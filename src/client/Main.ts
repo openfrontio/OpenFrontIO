@@ -8,12 +8,14 @@ import {
   GameInfo,
   GameRecord,
   GameStartInfo,
+  GameStartInfoSchema,
   GroupTokenEvent,
   LobbyInfoEvent,
   PublicGameInfo,
 } from "../core/Schemas";
 import { toWireGameStartInfo } from "../core/Util";
 import { GameEnv } from "../core/configuration/Config";
+import { GameType } from "../core/game/Game";
 import { UserSettings } from "../core/game/UserSettings";
 import "./AccountModal";
 import "./AccountSettingsModal";
@@ -167,6 +169,8 @@ import {
   installSafariPinchZoomBlocker,
 } from "./utilities/DisableSafariPinchZoom";
 
+const SINGLEPLAYER_REQUEUE_STORAGE_KEY = "openfront.singleplayerRequeue";
+
 import "./components/DesktopNavBar";
 import "./components/DetailedGameViewModal";
 import "./components/Footer";
@@ -237,7 +241,10 @@ declare global {
     toggle_game_start_timer: CustomEvent;
     "join-changed": CustomEvent;
     "open-matchmaking": CustomEvent<{ mode?: "1v1" | "2v2" } | undefined>;
-    "matchmaking-requeue": CustomEvent<{ mode?: "1v1" | "2v2" } | undefined>;
+    "matchmaking-requeue": CustomEvent<
+      | { mode?: "1v1" | "2v2" | "solo"; gameStartInfo?: GameStartInfo }
+      | undefined
+    >;
     userMeResponse: CustomEvent<UserMeResponse | false>;
     "session-cleared": CustomEvent;
     "leave-lobby": CustomEvent;
@@ -1271,6 +1278,23 @@ class Client {
 
     const requeueMode = this.consumeRequeueUrl();
     if (requeueMode !== null) {
+      if (requeueMode === "solo") {
+        const gameStartInfo = this.consumeSingleplayerRequeueData();
+        if (gameStartInfo === null) {
+          console.warn("Solo requeue requested without saved game settings");
+          return;
+        }
+        document.dispatchEvent(
+          new CustomEvent("join-lobby", {
+            detail: {
+              gameID: gameStartInfo.gameID,
+              gameStartInfo,
+              source: "singleplayer" as const,
+            },
+          }),
+        );
+        return;
+      }
       document.dispatchEvent(
         new CustomEvent("open-matchmaking", {
           detail: { mode: requeueMode },
@@ -1279,14 +1303,21 @@ class Client {
     }
   }
 
-  // Returns the requeue mode ("/?requeue" = 1v1, "/?requeue=2v2" = 2v2), or
+  // Returns the requeue mode ("/?requeue" = 1v1, "/?requeue=2v2" = 2v2,
+  // "/?requeue=solo" = solo), or
   // null when the URL has no requeue param.
-  private consumeRequeueUrl(): "1v1" | "2v2" | null {
+  private consumeRequeueUrl(): "1v1" | "2v2" | "solo" | null {
     const searchParams = new URLSearchParams(window.location.search);
     if (!searchParams.has("requeue")) {
       return null;
     }
-    const mode = searchParams.get("requeue") === "2v2" ? "2v2" : "1v1";
+    const requestedMode = searchParams.get("requeue");
+    const mode =
+      requestedMode === "solo"
+        ? "solo"
+        : requestedMode === "2v2"
+          ? "2v2"
+          : "1v1";
 
     searchParams.delete("requeue");
     const newUrl =
@@ -1295,6 +1326,41 @@ class Client {
       window.location.hash;
     history.replaceState(null, "", newUrl);
     return mode;
+  }
+
+  private consumeSingleplayerRequeueData(): GameStartInfo | null {
+    let serialized: string | null;
+    try {
+      serialized = sessionStorage.getItem(SINGLEPLAYER_REQUEUE_STORAGE_KEY);
+    } catch (error) {
+      console.warn("Unable to access singleplayer requeue data", error);
+      return null;
+    }
+
+    if (serialized === null) {
+      return null;
+    }
+
+    try {
+      sessionStorage.removeItem(SINGLEPLAYER_REQUEUE_STORAGE_KEY);
+    } catch (error) {
+      console.warn("unable to remove singleplayer requeue data", error);
+    }
+
+    try {
+      const parsed = GameStartInfoSchema.safeParse(JSON.parse(serialized));
+      if (
+        !parsed.success ||
+        parsed.data.config.gameType !== GameType.Singleplayer
+      ) {
+        console.warn("Ignoring invalid singleplayer requeue data");
+        return null;
+      }
+      return parsed.data;
+    } catch (error) {
+      console.warn("Ignoring unreadable singleplayer requeue data", error);
+      return null;
+    }
   }
 
   private desktopUpdateState: DesktopUpdateState | null = null;
@@ -1834,8 +1900,29 @@ class Client {
   // dispatch with no open modal (the player closed it mid-wait) stays a
   // no-op — don't force them back into a queue they left.
   private handleMatchmakingRequeue(
-    event: CustomEvent<{ mode?: "1v1" | "2v2" } | undefined>,
+    event: CustomEvent<
+      | { mode?: "1v1" | "2v2" | "solo"; gameStartInfo?: GameStartInfo }
+      | undefined
+    >,
   ) {
+    if (event.detail?.mode === "solo") {
+      if (event.detail.gameStartInfo === undefined) {
+        console.warn("Solo requeue requested without game settings");
+        return;
+      }
+
+      try {
+        sessionStorage.setItem(
+          SINGLEPLAYER_REQUEUE_STORAGE_KEY,
+          JSON.stringify(event.detail.gameStartInfo),
+        );
+      } catch (error) {
+        console.warn("Unable to set player requeue data", error);
+        return;
+      }
+      window.location.href = `/?requeue=solo`;
+      return;
+    }
     if (this.matchmakingModal?.requeue()) {
       return;
     }

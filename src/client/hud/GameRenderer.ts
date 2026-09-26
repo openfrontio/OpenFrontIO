@@ -1,5 +1,6 @@
 import { EventBus } from "../../core/EventBus";
 import { UserSettings } from "../../core/game/UserSettings";
+import { GameStartInfo } from "../../core/Schemas";
 import { Controller } from "../Controller";
 import { AmbienceController } from "../controllers/AmbienceController";
 import { AttackingTroopsController } from "../controllers/AttackingTroopsController";
@@ -54,6 +55,7 @@ export function createRenderer(
   playerRole: string | null,
   view: MapRenderer,
   mapLayerController?: MapLayerController,
+  gameStartInfo?: GameStartInfo,
 ): GameRenderer {
   const transformHandler = new TransformHandler(game, eventBus, inputEl);
   const userSettings = new UserSettings();
@@ -159,6 +161,7 @@ export function createRenderer(
   }
   winModal.eventBus = eventBus;
   winModal.game = game;
+  winModal.resetForGame(gameStartInfo);
 
   const newLobbyPrompt = document.querySelector(
     "new-lobby-prompt",

@@ -10,8 +10,10 @@ import {
 } from "../../../client/Utils";
 import { Pattern } from "../../../core/CosmeticSchemas";
 import { EventBus } from "../../../core/EventBus";
-import { RankedType } from "../../../core/game/Game";
+import { GameType, RankedType } from "../../../core/game/Game";
 import { GameUpdateType } from "../../../core/game/GameUpdates";
+import { GameStartInfo } from "../../../core/Schemas";
+import { generateID } from "../../../core/Util";
 import { getUserMe } from "../../Api";
 import "../../components/CosmeticCard";
 import { cosmeticSelectionLabel } from "../../components/CosmeticPresentation";
@@ -35,8 +37,10 @@ import { GameView } from "../../view";
 export class WinModal extends LitElement implements Controller {
   public game: GameView;
   public eventBus: EventBus;
+  private gameStartInfo?: GameStartInfo;
 
   private hasShownDeathModal = false;
+  private playAgainRequested = false;
 
   @state()
   isVisible = false;
@@ -92,6 +96,17 @@ export class WinModal extends LitElement implements Controller {
                   class="flex-1"
                   translationKey="win_modal.requeue"
                   @click=${this._handleRequeue}
+                ></o-button>
+              `
+            : null}
+          ${this.isSingleplayer && !this.isRankedGame
+            ? html`
+                <o-button
+                  variant="primary"
+                  width="block"
+                  class="flex-1"
+                  translationKey="win_modal.requeue"
+                  @click=${this._handlePlayAgain}
                 ></o-button>
               `
             : null}
@@ -280,6 +295,14 @@ export class WinModal extends LitElement implements Controller {
     this.requestUpdate();
   }
 
+  resetForGame(gameStartInfo?: GameStartInfo) {
+    this.gameStartInfo = gameStartInfo;
+    this.hasShownDeathModal = false;
+    this.playAgainRequested = false;
+    this.isWin = false;
+    this.isVisible = false;
+  }
+
   private _handleExit() {
     this.hide();
     window.location.href = homeHref();
@@ -300,6 +323,41 @@ export class WinModal extends LitElement implements Controller {
         },
       }),
     );
+  }
+
+  private get isSingleplayer(): boolean {
+    return (
+      this.gameStartInfo?.config.gameType === GameType.Singleplayer &&
+      this.gameStartInfo.players.length > 0 &&
+      this.game?.config().isReplay() !== true
+    );
+  }
+
+  private _handlePlayAgain() {
+    if (
+      this.playAgainRequested ||
+      !this.isSingleplayer ||
+      this.isRankedGame ||
+      this.gameStartInfo === undefined
+    )
+      return;
+
+    const gameStartInfo: GameStartInfo = {
+      ...this.gameStartInfo,
+      gameID: generateID(),
+      lobbyCreatedAt: Date.now(),
+      players: this.gameStartInfo.players.map((player, index) =>
+        index === 0 ? { ...player, clientID: generateID() } : player,
+      ),
+    };
+    document.dispatchEvent(
+      new CustomEvent("matchmaking-requeue", {
+        detail: { mode: "solo" as const, gameStartInfo },
+      }),
+    );
+
+    this.playAgainRequested = true;
+    this.hide();
   }
 
   init() {}
