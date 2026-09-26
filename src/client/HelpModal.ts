@@ -11,56 +11,24 @@ import { UserSettings } from "../core/game/UserSettings";
 import { BaseModal } from "./components/BaseModal";
 import "./components/Difficulties";
 import { modalHeader } from "./components/ui/ModalHeader";
+import { KeyboardLayoutController } from "./KeyboardLayout";
 import { Platform } from "./Platform";
 import { TroubleshootingModal } from "./TroubleshootingModal";
 
 @customElement("help-modal")
 export class HelpModal extends BaseModal {
+  private keyboardLayout = new KeyboardLayoutController(this);
   protected routerName = "help";
 
   @state() private keybinds: Record<string, string> = this.getKeybinds();
-  @state() private layoutMap: Map<string, string> | null = null;
   @query("#tutorial-video-iframe") private videoIframe?: HTMLIFrameElement;
   @query("#tutorial-video-player") private videoPlayer?: HTMLVideoElement;
 
-  private keyboardLayoutRequestId = 0;
-
-  private readonly refreshKeyboardLayout = () => {
-    const keyboard = navigator.keyboard;
-    if (!keyboard) return;
-
-    const requestId = ++this.keyboardLayoutRequestId;
-    void keyboard
-      .getLayoutMap()
-      .then((map) => {
-        if (requestId === this.keyboardLayoutRequestId) {
-          this.layoutMap = map;
-        }
-      })
-      .catch((e) => {
-        console.warn("Failed to get keyboard layout map:", e);
-      });
-  };
-
   connectedCallback() {
     super.connectedCallback();
-    if (navigator.keyboard) {
-      navigator.keyboard.addEventListener(
-        "layoutchange",
-        this.refreshKeyboardLayout,
-      );
-      this.refreshKeyboardLayout();
-    }
   }
 
   disconnectedCallback() {
-    this.keyboardLayoutRequestId++;
-    if (navigator.keyboard) {
-      navigator.keyboard.removeEventListener(
-        "layoutchange",
-        this.refreshKeyboardLayout,
-      );
-    }
     super.disconnectedCallback();
   }
 
@@ -91,12 +59,20 @@ export class HelpModal extends BaseModal {
       Comma: "<",
     };
 
-    if ((code === "Period" || code === "Comma") && this.layoutMap?.has(code)) {
-      return this.layoutMap.get(code)!.toUpperCase();
+    if (
+      (code === "Period" || code === "Comma") &&
+      this.keyboardLayout.map?.has(code)
+    ) {
+      return this.keyboardLayout.map.get(code)!.toUpperCase();
     }
     if (specialLabels[code]) return specialLabels[code];
-    if (this.layoutMap && this.layoutMap.has(code))
-      return this.layoutMap.get(code)!.toUpperCase();
+    if (
+      this.keyboardLayout.map &&
+      this.keyboardLayout.map.has(code) &&
+      !code.startsWith("Digit") &&
+      !code.startsWith("Numpad")
+    )
+      return this.keyboardLayout.map.get(code)!.toUpperCase();
     if (code.startsWith("Key") && code.length === 4) return code.slice(3);
     if (code.startsWith("Digit")) return code.slice(5);
     if (code.startsWith("Numpad")) return `Num ${code.slice(6)}`;

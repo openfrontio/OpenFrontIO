@@ -381,8 +381,10 @@ export function formatPercentage(value: number): string {
  * formatKeyForDisplay("ArrowUp") // returns "Arrowup"
  * formatKeyForDisplay("") // returns ""
  */
+export type KeybindEntry = { key?: string; value?: string | string[] } | string;
+
 export function resolveKeybindLabel(
-  entry: any,
+  entry: KeybindEntry | undefined,
   defaultCode: string,
   layoutMap: Map<string, string> | null,
 ): string {
@@ -409,7 +411,12 @@ export function resolveKeybindLabel(
     codeToResolve = valueCode.slice(6);
   }
 
-  if (layoutMap && layoutMap.has(codeToResolve)) {
+  if (
+    layoutMap &&
+    layoutMap.has(codeToResolve) &&
+    !codeToResolve.startsWith("Digit") &&
+    !codeToResolve.startsWith("Numpad")
+  ) {
     const char = layoutMap.get(codeToResolve)!.toUpperCase();
     const shiftPrefix = translateText("user_setting.keybind_shift_prefix");
     const prefix =

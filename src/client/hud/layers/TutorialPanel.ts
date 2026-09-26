@@ -4,6 +4,7 @@ import { EventBus } from "../../../core/EventBus";
 import { PlayerType, Relation, UnitType } from "../../../core/game/Game";
 import { UserSettings } from "../../../core/game/UserSettings";
 import { Controller } from "../../Controller";
+import { KeyboardLayoutController } from "../../KeyboardLayout";
 import { Platform } from "../../Platform";
 import { GoToPlayerEvent } from "../../TransformHandler";
 import { UIState } from "../../UIState";
@@ -91,6 +92,7 @@ const HOTKEY_FALLBACKS = {
 
 @customElement("tutorial-panel")
 export class TutorialPanel extends LitElement implements Controller {
+  private keyboardLayout = new KeyboardLayoutController(this);
   public game: GameView;
   public eventBus: EventBus;
   public userSettings: UserSettings;
@@ -99,30 +101,14 @@ export class TutorialPanel extends LitElement implements Controller {
   @state() private active = false;
   @state() private confirmingClose = false;
   @state() private ctx: TutorialContext | null = null;
-  @state() private layoutMap: Map<string, string> | null = null;
-  private keyboardLayoutRequestId = 0;
-
-  private readonly refreshKeyboardLayout = () => {
-    const keyboard = navigator.keyboard;
-    if (!keyboard) return;
-
-    const requestId = ++this.keyboardLayoutRequestId;
-    void keyboard
-      .getLayoutMap()
-      .then((map) => {
-        if (requestId === this.keyboardLayoutRequestId) {
-          this.layoutMap = map;
-        }
-      })
-      .catch((e) => {
-        console.warn("Failed to get keyboard layout map:", e);
-      });
-  };
 
   private progress = new TutorialProgress();
   private started = false;
   private costs = new Map<UnitType, bigint>();
-  private keybinds: Record<string, any> | null = null;
+  private keybinds: Record<
+    string,
+    { key?: string; value?: string | string[] }
+  > | null = null;
   private mapMarksActive = false;
   /** Latched: an atom bomb of ours was seen in flight at least once. */
   private atomLaunchSeen = false;
@@ -134,23 +120,9 @@ export class TutorialPanel extends LitElement implements Controller {
 
   connectedCallback() {
     super.connectedCallback();
-    if (navigator.keyboard) {
-      navigator.keyboard.addEventListener(
-        "layoutchange",
-        this.refreshKeyboardLayout,
-      );
-      this.refreshKeyboardLayout();
-    }
   }
 
   disconnectedCallback() {
-    this.keyboardLayoutRequestId++;
-    if (navigator.keyboard) {
-      navigator.keyboard.removeEventListener(
-        "layoutchange",
-        this.refreshKeyboardLayout,
-      );
-    }
     super.disconnectedCallback();
   }
   /** Nation smallID → its attitude toward us, fetched during the ally step. */
@@ -430,7 +402,7 @@ export class TutorialPanel extends LitElement implements Controller {
     this.keybinds ??= this.userSettings.parsedUserKeybinds();
     const entry = this.keybinds[step.hotkey];
     const defaultCode = HOTKEY_FALLBACKS[step.hotkey] || "";
-    return resolveKeybindLabel(entry, defaultCode, this.layoutMap);
+    return resolveKeybindLabel(entry, defaultCode, this.keyboardLayout.map);
   }
 
   private setHighlight(target: TutorialHighlight | null) {

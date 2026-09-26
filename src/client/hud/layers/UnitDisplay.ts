@@ -1,5 +1,5 @@
-import { html, LitElement } from "lit";
-import { customElement, state } from "lit/decorators.js";
+import { html, LitElement, nothing } from "lit";
+import { customElement } from "lit/decorators.js";
 import { EventBus } from "../../../core/EventBus";
 import {
   BuildableUnit,
@@ -11,6 +11,7 @@ import {
 import { UserSettings } from "../../../core/game/UserSettings";
 import { Controller } from "../../Controller";
 import { ToggleStructureEvent } from "../../InputHandler";
+import { KeyboardLayoutController } from "../../KeyboardLayout";
 import { UIState } from "../../UIState";
 import { renderNumber, resolveKeybindLabel, translateText } from "../../Utils";
 import { GameView } from "../../view";
@@ -31,6 +32,7 @@ import { TutorialHighlight, TutorialHighlightEvent } from "../Tutorial";
 
 @customElement("unit-display")
 export class UnitDisplay extends LitElement implements Controller {
+  private keyboardLayout = new KeyboardLayoutController(this);
   public game: GameView;
   public eventBus: EventBus;
   public uiState: UIState;
@@ -46,25 +48,6 @@ export class UnitDisplay extends LitElement implements Controller {
   private allDisabled = false;
   private _hoveredUnit: PlayerBuildableUnitType | null = null;
   private tutorialHighlight: PlayerBuildableUnitType | null = null;
-  @state() private layoutMap: Map<string, string> | null = null;
-  private keyboardLayoutRequestId = 0;
-
-  private readonly refreshKeyboardLayout = () => {
-    const keyboard = navigator.keyboard;
-    if (!keyboard) return;
-
-    const requestId = ++this.keyboardLayoutRequestId;
-    void keyboard
-      .getLayoutMap()
-      .then((map) => {
-        if (requestId === this.keyboardLayoutRequestId) {
-          this.layoutMap = map;
-        }
-      })
-      .catch((e) => {
-        console.warn("Failed to get keyboard layout map:", e);
-      });
-  };
 
   createRenderRoot() {
     return this;
@@ -72,23 +55,9 @@ export class UnitDisplay extends LitElement implements Controller {
 
   connectedCallback() {
     super.connectedCallback();
-    if (navigator.keyboard) {
-      navigator.keyboard.addEventListener(
-        "layoutchange",
-        this.refreshKeyboardLayout,
-      );
-      this.refreshKeyboardLayout();
-    }
   }
 
   disconnectedCallback() {
-    this.keyboardLayoutRequestId++;
-    if (navigator.keyboard) {
-      navigator.keyboard.removeEventListener(
-        "layoutchange",
-        this.refreshKeyboardLayout,
-      );
-    }
     super.disconnectedCallback();
   }
 
@@ -261,7 +230,7 @@ export class UnitDisplay extends LitElement implements Controller {
 
   private getHotkey(action: string, defaultCode: string): string {
     const entry = this.keybinds[action];
-    return resolveKeybindLabel(entry, defaultCode, this.layoutMap);
+    return resolveKeybindLabel(entry, defaultCode, this.keyboardLayout.map);
   }
 
   private renderUnitItem(
@@ -299,9 +268,9 @@ export class UnitDisplay extends LitElement implements Controller {
                 class="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 text-gray-200 text-center w-max text-xs bg-gray-800/90 backdrop-blur-xs rounded-sm p-1 z-[100] shadow-lg pointer-events-none"
               >
                 <div class="font-bold text-sm mb-1">
-                  ${translateText("unit_type." + structureKey)}${
-                    hotkey ? ` [${displayHotkey}]` : ""
-                  }
+                  ${translateText("unit_type." + structureKey)}${hotkey
+                    ? ` [${displayHotkey}]`
+                    : ""}
                 </div>
                 <div class="p-2">
                   ${translateText("build_menu.desc." + structureKey)}
@@ -359,7 +328,9 @@ export class UnitDisplay extends LitElement implements Controller {
             this.eventBus?.emit(new ToggleStructureEvent(null))}
         >
           ${hotkey
-            ? html`<div class="ml-0.5 text-[10px] relative -top-1 text-gray-400">
+            ? html`<div
+                class="ml-0.5 text-[10px] relative -top-1 text-gray-400"
+              >
                 ${displayHotkey}
               </div>`
             : nothing}
