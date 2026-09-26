@@ -19,7 +19,7 @@ See the parent spec for the full contribution model rationale.
 
 ```bash
 cd scripts/issue-lifecycle
-npm install
+npm ci --ignore-scripts
 export GITHUB_TOKEN=ghp_... # PAT with repo scope
 
 # Full cron sweep against the real repo, dry-run (default for CLI):

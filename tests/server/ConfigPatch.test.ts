@@ -103,6 +103,16 @@ describe("applyGameConfigPatch", () => {
     expect(target.maxPlayers).toBe(4);
   });
 
+  it("ignores pool, which every member of a pool has to agree on", () => {
+    // A patch reaches exactly one GameServer, so a copied pool could only
+    // describe a group that disagrees with itself about who goes where.
+    const target = testGameConfig();
+    applyGameConfigPatch(target, {
+      pool: { id: "pool-1", siblings: ["aaaa1111", "bbbb2222"] },
+    });
+    expect(target.pool).toBeUndefined();
+  });
+
   it("ignores keys that are not part of GameConfig at all", () => {
     // e.g. the listing flag, which lives on the GameServer, not the config.
     const target = testGameConfig();

@@ -32,6 +32,7 @@ function publicLobbyGameConfig(gc: GameConfig): GameConfig {
   delete sanitized.nameReveals;
   delete sanitized.nameRevealPublicIds;
   delete sanitized.hostCheats;
+  delete sanitized.pool;
   return sanitized;
 }
 
@@ -197,7 +198,9 @@ export class WorkerLobbyService {
     // Subscriber-listed private lobbies. creatorID (a hash of the creator's
     // persistentID) rides along for the one-listed-lobby-per-creator check;
     // sanitizeGames strips it before anything reaches browsers. The config is
-    // reduced to the publicLobbyGameConfig allowlist.
+    // reduced to the publicLobbyGameConfig allowlist. A lobby the host paid
+    // to queue is reported as Special with its queuedAt, which puts it right
+    // behind the counting-down Special lobby.
     const hostedLobbies = this.gm.listedLobbies().map((g) => {
       const gi = g.gameInfo();
       return {
@@ -205,7 +208,8 @@ export class WorkerLobbyService {
         numClients: gi.clients?.length ?? 0,
         startsAt: gi.startsAt,
         gameConfig: gi.gameConfig && publicLobbyGameConfig(gi.gameConfig),
-        publicGameType: "hosted",
+        publicGameType: g.isQueued() ? "special" : "hosted",
+        queuedAt: g.queuedAt(),
         creatorID: g.hashedCreatorID(),
         createdAt: g.createdAt,
         // Already sanitised on the way in (GameServer.setFeatured), so nothing
@@ -214,6 +218,7 @@ export class WorkerLobbyService {
         accent: g.lobbyAccent(),
         featured: g.isFeatured() ? true : undefined,
         autoStartAt: gi.autoStartAt,
+        custom: g.isFeatured() ? undefined : true,
       } satisfies InternalGameInfo;
     });
     this.sendToMaster({
@@ -226,12 +231,16 @@ export class WorkerLobbyService {
   // Whether the creator (hashed persistentID) already has a listed lobby
   // other than `excludeGameID`. Checks the cluster-wide view from the last
   // master broadcast plus this worker's own lobbies (fresher than the
-  // broadcast interval).
+  // broadcast interval). A lobby the host paid to queue is broadcast under
+  // special, and still counts as their one listing.
   public creatorHasListedLobby(
     hashedCreatorID: string,
     excludeGameID: string,
   ): boolean {
-    const broadcast = this.lastPublicGames?.games["hosted"] ?? [];
+    const broadcast = [
+      ...(this.lastPublicGames?.games["hosted"] ?? []),
+      ...(this.lastPublicGames?.games["special"] ?? []),
+    ];
     if (
       broadcast.some((l) => {
         if (l.gameID === excludeGameID || l.creatorID !== hashedCreatorID) {
@@ -263,14 +272,13 @@ export class WorkerLobbyService {
     const broadcastIds = new Set(broadcast.map((l) => l.gameID));
     const localExtra = this.gm
       .listedLobbies()
-      .filter((g) => !broadcastIds.has(g.id)).length;
+      .filter((g) => !g.isQueued() && !broadcastIds.has(g.id)).length;
     return broadcast.length + localExtra;
   }
 
-  // Strips worker/master-internal fields (creatorID, createdAt) before lobby
-  // info is
-  // sent to browser clients, converting InternalGameInfo to the
-  // browser-facing PublicGameInfo.
+  // Strips worker/master-internal fields (creatorID, createdAt, queuedAt)
+  // before lobby info is sent to browser clients, converting
+  // InternalGameInfo to the browser-facing PublicGameInfo.
   private sanitizeGames(
     games: InternalPublicGames["games"],
   ): PublicGames["games"] {
@@ -283,6 +291,7 @@ export class WorkerLobbyService {
         ({
           creatorID: _creatorID,
           createdAt: _createdAt,
+          queuedAt: _queuedAt,
           ...rest
         }): PublicGameInfo => rest,
       );
@@ -332,7 +341,15 @@ export class WorkerLobbyService {
         });
 
         ws.on("error", (error) => {
-          this.log.error(`Lobbies WebSocket error:`, error);
+          // ws raises WS_ERR_* for a malformed frame from the peer (e.g. a
+          // reserved close code from a bot or proxy): the peer's fault, not
+          // ours, so it must not drown real server errors.
+          const code = (error as { code?: unknown }).code;
+          if (typeof code === "string" && code.startsWith("WS_ERR_")) {
+            this.log.warn("Lobbies WebSocket peer protocol error", { code });
+          } else {
+            this.log.error(`Lobbies WebSocket error:`, error);
+          }
           this.lobbyClients.delete(ws);
           try {
             if (

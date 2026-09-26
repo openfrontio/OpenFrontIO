@@ -290,6 +290,13 @@ export class MasterLobbyService {
     for (const type of Object.keys(result) as PublicGameType[]) {
       result[type].sort((a, b) => {
         if (a.startsAt === undefined && b.startsAt === undefined) {
+          // Paid-queued lobbies go right behind the counting-down one, in
+          // the order their hosts paid.
+          if (a.queuedAt !== b.queuedAt) {
+            if (a.queuedAt === undefined) return 1;
+            if (b.queuedAt === undefined) return -1;
+            return a.queuedAt - b.queuedAt;
+          }
           // Queue order: oldest first, so a lobby moves up a place each time
           // the one in front of it starts, and a newly created lobby joins the
           // back instead of landing in the middle. Game id only breaks ties
@@ -313,7 +320,13 @@ export class MasterLobbyService {
     // so broadcastLobbies can tell the owning worker to clear the loser's
     // listed flag — otherwise it would stay flagged Public on its worker
     // while never appearing in any browser.
-    const seenCreators = new Set<string>();
+    // A queued lobby (reported under special) is the creator's listing too,
+    // and always wins: the host paid for it.
+    const seenCreators = new Set<string>(
+      result.special.flatMap((l) =>
+        l.creatorID === undefined ? [] : [l.creatorID],
+      ),
+    );
     const losers: string[] = [];
     result.hosted = result.hosted.filter((lobby) => {
       if (lobby.creatorID === undefined) return true;

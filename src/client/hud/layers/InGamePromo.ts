@@ -42,13 +42,15 @@ export class InGamePromo extends LitElement implements Controller {
   }
 
   private destroyBottomRail(): void {
-    if (!window.ramp) return;
+    // index.html stubs window.ramp; without ramp.js (an ad blocker) there is
+    // no destroyUnits and no units to destroy.
+    if (typeof window.ramp?.destroyUnits !== "function") return;
 
     try {
       window.ramp.destroyUnits("pw-oop-bottom_rail");
       console.log("Bottom rail ad destroyed after spawn phase");
     } catch (e) {
-      console.error("Error destroying bottom_rail ad:", e);
+      console.warn("Error destroying bottom_rail ad:", e);
     }
   }
 
@@ -109,11 +111,11 @@ export class InGamePromo extends LitElement implements Controller {
             AD_TYPES.map((a) => a.type),
           );
         } catch (e) {
-          console.error("Failed to add in-game ads:", e);
+          console.warn("Failed to add in-game ads:", e);
         }
       });
     } catch (error) {
-      console.error("Failed to load in-game ads:", error);
+      console.warn("Failed to load in-game ads:", error);
     }
   }
 
@@ -140,7 +142,7 @@ export class InGamePromo extends LitElement implements Controller {
       }
       console.log("successfully destroyed in-game bottom-left ads");
     } catch (e) {
-      console.error("error destroying in-game ads:", e);
+      console.warn("error destroying in-game ads:", e);
     }
     this.requestUpdate();
   }

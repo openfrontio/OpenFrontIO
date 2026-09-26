@@ -310,7 +310,7 @@ export class PublicLobbySocket {
       console.warn(detail);
     }
     if (this.wsConnectionAttempts >= this.maxWsAttempts) {
-      if (!this.gaveUp) console.error("Max WebSocket attempts reached");
+      if (!this.gaveUp) console.warn("Max WebSocket attempts reached");
       this.giveUp();
     }
     this.scheduleReconnect();
@@ -351,7 +351,7 @@ export class PublicLobbySocket {
   // known the next attempt has to re-run discovery, not re-dial an empty
   // worker path.
   private handleConnectError(error: unknown, rediscover = false) {
-    console.error("Error connecting WebSocket:", error);
+    console.warn("Error connecting WebSocket:", error);
     if (!this.wsAttemptCounted) {
       this.wsAttemptCounted = true;
       this.wsConnectionAttempts++;

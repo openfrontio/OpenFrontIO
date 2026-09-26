@@ -11,6 +11,7 @@ import { steamSDK } from "../SteamSDK";
 import { translateText } from "../Utils";
 import "./baseComponents/Button";
 import "./DeleteAccountDialog";
+import "./IdentityTokenCard";
 import { googleLinkButton } from "./ui/GoogleLinkButton";
 
 type UserMePlayer = UserMeResponse["player"];
@@ -18,7 +19,8 @@ type UserMeUser = UserMeResponse["user"];
 
 /**
  * Account settings: marketing-consent control (with the bind-an-email flow when
- * the account has no verified email) and self-service account deletion.
+ * the account has no verified email), third-party identity tokens and
+ * self-service account deletion.
  *
  * Extracted from AccountModal so the standalone account-settings modal opened
  * from the nav profile menu and the account modal's settings tab render the
@@ -61,7 +63,9 @@ export class AccountSettingsPanel extends LitElement {
   render(): TemplateResult {
     return html`
       <div class="flex flex-col gap-6">
-        ${this.renderMarketingCard()} ${this.renderDeleteAccountCard()}
+        ${this.renderMarketingCard()}
+        <identity-token-card></identity-token-card>
+        ${this.renderDeleteAccountCard()}
       </div>
     `;
   }
