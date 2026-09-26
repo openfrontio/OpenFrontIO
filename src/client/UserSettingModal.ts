@@ -143,6 +143,24 @@ export class UserSettingModal extends BaseModal {
   > = {};
 
   @state() private layoutMap: Map<string, string> | null = null;
+  private keyboardLayoutRequestId = 0;
+
+  private readonly refreshKeyboardLayout = () => {
+    const keyboard = navigator.keyboard;
+    if (!keyboard) return;
+
+    const requestId = ++this.keyboardLayoutRequestId;
+    void keyboard
+      .getLayoutMap()
+      .then((map) => {
+        if (requestId === this.keyboardLayoutRequestId) {
+          this.layoutMap = map;
+        }
+      })
+      .catch((e) => {
+        console.warn("Failed to get keyboard layout map:", e);
+      });
+  };
 
   // ---- Display tab state (desktop shell only) ----
   //
@@ -183,18 +201,22 @@ export class UserSettingModal extends BaseModal {
     );
 
     if (navigator.keyboard) {
-      navigator.keyboard
-        .getLayoutMap()
-        .then((map) => {
-          this.layoutMap = map;
-        })
-        .catch((e) => {
-          console.warn("Failed to get keyboard layout map:", e);
-        });
+      navigator.keyboard.addEventListener(
+        "layoutchange",
+        this.refreshKeyboardLayout,
+      );
+      this.refreshKeyboardLayout();
     }
   }
 
   disconnectedCallback() {
+    this.keyboardLayoutRequestId++;
+    if (navigator.keyboard) {
+      navigator.keyboard.removeEventListener(
+        "layoutchange",
+        this.refreshKeyboardLayout,
+      );
+    }
     globalThis.removeEventListener(
       `${USER_SETTINGS_CHANGED_EVENT}:${GRAPHICS_KEY}`,
       this.onGraphicsChanged,
