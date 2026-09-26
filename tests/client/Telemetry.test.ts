@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ClientEnv } from "../../src/client/ClientEnv";
 import {
   initTelemetry,
+  isSessionSampled,
   reportGameError,
   reportMeasurement,
   resetTelemetry,
@@ -17,7 +18,38 @@ const getWebInstrumentations = vi.fn((_options: unknown) => []);
 vi.mock("@grafana/faro-web-sdk", () => ({
   initializeFaro: (config: unknown) => initializeFaro(config),
   getWebInstrumentations: (options: unknown) => getWebInstrumentations(options),
+  LogLevel: {
+    TRACE: "trace",
+    DEBUG: "debug",
+    INFO: "info",
+    LOG: "log",
+    WARN: "warn",
+    ERROR: "error",
+  },
 }));
+
+type BeforeSend = (item: unknown) => unknown;
+
+async function beforeSendFor(
+  extra: Record<string, unknown> = {},
+): Promise<BeforeSend> {
+  page({ faroCollectorUrl: "https://faro.example/collect/k", ...extra });
+  await initTelemetry();
+  return (initializeFaro.mock.calls[0][0] as { beforeSend: BeforeSend })
+    .beforeSend;
+}
+
+// Session ids on either side of the 1% prod cut.
+function sessionIds(): { inside: string; outside: string } {
+  let inside: string | undefined;
+  let outside: string | undefined;
+  for (let i = 0; inside === undefined || outside === undefined; i++) {
+    const id = `session${i}`;
+    if (isSessionSampled(id, 0.01)) inside ??= id;
+    else outside ??= id;
+  }
+  return { inside, outside };
+}
 
 function page(extra: Record<string, unknown> = {}) {
   ClientEnv.reset();
@@ -70,28 +102,95 @@ describe("Telemetry", () => {
         environment: "prod",
       },
       sessionTracking: {
-        samplingRate: 0.01,
+        samplingRate: 1,
         persistent: true,
         session: { attributes: { platform: "web" } },
       },
       trackResources: false,
     });
     expect(getWebInstrumentations).toHaveBeenCalledWith({
-      captureConsole: false,
+      captureConsole: true,
+    });
+    expect(initializeFaro.mock.calls[0][0]).toMatchObject({
+      consoleInstrumentation: {
+        disabledLevels: ["trace", "debug", "log", "info"],
+        consoleErrorAsLog: true,
+      },
     });
   });
 
-  // Prod has the players to make 1% plenty; a staging deployment wants every
-  // session so its errors show up at once.
-  it("samples 1% of sessions in prod and every session on staging", async () => {
-    page({
-      gameEnv: "staging",
-      faroCollectorUrl: "https://faro.example/collect/k",
+  it("samples a session id the same way every time, at about the rate", () => {
+    let sampled = 0;
+    for (let i = 0; i < 10_000; i++) {
+      const id = `s${i}`;
+      expect(isSessionSampled(id, 0.01)).toBe(isSessionSampled(id, 0.01));
+      if (isSessionSampled(id, 0.01)) sampled++;
+    }
+    expect(sampled).toBeGreaterThan(50);
+    expect(sampled).toBeLessThan(150);
+    expect(isSessionSampled("anything", 1)).toBe(true);
+  });
+
+  // Faro would drop an unsampled session's exceptions along with the rest,
+  // so its own sampling is off and prod sessions outside the 1% still send
+  // exceptions, and only exceptions.
+  it("sends exceptions from every prod session and the rest from 1%", async () => {
+    const beforeSend = await beforeSendFor();
+    const { inside, outside } = sessionIds();
+    const signal = (type: string, session: string) => ({
+      type,
+      payload: {},
+      meta: { session: { id: session } },
     });
-    await initTelemetry();
+
+    for (const type of ["measurement", "log", "event"]) {
+      expect(beforeSend(signal(type, inside))).not.toBeNull();
+      expect(beforeSend(signal(type, outside))).toBeNull();
+    }
+    expect(beforeSend(signal("exception", outside))).not.toBeNull();
+  });
+
+  it("sends everything from every session on staging", async () => {
+    const beforeSend = await beforeSendFor({ gameEnv: "staging" });
     expect(initializeFaro.mock.calls[0][0]).toMatchObject({
       app: { environment: "staging" },
-      sessionTracking: { samplingRate: 1 },
+    });
+    const { outside } = sessionIds();
+    const item = {
+      type: "log",
+      payload: {},
+      meta: { session: { id: outside } },
+    };
+    expect(beforeSend(item)).toEqual(item);
+  });
+
+  it("drops the user agent and brand list from the browser meta", async () => {
+    const beforeSend = await beforeSendFor();
+    const item = {
+      type: "exception",
+      payload: {},
+      meta: {
+        browser: {
+          name: "Chrome",
+          version: "151",
+          os: "Mac OS",
+          mobile: false,
+          userAgent: "Mozilla/5.0 ...",
+          brands: [{ brand: "Chromium", version: "151" }],
+        },
+      },
+    };
+    expect(beforeSend(item)).toEqual({
+      type: "exception",
+      payload: {},
+      meta: {
+        browser: {
+          name: "Chrome",
+          version: "151",
+          os: "Mac OS",
+          mobile: false,
+        },
+      },
     });
   });
 
@@ -118,6 +217,7 @@ describe("Telemetry", () => {
       meta: {
         page: { url: "https://openfront.io/#token-login?token-login=secret" },
         app: { name: "openfront-client" },
+        session: { id: sessionIds().inside },
       },
     };
 
@@ -134,6 +234,7 @@ describe("Telemetry", () => {
       meta: {
         page: { url: "https://openfront.io/" },
         app: { name: "openfront-client" },
+        session: { id: sessionIds().inside },
       },
     });
   });
@@ -144,7 +245,11 @@ describe("Telemetry", () => {
     const config = initializeFaro.mock.calls[0][0] as {
       beforeSend: (item: unknown) => unknown;
     };
-    const item = { type: "log", payload: { message: "m" }, meta: {} };
+    const item = {
+      type: "log",
+      payload: { message: "m" },
+      meta: { session: { id: sessionIds().inside } },
+    };
     expect(config.beforeSend(item)).toEqual(item);
   });
 
@@ -162,14 +267,20 @@ describe("Telemetry", () => {
         name: "securitypolicyviolation",
         attributes: { blockedURI: "https://cdn.ofedge.io/x.mp3" },
       },
-      meta: { page: { url: "https://openfront.io/" } },
+      meta: {
+        page: { url: "https://openfront.io/" },
+        session: { id: sessionIds().inside },
+      },
     };
     expect(config.beforeSend(csp)).toBe(null);
 
     const start = {
       type: "event",
       payload: { name: "session_start", attributes: {} },
-      meta: { page: { url: "https://openfront.io/" } },
+      meta: {
+        page: { url: "https://openfront.io/" },
+        session: { id: sessionIds().inside },
+      },
     };
     expect(config.beforeSend(start)).toEqual(start);
   });
