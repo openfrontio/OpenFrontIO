@@ -48,6 +48,18 @@ export class UnitDisplay extends LitElement implements Controller {
   private tutorialHighlight: PlayerBuildableUnitType | null = null;
   @state() private layoutMap: Map<string, string> | null = null;
 
+  private readonly refreshKeyboardLayout = () => {
+    if (!navigator.keyboard) return;
+    void navigator.keyboard
+      .getLayoutMap()
+      .then((map) => {
+        this.layoutMap = map;
+      })
+      .catch((e) => {
+        console.warn("Failed to get keyboard layout map:", e);
+      });
+  };
+
   createRenderRoot() {
     return this;
   }
@@ -55,15 +67,22 @@ export class UnitDisplay extends LitElement implements Controller {
   connectedCallback() {
     super.connectedCallback();
     if (navigator.keyboard) {
-      navigator.keyboard
-        .getLayoutMap()
-        .then((map) => {
-          this.layoutMap = map;
-        })
-        .catch((e) => {
-          console.warn("Failed to get keyboard layout map:", e);
-        });
+      navigator.keyboard.addEventListener(
+        "layoutchange",
+        this.refreshKeyboardLayout,
+      );
+      this.refreshKeyboardLayout();
     }
+  }
+
+  disconnectedCallback() {
+    if (navigator.keyboard) {
+      navigator.keyboard.removeEventListener(
+        "layoutchange",
+        this.refreshKeyboardLayout,
+      );
+    }
+    super.disconnectedCallback();
   }
 
   init() {
