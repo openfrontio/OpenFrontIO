@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ClientEnv } from "../../src/client/ClientEnv";
 import {
+  calledFromBundle,
   initTelemetry,
   isSessionSampled,
   reportGameError,
@@ -10,9 +11,13 @@ import {
 
 const pushError = vi.fn();
 const pushMeasurement = vi.fn();
+const pushLog = vi.fn();
 const initializeFaro = vi.fn((_config: unknown) => ({
-  api: { pushError, pushMeasurement },
+  api: { pushError, pushMeasurement, pushLog },
 }));
+
+// Telemetry.ts's directory, which is what it takes for the bundle's.
+const BUNDLE_DIR = new URL("../../src/client/", import.meta.url).href;
 const getWebInstrumentations = vi.fn((_options: unknown) => []);
 
 vi.mock("@grafana/faro-web-sdk", () => ({
@@ -63,14 +68,21 @@ function page(extra: Record<string, unknown> = {}) {
 }
 
 describe("Telemetry", () => {
+  const { warn, error } = console;
+
   beforeEach(() => {
     resetTelemetry();
     vi.clearAllMocks();
+    // initTelemetry wraps these; keep the test output quiet.
+    console.warn = vi.fn();
+    console.error = vi.fn();
   });
 
   afterEach(() => {
     delete (window as any).BOOTSTRAP_CONFIG;
     ClientEnv.reset();
+    console.warn = warn;
+    console.error = error;
   });
 
   it("stays off, and never loads the SDK, without a collector URL", async () => {
@@ -109,14 +121,135 @@ describe("Telemetry", () => {
       trackResources: false,
     });
     expect(getWebInstrumentations).toHaveBeenCalledWith({
-      captureConsole: true,
+      captureConsole: false,
     });
-    expect(initializeFaro.mock.calls[0][0]).toMatchObject({
-      consoleInstrumentation: {
-        disabledLevels: ["trace", "debug", "log", "info"],
-        consoleErrorAsLog: true,
+  });
+
+  it("counts a console call as ours only with a caller in the bundle", () => {
+    const dir = "https://cdn.example/assets/";
+    const wrapper = `    at console.error (${dir}index-abc.js:1:100)`;
+    const ours = `    at Transport.onMessage (${dir}index-abc.js:1:500)`;
+    const ad = "    at t (https://ads.example/tag.js:8:1)";
+    expect(calledFromBundle(["Error", wrapper, ours].join("\n"), dir)).toBe(
+      true,
+    );
+    expect(calledFromBundle(["Error", wrapper, ad].join("\n"), dir)).toBe(
+      false,
+    );
+    // An ad script that wrapped console after us sits between our code and
+    // the wrapper; our frame further down still counts.
+    expect(calledFromBundle(["Error", wrapper, ad, ours].join("\n"), dir)).toBe(
+      true,
+    );
+    // Firefox and Safari frames: fn@url:line:col.
+    expect(
+      calledFromBundle(
+        [
+          `error@${dir}index-abc.js:1:100`,
+          `onMessage@${dir}index-abc.js:1:500`,
+        ].join("\n"),
+        dir,
+      ),
+    ).toBe(true);
+  });
+
+  // Only the negative case runs here: Vitest reports frames as file paths,
+  // where a browser gives the bundle URLs calledFromBundle matches.
+  it("does not forward console calls from outside the bundle", async () => {
+    page({ faroCollectorUrl: "https://faro.example/collect/k" });
+    await initTelemetry();
+    console.error("third party");
+    console.warn("third party");
+    expect(pushLog).not.toHaveBeenCalled();
+  });
+
+  it("drops exceptions thrown entirely inside other scripts", async () => {
+    const beforeSend = await beforeSendFor();
+    const exception = (filenames: string[]) => ({
+      type: "exception",
+      payload: {
+        type: "TypeError",
+        value: "Failed to fetch",
+        stacktrace: {
+          frames: filenames.map((filename) => ({ filename, function: "f" })),
+        },
       },
+      meta: {},
     });
+    expect(beforeSend(exception(["https://btloader.com/tag"]))).toBeNull();
+    expect(
+      beforeSend(
+        exception(["https://btloader.com/tag", `${BUNDLE_DIR}index-abc.js`]),
+      ),
+    ).not.toBeNull();
+    // No frames at all: no telling whose, so it goes out.
+    expect(beforeSend(exception([]))).not.toBeNull();
+  });
+
+  it("ignores cross-origin script errors, ResizeObserver notices and bare network failures", async () => {
+    page({ faroCollectorUrl: "https://faro.example/collect/k" });
+    await initTelemetry();
+    const { ignoreErrors } = initializeFaro.mock.calls[0][0] as {
+      ignoreErrors: RegExp[];
+    };
+    // What faro-core's isErrorIgnored matches: message, name and stack.
+    const ignored = (message: string, name = "Error") =>
+      ignoreErrors.some((pattern) =>
+        pattern.test(`${message} ${name} ${name}: ${message}\n    at f`),
+      );
+    expect(ignored("Script error.")).toBe(true);
+    expect(
+      ignored("ResizeObserver loop completed with undelivered notifications."),
+    ).toBe(true);
+    expect(ignored("Failed to fetch", "TypeError")).toBe(true);
+    expect(ignored("Load failed", "TypeError")).toBe(true);
+    expect(
+      ignored("NetworkError when attempting to fetch resource.", "TypeError"),
+    ).toBe(true);
+    expect(ignored("Script error in player_actions")).toBe(false);
+    // A chunk that failed to load is ours and worth knowing about.
+    expect(
+      ignored(
+        "Failed to fetch dynamically imported module: https://cdn/x.js",
+        "TypeError",
+      ),
+    ).toBe(false);
+  });
+
+  it("sends console errors from every prod session and warnings from 1%", async () => {
+    const beforeSend = await beforeSendFor();
+    const { outside } = sessionIds();
+    const log = (level: string) => ({
+      type: "log",
+      payload: { level, message: `a ${level}` },
+      meta: { session: { id: outside } },
+    });
+    expect(beforeSend(log("error"))).not.toBeNull();
+    expect(beforeSend(log("warn"))).toBeNull();
+  });
+
+  it("caps repeats of one message, digits aside, and the page's total", async () => {
+    const beforeSend = await beforeSendFor();
+    const log = (message: string) => ({
+      type: "log",
+      payload: { level: "error", message },
+      meta: {},
+    });
+    for (let turn = 0; turn < 5; turn++) {
+      expect(beforeSend(log(`got wrong turn ${turn}`))).not.toBeNull();
+    }
+    expect(beforeSend(log("got wrong turn 99"))).toBeNull();
+
+    for (let i = 0; i < 195; i++) {
+      expect(
+        beforeSend(
+          log(
+            `distinct ${String.fromCharCode(65 + (i % 26))}${String.fromCharCode(65 + Math.floor(i / 26))}`,
+          ),
+        ),
+      ).not.toBeNull();
+    }
+    expect(beforeSend(log("one too many"))).toBeNull();
   });
 
   it("samples a session id the same way every time, at about the rate", () => {

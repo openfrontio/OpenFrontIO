@@ -96,7 +96,7 @@ class MapAspectRatioCache {
           onLoaded();
         }
       })
-      .catch((e) => console.error(`Failed to load manifest for ${mapType}`, e))
+      .catch((e) => console.warn(`Failed to load manifest for ${mapType}`, e))
       .finally(() => this.pending.delete(mapType));
   }
 }
