@@ -76,6 +76,7 @@ export class UnitDisplay extends LitElement implements Controller {
   }
 
   disconnectedCallback() {
+    this.keyboardLayoutRequestId++;
     if (navigator.keyboard) {
       navigator.keyboard.removeEventListener(
         "layoutchange",
