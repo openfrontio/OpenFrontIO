@@ -290,6 +290,12 @@ export class CosmeticPreviewRenderer {
       this.territoryPass.setTeamMode(isPngSkin && rgbColors.length > 0);
       this.updatePalette(rgbColors[0], rgbColors[1]);
     } else {
+      // Effects play over plain territory. Clear any skin or pattern a
+      // previous cosmetic left on this renderer: the store builds a fresh one
+      // per preview, but a reused renderer (the cosmetic-preview package's
+      // show()) would otherwise draw the effect over the last skin.
+      this.territoryPass.setDecoration(undefined, undefined);
+      this.territoryPass.setTeamMode(false);
       this.updatePalette();
     }
     this.structurePass.setHighlightOwner(config.mode === "BUILDING" ? 1 : 0);
