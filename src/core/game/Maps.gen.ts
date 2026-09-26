@@ -1979,7 +1979,7 @@ export const maps: readonly MapInfo[] = [
     type: GameMapType.Tokyo,
     translationKey: "map.tokyo",
     categories: ["asia"],
-    multiplayerFrequency: 20,
+    multiplayerFrequency: 3,
     ffaFrequency: -1,
     teamFrequency: -1,
     specialFrequency: -1,
