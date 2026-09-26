@@ -1,4 +1,5 @@
 import { render } from "lit";
+import type { MockInstance } from "vitest";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const presenceMocks = vi.hoisted(() => ({
@@ -74,10 +75,8 @@ describe("JoinLobbyModal lobby start alert default", () => {
     return container.querySelector("button")!;
   }
 
-  function showMessageEvents(spy: ReturnType<typeof vi.spyOn>) {
-    return spy.mock.calls.filter(
-      ([event]) => (event as Event).type === "show-message",
-    );
+  function showMessageEvents(spy: MockInstance<Window["dispatchEvent"]>) {
+    return spy.mock.calls.filter(([event]) => event.type === "show-message");
   }
 
   it("keeps the existing off default without preloading", () => {
