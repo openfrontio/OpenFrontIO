@@ -387,6 +387,7 @@ export function resolveKeybindLabel(
   layoutMap: Map<string, string> | null,
 ): string {
   const savedValue = typeof entry === "string" ? entry : entry?.value;
+  if (savedValue === "Null") return "";
   const hasValidSavedValue =
     typeof savedValue === "string" ||
     (Array.isArray(savedValue) && typeof savedValue[0] === "string");
