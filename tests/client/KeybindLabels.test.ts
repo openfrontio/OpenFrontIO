@@ -18,10 +18,10 @@ describe("resolveKeybindLabel", () => {
     ).toBe("&");
   });
 
-  it("falls back to the saved key for malformed saved values", () => {
+  it("falls back to the default code for malformed saved values", () => {
     expect(
       resolveKeybindLabel({ value: [123], key: "1" }, "Digit2", null),
-    ).toBe("1");
+    ).toBe("2");
   });
 });
 
@@ -51,10 +51,22 @@ describe("HelpModal keyboard layout refresh", () => {
     const keyboard = new EventTarget() as EventTarget & {
       getLayoutMap: ReturnType<typeof vi.fn>;
     };
+    let resolveFirst!: (map: Map<string, string>) => void;
+    let resolveSecond!: (map: Map<string, string>) => void;
     keyboard.getLayoutMap = vi
       .fn()
-      .mockResolvedValueOnce(firstMap)
-      .mockResolvedValueOnce(secondMap);
+      .mockImplementationOnce(
+        () =>
+          new Promise<Map<string, string>>((resolve) => {
+            resolveFirst = resolve;
+          }),
+      )
+      .mockImplementationOnce(
+        () =>
+          new Promise<Map<string, string>>((resolve) => {
+            resolveSecond = resolve;
+          }),
+      );
 
     Object.defineProperty(navigator, "keyboard", {
       configurable: true,
@@ -68,18 +80,29 @@ describe("HelpModal keyboard layout refresh", () => {
       layoutMap: Map<string, string> | null;
     };
     document.body.appendChild(modal);
-    await modal.updateComplete;
-    await Promise.resolve();
-    await modal.updateComplete;
 
-    expect(state.layoutMap).toBe(firstMap);
+    await vi.waitFor(() => {
+      expect(keyboard.getLayoutMap).toHaveBeenCalledTimes(1);
+    });
+
+    resolveFirst(firstMap);
+    await vi.waitFor(() => {
+      expect(state.layoutMap).toBe(firstMap);
+    });
 
     keyboard.dispatchEvent(new Event("layoutchange"));
-    await Promise.resolve();
-    await modal.updateComplete;
+    await vi.waitFor(() => {
+      expect(keyboard.getLayoutMap).toHaveBeenCalledTimes(2);
+    });
 
+    resolveSecond(secondMap);
+    await vi.waitFor(() => {
+      expect(state.layoutMap).toBe(secondMap);
+    });
+
+    resolveFirst(new Map([["KeyQ", "stale"]]));
+    await Promise.resolve();
     expect(state.layoutMap).toBe(secondMap);
-    expect(keyboard.getLayoutMap).toHaveBeenCalledTimes(2);
 
     modal.remove();
     keyboard.dispatchEvent(new Event("layoutchange"));
