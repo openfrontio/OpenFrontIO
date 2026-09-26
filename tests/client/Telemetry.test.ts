@@ -44,16 +44,23 @@ async function beforeSendFor(
     .beforeSend;
 }
 
-// Session ids on either side of the 1% prod cut.
-function sessionIds(): { inside: string; outside: string } {
+// Session ids in each prod band: inside the 1% that sends everything, in
+// the 10% that sends errors only, and outside both.
+function sessionIds(): { inside: string; errorsOnly: string; outside: string } {
   let inside: string | undefined;
+  let errorsOnly: string | undefined;
   let outside: string | undefined;
-  for (let i = 0; inside === undefined || outside === undefined; i++) {
+  for (
+    let i = 0;
+    inside === undefined || errorsOnly === undefined || outside === undefined;
+    i++
+  ) {
     const id = `session${i}`;
     if (isSessionSampled(id, 0.01)) inside ??= id;
+    else if (isSessionSampled(id, 0.1)) errorsOnly ??= id;
     else outside ??= id;
   }
-  return { inside, outside };
+  return { inside, errorsOnly, outside };
 }
 
 function page(extra: Record<string, unknown> = {}) {
@@ -174,7 +181,7 @@ describe("Telemetry", () => {
           frames: filenames.map((filename) => ({ filename, function: "f" })),
         },
       },
-      meta: {},
+      meta: { session: { id: sessionIds().inside } },
     });
     expect(beforeSend(exception(["https://btloader.com/tag"]))).toBeNull();
     expect(
@@ -216,24 +223,28 @@ describe("Telemetry", () => {
     ).toBe(false);
   });
 
-  it("sends console errors from every prod session and warnings from 1%", async () => {
+  it("sends console errors from 10% of prod sessions and warnings from 1%", async () => {
     const beforeSend = await beforeSendFor();
-    const { outside } = sessionIds();
-    const log = (level: string) => ({
+    const { inside, errorsOnly, outside } = sessionIds();
+    const log = (level: string, session: string) => ({
       type: "log",
       payload: { level, message: `a ${level}` },
-      meta: { session: { id: outside } },
+      meta: { session: { id: session } },
     });
-    expect(beforeSend(log("error"))).not.toBeNull();
-    expect(beforeSend(log("warn"))).toBeNull();
+    expect(beforeSend(log("error", inside))).not.toBeNull();
+    expect(beforeSend(log("warn", inside))).not.toBeNull();
+    expect(beforeSend(log("error", errorsOnly))).not.toBeNull();
+    expect(beforeSend(log("warn", errorsOnly))).toBeNull();
+    expect(beforeSend(log("error", outside))).toBeNull();
   });
 
   it("caps repeats of one message, digits aside, and the page's total", async () => {
     const beforeSend = await beforeSendFor();
+    const session = { id: sessionIds().inside };
     const log = (message: string) => ({
       type: "log",
       payload: { level: "error", message },
-      meta: {},
+      meta: { session },
     });
     for (let turn = 0; turn < 5; turn++) {
       expect(beforeSend(log(`got wrong turn ${turn}`))).not.toBeNull();
@@ -264,12 +275,11 @@ describe("Telemetry", () => {
     expect(isSessionSampled("anything", 1)).toBe(true);
   });
 
-  // Faro would drop an unsampled session's exceptions along with the rest,
-  // so its own sampling is off and prod sessions outside the 1% still send
-  // exceptions, and only exceptions.
-  it("sends exceptions from every prod session and the rest from 1%", async () => {
+  // Faro samples whole sessions, so its own sampling is off: prod sessions
+  // in the 10% but outside the 1% send exceptions, and only exceptions.
+  it("sends exceptions from 10% of prod sessions and the rest from 1%", async () => {
     const beforeSend = await beforeSendFor();
-    const { inside, outside } = sessionIds();
+    const { inside, errorsOnly, outside } = sessionIds();
     const signal = (type: string, session: string) => ({
       type,
       payload: {},
@@ -278,9 +288,12 @@ describe("Telemetry", () => {
 
     for (const type of ["measurement", "log", "event"]) {
       expect(beforeSend(signal(type, inside))).not.toBeNull();
+      expect(beforeSend(signal(type, errorsOnly))).toBeNull();
       expect(beforeSend(signal(type, outside))).toBeNull();
     }
-    expect(beforeSend(signal("exception", outside))).not.toBeNull();
+    expect(beforeSend(signal("exception", inside))).not.toBeNull();
+    expect(beforeSend(signal("exception", errorsOnly))).not.toBeNull();
+    expect(beforeSend(signal("exception", outside))).toBeNull();
   });
 
   it("sends everything from every session on staging", async () => {
@@ -299,10 +312,12 @@ describe("Telemetry", () => {
 
   it("drops the user agent and brand list from the browser meta", async () => {
     const beforeSend = await beforeSendFor();
+    const session = { id: sessionIds().inside };
     const item = {
       type: "exception",
       payload: {},
       meta: {
+        session,
         browser: {
           name: "Chrome",
           version: "151",
@@ -317,6 +332,7 @@ describe("Telemetry", () => {
       type: "exception",
       payload: {},
       meta: {
+        session,
         browser: {
           name: "Chrome",
           version: "151",
