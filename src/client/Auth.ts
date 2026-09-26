@@ -169,7 +169,7 @@ export async function linkGoogle(): Promise<boolean> {
     window.location.href = url;
     return true;
   } catch (e) {
-    console.error("Failed to start Google link", e);
+    console.warn("Failed to start Google link", e);
     return false;
   }
 }
@@ -206,7 +206,7 @@ export async function linkSteam(): Promise<boolean> {
     window.location.href = url;
     return true;
   } catch (e) {
-    console.error("Failed to start Steam link", e);
+    console.warn("Failed to start Steam link", e);
     return false;
   }
 }
@@ -229,7 +229,7 @@ export async function tempTokenLogin(token: string): Promise<TokenLoginResult> {
       },
     );
   } catch (e) {
-    console.error("Token login request failed", e);
+    console.warn("Token login request failed", e);
     return { status: "retry" };
   }
   if (response.status === 400) {
@@ -254,7 +254,7 @@ export async function tempTokenLogin(token: string): Promise<TokenLoginResult> {
     return { status: "failed", code: "invalid" };
   }
   if (response.status !== 200) {
-    console.error("Token login failed", response);
+    console.warn("Token login failed", response);
     return { status: "retry" };
   }
   const body = await response.json().catch(() => null);
@@ -284,13 +284,13 @@ export async function logOut(allSessions: boolean = false): Promise<boolean> {
     );
 
     if (response.ok === false) {
-      console.error("Logout failed", response);
+      console.warn("Logout failed", response);
       return false;
     }
 
     return true;
   } catch (e) {
-    console.error("Logout failed", e);
+    console.warn("Logout failed", e);
     return false;
   } finally {
     clearLocalSession();
@@ -523,7 +523,7 @@ async function doRefreshJwt(): Promise<void> {
       signal: AbortSignal.timeout(10_000),
     });
     if (response.status !== 200) {
-      console.error("Refresh failed", response);
+      console.warn("Refresh failed", response);
       logOut();
       return;
     }
@@ -533,7 +533,7 @@ async function doRefreshJwt(): Promise<void> {
     console.log("Refresh succeeded");
     __jwt = jwt;
   } catch (e) {
-    console.error("Refresh failed", e);
+    console.warn("Refresh failed", e);
     // if server unreachable, just clear jwt
     __jwt = null;
     return;
@@ -598,7 +598,7 @@ async function doCrazyGamesLogin(token: string): Promise<void> {
     console.log("CrazyGames login succeeded");
     __jwt = jwt;
   } catch (e) {
-    console.error("CrazyGames login failed", e);
+    console.warn("CrazyGames login failed", e);
     __jwt = null;
   }
 }
@@ -649,7 +649,7 @@ async function doSteamLogin(ticket: string): Promise<void> {
     __jwt = jwt;
     setSessionState({ status: "signed-in" });
   } catch (e) {
-    console.error("Steam login failed", e);
+    console.warn("Steam login failed", e);
     __jwt = null;
     setSessionState({ status: "signed-out", reason: "network" });
   }
@@ -747,7 +747,7 @@ export async function sendMagicLink(email: string): Promise<boolean> {
       return false;
     }
   } catch (error) {
-    console.error("Error sending recovery email:", error);
+    console.warn("Error sending recovery email:", error);
     return false;
   }
 }

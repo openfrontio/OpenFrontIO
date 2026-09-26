@@ -454,7 +454,7 @@ export class Transport {
       workerPath = ClientEnv.gameWorkerPath(this.lobbyConfig.gameID);
     } catch (e) {
       if (!(e instanceof NoServerError)) throw e;
-      console.error("No server for game", this.lobbyConfig.gameID, e);
+      console.warn("No server for game", this.lobbyConfig.gameID, e);
       this.handleConnectionRefused(CloseReason.Unknown);
       return;
     }
@@ -654,7 +654,7 @@ export class Transport {
       return;
     }
     if (this.reconnectAttempts >= Transport.RECONNECT_MAX_ATTEMPTS) {
-      console.error(
+      console.warn(
         `giving up after ${this.reconnectAttempts} reconnect attempts`,
       );
       this.connectionRefused = true;

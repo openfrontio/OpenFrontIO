@@ -170,7 +170,7 @@ export class LangSelector extends LitElement {
       this.languageCache.set(lang, flat);
       return flat;
     } catch (err) {
-      console.error(`Failed to load language ${lang}:`, err);
+      console.warn(`Failed to load language ${lang}:`, err);
       return {};
     }
   }
@@ -231,7 +231,7 @@ export class LangSelector extends LitElement {
 
       this.languageList = finalList;
     } catch (err) {
-      console.error("Failed to load language list:", err);
+      console.warn("Failed to load language list:", err);
     }
   }
 
