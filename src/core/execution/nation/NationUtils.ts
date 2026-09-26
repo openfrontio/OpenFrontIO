@@ -1,7 +1,16 @@
-import { Cell, Game, Player, Structures, UnitType } from "../../game/Game";
+import {
+  Cell,
+  Difficulty,
+  Game,
+  GameMode,
+  Player,
+  PlayerType,
+  Structures,
+  UnitType,
+} from "../../game/Game";
 import { TileRef } from "../../game/GameMap";
 import { PseudoRandom } from "../../PseudoRandom";
-import { calculateBoundingBox } from "../../Util";
+import { assertNever, calculateBoundingBox } from "../../Util";
 
 export function randTerritoryTileArray(
   random: PseudoRandom,
@@ -101,4 +110,49 @@ export function findJuiciestTarget(
     }
   }
   return best;
+}
+
+// How many times the runner-up's land the leader must own to count as a
+// runaway leader. Easy nations never notice one.
+function runawayLeadFactor(difficulty: Difficulty): number | null {
+  switch (difficulty) {
+    case Difficulty.Easy:
+      return null;
+    case Difficulty.Medium:
+      return 3;
+    case Difficulty.Hard:
+      return 2;
+    case Difficulty.Impossible:
+      return 1.5;
+    default:
+      assertNever(difficulty);
+  }
+}
+
+// The FFA player (not a bot) owning the most land, if it is far enough ahead
+// of the runner-up that nations should stop helping it and start pressuring it
+export function findRunawayLeader(game: Game): Player | null {
+  const { difficulty, gameMode } = game.config().gameConfig();
+  if (gameMode !== GameMode.FFA) return null;
+  const factor = runawayLeadFactor(difficulty);
+  if (factor === null) return null;
+
+  let leader: Player | null = null;
+  let runnerUp: Player | null = null;
+  for (const p of game.players()) {
+    if (p.type() === PlayerType.Bot) continue;
+    if (leader === null || p.numTilesOwned() > leader.numTilesOwned()) {
+      runnerUp = leader;
+      leader = p;
+    } else if (
+      runnerUp === null ||
+      p.numTilesOwned() > runnerUp.numTilesOwned()
+    ) {
+      runnerUp = p;
+    }
+  }
+  if (leader === null || runnerUp === null) return null;
+  return leader.numTilesOwned() >= runnerUp.numTilesOwned() * factor
+    ? leader
+    : null;
 }

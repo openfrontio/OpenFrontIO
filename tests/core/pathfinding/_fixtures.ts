@@ -71,7 +71,10 @@ export function createIslandMap(): TestMapData {
 }
 
 // Create Game from test map data (computes shoreline bits)
-export function createGame(data: TestMapData): Game {
+export function createGame(
+  data: TestMapData,
+  configOverrides: Partial<GameConfig> = {},
+): Game {
   const { width, height, grid } = data;
 
   // Convert string grid to terrain bytes
@@ -145,6 +148,7 @@ export function createGame(data: TestMapData): Game {
     instantBuild: false,
     disableNavMesh: false,
     randomSpawn: false,
+    ...configOverrides,
   };
   const config = new TestConfig(gameConfig, new UserSettings(), false);
 
