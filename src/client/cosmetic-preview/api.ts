@@ -18,7 +18,11 @@ export type CosmeticPreviewRequest =
     }
   | {
       type: "skin";
-      /** https image URL; its host must allow CORS (it becomes a texture). */
+      /**
+       * https image URL; its host must allow CORS (it becomes a texture).
+       * The viewer's browser fetches it, so hosts should pass only URLs
+       * they trust, such as the catalogue's own CDN.
+       */
       url: string;
     }
   | {
@@ -39,7 +43,10 @@ export interface CosmeticPreviewHandle {
   show(request: CosmeticPreviewRequest): CosmeticPreviewResult;
   zoomIn(): void;
   zoomOut(): void;
-  /** Stop rendering and release the WebGL context. */
+  /**
+   * Stop rendering and release the WebGL context. Final: afterwards show()
+   * returns an error and the host element is left alone.
+   */
   destroy(): void;
 }
 

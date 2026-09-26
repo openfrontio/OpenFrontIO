@@ -29,23 +29,38 @@ function mountCosmeticPreview(
     "cosmetic-render-canvas",
   ) as CosmeticRenderCanvas;
   canvas.className = "block h-full w-full";
+  let mounted = false;
+  // Terminal: reattaching the canvas would start a new WebGL context and
+  // clear whatever the host has put in `host` since.
+  let destroyed = false;
 
   const show = (next: CosmeticPreviewRequest): CosmeticPreviewResult => {
+    if (destroyed) return { ok: false, error: "This preview was destroyed." };
     const parsed = parsePreviewRequest(next);
     if (!parsed.ok) return parsed;
     canvas.resolved = toResolvedCosmetic(parsed.request);
     // Mount on the first valid request: the component starts WebGL when it
     // connects, and has nothing to draw until it has a cosmetic.
-    if (!canvas.isConnected) host.replaceChildren(canvas);
+    if (!mounted) {
+      host.replaceChildren(canvas);
+      mounted = true;
+    }
     return { ok: true };
   };
 
   const handle: CosmeticPreviewHandle = {
     show,
-    zoomIn: () => canvas.zoomIn(),
-    zoomOut: () => canvas.zoomOut(),
-    // Disconnecting is what releases the context (disconnectedCallback).
-    destroy: () => canvas.remove(),
+    zoomIn: () => {
+      if (!destroyed) canvas.zoomIn();
+    },
+    zoomOut: () => {
+      if (!destroyed) canvas.zoomOut();
+    },
+    destroy: () => {
+      destroyed = true;
+      // Disconnecting is what releases the context (disconnectedCallback).
+      canvas.remove();
+    },
   };
   return { handle, result: show(request) };
 }
