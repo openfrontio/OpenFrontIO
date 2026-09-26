@@ -18,10 +18,10 @@ describe("resolveKeybindLabel", () => {
     ).toBe("&");
   });
 
-  it("falls back to the default code for malformed saved values", () => {
+  it("falls back to the saved key for malformed saved values", () => {
     expect(
       resolveKeybindLabel({ value: [123], key: "1" }, "Digit2", null),
-    ).toBe("2");
+    ).toBe("1");
   });
 });
 
@@ -70,11 +70,13 @@ describe("HelpModal keyboard layout refresh", () => {
     document.body.appendChild(modal);
     await modal.updateComplete;
     await Promise.resolve();
+    await modal.updateComplete;
 
     expect(state.layoutMap).toBe(firstMap);
 
     keyboard.dispatchEvent(new Event("layoutchange"));
     await Promise.resolve();
+    await modal.updateComplete;
 
     expect(state.layoutMap).toBe(secondMap);
     expect(keyboard.getLayoutMap).toHaveBeenCalledTimes(2);
