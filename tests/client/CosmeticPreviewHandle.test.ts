@@ -1,7 +1,10 @@
 // The handle mountCosmeticPreview returns, with the WebGL component swapped
 // for a stub: the lifecycle is what is under test, not rendering.
 
-const zoomIn = vi.fn();
+import { previewModule } from "../../src/client/cosmetic-preview/preview";
+
+// vi.mock is hoisted above the import, so what it uses must be hoisted too.
+const { zoomIn } = vi.hoisted(() => ({ zoomIn: vi.fn() }));
 
 vi.mock("../../src/client/components/cosmetics/CosmeticRenderCanvas", () => {
   class StubRenderCanvas extends HTMLElement {
@@ -13,8 +16,6 @@ vi.mock("../../src/client/components/cosmetics/CosmeticRenderCanvas", () => {
   return {};
 });
 
-const { previewModule } =
-  await import("../../src/client/cosmetic-preview/preview");
 const { mountCosmeticPreview } = previewModule;
 
 // An 8x8 pattern at scale 1 with diagonal stripes.
