@@ -93,6 +93,11 @@ export class SettingsModal extends LitElement implements Controller {
     }
   };
 
+  /** Whether the menu is showing. */
+  get open(): boolean {
+    return this.isVisible;
+  }
+
   public openModal() {
     this.isVisible = true;
     this.requestUpdate();

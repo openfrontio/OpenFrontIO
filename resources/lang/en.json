@@ -1846,6 +1846,37 @@
     "game_speed": "Game speed",
     "replay_speed": "Replay speed"
   },
+  "replay_viewer": {
+    "bot_difficulty": "Bot Difficulty",
+    "cancel": "Cancel",
+    "continue_from_here": "Continue Game from Here",
+    "continue_modal_desc": "Take over and continue playing as a singleplayer match from this moment.",
+    "continue_modal_title": "Play from this Time",
+    "following": "Following {name}",
+    "game_time": "Game Time",
+    "load_failed": "This replay could not be loaded.",
+    "loading": "Loading replay…",
+    "no_players_found": "No players found",
+    "partial": "Only the first {time} of this game can be watched.",
+    "pause": "Pause",
+    "play": "Play",
+    "play_now": "Play Now",
+    "player_stats_control": "{percent} map control",
+    "player_stats_troops": "{troops} troops",
+    "preparing_game": "Preparing game state…",
+    "processing": "Preparing this replay…",
+    "processing_fetching": "Fetching the game record",
+    "processing_simulating": "Replaying the game: {percent}%",
+    "search_players": "Search players…",
+    "select_player": "Choose Player to Control",
+    "timeline": "Replay timeline",
+    "unavailable_desync": "This game doesn't replay correctly on this version of OpenFront.",
+    "unavailable_failed": "Processing this game failed.",
+    "unavailable_not_found": "This game could not be found.",
+    "unavailable_other_build": "This game was played on another version of OpenFront.",
+    "unavailable_unreachable": "The game could not be downloaded. Check your connection and try again.",
+    "watch_classic": "Watch the old replay instead"
+  },
   "rewards_modal": {
     "title": "Rewards"
   },
@@ -1864,10 +1895,16 @@
     "title_with_name": "Send Troops to {name}"
   },
   "single_modal": {
+    "confirm_discard": "Are you sure you want to discard your saved singleplayer game?",
+    "discard_game": "Discard Save",
     "max_timer_invalid": "Please enter a valid max timer value (1-120 minutes)",
     "medals_earned": "Medals",
     "medals_of_maps": "out of {total} maps",
     "options_changed_no_achievements": "Custom settings – achievements disabled",
+    "resume": "Resume",
+    "resume_desc": "You have an unfinished singleplayer match on map {map} ({time}).",
+    "resume_failed": "Failed to resume saved game.",
+    "resume_game": "Resume In-Progress Game",
     "sign_in_for_achievements": "Sign in for achievements",
     "toggle_achievements": "Toggle achievements"
   },
@@ -2391,6 +2428,7 @@
     "verified_use_hint": "Play under your verified account name"
   },
   "win_modal": {
+    "buy_on_steam": "Buy OpenFront on Steam!",
     "died": "You died",
     "discord_description": "Connect with players, discover new features, and win prizes!",
     "exit": "Exit Game",

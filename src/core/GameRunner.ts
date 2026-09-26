@@ -25,7 +25,11 @@ import {
 import { createGame } from "./game/GameImpl";
 import { TileRef } from "./game/GameMap";
 import { GameMapLoader } from "./game/GameMapLoader";
-import { ErrorUpdate, GameUpdateViewData } from "./game/GameUpdates";
+import {
+  ErrorUpdate,
+  GameUpdateType,
+  GameUpdateViewData,
+} from "./game/GameUpdates";
 import { createNationsForGame } from "./game/NationCreation";
 import { loadTerrainMap as loadGameMap } from "./game/TerrainMapLoader";
 import { PseudoRandom } from "./PseudoRandom";
@@ -125,7 +129,7 @@ export async function createGameRunnerFromSnapshot(
     teamGameSpawnAreas: gameMap.teamGameSpawnAreas,
   });
   // No init(): the snapshot already holds every execution init() adds.
-  return new GameRunner(
+  const gr = new GameRunner(
     game,
     new Executor(
       game,
@@ -135,12 +139,17 @@ export async function createGameRunnerFromSnapshot(
     ),
     callBack,
   );
+  if (!game.inSpawnPhase()) {
+    gr.setPendingSpawnPhaseEnd();
+  }
+  return gr;
 }
 
 export class GameRunner {
   private turns: Turn[] = [];
   private currTurn = 0;
   private isExecuting = false;
+  private pendingSpawnPhaseEnd = false;
 
   private playerViewData: Record<PlayerID, NameViewData> = {};
   // Name placements are recomputed periodically; a runner that starts
@@ -152,6 +161,10 @@ export class GameRunner {
     private execManager: Executor,
     private callBack: (gu: GameUpdateViewData | ErrorUpdate) => void,
   ) {}
+
+  public setPendingSpawnPhaseEnd(): void {
+    this.pendingSpawnPhaseEnd = true;
+  }
 
   /**
    * Serializes the simulation at the current tick boundary. Turns that were
@@ -232,6 +245,16 @@ export class GameRunner {
       }
       this.isExecuting = false;
       return false;
+    }
+
+    if (this.pendingSpawnPhaseEnd) {
+      this.pendingSpawnPhaseEnd = false;
+      if (updates[GameUpdateType.SpawnPhaseEnd].length === 0) {
+        updates[GameUpdateType.SpawnPhaseEnd].push({
+          type: GameUpdateType.SpawnPhaseEnd,
+          startTick: this.game.startTick() ?? 0,
+        });
+      }
     }
 
     // Track whether placements were recomputed this tick — the record is

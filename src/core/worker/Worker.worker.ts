@@ -332,10 +332,13 @@ ctx.addEventListener("message", async (e: MessageEvent<MainThreadMessage>) => {
         throw new Error("Game runner not initialized");
       }
       let snapshot: Uint8Array | null = null;
+      let tick = 0;
       try {
         // Messages are handled between drain batches, so this is always a
         // tick boundary.
-        snapshot = (await gameRunner).snapshot(message.gitCommit);
+        const runner = await gameRunner;
+        snapshot = runner.snapshot(message.gitCommit);
+        tick = runner.game?.ticks() ?? 0;
       } catch (error) {
         console.error("Failed to snapshot game:", error);
       }
@@ -344,6 +347,7 @@ ctx.addEventListener("message", async (e: MessageEvent<MainThreadMessage>) => {
           type: "snapshot_result",
           id: message.id,
           snapshot,
+          tick,
         } as SnapshotResultMessage,
         snapshot ? [snapshot.buffer] : [],
       );

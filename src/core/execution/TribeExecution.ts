@@ -1,4 +1,4 @@
-﻿import { z } from "zod";
+import { z } from "zod";
 import { Execution, Game, Player, Structures } from "../game/Game";
 import { PseudoRandom } from "../PseudoRandom";
 import { execSnapshotType } from "../snapshot/ExecutionSnapshot";
@@ -38,6 +38,10 @@ export class TribeExecution implements Execution {
     this.triggerRatio = this.random.nextInt(50, 60) / 100;
     this.reserveRatio = this.random.nextInt(30, 40) / 100;
     this.expandRatio = this.random.nextInt(10, 20) / 100;
+  }
+
+  playerID(): string {
+    return this.tribe.id();
   }
 
   activeDuringSpawnPhase(): boolean {

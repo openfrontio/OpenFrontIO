@@ -156,6 +156,7 @@ export interface SnapshotResultMessage extends BaseWorkerMessage {
   type: "snapshot_result";
   /** Uncompressed; null if the snapshot failed (see the worker log). */
   snapshot: Uint8Array | null;
+  tick: number;
 }
 
 // Union types for type safety
