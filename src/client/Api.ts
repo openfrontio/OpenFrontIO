@@ -269,7 +269,10 @@ async function requestUserMe(): Promise<{
     // session changed (logout, account switch) while the request was in
     // flight: a stale response must not reactivate the old player's scope.
     if (isSessionActive(claims.sub)) {
-      UserSettings.setPlayerId(result.data.player.publicId);
+      const publicId = result.data.player.publicId;
+      const persistentId = claims.sub;
+      localStorage.setItem("cached_public_id_" + persistentId, publicId);
+      UserSettings.setPlayerId(publicId);
     }
     return { profile: result.data, aborted: false };
   } catch (e) {

@@ -324,7 +324,6 @@ export function clearLocalSession(): void {
   // Switch cosmetics back to the logged-out scope. The player's own
   // selections stay stored under their publicId and are restored on the
   // next login (#4955).
-  UserSettings.setPlayerId(null);
   // Keep the desktop bar's session state in sync: without this, a 401-driven
   // logOut() (or any other clearLocalSession caller) leaves __sessionState at
   // "signed-in" with no JWT behind it, so the bar hides and multiplayer
@@ -796,16 +795,28 @@ function getPersistentIDFromLocalStorage(): string {
 function updateUserSettingsForJwt(jwt: string | null) {
   if (!jwt) {
     UserSettings.setPlayerId(null);
-  } else {
-    try {
-      const payload = decodeJwt(jwt);
-      if (payload.sub) {
-        UserSettings.setPlayerId(base64urlToUuid(payload.sub));
+    return;
+  }
+  try {
+    const payload = decodeJwt(jwt);
+    const result = TokenPayloadSchema.safeParse(payload);
+    if (!result.success) {
+      UserSettings.setPlayerId(null);
+      return;
+    }
+    const persistentId = result.data.sub;
+    const publicId = result.data.publicId;
+    if (publicId) {
+      UserSettings.setPlayerId(publicId);
+    } else {
+      const cached = localStorage.getItem("cached_public_id_" + persistentId);
+      if (cached) {
+        UserSettings.setPlayerId(cached);
       } else {
         UserSettings.setPlayerId(null);
       }
-    } catch {
-      UserSettings.setPlayerId(null);
     }
+  } catch {
+    UserSettings.setPlayerId(null);
   }
 }
