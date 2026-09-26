@@ -1,0 +1,269 @@
+{
+  "id": "Paris",
+  "name": "Paris",
+  "translation_key": "map.paris",
+  "categories": ["europe", "new"],
+  "multiplayer_frequency": 0,
+  "nations": [
+    {
+      "coordinates": [841, 634],
+      "name": "Paris 1er",
+      "flag": "fr"
+    },
+    {
+      "coordinates": [869, 596],
+      "name": "Paris 2e",
+      "flag": "fr"
+    },
+    {
+      "coordinates": [943, 650],
+      "name": "Le Marais",
+      "flag": "fr"
+    },
+    {
+      "coordinates": [891, 692],
+      "name": "Île de la Cité",
+      "flag": "fr"
+    },
+    {
+      "coordinates": [903, 751],
+      "name": "Quartier Latin",
+      "flag": "fr"
+    },
+    {
+      "coordinates": [826, 721],
+      "name": "Saint-Germain",
+      "flag": "fr"
+    },
+    {
+      "coordinates": [738, 675],
+      "name": "Tour Eiffel",
+      "flag": "fr"
+    },
+    {
+      "coordinates": [739, 567],
+      "name": "Champs-Élysées",
+      "flag": "fr"
+    },
+    {
+      "coordinates": [846, 539],
+      "name": "Opéra",
+      "flag": "fr"
+    },
+    {
+      "coordinates": [946, 545],
+      "name": "Canal Saint-Martin",
+      "flag": "fr"
+    },
+    {
+      "coordinates": [1029, 656],
+      "name": "Bastille",
+      "flag": "fr"
+    },
+    {
+      "coordinates": [1071, 780],
+      "name": "Bercy",
+      "flag": "fr"
+    },
+    {
+      "coordinates": [953, 856],
+      "name": "Paris 13e",
+      "flag": "fr"
+    },
+    {
+      "coordinates": [800, 826],
+      "name": "Montparnasse",
+      "flag": "fr"
+    },
+    {
+      "coordinates": [656, 779],
+      "name": "Paris 15e",
+      "flag": "fr"
+    },
+    {
+      "coordinates": [583, 630],
+      "name": "Passy",
+      "flag": "fr"
+    },
+    {
+      "coordinates": [714, 472],
+      "name": "Batignolles",
+      "flag": "fr"
+    },
+    {
+      "coordinates": [870, 476],
+      "name": "Montmartre",
+      "flag": "fr"
+    },
+    {
+      "coordinates": [1049, 474],
+      "name": "Buttes-Chaumont",
+      "flag": "fr"
+    },
+    {
+      "coordinates": [1120, 628],
+      "name": "Belleville",
+      "flag": "fr"
+    },
+    {
+      "coordinates": [932, 155],
+      "name": "Saint-Denis",
+      "flag": "fr"
+    },
+    {
+      "coordinates": [830, 313],
+      "name": "Saint-Ouen",
+      "flag": "fr"
+    },
+    {
+      "coordinates": [1038, 295],
+      "name": "Aubervilliers",
+      "flag": "fr"
+    },
+    {
+      "coordinates": [1154, 426],
+      "name": "Pantin",
+      "flag": "fr"
+    },
+    {
+      "coordinates": [1322, 625],
+      "name": "Montreuil",
+      "flag": "fr"
+    },
+    {
+      "coordinates": [1282, 732],
+      "name": "Vincennes",
+      "flag": "fr"
+    },
+    {
+      "coordinates": [1517, 1021],
+      "name": "Saint-Maur",
+      "flag": "fr"
+    },
+    {
+      "coordinates": [1353, 1102],
+      "name": "Créteil",
+      "flag": "fr"
+    },
+    {
+      "coordinates": [1083, 1121],
+      "name": "Vitry-sur-Seine",
+      "flag": "fr"
+    },
+    {
+      "coordinates": [1050, 938],
+      "name": "Ivry-sur-Seine",
+      "flag": "fr"
+    },
+    {
+      "coordinates": [756, 934],
+      "name": "Montrouge",
+      "flag": "fr"
+    },
+    {
+      "coordinates": [557, 881],
+      "name": "Issy-les-Moulineaux",
+      "flag": "fr"
+    },
+    {
+      "coordinates": [428, 782],
+      "name": "Boulogne-Billancourt",
+      "flag": "fr"
+    },
+    {
+      "coordinates": [339, 754],
+      "name": "Saint-Cloud",
+      "flag": "fr"
+    },
+    {
+      "coordinates": [556, 490],
+      "name": "Neuilly-sur-Seine",
+      "flag": "fr"
+    },
+    {
+      "coordinates": [630, 422],
+      "name": "Levallois",
+      "flag": "fr"
+    },
+    {
+      "coordinates": [711, 361],
+      "name": "Clichy",
+      "flag": "fr"
+    },
+    {
+      "coordinates": [656, 174],
+      "name": "Gennevilliers",
+      "flag": "fr"
+    },
+    {
+      "coordinates": [481, 243],
+      "name": "Colombes",
+      "flag": "fr"
+    },
+    {
+      "coordinates": [287, 439],
+      "name": "Nanterre",
+      "flag": "fr"
+    },
+    {
+      "coordinates": [420, 442],
+      "name": "La Défense",
+      "flag": "fr"
+    },
+    {
+      "coordinates": [173, 534],
+      "name": "Rueil-Malmaison",
+      "flag": "fr"
+    },
+    {
+      "coordinates": [1284, 334],
+      "name": "Bobigny",
+      "flag": "fr"
+    },
+    {
+      "coordinates": [1483, 555],
+      "name": "Rosny-sous-Bois",
+      "flag": "fr"
+    },
+    {
+      "coordinates": [1714, 754],
+      "name": "Noisy-le-Grand",
+      "flag": "fr"
+    },
+    {
+      "coordinates": [1610, 929],
+      "name": "Champigny",
+      "flag": "fr"
+    },
+    {
+      "coordinates": [957, 1091],
+      "name": "Villejuif",
+      "flag": "fr"
+    },
+    {
+      "coordinates": [407, 955],
+      "name": "Meudon",
+      "flag": "fr"
+    },
+    {
+      "coordinates": [543, 1040],
+      "name": "Clamart",
+      "flag": "fr"
+    },
+    {
+      "coordinates": [1309, 240],
+      "name": "Drancy",
+      "flag": "fr"
+    },
+    {
+      "coordinates": [1221, 161],
+      "name": "Le Bourget",
+      "flag": "fr"
+    },
+    {
+      "coordinates": [1469, 799],
+      "name": "Nogent-sur-Marne",
+      "flag": "fr"
+    }
+  ]
+}
