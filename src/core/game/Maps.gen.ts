@@ -106,6 +106,7 @@ export enum GameMapType {
   TheBox = "The Box", // map-generator/assets/maps/thebox/info.json
   TierraDelFuego = "Tierra Del Fuego", // map-generator/assets/maps/tierradelfuego/info.json
   Titan = "Titan", // map-generator/assets/maps/titan/info.json
+  Tokyo = "Tokyo", // map-generator/assets/maps/tokyo/info.json
   Tourney1 = "Tourney 2 Teams", // map-generator/assets/maps/tourney1/info.json
   Tourney2 = "Tourney 3 Teams", // map-generator/assets/maps/tourney2/info.json
   Tourney3 = "Tourney 4 Teams", // map-generator/assets/maps/tourney3/info.json
@@ -1972,6 +1973,17 @@ export const maps: readonly MapInfo[] = [
     ffaFrequency: -1,
     teamFrequency: -1,
     specialFrequency: -1,
+  },
+  {
+    id: "Tokyo",
+    type: GameMapType.Tokyo,
+    translationKey: "map.tokyo",
+    categories: ["asia"],
+    multiplayerFrequency: 20,
+    ffaFrequency: -1,
+    teamFrequency: -1,
+    specialFrequency: -1,
+    themes: ["asia"],
   },
   {
     id: "Tourney1",

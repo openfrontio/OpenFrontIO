@@ -1,0 +1,290 @@
+{
+  "categories": ["asia"],
+  "id": "Tokyo",
+  "map": {
+    "height": 1316,
+    "num_land_tiles": 1417796,
+    "width": 3060
+  },
+  "map16x": {
+    "height": 329,
+    "num_land_tiles": 82962,
+    "width": 765
+  },
+  "map4x": {
+    "height": 658,
+    "num_land_tiles": 346804,
+    "width": 1530
+  },
+  "multiplayer_frequency": 3,
+  "name": "Tokyo",
+  "nations": [
+    {
+      "coordinates": [611, 303],
+      "flag": "jp",
+      "name": "Okutama"
+    },
+    {
+      "coordinates": [916, 319],
+      "flag": "jp",
+      "name": "Ome"
+    },
+    {
+      "coordinates": [1082, 397],
+      "flag": "jp",
+      "name": "Hamura"
+    },
+    {
+      "coordinates": [1089, 755],
+      "flag": "jp",
+      "name": "Hachioji"
+    },
+    {
+      "coordinates": [580, 590],
+      "flag": "jp",
+      "name": "Hinohara"
+    },
+    {
+      "coordinates": [940, 563],
+      "flag": "jp",
+      "name": "Akiruno"
+    },
+    {
+      "coordinates": [936, 431],
+      "flag": "jp",
+      "name": "Hinode"
+    },
+    {
+      "coordinates": [1201, 372],
+      "flag": "jp",
+      "name": "Mizuho"
+    },
+    {
+      "coordinates": [1178, 493],
+      "flag": "jp",
+      "name": "Fussa"
+    },
+    {
+      "coordinates": [1521, 1020],
+      "flag": "jp",
+      "name": "Machida"
+    },
+    {
+      "coordinates": [1466, 859],
+      "flag": "jp",
+      "name": "Tama"
+    },
+    {
+      "coordinates": [1648, 771],
+      "flag": "jp",
+      "name": "Inagi"
+    },
+    {
+      "coordinates": [1778, 726],
+      "flag": "jp",
+      "name": "Chofu"
+    },
+    {
+      "coordinates": [1945, 810],
+      "flag": "jp",
+      "name": "Komae"
+    },
+    {
+      "coordinates": [1724, 376],
+      "flag": "jp",
+      "name": "Kiyose"
+    },
+    {
+      "coordinates": [1597, 461],
+      "flag": "jp",
+      "name": "Higashimurayama"
+    },
+    {
+      "coordinates": [1308, 723],
+      "flag": "jp",
+      "name": "Hino"
+    },
+    {
+      "coordinates": [1440, 573],
+      "flag": "jp",
+      "name": "Tachikawa"
+    },
+    {
+      "coordinates": [1253, 597],
+      "flag": "jp",
+      "name": "Akishima"
+    },
+    {
+      "coordinates": [1482, 494],
+      "flag": "jp",
+      "name": "Higashiyamato"
+    },
+    {
+      "coordinates": [1344, 483],
+      "flag": "jp",
+      "name": "Musashimurayama"
+    },
+    {
+      "coordinates": [1455, 712],
+      "flag": "jp",
+      "name": "Kunitachi"
+    },
+    {
+      "coordinates": [1510, 643],
+      "flag": "jp",
+      "name": "Kokubunji"
+    },
+    {
+      "coordinates": [1598, 562],
+      "flag": "jp",
+      "name": "Kodaira"
+    },
+    {
+      "coordinates": [1622, 675],
+      "flag": "jp",
+      "name": "Fuchu"
+    },
+    {
+      "coordinates": [1704, 584],
+      "flag": "jp",
+      "name": "Koganei"
+    },
+    {
+      "coordinates": [1738, 466],
+      "flag": "jp",
+      "name": "Higashikurume"
+    },
+    {
+      "coordinates": [1840, 495],
+      "flag": "jp",
+      "name": "Nishitokyo"
+    },
+    {
+      "coordinates": [1819, 654],
+      "flag": "jp",
+      "name": "Mitaka"
+    },
+    {
+      "coordinates": [1838, 584],
+      "flag": "jp",
+      "name": "Musashino"
+    },
+    {
+      "coordinates": [2089, 801],
+      "flag": "jp",
+      "name": "Setagaya"
+    },
+    {
+      "coordinates": [2229, 822],
+      "flag": "jp",
+      "name": "Meguro"
+    },
+    {
+      "coordinates": [2333, 983],
+      "flag": "jp",
+      "name": "Ota"
+    },
+    {
+      "coordinates": [2336, 898],
+      "flag": "jp",
+      "name": "Shinagawa"
+    },
+    {
+      "coordinates": [1955, 599],
+      "flag": "jp",
+      "name": "Suginami"
+    },
+    {
+      "coordinates": [1981, 473],
+      "flag": "jp",
+      "name": "Nerima"
+    },
+    {
+      "coordinates": [2130, 410],
+      "flag": "jp",
+      "name": "Itabashi"
+    },
+    {
+      "coordinates": [2274, 413],
+      "flag": "jp",
+      "name": "Kita"
+    },
+    {
+      "coordinates": [2468, 422],
+      "flag": "jp",
+      "name": "Adachi"
+    },
+    {
+      "coordinates": [2629, 405],
+      "flag": "jp",
+      "name": "Katsushika"
+    },
+    {
+      "coordinates": [2753, 588],
+      "flag": "jp",
+      "name": "Edogawa"
+    },
+    {
+      "coordinates": [2593, 696],
+      "flag": "jp",
+      "name": "Koto"
+    },
+    {
+      "coordinates": [2075, 589],
+      "flag": "jp",
+      "name": "Nakano"
+    },
+    {
+      "coordinates": [2217, 635],
+      "flag": "jp",
+      "name": "Shinjuku"
+    },
+    {
+      "coordinates": [2238, 730],
+      "flag": "jp",
+      "name": "Shibuya"
+    },
+    {
+      "coordinates": [2353, 796],
+      "flag": "jp",
+      "name": "Minato"
+    },
+    {
+      "coordinates": [2447, 705],
+      "flag": "jp",
+      "name": "Chuo"
+    },
+    {
+      "coordinates": [2204, 518],
+      "flag": "jp",
+      "name": "Toshima"
+    },
+    {
+      "coordinates": [2349, 572],
+      "flag": "jp",
+      "name": "Bunkyo"
+    },
+    {
+      "coordinates": [2385, 487],
+      "flag": "jp",
+      "name": "Arakawa"
+    },
+    {
+      "coordinates": [2470, 540],
+      "flag": "jp",
+      "name": "Taito"
+    },
+    {
+      "coordinates": [2586, 531],
+      "flag": "jp",
+      "name": "Sumida"
+    },
+    {
+      "coordinates": [2338, 672],
+      "flag": "jp",
+      "name": "Chiyoda"
+    }
+  ],
+  "themes": ["asia"],
+  "translation_key": "map.tokyo"
+}
