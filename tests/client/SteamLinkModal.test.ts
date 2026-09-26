@@ -12,6 +12,7 @@ const redeemSteamLinkCodeMock = vi.hoisted(() => vi.fn());
 const answerSteamLinkConflictMock = vi.hoisted(() => vi.fn());
 const getUserMeMock = vi.hoisted(() => vi.fn());
 const invalidateUserMeMock = vi.hoisted(() => vi.fn());
+const showToastMock = vi.hoisted(() => vi.fn());
 
 vi.mock("../../src/client/Auth", () => ({
   isLoggedIn: isLoggedInMock,
@@ -44,6 +45,7 @@ vi.mock("../../src/client/Api", () => ({
 }));
 
 vi.mock("../../src/client/Utils", () => ({
+  showToast: showToastMock,
   translateText: vi.fn((key: string, params?: Record<string, unknown>) =>
     params ? `${key}:${JSON.stringify(params)}` : key,
   ),
@@ -112,6 +114,10 @@ describe("SteamLinkModal", () => {
     await modal.updateComplete;
 
     expect(stashPendingLinkMock).toHaveBeenCalledWith("tok-abc");
+    expect(showToastMock).toHaveBeenCalledWith(
+      "steam_link_modal.login_required",
+      "red",
+    );
     // "Trigger the login flow" = route to the account modal, which shows the
     // login options for a logged-out visitor (see AccountModal).
     expect(window.location.hash).toBe("#modal=account");
@@ -138,6 +144,10 @@ describe("SteamLinkModal", () => {
       await modal.updateComplete;
 
       expect(stashPendingLinkMock).toHaveBeenCalledWith("tok-abc");
+      expect(showToastMock).toHaveBeenCalledWith(
+        "steam_link_modal.login_required",
+        "red",
+      );
       expect(window.location.hash).toBe("#modal=account");
       expect(modal.isOpen()).toBe(false);
       expect(fetchSteamLinkTicketMock).not.toHaveBeenCalled();
