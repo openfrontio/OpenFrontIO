@@ -9,6 +9,9 @@ import {
   ClaimRewardResponseSchema,
   GetMyTribeNamesResponse,
   GetMyTribeNamesResponseSchema,
+  IdentityTokenAudiencesResponseSchema,
+  IdentityTokenResponse,
+  IdentityTokenResponseSchema,
   NewsItemSchema,
   PaymentsCheckoutResponse,
   PaymentsCheckoutResponseSchema,
@@ -403,6 +406,66 @@ export async function setMarketingConsent(
   } catch (e) {
     console.error("setMarketingConsent: request failed", e);
     return false;
+  }
+}
+
+// The sites a player can generate an identity token for. Fails closed: any
+// error lands on an empty list, which hides the account-settings card.
+export async function getIdentityTokenAudiences(): Promise<string[]> {
+  const { audiences } = await getServedConfig(
+    "public/identity_token/audiences",
+    IdentityTokenAudiencesResponseSchema,
+    { audiences: [] },
+  );
+  return audiences;
+}
+
+export type IdentityTokenResult =
+  | { ok: true; data: IdentityTokenResponse }
+  // 401: the session is gone.
+  | { ok: false; code: "logged_out" }
+  // 429: more than 10 requests/min from this IP.
+  | { ok: false; code: "rate_limited" }
+  | { ok: false; code: "failed" };
+
+// POST /users/@me/identity_token — mint a 10-minute token proving which
+// account the player owns, valid only on `audience`. Nothing is stored
+// server-side and callers must not cache it: mint a fresh one per request.
+export async function createIdentityToken(
+  audience: string,
+): Promise<IdentityTokenResult> {
+  try {
+    const response = await fetch(`${getApiBase()}/users/@me/identity_token`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: await getAuthHeader(),
+      },
+      body: JSON.stringify({ audience }),
+    });
+    if (response.status === 401) {
+      return { ok: false, code: "logged_out" };
+    }
+    if (response.status === 429) {
+      return { ok: false, code: "rate_limited" };
+    }
+    if (!response.ok) {
+      console.error(
+        "createIdentityToken: request failed",
+        response.status,
+        response.statusText,
+      );
+      return { ok: false, code: "failed" };
+    }
+    const parsed = IdentityTokenResponseSchema.safeParse(await response.json());
+    if (!parsed.success) {
+      console.error("createIdentityToken: invalid response", parsed.error);
+      return { ok: false, code: "failed" };
+    }
+    return { ok: true, data: parsed.data };
+  } catch (e) {
+    console.error("createIdentityToken: request failed", e);
+    return { ok: false, code: "failed" };
   }
 }
 
@@ -1931,6 +1994,32 @@ export async function setLobbyListed(
     };
   } catch (e) {
     console.error("setLobbyListed: request failed", e);
+    return { ok: false };
+  }
+}
+
+// POST /api/game/:id/queue on the game server — the host of a listed lobby
+// pays plutonium to put it in the public Special queue. The worker charges
+// through the API with the host's token. On failure, `error` is the server's
+// code when available ("insufficient_balance", "queue_payment_failed", ...).
+export async function queueLobby(
+  gameID: string,
+): Promise<{ ok: true } | { ok: false; error?: string }> {
+  try {
+    await ensureServerList();
+    const token = await getPlayToken();
+    const response = await fetch(
+      `${ClientEnv.gameHttpBase(gameID)}/${ClientEnv.gameWorkerPath(gameID)}/api/game/${gameID}/queue`,
+      {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+      },
+    );
+    if (response.ok) return { ok: true };
+    const body = await response.json().catch(() => null);
+    return { ok: false, error: body?.error };
+  } catch (e) {
+    console.error("queueLobby: request failed", e);
     return { ok: false };
   }
 }

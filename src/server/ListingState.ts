@@ -23,6 +23,9 @@ export class ListingState {
   private label?: string;
   private accent?: LobbyAccent;
   private featured = false;
+  // When the host paid to put the lobby in the public Special queue. From
+  // then on the queue's countdown starts it, not the listing deadline.
+  private queuedAt?: number;
 
   isListed(): boolean {
     return this.listed;
@@ -36,12 +39,28 @@ export class ListingState {
     this.listed = listed;
     this.listedAt = listed ? Date.now() : undefined;
     this.autoStartMs = listed ? autoStartMs : undefined;
+    if (!listed) this.queuedAt = undefined;
+  }
+
+  isQueued(): boolean {
+    return this.queuedAt !== undefined;
+  }
+
+  queuedAtTime(): number | undefined {
+    return this.queuedAt;
+  }
+
+  // Only listed lobbies can be queued, and only once.
+  queue(): void {
+    if (!this.listed || this.queuedAt !== undefined) return;
+    this.queuedAt = Date.now();
   }
 
   // Deadline after which a listed lobby starts automatically, so hosts
   // can't sit on a public listing indefinitely.
   autoStartAt(): number | undefined {
     if (!this.listed || this.listedAt === undefined) return undefined;
+    if (this.queuedAt !== undefined) return undefined;
     return (
       this.listedAt +
       (this.featured

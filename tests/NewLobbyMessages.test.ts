@@ -30,3 +30,42 @@ describe("reuse-lobby wire messages", () => {
     expect(parsed.success).toBe(false);
   });
 });
+
+// The other server frame that carries nothing but a game id: the pool
+// redirect, sent to a joiner this lobby's pool assigns to a sibling.
+describe("pool redirect wire message", () => {
+  it("accepts a redirect server message with a valid game id", () => {
+    const parsed = ServerMessageSchema.safeParse({
+      type: "redirect",
+      gameID: "abcd1234",
+    });
+    expect(parsed.success).toBe(true);
+    if (parsed.success && parsed.data.type === "redirect") {
+      expect(parsed.data.gameID).toBe("abcd1234");
+    }
+  });
+
+  it("rejects a redirect message without a game id", () => {
+    expect(ServerMessageSchema.safeParse({ type: "redirect" }).success).toBe(
+      false,
+    );
+  });
+
+  it("rejects a redirect game id that is not a valid id", () => {
+    const parsed = ServerMessageSchema.safeParse({
+      type: "redirect",
+      gameID: "not a valid id!",
+    });
+    expect(parsed.success).toBe(false);
+  });
+
+  it("carries the target and nothing else", () => {
+    // Deliberately minimal: which worker hosts a game is a pure function of
+    // its id, so the client resolves the route itself.
+    const parsed = ServerMessageSchema.parse({
+      type: "redirect",
+      gameID: "abcd1234",
+    });
+    expect(Object.keys(parsed).sort()).toEqual(["gameID", "type"]);
+  });
+});

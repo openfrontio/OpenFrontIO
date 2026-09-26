@@ -85,7 +85,7 @@ export class SoundManager {
     try {
       fn();
     } catch (err) {
-      console.error(`SoundManager: failed to ${action}`, err);
+      console.warn(`SoundManager: failed to ${action}`, err);
     }
   }
 
@@ -233,7 +233,7 @@ export class SoundManager {
       this.ambienceTracks.set(name, sound);
       return sound;
     } catch (err) {
-      console.error(`SoundManager: failed to load ambience ${name}`, err);
+      console.warn(`SoundManager: failed to load ambience ${name}`, err);
       return null;
     }
   }
