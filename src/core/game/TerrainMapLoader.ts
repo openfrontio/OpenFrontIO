@@ -35,6 +35,9 @@ export interface MapManifest {
   teamGameSpawnAreas?: TeamGameSpawnAreas;
   /** Optional map layers rendered between terrain and territory. */
   layers?: MapLayer[];
+  // Optional information rendered in the map selection UI
+  info?: string;
+  designers?: string[];
 }
 
 export type LayerPlacement = "land" | "water";
