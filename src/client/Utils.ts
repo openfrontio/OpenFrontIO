@@ -386,9 +386,18 @@ export function resolveKeybindLabel(
   defaultCode: string,
   layoutMap: Map<string, string> | null,
 ): string {
-  const valueCode =
+  const rawValue =
     typeof entry === "string" ? entry : (entry?.value ?? defaultCode);
-  const savedKey = typeof entry === "string" ? "" : (entry?.key ?? "");
+  const valueCode =
+    typeof rawValue === "string"
+      ? rawValue
+      : Array.isArray(rawValue) && typeof rawValue[0] === "string"
+        ? rawValue[0]
+        : defaultCode;
+  const savedKey =
+    typeof entry === "object" && typeof entry?.key === "string"
+      ? entry.key
+      : "";
 
   let isShift = false;
   let codeToResolve = valueCode;
