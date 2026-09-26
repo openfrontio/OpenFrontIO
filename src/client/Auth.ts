@@ -17,6 +17,17 @@ export type UserAuth = { jwt: string; claims: TokenPayload } | false;
 
 const PERSISTENT_ID_KEY = "player_persistent_id";
 
+// The publicId the API last reported for a session, keyed by that session's
+// persistent ID. /users/@me is the only source of a publicId, but cosmetics
+// are read long before it resolves -- and re-reading them while it is in
+// flight is what made a returning player's selections look unset (#5660).
+// Keyed by persistent ID rather than being a single value so signing into a
+// different account cannot read the previous one's scope.
+const PUBLIC_ID_CACHE_PREFIX = "cached_public_id_";
+
+let __inMemoryPublicId: string | null = null;
+let __inMemoryPublicIdSub: string | null = null;
+
 let __jwt: string | null = null;
 let __refreshPromise: Promise<void> | null = null;
 let __expiresAt: number = 0;
@@ -319,11 +330,11 @@ function announceLoggedOut(): void {
 export function clearLocalSession(): void {
   const hadSession = __jwt !== null;
   __jwt = null;
+  updateUserSettingsForJwt(null);
   localStorage.removeItem(PERSISTENT_ID_KEY);
-  // Switch cosmetics back to the logged-out scope. The player's own
-  // selections stay stored under their publicId and are restored on the
-  // next login (#4955).
-  UserSettings.setPlayerId(null);
+  // Switch cosmetics back to the logged-out scope (via the call above). The
+  // player's own selections stay stored under their publicId and are restored
+  // on the next login (#4955).
   // Keep the desktop bar's session state in sync: without this, a 401-driven
   // logOut() (or any other clearLocalSession caller) leaves __sessionState at
   // "signed-in" with no JWT behind it, so the bar hides and multiplayer
@@ -498,6 +509,7 @@ async function doRefreshJwt(): Promise<void> {
     // pointless round trips and the player's stored persistent ID every time
     // Steam hiccuped. Record why and stop.
     __jwt = null;
+    updateUserSettingsForJwt(null);
     setSessionState({ status: "signed-out", reason: ticketReason(result) });
     return;
   }
@@ -532,10 +544,12 @@ async function doRefreshJwt(): Promise<void> {
     __expiresAt = Date.now() + expiresIn * 1000;
     console.log("Refresh succeeded");
     __jwt = jwt;
+    updateUserSettingsForJwt(jwt);
   } catch (e) {
     console.warn("Refresh failed", e);
     // if server unreachable, just clear jwt
     __jwt = null;
+    updateUserSettingsForJwt(null);
     return;
   }
 }
@@ -590,6 +604,7 @@ async function doCrazyGamesLogin(token: string): Promise<void> {
     if (response.status !== 200) {
       console.error("CrazyGames login failed", response);
       __jwt = null;
+      updateUserSettingsForJwt(null);
       return;
     }
     const json = await response.json();
@@ -597,9 +612,11 @@ async function doCrazyGamesLogin(token: string): Promise<void> {
     __expiresAt = Date.now() + expiresIn * 1000;
     console.log("CrazyGames login succeeded");
     __jwt = jwt;
+    updateUserSettingsForJwt(jwt);
   } catch (e) {
     console.warn("CrazyGames login failed", e);
     __jwt = null;
+    updateUserSettingsForJwt(null);
   }
 }
 
@@ -624,6 +641,7 @@ async function doSteamLogin(ticket: string): Promise<void> {
     if (response.status !== 200) {
       console.error("Steam login failed", response);
       __jwt = null;
+      updateUserSettingsForJwt(null);
       // 401 is infra's unauthorized("Invalid Steam ticket"); 5xx is its
       // internalServerError for "steam unreachable" / "steam auth error",
       // which is Steam's backend rather than anything the player did. Any
@@ -647,10 +665,12 @@ async function doSteamLogin(ticket: string): Promise<void> {
     __expiresAt = Date.now() + expiresIn * 1000;
     console.log("Steam login succeeded");
     __jwt = jwt;
+    updateUserSettingsForJwt(jwt);
     setSessionState({ status: "signed-in" });
   } catch (e) {
     console.warn("Steam login failed", e);
     __jwt = null;
+    updateUserSettingsForJwt(null);
     setSessionState({ status: "signed-out", reason: "network" });
   }
 }
@@ -669,6 +689,7 @@ export async function reauthAfterCrazyGamesChange(): Promise<UserAuth> {
         await __refreshPromise.catch(() => {});
       }
       __jwt = null;
+      updateUserSettingsForJwt(null);
       __expiresAt = 0;
       return await userAuth();
     } finally {
@@ -693,6 +714,7 @@ export async function retrySteamSignIn(): Promise<UserAuth> {
         await __refreshPromise.catch(() => {});
       }
       __jwt = null;
+      updateUserSettingsForJwt(null);
       __expiresAt = 0;
       setSessionState({ status: "retrying" });
       return await userAuth();
@@ -780,4 +802,88 @@ function getPersistentIDFromLocalStorage(): string {
   localStorage.setItem(PERSISTENT_ID_KEY, newID);
 
   return newID;
+}
+/**
+ * Records the publicId /users/@me reported for a session, so the next load can
+ * restore the cosmetic scope from the token alone (see PUBLIC_ID_CACHE_PREFIX).
+ *
+ * Best effort by design: this is a cache of something the network already
+ * answered, so a storage failure (quota exceeded, private browsing) must not
+ * cost the caller the profile it just fetched. Losing the cache only puts the
+ * cosmetic scope back on the /users/@me path it was there to shortcut.
+ */
+export function rememberPublicId(persistentId: string, publicId: string): void {
+  // Keep the latest known mapping in memory before attempting persistence.
+  // localStorage is only a cache; a storage failure must not lose the publicId
+  // that /users/@me already gave us during this session.
+  __inMemoryPublicIdSub = persistentId;
+  __inMemoryPublicId = publicId;
+  try {
+    localStorage.setItem(PUBLIC_ID_CACHE_PREFIX + persistentId, publicId);
+  } catch (e) {
+    console.warn("rememberPublicId: cache write failed", e);
+  }
+}
+
+/**
+ * Points UserSettings at the cosmetic scope of whoever `jwt` belongs to, and at
+ * the logged-out scope when there is no session.
+ *
+ * Called from every place `__jwt` is assigned rather than from /users/@me alone,
+ * so cosmetics are scoped correctly from the first render instead of only once
+ * the profile request lands. A token whose claims do not validate clears the
+ * scope rather than guessing at one: an unverified `sub` must never adopt a
+ * player's stored cosmetics.
+ */
+function updateUserSettingsForJwt(jwt: string | null): void {
+  if (!jwt) {
+    __inMemoryPublicId = null;
+    __inMemoryPublicIdSub = null;
+    UserSettings.setPlayerId(null);
+    return;
+  }
+  try {
+    const result = TokenPayloadSchema.safeParse(decodeJwt(jwt));
+    if (!result.success) {
+      __inMemoryPublicId = null;
+      __inMemoryPublicIdSub = null;
+      UserSettings.setPlayerId(null);
+      return;
+    }
+
+    const sub = result.data.sub;
+    // Replace the session-only fallback when the authenticated account changes
+    // so a previous account can never bleed into the new cosmetic scope.
+    if (__inMemoryPublicIdSub !== null && __inMemoryPublicIdSub !== sub) {
+      __inMemoryPublicId = null;
+      __inMemoryPublicIdSub = null;
+    }
+
+    // A token carrying the claim needs no round trip. Otherwise prefer the
+    // in-memory publicId learned most recently from /users/@me, then fall back
+    // to the persistent cache. The in-memory value is authoritative for the
+    // current authenticated account while localStorage may be stale.
+    let cachedPublicId: string | null = null;
+    try {
+      cachedPublicId = localStorage.getItem(PUBLIC_ID_CACHE_PREFIX + sub);
+    } catch (e) {
+      console.warn("updateUserSettingsForJwt: cache read failed", e);
+    }
+
+    const inMemoryPublicId =
+      __inMemoryPublicIdSub === sub ? __inMemoryPublicId : null;
+    const publicId = result.data.publicId ?? inMemoryPublicId ?? cachedPublicId;
+
+    if (result.data.publicId !== undefined) {
+      __inMemoryPublicIdSub = sub;
+      __inMemoryPublicId = result.data.publicId;
+    }
+    UserSettings.setPlayerId(publicId ?? null);
+  } catch {
+    // An undecodable token or invalid claims cannot safely select a cosmetic
+    // scope. Drop the in-memory mapping associated with the old session.
+    __inMemoryPublicId = null;
+    __inMemoryPublicIdSub = null;
+    UserSettings.setPlayerId(null);
+  }
 }

@@ -45,6 +45,13 @@ export const TokenPayloadSchema = z.object({
     .or(z.string())
     .optional(),
   provider: z.string().optional(),
+  // The account's public ID, carried alongside the persistent `sub`. Optional
+  // because a session token minted before the claim existed still verifies: the
+  // fallback is the cache in Auth.ts, and then the /users/@me round trip.
+  // Trimmed and non-empty because it is used verbatim as a localStorage key
+  // suffix -- an empty or padded id would collapse accounts onto a shared (or
+  // unreachable) cosmetic scope.
+  publicId: z.string().trim().min(1).optional(),
 });
 export type TokenPayload = z.infer<typeof TokenPayloadSchema>;
 

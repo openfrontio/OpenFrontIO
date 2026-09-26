@@ -20,11 +20,83 @@ import {
   PutUsernameResponseSchema,
   RankedLeaderboardEntrySchema,
   RewardSchema,
+  TokenPayloadSchema,
   TribeLeaderboardResponseSchema,
   TribeNameSchema,
   TribeStatsResponseSchema,
   UserMeResponseSchema,
 } from "../src/core/ApiSchemas";
+import { uuidToBase64url } from "../src/core/Base64";
+
+describe("TokenPayloadSchema", () => {
+  // The claims an API-issued session token carries. `sub` is the base64url
+  // form of the player's persistent UUID, which the schema transforms into
+  // the dashed UUID every caller holds.
+  const base = {
+    jti: "jti-1",
+    sub: uuidToBase64url("123e4567-e89b-12d3-a456-426614174000"),
+    iat: 1790306816,
+    iss: "https://api.openfront.io",
+    aud: "openfront.io",
+    exp: 1790307416,
+  };
+
+  it("transforms sub into the dashed UUID", () => {
+    expect(TokenPayloadSchema.parse(base).sub).toBe(
+      "123e4567-e89b-12d3-a456-426614174000",
+    );
+  });
+
+  // Zod strips undeclared keys, so a claim read off result.data is only
+  // readable at all once the schema declares it. Auth.ts reads publicId off
+  // the parsed payload to pick a player's cosmetic scope without waiting for
+  // /users/@me.
+  it("keeps publicId on the parsed payload", () => {
+    const result = TokenPayloadSchema.safeParse({
+      ...base,
+      publicId: "HabCsQYR",
+    });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.publicId).toBe("HabCsQYR");
+    }
+  });
+
+  // A session token minted before the claim existed still verifies; the
+  // fallback is the localStorage cache Auth.ts keeps per persistent id.
+  it("accepts a token without publicId", () => {
+    const result = TokenPayloadSchema.safeParse(base);
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.publicId).toBeUndefined();
+    }
+  });
+
+  // publicId is used verbatim as a localStorage key suffix, so an empty one
+  // would collapse every account onto a single cosmetic scope.
+  it.each(["", "   "])("rejects the unusable publicId %j", (publicId) => {
+    expect(TokenPayloadSchema.safeParse({ ...base, publicId }).success).toBe(
+      false,
+    );
+  });
+
+  it("trims a padded publicId so the scope key stays reachable", () => {
+    const result = TokenPayloadSchema.safeParse({
+      ...base,
+      publicId: " HabCsQYR ",
+    });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.publicId).toBe("HabCsQYR");
+    }
+  });
+
+  it("rejects a non-string publicId", () => {
+    expect(
+      TokenPayloadSchema.safeParse({ ...base, publicId: 42 }).success,
+    ).toBe(false);
+  });
+});
 
 describe("UserMeResponseSchema ban", () => {
   const ban = UserMeResponseSchema.shape.ban;
