@@ -25,6 +25,9 @@ const PERSISTENT_ID_KEY = "player_persistent_id";
 // different account cannot read the previous one's scope.
 const PUBLIC_ID_CACHE_PREFIX = "cached_public_id_";
 
+let __inMemoryPublicId: string | null = null;
+let __inMemoryPublicIdSub: string | null = null;
+
 let __jwt: string | null = null;
 let __refreshPromise: Promise<void> | null = null;
 let __expiresAt: number = 0;
@@ -810,6 +813,11 @@ function getPersistentIDFromLocalStorage(): string {
  * cosmetic scope back on the /users/@me path it was there to shortcut.
  */
 export function rememberPublicId(persistentId: string, publicId: string): void {
+  // Keep the latest known mapping in memory before attempting persistence.
+  // localStorage is only a cache; a storage failure must not lose the publicId
+  // that /users/@me already gave us during this session.
+  __inMemoryPublicIdSub = persistentId;
+  __inMemoryPublicId = publicId;
   try {
     localStorage.setItem(PUBLIC_ID_CACHE_PREFIX + persistentId, publicId);
   } catch (e) {
@@ -829,25 +837,55 @@ export function rememberPublicId(persistentId: string, publicId: string): void {
  */
 function updateUserSettingsForJwt(jwt: string | null): void {
   if (!jwt) {
+    __inMemoryPublicId = null;
+    __inMemoryPublicIdSub = null;
     UserSettings.setPlayerId(null);
     return;
   }
   try {
     const result = TokenPayloadSchema.safeParse(decodeJwt(jwt));
     if (!result.success) {
+      __inMemoryPublicId = null;
+      __inMemoryPublicIdSub = null;
       UserSettings.setPlayerId(null);
       return;
     }
-    // A token carrying the claim needs no round trip. Otherwise fall back to
-    // the cached publicId, and to the logged-out scope on a first-ever visit
-    // (/users/@me will set the real one when it resolves).
+
+    const sub = result.data.sub;
+    // Replace the session-only fallback when the authenticated account changes
+    // so a previous account can never bleed into the new cosmetic scope.
+    if (__inMemoryPublicIdSub !== null && __inMemoryPublicIdSub !== sub) {
+      __inMemoryPublicId = null;
+      __inMemoryPublicIdSub = null;
+    }
+
+    // A token carrying the claim needs no round trip. Otherwise use the
+    // persistent cache and then the in-memory publicId learned from /users/@me.
+    // The latter keeps the known scope usable when localStorage is unavailable.
+    let cachedPublicId: string | null = null;
+    try {
+      cachedPublicId = localStorage.getItem(
+        PUBLIC_ID_CACHE_PREFIX + sub,
+      );
+    } catch (e) {
+      console.warn("updateUserSettingsForJwt: cache read failed", e);
+    }
+
+    const inMemoryPublicId =
+      __inMemoryPublicIdSub === sub ? __inMemoryPublicId : null;
     const publicId =
-      result.data.publicId ??
-      localStorage.getItem(PUBLIC_ID_CACHE_PREFIX + result.data.sub);
+      result.data.publicId ?? cachedPublicId ?? inMemoryPublicId;
+
+    if (result.data.publicId !== undefined) {
+      __inMemoryPublicIdSub = sub;
+      __inMemoryPublicId = result.data.publicId;
+    }
     UserSettings.setPlayerId(publicId ?? null);
   } catch {
-    // An undecodable token, or a localStorage read that threw. Same answer as
-    // an invalid payload: no scope we are willing to stand behind.
+    // An undecodable token or invalid claims cannot safely select a cosmetic
+    // scope. Drop the in-memory mapping associated with the old session.
+    __inMemoryPublicId = null;
+    __inMemoryPublicIdSub = null;
     UserSettings.setPlayerId(null);
   }
 }
