@@ -265,6 +265,7 @@ export class TrainExecution implements Execution {
         }
       }
     }
+
     this.stations.splice(0, 2, ...path);
     return getOrientedRailroad(this.stations[0], this.stations[1]);
   }
@@ -279,6 +280,33 @@ export class TrainExecution implements Execution {
     if (this.currentRailroad === null || !this.canTradeWithDestination()) {
       return null;
     }
+
+    // If the current direct connection was broken (e.g., by a newly placed station splitting it),
+    // resolve the split so trains can stop and trade at the new station.
+    if (!getOrientedRailroad(this.stations[0], this.stations[1])) {
+      const newRailroad = this.resolveSplitRailroad();
+      if (!newRailroad) {
+        return null;
+      }
+      this.currentRailroad = newRailroad;
+
+      // If the train has already physically passed intermediate stations on the split segment,
+      // advance to the active segment without treating already-passed stations as new stops.
+      while (this.currentTile >= this.currentRailroad.getTiles().length) {
+        if (this.stations.length <= 2) {
+          return null; // Train is past the end of the new path
+        }
+        this.currentTile -= this.currentRailroad.getTiles().length;
+        this.pathIndex += this.currentRailroad.getTiles().length;
+        this.stations.shift();
+        const next = getOrientedRailroad(this.stations[0], this.stations[1]);
+        if (!next) {
+          return null;
+        }
+        this.currentRailroad = next;
+      }
+    }
+
     this.saveTraversedTiles(this.currentTile, this.speed);
     this.currentTile = this.currentTile + this.speed;
     const leftOver = this.currentTile - this.currentRailroad.getTiles().length;
