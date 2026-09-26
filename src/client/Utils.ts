@@ -381,13 +381,63 @@ export function formatPercentage(value: number): string {
  * formatKeyForDisplay("ArrowUp") // returns "Arrowup"
  * formatKeyForDisplay("") // returns ""
  */
+export function resolveKeybindLabel(
+  entry: any,
+  defaultCode: string,
+  layoutMap: Map<string, string> | null,
+): string {
+  const savedValue = typeof entry === "string" ? entry : entry?.value;
+  if (savedValue === "Null") return "";
+  const hasValidSavedValue =
+    typeof savedValue === "string" ||
+    (Array.isArray(savedValue) && typeof savedValue[0] === "string");
+  const valueCode =
+    typeof savedValue === "string"
+      ? savedValue
+      : Array.isArray(savedValue) && typeof savedValue[0] === "string"
+        ? savedValue[0]
+        : defaultCode;
+  const savedKey =
+    typeof entry === "object" && typeof entry?.key === "string"
+      ? entry.key
+      : "";
+
+  let isShift = false;
+  let codeToResolve = valueCode;
+  if (valueCode.startsWith("Shift+")) {
+    isShift = true;
+    codeToResolve = valueCode.slice(6);
+  }
+
+  if (layoutMap && layoutMap.has(codeToResolve)) {
+    const char = layoutMap.get(codeToResolve)!.toUpperCase();
+    const shiftPrefix = translateText("user_setting.keybind_shift_prefix");
+    const prefix =
+      shiftPrefix === "user_setting.keybind_shift_prefix"
+        ? "Shift+"
+        : shiftPrefix;
+    return isShift ? `${prefix}${char}` : char;
+  }
+
+  if (savedKey && hasValidSavedValue) {
+    return savedKey;
+  }
+
+  return formatKeyForDisplay(valueCode);
+}
+
 export function formatKeyForDisplay(value: string): string {
   // Handle empty string
   if (!value) return "";
 
   // Handle Shift+ prefix: format as "Shift+X"
   if (value.startsWith("Shift+")) {
-    return "Shift+" + formatKeyForDisplay(value.slice(6));
+    const shiftPrefix = translateText("user_setting.keybind_shift_prefix");
+    const prefix =
+      shiftPrefix === "user_setting.keybind_shift_prefix"
+        ? "Shift+"
+        : shiftPrefix;
+    return prefix + formatKeyForDisplay(value.slice(6));
   }
 
   // Handle space character or "Space" key

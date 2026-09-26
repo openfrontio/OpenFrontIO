@@ -1,5 +1,5 @@
-import { html, LitElement } from "lit";
-import { customElement } from "lit/decorators.js";
+import { html, LitElement, nothing } from "lit";
+import { customElement, state } from "lit/decorators.js";
 import { EventBus } from "../../../core/EventBus";
 import {
   BuildableUnit,
@@ -12,7 +12,7 @@ import { UserSettings } from "../../../core/game/UserSettings";
 import { Controller } from "../../Controller";
 import { ToggleStructureEvent } from "../../InputHandler";
 import { UIState } from "../../UIState";
-import { renderNumber, translateText } from "../../Utils";
+import { renderNumber, resolveKeybindLabel, translateText } from "../../Utils";
 import { GameView } from "../../view";
 import {
   atomBombIcon,
@@ -46,9 +46,50 @@ export class UnitDisplay extends LitElement implements Controller {
   private allDisabled = false;
   private _hoveredUnit: PlayerBuildableUnitType | null = null;
   private tutorialHighlight: PlayerBuildableUnitType | null = null;
+  @state() private layoutMap: Map<string, string> | null = null;
+  private keyboardLayoutRequestId = 0;
+
+  private readonly refreshKeyboardLayout = () => {
+    const keyboard = navigator.keyboard;
+    if (!keyboard) return;
+
+    const requestId = ++this.keyboardLayoutRequestId;
+    void keyboard
+      .getLayoutMap()
+      .then((map) => {
+        if (requestId === this.keyboardLayoutRequestId) {
+          this.layoutMap = map;
+        }
+      })
+      .catch((e) => {
+        console.warn("Failed to get keyboard layout map:", e);
+      });
+  };
 
   createRenderRoot() {
     return this;
+  }
+
+  connectedCallback() {
+    super.connectedCallback();
+    if (navigator.keyboard) {
+      navigator.keyboard.addEventListener(
+        "layoutchange",
+        this.refreshKeyboardLayout,
+      );
+      this.refreshKeyboardLayout();
+    }
+  }
+
+  disconnectedCallback() {
+    this.keyboardLayoutRequestId++;
+    if (navigator.keyboard) {
+      navigator.keyboard.removeEventListener(
+        "layoutchange",
+        this.refreshKeyboardLayout,
+      );
+    }
+    super.disconnectedCallback();
   }
 
   init() {
@@ -148,74 +189,79 @@ export class UnitDisplay extends LitElement implements Controller {
             this._cities,
             UnitType.City,
             "city",
-            this.keybinds["buildCity"]?.key ?? "1",
+            this.getHotkey("buildCity", "Digit1"),
           )}
           ${this.renderUnitItem(
             factoryIcon,
             this._factories,
             UnitType.Factory,
             "factory",
-            this.keybinds["buildFactory"]?.key ?? "2",
+            this.getHotkey("buildFactory", "Digit2"),
           )}
           ${this.renderUnitItem(
             portIcon,
             this._port,
             UnitType.Port,
             "port",
-            this.keybinds["buildPort"]?.key ?? "3",
+            this.getHotkey("buildPort", "Digit3"),
           )}
           ${this.renderUnitItem(
             defensePostIcon,
             this._defensePost,
             UnitType.DefensePost,
             "defense_post",
-            this.keybinds["buildDefensePost"]?.key ?? "4",
+            this.getHotkey("buildDefensePost", "Digit4"),
           )}
           ${this.renderUnitItem(
             missileSiloIcon,
             this._missileSilo,
             UnitType.MissileSilo,
             "missile_silo",
-            this.keybinds["buildMissileSilo"]?.key ?? "5",
+            this.getHotkey("buildMissileSilo", "Digit5"),
           )}
           ${this.renderUnitItem(
             samLauncherIcon,
             this._samLauncher,
             UnitType.SAMLauncher,
             "sam_launcher",
-            this.keybinds["buildSamLauncher"]?.key ?? "6",
+            this.getHotkey("buildSamLauncher", "Digit6"),
           )}
           ${this.renderUnitItem(
             warshipIcon,
             this._warships,
             UnitType.Warship,
             "warship",
-            this.keybinds["buildWarship"]?.key ?? "7",
+            this.getHotkey("buildWarship", "Digit7"),
           )}
           ${this.renderUnitItem(
             atomBombIcon,
             null,
             UnitType.AtomBomb,
             "atom_bomb",
-            this.keybinds["buildAtomBomb"]?.key ?? "8",
+            this.getHotkey("buildAtomBomb", "Digit8"),
           )}
           ${this.renderUnitItem(
             hydrogenBombIcon,
             null,
             UnitType.HydrogenBomb,
             "hydrogen_bomb",
-            this.keybinds["buildHydrogenBomb"]?.key ?? "9",
+            this.getHotkey("buildHydrogenBomb", "Digit9"),
           )}
           ${this.renderUnitItem(
             mirvIcon,
             null,
             UnitType.MIRV,
             "mirv",
-            this.keybinds["buildMIRV"]?.key ?? "0",
+            this.getHotkey("buildMIRV", "Digit0"),
           )}
         </div>
       </div>
     `;
+  }
+
+  private getHotkey(action: string, defaultCode: string): string {
+    const entry = this.keybinds[action];
+    return resolveKeybindLabel(entry, defaultCode, this.layoutMap);
   }
 
   private renderUnitItem(
@@ -253,9 +299,9 @@ export class UnitDisplay extends LitElement implements Controller {
                 class="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 text-gray-200 text-center w-max text-xs bg-gray-800/90 backdrop-blur-xs rounded-sm p-1 z-[100] shadow-lg pointer-events-none"
               >
                 <div class="font-bold text-sm mb-1">
-                  ${translateText(
-                    "unit_type." + structureKey,
-                  )}${` [${displayHotkey}]`}
+                  ${translateText("unit_type." + structureKey)}${hotkey
+                    ? ` [${displayHotkey}]`
+                    : ""}
                 </div>
                 <div class="p-2">
                   ${translateText("build_menu.desc." + structureKey)}
@@ -312,9 +358,13 @@ export class UnitDisplay extends LitElement implements Controller {
           @mouseleave=${() =>
             this.eventBus?.emit(new ToggleStructureEvent(null))}
         >
-          ${html`<div class="ml-0.5 text-[10px] relative -top-1 text-gray-400">
-            ${displayHotkey}
-          </div>`}
+          ${hotkey
+            ? html`<div
+                class="ml-0.5 text-[10px] relative -top-1 text-gray-400"
+              >
+                ${displayHotkey}
+              </div>`
+            : nothing}
           <div class="flex items-center gap-0.5 pt-0.5">
             <img src=${icon} alt=${structureKey} class="align-middle size-5" />
             ${number !== null

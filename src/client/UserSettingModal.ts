@@ -1,6 +1,19 @@
 import { html, nothing } from "lit";
 import { customElement, state } from "lit/decorators.js";
-import { formatKeyForDisplay, translateText } from "../client/Utils";
+
+declare global {
+  interface Navigator {
+    keyboard?: EventTarget & {
+      getLayoutMap(): Promise<Map<string, string>>;
+    };
+  }
+}
+
+import {
+  formatKeyForDisplay,
+  resolveKeybindLabel,
+  translateText,
+} from "../client/Utils";
 import type { MapLayer } from "../core/game/TerrainMapLoader";
 import {
   AudioCategory,
@@ -129,6 +142,26 @@ export class UserSettingModal extends BaseModal {
     { value: string; key: string }
   > = {};
 
+  @state() private layoutMap: Map<string, string> | null = null;
+  private keyboardLayoutRequestId = 0;
+
+  private readonly refreshKeyboardLayout = () => {
+    const keyboard = navigator.keyboard;
+    if (!keyboard) return;
+
+    const requestId = ++this.keyboardLayoutRequestId;
+    void keyboard
+      .getLayoutMap()
+      .then((map) => {
+        if (requestId === this.keyboardLayoutRequestId) {
+          this.layoutMap = map;
+        }
+      })
+      .catch((e) => {
+        console.warn("Failed to get keyboard layout map:", e);
+      });
+  };
+
   // ---- Display tab state (desktop shell only) ----
   //
   // Every field here is inert on the web: the tab is not in tabs[] when
@@ -166,9 +199,24 @@ export class UserSettingModal extends BaseModal {
       `${USER_SETTINGS_CHANGED_EVENT}:${GRAPHICS_KEY}`,
       this.onGraphicsChanged,
     );
+
+    if (navigator.keyboard) {
+      navigator.keyboard.addEventListener(
+        "layoutchange",
+        this.refreshKeyboardLayout,
+      );
+      this.refreshKeyboardLayout();
+    }
   }
 
   disconnectedCallback() {
+    this.keyboardLayoutRequestId++;
+    if (navigator.keyboard) {
+      navigator.keyboard.removeEventListener(
+        "layoutchange",
+        this.refreshKeyboardLayout,
+      );
+    }
     globalThis.removeEventListener(
       `${USER_SETTINGS_CHANGED_EVENT}:${GRAPHICS_KEY}`,
       this.onGraphicsChanged,
@@ -346,8 +394,8 @@ export class UserSettingModal extends BaseModal {
 
   private getKeyChar(action: string): string {
     const entry = this.userKeybinds[action];
-    if (!entry) return formatKeyForDisplay(this.defaultKeybinds[action] || "");
-    return entry.key || formatKeyForDisplay(entry.value || "");
+    const defaultCode = this.defaultKeybinds[action] || "";
+    return resolveKeybindLabel(entry, defaultCode, this.layoutMap);
   }
 
   private handleEasterEggKey = (e: KeyboardEvent) => {
