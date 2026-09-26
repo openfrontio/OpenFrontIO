@@ -447,7 +447,7 @@ export class AudioMixer {
       howl.once("loaderror", () => this.discard(name, howl));
       return howl;
     } catch (err) {
-      console.error(`AudioMixer: failed to load sound ${name}`, err);
+      console.warn(`AudioMixer: failed to load sound ${name}`, err);
       return null;
     }
   }
@@ -514,7 +514,7 @@ export class AudioMixer {
     try {
       fn();
     } catch (err) {
-      console.error(`AudioMixer: failed to ${action}`, err);
+      console.warn(`AudioMixer: failed to ${action}`, err);
     }
   }
 }

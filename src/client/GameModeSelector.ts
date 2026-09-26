@@ -241,7 +241,7 @@ export function reportMultiplayerRefusal(backendOutage: boolean): void {
       retryServerList().catch((err: unknown) => {
         // retryServerList never rejects; belt and braces, so a change there
         // cannot surface as an unhandled rejection from a click handler.
-        console.error("server list retry from a refused click failed", err);
+        console.warn("server list retry from a refused click failed", err);
       });
     }
     showToast(translateText("common.backend_unreachable"), "red");
