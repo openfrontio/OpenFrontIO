@@ -667,6 +667,38 @@ describe("InputHandler AutoUpgrade", () => {
     });
   });
 
+  describe("Default keybinds handling", () => {
+    test("zoom fallback keys are configurable bindings with defaults", () => {
+      inputHandler.initialize();
+
+      expect((inputHandler as any).keybinds.zoomOutMinus).toBe("Minus");
+      expect((inputHandler as any).keybinds.zoomOutNumpad).toBe(
+        "NumpadSubtract",
+      );
+      expect((inputHandler as any).keybinds.zoomInEqual).toBe("Equal");
+      expect((inputHandler as any).keybinds.zoomInNumpad).toBe("NumpadAdd");
+    });
+
+    test("a saved binding replaces a zoom fallback", () => {
+      testSettings.setKeybinds({ zoomInEqual: "KeyU" });
+
+      inputHandler.initialize();
+
+      expect((inputHandler as any).keybinds.zoomInEqual).toBe("KeyU");
+    });
+
+    test("a saved binding on a zoom fallback's key blocks the fallback default", () => {
+      // Saved before the zoom fallbacks became defaults: the player's binding
+      // wins and Equal no longer also zooms.
+      testSettings.setKeybinds({ attackRatioUp: "Equal" });
+
+      inputHandler.initialize();
+
+      expect((inputHandler as any).keybinds.attackRatioUp).toBe("Equal");
+      expect((inputHandler as any).keybinds.zoomInEqual).toBeUndefined();
+    });
+  });
+
   describe("Enter key confirm ghost structure", () => {
     let uiState: UIState;
 

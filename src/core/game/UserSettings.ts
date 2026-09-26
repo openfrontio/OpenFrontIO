@@ -40,6 +40,10 @@ export function getDefaultKeybinds(isMac: boolean): Record<string, string> {
     swapDirection: "KeyU",
     zoomOut: "KeyQ",
     zoomIn: "KeyE",
+    zoomOutMinus: "Minus",
+    zoomOutNumpad: "NumpadSubtract",
+    zoomInEqual: "Equal",
+    zoomInNumpad: "NumpadAdd",
     centerCamera: "KeyC",
     moveUp: "KeyW",
     moveLeft: "KeyA",
@@ -56,6 +60,67 @@ export function getDefaultKeybinds(isMac: boolean): Record<string, string> {
     gameSpeedDown: "Comma",
     altKey: "AltLeft",
   };
+}
+
+/**
+ * Merges saved keybinds over the defaults into the effective map.
+ *
+ * Conflict policy:
+ *
+ * - A saved binding always wins for its own action. A saved "Null" unbinds
+ *   the action entirely: if Unbind is clicked in UserSettingsModal, e.g. for
+ *   Attack Ratio Up, the keybind is "Null" and even the default (Y) stops
+ *   working. The key (Y) is freed and can be bound to another action like
+ *   Boat Attack, and no two actions listen to the same key.
+ *
+ * - A default binding is NOT activated when its key is already claimed by a
+ *   saved binding for a different action. A release that adds a default must
+ *   never make one physical key trigger two actions for an existing player:
+ *   e.g. boatAttack: "ArrowUp" saved before moveUpArrow: "ArrowUp" shipped
+ *   keeps boatAttack on ArrowUp and leaves moveUpArrow unbound. This is
+ *   read-through, not a migration: nothing is written back, and the default
+ *   activates on its own once the player moves or unbinds the saved action.
+ *
+ * - A saved binding claims its key only when its action exists in the current
+ *   defaults and the saved value differs from that action's own default. A
+ *   restated default claims nothing: the settings modal's Reset button
+ *   persists one, and treating it as a claim would break the intentional
+ *   shared-modifier pairs (shiftKey/boxSelectWarships on ShiftLeft,
+ *   altKey/emojiMenuModifier on AltLeft). A stale entry whose action no
+ *   longer exists in the defaults claims nothing either: it sits inert in the
+ *   merged map and must not take a live default down with it.
+ *
+ * Default-vs-default duplicates are kept as-is; the shared-modifier pairs
+ * above are deliberate.
+ */
+export function mergeKeybinds(
+  defaults: Record<string, string>,
+  saved: Record<string, string>,
+): Record<string, string> {
+  const claimedKeys = new Set(
+    Object.entries(saved)
+      .filter(
+        ([action, key]) =>
+          key !== "Null" &&
+          defaults[action] !== undefined &&
+          key !== defaults[action],
+      )
+      .map(([, key]) => key),
+  );
+
+  const merged: Record<string, string> = {};
+  for (const [action, key] of Object.entries(defaults)) {
+    // A saved binding (or explicit unbind) wins for its own action.
+    if (action in saved) continue;
+    // The key is taken by a saved binding for another action.
+    if (claimedKeys.has(key)) continue;
+    merged[action] = key;
+  }
+  for (const [action, key] of Object.entries(saved)) {
+    if (key === "Null") continue;
+    merged[action] = key;
+  }
+  return merged;
 }
 
 export const USER_SETTINGS_CHANGED_EVENT = "event:user-settings-changed";
@@ -1090,20 +1155,12 @@ export class UserSettings {
   }
 
   keybinds(isMac: boolean): Record<string, string> {
-    const merged = {
-      ...getDefaultKeybinds(isMac),
-      ...this.normalizedUserKeybinds(),
-    };
-    // Actually unbind key: if Unbind is clicked in UserSettingsModal, eg. for Attack Ratio Up,
-    // keybind is "Null". Even if it is in default kindbinds (Y), it should not work anymore.
-    // The key (Y) can now be bound to another action like Boat Attack, and no two actions listen to the same key.
-    for (const k in merged) {
-      if (merged[k] === "Null") {
-        delete merged[k];
-      }
-    }
-
-    return merged;
+    // Saved bindings win; a default whose key conflicts with a saved binding
+    // is not activated. See mergeKeybinds for the full policy.
+    return mergeKeybinds(
+      getDefaultKeybinds(isMac),
+      this.normalizedUserKeybinds(),
+    );
   }
 
   setKeybinds(value: string | Record<string, any>): void {
