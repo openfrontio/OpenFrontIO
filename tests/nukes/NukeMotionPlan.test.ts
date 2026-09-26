@@ -61,7 +61,7 @@ describe("Nuke motion plan", () => {
 
   // game.ticks() after executeNextTick() matches the tick the client receives
   // for that update batch (GameRunner reads ticks() post-increment), so this
-  // mirrors GameView.advanceMotionPlannedUnits exactly.
+  // mirrors MotionPlanResolver's grid step exactly.
   function expectedTile(plan: GridPathPlan, tick: number): TileRef {
     const dt = tick - plan.startTick;
     const stepIndex =
