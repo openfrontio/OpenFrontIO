@@ -59,6 +59,7 @@ import {
   getPlayToken,
   isSessionActive,
   logOut,
+  rememberPublicId,
   userAuth,
 } from "./Auth";
 import { ClientEnv } from "./ClientEnv";
@@ -270,8 +271,7 @@ async function requestUserMe(): Promise<{
     // flight: a stale response must not reactivate the old player's scope.
     if (isSessionActive(claims.sub)) {
       const publicId = result.data.player.publicId;
-      const persistentId = claims.sub;
-      localStorage.setItem("cached_public_id_" + persistentId, publicId);
+      rememberPublicId(claims.sub, publicId);
       UserSettings.setPlayerId(publicId);
     }
     return { profile: result.data, aborted: false };

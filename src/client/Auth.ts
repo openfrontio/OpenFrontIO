@@ -17,6 +17,14 @@ export type UserAuth = { jwt: string; claims: TokenPayload } | false;
 
 const PERSISTENT_ID_KEY = "player_persistent_id";
 
+// The publicId the API last reported for a session, keyed by that session's
+// persistent ID. /users/@me is the only source of a publicId, but cosmetics
+// are read long before it resolves -- and re-reading them while it is in
+// flight is what made a returning player's selections look unset (#5660).
+// Keyed by persistent ID rather than being a single value so signing into a
+// different account cannot read the previous one's scope.
+const PUBLIC_ID_CACHE_PREFIX = "cached_public_id_";
+
 let __jwt: string | null = null;
 let __refreshPromise: Promise<void> | null = null;
 let __expiresAt: number = 0;
@@ -321,9 +329,9 @@ export function clearLocalSession(): void {
   __jwt = null;
   updateUserSettingsForJwt(null);
   localStorage.removeItem(PERSISTENT_ID_KEY);
-  // Switch cosmetics back to the logged-out scope. The player's own
-  // selections stay stored under their publicId and are restored on the
-  // next login (#4955).
+  // Switch cosmetics back to the logged-out scope (via the call above). The
+  // player's own selections stay stored under their publicId and are restored
+  // on the next login (#4955).
   // Keep the desktop bar's session state in sync: without this, a 401-driven
   // logOut() (or any other clearLocalSession caller) leaves __sessionState at
   // "signed-in" with no JWT behind it, so the bar hides and multiplayer
@@ -792,31 +800,54 @@ function getPersistentIDFromLocalStorage(): string {
 
   return newID;
 }
-function updateUserSettingsForJwt(jwt: string | null) {
+/**
+ * Records the publicId /users/@me reported for a session, so the next load can
+ * restore the cosmetic scope from the token alone (see PUBLIC_ID_CACHE_PREFIX).
+ *
+ * Best effort by design: this is a cache of something the network already
+ * answered, so a storage failure (quota exceeded, private browsing) must not
+ * cost the caller the profile it just fetched. Losing the cache only puts the
+ * cosmetic scope back on the /users/@me path it was there to shortcut.
+ */
+export function rememberPublicId(persistentId: string, publicId: string): void {
+  try {
+    localStorage.setItem(PUBLIC_ID_CACHE_PREFIX + persistentId, publicId);
+  } catch (e) {
+    console.warn("rememberPublicId: cache write failed", e);
+  }
+}
+
+/**
+ * Points UserSettings at the cosmetic scope of whoever `jwt` belongs to, and at
+ * the logged-out scope when there is no session.
+ *
+ * Called from every place `__jwt` is assigned rather than from /users/@me alone,
+ * so cosmetics are scoped correctly from the first render instead of only once
+ * the profile request lands. A token whose claims do not validate clears the
+ * scope rather than guessing at one: an unverified `sub` must never adopt a
+ * player's stored cosmetics.
+ */
+function updateUserSettingsForJwt(jwt: string | null): void {
   if (!jwt) {
     UserSettings.setPlayerId(null);
     return;
   }
   try {
-    const payload = decodeJwt(jwt);
-    const result = TokenPayloadSchema.safeParse(payload);
+    const result = TokenPayloadSchema.safeParse(decodeJwt(jwt));
     if (!result.success) {
       UserSettings.setPlayerId(null);
       return;
     }
-    const persistentId = result.data.sub;
-    const publicId = result.data.publicId;
-    if (publicId) {
-      UserSettings.setPlayerId(publicId);
-    } else {
-      const cached = localStorage.getItem("cached_public_id_" + persistentId);
-      if (cached) {
-        UserSettings.setPlayerId(cached);
-      } else {
-        UserSettings.setPlayerId(null);
-      }
-    }
+    // A token carrying the claim needs no round trip. Otherwise fall back to
+    // the cached publicId, and to the logged-out scope on a first-ever visit
+    // (/users/@me will set the real one when it resolves).
+    const publicId =
+      result.data.publicId ??
+      localStorage.getItem(PUBLIC_ID_CACHE_PREFIX + result.data.sub);
+    UserSettings.setPlayerId(publicId ?? null);
   } catch {
+    // An undecodable token, or a localStorage read that threw. Same answer as
+    // an invalid payload: no scope we are willing to stand behind.
     UserSettings.setPlayerId(null);
   }
 }
