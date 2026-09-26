@@ -859,9 +859,10 @@ function updateUserSettingsForJwt(jwt: string | null): void {
       __inMemoryPublicIdSub = null;
     }
 
-    // A token carrying the claim needs no round trip. Otherwise use the
-    // persistent cache and then the in-memory publicId learned from /users/@me.
-    // The latter keeps the known scope usable when localStorage is unavailable.
+    // A token carrying the claim needs no round trip. Otherwise prefer the
+    // in-memory publicId learned most recently from /users/@me, then fall back
+    // to the persistent cache. The in-memory value is authoritative for the
+    // current authenticated account while localStorage may be stale.
     let cachedPublicId: string | null = null;
     try {
       cachedPublicId = localStorage.getItem(PUBLIC_ID_CACHE_PREFIX + sub);
@@ -871,7 +872,7 @@ function updateUserSettingsForJwt(jwt: string | null): void {
 
     const inMemoryPublicId =
       __inMemoryPublicIdSub === sub ? __inMemoryPublicId : null;
-    const publicId = result.data.publicId ?? cachedPublicId ?? inMemoryPublicId;
+    const publicId = result.data.publicId ?? inMemoryPublicId ?? cachedPublicId;
 
     if (result.data.publicId !== undefined) {
       __inMemoryPublicIdSub = sub;
