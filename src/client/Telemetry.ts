@@ -102,18 +102,22 @@ export function initTelemetry(): Promise<Faro | null> {
         // Faro's console capture forwards every console call on the page;
         // forwardConsole below takes only ours.
         instrumentations: getWebInstrumentations({ captureConsole: false }),
+        // Faro matches these against `${message} ${name} ${stack}`, so a
+        // whole message is the one followed by its error name: " Error ",
+        // " TypeError ". Without that, "Failed to fetch" would also swallow
+        // "Failed to fetch dynamically imported module", a chunk load failure.
         ignoreErrors: [
           // A cross-origin script threw; the browser hides everything else.
-          /^Script error\.?$/,
+          /^Script error\.(?= \w*Error )/,
           // Benign: the browser deferred a resize notification to the next
           // frame. Chrome and Firefox wordings.
           /^ResizeObserver loop/,
           // A fetch failed on the network: offline, blocked, cancelled by a
           // navigation. Chrome, Safari and Firefox wordings; mostly without a
           // stack, so there is not even a telling whose fetch it was.
-          /^Failed to fetch$/,
-          /^Load failed$/,
-          /^NetworkError when attempting to fetch resource\.$/,
+          /^Failed to fetch(?= \w*Error )/,
+          /^Load failed(?= \w*Error )/,
+          /^NetworkError when attempting to fetch resource\.(?= \w*Error )/,
         ],
         beforeSend: (item) => filterSignal(item, sessionSamplingRate(env)),
       });

@@ -192,19 +192,28 @@ describe("Telemetry", () => {
     const { ignoreErrors } = initializeFaro.mock.calls[0][0] as {
       ignoreErrors: RegExp[];
     };
-    const ignored = (message: string) =>
-      ignoreErrors.some((pattern) => pattern.test(message));
+    // What faro-core's isErrorIgnored matches: message, name and stack.
+    const ignored = (message: string, name = "Error") =>
+      ignoreErrors.some((pattern) =>
+        pattern.test(`${message} ${name} ${name}: ${message}\n    at f`),
+      );
     expect(ignored("Script error.")).toBe(true);
     expect(
       ignored("ResizeObserver loop completed with undelivered notifications."),
     ).toBe(true);
-    expect(ignored("Failed to fetch")).toBe(true);
-    expect(ignored("Load failed")).toBe(true);
-    expect(ignored("NetworkError when attempting to fetch resource.")).toBe(
-      true,
-    );
+    expect(ignored("Failed to fetch", "TypeError")).toBe(true);
+    expect(ignored("Load failed", "TypeError")).toBe(true);
+    expect(
+      ignored("NetworkError when attempting to fetch resource.", "TypeError"),
+    ).toBe(true);
     expect(ignored("Script error in player_actions")).toBe(false);
-    expect(ignored("Failed to fetch map manifest")).toBe(false);
+    // A chunk that failed to load is ours and worth knowing about.
+    expect(
+      ignored(
+        "Failed to fetch dynamically imported module: https://cdn/x.js",
+        "TypeError",
+      ),
+    ).toBe(false);
   });
 
   it("sends console errors from every prod session and warnings from 1%", async () => {
