@@ -38,7 +38,8 @@
     "lint:eslint:fix": "eslint --fix",
     "prepare": "husky",
     "gen-maps": "cd map-generator && go run . && npm run format",
-    "inst": "npm ci --ignore-scripts"
+    "inst": "npm ci --ignore-scripts",
+    "build:cosmetic-preview": "tsx scripts/buildCosmeticPreview.ts"
   },
   "lint-staged": {
     "**/*.{js,mjs,cjs,ts,jsx,tsx}": [

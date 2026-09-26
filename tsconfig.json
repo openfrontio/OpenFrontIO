@@ -30,7 +30,9 @@
     "generated/**/*",
     "tests/**/*",
     "src/scripts",
-    "vite.config.ts"
+    "vite.config.ts",
+    "vite.cosmetic-preview.config.ts",
+    "scripts/buildCosmeticPreview.ts"
   ],
   "exclude": ["node_modules"]
 }

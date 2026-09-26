@@ -31,3 +31,6 @@ map-generator/map-generator.exe
 # (it needs the CLI copy at the same relative depth as the real one). Cleaned
 # up after each case; ignored so a crashed run cannot dirty the tree.
 .tmp-desktop-cli-*
+
+# Built packages (npm run build:cosmetic-preview)
+dist/

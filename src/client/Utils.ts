@@ -468,7 +468,28 @@ export function formatDebugTranslation(
 
 const EMPTY_TRANSLATION_PARAMS: Record<string, string | number> = {};
 
-function getCachedLangSelector(): LangSelector | null {
+type TranslationSource = Pick<
+  LangSelector,
+  "currentLang" | "translations" | "defaultTranslations"
+>;
+
+// Used only where no <lang-selector> exists: components shipped outside the
+// game (the cosmetic preview library, src/client/cosmetic-preview) register
+// their English strings here so they never show raw keys. The game always
+// has a <lang-selector>, which keeps precedence.
+let standaloneTranslations: TranslationSource | null = null;
+
+export function setStandaloneTranslations(
+  defaultTranslations: Record<string, string>,
+): void {
+  standaloneTranslations = {
+    currentLang: "en",
+    translations: undefined,
+    defaultTranslations,
+  };
+}
+
+function getCachedLangSelector(): TranslationSource | null {
   const self = translateText as any;
   const cached = self.langSelector as LangSelector | null | undefined;
   if (cached && cached.isConnected) return cached;
@@ -485,7 +506,7 @@ function getCachedLangSelector(): LangSelector | null {
 
   const found = document.querySelector("lang-selector") as LangSelector | null;
   self.langSelector = found ?? null;
-  return found;
+  return found ?? standaloneTranslations;
 }
 
 /** Language codes whose script reads right-to-left (resources/lang/metadata.json). */
