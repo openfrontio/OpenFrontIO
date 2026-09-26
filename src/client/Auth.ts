@@ -424,7 +424,7 @@ export async function userAuth(
     if (Date.now() >= __expiresAt - 3 * 60 * 1000) {
       console.log("jwt expired or about to expire");
       if (!shouldRefresh) {
-        console.error("jwt expired and shouldRefresh is false");
+        console.warn("jwt expired and shouldRefresh is false");
         return false;
       }
       await refreshJwt();
