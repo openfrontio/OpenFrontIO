@@ -80,7 +80,7 @@ export class LeaderboardTribeTable extends LitElement {
       this.tribeData = data;
       this.hasLoaded = true;
     } catch (error) {
-      console.error("loadTribeLeaderboard: request failed", error);
+      console.warn("loadTribeLeaderboard: request failed", error);
       this.error = translateText("leaderboard_modal.error");
     } finally {
       this.isLoading = false;

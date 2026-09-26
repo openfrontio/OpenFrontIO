@@ -1,0 +1,345 @@
+{
+  "additionalNations": [
+    {
+      "coordinates": [3038, 31],
+      "flag": "mu",
+      "name": "Agalega"
+    },
+    {
+      "coordinates": [1226, 196],
+      "flag": "km-g",
+      "name": "Grande Comore"
+    },
+    {
+      "coordinates": [1282, 297],
+      "flag": "km-m",
+      "name": "Moheli"
+    },
+    {
+      "coordinates": [1383, 270],
+      "flag": "km-a",
+      "name": "Anjouan"
+    },
+    {
+      "coordinates": [800, 33],
+      "flag": "tz",
+      "name": "Mtwara"
+    },
+    {
+      "coordinates": [628, 79],
+      "flag": "tz",
+      "name": "Masasi"
+    },
+    {
+      "coordinates": [340, 379],
+      "flag": "Mozambique PR",
+      "name": "Marrupa"
+    },
+    {
+      "coordinates": [519, 940],
+      "flag": "Mozambique PR",
+      "name": "Pebane"
+    },
+    {
+      "coordinates": [754, 816],
+      "flag": "Mozambique PR",
+      "name": "Angoche"
+    },
+    {
+      "coordinates": [178, 1101],
+      "flag": "Mozambique PR",
+      "name": "Marromeu"
+    },
+    {
+      "coordinates": [111, 1647],
+      "flag": "Mozambique PR",
+      "name": "Vilankulo"
+    },
+    {
+      "coordinates": [392, 120],
+      "flag": "tz",
+      "name": "Tunduru"
+    },
+    {
+      "coordinates": [849, 661],
+      "flag": "Mozambique PR",
+      "name": "Moçambique"
+    },
+    {
+      "coordinates": [58, 300],
+      "flag": "Mozambique PR",
+      "name": "Metangula"
+    },
+    {
+      "coordinates": [6, 817],
+      "flag": "mw",
+      "name": "Blantyre"
+    },
+    {
+      "coordinates": [54, 651],
+      "flag": "mw",
+      "name": "Zomba"
+    },
+    {
+      "coordinates": [1895, 659],
+      "flag": "mg",
+      "name": "Antsohihy"
+    },
+    {
+      "coordinates": [1402, 914],
+      "flag": "mg",
+      "name": "Besalampy"
+    },
+    {
+      "coordinates": [2094, 709],
+      "flag": "mg",
+      "name": "Maroantsetra"
+    },
+    {
+      "coordinates": [1340, 1073],
+      "flag": "mg",
+      "name": "Maintirano"
+    },
+    {
+      "coordinates": [1498, 1226],
+      "flag": "mg",
+      "name": "Miandrivazo"
+    },
+    {
+      "coordinates": [1883, 920],
+      "flag": "mg",
+      "name": "Ambatondrazaka"
+    },
+    {
+      "coordinates": [1944, 1384],
+      "flag": "mg",
+      "name": "Mananjary"
+    },
+    {
+      "coordinates": [1490, 1909],
+      "flag": "mg",
+      "name": "Bekiy"
+    },
+    {
+      "coordinates": [1585, 1645],
+      "flag": "mg",
+      "name": "Ihosy"
+    },
+    {
+      "coordinates": [1946, 498],
+      "flag": "mg",
+      "name": "Ambanja"
+    },
+    {
+      "coordinates": [1713, 870],
+      "flag": "mg",
+      "name": "Marovoay"
+    },
+    {
+      "coordinates": [1813, 1794],
+      "flag": "mg",
+      "name": "Farafangana"
+    },
+    {
+      "coordinates": [1974, 749],
+      "flag": "mg",
+      "name": "Mandritsara"
+    }
+  ],
+  "categories": ["new", "africa"],
+  "forced_modifiers": ["isWaterNukes:50"],
+  "id": "Madagascar",
+  "map": {
+    "height": 2332,
+    "num_land_tiles": 1887622,
+    "width": 3500
+  },
+  "map16x": {
+    "height": 583,
+    "num_land_tiles": 114968,
+    "width": 875
+  },
+  "map4x": {
+    "height": 1166,
+    "num_land_tiles": 467723,
+    "width": 1750
+  },
+  "multiplayer_frequency": 5,
+  "name": "Madagascar",
+  "nations": [
+    {
+      "coordinates": [2941, 1383],
+      "flag": "mu",
+      "name": "Mauritius"
+    },
+    {
+      "coordinates": [2654, 1502],
+      "flag": "fr",
+      "name": "Reunion"
+    },
+    {
+      "coordinates": [1478, 361],
+      "flag": "yt",
+      "name": "Mayotte"
+    },
+    {
+      "coordinates": [1380, 284],
+      "flag": "Comoros Islamic Republic",
+      "name": "Comoros Islamic Republic"
+    },
+    {
+      "coordinates": [1777, 1117],
+      "flag": "mg",
+      "name": "Antananarivo"
+    },
+    {
+      "coordinates": [2050, 935],
+      "flag": "mg",
+      "name": "Toamasina"
+    },
+    {
+      "coordinates": [2137, 575],
+      "flag": "mg",
+      "name": "Sambava"
+    },
+    {
+      "coordinates": [2057, 312],
+      "flag": "Antankarana",
+      "name": "Antsiranana"
+    },
+    {
+      "coordinates": [1907, 430],
+      "flag": "mg",
+      "name": "Andoany"
+    },
+    {
+      "coordinates": [1668, 765],
+      "flag": "mg",
+      "name": "Mahajanga"
+    },
+    {
+      "coordinates": [1701, 1321],
+      "flag": "mg",
+      "name": "Antsirabe"
+    },
+    {
+      "coordinates": [1336, 1462],
+      "flag": "mg",
+      "name": "Morondava"
+    },
+    {
+      "coordinates": [1242, 1625],
+      "flag": "mg",
+      "name": "Morombe"
+    },
+    {
+      "coordinates": [1289, 1804],
+      "flag": "mg",
+      "name": "Toliara"
+    },
+    {
+      "coordinates": [1392, 2047],
+      "flag": "mg",
+      "name": "Androka"
+    },
+    {
+      "coordinates": [1631, 2022],
+      "flag": "mg",
+      "name": "Tolanaro"
+    },
+    {
+      "coordinates": [1849, 1650],
+      "flag": "mg",
+      "name": "Manakara"
+    },
+    {
+      "coordinates": [1696, 1540],
+      "flag": "mg",
+      "name": "Fianarantsoa"
+    },
+    {
+      "coordinates": [27, 489],
+      "flag": "mw",
+      "name": "Malawi"
+    },
+    {
+      "coordinates": [115, 1869],
+      "flag": "Mozambique PR",
+      "name": "Maxixe"
+    },
+    {
+      "coordinates": [65, 1279],
+      "flag": "Mozambique PR",
+      "name": "Beira"
+    },
+    {
+      "coordinates": [774, 148],
+      "flag": "Mozambique PR",
+      "name": "Mocimboa do Praira"
+    },
+    {
+      "coordinates": [798, 356],
+      "flag": "Mozambique PR",
+      "name": "Pemba"
+    },
+    {
+      "coordinates": [819, 569],
+      "flag": "Mozambique PR",
+      "name": "Nacala"
+    },
+    {
+      "coordinates": [580, 643],
+      "flag": "Mozambique PR",
+      "name": "Nampula"
+    },
+    {
+      "coordinates": [149, 369],
+      "flag": "Mozambique PR",
+      "name": "Lichinga"
+    },
+    {
+      "coordinates": [332, 1009],
+      "flag": "Mozambique PR",
+      "name": "Quelimane"
+    },
+    {
+      "coordinates": [184, 112],
+      "flag": "tz",
+      "name": "Songea"
+    },
+    {
+      "coordinates": [66, 1484],
+      "flag": "Mozambique PR",
+      "name": "Nova Mambone"
+    },
+    {
+      "coordinates": [272, 595],
+      "flag": "Mozambique PR",
+      "name": "Gurue"
+    },
+    {
+      "coordinates": [355, 808],
+      "flag": "Mozambique PR",
+      "name": "Mocuba"
+    },
+    {
+      "coordinates": [583, 267],
+      "flag": "Mozambique PR",
+      "name": "Montepuez"
+    },
+    {
+      "coordinates": [3461, 1307],
+      "flag": "mu-ro",
+      "name": "Rodrigues"
+    },
+    {
+      "coordinates": [813, 1667],
+      "flag": "tf",
+      "name": "French Southern Territories"
+    }
+  ],
+  "special_team_count": 2,
+  "team_frequency": 10,
+  "themes": ["africa"],
+  "translation_key": "map.madagascar"
+}

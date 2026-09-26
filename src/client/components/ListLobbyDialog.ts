@@ -4,6 +4,7 @@ import {
   HOSTED_LOBBY_AUTO_START_MS,
   MAX_HOSTED_LOBBY_PLAYERS,
   MIN_HOSTED_LOBBY_AUTO_START_MS,
+  MIN_HOSTED_LOBBY_PLAYERS,
 } from "../../core/Schemas";
 import { translateText } from "../Utils";
 import "./FluentSlider";
@@ -61,7 +62,7 @@ export class ListLobbyDialog extends LitElement {
   private minPlayers(): number {
     return Math.min(
       MAX_HOSTED_LOBBY_PLAYERS,
-      Math.max(2, this.currentPlayers + 1),
+      Math.max(MIN_HOSTED_LOBBY_PLAYERS, this.currentPlayers + 1),
     );
   }
 

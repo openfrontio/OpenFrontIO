@@ -1,14 +1,15 @@
 # Use an official Node runtime as the base image
 FROM node:24-slim AS base
 WORKDIR /usr/src/app
+RUN npm install --global --ignore-scripts npm@12.1.0
 
 # Build stage - install ALL dependencies and build
 FROM base AS build
 ENV HUSKY=0
 # Copy package files first for better caching
-COPY package*.json ./
+COPY package*.json .npmrc ./
 RUN --mount=type=cache,target=/root/.npm \
-    npm ci
+    npm ci --ignore-scripts
 
 # Copy only what's needed for build
 COPY tsconfig.json ./
@@ -35,9 +36,9 @@ RUN npm run build-prod
 FROM base AS prod-deps
 ENV HUSKY=0
 ENV NPM_CONFIG_IGNORE_SCRIPTS=1
-COPY package*.json ./
+COPY package*.json .npmrc ./
 RUN --mount=type=cache,target=/root/.npm \
-    npm ci --omit=dev
+    npm ci --omit=dev --ignore-scripts
 
 # Final production image
 FROM base

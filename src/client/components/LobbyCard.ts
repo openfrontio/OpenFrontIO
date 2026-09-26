@@ -5,8 +5,10 @@ import { PublicGameInfo } from "../../core/Schemas";
 import { responseHasLinkedIdentity } from "../AccountIdentity";
 import { crazyGamesSDK } from "../CrazyGamesSDK";
 import { terrainMapFileLoader } from "../TerrainMapFileLoader";
+import { notableLobbySettings } from "../utilities/LobbySettingsSummary";
 import { getMapName, getModifierLabels, translateText } from "../Utils";
 import "./ConfirmDialog";
+import { hideFloatingTooltip, showFloatingTooltip } from "./FloatingTooltip";
 
 /**
  * Whether the signed-in player may join trusted-only lobbies, from the
@@ -94,7 +96,7 @@ class MapAspectRatioCache {
           onLoaded();
         }
       })
-      .catch((e) => console.error(`Failed to load manifest for ${mapType}`, e))
+      .catch((e) => console.warn(`Failed to load manifest for ${mapType}`, e))
       .finally(() => this.pending.delete(mapType));
   }
 }
@@ -132,6 +134,9 @@ const PILL =
 // No backdrop-filter anywhere in the card: under a transformed ancestor
 // Chrome clips it with a separate mask and the map leaks at the corners.
 const BADGE = "rounded bg-black/70";
+/** A player's listed lobby, so it can't pass for a scheduled public game. */
+const CUSTOM_PILL =
+  "rounded bg-orange-500 px-2 py-1 text-xs font-bold tracking-widest text-white";
 
 /** Extreme aspect ratios (Amazon River is ~20:1) show whole rather than cropped. */
 function fitsByContain(mapType: GameMapType): boolean {
@@ -177,6 +182,7 @@ export function lobbyCard({
     lobby.gameConfig?.doomsdayClock?.speed,
   ).sort((a, b) => b.length - a.length);
   const trustedOnly = lobby.gameConfig?.trusted === true;
+  const custom = lobby.custom === true;
 
   const state = disabled
     ? "opacity-50 cursor-not-allowed pointer-events-none"
@@ -206,6 +212,11 @@ export function lobbyCard({
         class="absolute inset-x-2 top-2 flex items-start justify-between gap-2"
       >
         <div class="flex min-w-0 flex-col items-start gap-1">
+          ${custom
+            ? html`<span class=${CUSTOM_PILL}
+                >${translateText("public_lobby.custom")}</span
+              >`
+            : nothing}
           ${modifiers.map((label) => html`<span class=${PILL}>${label}</span>`)}
         </div>
         <span
@@ -217,9 +228,12 @@ export function lobbyCard({
       </div>
 
       <div
-        class="absolute inset-x-0 bottom-0 flex flex-col bg-black/65 px-3 py-2 ${trustedOnly
-          ? "pr-10"
-          : ""}"
+        class="absolute inset-x-0 bottom-0 flex flex-col bg-black/65 px-3 py-2 ${trustedOnly &&
+        custom
+          ? "pr-20"
+          : trustedOnly || custom
+            ? "pr-10"
+            : ""}"
       >
         <span
           class="${BADGE} absolute bottom-full right-2 mb-1 flex items-center gap-1 px-2 py-0.5 text-xs font-bold tabular-nums tracking-widest"
@@ -237,6 +251,7 @@ export function lobbyCard({
           </svg>
         </span>
         ${trustedOnly ? trustLockIcon(viewerTrusted) : nothing}
+        ${custom ? customInfoIcon(lobby, trustedOnly) : nothing}
         ${title
           ? html`<p
               class="text-sm font-bold leading-tight tracking-wider @[20rem]:text-base"
@@ -248,6 +263,72 @@ export function lobbyCard({
       </div>
     </button>
   `;
+}
+
+/**
+ * Bottom-right info icon on a player's listed lobby. Hovering shows that a
+ * player made it and the settings it runs with, since a custom lobby in a
+ * public queue otherwise looks like a scheduled game.
+ */
+function customInfoIcon(
+  lobby: PublicGameInfo,
+  besideLock: boolean,
+): TemplateResult {
+  const c = lobby.gameConfig;
+  const enabled = translateText("common.enabled");
+  const lines: string[] = [];
+  if (c?.maxPlayers !== undefined) {
+    lines.push(
+      `${translateText("host_modal.list_lobby_max_players")}: ${c.maxPlayers}`,
+    );
+  }
+  if (c) {
+    for (const s of notableLobbySettings(c, null)) {
+      // Some labels (e.g. game_settings.bots) already end with ": ".
+      const label = s.label.replace(/[:\uFF1A\s]+$/u, "");
+      lines.push(s.value === enabled ? label : `${label}: ${s.value}`);
+    }
+    if ((c.disabledUnits?.length ?? 0) > 0) {
+      lines.push(
+        `${translateText("private_lobby.disabled_units")}: ${c.disabledUnits!.length}`,
+      );
+    }
+  }
+  const title = translateText("public_lobby.custom_tooltip_title");
+  const tooltip = html`<div class="flex flex-col gap-0.5">
+    <span class="font-bold">${title}</span>
+    ${lines.length > 0
+      ? lines.map((l) => html`<span class="text-white/80">${l}</span>`)
+      : html`<span class="text-white/80"
+          >${translateText("public_lobby.custom_default_settings")}</span
+        >`}
+  </div>`;
+  // Floats in <body> (FloatingTooltip): the card clips its overflow, and so
+  // do the modal panels the cards sit in.
+  const show = (e: Event) =>
+    showFloatingTooltip(e.currentTarget as HTMLElement, tooltip);
+  return html`<span
+    class="${BADGE} absolute bottom-2 ${besideLock
+      ? "right-11"
+      : "right-2"} flex items-center px-1.5 py-1 text-orange-400"
+    aria-label=${title}
+    data-custom-info
+    @mouseenter=${show}
+    @mouseleave=${hideFloatingTooltip}
+  >
+    <svg
+      class="size-4"
+      viewBox="0 0 20 20"
+      fill="currentColor"
+      aria-hidden="true"
+    >
+      <path
+        fill-rule="evenodd"
+        d="M18 10a8 8 0 1 1-16 0 8 8 0 0 1 16 0Zm-7-4a1 1 0 1 1-2 0 1 1 0 0 1 2 0ZM9 9a.75.75 0 0 0 0 1.5h.253a.25.25 0 0 1 .244.304l-.459 2.066A1.75 1.75 0 0 0 10.747 15H11a.75.75 0 0 0 0-1.5h-.253a.25.25 0 0 1-.244-.304l.459-2.066A1.75 1.75 0 0 0 9.253 9H9Z"
+        clip-rule="evenodd"
+      />
+    </svg>
+  </span>`;
 }
 
 /** Bottom-right lock: red and closed when the viewer can't join, green and open when they can. */
