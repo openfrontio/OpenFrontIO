@@ -75,18 +75,20 @@ describe("HelpModal keyboard layout refresh", () => {
 
     const modal = document.createElement("help-modal") as HelpModal & {
       updateComplete: Promise<unknown>;
+    };
+    const state = modal as unknown as {
       layoutMap: Map<string, string> | null;
     };
     document.body.appendChild(modal);
     await modal.updateComplete;
     await Promise.resolve();
 
-    expect(modal.layoutMap).toBe(firstMap);
+    expect(state.layoutMap).toBe(firstMap);
 
     keyboard.dispatchEvent(new Event("layoutchange"));
     await Promise.resolve();
 
-    expect(modal.layoutMap).toBe(secondMap);
+    expect(state.layoutMap).toBe(secondMap);
     expect(keyboard.getLayoutMap).toHaveBeenCalledTimes(2);
 
     modal.remove();
