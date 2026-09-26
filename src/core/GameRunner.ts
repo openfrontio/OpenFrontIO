@@ -138,7 +138,7 @@ export async function createGameRunnerFromSnapshot(
 }
 
 export class GameRunner {
-  private turns: Turn[] = [];
+  private turns: (Turn | undefined)[] = [];
   private currTurn = 0;
   private isExecuting = false;
 
@@ -207,9 +207,22 @@ export class GameRunner {
     this.isExecuting = true;
 
     this.game.addExecution(
-      ...this.execManager.createExecs(this.turns[this.currTurn]),
+      ...this.execManager.createExecs(this.turns[this.currTurn]!),
     );
+    // Release consumed turns even while a backlog remains.
+    this.turns[this.currTurn] = undefined;
     this.currTurn++;
+    if (this.currTurn === this.turns.length) {
+      this.turns.length = 0;
+      this.currTurn = 0;
+    } else if (
+      this.currTurn >= 1024 &&
+      this.currTurn >= this.turns.length / 2
+    ) {
+      // Moving no more entries than we've consumed keeps dequeue amortized O(1).
+      this.turns = this.turns.slice(this.currTurn);
+      this.currTurn = 0;
+    }
 
     const wasInSpawnPhase = this.game.inSpawnPhase();
     let updates: GameUpdates;

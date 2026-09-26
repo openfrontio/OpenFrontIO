@@ -1,11 +1,97 @@
+import { Executor } from "../../src/core/execution/ExecutionManager";
 import { NationExecution } from "../../src/core/execution/NationExecution";
 import { SpawnExecution } from "../../src/core/execution/SpawnExecution";
 import { Cell, Nation, PlayerInfo, PlayerType } from "../../src/core/game/Game";
-import { GameConfig, GameID } from "../../src/core/Schemas";
+import { GameRunner } from "../../src/core/GameRunner";
+import { GameConfig, GameID, Turn } from "../../src/core/Schemas";
 import { setup } from "../util/Setup";
 import { executeTicks } from "../util/utils";
 
 const gameID: GameID = "test_game_id";
+
+describe("GameRunner turn queue", () => {
+  async function createRunner() {
+    const human = new PlayerInfo(
+      "human",
+      PlayerType.Human,
+      "client_1",
+      "human_id",
+    );
+    const game = await setup("plains", {}, [human]);
+    const runner = new GameRunner(
+      game,
+      new Executor(game, gameID, "client_1"),
+      () => {},
+    );
+    return { runner, player: game.player(human.id) };
+  }
+
+  function turn(turnNumber: number): Turn {
+    return {
+      turnNumber,
+      intents: [
+        {
+          type: "mark_disconnected",
+          clientID: "client_1",
+          isDisconnected: turnNumber % 2 === 0,
+        },
+      ],
+    };
+  }
+
+  // Inspect retention directly; garbage collection timing is nondeterministic.
+  function retainedTurns(runner: GameRunner) {
+    return (runner as unknown as { turns: (Turn | undefined)[] }).turns;
+  }
+
+  test("releases consumed turns before a backlog drains and accepts new turns after draining", async () => {
+    const { runner, player } = await createRunner();
+    const first = turn(0);
+    const second = turn(1);
+    runner.addTurn(first);
+    runner.addTurn(second);
+
+    expect(runner.executeNextTick()).toBe(true);
+    expect(player.isDisconnected()).toBe(true);
+    expect(runner.pendingTurns()).toBe(1);
+    expect(retainedTurns(runner)).not.toContain(first);
+    expect(retainedTurns(runner)).toContain(second);
+
+    expect(runner.executeNextTick()).toBe(true);
+    expect(player.isDisconnected()).toBe(false);
+    expect(runner.pendingTurns()).toBe(0);
+    expect(retainedTurns(runner)).toHaveLength(0);
+    expect(runner.executeNextTick()).toBe(false);
+
+    runner.addTurn(turn(2));
+    expect(runner.executeNextTick()).toBe(true);
+    expect(player.isDisconnected()).toBe(true);
+    expect(runner.pendingTurns()).toBe(0);
+    expect(retainedTurns(runner)).toHaveLength(0);
+  });
+
+  test("bounds consumed queue storage and preserves FIFO while turns arrive during catch-up", async () => {
+    const { runner, player } = await createRunner();
+    const backlog = 1500;
+    for (let i = 0; i < backlog; i++) runner.addTurn(turn(i));
+
+    // Keep a constant backlog long enough to require multiple compactions.
+    for (let i = 0; i < 4500; i++) {
+      expect(runner.executeNextTick()).toBe(true);
+      expect(player.isDisconnected()).toBe(i % 2 === 0);
+      runner.addTurn(turn(i + backlog));
+      expect(runner.pendingTurns()).toBe(backlog);
+      expect(retainedTurns(runner).length).toBeLessThanOrEqual(2 * backlog);
+    }
+    for (let i = 4500; i < 6000; i++) {
+      expect(runner.executeNextTick()).toBe(true);
+      expect(player.isDisconnected()).toBe(i % 2 === 0);
+      expect(runner.pendingTurns()).toBe(5999 - i);
+    }
+    expect(retainedTurns(runner)).toHaveLength(0);
+    expect(runner.executeNextTick()).toBe(false);
+  });
+});
 
 async function createTestGame(
   randomSpawn: boolean,
