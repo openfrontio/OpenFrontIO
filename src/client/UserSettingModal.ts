@@ -450,6 +450,35 @@ export class UserSettingModal extends BaseModal {
     );
   }
 
+  private toggleLobbyStartAlerts(e: Event) {
+    const enabled = (e.target as HTMLInputElement).checked;
+    this.userSettings.setLobbyStartAlerts(enabled);
+
+    // A permission prompt must originate from a user gesture. Persist the
+    // choice regardless of the result: desktop notifications are optional,
+    // and the lobby-start chime still works when permission is denied.
+    if (
+      enabled &&
+      typeof Notification !== "undefined" &&
+      Notification.permission === "default"
+    ) {
+      try {
+        void Notification.requestPermission().catch((error) => {
+          console.warn(
+            "Failed to request game-start notification permission",
+            error,
+          );
+        });
+      } catch (error) {
+        console.warn(
+          "Failed to request game-start notification permission",
+          error,
+        );
+      }
+    }
+    this.requestUpdate();
+  }
+
   private toggleSteamLobbyLinks() {
     this.userSettings.setSteamLobbyLinks(
       this.userSettings.steamLobbyLinks() === "steam" ? "browser" : "steam",
@@ -1723,6 +1752,15 @@ export class UserSettingModal extends BaseModal {
         id="lobby-id-visibility-toggle"
         .checked=${!this.userSettings.lobbyIdVisibility()}
         @change=${this.toggleLobbyIdVisibility}
+      ></setting-toggle>
+
+      <!-- 🔔 Lobby start alerts -->
+      <setting-toggle
+        label="${translateText("user_setting.lobby_start_alerts_label")}"
+        description="${translateText("user_setting.lobby_start_alerts_desc")}"
+        id="lobby-start-alerts-toggle"
+        .checked=${this.userSettings.lobbyStartAlerts()}
+        @change=${this.toggleLobbyStartAlerts}
       ></setting-toggle>
 
       ${canHandOffToSteam()

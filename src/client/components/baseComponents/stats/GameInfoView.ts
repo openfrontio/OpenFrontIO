@@ -435,11 +435,11 @@ export class GameInfoView extends LitElement {
         const mapType = session.info.config.gameMap as GameMapType;
         this.mapImage = terrainMapFileLoader.getMapData(mapType).webpPath;
       } catch (error) {
-        console.error("Failed to load map image:", error);
+        console.warn("Failed to load map image:", error);
       }
     } catch (err) {
       if (generation === this.loadGeneration) {
-        console.error("Failed to load game:", err);
+        console.warn("Failed to load game:", err);
         this.loadFailed = true;
       }
     } finally {

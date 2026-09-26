@@ -445,8 +445,11 @@ export function claimPromptStringsReady(
  * only explanation a buyer ever gets on a string nobody can read.
  */
 export function steamGrantStringsReady(
-  translate: (key: string) => string,
+  translate: (key: string, params: Record<string, string>) => string,
 ): boolean {
+  // The bodies take {tier} and {date}; formatting them without those fails
+  // and logs an ICU error on every boot. Only key !== result matters here.
+  const params = { tier: "", date: "" };
   return (
     [
       BOOT_INTERRUPT_KEYS.grantWelcomeBody,
@@ -454,7 +457,7 @@ export function steamGrantStringsReady(
       BOOT_INTERRUPT_KEYS.grantEndedBody,
       BOOT_INTERRUPT_KEYS.grantEndedHeading,
     ] as string[]
-  ).every((key) => translate(key) !== key);
+  ).every((key) => translate(key, params) !== key);
 }
 
 /**

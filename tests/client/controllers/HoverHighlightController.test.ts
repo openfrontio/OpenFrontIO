@@ -107,4 +107,27 @@ describe("HoverHighlightController", () => {
     handler(new MouseMoveEvent(200, 100)); // >50 tiles from unit
     expect(view.setHighlightOwner).toHaveBeenCalledWith(0);
   });
+
+  it("does not throw over water while the renderer is gone (lost WebGL context)", () => {
+    const waterTile = game.ref(50, 100);
+    expect(game.isWater(waterTile)).toBe(true);
+    game
+      .player("player1_id")
+      .buildUnit(UnitType.Warship, waterTile, { patrolTile: waterTile });
+
+    // MapRenderer.getSettings() returns {} when it has no renderer.
+    view.getSettings = vi.fn().mockReturnValue({});
+    const ui = new HoverHighlightController(
+      game,
+      eventBus,
+      transformHandler,
+      view,
+    );
+    ui["lastOwnerID"] = 1;
+
+    ui.init();
+    const handler = (eventBus.on as any).mock.calls[0][1];
+    expect(() => handler(new MouseMoveEvent(50, 101))).not.toThrow();
+    expect(view.setHighlightOwner).toHaveBeenCalledWith(0);
+  });
 });

@@ -398,7 +398,7 @@ export class CrazyGamesSDK {
         };
         window.CrazyGames!.SDK.ad.requestAd("midgame", callbacks);
       } catch (error) {
-        console.error("Failed to request midgame ad:", error);
+        console.warn("Failed to request midgame ad:", error);
         resolve();
       }
     });

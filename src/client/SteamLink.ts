@@ -240,7 +240,7 @@ export async function fetchSteamLinkTicket(
       typeof body?.personaName === "string" ? body.personaName : null;
     return { ok: true, personaName };
   } catch (e) {
-    console.error("fetchSteamLinkTicket: request failed", e);
+    console.warn("fetchSteamLinkTicket: request failed", e);
     return { ok: false };
   }
 }
@@ -436,7 +436,7 @@ async function postSteamLinkRedeem(
     );
     return { ok: false, reason: "failed" };
   } catch (e) {
-    console.error(
+    console.warn(
       `postSteamLinkRedeem(${"code" in body ? "code" : "token"}): request failed`,
       e,
     );
@@ -522,7 +522,7 @@ export async function fetchSteamLinkConflict(): Promise<SteamLinkConflictLookup>
     // An unrecognised body is "no offer", not a failure — see parseConflict.
     return { ok: true, conflict: parseConflict(await response.json()) };
   } catch (e) {
-    console.error("fetchSteamLinkConflict: request failed", e);
+    console.warn("fetchSteamLinkConflict: request failed", e);
     return { ok: false, reason: "failed" };
   }
 }
@@ -613,7 +613,7 @@ export async function answerSteamLinkConflict(
     );
     return { ok: false, reason: "failed" };
   } catch (e) {
-    console.error("answerSteamLinkConflict: request failed", e);
+    console.warn("answerSteamLinkConflict: request failed", e);
     return { ok: false, reason: "failed" };
   }
 }

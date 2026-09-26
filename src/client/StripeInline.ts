@@ -78,7 +78,7 @@ function getStripe(): Promise<Stripe | null> {
   const key = stripePublishableKey();
   if (key === null) return Promise.resolve(null);
   stripePromise ??= loadStripe(key).catch((e: unknown) => {
-    console.error("getStripe: Stripe.js failed to load", e);
+    console.warn("getStripe: Stripe.js failed to load", e);
     stripePromise = null;
     return null;
   });
