@@ -41,6 +41,12 @@ export class HeadsUpMessage extends LitElement implements Controller {
   @state()
   private toastColor: "green" | "red" = "green";
   private toastTimeout: number | null = null;
+  private toastPointerId: number | null = null;
+  private toastDragStart = { x: 0, y: 0 };
+  @state()
+  private toastDragOffset = { x: 0, y: 0 };
+
+  private static readonly TOAST_DISMISS_DISTANCE = 80;
 
   createRenderRoot() {
     return this;
@@ -60,10 +66,20 @@ export class HeadsUpMessage extends LitElement implements Controller {
       "show-message",
       this.handleShowMessage as EventListener,
     );
-    if (this.toastTimeout) {
+    if (this.toastTimeout !== null) {
       clearTimeout(this.toastTimeout);
     }
   }
+
+  private dismissToast = () => {
+    if (this.toastTimeout !== null) {
+      clearTimeout(this.toastTimeout);
+      this.toastTimeout = null;
+    }
+    this.toastPointerId = null;
+    this.toastDragOffset = { x: 0, y: 0 };
+    this.toastMessage = null;
+  };
 
   private handleShowMessage = (event: CustomEvent) => {
     const { message, duration, color } = event.detail ?? {};
@@ -73,18 +89,52 @@ export class HeadsUpMessage extends LitElement implements Controller {
     ) {
       this.toastMessage = message;
       this.toastColor = color === "red" ? "red" : "green";
+      this.toastPointerId = null;
+      this.toastDragOffset = { x: 0, y: 0 };
       this.requestUpdate();
-      if (this.toastTimeout) {
+      if (this.toastTimeout !== null) {
         clearTimeout(this.toastTimeout);
       }
       this.toastTimeout = window.setTimeout(
-        () => {
-          this.toastMessage = null;
-          this.requestUpdate();
-        },
+        this.dismissToast,
         typeof duration === "number" ? (duration ?? 2000) : 2000,
       );
     }
+  };
+
+  private onToastPointerDown = (event: PointerEvent) => {
+    if (event.button !== 0 || this.toastPointerId !== null) return;
+    this.toastPointerId = event.pointerId;
+    this.toastDragStart = { x: event.clientX, y: event.clientY };
+    (event.currentTarget as HTMLElement).setPointerCapture(event.pointerId);
+  };
+
+  private onToastPointerMove = (event: PointerEvent) => {
+    if (event.pointerId !== this.toastPointerId) return;
+    this.toastDragOffset = {
+      x: event.clientX - this.toastDragStart.x,
+      y: event.clientY - this.toastDragStart.y,
+    };
+  };
+
+  private onToastPointerUp = (event: PointerEvent) => {
+    if (event.pointerId !== this.toastPointerId) return;
+    const distance = Math.hypot(
+      event.clientX - this.toastDragStart.x,
+      event.clientY - this.toastDragStart.y,
+    );
+    if (distance >= HeadsUpMessage.TOAST_DISMISS_DISTANCE) {
+      this.dismissToast();
+      return;
+    }
+    this.toastPointerId = null;
+    this.toastDragOffset = { x: 0, y: 0 };
+  };
+
+  private onToastPointerCancel = (event: PointerEvent) => {
+    if (event.pointerId !== this.toastPointerId) return;
+    this.toastPointerId = null;
+    this.toastDragOffset = { x: 0, y: 0 };
   };
 
   init() {
@@ -187,24 +237,44 @@ export class HeadsUpMessage extends LitElement implements Controller {
         ${this.toastMessage
           ? html`
               <div
-                class="fixed top-6 left-1/2 -translate-x-1/2 z-[1002] px-6 py-4 rounded-xl transition-all duration-300 animate-fade-in-out"
-                style="max-width: 90vw; min-width: 200px; text-align: center;
-                  background: ${this.toastColor === "red"
-                  ? "rgba(239,68,68,0.1)"
-                  : "rgba(34,197,94,0.1)"};
-                  border: 1px solid ${this.toastColor === "red"
-                  ? "rgba(239,68,68,0.5)"
-                  : "rgba(34,197,94,0.5)"};
-                  color: white;
-                  box-shadow: 0 0 30px 0 ${this.toastColor === "red"
-                  ? "rgba(239,68,68,0.3)"
-                  : "rgba(34,197,94,0.3)"};
-                  backdrop-filter: blur(12px);"
+                data-game-toast
+                data-game-input-pass-through
+                class="fixed top-6 left-1/2 -translate-x-1/2 z-[1002]
+                       max-w-[90vw] pointer-events-auto touch-none select-none
+                       cursor-grab active:cursor-grabbing"
+                @pointerdown=${this.onToastPointerDown}
+                @pointermove=${this.onToastPointerMove}
+                @pointerup=${this.onToastPointerUp}
+                @pointercancel=${this.onToastPointerCancel}
                 @contextmenu=${(e: MouseEvent) => e.preventDefault()}
               >
-                ${typeof this.toastMessage === "string"
-                  ? html`<span class="font-medium">${this.toastMessage}</span>`
-                  : this.toastMessage}
+                <div
+                  data-game-toast-content
+                  class="px-6 py-4 rounded-xl animate-fade-in-out"
+                  style="min-width: 200px; text-align: center;
+                  transform: translate3d(${this.toastDragOffset.x}px, ${this
+                    .toastDragOffset.y}px, 0);
+                  transition: ${this.toastPointerId === null
+                    ? "transform 180ms cubic-bezier(0.4, 0, 0.2, 1)"
+                    : "none"};
+                  background: ${this.toastColor === "red"
+                    ? "rgba(239,68,68,0.1)"
+                    : "rgba(34,197,94,0.1)"};
+                  border: 1px solid ${this.toastColor === "red"
+                    ? "rgba(239,68,68,0.5)"
+                    : "rgba(34,197,94,0.5)"};
+                  color: white;
+                  box-shadow: 0 0 30px 0 ${this.toastColor === "red"
+                    ? "rgba(239,68,68,0.3)"
+                    : "rgba(34,197,94,0.3)"};
+                  backdrop-filter: blur(12px);"
+                >
+                  ${typeof this.toastMessage === "string"
+                    ? html`<span class="font-medium"
+                        >${this.toastMessage}</span
+                      >`
+                    : this.toastMessage}
+                </div>
               </div>
             `
           : null}

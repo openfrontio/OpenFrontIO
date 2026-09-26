@@ -227,6 +227,8 @@ export class InputHandler {
   private lastPointerDownY: number = 0;
 
   private pointers: Map<number, PointerEvent> = new Map();
+  private passThroughPointers: Map<number, { x: number; y: number }> =
+    new Map();
 
   private lastPinchDistance: number = 0;
 
@@ -330,6 +332,7 @@ export class InputHandler {
   private resetPointerState() {
     this.pointerDown = false;
     this.pointers.clear();
+    this.passThroughPointers.clear();
     this.lastGestureScale = null;
     if (this.longPressTimer !== null) {
       clearTimeout(this.longPressTimer);
@@ -522,10 +525,13 @@ export class InputHandler {
     this.canvas.addEventListener("pointerdown", (e) => this.onPointerDown(e), {
       signal,
     });
+    window.addEventListener("pointerdown", this.onPassThroughPointerDown, {
+      signal,
+    });
     window.addEventListener("pointerup", (e) => this.onPointerUp(e), {
       signal,
     });
-    window.addEventListener("pointercancel", (e) => this.onPointerUp(e), {
+    window.addEventListener("pointercancel", this.onPointerCancel, {
       signal,
     });
     this.canvas.addEventListener(
@@ -884,6 +890,70 @@ export class InputHandler {
     }
   }
 
+  private isGameInputPassThrough(event: PointerEvent): boolean {
+    return (
+      event
+        .composedPath?.()
+        .some(
+          (target) =>
+            target instanceof HTMLElement &&
+            target.hasAttribute("data-game-input-pass-through"),
+        ) ?? false
+    );
+  }
+
+  private onPassThroughPointerDown = (event: PointerEvent): void => {
+    if (this.isGameInputPassThrough(event)) {
+      if (event.button === 0) {
+        this.passThroughPointers.set(event.pointerId, {
+          x: event.clientX,
+          y: event.clientY,
+        });
+      }
+      this.onPointerDown(event);
+    }
+  };
+
+  private cancelPassThroughDrag(pointerId: number): void {
+    this.passThroughPointers.delete(pointerId);
+    const wasPrimaryPointer = this.pointers.keys().next().value === pointerId;
+    if (!this.pointers.delete(pointerId)) return;
+
+    this.pointerDown = this.pointers.size > 0;
+    if (this.pointerDown) {
+      if (wasPrimaryPointer) {
+        const nextPointer = this.pointers.values().next().value;
+        if (nextPointer) {
+          this.lastPointerX = nextPointer.clientX;
+          this.lastPointerY = nextPointer.clientY;
+          this.lastPointerDownX = nextPointer.clientX;
+          this.lastPointerDownY = nextPointer.clientY;
+        }
+      }
+      this.lastPinchDistance =
+        this.pointers.size >= 2 ? this.getPinchDistance() : 0;
+      return;
+    }
+
+    if (this.longPressTimer !== null) {
+      clearTimeout(this.longPressTimer);
+      this.longPressTimer = null;
+    }
+    if (this.longPressActive) {
+      this.canvas.style.cursor = "";
+    }
+    this.longPressActive = false;
+    this.suppressNextTap = false;
+  }
+
+  private onPointerCancel = (event: PointerEvent): void => {
+    if (this.passThroughPointers.has(event.pointerId)) {
+      this.cancelPassThroughDrag(event.pointerId);
+      return;
+    }
+    this.onPointerUp(event);
+  };
+
   onPointerUp(event: PointerEvent) {
     if (event.button === 1) {
       event.preventDefault();
@@ -893,6 +963,14 @@ export class InputHandler {
     if (event.button > 0) {
       return;
     }
+    if (
+      this.passThroughPointers.has(event.pointerId) &&
+      this.pointers.size > 1
+    ) {
+      this.cancelPassThroughDrag(event.pointerId);
+      return;
+    }
+    this.passThroughPointers.delete(event.pointerId);
     // The release listener is global so map drags can end over the HUD. A HUD
     // click has no matching map pointerdown and must not reuse stale map state.
     if (!this.pointerDown || !this.pointers.has(event.pointerId)) {
@@ -1053,6 +1131,17 @@ export class InputHandler {
     }
 
     if (!this.pointers.has(event.pointerId)) {
+      return;
+    }
+
+    const passThroughOrigin = this.passThroughPointers.get(event.pointerId);
+    if (passThroughOrigin) {
+      const distance =
+        Math.abs(event.clientX - passThroughOrigin.x) +
+        Math.abs(event.clientY - passThroughOrigin.y);
+      if (distance >= this.DRAG_THRESHOLD_PX) {
+        this.cancelPassThroughDrag(event.pointerId);
+      }
       return;
     }
     this.pointers.set(event.pointerId, event);
