@@ -28,13 +28,25 @@ import { clientPlatform } from "./ClientPlatform";
  * sends from the error modal. log and info are chatter and stay local.
  */
 
+// Grafana bills Frontend Observability per session that sends anything, so
+// these rates are the bill: at ~250k prod sessions a day, every point of
+// sampling is ~75k sessions a month.
+//
 // Fraction of sessions that send everything: measurements, events, console
-// warnings. Exceptions and console.error are sent by every session
-// regardless (see filterSignal), so error means worth a look.
-// Prod has enough players that 1% is plenty of signal; everywhere else every
-// session reports, so a staging or dev deployment shows everything at once.
+// warnings. Prod has enough players that 1% is plenty of signal; everywhere
+// else every session reports, so a staging or dev deployment shows
+// everything at once.
 export function sessionSamplingRate(env: GameEnv): number {
   return env === GameEnv.Prod ? 0.01 : 1;
+}
+
+// Fraction of sessions that send their errors: exceptions and console.error.
+// About one prod session in ten hits one, so at 100% nearly every error
+// would be its own billed session; at 10% a common error still shows up
+// hundreds of times a day. Both rates cut the same hash (isSessionSampled),
+// so the 1% sessions are among these and send their errors too.
+export function errorSamplingRate(env: GameEnv): number {
+  return env === GameEnv.Prod ? 0.1 : 1;
 }
 
 /**
@@ -119,7 +131,8 @@ export function initTelemetry(): Promise<Faro | null> {
           /^Load failed(?= \w*Error )/,
           /^NetworkError when attempting to fetch resource\.(?= \w*Error )/,
         ],
-        beforeSend: (item) => filterSignal(item, sessionSamplingRate(env)),
+        beforeSend: (item) =>
+          filterSignal(item, sessionSamplingRate(env), errorSamplingRate(env)),
       });
       forwardConsole(faro, "warn", LogLevel.WARN);
       forwardConsole(faro, "error", LogLevel.ERROR);
@@ -183,6 +196,7 @@ export function calledFromBundle(stack: string, bundleDir: string): boolean {
 function filterSignal(
   item: TransportItem,
   samplingRate: number,
+  errorRate: number,
 ): TransportItem | null {
   try {
     if (item.type === "event") {
@@ -190,13 +204,10 @@ function filterSignal(
       if (typeof name === "string" && DROPPED_EVENTS.has(name)) return null;
     }
     if (item.type === "exception" && isThirdPartyException(item)) return null;
-    // Errors are the signal we most want and a sliver of the volume (~0.4%
-    // of prod bytes), so only the rest is sampled.
-    if (!isError(item)) {
-      const sessionId = item.meta.session?.id;
-      if (sessionId === undefined) return null;
-      if (!isSessionSampled(sessionId, samplingRate)) return null;
-    }
+    const sessionId = item.meta.session?.id;
+    if (sessionId === undefined) return null;
+    const rate = isError(item) ? errorRate : samplingRate;
+    if (!isSessionSampled(sessionId, rate)) return null;
     if (isRepeated(item)) return null;
     return slimBrowserMeta(scrubUrls(item));
   } catch {
