@@ -1,4 +1,5 @@
 import { render } from "lit";
+import type { MockInstance } from "vitest";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const presenceMocks = vi.hoisted(() => ({
@@ -19,6 +20,23 @@ vi.mock("../../src/client/DesktopPresence", () => ({
   },
 }));
 
+const alertMocks = vi.hoisted(() => ({
+  construct: vi.fn(),
+  play: vi.fn(),
+}));
+
+vi.mock("howler", () => ({
+  Howl: class {
+    constructor(options: unknown) {
+      alertMocks.construct(options);
+    }
+
+    play() {
+      return alertMocks.play();
+    }
+  },
+}));
+
 import { JoinLobbyModal } from "../../src/client/JoinLobbyModal";
 import { GameMode, GameType } from "../../src/core/game/Game";
 import { UserSettings } from "../../src/core/game/UserSettings";
@@ -34,7 +52,11 @@ function resetUserSettingsState() {
 }
 
 describe("JoinLobbyModal lobby start alert default", () => {
-  beforeEach(resetUserSettingsState);
+  beforeEach(() => {
+    resetUserSettingsState();
+    alertMocks.construct.mockReset();
+    alertMocks.play.mockReset();
+  });
 
   afterEach(() => {
     vi.restoreAllMocks();
@@ -44,9 +66,17 @@ describe("JoinLobbyModal lobby start alert default", () => {
   function trackingModal() {
     const modal = new JoinLobbyModal();
     (modal as any).startLobbyUpdates = vi.fn();
-    (modal as any).loadStartAlertSound = vi.fn();
-    (modal as any).showMessage = vi.fn();
     return modal;
+  }
+
+  function bellButton(modal: JoinLobbyModal): HTMLButtonElement {
+    const container = document.createElement("div");
+    render((modal as any).gameStartAlert.renderBell(), container);
+    return container.querySelector("button")!;
+  }
+
+  function showMessageEvents(spy: MockInstance<Window["dispatchEvent"]>) {
+    return spy.mock.calls.filter(([event]) => event.type === "show-message");
   }
 
   it("keeps the existing off default without preloading", () => {
@@ -54,19 +84,20 @@ describe("JoinLobbyModal lobby start alert default", () => {
 
     (modal as any).startTrackingLobby("first");
 
-    expect((modal as any).notifyOnStart).toBe(false);
-    expect((modal as any).loadStartAlertSound).not.toHaveBeenCalled();
+    expect(bellButton(modal).getAttribute("aria-pressed")).toBe("false");
+    expect(alertMocks.construct).not.toHaveBeenCalled();
   });
 
   it("auto-arms and preloads without showing the manual-arm toast", () => {
     new UserSettings().setLobbyStartAlerts(true);
+    const dispatchSpy = vi.spyOn(window, "dispatchEvent");
     const modal = trackingModal();
 
     (modal as any).startTrackingLobby("first");
 
-    expect((modal as any).notifyOnStart).toBe(true);
-    expect((modal as any).loadStartAlertSound).toHaveBeenCalledOnce();
-    expect((modal as any).showMessage).not.toHaveBeenCalled();
+    expect(bellButton(modal).getAttribute("aria-pressed")).toBe("true");
+    expect(alertMocks.construct).toHaveBeenCalledOnce();
+    expect(showMessageEvents(dispatchSpy)).toHaveLength(0);
   });
 
   it("keeps bell overrides local to one lobby", () => {
@@ -74,24 +105,24 @@ describe("JoinLobbyModal lobby start alert default", () => {
     const modal = trackingModal();
     (modal as any).startTrackingLobby("first");
 
-    (modal as any).toggleNotifyOnStart();
-    expect((modal as any).notifyOnStart).toBe(false);
+    bellButton(modal).click();
+    expect(bellButton(modal).getAttribute("aria-pressed")).toBe("false");
     expect(new UserSettings().lobbyStartAlerts()).toBe(true);
 
     (modal as any).startTrackingLobby("second");
-    expect((modal as any).notifyOnStart).toBe(true);
+    expect(bellButton(modal).getAttribute("aria-pressed")).toBe("true");
   });
 
   it("still plays the chime when notification permission is denied", () => {
+    new UserSettings().setLobbyStartAlerts(true);
     const modal = trackingModal();
+    (modal as any).startTrackingLobby("first");
     (modal as any).currentLobbyId = "first";
-    (modal as any).notifyOnStart = true;
-    (modal as any).playStartAlertSound = vi.fn();
     vi.stubGlobal("Notification", { permission: "denied" });
 
-    (modal as any).handleGameStarting();
+    (modal as any).gameStartAlert.handleGameStarting();
 
-    expect((modal as any).playStartAlertSound).toHaveBeenCalledOnce();
+    expect(alertMocks.play).toHaveBeenCalledOnce();
   });
 });
 
