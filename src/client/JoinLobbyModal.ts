@@ -401,7 +401,9 @@ export class JoinLobbyModal extends BaseModal {
     // Nation count for this map isn't loaded pre-join, so the numeric-nations
     // default comparison is skipped in the row chips.
     const settings = c ? notableLobbySettings(c, null) : [];
-    const disabledUnits = c?.disabledUnits?.map((u) => translateText(UnitTranslations.get(u) ?? "")) ?? [];
+    const disabledUnits = c?.disabledUnits?.map(
+      (u) => translateText(UnitTranslations.get(u) ?? u)
+    ) ?? [];
     const enabled = translateText("common.enabled");
     // A featured lobby names itself; the map drops to the subtitle so nothing
     // is lost. Interpolated by lit as TEXT, never markup — emoji render because
