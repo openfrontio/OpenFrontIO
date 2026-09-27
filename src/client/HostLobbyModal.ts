@@ -468,7 +468,7 @@ export class HostLobbyModal extends BaseModal {
         .checked=${this.customAlliances}
         .inputMin=${0}
         .inputMax=${15}
-        .inputStep=${1}
+        .inputStep=${"any"}
         .inputValue=${this.customAllianceMinutes}
         .inputAriaLabel=${translateText("game_settings.custom_alliances")}
         .inputPlaceholder=${translateText("game_settings.mins_placeholder")}
@@ -1265,7 +1265,7 @@ export class HostLobbyModal extends BaseModal {
 
   private handleCustomAllianceMinutesInput = (e: Event) => {
     const input = e.target as HTMLInputElement;
-    const value = parseBoundedIntegerFromInput(input, { min: 0, max: 15 });
+    const value = parseBoundedFloatFromInput(input, { min: 0, max: 15 });
     if (value === undefined) {
       return;
     }

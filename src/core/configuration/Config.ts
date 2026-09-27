@@ -267,13 +267,21 @@ const OVERTIME_DEFAULTS = {
 
 export class Config {
   private unitInfoCache = new Map<UnitType, UnitInfo>();
+  private readonly _allianceDurationTicks: Tick;
+
   constructor(
     private _gameConfig: GameConfig,
     private _userSettings: UserSettings | null,
     private _isReplay: boolean,
     public readonly listed: boolean = false,
     private _spectator: boolean = false,
-  ) {}
+  ) {
+    const m = this._gameConfig.customAllianceDuration;
+    this._allianceDurationTicks =
+      typeof m === "number" && m > 0
+        ? Math.max(1, Math.round(m * 60 * 10))
+        : 300 * 10;
+  }
 
   isReplay(): boolean {
     return this._isReplay;
@@ -811,11 +819,9 @@ export class Config {
     return 30 * 10;
   }
   allianceDuration(): Tick {
-    // Host can set a custom alliance duration in minutes (1-15); 0 disables
-    // alliances (see disableAlliances). Falls back to the 5 minute default.
-    const m = this._gameConfig.customAllianceDuration;
-    if (typeof m === "number" && m > 0) return m * 60 * 10;
-    return 300 * 10; // 5 minutes.
+    // Host can set a custom alliance duration in minutes (0 disables, up to 15);
+    // falls back to the 5 minute default.
+    return this._allianceDurationTicks;
   }
   temporaryEmbargoDuration(): Tick {
     return 300 * 10; // 5 minutes.

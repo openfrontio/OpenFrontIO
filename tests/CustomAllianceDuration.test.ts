@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { Config } from "../src/core/configuration/Config";
-import { GameConfig } from "../src/core/Schemas";
+import { GameConfig, GameConfigSchema } from "../src/core/Schemas";
 
 // The "custom alliances" lobby control writes customAllianceDuration (minutes):
 // 0 disables alliances, 1-15 sets the alliance duration, unset = default.
@@ -33,5 +33,17 @@ describe("custom alliance duration", () => {
 
   it("the legacy disableAlliances boolean still disables", () => {
     expect(cfg({ disableAlliances: true }).disableAlliances()).toBe(true);
+  });
+
+  it("fractional minutes convert to ticks (min 1 tick for positive values)", () => {
+    expect(cfg({ customAllianceDuration: 0.5 }).allianceDuration()).toBe(300);
+    expect(cfg({ customAllianceDuration: 0.0001 }).allianceDuration()).toBe(1);
+  });
+
+  it("schema allows fractional minutes between 0 and 15", () => {
+    const s = GameConfigSchema.shape.customAllianceDuration;
+    expect(s.safeParse(0.5).success).toBe(true);
+    expect(s.safeParse(15.5).success).toBe(false);
+    expect(s.safeParse(-0.1).success).toBe(false);
   });
 });

@@ -590,7 +590,7 @@ export const GameConfigSchema = z.object({
   // create_game / update_game_config.
   trusted: z.boolean().optional(),
   maxTimerValue: zb.uint({ min: 1, max: 120 }).nullable().optional(), // In minutes
-  customAllianceDuration: zb.uint({ max: 15 }).nullable().optional(), // In minutes; 0 disables alliances
+  customAllianceDuration: zb.float({ min: 0, max: 15 }).nullable().optional(), // In minutes; 0 disables alliances
   startDelay: zb.uint({ max: 600 }).nullable().optional(), // In seconds
   spawnImmunityDuration: zb.uint().nullable().optional(), // In ticks
   disabledUnits: z.enum(UnitType).array().optional(),
