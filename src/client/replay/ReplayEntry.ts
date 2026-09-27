@@ -10,7 +10,7 @@
 import type { GameRecord } from "../../core/Schemas";
 import { ClientEnv } from "../ClientEnv";
 import { currentPagePath } from "../Utils";
-import { findVersionedShell } from "../VersionedReplay";
+import { findVersionedShell, isReplayShellHost } from "../VersionedReplay";
 import { handOverRecord } from "./ReplayRecord";
 
 /**
@@ -52,6 +52,11 @@ export function classicReplayHref(gameID: string): string {
     sessionStorage.setItem(CLASSIC, JSON.stringify([...games]));
   } catch {
     // A tab without storage just gets routed back to the viewer.
+  }
+  // The /game/<id> shape only exists on the game-server origin. On a replay
+  // shell the game's page is replay.<domain>/<gameId>.
+  if (isReplayShellHost(window.location.hostname)) {
+    return `/${encodeURIComponent(gameID)}`;
   }
   return currentPagePath(ClientEnv.gamePath(gameID));
 }

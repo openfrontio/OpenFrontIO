@@ -40,11 +40,12 @@ export function mergeAppends(appends: readonly ReplayAppend[]): ReplayAppend {
     },
   };
   for (const a of appends) {
-    out.chunks.push(...a.chunks);
-    out.players.push(...a.players);
-    out.unitTypes.push(...a.unitTypes);
+    for (const c of a.chunks) out.chunks.push(c);
+    for (const p of a.players) out.players.push(p);
+    for (const t of a.unitTypes) out.unitTypes.push(t);
     for (const key of EVENT_LISTS) {
-      (out.events[key] as unknown[]).push(...a.events[key]);
+      const list = out.events[key] as unknown[];
+      for (const e of a.events[key]) list.push(e);
     }
     out.events.spawnPhaseEnd ??= a.events.spawnPhaseEnd;
   }

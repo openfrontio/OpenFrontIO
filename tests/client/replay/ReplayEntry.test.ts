@@ -15,6 +15,16 @@ import {
 import { fetchReplayRecord } from "../../../src/client/replay/ReplayRecord";
 import type { GameRecord } from "../../../src/core/Schemas";
 
+// jsdom can't change location.hostname, so a test says whether this page
+// is a replay shell.
+const shell = vi.hoisted(() => ({ host: false }));
+vi.mock("../../../src/client/VersionedReplay", async (importOriginal) => ({
+  ...(await importOriginal<
+    typeof import("../../../src/client/VersionedReplay")
+  >()),
+  isReplayShellHost: () => shell.host,
+}));
+
 const record = (gitCommit: string) =>
   ({
     gitCommit,
@@ -34,6 +44,7 @@ function config(gameEnv: string, jwtAudience: string) {
 }
 
 beforeEach(() => {
+  shell.host = false;
   sessionStorage.clear();
   window.location.hash = "";
   config("dev", "localhost");
@@ -69,6 +80,13 @@ describe("openReplayViewer", () => {
     expect(window.location.hash).toBe("");
     // Only that game.
     expect(openReplayViewer("efgh5678", record("test"))).toBe(true);
+  });
+
+  test("on a replay shell the client-side replay is the shell's own page", () => {
+    // /game/<id> only exists on the game-server origin.
+    expect(classicReplayHref("abcd1234")).toMatch(/\/game\/abcd1234$/);
+    shell.host = true;
+    expect(classicReplayHref("abcd1234")).toBe("/abcd1234");
   });
 });
 

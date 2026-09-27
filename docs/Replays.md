@@ -25,7 +25,7 @@ browser from the game's archived record. Nothing runs on the server.
 5. **Store.** Once processing finishes, the replay is kept in IndexedDB,
    so watching it again opens instantly (see [Storage](#storage)).
 
-A 26 minute, 25 player game takes about 80 s to process in a dev build
+A 26-minute, 25-player game takes about 70 s to process in a dev build
 and is stored in about 24 MB.
 
 ## Storage
