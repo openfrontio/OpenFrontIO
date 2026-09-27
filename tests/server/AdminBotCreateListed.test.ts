@@ -114,3 +114,21 @@ describe("admin bot create_game public listing", () => {
     expect(res.statusCode).toBe(400);
   });
 });
+
+describe("admin bot create_game pool", () => {
+  it("refuses a caller-supplied pool, which only create_pool can build", () => {
+    // The lobby's own id is minted after the request arrives, so no pool a
+    // caller sends could ever contain it.
+    const { handler, created } = captureCreateHandler({ setListed: vi.fn() });
+    const res = mockRes();
+    handler(
+      {
+        body: { ...BASE, pool: { id: "pool-1", siblings: ["bbbb2222"] } },
+      },
+      res,
+    );
+    expect(res.statusCode).toBe(400);
+    expect(res.body.error).toBe("pool_is_generated");
+    expect(created.config).toBeUndefined();
+  });
+});

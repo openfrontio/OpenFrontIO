@@ -53,4 +53,15 @@ describe("control-panel attack ratio", () => {
 
     expect(uiState.attackRatio).toBeCloseTo(0.2);
   });
+
+  // <control-panel> sits in index.html, so its (hidden) slider exists on the
+  // lobby page before any game has handed it a uiState.
+  it("ignores ratio changes before init() has run", () => {
+    const fresh = document.createElement("control-panel") as ControlPanel;
+    document.body.appendChild(fresh);
+
+    expect(() => fresh.onAttackRatioChange(0.3)).not.toThrow();
+
+    fresh.remove();
+  });
 });

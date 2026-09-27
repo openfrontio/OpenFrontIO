@@ -385,7 +385,7 @@ export class GameRenderer {
 
   initialize() {
     loadAllSprites().catch((err) =>
-      console.error("Failed to preload sprites:", err),
+      console.warn("Failed to preload sprites:", err),
     );
 
     this.layers.forEach((l) => l.init?.());

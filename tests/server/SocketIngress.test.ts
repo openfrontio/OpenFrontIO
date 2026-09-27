@@ -80,12 +80,15 @@ describe("SocketIngress.receive", () => {
   it("hands a valid message to the game after charging it to the rate limiter", () => {
     const { ingress, view, check, observed } = setup();
     const client = makeClient({ clientID: P1 });
-    const frame = clientFrame({ type: "ping" });
+    const frame = clientFrame({ type: "ping", sentAt: 0 });
 
     ingress.receive(client, frame);
 
     expect(check).toHaveBeenCalledWith(P1, "ping", frame.length);
-    expect(view.onMessage).toHaveBeenCalledWith(client, { type: "ping" });
+    expect(view.onMessage).toHaveBeenCalledWith(client, {
+      type: "ping",
+      sentAt: 0,
+    });
     expect(view.kick).not.toHaveBeenCalled();
     expect(observed()).toEqual([]);
   });
@@ -180,7 +183,7 @@ describe("SocketIngress.receive", () => {
     const { ingress, view, observed, log } = setup("limit");
     ingress.receive(
       makeClient({ clientID: P1 }),
-      clientFrame({ type: "ping" }),
+      clientFrame({ type: "ping", sentAt: 0 }),
     );
     expect(view.onMessage).not.toHaveBeenCalled();
     expect(view.kick).not.toHaveBeenCalled();
@@ -213,8 +216,11 @@ describe("SocketIngress.receive", () => {
       expect.objectContaining({ clientID: P1 }),
     );
 
-    ingress.receive(spectator, clientFrame({ type: "ping" }));
-    expect(view.onMessage).toHaveBeenCalledWith(spectator, { type: "ping" });
+    ingress.receive(spectator, clientFrame({ type: "ping", sentAt: 0 }));
+    expect(view.onMessage).toHaveBeenCalledWith(spectator, {
+      type: "ping",
+      sentAt: 0,
+    });
   });
 });
 
@@ -224,8 +230,14 @@ describe("SocketIngress.attach", () => {
     const client = makeClient({ clientID: P1 });
     ingress.attach(client);
 
-    await mockWsOf(client).trigger("message", clientFrame({ type: "ping" }));
-    expect(view.onMessage).toHaveBeenCalledWith(client, { type: "ping" });
+    await mockWsOf(client).trigger(
+      "message",
+      clientFrame({ type: "ping", sentAt: 0 }),
+    );
+    expect(view.onMessage).toHaveBeenCalledWith(client, {
+      type: "ping",
+      sentAt: 0,
+    });
 
     await mockWsOf(client).trigger("close");
     expect(view.onClose).toHaveBeenCalledWith(client);
@@ -247,7 +259,10 @@ describe("SocketIngress.attach", () => {
     const client = makeClient({ clientID: P1 });
     ingress.attach(client);
     await expect(
-      mockWsOf(client).trigger("message", clientFrame({ type: "ping" })),
+      mockWsOf(client).trigger(
+        "message",
+        clientFrame({ type: "ping", sentAt: 0 }),
+      ),
     ).resolves.toBeUndefined();
     expect(view.kick).not.toHaveBeenCalled();
   });

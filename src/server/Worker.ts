@@ -19,6 +19,7 @@ import {
   MAX_HOSTED_LOBBIES,
   MAX_HOSTED_LOBBY_PLAYERS,
   MIN_HOSTED_LOBBY_AUTO_START_MS,
+  MIN_HOSTED_LOBBY_PLAYERS,
   ServerErrorMessage,
 } from "../core/Schemas";
 import { generateID, replacer } from "../core/Util";
@@ -30,9 +31,10 @@ import { Client } from "./Client";
 import { gameApiCors } from "./GameApiCors";
 import { GameManager } from "./GameManager";
 import { registerGamePreviewRoute } from "./GamePreviewRoute";
-import type { GameServer } from "./GameServer";
+import { GamePhase, type GameServer } from "./GameServer";
 import { isSteamAuthenticated, planJoinVerify, verifyJoin } from "./JoinVerify";
 import { getUserMe, verifyClientToken } from "./jwt";
+import { payForLobbyQueue, queueListedLobby } from "./LobbyQueuePayment";
 import { logger } from "./Logger";
 import { resolveVerifiedJoin } from "./Privilege";
 
@@ -289,7 +291,7 @@ export async function startWorker() {
         maxPlayers: z
           .number()
           .int()
-          .min(2)
+          .min(MIN_HOSTED_LOBBY_PLAYERS)
           .max(MAX_HOSTED_LOBBY_PLAYERS)
           .optional(),
       })
@@ -379,6 +381,50 @@ export async function startWorker() {
       maxPlayers,
     });
     res.json({ listed });
+  });
+
+  // The host of a listed lobby pays (plutonium, charged by the API with the
+  // host's token) to put it in the public Special queue, right behind the
+  // lobby that's counting down.
+  app.post("/api/game/:id/queue", async (req, res) => {
+    const authHeader = req.headers.authorization;
+    if (!authHeader?.startsWith("Bearer ")) {
+      return res.status(400).json({ error: "Authorization header required" });
+    }
+    const token = authHeader.substring("Bearer ".length);
+    const auth = await verifyClientToken(token);
+    if (auth.type !== "success") {
+      return res.status(401).json({ error: "Invalid token" });
+    }
+
+    const game = gm.game(req.params.id);
+    if (game === null) {
+      return res.status(404).json({ error: "Game not found" });
+    }
+    const outcome = await queueListedLobby(
+      {
+        isCreator: (id) => game.isCreator(id),
+        isPublic: () => game.isPublic(),
+        isListed: () => game.isListed(),
+        isQueued: () => game.isQueued(),
+        inLobby: () => game.phase() === GamePhase.Lobby && !game.hasStarted(),
+        startsAt: () => game.gameInfo().startsAt,
+        autoStartAt: () => game.autoStartAt(),
+        queueForPublic: () => game.queueForPublic(),
+      },
+      auth.persistentId,
+      // Dev has no payment backend; skip the charge so the feature is
+      // testable locally (same precedent as the listing subscription check).
+      ServerEnv.env() === GameEnv.Dev
+        ? async () => ({ type: "success" })
+        : () => payForLobbyQueue(token, game.id),
+    );
+    if (outcome.status === 502) {
+      log.warn("lobby queue payment failed", { gameID: game.id });
+    } else if (outcome.status === 200) {
+      log.info("lobby queued for public play", { gameID: game.id });
+    }
+    res.status(outcome.status).json(outcome.body);
   });
 
   // Singleplayer games run in the browser; the client beats here once a
@@ -806,6 +852,15 @@ export async function startWorker() {
             workerId,
           });
           ws.close(CloseCode.Forbidden, CloseReason.NotTrusted);
+        } else if (joinResult === "redirected") {
+          // Normal, not a rejection code: the game already sent this client
+          // where to go, and Normal is the client's silent branch, so no
+          // dialog appears while it navigates.
+          log.info("client redirected to a pool sibling", {
+            gameID: clientMsg.gameID,
+            workerId,
+          });
+          ws.close(CloseCode.Normal, CloseReason.PoolRedirect);
         } else if (joinResult === "ended") {
           log.info(`client tried to join ended game ${clientMsg.gameID}`, {
             gameID: clientMsg.gameID,

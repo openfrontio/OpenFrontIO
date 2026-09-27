@@ -826,7 +826,7 @@ export async function fetchCosmetics(): Promise<Cosmetics | null> {
         signal: AbortSignal.timeout(COSMETICS_FETCH_TIMEOUT_MS),
       });
       if (!response.ok) {
-        console.error(`HTTP error! status: ${response.status}`);
+        console.warn(`HTTP error! status: ${response.status}`);
         return null;
       }
       const result = CosmeticsSchema.safeParse(await response.json());
@@ -840,7 +840,7 @@ export async function fetchCosmetics(): Promise<Cosmetics | null> {
       __cosmeticsCache = result.data;
       return result.data;
     } catch (error) {
-      console.error("Error getting cosmetics:", error);
+      console.warn("Error getting cosmetics:", error);
       return null;
     }
   })();

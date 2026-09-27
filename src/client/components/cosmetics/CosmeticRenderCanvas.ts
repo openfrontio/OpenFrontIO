@@ -76,7 +76,7 @@ export class CosmeticRenderCanvas extends LitElement {
       this.applyCosmetic();
       this.startLoop();
     } catch (e) {
-      console.error("Failed to init cosmetic preview renderer:", e);
+      console.warn("Failed to init cosmetic preview renderer:", e);
       this.hasError = true;
     }
   }

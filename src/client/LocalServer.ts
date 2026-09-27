@@ -374,7 +374,7 @@ export class LocalServer {
         );
       }
     } catch (error) {
-      console.error("Failed to archive singleplayer game:", error);
+      console.warn("Failed to archive singleplayer game:", error);
     } finally {
       this.archiveInFlight = false;
     }

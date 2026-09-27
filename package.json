@@ -1,5 +1,9 @@
 {
   "name": "openfront-client",
+  "engines": {
+    "node": ">=24.15.0 <25",
+    "npm": ">=12.1.0 <13"
+  },
   "scripts": {
     "build-dev": "concurrently \"tsc --noEmit\" \"vite build --mode development\"",
     "build-prod": "concurrently --kill-others-on-fail \"tsc --noEmit\" \"vite build\" && tsx scripts/buildAssetHashes.ts",

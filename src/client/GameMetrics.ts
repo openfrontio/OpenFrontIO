@@ -2,22 +2,26 @@ import { reportMeasurement } from "./Telemetry";
 
 /**
  * In-game performance metrics for Grafana: frame interval, sim tick
- * execution time and the gap between consecutive turn messages from the
- * server. Each is sampled continuously and summarised as p50/p90/p99 once
- * per window, so a 60fps client costs one measurement per series per window
- * rather than one event per frame.
+ * execution time, the gap between consecutive turn messages from the
+ * server and the WebSocket round trip. Each is sampled continuously and summarised as p50/p90/p99 once
+ * per window, and all of them go out together as one Faro measurement of
+ * type game_perf per window: every line carries ~1KB of Faro metadata, so
+ * one line per series would mostly be paying for that.
  *
- * Series (Faro measurement type → values p50/p90/p99/count, all ms except
- * count):
+ * Series (value key prefix → <prefix>_p50/_p90/_p99/_count, all ms except
+ * count; a series with no samples in the window is left out):
  * - frame_time: time between consecutive animation frames of the game's
  *   render loop. 16.7 is 60fps; the p99 is the jank.
  * - tick_execution: how long the worker took to run one sim tick, as it
  *   reports in each GameUpdate.
  * - tick_interval: time between consecutive turn messages arriving over the
  *   WebSocket. The server sends one per turn interval (100ms), so p50 sits
- *   there and p90/p99 show stalls. Not a one-way latency: turns carry no send
- *   time and pings get no reply. Multiplayer only. A rejoin replays missed
- *   turns in a burst, so the window it lands in reads low.
+ *   there and p90/p99 show stalls. Not a latency: turns carry no send time
+ *   (ws_rtt measures that). Multiplayer only. A rejoin replays missed turns
+ *   in a burst, so the window it lands in reads low.
+ * - ws_rtt: ping → pong round trip over the game WebSocket. The client pings
+ *   every 5s, so a window holds ~6 samples. Includes any time the pong waits
+ *   behind other work on the client's main thread. Multiplayer only.
  */
 
 export const FLUSH_INTERVAL_MS = 30_000;
@@ -46,6 +50,7 @@ export class GameMetrics {
   private frameTime: number[] = [];
   private tickExecution: number[] = [];
   private tickInterval: number[] = [];
+  private roundTrip: number[] = [];
   private lastFrameAt: number | null = null;
   private timer: ReturnType<typeof setInterval> | null = null;
 
@@ -86,18 +91,30 @@ export class GameMetrics {
     this.tickInterval.push(ms);
   }
 
+  recordRoundTrip(ms: number): void {
+    this.roundTrip.push(ms);
+  }
+
   flush(): void {
-    const context = { gameID: this.gameID, clientID: this.clientID ?? "" };
-    for (const [type, samples] of [
+    const values: Record<string, number> = {};
+    for (const [series, samples] of [
       ["frame_time", this.frameTime],
       ["tick_execution", this.tickExecution],
       ["tick_interval", this.tickInterval],
+      ["ws_rtt", this.roundTrip],
     ] as const) {
-      const values = percentiles(samples);
-      if (values === undefined) continue;
-      reportMeasurement(type, { ...values }, context);
+      const summary = percentiles(samples);
+      if (summary === undefined) continue;
+      for (const [key, value] of Object.entries(summary)) {
+        values[`${series}_${key}`] = value;
+      }
       samples.length = 0;
     }
+    if (Object.keys(values).length === 0) return;
+    reportMeasurement("game_perf", values, {
+      gameID: this.gameID,
+      clientID: this.clientID ?? "",
+    });
   }
 
   // Animation frames stop while the tab is hidden, so the first frame back
