@@ -1,3 +1,5 @@
+import type { UserMeResponse } from "../core/ApiSchemas";
+import { responseHasLinkedIdentity } from "./AccountIdentity";
 import { getApiBase } from "./Api";
 import { getAuthHeader, logOut } from "./Auth";
 
@@ -170,9 +172,25 @@ export interface PendingLinkModal {
 // was nothing pending. A missing modal (element not found/not yet defined)
 // still consumes the stash — same "don't replay a stale entry" reasoning as
 // takePendingLink itself — it just has nothing to hand the result to.
+//
+// `userMeResponse` is the login precondition, and it is taken HERE rather
+// than left to the caller because this function consumes the stash: the two
+// have to be decided together or not at all. Resuming while the player is
+// still logged out burns the entry that their *later* successful login
+// should have got to resume.
+//
+// The bar is a real IDENTITY, not merely a session. POST /auth/refresh mints
+// a guest account for any visitor with no cookie, so a `!== false` response
+// says almost nothing — it is true for someone who has never logged in. That
+// is the same predicate SteamLinkModal.needsAccountLogin gates on, and
+// getting it wrong here does not just fail to resume: the modal would open,
+// re-stash, and redirect to #modal=account again on every pass.
 export function resumePendingSteamLink(
+  userMeResponse: UserMeResponse | false,
   modal: PendingLinkModal | undefined,
 ): boolean {
+  if (!responseHasLinkedIdentity(userMeResponse)) return false;
+
   const pending = takePendingLink();
   if (pending === null) return false;
 
@@ -222,14 +240,115 @@ export async function fetchSteamLinkTicket(
       typeof body?.personaName === "string" ? body.personaName : null;
     return { ok: true, personaName };
   } catch (e) {
-    console.error("fetchSteamLinkTicket: request failed", e);
+    console.warn("fetchSteamLinkTicket: request failed", e);
     return { ok: false };
   }
 }
 
+/**
+ * The account a `steam_has_progress` refusal is about: the OpenFront account
+ * that already holds this Steam id and holds nothing else — the one the
+ * desktop login creates for a player who launched on Steam before linking.
+ *
+ * Everything here describes what confirming would DESTROY, which is the whole
+ * job of the screen that renders it. Server-supplied and re-read live on every
+ * request (see the API's lib/LinkConflict.ts), never cached across a reload.
+ */
+export interface SteamConflictAccount {
+  publicId: string;
+  username: string | null;
+  createdAt: string | null;
+  personaName: string | null;
+  gamesPlayed: number;
+  // The count hit the server's cap — render "500+", not "500".
+  gamesPlayedCapped: boolean;
+}
+
+/**
+ * Whether a `steam_has_progress` refusal has a way through, and what it is.
+ *
+ * `discardable: false` is NOT the same as "no offer": it means the server
+ * looked and there is genuinely no way through, and `block` says why —
+ * "paid" (real money reached that account) or "banned". Both are support's
+ * call, and each gets its own message rather than the generic dead end.
+ */
+export type SteamLinkConflict =
+  | { discardable: true; account: SteamConflictAccount }
+  | { discardable: false; block: string };
+
+const isStringOrNull = (v: unknown): v is string | null =>
+  v === null || typeof v === "string";
+
+/**
+ * Validate the account field rather than trusting its shape.
+ *
+ * Our own API is on the other end, so this is not defending against an
+ * attacker — it is defending against the ONE screen in this flow whose button
+ * deletes an account. Every field here is rendered on it, and a partial object
+ * would put "undefined" where the account's name goes, or "undefined games
+ * played" under it, on exactly the screen a player is reading to decide
+ * whether this is the account they meant. A half-rendered confirmation is
+ * worse than no offer at all, so anything unrecognised degrades to no offer
+ * and the player sees the plain refusal.
+ */
+function parseConflictAccount(value: unknown): SteamConflictAccount | null {
+  if (typeof value !== "object" || value === null) return null;
+  const a = value as Record<string, unknown>;
+  if (typeof a.publicId !== "string") return null;
+  if (
+    !isStringOrNull(a.username) ||
+    !isStringOrNull(a.createdAt) ||
+    !isStringOrNull(a.personaName)
+  ) {
+    return null;
+  }
+  if (typeof a.gamesPlayed !== "number" || !Number.isFinite(a.gamesPlayed)) {
+    return null;
+  }
+  if (typeof a.gamesPlayedCapped !== "boolean") return null;
+  return {
+    publicId: a.publicId,
+    username: a.username,
+    createdAt: a.createdAt,
+    personaName: a.personaName,
+    gamesPlayed: a.gamesPlayed,
+    gamesPlayedCapped: a.gamesPlayedCapped,
+  };
+}
+
+function parseConflict(body: unknown): SteamLinkConflict | null {
+  const b = body as { discardable?: unknown; block?: unknown } | null;
+  if (b?.discardable === true) {
+    const account = parseConflictAccount((b as { account?: unknown }).account);
+    return account === null ? null : { discardable: true, account };
+  }
+  if (b?.discardable === false && typeof b.block === "string") {
+    return { discardable: false, block: b.block };
+  }
+  return null;
+}
+
+// Retry-After in its delay-seconds form (RFC 9110 §10.2.3). An HTTP-date form
+// or a missing/stripped header both degrade to null rather than throwing.
+// Shared by every call in this file that can be throttled: the redeem, the
+// offer lookup and the answer all sit behind the same kind of limiter.
+function parseRetryAfterSeconds(response: Response): number | null {
+  const header = response.headers.get("Retry-After");
+  return header !== null && /^\d+$/.test(header) ? Number(header) : null;
+}
+
 export type RedeemSteamLinkResult =
   | { ok: true }
-  | { ok: false; reason: string; retryAfterSeconds?: number | null };
+  | {
+      ok: false;
+      reason: string;
+      retryAfterSeconds?: number | null;
+      // Present only on `steam_has_progress`, and only from a server that
+      // knows about the discard path. Absent everywhere else, including from
+      // an older API — which is what keeps this an addition rather than a
+      // behaviour change: no offer simply renders the refusal as before.
+      conflict?: SteamLinkConflict;
+    };
 
 // POST /auth/steam/link — redeems a link ticket (token or code) against the
 // currently logged-in account. Idempotent on the server (re-redeeming an
@@ -288,7 +407,10 @@ async function postSteamLinkRedeem(
         typeof responseBody?.reason === "string"
           ? responseBody.reason
           : "failed";
-      return { ok: false, reason };
+      const conflict = parseConflict(responseBody);
+      return conflict === null
+        ? { ok: false, reason }
+        : { ok: false, reason, conflict };
     }
 
     if (response.status === 410) {
@@ -296,12 +418,11 @@ async function postSteamLinkRedeem(
     }
 
     if (response.status === 429) {
-      const retryAfterHeader = response.headers.get("Retry-After");
-      const retryAfterSeconds =
-        retryAfterHeader !== null && /^\d+$/.test(retryAfterHeader)
-          ? Number(retryAfterHeader)
-          : null;
-      return { ok: false, reason: "rate_limited", retryAfterSeconds };
+      return {
+        ok: false,
+        reason: "rate_limited",
+        retryAfterSeconds: parseRetryAfterSeconds(response),
+      };
     }
 
     // Name the shared function and the payload kind, not redeemSteamLink:
@@ -315,7 +436,7 @@ async function postSteamLinkRedeem(
     );
     return { ok: false, reason: "failed" };
   } catch (e) {
-    console.error(
+    console.warn(
       `postSteamLinkRedeem(${"code" in body ? "code" : "token"}): request failed`,
       e,
     );
@@ -339,4 +460,160 @@ export async function redeemSteamLinkCode(
   code: string,
 ): Promise<RedeemSteamLinkResult> {
   return postSteamLinkRedeem({ code });
+}
+
+// GET /auth/steam/link/conflict — the pending discard offer for the logged-in
+// account, if any.
+//
+// This is how the WEBSITE path finds out there is a way through. Its refusal
+// arrives as a redirect carrying `#link=steam_has_progress` and nothing else:
+// the server deliberately keeps the offer server-side rather than handing a
+// delete-an-account capability back through a URL, where it would outlive the
+// request in history and session restore. The desktop path never needs this —
+// its 409 already carried the same answer in the body.
+//
+// `failed` covers a 401 (stale JWT, cleared), any unexpected status and a
+// network error, and the caller shows exactly the dead end the player saw
+// before this endpoint existed — the right direction to degrade in. 429 is the
+// one failure with a BETTER message than that: the throttle refuses a read
+// that would have succeeded, and "can't be merged" is wrong for it, so it is
+// surfaced with its wait, like the redeem.
+export type SteamLinkConflictLookup =
+  | { ok: true; conflict: SteamLinkConflict | null }
+  | {
+      ok: false;
+      reason: "rate_limited" | "failed";
+      retryAfterSeconds?: number | null;
+    };
+
+export async function fetchSteamLinkConflict(): Promise<SteamLinkConflictLookup> {
+  try {
+    const authHeader = await getAuthHeader();
+    if (authHeader === "") return { ok: false, reason: "failed" };
+
+    const response = await fetch(`${getApiBase()}/auth/steam/link/conflict`, {
+      headers: { Accept: "application/json", Authorization: authHeader },
+    });
+    // 404 is the ordinary "nothing pending", not an error worth logging: it is
+    // what every link outcome other than a discardable steam_has_progress
+    // produces, and this is called on every returning link redirect.
+    if (response.status === 404) return { ok: true, conflict: null };
+    // Same convention as the other two authenticated calls in this file: a
+    // stale JWT is cleared rather than left in place.
+    if (response.status === 401) {
+      await logOut();
+      return { ok: false, reason: "failed" };
+    }
+    if (response.status === 429) {
+      return {
+        ok: false,
+        reason: "rate_limited",
+        retryAfterSeconds: parseRetryAfterSeconds(response),
+      };
+    }
+    if (response.status !== 200) {
+      console.warn(
+        "fetchSteamLinkConflict: unexpected status",
+        response.status,
+        response.statusText,
+      );
+      return { ok: false, reason: "failed" };
+    }
+    // An unrecognised body is "no offer", not a failure — see parseConflict.
+    return { ok: true, conflict: parseConflict(await response.json()) };
+  } catch (e) {
+    console.warn("fetchSteamLinkConflict: request failed", e);
+    return { ok: false, reason: "failed" };
+  }
+}
+
+export type AnswerSteamLinkConflictResult =
+  | { ok: true; linked: boolean }
+  | {
+      ok: false;
+      reason: string;
+      // Set alongside `reason: "discard_blocked"` when the server's re-check
+      // at confirm time found a reason support has to handle — "paid" today.
+      // The refusal path needs it for the same reason the offer path does:
+      // naming which block it was is what stops the player opening a ticket
+      // to ask.
+      block?: string;
+      // Only with reason "rate_limited"; see parseRetryAfterSeconds.
+      retryAfterSeconds?: number | null;
+    };
+
+// POST /auth/steam/link/discard — answers the offer.
+//
+// "discard" DELETES the other account and links this one; "cancel" declines,
+// which is a real answer rather than an absence of one (it releases the
+// desktop's link ticket immediately instead of leaving the game waiting for
+// the full ten minutes).
+//
+// The body carries the answer and NOTHING else — no account id, no token. The
+// server re-derives what may be deleted from the caller's session and its own
+// stashed record, so this call cannot name a target even if it wanted to.
+//
+// Single-use server-side: a 410 means the offer is already spent or expired,
+// which is also what a double-click produces.
+export async function answerSteamLinkConflict(
+  action: "discard" | "cancel",
+): Promise<AnswerSteamLinkConflictResult> {
+  try {
+    const authHeader = await getAuthHeader();
+    if (authHeader === "") return { ok: false, reason: "failed" };
+
+    const response = await fetch(`${getApiBase()}/auth/steam/link/discard`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: authHeader,
+      },
+      body: JSON.stringify({ action }),
+    });
+
+    if (response.status === 200) {
+      const body = await response.json().catch(() => null);
+      return { ok: true, linked: body?.linked === true };
+    }
+    if (response.status === 401) {
+      await logOut();
+      return { ok: false, reason: "failed" };
+    }
+    // 409 (the re-check refused it) and 410 (the offer is gone) both carry a
+    // machine-readable reason. Passed through verbatim, exactly as the redeem
+    // path does — the UI has a message per reason and must not collapse them.
+    // A 410 with no readable reason still means gone, so it defaults to the
+    // reason that status stands for rather than to a retryable "failed".
+    if (response.status === 409 || response.status === 410) {
+      const body = await response.json().catch(() => null);
+      const fallback = response.status === 410 ? "offer_unavailable" : "failed";
+      return {
+        ok: false,
+        reason: typeof body?.reason === "string" ? body.reason : fallback,
+        ...(typeof body?.block === "string" ? { block: body.block } : {}),
+      };
+    }
+    // The throttle (5/min) runs before the handler, and the handler is what
+    // consumes the offer — so a 429 never spent it. That is why this must not
+    // collapse into "failed" either: the UI treats it as still answerable,
+    // and says how long to wait rather than inviting a click straight back
+    // into the same limiter.
+    if (response.status === 429) {
+      return {
+        ok: false,
+        reason: "rate_limited",
+        retryAfterSeconds: parseRetryAfterSeconds(response),
+      };
+    }
+
+    console.error(
+      "answerSteamLinkConflict: request failed",
+      response.status,
+      response.statusText,
+    );
+    return { ok: false, reason: "failed" };
+  } catch (e) {
+    console.warn("answerSteamLinkConflict: request failed", e);
+    return { ok: false, reason: "failed" };
+  }
 }

@@ -44,8 +44,16 @@ export function normalizeAssetPath(path: string): string {
   return normalizedPath;
 }
 
+// Any scheme, not just http(s): the desktop shell resolves assets against an
+// absolute app://openfront base (its cdnBase), and an already-resolved URL
+// can be handed back to assetUrl() (e.g. WebGLFrameBuilder re-resolves
+// player cosmetic refs that a singleplayer start resolved at join time).
+// Matching only http(s) sent those through normalizeAssetPath, which mangled
+// "app://openfront/_assets/flags/US.<hash>.svg" into
+// "/app%3A/openfront/_assets/..." — a 404, and a country flag that silently
+// never rendered in game on desktop.
 function isAbsoluteUrl(path: string): boolean {
-  return /^https?:\/\//i.test(path);
+  return /^[a-z][a-z0-9+.-]*:\/\//i.test(path);
 }
 
 export function buildAssetUrl(

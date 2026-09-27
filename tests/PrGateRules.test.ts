@@ -62,6 +62,15 @@ describe("parseLinkedIssues", () => {
     expect(parseLinkedIssues("Closes #5 and fixes #5")).toEqual([5]);
   });
 
+  it("matches references wrapped in parentheses", () => {
+    expect(parseLinkedIssues("Fixes (#5315)")).toEqual([5315]);
+    expect(parseLinkedIssues("Closes (#5315) and resolves (#6)")).toEqual([
+      5315, 6,
+    ]);
+    expect(parseLinkedIssues("fixes (#7")).toEqual([7]);
+    expect(parseLinkedIssues("fixes #8)")).toEqual([8]);
+  });
+
   it("ignores references inside fenced code blocks", () => {
     const body = "```\nCloses #5\n```\nFixes #6";
     expect(parseLinkedIssues(body)).toEqual([6]);

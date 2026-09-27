@@ -33,11 +33,15 @@ vi.mock("../src/client/CrazyGamesSDK", () => ({
 vi.mock("../src/client/SteamSDK", () => ({
   steamSDK: { isOnSteam: () => false, getUser: async () => null },
 }));
-const { showInGameAlert } = vi.hoisted(() => ({
+const { showInGameAlert, showInGameConfirm } = vi.hoisted(() => ({
   showInGameAlert: vi.fn(async (_message: string) => Promise.resolve(true)),
+  showInGameConfirm: vi.fn(async (_message: string, _options?: unknown) =>
+    Promise.resolve(false),
+  ),
 }));
 vi.mock("../src/client/InGameModal", () => ({
-  showInGameConfirm: vi.fn(async () => false),
+  showInGameConfirm: (message: string, options?: unknown) =>
+    showInGameConfirm(message, options),
   showInGameAlert: (message: string) => showInGameAlert(message),
 }));
 // Partial: only translateText is stubbed (echoing keys so assertions read as
@@ -51,6 +55,7 @@ vi.mock("../src/client/Utils", async (importOriginal) => ({
 }));
 
 // Side-effect import registers <username-input>; vi.mock is hoisted above it.
+import { STEAM_GRANT_NOTICE_KEY } from "../src/client/SteamGrantNotices";
 import "../src/client/UsernameInput";
 import type { UsernameInput as UsernameInputEl } from "../src/client/UsernameInput";
 
@@ -68,6 +73,17 @@ function premiumUser(
         joinedAt: "2024-01-01T00:00:00.000Z",
         memberCount: 3,
       })),
+    },
+  } as unknown as UserMeResponse;
+}
+
+function heldNameUser(): UserMeResponse {
+  return {
+    player: {
+      username: "RyanTheGreat.2222",
+      usernameBase: "RyanTheGreat",
+      usernameStatus: "premium",
+      clans: [],
     },
   } as unknown as UserMeResponse;
 }
@@ -102,6 +118,8 @@ beforeEach(() => {
     error: null,
   }));
   showInGameAlert.mockClear();
+  showInGameConfirm.mockClear();
+  showInGameConfirm.mockResolvedValue(false);
 });
 
 // Lets a handler's `await getUserMe()` continuation run before asserting.
@@ -800,6 +818,58 @@ describe("UsernameInput lapse notice", () => {
     expect(message).toContain("RyanTheGreat");
   });
 
+  // A Steam buyer whose included month ran out never subscribed, so the
+  // ordinary "your subscription ended... resubscribe" wording is the sentence
+  // that convinces them the game hid one. The notice reads the grant record
+  // Main wrote while the month was running, and marks the sign-off shown so
+  // the boot sequencer does not say it all again next launch.
+  it("uses the after-grant wording for a former Steam grant holder", async () => {
+    localStorage.setItem(
+      STEAM_GRANT_NOTICE_KEY,
+      JSON.stringify({
+        p: {
+          periodEnd: "2026-08-30T00:00:00.000Z",
+          tier: "warlord",
+          welcomed: true,
+          endedShown: false,
+          seenAt: 0,
+        },
+      }),
+    );
+    const el = await mount();
+    await signIn(el, lapsedUser({ publicId: "p" }));
+
+    expect(showInGameAlert).toHaveBeenCalledTimes(1);
+    const message = showInGameAlert.mock.calls[0][0];
+    expect(message).toContain("username.lapse_notice_after_grant");
+    expect(message).toContain("RyanTheGreat");
+    expect(
+      JSON.parse(localStorage.getItem(STEAM_GRANT_NOTICE_KEY) ?? "{}").p
+        .endedShown,
+    ).toBe(true);
+  });
+
+  it("keeps the ordinary wording when the grant is someone else's", async () => {
+    localStorage.setItem(
+      STEAM_GRANT_NOTICE_KEY,
+      JSON.stringify({
+        other: {
+          periodEnd: "2026-08-30T00:00:00.000Z",
+          tier: "warlord",
+          welcomed: true,
+          endedShown: false,
+          seenAt: 0,
+        },
+      }),
+    );
+    const el = await mount();
+    await signIn(el, lapsedUser({ publicId: "p" }));
+
+    const message = showInGameAlert.mock.calls[0][0];
+    expect(message).toContain("username.lapse_notice");
+    expect(message).not.toContain("after_grant");
+  });
+
   it("does not announce it again on the next launch", async () => {
     localStorage.setItem("username", "MyCoolName");
     const first = await mount();
@@ -1037,5 +1107,47 @@ describe("UsernameInput claim grace, live behaviour", () => {
 
     expect(q(el, ERROR)).not.toBeNull();
     expect(q(el, GRACE)).not.toBeNull();
+  });
+});
+
+// Spec (10 Sept 2026): a subscriber whose bare name someone else holds is not
+// eligible, and the button says why instead of silently doing nothing.
+describe("UsernameInput held bare name", () => {
+  it("does not lock the box to a suffixed account name", async () => {
+    localStorage.setItem("username", "MyCoolName");
+    const el = await mount();
+    await signIn(el, heldNameUser());
+    expect(el.isVerified()).toBe(false);
+    expect(el.getUsername()).toBe("MyCoolName");
+    expect(q(el, TOGGLE)).not.toBeNull();
+  });
+
+  it("explains the held name and offers the rename form", async () => {
+    const el = await mount();
+    await signIn(el, heldNameUser());
+    expect(q(el, TOGGLE)!.getAttribute("title")).toContain(
+      "username.verified_held_hint",
+    );
+
+    showInGameConfirm.mockResolvedValueOnce(true);
+    q(el, TOGGLE)!.click();
+    await settle();
+
+    expect(showInGameConfirm).toHaveBeenCalledTimes(1);
+    expect(showInGameConfirm.mock.calls[0][0]).toContain(
+      'username.verified_held_body:{"name":"RyanTheGreat"}',
+    );
+    expect(window.location.hash).toBe("#modal=change-username");
+    expect(el.isVerified()).toBe(false);
+  });
+
+  it("stays put when the player declines the rename", async () => {
+    const el = await mount();
+    await signIn(el, heldNameUser());
+    window.location.hash = "";
+    q(el, TOGGLE)!.click();
+    await settle();
+    expect(window.location.hash).toBe("");
+    expect(el.isVerified()).toBe(false);
   });
 });

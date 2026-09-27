@@ -291,6 +291,33 @@ export class NamePass {
   }
 
   /**
+   * Swap known players' flag and crown images (e.g. after the cosmetics
+   * visibility settings change). slot.static is the playerByID entry, so a
+   * slot created later picks the new URLs up too.
+   */
+  updatePlayerCosmetics(players: PlayerStatic[]): void {
+    for (const p of players) {
+      const known = this.playerByID.get(p.id);
+      if (known === undefined) continue;
+      known.flag = p.flag;
+      known.crown = p.crown;
+      const slot = this.slots.get(p.id);
+      if (slot === undefined) continue;
+      if (slot.flagUrl !== p.flag) {
+        slot.flagUrl = p.flag;
+        slot.flagLayerIdx = -1;
+        this.resolveSlotFlag(slot);
+      }
+      if (slot.crownUrl !== p.crown) {
+        slot.crownUrl = p.crown;
+        slot.crownLayerIdx = -1;
+        this.resolveSlotCrown(slot);
+      }
+      this.writePlayerDataRow(slot);
+    }
+  }
+
+  /**
    * Request the texture layer for a slot's flag (called once at slot creation).
    * If the image is already loaded the layer index is set immediately; otherwise
    * the slot joins a wait list and is updated when the image arrives.

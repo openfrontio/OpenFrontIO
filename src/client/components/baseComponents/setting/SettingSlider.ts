@@ -1,4 +1,4 @@
-import { LitElement, html } from "lit";
+import { LitElement, html, type PropertyValues } from "lit";
 import { customElement, property } from "lit/decorators.js";
 
 @customElement("setting-slider")
@@ -8,6 +8,9 @@ export class SettingSlider extends LitElement {
   @property({ type: Number }) value = 0;
   @property({ type: Number }) min = 0;
   @property({ type: Number }) max = 100;
+  // Graphics options tune fractional values (opacities, scale factors), which
+  // a whole-number slider cannot express.
+  @property({ type: Number }) step = 1;
   @property({ type: Boolean }) easter = false;
   @property() unit = "%";
   @property({ attribute: false }) formatValue?: (value: number) => string;
@@ -34,6 +37,21 @@ export class SettingSlider extends LitElement {
     const percent = ((this.value - this.min) / (this.max - this.min)) * 100;
     const clamped = Math.max(0, Math.min(100, percent));
     slider.style.setProperty("--fill", `${clamped}%`);
+  }
+
+  /**
+   * The filled part of the track is a CSS custom property, which `handleInput`
+   * sets during a drag. Setting `.value` from outside — "Reset to defaults",
+   * or reopening the tab — moves the thumb but left the fill where it was.
+   */
+  protected updated(changed: PropertyValues) {
+    if (!changed.has("value") && !changed.has("min") && !changed.has("max")) {
+      return;
+    }
+    const slider = this.renderRoot.querySelector(
+      "input[type=range]",
+    ) as HTMLInputElement | null;
+    if (slider) this.updateSliderStyle(slider);
   }
 
   firstUpdated() {
@@ -81,6 +99,7 @@ export class SettingSlider extends LitElement {
               [&::-moz-range-thumb]:h-[18px] [&::-moz-range-thumb]:w-[18px] [&::-moz-range-thumb]:border-none [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:bg-malibu-blue [&::-moz-range-thumb]:cursor-pointer [&::-moz-range-thumb]:shadow-[var(--shadow-malibu-blue-ring-sm)] [&::-moz-range-thumb]:transition-all active:[&::-moz-range-thumb]:scale-110 active:[&::-moz-range-thumb]:shadow-[var(--shadow-malibu-blue-ring-lg)]"
               min=${this.min}
               max=${this.max}
+              step=${this.step}
               .value=${String(this.value)}
               @input=${this.handleInput}
             />

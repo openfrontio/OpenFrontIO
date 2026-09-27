@@ -4,6 +4,7 @@ import {
   GameUpdates,
   PlayerID,
   PlayerType,
+  Team,
   TerrainType,
   TerraNullius,
   Tick,
@@ -25,6 +26,7 @@ import {
 import { TerrainMapData } from "../../core/game/TerrainMapLoader";
 import { TerraNulliusImpl } from "../../core/game/TerraNulliusImpl";
 import { UnitGrid, UnitPredicate } from "../../core/game/UnitGrid";
+import { UserSettings } from "../../core/game/UserSettings";
 import { ClientID, GameID, Player, PlayerCosmetics } from "../../core/Schemas";
 import { formatPlayerDisplayName } from "../../core/Util";
 import { WorkerClient } from "../../core/worker/WorkerClient";
@@ -39,8 +41,14 @@ import { SpiralTrails } from "../render/frame/SpiralTrails";
 import { TrailManager } from "../render/frame/TrailManager";
 import type { FrameData, NameEntry } from "../render/types";
 import { STRUCTURE_TYPES } from "../render/types";
+import { resolveTeamClanTag } from "../Utils";
+import type { CosmeticVisibility } from "./CosmeticVisibility";
 import { PlayerView } from "./PlayerView";
 import { UnitView } from "./UnitView";
+
+function readCosmeticVisibility(): CosmeticVisibility {
+  return new UserSettings().graphicsOverrides().cosmetics ?? {};
+}
 
 const TRAIL_TYPES: ReadonlySet<UnitType> = new Set<UnitType>([
   UnitType.TransportShip,
@@ -82,6 +90,7 @@ export class GameView implements GameMap {
   private _unitStates = new Map<number, import("../render/types").UnitState>();
   /** smallID → team, for the renderer's relation matrix (team games). */
   private _teams = new Map<number, string>();
+  private _teamClanTags: Map<Team, string | null> | null = null;
   private updatedTiles: TileRef[] = [];
   private updatedTerrainTiles: TileRef[] = [];
   private nukeImpactTiles: TileRef[] = [];
@@ -140,6 +149,7 @@ export class GameView implements GameMap {
   private toDelete = new Set<number>();
 
   private _cosmetics: Map<string, PlayerCosmetics> = new Map();
+  private _cosmeticVisibility: CosmeticVisibility = readCosmeticVisibility();
 
   private _map: GameMap;
 
@@ -399,6 +409,7 @@ export class GameView implements GameMap {
         this._namesDirty = true;
         this._relationsDirty = true;
         this._clustersDirty = true;
+        this._teamClanTags = null;
       }
     });
 
@@ -597,7 +608,8 @@ export class GameView implements GameMap {
       tick: gu.tick,
       allianceDuration: this._config.allianceDuration(),
       isTransitiveTarget: (sid) =>
-        this._myPlayer?.hasTransitiveTarget(sid) ?? false,
+        (this._markedPlayers?.has(sid) ?? false) ||
+        (this._myPlayer?.hasTransitiveTarget(sid) ?? false),
       doomsdayClockWarnTicks:
         this._config.doomsdayClockConfig().warnSeconds * 10,
     });
@@ -1033,6 +1045,39 @@ export class GameView implements GameMap {
     return Array.from(this._players.values());
   }
 
+  teamClanTag(team: Team | null): string | null {
+    if (!team) return null;
+    if (this._teamClanTags === null) {
+      if (this._players.size === 0) return null;
+      this._teamClanTags = this.initTeamClanTags();
+    }
+    return this._teamClanTags.get(team) ?? null;
+  }
+
+  invalidateTeamClanTags(): void {
+    this._teamClanTags = null;
+  }
+
+  private initTeamClanTags(): Map<Team, string | null> {
+    const teams = new Map<Team, PlayerView[]>();
+    for (const player of this._players.values()) {
+      const t = player.team();
+      if (t) {
+        let list = teams.get(t);
+        if (!list) {
+          list = [];
+          teams.set(t, list);
+        }
+        list.push(player);
+      }
+    }
+    const result = new Map<Team, string | null>();
+    for (const [t, players] of teams.entries()) {
+      result.set(t, resolveTeamClanTag(players));
+    }
+    return result;
+  }
+
   /**
    * Recompute every player's theme-derived colors. Call when the active theme
    * changes mid-game (e.g. toggling colorblind mode) so existing territories
@@ -1041,6 +1086,21 @@ export class GameView implements GameMap {
   refreshPlayerColors(): void {
     for (const p of this._players.values()) {
       p.refreshColors();
+    }
+  }
+
+  cosmeticVisibility(): CosmeticVisibility {
+    return this._cosmeticVisibility;
+  }
+
+  /**
+   * Re-read the cosmetics visibility settings and re-resolve every player's
+   * drawn cosmetics and colors; the renderer must be refreshed afterwards.
+   */
+  refreshPlayerCosmetics(): void {
+    this._cosmeticVisibility = readCosmeticVisibility();
+    for (const p of this._players.values()) {
+      p.refreshCosmetics();
     }
   }
 
@@ -1274,6 +1334,9 @@ export class GameView implements GameMap {
   neighbors4(ref: TileRef, out: TileRef[]): number {
     return this._map.neighbors4(ref, out);
   }
+  neighbors8(ref: TileRef, out: TileRef[]): number {
+    return this._map.neighbors8(ref, out);
+  }
   forEachNeighborWithDiag(
     ref: TileRef,
     callback: (neighbor: TileRef) => void,
@@ -1330,7 +1393,36 @@ export class GameView implements GameMap {
     return this._gameID;
   }
 
+  private _markedPlayers: ReadonlySet<number> | null = null;
+
   focusedPlayer(): PlayerView | null {
     return this.myPlayer();
+  }
+
+  /**
+   * Extra smallIDs drawn with the target crosshair by the name pass, on top
+   * of the player's real transitive targets (e.g. the tutorial pointing at
+   * capturable tribes). Null when nothing is requested.
+   */
+  setMarkedPlayers(ids: ReadonlySet<number> | null): void {
+    this._markedPlayers = ids;
+  }
+
+  markedPlayers(): ReadonlySet<number> | null {
+    return this._markedPlayers;
+  }
+
+  private _ownSpawnRing = false;
+
+  /**
+   * Keep the local player's spawn-phase ring drawn after the phase ends
+   * (the tutorial uses it to show a new player where their territory is).
+   */
+  setOwnSpawnRing(show: boolean): void {
+    this._ownSpawnRing = show;
+  }
+
+  ownSpawnRing(): boolean {
+    return this._ownSpawnRing;
   }
 }

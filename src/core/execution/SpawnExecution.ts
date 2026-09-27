@@ -1,3 +1,4 @@
+import { z } from "zod";
 import {
   Execution,
   Game,
@@ -10,6 +11,18 @@ import {
 import { TileRef } from "../game/GameMap";
 import { PseudoRandom } from "../PseudoRandom";
 import { GameID } from "../Schemas";
+import {
+  PlayerInfoSchema,
+  playerInfoData,
+  readPlayerInfo,
+} from "../snapshot/CommonSchemas";
+import { execSnapshotType } from "../snapshot/ExecutionSnapshot";
+import type {
+  ExecRecord,
+  SnapshotReader,
+  SnapshotWriter,
+} from "../snapshot/SnapshotContext";
+import { zNum, zRandom } from "../snapshot/SnapshotType";
 import { simpleHash } from "../Util";
 import { PlayerExecution } from "./PlayerExecution";
 import { TribeExecution } from "./TribeExecution";
@@ -80,13 +93,15 @@ export class SpawnExecution implements Execution {
       return;
     }
 
-    player.tiles().forEach((t) => player.relinquish(t));
+    const prevTiles = Array.from(player.tiles());
+    prevTiles.forEach((t) => player.relinquish(t));
     const spawn = this.getSpawn(
       this.mg.config().isRandomSpawn() ? undefined : this.tile,
     );
 
     if (!spawn) {
       console.warn(`SpawnExecution: cannot spawn ${this.playerInfo.name}`);
+      prevTiles.forEach((t) => player.conquer(t));
       return;
     }
 
@@ -201,4 +216,47 @@ export class SpawnExecution implements Execution {
     }
     return this.mg.teamSpawnArea(team);
   }
+
+  // The constructor's gameID only seeds `random`, so the PRNG state is all
+  // that needs storing for it.
+  snapshot(w: SnapshotWriter): ExecRecord {
+    return SpawnExecutionSnapshot.write({
+      random: w.random(this.random),
+      active: this.active,
+      initialized: this.mg !== undefined,
+      queuedDuringSpawnPhase: this.queuedDuringSpawnPhase,
+      playerInfo: playerInfoData(this.playerInfo),
+      tile: this.tile,
+      fromIntent: this.fromIntent,
+    });
+  }
+
+  restoreSnapshot(s: SpawnState, r: SnapshotReader): void {
+    this.random = r.random(s.random);
+    this.active = s.active;
+    if (s.initialized) this.mg = r.game;
+    this.queuedDuringSpawnPhase = s.queuedDuringSpawnPhase;
+    this.playerInfo = readPlayerInfo(s.playerInfo, r);
+    if (s.tile !== undefined) this.tile = s.tile;
+    this.fromIntent = s.fromIntent;
+  }
 }
+
+const SpawnStateSchema = z.object({
+  random: zRandom(),
+  active: z.boolean(),
+  initialized: z.boolean(),
+  queuedDuringSpawnPhase: z.boolean(),
+  playerInfo: PlayerInfoSchema,
+  // Untrusted intent data, validated in tick, so any number.
+  tile: zNum().optional(),
+  fromIntent: z.boolean(),
+});
+type SpawnState = z.infer<typeof SpawnStateSchema>;
+
+export const SpawnExecutionSnapshot = execSnapshotType({
+  name: "Spawn",
+  version: 1,
+  schema: SpawnStateSchema,
+  cls: () => SpawnExecution,
+});

@@ -72,25 +72,38 @@ export async function loadTerrainMap(
   /** Whether to load layer PNG images inline. The Web Worker path should
    *  pass false — it never renders layers and should not retain ImageBitmaps. */
   loadImages: boolean = true,
+  /**
+   * Build maps no other caller shares, from unmodified map files. Games
+   * mutate their maps, so the cached (shared) maps are only pristine until a
+   * game has run on them; restoring a snapshot needs pristine ones.
+   */
+  fresh: boolean = false,
 ): Promise<TerrainMapData> {
   const cacheKey = `${map}:${mapSize}`;
   const cached = loadedMaps.get(cacheKey);
-  if (cached !== undefined) return cached;
+  if (cached !== undefined && !fresh) return cached;
   const mapFiles = terrainMapFileLoader.getMapData(map);
-  const manifest = await mapFiles.manifest();
+  const loadedManifest = await mapFiles.manifest();
+  // Map loaders may hand out the same manifest and byte arrays on every call,
+  // and both get mutated below (compact scaling) or by the game (terrain).
+  const manifest: MapManifest = fresh
+    ? structuredClone(loadedManifest)
+    : loadedManifest;
+  const bin = async (load: () => Promise<Uint8Array>) =>
+    fresh ? (await load()).slice() : await load();
 
   const gameMap =
     mapSize === GameMapSize.Normal
-      ? await genTerrainFromBin(manifest.map, await mapFiles.mapBin())
-      : await genTerrainFromBin(manifest.map4x, await mapFiles.map4xBin());
+      ? await genTerrainFromBin(manifest.map, await bin(mapFiles.mapBin))
+      : await genTerrainFromBin(manifest.map4x, await bin(mapFiles.map4xBin));
 
   const miniMap =
     mapSize === GameMapSize.Normal
       ? await genTerrainFromBin(
           mapSize === GameMapSize.Normal ? manifest.map4x : manifest.map16x,
-          await mapFiles.map4xBin(),
+          await bin(mapFiles.map4xBin),
         )
-      : await genTerrainFromBin(manifest.map16x, await mapFiles.map16xBin());
+      : await genTerrainFromBin(manifest.map16x, await bin(mapFiles.map16xBin));
 
   if (mapSize === GameMapSize.Compact) {
     manifest.nations.forEach((nation) => {
@@ -188,7 +201,7 @@ export async function loadTerrainMap(
     layers,
     layerImages,
   };
-  loadedMaps.set(cacheKey, result);
+  if (!fresh) loadedMaps.set(cacheKey, result);
   return result;
 }
 

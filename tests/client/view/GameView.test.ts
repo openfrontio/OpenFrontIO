@@ -140,6 +140,47 @@ describe("GameView.update — players", () => {
     );
     expect(game.myPlayer()?.name()).toBe("RealName");
   });
+
+  it("invalidates the teamClanTag cache when a new player is added", () => {
+    const game = makeGameView();
+    // 1. Initial state with 1 player in team 1
+    game.update(
+      withPlayers(1, [
+        makePlayerUpdate({ id: "p1", smallID: 1, team: "1", clanTag: "MARS" }),
+      ]),
+    );
+    expect(game.teamClanTag("1")).toBe("MARS");
+
+    // 2. Add second player to team 1 in tick 2
+    game.update(
+      withPlayers(2, [
+        makePlayerUpdate({ id: "p2", smallID: 2, team: "1", clanTag: "UN" }),
+      ]),
+    );
+    // Cache should have been invalidated, and recalculation should see both players
+    expect(game.teamClanTag("1")).toBe("MARS / UN");
+  });
+
+  it("can explicitly invalidate teamClanTag cache (e.g. for anonymous names toggle)", () => {
+    const game = makeGameView();
+    game.update(
+      withPlayers(1, [
+        makePlayerUpdate({ id: "p1", smallID: 1, team: "1", clanTag: "MARS" }),
+      ]),
+    );
+    expect(game.teamClanTag("1")).toBe("MARS");
+
+    // Simulate the streamer mode toggle bypassing GameUpdate logic
+    // by silently mutating the static player clan tag
+    game.player("p1").static.clanTag = "EARTH";
+
+    // Explicitly invalidate cache
+    game.invalidateTeamClanTags();
+
+    // The next lookup will lazily re-evaluate it based on current player state
+    // If invalidation is broken, this would incorrectly return "MARS"
+    expect(game.teamClanTag("1")).toBe("EARTH");
+  });
 });
 
 describe("GameView.update — packed channels", () => {

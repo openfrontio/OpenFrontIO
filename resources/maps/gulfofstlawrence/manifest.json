@@ -173,6 +173,7 @@
       }
     ]
   },
+  "team_frequency": 8,
   "themes": ["north_america"],
   "translation_key": "map.gulfofstlawrence"
 }

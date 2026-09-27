@@ -1,4 +1,5 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { capturePagePin, resetPagePinForTests } from "../src/client/PagePin";
 import type { PublicGames } from "../src/core/Schemas";
 
 // OPE-255. The component stops its public-lobby socket when a game starts
@@ -10,15 +11,28 @@ import type { PublicGames } from "../src/core/Schemas";
 // jsdom has no WebSocket worth talking to and this test is about the
 // lifecycle, not the wire, so the socket is a spy -- following the same
 // pattern as GameModeSelectorGatingWiring.test.ts.
-const { socketCalls } = vi.hoisted(() => ({
-  socketCalls: { started: 0, stopped: 0 },
+const { socketCalls, lobbiesCallbackRef, gaveUpRef } = vi.hoisted(() => ({
+  socketCalls: {
+    started: 0,
+    stopped: 0,
+    lastStart: undefined as { refreshList?: boolean } | undefined,
+  },
+  lobbiesCallbackRef: { current: null as ((g: PublicGames) => void) | null },
+  gaveUpRef: { current: null as (() => void) | null },
 }));
 
 vi.mock("../src/client/LobbySocket", () => ({
   PublicLobbySocket: class {
-    constructor(_onUpdate: (g: PublicGames) => void) {}
-    start(): void {
+    constructor(
+      onUpdate: (g: PublicGames) => void,
+      options?: { onGaveUp?: () => void },
+    ) {
+      lobbiesCallbackRef.current = onUpdate;
+      gaveUpRef.current = options?.onGaveUp ?? null;
+    }
+    start(options?: { refreshList?: boolean }): void {
       socketCalls.started++;
+      socketCalls.lastStart = options;
     }
     stop(): void {
       socketCalls.stopped++;
@@ -26,7 +40,23 @@ vi.mock("../src/client/LobbySocket", () => ({
   },
 }));
 
+// The suppression tests below need to see whether the prompt actually fired;
+// everything else in InGameModal stays real.
+vi.mock("../src/client/InGameModal", async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import("../src/client/InGameModal")>();
+  return {
+    ...actual,
+    // Never resolves: the real flow reloads the page after the alert, which
+    // has no business running under jsdom.
+    showInGameAlert: vi.fn(() => new Promise<void>(() => {})),
+  };
+});
+
+import { ClientEnv } from "../src/client/ClientEnv";
 import { GameModeSelector } from "../src/client/GameModeSelector";
+import { showInGameAlert } from "../src/client/InGameModal";
+import * as ServerList from "../src/client/ServerList";
 
 describe("GameModeSelector lobby-socket lifecycle", () => {
   beforeEach(() => {
@@ -57,5 +87,370 @@ describe("GameModeSelector lobby-socket lifecycle", () => {
 
     expect(socketCalls.stopped).toBe(2);
     expect(socketCalls.started).toBe(2);
+  });
+});
+
+// The socket is NOT scoped to the homepage: Main.ts only stops it when a game
+// actually starts, so it is still listening while the player waits in a
+// lobby. An update/drain prompt firing there would reload the player out of
+// a lobby the draining deployment deliberately lets finish — it must be
+// deferred until they leave.
+describe("GameModeSelector update prompt deferral", () => {
+  it("defers the prompt while the player is in a lobby", () => {
+    const selector = new GameModeSelector() as any;
+
+    selector.onJoinLobby();
+    selector.handleUpdateAvailable();
+
+    expect(selector.updateDeferred).toBe(true);
+  });
+
+  it("re-fires the prompt when the player leaves the lobby", () => {
+    const selector = new GameModeSelector() as any;
+    selector.onJoinLobby();
+    selector.handleUpdateAvailable();
+
+    const prompt = vi
+      .spyOn(selector, "handleUpdateAvailable")
+      .mockImplementation(() => {});
+    selector.onLeaveLobby();
+
+    expect(prompt).toHaveBeenCalledTimes(1);
+    expect(selector.updateDeferred).toBe(false);
+  });
+});
+
+// A versioned replay shell (replay.<domain>/<gameId>) is pinned to the
+// archived game's build on purpose, but its baked-in serverHost points at a
+// live deployment running a newer build — so the lobby socket's commit
+// compare fires on every load, and reloading re-serves the same immutable
+// shell: the prompt would loop forever.
+describe("GameModeSelector update prompt on the replay shell host", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.mocked(showInGameAlert).mockClear();
+    resetPagePinForTests();
+  });
+
+  it("suppresses the prompt on replay.<domain>", () => {
+    vi.stubGlobal("location", { hostname: "replay.openfront.io" });
+    const selector = new GameModeSelector() as any;
+
+    selector.handleUpdateAvailable();
+
+    expect(showInGameAlert).not.toHaveBeenCalled();
+    expect(selector.updateDeferred).toBe(false);
+  });
+
+  it("still prompts on ordinary hosts", () => {
+    vi.stubGlobal("location", { hostname: "openfront.io" });
+    const selector = new GameModeSelector() as any;
+
+    selector.handleUpdateAvailable();
+
+    expect(showInGameAlert).toHaveBeenCalledTimes(1);
+  });
+});
+
+// A page pinned under /v/<commit>/ sits on a draining build on purpose, so
+// the lobby feed's drain signal fires on every load. Prompting would strip
+// the pin, reload at latest, and be re-pinned straight back -- the loop the
+// pinned-page work exists to prevent (see isOutdated and ClientGameRunner's
+// version_mismatch handler for the other two exits).
+describe("GameModeSelector update prompt on a pinned /v/<commit>/ page", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.mocked(showInGameAlert).mockClear();
+    resetPagePinForTests();
+  });
+
+  it("suppresses the prompt when the page is pinned to a version", () => {
+    vi.stubGlobal("location", {
+      hostname: "openfront.io",
+      pathname: "/v/5ccc50a7/game/dAbCd12345",
+    });
+    // isPinnedToAVersion answers from the pin captured at boot (PagePin.ts),
+    // so take it against the stubbed location, as Client.initialize() does.
+    capturePagePin();
+    const selector = new GameModeSelector() as any;
+
+    selector.handleUpdateAvailable();
+
+    expect(showInGameAlert).not.toHaveBeenCalled();
+    expect(selector.updateDeferred).toBe(false);
+  });
+
+  it("still prompts at a version-free path", () => {
+    vi.stubGlobal("location", {
+      hostname: "openfront.io",
+      pathname: "/game/dAbCd12345",
+    });
+    capturePagePin();
+    const selector = new GameModeSelector() as any;
+
+    selector.handleUpdateAvailable();
+
+    expect(showInGameAlert).toHaveBeenCalledTimes(1);
+  });
+});
+
+// The feed is closed while the desktop session is gated -- every join it could
+// offer would be refused -- and reopened when the session comes back. Main's
+// own stop()/start() still wins: a session change must never reopen a feed
+// Main closed for a game.
+describe("GameModeSelector lobby feed while the desktop session is gated", () => {
+  let selector: GameModeSelector & { updateComplete: Promise<unknown> };
+
+  function setSession(detail: { status: string; reason?: string }) {
+    document.dispatchEvent(
+      new CustomEvent("desktop-session-state", { detail }),
+    );
+  }
+
+  beforeEach(() => {
+    socketCalls.started = 0;
+    socketCalls.stopped = 0;
+    window.BOOTSTRAP_CONFIG = {
+      gameEnv: "dev",
+      numWorkers: 1,
+      turnstileSiteKey: "",
+      jwtAudience: "test",
+      instanceId: "test",
+      gitCommit: "test",
+    };
+    ClientEnv.reset();
+    selector = document.createElement(
+      "game-mode-selector",
+    ) as GameModeSelector & { updateComplete: Promise<unknown> };
+    document.body.appendChild(selector);
+  });
+
+  afterEach(() => {
+    document.body.innerHTML = "";
+    window.BOOTSTRAP_CONFIG = undefined;
+    ClientEnv.reset();
+  });
+
+  it("closes the feed when the session drops and reopens it when it returns", () => {
+    expect(socketCalls.started).toBe(1);
+
+    setSession({ status: "signed-out", reason: "steam-unavailable" });
+    expect(socketCalls.stopped).toBe(1);
+
+    setSession({ status: "signed-in" });
+    expect(socketCalls.started).toBe(2);
+  });
+
+  it("does not churn the socket on a session change that keeps it gated", () => {
+    setSession({ status: "signed-out", reason: "steam-unavailable" });
+    setSession({ status: "retrying" });
+    setSession({ status: "signed-out", reason: "steam-unavailable" });
+    expect(socketCalls.stopped).toBe(1);
+    expect(socketCalls.started).toBe(1);
+  });
+
+  it("does not reopen a feed Main stopped for a game", () => {
+    selector.stop();
+    setSession({ status: "signed-out", reason: "steam-unavailable" });
+    setSession({ status: "signed-in" });
+    expect(socketCalls.started).toBe(1);
+
+    selector.start();
+    expect(socketCalls.started).toBe(2);
+  });
+
+  it("keeps a start() while gated closed until the session returns", () => {
+    setSession({ status: "signed-out", reason: "steam-unavailable" });
+    selector.stop();
+    selector.start();
+    expect(socketCalls.started).toBe(1);
+
+    setSession({ status: "signed-in" });
+    expect(socketCalls.started).toBe(2);
+  });
+
+  it("drops a snapshot kept across a game when start() finds the session gated", async () => {
+    lobbiesCallbackRef.current?.({
+      serverTime: Date.now(),
+      games: {
+        ffa: [
+          {
+            gameID: "abc",
+            numClients: 1,
+            publicGameType: "ffa",
+            gameConfig: {
+              gameMap: "World",
+              gameMode: "Free For All",
+              maxPlayers: 8,
+            },
+          },
+        ],
+      },
+    } as unknown as PublicGames);
+    await selector.updateComplete;
+    expect(selector.querySelector("button.group")).not.toBeNull();
+
+    selector.stop();
+    setSession({ status: "signed-out", reason: "steam-unavailable" });
+    selector.start();
+    await selector.updateComplete;
+
+    expect(selector.querySelector("button.group")).toBeNull();
+    expect(selector.textContent).toContain("mode_selector.offline_lobbies");
+  });
+
+  it("swaps the spinner and any cards for the offline message once the socket gives up", async () => {
+    const snapshot = {
+      serverTime: Date.now(),
+      games: {
+        ffa: [
+          {
+            gameID: "abc",
+            numClients: 1,
+            publicGameType: "ffa",
+            gameConfig: {
+              gameMap: "World",
+              gameMode: "Free For All",
+              maxPlayers: 8,
+            },
+          },
+        ],
+      },
+    } as unknown as PublicGames;
+    lobbiesCallbackRef.current?.(snapshot);
+    await selector.updateComplete;
+    expect(selector.querySelector("button.group")).not.toBeNull();
+
+    gaveUpRef.current?.();
+    await selector.updateComplete;
+    expect(selector.querySelector("button.group")).toBeNull();
+    expect(selector.querySelector(".animate-spin")).toBeNull();
+    // Not "offline": the API still answers, only the feed is gone.
+    expect(selector.textContent).toContain("mode_selector.lobbies_unreachable");
+    expect(selector.textContent).not.toContain("mode_selector.offline_lobbies");
+
+    // A feed that comes back is believed.
+    lobbiesCallbackRef.current?.(snapshot);
+    await selector.updateComplete;
+    expect(selector.querySelector("button.group")).not.toBeNull();
+  });
+
+  it("spins again on a start() after giving up", async () => {
+    gaveUpRef.current?.();
+    await selector.updateComplete;
+    expect(selector.querySelector(".animate-spin")).toBeNull();
+
+    selector.start();
+    await selector.updateComplete;
+    expect(selector.querySelector(".animate-spin")).not.toBeNull();
+  });
+
+  function retryButton(): HTMLButtonElement | undefined {
+    return Array.from(selector.querySelectorAll("button")).find((b) =>
+      b.textContent?.includes("mode_selector.retry_lobbies"),
+    );
+  }
+
+  // The API answers here, so no outage shows anywhere: without the Retry the
+  // only way to reopen a feed that gave up is a reload.
+  it("offers a Retry that reopens the feed once the socket gives up", async () => {
+    gaveUpRef.current?.();
+    await selector.updateComplete;
+    const started = socketCalls.started;
+    const probe = vi.spyOn(ServerList, "refreshServerList");
+
+    retryButton()!.click();
+    await selector.updateComplete;
+
+    // The socket is what waits for the list, so the refresh-then-dial order
+    // has one owner; a probe from here as well would race it.
+    expect(socketCalls.started).toBe(started + 1);
+    expect(socketCalls.lastStart).toEqual({ refreshList: true });
+    expect(probe).not.toHaveBeenCalled();
+    expect(selector.querySelector(".animate-spin")).not.toBeNull();
+    probe.mockRestore();
+  });
+
+  it("does not reopen from Retry a feed Main stopped for a game", async () => {
+    gaveUpRef.current?.();
+    await selector.updateComplete;
+    selector.stop();
+    const started = socketCalls.started;
+    const probe = vi
+      .spyOn(ServerList, "refreshServerList")
+      .mockResolvedValue("fallback");
+
+    retryButton()!.click();
+
+    expect(socketCalls.started).toBe(started);
+    probe.mockRestore();
+  });
+
+  it("only probes the list on an outage whose feed has not given up, and holds the button for the cooldown", async () => {
+    vi.useFakeTimers();
+    const probe = vi
+      .spyOn(ServerList, "refreshServerList")
+      .mockResolvedValue("fallback");
+    try {
+      document.dispatchEvent(
+        new CustomEvent("backend-reachability", {
+          detail: { reachable: false, confirmed: true },
+        }),
+      );
+      await selector.updateComplete;
+      const started = socketCalls.started;
+
+      retryButton()!.click();
+      await selector.updateComplete;
+      expect(probe).toHaveBeenCalledTimes(1);
+      expect(socketCalls.started).toBe(started);
+      expect(retryButton()!.disabled).toBe(true);
+
+      retryButton()!.click();
+      expect(probe).toHaveBeenCalledTimes(1);
+
+      await vi.advanceTimersByTimeAsync(ServerList.MANUAL_RETRY_COOLDOWN_MS);
+      await selector.updateComplete;
+      expect(retryButton()!.disabled).toBe(false);
+    } finally {
+      probe.mockRestore();
+      vi.useRealTimers();
+    }
+  });
+
+  it("says the servers cannot be reached on a confirmed outage, never that the player is offline", async () => {
+    document.dispatchEvent(
+      new CustomEvent("backend-reachability", {
+        detail: { reachable: false, confirmed: true },
+      }),
+    );
+    await selector.updateComplete;
+
+    expect(selector.textContent).toContain("mode_selector.servers_unreachable");
+    expect(selector.textContent).not.toContain("mode_selector.offline_lobbies");
+    expect(selector.textContent).toContain("mode_selector.retry_lobbies");
+  });
+
+  it("offers no Retry while the session is gated, where the status bar owns the remedy", async () => {
+    setSession({ status: "signed-out", reason: "steam-unavailable" });
+    await selector.updateComplete;
+
+    expect(selector.textContent).toContain("mode_selector.offline_lobbies");
+    expect(selector.textContent).not.toContain("mode_selector.retry_lobbies");
+  });
+
+  it("shows an offline message in place of the spinner while gated", async () => {
+    await selector.updateComplete;
+    expect(selector.querySelector(".animate-spin")).not.toBeNull();
+
+    setSession({ status: "signed-out", reason: "steam-unavailable" });
+    await selector.updateComplete;
+    expect(selector.querySelector(".animate-spin")).toBeNull();
+    expect(selector.textContent).toContain("mode_selector.offline_lobbies");
+
+    setSession({ status: "signed-in" });
+    await selector.updateComplete;
+    expect(selector.querySelector(".animate-spin")).not.toBeNull();
+    expect(selector.textContent).not.toContain("mode_selector.offline_lobbies");
   });
 });

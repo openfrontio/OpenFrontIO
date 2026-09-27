@@ -1,4 +1,12 @@
+import { z } from "zod";
 import { Execution, Game, MessageType, Player, Unit } from "../game/Game";
+import { execSnapshotType } from "../snapshot/ExecutionSnapshot";
+import type {
+  ExecRecord,
+  SnapshotReader,
+  SnapshotWriter,
+} from "../snapshot/SnapshotContext";
+import { zInt, zPlayerRef, zRef } from "../snapshot/SnapshotType";
 
 export class DeleteUnitExecution implements Execution {
   private active: boolean = true;
@@ -90,4 +98,38 @@ export class DeleteUnitExecution implements Execution {
   isActive(): boolean {
     return this.active;
   }
+
+  snapshot(w: SnapshotWriter): ExecRecord {
+    return DeleteUnitExecutionSnapshot.write({
+      active: this.active,
+      initialized: this.mg !== undefined,
+      unit: w.unitOrNull(this.unit),
+      player: w.player(this.player),
+      unitId: this.unitId,
+    });
+  }
+
+  restoreSnapshot(s: DeleteUnitState, r: SnapshotReader): void {
+    this.active = s.active;
+    if (s.initialized) this.mg = r.game;
+    this.unit = r.unitOrNull(s.unit);
+    this.player = r.player(s.player);
+    this.unitId = s.unitId;
+  }
 }
+
+const DeleteUnitStateSchema = z.object({
+  active: z.boolean(),
+  initialized: z.boolean(),
+  unit: zRef().nullable(),
+  player: zPlayerRef(),
+  unitId: zInt(),
+});
+type DeleteUnitState = z.infer<typeof DeleteUnitStateSchema>;
+
+export const DeleteUnitExecutionSnapshot = execSnapshotType({
+  name: "DeleteUnit",
+  version: 1,
+  schema: DeleteUnitStateSchema,
+  cls: () => DeleteUnitExecution,
+});

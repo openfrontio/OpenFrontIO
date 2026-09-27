@@ -1,7 +1,7 @@
 import express from "express";
 import http from "http";
 import type { AddressInfo } from "net";
-import { afterEach, beforeEach, describe, expect, test } from "vitest";
+import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import {
   DESKTOP_APP_ORIGIN,
   applyGameApiCorsHeaders,
@@ -81,6 +81,125 @@ describe("applyGameApiCorsHeaders", () => {
     const { headers, setHeader } = collect();
     applyGameApiCorsHeaders(undefined, setHeader);
     expect(headers.has("Access-Control-Allow-Origin")).toBe(false);
+  });
+
+  // Two hostnames per deployment (docs/MultiServer.md): with GAME_DOMAIN set
+  // the page is served from main.openfront.dev by the static Worker while
+  // this server answers on main.server.openfront.dev, so every /api call the
+  // page makes is cross-origin and the page host has to be granted.
+  describe("a deployment whose page host differs from its game host", () => {
+    beforeEach(() => {
+      vi.stubEnv("SITE_HOST", "main.openfront.dev");
+      vi.stubEnv("DOMAIN", "openfront.dev");
+      vi.stubEnv("GAME_DOMAIN", "server.openfront.dev");
+      vi.stubEnv("SUBDOMAIN", "main");
+    });
+    afterEach(() => vi.unstubAllEnvs());
+
+    test("allows the page origin", () => {
+      const { headers, setHeader } = collect();
+      applyGameApiCorsHeaders("https://main.openfront.dev", setHeader);
+      expect(headers.get("Access-Control-Allow-Origin")).toBe(
+        "https://main.openfront.dev",
+      );
+    });
+
+    test("allows the game host's own origin", () => {
+      const { headers, setHeader } = collect();
+      applyGameApiCorsHeaders("https://main.server.openfront.dev", setHeader);
+      expect(headers.get("Access-Control-Allow-Origin")).toBe(
+        "https://main.server.openfront.dev",
+      );
+    });
+
+    test("refuses another page on the same domain", () => {
+      // Sharing a parent domain grants nothing: only this deployment's own
+      // page host and its own game host are allowed.
+      const { headers, setHeader } = collect();
+      applyGameApiCorsHeaders("https://other.openfront.dev", setHeader);
+      expect(headers.has("Access-Control-Allow-Origin")).toBe(false);
+    });
+  });
+
+  // A dev fleet member with GAME_DOMAIN set: SITE_HOST is the apex, and a
+  // player who loads this colour's page directly (blue.openfront.dev,
+  // bypassing the apex) arrives from an origin that is neither the apex nor
+  // the game host. Before the split that name WAS the game host, so it was
+  // allowed; the pairing must survive the split. Sibling servers are not on
+  // the list: a page that reaches a foreign game is served by the apex.
+  describe("a fleet member whose game host lives under GAME_DOMAIN", () => {
+    beforeEach(() => {
+      vi.stubEnv("DOMAIN", "openfront.dev");
+      vi.stubEnv("GAME_DOMAIN", "server.openfront.dev");
+      vi.stubEnv("SUBDOMAIN", "blue");
+      vi.stubEnv("SITE_HOST", "openfront.dev");
+    });
+    afterEach(() => vi.unstubAllEnvs());
+
+    test("allows its own page host, the apex and its own game host", () => {
+      for (const origin of [
+        "https://blue.openfront.dev",
+        "https://openfront.dev",
+        "https://blue.server.openfront.dev",
+      ]) {
+        const { headers, setHeader } = collect();
+        applyGameApiCorsHeaders(origin, setHeader);
+        expect(headers.get("Access-Control-Allow-Origin")).toBe(origin);
+      }
+    });
+
+    test("refuses a sibling's page host and game host", () => {
+      for (const origin of [
+        "https://green.openfront.dev",
+        "https://green.server.openfront.dev",
+        "https://main.openfront.dev",
+      ]) {
+        const { headers, setHeader } = collect();
+        applyGameApiCorsHeaders(origin, setHeader);
+        expect(headers.has("Access-Control-Allow-Origin")).toBe(false);
+      }
+    });
+
+    // A machine-scoped game host (blue.nbg2.server.openfront.dev) has no
+    // page host of its own — its page is the apex — so the pairing derives
+    // nothing and only the two real names are granted.
+    test("grants a machine-scoped game host and nothing derived from it", () => {
+      vi.stubEnv("GAME_HOST", "blue.nbg2.server.openfront.dev");
+      const allowed = collect();
+      applyGameApiCorsHeaders(
+        "https://blue.nbg2.server.openfront.dev",
+        allowed.setHeader,
+      );
+      expect(allowed.headers.get("Access-Control-Allow-Origin")).toBe(
+        "https://blue.nbg2.server.openfront.dev",
+      );
+      for (const origin of [
+        "https://blue.openfront.dev",
+        "https://blue.server.openfront.dev",
+        "https://nbg2.openfront.dev",
+      ]) {
+        const { headers, setHeader } = collect();
+        applyGameApiCorsHeaders(origin, setHeader);
+        expect(headers.has("Access-Control-Allow-Origin")).toBe(false);
+      }
+    });
+
+    test("grants nothing from the pairing when GAME_DOMAIN is unset", () => {
+      // With no GAME_DOMAIN there is no page host to derive, and
+      // blue.openfront.dev is just this server's game host.
+      vi.stubEnv("GAME_DOMAIN", "");
+      const { headers, setHeader } = collect();
+      applyGameApiCorsHeaders("https://blue.openfront.dev", setHeader);
+      expect(headers.get("Access-Control-Allow-Origin")).toBe(
+        "https://blue.openfront.dev",
+      );
+      const other = collect();
+      applyGameApiCorsHeaders(
+        "https://blue.server.openfront.dev",
+        other.setHeader,
+      );
+      expect(other.headers.has("Access-Control-Allow-Origin")).toBe(false);
+    });
   });
 });
 
@@ -226,5 +345,85 @@ describe("gameApiCors middleware, mounted on a real Express app", () => {
     expect(res.status).toBe(200);
     expect(res.headers.get("access-control-allow-origin")).toBeNull();
     expect(routeHits).toEqual(["create_game"]);
+  });
+});
+
+describe("applyGameApiCorsHeaders with a load balancer site host", () => {
+  // Blue/green: the page is served from openfront.io but pins its game server
+  // to blue.openfront.io, so the web client's /api calls are cross-origin too.
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  test("allows the site origin", () => {
+    vi.stubEnv("SITE_HOST", "openfront.io");
+    const { headers, setHeader } = collect();
+    applyGameApiCorsHeaders("https://openfront.io", setHeader);
+    expect(headers.get("Access-Control-Allow-Origin")).toBe(
+      "https://openfront.io",
+    );
+  });
+
+  test("only allows the site origin over https", () => {
+    vi.stubEnv("SITE_HOST", "openfront.io");
+    const { headers, setHeader } = collect();
+    applyGameApiCorsHeaders("http://openfront.io", setHeader);
+    expect(headers.has("Access-Control-Allow-Origin")).toBe(false);
+  });
+
+  test("does not allow a subdomain of the site host", () => {
+    vi.stubEnv("SITE_HOST", "openfront.io");
+    const { headers, setHeader } = collect();
+    applyGameApiCorsHeaders("https://evil.openfront.io", setHeader);
+    expect(headers.has("Access-Control-Allow-Origin")).toBe(false);
+  });
+
+  test("allows nothing extra without a site host", () => {
+    vi.stubEnv("SITE_HOST", "");
+    const { headers, setHeader } = collect();
+    applyGameApiCorsHeaders("https://openfront.io", setHeader);
+    expect(headers.has("Access-Control-Allow-Origin")).toBe(false);
+  });
+});
+
+describe("applyGameApiCorsHeaders and the rest of the fleet", () => {
+  // Per-game routing (docs/MultiServer.md): a page reaches a foreign game
+  // cross-origin, but every such page is served by the site host, which is
+  // granted. The sibling's own game host is not a page origin anything
+  // serves, so it is not granted — a server knows only itself now.
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  test("allows its own game host over https only", () => {
+    vi.stubEnv("DOMAIN", "openfront.io");
+    vi.stubEnv("SUBDOMAIN", "blue");
+    vi.stubEnv("SITE_HOST", "openfront.io");
+    const ok = collect();
+    applyGameApiCorsHeaders("https://blue.openfront.io", ok.setHeader);
+    expect(ok.headers.get("Access-Control-Allow-Origin")).toBe(
+      "https://blue.openfront.io",
+    );
+    const insecure = collect();
+    applyGameApiCorsHeaders("http://blue.openfront.io", insecure.setHeader);
+    expect(insecure.headers.has("Access-Control-Allow-Origin")).toBe(false);
+  });
+
+  test("does not allow a sibling deployment's origin", () => {
+    vi.stubEnv("DOMAIN", "openfront.io");
+    vi.stubEnv("SUBDOMAIN", "blue");
+    vi.stubEnv("SITE_HOST", "openfront.io");
+    const { headers, setHeader } = collect();
+    applyGameApiCorsHeaders("https://green.openfront.io", setHeader);
+    expect(headers.has("Access-Control-Allow-Origin")).toBe(false);
+  });
+
+  test("rejects an unrelated host under the domain", () => {
+    vi.stubEnv("DOMAIN", "openfront.io");
+    vi.stubEnv("SUBDOMAIN", "blue");
+    vi.stubEnv("SITE_HOST", "openfront.io");
+    const { headers, setHeader } = collect();
+    applyGameApiCorsHeaders("https://evil.openfront.io", setHeader);
+    expect(headers.has("Access-Control-Allow-Origin")).toBe(false);
   });
 });

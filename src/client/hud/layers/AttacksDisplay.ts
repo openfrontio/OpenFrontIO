@@ -336,7 +336,7 @@ export class AttacksDisplay extends LitElement implements Controller {
     const target = boat.targetTile();
     if (target === undefined) return "";
     const ownerID = this.game.ownerID(target);
-    if (ownerID === 0) return "";
+    if (ownerID === 0) return translateText("help_modal.ui_wilderness");
     const player = this.game.playerBySmallID(ownerID) as PlayerView;
     return player?.displayName() ?? "";
   }

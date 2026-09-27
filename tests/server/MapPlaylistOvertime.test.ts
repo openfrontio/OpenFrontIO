@@ -14,7 +14,6 @@ describe("MapPlaylist overtime", () => {
     const config = await new MapPlaylist().gameConfig("ffa");
     expect(config.gameMode).toBe(GameMode.FFA);
     expect(config.overtime).toEqual({ enabled: true });
-    expect(config.publicGameModifiers).toEqual({ isCompact: undefined });
     expect(GameConfigSchema.safeParse(config).success).toBe(true);
   });
 

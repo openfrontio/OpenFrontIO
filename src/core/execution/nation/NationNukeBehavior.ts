@@ -1,3 +1,4 @@
+import { z } from "zod";
 import {
   Difficulty,
   Game,
@@ -11,9 +12,20 @@ import {
   Unit,
   UnitType,
 } from "../../game/Game";
-import { TileRef, euclDistFN } from "../../game/GameMap";
+import { euclDistFN, TileRef } from "../../game/GameMap";
 import { UniversalPathFinding } from "../../pathfinding/PathFinder";
 import { PseudoRandom } from "../../PseudoRandom";
+import type {
+  SnapshotReader,
+  SnapshotWriter,
+} from "../../snapshot/SnapshotContext";
+import {
+  readVersioned,
+  snapshotType,
+  Versioned,
+  zInt,
+  zTile,
+} from "../../snapshot/SnapshotType";
 import { assertNever, boundingBoxTiles } from "../../Util";
 import { NukeExecution } from "../NukeExecution";
 import { UpgradeStructureExecution } from "../UpgradeStructureExecution";
@@ -35,7 +47,7 @@ const HIGH_DENSITY_NUKE_THRESHOLD = 1 / 75;
 const MIN_LEVEL_SUM_FOR_HIGH_DENSITY_NUKE = 5;
 
 export class NationNukeBehavior {
-  private readonly recentlySentNukes: [
+  private recentlySentNukes: [
     Tick,
     TileRef,
     UnitType.AtomBomb | UnitType.HydrogenBomb,
@@ -45,7 +57,7 @@ export class NationNukeBehavior {
   private hydrogenBombsLaunched = 0;
   private hydrogenBombPerceivedCost = this.cost(UnitType.HydrogenBomb);
   // Make 1/3 of nations "hydro-nations" that only throw hydrogen bombs (to reduce atom bomb spam)
-  private readonly isHydroNation: boolean = this.random.chance(3);
+  private isHydroNation: boolean = this.random.chance(3);
 
   constructor(
     private random: PseudoRandom,
@@ -54,6 +66,50 @@ export class NationNukeBehavior {
     private attackBehavior: AiAttackBehavior,
     private emojiBehavior: NationEmojiBehavior,
   ) {}
+
+  snapshot(w: SnapshotWriter): Versioned {
+    return w.versioned(NationNukeBehaviorSnapshot, {
+      recentlySentNukes: this.recentlySentNukes.map(
+        ([tick, tile, type]) =>
+          [tick, tile, type] as [number, number, NukeType],
+      ),
+      atomBombsLaunched: this.atomBombsLaunched,
+      atomBombPerceivedCost: this.atomBombPerceivedCost,
+      hydrogenBombsLaunched: this.hydrogenBombsLaunched,
+      hydrogenBombPerceivedCost: this.hydrogenBombPerceivedCost,
+      isHydroNation: this.isHydroNation,
+    });
+  }
+
+  /**
+   * Fills a prototype-only shell; only assigns (see README). Field
+   * initializers do not run, so isHydroNation's PRNG draw is not repeated.
+   */
+  restoreSnapshot(
+    raw: unknown,
+    r: SnapshotReader,
+    random: PseudoRandom,
+    player: Player,
+    attackBehavior: AiAttackBehavior,
+    emojiBehavior: NationEmojiBehavior,
+  ): void {
+    const s = readVersioned(NationNukeBehaviorSnapshot, raw);
+    this.random = random;
+    this.game = r.game;
+    this.player = player;
+    this.attackBehavior = attackBehavior;
+    this.emojiBehavior = emojiBehavior;
+    this.recentlySentNukes = s.recentlySentNukes.map(([tick, tile, type]) => [
+      tick,
+      tile,
+      type,
+    ]);
+    this.atomBombsLaunched = s.atomBombsLaunched;
+    this.atomBombPerceivedCost = s.atomBombPerceivedCost;
+    this.hydrogenBombsLaunched = s.hydrogenBombsLaunched;
+    this.hydrogenBombPerceivedCost = s.hydrogenBombPerceivedCost;
+    this.isHydroNation = s.isHydroNation;
+  }
 
   maybeSendNuke() {
     const silos = this.player.units(UnitType.MissileSilo);
@@ -1102,3 +1158,27 @@ export class NationNukeBehavior {
     return this.game.unitInfo(type).cost(this.game, this.player);
   }
 }
+
+type NukeType = UnitType.AtomBomb | UnitType.HydrogenBomb;
+
+export const NationNukeBehaviorSnapshot = snapshotType({
+  name: "NationNukeBehavior",
+  version: 1,
+  schema: z.object({
+    recentlySentNukes: z.array(
+      z.tuple([
+        zInt(),
+        zTile(),
+        z.union([
+          z.literal(UnitType.AtomBomb),
+          z.literal(UnitType.HydrogenBomb),
+        ]),
+      ]),
+    ),
+    atomBombsLaunched: zInt(),
+    atomBombPerceivedCost: z.bigint(),
+    hydrogenBombsLaunched: zInt(),
+    hydrogenBombPerceivedCost: z.bigint(),
+    isHydroNation: z.boolean(),
+  }),
+});

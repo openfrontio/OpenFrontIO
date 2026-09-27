@@ -7,7 +7,9 @@ import {
   makeClient,
   makeGame,
   makeMockWs,
+  mockLogger,
   mockWsOf,
+  startGame,
 } from "../util/GameServerHarness";
 
 // Characterization tests for joinClient paths that had no coverage: the
@@ -49,6 +51,7 @@ describe("GameServer.joinClient — environment guards", () => {
         1000,
         "kick_reason.duplicate_session",
       );
+      expect(mockWsOf(first).removeAllListeners).toHaveBeenCalled();
       expect(mockWsOf(second).close).not.toHaveBeenCalled();
       expect(game.numClients()).toBe(1);
       expect(game.gameInfo().clients?.map((c) => c.clientID)).toEqual([
@@ -56,18 +59,14 @@ describe("GameServer.joinClient — environment guards", () => {
       ]);
     });
 
-    it("bans the account's persistentID as a side effect (current behaviour)", () => {
-      // kickClient() records the persistentID, and the survivor shares it: the
-      // seated session can no longer be looked up or reconnected. Pinned so a
-      // fix is a deliberate change, not a refactor side effect.
+    it("does not ban the account's persistentID when evicting duplicate session", () => {
       vi.spyOn(ServerEnv, "env").mockReturnValue(GameEnv.Prod);
       const game = makeGame();
       game.joinClient(account("first"));
       game.joinClient(account("second"));
 
-      expect(game.getClientIdForPersistentId("acct-pid")).toBeNull();
-      expect(game.wasAdmitted("acct-pid")).toBe(false);
-      expect(game.rejoinClient(makeMockWs() as any, "acct-pid")).toBe(false);
+      expect(game.getClientIdForPersistentId("acct-pid")).toBe(cid("second"));
+      expect(game.wasAdmitted("acct-pid")).toBe(true);
     });
 
     it("is not enforced outside prod", () => {
@@ -78,6 +77,36 @@ describe("GameServer.joinClient — environment guards", () => {
       expect(game.joinClient(account("second"))).toBe("joined");
       expect(mockWsOf(first).close).not.toHaveBeenCalled();
       expect(game.numClients()).toBe(2);
+    });
+  });
+
+  describe("full lobby", () => {
+    it("rejects a late joiner with full-lobby, at debug rather than warn", () => {
+      const log = mockLogger();
+      const game = makeGame({
+        config: { gameType: GameType.Public, maxPlayers: 2 },
+        log,
+      });
+      expect(game.joinClient(makeClient({ clientID: cid("a") }))).toBe(
+        "joined",
+      );
+      expect(game.joinClient(makeClient({ clientID: cid("b") }))).toBe(
+        "joined",
+      );
+      const late = makeClient({ clientID: cid("c") });
+      expect(game.joinClient(late)).toBe("rejected");
+      expect(mockWsOf(late).sent()).toContainEqual({
+        type: "error",
+        error: "full-lobby",
+      });
+      expect(game.numClients()).toBe(2);
+      // Every filled public lobby turns away a stream of late joiners; this
+      // is routine, not something worth a warn line per attempt.
+      expect(log.warn).not.toHaveBeenCalled();
+      expect(log.debug).toHaveBeenCalledWith(
+        expect.stringContaining("cannot add client, game full"),
+        expect.objectContaining({ clientID: cid("c") }),
+      );
     });
   });
 
@@ -187,5 +216,62 @@ describe("GameServer — undecodable frame", () => {
         makeClient({ clientID: cid("bad2"), persistentID: "bad-pid" }),
       ),
     ).toBe("kicked");
+  });
+});
+
+describe("GameServer.joinClient — active game reconnection", () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+  });
+
+  afterEach(() => {
+    vi.clearAllTimers();
+    vi.useRealTimers();
+  });
+
+  it("preserves player identity and does not downgrade admitted player to spectator", () => {
+    const game = makeGame();
+    const original = makeClient({
+      clientID: cid("orig"),
+      persistentID: "player-pid",
+    });
+    expect(game.joinClient(original)).toBe("joined");
+
+    startGame(game);
+
+    const newWs = makeMockWs();
+    const reconnecting = makeClient({
+      clientID: cid("fresh"),
+      persistentID: "player-pid",
+      ws: newWs,
+    });
+
+    expect(game.joinClient(reconnecting)).toBe("joined");
+
+    // Client should retain their mapped clientID and not be downgraded to spectator
+    expect(game.getClientIdForPersistentId("player-pid")).toBe(cid("orig"));
+    expect(reconnecting.spectator).toBe(false);
+    expect(original.spectator).toBe(false);
+
+    // Reconnecting client socket received the start message with original clientID
+    const startMsg = newWs.sent().find((m) => (m as any).type === "start");
+    expect(startMsg).toBeDefined();
+    expect((startMsg as any).myClientID).toBe(cid("orig"));
+  });
+
+  it("turns away a genuine late arrival just after game start", () => {
+    const game = makeGame();
+    const player = makeClient({ clientID: cid("p1"), persistentID: "p1-pid" });
+    game.joinClient(player);
+
+    startGame(game);
+
+    const lateClient = makeClient({
+      clientID: cid("late"),
+      persistentID: "late-pid",
+    });
+    expect(game.joinClient(lateClient)).toBe("started");
+    expect(lateClient.spectator).toBe(false);
+    expect(game.getClientIdForPersistentId("late-pid")).toBeNull();
   });
 });

@@ -18,7 +18,7 @@ export class SpawnTimer extends LitElement implements Controller {
   public eventBus: EventBus;
   public transformHandler: TransformHandler;
 
-  private ratios = [0];
+  private ratios: number[] = [0];
   private _barVisible = false;
   private teams: Team[] = [];
   private colors = [
@@ -180,7 +180,7 @@ export class SpawnTimer extends LitElement implements Controller {
   }
 }
 
-function sumIterator(values: MapIterator<number>) {
+function sumIterator(values: MapIterator<number>): number {
   let total = 0;
   for (const value of values) {
     total += value;

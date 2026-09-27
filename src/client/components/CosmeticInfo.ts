@@ -14,6 +14,9 @@ const rarityColors: Record<string, string> = {
 @customElement("cosmetic-info")
 export class CosmeticInfo extends LitElement {
   @property({ type: String }) artist?: string;
+  // The artist's own declaration, from the catalogue. Undefined where nobody was asked — which is
+  // every cosmetic added before the question existed — and that reads as nothing at all here.
+  @property({ type: Boolean }) aiDisclosed?: boolean;
   @property({ type: String }) rarity?: string;
   @property({ type: String }) colorPalette?: string;
   @property({ type: Boolean }) showAdFree = false;
@@ -106,6 +109,15 @@ export class CosmeticInfo extends LitElement {
               ${translateText("cosmetics.artist_label")} ${this.artist}
             </div>`
           : nothing}
+        ${
+          // `=== true` on purpose: false (declared no AI) and undefined (never asked) both render
+          // nothing, so the bubble only ever carries a declaration that was actually made.
+          this.aiDisclosed === true
+            ? html`<div class="text-white/70">
+                ${translateText("cosmetics.ai_label")}
+              </div>`
+            : nothing
+        }
       </div>
     </div>`;
   }

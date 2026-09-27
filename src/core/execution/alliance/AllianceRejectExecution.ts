@@ -1,4 +1,12 @@
+import { z } from "zod";
 import { Execution, Game, Player, PlayerID } from "../../game/Game";
+import { execSnapshotType } from "../../snapshot/ExecutionSnapshot";
+import type {
+  ExecRecord,
+  SnapshotReader,
+  SnapshotWriter,
+} from "../../snapshot/SnapshotContext";
+import { zPlayerRef } from "../../snapshot/SnapshotType";
 
 export class AllianceRejectExecution implements Execution {
   private active = true;
@@ -46,4 +54,32 @@ export class AllianceRejectExecution implements Execution {
   activeDuringSpawnPhase(): boolean {
     return false;
   }
+
+  snapshot(w: SnapshotWriter): ExecRecord {
+    return AllianceRejectExecutionSnapshot.write({
+      active: this.active,
+      requestorID: this.requestorID,
+      recipient: w.player(this.recipient),
+    });
+  }
+
+  restoreSnapshot(s: AllianceRejectState, r: SnapshotReader): void {
+    this.active = s.active;
+    this.requestorID = s.requestorID;
+    this.recipient = r.player(s.recipient);
+  }
 }
+
+const AllianceRejectStateSchema = z.object({
+  active: z.boolean(),
+  requestorID: z.string(),
+  recipient: zPlayerRef(),
+});
+type AllianceRejectState = z.infer<typeof AllianceRejectStateSchema>;
+
+export const AllianceRejectExecutionSnapshot = execSnapshotType({
+  name: "AllianceReject",
+  version: 1,
+  schema: AllianceRejectStateSchema,
+  cls: () => AllianceRejectExecution,
+});

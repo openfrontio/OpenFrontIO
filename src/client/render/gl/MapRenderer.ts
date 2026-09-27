@@ -186,7 +186,20 @@ export class MapRenderer {
   ): void {
     this.renderer?.addPlayers(players, paletteData, patternMeta, patternData);
   }
-  setPlayerSkin(smallID: number, url: string): void {
+  updatePlayerCosmetics(
+    players: PlayerStatic[],
+    paletteData: Float32Array,
+    patternMeta: Float32Array,
+    patternData: Uint8Array,
+  ): void {
+    this.renderer?.updatePlayerCosmetics(
+      players,
+      paletteData,
+      patternMeta,
+      patternData,
+    );
+  }
+  setPlayerSkin(smallID: number, url: string | null): void {
     this.renderer?.setPlayerSkin(smallID, url);
   }
   initSkinAtlas(urls: readonly string[]): void {
@@ -353,9 +366,6 @@ export class MapRenderer {
   }
   setGridView(active: boolean): void {
     this.renderer?.setGridView(active);
-  }
-  setShowPatterns(active: boolean): void {
-    this.renderer?.setShowPatterns(active);
   }
   setHighlightOwner(ownerID: number): void {
     this.renderer?.setHighlightOwner(ownerID);

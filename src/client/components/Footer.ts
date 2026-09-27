@@ -1,20 +1,20 @@
 import { LitElement, html } from "lit";
 import { customElement, state } from "lit/decorators.js";
-import version from "resources/version.txt?raw";
 import { assetUrl } from "../../core/AssetUrls";
 import { composeVersionDisplay, desktopVersion } from "../DesktopShell";
+import { currentGameVersion } from "../GameVersion";
 import "./SteamWishlistButton";
-
-const gameVersion = (() => {
-  const trimmed = version.trim();
-  return trimmed.startsWith("v") ? trimmed : `v${trimmed}`;
-})();
 
 @customElement("page-footer")
 export class Footer extends LitElement {
+  // Per instance, not at module scope: currentGameVersion reads
+  // BOOTSTRAP_CONFIG, which the server injects into the page and which is not
+  // guaranteed to exist at the moment this module is first imported.
+  private readonly gameVersion = currentGameVersion();
+
   // Starts as the game version alone and gains the shell version once the
   // bridge answers, so the line is never blank while that call is in flight.
-  @state() private versionLabel = gameVersion;
+  @state() private versionLabel = this.gameVersion;
 
   createRenderRoot() {
     return this;
@@ -25,7 +25,7 @@ export class Footer extends LitElement {
     // desktopVersion() resolves null off the desktop shell and on its own
     // timeout, so this can only ever leave the label as-is or extend it.
     void desktopVersion().then((shellVersion) => {
-      this.versionLabel = composeVersionDisplay(gameVersion, shellVersion);
+      this.versionLabel = composeVersionDisplay(this.gameVersion, shellVersion);
     });
   }
 

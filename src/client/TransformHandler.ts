@@ -241,8 +241,9 @@ export class TransformHandler {
   private goTo() {
     const { screenX, screenY } = this.screenCenter();
 
-    if (this.target === null) throw new Error("null target");
-
+    if (this.target === null) {
+      throw new Error("null target");
+    }
     const positionClose =
       Math.abs(this.target.x - screenX) + Math.abs(this.target.y - screenY) < 2;
     const scaleClose =

@@ -1,3 +1,4 @@
+import { z } from "zod";
 import {
   Difficulty,
   Game,
@@ -15,6 +16,16 @@ import {
 import { TileRef } from "../../game/GameMap";
 import { canBuildTransportShip } from "../../game/TransportShipUtils";
 import { PseudoRandom } from "../../PseudoRandom";
+import type {
+  SnapshotReader,
+  SnapshotWriter,
+} from "../../snapshot/SnapshotContext";
+import {
+  readVersioned,
+  snapshotType,
+  Versioned,
+  zNum,
+} from "../../snapshot/SnapshotType";
 import {
   assertNever,
   boundingBoxCenter,
@@ -30,6 +41,7 @@ import {
   EMOJI_ASSIST_TARGET_ME,
   NationEmojiBehavior,
 } from "../nation/NationEmojiBehavior";
+import { findJuiciestTarget } from "../nation/NationUtils";
 import { TransportShipExecution } from "../TransportShipExecution";
 import { closestTwoTiles } from "../Util";
 
@@ -49,6 +61,39 @@ export class AiAttackBehavior {
     private allianceBehavior?: NationAllianceBehavior,
     private emojiBehavior?: NationEmojiBehavior,
   ) {}
+
+  /** The owner supplies the shared PRNG, player and nation behaviors. */
+  snapshot(w: SnapshotWriter): Versioned {
+    return w.versioned(AiAttackBehaviorSnapshot, {
+      botAttackTroopsSent: this.botAttackTroopsSent,
+      triggerRatio: this.triggerRatio,
+      reserveRatio: this.reserveRatio,
+      expandRatio: this.expandRatio,
+    });
+  }
+
+  /** Fills a prototype-only shell; only assigns (see README). */
+  restoreSnapshot(
+    raw: unknown,
+    r: SnapshotReader,
+    random: PseudoRandom,
+    player: Player,
+    allianceBehavior?: NationAllianceBehavior,
+    emojiBehavior?: NationEmojiBehavior,
+  ): void {
+    const s = readVersioned(AiAttackBehaviorSnapshot, raw);
+    this.random = random;
+    this.game = r.game;
+    this.player = player;
+    this.allianceBehavior = allianceBehavior;
+    this.emojiBehavior = emojiBehavior;
+    this.botAttackTroopsSent = s.botAttackTroopsSent;
+    this.triggerRatio = s.triggerRatio;
+    this.reserveRatio = s.reserveRatio;
+    this.expandRatio = s.expandRatio;
+    // Scratch buffer: always written before it is read.
+    this.nbuf = [0, 0, 0, 0];
+  }
 
   maybeAttack() {
     if (this.player === null || this.allianceBehavior === undefined) {
@@ -145,7 +190,9 @@ export class AiAttackBehavior {
     }
 
     const owner = this.game.owner(dst);
-    const cap = owner.isPlayer() ? this.troopSendCap() : Infinity;
+    const cap = owner.isPlayer()
+      ? this.troopSendCap()
+      : this.troopSendCapForExpansion();
     const troops = Math.min(this.player.troops() / 5, cap);
     if (troops < 1) return;
 
@@ -314,6 +361,11 @@ export class AiAttackBehavior {
       return false;
     };
 
+    const juicy = (): boolean => {
+      const target = this.findJuicyTarget(borderingEnemies);
+      return target !== null ? this.sendAttack(target) : false;
+    };
+
     const hated = (): boolean => {
       for (const relation of this.player.allRelationsSorted()) {
         if (relation.relation !== Relation.Hostile) continue;
@@ -361,17 +413,19 @@ export class AiAttackBehavior {
     // Easy nations get the dumbest order, impossible nations get the smartest order
     switch (difficulty) {
       case Difficulty.Easy:
+        // So dumb, they cant even find islanders
         // prettier-ignore
         return [nuked, bots, retaliate, assist, betray, hated, weakest];
       case Difficulty.Medium:
         // prettier-ignore
         return [bots, nuked, retaliate, assist, betray, hated, afk, traitor, weakest, island, donate];
       case Difficulty.Hard:
+        // Strong veryWeak and juicy strats after the distracting hated strat, to make the nations weaker than impossible
         // prettier-ignore
-        return [bots, retaliate, assist, betray, nuked, traitor, afk, hated, veryWeak, victim, weakest, island, donate];
+        return [bots, retaliate, assist, betray, nuked, traitor, afk, hated, veryWeak, juicy, victim, weakest, island, donate];
       case Difficulty.Impossible:
         // prettier-ignore
-        return [retaliate, bots, veryWeak, assist, traitor, afk, betray, victim, nuked, hated, weakest, island, donate];
+        return [retaliate, bots, veryWeak, betray, assist, victim, traitor, juicy, afk, nuked, hated, weakest, island, donate];
       default:
         assertNever(difficulty);
     }
@@ -535,11 +589,16 @@ export class AiAttackBehavior {
     if (this.game.config().disableAlliances()) return false;
 
     if (borderingFriends.length > 0) {
+      // Computed once here, not per friend below - it doesn't depend on which one.
+      const juiciestAlly =
+        this.allianceBehavior.findJuiciestAlly(borderingFriends);
       for (const friend of borderingFriends) {
         if (
           this.allianceBehavior.maybeBetray(
             friend,
-            borderingFriends.length + borderingEnemies.length,
+            juiciestAlly,
+            borderingFriends,
+            borderingEnemies,
           )
         ) {
           return this.sendAttack(friend, true);
@@ -604,6 +663,14 @@ export class AiAttackBehavior {
 
     // borderingEnemies is already sorted by troops (ascending), so first match is weakest very weak enemy
     return veryWeakEnemies.length > 0 ? veryWeakEnemies[0] : null;
+  }
+
+  // Juiciest bordering enemy (Hard & Impossible only) we could plausibly beat (troops <= 75% of ours)
+  private findJuicyTarget(borderingEnemies: Player[]): Player | null {
+    const candidates = borderingEnemies.filter(
+      (enemy) => enemy.troops() <= this.player.troops() * 0.75,
+    );
+    return findJuiciestTarget(this.game, candidates);
   }
 
   private findNearestIslandEnemy(): Player | null {
@@ -795,7 +862,7 @@ export class AiAttackBehavior {
     return false;
   }
 
-  private readonly nbuf: TileRef[] = [0, 0, 0, 0];
+  private nbuf: TileRef[] = [0, 0, 0, 0];
 
   /** The player's shore border tiles, in border-set order (one pass, no copy of the whole set). */
   private shoreTiles(player: Player): TileRef[] {
@@ -847,7 +914,10 @@ export class AiAttackBehavior {
         if (this.game.hasFallout(tile)) continue;
         if (!canBuildTransportShip(this.game, this.player, tile)) continue;
 
-        const troops = this.player.troops() / 5;
+        const troops = Math.min(
+          this.player.troops() / 5,
+          this.troopSendCapForExpansion(),
+        );
         if (troops < 1) return false;
 
         this.game.addExecution(
@@ -961,6 +1031,13 @@ export class AiAttackBehavior {
     return cap;
   }
 
+  // Like troopSendCap(), but floored above 0 — TerraNullius can't fight back, so it's throttled, not frozen.
+  private troopSendCapForExpansion(): number {
+    const cap = this.troopSendCap();
+    if (cap > 0) return cap;
+    return Math.ceil(this.player.troops() * 0.05);
+  }
+
   private calculateAttackTroops(
     target: Player | TerraNullius,
     nonBotTroops: (targetTroops: number) => number,
@@ -977,11 +1054,11 @@ export class AiAttackBehavior {
     const targetTroops = maxTroops * reserveRatio;
 
     let troops;
-    if (
+    const isBotAttack =
       target.isPlayer() &&
       target.type() === PlayerType.Bot &&
-      this.player.type() !== PlayerType.Bot
-    ) {
+      this.player.type() !== PlayerType.Bot;
+    if (isBotAttack) {
       troops = this.calculateBotAttackTroops(
         target,
         this.player.troops() - targetTroops - this.botAttackTroopsSent,
@@ -990,10 +1067,11 @@ export class AiAttackBehavior {
       troops = nonBotTroops(targetTroops);
     }
 
-    // Hard & Impossible: don't drop below neighbor troop threshold (players only)
-    if (target.isPlayer()) {
-      troops = Math.min(troops, this.troopSendCap());
-    }
+    // Hard & Impossible: don't drop below neighbor troop threshold (also applies to TerraNullius/fallout).
+    troops = Math.min(
+      troops,
+      target.isPlayer() ? this.troopSendCap() : this.troopSendCapForExpansion(),
+    );
 
     if (troops < 1) {
       return null;
@@ -1007,6 +1085,11 @@ export class AiAttackBehavior {
     if (target.isPlayer() && this.player.type() === PlayerType.Nation) {
       if (this.emojiBehavior === undefined) throw new Error("not initialized");
       this.emojiBehavior.maybeSendAttackEmoji(target);
+    }
+
+    // Only count troops that will actually be sent, post-cap.
+    if (isBotAttack) {
+      this.botAttackTroopsSent += troops;
     }
 
     return troops;
@@ -1066,7 +1149,6 @@ export class AiAttackBehavior {
   private calculateBotAttackTroops(target: Player, maxTroops: number): number {
     const { difficulty } = this.game.config().gameConfig();
     if (difficulty === Difficulty.Easy) {
-      this.botAttackTroopsSent += maxTroops;
       return maxTroops;
     }
     let troops = target.troops() * 4;
@@ -1080,7 +1162,6 @@ export class AiAttackBehavior {
         troops = maxTroops;
       }
     }
-    this.botAttackTroopsSent += troops;
     return troops;
   }
 
@@ -1184,3 +1265,14 @@ export class AiAttackBehavior {
     return true;
   }
 }
+
+export const AiAttackBehaviorSnapshot = snapshotType({
+  name: "AiAttackBehavior",
+  version: 1,
+  schema: z.object({
+    botAttackTroopsSent: zNum(),
+    triggerRatio: zNum(),
+    reserveRatio: zNum(),
+    expandRatio: zNum(),
+  }),
+});

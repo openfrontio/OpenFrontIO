@@ -1,5 +1,13 @@
-import { ColoredTeams, PlayerInfo, PlayerType } from "../src/core/game/Game";
-import { assignTeams } from "../src/core/game/TeamAssignment";
+import {
+  ColoredTeams,
+  Duos,
+  HumansVsNations,
+  PlayerInfo,
+  PlayerType,
+  Quads,
+  Trios,
+} from "../src/core/game/Game";
+import { assignTeams, resolveTeamsList } from "../src/core/game/TeamAssignment";
 
 const teams = [ColoredTeams.Red, ColoredTeams.Blue];
 
@@ -456,5 +464,50 @@ describe("assignTeams", () => {
     for (const n of nations) {
       expect(result.get(n)).toEqual(ColoredTeams.Blue);
     }
+  });
+});
+
+describe("resolveTeamsList", () => {
+  it("derives the team count from attendance for named modes", () => {
+    expect(resolveTeamsList(Duos, 10)).toHaveLength(5);
+    expect(resolveTeamsList(Trios, 9)).toHaveLength(3);
+    expect(resolveTeamsList(Quads, 12)).toHaveLength(3);
+  });
+
+  // Public lobbies start on their countdown regardless of attendance, so
+  // named modes must never resolve below 2 teams: with 0-2 players a Duos
+  // game used to throw "Too few teams" and no client could construct the
+  // game at all.
+  for (const { config, size } of [
+    { config: Duos, size: 2 },
+    { config: Trios, size: 3 },
+    { config: Quads, size: 4 },
+  ]) {
+    it(`clamps ${config} to 2 teams when attendance can't fill two`, () => {
+      for (const totalPlayers of [0, 1, size]) {
+        expect(resolveTeamsList(config, totalPlayers)).toEqual([
+          ColoredTeams.Red,
+          ColoredTeams.Blue,
+        ]);
+      }
+    });
+  }
+
+  it("always resolves HumansVsNations to its two fixed teams", () => {
+    expect(resolveTeamsList(HumansVsNations, 0)).toEqual([
+      ColoredTeams.Humans,
+      ColoredTeams.Nations,
+    ]);
+  });
+
+  it("keeps numeric configs verbatim, independent of attendance", () => {
+    expect(resolveTeamsList(7, 3)).toHaveLength(7);
+  });
+
+  it("still rejects a numeric config below 2 (misconfiguration)", () => {
+    // A Team game with playerTeams unset resolves to 0 via
+    // Config.playerTeams(); that must stay a loud error.
+    expect(() => resolveTeamsList(0, 50)).toThrow("Too few teams: 0");
+    expect(() => resolveTeamsList(1, 50)).toThrow("Too few teams: 1");
   });
 });

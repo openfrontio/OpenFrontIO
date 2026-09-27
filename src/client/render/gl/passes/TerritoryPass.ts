@@ -59,7 +59,6 @@ export class TerritoryPass {
   private affiliationTex: WebGLTexture | null = null;
 
   private altView = false;
-  private showPatterns = true;
 
   /** CPU-side tile state — what is currently on the GPU (display state). */
   private cpuTileState: Uint16Array;
@@ -384,10 +383,6 @@ export class TerritoryPass {
     this.altView = active;
   }
 
-  setShowPatterns(show: boolean): void {
-    this.showPatterns = show;
-  }
-
   /**
    * Update the skin atlas texture handle. Called once at game start after
    * the renderer learns the locked-in skin URL set.
@@ -445,7 +440,7 @@ export class TerritoryPass {
     gl.uniform1f(this.uHighlightBrighten, mo.highlightFillBrighten);
     gl.uniform1i(
       this.uShowPatterns,
-      this.settings.passEnabled.territoryPatterns && this.showPatterns ? 1 : 0,
+      this.settings.passEnabled.territoryPatterns ? 1 : 0,
     );
     gl.uniform1i(this.uIsTeamMode, this.isTeamMode ? 1 : 0);
     gl.uniform1f(this.uDefenseDarken, mo.territoryDefenseDarken);

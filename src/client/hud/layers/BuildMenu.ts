@@ -438,9 +438,9 @@ export class BuildMenu extends LitElement implements Controller {
                       width="40"
                       height="40"
                     />
-                    <span class="build-name"
-                      >${item.key && translateText(item.key)}</span
-                    >
+                    <span class="build-name">
+                      ${item.key && translateText(item.key)}
+                    </span>
                     <span class="build-description"
                       >${item.description &&
                       translateText(item.description)}</span

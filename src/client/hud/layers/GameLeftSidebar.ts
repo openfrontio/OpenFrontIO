@@ -112,7 +112,7 @@ export class GameLeftSidebar extends LitElement implements Controller {
   render() {
     return html`
       <aside
-        class=${`fixed top-0 min-[1200px]:top-4 left-0 min-[1200px]:left-4 z-900 flex flex-col max-h-[calc(100vh-80px)] overflow-y-auto p-2 bg-gray-800/92 backdrop-blur-sm shadow-xs min-[1200px]:rounded-lg rounded-br-lg ${this.isPlayerStatsShown || this.isTeamStatsShown ? "max-[400px]:w-full max-[400px]:rounded-none" : ""} transition-all duration-300 ease-out transform ${
+        class=${`fixed top-0 left-0 z-900 flex flex-col max-h-[calc(100vh-80px)] overflow-y-auto p-2 bg-gray-800/92 backdrop-blur-sm shadow-xs rounded-br-lg ${this.isPlayerStatsShown || this.isTeamStatsShown ? "max-[400px]:w-full max-[400px]:rounded-none" : ""} transition-all duration-300 ease-out transform ${
           this.isVisible ? "translate-x-0" : "hidden"
         }`}
         style="margin-top: ${this.barOffset}px;"
@@ -190,7 +190,10 @@ export class GameLeftSidebar extends LitElement implements Controller {
                   style="--color: ${this.playerColor.toRgbString()}"
                   class="text-(--color)"
                 >
-                  &nbsp;${getTranslatedPlayerTeamLabel(this.playerTeam)}
+                  &nbsp;${getTranslatedPlayerTeamLabel(
+                    this.playerTeam,
+                    this.game?.teamClanTag(this.playerTeam),
+                  )}
                   &#10687;
                 </span>
               </div>

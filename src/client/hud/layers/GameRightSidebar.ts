@@ -9,10 +9,11 @@ import "../../components/DoomsdayClockPanel";
 import "../../components/OvertimePanel";
 import { Controller } from "../../Controller";
 import { crazyGamesSDK } from "../../CrazyGamesSDK";
+import { isDesktopShell } from "../../DesktopShell";
 import { showInGameAlert, showInGameConfirm } from "../../InGameModal";
 import { TogglePauseIntentEvent } from "../../InputHandler";
 import { PauseGameIntentEvent, SendWinnerEvent } from "../../Transport";
-import { showToast, translateText } from "../../Utils";
+import { homeHref, showToast, translateText } from "../../Utils";
 import { GameView } from "../../view";
 import { ImmunityBarVisibleEvent } from "./ImmunityTimer";
 import { ShowReplayPanelEvent } from "./ReplayPanel";
@@ -55,8 +56,11 @@ export class GameRightSidebar extends LitElement implements Controller {
   @state()
   private timer: number = 0;
 
-  // CrazyGames provides its own fullscreen control in the game frame, so hide ours.
-  private readonly onCrazyGames = crazyGamesSDK.isOnCrazyGames();
+  // CrazyGames provides its own fullscreen control in the game frame, and the
+  // desktop shell owns its window mode from the settings Display tab, so hide
+  // ours on both.
+  private readonly hideFullscreenButton =
+    crazyGamesSDK.isOnCrazyGames() || isDesktopShell();
   private hasWinner = false;
   private isLobbyCreator = false;
   private isPrivateLobby = false;
@@ -254,7 +258,7 @@ export class GameRightSidebar extends LitElement implements Controller {
       const lobby = await createNextLobby(this.game.gameID());
       const id = lobby.gameID;
       // ?host routes the creator back into the host view on load.
-      window.location.href = `${window.location.origin}/${ClientEnv.workerPath(id)}/game/${id}?host`;
+      window.location.href = `${window.location.origin}${ClientEnv.gamePath(id)}?host`;
     } catch (error) {
       console.error("Failed to create successor lobby", error);
       this.newLobbyRequested = false;
@@ -274,7 +278,7 @@ export class GameRightSidebar extends LitElement implements Controller {
     await crazyGamesSDK.requestMidgameAd();
     await crazyGamesSDK.gameplayStop();
     // redirect to the home page
-    window.location.href = "/";
+    window.location.href = homeHref();
   }
 
   private onSettingsButtonClick() {
@@ -358,7 +362,7 @@ export class GameRightSidebar extends LitElement implements Controller {
         }
       </style>
       <aside
-        class=${`w-fit flex flex-row items-center gap-3 py-2 px-3 bg-gray-800/92 backdrop-blur-sm shadow-xs min-[1200px]:rounded-lg rounded-bl-lg transition-transform duration-300 ease-out transform text-white ${shouldFlashSidebar ? "game-end-timer-sidebar-flash" : ""} ${
+        class=${`w-fit flex flex-row items-center gap-3 py-2 px-3 bg-gray-800/92 backdrop-blur-sm shadow-xs rounded-bl-lg transition-transform duration-300 ease-out transform text-white ${shouldFlashSidebar ? "game-end-timer-sidebar-flash" : ""} ${
           this._isVisible ? "translate-x-0" : "translate-x-full"
         }`}
         @contextmenu=${(e: Event) => e.preventDefault()}
@@ -375,7 +379,7 @@ export class GameRightSidebar extends LitElement implements Controller {
           <img src=${settingsIcon} alt="settings" width="20" height="20" />
         </div>
 
-        ${document.fullscreenEnabled && !this.onCrazyGames
+        ${document.fullscreenEnabled && !this.hideFullscreenButton
           ? html`<div
               class="cursor-pointer"
               @click=${this.onFullscreenButtonClick}

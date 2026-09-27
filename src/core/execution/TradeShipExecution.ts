@@ -1,3 +1,4 @@
+import { z } from "zod";
 import { renderNumber } from "../../client/Utils";
 import {
   Execution,
@@ -10,6 +11,18 @@ import {
 import { TileRef } from "../game/GameMap";
 import { WaterPathFinder } from "../pathfinding/PathFinder";
 import { PathStatus } from "../pathfinding/types";
+import { execSnapshotType } from "../snapshot/ExecutionSnapshot";
+import {
+  restoreWaterPathFinder,
+  WaterPathFinderSchema,
+  waterPathFinderState,
+} from "../snapshot/PathfinderSnapshots";
+import type {
+  ExecRecord,
+  SnapshotReader,
+  SnapshotWriter,
+} from "../snapshot/SnapshotContext";
+import { zInt, zPlayerRef, zRef, zTile } from "../snapshot/SnapshotType";
 import { findClosestBy } from "../Util";
 
 export class TradeShipExecution implements Execution {
@@ -22,8 +35,6 @@ export class TradeShipExecution implements Execution {
   private motionPlanId = 1;
   private motionPlanDst: TileRef | null = null;
 
-  private static _staggerCounter = 0;
-
   constructor(
     private origOwner: Player,
     private srcPort: Unit,
@@ -32,8 +43,7 @@ export class TradeShipExecution implements Execution {
 
   init(mg: Game, ticks: number): void {
     this.mg = mg;
-    const stagger =
-      TradeShipExecution._staggerCounter++ % WaterPathFinder.STAGGER_SPREAD;
+    const stagger = mg.nextShipStagger("tradeShip");
     this.pathFinder = new WaterPathFinder(mg, stagger, true); // memoized: port tile to port tile repeats
   }
 
@@ -178,7 +188,10 @@ export class TradeShipExecution implements Execution {
       .config()
       .tradeShipGold(this.tilesTraveled, this.tradeShip!.owner());
 
-    if (this.wasCaptured) {
+    if (this.wasCaptured && this.tradeShip!.owner() === this.origOwner) {
+      // Retaken by its original owner: the payout stands, but nobody pirated it.
+      this.origOwner.addGold(gold, this._dstPort.tile());
+    } else if (this.wasCaptured) {
       this.tradeShip!.owner().addGold(gold, this._dstPort.tile());
       this.tradeShip!.owner().addPiracyGold(gold);
       this.mg.displayMessage(
@@ -221,4 +234,62 @@ export class TradeShipExecution implements Execution {
   dstPort(): TileRef {
     return this._dstPort.tile();
   }
+
+  snapshot(w: SnapshotWriter): ExecRecord {
+    return TradeShipExecutionSnapshot.write({
+      active: this.active,
+      initialized: this.mg !== undefined,
+      tradeShip: this.tradeShip === undefined ? null : w.unit(this.tradeShip),
+      wasCaptured: this.wasCaptured,
+      pathFinder:
+        this.pathFinder === undefined
+          ? null
+          : waterPathFinderState(this.pathFinder),
+      tilesTraveled: this.tilesTraveled,
+      motionPlanId: this.motionPlanId,
+      motionPlanDst: this.motionPlanDst,
+      origOwner: w.player(this.origOwner),
+      srcPort: w.unit(this.srcPort),
+      dstPort: w.unit(this._dstPort),
+    });
+  }
+
+  restoreSnapshot(s: TradeShipExecutionState, r: SnapshotReader): void {
+    this.active = s.active;
+    if (s.initialized) this.mg = r.game;
+    this.tradeShip = s.tradeShip === null ? undefined : r.unit(s.tradeShip);
+    this.wasCaptured = s.wasCaptured;
+    if (s.pathFinder !== null) {
+      this.pathFinder = restoreWaterPathFinder(r.game, s.pathFinder);
+    }
+    this.tilesTraveled = s.tilesTraveled;
+    this.motionPlanId = s.motionPlanId;
+    this.motionPlanDst = s.motionPlanDst;
+    this.origOwner = r.player(s.origOwner);
+    this.srcPort = r.unit(s.srcPort);
+    this._dstPort = r.unit(s.dstPort);
+  }
 }
+
+const TradeShipExecutionStateSchema = z.object({
+  active: z.boolean(),
+  initialized: z.boolean(),
+  tradeShip: zRef().nullable(),
+  wasCaptured: z.boolean(),
+  /** Null before init(). */
+  pathFinder: WaterPathFinderSchema.nullable(),
+  tilesTraveled: zInt(),
+  motionPlanId: zInt(),
+  motionPlanDst: zTile().nullable(),
+  origOwner: zPlayerRef(),
+  srcPort: zRef(),
+  dstPort: zRef(),
+});
+type TradeShipExecutionState = z.infer<typeof TradeShipExecutionStateSchema>;
+
+export const TradeShipExecutionSnapshot = execSnapshotType({
+  name: "TradeShip",
+  version: 1,
+  schema: TradeShipExecutionStateSchema,
+  cls: () => TradeShipExecution,
+});

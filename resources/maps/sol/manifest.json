@@ -191,7 +191,7 @@
     }
   ],
   "ffa_frequency": 0,
-  "forced_modifiers": ["isWaterNukes:50"],
+  "forced_modifiers": ["isWaterNukes:50", "startingGold5M:100"],
   "id": "Sol",
   "map": {
     "height": 2528,

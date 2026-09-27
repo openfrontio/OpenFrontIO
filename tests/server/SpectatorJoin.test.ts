@@ -159,14 +159,68 @@ describe("GameServer - spectators", () => {
     expect(handleIntent).toHaveBeenCalled();
   });
 
-  it("joining after the start makes you a spectator, not a seatless player", () => {
+  it("turns away a player who arrives just after the start", () => {
     // The player list is frozen at start; a late joiner used to be admitted as a
-    // player who could never spawn.
+    // player who could never spawn, then as a spectator they never asked to be.
+    // Someone landing seconds after the start clicked the lobby to play, so
+    // they are told they missed it instead.
     const game = makeGame();
     startGame(game);
+    vi.advanceTimersByTime(2_000);
+    const late = makeClient("late");
+    expect(game.joinClient(late)).toBe("started");
+    expect(mockWsOf(late).sent()).toContainEqual({
+      type: "error",
+      error: "game-started",
+    });
+    expect(
+      mockWsOf(late)
+        .sent()
+        .some((m) => m.type === "start"),
+    ).toBe(false);
+    expect(game.numClients()).toBe(0);
+  });
+
+  it("seats a player arriving well after the start as a spectator", () => {
+    // Past the grace window the game is no longer joinable from the lobby
+    // browser; whoever arrives followed a shared link to watch.
+    const game = makeGame();
+    startGame(game);
+    vi.advanceTimersByTime(5_000);
     const late = makeClient("late");
     expect(game.joinClient(late)).toBe("joined");
     expect(late.spectator).toBe(true);
+    expect(
+      mockWsOf(late)
+        .sent()
+        .some((m) => m.type === "start"),
+    ).toBe(true);
+  });
+
+  it("turns away a player whose join lands as a filled lobby starts", () => {
+    // The common case: the last seat goes while a click is in flight. Filling
+    // starts the game a couple of seconds later, so the join lands just after
+    // start(). It used to get "full-lobby"; the spectator change put the
+    // started check ahead of the capacity check and, since spectators hold
+    // no seat, admitted the player as one. Either refusal reaches the same
+    // "didn't enter in time" toast; what matters is that they are not seated.
+    const game = makeGame(2);
+    game.joinClient(makeClient("p1"));
+    game.joinClient(makeClient("p2"));
+    startGame(game);
+    vi.advanceTimersByTime(1_000);
+    const late = makeClient("late");
+    expect(game.joinClient(late)).toBe("started");
+    expect(late.spectator).toBe(false);
+    expect(game.numClients()).toBe(2);
+  });
+
+  it("lets a player in during prestart", () => {
+    // The player list is only frozen at start(), so a join that lands in the
+    // prestart window still gets a seat.
+    const game = makeGame();
+    game.prestart();
+    expect(game.joinClient(makeClient("late"))).toBe("joined");
   });
 
   it("does not put a spectator's disconnect into the turn log", () => {
@@ -323,8 +377,8 @@ describe("GameServer - spectators", () => {
   });
 
   it("may join after the game has started", () => {
-    // A caster arriving mid-game is the normal case; a late player already
-    // gets the same treatment, so this only has to keep working.
+    // A caster arriving mid-game is the normal case. Only a player landing
+    // just after the start is turned away; asking to watch must keep working.
     const game = makeGame();
     startGame(game);
     expect(game.joinClient(makeClient("cast", true))).toBe("joined");

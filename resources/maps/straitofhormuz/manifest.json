@@ -142,6 +142,7 @@
       }
     ]
   },
+  "team_frequency": 8,
   "themes": ["asia"],
   "translation_key": "map.straitofhormuz"
 }

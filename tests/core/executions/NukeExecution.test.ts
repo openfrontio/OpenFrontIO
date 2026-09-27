@@ -3,12 +3,14 @@ import { MissileSiloExecution } from "../../../src/core/execution/MissileSiloExe
 import { NukeExecution } from "../../../src/core/execution/NukeExecution";
 import {
   Game,
+  GameMode,
   MessageType,
   Player,
   PlayerInfo,
   PlayerType,
   UnitType,
 } from "../../../src/core/game/Game";
+import { OTHER_INDEX_DESTROY } from "../../../src/core/StatsSchemas";
 import { setup } from "../../util/Setup";
 import { TestConfig } from "../../util/TestConfig";
 import { executeTicks } from "../../util/utils";
@@ -522,5 +524,109 @@ describe("NukeExecution", () => {
     expect(nukes).toHaveLength(6);
     const tiles = nukes.map((n) => n.tile());
     expect(new Set(tiles).size).toBe(6);
+  });
+});
+
+describe("NukeExecution kill credit", () => {
+  const warshipsDestroyed = (g: Game, p: Player) =>
+    g.stats().getPlayerStats(p)?.units?.wshp?.[OTHER_INDEX_DESTROY] ?? 0n;
+
+  async function nukeGame(gameMode: GameMode, infos: PlayerInfo[]) {
+    const g = await setup(
+      "big_plains",
+      { infiniteGold: true, instantBuild: true, gameMode, playerTeams: 2 },
+      infos,
+    );
+    (g.config() as TestConfig).nukeMagnitudes = vi.fn(() => ({
+      inner: 10,
+      outer: 10,
+    }));
+    const launcher = g.player("launcher_id");
+    launcher.conquer(g.ref(1, 1));
+    launcher.buildUnit(UnitType.MissileSilo, g.ref(1, 1), {});
+    return { g, launcher };
+  }
+
+  test("credits only the enemy's units, not the launcher's own or an ally's", async () => {
+    const { g, launcher } = await nukeGame(GameMode.FFA, [
+      new PlayerInfo("launcher", PlayerType.Human, "c1", "launcher_id"),
+      new PlayerInfo("ally", PlayerType.Human, "c2", "ally_id"),
+      new PlayerInfo("enemy", PlayerType.Human, "c3", "enemy_id"),
+    ]);
+    const ally = g.player("ally_id");
+    const enemy = g.player("enemy_id");
+    launcher.createAllianceRequest(ally)!.accept();
+
+    launcher.buildUnit(UnitType.Warship, g.ref(50, 52), {
+      patrolTile: g.ref(50, 52),
+    });
+    ally.buildUnit(UnitType.Warship, g.ref(52, 50), {
+      patrolTile: g.ref(52, 50),
+    });
+    enemy.buildUnit(UnitType.Warship, g.ref(48, 50), {
+      patrolTile: g.ref(48, 50),
+    });
+
+    g.addExecution(
+      new NukeExecution(UnitType.AtomBomb, launcher, g.ref(50, 50), null),
+    );
+    executeTicks(g, 200);
+
+    expect(launcher.units(UnitType.Warship)).toHaveLength(0);
+    expect(ally.units(UnitType.Warship)).toHaveLength(0);
+    expect(enemy.units(UnitType.Warship)).toHaveLength(0);
+    expect(launcher.isAlliedWith(ally)).toBe(true);
+    expect(warshipsDestroyed(g, launcher)).toBe(1n);
+  });
+
+  test("does not credit teammates' units, even a disconnected teammate's", async () => {
+    const { g, launcher } = await nukeGame(GameMode.Team, [
+      new PlayerInfo(
+        "launcher",
+        PlayerType.Human,
+        "c1",
+        "launcher_id",
+        false,
+        "ALPHA",
+      ),
+      new PlayerInfo("mate", PlayerType.Human, "c2", "mate_id", false, "ALPHA"),
+      new PlayerInfo("afk", PlayerType.Human, "c3", "afk_id", false, "ALPHA"),
+      new PlayerInfo(
+        "enemy",
+        PlayerType.Human,
+        "c4",
+        "enemy_id",
+        false,
+        "BETA",
+      ),
+      new PlayerInfo("e2", PlayerType.Human, "c5", "e2_id", false, "BETA"),
+      new PlayerInfo("e3", PlayerType.Human, "c6", "e3_id", false, "BETA"),
+    ]);
+    const mate = g.player("mate_id");
+    const afk = g.player("afk_id");
+    const enemy = g.player("enemy_id");
+    expect(launcher.isOnSameTeam(afk)).toBe(true);
+    expect(launcher.isOnSameTeam(enemy)).toBe(false);
+    afk.markDisconnected(true);
+
+    mate.buildUnit(UnitType.Warship, g.ref(52, 50), {
+      patrolTile: g.ref(52, 50),
+    });
+    afk.buildUnit(UnitType.Warship, g.ref(50, 52), {
+      patrolTile: g.ref(50, 52),
+    });
+    enemy.buildUnit(UnitType.Warship, g.ref(48, 50), {
+      patrolTile: g.ref(48, 50),
+    });
+
+    g.addExecution(
+      new NukeExecution(UnitType.AtomBomb, launcher, g.ref(50, 50), null),
+    );
+    executeTicks(g, 200);
+
+    expect(mate.units(UnitType.Warship)).toHaveLength(0);
+    expect(afk.units(UnitType.Warship)).toHaveLength(0);
+    expect(enemy.units(UnitType.Warship)).toHaveLength(0);
+    expect(warshipsDestroyed(g, launcher)).toBe(1n);
   });
 });

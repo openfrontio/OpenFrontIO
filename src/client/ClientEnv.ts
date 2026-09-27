@@ -1,6 +1,8 @@
 import { JWK } from "jose";
 import { z } from "zod";
+import { ClusterConfig } from "../core/ClusterConfig";
 import { GameID } from "../core/Schemas";
+import { ServerList } from "../core/ServerList";
 import { simpleHash } from "../core/Util";
 import {
   GameEnv,
@@ -8,14 +10,123 @@ import {
   parseGameEnv,
 } from "../core/configuration/Config";
 
+/**
+ * No server is known: the API's list has not loaded (or carries none for
+ * this build) and the page itself names none either.
+ *
+ * Raised by numWorkers() and propagated by every accessor that derives a
+ * worker route from it — workerIndex(), workerPath(), and gameWorkerPath()
+ * on its own-server branch. Those have no truthful answer without a server:
+ * a worker count belongs to ONE server, so any number routes to a worker
+ * that does not own the game. (gamePath() is the deliberate exception: it
+ * catches this and falls back to the worker-free `/game/<id>` shape.)
+ *
+ * serverWsBase() / serverHttpBase() raise it too, but only on a page that
+ * names no server of its own. On a dev box, on a standalone deployment and
+ * on any server-rendered page the document's origin IS the game server, so
+ * those keep the same-origin answer they have always had (ownServerKnown).
+ * The static page the site Worker serves is the one case where the origin is
+ * nobody: it is the page host, which runs no game server, so a socket built
+ * from it hangs for the edge's origin-connect timeout and then fails. Failing
+ * at URL-build time instead is what routes it into the path below.
+ *
+ * Typed so callers can tell "there is no server" from a programming error and
+ * route it into the connection-failed path they already have
+ * (LobbySocket.handleConnectError, createLobby's callers) rather than letting
+ * it surface as an uncaught exception.
+ */
+export class NoServerError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "NoServerError";
+  }
+}
+
 export class ClientEnv {
   private static values: ClientEnvValues | null = null;
   private static publicKey: JWK | null = null;
+  // The API-served server list (src/client/ServerList.ts), once fetched, and
+  // the letter picked for new games from it. Null until a server was needed
+  // and the list loaded; every accessor below then prefers it over the
+  // page's own values, and falls back to them when it is absent, so the
+  // client behaves exactly as today until the API serves a list.
+  private static apiList: {
+    list: ServerList;
+    picked: string | null;
+  } | null = null;
 
   /** Test-only. */
   static reset(): void {
     ClientEnv.values = null;
     ClientEnv.publicKey = null;
+    ClientEnv.apiList = null;
+  }
+
+  // Called by src/client/ServerList.ts only. `picked` is the letter of the
+  // server chosen for this page's new games — open on this build, else
+  // draining on this build — or null when none takes them (existing games
+  // still resolve by letter; own-server calls fall back to the page's
+  // values).
+  static applyServerList(list: ServerList | null, picked: string | null) {
+    ClientEnv.apiList = list === null ? null : { list, picked };
+  }
+  static serverListLoaded(): boolean {
+    return ClientEnv.apiList !== null;
+  }
+  /**
+   * Whether this page carries a server of its own — a page a game server
+   * rendered, not a static one. True when `serverHost` was injected, or
+   * when the cluster map and this page's own letter both were.
+   *
+   * A page like that was served BY a game server running exactly this
+   * build, and a reload re-fetches it from that same host, so the API's
+   * list can never make it "outdated": there is nothing a reload would move
+   * it to, and when the list carries no server for this build (a registry
+   * that missed a deploy, say) the page's own injected server IS the server
+   * for it. The list-driven "outdated" answer belongs to pages that name no
+   * server — the static Worker's — where a reload really does fetch
+   * `latest`. See ServerList.apply and reloadWouldRescue, and
+   * docs/MultiServer.md.
+   */
+  static servedByGameServer(): boolean {
+    const v = ClientEnv.get();
+    if (v.serverHost !== undefined) return true;
+    return v.cluster !== undefined && v.instanceLetter !== undefined;
+  }
+  /**
+   * Whether this page knows a game server WITHOUT falling back to the
+   * document's origin: one the API's list picked, an injected serverHost, the
+   * injected cluster map plus this page's own letter, or the legacy
+   * numWorkers scalar.
+   *
+   * Deliberately the same set numWorkers() answers from, plus serverHost
+   * (which pins the host outright and never reaches the fallback), so every
+   * page where numWorkers() answers keeps the exact origin bases it has
+   * always had — `npm run dev`, a standalone deployment and the desktop
+   * shell all behave as before.
+   *
+   * False only for the static per-version page with no list applied. There
+   * the document's origin is the page host, which is not a game server, and
+   * `servedByGameServer()` is false for the same reason — but that one
+   * answers a different question (what a RELOAD would fetch), so the two are
+   * kept apart.
+   */
+  private static ownServerKnown(): boolean {
+    if (ClientEnv.pickedServer() !== null) return true;
+    const v = ClientEnv.get();
+    if (v.serverHost !== undefined) return true;
+    if (v.cluster !== undefined && v.instanceLetter !== undefined) return true;
+    return v.numWorkers !== undefined;
+  }
+
+  private static requireOwnServer(what: string): void {
+    if (ClientEnv.ownServerKnown()) return;
+    throw new NoServerError(`no ${what} base: no server list, none injected`);
+  }
+  private static pickedServer(): { host: string; numWorkers: number } | null {
+    const a = ClientEnv.apiList;
+    if (a === null || a.picked === null) return null;
+    return a.list.servers[a.picked] ?? null;
   }
 
   private static get(): ClientEnvValues {
@@ -24,27 +135,52 @@ export class ClientEnv {
       throw new Error("ClientEnv is only available on the browser main thread");
     }
     const bc = window.BOOTSTRAP_CONFIG;
+    // Only the values that are the same for every player are required.
+    //
+    // Multi-server v2 (docs/MultiServer.md, roadmap item 2): the page becomes
+    // a static file built once per version, so nothing in it can name a
+    // server — no cluster map, no instanceLetter, no numWorkers, no
+    // serverHost, no siteHost, no instanceId. Which server to talk to is what
+    // the API's list answers (src/client/ServerList.ts), and until it does,
+    // whatever a server that rendered the page injected still answers.
+    //
+    // A page missing one of these four is broken rather than server-less:
+    // there is no environment to run in at all, so it still throws.
     if (
       !bc ||
       bc.gameEnv === undefined ||
-      bc.numWorkers === undefined ||
       bc.turnstileSiteKey === undefined ||
       bc.jwtAudience === undefined ||
-      bc.instanceId === undefined ||
       bc.gitCommit === undefined
     ) {
       throw new Error("Missing BOOTSTRAP_CONFIG");
     }
     ClientEnv.values = {
       gameEnv: parseGameEnv(bc.gameEnv),
+      // Worker-count source, when the page carries one: web shells inject
+      // the cluster map + own letter; desktop shells predating the map
+      // inject the numWorkers scalar. Either shape hydrates — the shell
+      // binary and the bundle it runs update on separate schedules, so a new
+      // bundle under an old shell is a live combination.
+      cluster: bc.cluster,
+      instanceLetter: bc.instanceLetter,
       numWorkers: bc.numWorkers,
       turnstileSiteKey: bc.turnstileSiteKey,
       jwtAudience: bc.jwtAudience,
-      instanceId: bc.instanceId,
+      // Optional: a deployment without a key (or a desktop shell, which
+      // buys on Steam) omits it, and the inline Stripe flow stays off.
+      stripePublishableKey: bc.stripePublishableKey,
+      // Optional: absent keeps client telemetry off (see Telemetry.ts).
+      faroCollectorUrl: bc.faroCollectorUrl,
+      // Absent on a static page: only a server that renders the page knows
+      // its own instance id. Empty means "none", and callers send it only
+      // when it is there (the API ignores it either way).
+      instanceId: bc.instanceId ?? "",
       gitCommit: bc.gitCommit,
       // Optional: only the desktop app injects an explicit game-server host.
       // Absent on the web build (falls back to same-origin window.location).
       serverHost: bc.serverHost,
+      siteHost: bc.siteHost,
     };
     return ClientEnv.values;
   }
@@ -56,8 +192,45 @@ export class ClientEnv {
   static env(): GameEnv {
     return ClientEnv.get().gameEnv;
   }
+  static stripePublishableKey(): string | undefined {
+    return ClientEnv.get().stripePublishableKey;
+  }
+  static faroCollectorUrl(): string | undefined {
+    return ClientEnv.get().faroCollectorUrl;
+  }
+  // Worker count of the server this page talks to: the server the API's list
+  // picked, else the own cluster entry when the map was injected, else the
+  // legacy scalar (old desktop shells).
+  //
+  // Throws NoServerError when there is none of the three — a static page
+  // whose list never loaded. A worker count is a property of ONE server, so
+  // unlike the origin bases below there is no same-origin answer to fall back
+  // on: any number would route to a worker that does not own the game.
   static numWorkers(): number {
-    return ClientEnv.get().numWorkers;
+    const picked = ClientEnv.pickedServer();
+    if (picked !== null) return picked.numWorkers;
+    const v = ClientEnv.get();
+    if (v.cluster !== undefined && v.instanceLetter !== undefined) {
+      const own = v.cluster[v.instanceLetter];
+      if (own === undefined) {
+        throw new Error(
+          `BOOTSTRAP_CONFIG instanceLetter ${v.instanceLetter} not in cluster map`,
+        );
+      }
+      return own.numWorkers;
+    }
+    if (v.numWorkers === undefined) {
+      throw new NoServerError("no worker count: no server list, none injected");
+    }
+    return v.numWorkers;
+  }
+  // The fleet map and this page's own letter; undefined under an old desktop
+  // shell that predates the map. PR 5 routes foreign game ids with these.
+  static cluster(): ClusterConfig | undefined {
+    return ClientEnv.get().cluster;
+  }
+  static instanceLetter(): string | undefined {
+    return ClientEnv.get().instanceLetter;
   }
   static turnstileSiteKey(): string {
     return ClientEnv.get().turnstileSiteKey;
@@ -107,14 +280,158 @@ export class ClientEnv {
   static workerPath(gameID: GameID): string {
     return `w${ClientEnv.workerIndex(gameID)}`;
   }
+  // Which deployment hosts this game (docs/MultiServer.md): a 10-char id's
+  // leading letter names its server in the cluster map.
+  static resolveGame(gameID: GameID): GameResolution {
+    const a = ClientEnv.apiList;
+    if (a !== null) {
+      return resolveGameHost(gameID, a.list.servers, a.picked ?? undefined);
+    }
+    const v = ClientEnv.get();
+    return resolveGameHost(gameID, v.cluster, v.instanceLetter);
+  }
+  // True when the id carries a letter this bundle's map doesn't know: the
+  // map predates the letter's deployment. Join flows answer by redirecting
+  // to the apex, whose shell carries the freshest map.
+  static gameLetterUnknown(gameID: GameID): boolean {
+    return ClientEnv.resolveGame(gameID).kind === "unknown-letter";
+  }
+  // Per-game WS/HTTP bases and worker path: same-origin (or the desktop
+  // serverHost) for own and legacy games, the owning deployment's host —
+  // always TLS, cross-host maps only exist deployed — for foreign letters.
+  // An unknown letter resolves like "own" so plain fetches 404 into the
+  // existing not-found paths; flows that can redirect check
+  // gameLetterUnknown first.
+  static gameWsBase(gameID: GameID): string {
+    const r = ClientEnv.resolveGame(gameID);
+    return r.kind === "cross" ? `wss://${r.host}` : ClientEnv.serverWsBase();
+  }
+  static gameHttpBase(gameID: GameID): string {
+    const r = ClientEnv.resolveGame(gameID);
+    return r.kind === "cross"
+      ? `https://${r.host}`
+      : ClientEnv.serverHttpBase();
+  }
+  /**
+   * Origin to NAVIGATE a browser to for a game's page: the game's own host
+   * when the id names one, else this page's own origin.
+   *
+   * NOT gameHttpBase, which is where API calls and sockets go and throws when
+   * no game server is known. That is right for a request only a game server
+   * can answer and wrong for a page load: every page host serves
+   * `/game/<id>` — the SPA fallback on a game server, the site Worker's page
+   * on the apex — so a navigation always has a correct target, and a page
+   * that knows no server should reload rather than throw.
+   */
+  static gameNavigateBase(gameID: GameID): string {
+    const r = ClientEnv.resolveGame(gameID);
+    if (r.kind === "cross") return `https://${r.host}`;
+    try {
+      return ClientEnv.serverHttpBase();
+    } catch (e) {
+      if (!(e instanceof NoServerError)) throw e;
+      // The document's own origin, exactly as the base itself used to
+      // answer — deriveServerHttpBase with no serverHost IS that value.
+      return deriveServerHttpBase(
+        undefined,
+        window.location.protocol,
+        window.location.host,
+      );
+    }
+  }
+  /**
+   * The same-origin path that opens a game: `/w<n>/game/<id>` when a worker
+   * count for that id is known, plain `/game/<id>` when none is.
+   *
+   * For share links, history entries and "open this game" navigations — NOT
+   * for API calls, which must hit the owning server's worker and use
+   * gameWorkerPath against gameHttpBase instead.
+   *
+   * Both shapes are served: the game server's SPA fallback and the static
+   * Worker each answer `/game/<id>`, and the join flow re-resolves the
+   * worker from the id anyway. So a page that cannot know a worker count —
+   * a static page whose list never loaded — still hands out a link that
+   * works, instead of throwing while building a URL.
+   *
+   * Deliberately version-free (no `/v/<commit>/`): a recipient should be
+   * routed to whatever version the game's server actually runs, which is
+   * decided when they open it, not when the link was copied.
+   */
+  static gamePath(gameID: GameID): string {
+    const id = encodeURIComponent(gameID);
+    try {
+      return `/${ClientEnv.gameWorkerPath(gameID)}/game/${id}`;
+    } catch (e) {
+      if (e instanceof NoServerError) return `/game/${id}`;
+      throw e;
+    }
+  }
+  /**
+   * The commit the game's server runs, from the API's list, or undefined
+   * when no list is loaded or it carries no entry for the id's letter.
+   *
+   * The web client opens a game at its server's version rather than trying
+   * to play it with the wrong bundle (docs/MultiServer.md, roadmap item 2);
+   * see versionedPathForGame for the decision this feeds.
+   */
+  static gameVersion(gameID: GameID): string | undefined {
+    const a = ClientEnv.apiList;
+    // Legacy ids carry no letter, so nothing names their server's version.
+    if (a === null || gameID.length < 10) return undefined;
+    return a.list.servers[gameID[0]]?.version;
+  }
+  // The worker path on the game's own server: a foreign deployment's worker
+  // count comes from its cluster entry, not this server's.
+  static gameWorkerPath(gameID: GameID): string {
+    const r = ClientEnv.resolveGame(gameID);
+    return r.kind === "cross"
+      ? `w${simpleHash(gameID) % r.numWorkers}`
+      : ClientEnv.workerPath(gameID);
+  }
   // Explicit game-server host, injected by the desktop app (absent on web).
   static serverHost(): string | undefined {
     return ClientEnv.get().serverHost;
   }
+  // The load-balancer apex this deployment sits behind — the unknown-letter
+  // redirect target, whose shell always carries the freshest cluster map.
+  // Absent for standalone deployments and desktop: no apex to bounce to.
+  static siteHost(): string | undefined {
+    return ClientEnv.get().siteHost;
+  }
+  // Origin of the WEBSITE this page belongs to (scheme + host, no trailing
+  // slash), for links that must leave the game and land on the site — the
+  // desktop shell opening account settings in a browser, say.
+  //
+  // NOT serverHttpBase(): that is a game server, and once the API's list has
+  // picked one it is a deployment host (falk2-b.openfront.io) with no site
+  // on it. This reads only the page's own injected values, which name sites:
+  // the apex a web page was rendered behind (siteHost) first, because a
+  // server-rendered page carries serverHost too and there it is one
+  // deployment (blue.openfront.io), not the site; else the shell's
+  // serverHost, which IS the site on desktop (openfront.io,
+  // nightly.openfront.dev, main.openfront.dev) and injects no siteHost.
+  // Undefined when neither was injected; callers fall back themselves.
+  static siteOrigin(): string | undefined {
+    const v = ClientEnv.get();
+    const host = v.siteHost ?? v.serverHost;
+    return host ? `https://${host}` : undefined;
+  }
   // Origin (scheme + host, no trailing slash) of the game server that hosts the
   // public-lobby and in-game WebSockets. The lobby-list and game sockets append
   // their own worker path (e.g. `/w0/lobbies`, `/w0`).
+  //
+  // Throws NoServerError on the same pages numWorkers() does, and for the
+  // same reason: the document's own origin is the game server only when a
+  // game server served the document. On the static page the site Worker
+  // serves it is the page host, which answers no game path — the socket is a
+  // TCP connect the edge times out, and the client then retries a host that
+  // can never answer (1.1M 522s a day on the prod apex; ai-ops#21). Refusing
+  // to build the URL routes it into the connection-failed path callers
+  // already have for numWorkers().
   static serverWsBase(): string {
+    const picked = ClientEnv.pickedServer();
+    if (picked !== null) return `wss://${picked.host}`;
+    ClientEnv.requireOwnServer("WebSocket");
     return deriveServerWsBase(
       ClientEnv.serverHost(),
       window.location.protocol,
@@ -127,14 +444,55 @@ export class ClientEnv {
   // the route needs one (e.g. `/w0/api/game/<id>`).
   //
   // NOT the account/shop API: that is a separate service on api.<audience>,
-  // reached via getApiBase().
+  // reached via getApiBase(). Same same-origin fallback as serverWsBase, and
+  // the same NoServerError where there is no server to fall back to — which
+  // is what stops createLobby POSTing `/api/create_game` at a page host that
+  // cannot answer it.
   static serverHttpBase(): string {
+    const picked = ClientEnv.pickedServer();
+    if (picked !== null) return `https://${picked.host}`;
+    ClientEnv.requireOwnServer("HTTP");
     return deriveServerHttpBase(
       ClientEnv.serverHost(),
       window.location.protocol,
       window.location.host,
     );
   }
+  // Origin a link that LEAVES this client should point at — a lobby invite, a
+  // game link, the domain the magic-link email comes back to. See
+  // deriveShareOrigin. Compose a path of your own onto it
+  // (`${shareOrigin()}${gamePath(id)}`); shareBase() is the variant that keeps
+  // the current page's path, for a link that differs only in its #hash.
+  static shareOrigin(): string {
+    return deriveShareOrigin(
+      shareBootstrap,
+      window.location.protocol,
+      window.location.origin,
+    );
+  }
+  static shareBase(): string {
+    return deriveShareBase(
+      shareBootstrap,
+      window.location.protocol,
+      window.location.origin,
+      window.location.pathname,
+    );
+  }
+}
+
+/**
+ * BOOTSTRAP_CONFIG values the share helpers need, read on demand.
+ *
+ * A thunk, not two arguments, so the helpers can decide the http(s) case
+ * without touching the bootstrap at all: reading it means REQUIRING it, and a
+ * plain web page (or a jsdom test rendering a copy button) must not start
+ * depending on BOOTSTRAP_CONFIG merely to build a link to itself.
+ */
+function shareBootstrap(): { siteOrigin?: string; jwtAudience: string } {
+  return {
+    siteOrigin: ClientEnv.siteOrigin(),
+    jwtAudience: ClientEnv.jwtAudience(),
+  };
 }
 
 /**
@@ -170,6 +528,38 @@ function resolveServerOrigin(
   return { secure: locationProtocol === "https:", host: locationHost };
 }
 
+export type GameResolution =
+  | { kind: "own" }
+  | { kind: "cross"; host: string; numWorkers: number }
+  | { kind: "unknown-letter" };
+
+/**
+ * Which deployment hosts a game. Pure and exported for tests.
+ *
+ * - Legacy 8-char ids (and the never-minted 9-char length) carry no letter:
+ *   they were minted by whichever server this page already talks to, so they
+ *   stay on the own server.
+ * - No cluster map means an old desktop shell that predates it: everything
+ *   keeps routing to its configured serverHost, as before.
+ * - A 10-char id's leading letter is looked up in the map. Own letter (or a
+ *   letter the map doesn't know) is not a cross-host target; unknown letters
+ *   get their own kind so join flows can redirect to the apex for a fresher
+ *   map instead of silently 404ing.
+ */
+export function resolveGameHost(
+  gameID: string,
+  cluster: Record<string, { host: string; numWorkers: number }> | undefined,
+  instanceLetter: string | undefined,
+): GameResolution {
+  if (gameID.length < 10) return { kind: "own" };
+  if (cluster === undefined) return { kind: "own" };
+  const letter = gameID[0];
+  const entry = cluster[letter];
+  if (entry === undefined) return { kind: "unknown-letter" };
+  if (letter === instanceLetter) return { kind: "own" };
+  return { kind: "cross", host: entry.host, numWorkers: entry.numWorkers };
+}
+
 /** Game-server WebSocket origin: see resolveServerOrigin. */
 export function deriveServerWsBase(
   serverHost: string | undefined,
@@ -197,6 +587,70 @@ export function deriveServerHttpBase(
   );
   return `${secure ? "https:" : "http:"}//${host}`;
 }
+
+/** Whether an origin on this scheme is a real web address someone else can open. */
+function isWebScheme(locationProtocol: string): boolean {
+  return locationProtocol === "http:" || locationProtocol === "https:";
+}
+
+/**
+ * Where a link meant to LEAVE this client should point.
+ *
+ * On the web that is the document's own origin: the page the copier is looking
+ * at is the page the recipient should get.
+ *
+ * The desktop shell is the exception, and the reason this exists. It serves the
+ * renderer from its own privileged scheme — `app://openfront/index.html` — so a
+ * link built from `window.location` reads
+ * `app://openfront/index.html#modal=profile&publicID=…`, which resolves to
+ * nothing anywhere except inside that one Electron app. It is not even a link
+ * the desktop client itself can take back: the friends box only unwraps http(s)
+ * URLs. So the shell's links go to siteOrigin() — the website it was downloaded
+ * from (openfront.io in prod, a branch subdomain on staging) — with the same
+ * audience fallback desktopWebAccountSettingsUrl in Auth.ts already used for
+ * this question, localhost dev port included, for a shell that injects neither
+ * host.
+ *
+ * Keyed on the document's scheme rather than on siteOrigin's presence, because
+ * the `app:` scheme is itself what makes a link unshareable, and because a
+ * server-rendered web page is a site in its own right: whatever host the copier
+ * is reading right now is a host their recipient can open. (A desktop build
+ * pointed at a local dev server with OPENFRONT_DEV_URL is on http and gets the
+ * web answer for exactly that reason.)
+ */
+export function deriveShareOrigin(
+  bootstrap: () => { siteOrigin?: string; jwtAudience: string },
+  locationProtocol: string,
+  locationOrigin: string,
+): string {
+  if (isWebScheme(locationProtocol)) return locationOrigin;
+  const { siteOrigin, jwtAudience } = bootstrap();
+  if (siteOrigin) return siteOrigin;
+  return jwtAudience === "localhost"
+    ? "http://localhost:9000"
+    : `https://${jwtAudience}`;
+}
+
+/**
+ * deriveShareOrigin plus the page path to hang a `#hash` link off — what a
+ * modal's copy-link button wants, since the modals are hash-routed.
+ *
+ * The web keeps the current path, so a link copied from `/c/CODE` still carries
+ * the creator code. The desktop shell drops it: its path is the shell's local
+ * `/index.html`, which means nothing on the website.
+ */
+export function deriveShareBase(
+  bootstrap: () => { siteOrigin?: string; jwtAudience: string },
+  locationProtocol: string,
+  locationOrigin: string,
+  locationPathname: string,
+): string {
+  const origin = deriveShareOrigin(bootstrap, locationProtocol, locationOrigin);
+  return isWebScheme(locationProtocol)
+    ? `${origin}${locationPathname}`
+    : `${origin}/`;
+}
+
 /**
  * Values that flow from server → client via index.html. Set on the server from
  * process.env, then re-hydrated on the client from window.BOOTSTRAP_CONFIG.
@@ -204,10 +658,24 @@ export function deriveServerHttpBase(
 
 export interface ClientEnvValues {
   gameEnv: GameEnv;
-  numWorkers: number;
+  // A worker-count source, when the page names a server at all: cluster +
+  // instanceLetter from a web shell, or the legacy numWorkers scalar from a
+  // desktop shell that predates the cluster map. A static page carries
+  // neither, and the API's list answers instead (NoServerError until it has).
+  cluster?: ClusterConfig;
+  instanceLetter?: string;
+  numWorkers?: number;
   turnstileSiteKey: string;
   jwtAudience: string;
+  // Optional: absent when the deployment carries no Stripe key (dev, desktop
+  // shells). Environment-scoped like turnstileSiteKey, so a static page
+  // carries it too.
+  stripePublishableKey?: string;
+  // Optional: absent keeps client telemetry off (Telemetry.ts).
+  faroCollectorUrl?: string;
+  // "" on a static page, which no server rendered.
   instanceId: string;
   gitCommit: string;
   serverHost?: string;
+  siteHost?: string;
 }

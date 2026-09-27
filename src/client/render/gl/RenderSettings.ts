@@ -19,7 +19,11 @@ export interface ThemeSettings {
   teamColors: Record<string, string>;
   humanColors: string[];
   nationColors: string[];
-  botColors: string[];
+  /**
+   * The pre-v34 tribe (bot) color pool, used instead of the flat Bot team
+   * color when the classicBotColors graphics override is on.
+   */
+  classicBotColors: string[];
   /** Used when the primary palettes are exhausted. */
   fallbackColors: string[];
   /** Border = territory color darkened by this absolute amount. */
@@ -294,6 +298,7 @@ export interface RenderSettings {
     hoverGlowWidth: number;
     /** Peak opacity of the hover glow (0 disables it). */
     hoverGlowAlpha: number;
+    flagAlpha: number;
   };
   fx: {
     shockwaveRingWidth: number;
@@ -410,11 +415,6 @@ export interface RenderSettings {
     recolorStructures: boolean;
     /** Opacity of the translucent affiliation-colored territory fill. */
     fillAlpha: number;
-    /**
-     * When true, hovering another player's territory recolors alt-view from
-     * that player's diplomacy; when false, always use the local player's.
-     */
-    hoverPerspective: boolean;
   };
   tileDrip: {
     /**

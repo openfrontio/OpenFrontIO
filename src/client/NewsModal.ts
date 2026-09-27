@@ -13,7 +13,7 @@ export class NewsModal extends BaseModal {
 
   @property({ type: String }) markdown = "Loading...";
 
-  private initialized: boolean = false;
+  private initialized = false;
 
   protected renderHeaderSlot() {
     return modalHeader({

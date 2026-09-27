@@ -233,6 +233,11 @@ describe("Map consistency", () => {
           normalizeCustomTribes(info.custom_tribes),
           map.customTribes,
         ],
+        [
+          "defaultNationCount",
+          Array.isArray(info.nations) ? info.nations.length : 0,
+          map.defaultNationCount,
+        ],
       ];
       for (const [field, infoValue, mapValue] of fields) {
         if (JSON.stringify(infoValue) !== JSON.stringify(mapValue)) {

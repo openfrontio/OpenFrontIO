@@ -266,8 +266,10 @@ export class PlayerGameHistoryView extends LitElement {
   }
 
   private async copyGameLink(gameId: string) {
-    const encodedGameId = encodeURIComponent(gameId);
-    const url = `${window.location.origin}/${ClientEnv.workerPath(gameId)}/game/${encodedGameId}`;
+    // shareOrigin(), not window.location.origin: this is copied to be sent to
+    // someone else, and the desktop shell's own origin (`app://openfront`)
+    // resolves nowhere outside that Electron app. See deriveShareOrigin.
+    const url = `${ClientEnv.shareOrigin()}${ClientEnv.gamePath(gameId)}`;
 
     try {
       await void copyToClipboard(url);

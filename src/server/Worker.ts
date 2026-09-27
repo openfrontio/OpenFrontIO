@@ -7,12 +7,19 @@ import path from "path";
 import { fileURLToPath } from "url";
 import { WebSocket, WebSocketServer } from "ws";
 import { z } from "zod";
+import { CloseCode, CloseReason } from "../core/CloseCodes";
 import { GameEnv } from "../core/configuration/Config";
 import { GameType } from "../core/game/Game";
 import {
   ClientMessage,
+  ClientPlatformSchema,
+  HOSTED_LOBBY_AUTO_START_MS,
   ID,
+  isValidGameID,
   MAX_HOSTED_LOBBIES,
+  MAX_HOSTED_LOBBY_PLAYERS,
+  MIN_HOSTED_LOBBY_AUTO_START_MS,
+  MIN_HOSTED_LOBBY_PLAYERS,
   ServerErrorMessage,
 } from "../core/Schemas";
 import { generateID, replacer } from "../core/Util";
@@ -24,17 +31,19 @@ import { Client } from "./Client";
 import { gameApiCors } from "./GameApiCors";
 import { GameManager } from "./GameManager";
 import { registerGamePreviewRoute } from "./GamePreviewRoute";
-import type { GameServer } from "./GameServer";
+import { GamePhase, type GameServer } from "./GameServer";
 import { isSteamAuthenticated, planJoinVerify, verifyJoin } from "./JoinVerify";
 import { getUserMe, verifyClientToken } from "./jwt";
+import { payForLobbyQueue, queueListedLobby } from "./LobbyQueuePayment";
 import { logger } from "./Logger";
-import { enforceVerifiedBadge } from "./Privilege";
+import { resolveVerifiedJoin } from "./Privilege";
 
 import { MapPlaylist } from "./MapPlaylist";
 import { setNoStoreHeaders } from "./NoStoreHeaders";
-import { startPolling } from "./PollingLoop";
 import { PrivilegeRefresher } from "./PrivilegeRefresher";
+import { startRankedCheckinLoops } from "./RankedCheckin";
 import { ServerEnv } from "./ServerEnv";
+import { SingleplayerPresence } from "./SingleplayerPresence";
 import { applyStaticAssetCacheControl } from "./StaticAssetCache";
 import { createMatchTelemetryEmitter } from "./telemetry/BufferedMatchTelemetryEmitter";
 import { MAX_WEBSOCKET_PAYLOAD_BYTES } from "./telemetry/MatchTelemetryConfig";
@@ -75,16 +84,26 @@ export async function startWorker() {
 
   // Initialize lobby service (handles WebSocket upgrade routing)
   const lobbyService = new WorkerLobbyService(server, wss, gm, log);
+  const singleplayerPresence = new SingleplayerPresence();
 
   setTimeout(
     () => {
-      startMatchmakingPolling(gm);
+      // The ranked loop follows the deployment-active flag the master pushes
+      // to this worker (OPE-469): a draining, standby or fenced server keeps
+      // the games it has but stops offering new matches.
+      startRankedCheckinLoops({
+        gm,
+        playlist,
+        workerId,
+        log,
+        isActive: () => lobbyService.isDeploymentActive(),
+      });
     },
     1000 + Math.random() * 2000,
   );
 
   if (ServerEnv.otelEnabled()) {
-    initWorkerMetrics(gm);
+    initWorkerMetrics(gm, lobbyService, singleplayerPresence);
   }
 
   const privilegeRefresher = new PrivilegeRefresher(
@@ -260,11 +279,27 @@ export async function startWorker() {
       return res.status(401).json({ error: "Invalid token" });
     }
 
-    const parsed = z.object({ listed: z.boolean() }).safeParse(req.body);
+    const parsed = z
+      .object({
+        listed: z.boolean(),
+        autoStartMs: z
+          .number()
+          .int()
+          .min(MIN_HOSTED_LOBBY_AUTO_START_MS)
+          .max(HOSTED_LOBBY_AUTO_START_MS)
+          .optional(),
+        maxPlayers: z
+          .number()
+          .int()
+          .min(MIN_HOSTED_LOBBY_PLAYERS)
+          .max(MAX_HOSTED_LOBBY_PLAYERS)
+          .optional(),
+      })
+      .safeParse(req.body);
     if (!parsed.success) {
       return res.status(400).json({ error: z.prettifyError(parsed.error) });
     }
-    const { listed } = parsed.data;
+    const { listed, autoStartMs, maxPlayers } = parsed.data;
 
     const game = gm.game(req.params.id);
     if (game === null) {
@@ -300,6 +335,12 @@ export async function startWorker() {
         return res.status(409).json({ error: "listing_host_cheats_enabled" });
       }
 
+      // A cap at or below the current head count would advertise a lobby
+      // nobody can join.
+      if (maxPlayers !== undefined && maxPlayers <= game.numPlayers()) {
+        return res.status(409).json({ error: "listing_max_players_too_low" });
+      }
+
       // Dev has no subscription backend; skip the check so the feature is
       // testable locally (same precedent as Turnstile).
       if (ServerEnv.env() !== GameEnv.Dev) {
@@ -333,11 +374,75 @@ export async function startWorker() {
       }
     }
 
-    game.setListed(listed);
+    game.setListed(listed, { autoStartMs, maxPlayers });
     log.info(`lobby listing ${listed ? "enabled" : "disabled"}`, {
       gameID: game.id,
+      autoStartMs,
+      maxPlayers,
     });
     res.json({ listed });
+  });
+
+  // The host of a listed lobby pays (plutonium, charged by the API with the
+  // host's token) to put it in the public Special queue, right behind the
+  // lobby that's counting down.
+  app.post("/api/game/:id/queue", async (req, res) => {
+    const authHeader = req.headers.authorization;
+    if (!authHeader?.startsWith("Bearer ")) {
+      return res.status(400).json({ error: "Authorization header required" });
+    }
+    const token = authHeader.substring("Bearer ".length);
+    const auth = await verifyClientToken(token);
+    if (auth.type !== "success") {
+      return res.status(401).json({ error: "Invalid token" });
+    }
+
+    const game = gm.game(req.params.id);
+    if (game === null) {
+      return res.status(404).json({ error: "Game not found" });
+    }
+    const outcome = await queueListedLobby(
+      {
+        isCreator: (id) => game.isCreator(id),
+        isPublic: () => game.isPublic(),
+        isListed: () => game.isListed(),
+        isQueued: () => game.isQueued(),
+        inLobby: () => game.phase() === GamePhase.Lobby && !game.hasStarted(),
+        startsAt: () => game.gameInfo().startsAt,
+        autoStartAt: () => game.autoStartAt(),
+        queueForPublic: () => game.queueForPublic(),
+      },
+      auth.persistentId,
+      // Dev has no payment backend; skip the charge so the feature is
+      // testable locally (same precedent as the listing subscription check).
+      ServerEnv.env() === GameEnv.Dev
+        ? async () => ({ type: "success" })
+        : () => payForLobbyQueue(token, game.id),
+    );
+    if (outcome.status === 502) {
+      log.warn("lobby queue payment failed", { gameID: game.id });
+    } else if (outcome.status === 200) {
+      log.info("lobby queued for public play", { gameID: game.id });
+    }
+    res.status(outcome.status).json(outcome.body);
+  });
+
+  // Singleplayer games run in the browser; the client beats here once a
+  // minute so the worker can export how many are in progress (see
+  // SingleplayerPresence). The id is client-minted and routes here by hash,
+  // exactly like the game socket would.
+  app.post("/api/singleplayer/:id/heartbeat", (req, res) => {
+    const gameID = req.params.id;
+    if (!isValidGameID(gameID)) {
+      res.status(400).json({ error: "Invalid game ID" });
+      return;
+    }
+    const platform = ClientPlatformSchema.safeParse(req.body?.platform);
+    singleplayerPresence.heartbeat(
+      gameID,
+      platform.success ? platform.data : "unknown",
+    );
+    res.status(204).end();
   });
 
   app.get("/api/game/:id/exists", async (req, res) => {
@@ -389,7 +494,7 @@ export async function startWorker() {
               undefined,
             ),
           );
-          ws.close(1002, "ClientJoinMessageSchema");
+          ws.close(CloseCode.BadRequest, CloseReason.InvalidMessage);
           return;
         }
 
@@ -403,12 +508,53 @@ export async function startWorker() {
           return;
         }
 
-        // Verify this worker should handle this game
+        // Verify this worker should handle this game. Close loudly: the bare
+        // return this replaces left the socket open with no reply, so a
+        // misrouted client (stale bundle computing a worker index from an old
+        // numWorkers) hung forever instead of being told to reload.
         const expectedWorkerId = ServerEnv.workerIndex(clientMsg.gameID);
         if (expectedWorkerId !== workerId) {
           log.warn(
             `Worker mismatch: Game ${clientMsg.gameID} should be on worker ${expectedWorkerId}, but this is worker ${workerId}`,
           );
+          ws.close(CloseCode.WrongWorker, CloseReason.WrongWorker);
+          return;
+        }
+
+        // The sim is deterministic only when every client in a game runs
+        // identical code, so a client built from a different commit (e.g. a
+        // tab left open across a deploy) would desync the game. Reject it
+        // with a typed error the client answers by refreshing. A missing
+        // commit means a pre-feature bundle, which is stale by definition.
+        // The "desktop" placeholder is exempt: an Electron shell predating
+        // OPE-358 injects it no matter how fresh its self-updating bundle is
+        // (GameVersion.ts documents the shape as live), so treating it as a
+        // mismatch would lock those players out permanently — and the
+        // desktop error path is a terminal alert with no retry. The grace
+        // dies with the last pre-OPE-358 shell.
+        if (
+          clientMsg.gitCommit !== ServerEnv.gitCommit() &&
+          clientMsg.gitCommit !== "desktop"
+        ) {
+          log.info("rejecting version-mismatched client", {
+            gameID: clientMsg.gameID,
+            clientCommit: clientMsg.gitCommit,
+          });
+          ws.send(
+            encodeServerMessage(
+              {
+                type: "error",
+                error: "version_mismatch",
+                gitCommit: ServerEnv.gitCommit(),
+              } satisfies ServerErrorMessage,
+              undefined,
+            ),
+          );
+          // Normal closure: the typed error above is the whole message. The
+          // client latches Normal silently, so nothing stacks on the alert; a
+          // 4xxx rejection would pop a generic "connection refused" dialog on
+          // top of it, and a retryable code makes it reconnect and loop.
+          ws.close(CloseCode.Normal, "Version mismatch");
           return;
         }
 
@@ -418,13 +564,13 @@ export async function startWorker() {
           log.warn(`Invalid token: ${result.message}`, {
             gameID: clientMsg.gameID,
           });
-          ws.close(1002, `Unauthorized: invalid token`);
+          ws.close(CloseCode.InternalError, CloseReason.InvalidToken);
           return;
         }
         const { persistentId, claims } = result;
 
         if (claims?.role === "banned") {
-          ws.close(1002, "Account Banned");
+          ws.close(CloseCode.Banned, CloseReason.Banned);
           return;
         }
 
@@ -443,7 +589,7 @@ export async function startWorker() {
             log.warn(
               `game ${clientMsg.gameID} not found on worker ${workerId}`,
             );
-            ws.close(1002, "Game not found");
+            ws.close(CloseCode.GameNotFound, CloseReason.GameNotFound);
           }
           return;
         }
@@ -503,7 +649,7 @@ export async function startWorker() {
               persistentID: persistentId,
               gameID: clientMsg.gameID,
             });
-            ws.close(1002, "Unauthorized: Turnstile token rejected");
+            ws.close(CloseCode.Unauthorized, CloseReason.TurnstileFailed);
             return;
           }
           if (plan.action === "verify") {
@@ -526,7 +672,7 @@ export async function startWorker() {
                   gameID: clientMsg.gameID,
                   reason: verdict.reason,
                 });
-                ws.close(1002, "Unauthorized: Turnstile token rejected");
+                ws.close(CloseCode.Unauthorized, CloseReason.TurnstileFailed);
                 return;
               case "error":
                 // Fail open: the locally screened name stands.
@@ -566,14 +712,18 @@ export async function startWorker() {
         let ownedClanTags: string[] = [];
         let trusted = false;
         let accountUsername:
-          | { username?: string | null; usernameStatus?: string }
+          | {
+              username?: string | null;
+              usernameBase?: string | null;
+              usernameStatus?: string;
+            }
           | undefined;
 
         const allowedFlares = ServerEnv.allowedFlares();
         if (claims === null) {
           if (allowedFlares !== undefined) {
             log.warn("Unauthorized: Anonymous user attempted to join game");
-            ws.close(1002, "Unauthorized");
+            ws.close(CloseCode.Unauthorized, CloseReason.LoginRequired);
             return;
           }
         } else {
@@ -584,7 +734,7 @@ export async function startWorker() {
               persistentID: persistentId,
               gameID: clientMsg.gameID,
             });
-            ws.close(1002, "Unauthorized: user me fetch failed");
+            ws.close(CloseCode.InternalError, CloseReason.AccountLookupFailed);
             return;
           }
           flares = result.response.player.flares;
@@ -602,7 +752,7 @@ export async function startWorker() {
               log.warn(
                 "Forbidden: player without an allowed flare attempted to join game",
               );
-              ws.close(1002, "Forbidden");
+              ws.close(CloseCode.Forbidden, CloseReason.Forbidden);
               return;
             }
           }
@@ -632,23 +782,32 @@ export async function startWorker() {
             persistentID: persistentId,
             gameID: clientMsg.gameID,
           });
-          ws.close(1002, cosmeticResult.reason);
+          ws.close(CloseCode.Forbidden, CloseReason.CosmeticsForbidden);
           return;
         }
 
-        // An undefined account means an anonymous persistent-ID join (no
-        // /users/@me fetch) — enforceVerifiedBadge treats that as Dev-only.
+        // Verified intent, not a claim to verify: the check stays only when
+        // the account renders bare and the screened join name is that bare
+        // name. The name itself is never replaced, so everything shown in the
+        // lobby has been through censorPlayer and join_verify. An undefined
+        // account is an anonymous persistent-ID join, which
+        // resolveVerifiedJoin treats as Dev-only.
+        const verifiedOutcome = resolveVerifiedJoin(
+          cosmeticResult.cosmetics,
+          username,
+          accountUsername ?? null,
+        );
         if (
-          enforceVerifiedBadge(
-            cosmeticResult.cosmetics,
-            username,
-            accountUsername ?? null,
-          )
+          verifiedOutcome === "custom" &&
+          clientMsg.cosmetics?.verified === true
         ) {
-          log.info("Stripped unvouched verified-badge claim", {
-            persistentID: persistentId,
-            gameID: clientMsg.gameID,
-          });
+          log.info(
+            "Verified intent not honoured: join name is not the account bare name",
+            {
+              persistentID: persistentId,
+              gameID: clientMsg.gameID,
+            },
+          );
         }
 
         // Create client and add to game
@@ -667,42 +826,64 @@ export async function startWorker() {
           friends,
           clientMsg.spectator === true,
           trusted,
+          clientMsg.platform,
         );
 
         const joinResult = gm.joinClient(client, clientMsg.gameID);
 
         if (joinResult === "not_found") {
           log.info(`game ${clientMsg.gameID} not found on worker ${workerId}`);
-          ws.close(1002, "Game not found");
+          ws.close(CloseCode.GameNotFound, CloseReason.GameNotFound);
         } else if (joinResult === "kicked") {
           log.warn(`kicked client tried to join game ${clientMsg.gameID}`, {
             gameID: clientMsg.gameID,
             workerId,
           });
-          ws.close(1002, "Cannot join game");
+          ws.close(CloseCode.GameClosed, CloseReason.CannotJoin);
         } else if (joinResult === "not_allowlisted") {
           log.info(`client not whitelisted for game ${clientMsg.gameID}`, {
             gameID: clientMsg.gameID,
             workerId,
           });
-          ws.close(1002, "You are not whitelisted");
+          ws.close(CloseCode.Forbidden, CloseReason.NotAllowlisted);
         } else if (joinResult === "not_trusted") {
           log.info(`untrusted client tried to join game ${clientMsg.gameID}`, {
             gameID: clientMsg.gameID,
             workerId,
           });
-          ws.close(1002, "Trusted account required");
+          ws.close(CloseCode.Forbidden, CloseReason.NotTrusted);
+        } else if (joinResult === "redirected") {
+          // Normal, not a rejection code: the game already sent this client
+          // where to go, and Normal is the client's silent branch, so no
+          // dialog appears while it navigates.
+          log.info("client redirected to a pool sibling", {
+            gameID: clientMsg.gameID,
+            workerId,
+          });
+          ws.close(CloseCode.Normal, CloseReason.PoolRedirect);
+        } else if (joinResult === "ended") {
+          log.info(`client tried to join ended game ${clientMsg.gameID}`, {
+            gameID: clientMsg.gameID,
+            workerId,
+          });
+          ws.close(CloseCode.GameNotFound, CloseReason.GameEnded);
         } else if (joinResult === "rejected") {
           log.info(`client rejected from game ${clientMsg.gameID}`, {
             gameID: clientMsg.gameID,
             workerId,
           });
-          ws.close(1002, "Lobby full");
+          ws.close(CloseCode.LobbyFull, CloseReason.LobbyFull);
+        } else if (joinResult === "started") {
+          log.info(`client joined game ${clientMsg.gameID} after it started`, {
+            gameID: clientMsg.gameID,
+            workerId,
+          });
+          ws.close(CloseCode.GameStarted, CloseReason.GameStarted);
         }
 
         // Handle other message types
       } catch (error) {
-        ws.close(1011, "Internal server error");
+        ws.close(CloseCode.InternalError, CloseReason.InternalError);
         log.warn(
           `error handling websocket message for ${ipAnonymize(ip)}: ${error}`.substring(
             0,
@@ -714,7 +895,7 @@ export async function startWorker() {
 
     ws.on("error", (error: Error) => {
       if ((error as any).code === "WS_ERR_UNEXPECTED_RSV_1") {
-        ws.close(1002, "WS_ERR_UNEXPECTED_RSV_1");
+        ws.close(CloseCode.ProtocolError, CloseReason.ProtocolError);
       }
     });
     ws.on("close", () => {
@@ -746,105 +927,6 @@ export async function startWorker() {
   process.on("unhandledRejection", (reason, promise) => {
     log.error(`unhandled rejection at:`, promise, "reason:", reason);
   });
-}
-
-async function startMatchmakingPolling(gm: GameManager) {
-  // One checkin serves exactly one queue, so a host serving both modes
-  // runs one long-poll loop per mode.
-  startMatchmakingLoop(gm, "1v1");
-  startMatchmakingLoop(gm, "2v2");
-}
-
-const MatchmakingAssignmentSchema = z.object({
-  // Flat list of matched players' publicIds.
-  players: z.array(z.string()),
-  // The matcher's team split ([[a],[b]] for 1v1). Optional for tolerance,
-  // but the current API always sends it.
-  teams: z.array(z.array(z.string())).optional(),
-});
-
-function startMatchmakingLoop(gm: GameManager, mode: "1v1" | "2v2") {
-  startPolling(
-    async () => {
-      try {
-        const url = `${ServerEnv.jwtIssuer() + "/matchmaking/checkin"}`;
-        const gameId = ServerEnv.generateGameIdForWorker(workerId);
-        if (gameId === null) {
-          log.warn(`Failed to generate game ID for worker ${workerId}`);
-          return;
-        }
-
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 20000);
-        const response = await fetch(url, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "x-api-key": ServerEnv.apiKey(),
-          },
-          body: JSON.stringify({
-            id: workerId,
-            gameId: gameId,
-            ccu: gm.activeClients(),
-            instanceId: process.env.INSTANCE_ID,
-            mode,
-          }),
-          signal: controller.signal,
-        });
-
-        clearTimeout(timeoutId);
-
-        if (!response.ok) {
-          log.warn(
-            `Failed to poll ${mode} lobby: ${response.status} ${response.statusText}`,
-          );
-          return;
-        }
-
-        const data = await response.json();
-        log.info(`Lobby ${mode} poll successful:`, data);
-
-        if (data.assignment) {
-          const parsed = MatchmakingAssignmentSchema.safeParse(data.assignment);
-          if (!parsed.success) {
-            // Don't strand the matched players: create the game without
-            // the allowlist/team pins rather than dropping the match.
-            log.warn(
-              `Unexpected ${mode} assignment shape: ${z.prettifyError(parsed.error)}`,
-            );
-          }
-          const baseConfig =
-            mode === "2v2" ? playlist.get2v2Config() : playlist.get1v1Config();
-          const game = gm.createGame(
-            gameId,
-            parsed.success
-              ? { ...baseConfig, allowedPublicIds: parsed.data.players }
-              : baseConfig,
-            undefined,
-            // Deadline for the slowest player: after match-assignment the
-            // client still has to poll game existence, pass Turnstile, and
-            // clear join auth; anyone not connected when start() fires is
-            // left out of the roster and the ranked game starts short-handed.
-            // A full lobby is NOT delayed by this — hasReachedMaxPlayerCount
-            // flips the phase to Active as soon as everyone has joined.
-            Date.now() + 15000,
-            undefined,
-            parsed.success ? parsed.data.teams : undefined,
-          );
-          if (game === null) {
-            log.warn(`Failed to create matchmaking game ${gameId}`);
-          }
-        }
-      } catch (error) {
-        if (error instanceof Error && error.name === "AbortError") {
-          // Abort is expected if no game is scheduled on this worker.
-          return;
-        }
-        log.error(`Error polling ${mode} lobby:`, error);
-      }
-    },
-    5000 + Math.random() * 1000,
-  );
 }
 
 function getClientIp(req: http.IncomingMessage): string {

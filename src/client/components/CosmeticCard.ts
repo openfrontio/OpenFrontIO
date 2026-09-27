@@ -2,6 +2,7 @@ import { html, LitElement, nothing, TemplateResult } from "lit";
 import { customElement, property } from "lit/decorators.js";
 import { Subscription } from "../../core/CosmeticSchemas";
 import { ResolvedCosmetic, translateCosmetic } from "../Cosmetics";
+import { isDesktopShell } from "../DesktopShell";
 import { translateText } from "../Utils";
 import "./CosmeticInfo";
 import {
@@ -304,7 +305,9 @@ export class CosmeticCard extends LitElement {
 
   private renderSwatches() {
     const variants = this.variants.filter(
-      (variant) => variant.colorPalette !== null,
+      (variant) =>
+        variant.colorPalette !== null ||
+        (variant.type === "pattern" && variant.cosmetic !== null),
     );
     if (!this.interactive || !this.showSwatches || variants.length === 0) {
       return nothing;
@@ -322,7 +325,7 @@ export class CosmeticCard extends LitElement {
         const isActive = variant.key === activeKey;
         const label = palette
           ? translateCosmetic("territory_patterns.color_palette", palette.name)
-          : cosmeticDisplayName(variant);
+          : translateText("territory_patterns.pattern.default");
         return html`<button
           type="button"
           data-variant-key=${variant.key}
@@ -385,6 +388,7 @@ export class CosmeticCard extends LitElement {
     } ${this.rarityHoverClass(rarity)}`;
     const priced = active.cosmetic as {
       artist?: string;
+      aiDisclosed?: boolean;
       priceHard?: number;
     } | null;
     const usdValue =
@@ -398,7 +402,7 @@ export class CosmeticCard extends LitElement {
     // below it rather than over the text. The artwork clips inside its own box
     // so the info tooltip can still overflow the card.
     const content = html`
-      <div class="relative w-full ${previewShape}">
+      <div class="relative w-full flex-1 ${previewShape}">
         <div
           class="flex h-full w-full items-center justify-center overflow-hidden rounded-lg bg-white/5 p-2"
         >
@@ -415,7 +419,7 @@ export class CosmeticCard extends LitElement {
     `;
     const name = html`<span
       data-cosmetic-name
-      class="w-full whitespace-normal break-words px-3 pt-3 text-center text-sm font-bold leading-tight text-white ${this
+      class="w-full capitalize  whitespace-normal break-words px-3 pt-3 text-center text-sm font-bold leading-tight text-white ${this
         .interactive
         ? "cursor-pointer"
         : ""}"
@@ -462,8 +466,11 @@ export class CosmeticCard extends LitElement {
       ${name}
       <!-- The info bubble anchors to this wrapper, not the whole card, so it
            lands on the artwork's corner instead of over the name — and stays
-           outside the card's own button, which may not nest a control. -->
-      <div class="relative w-full">
+           outside the card's own button, which may not nest a control.
+           flex-1 down this chain hands any row-stretch slack (a taller
+           sibling card, e.g. the custom-amount slider) to the artwork box,
+           instead of pooling it as a void between artwork and buttons. -->
+      <div class="relative w-full flex-1 flex flex-col">
         ${this.interactive
           ? html`<button
               type="button"
@@ -471,23 +478,25 @@ export class CosmeticCard extends LitElement {
               aria-label=${displayName}
               aria-pressed=${isEquipped ? "true" : nothing}
               aria-current=${isFocused ? "true" : nothing}
-              class="group relative flex flex-col items-center gap-2 w-full rounded-xl px-3 pb-3 pt-2 cursor-pointer outline-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50 focus-visible:ring-offset-1"
+              class="group relative flex flex-1 flex-col items-center gap-2 w-full rounded-xl px-3 pb-3 pt-2 cursor-pointer outline-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50 focus-visible:ring-offset-1"
               @click=${() => this.onActivate?.(active)}
             >
               ${content}
             </button>`
           : html`<div
               data-cosmetic-main
-              class="group relative flex w-full flex-col items-center gap-2 rounded-xl px-3 pb-3 pt-2"
+              class="group relative flex flex-1 w-full flex-col items-center gap-2 rounded-xl px-3 pb-3 pt-2"
             >
               ${content}
             </div>`}
         ${this.interactive && active.cosmetic !== null
           ? html`<cosmetic-info
                 .artist=${priced?.artist}
+                .aiDisclosed=${priced?.aiDisclosed}
                 .rarity=${rarity}
                 .colorPalette=${active.colorPalette?.name}
-                .showAdFree=${active.relationship === "purchasable"}
+                .showAdFree=${active.relationship === "purchasable" &&
+                !isDesktopShell()}
                 .usdValue=${usdValue}
                 .perks=${this.subscriptionPerks()}
                 .items=${(active.packItems ?? []).map(cosmeticSelectionLabel)}

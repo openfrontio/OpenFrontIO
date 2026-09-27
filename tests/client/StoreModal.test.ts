@@ -764,6 +764,50 @@ describe("StoreModal cosmetic browser", () => {
     );
   });
 
+  // OPE-440. A grant (`provider: null`) is free access nobody is billing, so
+  // the player is not switching anything — every tier, the one their grant
+  // confers included, is a first purchase. resolveCosmetics is what stops
+  // calling the granted tier "owned" (covered in
+  // GrantedSubscriptionPurchase.test.ts); what this asserts is the store's
+  // half: a purchasable tier renders its buy button and no dead status box,
+  // and the "Switch" label is not applied to a granted player.
+  it("offers a plain buy button on every tier to a granted subscriber", async () => {
+    resolvedCatalog = [
+      { ...goldSubscription, relationship: "purchasable" },
+      platinumSubscription,
+    ];
+    const modal = await openStoreOnTab("subscriptions");
+    await modal.onUserMe({
+      player: {
+        subscription: { tier: "gold", provider: null },
+      },
+    } as never);
+    await modal.updateComplete;
+
+    // The "Subscribed" box was the whole bug: it replaced the buy button.
+    expect(
+      product(modal, goldSubscription.key)?.querySelector(
+        "[data-store-status]",
+      ),
+    ).toBeFalsy();
+
+    const gold = purchaseButton(modal, goldSubscription.key);
+    expect(gold.onPurchaseDollar).toBeTypeOf("function");
+    expect(gold.dollarLabelKey).toBe("");
+
+    await focusCard(modal, platinumSubscription.key);
+    // Not "Switch": there is no paid plan to switch away from.
+    expect(purchaseButton(modal, platinumSubscription.key).dollarLabelKey).toBe(
+      "",
+    );
+
+    await gold.onPurchaseDollar!();
+    expect(purchaseCosmetic).toHaveBeenCalledWith(
+      { ...goldSubscription, relationship: "purchasable" },
+      "dollar",
+    );
+  });
+
   it("sells a cosmetic bundle for plutonium with its contents listed", async () => {
     resolvedCatalog = [starterBundle];
     const modal = await openStoreOnTab("bundles");
@@ -905,5 +949,89 @@ describe("StoreModal cosmetic browser", () => {
 
     await purchaseButton(modal, affiliatePattern.key).onPurchaseHard!();
     expect(purchaseCosmetic).toHaveBeenCalledWith(affiliatePattern, "hard");
+  });
+});
+
+// The custom-amount card is sold on both rails since OPE-337: the server
+// accepts custom_currency on Steam, so the card is offered there too.
+describe("StoreModal on the Steam rail", () => {
+  Element.prototype.animate ??= () => ({ cancel: () => {} }) as Animation;
+
+  function installSteamShell() {
+    const microTxn = {
+      subscribe: vi.fn(() => () => {}),
+      consumePending: vi.fn(
+        async (): Promise<
+          { appId: number; orderId: string | null; authorized: boolean }[]
+        > => [],
+      ),
+    };
+    (window as any).openfrontDesktop = { steam: { microTxn } };
+    return microTxn;
+  }
+
+  beforeEach(() => {
+    localStorage.clear();
+    resolvedCatalog = [pack];
+    vi.mocked(fetchCosmetics).mockReset();
+    vi.mocked(fetchCosmetics).mockResolvedValue({} as Cosmetics);
+    vi.mocked(resolveCosmetics).mockReset();
+    vi.mocked(resolveCosmetics).mockImplementation(() => resolvedCatalog);
+    vi.mocked(purchaseCosmetic).mockReset();
+    vi.mocked(purchaseCosmetic).mockResolvedValue(undefined);
+  });
+
+  afterEach(() => {
+    store?.remove();
+    store = undefined;
+    delete (window as any).openfrontDesktop;
+    localStorage.clear();
+  });
+
+  it("offers the custom-amount card on the web", async () => {
+    const modal = await openStoreOnTab("packs");
+    expect(modal.querySelector("custom-currency-card")).toBeTruthy();
+  });
+
+  it("offers the custom-amount card on Steam too", async () => {
+    installSteamShell();
+    const modal = await openStoreOnTab("packs");
+    expect(modal.querySelector("custom-currency-card")).toBeTruthy();
+  });
+
+  // REQUIRED, not an optimisation: the main process parks authorizations and
+  // its "something arrived" nudge is contentless, so one that fires before any
+  // window exists is heard by nobody. subscribe() alone never surfaces it.
+  it("drains parked Steam authorizations every time it opens", async () => {
+    const microTxn = installSteamShell();
+    await openStoreOnTab("packs");
+    await vi.waitFor(() => expect(microTxn.consumePending).toHaveBeenCalled());
+
+    // "Every time", not "once per element". Closing and REOPENING the same
+    // modal has to drain again: an authorization parked while the player had
+    // the store shut is only surfaced by the next open, and a drain wired to
+    // first mount rather than to onOpen would strand it there.
+    const opened = store!;
+    opened.close();
+    await opened.updateComplete;
+    opened.open({ tab: "packs" });
+    await vi.waitFor(() =>
+      expect(microTxn.consumePending).toHaveBeenCalledTimes(2),
+    );
+  });
+
+  it("tells the player about an approval it can no longer finalize", async () => {
+    const microTxn = installSteamShell();
+    microTxn.consumePending.mockResolvedValueOnce([
+      { appId: 480, orderId: "77770000", authorized: true },
+    ]);
+    const seen: string[] = [];
+    const onToast = (e: Event) => seen.push((e as CustomEvent).detail.message);
+    window.addEventListener("show-message", onToast);
+
+    await openStoreOnTab("packs");
+
+    await vi.waitFor(() => expect(seen).toContain("store.purchase_pending"));
+    window.removeEventListener("show-message", onToast);
   });
 });

@@ -202,7 +202,7 @@ describe("CosmeticPreview", () => {
     await render(resolved.pattern);
 
     expect(
-      preview!.querySelector('[data-cosmetic-preview="pattern"] img'),
+      preview!.querySelector('[data-cosmetic-preview="pattern"] canvas'),
     ).toBeTruthy();
     expect(cosmeticDisplayName(preview!.resolved)).toBe("Ocean Stripes");
     expect(cosmeticRarity(preview!.resolved)).toBe("rare");

@@ -101,6 +101,10 @@ void main() {
 
   bool isHighlighted = uHighlightOwnerID > 0.0 && smallID == uHighlightOwnerID;
 
+  // Targeted players' names must stay findable at any zoom (pd6.y = target
+  // status flag; the crosshair in status-icon.vert.glsl matches this).
+  bool isTargeted = texelFetch(uPlayerData, ivec2(6, playerIdx), 0).y > 0.5;
+
   // Troop count is smaller
   if (lineIdx == 1) {
     worldScale *= uTroopSizeMultiplier;
@@ -111,6 +115,14 @@ void main() {
   // uCamera[0][0] is the x-scale component of the camera matrix
   float cameraScale = length(vec2(uCamera[0][0], uCamera[1][0]));
   float screenSize = nameWorldScale * uBase * cameraScale;
+  // Targeted names bypass the cull, boosted to the smallest size that
+  // survives it, so a mark set from across the map is still visible.
+  if (isTargeted && screenSize < uCullThreshold) {
+    float boost = uCullThreshold / screenSize;
+    nameWorldScale *= boost;
+    worldScale *= boost;
+    screenSize = uCullThreshold;
+  }
   if (screenSize < uCullThreshold && !isHighlighted) {
     gl_Position = vec4(0.0);
     vUV = vec2(0.0);

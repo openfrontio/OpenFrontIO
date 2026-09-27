@@ -2,10 +2,10 @@
   "teamColors": {
     "Red": "#eb3333",
     "Blue": "#2962ff",
-    "Teal": "#2bd4bd",
+    "Teal": "#06b6d4",
     "Purple": "#9234ea",
     "Yellow": "#e7b008",
-    "Orange": "#f97415",
+    "Orange": "#ff7f0e",
     "Green": "#41be52",
     "Bot": "#d1cdc7",
     "Humans": "#2962ff",
@@ -122,12 +122,11 @@
     "#e6b450",
     "#c8a06e",
     "#be9682",
-    "#beb4a0",
     "#b4aa8c",
     "#c8c88c",
     "#beaa64"
   ],
-  "botColors": [
+  "classicBotColors": [
     "#96a08c",
     "#a0a096",
     "#aaaa8c",

@@ -1,3 +1,16 @@
+import { z } from "zod";
+import type {
+  SnapshotReader,
+  SnapshotWriter,
+} from "../snapshot/SnapshotContext";
+import {
+  snapshotType,
+  zInt,
+  zNum,
+  zPlayerRef,
+  zTile,
+  zTiles,
+} from "../snapshot/SnapshotType";
 import { Attack, Player, TerraNullius } from "./Game";
 import { GameImpl } from "./GameImpl";
 import { TileRef } from "./GameMap";
@@ -182,4 +195,52 @@ export class AttackImpl implements Attack {
       }
     }
   }
+
+  snapshot(w: SnapshotWriter): AttackState {
+    return {
+      id: this._id,
+      target: w.owner(this._target),
+      attacker: w.player(this._attacker),
+      troops: this._troops,
+      sourceTile: this._sourceTile,
+      border: w.tiles(this._border),
+      borderSize: this._borderSize,
+      isActive: this._isActive,
+      retreating: this._retreating,
+      retreated: this._retreated,
+    };
+  }
+
+  /** Fills a prototype-only shell; see RestorableExecution.restoreSnapshot. */
+  restoreSnapshot(s: AttackState, r: SnapshotReader): void {
+    this._mg = r.game;
+    this._id = s.id;
+    this._target = r.owner(s.target);
+    this._attacker = r.player(s.attacker);
+    this._troops = s.troops;
+    this._sourceTile = s.sourceTile;
+    this._border = new Set(s.border);
+    this._borderSize = s.borderSize;
+    this._isActive = s.isActive;
+    this._retreating = s.retreating;
+    this._retreated = s.retreated;
+  }
 }
+
+export const AttackSnapshot = snapshotType({
+  name: "Attack",
+  version: 1,
+  schema: z.object({
+    id: z.string(),
+    target: zPlayerRef(),
+    attacker: zPlayerRef(),
+    troops: zNum(),
+    sourceTile: zTile().nullable(),
+    border: zTiles(),
+    borderSize: zInt(),
+    isActive: z.boolean(),
+    retreating: z.boolean(),
+    retreated: z.boolean(),
+  }),
+});
+export type AttackState = z.infer<typeof AttackSnapshot.schema>;

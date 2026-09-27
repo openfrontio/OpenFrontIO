@@ -1,4 +1,5 @@
 import { render } from "lit";
+import type { MockInstance } from "vitest";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const presenceMocks = vi.hoisted(() => ({
@@ -19,7 +20,111 @@ vi.mock("../../src/client/DesktopPresence", () => ({
   },
 }));
 
+const alertMocks = vi.hoisted(() => ({
+  construct: vi.fn(),
+  play: vi.fn(),
+}));
+
+vi.mock("howler", () => ({
+  Howl: class {
+    constructor(options: unknown) {
+      alertMocks.construct(options);
+    }
+
+    play() {
+      return alertMocks.play();
+    }
+  },
+}));
+
 import { JoinLobbyModal } from "../../src/client/JoinLobbyModal";
+import { GameMode, GameType } from "../../src/core/game/Game";
+import { UserSettings } from "../../src/core/game/UserSettings";
+
+function resetUserSettingsState() {
+  localStorage.clear();
+  const statics = UserSettings as unknown as {
+    cache: Map<string, string | null>;
+    playerId: string | null;
+  };
+  statics.cache.clear();
+  statics.playerId = null;
+}
+
+describe("JoinLobbyModal lobby start alert default", () => {
+  beforeEach(() => {
+    resetUserSettingsState();
+    alertMocks.construct.mockReset();
+    alertMocks.play.mockReset();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+    vi.unstubAllGlobals();
+  });
+
+  function trackingModal() {
+    const modal = new JoinLobbyModal();
+    (modal as any).startLobbyUpdates = vi.fn();
+    return modal;
+  }
+
+  function bellButton(modal: JoinLobbyModal): HTMLButtonElement {
+    const container = document.createElement("div");
+    render((modal as any).gameStartAlert.renderBell(), container);
+    return container.querySelector("button")!;
+  }
+
+  function showMessageEvents(spy: MockInstance<Window["dispatchEvent"]>) {
+    return spy.mock.calls.filter(([event]) => event.type === "show-message");
+  }
+
+  it("keeps the existing off default without preloading", () => {
+    const modal = trackingModal();
+
+    (modal as any).startTrackingLobby("first");
+
+    expect(bellButton(modal).getAttribute("aria-pressed")).toBe("false");
+    expect(alertMocks.construct).not.toHaveBeenCalled();
+  });
+
+  it("auto-arms and preloads without showing the manual-arm toast", () => {
+    new UserSettings().setLobbyStartAlerts(true);
+    const dispatchSpy = vi.spyOn(window, "dispatchEvent");
+    const modal = trackingModal();
+
+    (modal as any).startTrackingLobby("first");
+
+    expect(bellButton(modal).getAttribute("aria-pressed")).toBe("true");
+    expect(alertMocks.construct).toHaveBeenCalledOnce();
+    expect(showMessageEvents(dispatchSpy)).toHaveLength(0);
+  });
+
+  it("keeps bell overrides local to one lobby", () => {
+    new UserSettings().setLobbyStartAlerts(true);
+    const modal = trackingModal();
+    (modal as any).startTrackingLobby("first");
+
+    bellButton(modal).click();
+    expect(bellButton(modal).getAttribute("aria-pressed")).toBe("false");
+    expect(new UserSettings().lobbyStartAlerts()).toBe(true);
+
+    (modal as any).startTrackingLobby("second");
+    expect(bellButton(modal).getAttribute("aria-pressed")).toBe("true");
+  });
+
+  it("still plays the chime when notification permission is denied", () => {
+    new UserSettings().setLobbyStartAlerts(true);
+    const modal = trackingModal();
+    (modal as any).startTrackingLobby("first");
+    (modal as any).currentLobbyId = "first";
+    vi.stubGlobal("Notification", { permission: "denied" });
+
+    (modal as any).gameStartAlert.handleGameStarting();
+
+    expect(alertMocks.play).toHaveBeenCalledOnce();
+  });
+});
 
 describe("JoinLobbyModal server time offset", () => {
   let nowMs = 0;
@@ -154,10 +259,18 @@ describe("JoinLobbyModal Steam invite button", () => {
     return container;
   }
 
-  function lobbyModal(): JoinLobbyModal {
+  // A joined lobby whose config has arrived; private FFA unless overridden.
+  function lobbyModal(config?: {
+    gameType: GameType;
+    gameMode: GameMode;
+  }): JoinLobbyModal {
     const modal = new JoinLobbyModal();
     (modal as unknown as { currentLobbyId: string }).currentLobbyId =
       "ABCD1234";
+    (modal as unknown as { gameConfig: unknown }).gameConfig = config ?? {
+      gameType: GameType.Private,
+      gameMode: GameMode.FFA,
+    };
     return modal;
   }
 
@@ -184,10 +297,21 @@ describe("JoinLobbyModal Steam invite button", () => {
     expect(renderHeader(modal).querySelector(INVITE)).toBeNull();
   });
 
-  it("appears in a joined lobby on the desktop shell", () => {
+  it("appears in a joined private lobby on the desktop shell", () => {
     presenceMocks.isAvailable.mockReturnValue(true);
 
     expect(renderHeader(lobbyModal()).querySelector(INVITE)).not.toBeNull();
+  });
+
+  // The URL-join and accepted-Steam-invite paths render this header before
+  // the first lobby_info delivers the config. That window must not show a
+  // button the config may be about to forbid.
+  it("is absent while the lobby's config is still unknown", () => {
+    presenceMocks.isAvailable.mockReturnValue(true);
+    const modal = lobbyModal();
+    (modal as unknown as { gameConfig: unknown }).gameConfig = null;
+
+    expect(renderHeader(modal).querySelector(INVITE)).toBeNull();
   });
 
   it("opens the Steam invite dialog when clicked", () => {
@@ -210,6 +334,28 @@ describe("JoinLobbyModal Steam invite button", () => {
 
     expect(() => button?.click()).not.toThrow();
     await Promise.resolve();
+  });
+
+  // Inviting Steam friends into a public FFA match encourages teaming, so
+  // the button is suppressed exactly there and nowhere else.
+  it("is absent in a public FFA lobby", () => {
+    presenceMocks.isAvailable.mockReturnValue(true);
+    const modal = lobbyModal({
+      gameType: GameType.Public,
+      gameMode: GameMode.FFA,
+    });
+
+    expect(renderHeader(modal).querySelector(INVITE)).toBeNull();
+  });
+
+  it("appears in a public team lobby", () => {
+    presenceMocks.isAvailable.mockReturnValue(true);
+    const modal = lobbyModal({
+      gameType: GameType.Public,
+      gameMode: GameMode.Team,
+    });
+
+    expect(renderHeader(modal).querySelector(INVITE)).not.toBeNull();
   });
 
   it("does not suppress the private-lobby copy button", () => {

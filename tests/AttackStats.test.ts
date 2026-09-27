@@ -1,6 +1,11 @@
 import { AttackExecution } from "../src/core/execution/AttackExecution";
 import { Game, Player, PlayerInfo, PlayerType } from "../src/core/game/Game";
-import { GOLD_INDEX_WAR, GOLD_INDEX_WORK } from "../src/core/StatsSchemas";
+import {
+  ATTACK_INDEX_MAX_RECV,
+  ATTACK_INDEX_RECV,
+  GOLD_INDEX_WAR,
+  GOLD_INDEX_WORK,
+} from "../src/core/StatsSchemas";
 import { setup } from "./util/Setup";
 
 let game: Game;
@@ -83,6 +88,33 @@ describe("AttackStats", () => {
 
     performAttack(game, player1, player2);
     expectWarGoldStatIsIncreasedAfterKill(game, player1, player2);
+  });
+
+  test("records the merged total as the largest incoming attack, not one click", () => {
+    player1.addTroops(1000);
+    for (let i = 0; i < 3; i++) {
+      game.addExecution(new AttackExecution(20, player1, player2.id()));
+    }
+    game.executeNextTick();
+
+    const attacks = game.stats().stats()[player2.clientID()!]?.attacks;
+    expect(attacks?.[ATTACK_INDEX_RECV]).toBe(60n);
+    expect(attacks?.[ATTACK_INDEX_MAX_RECV]).toBe(60n);
+  });
+
+  test("records no maximum for an attack that is cancelled out on arrival", () => {
+    player1.addTroops(1000);
+    player2.addTroops(1000);
+    game.addExecution(new AttackExecution(50, player2, player1.id()));
+    game.executeNextTick();
+
+    game.addExecution(new AttackExecution(20, player1, player2.id()));
+    game.executeNextTick();
+
+    const attacks = game.stats().stats()[player2.clientID()!]?.attacks;
+    // The pre-existing RECV accounting still counts the launch, unchanged.
+    expect(attacks?.[ATTACK_INDEX_RECV]).toBe(20n);
+    expect(attacks?.[ATTACK_INDEX_MAX_RECV]).toBeUndefined();
   });
 });
 

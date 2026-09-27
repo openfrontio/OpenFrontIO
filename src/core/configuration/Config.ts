@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { PlayerView } from "../../client/view";
 import { AssetManifest } from "../AssetUrls";
+import { ClusterConfig } from "../ClusterConfig";
 import { exp, log, pow, pow2 } from "../DetMath";
 import { DoomsdayClockSpeed } from "../game/DoomsdayClock";
 import {
@@ -25,18 +26,45 @@ import { assertNever, sigmoid, toInt, within } from "../Util";
 
 declare global {
   interface Window {
+    // Values the page carries into the bundle. Every field is optional to
+    // TypeScript because the page is data, not code; ClientEnv.get() decides
+    // which are actually required. Only gitCommit, gameEnv, turnstileSiteKey
+    // and jwtAudience are: they describe the ENVIRONMENT, and are identical
+    // for every player on a site. Everything below them names a SERVER, and
+    // a static page (docs/MultiServer.md, "Server list v2") carries none of
+    // it — the API's list answers instead.
     BOOTSTRAP_CONFIG?: {
       gitCommit?: string;
       assetManifest?: AssetManifest;
       cdnBase?: string;
       gameEnv?: string;
+      // The fleet map + which entry served this page (docs/MultiServer.md).
+      // Absent on a static page.
+      cluster?: ClusterConfig;
+      instanceLetter?: string;
+      // Legacy scalar, still injected by desktop shells that predate the
+      // cluster map. Web shells send cluster/instanceLetter instead; a static
+      // page sends neither.
       numWorkers?: number;
       turnstileSiteKey?: string;
       jwtAudience?: string;
+      // Environment-scoped like turnstileSiteKey, but optional: a deployment
+      // without one (dev, desktop shells) just keeps the inline Stripe flow
+      // off.
+      stripePublishableKey?: string;
+      // Environment-scoped and optional like stripePublishableKey: the
+      // Grafana Faro collector URL. Absent keeps client telemetry off.
+      faroCollectorUrl?: string;
+      // The rendering server's own id. Absent on a static page, which no
+      // server rendered; ClientEnv.instanceId() then answers "".
       instanceId?: string;
       // Desktop-only: explicit game-server host for the WebSocket origin.
       // Absent on the web build (client falls back to same-origin location).
       serverHost?: string;
+      // The load-balancer apex this deployment sits behind; absent for
+      // standalone deployments (beta, branch previews, dev), desktop, and
+      // static pages.
+      siteHost?: string;
     };
   }
 }
@@ -100,7 +128,8 @@ export interface NukeMagnitude {
 // attackLogic tunables
 const LARGE_TERRITORY_MIDPOINT = 300_000;
 const LARGE_TERRITORY_STEEPNESS = 2.5;
-// Floors: a huge attacker's tiles cost 0.3x, a huge defender's 0.7x.
+// Floors: a huge attacker's bonus bottoms at 0.3x (losses; speed uses the
+// deeper LARGE_ATTACKER_SPEED_DEPTH below), a huge defender's at 0.7x.
 const LARGE_ATTACKER_DEPTH = 0.7;
 const LARGE_DEFENDER_DEPTH = 0.3;
 const BOT_DEFENDER_LOSS_MULT = 0.7;
@@ -114,8 +143,15 @@ const TERRA_NULLIUS_MAX_COST = 100;
 // army matches the old cost, bigger stacks pay less, smaller pay more.
 const ATTACKER_LOSS_BASE = 0.463;
 const ATTACKER_LOSS_PER_DENSITY = 0.0039;
-// Speed divisor: 7.5 / 0.965, absorbing the same sigmoid tail.
-const SPEED_COST_DIVISOR = 7.77;
+// Speed divisor: 8.25 / 0.965, absorbing the same sigmoid tail. 8.25 is the
+// old 7.5 raised ~10%: v34 pace feedback said attacks felt a bit too slow, so
+// every player-vs-player attack lands ~10% faster across the board.
+const SPEED_COST_DIVISOR = 8.55;
+// Speed-only: the attacker's territory bonus runs a touch deeper for speed
+// than the 0.7 loss depth above (floor 0.27x vs 0.3x). Paired with the 0.82
+// sub-parity floor on the ratio curve, an overwhelming push lands ~18%
+// faster for a small attacker, ~20% at the 300k midpoint, ~25% for giants.
+const LARGE_ATTACKER_SPEED_DEPTH = 0.73;
 
 /**
  * Logistic in log(tiles): ~1 for small territories, easing down to
@@ -256,6 +292,10 @@ export class Config {
   }
   traitorDuration(): number {
     return 30 * 10; // 30 seconds
+  }
+
+  teamLandShareWinThresholdTenths(): number {
+    return 7;
   }
 
   // Doomsday Clock config, resolved against defaults. One read per tick.
@@ -403,11 +443,41 @@ export class Config {
     return this.startingGoldFor(playerInfo);
   }
 
-  trainSpawnRate(numPlayerFactories: number): number {
+  /**
+   * Global spawn throttle for the train economy, counted in Train *units*
+   * (~7 per train: engine, tail, 5 cars). Up to 1.5x spawns for the very
+   * first trains, ~1x around 35 units (~5 trains), then a capacity
+   * sigmoid damps spawning past the ~560-unit midpoint. The damping
+   * flattens onto a ~0.25 plateau past ~810 units (~115 trains), so a big
+   * enough rail economy still scales at a quarter of the un-damped rate,
+   * until a global hard cap far beyond any normal game collapses the
+   * plateau past ~900 units (~130 trains).
+   *
+   * The midpoint was 300 units in v34.0. Public-game telemetry put a real
+   * lobby at ~4.2 train units per player, so a 50-player game sat at ~210
+   * units and a 70-player game at ~300 — i.e. normal lobbies were landing
+   * on and past the knee, costing factories 35-56% of their v33 income.
+   * The 61-nation benchmark this curve was tuned against peaks at 91 units,
+   * roughly a quarter of a full public lobby, so it never saw that region.
+   * v34.5 moved it to 500 (measured +32% train gold in matched lobbies);
+   * 560 softens the remaining early/mid-game gap vs v33 (~-8% at 50
+   * players, ~-18% at 80) without re-opening v33's big-lobby train
+   * dominance, and leaves the plateau and hard cap untouched.
+   */
+  trainSaturation(numTrainUnits: number): number {
+    const boost = 1 + 0.5 * exp(-numTrainUnits / 30);
+    const damping = 1 - sigmoid(numTrainUnits, Math.LN2 / 100, 560);
+    const plateau = 0.25 * (1 - sigmoid(numTrainUnits, Math.LN2 / 150, 900));
+    return boost * Math.max(damping, plateau);
+  }
+
+  trainSpawnRate(numPlayerFactories: number, numTrainUnits: number): number {
     // hyperbolic decay, midpoint at 10 factories
     // expected number of trains = numPlayerFactories  / trainSpawnRate(numPlayerFactories)
-    return (numPlayerFactories + 10) * 15;
+    const rate = (numPlayerFactories + 10) * 15;
+    return Math.max(1, Math.floor(rate / this.trainSaturation(numTrainUnits)));
   }
+
   trainGold(
     rel: "self" | "team" | "ally" | "other",
     citiesVisited: number,
@@ -450,20 +520,45 @@ export class Config {
     return BigInt(Math.floor(baseGold * this.goldMultiplierFor(player)));
   }
 
+  /**
+   * Global spawn throttle for the trade-ship economy. A mild ~1.45x odds
+   * boost while the world fleet is small (the pity timer square-roots the
+   * realized effect, so ~1.2x actual spawns), held through the opening
+   * trading minutes and crossing the old un-boosted curve around 110
+   * ships, then a capacity sigmoid damps spawning past the ~330-ship
+   * midpoint. The damping flattens onto a 0.25 plateau past ~415 ships
+   * (~half cadence per port after the pity timer), so heavy port
+   * investment keeps scaling income linearly, until a global hard cap far
+   * beyond any normal game collapses the plateau past ~800 at sea.
+   *
+   * The midpoint was 230 in v34.0. v33's was 400, so fleets of 150-350 —
+   * reached within the opening minutes of a 40+ player lobby — ran 30-64%
+   * below v33's spawn odds, which is where the "no early gold for nukes"
+   * deficit lived; the opening (<130 ships) was already above v33 via the
+   * boost. 330 restores that window to near-v33 while the plateau keeps
+   * everything past ~450 ships (the late game) numerically unchanged.
+   */
+  tradeShipSaturation(numTradeShips: number): number {
+    const boost = 1 + 0.45 * exp(-numTradeShips / 120);
+    const damping = 1 - sigmoid(numTradeShips, Math.LN2 / 50, 330);
+    const plateau = 0.25 * (1 - sigmoid(numTradeShips, Math.LN2 / 100, 800));
+    return boost * Math.max(damping, plateau);
+  }
+
   // Probability of trade ship spawn = 1 / tradeShipSpawnRate
   tradeShipSpawnRate(
     tradeShipSpawnRejections: number,
     numTradeShips: number,
   ): number {
-    const decayRate = Math.LN2 / 50;
-
-    // Approaches 0 as numTradeShips increase
-    const baseSpawnRate = 1 - sigmoid(numTradeShips, decayRate, 400);
-
     // Pity timer: increases spawn chance after consecutive rejections
     const rejectionModifier = 1 / (tradeShipSpawnRejections + 1);
 
-    return Math.floor((100 * rejectionModifier) / baseSpawnRate);
+    return Math.max(
+      1,
+      Math.floor(
+        (100 * rejectionModifier) / this.tradeShipSaturation(numTradeShips),
+      ),
+    );
   }
 
   unitInfo(type: UnitType): UnitInfo {
@@ -529,7 +624,7 @@ export class Config {
             ) {
               return 0n;
             }
-            return 25_000_000n + game.stats().numMirvsLaunched() * 15_000_000n;
+            return 25_000_000n + BigInt(game.mirvsLaunched()) * 15_000_000n;
           },
         };
         break;
@@ -765,7 +860,7 @@ export class Config {
     if (this.isRandomSpawn()) {
       return 150;
     }
-    return 300;
+    return 200;
   }
   numBots(): number {
     return this.bots();
@@ -854,18 +949,23 @@ export class Config {
         ATTACKER_LOSS_PER_DENSITY * defenderTroopLoss);
 
     // Speed: a tile's cost in tick-fractions grows with how outnumbered the
-    // attack is. Flat at 1/5 up to parity, then rising linearly (saturating
-    // at 7.5x), with a second ramp for hopeless attacks past 20x.
+    // attack is. Floored at 0.82 below parity (overwhelming stacks land ~18%
+    // faster), then rising linearly (saturating at 7.5x), with a second ramp
+    // for hopeless attacks past 20x.
     const speedCost =
-      (within(troopRatio, 1, 7.5) * within(troopRatio / 20, 1, 50)) /
+      (within(troopRatio, 0.82, 7.5) * within(troopRatio / 20, 1, 50)) /
       SPEED_COST_DIVISOR;
+    const largeAttackerSpeedBonus = largeTerritoryBonus(
+      attacker.numTiles,
+      LARGE_ATTACKER_SPEED_DEPTH,
+    );
     return {
       attackerTroopLoss,
       defenderTroopLoss,
       tickFraction:
         (speedCost *
           tileCost *
-          largeAttackerBonus *
+          largeAttackerSpeedBonus *
           largeDefenderBonus *
           traitorCostMod) /
         input.borderSize,

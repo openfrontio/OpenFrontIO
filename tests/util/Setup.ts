@@ -1,6 +1,7 @@
 import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
+import { Config } from "../../src/core/configuration/Config";
 import {
   Difficulty,
   Game,
@@ -8,6 +9,7 @@ import {
   GameMapType,
   GameMode,
   GameType,
+  Nation,
   PlayerInfo,
   PlayerType,
 } from "../../src/core/game/Game";
@@ -27,8 +29,9 @@ export async function setup(
   _gameConfig: Partial<GameConfig> = {},
   humans: PlayerInfo[] = [],
   currentDir: string = __dirname,
-  ConfigClass: typeof TestConfig = TestConfig,
+  ConfigClass: typeof Config = TestConfig,
   autoEndSpawnPhase: boolean = true,
+  nations: Nation[] = [],
 ): Promise<Game> {
   // Suppress console.debug for tests.
   console.debug = () => {};
@@ -74,7 +77,7 @@ export async function setup(
   };
   const config = new ConfigClass(gameConfig, new UserSettings(), false);
 
-  const game = createGame(humans, [], gameMap, miniGameMap, config);
+  const game = createGame(humans, nations, gameMap, miniGameMap, config);
   if (autoEndSpawnPhase) game.endSpawnPhase();
   return game;
 }

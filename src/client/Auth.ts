@@ -4,11 +4,14 @@ import { z } from "zod";
 import { TokenPayload, TokenPayloadSchema } from "../core/ApiSchemas";
 import { base64urlToUuid } from "../core/Base64";
 import { getApiBase, getAudience } from "./Api";
+import { ClientEnv } from "./ClientEnv";
 import { crazyGamesSDK } from "./CrazyGamesSDK";
 import type { DesktopSessionState, SessionFailureKind } from "./DesktopShell";
+import { desktopLinkGate, isDesktopShell } from "./DesktopShell";
+import { showInGameAlert } from "./InGameModal";
 import type { SteamTicketResult } from "./SteamSDK";
 import { steamSDK } from "./SteamSDK";
-import { generateCryptoRandomUUID } from "./Utils";
+import { generateCryptoRandomUUID, translateText } from "./Utils";
 
 export type UserAuth = { jwt: string; claims: TokenPayload } | false;
 
@@ -37,21 +40,115 @@ function setSessionState(state: DesktopSessionState): void {
   );
 }
 
+// On the desktop shell a provider login cannot be an OAuth redirect: the
+// redirect_uri would be this window's own `app://openfront/...` URL, which
+// the API's allowlist refuses (rightly -- the shell registers no scheme
+// handler, so a browser-completed OAuth flow would have nowhere to return
+// to). The player used to get a browser tab showing a bare JSON 400.
+//
+// Instead the shell's account-linking gate is re-opened (see
+// DesktopShell.ts's desktopLinkGate): it sends the browser to the website
+// with a link ticket, the player signs in THERE -- with Discord, Google or
+// email, the choice is made on the website, not by which button was clicked
+// here -- and confirms linking that account to their Steam account, and the
+// shell reloads the game into it. The one thing this cannot do is merge a
+// Steam account that already has its own progress into a web account (the
+// server refuses that as `steam_has_progress`, and the website says so);
+// that is the same rule the first-launch gate lives under.
+//
+// Returns true whenever this is the desktop shell at all -- the caller must
+// not build the redirect there under any circumstances -- and false only on
+// the web, where the redirect is the right thing.
+//
+// A shell that exists but has no callable showLinkGate is a real case, not a
+// hypothetical: this client updates at runtime while the shell ships in the
+// Steam depot and updates on Steam's schedule, so a client newer than its
+// shell is ordinary. Falling through to the redirect there would be the
+// original bug (a browser tab showing a JSON 400) on exactly the shells that
+// cannot be fixed from this side, so that case says what to do instead.
+function startDesktopLinkFlow(): boolean {
+  const gate = desktopLinkGate();
+  if (gate !== null) {
+    // An IPC round trip to the Electron main process, so it can genuinely
+    // reject (no window, a main-process throw); log rather than surface as a
+    // button that silently does nothing.
+    gate.showLinkGate().catch((err) => {
+      console.error("Failed to open the desktop link flow", err);
+    });
+    return true;
+  }
+  if (isDesktopShell()) {
+    void showInGameAlert(
+      translateText("account_modal.desktop_login_needs_update"),
+    );
+    return true;
+  }
+  return false;
+}
+
 export function discordLogin() {
+  if (startDesktopLinkFlow()) return;
   const redirectUri = encodeURIComponent(window.location.href);
   window.location.href = `${getApiBase()}/auth/login/discord?redirect_uri=${redirectUri}`;
 }
 
 export function googleLogin() {
+  if (startDesktopLinkFlow()) return;
   const redirectUri = encodeURIComponent(window.location.href);
   window.location.href = `${getApiBase()}/auth/login/google?redirect_uri=${redirectUri}`;
+}
+
+// "Sign in through Steam" (OPE-115). The web-only way into an account whose
+// only identity is Steam, which before this had no way into the website at all.
+//
+// Deliberately NOT routed through startDesktopLinkFlow, unlike the two above.
+// Inside the shell the player is already signed in through the native Steam
+// ticket (doSteamLogin), so a Steam sign-in button there is redundant rather
+// than broken -- the caller hides it on the desktop shell instead. Keeping the
+// guard out of here means the function does exactly one thing.
+export function steamLogin() {
+  const redirectUri = encodeURIComponent(window.location.href);
+  window.location.href = `${getApiBase()}/auth/login/steam?redirect_uri=${redirectUri}`;
+}
+
+// The website's account-settings page, for the desktop shell to open in the
+// browser. Never from window.location, which is app://openfront in the shell.
+//
+// The precedence this used to spell out for itself -- siteOrigin() (NOT
+// serverHttpBase(), which answers with whichever game server the API's list
+// picked, a deployment host with no website on it), then the audience with the
+// same localhost:9000 special case as the shell's own siteUrlForAudience
+// (openfront-desktop's linkApi.ts) -- is now ClientEnv.shareOrigin(), which is
+// that same question asked by every outbound link in the client. See
+// deriveShareOrigin.
+function desktopWebAccountSettingsUrl(): string {
+  return `${ClientEnv.shareOrigin()}/#modal=account-settings`;
 }
 
 // Link a Google account to the currently logged-in player. Unlike login this is
 // an authenticated request, so we fetch the Google authorize URL with the
 // Bearer token (a top-level navigation can't carry it) and then navigate to it.
 // Returns false if the user isn't logged in or the request fails.
+//
+// On the desktop shell the OAuth redirect is impossible for the reason
+// startDesktopLinkFlow gives, and the link flow is no substitute here: the
+// button is only ever shown to an account that is already linked (Discord or
+// email primary), and redeeming a link ticket against an account that already
+// holds this Steam identity is an idempotent no-op -- it attaches nothing. So
+// the shell opens the website's account settings in the browser instead, where
+// the same button runs the real OAuth flow. The player signs in there with the
+// account they use here; the copy on the button says as much.
 export async function linkGoogle(): Promise<boolean> {
+  if (isDesktopShell()) {
+    // Routed to the system browser by the shell's window-open policy
+    // (openfront-desktop's navigationPolicy.ts), like every https link.
+    window.open(
+      desktopWebAccountSettingsUrl(),
+      "_blank",
+      "noopener,noreferrer",
+    );
+    return true;
+  }
   const authHeader = await getAuthHeader();
   if (authHeader === "") return false;
   const redirectUri = encodeURIComponent(window.location.href);
@@ -72,25 +169,101 @@ export async function linkGoogle(): Promise<boolean> {
     window.location.href = url;
     return true;
   } catch (e) {
-    console.error("Failed to start Google link", e);
+    console.warn("Failed to start Google link", e);
     return false;
   }
 }
 
-export async function tempTokenLogin(token: string): Promise<string | null> {
-  const response = await fetch(
-    `${getApiBase()}/auth/login/token?login-token=${token}`,
-    {
-      credentials: "include",
-    },
-  );
-  if (response.status !== 200) {
-    console.error("Token login failed", response);
-    return null;
+// Link a Steam account to the currently logged-in player (OPE-115). Same shape
+// as linkGoogle: an authenticated fetch for the authorize URL (a top-level
+// navigation can't carry the Bearer token), then navigate to it.
+//
+// THE LINK THIS STARTS IS PERMANENT. Steam recommends that users cannot
+// self-unlink Steam from an external account, so there is no unlink action
+// anywhere in the client and a mistake can only be undone by support. The
+// caller must show that warning before the click; afterwards is too late.
+//
+// No desktop branch, unlike linkGoogle. A shell player already holds the Steam
+// identity through the native ticket, so this button is not shown there.
+export async function linkSteam(): Promise<boolean> {
+  const authHeader = await getAuthHeader();
+  if (authHeader === "") return false;
+  const redirectUri = encodeURIComponent(window.location.href);
+  try {
+    const response = await fetch(
+      `${getApiBase()}/auth/link/steam?redirect_uri=${redirectUri}`,
+      {
+        headers: { Authorization: authHeader },
+        credentials: "include",
+      },
+    );
+    if (!response.ok) {
+      console.error("Failed to start Steam link", response);
+      return false;
+    }
+    const { url } = await response.json();
+    if (typeof url !== "string") return false;
+    window.location.href = url;
+    return true;
+  } catch (e) {
+    console.warn("Failed to start Steam link", e);
+    return false;
   }
-  const json = await response.json();
-  const { email } = json;
-  return email;
+}
+
+export type TokenLoginResult =
+  | { status: "success"; email: string }
+  // A 400 is final: the token was invalid, expired, or already consumed.
+  // Retrying it is pointless.
+  | { status: "failed"; code: "consumed" | "expired" | "invalid" }
+  // A network hiccup or non-400 error — worth retrying.
+  | { status: "retry" };
+
+export async function tempTokenLogin(token: string): Promise<TokenLoginResult> {
+  let response: Response;
+  try {
+    response = await fetch(
+      `${getApiBase()}/auth/login/token?login-token=${token}`,
+      {
+        credentials: "include",
+      },
+    );
+  } catch (e) {
+    console.warn("Token login request failed", e);
+    return { status: "retry" };
+  }
+  if (response.status === 400) {
+    const body = await response.json().catch(() => null);
+    const code =
+      body?.code === "consumed" ||
+      body?.code === "expired" ||
+      body?.code === "invalid"
+        ? body.code
+        : "invalid";
+    return { status: "failed", code };
+  }
+  // A permanent client error (anything but the rate-limit 429) can't be
+  // fixed by asking again with the same token — only 429 and a transient
+  // server/network failure are worth retrying.
+  if (
+    response.status >= 400 &&
+    response.status < 500 &&
+    response.status !== 429
+  ) {
+    console.error("Token login failed with a permanent client error", response);
+    return { status: "failed", code: "invalid" };
+  }
+  if (response.status !== 200) {
+    console.warn("Token login failed", response);
+    return { status: "retry" };
+  }
+  const body = await response.json().catch(() => null);
+  const email = (body as { email?: unknown } | null)?.email;
+  if (typeof email !== "string") {
+    console.error("Token login succeeded but response had no email", body);
+    return { status: "retry" };
+  }
+  return { status: "success", email };
 }
 
 export async function getAuthHeader(): Promise<string> {
@@ -111,13 +284,13 @@ export async function logOut(allSessions: boolean = false): Promise<boolean> {
     );
 
     if (response.ok === false) {
-      console.error("Logout failed", response);
+      console.warn("Logout failed", response);
       return false;
     }
 
     return true;
   } catch (e) {
-    console.error("Logout failed", e);
+    console.warn("Logout failed", e);
     return false;
   } finally {
     clearLocalSession();
@@ -186,13 +359,23 @@ export async function isLoggedIn(): Promise<boolean> {
   return userAuthResult !== false;
 }
 
-// True when the in-memory session still belongs to the given JWT subject.
-// Lets callers of authenticated endpoints discard a response that arrived
-// after a logout or session change invalidated the request's session.
+// True when the in-memory session still belongs to the given player. Lets
+// callers of authenticated endpoints discard a response that arrived after a
+// logout or session change invalidated the request's session.
+//
+// `sub` is the dashed UUID TokenPayloadSchema transforms the claim into --
+// what every caller holds -- while the JWT carries the base64url form, so the
+// two have to be brought to the same encoding before comparing. Converting
+// here rather than at the call sites means no caller has to know which
+// encoding this wants.
 export function isSessionActive(sub: string): boolean {
   if (__jwt === null) return false;
   try {
-    return decodeJwt(__jwt).sub === sub;
+    const raw = decodeJwt(__jwt).sub;
+    if (raw === undefined) return false;
+    // Throws on a subject that is not a base64url UUID, which the catch
+    // below answers the same way as an undecodable JWT: not this session.
+    return base64urlToUuid(raw) === sub;
   } catch {
     return false;
   }
@@ -241,7 +424,7 @@ export async function userAuth(
     if (Date.now() >= __expiresAt - 3 * 60 * 1000) {
       console.log("jwt expired or about to expire");
       if (!shouldRefresh) {
-        console.error("jwt expired and shouldRefresh is false");
+        console.warn("jwt expired and shouldRefresh is false");
         return false;
       }
       await refreshJwt();
@@ -329,12 +512,18 @@ async function doRefreshJwt(): Promise<void> {
   }
   try {
     console.log("Refreshing jwt");
+    // Bounded like doSteamLogin below: userAuth() awaits this, and every
+    // authenticated path awaits userAuth(), so a response that never settles
+    // stops the client joining anything at all. An abort lands in the catch
+    // below, which already treats an unreachable server as "clear the jwt" —
+    // the same outcome, now reached in bounded time.
     const response = await fetch(getApiBase() + "/auth/refresh", {
       method: "POST",
       credentials: "include",
+      signal: AbortSignal.timeout(10_000),
     });
     if (response.status !== 200) {
-      console.error("Refresh failed", response);
+      console.warn("Refresh failed", response);
       logOut();
       return;
     }
@@ -344,14 +533,14 @@ async function doRefreshJwt(): Promise<void> {
     console.log("Refresh succeeded");
     __jwt = jwt;
   } catch (e) {
-    console.error("Refresh failed", e);
+    console.warn("Refresh failed", e);
     // if server unreachable, just clear jwt
     __jwt = null;
     return;
   }
 }
 
-// Total mapping from the shell's three ticket failures. Kept exhaustive by
+// Total mapping from the shell's six ticket failures. Kept exhaustive by
 // the parameter type: adding a SteamTicketFailure value fails the build here.
 // The `default` is not reachable through that exhaustive type, but the shell
 // lives in a separate repo and the bridge shape reaches us as `unknown` at
@@ -369,6 +558,19 @@ function ticketReason(
       return "steam-wedged";
     case "error":
       return "steam-error";
+    case "needs-account":
+      return "needs-account";
+    case "ticket-rejected":
+      // A completed 401 from the status check. The player's own /auth/steam
+      // call would be refused identically, so this is the same situation the
+      // web path already has a message for.
+      return "steam-ticket-rejected";
+    case "api-unreachable":
+      // The shell could not reach OUR api to ask about the account -- nothing
+      // to do with Steam, and nothing the player does to their account
+      // changes it. "Can't reach OpenFront. Check your connection." is
+      // exactly right, and `network` already says that.
+      return "network";
     default:
       return "steam-error";
   }
@@ -396,7 +598,7 @@ async function doCrazyGamesLogin(token: string): Promise<void> {
     console.log("CrazyGames login succeeded");
     __jwt = jwt;
   } catch (e) {
-    console.error("CrazyGames login failed", e);
+    console.warn("CrazyGames login failed", e);
     __jwt = null;
   }
 }
@@ -447,7 +649,7 @@ async function doSteamLogin(ticket: string): Promise<void> {
     __jwt = jwt;
     setSessionState({ status: "signed-in" });
   } catch (e) {
-    console.error("Steam login failed", e);
+    console.warn("Steam login failed", e);
     __jwt = null;
     setSessionState({ status: "signed-out", reason: "network" });
   }
@@ -481,9 +683,8 @@ export async function reauthAfterCrazyGamesChange(): Promise<UserAuth> {
 // share one exchange rather than race on __jwt. A refresh already in flight
 // is allowed to settle first so its stale result cannot satisfy the retry.
 //
-// There is no automatic retry anywhere: a wedged Steam session does not
-// self-heal (only a Steam restart cleared it in both observed cases), so a
-// silent retry would buy nothing and delay the message.
+// DesktopSessionRecovery also calls this when connectivity returns. Failures
+// remain actionable; there is no timer repeatedly retrying a wedged session.
 let __steamRetryPromise: Promise<UserAuth> | null = null;
 export async function retrySteamSignIn(): Promise<UserAuth> {
   __steamRetryPromise ??= (async () => {
@@ -525,7 +726,12 @@ export async function sendMagicLink(email: string): Promise<boolean> {
       },
       credentials: "include",
       body: JSON.stringify({
-        redirectDomain: window.location.origin,
+        // The domain the server builds the emailed link on, so it has to be a
+        // real website: the recipient opens it in a browser, possibly on
+        // another device. window.location.origin is `app://openfront` in the
+        // shell, which would email a link nothing can open. See
+        // deriveShareOrigin in ClientEnv.ts.
+        redirectDomain: ClientEnv.shareOrigin(),
         email: email,
       }),
     });
@@ -541,7 +747,7 @@ export async function sendMagicLink(email: string): Promise<boolean> {
       return false;
     }
   } catch (error) {
-    console.error("Error sending recovery email:", error);
+    console.warn("Error sending recovery email:", error);
     return false;
   }
 }
