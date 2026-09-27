@@ -6,10 +6,12 @@ import {
   SharedWaterCache,
   SharedWaterCacheSnapshot,
 } from "../execution/nation/SharedWaterCache";
+import { NationExecution } from "../execution/NationExecution";
+import { TribeExecution } from "../execution/TribeExecution";
 import { AbstractGraph } from "../pathfinding/algorithms/AbstractGraph";
 import { WaterPathFinder } from "../pathfinding/PathFinder";
 import { PathFinder } from "../pathfinding/types";
-import { AllPlayersStats, ClientID, Winner } from "../Schemas";
+import { AllPlayersStats, ClientID, GameID, Winner } from "../Schemas";
 import {
   nationData,
   NationSchema,
@@ -713,6 +715,72 @@ export class GameImpl implements Game {
     this.unInitExecs = this.unInitExecs.filter(
       (execution) => execution !== exec,
     );
+  }
+
+  takeoverPlayer(player: Player | PlayerID, localClientID: ClientID): void {
+    const target = typeof player === "string" ? this.player(player) : player;
+
+    // Remove existing AI executions from chosenPlayer if it was previously an AI nation or tribe
+    for (const exec of this.executions()) {
+      if (
+        (exec instanceof NationExecution || exec instanceof TribeExecution) &&
+        exec.playerID() === target.id()
+      ) {
+        this.removeExecution(exec);
+      }
+    }
+
+    // Update chosen player to be the local human
+    const chosenInfo = target.info();
+    const updatedChosenInfo = new PlayerInfo(
+      chosenInfo.name,
+      PlayerType.Human,
+      localClientID,
+      chosenInfo.id,
+      chosenInfo.isLobbyCreator,
+      chosenInfo.clanTag,
+      chosenInfo.friends,
+      chosenInfo.teamIndex,
+      chosenInfo.nationFlag,
+    );
+    target.setPlayerInfo(updatedChosenInfo);
+
+    this._humans = this._humans.filter((h) => h.id !== target.id());
+    this._humans.push(updatedChosenInfo);
+    this._nations = this._nations.filter(
+      (n) => n.playerInfo.id !== target.id(),
+    );
+  }
+
+  convertHumanToNation(player: Player | PlayerID, gameID: GameID): Execution {
+    const target = typeof player === "string" ? this.player(player) : player;
+    const pInfo = target.info();
+    const updatedBotInfo = new PlayerInfo(
+      pInfo.name,
+      PlayerType.Nation,
+      null,
+      pInfo.id,
+      false,
+      pInfo.clanTag,
+      pInfo.friends,
+      pInfo.teamIndex,
+      pInfo.nationFlag,
+    );
+    target.setPlayerInfo(updatedBotInfo);
+
+    this._humans = this._humans.filter((h) => h.id !== target.id());
+    this._nations = this._nations.filter(
+      (n) => n.playerInfo.id !== target.id(),
+    );
+    const spawnTile = target.spawnTile();
+    const spawnCell =
+      spawnTile !== undefined ? this.cell(spawnTile) : undefined;
+    const nation = new Nation(spawnCell, updatedBotInfo);
+    this._nations.push(nation);
+
+    const nationExec = new NationExecution(gameID, nation);
+    this.addExecution(nationExec);
+    return nationExec;
   }
 
   playerView(id: PlayerID): Player {

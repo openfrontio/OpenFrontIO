@@ -159,7 +159,7 @@ describe("SnapshotExtractor", () => {
     expect(player?.type()).toBe(PlayerType.Human);
 
     // Verify AI execution was removed for the chosen player
-    for (const exec of (game as any).executions()) {
+    for (const exec of game.executions()) {
       if (exec instanceof NationExecution) {
         expect(exec.playerID()).not.toBe(player?.id());
       }
@@ -241,7 +241,7 @@ describe("SnapshotExtractor", () => {
 
     let chosenHasTribeExec = false;
     let otherTribesExecCount = 0;
-    for (const exec of (game as any).executions()) {
+    for (const exec of game.executions()) {
       if (exec instanceof NationExecution) {
         expect(exec.playerID()).not.toBe(player?.id());
       }

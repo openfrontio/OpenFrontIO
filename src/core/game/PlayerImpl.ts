@@ -728,6 +728,9 @@ export class PlayerImpl implements Player {
   info(): PlayerInfo {
     return this.playerInfo;
   }
+  setPlayerInfo(info: PlayerInfo): void {
+    this.playerInfo = info;
+  }
 
   isLobbyCreator(): boolean {
     return this.playerInfo.isLobbyCreator;

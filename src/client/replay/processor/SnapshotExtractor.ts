@@ -5,14 +5,10 @@
  */
 
 import { NationExecution } from "../../../core/execution/NationExecution";
-import { TribeExecution } from "../../../core/execution/TribeExecution";
 import {
   Difficulty,
-  Execution,
   GameType,
-  Nation,
   PlayerID,
-  PlayerInfo,
   PlayerType,
 } from "../../../core/game/Game";
 import { GameMapLoader } from "../../../core/game/GameMapLoader";
@@ -20,13 +16,6 @@ import { createGameRunner } from "../../../core/GameRunner";
 import { ClientID, GameRecord, GameStartInfo } from "../../../core/Schemas";
 import { decompressGameRecord, generateID } from "../../../core/Util";
 import { wireGameStartInfo } from "./ReplayProcessor";
-
-interface InternalGame {
-  executions(): Execution[];
-  removeExecution(exec: Execution): void;
-  _humans: PlayerInfo[];
-  _nations: Nation[];
-}
 
 export interface ExtractSnapshotOptions {
   record: GameRecord;
@@ -91,44 +80,10 @@ export async function extractSnapshotFromRecord(
     throw new Error(`Player with ID ${opts.chosenPlayerID} not found`);
   }
 
-  const gameImpl = game as unknown as InternalGame;
+  const originalClientID = chosenPlayer.clientID();
 
-  // Remove existing AI executions from chosenPlayer if it was previously an AI nation or tribe
-  for (const exec of gameImpl.executions()) {
-    if (
-      exec instanceof NationExecution &&
-      exec.playerID() === chosenPlayer.id()
-    ) {
-      gameImpl.removeExecution(exec);
-    } else if (
-      exec instanceof TribeExecution &&
-      exec.playerID() === chosenPlayer.id()
-    ) {
-      gameImpl.removeExecution(exec);
-    }
-  }
-
-  // Update chosen player to be the local human
-  const chosenInfo = chosenPlayer.info();
-  const updatedChosenInfo = new PlayerInfo(
-    chosenInfo.name,
-    PlayerType.Human,
-    opts.localClientID,
-    chosenInfo.id,
-    chosenInfo.isLobbyCreator,
-    chosenInfo.clanTag,
-    chosenInfo.friends,
-    chosenInfo.teamIndex,
-    chosenInfo.nationFlag,
-  );
-  (chosenPlayer as unknown as { playerInfo: PlayerInfo }).playerInfo =
-    updatedChosenInfo;
-
-  gameImpl._humans = gameImpl._humans.filter((h) => h.id !== chosenPlayer.id());
-  gameImpl._humans.push(updatedChosenInfo);
-  gameImpl._nations = gameImpl._nations.filter(
-    (n) => n.playerInfo.id !== chosenPlayer.id(),
-  );
+  // Take over the chosen player as the local human
+  game.takeoverPlayer(chosenPlayer, opts.localClientID);
 
   // Convert other players to Nation bots
   for (const p of game.allPlayers()) {
@@ -136,31 +91,7 @@ export async function extractSnapshotFromRecord(
     if (!game.inSpawnPhase() && !p.isAlive()) continue;
 
     if (p.type() === PlayerType.Human) {
-      const pInfo = p.info();
-      const updatedBotInfo = new PlayerInfo(
-        pInfo.name,
-        PlayerType.Nation,
-        null,
-        pInfo.id,
-        false,
-        pInfo.clanTag,
-        pInfo.friends,
-        pInfo.teamIndex,
-        pInfo.nationFlag,
-      );
-      (p as unknown as { playerInfo: PlayerInfo }).playerInfo = updatedBotInfo;
-
-      gameImpl._humans = gameImpl._humans.filter((h) => h.id !== p.id());
-      const spawnTile = p.spawnTile();
-      const spawnCell =
-        spawnTile !== undefined ? game.cell(spawnTile) : undefined;
-      const nation = new Nation(spawnCell, updatedBotInfo);
-      if (!gameImpl._nations.some((n) => n.playerInfo.id === p.id())) {
-        gameImpl._nations.push(nation);
-      }
-
-      const nationExec = new NationExecution(gameStart.gameID, nation);
-      game.addExecution(nationExec);
+      game.convertHumanToNation(p, gameStart.gameID);
     }
   }
 
@@ -171,7 +102,7 @@ export async function extractSnapshotFromRecord(
   };
   if (opts.difficulty !== undefined) {
     config.difficulty = opts.difficulty;
-    for (const exec of gameImpl.executions()) {
+    for (const exec of game.executions()) {
       if (
         exec instanceof NationExecution &&
         exec.isActive() &&
@@ -185,7 +116,6 @@ export async function extractSnapshotFromRecord(
 
   const snapshot = runner.snapshot();
 
-  const originalClientID = chosenInfo.clientID;
   const originalCosmetics =
     (originalClientID !== null
       ? gameStart.players.find((p) => p.clientID === originalClientID)

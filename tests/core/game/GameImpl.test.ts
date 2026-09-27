@@ -1,6 +1,8 @@
 import { GameID } from "../../../src/core/Schemas";
 import { AttackExecution } from "../../../src/core/execution/AttackExecution";
+import { NationExecution } from "../../../src/core/execution/NationExecution";
 import { SpawnExecution } from "../../../src/core/execution/SpawnExecution";
+import { TribeExecution } from "../../../src/core/execution/TribeExecution";
 //import { TransportShipExecution } from "../../../src/core/execution/TransportShipExecution";
 import { AllianceRequestExecution } from "../../../src/core/execution/alliance/AllianceRequestExecution";
 import {
@@ -10,6 +12,7 @@ import {
   PlayerInfo,
   PlayerType,
 } from "../../../src/core/game/Game";
+import { GameImpl } from "../../../src/core/game/GameImpl";
 import { TileRef } from "../../../src/core/game/GameMap";
 import { GameUpdateType } from "../../../src/core/game/GameUpdates";
 import { setup } from "../../util/Setup";
@@ -168,5 +171,72 @@ describe("GameImpl", () => {
     expect(singleplayerGame.player(lateHumanInfo.id).hasSpawned()).toBe(true);
     expect(spawnUpdates[GameUpdateType.SpawnPhaseEnd]).toHaveLength(1);
     expect(singleplayerGame.isSpawnImmunityActive()).toBe(true);
+  });
+
+  test("convertHumanToNation converts human player to nation bot and adds NationExecution", () => {
+    expect(defender.type()).toBe(PlayerType.Human);
+    const nationExec = game.convertHumanToNation(defender, gameID);
+
+    expect(nationExec).toBeInstanceOf(NationExecution);
+    expect(defender.type()).toBe(PlayerType.Nation);
+    expect(defender.clientID()).toBeNull();
+    expect(defender.isLobbyCreator()).toBe(false);
+
+    // Verify executions list includes the new NationExecution
+    expect(game.executions()).toContain(nationExec);
+
+    // Verify registry updates
+    const nationEntry = game
+      .nations()
+      .find((n) => n.playerInfo.id === defender.id());
+    expect(nationEntry).toBeDefined();
+    expect(nationEntry?.playerInfo.playerType).toBe(PlayerType.Nation);
+
+    // Verify player info lookup reflects the bot
+    const info = (game as GameImpl).findPlayerInfo(defender.id());
+    expect(info?.playerType).toBe(PlayerType.Nation);
+  });
+
+  test("takeoverPlayer converts bot to human, assigns clientID, updates registries and removes bot executions", () => {
+    // Convert defender to nation first
+    const nationExec = game.convertHumanToNation(defender, gameID);
+    expect(game.executions()).toContain(nationExec);
+    expect(defender.type()).toBe(PlayerType.Nation);
+
+    // Also add a TribeExecution to verify tribe executions are removed as well
+    const tribeExec = new TribeExecution(defender);
+    game.addExecution(tribeExec);
+    expect(game.executions()).toContain(tribeExec);
+
+    // Now takeover defender with a new client ID
+    game.takeoverPlayer(defender, "new_client_123");
+
+    expect(defender.type()).toBe(PlayerType.Human);
+    expect(defender.clientID()).toBe("new_client_123");
+    expect(defender.info().clientID).toBe("new_client_123");
+    expect(defender.info().playerType).toBe(PlayerType.Human);
+
+    // Verify AI executions were removed
+    expect(game.executions()).not.toContain(nationExec);
+    expect(game.executions()).not.toContain(tribeExec);
+
+    // Verify nations registry no longer includes the taken-over player
+    expect(
+      game.nations().find((n) => n.playerInfo.id === defender.id()),
+    ).toBeUndefined();
+
+    // Verify player info lookup reflects human
+    const info = (game as GameImpl).findPlayerInfo(defender.id());
+    expect(info?.playerType).toBe(PlayerType.Human);
+    expect(info?.clientID).toBe("new_client_123");
+  });
+
+  test("takeoverPlayer rebinds existing human player to new client ID", () => {
+    expect(attacker.type()).toBe(PlayerType.Human);
+    game.takeoverPlayer(attacker.id(), "attacker_new_client");
+
+    expect(attacker.clientID()).toBe("attacker_new_client");
+    expect(attacker.info().clientID).toBe("attacker_new_client");
+    expect(attacker.type()).toBe(PlayerType.Human);
   });
 });
