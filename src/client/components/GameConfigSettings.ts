@@ -363,20 +363,22 @@ export class GameConfigSettings extends LitElement {
   }
 
   private renderUnitTypeOptions(disabledUnits: UnitType[]): TemplateResult[] {
-    return Array.from(UnitTranslations.entries()).map(([type, translationKey]) => {
-      const isEnabled = !disabledUnits.includes(type);
-      return html`
-        <button
-          class="${cardClass(isEnabled, "p-4 text-center")}"
-          aria-pressed=${isEnabled}
-          @click=${() => this.handleUnitToggle(type, isEnabled)}
-        >
-          <span class="${CARD_LABEL_CLASS} ${stateTextClass(isEnabled)}">
-            ${translateText(translationKey)}
-          </span>
-        </button>
-      `;
-    });
+    return Array.from(UnitTranslations.entries()).map(
+      ([type, translationKey]) => {
+        const isEnabled = !disabledUnits.includes(type);
+        return html`
+          <button
+            class="${cardClass(isEnabled, "p-4 text-center")}"
+            aria-pressed=${isEnabled}
+            @click=${() => this.handleUnitToggle(type, isEnabled)}
+          >
+            <span class="${CARD_LABEL_CLASS} ${stateTextClass(isEnabled)}">
+              ${translateText(translationKey)}
+            </span>
+          </button>
+        `;
+      },
+    );
   }
 
   private renderMapSearchInput(): TemplateResult {

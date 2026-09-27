@@ -37,9 +37,9 @@ vi.mock("howler", () => ({
   },
 }));
 
+import { PublicGameInfo } from "src/core/Schemas";
 import { JoinLobbyModal } from "../../src/client/JoinLobbyModal";
 import { GameMode, GameType, UnitType } from "../../src/core/game/Game";
-import { PublicGameInfo } from "src/core/Schemas";
 import { UserSettings } from "../../src/core/game/UserSettings";
 
 function resetUserSettingsState() {
