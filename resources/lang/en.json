@@ -1556,7 +1556,10 @@
     "explanation": "To ensure fair play, only one active game tab is permitted at a time.",
     "please_wait": "Please wait",
     "seconds": "seconds",
-    "warning": "Vigilant Mode Warning"
+    "warning": "Vigilant Mode Warning",
+    "ip": "IP:",
+    "device_fingerprint": "Device Fingerprint:",
+    "reported": "Reported:"
   },
   "nav_account_menu": {
     "account_settings": "Account settings",
@@ -2410,5 +2413,8 @@
     "you_won": "You Won!",
     "your_team": "Your team won!",
     "youtube_tutorial": "Need some help?"
+  },
+  "lang_selector": {
+    "change_language": "Change Language"
   }
 }

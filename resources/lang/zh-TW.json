@@ -1,10 +1,4 @@
 {
-  "lang": {
-    "en": "Chinese Traditional",
-    "lang_code": "zh-TW",
-    "native": "繁體中文",
-    "svg": "tw"
-  },
   "account_modal": {
     "cancel_subscription": "取消",
     "cancel_subscription_confirm": "您是否確認取消訂閱？訂閱在當前計費周期中依然有效。",
@@ -44,6 +38,16 @@
     "games_type_singleplayer": "單人模式",
     "get_magic_link": "獲取魔法連結",
     "google_alt": "Google",
+    "identity_token_copied": "已複製",
+    "identity_token_copy": "複製",
+    "identity_token_desc": "向統計網站證明哪個 OpenFront 帳號是您的。選擇網站、產生權杖，然後貼到該網站。",
+    "identity_token_failed": "無法產生權杖，請再試一次。",
+    "identity_token_generate": "產生權杖",
+    "identity_token_logged_out": "您的工作階段已過期，請重新登入。",
+    "identity_token_note": "僅在 {site} 有效，10 分鐘後過期。請只貼到 {site}。",
+    "identity_token_rate_limited": "請求過於頻繁，請等待一分鐘後再試。",
+    "identity_token_site": "網站",
+    "identity_token_title": "連結第三方網站",
     "link_discord": "綁定 Discord 帳號",
     "link_existing_account": "綁定現有帳號",
     "link_google": "綁定 Google 帳號",
@@ -83,9 +87,9 @@
     "reward_daily": "每日訂閱獎勵",
     "reward_signup_bonus": "訂閱獎勵",
     "sign_in_desc": "登入以保存您的遊戲生涯紀錄和進度",
-    "sub_granted_ends_on": "免費體驗將在 {date} 結束",
-    "sub_granted_from_purchase": "隨您的 Steam 付款免費附贈。這不會包含在付款內，也不會續訂，所以不用管理或取消。",
+    "sub_granted_from_purchase": "隨您的 Steam 購買附贈，已在 Steam 一次性付費。不會扣款也不會續訂，因此無需管理或取消。結束後您仍可免費保留完整遊戲，只有 {tier} 特權會停止。",
     "sub_granted_indefinite": "免費體驗已套用至您的帳號。這不會包含在付款內，所以所以不用管理或取消。",
+    "sub_granted_perks_end_on": "{tier} 特權將於 {date} 結束",
     "sub_price_monthly": "{price}/月",
     "sub_renews_on": "將於 {date} 續訂",
     "sub_status_active": "啟用中",
@@ -468,6 +472,7 @@
     "no_heartbeat": "伺服器已停止接收您的請求。",
     "not_allowlisted": "您不在該大廳的允許列表中。",
     "not_trusted": "這個大廳只允許信任帳號加入。您仍可加入其他大廳。",
+    "pool_redirect": "該房間已將您轉移到另一個房間，請重試。",
     "protocol_error": "連線資料損壞。",
     "ranked_limit_reached": "您已用完今日的免費排位賽額度。",
     "turnstile_failed": "機器人帳號驗證失敗。請刷新頁面後重試。",
@@ -528,6 +533,7 @@
   },
   "cosmetics": {
     "adfree": "永久移除廣告！",
+    "ai_label": "由 AI 協助製作",
     "artist_label": "作者：",
     "color_label": "顏色：",
     "common": "普通",
@@ -537,6 +543,7 @@
     "legendary": "傳說",
     "pack_includes": "包含：",
     "pack_more_items": "+{count} 更多",
+    "pattern_preview": "皮膚預覽",
     "per_day": "/天",
     "public_lobbies": "公開大廳",
     "public_lobbies_info": "創建任何人都可加入的公開自訂大廳。",
@@ -678,6 +685,16 @@
     "easy": "簡單",
     "hard": "困難",
     "impossible": "地獄",
+    "info": "{smarts}，{troops}",
+    "info_label": "顯示難度詳細資訊",
+    "info_note_hard": "（此難度用於公開的 HvN 遊戲）",
+    "info_note_medium": "（此難度用於公開的混戰遊戲）",
+    "info_smarts_easy": "笨拙",
+    "info_smarts_hard": "聰明",
+    "info_smarts_impossible": "非常聰明",
+    "info_smarts_medium": "普通",
+    "info_troops": "為人類軍隊上限的 {percent}%",
+    "info_troops_same": "軍隊上限與人類相同",
     "medium": "適中"
   },
   "discord_user_header": {
@@ -727,6 +744,9 @@
     "crashed": "遊戲崩潰！",
     "desync_notice": "你與其他玩家失去同步。你看到的可能與其他玩家不同。",
     "login_failed": "登入失敗，請稍後再試。",
+    "login_token_consumed": "此登入連結已被使用。您可能已經登入了——請查看其他分頁。",
+    "login_token_expired": "此登入連結已過期。請重新申請登入連結。",
+    "login_token_invalid": "此登入連結無效或已過期。請重新申請登入連結。",
     "paste_discord": "請在 Discord 中貼上以下錯誤報告：",
     "spawn_failed": {
       "description": "自動選擇出生點失敗。您無法參與這場遊戲。",
@@ -781,6 +801,15 @@
     "live": "即時",
     "minimize": "最小化",
     "open_on_twitch": "在 Twitch 上開啟 {channel}"
+  },
+  "free_play": {
+    "account": "您的帳號、統計、好友和裝飾品",
+    "ad_free_steam": "Steam 版永遠沒有廣告",
+    "after_grant_heading": "結束後，您仍然享有",
+    "custom_lobbies": "與好友遊玩私人自訂房間",
+    "free_heading": "免費遊玩包含",
+    "full_game": "完整遊戲：所有地圖和模式，連線和單人",
+    "ranked": "排位賽（有每日免費場次限制）"
   },
   "friends": {
     "accept": "接受",
@@ -1126,6 +1155,11 @@
     "host_badge": "主持人",
     "host_cheats": "房主作弊模式",
     "leave_confirmation": "您確定要離開大廳嗎？",
+    "list_lobby_body": "您的房間將出現在公開房間列表中。倒數計時結束或房間滿員時自動開始。公開後設定將無法再更改。",
+    "list_lobby_confirm": "公開房間",
+    "list_lobby_max_players": "最大玩家數",
+    "list_lobby_start_minutes": "開始倒數（分鐘）",
+    "list_lobby_title": "將房間公開",
     "mode": "模式",
     "nation_player": "國家",
     "nation_players": "國家",
@@ -1134,7 +1168,17 @@
     "player_whitelist": "玩家白名單（公開 ID）",
     "player_whitelist_placeholder": "以逗號分隔",
     "players": "玩家",
+    "queue": "排隊",
+    "queue_confirm": "付費並排隊",
+    "queue_confirm_body": "支付 {price} 鈽將此房間送入公共佇列？它將在正在倒數的房間之後立即開始。",
+    "queue_confirm_title": "送入公共佇列？",
+    "queue_failed": "房間排隊失敗。請重試；不會被重複扣費。",
+    "queue_item": "公共佇列中的一個位置",
+    "queue_tooltip": "將此房間放入公共特殊佇列，緊排在即將開始的房間之後",
+    "queued": "已排隊",
+    "queued_waiting": "在公共佇列中",
     "remove_player": "刪除 {username}",
+    "settings_locked_listed": "此房間已公開，設定無法再更改。",
     "spectator": "旁觀者",
     "spectators": "旁觀者",
     "start_delay": "啟動延遲（秒）",
@@ -1174,6 +1218,7 @@
     "selected_cosmetic": "已選擇 {name}",
     "selected_cosmetic_variant": "{name}（{variant}）",
     "showing_effects": "裝備中的特效：{count} 個",
+    "sign_in_for_cosmetics": "登入或建立帳號即可使用您的皮膚、皇冠和特效。",
     "title": "物品庫",
     "unequip": "卸下",
     "unequip_all": "全部卸下",
@@ -1198,6 +1243,12 @@
     "host_left": "房主已離開房間。",
     "lobby_creator": "已被房主踢出房間",
     "match_cancelled": "對局已取消：玩家連接失敗。您沒有丟失任何 ELO 等級分。"
+  },
+  "lang": {
+    "en": "Chinese Traditional",
+    "lang_code": "zh-TW",
+    "native": "繁體中文",
+    "svg": "tw"
   },
   "leaderboard": {
     "allies": "盟友",
@@ -1303,6 +1354,7 @@
     "arctic": "北極",
     "asia": "亞洲",
     "australia": "澳大利亞",
+    "babelmandebstrait": "曼德海峽",
     "baikal": "貝加爾湖",
     "baikalnukewars": "貝加爾湖（核戰）",
     "bajacalifornia": "下加利福尼亞",
@@ -1317,6 +1369,7 @@
     "branchingpaths": "岔路",
     "britannia": "不列顛尼亞",
     "britanniaclassic": "不列顛尼亞（經典）",
+    "canaryislands": "加那利群島",
     "capecod": "科德角",
     "caribbean": "加勒比海",
     "caspiansea": "裏海",
@@ -1354,6 +1407,7 @@
     "hawaii": "夏威夷",
     "hecatestrait": "赫卡特海峽",
     "hongkong": "香港",
+    "hornofafrica": "非洲之角",
     "iceland": "冰島",
     "indiansubcontinent": "印度次大陸",
     "irishsea": "愛爾蘭海",
@@ -1368,6 +1422,7 @@
     "lisbon": "里斯本",
     "losangeles": "洛杉磯",
     "luna": "月球",
+    "madagascar": "馬達加斯加",
     "manicouagan": "馬尼夸根隕石坑",
     "map": "地圖",
     "marenostrum": "我們的海",
@@ -1379,6 +1434,7 @@
     "montreal": "蒙特婁",
     "morethanluck": "幸運五葉草",
     "newyorkcity": "紐約市",
+    "newzealand": "紐西蘭",
     "niledelta": "尼羅河三角洲",
     "northamerica": "北美洲",
     "northwestpassage": "西北航道",
@@ -1387,8 +1443,10 @@
     "pangaea": "盤古大陸",
     "passage": "航道",
     "pluto": "冥王星",
+    "pulicatlake": "帕利卡特湖",
     "qingchina": "清朝中國",
     "random": "隨機",
+    "riodejaneiro": "里約熱內盧",
     "russia": "俄羅斯",
     "sanfrancisco": "舊金山",
     "scandinavia": "斯堪地那維亞半島",
@@ -1498,7 +1556,10 @@
     "explanation": "為確保遊戲公平，玩家只能同一時間參加一場對局。",
     "please_wait": "請稍候",
     "seconds": "秒",
-    "warning": "提示模式警告"
+    "warning": "提示模式警告",
+    "ip": "IP：",
+    "device_fingerprint": "裝置指紋：",
+    "reported": "已回報："
   },
   "nav_account_menu": {
     "account_settings": "帳號設定",
@@ -1697,6 +1758,7 @@
     "listing_full": "公開大廳列表已滿。請稍後再試。",
     "listing_host_cheats_enabled": "關閉作弊後才能公開您的大廳。",
     "listing_limit_reached": "您已經擁有一個公開的大廳。",
+    "listing_max_players_too_low": "最大玩家數必須高於房間內已有的玩家數量。",
     "listing_requires_subscription": "您必須擁有有效的訂閱才能公開您的大廳。",
     "listing_whitelist_enabled": "取消白名單後才能公開您的大廳。",
     "no_open_lobbies": "目前沒有公開大廳",
@@ -1734,6 +1796,9 @@
   },
   "public_lobby": {
     "connecting": "正在連接大廳……",
+    "custom": "自訂",
+    "custom_default_settings": "標準設定",
+    "custom_tooltip_title": "這是玩家建立的房間",
     "invite_friends": "邀請朋友",
     "join_timeout": "您未能及時加入遊戲。",
     "notify_armed": "啟用通知：當您的遊戲開始時將會發出聲音提示",
@@ -1813,6 +1878,12 @@
   "spawn_timer": {
     "team_percent_tooltip": "{team}：{percent}"
   },
+  "steam_grant": {
+    "ended_body": "隨 Steam 購買附贈的一個月 {tier} 已結束。沒有也不會產生任何扣費。您仍可免費保留完整遊戲：所有地圖和模式、連線、有每日免費上限的排位賽，以及與好友的私人自訂房間。Steam 版繼續無廣告。如果想恢復 {tier} 特權，隨時可以在商店重新訂閱。",
+    "ended_heading": "您的 Steam 附贈月已結束",
+    "welcome_body": "您的 Steam 購買包含 {tier}，有效期至 {date}。您已在 Steam 一次性付費：不會扣款，也不會續訂。結束後您仍可保留完整遊戲和所有地圖、模式，Steam 版也無廣告，只有 {tier} 特權會停止。",
+    "welcome_heading": "隨您的 Steam 購買附贈"
+  },
   "steam_handoff": {
     "launched": "在 Steam 程式中開啟這個大廳。如果沒有反應，請確保 Steam 正在運行。",
     "open_in_steam": "在 Steam 中開啟",
@@ -1860,10 +1931,8 @@
     "default_name": "Steam 玩家"
   },
   "steam_wishlist": {
-    "cta": "立即加入願望清單",
-    "on_steam": "在 Steam 上開啟 OpenFront",
-    "release": "於 2026 年第三季度發布",
-    "title": "將 OpenFront 加入 Steam 願望清單！"
+    "buy_cta": "在 Steam 上購買",
+    "buy_on_steam": "在 Steam 上購買 OpenFront"
   },
   "store": {
     "already_owned": "您已經擁有該物品。沒有收取費用。",
@@ -2232,6 +2301,8 @@
     "left_click_label": "點擊滑鼠左鍵打開選單",
     "lobby_id_visibility_desc": "在創建私人大廳時隱藏大廳 ID",
     "lobby_id_visibility_label": "隱藏大廳 ID",
+    "lobby_start_alerts_desc": "預設為每個房間和排位賽播放開始提示音，並在允許時顯示桌面通知。可以用房間鈴鐺個別覆蓋。",
+    "lobby_start_alerts_label": "房間開始提醒",
     "menu_shortcuts": "選單快捷方式",
     "move_down": "向下移動相機",
     "move_down_desc": "將相機向下移動",
@@ -2300,6 +2371,8 @@
     "enter_username": "輸入您的使用者名稱",
     "invalid_chars": "使用者名稱只能包含字母、數字、空格、底線、連字號、和逗號。",
     "lapse_notice": "您的訂閱已結束，您不再以 \"{name}\" 遊玩。其將會保留給您直到 {date}──請在此之前重新訂閱以保留，否則其他玩家將可以使用。",
+    "lapse_notice_after_grant": "隨 Steam 購買附贈的一個月高級權益已結束，因此您不再以「{name}」遊玩。您仍可免費保留完整遊戲，只有高級特權停止。該名稱為您保留至 {date}——在此之前訂閱即可保留。之後任何人都可以佔用它。",
+    "lapse_notice_after_grant_at_risk": "隨 Steam 購買附贈的一個月高級權益已結束，因此您不再以「{name}」遊玩，該名稱也不再保留。您仍可免費保留完整遊戲。其他玩家隨時可能搶走該名稱——立即訂閱即可保留。",
     "lapse_notice_at_risk": "您不再以 \"{name}\" 遊玩，其以不再被保留。其他玩家隨時可以使用該名稱──立即重新訂閱以保留。",
     "not_string": "使用者名稱必須是字串。",
     "tag": "標籤",
@@ -2340,5 +2413,8 @@
     "you_won": "你獲勝了！",
     "your_team": "你的隊伍獲勝了！",
     "youtube_tutorial": "需要幫助嗎？"
+  },
+  "lang_selector": {
+    "change_language": "變更語言"
   }
 }

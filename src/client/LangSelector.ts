@@ -4,7 +4,7 @@ import { assetUrl } from "../core/AssetUrls";
 import { desktopSteamLocale } from "./DesktopShell";
 import "./LanguageModal";
 import { LanguageModal } from "./LanguageModal";
-import { formatDebugTranslation } from "./Utils";
+import { formatDebugTranslation, translateText } from "./Utils";
 
 import en from "../../resources/lang/en.json";
 import metadata from "../../resources/lang/metadata.json";
@@ -405,7 +405,7 @@ export class LangSelector extends LitElement {
     return html`
       <button
         id="lang-selector"
-        title="Change Language"
+        title=${translateText("lang_selector.change_language")}
         @click=${this.openModal}
         class="border-none bg-none cursor-pointer p-0 flex items-center justify-center transition-transform duration-200 hover:scale-[1.1] active:scale-[0.9] opacity-60 hover:opacity-100 w-[40px] h-[40px] lg:w-[56px] lg:h-[56px]"
       >
