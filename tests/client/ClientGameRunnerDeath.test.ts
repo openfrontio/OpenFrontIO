@@ -207,4 +207,48 @@ describe("ClientGameRunner death detection and save clearing", () => {
       50,
     );
   });
+
+  it("clears snapshotInFlight when worker.snapshot() hangs and times out", async () => {
+    vi.useFakeTimers();
+    try {
+      mockWorker.snapshot = vi.fn().mockReturnValue(new Promise(() => {}));
+      const runner = createRunner(true);
+      runner.start();
+
+      // Tick 50 triggers auto-snapshot
+      workerCallback({
+        tick: 50,
+        updates: { [GameUpdateType.Hash]: [] },
+      });
+
+      expect(mockWorker.snapshot).toHaveBeenCalledTimes(1);
+
+      // Fast-forward past the 5000ms timeout
+      await vi.advanceTimersByTimeAsync(5000);
+
+      // Now mockWorker.snapshot resolves normally for the next attempt
+      mockWorker.snapshot = vi.fn().mockResolvedValue({
+        bytes: new Uint8Array([1, 2, 3]),
+        snapshot: new Uint8Array([1, 2, 3]),
+        tick: 100,
+      });
+
+      // Tick 100 triggers auto-snapshot again
+      workerCallback({
+        tick: 100,
+        updates: { [GameUpdateType.Hash]: [] },
+      });
+
+      await vi.waitFor(() => {
+        expect(mockWorker.snapshot).toHaveBeenCalledTimes(1);
+        expect(saveSoloSnapshotMock).toHaveBeenCalledWith(
+          expect.anything(),
+          expect.anything(),
+          100,
+        );
+      });
+    } finally {
+      vi.useRealTimers();
+    }
+  });
 });

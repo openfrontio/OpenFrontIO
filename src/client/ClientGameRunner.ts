@@ -1099,8 +1099,14 @@ export class ClientGameRunner {
         gu.tick % 50 === 0
       ) {
         this.snapshotInFlight = true;
-        this.worker
-          .snapshot()
+        let timer: ReturnType<typeof setTimeout> | undefined;
+        const timeoutPromise = new Promise<never>((_, reject) => {
+          timer = setTimeout(
+            () => reject(new Error("Worker snapshot timed out")),
+            5000,
+          );
+        });
+        Promise.race([this.worker.snapshot(), timeoutPromise])
           .then(async ({ bytes, tick }) => {
             const compressed = await compressSnapshot(bytes);
             return { compressed, snapshotTick: tick };
@@ -1123,6 +1129,9 @@ export class ClientGameRunner {
             console.warn("Auto-snapshot failed:", err);
           })
           .finally(() => {
+            if (timer !== undefined) {
+              clearTimeout(timer);
+            }
             this.snapshotInFlight = false;
           });
       }

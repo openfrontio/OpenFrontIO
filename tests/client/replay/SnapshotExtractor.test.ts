@@ -112,14 +112,31 @@ describe("SnapshotExtractor", () => {
       ticks: 30,
     });
 
-    // Find the name of one of the nations
-    const nationName = record.info.players[1]?.username ?? "Oman";
+    // Run to target tick to find a real nation player
+    const preRunner = await createGameRunner(
+      record.info,
+      undefined,
+      mapLoader,
+      () => {},
+    );
+    const turns = decompressGameRecord(record).turns;
+    for (let t = 0; t < 15; t++) {
+      preRunner.addTurn(turns[t]);
+      preRunner.executeNextTick();
+    }
+    const preGame = preRunner.game;
+    const nationPlayer = preGame
+      .players()
+      .find((p) => p.type() === PlayerType.Nation);
+    expect(nationPlayer).toBeDefined();
+    const nationID = nationPlayer!.id();
+    const nationName = nationPlayer!.name();
 
     // Extract snapshot at tick 15, taking over as the nation
     const result = await extractSnapshotFromRecord({
       record,
       targetTick: 15,
-      chosenPlayerID: nationName,
+      chosenPlayerID: nationID,
       localClientID: "MYCLIENT2",
       mapLoader,
     });
@@ -137,6 +154,7 @@ describe("SnapshotExtractor", () => {
 
     const player = game.playerByClientID("MYCLIENT2");
     expect(player).not.toBeNull();
+    expect(player?.id()).toBe(nationID);
     expect(player?.name()).toBe(nationName);
     expect(player?.type()).toBe(PlayerType.Human);
 
