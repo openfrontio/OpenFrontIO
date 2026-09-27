@@ -989,6 +989,14 @@ export class ClientGameRunner {
     private metrics: GameMetrics | null = null,
   ) {
     this.lastMessageTime = Date.now();
+    if (this.lobby.resumeSnapshot) {
+      try {
+        const header = readSnapshotHeader(this.lobby.resumeSnapshot);
+        this.turnsSeen = header.tick;
+      } catch (e) {
+        console.warn("Failed to read snapshot header for turnsSeen", e);
+      }
+    }
     this.eventBus.on(SendWinnerEvent, () => {
       this.hasWinner = true;
       if (this.transport.isLocal && !this.lobby.gameRecord) {
