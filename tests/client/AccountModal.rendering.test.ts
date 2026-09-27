@@ -72,7 +72,7 @@ function makeUserMe(
       adfree: false,
       unlimitedRanked: false,
       canCreatePublicLobbies: false,
-      achievements: { singleplayerMap: [] },
+      achievements: { singleplayerMap: [], player: [] },
       friends: [],
       subscription: null,
       currency: { soft: 100, hard: 10 },
@@ -324,12 +324,25 @@ describe("AccountModal — rendering", () => {
       expect(googleLogin).toHaveBeenCalledTimes(1);
     });
 
+    it("hides Clear Session on Steam, where the ticket restores the session", async () => {
+      (window as unknown as { openfrontDesktop: unknown }).openfrontDesktop = {
+        steam: {},
+      };
+      modal.open();
+      await flushOpen();
+
+      const text = modal.textContent ?? "";
+      expect(text).toContain("account_modal.desktop_login_discord");
+      expect(text).not.toContain("account_modal.clear_session");
+    });
+
     it("keeps the web captions on plain web", async () => {
       modal.open();
       await flushOpen();
 
       const text = modal.textContent ?? "";
       expect(text).toContain("main.login_discord");
+      expect(text).toContain("account_modal.clear_session");
       expect(text).toContain("main.login_google");
       expect(text).not.toContain("account_modal.desktop_login_discord");
       expect(text).not.toContain("account_modal.desktop_sign_in_desc");

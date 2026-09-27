@@ -996,18 +996,30 @@ describe("PublicCreatorSchema", () => {
 });
 
 describe("PutCreatorResponseSchema", () => {
-  it("parses the bind confirmation (code + displayName only)", () => {
+  it("parses the API's bind confirmation envelope", () => {
     const result = PutCreatorResponseSchema.safeParse({
-      code: "LEWIS",
-      displayName: "Lewis",
+      ok: true,
+      creator: { code: "LEWIS", displayName: "Lewis" },
     });
     expect(result.success).toBe(true);
   });
 
+  it("rejects the un-enveloped pair the API never sends", () => {
+    expect(
+      PutCreatorResponseSchema.safeParse({
+        code: "LEWIS",
+        displayName: "Lewis",
+      }).success,
+    ).toBe(false);
+  });
+
   it("rejects a missing displayName", () => {
-    expect(PutCreatorResponseSchema.safeParse({ code: "LEWIS" }).success).toBe(
-      false,
-    );
+    expect(
+      PutCreatorResponseSchema.safeParse({
+        ok: true,
+        creator: { code: "LEWIS" },
+      }).success,
+    ).toBe(false);
   });
 });
 
@@ -1359,5 +1371,22 @@ describe("PostTribeBoostResponseSchema", () => {
         pricePaid: "100",
       }).success,
     ).toBe(false);
+  });
+});
+
+describe("UserMeResponseSchema player achievements", () => {
+  const achievements = UserMeResponseSchema.shape.player.shape.achievements;
+
+  it("keeps the server-awarded player achievements array", () => {
+    const parsed = achievements.parse({
+      singleplayerMap: [],
+      player: [{ achievement: "win_ffa", game: "abc123", achievedAt: null }],
+    });
+    expect(parsed.player[0].achievement).toBe("win_ffa");
+  });
+
+  it("defaults player to an empty array when the server omits it", () => {
+    const parsed = achievements.parse({ singleplayerMap: [] });
+    expect(parsed.player).toEqual([]);
   });
 });

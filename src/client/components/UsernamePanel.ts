@@ -14,7 +14,7 @@ import { updateUsername, UpdateUsernameResult } from "../Api";
 import { showInGameAlert, showInGameConfirm } from "../InGameModal";
 import { sanitizeAccountPersona } from "../PlayerName";
 import { steamSDK } from "../SteamSDK";
-import { translateText } from "../Utils";
+import { showToastAfterReload, translateText } from "../Utils";
 import "./baseComponents/Button";
 import { usernameText } from "./ui/UsernameText";
 
@@ -175,13 +175,20 @@ export class UsernamePanel extends LitElement {
     if (result.ok) {
       // Against an API that predates the strict rule, a held bare name still
       // arrives as a 200 that already spent the rename. Say so before the
-      // reload; otherwise the modal reopens on a name they never chose.
+      // reload; otherwise they land on a name they never chose.
       if (!chosenSuffix) {
         await this.warnBareClaimUnavailable(name, result.data);
       }
-      // Reload so every consumer starts from a fresh /users/@me; this modal
-      // reopens via #modal=change-username showing the new name. Keep the
-      // form locked (busy) while the reload happens.
+      // Reload so every consumer starts from a fresh /users/@me. The hash goes
+      // first: #modal=change-username survives a reload and would reopen this
+      // modal on a rename that is already done. Keep the form locked (busy)
+      // while the reload happens.
+      showToastAfterReload(translateText("account_modal.username_saved"));
+      history.replaceState(
+        history.state,
+        "",
+        window.location.pathname + window.location.search,
+      );
       window.location.reload();
       return;
     }

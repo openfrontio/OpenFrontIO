@@ -186,4 +186,29 @@ describe("WinModal pattern promotion", () => {
     expect(modal.querySelectorAll(legacyButtonTag)).toHaveLength(0);
     expect(modal.querySelectorAll(legacyContainerTag)).toHaveLength(0);
   });
+
+  it("drops the ad-free pitch in the desktop shell, which has no ads", async () => {
+    const render = async () => {
+      modal = document.createElement("win-modal") as WinModal;
+      Object.assign(modal as unknown as { rand: number; isWin: boolean }, {
+        rand: 0.75,
+        isWin: true,
+      });
+      document.body.appendChild(modal);
+      await modal.updateComplete;
+      return modal.textContent ?? "";
+    };
+
+    expect(await render()).toContain("win_modal.territory_pattern");
+    modal?.remove();
+
+    window.openfrontDesktop = {};
+    try {
+      const text = await render();
+      expect(text).toContain("win_modal.support_openfront");
+      expect(text).not.toContain("win_modal.territory_pattern");
+    } finally {
+      delete window.openfrontDesktop;
+    }
+  });
 });

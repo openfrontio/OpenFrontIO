@@ -1,3 +1,4 @@
+import { z } from "zod";
 import {
   Attack,
   Difficulty,
@@ -13,6 +14,16 @@ import {
 import { TileRef } from "../../game/GameMap";
 import { Cluster } from "../../game/TrainStation";
 import { PseudoRandom } from "../../PseudoRandom";
+import type {
+  SnapshotReader,
+  SnapshotWriter,
+} from "../../snapshot/SnapshotContext";
+import {
+  readVersioned,
+  snapshotType,
+  Versioned,
+  zInt,
+} from "../../snapshot/SnapshotType";
 import { assertNever } from "../../Util";
 import { ConstructionExecution } from "../ConstructionExecution";
 import { UpgradeStructureExecution } from "../UpgradeStructureExecution";
@@ -150,6 +161,40 @@ export class NationStructureBehavior {
     private game: Game,
     private player: Player,
   ) {}
+
+  /**
+   * reachableStationsCache and _sharedWaterComponents are not stored: both
+   * are reset at the start of doHandleStructures and only read inside it.
+   */
+  snapshot(w: SnapshotWriter): Versioned {
+    return w.versioned(NationStructureBehaviorSnapshot, {
+      lastStructureTick: this.lastStructureTick,
+      placementsCount: this.placementsCount,
+      builtCrowdedMapFirstStructure: this.builtCrowdedMapFirstStructure,
+      hasHighStartingGold: this._hasHighStartingGold,
+      postSaveUpStartTick: this._postSaveUpStartTick,
+    });
+  }
+
+  /** Fills a prototype-only shell; only assigns (see README). */
+  restoreSnapshot(
+    raw: unknown,
+    r: SnapshotReader,
+    random: PseudoRandom,
+    player: Player,
+  ): void {
+    const s = readVersioned(NationStructureBehaviorSnapshot, raw);
+    this.random = random;
+    this.game = r.game;
+    this.player = player;
+    this.reachableStationsCache = null;
+    this._sharedWaterComponents = null;
+    this.lastStructureTick = s.lastStructureTick;
+    this.placementsCount = s.placementsCount;
+    this.builtCrowdedMapFirstStructure = s.builtCrowdedMapFirstStructure;
+    this._hasHighStartingGold = s.hasHighStartingGold;
+    this._postSaveUpStartTick = s.postSaveUpStartTick;
+  }
 
   handleStructures(): boolean {
     // Defense posts are handled outside the normal pacing/counter system:
@@ -1368,3 +1413,15 @@ export class NationStructureBehavior {
     return { borderSpacing, structureSpacing: borderSpacing * 2 };
   }
 }
+
+export const NationStructureBehaviorSnapshot = snapshotType({
+  name: "NationStructureBehavior",
+  version: 1,
+  schema: z.object({
+    lastStructureTick: zInt().nullable(),
+    placementsCount: zInt(),
+    builtCrowdedMapFirstStructure: z.boolean(),
+    hasHighStartingGold: z.boolean().nullable(),
+    postSaveUpStartTick: zInt().nullable(),
+  }),
+});

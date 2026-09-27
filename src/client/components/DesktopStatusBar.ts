@@ -127,8 +127,56 @@ export class DesktopStatusBar extends LitElement {
   private unsubscribe: (() => void) | null = null;
 
   private onSessionState = (e: Event) => {
-    this.sessionState = (e as CustomEvent<DesktopSessionState>).detail;
+    const next = (e as CustomEvent<DesktopSessionState>).detail;
+    const wasGated =
+      this.sessionState !== null &&
+      !multiplayerAllowedForSession(this.sessionState);
+    this.sessionState = next;
+    if (wasGated && next.status === "signed-in") this.applyStagedUpdate();
+    // A Retry that lands back on the same signed-out reason changes nothing
+    // on screen (the shell answered in a few ms, so even "Signing in…" never
+    // paints). Wiggle so the press is seen to have been tried.
+    const before = this.sessionAtRetry;
+    if (before === null || next.status === "retrying") return;
+    this.sessionAtRetry = null;
+    if (next.status === before.status && next.reason === before.reason) {
+      this.wiggle();
+    }
   };
+
+  /**
+   * Reloads into a staged update the moment a gated session signs in.
+   *
+   * barSource ranks the session above the update, so while the session was
+   * gated the staged release's Reload was never on screen and the player had
+   * no way to apply it. They are about to get multiplayer back on a client
+   * that may be too old to speak to the servers (a stale wire format fails
+   * every lobby frame), so apply it now rather than leave a button to find.
+   *
+   * Only from a GATED state: a fresh page goes unknown -> signed-in, which
+   * must not reload, or applying would loop. Never mid-game or while waiting
+   * in a lobby, where a reload throws the player out.
+   */
+  private applyStagedUpdate(): void {
+    if (this.updateState?.status !== "staged") return;
+    if (this.inLobby || document.body.classList.contains("in-game")) return;
+    desktopUpdate()
+      ?.apply()
+      .catch((err: unknown) => {
+        console.error("desktop-status-bar: auto-apply failed", err);
+      });
+  }
+
+  private inLobby = false;
+  private onJoinLobby = () => {
+    this.inLobby = true;
+  };
+  private onLeaveLobby = () => {
+    this.inLobby = false;
+  };
+
+  // The session state when Retry was pressed, until the retry settles.
+  private sessionAtRetry: DesktopSessionState | null = null;
 
   private onBackendReachability = (e: Event) => {
     this.backendOutage = (
@@ -171,6 +219,8 @@ export class DesktopStatusBar extends LitElement {
     // startup, quite possibly before this element upgrades.
     if (isDesktopShell()) this.sessionState = getDesktopSessionState();
     document.addEventListener("desktop-session-state", this.onSessionState);
+    document.addEventListener("join-lobby", this.onJoinLobby);
+    document.addEventListener("leave-lobby", this.onLeaveLobby);
 
     // Reachability is subscribed ONLY on desktop, unlike the entry-point
     // components that gate on it. The heartbeat runs on the web too and
@@ -195,6 +245,8 @@ export class DesktopStatusBar extends LitElement {
     this.unsubscribe?.();
     this.unsubscribe = null;
     document.removeEventListener("desktop-session-state", this.onSessionState);
+    document.removeEventListener("join-lobby", this.onJoinLobby);
+    document.removeEventListener("leave-lobby", this.onLeaveLobby);
     document.removeEventListener(
       "backend-reachability",
       this.onBackendReachability,
@@ -349,7 +401,7 @@ export class DesktopStatusBar extends LitElement {
     retryServerList().catch((err: unknown) => {
       // retryServerList never rejects; belt and braces, so a change there
       // cannot surface as an unhandled rejection from a click handler.
-      console.error("desktop-status-bar: server list retry failed", err);
+      console.warn("desktop-status-bar: server list retry failed", err);
     });
   }
 
@@ -461,6 +513,7 @@ export class DesktopStatusBar extends LitElement {
       class="shrink-0 px-4 py-2 rounded-md bg-malibu-blue hover:bg-aquarius
              text-sm font-medium uppercase tracking-wider"
       @click=${() => {
+        this.sessionAtRetry = s;
         // Main.ts owns the retry, because a successful sign-in also has to
         // refresh userMe, the nav account button and the cached profile --
         // all of which already live there. See its crazyGamesSDK listener.

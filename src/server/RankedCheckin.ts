@@ -201,7 +201,13 @@ export async function rankedCheckinPass(
     }
 
     const data = await response.json();
-    log.info(`Lobby ${mode} poll successful:`, data);
+    // Every worker polls both queues every few seconds; only a poll that
+    // hands us a match is worth an info line.
+    if (data.assignment) {
+      log.info(`Lobby ${mode} poll successful:`, data);
+    } else {
+      log.debug(`Lobby ${mode} poll successful:`, data);
+    }
 
     if (data.assignment) {
       const parsed = MatchmakingAssignmentSchema.safeParse(data.assignment);

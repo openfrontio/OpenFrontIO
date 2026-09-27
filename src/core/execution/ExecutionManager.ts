@@ -35,13 +35,17 @@ export class Executor {
 
   constructor(
     private mg: Game,
-    private gameID: GameID,
+    private gameID_: GameID,
     private clientID: ClientID | undefined,
     // Purchased bot tribe names drawn for this game (GameStartInfo.tribes).
     private purchasedTribeNames: string[] = [],
   ) {
     // Add one to avoid id collisions with tribes.
-    this.random = new PseudoRandom(simpleHash(gameID) + 1);
+    this.random = new PseudoRandom(simpleHash(gameID_) + 1);
+  }
+
+  gameID(): GameID {
+    return this.gameID_;
   }
 
   createExecs(turn: Turn): Execution[] {
@@ -75,7 +79,7 @@ export class Executor {
         // fromIntent: this one came off the wire, so it is subject to the
         // spawn-phase gate that internal spawns are not.
         return new SpawnExecution(
-          this.gameID,
+          this.gameID_,
           player.info(),
           intent.tile,
           true,
@@ -145,20 +149,20 @@ export class Executor {
       .nations()
       .map((n) => n.spawnCell)
       .filter((c): c is NonNullable<typeof c> => c !== undefined);
-    return new TribeSpawner(this.mg, this.gameID, nationCells).spawnTribes(
+    return new TribeSpawner(this.mg, this.gameID_, nationCells).spawnTribes(
       numTribes,
       this.purchasedTribeNames,
     );
   }
 
   spawnPlayers(): SpawnExecution[] {
-    return new PlayerSpawner(this.mg, this.gameID).spawnPlayers();
+    return new PlayerSpawner(this.mg, this.gameID_).spawnPlayers();
   }
 
   nationExecutions(): Execution[] {
     const execs: Execution[] = [];
     for (const nation of this.mg.nations()) {
-      execs.push(new NationExecution(this.gameID, nation));
+      execs.push(new NationExecution(this.gameID_, nation));
     }
     return execs;
   }

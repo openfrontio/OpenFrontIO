@@ -6,8 +6,8 @@ import { ClusterConfig } from "../../src/core/ClusterConfig";
 // leading letter names its deployment in the cluster map; everything older
 // or unmapped stays on the server the page already talks to.
 const CLUSTER: ClusterConfig = {
-  c: { host: "blue.openfront.io", color: "blue", numWorkers: 20 },
-  d: { host: "green.openfront.io", color: "green", numWorkers: 20 },
+  c: { host: "blue.openfront.io", numWorkers: 20 },
+  d: { host: "green.openfront.io", numWorkers: 20 },
 };
 
 describe("resolveGameHost", () => {

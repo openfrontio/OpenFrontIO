@@ -1,11 +1,19 @@
+import { z } from "zod";
 import { Execution, Game, Player, UnitType } from "../game/Game";
 import { TileRef } from "../game/GameMap";
+import { execSnapshotType } from "../snapshot/ExecutionSnapshot";
+import type {
+  ExecRecord,
+  SnapshotReader,
+  SnapshotWriter,
+} from "../snapshot/SnapshotContext";
+import { zNum, zPlayerRef } from "../snapshot/SnapshotType";
 
 export class MoveWarshipExecution implements Execution {
   constructor(
-    private readonly owner: Player,
-    private readonly unitIds: number[],
-    private readonly position: TileRef,
+    private owner: Player,
+    private unitIds: number[],
+    private position: TileRef,
   ) {}
 
   init(mg: Game, _ticks: number): void {
@@ -50,4 +58,33 @@ export class MoveWarshipExecution implements Execution {
   activeDuringSpawnPhase(): boolean {
     return false;
   }
+
+  snapshot(w: SnapshotWriter): ExecRecord {
+    return MoveWarshipExecutionSnapshot.write({
+      owner: w.player(this.owner),
+      unitIds: [...this.unitIds],
+      position: this.position,
+    });
+  }
+
+  restoreSnapshot(s: MoveWarshipState, r: SnapshotReader): void {
+    this.owner = r.player(s.owner);
+    this.unitIds = s.unitIds;
+    this.position = s.position;
+  }
 }
+
+// position is untrusted intent data (validated in init), so any number.
+const MoveWarshipStateSchema = z.object({
+  owner: zPlayerRef(),
+  unitIds: z.array(zNum()),
+  position: zNum(),
+});
+type MoveWarshipState = z.infer<typeof MoveWarshipStateSchema>;
+
+export const MoveWarshipExecutionSnapshot = execSnapshotType({
+  name: "MoveWarship",
+  version: 1,
+  schema: MoveWarshipStateSchema,
+  cls: () => MoveWarshipExecution,
+});

@@ -114,6 +114,7 @@ export interface ClientOpts {
   friends?: string[];
   spectator?: boolean;
   trusted?: boolean;
+  platform?: Client["platform"];
 }
 
 let nextClient = 1;
@@ -140,6 +141,7 @@ export function makeClient(opts: ClientOpts = {}): Client {
     opts.friends ?? [],
     opts.spectator ?? false,
     opts.trusted ?? false,
+    opts.platform,
   );
 }
 

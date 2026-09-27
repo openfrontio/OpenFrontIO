@@ -27,6 +27,8 @@ import {
   DISPLAY_SETTLE_TIMEOUT_MS,
   isDisplaySnapshot,
   selectedDisplayId,
+  UI_SCALE_OPTIONS,
+  uiScaleOptions,
   type DesktopDisplayInfo,
   type DesktopDisplayPrefsPatch,
   type DesktopDisplaySnapshot,
@@ -37,6 +39,7 @@ import { Platform } from "./Platform";
 import type { AudioControls } from "./sound/CuePlayer";
 import { audioControls, playCue } from "./sound/CuePlayer";
 import type { CueCategory } from "./sound/Sounds";
+import { canHandOffToSteam } from "./SteamHandoff";
 import type { UIState } from "./UIState";
 
 /**
@@ -78,6 +81,7 @@ const PREVIEW_CEILING_MS = 10_000;
 
 @customElement("user-setting")
 export class UserSettingModal extends BaseModal {
+  private currentUiScale: number | undefined;
   protected routerName: string | undefined = "settings";
 
   /**
@@ -417,6 +421,41 @@ export class UserSettingModal extends BaseModal {
     console.log(
       "👁️ Hidden Lobby IDs:",
       !this.userSettings.lobbyIdVisibility() ? "ON" : "OFF",
+    );
+  }
+
+  private toggleLobbyStartAlerts(e: Event) {
+    const enabled = (e.target as HTMLInputElement).checked;
+    this.userSettings.setLobbyStartAlerts(enabled);
+
+    // A permission prompt must originate from a user gesture. Persist the
+    // choice regardless of the result: desktop notifications are optional,
+    // and the lobby-start chime still works when permission is denied.
+    if (
+      enabled &&
+      typeof Notification !== "undefined" &&
+      Notification.permission === "default"
+    ) {
+      try {
+        void Notification.requestPermission().catch((error) => {
+          console.warn(
+            "Failed to request game-start notification permission",
+            error,
+          );
+        });
+      } catch (error) {
+        console.warn(
+          "Failed to request game-start notification permission",
+          error,
+        );
+      }
+    }
+    this.requestUpdate();
+  }
+
+  private toggleSteamLobbyLinks() {
+    this.userSettings.setSteamLobbyLinks(
+      this.userSettings.steamLobbyLinks() === "steam" ? "browser" : "steam",
     );
   }
 
@@ -971,6 +1010,13 @@ export class UserSettingModal extends BaseModal {
       mode.value = snapshot.prefs.mode;
     }
 
+    const scale = this.querySelector<SettingSelect>("#display-ui-scale-select");
+    const uiScale = snapshot.prefs.uiScale;
+    this.currentUiScale = uiScale;
+    if (scale && uiScale !== undefined && scale.value !== String(uiScale)) {
+      scale.value = String(uiScale);
+    }
+
     const monitor = this.querySelector<SettingSelect>(
       "#display-monitor-select",
     );
@@ -993,6 +1039,15 @@ export class UserSettingModal extends BaseModal {
     // and there is no reason to spend an IPC round trip to be told so.
     if (value !== "windowed" && value !== "borderless") return;
     this.applyDisplayPatch({ mode: value });
+  };
+
+  private handleUiScaleChange = (e: CustomEvent<{ value: unknown }>) => {
+    const value = Number(e.detail?.value);
+    const current = this.currentUiScale;
+    const validOptions =
+      current !== undefined ? uiScaleOptions(current) : UI_SCALE_OPTIONS;
+    if (!Number.isFinite(value) || !validOptions.includes(value)) return;
+    this.applyDisplayPatch({ uiScale: value });
   };
 
   private handleDisplayMonitorChange = (e: CustomEvent<{ value: unknown }>) => {
@@ -1052,6 +1107,7 @@ export class UserSettingModal extends BaseModal {
 
     const displays = snapshot.displays;
     const selectedId = selectedDisplayId(snapshot);
+    const uiScale = snapshot.prefs.uiScale;
 
     // Rendered as its own row rather than as the spec's extra option inside
     // the picker: losing the remembered monitor usually drops the count to
@@ -1090,6 +1146,24 @@ export class UserSettingModal extends BaseModal {
         @change=${this.handleDisplayModeChange}
       ></setting-select>
 
+      ${uiScale === undefined
+        ? null
+        : html`
+            <setting-select
+              id="display-ui-scale-select"
+              label=${translateText("user_setting.display_ui_scale_label")}
+              description=${translateText("user_setting.display_ui_scale_desc")}
+              .value=${String(uiScale)}
+              ?disabled=${this.displayBusy}
+              .options=${uiScaleOptions(uiScale).map((scale) => ({
+                value: scale,
+                label: translateText("user_setting.display_ui_scale_option", {
+                  scale,
+                }),
+              }))}
+              @change=${this.handleUiScaleChange}
+            ></setting-select>
+          `}
       ${displays.length > 1
         ? html`
             <setting-select
@@ -1653,6 +1727,27 @@ export class UserSettingModal extends BaseModal {
         .checked=${!this.userSettings.lobbyIdVisibility()}
         @change=${this.toggleLobbyIdVisibility}
       ></setting-toggle>
+
+      <!-- 🔔 Lobby start alerts -->
+      <setting-toggle
+        label="${translateText("user_setting.lobby_start_alerts_label")}"
+        description="${translateText("user_setting.lobby_start_alerts_desc")}"
+        id="lobby-start-alerts-toggle"
+        .checked=${this.userSettings.lobbyStartAlerts()}
+        @change=${this.toggleLobbyStartAlerts}
+      ></setting-toggle>
+
+      ${canHandOffToSteam()
+        ? html`<setting-toggle
+            label="${translateText("user_setting.steam_lobby_links_label")}"
+            description="${translateText(
+              "user_setting.steam_lobby_links_desc",
+            )}"
+            id="steam-lobby-links-toggle"
+            .checked=${this.userSettings.steamLobbyLinks() === "steam"}
+            @change=${this.toggleSteamLobbyLinks}
+          ></setting-toggle>`
+        : null}
 
       <!-- 🔍 Go to player -->
       <setting-toggle

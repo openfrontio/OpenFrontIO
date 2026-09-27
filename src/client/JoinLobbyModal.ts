@@ -1,4 +1,3 @@
-import { Howl } from "howler";
 import { html, TemplateResult } from "lit";
 import { customElement, property, query, state } from "lit/decorators.js";
 import { ClientEnv } from "src/client/ClientEnv";
@@ -21,13 +20,7 @@ import {
   LobbyInfoEvent,
   PublicGameInfo,
 } from "../core/Schemas";
-import {
-  Difficulty,
-  GameMapSize,
-  GameMode,
-  GameType,
-  HumansVsNations,
-} from "../core/game/Game";
+import { GameMode, GameType, HumansVsNations } from "../core/game/Game";
 import { getApiBase } from "./Api";
 import { crazyGamesSDK } from "./CrazyGamesSDK";
 import { PublicLobbySocket } from "./LobbySocket";
@@ -39,11 +32,13 @@ import { normaliseMapKey } from "./Utils";
 import { isReplayShellHost, versionedReplayUrl } from "./VersionedReplay";
 import { BaseModal } from "./components/BaseModal";
 import "./components/CopyButton";
+import { GameStartAlertController } from "./components/GameStartAlertController";
 import "./components/LobbyConfigItem";
 import "./components/LobbyPlayerView";
 import { inviteFriendsButton } from "./components/ui/InviteFriendsButton";
 import { DEFAULT_TITLE_CLASS, modalHeader } from "./components/ui/ModalHeader";
 import { nationsConfigToSlider } from "./utilities/GameConfigHelpers";
+import { notableLobbySettings } from "./utilities/LobbySettingsSummary";
 
 @customElement("join-lobby-modal")
 export class JoinLobbyModal extends BaseModal {
@@ -65,20 +60,22 @@ export class JoinLobbyModal extends BaseModal {
   // the pre-join form.
   @state() private hostedLobbies: PublicGameInfo[] = [];
   @state() private hostedLobbiesLoaded = false;
-  // Deliberately not persisted: the bell starts off and is re-armed by hand
-  // for each game (reset in startTrackingLobby).
-  @state() private notifyOnStart = false;
-  // Own Howl rather than SoundManager: that only exists once the game is
-  // running, and this has to play during the lobby wait. Fixed volume on
-  // purpose -- the SFX slider defaults to 0, and an alert the player asked
-  // for must not be silenced by it.
-  private startAlertSound: Howl | null = null;
+  // Clock offset for the hosted list's countdowns, kept apart from
+  // serverTimeOffset (the joined lobby's).
+  private hostedServerTimeOffset = 0;
+  private readonly gameStartAlert = new GameStartAlertController(
+    this,
+    () => this.currentLobbyId !== "",
+  );
 
   private leaveLobbyOnClose = true;
   private countdownTimerId: number | null = null;
   private handledJoinTimeout = false;
 
   private readonly hostedLobbySocket = new PublicLobbySocket((lobbies) => {
+    this.hostedServerTimeOffset = calculateServerTimeOffset(lobbies.serverTime);
+    // Re-assigned on every broadcast (~2/s), which also keeps the row
+    // countdowns ticking.
     this.hostedLobbies = lobbies.games?.hosted ?? [];
     this.hostedLobbiesLoaded = true;
   });
@@ -148,7 +145,7 @@ export class JoinLobbyModal extends BaseModal {
       titleContent: html`<span class="${DEFAULT_TITLE_CLASS}"
           >${translateText("public_lobby.title")}</span
         >
-        ${this.renderNotifyBell()}`,
+        ${this.gameStartAlert.renderBell()}`,
       onBack: () => this.closeAndLeave(),
       ariaLabel: translateText("common.close"),
       // Only pair them behind a wrapper when both are present, so a browser --
@@ -160,115 +157,6 @@ export class JoinLobbyModal extends BaseModal {
           : (copy ?? invite),
     });
   }
-
-  // Bell in the post-join title: opt into an alert for when the wait is over
-  // and the game actually starts -- a chime, plus a desktop notification
-  // where the browser allows one.
-  private renderNotifyBell(): TemplateResult {
-    const on = this.notifyOnStart;
-    const label = translateText(
-      on ? "public_lobby.notify_on" : "public_lobby.notify_off",
-    );
-    return html`<button
-      type="button"
-      class="inline-flex ml-auto p-1 rounded-lg transition-colors ${on
-        ? "text-amber-300 hover:text-amber-200"
-        : "text-white/40 hover:text-white"}"
-      title=${label}
-      aria-label=${label}
-      aria-pressed=${on}
-      @click=${() => this.toggleNotifyOnStart()}
-    >
-      <svg
-        xmlns="http://www.w3.org/2000/svg"
-        viewBox="0 0 24 24"
-        fill=${on ? "currentColor" : "none"}
-        stroke="currentColor"
-        stroke-width="1.8"
-        stroke-linecap="round"
-        stroke-linejoin="round"
-        class="w-7 h-7"
-        aria-hidden="true"
-      >
-        <path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9" />
-        <path d="M13.73 21a2 2 0 0 1-3.46 0" />
-      </svg>
-    </button>`;
-  }
-
-  private toggleNotifyOnStart(): void {
-    if (this.notifyOnStart) {
-      this.notifyOnStart = false;
-      return;
-    }
-    this.notifyOnStart = true;
-    // Nothing about a bell says "sound", so say it every time it's armed --
-    // a toast rather than a dialog: it must not add friction to a one-click
-    // toggle.
-    this.showMessage(translateText("public_lobby.notify_armed"));
-    // Both stay synchronous inside the click. Safari only shows the
-    // permission prompt from inside a user gesture, and creating (not
-    // playing) the Howl here opens Howler's AudioContext under that gesture,
-    // which is what lets the chime start later from a background tab with no
-    // gesture of its own.
-    if (
-      typeof Notification !== "undefined" &&
-      Notification.permission === "default"
-    ) {
-      void Notification.requestPermission();
-    }
-    this.loadStartAlertSound();
-  }
-
-  private loadStartAlertSound(): Howl {
-    this.startAlertSound ??= new Howl({
-      src: [assetUrl("sounds/effects/game-start-alert.mp3")],
-    });
-    return this.startAlertSound;
-  }
-
-  private playStartAlertSound(): void {
-    try {
-      this.loadStartAlertSound().play();
-    } catch (error) {
-      console.warn("Failed to play game-start alert sound", error);
-    }
-  }
-
-  // Main.ts dispatches "game-starting" at prestart, before it closes this
-  // modal — so the listener lives on the element, not the open/close cycle.
-  // Deliberately NOT gated on document focus: an armed bell always alerts.
-  // The redundant banner when the player is already watching is cheaper than
-  // a "sometimes it doesn't fire" rule nobody can predict (and the OS may
-  // suppress it for a focused app anyway).
-  // The chime is unconditional and the notification is on top of it, not a
-  // fallback path: `new Notification()` succeeds even when the OS drops the
-  // banner (Focus mode, browser lacking system-level permission), so there
-  // is no failure signal to fall back from.
-  private readonly handleGameStarting = () => {
-    if (!this.notifyOnStart || !this.currentLobbyId) {
-      return;
-    }
-    this.playStartAlertSound();
-    if (
-      typeof Notification === "undefined" ||
-      Notification.permission !== "granted"
-    ) {
-      return;
-    }
-    try {
-      const notification = new Notification(
-        translateText("public_lobby.notify_started"),
-      );
-      notification.onclick = () => {
-        window.focus();
-        notification.close();
-      };
-    } catch (error) {
-      // Some mobile browsers only allow notifications via a service worker.
-      console.warn("Failed to show game-start notification", error);
-    }
-  };
 
   // Play/Spectate switch. Hidden once the game is running: the player list is
   // frozen at start, so the server would refuse to seat anyone new and the
@@ -512,7 +400,7 @@ export class JoinLobbyModal extends BaseModal {
       : "";
     // Nation count for this map isn't loaded pre-join, so the numeric-nations
     // default comparison is skipped in the row chips.
-    const settings = c ? this.notableSettings(c, null) : [];
+    const settings = c ? notableLobbySettings(c, null) : [];
     const disabledUnitCount = c?.disabledUnits?.length ?? 0;
     const enabled = translateText("common.enabled");
     // A featured lobby names itself; the map drops to the subtitle so nothing
@@ -534,6 +422,12 @@ export class JoinLobbyModal extends BaseModal {
     const subtitleLine = featuredLabel
       ? [mapName, subtitle].filter(Boolean).join(" · ")
       : subtitle;
+    // The host's Start countdown once armed, otherwise the listing deadline.
+    const startAt = lobby.startsAt ?? lobby.autoStartAt;
+    const secondsToStart =
+      startAt === undefined
+        ? undefined
+        : getSecondsUntilServerTimestamp(startAt, this.hostedServerTimeOffset);
     return html`
       <button
         type="button"
@@ -549,15 +443,23 @@ export class JoinLobbyModal extends BaseModal {
           }}
         />
         <div class="flex flex-col flex-1 min-w-0">
-          <span class="text-sm font-bold truncate ${accentClass}"
-            >${featuredLabel ?? mapName}</span
-          >
+          <div class="flex items-center gap-2 min-w-0">
+            <span class="text-sm font-bold truncate ${accentClass}"
+              >${featuredLabel ?? mapName}</span
+            >
+            ${lobby.custom
+              ? html`<span
+                  class="px-1.5 py-0.5 bg-orange-500 text-white text-[10px] rounded font-bold uppercase tracking-wider shrink-0"
+                  >${translateText("public_lobby.custom")}</span
+                >`
+              : ""}
+          </div>
           <span class="text-xs text-white/60">${subtitleLine}</span>
           ${settings.length > 0 || disabledUnitCount > 0
             ? html`<div class="flex flex-wrap gap-1 mt-1">
                 ${settings.map((s) => {
-                  // Some labels (e.g. game_settings.bots) already end with ": ".
-                  const label = s.label.replace(/[:\s]+$/, "");
+                  // Some labels (e.g. game_settings.bots) already end with ": " or ": ".
+                  const label = s.label.replace(/[:\uFF1A\s]+$/u, "");
                   return html`<span
                     class="px-1.5 py-0.5 bg-white/10 text-white/70 text-[10px] rounded font-bold"
                     >${s.value === enabled
@@ -575,15 +477,24 @@ export class JoinLobbyModal extends BaseModal {
               </div>`
             : ""}
         </div>
-        <div
-          class="flex items-center gap-1 text-white/80 text-xs font-bold shrink-0"
-        >
-          ${lobby.numClients}${c?.maxPlayers ? `/${c.maxPlayers}` : ""}
-          <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-            <path
-              d="M13 6a3 3 0 11-6 0 3 3 0 016 0zM18 8a2 2 0 11-4 0 2 2 0 014 0zM14 15a4 4 0 00-8 0v3h8v-3zM6 8a2 2 0 11-4 0 2 2 0 014 0zM16 18v-3a5.972 5.972 0 00-.75-2.906A3.005 3.005 0 0119 15v3h-3zM4.75 12.094A5.973 5.972 0 004 15v3H1v-3a3 3 0 013.75-2.906z"
-            ></path>
-          </svg>
+        <div class="flex flex-col items-end gap-1 shrink-0">
+          <div class="flex items-center gap-1 text-white/80 text-xs font-bold">
+            ${lobby.numClients}${c?.maxPlayers ? `/${c.maxPlayers}` : ""}
+            <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+              <path
+                d="M13 6a3 3 0 11-6 0 3 3 0 016 0zM18 8a2 2 0 11-4 0 2 2 0 014 0zM14 15a4 4 0 00-8 0v3h8v-3zM6 8a2 2 0 11-4 0 2 2 0 014 0zM16 18v-3a5.972 5.972 0 00-.75-2.906A3.005 3.005 0 0119 15v3h-3zM4.75 12.094A5.973 5.972 0 004 15v3H1v-3a3 3 0 013.75-2.906z"
+              ></path>
+            </svg>
+          </div>
+          ${secondsToStart === undefined
+            ? ""
+            : html`<span
+                class="text-amber-300 text-xs font-bold tabular-nums"
+                title=${translateText("host_modal.auto_start_timer")}
+                >${secondsToStart > 0
+                  ? renderDuration(secondsToStart)
+                  : translateText("public_lobby.starting_game")}</span
+              >`}
         </div>
       </button>
     `;
@@ -659,7 +570,7 @@ export class JoinLobbyModal extends BaseModal {
           return;
       }
     } catch (error) {
-      console.error("Error checking lobby from URL:", error);
+      console.warn("Error checking lobby from URL:", error);
       this.resetTrackingState();
       this.showMessage(translateText("private_lobby.error"), "red");
     }
@@ -678,7 +589,7 @@ export class JoinLobbyModal extends BaseModal {
     this.lobbyStartAt = null;
     this.serverTimeOffset = 0;
     this.lobbyCreatorClientID = null;
-    this.notifyOnStart = false;
+    this.gameStartAlert.reset();
     this.isConnecting = true;
     this.handledJoinTimeout = false;
     this.startLobbyUpdates();
@@ -737,17 +648,11 @@ export class JoinLobbyModal extends BaseModal {
     this.lobbyStartAt = null;
     this.serverTimeOffset = 0;
     this.lobbyCreatorClientID = null;
-    this.notifyOnStart = false;
+    this.gameStartAlert.reset();
     this.isConnecting = true;
   }
 
-  connectedCallback() {
-    super.connectedCallback();
-    document.addEventListener("game-starting", this.handleGameStarting);
-  }
-
   disconnectedCallback() {
-    document.removeEventListener("game-starting", this.handleGameStarting);
     this.hostedLobbySocket.stop();
     this.clearCountdownTimer();
     this.stopLobbyUpdates();
@@ -805,155 +710,6 @@ export class JoinLobbyModal extends BaseModal {
     return translateText("game_mode.ffa");
   }
 
-  // Non-default settings worth surfacing, shared by the post-join config view
-  // and the open-lobby rows. Pass null nationCount to skip the numeric-nations
-  // default comparison (it needs the map manifest, loaded only post-join).
-  private notableSettings(
-    c: GameConfig,
-    nationCount: number | null,
-  ): { label: string; value: string }[] {
-    const isTeam = c.gameMode === GameMode.Team;
-    const enabled = translateText("common.enabled");
-    const disabled = translateText("common.disabled");
-    const pm = c.publicGameModifiers;
-    const items: { label: string; value: string }[] = [];
-    if (pm?.isCrowded)
-      items.push({
-        label: translateText("host_modal.crowded"),
-        value: enabled,
-      });
-    if (
-      pm?.isHardNations ||
-      (c.gameType === GameType.Private && c.difficulty !== Difficulty.Easy)
-    )
-      items.push({
-        label: translateText("difficulty.difficulty"),
-        value: translateText(`difficulty.${c.difficulty.toLowerCase()}`),
-      });
-    if (c.infiniteTroops)
-      items.push({
-        label: translateText("game_settings.infinite_troops"),
-        value: enabled,
-      });
-    if (c.infiniteGold)
-      items.push({
-        label: translateText("game_settings.infinite_gold"),
-        value: enabled,
-      });
-    if (c.instantBuild)
-      items.push({
-        label: translateText("game_settings.instant_build"),
-        value: enabled,
-      });
-    if (c.randomSpawn)
-      items.push({
-        label: translateText("game_settings.random_spawn"),
-        value: enabled,
-      });
-    if (c.maxTimerValue)
-      items.push({
-        label: translateText("private_lobby.game_length"),
-        value: renderDuration(c.maxTimerValue * 60),
-      });
-    if (
-      c.spawnImmunityDuration &&
-      Math.round(c.spawnImmunityDuration / 10) !== 5
-    ) {
-      items.push({
-        label: translateText("private_lobby.pvp_immunity"),
-        value: renderDuration(Math.round(c.spawnImmunityDuration / 10)),
-      });
-    }
-    if (c.startingGold)
-      items.push({
-        label: translateText("private_lobby.starting_gold"),
-        value: `${parseFloat((c.startingGold / 1_000_000).toPrecision(12))}M`,
-      });
-    if (c.goldMultiplier)
-      items.push({
-        label: translateText("game_settings.gold_multiplier"),
-        value: `x${c.goldMultiplier}`,
-      });
-    if (c.customAllianceDuration === 0 || c.disableAlliances)
-      items.push({
-        label: translateText("public_game_modifier.disable_alliances_label"),
-        value: disabled,
-      });
-    else if (
-      typeof c.customAllianceDuration === "number" &&
-      // 5 minutes is the sim fallback (Config.allianceDuration), so an
-      // explicit 5 changes nothing worth surfacing.
-      c.customAllianceDuration !== 5
-    )
-      items.push({
-        label: translateText("public_game_modifier.disable_alliances_label"),
-        value: renderDuration(c.customAllianceDuration * 60),
-      });
-    if (c.waterNukes)
-      items.push({
-        label: translateText("game_settings.water_nukes"),
-        value: enabled,
-      });
-    if (c.doomsdayClock?.enabled)
-      items.push({
-        label: translateText("game_settings.doomsday_clock"),
-        value: translateText(
-          `doomsday_clock_speed.${c.doomsdayClock.speed ?? "normal"}`,
-        ),
-      });
-    if (c.overtime?.enabled)
-      items.push({
-        label: translateText("overtime.title"),
-        value: renderDuration((c.overtime.startMinutes ?? 30) * 60),
-      });
-    if (c.anonymizeNames)
-      items.push({
-        label: translateText("host_modal.anonymous_players"),
-        value: enabled,
-      });
-    if ((isTeam && !c.donateGold) || (!isTeam && c.donateGold))
-      items.push({
-        label: translateText("host_modal.donate_gold"),
-        value: c.donateGold ? enabled : disabled,
-      });
-    if ((isTeam && !c.donateTroops) || (!isTeam && c.donateTroops))
-      items.push({
-        label: translateText("host_modal.donate_troops"),
-        value: c.donateTroops ? enabled : disabled,
-      });
-    const isCompact =
-      c.gameMapSize === GameMapSize.Compact || c.publicGameModifiers?.isCompact;
-    if (isCompact)
-      items.push({
-        label: translateText("game_settings.compact_map"),
-        value: enabled,
-      });
-    {
-      const defaultBots = isCompact ? 100 : 400;
-      if (c.bots !== defaultBots)
-        items.push({
-          label: translateText("game_settings.bots"),
-          value: String(c.bots),
-        });
-    }
-    if (nationCount !== null) {
-      const defaultNations = isCompact
-        ? Math.max(0, Math.floor(nationCount * 0.25))
-        : nationCount;
-      if (typeof c.nations === "number" && c.nations !== defaultNations)
-        items.push({
-          label: translateText("game_settings.nations"),
-          value: String(c.nations),
-        });
-    }
-    if (c.nations === "disabled" && !(c.gameType === GameType.Public && isTeam))
-      items.push({
-        label: translateText("game_settings.nations"),
-        value: disabled,
-      });
-    return items;
-  }
-
   private renderGameConfig(): TemplateResult {
     if (!this.gameConfig) return html``;
 
@@ -965,7 +721,7 @@ export class JoinLobbyModal extends BaseModal {
     );
     const modeSubtitle = this.modeSubtitle(c);
 
-    const cards = this.notableSettings(c, this.nationCount).map(
+    const cards = notableLobbySettings(c, this.nationCount).map(
       (s) =>
         html`<lobby-config-item
           .label=${s.label}
@@ -1268,7 +1024,7 @@ export class JoinLobbyModal extends BaseModal {
       const clipText = await navigator.clipboard.readText();
       this.setLobbyId(clipText);
     } catch (err) {
-      console.error("Failed to read clipboard contents: ", err);
+      console.warn("Failed to read clipboard contents: ", err);
     }
   }
 
@@ -1321,7 +1077,7 @@ export class JoinLobbyModal extends BaseModal {
           return;
       }
     } catch (error) {
-      console.error("Error checking lobby existence:", error);
+      console.warn("Error checking lobby existence:", error);
       this.resetTrackingState();
       this.showMessage(translateText("private_lobby.error"), "red");
     }

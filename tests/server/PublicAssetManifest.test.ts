@@ -5,10 +5,12 @@ import { afterEach, describe, expect, test } from "vitest";
 import { normalizeAssetPath } from "../../src/core/AssetUrls";
 import {
   buildPublicAssetManifest,
+  buildRootFilesIndex,
   clearPublicAssetManifestCache,
   copyRootPublicFiles,
   createHashedPublicAssetFiles,
-  shouldKeepRootPublicFile,
+  getPublicDir,
+  writeRootFilesIndex,
 } from "../../src/server/PublicAssetManifest";
 
 describe("PublicAssetManifest", () => {
@@ -132,11 +134,15 @@ describe("PublicAssetManifest", () => {
 
     expect(firstIconHref).not.toBe(secondIconHref);
     expect(firstManifestHref).not.toBe(secondManifestHref);
-    expect(firstOutput).toContain(firstIconHref);
-    expect(firstOutput).not.toContain(secondIconHref);
+    expect(firstOutput).toContain(
+      getExpectedRelativeEmittedPath(firstManifestHref, firstIconHref),
+    );
+    expect(firstOutput).not.toContain(
+      getExpectedRelativeEmittedPath(firstManifestHref, secondIconHref),
+    );
   });
 
-  test("rewrites root-relative web manifest icon paths to hashed URLs", async () => {
+  test("rewrites root-relative web manifest icon paths to hashed paths relative to the manifest", async () => {
     const { resourcesDir, outDir } = await createTempResources();
 
     await fs.mkdir(path.join(resourcesDir, "icons"), { recursive: true });
@@ -152,13 +158,54 @@ describe("PublicAssetManifest", () => {
     const assetManifest = buildPublicAssetManifest([resourcesDir]);
     createHashedPublicAssetFiles([resourcesDir], outDir, assetManifest);
 
-    const emittedManifest = await emitHashedAsset(
-      outDir,
-      assetManifest["manifest.json"],
+    const manifestHref = assetManifest["manifest.json"];
+    const iconHref = assetManifest["icons/app-icon.png"];
+    const emittedManifest = JSON.parse(
+      await emitHashedAsset(outDir, manifestHref),
+    ) as { icons: Array<{ src: string }> };
+
+    // The manifest is served under the CDN prefix (/game_assets/_assets/...),
+    // and the browser resolves icon srcs against the manifest URL, so a
+    // root-relative /_assets/... src would escape the prefix and 404.
+    const iconSrc = emittedManifest.icons[0].src;
+    expect(iconSrc).toBe(
+      getExpectedRelativeEmittedPath(manifestHref, iconHref),
+    );
+    expect(iconSrc).toMatch(/^icons\/app-icon\.[0-9a-f]{12}\.png$/);
+    expect(iconSrc).not.toMatch(/^\//);
+    expect(iconSrc).not.toContain("_assets/");
+    expect(iconSrc).not.toBe("/icons/app-icon.png");
+  });
+
+  test("rewrites nested web manifest icon paths relative to the manifest", async () => {
+    const { resourcesDir, outDir } = await createTempResources();
+
+    await fs.mkdir(path.join(resourcesDir, "icons", "pwa"), {
+      recursive: true,
+    });
+    await writeWebManifestFixture(resourcesDir, [
+      { src: "icons/pwa/maskable.png" },
+    ]);
+    await fs.writeFile(
+      path.join(resourcesDir, "icons", "pwa", "maskable.png"),
+      "icon-v1",
+      "utf8",
     );
 
-    expect(emittedManifest).toContain(assetManifest["icons/app-icon.png"]);
-    expect(emittedManifest).not.toContain('"/icons/app-icon.png"');
+    const assetManifest = buildPublicAssetManifest([resourcesDir]);
+    createHashedPublicAssetFiles([resourcesDir], outDir, assetManifest);
+
+    const manifestHref = assetManifest["manifest.json"];
+    const iconHref = assetManifest["icons/pwa/maskable.png"];
+    const emittedManifest = JSON.parse(
+      await emitHashedAsset(outDir, manifestHref),
+    ) as { icons: Array<{ src: string }> };
+
+    const iconSrc = emittedManifest.icons[0].src;
+    expect(iconSrc).toBe(
+      getExpectedRelativeEmittedPath(manifestHref, iconHref),
+    );
+    expect(iconSrc).toMatch(/^icons\/pwa\/maskable\.[0-9a-f]{12}\.png$/);
   });
 
   test("fails when web manifest references a missing local icon", async () => {
@@ -280,34 +327,72 @@ describe("PublicAssetManifest", () => {
     expect(emittedXml).not.toContain('file="pages/p0.png"');
   });
 
-  test("copies unhashed public directories verbatim, keeping paths stable", async () => {
+  test("copies resources/public/ verbatim to the site root, dot-directories included", async () => {
     const { resourcesDir, outDir } = await createTempResources();
-    await fs.mkdir(path.join(resourcesDir, "press", "images"), {
+    const publicDir = getPublicDir(resourcesDir);
+    await fs.mkdir(path.join(publicDir, "press", "images"), {
       recursive: true,
     });
-    await fs.writeFile(
-      path.join(resourcesDir, "press", "index.html"),
-      "<!doctype html>\n",
-    );
-    await fs.writeFile(
-      path.join(resourcesDir, "press", "images", "key-art.png"),
-      "png",
-    );
+    await fs.mkdir(path.join(publicDir, ".well-known"), { recursive: true });
+    await fs.writeFile(path.join(publicDir, "press", "index.html"), "press");
+    await fs.writeFile(path.join(publicDir, "press", "images", "a.png"), "png");
+    await fs.writeFile(path.join(publicDir, ".well-known", "apple"), "apple");
+    await fs.writeFile(path.join(publicDir, ".DS_Store"), "junk");
 
-    copyRootPublicFiles(resourcesDir, outDir);
+    copyRootPublicFiles(publicDir, outDir);
 
     await expect(
-      fs.readFile(path.join(outDir, "press", "index.html"), "utf8"),
-    ).resolves.toBe("<!doctype html>\n");
-    await expect(
-      fs.readFile(path.join(outDir, "press", "images", "key-art.png"), "utf8"),
+      fs.readFile(path.join(outDir, "press", "images", "a.png"), "utf8"),
     ).resolves.toBe("png");
+    await expect(
+      fs.readFile(path.join(outDir, ".well-known", "apple"), "utf8"),
+    ).resolves.toBe("apple");
+    await expect(fs.access(path.join(outDir, ".DS_Store"))).rejects.toThrow();
   });
 
-  test("leaves directories outside the allowlist alone", () => {
-    expect(shouldKeepRootPublicFile("press/index.html")).toBe(true);
-    expect(shouldKeepRootPublicFile("terms-of-service.html")).toBe(true);
-    expect(shouldKeepRootPublicFile("pressed/index.html")).toBe(false);
-    expect(shouldKeepRootPublicFile("maps/world.bin")).toBe(false);
+  test("indexes every root file's content type, with directory entries", async () => {
+    const { resourcesDir, outDir } = await createTempResources();
+    const publicDir = getPublicDir(resourcesDir);
+    await fs.mkdir(path.join(publicDir, "press"), { recursive: true });
+    await fs.mkdir(path.join(publicDir, ".well-known"), { recursive: true });
+    await fs.writeFile(path.join(publicDir, "privacy-policy.html"), "p");
+    await fs.writeFile(path.join(publicDir, "index.html"), "not a dir entry");
+    await fs.writeFile(path.join(publicDir, "press", "index.html"), "press");
+    await fs.writeFile(path.join(publicDir, "press", "Kit 1.png"), "png");
+    await fs.writeFile(path.join(publicDir, ".well-known", "apple"), "a");
+
+    writeRootFilesIndex(publicDir, outDir);
+
+    const html = "text/html; charset=utf-8";
+    expect(
+      JSON.parse(
+        await fs.readFile(path.join(outDir, "root-files.json"), "utf8"),
+      ),
+    ).toEqual({
+      ".well-known/apple": "text/plain; charset=utf-8",
+      "index.html": html,
+      "press/": html,
+      "press/Kit 1.png": "image/png",
+      "press/index.html": html,
+      "privacy-policy.html": html,
+    });
+  });
+
+  test("refuses a root file it has no content type for", async () => {
+    const { resourcesDir } = await createTempResources();
+    const publicDir = getPublicDir(resourcesDir);
+    await fs.mkdir(path.join(publicDir, "press"), { recursive: true });
+    await fs.writeFile(path.join(publicDir, "press", "kit.xyz"), "?");
+    expect(() => buildRootFilesIndex(publicDir)).toThrow(/press\/kit\.xyz/);
+  });
+
+  test("indexes the real resources/public/, policy pages included", () => {
+    const index = buildRootFilesIndex(getPublicDir(path.resolve("resources")));
+    expect(index["privacy-policy.html"]).toBe("text/html; charset=utf-8");
+    expect(index["terms-of-service.html"]).toBe("text/html; charset=utf-8");
+    expect(
+      index[".well-known/apple-developer-merchantid-domain-association"],
+    ).toBe("text/plain; charset=utf-8");
+    expect(index["press/"]).toBe("text/html; charset=utf-8");
   });
 });

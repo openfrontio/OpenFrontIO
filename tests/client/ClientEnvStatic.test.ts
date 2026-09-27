@@ -100,13 +100,36 @@ describe("a page carrying only environment values", () => {
     expect(() => ClientEnv.workerIndex("dAbCd12345")).toThrow(NoServerError);
   });
 
-  it("still answers same-origin for the socket and HTTP bases", () => {
-    // Deliberately asymmetric with numWorkers above: a dev or standalone
-    // deployment serves the game from the document's own origin, and that
-    // is the historical answer when nothing was injected. Keeping it means
-    // `npm run dev` and single-box deployments behave as they always have.
-    expect(ClientEnv.serverWsBase()).toBe("wss://openfront.io");
-    expect(ClientEnv.serverHttpBase()).toBe("https://openfront.io");
+  it("refuses to build a game-server base from the page's own origin", () => {
+    // The page host is not a game server (ai-ops#21): on the prod apex a
+    // socket dialed here is a TCP connect Cloudflare times out, so the
+    // client retried a host that can never answer — 1.1M 522s a day, and a
+    // player watching a lobby that never opens. There is no answer to give,
+    // so callers get the same typed failure numWorkers() gives them.
+    expect(() => ClientEnv.serverWsBase()).toThrow(NoServerError);
+    expect(() => ClientEnv.serverHttpBase()).toThrow(NoServerError);
+    // Every per-game base derives from those, so an own/legacy id refuses
+    // too. A foreign letter still resolves: the list named its host.
+    expect(() => ClientEnv.gameWsBase("dAbCd12345")).toThrow(NoServerError);
+    expect(() => ClientEnv.gameHttpBase("abcd1234")).toThrow(NoServerError);
+  });
+
+  it("still navigates to its own origin for a game page", () => {
+    // A page load is not a game-server request: every page host serves
+    // `/game/<id>`, so the WrongWorker redirect must not throw where the
+    // socket bases do.
+    expect(ClientEnv.gameNavigateBase("dAbCd12345")).toBe(
+      "https://openfront.io",
+    );
+
+    ClientEnv.applyServerList(LIST, "d");
+    // Once a server is known it is the same answer gameHttpBase gives.
+    expect(ClientEnv.gameNavigateBase("dAbCd12345")).toBe(
+      "https://falk2-b.openfront.io",
+    );
+    expect(ClientEnv.gameNavigateBase("cAbCd12345")).toBe(
+      "https://falk2-a.openfront.io",
+    );
   });
 
   it("answers from the list once it is applied", () => {
@@ -161,6 +184,56 @@ describe("a page carrying only environment values", () => {
     // Unknown letter, and legacy ids that carry no letter at all.
     expect(ClientEnv.gameVersion("zAbCd12345")).toBeUndefined();
     expect(ClientEnv.gameVersion("abcd1234")).toBeUndefined();
+  });
+});
+
+// The same-origin fallback is still right wherever the document DID come
+// from a game server — `npm run dev`, a standalone deployment, the desktop
+// shell. Only the static page has no server to fall back to, so these pin
+// that the fix above did not take the fallback away from the pages that need
+// it.
+describe("a page a game server rendered", () => {
+  afterEach(() => {
+    ClientEnv.reset();
+    delete (window as any).BOOTSTRAP_CONFIG;
+  });
+
+  function bootstrap(overrides: Record<string, unknown>) {
+    ClientEnv.reset();
+    (window as any).BOOTSTRAP_CONFIG = {
+      gameEnv: "prod",
+      turnstileSiteKey: "site-key",
+      jwtAudience: "openfront.io",
+      gitCommit: OWN,
+      ...overrides,
+    };
+    stubLocation("localhost:3000");
+  }
+
+  it("keeps same-origin bases from the injected cluster map", () => {
+    // What a game server renders today: its own one-entry map and letter.
+    bootstrap({
+      cluster: { a: { host: "localhost:3000", numWorkers: 2 } },
+      instanceLetter: "a",
+    });
+    expect(ClientEnv.serverWsBase()).toBe("wss://localhost:3000");
+    expect(ClientEnv.serverHttpBase()).toBe("https://localhost:3000");
+  });
+
+  it("keeps same-origin bases from a legacy numWorkers scalar", () => {
+    // An older server-rendered page, which numWorkers() still answers from.
+    // The two must agree: a page that can route to a worker must be able to
+    // build the origin that worker lives on.
+    bootstrap({ numWorkers: 4 });
+    expect(ClientEnv.numWorkers()).toBe(4);
+    expect(ClientEnv.serverWsBase()).toBe("wss://localhost:3000");
+  });
+
+  it("targets the injected serverHost, not the document, on desktop", () => {
+    // app://openfront — `window.location.host` is the string "openfront".
+    bootstrap({ serverHost: "blue.openfront.io" });
+    expect(ClientEnv.serverWsBase()).toBe("wss://blue.openfront.io");
+    expect(ClientEnv.serverHttpBase()).toBe("https://blue.openfront.io");
   });
 });
 

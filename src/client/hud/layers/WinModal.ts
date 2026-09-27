@@ -24,6 +24,7 @@ import {
   resolveCosmetics,
 } from "../../Cosmetics";
 import { crazyGamesSDK } from "../../CrazyGamesSDK";
+import { isDesktopShell } from "../../DesktopShell";
 import { Platform } from "../../Platform";
 import { PlaySoundEffectEvent } from "../../sound/Sounds";
 import { steamSDK } from "../../SteamSDK";
@@ -39,9 +40,6 @@ export class WinModal extends LitElement implements Controller {
 
   @state()
   isVisible = false;
-
-  @state()
-  showButtons = false;
 
   @state()
   private isWin = false;
@@ -78,11 +76,7 @@ export class WinModal extends LitElement implements Controller {
         <div class="min-h-0 flex-1 overflow-y-auto pr-0.5">
           ${this.innerHtml()}
         </div>
-        <div
-          class="${this.showButtons
-            ? "mt-4 flex justify-between gap-2.5 shrink-0"
-            : "hidden"}"
-        >
+        <div class="mt-4 flex justify-between gap-2.5 shrink-0">
           <o-button
             variant="primary"
             width="block"
@@ -170,9 +164,11 @@ export class WinModal extends LitElement implements Controller {
         <h3 class="text-xl font-semibold text-white mb-3">
           ${translateText("win_modal.support_openfront")}
         </h3>
-        <p class="text-white mb-3">
-          ${translateText("win_modal.territory_pattern")}
-        </p>
+        ${isDesktopShell()
+          ? null
+          : html`<p class="text-white mb-3">
+              ${translateText("win_modal.territory_pattern")}
+            </p>`}
         <div
           class="mx-auto w-full overflow-x-auto overflow-y-visible rounded-sm"
         >
@@ -233,7 +229,7 @@ export class WinModal extends LitElement implements Controller {
     return html`
       <div class="text-center mb-6 bg-black/30 p-2.5 rounded-sm">
         <h3 class="text-xl font-semibold text-white mb-3">
-          ${translateText("steam_wishlist.title")}
+          ${translateText("steam_wishlist.buy_on_steam")}
         </h3>
         <steam-wishlist
           campaign="win_modal"
@@ -266,21 +262,21 @@ export class WinModal extends LitElement implements Controller {
 
   async show() {
     crazyGamesSDK.gameplayStop();
-    await this.loadPatternContent();
-    // Check if this is a ranked game
     this.isRankedGame =
       this.game.config().gameConfig().rankedType !== undefined;
     this.isVisible = true;
     this.requestUpdate();
-    setTimeout(() => {
-      this.showButtons = true;
-      this.requestUpdate();
-    }, 3000);
+    try {
+      await this.loadPatternContent();
+    } catch (error) {
+      console.warn("Failed to load win modal cosmetics", error);
+      return;
+    }
+    this.requestUpdate();
   }
 
   hide() {
     this.isVisible = false;
-    this.showButtons = false;
     this.requestUpdate();
   }
 

@@ -256,9 +256,18 @@ export class EventsDisplay extends LitElement implements Controller {
   private resolveParams(
     event: DisplayMessageUpdate,
   ): Record<string, string | number> {
-    const params = event.params;
-    if (params?.name === undefined || event.focusPlayerID === undefined) {
-      return params ?? {};
+    let params = event.params ?? {};
+    if (
+      (event.message === "events_display.missile_intercepted" ||
+        event.message === "events_display.unit_destroyed") &&
+      typeof params.unit === "string" &&
+      params.unit.startsWith("unit_type.")
+    ) {
+      params = { ...params, unit: translateText(params.unit) };
+    }
+
+    if (params.name === undefined || event.focusPlayerID === undefined) {
+      return params;
     }
     const subject = this.game.playerBySmallID(event.focusPlayerID);
     if (!subject.isPlayer()) {

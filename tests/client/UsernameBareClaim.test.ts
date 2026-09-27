@@ -37,6 +37,7 @@ vi.mock("../../src/client/Utils", async (importOriginal) => ({
 
 import "../../src/client/components/UsernamePanel";
 import type { UsernamePanel } from "../../src/client/components/UsernamePanel";
+import { flushReloadToast } from "../../src/client/Utils";
 import type { UserMeResponse } from "../../src/core/ApiSchemas";
 
 function okBody(overrides: Record<string, unknown> = {}) {
@@ -278,6 +279,49 @@ describe("UsernamePanel bare-claim fallback", () => {
 
     expect(showInGameAlert).not.toHaveBeenCalled();
     expect(reload).toHaveBeenCalled();
+  });
+
+  // The modal is hash-routed and the hash survives a reload, so a save that
+  // leaves it in place reopens the form on a rename that already succeeded.
+  it("drops the modal hash before reloading", async () => {
+    history.replaceState(null, "", "/?x=1#modal=change-username");
+    Object.defineProperty(window, "location", {
+      configurable: true,
+      value: { ...realLocation, pathname: "/", search: "?x=1", reload },
+    });
+    const replaceState = vi.spyOn(history, "replaceState");
+    updateUsername.mockResolvedValue({ ok: true, data: okBody() });
+    const el = await mount();
+
+    await submit(el, "Ninja");
+
+    expect(replaceState).toHaveBeenCalledWith(history.state, "", "/?x=1");
+    expect(replaceState.mock.invocationCallOrder[0]).toBeLessThan(
+      reload.mock.invocationCallOrder[0],
+    );
+    replaceState.mockRestore();
+    history.replaceState(null, "", "/");
+  });
+
+  // With the modal gone the toast is the only confirmation left, and it has to
+  // cross the reload — once, not on every load after it.
+  it("queues a confirmation toast that shows once after the reload", async () => {
+    updateUsername.mockResolvedValue({ ok: true, data: okBody() });
+    const el = await mount();
+    const shown = vi.fn();
+    window.addEventListener("show-message", shown);
+
+    await submit(el, "Ninja");
+    expect(shown).not.toHaveBeenCalled();
+
+    flushReloadToast();
+    flushReloadToast();
+
+    expect(shown).toHaveBeenCalledTimes(1);
+    expect((shown.mock.calls[0][0] as CustomEvent).detail.message).toBe(
+      "account_modal.username_saved",
+    );
+    window.removeEventListener("show-message", shown);
   });
 
   // The tests above hand the panel a hand-built body, so they never reach

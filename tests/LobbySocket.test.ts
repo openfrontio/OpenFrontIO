@@ -11,6 +11,7 @@ import { lobbyFrame } from "./util/Wire";
 
 const mocks = vi.hoisted(() => ({
   ensureServerList: vi.fn(async (): Promise<string> => "api"),
+  refreshServerList: vi.fn(async (): Promise<string> => "api"),
   // The post-failure question (ServerList.reloadWouldRescue): would a
   // reload actually land this tab somewhere better? Asked only once
   // reconnecting has given up, never at page load.
@@ -30,9 +31,18 @@ vi.mock("../src/client/ServerList", async (importOriginal) => {
   return {
     ...actual,
     ensureServerList: mocks.ensureServerList,
+    refreshServerList: mocks.refreshServerList,
     reloadWouldRescue: mocks.reloadWouldRescue,
   };
 });
+
+// What a dropped or refused socket delivers: the arguments handleClose
+// receives from the socket's close listener.
+const ABNORMAL_CLOSE = [
+  "wss://blue.openfront.io/w0/lobbies",
+  { code: 1006, reason: "", wasClean: false } as CloseEvent,
+  null,
+] as const;
 
 function lobby(
   gameID: string,
@@ -305,7 +315,7 @@ describe("PublicLobbySocket.start when this build is outdated", () => {
 
     mocks.ensureServerList.mockResolvedValue("fallback");
     mocks.reloadWouldRescue.mockReturnValue(true);
-    (socket as any).handleClose();
+    (socket as any).handleClose(...ABNORMAL_CLOSE);
     await Promise.resolve();
     await Promise.resolve();
     expect(onUpdateAvailable).toHaveBeenCalledTimes(1);
@@ -313,11 +323,259 @@ describe("PublicLobbySocket.start when this build is outdated", () => {
     expect(mocks.reloadWouldRescue).toHaveBeenCalledWith("fallback");
 
     // Every further failure re-asks at most a prompt already given.
-    (socket as any).handleClose();
+    (socket as any).handleClose(...ABNORMAL_CLOSE);
     (socket as any).handleConnectError(new Error("refused"));
     await Promise.resolve();
     await Promise.resolve();
     expect(onUpdateAvailable).toHaveBeenCalledTimes(1);
+    socket.stop();
+  });
+
+  // A client whose wire format the server has moved past: every socket opens
+  // and every frame fails to decode. Resetting the attempt count on open made
+  // that loop forever, so the cap -- and with it the outdated prompt and the
+  // give-up signal -- was unreachable in exactly the case it exists for.
+  it("reaches the cap when sockets open but no frame ever decodes", async () => {
+    const onGaveUp = vi.fn();
+    const socket = new PublicLobbySocket(vi.fn(), {
+      onGaveUp,
+      maxWsAttempts: 2,
+    });
+    await socket.start();
+
+    (socket as any).handleOpen();
+    (socket as any).handleClose(...ABNORMAL_CLOSE);
+    expect(onGaveUp).not.toHaveBeenCalled();
+
+    (socket as any).connectWebSocket();
+    (socket as any).handleOpen();
+    (socket as any).handleClose(...ABNORMAL_CLOSE);
+    expect(onGaveUp).toHaveBeenCalledTimes(1);
+    socket.stop();
+  });
+
+  it("starts the count over once a frame decodes", async () => {
+    const onGaveUp = vi.fn();
+    const socket = new PublicLobbySocket(vi.fn(), {
+      onGaveUp,
+      maxWsAttempts: 2,
+    });
+    await socket.start();
+    (socket as any).handleClose(...ABNORMAL_CLOSE);
+
+    (socket as any).connectWebSocket();
+    (socket as any).handleOpen();
+    const frame = fullMessage(1000, {});
+    (socket as any).handleMessage({
+      data: frame.buffer.slice(
+        frame.byteOffset,
+        frame.byteOffset + frame.byteLength,
+      ),
+    } as MessageEvent);
+    (socket as any).handleClose(...ABNORMAL_CLOSE);
+
+    expect(onGaveUp).not.toHaveBeenCalled();
+    socket.stop();
+  });
+
+  // A deploy outlasts the fast attempts, and the homepage says "unavailable"
+  // from the give-up until a frame arrives.
+  it("keeps re-dialing after giving up, and recovers without a start()", async () => {
+    vi.useFakeTimers();
+    try {
+      const onGaveUp = vi.fn();
+      const onUpdate = vi.fn();
+      const socket = new PublicLobbySocket(onUpdate, {
+        onGaveUp,
+        maxWsAttempts: 1,
+        reconnectDelay: 1000,
+      });
+      await socket.start();
+      (socket as any).handleClose(...ABNORMAL_CLOSE);
+      expect(onGaveUp).toHaveBeenCalledTimes(1);
+
+      const connect = vi.spyOn(socket as any, "connectWebSocket");
+      await vi.advanceTimersByTimeAsync(1000);
+      expect(connect).not.toHaveBeenCalled();
+      // Discovery's own call, so the dial reads the list as it is now.
+      mocks.ensureServerList.mockClear();
+      await vi.advanceTimersByTimeAsync(45_000);
+      expect(connect).toHaveBeenCalledTimes(1);
+      expect(mocks.ensureServerList).toHaveBeenCalledTimes(1);
+
+      // Still down: no second announcement, and another slow retry.
+      (socket as any).handleClose(...ABNORMAL_CLOSE);
+      expect(onGaveUp).toHaveBeenCalledTimes(1);
+      await vi.advanceTimersByTimeAsync(45_000);
+      expect(connect).toHaveBeenCalledTimes(2);
+
+      const frame = fullMessage(1000, {});
+      (socket as any).handleMessage({
+        data: frame.buffer.slice(
+          frame.byteOffset,
+          frame.byteOffset + frame.byteLength,
+        ),
+      } as MessageEvent);
+      expect(onUpdate).toHaveBeenCalledTimes(1);
+
+      // Recovered, so the next outage is announced again.
+      (socket as any).handleClose(...ABNORMAL_CLOSE);
+      expect(onGaveUp).toHaveBeenCalledTimes(2);
+      socket.stop();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  // The error event before an abnormal close carries nothing, so the close
+  // is where a failed lobby socket has to say what happened.
+  it("warns with the close code and attempt count when the socket drops", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const socket = new PublicLobbySocket(vi.fn(), { maxWsAttempts: 3 });
+    await socket.start();
+
+    (socket as any).handleClose(...ABNORMAL_CLOSE);
+
+    expect(warn).toHaveBeenCalledWith(
+      "Lobby socket blue.openfront.io/w0/lobbies closed (1006, no close frame) " +
+        "before it opened; attempt 1/3, reconnecting",
+    );
+    socket.stop();
+  });
+
+  it("logs rather than warns when the server closes normally", async () => {
+    const log = vi.spyOn(console, "log").mockImplementation(() => {});
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const socket = new PublicLobbySocket(vi.fn(), { maxWsAttempts: 3 });
+    await socket.start();
+
+    (socket as any).handleClose(
+      ABNORMAL_CLOSE[0],
+      { code: 1000, reason: "", wasClean: true } as CloseEvent,
+      Date.now(),
+    );
+
+    expect(warn).not.toHaveBeenCalled();
+    expect(log).toHaveBeenCalledWith(
+      expect.stringContaining(
+        "Lobby socket blue.openfront.io/w0/lobbies closed (1000)",
+      ),
+    );
+    socket.stop();
+  });
+
+  // start() closes the socket it replaces, and that socket's close event
+  // lands after its successor is already dialing.
+  it("ignores a close from a socket it has already replaced", async () => {
+    const sockets: Array<{ emit: (type: string) => void }> = [];
+    class ListeningWebSocket {
+      static OPEN = 1;
+      readyState = 0;
+      binaryType = "";
+      private listeners = new Map<string, Array<(event: unknown) => void>>();
+      constructor(public url: string) {
+        sockets.push(this);
+      }
+      addEventListener(type: string, fn: (event: unknown) => void) {
+        this.listeners.set(type, [...(this.listeners.get(type) ?? []), fn]);
+      }
+      emit(type: string) {
+        for (const fn of this.listeners.get(type) ?? []) fn(ABNORMAL_CLOSE[1]);
+      }
+      close() {}
+    }
+    vi.stubGlobal("WebSocket", ListeningWebSocket);
+    const onGaveUp = vi.fn();
+    const socket = new PublicLobbySocket(vi.fn(), {
+      onGaveUp,
+      maxWsAttempts: 1,
+    });
+    await socket.start();
+    await socket.start();
+    expect(sockets).toHaveLength(2);
+
+    sockets[0].emit("close");
+    expect(onGaveUp).not.toHaveBeenCalled();
+
+    sockets[1].emit("close");
+    expect(onGaveUp).toHaveBeenCalledTimes(1);
+    socket.stop();
+  });
+
+  function deferredStatus() {
+    let settle!: (status: string) => void;
+    const promise = new Promise<string>((resolve) => {
+      settle = resolve;
+    });
+    return { promise, settle };
+  }
+
+  function countSockets(): { count: number } {
+    const made = { count: 0 };
+    vi.stubGlobal(
+      "WebSocket",
+      class extends FakeWebSocket {
+        constructor(url: string) {
+          super(url);
+          made.count++;
+        }
+      },
+    );
+    return made;
+  }
+
+  // Discovery answers from a cached list at once, and after a failure that
+  // list may still name the server that died.
+  it("waits for a refreshed list before dialing when asked to", async () => {
+    const made = countSockets();
+    const refresh = deferredStatus();
+    mocks.refreshServerList.mockReset();
+    mocks.refreshServerList.mockReturnValue(refresh.promise);
+    const socket = new PublicLobbySocket(vi.fn(), {});
+
+    const started = socket.start({ refreshList: true });
+    await Promise.resolve();
+    expect(made.count).toBe(0);
+    expect(mocks.ensureServerList).not.toHaveBeenCalled();
+
+    refresh.settle("api");
+    await started;
+    expect(made.count).toBe(1);
+    socket.stop();
+  });
+
+  it("dials once when a second start() lands while the first is still waiting for the list", async () => {
+    const made = countSockets();
+    const first = deferredStatus();
+    mocks.ensureServerList.mockReturnValueOnce(first.promise);
+    const socket = new PublicLobbySocket(vi.fn(), {});
+
+    const stale = socket.start();
+    await socket.start();
+    expect(made.count).toBe(1);
+
+    first.settle("api");
+    await stale;
+    expect(made.count).toBe(1);
+    socket.stop();
+  });
+
+  it("does not dial for a start() that was stopped and restarted while it waited", async () => {
+    const made = countSockets();
+    const first = deferredStatus();
+    const onUpdateAvailable = vi.fn();
+    mocks.ensureServerList.mockReturnValueOnce(first.promise);
+    const socket = new PublicLobbySocket(vi.fn(), { onUpdateAvailable });
+
+    const stale = socket.start();
+    socket.stop();
+    await socket.start();
+    expect(made.count).toBe(1);
+
+    first.settle("outdated");
+    await stale;
+    expect(made.count).toBe(1);
+    expect(onUpdateAvailable).not.toHaveBeenCalled();
     socket.stop();
   });
 
@@ -333,7 +591,7 @@ describe("PublicLobbySocket.start when this build is outdated", () => {
       maxWsAttempts: 1,
     });
     await socket.start();
-    (socket as any).handleClose();
+    (socket as any).handleClose(...ABNORMAL_CLOSE);
     await Promise.resolve();
     await Promise.resolve();
     expect(onUpdateAvailable).not.toHaveBeenCalled();
@@ -470,7 +728,7 @@ describe("PublicLobbySocket.start with no server known", () => {
 
       expect(urls).toHaveLength(1);
       expect(urls[0]).toMatch(
-        /^wss:\/\/falk2-b\.openfront\.io\/w\d+\/lobbies$/,
+        /^wss:\/\/falk2-b\.openfront\.io\/w\d+\/lobbies\?platform=web$/,
       );
       expect(mocks.showInGameAlert).not.toHaveBeenCalled();
     } finally {
@@ -499,9 +757,14 @@ describe("PublicLobbySocket.start with no server known", () => {
       expect(mocks.showInGameAlert).toHaveBeenCalledTimes(1);
       expect(mocks.showInGameAlert.mock.calls[0][0]).toContain("connection");
 
-      // And it stops: no third attempt, no second alert.
+      // It keeps asking, slowly, but announces the outage only once.
+      const asked = mocks.ensureServerList.mock.calls.length;
       await vi.advanceTimersByTimeAsync(10_000);
+      expect(mocks.ensureServerList.mock.calls.length).toBe(asked);
+      await vi.advanceTimersByTimeAsync(120_000);
+      expect(mocks.ensureServerList.mock.calls.length).toBeGreaterThan(asked);
       expect(mocks.showInGameAlert).toHaveBeenCalledTimes(1);
+      socket.stop();
     } finally {
       vi.useRealTimers();
     }
@@ -608,7 +871,7 @@ describe("PublicLobbySocket.start on a page its own game server rendered", () =>
     expect(onUpdateAvailable).not.toHaveBeenCalled();
     // And the lobby list still connects, on the page's own server.
     expect((socket as any).ws.url).toMatch(
-      /^wss:\/\/blue\.openfront\.io\/w\d+\/lobbies$/,
+      /^wss:\/\/blue\.openfront\.io\/w\d+\/lobbies\?platform=web$/,
     );
     socket.stop();
   });
@@ -641,7 +904,7 @@ describe("PublicLobbySocket.start on a page its own game server rendered", () =>
     await socket.start();
     expect(onUpdateAvailable).not.toHaveBeenCalled();
 
-    (socket as any).handleClose();
+    (socket as any).handleClose(...ABNORMAL_CLOSE);
     await Promise.resolve();
     await Promise.resolve();
     expect(onUpdateAvailable).toHaveBeenCalledTimes(1);
@@ -691,11 +954,11 @@ describe("PublicLobbySocket.start on a page its own game server rendered", () =>
     await socket.start();
     expect(onUpdateAvailable).not.toHaveBeenCalled();
     expect((socket as any).ws.url).toMatch(
-      /^wss:\/\/blue\.openfront\.io\/w\d+\/lobbies$/,
+      /^wss:\/\/blue\.openfront\.io\/w\d+\/lobbies\?platform=web$/,
     );
 
     // And not after the socket gives up either: there is no newer build.
-    (socket as any).handleClose();
+    (socket as any).handleClose(...ABNORMAL_CLOSE);
     await Promise.resolve();
     await Promise.resolve();
     expect(onUpdateAvailable).not.toHaveBeenCalled();
@@ -703,11 +966,29 @@ describe("PublicLobbySocket.start on a page its own game server rendered", () =>
   });
 
   // A standalone deployment (dev's main.openfront.dev today, previews,
-  // beta) has nowhere else for a reload to go: a one-entry cluster map, and
-  // Traefik routes its page host and its game host to the same container.
-  // So even a socket that has given up raises nothing — a prompt there
-  // would reload straight back into this page and fire again.
+  // beta) has nowhere else for a reload to go: its site's list names only
+  // its own server, and Traefik routes its page host and its game host to
+  // the same container. So even a socket that has given up raises nothing —
+  // a prompt there would reload straight back into this page and fire again.
   it("never prompts a standalone page, even once its socket has given up", async () => {
+    vi.stubGlobal(
+      "fetch",
+      async () =>
+        new Response(
+          JSON.stringify({
+            latest: OWN,
+            servers: {
+              a: {
+                host: "main.server.openfront.dev",
+                numWorkers: 2,
+                version: OWN,
+                state: "open" as const,
+              },
+            },
+          }),
+          { status: 200, headers: { "content-type": "application/json" } },
+        ),
+    );
     bootstrap({
       cluster: { a: { host: "main.server.openfront.dev", numWorkers: 2 } },
       instanceLetter: "a",
@@ -721,7 +1002,7 @@ describe("PublicLobbySocket.start on a page its own game server rendered", () =>
     });
 
     await socket.start();
-    (socket as any).handleClose();
+    (socket as any).handleClose(...ABNORMAL_CLOSE);
     await Promise.resolve();
     await Promise.resolve();
 

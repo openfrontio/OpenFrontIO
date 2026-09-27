@@ -84,4 +84,25 @@ describe("EmojiTable event bus wiring", () => {
 
     expect(table.isVisible).toBe(false);
   });
+  it("ignores ShowEmojiMenuEvent while already open to preserve original target", async () => {
+    tileOwner = otherPlayer;
+    eventBus.emit(new ShowEmojiMenuEvent(3, 4));
+    expect(table.isVisible).toBe(true);
+
+    // Another event fires for a different owner while already visible
+    tileOwner = myPlayer;
+    eventBus.emit(new ShowEmojiMenuEvent(10, 20));
+
+    await pickEmoji(1);
+
+    expect(emojiIntents).toHaveLength(1);
+    expect(emojiIntents[0].recipient).toBe(otherPlayer);
+    expect(emojiIntents[0].emoji).toBe(1);
+  });
+
+  it("does not stay visible if coordinate validation fails", () => {
+    table.game.isValidCoord = () => false;
+    eventBus.emit(new ShowEmojiMenuEvent(999, 999));
+    expect(table.isVisible).toBe(false);
+  });
 });

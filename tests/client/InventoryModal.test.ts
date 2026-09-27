@@ -309,6 +309,8 @@ describe("InventoryModal", () => {
       "inventory.showing_effects": "Effects equipped: {count}",
       "inventory.selected_cosmetic": "Selected {name}",
       "inventory.selected_cosmetic_variant": "{name} ({variant})",
+      "inventory.sign_in_for_cosmetics":
+        "Sign in or create an account to access your skins, crowns, and effects.",
       "inventory.unequip": "Unequip",
       "inventory.unequip_all": "Unequip all",
       "inventory.unequipped_all": "Unequipped everything",
@@ -323,6 +325,7 @@ describe("InventoryModal", () => {
       "common.none": "No flag",
       "common.not_logged_in": "Not logged in",
       "main.store": "Store",
+      "main.sign_in": "Sign in",
       "store.patterns": "Skins",
       "store.flags": "Flags",
       "store.crowns": "Crowns",
@@ -353,6 +356,7 @@ describe("InventoryModal", () => {
       ownershipState: "loaded",
       isLoading: false,
       loadFailed: false,
+      isModalOpen: true,
     });
     modal.requestUpdate();
     await modal.updateComplete;
@@ -378,6 +382,20 @@ describe("InventoryModal", () => {
         .querySelector("o-modal")
         ?.shadowRoot?.querySelector('[role="tablist"]'),
     ).toBeNull();
+  });
+
+  it("builds no cosmetic cards while closed", async () => {
+    modal.open();
+    await modal.updateComplete;
+    expect(card(modal, "skin:owned_skin")).toBeTruthy();
+
+    modal.close();
+    await modal.updateComplete;
+    expect(modal.querySelector("cosmetic-card")).toBeNull();
+
+    modal.open();
+    await modal.updateComplete;
+    expect(card(modal, "skin:owned_skin")).toBeTruthy();
   });
 
   it("drops an open preview when the inventory closes", async () => {
@@ -416,6 +434,47 @@ describe("InventoryModal", () => {
     await (action as LitElement).updateComplete;
     expect(action.closest('[slot="header"]')).toBeTruthy();
     expect(action.textContent?.trim()).toBe("Not logged in");
+  });
+
+  it("explains guest access across inventory categories and opens sign-in", async () => {
+    const showPage = vi.fn();
+    const previousShowPage = window.showPage;
+    window.showPage = showPage;
+    try {
+      Object.assign(modal as unknown as Record<string, unknown>, {
+        userMeResponse: false,
+        ownershipState: "guest",
+      });
+      modal.requestUpdate();
+
+      for (const tab of ["skins", "crowns", "effects", "flags"] as const) {
+        await showTab(modal, tab);
+        const notice = modal.querySelector<HTMLElement>(
+          "[data-inventory-sign-in]",
+        );
+        expect(notice?.textContent).toContain(
+          "Sign in or create an account to access your skins, crowns, and effects.",
+        );
+        const button = notice?.querySelector<HTMLElement>("o-button");
+        await (button as LitElement).updateComplete;
+        expect(button?.textContent?.trim()).toBe("Sign in");
+      }
+
+      modal
+        .querySelector<HTMLElement>("[data-inventory-sign-in] o-button")!
+        .click();
+      expect(showPage).toHaveBeenCalledWith("page-account");
+
+      Object.assign(modal as unknown as Record<string, unknown>, {
+        userMeResponse: ownedUser,
+        ownershipState: "loaded",
+      });
+      modal.requestUpdate();
+      await modal.updateComplete;
+      expect(modal.querySelector("[data-inventory-sign-in]")).toBeNull();
+    } finally {
+      window.showPage = previousShowPage;
+    }
   });
 
   it("deep-links to the store cosmetics tab from the header action", async () => {

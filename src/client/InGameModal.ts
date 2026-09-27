@@ -49,11 +49,15 @@ export function showInGameConfirm(
 }
 
 /** In-game replacement for `alert()`. Resolves once dismissed. */
-export function showInGameAlert(message: string): Promise<boolean> {
+export function showInGameAlert(
+  message: string,
+  options?: Partial<ConfirmDialog>,
+): Promise<boolean> {
   return showDialog({
     message,
     variant: "warning",
     buttons: "confirmOnly",
     confirmText: translateText("common.close"),
+    ...options,
   });
 }

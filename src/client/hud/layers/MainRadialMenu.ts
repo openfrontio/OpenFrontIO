@@ -104,15 +104,20 @@ export class MainRadialMenu implements Controller {
 
       const myPlayer = this.game.myPlayer();
       if (myPlayer === null) return;
-      myPlayer.actions(clickedTile).then((actions) => {
-        this.updatePlayerActions(
-          myPlayer,
-          actions,
-          clickedTile,
-          event.x,
-          event.y,
-        );
-      });
+      myPlayer
+        .actions(clickedTile)
+        .then((actions) => {
+          this.updatePlayerActions(
+            myPlayer,
+            actions,
+            clickedTile,
+            event.x,
+            event.y,
+          );
+        })
+        .catch((error) => {
+          console.warn("Failed to load radial menu actions:", error);
+        });
     });
   }
 
@@ -174,9 +179,14 @@ export class MainRadialMenu implements Controller {
     const myPlayer = this.game.myPlayer();
     if (myPlayer === null) return;
     const tile = this.clickedTile;
-    myPlayer.actions(tile).then((actions) => {
-      this.updatePlayerActions(myPlayer, actions, tile);
-    });
+    myPlayer
+      .actions(tile)
+      .then((actions) => {
+        this.updatePlayerActions(myPlayer, actions, tile);
+      })
+      .catch((error) => {
+        console.warn("Failed to refresh radial menu actions:", error);
+      });
   }
 
   closeMenu() {

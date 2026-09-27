@@ -1,3 +1,4 @@
+import { z } from "zod";
 import {
   AbstractGraph,
   AbstractGraphBuilder,
@@ -6,6 +7,13 @@ import { AStarWaterHierarchical } from "../pathfinding/algorithms/AStar.WaterHie
 import { BFSGrid } from "../pathfinding/algorithms/BFS.Grid";
 import { ConnectedComponents } from "../pathfinding/algorithms/ConnectedComponents";
 import { PathFinder } from "../pathfinding/types";
+import {
+  snapshotType,
+  zBytes,
+  zInt,
+  zTiles,
+  zU16Array,
+} from "../snapshot/SnapshotType";
 import { DebugSpan } from "../utilities/DebugSpan";
 import { GameMap, TileRef } from "./GameMap";
 
@@ -81,6 +89,50 @@ export class WaterManager {
         this._miniWaterGraph,
         { cachePaths: true },
       );
+    }
+  }
+
+  snapshot(): WaterManagerState {
+    return {
+      waterGraphVersion: this._waterGraphVersion,
+      waterGraphDirty: this._waterGraphDirty,
+      waterGraphLastRebuildTick: this._waterGraphLastRebuildTick,
+      pendingWaterTiles: Uint32Array.from(this._pendingWaterTiles),
+      dirtyMiniTiles: Uint32Array.from(this._dirtyMiniTiles),
+      // Components only diverge from a fresh labeling of the (restored)
+      // minimap once water has been added; skip the arrays until then.
+      components:
+        this.miniMap.waterVersion() > 0
+          ? (this._miniWaterCC?.snapshot() ?? null)
+          : null,
+    };
+  }
+
+  /**
+   * Applies a snapshot to a manager just constructed on the restored maps.
+   *
+   * The water graph is rebuilt from the restored components rather than
+   * stored. While the graph is dirty (up to WATER_GRAPH_REBUILD_INTERVAL
+   * ticks after a water nuke) the live game still routes on the stale graph,
+   * which a restore cannot reproduce.
+   */
+  restoreSnapshot(s: WaterManagerState): void {
+    this._waterGraphVersion = s.waterGraphVersion;
+    this._waterGraphDirty = s.waterGraphDirty;
+    this._waterGraphLastRebuildTick = s.waterGraphLastRebuildTick;
+    this._pendingWaterTiles = new Set(s.pendingWaterTiles);
+    this._dirtyMiniTiles = new Set(s.dirtyMiniTiles);
+    if (s.components !== null && this._miniWaterCC !== null) {
+      this._miniWaterCC.restoreSnapshot(s.components);
+      this._miniWaterGraph = new AbstractGraphBuilder(
+        this.miniMap,
+        AbstractGraphBuilder.CLUSTER_SIZE,
+        undefined,
+        undefined,
+        this._miniWaterCC,
+        this._builderBFS ?? undefined,
+      ).build();
+      this._miniWaterHPA?.setGraph(this._miniWaterGraph);
     }
   }
 
@@ -832,3 +884,26 @@ export class WaterManager {
     }
   }
 }
+
+export const WaterManagerSnapshot = snapshotType({
+  name: "WaterManager",
+  version: 1,
+  schema: z.object({
+    waterGraphVersion: zInt(),
+    waterGraphDirty: z.boolean(),
+    waterGraphLastRebuildTick: zInt(),
+    pendingWaterTiles: zTiles(),
+    dirtyMiniTiles: zTiles(),
+    components: z
+      .object({
+        componentIds: z.union([zBytes(), zU16Array()]),
+        // Indexed by component id, which starts at 1: slot 0 is a hole.
+        componentSizes: z.array(zInt().optional()),
+        parents: z.array(zInt()),
+        maxId: zInt(),
+        landMarker: zInt(),
+      })
+      .nullable(),
+  }),
+});
+export type WaterManagerState = z.infer<typeof WaterManagerSnapshot.schema>;

@@ -1,3 +1,4 @@
+import { z } from "zod";
 import {
   AllianceRequest,
   Execution,
@@ -7,6 +8,13 @@ import {
   PlayerID,
   UnitType,
 } from "../../game/Game";
+import { execSnapshotType } from "../../snapshot/ExecutionSnapshot";
+import type {
+  ExecRecord,
+  SnapshotReader,
+  SnapshotWriter,
+} from "../../snapshot/SnapshotContext";
+import { zPlayerRef, zRef } from "../../snapshot/SnapshotType";
 import { wouldNukeBreakAlliance } from "../Util";
 
 export class AllianceRequestExecution implements Execution {
@@ -169,4 +177,39 @@ export class AllianceRequestExecution implements Execution {
       );
     }
   }
+
+  snapshot(w: SnapshotWriter): ExecRecord {
+    return AllianceRequestExecutionSnapshot.write({
+      active: this.active,
+      initialized: this.mg !== undefined,
+      req: this.req === null ? null : w.allianceRequest(this.req),
+      requestor: w.player(this.requestor),
+      recipientID: this.recipientID,
+    });
+  }
+
+  restoreSnapshot(s: AllianceRequestState, r: SnapshotReader): void {
+    this.active = s.active;
+    if (s.initialized) this.mg = r.game;
+    this.req =
+      s.req === null ? null : r.allianceRequest<AllianceRequest>(s.req);
+    this.requestor = r.player(s.requestor);
+    this.recipientID = s.recipientID;
+  }
 }
+
+const AllianceRequestStateSchema = z.object({
+  active: z.boolean(),
+  initialized: z.boolean(),
+  req: zRef().nullable(),
+  requestor: zPlayerRef(),
+  recipientID: z.string(),
+});
+type AllianceRequestState = z.infer<typeof AllianceRequestStateSchema>;
+
+export const AllianceRequestExecutionSnapshot = execSnapshotType({
+  name: "AllianceRequest",
+  version: 1,
+  schema: AllianceRequestStateSchema,
+  cls: () => AllianceRequestExecution,
+});

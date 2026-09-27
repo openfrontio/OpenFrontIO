@@ -170,7 +170,7 @@ export class LangSelector extends LitElement {
       this.languageCache.set(lang, flat);
       return flat;
     } catch (err) {
-      console.error(`Failed to load language ${lang}:`, err);
+      console.warn(`Failed to load language ${lang}:`, err);
       return {};
     }
   }
@@ -231,7 +231,7 @@ export class LangSelector extends LitElement {
 
       this.languageList = finalList;
     } catch (err) {
-      console.error("Failed to load language list:", err);
+      console.warn("Failed to load language list:", err);
     }
   }
 
@@ -246,6 +246,7 @@ export class LangSelector extends LitElement {
     const components = [
       "single-player-modal",
       "host-lobby-modal",
+      "map-picker",
       "join-lobby-modal",
       "emoji-table",
       "player-stats",
@@ -271,6 +272,7 @@ export class LangSelector extends LitElement {
       "cosmetic-card",
       "cosmetic-info",
       "cosmetic-preview",
+      "difficulty-info",
       "inventory-loadout-bar",
       "purchase-button",
       "custom-currency-card",

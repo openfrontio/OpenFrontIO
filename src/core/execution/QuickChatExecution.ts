@@ -1,4 +1,12 @@
+import { z } from "zod";
 import { Execution, Game, Player, PlayerID } from "../game/Game";
+import { execSnapshotType } from "../snapshot/ExecutionSnapshot";
+import type {
+  ExecRecord,
+  SnapshotReader,
+  SnapshotWriter,
+} from "../snapshot/SnapshotContext";
+import { zPlayerRef } from "../snapshot/SnapshotType";
 
 export class QuickChatExecution implements Execution {
   private recipient: Player;
@@ -77,4 +85,44 @@ export class QuickChatExecution implements Execution {
     const translated = fullKey.split(".");
     return translated;
   }
+
+  snapshot(w: SnapshotWriter): ExecRecord {
+    return QuickChatExecutionSnapshot.write({
+      active: this.active,
+      initialized: this.mg !== undefined,
+      recipient: this.recipient === undefined ? null : w.player(this.recipient),
+      sender: w.player(this.sender),
+      recipientID: this.recipientID,
+      quickChatKey: this.quickChatKey,
+      target: this.target,
+    });
+  }
+
+  restoreSnapshot(s: QuickChatState, r: SnapshotReader): void {
+    this.active = s.active;
+    if (s.initialized) this.mg = r.game;
+    if (s.recipient !== null) this.recipient = r.player(s.recipient);
+    this.sender = r.player(s.sender);
+    this.recipientID = s.recipientID;
+    this.quickChatKey = s.quickChatKey;
+    this.target = s.target;
+  }
 }
+
+const QuickChatStateSchema = z.object({
+  active: z.boolean(),
+  initialized: z.boolean(),
+  recipient: zPlayerRef().nullable(),
+  sender: zPlayerRef(),
+  recipientID: z.string(),
+  quickChatKey: z.string(),
+  target: z.string().optional(),
+});
+type QuickChatState = z.infer<typeof QuickChatStateSchema>;
+
+export const QuickChatExecutionSnapshot = execSnapshotType({
+  name: "QuickChat",
+  version: 1,
+  schema: QuickChatStateSchema,
+  cls: () => QuickChatExecution,
+});

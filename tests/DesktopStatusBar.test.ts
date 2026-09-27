@@ -547,3 +547,144 @@ describe("the rendered needs-account session state", () => {
     (window as { openfrontDesktop?: unknown }).openfrontDesktop = undefined;
   });
 });
+
+// A Retry on a gated session that lands back on the same reason (Steam is
+// still not running) repaints nothing: the shell answers in milliseconds, so
+// not even "Signing in…" is seen. The bar wiggles instead, so the press is
+// visibly tried rather than reading as a dead button.
+describe("Retry on a session state that does not change", () => {
+  function mountBar(): HTMLElement & { updateComplete: Promise<unknown> } {
+    const bar = document.createElement("desktop-status-bar") as HTMLElement & {
+      updateComplete: Promise<unknown>;
+    };
+    document.body.appendChild(bar);
+    return bar;
+  }
+
+  function setSession(detail: { status: string; reason?: string }) {
+    document.dispatchEvent(
+      new CustomEvent("desktop-session-state", { detail }),
+    );
+  }
+
+  function strip(bar: HTMLElement): HTMLElement {
+    return bar.querySelector('[role="status"]') as HTMLElement;
+  }
+
+  afterEach(() => {
+    document.body.innerHTML = "";
+  });
+
+  it("wiggles when the retry settles on the same signed-out reason", async () => {
+    const bar = mountBar();
+    setSession({ status: "signed-out", reason: "steam-unavailable" });
+    await bar.updateComplete;
+    expect(strip(bar).classList.contains("animate-bounce")).toBe(false);
+
+    bar.querySelector("button")!.click();
+    setSession({ status: "retrying" });
+    setSession({ status: "signed-out", reason: "steam-unavailable" });
+    await bar.updateComplete;
+
+    expect(strip(bar).classList.contains("animate-bounce")).toBe(true);
+  });
+
+  it("does not wiggle when the retry lands somewhere new", async () => {
+    const bar = mountBar();
+    setSession({ status: "signed-out", reason: "steam-unavailable" });
+    await bar.updateComplete;
+
+    bar.querySelector("button")!.click();
+    setSession({ status: "retrying" });
+    setSession({ status: "signed-out", reason: "network" });
+    await bar.updateComplete;
+
+    expect(strip(bar).classList.contains("animate-bounce")).toBe(false);
+  });
+
+  it("does not wiggle on a session change nobody pressed Retry for", async () => {
+    const bar = mountBar();
+    setSession({ status: "signed-out", reason: "steam-unavailable" });
+    await bar.updateComplete;
+
+    setSession({ status: "signed-out", reason: "steam-unavailable" });
+    await bar.updateComplete;
+
+    expect(strip(bar).classList.contains("animate-bounce")).toBe(false);
+  });
+});
+
+// barSource ranks the session above the update, so a release staged while the
+// session was gated never showed its Reload. The bar applies it itself when
+// the session signs in -- but only from a gated state, and never where a
+// reload would throw the player out of something.
+describe("a staged update when a gated session signs in", () => {
+  let apply: ReturnType<typeof vi.fn>;
+
+  function mountBar(status: string) {
+    apply = vi.fn(() => Promise.resolve());
+    (window as { openfrontDesktop?: unknown }).openfrontDesktop = {
+      update: {
+        subscribe(cb: (s: unknown) => void) {
+          cb({ status, bytes: 0, total: 0 });
+          return () => {};
+        },
+        apply,
+        retry: () => Promise.resolve(),
+      },
+    };
+    const bar = document.createElement("desktop-status-bar");
+    document.body.appendChild(bar);
+    return bar;
+  }
+
+  function setSession(detail: { status: string; reason?: string }) {
+    document.dispatchEvent(
+      new CustomEvent("desktop-session-state", { detail }),
+    );
+  }
+
+  afterEach(() => {
+    document.body.innerHTML = "";
+    document.body.classList.remove("in-game");
+    (window as { openfrontDesktop?: unknown }).openfrontDesktop = undefined;
+  });
+
+  it("applies it when Retry signs the player in", () => {
+    mountBar("staged");
+    setSession({ status: "signed-out", reason: "steam-unavailable" });
+    setSession({ status: "retrying" });
+    setSession({ status: "signed-in" });
+    expect(apply).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not reload on an ordinary first sign-in", () => {
+    mountBar("staged");
+    setSession({ status: "unknown" });
+    setSession({ status: "signed-in" });
+    expect(apply).not.toHaveBeenCalled();
+  });
+
+  it("does nothing when no update is staged", () => {
+    mountBar("downloading");
+    setSession({ status: "signed-out", reason: "steam-unavailable" });
+    setSession({ status: "signed-in" });
+    expect(apply).not.toHaveBeenCalled();
+  });
+
+  it("does not reload a player out of a lobby wait", () => {
+    mountBar("staged");
+    setSession({ status: "signed-out", reason: "network" });
+    document.dispatchEvent(new CustomEvent("join-lobby"));
+    setSession({ status: "signed-in" });
+    expect(apply).not.toHaveBeenCalled();
+  });
+
+  it("does not reload mid-game", () => {
+    mountBar("staged");
+    setSession({ status: "signed-out", reason: "network" });
+    document.body.classList.add("in-game");
+    setSession({ status: "signed-in" });
+    expect(apply).not.toHaveBeenCalled();
+  });
+});

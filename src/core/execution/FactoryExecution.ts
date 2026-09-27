@@ -1,4 +1,12 @@
+import { z } from "zod";
 import { Execution, Game, Unit, UnitType } from "../game/Game";
+import { execSnapshotType } from "../snapshot/ExecutionSnapshot";
+import type {
+  ExecRecord,
+  SnapshotReader,
+  SnapshotWriter,
+} from "../snapshot/SnapshotContext";
+import { zRef } from "../snapshot/SnapshotType";
 import { TrainStationExecution } from "./TrainStationExecution";
 
 export class FactoryExecution implements Execution {
@@ -45,4 +53,35 @@ export class FactoryExecution implements Execution {
       }
     }
   }
+
+  snapshot(w: SnapshotWriter): ExecRecord {
+    return FactoryExecutionSnapshot.write({
+      active: this.active,
+      initialized: this.game !== undefined,
+      stationCreated: this.stationCreated,
+      factory: w.unit(this.factory),
+    });
+  }
+
+  restoreSnapshot(s: FactoryState, r: SnapshotReader): void {
+    this.active = s.active;
+    if (s.initialized) this.game = r.game;
+    this.stationCreated = s.stationCreated;
+    this.factory = r.unit(s.factory);
+  }
 }
+
+const FactoryStateSchema = z.object({
+  active: z.boolean(),
+  initialized: z.boolean(),
+  stationCreated: z.boolean(),
+  factory: zRef(),
+});
+type FactoryState = z.infer<typeof FactoryStateSchema>;
+
+export const FactoryExecutionSnapshot = execSnapshotType({
+  name: "Factory",
+  version: 1,
+  schema: FactoryStateSchema,
+  cls: () => FactoryExecution,
+});

@@ -858,6 +858,29 @@ export function showToast(
   );
 }
 
+const RELOAD_TOAST_KEY = "reloadToast";
+
+// Holds the translated text, not the key: on the far side of the reload the
+// language files may not have landed yet and translateText would echo the key.
+export function showToastAfterReload(message: string): void {
+  try {
+    sessionStorage.setItem(RELOAD_TOAST_KEY, message);
+  } catch {
+    // sessionStorage unavailable: the reload still happens, just silently.
+  }
+}
+
+export function flushReloadToast(): void {
+  let message: string | null;
+  try {
+    message = sessionStorage.getItem(RELOAD_TOAST_KEY);
+    sessionStorage.removeItem(RELOAD_TOAST_KEY);
+  } catch {
+    return;
+  }
+  if (message) showToast(message, "green");
+}
+
 export function getSecondsUntilServerTimestamp(
   targetServerTimestampMs: number,
   serverTimeOffsetMs: number,

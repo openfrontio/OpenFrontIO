@@ -262,6 +262,59 @@ describe("Transport send paths", () => {
     });
   });
 
+  describe("after leaving the game", () => {
+    // The bus is shared by every transport the page ever made, so a
+    // superseded one must stop answering or it logs on every hash the live
+    // game sends.
+
+    it("stops answering bus events while the live transport still does", () => {
+      const { transport: stale, eventBus, ws: staleWs } = connected();
+      const live = new Transport(
+        { gameID: "game5678", playerName: "tester" } as unknown as LobbyConfig,
+        eventBus,
+      );
+      transports.push(live);
+      const liveWs = handshake(live);
+
+      stale.leaveGame();
+      vi.mocked(console.log).mockClear();
+      eventBus.emit(new SendHashEvent(10, 42));
+      eventBus.emit(new SendWinnerEvent(["player", "player01"], {}));
+
+      expect(decodeFrames(liveWs)).toContainEqual({
+        type: "hash",
+        turnNumber: 10,
+        hash: 42,
+      });
+      expect(decodeFrames(staleWs)).not.toContainEqual(
+        expect.objectContaining({ type: "hash" }),
+      );
+      expect(
+        vi
+          .mocked(console.log)
+          .mock.calls.some(
+            (call) => call[0] === "WebSocket is not open. Current state:",
+          ),
+      ).toBe(false);
+    });
+
+    it("stops forwarding to the local server in singleplayer", () => {
+      const { transport, eventBus } = makeTransport({
+        gameRecord: {} as LobbyConfig["gameRecord"],
+      });
+      transports.push(transport);
+      transport.connect(
+        () => {},
+        () => {},
+      );
+
+      transport.leaveGame();
+      eventBus.emit(new SendWinnerEvent(["player", "player01"], {}));
+
+      expect(localServer.onMessage).not.toHaveBeenCalled();
+    });
+  });
+
   describe("torn-down socket guards", () => {
     // The browser can fire a queued handler after killExistingSocket nulled
     // the transport's reference; each guard must bail without acting.

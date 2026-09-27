@@ -128,7 +128,10 @@ function makeLobbyConfig(withStartInfo: boolean): LobbyConfig {
 
 // Builds a runner around fully mocked collaborators, starts it, and returns
 // the callbacks start() handed to the transport and the worker.
-function makeStartedRunner(withStartInfo: boolean) {
+function makeStartedRunner(
+  withStartInfo: boolean,
+  opts: { isLocal?: boolean; metrics?: object } = {},
+) {
   const eventBus = new EventBus();
   const emitSpy = vi.spyOn(eventBus, "emit");
   const worker = { start: vi.fn(), sendTurn: vi.fn(), cleanup: vi.fn() };
@@ -137,7 +140,7 @@ function makeStartedRunner(withStartInfo: boolean) {
     rejoinGame: vi.fn(),
     turnComplete: vi.fn(),
     leaveGame: vi.fn(),
-    isLocal: true,
+    isLocal: opts.isLocal ?? true,
   };
   const renderer = {
     initialize: vi.fn(),
@@ -165,6 +168,10 @@ function makeStartedRunner(withStartInfo: boolean) {
     gameView as never,
     soundManager as never,
     userSettings as never,
+    null,
+    null,
+    null,
+    (opts.metrics ?? null) as never,
   );
   runner.start();
 
@@ -298,6 +305,51 @@ describe("ClientGameRunner in-game messages", () => {
     expect(transport.turnComplete).toHaveBeenCalled();
     expect(emitSpy).toHaveBeenCalledWith(new SendHashEvent(3, 42));
     expect(gameView.update).toHaveBeenCalled();
+  });
+
+  it("feeds tick execution and wire tick interval to the game metrics", () => {
+    const metrics = {
+      start: vi.fn(),
+      stop: vi.fn(),
+      recordTickExecution: vi.fn(),
+      recordTickInterval: vi.fn(),
+    };
+    const { runner, onmessage, workerCallback } = makeStartedRunner(true, {
+      isLocal: false,
+      metrics,
+    });
+    expect(metrics.start).toHaveBeenCalledTimes(1);
+
+    const now = vi.spyOn(Date, "now");
+    now.mockReturnValue(1000);
+    onmessage({ type: "turn", turn: { turnNumber: 0, intents: [] } });
+    now.mockReturnValue(1130);
+    onmessage({ type: "turn", turn: { turnNumber: 1, intents: [] } });
+    // The first turn has nothing to measure against.
+    expect(metrics.recordTickInterval.mock.calls).toEqual([[130]]);
+
+    workerCallback({
+      tickExecutionDuration: 4.5,
+      updates: { [GameUpdateType.Hash]: [] },
+    });
+    workerCallback({ updates: { [GameUpdateType.Hash]: [] } });
+    expect(metrics.recordTickExecution.mock.calls).toEqual([[4.5]]);
+
+    runner.stop();
+    expect(metrics.stop).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not measure the tick interval of a local game", () => {
+    const metrics = {
+      start: vi.fn(),
+      stop: vi.fn(),
+      recordTickExecution: vi.fn(),
+      recordTickInterval: vi.fn(),
+    };
+    const { onmessage } = makeStartedRunner(true, { isLocal: true, metrics });
+    onmessage({ type: "turn", turn: { turnNumber: 0, intents: [] } });
+    onmessage({ type: "turn", turn: { turnNumber: 1, intents: [] } });
+    expect(metrics.recordTickInterval).not.toHaveBeenCalled();
   });
 
   it("shows the crash modal and stops on a worker error update", () => {

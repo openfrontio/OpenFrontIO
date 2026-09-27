@@ -169,7 +169,7 @@ export async function linkGoogle(): Promise<boolean> {
     window.location.href = url;
     return true;
   } catch (e) {
-    console.error("Failed to start Google link", e);
+    console.warn("Failed to start Google link", e);
     return false;
   }
 }
@@ -206,25 +206,64 @@ export async function linkSteam(): Promise<boolean> {
     window.location.href = url;
     return true;
   } catch (e) {
-    console.error("Failed to start Steam link", e);
+    console.warn("Failed to start Steam link", e);
     return false;
   }
 }
 
-export async function tempTokenLogin(token: string): Promise<string | null> {
-  const response = await fetch(
-    `${getApiBase()}/auth/login/token?login-token=${token}`,
-    {
-      credentials: "include",
-    },
-  );
-  if (response.status !== 200) {
-    console.error("Token login failed", response);
-    return null;
+export type TokenLoginResult =
+  | { status: "success"; email: string }
+  // A 400 is final: the token was invalid, expired, or already consumed.
+  // Retrying it is pointless.
+  | { status: "failed"; code: "consumed" | "expired" | "invalid" }
+  // A network hiccup or non-400 error — worth retrying.
+  | { status: "retry" };
+
+export async function tempTokenLogin(token: string): Promise<TokenLoginResult> {
+  let response: Response;
+  try {
+    response = await fetch(
+      `${getApiBase()}/auth/login/token?login-token=${token}`,
+      {
+        credentials: "include",
+      },
+    );
+  } catch (e) {
+    console.warn("Token login request failed", e);
+    return { status: "retry" };
   }
-  const json = await response.json();
-  const { email } = json;
-  return email;
+  if (response.status === 400) {
+    const body = await response.json().catch(() => null);
+    const code =
+      body?.code === "consumed" ||
+      body?.code === "expired" ||
+      body?.code === "invalid"
+        ? body.code
+        : "invalid";
+    return { status: "failed", code };
+  }
+  // A permanent client error (anything but the rate-limit 429) can't be
+  // fixed by asking again with the same token — only 429 and a transient
+  // server/network failure are worth retrying.
+  if (
+    response.status >= 400 &&
+    response.status < 500 &&
+    response.status !== 429
+  ) {
+    console.error("Token login failed with a permanent client error", response);
+    return { status: "failed", code: "invalid" };
+  }
+  if (response.status !== 200) {
+    console.warn("Token login failed", response);
+    return { status: "retry" };
+  }
+  const body = await response.json().catch(() => null);
+  const email = (body as { email?: unknown } | null)?.email;
+  if (typeof email !== "string") {
+    console.error("Token login succeeded but response had no email", body);
+    return { status: "retry" };
+  }
+  return { status: "success", email };
 }
 
 export async function getAuthHeader(): Promise<string> {
@@ -245,13 +284,13 @@ export async function logOut(allSessions: boolean = false): Promise<boolean> {
     );
 
     if (response.ok === false) {
-      console.error("Logout failed", response);
+      console.warn("Logout failed", response);
       return false;
     }
 
     return true;
   } catch (e) {
-    console.error("Logout failed", e);
+    console.warn("Logout failed", e);
     return false;
   } finally {
     clearLocalSession();
@@ -320,13 +359,23 @@ export async function isLoggedIn(): Promise<boolean> {
   return userAuthResult !== false;
 }
 
-// True when the in-memory session still belongs to the given JWT subject.
-// Lets callers of authenticated endpoints discard a response that arrived
-// after a logout or session change invalidated the request's session.
+// True when the in-memory session still belongs to the given player. Lets
+// callers of authenticated endpoints discard a response that arrived after a
+// logout or session change invalidated the request's session.
+//
+// `sub` is the dashed UUID TokenPayloadSchema transforms the claim into --
+// what every caller holds -- while the JWT carries the base64url form, so the
+// two have to be brought to the same encoding before comparing. Converting
+// here rather than at the call sites means no caller has to know which
+// encoding this wants.
 export function isSessionActive(sub: string): boolean {
   if (__jwt === null) return false;
   try {
-    return decodeJwt(__jwt).sub === sub;
+    const raw = decodeJwt(__jwt).sub;
+    if (raw === undefined) return false;
+    // Throws on a subject that is not a base64url UUID, which the catch
+    // below answers the same way as an undecodable JWT: not this session.
+    return base64urlToUuid(raw) === sub;
   } catch {
     return false;
   }
@@ -375,7 +424,7 @@ export async function userAuth(
     if (Date.now() >= __expiresAt - 3 * 60 * 1000) {
       console.log("jwt expired or about to expire");
       if (!shouldRefresh) {
-        console.error("jwt expired and shouldRefresh is false");
+        console.warn("jwt expired and shouldRefresh is false");
         return false;
       }
       await refreshJwt();
@@ -474,7 +523,7 @@ async function doRefreshJwt(): Promise<void> {
       signal: AbortSignal.timeout(10_000),
     });
     if (response.status !== 200) {
-      console.error("Refresh failed", response);
+      console.warn("Refresh failed", response);
       logOut();
       return;
     }
@@ -484,7 +533,7 @@ async function doRefreshJwt(): Promise<void> {
     console.log("Refresh succeeded");
     __jwt = jwt;
   } catch (e) {
-    console.error("Refresh failed", e);
+    console.warn("Refresh failed", e);
     // if server unreachable, just clear jwt
     __jwt = null;
     return;
@@ -549,7 +598,7 @@ async function doCrazyGamesLogin(token: string): Promise<void> {
     console.log("CrazyGames login succeeded");
     __jwt = jwt;
   } catch (e) {
-    console.error("CrazyGames login failed", e);
+    console.warn("CrazyGames login failed", e);
     __jwt = null;
   }
 }
@@ -600,7 +649,7 @@ async function doSteamLogin(ticket: string): Promise<void> {
     __jwt = jwt;
     setSessionState({ status: "signed-in" });
   } catch (e) {
-    console.error("Steam login failed", e);
+    console.warn("Steam login failed", e);
     __jwt = null;
     setSessionState({ status: "signed-out", reason: "network" });
   }
@@ -698,7 +747,7 @@ export async function sendMagicLink(email: string): Promise<boolean> {
       return false;
     }
   } catch (error) {
-    console.error("Error sending recovery email:", error);
+    console.warn("Error sending recovery email:", error);
     return false;
   }
 }

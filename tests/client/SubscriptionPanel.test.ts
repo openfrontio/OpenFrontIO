@@ -183,12 +183,42 @@ describe("subscription-panel", () => {
     });
 
     it("says the access ends instead of claiming it renews", () => {
-      expect(text()).toContain("account_modal.sub_granted_ends_on");
+      expect(text()).toContain("account_modal.sub_granted_perks_end_on");
       expect(text()).not.toContain("account_modal.sub_renews_on");
     });
 
     it("says what the subscription actually is", () => {
       expect(text()).toContain("account_modal.sub_granted_from_purchase");
+    });
+
+    // The forum complaint in one line: "ends" read as the game ending. The
+    // panel names the tier on the date line and lists what stays afterwards.
+    it("names the tier's perks on the date line, not access", () => {
+      expect(text()).toContain(
+        `account_modal.sub_granted_perks_end_on plutonium ${PERIOD_END_TEXT}`,
+      );
+    });
+
+    it("lists what the player keeps once the month ends", () => {
+      expect(text()).toContain("free_play.after_grant_heading");
+      expect(text()).toContain("free_play.full_game");
+      // Only the desktop build is ad-free for everyone; the website is not.
+      expect(text()).not.toContain("free_play.ad_free_steam");
+    });
+
+    it("promises ad-free play only inside the desktop shell", async () => {
+      (window as unknown as { openfrontDesktop?: unknown }).openfrontDesktop = {
+        steam: {},
+      };
+      try {
+        el.sub = granted();
+        el.requestUpdate();
+        await el.updateComplete;
+        expect(text()).toContain("free_play.ad_free_steam");
+      } finally {
+        delete (window as unknown as { openfrontDesktop?: unknown })
+          .openfrontDesktop;
+      }
     });
 
     // Not a link — the desktop build must not hand over a route to a payment
@@ -224,7 +254,8 @@ describe("subscription-panel", () => {
       await el.updateComplete;
       expect(text()).toContain("account_modal.sub_granted_indefinite");
       expect(text()).not.toContain("account_modal.sub_granted_from_purchase");
-      expect(text()).not.toContain("account_modal.sub_granted_ends_on");
+      expect(text()).not.toContain("account_modal.sub_granted_perks_end_on");
+      expect(text()).not.toContain("free_play.after_grant_heading");
       expect(text()).not.toContain("account_modal.cancel_subscription");
     });
   });
@@ -262,7 +293,7 @@ describe("subscription-panel", () => {
 
     it("still renders the renews line", () => {
       expect(text()).toContain("account_modal.sub_renews_on");
-      expect(text()).not.toContain("account_modal.sub_granted_ends_on");
+      expect(text()).not.toContain("account_modal.sub_granted_perks_end_on");
     });
   });
 

@@ -11,6 +11,7 @@ import {
   updateAccountNavButton,
 } from "../NavAccountButton";
 import { closeMobileSidebar } from "../Navigation";
+import { steamSDK } from "../SteamSDK";
 import { playerProfileUrl } from "../utilities/PlayerProfileUrl";
 import { copyToClipboard, showToast, translateText } from "../Utils";
 
@@ -245,8 +246,9 @@ export class NavAccountMenu extends LitElement {
     }
 
     // CrazyGames owns its own sessions: signing out happens on their site, and
-    // our /auth/logout wouldn't end theirs.
-    if (!crazyGamesSDK.isOnCrazyGames()) {
+    // our /auth/logout wouldn't end theirs. On Steam the session comes from the
+    // Steam ticket, which signs the player straight back in after the reload.
+    if (!crazyGamesSDK.isOnCrazyGames() && !steamSDK.isOnSteam()) {
       items.push({
         key: "log-out",
         labelKey: "nav_account_menu.log_out",

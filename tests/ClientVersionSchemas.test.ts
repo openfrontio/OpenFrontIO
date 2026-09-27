@@ -1,10 +1,12 @@
 import {
   ClientJoinMessageSchema,
+  ClientMessageSchema,
   ClientRejoinMessageSchema,
   PublicLobbyMessageSchema,
   ServerErrorSchema,
   ServerMessageSchema,
 } from "../src/core/Schemas";
+import { zb } from "../zbin";
 
 const COMMIT = "a".repeat(40);
 
@@ -107,5 +109,32 @@ describe("gitCommit on the public lobby feed", () => {
     if (parsed.success && parsed.data.type === "full") {
       expect(parsed.data.active).toBe(false);
     }
+  });
+});
+
+describe("platform on join messages", () => {
+  const join = { ...baseJoin, type: "join", gitCommit: COMMIT } as const;
+
+  test("round-trips the binary wire", () => {
+    const withPlatform = { ...join, platform: "crazygames" } as const;
+    const bytes = ClientMessageSchema.serialize(withPlatform);
+    expect(ClientMessageSchema.parseBytes(bytes)).toEqual(withPlatform);
+  });
+
+  test("rejects a platform outside the closed set", () => {
+    expect(
+      ClientJoinMessageSchema.safeParse({ ...join, platform: "itch" }).success,
+    ).toBe(false);
+  });
+
+  // A tab left open across a deploy must still decode, or it gets a generic
+  // invalid-message close instead of the version_mismatch refresh prompt.
+  test("a join from a bundle predating the field still decodes", () => {
+    // Every optional/nullable field set, so the stale header is at its widest.
+    const stale = { ...join, cosmetics: {}, spectator: true };
+    const staleShape = ClientJoinMessageSchema.omit({ platform: true }).shape;
+    const bytes = zb.object(staleShape).serialize(stale);
+    const current = zb.object(ClientJoinMessageSchema.shape);
+    expect(current.parseBytes(bytes)).toEqual(stale);
   });
 });

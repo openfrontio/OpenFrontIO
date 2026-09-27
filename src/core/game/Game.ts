@@ -2,6 +2,7 @@ import { Config } from "../configuration/Config";
 import { AbstractGraph } from "../pathfinding/algorithms/AbstractGraph";
 import { PathFinder } from "../pathfinding/types";
 import { AllPlayersStats, ClientID } from "../Schemas";
+import type { ExecRecord, SnapshotWriter } from "../snapshot/SnapshotContext";
 import { formatPlayerDisplayName } from "../Util";
 import { GameMap, TileRef } from "./GameMap";
 import {
@@ -381,6 +382,12 @@ export interface Execution {
   activeDuringSpawnPhase(): boolean;
   init(mg: Game, ticks: number): void;
   tick(ticks: number): void;
+  /**
+   * Serializes this execution for a game snapshot (see
+   * src/core/snapshot/README.md). Every class registers an
+   * ExecutionSnapshotType in snapshot/ExecutionRegistry.ts.
+   */
+  snapshot(w: SnapshotWriter): ExecRecord;
 }
 
 export interface Attack {
@@ -793,6 +800,7 @@ export interface Game extends GameMap {
   // neighbors()) and returns the count. Reuse out across calls to avoid
   // allocation.
   neighbors4(ref: TileRef, out: TileRef[]): number;
+  neighbors8(ref: TileRef, out: TileRef[]): number;
   // Zero-allocation neighbor iteration for performance-critical cluster calculation
   // Alternative to neighborsWithDiag() that returns arrays
   // Avoids creating intermediate arrays and uses a callback for better performance
@@ -911,6 +919,16 @@ export interface Game extends GameMap {
 
   addUpdate(update: GameUpdate): void;
   railNetwork(): RailNetwork;
+  /** MIRVs launched so far by anyone; each one raises the next one's price. */
+  mirvsLaunched(): number;
+  recordMirvLaunch(): void;
+  /**
+   * Round-robin counter per ship kind, used to spread the ships' water
+   * pathfinder rebuilds over WaterPathFinder.STAGGER_SPREAD ticks.
+   */
+  nextShipStagger(kind: "tradeShip" | "transportShip"): number;
+  /** Tick each player was last hit by a nation MIRV, shared by all nations. */
+  nationMirvTargets(): Map<PlayerID, Tick>;
   conquerPlayer(conqueror: Player, conquered: Player): void;
   miniWaterHPA(): PathFinder<number> | null;
   miniWaterGraph(): AbstractGraph | null;

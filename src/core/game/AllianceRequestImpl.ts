@@ -1,3 +1,9 @@
+import { z } from "zod";
+import type {
+  SnapshotReader,
+  SnapshotWriter,
+} from "../snapshot/SnapshotContext";
+import { snapshotType, zInt, zPlayerRef } from "../snapshot/SnapshotType";
 import { AllianceRequest, Player, Tick } from "./Game";
 import { GameImpl } from "./GameImpl";
 import { AllianceRequestUpdate, GameUpdateType } from "./GameUpdates";
@@ -45,4 +51,36 @@ export class AllianceRequestImpl implements AllianceRequest {
       createdAt: this.tickCreated,
     };
   }
+
+  snapshot(w: SnapshotWriter): AllianceRequestState {
+    return {
+      requestor: w.player(this.requestor_),
+      recipient: w.player(this.recipient_),
+      createdAt: this.tickCreated,
+      status: this.status_,
+    };
+  }
+
+  /** Fills a prototype-only shell; see RestorableExecution.restoreSnapshot. */
+  restoreSnapshot(s: AllianceRequestState, r: SnapshotReader): void {
+    this.game = r.game;
+    this.requestor_ = r.player(s.requestor);
+    this.recipient_ = r.player(s.recipient);
+    this.tickCreated = s.createdAt;
+    this.status_ = s.status;
+  }
 }
+
+export const AllianceRequestSnapshot = snapshotType({
+  name: "AllianceRequest",
+  version: 1,
+  schema: z.object({
+    requestor: zPlayerRef(),
+    recipient: zPlayerRef(),
+    createdAt: zInt(),
+    status: z.enum(["pending", "accepted", "rejected"]),
+  }),
+});
+export type AllianceRequestState = z.infer<
+  typeof AllianceRequestSnapshot.schema
+>;

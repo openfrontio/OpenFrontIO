@@ -26,8 +26,13 @@ echo "======================================================"
 echo "🔄 UPDATING SERVER: ${HOST} ENVIRONMENT"
 echo "======================================================"
 
-# Container and image configuration
-CONTAINER_NAME="openfront-${ENV}-${SUBDOMAIN}"
+# Container and image configuration. DEPLOYMENT_NAME is the bare subdomain
+# for a standalone deployment and <machine>-<subdomain> for a machine-scoped
+# one (deploy.sh, "game host"): the same slot on two machines must not share
+# a container name when both "machines" are names for one box. The fallback
+# keeps a hand-written env file working.
+DEPLOYMENT_NAME="${DEPLOYMENT_NAME:-$SUBDOMAIN}"
+CONTAINER_NAME="openfront-${ENV}-${DEPLOYMENT_NAME}"
 
 echo "Pulling ${GHCR_IMAGE} from GitHub Container Registry..."
 docker pull "${GHCR_IMAGE}"
@@ -73,6 +78,77 @@ R2_ENDPOINT="https://api.${DOMAIN}"
 # container answers on (<subdomain>.<GAME_DOMAIN>). An old-style standalone
 # deployment — beta, a branch preview — is its own site, page and game alike.
 SITE="${SITE_HOST:-${SUBDOMAIN}.${DOMAIN}}"
+
+# Ask the API who this container is (infra docs/cluster-registry.md,
+# "Registration"): the registry owns each site's letters and an operator sets
+# worker counts in the admin panel, so neither lives in deploy config. Asked
+# here, once per deploy, and written into the env file so the render steps,
+# nginx and the server all read one answer, and a container restart can never
+# pick up a different worker count while its game ids are live. A value
+# already in the env file wins, as an escape hatch for an API that is down.
+#
+# The markers delimit the block tests/UpdateRegister.test.ts runs against a
+# fake curl. Keep them in place.
+# --- BEGIN register (tested) ---
+: "${REGISTER_ATTEMPTS:=6}"
+: "${REGISTER_RETRY_DELAY:=5}"
+
+register_identity() {
+    local endpoint="$1" api_key="$2" site="$3" host="$4" cpus="$5"
+    local body code attempt payload
+    body="$(mktemp)"
+    payload="$(jq -nc --arg site "$site" --arg host "$host" --argjson cpus "$cpus" \
+        '{site: $site, host: $host, cpus: $cpus}')"
+    for attempt in $(seq 1 "$REGISTER_ATTEMPTS"); do
+        code="$(curl -sS -o "$body" -w "%{http_code}" \
+            --connect-timeout 10 --max-time 30 \
+            -X POST "${endpoint}/cluster/register" \
+            -H "X-API-Key: ${api_key}" \
+            -H "Content-Type: application/json" \
+            -d "$payload" || true)"
+        case "$code" in
+            200)
+                REGISTERED_LETTER="$(jq -r '.letter // empty' "$body")"
+                REGISTERED_NUM_WORKERS="$(jq -r '.numWorkers // empty' "$body")"
+                rm -f "$body"
+                case "$REGISTERED_LETTER" in [a-z]) ;; *) REGISTERED_LETTER="" ;; esac
+                case "$REGISTERED_NUM_WORKERS" in "" | *[!0-9]* | 0*) REGISTERED_NUM_WORKERS="" ;; esac
+                if [ -z "$REGISTERED_LETTER" ] || [ -z "$REGISTERED_NUM_WORKERS" ]; then
+                    REGISTERED_LETTER="" REGISTERED_NUM_WORKERS=""
+                    echo "❌ ${endpoint}/cluster/register answered 200 with an unusable identity."
+                    return 1
+                fi
+                return 0
+                ;;
+            4*)
+                echo "❌ ${endpoint}/cluster/register refused ${host} on ${site} (HTTP ${code}): $(cat "$body" 2> /dev/null)"
+                rm -f "$body"
+                return 1
+                ;;
+        esac
+        echo "… ${endpoint}/cluster/register returned HTTP ${code:-none}; attempt ${attempt}/${REGISTER_ATTEMPTS}"
+        sleep "$REGISTER_RETRY_DELAY"
+    done
+    rm -f "$body"
+    echo "❌ Could not register with ${endpoint}. Set INSTANCE_LETTER and NUM_WORKERS on the deploy to go ahead without it."
+    return 1
+}
+# --- END register (tested) ---
+
+if [ -z "${INSTANCE_LETTER:-}" ] || [ -z "${NUM_WORKERS:-}" ]; then
+    if ! register_identity "$R2_ENDPOINT" "$API_KEY" "$SITE" \
+        "${GAME_HOST:-${SUBDOMAIN}.${GAME_DOMAIN:-$DOMAIN}}" \
+        "$(nproc 2> /dev/null || getconf _NPROCESSORS_ONLN)"; then
+        exit 1
+    fi
+    export INSTANCE_LETTER="${INSTANCE_LETTER:-$REGISTERED_LETTER}"
+    export NUM_WORKERS="${NUM_WORKERS:-$REGISTERED_NUM_WORKERS}"
+    # The env file is what `docker run --env-file` hands the render steps and
+    # the container; drop any empty assignment deploy.sh wrote first.
+    sed -i.bak -e '/^INSTANCE_LETTER=/d' -e '/^NUM_WORKERS=/d' "$ENV_FILE" && rm -f "$ENV_FILE.bak"
+    printf 'INSTANCE_LETTER=%s\nNUM_WORKERS=%s\n' "$INSTANCE_LETTER" "$NUM_WORKERS" >> "$ENV_FILE"
+fi
+echo "Identity: letter ${INSTANCE_LETTER}, ${NUM_WORKERS} workers"
 MANIFEST="$STATIC_DIR/asset-manifest.json"
 if [ ! -f "$MANIFEST" ]; then
     echo "❌ Manifest not found at $MANIFEST"
@@ -290,26 +366,63 @@ else
         "$DESKTOP_RELEASE" "application/json" || exit 1
     upload_versioned "${VERSION_PREFIX}/desktop/version.json" \
         "$DESKTOP_VERSION" "application/json" || exit 1
+
+    # resources/public/ (policy pages, robots.txt, press/, .well-known/): the
+    # site has no origin behind the Worker, so it serves these from here, by
+    # the index the build wrote. Directory entries ("press/") have no file of
+    # their own.
+    ROOT_FILES_INDEX="$STATIC_DIR/root-files.json"
+    if ! jq -e '.["privacy-policy.html"] and .["terms-of-service.html"]' \
+        "$ROOT_FILES_INDEX" > /dev/null; then
+        echo "❌ The root-files index is missing or lacks the policy pages"
+        exit 1
+    fi
+    while IFS= read -r ROOT_PATH; do
+        case "$ROOT_PATH" in
+            /* | .. | ../* | */../* | */..)
+                echo "❌ refusing unsafe path: $ROOT_PATH" >&2
+                exit 1
+                ;;
+        esac
+        upload_versioned "${VERSION_PREFIX}/root/${ROOT_PATH}" \
+            "$STATIC_DIR/$ROOT_PATH" "application/octet-stream" || exit 1
+    done < <(jq -r 'keys[] | select(endswith("/") | not)' "$ROOT_FILES_INDEX")
+    upload_versioned "${VERSION_PREFIX}/root-files.json" \
+        "$ROOT_FILES_INDEX" "application/json" || exit 1
 fi
+
+# remove_container <name>: stop and remove the container of that exact name,
+# running or not. Silent when there is none.
+remove_container() {
+    local name="$1" running stopped
+    # Use docker ps with filter for exact name match
+    running="$(docker ps --filter "name=^${name}$" -q)"
+    if [ -n "$running" ]; then
+        echo "Stopping running container $running ($name)..."
+        docker stop "$running"
+        echo "Waiting for container to fully stop and release resources..."
+        sleep 5 # Add a 5-second delay
+        docker rm "$running"
+        echo "Container $running stopped and removed."
+    fi
+    # Also check for stopped containers with the same name
+    stopped="$(docker ps -a --filter "name=^${name}$" -q)"
+    if [ -n "$stopped" ]; then
+        echo "Removing stopped container $stopped ($name)..."
+        docker rm "$stopped"
+        echo "Container $stopped removed."
+    fi
+}
 
 echo "Checking for existing container..."
-# Use docker ps with filter for exact name match
-RUNNING_CONTAINER="$(docker ps --filter "name=^${CONTAINER_NAME}$" -q)"
-if [ -n "$RUNNING_CONTAINER" ]; then
-    echo "Stopping running container $RUNNING_CONTAINER..."
-    docker stop "$RUNNING_CONTAINER"
-    echo "Waiting for container to fully stop and release resources..."
-    sleep 5 # Add a 5-second delay
-    docker rm "$RUNNING_CONTAINER"
-    echo "Container $RUNNING_CONTAINER stopped and removed."
-fi
-
-# Also check for stopped containers with the same name
-STOPPED_CONTAINER="$(docker ps -a --filter "name=^${CONTAINER_NAME}$" -q)"
-if [ -n "$STOPPED_CONTAINER" ]; then
-    echo "Removing stopped container $STOPPED_CONTAINER..."
-    docker rm "$STOPPED_CONTAINER"
-    echo "Container $STOPPED_CONTAINER removed."
+remove_container "${CONTAINER_NAME}"
+# A slot that has just moved to a machine-scoped host leaves its old
+# container behind under the bare name, still claiming
+# <subdomain>.<GAME_DOMAIN> — a host no cluster entry names any more — and,
+# for the long-lived slots, with restart=always keeping it up. The two
+# shapes are exclusive for one slot on one box, so retire it here.
+if [ "${DEPLOYMENT_NAME}" != "${SUBDOMAIN}" ]; then
+    remove_container "openfront-${ENV}-${SUBDOMAIN}"
 fi
 
 # Docker restart policy. `always` means the daemon brings this container back
@@ -360,24 +473,28 @@ echo "Starting new container for ${HOST} environment..."
 # Ensure the traefik network exists
 docker network create web 2> /dev/null || true
 
-# Traefik Host() rule. With GAME_DOMAIN set this container owns two names:
-# its game host (<subdomain>.<GAME_DOMAIN>), which is what cluster entries
-# point sockets and /api at, and — during the transition, until the static
-# Worker is actually routed — its page host (<subdomain>.<DOMAIN>), so the
-# box still answers on the name people already have bookmarked. Once the
-# Worker owns the page host its DNS stops pointing here and that clause
-# simply never matches. With GAME_DOMAIN unset there is one name and the
-# rule is byte-for-byte the one this script has always emitted.
+# Traefik Host() rule. The container always answers on its game host —
+# GAME_HOST, as deploy.sh settled it, or
+# <subdomain>.<GAME_DOMAIN>/<subdomain>.<DOMAIN> for an env file written by
+# hand. With GAME_DOMAIN set a standalone deployment also owns its page host
+# (<subdomain>.<DOMAIN>) during the transition, until the static Worker is
+# actually routed there, so the box still answers on the name people already
+# have bookmarked; once the Worker owns it that clause simply never matches.
+# A machine-scoped host (blue.staging2.server.openfront.dev) has no page host
+# of its own — its page is the apex, SITE_HOST — so it gets the one name.
+# With GAME_DOMAIN unset there is one name and the rule is byte-for-byte the
+# one this script has always emitted.
 #
 # The markers below delimit the block tests/UpdateTraefikHostRule.test.ts
 # extracts and runs, the same way the restart policy above is tested: the
-# rest of this script talks to docker, this decision is three strings in and
+# rest of this script talks to docker, this decision is four strings in and
 # one string out. Keep them in place.
 # --- BEGIN traefik host rule (tested) ---
-if [ -n "${GAME_DOMAIN:-}" ]; then
-    TRAEFIK_HOST_RULE="Host(\`${SUBDOMAIN}.${DOMAIN}\`) || Host(\`${SUBDOMAIN}.${GAME_DOMAIN}\`)"
+GAME_HOST="${GAME_HOST:-${SUBDOMAIN}.${GAME_DOMAIN:-$DOMAIN}}"
+if [ -n "${GAME_DOMAIN:-}" ] && [ "${GAME_HOST}" = "${SUBDOMAIN}.${GAME_DOMAIN}" ]; then
+    TRAEFIK_HOST_RULE="Host(\`${SUBDOMAIN}.${DOMAIN}\`) || Host(\`${GAME_HOST}\`)"
 else
-    TRAEFIK_HOST_RULE="Host(\`${SUBDOMAIN}.${DOMAIN}\`)"
+    TRAEFIK_HOST_RULE="Host(\`${GAME_HOST}\`)"
 fi
 # --- END traefik host rule (tested) ---
 
@@ -434,23 +551,14 @@ fi
 : "${FLAG_LATEST_TIMEOUT:=90}"
 : "${FLAG_LATEST_RETRY_DELAY:=5}"
 
-# flag_latest <site> <version> <endpoint> <api_key> <cluster_state_source>
+# flag_latest <site> <version> <endpoint> <api_key>
 #
-# Returns 0 when the deploy may report success, 1 when it must not.
-#
-# The asymmetry is deliberate. While the page and the servers still come from
-# BOOTSTRAP_CONFIG, a missing `latest` changes nothing a player can see, so a
-# warning is the honest outcome and failing the deploy would be noise. Once
-# CLUSTER_STATE_SOURCE=api is in the env file the site's clients get their
-# server list from the API, and a version that was never flagged means no
-# server is `open`: nobody can start a game. A deploy that ends there has not
-# succeeded and must not say it has.
+# Returns 0 when the deploy may report success, 1 when it must not. Clients
+# get their server list from the API, and a version that was never flagged
+# means no server is `open`: nobody can start a game. A deploy that ends there
+# has not succeeded and must not say it has.
 flag_latest() {
-    local site="$1" version="$2" endpoint="$3" api_key="$4" state_source="$5"
-    local strict=no
-    if [ "$state_source" = "api" ]; then
-        strict=yes
-    fi
+    local site="$1" version="$2" endpoint="$3" api_key="$4"
 
     local deadline=$((SECONDS + FLAG_LATEST_TIMEOUT))
     local body code reason
@@ -480,9 +588,8 @@ flag_latest() {
                 return 0
                 ;;
             404)
-                # The API predates the registry. Never strict: there is nothing
-                # to flag and nothing reading it, so this is the expected
-                # answer everywhere until the API ships.
+                # The API predates the registry: there is nothing to flag and
+                # nothing reading it.
                 echo "⚠️ ${endpoint}/cluster/latest is not deployed yet (HTTP 404); skipping the latest flag."
                 rm -f "$body"
                 return 0
@@ -508,21 +615,16 @@ flag_latest() {
         esac
     done
 
-    echo "⚠️ Failed to flag ${version} as latest for ${site}: ${reason}"
+    echo "❌ Failed to flag ${version} as latest for ${site}: ${reason}"
     cat "$body" || true
     rm -f "$body"
-    if [ "$strict" = "yes" ]; then
-        echo "❌ CLUSTER_STATE_SOURCE=api: clients take their server list from the API, so an unflagged version means no server is open. Failing the deploy."
-        return 1
-    fi
-    echo "   Continuing: this site still boots from the page's own values."
-    return 0
+    echo "   Clients take their server list from the API, so an unflagged version means no server is open. Failing the deploy."
+    return 1
 }
 # --- END flag latest (tested) ---
 
 if [[ "$FULL_COMMIT" =~ ^[0-9a-f]{40}$ ]]; then
-    if ! flag_latest "$SITE" "$FULL_COMMIT" "$R2_ENDPOINT" "$API_KEY" \
-        "${CLUSTER_STATE_SOURCE:-}"; then
+    if ! flag_latest "$SITE" "$FULL_COMMIT" "$R2_ENDPOINT" "$API_KEY"; then
         exit 1
     fi
 else
