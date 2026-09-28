@@ -55,17 +55,17 @@
   "id": "Paris",
   "map": {
     "height": 1344,
-    "num_land_tiles": 1649395,
+    "num_land_tiles": 1704698,
     "width": 2436
   },
   "map16x": {
     "height": 336,
-    "num_land_tiles": 92825,
+    "num_land_tiles": 99937,
     "width": 609
   },
   "map4x": {
     "height": 672,
-    "num_land_tiles": 397199,
+    "num_land_tiles": 416172,
     "width": 1218
   },
   "multiplayer_frequency": 3,
