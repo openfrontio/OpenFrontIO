@@ -522,9 +522,20 @@ async function doRefreshJwt(): Promise<void> {
       credentials: "include",
       signal: AbortSignal.timeout(10_000),
     });
-    if (response.status !== 200) {
-      console.warn("Refresh failed", response);
+    if (response.status === 401) {
+      // The only answer that means the session is dead: the server has
+      // already cleared the refresh cookie.
+      console.warn("Refresh rejected", response);
       logOut();
+      return;
+    }
+    if (response.status !== 200) {
+      // A 5xx (database/Hyperdrive), 429 or edge block is transient. Logging
+      // out here would drop the player mid-session and, if /auth/logout
+      // reached a healthy connection, delete a still-valid session. Treat it
+      // like an unreachable server: keep the cookie, retry on next userAuth().
+      console.warn("Refresh failed", response);
+      __jwt = null;
       return;
     }
     const json = await response.json();
