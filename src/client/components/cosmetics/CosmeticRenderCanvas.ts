@@ -138,7 +138,10 @@ export class CosmeticRenderCanvas extends LitElement {
       config.effectColors = this.customColors;
     }
     config.salvoMode = this.salvoEnabled;
-    this.renderer.setCosmetic(config);
+    // Same scene: the renderer updates what is playing and keeps the camera,
+    // so the auto-zoom below runs only when the scene itself changes.
+    const kind = this.renderer.updateCosmetic(config);
+    if (kind !== "reframe") return;
 
     if (config.mode === "SKIN") {
       const isSmall = this.checkIsSmallSkin(this.resolved);

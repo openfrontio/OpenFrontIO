@@ -69,6 +69,24 @@ describe("PreviewMap", () => {
 });
 
 describe("PreviewAnimationTicker", () => {
+  it("keeps its clock when the spiral settings change, so a trail carries on", () => {
+    const params = {
+      radius: 3,
+      strands: 2,
+      rotationSpeed: 1,
+      colors: [[1, 0, 0]],
+    } as never;
+    const ticker = new PreviewAnimationTicker(
+      { mode: "NUKE_MISSILE_TRAIL", spiralParams: params },
+      0,
+    );
+    const before = ticker.sample(1500).units.map((u) => u.pos);
+    ticker.setSpiralParams({ ...(params as object), radius: 6 } as never);
+    const after = ticker.sample(1500).units.map((u) => u.pos);
+    expect(after.length).toBeGreaterThan(0);
+    expect(after).toEqual(before);
+  });
+
   it("samples single city for size reference with no missiles in SKIN mode", () => {
     const ticker = new PreviewAnimationTicker({
       mode: "SKIN",
