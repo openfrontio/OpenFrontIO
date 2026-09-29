@@ -33,7 +33,7 @@ import { GameManager } from "./GameManager";
 import { registerGamePreviewRoute } from "./GamePreviewRoute";
 import { GamePhase, type GameServer } from "./GameServer";
 import { isSteamAuthenticated, planJoinVerify, verifyJoin } from "./JoinVerify";
-import { getUserMe, verifyClientToken } from "./jwt";
+import { getUserMe, userMeFailureClose, verifyClientToken } from "./jwt";
 import { payForLobbyQueue, queueListedLobby } from "./LobbyQueuePayment";
 import { logger } from "./Logger";
 import { resolveVerifiedJoin } from "./Privilege";
@@ -42,6 +42,7 @@ import { MapPlaylist } from "./MapPlaylist";
 import { setNoStoreHeaders } from "./NoStoreHeaders";
 import { PrivilegeRefresher } from "./PrivilegeRefresher";
 import { startRankedCheckinLoops } from "./RankedCheckin";
+import { rejoinOrClose } from "./Rejoin";
 import { ServerEnv } from "./ServerEnv";
 import { SingleplayerPresence } from "./SingleplayerPresence";
 import { applyStaticAssetCacheControl } from "./StaticAssetCache";
@@ -579,18 +580,15 @@ export async function startWorker() {
             gameID: clientMsg.gameID,
             persistentID: persistentId,
           });
-          const wasFound = gm.rejoinClient(
+          rejoinOrClose(
+            gm,
+            log,
+            workerId,
             ws,
             persistentId,
             clientMsg.gameID,
             clientMsg.lastTurn,
           );
-          if (!wasFound) {
-            log.warn(
-              `game ${clientMsg.gameID} not found on worker ${workerId}`,
-            );
-            ws.close(CloseCode.GameNotFound, CloseReason.GameNotFound);
-          }
           return;
         }
 
@@ -734,7 +732,8 @@ export async function startWorker() {
               persistentID: persistentId,
               gameID: clientMsg.gameID,
             });
-            ws.close(CloseCode.InternalError, CloseReason.AccountLookupFailed);
+            const { code, reason } = userMeFailureClose(result);
+            ws.close(code, reason);
             return;
           }
           flares = result.response.player.flares;

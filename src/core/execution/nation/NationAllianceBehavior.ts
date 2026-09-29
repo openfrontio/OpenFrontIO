@@ -27,7 +27,7 @@ import {
   EMOJI_SCARED_OF_THREAT,
   NationEmojiBehavior,
 } from "./NationEmojiBehavior";
-import { findJuiciestTarget } from "./NationUtils";
+import { findJuiciestTarget, findRunawayLeader } from "./NationUtils";
 
 export class NationAllianceBehavior {
   constructor(
@@ -136,6 +136,10 @@ export class NationAllianceBehavior {
     if (this.hasTooManyAlliances(otherPlayer)) {
       return false;
     }
+    // Don't help a runaway leader grow even further (Medium and up)
+    if (this.isRunawayLeader(otherPlayer)) {
+      return false;
+    }
     // Before caring about the relation, first check if the otherPlayer is a threat
     // Easy (dumb) nations are blinded by hatred, they don't care about threats, they care about the relation
     // Impossible (smart) nations on the other hand are analyzing the facts
@@ -197,6 +201,10 @@ export class NationAllianceBehavior {
     } else {
       return otherPlayerAlliances >= totalPlayers * 0.25;
     }
+  }
+
+  private isRunawayLeader(otherPlayer: Player): boolean {
+    return findRunawayLeader(this.game) === otherPlayer;
   }
 
   private isConfused(): boolean {
