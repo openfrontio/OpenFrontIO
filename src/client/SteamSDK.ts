@@ -19,6 +19,7 @@ export type SteamTicketResult =
   | { ok: false; reason: SteamTicketFailure };
 
 interface SteamBridge {
+  steamId?: string;
   getAuthTicket(): Promise<SteamTicketResult>;
   getUser(): Promise<{ steamId: string; name: string } | null>;
 }
@@ -88,12 +89,8 @@ class SteamSDK {
   getSteamIdSync(): string | null {
     if (this.cachedUser?.steamId) return this.cachedUser.steamId;
     const bridge = steamBridge();
-    if (
-      bridge &&
-      "steamId" in bridge &&
-      typeof (bridge as any).steamId === "string"
-    ) {
-      return (bridge as any).steamId;
+    if (typeof bridge?.steamId === "string") {
+      return bridge.steamId;
     }
     return null;
   }
