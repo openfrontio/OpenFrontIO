@@ -1,4 +1,5 @@
 import { afterEach, expect, it, vi } from "vitest";
+import "../../src/client/components/baseComponents/Modal";
 import { ChatModal } from "../../src/client/hud/layers/ChatModal";
 import { makeGameView, makePlayerView } from "../util/viewStubs";
 
@@ -68,4 +69,39 @@ it("toggles chat player sorting while preserving search and selection", async ()
     modal.querySelector(".player-scroll-area .selected")?.textContent?.trim(),
   ).toBe("Zulu");
   expect(modal.querySelector(".chat-preview")!.textContent).toBe(preview);
+});
+
+it("clears selected player when changing category or closing", async () => {
+  const players = [
+    { displayName: "Alpha", tilesOwned: 400 },
+    { displayName: "Zulu", tilesOwned: 1200 },
+  ].map((data) => makePlayerView({ data }));
+  const modal = new ChatModal();
+  modal.g = makeGameView();
+  vi.spyOn(modal.g, "players").mockReturnValue(players);
+  document.body.append(modal);
+
+  modal.openWithSelection("attack", "attack", players[0], players[1]);
+  await modal.updateComplete;
+
+  modal.querySelector<HTMLButtonElement>(".player-scroll-area button")!.click();
+  await modal.updateComplete;
+  expect(modal.querySelector(".player-scroll-area .selected")).not.toBeNull();
+
+  modal.querySelector<HTMLButtonElement>(".chat-column button")!.click();
+  await modal.updateComplete;
+  expect(modal.querySelector(".player-scroll-area")).toBeNull();
+  expect(
+    (modal as unknown as { selectedPlayer: unknown }).selectedPlayer,
+  ).toBeNull();
+
+  modal.openWithSelection("attack", "attack", players[0], players[1]);
+  await modal.updateComplete;
+  modal.querySelector<HTMLButtonElement>(".player-scroll-area button")!.click();
+  await modal.updateComplete;
+
+  modal.close();
+  expect(
+    (modal as unknown as { selectedPlayer: unknown }).selectedPlayer,
+  ).toBeNull();
 });

@@ -54,6 +54,21 @@ describe("control-panel attack ratio", () => {
     expect(uiState.attackRatio).toBeCloseTo(0.2);
   });
 
+  it("renders the calculated troop count alongside percentage in mobile view", async () => {
+    panel.game = {
+      inSpawnPhase: () => false,
+      myPlayer: () => ({ isAlive: () => true, troops: () => 100_000 }),
+    } as unknown as GameView;
+
+    panel.setVisibile(true);
+    await (panel as any).updateComplete;
+
+    const mobileContainer = panel.querySelector(".lg\\:hidden");
+    expect(mobileContainer?.textContent).toContain(
+      "control_panel.attack_ratio",
+    );
+  });
+
   // <control-panel> sits in index.html, so its (hidden) slider exists on the
   // lobby page before any game has handed it a uiState.
   it("ignores ratio changes before init() has run", () => {
