@@ -1525,7 +1525,7 @@ export class GameImpl implements Game {
       nextUnitID: this._nextUnitID,
       nextAllianceID: this.nextAllianceID,
       units: [...this._unitMap.values()].map((u) => w.unit(u)),
-      planDrivenUnitIds: [...this.planDrivenUnitIds],
+      planDrivenUnitIds: [],
       unitGrid: this.unitGrid.snapshot((u) => w.unit(u)),
       playerTeams: [...this.playerTeams],
       botTeam: this.botTeam,
@@ -1581,7 +1581,7 @@ export class GameImpl implements Game {
         return [u.id(), u];
       }),
     );
-    this.planDrivenUnitIds = new Set(s.planDrivenUnitIds);
+    this.planDrivenUnitIds = new Set();
     this.unitGrid.restoreSnapshot(s.unitGrid, (i) => r.unit(i));
     this.playerTeams = [...s.playerTeams];
     this.botTeam = s.botTeam;

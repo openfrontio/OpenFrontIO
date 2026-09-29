@@ -13,8 +13,9 @@ import {
   PlayerType,
   UnitType,
 } from "../../../src/core/game/Game";
+import { GameUpdateType } from "../../../src/core/game/GameUpdates";
 import { setup } from "../../util/Setup";
-import { expectSnapshotRoundTrip } from "../../util/Snapshot";
+import { expectSnapshotRoundTrip, roundTrip } from "../../util/Snapshot";
 import { executeTicks } from "../../util/utils";
 
 function conquerRect(
@@ -138,6 +139,35 @@ describe("snapshot: transport ships", () => {
     executeTicks(game, 2);
     expect(boat.transportShipState().isRetreating).toBe(true);
     await expectSnapshotRoundTrip(game, MAP, 40);
+  });
+
+  test("resuming snapshot with a moving transport ship emits advancing client position updates", async () => {
+    const { game, defender } = await boatGame();
+    game.addExecution(
+      new TransportShipExecution(defender, game.ref(15, 8), 100),
+    );
+    executeTicks(game, 5);
+    const boat = defender.units(UnitType.TransportShip)[0];
+    expect(boat).toBeDefined();
+    const initialTile = boat.tile();
+
+    const { restored } = await roundTrip(game, MAP);
+    const restoredBoat = restored.unit(boat.id());
+    expect(restoredBoat).toBeDefined();
+    expect(restoredBoat!.tile()).toBe(initialTile);
+
+    let advanced = false;
+    for (let i = 0; i < 20; i++) {
+      const updates = restored.executeNextTick();
+      const unitUpdates = updates[GameUpdateType.Unit] ?? [];
+      const boatUpdate = unitUpdates.find((u) => u.id === boat.id());
+      if (boatUpdate && boatUpdate.pos !== initialTile) {
+        expect(boatUpdate.pos).toBe(restoredBoat!.tile());
+        advanced = true;
+        break;
+      }
+    }
+    expect(advanced).toBe(true);
   });
 });
 
