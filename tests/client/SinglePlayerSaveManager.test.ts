@@ -36,13 +36,30 @@ vi.mock("../../src/client/SteamSDK", () => ({
 
 function dummyStartInfo(): GameStartInfo {
   return {
-    gameID: "game_test_1" as GameID,
+    gameID: "gameID1234" as GameID,
     lobbyCreatedAt: Date.now(),
     config: {
       gameMap: "World",
-      playerTeams: 0,
       difficulty: "Medium",
-    } as any,
+      donateGold: false,
+      donateTroops: false,
+      gameType: "Singleplayer",
+      gameMode: "Free For All",
+      gameMapSize: "Normal",
+      nations: "default",
+      bots: 400,
+      infiniteGold: false,
+      infiniteTroops: false,
+      instantBuild: false,
+      randomSpawn: false,
+    },
+    players: [
+      {
+        clientID: "client1234",
+        username: "Tester",
+        clanTag: null,
+      },
+    ],
   } as GameStartInfo;
 }
 
@@ -96,7 +113,7 @@ describe("SinglePlayerSaveManager", () => {
 
     const save = getSoloSave();
     expect(save).not.toBe(null);
-    expect(save?.gameID).toBe("game_test_1");
+    expect(save?.gameID).toBe("gameID1234");
     expect(save?.platform).toBe("steam");
     expect(save?.userId).toBe("76561198000000001");
     expect(save?.steamId).toBe("76561198000000001");
@@ -110,11 +127,11 @@ describe("SinglePlayerSaveManager", () => {
     expect(getSoloSave()).not.toBe(null);
 
     // Mismatched gameID does not clear save
-    clearSoloSave("game_other" as GameID);
+    clearSoloSave("gameOther12" as GameID);
     expect(getSoloSave()).not.toBe(null);
 
     // Matching gameID clears save
-    clearSoloSave("game_test_1" as GameID);
+    clearSoloSave("gameID1234" as GameID);
     expect(getSoloSave()).toBe(null);
   });
 
@@ -165,7 +182,7 @@ describe("SinglePlayerSaveManager", () => {
 
     const restored = await getSoloSnapshot();
     expect(restored).not.toBeNull();
-    expect(restored?.gameStartInfo.gameID).toBe("game_test_1");
+    expect(restored?.gameStartInfo.gameID).toBe("gameID1234");
     expect(restored?.numTurns).toBe(150);
     expect(restored?.snapshot).toEqual(rawBytes);
   });
@@ -198,6 +215,13 @@ describe("SinglePlayerSaveManager", () => {
     // Valid base save
     localStorage.setItem(key, JSON.stringify(validBase));
     expect(getSoloSave()).not.toBeNull();
+
+    // Invalid gameStartInfo (fails GameStartInfoSchema)
+    localStorage.setItem(
+      key,
+      JSON.stringify({ ...validBase, gameStartInfo: { invalid: true } }),
+    );
+    expect(getSoloSave()).toBeNull();
 
     // Invalid numTurns (negative, float, string)
     localStorage.setItem(key, JSON.stringify({ ...validBase, numTurns: -1 }));

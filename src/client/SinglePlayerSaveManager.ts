@@ -1,4 +1,10 @@
-import { GameID, GameStartInfo, Turn, TurnSchema } from "../core/Schemas";
+import {
+  GameID,
+  GameStartInfo,
+  GameStartInfoSchema,
+  Turn,
+  TurnSchema,
+} from "../core/Schemas";
 import { decompressSnapshot } from "../core/snapshot/GameSnapshot";
 import { getPersistentID } from "./Auth";
 import { clientPlatform } from "./ClientPlatform";
@@ -171,7 +177,7 @@ export function getSoloSave(): SoloSaveState | null {
 
     if (record.version !== 1) return null;
     if (typeof record.gameID !== "string" || !record.gameID) return null;
-    if (!record.gameStartInfo || typeof record.gameStartInfo !== "object") {
+    if (!GameStartInfoSchema.safeParse(record.gameStartInfo).success) {
       return null;
     }
     if (
