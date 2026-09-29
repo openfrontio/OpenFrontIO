@@ -6,6 +6,7 @@ import {
   UserMeResponse,
   UserMeResponseSchema,
 } from "../core/ApiSchemas";
+import { CloseCode, CloseReason } from "../core/CloseCodes";
 import { GameEnv } from "../core/configuration/Config";
 import { PersistentIdSchema } from "../core/Schemas";
 import { ServerEnv } from "./ServerEnv";
@@ -62,12 +63,12 @@ export async function verifyClientToken(
   }
 }
 
+// status is the API's HTTP status; unset for network and parse failures.
+export type UserMeError = { type: "error"; status?: number; message: string };
+
 export async function getUserMe(
   token: string,
-): Promise<
-  | { type: "success"; response: UserMeResponse }
-  | { type: "error"; message: string }
-> {
+): Promise<{ type: "success"; response: UserMeResponse } | UserMeError> {
   try {
     // Get the user object
     const response = await fetch(ServerEnv.jwtIssuer() + "/users/@me", {
@@ -79,6 +80,7 @@ export async function getUserMe(
     if (response.status !== 200) {
       return {
         type: "error",
+        status: response.status,
         message: `Failed to fetch user me: ${response.statusText}`,
       };
     }
@@ -97,4 +99,21 @@ export async function getUserMe(
       message: `Failed to fetch user me: ${e}`,
     };
   }
+}
+
+// How a join closes when /users/@me fails. A 401/403 is the API rejecting the
+// session itself: retrying with the same token cannot succeed, so close with a
+// terminal code and let the client send the player back to log in. Anything
+// else (5xx, network, bad body) may be transient and stays retryable.
+export function userMeFailureClose(error: UserMeError): {
+  code: CloseCode;
+  reason: CloseReason;
+} {
+  if (error.status === 401 || error.status === 403) {
+    return { code: CloseCode.Unauthorized, reason: CloseReason.InvalidToken };
+  }
+  return {
+    code: CloseCode.InternalError,
+    reason: CloseReason.AccountLookupFailed,
+  };
 }
