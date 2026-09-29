@@ -401,7 +401,7 @@ export class DesktopStatusBar extends LitElement {
     retryServerList().catch((err: unknown) => {
       // retryServerList never rejects; belt and braces, so a change there
       // cannot surface as an unhandled rejection from a click handler.
-      console.error("desktop-status-bar: server list retry failed", err);
+      console.warn("desktop-status-bar: server list retry failed", err);
     });
   }
 

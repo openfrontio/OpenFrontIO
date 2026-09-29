@@ -14,6 +14,7 @@ vi.mock("../../../src/client/Utils", () => ({
 vi.mock("../../../src/client/Api", () => ({
   setMarketingConsent: vi.fn(async () => true),
   deleteAccount: vi.fn(async () => ({ ok: true })),
+  getIdentityTokenAudiences: vi.fn(async () => []),
 }));
 
 vi.mock("../../../src/client/Auth", () => ({

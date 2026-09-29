@@ -44,6 +44,7 @@ import {
   ServerNewLobbyMessage,
   ServerPongMessage,
   ServerPrestartMessageSchema,
+  ServerRedirectMessage,
   ServerStartGameMessage,
   ServerTurnMessage,
   StampedIntent,
@@ -67,6 +68,7 @@ import {
 import { ListingState } from "./ListingState";
 import { identityFor, MatchTelemetryRecorder } from "./MatchTelemetryRecorder";
 import { friendsLookup, NameVisibility } from "./NameVisibility";
+import { poolTargetFor } from "./PoolRouting";
 import { Roster } from "./Roster";
 import { ServerEnv } from "./ServerEnv";
 import { SocketIngress } from "./SocketIngress";
@@ -87,7 +89,9 @@ export type JoinResult =
   | "ended"
   | "not_allowlisted"
   | "not_trusted"
-  | "started";
+  | "started"
+  // Not a refusal: the client was told which sibling lobby to go to instead.
+  | "redirected";
 
 export enum GamePhase {
   Lobby = "LOBBY",
@@ -99,6 +103,16 @@ export enum GamePhase {
 // per-connection websocket client, or the trusted admin-bot HTTP API.
 export function hashPersistentID(persistentID: string): string {
   return createHash("sha256").update(persistentID).digest("hex");
+}
+
+// `pool` carries sibling lobby ids, which are join secrets. Strip it from every
+// config that leaves the server — telemetry, the client start message + game
+// record, and the unauthenticated gameInfo route — in one place, so a new
+// export site can't forget.
+function configWithoutPool(config: GameConfig): GameConfig {
+  const copy = { ...config };
+  delete copy.pool;
+  return copy;
 }
 
 const KICK_REASON_DUPLICATE_SESSION = "kick_reason.duplicate_session";
@@ -236,6 +250,10 @@ export class GameServer {
   // ListingState.ts).
   private readonly listing = new ListingState();
 
+  // A pool member other than the entry is never listed, so it has no listing
+  // deadline of its own and takes the entry's; otherwise nothing starts it.
+  private poolAutoStartAt?: number;
+
   private lobbyInfoIntervalId: ReturnType<typeof setInterval> | null = null;
 
   private visibleAt?: number;
@@ -302,11 +320,13 @@ export class GameServer {
     if (opts.startsAt !== undefined) {
       this.visibleAt = Date.now();
     }
+    // Telemetry ships off-box, and sibling ids are join secrets.
+    const telemetryConfig = configWithoutPool(opts.gameConfig);
     this.telemetry.emit(
       "match_opened",
       {
         lobbyCreatedAt: opts.createdAt,
-        config: opts.gameConfig,
+        config: telemetryConfig,
         publicGameType: opts.publicGameType,
         buildHash: this.deps.telemetryBuildHash,
         instanceId: ServerEnv.instanceId(),
@@ -503,6 +523,26 @@ export class GameServer {
         clientID: client.clientID,
       });
       return "not_trusted";
+    }
+
+    // Being routed is not a refusal, so it must not consume the "full" or
+    // "started" answer that belongs to the lobby they end up on.
+    const redirect = this.poolRedirectFor(client);
+    if (redirect !== null) {
+      this.log.info("assigning client to pool sibling", {
+        clientID: client.clientID,
+        target: redirect,
+      });
+      client.ws.send(
+        encodeServerMessage(
+          {
+            type: "redirect",
+            gameID: redirect,
+          } satisfies ServerRedirectMessage,
+          this.zbinCtx,
+        ),
+      );
+      return "redirected";
     }
 
     // gameStartInfo.players is frozen at start, so a late arrival could never
@@ -1053,7 +1093,7 @@ export class GameServer {
     // enforced server-side against this.gameConfig (joinClient / seesReal).
     // Keep them out of gameStartInfo: its config goes to every client in the
     // start message and into the publicly downloadable game record.
-    const config = { ...this.gameConfig };
+    const config = configWithoutPool(this.gameConfig);
     delete config.allowedPublicIds;
     delete config.nameRevealPublicIds;
 
@@ -1229,18 +1269,63 @@ export class GameServer {
     return client.trusted;
   }
 
+  // ONE definition of which member a client belongs to, shared by every path
+  // that can seat someone here — joinClient and the Play/Spectate toggle — the
+  // same way passesAllowlist is. Null means seat them here.
+  //
+  // Naming a publicId in allowedPublicIds pins them to this member on purpose,
+  // so it overrides the hash.
+  private poolTargetForClient(client: Client): GameID | null {
+    const pool = this.gameConfig.pool;
+    if (pool === undefined) return null;
+    if (isAdminRole(client.role)) return null;
+    if (
+      client.publicId !== undefined &&
+      this.gameConfig.allowedPublicIds?.includes(client.publicId) === true
+    ) {
+      return null;
+    }
+    return poolTargetFor(
+      pool,
+      client.publicId ?? hashPersistentID(client.persistentID),
+      this.id,
+    );
+  }
+
+  // The join-path view. Both extra guards belong here and NOT in
+  // poolTargetForClient: a client that is already in this game is a known
+  // client, and a spectator that later asks for a seat is too, so sharing
+  // either one would make the seat toggle a way past the pool.
+  //
+  // Already here: a mid-game drop reconnects as a fresh join, and routing it
+  // out would take the player out of the game they are playing. (A reconnect
+  // that arrives as a rejoin never reaches any of this — rejoinClient hands
+  // an existing client a new socket and seats nobody.)
+  //
+  // Spectator: they take no seat on the way in, so a caster can watch whichever
+  // member they asked for.
+  private poolRedirectFor(client: Client): GameID | null {
+    if (this.getClientIdForPersistentId(client.persistentID) !== null) {
+      return null;
+    }
+    if (client.spectator) return null;
+    return this.poolTargetForClient(client);
+  }
+
   // Switch a client between playing and watching from the lobby screen. Seating
   // is refused once the game has started (the player list is frozen), when the
-  // lobby is full, or when the allowlist does not name them — the toggle must
-  // not be a way past either. The allowlist can gain entries AFTER people are in
-  // the lobby (update_game_config replaces it), so someone admitted before it
-  // was set is not proof they may hold a seat now.
+  // lobby is full, when the allowlist does not name them, or when the pool puts
+  // them on another member — the toggle must not be a way past any of them. The
+  // allowlist can gain entries AFTER people are in the lobby
+  // (update_game_config replaces it), so someone admitted before it was set is
+  // not proof they may hold a seat now.
   private setSpectator(client: Client, spectator: boolean): void {
     if (client.spectator === spectator) return;
     if (!spectator) {
       if (this.stage === "started" || this.ended) return;
       if (!this.passesAllowlist(client)) return;
       if (!this.passesTrustGate(client)) return;
+      if (this.poolTargetForClient(client) !== null) return;
       const max = this.gameConfig.maxPlayers;
       if (max !== undefined && this.playerCount() >= max) return;
     }
@@ -1562,16 +1647,19 @@ export class GameServer {
   // Omitting viewer (e.g. the HTTP /api/game/:id and link-preview routes)
   // anonymizes all names when the option is on.
   public gameInfo(viewer?: ClientID): GameInfo {
+    // Goes out over the unauthenticated /api/game/:id route and the per-second
+    // lobby_info broadcast, so strip the pool secrets (see configWithoutPool).
+    const gameConfig = configWithoutPool(this.gameConfig);
     return {
       gameID: this.id,
       clients: this.names.lobbyClients(viewer, this.clients.active()),
       lobbyCreatorClientID: this.lobbyCreatorID,
-      gameConfig: this.gameConfig,
+      gameConfig,
       startsAt: this.startsAt,
       serverTime: Date.now(),
       publicGameType: this.publicGameType,
       listed: this.isPublic() ? undefined : this.listing.isListed(),
-      autoStartAt: this.listing.autoStartAt(),
+      autoStartAt: this.autoStartAt(),
       label: this.listing.lobbyLabel(),
       accent: this.listing.lobbyAccent(),
       featured: this.listing.isFeatured() ? true : undefined,
@@ -1648,7 +1736,12 @@ export class GameServer {
   }
 
   public autoStartAt(): number | undefined {
-    return this.listing.autoStartAt();
+    return this.listing.autoStartAt() ?? this.poolAutoStartAt;
+  }
+
+  // Only create_pool calls this.
+  public setPoolAutoStartAt(deadline: number): void {
+    this.poolAutoStartAt = deadline;
   }
 
   public isFeatured(): boolean {
@@ -1669,14 +1762,14 @@ export class GameServer {
   }
 
   // Called from GameManager's tick while in the Lobby phase: once the
-  // listed deadline passes, arm the normal start countdown (same path as
+  // listed (or pool) deadline passes, arm the normal start countdown (same path as
   // the host's Start button). Cancelling the countdown re-arms it on the
   // next tick, so the only way out is to unlist.
   public maybeAutoStartListed(): void {
     if (this.hasStarted() || this.startsAt !== undefined) {
       return;
     }
-    const deadline = this.listing.autoStartAt();
+    const deadline = this.autoStartAt();
     if (deadline === undefined || Date.now() < deadline) {
       return;
     }

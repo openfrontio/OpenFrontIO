@@ -93,6 +93,28 @@ describe("UserSettings tutorial dismissal", () => {
   });
 });
 
+describe("UserSettings lobby start alerts", () => {
+  beforeEach(resetUserSettingsState);
+
+  it("defaults off and round-trips both choices", () => {
+    const settings = new UserSettings();
+    expect(settings.lobbyStartAlerts()).toBe(false);
+
+    settings.setLobbyStartAlerts(true);
+    expect(settings.lobbyStartAlerts()).toBe(true);
+    expect(localStorage.getItem("settings.lobbyStartAlerts")).toBe("true");
+
+    settings.setLobbyStartAlerts(false);
+    expect(settings.lobbyStartAlerts()).toBe(false);
+    expect(localStorage.getItem("settings.lobbyStartAlerts")).toBe("false");
+  });
+
+  it("falls back to off for malformed storage", () => {
+    localStorage.setItem("settings.lobbyStartAlerts", "enabled");
+    expect(new UserSettings().lobbyStartAlerts()).toBe(false);
+  });
+});
+
 describe("UserSettings cosmetic loadouts", () => {
   beforeEach(resetUserSettingsState);
 

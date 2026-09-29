@@ -33,7 +33,7 @@ import { GameManager } from "./GameManager";
 import { registerGamePreviewRoute } from "./GamePreviewRoute";
 import { GamePhase, type GameServer } from "./GameServer";
 import { isSteamAuthenticated, planJoinVerify, verifyJoin } from "./JoinVerify";
-import { getUserMe, verifyClientToken } from "./jwt";
+import { getUserMe, userMeFailureClose, verifyClientToken } from "./jwt";
 import { payForLobbyQueue, queueListedLobby } from "./LobbyQueuePayment";
 import { logger } from "./Logger";
 import { resolveVerifiedJoin } from "./Privilege";
@@ -734,7 +734,8 @@ export async function startWorker() {
               persistentID: persistentId,
               gameID: clientMsg.gameID,
             });
-            ws.close(CloseCode.InternalError, CloseReason.AccountLookupFailed);
+            const { code, reason } = userMeFailureClose(result);
+            ws.close(code, reason);
             return;
           }
           flares = result.response.player.flares;
@@ -852,6 +853,15 @@ export async function startWorker() {
             workerId,
           });
           ws.close(CloseCode.Forbidden, CloseReason.NotTrusted);
+        } else if (joinResult === "redirected") {
+          // Normal, not a rejection code: the game already sent this client
+          // where to go, and Normal is the client's silent branch, so no
+          // dialog appears while it navigates.
+          log.info("client redirected to a pool sibling", {
+            gameID: clientMsg.gameID,
+            workerId,
+          });
+          ws.close(CloseCode.Normal, CloseReason.PoolRedirect);
         } else if (joinResult === "ended") {
           log.info(`client tried to join ended game ${clientMsg.gameID}`, {
             gameID: clientMsg.gameID,

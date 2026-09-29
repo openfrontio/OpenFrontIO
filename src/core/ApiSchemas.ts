@@ -162,6 +162,19 @@ export function isVerifiedUsername(
   );
 }
 
+// Third-party sites a player can prove account ownership to with a short-lived
+// identity token (POST /users/@me/identity_token). Admin-managed on the API
+// and served by GET /public/identity_token/audiences.
+export const IdentityTokenAudiencesResponseSchema = z.object({
+  audiences: z.array(z.string()),
+});
+
+export const IdentityTokenResponseSchema = z.object({
+  token: z.string(),
+  expiresAt: z.string(),
+});
+export type IdentityTokenResponse = z.infer<typeof IdentityTokenResponseSchema>;
+
 export const UserMeResponseSchema = z.object({
   user: z.object({
     discord: DiscordUserSchema.optional(),

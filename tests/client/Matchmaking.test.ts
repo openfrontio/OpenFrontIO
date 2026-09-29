@@ -8,6 +8,23 @@ const apiMocks = vi.hoisted(() => ({
   invalidateUserMe: vi.fn(),
 }));
 
+const alertMocks = vi.hoisted(() => ({
+  construct: vi.fn(),
+  play: vi.fn(),
+}));
+
+vi.mock("howler", () => ({
+  Howl: class {
+    constructor(options: unknown) {
+      alertMocks.construct(options);
+    }
+
+    play() {
+      return alertMocks.play();
+    }
+  },
+}));
+
 // The two ClientEnv reads the version check below depends on: this bundle's
 // commit, and the commit the matched game's server runs (the API's list).
 const envMocks = vi.hoisted(() => ({
@@ -63,6 +80,7 @@ vi.mock("../../src/client/Utils", () => ({
 }));
 
 import { MatchmakingModal } from "../../src/client/Matchmaking";
+import { UserSettings } from "../../src/core/game/UserSettings";
 
 class FakeWebSocket {
   static readonly CONNECTING = 0;
@@ -688,5 +706,168 @@ describe("MatchmakingModal queue join carries the page's site", () => {
     const { socket } = await openAndJoin("1v1");
 
     expect(socket.url).not.toContain("site=");
+  });
+});
+
+describe("MatchmakingModal game-start alert", () => {
+  const notificationTitles: string[] = [];
+  const closeNotification = vi.fn();
+
+  class FakeNotification {
+    static permission: NotificationPermission = "default";
+    static requestPermission = vi.fn(async () => "granted" as const);
+
+    onclick: ((event: Event) => void) | null = null;
+    close = closeNotification;
+
+    constructor(title: string) {
+      notificationTitles.push(title);
+    }
+  }
+
+  let modal: MatchmakingModal | null = null;
+
+  beforeEach(() => {
+    vi.useFakeTimers();
+    sockets.length = 0;
+    apiMocks.getUserMe.mockReset().mockResolvedValue(userMe());
+    apiMocks.invalidateUserMe.mockReset();
+    alertMocks.construct.mockReset();
+    alertMocks.play.mockReset();
+    notificationTitles.length = 0;
+    closeNotification.mockReset();
+    FakeNotification.permission = "default";
+    FakeNotification.requestPermission.mockClear();
+    localStorage.clear();
+    const statics = UserSettings as unknown as {
+      cache: Map<string, string | null>;
+      playerId: string | null;
+    };
+    statics.cache.clear();
+    statics.playerId = null;
+    vi.stubGlobal("WebSocket", FakeWebSocket);
+    vi.stubGlobal("Notification", FakeNotification);
+    vi.spyOn(console, "log").mockImplementation(() => {});
+  });
+
+  afterEach(() => {
+    modal?.close();
+    modal?.remove();
+    modal = null;
+    vi.restoreAllMocks();
+    vi.unstubAllGlobals();
+    vi.useRealTimers();
+  });
+
+  it("uses the lobby bell and alerts only after a ranked match is assigned", async () => {
+    const joined = await openAndJoin("1v1");
+    modal = joined.modal;
+    document.body.append(modal);
+    await modal.updateComplete;
+
+    const bell = modal.querySelector<HTMLButtonElement>(
+      '[aria-label="public_lobby.notify_off"]',
+    );
+    expect(bell).not.toBeNull();
+    expect(bell?.getAttribute("aria-pressed")).toBe("false");
+
+    bell?.click();
+    await modal.updateComplete;
+
+    expect(FakeNotification.requestPermission).toHaveBeenCalledOnce();
+    expect(alertMocks.construct).toHaveBeenCalledWith({
+      src: ["/sounds/effects/game-start-alert.mp3"],
+    });
+    expect(
+      modal.querySelector('[aria-label="public_lobby.notify_on"]'),
+    ).not.toBeNull();
+
+    // Queueing alone is not a game start. The shared event is ignored until
+    // matchmaking has actually assigned this modal a game.
+    document.dispatchEvent(new CustomEvent("game-starting"));
+    expect(alertMocks.play).not.toHaveBeenCalled();
+
+    joined.socket.onmessage?.({
+      data: JSON.stringify({
+        type: "match-assignment",
+        gameId: "cAbCd12345",
+      }),
+    });
+    FakeNotification.permission = "granted";
+    document.dispatchEvent(new CustomEvent("game-starting"));
+
+    expect(alertMocks.play).toHaveBeenCalledOnce();
+    expect(notificationTitles).toEqual(["public_lobby.notify_started"]);
+  });
+
+  it("stays armed across a cancellation requeue but resets when leaving", async () => {
+    const joined = await openAndJoin("1v1");
+    modal = joined.modal;
+    document.body.append(modal);
+    await modal.updateComplete;
+
+    modal
+      .querySelector<HTMLButtonElement>(
+        '[aria-label="public_lobby.notify_off"]',
+      )
+      ?.click();
+    await modal.updateComplete;
+
+    joined.socket.onmessage?.({
+      data: JSON.stringify({
+        type: "match-assignment",
+        gameId: "cAbCd12345",
+      }),
+    });
+    expect(modal.requeue()).toBe(true);
+    await modal.updateComplete;
+    expect(
+      modal.querySelector('[aria-label="public_lobby.notify_on"]'),
+    ).not.toBeNull();
+
+    modal.close();
+    await modal.updateComplete;
+    expect(
+      modal.querySelector('[aria-label="public_lobby.notify_off"]'),
+    ).not.toBeNull();
+  });
+
+  it("arms from the saved default without a toast or permission prompt", async () => {
+    new UserSettings().setLobbyStartAlerts(true);
+    const dispatchSpy = vi.spyOn(window, "dispatchEvent");
+    const joined = await openAndJoin("1v1");
+    modal = joined.modal;
+    document.body.append(modal);
+    await modal.updateComplete;
+
+    expect(
+      modal.querySelector('[aria-label="public_lobby.notify_on"]'),
+    ).not.toBeNull();
+    expect(alertMocks.construct).toHaveBeenCalledOnce();
+    expect(FakeNotification.requestPermission).not.toHaveBeenCalled();
+    expect(
+      dispatchSpy.mock.calls.filter(
+        ([event]) => (event as Event).type === "show-message",
+      ),
+    ).toHaveLength(0);
+
+    joined.socket.onmessage?.({
+      data: JSON.stringify({
+        type: "match-assignment",
+        gameId: "cAbCd12345",
+      }),
+    });
+    document.dispatchEvent(new CustomEvent("game-starting"));
+
+    expect(alertMocks.play).toHaveBeenCalledOnce();
+    // The setting is a default, not a lock: the bell still turns it off.
+    modal
+      .querySelector<HTMLButtonElement>('[aria-label="public_lobby.notify_on"]')
+      ?.click();
+    await modal.updateComplete;
+    expect(
+      modal.querySelector('[aria-label="public_lobby.notify_off"]'),
+    ).not.toBeNull();
+    expect(new UserSettings().lobbyStartAlerts()).toBe(true);
   });
 });
