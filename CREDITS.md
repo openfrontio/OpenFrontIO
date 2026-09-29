@@ -109,6 +109,12 @@ Licensed under ODbL
 © [OpenStreetMap contributors](https://www.openstreetmap.org/copyright)  
 Licensed under ODbL
 
+### Ukraine Map
+
+Elevation: [Terrain Tiles on AWS](https://registry.opendata.aws/terrain-tiles/) (SRTM, GMTED2010, ETOPO1, EU-DEM), see [attribution](https://github.com/tilezen/joerd/blob/master/docs/attribution.md)
+Borders, rivers and cities: [Natural Earth](https://www.naturalearthdata.com/), Public Domain
+Lakes, reservoirs and river areas: © [OpenStreetMap contributors](https://www.openstreetmap.org/copyright), Licensed under ODbL
+
 ## Icons
 
 ### [The Noun Project](https://thenounproject.com/)
