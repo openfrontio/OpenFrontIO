@@ -206,7 +206,7 @@ export class MirvExecution implements Execution {
   private finalizeDestinations(additionalAttempts = 500): void {
     // Re-check target tile ownership at tick 10
     this.stagedTargets = this.stagedTargets.filter(
-      (tile) => tile === this.dst || this.mg.owner(tile) === this.targetPlayer,
+      (tile) => tile === this.dst || this.isTileOwnedByValidEnemy(tile),
     );
 
     // Top-up loop using specified attempt budget if targets were lost or not yet filled
