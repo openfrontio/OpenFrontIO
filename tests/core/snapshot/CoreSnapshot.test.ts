@@ -15,6 +15,7 @@ import {
   decodeSnapshotValue,
   encodeSnapshotValue,
 } from "../../../src/core/snapshot/SnapshotCodec";
+import { SnapshotError } from "../../../src/core/snapshot/SnapshotType";
 import { setup } from "../../util/Setup";
 import {
   diffGraphs,
@@ -113,5 +114,25 @@ describe("core snapshot", () => {
     const validBytes = encodeSnapshotValue(raw);
     const validHeader = readSnapshotHeader(validBytes);
     expect(validHeader.startTick).toBe(42);
+  });
+
+  test("restoreMapsFromSnapshot throws SnapshotError on invalid tile reference", async () => {
+    const game = await builtGame();
+    const bytes = snapshotGame(game);
+    const { gameMap, miniGameMap } = await loadTestMaps(MAP);
+
+    const raw = decodeSnapshotValue(bytes) as any;
+    const invalidTile = 99999999;
+    raw.players[0].d.tiles = new Uint32Array([invalidTile]);
+    const corruptedBytes = encodeSnapshotValue(raw);
+
+    const playerID = raw.players[0].d.info.id;
+    expect(() =>
+      restoreMapsFromSnapshot(corruptedBytes, gameMap, miniGameMap),
+    ).toThrowError(
+      new SnapshotError(
+        `invalid tile ref ${invalidTile} for player ${playerID}`,
+      ),
+    );
   });
 });

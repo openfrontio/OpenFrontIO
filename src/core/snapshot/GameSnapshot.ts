@@ -295,7 +295,13 @@ export function restoreMapsFromSnapshot(
     const id = p.smallID;
     const tiles = p.tiles;
     for (let i = 0; i < tiles.length; i++) {
-      gameMap.setOwnerID(tiles[i], id);
+      const tile = tiles[i];
+      if (!gameMap.isValidRef(tile)) {
+        throw new SnapshotError(
+          `invalid tile ref ${tile} for player ${p.info.id}`,
+        );
+      }
+      gameMap.setOwnerID(tile, id);
     }
   }
 }
