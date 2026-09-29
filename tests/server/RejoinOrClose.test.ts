@@ -42,6 +42,26 @@ describe("rejoinOrClose", () => {
     );
   });
 
+  it("reports an ended game not yet pruned as not found", async () => {
+    const gameID = cid("ended");
+    const game = gm.createGame(gameID, undefined)!;
+    game.joinClient(
+      makeClient({ clientID: cid("p1"), persistentID: "p1-pid" }),
+    );
+    await game.end();
+    const ws = makeMockWs();
+    rejoinOrClose(gm, log, 3, ws as any, "p1-pid", gameID, 0);
+
+    expect(ws.close).toHaveBeenCalledWith(
+      CloseCode.GameNotFound,
+      CloseReason.GameNotFound,
+    );
+    expect(log.info).toHaveBeenCalledWith(
+      `game ${gameID} not found on worker 3`,
+      { gameID },
+    );
+  });
+
   it("says the client is not in the game when the game exists", () => {
     const gameID = cid("live");
     gm.createGame(gameID, undefined);

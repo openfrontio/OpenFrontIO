@@ -18,7 +18,10 @@ export function rejoinOrClose(
   lastTurn: number,
 ): void {
   if (gm.rejoinClient(ws, persistentID, gameID, lastTurn)) return;
-  if (gm.game(gameID) === null) {
+  // An ended game stays in GameManager until its next tick prunes it; to
+  // the rejoining client it is already gone.
+  const game = gm.game(gameID);
+  if (game === null || game.hasEnded()) {
     log.info(`game ${gameID} not found on worker ${workerId}`, { gameID });
   } else {
     log.info(`rejoining client not in game ${gameID}`, { gameID });
