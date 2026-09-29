@@ -42,6 +42,7 @@ import { MapPlaylist } from "./MapPlaylist";
 import { setNoStoreHeaders } from "./NoStoreHeaders";
 import { PrivilegeRefresher } from "./PrivilegeRefresher";
 import { startRankedCheckinLoops } from "./RankedCheckin";
+import { rejoinOrClose } from "./Rejoin";
 import { ServerEnv } from "./ServerEnv";
 import { SingleplayerPresence } from "./SingleplayerPresence";
 import { applyStaticAssetCacheControl } from "./StaticAssetCache";
@@ -579,18 +580,15 @@ export async function startWorker() {
             gameID: clientMsg.gameID,
             persistentID: persistentId,
           });
-          const wasFound = gm.rejoinClient(
+          rejoinOrClose(
+            gm,
+            log,
+            workerId,
             ws,
             persistentId,
             clientMsg.gameID,
             clientMsg.lastTurn,
           );
-          if (!wasFound) {
-            log.warn(
-              `game ${clientMsg.gameID} not found on worker ${workerId}`,
-            );
-            ws.close(CloseCode.GameNotFound, CloseReason.GameNotFound);
-          }
           return;
         }
 

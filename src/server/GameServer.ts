@@ -1640,6 +1640,10 @@ export class GameServer {
     return this.stage !== "lobby";
   }
 
+  hasEnded(): boolean {
+    return this.ended;
+  }
+
   isPaused(): boolean {
     return this.paused;
   }
