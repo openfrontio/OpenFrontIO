@@ -152,7 +152,7 @@ ctx.addEventListener("message", async (e: MessageEvent<MainThreadMessage>) => {
         // Set before createGameRunner so map fetches via mapLoader pick up the
         // CDN base. Workers have no `window`, so AssetUrls falls back to this.
         globalThis.__CDN_BASE__ = message.cdnBase;
-        gameRunner = (
+        gameRunner =
           message.snapshot !== undefined
             ? createGameRunnerFromSnapshot(
                 message.gameStartInfo,
@@ -160,20 +160,27 @@ ctx.addEventListener("message", async (e: MessageEvent<MainThreadMessage>) => {
                 message.clientID,
                 mapLoader,
                 gameUpdate,
-              )
+              ).then((gr) => {
+                const initialUpdate = gr.snapshotViewData();
+                sendMessage({
+                  type: "initialized",
+                  id: message.id,
+                  initialUpdate,
+                } as InitializedMessage);
+                return gr;
+              })
             : createGameRunner(
                 message.gameStartInfo,
                 message.clientID,
                 mapLoader,
                 gameUpdate,
-              )
-        ).then((gr) => {
-          sendMessage({
-            type: "initialized",
-            id: message.id,
-          } as InitializedMessage);
-          return gr;
-        });
+              ).then((gr) => {
+                sendMessage({
+                  type: "initialized",
+                  id: message.id,
+                } as InitializedMessage);
+                return gr;
+              });
       } catch (error) {
         console.error("Failed to initialize game runner:", error);
         throw error;

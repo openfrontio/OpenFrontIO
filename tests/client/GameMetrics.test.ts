@@ -41,7 +41,7 @@ describe("GameMetrics", () => {
     vi.useRealTimers();
   });
 
-  it("reports each series once per window and starts the window over", () => {
+  it("reports every series in one game_perf measurement per window and starts the window over", () => {
     const metrics = new GameMetrics("game1234", "c0000001", 1000);
     metrics.start();
     for (const t of [0, 16, 32, 48, 100]) metrics.recordFrame(t);
@@ -55,28 +55,52 @@ describe("GameMetrics", () => {
 
     const context = { gameID: "game1234", clientID: "c0000001" };
     expect(reportMeasurement.mock.calls).toEqual([
-      ["frame_time", { p50: 16, p90: 52, p99: 52, count: 4 }, context],
-      ["tick_execution", { p50: 3, p90: 9, p99: 9, count: 2 }, context],
-      ["tick_interval", { p50: 101, p90: 400, p99: 400, count: 3 }, context],
+      [
+        "game_perf",
+        {
+          frame_time_p50: 16,
+          frame_time_p90: 52,
+          frame_time_p99: 52,
+          frame_time_count: 4,
+          tick_execution_p50: 3,
+          tick_execution_p90: 9,
+          tick_execution_p99: 9,
+          tick_execution_count: 2,
+          tick_interval_p50: 101,
+          tick_interval_p90: 400,
+          tick_interval_p99: 400,
+          tick_interval_count: 3,
+        },
+        context,
+      ],
     ]);
 
     reportMeasurement.mockClear();
     metrics.recordTickExecution(5);
     vi.advanceTimersByTime(1000);
     expect(reportMeasurement.mock.calls).toEqual([
-      ["tick_execution", { p50: 5, p90: 5, p99: 5, count: 1 }, context],
+      [
+        "game_perf",
+        {
+          tick_execution_p50: 5,
+          tick_execution_p90: 5,
+          tick_execution_p99: 5,
+          tick_execution_count: 1,
+        },
+        context,
+      ],
     ]);
   });
 
-  it("reports the WebSocket round trip as ws_rtt", () => {
+  it("reports the WebSocket round trip under ws_rtt", () => {
     const metrics = new GameMetrics("game1234", "c0000001", 1000);
     metrics.start();
     metrics.recordRoundTrip(40);
     metrics.recordRoundTrip(60);
     vi.advanceTimersByTime(1000);
     expect(reportMeasurement).toHaveBeenCalledWith(
-      "ws_rtt",
-      { p50: 40, p90: 60, p99: 60, count: 2 },
+      "game_perf",
+      { ws_rtt_p50: 40, ws_rtt_p90: 60, ws_rtt_p99: 60, ws_rtt_count: 2 },
       { gameID: "game1234", clientID: "c0000001" },
     );
   });
@@ -94,8 +118,13 @@ describe("GameMetrics", () => {
     metrics.recordTickExecution(7);
     metrics.stop();
     expect(reportMeasurement).toHaveBeenCalledWith(
-      "tick_execution",
-      { p50: 7, p90: 7, p99: 7, count: 1 },
+      "game_perf",
+      {
+        tick_execution_p50: 7,
+        tick_execution_p90: 7,
+        tick_execution_p99: 7,
+        tick_execution_count: 1,
+      },
       { gameID: "game1234", clientID: "" },
     );
 
@@ -118,8 +147,13 @@ describe("GameMetrics", () => {
     metrics.recordFrame(60_016);
     metrics.flush();
     expect(reportMeasurement).toHaveBeenCalledWith(
-      "frame_time",
-      { p50: 16, p90: 16, p99: 16, count: 2 },
+      "game_perf",
+      {
+        frame_time_p50: 16,
+        frame_time_p90: 16,
+        frame_time_p99: 16,
+        frame_time_count: 2,
+      },
       expect.anything(),
     );
   });

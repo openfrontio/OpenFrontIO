@@ -26,6 +26,7 @@ import { createGame } from "./game/GameImpl";
 import { TileRef } from "./game/GameMap";
 import { GameMapLoader } from "./game/GameMapLoader";
 import {
+  createGameUpdatesMap,
   ErrorUpdate,
   GameUpdateType,
   GameUpdateViewData,
@@ -178,6 +179,67 @@ export class GameRunner {
       gameID: this.execManager.gameID(),
       gitCommit,
     });
+  }
+
+  /**
+   * Generates a full GameUpdateViewData representing the current simulation state
+   * (e.g. for snapshot resume before processing new turns). Calling this also
+   * initializes PlayerImpl.lastSentUpdate so subsequent tick emissions retain partial diffs.
+   */
+  public snapshotViewData(): GameUpdateViewData {
+    const updates = createGameUpdatesMap();
+
+    for (const player of this.game.players()) {
+      const update = player.toUpdate(undefined, undefined, true);
+      if (update !== null) {
+        updates[GameUpdateType.Player].push(update);
+      }
+    }
+
+    for (const unit of this.game.units()) {
+      if (unit.isActive()) {
+        updates[GameUpdateType.Unit].push(unit.toUpdate());
+      }
+    }
+
+    if (!this.game.inSpawnPhase()) {
+      updates[GameUpdateType.SpawnPhaseEnd].push({
+        type: GameUpdateType.SpawnPhaseEnd,
+        startTick: this.game.startTick() ?? 0,
+      });
+    }
+
+    this.playerViewData = {};
+    if (this.game.inSpawnPhase()) {
+      for (const p of this.game.players()) {
+        if (p.type() !== PlayerType.Human && p.type() !== PlayerType.Nation) {
+          continue;
+        }
+        if (p.spawnTile() === undefined) continue;
+        this.playerViewData[p.id()] = placeSpawnName(this.game, p);
+      }
+    } else {
+      for (const p of this.game.players()) {
+        this.playerViewData[p.id()] = placeName(this.game, p);
+      }
+    }
+
+    const packedTileUpdates = new Uint32Array(0);
+    const packedPlayerUpdates =
+      this.game.drainPackedPlayerUpdates() ?? undefined;
+    const packedAttackUpdates =
+      this.game.drainPackedAttackUpdates() ?? undefined;
+
+    return {
+      tick: this.game.ticks(),
+      updates,
+      packedTileUpdates,
+      ...(packedPlayerUpdates ? { packedPlayerUpdates } : {}),
+      ...(packedAttackUpdates ? { packedAttackUpdates } : {}),
+      playerNameViewData: this.playerViewData,
+      tickExecutionDuration: 0,
+      pendingTurns: 0,
+    };
   }
 
   init() {

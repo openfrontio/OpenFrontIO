@@ -78,7 +78,7 @@ export class NewsBox extends LitElement {
       }
       this.startCycle();
     } catch (e) {
-      console.error(e);
+      console.warn(e);
     }
   }
 

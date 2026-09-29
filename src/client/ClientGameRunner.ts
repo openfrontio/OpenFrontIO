@@ -758,6 +758,10 @@ export async function createClientGame(
     lobbyConfig.gameStartInfo.players,
     initialStartTick,
   );
+  const initialUpdate = worker.consumeInitialUpdate?.();
+  if (initialUpdate) {
+    gameView.update(initialUpdate);
+  }
 
   // Transparent fullscreen overlay used purely as the pointer-event /
   // bounding-rect target for InputHandler + TransformHandler. The actual

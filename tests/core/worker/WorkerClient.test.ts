@@ -180,3 +180,37 @@ describe("WorkerClient snapshot", () => {
     expect(internalClient.messageHandlers.size).toBe(0);
   });
 });
+
+describe("WorkerClient initialUpdate", () => {
+  it("stores initialUpdate from initialized message and consumeInitialUpdate clears it", () => {
+    const { client, internalClient } = createClient();
+    const dummyUpdate = { tick: 10 } as any;
+
+    internalClient.handleWorkerMessage({
+      data: {
+        type: "initialized",
+        id: "msg-1",
+        initialUpdate: dummyUpdate,
+      },
+    } as MessageEvent<WorkerMessage>);
+
+    // If a handler was waiting for msg-1, it would be called;
+    // but here we can directly verify handleWorkerMessage behavior
+    expect(client.initialUpdate).toBe(dummyUpdate);
+    expect(client.consumeInitialUpdate()).toBe(dummyUpdate);
+    expect(client.initialUpdate).toBeNull();
+    expect(client.consumeInitialUpdate()).toBeNull();
+  });
+
+  it("passes initialUpdate to gameUpdate callback on start if not consumed", () => {
+    const { client } = createClient();
+    const dummyUpdate = { tick: 20 } as any;
+    client.initialUpdate = dummyUpdate;
+
+    const callback = vi.fn();
+    client.start(callback);
+
+    expect(callback).toHaveBeenCalledWith(dummyUpdate);
+    expect(client.initialUpdate).toBeNull();
+  });
+});

@@ -74,7 +74,7 @@ export class MapDisplay extends LitElement {
       this.hasNations =
         Array.isArray(manifest.nations) && manifest.nations.length > 0;
     } catch (error) {
-      console.error("Failed to load map data:", error);
+      console.warn("Failed to load map data:", error);
     } finally {
       this.isLoading = false;
     }

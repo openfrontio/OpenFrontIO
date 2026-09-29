@@ -67,7 +67,11 @@ import {
   UnitType,
 } from "./Game";
 import { GameMap, TileRef } from "./GameMap";
-import { GameUpdate, GameUpdateType } from "./GameUpdates";
+import {
+  createGameUpdatesMap,
+  GameUpdate,
+  GameUpdateType,
+} from "./GameUpdates";
 import { MotionPlanRecord, packMotionPlans } from "./MotionPlans";
 import { PlayerImpl } from "./PlayerImpl";
 import { RailNetwork } from "./RailNetwork";
@@ -1732,14 +1736,3 @@ export const GameSnapshot = snapshotType({
   }),
 });
 export type GameState = z.infer<typeof GameSnapshot.schema>;
-
-// Or a more dynamic approach that will catch new enum values:
-const createGameUpdatesMap = (): GameUpdates => {
-  const map = {} as GameUpdates;
-  Object.values(GameUpdateType)
-    .filter((key) => !isNaN(Number(key))) // Filter out reverse mappings
-    .forEach((key) => {
-      map[key as GameUpdateType] = [];
-    });
-  return map;
-};

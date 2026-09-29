@@ -133,7 +133,7 @@ export class InlineCheckout extends LitElement {
         // unhandled rejection in both void-ing callers. Resolve to null
         // instead: the price button falls back to the redirect flow, and the
         // dropped memo lets a later interaction retry.
-        console.error("inline-checkout: session creation failed", e);
+        console.warn("inline-checkout: session creation failed", e);
         this.sessionPromise = null;
         return null;
       });
