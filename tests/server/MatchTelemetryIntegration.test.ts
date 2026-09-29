@@ -315,6 +315,26 @@ describe("GameServer match telemetry", () => {
     });
   });
 
+  it("keeps pool sibling ids out of match_opened", () => {
+    // Telemetry leaves the box, and sibling ids are join secrets.
+    const manager = new GameManager(log, telemetry, "build-hash");
+    manager.createGame(
+      "poolMatch",
+      testGameConfig({
+        gameType: GameType.Private,
+        bots: 7,
+        pool: { id: "pool-1", siblings: ["poolMatch", "bbbb2222"] },
+      }),
+    );
+    const opened = telemetry.events.find(
+      (event) => event.type === "match_opened",
+    );
+    const config = (opened?.payload as { config: Record<string, unknown> })
+      .config;
+    expect(config).not.toHaveProperty("pool");
+    expect(config.bots).toBe(7);
+  });
+
   it("GameManager forwards the worker emitter and build hash to each game", () => {
     const manager = new GameManager(log, telemetry, "build-hash");
     const game = manager.createGame(

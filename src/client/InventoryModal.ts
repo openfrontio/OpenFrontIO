@@ -40,6 +40,7 @@ import type {
 import "./components/InventoryLoadoutMenu";
 import { ProgressiveList } from "./components/ProgressiveList";
 import { modalHeader } from "./components/ui/ModalHeader";
+import { signedOutNotice } from "./components/ui/SignedOutNotice";
 import {
   fetchCosmetics,
   groupCosmeticVariants,
@@ -735,6 +736,14 @@ export class InventoryModal extends BaseModal {
     }
     const category = tab as InventoryCategory;
     return html`
+      ${this.ownershipState === "guest"
+        ? html`<div data-inventory-sign-in>
+            ${signedOutNotice(
+              () => window.showPage?.("page-account"),
+              translateText("inventory.sign_in_for_cosmetics"),
+            )}
+          </div>`
+        : nothing}
       ${this.renderLoadoutMenu()}
       <inventory-loadout-bar
         .entries=${this.loadoutEntries()}

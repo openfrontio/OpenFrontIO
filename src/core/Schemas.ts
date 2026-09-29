@@ -116,7 +116,8 @@ export type ServerMessage =
   | ServerErrorMessage
   | ServerLobbyInfoMessage
   | ServerNewLobbyMessage
-  | ServerPongMessage;
+  | ServerPongMessage
+  | ServerRedirectMessage;
 
 export type ServerTurnMessage = z.infer<typeof ServerTurnMessageSchema>;
 export type ServerStartGameMessage = z.infer<
@@ -131,6 +132,7 @@ export type ServerLobbyInfoMessage = z.infer<
   typeof ServerLobbyInfoMessageSchema
 >;
 export type ServerNewLobbyMessage = z.infer<typeof ServerNewLobbyMessageSchema>;
+export type ServerRedirectMessage = z.infer<typeof ServerRedirectMessageSchema>;
 export type ClientSendWinnerMessage = z.infer<typeof ClientSendWinnerSchema>;
 export type ClientSendLiveStatsMessage = z.infer<
   typeof ClientSendLiveStatsSchema
@@ -497,6 +499,34 @@ export const OvertimeConfigSchema = z.object({
   startMinutes: zb.uint({ min: 1, max: 120 }).optional(),
 });
 
+// A lobby pool: several lobbies that arriving players are spread across, so
+// one advertised entry point can absorb more players than a single lobby
+// holds. Assignment is a hash of the joiner's identity (server/PoolRouting.ts),
+// so members need no shared state. Every member carries this same config and
+// recognises itself by its own game id.
+//
+// The advertised entry point is itself a member rather than an empty router:
+// a lobby nobody plays in would start, leave the Lobby phase, drop out of the
+// listing and be reaped, taking the entry point with it.
+export const PoolConfigSchema = z
+  .object({
+    id: z.string().min(1).max(64),
+    // z.lazy because ID is declared further down this file, and GameConfigSchema
+    // — which embeds this — is evaluated before that point.
+    siblings: z
+      .lazy(() => ID)
+      .array()
+      .min(1)
+      .max(64),
+  })
+  // Rejected rather than deduped: a repeated id holds more than one slot and
+  // draws proportionally more players than the rest.
+  .refine((pool) => new Set(pool.siblings).size === pool.siblings.length, {
+    error: "pool siblings must be unique",
+    path: ["siblings"],
+  });
+export type PoolConfig = z.infer<typeof PoolConfigSchema>;
+
 export const GameConfigSchema = z.object({
   gameMap: z.enum(GameMapType),
   difficulty: z.enum(Difficulty),
@@ -575,6 +605,9 @@ export const GameConfigSchema = z.object({
       startingGold: zb.uint({ max: 1000000000 }).nullable().optional(),
     })
     .optional(),
+  // Stripped from gameStartInfo and from the advertised lobby config: sibling
+  // ids are private lobby ids, which are join secrets.
+  pool: PoolConfigSchema.optional(),
 });
 
 export const TeamSchema = z.string();
@@ -1058,6 +1091,15 @@ export const ServerPongMessageSchema = z.object({
   sentAt: zb.uint(),
 });
 
+// Sent to a joiner this lobby's pool assigns elsewhere, immediately before the
+// close. A close frame's reason is a fixed enum and cannot carry an id, so the
+// target needs a frame of its own; the id is all the client needs, since it
+// resolves the hosting worker from the id itself.
+export const ServerRedirectMessageSchema = z.object({
+  type: z.literal("redirect"),
+  gameID: ID,
+});
+
 export const ServerMessageSchema = zb.discriminatedUnion("type", [
   ServerTurnMessageSchema,
   ServerPrestartMessageSchema,
@@ -1068,6 +1110,8 @@ export const ServerMessageSchema = zb.discriminatedUnion("type", [
   ServerLobbyInfoMessageSchema,
   ServerNewLobbyMessageSchema,
   ServerPongMessageSchema,
+  // Appended, never inserted: variant order is the wire tag (zbin/README.md).
+  ServerRedirectMessageSchema,
 ]);
 
 //

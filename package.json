@@ -1,5 +1,9 @@
 {
   "name": "openfront-client",
+  "engines": {
+    "node": ">=24.15.0 <25",
+    "npm": ">=12.1.0 <13"
+  },
   "scripts": {
     "build-dev": "concurrently \"tsc --noEmit\" \"vite build --mode development\"",
     "build-prod": "concurrently --kill-others-on-fail \"tsc --noEmit\" \"vite build\" && tsx scripts/buildAssetHashes.ts",
@@ -60,8 +64,8 @@
     "@types/node": "^24.12.0",
     "@types/pg": "^8.20.0",
     "@types/ws": "^8.18.1",
-    "@vitest/coverage-v8": "^4.1.5",
-    "@vitest/ui": "^4.1.5",
+    "@vitest/coverage-v8": "^4.1.11",
+    "@vitest/ui": "^4.1.11",
     "benchmark": "^2.1.4",
     "canvas": "^3.2.3",
     "concurrently": "^9.2.4",
@@ -87,7 +91,7 @@
     "typescript-eslint": "^8.59.1",
     "vite": "^8.0.16",
     "vite-plugin-html": "^3.2.2",
-    "vitest": "^4.1.5",
+    "vitest": "^4.1.11",
     "vitest-canvas-mock": "^1.1.4"
   },
   "dependencies": {

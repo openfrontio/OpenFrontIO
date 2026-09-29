@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import "../../src/client/components/baseComponents/setting/SettingKeybind";
 import {
   AlternateViewEvent,
   InputHandler,
@@ -112,5 +113,28 @@ describe("keybind capture over a live game", () => {
 
     press(other, "KeyV");
     expect(alternateViewEvents()).toEqual([]);
+  });
+
+  it("cancels keybind listening on Escape without bubbling to window", async () => {
+    const keybind = document.createElement("setting-keybind") as HTMLElement & {
+      updateComplete: Promise<unknown>;
+    };
+    document.body.appendChild(keybind);
+    await keybind.updateComplete;
+    const button = keybind.querySelector<HTMLElement>('[role="button"]')!;
+    button.click();
+    await keybind.updateComplete;
+
+    let escaped = false;
+    const onEscape = () => (escaped = true);
+    window.addEventListener("keydown", onEscape);
+    button.dispatchEvent(
+      new KeyboardEvent("keydown", { key: "Escape", bubbles: true }),
+    );
+    await keybind.updateComplete;
+    window.removeEventListener("keydown", onEscape);
+
+    expect(escaped).toBe(false);
+    expect(button.textContent?.trim()).not.toBe("...");
   });
 });
