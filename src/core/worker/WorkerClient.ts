@@ -27,7 +27,6 @@ async function createGameWorker(): Promise<Worker> {
 
 export interface WorkerSnapshotResult {
   bytes: Uint8Array;
-  snapshot: Uint8Array;
   tick: number;
 }
 
@@ -149,7 +148,6 @@ export class WorkerClient {
           } else {
             resolve({
               bytes: message.snapshot,
-              snapshot: message.snapshot,
               tick: message.tick,
             });
           }

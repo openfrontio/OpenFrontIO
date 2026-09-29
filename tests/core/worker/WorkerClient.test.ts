@@ -132,7 +132,7 @@ describe("WorkerClient playerInteraction", () => {
 });
 
 describe("WorkerClient snapshot", () => {
-  it("resolves with bytes, snapshot and tick when worker responds", async () => {
+  it("resolves with bytes and tick when worker responds", async () => {
     const { client, worker, internalClient } = createClient();
     const promise = client.snapshot("commit-123");
     const request = vi.mocked(worker.postMessage).mock.calls[0][0] as {
@@ -155,7 +155,6 @@ describe("WorkerClient snapshot", () => {
 
     await expect(promise).resolves.toEqual({
       bytes: dummyBytes,
-      snapshot: dummyBytes,
       tick: 42,
     });
     expect(internalClient.messageHandlers.size).toBe(0);
