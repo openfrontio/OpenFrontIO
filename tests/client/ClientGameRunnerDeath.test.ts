@@ -77,8 +77,7 @@ describe("ClientGameRunner death detection and save clearing", () => {
       }),
       snapshot: vi.fn(async () => ({
         bytes: new Uint8Array([1, 2, 3]),
-        snapshot: new Uint8Array([1, 2, 3]),
-        tick: 50,
+        tick: 52,
       })),
     };
 
@@ -204,7 +203,7 @@ describe("ClientGameRunner death detection and save clearing", () => {
     expect(saveSoloSnapshotMock).toHaveBeenCalledWith(
       expect.anything(),
       expect.anything(),
-      50,
+      52,
     );
   });
 
@@ -229,8 +228,7 @@ describe("ClientGameRunner death detection and save clearing", () => {
       // Now mockWorker.snapshot resolves normally for the next attempt
       mockWorker.snapshot = vi.fn().mockResolvedValue({
         bytes: new Uint8Array([1, 2, 3]),
-        snapshot: new Uint8Array([1, 2, 3]),
-        tick: 100,
+        tick: 105,
       });
 
       // Tick 100 triggers auto-snapshot again
@@ -244,7 +242,7 @@ describe("ClientGameRunner death detection and save clearing", () => {
         expect(saveSoloSnapshotMock).toHaveBeenCalledWith(
           expect.anything(),
           expect.anything(),
-          100,
+          105,
         );
       });
     } finally {
