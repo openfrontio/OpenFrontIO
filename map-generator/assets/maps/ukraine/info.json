@@ -8,19 +8,19 @@
   "custom_tribes": [
     {
       "name": "Znamianka",
-      "coordinates": [1197, 671]
+      "coordinates": [1197, 672]
     },
     {
       "name": "Berehove",
-      "coordinates": [82, 758]
+      "coordinates": [83, 758]
     },
     {
       "name": "Yalta",
-      "coordinates": [1364, 1355]
+      "coordinates": [1364, 1356]
     },
     {
       "name": "Starobilsk",
-      "coordinates": [1888, 577]
+      "coordinates": [1891, 577]
     },
     {
       "name": "Sarny",
@@ -28,7 +28,7 @@
     },
     {
       "name": "Bolhrad",
-      "coordinates": [746, 1169]
+      "coordinates": [746, 1170]
     },
     {
       "name": "Shostka",
@@ -36,15 +36,15 @@
     },
     {
       "name": "Berdiansk",
-      "coordinates": [1655, 996]
+      "coordinates": [1655, 997]
     },
     {
       "name": "Mohyliv-Podilskyi",
-      "coordinates": [656, 717]
+      "coordinates": [657, 718]
     },
     {
-      "name": "Bucha",
-      "coordinates": [924, 357]
+      "name": "Irpin",
+      "coordinates": [928, 363]
     },
     {
       "name": "Ochakiv",
@@ -52,43 +52,43 @@
     },
     {
       "name": "Okhtyrka",
-      "coordinates": [1443, 399]
-    },
-    {
-      "name": "Chervonohrad",
-      "coordinates": [261, 385]
+      "coordinates": [1444, 399]
     },
     {
       "name": "Pavlohrad",
       "coordinates": [1553, 703]
     },
     {
-      "name": "Kolomyia",
-      "coordinates": [349, 705]
+      "name": "Chervonohrad",
+      "coordinates": [261, 385]
     },
     {
       "name": "Uman",
-      "coordinates": [925, 666]
+      "coordinates": [925, 667]
     },
     {
-      "name": "Pryluky",
-      "coordinates": [1165, 349]
+      "name": "Kolomyia",
+      "coordinates": [349, 705]
     },
     {
       "name": "Henichesk",
       "coordinates": [1435, 1091]
     },
     {
+      "name": "Pryluky",
+      "coordinates": [1166, 350]
+    },
+    {
       "name": "Makiivka",
-      "coordinates": [1786, 784]
+      "coordinates": [1787, 783]
     },
     {
       "name": "Nikopol",
-      "coordinates": [1388, 863]
+      "coordinates": [1389, 864]
     },
     {
       "name": "Kerch",
-      "coordinates": [1619, 1220]
+      "coordinates": [1620, 1221]
     },
     {
       "name": "Chuhuiv",
@@ -100,35 +100,39 @@
     },
     {
       "name": "Truskavets",
-      "coordinates": [178, 577]
+      "coordinates": [179, 585]
     },
     {
       "name": "Yuzhnoukrainsk",
-      "coordinates": [1031, 821]
+      "coordinates": [1032, 822]
+    },
+    {
+      "name": "Slavutych",
+      "coordinates": [985, 186]
     },
     {
       "name": "Podilsk",
-      "coordinates": [848, 833]
+      "coordinates": [848, 834]
     },
     {
       "name": "Korosten",
       "coordinates": [749, 288]
     },
     {
-      "name": "Slavutych",
-      "coordinates": [984, 186]
+      "name": "Nova Kakhovka",
+      "coordinates": [1271, 1000]
     },
     {
       "name": "Netishyn",
       "coordinates": [529, 395]
     },
     {
-      "name": "Nova Kakhovka",
-      "coordinates": [1274, 997]
+      "name": "Orikhiv",
+      "coordinates": [1544, 863]
     },
     {
-      "name": "Orikhiv",
-      "coordinates": [1543, 862]
+      "name": "Sviatohirsk",
+      "coordinates": [1742, 619]
     },
     {
       "name": "Myrhorod",
@@ -139,24 +143,20 @@
       "coordinates": [312, 241]
     },
     {
-      "name": "Sviatohirsk",
-      "coordinates": [1742, 619]
-    },
-    {
       "name": "Bilhorod-Dnistrovskyi",
       "coordinates": [939, 1088]
     },
     {
       "name": "Yevpatoriia",
-      "coordinates": [1275, 1245]
+      "coordinates": [1275, 1246]
     },
     {
       "name": "Kamianets-Podilskyi",
-      "coordinates": [520, 678]
+      "coordinates": [521, 679]
     },
     {
       "name": "Kamianske",
-      "coordinates": [1412, 706]
+      "coordinates": [1413, 706]
     },
     {
       "name": "Pereiaslav",
@@ -164,27 +164,23 @@
     },
     {
       "name": "Feodosiia",
-      "coordinates": [1498, 1271]
+      "coordinates": [1498, 1272]
+    },
+    {
+      "name": "Melitopol",
+      "coordinates": [1499, 982]
     },
     {
       "name": "Bila Tserkva",
       "coordinates": [914, 487]
     },
     {
-      "name": "Melitopol",
-      "coordinates": [1499, 981]
-    },
-    {
       "name": "Smila",
-      "coordinates": [1109, 584]
+      "coordinates": [1110, 584]
     },
     {
       "name": "Rakhiv",
       "coordinates": [257, 783]
-    },
-    {
-      "name": "Alchevsk",
-      "coordinates": [1879, 713]
     },
     {
       "name": "Konotop",
@@ -192,55 +188,59 @@
     },
     {
       "name": "Novohrad-Volynskyi",
-      "coordinates": [634, 350]
+      "coordinates": [635, 350]
+    },
+    {
+      "name": "Alchevsk",
+      "coordinates": [1879, 714]
+    },
+    {
+      "name": "Kremenets",
+      "coordinates": [425, 437]
     },
     {
       "name": "Skadovsk",
       "coordinates": [1224, 1099]
     },
     {
-      "name": "Kremenets",
-      "coordinates": [425, 436]
-    },
-    {
       "name": "Dobropillia",
-      "coordinates": [1688, 714]
-    },
-    {
-      "name": "Kupiansk",
-      "coordinates": [1747, 502]
+      "coordinates": [1689, 714]
     },
     {
       "name": "Kremenchuk",
       "coordinates": [1282, 608]
     },
     {
-      "name": "Zhmerynka",
-      "coordinates": [691, 618]
+      "name": "Kupiansk",
+      "coordinates": [1747, 503]
     },
     {
       "name": "Chortkiv",
-      "coordinates": [432, 621]
+      "coordinates": [433, 622]
+    },
+    {
+      "name": "Zhmerynka",
+      "coordinates": [691, 619]
     },
     {
       "name": "Kalush",
-      "coordinates": [273, 619]
+      "coordinates": [274, 620]
     },
     {
       "name": "Nizhyn",
-      "coordinates": [1109, 270]
-    },
-    {
-      "name": "Haisyn",
-      "coordinates": [832, 656]
+      "coordinates": [1110, 270]
     },
     {
       "name": "Vuhledar",
-      "coordinates": [1706, 828]
+      "coordinates": [1706, 829]
+    },
+    {
+      "name": "Haisyn",
+      "coordinates": [833, 656]
     },
     {
       "name": "Bakhmut",
-      "coordinates": [1790, 693]
+      "coordinates": [1790, 694]
     },
     {
       "name": "Dzhankoi",
@@ -252,39 +252,43 @@
     },
     {
       "name": "Volodymyr",
-      "coordinates": [269, 305]
+      "coordinates": [270, 306]
     },
     {
       "name": "Lozova",
-      "coordinates": [1602, 644]
+      "coordinates": [1603, 644]
+    },
+    {
+      "name": "Chornobyl",
+      "coordinates": [925, 232]
     },
     {
       "name": "Boryspil",
       "coordinates": [1006, 392]
     },
     {
-      "name": "Chornobyl",
-      "coordinates": [924, 229]
+      "name": "Sievierodonetsk",
+      "coordinates": [1845, 633]
     },
     {
       "name": "Khust",
       "coordinates": [155, 763]
     },
     {
-      "name": "Lysychansk",
-      "coordinates": [1837, 638]
+      "name": "Lubny",
+      "coordinates": [1235, 451]
     },
     {
-      "name": "Lubny",
-      "coordinates": [1234, 451]
+      "name": "Sambir",
+      "coordinates": [144, 536]
+    },
+    {
+      "name": "Selydove",
+      "coordinates": [1712, 768]
     },
     {
       "name": "Izmail",
       "coordinates": [771, 1222]
-    },
-    {
-      "name": "Selydove",
-      "coordinates": [1712, 767]
     },
     {
       "name": "Yaremche",
@@ -292,39 +296,39 @@
     },
     {
       "name": "Huliaipole",
-      "coordinates": [1597, 847]
+      "coordinates": [1597, 848]
     },
     {
       "name": "Dubno",
-      "coordinates": [426, 380]
-    },
-    {
-      "name": "Tokmak",
-      "coordinates": [1535, 915]
-    },
-    {
-      "name": "Sambir",
-      "coordinates": [144, 536]
-    },
-    {
-      "name": "Fastiv",
-      "coordinates": [891, 439]
+      "coordinates": [428, 382]
     },
     {
       "name": "Pervomaisk",
       "coordinates": [993, 784]
     },
     {
+      "name": "Tokmak",
+      "coordinates": [1535, 915]
+    },
+    {
       "name": "Shepetivka",
       "coordinates": [574, 422]
+    },
+    {
+      "name": "Fastiv",
+      "coordinates": [891, 440]
     },
     {
       "name": "Oleksandriia",
       "coordinates": [1247, 680]
     },
     {
+      "name": "Siversk",
+      "coordinates": [1800, 647]
+    },
+    {
       "name": "Voznesensk",
-      "coordinates": [1048, 863]
+      "coordinates": [1049, 864]
     },
     {
       "name": "Horlivka",
@@ -335,32 +339,28 @@
       "coordinates": [1710, 592]
     },
     {
-      "name": "Mukachevo",
-      "coordinates": [91, 718]
-    },
-    {
       "name": "Volnovakha",
-      "coordinates": [1733, 858]
+      "coordinates": [1734, 858]
     },
     {
-      "name": "Stryi",
-      "coordinates": [217, 581]
+      "name": "Mukachevo",
+      "coordinates": [91, 719]
+    },
+    {
+      "name": "Alushta",
+      "coordinates": [1391, 1328]
     },
     {
       "name": "Chornomorsk",
       "coordinates": [973, 1070]
     },
     {
-      "name": "Alushta",
-      "coordinates": [1390, 1327]
-    },
-    {
-      "name": "Siversk",
-      "coordinates": [1800, 646]
+      "name": "Stryi",
+      "coordinates": [217, 581]
     },
     {
       "name": "Mykolaivka",
-      "coordinates": [1763, 648]
+      "coordinates": [1766, 648]
     },
     {
       "name": "Brovary",
@@ -368,63 +368,47 @@
     },
     {
       "name": "Enerhodar",
-      "coordinates": [1418, 876]
+      "coordinates": [1419, 877]
     },
     {
       "name": "Avdiivka",
-      "coordinates": [1761, 770]
+      "coordinates": [1762, 770]
     },
     {
       "name": "Kurakhove",
       "coordinates": [1710, 795]
     },
     {
-      "name": "Myrnohrad",
-      "coordinates": [1707, 741]
+      "name": "Pokrovsk",
+      "coordinates": [1699, 746]
     },
     {
       "name": "Yenakiieve",
-      "coordinates": [1810, 754]
+      "coordinates": [1811, 754]
     },
     {
       "name": "Toretsk",
       "coordinates": [1773, 726]
     },
     {
-      "name": "Lyman",
-      "coordinates": [1769, 627]
-    },
-    {
       "name": "Soledar",
-      "coordinates": [1797, 676]
+      "coordinates": [1798, 675]
     },
     {
       "name": "Chasiv Yar",
-      "coordinates": [1772, 694]
+      "coordinates": [1770, 689]
+    },
+    {
+      "name": "Lyman",
+      "coordinates": [1770, 628]
     },
     {
       "name": "Kakhovka",
-      "coordinates": [1287, 988]
+      "coordinates": [1288, 989]
     },
     {
       "name": "Drohobych",
-      "coordinates": [178, 564]
-    },
-    {
-      "name": "Bilozerske",
-      "coordinates": [1685, 703]
-    },
-    {
-      "name": "Pokrovsk",
-      "coordinates": [1698, 746]
-    },
-    {
-      "name": "Sievierodonetsk",
-      "coordinates": [1845, 633]
-    },
-    {
-      "name": "Irpin",
-      "coordinates": [927, 362]
+      "coordinates": [179, 565]
     }
   ],
   "nations": [
@@ -434,7 +418,7 @@
       "flag": "ua"
     },
     {
-      "coordinates": [236, 481],
+      "coordinates": [237, 481],
       "name": "Lviv",
       "flag": "ua"
     },
@@ -444,7 +428,7 @@
       "flag": "ua"
     },
     {
-      "coordinates": [483, 345],
+      "coordinates": [484, 346],
       "name": "Rivne",
       "flag": "ua"
     },
@@ -459,7 +443,7 @@
       "flag": "ua"
     },
     {
-      "coordinates": [312, 637],
+      "coordinates": [313, 638],
       "name": "Ivano-Frankivsk",
       "flag": "ua"
     },
@@ -474,7 +458,7 @@
       "flag": "ua"
     },
     {
-      "coordinates": [448, 743],
+      "coordinates": [449, 744],
       "name": "Chernivtsi",
       "flag": "ua"
     },
@@ -514,17 +498,17 @@
       "flag": "ua"
     },
     {
-      "coordinates": [1459, 716],
+      "coordinates": [1460, 717],
       "name": "Dnipro",
       "flag": "ua"
     },
     {
-      "coordinates": [1277, 807],
+      "coordinates": [1278, 807],
       "name": "Kryvyi Rih",
       "flag": "ua"
     },
     {
-      "coordinates": [1406, 524],
+      "coordinates": [1407, 524],
       "name": "Poltava",
       "flag": "ua"
     },
@@ -539,7 +523,7 @@
       "flag": "ua"
     },
     {
-      "coordinates": [1043, 190],
+      "coordinates": [1044, 190],
       "name": "Chernihiv",
       "flag": "ua"
     },
@@ -549,7 +533,7 @@
       "flag": "ua"
     },
     {
-      "coordinates": [1768, 789],
+      "coordinates": [1768, 790],
       "name": "Donetsk",
       "flag": "ua"
     },
@@ -559,7 +543,7 @@
       "flag": "ua"
     },
     {
-      "coordinates": [1743, 668],
+      "coordinates": [1744, 669],
       "name": "Kramatorsk",
       "flag": "ua"
     },
@@ -569,7 +553,7 @@
       "flag": "ua"
     },
     {
-      "coordinates": [1737, 688],
+      "coordinates": [1737, 689],
       "name": "Druzhkivka",
       "flag": "ua"
     },
@@ -579,17 +563,17 @@
       "flag": "ua"
     },
     {
-      "coordinates": [1740, 704],
+      "coordinates": [1736, 710],
       "name": "Mykolaipillia",
       "flag": "ua"
     },
     {
-      "coordinates": [1356, 1284],
+      "coordinates": [1357, 1285],
       "name": "Simferopol",
       "flag": "ua"
     },
     {
-      "coordinates": [1292, 1337],
+      "coordinates": [1293, 1337],
       "name": "Sevastopol",
       "flag": "ua"
     }
