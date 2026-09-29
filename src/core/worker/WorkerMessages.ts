@@ -57,6 +57,7 @@ export interface TurnMessage extends BaseWorkerMessage {
 // Messages from worker to main thread
 export interface InitializedMessage extends BaseWorkerMessage {
   type: "initialized";
+  initialUpdate?: GameUpdateViewData;
 }
 
 export interface GameUpdateMessage extends BaseWorkerMessage {

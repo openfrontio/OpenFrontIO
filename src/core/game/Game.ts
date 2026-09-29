@@ -779,6 +779,7 @@ export interface Player {
   toUpdate(
     statsOut?: number[],
     attackTroopsOut?: number[],
+    forceFull?: boolean,
   ): PlayerUpdate | null;
   playerProfile(): PlayerProfile;
   // WARNING: this operation is expensive.
