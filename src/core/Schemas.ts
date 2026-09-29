@@ -489,6 +489,15 @@ export const DoomsdayClockConfigSchema = z.object({
   speed: z.enum(["slow", "normal", "fast", "veryfast"]).optional(),
 });
 
+// Rising sea level. The sea floods the map from the coast inward, low ground
+// first, so inner basins stay dry behind higher ground until the waterline
+// breaches their rim. The `speed` preset sets how long full submersion takes
+// (see RisingSeaLevel.ts). Only `enabled` and `speed` are wire-configurable.
+export const RisingSeaLevelConfigSchema = z.object({
+  enabled: z.boolean().optional(),
+  speed: z.enum(["slow", "normal", "fast", "veryfast"]).optional(),
+});
+
 // Overtime (anti-stalemate). After startMinutes of game time the tile share
 // required to win drops steadily from the 80% base at a fixed rate (see
 // OVERTIME_DEFAULTS in Config.ts), so the leading side eventually crosses the
@@ -537,6 +546,7 @@ export const GameConfigSchema = z.object({
   rankedType: z.enum(RankedType).optional(), // Only set for ranked games.
   gameMapSize: z.enum(GameMapSize),
   doomsdayClock: DoomsdayClockConfigSchema.optional(),
+  risingSeaLevel: RisingSeaLevelConfigSchema.optional(),
   overtime: OvertimeConfigSchema.optional(),
   publicGameModifiers: z
     .object({

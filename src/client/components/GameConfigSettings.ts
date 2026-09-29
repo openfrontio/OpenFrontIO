@@ -8,10 +8,6 @@ import {
 } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
 import {
-  DOOMSDAY_CLOCK_SPEEDS,
-  DoomsdayClockSpeed,
-} from "../../core/game/DoomsdayClock";
-import {
   Difficulty,
   Duos,
   GameMapType,
@@ -182,12 +178,27 @@ function renderSectionHeader(
   `;
 }
 
+/**
+ * A pace dropdown a toggle's card grows when it is checked. Shared by every mode
+ * that has speed presets (the Doomsday Clock and the rising sea level), so the
+ * card markup exists once.
+ */
+export interface ToggleSpeedConfig {
+  /** The presets, in selector order. */
+  options: readonly string[];
+  selected: string;
+  /** Prefix of the option labels' translation keys, e.g. "doomsday_clock_speed". */
+  labelPrefix: string;
+  /** Event emitted with `{ speed }` when the selection changes. */
+  event: string;
+}
+
 export interface ToggleOptionConfig {
   labelKey: string;
   checked: boolean;
   hidden?: boolean;
   // When set, this toggle's card expands to a pace dropdown while it is checked.
-  doomsdayClockSpeed?: DoomsdayClockSpeed;
+  speed?: ToggleSpeedConfig;
 }
 
 export interface GameConfigSettingsData {
@@ -278,11 +289,6 @@ export class GameConfigSettings extends LitElement {
     this.emit("difficulty-selected", { difficulty });
   };
 
-  private handleDoomsdayClockSpeedChange = (e: Event) => {
-    const speed = (e.target as HTMLSelectElement).value as DoomsdayClockSpeed;
-    this.emit("doomsday-clock-speed-selected", { speed });
-  };
-
   private handleGameModeSelect = (mode: GameMode) => {
     this.emit("game-mode-selected", { mode });
   };
@@ -322,8 +328,8 @@ export class GameConfigSettings extends LitElement {
   private renderOptionToggle(toggle: ToggleOptionConfig): TemplateResult {
     if (toggle.hidden) return html``;
 
-    if (toggle.doomsdayClockSpeed !== undefined) {
-      return this.renderDoomsdayClockToggle(toggle);
+    if (toggle.speed !== undefined) {
+      return this.renderSpeedToggle(toggle, toggle.speed);
     }
 
     return renderTextCardButton(
@@ -337,10 +343,10 @@ export class GameConfigSettings extends LitElement {
   // Same toggle card as the others, but when on it grows to hold the pace
   // dropdown. The card toggles on click; the dropdown stops propagation so
   // changing the pace doesn't flip the toggle.
-  private renderDoomsdayClockToggle(
+  private renderSpeedToggle(
     toggle: ToggleOptionConfig,
+    speedConfig: ToggleSpeedConfig,
   ): TemplateResult {
-    const selected = toggle.doomsdayClockSpeed;
     return html`
       <div
         class="${cardClass(
@@ -359,12 +365,18 @@ export class GameConfigSettings extends LitElement {
               <select
                 class="bg-white/10 border border-white/20 rounded-lg px-2 py-1 text-white text-xs"
                 @click=${(e: Event) => e.stopPropagation()}
-                @change=${this.handleDoomsdayClockSpeedChange}
+                @change=${(e: Event) =>
+                  this.emit(speedConfig.event, {
+                    speed: (e.target as HTMLSelectElement).value,
+                  })}
               >
-                ${DOOMSDAY_CLOCK_SPEEDS.map(
+                ${speedConfig.options.map(
                   (speed) => html`
-                    <option value=${speed} ?selected=${selected === speed}>
-                      ${translateText(`doomsday_clock_speed.${speed}`)}
+                    <option
+                      value=${speed}
+                      ?selected=${speedConfig.selected === speed}
+                    >
+                      ${translateText(`${speedConfig.labelPrefix}.${speed}`)}
                     </option>
                   `,
                 )}

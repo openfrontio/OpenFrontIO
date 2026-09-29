@@ -66,10 +66,25 @@ export class WaterManager {
   private _miniStampArr: Uint16Array | null = null;
   private _miniStamp: number = 0;
 
+  /**
+   * Water magnitude (depth) is COSMETIC. It feeds only getMagnitudePenalty — a
+   * soft preference in AStar.Water/AStar.WaterBounded that nudges ships toward
+   * deeper water — plus name-box placement and render shading. No integer sim
+   * state is derived from it, so skipping the recompute cannot desync.
+   *
+   * It is skipped for the rising-sea-level mode because that mode advances a
+   * front along the WHOLE coastline every second. The magnitude BFS is sized by
+   * the bounding box of the converted tiles, so a whole-coastline front makes it
+   * a near-full-map BFS costing several times the 100ms tick budget, and it
+   * repaints millions of untouched water tiles into the client's tile-update
+   * stream every second. Newly flooded land simply stays magnitude 0 (shallow),
+   * which is also the truer look for a shoreline the sea has just crept over.
+   */
   constructor(
     private map: GameMap,
     private miniMap: GameMap,
     private disableNavMesh: boolean,
+    private skipWaterMagnitude: boolean = false,
   ) {
     if (!disableNavMesh) {
       this._miniWaterCC = new ConnectedComponents(miniMap);
@@ -385,17 +400,19 @@ export class WaterManager {
     // Converted tiles are first grouped into spatially separate craters so
     // that simultaneous distant nukes (barrages, MIRVs) each get a small
     // local BFS instead of one bounding box spanning most of the map.
-    const groups = this.computeCraterGroups(converted, w, MAX_MAG_DIST);
-    for (const g of groups) {
-      this.recomputeMagnitudesInBox(
-        map,
-        g,
-        this._waterStampArr!,
-        this._waterDistArr,
-        this.bumpFullMapStamp(),
-        true, // impassable terrain is void, not coastline
-        changed,
-      );
+    if (!this.skipWaterMagnitude) {
+      const groups = this.computeCraterGroups(converted, w, MAX_MAG_DIST);
+      for (const g of groups) {
+        this.recomputeMagnitudesInBox(
+          map,
+          g,
+          this._waterStampArr!,
+          this._waterDistArr,
+          this.bumpFullMapStamp(),
+          true, // impassable terrain is void, not coastline
+          changed,
+        );
+      }
     }
 
     DebugSpan.end("magnitude");
@@ -566,27 +583,31 @@ export class WaterManager {
       // Mirrors the full-map magnitude BFS (step 2) but runs on the
       // minimap.  Uses separate stamp/dist arrays to avoid conflicts.
       // Note: unlike the full map, ANY land tile counts as coastline.
-      const miniTotal = miniW * miniH;
-      if (!this._miniDistArr || this._miniDistArr.length !== miniTotal) {
-        this._miniDistArr = new Uint16Array(miniTotal);
-        this._miniStampArr = new Uint16Array(miniTotal);
-        this._miniStamp = 0;
-      }
-      const miniGroups = this.computeCraterGroups(
-        convertedMiniTiles,
-        miniW,
-        MAX_MAG_DIST,
-      );
-      for (const g of miniGroups) {
-        this.recomputeMagnitudesInBox(
-          this.miniMap,
-          g,
-          this._miniStampArr!,
-          this._miniDistArr,
-          this.bumpMiniStamp(),
-          false,
-          null,
+      // Nothing outside this block reads the minimap dist/stamp arrays, so with
+      // the recompute skipped they are never allocated at all.
+      if (!this.skipWaterMagnitude) {
+        const miniTotal = miniW * miniH;
+        if (!this._miniDistArr || this._miniDistArr.length !== miniTotal) {
+          this._miniDistArr = new Uint16Array(miniTotal);
+          this._miniStampArr = new Uint16Array(miniTotal);
+          this._miniStamp = 0;
+        }
+        const miniGroups = this.computeCraterGroups(
+          convertedMiniTiles,
+          miniW,
+          MAX_MAG_DIST,
         );
+        for (const g of miniGroups) {
+          this.recomputeMagnitudesInBox(
+            this.miniMap,
+            g,
+            this._miniStampArr!,
+            this._miniDistArr,
+            this.bumpMiniStamp(),
+            false,
+            null,
+          );
+        }
       }
     }
 

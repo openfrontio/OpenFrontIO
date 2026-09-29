@@ -175,6 +175,10 @@ export class GameImpl implements Game {
       this._map,
       this.miniGameMap,
       _config.disableNavMesh(),
+      // The rising sea advances along the whole coastline every second, which
+      // makes the cosmetic water-depth recompute a near-full-map BFS per second.
+      // See the WaterManager constructor.
+      _config.risingSeaLevelConfig().enabled,
     );
     this._sharedWaterCache = new SharedWaterCache(this);
 
@@ -299,6 +303,18 @@ export class GameImpl implements Game {
     if (!this._config.waterNukes()) {
       this.setFallout(tile, true);
       return;
+    }
+    this._waterManager.queueTile(tile);
+  }
+
+  floodTile(tile: TileRef): void {
+    if (!this.isLand(tile)) return;
+    // Impassable terrain is a wall the sea never crosses; _map.setWater would
+    // silently ignore it anyway, and letting it into the queue would make the
+    // flood's own tally disagree with the map.
+    if (this._map.isImpassable(tile)) return;
+    if (this.hasOwner(tile)) {
+      throw Error(`cannot flood, tile ${tile} has owner`);
     }
     this._waterManager.queueTile(tile);
   }

@@ -166,6 +166,21 @@ export const DERIVED_FIELDS = new Set<string>([
   // and only read inside it. (AiAttackBehavior.nbuf is covered above.)
   "_sharedWaterComponents",
   "reachableStationsCache",
+  // WaterManager: lazily allocated BFS scratch, allocated on the first land→
+  // water conversion and invalidated by a bumped stamp rather than a fill, so
+  // stale contents are never read. A restored game reallocates on its own first
+  // conversion. (The stamp counter is scratch for the same reason.)
+  "_waterDistArr",
+  "_waterStampArr",
+  "_waterStamp",
+  "_miniDistArr",
+  "_miniStampArr",
+  "_miniStamp",
+  // SeaFloodFront: derived from the queue, and deliberately not snapshotted —
+  // it still carries a 1 for every tile the sea has already taken, which a
+  // restore reconstructs as 0 because those tiles are water and never consulted
+  // again. See SeaFloodFront.rebuildEverQueued.
+  "everQueued",
 ]);
 
 // Search engines whose fields are per-query scratch (stamps, scores, open

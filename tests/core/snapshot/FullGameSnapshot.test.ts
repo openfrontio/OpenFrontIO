@@ -93,6 +93,15 @@ const VARIANTS: [string, Partial<GameConfig>][] = [
   // Water nukes rewrite terrain and the water graph mid-game.
   ["water nukes", { waterNukes: true }],
   ["teams", { gameMode: GameMode.Team, playerTeams: 2 }],
+  // Not enabled on the base variant: the mode turns WaterManager's magnitude
+  // recompute off, which is exactly what the water-nukes variant is here to
+  // exercise. TICKS is inside the 180 s grace, so this covers the wiring and
+  // the pre-flood snapshot; the flooding phases are in
+  // RisingSeaLevelSnapshot.test.ts.
+  [
+    "rising sea level",
+    { risingSeaLevel: { enabled: true, speed: "veryfast" } },
+  ],
 ];
 
 describe.each(VARIANTS)("full game snapshots: %s", (_, overrides) => {
@@ -165,7 +174,9 @@ describe.each(VARIANTS)("full game snapshots: %s", (_, overrides) => {
       if (Object.keys(overrides).length > 0) return; // checked once, on FFA
       // Runs during the spawn phase and finishes inside init, so it is never
       // alive at a tick boundary. BasicExecutions.test.ts covers it directly.
-      const neverStored = new Set(["Pause"]);
+      // RisingSeaLevel is off on this variant (see VARIANTS) and covered by
+      // its own round-trip test.
+      const neverStored = new Set(["Pause", "RisingSeaLevel"]);
       const missing = EXECUTION_SNAPSHOT_TYPES.map((t) => t.name).filter(
         (name) => !reference.execTypes.has(name) && !neverStored.has(name),
       );

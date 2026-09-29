@@ -3,7 +3,10 @@ import { customElement, state } from "lit/decorators.js";
 import { translateText } from "../client/Utils";
 import { UserMeResponse } from "../core/ApiSchemas";
 import { assetUrl } from "../core/AssetUrls";
-import { DoomsdayClockSpeed } from "../core/game/DoomsdayClock";
+import {
+  DOOMSDAY_CLOCK_SPEEDS,
+  DoomsdayClockSpeed,
+} from "../core/game/DoomsdayClock";
 import {
   Difficulty,
   GameMapSize,
@@ -13,6 +16,11 @@ import {
   maps,
   UnitType,
 } from "../core/game/Game";
+import {
+  RISING_SEA_LEVEL_SPEEDS,
+  RisingSeaLevelSpeed,
+  risingSeaLevelSupported,
+} from "../core/game/RisingSeaLevel";
 import { UserSettings } from "../core/game/UserSettings";
 import { PlayerCosmetics, TeamCountConfig } from "../core/Schemas";
 import { generateID } from "../core/Util";
@@ -117,6 +125,8 @@ const DEFAULT_OPTIONS = {
   waterNukes: false,
   doomsdayClock: false,
   doomsdayClockSpeed: "normal" as DoomsdayClockSpeed,
+  risingSeaLevel: false,
+  risingSeaLevelSpeed: "normal" as RisingSeaLevelSpeed,
   overtime: false,
   overtimeStartMinutes: undefined as number | undefined,
 } as const;
@@ -207,6 +217,11 @@ export class SinglePlayerModal extends BaseModal {
   @state() private doomsdayClock: boolean = DEFAULT_OPTIONS.doomsdayClock;
   @state() private doomsdayClockSpeed: DoomsdayClockSpeed =
     DEFAULT_OPTIONS.doomsdayClockSpeed;
+  @state() private risingSeaLevel: boolean = DEFAULT_OPTIONS.risingSeaLevel;
+  @state() private risingSeaLevelSpeed: RisingSeaLevelSpeed =
+    DEFAULT_OPTIONS.risingSeaLevelSpeed;
+  // False for the handful of maps with no water at all — nothing could flood.
+  @state() private mapSupportsRisingSeaLevel: boolean = true;
   @state() private overtime: boolean = DEFAULT_OPTIONS.overtime;
   @state() private overtimeStartMinutes: number | undefined =
     DEFAULT_OPTIONS.overtimeStartMinutes;
@@ -544,7 +559,23 @@ export class SinglePlayerModal extends BaseModal {
                   {
                     labelKey: "game_settings.doomsday_clock",
                     checked: this.doomsdayClock,
-                    doomsdayClockSpeed: this.doomsdayClockSpeed,
+                    speed: {
+                      options: DOOMSDAY_CLOCK_SPEEDS,
+                      selected: this.doomsdayClockSpeed,
+                      labelPrefix: "doomsday_clock_speed",
+                      event: "doomsday-clock-speed-selected",
+                    },
+                  },
+                  {
+                    labelKey: "game_settings.rising_sea_level",
+                    checked: this.risingSeaLevel,
+                    hidden: !this.mapSupportsRisingSeaLevel,
+                    speed: {
+                      options: RISING_SEA_LEVEL_SPEEDS,
+                      selected: this.risingSeaLevelSpeed,
+                      labelPrefix: "rising_sea_level_speed",
+                      event: "rising-sea-level-speed-selected",
+                    },
                   },
                 ],
                 inputCards,
@@ -559,6 +590,8 @@ export class SinglePlayerModal extends BaseModal {
             @difficulty-selected=${this.handleConfigDifficultySelected}
             @doomsday-clock-speed-selected=${this
               .handleConfigDoomsdayClockSpeedSelected}
+            @rising-sea-level-speed-selected=${this
+              .handleConfigRisingSeaLevelSpeedSelected}
             @game-mode-selected=${this.handleConfigGameModeSelected}
             @team-count-selected=${this.handleConfigTeamCountSelected}
             @bots-changed=${this.handleBotsChange}
@@ -614,6 +647,9 @@ export class SinglePlayerModal extends BaseModal {
       // Pace only matters when the mode is on (startGame drops it when off).
       (this.doomsdayClock &&
         this.doomsdayClockSpeed !== DEFAULT_OPTIONS.doomsdayClockSpeed) ||
+      this.risingSeaLevel !== DEFAULT_OPTIONS.risingSeaLevel ||
+      (this.risingSeaLevel &&
+        this.risingSeaLevelSpeed !== DEFAULT_OPTIONS.risingSeaLevelSpeed) ||
       this.overtime !== DEFAULT_OPTIONS.overtime ||
       this.disabledUnits.length > 0
     );
@@ -688,6 +724,9 @@ export class SinglePlayerModal extends BaseModal {
     this.waterNukes = DEFAULT_OPTIONS.waterNukes;
     this.doomsdayClock = DEFAULT_OPTIONS.doomsdayClock;
     this.doomsdayClockSpeed = DEFAULT_OPTIONS.doomsdayClockSpeed;
+    this.risingSeaLevel = DEFAULT_OPTIONS.risingSeaLevel;
+    this.risingSeaLevelSpeed = DEFAULT_OPTIONS.risingSeaLevelSpeed;
+    this.mapSupportsRisingSeaLevel = true;
     this.overtime = DEFAULT_OPTIONS.overtime;
     this.overtimeStartMinutes = DEFAULT_OPTIONS.overtimeStartMinutes;
   }
@@ -738,6 +777,11 @@ export class SinglePlayerModal extends BaseModal {
     this.doomsdayClockSpeed = customEvent.detail.speed;
   };
 
+  private handleConfigRisingSeaLevelSpeedSelected = (e: Event) => {
+    const customEvent = e as CustomEvent<{ speed: RisingSeaLevelSpeed }>;
+    this.risingSeaLevelSpeed = customEvent.detail.speed;
+  };
+
   private handleConfigGameModeSelected = (e: Event) => {
     const customEvent = e as CustomEvent<{ mode: GameMode }>;
     this.handleGameModeSelection(customEvent.detail.mode);
@@ -786,6 +830,9 @@ export class SinglePlayerModal extends BaseModal {
         break;
       case "game_settings.doomsday_clock":
         this.doomsdayClock = checked;
+        break;
+      case "game_settings.rising_sea_level":
+        this.risingSeaLevel = checked && this.mapSupportsRisingSeaLevel;
         break;
       default:
         break;
@@ -1177,6 +1224,14 @@ export class SinglePlayerModal extends BaseModal {
                       },
                     }
                   : {}),
+                ...(this.risingSeaLevel
+                  ? {
+                      risingSeaLevel: {
+                        enabled: true,
+                        speed: this.risingSeaLevelSpeed,
+                      },
+                    }
+                  : {}),
                 ...(this.overtime
                   ? {
                       overtime: {
@@ -1226,6 +1281,10 @@ export class SinglePlayerModal extends BaseModal {
         this.nations = this.compactMap
           ? Math.max(0, Math.floor(manifest.nations.length * 0.25))
           : manifest.nations.length;
+        this.mapSupportsRisingSeaLevel = risingSeaLevelSupported(manifest.map);
+        // Picking a water-less map must clear the flag, not leave a config the
+        // toggle is no longer showing.
+        if (!this.mapSupportsRisingSeaLevel) this.risingSeaLevel = false;
       }
     } catch (error) {
       console.warn("Failed to load nation count", error);

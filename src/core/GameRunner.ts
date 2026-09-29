@@ -3,6 +3,7 @@ import { Config } from "./configuration/Config";
 import { DoomsdayClockExecution } from "./execution/DoomsdayClockExecution";
 import { Executor } from "./execution/ExecutionManager";
 import { RecomputeRailClusterExecution } from "./execution/RecomputeRailClusterExecution";
+import { RisingSeaLevelExecution } from "./execution/RisingSeaLevelExecution";
 import { SpawnTimerExecution } from "./execution/SpawnTimerExecution";
 import { WinCheckExecution } from "./execution/WinCheckExecution";
 import {
@@ -185,6 +186,9 @@ export class GameRunner {
     this.game.addExecution(new WinCheckExecution());
     if (this.game.config().doomsdayClockConfig().enabled) {
       this.game.addExecution(new DoomsdayClockExecution());
+    }
+    if (this.game.config().risingSeaLevelConfig().enabled) {
+      this.game.addExecution(new RisingSeaLevelExecution());
     }
     if (!this.game.config().isUnitDisabled(UnitType.Factory)) {
       this.game.addExecution(

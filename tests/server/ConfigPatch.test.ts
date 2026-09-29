@@ -34,6 +34,7 @@ const EDITABLE: { [K in keyof GameConfig]?: GameConfig[K] } = {
   allowedPublicIds: ["pub-a"],
   trusted: true,
   doomsdayClock: { enabled: true, speed: "fast" },
+  risingSeaLevel: { enabled: true, speed: "fast" },
   overtime: { enabled: true, startMinutes: 20 },
   anonymizeNames: true,
   nameReveals: ["c1000000"],

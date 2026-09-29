@@ -104,6 +104,13 @@ export function notableLobbySettings(
         `doomsday_clock_speed.${c.doomsdayClock.speed ?? "normal"}`,
       ),
     });
+  if (c.risingSeaLevel?.enabled)
+    items.push({
+      label: translateText("game_settings.rising_sea_level"),
+      value: translateText(
+        `rising_sea_level_speed.${c.risingSeaLevel.speed ?? "normal"}`,
+      ),
+    });
   if (c.overtime?.enabled)
     items.push({
       label: translateText("overtime.title"),

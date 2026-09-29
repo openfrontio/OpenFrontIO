@@ -19,6 +19,7 @@ import {
   UnitInfo,
   UnitType,
 } from "../game/Game";
+import { RisingSeaLevelSpeed } from "../game/RisingSeaLevel";
 import { UserSettings } from "../game/UserSettings";
 import { GameConfig, TeamCountConfig } from "../Schemas";
 import { NukeType } from "../StatsSchemas";
@@ -251,6 +252,14 @@ const DOOMSDAY_CLOCK_DEFAULTS = {
   warshipDrainCurveExponent: 8, // >1 = convex: stays gentle early, then spikes
 };
 
+// Rising sea level tunables. Off unless enabled in GameConfig. The pacing
+// (grace + submersion time per preset) lives in RisingSeaLevel.ts, shared with
+// the HUD; only the preset itself is wire-configurable.
+const RISING_SEA_LEVEL_DEFAULTS = {
+  enabled: false,
+  speed: "normal" as RisingSeaLevelSpeed,
+};
+
 // Share of the land a side must hold to win, in every game mode.
 const PERCENT_TILES_OWNED_TO_WIN = 80;
 
@@ -319,6 +328,15 @@ export class Config {
       warshipDrainStartPercent: d.warshipDrainStartPercent,
       warshipDrainMaxPercent: d.warshipDrainMaxPercent,
       warshipDrainCurveExponent: d.warshipDrainCurveExponent,
+    };
+  }
+  // Rising sea level config, resolved against defaults. One read per tick.
+  risingSeaLevelConfig(): typeof RISING_SEA_LEVEL_DEFAULTS {
+    const c = this._gameConfig.risingSeaLevel;
+    const d = RISING_SEA_LEVEL_DEFAULTS;
+    return {
+      enabled: c?.enabled ?? d.enabled,
+      speed: c?.speed ?? d.speed,
     };
   }
   // Overtime config, resolved against defaults.

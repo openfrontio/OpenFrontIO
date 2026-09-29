@@ -41,9 +41,11 @@ function createSidebar(overrides: Partial<TimerState> = {}) {
   const game = {
     config: () => ({
       doomsdayClockConfig: () => undefined,
-      // The overtime panel is embedded in the sidebar's template, so its
-      // config read must exist even though these tests keep the mode off.
+      // The overtime and rising-sea-level panels are embedded in the sidebar's
+      // template, so their config reads must exist even though these tests keep
+      // both modes off.
       overtimeConfig: () => ({ enabled: false, startMinutes: 30 }),
+      risingSeaLevelConfig: () => ({ enabled: false, speed: "normal" }),
       gameConfig: () => ({
         gameType: GameType.Public,
         maxTimerValue: state.maxTimerValue,

@@ -7,6 +7,7 @@ import { createNextLobby } from "../../Api";
 import { ClientEnv } from "../../ClientEnv";
 import "../../components/DoomsdayClockPanel";
 import "../../components/OvertimePanel";
+import "../../components/RisingSeaLevelPanel";
 import { Controller } from "../../Controller";
 import { crazyGamesSDK } from "../../CrazyGamesSDK";
 import { isDesktopShell } from "../../DesktopShell";
@@ -404,6 +405,11 @@ export class GameRightSidebar extends LitElement implements Controller {
         .hasWinner=${this.hasWinner}
         .refreshKey=${this.timer}
       ></doomsday-clock-panel>
+      <rising-sea-level-panel
+        .game=${this.game}
+        .hasWinner=${this.hasWinner}
+        .refreshKey=${this.timer}
+      ></rising-sea-level-panel>
       <overtime-panel
         .game=${this.game}
         .hasWinner=${this.hasWinner}

@@ -895,6 +895,7 @@
     "options": "Options",
     "overtime": "Overtime after (minutes)",
     "random_spawn": "Random spawn",
+    "rising_sea_level": "Rising Sea Level",
     "start": "Start Game",
     "starting": "Starting…",
     "starting_gold": "Starting Gold (Millions)",
@@ -1849,6 +1850,20 @@
   },
   "rewards_modal": {
     "title": "Rewards"
+  },
+  "rising_sea_level": {
+    "calm": "Calm",
+    "full_in": "Fully submerged in {time}",
+    "rising": "Rising",
+    "starts_in": "Starts rising in {time}",
+    "submerged": "{pct}% submerged",
+    "title": "Rising Sea Level"
+  },
+  "rising_sea_level_speed": {
+    "fast": "Fast",
+    "normal": "Normal",
+    "slow": "Slow",
+    "veryfast": "Very Fast"
   },
   "select_lang": {
     "title": "Select Language"

@@ -10,7 +10,10 @@ import {
 } from "../client/Utils";
 import { GameEnv } from "../core/configuration/Config";
 import { EventBus } from "../core/EventBus";
-import { DoomsdayClockSpeed } from "../core/game/DoomsdayClock";
+import {
+  DOOMSDAY_CLOCK_SPEEDS,
+  DoomsdayClockSpeed,
+} from "../core/game/DoomsdayClock";
 import {
   Difficulty,
   GameMapSize,
@@ -18,6 +21,11 @@ import {
   GameMode,
   UnitType,
 } from "../core/game/Game";
+import {
+  RISING_SEA_LEVEL_SPEEDS,
+  RisingSeaLevelSpeed,
+  risingSeaLevelSupported,
+} from "../core/game/RisingSeaLevel";
 import { UserSettings } from "../core/game/UserSettings";
 import {
   ClientInfo,
@@ -92,6 +100,10 @@ export class HostLobbyModal extends BaseModal {
   @state() private customAllianceMinutes: number | undefined = undefined;
   @state() private doomsdayClock: boolean = false;
   @state() private doomsdayClockSpeed: DoomsdayClockSpeed = "normal";
+  @state() private risingSeaLevel: boolean = false;
+  @state() private risingSeaLevelSpeed: RisingSeaLevelSpeed = "normal";
+  // False for the handful of maps with no water at all — nothing could flood.
+  @state() private mapSupportsRisingSeaLevel: boolean = true;
   @state() private overtime: boolean = false;
   @state() private overtimeStartMinutes: number | undefined = undefined;
   @state() private anonymizeNames: boolean = false;
@@ -670,7 +682,23 @@ export class HostLobbyModal extends BaseModal {
                   {
                     labelKey: "game_settings.doomsday_clock",
                     checked: this.doomsdayClock,
-                    doomsdayClockSpeed: this.doomsdayClockSpeed,
+                    speed: {
+                      options: DOOMSDAY_CLOCK_SPEEDS,
+                      selected: this.doomsdayClockSpeed,
+                      labelPrefix: "doomsday_clock_speed",
+                      event: "doomsday-clock-speed-selected",
+                    },
+                  },
+                  {
+                    labelKey: "game_settings.rising_sea_level",
+                    checked: this.risingSeaLevel,
+                    hidden: !this.mapSupportsRisingSeaLevel,
+                    speed: {
+                      options: RISING_SEA_LEVEL_SPEEDS,
+                      selected: this.risingSeaLevelSpeed,
+                      labelPrefix: "rising_sea_level_speed",
+                      event: "rising-sea-level-speed-selected",
+                    },
                   },
                   // Host cheats and public listing are mutually exclusive
                   // (the server rejects both combinations), so the controls
@@ -711,6 +739,8 @@ export class HostLobbyModal extends BaseModal {
             @difficulty-selected=${this.handleConfigDifficultySelected}
             @doomsday-clock-speed-selected=${this
               .handleConfigDoomsdayClockSpeedSelected}
+            @rising-sea-level-speed-selected=${this
+              .handleConfigRisingSeaLevelSpeedSelected}
             @game-mode-selected=${this.handleConfigGameModeSelected}
             @team-count-selected=${this.handleConfigTeamCountSelected}
             @bots-changed=${this.handleBotsChange}
@@ -990,6 +1020,9 @@ export class HostLobbyModal extends BaseModal {
     this.customAllianceMinutes = undefined;
     this.doomsdayClock = false;
     this.doomsdayClockSpeed = "normal";
+    this.risingSeaLevel = false;
+    this.risingSeaLevelSpeed = "normal";
+    this.mapSupportsRisingSeaLevel = true;
     this.overtime = false;
     this.overtimeStartMinutes = undefined;
     this.anonymizeNames = false;
@@ -1053,6 +1086,12 @@ export class HostLobbyModal extends BaseModal {
     this.putGameConfig();
   };
 
+  private handleConfigRisingSeaLevelSpeedSelected = (e: Event) => {
+    const customEvent = e as CustomEvent<{ speed: RisingSeaLevelSpeed }>;
+    this.risingSeaLevelSpeed = customEvent.detail.speed;
+    this.putGameConfig();
+  };
+
   private handleConfigGameModeSelected = (e: Event) => {
     const customEvent = e as CustomEvent<{ mode: GameMode }>;
     void this.handleGameModeSelection(customEvent.detail.mode);
@@ -1102,6 +1141,10 @@ export class HostLobbyModal extends BaseModal {
         break;
       case "game_settings.doomsday_clock":
         this.doomsdayClock = checked;
+        this.putGameConfig();
+        break;
+      case "game_settings.rising_sea_level":
+        this.risingSeaLevel = checked && this.mapSupportsRisingSeaLevel;
         this.putGameConfig();
         break;
       case "host_modal.host_cheats":
@@ -1581,6 +1624,10 @@ export class HostLobbyModal extends BaseModal {
             doomsdayClock: this.doomsdayClock
               ? { enabled: true, speed: this.doomsdayClockSpeed }
               : { enabled: false },
+            // Same {enabled:false} rule as doomsdayClock above.
+            risingSeaLevel: this.risingSeaLevel
+              ? { enabled: true, speed: this.risingSeaLevelSpeed }
+              : { enabled: false },
             // Same {enabled:false} rule as doomsdayClock above: undefined is
             // dropped by JSON.stringify, so the toggle could never turn off.
             overtime: this.overtime
@@ -1663,6 +1710,10 @@ export class HostLobbyModal extends BaseModal {
         this.nations = this.compactMap
           ? Math.max(0, Math.floor(manifest.nations.length * 0.25))
           : manifest.nations.length;
+        this.mapSupportsRisingSeaLevel = risingSeaLevelSupported(manifest.map);
+        // Picking a water-less map must clear the flag, not leave a config the
+        // toggle is no longer showing.
+        if (!this.mapSupportsRisingSeaLevel) this.risingSeaLevel = false;
       }
     } catch (error) {
       console.warn("Failed to load nation count", error);

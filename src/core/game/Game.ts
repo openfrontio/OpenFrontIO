@@ -952,6 +952,14 @@ export interface Game extends GameMap {
   /** Queue a land tile for conversion to water (batched every few ticks). Tile must be unowned. */
   queueWaterConversion(tile: TileRef): void;
 
+  /**
+   * Queue a land tile for flooding by the rising sea (batched like
+   * queueWaterConversion, but NOT gated on the waterNukes config — the rising
+   * sea is its own game mode and must flood whether or not nukes make water).
+   * Tile must be unowned; impassable tiles are ignored.
+   */
+  floodTile(tile: TileRef): void;
+
   /** Queue a tile that was inside a nuke blast radius (for nukeable layer destruction). */
   queueNukeImpact(tile: TileRef): void;
 
