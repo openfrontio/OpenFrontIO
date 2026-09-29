@@ -272,7 +272,7 @@ export class FeaturedStream extends LitElement {
       Twitch = await loadTwitchSdk();
     } catch (e) {
       // SDK blocked (extension, network): the next feed tick retries rather than never.
-      console.error("featured-stream: Twitch SDK load failed", e);
+      console.warn("featured-stream: Twitch SDK load failed", e);
       if (this.dismissed) return;
       this.goOffline();
       return;

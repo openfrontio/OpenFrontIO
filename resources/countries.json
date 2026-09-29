@@ -24,6 +24,11 @@
     "name": "Aceh"
   },
   {
+    "code": "Adal Sultanate",
+    "continent": "Africa",
+    "name": "Adal Sultanate"
+  },
+  {
     "code": "Circassia",
     "continent": "Europe",
     "name": "Adygea"
@@ -32,6 +37,16 @@
     "code": "Aden State",
     "continent": "Asia",
     "name": "Aden State"
+  },
+  {
+    "code": "et-aa",
+    "continent": "Africa",
+    "name": "Addis Ababa"
+  },
+  {
+    "code": "et-af",
+    "continent": "Africa",
+    "name": "Afar"
   },
   {
     "code": "af",
@@ -44,6 +59,11 @@
     "name": "African Union"
   },
   {
+    "code": "et-am",
+    "continent": "Africa",
+    "name": "Amhara"
+  },
+  {
     "code": "es-an",
     "continent": "Europe",
     "name": "Andalusia"
@@ -52,6 +72,11 @@
     "code": "ag",
     "continent": "North America",
     "name": "Antigua and Barbuda"
+  },
+  {
+    "code": "Antankarana",
+    "continent": "Africa",
+    "name": "Antankarana"
   },
   {
     "code": "ai",
@@ -181,6 +206,11 @@
     "code": "Anishinaabe",
     "continent": "North America",
     "name": "Anishinaabe"
+  },
+  {
+    "code": "km-a",
+    "continent": "Africa",
+    "name": "Anjouan"
   },
   {
     "code": "gq-an",
@@ -345,7 +375,7 @@
   {
     "code": "Azad Kashmir",
     "continent": "Asia",
-    "name": "Azad Kashmir"
+    "name": "Kashmir (Pak-administered)"
   },
   {
     "code": "az",
@@ -447,6 +477,11 @@
     "name": "Bedford"
   },
   {
+    "code": "Beja",
+    "continent": "Africa",
+    "name": "Beja"
+  },
+  {
     "code": "by",
     "continent": "Europe",
     "name": "Belarus"
@@ -460,6 +495,11 @@
     "code": "bz",
     "continent": "North America",
     "name": "Belize"
+  },
+  {
+    "code": "et-be",
+    "continent": "Africa",
+    "name": "Benishangul-Gumuz"
   },
   {
     "code": "bj",
@@ -497,6 +537,11 @@
     "name": "Bonaire"
   },
   {
+    "code": "Bophuthatswana",
+    "continent": "Africa",
+    "name": "Bophuthatswana"
+  },
+  {
     "code": "ba",
     "continent": "Europe",
     "name": "Bosnia and Herzegovina"
@@ -506,6 +551,7 @@
     "continent": "Africa",
     "name": "Botswana"
   },
+
   {
     "code": "fr-bfc",
     "continent": "Europe",
@@ -651,6 +697,16 @@
     "name": "Cantabria"
   },
   {
+    "code": "Cape Republic",
+    "continent": "Africa",
+    "name": "Cape Republic"
+  },
+  {
+    "code": "Cape Town",
+    "continent": "Africa",
+    "name": "Cape Town"
+  },
+  {
     "code": "Capybara",
     "name": "Capybara"
   },
@@ -663,6 +719,11 @@
     "code": "Carthage",
     "continent": "Africa",
     "name": "Carthage"
+  },
+  {
+    "code": "Cascadia",
+    "continent": "North America",
+    "name": "Cascadia"
   },
   {
     "code": "castille",
@@ -705,6 +766,11 @@
     "name": "Central African Republic"
   },
   {
+    "code": "et-ce",
+    "continent": "Africa",
+    "name": "Central Ethiopia"
+  },
+  {
     "code": "fr-cvl",
     "continent": "Europe",
     "name": "Centre-Val de Loire"
@@ -723,6 +789,11 @@
     "code": "td",
     "continent": "Africa",
     "name": "Chad"
+  },
+  {
+    "code": "Chagossians",
+    "continent": "Africa",
+    "name": "Chagossians"
   },
   {
     "code": "Chaldea",
@@ -800,6 +871,11 @@
     "name": "Chuvashia"
   },
   {
+    "code": "Ciskei",
+    "continent": "Africa",
+    "name": "Ciskei"
+  },
+  {
     "code": "cp",
     "name": "Clipperton Island"
   },
@@ -827,6 +903,11 @@
     "code": "km",
     "continent": "Africa",
     "name": "Comoros"
+  },
+  {
+    "code": "Comoros Islamic Republic",
+    "continent": "Africa",
+    "name": "Comoros Islamic Republic"
   },
   {
     "code": "Commonwealth",
@@ -977,6 +1058,11 @@
     "name": "Dallas"
   },
   {
+    "code": "Darfur",
+    "continent": "Africa",
+    "name": "Darfur"
+  },
+  {
     "code": "Dathina Sheikhdom",
     "continent": "Asia",
     "name": "Dathina Sheikhdom"
@@ -997,6 +1083,11 @@
     "name": "Democratic Republic of the Congo"
   },
   {
+    "code": "Dervish State",
+    "continent": "Africa",
+    "name": "Dervish State"
+  },
+  {
     "code": "Deseret",
     "continent": "North America",
     "name": "Deseret"
@@ -1010,6 +1101,11 @@
     "code": "Dilmun",
     "continent": "Asia",
     "name": "Dilmun"
+  },
+  {
+    "code": "et-dd",
+    "continent": "Africa",
+    "name": "Dire Dawa"
   },
   {
     "code": "District_of_Columbia",
@@ -1064,6 +1160,11 @@
     "code": "1_Dyfed",
     "continent": "Europe",
     "name": "Dyfed"
+  },
+  {
+    "code": "East African Community",
+    "continent": "Africa",
+    "name": "East African Community"
   },
   {
     "code": "1_East Anglia",
@@ -1288,6 +1389,11 @@
     "name": "Franche-Comté"
   },
   {
+    "code": "Franco-Columbians",
+    "continent": "North America",
+    "name": "Franco-Columbians"
+  },
+  {
     "code": "1_Franks",
     "continent": "Europe",
     "name": "Franks"
@@ -1336,9 +1442,19 @@
     "name": "Galicia"
   },
   {
+    "code": "Galmudug",
+    "continent": "Africa",
+    "name": "Galmudug"
+  },
+  {
     "code": "gm",
     "continent": "Africa",
     "name": "Gambia"
+  },
+  {
+    "code": "et-ga",
+    "continent": "Africa",
+    "name": "Gambela"
   },
   {
     "code": "Gascony",
@@ -1354,6 +1470,11 @@
     "code": "Garifuna",
     "continent": "North America",
     "name": "Garifuna"
+  },
+  {
+    "code": "Gazankulu",
+    "continent": "Africa",
+    "name": "Gazankulu"
   },
   {
     "code": "ge",
@@ -1407,6 +1528,16 @@
     "name": "Golden Horde"
   },
   {
+    "code": "Good Hope",
+    "continent": "Africa",
+    "name": "Good Hope"
+  },
+  {
+    "code": "Goshen",
+    "continent": "Africa",
+    "name": "Goshen"
+  },
+  {
     "code": "fr-ges",
     "continent": "Europe",
     "name": "Grand Est"
@@ -1425,6 +1556,11 @@
     "code": "Grand Duchy of Tuscany",
     "continent": "Europe",
     "name": "Grand Duchy of Tuscany"
+  },
+  {
+    "code": "km-g",
+    "continent": "Africa",
+    "name": "Grande Comore"
   },
   {
     "code": "gr",
@@ -1522,6 +1658,11 @@
     "name": "Hakupu"
   },
   {
+    "code": "et-ha",
+    "continent": "Africa",
+    "name": "Harari"
+  },
+  {
     "code": "Haushabi",
     "continent": "Asia",
     "name": "Haushabi Sultanate"
@@ -1544,6 +1685,11 @@
     "code": "DE-HE",
     "continent": "Europe",
     "name": "Hesse"
+  },
+  {
+    "code": "Hirshabelle",
+    "continent": "Africa",
+    "name": "Hirshabelle"
   },
   {
     "code": "Holy Roman Empire",
@@ -1706,6 +1852,11 @@
     "name": "Jordan"
   },
   {
+    "code": "Jubaland",
+    "continent": "Africa",
+    "name": "Jubaland"
+  },
+  {
     "code": "Jujuy",
     "continent": "South America",
     "name": "Jujuy"
@@ -1801,6 +1952,11 @@
     "name": "Key West"
   },
   {
+    "code": "Khatumo",
+    "continent": "Africa",
+    "name": "Khatumo"
+  },
+  {
     "code": "Khemet",
     "continent": "Africa",
     "name": "Khemet"
@@ -1809,6 +1965,11 @@
     "code": "Khiva",
     "continent": "Asia",
     "name": "Khiva"
+  },
+  {
+    "code": "Khoisan",
+    "continent": "Africa",
+    "name": "Khoisan"
   },
   {
     "code": "Kingdom of Araucania and Patagonia",
@@ -1955,6 +2116,16 @@
     "name": "Kuwait"
   },
   {
+    "code": "KwaNdebele",
+    "continent": "Africa",
+    "name": "KwaNdebele"
+  },
+  {
+    "code": "KwaZulu",
+    "continent": "Africa",
+    "name": "KwaZulu"
+  },
+  {
     "code": "kg",
     "continent": "Asia",
     "name": "Kyrgyzstan"
@@ -2032,6 +2203,11 @@
     "code": "lb",
     "continent": "Asia",
     "name": "Lebanon"
+  },
+  {
+    "code": "Lebowa",
+    "continent": "Africa",
+    "name": "Lebowa"
   },
   {
     "code": "Leinster",
@@ -2222,6 +2398,11 @@
     "name": "Malacca"
   },
   {
+    "code": "Malagasy Protectorate",
+    "continent": "Africa",
+    "name": "Malagasy Protectorate"
+  },
+  {
     "code": "mw",
     "continent": "Africa",
     "name": "Malawi"
@@ -2336,6 +2517,16 @@
     "name": "Mercia"
   },
   {
+    "code": "Merina Kingdom",
+    "continent": "Africa",
+    "name": "Merina Kingdom"
+  },
+  {
+    "code": "Merina",
+    "continent": "Africa",
+    "name": "Merina"
+  },
+  {
     "code": "GB-Merseyside",
     "continent": "Europe",
     "name": "Merseyside"
@@ -2401,6 +2592,11 @@
     "name": "Mobile"
   },
   {
+    "code": "km-m",
+    "continent": "Africa",
+    "name": "Moheli"
+  },
+  {
     "code": "Moldavian SSR",
     "continent": "Europe",
     "name": "Moldavian SSR"
@@ -2461,9 +2657,19 @@
     "name": "Mount Athos"
   },
   {
+    "code": "Mozambique PR",
+    "continent": "Africa",
+    "name": "Mozambique People's Republic"
+  },
+  {
     "code": "mz",
     "continent": "Africa",
     "name": "Mozambique"
+  },
+  {
+    "code": "za-mp",
+    "continent": "Africa",
+    "name": "Mpumalanga"
   },
   {
     "code": "Mulgimaa",
@@ -2479,6 +2685,11 @@
     "code": "es-mc",
     "continent": "Europe",
     "name": "Murcia"
+  },
+  {
+    "code": "Musqueam",
+    "continent": "North America",
+    "name": "Musqueam"
   },
   {
     "code": "mm",
@@ -2514,6 +2725,11 @@
     "code": "pa-nt",
     "continent": "North America",
     "name": "Naso Tjër Di"
+  },
+  {
+    "code": "Natalia Republic",
+    "continent": "Africa",
+    "name": "Natalia Republic"
   },
   {
     "code": "NATO",
@@ -2649,6 +2865,11 @@
     "name": "Nicaragua"
   },
   {
+    "code": "Nieuwe Republiek",
+    "continent": "Africa",
+    "name": "Nieuwe Republiek"
+  },
+  {
     "code": "ne",
     "continent": "Africa",
     "name": "Niger"
@@ -2657,6 +2878,11 @@
     "code": "ng",
     "continent": "Africa",
     "name": "Nigeria"
+  },
+  {
+    "code": "Nisga'a",
+    "continent": "North America",
+    "name": "Nisga'a"
   },
   {
     "code": "nu",
@@ -2759,6 +2985,11 @@
     "name": "Nova Scotia"
   },
   {
+    "code": "Nunatsiavut",
+    "continent": "North America",
+    "name": "Nunatsiavut"
+  },
+  {
     "code": "Nunavik",
     "continent": "North America",
     "name": "Nunavik"
@@ -2772,6 +3003,11 @@
     "code": "1_Occitania",
     "continent": "Europe",
     "name": "Occitania"
+  },
+  {
+    "code": "Ogaden",
+    "continent": "Africa",
+    "name": "Ogaden"
   },
   {
     "code": "Ohio",
@@ -2792,6 +3028,11 @@
     "code": "ontario",
     "continent": "North America",
     "name": "Ontario"
+  },
+  {
+    "code": "Orange Free State",
+    "continent": "Africa",
+    "name": "Orange Free State"
   },
   {
     "code": "Order Of Malta",
@@ -2817,6 +3058,11 @@
     "code": "Orlando",
     "continent": "North America",
     "name": "Orlando"
+  },
+  {
+    "code": "et-or",
+    "continent": "Africa",
+    "name": "Oromia"
   },
   {
     "code": "nz-otago",
@@ -3033,6 +3279,11 @@
     "name": "Puerto Rico"
   },
   {
+    "code": "Puntland",
+    "continent": "Africa",
+    "name": "Puntland"
+  },
+  {
     "code": "Purple Flag",
     "name": "Purple Flag"
   },
@@ -3065,6 +3316,11 @@
     "code": "aus_quelan",
     "continent": "Oceania",
     "name": "Queensland"
+  },
+  {
+    "code": "QwaQwa",
+    "continent": "Africa",
+    "name": "QwaQwa"
   },
   {
     "code": "Rakhine",
@@ -3155,6 +3411,11 @@
     "code": "Rio Negro",
     "continent": "South America",
     "name": "Rio Negro"
+  },
+  {
+    "code": "mu-ro",
+    "continent": "Africa",
+    "name": "Rodrigues"
   },
   {
     "code": "SPQR",
@@ -3849,6 +4110,11 @@
     "name": "Sicily"
   },
   {
+    "code": "et-si",
+    "continent": "Africa",
+    "name": "Sidama"
+  },
+  {
     "code": "sl",
     "continent": "Africa",
     "name": "Sierra Leone"
@@ -3913,9 +4179,19 @@
     "name": "Solomon Islands"
   },
   {
+    "code": "et-so",
+    "continent": "Africa",
+    "name": "Somali Region"
+  },
+  {
     "code": "so",
     "continent": "Africa",
     "name": "Somalia"
+  },
+  {
+    "code": "Somaliland",
+    "continent": "Africa",
+    "name": "Somaliland"
   },
   {
     "code": "za",
@@ -3943,6 +4219,11 @@
     "name": "South Dakota"
   },
   {
+    "code": "et-se",
+    "continent": "Africa",
+    "name": "South Ethiopia"
+  },
+  {
     "code": "gs",
     "continent": "Antarctica",
     "name": "South Georgia and the South Sandwich Islands"
@@ -3953,9 +4234,24 @@
     "name": "South Korea"
   },
   {
+    "code": "South Kordofan",
+    "continent": "Africa",
+    "name": "South Kordofan"
+  },
+  {
     "code": "ss",
     "continent": "Africa",
     "name": "South Sudan"
+  },
+  {
+    "code": "et-sw",
+    "continent": "Africa",
+    "name": "South West Ethiopia"
+  },
+  {
+    "code": "South West Somalia",
+    "continent": "Africa",
+    "name": "South West Somalia"
   },
   {
     "code": "south yemen",
@@ -3998,6 +4294,11 @@
     "name": "State of Palestine"
   },
   {
+    "code": "Stellaland",
+    "continent": "Africa",
+    "name": "Stellaland"
+  },
+  {
     "code": "1_Strathclyde",
     "continent": "Europe",
     "name": "Strathclyde"
@@ -4006,6 +4307,11 @@
     "code": "sd",
     "continent": "Africa",
     "name": "Sudan"
+  },
+  {
+    "code": "Mahdist Sudan",
+    "continent": "Africa",
+    "name": "Sudanese Mahdiyya"
   },
   {
     "code": "Sultanate of Fadhli",
@@ -4021,6 +4327,11 @@
     "code": "Sultanate of Lower Yafa",
     "continent": "Asia",
     "name": "Sultanate of Lower Yafa"
+  },
+  {
+    "code": "Sultanate of Mogadishu",
+    "continent": "Africa",
+    "name": "Sultanate of Mogadishu"
   },
   {
     "code": "Sultanate of Nejd",
@@ -4168,6 +4479,11 @@
     "name": "Tierra del Fuego"
   },
   {
+    "code": "et-ti",
+    "continent": "Africa",
+    "name": "Tigray"
+  },
+  {
     "code": "tl",
     "continent": "Asia",
     "name": "Timor-Leste"
@@ -4191,6 +4507,16 @@
     "code": "to",
     "continent": "Oceania",
     "name": "Tonga"
+  },
+  {
+    "code": "Transkei",
+    "continent": "Africa",
+    "name": "Transkei"
+  },
+  {
+    "code": "Transvaal",
+    "continent": "Africa",
+    "name": "Transvaal"
   },
   {
     "code": "Transylvania",
@@ -4337,6 +4663,11 @@
     "name": "Upper Silesia"
   },
   {
+    "code": "Upper Skagit",
+    "continent": "North America",
+    "name": "Upper Skagit"
+  },
+  {
     "code": "Upper Yafa",
     "continent": "Asia",
     "name": "Upper Yafa"
@@ -4377,6 +4708,11 @@
     "name": "Valencia Republic"
   },
   {
+    "code": "Vancouver",
+    "continent": "North America",
+    "name": "Vancouver"
+  },
+  {
     "code": "vu",
     "continent": "Oceania",
     "name": "Vanuatu"
@@ -4385,6 +4721,11 @@
     "code": "va",
     "continent": "Europe",
     "name": "Vatican City"
+  },
+  {
+    "code": "Venda",
+    "continent": "Africa",
+    "name": "Venda"
   },
   {
     "code": "ve",
@@ -4435,6 +4776,11 @@
     "code": "Vojvodina",
     "continent": "Europe",
     "name": "Vojvodina"
+  },
+  {
+    "code": "Voortrekker",
+    "continent": "Africa",
+    "name": "Voortrekker"
   },
   {
     "code": "Vorumaa",
@@ -4517,6 +4863,11 @@
     "name": "West Virginia"
   },
   {
+    "code": "Western Canada",
+    "continent": "North America",
+    "name": "Western Canada"
+  },
+  {
     "code": "eh",
     "continent": "Africa",
     "name": "Western Sahara"
@@ -4560,6 +4911,11 @@
     "name": "Yukon"
   },
   {
+    "code": "Yuułuʔiłʔatḥ",
+    "continent": "North America",
+    "name": "Yuułuʔiłʔatḥ"
+  },
+  {
     "code": "Zaire",
     "continent": "Africa",
     "name": "Zaire"
@@ -4568,6 +4924,11 @@
     "code": "zm",
     "continent": "Africa",
     "name": "Zambia"
+  },
+  {
+    "code": "Zanzibar",
+    "continent": "Africa",
+    "name": "Zanzibar"
   },
   {
     "code": "zayyanid",
@@ -4583,5 +4944,10 @@
     "code": "zw",
     "continent": "Africa",
     "name": "Zimbabwe"
+  },
+  {
+    "code": "Zulu",
+    "continent": "Africa",
+    "name": "Zulu"
   }
 ]

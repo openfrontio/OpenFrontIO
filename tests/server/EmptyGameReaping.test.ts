@@ -82,6 +82,20 @@ describe("empty game reaping", () => {
     expect(game.phase()).toBe(GamePhase.Active);
   });
 
+  it("answers a ping with a pong echoing its sentAt", async () => {
+    const game = makeGame({ log });
+    const client = makeClient({ clientID: cid("pinger") });
+    game.joinClient(client);
+    startGame(game);
+
+    await mockWsOf(client).emit({ type: "ping", sentAt: 4321 });
+
+    expect(mockWsOf(client).sent()).toContainEqual({
+      type: "pong",
+      sentAt: 4321,
+    });
+  });
+
   it("ignores pings from a socket that has left the roster", async () => {
     const game = makeGame({ log });
     const client = makeClient({ clientID: cid("ghost") });
@@ -93,7 +107,7 @@ describe("empty game reaping", () => {
     const ws = mockWsOf(client);
     await ws.trigger("close");
     vi.advanceTimersByTime(60_000);
-    await ws.emit({ type: "ping" });
+    await ws.emit({ type: "ping", sentAt: 0 });
 
     // A ping that refreshed the game-wide clock would hold this at Active.
     expect(game.phase()).toBe(GamePhase.Finished);
@@ -108,7 +122,7 @@ describe("empty game reaping", () => {
     // Well past both the warmup grace and the empty-game timeout.
     for (let i = 0; i < 40; i++) {
       vi.advanceTimersByTime(30_000);
-      await mockWsOf(client).emit({ type: "ping" });
+      await mockWsOf(client).emit({ type: "ping", sentAt: 0 });
       game.pruneStaleClients();
       expect(game.phase()).toBe(GamePhase.Active);
     }
