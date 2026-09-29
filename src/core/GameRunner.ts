@@ -189,7 +189,7 @@ export class GameRunner {
   public snapshotViewData(): GameUpdateViewData {
     const updates = createGameUpdatesMap();
 
-    for (const player of this.game.players()) {
+    for (const player of this.game.allPlayers()) {
       const update = player.toUpdate(undefined, undefined, true);
       if (update !== null) {
         updates[GameUpdateType.Player].push(update);

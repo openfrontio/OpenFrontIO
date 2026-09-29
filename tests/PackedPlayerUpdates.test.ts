@@ -170,6 +170,15 @@ describe("GameRunner payload cadence", () => {
     const alice = game.player("alice_id");
     const city = alice.buildUnit(UnitType.City, game.ref(10, 10), {});
 
+    const bobInfo = new PlayerInfo(
+      "bob",
+      PlayerType.Human,
+      "bob_client",
+      "bob_id",
+    );
+    game.addPlayer(bobInfo);
+    expect(game.player("bob_id").isAlive()).toBe(false);
+
     const runner = new GameRunner(
       game,
       new Executor(game, gameID, "alice_client"),
@@ -188,6 +197,13 @@ describe("GameRunner payload cadence", () => {
     expect(alicePu).toBeDefined();
     expect(alicePu!.name).toBe("alice");
     expect(alicePu!.smallID).toBe(alice.smallID());
+
+    const bobPu = snapshotView.updates[GameUpdateType.Player].find(
+      (p) => p.id === "bob_id",
+    );
+    expect(bobPu).toBeDefined();
+    expect(bobPu!.name).toBe("bob");
+    expect(bobPu!.isAlive).toBe(false);
 
     const cityUu = snapshotView.updates[GameUpdateType.Unit].find(
       (u) => u.id === city.id(),
