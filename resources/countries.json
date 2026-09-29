@@ -537,6 +537,11 @@
     "name": "Bonaire"
   },
   {
+    "code": "Bophuthatswana",
+    "continent": "Africa",
+    "name": "Bophuthatswana"
+  },
+  {
     "code": "ba",
     "continent": "Europe",
     "name": "Bosnia and Herzegovina"
@@ -546,6 +551,7 @@
     "continent": "Africa",
     "name": "Botswana"
   },
+
   {
     "code": "fr-bfc",
     "continent": "Europe",
@@ -689,6 +695,16 @@
     "code": "es-cb",
     "continent": "Europe",
     "name": "Cantabria"
+  },
+  {
+    "code": "Cape Republic",
+    "continent": "Africa",
+    "name": "Cape Republic"
+  },
+  {
+    "code": "Cape Town",
+    "continent": "Africa",
+    "name": "Cape Town"
   },
   {
     "code": "Capybara",
@@ -848,6 +864,11 @@
     "code": "Chuvashia",
     "continent": "Europe",
     "name": "Chuvashia"
+  },
+  {
+    "code": "Ciskei",
+    "continent": "Africa",
+    "name": "Ciskei"
   },
   {
     "code": "cp",
@@ -1441,6 +1462,11 @@
     "name": "Garifuna"
   },
   {
+    "code": "Gazankulu",
+    "continent": "Africa",
+    "name": "Gazankulu"
+  },
+  {
     "code": "ge",
     "continent": "Asia",
     "name": "Georgia"
@@ -1490,6 +1516,16 @@
     "code": "Golden Horde",
     "continent": "Asia",
     "name": "Golden Horde"
+  },
+  {
+    "code": "Good Hope",
+    "continent": "Africa",
+    "name": "Good Hope"
+  },
+  {
+    "code": "Goshen",
+    "continent": "Africa",
+    "name": "Goshen"
   },
   {
     "code": "fr-ges",
@@ -1921,6 +1957,11 @@
     "name": "Khiva"
   },
   {
+    "code": "Khoisan",
+    "continent": "Africa",
+    "name": "Khoisan"
+  },
+  {
     "code": "Kingdom of Araucania and Patagonia",
     "continent": "South America",
     "name": "Kingdom of Araucania and Patagonia"
@@ -2065,6 +2106,16 @@
     "name": "Kuwait"
   },
   {
+    "code": "KwaNdebele",
+    "continent": "Africa",
+    "name": "KwaNdebele"
+  },
+  {
+    "code": "KwaZulu",
+    "continent": "Africa",
+    "name": "KwaZulu"
+  },
+  {
     "code": "kg",
     "continent": "Asia",
     "name": "Kyrgyzstan"
@@ -2142,6 +2193,11 @@
     "code": "lb",
     "continent": "Asia",
     "name": "Lebanon"
+  },
+  {
+    "code": "Lebowa",
+    "continent": "Africa",
+    "name": "Lebowa"
   },
   {
     "code": "Leinster",
@@ -2601,6 +2657,11 @@
     "name": "Mozambique"
   },
   {
+    "code": "za-mp",
+    "continent": "Africa",
+    "name": "Mpumalanga"
+  },
+  {
     "code": "Mulgimaa",
     "continent": "Europe",
     "name": "Mulgimaa"
@@ -2649,6 +2710,11 @@
     "code": "pa-nt",
     "continent": "North America",
     "name": "Naso Tjër Di"
+  },
+  {
+    "code": "Natalia Republic",
+    "continent": "Africa",
+    "name": "Natalia Republic"
   },
   {
     "code": "NATO",
@@ -2782,6 +2848,11 @@
     "code": "ni",
     "continent": "North America",
     "name": "Nicaragua"
+  },
+  {
+    "code": "Nieuwe Republiek",
+    "continent": "Africa",
+    "name": "Nieuwe Republiek"
   },
   {
     "code": "ne",
@@ -2932,6 +3003,11 @@
     "code": "ontario",
     "continent": "North America",
     "name": "Ontario"
+  },
+  {
+    "code": "Orange Free State",
+    "continent": "Africa",
+    "name": "Orange Free State"
   },
   {
     "code": "Order Of Malta",
@@ -3215,6 +3291,11 @@
     "code": "aus_quelan",
     "continent": "Oceania",
     "name": "Queensland"
+  },
+  {
+    "code": "QwaQwa",
+    "continent": "Africa",
+    "name": "QwaQwa"
   },
   {
     "code": "Rakhine",
@@ -4188,6 +4269,11 @@
     "name": "State of Palestine"
   },
   {
+    "code": "Stellaland",
+    "continent": "Africa",
+    "name": "Stellaland"
+  },
+  {
     "code": "1_Strathclyde",
     "continent": "Europe",
     "name": "Strathclyde"
@@ -4398,6 +4484,16 @@
     "name": "Tonga"
   },
   {
+    "code": "Transkei",
+    "continent": "Africa",
+    "name": "Transkei"
+  },
+  {
+    "code": "Transvaal",
+    "continent": "Africa",
+    "name": "Transvaal"
+  },
+  {
     "code": "Transylvania",
     "continent": "Europe",
     "name": "Transylvania"
@@ -4592,6 +4688,11 @@
     "name": "Vatican City"
   },
   {
+    "code": "Venda",
+    "continent": "Africa",
+    "name": "Venda"
+  },
+  {
     "code": "ve",
     "continent": "South America",
     "name": "Venezuela"
@@ -4640,6 +4741,11 @@
     "code": "Vojvodina",
     "continent": "Europe",
     "name": "Vojvodina"
+  },
+  {
+    "code": "Voortrekker",
+    "continent": "Africa",
+    "name": "Voortrekker"
   },
   {
     "code": "Vorumaa",
@@ -4793,5 +4899,10 @@
     "code": "zw",
     "continent": "Africa",
     "name": "Zimbabwe"
+  },
+  {
+    "code": "Zulu",
+    "continent": "Africa",
+    "name": "Zulu"
   }
 ]
