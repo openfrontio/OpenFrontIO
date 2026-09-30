@@ -61,16 +61,24 @@ describe("<level-badge>", () => {
     return el;
   }
 
+  // An element's markup without Lit's comment markers, which differ between
+  // renders of the same template. Removed as nodes, not by pattern.
+  function markupWithoutComments(el: Element): string {
+    const clone = el.cloneNode(true) as Element;
+    const walker = document.createTreeWalker(clone, NodeFilter.SHOW_COMMENT);
+    const comments: Node[] = [];
+    while (walker.nextNode()) comments.push(walker.currentNode);
+    for (const comment of comments) comment.parentNode?.removeChild(comment);
+    return clone.innerHTML;
+  }
+
   // The frame's outline, as markup — two bands with the same outline would
   // differ only by colour, which colour-blind players can't rely on.
   async function frameShape(level: number): Promise<string> {
     const badge = await render({ level });
     const frame = badge.querySelector("svg > g");
     expect(frame).not.toBeNull();
-    return (frame!.innerHTML ?? "")
-      .replace(/<!--[^]*?-->/g, "")
-      .replace(/\s+/g, " ")
-      .trim();
+    return markupWithoutComments(frame!).replace(/\s+/g, " ").trim();
   }
 
   it("draws a differently shaped frame for every band", async () => {
@@ -119,10 +127,10 @@ describe("<level-badge>", () => {
     for (const prestige of [1, 4, 7, 10]) {
       const badge = await render({ level: 12, prestige, size: 16 });
       markup.add(
-        badge
-          .querySelector("svg")!
-          .innerHTML.replace(/<!--[^]*?-->/g, "")
-          .replace(/class="[^"]*"/g, ""),
+        markupWithoutComments(badge.querySelector("svg")!).replace(
+          /class="[^"]*"/g,
+          "",
+        ),
       );
     }
     expect(markup.size).toBe(4);
