@@ -105,6 +105,101 @@ export const RewardSchema = z.object({
 });
 export type Reward = z.infer<typeof RewardSchema>;
 
+// Player levels / XP ("progression"). Purely cosmetic: levels never affect
+// gameplay, and XP is computed server-side only — the client just displays it.
+// Level 1..100, prestige 0..10; `legend` is level 100 at the last prestige.
+export const ProgressSchema = z.object({
+  prestige: z.number(),
+  level: z.number(),
+  // XP into the current level; 0 at level 100.
+  xpInLevel: z.number(),
+  // XP needed for the next level; 0 at level 100.
+  xpForNext: z.number(),
+  lifetimeXp: z.number(),
+  legend: z.boolean(),
+  canPrestige: z.boolean(),
+});
+export type Progress = z.infer<typeof ProgressSchema>;
+
+export const ProgressPositionSchema = z.object({
+  prestige: z.number(),
+  level: z.number(),
+  xpInLevel: z.number(),
+  xpForNext: z.number(),
+});
+export type ProgressPosition = z.infer<typeof ProgressPositionSchema>;
+
+export const XpBreakdownSchema = z.object({
+  // Left while still alive: the per-game, placement and win XP are forfeited.
+  leftEarly: z.boolean(),
+  played: z.number(),
+  time: z.number(),
+  placement: z.number(),
+  win: z.number(),
+  firstWin: z.number(),
+  feats: z.number(),
+  // Before multipliers.
+  subtotal: z.number(),
+  // Multipliers in permille: 1000 is 1x.
+  gamePermille: z.number(),
+  subscriberPermille: z.number(),
+  // XP actually awarded.
+  total: z.number(),
+});
+export type XpBreakdown = z.infer<typeof XpBreakdownSchema>;
+
+// GET /users/@me/xp/:gameId — the XP a finished game awarded the caller. 404
+// until the game has been processed. `reason` is open-ended server-side, so it
+// stays a string: an unknown reason shows a generic line, never a parse error.
+export const GameXpEligibleSchema = z.object({
+  gameId: z.string(),
+  eligible: z.literal(true),
+  breakdown: XpBreakdownSchema,
+  before: ProgressPositionSchema,
+  after: ProgressSchema,
+  // Every level crossed this game, in order.
+  levelsReached: z
+    .array(z.object({ prestige: z.number(), level: z.number() }))
+    .optional()
+    .default([]),
+});
+export const GameXpIneligibleSchema = z.object({
+  gameId: z.string(),
+  eligible: z.literal(false),
+  reason: z.string(),
+});
+export const GameXpResponseSchema = z.discriminatedUnion("eligible", [
+  GameXpEligibleSchema,
+  GameXpIneligibleSchema,
+]);
+export type GameXpEligible = z.infer<typeof GameXpEligibleSchema>;
+export type GameXpIneligible = z.infer<typeof GameXpIneligibleSchema>;
+export type GameXpResponse = z.infer<typeof GameXpResponseSchema>;
+
+// GET /public/player/:publicId/progress — another player's level. No auth.
+export const PublicProgressSchema = z.object({
+  prestige: z.number(),
+  level: z.number(),
+  lifetimeXp: z.number(),
+  legend: z.boolean(),
+});
+export type PublicProgress = z.infer<typeof PublicProgressSchema>;
+
+// GET /public/progression/config — the level curve. No auth, cacheable.
+export const ProgressionConfigSchema = z.object({
+  version: z.number(),
+  maxLevel: z.number(),
+  maxPrestige: z.number(),
+  levels: z.array(
+    z.object({
+      level: z.number(),
+      xpToNext: z.number(),
+      cumulativeXp: z.number(),
+    }),
+  ),
+});
+export type ProgressionConfig = z.infer<typeof ProgressionConfigSchema>;
+
 const CurrencyBalancesSchema = z.object({
   soft: z.coerce.number(),
   hard: z.coerce.number(),
@@ -249,6 +344,10 @@ export const UserMeResponseSchema = z.object({
     currency: CurrencyBalancesSchema.optional(),
     // Unclaimed rewards — NOT included in `currency` balances until claimed.
     rewards: RewardSchema.array().optional(),
+    // Level / XP. Absent when progression is off (or on an API that predates
+    // it): every level UI hides itself then. Optional rather than defaulted,
+    // so "absent" never renders as "level 1, 0 XP".
+    progress: ProgressSchema.optional(),
     clans: z
       .array(
         z.object({
