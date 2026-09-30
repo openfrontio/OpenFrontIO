@@ -11,11 +11,13 @@ import "../../../src/client/hud/layers/PlayerInfoOverlay";
 import type { PlayerInfoOverlay } from "../../../src/client/hud/layers/PlayerInfoOverlay";
 import "../../../src/client/hud/layers/PlayerStats";
 import type { PlayerStats } from "../../../src/client/hud/layers/PlayerStats";
+import type { UnitState } from "../../../src/client/render/types";
 import type { ReplayReader } from "../../../src/client/replay/codec/decode/ReplayReader";
+import type { ReplayFrame } from "../../../src/client/replay/codec/ReplayTypes";
 import { ReplayGameView } from "../../../src/client/replay/ReplayGameAdapter";
 import { Config } from "../../../src/core/configuration/Config";
 import { EventBus } from "../../../src/core/EventBus";
-import { Cell, GameType } from "../../../src/core/game/Game";
+import { Cell, GameType, UnitType } from "../../../src/core/game/Game";
 import { GameUpdateType } from "../../../src/core/game/GameUpdates";
 import { UserSettings } from "../../../src/core/game/UserSettings";
 import { setup } from "../../util/Setup";
@@ -23,6 +25,34 @@ import { config as gameConfig } from "./util/ArchiveGame";
 import { openReader, recordGame, type RecordedGame } from "./util/RecordGame";
 
 const EMPTY = new Uint8Array(0);
+
+/** A unit with the fields the HUD reads; the rest don't matter here. */
+function unit(
+  id: number,
+  unitType: UnitType,
+  ownerID: number,
+  more: Partial<UnitState> = {},
+): UnitState {
+  return {
+    id,
+    unitType,
+    ownerID,
+    pos: 0,
+    isActive: true,
+    underConstruction: false,
+    level: 1,
+    troops: 0,
+    health: null,
+    targetTile: null,
+    missileTimerQueue: [],
+    ...more,
+  } as UnitState;
+}
+
+/** A frame with its units swapped for the given ones. */
+function withUnits(frame: ReplayFrame, units: UnitState[]): ReplayFrame {
+  return { ...frame, units: new Map(units.map((u) => [u.id, u])) };
+}
 
 describe("ReplayGameAdapter", () => {
   let rec: RecordedGame;
@@ -82,20 +112,30 @@ describe("ReplayGameAdapter", () => {
     expect(adapter.ticks()).toBe(frame.tick);
   });
 
-  test("unit levels are totalled from the frame", () => {
+  test("unit levels are totalled per type, finished units only", () => {
     const frame = reader.seek(119);
-    adapter.update(frame, new Uint8Array(0), 0, false);
-    const expected = new Map<number, number>();
-    for (const unit of frame.units.values()) {
-      if (!unit.isActive) continue;
-      expected.set(
-        unit.ownerID,
-        (expected.get(unit.ownerID) ?? 0) + unit.level,
-      );
-    }
-    for (const [smallID, levels] of expected) {
-      expect(adapter.playerBySmallID(smallID)?.totalUnitLevels()).toBe(levels);
-    }
+    const [a, b] = adapter.playerViews();
+    adapter.update(
+      withUnits(frame, [
+        unit(1, UnitType.City, a.smallID(), { level: 3 }),
+        unit(2, UnitType.City, a.smallID(), { level: 2 }),
+        // Still being built: live leaves it out, so the replay does too.
+        unit(3, UnitType.City, a.smallID(), {
+          level: 4,
+          underConstruction: true,
+        }),
+        unit(4, UnitType.Port, a.smallID(), { level: 1 }),
+        unit(5, UnitType.City, b.smallID(), { level: 7 }),
+        unit(6, UnitType.City, a.smallID(), { level: 9, isActive: false }),
+      ]),
+      EMPTY,
+      0,
+      false,
+    );
+    expect(a.totalUnitLevels(UnitType.City)).toBe(5);
+    expect(a.totalUnitLevels(UnitType.Port)).toBe(1);
+    expect(a.totalUnitLevels(UnitType.Warship)).toBe(0);
+    expect(b.totalUnitLevels(UnitType.City)).toBe(7);
   });
 
   test("tile ownership and land come from the frame and the terrain", () => {
@@ -196,6 +236,134 @@ describe("ReplayGameAdapter", () => {
       expect(overlay.textContent ?? "").toContain(owner.displayName());
     } finally {
       overlay.remove();
+    }
+  }, 30_000);
+
+  test("targets, embargoes and units read like PlayerView's", () => {
+    const frame = reader.seek(119);
+    const [a, b, c, d] = adapter.playerViews();
+    const players = new Map(frame.players);
+    const at = (p: typeof a) => players.get(p.smallID())!;
+    // a is allied with b; a targets c, b targets d; b embargoes a.
+    players.set(a.smallID(), {
+      ...at(a),
+      allies: [b.smallID()],
+      targets: [c.smallID()],
+      embargoes: [],
+    });
+    players.set(b.smallID(), {
+      ...at(b),
+      allies: [a.smallID()],
+      targets: [d.smallID()],
+      embargoes: [a.smallID()],
+    });
+    adapter.update(
+      withUnits({ ...frame, players }, [
+        unit(1, UnitType.Warship, b.smallID(), { health: 800, targetTile: 7 }),
+      ]),
+      EMPTY,
+      0,
+      false,
+    );
+
+    expect(a.transitiveTargets().map((p) => p.smallID())).toEqual([
+      c.smallID(),
+      d.smallID(),
+    ]);
+    // Either side's embargo counts, as in PlayerView.hasEmbargo.
+    expect(a.hasEmbargo(b)).toBe(true);
+    expect(b.hasEmbargo(a)).toBe(true);
+    expect(a.hasEmbargo(c)).toBe(false);
+    expect(a.isLobbyCreator()).toBe(a.info.isLobbyCreator);
+
+    const ship = adapter.unit(1)!;
+    expect(ship.owner()).toBe(b);
+    expect(ship.hasHealth()).toBe(true);
+    expect(ship.health()).toBe(800);
+    expect(ship.targetTile()).toBe(7);
+    const city = unit(2, UnitType.City, a.smallID());
+    adapter.update(withUnits(frame, [city]), EMPTY, 0, false);
+    expect(adapter.unit(2)!.hasHealth()).toBe(false);
+    expect(adapter.unit(2)!.targetTile()).toBeUndefined();
+  });
+
+  test("the hover card renders while a player is followed", async () => {
+    const frame = reader.seek(119);
+    adapter.update(frame, EMPTY, 0, false);
+    // Two living players who own land: one followed, one hovered.
+    const owners = adapter
+      .playerViews()
+      .filter((p) => p.isAlive() && p.numTilesOwned() > 0);
+    expect(owners.length).toBeGreaterThan(1);
+    const [followed, hovered] = owners;
+    const ownedBy = (p: typeof followed) =>
+      [...frame.tileState].findIndex((t) => (t & 0xfff) === p.smallID());
+    const hoverTile = ownedBy(hovered);
+    const players = new Map(frame.players);
+    players.set(followed.smallID(), {
+      ...players.get(followed.smallID())!,
+      targets: [hovered.smallID()],
+      embargoes: [hovered.smallID()],
+    });
+    // The hovered player has a nuke in flight at the followed player.
+    adapter.update(
+      withUnits({ ...frame, players }, [
+        unit(1, UnitType.AtomBomb, hovered.smallID(), {
+          pos: hoverTile,
+          targetTile: ownedBy(followed),
+        }),
+      ]),
+      EMPTY,
+      0,
+      false,
+    );
+    adapter.focus = followed;
+
+    const overlay = document.createElement(
+      "player-info-overlay",
+    ) as PlayerInfoOverlay;
+    overlay.game = adapter.asGameView();
+    overlay.eventBus = new EventBus();
+    let at = hoverTile;
+    overlay.transform = {
+      screenToWorldCoordinates: () => new Cell(adapter.x(at), adapter.y(at)),
+    } as never;
+    document.body.appendChild(overlay);
+    try {
+      overlay.init();
+      overlay.maybeShow(10, 10);
+      await overlay.updateComplete;
+      await Promise.resolve();
+      overlay.tick();
+      await overlay.updateComplete;
+      expect(overlay.textContent ?? "").toContain(hovered.displayName());
+
+      // Water next to a warship shows the ship's card.
+      // (Not tile 0: maybeShow skips a falsy ref.)
+      const water = [...frame.tileState].findIndex(
+        (t, ref) => ref > 0 && (t & 0xfff) === 0,
+      );
+      at = water;
+      adapter.update(
+        withUnits(frame, [
+          unit(2, UnitType.Warship, hovered.smallID(), {
+            pos: water,
+            health: 800,
+          }),
+        ]),
+        new Uint8Array(reader.header.mapWidth * reader.header.mapHeight),
+        0,
+        false,
+      );
+      overlay.maybeShow(10, 10);
+      overlay.tick();
+      await overlay.updateComplete;
+      const text = overlay.textContent ?? "";
+      expect(text).toContain(hovered.displayName());
+      expect(text).toContain("800");
+    } finally {
+      overlay.remove();
+      adapter.focus = null;
     }
   }, 30_000);
 

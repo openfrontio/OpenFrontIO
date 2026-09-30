@@ -1205,8 +1205,8 @@ export class JoinLobbyModal extends BaseModal {
     // If the modal closes as part of joining the replay, do not leave/reset URL
     this.leaveLobbyOnClose = false;
 
-    // This build can replay it, so open the replay viewer (unless the
-    // viewer already sent this game back to the client-side replay).
+    // This build can replay it, so open the replay viewer if the player
+    // turned it on (and it hasn't sent this game back to the classic replay).
     if (openReplayViewer(lobbyId, parsed.data)) {
       this.close();
       return "success";

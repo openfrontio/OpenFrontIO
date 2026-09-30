@@ -2344,6 +2344,8 @@
     "press_a_key": "Press a key",
     "render_debug_gui": "Render Debug GUI",
     "render_debug_gui_desc": "Toggle the renderer tuning panel",
+    "replay_viewer_desc": "Open replays with rewind controls. Off opens the classic replay",
+    "replay_viewer_label": "New Replay Viewer",
     "request_alliance": "Request Alliance",
     "request_alliance_desc": "Send an alliance request to the player whose tile is under your cursor.",
     "reset": "Reset",

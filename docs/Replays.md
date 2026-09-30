@@ -4,6 +4,11 @@ The replay viewer plays a finished game with the game's own renderer and
 HUD, and can seek anywhere in it. The replay is made in the viewer's
 browser from the game's archived record. Nothing runs on the server.
 
+It's opt-in while it's rolled out: "watch replay" opens the classic replay
+unless the player turns on **New Replay Viewer** in the settings
+(`UserSettings.replayViewer`). A `#replay-viewer=<gameID>` link opens the
+viewer either way.
+
 ## How a replay is made
 
 1. **Open.** Watching a finished game (from the lobby modal, or

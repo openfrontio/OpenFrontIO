@@ -33,12 +33,18 @@ import type { GameView } from "../view";
 import { playerTypeFromEnum } from "../view/EntityState";
 import type { ReplayFrame } from "./codec/ReplayTypes";
 
-/** A unit as the HUD reads it (Config.maxTroops, the ship counts). */
+/** A unit as the HUD reads it (maxTroops, ship counts, hover cards). */
 export class ReplayUnitView {
-  constructor(private readonly state: UnitState) {}
+  constructor(
+    private readonly state: UnitState,
+    private readonly game: ReplayGameView,
+  ) {}
 
   id(): number {
     return this.state.id;
+  }
+  owner(): ReplayPlayerView {
+    return this.game.playerBySmallID(this.state.ownerID)!;
   }
   type(): UnitType {
     return this.state.unitType as UnitType;
@@ -48,6 +54,16 @@ export class ReplayUnitView {
   }
   troops(): number {
     return this.state.troops;
+  }
+  hasHealth(): boolean {
+    return this.state.health !== null;
+  }
+  health(): number {
+    return this.state.health ?? 0;
+  }
+  /** Where a nuke will land, if it's heading somewhere. */
+  targetTile(): TileRef | undefined {
+    return (this.state.targetTile ?? undefined) as TileRef | undefined;
   }
   isActive(): boolean {
     return this.state.isActive;
@@ -67,8 +83,6 @@ export class ReplayPlayerView {
   // Written by ReplayGameView.sync, read through the accessors below.
   /** The current frame's state, undefined before the player appears. */
   current: PlayerState | undefined;
-  /** Sum of the player's unit levels. */
-  unitLevels = 0;
   /** This player's active units in the current frame. */
   ownUnits: ReplayUnitView[] = [];
 
@@ -100,6 +114,9 @@ export class ReplayPlayerView {
   }
   clanTag(): string | null {
     return this.info.clanTag;
+  }
+  isLobbyCreator(): boolean {
+    return this.info.isLobbyCreator;
   }
   type(): PlayerType {
     return playerTypeFromEnum(this.info.playerType);
@@ -158,6 +175,10 @@ export class ReplayPlayerView {
   hasEmbargoAgainst(other: ReplayPlayerView): boolean {
     return (this.state?.embargoes ?? []).includes(other.smallID());
   }
+  /** An embargo either way, as PlayerView.hasEmbargo. */
+  hasEmbargo(other: ReplayPlayerView): boolean {
+    return this.hasEmbargoAgainst(other) || other.hasEmbargoAgainst(this);
+  }
   outgoingEmojis(): PlayerState["outgoingEmojis"] {
     if (!this.game.showEmojis()) return [];
     return this.state?.outgoingEmojis ?? [];
@@ -176,6 +197,10 @@ export class ReplayPlayerView {
       const p = this.game.playerBySmallID(id);
       return p === undefined ? [] : [p];
     });
+  }
+  /** This player's targets and their allies' targets, as PlayerView's. */
+  transitiveTargets(): ReplayPlayerView[] {
+    return [this, ...this.allies()].flatMap((p) => p.targets());
   }
   numTilesOwned(): number {
     return this.state?.tilesOwned ?? 0;
@@ -201,9 +226,11 @@ export class ReplayPlayerView {
   betrayals(): number {
     return this.state?.betrayals ?? 0;
   }
-  totalUnitLevels(): number {
-    this.game.sync();
-    return this.unitLevels;
+  /** Levels of the finished units of a type, as PlayerView's. */
+  totalUnitLevels(type: UnitType): number {
+    return this.units(type)
+      .filter((u) => !u.isUnderConstruction())
+      .reduce((sum, u) => sum + u.level(), 0);
   }
   units(...types: UnitType[]): ReplayUnitView[] {
     this.game.sync();
@@ -323,15 +350,13 @@ export class ReplayGameView {
     this.stale = false;
     for (const view of this.order) {
       view.current = frame.players.get(view.smallID());
-      view.unitLevels = 0;
       view.ownUnits = [];
     }
     for (const unit of frame.units.values() as Iterable<UnitState>) {
       if (!unit.isActive) continue;
       const owner = this.bySmallID.get(unit.ownerID);
       if (owner === undefined) continue;
-      owner.unitLevels += unit.level;
-      owner.ownUnits.push(new ReplayUnitView(unit));
+      owner.ownUnits.push(new ReplayUnitView(unit, this));
     }
   }
 
@@ -363,7 +388,7 @@ export class ReplayGameView {
   }
   unit(id: number): ReplayUnitView | undefined {
     const state = this.frame?.units.get(id);
-    return state === undefined ? undefined : new ReplayUnitView(state);
+    return state === undefined ? undefined : new ReplayUnitView(state, this);
   }
   /** Events since the HUD last asked, in the shape the HUD expects. */
   updatesSinceLastTick(): Record<number, unknown[]> {

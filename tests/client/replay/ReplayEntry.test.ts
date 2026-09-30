@@ -13,6 +13,7 @@ import {
   versionedViewerUrl,
 } from "../../../src/client/replay/ReplayEntry";
 import { fetchReplayRecord } from "../../../src/client/replay/ReplayRecord";
+import { UserSettings } from "../../../src/core/game/UserSettings";
 import type { GameRecord } from "../../../src/core/Schemas";
 
 // jsdom can't change location.hostname, so a test says whether this page
@@ -44,6 +45,8 @@ function config(gameEnv: string, jwtAudience: string) {
 }
 
 beforeEach(() => {
+  // The viewer is opt-in; these tests are about what happens once it's on.
+  new UserSettings().setReplayViewer(true);
   shell.host = false;
   sessionStorage.clear();
   window.location.hash = "";
@@ -57,6 +60,12 @@ afterEach(() => {
 });
 
 describe("openReplayViewer", () => {
+  test("without the setting, the classic replay opens", () => {
+    new UserSettings().setReplayViewer(false);
+    expect(openReplayViewer("abcd1234", record("test"))).toBe(false);
+    expect(window.location.hash).toBe("");
+  });
+
   test("opens the viewer and hands it the record, so it isn't fetched again", async () => {
     const fetchFn = vi.fn();
     expect(openReplayViewer("abcd1234", record("test"))).toBe(true);
