@@ -1,4 +1,4 @@
-import { LitElement, html } from "lit";
+import { LitElement, css, html, nothing } from "lit";
 import { customElement, property, query, state } from "lit/decorators.js";
 import { documentStylesSheet } from "./SharedStyles";
 
@@ -6,7 +6,57 @@ export type OModalTab = { key: string; label: string };
 
 @customElement("o-modal")
 export class OModal extends LitElement {
-  static styles = [documentStylesSheet()];
+  static styles = [
+    documentStylesSheet(),
+    css`
+      .compact-backdrop {
+        background: transparent;
+      }
+      .compact-wrapper {
+        width: min(680px, calc(100% - 24px));
+        min-width: 0;
+        height: auto;
+        margin: 12px;
+        max-height: min(560px, calc(100dvh - 32px));
+        border-radius: 16px;
+        overflow: hidden;
+        background: rgb(15 23 35 / var(--modal-background-opacity, 0.8));
+        border: 1px solid rgb(255 255 255 / 0.16);
+        box-shadow: 0 12px 40px rgb(0 0 0 / 0.3);
+        backdrop-filter: blur(8px);
+      }
+      .compact-header {
+        padding-inline-end: 60px;
+        font-size: 1.125rem;
+      }
+      .compact-section {
+        background: transparent;
+        backdrop-filter: none;
+        border: 0;
+      }
+      .compact-close {
+        position: absolute;
+        inset-inline-end: 12px;
+        top: 12px;
+        z-index: 10;
+        width: 36px;
+        height: 36px;
+        border-radius: 8px;
+        color: white;
+        cursor: pointer;
+      }
+      .compact-close:hover,
+      .compact-close:focus-visible {
+        background: rgb(255 255 255 / 0.12);
+      }
+    `,
+  ];
+
+  @property({ type: Boolean })
+  public compact = false;
+
+  @property({ type: String })
+  public closeLabel = "";
 
   @state() public isModalOpen = false;
 
@@ -143,35 +193,52 @@ export class OModal extends LitElement {
 
     return html`
       <aside
-        class="${backdropClass}"
+        class="${backdropClass} ${this.compact ? "compact-backdrop" : ""}"
         @click=${this.inline ? null : () => this.close()}
       >
         <div
           @click=${(e: Event) => e.stopPropagation()}
-          class="${wrapperClass}"
+          class="${wrapperClass} ${this.compact ? "compact-wrapper" : ""}"
           style="${wrapperStyle}"
+          role=${this.compact ? "dialog" : nothing}
+          aria-label=${this.compact ? this.title : nothing}
         >
-          ${this.inline || this.hideCloseButton
-            ? html``
-            : html`<div
-                class="absolute top-5 right-5 z-10 text-white cursor-pointer"
+          ${this.compact && !this.inline && !this.hideCloseButton
+            ? html`<button
+                class="compact-close"
+                type="button"
+                aria-label=${this.closeLabel}
                 @click=${() => this.close()}
               >
                 ✕
-              </div>`}
+              </button>`
+            : this.inline || this.hideCloseButton
+              ? html``
+              : html`<div
+                  class="absolute top-5 right-5 z-10 text-white cursor-pointer"
+                  @click=${() => this.close()}
+                >
+                  ✕
+                </div>`}
           ${!this.hideHeader && this.title
             ? html`<div
-                class="px-[1.4rem] py-[1rem] text-2xl font-bold text-white"
+                class="px-[1.4rem] py-[1rem] text-2xl font-bold text-white ${this
+                  .compact
+                  ? "compact-header"
+                  : ""}"
               >
                 ${this.title}
               </div>`
             : html``}
-          <section class="${sectionClass}">
+          <section
+            class="${sectionClass} ${this.compact ? "compact-section" : ""}"
+          >
             <slot name="header"></slot>
             ${hasTabs ? this.renderTabs() : html``}
             <div data-modal-scroll class="flex-1 min-h-0 overflow-y-auto">
               <slot></slot>
             </div>
+            <slot name="footer"></slot>
           </section>
         </div>
       </aside>

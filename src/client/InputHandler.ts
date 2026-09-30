@@ -164,6 +164,8 @@ export class DoRequestAllianceEvent implements GameEvent {}
 
 export class DoBreakAllianceEvent implements GameEvent {}
 
+export class DoQuickChatEvent implements GameEvent {}
+
 export class AttackRatioEvent implements GameEvent {
   constructor(public readonly attackRatio: number) {}
 }
@@ -366,6 +368,9 @@ export class InputHandler {
     });
     this.addKeybindAndEvent(this.keybinds.breakAlliance, () => {
       this.eventBus.emit(new DoBreakAllianceEvent());
+    });
+    this.addKeybindAndEvent(this.keybinds.quickChat, () => {
+      this.eventBus.emit(new DoQuickChatEvent());
     });
     this.addKeybindAndEvent(
       this.keybinds.pauseGame,

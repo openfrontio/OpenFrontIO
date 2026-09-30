@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { EventBus } from "../../src/core/EventBus";
-import { UnitType } from "../../src/core/game/Game";
+import { PlayerType, UnitType } from "../../src/core/game/Game";
 import { TileRef } from "../../src/core/game/GameMap";
 
 // ClientGameRunner's left-click handling: spawn intents during the spawn
@@ -21,6 +21,7 @@ vi.mock("../../src/client/InGameModal", () => ({
   showInGameConfirm: vi.fn(async () => false),
 }));
 vi.mock("../../src/client/Utils", () => ({
+  textDirection: () => "ltr",
   translateText: (key: string) => key,
   reloadForUpdate: vi.fn(),
   createCanvas: () => document.createElement("canvas"),
@@ -73,12 +74,18 @@ import {
   ClientGameRunner,
   LobbyConfig,
 } from "../../src/client/ClientGameRunner";
-import { MouseUpEvent } from "../../src/client/InputHandler";
+import {
+  DoQuickChatEvent,
+  MouseMoveEvent,
+  MouseUpEvent,
+} from "../../src/client/InputHandler";
 import {
   SendAttackIntentEvent,
   SendBoatAttackIntentEvent,
   SendSpawnIntentEvent,
 } from "../../src/client/Transport";
+
+import { OModal } from "../../src/client/components/baseComponents/Modal";
 
 const TILE = 77 as TileRef;
 const CLICK = { x: 10, y: 20 };
@@ -252,5 +259,63 @@ describe("stop() (OPE-411)", () => {
     runner.stop();
 
     expect(input.destroy).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe("Quick Chat under the cursor", () => {
+  function setup() {
+    const fixture = makeRunner({});
+    const sender = { id: () => "sender", isAlive: () => true };
+    const recipient = {
+      isPlayer: () => true,
+      id: () => "recipient",
+      isAlive: () => true,
+      type: () => PlayerType.Human,
+    };
+    vi.spyOn(fixture.gameView, "myPlayer").mockReturnValue(sender as never);
+    vi.spyOn(fixture.gameView, "owner").mockReturnValue(recipient as never);
+    const chat = document.createElement("chat-modal") as HTMLElement & {
+      open: ReturnType<typeof vi.fn>;
+    };
+    chat.open = vi.fn();
+    document.body.append(chat);
+    return { ...fixture, sender, recipient, chat };
+  }
+
+  it("opens for the player on the hovered tile", () => {
+    const { eventBus, sender, recipient, chat } = setup();
+    eventBus.emit(new MouseMoveEvent(CLICK.x, CLICK.y));
+    eventBus.emit(new DoQuickChatEvent());
+    expect(chat.open).toHaveBeenCalledWith(sender, recipient);
+  });
+
+  it("ignores spawn phase, missing hover, self, dead targets and non-player tiles", () => {
+    const { eventBus, gameView, recipient, chat } = setup();
+    eventBus.emit(new DoQuickChatEvent());
+    expect(chat.open).not.toHaveBeenCalled();
+    eventBus.emit(new MouseMoveEvent(CLICK.x, CLICK.y));
+    vi.spyOn(gameView, "inSpawnPhase").mockReturnValue(true);
+    eventBus.emit(new DoQuickChatEvent());
+    vi.mocked(gameView.inSpawnPhase).mockReturnValue(false);
+    vi.spyOn(recipient, "id").mockReturnValue("sender");
+    eventBus.emit(new DoQuickChatEvent());
+    vi.mocked(recipient.id).mockReturnValue("recipient");
+    vi.spyOn(recipient, "isAlive").mockReturnValue(false);
+    eventBus.emit(new DoQuickChatEvent());
+    vi.mocked(recipient.isAlive).mockReturnValue(true);
+    vi.spyOn(recipient, "isPlayer").mockReturnValue(false);
+    eventBus.emit(new DoQuickChatEvent());
+    expect(chat.open).not.toHaveBeenCalled();
+  });
+
+  it("does not open through another modal or after the game stops", () => {
+    const { eventBus, runner, chat } = setup();
+    eventBus.emit(new MouseMoveEvent(CLICK.x, CLICK.y));
+    OModal.openCount = 1;
+    eventBus.emit(new DoQuickChatEvent());
+    OModal.openCount = 0;
+    runner.stop();
+    eventBus.emit(new DoQuickChatEvent());
+    expect(chat.open).not.toHaveBeenCalled();
   });
 });

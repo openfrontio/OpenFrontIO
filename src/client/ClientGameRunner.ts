@@ -39,9 +39,11 @@ import { GameMetrics } from "./GameMetrics";
 import { showInGameAlert } from "./InGameModal";
 import {
   AutoUpgradeEvent,
+  CloseViewEvent,
   DoBoatAttackEvent,
   DoBreakAllianceEvent,
   DoGroundAttackEvent,
+  DoQuickChatEvent,
   DoRequestAllianceEvent,
   DoRetaliateAttackEvent,
   InputHandler,
@@ -71,8 +73,10 @@ import {
 } from "./Transport";
 import { createCanvas } from "./Utils";
 import { WebGLFrameBuilder } from "./WebGLFrameBuilder";
+import { OModal } from "./components/baseComponents/Modal";
 import { MapLayerController } from "./controllers/MapLayerController";
 import { createRenderer, GameRenderer } from "./hud/GameRenderer";
+import { ChatModal } from "./hud/layers/ChatModal";
 import { goldRateTracker } from "./hud/layers/lib/GoldRateTracker";
 import {
   applyGraphicsOverrides,
@@ -993,6 +997,7 @@ export class ClientGameRunner {
       DoBreakAllianceEvent,
       this.doBreakAllianceUnderCursor.bind(this),
     );
+    this.eventBus.on(DoQuickChatEvent, this.doQuickChatUnderCursor.bind(this));
 
     this.renderer.initialize();
     this.input.initialize();
@@ -1450,6 +1455,19 @@ export class ClientGameRunner {
       this.renderer.uiState.attackRatio * this.myPlayer.troops(),
     );
     this.eventBus.emit(new SendAttackIntentEvent(attacker.id(), counterTroops));
+  }
+
+  private doQuickChatUnderCursor(): void {
+    if (OModal.openCount > 0) return;
+    const tile = this.getTileUnderCursor();
+    const sender = this.gameView.myPlayer();
+    if (tile === null || !sender?.isAlive()) return;
+    const owner = this.gameView.owner(tile);
+    if (!owner.isPlayer()) return;
+    const recipient = owner as PlayerView;
+    if (recipient.id() === sender.id() || !recipient.isAlive()) return;
+    this.eventBus.emit(new CloseViewEvent());
+    document.querySelector<ChatModal>("chat-modal")?.open(sender, recipient);
   }
 
   private doRequestAllianceUnderCursor(): void {

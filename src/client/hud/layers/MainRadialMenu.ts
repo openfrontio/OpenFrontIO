@@ -77,7 +77,7 @@ export class MainRadialMenu implements Controller {
       this.uiState,
     );
 
-    this.chatIntegration = new ChatIntegration(this.game, this.eventBus);
+    this.chatIntegration = new ChatIntegration(this.game);
   }
 
   init() {

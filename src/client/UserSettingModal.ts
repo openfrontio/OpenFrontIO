@@ -1519,6 +1519,16 @@ export class UserSettingModal extends BaseModal {
       </h2>
 
       <setting-keybind
+        action="quickChat"
+        label=${translateText("user_setting.quick_chat")}
+        description=${translateText("user_setting.quick_chat_desc")}
+        .defaultKey=${this.defaultKeybinds.quickChat}
+        .value=${this.getKeyValue("quickChat")}
+        .display=${this.getKeyChar("quickChat")}
+        @change=${this.handleKeybindChange}
+      ></setting-keybind>
+
+      <setting-keybind
         action="requestAlliance"
         label=${translateText("user_setting.request_alliance")}
         description=${translateText("user_setting.request_alliance_desc")}
@@ -1777,6 +1787,19 @@ export class UserSettingModal extends BaseModal {
         .checked=${this.userSettings.attackingTroopsOverlay()}
         @change=${this.toggleAttackingTroopsOverlay}
       ></setting-toggle>
+
+      <setting-slider
+        label=${translateText("user_setting.quick_chat_opacity")}
+        description=${translateText("user_setting.quick_chat_opacity_desc")}
+        id="quick-chat-opacity-slider"
+        min="30"
+        max="100"
+        .value=${Math.round(this.userSettings.quickChatOpacity() * 100)}
+        @change=${(e: CustomEvent<{ value: number }>) => {
+          this.userSettings.setQuickChatOpacity(e.detail.value / 100);
+          this.requestUpdate();
+        }}
+      ></setting-slider>
 
       <!-- ⚔️ Attack Ratio -->
       <setting-slider

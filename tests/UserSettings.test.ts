@@ -616,3 +616,42 @@ describe("UserSettings audio volumes", () => {
     expect(new UserSettings().audioVolume("music")).toBe(0);
   });
 });
+
+describe("Quick Chat settings", () => {
+  beforeEach(resetUserSettingsState);
+
+  it("persists opacity, clamps the readable range, and ignores non-finite writes", () => {
+    const settings = new UserSettings();
+    expect(settings.quickChatOpacity()).toBe(0.8);
+    settings.setQuickChatOpacity(0.45);
+    expect(new UserSettings().quickChatOpacity()).toBe(0.45);
+    settings.setQuickChatOpacity(-1);
+    expect(settings.quickChatOpacity()).toBe(0.3);
+    settings.setQuickChatOpacity(2);
+    expect(settings.quickChatOpacity()).toBe(1);
+    settings.setQuickChatOpacity(NaN);
+    expect(settings.quickChatOpacity()).toBe(1);
+  });
+
+  it("falls back for non-finite stored opacity", () => {
+    localStorage.setItem("settings.quickChatOpacity", "Infinity");
+    expect(new UserSettings().quickChatOpacity()).toBe(0.8);
+  });
+
+  it("provides an unused default key on both platforms and allows rebinding", () => {
+    for (const isMac of [false, true]) {
+      const defaults = getDefaultKeybinds(isMac);
+      expect(defaults.quickChat).toBe("KeyH");
+      expect(Object.values(defaults).filter((k) => k === "KeyH")).toHaveLength(
+        1,
+      );
+    }
+    const settings = new UserSettings();
+    settings.setKeybinds({
+      quickChat: { value: "Shift+KeyJ", key: "Shift+J" },
+    });
+    expect(settings.keybinds(false).quickChat).toBe("Shift+KeyJ");
+    settings.setKeybinds({ quickChat: { value: "Null", key: "None" } });
+    expect(settings.keybinds(false).quickChat).toBeUndefined();
+  });
+});
