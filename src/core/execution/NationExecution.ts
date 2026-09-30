@@ -263,6 +263,7 @@ export class NationExecution implements Execution {
       this.expandRatio,
       this.allianceBehavior,
       this.emojiBehavior,
+      this.warshipBehavior,
     );
     this.nukeBehavior = new NationNukeBehavior(
       this.random,
@@ -463,7 +464,15 @@ export class NationExecution implements Execution {
     mirv.restoreSnapshot(b.mirv, r, random, player, emoji);
     alliance.restoreSnapshot(b.alliance, r, random, player, emoji);
     warship.restoreSnapshot(b.warship, r, random, player, emoji);
-    attack.restoreSnapshot(b.attack, r, random, player, alliance, emoji);
+    attack.restoreSnapshot(
+      b.attack,
+      r,
+      random,
+      player,
+      alliance,
+      emoji,
+      warship,
+    );
     nuke.restoreSnapshot(b.nuke, r, random, player, attack, emoji);
     structure.restoreSnapshot(b.structure, r, random, player);
     this.emojiBehavior = emoji;

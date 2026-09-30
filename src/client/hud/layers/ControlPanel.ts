@@ -333,11 +333,14 @@ export class ControlPanel extends LitElement implements Controller {
   }
 
   onAttackRatioChange(newRatio: number) {
+    // The element outlives any one game; uiState only exists once init() ran.
+    // Before that (the hidden slider on the lobby page) this.attackRatio holds
+    // the value, and init() reloads it from UserSettings anyway.
+    if (this.uiState === undefined) return;
     this.uiState.attackRatio = newRatio;
   }
 
   private onAttackRatioSettingChanged = () => {
-    // The element outlives any one game; uiState only exists once init() ran.
     if (this.uiState === undefined) return;
     this.attackRatio = new UserSettings().attackRatio();
     this.onAttackRatioChange(this.attackRatio);
@@ -627,22 +630,27 @@ export class ControlPanel extends LitElement implements Controller {
         >
           ${this.renderMobileTroopBar()}
         </div>
-        <!-- Sword + % label -->
-        <div
-          class="flex flex-col items-center shrink-0 gap-0.5 w-8"
-          translate="no"
-        >
-          <img
-            src=${swordIcon}
-            alt=""
-            aria-hidden="true"
-            width="10"
-            height="10"
-            style="filter: brightness(0) invert(1);"
-          />
-          <span class="text-white text-xs font-bold tabular-nums"
-            >${(this.attackRatio * 100).toFixed(0)}%</span
-          >
+        <!-- Sword + % and troop count label -->
+        <div class="flex flex-col items-center justify-center shrink-0">
+          <div class="flex items-center gap-0.5">
+            <img
+              src=${swordIcon}
+              alt=""
+              aria-hidden="true"
+              width="10"
+              height="10"
+              style="filter: brightness(0) invert(1);"
+            />
+            <span
+              class="text-white text-[11px] font-bold tabular-nums text-center leading-tight whitespace-pre-wrap"
+              >${translateText("control_panel.attack_ratio", {
+                percent: (this.attackRatio * 100).toFixed(0),
+                troops: renderTroops(
+                  (this.game?.myPlayer()?.troops() ?? 0) * this.attackRatio,
+                ),
+              })}</span
+            >
+          </div>
         </div>
         <!-- Attack ratio slider -->
         <div

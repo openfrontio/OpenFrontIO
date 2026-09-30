@@ -164,7 +164,7 @@ export class EventsDisplay extends LitElement implements Controller {
     }
     this.addEvent({
       description: translateText("events_display.alliance_request_sent", {
-        name: e.recipient.name(),
+        name: e.recipient.displayName(),
       }),
       type: MessageType.ALLIANCE_REQUEST,
       createdAt: this.game.ticks(),

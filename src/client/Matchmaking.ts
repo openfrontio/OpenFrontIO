@@ -9,7 +9,8 @@ import { getUserMe, invalidateUserMe } from "./Api";
 import { getPlayToken } from "./Auth";
 import { BaseModal } from "./components/BaseModal";
 import "./components/Difficulties";
-import { modalHeader } from "./components/ui/ModalHeader";
+import { GameStartAlertController } from "./components/GameStartAlertController";
+import { DEFAULT_TITLE_CLASS, modalHeader } from "./components/ui/ModalHeader";
 import { crazyGamesSDK } from "./CrazyGamesSDK";
 import type { JoinLobbyEvent } from "./Main";
 import {
@@ -45,6 +46,10 @@ export class MatchmakingModal extends BaseModal {
   @state() private queueSize: number | null = null;
   private selectedClanTag: string | null = null;
   private elo: number | string = "...";
+  private readonly gameStartAlert = new GameStartAlertController(
+    this,
+    () => this.isModalOpen && this.gameID !== null,
+  );
 
   constructor() {
     super();
@@ -56,12 +61,14 @@ export class MatchmakingModal extends BaseModal {
   }
 
   protected renderHeaderSlot() {
+    const title = translateText(
+      this.mode === "2v2"
+        ? "matchmaking_modal.title_2v2"
+        : "matchmaking_modal.title",
+    );
     return modalHeader({
-      title: translateText(
-        this.mode === "2v2"
-          ? "matchmaking_modal.title_2v2"
-          : "matchmaking_modal.title",
-      ),
+      titleContent: html`<span class="${DEFAULT_TITLE_CLASS}">${title}</span>
+        ${this.gameStartAlert.renderBell()}`,
       onBack: () => this.close(),
       ariaLabel: translateText("common.back"),
     });
@@ -414,6 +421,9 @@ export class MatchmakingModal extends BaseModal {
   }
 
   protected async onOpen(): Promise<void> {
+    // Like a lobby bell, a new matchmaking session starts from the saved
+    // default; a cancellation requeue keeps any per-session override.
+    this.gameStartAlert.reset();
     const userMe = await getUserMe();
     // Early return if modal was closed during async operation
     if (!this.isModalOpen) {
@@ -469,6 +479,7 @@ export class MatchmakingModal extends BaseModal {
   }
 
   protected onClose(): void {
+    this.gameStartAlert.reset();
     this.connected = false;
     this.intentionalClose = true;
     this.socket?.close();
