@@ -290,10 +290,12 @@ export class BuildPreviewController implements Controller {
       }
     }
 
+    const queriedTouchPreview = this.touchPreviewTile;
     this.game
       ?.myPlayer()
       ?.buildables(tileRef, [this.ghostUnit?.buildableUnit.type])
       .then((buildables) => {
+        if (queriedTouchPreview !== this.touchPreviewTile) return;
         if (!this.ghostUnit) {
           this.pendingConfirm = null;
           this.emitGhostPreview(tileRef, targetingAlly, trajectoryTileRef);
@@ -689,7 +691,17 @@ export class BuildPreviewController implements Controller {
   private moveTouchPreview(x: number, y: number): void {
     const tile = this.transformHandler.screenToWorldCoordinates(x, y);
     if (!this.game.isValidCoord(tile.x, tile.y)) return;
-    this.touchPreviewTile = this.game.ref(tile.x, tile.y);
+    const next = this.game.ref(tile.x, tile.y);
+    if (next !== this.touchPreviewTile) {
+      this.pendingConfirm = null;
+      if (this.ghostUnit) {
+        Object.assign(this.ghostUnit.buildableUnit, {
+          canBuild: false,
+          canUpgrade: false,
+        });
+      }
+    }
+    this.touchPreviewTile = next;
     this.lastGhostQueryAt = 0;
   }
 
