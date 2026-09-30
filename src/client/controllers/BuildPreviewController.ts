@@ -81,7 +81,7 @@ export class BuildPreviewController implements Controller {
   private readonly usedSafetyAllies: Set<number> = new Set();
   private readonly mousePos = { x: 0, y: 0 };
   private lastGhostQueryAt: number = 0;
-  private confirmRequestId = 0;
+  private pendingConfirm: MouseUpEvent | null = null;
   private touchPreviewTile: TileRef | null = null;
   private touchPlacementMode = false;
 
@@ -121,7 +121,8 @@ export class BuildPreviewController implements Controller {
       this.moveTouchPreview(e.x, e.y),
     );
     this.eventBus.on(TouchGhostPlacementDragStartEvent, (e) => {
-      e.handled = this.isNearTouchPreview(e.x, e.y);
+      e.handled =
+        this.touchPreviewTile === null || this.isNearTouchPreview(e.x, e.y);
     });
     this.eventBus.on(ConfirmGhostStructureEvent, () =>
       this.requestConfirmStructure(
@@ -294,6 +295,7 @@ export class BuildPreviewController implements Controller {
       ?.buildables(tileRef, [this.ghostUnit?.buildableUnit.type])
       .then((buildables) => {
         if (!this.ghostUnit) {
+          this.pendingConfirm = null;
           this.emitGhostPreview(tileRef, targetingAlly, trajectoryTileRef);
           return;
         }
@@ -306,11 +308,20 @@ export class BuildPreviewController implements Controller {
             canBuild: false,
             canUpgrade: false,
           });
+          this.pendingConfirm = null;
           this.emitGhostPreview(tileRef, targetingAlly, trajectoryTileRef);
           return;
         }
 
         this.ghostUnit.buildableUnit = unit;
+
+        if (this.pendingConfirm !== null) {
+          const ev = this.pendingConfirm;
+          this.pendingConfirm = null;
+          if (this.isGhostReadyForConfirm()) {
+            this.createStructure(ev);
+          }
+        }
 
         this.emitGhostPreview(tileRef, targetingAlly, trajectoryTileRef);
       });
@@ -531,56 +542,49 @@ export class BuildPreviewController implements Controller {
     };
   }
 
+  private isGhostReadyForConfirm(): boolean {
+    if (!this.ghostUnit) return false;
+    const bu = this.ghostUnit.buildableUnit;
+    return bu.canBuild !== false || bu.canUpgrade !== false;
+  }
+
   private requestConfirmStructure(e: MouseUpEvent): void {
     if (!this.ghostUnit && !this.uiState.ghostStructure) return;
-    const ghostType = this.uiState.ghostStructure;
-    const player = this.game.myPlayer();
-    if (!player || ghostType === null) return;
-
-    const tile = this.transformHandler.screenToWorldCoordinates(e.x, e.y);
-    if (!this.game.isValidCoord(tile.x, tile.y)) return;
-    const tileRef = this.game.ref(tile.x, tile.y);
-    if (this.game.isImpassable(tileRef)) return;
-
-    this.requestConfirmTile(tileRef);
+    if (this.isGhostReadyForConfirm()) {
+      this.createStructure(e);
+    } else {
+      this.pendingConfirm = e;
+    }
   }
 
-  private requestConfirmTile(tileRef: TileRef): void {
-    if (!this.ghostUnit && !this.uiState.ghostStructure) return;
-    const ghostType = this.uiState.ghostStructure;
-    const player = this.game.myPlayer();
-    if (!player || ghostType === null) return;
-
-    const requestId = ++this.confirmRequestId;
-    player.buildables(tileRef, [ghostType]).then((buildables) => {
-      if (
-        requestId !== this.confirmRequestId ||
-        this.uiState.ghostStructure !== ghostType ||
-        !this.ghostUnit
-      ) {
-        return;
-      }
-      const validated = buildables.find((u) => u.type === ghostType);
-      if (!validated) return;
-      this.ghostUnit.buildableUnit = validated;
-      this.createStructure(tileRef, validated);
-    });
-  }
-
-  private createStructure(tile: TileRef, buildableUnit: BuildableUnit) {
+  private createStructure(e: MouseUpEvent) {
     if (!this.ghostUnit) return;
-    if (buildableUnit.canUpgrade !== false) {
+    if (
+      this.ghostUnit.buildableUnit.canBuild === false &&
+      this.ghostUnit.buildableUnit.canUpgrade === false
+    ) {
+      this.removeGhostStructure();
+      return;
+    }
+    const tile = this.transformHandler.screenToWorldCoordinates(e.x, e.y);
+    if (this.ghostUnit.buildableUnit.canUpgrade !== false) {
       this.eventBus.emit(
         new SendUpgradeStructureIntentEvent(
-          buildableUnit.canUpgrade,
-          buildableUnit.type,
+          this.ghostUnit.buildableUnit.canUpgrade,
+          this.ghostUnit.buildableUnit.type,
           this.uiState.upgradeMultiplier || 1,
         ),
       );
       this.removeGhostStructure();
-    } else if (buildableUnit.canBuild) {
-      const unitType = buildableUnit.type;
-      if (this.shouldBlockRecentAllyNuke(tile, unitType)) {
+    } else if (this.ghostUnit.buildableUnit.canBuild) {
+      // The pointer can be released just off the map edge before the
+      // throttled hover refresh marks the ghost unbuildable; there is no
+      // tile to build on, so keep the ghost and wait for a click on the map.
+      if (!this.game.isValidCoord(tile.x, tile.y)) return;
+      const unitType = this.ghostUnit.buildableUnit.type;
+      const targetTile = this.game.ref(tile.x, tile.y);
+
+      if (this.shouldBlockRecentAllyNuke(targetTile, unitType)) {
         return;
       }
 
@@ -592,13 +596,12 @@ export class BuildPreviewController implements Controller {
       this.eventBus.emit(
         new BuildUnitIntentEvent(
           unitType,
-          tile,
+          targetTile,
           rocketDirectionUp,
           isNuke ? this.uiState.upgradeMultiplier || 1 : undefined,
         ),
       );
-      this.touchPreviewTile = null;
-      if (this.touchPlacementMode || !shouldPreserveGhostAfterBuild(unitType)) {
+      if (!shouldPreserveGhostAfterBuild(unitType)) {
         this.removeGhostStructure();
       }
     } else {
@@ -673,7 +676,10 @@ export class BuildPreviewController implements Controller {
   private handleTouchPlacement(e: TouchGhostPlacementEvent): void {
     this.touchPlacementMode = true;
     if (this.touchPreviewTile !== null && this.isNearTouchPreview(e.x, e.y)) {
-      this.requestConfirmTile(this.touchPreviewTile);
+      const preview = this.touchPreviewScreenPosition();
+      if (preview !== null) {
+        this.requestConfirmStructure(new MouseUpEvent(preview.x, preview.y));
+      }
       return;
     }
 
@@ -688,15 +694,20 @@ export class BuildPreviewController implements Controller {
   }
 
   private isNearTouchPreview(x: number, y: number): boolean {
-    if (this.touchPreviewTile === null) return false;
-    const preview = this.transformHandler.worldToScreenCoordinates(
+    const preview = this.touchPreviewScreenPosition();
+    return (
+      preview !== null &&
+      Math.hypot(x - preview.x, y - preview.y) <= TOUCH_CONFIRM_DISTANCE_PX
+    );
+  }
+
+  private touchPreviewScreenPosition(): { x: number; y: number } | null {
+    if (this.touchPreviewTile === null) return null;
+    return this.transformHandler.worldToScreenCoordinates(
       new Cell(
         this.game.x(this.touchPreviewTile) + 0.5,
         this.game.y(this.touchPreviewTile) + 0.5,
       ),
-    );
-    return (
-      Math.hypot(x - preview.x, y - preview.y) <= TOUCH_CONFIRM_DISTANCE_PX
     );
   }
 
@@ -716,7 +727,7 @@ export class BuildPreviewController implements Controller {
   }
 
   private clearGhostStructure() {
-    this.confirmRequestId++;
+    this.pendingConfirm = null;
     this.touchPreviewTile = null;
     this.ghostUnit = null;
     this.lastGhostData = null;

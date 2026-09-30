@@ -895,7 +895,7 @@ export class InputHandler {
       // Start long-press timer for touch devices
       if (
         event.pointerType === "touch" &&
-        this.touchPlacementDragState !== "candidate"
+        this.uiState.ghostStructure === null
       ) {
         this.longPressActive = false;
         if (this.longPressTimer !== null) {
@@ -905,11 +905,6 @@ export class InputHandler {
         this.longPressTimer = setTimeout(() => {
           this.longPressTimer = null;
           this.longPressActive = true;
-          if (this.uiState.ghostStructure !== null) {
-            this.longPressActive = false;
-            this.suppressNextTap = true;
-            return;
-          }
           this.canvas.style.cursor = "crosshair";
           this.eventBus.emit(
             new TouchLongPressStartEvent(

@@ -324,7 +324,7 @@ export class UnitDisplay extends LitElement implements Controller {
           >
             <img
               src=${icon}
-              alt=${structureKey}
+              alt=${translateText("unit_type." + structureKey)}
               class="align-middle size-7 lg:size-5"
             />
             ${number !== null
