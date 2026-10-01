@@ -240,7 +240,10 @@ export class GameXpPanel extends LitElement {
       position: start,
       level: Math.min(MAX_LEVEL, Math.floor(start)),
       levelUp: null,
-      legend: false,
+      // A player who was already a Legend before this game shows the Legend
+      // frame throughout; one who becomes one this game gets it at the
+      // level-100 moment.
+      legend: data.after.legend && !reachedLegendThisGame(data),
       counted: 0,
       xpText: "before",
       linesShown: 0,
@@ -504,7 +507,7 @@ export class GameXpPanel extends LitElement {
       data-xp-state=${stateName}
       data-xp-revealing=${revealing ? "true" : nothing}
       style=${style ?? nothing}
-      class="mb-4 rounded-lg bg-black/30 p-3 text-left text-white ${revealing
+      class="relative mb-4 rounded-lg bg-black/30 p-3 text-left text-white ${revealing
         ? "cursor-pointer"
         : ""}"
       aria-live="polite"
@@ -512,6 +515,21 @@ export class GameXpPanel extends LitElement {
       title=${revealing ? translateText("progression.tap_to_skip") : nothing}
       @click=${() => this.skipReveal()}
     >
+      ${revealing
+        ? // Tapping anywhere skips; this is the same for the keyboard. Out of
+          // sight until focused, so the panel looks the same for a pointer.
+          html`<button
+            type="button"
+            data-xp-skip
+            class="sr-only focus:not-sr-only focus:absolute focus:right-2 focus:top-2 focus:z-10 focus:rounded-sm focus:bg-black/80 focus:px-2 focus:py-1 focus:text-xs focus:font-bold focus:text-white"
+            @click=${(e: Event) => {
+              e.stopPropagation();
+              this.skipReveal();
+            }}
+          >
+            ${translateText("progression.skip_reveal")}
+          </button>`
+        : nothing}
       ${content}
     </section>`;
   }
@@ -631,6 +649,7 @@ export class GameXpPanel extends LitElement {
   private renderSegmentedBar(
     fillPercent: number,
     flashing: boolean,
+    valueText: string,
   ): TemplateResult {
     return html`<div
       data-xp-bar
@@ -638,9 +657,11 @@ export class GameXpPanel extends LitElement {
         ? "xp-bar-flash"
         : ""}"
       role="progressbar"
+      aria-label=${translateText("progression.xp_bar_label")}
       aria-valuemin="0"
       aria-valuemax="100"
       aria-valuenow=${Math.round(fillPercent)}
+      aria-valuetext=${valueText === "" ? nothing : valueText}
     >
       <div
         data-xp-bar-fill
@@ -722,7 +743,7 @@ export class GameXpPanel extends LitElement {
             )}
           </div>
           <div class="min-w-0 flex-1 pt-3.5">
-            ${this.renderSegmentedBar(fill, levelUp !== null)}
+            ${this.renderSegmentedBar(fill, levelUp !== null, progressText)}
             <div class="mt-1 grid h-5 grid-cols-[1fr_auto_1fr] items-center">
               <span></span>
               <span
@@ -1412,7 +1433,9 @@ export class GameXpPanel extends LitElement {
           </div>
         </div>
         <div class="mt-2">
-          ${xpBar(levelFraction(after.xpInLevel, after.xpForNext) * 100)}
+          ${xpBar(levelFraction(after.xpInLevel, after.xpForNext) * 100, {
+            valueText: xpProgressText(after.xpInLevel, after.xpForNext),
+          })}
         </div>
         ${this.renderBonuses(data)} ${this.renderBreakdown(data)}
         ${data.breakdown.leftEarly

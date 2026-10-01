@@ -1808,8 +1808,11 @@
     "new_milestone": "New milestone!",
     "penalty_line": "−{percent}% XP ({source})",
     "prestige": "Prestige {prestige}",
+    "prestige_short": "P{prestige}",
     "sign_in_to_earn": "Sign in to earn XP and level up.",
+    "skip_reveal": "Skip",
     "tap_to_skip": "Tap to skip",
+    "xp_bar_label": "Level progress",
     "xp_heading": "XP earned",
     "xp_progress": "{current} / {next} XP",
     "xp_total": "+{xp} XP"

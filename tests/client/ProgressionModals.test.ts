@@ -14,11 +14,18 @@ const {
   fetchPublicPlayerProfile,
   fetchPublicPlayerProgress,
   fetchMyGameXp,
+  isLoggedIn,
+  crazyGamesSDK,
 } = vi.hoisted(() => ({
   getUserMe: vi.fn(),
   fetchPublicPlayerProfile: vi.fn(),
   fetchPublicPlayerProgress: vi.fn(),
   fetchMyGameXp: vi.fn(),
+  isLoggedIn: vi.fn(async () => true),
+  crazyGamesSDK: {
+    isOnCrazyGames: vi.fn(() => false),
+    getUserProfile: vi.fn(async (): Promise<unknown> => null),
+  },
 }));
 
 vi.mock("../../src/client/Utils", () => ({
@@ -32,6 +39,10 @@ vi.mock("../../src/client/Api", () => ({
   getUserMe,
   fetchPublicPlayerProfile,
 }));
+
+vi.mock("../../src/client/Auth", () => ({ isLoggedIn }));
+
+vi.mock("../../src/client/CrazyGamesSDK", () => ({ crazyGamesSDK }));
 
 vi.mock("../../src/client/ProgressionApi", () => ({
   fetchPublicPlayerProgress,
@@ -217,6 +228,43 @@ describe("player profile level", () => {
     await open("no-progress");
     expect(modal.querySelector("[data-profile-level]")).toBeNull();
   });
+
+  it("shows the profile without waiting for the level, which lands later", async () => {
+    let resolveProgress!: (p: unknown) => void;
+    fetchPublicPlayerProgress.mockReturnValue(
+      new Promise((resolve) => (resolveProgress = resolve)),
+    );
+    await open("slow-progress");
+    // The stats are up while the level is still on its way.
+    expect(modal.querySelector("[data-profile-level]")).toBeNull();
+    resolveProgress({
+      prestige: 0,
+      level: 33,
+      lifetimeXp: 9000,
+      legend: false,
+    });
+    await vi.waitFor(async () => {
+      await settled(modal);
+      expect(
+        modal.querySelector("[data-profile-level]")?.textContent,
+      ).toContain('progression.level:{"level":33}');
+    });
+  });
+
+  it("never puts a stale level on another player's profile", async () => {
+    let resolveFirst!: (p: unknown) => void;
+    fetchPublicPlayerProgress.mockImplementation((publicId: string) =>
+      publicId === "first"
+        ? new Promise((resolve) => (resolveFirst = resolve))
+        : Promise.resolve(false),
+    );
+    await open("first");
+    await open("second");
+    resolveFirst({ prestige: 0, level: 77, lifetimeXp: 1, legend: false });
+    await new Promise((r) => setTimeout(r, 0));
+    await settled(modal);
+    expect(modal.querySelector("[data-profile-level]")).toBeNull();
+  });
 });
 
 describe("game stats XP", () => {
@@ -289,6 +337,20 @@ describe("game stats XP", () => {
     await settled(modal);
     expect(fetchMyGameXp).not.toHaveBeenCalled();
     expect(await panelState()).toBeNull();
+  });
+
+  it("shows XP to a CrazyGames player, the same as the end-of-game panel", async () => {
+    getUserMe.mockResolvedValue({ ...me, user: {} });
+    crazyGamesSDK.isOnCrazyGames.mockReturnValue(true);
+    crazyGamesSDK.getUserProfile.mockResolvedValue({ username: "cg" });
+    fetchMyGameXp.mockResolvedValue({ status: "ok", data: eligibleXp });
+    try {
+      await open("g6");
+      await vi.waitFor(async () => expect(await panelState()).toBe("result"));
+    } finally {
+      crazyGamesSDK.isOnCrazyGames.mockReturnValue(false);
+      crazyGamesSDK.getUserProfile.mockResolvedValue(null);
+    }
   });
 
   it("does not ask for a signed-out viewer", async () => {

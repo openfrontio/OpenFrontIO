@@ -336,19 +336,23 @@ export class PlayerProfileModal extends BaseModal {
 
   private async loadProfile(publicId: string): Promise<void> {
     const gen = ++this.loadGeneration;
-    const [profile, progress] = await Promise.all([
-      fetchPublicPlayerProfile(publicId),
-      this.loadProgress(publicId),
-    ]);
     // Drop a superseded response: a newer load started, or the modal moved to a
     // different player. onClose no longer clears publicId, so the id check alone
     // can't reject a stale same-player load started before an earlier close.
-    if (gen !== this.loadGeneration || this.publicId !== publicId) return;
+    const current = () =>
+      gen === this.loadGeneration && this.publicId === publicId;
+    // The level is a nice-to-have: it lands whenever it arrives and never
+    // holds up the profile (its request can take up to its own timeout).
+    // Only shown alongside a loaded profile (see renderProfile).
+    void this.loadProgress(publicId).then((progress) => {
+      if (current()) this.progress = progress;
+    });
+    const profile = await fetchPublicPlayerProfile(publicId);
+    if (!current()) return;
     this.loading = false;
     this.statsTree = profile === false ? null : profile.stats;
     this.username = profile === false ? null : (profile.username ?? null);
     this.clans = profile === false ? [] : (profile.clans ?? []);
-    this.progress = profile === false ? null : progress;
   }
 
   // Intentionally preserves publicId/statsTree/history cache/scroll: the page

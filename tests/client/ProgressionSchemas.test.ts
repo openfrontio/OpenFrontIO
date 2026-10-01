@@ -65,11 +65,19 @@ describe("UserMeResponseSchema progress", () => {
     expect(parsed.player.progress).toEqual(progress);
   });
 
-  it("rejects a malformed progress object rather than guessing", () => {
+  it("drops a malformed progress object but still parses the profile", () => {
     const parsed = UserMeResponseSchema.safeParse(
       userMe({ progress: { level: "ten" } }),
     );
-    expect(parsed.success).toBe(false);
+    expect(parsed.success).toBe(true);
+    expect(parsed.data?.player.progress).toBeUndefined();
+    expect(parsed.data?.player.publicId).toBe("abc");
+  });
+
+  it("drops a non-object progress value but still parses the profile", () => {
+    const parsed = UserMeResponseSchema.safeParse(userMe({ progress: "x" }));
+    expect(parsed.success).toBe(true);
+    expect(parsed.data?.player.progress).toBeUndefined();
   });
 });
 

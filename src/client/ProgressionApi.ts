@@ -84,16 +84,19 @@ export async function pollGameXp(
     if (result.status === "ok") return result.data;
     if (result.status === "unavailable") return null;
     if (Date.now() + intervalMs > deadline) return null;
+    const signal = opts.signal;
     await new Promise<void>((resolve) => {
-      const timer = setTimeout(resolve, intervalMs);
-      opts.signal?.addEventListener(
-        "abort",
-        () => {
-          clearTimeout(timer);
-          resolve();
-        },
-        { once: true },
-      );
+      // Whichever fires first tears down the other, so a long poll never
+      // piles one abort listener per wait onto the caller's signal.
+      const onAbort = () => {
+        clearTimeout(timer);
+        resolve();
+      };
+      const timer = setTimeout(() => {
+        signal?.removeEventListener("abort", onAbort);
+        resolve();
+      }, intervalMs);
+      signal?.addEventListener("abort", onAbort, { once: true });
     });
   }
 }

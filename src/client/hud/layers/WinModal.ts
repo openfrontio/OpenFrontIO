@@ -12,7 +12,6 @@ import { Pattern } from "../../../core/CosmeticSchemas";
 import { EventBus } from "../../../core/EventBus";
 import { RankedType } from "../../../core/game/Game";
 import { GameUpdateType } from "../../../core/game/GameUpdates";
-import { hasLinkedIdentity } from "../../AccountIdentity";
 import { getUserMe } from "../../Api";
 import "../../components/CosmeticCard";
 import { cosmeticSelectionLabel } from "../../components/CosmeticPresentation";
@@ -29,6 +28,7 @@ import {
 import { crazyGamesSDK } from "../../CrazyGamesSDK";
 import { isDesktopShell } from "../../DesktopShell";
 import { Platform } from "../../Platform";
+import { resolveXpAccount } from "../../ProgressionAccount";
 import { fetchProgressionConfig, pollGameXp } from "../../ProgressionApi";
 import { PlaySoundEffectEvent } from "../../sound/Sounds";
 import { steamSDK } from "../../SteamSDK";
@@ -436,8 +436,11 @@ export class WinModal extends LitElement implements Controller {
       const game = this.game;
       // Spectators and replay viewers have no XP of their own.
       if (game.config().isReplay() || !game.myPlayer()) return;
-      const me = await getUserMe();
-      if (!(await this.isSignedIn(me))) {
+      const account = await resolveXpAccount();
+      // /users/@me failed while there is a session: a signed-in player must
+      // not be told to sign in over a network blip, so say nothing.
+      if (account.kind === "unknown") return;
+      if (account.kind === "signed_out") {
         // Only pitch XP when progression is actually on. There is no
         // /users/@me progress to go by here, so ask the public config (404
         // when progression is off; any failure also says nothing).
@@ -448,7 +451,7 @@ export class WinModal extends LitElement implements Controller {
       }
       // /users/@me carries progress whenever progression is on (level 1
       // before a first scored game); absent means off: no section at all.
-      if (!me || me.player.progress === undefined) return;
+      if (account.me.player.progress === undefined) return;
       // The game may have ended while this was resolving; the end-of-game
       // call owns the section from then on.
       if (this.xpPolling) return;
@@ -470,17 +473,6 @@ export class WinModal extends LitElement implements Controller {
       console.warn("WinModal: XP section failed", err);
       this.xpView = { kind: "hidden" };
     }
-  }
-
-  // Same rule as the account modal: a linked identity, or a CrazyGames
-  // profile whose token exchange produced a session.
-  private async isSignedIn(
-    me: Awaited<ReturnType<typeof getUserMe>> | null,
-  ): Promise<boolean> {
-    if (!me) return false;
-    if (hasLinkedIdentity(me.user)) return true;
-    if (!crazyGamesSDK.isOnCrazyGames?.()) return false;
-    return (await crazyGamesSDK.getUserProfile()) !== null;
   }
 
   private _handleExit() {
