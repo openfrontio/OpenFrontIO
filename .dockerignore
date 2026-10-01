@@ -14,3 +14,4 @@ helm-charts
 .idea
 coverage*
 tests/
+scripts/replay/
