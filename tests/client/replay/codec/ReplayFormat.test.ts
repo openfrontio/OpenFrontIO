@@ -226,6 +226,27 @@ describe("replay format", () => {
     expect(() => reader.seek(-1)).toThrow(RangeError);
   });
 
+  test("delta tile ref out of bounds throws RangeError", async () => {
+    const enc = new StreamingEncoder({
+      mapWidth: 2,
+      mapHeight: 2,
+      terrain: new Uint8Array(4),
+      gzip,
+      keyframeInterval: 10,
+      gameStartInfo: {},
+      numLandTiles: 4,
+    });
+    enc.pushFrame(frame(1, {}));
+    enc.pushFrame(
+      frame(2, {
+        packedTileUpdates: Uint32Array.from([10, 1]),
+      }),
+    );
+    const reader = openReader(await finish(enc));
+    reader.next();
+    expect(() => reader.next()).toThrow(RangeError);
+  });
+
   test("terrain changes: per frame, and in every later keyframe", async () => {
     // A 4x2 map, base terrain byte 0x80 (land). Tile 5 becomes water
     // (0x00) at tick 3 and stays; tile 6 does at tick 4 and goes back to
