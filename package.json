@@ -27,7 +27,8 @@
     "perf:client-mem": "npx tsx tests/perf/client/ClientMemoryPerf.ts",
     "perf:client-tick": "npx tsx tests/perf/client/ClientTickPerf.ts",
     "test:coverage": "vitest run --coverage",
-    "format": "prettier --ignore-unknown --write .",
+    "format": "oxfmt",
+    "format:check": "oxfmt --check",
     "format:map-generator": "cd map-generator && go fmt .",
     "lint": "npm run lint:oxlint && npm run lint:eslint",
     "lint:fix": "npm run lint:oxlint:fix && npm run lint:eslint:fix",
@@ -46,7 +47,7 @@
       "eslint --fix"
     ],
     "**/*": [
-      "prettier --ignore-unknown --write"
+      "oxfmt --no-error-on-unmatched-pattern"
     ]
   },
   "devDependencies": {
@@ -81,11 +82,9 @@
     "lit": "^3.3.2",
     "marked": "^18.0.5",
     "mrmime": "^2.0.1",
+    "oxfmt": "^0.48.0",
     "oxlint": "^1.75.0",
     "oxlint-tsgolint": "^7.0.2001",
-    "prettier": "^3.8.3",
-    "prettier-plugin-organize-imports": "^4.3.0",
-    "prettier-plugin-sh": "^0.18.1",
     "tailwindcss": "^4.2.4",
     "typescript": "^6.0.3",
     "typescript-eslint": "^8.59.1",

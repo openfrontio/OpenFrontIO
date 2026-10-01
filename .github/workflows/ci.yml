@@ -65,7 +65,9 @@ jobs:
       - run: npm ci
       - run: npm run lint:github
 
-  prettier:
+  format:
+    # Still named "🎨 Prettier" because the main ruleset requires a check by
+    # that name. Rename to "🎨 Format" together with the ruleset.
     name: 🎨 Prettier
     runs-on: ubuntu-latest
     timeout-minutes: 30
@@ -78,7 +80,7 @@ jobs:
       - name: Setup npm
         run: npm install --global --ignore-scripts npm@12.1.0
       - run: npm ci
-      - run: npx prettier --check .
+      - run: npm run format:check
 
   gen-maps:
     name: 🗺️ Generated maps up to date

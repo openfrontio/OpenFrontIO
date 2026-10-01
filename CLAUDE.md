@@ -13,7 +13,7 @@ npm test                 # Run all tests (Vitest)
 npm run test:coverage    # Tests with coverage
 npm run lint             # Oxlint + ESLint
 npm run lint:fix         # Oxlint + ESLint with auto-fix
-npm run format           # Prettier
+npm run format           # Oxfmt
 npm run build-prod       # Production build
 ```
 

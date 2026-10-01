@@ -46,8 +46,7 @@ const pointerOnly = args.includes(VERSION_POINTER);
 // So: send everything that thinks it is logging to stderr, and keep the real
 // stdout for the payload. This has to happen before DesktopRelease is loaded,
 // which is why that import is dynamic — a static one would be hoisted above
-// these statements, and prettier-plugin-organize-imports would reorder it
-// anyway.
+// these statements.
 const writeOut = process.stdout.write.bind(process.stdout);
 process.stdout.write = process.stderr.write.bind(
   process.stderr,
