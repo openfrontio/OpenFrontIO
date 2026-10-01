@@ -45,7 +45,7 @@ async function beforeSendFor(
 }
 
 // Session ids in each prod band: inside the 1% that sends everything, in
-// the 10% that sends errors only, and outside both.
+// the 5% that sends errors only, and outside both.
 function sessionIds(): { inside: string; errorsOnly: string; outside: string } {
   let inside: string | undefined;
   let errorsOnly: string | undefined;
@@ -57,7 +57,7 @@ function sessionIds(): { inside: string; errorsOnly: string; outside: string } {
   ) {
     const id = `session${i}`;
     if (isSessionSampled(id, 0.01)) inside ??= id;
-    else if (isSessionSampled(id, 0.1)) errorsOnly ??= id;
+    else if (isSessionSampled(id, 0.05)) errorsOnly ??= id;
     else outside ??= id;
   }
   return { inside, errorsOnly, outside };
@@ -223,7 +223,7 @@ describe("Telemetry", () => {
     ).toBe(false);
   });
 
-  it("sends console errors from 10% of prod sessions and warnings from 1%", async () => {
+  it("sends console errors from 5% of prod sessions and warnings from 1%", async () => {
     const beforeSend = await beforeSendFor();
     const { inside, errorsOnly, outside } = sessionIds();
     const log = (level: string, session: string) => ({
@@ -276,8 +276,8 @@ describe("Telemetry", () => {
   });
 
   // Faro samples whole sessions, so its own sampling is off: prod sessions
-  // in the 10% but outside the 1% send exceptions, and only exceptions.
-  it("sends exceptions from 10% of prod sessions and the rest from 1%", async () => {
+  // in the 5% but outside the 1% send exceptions, and only exceptions.
+  it("sends exceptions from 5% of prod sessions and the rest from 1%", async () => {
     const beforeSend = await beforeSendFor();
     const { inside, errorsOnly, outside } = sessionIds();
     const signal = (type: string, session: string) => ({

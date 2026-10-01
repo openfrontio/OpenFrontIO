@@ -42,11 +42,12 @@ export function sessionSamplingRate(env: GameEnv): number {
 
 // Fraction of sessions that send their errors: exceptions and console.error.
 // About one prod session in ten hits one, so at 100% nearly every error
-// would be its own billed session; at 10% a common error still shows up
-// hundreds of times a day. Both rates cut the same hash (isSessionSampled),
-// so the 1% sessions are among these and send their errors too.
+// would be its own billed session. 10% was ~750k billed sessions a month
+// (~$525); at 5% a common error still shows up many times a day. Both rates
+// cut the same hash (isSessionSampled), so the 1% sessions are among these
+// and send their errors too.
 export function errorSamplingRate(env: GameEnv): number {
-  return env === GameEnv.Prod ? 0.1 : 1;
+  return env === GameEnv.Prod ? 0.05 : 1;
 }
 
 /**
