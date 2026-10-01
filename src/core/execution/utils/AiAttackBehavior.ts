@@ -131,13 +131,52 @@ export class AiAttackBehavior {
   maybeAttack() {
     const routes = new Map<Player, BoatRoute | null>();
     this.boatRoutes = routes;
+    let landFront = false;
     try {
       this.chooseAttack();
+      for (const neighbor of this.landNeighbors ?? []) {
+        if (!this.player.isFriendly(neighbor)) landFront = true;
+      }
     } finally {
       this.landNeighbors = null;
       this.boatRoutes = null;
     }
-    this.clearBlockedLane(routes);
+    this.clearBlockedLane(routes, landFront);
+  }
+
+  // Called every tick. Hard & Impossible boats are beachheads: the moment one lands
+  // (its attack starts at the landing tile), attack its target by land from there.
+  // If someone else holds that coast by now, the tile just stays for later attacks.
+  followUpLandings(): void {
+    if (!this.landsBeachheads()) return;
+    for (const attack of this.player.outgoingAttacks()) {
+      const landing = attack.sourceTile();
+      const target = attack.target();
+      if (landing === null || !this.holdsLandNextTo(target, landing)) continue;
+      this.sendLandAttack(
+        target,
+        undefined,
+        target.isPlayer() ? target : undefined,
+      );
+    }
+  }
+
+  private holdsLandNextTo(
+    owner: Player | TerraNullius,
+    tile: TileRef,
+  ): boolean {
+    const n = this.game.neighbors4(tile, this.nbuf);
+    for (let i = 0; i < n; i++) {
+      const t = this.nbuf[i];
+      if (
+        this.game.isLand(t) &&
+        !this.game.isImpassable(t) &&
+        this.game.owner(t) === owner
+      ) {
+        return true;
+      }
+    }
+    return false;
   }
 
   private chooseAttack() {
@@ -239,6 +278,10 @@ export class AiAttackBehavior {
     if (this.sail(launch, dst).blocker !== null) return;
 
     const owner = this.game.owner(dst);
+    if (this.landsBeachheads()) {
+      this.sendBeachhead(owner, dst);
+      return;
+    }
     const cap = owner.isPlayer()
       ? this.troopSendCap()
       : this.troopSendCapForExpansion();
@@ -933,10 +976,15 @@ export class AiAttackBehavior {
       })
       .sort((a, b) => a.distance - b.distance); // Sort by distance (ascending)
 
-    // Try players in order of distance until we find reachable candidates
+    // Try players in order of distance until we find reachable candidates.
+    // Beachhead boats sail any distance, even past a warship: nothing nearer is left to attack.
     const reachablePlayers: Player[] = [];
     for (const entry of sortedPlayers) {
-      if (this.canReach(entry.player)) {
+      const reachable = this.landsBeachheads()
+        ? this.bordersByLand(entry.player) ||
+          this.boatRoute(entry.player) !== null
+        : this.canReach(entry.player);
+      if (reachable) {
         reachablePlayers.push(entry.player);
         // We only need up to 2 reachable candidates
         if (reachablePlayers.length >= 2) break;
@@ -1120,6 +1168,9 @@ export class AiAttackBehavior {
         const launch = canBuildTransportShip(this.game, this.player, tile);
         if (launch === false) continue;
         if (this.sail(launch, tile).blocker !== null) continue;
+        if (this.landsBeachheads()) {
+          return this.sendBeachhead(this.game.terraNullius(), tile);
+        }
 
         const troops = Math.min(
           this.player.troops() / 5,
@@ -1338,9 +1389,16 @@ export class AiAttackBehavior {
 
   private sendBoatAttack(target: Player): boolean {
     const route = this.boatRoute(target);
-    if (route === null || route.blocker !== null) {
+    if (route === null) return false;
+    // A beachhead boat is cheap enough to risk past a warship, one at a time
+    const beachhead = this.landsBeachheads();
+    if (
+      route.blocker !== null &&
+      (!beachhead || this.player.unitCount(UnitType.TransportShip) > 0)
+    ) {
       return false;
     }
+    if (beachhead) return this.sendBeachhead(target, route.landing);
 
     const troops = this.calculateAttackTroops(
       target,
@@ -1352,6 +1410,36 @@ export class AiAttackBehavior {
 
     this.game.addExecution(
       new TransportShipExecution(this.player, route.landing, troops),
+    );
+    return true;
+  }
+
+  // Hard & Impossible boat a tiny force and attack by land as soon as it lands
+  private landsBeachheads(): boolean {
+    const { difficulty } = this.game.config().gameConfig();
+    return (
+      this.player.type() === PlayerType.Nation &&
+      (difficulty === Difficulty.Hard || difficulty === Difficulty.Impossible)
+    );
+  }
+
+  // A 1% boat, if the land attack following its landing would be worth making now
+  private sendBeachhead(
+    target: Player | TerraNullius,
+    landing: TileRef,
+  ): boolean {
+    const troops = this.calculateAttackTroops(
+      target,
+      (targetTroops) => this.player.troops() - targetTroops,
+      target.isPlayer() ? target : undefined,
+    );
+    if (troops === null) return false;
+    this.game.addExecution(
+      new TransportShipExecution(
+        this.player,
+        landing,
+        Math.max(1, Math.floor(this.player.troops() / 100)),
+      ),
     );
     return true;
   }
@@ -1605,8 +1693,12 @@ export class AiAttackBehavior {
       );
   }
 
-  // Hard & Impossible send warships at whatever blocks the juiciest target they couldn't reach
-  private clearBlockedLane(routes: Map<Player, BoatRoute | null>): void {
+  // Hard & Impossible send warships at whatever blocks the juiciest target they couldn't reach.
+  // Without a land front any distance counts: the sea is the only way to attack.
+  private clearBlockedLane(
+    routes: Map<Player, BoatRoute | null>,
+    landFront: boolean,
+  ): void {
     if (this.warshipBehavior === undefined) return;
     const { difficulty } = this.game.config().gameConfig();
     if (
@@ -1620,7 +1712,7 @@ export class AiAttackBehavior {
     for (const [target, route] of routes) {
       if (
         route?.blocker &&
-        route.length <= maxRoute &&
+        (!landFront || route.length <= maxRoute) &&
         (!this.isFFA() || target.troops() < this.player.troops())
       ) {
         blocked.set(target, route.blocker);

@@ -7,6 +7,7 @@ import {
   GameMapType,
   GameMode,
   GameType,
+  TeamGameSpawnAreas,
 } from "../../../src/core/game/Game";
 import { createGame as createGameImpl } from "../../../src/core/game/GameImpl";
 import { GameMapImpl } from "../../../src/core/game/GameMap";
@@ -74,6 +75,7 @@ export function createIslandMap(): TestMapData {
 export function createGame(
   data: TestMapData,
   configOverrides: Partial<GameConfig> = {},
+  teamGameSpawnAreas?: TeamGameSpawnAreas,
 ): Game {
   const { width, height, grid } = data;
 
@@ -152,7 +154,14 @@ export function createGame(
   };
   const config = new TestConfig(gameConfig, new UserSettings(), false);
 
-  return createGameImpl([], [], gameMap, miniGameMap, config);
+  return createGameImpl(
+    [],
+    [],
+    gameMap,
+    miniGameMap,
+    config,
+    teamGameSpawnAreas,
+  );
 }
 
 // Create GameMapImpl from test map data (for map-only tests)

@@ -77,6 +77,9 @@ function getStructureRatios(
 /** Perceived cost increase percentage per city owned */
 const CITY_PERCEIVED_COST_INCREASE_PER_OWNED = 1;
 
+/** Cities owned before saving up for nukes inflates structure costs (not on Easy) */
+const CITIES_BEFORE_SAVING = 3;
+
 /** Factory ratio multiplier when the nation has coastal tiles */
 const FACTORY_COASTAL_RATIO_MULTIPLIER = 0.33;
 
@@ -511,16 +514,17 @@ export class NationStructureBehavior {
       return true;
     }
 
-    // On crowded maps the first structure is a port (or factory if landlocked)
-    // instead of a city, so nations can get income earlier.
-    // Mainly intended for private 200+ nation HvN games.
+    // On crowded maps, and when teams start apart in their own spawn areas (not on Easy),
+    // the first structure is a port (or factory if landlocked) instead of a city, so nations
+    // can get income earlier. Crowded maps are mainly private 200+ nation HvN games.
     // Own one-shot flag, set only on success: unitsOwned(City) never clears
     // (starves cities forever) and placementsCount can get consumed by the
     // SAM-first branch above.
     if (
       !citiesDisabled &&
       !this.builtCrowdedMapFirstStructure &&
-      this.isHighNationDensity()
+      (this.isHighNationDensity() ||
+        (difficulty !== Difficulty.Easy && this.startsInTeamSpawnArea()))
     ) {
       const preferredFirst =
         hasCoastalTiles && !config.isUnitDisabled(UnitType.Port)
@@ -586,6 +590,11 @@ export class NationStructureBehavior {
     }
 
     return false;
+  }
+
+  private startsInTeamSpawnArea(): boolean {
+    const team = this.player.team();
+    return team !== null && this.game.teamSpawnArea(team) !== undefined;
   }
 
   private hasHighStartingGold(): boolean {
@@ -699,6 +708,15 @@ export class NationStructureBehavior {
 
     const saveUpTarget = this.getSaveUpTarget();
     if (saveUpTarget === 0n || this.player.gold() >= saveUpTarget) {
+      return realCost;
+    }
+
+    // Like humans, nations don't save up before their first few cities stand. The build order
+    // still holds: until then, whatever is due before the next city is cheaper than that city.
+    if (
+      this.player.unitsOwned(UnitType.City) < CITIES_BEFORE_SAVING &&
+      this.game.config().gameConfig().difficulty !== Difficulty.Easy
+    ) {
       return realCost;
     }
 
