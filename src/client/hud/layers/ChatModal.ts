@@ -198,6 +198,9 @@ export class ChatModal extends LitElement {
   private selectCategory(categoryId: string) {
     this.selectedCategory = categoryId;
     this.selectedPhraseText = null;
+    this.selectedPhraseTemplate = null;
+    this.selectedQuickChatKey = null;
+    this.selectedPlayer = null;
     this.previewText = null;
     this.requiresPlayerSelection = false;
     this.requestUpdate();
@@ -215,6 +218,7 @@ export class ChatModal extends LitElement {
       `chat.${this.selectedCategory}.${phrase.key}`,
     );
     this.previewText = `chat.${this.selectedCategory}.${phrase.key}`;
+    this.selectedPlayer = null;
     this.requiresPlayerSelection = phrase.requiresPlayer;
     this.requestUpdate();
   }
@@ -306,6 +310,9 @@ export class ChatModal extends LitElement {
   public close() {
     this.selectedCategory = null;
     this.selectedPhraseText = null;
+    this.selectedPhraseTemplate = null;
+    this.selectedQuickChatKey = null;
+    this.selectedPlayer = null;
     this.previewText = null;
     this.requiresPlayerSelection = false;
     this.modalEl?.close();

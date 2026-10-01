@@ -1,12 +1,14 @@
 /**
  * Decides which replay a "watch replay" click opens.
  *
- * The default is the viewer, which can seek and plays the game while it's
- * being processed (LocalProcessing). A game from another build goes to
+ * The viewer, which can seek and plays the game while it's being processed
+ * (LocalProcessing), is opt-in for now (the "new replay viewer" setting);
+ * without it the classic client-side replay opens. A game from another build goes to
  * that build's versioned shell (#4934). The old client-side replay is the
  * fallback the viewer offers when it can't show a game.
  */
 
+import { UserSettings } from "../../core/game/UserSettings";
 import type { GameRecord } from "../../core/Schemas";
 import { ClientEnv } from "../ClientEnv";
 import { currentPagePath } from "../Utils";
@@ -53,8 +55,11 @@ export function classicReplayHref(gameID: string): string {
   } catch {
     // A tab without storage just gets routed back to the viewer.
   }
-  // On a versioned shell the pathname is the game ID; /game/<id> 404s there.
-  if (isReplayShellHost(window.location.hostname)) return `/${gameID}`;
+  // The /game/<id> shape only exists on the game-server origin. On a replay
+  // shell the game's page is replay.<domain>/<gameId>.
+  if (isReplayShellHost(window.location.hostname)) {
+    return `/${encodeURIComponent(gameID)}`;
+  }
   return currentPagePath(ClientEnv.gamePath(gameID));
 }
 
@@ -65,10 +70,12 @@ export function replayViewerHref(gameID: string): string {
 
 /**
  * Opens the viewer for a game this build can replay (the caller already
- * checked the build). Returns false if the viewer sent this game back and
- * the caller should use the client-side replay.
+ * checked the build). Returns false if the player hasn't turned the viewer
+ * on, or the viewer sent this game back, and the caller should use the
+ * client-side replay.
  */
 export function openReplayViewer(gameID: string, record: GameRecord): boolean {
+  if (!new UserSettings().replayViewer()) return false;
   if (classicGames().has(gameID)) return false;
   handOverRecord(gameID, record);
   const href = replayViewerHref(gameID);

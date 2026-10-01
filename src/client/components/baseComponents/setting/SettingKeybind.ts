@@ -90,13 +90,17 @@ export class SettingKeybind extends LitElement {
   private handleKeydown(e: KeyboardEvent) {
     if (!this.listening) return;
 
-    // Allow Tab and Escape to work normally (don't trap focus)
-    if (e.key === "Tab" || e.key === "Escape") {
-      if (e.key === "Escape") {
-        // Cancel listening on Escape
-        this.listening = false;
-        this.requestUpdate();
-      }
+    if (e.key === "Escape") {
+      // Cancel listening on Escape without bubbling to close parent modals
+      e.preventDefault();
+      e.stopPropagation();
+      this.listening = false;
+      this.requestUpdate();
+      return;
+    }
+
+    // Allow Tab to work normally (don't trap focus)
+    if (e.key === "Tab") {
       return;
     }
 

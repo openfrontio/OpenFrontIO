@@ -13,7 +13,18 @@ import {
   versionedViewerUrl,
 } from "../../../src/client/replay/ReplayEntry";
 import { fetchReplayRecord } from "../../../src/client/replay/ReplayRecord";
+import { UserSettings } from "../../../src/core/game/UserSettings";
 import type { GameRecord } from "../../../src/core/Schemas";
+
+// jsdom can't change location.hostname, so a test says whether this page
+// is a replay shell.
+const shell = vi.hoisted(() => ({ host: false }));
+vi.mock("../../../src/client/VersionedReplay", async (importOriginal) => ({
+  ...(await importOriginal<
+    typeof import("../../../src/client/VersionedReplay")
+  >()),
+  isReplayShellHost: () => shell.host,
+}));
 
 const record = (gitCommit: string) =>
   ({
@@ -34,6 +45,9 @@ function config(gameEnv: string, jwtAudience: string) {
 }
 
 beforeEach(() => {
+  // The viewer is opt-in; these tests are about what happens once it's on.
+  new UserSettings().setReplayViewer(true);
+  shell.host = false;
   sessionStorage.clear();
   window.location.hash = "";
   config("dev", "localhost");
@@ -46,6 +60,12 @@ afterEach(() => {
 });
 
 describe("openReplayViewer", () => {
+  test("without the setting, the classic replay opens", () => {
+    new UserSettings().setReplayViewer(false);
+    expect(openReplayViewer("abcd1234", record("test"))).toBe(false);
+    expect(window.location.hash).toBe("");
+  });
+
   test("opens the viewer and hands it the record, so it isn't fetched again", async () => {
     const fetchFn = vi.fn();
     expect(openReplayViewer("abcd1234", record("test"))).toBe(true);
@@ -69,6 +89,13 @@ describe("openReplayViewer", () => {
     expect(window.location.hash).toBe("");
     // Only that game.
     expect(openReplayViewer("efgh5678", record("test"))).toBe(true);
+  });
+
+  test("on a replay shell the client-side replay is the shell's own page", () => {
+    // /game/<id> only exists on the game-server origin.
+    expect(classicReplayHref("abcd1234")).toMatch(/\/game\/abcd1234$/);
+    shell.host = true;
+    expect(classicReplayHref("abcd1234")).toBe("/abcd1234");
   });
 });
 

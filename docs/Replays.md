@@ -4,6 +4,11 @@ The replay viewer plays a finished game with the game's own renderer and
 HUD, and can seek anywhere in it. The replay is made in the viewer's
 browser from the game's archived record. Nothing runs on the server.
 
+It's opt-in while it's rolled out: "watch replay" opens the classic replay
+unless the player turns on **New Replay Viewer** in the settings
+(`UserSettings.replayViewer`). A `#replay-viewer=<gameID>` link opens the
+viewer either way.
+
 ## How a replay is made
 
 1. **Open.** Watching a finished game (from the lobby modal, or
@@ -20,12 +25,18 @@ browser from the game's archived record. Nothing runs on the server.
    first, then new frames every few seconds (the first batch after about
    a second). Frames are only sent once a later hash has matched, so if a
    mismatch turns up partway, what the viewer already has is still the
-   real game. The timeline spans the whole game from the start; the part
+   real game. The exception is the end: frames after the record's last
+   hash have nothing left to check them, so they're sent as they are.
+   Hashes come every 10 turns in multiplayer and every 100 in
+   singleplayer, so that's the last few seconds at most. The classic
+   replay doesn't check them either. The hashes catch a build that
+   drifted from the original game; they aren't a signature, since they
+   come from the same record. The timeline spans the whole game from the start; the part
    not processed yet is grey, and seeking into it snaps back.
 5. **Store.** Once processing finishes, the replay is kept in IndexedDB,
    so watching it again opens instantly (see [Storage](#storage)).
 
-A 26 minute, 25 player game takes about 80 s to process in a dev build
+A 26-minute, 25-player game takes about 70 s to process in a dev build
 and is stored in about 24 MB.
 
 ## Storage

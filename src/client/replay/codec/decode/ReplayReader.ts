@@ -105,11 +105,14 @@ export class ReplayReader {
       this._chunks.push(c);
       h.totalFrames += c.frameCount;
     }
-    h.players.push(...more.players);
+    // No push(...list): a stored replay arrives as one append, and a list
+    // that long passed as arguments throws a RangeError.
+    for (const p of more.players) h.players.push(p);
     // this.ctx reads this same array.
-    h.unitTypes.push(...more.unitTypes);
+    for (const t of more.unitTypes) h.unitTypes.push(t);
     for (const key of EVENT_LISTS) {
-      (h[key] as unknown[]).push(...more.events[key]);
+      const list = h[key] as unknown[];
+      for (const e of more.events[key]) list.push(e);
     }
     h.spawnPhaseEnd ??= more.events.spawnPhaseEnd;
     for (const e of more.events.constructionStarts) {

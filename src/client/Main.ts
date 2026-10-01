@@ -524,6 +524,11 @@ class Client {
 
     window.addEventListener("beforeunload", async () => {
       console.log("Browser is closing");
+      if (this.replayViewerID !== null) {
+        // Leaving the replay viewer always navigates, so the same applies:
+        // nothing else clears the in-game signal it set.
+        setInGameSignal(false);
+      }
       if (this.lobbyHandle !== null) {
         // Leaving a game by navigating away (the popstate path's
         // `window.location.href = "/"`, or a desktop renderer reload) tears the

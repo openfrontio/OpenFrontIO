@@ -527,6 +527,7 @@
   "control_panel": {
     "allied_afk_neighbor_info": "You can attack disconnected players even if you are allied with them.",
     "army_limit_warning": "You're near your army limit! Consider sending troops to teammates.",
+    "attack_ratio": "{percent}%\n({troops})",
     "low_troops_warning": "You are very low on troops - You should always keep some troops for defense.",
     "teammate_afk_neighbor_info": "You can attack disconnected teammates.",
     "traitor_neighbor_info": "You can betray traitors without becoming a traitor yourself."
@@ -1371,6 +1372,7 @@
     "britanniaclassic": "Britannia (Classic)",
     "canaryislands": "Canary Islands",
     "capecod": "Cape Cod",
+    "capeofgoodhope": "Cape Of Good Hope",
     "caribbean": "Caribbean",
     "caspiansea": "Caspian Sea",
     "caucasus": "Caucasus",
@@ -1470,6 +1472,7 @@
     "tradersdream": "Traders Dream",
     "twolakes": "Two Lakes",
     "unitedstates": "United States",
+    "vancouverisland": "Vancouver Island",
     "venice": "Venice",
     "vietnam": "Vietnam",
     "warshipwarship": "Warship Warship",
@@ -2360,6 +2363,8 @@
     "press_a_key": "Press a key",
     "render_debug_gui": "Render Debug GUI",
     "render_debug_gui_desc": "Toggle the renderer tuning panel",
+    "replay_viewer_desc": "Open replays with rewind controls. Off opens the classic replay",
+    "replay_viewer_label": "New Replay Viewer",
     "request_alliance": "Request Alliance",
     "request_alliance_desc": "Send an alliance request to the player whose tile is under your cursor.",
     "reset": "Reset",
