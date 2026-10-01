@@ -1,6 +1,6 @@
 import { html, TemplateResult } from "lit";
 import { customElement, state } from "lit/decorators.js";
-import { translateText } from "../client/Utils";
+import { getMapName, translateText } from "../client/Utils";
 import { UserMeResponse } from "../core/ApiSchemas";
 import { assetUrl } from "../core/AssetUrls";
 import { DoomsdayClockSpeed } from "../core/game/DoomsdayClock";
@@ -361,7 +361,8 @@ export class SinglePlayerModal extends BaseModal {
   private renderResumeBanner(): TemplateResult | null {
     if (!this.resumeSave) return null;
 
-    const map = this.resumeSave.gameStartInfo?.config?.gameMap ?? "World";
+    const rawMap = this.resumeSave.gameStartInfo?.config?.gameMap ?? "World";
+    const map = getMapName(rawMap) ?? String(rawMap);
     const totalSeconds = Math.floor(this.resumeSave.numTurns / 10);
     const pad = (n: number) => (n < 10 ? `0${n}` : `${n}`);
     const h = Math.floor(totalSeconds / 3600);
@@ -380,10 +381,8 @@ export class SinglePlayerModal extends BaseModal {
           </div>
           <div class="text-xs text-white/70">
             ${translateText("single_modal.resume_desc", {
-              map: String(map),
+              map,
               time,
-              minutes: pad(m),
-              seconds: pad(s),
             })}
           </div>
         </div>

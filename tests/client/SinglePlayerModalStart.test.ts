@@ -1,7 +1,8 @@
+import { render } from "lit";
 import { describe, expect, it, vi } from "vitest";
 import * as inGameModal from "../../src/client/InGameModal";
 import * as saveManager from "../../src/client/SinglePlayerSaveManager";
-import { UnitType } from "../../src/core/game/Game";
+import { GameMapType, UnitType } from "../../src/core/game/Game";
 
 vi.mock("../../src/client/Cosmetics", () => ({
   getPlayerCosmetics: vi.fn(async () => ({})),
@@ -316,5 +317,31 @@ describe("SinglePlayerModal start", () => {
 
     confirmSpy.mockRestore();
     clearSpy.mockRestore();
+  });
+
+  it("renders resume banner with translated map name and time", async () => {
+    const utils = await import("../../src/client/Utils");
+    const translateSpy = vi.spyOn(utils, "translateText");
+
+    const modal = createModal();
+    expect(modal.renderResumeBanner()).toBeNull();
+
+    modal.resumeSave = {
+      gameID: "test_save",
+      numTurns: 1250,
+      gameStartInfo: { config: { gameMap: GameMapType.World } },
+    };
+
+    const banner = modal.renderResumeBanner();
+    expect(banner).not.toBeNull();
+    const container = document.createElement("div");
+    render(banner, container);
+
+    expect(translateSpy).toHaveBeenCalledWith("single_modal.resume_desc", {
+      map: "map.world",
+      time: "02:05",
+    });
+
+    translateSpy.mockRestore();
   });
 });
