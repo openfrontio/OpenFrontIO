@@ -15,6 +15,7 @@ import {
 import {
   BuildableUnit,
   bulkCost,
+  Cell,
   PlayerBuildableUnitType,
   UnitType,
 } from "../../core/game/Game";
@@ -25,6 +26,9 @@ import {
   ConfirmGhostStructureEvent,
   MouseMoveEvent,
   MouseUpEvent,
+  TouchGhostPlacementDragStartEvent,
+  TouchGhostPlacementEvent,
+  TouchGhostPlacementMoveEvent,
 } from "../InputHandler";
 import { buildNukeTrajectory, MapRenderer } from "../render/gl";
 import type { SAMInfo } from "../render/gl/utils/NukeTrajectory";
@@ -46,6 +50,7 @@ export function shouldPreserveGhostAfterBuild(unitType: UnitType): boolean {
 // draws the red X marker essentially at the destination while leaving the
 // visible line unchanged (1.0 would mean "no marker").
 const T_BLOCKED_DST = 0.9999;
+const TOUCH_CONFIRM_DISTANCE_PX = 32;
 
 /**
  * Whether a SAM belongs in the nuke trajectory preview's threat set.
@@ -77,6 +82,8 @@ export class BuildPreviewController implements Controller {
   private readonly mousePos = { x: 0, y: 0 };
   private lastGhostQueryAt: number = 0;
   private pendingConfirm: MouseUpEvent | null = null;
+  private touchPreviewTile: TileRef | null = null;
+  private touchPlacementMode = false;
 
   // Buildable validation runs on the snapped tile under the cursor, but the
   // rendered icon follows the cursor at sub-tile precision so motion is
@@ -107,6 +114,16 @@ export class BuildPreviewController implements Controller {
   init() {
     this.eventBus.on(MouseMoveEvent, (e) => this.moveGhost(e));
     this.eventBus.on(MouseUpEvent, (e) => this.requestConfirmStructure(e));
+    this.eventBus.on(TouchGhostPlacementEvent, (e) =>
+      this.handleTouchPlacement(e),
+    );
+    this.eventBus.on(TouchGhostPlacementMoveEvent, (e) =>
+      this.moveTouchPreview(e.x, e.y),
+    );
+    this.eventBus.on(TouchGhostPlacementDragStartEvent, (e) => {
+      e.handled =
+        this.touchPreviewTile === null || this.isNearTouchPreview(e.x, e.y);
+    });
     this.eventBus.on(ConfirmGhostStructureEvent, () =>
       this.requestConfirmStructure(
         new MouseUpEvent(this.mousePos.x, this.mousePos.y),
@@ -124,10 +141,16 @@ export class BuildPreviewController implements Controller {
       const ghost = this.lastGhostData;
       const traj = this.nukeTrajectoryStatic;
       if (ghost !== null || traj !== null) {
-        const w = this.transformHandler.screenToWorldCoordinatesFloat(
-          this.mousePos.x,
-          this.mousePos.y,
-        );
+        const w =
+          this.touchPreviewTile === null
+            ? this.transformHandler.screenToWorldCoordinatesFloat(
+                this.mousePos.x,
+                this.mousePos.y,
+              )
+            : {
+                x: this.game.x(this.touchPreviewTile) + 0.5,
+                y: this.game.y(this.touchPreviewTile) + 0.5,
+              };
         if (ghost !== null) {
           // The range circle (defense post / SAM / nuke radius) normally
           // follows the cursor, so smooth it the same way as the icon. When
@@ -203,16 +226,28 @@ export class BuildPreviewController implements Controller {
 
   renderGhost() {
     if (!this.ghostUnit) return;
+    if (this.touchPlacementMode && this.touchPreviewTile === null) {
+      this.lastGhostData = null;
+      this.view.updateGhostPreview(null);
+      this.clearNukeTrajectory();
+      return;
+    }
 
     const now = performance.now();
     if (now - this.lastGhostQueryAt < 50) return;
     this.lastGhostQueryAt = now;
     let tileRef: TileRef | undefined;
     let trajectoryTileRef: TileRef | undefined;
-    const tile = this.transformHandler.screenToWorldCoordinates(
-      this.mousePos.x,
-      this.mousePos.y,
-    );
+    const tile =
+      this.touchPreviewTile === null
+        ? this.transformHandler.screenToWorldCoordinates(
+            this.mousePos.x,
+            this.mousePos.y,
+          )
+        : new Cell(
+            this.game.x(this.touchPreviewTile),
+            this.game.y(this.touchPreviewTile),
+          );
     if (this.game.isValidCoord(tile.x, tile.y)) {
       tileRef = this.game.ref(tile.x, tile.y);
       trajectoryTileRef = tileRef;
@@ -255,10 +290,12 @@ export class BuildPreviewController implements Controller {
       }
     }
 
+    const queriedTouchPreview = this.touchPreviewTile;
     this.game
       ?.myPlayer()
       ?.buildables(tileRef, [this.ghostUnit?.buildableUnit.type])
       .then((buildables) => {
+        if (queriedTouchPreview !== this.touchPreviewTile) return;
         if (!this.ghostUnit) {
           this.pendingConfirm = null;
           this.emitGhostPreview(tileRef, targetingAlly, trajectoryTileRef);
@@ -632,8 +669,58 @@ export class BuildPreviewController implements Controller {
   }
 
   private moveGhost(e: MouseMoveEvent) {
+    this.touchPlacementMode = false;
+    this.touchPreviewTile = null;
     this.mousePos.x = e.x;
     this.mousePos.y = e.y;
+  }
+
+  private handleTouchPlacement(e: TouchGhostPlacementEvent): void {
+    this.touchPlacementMode = true;
+    if (this.touchPreviewTile !== null && this.isNearTouchPreview(e.x, e.y)) {
+      const preview = this.touchPreviewScreenPosition();
+      if (preview !== null) {
+        this.requestConfirmStructure(new MouseUpEvent(preview.x, preview.y));
+      }
+      return;
+    }
+
+    this.moveTouchPreview(e.x, e.y);
+  }
+
+  private moveTouchPreview(x: number, y: number): void {
+    const tile = this.transformHandler.screenToWorldCoordinates(x, y);
+    if (!this.game.isValidCoord(tile.x, tile.y)) return;
+    const next = this.game.ref(tile.x, tile.y);
+    if (next !== this.touchPreviewTile) {
+      this.pendingConfirm = null;
+      if (this.ghostUnit) {
+        Object.assign(this.ghostUnit.buildableUnit, {
+          canBuild: false,
+          canUpgrade: false,
+        });
+      }
+    }
+    this.touchPreviewTile = next;
+    this.lastGhostQueryAt = 0;
+  }
+
+  private isNearTouchPreview(x: number, y: number): boolean {
+    const preview = this.touchPreviewScreenPosition();
+    return (
+      preview !== null &&
+      Math.hypot(x - preview.x, y - preview.y) <= TOUCH_CONFIRM_DISTANCE_PX
+    );
+  }
+
+  private touchPreviewScreenPosition(): { x: number; y: number } | null {
+    if (this.touchPreviewTile === null) return null;
+    return this.transformHandler.worldToScreenCoordinates(
+      new Cell(
+        this.game.x(this.touchPreviewTile) + 0.5,
+        this.game.y(this.touchPreviewTile) + 0.5,
+      ),
+    );
   }
 
   private createGhostStructure(type: PlayerBuildableUnitType | null) {
@@ -653,6 +740,7 @@ export class BuildPreviewController implements Controller {
 
   private clearGhostStructure() {
     this.pendingConfirm = null;
+    this.touchPreviewTile = null;
     this.ghostUnit = null;
     this.lastGhostData = null;
     this.view.updateGhostPreview(null);

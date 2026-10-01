@@ -4,7 +4,10 @@ import {
   samThreatensNukePreview,
   shouldPreserveGhostAfterBuild,
 } from "../../../src/client/controllers/BuildPreviewController";
-import { MouseUpEvent } from "../../../src/client/InputHandler";
+import {
+  MouseUpEvent,
+  TouchGhostPlacementEvent,
+} from "../../../src/client/InputHandler";
 import { BuildUnitIntentEvent } from "../../../src/client/Transport";
 import { EventBus } from "../../../src/core/EventBus";
 import { UnitType } from "../../../src/core/game/Game";
@@ -130,5 +133,153 @@ describe("BuildPreviewController confirm with the pointer off the map", () => {
       | BuildUnitIntentEvent
       | undefined;
     expect(intent?.tile).toBe(43);
+  });
+});
+
+describe("BuildPreviewController touch preview", () => {
+  function makeController(type: UnitType) {
+    const eventBus = new EventBus();
+    const builds: BuildUnitIntentEvent[] = [];
+    eventBus.on(BuildUnitIntentEvent, (event) => builds.push(event));
+    const uiState = { ghostStructure: type, upgradeMultiplier: 1 };
+    const controller = new BuildPreviewController(
+      {
+        myPlayer: () => ({}),
+        isValidCoord: () => true,
+        ref: (x: number, y: number) => x * 100 + y,
+        x: (ref: number) => Math.floor(ref / 100),
+        y: (ref: number) => ref % 100,
+      } as any,
+      eventBus,
+      uiState as any,
+      {
+        screenToWorldCoordinates: (x: number) =>
+          x < 150 ? { x: 1, y: 1 } : { x: 2, y: 2 },
+        worldToScreenCoordinates: (cell: { x: number }) =>
+          cell.x < 2 ? { x: 100, y: 100 } : { x: 200, y: 200 },
+      } as any,
+      {
+        updateGhostPreview: vi.fn(),
+        updateNukeTrajectory: vi.fn(),
+      } as any,
+      { nukeAllianceSafetyDuration: () => 0 } as any,
+    );
+    (controller as any).ghostUnit = {
+      buildableUnit: { type, canBuild: true, canUpgrade: false },
+    };
+    return { controller, builds, uiState };
+  }
+
+  test("moves on a distant tap and confirms the anchored tile on a nearby tap", () => {
+    const { controller, builds } = makeController(UnitType.City);
+
+    (controller as any).handleTouchPlacement(
+      new TouchGhostPlacementEvent(100, 100),
+    );
+    (controller as any).handleTouchPlacement(
+      new TouchGhostPlacementEvent(200, 200),
+    );
+    expect((controller as any).touchPreviewTile).toBe(202);
+    expect(builds).toHaveLength(0);
+    (controller as any).ghostUnit.buildableUnit.canBuild = true;
+
+    (controller as any).handleTouchPlacement(
+      new TouchGhostPlacementEvent(205, 205),
+    );
+    expect(builds.map((event) => event.tile)).toEqual([202]);
+  });
+
+  test("preserves a selected nuke for repeated touch launches", () => {
+    const { controller, builds, uiState } = makeController(UnitType.AtomBomb);
+
+    (controller as any).handleTouchPlacement(
+      new TouchGhostPlacementEvent(100, 100),
+    );
+    (controller as any).ghostUnit.buildableUnit.canBuild = true;
+    (controller as any).handleTouchPlacement(
+      new TouchGhostPlacementEvent(105, 105),
+    );
+    (controller as any).handleTouchPlacement(
+      new TouchGhostPlacementEvent(200, 200),
+    );
+    (controller as any).ghostUnit.buildableUnit.canBuild = true;
+    (controller as any).handleTouchPlacement(
+      new TouchGhostPlacementEvent(205, 205),
+    );
+
+    expect(builds.map((event) => event.tile)).toEqual([101, 202]);
+    expect(uiState.ghostStructure).toBe(UnitType.AtomBomb);
+  });
+
+  test("moving the preview clears cached eligibility and pending confirmation", () => {
+    const { controller } = makeController(UnitType.City);
+    (controller as any).touchPreviewTile = 101;
+    (controller as any).pendingConfirm = new MouseUpEvent(100, 100);
+    (controller as any).ghostUnit.buildableUnit.canUpgrade = 42;
+
+    (controller as any).moveTouchPreview(200, 200);
+
+    expect((controller as any).touchPreviewTile).toBe(202);
+    expect((controller as any).pendingConfirm).toBeNull();
+    expect((controller as any).ghostUnit.buildableUnit).toEqual(
+      expect.objectContaining({ canBuild: false, canUpgrade: false }),
+    );
+  });
+
+  test("ignores validation returned for an earlier touch preview", async () => {
+    let resolveBuildables!: (value: any[]) => void;
+    const buildables = vi.fn(
+      () =>
+        new Promise<any[]>((resolve) => {
+          resolveBuildables = resolve;
+        }),
+    );
+    const eventBus = new EventBus();
+    const controller = new BuildPreviewController(
+      {
+        myPlayer: () => ({ buildables }),
+        isValidCoord: () => true,
+        ref: (x: number, y: number) => x * 100 + y,
+        x: (ref: number) => Math.floor(ref / 100),
+        y: (ref: number) => ref % 100,
+        isImpassable: () => false,
+      } as any,
+      eventBus,
+      { ghostStructure: UnitType.City, upgradeMultiplier: 1 } as any,
+      {
+        screenToWorldCoordinates: (x: number) =>
+          x < 150 ? { x: 1, y: 1 } : { x: 2, y: 2 },
+        worldToScreenCoordinates: () => ({ x: 100, y: 100 }),
+      } as any,
+      {
+        updateGhostPreview: vi.fn(),
+        updateNukeTrajectory: vi.fn(),
+      } as any,
+      { nukeAllianceSafetyDuration: () => 0 } as any,
+    );
+    (controller as any).ghostUnit = {
+      buildableUnit: {
+        type: UnitType.City,
+        canBuild: false,
+        canUpgrade: false,
+      },
+    };
+    (controller as any).touchPlacementMode = true;
+    (controller as any).touchPreviewTile = 101;
+    (controller as any).lastGhostQueryAt = -Infinity;
+
+    controller.renderGhost();
+    expect(buildables).toHaveBeenCalledWith(101, [UnitType.City]);
+
+    (controller as any).moveTouchPreview(200, 200);
+    resolveBuildables([
+      { type: UnitType.City, canBuild: false, canUpgrade: 42 },
+    ]);
+    await Promise.resolve();
+
+    expect((controller as any).touchPreviewTile).toBe(202);
+    expect((controller as any).ghostUnit.buildableUnit).toEqual(
+      expect.objectContaining({ canBuild: false, canUpgrade: false }),
+    );
   });
 });
