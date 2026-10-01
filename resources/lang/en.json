@@ -1749,6 +1749,23 @@
     "nation": "Nation",
     "player": "Player"
   },
+  "prestige": {
+    "button": "Prestige",
+    "ceremony_title": "Prestige {rank}",
+    "confirm": "Hold to prestige",
+    "continue": "Continue",
+    "error": "Couldn't prestige. Nothing has changed, so try again.",
+    "gain_caps": "Caps bonus",
+    "gain_cosmetic": "Exclusive cosmetic",
+    "gain_emblem": "Prestige {rank} emblem",
+    "irreversible": "This can't be undone",
+    "keep_holding": "Keep holding…",
+    "ready": "Level 100! Until you prestige, XP only adds to your lifetime total.",
+    "submitting": "Prestiging…",
+    "summary": "You go back to level 1. You keep your lifetime stats, XP and cosmetics.",
+    "title": "Enter Prestige {rank}",
+    "unlocks": "Unlocks"
+  },
   "private_lobby": {
     "disabled_units": "Disabled Units",
     "enter_id": "Enter Lobby ID",
@@ -1775,6 +1792,9 @@
     "title": "Join Lobby",
     "version_mismatch": "This game was created with a different version. Cannot join."
   },
+  "profile_card": {
+    "lifetime_xp": "Lifetime XP"
+  },
   "progression": {
     "awaiting_end": "XP is awarded when the game ends.",
     "bonus_line": "+{percent}% XP ({source})",
@@ -1792,7 +1812,6 @@
     "legend_reached_title": "You are a Legend!",
     "level": "Level {level}",
     "level_reached": "Level {level}!",
-    "lifetime_xp": "{xp} lifetime XP",
     "line_feats": "Feats",
     "line_first_win": "First win of the day",
     "line_placement": "Placement",

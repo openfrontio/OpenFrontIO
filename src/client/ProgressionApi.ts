@@ -1,6 +1,8 @@
 import {
   type GameXpResponse,
   GameXpResponseSchema,
+  type PrestigeResponse,
+  PrestigeResponseSchema,
   type ProgressionConfig,
   ProgressionConfigSchema,
   type PublicProgress,
@@ -128,6 +130,41 @@ export async function fetchPublicPlayerProgress(
   } catch (err) {
     console.warn("fetchPublicPlayerProgress: request failed", err);
     return false;
+  }
+}
+
+// POST /users/@me/prestige — the opt-in reset at level 100. The idempotency
+// key is per confirmation, so a retried request (a slow network, a double
+// submit) prestiges once. Unlike the reads above this does surface failure:
+// the player asked for it and must be told it didn't happen.
+export async function prestigeMe(
+  idempotencyKey: string,
+): Promise<{ ok: true; data: PrestigeResponse } | { ok: false }> {
+  try {
+    const authorization = await getAuthHeader();
+    if (authorization === "") return { ok: false };
+    const res = await fetch(`${getApiBase()}/users/@me/prestige`, {
+      method: "POST",
+      headers: {
+        Accept: "application/json",
+        Authorization: authorization,
+        "Idempotency-Key": idempotencyKey,
+      },
+      signal: AbortSignal.timeout(15_000),
+    });
+    if (!res.ok) {
+      console.warn("prestigeMe: unexpected status", res.status);
+      return { ok: false };
+    }
+    const parsed = PrestigeResponseSchema.safeParse(await res.json());
+    if (!parsed.success) {
+      console.warn("prestigeMe: Zod validation failed", parsed.error);
+      return { ok: false };
+    }
+    return { ok: true, data: parsed.data };
+  } catch (err) {
+    console.warn("prestigeMe: request failed", err);
+    return { ok: false };
   }
 }
 

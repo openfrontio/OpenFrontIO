@@ -1,7 +1,11 @@
 import { html, nothing, TemplateResult } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import { ClientEnv } from "src/client/ClientEnv";
-import { PlayerStatsTree, UserMeResponse } from "../core/ApiSchemas";
+import {
+  PlayerStatsTree,
+  PrestigeResponse,
+  UserMeResponse,
+} from "../core/ApiSchemas";
 import { assetUrl } from "../core/AssetUrls";
 import { hasLinkedIdentity } from "./AccountIdentity";
 import { fetchPlayerById, getUserMe, invalidateUserMe } from "./Api";
@@ -28,6 +32,9 @@ import type { CreatorChangedDetail } from "./components/CreatorCodePanel";
 import "./components/CurrencyDisplay";
 import "./components/Difficulties";
 import "./components/FriendsList";
+import "./components/PrestigeFlow";
+import type { PrestigeFlow } from "./components/PrestigeFlow";
+import "./components/ProfileCard";
 import "./components/RewardsPanel";
 import type { RewardsChangedDetail } from "./components/RewardsPanel";
 import { googleLinkButton } from "./components/ui/GoogleLinkButton";
@@ -186,6 +193,7 @@ export class AccountModal extends BaseModal {
       <div class="custom-scrollbar mr-1">
         <div class="p-6">${this.renderTab(tab)}</div>
       </div>
+      <prestige-flow @prestiged=${this.handlePrestiged}></prestige-flow>
     `;
   }
 
@@ -248,6 +256,7 @@ export class AccountModal extends BaseModal {
     }
     return html`
       <div class="flex flex-col gap-6">
+        ${this.renderProfileCard("compact")}
         <div class="bg-white/5 rounded-xl border border-white/10 p-6">
           <div class="flex flex-col items-center gap-4">
             <div
@@ -313,6 +322,7 @@ export class AccountModal extends BaseModal {
   private renderCrazyGamesAccount(user: CrazyGamesUser): TemplateResult {
     return html`
       <div class="flex flex-col gap-6">
+        ${this.renderProfileCard("compact")}
         <div class="bg-white/5 rounded-xl border border-white/10 p-6">
           <div class="flex flex-col items-center gap-4">
             <div
@@ -361,16 +371,13 @@ export class AccountModal extends BaseModal {
   }
 
   private renderStatsTab(): TemplateResult {
-    if (!this.hasAnyStats()) {
-      return this.renderEmptyState(
-        "📊",
-        translateText("account_modal.no_stats"),
-      );
-    }
     return html`
-      <player-stats-tree-view
-        .statsTree=${this.statsTree}
-      ></player-stats-tree-view>
+      ${this.renderProfileCard("full")}
+      ${this.hasAnyStats()
+        ? html`<player-stats-tree-view
+            .statsTree=${this.statsTree}
+          ></player-stats-tree-view>`
+        : this.renderEmptyState("📊", translateText("account_modal.no_stats"))}
     `;
   }
 
@@ -455,6 +462,44 @@ export class AccountModal extends BaseModal {
     // One-shot: a share-link prefill must not reappear in the input after the
     // player has bound or unbound a creator in this session.
     this.prefillCreatorCode = undefined;
+    this.requestUpdate();
+  };
+
+  // Your level at a glance, the way a shared profile link shows it: one row
+  // on the account page, the full card heading the Stats tab. Nothing while
+  // progression is off.
+  private renderProfileCard(
+    variant: "full" | "compact",
+  ): TemplateResult | typeof nothing {
+    const player = this.userMeResponse?.player;
+    if (!player?.publicId || !player.progress) return nothing;
+    return html`<profile-card
+      class=${variant === "full" ? "mb-4 block" : "block"}
+      .variant=${variant}
+      .username=${player.username ?? player.publicId}
+      .clanTag=${player.clans?.[0]?.tag ?? null}
+      .progress=${player.progress}
+      prestigeable
+      @prestige-request=${this.handlePrestigeRequest}
+    ></profile-card>`;
+  }
+
+  private handlePrestigeRequest = (): void => {
+    const progress = this.userMeResponse?.player?.progress;
+    if (!progress) return;
+    this.querySelector<PrestigeFlow>("prestige-flow")?.open(progress);
+  };
+
+  // The server has prestiged the player: show the new rank behind the
+  // ceremony, list the rewards it granted, and drop the cached /users/@me.
+  private handlePrestiged = (event: CustomEvent<PrestigeResponse>): void => {
+    if (!this.userMeResponse) return;
+    const player = this.userMeResponse.player;
+    player.progress = event.detail.progress;
+    if (event.detail.rewards.length > 0) {
+      player.rewards = [...(player.rewards ?? []), ...event.detail.rewards];
+    }
+    invalidateUserMe();
     this.requestUpdate();
   };
 
