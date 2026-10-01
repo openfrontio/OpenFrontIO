@@ -2027,8 +2027,15 @@ export async function queueLobby(
 // POST /api/create_game on the game server — mints a fresh private lobby with
 // the caller as creator. Deliberately has no worker prefix and no id: the edge
 // (nginx in prod, the vite dev proxy locally) picks a worker, which mints a
-// self-owned id and returns it.
-export async function createLobby(): Promise<GameInfo> {
+// self-owned id and returns it, along with the play token the lobby was
+// created under. The host must join with that same token: a cookieless guest
+// (blocked third-party cookies, some iframes) is minted a new identity on each
+// JWT refresh, and a refresh landing between create and join leaves the host
+// in their own lobby as someone who is not its creator.
+export async function createLobby(): Promise<{
+  lobby: GameInfo;
+  creatorToken: string;
+}> {
   // A new game needs a server that takes new games on this build: ask the
   // API (multi-server v2), falling back to the page's own server. When the
   // list says nothing runs this build any more, creating against the page's
@@ -2078,7 +2085,7 @@ export async function createLobby(): Promise<GameInfo> {
     const data = await response.json();
     console.log("Success:", data);
 
-    return data as GameInfo;
+    return { lobby: data as GameInfo, creatorToken: token };
   } catch (error) {
     console.error("Error creating lobby:", error);
     throw error;
