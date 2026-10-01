@@ -19,6 +19,7 @@ import {
   HumansVsNations,
   Quads,
   Trios,
+  UnitTranslations,
   UnitType,
 } from "../../core/game/Game";
 import { TeamCountConfig } from "../../core/Schemas";
@@ -106,20 +107,6 @@ function renderSection(
     </section>
   `;
 }
-
-const unitOptions: { type: UnitType; translationKey: string }[] = [
-  { type: UnitType.City, translationKey: "unit_type.city" },
-  { type: UnitType.DefensePost, translationKey: "unit_type.defense_post" },
-  { type: UnitType.Port, translationKey: "unit_type.port" },
-  { type: UnitType.Warship, translationKey: "unit_type.warship" },
-  { type: UnitType.TransportShip, translationKey: "unit_type.boat" },
-  { type: UnitType.MissileSilo, translationKey: "unit_type.missile_silo" },
-  { type: UnitType.SAMLauncher, translationKey: "unit_type.sam_launcher" },
-  { type: UnitType.AtomBomb, translationKey: "unit_type.atom_bomb" },
-  { type: UnitType.HydrogenBomb, translationKey: "unit_type.hydrogen_bomb" },
-  { type: UnitType.MIRV, translationKey: "unit_type.mirv" },
-  { type: UnitType.Factory, translationKey: "unit_type.factory" },
-];
 
 const MAP_ICON = svg`<path
   d="M21.731 2.269a2.625 2.625 0 00-3.712 0l-1.157 1.157 3.712 3.712 1.157-1.157a2.625 2.625 0 000-3.712zM19.513 8.199l-3.712-3.712-12.15 12.15a5.25 5.25 0 00-1.32 2.214l-.8 2.685a.75.75 0 00.933.933l2.685-.8a5.25 5.25 0 002.214-1.32L19.513 8.2z"
@@ -376,20 +363,22 @@ export class GameConfigSettings extends LitElement {
   }
 
   private renderUnitTypeOptions(disabledUnits: UnitType[]): TemplateResult[] {
-    return unitOptions.map(({ type, translationKey }) => {
-      const isEnabled = !disabledUnits.includes(type);
-      return html`
-        <button
-          class="${cardClass(isEnabled, "p-4 text-center")}"
-          aria-pressed=${isEnabled}
-          @click=${() => this.handleUnitToggle(type, isEnabled)}
-        >
-          <span class="${CARD_LABEL_CLASS} ${stateTextClass(isEnabled)}">
-            ${translateText(translationKey)}
-          </span>
-        </button>
-      `;
-    });
+    return Array.from(UnitTranslations.entries()).map(
+      ([type, translationKey]) => {
+        const isEnabled = !disabledUnits.includes(type);
+        return html`
+          <button
+            class="${cardClass(isEnabled, "p-4 text-center")}"
+            aria-pressed=${isEnabled}
+            @click=${() => this.handleUnitToggle(type, isEnabled)}
+          >
+            <span class="${CARD_LABEL_CLASS} ${stateTextClass(isEnabled)}">
+              ${translateText(translationKey)}
+            </span>
+          </button>
+        `;
+      },
+    );
   }
 
   private renderMapSearchInput(): TemplateResult {

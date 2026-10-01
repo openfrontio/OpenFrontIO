@@ -37,8 +37,9 @@ vi.mock("howler", () => ({
   },
 }));
 
+import { PublicGameInfo } from "src/core/Schemas";
 import { JoinLobbyModal } from "../../src/client/JoinLobbyModal";
-import { GameMode, GameType } from "../../src/core/game/Game";
+import { GameMode, GameType, UnitType } from "../../src/core/game/Game";
 import { UserSettings } from "../../src/core/game/UserSettings";
 
 function resetUserSettingsState() {
@@ -370,5 +371,65 @@ describe("JoinLobbyModal Steam invite button", () => {
 
     expect(header.querySelector("copy-button")).not.toBeNull();
     expect(header.querySelector(INVITE)).not.toBeNull();
+  });
+});
+
+describe("JoinLobbyModal: Open lobbies row content", () => {
+  function renderHostedLobbyRow(
+    modal: JoinLobbyModal,
+    lobby: PublicGameInfo,
+  ): HTMLElement {
+    const container = document.createElement("div");
+    render(
+      (
+        modal as unknown as {
+          renderHostedLobbyRow(l: PublicGameInfo): unknown;
+        }
+      ).renderHostedLobbyRow(lobby) as never,
+      container,
+    );
+    return container;
+  }
+
+  const sampleLobby = (disabledUnits?: UnitType[]): PublicGameInfo =>
+    ({
+      gameID: "open123",
+      numClients: 1,
+      gameConfig: {
+        gameMap: "World",
+        gameType: GameType.Public,
+        gameMode: GameMode.FFA,
+        disabledUnits: disabledUnits ?? [UnitType.AtomBomb, UnitType.MIRV],
+      },
+    }) as unknown as PublicGameInfo;
+
+  it("renders individual badges for each disabled unit in an open lobby card", () => {
+    const modal = new JoinLobbyModal();
+    const lobby = sampleLobby([UnitType.AtomBomb, UnitType.MIRV]);
+
+    const card = renderHostedLobbyRow(modal, lobby);
+    const textContent = card.textContent ?? "";
+
+    expect(textContent).toContain("unit_type.atom_bomb");
+    expect(textContent).toContain("unit_type.mirv");
+    expect(textContent).not.toContain("private_lobby.disabled_units");
+  });
+
+  it("handles empty or missing disabledUnits array without rendering badges", () => {
+    const modal = new JoinLobbyModal();
+    const lobby = sampleLobby([]);
+
+    const card = renderHostedLobbyRow(modal, lobby);
+
+    expect(card.querySelector(".bg-red-500\\/20")).toBeNull();
+  });
+
+  it("falls back to raw unit key if UnitTranslations missing mapping", () => {
+    const modal = new JoinLobbyModal();
+    const lobby = sampleLobby(["CustomUnknownUnit" as UnitType]);
+
+    const card = renderHostedLobbyRow(modal, lobby);
+
+    expect(card.textContent).toContain("CustomUnknownUnit");
   });
 });
