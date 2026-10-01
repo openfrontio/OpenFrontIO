@@ -1446,12 +1446,13 @@ export class AiAttackBehavior {
       target.isPlayer() ? target : undefined,
     );
     if (troops === null) return false;
+    const boatTroops = Math.max(1, Math.floor(this.player.troops() / 100));
+    // Only the boat leaves now: the land attack is budgeted once it lands
+    if (target.isPlayer() && target.type() === PlayerType.Bot) {
+      this.botAttackTroopsSent += boatTroops - troops;
+    }
     this.game.addExecution(
-      new TransportShipExecution(
-        this.player,
-        landing,
-        Math.max(1, Math.floor(this.player.troops() / 100)),
-      ),
+      new TransportShipExecution(this.player, landing, boatTroops),
     );
     return true;
   }

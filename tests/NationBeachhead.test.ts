@@ -152,6 +152,8 @@ describe("Nation beachhead boats", () => {
       (e) => e instanceof TransportShipExecution,
     );
     expect(boats.map((e) => e["troops"])).toEqual([1_000]);
+    // Only the boat counts toward this tick's bot budget, not the land attack to come
+    expect(behavior["botAttackTroopsSent"]).toBe(1_000);
   });
 
   it("Medium still boats a fifth of its troops", async () => {
