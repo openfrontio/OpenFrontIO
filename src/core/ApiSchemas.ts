@@ -308,6 +308,12 @@ export const UserMeResponseSchema = z.object({
         provider: z.string().nullable().optional(),
       })
       .nullable(),
+    // A Stripe subscription whose renewal failed and is still being retried,
+    // sent only when `subscription` is null. It entitles nothing, which is
+    // why it is not `subscription`: every caller reads that as "subscribed".
+    // It exists so the account can say the payment failed and offer the
+    // billing portal. Optional so an older API without the field still parses.
+    pastDueSubscription: z.object({ tier: z.string() }).nullable().optional(),
     // Marketing-email consent state (client-driven consent). `consented` is the
     // player's current decision; `hasEmail` is whether a verified contact email
     // exists to subscribe. Optional so an older API without the field is treated

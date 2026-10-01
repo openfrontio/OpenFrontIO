@@ -192,6 +192,10 @@ export const PlayerStatsSchema = z
     alliances: AtLeastOneNumberSchema.optional(),
     peakTroops: BigIntStringSchema.optional(),
     donations: AtLeastOneNumberSchema.optional(),
+    // Centre of the player's final spawn (a TileRef into the map as loaded,
+    // so compact games index a smaller map). Last write wins: a player may
+    // re-pick during the spawn phase.
+    spawnTile: zb.uint().optional(),
   })
   .optional();
 export type PlayerStats = z.infer<typeof PlayerStatsSchema>;

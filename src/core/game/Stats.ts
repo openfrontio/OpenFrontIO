@@ -6,6 +6,7 @@ import {
   PlayerStats,
 } from "../StatsSchemas";
 import { Player, TerraNullius } from "./Game";
+import { TileRef } from "./GameMap";
 
 export interface Stats {
   getPlayerStats(player: Player): PlayerStats | null;
@@ -154,6 +155,10 @@ export interface Stats {
 
   // Record tiles owned at game end (final standings).
   recordFinalTiles(player: Player, tiles: number | bigint): void;
+
+  // Record where the player spawned. Last write wins: a player may re-pick
+  // during the spawn phase, and only the final pick matters.
+  recordSpawnTile(player: Player, tile: TileRef): void;
 
   // Alliances still standing when the game ended. Called for every player
   // from GameImpl.setWinner, beside recordFinalTiles.

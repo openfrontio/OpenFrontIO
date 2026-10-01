@@ -12,6 +12,21 @@
 
     <!-- Preload styles -->
     <style>
+      html {
+        color-scheme: dark;
+      }
+
+      html.preload {
+        visibility: visible !important;
+        opacity: 1 !important;
+        background-color: #111827 !important;
+      }
+
+      html.preload body {
+        visibility: hidden;
+        opacity: 0;
+      }
+
       .preload {
         visibility: hidden;
         opacity: 0;
