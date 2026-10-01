@@ -282,6 +282,7 @@ describe("ClientGameRunner in-game messages", () => {
     const { worker, onmessage } = makeStartedRunner(true);
     const turn = { turnNumber: 0, intents: [] };
 
+    onmessage({ type: "start", turns: [] });
     onmessage({ type: "turn", turn });
     expect(worker.sendTurn).toHaveBeenCalledWith(turn);
 
@@ -290,6 +291,33 @@ describe("ClientGameRunner in-game messages", () => {
     expect(console.error).toHaveBeenCalledWith(
       "got wrong turn have turns 1, received turn 5",
     );
+  });
+
+  // The (re)join's start message replays every turn so far, so live turns
+  // that beat it there are expected to be dropped: a warning, not an error.
+  it("only warns about a wrong turn while a start message is awaited", () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const { worker, transport, onmessage } = makeStartedRunner(true);
+    const onconnect = transport.updateCallback.mock.calls[0][0] as () => void;
+
+    onmessage({ type: "turn", turn: { turnNumber: 3, intents: [] } });
+    expect(warn).toHaveBeenCalledWith(
+      "got wrong turn have turns 0, received turn 3",
+    );
+
+    const turns = [0, 1, 2, 3].map((turnNumber) => ({
+      turnNumber,
+      intents: [],
+    }));
+    onmessage({ type: "start", turns });
+    expect(worker.sendTurn).toHaveBeenCalledTimes(4);
+
+    onconnect();
+    onmessage({ type: "turn", turn: { turnNumber: 6, intents: [] } });
+    expect(warn).toHaveBeenCalledWith(
+      "got wrong turn have turns 4, received turn 6",
+    );
+    expect(console.error).not.toHaveBeenCalled();
   });
 
   it("processes a worker game update: turnComplete, hash events, render tick", () => {
