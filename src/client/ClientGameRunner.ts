@@ -108,6 +108,9 @@ export interface LobbyConfig {
   gameRecord?: GameRecord;
   // Watch without playing.
   spectator?: boolean;
+  // Host only: the play token the lobby was created under, used for the
+  // first join so the host joins as the creator (see createLobby).
+  creatorToken?: string;
 }
 
 export interface JoinLobbyResult {
