@@ -1754,7 +1754,7 @@
     "ceremony_title": "Prestige {rank}",
     "confirm": "Hold to prestige",
     "continue": "Continue",
-    "error": "Couldn't prestige. Nothing has changed, so try again.",
+    "error": "Couldn't confirm your prestige. Check your connection and hold again.",
     "gain_caps": "Caps bonus",
     "gain_cosmetic": "Exclusive cosmetic",
     "gain_emblem": "Prestige {rank} emblem",

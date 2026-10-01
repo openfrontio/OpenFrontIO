@@ -100,6 +100,12 @@ function prefersReducedMotion(): boolean {
   }
 }
 
+// The key for a prestige from each rank, kept until that prestige succeeds.
+// Closing and reopening the confirmation must not mint a new one: if an
+// earlier request went through but its answer was lost, the same key gets
+// that prestige back, where a new key would be refused.
+const pendingKeys = new Map<number, string>();
+
 function newIdempotencyKey(): string {
   return typeof crypto !== "undefined" && "randomUUID" in crypto
     ? crypto.randomUUID()
@@ -138,10 +144,17 @@ export class PrestigeFlow extends LitElement {
     super.connectedCallback();
     this.portal = document.createElement("div");
     document.body.appendChild(this.portal);
+    // Capture, so the overlay sees keys before the page behind it does.
+    window.addEventListener("keydown", this.onKeyDown, true);
+    window.addEventListener("blur", this.onFocusLost);
+    document.addEventListener("visibilitychange", this.onFocusLost);
   }
 
   disconnectedCallback() {
     super.disconnectedCallback();
+    window.removeEventListener("keydown", this.onKeyDown, true);
+    window.removeEventListener("blur", this.onFocusLost);
+    document.removeEventListener("visibilitychange", this.onFocusLost);
     this.clearTimers();
     this.endHold();
     if (this.portal) {
@@ -153,15 +166,69 @@ export class PrestigeFlow extends LitElement {
 
   /** Opens the confirmation for a player who can prestige. */
   open(progress: Progress): void {
-    if (!progress.canPrestige) return;
+    // Already up (a second press on the card behind it): leave it alone, and
+    // never swap the key of a request that's in flight.
+    if (this.stage !== "closed" || !progress.canPrestige) return;
     this.prior = progress;
     this.outcome = null;
     this.failed = false;
     this.holdProgress = 0;
-    // One key per confirmation: a retry after a failure is the same request.
-    this.idempotencyKey = newIdempotencyKey();
+    let key = pendingKeys.get(progress.prestige);
+    if (key === undefined) {
+      key = newIdempotencyKey();
+      pendingKeys.set(progress.prestige, key);
+    }
+    this.idempotencyKey = key;
     this.stage = "confirm";
+    void this.updateComplete.then(() => this.focusConfirmButton());
   }
+
+  private focusConfirmButton(): void {
+    this.portal
+      ?.querySelector<HTMLButtonElement>("[data-prestige-confirm-button]")
+      ?.focus();
+  }
+
+  // Keys while the overlay is up: Escape cancels the confirmation (or skips,
+  // then closes, the ceremony), and Tab stays inside the confirmation. The
+  // page behind never sees them.
+  private onKeyDown = (e: KeyboardEvent): void => {
+    if (this.stage === "closed") return;
+    if (e.key === "Escape") {
+      e.preventDefault();
+      e.stopPropagation();
+      if (this.stage === "confirm") this.close();
+      else if (this.stage === "ceremony") {
+        if (this.beat === "done") this.close();
+        else this.skipCeremony();
+      }
+      return;
+    }
+    if (e.key === "Tab" && this.stage !== "ceremony") {
+      const buttons = [
+        ...(this.portal?.querySelectorAll<HTMLButtonElement>(
+          "[data-prestige-confirm] button:not([disabled])",
+        ) ?? []),
+      ];
+      if (buttons.length === 0) return;
+      const at = buttons.indexOf(document.activeElement as HTMLButtonElement);
+      const next =
+        at === -1
+          ? 0
+          : (at + (e.shiftKey ? -1 : 1) + buttons.length) % buttons.length;
+      e.preventDefault();
+      e.stopPropagation();
+      buttons[next].focus();
+    }
+  };
+
+  // A hold only counts while the button keeps it: switching window or tab
+  // lets go, wherever the key or pointer is released.
+  private onFocusLost = (): void => {
+    if (document.visibilityState === "hidden" || !document.hasFocus()) {
+      this.endHold();
+    }
+  };
 
   /** Plays the ceremony for a prestige that already happened (previews). */
   celebrate(before: Progress, result: PrestigeResponse): void {
@@ -284,6 +351,7 @@ export class PrestigeFlow extends LitElement {
             @pointerup=${() => this.endHold()}
             @pointerleave=${() => this.endHold()}
             @pointercancel=${() => this.endHold()}
+            @blur=${() => this.endHold()}
             @keydown=${(e: KeyboardEvent) => {
               if (e.key !== " " && e.key !== "Enter") return;
               e.preventDefault();
@@ -440,13 +508,27 @@ export class PrestigeFlow extends LitElement {
     if (this.stage !== "confirm") return;
     this.failed = false;
     this.stage = "submitting";
+    const prior = this.prior;
     const response = await this.submit(this.idempotencyKey);
     if (!response.ok) {
+      if (response.refused) {
+        // The server won't prestige from here: the page is out of date. Drop
+        // the key and let the page reload where the player really is.
+        if (prior) pendingKeys.delete(prior.prestige);
+        this.close();
+        this.dispatchEvent(
+          new CustomEvent("prestige-stale", { bubbles: true, composed: true }),
+        );
+        return;
+      }
+      // It may or may not have gone through: the same key finds out.
       this.stage = "confirm";
       this.holdProgress = 0;
       this.failed = true;
+      void this.updateComplete.then(() => this.focusConfirmButton());
       return;
     }
+    if (prior) pendingKeys.delete(prior.prestige);
     this.outcome = response.data;
     this.dispatchEvent(
       new CustomEvent<PrestigeResponse>("prestiged", {
@@ -503,6 +585,9 @@ export class PrestigeFlow extends LitElement {
     const shards = Array.from({ length: 14 }, (_, i) => (i * 360) / 14 + 7);
     return html`<div
       data-prestige-ceremony
+      role="dialog"
+      aria-modal="true"
+      aria-label=${translateText("prestige.ceremony_title", { rank })}
       data-beat=${this.beat}
       ?data-from-confirm=${this.fromConfirm}
       class="prestige-ceremony fixed inset-0 z-[10030] flex flex-col items-center justify-center overflow-hidden text-white"

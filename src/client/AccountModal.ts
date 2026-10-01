@@ -193,7 +193,10 @@ export class AccountModal extends BaseModal {
       <div class="custom-scrollbar mr-1">
         <div class="p-6">${this.renderTab(tab)}</div>
       </div>
-      <prestige-flow @prestiged=${this.handlePrestiged}></prestige-flow>
+      <prestige-flow
+        @prestiged=${this.handlePrestiged}
+        @prestige-stale=${this.handlePrestigeStale}
+      ></prestige-flow>
     `;
   }
 
@@ -502,6 +505,25 @@ export class AccountModal extends BaseModal {
     invalidateUserMe();
     this.requestUpdate();
   };
+
+  // The server says the player can't prestige from where this page thinks
+  // they are: most likely an earlier prestige whose answer never arrived.
+  // Reload the account so the card shows where they really are.
+  private handlePrestigeStale = async (): Promise<void> => {
+    invalidateUserMe();
+    const userMe = await getUserMe();
+    if (userMe) this.userMeResponse = userMe;
+    this.requestUpdate();
+  };
+
+  // Escape belongs to the prestige confirmation or ceremony while it's up,
+  // not to the page behind it.
+  public confirmBeforeClose(): boolean | Promise<boolean> {
+    if (this.querySelector<PrestigeFlow>("prestige-flow")?.isOpen) {
+      return false;
+    }
+    return super.confirmBeforeClose();
+  }
 
   private renderCurrency(): TemplateResult {
     const currency = this.userMeResponse?.player?.currency;

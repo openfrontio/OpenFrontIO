@@ -254,7 +254,7 @@ describe("<prestige-flow>", () => {
   });
 
   it("says so when it fails, and retries with the same key", async () => {
-    submit.mockResolvedValueOnce({ ok: false });
+    submit.mockResolvedValueOnce({ ok: false, refused: false });
     flow.open(AT_100);
     await settle();
     await hold();
@@ -266,6 +266,134 @@ describe("<prestige-flow>", () => {
     expect(submit).toHaveBeenCalledTimes(2);
     expect(submit.mock.calls[1][0]).toBe(submit.mock.calls[0][0]);
     expect(q("[data-prestige-ceremony]")).not.toBeNull();
+  });
+
+  it("keeps the key when the confirmation is closed and reopened", async () => {
+    submit.mockResolvedValueOnce({ ok: false, refused: false });
+    flow.open({ ...AT_100, prestige: 6 });
+    await settle();
+    await hold();
+    q("[data-prestige-confirm]")!.dispatchEvent(
+      new KeyboardEvent("keydown", { key: "Escape", bubbles: true }),
+    );
+    await settle();
+    expect(flow.isOpen).toBe(false);
+
+    // A lost answer may have prestiged already: the same key finds out.
+    flow.open({ ...AT_100, prestige: 6 });
+    await settle();
+    await hold();
+    expect(submit).toHaveBeenCalledTimes(2);
+    expect(submit.mock.calls[1][0]).toBe(submit.mock.calls[0][0]);
+  });
+
+  it("reloads the page when the server refuses", async () => {
+    submit.mockResolvedValueOnce({ ok: false, refused: true });
+    const stale = vi.fn();
+    flow.addEventListener("prestige-stale", stale);
+    flow.open({ ...AT_100, prestige: 7 });
+    await settle();
+    await hold();
+    expect(stale).toHaveBeenCalledTimes(1);
+    expect(flow.isOpen).toBe(false);
+    expect(q("[data-prestige-error]")).toBeNull();
+  });
+
+  it("lets go of the hold when the button loses focus", async () => {
+    flow.open(AT_100);
+    await settle();
+    confirmButton().dispatchEvent(
+      new KeyboardEvent("keydown", { key: " ", bubbles: true }),
+    );
+    await settle(HOLD_MS / 4);
+    // Tab away with the key still down: its keyup lands somewhere else.
+    confirmButton().dispatchEvent(new FocusEvent("blur"));
+    await settle(HOLD_MS * 2);
+    expect(submit).not.toHaveBeenCalled();
+    expect(fill()).toBe("scaleX(0)");
+  });
+
+  it("lets go of the hold when the window loses focus", async () => {
+    const hasFocus = vi.spyOn(document, "hasFocus").mockReturnValue(false);
+    try {
+      flow.open(AT_100);
+      await settle();
+      confirmButton().dispatchEvent(
+        new MouseEvent("pointerdown", { button: 0, bubbles: true }),
+      );
+      await settle(HOLD_MS / 4);
+      window.dispatchEvent(new Event("blur"));
+      await settle(HOLD_MS * 2);
+      expect(submit).not.toHaveBeenCalled();
+    } finally {
+      hasFocus.mockRestore();
+    }
+  });
+
+  it("ignores a second open while one is in flight", async () => {
+    let finish!: (v: Awaited<ReturnType<PrestigeFlow["submit"]>>) => void;
+    submit.mockReturnValueOnce(new Promise((r) => (finish = r)));
+    flow.open(AT_100);
+    await settle();
+    confirmButton().dispatchEvent(
+      new MouseEvent("pointerdown", { button: 0, bubbles: true }),
+    );
+    await settle(HOLD_MS + 100);
+    expect(submit).toHaveBeenCalledTimes(1);
+
+    flow.open(AT_100);
+    await settle();
+    expect(confirmButton().textContent).toContain("prestige.submitting");
+    finish({ ok: true, data: PRESTIGED });
+    await settle();
+    expect(q("[data-prestige-ceremony]")).not.toBeNull();
+    expect(submit).toHaveBeenCalledTimes(1);
+  });
+
+  it("keeps Escape and Tab to itself", async () => {
+    const pageEscape = vi.fn();
+    window.addEventListener("keydown", pageEscape);
+    try {
+      flow.open(AT_100);
+      await settle();
+      expect(document.activeElement).toBe(confirmButton());
+
+      // Tab cycles within the confirmation.
+      confirmButton().dispatchEvent(
+        new KeyboardEvent("keydown", { key: "Tab", bubbles: true }),
+      );
+      expect(document.activeElement?.textContent).toContain("common.cancel");
+      (document.activeElement as HTMLElement).dispatchEvent(
+        new KeyboardEvent("keydown", { key: "Tab", bubbles: true }),
+      );
+      expect(document.activeElement).toBe(confirmButton());
+
+      confirmButton().dispatchEvent(
+        new KeyboardEvent("keydown", { key: "Escape", bubbles: true }),
+      );
+      await settle();
+      expect(flow.isOpen).toBe(false);
+      expect(pageEscape).not.toHaveBeenCalled();
+    } finally {
+      window.removeEventListener("keydown", pageEscape);
+    }
+  });
+
+  it("Escape skips the ceremony, then closes it", async () => {
+    flow.celebrate(AT_100, PRESTIGED);
+    await settle(300);
+    const escape = () =>
+      q("[data-prestige-ceremony]")!.dispatchEvent(
+        new KeyboardEvent("keydown", { key: "Escape", bubbles: true }),
+      );
+    escape();
+    await settle();
+    expect(q("[data-prestige-ceremony]")!.getAttribute("data-beat")).toBe(
+      "done",
+    );
+    escape();
+    await settle();
+    expect(flow.isOpen).toBe(false);
   });
 });
 

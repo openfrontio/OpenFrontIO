@@ -30,8 +30,14 @@ export interface ProfileCardProgress {
 // Segments the XP bar is drawn in, as on the end-of-game screen.
 const BAR_SEGMENTS = 10;
 
+// Each card names its own hex pattern: a shared id would resolve to the
+// first card in the document, which may sit in a hidden page (Chrome draws no
+// pattern from a display:none subtree).
+let nextPatternId = 0;
+
 @customElement("profile-card")
 export class ProfileCard extends LitElement {
+  private readonly patternId = `profile-card-hex-${nextPatternId++}`;
   @property({ type: String }) variant: "full" | "compact" = "full";
   @property({ type: String }) username = "";
   @property({ attribute: false }) clanTag: string | null = null;
@@ -212,7 +218,7 @@ export class ProfileCard extends LitElement {
     >
       <defs>
         <pattern
-          id="profile-card-hex"
+          id=${this.patternId}
           width="60"
           height="103.92"
           patternUnits="userSpaceOnUse"
@@ -226,7 +232,7 @@ export class ProfileCard extends LitElement {
           ></path>
         </pattern>
       </defs>
-      <rect width="100%" height="100%" fill="url(#profile-card-hex)"></rect>
+      <rect width="100%" height="100%" fill="url(#${this.patternId})"></rect>
     </svg>`;
   }
 

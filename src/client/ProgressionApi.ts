@@ -133,16 +133,23 @@ export async function fetchPublicPlayerProgress(
   }
 }
 
-// POST /users/@me/prestige — the opt-in reset at level 100. The idempotency
-// key is per confirmation, so a retried request (a slow network, a double
-// submit) prestiges once. Unlike the reads above this does surface failure:
-// the player asked for it and must be told it didn't happen.
+// POST /users/@me/prestige — the opt-in reset at level 100. The caller keeps
+// one idempotency key until a prestige succeeds, so a retried request (a
+// slow network, a lost response) prestiges once. Unlike the reads above this
+// does surface failure: the player asked for it and must be told. "refused"
+// is the server saying the player can't prestige (409): usually an earlier
+// prestige whose answer never arrived. Anything else may or may not have
+// gone through, and a retry with the same key finds out.
+export type PrestigeResult =
+  | { ok: true; data: PrestigeResponse }
+  | { ok: false; refused: boolean };
+
 export async function prestigeMe(
   idempotencyKey: string,
-): Promise<{ ok: true; data: PrestigeResponse } | { ok: false }> {
+): Promise<PrestigeResult> {
   try {
     const authorization = await getAuthHeader();
-    if (authorization === "") return { ok: false };
+    if (authorization === "") return { ok: false, refused: false };
     const res = await fetch(`${getApiBase()}/users/@me/prestige`, {
       method: "POST",
       headers: {
@@ -154,17 +161,17 @@ export async function prestigeMe(
     });
     if (!res.ok) {
       console.warn("prestigeMe: unexpected status", res.status);
-      return { ok: false };
+      return { ok: false, refused: res.status === 409 };
     }
     const parsed = PrestigeResponseSchema.safeParse(await res.json());
     if (!parsed.success) {
       console.warn("prestigeMe: Zod validation failed", parsed.error);
-      return { ok: false };
+      return { ok: false, refused: false };
     }
     return { ok: true, data: parsed.data };
   } catch (err) {
     console.warn("prestigeMe: request failed", err);
-    return { ok: false };
+    return { ok: false, refused: false };
   }
 }
 
