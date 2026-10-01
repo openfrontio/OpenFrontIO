@@ -19,7 +19,11 @@ vi.mock("../../src/client/Utils", () => ({
     params ? `${key} ${Object.values(params).join(" ")}` : key,
 }));
 
-import { cancelSubscription, invalidateUserMe } from "../../src/client/Api";
+import {
+  cancelSubscription,
+  invalidateUserMe,
+  openSubscriptionPortal,
+} from "../../src/client/Api";
 import { SubscriptionPanel } from "../../src/client/components/SubscriptionPanel";
 import {
   showInGameAlert,
@@ -134,6 +138,61 @@ describe("subscription-panel", () => {
     // working, and it is the control a player most needs.
     it("keeps the Cancel control", async () => {
       expect(text()).toContain("account_modal.cancel_subscription");
+    });
+  });
+
+  // The renewal bounced. Stripe is still retrying, and the portal is where
+  // the card gets fixed, so it is the only thing on offer.
+  describe("past_due", () => {
+    beforeEach(async () => {
+      el.sub = sub({
+        status: "past_due",
+        currentPeriodEnd: null,
+        provider: "stripe",
+      });
+      await el.updateComplete;
+    });
+
+    afterEach(() => {
+      delete (window as unknown as { openfrontDesktop?: unknown })
+        .openfrontDesktop;
+    });
+
+    const keys = () =>
+      Array.from(el.querySelectorAll("o-button")).map((b) =>
+        b.getAttribute("translationKey"),
+      );
+
+    it("says the payment failed and offers only Manage billing", async () => {
+      expect(text()).toContain("account_modal.sub_past_due_note");
+      expect(keys()).toEqual(["store.manage_billing"]);
+      expect(text()).not.toContain("account_modal.cancel_subscription");
+    });
+
+    it("opens the billing portal", async () => {
+      const open = vi.spyOn(window, "open").mockImplementation(() => null);
+      el.querySelector("o-button")!.dispatchEvent(
+        new MouseEvent("click", { bubbles: true }),
+      );
+      await vi.waitFor(() =>
+        expect(open).toHaveBeenCalledWith(
+          "https://portal.example",
+          "_blank",
+          "noopener,noreferrer",
+        ),
+      );
+      expect(openSubscriptionPortal).toHaveBeenCalled();
+      open.mockRestore();
+    });
+
+    it("says where billing is managed inside the desktop shell", async () => {
+      (window as unknown as { openfrontDesktop?: unknown }).openfrontDesktop = {
+        steam: {},
+      };
+      el.requestUpdate();
+      await el.updateComplete;
+      expect(keys()).toEqual([]);
+      expect(text()).toContain("account_modal.manage_subscription_on_web");
     });
   });
 

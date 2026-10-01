@@ -1573,6 +1573,11 @@ export type PaymentsCheckoutResult =
   // (a double click, or the store offered a tier they have). Nothing was
   // charged.
   | { ok: false; code: "already_subscribed"; existingTier: string }
+  // 409 subscription_past_due: the player's Stripe subscription failed to
+  // renew and Stripe is still retrying it, so a second one would double-bill.
+  // The recovery is fixing the card in the billing portal, which admits a
+  // past_due subscription even though /users/@me does not return it.
+  | { ok: false; code: "subscription_past_due" }
   // 409 tier_change_unavailable_on_provider: a Steam subscriber tried to
   // change tier and Steam refused a second agreement while one is live, or
   // tier changes are switched off on that rail. `message` is the server's
@@ -1716,6 +1721,9 @@ export async function createPaymentsCheckout(
         }
         if (reason === "pending_provider_transaction" && provider !== null) {
           return { ok: false, code: "pending_provider_transaction", provider };
+        }
+        if (reason === "subscription_past_due") {
+          return { ok: false, code: "subscription_past_due" };
         }
         if (reason === "already_subscribed") {
           return {

@@ -273,8 +273,14 @@ export type PurchaseOutcome =
   // "purchase failed".
   | { outcome: "pending" }
   // `message` is ready to display: already translated, or the server's own
-  // player-facing text where it had one.
-  | { outcome: "error"; message: string; refetchCatalog: boolean };
+  // player-facing text where it had one. `manageBilling` means the fix is in
+  // the billing portal, so callers should offer a way there.
+  | {
+      outcome: "error";
+      message: string;
+      refetchCatalog: boolean;
+      manageBilling?: true;
+    };
 
 export type PurchaseError = Extract<PurchaseOutcome, { outcome: "error" }>;
 
@@ -332,6 +338,11 @@ function checkoutError(
           provider: providerName(result.provider),
         }),
       );
+    case "subscription_past_due":
+      return {
+        ...error(translateText("store.subscription_past_due")),
+        manageBilling: true,
+      };
     // Nothing was charged; the store's own copy for "you have this already".
     case "already_subscribed":
       return error(translateText("store.already_subscribed"));

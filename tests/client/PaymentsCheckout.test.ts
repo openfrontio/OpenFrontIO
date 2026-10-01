@@ -409,6 +409,22 @@ describe("createPaymentsCheckout errors", () => {
     });
   });
 
+  it("maps 409 subscription_past_due", async () => {
+    respond(409, {
+      reason: "subscription_past_due",
+      existingProvider: "stripe",
+      existingTier: "sovereign",
+      message: "Your subscription has an unpaid invoice.",
+    });
+    expect(
+      await createPaymentsCheckout({
+        provider: "stripe",
+        kind: "subscription_tier",
+        tierName: "sovereign",
+      }),
+    ).toEqual({ ok: false, code: "subscription_past_due" });
+  });
+
   it("maps 409 tier_change_unavailable_on_provider with the server's message", async () => {
     respond(409, {
       reason: "tier_change_unavailable_on_provider",
