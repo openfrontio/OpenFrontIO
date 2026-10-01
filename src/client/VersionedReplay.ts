@@ -26,3 +26,27 @@ export function versionedReplayUrl(
 export function isReplayShellHost(hostname: string): boolean {
   return hostname.startsWith("replay.");
 }
+
+// The versioned shell URL for a game from another build, if that shell is
+// actually served. Null on a shell host (redirecting again would loop), in
+// dev, or when the probe fails. The probe requires text/html so a misrouted
+// host that answers 200 with something else can't strand the player on a
+// broken page.
+export async function findVersionedShell(
+  audience: string,
+  gameID: GameID,
+  hostname: string,
+  fetchFn: typeof fetch = fetch,
+): Promise<string | null> {
+  if (isReplayShellHost(hostname)) return null;
+  const url = versionedReplayUrl(audience, gameID);
+  if (url === null) return null;
+  try {
+    const probe = await fetchFn.call(globalThis, url, { method: "HEAD" });
+    if (!probe.ok) return null;
+    const contentType = probe.headers.get("content-type") ?? "";
+    return contentType.includes("text/html") ? url : null;
+  } catch {
+    return null;
+  }
+}

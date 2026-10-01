@@ -51,6 +51,7 @@ import {
   unitTypeToOtherUnit,
 } from "../StatsSchemas";
 import { Player, PlayerType, TerraNullius } from "./Game";
+import { TileRef } from "./GameMap";
 import { Stats } from "./Stats";
 
 type BigIntLike = bigint | number;
@@ -401,6 +402,12 @@ export class StatsImpl implements Stats {
     const p = this._makePlayerStats(player);
     if (p === undefined) return;
     p.finalTiles = _bigint(tiles);
+  }
+
+  recordSpawnTile(player: Player, tile: TileRef): void {
+    const p = this._makePlayerStats(player);
+    if (p === undefined) return;
+    p.spawnTile = tile;
   }
 
   recordAlliancesAtEnd(
