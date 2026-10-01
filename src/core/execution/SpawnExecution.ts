@@ -117,6 +117,7 @@ export class SpawnExecution implements Execution {
     }
 
     player.setSpawnTile(spawn.center);
+    this.mg.stats().recordSpawnTile(player, spawn.center);
 
     if (
       this.mg.config().gameConfig().gameType === GameType.Singleplayer &&

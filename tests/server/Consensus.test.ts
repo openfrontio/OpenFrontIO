@@ -1,6 +1,19 @@
 import { describe, expect, it } from "vitest";
-import { ClientSendWinnerMessage, LiveStats } from "../../src/core/Schemas";
-import { LiveStatsVote, WinnerVote } from "../../src/server/Consensus";
+import {
+  AllPlayersStats,
+  ClientSendWinnerMessage,
+  LiveStats,
+} from "../../src/core/Schemas";
+import {
+  createGameWireContext,
+  decodeClientMessage,
+  encodeClientMessage,
+} from "../../src/core/ZbinWire";
+import {
+  LiveStatsVote,
+  statsDigest,
+  WinnerVote,
+} from "../../src/server/Consensus";
 import { cid } from "../util/GameServerHarness";
 
 // The two vote objects on their own. Who may vote and what a settled vote
@@ -63,6 +76,131 @@ describe("WinnerVote", () => {
     vote.cast(winnerMsg(["player", P2]), "2.2.2.2");
     expect(vote.tallyAmong(new Set(["1.1.1.1"]))).toBeNull();
     expect(vote.winner()).toBeNull();
+  });
+});
+
+describe("statsDigest", () => {
+  it("ignores key order at every level", () => {
+    const a: AllPlayersStats = {
+      [P1]: { gold: [1n, 2n], units: { city: [1n], port: [2n] } },
+      [P2]: { killedAt: 10n },
+    };
+    const b: AllPlayersStats = {
+      [P2]: { killedAt: 10n },
+      [P1]: { units: { port: [2n], city: [1n] }, gold: [1n, 2n] },
+    };
+    expect(statsDigest(a)).toBe(statsDigest(b));
+  });
+
+  it("treats a bigint and its decimal string as the same value", () => {
+    // The wire decodes stats to bigints; the archive writes them as strings.
+    expect(statsDigest({ [P1]: { killedAt: 10n } })).toBe(
+      statsDigest({ [P1]: { killedAt: "10" as unknown as bigint } }),
+    );
+  });
+
+  it("changes when any value changes", () => {
+    const base: AllPlayersStats = {
+      [P1]: { deathPosition: 3, finalTiles: 100n },
+    };
+    expect(statsDigest(base)).not.toBe(
+      statsDigest({ [P1]: { deathPosition: 2, finalTiles: 100n } }),
+    );
+    expect(statsDigest(base)).not.toBe(
+      statsDigest({ [P1]: { deathPosition: 3, finalTiles: 101n } }),
+    );
+  });
+
+  it("survives the binary wire the server receives votes over", () => {
+    const stats: AllPlayersStats = {
+      [P2]: {
+        killedAt: 1200n,
+        killedBy: P1,
+        deathPosition: 2,
+        units: { port: [1n, 0n, 1n], city: [3n] },
+      },
+      [P1]: {
+        finalTiles: 5000n,
+        kills: [{ victim: P2, tick: 1200n }],
+        gold: [10n, 20n, 0n, 0n, 0n, 0n, 5n],
+        killedBy: null,
+      },
+    };
+    const msg: ClientSendWinnerMessage = {
+      type: "winner",
+      winner: ["player", P1],
+      allPlayersStats: stats,
+    };
+    const players = [{ clientID: P1 }, { clientID: P2 }];
+    const decoded = decodeClientMessage(
+      encodeClientMessage(msg, createGameWireContext(players)),
+      createGameWireContext(players),
+    ) as ClientSendWinnerMessage;
+    expect(statsDigest(decoded.allPlayersStats)).toBe(statsDigest(stats));
+  });
+
+  it("keeps array order significant", () => {
+    expect(statsDigest({ [P1]: { gold: [1n, 2n] } })).not.toBe(
+      statsDigest({ [P1]: { gold: [2n, 1n] } }),
+    );
+  });
+});
+
+describe("WinnerVote stats agreement", () => {
+  const honest: AllPlayersStats = { [P1]: { finalTiles: 100n } };
+  const forged: AllPlayersStats = { [P1]: { finalTiles: 999n } };
+  const voteWith = (
+    winner: ClientSendWinnerMessage["winner"],
+    allPlayersStats: AllPlayersStats,
+  ): ClientSendWinnerMessage => ({ type: "winner", winner, allPlayersStats });
+
+  it("is null until the vote is decided", () => {
+    const vote = new WinnerVote();
+    vote.cast(voteWith(["player", P1], honest), "1.1.1.1");
+    expect(vote.statsAgreement()).toBeNull();
+  });
+
+  it("reports one version when every voter sent the same stats", () => {
+    const vote = new WinnerVote();
+    vote.cast(voteWith(["player", P1], honest), "1.1.1.1");
+    vote.cast(voteWith(["player", P1], honest), "2.2.2.2");
+    vote.tally(2);
+    expect(vote.statsAgreement()).toEqual({
+      voters: 2,
+      versions: 1,
+      archivedBackers: 2,
+      topBackers: 2,
+    });
+  });
+
+  it("shows when the archived stats came from a minority of voters", () => {
+    const vote = new WinnerVote();
+    // The forger votes first, so today their stats are the ones archived.
+    vote.cast(voteWith(["player", P1], forged), "1.1.1.1");
+    vote.cast(voteWith(["player", P1], honest), "2.2.2.2");
+    vote.cast(voteWith(["player", P1], honest), "3.3.3.3");
+    vote.tally(3);
+    expect(vote.winner()?.allPlayersStats).toEqual(forged);
+    expect(vote.statsAgreement()).toEqual({
+      voters: 3,
+      versions: 2,
+      archivedBackers: 1,
+      topBackers: 2,
+    });
+  });
+
+  it("counts only votes for the decided winner", () => {
+    const vote = new WinnerVote();
+    vote.cast(voteWith(["player", P2], forged), "9.9.9.9");
+    vote.cast(voteWith(["player", P1], honest), "1.1.1.1");
+    vote.cast(voteWith(["player", P1], honest), "2.2.2.2");
+    vote.tally(3);
+    expect(vote.statsAgreement()).toEqual({
+      voters: 2,
+      versions: 1,
+      archivedBackers: 2,
+      topBackers: 2,
+    });
   });
 });
 
