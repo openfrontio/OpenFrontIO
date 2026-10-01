@@ -206,7 +206,7 @@ export class MirvExecution implements Execution {
   private finalizeDestinations(additionalAttempts = 500): void {
     // Re-check target tile ownership at tick 10
     this.stagedTargets = this.stagedTargets.filter(
-      (tile) => tile === this.dst || this.mg.owner(tile) === this.targetPlayer,
+      (tile) => tile === this.dst || this.isTileOwnedByValidEnemy(tile),
     );
 
     // Top-up loop using specified attempt budget if targets were lost or not yet filled
@@ -222,7 +222,21 @@ export class MirvExecution implements Execution {
         this.mg.manhattanDist(b, this.dst) - this.mg.manhattanDist(a, this.dst),
     );
   }
-
+  private isTileOwnedByValidEnemy(tile: TileRef): boolean {
+    const targetTileOwner = this.mg.owner(tile);
+    if (!targetTileOwner.isPlayer() || !this.targetPlayer.isPlayer())
+      return false;
+    if (
+      targetTileOwner !== this.targetPlayer &&
+      !targetTileOwner.isOnSameTeam(this.targetPlayer)
+    ) {
+      return false;
+    }
+    if (targetTileOwner.isFriendly(this.player)) {
+      return false;
+    }
+    return true;
+  }
   private spawnWarheadsWithWait(remainingTicks: number): void {
     if (this.nuke === null) return;
 
@@ -278,9 +292,7 @@ export class MirvExecution implements Execution {
         continue;
       }
 
-      if (this.mg.owner(tile) !== this.targetPlayer) {
-        continue;
-      }
+      if (!this.isTileOwnedByValidEnemy(tile)) continue;
 
       if (this.isOverlapping(x, y, taken)) {
         continue;
