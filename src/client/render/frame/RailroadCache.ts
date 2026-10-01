@@ -161,6 +161,15 @@ export class RailroadCache {
     this.tickAnimations();
   }
 
+  /**
+   * Whether a railroad is still being drawn in. While none is, a tick
+   * without railroad events changes nothing.
+   */
+  get animating(): boolean {
+    for (const anim of this.anims.values()) if (!anim.complete) return true;
+    return false;
+  }
+
   /** Clear the dirty flag after the consumer has uploaded the state. */
   clearDirty(): void {
     this.railroadDirty = false;
