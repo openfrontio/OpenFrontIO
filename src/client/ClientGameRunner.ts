@@ -1158,9 +1158,9 @@ export class ClientGameRunner {
         this.lastTickReceiveTime = now;
 
         if (this.turnsSeen !== message.turn.turnNumber) {
-          // A warning while the start message is still on its way (every
+          // Expected while the start message is still on its way (every
           // multiplayer game start hits this); an error once it has arrived.
-          (this.awaitingStart ? console.warn : console.error)(
+          (this.awaitingStart ? console.debug : console.error)(
             `got wrong turn have turns ${this.turnsSeen}, received turn ${message.turn.turnNumber}`,
           );
         } else {

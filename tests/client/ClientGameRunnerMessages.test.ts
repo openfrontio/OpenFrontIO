@@ -294,14 +294,14 @@ describe("ClientGameRunner in-game messages", () => {
   });
 
   // The (re)join's start message replays every turn so far, so live turns
-  // that beat it there are expected to be dropped: a warning, not an error.
-  it("only warns about a wrong turn while a start message is awaited", () => {
-    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+  // that beat it there are expected to be dropped: debug, not an error.
+  it("only logs a wrong turn at debug while a start message is awaited", () => {
+    const debug = vi.spyOn(console, "debug").mockImplementation(() => {});
     const { worker, transport, onmessage } = makeStartedRunner(true);
     const onconnect = transport.updateCallback.mock.calls[0][0] as () => void;
 
     onmessage({ type: "turn", turn: { turnNumber: 3, intents: [] } });
-    expect(warn).toHaveBeenCalledWith(
+    expect(debug).toHaveBeenCalledWith(
       "got wrong turn have turns 0, received turn 3",
     );
 
@@ -314,7 +314,7 @@ describe("ClientGameRunner in-game messages", () => {
 
     onconnect();
     onmessage({ type: "turn", turn: { turnNumber: 6, intents: [] } });
-    expect(warn).toHaveBeenCalledWith(
+    expect(debug).toHaveBeenCalledWith(
       "got wrong turn have turns 4, received turn 6",
     );
     expect(console.error).not.toHaveBeenCalled();
