@@ -118,7 +118,14 @@ export class TrainExecution implements Execution {
       throw new Error("Not initialized");
     }
 
-    if (!this.train.isActive() || !this.activeSourceOrDestination()) {
+    if (!this.train.isActive()) {
+      this.deleteTrain();
+      return;
+    }
+
+    this.reconcileCurrentRailroadSplit();
+
+    if (!this.activeSourceOrDestination()) {
       this.deleteTrain();
       return;
     }
@@ -267,6 +274,83 @@ export class TrainExecution implements Execution {
     }
     this.stations.splice(0, 2, ...path);
     return getOrientedRailroad(this.stations[0], this.stations[1]);
+  }
+
+  /**
+   * Reconcile a split of the railroad currently occupied by the train. The
+   * client keeps following the original motion plan, so only replacement
+   * segments whose concatenated tiles exactly match that plan are accepted.
+   */
+  private reconcileCurrentRailroadSplit(): void {
+    if (this.currentRailroad === null || this.stations.length < 2) return;
+
+    const [station0, station1] = this.stations;
+    if (station0.getRailroadTo(station1) !== null) return;
+
+    const path = this.railNetwork.findStationsPath(station0, station1);
+    if (!path || path.length <= 2) return;
+
+    const segments: OrientedRailroad[] = [];
+    let cursor = this.pathIndex;
+    for (let i = 0; i < path.length - 1; i++) {
+      const segment = getOrientedRailroad(path[i], path[i + 1]);
+      if (!segment) return;
+      segments.push(segment);
+      for (const tile of segment.getTiles()) {
+        if (this.pathTiles[cursor++] !== tile) return;
+      }
+    }
+
+    const oldTiles = this.currentRailroad.getTiles();
+    if (cursor !== this.pathIndex + oldTiles.length) return;
+
+    // Drop replacement stations whose stop boundary is already behind the
+    // engine. A station exactly at the engine remains so stationReached() can
+    // process it normally and award gold once.
+    let activeSegment = 0;
+    let segmentStart = 0;
+    let boundary = 0;
+    for (let i = 0; i < segments.length - 1; i++) {
+      boundary += segments[i].getTiles().length;
+      const stopIndex = this.stopIndexAtBoundary(
+        path[i + 1],
+        oldTiles,
+        boundary,
+      );
+      if (this.currentTile <= stopIndex) break;
+      activeSegment = i + 1;
+      segmentStart = boundary;
+    }
+
+    this.pathIndex += segmentStart;
+    this.currentTile -= segmentStart;
+    this.currentRailroad = segments[activeSegment];
+    this.stations.splice(0, 2, ...path.slice(activeSegment));
+  }
+
+  /**
+   * Railroad segments can meet on either side of the station building tile.
+   * Pick the adjacent rail tile closest to the station to determine the exact
+   * engine position at which that stop is reached.
+   */
+  private stopIndexAtBoundary(
+    station: TrainStation,
+    tiles: readonly TileRef[],
+    boundary: number,
+  ): number {
+    if (this.mg === null) throw new Error("Not initialized");
+
+    const before = boundary - 1;
+    const after = boundary;
+    const stationX = this.mg.x(station.tile());
+    const stationY = this.mg.y(station.tile());
+    const distanceSquared = (index: number) => {
+      const dx = this.mg!.x(tiles[index]) - stationX;
+      const dy = this.mg!.y(tiles[index]) - stationY;
+      return dx * dx + dy * dy;
+    };
+
+    return distanceSquared(before) <= distanceSquared(after) ? before : after;
   }
 
   private canTradeWithDestination() {
