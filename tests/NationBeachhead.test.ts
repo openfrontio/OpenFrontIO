@@ -60,7 +60,7 @@ describe("Nation beachhead boats", () => {
   }
 
   it("Hard attacks by land the tick after its beachhead boat lands", async () => {
-    const { game, island, behavior, executions, attacks } =
+    const { game, nation, island, behavior, executions, attacks } =
       await setupBeachhead(Difficulty.Hard);
     expect(behavior.sendAttack(island)).toBe(true);
     const boats = executions().filter(
@@ -81,6 +81,30 @@ describe("Nation beachhead boats", () => {
     const [followUp] = attacks(false) as AttackExecution[];
     // Everything left at home goes in: the reserve ratio is 0 here
     expect(followUp["startTroops"]).toBe(99_000);
+
+    // Only once, however much the troops grow back
+    for (let i = 0; i < 30; i++) {
+      nation.addTroops(10_000);
+      game.executeNextTick();
+      behavior.followUpLandings();
+    }
+    expect(attacks(false)).toHaveLength(1);
+  });
+
+  it("doesn't follow up later when it had no troops to spare at the landing", async () => {
+    const { game, nation, island, behavior, attacks } = await setupBeachhead(
+      Difficulty.Hard,
+    );
+    expect(behavior.sendAttack(island)).toBe(true);
+    for (let i = 0; i < 50 && attacks(true).length === 0; i++) {
+      game.executeNextTick();
+    }
+    expect(attacks(true)).toHaveLength(1);
+    nation.setTroops(0);
+    behavior.followUpLandings();
+    nation.setTroops(50_000);
+    behavior.followUpLandings();
+    expect(attacks(false)).toHaveLength(0);
   });
 
   it("makes no land attack when its boat sinks", async () => {

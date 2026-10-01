@@ -1,5 +1,6 @@
 import { z } from "zod";
 import {
+  Attack,
   Cell,
   Difficulty,
   Game,
@@ -31,6 +32,7 @@ import {
   snapshotType,
   Versioned,
   zNum,
+  zRef,
 } from "../../snapshot/SnapshotType";
 import {
   assertNever,
@@ -74,6 +76,8 @@ function boxGap(a: Box, b: Box): number {
 
 export class AiAttackBehavior {
   private botAttackTroopsSent: number = 0;
+  // Our boat attacks (landed beachheads) already followed up by land, while they last
+  private followedLandings: Attack[] = [];
   // Only set during a maybeAttack call: our land neighbors, and each boat route planned
   private landNeighbors: Set<Player> | null = null;
   private boatRoutes: Map<Player, BoatRoute | null> | null = null;
@@ -94,6 +98,7 @@ export class AiAttackBehavior {
   snapshot(w: SnapshotWriter): Versioned {
     return w.versioned(AiAttackBehaviorSnapshot, {
       botAttackTroopsSent: this.botAttackTroopsSent,
+      followedLandings: this.followedLandings.map((a) => w.attack(a)),
       triggerRatio: this.triggerRatio,
       reserveRatio: this.reserveRatio,
       expandRatio: this.expandRatio,
@@ -121,6 +126,7 @@ export class AiAttackBehavior {
     this.landNeighbors = null;
     this.boatRoutes = null;
     this.botAttackTroopsSent = s.botAttackTroopsSent;
+    this.followedLandings = s.followedLandings.map((i) => r.attack(i));
     this.triggerRatio = s.triggerRatio;
     this.reserveRatio = s.reserveRatio;
     this.expandRatio = s.expandRatio;
@@ -145,14 +151,20 @@ export class AiAttackBehavior {
   }
 
   // Called every tick. Hard & Impossible boats are beachheads: the moment one lands
-  // (its attack starts at the landing tile), attack its target by land from there.
+  // (its attack starts at the landing tile), attack its target by land from there, once.
   // If someone else holds that coast by now, the tile just stays for later attacks.
   followUpLandings(): void {
     if (!this.landsBeachheads()) return;
-    for (const attack of this.player.outgoingAttacks()) {
+    const attacks = this.player.outgoingAttacks();
+    this.followedLandings = this.followedLandings.filter((a) =>
+      attacks.includes(a),
+    );
+    for (const attack of attacks) {
       const landing = attack.sourceTile();
+      if (landing === null || this.followedLandings.includes(attack)) continue;
+      this.followedLandings.push(attack);
       const target = attack.target();
-      if (landing === null || !this.holdsLandNextTo(target, landing)) continue;
+      if (!this.holdsLandNextTo(target, landing)) continue;
       this.sendLandAttack(
         target,
         undefined,
@@ -1846,11 +1858,16 @@ export class AiAttackBehavior {
 
 export const AiAttackBehaviorSnapshot = snapshotType({
   name: "AiAttackBehavior",
-  version: 1,
+  version: 2,
   schema: z.object({
     botAttackTroopsSent: zNum(),
+    followedLandings: z.array(zRef()),
     triggerRatio: zNum(),
     reserveRatio: zNum(),
     expandRatio: zNum(),
   }),
+  migrations: {
+    // v1 nations never followed up landings
+    1: (d) => ({ ...d, followedLandings: [] }),
+  },
 });
