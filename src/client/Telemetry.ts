@@ -130,6 +130,14 @@ export function initTelemetry(): Promise<Faro | null> {
           /^Failed to fetch(?= \w*Error )/,
           /^Load failed(?= \w*Error )/,
           /^NetworkError when attempting to fetch resource\.(?= \w*Error )/,
+          // Stackless, so not traceable to us: Firefox refusing
+          // CSSStyleSheet.replace on a sheet it did not construct (we never
+          // call it; likely an extension), and the browser refusing to start
+          // an AudioContext (howler's unlock; the game just stays silent).
+          // Unanchored: these arrive as rejected DOMExceptions whose message
+          // carries the name ("NotAllowedError: CSSStyleSheet.replace: ...").
+          /This method can only be called on modifiable style sheets/,
+          /Failed to start the audio device/,
         ],
         beforeSend: (item) =>
           filterSignal(item, sessionSamplingRate(env), errorSamplingRate(env)),
