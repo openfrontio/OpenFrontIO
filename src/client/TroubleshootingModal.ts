@@ -217,11 +217,13 @@ export class TroubleshootingModal extends BaseModal {
   public close(): void {
     // Override BaseModal.close() to navigate back to Help (this modal is
     // opened from inside HelpModal), not to page-play like other inline modals.
+    // Main's game-start sweep closes it unopened; that must not reopen Help.
+    const wasOpen = this.isOpen();
     this.unregisterEscapeHandler();
     this.onClose();
     if (this.inline) {
       this.style.pointerEvents = "none";
-      window.showPage?.("page-help");
+      if (wasOpen) window.showPage?.("page-help");
     } else {
       this.modalEl?.close();
     }
