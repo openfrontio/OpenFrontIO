@@ -1,5 +1,6 @@
 import {
   ACTIVE_LOADOUT_KEY,
+  ACTIVE_PLAYER_KEY,
   CROWN_KEY,
   EFFECTS_KEY,
   FLAG_KEY,
@@ -527,6 +528,26 @@ describe("UserSettings per-player cosmetics (#4955)", () => {
         listener,
       );
     }
+  });
+
+  it("persists active playerId to localStorage and restores it across reloads (#5660)", () => {
+    UserSettings.setPlayerId("p1");
+    expect(localStorage.getItem(ACTIVE_PLAYER_KEY)).toBe("p1");
+
+    // Simulate page reload: reset static cache, restore static playerId from localStorage
+    const statics = UserSettings as unknown as {
+      cache: Map<string, string | null>;
+      playerId: string | null;
+    };
+    statics.cache.clear();
+    statics.playerId = localStorage.getItem(ACTIVE_PLAYER_KEY);
+
+    const s = new UserSettings();
+    s.setSelectedCrownName("golden");
+    expect(localStorage.getItem(`${CROWN_KEY}:p1`)).toBe("golden");
+
+    UserSettings.setPlayerId(null);
+    expect(localStorage.getItem(ACTIVE_PLAYER_KEY)).toBeNull();
   });
 
   it("does not scope non-cosmetic settings", () => {

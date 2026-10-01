@@ -1376,6 +1376,7 @@ export async function getPlayerCosmeticsRefs(
   const cosmetics = await fetchCosmetics();
   let pattern: PlayerPattern | null =
     userSettings.getSelectedPatternName(cosmetics);
+  let patternDenied = false;
 
   if (pattern) {
     const userMe = await getUserMe();
@@ -1388,9 +1389,13 @@ export async function getPlayerCosmeticsRefs(
       const hasWildcard = flares.includes("pattern:*");
       if (!hasWildcard && !flares.includes(flareName)) {
         pattern = null;
+        patternDenied = true;
       }
+    } else {
+      // Unknown profile: keep the selection in settings, but do not send it.
+      pattern = null;
     }
-    if (pattern === null) {
+    if (patternDenied) {
       userSettings.setSelectedPatternName(undefined);
     }
   }
@@ -1428,9 +1433,7 @@ export async function getPlayerCosmeticsRefs(
         // not strip an unowned cosmetic ref, it refuses the connection
         // (Privilege returns "forbidden", Worker.ts closes the socket with
         // CosmeticsForbidden), so sending it would trade a lost flag for an
-        // unjoinable multiplayer. The pattern, skin and crown branches nearby
-        // do send theirs on an unknown profile and carry that exposure; this
-        // one deliberately does not.
+        // unjoinable multiplayer.
         flag = null;
       }
     }
@@ -1440,43 +1443,59 @@ export async function getPlayerCosmeticsRefs(
   }
 
   let skinName = userSettings.getSelectedSkinName() ?? undefined;
+  let skinDenied = false;
   if (skinName) {
     const skin = cosmetics?.skins?.[skinName];
-    if (cosmetics && !skin) {
-      // Cosmetics loaded but the saved skin no longer exists.
-      skinName = undefined;
-    } else if (skin) {
+    if (!skin) {
+      if (cosmetics) {
+        // Cosmetics loaded but the saved skin no longer exists.
+        skinName = undefined;
+        skinDenied = true;
+      }
+    } else {
       const userMe = await getUserMe();
       if (userMe) {
         const flares = userMe.player.flares ?? [];
         const hasWildcard = flares.includes("skin:*");
         if (!hasWildcard && !flares.includes(`skin:${skin.name}`)) {
           skinName = undefined;
+          skinDenied = true;
         }
+      } else {
+        // Unknown profile: keep the selection, but do not send it.
+        skinName = undefined;
       }
     }
-    if (skinName === undefined) {
+    if (skinDenied) {
       userSettings.setSelectedPatternName(undefined);
     }
   }
 
   let crownName = userSettings.getSelectedCrownName() ?? undefined;
+  let crownDenied = false;
   if (crownName) {
     const crown = cosmetics?.crowns?.[crownName];
-    if (cosmetics && !crown) {
-      // Cosmetics loaded but the saved crown no longer exists.
-      crownName = undefined;
-    } else if (crown) {
+    if (!crown) {
+      if (cosmetics) {
+        // Cosmetics loaded but the saved crown no longer exists.
+        crownName = undefined;
+        crownDenied = true;
+      }
+    } else {
       const userMe = await getUserMe();
       if (userMe) {
         const flares = userMe.player.flares ?? [];
         const hasWildcard = flares.includes("crown:*");
         if (!hasWildcard && !flares.includes(`crown:${crown.name}`)) {
           crownName = undefined;
+          crownDenied = true;
         }
+      } else {
+        // Unknown profile: keep the selection, but do not send it.
+        crownName = undefined;
       }
     }
-    if (crownName === undefined) {
+    if (crownDenied) {
       userSettings.setSelectedCrownName(undefined);
     }
   }
@@ -1484,26 +1503,29 @@ export async function getPlayerCosmeticsRefs(
   // Effects: a per-slot map (slot -> effect name). A slot is the effectType for
   // trails and the nukeType for nuke explosions (see effectTypeForSlot). Drop any
   // entry whose effect no longer exists, doesn't fit the slot, or the user can't
-  // access. Like skins/flags/patterns above, a selection is kept (and left to the
-  // server to validate) when cosmetics or userMe fail to load.
+  // access. Like skins/flags/patterns above, a selection is kept in settings (and
+  // omitted from join refs) when cosmetics or userMe fail to load.
   const selectedEffects = userSettings.getSelectedEffects();
   const effects: Record<string, string> = {};
   for (const [slot, name] of Object.entries(selectedEffects)) {
     const effect = findEffectForSlot(cosmetics, slot, name);
-    if (cosmetics && !effect) {
-      userSettings.setSelectedEffectName(slot, undefined);
+    if (!effect) {
+      if (cosmetics) {
+        userSettings.setSelectedEffectName(slot, undefined);
+      }
       continue;
     }
-    if (effect) {
-      const userMe = await getUserMe();
-      if (userMe) {
-        const flares = userMe.player.flares ?? [];
-        const hasWildcard = flares.includes("effect:*");
-        if (!hasWildcard && !flares.includes(`effect:${effect.name}`)) {
-          userSettings.setSelectedEffectName(slot, undefined);
-          continue;
-        }
+    const userMe = await getUserMe();
+    if (userMe) {
+      const flares = userMe.player.flares ?? [];
+      const hasWildcard = flares.includes("effect:*");
+      if (!hasWildcard && !flares.includes(`effect:${effect.name}`)) {
+        userSettings.setSelectedEffectName(slot, undefined);
+        continue;
       }
+    } else {
+      // Unknown profile: keep the selection in settings, but do not send it.
+      continue;
     }
     effects[slot] = name;
   }

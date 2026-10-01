@@ -205,6 +205,8 @@ const PER_PLAYER_KEYS: readonly string[] = [
   ACTIVE_LOADOUT_KEY,
 ];
 
+export const ACTIVE_PLAYER_KEY = "settings.active_player_id";
+
 /**
  * A named snapshot of every equip slot, so a player can switch their whole
  * cosmetic set in one action. Values are the raw stored forms of the slots:
@@ -260,7 +262,10 @@ function parseLoadout(value: unknown): CosmeticLoadout | null {
 export class UserSettings {
   private static cache = new Map<string, string | null>();
   /** publicId of the logged-in player, or null when logged out. */
-  private static playerId: string | null = null;
+  private static playerId: string | null =
+    typeof localStorage !== "undefined"
+      ? localStorage.getItem(ACTIVE_PLAYER_KEY)
+      : null;
   /** Set while applyLoadout writes, to stop the mirror writing back. */
   private static applyingLoadout = false;
 
@@ -274,6 +279,15 @@ export class UserSettings {
    * users keep their cosmetics.
    */
   static setPlayerId(playerId: string | null): void {
+    try {
+      if (playerId !== null) {
+        localStorage.setItem(ACTIVE_PLAYER_KEY, playerId);
+      } else {
+        localStorage.removeItem(ACTIVE_PLAYER_KEY);
+      }
+    } catch {
+      // In case localStorage throws in restricted environments
+    }
     if (UserSettings.playerId === playerId) return;
     UserSettings.playerId = playerId;
     const settings = new UserSettings();
