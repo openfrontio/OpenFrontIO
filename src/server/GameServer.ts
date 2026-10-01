@@ -1905,6 +1905,19 @@ export class GameServer {
       winner: winner?.winner,
     });
 
+    // The record carries the first winning voter's stats, unchecked. Before
+    // the vote can also be made to agree on stats, measure how often honest
+    // voters actually differ: a "split" here means they did.
+    const agreement = this.winnerVote.statsAgreement();
+    if (agreement !== null) {
+      const split = agreement.versions > 1;
+      this.log[split ? "warn" : "info"]("winner stats agreement", {
+        gameID: this.id,
+        statsAgreement: split ? "split" : "agreed",
+        ...agreement,
+      });
+    }
+
     // Players must stay in the same order as the game start info.
     const playerRecords: PlayerRecord[] = this.gameStartInfo.players.map(
       (player) => {

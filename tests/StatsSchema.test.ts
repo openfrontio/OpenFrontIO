@@ -2,6 +2,7 @@ import {
   PlayerStatsLeafSchema,
   PlayerStatsTreeSchema,
 } from "../src/core/ApiSchemas";
+import { AllPlayersStats, ClientSendWinnerMessage } from "../src/core/Schemas";
 import {
   ALLIANCE_INDEX_LONGEST_HELD,
   ATTACK_INDEX_MAX_RECV,
@@ -12,6 +13,13 @@ import {
   PlayerStatsSchema,
   TILE_INDEX_DRAWDOWN_TROUGH,
 } from "../src/core/StatsSchemas";
+import {
+  createGameWireContext,
+  decodeClientMessage,
+  encodeClientMessage,
+} from "../src/core/ZbinWire";
+
+const CLIENT = "AbCdEfGh";
 
 function testPlayerSchema(
   json: string,
@@ -220,8 +228,29 @@ describe("PlayerStats new fields", () => {
     expect(parsed?.gold?.[GOLD_INDEX_DONATE_RECV]).toBeUndefined();
   });
 
+  it("parses a spawn tile", () => {
+    const parsed = PlayerStatsSchema.parse({ spawnTile: 123456 });
+    expect(parsed?.spawnTile).toBe(123456);
+  });
+
+  it("carries a spawn tile over the binary wire", () => {
+    const stats: AllPlayersStats = {
+      [CLIENT]: { attacks: [1n], donations: [2n], spawnTile: 98765 },
+    };
+    const players = [{ clientID: CLIENT }];
+    const decoded = decodeClientMessage(
+      encodeClientMessage(
+        { type: "winner", winner: ["player", CLIENT], allPlayersStats: stats },
+        createGameWireContext(players),
+      ),
+      createGameWireContext(players),
+    ) as ClientSendWinnerMessage;
+    expect(decoded.allPlayersStats[CLIENT]).toEqual(stats[CLIENT]);
+  });
+
   it("parses a record with none of the new fields", () => {
     const parsed = PlayerStatsSchema.parse({ attacks: ["1", "2", "3"] });
+    expect(parsed?.spawnTile).toBeUndefined();
     expect(parsed?.tiles).toBeUndefined();
     expect(parsed?.alliances).toBeUndefined();
     expect(parsed?.peakTroops).toBeUndefined();

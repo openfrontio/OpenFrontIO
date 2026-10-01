@@ -1,8 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-const { getUserMe, fetchProgressionConfig } = vi.hoisted(() => ({
+const { getUserMe, fetchProgressionConfig, isLoggedIn } = vi.hoisted(() => ({
   getUserMe: vi.fn(),
   fetchProgressionConfig: vi.fn(),
+  isLoggedIn: vi.fn(),
 }));
 
 vi.mock("../../../../src/client/Utils", () => ({
@@ -18,6 +19,7 @@ vi.mock("../../../../src/client/Api", () => ({ getUserMe }));
 
 vi.mock("../../../../src/client/Auth", () => ({
   getAuthHeader: vi.fn(async () => "Bearer test-token"),
+  isLoggedIn,
 }));
 
 vi.mock("../../../../src/client/ApiBase", () => ({
@@ -164,6 +166,7 @@ describe("WinModal XP section", () => {
   beforeEach(() => {
     vi.useFakeTimers();
     getUserMe.mockResolvedValue(signedIn);
+    isLoggedIn.mockResolvedValue(true);
     fetchProgressionConfig.mockResolvedValue({
       version: 1,
       maxLevel: 100,
@@ -441,6 +444,46 @@ describe("WinModal XP section", () => {
     expect(current.level).toBe(100);
     expect(current.legend).toBe(true);
     expect(panel()!.querySelector("[data-xp-next-badge]")).toBeNull();
+  });
+
+  it("shows a player who was already a Legend as one throughout the reveal", async () => {
+    stubXpEndpoint([
+      () =>
+        json(
+          eligible({
+            before: { prestige: 10, level: 100, xpInLevel: 0, xpForNext: 0 },
+            after: {
+              ...eligible().after,
+              prestige: 10,
+              level: 100,
+              xpInLevel: 0,
+              xpForNext: 0,
+              legend: true,
+              lifetimeXp: 2200000,
+            },
+            levelsReached: [],
+          }),
+        ),
+    ]);
+    await mount(makeGame({ ended: true }));
+    const currentLegend = () =>
+      (
+        panel()!.querySelector("[data-xp-current-badge] level-badge") as
+          | (HTMLElement & { legend: boolean; level: number })
+          | null
+      )?.legend;
+    expect(panel()!.getAttribute("data-xp-revealing")).toBe("true");
+    expect(currentLegend()).toBe(true);
+    // And every frame of the reveal after it, not just the first.
+    for (let i = 0; i < 400; i++) {
+      await settle(50);
+      if (panel()?.getAttribute("data-xp-revealing") !== "true") break;
+      expect(currentLegend()).toBe(true);
+    }
+    expect(currentLegend()).toBe(true);
+    // Not this game's moment: no Legend card or caption.
+    expect(panel()!.querySelector("[data-xp-legend]")).toBeNull();
+    expect(panel()!.querySelector("[data-xp-caption-legend]")).toBeNull();
   });
 
   it("reveals the XP a source at a time, then settles on the award", async () => {
@@ -721,6 +764,31 @@ describe("WinModal XP section", () => {
     );
   });
 
+  it("skips from the keyboard with a real button", async () => {
+    stubXpEndpoint([() => json(eligible())]);
+    await mount(makeGame({ ended: true }));
+    const skip = panel()!.querySelector<HTMLButtonElement>("[data-xp-skip]");
+    expect(skip).not.toBeNull();
+    expect(skip!.tagName).toBe("BUTTON");
+    expect(skip!.textContent!.trim()).toBe("progression.skip_reveal");
+    // A button's Enter / Space activation is a click.
+    skip!.click();
+    await settle();
+    expect(panel()!.getAttribute("data-xp-revealing")).toBeNull();
+    expect(panel()!.querySelector("[data-xp-skip]")).toBeNull();
+  });
+
+  it("names the progress bar for assistive tech", async () => {
+    stubXpEndpoint([() => json(eligible())]);
+    await mount(makeGame({ ended: true }));
+    await finishReveal();
+    const bar = panel()!.querySelector("[data-xp-bar]")!;
+    expect(bar.getAttribute("aria-label")).toBe("progression.xp_bar_label");
+    expect(bar.getAttribute("aria-valuetext")).toBe(
+      'progression.xp_progress:{"current":"512","next":"400"}',
+    );
+  });
+
   it("asks a signed-out player to sign in, without polling", async () => {
     getUserMe.mockResolvedValue(anonymous);
     const fetchMock = stubXpEndpoint([notFound]);
@@ -731,8 +799,30 @@ describe("WinModal XP section", () => {
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
+  it("asks a player with no session at all to sign in", async () => {
+    isLoggedIn.mockResolvedValue(false);
+    getUserMe.mockResolvedValue(false);
+    const fetchMock = stubXpEndpoint([notFound]);
+    await mount(makeGame({ ended: true }));
+    expect(xpState()).toBe("signed_out");
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("says nothing, rather than 'sign in', when /users/@me fails for a session", async () => {
+    // A 5xx or a timeout: getUserMe answers false, as for a signed-out
+    // player, but there is a session, so this says nothing about the account.
+    getUserMe.mockResolvedValue(false);
+    fetchProgressionConfig.mockClear();
+    const fetchMock = stubXpEndpoint([notFound]);
+    await mount(makeGame({ ended: true }));
+    expect(xpState()).toBe("hidden");
+    expect(fetchProgressionConfig).not.toHaveBeenCalled();
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
   it("says nothing at all when progression is off", async () => {
     fetchProgressionConfig.mockResolvedValue(false);
+    isLoggedIn.mockResolvedValue(false);
     getUserMe.mockResolvedValue(false);
     const fetchMock = stubXpEndpoint([notFound]);
     await mount(makeGame({ ended: true }));

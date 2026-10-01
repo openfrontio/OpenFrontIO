@@ -1827,8 +1827,11 @@
     "new_milestone": "New milestone!",
     "penalty_line": "−{percent}% XP ({source})",
     "prestige": "Prestige {prestige}",
+    "prestige_short": "P{prestige}",
     "sign_in_to_earn": "Sign in to earn XP and level up.",
+    "skip_reveal": "Skip",
     "tap_to_skip": "Tap to skip",
+    "xp_bar_label": "Level progress",
     "xp_heading": "XP earned",
     "xp_progress": "{current} / {next} XP",
     "xp_total": "+{xp} XP"
@@ -1910,6 +1913,24 @@
     "fastest_game_speed": "Max",
     "game_speed": "Game speed",
     "replay_speed": "Replay speed"
+  },
+  "replay_viewer": {
+    "following": "Following {name}",
+    "load_failed": "This replay could not be loaded.",
+    "loading": "Loading replay…",
+    "partial": "Only the first {time} of this game can be watched.",
+    "pause": "Pause",
+    "play": "Play",
+    "processing": "Preparing this replay…",
+    "processing_fetching": "Fetching the game record",
+    "processing_simulating": "Replaying the game: {percent}%",
+    "timeline": "Replay timeline",
+    "unavailable_desync": "This game doesn't replay correctly on this version of OpenFront.",
+    "unavailable_failed": "Processing this game failed.",
+    "unavailable_not_found": "This game could not be found.",
+    "unavailable_other_build": "This game was played on another version of OpenFront.",
+    "unavailable_unreachable": "The game could not be downloaded. Check your connection and try again.",
+    "watch_classic": "Watch the old replay instead"
   },
   "rewards_modal": {
     "title": "Rewards"
@@ -2387,6 +2408,8 @@
     "press_a_key": "Press a key",
     "render_debug_gui": "Render Debug GUI",
     "render_debug_gui_desc": "Toggle the renderer tuning panel",
+    "replay_viewer_desc": "Open replays with rewind controls. Off opens the classic replay",
+    "replay_viewer_label": "New Replay Viewer",
     "request_alliance": "Request Alliance",
     "request_alliance_desc": "Send an alliance request to the player whose tile is under your cursor.",
     "reset": "Reset",

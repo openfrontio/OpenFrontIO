@@ -152,7 +152,7 @@ describe("<level-badge>", () => {
   it("labels the rank where there is room, and always in the name", async () => {
     let badge = await render({ level: 12, prestige: 3, size: 40 });
     const texts = [...badge.querySelectorAll("text")].map((t) => t.textContent);
-    expect(texts).toEqual(["12", "P3"]);
+    expect(texts).toEqual(["12", 'progression.prestige_short:{"prestige":3}']);
     expect(badge.querySelector("svg")?.getAttribute("aria-label")).toContain(
       "progression.prestige",
     );

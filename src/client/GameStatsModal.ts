@@ -1,13 +1,12 @@
 import { html } from "lit";
 import { customElement, state } from "lit/decorators.js";
-import { hasLinkedIdentity } from "./AccountIdentity";
-import { getUserMe } from "./Api";
 import "./components/baseComponents/stats/GameInfoView";
 import { BaseModal } from "./components/BaseModal";
 import "./components/CopyButton";
 import "./components/GameXpPanel";
 import type { GameXpPanelState } from "./components/GameXpPanel";
 import { modalHeader } from "./components/ui/ModalHeader";
+import { resolveXpAccount } from "./ProgressionAccount";
 import { fetchMyGameXp } from "./ProgressionApi";
 import { translateText } from "./Utils";
 
@@ -68,10 +67,11 @@ export class GameStatsModal extends BaseModal {
   private async loadXp(gameId: string): Promise<void> {
     const gen = ++this.xpGeneration;
     try {
-      const me = await getUserMe();
-      if (!me || !hasLinkedIdentity(me.user)) return;
+      // The same "signed in" rule as the end-of-game panel.
+      const account = await resolveXpAccount();
+      if (account.kind !== "signed_in") return;
       // No progress on /users/@me means progression is off.
-      if (me.player.progress === undefined) return;
+      if (account.me.player.progress === undefined) return;
       const result = await fetchMyGameXp(gameId);
       if (gen !== this.xpGeneration || this.gameId !== gameId) return;
       if (result.status === "ok" && result.data.eligible) {

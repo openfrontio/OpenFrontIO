@@ -359,8 +359,10 @@ export const UserMeResponseSchema = z.object({
     rewards: RewardSchema.array().optional(),
     // Level / XP. Absent when progression is off (or on an API that predates
     // it): every level UI hides itself then. Optional rather than defaulted,
-    // so "absent" never renders as "level 1, 0 XP".
-    progress: ProgressSchema.optional(),
+    // so "absent" never renders as "level 1, 0 XP". A malformed object also
+    // reads as absent: drift in this cosmetic field must never fail the whole
+    // /users/@me parse, which would make the player look signed out.
+    progress: ProgressSchema.optional().catch(undefined),
     clans: z
       .array(
         z.object({

@@ -330,7 +330,7 @@ export class LevelBadge extends LitElement {
         class="fill-yellow-200"
         textLength=${prestige >= 10 ? 12 : nothing}
         lengthAdjust="spacingAndGlyphs"
-      >P${prestige}</text>`;
+      >${translateText("progression.prestige_short", { prestige })}</text>`;
   }
 
   // The level frame and number, shrunk inside the prestige emblem when there
