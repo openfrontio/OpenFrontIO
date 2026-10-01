@@ -266,7 +266,8 @@ describe("player profile level", () => {
     );
     await open("slow-progress");
     // The stats are up while the level is still on its way.
-    expect(modal.querySelector("[data-profile-level]")).toBeNull();
+    expect(modal.querySelector("player-stats-tree-view")).not.toBeNull();
+    expect(modal.querySelector("profile-card")).toBeNull();
     resolveProgress({
       prestige: 0,
       level: 33,
@@ -275,9 +276,9 @@ describe("player profile level", () => {
     });
     await vi.waitFor(async () => {
       await settled(modal);
-      expect(
-        modal.querySelector("[data-profile-level]")?.textContent,
-      ).toContain('progression.level:{"level":33}');
+      expect(levelLine()?.textContent).toContain(
+        'progression.level:{"level":33}',
+      );
     });
   });
 
@@ -293,7 +294,7 @@ describe("player profile level", () => {
     resolveFirst({ prestige: 0, level: 77, lifetimeXp: 1, legend: false });
     await new Promise((r) => setTimeout(r, 0));
     await settled(modal);
-    expect(modal.querySelector("[data-profile-level]")).toBeNull();
+    expect(modal.querySelector("profile-card")).toBeNull();
   });
 });
 
