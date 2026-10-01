@@ -487,12 +487,7 @@ export class NationStructureBehavior {
     this.reachableStationsCache = null;
     const config = this.game.config();
     const citiesDisabled = config.isUnitDisabled(UnitType.City);
-    const cityCount = citiesDisabled
-      ? Math.max(
-          1,
-          Math.floor(this.player.numTilesOwned() / TILES_PER_CITY_EQUIVALENT),
-        )
-      : this.player.unitsOwned(UnitType.City);
+    const cityCount = this.cityCount();
     this._sharedWaterComponents = this.game.sharedWaterComponents(this.player);
     const hasCoastalTiles = this._sharedWaterComponents !== null;
 
@@ -590,6 +585,17 @@ export class NationStructureBehavior {
     }
 
     return false;
+  }
+
+  // Cities owned, or a territory-based equivalent when cities are disabled
+  private cityCount(): number {
+    if (this.game.config().isUnitDisabled(UnitType.City)) {
+      return Math.max(
+        1,
+        Math.floor(this.player.numTilesOwned() / TILES_PER_CITY_EQUIVALENT),
+      );
+    }
+    return this.player.unitsOwned(UnitType.City);
   }
 
   private startsInTeamSpawnArea(): boolean {
@@ -714,7 +720,7 @@ export class NationStructureBehavior {
     // Like humans, nations don't save up before their first few cities stand. The build order
     // still holds: until then, whatever is due before the next city is cheaper than that city.
     if (
-      this.player.unitsOwned(UnitType.City) < CITIES_BEFORE_SAVING &&
+      this.cityCount() < CITIES_BEFORE_SAVING &&
       this.game.config().gameConfig().difficulty !== Difficulty.Easy
     ) {
       return realCost;

@@ -10,19 +10,22 @@ import {
 import { PseudoRandom } from "../src/core/PseudoRandom";
 import { createGame, L, W } from "./core/pathfinding/_fixtures";
 
-// 100x100 with a 50-tile lake: `nation` owns the west coast, `other` the east coast,
-// optionally with team spawn areas on either shore. When landlocked, `coast` owns the
-// west shore and `nation` only the land behind it.
+// size x size with a lake in the middle half: `nation` owns the west coast, `other` the
+// east coast, optionally with team spawn areas on either shore. When landlocked, `coast`
+// owns the west shore and `nation` only the land behind it.
 function setupCoast(
-  config: { difficulty: Difficulty; gameMode?: GameMode },
-  { spawnAreas = false, landlocked = false } = {},
+  config: {
+    difficulty: Difficulty;
+    gameMode?: GameMode;
+    disabledUnits?: UnitType[];
+  },
+  { spawnAreas = false, landlocked = false, size = 100 } = {},
 ) {
-  const size = 100;
-  const westEnd = 25;
+  const westEnd = size / 4;
   const grid: string[] = [];
   for (let y = 0; y < size; y++) {
     for (let x = 0; x < size; x++) {
-      grid.push(x < westEnd || x >= size - 25 ? L : W);
+      grid.push(x < westEnd || x >= size - westEnd ? L : W);
     }
   }
   const team = config.gameMode === GameMode.Team;
@@ -32,8 +35,8 @@ function setupCoast(
     spawnAreas
       ? {
           "2": [
-            { x: 0, y: 0, width: 50, height: size },
-            { x: 50, y: 0, width: 50, height: size },
+            { x: 0, y: 0, width: size / 2, height: size },
+            { x: size / 2, y: 0, width: size / 2, height: size },
           ],
         }
       : undefined,
@@ -66,7 +69,7 @@ function setupCoast(
       .map((c) => c[0])
       .filter((e) => e instanceof ConstructionExecution)
       .map((e) => e["constructionType"]);
-  return { nation, behavior, cities, built };
+  return { game, nation, behavior, cities, built };
 }
 
 describe("Nation economy at the start", () => {
@@ -152,4 +155,25 @@ describe("Nation economy at the start", () => {
     cities(owned);
     expect(behavior["getPerceivedCost"](UnitType.City)).toBe(perceived);
   });
+
+  // Cities disabled: about one city per 2000 tiles. The second port costs 250k, 500k while saving
+  it.each([
+    [100, 2_500, 250_000n],
+    [200, 10_000, 500_000n],
+  ])(
+    "without cities, on a %i-wide map (%i tiles) the second port feels like %i",
+    (size, tiles, perceived) => {
+      const { game, nation, behavior } = setupCoast(
+        {
+          difficulty: Difficulty.Hard,
+          gameMode: ffa,
+          disabledUnits: [UnitType.City],
+        },
+        { size },
+      );
+      expect(nation.numTilesOwned()).toBe(tiles);
+      nation.buildUnit(UnitType.Port, game.ref(size / 4 - 1, 10), {});
+      expect(behavior["getPerceivedCost"](UnitType.Port)).toBe(perceived);
+    },
+  );
 });
