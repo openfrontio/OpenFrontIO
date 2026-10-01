@@ -1576,5 +1576,51 @@
       "Federation",
       "Confederation"
     ]
+  },
+  "ukraine": {
+    "prefixes": [
+      "Cossack",
+      "Zaporizhian",
+      "Hutsul",
+      "Boyko",
+      "Lemko",
+      "Polissian",
+      "Volhynian",
+      "Podolian",
+      "Slobozhan",
+      "Tavrian",
+      "Donbas",
+      "Galician",
+      "Bukovinian",
+      "Siverian",
+      "Kyivan",
+      "Chumak",
+      "Haidamak",
+      "Steppe",
+      "Dnipro",
+      "Carpathian",
+      "Azov",
+      "Budzhak",
+      "Pokuttian",
+      "Sloboda"
+    ],
+    "suffixes": [
+      "Sich",
+      "Hromada",
+      "Khutir",
+      "Stanytsia",
+      "Sotnia",
+      "Polk",
+      "Hetmanate",
+      "Rada",
+      "Kurin",
+      "Selo",
+      "Posad",
+      "Zastava",
+      "Volost",
+      "Band",
+      "Brotherhood",
+      "Horde"
+    ]
   }
 }
