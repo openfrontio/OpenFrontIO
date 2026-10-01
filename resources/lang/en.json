@@ -1188,7 +1188,6 @@
     "subscription_required_title": "Subscription Required",
     "team_count": "Number of Teams",
     "teams_Duos": "Duos (teams of 2)",
-    "teams_Humans Vs Nations": "Humans vs Nations",
     "teams_Quads": "Quads (teams of 4)",
     "teams_Trios": "Trios (teams of 3)",
     "title": "Create Lobby",
@@ -1552,6 +1551,9 @@
     "servers_unreachable": "Can't connect to the OpenFront servers",
     "teams_count": "{teamCount} teams",
     "teams_of": "{teamCount} teams of {playersPerTeam}",
+    "teams_of_Duos": "Duos ({teamCount} teams of 2)",
+    "teams_of_Quads": "Quads ({teamCount} teams of 4)",
+    "teams_of_Trios": "Trios ({teamCount} teams of 3)",
     "teams_title": "Teams"
   },
   "multi_tab": {
@@ -1805,7 +1807,6 @@
     "notify_off": "Play a sound when the game starts",
     "notify_on": "Game start alert is on",
     "notify_started": "Your game is starting!",
-    "players_per_team": "of {num}",
     "see_all": "See all {count}",
     "started": "Started",
     "starting_game": "Starting…",

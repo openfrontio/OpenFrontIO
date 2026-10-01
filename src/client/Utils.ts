@@ -3,6 +3,7 @@ import { DoomsdayClockSpeed } from "../core/game/DoomsdayClock";
 import {
   Duos,
   GameMode,
+  GameType,
   HumansVsNations,
   maps,
   MessageType,
@@ -60,89 +61,60 @@ export function getMapName(mapName: string | undefined): string | null {
   return translateText(translationKey);
 }
 
+const TEAM_PRESET_SIZES = { [Duos]: 2, [Trios]: 3, [Quads]: 4 } as const;
+const TEAM_PRESET_BY_SIZE: Record<number, string> = {
+  2: Duos,
+  3: Trios,
+  4: Quads,
+};
+
 /**
- * Returns a display label for the game mode (e.g. "FFA", "4 Teams", "Duos").
+ * Display label for a lobby's game mode, e.g. "Free for All",
+ * "Trios (10 teams of 3)" or "5 teams of 20". A team count that splits the
+ * lobby evenly into teams of 2-4 is named like the matching preset.
  */
 export function getGameModeLabel(gameConfig: GameConfig): string {
-  const { gameMode, playerTeams, maxPlayers } = gameConfig;
+  const { gameMode, gameType, nations, playerTeams, maxPlayers } = gameConfig;
 
   if (gameMode !== GameMode.Team) {
     return translateText("game_mode.ffa");
   }
 
-  // Humans vs Nations
   if (playerTeams === HumansVsNations) {
-    if (maxPlayers) {
-      return translateText("public_lobby.teams_hvn_detailed", {
-        num: maxPlayers,
-      });
-    }
-    return translateText("public_lobby.teams_hvn");
+    // Only public HvN on default nations matches the nation count to the humans.
+    return maxPlayers && gameType === GameType.Public && nations === "default"
+      ? translateText("public_lobby.teams_hvn_detailed", { num: maxPlayers })
+      : translateText("public_lobby.teams_hvn");
   }
 
-  // Named team types (Duos, Trios, Quads)
-  if (typeof playerTeams === "string") {
-    const teamKey = `public_lobby.teams_${playerTeams}`;
-    const teamCount = getTeamCount(playerTeams, maxPlayers ?? 0);
-    const translated = translateText(teamKey, { team_count: teamCount });
-    if (translated !== teamKey) {
-      return translated;
-    }
+  if (playerTeams === Duos || playerTeams === Trios || playerTeams === Quads) {
+    const teamCount = Math.floor(
+      (maxPlayers ?? 0) / TEAM_PRESET_SIZES[playerTeams],
+    );
+    return teamCount > 0
+      ? translateText(`mode_selector.teams_of_${playerTeams}`, { teamCount })
+      : translateText(`host_modal.teams_${playerTeams}`);
   }
 
-  // Numeric team count (e.g. "5 teams of 20")
-  const teamCount =
-    typeof playerTeams === "number"
-      ? playerTeams
-      : getTeamCount(playerTeams, maxPlayers ?? 0);
-  const teamSize =
-    teamCount > 0 ? Math.floor((maxPlayers ?? 0) / teamCount) : 0;
-
-  // If the computed team size matches a named format, use that label instead
-  const namedTeamType =
-    teamSize === 2
-      ? Duos
-      : teamSize === 3
-        ? Trios
-        : teamSize === 4
-          ? Quads
-          : null;
-  if (namedTeamType) {
-    const teamKey = `public_lobby.teams_${namedTeamType}`;
-    const translated = translateText(teamKey, { team_count: teamCount });
-    if (translated !== teamKey) {
-      return translated;
-    }
+  if (playerTeams === undefined || playerTeams <= 0) {
+    return translateText("mode_selector.teams_title");
   }
-
-  const teamsLabel = translateText("public_lobby.teams", { num: teamCount });
-  if (teamSize > 0) {
-    return `${teamsLabel} ${translateText("public_lobby.players_per_team", { num: teamSize })}`;
+  const playersPerTeam = Math.floor((maxPlayers ?? 0) / playerTeams);
+  const preset =
+    (maxPlayers ?? 0) % playerTeams === 0
+      ? TEAM_PRESET_BY_SIZE[playersPerTeam]
+      : undefined;
+  if (preset !== undefined) {
+    return translateText(`mode_selector.teams_of_${preset}`, {
+      teamCount: playerTeams,
+    });
   }
-  return teamsLabel;
-}
-
-function getTeamCount(
-  playerTeams: string | number | undefined,
-  maxPlayers: number,
-): number {
-  if (typeof playerTeams === "number") return playerTeams;
-  const teamSize = getTeamSize(playerTeams, maxPlayers);
-  return teamSize > 0 ? Math.floor(maxPlayers / teamSize) : 0;
-}
-
-function getTeamSize(
-  playerTeams: string | number | undefined,
-  maxPlayers: number,
-): number {
-  if (playerTeams === Duos) return 2;
-  if (playerTeams === Trios) return 3;
-  if (playerTeams === Quads) return 4;
-  if (playerTeams === HumansVsNations) return maxPlayers;
-  if (typeof playerTeams === "number" && playerTeams > 0) {
-    return Math.floor(maxPlayers / playerTeams);
-  }
-  return 0;
+  return playersPerTeam > 0
+    ? translateText("mode_selector.teams_of", {
+        teamCount: playerTeams,
+        playersPerTeam,
+      })
+    : translateText("mode_selector.teams_count", { teamCount: playerTeams });
 }
 
 export interface ModifierInfo {
