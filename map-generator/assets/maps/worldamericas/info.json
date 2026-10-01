@@ -1,11 +1,11 @@
 {
-    "id": "worldamericas",
-    "name": "World - Americas",
-    "translation_key": "map.worldamericas",
-    "categories": ["featured", "world"],
-    "multiplayer_frequency": 8,
-    "featured_rank": 1,
-"nations": [
+  "id": "worldamericas",
+  "name": "World - Americas",
+  "translation_key": "map.worldamericas",
+  "categories": ["featured", "world"],
+  "multiplayer_frequency": 8,
+  "featured_rank": 7,
+  "nations": [
     {
       "coordinates": [1134, 284],
       "name": "United States",

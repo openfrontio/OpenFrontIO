@@ -2509,7 +2509,7 @@ export const maps: readonly MapInfo[] = [
     teamFrequency: -1,
     specialFrequency: -1,
     defaultNationCount: 72,
-    featuredRank: 1,
+    featuredRank: 7,
   },
   {
     id: "WorldInverted",
