@@ -11,6 +11,7 @@ import {
   USER_SETTINGS_CHANGED_EVENT,
   UserSettings,
   getDefaultKeybinds,
+  mergeKeybinds,
 } from "../src/core/game/UserSettings";
 
 // UserSettings keeps a static in-memory cache and the active player id; reset
@@ -593,11 +594,127 @@ describe("getDefaultKeybinds", () => {
     expect(keybinds.resetGfx).toBe("KeyR");
     expect(keybinds.selectAllWarships).toBe("KeyF");
     expect(keybinds.buildMenuModifier).toBe("ControlLeft");
+    expect(keybinds.zoomOutMinus).toBe("Minus");
+    expect(keybinds.zoomOutNumpad).toBe("NumpadSubtract");
+    expect(keybinds.zoomInEqual).toBe("Equal");
+    expect(keybinds.zoomInNumpad).toBe("NumpadAdd");
   });
 
   it("handles Mac-specific modifier keys correctly", () => {
     const macKeybinds = getDefaultKeybinds(true);
     expect(macKeybinds.buildMenuModifier).toBe("MetaLeft");
+  });
+});
+
+describe("mergeKeybinds", () => {
+  it("keeps a saved binding when an upgrade adds a default on the same key", () => {
+    // Upgrade case: boatAttack: "ArrowUp" saved before the moveUpArrow:
+    // "ArrowUp" default was introduced. The saved binding wins and the
+    // conflicting new default is not activated.
+    const defaults = {
+      boatAttack: "KeyB",
+      moveUp: "KeyW",
+      moveUpArrow: "ArrowUp",
+    };
+    const merged = mergeKeybinds(defaults, { boatAttack: "ArrowUp" });
+    expect(merged.boatAttack).toBe("ArrowUp");
+    expect(merged.moveUpArrow).toBeUndefined();
+    // Non-conflicting defaults keep working.
+    expect(merged.moveUp).toBe("KeyW");
+  });
+
+  it("lets a saved binding win for its own action", () => {
+    const merged = mergeKeybinds(
+      { moveUp: "KeyW", moveDown: "KeyS" },
+      { moveUp: "KeyZ" },
+    );
+    expect(merged.moveUp).toBe("KeyZ");
+    expect(merged.moveDown).toBe("KeyS");
+  });
+
+  it("unbinds a 'Null' action and frees its key for another saved action", () => {
+    const merged = mergeKeybinds(
+      { attackRatioUp: "KeyY", boatAttack: "KeyB" },
+      { attackRatioUp: "Null", boatAttack: "KeyY" },
+    );
+    expect(merged.attackRatioUp).toBeUndefined();
+    expect(merged.boatAttack).toBe("KeyY");
+  });
+
+  it("activates a new default once the conflicting saved action is unbound", () => {
+    const defaults = { boatAttack: "KeyB", moveUpArrow: "ArrowUp" };
+    const merged = mergeKeybinds(defaults, { boatAttack: "Null" });
+    expect(merged.boatAttack).toBeUndefined();
+    expect(merged.moveUpArrow).toBe("ArrowUp");
+  });
+
+  it("drops a default whose key a saved binding moved onto", () => {
+    const merged = mergeKeybinds(
+      { boatAttack: "KeyB", groundAttack: "KeyG" },
+      { boatAttack: "KeyG" },
+    );
+    expect(merged.boatAttack).toBe("KeyG");
+    expect(merged.groundAttack).toBeUndefined();
+  });
+
+  it("keeps the intentional shared-modifier pairs when a saved binding restates its own default", () => {
+    // The settings modal's Reset button persists a saved entry equal to the
+    // default; it must not claim the key away from the paired action.
+    const defaults = getDefaultKeybinds(false);
+    const merged = mergeKeybinds(defaults, { boxSelectWarships: "ShiftLeft" });
+    expect(merged.boxSelectWarships).toBe("ShiftLeft");
+    expect(merged.shiftKey).toBe("ShiftLeft");
+
+    const mergedAlt = mergeKeybinds(defaults, {
+      emojiMenuModifier: "AltLeft",
+    });
+    expect(mergedAlt.emojiMenuModifier).toBe("AltLeft");
+    expect(mergedAlt.altKey).toBe("AltLeft");
+  });
+
+  it("lets a saved binding moved onto a shared modifier claim the key", () => {
+    const defaults = getDefaultKeybinds(false);
+    const merged = mergeKeybinds(defaults, { attackRatioUp: "ShiftLeft" });
+    expect(merged.attackRatioUp).toBe("ShiftLeft");
+    expect(merged.boxSelectWarships).toBeUndefined();
+    expect(merged.shiftKey).toBeUndefined();
+  });
+
+  it("lets a stale saved action stay inert without blocking a live default", () => {
+    // Actions removed from the defaults since the entry was saved must not
+    // take a live default down with them.
+    const merged = mergeKeybinds(
+      { groundAttack: "KeyG" },
+      { removedAction: "KeyG" },
+    );
+    expect(merged.groundAttack).toBe("KeyG");
+    expect(merged.removedAction).toBe("KeyG");
+  });
+});
+
+describe("UserSettings keybinds", () => {
+  beforeEach(resetUserSettingsState);
+
+  it("returns the defaults when nothing is saved", () => {
+    expect(new UserSettings().keybinds(false)).toEqual(
+      getDefaultKeybinds(false),
+    );
+  });
+
+  it("applies a saved binding over the defaults, with no two actions on its key", () => {
+    const s = new UserSettings();
+    s.setKeybinds({ boatAttack: "ArrowUp" });
+    const keybinds = s.keybinds(false);
+    expect(keybinds.boatAttack).toBe("ArrowUp");
+    expect(
+      Object.entries(keybinds).filter(([, key]) => key === "ArrowUp"),
+    ).toEqual([["boatAttack", "ArrowUp"]]);
+  });
+
+  it("removes a 'Null' unbind from the effective map", () => {
+    const s = new UserSettings();
+    s.setKeybinds({ attackRatioUp: "Null" });
+    expect(s.keybinds(false).attackRatioUp).toBeUndefined();
   });
 });
 
