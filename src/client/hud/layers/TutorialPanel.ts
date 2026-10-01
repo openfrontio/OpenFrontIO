@@ -7,7 +7,12 @@ import { Controller } from "../../Controller";
 import { Platform } from "../../Platform";
 import { GoToPlayerEvent } from "../../TransformHandler";
 import { UIState } from "../../UIState";
-import { renderNumber, textDirection, translateText } from "../../Utils";
+import {
+  renderNumber,
+  resolveKeybindLabel,
+  textDirection,
+  translateText,
+} from "../../Utils";
 import { GameView } from "../../view";
 import { PlayerView } from "../../view/PlayerView";
 import {
@@ -75,13 +80,13 @@ const TOUCH_TEXT_STEPS = new Set([
 
 /** Defaults shown when the player hasn't rebound the action (see UnitDisplay). */
 const HOTKEY_FALLBACKS = {
-  buildCity: "1",
-  buildFactory: "2",
-  buildPort: "3",
-  buildDefensePost: "4",
-  buildWarship: "7",
-  buildMissileSilo: "5",
-  buildAtomBomb: "8",
+  buildCity: "Digit1",
+  buildFactory: "Digit2",
+  buildPort: "Digit3",
+  buildDefensePost: "Digit4",
+  buildWarship: "Digit7",
+  buildMissileSilo: "Digit5",
+  buildAtomBomb: "Digit8",
 } as const;
 
 @customElement("tutorial-panel")
@@ -94,11 +99,30 @@ export class TutorialPanel extends LitElement implements Controller {
   @state() private active = false;
   @state() private confirmingClose = false;
   @state() private ctx: TutorialContext | null = null;
+  @state() private layoutMap: Map<string, string> | null = null;
+  private keyboardLayoutRequestId = 0;
+
+  private readonly refreshKeyboardLayout = () => {
+    const keyboard = navigator.keyboard;
+    if (!keyboard) return;
+
+    const requestId = ++this.keyboardLayoutRequestId;
+    void keyboard
+      .getLayoutMap()
+      .then((map) => {
+        if (requestId === this.keyboardLayoutRequestId) {
+          this.layoutMap = map;
+        }
+      })
+      .catch((e) => {
+        console.warn("Failed to get keyboard layout map:", e);
+      });
+  };
 
   private progress = new TutorialProgress();
   private started = false;
   private costs = new Map<UnitType, bigint>();
-  private keybinds: Record<string, { key?: string }> | null = null;
+  private keybinds: Record<string, any> | null = null;
   private mapMarksActive = false;
   /** Latched: an atom bomb of ours was seen in flight at least once. */
   private atomLaunchSeen = false;
@@ -106,6 +130,29 @@ export class TutorialPanel extends LitElement implements Controller {
   private boatSeen = false;
   /** Attack ratio as of the previous tick, to spot the slider moving. */
   private lastAttackRatio: number | null = null;
+  private highlight: TutorialHighlight | null = null;
+
+  connectedCallback() {
+    super.connectedCallback();
+    if (navigator.keyboard) {
+      navigator.keyboard.addEventListener(
+        "layoutchange",
+        this.refreshKeyboardLayout,
+      );
+      this.refreshKeyboardLayout();
+    }
+  }
+
+  disconnectedCallback() {
+    this.keyboardLayoutRequestId++;
+    if (navigator.keyboard) {
+      navigator.keyboard.removeEventListener(
+        "layoutchange",
+        this.refreshKeyboardLayout,
+      );
+    }
+    super.disconnectedCallback();
+  }
   /** Nation smallID → its attitude toward us, fetched during the ally step. */
   private nationRelations = new Map<number, Relation>();
   /** smallIDs we share a border with; null until the first fetch lands. */
@@ -120,7 +167,6 @@ export class TutorialPanel extends LitElement implements Controller {
   /** Tribes step: every reachable tribe is walled off, so point at nations. */
   @state() private attackNations = false;
   private completeTicks: number | null = null;
-  private highlight: TutorialHighlight | null = null;
 
   createRenderRoot() {
     return this;
@@ -382,7 +428,9 @@ export class TutorialPanel extends LitElement implements Controller {
   private hotkeyFor(step: TutorialStep): string {
     if (!step.hotkey) return "";
     this.keybinds ??= this.userSettings.parsedUserKeybinds();
-    return this.keybinds[step.hotkey]?.key ?? HOTKEY_FALLBACKS[step.hotkey];
+    const entry = this.keybinds[step.hotkey];
+    const defaultCode = HOTKEY_FALLBACKS[step.hotkey] || "";
+    return resolveKeybindLabel(entry, defaultCode, this.layoutMap);
   }
 
   private setHighlight(target: TutorialHighlight | null) {

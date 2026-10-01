@@ -19,8 +19,50 @@ export class HelpModal extends BaseModal {
   protected routerName = "help";
 
   @state() private keybinds: Record<string, string> = this.getKeybinds();
+  @state() private layoutMap: Map<string, string> | null = null;
   @query("#tutorial-video-iframe") private videoIframe?: HTMLIFrameElement;
   @query("#tutorial-video-player") private videoPlayer?: HTMLVideoElement;
+
+  private keyboardLayoutRequestId = 0;
+
+  private readonly refreshKeyboardLayout = () => {
+    const keyboard = navigator.keyboard;
+    if (!keyboard) return;
+
+    const requestId = ++this.keyboardLayoutRequestId;
+    void keyboard
+      .getLayoutMap()
+      .then((map) => {
+        if (requestId === this.keyboardLayoutRequestId) {
+          this.layoutMap = map;
+        }
+      })
+      .catch((e) => {
+        console.warn("Failed to get keyboard layout map:", e);
+      });
+  };
+
+  connectedCallback() {
+    super.connectedCallback();
+    if (navigator.keyboard) {
+      navigator.keyboard.addEventListener(
+        "layoutchange",
+        this.refreshKeyboardLayout,
+      );
+      this.refreshKeyboardLayout();
+    }
+  }
+
+  disconnectedCallback() {
+    this.keyboardLayoutRequestId++;
+    if (navigator.keyboard) {
+      navigator.keyboard.removeEventListener(
+        "layoutchange",
+        this.refreshKeyboardLayout,
+      );
+    }
+    super.disconnectedCallback();
+  }
 
   private getKeybinds(): Record<string, string> {
     return new UserSettings().keybinds(Platform.isMac);
@@ -49,7 +91,12 @@ export class HelpModal extends BaseModal {
       Comma: "<",
     };
 
+    if ((code === "Period" || code === "Comma") && this.layoutMap?.has(code)) {
+      return this.layoutMap.get(code)!.toUpperCase();
+    }
     if (specialLabels[code]) return specialLabels[code];
+    if (this.layoutMap && this.layoutMap.has(code))
+      return this.layoutMap.get(code)!.toUpperCase();
     if (code.startsWith("Key") && code.length === 4) return code.slice(3);
     if (code.startsWith("Digit")) return code.slice(5);
     if (code.startsWith("Numpad")) return `Num ${code.slice(6)}`;
