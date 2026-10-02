@@ -288,7 +288,7 @@ export class SinglePlayerModal extends BaseModal {
 
     try {
       let resumeSnapshot: Uint8Array | undefined;
-      if (save.snapshot) {
+      if (save.hasSnapshot || (save as { snapshot?: string }).snapshot) {
         const snapData = await getSoloSnapshot();
         if (attempt !== this.resumeAttempt) return;
         if (snapData) {

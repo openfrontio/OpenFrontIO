@@ -1,14 +1,18 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
+  clearMemorySnapshots,
   clearSoloSave,
   decompressSoloTurns,
   getActiveIdentity,
   getScopedSoloSaveKey,
+  getSnapshotBytes,
   getSoloSave,
   getSoloSnapshot,
   LEGACY_SOLO_SAVE_KEY,
+  openSnapshotDatabase,
   saveSoloGame,
   saveSoloSnapshot,
+  uint8ArrayToBase64,
 } from "../../src/client/SinglePlayerSaveManager";
 import { GameID, GameStartInfo, Turn } from "../../src/core/Schemas";
 import { compressSnapshot } from "../../src/core/snapshot/GameSnapshot";
@@ -66,6 +70,7 @@ function dummyStartInfo(): GameStartInfo {
 describe("SinglePlayerSaveManager", () => {
   beforeEach(() => {
     localStorage.clear();
+    clearMemorySnapshots();
     mockPlatform = "web";
     mockPersistentId = "user_abc_123";
     mockSteamId = null;
@@ -174,11 +179,25 @@ describe("SinglePlayerSaveManager", () => {
     expect(expanded[5].turnNumber).toBe(5);
   });
 
-  it("persists and restores compressed snapshot bytes", async () => {
+  it("persists and restores compressed snapshot bytes while keeping only metadata in localStorage", async () => {
     const rawBytes = new Uint8Array([1, 2, 3, 4, 5, 42, 99, 128, 255]);
     const compressed = await compressSnapshot(rawBytes);
 
-    saveSoloSnapshot(dummyStartInfo(), compressed, 150);
+    await saveSoloSnapshot(dummyStartInfo(), compressed, 150);
+
+    // Verify localStorage has only metadata and no base64 snapshot payload
+    const key = getScopedSoloSaveKey()!;
+    const rawStored = JSON.parse(localStorage.getItem(key)!) as Record<
+      string,
+      unknown
+    >;
+    expect(rawStored.hasSnapshot).toBe(true);
+    expect(rawStored.snapshot).toBeUndefined();
+    expect(rawStored.numTurns).toBe(150);
+
+    const save = getSoloSave();
+    expect(save).not.toBeNull();
+    expect(save?.hasSnapshot).toBe(true);
 
     const restored = await getSoloSnapshot();
     expect(restored).not.toBeNull();
@@ -190,16 +209,108 @@ describe("SinglePlayerSaveManager", () => {
   it("preserves an existing snapshot when saveSoloGame is called with matching gameID", async () => {
     const rawBytes = new Uint8Array([10, 20, 30, 40]);
     const compressed = await compressSnapshot(rawBytes);
-    saveSoloSnapshot(dummyStartInfo(), compressed, 50);
+    await saveSoloSnapshot(dummyStartInfo(), compressed, 50);
 
     // Save turns for the same match
     saveSoloGame(dummyStartInfo(), []);
 
     const save = getSoloSave();
-    expect(save?.snapshot).not.toBeUndefined();
+    expect(save?.hasSnapshot).toBe(true);
     expect(save?.numTurns).toBe(50);
     const restored = await getSoloSnapshot();
     expect(restored?.snapshot).toEqual(rawBytes);
+  });
+
+  it("migrates legacy base64 snapshot in localStorage to snapshot store on restore", async () => {
+    const rawBytes = new Uint8Array([11, 22, 33, 44]);
+    const compressed = await compressSnapshot(rawBytes);
+    const legacyState = {
+      version: 1,
+      gameID: "legacy1234",
+      savedAt: Date.now(),
+      gameStartInfo: {
+        ...dummyStartInfo(),
+        gameID: "legacy1234",
+      },
+      numTurns: 75,
+      snapshot: uint8ArrayToBase64(compressed),
+    };
+    const key = getScopedSoloSaveKey()!;
+    localStorage.setItem(key, JSON.stringify(legacyState));
+
+    // getSoloSave recognises legacy snapshot as having a snapshot
+    const save = getSoloSave();
+    expect(save?.hasSnapshot).toBe(true);
+
+    // getSoloSnapshot decodes and migrates to snapshot store, removing snapshot from localStorage
+    const restored = await getSoloSnapshot();
+    expect(restored).not.toBeNull();
+    expect(restored?.snapshot).toEqual(rawBytes);
+
+    const rawAfter = JSON.parse(localStorage.getItem(key)!) as Record<
+      string,
+      unknown
+    >;
+    expect(rawAfter.snapshot).toBeUndefined();
+    expect(rawAfter.hasSnapshot).toBe(true);
+
+    // Snapshot store now has the bytes directly
+    const storedBytes = await getSnapshotBytes("legacy1234");
+    expect(storedBytes).not.toBeNull();
+  });
+
+  it("clears snapshot bytes from storage when clearSoloSave is called", async () => {
+    const rawBytes = new Uint8Array([7, 8, 9]);
+    const compressed = await compressSnapshot(rawBytes);
+    await saveSoloSnapshot(dummyStartInfo(), compressed, 20);
+
+    expect(await getSnapshotBytes("gameID1234")).not.toBeNull();
+
+    clearSoloSave("gameID1234" as GameID);
+    expect(getSoloSave()).toBeNull();
+    expect(await getSnapshotBytes("gameID1234")).toBeNull();
+  });
+
+  it("handles IndexedDB opening timeouts and version changes gracefully", async () => {
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+
+    // Timeout case
+    const dbStub = { close: vi.fn(), onversionchange: null as any };
+    const reqStub = {
+      result: dbStub,
+      onsuccess: null as any,
+    } as unknown as IDBOpenDBRequest;
+    const fakeIdbTimeout = {
+      open: () => reqStub,
+    } as unknown as IDBFactory;
+
+    const timeoutPromise = openSnapshotDatabase(fakeIdbTimeout, 5);
+    expect(await timeoutPromise).toBeNull();
+
+    // If onsuccess fires after timeout, it closes the db
+    reqStub.onsuccess();
+    expect(dbStub.close).toHaveBeenCalled();
+
+    // Versionchange case
+    let successCb: () => void = () => {};
+    const reqSuccess = {
+      result: dbStub,
+      set onsuccess(cb: () => void) {
+        successCb = cb;
+      },
+    } as unknown as IDBOpenDBRequest;
+    const fakeIdbSuccess = {
+      open: () => reqSuccess,
+    } as unknown as IDBFactory;
+
+    const openPromise = openSnapshotDatabase(fakeIdbSuccess, 1000);
+    successCb();
+    const opened = await openPromise;
+    expect(opened).not.toBeNull();
+    dbStub.onversionchange();
+    expect(dbStub.close).toHaveBeenCalledTimes(2);
+
+    vi.restoreAllMocks();
   });
 
   it("validates persisted save state and rejects records with malformed numTurns, snapshot, or turns", () => {
