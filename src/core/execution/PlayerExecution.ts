@@ -307,6 +307,113 @@ export class PlayerExecution implements Execution {
         this.removeCluster(cluster);
       }
     }
+
+    this.annexSeveredClusters(clusters, largestIndex);
+  }
+
+  /**
+   * Hands land a nuke has cut off from the main body to the enemy around it.
+   *
+   * isEnclosed walks through fallout, so a crater that touches both a
+   * severed piece and the main body links the two, and the piece is never
+   * annexed whenever the main body reaches the coast or the map edge. Judge
+   * the piece on its own instead: a territory not connected to the main body,
+   * with no coast or map edge of its own, whose only neighbours are enemies
+   * and fallout, has no way out and goes to the surrounding enemy.
+   */
+  private annexSeveredClusters(clusters: TileRef[][], largestIndex: number) {
+    const map = this.map;
+    const mySmallID = this.player.smallID();
+
+    let mainGen = 0;
+    for (let i = 0; i < clusters.length; i++) {
+      if (i === largestIndex) continue;
+      const cluster = clusters[i];
+      if (map.ownerID(cluster[0]) !== mySmallID) continue;
+      if (!this.isSeveredCandidate(cluster)) continue;
+
+      const state = this.traversalState();
+      if (mainGen === 0) {
+        // Stamp the main body's outer border so a flood that reaches it can
+        // stop: that cluster is still attached.
+        mainGen = this.bumpGeneration();
+        for (const t of clusters[largestIndex]) state.visited[t] = mainGen;
+      }
+      const territory = this.severedTerritory(cluster[0], mainGen);
+      if (territory === null) continue;
+
+      const capturing = this.getCapturingPlayer(cluster);
+      if (capturing === null) continue;
+      for (const t of territory) capturing.conquer(t);
+    }
+  }
+
+  // Cheap filter on the border cluster alone: no coast or map edge, touches
+  // fallout and at least one enemy, and nothing else.
+  private isSeveredCandidate(cluster: readonly TileRef[]): boolean {
+    const map = this.map;
+    const mySmallID = this.player.smallID();
+    let hasEnemy = false;
+    let hasFallout = false;
+    for (let j = 0; j < cluster.length; j++) {
+      const tile = cluster[j];
+      if (map.isShore(tile) || map.isOnEdgeOfMap(tile)) return false;
+      const numNeighbors = map.neighbors4(tile, this.nbuf);
+      for (let i = 0; i < numNeighbors; i++) {
+        const n = this.nbuf[i];
+        const ownerId = map.ownerID(n);
+        if (ownerId === mySmallID) continue;
+        if (ownerId !== 0) {
+          hasEnemy = true;
+        } else if (map.hasFallout(n)) {
+          hasFallout = true;
+        } else {
+          // Open unclaimed land (or water): not cut off.
+          return false;
+        }
+      }
+    }
+    return hasEnemy && hasFallout;
+  }
+
+  /**
+   * Flood-fills our territory from `start` and returns it if it is severed:
+   * it never reaches a tile stamped `mainGen` (the main body), never touches
+   * the coast or the map edge, and borders only other players and fallout.
+   * Returns null otherwise.
+   */
+  private severedTerritory(start: TileRef, mainGen: number): TileRef[] | null {
+    const map = this.map;
+    const mySmallID = this.player.smallID();
+    const state = this.traversalState();
+    const visited = state.visited;
+    if (visited[start] === mainGen) return null;
+    const gen = bumpTraversalGeneration(state);
+    const stack = state.stack;
+    stack.length = 0;
+    const tiles: TileRef[] = [start];
+    visited[start] = gen;
+    stack.push(start);
+
+    while (stack.length > 0) {
+      const tile = stack.pop()!;
+      if (map.isShore(tile) || map.isOnEdgeOfMap(tile)) return null;
+      const numNeighbors = map.neighbors4(tile, this.nbuf);
+      for (let i = 0; i < numNeighbors; i++) {
+        const n = this.nbuf[i];
+        const ownerId = map.ownerID(n);
+        if (ownerId === mySmallID) {
+          if (visited[n] === mainGen) return null;
+          if (visited[n] === gen) continue;
+          visited[n] = gen;
+          tiles.push(n);
+          stack.push(n);
+        } else if (ownerId === 0 && !map.hasFallout(n)) {
+          return null;
+        }
+      }
+    }
+    return tiles;
   }
 
   private checkAndAssignTerritory(
