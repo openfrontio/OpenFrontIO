@@ -120,7 +120,7 @@ export type XpLineKey =
   | "time"
   | "placement"
   | "win"
-  | "firstWin"
+  | "firstGame"
   | "feats";
 
 export const XP_LINE_KEYS: readonly XpLineKey[] = [
@@ -128,7 +128,7 @@ export const XP_LINE_KEYS: readonly XpLineKey[] = [
   "time",
   "placement",
   "win",
-  "firstWin",
+  "firstGame",
   "feats",
 ];
 

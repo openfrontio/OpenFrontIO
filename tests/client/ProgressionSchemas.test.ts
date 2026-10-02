@@ -41,7 +41,7 @@ const eligible = {
     time: 30,
     placement: 40,
     win: 100,
-    firstWin: 0,
+    firstGame: 0,
     feats: 0,
     subtotal: 220,
     gamePermille: 1250,

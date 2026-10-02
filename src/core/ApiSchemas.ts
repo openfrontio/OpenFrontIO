@@ -148,7 +148,7 @@ export const XpBreakdownSchema = z.object({
   time: z.number().default(0),
   placement: z.number().default(0),
   win: z.number().default(0),
-  firstWin: z.number().default(0),
+  firstGame: z.number().default(0),
   feats: z.number().default(0),
   // Before multipliers.
   subtotal: z.number(),

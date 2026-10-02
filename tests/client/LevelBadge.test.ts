@@ -186,7 +186,7 @@ describe("progression helpers", () => {
     time: 0,
     placement: 25,
     win: 0,
-    firstWin: 100,
+    firstGame: 100,
     feats: 0,
     subtotal: 175,
     gamePermille: 1000,
@@ -198,7 +198,7 @@ describe("progression helpers", () => {
     expect(visibleXpLines(breakdown)).toEqual([
       { key: "played", amount: 50 },
       { key: "placement", amount: 25 },
-      { key: "firstWin", amount: 100 },
+      { key: "firstGame", amount: 100 },
     ]);
   });
 

@@ -100,7 +100,7 @@ const eligibleXp = {
     time: 0,
     placement: 25,
     win: 0,
-    firstWin: 0,
+    firstGame: 0,
     feats: 0,
     subtotal: 75,
     gamePermille: 1000,

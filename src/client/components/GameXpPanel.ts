@@ -38,7 +38,7 @@ const LINE_LABEL_KEYS: Record<XpLineKey, string> = {
   time: "progression.line_time",
   placement: "progression.line_placement",
   win: "progression.line_win",
-  firstWin: "progression.line_first_win",
+  firstGame: "progression.line_first_game",
   feats: "progression.line_feats",
 };
 
