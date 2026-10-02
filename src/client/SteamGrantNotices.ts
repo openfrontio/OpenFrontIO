@@ -17,7 +17,11 @@
 // recognise a former grant holder by. Hence a per-account record in
 // localStorage, written while the grant is visible and consulted after.
 
-import { isGrantedSubscription, type UserMeResponse } from "../core/ApiSchemas";
+import {
+  isGrantedSubscription,
+  isSteamGrant,
+  type UserMeResponse,
+} from "../core/ApiSchemas";
 
 /** localStorage key holding the SteamGrantStore below. */
 export const STEAM_GRANT_NOTICE_KEY = "steamGrantNotice";
@@ -51,16 +55,16 @@ export interface SteamGrant {
 /**
  * The Steam-granted month on this account, or null.
  *
- * A grant with an end date. The other writer of a provider-null row is the
- * admin comp endpoint, which sets no end at all, so a dated grant is a Steam
- * month — the same rule the account panel uses to decide whose copy to show.
+ * Decided by `isSteamGrant`, the same rule the account panel uses to decide
+ * whose copy to show. An admin comp can carry an end date as well, and must
+ * never be welcomed or signed off as a Steam purchase.
  */
 export function steamGrantOf(
   userMe: UserMeResponse | false | null,
 ): SteamGrant | null {
   if (userMe === null || userMe === false) return null;
   const sub = userMe.player.subscription;
-  if (!isGrantedSubscription(sub) || !sub?.currentPeriodEnd) return null;
+  if (!isSteamGrant(sub) || !sub?.currentPeriodEnd) return null;
   return { tier: sub.tier, periodEnd: sub.currentPeriodEnd };
 }
 

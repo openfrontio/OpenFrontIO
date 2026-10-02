@@ -73,6 +73,19 @@ describe("steamGrantOf", () => {
     expect(steamGrantOf(adminComp())).toBeNull();
   });
 
+  // An admin can give a comp an end date, so the date alone is not enough.
+  it("does not mistake a dated admin comp for a Steam month", () => {
+    expect(steamGrantOf(me({ grantSource: "admin" }))).toBeNull();
+    expect(steamGrantOf(me({ grantSource: "discord_role" }))).toBeNull();
+  });
+
+  it("recognises a grant the server says came from Steam", () => {
+    expect(steamGrantOf(me({ grantSource: "steam" }))).toEqual({
+      tier: "warlord",
+      periodEnd: new Date(MONTH_END),
+    });
+  });
+
   it("ignores paid subscriptions, an absent provider, and no account", () => {
     expect(steamGrantOf(paid())).toBeNull();
     expect(steamGrantOf(me({ provider: undefined }))).toBeNull();

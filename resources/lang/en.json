@@ -87,6 +87,7 @@
     "reward_daily": "Daily subscription reward",
     "reward_signup_bonus": "Subscription signup bonus",
     "sign_in_desc": "Sign in to save your stats and progress",
+    "sub_granted_by_admin_until": "You have received an admin-granted subscription. It lasts until {date}. It isn't billed, so there's nothing to manage or cancel.",
     "sub_granted_from_purchase": "Included with your Steam purchase, paid for once on Steam. It isn't billed and doesn't renew, so there's nothing to manage or cancel. When it ends you keep the full game at no charge; only the {tier} perks stop.",
     "sub_granted_indefinite": "Free access granted to your account. It isn't billed, so there's nothing to manage or cancel.",
     "sub_granted_perks_end_on": "{tier} perks end {date}",

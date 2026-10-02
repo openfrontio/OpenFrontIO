@@ -306,6 +306,11 @@ export const UserMeResponseSchema = z.object({
         // client. An unrecognised value is simply not `null`, which lands on
         // the paid behaviour — the safe side.
         provider: z.string().nullable().optional(),
+        // Who gave a GRANTED subscription: "steam", "admin" or
+        // "discord_role", and null on a paid one. Absent on a server that
+        // predates the field; see `isSteamGrant` for what that falls back to.
+        // Loose `z.string()` for the same reason as `provider`.
+        grantSource: z.string().nullable().optional(),
       })
       .nullable(),
     // A Stripe subscription whose renewal failed and is still being retried,
@@ -384,6 +389,26 @@ export function isGrantedSubscription(
 ): boolean {
   if (sub === null || sub === undefined) return false;
   return sub.provider === null;
+}
+
+/**
+ * Is this the free month that comes with a Steam purchase?
+ *
+ * The one definition, shared by the account panel and the Steam grant notices,
+ * both of which tell the player their access came with a purchase. An admin
+ * can give a grant an end date too, so the date alone does not say that.
+ *
+ *   "steam"   — yes.
+ *   any other value — no: an admin comp or a Discord-role grant.
+ *   undefined — the server predates the field. Such a server cannot write a
+ *               dated admin grant either (both arrived in one deploy), so the
+ *               old rule still holds there: a dated grant is a Steam month.
+ */
+export function isSteamGrant(
+  sub: UserSubscription | null | undefined,
+): boolean {
+  if (!isGrantedSubscription(sub) || !sub?.currentPeriodEnd) return false;
+  return sub.grantSource === "steam" || sub.grantSource === undefined;
 }
 
 // PUT /users/@me/username success payload. `username` is the resolved display
