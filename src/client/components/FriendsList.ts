@@ -1,11 +1,16 @@
 import { html, LitElement, TemplateResult } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
-import type { FriendEntry } from "../../core/ApiSchemas";
+import type {
+  FriendEntry,
+  FriendRequestsResponse,
+} from "../../core/ApiSchemas";
 import {
   acceptFriendRequest,
   deleteFriendRequest,
   fetchFriendRequests,
   fetchFriends,
+  FRIEND_REQUESTS_UPDATED_EVENT,
+  publishFriendRequests,
   removeFriend,
   sendFriendRequest,
 } from "../FriendsApi";
@@ -60,8 +65,26 @@ export class FriendsList extends LitElement {
 
   connectedCallback(): void {
     super.connectedCallback();
+    document.addEventListener(
+      FRIEND_REQUESTS_UPDATED_EVENT,
+      this.handleRequestsUpdated,
+    );
     void this.loadAll();
   }
+
+  disconnectedCallback(): void {
+    document.removeEventListener(
+      FRIEND_REQUESTS_UPDATED_EVENT,
+      this.handleRequestsUpdated,
+    );
+    super.disconnectedCallback();
+  }
+
+  private handleRequestsUpdated = (event: Event): void => {
+    const requests = (event as CustomEvent<FriendRequestsResponse>).detail;
+    this.incoming = requests.incoming;
+    this.outgoing = requests.outgoing;
+  };
 
   private async loadAll(): Promise<void> {
     this.loading = true;
@@ -73,6 +96,7 @@ export class FriendsList extends LitElement {
       if (requests) {
         this.incoming = requests.incoming;
         this.outgoing = requests.outgoing;
+        publishFriendRequests(requests);
       }
       if (firstPage) {
         this.friends = firstPage.results;
@@ -158,6 +182,7 @@ export class FriendsList extends LitElement {
         if (requests) {
           this.incoming = requests.incoming;
           this.outgoing = requests.outgoing;
+          publishFriendRequests(requests);
         }
       }
     } finally {
@@ -175,6 +200,10 @@ export class FriendsList extends LitElement {
         return;
       }
       this.incoming = this.incoming.filter((r) => r.publicId !== publicId);
+      publishFriendRequests({
+        incoming: this.incoming,
+        outgoing: this.outgoing,
+      });
       this.friends = [
         { publicId, createdAt: new Date().toISOString() },
         ...this.friends,
@@ -201,9 +230,17 @@ export class FriendsList extends LitElement {
       }
       if (direction === "incoming") {
         this.incoming = this.incoming.filter((r) => r.publicId !== publicId);
+        publishFriendRequests({
+          incoming: this.incoming,
+          outgoing: this.outgoing,
+        });
         showToast(translateText("friends.request_denied"), "green");
       } else {
         this.outgoing = this.outgoing.filter((r) => r.publicId !== publicId);
+        publishFriendRequests({
+          incoming: this.incoming,
+          outgoing: this.outgoing,
+        });
         showToast(translateText("friends.request_withdrawn"), "green");
       }
     } finally {
