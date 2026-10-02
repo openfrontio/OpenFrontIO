@@ -3,6 +3,7 @@ import {
   LitElement,
   render as litRender,
   nothing,
+  PropertyValues,
   svg,
   TemplateResult,
 } from "lit";
@@ -118,13 +119,16 @@ export class PrestigeFlow extends LitElement {
   // Progress before prestiging.
   @state() private prior: Progress | null = null;
   @state() private outcome: PrestigeResponse | null = null;
-  @state() private failed = false;
+  // Why the last attempt didn't go through, shown on the confirmation.
+  @state() private error: "failed" | "signed_out" | null = null;
   @state() private beat: Beat = "charge";
   // True when the ceremony follows the confirmation, whose backdrop it takes
   // over as is: fading in again would show the page behind for a moment.
   private fromConfirm = false;
-  // The confirm button's hold: 0..1, and when it started (null when up).
-  @state() private holdProgress = 0;
+  // The confirm button's hold, and when it started (null when up). The fill
+  // is written straight to its element each frame (setFill), so a hold
+  // re-renders the overlay only when it starts and ends.
+  @state() private holding = false;
   private holdStart: number | null = null;
   private holdFrame = 0;
 
@@ -171,8 +175,8 @@ export class PrestigeFlow extends LitElement {
     if (this.stage !== "closed" || !progress.canPrestige) return;
     this.prior = progress;
     this.outcome = null;
-    this.failed = false;
-    this.holdProgress = 0;
+    this.error = null;
+    this.holding = false;
     let key = pendingKeys.get(progress.prestige);
     if (key === undefined) {
       key = newIdempotencyKey();
@@ -183,6 +187,35 @@ export class PrestigeFlow extends LitElement {
     void this.updateComplete.then(() => this.focusConfirmButton());
   }
 
+  protected updated(changed: PropertyValues): void {
+    // Keep keyboard focus inside the overlay: on its root while the request
+    // is out (both buttons are disabled) and through the ceremony, then on
+    // Continue once the ceremony is done.
+    if (
+      changed.has("stage") &&
+      (this.stage === "submitting" || this.stage === "ceremony")
+    ) {
+      this.overlayRoot()?.focus();
+    }
+    if (
+      (changed.has("beat") || changed.has("stage")) &&
+      this.stage === "ceremony" &&
+      this.beat === "done"
+    ) {
+      this.portal
+        ?.querySelector<HTMLButtonElement>("[data-prestige-continue]")
+        ?.focus();
+    }
+  }
+
+  private overlayRoot(): HTMLElement | null {
+    return (
+      this.portal?.querySelector<HTMLElement>(
+        "[data-prestige-confirm], [data-prestige-ceremony]",
+      ) ?? null
+    );
+  }
+
   private focusConfirmButton(): void {
     this.portal
       ?.querySelector<HTMLButtonElement>("[data-prestige-confirm-button]")
@@ -190,8 +223,8 @@ export class PrestigeFlow extends LitElement {
   }
 
   // Keys while the overlay is up: Escape cancels the confirmation (or skips,
-  // then closes, the ceremony), and Tab stays inside the confirmation. The
-  // page behind never sees them.
+  // then closes, the ceremony), and Tab stays inside the overlay in every
+  // stage. The page behind never sees them.
   private onKeyDown = (e: KeyboardEvent): void => {
     if (this.stage === "closed") return;
     if (e.key === "Escape") {
@@ -204,20 +237,26 @@ export class PrestigeFlow extends LitElement {
       }
       return;
     }
-    if (e.key === "Tab" && this.stage !== "ceremony") {
+    if (e.key === "Tab") {
+      e.preventDefault();
+      e.stopPropagation();
+      const root = this.overlayRoot();
       const buttons = [
-        ...(this.portal?.querySelectorAll<HTMLButtonElement>(
-          "[data-prestige-confirm] button:not([disabled])",
+        ...(root?.querySelectorAll<HTMLButtonElement>(
+          "button:not([disabled])",
         ) ?? []),
       ];
-      if (buttons.length === 0) return;
+      // Nothing to move between (the request is out, or the ceremony is
+      // still playing): keep focus on the overlay itself.
+      if (buttons.length === 0) {
+        root?.focus();
+        return;
+      }
       const at = buttons.indexOf(document.activeElement as HTMLButtonElement);
       const next =
         at === -1
           ? 0
           : (at + (e.shiftKey ? -1 : 1) + buttons.length) % buttons.length;
-      e.preventDefault();
-      e.stopPropagation();
       buttons[next].focus();
     }
   };
@@ -230,8 +269,13 @@ export class PrestigeFlow extends LitElement {
     }
   };
 
-  /** Plays the ceremony for a prestige that already happened (previews). */
+  /**
+   * Plays the ceremony for a prestige that already happened, without the
+   * confirmation. For previews and tests; the account page goes through
+   * open(). Ignored while the flow is up.
+   */
   celebrate(before: Progress, result: PrestigeResponse): void {
+    if (this.stage !== "closed") return;
     this.prior = before;
     this.outcome = result;
     this.fromConfirm = false;
@@ -277,9 +321,10 @@ export class PrestigeFlow extends LitElement {
   private renderConfirm(before: Progress): TemplateResult {
     const rank = this.nextRank(before);
     const submitting = this.stage === "submitting";
-    const holding = this.holdProgress > 0 && !submitting;
+    const holding = this.holding && !submitting;
     return html`<div
       data-prestige-confirm
+      tabindex="-1"
       role="dialog"
       aria-modal="true"
       aria-labelledby="prestige-confirm-title"
@@ -321,14 +366,16 @@ export class PrestigeFlow extends LitElement {
         <p class="m-0 mt-6 max-w-md text-sm text-white/75">
           ${translateText("prestige.summary")}
         </p>
-        ${this.failed
-          ? html`<p
+        ${this.error === null
+          ? nothing
+          : html`<p
               data-prestige-error
               class="m-0 mt-2 text-sm font-bold text-rose-400"
             >
-              ${translateText("prestige.error")}
-            </p>`
-          : nothing}
+              ${this.error === "signed_out"
+                ? translateText("prestige.error_signed_out")
+                : translateText("prestige.error")}
+            </p>`}
 
         <div class="mt-6 flex w-full max-w-md gap-3">
           <button
@@ -366,7 +413,6 @@ export class PrestigeFlow extends LitElement {
               aria-hidden="true"
               class="prestige-hold-fill"
               ?data-holding=${holding}
-              style="transform: scaleX(${submitting ? 1 : this.holdProgress})"
             ></span>
             <span class="relative">
               ${submitting
@@ -482,11 +528,15 @@ export class PrestigeFlow extends LitElement {
   private startHold(): void {
     if (this.stage !== "confirm" || this.holdStart !== null) return;
     this.holdStart = performance.now();
+    this.holding = true;
     const tick = () => {
       if (this.holdStart === null) return;
-      const elapsed = performance.now() - this.holdStart;
-      this.holdProgress = Math.min(1, Math.max(0.01, elapsed / HOLD_MS));
-      if (this.holdProgress >= 1) {
+      const progress = Math.min(
+        1,
+        (performance.now() - this.holdStart) / HOLD_MS,
+      );
+      this.setFill(progress);
+      if (progress >= 1) {
         this.holdStart = null;
         void this.confirm();
         return;
@@ -500,18 +550,28 @@ export class PrestigeFlow extends LitElement {
     if (this.holdStart === null) return;
     this.holdStart = null;
     cancelAnimationFrame(this.holdFrame);
-    this.holdProgress = 0;
+    this.holding = false;
+    this.setFill(0);
+  }
+
+  // How full the confirm button is, 0..1.
+  private setFill(progress: number): void {
+    const fill = this.portal?.querySelector<HTMLElement>(
+      "[data-prestige-confirm-button] .prestige-hold-fill",
+    );
+    if (fill) fill.style.transform = `scaleX(${progress})`;
   }
 
   private async confirm(): Promise<void> {
     // The stage check stops a second hold from sending twice.
     if (this.stage !== "confirm") return;
-    this.failed = false;
+    this.error = null;
     this.stage = "submitting";
+    this.setFill(1);
     const prior = this.prior;
     const response = await this.submit(this.idempotencyKey);
     if (!response.ok) {
-      if (response.refused) {
+      if (response.reason === "refused") {
         // The server won't prestige from here: the page is out of date. Drop
         // the key and let the page reload where the player really is.
         if (prior) pendingKeys.delete(prior.prestige);
@@ -523,8 +583,9 @@ export class PrestigeFlow extends LitElement {
       }
       // It may or may not have gone through: the same key finds out.
       this.stage = "confirm";
-      this.holdProgress = 0;
-      this.failed = true;
+      this.holding = false;
+      this.setFill(0);
+      this.error = response.reason;
       void this.updateComplete.then(() => this.focusConfirmButton());
       return;
     }
@@ -585,6 +646,7 @@ export class PrestigeFlow extends LitElement {
     const shards = Array.from({ length: 14 }, (_, i) => (i * 360) / 14 + 7);
     return html`<div
       data-prestige-ceremony
+      tabindex="-1"
       role="dialog"
       aria-modal="true"
       aria-label=${translateText("prestige.ceremony_title", { rank })}
@@ -1005,6 +1067,7 @@ export class PrestigeFlow extends LitElement {
       .prestige-hold-fill {
         position: absolute;
         inset: 0;
+        transform: scaleX(0);
         transform-origin: left;
         background: linear-gradient(90deg, #fff3b0, #ffffff);
         opacity: 0.6;

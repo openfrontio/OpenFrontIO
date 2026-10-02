@@ -254,7 +254,7 @@ describe("<prestige-flow>", () => {
   });
 
   it("says so when it fails, and retries with the same key", async () => {
-    submit.mockResolvedValueOnce({ ok: false, refused: false });
+    submit.mockResolvedValueOnce({ ok: false, reason: "failed" });
     flow.open(AT_100);
     await settle();
     await hold();
@@ -269,7 +269,7 @@ describe("<prestige-flow>", () => {
   });
 
   it("keeps the key when the confirmation is closed and reopened", async () => {
-    submit.mockResolvedValueOnce({ ok: false, refused: false });
+    submit.mockResolvedValueOnce({ ok: false, reason: "failed" });
     flow.open({ ...AT_100, prestige: 6 });
     await settle();
     await hold();
@@ -288,7 +288,7 @@ describe("<prestige-flow>", () => {
   });
 
   it("reloads the page when the server refuses", async () => {
-    submit.mockResolvedValueOnce({ ok: false, refused: true });
+    submit.mockResolvedValueOnce({ ok: false, reason: "refused" });
     const stale = vi.fn();
     flow.addEventListener("prestige-stale", stale);
     flow.open({ ...AT_100, prestige: 7 });
@@ -394,6 +394,69 @@ describe("<prestige-flow>", () => {
     escape();
     await settle();
     expect(flow.isOpen).toBe(false);
+  });
+  it("tells a signed-out player to sign in, not to check their connection", async () => {
+    submit.mockResolvedValueOnce({ ok: false, reason: "signed_out" });
+    flow.open({ ...AT_100, prestige: 8 });
+    await settle();
+    await hold();
+    expect(q("[data-prestige-error]")!.textContent).toContain(
+      "prestige.error_signed_out",
+    );
+  });
+
+  it("keeps focus in the overlay while the request is out", async () => {
+    let finish!: (v: Awaited<ReturnType<PrestigeFlow["submit"]>>) => void;
+    submit.mockReturnValueOnce(new Promise((r) => (finish = r)));
+    flow.open(AT_100);
+    await settle();
+    confirmButton().dispatchEvent(
+      new MouseEvent("pointerdown", { button: 0, bubbles: true }),
+    );
+    await settle(HOLD_MS + 100);
+    // Both buttons are disabled now: the dialog itself holds focus, and Tab
+    // can't leave it.
+    const root = q("[data-prestige-confirm]")!;
+    expect(document.activeElement).toBe(root);
+    const tab = new KeyboardEvent("keydown", {
+      key: "Tab",
+      bubbles: true,
+      cancelable: true,
+    });
+    root.dispatchEvent(tab);
+    expect(tab.defaultPrevented).toBe(true);
+    expect(document.activeElement).toBe(root);
+    finish({ ok: true, data: PRESTIGED });
+    await settle();
+  });
+
+  it("focuses the ceremony, then Continue when it ends", async () => {
+    flow.open(AT_100);
+    await settle();
+    await hold();
+    const ceremony = q("[data-prestige-ceremony]")!;
+    expect(document.activeElement).toBe(ceremony);
+
+    const tab = new KeyboardEvent("keydown", {
+      key: "Tab",
+      bubbles: true,
+      cancelable: true,
+    });
+    ceremony.dispatchEvent(tab);
+    expect(tab.defaultPrevented).toBe(true);
+    expect(document.activeElement).toBe(ceremony);
+
+    await settle(5000);
+    expect(document.activeElement).toBe(q("[data-prestige-continue]"));
+  });
+
+  it("ignores celebrate() while the confirmation is up", async () => {
+    flow.open(AT_100);
+    await settle();
+    flow.celebrate(AT_100, PRESTIGED);
+    await settle();
+    expect(q("[data-prestige-confirm]")).not.toBeNull();
+    expect(q("[data-prestige-ceremony]")).toBeNull();
   });
 });
 

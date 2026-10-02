@@ -499,22 +499,47 @@ export class AccountModal extends BaseModal {
     if (!this.userMeResponse) return;
     const player = this.userMeResponse.player;
     player.progress = event.detail.progress;
-    if (event.detail.rewards.length > 0) {
-      player.rewards = [...(player.rewards ?? []), ...event.detail.rewards];
+    // A replayed answer can list a reward this page already holds.
+    const held = new Set((player.rewards ?? []).map((r) => r.id));
+    const added = event.detail.rewards.filter((r) => !held.has(r.id));
+    if (added.length > 0) {
+      player.rewards = [...(player.rewards ?? []), ...added];
     }
-    invalidateUserMe();
     this.requestUpdate();
+    // Then the real thing, for the header and everything else showing the
+    // account.
+    void this.refreshUserMe();
   };
 
   // The server says the player can't prestige from where this page thinks
   // they are: most likely an earlier prestige whose answer never arrived.
-  // Reload the account so the card shows where they really are.
+  // Reload the account so the card shows where they really are, and say so.
   private handlePrestigeStale = async (): Promise<void> => {
-    invalidateUserMe();
-    const userMe = await getUserMe();
-    if (userMe) this.userMeResponse = userMe;
-    this.requestUpdate();
+    const fresh = await this.refreshUserMe();
+    await showInGameAlert(
+      fresh === false
+        ? translateText("prestige.stale_failed")
+        : translateText("prestige.stale"),
+    );
   };
+
+  // Re-reads /users/@me and tells the rest of the page (the header's account
+  // menu among them), as a purchase does. This modal listens too, so its own
+  // copy updates with it. A failed read leaves everything as it is rather
+  // than broadcasting a signed-out state.
+  private async refreshUserMe(): Promise<UserMeResponse | false> {
+    invalidateUserMe();
+    const fresh = await getUserMe();
+    if (fresh === false) return false;
+    document.dispatchEvent(
+      new CustomEvent("userMeResponse", {
+        detail: fresh,
+        bubbles: true,
+        cancelable: true,
+      }),
+    );
+    return fresh;
+  }
 
   // Escape belongs to the prestige confirmation or ceremony while it's up,
   // not to the page behind it.
