@@ -1,5 +1,5 @@
 import { LitElement, html } from "lit";
-import { customElement, query } from "lit/decorators.js";
+import { customElement, query, state } from "lit/decorators.js";
 
 import { PlayerID, PlayerType } from "../../../core/game/Game";
 import { GameView, PlayerView } from "../../view";
@@ -22,10 +22,8 @@ export const quickChatPhrases: QuickChatPhrases = quickChatData;
 
 @customElement("chat-modal")
 export class ChatModal extends LitElement {
-  @query("o-modal") private modalEl!: HTMLElement & {
-    open: () => void;
-    close: () => void;
-  };
+  @state() public isModalOpen = false;
+  @query(".chat-panel") private panel?: HTMLElement;
 
   createRenderRoot() {
     return this;
@@ -62,144 +60,180 @@ export class ChatModal extends LitElement {
     return quickChatPhrases[categoryId] ?? [];
   }
 
+  updated(changed: Map<string, unknown>) {
+    if (changed.has("isModalOpen") && this.isModalOpen) {
+      this.panel?.focus();
+    }
+  }
+
+  private onPanelKeydown = (event: KeyboardEvent) => {
+    if (event.key === "Escape") {
+      event.preventDefault();
+      event.stopPropagation();
+      this.close();
+    }
+  };
+
   render() {
+    if (!this.isModalOpen) return html``;
     return html`
-      <o-modal
-        compact
-        dir=${textDirection()}
-        title="${translateText("chat.title")}"
-        closeLabel="${translateText("common.close")}"
-        style="--modal-background-opacity: ${this.userSettings.quickChatOpacity()}"
-        .onClose=${() => this.resetSelection()}
-      >
-        <div class="chat-recipient">${this.recipient?.displayName()}</div>
-        <div
-          class="chat-columns ${this.requiresPlayerSelection
-            ? "has-player"
-            : ""}"
+      <div class="chat-container">
+        <section
+          class="chat-panel"
+          role="dialog"
+          aria-label=${translateText("chat.title")}
+          tabindex="-1"
+          dir=${textDirection()}
+          style="--chat-background-opacity: ${this.userSettings.quickChatOpacity()}"
+          @click=${(event: Event) => event.stopPropagation()}
+          @wheel=${(event: Event) => event.stopPropagation()}
+          @keydown=${this.onPanelKeydown}
         >
-          <div class="chat-column">
-            <div class="column-title">${translateText("chat.category")}</div>
-            ${this.categories.map(
-              (category) => html`
-                <button
-                  class="chat-option-button ${this.selectedCategory ===
-                  category.id
-                    ? "selected"
-                    : ""}"
-                  aria-pressed=${this.selectedCategory === category.id}
-                  @click=${() => this.selectCategory(category.id)}
-                >
-                  ${translateText(`chat.cat.${category.id}`)}
-                </button>
-              `,
-            )}
-          </div>
-
-          ${this.selectedCategory
-            ? html`
-                <div class="chat-column">
-                  <div class="column-title">
-                    ${translateText("chat.phrase")}
-                  </div>
-                  <div class="phrase-scroll-area">
-                    ${this.getPhrasesForCategory(this.selectedCategory).map(
-                      (phrase) => html`
-                        <button
-                          class="chat-option-button ${this
-                            .selectedQuickChatKey ===
-                          `${this.selectedCategory}.${phrase.key}`
-                            ? "selected"
-                            : ""}"
-                          aria-pressed=${this.selectedQuickChatKey ===
-                          `${this.selectedCategory}.${phrase.key}`}
-                          @click=${() => this.selectPhrase(phrase)}
-                        >
-                          ${this.renderPhrasePreview(phrase)}
-                        </button>
-                      `,
-                    )}
-                  </div>
-                </div>
-              `
-            : null}
-          ${this.requiresPlayerSelection
-            ? html`
-                <div class="chat-column">
-                  <div class="column-title">
-                    ${translateText("chat.player")}
-                  </div>
-
-                  <label class="flex items-center gap-2 text-sm cursor-pointer">
-                    <input
-                      type="checkbox"
-                      .checked=${this.sortByTerritory}
-                      @change=${this.onPlayerSortChange}
-                    />
-                    ${translateText("chat.sort_by_territory")}
-                  </label>
-
-                  <input
-                    class="player-search-input"
-                    type="text"
-                    aria-label="${translateText("chat.search")}"
-                    placeholder="${translateText("chat.search")}"
-                    .value=${this.playerSearchQuery}
-                    @input=${this.onPlayerSearchInput}
-                  />
-
-                  <div class="player-scroll-area">
-                    ${this.getSortedFilteredPlayers().map(
-                      (player) => html`
-                        <button
-                          class="chat-option-button ${this.selectedPlayer ===
-                          player
-                            ? "selected"
-                            : ""}"
-                          style="border: 2px solid ${player
-                            .territoryColor()
-                            .toHex()};"
-                          aria-pressed=${this.selectedPlayer === player}
-                          @click=${() => this.selectPlayer(player)}
-                        >
-                          ${player.displayName()}
-                        </button>
-                      `,
-                    )}
-                  </div>
-                </div>
-              `
-            : null}
-        </div>
-
-        <div slot="footer" class="chat-footer">
-          <div class="chat-preview">
-            ${this.previewText ?? translateText("chat.build")}
-          </div>
-          <div class="chat-send">
+          <header class="chat-header">
+            <h2>${translateText("chat.title")}</h2>
             <button
-              class="chat-repeat-button"
-              @click=${this.sendLastMessage}
-              ?disabled=${!this.canRepeatLastMessage()}
+              class="chat-close-button"
+              type="button"
+              aria-label=${translateText("common.close")}
+              @click=${() => this.close()}
             >
-              <span>${translateText("chat.send_last")}</span>
-              ${this.lastMessage
-                ? html`<span class="chat-last-preview"
-                    >${this.lastMessagePreview()}</span
-                  >`
+              ✕
+            </button>
+          </header>
+          <div class="chat-body">
+            <div class="chat-recipient">${this.recipient?.displayName()}</div>
+            <div
+              class="chat-columns ${this.requiresPlayerSelection
+                ? "has-player"
+                : ""}"
+            >
+              <div class="chat-column">
+                <div class="column-title">
+                  ${translateText("chat.category")}
+                </div>
+                ${this.categories.map(
+                  (category) => html`
+                    <button
+                      class="chat-option-button ${this.selectedCategory ===
+                      category.id
+                        ? "selected"
+                        : ""}"
+                      aria-pressed=${this.selectedCategory === category.id}
+                      @click=${() => this.selectCategory(category.id)}
+                    >
+                      ${translateText(`chat.cat.${category.id}`)}
+                    </button>
+                  `,
+                )}
+              </div>
+
+              ${this.selectedCategory
+                ? html`
+                    <div class="chat-column">
+                      <div class="column-title">
+                        ${translateText("chat.phrase")}
+                      </div>
+                      <div class="phrase-scroll-area">
+                        ${this.getPhrasesForCategory(this.selectedCategory).map(
+                          (phrase) => html`
+                            <button
+                              class="chat-option-button ${this
+                                .selectedQuickChatKey ===
+                              `${this.selectedCategory}.${phrase.key}`
+                                ? "selected"
+                                : ""}"
+                              aria-pressed=${this.selectedQuickChatKey ===
+                              `${this.selectedCategory}.${phrase.key}`}
+                              @click=${() => this.selectPhrase(phrase)}
+                            >
+                              ${this.renderPhrasePreview(phrase)}
+                            </button>
+                          `,
+                        )}
+                      </div>
+                    </div>
+                  `
                 : null}
-            </button>
-            <button
-              class="chat-send-button"
-              @click=${this.sendChatMessage}
-              ?disabled=${!this.previewText ||
-              (this.requiresPlayerSelection && !this.selectedPlayer)}
-            >
-              ${translateText("chat.send")}
-            </button>
+              ${this.requiresPlayerSelection
+                ? html`
+                    <div class="chat-column">
+                      <div class="column-title">
+                        ${translateText("chat.player")}
+                      </div>
+
+                      <label
+                        class="flex items-center gap-2 text-sm cursor-pointer"
+                      >
+                        <input
+                          type="checkbox"
+                          .checked=${this.sortByTerritory}
+                          @change=${this.onPlayerSortChange}
+                        />
+                        ${translateText("chat.sort_by_territory")}
+                      </label>
+
+                      <input
+                        class="player-search-input"
+                        type="text"
+                        aria-label="${translateText("chat.search")}"
+                        placeholder="${translateText("chat.search")}"
+                        .value=${this.playerSearchQuery}
+                        @input=${this.onPlayerSearchInput}
+                      />
+
+                      <div class="player-scroll-area">
+                        ${this.getSortedFilteredPlayers().map(
+                          (player) => html`
+                            <button
+                              class="chat-option-button ${this
+                                .selectedPlayer === player
+                                ? "selected"
+                                : ""}"
+                              style="border: 2px solid ${player
+                                .territoryColor()
+                                .toHex()};"
+                              aria-pressed=${this.selectedPlayer === player}
+                              @click=${() => this.selectPlayer(player)}
+                            >
+                              ${player.displayName()}
+                            </button>
+                          `,
+                        )}
+                      </div>
+                    </div>
+                  `
+                : null}
+            </div>
           </div>
-        </div>
-      </o-modal>
+          <div class="chat-footer">
+            <div class="chat-preview">
+              ${this.previewText ?? translateText("chat.build")}
+            </div>
+            <div class="chat-send">
+              <button
+                class="chat-repeat-button"
+                @click=${this.sendLastMessage}
+                ?disabled=${!this.canRepeatLastMessage()}
+              >
+                <span>${translateText("chat.send_last")}</span>
+                ${this.lastMessage
+                  ? html`<span class="chat-last-preview"
+                      >${this.lastMessagePreview()}</span
+                    >`
+                  : null}
+              </button>
+              <button
+                class="chat-send-button"
+                @click=${this.sendChatMessage}
+                ?disabled=${!this.previewText ||
+                (this.requiresPlayerSelection && !this.selectedPlayer)}
+              >
+                ${translateText("chat.send")}
+              </button>
+            </div>
+          </div>
+        </section>
+      </div>
     `;
   }
 
@@ -355,7 +389,7 @@ export class ChatModal extends LitElement {
       this.sender = sender;
     }
     this.requestUpdate();
-    this.modalEl?.open();
+    this.isModalOpen = true;
   }
 
   private resetSelection() {
@@ -369,7 +403,7 @@ export class ChatModal extends LitElement {
 
   public close() {
     this.resetSelection();
-    this.modalEl?.close();
+    this.isModalOpen = false;
   }
 
   public setRecipient(value: PlayerView) {
@@ -406,6 +440,6 @@ export class ChatModal extends LitElement {
     }
 
     this.requestUpdate();
-    this.modalEl?.open();
+    this.isModalOpen = true;
   }
 }

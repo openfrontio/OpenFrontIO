@@ -85,8 +85,6 @@ import {
   SendSpawnIntentEvent,
 } from "../../src/client/Transport";
 
-import { OModal } from "../../src/client/components/baseComponents/Modal";
-
 const TILE = 77 as TileRef;
 const CLICK = { x: 10, y: 20 };
 
@@ -276,8 +274,10 @@ describe("Quick Chat under the cursor", () => {
     vi.spyOn(fixture.gameView, "owner").mockReturnValue(recipient as never);
     const chat = document.createElement("chat-modal") as HTMLElement & {
       open: ReturnType<typeof vi.fn>;
+      isModalOpen: boolean;
     };
     chat.open = vi.fn();
+    chat.isModalOpen = false;
     document.body.append(chat);
     return { ...fixture, sender, recipient, chat };
   }
@@ -308,12 +308,12 @@ describe("Quick Chat under the cursor", () => {
     expect(chat.open).not.toHaveBeenCalled();
   });
 
-  it("does not open through another modal or after the game stops", () => {
+  it("does not reopen an active chat panel or open after the game stops", () => {
     const { eventBus, runner, chat } = setup();
     eventBus.emit(new MouseMoveEvent(CLICK.x, CLICK.y));
-    OModal.openCount = 1;
+    chat.isModalOpen = true;
     eventBus.emit(new DoQuickChatEvent());
-    OModal.openCount = 0;
+    chat.isModalOpen = false;
     runner.stop();
     eventBus.emit(new DoQuickChatEvent());
     expect(chat.open).not.toHaveBeenCalled();

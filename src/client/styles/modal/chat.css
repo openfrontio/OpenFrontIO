@@ -1,3 +1,68 @@
+chat-modal .chat-container {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 12px;
+  pointer-events: none;
+}
+
+chat-modal .chat-panel {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  width: min(680px, 100%);
+  min-width: 0;
+  max-height: min(560px, calc(100dvh - 32px));
+  overflow: hidden;
+  border-radius: 16px;
+  background: rgb(15 23 35 / var(--chat-background-opacity, 0.8));
+  border: 1px solid rgb(255 255 255 / 0.16);
+  box-shadow: 0 12px 40px rgb(0 0 0 / 0.3);
+  backdrop-filter: blur(8px);
+  color: white;
+  pointer-events: auto;
+  outline: none;
+}
+
+chat-modal .chat-header {
+  position: relative;
+  flex-shrink: 0;
+  padding: 16px 22px;
+  padding-inline-end: 60px;
+}
+
+chat-modal .chat-header h2 {
+  margin: 0;
+  font-size: 1.125rem;
+  font-weight: 700;
+}
+
+chat-modal .chat-close-button {
+  position: absolute;
+  inset-inline-end: 12px;
+  top: 12px;
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  color: white;
+  cursor: pointer;
+}
+
+chat-modal .chat-close-button:hover {
+  background: rgb(255 255 255 / 0.12);
+}
+
+chat-modal .chat-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+}
+
 chat-modal .chat-recipient {
   margin: 0 16px 12px;
   color: #c7d8ed;

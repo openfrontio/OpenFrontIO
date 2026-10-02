@@ -1,6 +1,4 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import "../../src/client/components/baseComponents/Modal";
-import { OModal } from "../../src/client/components/baseComponents/Modal";
 import { ChatIntegration } from "../../src/client/hud/layers/ChatIntegration";
 import { ChatModal } from "../../src/client/hud/layers/ChatModal";
 import { CloseViewEvent } from "../../src/client/InputHandler";
@@ -63,14 +61,13 @@ describe("Quick Chat panel", () => {
     chat.initEventBus(bus);
   });
 
-  const modal = () => chat.querySelector<OModal>("o-modal")!;
+  const panel = () => chat.querySelector<HTMLElement>(".chat-panel")!;
   const button = (selector: string) =>
     chat.querySelector<HTMLButtonElement>(selector)!;
 
   async function open(recipient = first) {
     chat.open(sender, recipient);
     await chat.updateComplete;
-    await modal().updateComplete;
   }
 
   it("repeats the last phrase to the new recipient in one click", async () => {
@@ -85,7 +82,7 @@ describe("Quick Chat panel", () => {
     expect(send.mock.calls[1][0]).toEqual(
       new SendQuickChatEvent(second, "greet.hello", undefined),
     );
-    expect(modal().isModalOpen).toBe(false);
+    expect(chat.isModalOpen).toBe(false);
   });
 
   it("requires a fresh player selection and never carries a target to a simple phrase", async () => {
@@ -145,12 +142,12 @@ describe("Quick Chat panel", () => {
     chat.sendQuickChat(sender, first, "greet.hello");
     chat.openWithSelection("attack", "attack", sender, first);
     await chat.updateComplete;
-    modal().close();
+    button(".chat-close-button").click();
     await open(second);
     expect(button(".chat-send-button").disabled).toBe(true);
     expect(button(".chat-repeat-button").disabled).toBe(false);
     bus.emit(new CloseViewEvent());
-    expect(modal().isModalOpen).toBe(false);
+    expect(chat.isModalOpen).toBe(false);
     chat.initEventBus(new EventBus());
     await open();
     expect(button(".chat-repeat-button").disabled).toBe(true);
@@ -165,19 +162,32 @@ describe("Quick Chat panel", () => {
     language.rtl = true;
     chat.requestUpdate();
     await chat.updateComplete;
-    expect(modal().dir).toBe("rtl");
+    expect(panel().dir).toBe("rtl");
     expect(chat.querySelector(".chat-preview")?.textContent?.trim()).toBe(
       "به target حمله کنید!",
     );
   });
 
-  it("applies stored opacity to the compact modal", async () => {
+  it("renders only while open, focuses the panel, and closes with Escape", async () => {
+    expect(panel()).toBeNull();
+    await open();
+    expect(document.activeElement).toBe(panel());
+    expect(panel().getAttribute("role")).toBe("dialog");
+    panel().dispatchEvent(
+      new KeyboardEvent("keydown", { key: "Escape", bubbles: true }),
+    );
+    await chat.updateComplete;
+    expect(chat.isModalOpen).toBe(false);
+    expect(panel()).toBeNull();
+  });
+
+  it("applies stored opacity to the independent panel", async () => {
     const settings = new UserSettings();
     settings.setQuickChatOpacity(0.45);
     await open();
-    expect(modal().compact).toBe(true);
+    expect(chat.querySelector("o-modal")).toBeNull();
     expect(
-      modal().style.getPropertyValue("--modal-background-opacity").trim(),
+      panel().style.getPropertyValue("--chat-background-opacity").trim(),
     ).toBe("0.45");
     settings.removeCached("settings.quickChatOpacity", false);
   });

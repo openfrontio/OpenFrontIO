@@ -73,7 +73,6 @@ import {
 } from "./Transport";
 import { createCanvas } from "./Utils";
 import { WebGLFrameBuilder } from "./WebGLFrameBuilder";
-import { OModal } from "./components/baseComponents/Modal";
 import { MapLayerController } from "./controllers/MapLayerController";
 import { createRenderer, GameRenderer } from "./hud/GameRenderer";
 import { ChatModal } from "./hud/layers/ChatModal";
@@ -1469,7 +1468,8 @@ export class ClientGameRunner {
   }
 
   private doQuickChatUnderCursor(): void {
-    if (OModal.openCount > 0) return;
+    const chat = document.querySelector<ChatModal>("chat-modal");
+    if (!chat || chat.isModalOpen) return;
     const tile = this.getTileUnderCursor();
     const sender = this.gameView.myPlayer();
     if (tile === null || !sender?.isAlive()) return;
@@ -1478,7 +1478,7 @@ export class ClientGameRunner {
     const recipient = owner as PlayerView;
     if (recipient.id() === sender.id() || !recipient.isAlive()) return;
     this.eventBus.emit(new CloseViewEvent());
-    document.querySelector<ChatModal>("chat-modal")?.open(sender, recipient);
+    chat.open(sender, recipient);
   }
 
   private doRequestAllianceUnderCursor(): void {
