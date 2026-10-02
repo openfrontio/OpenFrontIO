@@ -3,6 +3,7 @@ import { customElement, property, query, state } from "lit/decorators.js";
 import { ClientEnv } from "src/client/ClientEnv";
 import {
   calculateServerTimeOffset,
+  getGameModeLabel,
   getMapName,
   getSecondsUntilServerTimestamp,
   getServerNow,
@@ -20,7 +21,7 @@ import {
   LobbyInfoEvent,
   PublicGameInfo,
 } from "../core/Schemas";
-import { GameMode, GameType, HumansVsNations } from "../core/game/Game";
+import { GameMode, GameType } from "../core/game/Game";
 import { getApiBase } from "./Api";
 import { crazyGamesSDK } from "./CrazyGamesSDK";
 import { PublicLobbySocket } from "./LobbySocket";
@@ -418,7 +419,7 @@ export class JoinLobbyModal extends BaseModal {
             green: "text-emerald-300",
             red: "text-rose-300",
           }[lobby.accent ?? "gold"];
-    const subtitle = c ? this.modeSubtitle(c) : "";
+    const subtitle = c ? getGameModeLabel(c) : "";
     // The map name only moves down here when a label has taken the title line.
     const subtitleLine = featuredLabel
       ? [mapName, subtitle].filter(Boolean).join(" · ")
@@ -693,24 +694,6 @@ export class JoinLobbyModal extends BaseModal {
 
   // --- Game config rendering ---
 
-  private modeSubtitle(c: GameConfig): string {
-    if (c.gameMode !== GameMode.Team) {
-      return translateText("game_mode.ffa");
-    }
-    if (c.playerTeams === HumansVsNations) {
-      return translateText("host_modal.teams_Humans Vs Nations");
-    }
-    if (typeof c.playerTeams === "string") {
-      return translateText("host_modal.teams_" + c.playerTeams);
-    }
-    if (typeof c.playerTeams === "number") {
-      return translateText("public_lobby.teams", {
-        num: c.playerTeams,
-      });
-    }
-    return translateText("game_mode.ffa");
-  }
-
   private renderGameConfig(): TemplateResult {
     if (!this.gameConfig) return html``;
 
@@ -720,7 +703,7 @@ export class JoinLobbyModal extends BaseModal {
     const thumbnailUrl = assetUrl(
       `maps/${encodeURIComponent(normalizedMap)}/thumbnail.webp`,
     );
-    const modeSubtitle = this.modeSubtitle(c);
+    const modeSubtitle = getGameModeLabel(c);
 
     const cards = notableLobbySettings(c, this.nationCount).map(
       (s) =>
