@@ -1,9 +1,10 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   clearMemorySnapshots,
   clearSoloSave,
   closeSnapshotDatabase,
   decompressSoloTurns,
+  deleteSnapshotBytes,
   getActiveIdentity,
   getScopedSoloSaveKey,
   getSharedSnapshotDatabase,
@@ -70,13 +71,86 @@ function dummyStartInfo(gameID: string = "gameID1234"): GameStartInfo {
   } as GameStartInfo;
 }
 
+function createMockIndexedDb() {
+  const store = new Map<string, unknown>();
+  const db = {
+    close: vi.fn(),
+    onversionchange: null as (() => void) | null,
+    onclose: null as (() => void) | null,
+    objectStoreNames: {
+      contains: (name: string) => name === "snapshots",
+    },
+    createObjectStore: vi.fn(),
+    transaction: vi.fn((_storeName: string, _mode: string) => {
+      const tx = {
+        objectStore: vi.fn(() => ({
+          put: vi.fn((value: unknown, key: string) => {
+            store.set(key, value);
+            const req = { onsuccess: null as any, onerror: null as any };
+            setTimeout(() => req.onsuccess?.(), 0);
+            return req;
+          }),
+          get: vi.fn((key: string) => {
+            const req = {
+              onsuccess: null as any,
+              onerror: null as any,
+              result: store.get(key),
+            };
+            setTimeout(() => req.onsuccess?.(), 0);
+            return req;
+          }),
+          delete: vi.fn((key: string) => {
+            store.delete(key);
+            const req = { onsuccess: null as any, onerror: null as any };
+            setTimeout(() => req.onsuccess?.(), 0);
+            return req;
+          }),
+        })),
+        oncomplete: null as (() => void) | null,
+        onerror: null as ((err: unknown) => void) | null,
+        onabort: null as (() => void) | null,
+      };
+      setTimeout(() => tx.oncomplete?.(), 0);
+      return tx;
+    }),
+  };
+
+  const idb = {
+    open: vi.fn(() => {
+      const req = {
+        result: db,
+        onsuccess: null as (() => void) | null,
+        onerror: null as (() => void) | null,
+        onupgradeneeded: null as (() => void) | null,
+      };
+      setTimeout(() => {
+        req.onupgradeneeded?.();
+        req.onsuccess?.();
+      }, 0);
+      return req as unknown as IDBOpenDBRequest;
+    }),
+  } as unknown as IDBFactory;
+
+  return { idb, db, store };
+}
+
 describe("SinglePlayerSaveManager", () => {
+  const originalIndexedDB = globalThis.indexedDB;
+  let mockIdb: ReturnType<typeof createMockIndexedDb>;
+
   beforeEach(() => {
     localStorage.clear();
     clearMemorySnapshots();
     mockPlatform = "web";
     mockPersistentId = "user_abc_123";
     mockSteamId = null;
+    mockIdb = createMockIndexedDb();
+    (globalThis as any).indexedDB = mockIdb.idb;
+  });
+
+  afterEach(() => {
+    closeSnapshotDatabase();
+    (globalThis as any).indexedDB = originalIndexedDB;
   });
 
   it("constructs platform and account-scoped storage keys", () => {
@@ -203,10 +277,12 @@ describe("SinglePlayerSaveManager", () => {
     expect(save?.hasSnapshot).toBe(true);
 
     const restored = await getSoloSnapshot();
-    expect(restored).not.toBeNull();
-    expect(restored?.gameStartInfo.gameID).toBe("gameID1234");
-    expect(restored?.numTurns).toBe(150);
-    expect(restored?.snapshot).toEqual(rawBytes);
+    expect(restored.status).toBe("success");
+    if (restored.status === "success") {
+      expect(restored.gameStartInfo.gameID).toBe("gameID1234");
+      expect(restored.numTurns).toBe(150);
+      expect(restored.snapshot).toEqual(rawBytes);
+    }
   });
 
   it("preserves an existing snapshot when saveSoloGame is called with matching gameID", async () => {
@@ -221,7 +297,10 @@ describe("SinglePlayerSaveManager", () => {
     expect(save?.hasSnapshot).toBe(true);
     expect(save?.numTurns).toBe(50);
     const restored = await getSoloSnapshot();
-    expect(restored?.snapshot).toEqual(rawBytes);
+    expect(restored.status).toBe("success");
+    if (restored.status === "success") {
+      expect(restored.snapshot).toEqual(rawBytes);
+    }
   });
 
   it("skips writing snapshot bytes entirely if stored save belongs to a different game before write starts", async () => {
@@ -324,8 +403,10 @@ describe("SinglePlayerSaveManager", () => {
 
     // getSoloSnapshot decodes and migrates to snapshot store, removing snapshot from localStorage
     const restored = await getSoloSnapshot();
-    expect(restored).not.toBeNull();
-    expect(restored?.snapshot).toEqual(rawBytes);
+    expect(restored.status).toBe("success");
+    if (restored.status === "success") {
+      expect(restored.snapshot).toEqual(rawBytes);
+    }
 
     const rawAfter = JSON.parse(localStorage.getItem(key)!) as Record<
       string,
@@ -592,5 +673,110 @@ describe("SinglePlayerSaveManager", () => {
       }),
     );
     expect(getSoloSave()).not.toBeNull();
+  });
+
+  it("reports IndexedDB persistence status from saveSnapshotBytes and skips saveSoloSnapshot metadata when persistence fails", async () => {
+    const rawBytes = new Uint8Array([1, 2, 3, 4]);
+    const compressed = await compressSnapshot(rawBytes);
+
+    // With working mock IndexedDB
+    const success = await saveSnapshotBytes("gamesucc12", compressed);
+    expect(success).toBe(true);
+
+    try {
+      // When IndexedDB is unavailable
+      (globalThis as any).indexedDB = undefined;
+      closeSnapshotDatabase();
+      const fallbackOnly = await saveSnapshotBytes("gamefall12", compressed);
+      expect(fallbackOnly).toBe(false);
+
+      // saveSoloSnapshot skips writing metadata to localStorage when persistence returns false
+      await saveSoloSnapshot(dummyStartInfo("failidb123"), compressed, 100);
+      const key = getScopedSoloSaveKey()!;
+      expect(localStorage.getItem(key)).toBeNull();
+      expect(getSoloSave()).toBeNull();
+    } finally {
+      (globalThis as any).indexedDB = mockIdb.idb;
+      closeSnapshotDatabase();
+    }
+  });
+
+  it("distinguishes missing, corrupt, and storage unavailable states in getSoloSnapshot", async () => {
+    // 1. Missing: no save at all
+    expect(await getSoloSnapshot()).toEqual({ status: "missing" });
+
+    // Save metadata with hasSnapshot: true
+    const startInfo = dummyStartInfo("gamestat12");
+    const rawBytes = new Uint8Array([1, 2, 3, 4]);
+    const compressed = await compressSnapshot(rawBytes);
+    await saveSoloSnapshot(startInfo, compressed, 50);
+
+    // 2. Success
+    const successRes = await getSoloSnapshot();
+    expect(successRes.status).toBe("success");
+
+    // 3. Corrupt: snapshot bytes corrupted in store
+    mockIdb.store.set("gamestat12", new Uint8Array([99, 98, 97, 96])); // invalid compressed header
+    const corruptRes = await getSoloSnapshot();
+    expect(corruptRes.status).toBe("corrupt");
+
+    // 4. Missing: key removed from store
+    await deleteSnapshotBytes("gamestat12");
+    const missingRes = await getSoloSnapshot();
+    expect(missingRes.status).toBe("missing");
+
+    try {
+      // 5. Unavailable: database open times out or fails
+      closeSnapshotDatabase();
+      const timeoutSetup = {
+        open: () => ({}) as unknown as IDBOpenDBRequest, // never resolves
+      } as unknown as IDBFactory;
+      (globalThis as any).indexedDB = timeoutSetup;
+      const unavailableRes = await getSoloSnapshot(timeoutSetup);
+      expect(unavailableRes.status).toBe("unavailable");
+    } finally {
+      (globalThis as any).indexedDB = mockIdb.idb;
+      closeSnapshotDatabase();
+    }
+  });
+
+  it("retains legacy base64 snapshot in localStorage when IndexedDB persistence fails during migration", async () => {
+    const rawBytes = new Uint8Array([1, 2, 3, 4]);
+    const compressed = await compressSnapshot(rawBytes);
+    const base64 = uint8ArrayToBase64(compressed);
+
+    const key = getScopedSoloSaveKey()!;
+    const legacySave = {
+      version: 1,
+      gameID: "legacydb12",
+      savedAt: Date.now(),
+      gameStartInfo: dummyStartInfo("legacydb12"),
+      snapshot: base64,
+      numTurns: 10,
+    };
+    localStorage.setItem(key, JSON.stringify(legacySave));
+
+    // Simulate failing IndexedDB
+    const failingIdb = {
+      open: vi.fn(() => {
+        const req = {
+          onerror: null as any,
+          error: new Error("IDB write failed"),
+        } as unknown as IDBOpenDBRequest;
+        setTimeout(() => req.onerror?.(new Event("error")), 0);
+        return req;
+      }),
+    } as unknown as IDBFactory;
+
+    const restored = await getSoloSnapshot(failingIdb);
+    // Even if IndexedDB write failed, snapshot was read from memory/localStorage and returned
+    expect(restored.status).toBe("success");
+
+    // But legacy base64 snapshot is RETAINED in localStorage because persistence failed!
+    const rawStored = JSON.parse(localStorage.getItem(key)!) as Record<
+      string,
+      unknown
+    >;
+    expect(rawStored.snapshot).toBe(base64);
   });
 });

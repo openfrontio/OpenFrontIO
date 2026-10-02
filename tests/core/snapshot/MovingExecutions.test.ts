@@ -1,5 +1,7 @@
+import { GameView } from "../../../src/client/view/GameView";
 import { AttackExecution } from "../../../src/core/execution/AttackExecution";
 import { BoatRetreatExecution } from "../../../src/core/execution/BoatRetreatExecution";
+import { Executor } from "../../../src/core/execution/ExecutionManager";
 import { FactoryExecution } from "../../../src/core/execution/FactoryExecution";
 import { RetreatExecution } from "../../../src/core/execution/RetreatExecution";
 import { SpawnExecution } from "../../../src/core/execution/SpawnExecution";
@@ -13,10 +15,20 @@ import {
   PlayerType,
   UnitType,
 } from "../../../src/core/game/Game";
-import { GameUpdateType } from "../../../src/core/game/GameUpdates";
+import {
+  createGameUpdatesMap,
+  GameUpdateType,
+  GameUpdateViewData,
+} from "../../../src/core/game/GameUpdates";
+import {
+  MotionPlanRecord,
+  packMotionPlans,
+} from "../../../src/core/game/MotionPlans";
+import { GameRunner } from "../../../src/core/GameRunner";
 import { setup } from "../../util/Setup";
 import { expectSnapshotRoundTrip, roundTrip } from "../../util/Snapshot";
 import { executeTicks } from "../../util/utils";
+import { stubWorker } from "../../util/viewStubs";
 
 function conquerRect(
   game: Game,
@@ -168,6 +180,217 @@ describe("snapshot: transport ships", () => {
       }
     }
     expect(advanced).toBe(true);
+  });
+
+  test("client regression: GameRunner.snapshotViewData and restore behavior for fresh client vs client retaining grid or train plans", async () => {
+    const { game, defender } = await boatGame();
+    game.addExecution(
+      new TransportShipExecution(defender, game.ref(15, 8), 100),
+    );
+    executeTicks(game, 5);
+    const boat = defender.units(UnitType.TransportShip)[0];
+    expect(boat).toBeDefined();
+    const initialTile = boat.tile();
+
+    const { restored } = await roundTrip(game, MAP);
+    const restoredBoat = restored.unit(boat.id());
+    expect(restoredBoat).toBeDefined();
+
+    const runner = new GameRunner(
+      restored,
+      new Executor(restored, "game_id", "defender"),
+      () => {},
+    );
+
+    // Initial snapshot update from GameRunner.snapshotViewData
+    const snapshotView = runner.snapshotViewData();
+
+    const makeClient = () =>
+      new GameView(
+        stubWorker(),
+        restored.config(),
+        {
+          nations: [],
+          additionalNations: [],
+          gameMap: restored.map(),
+          miniGameMap: restored.map(),
+        } as any,
+        "client",
+        "Alice",
+        null,
+        "game_id",
+        [],
+      );
+
+    // 1. Fresh client without retained motion plan
+    const freshClient = makeClient();
+    freshClient.update(snapshotView);
+    expect(freshClient.unit(boat.id())?.tile()).toBe(initialTile);
+
+    // Advance restored game ticks until boat moves and emits a unit update
+    let nextTickUpdate: GameUpdateViewData | null = null;
+    let advancedBoatPos: number | null = null;
+    for (let i = 0; i < 20; i++) {
+      const updates = restored.executeNextTick();
+      const unitUpdates = updates[GameUpdateType.Unit] ?? [];
+      const boatUpdate = unitUpdates.find((u) => u.id === boat.id());
+      if (boatUpdate && boatUpdate.pos !== initialTile) {
+        advancedBoatPos = boatUpdate.pos;
+        nextTickUpdate = {
+          tick: restored.ticks(),
+          updates,
+          packedTileUpdates: new Uint32Array(0),
+          playerNameViewData: {},
+          tickExecutionDuration: 0,
+          pendingTurns: 0,
+        };
+        break;
+      }
+    }
+    expect(nextTickUpdate).not.toBeNull();
+
+    // Fresh client processes next unit update: asserts advancing client position
+    freshClient.update(nextTickUpdate!);
+    expect(freshClient.unit(boat.id())?.tile()).toBe(advancedBoatPos);
+    expect(freshClient.unit(boat.id())?.tile()).not.toBe(initialTile);
+
+    // 2. Client retaining a grid plan
+    const gridClient = makeClient();
+    const plannedTile1 = initialTile;
+    const plannedTile2 = restored.ref(12, 8);
+    const plannedTile3 = restored.ref(13, 8);
+    const gridPlan: MotionPlanRecord = {
+      kind: "grid",
+      unitId: boat.id(),
+      planId: 100,
+      startTick: snapshotView.tick,
+      ticksPerStep: 1,
+      path: new Uint32Array([plannedTile1, plannedTile2, plannedTile3]),
+    };
+    // Preload client with unit and grid plan from before snapshot
+    gridClient.update({
+      ...snapshotView,
+      tick: snapshotView.tick - 1,
+      packedMotionPlans: packMotionPlans([gridPlan]),
+    });
+    expect(gridClient.motionPlannedUnitIds()).toContain(boat.id());
+
+    // When snapshotViewData arrives, client's position is driven by its grid plan
+    gridClient.update(snapshotView);
+    expect(gridClient.unit(boat.id())?.tile()).toBe(plannedTile1);
+
+    // Next tick unit update arrives: grid plan advances client to plannedTile2
+    gridClient.update({
+      ...nextTickUpdate!,
+      tick: snapshotView.tick + 1,
+    });
+    expect(gridClient.unit(boat.id())?.tile()).toBe(plannedTile2);
+
+    // 3. Client retaining a train plan
+    const trainClient = makeClient();
+    const engineId = 9001;
+    const carId = 9002;
+    const trainTrack = [
+      restored.ref(1, 1),
+      restored.ref(2, 1),
+      restored.ref(3, 1),
+      restored.ref(4, 1),
+      restored.ref(5, 1),
+      restored.ref(6, 1),
+      restored.ref(7, 1),
+      restored.ref(8, 1),
+    ];
+    const trainPlan: MotionPlanRecord = {
+      kind: "train",
+      engineUnitId: engineId,
+      carUnitIds: [carId],
+      planId: 200,
+      startTick: snapshotView.tick,
+      speed: 1,
+      spacing: 1,
+      path: new Uint32Array(trainTrack),
+    };
+    const trainUnits = [
+      {
+        type: GameUpdateType.Unit,
+        id: engineId,
+        unitType: UnitType.TransportShip,
+        ownerID: defender.id(),
+        pos: trainTrack[0],
+        lastPos: [trainTrack[0]],
+        health: 100,
+        troops: 10,
+        level: 1,
+        isActive: true,
+      } as any,
+      {
+        type: GameUpdateType.Unit,
+        id: carId,
+        unitType: UnitType.TransportShip,
+        ownerID: defender.id(),
+        pos: trainTrack[0],
+        lastPos: [trainTrack[0]],
+        health: 100,
+        troops: 10,
+        level: 1,
+        isActive: true,
+      } as any,
+    ];
+    trainClient.update({
+      tick: snapshotView.tick - 1,
+      updates: {
+        ...createGameUpdatesMap(),
+        [GameUpdateType.Unit]: trainUnits,
+      },
+      packedTileUpdates: new Uint32Array(0),
+      packedMotionPlans: packMotionPlans([trainPlan]),
+      playerNameViewData: {},
+      tickExecutionDuration: 0,
+      pendingTurns: 0,
+    });
+    expect(trainClient.motionPlannedUnitIds()).toContain(engineId);
+    expect(trainClient.motionPlannedUnitIds()).toContain(carId);
+
+    // Snapshot update contains engine and car units
+    const snapshotWithTrain: GameUpdateViewData = {
+      ...snapshotView,
+      updates: {
+        ...snapshotView.updates,
+        [GameUpdateType.Unit]: [
+          ...snapshotView.updates[GameUpdateType.Unit],
+          ...trainUnits,
+        ],
+      },
+    };
+    trainClient.update(snapshotWithTrain);
+    expect(trainClient.unit(engineId)?.tile()).toBe(trainTrack[0]);
+
+    // Next unit update arrives: train plan advances
+    trainClient.update({
+      tick: snapshotView.tick + 1,
+      updates: {
+        ...createGameUpdatesMap(),
+        [GameUpdateType.Unit]: [
+          {
+            type: GameUpdateType.Unit,
+            id: engineId,
+            unitType: UnitType.TransportShip,
+            ownerID: defender.id(),
+            pos: trainTrack[1],
+            lastPos: [trainTrack[0]],
+            health: 100,
+            troops: 10,
+            level: 1,
+            isActive: true,
+          } as any,
+        ],
+      },
+      packedTileUpdates: new Uint32Array(0),
+      playerNameViewData: {},
+      tickExecutionDuration: 0,
+      pendingTurns: 0,
+    });
+    expect(trainClient.unit(engineId)?.tile()).toBe(trainTrack[1]);
   });
 });
 

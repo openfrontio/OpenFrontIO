@@ -349,4 +349,76 @@ describe("SinglePlayerModal start", () => {
 
     translateSpy.mockRestore();
   });
+
+  it("preserves saved game and resumeSave state when snapshot read fails due to storage unavailability", async () => {
+    const modal = createModal();
+    modal.resumeSave = {
+      gameID: "save_unavail",
+      hasSnapshot: true,
+      numTurns: 10,
+    } as any;
+
+    const alertSpy = vi
+      .spyOn(inGameModal, "showInGameAlert")
+      .mockImplementation(async () => true);
+    const clearSpy = vi.spyOn(saveManager, "clearSoloSave");
+    const snapSpy = vi
+      .spyOn(saveManager, "getSoloSnapshot")
+      .mockResolvedValue({ status: "unavailable" });
+
+    await modal.handleResumeGame();
+
+    expect(alertSpy).toHaveBeenCalled();
+    // Must NOT delete the save when storage is unavailable
+    expect(clearSpy).not.toHaveBeenCalled();
+    // Must preserve resumeSave in the modal
+    expect(modal.resumeSave).not.toBeNull();
+    expect(modal.resumeSave.gameID).toBe("save_unavail");
+
+    alertSpy.mockRestore();
+    clearSpy.mockRestore();
+    snapSpy.mockRestore();
+  });
+
+  it("clears saved game and resets resumeSave when snapshot is corrupt or missing", async () => {
+    const modal = createModal();
+    modal.resumeSave = {
+      gameID: "save_corrupt",
+      hasSnapshot: true,
+      numTurns: 10,
+    } as any;
+
+    const alertSpy = vi
+      .spyOn(inGameModal, "showInGameAlert")
+      .mockImplementation(async () => true);
+    const clearSpy = vi.spyOn(saveManager, "clearSoloSave");
+    const snapSpy = vi
+      .spyOn(saveManager, "getSoloSnapshot")
+      .mockResolvedValue({ status: "corrupt" });
+
+    await modal.handleResumeGame();
+
+    expect(alertSpy).toHaveBeenCalled();
+    // Must clear corrupted save
+    expect(clearSpy).toHaveBeenCalledWith("save_corrupt");
+    // Must reset resumeSave
+    expect(modal.resumeSave).toBeNull();
+
+    // Now test missing
+    modal.resumeSave = {
+      gameID: "save_missing",
+      hasSnapshot: true,
+      numTurns: 10,
+    } as any;
+    snapSpy.mockResolvedValueOnce({ status: "missing" });
+
+    await modal.handleResumeGame();
+
+    expect(clearSpy).toHaveBeenCalledWith("save_missing");
+    expect(modal.resumeSave).toBeNull();
+
+    alertSpy.mockRestore();
+    clearSpy.mockRestore();
+    snapSpy.mockRestore();
+  });
 });
