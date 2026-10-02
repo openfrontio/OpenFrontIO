@@ -12,8 +12,11 @@ import {
   Relation,
 } from "../../../core/game/Game";
 import { TileRef } from "../../../core/game/GameMap";
+import { UserSettings } from "../../../core/game/UserSettings";
+import { LevelBadge } from "../../../core/Schemas";
 import { Emoji, flattenedEmojiTable } from "../../../core/Util";
 import { fetchLobbyListed } from "../../Api";
+import "../../components/LevelBadge";
 import { actionButton } from "../../components/ui/ActionButton";
 import "../../components/ui/Divider";
 import { Controller } from "../../Controller";
@@ -22,6 +25,7 @@ import {
   MouseUpEvent,
   SwapRocketDirectionEvent,
 } from "../../InputHandler";
+import { lobbyLevelBadge } from "../../LobbyRosterLevels";
 import {
   PlayerReportedEvent,
   SendAllianceRequestIntentEvent,
@@ -69,6 +73,7 @@ export class PlayerPanel extends LitElement implements Controller {
   private tile: TileRef | null = null;
   private _profileForPlayerId: number | null = null;
   private kickedPlayerIDs = new Set<string>();
+  private userSettings = new UserSettings();
 
   @state() private sendTarget: PlayerView | null = null;
   @state() private sendMode: "troops" | "gold" | "none" = "none";
@@ -571,6 +576,18 @@ export class PlayerPanel extends LitElement implements Controller {
     `;
   }
 
+  // The level badge from the lobby roster, for human players only. Hidden for
+  // anyone but the viewer's own player while anonymous names are on: their
+  // name is anonymized then (PlayerView.displayName), and the badge belongs
+  // to the real one.
+  private levelBadgeFor(other: PlayerView): LevelBadge | undefined {
+    if (other.type() !== PlayerType.Human) return undefined;
+    const clientID = other.clientID();
+    const isSelf = clientID !== null && clientID === this.g.myClientID();
+    if (!isSelf && this.userSettings.anonymousNames()) return undefined;
+    return lobbyLevelBadge(this.g.gameID(), clientID);
+  }
+
   private renderIdentityRow(other: PlayerView, my: PlayerView) {
     const flagPath = other.cosmetics.flag;
     const flagCode = flagPath?.match(/\/flags\/(.+)\.svg$/)?.[1];
@@ -583,6 +600,7 @@ export class PlayerPanel extends LitElement implements Controller {
       other.type() === PlayerType.Human
         ? null
         : this.identityChipProps(other.type());
+    const levelBadge = this.levelBadgeFor(other);
 
     return html`
       <div class="flex items-center gap-2.5 flex-wrap">
@@ -598,9 +616,18 @@ export class PlayerPanel extends LitElement implements Controller {
             />`
           : ""}
 
-        <div class="flex-1 min-w-0">
+        <div class="flex-1 min-w-0 flex items-center gap-2">
+          ${levelBadge
+            ? html`<level-badge
+                class="shrink-0"
+                .level=${levelBadge.level}
+                .prestige=${levelBadge.prestige}
+                ?legend=${levelBadge.legend}
+                size="28"
+              ></level-badge>`
+            : ""}
           <h2
-            class="text-xl font-bold tracking-[-0.01em] text-zinc-50 truncate"
+            class="min-w-0 text-xl font-bold tracking-[-0.01em] text-zinc-50 truncate"
             title=${other.displayName()}
           >
             ${other.displayName()}
