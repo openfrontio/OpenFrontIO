@@ -6,6 +6,7 @@ import { TribeExecution } from "../../../src/core/execution/TribeExecution";
 //import { TransportShipExecution } from "../../../src/core/execution/TransportShipExecution";
 import { AllianceRequestExecution } from "../../../src/core/execution/alliance/AllianceRequestExecution";
 import {
+  Difficulty,
   Game,
   GameType,
   Player,
@@ -258,5 +259,26 @@ describe("GameImpl", () => {
 
     expect(attacker.clientID()).toBe("attacker_new_client");
     expect(attacker.isDisconnected()).toBe(false);
+  });
+
+  test("applySingleplayerConfig updates gameType, difficulty, and refreshes active initialized NationExecution instances", () => {
+    const nationExec = game.convertHumanToNation(
+      defender,
+      gameID,
+    ) as NationExecution;
+    nationExec.init(game);
+    expect(nationExec.isInitialized()).toBe(true);
+
+    const initialRate = nationExec.currentAttackRate();
+
+    game.applySingleplayerConfig(Difficulty.Impossible);
+
+    expect(game.config().gameConfig().gameType).toBe(GameType.Singleplayer);
+    expect(game.config().gameConfig().difficulty).toBe(Difficulty.Impossible);
+    expect(nationExec.currentAttackRate()).not.toBe(initialRate);
+
+    game.applySingleplayerConfig();
+    expect(game.config().gameConfig().gameType).toBe(GameType.Singleplayer);
+    expect(game.config().gameConfig().difficulty).toBe(Difficulty.Impossible);
   });
 });

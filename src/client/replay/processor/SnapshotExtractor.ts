@@ -4,7 +4,6 @@
  * to the local clientID.
  */
 
-import { NationExecution } from "../../../core/execution/NationExecution";
 import {
   Difficulty,
   GameType,
@@ -96,23 +95,7 @@ export async function extractSnapshotFromRecord(
   }
 
   // Update game configuration
-  const config = game.config().gameConfig() as {
-    difficulty?: Difficulty;
-    gameType: GameType;
-  };
-  if (opts.difficulty !== undefined) {
-    config.difficulty = opts.difficulty;
-    for (const exec of game.executions()) {
-      if (
-        exec instanceof NationExecution &&
-        exec.isActive() &&
-        exec.isInitialized()
-      ) {
-        exec.refreshDifficulty();
-      }
-    }
-  }
-  config.gameType = GameType.Singleplayer;
+  game.applySingleplayerConfig(opts.difficulty);
 
   const snapshot = runner.snapshot();
 

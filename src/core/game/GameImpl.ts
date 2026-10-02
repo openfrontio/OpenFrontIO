@@ -40,11 +40,13 @@ import {
   AllianceRequest,
   Cell,
   ColoredTeams,
+  Difficulty,
   Duos,
   EmojiMessage,
   Execution,
   Game,
   GameMode,
+  GameType,
   GameUpdates,
   HumansVsNations,
   MessageType,
@@ -787,6 +789,22 @@ export class GameImpl implements Game {
     const nationExec = new NationExecution(gameID, nation);
     this.addExecution(nationExec);
     return nationExec;
+  }
+
+  applySingleplayerConfig(difficulty?: Difficulty): void {
+    this.config().setGameType(GameType.Singleplayer);
+    if (difficulty !== undefined) {
+      this.config().setDifficulty(difficulty);
+      for (const exec of this.executions()) {
+        if (
+          exec instanceof NationExecution &&
+          exec.isActive() &&
+          exec.isInitialized()
+        ) {
+          exec.refreshDifficulty();
+        }
+      }
+    }
   }
 
   playerView(id: PlayerID): Player {

@@ -893,6 +893,7 @@ export interface Game extends GameMap {
   removeExecution(exec: Execution): void;
   takeoverPlayer(player: Player | PlayerID, localClientID: ClientID): void;
   convertHumanToNation(player: Player | PlayerID, gameID: GameID): Execution;
+  applySingleplayerConfig(difficulty?: Difficulty): void;
   displayMessage(
     message: string,
     type: MessageType,
