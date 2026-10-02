@@ -723,6 +723,7 @@ async function createClientGame(
   // map drawing happens on the WebGL canvas created in createWebGLView.
   const inputOverlay = document.createElement("div");
   inputOverlay.id = "game-input-overlay";
+  inputOverlay.tabIndex = -1;
   inputOverlay.style.position = "fixed";
   inputOverlay.style.left = "0";
   inputOverlay.style.top = "0";

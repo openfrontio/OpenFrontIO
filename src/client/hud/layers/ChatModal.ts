@@ -24,6 +24,7 @@ export const quickChatPhrases: QuickChatPhrases = quickChatData;
 export class ChatModal extends LitElement {
   @state() public isModalOpen = false;
   @query(".chat-panel") private panel?: HTMLElement;
+  private returnFocus: HTMLElement | null = null;
 
   createRenderRoot() {
     return this;
@@ -379,6 +380,7 @@ export class ChatModal extends LitElement {
   }
 
   public open(sender?: PlayerView, recipient?: PlayerView) {
+    this.captureReturnFocus();
     this.resetSelection();
     if (sender && recipient) {
       this.players = this.g
@@ -401,9 +403,48 @@ export class ChatModal extends LitElement {
     this.requestUpdate();
   }
 
+  private captureReturnFocus() {
+    if (!this.isModalOpen) {
+      this.returnFocus =
+        document.activeElement instanceof HTMLElement
+          ? document.activeElement
+          : null;
+    }
+  }
+
   public close() {
+    const restoreFocus =
+      this.isModalOpen && this.contains(document.activeElement);
+    const opener = this.returnFocus;
+    this.returnFocus = null;
     this.resetSelection();
     this.isModalOpen = false;
+    if (!restoreFocus) return;
+
+    // Wait for HUD updates: the PlayerPanel opener may be removed by hide().
+    void this.updateComplete.then(() => {
+      if (
+        this.isModalOpen ||
+        (document.activeElement !== document.body &&
+          !this.contains(document.activeElement))
+      )
+        return;
+      const canFocusOpener =
+        opener?.isConnected &&
+        opener !== document.body &&
+        !opener.closest("[inert], [hidden]") &&
+        !opener.matches(":disabled") &&
+        (opener.checkVisibility
+          ? opener.checkVisibility({
+              checkOpacity: true,
+              checkVisibilityCSS: true,
+            })
+          : opener.getClientRects().length > 0);
+      const focusTarget = canFocusOpener
+        ? opener
+        : document.getElementById("game-input-overlay");
+      focusTarget?.focus({ preventScroll: true });
+    });
   }
 
   public setRecipient(value: PlayerView) {
@@ -420,6 +461,7 @@ export class ChatModal extends LitElement {
     sender?: PlayerView,
     recipient?: PlayerView,
   ) {
+    this.captureReturnFocus();
     if (sender && recipient) {
       this.players = this.g
         .players()

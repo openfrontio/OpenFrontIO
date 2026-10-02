@@ -181,6 +181,81 @@ describe("Quick Chat panel", () => {
     expect(panel()).toBeNull();
   });
 
+  function focusOpener() {
+    const opener = document.createElement("button");
+    opener.textContent = "Open chat";
+    vi.spyOn(opener, "getClientRects").mockReturnValue([
+      new DOMRect(0, 0, 40, 40),
+    ] as unknown as DOMRectList);
+    document.body.append(opener);
+    opener.focus();
+    return opener;
+  }
+
+  function mapFocusTarget() {
+    const map = document.createElement("div");
+    map.id = "game-input-overlay";
+    map.tabIndex = -1;
+    document.body.append(map);
+    return map;
+  }
+
+  it.each(["close button", "Escape", "send", "repeat", "CloseViewEvent"])(
+    "restores opener focus after %s",
+    async (path) => {
+      const opener = focusOpener();
+      chat.sendQuickChat(sender, first, "greet.hello");
+      chat.openWithSelection("greet", "hello", sender, first);
+      await chat.updateComplete;
+      expect(document.activeElement).toBe(panel());
+      if (path === "Escape") {
+        panel().dispatchEvent(
+          new KeyboardEvent("keydown", { key: "Escape", bubbles: true }),
+        );
+      } else if (path === "CloseViewEvent") {
+        bus.emit(new CloseViewEvent());
+      } else {
+        const selector =
+          path === "send"
+            ? ".chat-send-button"
+            : path === "repeat"
+              ? ".chat-repeat-button"
+              : ".chat-close-button";
+        button(selector).focus();
+        button(selector).click();
+      }
+      await chat.updateComplete;
+      expect(chat.isModalOpen).toBe(false);
+      expect(document.activeElement).toBe(opener);
+    },
+  );
+
+  it.each(["removed", "hidden", "disabled", "body"])(
+    "returns focus to the map when the opener is %s",
+    async (state) => {
+      const map = mapFocusTarget();
+      const opener = state === "body" ? null : focusOpener();
+      await open();
+      if (state === "removed") opener!.remove();
+      if (state === "hidden") opener!.hidden = true;
+      if (state === "disabled") opener!.disabled = true;
+      chat.close();
+      await chat.updateComplete;
+      expect(document.activeElement).toBe(map);
+    },
+  );
+
+  it("does not steal focus from another HUD control on external close", async () => {
+    focusOpener();
+    await open();
+    const other = document.createElement("button");
+    document.body.append(other);
+    other.focus();
+    bus.emit(new CloseViewEvent());
+    await chat.updateComplete;
+    expect(document.activeElement).toBe(other);
+  });
+
   it("applies stored opacity to the independent panel", async () => {
     const settings = new UserSettings();
     settings.setQuickChatOpacity(0.45);
