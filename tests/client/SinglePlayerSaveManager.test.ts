@@ -401,6 +401,47 @@ describe("SinglePlayerSaveManager", () => {
     closeSnapshotDatabase();
   });
 
+  it("closes and resets the shared connection pool when an operation throws an error on a shared connection", async () => {
+    const originalIndexedDB = globalThis.indexedDB;
+    const dbStub = {
+      close: vi.fn(),
+      transaction: vi.fn(() => {
+        throw new Error("IndexedDB transaction failure");
+      }),
+    };
+    const req = {
+      result: dbStub,
+      onsuccess: null as (() => void) | null,
+    } as unknown as IDBOpenDBRequest & { onsuccess: () => void };
+
+    const fakeIndexedDb = {
+      open: vi.fn(() => req),
+    } as unknown as IDBFactory;
+
+    (globalThis as any).indexedDB = fakeIndexedDb;
+
+    try {
+      const savePromise = saveSnapshotBytes(
+        "fail_game",
+        new Uint8Array([1, 2, 3]),
+      );
+      req.onsuccess();
+      await savePromise;
+
+      // The error triggered closeSnapshotDatabase(), which closed the shared db
+      expect(dbStub.close).toHaveBeenCalledTimes(1);
+
+      // Subsequent requests will re-open rather than reusing the dead connection
+      const dbNextPromise = getSharedSnapshotDatabase();
+      req.onsuccess();
+      await dbNextPromise;
+      expect(fakeIndexedDb.open).toHaveBeenCalledTimes(2);
+    } finally {
+      (globalThis as any).indexedDB = originalIndexedDB;
+      closeSnapshotDatabase();
+    }
+  });
+
   it("validates persisted save state and rejects records with malformed numTurns, snapshot, or turns", () => {
     const validBase = {
       version: 1,
