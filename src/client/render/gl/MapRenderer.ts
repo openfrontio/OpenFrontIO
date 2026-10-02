@@ -31,6 +31,7 @@ import type {
   UnitState,
 } from "../types";
 import type { SpawnCenter } from "./passes/SpawnOverlayPass";
+import type { TeamMarker } from "./passes/TeamMarkerPass";
 import type { AttackTroopLabel } from "./passes/WorldTextPass";
 import { GPURenderer } from "./Renderer";
 import type { RenderSettings } from "./RenderSettings";
@@ -291,6 +292,11 @@ export class MapRenderer {
   /** Set the small-player glow set (1 byte per owner smallID), or null = off. */
   updateSmallPlayerGlow(set: Uint8Array | null): void {
     this.renderer?.updateSmallPlayerGlow(set);
+  }
+
+  /** Set the teammate markers (pulsing stars); empty = off. */
+  updateTeamMarkers(markers: TeamMarker[]): void {
+    this.renderer?.updateTeamMarkers(markers);
   }
 
   // ---- Map layers ----
