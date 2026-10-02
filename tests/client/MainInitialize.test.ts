@@ -629,6 +629,54 @@ describe("Client.initialize() booted from Main.ts module scope", () => {
     });
   });
 
+  it("ignores the replay viewer hash while a game is running", async () => {
+    mocks.joinLobby.mockClear();
+    let resolveJoin: () => void = () => {};
+    mocks.joinLobby.mockReturnValueOnce({
+      prestart: new Promise<void>(() => {}),
+      join: new Promise<void>((resolve) => {
+        resolveJoin = resolve;
+      }),
+      stop: () => true,
+    });
+    const input = document.querySelector("username-input") as unknown as {
+      canPlay: () => boolean;
+    };
+    input.canPlay = () => true;
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    try {
+      document.dispatchEvent(
+        new CustomEvent("join-lobby", {
+          detail: { gameID: "AbCd5678", source: "private" },
+          bubbles: true,
+        }),
+      );
+      await vi.waitFor(() => expect(mocks.joinLobby).toHaveBeenCalled());
+      resolveJoin();
+      // The in-game entry, which Main keeps as the game's URL.
+      await vi.waitFor(() =>
+        expect(window.location.href).toMatch(/game\/AbCd5678/),
+      );
+      const gameUrl = window.location.href;
+      const replaceSpy = vi.spyOn(history, "replaceState");
+
+      window.location.hash = "#replay-viewer=dqKzit4cWu";
+      window.dispatchEvent(new Event("hashchange"));
+      await new Promise((r) => setTimeout(r, 50));
+      expect(document.querySelector("replay-viewer")).toBeNull();
+      expect(warn).toHaveBeenCalledWith(
+        "replay viewer: ignored, a game is running",
+      );
+      // The game's URL is put back.
+      expect(replaceSpy).toHaveBeenCalledWith(null, "", gameUrl);
+      replaceSpy.mockRestore();
+    } finally {
+      // Leave, so the viewer can open in the next test.
+      document.dispatchEvent(new CustomEvent("leave-lobby"));
+      warn.mockRestore();
+    }
+  });
+
   // Last: the viewer replaces the menu, and any later hash change would
   // then leave the page.
   it("opens the replay viewer when the hash changes to one, tearing the menu down like a game start", async () => {

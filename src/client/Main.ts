@@ -982,6 +982,15 @@ class Client {
       // the URL, which would drop the hash before handleUrl reads it.
       const replayViewerID = parseReplayViewerHash(window.location.hash);
       if (replayViewerID !== null) {
+        // Not over a game that's running (or a lobby being waited in): the
+        // viewer would open on top of it. Put the game's URL back.
+        if (this.lobbyHandle !== null) {
+          console.warn("replay viewer: ignored, a game is running");
+          if (this.currentUrl !== null) {
+            history.replaceState(null, "", this.currentUrl);
+          }
+          return;
+        }
         void this.openReplayViewer(replayViewerID);
         return;
       }
