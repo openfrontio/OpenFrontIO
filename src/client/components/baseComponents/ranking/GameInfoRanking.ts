@@ -8,7 +8,10 @@ import {
   PLAYER_INDEX_HUMAN,
   PLAYER_INDEX_NATION,
 } from "@openfront/engine-api/StatsSchemas";
-import { AnalyticsRecord, PlayerRecord } from "@openfront/shared/WireSchemas";
+import {
+  ArchivedAnalyticsRecord,
+  PlayerRecord,
+} from "@openfront/shared/WireSchemas";
 
 export enum RankType {
   ConquestHumans = "ConquestHumans",
@@ -42,6 +45,7 @@ export const RANK_TYPE_LABEL_KEYS: Record<RankType, string> = {
 
 export interface PlayerInfo {
   id: string;
+  publicId: string | null;
   username: string;
   clanTag: string | null;
   killedAt?: number;
@@ -67,7 +71,7 @@ export class Ranking {
   private readonly duration: number;
   private players: PlayerInfo[];
 
-  constructor(session: AnalyticsRecord) {
+  constructor(session: ArchivedAnalyticsRecord) {
     this.duration = session.info.duration;
     this.players = this.summarizePlayers(session);
   }
@@ -86,7 +90,7 @@ export class Ranking {
     return this.getScore(player, type);
   }
 
-  private summarizePlayers(session: AnalyticsRecord): PlayerInfo[] {
+  private summarizePlayers(session: ArchivedAnalyticsRecord): PlayerInfo[] {
     const players: Record<string, PlayerInfo> = {};
 
     for (const player of session.info.players) {
@@ -96,6 +100,7 @@ export class Ranking {
       const conquests = (stats.conquests ?? []).map((v) => BigInt(v ?? 0));
       players[player.clientID] = {
         id: player.clientID,
+        publicId: player.publicID ?? null,
         username: player.username,
         clanTag: player.clanTag,
         conquests,

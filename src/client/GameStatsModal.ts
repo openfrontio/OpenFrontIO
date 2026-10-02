@@ -7,6 +7,8 @@ import { BaseModal } from "./components/BaseModal";
 import "./components/CopyButton";
 import type { PastGameXpView } from "./components/PastGameXpCard";
 import { modalHeader } from "./components/ui/ModalHeader";
+import "./PlayerProfileModal";
+import type { ProfileOrigin } from "./PlayerProfileModal";
 import { resolveXpAccount } from "./ProgressionAccount";
 import { fetchMyGameXp, pollGameXp } from "./ProgressionApi";
 import { translateText } from "./Utils";
@@ -43,7 +45,11 @@ export class GameStatsModal extends BaseModal {
   private xpAbort: AbortController | null = null;
   private openedFrom: "account" | "clan" | "profile" | null = null;
   // Whose profile the game was opened from, when opened from a profile.
-  private profilePublicId: string | null = null;
+  private profileReturn: {
+    publicId: string;
+    origin: ProfileOrigin | null;
+  } | null = null;
+  private preserveStateForProfileHandoff = false;
   // The loaded game's end time, once GameInfoView has it (null: it failed
   // to load), and whoever is waiting for it. Keyed by game, so it never
   // answers for another one.
@@ -83,17 +89,22 @@ export class GameStatsModal extends BaseModal {
             .gameType=${this.gameType}
           ></past-game-xp-card>`}
           @game-info-loaded=${this.onGameInfoLoaded}
+          @view-profile=${(event: CustomEvent<{ publicId: string }>) =>
+            this.openPlayerProfile(event.detail.publicId)}
         ></game-info-view>
       </div>
     `;
   }
 
   protected onOpen(args?: Record<string, unknown>): void {
-    this.gameId =
+    const gameId =
       typeof args?.gameID === "string" && args.gameID.length > 0
         ? args.gameID
         : null;
-    this.gameType = null;
+    // GameInfoView only announces a game when its id changes, so reopening
+    // the same one (back from a player's profile) keeps the type it reported.
+    if (gameId !== this.gameId) this.gameType = null;
+    this.gameId = gameId;
     this.resetXp();
     if (this.gameId !== null) {
       this.xpAbort = new AbortController();
@@ -166,8 +177,8 @@ export class GameStatsModal extends BaseModal {
       const ownHistory =
         this.openedFrom === "account" ||
         (this.openedFrom === "profile" &&
-          this.profilePublicId !== null &&
-          this.profilePublicId === account.me.player.publicId);
+          this.profileReturn !== null &&
+          this.profileReturn.publicId === account.me.player.publicId);
       if (!ownHistory) return;
       const end = await this.gameEndedAt(gameId, signal);
       if (signal.aborted || end === null) return;
@@ -192,34 +203,60 @@ export class GameStatsModal extends BaseModal {
   }
 
   protected onClose(): void {
+    // The XP lookup stops either way; a return from the profile restarts it.
     this.resetXp();
+    if (this.preserveStateForProfileHandoff) return;
     this.gameId = null;
     this.openedFrom = null;
-    this.profilePublicId = null;
+    this.profileReturn = null;
   }
 
   public openFromAccount(gameId: string): void {
     this.openedFrom = "account";
-    this.profilePublicId = null;
+    this.profileReturn = null;
     this.open({ gameID: gameId });
   }
 
   public openFromClan(gameId: string): void {
     this.openedFrom = "clan";
-    this.profilePublicId = null;
+    this.profileReturn = null;
     this.open({ gameID: gameId });
   }
 
-  // `profilePublicId` is whose profile the game was listed on: the player's
-  // own profile counts as their own history.
-  public openFromProfile(gameId: string, profilePublicId?: string): void {
+  // `publicId` is whose profile the game was listed on: the player's own
+  // profile counts as their own history.
+  public openFromProfile(
+    gameId: string,
+    publicId: string,
+    origin: ProfileOrigin | null = null,
+  ): void {
     this.openedFrom = "profile";
-    this.profilePublicId = profilePublicId ?? null;
+    this.profileReturn = { publicId, origin };
     this.open({ gameID: gameId });
+  }
+
+  public returnFromPlayerProfile(): void {
+    if (this.gameId) this.open({ gameID: this.gameId });
+  }
+
+  private openPlayerProfile(publicId: string): void {
+    if (!publicId) return;
+    const profileModal = document.querySelector<
+      HTMLElement & { openFromStats(publicId: string): void }
+    >("player-profile-modal");
+    if (!profileModal) return;
+
+    this.preserveStateForProfileHandoff = true;
+    try {
+      profileModal.openFromStats(publicId);
+    } finally {
+      this.preserveStateForProfileHandoff = false;
+    }
   }
 
   private back(): void {
     const openedFrom = this.openedFrom;
+    const profileReturn = this.profileReturn;
     this.close();
     if (openedFrom === "account") {
       document
@@ -228,9 +265,14 @@ export class GameStatsModal extends BaseModal {
     } else if (openedFrom === "profile") {
       document
         .querySelector<
-          HTMLElement & { returnToGames(): void }
+          HTMLElement & {
+            returnToGames(
+              publicId?: string | null,
+              origin?: ProfileOrigin | null,
+            ): void;
+          }
         >("player-profile-modal")
-        ?.returnToGames();
+        ?.returnToGames(profileReturn?.publicId, profileReturn?.origin);
     } else if (openedFrom === "clan") {
       document
         .querySelector<

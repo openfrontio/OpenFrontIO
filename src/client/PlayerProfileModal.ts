@@ -28,7 +28,7 @@ import { currentPagePath, translateText } from "./Utils";
 export { playerProfileUrl };
 
 /** Where a profile was opened from, i.e. where its Back button leads. */
-export type ProfileOrigin = "clan" | "leaderboard" | "account";
+export type ProfileOrigin = "clan" | "leaderboard" | "account" | "stats";
 
 @customElement("player-profile-modal")
 export class PlayerProfileModal extends BaseModal {
@@ -339,13 +339,19 @@ export class PlayerProfileModal extends BaseModal {
   // Open the game-stats modal on top for a game in this player's history. Stash
   // the scroll offset so returning restores it (see returnToGames()).
   private openGameStats(gameId: string): void {
+    const publicId = this.publicId;
+    if (publicId === null) return;
     this.gamesScrollTop = this.modalEl?.getScrollTop() ?? 0;
     const statsModal = document.querySelector<
       HTMLElement & {
-        openFromProfile(gameId: string, profilePublicId?: string): void;
+        openFromProfile(
+          gameId: string,
+          publicId: string,
+          origin: ProfileOrigin | null,
+        ): void;
       }
     >("game-stats-modal");
-    statsModal?.openFromProfile(gameId, this.publicId ?? undefined);
+    statsModal?.openFromProfile(gameId, publicId, this.openedFrom);
   }
 
   private viewGame(gameId: string): void {
@@ -360,9 +366,14 @@ export class PlayerProfileModal extends BaseModal {
   }
 
   // Called by the game-stats modal's back button when it was opened from here.
-  public returnToGames(): void {
-    this.restoreGamesScrollAfterOpen = true;
-    this.open({ publicID: this.publicId ?? undefined, tab: "games" });
+  public returnToGames(
+    publicId: string | null = this.publicId,
+    origin: ProfileOrigin | null = this.openedFrom,
+  ): void {
+    this.restoreGamesScrollAfterOpen =
+      publicId !== null && publicId === this.publicId;
+    this.open({ publicID: publicId ?? undefined, tab: "games" });
+    this.openedFrom = origin;
   }
 
   private async restoreGamesScroll(): Promise<void> {
@@ -394,6 +405,11 @@ export class PlayerProfileModal extends BaseModal {
     this.openedFrom = "account";
   }
 
+  public openFromStats(publicId: string): void {
+    this.open({ publicID: publicId, tab: "stats" });
+    this.openedFrom = "stats";
+  }
+
   private back(): void {
     const openedFrom = this.openedFrom;
     this.close();
@@ -413,6 +429,12 @@ export class PlayerProfileModal extends BaseModal {
           HTMLElement & { returnToFriends(): void }
         >("account-modal")
         ?.returnToFriends();
+    } else if (openedFrom === "stats") {
+      document
+        .querySelector<
+          HTMLElement & { returnFromPlayerProfile(): void }
+        >("game-stats-modal")
+        ?.returnFromPlayerProfile();
     }
   }
 }

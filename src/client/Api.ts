@@ -45,7 +45,7 @@ import {
   UserMeResponseSchema,
 } from "@openfront/shared/ApiSchemas";
 import {
-  AnalyticsRecord,
+  ArchivedAnalyticsRecord,
   ArchivedAnalyticsRecordSchema,
   GameInfo,
 } from "@openfront/shared/WireSchemas";
@@ -2142,7 +2142,7 @@ export { getApiBase, getAudience };
 
 export async function fetchGameById(
   gameId: string,
-): Promise<AnalyticsRecord | false> {
+): Promise<ArchivedAnalyticsRecord | false> {
   try {
     const url = `${getApiBase()}/game/${encodeURIComponent(gameId)}`;
     const res = await fetch(url, {
