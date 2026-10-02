@@ -6,6 +6,7 @@ import {
   SendAttackIntentEvent,
   SendBoatAttackIntentEvent,
   SendBreakAllianceIntentEvent,
+  SendDeleteRailroadIntentEvent,
   SendDeleteUnitIntentEvent,
   SendDonateGoldIntentEvent,
   SendDonateTroopsIntentEvent,
@@ -88,6 +89,10 @@ export class PlayerActionHandler {
 
   handleEmoji(targetPlayer: PlayerView | "AllPlayers", emojiIndex: number) {
     this.eventBus.emit(new SendEmojiIntentEvent(targetPlayer, emojiIndex));
+  }
+
+  handleDeleteRailroad(railroadId: number, tile: TileRef) {
+    this.eventBus.emit(new SendDeleteRailroadIntentEvent(railroadId, tile));
   }
 
   handleDeleteUnit(unitId: number) {

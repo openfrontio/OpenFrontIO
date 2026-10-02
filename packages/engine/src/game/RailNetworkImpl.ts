@@ -1,22 +1,25 @@
 import { TileRef } from "@openfront/engine-api/game/GameMap";
-import { UnitType } from "@openfront/engine-api/game/GameTypes";
+import {
+  DeletableRailroad,
+  UnitType,
+} from "@openfront/engine-api/game/GameTypes";
 import { GameUpdateType } from "@openfront/engine-api/game/GameUpdates";
 import {
   snapshotType,
   zInt,
   zRef,
 } from "@openfront/engine-lib/snapshot/SnapshotType";
-import { z } from "zod";
-import { PathFinding } from "../pathfinding/PathFinder";
+import { Game, Player, Unit } from "@openfront/engine/game/Game";
+import { RailNetwork } from "@openfront/engine/game/RailNetwork";
+import { Railroad } from "@openfront/engine/game/Railroad";
+import { RailSpatialGrid } from "@openfront/engine/game/RailroadSpatialGrid";
+import { Cluster, TrainStation } from "@openfront/engine/game/TrainStation";
+import { PathFinding } from "@openfront/engine/pathfinding/PathFinder";
 import type {
   SnapshotReader,
   SnapshotWriter,
-} from "../snapshot/SnapshotContext";
-import { Game, Unit } from "./Game";
-import { RailNetwork } from "./RailNetwork";
-import { Railroad } from "./Railroad";
-import { RailSpatialGrid } from "./RailroadSpatialGrid";
-import { Cluster, TrainStation } from "./TrainStation";
+} from "@openfront/engine/snapshot/SnapshotContext";
+import { z } from "zod";
 
 /**
  * The Stations handle their own neighbors so the graph is naturally traversable,
@@ -128,6 +131,49 @@ export class RailNetworkImpl implements RailNetwork {
 
   stationManager(): StationManager {
     return this._stationManager;
+  }
+
+  private removableRails(player: Player, tile: TileRef): Railroad[] {
+    if (
+      !Number.isInteger(tile) ||
+      tile < 0 ||
+      tile >= this.game.map().width() * this.game.map().height() ||
+      this.game.inSpawnPhase()
+    )
+      return [];
+    return [...this.railGrid.query(tile, 3)]
+      .filter(
+        (rail) =>
+          rail.from.isActive() &&
+          rail.to.isActive() &&
+          rail.from.unit.owner() === player &&
+          rail.to.unit.owner() === player &&
+          rail.tiles.some((t) => this.game.manhattanDist(t, tile) <= 3),
+      )
+      .sort((a, b) => a.id - b.id);
+  }
+
+  deletableRailroads(player: Player, tile: TileRef): DeletableRailroad[] {
+    return this.removableRails(player, tile).map((rail) => ({
+      id: rail.id,
+      fromTile: rail.from.tile(),
+      toTile: rail.to.tile(),
+    }));
+  }
+
+  removeRailroad(player: Player, id: number, tile: TileRef): boolean {
+    const rail = this.removableRails(player, tile).find(
+      (rail) => rail.id === id,
+    );
+    if (!rail) return false;
+    const cluster = rail.from.getCluster();
+    if (cluster) this.dirtyClusters.add(cluster);
+    const other = rail.to.getCluster();
+    if (other) this.dirtyClusters.add(other);
+    rail.delete(this.game);
+    this.railGrid.unregister(rail);
+    this.recomputeClusters();
+    return true;
   }
 
   connectStation(station: TrainStation) {

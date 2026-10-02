@@ -14,6 +14,7 @@ import { BreakAllianceExecution } from "./alliance/BreakAllianceExecution";
 import { AttackExecution } from "./AttackExecution";
 import { BoatRetreatExecution } from "./BoatRetreatExecution";
 import { ConstructionExecution } from "./ConstructionExecution";
+import { DeleteRailroadExecution } from "./DeleteRailroadExecution";
 import { DeleteUnitExecution } from "./DeleteUnitExecution";
 import { DonateGoldExecution } from "./DonateGoldExecution";
 import { DonateTroopsExecution } from "./DonateTroopExecution";
@@ -130,6 +131,12 @@ export class Executor {
           player,
           intent.unitId,
           intent.amount,
+        );
+      case "delete_railroad":
+        return new DeleteRailroadExecution(
+          player,
+          intent.railroadId,
+          intent.tile,
         );
       case "delete_unit":
         return new DeleteUnitExecution(player, intent.unitId);

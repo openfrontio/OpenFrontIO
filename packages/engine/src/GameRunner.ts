@@ -322,6 +322,10 @@ export class GameRunner {
     const tile =
       x !== undefined && y !== undefined ? this.game.ref(x, y) : null;
     const actions = {
+      deletableRailroads:
+        tile === null
+          ? []
+          : this.game.railNetwork().deletableRailroads(player, tile),
       canAttack: tile !== null && player.canAttack(tile),
       buildableUnits: units === null ? [] : player.buildableUnits(tile, units),
       canSendEmojiAllPlayers: player.canSendEmoji(AllPlayers),

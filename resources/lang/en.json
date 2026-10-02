@@ -1975,6 +1975,11 @@
     "visit_store": "Visit store"
   },
   "radial_menu": {
+    "delete_title": "Delete",
+    "delete_description": "Remove a building or a railway between two buildings. Railway removal is instant.",
+    "rail_station": "Station",
+    "delete_rail_title": "Remove railway {number}",
+    "delete_rail_description": "{from} ↔ {to}. Instant; buildings remain.",
     "delete_unit_description": "Click to delete the nearest unit",
     "delete_unit_title": "Delete Unit",
     "upgrade_x": "Upgrade x{amount}"

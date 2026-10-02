@@ -191,7 +191,10 @@ export class TrainExecution implements Execution {
     return (
       this.stations.length > 1 &&
       this.stations[1].isActive() &&
-      this.stations[0].isActive()
+      this.stations[0].isActive() &&
+      this.currentRailroad !== null &&
+      this.stations[0].getRailroadTo(this.stations[1]) ===
+        this.currentRailroad.getState().railroad
     );
   }
 

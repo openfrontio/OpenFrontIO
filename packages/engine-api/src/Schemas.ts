@@ -42,6 +42,7 @@ export type Intent =
   | MarkDisconnectedIntent
   | EmbargoAllIntent
   | UpgradeStructureIntent
+  | DeleteRailroadIntent
   | DeleteUnitIntent
   | KickPlayerIntent
   | TogglePauseIntent
@@ -74,6 +75,7 @@ export type MarkDisconnectedIntent = z.infer<
 export type AllianceExtensionIntent = z.infer<
   typeof AllianceExtensionIntentSchema
 >;
+export type DeleteRailroadIntent = z.infer<typeof DeleteRailroadIntentSchema>;
 export type DeleteUnitIntent = z.infer<typeof DeleteUnitIntentSchema>;
 export type KickPlayerIntent = z.infer<typeof KickPlayerIntentSchema>;
 export type TogglePauseIntent = z.infer<typeof TogglePauseIntentSchema>;
@@ -503,6 +505,12 @@ export const MoveWarshipIntentSchema = z.object({
   tile: zb.uint(),
 });
 
+export const DeleteRailroadIntentSchema = z.object({
+  type: z.literal("delete_railroad"),
+  railroadId: zb.uint(),
+  tile: zb.uint(),
+});
+
 export const DeleteUnitIntentSchema = z.object({
   type: z.literal("delete_unit"),
   unitId: zb.uint(),
@@ -571,6 +579,7 @@ export const IntentSchema = z.discriminatedUnion("type", [
   QuickChatIntentSchema,
   AllianceExtensionIntentSchema,
   DeleteUnitIntentSchema,
+  DeleteRailroadIntentSchema,
   KickPlayerIntentSchema,
   TogglePauseIntentSchema,
   UpdateGameConfigIntentSchema,
