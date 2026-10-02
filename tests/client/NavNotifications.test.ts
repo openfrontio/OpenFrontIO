@@ -72,6 +72,7 @@ async function flush(): Promise<void> {
 describe("nav notifications", () => {
   beforeEach(() => {
     navNotifications.reset();
+    document.body.classList.remove("in-game");
     localStorage.clear();
     latestUserMeResponse.mockReturnValue(false);
     fetchFriendRequests.mockResolvedValue({ incoming: [], outgoing: [] });
@@ -141,6 +142,67 @@ describe("nav notifications", () => {
     window.dispatchEvent(new Event("focus"));
     await flush();
     expect(fetchFriendRequests).toHaveBeenCalledTimes(3);
+  });
+
+  it("pauses polling in-game and refreshes once when the menu returns", async () => {
+    vi.useFakeTimers();
+    latestUserMeResponse.mockReturnValue(linkedUser);
+    host();
+    await flush();
+    expect(fetchFriendRequests).toHaveBeenCalledTimes(1);
+
+    document.dispatchEvent(new CustomEvent("game-starting"));
+    await vi.advanceTimersByTimeAsync(120_000);
+    window.dispatchEvent(new Event("focus"));
+    await flush();
+    expect(fetchFriendRequests).toHaveBeenCalledTimes(1);
+
+    document.dispatchEvent(new CustomEvent("menu-restored"));
+    await flush();
+    expect(fetchFriendRequests).toHaveBeenCalledTimes(2);
+
+    // Duplicate lifecycle events cannot create another interval or refresh.
+    document.dispatchEvent(new CustomEvent("menu-restored"));
+    await flush();
+    expect(fetchFriendRequests).toHaveBeenCalledTimes(2);
+
+    await vi.advanceTimersByTimeAsync(60_000);
+    expect(fetchFriendRequests).toHaveBeenCalledTimes(3);
+  });
+
+  it("does not start polling when the notification store loads in-game", async () => {
+    document.body.classList.add("in-game");
+    latestUserMeResponse.mockReturnValue(linkedUser);
+    host();
+    await flush();
+    expect(fetchFriendRequests).not.toHaveBeenCalled();
+
+    document.dispatchEvent(new CustomEvent("menu-restored"));
+    await flush();
+    expect(fetchFriendRequests).toHaveBeenCalledTimes(1);
+  });
+
+  it("drops a pre-game response even when it resolves after the menu returns", async () => {
+    let resolvePreGamePoll!: (value: {
+      incoming: (typeof pendingRequest)[];
+      outgoing: never[];
+    }) => void;
+    fetchFriendRequests.mockReturnValueOnce(
+      new Promise((resolve) => {
+        resolvePreGamePoll = resolve;
+      }),
+    );
+    latestUserMeResponse.mockReturnValue(linkedUser);
+    const bell = host();
+
+    document.dispatchEvent(new CustomEvent("game-starting"));
+    document.dispatchEvent(new CustomEvent("menu-restored"));
+    await flush();
+    expect(fetchFriendRequests).toHaveBeenCalledTimes(2);
+
+    resolvePreGamePoll({ incoming: [pendingRequest], outgoing: [] });
+    await flush();
+    expect(bell.controller.friendRequests()).toEqual([]);
   });
 
   it("does not poll signed-out players and stops after logout", async () => {

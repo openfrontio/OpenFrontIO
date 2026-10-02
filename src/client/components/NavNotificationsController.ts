@@ -40,9 +40,12 @@ class NavNotificationsStore {
   private _friendRequests: FriendEntry[] = [];
 
   private friendRequestsEnabled = false;
+  private friendRequestPollingPaused = false;
+  private friendRequestPollingGeneration = 0;
   private friendRequestPoll: number | null = null;
   private friendRequestFetch: {
-    generation: number;
+    authGeneration: number;
+    pollingGeneration: number;
     promise: Promise<void>;
   } | null = null;
   private authGeneration = 0;
@@ -66,6 +69,8 @@ class NavNotificationsStore {
   private load(): void {
     if (this.loaded) return;
     this.loaded = true;
+    this.friendRequestPollingPaused =
+      document.body.classList.contains("in-game");
 
     this._helpSeen = localStorage.getItem(HELP_SEEN_KEY) === "true";
 
@@ -90,6 +95,8 @@ class NavNotificationsStore {
       FRIEND_REQUESTS_UPDATED_EVENT,
       this.handleFriendRequestsUpdated,
     );
+    document.addEventListener("game-starting", this.handleGameStarting);
+    document.addEventListener("menu-restored", this.handleMenuRestored);
     document.addEventListener("visibilitychange", this.handleVisibilityChange);
     window.addEventListener("focus", this.handleFocus);
 
@@ -134,6 +141,12 @@ class NavNotificationsStore {
   private startFriendRequestPolling(generation: number): void {
     if (generation !== this.authGeneration) return;
     this.friendRequestsEnabled = true;
+    if (this.friendRequestPollingPaused) return;
+    this.beginFriendRequestPolling();
+  }
+
+  private beginFriendRequestPolling(): void {
+    if (this.friendRequestPoll !== null) return;
     this.friendRequestPoll = window.setInterval(
       () => void this.refreshFriendRequests(),
       FRIEND_REQUEST_POLL_MS,
@@ -147,6 +160,24 @@ class NavNotificationsStore {
       this.friendRequestPoll = null;
     }
   }
+
+  private handleGameStarting = (): void => {
+    if (this.friendRequestPollingPaused) return;
+    this.friendRequestPollingPaused = true;
+    this.stopFriendRequestPolling();
+
+    // Let a restored menu start a fresh request immediately even if a request
+    // from before the match is still in flight. Its generation check below
+    // prevents that older response from publishing after the menu returns.
+    this.friendRequestPollingGeneration++;
+    this.friendRequestFetch = null;
+  };
+
+  private handleMenuRestored = (): void => {
+    if (!this.friendRequestPollingPaused) return;
+    this.friendRequestPollingPaused = false;
+    if (this.friendRequestsEnabled) this.beginFriendRequestPolling();
+  };
 
   private handleVisibilityChange = (): void => {
     if (!document.hidden) void this.refreshFriendRequests();
@@ -184,26 +215,43 @@ class NavNotificationsStore {
   }
 
   async refreshFriendRequests(): Promise<void> {
-    if (!this.friendRequestsEnabled || document.hidden) return;
-    if (this.friendRequestFetch?.generation === this.authGeneration) {
+    if (
+      !this.friendRequestsEnabled ||
+      this.friendRequestPollingPaused ||
+      document.hidden
+    ) {
+      return;
+    }
+    if (
+      this.friendRequestFetch?.authGeneration === this.authGeneration &&
+      this.friendRequestFetch.pollingGeneration ===
+        this.friendRequestPollingGeneration
+    ) {
       return this.friendRequestFetch.promise;
     }
 
-    const generation = this.authGeneration;
+    const authGeneration = this.authGeneration;
+    const pollingGeneration = this.friendRequestPollingGeneration;
     const requestsRevision = this.friendRequestsRevision;
     const request = (async () => {
       const requests = await fetchFriendRequests();
       if (
         requests === false ||
-        generation !== this.authGeneration ||
+        authGeneration !== this.authGeneration ||
+        pollingGeneration !== this.friendRequestPollingGeneration ||
         requestsRevision !== this.friendRequestsRevision ||
-        !this.friendRequestsEnabled
+        !this.friendRequestsEnabled ||
+        this.friendRequestPollingPaused
       ) {
         return;
       }
       publishFriendRequests(requests);
     })();
-    this.friendRequestFetch = { generation, promise: request };
+    this.friendRequestFetch = {
+      authGeneration,
+      pollingGeneration,
+      promise: request,
+    };
     try {
       await request;
     } finally {
@@ -276,6 +324,8 @@ class NavNotificationsStore {
         FRIEND_REQUESTS_UPDATED_EVENT,
         this.handleFriendRequestsUpdated,
       );
+      document.removeEventListener("game-starting", this.handleGameStarting);
+      document.removeEventListener("menu-restored", this.handleMenuRestored);
       document.removeEventListener(
         "visibilitychange",
         this.handleVisibilityChange,
@@ -291,6 +341,8 @@ class NavNotificationsStore {
     this._hasNewVersion = false;
     this._friendRequests = [];
     this.friendRequestsEnabled = false;
+    this.friendRequestPollingPaused = false;
+    this.friendRequestPollingGeneration++;
     this.friendRequestFetch = null;
     this.friendRequestsRevision = 0;
   }

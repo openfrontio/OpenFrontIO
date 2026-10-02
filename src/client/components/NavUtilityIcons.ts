@@ -2,11 +2,17 @@ import { html, LitElement, nothing, render, TemplateResult } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
 import { desktopQuit, requestDesktopQuit } from "../DesktopShell";
 import { closeMobileSidebar } from "../Navigation";
-import { translateText } from "../Utils";
+import { getCurrentLanguage, translateText } from "../Utils";
 import { NavNotificationsController } from "./NavNotificationsController";
 import { usernameText } from "./ui/UsernameText";
 
 let nextNotificationsPanelId = 0;
+
+const REQUEST_DATE_FORMAT: Intl.DateTimeFormatOptions = {
+  year: "numeric",
+  month: "short",
+  day: "numeric",
+};
 
 /**
  * The news bell, help "?", settings cogwheel and (on the desktop shell) a
@@ -221,7 +227,10 @@ export class NavUtilityIcons extends LitElement {
   };
 
   private formatRequestDate(iso: string): string {
-    return new Date(iso).toLocaleDateString();
+    return new Date(iso).toLocaleDateString(
+      getCurrentLanguage(),
+      REQUEST_DATE_FORMAT,
+    );
   }
 
   private renderNotificationsMenu(): TemplateResult {

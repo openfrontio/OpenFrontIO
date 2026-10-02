@@ -23,9 +23,10 @@ vi.mock("../../src/client/DesktopShell", () => ({
 }));
 vi.mock("../../src/client/Navigation", () => ({ closeMobileSidebar }));
 vi.mock("../../src/client/Utils", () => ({
+  getCurrentLanguage: () => "fr",
   translateText: (key: string, params?: Record<string, string | number>) => {
     if (key === "notifications.new_version") {
-      return `Version ${params?.version} is now live`;
+      return `Version ${params?.version} is now live!`;
     }
     return key;
   },
@@ -82,6 +83,7 @@ describe("nav notification menu", () => {
   });
 
   afterEach(() => {
+    vi.restoreAllMocks();
     vi.clearAllMocks();
   });
 
@@ -105,7 +107,7 @@ describe("nav notification menu", () => {
     const element = await mount();
     const menu = await openMenu(element);
     const versionRow = Array.from(menu.querySelectorAll("button")).find(
-      (button) => button.textContent?.includes("Version v9.9.9 is now live"),
+      (button) => button.textContent?.includes("Version v9.9.9 is now live!"),
     )!;
 
     versionRow.click();
@@ -129,6 +131,21 @@ describe("nav notification menu", () => {
     expect(window.location.hash).toBe("#modal=account&tab=friends");
     expect(markVersionSeen).not.toHaveBeenCalled();
     expect(closeMobileSidebar).toHaveBeenCalled();
+  });
+
+  it("formats request dates with the language selected in the app", async () => {
+    const dateSpy = vi
+      .spyOn(Date.prototype, "toLocaleDateString")
+      .mockReturnValue("2 oct. 2026");
+    const element = await mount();
+    const menu = await openMenu(element);
+
+    expect(menu.textContent).toContain("2 oct. 2026");
+    expect(dateSpy).toHaveBeenCalledWith("fr", {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+    });
   });
 
   it("closes on Escape and removes its body portal on disconnect", async () => {
