@@ -137,15 +137,19 @@ export const ProgressPositionSchema = z.object({
 });
 export type ProgressPosition = z.infer<typeof ProgressPositionSchema>;
 
+// The breakdown is stored with each game's XP, so it keeps the shape of the
+// XP rules it was scored under. Fields added since the first rules (`played`,
+// `leftEarly`) are missing from older rows, so the per-source fields default
+// rather than failing the whole response.
 export const XpBreakdownSchema = z.object({
   // Left while still alive: the per-game, placement and win XP are forfeited.
-  leftEarly: z.boolean(),
-  played: z.number(),
-  time: z.number(),
-  placement: z.number(),
-  win: z.number(),
-  firstWin: z.number(),
-  feats: z.number(),
+  leftEarly: z.boolean().default(false),
+  played: z.number().default(0),
+  time: z.number().default(0),
+  placement: z.number().default(0),
+  win: z.number().default(0),
+  firstWin: z.number().default(0),
+  feats: z.number().default(0),
   // Before multipliers.
   subtotal: z.number(),
   // Multipliers in permille: 1000 is 1x.
@@ -422,6 +426,12 @@ export const UserMeResponseSchema = z.object({
         provider: z.string().nullable().optional(),
       })
       .nullable(),
+    // A Stripe subscription whose renewal failed and is still being retried,
+    // sent only when `subscription` is null. It entitles nothing, which is
+    // why it is not `subscription`: every caller reads that as "subscribed".
+    // It exists so the account can say the payment failed and offer the
+    // billing portal. Optional so an older API without the field still parses.
+    pastDueSubscription: z.object({ tier: z.string() }).nullable().optional(),
     // Marketing-email consent state (client-driven consent). `consented` is the
     // player's current decision; `hasEmail` is whether a verified contact email
     // exists to subscribe. Optional so an older API without the field is treated

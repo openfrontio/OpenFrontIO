@@ -83,15 +83,30 @@ describe("Nation boats and hostile warships", () => {
     },
   );
 
-  it.each([Difficulty.Medium, Difficulty.Hard, Difficulty.Impossible])(
-    "%s: holds the boat when a hostile warship covers the route",
+  it("Medium: holds the boat when a hostile warship covers the route", async () => {
+    const { game, island, navy, behavior } = await setupBoats(
+      Difficulty.Medium,
+    );
+    const water = game.ref(11, 12);
+    navy.buildUnit(UnitType.Warship, water, { patrolTile: water });
+    const spy = spyExecutions(game);
+    expect(behavior.sendAttack(island)).toBe(false);
+    expect(boatsSent(spy)).toHaveLength(0);
+  });
+
+  it.each([Difficulty.Hard, Difficulty.Impossible])(
+    "%s: risks only a 1%% beachhead boat when a hostile warship covers the route",
     async (difficulty) => {
       const { game, island, navy, behavior } = await setupBoats(difficulty);
       const water = game.ref(11, 12);
       navy.buildUnit(UnitType.Warship, water, { patrolTile: water });
       const spy = spyExecutions(game);
+      expect(behavior.sendAttack(island)).toBe(true);
+      expect(boatsSent(spy).map((e) => e["troops"])).toEqual([1_000]);
+      // Only one beachhead at a time goes past a warship
+      game.executeNextTick();
       expect(behavior.sendAttack(island)).toBe(false);
-      expect(boatsSent(spy)).toHaveLength(0);
+      expect(boatsSent(spy)).toHaveLength(1);
     },
   );
 
@@ -117,14 +132,15 @@ describe("Nation boats and hostile warships", () => {
     expect(boatsSent(spy)).toHaveLength(1);
   });
 
+  // Hard & Impossible send a beachhead boat through the blocked lane anyway
   it.each([
-    [Difficulty.Impossible, 2],
-    [Difficulty.Hard, 1],
-    [Difficulty.Medium, 0],
-    [Difficulty.Easy, 0],
+    [Difficulty.Impossible, 2, 1],
+    [Difficulty.Hard, 1, 1],
+    [Difficulty.Medium, 0, 0],
+    [Difficulty.Easy, 0, 0],
   ])(
-    "%s: blocked boat orders %i warships against the blocker at once",
-    async (difficulty, expected) => {
+    "%s: blocked boat orders %i warships against the blocker at once (%i boats)",
+    async (difficulty, expected, boats) => {
       const { game, nation, navy, behavior } = await setupBoats(difficulty);
       nation.buildUnit(UnitType.Port, game.ref(7, 8), {});
       nation.addGold(10_000_000n);
@@ -132,7 +148,7 @@ describe("Nation boats and hostile warships", () => {
       navy.buildUnit(UnitType.Warship, water, { patrolTile: water });
       const spy = spyExecutions(game);
       behavior.maybeAttack();
-      expect(boatsSent(spy)).toHaveLength(0);
+      expect(boatsSent(spy)).toHaveLength(boats);
       expect(warshipsOrdered(spy, nation)).toHaveLength(expected);
     },
   );
@@ -154,7 +170,7 @@ describe("Nation boats and hostile warships", () => {
       }
       const spy = spyExecutions(game);
       behavior.maybeAttack();
-      expect(boatsSent(spy)).toHaveLength(0);
+      expect(boatsSent(spy)).toHaveLength(1);
       expect(warshipsOrdered(spy, nation)).toHaveLength(expected);
     },
   );
@@ -235,7 +251,7 @@ describe("Nation boats and hostile warships", () => {
       nation.buildUnit(UnitType.Warship, near, { patrolTile: near });
       const spy = spyExecutions(game);
       behavior.maybeAttack();
-      expect(boatsSent(spy)).toHaveLength(0);
+      expect(boatsSent(spy)).toHaveLength(1);
       expect(warshipsOrdered(spy, nation)).toHaveLength(expected);
     },
   );
@@ -262,7 +278,7 @@ describe("Nation boats and hostile warships", () => {
       nation.addGold(price(0) + price(1) + extraGold);
       const spy = spyExecutions(game);
       behavior.maybeAttack();
-      expect(boatsSent(spy)).toHaveLength(0);
+      expect(boatsSent(spy)).toHaveLength(1);
       expect(warshipsOrdered(spy, nation)).toHaveLength(expected);
     },
   );
@@ -342,21 +358,19 @@ describe("Nation boat routes on open water", () => {
     },
   );
 
-  it.each([Difficulty.Medium, Difficulty.Hard, Difficulty.Impossible])(
-    "%s: holds the short hop when the warship is right next to it",
-    async (difficulty) => {
-      const { enemy, behavior, warshipAt, landings } = setupSea(
-        difficulty,
-        200,
-        30,
-        strait,
-        14,
-      );
-      warshipAt(16, 12);
-      expect(behavior.sendAttack(enemy)).toBe(false);
-      expect(landings()).toHaveLength(0);
-    },
-  );
+  // Hard & Impossible would send a beachhead boat instead
+  it("Medium: holds the short hop when the warship is right next to it", async () => {
+    const { enemy, behavior, warshipAt, landings } = setupSea(
+      Difficulty.Medium,
+      200,
+      30,
+      strait,
+      14,
+    );
+    warshipAt(16, 12);
+    expect(behavior.sendAttack(enemy)).toBe(false);
+    expect(landings()).toHaveLength(0);
+  });
 
   // Open sea with a peninsula reaching towards the enemy coast at x <= 10
   const sea = (x: number, y: number) =>

@@ -240,15 +240,26 @@ describe("player profile level", () => {
     ).toBe("25");
   });
 
-  it("uses /users/@me for your own profile", async () => {
+  it("reads your own level fresh, not from the page-load /users/@me", async () => {
+    // The cached /users/@me still says level 64; games played since have
+    // moved the player on, which only the public endpoint knows.
+    fetchPublicPlayerProgress.mockResolvedValue({
+      prestige: 2,
+      level: 65,
+      lifetimeXp: 130_000,
+      legend: false,
+    });
     await open("me");
-    expect(levelLine()!.textContent).toContain(
-      'progression.level:{"level":64}',
-    );
-    expect(levelLine()!.textContent).toContain(
-      'progression.prestige:{"prestige":2}',
-    );
-    expect(fetchPublicPlayerProgress).not.toHaveBeenCalled();
+    await vi.waitFor(async () => {
+      await settled(modal);
+      expect(levelLine()!.textContent).toContain(
+        'progression.level:{"level":65}',
+      );
+      expect(levelLine()!.textContent).toContain(
+        'progression.prestige:{"prestige":2}',
+      );
+    });
+    expect(fetchPublicPlayerProgress).toHaveBeenCalledWith("me");
   });
 
   it("shows no card when there is no progress", async () => {

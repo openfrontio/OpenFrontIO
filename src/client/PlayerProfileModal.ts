@@ -7,7 +7,7 @@ import {
   type PlayerStatsTree,
   type PublicProgress,
 } from "../core/ApiSchemas";
-import { fetchPublicPlayerProfile, getUserMe } from "./Api";
+import { fetchPublicPlayerProfile } from "./Api";
 import "./components/baseComponents/stats/PlayerGameHistoryView";
 import type { PlayerGameHistoryCache } from "./components/baseComponents/stats/PlayerGameHistoryView";
 import "./components/baseComponents/stats/PlayerStatsTree";
@@ -233,14 +233,11 @@ export class PlayerProfileModal extends BaseModal {
     `;
   }
 
-  // Your own level comes from /users/@me (already cached for the session);
-  // anyone else's from the public endpoint. Either missing hides the summary.
+  // Everyone's level, your own included, comes from the public endpoint: the
+  // /users/@me copy is cached from page load and would miss the games played
+  // since. Missing progress hides the summary.
   private async loadProgress(publicId: string): Promise<PublicProgress | null> {
     try {
-      const me = await getUserMe();
-      if (me && me.player.publicId === publicId) {
-        return me.player.progress ?? null;
-      }
       const progress = await fetchPublicPlayerProgress(publicId);
       return progress === false ? null : progress;
     } catch {

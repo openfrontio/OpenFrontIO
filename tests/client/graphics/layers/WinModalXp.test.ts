@@ -764,6 +764,48 @@ describe("WinModal XP section", () => {
     );
   });
 
+  it("shows a result that lands after the modal is dismissed in its final state", async () => {
+    stubXpEndpoint([notFound, () => json(eligible())]);
+    await mount(makeGame({ ended: true }));
+    expect(xpState()).toBe("calculating");
+    // Keep playing / spectate while it is still calculating.
+    modal.querySelector<HTMLButtonElement>('[data-win-action="keep"]')!.click();
+    await settle(3_000);
+    expect(xpState()).toBe("result");
+    // No reveal playing where nobody can see it: it is already over.
+    expect(panel()!.getAttribute("data-xp-revealing")).toBeNull();
+    expect(panel()!.getAttribute("aria-busy")).toBe("false");
+    expect(panel()!.querySelector("[data-xp-total]")!.textContent).toContain(
+      '"xp":"212"',
+    );
+    expect(vi.getTimerCount()).toBe(0);
+  });
+
+  it("ends a reveal in progress when the modal is dismissed", async () => {
+    stubXpEndpoint([() => json(eligible())]);
+    await mount(makeGame({ ended: true }));
+    expect(panel()!.getAttribute("data-xp-revealing")).toBe("true");
+    modal.querySelector<HTMLButtonElement>('[data-win-action="keep"]')!.click();
+    await settle();
+    expect(panel()!.getAttribute("data-xp-revealing")).toBeNull();
+    expect(panel()!.querySelector("[data-xp-total]")!.textContent).toContain(
+      '"xp":"212"',
+    );
+  });
+
+  it("does not come back half-revealed when the panel is removed and re-added", async () => {
+    stubXpEndpoint([() => json(eligible())]);
+    await mount(makeGame({ ended: true }));
+    const element = modal.querySelector<GameXpPanel>("game-xp-panel")!;
+    expect(panel()!.getAttribute("aria-busy")).toBe("true");
+    const parent = element.parentElement!;
+    element.remove();
+    parent.prepend(element);
+    await element.updateComplete;
+    expect(panel()!.getAttribute("data-xp-revealing")).toBeNull();
+    expect(panel()!.getAttribute("aria-busy")).toBe("false");
+  });
+
   it("skips from the keyboard with a real button", async () => {
     stubXpEndpoint([() => json(eligible())]);
     await mount(makeGame({ ended: true }));

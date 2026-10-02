@@ -86,7 +86,10 @@ export class WinModal extends LitElement implements Controller {
           ${this._title || ""}
         </h2>
         <div class="min-h-0 flex-1 overflow-y-auto pr-0.5">
-          <game-xp-panel .view=${this.xpView}></game-xp-panel>
+          <game-xp-panel
+            .view=${this.xpView}
+            .onScreen=${this.isVisible}
+          ></game-xp-panel>
           ${this.innerHtml()}
         </div>
         <!-- Leaving is the quieter action, on the left; staying in the game

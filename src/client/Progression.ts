@@ -39,8 +39,9 @@ export function prestigeTier(prestige: number): PrestigeTier {
   return "radiant";
 }
 
-// Levels called out when reached: the same set the level-up screen offers a
-// share button on.
+// Levels called out when reached: the end-of-game XP panel gives one reached
+// this game its own "new milestone" card (100 is the Legend card at the last
+// prestige).
 export const MILESTONE_LEVELS: readonly number[] = [10, 25, 50, 75, 100];
 
 export function isMilestoneLevel(level: number): boolean {
@@ -190,6 +191,8 @@ const INELIGIBLE_REASON_KEYS: Record<string, string> = {
   custom_settings: "progression.ineligible_custom_settings",
   too_few_humans: "progression.ineligible_too_few_humans",
   daily_cap: "progression.ineligible_daily_cap",
+  // The game's stats were not agreed on by the players' votes.
+  unverified: "progression.ineligible_unverified",
 };
 
 export function ineligibleReasonKey(reason: string): string {

@@ -24,9 +24,21 @@ export type GameXpFetchResult =
   // A conclusion: signed out, or a body we cannot read. Stop asking.
   | { status: "unavailable" };
 
+// The request's own timeout, plus the caller's signal when there is one, so
+// aborting cancels a request already in flight rather than leaving it to run
+// to its timeout. Without AbortSignal.any (older browsers), just the timeout.
+function requestSignal(signal: AbortSignal | undefined): AbortSignal {
+  const timeout = AbortSignal.timeout(10_000);
+  if (signal === undefined || typeof AbortSignal.any !== "function") {
+    return timeout;
+  }
+  return AbortSignal.any([signal, timeout]);
+}
+
 // GET /users/@me/xp/:gameId — the XP the caller earned in one game.
 export async function fetchMyGameXp(
   gameId: string,
+  signal?: AbortSignal,
 ): Promise<GameXpFetchResult> {
   try {
     const authorization = await getAuthHeader();
@@ -35,7 +47,7 @@ export async function fetchMyGameXp(
       `${getApiBase()}/users/@me/xp/${encodeURIComponent(gameId)}`,
       {
         headers: { Accept: "application/json", Authorization: authorization },
-        signal: AbortSignal.timeout(10_000),
+        signal: requestSignal(signal),
       },
     );
     if (res.status === 404) return { status: "pending" };
@@ -53,6 +65,8 @@ export async function fetchMyGameXp(
     }
     return { status: "ok", data: parsed.data };
   } catch (err) {
+    // The caller gave up: not a failure worth a warning.
+    if (signal?.aborted) return { status: "pending" };
     console.warn("fetchMyGameXp: request failed", err);
     return { status: "pending" };
   }
@@ -63,7 +77,10 @@ export interface PollGameXpOptions {
   timeoutMs?: number;
   signal?: AbortSignal;
   // Injectable for tests.
-  fetcher?: (gameId: string) => Promise<GameXpFetchResult>;
+  fetcher?: (
+    gameId: string,
+    signal?: AbortSignal,
+  ) => Promise<GameXpFetchResult>;
 }
 
 /**
@@ -81,7 +98,7 @@ export async function pollGameXp(
   const deadline = Date.now() + timeoutMs;
   for (;;) {
     if (opts.signal?.aborted) return null;
-    const result = await fetcher(gameId);
+    const result = await fetcher(gameId, opts.signal);
     if (opts.signal?.aborted) return null;
     if (result.status === "ok") return result.data;
     if (result.status === "unavailable") return null;

@@ -200,8 +200,12 @@ export class NavAccountMenu extends LitElement {
 
     const player =
       this.userMeResponse === false ? null : this.userMeResponse.player;
+    // A past_due subscriber still needs the panel: it is where they reach
+    // the billing portal to fix the failed payment.
     const subscribed =
-      player?.subscription !== undefined && player?.subscription !== null;
+      (player?.subscription !== undefined && player?.subscription !== null) ||
+      (player?.pastDueSubscription !== undefined &&
+        player?.pastDueSubscription !== null);
     const publicId = player?.publicId ?? "";
 
     const items: MenuItem[] = [];
@@ -383,6 +387,20 @@ export class NavAccountMenu extends LitElement {
     return this.userMeResponse.player.progress ?? null;
   }
 
+  // The trigger's accessible name. Its aria-label would otherwise hide the
+  // level badge inside it from screen readers, so the level is in it too.
+  private triggerLabel(): string {
+    const progress = this.progress();
+    if (progress === null) return translateText("main.account");
+    return translateText("nav_account_menu.account_with_level", {
+      level: levelBadgeLabel(
+        progress.level,
+        progress.prestige,
+        progress.legend,
+      ),
+    });
+  }
+
   // Level badge beside the avatar, plus a thin XP bar along the trigger's
   // bottom edge. Absent entirely when /users/@me carries no progress.
   private renderLevel(
@@ -500,7 +518,7 @@ export class NavAccountMenu extends LitElement {
         @click=${this.handleTriggerClick}
         class="nav-menu-item relative h-10 rounded-full flex items-center justify-center gap-2 px-3 bg-transparent border border-white/20 text-white/80 hover:text-white cursor-pointer transition-colors [&.active]:text-white"
         data-page="page-account"
-        data-i18n-aria-label="main.account"
+        aria-label=${this.triggerLabel()}
         data-i18n-title="main.account"
       >
         ${this.renderLevel("desktop")}
@@ -531,7 +549,7 @@ export class NavAccountMenu extends LitElement {
         @click=${this.handleTriggerClick}
         class="nav-menu-item h-10 flex items-center justify-center gap-1 pl-1 pr-1.5 rounded-full text-white/90 cursor-pointer transition-colors"
         data-page="page-account"
-        data-i18n-aria-label="main.account"
+        aria-label=${this.triggerLabel()}
         data-i18n-title="main.account"
       >
         <span class="relative flex items-center justify-center w-8 h-8">

@@ -137,6 +137,10 @@ export class GameXpPanel extends LitElement {
   @property({ attribute: false }) view: GameXpPanelState = { kind: "hidden" };
   // Past-game view (GameStatsModal): a static summary, no reveal.
   @property({ type: Boolean }) compact = false;
+  // Whether anyone can see the panel (WinModal hides it with its modal). The
+  // reveal only plays on screen: a result that arrives while it is off screen
+  // shows in its final state, and going off screen mid-reveal ends it there.
+  @property({ attribute: false }) onScreen = true;
 
   // The reveal in progress, or null once it has finished (or when there is
   // none: the compact view, reduced motion, a skip). Null renders the final
@@ -152,18 +156,22 @@ export class GameXpPanel extends LitElement {
   }
 
   disconnectedCallback(): void {
-    this.clearTimers();
+    // Jump to the end: with its timers gone, a reveal left in place would
+    // stay half-done (and aria-busy) if the panel were added back.
+    this.skipReveal();
     super.disconnectedCallback();
   }
 
   protected willUpdate(changed: PropertyValues<this>): void {
-    if (!changed.has("view") && !changed.has("compact")) return;
-    const s = this.view;
-    if (s.kind === "result" && s.data.eligible) {
-      this.startReveal(s.data);
-    } else {
-      this.clearTimers();
-      this.reveal = null;
+    if (changed.has("view") || changed.has("compact")) {
+      const s = this.view;
+      if (s.kind === "result" && s.data.eligible && this.onScreen) {
+        this.startReveal(s.data);
+      } else {
+        this.skipReveal();
+      }
+    } else if (changed.has("onScreen") && !this.onScreen) {
+      this.skipReveal();
     }
   }
 
@@ -456,8 +464,8 @@ export class GameXpPanel extends LitElement {
     });
   }
 
+  // Ends any reveal on its final state (a no-op when none is playing).
   private skipReveal(): void {
-    if (this.reveal === null) return;
     this.clearTimers();
     this.barAnimate = false;
     this.reveal = null;

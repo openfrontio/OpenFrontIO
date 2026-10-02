@@ -260,6 +260,8 @@ export interface JoinLobbyEvent {
   publicLobbyInfo?: GameInfo | PublicGameInfo;
   // Watch without playing.
   spectator?: boolean;
+  // Host only: the play token the lobby was created under (see createLobby).
+  creatorToken?: string;
 }
 
 /**
@@ -1568,6 +1570,7 @@ class Client {
           : undefined),
       gameRecord: lobby.gameRecord,
       spectator: lobby.spectator,
+      creatorToken: lobby.creatorToken,
     });
 
     if (this.mostRecentJoinEvent !== event.timeStamp) {

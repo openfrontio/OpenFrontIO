@@ -17,19 +17,13 @@ export function xpProgressText(xpInLevel: number, xpForNext: number): string {
 }
 
 /**
- * A thin XP bar. `percent` is 0..100. `durationMs` overrides the fill's
- * transition length when animating (the post-game reveal times each segment).
- * `valueText` is what a screen reader announces for the value (typically
- * xpProgressText); without it, the percentage.
+ * A thin XP bar. `percent` is 0..100. `valueText` is what a screen reader
+ * announces for the value (typically xpProgressText); without it, the
+ * percentage.
  */
 export function xpBar(
   percent: number,
-  opts: {
-    animate?: boolean;
-    heightClass?: string;
-    durationMs?: number;
-    valueText?: string;
-  } = {},
+  opts: { heightClass?: string; valueText?: string } = {},
 ): TemplateResult {
   return html`<div
     data-xp-bar
@@ -44,12 +38,8 @@ export function xpBar(
   >
     <div
       data-xp-bar-fill
-      class="h-full rounded-full bg-malibu-blue ${opts.animate
-        ? "transition-[width] duration-700 ease-out"
-        : ""}"
-      style="width: ${percent}%${opts.animate && opts.durationMs !== undefined
-        ? `; transition-duration: ${opts.durationMs}ms`
-        : ""}"
+      class="h-full rounded-full bg-malibu-blue"
+      style="width: ${percent}%"
     ></div>
   </div>`;
 }

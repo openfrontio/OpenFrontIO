@@ -90,6 +90,25 @@ describe("nav-account-menu level", () => {
     });
   }
 
+  for (const variant of ["desktop", "mobile"] as const) {
+    it(`names the level in the ${variant} trigger's accessible name`, async () => {
+      // The trigger's aria-label is its whole accessible name, so the badge
+      // inside it is only heard if the label says the level.
+      await mount(variant, userMe({ progress }));
+      const trigger = el.querySelector("[data-account-trigger]")!;
+      expect(trigger.getAttribute("aria-label")).toBe(
+        `nav_account_menu.account_with_level:${JSON.stringify({
+          level:
+            'progression.level:{"level":23}, progression.prestige:{"prestige":1}',
+        })}`,
+      );
+      await mount(variant, userMe({}));
+      expect(
+        el.querySelector("[data-account-trigger]")!.getAttribute("aria-label"),
+      ).toBe("main.account");
+    });
+  }
+
   it("hides everything when /users/@me has no progress", async () => {
     await mount("desktop", userMe({}));
     expect(el.querySelector("[data-account-level]")).toBeNull();
