@@ -85,7 +85,8 @@ function presetTeamsLabel(
 /**
  * Display label for a lobby's game mode, e.g. "Free for All",
  * "Trios (10 teams of 3)" or "5 teams of 20". A team count that splits the
- * lobby evenly into teams of 2-4 is named like the matching preset.
+ * lobby evenly into teams of 2-4 is named like the matching preset; an uneven
+ * split shows only the team count.
  */
 export function getGameModeLabel(gameConfig: GameConfig): string {
   const { gameMode, gameType, nations, playerTeams, maxPlayers } = gameConfig;
@@ -112,20 +113,20 @@ export function getGameModeLabel(gameConfig: GameConfig): string {
   if (playerTeams === undefined || playerTeams <= 0) {
     return translateText("mode_selector.teams_title");
   }
-  const playersPerTeam = Math.floor((maxPlayers ?? 0) / playerTeams);
-  const preset =
-    (maxPlayers ?? 0) % playerTeams === 0
-      ? TEAM_PRESET_BY_SIZE[playersPerTeam]
-      : undefined;
-  if (preset !== undefined) {
-    return presetTeamsLabel(preset, playerTeams, playersPerTeam);
+  const players = maxPlayers ?? 0;
+  if (players <= 0 || players % playerTeams !== 0) {
+    return translateText("mode_selector.teams_count", {
+      teamCount: playerTeams,
+    });
   }
-  return playersPerTeam > 0
-    ? translateText("mode_selector.teams_of", {
+  const playersPerTeam = players / playerTeams;
+  const preset = TEAM_PRESET_BY_SIZE[playersPerTeam];
+  return preset !== undefined
+    ? presetTeamsLabel(preset, playerTeams, playersPerTeam)
+    : translateText("mode_selector.teams_of", {
         teamCount: playerTeams,
         playersPerTeam,
-      })
-    : translateText("mode_selector.teams_count", { teamCount: playerTeams });
+      });
 }
 
 export interface ModifierInfo {

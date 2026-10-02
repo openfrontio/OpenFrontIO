@@ -88,10 +88,13 @@ describe("getGameModeLabel", () => {
     ).toBe("Quads (4 teams of 4)");
   });
 
-  it("keeps the plain label when teams would be uneven", () => {
+  it("shows only the team count when teams would be uneven", () => {
     expect(
       label({ gameMode: GameMode.Team, playerTeams: 5, maxPlayers: 11 }),
-    ).toBe("5 teams of 2");
+    ).toBe("5 teams");
+    expect(
+      label({ gameMode: GameMode.Team, playerTeams: 7, maxPlayers: 50 }),
+    ).toBe("7 teams");
   });
 
   it("counts both sides of a public Humans vs Nations lobby", () => {
