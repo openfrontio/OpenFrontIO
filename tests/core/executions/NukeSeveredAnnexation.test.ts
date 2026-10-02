@@ -199,6 +199,58 @@ describe("land a nuke severs from the main body is annexed", () => {
     expect(conquerPlayer).toHaveBeenCalledWith(attacker, defender);
   });
 
+  // Border clusters join land that touches only at a corner, but territories
+  // join only side by side. Piece A borders nothing but fallout; piece B,
+  // touching it diagonally, borders the attacker. Run both orientations so
+  // whichever piece the cluster lists first, A is judged on its own.
+  test.each([
+    {
+      name: "A above-left of B",
+      a: rect(120, 100, 125, 105),
+      b: rect(126, 106, 135, 115),
+      far: [120, 100],
+    },
+    {
+      name: "A below-right of B",
+      a: rect(126, 106, 131, 111),
+      b: rect(116, 96, 125, 105),
+      far: [131, 111],
+    },
+  ])(
+    "land touching a cut-off piece only at a corner is judged on its own ($name)",
+    ({ a, b, far }) => {
+      paint(union(mainBody, a, b));
+      startClusterChecks();
+      // Ring A in fallout; B keeps attacker land on its far sides.
+      const [ax0, ay0, ax1, ay1] = [96, 96, 136, 116];
+      game.map().forEachTile((t) => {
+        const x = game.x(t);
+        const y = game.y(t);
+        if (x < ax0 || x > ax1 || y < ay0 || y > ay1 || a(x, y) || b(x, y))
+          return;
+        const nearA = [...Array(9)].some((_, k) =>
+          a(x + (k % 3) - 1, y + Math.floor(k / 3) - 1),
+        );
+        if (!nearA) return;
+        const owner = game.owner(t);
+        if (owner.isPlayer()) owner.relinquish(t);
+        game.setFallout(t, true);
+      });
+      // The strike also takes a tile of A, as a real one would; losing
+      // tiles is what makes the defender re-run its cluster checks.
+      const farTile = game.ref(far[0], far[1]);
+      defender.relinquish(farTile);
+      game.setFallout(farTile, true);
+      const aBefore = defenderTilesIn(a);
+
+      runClusterChecks();
+
+      // A touches no enemy, so it stays; B is cut off and goes to the attacker.
+      expect(defenderTilesIn(a)).toBe(aBefore);
+      expect(defenderTilesIn(b)).toBe(0);
+    },
+  );
+
   test("a real hydrogen bomb cutting an arm off hands the arm over", () => {
     (game.config() as TestConfig).nukeMagnitudes = () => ({
       inner: 20,

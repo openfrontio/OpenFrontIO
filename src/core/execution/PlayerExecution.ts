@@ -341,9 +341,6 @@ export class PlayerExecution implements Execution {
     let mainGen = 0;
     for (const i of candidates) {
       const cluster = clusters[i];
-      // An earlier annex in this pass may already have taken it.
-      if (map.ownerID(cluster[0]) !== mySmallID) continue;
-
       const state = this.traversalState();
       if (mainGen === 0) {
         // Stamp the main body's outer border so a flood that reaches it can
@@ -351,57 +348,96 @@ export class PlayerExecution implements Execution {
         mainGen = this.bumpGeneration();
         for (const t of clusters[largestIndex]) state.visited[t] = mainGen;
       }
-      const territory = this.severedTerritory(cluster[0], mainGen);
-      if (territory === null) continue;
 
-      const capturing = this.getCapturingPlayer(cluster);
-      if (capturing === null) continue;
-      // The main body may already have been annexed earlier in this pass.
-      if (this.player.numTilesOwned() === territory.length) {
-        this.mg.conquerPlayer(capturing, this.player);
+      // Clusters join land that touches diagonally but territories only
+      // join side by side, so one cluster can span several territories.
+      // Judge each one separately; `seenGen` floods each only once.
+      let seenGen = this.bumpGeneration();
+      if (seenGen < mainGen) {
+        // The generation counter wrapped and cleared every stamp.
+        mainGen = seenGen;
+        for (const t of clusters[largestIndex]) state.visited[t] = mainGen;
+        seenGen = this.bumpGeneration();
       }
-      for (const t of territory) capturing.conquer(t);
+      for (const start of cluster) {
+        // An earlier annex in this pass may already have taken it.
+        if (map.ownerID(start) !== mySmallID) continue;
+        const mark = state.visited[start];
+        if (mark === seenGen || mark === mainGen) continue;
+
+        const territory = this.severedTerritory(start, mainGen, seenGen);
+        if (territory === null) continue;
+
+        const capturing = this.getCapturingPlayer(territory);
+        if (capturing === null) continue;
+        // The main body may already have been annexed earlier in this pass.
+        if (this.player.numTilesOwned() === territory.length) {
+          this.mg.conquerPlayer(capturing, this.player);
+        }
+        for (const t of territory) capturing.conquer(t);
+      }
     }
   }
 
   /**
-   * Flood-fills our territory from `start` and returns it if it is severed:
-   * it never reaches a tile stamped `mainGen` (the main body), never touches
-   * the coast or the map edge, and borders only other players and fallout.
-   * Returns null otherwise.
+   * Flood-fills our territory from `start`, stamping it with `seenGen`, and
+   * returns it if it is severed: it never reaches a tile stamped `mainGen`
+   * (the main body), never touches the coast or the map edge, and borders
+   * only other players and fallout, with at least one of each. Returns null
+   * otherwise.
+   *
+   * The cluster-level check that made it a candidate may have drawn on a
+   * diagonally touching territory, so every condition is checked again here
+   * on this territory alone. A territory that fails is still filled to the
+   * end so the caller can skip the rest of its tiles; one that reaches the
+   * main body stops at once and is stamped as part of it.
    */
-  private severedTerritory(start: TileRef, mainGen: number): TileRef[] | null {
+  private severedTerritory(
+    start: TileRef,
+    mainGen: number,
+    seenGen: number,
+  ): TileRef[] | null {
     const map = this.map;
     const mySmallID = this.player.smallID();
     const state = this.traversalState();
     const visited = state.visited;
-    if (visited[start] === mainGen) return null;
-    const gen = bumpTraversalGeneration(state);
     const stack = state.stack;
     stack.length = 0;
     const tiles: TileRef[] = [start];
-    visited[start] = gen;
+    visited[start] = seenGen;
     stack.push(start);
+    let severed = true;
+    let hasEnemy = false;
+    let hasFallout = false;
 
     while (stack.length > 0) {
       const tile = stack.pop()!;
-      if (map.isShore(tile) || map.isOnEdgeOfMap(tile)) return null;
+      if (map.isShore(tile) || map.isOnEdgeOfMap(tile)) severed = false;
       const numNeighbors = map.neighbors4(tile, this.nbuf);
       for (let i = 0; i < numNeighbors; i++) {
         const n = this.nbuf[i];
         const ownerId = map.ownerID(n);
         if (ownerId === mySmallID) {
-          if (visited[n] === mainGen) return null;
-          if (visited[n] === gen) continue;
-          visited[n] = gen;
+          if (visited[n] === mainGen) {
+            // Still attached to the main body: mark what we walked so later
+            // floods from this cluster stop as soon as they reach it.
+            for (const t of tiles) visited[t] = mainGen;
+            return null;
+          }
+          if (visited[n] === seenGen) continue;
+          visited[n] = seenGen;
           tiles.push(n);
           stack.push(n);
-        } else if (ownerId === 0 && !map.hasFallout(n)) {
-          return null;
+        } else if (ownerId !== 0) {
+          hasEnemy = true;
+        } else if (map.hasFallout(n)) {
+          hasFallout = true;
+        } else {
+          severed = false;
         }
       }
     }
-    return tiles;
+    return severed && hasEnemy && hasFallout ? tiles : null;
   }
 
   private checkAndAssignTerritory(
