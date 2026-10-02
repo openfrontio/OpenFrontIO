@@ -274,41 +274,36 @@ describe("SinglePlayerSaveManager", () => {
   it("handles IndexedDB opening timeouts and version changes gracefully", async () => {
     vi.spyOn(console, "warn").mockImplementation(() => {});
 
-    // Timeout case
-    const dbStub = { close: vi.fn(), onversionchange: null as any };
-    const reqStub = {
-      result: dbStub,
-      onsuccess: null as any,
-    } as unknown as IDBOpenDBRequest;
-    const fakeIdbTimeout = {
-      open: () => reqStub,
-    } as unknown as IDBFactory;
+    function fakeIndexedDb() {
+      const db = {
+        close: vi.fn(),
+        onversionchange: null as (() => void) | null,
+      };
+      const req = {
+        result: db,
+        onsuccess: null as (() => void) | null,
+      } as unknown as IDBOpenDBRequest & { onsuccess: () => void };
+      const idb = { open: () => req } as unknown as IDBFactory;
+      return { idb, db, succeed: () => req.onsuccess() };
+    }
 
-    const timeoutPromise = openSnapshotDatabase(fakeIdbTimeout, 5);
+    // Timeout case
+    const timeoutSetup = fakeIndexedDb();
+    const timeoutPromise = openSnapshotDatabase(timeoutSetup.idb, 5);
     expect(await timeoutPromise).toBeNull();
 
     // If onsuccess fires after timeout, it closes the db
-    reqStub.onsuccess();
-    expect(dbStub.close).toHaveBeenCalled();
+    timeoutSetup.succeed();
+    expect(timeoutSetup.db.close).toHaveBeenCalled();
 
     // Versionchange case
-    let successCb: () => void = () => {};
-    const reqSuccess = {
-      result: dbStub,
-      set onsuccess(cb: () => void) {
-        successCb = cb;
-      },
-    } as unknown as IDBOpenDBRequest;
-    const fakeIdbSuccess = {
-      open: () => reqSuccess,
-    } as unknown as IDBFactory;
-
-    const openPromise = openSnapshotDatabase(fakeIdbSuccess, 1000);
-    successCb();
+    const successSetup = fakeIndexedDb();
+    const openPromise = openSnapshotDatabase(successSetup.idb, 1000);
+    successSetup.succeed();
     const opened = await openPromise;
     expect(opened).not.toBeNull();
-    dbStub.onversionchange();
-    expect(dbStub.close).toHaveBeenCalledTimes(2);
+    successSetup.db.onversionchange?.();
+    expect(successSetup.db.close).toHaveBeenCalledTimes(1);
 
     vi.restoreAllMocks();
   });
