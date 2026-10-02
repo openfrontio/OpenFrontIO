@@ -32,6 +32,17 @@ describe("GoldRateTracker", () => {
     expect(t.goldIncomePerMin(1)).toBe(0);
   });
 
+  it("starts over when the clock goes back (a replay seeked backward)", () => {
+    const t = new GoldRateTracker();
+    t.record(1, sample(0), 5 * TICKS_PER_MIN);
+    t.record(1, sample(6000), 6 * TICKS_PER_MIN);
+    // Back to minute 2: the later samples are dropped, not mixed in.
+    t.record(1, sample(1000), 2 * TICKS_PER_MIN);
+    expect(t.goldIncomePerMin(1)).toBe(0);
+    t.record(1, sample(1500), 2 * TICKS_PER_MIN + 300);
+    expect(t.goldIncomePerMin(1)).toBeCloseTo(1000);
+  });
+
   it("evicts samples older than the 2-in-game-minute window", () => {
     const t = new GoldRateTracker();
     t.record(1, sample(0), 0);

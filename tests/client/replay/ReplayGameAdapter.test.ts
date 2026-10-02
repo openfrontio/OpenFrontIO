@@ -486,6 +486,50 @@ describe("ReplayGameAdapter", () => {
     }
   }, 30_000);
 
+  test("a backward seek clears later events from the feed", async () => {
+    const late = reader.seek(119);
+    adapter.update(late, EMPTY, 0, false, true);
+    const alive = adapter.playerViews().find((p) => p.isAlive())!;
+    adapter.focus = alive;
+    const feed = document.createElement("events-display") as EventsDisplay;
+    feed.game = adapter.asGameView();
+    feed.eventBus = new EventBus();
+    document.body.appendChild(feed);
+    try {
+      feed.init();
+      adapter.update(
+        {
+          ...late,
+          miscUpdates: {
+            DisplayEvent: [
+              {
+                messageType: 0,
+                message: "from later on",
+                playerID: alive.smallID(),
+                gold: undefined,
+                params: {},
+              },
+            ],
+          },
+        } as never,
+        EMPTY,
+        0,
+        false,
+      );
+      feed.tick();
+      await feed.updateComplete;
+      expect(feed.textContent ?? "").toContain("from later on");
+
+      // Back to a point before that message was sent.
+      adapter.update(reader.seek(100), EMPTY, 0, false, true);
+      feed.tick();
+      await feed.updateComplete;
+      expect(feed.textContent ?? "").not.toContain("from later on");
+    } finally {
+      feed.remove();
+    }
+  }, 30_000);
+
   test("the game's own event feed renders for the followed player", async () => {
     const frame = reader.seek(119);
     const alive = adapter.playerViews().find((p) => {

@@ -208,7 +208,10 @@ export class EventsDisplay extends LitElement implements Controller {
     }
 
     let remainingEvents = this.events.filter((event) => {
-      const expired = this.game.ticks() - event.createdAt >= 80;
+      const age = this.game.ticks() - event.createdAt;
+      // A negative age is an event from later in the game: the replay
+      // viewer seeked back past it.
+      const expired = age >= 80 || age < 0;
       const isInboundWarning =
         event.type === MessageType.NUKE_INBOUND ||
         event.type === MessageType.HYDROGEN_BOMB_INBOUND ||
