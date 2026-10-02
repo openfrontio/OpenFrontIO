@@ -68,6 +68,20 @@ const TEAM_PRESET_BY_SIZE: Record<number, string> = {
   4: Quads,
 };
 
+function presetTeamsLabel(
+  preset: string,
+  teamCount: number,
+  playersPerTeam: number,
+): string {
+  return translateText("mode_selector.teams_preset", {
+    teams: translateText("mode_selector.teams_of", {
+      teamCount,
+      playersPerTeam,
+    }),
+    preset: translateText(`detailed_view.layout_${preset.toLowerCase()}`),
+  });
+}
+
 /**
  * Display label for a lobby's game mode, e.g. "Free for All",
  * "Trios (10 teams of 3)" or "5 teams of 20". A team count that splits the
@@ -88,11 +102,10 @@ export function getGameModeLabel(gameConfig: GameConfig): string {
   }
 
   if (playerTeams === Duos || playerTeams === Trios || playerTeams === Quads) {
-    const teamCount = Math.floor(
-      (maxPlayers ?? 0) / TEAM_PRESET_SIZES[playerTeams],
-    );
+    const playersPerTeam = TEAM_PRESET_SIZES[playerTeams];
+    const teamCount = Math.floor((maxPlayers ?? 0) / playersPerTeam);
     return teamCount > 0
-      ? translateText(`mode_selector.teams_of_${playerTeams}`, { teamCount })
+      ? presetTeamsLabel(playerTeams, teamCount, playersPerTeam)
       : translateText(`host_modal.teams_${playerTeams}`);
   }
 
@@ -105,9 +118,7 @@ export function getGameModeLabel(gameConfig: GameConfig): string {
       ? TEAM_PRESET_BY_SIZE[playersPerTeam]
       : undefined;
   if (preset !== undefined) {
-    return translateText(`mode_selector.teams_of_${preset}`, {
-      teamCount: playerTeams,
-    });
+    return presetTeamsLabel(preset, playerTeams, playersPerTeam);
   }
   return playersPerTeam > 0
     ? translateText("mode_selector.teams_of", {

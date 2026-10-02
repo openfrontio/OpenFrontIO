@@ -1551,9 +1551,7 @@
     "servers_unreachable": "Can't connect to the OpenFront servers",
     "teams_count": "{teamCount} teams",
     "teams_of": "{teamCount} teams of {playersPerTeam}",
-    "teams_of_Duos": "Duos ({teamCount} teams of 2)",
-    "teams_of_Quads": "Quads ({teamCount} teams of 4)",
-    "teams_of_Trios": "Trios ({teamCount} teams of 3)",
+    "teams_preset": "{preset} ({teams})",
     "teams_title": "Teams"
   },
   "multi_tab": {
