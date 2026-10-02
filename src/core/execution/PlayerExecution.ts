@@ -26,6 +26,10 @@ import { getMode, simpleHash } from "../Util";
 
 const TICKS_PER_CLUSTER_CALC = 20;
 
+// Results of the per-cluster border scan (classifyCluster).
+const CLUSTER_SURROUNDED = 1;
+const CLUSTER_SEVERED_CANDIDATE = 2;
+
 export class PlayerExecution implements Execution {
   private ticksPerClusterCalc = TICKS_PER_CLUSTER_CALC;
 
@@ -291,24 +295,29 @@ export class PlayerExecution implements Execution {
     }
 
     // Process remaining clusters
+    let severedCandidates: number[] | null = null;
     for (let i = 0; i < clusters.length; i++) {
       if (i === largestIndex) continue;
       const cluster = clusters[i];
       const idx = i * 4;
-      if (
-        this.isSurrounded(
-          cluster,
-          boxes[idx],
-          boxes[idx + 1],
-          boxes[idx + 2],
-          boxes[idx + 3],
-        )
-      ) {
+      const result = this.classifyCluster(
+        cluster,
+        boxes[idx],
+        boxes[idx + 1],
+        boxes[idx + 2],
+        boxes[idx + 3],
+      );
+      if (result & CLUSTER_SURROUNDED) {
         this.removeCluster(cluster);
+      }
+      if (result & CLUSTER_SEVERED_CANDIDATE) {
+        (severedCandidates ??= []).push(i);
       }
     }
 
-    this.annexSeveredClusters(clusters, largestIndex);
+    if (severedCandidates !== null) {
+      this.annexSeveredClusters(clusters, largestIndex, severedCandidates);
+    }
   }
 
   /**
@@ -321,18 +330,19 @@ export class PlayerExecution implements Execution {
    * with no coast or map edge of its own, whose only neighbours are enemies
    * and fallout, has no way out and goes to the surrounding enemy.
    */
-  private annexSeveredClusters(clusters: TileRef[][], largestIndex: number) {
-    // Only fallout can sever a piece; skip the scan in games without nukes.
-    if (this.mg.numTilesWithFallout() === 0) return;
+  private annexSeveredClusters(
+    clusters: TileRef[][],
+    largestIndex: number,
+    candidates: readonly number[],
+  ) {
     const map = this.map;
     const mySmallID = this.player.smallID();
 
     let mainGen = 0;
-    for (let i = 0; i < clusters.length; i++) {
-      if (i === largestIndex) continue;
+    for (const i of candidates) {
       const cluster = clusters[i];
+      // An earlier annex in this pass may already have taken it.
       if (map.ownerID(cluster[0]) !== mySmallID) continue;
-      if (!this.isSeveredCandidate(cluster)) continue;
 
       const state = this.traversalState();
       if (mainGen === 0) {
@@ -352,34 +362,6 @@ export class PlayerExecution implements Execution {
       }
       for (const t of territory) capturing.conquer(t);
     }
-  }
-
-  // Cheap filter on the border cluster alone: no coast or map edge, touches
-  // fallout and at least one enemy, and nothing else.
-  private isSeveredCandidate(cluster: readonly TileRef[]): boolean {
-    const map = this.map;
-    const mySmallID = this.player.smallID();
-    let hasEnemy = false;
-    let hasFallout = false;
-    for (let j = 0; j < cluster.length; j++) {
-      const tile = cluster[j];
-      if (map.isShore(tile) || map.isOnEdgeOfMap(tile)) return false;
-      const numNeighbors = map.neighbors4(tile, this.nbuf);
-      for (let i = 0; i < numNeighbors; i++) {
-        const n = this.nbuf[i];
-        const ownerId = map.ownerID(n);
-        if (ownerId === mySmallID) continue;
-        if (ownerId !== 0) {
-          hasEnemy = true;
-        } else if (map.hasFallout(n)) {
-          hasFallout = true;
-        } else {
-          // Open unclaimed land (or water): not cut off.
-          return false;
-        }
-      }
-    }
-    return hasEnemy && hasFallout;
   }
 
   /**
@@ -535,15 +517,26 @@ export class PlayerExecution implements Execution {
     return false;
   }
 
+  /**
+   * One scan of a non-main border cluster's neighbours, answering both
+   * annexation questions:
+   * - CLUSTER_SURROUNDED: enemy neighbours box the cluster in (fallout and
+   *   other unclaimed land are ignored).
+   * - CLUSTER_SEVERED_CANDIDATE: it borders only enemies and fallout, with at
+   *   least one of each (see annexSeveredClusters).
+   * Coast or map edge rules out both.
+   */
   // Perf: Accepts raw bounds to skip allocating {min, max} Box objects.
-  private isSurrounded(
+  private classifyCluster(
     cluster: readonly TileRef[],
     clusterBoxMinX: number,
     clusterBoxMinY: number,
     clusterBoxMaxX: number,
     clusterBoxMaxY: number,
-  ): boolean {
+  ): number {
     let hasEnemy = false;
+    let hasFallout = false;
+    let hasOpenLand = false;
     let minX = 1e9,
       minY = 1e9,
       maxX = -1e9,
@@ -553,7 +546,7 @@ export class PlayerExecution implements Execution {
     for (let j = 0; j < cluster.length; j++) {
       const tr = cluster[j];
       if (map.isShore(tr) || map.isOnEdgeOfMap(tr)) {
-        return false;
+        return 0;
       }
       const numNeighbors = map.neighbors4(tr, this.nbuf);
       for (let i = 0; i < numNeighbors; i++) {
@@ -567,18 +560,28 @@ export class PlayerExecution implements Execution {
           if (y < minY) minY = y;
           if (x > maxX) maxX = x;
           if (y > maxY) maxY = y;
+        } else if (ownerId === 0) {
+          if (map.hasFallout(n)) hasFallout = true;
+          else hasOpenLand = true;
         }
       }
     }
     if (!hasEnemy) {
-      return false;
+      return 0;
     }
-    return (
+    let result = 0;
+    if (
       minX <= clusterBoxMinX &&
       minY <= clusterBoxMinY &&
       maxX >= clusterBoxMaxX &&
       maxY >= clusterBoxMaxY
-    );
+    ) {
+      result |= CLUSTER_SURROUNDED;
+    }
+    if (hasFallout && !hasOpenLand) {
+      result |= CLUSTER_SEVERED_CANDIDATE;
+    }
+    return result;
   }
 
   private removeCluster(cluster: readonly TileRef[]) {
