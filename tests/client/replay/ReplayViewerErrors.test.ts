@@ -374,3 +374,59 @@ test("playback keys do nothing while the settings menu is open", () => {
   expect(playback.play).toHaveBeenCalledOnce();
   expect(playback.seek).toHaveBeenCalledWith(11);
 });
+
+test("playback keys do nothing while the game settings are open, or in their sliders", () => {
+  const element = new ReplayViewer();
+  const v = element as unknown as {
+    status: string;
+    playback: unknown;
+    onKey(e: KeyboardEvent): void;
+  };
+  const playback = {
+    playing: false,
+    frame: 10,
+    play: vi.fn(),
+    pause: vi.fn(),
+    seek: vi.fn(async () => {}),
+  };
+  v.status = "ready";
+  v.playback = playback;
+  // Opened from the settings menu, which has closed by then.
+  let open = true;
+  const gameSettings = Object.assign(document.createElement("div"), {
+    id: "game-settings",
+    isOpen: () => open,
+  });
+  document.body.appendChild(gameSettings);
+  const slider = Object.assign(document.createElement("input"), {
+    type: "range",
+  });
+  gameSettings.appendChild(slider);
+  const timeline = Object.assign(document.createElement("input"), {
+    type: "range",
+  });
+  element.appendChild(document.createElement("replay-controls"));
+  element.querySelector("replay-controls")!.appendChild(timeline);
+  const key = (code: string, on: HTMLElement = document.body) => {
+    const e = new KeyboardEvent("keydown", { code, bubbles: true });
+    Object.defineProperty(e, "target", { value: on });
+    return e;
+  };
+  try {
+    v.onKey(key("Space"));
+    v.onKey(key("ArrowRight", slider));
+    expect(playback.play).not.toHaveBeenCalled();
+    expect(playback.seek).not.toHaveBeenCalled();
+
+    // Closed, a slider still keeps its arrow keys. The timeline seeks.
+    open = false;
+    v.onKey(key("ArrowRight", slider));
+    expect(playback.seek).not.toHaveBeenCalled();
+    v.onKey(key("ArrowRight", timeline));
+    expect(playback.seek).toHaveBeenCalledWith(11);
+    v.onKey(key("Space"));
+    expect(playback.play).toHaveBeenCalledOnce();
+  } finally {
+    gameSettings.remove();
+  }
+});

@@ -53,6 +53,7 @@ import {
 import type { TransformHandler } from "../TransformHandler";
 import { GoToPlayerEvent } from "../TransformHandler";
 import { PauseGameIntentEvent } from "../Transport";
+import type { UserSettingModal } from "../UserSettingModal";
 import {
   GRAPHICS_KEY,
   USER_SETTINGS_CHANGED_EVENT,
@@ -670,11 +671,19 @@ export class ReplayViewer extends LitElement {
   private onKey(e: KeyboardEvent): void {
     const p = this.playback;
     if (p === null || this.status !== "ready") return;
-    // The settings menu paused playback, so keys wait until it closes.
-    if (this.querySelector<SettingsModal>("settings-modal")?.open) return;
+    // The settings menu paused playback, so keys wait until it closes. So
+    // do the game settings it opens: their sliders take the arrow keys.
+    if (this.settingsOpen()) return;
     // The timeline keeps focus after a click, so it doesn't count as typing.
-    // Its own arrow-key steps are prevented below so a key seeks once.
-    if (e.target instanceof HTMLInputElement && e.target.type !== "range") {
+    // Its own arrow-key steps are prevented below so a key seeks once. Any
+    // other input keeps its keys.
+    const target = e.target;
+    if (
+      (target instanceof HTMLInputElement ||
+        target instanceof HTMLTextAreaElement ||
+        target instanceof HTMLSelectElement) &&
+      target.closest("replay-controls") === null
+    ) {
       return;
     }
     if (e.code === "Space") {
@@ -687,6 +696,15 @@ export class ReplayViewer extends LitElement {
       e.preventDefault();
       void p.seek(p.frame - (e.shiftKey ? 100 : 1));
     }
+  }
+
+  /** The settings menu, or the game settings opened from it. */
+  private settingsOpen(): boolean {
+    if (this.querySelector<SettingsModal>("settings-modal")?.open) return true;
+    const gameSettings = document.getElementById(
+      "game-settings",
+    ) as UserSettingModal | null;
+    return gameSettings?.isOpen?.() === true;
   }
 
   private onPointerDown(e: PointerEvent): void {
