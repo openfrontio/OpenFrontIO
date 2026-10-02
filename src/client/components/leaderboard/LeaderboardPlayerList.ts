@@ -7,6 +7,7 @@ import {
 import { RankedType } from "../../../core/game/Game";
 import { fetchPlayerLeaderboard, getUserMe } from "../../Api";
 import { translateText } from "../../Utils";
+import { isPrestigedOrLegend, levelBadgeSlot } from "../LevelBadgeSlot";
 import "../PlayerName";
 
 /** One ranked ladder's loaded rows. */
@@ -34,6 +35,9 @@ const toPlayerEntry = (
   wins: entry.wins,
   losses: entry.losses,
   winRate: entry.total > 0 ? entry.wins / entry.total : 0,
+  level: entry.level,
+  prestige: entry.prestige,
+  legend: entry.legend,
 });
 
 @customElement("leaderboard-player-list")
@@ -289,7 +293,7 @@ export class LeaderboardPlayerList extends LitElement {
   // the container, so the resolved widths depend on the modal size and cannot
   // be reproduced by a separate element; and below 34rem the table scrolls
   // horizontally, which an overlay outside .scroll-container would not follow.
-  private renderStickyUserRow() {
+  private renderStickyUserRow(badgeSlot: boolean) {
     if (!this.currentUserEntry || !this.showStickyUser) return nothing;
     const entry = this.currentUserEntry;
 
@@ -309,12 +313,15 @@ export class LeaderboardPlayerList extends LitElement {
                 class="text-[10px] uppercase font-bold text-blue-200/80 leading-tight"
                 >${translateText("leaderboard_modal.your_ranking")}</span
               >
-              <player-name
-                .username=${entry.accountUsername}
-                .publicId=${entry.playerId}
-                .nameClass=${"font-bold text-white truncate text-base hover:underline"}
-                .onNameClick=${() => this.openProfile(entry.playerId)}
-              ></player-name>
+              <div class="flex items-center gap-2 min-w-0">
+                ${levelBadgeSlot(entry, isPrestigedOrLegend(entry), badgeSlot)}
+                <player-name
+                  .username=${entry.accountUsername}
+                  .publicId=${entry.playerId}
+                  .nameClass=${"font-bold text-white truncate text-base hover:underline"}
+                  .onNameClick=${() => this.openProfile(entry.playerId)}
+                ></player-name>
+              </div>
             </div>
           </td>
           <td class="py-3 px-4 text-right">
@@ -339,7 +346,7 @@ export class LeaderboardPlayerList extends LitElement {
     `;
   }
 
-  private renderPlayerRow(player: PlayerLeaderboardEntry) {
+  private renderPlayerRow(player: PlayerLeaderboardEntry, badgeSlot: boolean) {
     const isCurrentUser = this.currentUserEntry?.playerId === player.playerId;
     const displayRank = player.rank;
 
@@ -373,6 +380,7 @@ export class LeaderboardPlayerList extends LitElement {
         </td>
         <td class="py-3 px-4">
           <div class="flex items-center gap-2">
+            ${levelBadgeSlot(player, isPrestigedOrLegend(player), badgeSlot)}
             <player-name
               .username=${player.accountUsername}
               .publicId=${player.playerId}
@@ -526,6 +534,11 @@ export class LeaderboardPlayerList extends LitElement {
     if (this.hasLoadedPlayers && this.playerData.length === 0)
       return this.renderNoData();
 
+    // Level badges mark prestiged players and Legends only. Rows without one
+    // keep an empty slot so names line up — but only once some loaded row in
+    // this ladder has a badge, so the board is unchanged until then.
+    const badgeSlot = this.playerData.some(isPrestigedOrLegend);
+
     return html`
       <div class="h-full">
         <!--
@@ -570,9 +583,11 @@ export class LeaderboardPlayerList extends LitElement {
                 </tr>
               </thead>
               <tbody>
-                ${this.playerData.map((player) => this.renderPlayerRow(player))}
+                ${this.playerData.map((player) =>
+                  this.renderPlayerRow(player, badgeSlot),
+                )}
               </tbody>
-              ${this.renderStickyUserRow()}
+              ${this.renderStickyUserRow(badgeSlot)}
             </table>
             ${this.renderPlayerFooter()}
           </div>

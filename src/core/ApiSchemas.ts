@@ -189,6 +189,16 @@ export const PublicProgressSchema = z.object({
 });
 export type PublicProgress = z.infer<typeof PublicProgressSchema>;
 
+// A player's level as stamped onto rows in other players' lists (the ranked
+// leaderboard, clan member lists), for drawing a level badge. Sent together
+// for a player with progress; absent for one without, while progression is
+// off, and from an API that predates them.
+export const RowLevelFields = {
+  level: z.number().optional(),
+  prestige: z.number().optional(),
+  legend: z.boolean().optional(),
+};
+
 // GET /public/progression/config — the level curve. No auth, cacheable.
 export const ProgressionConfigSchema = z.object({
   version: z.number(),
@@ -902,6 +912,7 @@ export const PlayerLeaderboardEntrySchema = z.object({
   wins: z.number(),
   losses: z.number(),
   winRate: z.number(),
+  ...RowLevelFields,
 });
 export type PlayerLeaderboardEntry = z.infer<
   typeof PlayerLeaderboardEntrySchema
@@ -925,6 +936,7 @@ export const RankedLeaderboardEntrySchema = z.object({
   // Account username (null = never set). The client displays
   // `accountUsername ?? public_id`.
   accountUsername: z.string().nullable(),
+  ...RowLevelFields,
 });
 export type RankedLeaderboardEntry = z.infer<
   typeof RankedLeaderboardEntrySchema

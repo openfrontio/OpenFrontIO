@@ -108,6 +108,41 @@ describe("ClanMemberSchema", () => {
     expect(result.success).toBe(false);
   });
 
+  it("leaves level fields unset for a member without them", () => {
+    const result = ClanMemberSchema.parse({
+      role: "member",
+      joinedAt: "2024-03-01T09:30:00.000Z",
+      publicId: "abc123",
+    });
+    expect(result.level).toBeUndefined();
+    expect(result.prestige).toBeUndefined();
+    expect(result.legend).toBeUndefined();
+  });
+
+  it("keeps a member's level fields", () => {
+    const result = ClanMemberSchema.parse({
+      role: "member",
+      joinedAt: "2024-03-01T09:30:00.000Z",
+      publicId: "abc123",
+      level: 100,
+      prestige: 10,
+      legend: true,
+    });
+    expect(result).toMatchObject({ level: 100, prestige: 10, legend: true });
+  });
+
+  it("rejects a malformed legend flag", () => {
+    const result = ClanMemberSchema.safeParse({
+      role: "member",
+      joinedAt: "2024-03-01T09:30:00.000Z",
+      publicId: "abc123",
+      level: 5,
+      prestige: 0,
+      legend: "yes",
+    });
+    expect(result.success).toBe(false);
+  });
+
   it("rejects null publicId", () => {
     const result = ClanMemberSchema.safeParse({
       role: "leader",
