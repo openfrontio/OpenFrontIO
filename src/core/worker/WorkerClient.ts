@@ -10,6 +10,7 @@ import {
 } from "../game/Game";
 import { TileRef } from "../game/GameMap";
 import { ErrorUpdate, GameUpdateViewData } from "../game/GameUpdates";
+import type { HumanStatsSnapshot } from "../game/HumanStats";
 import { ClientID, GameStartInfo, Turn } from "../Schemas";
 import { generateID } from "../Util";
 import { WorkerMessage } from "./WorkerMessages";
@@ -176,6 +177,29 @@ export class WorkerClient {
         type: "player_profile",
         id: messageId,
         playerID: playerID,
+      });
+    });
+  }
+
+  /** Every human's stats as they stand now (see HumanStats.ts). */
+  humanStats(): Promise<HumanStatsSnapshot> {
+    return new Promise((resolve, reject) => {
+      if (!this.isInitialized) {
+        reject(new Error("Worker not initialized"));
+        return;
+      }
+
+      const messageId = generateID();
+
+      this.messageHandlers.set(messageId, (message) => {
+        if (message.type === "human_stats_result") {
+          resolve(message.result);
+        }
+      });
+
+      this.worker!.postMessage({
+        type: "human_stats",
+        id: messageId,
       });
     });
   }

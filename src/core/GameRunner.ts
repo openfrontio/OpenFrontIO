@@ -26,6 +26,7 @@ import { createGame } from "./game/GameImpl";
 import { TileRef } from "./game/GameMap";
 import { GameMapLoader } from "./game/GameMapLoader";
 import { ErrorUpdate, GameUpdateViewData } from "./game/GameUpdates";
+import { HumanStatsSnapshot, humanStatsSnapshot } from "./game/HumanStats";
 import { createNationsForGame } from "./game/NationCreation";
 import { loadTerrainMap as loadGameMap } from "./game/TerrainMapLoader";
 import { PseudoRandom } from "./PseudoRandom";
@@ -345,6 +346,10 @@ export class GameRunner {
     }
     return player.playerProfile();
   }
+  public humanStats(): HumanStatsSnapshot {
+    return humanStatsSnapshot(this.game);
+  }
+
   public playerBorderTiles(playerID: PlayerID): PlayerBorderTiles {
     const player = this.game.player(playerID);
     if (!player.isPlayer()) {
