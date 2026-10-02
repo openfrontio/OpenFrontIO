@@ -190,8 +190,8 @@ describe("progression helpers", () => {
     feats: 0,
     subtotal: 175,
     gamePermille: 1000,
-    subscriberPermille: 1200,
-    total: 210,
+    subscriberPermille: 1250,
+    total: 218,
   };
 
   it("lists only the non-zero breakdown lines, in order", () => {
@@ -204,7 +204,7 @@ describe("progression helpers", () => {
 
   it("lists only the multipliers that are not 1x", () => {
     expect(visibleMultipliers(breakdown)).toEqual([
-      { key: "subscriber", permille: 1200 },
+      { key: "subscriber", permille: 1250 },
     ]);
     expect(
       visibleMultipliers({ ...breakdown, gamePermille: 250 }).map((m) => m.key),
@@ -220,11 +220,12 @@ describe("progression helpers", () => {
   });
 
   it("recognises the subscription tiers by their XP boost", () => {
-    expect(subscriberTierOf(1500)?.tier).toBe("sovereign");
-    expect(subscriberTierOf(1300)?.tier).toBe("warlord");
-    expect(subscriberTierOf(1200)?.tier).toBe("vanguard");
-    // Anything else is a plain subscriber bonus.
-    expect(subscriberTierOf(1250)).toBeNull();
+    expect(subscriberTierOf(2000)?.tier).toBe("sovereign");
+    expect(subscriberTierOf(1500)?.tier).toBe("warlord");
+    expect(subscriberTierOf(1250)?.tier).toBe("vanguard");
+    // Anything else is a plain subscriber bonus, the old multipliers too.
+    expect(subscriberTierOf(1300)).toBeNull();
+    expect(subscriberTierOf(1200)).toBeNull();
     expect(subscriberTierOf(1000)).toBeNull();
   });
 
