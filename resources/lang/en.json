@@ -1594,7 +1594,7 @@
   "notifications": {
     "empty": "No new notifications",
     "friend_request": "Friend request",
-    "new_version": "Version {version} is now live",
+    "new_version": "Version {version} is now live!",
     "title": "Notifications",
     "view_release_notes": "View release notes"
   },
