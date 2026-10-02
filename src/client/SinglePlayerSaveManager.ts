@@ -31,6 +31,151 @@ export function base64ToUint8Array(base64: string): Uint8Array {
 
 export const LEGACY_SOLO_SAVE_KEY = "openfront_solo_save_v1";
 
+export const SNAPSHOT_DB_NAME = "openfront_snapshots";
+export const SNAPSHOT_STORE_NAME = "snapshots";
+export const SNAPSHOT_DB_VERSION = 1;
+const OPEN_TIMEOUT_MS = 3000;
+
+function request<T>(req: IDBRequest<T>): Promise<T> {
+  return new Promise((resolve, reject) => {
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  });
+}
+
+function done(tx: IDBTransaction): Promise<void> {
+  return new Promise((resolve, reject) => {
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error);
+    tx.onabort = () => reject(tx.error);
+  });
+}
+
+export function openSnapshotDatabase(
+  idb: IDBFactory | undefined = globalThis.indexedDB,
+  timeoutMs = OPEN_TIMEOUT_MS,
+): Promise<IDBDatabase | null> {
+  if (!idb) return Promise.resolve(null);
+  return new Promise((resolve) => {
+    let settled = false;
+    const timer = setTimeout(() => {
+      settled = true;
+      console.warn("snapshot store: the database didn't open in time");
+      resolve(null);
+    }, timeoutMs);
+
+    let req: IDBOpenDBRequest;
+    try {
+      req = idb.open(SNAPSHOT_DB_NAME, SNAPSHOT_DB_VERSION);
+    } catch (e) {
+      settled = true;
+      clearTimeout(timer);
+      console.warn("snapshot store: failed to open database", e);
+      resolve(null);
+      return;
+    }
+
+    req.onupgradeneeded = () => {
+      const db = req.result;
+      if (!db.objectStoreNames.contains(SNAPSHOT_STORE_NAME)) {
+        db.createObjectStore(SNAPSHOT_STORE_NAME);
+      }
+    };
+
+    req.onsuccess = () => {
+      if (settled) {
+        req.result.close();
+        return;
+      }
+      settled = true;
+      clearTimeout(timer);
+      const db = req.result;
+      db.onversionchange = () => db.close();
+      resolve(db);
+    };
+
+    req.onerror = () => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      console.warn("snapshot store: database open error", req.error);
+      resolve(null);
+    };
+  });
+}
+
+const memorySnapshots = new Map<string, Uint8Array>();
+
+export function clearMemorySnapshots(): void {
+  memorySnapshots.clear();
+}
+
+export async function saveSnapshotBytes(
+  gameID: string,
+  bytes: Uint8Array,
+  idb?: IDBFactory,
+): Promise<void> {
+  try {
+    const db = await openSnapshotDatabase(idb);
+    if (!db) {
+      memorySnapshots.set(gameID, bytes);
+      return;
+    }
+    const tx = db.transaction(SNAPSHOT_STORE_NAME, "readwrite");
+    tx.objectStore(SNAPSHOT_STORE_NAME).put(bytes, gameID);
+    await done(tx);
+    memorySnapshots.set(gameID, bytes);
+  } catch (e) {
+    console.warn(
+      "Failed to persist snapshot to IndexedDB, falling back to memory",
+      e,
+    );
+    memorySnapshots.set(gameID, bytes);
+  }
+}
+
+export async function getSnapshotBytes(
+  gameID: string,
+  idb?: IDBFactory,
+): Promise<Uint8Array | null> {
+  try {
+    const db = await openSnapshotDatabase(idb);
+    if (!db) {
+      return memorySnapshots.get(gameID) ?? null;
+    }
+    const tx = db.transaction(SNAPSHOT_STORE_NAME, "readonly");
+    const result = await request<unknown>(
+      tx.objectStore(SNAPSHOT_STORE_NAME).get(gameID),
+    );
+    if (result instanceof Uint8Array) {
+      return result;
+    }
+    if (result instanceof ArrayBuffer) {
+      return new Uint8Array(result);
+    }
+    return memorySnapshots.get(gameID) ?? null;
+  } catch (e) {
+    console.warn("Failed to read snapshot from IndexedDB", e);
+    return memorySnapshots.get(gameID) ?? null;
+  }
+}
+
+export async function deleteSnapshotBytes(
+  gameID: string,
+  idb?: IDBFactory,
+): Promise<void> {
+  memorySnapshots.delete(gameID);
+  try {
+    const db = await openSnapshotDatabase(idb);
+    if (!db) return;
+    const tx = db.transaction(SNAPSHOT_STORE_NAME, "readwrite");
+    tx.objectStore(SNAPSHOT_STORE_NAME).delete(gameID);
+    await done(tx);
+  } catch (e) {
+    console.warn("Failed to delete snapshot from IndexedDB", e);
+  }
+}
+
 export interface SoloSaveState {
   version: 1;
   gameID: GameID;
@@ -41,7 +186,7 @@ export interface SoloSaveState {
   platform?: string;
   userId?: string;
   steamId?: string;
-  snapshot?: string; // base64-encoded compressed Uint8Array
+  hasSnapshot?: boolean;
 }
 
 /**
@@ -93,17 +238,19 @@ export function migrateLegacySoloSave(): void {
 }
 
 /**
- * Persists a singleplayer save state to localStorage scoped to the active account.
+ * Persists a singleplayer snapshot: compressed bytes in IndexedDB, metadata in localStorage.
  */
-export function saveSoloSnapshot(
+export async function saveSoloSnapshot(
   gameStartInfo: GameStartInfo,
   compressedSnapshot: Uint8Array,
   numTurns: number,
-): void {
+): Promise<void> {
   try {
     const identity = getActiveIdentity();
     const scopedKey = getScopedSoloSaveKey();
     if (!identity || !scopedKey) return;
+
+    await saveSnapshotBytes(gameStartInfo.gameID, compressedSnapshot);
 
     const saveState: SoloSaveState = {
       version: 1,
@@ -114,11 +261,11 @@ export function saveSoloSnapshot(
       platform: clientPlatform(),
       userId: identity.id,
       steamId: identity.steamId,
-      snapshot: uint8ArrayToBase64(compressedSnapshot),
+      hasSnapshot: true,
     };
     localStorage.setItem(scopedKey, JSON.stringify(saveState));
   } catch (e) {
-    console.error("Failed to save singleplayer snapshot to localStorage", e);
+    console.error("Failed to save singleplayer snapshot", e);
   }
 }
 
@@ -136,6 +283,17 @@ export function saveSoloGame(
     const scopedKey = getScopedSoloSaveKey();
     if (!identity || !scopedKey) return;
 
+    const hasSnapshot =
+      compressedSnapshot !== undefined
+        ? true
+        : existing?.gameID === gameStartInfo.gameID
+          ? (existing?.hasSnapshot ?? false)
+          : false;
+
+    if (compressedSnapshot) {
+      void saveSnapshotBytes(gameStartInfo.gameID, compressedSnapshot);
+    }
+
     const saveState: SoloSaveState = {
       version: 1,
       gameID: gameStartInfo.gameID,
@@ -143,17 +301,13 @@ export function saveSoloGame(
       gameStartInfo,
       turns,
       numTurns:
-        existing?.gameID === gameStartInfo.gameID && existing.snapshot
+        existing?.gameID === gameStartInfo.gameID && hasSnapshot
           ? existing.numTurns
           : turns.length,
       platform: clientPlatform(),
       userId: identity.id,
       steamId: identity.steamId,
-      snapshot: compressedSnapshot
-        ? uint8ArrayToBase64(compressedSnapshot)
-        : existing?.gameID === gameStartInfo.gameID
-          ? existing?.snapshot
-          : undefined,
+      hasSnapshot,
     };
     localStorage.setItem(scopedKey, JSON.stringify(saveState));
   } catch (e) {
@@ -190,6 +344,12 @@ export function getSoloSave(): SoloSaveState | null {
     if (record.snapshot !== undefined && typeof record.snapshot !== "string") {
       return null;
     }
+    if (
+      record.hasSnapshot !== undefined &&
+      typeof record.hasSnapshot !== "boolean"
+    ) {
+      return null;
+    }
     if (record.turns !== undefined) {
       if (!Array.isArray(record.turns)) return null;
       for (const turn of record.turns) {
@@ -198,7 +358,22 @@ export function getSoloSave(): SoloSaveState | null {
         }
       }
     }
-    return parsed as SoloSaveState;
+    const hasSnapshot =
+      record.hasSnapshot === true ||
+      (typeof record.snapshot === "string" && record.snapshot.length > 0);
+
+    return {
+      version: 1,
+      gameID: record.gameID as GameID,
+      savedAt: record.savedAt as number,
+      gameStartInfo: record.gameStartInfo as GameStartInfo,
+      turns: record.turns as Turn[] | undefined,
+      numTurns: record.numTurns as number,
+      platform: record.platform as string | undefined,
+      userId: record.userId as string | undefined,
+      steamId: record.steamId as string | undefined,
+      hasSnapshot,
+    };
   } catch (e) {
     console.error("Failed to read singleplayer save from localStorage", e);
     return null;
@@ -214,9 +389,28 @@ export async function getSoloSnapshot(): Promise<{
   numTurns: number;
 } | null> {
   const save = getSoloSave();
-  if (!save || !save.snapshot) return null;
+  if (!save || !save.hasSnapshot) return null;
   try {
-    const compressed = base64ToUint8Array(save.snapshot);
+    let compressed = await getSnapshotBytes(save.gameID);
+    if (!compressed) {
+      // Check for legacy base64 snapshot in localStorage
+      const scopedKey = getScopedSoloSaveKey();
+      if (scopedKey) {
+        const raw = localStorage.getItem(scopedKey);
+        if (raw) {
+          const parsed = JSON.parse(raw) as Record<string, unknown>;
+          if (typeof parsed.snapshot === "string" && parsed.snapshot) {
+            compressed = base64ToUint8Array(parsed.snapshot);
+            // Migrate to IndexedDB and remove base64 payload from localStorage
+            await saveSnapshotBytes(save.gameID, compressed);
+            delete parsed.snapshot;
+            parsed.hasSnapshot = true;
+            localStorage.setItem(scopedKey, JSON.stringify(parsed));
+          }
+        }
+      }
+    }
+    if (!compressed) return null;
     const uncompressed = await decompressSnapshot(compressed);
     return {
       gameStartInfo: save.gameStartInfo,
@@ -235,17 +429,19 @@ export async function getSoloSnapshot(): Promise<{
  */
 export function clearSoloSave(gameID?: GameID): void {
   try {
-    if (gameID) {
-      const current = getSoloSave();
-      if (current && current.gameID !== gameID) {
-        return;
-      }
+    const current = getSoloSave();
+    if (gameID && current && current.gameID !== gameID) {
+      return;
     }
+    const targetGameID = gameID ?? current?.gameID;
     const scopedKey = getScopedSoloSaveKey();
     if (scopedKey) {
       localStorage.removeItem(scopedKey);
     }
     localStorage.removeItem(LEGACY_SOLO_SAVE_KEY);
+    if (targetGameID) {
+      void deleteSnapshotBytes(targetGameID);
+    }
   } catch (e) {
     console.error("Failed to clear singleplayer save from localStorage", e);
   }

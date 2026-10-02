@@ -1140,7 +1140,7 @@ export class ClientGameRunner {
               !this.playerDied &&
               this.lobby.gameStartInfo
             ) {
-              saveSoloSnapshot(
+              return saveSoloSnapshot(
                 this.lobby.gameStartInfo,
                 compressed,
                 snapshotTick,
