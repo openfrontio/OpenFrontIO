@@ -42,13 +42,13 @@ export interface XpGameConfig {
 export interface DailyXpState {
   privateGames: number;
   singleplayerGames: number;
-  firstWinClaimed: boolean;
+  firstGameClaimed: boolean;
 }
 
 export const NO_DAILY_XP: DailyXpState = {
   privateGames: 0,
   singleplayerGames: 0,
-  firstWinClaimed: false,
+  firstGameClaimed: false,
 };
 
 // Everything computeXp reads about one player in one game.
@@ -86,7 +86,7 @@ export interface XpBreakdown {
   time: number;
   placement: number;
   win: number;
-  firstWin: number;
+  firstGame: number;
   feats: number;
   subtotal: number;
   gamePermille: number;
@@ -163,17 +163,22 @@ export function computeXp(ctx: XpContext, rules: XpRules): XpResult {
     }
   }
 
-  let firstWin = 0;
-  if (win > 0 && !ctx.daily.firstWinClaimed) {
-    firstWin = isFfa
-      ? Math.floor((rules.firstWinOfDay * lobbyNum) / lobbyDen)
-      : rules.firstWinOfDay;
-  }
+  // The player's first public game of the UTC day (ranked included), won or
+  // lost, pays a flat bonus, not scaled by the lobby. Private and
+  // singleplayer games neither pay it nor use it up, and nor does a game the
+  // player left early.
+  const firstGame =
+    config.gameType === GameType.Public &&
+    !leftEarly &&
+    !ctx.daily.firstGameClaimed
+      ? rules.firstGameOfDay
+      : 0;
+  // Zero while the rules pay nothing for a feat (featXp 0).
   const feats =
     Math.min(Math.max(ctx.featCount, 0), rules.maxFeatsPerGame) * rules.featXp;
 
   const played = leftEarly ? 0 : rules.gameXp;
-  const subtotal = played + time + placement + win + firstWin + feats;
+  const subtotal = played + time + placement + win + firstGame + feats;
   const gamePermille = gameMultiplier(config, rules);
   const total = applyMultipliers(
     subtotal,
@@ -189,7 +194,7 @@ export function computeXp(ctx: XpContext, rules: XpRules): XpResult {
       time,
       placement,
       win,
-      firstWin,
+      firstGame,
       feats,
       subtotal,
       gamePermille,
@@ -199,7 +204,7 @@ export function computeXp(ctx: XpContext, rules: XpRules): XpResult {
     daily: {
       privateGames: ctx.daily.privateGames + (isPrivate ? 1 : 0),
       singleplayerGames: ctx.daily.singleplayerGames + (isSingleplayer ? 1 : 0),
-      firstWinClaimed: ctx.daily.firstWinClaimed || firstWin > 0,
+      firstGameClaimed: ctx.daily.firstGameClaimed || firstGame > 0,
     },
   };
 }

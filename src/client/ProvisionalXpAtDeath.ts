@@ -28,12 +28,16 @@ import {
 export interface ProvisionalXp {
   // The figure shaped like the server's GET /users/@me/xp/:gameId answer, so
   // the XP panel draws both the same way. An eligible one carries the bar's
-  // projected position; the levels it crosses are only pending.
+  // projected position and the levels it reaches, which are celebrated then:
+  // most players die before the end and would otherwise miss them.
   response: GameXpResponse;
   result: XpResult;
   // A team (or Humans vs Nations) game: the team may still win, and a win
   // bonus is only known once it ends.
   teamWinPending: boolean;
+  // Feats pay XP under these rules (featXp > 0), and they are only judged on
+  // the finished game. With feats paying nothing there is nothing to add.
+  featsPending: boolean;
   // What the figure was worked out from, for the mismatch log. No ids, no
   // names.
   inputs: ProvisionalXpInputs;
@@ -73,6 +77,8 @@ export function provisionalXpRules(config: ProgressionConfig): XpRules | null {
  * GameInputs.ts), with what can only be known at the end left out: no win
  * (a dead player can't win FFA; a team's result is pending), no feats (they
  * are judged on the finished game), and no leave (the player is still here).
+ * The first game of the day is known now: the daily state from /users/@me
+ * says whether it is still open, and the game type whether this game pays it.
  */
 export function provisionalXpContext(input: {
   snapshot: HumanStatsSnapshot;
@@ -229,6 +235,7 @@ export function buildProvisionalXp(input: {
     response,
     result,
     teamWinPending: ctx.config.gameMode === GameMode.Team,
+    featsPending: rules.featXp > 0 && rules.maxFeatsPerGame > 0,
     inputs: {
       gameType: ctx.config.gameType,
       gameMode: ctx.config.gameMode,
@@ -309,13 +316,15 @@ async function withTimeout<T>(p: Promise<T>, ms: number): Promise<T | null> {
 
 // Why the server's figure differs from the provisional one, where it's known.
 export type XpDifference =
-  // The team won: a win bonus (and maybe the first win of the day) added.
+  // The team won: a win bonus added.
   | "team_win"
-  // Feats are judged on the finished game.
+  // Feats are judged on the finished game (only while they pay XP).
   | "feats"
   // The end-of-game vote didn't agree on the game's stats.
   | "unverified"
-  // The daily allowance was used up (or freed) by another game meanwhile.
+  // Today's allowances changed meanwhile: a private or singleplayer cap used
+  // up (or freed), or the first-game-of-the-day bonus taken by another game
+  // (or the game scored on another UTC day).
   | "daily_cap"
   // Anything else.
   | "other";
@@ -376,10 +385,14 @@ export function reconcileXp(
   const s = server.breakdown;
   if (s.total === p.total) return same;
   const differences: XpDifference[] = [];
-  if (s.win + s.firstWin > p.win + p.firstWin) differences.push("team_win");
+  if (s.win > p.win) differences.push("team_win");
   if (s.feats > p.feats) differences.push("feats");
-  // The provisional figure with the server's end-of-game lines in its place:
-  // if that lands on the server's total, nothing else changed.
+  // The first game of the day is known at death (from /users/@me), so it
+  // only differs when the day's state changed before the game was scored.
+  if (s.firstGame !== p.firstGame) differences.push("daily_cap");
+  // The provisional figure with the server's end-of-game lines (and its
+  // first-game line) in their place: if that lands on the server's total,
+  // nothing else changed.
   const expected = applyMultipliers(
     p.subtotal - endOfGameXp(p) + endOfGameXp(s),
     p.gamePermille,
@@ -390,6 +403,6 @@ export function reconcileXp(
   return differ(differences, drift);
 }
 
-function endOfGameXp(b: Pick<XpBreakdown, "win" | "firstWin" | "feats">) {
-  return b.win + b.firstWin + b.feats;
+function endOfGameXp(b: Pick<XpBreakdown, "win" | "firstGame" | "feats">) {
+  return b.win + b.firstGame + b.feats;
 }

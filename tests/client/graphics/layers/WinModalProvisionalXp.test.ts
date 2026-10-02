@@ -80,8 +80,9 @@ const RULES = {
   teamWin: 150,
   teamWinMinAlivePermille: 500,
   hvnWin: 100,
-  firstWinOfDay: 200,
-  featXp: 50,
+  firstGameOfDay: 100,
+  // Feats pay nothing, as the API's defaults have it.
+  featXp: 0,
   maxFeatsPerGame: 3,
   publicPermille: 1000,
   rankedPermille: 1250,
@@ -106,14 +107,18 @@ const CONFIG = {
   xp: RULES,
 };
 
+// Level 9, halfway: a provisional figure of 50+ XP reaches the level-10
+// milestone. Today's first public game is still open.
 const PROGRESS = {
   prestige: 0,
-  level: 4,
+  level: 9,
   xpInLevel: 50,
   xpForNext: 100,
-  lifetimeXp: 350,
+  lifetimeXp: 850,
   legend: false,
   canPrestige: false,
+  daily: { privateGames: 0, singleplayerGames: 0, firstGameClaimed: false },
+  subscriberPermille: 1000,
 };
 
 const signedIn = {
@@ -123,7 +128,8 @@ const signedIn = {
 
 // "me" died at tick 4000 having attacked; one opponent was out before.
 // Provisional FFA figure: 50 played + floor(4000 * 17 / 600) = 113 time +
-// floor(150 * 1 * 3 / (2 * 20)) = 11 placement = 174.
+// floor(150 * 1 * 3 / (2 * 20)) = 11 placement + 100 first game = 274.
+// In a team game: no placement, so 263.
 function snapshot(): HumanStatsSnapshot {
   return {
     tick: 4100,
@@ -142,35 +148,34 @@ const BREAKDOWN = {
   time: 113,
   placement: 11,
   win: 0,
-  firstWin: 0,
+  firstGame: 100,
   feats: 0,
-  subtotal: 174,
+  subtotal: 274,
   gamePermille: 1000,
   subscriberPermille: 1000,
-  total: 174,
+  total: 274,
 };
 
-// The server's figure. By default the provisional one exactly: 50 + 174 is
-// two levels up, 24 into level 6.
+const levels = (...ls: number[]) => ls.map((level) => ({ prestige: 0, level }));
+
+// The server's figure. By default the provisional one exactly: 50 + 274 is
+// three levels up (the level-10 milestone among them), 24 into level 12.
 function serverXp(overrides: Record<string, unknown> = {}) {
   return {
     gameId: GAME_ID,
     eligible: true,
     breakdown: BREAKDOWN,
-    before: { prestige: 0, level: 4, xpInLevel: 50, xpForNext: 100 },
+    before: { prestige: 0, level: 9, xpInLevel: 50, xpForNext: 100 },
     after: {
       prestige: 0,
-      level: 6,
+      level: 12,
       xpInLevel: 24,
       xpForNext: 100,
-      lifetimeXp: 524,
+      lifetimeXp: 1124,
       legend: false,
       canPrestige: false,
     },
-    levelsReached: [
-      { prestige: 0, level: 5 },
-      { prestige: 0, level: 6 },
-    ],
+    levelsReached: levels(10, 11, 12),
     ...overrides,
   };
 }
@@ -285,14 +290,36 @@ describe("WinModal provisional XP at death", () => {
     );
   }
 
+  function total(): string {
+    return panel()!.querySelector("[data-xp-total]")!.textContent!;
+  }
+
+  function currentLevel(): number | undefined {
+    return (
+      panel()!.querySelector("[data-xp-current-badge] level-badge") as
+        | (HTMLElement & { level: number })
+        | null
+    )?.level;
+  }
+
+  function milestoneCard(): HTMLElement | null {
+    return panel()!.querySelector<HTMLElement>("[data-xp-levelup]");
+  }
+
+  function revealing(): boolean {
+    return panel()?.getAttribute("data-xp-revealing") === "true";
+  }
+
   async function finishReveal(): Promise<void> {
     panel()?.click();
     await settle();
   }
 
-  // Lets a reveal play out, collecting each level-up moment it pauses on.
-  async function levelUpMoments(): Promise<string[]> {
+  // Lets a reveal play out, collecting each level-up moment it pauses on and
+  // each milestone card it lands.
+  async function playOut(): Promise<{ moments: string[]; cards: string[] }> {
     const moments: string[] = [];
+    const cards: string[] = [];
     for (let i = 0; i < 400; i++) {
       const moment = panel()
         ?.querySelector("[data-xp-caption-levelup]")
@@ -300,10 +327,17 @@ describe("WinModal provisional XP at death", () => {
       if (moment && moment !== moments[moments.length - 1]) {
         moments.push(moment);
       }
-      if (panel()?.getAttribute("data-xp-revealing") !== "true") break;
+      const card = panel()?.querySelector(
+        "[data-xp-levelup]:not([data-xp-slot-hidden])",
+      );
+      const landed = card?.classList.contains("xp-card-in")
+        ? card.getAttribute("data-xp-milestone")
+        : null;
+      if (landed && landed !== cards[cards.length - 1]) cards.push(landed);
+      if (!revealing()) break;
       await settle(50);
     }
-    return moments;
+    return { moments, cards };
   }
 
   async function endGame(end: () => void): Promise<void> {
@@ -312,7 +346,7 @@ describe("WinModal provisional XP at death", () => {
     await settle();
   }
 
-  it("shows a provisional figure at death, with its levels pending", async () => {
+  it("plays the full reveal at death, levels and milestones included", async () => {
     const fetchMock = stubXpEndpoint(() => json(serverXp()));
     const { game } = makeGame();
     await mount(game);
@@ -323,32 +357,45 @@ describe("WinModal provisional XP at death", () => {
     expect(
       panel()!.querySelector("[data-xp-provisional]")!.textContent,
     ).toContain("progression.provisional_label");
-    // The reveal plays, but never celebrates a level.
-    expect(await levelUpMoments()).toEqual([]);
-    expect(panel()!.querySelector("[data-xp-total]")!.textContent).toContain(
-      '"xp":"174"',
-    );
-    // Short of the next level, which is only named.
-    expect(
-      panel()!.querySelector("[data-xp-bar]")!.getAttribute("aria-valuenow"),
-    ).toBe("100");
+    // Every level-up plays, and the level-10 milestone card lands.
+    expect(await playOut()).toEqual({
+      moments: ["10", "11", "12"],
+      cards: ["10"],
+    });
+    // The first game of the day is in the figure: it is known at death.
+    expect(total()).toContain('"xp":"274"');
+    expect(panel()!.querySelector('[data-xp-line="firstGame"]')).not.toBeNull();
     expect(
       panel()!.querySelector("[data-xp-header-level]")!.textContent,
-    ).toContain('progression.provisional_level_pending:{"level":6}');
-    expect(
-      (
-        panel()!.querySelector("[data-xp-current-badge] level-badge") as
-          | (HTMLElement & { level: number })
-          | null
-      )?.level,
-    ).toBe(4);
-    expect(panel()!.querySelector("[data-xp-levelup]")).toBeNull();
-    expect(notes()).toEqual(["progression.provisional_feats_pending"]);
+    ).toContain('progression.xp_progress:{"current":"24","next":"100"}');
+    expect(currentLevel()).toBe(12);
+    expect(milestoneCard()?.getAttribute("data-xp-milestone")).toBe("10");
+    // Still labelled provisional once the reveal is over.
+    expect(panel()!.querySelector("[data-xp-provisional]")).not.toBeNull();
+    // Feats pay nothing: nothing for the end of an FFA game to add.
+    expect(panel()!.querySelector("[data-xp-reconcile]")).toBeNull();
     // Nothing is asked of the server until the game ends.
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
-  it("confirms a matching figure quietly, then celebrates the levels", async () => {
+  it("says what the end of the game may still add", async () => {
+    stubXpEndpoint(() => json(serverXp()));
+    await mount(makeGame({ gameMode: GameMode.Team }).game);
+    await finishReveal();
+    expect(notes()).toEqual(["progression.provisional_team_win_pending"]);
+    modal.remove();
+
+    // Feats only while they pay XP.
+    fetchProgressionConfig.mockResolvedValue({
+      ...CONFIG,
+      xp: { ...RULES, featXp: 50 },
+    });
+    await mount(makeGame().game);
+    await finishReveal();
+    expect(notes()).toEqual(["progression.provisional_feats_pending"]);
+  });
+
+  it("confirms a matching figure quietly, with no second celebration", async () => {
     // Not processed yet on the first ask.
     let asked = 0;
     stubXpEndpoint(() =>
@@ -356,7 +403,7 @@ describe("WinModal provisional XP at death", () => {
     );
     const { game, end } = makeGame();
     await mount(game);
-    await finishReveal();
+    await playOut();
 
     await endGame(end);
     // While the server is asked, the figure stays up.
@@ -371,54 +418,19 @@ describe("WinModal provisional XP at death", () => {
     expect(
       panel()!.querySelector("[data-xp-confirmed]")!.textContent,
     ).toContain("progression.xp_confirmed");
-    // No second reveal of the cards: they are all there from the start.
+    // Nothing replays: no reveal, no level-up, the milestone card in place.
+    expect(revealing()).toBe(false);
+    expect(await playOut()).toEqual({ moments: [], cards: [] });
     expect(panel()!.querySelector("[data-xp-slot-hidden]")).toBeNull();
-    // The level-ups play now.
-    expect(await levelUpMoments()).toEqual(["5", "6"]);
-    expect(panel()!.querySelector("[data-xp-total]")!.textContent).toContain(
-      '"xp":"174"',
-    );
+    expect(milestoneCard()?.getAttribute("data-xp-milestone")).toBe("10");
+    expect(total()).toContain('"xp":"274"');
     expect(panel()!.querySelector("[data-xp-reconcile]")).toBeNull();
   });
 
-  it("confirms without any reveal when no level was crossed", async () => {
-    const small = {
-      ...serverXp(),
-      after: { ...serverXp().after, level: 4, xpInLevel: 224, xpForNext: 100 },
-      levelsReached: [],
-    };
-    // A long level: 50 + 174 stays inside it.
-    fetchProgressionConfig.mockResolvedValue({
-      ...CONFIG,
-      levels: CONFIG.levels.map((l) => ({ ...l, xpToNext: 1000 })),
-    });
-    getUserMe.mockResolvedValue({
-      ...signedIn,
-      player: {
-        ...signedIn.player,
-        progress: { ...PROGRESS, xpForNext: 1000 },
-      },
-    });
-    stubXpEndpoint(() =>
-      json({
-        ...small,
-        before: { ...small.before, xpForNext: 1000 },
-        after: { ...small.after, xpForNext: 1000 },
-      }),
-    );
-    const { game, end } = makeGame();
-    await mount(game);
-    await finishReveal();
-    await endGame(end);
-
-    expect(xpState()).toBe("result");
-    expect(panel()!.querySelector("[data-xp-confirmed]")).not.toBeNull();
-    expect(panel()!.getAttribute("data-xp-revealing")).toBeNull();
-  });
-
-  it("shows the server's figure and why it changed when the team won", async () => {
+  it("celebrates only the new levels when the team's win adds more", async () => {
     const warn = vi.spyOn(console, "warn");
-    // 50 + 113 (no placement in a team game) + 150 team win + 200 first win.
+    // 50 + 113 (no placement in a team game) + 100 first game + 150 team win
+    // = 413: 50 + 413 reaches level 13, one past the provisional 12.
     stubXpEndpoint(() =>
       json(
         serverXp({
@@ -426,15 +438,11 @@ describe("WinModal provisional XP at death", () => {
             ...BREAKDOWN,
             placement: 0,
             win: 150,
-            firstWin: 200,
-            subtotal: 513,
-            total: 513,
+            subtotal: 413,
+            total: 413,
           },
-          after: { ...serverXp().after, level: 9, xpInLevel: 63 },
-          levelsReached: [5, 6, 7, 8, 9].map((level) => ({
-            prestige: 0,
-            level,
-          })),
+          after: { ...serverXp().after, level: 13, xpInLevel: 63 },
+          levelsReached: levels(10, 11, 12, 13),
         }),
       ),
     );
@@ -442,27 +450,66 @@ describe("WinModal provisional XP at death", () => {
     await mount(game);
 
     expect(xpState()).toBe("provisional");
-    expect(notes()).toEqual([
-      "progression.provisional_team_win_pending",
-      "progression.provisional_feats_pending",
-    ]);
-    await finishReveal();
-    expect(panel()!.querySelector("[data-xp-total]")!.textContent).toContain(
-      '"xp":"163"',
-    );
+    expect(await playOut()).toEqual({
+      moments: ["10", "11", "12"],
+      cards: ["10"],
+    });
+    expect(total()).toContain('"xp":"263"');
 
     await endGame(end);
     expect(xpState()).toBe("result");
     expect(panel()!.querySelector("[data-xp-confirmed]")).toBeNull();
-    expect(await levelUpMoments()).toEqual(["5", "6", "7", "8", "9"]);
-    expect(panel()!.querySelector("[data-xp-total]")!.textContent).toContain(
-      '"xp":"513"',
-    );
+    // The milestone already celebrated stays put.
+    expect(milestoneCard()?.getAttribute("data-xp-milestone")).toBe("10");
+    expect(milestoneCard()?.hasAttribute("data-xp-slot-hidden")).toBe(false);
+    expect(milestoneCard()?.classList.contains("xp-card-in")).toBe(false);
+    expect(await playOut()).toEqual({ moments: ["13"], cards: [] });
+    expect(total()).toContain('"xp":"413"');
+    expect(currentLevel()).toBe(13);
     expect(notes()).toEqual([
-      'progression.provisional_was:{"xp":"163"}',
+      'progression.provisional_was:{"xp":"263"}',
       "progression.reconcile_team_win",
     ]);
     // Explained by the win: not a formula drift.
+    expect(warn).not.toHaveBeenCalledWith(
+      "Provisional XP differed from the server's",
+      expect.anything(),
+    );
+  });
+
+  it("adjusts the level, without celebrating, when the server's figure is lower", async () => {
+    const warn = vi.spyOn(console, "warn");
+    // Another public game took today's first-game bonus first: 174, and
+    // 50 + 174 only reaches level 11.
+    stubXpEndpoint(() =>
+      json(
+        serverXp({
+          breakdown: { ...BREAKDOWN, firstGame: 0, subtotal: 174, total: 174 },
+          after: { ...serverXp().after, level: 11, lifetimeXp: 1024 },
+          levelsReached: levels(10, 11),
+        }),
+      ),
+    );
+    const { game, end } = makeGame();
+    await mount(game);
+    expect((await playOut()).moments).toEqual(["10", "11", "12"]);
+
+    await endGame(end);
+    expect(xpState()).toBe("result");
+    expect(revealing()).toBe(false);
+    expect(await playOut()).toEqual({ moments: [], cards: [] });
+    expect(panel()!.querySelector("[data-xp-confirmed]")).toBeNull();
+    expect(total()).toContain('"xp":"174"');
+    expect(currentLevel()).toBe(11);
+    // No "Level 11!" either: the caption rests on the heading.
+    expect(panel()!.querySelector("[data-xp-caption]")!.textContent).toContain(
+      "progression.xp_heading",
+    );
+    expect(notes()).toEqual([
+      'progression.provisional_was:{"xp":"274"}',
+      "progression.reconcile_daily_cap",
+      'progression.reconcile_level_adjusted:{"level":"11"}',
+    ]);
     expect(warn).not.toHaveBeenCalledWith(
       "Provisional XP differed from the server's",
       expect.anything(),
@@ -474,7 +521,7 @@ describe("WinModal provisional XP at death", () => {
     stubXpEndpoint(() =>
       json(
         serverXp({
-          breakdown: { ...BREAKDOWN, time: 120, subtotal: 181, total: 181 },
+          breakdown: { ...BREAKDOWN, time: 120, subtotal: 281, total: 281 },
           after: { ...serverXp().after, xpInLevel: 31 },
         }),
       ),
@@ -483,17 +530,19 @@ describe("WinModal provisional XP at death", () => {
     await mount(game);
     await finishReveal();
     await endGame(end);
-    await finishReveal();
+    // More XP, but no level past those already celebrated.
+    expect(await playOut()).toEqual({ moments: [], cards: [] });
+    expect(total()).toContain('"xp":"281"');
 
     expect(notes()).toEqual([
-      'progression.provisional_was:{"xp":"174"}',
+      'progression.provisional_was:{"xp":"274"}',
       "progression.reconcile_other",
     ]);
     expect(warn).toHaveBeenCalledWith(
       "Provisional XP differed from the server's",
       expect.objectContaining({
-        provisional: 174,
-        server: 181,
+        provisional: 274,
+        server: 281,
         inputs: expect.objectContaining({
           gameMode: GameMode.FFA,
           spawnedHumans: 3,
@@ -503,7 +552,7 @@ describe("WinModal provisional XP at death", () => {
     );
   });
 
-  it("says when the server couldn't verify the game", async () => {
+  it("says when the server couldn't verify the game, and where that leaves the level", async () => {
     stubXpEndpoint(() =>
       json({ gameId: GAME_ID, eligible: false, reason: "unverified" }),
     );
@@ -514,7 +563,10 @@ describe("WinModal provisional XP at death", () => {
 
     expect(xpState()).toBe("ineligible");
     expect(panel()!.textContent).toContain("progression.ineligible_unverified");
-    expect(notes()).toEqual(['progression.provisional_was:{"xp":"174"}']);
+    expect(notes()).toEqual([
+      'progression.provisional_was:{"xp":"274"}',
+      'progression.reconcile_level_adjusted:{"level":"9"}',
+    ]);
   });
 
   it("marks an ineligible death as provisional too, then confirms it", async () => {
@@ -549,6 +601,7 @@ describe("WinModal provisional XP at death", () => {
     expect(xpState()).toBe("provisional");
     expect(panel()!.querySelector("[data-xp-confirming]")).toBeNull();
     expect(panel()!.querySelector("[data-xp-provisional]")).not.toBeNull();
+    expect(total()).toContain('"xp":"274"');
   });
 
   describe("falls back to 'XP is awarded when the game ends'", () => {

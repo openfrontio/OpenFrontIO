@@ -187,8 +187,8 @@ describe("provisional XP fields", () => {
     teamWin: 150,
     teamWinMinAlivePermille: 500,
     hvnWin: 100,
-    firstWinOfDay: 200,
-    featXp: 50,
+    firstGameOfDay: 100,
+    featXp: 0,
     maxFeatsPerGame: 3,
     publicPermille: 1000,
     rankedPermille: 1250,
@@ -214,17 +214,49 @@ describe("provisional XP fields", () => {
     expect(parsed.levels).toEqual(config.levels);
   });
 
+  it("reads first-win rules (from before the first game of the day) as absent", () => {
+    const firstWinRules: Record<string, number> = {
+      ...rules,
+      firstWinOfDay: 200,
+    };
+    delete firstWinRules.firstGameOfDay;
+    const parsed = ProgressionConfigSchema.parse({
+      ...config,
+      formula: 1,
+      xp: firstWinRules,
+    });
+    expect(parsed.xp).toBeUndefined();
+    expect(parsed.levels).toEqual(config.levels);
+  });
+
   it("parses today's allowances and the subscriber boost on progress", () => {
     const daily = {
       privateGames: 2,
       singleplayerGames: 0,
-      firstWinClaimed: true,
+      firstGameClaimed: true,
     };
     const parsed = UserMeResponseSchema.parse(
       userMe({ progress: { ...progress, daily, subscriberPermille: 1200 } }),
     );
     expect(parsed.player.progress?.daily).toEqual(daily);
     expect(parsed.player.progress?.subscriberPermille).toBe(1200);
+  });
+
+  it("drops a first-win allowance block but keeps the progress", () => {
+    const parsed = UserMeResponseSchema.parse(
+      userMe({
+        progress: {
+          ...progress,
+          daily: {
+            privateGames: 0,
+            singleplayerGames: 0,
+            firstWinClaimed: true,
+          },
+        },
+      }),
+    );
+    expect(parsed.player.progress?.level).toBe(37);
+    expect(parsed.player.progress?.daily).toBeUndefined();
   });
 
   it("drops a malformed allowance block but keeps the progress", () => {

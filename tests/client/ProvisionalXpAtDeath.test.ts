@@ -29,8 +29,9 @@ const RULES: XpRules = {
   teamWin: 150,
   teamWinMinAlivePermille: 500,
   hvnWin: 100,
-  firstWinOfDay: 200,
-  featXp: 50,
+  firstGameOfDay: 100,
+  // Feats pay nothing, as the API's defaults have it.
+  featXp: 0,
   maxFeatsPerGame: 3,
   publicPermille: 1000,
   rankedPermille: 1250,
@@ -118,7 +119,7 @@ describe("provisionalXpContext", () => {
       featCount: 0,
       leftAtTick: null,
       ticks: 6000,
-      daily: { privateGames: 0, singleplayerGames: 0, firstWinClaimed: false },
+      daily: { privateGames: 0, singleplayerGames: 0, firstGameClaimed: false },
       subscriberPermille: 1000,
     });
     expect(derived.disconnectedOpponents).toBe(1);
@@ -144,7 +145,11 @@ describe("provisionalXpContext", () => {
       config: FFA,
       progress: {
         ...PROGRESS,
-        daily: { privateGames: 3, singleplayerGames: 1, firstWinClaimed: true },
+        daily: {
+          privateGames: 3,
+          singleplayerGames: 1,
+          firstGameClaimed: true,
+        },
         subscriberPermille: 1200,
       },
     });
@@ -152,7 +157,7 @@ describe("provisionalXpContext", () => {
     expect(derived.ctx.daily).toEqual({
       privateGames: 3,
       singleplayerGames: 1,
-      firstWinClaimed: true,
+      firstGameClaimed: true,
     });
     expect(derived.ctx.subscriberPermille).toBe(1200);
   });
@@ -177,7 +182,7 @@ describe("buildProvisionalXp", () => {
     const provisional = build();
     if (provisional === null || provisional === "retry") throw new Error();
     // time: floor(4000 * 17 / 600) = 113; placement: floor(150 * 2 * 6 /
-    // (5 * 20)) = 18.
+    // (5 * 20)) = 18; the day's first public game: 100.
     expect(provisional.response).toMatchObject({
       gameId: "game1",
       eligible: true,
@@ -186,13 +191,14 @@ describe("buildProvisionalXp", () => {
         time: 113,
         placement: 18,
         win: 0,
-        firstWin: 0,
+        firstGame: 100,
         feats: 0,
-        subtotal: 181,
-        total: 181,
+        subtotal: 281,
+        total: 281,
       },
     });
     expect(provisional.teamWinPending).toBe(false);
+    expect(provisional.featsPending).toBe(false);
     expect(provisional.inputs).toMatchObject({
       spawnedHumans: 6,
       opponentsOutlasted: 2,
@@ -204,15 +210,60 @@ describe("buildProvisionalXp", () => {
   it("projects the bar and lists the levels the figure would cross", () => {
     const provisional = build();
     if (provisional === null || provisional === "retry") throw new Error();
-    // 50 + 181 in a 100-XP level: two levels up, 31 into level 6.
+    // 50 + 281 in a 100-XP level: three levels up, 31 into level 7.
     expect(provisional.response).toMatchObject({
       before: { prestige: 0, level: 4, xpInLevel: 50, xpForNext: 100 },
-      after: { level: 6, xpInLevel: 31, xpForNext: 100, lifetimeXp: 531 },
+      after: { level: 7, xpInLevel: 31, xpForNext: 100, lifetimeXp: 631 },
       levelsReached: [
         { prestige: 0, level: 5 },
         { prestige: 0, level: 6 },
+        { prestige: 0, level: 7 },
       ],
     });
+  });
+
+  it("counts the first game of the day only while it is open, in a public game", () => {
+    const claimed = build({
+      progress: {
+        ...PROGRESS,
+        daily: {
+          privateGames: 0,
+          singleplayerGames: 0,
+          firstGameClaimed: true,
+        },
+      },
+    });
+    if (claimed === null || claimed === "retry") throw new Error();
+    expect(claimed.response).toMatchObject({
+      breakdown: { firstGame: 0, subtotal: 181, total: 181 },
+    });
+
+    // A private game neither pays it nor uses it up: half of 181, rounded.
+    const privateGame = build({
+      config: { ...FFA, gameType: GameType.Private },
+    });
+    if (privateGame === null || privateGame === "retry") throw new Error();
+    expect(privateGame.response).toMatchObject({
+      breakdown: { firstGame: 0, subtotal: 181, gamePermille: 500, total: 91 },
+    });
+    expect(privateGame.result).toMatchObject({
+      daily: { privateGames: 1, firstGameClaimed: false },
+    });
+
+    // Ranked: a public game, so it pays, times the ranked multiplier.
+    const ranked = build({ config: { ...FFA, rankedType: "1v1" } });
+    if (ranked === null || ranked === "retry") throw new Error();
+    expect(ranked.response).toMatchObject({
+      breakdown: { firstGame: 100, subtotal: 281, total: 351 },
+    });
+  });
+
+  it("says feats are added at the end only while they pay XP", () => {
+    const paying = build({
+      progression: progression({ xp: { ...RULES, featXp: 50 } }),
+    });
+    if (paying === null || paying === "retry") throw new Error();
+    expect(paying.featsPending).toBe(true);
   });
 
   it("leaves a team game's win pending rather than guessing it", () => {
@@ -221,7 +272,7 @@ describe("buildProvisionalXp", () => {
     expect(provisional.teamWinPending).toBe(true);
     expect(provisional.response).toMatchObject({
       eligible: true,
-      breakdown: { placement: 0, win: 0, firstWin: 0, total: 163 },
+      breakdown: { placement: 0, win: 0, firstGame: 100, total: 263 },
     });
   });
 
@@ -285,7 +336,7 @@ describe("reconcileXp", () => {
     time: 113,
     placement: 0,
     win: 0,
-    firstWin: 0,
+    firstGame: 0,
     feats: 0,
     subtotal: 163,
     gamePermille: 1000,
@@ -295,7 +346,7 @@ describe("reconcileXp", () => {
   const provisional: XpResult = {
     eligible: true,
     breakdown,
-    daily: { privateGames: 0, singleplayerGames: 0, firstWinClaimed: false },
+    daily: { privateGames: 0, singleplayerGames: 0, firstGameClaimed: true },
   };
   const server = (b: Partial<typeof breakdown>): GameXpResponse => ({
     gameId: "game1",
@@ -324,22 +375,37 @@ describe("reconcileXp", () => {
   });
 
   it("puts a difference down to the team's win and feats when they explain it", () => {
-    // (163 + 150 + 200 + 50) * 1.2 = 675.6, rounded half up.
+    // (163 + 150 + 50) * 1.2 = 435.6, rounded half up.
     expect(
       reconcileXp(
         provisional,
         server({
           win: 150,
-          firstWin: 200,
           feats: 50,
-          subtotal: 563,
-          total: 676,
+          subtotal: 363,
+          total: 436,
         }),
       ),
     ).toEqual({
       matched: false,
       differences: ["team_win", "feats"],
       provisionalTotal: 196,
+      drift: false,
+    });
+  });
+
+  it("puts a first-game difference down to the day's allowances", () => {
+    // Shown with the first game (263 * 1.2 = 315.6), scored without it: another
+    // public game took it first.
+    const withFirstGame: XpResult = {
+      eligible: true,
+      breakdown: { ...breakdown, firstGame: 100, subtotal: 263, total: 316 },
+      daily: { privateGames: 0, singleplayerGames: 0, firstGameClaimed: true },
+    };
+    expect(reconcileXp(withFirstGame, server({}))).toEqual({
+      matched: false,
+      differences: ["daily_cap"],
+      provisionalTotal: 316,
       drift: false,
     });
   });

@@ -126,7 +126,7 @@ export const ProgressSchema = z.object({
     .object({
       privateGames: z.number(),
       singleplayerGames: z.number(),
-      firstWinClaimed: z.boolean(),
+      firstGameClaimed: z.boolean(),
     })
     .optional()
     .catch(undefined),
@@ -216,7 +216,7 @@ export const XpRulesSchema = z.object({
   teamWin: z.number().int(),
   teamWinMinAlivePermille: z.number().int(),
   hvnWin: z.number().int(),
-  firstWinOfDay: z.number().int(),
+  firstGameOfDay: z.number().int(),
   featXp: z.number().int(),
   maxFeatsPerGame: z.number().int(),
   publicPermille: z.number().int(),
