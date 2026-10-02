@@ -200,8 +200,12 @@ export class NavAccountMenu extends LitElement {
 
     const player =
       this.userMeResponse === false ? null : this.userMeResponse.player;
+    // A past_due subscriber still needs the panel: it is where they reach
+    // the billing portal to fix the failed payment.
     const subscribed =
-      player?.subscription !== undefined && player?.subscription !== null;
+      (player?.subscription !== undefined && player?.subscription !== null) ||
+      (player?.pastDueSubscription !== undefined &&
+        player?.pastDueSubscription !== null);
     const publicId = player?.publicId ?? "";
 
     const items: MenuItem[] = [];

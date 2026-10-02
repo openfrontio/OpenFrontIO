@@ -701,6 +701,10 @@ export class Transport {
   }
 
   async joinGame() {
+    // Only the first join: the token is short-lived, and a later reconnect
+    // must not present one that has since expired.
+    const token = this.lobbyConfig.creatorToken ?? (await getPlayToken());
+    delete this.lobbyConfig.creatorToken;
     this.sendMsg({
       type: "join",
       gameID: this.lobbyConfig.gameID,
@@ -709,7 +713,7 @@ export class Transport {
       clanTag: this.lobbyConfig.playerClanTag ?? null,
       cosmetics: this.lobbyConfig.cosmetics,
       turnstileToken: this.lobbyConfig.turnstileToken,
-      token: await getPlayToken(),
+      token,
       spectator: this.lobbyConfig.spectator,
       gitCommit: ClientEnv.gitCommit(),
       platform: clientPlatform(),

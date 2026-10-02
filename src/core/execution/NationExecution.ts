@@ -197,6 +197,8 @@ export class NationExecution implements Execution {
       return;
     }
 
+    this.attackBehavior.followUpLandings();
+
     if (ticks % this.attackRate !== this.attackTick) {
       // Call handleStructures twice between regular attack ticks (at 1/3 and 2/3 of the interval)
       // Otherwise it is possible that we earn more gold than we can spend

@@ -59,7 +59,7 @@ test("world map nations: trade ships and trains round-trip", async () => {
 
   let spawnEnded = false;
   const rec = await recordGame(game, {
-    ticks: 4100,
+    ticks: 5000,
     keyframeInterval: 100,
     skipInit: true,
     tileTruthEvery: 97,
