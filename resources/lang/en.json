@@ -1567,6 +1567,7 @@
   },
   "nav_account_menu": {
     "account_settings": "Account settings",
+    "account_with_level": "Account ({level})",
     "change_subscription": "Change subscription",
     "change_username": "Change username",
     "copy_profile_url": "Copy profile URL",
@@ -1787,6 +1788,7 @@
     "ineligible_not_spawned": "You didn't spawn, so this game didn't earn XP.",
     "ineligible_too_few_humans": "Not enough human players in this game to earn XP.",
     "ineligible_too_short": "This game was too short to earn XP.",
+    "ineligible_unverified": "This game's results couldn't be verified, so it didn't earn XP.",
     "left_early": "You left before being eliminated, so the game bonus, placement and win XP were forfeited.",
     "legend": "Legend",
     "legend_reached_body": "The top of the track. {xp} lifetime XP.",

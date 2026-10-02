@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
+import en from "../../resources/lang/en.json";
 
 vi.mock("../../src/client/Utils", () => ({
   translateText: (key: string, params?: Record<string, string | number>) =>
@@ -255,6 +256,14 @@ describe("progression helpers", () => {
     );
     expect(ineligibleReasonKey("constructor")).toBe(
       "progression.ineligible_generic",
+    );
+  });
+
+  it("explains a game whose stats the votes did not agree on", () => {
+    const key = ineligibleReasonKey("unverified");
+    expect(key).toBe("progression.ineligible_unverified");
+    expect(en.progression.ineligible_unverified).toBe(
+      "This game's results couldn't be verified, so it didn't earn XP.",
     );
   });
 

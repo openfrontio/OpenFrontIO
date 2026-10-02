@@ -106,6 +106,7 @@ describe("GameXpResponseSchema", () => {
       "custom_settings",
       "too_few_humans",
       "daily_cap",
+      "unverified",
     ]) {
       const parsed = GameXpResponseSchema.parse({
         gameId: "g",
@@ -123,6 +124,20 @@ describe("GameXpResponseSchema", () => {
       reason: "something_new_next_year",
     });
     expect(parsed.success).toBe(true);
+  });
+
+  it("reads a breakdown stored under the first XP rules", () => {
+    // Rows scored before `played` and `leftEarly` existed lack both.
+    const v1: Record<string, unknown> = { ...eligible.breakdown };
+    delete v1.played;
+    delete v1.leftEarly;
+    const parsed = GameXpResponseSchema.parse({ ...eligible, breakdown: v1 });
+    if (!parsed.eligible) throw new Error("expected eligible");
+    expect(parsed.breakdown).toEqual({
+      ...eligible.breakdown,
+      played: 0,
+      leftEarly: false,
+    });
   });
 
   it("rejects an eligible result with no breakdown", () => {

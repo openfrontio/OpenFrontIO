@@ -215,12 +215,25 @@ describe("player profile level", () => {
     expect(fetchPublicPlayerProgress).toHaveBeenCalledWith("someone-else");
   });
 
-  it("uses /users/@me for your own profile", async () => {
+  it("reads your own level fresh, not from the page-load /users/@me", async () => {
+    // The cached /users/@me still says level 64; games played since have
+    // moved the player on, which only the public endpoint knows.
+    fetchPublicPlayerProgress.mockResolvedValue({
+      prestige: 2,
+      level: 65,
+      lifetimeXp: 130_000,
+      legend: false,
+    });
     await open("me");
-    const level = modal.querySelector("[data-profile-level]");
-    expect(level!.textContent).toContain('progression.level:{"level":64}');
-    expect(level!.textContent).toContain('progression.prestige:{"prestige":2}');
-    expect(fetchPublicPlayerProgress).not.toHaveBeenCalled();
+    await vi.waitFor(async () => {
+      await settled(modal);
+      const level = modal.querySelector("[data-profile-level]");
+      expect(level!.textContent).toContain('progression.level:{"level":65}');
+      expect(level!.textContent).toContain(
+        'progression.prestige:{"prestige":2}',
+      );
+    });
+    expect(fetchPublicPlayerProgress).toHaveBeenCalledWith("me");
   });
 
   it("hides the level when there is no progress", async () => {

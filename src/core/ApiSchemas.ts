@@ -129,15 +129,19 @@ export const ProgressPositionSchema = z.object({
 });
 export type ProgressPosition = z.infer<typeof ProgressPositionSchema>;
 
+// The breakdown is stored with each game's XP, so it keeps the shape of the
+// XP rules it was scored under. Fields added since the first rules (`played`,
+// `leftEarly`) are missing from older rows, so the per-source fields default
+// rather than failing the whole response.
 export const XpBreakdownSchema = z.object({
   // Left while still alive: the per-game, placement and win XP are forfeited.
-  leftEarly: z.boolean(),
-  played: z.number(),
-  time: z.number(),
-  placement: z.number(),
-  win: z.number(),
-  firstWin: z.number(),
-  feats: z.number(),
+  leftEarly: z.boolean().default(false),
+  played: z.number().default(0),
+  time: z.number().default(0),
+  placement: z.number().default(0),
+  win: z.number().default(0),
+  firstWin: z.number().default(0),
+  feats: z.number().default(0),
   // Before multipliers.
   subtotal: z.number(),
   // Multipliers in permille: 1000 is 1x.

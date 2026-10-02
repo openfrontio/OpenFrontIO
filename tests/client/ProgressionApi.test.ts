@@ -111,6 +111,36 @@ describe("pollGameXp", () => {
     expect(vi.getTimerCount()).toBe(0);
   });
 
+  it("cancels a request already in flight when the caller aborts", async () => {
+    let requestSignal: AbortSignal | undefined;
+    // A request that never answers on its own: it ends only when its signal
+    // aborts, the way fetch does.
+    const fetchStub = vi.fn(
+      (_url: string, init: RequestInit) =>
+        new Promise<Response>((_resolve, reject) => {
+          requestSignal = init.signal ?? undefined;
+          requestSignal?.addEventListener("abort", () =>
+            reject(new DOMException("aborted", "AbortError")),
+          );
+        }),
+    );
+    vi.stubGlobal("fetch", fetchStub);
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    try {
+      const controller = new AbortController();
+      const result = pollGameXp("g1", { signal: controller.signal });
+      await vi.waitFor(() => expect(fetchStub).toHaveBeenCalledTimes(1));
+      expect(requestSignal?.aborted).toBe(false);
+      controller.abort();
+      expect(requestSignal?.aborted).toBe(true);
+      await expect(result).resolves.toBeNull();
+      expect(fetchStub).toHaveBeenCalledTimes(1);
+      expect(warn).not.toHaveBeenCalled();
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
   it("gives up at the deadline", async () => {
     const fetcher = fetcherOf([{ status: "pending" }]);
     const result = pollGameXp("g1", {
