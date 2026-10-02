@@ -41,9 +41,9 @@ vi.mock("../../src/client/SteamSDK", () => ({
   },
 }));
 
-function dummyStartInfo(): GameStartInfo {
+function dummyStartInfo(gameID: string = "gameID1234"): GameStartInfo {
   return {
-    gameID: "gameID1234" as GameID,
+    gameID: gameID as GameID,
     lobbyCreatedAt: Date.now(),
     config: {
       gameMap: "World",
@@ -222,6 +222,29 @@ describe("SinglePlayerSaveManager", () => {
     expect(save?.numTurns).toBe(50);
     const restored = await getSoloSnapshot();
     expect(restored?.snapshot).toEqual(rawBytes);
+  });
+
+  it("discards stale snapshot bytes and does not overwrite newer save if a different game was saved during snapshot write", async () => {
+    const rawBytes = new Uint8Array([5, 6, 7, 8]);
+    const compressed = await compressSnapshot(rawBytes);
+
+    const oldGame = dummyStartInfo("gameOLD123");
+    const newGame = dummyStartInfo("gameNEW456");
+
+    // A newer save is written to localStorage (simulating user starting another match while snapshot is being written)
+    saveSoloGame(newGame, []);
+
+    // Now saveSoloSnapshot completes for the old game
+    await saveSoloSnapshot(oldGame, compressed, 30);
+
+    // The newer save is preserved in localStorage
+    const save = getSoloSave();
+    expect(save).not.toBeNull();
+    expect(save?.gameID).toBe("gameNEW456");
+
+    // The stale snapshot bytes for oldGame were deleted from storage
+    const oldSnapshotBytes = await getSnapshotBytes("gameOLD123");
+    expect(oldSnapshotBytes).toBeNull();
   });
 
   it("migrates legacy base64 snapshot in localStorage to snapshot store on restore", async () => {
