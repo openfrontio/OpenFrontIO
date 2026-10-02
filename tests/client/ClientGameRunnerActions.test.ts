@@ -289,6 +289,22 @@ describe("Quick Chat under the cursor", () => {
     expect(chat.open).toHaveBeenCalledWith(sender, recipient);
   });
 
+  it("ignores a bot on the hovered tile", () => {
+    const { eventBus, recipient, chat } = setup();
+    vi.spyOn(recipient, "type").mockReturnValue(PlayerType.Bot);
+    eventBus.emit(new MouseMoveEvent(CLICK.x, CLICK.y));
+    eventBus.emit(new DoQuickChatEvent());
+    expect(chat.open).not.toHaveBeenCalled();
+  });
+
+  it("still opens for a nation on the hovered tile", () => {
+    const { eventBus, sender, recipient, chat } = setup();
+    vi.spyOn(recipient, "type").mockReturnValue(PlayerType.Nation);
+    eventBus.emit(new MouseMoveEvent(CLICK.x, CLICK.y));
+    eventBus.emit(new DoQuickChatEvent());
+    expect(chat.open).toHaveBeenCalledWith(sender, recipient);
+  });
+
   it("ignores spawn phase, missing hover, self, dead targets and non-player tiles", () => {
     const { eventBus, gameView, recipient, chat } = setup();
     eventBus.emit(new DoQuickChatEvent());

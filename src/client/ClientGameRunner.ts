@@ -1477,7 +1477,12 @@ export class ClientGameRunner {
     const owner = this.gameView.owner(tile);
     if (!owner.isPlayer()) return;
     const recipient = owner as PlayerView;
-    if (recipient.id() === sender.id() || !recipient.isAlive()) return;
+    if (
+      recipient.type() === PlayerType.Bot ||
+      recipient.id() === sender.id() ||
+      !recipient.isAlive()
+    )
+      return;
     this.eventBus.emit(new CloseViewEvent());
     chat.open(sender, recipient);
   }
