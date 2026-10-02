@@ -365,13 +365,20 @@ export async function saveSoloSnapshot(
   gameStartInfo: GameStartInfo,
   compressedSnapshot: Uint8Array,
   numTurns: number,
+  idb?: IDBFactory,
 ): Promise<void> {
   try {
     const identity = getActiveIdentity();
     const scopedKey = getScopedSoloSaveKey();
     if (!identity || !scopedKey) return;
 
-    await saveSnapshotBytes(gameStartInfo.gameID, compressedSnapshot);
+    await saveSnapshotBytes(gameStartInfo.gameID, compressedSnapshot, idb);
+
+    const currentSave = getSoloSave();
+    if (currentSave && currentSave.gameID !== gameStartInfo.gameID) {
+      await deleteSnapshotBytes(gameStartInfo.gameID, idb);
+      return;
+    }
 
     const saveState: SoloSaveState = {
       version: 1,
