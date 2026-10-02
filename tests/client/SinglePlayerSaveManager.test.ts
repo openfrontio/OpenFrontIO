@@ -224,6 +224,29 @@ describe("SinglePlayerSaveManager", () => {
     expect(restored?.snapshot).toEqual(rawBytes);
   });
 
+  it("skips writing snapshot bytes entirely if stored save belongs to a different game before write starts", async () => {
+    const rawBytes = new Uint8Array([1, 2, 3, 4]);
+    const compressed = await compressSnapshot(rawBytes);
+
+    const oldGame = dummyStartInfo("gameOLD123");
+    const newGame = dummyStartInfo("gameNEW456");
+
+    saveSoloGame(newGame, []);
+
+    const fakeIdb = {
+      open: vi.fn(),
+    } as unknown as IDBFactory;
+
+    await saveSoloSnapshot(oldGame, compressed, 10, fakeIdb);
+
+    // fakeIdb.open was never called because it returned early before write
+    expect(fakeIdb.open).not.toHaveBeenCalled();
+
+    // Newer save is preserved
+    const save = getSoloSave();
+    expect(save?.gameID).toBe("gameNEW456");
+  });
+
   it("discards stale snapshot bytes and does not overwrite newer save if a different game was saved during snapshot write", async () => {
     const rawBytes = new Uint8Array([5, 6, 7, 8]);
     const compressed = await compressSnapshot(rawBytes);
@@ -231,20 +254,51 @@ describe("SinglePlayerSaveManager", () => {
     const oldGame = dummyStartInfo("gameOLD123");
     const newGame = dummyStartInfo("gameNEW456");
 
-    // A newer save is written to localStorage (simulating user starting another match while snapshot is being written)
-    saveSoloGame(newGame, []);
+    // Initialize with oldGame save so pre-write check passes
+    saveSoloGame(oldGame, []);
 
-    // Now saveSoloSnapshot completes for the old game
-    await saveSoloSnapshot(oldGame, compressed, 30);
+    const store = {
+      put: vi.fn(),
+      delete: vi.fn(),
+    };
+    const dbStub = {
+      close: vi.fn(),
+      transaction: vi.fn((_storeName: string, mode: string) => {
+        const tx = {
+          objectStore: vi.fn(() => store),
+          oncomplete: null as (() => void) | null,
+          onerror: null as any,
+          onabort: null as any,
+        };
+        if (mode === "readwrite" && store.put.mock.calls.length === 0) {
+          // While write is in flight, a new game is saved
+          saveSoloGame(newGame, []);
+        }
+        setTimeout(() => tx.oncomplete?.(), 0);
+        return tx;
+      }),
+    };
+    const injectedIdb = {
+      open: vi.fn(() => {
+        const req = {
+          result: dbStub,
+          onsuccess: null as (() => void) | null,
+        } as unknown as IDBOpenDBRequest & { onsuccess: () => void };
+        queueMicrotask(() => req.onsuccess?.());
+        return req;
+      }),
+    } as unknown as IDBFactory;
+
+    await saveSoloSnapshot(oldGame, compressed, 30, injectedIdb);
 
     // The newer save is preserved in localStorage
     const save = getSoloSave();
     expect(save).not.toBeNull();
     expect(save?.gameID).toBe("gameNEW456");
 
-    // The stale snapshot bytes for oldGame were deleted from storage
-    const oldSnapshotBytes = await getSnapshotBytes("gameOLD123");
-    expect(oldSnapshotBytes).toBeNull();
+    // Snapshot bytes were written, then deleted once replacement was detected
+    expect(store.put).toHaveBeenCalled();
+    expect(store.delete).toHaveBeenCalledWith("gameOLD123");
   });
 
   it("migrates legacy base64 snapshot in localStorage to snapshot store on restore", async () => {

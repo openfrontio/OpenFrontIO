@@ -372,6 +372,11 @@ export async function saveSoloSnapshot(
     const scopedKey = getScopedSoloSaveKey();
     if (!identity || !scopedKey) return;
 
+    const existingSave = getSoloSave();
+    if (existingSave && existingSave.gameID !== gameStartInfo.gameID) {
+      return;
+    }
+
     await saveSnapshotBytes(gameStartInfo.gameID, compressedSnapshot, idb);
 
     const currentSave = getSoloSave();
