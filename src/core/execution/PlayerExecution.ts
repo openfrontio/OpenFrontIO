@@ -344,6 +344,10 @@ export class PlayerExecution implements Execution {
 
       const capturing = this.getCapturingPlayer(cluster);
       if (capturing === null) continue;
+      // The main body may already have been annexed earlier in this pass.
+      if (this.player.numTilesOwned() === territory.length) {
+        this.mg.conquerPlayer(capturing, this.player);
+      }
       for (const t of territory) capturing.conquer(t);
     }
   }

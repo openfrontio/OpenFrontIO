@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, test } from "vitest";
+import { beforeEach, describe, expect, test, vi } from "vitest";
 import { NukeExecution } from "../../../src/core/execution/NukeExecution";
 import { PlayerExecution } from "../../../src/core/execution/PlayerExecution";
 import {
@@ -156,6 +156,46 @@ describe("land a nuke severs from the main body is annexed", () => {
     // isSurrounded already annexes a fully surrounded inland pocket.
     expect(defenderTilesIn(armTip)).toBeLessThanOrEqual(tipBefore);
     expect(defenderTilesIn(mainBody)).toBeGreaterThan(0);
+  });
+
+  test("losing the last land to a severed-piece annex conquers the player", () => {
+    // Both pieces must fall in the same cluster pass: the main body first,
+    // through the existing rules, then the cut-off piece as the last land.
+    const main = rect(40, 80, 80, 120);
+    const pocket = rect(81, 98, 83, 102);
+    const strip = rect(176, 90, 199, 110);
+    paint(union(main, rect(150, 94, 175, 106)));
+    // Until the strike, the main body touches an unclaimed pocket and the
+    // piece opens onto unclaimed land running to the map edge, so neither
+    // is annexed yet.
+    game.map().forEachTile((t) => {
+      const x = game.x(t);
+      const y = game.y(t);
+      if (pocket(x, y) || strip(x, y)) attacker.relinquish(t);
+    });
+    startClusterChecks();
+    expect(defender.numTilesOwned()).toBeGreaterThan(0);
+
+    const conquerPlayer = vi.spyOn(game, "conquerPlayer");
+    // In one tick the attacker seals the main body and a strike turns the
+    // strip, plus the piece's last column, into fallout. Losing tiles is what
+    // makes the defender's cluster check run again.
+    const blast = rect(175, 90, 199, 110);
+    game.map().forEachTile((t) => {
+      const x = game.x(t);
+      const y = game.y(t);
+      if (pocket(x, y)) attacker.conquer(t);
+      if (blast(x, y)) {
+        const owner = game.owner(t);
+        if (owner.isPlayer()) owner.relinquish(t);
+        game.setFallout(t, true);
+      }
+    });
+
+    runClusterChecks();
+
+    expect(defender.numTilesOwned()).toBe(0);
+    expect(conquerPlayer).toHaveBeenCalledWith(attacker, defender);
   });
 
   test("a real hydrogen bomb cutting an arm off hands the arm over", () => {
