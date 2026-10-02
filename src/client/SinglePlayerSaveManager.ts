@@ -190,7 +190,7 @@ export async function saveSnapshotBytes(
     );
     memorySnapshots.set(gameID, bytes);
     if (connection?.isShared) {
-      sharedDbPromise = null;
+      closeSnapshotDatabase();
     }
   } finally {
     if (connection && !connection.isShared && connection.db) {
@@ -228,7 +228,7 @@ export async function getSnapshotBytes(
   } catch (e) {
     console.warn("Failed to read snapshot from IndexedDB", e);
     if (connection?.isShared) {
-      sharedDbPromise = null;
+      closeSnapshotDatabase();
     }
     return memorySnapshots.get(gameID) ?? null;
   } finally {
@@ -258,7 +258,7 @@ export async function deleteSnapshotBytes(
   } catch (e) {
     console.warn("Failed to delete snapshot from IndexedDB", e);
     if (connection?.isShared) {
-      sharedDbPromise = null;
+      closeSnapshotDatabase();
     }
   } finally {
     if (connection && !connection.isShared && connection.db) {
@@ -284,7 +284,7 @@ export async function clearAllSnapshotBytes(idb?: IDBFactory): Promise<void> {
   } catch (e) {
     console.warn("Failed to clear snapshots from IndexedDB", e);
     if (connection?.isShared) {
-      sharedDbPromise = null;
+      closeSnapshotDatabase();
     }
   } finally {
     if (connection && !connection.isShared && connection.db) {
