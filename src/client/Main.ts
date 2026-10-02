@@ -1097,6 +1097,54 @@ class Client {
   }
 
   /**
+   * Close the menu's modals and hide its chrome, for something that
+   * replaces the menu: a game at prestart, or the replay viewer. Callers
+   * dispatch "game-starting" first, so the listeners that stay up through
+   * a lobby wait (featured stream, streams feed, menu music) stop too.
+   */
+  private closeMenu(): void {
+    [
+      "single-player-modal",
+      "game-starting-modal",
+      "game-top-bar",
+      "help-modal",
+      "user-setting",
+      // The in-game instance is addressed by id: querySelector("user-setting")
+      // above only ever reaches the page's inline one.
+      "#game-settings",
+      "troubleshooting-modal",
+      "inventory-modal",
+      "store-modal",
+      "language-modal",
+      "news-modal",
+      "account-button",
+      "leaderboard-button",
+      "token-login",
+      "steam-link-modal",
+      "steam-handoff-modal",
+      "matchmaking-modal",
+      "clan-modal",
+      "account-settings-modal",
+      "change-username-modal",
+      "subscription-modal",
+      "lang-selector",
+      "homepage-promos",
+    ].forEach((tag) => {
+      const modal = document.querySelector(tag) as HTMLElement & {
+        close?: () => void;
+        isModalOpen?: boolean;
+      };
+      if (modal?.close) {
+        modal.close();
+      } else if (modal && "isModalOpen" in modal) {
+        modal.isModalOpen = false;
+      }
+    });
+    this.gameModeSelector.stop();
+    hideMenuChrome();
+  }
+
+  /**
    * Replace the menu with the replay viewer. Leaving it reloads the page,
    * like leaving a game.
    */
@@ -1117,8 +1165,20 @@ class Client {
       window.location.assign(classicReplayHref(gameID));
       return;
     }
-    this.gameModeSelector.stop();
-    hideMenuChrome();
+    // The same teardown as starting a game: the featured stream, ads and
+    // menu music stop, and the menu's modals close.
+    const hash = window.location.hash;
+    document.dispatchEvent(new CustomEvent("game-starting"));
+    this.closeMenu();
+    // Closing a modal the router opened clears the hash. Put the viewer's
+    // back, so a reload opens the replay again.
+    if (window.location.hash !== hash) {
+      history.replaceState(
+        history.state,
+        "",
+        window.location.pathname + window.location.search + hash,
+      );
+    }
     setInGameSignal(true);
     const viewer = new ReplayViewer();
     viewer.gameID = gameID;
@@ -1625,45 +1685,7 @@ class Client {
       this.joinModal?.disarmLeaveOnClose();
       this.hostModal?.closeWithoutLeaving();
       this.joinModal?.closeWithoutLeaving();
-      [
-        "single-player-modal",
-        "game-starting-modal",
-        "game-top-bar",
-        "help-modal",
-        "user-setting",
-        // The in-game instance is addressed by id: querySelector("user-setting")
-        // above only ever reaches the page's inline one.
-        "#game-settings",
-        "troubleshooting-modal",
-        "inventory-modal",
-        "store-modal",
-        "language-modal",
-        "news-modal",
-        "account-button",
-        "leaderboard-button",
-        "token-login",
-        "steam-link-modal",
-        "steam-handoff-modal",
-        "matchmaking-modal",
-        "clan-modal",
-        "account-settings-modal",
-        "change-username-modal",
-        "subscription-modal",
-        "lang-selector",
-        "homepage-promos",
-      ].forEach((tag) => {
-        const modal = document.querySelector(tag) as HTMLElement & {
-          close?: () => void;
-          isModalOpen?: boolean;
-        };
-        if (modal?.close) {
-          modal.close();
-        } else if (modal && "isModalOpen" in modal) {
-          modal.isModalOpen = false;
-        }
-      });
-      this.gameModeSelector.stop();
-      hideMenuChrome();
+      this.closeMenu();
 
       crazyGamesSDK.loadingStart();
 
