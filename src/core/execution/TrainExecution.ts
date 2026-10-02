@@ -259,12 +259,25 @@ export class TrainExecution implements Execution {
     for (let i = 0; i < path.length - 1; i++) {
       const segment = getOrientedRailroad(path[i], path[i + 1]);
       if (!segment) return null;
-      for (const tile of segment.getTiles()) {
+      const tiles = segment.getTiles();
+      for (let j = 0; j < tiles.length; j++) {
+        const tile = tiles[j];
+        // Normalize duplicated junction tiles before comparing
+        if (
+          i > 0 &&
+          j === 0 &&
+          cursor > 0 &&
+          this.pathTiles[cursor - 1] === tile &&
+          this.pathTiles[cursor] !== tile
+        ) {
+          continue;
+        }
         if (this.pathTiles[cursor++] !== tile) {
           return null;
         }
       }
     }
+
     this.stations.splice(0, 2, ...path);
     return getOrientedRailroad(this.stations[0], this.stations[1]);
   }
@@ -279,6 +292,32 @@ export class TrainExecution implements Execution {
     if (this.currentRailroad === null || !this.canTradeWithDestination()) {
       return null;
     }
+
+    // If the current direct connection was broken (e.g., by a newly placed station splitting it),
+    // resolve the split so trains can stop and trade at the new station.
+    if (!this.stations[0].getRailroadTo(this.stations[1])) {
+      const newRailroad = this.resolveSplitRailroad();
+      if (newRailroad) {
+        const physicalPos = this.pathIndex + this.currentTile;
+        this.currentRailroad = newRailroad;
+
+        // If the train has already physically passed intermediate stations on the split segment,
+        // advance to the active segment without treating already-passed stations as new stops.
+        while (
+          this.pathIndex + this.currentRailroad.getTiles().length <=
+          physicalPos
+        ) {
+          if (this.stations.length <= 2) {
+            break; // Train is past the end of the new path, continue with current
+          }
+          if (!this.nextStation()) {
+            break;
+          }
+        }
+        this.currentTile = physicalPos - this.pathIndex;
+      }
+    }
+
     this.saveTraversedTiles(this.currentTile, this.speed);
     this.currentTile = this.currentTile + this.speed;
     const leftOver = this.currentTile - this.currentRailroad.getTiles().length;
