@@ -244,7 +244,11 @@ export interface GhostPreviewData {
   upgradeTargetTile: number | null;
   /** Range radius in tiles for the placement circle (0 = no circle). */
   rangeRadius: number;
-  /** True if placing here would carry a penalty (e.g. nuking an ally → traitor). */
+  /**
+   * True if placing here would mark you a traitor (nuking a non-traitor
+   * ally) — flashes the range circle red. Betraying a traitor or
+   * disconnected ally carries no traitor mark, so it stays white.
+   */
   rangeWarning: boolean;
 }
 
