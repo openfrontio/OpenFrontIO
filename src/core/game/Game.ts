@@ -779,6 +779,7 @@ export interface Player {
   toUpdate(
     statsOut?: number[],
     attackTroopsOut?: number[],
+    forceFull?: boolean,
   ): PlayerUpdate | null;
   playerProfile(): PlayerProfile;
   // WARNING: this operation is expensive.
@@ -835,6 +836,7 @@ export interface Game extends GameMap {
 
   // Game State
   ticks(): Tick;
+  startTick(): Tick | null;
   inSpawnPhase(): boolean;
   endSpawnPhase(): void;
   executeNextTick(): GameUpdates;

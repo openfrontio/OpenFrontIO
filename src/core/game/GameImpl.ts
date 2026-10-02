@@ -65,7 +65,11 @@ import {
   UnitType,
 } from "./Game";
 import { GameMap, TileRef } from "./GameMap";
-import { GameUpdate, GameUpdateType } from "./GameUpdates";
+import {
+  createGameUpdatesMap,
+  GameUpdate,
+  GameUpdateType,
+} from "./GameUpdates";
 import { MotionPlanRecord, packMotionPlans } from "./MotionPlans";
 import { PlayerImpl } from "./PlayerImpl";
 import { RailNetwork } from "./RailNetwork";
@@ -105,7 +109,7 @@ export type CellString = string;
 
 export class GameImpl implements Game {
   private _ticks = 0;
-  private startTick: number | null = null;
+  private _startTick: number | null = null;
 
   private unInitExecs: Execution[] = [];
 
@@ -504,18 +508,22 @@ export class GameImpl implements Game {
     this.addUpdate({ type: GameUpdateType.GamePaused, paused });
   }
 
+  startTick(): Tick | null {
+    return this._startTick;
+  }
+
   inSpawnPhase(): boolean {
-    return this.startTick === null;
+    return this._startTick === null;
   }
 
   endSpawnPhase(): void {
-    if (this.startTick !== null) {
+    if (this._startTick !== null) {
       return;
     }
-    this.startTick = this._ticks;
+    this._startTick = this._ticks;
     this.addUpdate({
       type: GameUpdateType.SpawnPhaseEnd,
-      startTick: this.startTick,
+      startTick: this._startTick,
     });
   }
 
@@ -979,7 +987,7 @@ export class GameImpl implements Game {
       return 0;
     }
 
-    return Math.max(0, this.ticks() - this.startTick!);
+    return Math.max(0, this.ticks() - this._startTick!);
   }
 
   sendEmojiUpdate(msg: EmojiMessage): void {
@@ -1438,7 +1446,7 @@ export class GameImpl implements Game {
     const unInitExecs = this.unInitExecs.map((e) => w.exec(e));
     return {
       ticks: this._ticks,
-      startTick: this.startTick,
+      startTick: this._startTick,
       humans: this._humans.map(playerInfoData),
       nations: this._nations.map(nationData),
       players: [...this._players.values()].map((p) => w.player(p)),
@@ -1449,7 +1457,7 @@ export class GameImpl implements Game {
       nextUnitID: this._nextUnitID,
       nextAllianceID: this.nextAllianceID,
       units: [...this._unitMap.values()].map((u) => w.unit(u)),
-      planDrivenUnitIds: [...this.planDrivenUnitIds],
+      planDrivenUnitIds: [],
       unitGrid: this.unitGrid.snapshot((u) => w.unit(u)),
       playerTeams: [...this.playerTeams],
       botTeam: this.botTeam,
@@ -1490,7 +1498,7 @@ export class GameImpl implements Game {
    */
   restoreState(s: GameState, r: SnapshotReader): void {
     this._ticks = s.ticks;
-    this.startTick = s.startTick;
+    this._startTick = s.startTick;
     this.execs = s.execs.map((i) => r.exec(i));
     this.unInitExecs = s.unInitExecs.map((i) => r.exec(i));
     this.allianceRequests = s.allianceRequests.map((i) =>
@@ -1505,7 +1513,7 @@ export class GameImpl implements Game {
         return [u.id(), u];
       }),
     );
-    this.planDrivenUnitIds = new Set(s.planDrivenUnitIds);
+    this.planDrivenUnitIds = new Set();
     this.unitGrid.restoreSnapshot(s.unitGrid, (i) => r.unit(i));
     this.playerTeams = [...s.playerTeams];
     this.botTeam = s.botTeam;
@@ -1660,14 +1668,3 @@ export const GameSnapshot = snapshotType({
   }),
 });
 export type GameState = z.infer<typeof GameSnapshot.schema>;
-
-// Or a more dynamic approach that will catch new enum values:
-const createGameUpdatesMap = (): GameUpdates => {
-  const map = {} as GameUpdates;
-  Object.values(GameUpdateType)
-    .filter((key) => !isNaN(Number(key))) // Filter out reverse mappings
-    .forEach((key) => {
-      map[key as GameUpdateType] = [];
-    });
-  return map;
-};

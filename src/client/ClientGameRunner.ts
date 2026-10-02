@@ -11,6 +11,7 @@ import {
   LobbyInfoEvent,
   PlayerCosmeticRefs,
   ServerMessage,
+  Turn,
 } from "../core/Schemas";
 import { findClosestBy, replacer } from "../core/Util";
 import {
@@ -33,6 +34,11 @@ import {
   USER_SETTINGS_CHANGED_EVENT,
   UserSettings,
 } from "../core/game/UserSettings";
+import {
+  compressSnapshot,
+  readSnapshotHeader,
+  restoreMapsFromSnapshot,
+} from "../core/snapshot/GameSnapshot";
 import { WorkerClient } from "../core/worker/WorkerClient";
 import { isDesktopShell } from "./DesktopShell";
 import { GameMetrics } from "./GameMetrics";
@@ -53,6 +59,7 @@ import {
 import { pagePin } from "./PagePin";
 import { groupTokenOf, loggableStartMessage } from "./PresenceGroup";
 import { versionedPathForMismatchedGame } from "./ServerList";
+import { clearSoloSave, saveSoloSnapshot } from "./SinglePlayerSaveManager";
 import { reportGameError } from "./Telemetry";
 import { terrainMapFileLoader } from "./TerrainMapFileLoader";
 import { GoToPlayerEvent } from "./TransformHandler";
@@ -67,6 +74,7 @@ import {
   SendHashEvent,
   SendSpawnIntentEvent,
   SendUpgradeStructureIntentEvent,
+  SendWinnerEvent,
   Transport,
 } from "./Transport";
 import { createCanvas } from "./Utils";
@@ -108,6 +116,9 @@ export interface LobbyConfig {
   gameRecord?: GameRecord;
   // Watch without playing.
   spectator?: boolean;
+  // Saved historical turns when resuming a solo match.
+  resumeTurns?: Turn[];
+  resumeSnapshot?: Uint8Array;
   // Host only: the play token the lobby was created under, used for the
   // first join so the host joins as the creator (see createLobby).
   creatorToken?: string;
@@ -688,7 +699,15 @@ async function createClientGame(
   );
   let gameMap: TerrainMapData;
 
-  if (terrainLoad) {
+  if (lobbyConfig.resumeSnapshot) {
+    gameMap = await loadTerrainMap(
+      lobbyConfig.gameStartInfo.config.gameMap,
+      lobbyConfig.gameStartInfo.config.gameMapSize,
+      mapLoader,
+      false, // Layer images loaded off the critical path after game start.
+      true, // fresh copy for snapshot restoration
+    );
+  } else if (terrainLoad) {
     gameMap = await terrainLoad;
   } else {
     gameMap = await loadTerrainMap(
@@ -701,9 +720,34 @@ async function createClientGame(
   // Kick off the font-atlas fetch so it overlaps with worker init; the
   // render passes need it parsed before createWebGLView runs.
   const atlasDataLoad = preloadAtlasData();
-  const worker = new WorkerClient(lobbyConfig.gameStartInfo, clientID);
+  const worker = new WorkerClient(
+    lobbyConfig.gameStartInfo,
+    clientID,
+    lobbyConfig.resumeSnapshot,
+  );
   await worker.initialize();
   await atlasDataLoad;
+  let initialStartTick: number | null = null;
+  if (lobbyConfig.resumeSnapshot) {
+    try {
+      restoreMapsFromSnapshot(
+        lobbyConfig.resumeSnapshot,
+        gameMap.gameMap,
+        gameMap.miniGameMap,
+      );
+    } catch (e) {
+      console.warn("Failed to restore maps from snapshot", e);
+      throw e;
+    }
+    try {
+      const header = readSnapshotHeader(lobbyConfig.resumeSnapshot);
+      initialStartTick = header.startTick ?? null;
+    } catch (e) {
+      console.warn("Failed to read snapshot header for initial startTick", e);
+      throw e;
+    }
+  }
+
   const gameView = new GameView(
     worker,
     config,
@@ -713,7 +757,12 @@ async function createClientGame(
     lobbyConfig.playerClanTag,
     lobbyConfig.gameStartInfo.gameID,
     lobbyConfig.gameStartInfo.players,
+    initialStartTick,
   );
+  const initialUpdate = worker.consumeInitialUpdate?.();
+  if (initialUpdate) {
+    gameView.update(initialUpdate);
+  }
 
   // Transparent fullscreen overlay used purely as the pointer-event /
   // bounding-rect target for InputHandler + TransformHandler. The actual
@@ -914,6 +963,7 @@ async function createClientGame(
 export class ClientGameRunner {
   private myPlayer: PlayerView | null = null;
   private isActive = false;
+  private playerDied = false;
 
   private turnsSeen = 0;
   // True from a (re)join request until the server's start message answers it.
@@ -928,6 +978,8 @@ export class ClientGameRunner {
 
   private lastTickReceiveTime: number = 0;
   private currentTickDelay: number | undefined = undefined;
+  private hasWinner: boolean = false;
+  private snapshotInFlight: boolean = false;
 
   constructor(
     private lobby: LobbyConfig,
@@ -946,6 +998,13 @@ export class ClientGameRunner {
     private metrics: GameMetrics | null = null,
   ) {
     this.lastMessageTime = Date.now();
+    this.eventBus.on(SendWinnerEvent, () => {
+      this.hasWinner = true;
+      if (this.transport.isLocal && !this.lobby.gameRecord) {
+        this.transport.disableLocalSave?.();
+        clearSoloSave(this.lobby.gameStartInfo?.gameID);
+      }
+    });
   }
 
   /**
@@ -1023,8 +1082,63 @@ export class ClientGameRunner {
         this.eventBus.emit(new SendHashEvent(hu.tick, hu.hash));
       });
       this.gameView.update(gu);
+      if (
+        !this.playerDied &&
+        this.transport.isLocal &&
+        !this.lobby.gameRecord &&
+        !this.gameView.inSpawnPhase()
+      ) {
+        const myPlayer = this.gameView.myPlayer();
+        if (myPlayer && myPlayer.hasSpawned() && !myPlayer.isAlive()) {
+          this.playerDied = true;
+          this.transport.disableLocalSave?.();
+          clearSoloSave(this.lobby.gameStartInfo?.gameID);
+        }
+      }
       this.webglBuilder?.update(this.gameView);
       this.renderer.tick();
+      if (
+        !this.snapshotInFlight &&
+        this.transport.isLocal &&
+        !this.lobby.gameRecord &&
+        !this.hasWinner &&
+        !this.playerDied &&
+        this.lobby.gameStartInfo &&
+        gu.tick > 0 &&
+        gu.tick % 50 === 0
+      ) {
+        this.snapshotInFlight = true;
+        this.worker
+          .snapshot()
+          .then(async ({ bytes, tick }) => {
+            const compressed = await compressSnapshot(bytes);
+            return { compressed, snapshotTick: tick };
+          })
+          .then(async ({ compressed, snapshotTick }) => {
+            if (
+              this.isActive &&
+              !this.hasWinner &&
+              !this.playerDied &&
+              this.lobby.gameStartInfo
+            ) {
+              const gameID = this.lobby.gameStartInfo.gameID;
+              await saveSoloSnapshot(
+                this.lobby.gameStartInfo,
+                compressed,
+                snapshotTick,
+              );
+              if (this.hasWinner || this.playerDied || !this.isActive) {
+                clearSoloSave(gameID);
+              }
+            }
+          })
+          .catch((err) => {
+            console.warn("Auto-snapshot failed:", err);
+          })
+          .finally(() => {
+            this.snapshotInFlight = false;
+          });
+      }
       if (gu.tickExecutionDuration !== undefined) {
         this.metrics?.recordTickExecution(gu.tickExecutionDuration);
       }

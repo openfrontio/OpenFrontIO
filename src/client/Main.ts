@@ -11,6 +11,7 @@ import {
   GroupTokenEvent,
   LobbyInfoEvent,
   PublicGameInfo,
+  Turn,
 } from "../core/Schemas";
 import { toWireGameStartInfo } from "../core/Util";
 import { GameEnv } from "../core/configuration/Config";
@@ -260,6 +261,8 @@ export interface JoinLobbyEvent {
   publicLobbyInfo?: GameInfo | PublicGameInfo;
   // Watch without playing.
   spectator?: boolean;
+  resumeTurns?: Turn[];
+  resumeSnapshot?: Uint8Array;
   // Host only: the play token the lobby was created under (see createLobby).
   creatorToken?: string;
 }
@@ -1464,9 +1467,11 @@ class Client {
       if (startingModal instanceof GameStartingModal) {
         startingModal.hide();
       }
+      event.preventDefault();
       return;
     }
     if (this.blockedJoin(lobby)) {
+      event.preventDefault();
       return;
     }
     // Only once the join is actually going ahead: a refused dispatch that
@@ -1570,6 +1575,8 @@ class Client {
           : undefined),
       gameRecord: lobby.gameRecord,
       spectator: lobby.spectator,
+      resumeTurns: lobby.resumeTurns,
+      resumeSnapshot: lobby.resumeSnapshot,
       creatorToken: lobby.creatorToken,
     });
 
