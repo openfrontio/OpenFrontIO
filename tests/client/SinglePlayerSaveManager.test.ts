@@ -2,14 +2,17 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   clearMemorySnapshots,
   clearSoloSave,
+  closeSnapshotDatabase,
   decompressSoloTurns,
   getActiveIdentity,
   getScopedSoloSaveKey,
+  getSharedSnapshotDatabase,
   getSnapshotBytes,
   getSoloSave,
   getSoloSnapshot,
   LEGACY_SOLO_SAVE_KEY,
   openSnapshotDatabase,
+  saveSnapshotBytes,
   saveSoloGame,
   saveSoloSnapshot,
   uint8ArrayToBase64,
@@ -306,6 +309,96 @@ describe("SinglePlayerSaveManager", () => {
     expect(successSetup.db.close).toHaveBeenCalledTimes(1);
 
     vi.restoreAllMocks();
+  });
+
+  it("reuses the shared cached IndexedDB connection across multiple operations and invalidates on version change", async () => {
+    const dbStub = {
+      close: vi.fn(),
+      onversionchange: null as (() => void) | null,
+      onclose: null as (() => void) | null,
+    };
+    let openCount = 0;
+    const req = {
+      result: dbStub,
+      onsuccess: null as (() => void) | null,
+    } as unknown as IDBOpenDBRequest & { onsuccess: () => void };
+    const fakeIdb = {
+      open: () => {
+        openCount++;
+        return req;
+      },
+    } as unknown as IDBFactory;
+
+    const originalIndexedDB = globalThis.indexedDB;
+    try {
+      (globalThis as any).indexedDB = fakeIdb;
+
+      // First request opens the database
+      const db1Promise = getSharedSnapshotDatabase();
+      req.onsuccess();
+      const db1 = await db1Promise;
+      expect(db1).toBe(dbStub);
+      expect(openCount).toBe(1);
+
+      // Second request reuses the cached connection without calling open again
+      const db2 = await getSharedSnapshotDatabase();
+      expect(db2).toBe(dbStub);
+      expect(openCount).toBe(1);
+
+      // Triggering version change closes the db and clears the shared connection
+      dbStub.onversionchange?.();
+      expect(dbStub.close).toHaveBeenCalledTimes(1);
+
+      // Next request opens a new database connection
+      const db3Promise = getSharedSnapshotDatabase();
+      req.onsuccess();
+      const db3 = await db3Promise;
+      expect(db3).toBe(dbStub);
+      expect(openCount).toBe(2);
+    } finally {
+      (globalThis as any).indexedDB = originalIndexedDB;
+      closeSnapshotDatabase();
+    }
+  });
+
+  it("keeps explicitly injected factories isolated from the shared connection pool and closes them after use", async () => {
+    const tx = {
+      objectStore: vi.fn(() => ({
+        put: vi.fn(),
+      })),
+      oncomplete: null as (() => void) | null,
+      onerror: null as any,
+      onabort: null as any,
+    };
+    const isolatedDbStub = {
+      close: vi.fn(),
+      transaction: vi.fn(() => {
+        setTimeout(() => tx.oncomplete?.(), 0);
+        return tx;
+      }),
+    };
+    const req = {
+      result: isolatedDbStub,
+      onsuccess: null as (() => void) | null,
+    } as unknown as IDBOpenDBRequest & { onsuccess: () => void };
+    const injectedIdb = {
+      open: vi.fn(() => req),
+    } as unknown as IDBFactory;
+
+    const savePromise = saveSnapshotBytes(
+      "isolated_game",
+      new Uint8Array([1, 2, 3]),
+      injectedIdb,
+    );
+    req.onsuccess();
+
+    await savePromise;
+
+    // Injected connection was opened and closed after use
+    expect(injectedIdb.open).toHaveBeenCalledTimes(1);
+    expect(isolatedDbStub.close).toHaveBeenCalledTimes(1);
+
+    closeSnapshotDatabase();
   });
 
   it("validates persisted save state and rejects records with malformed numTurns, snapshot, or turns", () => {

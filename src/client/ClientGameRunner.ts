@@ -1133,18 +1133,22 @@ export class ClientGameRunner {
             const compressed = await compressSnapshot(bytes);
             return { compressed, snapshotTick: tick };
           })
-          .then(({ compressed, snapshotTick }) => {
+          .then(async ({ compressed, snapshotTick }) => {
             if (
               this.isActive &&
               !this.hasWinner &&
               !this.playerDied &&
               this.lobby.gameStartInfo
             ) {
-              return saveSoloSnapshot(
+              const gameID = this.lobby.gameStartInfo.gameID;
+              await saveSoloSnapshot(
                 this.lobby.gameStartInfo,
                 compressed,
                 snapshotTick,
               );
+              if (this.hasWinner || this.playerDied || !this.isActive) {
+                clearSoloSave(gameID);
+              }
             }
           })
           .catch((err) => {
