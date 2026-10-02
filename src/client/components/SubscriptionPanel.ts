@@ -387,6 +387,30 @@ export class SubscriptionPanel extends LitElement {
     // packaged launch.
     const onDesktop = isDesktopShell();
 
+    // The renewal failed and Stripe is still retrying it. The portal is the
+    // fix, so it is the only action: there is nothing to change tier from,
+    // and the server refuses to cancel a subscription that is not entitled.
+    if (this.sub.status === "past_due") {
+      return html`
+        <div class="flex flex-col gap-2">
+          <p class="text-sm text-amber-200/80 leading-snug">
+            ${translateText("account_modal.sub_past_due_note", {
+              tier: tierName,
+            })}
+          </p>
+          ${onDesktop
+            ? this.renderManageOnWeb()
+            : html`<o-button
+                variant="primary"
+                width="block"
+                size="md"
+                translationKey="store.manage_billing"
+                @click=${this.handleManage}
+              ></o-button>`}
+        </div>
+      `;
+    }
+
     if (this.sub.cancelAtPeriodEnd) {
       if (onDesktop) return this.renderManageOnWeb();
       return html`

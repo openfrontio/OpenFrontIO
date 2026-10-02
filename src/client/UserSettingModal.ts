@@ -453,6 +453,10 @@ export class UserSettingModal extends BaseModal {
     this.requestUpdate();
   }
 
+  private toggleReplayViewer(e: Event) {
+    this.userSettings.setReplayViewer((e.target as HTMLInputElement).checked);
+  }
+
   private toggleSteamLobbyLinks() {
     this.userSettings.setSteamLobbyLinks(
       this.userSettings.steamLobbyLinks() === "steam" ? "browser" : "steam",
@@ -1745,6 +1749,15 @@ export class UserSettingModal extends BaseModal {
         id="lobby-start-alerts-toggle"
         .checked=${this.userSettings.lobbyStartAlerts()}
         @change=${this.toggleLobbyStartAlerts}
+      ></setting-toggle>
+
+      <!-- 🎬 New replay viewer (opt-in while it's rolled out) -->
+      <setting-toggle
+        label="${translateText("user_setting.replay_viewer_label")}"
+        description="${translateText("user_setting.replay_viewer_desc")}"
+        id="replay-viewer-toggle"
+        .checked=${this.userSettings.replayViewer()}
+        @change=${this.toggleReplayViewer}
       ></setting-toggle>
 
       ${canHandOffToSteam()

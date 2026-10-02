@@ -1573,7 +1573,15 @@ export class GameServer {
         : null;
   }
 
+  // The 3 hour cap every game ends at, however it is going. Exposed so
+  // GameManager can log the timeout once, where it prunes the game.
+  pastMaxDuration(): boolean {
+    return Date.now() > this.createdAt + this.maxGameDuration;
+  }
+
   // A pure read of the lifecycle; pruneStaleClients() is the side effect.
+  // It does not log: every caller (lobby listings, the tick loop, the HTTP
+  // handlers) reads it, so a log here repeats per call.
   phase(): GamePhase {
     // An ended game (e.g. an unstarted lobby whose host left) must report
     // Finished: GameManager prunes on Finished, and a ghost that kept
@@ -1582,13 +1590,10 @@ export class GameServer {
     if (this.ended) {
       return GamePhase.Finished;
     }
-    const now = Date.now();
-    if (now > this.createdAt + this.maxGameDuration) {
-      this.log.warn("game past max duration", {
-        gameID: this.id,
-      });
+    if (this.pastMaxDuration()) {
       return GamePhase.Finished;
     }
+    const now = Date.now();
 
     const lessThanLifetime = this.startsAt ? Date.now() < this.startsAt : true;
     if (
@@ -1904,6 +1909,19 @@ export class GameServer {
       gameID: this.id,
       winner: winner?.winner,
     });
+
+    // The record carries the first winning voter's stats, unchecked. Before
+    // the vote can also be made to agree on stats, measure how often honest
+    // voters actually differ: a "split" here means they did.
+    const agreement = this.winnerVote.statsAgreement();
+    if (agreement !== null) {
+      const split = agreement.versions > 1;
+      this.log[split ? "warn" : "info"]("winner stats agreement", {
+        gameID: this.id,
+        statsAgreement: split ? "split" : "agreed",
+        ...agreement,
+      });
+    }
 
     // Players must stay in the same order as the game start info.
     const playerRecords: PlayerRecord[] = this.gameStartInfo.players.map(

@@ -844,7 +844,7 @@ export class HostLobbyModal extends BaseModal {
 
     // Pass auth token for creator identification (server extracts persistentID from it)
     createLobby()
-      .then(async (lobby) => {
+      .then(async ({ lobby, creatorToken }) => {
         this.lobbyId = lobby.gameID;
         if (!isValidGameID(this.lobbyId)) {
           throw new Error(`Invalid lobby ID format: ${this.lobbyId}`);
@@ -857,13 +857,15 @@ export class HostLobbyModal extends BaseModal {
         this.updateLobbyHistory(url);
         await this.updateComplete;
         void (this.querySelector("copy-button") as CopyButton)?.handleCopy();
+        return creatorToken;
       })
-      .then(() => {
+      .then((creatorToken) => {
         this.dispatchEvent(
           new CustomEvent("join-lobby", {
             detail: {
               gameID: this.lobbyId,
               source: "host",
+              creatorToken,
             } as JoinLobbyEvent,
             bubbles: true,
             composed: true,

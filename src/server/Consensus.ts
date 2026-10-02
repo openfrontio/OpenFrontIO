@@ -1,4 +1,10 @@
-import { ClientID, ClientSendWinnerMessage, LiveStats } from "../core/Schemas";
+import { createHash } from "crypto";
+import {
+  AllPlayersStats,
+  ClientID,
+  ClientSendWinnerMessage,
+  LiveStats,
+} from "../core/Schemas";
 import { VoteRound } from "./VoteTally";
 
 // The simulation runs on the clients, so the outcomes the server has to
@@ -13,11 +19,52 @@ export interface VoteOutcome<T> {
   votes: number;
 }
 
+// A fingerprint of a winner vote's per-player stats, so votes can be compared
+// on their stats and not just their winner. The stats come from the
+// deterministic simulation, so in-sync clients hold the same values -- but not
+// necessarily in the same key order: record keys follow insertion order, which
+// differs between a client that played the whole game and one restored from a
+// snapshot. So keys are sorted at every level before hashing. Bigints hash as
+// decimal strings, the form the archive writes them in (Util.replacer).
+export function statsDigest(stats: AllPlayersStats): string {
+  const canonical = JSON.stringify(stats, (_key, value: unknown) => {
+    if (typeof value === "bigint") return value.toString();
+    if (value !== null && typeof value === "object" && !Array.isArray(value)) {
+      const obj = value as Record<string, unknown>;
+      return Object.fromEntries(
+        Object.keys(obj)
+          .sort()
+          .map((k) => [k, obj[k]]),
+      );
+    }
+    return value;
+  });
+  return createHash("sha256").update(canonical).digest("hex");
+}
+
+// How the voters for the decided winner split on stats. Counted in unique IPs,
+// like the vote itself, over every vote received for that winner (departed
+// voters included).
+export interface StatsAgreement {
+  // IPs that voted for the decided winner.
+  voters: number;
+  // Distinct stats among those votes; 1 means everyone agreed.
+  versions: number;
+  // IPs that sent the stats the record carries (the first vote for the winner).
+  archivedBackers: number;
+  // IPs behind the most-backed stats.
+  topBackers: number;
+}
+
 // The end-of-game winner vote. Decided once; the game guards against votes
 // arriving after that.
 export class WinnerVote {
   private readonly round = new VoteRound<ClientSendWinnerMessage>();
   private decided: ClientSendWinnerMessage | null = null;
+  // Per winner key: the IPs behind each stats digest, and the digest of the
+  // first vote -- the one VoteRound keeps as the candidate's value.
+  private readonly statsBackers = new Map<string, Map<string, Set<string>>>();
+  private readonly firstDigest = new Map<string, string>();
 
   // The winning message once a majority has backed one, else null.
   winner(): ClientSendWinnerMessage | null {
@@ -30,10 +77,43 @@ export class WinnerVote {
     msg: ClientSendWinnerMessage,
     ip: string,
   ): { key: string; votes: number } {
-    // A cancelled match ends with winner omitted; JSON.stringify(undefined)
-    // is not a string, so key those votes as "null".
-    const key = JSON.stringify(msg.winner ?? null);
+    const key = winnerKey(msg);
+    const digest = statsDigest(msg.allPlayersStats);
+    if (!this.firstDigest.has(key)) this.firstDigest.set(key, digest);
+    let byDigest = this.statsBackers.get(key);
+    if (byDigest === undefined) {
+      byDigest = new Map();
+      this.statsBackers.set(key, byDigest);
+    }
+    let ips = byDigest.get(digest);
+    if (ips === undefined) {
+      ips = new Set();
+      byDigest.set(digest, ips);
+    }
+    ips.add(ip);
     return { key, votes: this.round.add(key, msg, ip) };
+  }
+
+  // How the decided winner's voters split on stats, or null while undecided.
+  // Observation only: the vote is still decided on the winner alone.
+  statsAgreement(): StatsAgreement | null {
+    if (this.decided === null) return null;
+    const key = winnerKey(this.decided);
+    const byDigest = this.statsBackers.get(key);
+    const first = this.firstDigest.get(key);
+    if (byDigest === undefined || first === undefined) return null;
+    const voters = new Set<string>();
+    let topBackers = 0;
+    for (const ips of byDigest.values()) {
+      ips.forEach((ip) => voters.add(ip));
+      topBackers = Math.max(topBackers, ips.size);
+    }
+    return {
+      voters: voters.size,
+      versions: byDigest.size,
+      archivedBackers: byDigest.get(first)?.size ?? 0,
+      topBackers,
+    };
   }
 
   // Decides the vote if some candidate holds a strict majority of an
@@ -57,6 +137,12 @@ export class WinnerVote {
     }
     return result;
   }
+}
+
+// A cancelled match ends with winner omitted; JSON.stringify(undefined) is not
+// a string, so key those votes as "null".
+function winnerKey(msg: ClientSendWinnerMessage): string {
+  return JSON.stringify(msg.winner ?? null);
 }
 
 // The running live-stats vote. Clients each send a snapshot every ~10s

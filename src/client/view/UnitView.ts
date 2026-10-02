@@ -10,25 +10,9 @@ import { TileRef } from "../../core/game/GameMap";
 import { UnitUpdate } from "../../core/game/GameUpdates";
 import type { UnitState } from "../render/types";
 import { TrainType as RendererTrainType } from "../render/types";
+import { applyUnitUpdateInPlace, unitStateFromUpdate } from "./EntityState";
 import { GameView } from "./GameView";
 import { PlayerView } from "./PlayerView";
-
-/**
- * Convert engine TrainType (string enum) to renderer's numeric encoding.
- * UnitState uses 0/1/2 so it can be uploaded to GPU buffers without lookup.
- */
-function trainTypeToNum(t: TrainType | undefined): number | null {
-  switch (t) {
-    case TrainType.Engine:
-      return RendererTrainType.Engine;
-    case TrainType.TailEngine:
-      return RendererTrainType.TailEngine;
-    case TrainType.Carriage:
-      return RendererTrainType.Carriage;
-    default:
-      return null;
-  }
-}
 
 function numToTrainType(n: number | null): TrainType | undefined {
   switch (n) {
@@ -41,74 +25,6 @@ function numToTrainType(n: number | null): TrainType | undefined {
     default:
       return undefined;
   }
-}
-
-/** Build a fresh UnitState from an incoming UnitUpdate. */
-function unitStateFromUpdate(u: UnitUpdate): UnitState {
-  return {
-    id: u.id,
-    unitType: u.unitType,
-    ownerID: u.ownerID,
-    lastOwnerID: u.lastOwnerID ?? null,
-    pos: u.pos,
-    lastPos: u.lastPos,
-    isActive: u.isActive,
-    reachedTarget: u.reachedTarget,
-    retreating:
-      (u.transportShipState?.isRetreating ?? false) ||
-      u.warshipState?.state === "retreating",
-    targetable: u.targetable,
-    waitTicks: u.nukeState?.waitTicks ?? 0,
-    markedForDeletion: u.markedForDeletion,
-    health: u.health ?? null,
-    underConstruction: u.underConstruction ?? false,
-    targetUnitId: u.targetUnitId ?? null,
-    targetTile: u.targetTile ?? null,
-    troops: u.troops,
-    missileTimerQueue: u.missileTimerQueue,
-    level: u.level,
-    veterancy: u.warshipState?.veterancy ?? 0,
-    hasTrainStation: u.hasTrainStation,
-    trainType: trainTypeToNum(u.trainType),
-    loaded: u.loaded ?? null,
-    constructionStartTick: null, // GameView fills in createdAt when underConstruction
-    samUpgradeStartTick: u.samUpgrade?.upgradeStartTick ?? null,
-    samUpgradeStartRange: u.samUpgrade?.startRange ?? null,
-    samUpgradeTargetLevel: u.samUpgrade?.targetLevel ?? null,
-    samUpgradeDuration: u.samUpgrade?.duration ?? null,
-  };
-}
-
-/** Mutate `target` in place from a UnitUpdate, avoiding any allocation. */
-function applyUpdateInPlace(target: UnitState, u: UnitUpdate): void {
-  target.ownerID = u.ownerID;
-  target.unitType = u.unitType;
-  target.lastOwnerID = u.lastOwnerID ?? null;
-  target.pos = u.pos;
-  target.lastPos = u.lastPos;
-  target.isActive = u.isActive;
-  target.reachedTarget = u.reachedTarget;
-  target.retreating =
-    (u.transportShipState?.isRetreating ?? false) ||
-    u.warshipState?.state === "retreating";
-  target.targetable = u.targetable;
-  target.waitTicks = u.nukeState?.waitTicks ?? 0;
-  target.markedForDeletion = u.markedForDeletion;
-  target.health = u.health ?? null;
-  target.underConstruction = u.underConstruction ?? false;
-  target.targetUnitId = u.targetUnitId ?? null;
-  target.targetTile = u.targetTile ?? null;
-  target.troops = u.troops;
-  target.missileTimerQueue = u.missileTimerQueue;
-  target.level = u.level;
-  target.veterancy = u.warshipState?.veterancy ?? 0;
-  target.hasTrainStation = u.hasTrainStation;
-  target.trainType = trainTypeToNum(u.trainType);
-  target.loaded = u.loaded ?? null;
-  target.samUpgradeStartTick = u.samUpgrade?.upgradeStartTick ?? null;
-  target.samUpgradeStartRange = u.samUpgrade?.startRange ?? null;
-  target.samUpgradeTargetLevel = u.samUpgrade?.targetLevel ?? null;
-  target.samUpgradeDuration = u.samUpgrade?.duration ?? null;
 }
 
 export class UnitView {
@@ -160,7 +76,7 @@ export class UnitView {
     this.lastPos.push(data.pos);
     this._wasUpdated = true;
     const wasUnderConstruction = this.state.underConstruction;
-    applyUpdateInPlace(this.state, data);
+    applyUnitUpdateInPlace(this.state, data);
     this._warshipState = data.warshipState;
     this._transportShipState = data.transportShipState;
     this._nukeState = data.nukeState;
