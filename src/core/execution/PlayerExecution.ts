@@ -322,6 +322,8 @@ export class PlayerExecution implements Execution {
    * and fallout, has no way out and goes to the surrounding enemy.
    */
   private annexSeveredClusters(clusters: TileRef[][], largestIndex: number) {
+    // Only fallout can sever a piece; skip the scan in games without nukes.
+    if (this.mg.numTilesWithFallout() === 0) return;
     const map = this.map;
     const mySmallID = this.player.smallID();
 
