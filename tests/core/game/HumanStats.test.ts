@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
+import { AttackExecution } from "../../../src/core/execution/AttackExecution";
 import { MarkDisconnectedExecution } from "../../../src/core/execution/MarkDisconnectedExecution";
-import { PlayerInfo, PlayerType } from "../../../src/core/game/Game";
+import { SpawnExecution } from "../../../src/core/execution/SpawnExecution";
+import { Game, PlayerInfo, PlayerType } from "../../../src/core/game/Game";
 import { humanStatsSnapshot } from "../../../src/core/game/HumanStats";
 import { setup } from "../../util/Setup";
 import { executeTicks } from "../../util/utils";
@@ -63,5 +65,61 @@ describe("humanStatsSnapshot", () => {
     new MarkDisconnectedExecution(g.player("nation_1"), true).init(g, 5);
 
     expect(humanStatsSnapshot(g).disconnectedAt).toEqual({});
+  });
+
+  // The snapshot is asked for mid-game, between ticks. It must not change
+  // the simulation: a game snapshotted every tick ends in exactly the state
+  // of one that never was.
+  it("leaves the game exactly as it would have been", async () => {
+    async function play(snapshotEveryTick: boolean) {
+      const g: Game = await setup("ocean_and_land", { infiniteTroops: true }, [
+        new PlayerInfo("alice", PlayerType.Human, "client_a", "player_a"),
+        new PlayerInfo("bob", PlayerType.Human, "client_b", "player_b"),
+      ]);
+      g.addExecution(
+        new SpawnExecution(
+          "game_id",
+          g.player("player_a").info(),
+          g.ref(0, 14),
+        ),
+        new SpawnExecution(
+          "game_id",
+          g.player("player_b").info(),
+          g.ref(0, 15),
+        ),
+      );
+      const trace: string[] = [];
+      for (let tick = 0; tick < 300; tick++) {
+        if (tick === 60) {
+          g.addExecution(
+            new AttackExecution(1000, g.player("player_a"), "player_b"),
+          );
+        }
+        g.executeNextTick();
+        if (snapshotEveryTick) humanStatsSnapshot(g);
+        trace.push(
+          g
+            .allPlayers()
+            .map(
+              (p) =>
+                `${p.id()}:${p.numTilesOwned()}:${p.troops()}:${p.isAlive()}`,
+            )
+            .join("|"),
+        );
+      }
+      return {
+        trace,
+        stats: JSON.stringify(g.stats().stats(), (_, v) =>
+          typeof v === "bigint" ? v.toString() : v,
+        ),
+      };
+    }
+
+    const plain = await play(false);
+    const snapshotted = await play(true);
+    expect(snapshotted.trace).toEqual(plain.trace);
+    expect(snapshotted.stats).toEqual(plain.stats);
+    // The run did something worth comparing.
+    expect(plain.trace[0]).not.toEqual(plain.trace[plain.trace.length - 1]);
   });
 });
