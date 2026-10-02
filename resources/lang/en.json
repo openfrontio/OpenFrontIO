@@ -1875,6 +1875,7 @@
     "unavailable_not_found": "This game could not be found.",
     "unavailable_other_build": "This game was played on another version of OpenFront.",
     "unavailable_unreachable": "The game could not be downloaded. Check your connection and try again.",
+    "unverified": "This game's record has no checks, so this replay couldn't be verified against the game that was played.",
     "watch_classic": "Watch the old replay instead"
   },
   "rewards_modal": {

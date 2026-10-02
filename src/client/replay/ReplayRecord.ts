@@ -74,3 +74,11 @@ export async function fetchReplayRecord(
   }
   return { kind: "record", record };
 }
+
+/**
+ * Whether the record has any of the hashes the processor checks the game
+ * against. Without them it can be replayed, but not verified.
+ */
+export function hasRecordedHashes(record: GameRecord): boolean {
+  return record.turns.some((t) => t.hash !== null && t.hash !== undefined);
+}

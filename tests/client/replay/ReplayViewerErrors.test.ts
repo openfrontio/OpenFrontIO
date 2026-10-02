@@ -18,13 +18,17 @@ import {
   type ProcessingHandlers,
 } from "../../../src/client/replay/LocalProcessing";
 import { ReplayPlayback } from "../../../src/client/replay/ReplayPlayback";
-import { fetchReplayRecord } from "../../../src/client/replay/ReplayRecord";
+import {
+  fetchReplayRecord,
+  hasRecordedHashes,
+} from "../../../src/client/replay/ReplayRecord";
 import { replayStore } from "../../../src/client/replay/ReplayStore";
 import { ReplayViewer } from "../../../src/client/replay/ReplayViewer";
 import { loadCachedTerrainMap } from "../../../src/client/TerrainMapFileLoader";
 
 vi.mock("../../../src/client/replay/ReplayRecord", () => ({
   fetchReplayRecord: vi.fn(),
+  hasRecordedHashes: vi.fn(() => true),
 }));
 vi.mock("../../../src/client/replay/ReplayStore", () => ({
   replayStore: { get: vi.fn(), put: vi.fn(), remove: vi.fn() },
@@ -73,6 +77,7 @@ function viewer() {
     status: string;
     error: string;
     stoppedEarly: string;
+    unverifiedNotice: boolean;
     classicFallback: boolean;
     growing: boolean;
     gameLength: number | null;
@@ -248,6 +253,7 @@ test("plays as the game is processed, and keeps the finished replay", async () =
   expect(playback.append).toHaveBeenCalledExactlyOnceWith(MORE);
   expect(v.growing).toBe(false);
   expect(playback.live).toBe(false);
+  expect(v.unverifiedNotice).toBe(false);
   // Stored from what the viewer holds.
   await vi.waitFor(() =>
     expect(replayStore.put).toHaveBeenCalledExactlyOnceWith(
@@ -255,6 +261,19 @@ test("plays as the game is processed, and keeps the finished replay", async () =
       STORED,
     ),
   );
+});
+
+test("a record with no hashes plays with a notice, and isn't kept", async () => {
+  vi.mocked(hasRecordedHashes).mockReturnValueOnce(false);
+  const { v, handlers } = await processing();
+  handlers.onAppend(FIRST);
+  handlers.onDone();
+  await v.applying;
+  expect(v.status).toBe("ready");
+  expect(v.unverifiedNotice).toBe(true);
+  // Next time it's checked (and the notice shown) again.
+  await new Promise((r) => setTimeout(r, 0));
+  expect(replayStore.put).not.toHaveBeenCalled();
 });
 
 test("a desync before any frames is an error, and the client-side replay is offered", async () => {
