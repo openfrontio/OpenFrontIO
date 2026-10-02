@@ -319,6 +319,66 @@ describe("Profile Games stats navigation", () => {
     );
   });
 
+  it("does not loop when a stats profile opens another game's stats", async () => {
+    const firstStatsButton = Array.from(modal.querySelectorAll("button")).find(
+      (button) => button.textContent?.trim() === "game_list.stats",
+    );
+    expect(firstStatsButton).toBeTruthy();
+    firstStatsButton!.click();
+    await waitForStatsModal(statsModal, () => {
+      expect(statsModal.isOpen()).toBe(true);
+    });
+
+    statsModal.querySelector("game-info-view")!.dispatchEvent(
+      new CustomEvent("view-profile", {
+        detail: { publicId: "player-2" },
+        bubbles: true,
+        composed: true,
+      }),
+    );
+    await waitForProfile(modal, () => {
+      expect(modal.isOpen()).toBe(true);
+    });
+
+    modal.setActiveTab("games");
+    await waitForProfile(modal, () => {
+      expect(modal.querySelector("player-game-history-view")).not.toBeNull();
+    });
+
+    const secondStatsButton = Array.from(modal.querySelectorAll("button")).find(
+      (button) => button.textContent?.trim() === "game_list.stats",
+    );
+    expect(secondStatsButton).toBeTruthy();
+    secondStatsButton!.click();
+    await waitForStatsModal(statsModal, () => {
+      expect(statsModal.isOpen()).toBe(true);
+    });
+
+    const statsBack = statsModal.querySelector(
+      '[slot="header"] button',
+    ) as HTMLButtonElement;
+    statsBack.click();
+    await waitForProfile(modal, () => {
+      expect(modal.isOpen()).toBe(true);
+      expect(
+        modal.querySelector<HTMLElement & { publicId: string }>(
+          "player-game-history-view",
+        )?.publicId,
+      ).toBe("player-2");
+    });
+
+    const profileBack = modal.querySelector(
+      '[slot="header"] button',
+    ) as HTMLButtonElement;
+    const staleStatsReturn = vi.spyOn(statsModal, "returnFromPlayerProfile");
+    profileBack.click();
+
+    expect(modal.isOpen()).toBe(false);
+    expect(statsModal.isOpen()).toBe(false);
+    expect(staleStatsReturn).not.toHaveBeenCalled();
+    expect(window.location.hash).toBe("");
+  });
+
   it("reloads the games history when the route changes to a different player", async () => {
     // beforeEach opened player-1's history.
     expect(fetchPublicPlayerGames).toHaveBeenCalledWith(
