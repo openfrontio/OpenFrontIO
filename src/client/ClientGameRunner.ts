@@ -119,6 +119,9 @@ export interface LobbyConfig {
   // Saved historical turns when resuming a solo match.
   resumeTurns?: Turn[];
   resumeSnapshot?: Uint8Array;
+  // Host only: the play token the lobby was created under, used for the
+  // first join so the host joins as the creator (see createLobby).
+  creatorToken?: string;
 }
 
 export interface JoinLobbyResult {
@@ -965,6 +968,10 @@ export class ClientGameRunner {
   private playerDied = false;
 
   private turnsSeen = 0;
+  // True from a (re)join request until the server's start message answers it.
+  // Live turns that land in that window arrive ahead of turnsSeen and are
+  // dropped; the start message replays them, so dropping them is expected.
+  private awaitingStart = true;
   private lastMousePosition: { x: number; y: number } | null = null;
 
   private lastMessageTime: number = 0;
@@ -1162,6 +1169,7 @@ export class ClientGameRunner {
 
     const onconnect = () => {
       console.log("Connected to game server!");
+      this.awaitingStart = true;
       this.transport.rejoinGame(this.turnsSeen);
     };
 
@@ -1170,6 +1178,7 @@ export class ClientGameRunner {
       this.lastMessageTime = Date.now();
       if (message.type === "start") {
         console.log("starting game! in client game runner");
+        this.awaitingStart = false;
 
         if (this.gameView.config().isRandomSpawn()) {
           const goToPlayer = () => {
@@ -1278,7 +1287,9 @@ export class ClientGameRunner {
         this.lastTickReceiveTime = now;
 
         if (this.turnsSeen !== message.turn.turnNumber) {
-          console.error(
+          // Expected while the start message is still on its way (every
+          // multiplayer game start hits this); an error once it has arrived.
+          (this.awaitingStart ? console.debug : console.error)(
             `got wrong turn have turns ${this.turnsSeen}, received turn ${message.turn.turnNumber}`,
           );
         } else {

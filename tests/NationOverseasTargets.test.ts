@@ -1,3 +1,4 @@
+import { ConstructionExecution } from "../src/core/execution/ConstructionExecution";
 import { NationAllianceBehavior } from "../src/core/execution/nation/NationAllianceBehavior";
 import { NationEmojiBehavior } from "../src/core/execution/nation/NationEmojiBehavior";
 import { NationWarshipBehavior } from "../src/core/execution/nation/NationWarshipBehavior";
@@ -78,13 +79,13 @@ function setupSea(
   const halfStrength = (p: Player) =>
     p.setTroops(Math.floor(game.config().maxTroops(p) * 0.5));
   vi.spyOn(game, "addExecution");
-  const boatTargets = () =>
+  const boats = () =>
     vi
       .mocked(game.addExecution)
       .mock.calls.map((c) => c[0])
-      .filter((e) => e instanceof TransportShipExecution)
-      .map((e) => game.owner(e["ref"]));
-  return { player, behavior, juicy, halfStrength, boatTargets };
+      .filter((e) => e instanceof TransportShipExecution);
+  const boatTargets = () => boats().map((e) => game.owner(e["ref"]));
+  return { game, player, behavior, juicy, halfStrength, boats, boatTargets };
 }
 
 describe("Nation targets across the water", () => {
@@ -132,11 +133,12 @@ describe("Nation targets across the water", () => {
     },
   );
 
-  // About 560 tiles apart, beyond Impossible's 500 and Hard's 300
+  // About 560 tiles apart, beyond Impossible's 500 and Hard's 300: with nobody nearer,
+  // the island strategy still gets there, with a 1% beachhead boat
   it.each([Difficulty.Hard, Difficulty.Impossible])(
-    "%s doesn't sail beyond its boat range",
+    "%s sends only a beachhead beyond its boat range",
     (difficulty) => {
-      const { player, behavior, juicy, boatTargets } = setupSea(
+      const { player, behavior, juicy, boats, boatTargets } = setupSea(
         difficulty,
         620,
         24,
@@ -145,7 +147,37 @@ describe("Nation targets across the water", () => {
       );
       juicy(player("rich"), [600, 20]);
       behavior.maybeAttack();
-      expect(boatTargets()).toHaveLength(0);
+      expect(boatTargets()).toEqual([player("rich")]);
+      expect(boats()[0]["troops"]).toBe(10_000);
+    },
+  );
+
+  it.each([Difficulty.Hard, Difficulty.Impossible])(
+    "%s without a land front sends warships at a blocker beyond its boat range",
+    (difficulty) => {
+      const { player, behavior, juicy, game } = setupSea(
+        difficulty,
+        620,
+        24,
+        (x, y) =>
+          y <= 7 && x < 20 ? "nation" : y >= 16 && x >= 570 ? "rich" : null,
+      );
+      juicy(player("rich"), [600, 20]);
+      const nation = player("nation");
+      nation.buildUnit(UnitType.Port, game.ref(10, 7), {});
+      nation.addGold(10_000_000n);
+      const guard = game.ref(575, 12);
+      player("navy").buildUnit(UnitType.Warship, guard, { patrolTile: guard });
+      behavior.maybeAttack();
+      const ordered = vi
+        .mocked(game.addExecution)
+        .mock.calls.map((c) => c[0])
+        .filter(
+          (e) =>
+            e instanceof ConstructionExecution &&
+            e["constructionType"] === UnitType.Warship,
+        );
+      expect(ordered.length).toBeGreaterThan(0);
     },
   );
 });
