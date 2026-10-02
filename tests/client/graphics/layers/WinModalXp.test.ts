@@ -91,7 +91,7 @@ function eligible(overrides: Record<string, unknown> = {}) {
       time: 20,
       placement: 0,
       win: 100,
-      firstWin: 0,
+      firstGame: 0,
       feats: 0,
       subtotal: 170,
       gamePermille: 1250,
