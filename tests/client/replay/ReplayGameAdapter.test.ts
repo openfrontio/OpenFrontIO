@@ -438,6 +438,54 @@ describe("ReplayGameAdapter", () => {
     expect(afterSeek[GameUpdateType.Emoji]).toEqual([{ e: 1 }]);
   });
 
+  test("events the HUD didn't read are dropped when its tick ends", async () => {
+    const frame = reader.seek(119);
+    adapter.update(frame, EMPTY, 0, false, true);
+    const alive = adapter.playerViews().find((p) => p.isAlive())!;
+    const dead = adapter.playerViews().find((p) => !p.isAlive())!;
+    const message = (n: number, playerID: number) =>
+      ({
+        ...frame,
+        miscUpdates: {
+          DisplayEvent: [
+            {
+              messageType: 0,
+              message: `message ${n}`,
+              playerID,
+              gold: undefined,
+              params: {},
+            },
+          ],
+        },
+      }) as never;
+
+    const feed = document.createElement("events-display") as EventsDisplay;
+    feed.game = adapter.asGameView();
+    feed.eventBus = new EventBus();
+    document.body.appendChild(feed);
+    try {
+      feed.init();
+      // Following a dead player, the feed reads nothing for a while.
+      adapter.focus = dead;
+      for (let n = 0; n < 3; n++) {
+        adapter.update(message(n, alive.smallID()), EMPTY, 0, false);
+        feed.tick();
+        adapter.endHudTick();
+      }
+      // Then a living one: only what's new shows, not the backlog.
+      adapter.focus = alive;
+      adapter.update(message(3, alive.smallID()), EMPTY, 0, false);
+      feed.tick();
+      await feed.updateComplete;
+      const text = feed.textContent ?? "";
+      expect(text).toContain("message 3");
+      expect(text).not.toContain("message 0");
+      expect(text).not.toContain("message 2");
+    } finally {
+      feed.remove();
+    }
+  }, 30_000);
+
   test("the game's own event feed renders for the followed player", async () => {
     const frame = reader.seek(119);
     const alive = adapter.playerViews().find((p) => {

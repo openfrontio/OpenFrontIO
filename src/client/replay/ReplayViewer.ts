@@ -663,6 +663,7 @@ export class ReplayViewer extends LitElement {
       this.querySelector<PlayerStats>("player-stats")?.refresh();
       overlay?.tick();
       events?.tick();
+      adapter.endHudTick();
     }, 1000);
   }
 
