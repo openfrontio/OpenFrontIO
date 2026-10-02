@@ -150,9 +150,11 @@ export class GameView implements GameMap {
     private _myClanTag: string | null,
     private _gameID: GameID,
     humans: Player[],
+    initialStartTick?: Tick | null,
   ) {
     this._map = this._mapData.gameMap;
     this.lastUpdate = null;
+    this.startTick = initialStartTick ?? null;
     this.unitGrid = new UnitGrid(this._map);
     this._cosmetics = new Map(
       humans.map((h) => [h.clientID, h.cosmetics ?? {}]),
@@ -177,7 +179,7 @@ export class GameView implements GameMap {
     // events: fresh arrays we own; cleared and repopulated each tick.
     this._frame = {
       tick: 0,
-      inSpawnPhase: true,
+      inSpawnPhase: this.startTick === null,
       tileState: this._map.tileStateBuffer(),
       trailState: this.trailManager.getTrailState(),
       spiralRibbons: this.spiralTrails.getRibbons(),

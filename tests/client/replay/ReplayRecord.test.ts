@@ -66,6 +66,11 @@ test.each([
   ["a server error", () => new Response("", { status: 502 }), "unreachable"],
   ["not JSON", () => new Response("<html>"), "unreachable"],
   ["no network", () => new TypeError("Failed to fetch"), "unreachable"],
+  [
+    "timeout or abort",
+    () => new DOMException("The operation was aborted.", "TimeoutError"),
+    "unreachable",
+  ],
 ])("%s → %s", async (_name, res, kind) => {
   const got = await fetchReplayRecord("recFETCH1", {
     apiBase: API,
@@ -73,4 +78,18 @@ test.each([
     fetchFn: answering(res()) as typeof fetch,
   });
   expect(got).toEqual({ kind });
+});
+
+test("passes signal with finite timeout in options", async () => {
+  let capturedInit: RequestInit | undefined;
+  const fetchFn = vi.fn(async (_url: string, init?: RequestInit) => {
+    capturedInit = init;
+    return Response.json(archived);
+  });
+  await fetchReplayRecord("recFETCH1", {
+    apiBase: API,
+    ownCommit: OWN,
+    fetchFn: fetchFn as typeof fetch,
+  });
+  expect(capturedInit?.signal).toBeInstanceOf(AbortSignal);
 });

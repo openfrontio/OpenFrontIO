@@ -26,6 +26,7 @@ import {
 import { crazyGamesSDK } from "../../CrazyGamesSDK";
 import { isDesktopShell } from "../../DesktopShell";
 import { Platform } from "../../Platform";
+import { clearSoloSave } from "../../SinglePlayerSaveManager";
 import { PlaySoundEffectEvent } from "../../sound/Sounds";
 import { steamSDK } from "../../SteamSDK";
 import { SendWinnerEvent } from "../../Transport";
@@ -229,7 +230,7 @@ export class WinModal extends LitElement implements Controller {
     return html`
       <div class="text-center mb-6 bg-black/30 p-2.5 rounded-sm">
         <h3 class="text-xl font-semibold text-white mb-3">
-          ${translateText("steam_wishlist.buy_on_steam")}
+          ${translateText("win_modal.buy_on_steam")}
         </h3>
         <steam-wishlist
           campaign="win_modal"
@@ -282,6 +283,10 @@ export class WinModal extends LitElement implements Controller {
 
   private _handleExit() {
     this.hide();
+    const myPlayer = this.game?.myPlayer();
+    if (myPlayer && !myPlayer.isAlive()) {
+      clearSoloSave(this.game?.gameID());
+    }
     window.location.href = homeHref();
   }
 

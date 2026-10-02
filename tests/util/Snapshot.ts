@@ -140,6 +140,7 @@ export const DERIVED_FIELDS = new Set<string>([
   "playerStatsQuads",
   "attackTroopsQuads",
   "motionPlanRecords",
+  "planDrivenUnitIds",
   "_nukeImpactQueue",
   "unitCountMemo",
   "unitsByTypeMemo",

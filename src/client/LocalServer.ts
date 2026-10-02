@@ -14,6 +14,7 @@ import {
   StampedIntent,
   Turn,
 } from "../core/Schemas";
+import { readSnapshotHeader } from "../core/snapshot/GameSnapshot";
 import {
   createPartialGameRecord,
   decompressGameRecord,
@@ -28,6 +29,7 @@ import {
   ReplaySpeedChangeEvent,
 } from "./InputHandler";
 import { startSingleplayerHeartbeat } from "./SingleplayerHeartbeat";
+import { clearSoloSave, saveSoloGame } from "./SinglePlayerSaveManager";
 import {
   defaultReplaySpeedMultiplier,
   ReplaySpeedMultiplier,
@@ -49,6 +51,7 @@ export class LocalServer {
   private replayTurns: Turn[] = [];
 
   private turns: Turn[] = [];
+  private turnOffset = 0;
 
   private intents: StampedIntent[] = [];
   private startedAt: number;
@@ -133,6 +136,9 @@ export class LocalServer {
       });
     }
 
+    if (!this.isReplay) {
+      window.addEventListener("beforeunload", this.handleBeforeUnload);
+    }
     this.startedAt = Date.now();
     this.clientConnect();
     if (this.lobbyConfig.gameRecord) {
@@ -147,10 +153,24 @@ export class LocalServer {
     if (!this.clientID) {
       throw new Error("missing clientID");
     }
+    if (
+      this.lobbyConfig.resumeTurns &&
+      this.lobbyConfig.resumeTurns.length > 0
+    ) {
+      this.turns = [...this.lobbyConfig.resumeTurns];
+    }
+    if (this.lobbyConfig.resumeSnapshot) {
+      try {
+        const header = readSnapshotHeader(this.lobbyConfig.resumeSnapshot);
+        this.turnOffset = header.tick;
+      } catch (e) {
+        console.warn("Failed to read snapshot header for turnOffset", e);
+      }
+    }
     this.clientMessage({
       type: "start",
       gameStartInfo: this.lobbyConfig.gameStartInfo,
-      turns: [],
+      turns: this.turns,
       lobbyCreatedAt: this.lobbyConfig.gameStartInfo.lobbyCreatedAt,
       // Don't send myClientID for replays — viewer has no player identity.
       myClientID: this.lobbyConfig.gameRecord ? undefined : this.clientID,
@@ -207,7 +227,7 @@ export class LocalServer {
       if (!this.lobbyConfig.gameRecord) {
         if (clientMsg.turnNumber % 100 === 0) {
           // In singleplayer, only store hash every 100 turns to reduce size of game record.
-          const turn = this.turns[clientMsg.turnNumber];
+          const turn = this.turns[clientMsg.turnNumber - this.turnOffset];
           if (turn) {
             turn.hash = clientMsg.hash;
           }
@@ -242,6 +262,10 @@ export class LocalServer {
     }
     if (clientMsg.type === "winner") {
       this.winner = clientMsg;
+      this.disableSave();
+      if (!this.isReplay && this.lobbyConfig.gameStartInfo) {
+        clearSoloSave(this.lobbyConfig.gameStartInfo.gameID);
+      }
       this.allPlayersStats = clientMsg.allPlayersStats;
       if (!this.isReplay) {
         // Archive as soon as the game is decided: endGame() only runs during
@@ -251,6 +275,25 @@ export class LocalServer {
       }
     }
   }
+
+  private saveEnabled = true;
+
+  public disableSave(): void {
+    this.saveEnabled = false;
+  }
+
+  private handleBeforeUnload = () => {
+    if (
+      this.saveEnabled &&
+      !this.winner &&
+      !this.isReplay &&
+      this.lobbyConfig.gameStartInfo &&
+      this.lobbyConfig.resumeSnapshot === undefined &&
+      this.turns.length > 0
+    ) {
+      saveSoloGame(this.lobbyConfig.gameStartInfo, this.turns);
+    }
+  };
 
   // This is so the client can tell us when it finished processing the turn.
   public turnComplete() {
@@ -271,7 +314,7 @@ export class LocalServer {
       this.intents = this.replayTurns[this.turns.length].intents;
     }
     const pastTurn: Turn = {
-      turnNumber: this.turns.length,
+      turnNumber: this.turnOffset + this.turns.length,
       intents: this.intents,
     };
     this.turns.push(pastTurn);
@@ -287,6 +330,18 @@ export class LocalServer {
     clearInterval(this.turnCheckInterval);
     this.stopHeartbeat?.();
     this.stopHeartbeat = null;
+    if (!this.isReplay) {
+      window.removeEventListener("beforeunload", this.handleBeforeUnload);
+      if (
+        this.saveEnabled &&
+        !this.winner &&
+        this.lobbyConfig.gameStartInfo &&
+        this.lobbyConfig.resumeSnapshot === undefined &&
+        this.turns.length > 0
+      ) {
+        saveSoloGame(this.lobbyConfig.gameStartInfo, this.turns);
+      }
+    }
     if (this.isReplay) {
       return;
     }
@@ -296,7 +351,11 @@ export class LocalServer {
   }
 
   private archiveGameRecord(unloading: boolean) {
-    if (this.archived || this.archiveInFlight) {
+    if (
+      this.archived ||
+      this.archiveInFlight ||
+      this.lobbyConfig.resumeSnapshot !== undefined
+    ) {
       return;
     }
     const players: PlayerRecord[] = [

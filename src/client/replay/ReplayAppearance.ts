@@ -66,7 +66,7 @@ export class ReplayAppearance {
     view.initSkinAtlas([...this.skinUrls()]);
     const p = this._palette;
     view.addPlayers(p.players, p.palette, p.patternMeta, p.patternData);
-    this.drawn = this.players.length;
+    this.drawn = p.players.length;
     this.applySkins();
     this.applyEffects();
     void fetchCosmetics().then(
@@ -83,7 +83,7 @@ export class ReplayAppearance {
     if (view === null || this.players.length === this.drawn) return;
     this.resolve();
     const added = this._palette.players.slice(this.drawn);
-    this.drawn = this.players.length;
+    this.drawn = this._palette.players.length;
     const p = this._palette;
     view.addPlayers(added, p.palette, p.patternMeta, p.patternData);
     this.applySkins();

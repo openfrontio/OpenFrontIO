@@ -348,6 +348,14 @@ export class Config {
     return this._gameConfig;
   }
 
+  setDifficulty(difficulty: Difficulty): void {
+    this._gameConfig.difficulty = difficulty;
+  }
+
+  setGameType(gameType: GameType): void {
+    this._gameConfig.gameType = gameType;
+  }
+
   userSettings(): UserSettings {
     if (this._userSettings === null) {
       throw new Error("userSettings is null");

@@ -99,3 +99,73 @@ export function processInBrowser(
 
   return { cancel: stop };
 }
+
+export async function extractSnapshotInWorker(
+  record: GameRecord,
+  targetTick: number,
+  chosenPlayerID: string,
+  localClientID: string,
+  difficulty?: import("../../core/game/Game").Difficulty,
+  createWorker: () => Promise<Worker> = createProcessorWorker,
+  signal?: AbortSignal,
+): Promise<{
+  snapshot: Uint8Array;
+  gameStartInfo: import("../../core/Schemas").GameStartInfo;
+}> {
+  if (signal?.aborted) {
+    throw (
+      signal.reason ??
+      new DOMException("The operation was aborted.", "AbortError")
+    );
+  }
+  const worker = await createWorker();
+  if (signal?.aborted) {
+    worker.terminate();
+    throw (
+      signal.reason ??
+      new DOMException("The operation was aborted.", "AbortError")
+    );
+  }
+  return new Promise((resolve, reject) => {
+    const onAbort = () => {
+      worker.terminate();
+      reject(
+        signal?.reason ??
+          new DOMException("The operation was aborted.", "AbortError"),
+      );
+    };
+    signal?.addEventListener("abort", onAbort, { once: true });
+
+    const cleanup = () => {
+      signal?.removeEventListener("abort", onAbort);
+    };
+
+    worker.addEventListener("message", (e: MessageEvent<ProcessorResponse>) => {
+      const msg = e.data;
+      if (msg.type === "snapshot_extracted") {
+        cleanup();
+        worker.terminate();
+        resolve({ snapshot: msg.snapshot, gameStartInfo: msg.gameStartInfo });
+      } else if (msg.type === "error") {
+        cleanup();
+        worker.terminate();
+        reject(new Error(msg.message));
+      }
+    });
+    worker.addEventListener("error", (e) => {
+      cleanup();
+      worker.terminate();
+      reject(new Error(e.message || "the replay worker failed"));
+    });
+    const request: ProcessorRequest = {
+      type: "extract_snapshot",
+      record,
+      targetTick,
+      chosenPlayerID,
+      localClientID,
+      difficulty,
+      cdnBase: getCdnBase(),
+    };
+    worker.postMessage(request);
+  });
+}

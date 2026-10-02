@@ -78,6 +78,10 @@ export class NationExecution implements Execution {
     this.expandRatio = this.random.nextInt(10, 20) / 100;
   }
 
+  playerID(): string {
+    return this.nation.playerInfo.id;
+  }
+
   init(mg: Game) {
     this.mg = mg;
     this.attackRate = this.getAttackRate();
@@ -104,6 +108,24 @@ export class NationExecution implements Execution {
       default:
         assertNever(difficulty);
     }
+  }
+
+  isInitialized(): boolean {
+    return this.mg !== undefined;
+  }
+
+  refreshDifficulty(): void {
+    if (!this.mg) return;
+    this.attackRate = this.getAttackRate();
+    this.attackTick = this.random.nextInt(0, this.attackRate);
+  }
+
+  currentAttackRate(): number {
+    return this.attackRate;
+  }
+
+  currentAttackTick(): number {
+    return this.attackTick;
   }
 
   tick(ticks: number) {

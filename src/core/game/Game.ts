@@ -1,7 +1,7 @@
 import { Config } from "../configuration/Config";
 import { AbstractGraph } from "../pathfinding/algorithms/AbstractGraph";
 import { PathFinder } from "../pathfinding/types";
-import { AllPlayersStats, ClientID } from "../Schemas";
+import { AllPlayersStats, ClientID, GameID } from "../Schemas";
 import type { ExecRecord, SnapshotWriter } from "../snapshot/SnapshotContext";
 import { formatPlayerDisplayName } from "../Util";
 import { GameMap, TileRef } from "./GameMap";
@@ -595,6 +595,7 @@ export interface Player {
   // Basic Info
   smallID(): number;
   info(): PlayerInfo;
+  setPlayerInfo(info: PlayerInfo): void;
   name(): string;
   displayName(): string;
   clanTag(): string | null;
@@ -779,6 +780,7 @@ export interface Player {
   toUpdate(
     statsOut?: number[],
     attackTroopsOut?: number[],
+    forceFull?: boolean,
   ): PlayerUpdate | null;
   playerProfile(): PlayerProfile;
   // WARNING: this operation is expensive.
@@ -835,6 +837,7 @@ export interface Game extends GameMap {
 
   // Game State
   ticks(): Tick;
+  startTick(): Tick | null;
   inSpawnPhase(): boolean;
   endSpawnPhase(): void;
   executeNextTick(): GameUpdates;
@@ -886,6 +889,11 @@ export interface Game extends GameMap {
   ): Array<{ unit: Unit; distSquared: number }>;
 
   addExecution(...exec: Execution[]): void;
+  executions(): Execution[];
+  removeExecution(exec: Execution): void;
+  takeoverPlayer(player: Player | PlayerID, localClientID: ClientID): void;
+  convertHumanToNation(player: Player | PlayerID, gameID: GameID): Execution;
+  applySingleplayerConfig(difficulty?: Difficulty): void;
   displayMessage(
     message: string,
     type: MessageType,

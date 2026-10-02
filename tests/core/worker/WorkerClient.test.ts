@@ -130,3 +130,87 @@ describe("WorkerClient playerInteraction", () => {
     expect(internalClient.messageHandlers.size).toBe(0);
   });
 });
+
+describe("WorkerClient snapshot", () => {
+  it("resolves with bytes and tick when worker responds", async () => {
+    const { client, worker, internalClient } = createClient();
+    const promise = client.snapshot("commit-123");
+    const request = vi.mocked(worker.postMessage).mock.calls[0][0] as {
+      type: string;
+      id: string;
+      gitCommit?: string;
+    };
+    expect(request.type).toBe("snapshot");
+    expect(request.gitCommit).toBe("commit-123");
+
+    const dummyBytes = new Uint8Array([1, 2, 3]);
+    internalClient.handleWorkerMessage({
+      data: {
+        type: "snapshot_result",
+        id: request.id,
+        snapshot: dummyBytes,
+        tick: 42,
+      },
+    } as MessageEvent<WorkerMessage>);
+
+    await expect(promise).resolves.toEqual({
+      bytes: dummyBytes,
+      tick: 42,
+    });
+    expect(internalClient.messageHandlers.size).toBe(0);
+  });
+
+  it("rejects when worker returns null snapshot", async () => {
+    const { client, worker, internalClient } = createClient();
+    const promise = client.snapshot();
+    const request = vi.mocked(worker.postMessage).mock.calls[0][0] as {
+      id: string;
+    };
+
+    internalClient.handleWorkerMessage({
+      data: {
+        type: "snapshot_result",
+        id: request.id,
+        snapshot: null,
+        tick: 0,
+      },
+    } as MessageEvent<WorkerMessage>);
+
+    await expect(promise).rejects.toThrow("Snapshot failed");
+    expect(internalClient.messageHandlers.size).toBe(0);
+  });
+});
+
+describe("WorkerClient initialUpdate", () => {
+  it("stores initialUpdate from initialized message and consumeInitialUpdate clears it", () => {
+    const { client, internalClient } = createClient();
+    const dummyUpdate = { tick: 10 } as any;
+
+    internalClient.handleWorkerMessage({
+      data: {
+        type: "initialized",
+        id: "msg-1",
+        initialUpdate: dummyUpdate,
+      },
+    } as MessageEvent<WorkerMessage>);
+
+    // If a handler was waiting for msg-1, it would be called;
+    // but here we can directly verify handleWorkerMessage behavior
+    expect(client.initialUpdate).toBe(dummyUpdate);
+    expect(client.consumeInitialUpdate()).toBe(dummyUpdate);
+    expect(client.initialUpdate).toBeNull();
+    expect(client.consumeInitialUpdate()).toBeNull();
+  });
+
+  it("passes initialUpdate to gameUpdate callback on start if not consumed", () => {
+    const { client } = createClient();
+    const dummyUpdate = { tick: 20 } as any;
+    client.initialUpdate = dummyUpdate;
+
+    const callback = vi.fn();
+    client.start(callback);
+
+    expect(callback).toHaveBeenCalledWith(dummyUpdate);
+    expect(client.initialUpdate).toBeNull();
+  });
+});

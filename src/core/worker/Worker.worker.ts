@@ -152,7 +152,7 @@ ctx.addEventListener("message", async (e: MessageEvent<MainThreadMessage>) => {
         // Set before createGameRunner so map fetches via mapLoader pick up the
         // CDN base. Workers have no `window`, so AssetUrls falls back to this.
         globalThis.__CDN_BASE__ = message.cdnBase;
-        gameRunner = (
+        gameRunner =
           message.snapshot !== undefined
             ? createGameRunnerFromSnapshot(
                 message.gameStartInfo,
@@ -160,20 +160,27 @@ ctx.addEventListener("message", async (e: MessageEvent<MainThreadMessage>) => {
                 message.clientID,
                 mapLoader,
                 gameUpdate,
-              )
+              ).then((gr) => {
+                const initialUpdate = gr.snapshotViewData();
+                sendMessage({
+                  type: "initialized",
+                  id: message.id,
+                  initialUpdate,
+                } as InitializedMessage);
+                return gr;
+              })
             : createGameRunner(
                 message.gameStartInfo,
                 message.clientID,
                 mapLoader,
                 gameUpdate,
-              )
-        ).then((gr) => {
-          sendMessage({
-            type: "initialized",
-            id: message.id,
-          } as InitializedMessage);
-          return gr;
-        });
+              ).then((gr) => {
+                sendMessage({
+                  type: "initialized",
+                  id: message.id,
+                } as InitializedMessage);
+                return gr;
+              });
       } catch (error) {
         console.error("Failed to initialize game runner:", error);
         throw error;
@@ -332,10 +339,13 @@ ctx.addEventListener("message", async (e: MessageEvent<MainThreadMessage>) => {
         throw new Error("Game runner not initialized");
       }
       let snapshot: Uint8Array | null = null;
+      let tick = 0;
       try {
         // Messages are handled between drain batches, so this is always a
         // tick boundary.
-        snapshot = (await gameRunner).snapshot(message.gitCommit);
+        const runner = await gameRunner;
+        snapshot = runner.snapshot(message.gitCommit);
+        tick = runner.game?.ticks() ?? 0;
       } catch (error) {
         console.error("Failed to snapshot game:", error);
       }
@@ -344,6 +354,7 @@ ctx.addEventListener("message", async (e: MessageEvent<MainThreadMessage>) => {
           type: "snapshot_result",
           id: message.id,
           snapshot,
+          tick,
         } as SnapshotResultMessage,
         snapshot ? [snapshot.buffer] : [],
       );

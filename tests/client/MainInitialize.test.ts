@@ -625,7 +625,54 @@ describe("Client.initialize() booted from Main.ts module scope", () => {
       expect(messages).not.toContain(
         translateText("common.backend_unreachable"),
       );
+      document.dispatchEvent(new CustomEvent("leave-lobby"));
     });
+  });
+
+  it("preserves the replay hash when popstate and hashchange are dispatched and closing the join modal resets the URL", async () => {
+    const joinModal = document.querySelector("join-lobby-modal") as unknown as {
+      close: () => void;
+    };
+    const closeSpy = vi
+      .spyOn(joinModal, "close")
+      .mockImplementation(() => history.replaceState(null, "", "/"));
+    window.location.hash = "#replay-viewer=dqKzit4cWu";
+    window.dispatchEvent(new Event("popstate"));
+    window.dispatchEvent(new Event("hashchange"));
+    await vi.waitFor(() => {
+      expect(closeSpy).toHaveBeenCalled();
+      expect(window.location.hash).toBe("#replay-viewer=dqKzit4cWu");
+    });
+    closeSpy.mockRestore();
+  });
+
+  it("replaces the URL and clears the replay hash when joining a singleplayer lobby", async () => {
+    history.replaceState(null, "", "/#replay-viewer=dqKzit4cWu");
+    expect(window.location.hash).toBe("#replay-viewer=dqKzit4cWu");
+
+    const replaceSpy = vi.spyOn(history, "replaceState");
+
+    document.dispatchEvent(
+      new CustomEvent("join-lobby", {
+        detail: {
+          gameID: "sp_game_clear_hash",
+          source: "singleplayer",
+        },
+        bubbles: true,
+      }),
+    );
+
+    await vi.waitFor(() => {
+      const calls = replaceSpy.mock.calls;
+      const targetCall = calls.find(
+        (call) =>
+          typeof call[2] === "string" && call[2].includes("sp_game_clear_hash"),
+      );
+      expect(targetCall).toBeDefined();
+      expect(targetCall![2]).not.toContain("#");
+    });
+
+    replaceSpy.mockRestore();
   });
 
   // Last: the viewer replaces the menu, and any later hash change would

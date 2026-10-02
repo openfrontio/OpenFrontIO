@@ -240,11 +240,12 @@ export class PlayerImpl implements Player {
   toUpdate(
     statsOut?: number[],
     attackTroopsOut?: number[],
+    forceFull = false,
   ): PlayerUpdate | null {
     const full = this.toFullUpdate();
     const prev = this.lastSentUpdate;
     this.lastSentUpdate = full;
-    if (prev === undefined) return full;
+    if (prev === undefined || forceFull) return full;
     if (
       statsOut !== undefined &&
       (prev.tilesOwned !== full.tilesOwned ||
@@ -727,6 +728,9 @@ export class PlayerImpl implements Player {
   }
   info(): PlayerInfo {
     return this.playerInfo;
+  }
+  setPlayerInfo(info: PlayerInfo): void {
+    this.playerInfo = info;
   }
 
   isLobbyCreator(): boolean {

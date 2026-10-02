@@ -6,7 +6,13 @@
  */
 import { Executor } from "../src/core/execution/ExecutionManager";
 import { SpawnExecution } from "../src/core/execution/SpawnExecution";
-import { Game, Player, PlayerInfo, PlayerType } from "../src/core/game/Game";
+import {
+  Game,
+  Player,
+  PlayerInfo,
+  PlayerType,
+  UnitType,
+} from "../src/core/game/Game";
 import {
   GameUpdateType,
   GameUpdateViewData,
@@ -153,5 +159,66 @@ describe("GameRunner payload cadence", () => {
     // not appear in this tick's PlayerUpdates for a gold-only change.
     const playerUpdates = gu.updates[GameUpdateType.Player];
     expect(playerUpdates.find((u) => u.id === "alice_id")).toBeUndefined();
+  });
+
+  test("snapshotViewData emits full state and subsequent tick retains partial updates", () => {
+    tick(); // 1
+    tick(); // 2
+    game.endSpawnPhase();
+    tick(); // 3
+
+    const alice = game.player("alice_id");
+    const city = alice.buildUnit(UnitType.City, game.ref(10, 10), {});
+
+    const bobInfo = new PlayerInfo(
+      "bob",
+      PlayerType.Human,
+      "bob_client",
+      "bob_id",
+    );
+    game.addPlayer(bobInfo);
+    expect(game.player("bob_id").isAlive()).toBe(false);
+
+    const runner = new GameRunner(
+      game,
+      new Executor(game, gameID, "alice_client"),
+      (gu) => {
+        if (!("errMsg" in gu)) byTick.set(gu.tick, gu);
+      },
+    );
+
+    const snapshotView = runner.snapshotViewData();
+    expect(snapshotView.updates[GameUpdateType.Player].length).toBeGreaterThan(
+      0,
+    );
+    const alicePu = snapshotView.updates[GameUpdateType.Player].find(
+      (p) => p.id === "alice_id",
+    );
+    expect(alicePu).toBeDefined();
+    expect(alicePu!.name).toBe("alice");
+    expect(alicePu!.smallID).toBe(alice.smallID());
+
+    const bobPu = snapshotView.updates[GameUpdateType.Player].find(
+      (p) => p.id === "bob_id",
+    );
+    expect(bobPu).toBeDefined();
+    expect(bobPu!.name).toBe("bob");
+    expect(bobPu!.isAlive).toBe(false);
+
+    const cityUu = snapshotView.updates[GameUpdateType.Unit].find(
+      (u) => u.id === city.id(),
+    );
+    expect(cityUu).toBeDefined();
+    expect(cityUu!.unitType).toBe(UnitType.City);
+
+    // On the subsequent tick, no non-churn fields changed, so partial updates are retained
+    alice.addGold(500n);
+    runner.addTurn({ turnNumber: game.ticks(), intents: [] });
+    runner.executeNextTick();
+
+    const nextGu = byTick.get(game.ticks())!;
+    const nextPlayerUpdates = nextGu.updates[GameUpdateType.Player];
+    // Alice's static fields are omitted in partial update diff
+    expect(nextPlayerUpdates.find((u) => u.id === "alice_id")).toBeUndefined();
   });
 });

@@ -25,6 +25,11 @@ async function createGameWorker(): Promise<Worker> {
   return new GameWorker();
 }
 
+export interface WorkerSnapshotResult {
+  bytes: Uint8Array;
+  tick: number;
+}
+
 export class WorkerClient {
   private worker: Worker | null = null;
   private isInitialized = false;
@@ -32,6 +37,13 @@ export class WorkerClient {
   private gameUpdateCallback?: (
     update: GameUpdateViewData | ErrorUpdate,
   ) => void;
+  public initialUpdate: GameUpdateViewData | null = null;
+
+  public consumeInitialUpdate(): GameUpdateViewData | null {
+    const update = this.initialUpdate;
+    this.initialUpdate = null;
+    return update;
+  }
 
   constructor(
     private gameStartInfo: GameStartInfo,
@@ -65,6 +77,16 @@ export class WorkerClient {
         break;
 
       case "initialized":
+        if (message.initialUpdate) {
+          this.initialUpdate = message.initialUpdate;
+        }
+        if (message.id && this.messageHandlers.has(message.id)) {
+          const handler = this.messageHandlers.get(message.id)!;
+          handler(message);
+          this.messageHandlers.delete(message.id);
+        }
+        break;
+
       default:
         if (message.id && this.messageHandlers.has(message.id)) {
           const handler = this.messageHandlers.get(message.id)!;
@@ -86,6 +108,9 @@ export class WorkerClient {
       this.messageHandlers.set(messageId, (message) => {
         if (message.type === "initialized") {
           this.isInitialized = true;
+          if (message.initialUpdate) {
+            this.initialUpdate = message.initialUpdate;
+          }
           resolve();
         }
       });
@@ -113,6 +138,11 @@ export class WorkerClient {
       throw new Error("Failed to initialize pathfinder");
     }
     this.gameUpdateCallback = gameUpdate;
+    if (this.initialUpdate) {
+      const update = this.initialUpdate;
+      this.initialUpdate = null;
+      this.gameUpdateCallback(update);
+    }
   }
 
   sendTurn(turn: Turn) {
@@ -127,7 +157,7 @@ export class WorkerClient {
   }
 
   /** Serializes the worker's game at its current tick (uncompressed). */
-  snapshot(gitCommit?: string): Promise<Uint8Array> {
+  snapshot(gitCommit?: string): Promise<WorkerSnapshotResult> {
     return new Promise((resolve, reject) => {
       if (!this.isInitialized) {
         reject(new Error("Worker not initialized"));
@@ -141,7 +171,10 @@ export class WorkerClient {
           if (message.snapshot === null) {
             reject(new Error("Snapshot failed"));
           } else {
-            resolve(message.snapshot);
+            resolve({
+              bytes: message.snapshot,
+              tick: message.tick,
+            });
           }
         }
       });
