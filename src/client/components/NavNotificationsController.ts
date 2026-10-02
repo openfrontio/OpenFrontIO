@@ -46,6 +46,7 @@ class NavNotificationsStore {
     promise: Promise<void>;
   } | null = null;
   private authGeneration = 0;
+  private friendRequestsRevision = 0;
 
   subscribe(host: ReactiveControllerHost): void {
     this.hosts.add(host);
@@ -157,6 +158,10 @@ class NavNotificationsStore {
 
   private handleFriendRequestsUpdated = (event: Event): void => {
     if (!this.friendRequestsEnabled) return;
+    // Any published snapshot is newer than a poll already in flight. Remember
+    // that publication so the older response cannot resurrect a request that
+    // was just accepted, denied, or withdrawn in the Friends tab.
+    this.friendRequestsRevision++;
     this.setFriendRequests(
       (event as CustomEvent<{ incoming: FriendEntry[] }>).detail.incoming,
     );
@@ -185,11 +190,13 @@ class NavNotificationsStore {
     }
 
     const generation = this.authGeneration;
+    const requestsRevision = this.friendRequestsRevision;
     const request = (async () => {
       const requests = await fetchFriendRequests();
       if (
         requests === false ||
         generation !== this.authGeneration ||
+        requestsRevision !== this.friendRequestsRevision ||
         !this.friendRequestsEnabled
       ) {
         return;
@@ -285,6 +292,7 @@ class NavNotificationsStore {
     this._friendRequests = [];
     this.friendRequestsEnabled = false;
     this.friendRequestFetch = null;
+    this.friendRequestsRevision = 0;
   }
 }
 

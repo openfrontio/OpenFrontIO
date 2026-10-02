@@ -177,6 +177,30 @@ describe("nav notifications", () => {
     expect(bell.controller.friendRequests()).toEqual([pendingRequest]);
   });
 
+  it("drops a poll response that started before a local request update", async () => {
+    let resolvePoll!: (value: {
+      incoming: (typeof pendingRequest)[];
+      outgoing: never[];
+    }) => void;
+    fetchFriendRequests.mockReturnValueOnce(
+      new Promise((resolve) => {
+        resolvePoll = resolve;
+      }),
+    );
+    latestUserMeResponse.mockReturnValue(linkedUser);
+    const bell = host();
+
+    document.dispatchEvent(
+      new CustomEvent("friend-requests-updated", {
+        detail: { incoming: [], outgoing: [] },
+      }),
+    );
+    resolvePoll({ incoming: [pendingRequest], outgoing: [] });
+    await flush();
+
+    expect(bell.controller.friendRequests()).toEqual([]);
+  });
+
   it("does not overlap refreshes for one account or apply a stale account response", async () => {
     let resolveFirst!: (value: {
       incoming: (typeof pendingRequest)[];
