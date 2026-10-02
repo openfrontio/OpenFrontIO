@@ -299,6 +299,9 @@ export class PlayerProfileModal extends BaseModal {
     const publicId = this.publicId;
     if (publicId === null) return;
     this.gamesScrollTop = this.modalEl?.getScrollTop() ?? 0;
+    // A profile reached from stats must not point back to those same stats
+    // after opening another game, or the return chain becomes cyclic.
+    const origin = this.openedFrom === "stats" ? null : this.openedFrom;
     const statsModal = document.querySelector<
       HTMLElement & {
         openFromProfile(
@@ -308,7 +311,7 @@ export class PlayerProfileModal extends BaseModal {
         ): void;
       }
     >("game-stats-modal");
-    statsModal?.openFromProfile(gameId, publicId, this.openedFrom);
+    statsModal?.openFromProfile(gameId, publicId, origin);
   }
 
   private viewGame(gameId: string): void {
