@@ -403,12 +403,11 @@ export async function saveSoloSnapshot(
 }
 
 /**
- * Legacy compatibility: saves solo game with optional compressed snapshot.
+ * Saves solo game turns to localStorage.
  */
 export function saveSoloGame(
   gameStartInfo: GameStartInfo,
   turns: Turn[],
-  compressedSnapshot?: Uint8Array,
 ): void {
   try {
     const existing = getSoloSave();
@@ -417,15 +416,9 @@ export function saveSoloGame(
     if (!identity || !scopedKey) return;
 
     const hasSnapshot =
-      compressedSnapshot !== undefined
-        ? true
-        : existing?.gameID === gameStartInfo.gameID
-          ? (existing?.hasSnapshot ?? false)
-          : false;
-
-    if (compressedSnapshot) {
-      void saveSnapshotBytes(gameStartInfo.gameID, compressedSnapshot);
-    }
+      existing?.gameID === gameStartInfo.gameID
+        ? (existing?.hasSnapshot ?? false)
+        : false;
 
     const saveState: SoloSaveState = {
       version: 1,
