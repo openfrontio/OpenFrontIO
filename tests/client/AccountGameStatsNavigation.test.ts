@@ -171,6 +171,9 @@ async function waitForStatsModal(
 describe("Account Games stats navigation", () => {
   let modal: AccountModal;
   let statsModal: GameStatsModal;
+  let profileModal: HTMLElement & {
+    openFromStats: ReturnType<typeof vi.fn>;
+  };
   let playPage: HTMLElement;
 
   beforeAll(() => {
@@ -213,6 +216,12 @@ describe("Account Games stats navigation", () => {
     statsModal.className = "hidden page-content";
     document.body.appendChild(statsModal);
 
+    profileModal = document.createElement(
+      "player-profile-modal",
+    ) as typeof profileModal;
+    profileModal.openFromStats = vi.fn(() => statsModal.close());
+    document.body.appendChild(profileModal);
+
     await modal.updateComplete;
     await statsModal.updateComplete;
     window.showPage?.("page-account");
@@ -232,6 +241,7 @@ describe("Account Games stats navigation", () => {
     window.showPage?.("page-play");
     modal.remove();
     statsModal.remove();
+    profileModal.remove();
     history.replaceState(null, "", "/");
   });
 
@@ -269,6 +279,43 @@ describe("Account Games stats navigation", () => {
     });
     expect(window.location.hash).toBe("#modal=account&tab=games");
 
+    expect(fetchPublicPlayerGames).toHaveBeenCalledOnce();
+  });
+
+  it("keeps the account return target across a player-profile detour", async () => {
+    const statsButton = Array.from(modal.querySelectorAll("button")).find(
+      (button) => button.textContent?.trim() === "game_list.stats",
+    );
+    statsButton!.click();
+    await waitForStatsModal(statsModal, () => {
+      expect(statsModal.isOpen()).toBe(true);
+    });
+
+    statsModal.querySelector("game-info-view")!.dispatchEvent(
+      new CustomEvent("view-profile", {
+        detail: { publicId: "player-2" },
+        bubbles: true,
+        composed: true,
+      }),
+    );
+
+    expect(profileModal.openFromStats).toHaveBeenCalledWith("player-2");
+    expect(statsModal.isOpen()).toBe(false);
+
+    statsModal.returnFromPlayerProfile();
+    await waitForStatsModal(statsModal, () => {
+      expect(statsModal.isOpen()).toBe(true);
+    });
+
+    const backButton = statsModal.querySelector(
+      '[slot="header"] button',
+    ) as HTMLButtonElement;
+    backButton.click();
+
+    await waitForModal(modal, () => {
+      expect(modal.querySelector("player-game-history-view")).not.toBeNull();
+    });
+    expect(window.location.hash).toBe("#modal=account&tab=games");
     expect(fetchPublicPlayerGames).toHaveBeenCalledOnce();
   });
 });

@@ -97,6 +97,26 @@ describe("ArchivedAnalyticsRecordSchema", () => {
     expect(result.data.info.players[0].stats?.conquests).toEqual([1n, 2n, 0n]);
   });
 
+  test.each(["public-player-1", null])(
+    "retains an API-enriched publicID of %s",
+    (publicID) => {
+      const base = oldRecord();
+      const record = {
+        ...base,
+        info: {
+          ...base.info,
+          players: [{ ...base.info.players[0], publicID }],
+        },
+      };
+
+      const result = ArchivedAnalyticsRecordSchema.safeParse(record);
+
+      expect(result.success).toBe(true);
+      if (!result.success) return;
+      expect(result.data.info.players[0].publicID).toBe(publicID);
+    },
+  );
+
   test("normalizes accidental whitespace around an archived map name", () => {
     const record = oldRecord();
     record.info.config.gameMap = "Deglaciated Antarctica ";

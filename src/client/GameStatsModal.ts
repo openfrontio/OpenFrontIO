@@ -4,6 +4,7 @@ import "./components/baseComponents/stats/GameInfoView";
 import { BaseModal } from "./components/BaseModal";
 import "./components/CopyButton";
 import { modalHeader } from "./components/ui/ModalHeader";
+import type { ProfileOrigin } from "./PlayerProfileModal";
 import { translateText } from "./Utils";
 
 @customElement("game-stats-modal")
@@ -12,6 +13,11 @@ export class GameStatsModal extends BaseModal {
 
   @state() private gameId: string | null = null;
   private openedFrom: "account" | "clan" | "profile" | null = null;
+  private profileReturn: {
+    publicId: string;
+    origin: ProfileOrigin | null;
+  } | null = null;
+  private preserveStateForProfileHandoff = false;
 
   protected modalConfig() {
     return { maxWidth: "960px" };
@@ -39,7 +45,11 @@ export class GameStatsModal extends BaseModal {
   protected renderBody() {
     return html`
       <div class="px-3 py-4 sm:px-6 sm:py-6 lg:px-8 lg:py-7">
-        <game-info-view .gameId=${this.gameId}></game-info-view>
+        <game-info-view
+          .gameId=${this.gameId}
+          @view-profile=${(event: CustomEvent<{ publicId: string }>) =>
+            this.openPlayerProfile(event.detail.publicId)}
+        ></game-info-view>
       </div>
     `;
   }
@@ -52,27 +62,56 @@ export class GameStatsModal extends BaseModal {
   }
 
   protected onClose(): void {
+    if (this.preserveStateForProfileHandoff) return;
     this.gameId = null;
     this.openedFrom = null;
+    this.profileReturn = null;
   }
 
   public openFromAccount(gameId: string): void {
     this.openedFrom = "account";
+    this.profileReturn = null;
     this.open({ gameID: gameId });
   }
 
   public openFromClan(gameId: string): void {
     this.openedFrom = "clan";
+    this.profileReturn = null;
     this.open({ gameID: gameId });
   }
 
-  public openFromProfile(gameId: string): void {
+  public openFromProfile(
+    gameId: string,
+    publicId: string,
+    origin: ProfileOrigin | null,
+  ): void {
     this.openedFrom = "profile";
+    this.profileReturn = { publicId, origin };
     this.open({ gameID: gameId });
+  }
+
+  public returnFromPlayerProfile(): void {
+    if (this.gameId) this.open({ gameID: this.gameId });
+  }
+
+  private openPlayerProfile(publicId: string): void {
+    if (!publicId) return;
+    const profileModal = document.querySelector<
+      HTMLElement & { openFromStats(publicId: string): void }
+    >("player-profile-modal");
+    if (!profileModal) return;
+
+    this.preserveStateForProfileHandoff = true;
+    try {
+      profileModal.openFromStats(publicId);
+    } finally {
+      this.preserveStateForProfileHandoff = false;
+    }
   }
 
   private back(): void {
     const openedFrom = this.openedFrom;
+    const profileReturn = this.profileReturn;
     this.close();
     if (openedFrom === "account") {
       document
@@ -81,9 +120,14 @@ export class GameStatsModal extends BaseModal {
     } else if (openedFrom === "profile") {
       document
         .querySelector<
-          HTMLElement & { returnToGames(): void }
+          HTMLElement & {
+            returnToGames(
+              publicId?: string | null,
+              origin?: ProfileOrigin | null,
+            ): void;
+          }
         >("player-profile-modal")
-        ?.returnToGames();
+        ?.returnToGames(profileReturn?.publicId, profileReturn?.origin);
     } else if (openedFrom === "clan") {
       document
         .querySelector<

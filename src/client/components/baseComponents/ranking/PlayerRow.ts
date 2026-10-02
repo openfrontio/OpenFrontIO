@@ -7,6 +7,7 @@ import {
 import { customElement, property } from "lit/decorators.js";
 import { assetUrl } from "../../../../core/AssetUrls";
 import { renderNumber, translateText } from "../../../Utils";
+import { dispatchViewProfile } from "../../ui/PlayerNameLink";
 import { PlayerInfo, RANK_TYPE_LABEL_KEYS, RankType } from "./GameInfoRanking";
 
 const goldCoinIcon = assetUrl("images/GoldCoinIcon.svg");
@@ -29,25 +30,41 @@ export class PlayerRow extends LitElement {
   render() {
     if (!this.player) return html``;
     const { player } = this;
+    const content = this.renderRowContent();
+    const rowClass = `group relative grid w-full grid-cols-[2rem_minmax(0,1fr)] items-center gap-x-3 gap-y-2 px-3 py-3 text-left transition-colors duration-150 hover:bg-white/[0.055] sm:grid-cols-[2.5rem_minmax(0,1fr)_minmax(13rem,0.9fr)] sm:px-5 sm:py-2.5 ${
+      player.winner
+        ? "bg-gradient-to-r from-yellow-400/[0.08] via-yellow-400/[0.025] to-transparent"
+        : this.currentPlayer
+          ? "bg-malibu-blue/10"
+          : "bg-transparent"
+    }`;
     return html`
-      <li
-        data-player-row
-        class="group relative grid grid-cols-[2rem_minmax(0,1fr)] items-center gap-x-3 gap-y-2 px-3 py-3 transition-colors duration-150 hover:bg-white/[0.055] sm:grid-cols-[2.5rem_minmax(0,1fr)_minmax(13rem,0.9fr)] sm:px-5 sm:py-2.5 ${player.winner
-          ? "bg-gradient-to-r from-yellow-400/[0.08] via-yellow-400/[0.025] to-transparent"
-          : this.currentPlayer
-            ? "bg-malibu-blue/10"
-            : "bg-transparent"}"
-      >
-        ${player.winner
-          ? html`<div
-              class="absolute inset-y-0 left-0 w-0.5 bg-yellow-400/70"
-            ></div>`
+      <li data-player-row class=${rowClass}>
+        ${content}
+        ${player.publicId
+          ? html`<button
+              type="button"
+              class="absolute inset-0 z-10 cursor-pointer bg-transparent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-aquarius/70"
+              title=${translateText("player_profile.view")}
+              aria-label=${`${translateText("player_profile.view")}: ${player.username}`}
+              @click=${() => dispatchViewProfile(this, player.publicId!)}
+            ></button>`
           : ""}
-        ${this.renderRank()} ${this.renderIdentity()}
-        <div class="col-start-2 min-w-0 sm:col-start-auto">
-          ${this.renderPlayerInfo()}
-        </div>
       </li>
+    `;
+  }
+
+  private renderRowContent(): TemplateResult {
+    return html`
+      ${this.player.winner
+        ? html`<div
+            class="absolute inset-y-0 left-0 w-0.5 bg-yellow-400/70"
+          ></div>`
+        : ""}
+      ${this.renderRank()} ${this.renderIdentity()}
+      <div class="col-start-2 min-w-0 sm:col-start-auto">
+        ${this.renderPlayerInfo()}
+      </div>
     `;
   }
 

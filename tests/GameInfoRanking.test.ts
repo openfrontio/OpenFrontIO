@@ -9,7 +9,7 @@ import {
   GameMode,
   GameType,
 } from "../src/core/game/Game";
-import { AnalyticsRecord, GameConfig } from "../src/core/Schemas";
+import { ArchivedAnalyticsRecord, GameConfig } from "../src/core/Schemas";
 import {
   GOLD_INDEX_STEAL,
   GOLD_INDEX_TRADE,
@@ -41,8 +41,8 @@ describe("Ranking class", () => {
   const gameDuration = gameTickDuration / 10;
 
   function makeSession(
-    overrides: Partial<AnalyticsRecord> = {},
-  ): AnalyticsRecord {
+    overrides: Partial<ArchivedAnalyticsRecord> = {},
+  ): ArchivedAnalyticsRecord {
     return {
       version: "v0.0.2",
       info: {
@@ -51,6 +51,7 @@ describe("Ranking class", () => {
         players: [
           {
             clientID: "p1",
+            publicID: "public-p1",
             username: "Alice",
             clanTag: "X",
             cosmetics: { flag: "USA" },
@@ -117,6 +118,7 @@ describe("Ranking class", () => {
     expect(players.length).toBe(3);
 
     const p1 = players.find((p) => p.id === "p1")!;
+    expect(p1.publicId).toBe("public-p1");
     expect(p1.username).toBe("Alice");
     expect(p1.flag).toBe("USA");
     expect(p1.conquests).toStrictEqual([5n]);
@@ -125,6 +127,7 @@ describe("Ranking class", () => {
     expect(p1.killedAt).toBeUndefined();
 
     const p3 = players.find((p) => p.id === "p3")!;
+    expect(p3.publicId).toBeNull();
     expect(p3.killedAt).toBe(600);
   });
 

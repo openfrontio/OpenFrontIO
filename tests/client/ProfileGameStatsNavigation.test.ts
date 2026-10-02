@@ -266,6 +266,59 @@ describe("Profile Games stats navigation", () => {
     expect(fetchPublicPlayerGames).toHaveBeenCalledOnce();
   });
 
+  it("opens a stats player profile and returns through stats to the originating profile", async () => {
+    const statsButton = Array.from(modal.querySelectorAll("button")).find(
+      (button) => button.textContent?.trim() === "game_list.stats",
+    );
+    expect(statsButton).toBeTruthy();
+    statsButton!.click();
+    await waitForStatsModal(statsModal, () => {
+      expect(statsModal.isOpen()).toBe(true);
+    });
+
+    statsModal.querySelector("game-info-view")!.dispatchEvent(
+      new CustomEvent("view-profile", {
+        detail: { publicId: "player-2" },
+        bubbles: true,
+        composed: true,
+      }),
+    );
+
+    await waitForProfile(modal, () => {
+      expect(modal.isOpen()).toBe(true);
+      const name = modal.querySelector<HTMLElement & { publicId: string }>(
+        "[slot='header'] player-name",
+      );
+      expect(name?.publicId).toBe("player-2");
+    });
+    expect(window.location.hash).toBe(
+      "#modal=profile&publicID=player-2&tab=stats",
+    );
+
+    const profileBack = modal.querySelector(
+      '[slot="header"] button',
+    ) as HTMLButtonElement;
+    profileBack.click();
+    await waitForStatsModal(statsModal, () => {
+      expect(statsModal.isOpen()).toBe(true);
+    });
+    expect(window.location.hash).toBe("#modal=stats&gameID=game-1");
+
+    const statsBack = statsModal.querySelector(
+      '[slot="header"] button',
+    ) as HTMLButtonElement;
+    statsBack.click();
+    await waitForProfile(modal, () => {
+      const history = modal.querySelector<HTMLElement & { publicId: string }>(
+        "player-game-history-view",
+      );
+      expect(history?.publicId).toBe("player-1");
+    });
+    expect(window.location.hash).toBe(
+      "#modal=profile&publicID=player-1&tab=games",
+    );
+  });
+
   it("reloads the games history when the route changes to a different player", async () => {
     // beforeEach opened player-1's history.
     expect(fetchPublicPlayerGames).toHaveBeenCalledWith(
