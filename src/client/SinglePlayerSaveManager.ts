@@ -170,19 +170,20 @@ export async function saveSnapshotBytes(
   gameID: string,
   bytes: Uint8Array,
   idb?: IDBFactory,
-): Promise<void> {
+): Promise<boolean> {
   let connection: { db: IDBDatabase | null; isShared: boolean } | null = null;
   try {
     connection = await getSnapshotDatabase(idb);
     const db = connection.db;
     if (!db) {
       memorySnapshots.set(gameID, bytes);
-      return;
+      return false;
     }
     const tx = db.transaction(SNAPSHOT_STORE_NAME, "readwrite");
     tx.objectStore(SNAPSHOT_STORE_NAME).put(bytes, gameID);
     await done(tx);
     memorySnapshots.set(gameID, bytes);
+    return true;
   } catch (e) {
     console.warn(
       "Failed to persist snapshot to IndexedDB, falling back to memory",
@@ -192,6 +193,7 @@ export async function saveSnapshotBytes(
     if (connection?.isShared) {
       closeSnapshotDatabase();
     }
+    return false;
   } finally {
     if (connection && !connection.isShared && connection.db) {
       try {
@@ -377,7 +379,14 @@ export async function saveSoloSnapshot(
       return;
     }
 
-    await saveSnapshotBytes(gameStartInfo.gameID, compressedSnapshot, idb);
+    const persisted = await saveSnapshotBytes(
+      gameStartInfo.gameID,
+      compressedSnapshot,
+      idb,
+    );
+    if (!persisted) {
+      return;
+    }
 
     const currentSave = getSoloSave();
     if (currentSave && currentSave.gameID !== gameStartInfo.gameID) {
@@ -506,46 +515,122 @@ export function getSoloSave(): SoloSaveState | null {
   }
 }
 
+export type SoloSnapshotResult =
+  | {
+      status: "success";
+      gameStartInfo: GameStartInfo;
+      snapshot: Uint8Array;
+      numTurns: number;
+    }
+  | {
+      status: "missing";
+    }
+  | {
+      status: "corrupt";
+      error?: unknown;
+    }
+  | {
+      status: "unavailable";
+      error?: unknown;
+    };
+
 /**
  * Loads and decompresses the raw snapshot bytes from the saved singleplayer match.
  */
-export async function getSoloSnapshot(): Promise<{
-  gameStartInfo: GameStartInfo;
-  snapshot: Uint8Array;
-  numTurns: number;
-} | null> {
+export async function getSoloSnapshot(
+  idb?: IDBFactory,
+): Promise<SoloSnapshotResult> {
   const save = getSoloSave();
-  if (!save || !save.hasSnapshot) return null;
+  if (!save || !save.hasSnapshot) return { status: "missing" };
+
+  let compressed: Uint8Array | null = null;
+  let storageUnavailable = false;
+  let storageError: unknown = null;
+
+  let connection: { db: IDBDatabase | null; isShared: boolean } | null = null;
   try {
-    let compressed = await getSnapshotBytes(save.gameID);
-    if (!compressed) {
-      // Check for legacy base64 snapshot in localStorage
-      const scopedKey = getScopedSoloSaveKey();
-      if (scopedKey) {
-        const raw = localStorage.getItem(scopedKey);
-        if (raw) {
+    connection = await getSnapshotDatabase(idb);
+    const db = connection.db;
+    if (db) {
+      const tx = db.transaction(SNAPSHOT_STORE_NAME, "readonly");
+      const result = await request<unknown>(
+        tx.objectStore(SNAPSHOT_STORE_NAME).get(save.gameID),
+      );
+      if (result instanceof Uint8Array) {
+        compressed = result;
+      } else if (result instanceof ArrayBuffer) {
+        compressed = new Uint8Array(result);
+      }
+    } else {
+      storageUnavailable = true;
+    }
+  } catch (e) {
+    console.warn("Failed to read snapshot from IndexedDB", e);
+    storageUnavailable = true;
+    storageError = e;
+    if (connection?.isShared) {
+      closeSnapshotDatabase();
+    }
+  } finally {
+    if (connection && !connection.isShared && connection.db) {
+      try {
+        connection.db.close();
+      } catch {
+        // Ignore
+      }
+    }
+  }
+
+  compressed ??= memorySnapshots.get(save.gameID) ?? null;
+
+  if (!compressed) {
+    // Check for legacy base64 snapshot in localStorage
+    const scopedKey = getScopedSoloSaveKey();
+    if (scopedKey) {
+      const raw = localStorage.getItem(scopedKey);
+      if (raw) {
+        try {
           const parsed = JSON.parse(raw) as Record<string, unknown>;
           if (typeof parsed.snapshot === "string" && parsed.snapshot) {
             compressed = base64ToUint8Array(parsed.snapshot);
-            // Migrate to IndexedDB and remove base64 payload from localStorage
-            await saveSnapshotBytes(save.gameID, compressed);
-            delete parsed.snapshot;
-            parsed.hasSnapshot = true;
-            localStorage.setItem(scopedKey, JSON.stringify(parsed));
+            // Migrate to IndexedDB and remove base64 payload from localStorage only on success
+            const persisted = await saveSnapshotBytes(
+              save.gameID,
+              compressed,
+              idb,
+            );
+            if (persisted) {
+              delete parsed.snapshot;
+              parsed.hasSnapshot = true;
+              localStorage.setItem(scopedKey, JSON.stringify(parsed));
+            }
           }
+        } catch (e) {
+          console.error("Failed to parse legacy snapshot from localStorage", e);
+          return { status: "corrupt", error: e };
         }
       }
     }
-    if (!compressed) return null;
+  }
+
+  if (!compressed) {
+    if (storageUnavailable) {
+      return { status: "unavailable", error: storageError };
+    }
+    return { status: "missing" };
+  }
+
+  try {
     const uncompressed = await decompressSnapshot(compressed);
     return {
+      status: "success",
       gameStartInfo: save.gameStartInfo,
       snapshot: uncompressed,
       numTurns: save.numTurns,
     };
   } catch (e) {
     console.error("Failed to decompress saved snapshot", e);
-    return null;
+    return { status: "corrupt", error: e };
   }
 }
 

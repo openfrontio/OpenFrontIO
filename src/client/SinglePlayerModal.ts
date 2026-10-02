@@ -288,11 +288,22 @@ export class SinglePlayerModal extends BaseModal {
 
     try {
       let resumeSnapshot: Uint8Array | undefined;
+      let snapshotFailedReason:
+        | "missing"
+        | "corrupt"
+        | "unavailable"
+        | undefined;
       if (save.hasSnapshot || (save as { snapshot?: string }).snapshot) {
         const snapData = await getSoloSnapshot();
         if (attempt !== this.resumeAttempt) return;
-        if (snapData) {
-          resumeSnapshot = snapData.snapshot;
+        if (snapData && "status" in snapData) {
+          if (snapData.status === "success") {
+            resumeSnapshot = snapData.snapshot;
+          } else {
+            snapshotFailedReason = snapData.status;
+          }
+        } else if (snapData && (snapData as any).snapshot) {
+          resumeSnapshot = (snapData as any).snapshot;
         }
       }
       const lastTurnNum =
@@ -311,9 +322,11 @@ export class SinglePlayerModal extends BaseModal {
           translateText("single_modal.resume_failed") ||
             "Failed to resume saved game.",
         );
-        clearSoloSave(save.gameID);
-        this.resumeSave = null;
-        this.requestUpdate();
+        if (snapshotFailedReason !== "unavailable") {
+          clearSoloSave(save.gameID);
+          this.resumeSave = null;
+          this.requestUpdate();
+        }
         return;
       }
 
