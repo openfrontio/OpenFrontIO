@@ -104,9 +104,65 @@ export function openSnapshotDatabase(
   });
 }
 
+let sharedDbPromise: Promise<IDBDatabase | null> | null = null;
+
+export function closeSnapshotDatabase(): void {
+  if (sharedDbPromise) {
+    const pending = sharedDbPromise;
+    sharedDbPromise = null;
+    void pending.then((db) => {
+      try {
+        db?.close();
+      } catch {
+        // Ignore close errors
+      }
+    });
+  }
+}
+
+export async function getSharedSnapshotDatabase(): Promise<IDBDatabase | null> {
+  sharedDbPromise ??= openSnapshotDatabase()
+    .then((db) => {
+      if (!db) {
+        sharedDbPromise = null;
+        return null;
+      }
+      db.onversionchange = () => {
+        try {
+          db.close();
+        } catch {
+          // Ignore
+        }
+        sharedDbPromise = null;
+      };
+      db.onclose = () => {
+        sharedDbPromise = null;
+      };
+      return db;
+    })
+    .catch((err) => {
+      console.warn("snapshot store: failed to open shared database", err);
+      sharedDbPromise = null;
+      return null;
+    });
+  return sharedDbPromise;
+}
+
+async function getSnapshotDatabase(
+  idb?: IDBFactory,
+): Promise<{ db: IDBDatabase | null; isShared: boolean }> {
+  if (!idb || idb === globalThis.indexedDB) {
+    const db = await getSharedSnapshotDatabase();
+    return { db, isShared: true };
+  }
+  const db = await openSnapshotDatabase(idb);
+  return { db, isShared: false };
+}
+
 const memorySnapshots = new Map<string, Uint8Array>();
 
 export function clearMemorySnapshots(): void {
+  closeSnapshotDatabase();
   memorySnapshots.clear();
 }
 
@@ -115,8 +171,10 @@ export async function saveSnapshotBytes(
   bytes: Uint8Array,
   idb?: IDBFactory,
 ): Promise<void> {
+  let connection: { db: IDBDatabase | null; isShared: boolean } | null = null;
   try {
-    const db = await openSnapshotDatabase(idb);
+    connection = await getSnapshotDatabase(idb);
+    const db = connection.db;
     if (!db) {
       memorySnapshots.set(gameID, bytes);
       return;
@@ -131,6 +189,17 @@ export async function saveSnapshotBytes(
       e,
     );
     memorySnapshots.set(gameID, bytes);
+    if (connection?.isShared) {
+      sharedDbPromise = null;
+    }
+  } finally {
+    if (connection && !connection.isShared && connection.db) {
+      try {
+        connection.db.close();
+      } catch {
+        // Ignore
+      }
+    }
   }
 }
 
@@ -138,8 +207,10 @@ export async function getSnapshotBytes(
   gameID: string,
   idb?: IDBFactory,
 ): Promise<Uint8Array | null> {
+  let connection: { db: IDBDatabase | null; isShared: boolean } | null = null;
   try {
-    const db = await openSnapshotDatabase(idb);
+    connection = await getSnapshotDatabase(idb);
+    const db = connection.db;
     if (!db) {
       return memorySnapshots.get(gameID) ?? null;
     }
@@ -156,7 +227,18 @@ export async function getSnapshotBytes(
     return memorySnapshots.get(gameID) ?? null;
   } catch (e) {
     console.warn("Failed to read snapshot from IndexedDB", e);
+    if (connection?.isShared) {
+      sharedDbPromise = null;
+    }
     return memorySnapshots.get(gameID) ?? null;
+  } finally {
+    if (connection && !connection.isShared && connection.db) {
+      try {
+        connection.db.close();
+      } catch {
+        // Ignore
+      }
+    }
   }
 }
 
@@ -165,14 +247,53 @@ export async function deleteSnapshotBytes(
   idb?: IDBFactory,
 ): Promise<void> {
   memorySnapshots.delete(gameID);
+  let connection: { db: IDBDatabase | null; isShared: boolean } | null = null;
   try {
-    const db = await openSnapshotDatabase(idb);
+    connection = await getSnapshotDatabase(idb);
+    const db = connection.db;
     if (!db) return;
     const tx = db.transaction(SNAPSHOT_STORE_NAME, "readwrite");
     tx.objectStore(SNAPSHOT_STORE_NAME).delete(gameID);
     await done(tx);
   } catch (e) {
     console.warn("Failed to delete snapshot from IndexedDB", e);
+    if (connection?.isShared) {
+      sharedDbPromise = null;
+    }
+  } finally {
+    if (connection && !connection.isShared && connection.db) {
+      try {
+        connection.db.close();
+      } catch {
+        // Ignore
+      }
+    }
+  }
+}
+
+export async function clearAllSnapshotBytes(idb?: IDBFactory): Promise<void> {
+  memorySnapshots.clear();
+  let connection: { db: IDBDatabase | null; isShared: boolean } | null = null;
+  try {
+    connection = await getSnapshotDatabase(idb);
+    const db = connection.db;
+    if (!db) return;
+    const tx = db.transaction(SNAPSHOT_STORE_NAME, "readwrite");
+    tx.objectStore(SNAPSHOT_STORE_NAME).clear();
+    await done(tx);
+  } catch (e) {
+    console.warn("Failed to clear snapshots from IndexedDB", e);
+    if (connection?.isShared) {
+      sharedDbPromise = null;
+    }
+  } finally {
+    if (connection && !connection.isShared && connection.db) {
+      try {
+        connection.db.close();
+      } catch {
+        // Ignore
+      }
+    }
   }
 }
 
