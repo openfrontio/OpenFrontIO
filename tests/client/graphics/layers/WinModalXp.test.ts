@@ -625,8 +625,8 @@ describe("WinModal XP section", () => {
             breakdown: {
               ...eligible().breakdown,
               gamePermille: 1000,
-              subscriberPermille: 1500,
-              total: 255,
+              subscriberPermille: 2000,
+              total: 340,
             },
           }),
         ),
@@ -636,7 +636,7 @@ describe("WinModal XP section", () => {
     const line = panel()!.querySelector("[data-xp-multiplier='subscriber']")!;
     expect(line.getAttribute("data-xp-tier")).toBe("sovereign");
     expect(line.textContent).toContain(
-      'progression.bonus_line:{"percent":50,"source":"progression.multiplier_sovereign"}',
+      'progression.bonus_line:{"percent":100,"source":"progression.multiplier_sovereign"}',
     );
     // Sovereign's gold, on the line and across the panel's boosted cards.
     expect(line.getAttribute("style")).toContain("--accent-a: #ffc713");
@@ -651,8 +651,8 @@ describe("WinModal XP section", () => {
             breakdown: {
               ...eligible().breakdown,
               gamePermille: 1000,
-              subscriberPermille: 1250,
-              total: 212,
+              subscriberPermille: 1200,
+              total: 204,
             },
           }),
         ),

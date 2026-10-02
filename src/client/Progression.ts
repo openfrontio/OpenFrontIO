@@ -100,9 +100,9 @@ export const SUBSCRIBER_TIERS: readonly {
   permille: number;
   colors: readonly [string, string];
 }[] = [
-  { tier: "sovereign", permille: 1500, colors: ["#ffc713", "#ffde90"] },
-  { tier: "warlord", permille: 1300, colors: ["#4cadd0", "#b2f9ff"] },
-  { tier: "vanguard", permille: 1200, colors: ["#369876", "#71ff9e"] },
+  { tier: "sovereign", permille: 2000, colors: ["#ffc713", "#ffde90"] },
+  { tier: "warlord", permille: 1500, colors: ["#4cadd0", "#b2f9ff"] },
+  { tier: "vanguard", permille: 1250, colors: ["#369876", "#71ff9e"] },
 ];
 
 /** The subscription tier a subscriber multiplier belongs to, if it's one. */

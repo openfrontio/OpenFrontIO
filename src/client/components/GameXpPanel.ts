@@ -1309,7 +1309,7 @@ export class GameXpPanel extends LitElement {
   }
 
   // A multiplier as a line of its own, the way Overwatch shows a group
-  // bonus: "+50% XP (SOVEREIGN BONUS)", "+20% XP (SUBSCRIBER BONUS)" for a
+  // bonus: "+100% XP (SOVEREIGN BONUS)", "+20% XP (SUBSCRIBER BONUS)" for a
   // boost from no known tier, or "−50% XP (GAME TYPE)" for a cut.
   private bonusText(key: "game" | "subscriber", permille: number): string {
     const percent = multiplierPercent(permille);
