@@ -145,17 +145,18 @@ describe("land a nuke severs from the main body is annexed", () => {
   });
 
   test("a piece with no fallout around it is left to the existing rules", () => {
-    // Detached by the attacker's land rather than by a nuke.
-    paint(union(mainBody, rect(140, 94, 170, 106)));
+    // Cut off by the attacker's land rather than by a nuke.
+    paint(union(mainBody, arm));
     startClusterChecks();
-    for (let y = 94; y <= 106; y++) attacker.conquer(game.ref(140, y));
-    const tipBefore = defenderTilesIn(armTip);
+    for (let y = 94; y <= 106; y++) attacker.conquer(game.ref(120, y));
+    const mainBefore = defenderTilesIn(mainBody);
+    expect(defenderTilesIn(armTip)).toBeGreaterThan(0);
 
     runClusterChecks();
 
     // isSurrounded already annexes a fully surrounded inland pocket.
-    expect(defenderTilesIn(armTip)).toBeLessThanOrEqual(tipBefore);
-    expect(defenderTilesIn(mainBody)).toBeGreaterThan(0);
+    expect(defenderTilesIn(armTip)).toBe(0);
+    expect(defenderTilesIn(mainBody)).toBe(mainBefore);
   });
 
   test("losing the last land to a severed-piece annex conquers the player", () => {
