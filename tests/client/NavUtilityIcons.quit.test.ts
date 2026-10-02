@@ -103,7 +103,7 @@ describe("the nav's exit door", () => {
     const pageButtons = Array.from(
       el.querySelectorAll<HTMLElement>(".nav-menu-item[data-page]"),
     ).map((b) => b.dataset.page);
-    expect(pageButtons).toEqual(["page-news", "page-help", "page-settings"]);
+    expect(pageButtons).toEqual(["page-help", "page-settings"]);
 
     const settings = el.querySelector<HTMLElement>(
       '.nav-menu-item[data-page="page-settings"]',
