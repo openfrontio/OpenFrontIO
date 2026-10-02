@@ -259,7 +259,19 @@ export class TrainExecution implements Execution {
     for (let i = 0; i < path.length - 1; i++) {
       const segment = getOrientedRailroad(path[i], path[i + 1]);
       if (!segment) return null;
-      for (const tile of segment.getTiles()) {
+      const tiles = segment.getTiles();
+      for (let j = 0; j < tiles.length; j++) {
+        const tile = tiles[j];
+        // Normalize duplicated junction tiles before comparing
+        if (
+          i > 0 &&
+          j === 0 &&
+          cursor > 0 &&
+          this.pathTiles[cursor - 1] === tile &&
+          this.pathTiles[cursor] !== tile
+        ) {
+          continue;
+        }
         if (this.pathTiles[cursor++] !== tile) {
           return null;
         }
@@ -286,23 +298,23 @@ export class TrainExecution implements Execution {
     if (!this.stations[0].getRailroadTo(this.stations[1])) {
       const newRailroad = this.resolveSplitRailroad();
       if (newRailroad) {
+        const physicalPos = this.pathIndex + this.currentTile;
         this.currentRailroad = newRailroad;
 
         // If the train has already physically passed intermediate stations on the split segment,
         // advance to the active segment without treating already-passed stations as new stops.
-        while (this.currentTile >= this.currentRailroad.getTiles().length) {
+        while (
+          this.pathIndex + this.currentRailroad.getTiles().length <=
+          physicalPos
+        ) {
           if (this.stations.length <= 2) {
             break; // Train is past the end of the new path, continue with current
           }
-          this.currentTile -= this.currentRailroad.getTiles().length;
-          this.pathIndex += this.currentRailroad.getTiles().length;
-          this.stations.shift();
-          const next = getOrientedRailroad(this.stations[0], this.stations[1]);
-          if (!next) {
+          if (!this.nextStation()) {
             break;
           }
-          this.currentRailroad = next;
         }
+        this.currentTile = physicalPos - this.pathIndex;
       }
     }
 

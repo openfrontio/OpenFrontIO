@@ -305,4 +305,57 @@ describe("TrainExecution", () => {
       expect(exec.tradeStopsVisited()).toBe(expectedTradeStops);
     },
   );
+
+  it("re-resolves when splitting a segment whose original tiles do not repeat the junction", async () => {
+    const game = await setup("plains", { instantBuild: true }, [
+      new PlayerInfo("p1", PlayerType.Human, null, "p1"),
+    ]);
+    const player = game.player("p1")!;
+
+    [0, 1, 2, 3].forEach((t) => player.conquer(t));
+    const [stationA, stationB, stationC, stationD] = [0, 1, 3, 2].map(
+      (t) => new TrainStation(game, player.buildUnit(UnitType.City, t, {})),
+    );
+
+    const net = game.railNetwork();
+    const stationManager = net.stationManager();
+    [stationA, stationB, stationC].forEach((s) => stationManager.addStation(s));
+
+    const link = (
+      a: TrainStation,
+      b: TrainStation,
+      tiles: TileRef[],
+      id: number,
+    ) => {
+      const r = new Railroad(a, b, tiles, id);
+      a.addRailroad(r);
+      b.addRailroad(r);
+      return r;
+    };
+
+    link(stationA, stationB, [0, 1], 1);
+    // B->C has tiles [1, 2, 3]
+    const railBC = link(stationB, stationC, [1, 2, 3], 2);
+
+    const exec = new TrainExecution(net, player, stationA, stationC, 1);
+    exec.init(game, 0);
+
+    // Split edge B->C into B->D [1, 2] and D->C [2, 3]
+    // The new tiles are [1, 2, 2, 3], which repeats the junction at 2
+    // But the original path only listed [1, 2, 3]
+    stationB.removeRailroad(railBC);
+    stationC.removeRailroad(railBC);
+    stationManager.addStation(stationD);
+    link(stationB, stationD, [1, 2], 3);
+    link(stationD, stationC, [2, 3], 4);
+
+    exec.tick(1);
+    exec.tick(1);
+    expect(exec.isActive()).toBe(true);
+    let maxTicks = 10;
+    while (exec.isActive() && maxTicks-- > 0) {
+      exec.tick(maxTicks);
+    }
+    expect(exec.isActive()).toBe(false);
+  });
 });
