@@ -748,6 +748,7 @@ export class GameImpl implements Game {
       chosenInfo.nationFlag,
     );
     target.setPlayerInfo(updatedChosenInfo);
+    target.markDisconnected(false);
 
     this._humans = this._humans.filter((h) => h.id !== target.id());
     this._humans.push(updatedChosenInfo);
@@ -771,6 +772,7 @@ export class GameImpl implements Game {
       pInfo.nationFlag,
     );
     target.setPlayerInfo(updatedBotInfo);
+    target.markDisconnected(false);
 
     this._humans = this._humans.filter((h) => h.id !== target.id());
     this._nations = this._nations.filter(

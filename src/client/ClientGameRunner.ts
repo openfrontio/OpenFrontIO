@@ -921,6 +921,9 @@ export async function createClientGame(
       eventBus,
       (nowMs) => metrics.recordFrame(nowMs),
     );
+    if (initialUpdate) {
+      webglBuilder.update(gameView);
+    }
 
     // Releases all WebGL/DOM resources this game created. Without it, stopping
     // a game (e.g. joining another without a page reload) leaks the WebGL

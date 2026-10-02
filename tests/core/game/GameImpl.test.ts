@@ -239,4 +239,24 @@ describe("GameImpl", () => {
     expect(attacker.info().clientID).toBe("attacker_new_client");
     expect(attacker.type()).toBe(PlayerType.Human);
   });
+
+  test("convertHumanToNation clears disconnected status on a previously disconnected player", () => {
+    defender.markDisconnected(true);
+    expect(defender.isDisconnected()).toBe(true);
+
+    game.convertHumanToNation(defender, gameID);
+
+    expect(defender.type()).toBe(PlayerType.Nation);
+    expect(defender.isDisconnected()).toBe(false);
+  });
+
+  test("takeoverPlayer clears disconnected status on a previously disconnected player", () => {
+    attacker.markDisconnected(true);
+    expect(attacker.isDisconnected()).toBe(true);
+
+    game.takeoverPlayer(attacker.id(), "attacker_new_client");
+
+    expect(attacker.clientID()).toBe("attacker_new_client");
+    expect(attacker.isDisconnected()).toBe(false);
+  });
 });
