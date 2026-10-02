@@ -25,7 +25,7 @@ vi.mock("../../src/client/Navigation", () => ({ closeMobileSidebar }));
 vi.mock("../../src/client/Utils", () => ({
   translateText: (key: string, params?: Record<string, string | number>) => {
     if (key === "notifications.new_version") {
-      return `Version ${params?.version} is available`;
+      return `Version ${params?.version} is now live`;
     }
     return key;
   },
@@ -105,7 +105,7 @@ describe("nav notification menu", () => {
     const element = await mount();
     const menu = await openMenu(element);
     const versionRow = Array.from(menu.querySelectorAll("button")).find(
-      (button) => button.textContent?.includes("Version v9.9.9 is available"),
+      (button) => button.textContent?.includes("Version v9.9.9 is now live"),
     )!;
 
     versionRow.click();
