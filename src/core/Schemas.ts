@@ -1327,10 +1327,12 @@ export type AnalyticsRecord = z.infer<typeof AnalyticsRecordSchema>;
 // added later, conquests became an array) while the `version` literal never
 // changed, so strict parsing rejects them wholesale. Records are trusted
 // server output, not untrusted input — tolerate the historical shapes.
-// Inferred types are identical to the strict schemas', so parsed results are
-// still AnalyticsRecord. Not for replays: those require an exact gitCommit
-// match anyway (see JoinLobbyModal.checkArchivedGame).
+// The API also enriches archived players with their public account ID. Keep
+// that read-only field out of the strict game-record schema written by game
+// servers. Not for replays: those require an exact gitCommit match anyway
+// (see JoinLobbyModal.checkArchivedGame).
 const ArchivedPlayerRecordSchema = PlayerRecordSchema.extend({
+  publicID: z.string().nullable().optional(),
   // Validated at join time under the rules of its era; the loosest era was
   // SafeString (max 1000, emoji allowed, no min), so only cap length.
   username: z.string().max(1000),
@@ -1353,6 +1355,9 @@ export const ArchivedAnalyticsRecordSchema = AnalyticsRecordSchema.extend({
     players: ArchivedPlayerRecordSchema.array(),
   }),
 });
+export type ArchivedAnalyticsRecord = z.infer<
+  typeof ArchivedAnalyticsRecordSchema
+>;
 
 export const GameRecordSchema = AnalyticsRecordSchema.extend({
   turns: TurnSchema.array(),
