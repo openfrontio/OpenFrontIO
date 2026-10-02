@@ -730,26 +730,30 @@ export class JoinLobbyModal extends BaseModal {
         ></lobby-config-item>`,
     );
 
+    // object-contain, not object-cover: the preview is here to be studied
+    // while waiting, so a wide or tall map must show whole rather than cropped
+    // to the box. max-h keeps a tall map from pushing the player list away.
     return html`
-      <div class="flex items-center gap-3 mb-6">
+      <div class="flex flex-col sm:flex-row sm:items-start gap-4 mb-6">
         <img
+          data-test-map-preview
           src=${thumbnailUrl}
           alt=${mapName ?? c.gameMap}
-          class="w-20 h-20 rounded-lg object-cover border border-white/10 shrink-0"
+          class="w-full sm:w-3/5 max-h-60 rounded-lg object-contain border border-white/10 bg-black/20 shrink-0"
           @error=${(e: Event) => {
             (e.target as HTMLImageElement).style.display = "none";
           }}
         />
-        <div class="flex flex-col gap-1">
-          <span class="text-lg font-bold text-white">${mapName}</span>
-          <span class="text-sm text-white/60">${modeSubtitle}</span>
+        <div class="flex flex-col gap-3 min-w-0 flex-1">
+          <div class="flex flex-col gap-1">
+            <span class="text-lg font-bold text-white">${mapName}</span>
+            <span class="text-sm text-white/60">${modeSubtitle}</span>
+          </div>
+          ${cards.length > 0
+            ? html`<div class="grid grid-cols-2 gap-2">${cards}</div>`
+            : html``}
         </div>
       </div>
-      ${cards.length > 0
-        ? html`<div class="grid grid-cols-2 sm:grid-cols-3 gap-2 mb-6">
-            ${cards}
-          </div>`
-        : html``}
       ${this.renderDisabledUnits()} ${this.renderHostCheats()}
     `;
   }
