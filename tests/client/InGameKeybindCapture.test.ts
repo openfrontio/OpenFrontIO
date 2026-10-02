@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import "../../src/client/components/baseComponents/setting/SettingKeybind";
 import {
   AlternateViewEvent,
+  DoQuickChatEvent,
   InputHandler,
 } from "../../src/client/InputHandler";
 import type { GameView } from "../../src/client/view";
@@ -102,6 +103,37 @@ describe("keybind capture over a live game", () => {
     // ...and the old binding stops acting.
     pressToggleView(other);
     expect(alternateViewEvents()).toHaveLength(1);
+  });
+
+  it("dispatches Quick Chat with its current binding and ignores text input", () => {
+    const pressAndRelease = (target: EventTarget, code: string) => {
+      press(target, code);
+      target.dispatchEvent(new KeyboardEvent("keyup", { code, bubbles: true }));
+    };
+    pressAndRelease(window, "KeyH");
+    expect(emitted.filter((e) => e instanceof DoQuickChatEvent)).toHaveLength(
+      1,
+    );
+    new UserSettings().setKeybinds({ quickChat: { value: "KeyJ", key: "J" } });
+    pressAndRelease(window, "KeyH");
+    pressAndRelease(window, "KeyJ");
+    expect(emitted.filter((e) => e instanceof DoQuickChatEvent)).toHaveLength(
+      2,
+    );
+    const search = document.createElement("input");
+    document.body.append(search);
+    pressAndRelease(search, "KeyJ");
+    expect(emitted.filter((e) => e instanceof DoQuickChatEvent)).toHaveLength(
+      2,
+    );
+    new UserSettings().setKeybinds({
+      quickChat: { value: "Null", key: "None" },
+    });
+    pressAndRelease(window, "KeyJ");
+    pressAndRelease(window, "KeyH");
+    expect(emitted.filter((e) => e instanceof DoQuickChatEvent)).toHaveLength(
+      2,
+    );
   });
 
   it("stops following rebinds once the handler is destroyed", () => {

@@ -39,9 +39,11 @@ import { GameMetrics } from "./GameMetrics";
 import { showInGameAlert } from "./InGameModal";
 import {
   AutoUpgradeEvent,
+  CloseViewEvent,
   DoBoatAttackEvent,
   DoBreakAllianceEvent,
   DoGroundAttackEvent,
+  DoQuickChatEvent,
   DoRequestAllianceEvent,
   DoRetaliateAttackEvent,
   InputHandler,
@@ -73,6 +75,7 @@ import { createCanvas } from "./Utils";
 import { WebGLFrameBuilder } from "./WebGLFrameBuilder";
 import { MapLayerController } from "./controllers/MapLayerController";
 import { createRenderer, GameRenderer } from "./hud/GameRenderer";
+import { ChatModal } from "./hud/layers/ChatModal";
 import { goldRateTracker } from "./hud/layers/lib/GoldRateTracker";
 import {
   applyGraphicsOverrides,
@@ -720,6 +723,7 @@ async function createClientGame(
   // map drawing happens on the WebGL canvas created in createWebGLView.
   const inputOverlay = document.createElement("div");
   inputOverlay.id = "game-input-overlay";
+  inputOverlay.tabIndex = -1;
   inputOverlay.style.position = "fixed";
   inputOverlay.style.left = "0";
   inputOverlay.style.top = "0";
@@ -1000,6 +1004,7 @@ export class ClientGameRunner {
       DoBreakAllianceEvent,
       this.doBreakAllianceUnderCursor.bind(this),
     );
+    this.eventBus.on(DoQuickChatEvent, this.doQuickChatUnderCursor.bind(this));
 
     this.renderer.initialize();
     this.input.initialize();
@@ -1461,6 +1466,25 @@ export class ClientGameRunner {
       this.renderer.uiState.attackRatio * this.myPlayer.troops(),
     );
     this.eventBus.emit(new SendAttackIntentEvent(attacker.id(), counterTroops));
+  }
+
+  private doQuickChatUnderCursor(): void {
+    const chat = document.querySelector<ChatModal>("chat-modal");
+    if (!chat || chat.isModalOpen) return;
+    const tile = this.getTileUnderCursor();
+    const sender = this.gameView.myPlayer();
+    if (tile === null || !sender?.isAlive()) return;
+    const owner = this.gameView.owner(tile);
+    if (!owner.isPlayer()) return;
+    const recipient = owner as PlayerView;
+    if (
+      recipient.type() === PlayerType.Bot ||
+      recipient.id() === sender.id() ||
+      !recipient.isAlive()
+    )
+      return;
+    this.eventBus.emit(new CloseViewEvent());
+    chat.open(sender, recipient);
   }
 
   private doRequestAllianceUnderCursor(): void {

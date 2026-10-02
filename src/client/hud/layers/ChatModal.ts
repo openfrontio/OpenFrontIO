@@ -1,14 +1,15 @@
 import { LitElement, html } from "lit";
-import { customElement, query } from "lit/decorators.js";
+import { customElement, query, state } from "lit/decorators.js";
 
-import { PlayerType } from "../../../core/game/Game";
+import { PlayerID, PlayerType } from "../../../core/game/Game";
 import { GameView, PlayerView } from "../../view";
 
 import quickChatData from "resources/QuickChat.json";
 import { EventBus } from "../../../core/EventBus";
+import { UserSettings } from "../../../core/game/UserSettings";
 import { CloseViewEvent } from "../../InputHandler";
 import { SendQuickChatEvent } from "../../Transport";
-import { translateText } from "../../Utils";
+import { textDirection, translateText } from "../../Utils";
 
 export type QuickChatPhrase = {
   key: string;
@@ -21,10 +22,9 @@ export const quickChatPhrases: QuickChatPhrases = quickChatData;
 
 @customElement("chat-modal")
 export class ChatModal extends LitElement {
-  @query("o-modal") private modalEl!: HTMLElement & {
-    open: () => void;
-    close: () => void;
-  };
+  @state() public isModalOpen = false;
+  @query(".chat-panel") private panel?: HTMLElement;
+  private returnFocus: HTMLElement | null = null;
 
   createRenderRoot() {
     return this;
@@ -34,30 +34,19 @@ export class ChatModal extends LitElement {
 
   private playerSearchQuery: string = "";
   private sortByTerritory = false;
-  private previewText: string | null = null;
   private requiresPlayerSelection: boolean = false;
   private selectedCategory: string | null = null;
-  private selectedPhraseText: string | null = null;
-  private selectedPhraseTemplate: string | null = null;
   private selectedQuickChatKey: string | null = null;
   private selectedPlayer: PlayerView | null = null;
+
+  private userSettings = new UserSettings();
+  private lastMessage: { key: string; target?: PlayerID } | null = null;
 
   private recipient: PlayerView;
   private sender: PlayerView;
   public eventBus: EventBus;
 
   public g: GameView;
-
-  quickChatPhrases: Record<
-    string,
-    Array<{ text: string; requiresPlayer: boolean }>
-  > = {
-    help: [{ text: "Please give me troops!", requiresPlayer: false }],
-    attack: [{ text: "Attack [P1]!", requiresPlayer: true }],
-    defend: [{ text: "Defend [P1]!", requiresPlayer: true }],
-    greet: [{ text: "Hello!", requiresPlayer: false }],
-    misc: [{ text: "Let's go!", requiresPlayer: false }],
-  };
 
   public categories = [
     { id: "help" },
@@ -72,153 +61,207 @@ export class ChatModal extends LitElement {
     return quickChatPhrases[categoryId] ?? [];
   }
 
+  updated(changed: Map<string, unknown>) {
+    if (changed.has("isModalOpen") && this.isModalOpen) {
+      this.panel?.focus();
+    }
+  }
+
+  private onPanelKeydown = (event: KeyboardEvent) => {
+    if (event.key === "Escape") {
+      event.preventDefault();
+      event.stopPropagation();
+      this.close();
+    }
+  };
+
   render() {
+    if (!this.isModalOpen) return html``;
     return html`
-      <o-modal title="${translateText("chat.title")}">
-        <div class="chat-columns">
-          <div class="chat-column">
-            <div class="column-title">${translateText("chat.category")}</div>
-            ${this.categories.map(
-              (category) => html`
-                <button
-                  class="chat-option-button ${this.selectedCategory ===
-                  category.id
-                    ? "selected"
-                    : ""}"
-                  @click=${() => this.selectCategory(category.id)}
-                >
-                  ${translateText(`chat.cat.${category.id}`)}
-                </button>
-              `,
-            )}
+      <div class="chat-container">
+        <section
+          class="chat-panel"
+          role="dialog"
+          aria-label=${translateText("chat.title")}
+          tabindex="-1"
+          dir=${textDirection()}
+          style="--chat-background-opacity: ${this.userSettings.quickChatOpacity()}"
+          @click=${(event: Event) => event.stopPropagation()}
+          @wheel=${(event: Event) => event.stopPropagation()}
+          @keydown=${this.onPanelKeydown}
+        >
+          <header class="chat-header">
+            <h2>${translateText("chat.title")}</h2>
+            <button
+              class="chat-close-button"
+              type="button"
+              aria-label=${translateText("common.close")}
+              @click=${() => this.close()}
+            >
+              ✕
+            </button>
+          </header>
+          <div class="chat-body">
+            <div class="chat-recipient">${this.recipient?.displayName()}</div>
+            <div
+              class="chat-columns ${this.requiresPlayerSelection
+                ? "has-player"
+                : ""}"
+            >
+              <div class="chat-column">
+                <div class="column-title">
+                  ${translateText("chat.category")}
+                </div>
+                ${this.categories.map(
+                  (category) => html`
+                    <button
+                      class="chat-option-button ${this.selectedCategory ===
+                      category.id
+                        ? "selected"
+                        : ""}"
+                      aria-pressed=${this.selectedCategory === category.id}
+                      @click=${() => this.selectCategory(category.id)}
+                    >
+                      ${translateText(`chat.cat.${category.id}`)}
+                    </button>
+                  `,
+                )}
+              </div>
+
+              ${this.selectedCategory
+                ? html`
+                    <div class="chat-column">
+                      <div class="column-title">
+                        ${translateText("chat.phrase")}
+                      </div>
+                      <div class="phrase-scroll-area">
+                        ${this.getPhrasesForCategory(this.selectedCategory).map(
+                          (phrase) => html`
+                            <button
+                              class="chat-option-button ${this
+                                .selectedQuickChatKey ===
+                              `${this.selectedCategory}.${phrase.key}`
+                                ? "selected"
+                                : ""}"
+                              aria-pressed=${this.selectedQuickChatKey ===
+                              `${this.selectedCategory}.${phrase.key}`}
+                              @click=${() => this.selectPhrase(phrase)}
+                            >
+                              ${this.renderPhrasePreview(phrase)}
+                            </button>
+                          `,
+                        )}
+                      </div>
+                    </div>
+                  `
+                : null}
+              ${this.requiresPlayerSelection
+                ? html`
+                    <div class="chat-column">
+                      <div class="column-title">
+                        ${translateText("chat.player")}
+                      </div>
+
+                      <label
+                        class="flex items-center gap-2 text-sm cursor-pointer"
+                      >
+                        <input
+                          type="checkbox"
+                          .checked=${this.sortByTerritory}
+                          @change=${this.onPlayerSortChange}
+                        />
+                        ${translateText("chat.sort_by_territory")}
+                      </label>
+
+                      <input
+                        class="player-search-input"
+                        type="text"
+                        aria-label="${translateText("chat.search")}"
+                        placeholder="${translateText("chat.search")}"
+                        .value=${this.playerSearchQuery}
+                        @input=${this.onPlayerSearchInput}
+                      />
+
+                      <div class="player-scroll-area">
+                        ${this.getSortedFilteredPlayers().map(
+                          (player) => html`
+                            <button
+                              class="chat-option-button ${this
+                                .selectedPlayer === player
+                                ? "selected"
+                                : ""}"
+                              style="border: 2px solid ${player
+                                .territoryColor()
+                                .toHex()};"
+                              aria-pressed=${this.selectedPlayer === player}
+                              @click=${() => this.selectPlayer(player)}
+                            >
+                              ${player.displayName()}
+                            </button>
+                          `,
+                        )}
+                      </div>
+                    </div>
+                  `
+                : null}
+            </div>
           </div>
-
-          ${this.selectedCategory
-            ? html`
-                <div class="chat-column">
-                  <div class="column-title">
-                    ${translateText("chat.phrase")}
-                  </div>
-                  <div class="phrase-scroll-area">
-                    ${this.getPhrasesForCategory(this.selectedCategory).map(
-                      (phrase) => html`
-                        <button
-                          class="chat-option-button ${this
-                            .selectedPhraseText ===
-                          translateText(
-                            `chat.${this.selectedCategory}.${phrase.key}`,
-                          )
-                            ? "selected"
-                            : ""}"
-                          @click=${() => this.selectPhrase(phrase)}
-                        >
-                          ${this.renderPhrasePreview(phrase)}
-                        </button>
-                      `,
-                    )}
-                  </div>
-                </div>
-              `
-            : null}
-          ${this.requiresPlayerSelection || this.selectedPlayer
-            ? html`
-                <div class="chat-column">
-                  <div class="column-title">
-                    ${translateText("chat.player")}
-                  </div>
-
-                  <label class="flex items-center gap-2 text-sm cursor-pointer">
-                    <input
-                      type="checkbox"
-                      .checked=${this.sortByTerritory}
-                      @change=${this.onPlayerSortChange}
-                    />
-                    ${translateText("chat.sort_by_territory")}
-                  </label>
-
-                  <input
-                    class="player-search-input"
-                    type="text"
-                    placeholder="${translateText("chat.search")}"
-                    .value=${this.playerSearchQuery}
-                    @input=${this.onPlayerSearchInput}
-                  />
-
-                  <div class="player-scroll-area">
-                    ${this.getSortedFilteredPlayers().map(
-                      (player) => html`
-                        <button
-                          class="chat-option-button ${this.selectedPlayer ===
-                          player
-                            ? "selected"
-                            : ""}"
-                          style="border: 2px solid ${player
-                            .territoryColor()
-                            .toHex()};"
-                          @click=${() => this.selectPlayer(player)}
-                        >
-                          ${player.displayName()}
-                        </button>
-                      `,
-                    )}
-                  </div>
-                </div>
-              `
-            : null}
-        </div>
-
-        <div class="chat-preview">
-          ${this.previewText
-            ? translateText(this.previewText)
-            : translateText("chat.build")}
-        </div>
-        <div class="chat-send">
-          <button
-            class="chat-send-button"
-            @click=${this.sendChatMessage}
-            ?disabled=${!this.previewText ||
-            (this.requiresPlayerSelection && !this.selectedPlayer)}
-          >
-            ${translateText("chat.send")}
-          </button>
-        </div>
-      </o-modal>
+          <div class="chat-footer">
+            <div class="chat-preview">
+              ${this.previewText ?? translateText("chat.build")}
+            </div>
+            <div class="chat-send">
+              <button
+                class="chat-repeat-button"
+                @click=${this.sendLastMessage}
+                ?disabled=${!this.canRepeatLastMessage()}
+              >
+                <span>${translateText("chat.send_last")}</span>
+                ${this.lastMessage
+                  ? html`<span class="chat-last-preview"
+                      >${this.lastMessagePreview()}</span
+                    >`
+                  : null}
+              </button>
+              <button
+                class="chat-send-button"
+                @click=${this.sendChatMessage}
+                ?disabled=${!this.previewText ||
+                (this.requiresPlayerSelection && !this.selectedPlayer)}
+              >
+                ${translateText("chat.send")}
+              </button>
+            </div>
+          </div>
+        </section>
+      </div>
     `;
   }
 
   initEventBus(eventBus: EventBus) {
+    this.eventBus?.off(CloseViewEvent, this.onCloseView);
+    this.lastMessage = null;
+    this.close();
     this.eventBus = eventBus;
-    eventBus.on(CloseViewEvent, (e) => {
-      if (!this.hidden) {
-        this.close();
-      }
-    });
+    eventBus.on(CloseViewEvent, this.onCloseView);
   }
+
+  private onCloseView = () => this.close();
 
   private selectCategory(categoryId: string) {
     this.selectedCategory = categoryId;
-    this.selectedPhraseText = null;
-    this.selectedPhraseTemplate = null;
     this.selectedQuickChatKey = null;
     this.selectedPlayer = null;
-    this.previewText = null;
     this.requiresPlayerSelection = false;
     this.requestUpdate();
   }
 
   private selectPhrase(phrase: QuickChatPhrase) {
+    this.selectedPlayer = null;
     this.selectedQuickChatKey = this.getFullQuickChatKey(
       this.selectedCategory!,
       phrase.key,
     );
-    this.selectedPhraseTemplate = translateText(
-      `chat.${this.selectedCategory}.${phrase.key}`,
-    );
-    this.selectedPhraseText = translateText(
-      `chat.${this.selectedCategory}.${phrase.key}`,
-    );
-    this.previewText = `chat.${this.selectedCategory}.${phrase.key}`;
-    this.selectedPlayer = null;
     this.requiresPlayerSelection = phrase.requiresPlayer;
     this.requestUpdate();
   }
@@ -227,39 +270,83 @@ export class ChatModal extends LitElement {
     return translateText(`chat.${this.selectedCategory}.${phrase.key}`);
   }
 
+  private get previewText(): string | null {
+    if (!this.selectedQuickChatKey) return null;
+    const text = translateText(`chat.${this.selectedQuickChatKey}`);
+    return this.requiresPlayerSelection && this.selectedPlayer
+      ? text.replace("[P1]", this.selectedPlayer.displayName())
+      : text;
+  }
+
   private selectPlayer(player: PlayerView) {
-    if (this.previewText) {
-      this.previewText =
-        this.selectedPhraseTemplate?.replace("[P1]", player.displayName()) ??
-        null;
+    if (this.selectedQuickChatKey && this.requiresPlayerSelection) {
       this.selectedPlayer = player;
-      this.requiresPlayerSelection = false;
       this.requestUpdate();
     }
   }
 
-  private sendChatMessage() {
-    console.log("Sent message:", this.previewText);
-    console.log("Sender:", this.sender);
-    console.log("Recipient:", this.recipient);
-    console.log("Key:", this.selectedQuickChatKey);
-
-    if (this.sender && this.recipient && this.selectedQuickChatKey) {
-      this.eventBus.emit(
-        new SendQuickChatEvent(
-          this.recipient,
-          this.selectedQuickChatKey,
-          this.selectedPlayer?.id(),
-        ),
-      );
-    }
-
-    this.previewText = null;
-    this.selectedCategory = null;
-    this.requiresPlayerSelection = false;
-    this.close();
-
+  public sendQuickChat(
+    sender: PlayerView,
+    recipient: PlayerView,
+    key: string,
+    target?: PlayerID,
+  ) {
+    if (sender.id() === recipient.id()) return;
+    this.eventBus.emit(new SendQuickChatEvent(recipient, key, target));
+    this.lastMessage = { key, target };
     this.requestUpdate();
+  }
+
+  private sendChatMessage() {
+    if (
+      !this.sender ||
+      !this.recipient ||
+      !this.selectedQuickChatKey ||
+      (this.requiresPlayerSelection && !this.selectedPlayer)
+    )
+      return;
+    this.sendQuickChat(
+      this.sender,
+      this.recipient,
+      this.selectedQuickChatKey,
+      this.requiresPlayerSelection ? this.selectedPlayer?.id() : undefined,
+    );
+    this.close();
+  }
+
+  private canRepeatLastMessage(): boolean {
+    const message = this.lastMessage;
+    return (
+      !!message &&
+      (!message.target ||
+        this.players.some((p) => p.id() === message.target && p.isAlive()))
+    );
+  }
+
+  private lastMessagePreview(): string {
+    if (!this.lastMessage) return "";
+    const text = translateText(`chat.${this.lastMessage.key}`);
+    const target = this.players.find(
+      (p) => p.id() === this.lastMessage!.target,
+    );
+    return target ? text.replace("[P1]", target.displayName()) : text;
+  }
+
+  private sendLastMessage() {
+    if (
+      !this.sender ||
+      !this.recipient ||
+      !this.lastMessage ||
+      !this.canRepeatLastMessage()
+    )
+      return;
+    this.sendQuickChat(
+      this.sender,
+      this.recipient,
+      this.lastMessage.key,
+      this.lastMessage.target,
+    );
+    this.close();
   }
 
   private onPlayerSearchInput(e: Event) {
@@ -293,9 +380,9 @@ export class ChatModal extends LitElement {
   }
 
   public open(sender?: PlayerView, recipient?: PlayerView) {
+    this.captureReturnFocus();
+    this.resetSelection();
     if (sender && recipient) {
-      console.log("Sent message:", recipient);
-      console.log("Sent message:", sender);
       this.players = this.g
         .players()
         .filter((p) => p.isAlive() && p.type() !== PlayerType.Bot);
@@ -304,18 +391,60 @@ export class ChatModal extends LitElement {
       this.sender = sender;
     }
     this.requestUpdate();
-    this.modalEl?.open();
+    this.isModalOpen = true;
+  }
+
+  private resetSelection() {
+    this.selectedCategory = null;
+    this.selectedQuickChatKey = null;
+    this.selectedPlayer = null;
+    this.playerSearchQuery = "";
+    this.requiresPlayerSelection = false;
+    this.requestUpdate();
+  }
+
+  private captureReturnFocus() {
+    if (!this.isModalOpen) {
+      this.returnFocus =
+        document.activeElement instanceof HTMLElement
+          ? document.activeElement
+          : null;
+    }
   }
 
   public close() {
-    this.selectedCategory = null;
-    this.selectedPhraseText = null;
-    this.selectedPhraseTemplate = null;
-    this.selectedQuickChatKey = null;
-    this.selectedPlayer = null;
-    this.previewText = null;
-    this.requiresPlayerSelection = false;
-    this.modalEl?.close();
+    const restoreFocus =
+      this.isModalOpen && this.contains(document.activeElement);
+    const opener = this.returnFocus;
+    this.returnFocus = null;
+    this.resetSelection();
+    this.isModalOpen = false;
+    if (!restoreFocus) return;
+
+    // Wait for HUD updates: the PlayerPanel opener may be removed by hide().
+    void this.updateComplete.then(() => {
+      if (
+        this.isModalOpen ||
+        (document.activeElement !== document.body &&
+          !this.contains(document.activeElement))
+      )
+        return;
+      const canFocusOpener =
+        opener?.isConnected &&
+        opener !== document.body &&
+        !opener.closest("[inert], [hidden]") &&
+        !opener.matches(":disabled") &&
+        (opener.checkVisibility
+          ? opener.checkVisibility({
+              checkOpacity: true,
+              checkVisibilityCSS: true,
+            })
+          : opener.getClientRects().length > 0);
+      const focusTarget = canFocusOpener
+        ? opener
+        : document.getElementById("game-input-overlay");
+      focusTarget?.focus({ preventScroll: true });
+    });
   }
 
   public setRecipient(value: PlayerView) {
@@ -332,6 +461,7 @@ export class ChatModal extends LitElement {
     sender?: PlayerView,
     recipient?: PlayerView,
   ) {
+    this.captureReturnFocus();
     if (sender && recipient) {
       this.players = this.g
         .players()
@@ -352,6 +482,6 @@ export class ChatModal extends LitElement {
     }
 
     this.requestUpdate();
-    this.modalEl?.open();
+    this.isModalOpen = true;
   }
 }

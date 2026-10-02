@@ -249,6 +249,7 @@ export class LangSelector extends LitElement {
       "map-picker",
       "join-lobby-modal",
       "emoji-table",
+      "chat-modal",
       "player-stats",
       "team-stats",
       "leaderboard-player-list",
