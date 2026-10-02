@@ -26,6 +26,10 @@ import { getMode, simpleHash } from "../Util";
 
 const TICKS_PER_CLUSTER_CALC = 20;
 
+// Results of the per-cluster border scan (classifyCluster).
+const CLUSTER_SURROUNDED = 1;
+const CLUSTER_SEVERED_CANDIDATE = 2;
+
 export class PlayerExecution implements Execution {
   private ticksPerClusterCalc = TICKS_PER_CLUSTER_CALC;
 
@@ -291,22 +295,149 @@ export class PlayerExecution implements Execution {
     }
 
     // Process remaining clusters
+    let severedCandidates: number[] | null = null;
     for (let i = 0; i < clusters.length; i++) {
       if (i === largestIndex) continue;
       const cluster = clusters[i];
       const idx = i * 4;
-      if (
-        this.isSurrounded(
-          cluster,
-          boxes[idx],
-          boxes[idx + 1],
-          boxes[idx + 2],
-          boxes[idx + 3],
-        )
-      ) {
+      const result = this.classifyCluster(
+        cluster,
+        boxes[idx],
+        boxes[idx + 1],
+        boxes[idx + 2],
+        boxes[idx + 3],
+      );
+      if (result & CLUSTER_SURROUNDED) {
         this.removeCluster(cluster);
       }
+      if (result & CLUSTER_SEVERED_CANDIDATE) {
+        (severedCandidates ??= []).push(i);
+      }
     }
+
+    if (severedCandidates !== null) {
+      this.annexSeveredClusters(clusters, largestIndex, severedCandidates);
+    }
+  }
+
+  /**
+   * Hands land a nuke has cut off from the main body to the enemy around it.
+   *
+   * isEnclosed walks through fallout, so a crater that touches both a
+   * severed piece and the main body links the two, and the piece is never
+   * annexed whenever the main body reaches the coast or the map edge. Judge
+   * the piece on its own instead: a territory not connected to the main body,
+   * with no coast or map edge of its own, whose only neighbours are enemies
+   * and fallout, has no way out and goes to the surrounding enemy.
+   */
+  private annexSeveredClusters(
+    clusters: TileRef[][],
+    largestIndex: number,
+    candidates: readonly number[],
+  ) {
+    const map = this.map;
+    const mySmallID = this.player.smallID();
+
+    let mainGen = 0;
+    for (const i of candidates) {
+      const cluster = clusters[i];
+      const state = this.traversalState();
+      if (mainGen === 0) {
+        // Stamp the main body's outer border so a flood that reaches it can
+        // stop: that cluster is still attached.
+        mainGen = this.bumpGeneration();
+        for (const t of clusters[largestIndex]) state.visited[t] = mainGen;
+      }
+
+      // Clusters join land that touches diagonally but territories only
+      // join side by side, so one cluster can span several territories.
+      // Judge each one separately; `seenGen` floods each only once.
+      let seenGen = this.bumpGeneration();
+      if (seenGen < mainGen) {
+        // The generation counter wrapped and cleared every stamp.
+        mainGen = seenGen;
+        for (const t of clusters[largestIndex]) state.visited[t] = mainGen;
+        seenGen = this.bumpGeneration();
+      }
+      for (const start of cluster) {
+        // An earlier annex in this pass may already have taken it.
+        if (map.ownerID(start) !== mySmallID) continue;
+        const mark = state.visited[start];
+        if (mark === seenGen || mark === mainGen) continue;
+
+        const territory = this.severedTerritory(start, mainGen, seenGen);
+        if (territory === null) continue;
+
+        const capturing = this.getCapturingPlayer(territory);
+        if (capturing === null) continue;
+        // The main body may already have been annexed earlier in this pass.
+        if (this.player.numTilesOwned() === territory.length) {
+          this.mg.conquerPlayer(capturing, this.player);
+        }
+        for (const t of territory) capturing.conquer(t);
+      }
+    }
+  }
+
+  /**
+   * Flood-fills our territory from `start`, stamping it with `seenGen`, and
+   * returns it if it is severed: it never reaches a tile stamped `mainGen`
+   * (the main body), never touches the coast or the map edge, and borders
+   * only other players and fallout, with at least one of each. Returns null
+   * otherwise.
+   *
+   * The cluster-level check that made it a candidate may have drawn on a
+   * diagonally touching territory, so every condition is checked again here
+   * on this territory alone. A territory that fails is still filled to the
+   * end so the caller can skip the rest of its tiles; one that reaches the
+   * main body stops at once and is stamped as part of it.
+   */
+  private severedTerritory(
+    start: TileRef,
+    mainGen: number,
+    seenGen: number,
+  ): TileRef[] | null {
+    const map = this.map;
+    const mySmallID = this.player.smallID();
+    const state = this.traversalState();
+    const visited = state.visited;
+    const stack = state.stack;
+    stack.length = 0;
+    const tiles: TileRef[] = [start];
+    visited[start] = seenGen;
+    stack.push(start);
+    let severed = true;
+    let hasEnemy = false;
+    let hasFallout = false;
+
+    while (stack.length > 0) {
+      const tile = stack.pop()!;
+      if (map.isShore(tile) || map.isOnEdgeOfMap(tile)) severed = false;
+      const numNeighbors = map.neighbors4(tile, this.nbuf);
+      for (let i = 0; i < numNeighbors; i++) {
+        const n = this.nbuf[i];
+        const ownerId = map.ownerID(n);
+        if (ownerId === mySmallID) {
+          if (visited[n] === mainGen) {
+            // Still attached to the main body: mark what we walked so later
+            // floods from this cluster stop as soon as they reach it.
+            for (const t of tiles) visited[t] = mainGen;
+            return null;
+          }
+          if (visited[n] === seenGen) continue;
+          visited[n] = seenGen;
+          tiles.push(n);
+          stack.push(n);
+        } else if (ownerId !== 0) {
+          hasEnemy = true;
+        } else if (map.hasFallout(n)) {
+          hasFallout = true;
+        } else {
+          severed = false;
+        }
+      }
+    }
+    return severed && hasEnemy && hasFallout ? tiles : null;
   }
 
   private checkAndAssignTerritory(
@@ -422,15 +553,26 @@ export class PlayerExecution implements Execution {
     return false;
   }
 
+  /**
+   * One scan of a non-main border cluster's neighbours, answering both
+   * annexation questions:
+   * - CLUSTER_SURROUNDED: enemy neighbours box the cluster in (fallout and
+   *   other unclaimed land are ignored).
+   * - CLUSTER_SEVERED_CANDIDATE: it borders only enemies and fallout, with at
+   *   least one of each (see annexSeveredClusters).
+   * Coast or map edge rules out both.
+   */
   // Perf: Accepts raw bounds to skip allocating {min, max} Box objects.
-  private isSurrounded(
+  private classifyCluster(
     cluster: readonly TileRef[],
     clusterBoxMinX: number,
     clusterBoxMinY: number,
     clusterBoxMaxX: number,
     clusterBoxMaxY: number,
-  ): boolean {
+  ): number {
     let hasEnemy = false;
+    let hasFallout = false;
+    let hasOpenLand = false;
     let minX = 1e9,
       minY = 1e9,
       maxX = -1e9,
@@ -440,7 +582,7 @@ export class PlayerExecution implements Execution {
     for (let j = 0; j < cluster.length; j++) {
       const tr = cluster[j];
       if (map.isShore(tr) || map.isOnEdgeOfMap(tr)) {
-        return false;
+        return 0;
       }
       const numNeighbors = map.neighbors4(tr, this.nbuf);
       for (let i = 0; i < numNeighbors; i++) {
@@ -454,18 +596,28 @@ export class PlayerExecution implements Execution {
           if (y < minY) minY = y;
           if (x > maxX) maxX = x;
           if (y > maxY) maxY = y;
+        } else if (ownerId === 0) {
+          if (map.hasFallout(n)) hasFallout = true;
+          else hasOpenLand = true;
         }
       }
     }
     if (!hasEnemy) {
-      return false;
+      return 0;
     }
-    return (
+    let result = 0;
+    if (
       minX <= clusterBoxMinX &&
       minY <= clusterBoxMinY &&
       maxX >= clusterBoxMaxX &&
       maxY >= clusterBoxMaxY
-    );
+    ) {
+      result |= CLUSTER_SURROUNDED;
+    }
+    if (hasFallout && !hasOpenLand) {
+      result |= CLUSTER_SEVERED_CANDIDATE;
+    }
+    return result;
   }
 
   private removeCluster(cluster: readonly TileRef[]) {
