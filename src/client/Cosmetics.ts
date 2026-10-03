@@ -271,9 +271,9 @@ function debtMessage(debt: number): string {
  * Whole days left on a granted subscription, or null when there is no end date
  * to count to.
  *
- * A Steam ownership grant is a fixed free month, so `currentPeriodEnd` is set
- * and the number is real. An admin comp is open-ended (`currentPeriodEnd`
- * null) and there is nothing to count — the caller uses the no-days copy
+ * A Steam ownership grant is a fixed free month, and an admin comp can be
+ * given an end date, so `currentPeriodEnd` is set and the number is real. An
+ * open-ended admin comp has nothing to count — the caller uses the no-days copy
  * rather than inventing a figure. A date already in the past returns null for
  * the same reason: "0 days" reads as a bug, and a row the sweeper has not got
  * to yet is not worth quoting.

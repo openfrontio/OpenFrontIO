@@ -1,6 +1,10 @@
 import { html, LitElement, nothing, TemplateResult } from "lit";
 import { customElement, property } from "lit/decorators.js";
-import { isGrantedSubscription, UserSubscription } from "../../core/ApiSchemas";
+import {
+  isGrantedSubscription,
+  isSteamGrant,
+  UserSubscription,
+} from "../../core/ApiSchemas";
 import { Subscription } from "../../core/CosmeticSchemas";
 import {
   cancelSubscription,
@@ -277,19 +281,24 @@ export class SubscriptionPanel extends LitElement {
    * replaced by static copy — no anchor, no click handler, same shape as
    * `renderManageOnWeb`.
    *
-   * Two variants, on a fact the client already has rather than a guess. Grants
-   * come from two writers and only one of them sets an end date: a Steam
-   * ownership grant is a fixed free month (`currentPeriodEnd = now + 30d`), an
-   * admin comp is open-ended (`currentPeriodEnd` null, so no date line renders
-   * above either). Telling an admin-comped player their access came from a
-   * Steam purchase would be a fresh instance of exactly the dishonesty this
-   * change exists to remove.
+   * Three variants, on facts the server sends rather than a guess. A Steam
+   * ownership grant is a fixed free month and gets the purchase copy. Any other
+   * grant (an admin comp, a Discord role) gets neutral free-access copy, naming
+   * its end date when it has one, and never saying who granted it. Telling such
+   * a player their access came from a Steam purchase would be a fresh instance
+   * of exactly the dishonesty this panel exists to remove, and an end date no
+   * longer tells the two apart (see `isSteamGrant`).
    */
   private renderGrantedNote(tierName: string): TemplateResult {
-    if (!this.sub.currentPeriodEnd) {
+    if (!isSteamGrant(this.sub)) {
+      const date = this.periodEnd();
       return html`
         <p class="text-[11px] text-center text-white/40 leading-snug">
-          ${translateText("account_modal.sub_granted_indefinite")}
+          ${date
+            ? translateText("account_modal.sub_granted_until", {
+                date,
+              })
+            : translateText("account_modal.sub_granted_indefinite")}
         </p>
       `;
     }
