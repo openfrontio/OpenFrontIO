@@ -121,6 +121,14 @@ export const ProgressSchema = z.object({
 });
 export type Progress = z.infer<typeof ProgressSchema>;
 
+// POST /users/@me/prestige — the player's progress after prestiging, and the
+// rewards it granted (unclaimed, like every reward; a Caps bonus at least).
+export const PrestigeResponseSchema = z.object({
+  progress: ProgressSchema,
+  rewards: RewardSchema.array().optional().default([]),
+});
+export type PrestigeResponse = z.infer<typeof PrestigeResponseSchema>;
+
 export const ProgressPositionSchema = z.object({
   prestige: z.number(),
   level: z.number(),
@@ -186,6 +194,11 @@ export const PublicProgressSchema = z.object({
   level: z.number(),
   lifetimeXp: z.number(),
   legend: z.boolean(),
+  // Progress through the current level (both 0 at level 100), for the profile
+  // card's XP bar. Optional: an API without them still parses, and the bar
+  // is left out.
+  xpInLevel: z.number().optional(),
+  xpForNext: z.number().optional(),
 });
 export type PublicProgress = z.infer<typeof PublicProgressSchema>;
 

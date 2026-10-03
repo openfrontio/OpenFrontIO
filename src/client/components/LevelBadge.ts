@@ -141,6 +141,27 @@ const BANDS: readonly BandStyle[] = [
   },
 ];
 
+// The light colour of each band's frame (its Tailwind stroke, written out),
+// by levelBand: the profile card's glow behind the badge.
+const BAND_ACCENTS = [
+  "#cbd5e1",
+  "#6ee7b7",
+  "#5eead4",
+  "#7dd3fc",
+  "#93c5fd",
+  "#a5b4fc",
+  "#c4b5fd",
+  "#f0abfc",
+  "#fda4af",
+  "#fdba74",
+  "#fef08a",
+] as const;
+
+/** The badge's accent colour, for a glow or a highlight around it. */
+export function levelBadgeAccent(level: number, legend: boolean): string {
+  return legend ? "#facc15" : BAND_ACCENTS[levelBand(level)];
+}
+
 function displayLevel(level: number): number {
   if (!Number.isFinite(level)) return 1;
   return Math.min(MAX_LEVEL, Math.max(1, Math.floor(level)));

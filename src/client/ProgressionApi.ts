@@ -1,6 +1,8 @@
 import {
   type GameXpResponse,
   GameXpResponseSchema,
+  type PrestigeResponse,
+  PrestigeResponseSchema,
   type ProgressionConfig,
   ProgressionConfigSchema,
   type PublicProgress,
@@ -148,6 +150,56 @@ export async function fetchPublicPlayerProgress(
   } catch (err) {
     console.warn("fetchPublicPlayerProgress: request failed", err);
     return false;
+  }
+}
+
+// POST /users/@me/prestige — the opt-in reset at level 100. The caller keeps
+// one idempotency key until a prestige succeeds, so a retried request (a
+// slow network, a lost response) prestiges once. Unlike the reads above this
+// does surface failure: the player asked for it and must be told why.
+// - "refused": the server says the player can't prestige (409), usually an
+//   earlier prestige whose answer never arrived.
+// - "signed_out": no session to send, or the server rejected it (401/403).
+// - "failed": anything else. It may or may not have gone through, and a
+//   retry with the same key finds out.
+export type PrestigeFailure = "refused" | "signed_out" | "failed";
+
+export type PrestigeResult =
+  | { ok: true; data: PrestigeResponse }
+  | { ok: false; reason: PrestigeFailure };
+
+export async function prestigeMe(
+  idempotencyKey: string,
+): Promise<PrestigeResult> {
+  try {
+    const authorization = await getAuthHeader();
+    if (authorization === "") return { ok: false, reason: "signed_out" };
+    const res = await fetch(`${getApiBase()}/users/@me/prestige`, {
+      method: "POST",
+      headers: {
+        Accept: "application/json",
+        Authorization: authorization,
+        "Idempotency-Key": idempotencyKey,
+      },
+      signal: AbortSignal.timeout(15_000),
+    });
+    if (!res.ok) {
+      console.warn("prestigeMe: unexpected status", res.status);
+      if (res.status === 409) return { ok: false, reason: "refused" };
+      if (res.status === 401 || res.status === 403) {
+        return { ok: false, reason: "signed_out" };
+      }
+      return { ok: false, reason: "failed" };
+    }
+    const parsed = PrestigeResponseSchema.safeParse(await res.json());
+    if (!parsed.success) {
+      console.warn("prestigeMe: Zod validation failed", parsed.error);
+      return { ok: false, reason: "failed" };
+    }
+    return { ok: true, data: parsed.data };
+  } catch (err) {
+    console.warn("prestigeMe: request failed", err);
+    return { ok: false, reason: "failed" };
   }
 }
 
