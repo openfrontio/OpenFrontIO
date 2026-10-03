@@ -1,7 +1,7 @@
 import { html, LitElement, nothing, render, TemplateResult } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
 import { ifDefined } from "lit/directives/if-defined.js";
-import { UserMeResponse } from "../../core/ApiSchemas";
+import { Progress, UserMeResponse } from "../../core/ApiSchemas";
 import { hasLinkedIdentity } from "../AccountIdentity";
 import { logOut } from "../Auth";
 import { crazyGamesSDK, type CrazyGamesUser } from "../CrazyGamesSDK";
@@ -11,9 +11,13 @@ import {
   updateAccountNavButton,
 } from "../NavAccountButton";
 import { closeMobileSidebar } from "../Navigation";
+import { levelFraction } from "../Progression";
 import { steamSDK } from "../SteamSDK";
 import { playerProfileUrl } from "../utilities/PlayerProfileUrl";
 import { copyToClipboard, showToast, translateText } from "../Utils";
+import "./LevelBadge";
+import { levelBadgeLabel } from "./LevelBadge";
+import { xpBar, xpProgressText } from "./XpBar";
 
 type MenuItem = {
   key: string;
@@ -377,6 +381,66 @@ export class NavAccountMenu extends LitElement {
     `;
   }
 
+  /** The signed-in player's level, or null when there is none to show. */
+  private progress(): Progress | null {
+    if (!this.isSignedIn() || this.userMeResponse === false) return null;
+    return this.userMeResponse.player.progress ?? null;
+  }
+
+  // The trigger's accessible name. Its aria-label would otherwise hide the
+  // level badge inside it from screen readers, so the level is in it too.
+  private triggerLabel(): string {
+    const progress = this.progress();
+    if (progress === null) return translateText("main.account");
+    return translateText("nav_account_menu.account_with_level", {
+      level: levelBadgeLabel(
+        progress.level,
+        progress.prestige,
+        progress.legend,
+      ),
+    });
+  }
+
+  // Level badge beside the avatar, plus a thin XP bar along the trigger's
+  // bottom edge. Absent entirely when /users/@me carries no progress.
+  private renderLevel(
+    variant: "desktop" | "mobile",
+  ): TemplateResult | typeof nothing {
+    const progress = this.progress();
+    if (progress === null) return nothing;
+    const label = levelBadgeLabel(
+      progress.level,
+      progress.prestige,
+      progress.legend,
+    );
+    const title = `${label} · ${xpProgressText(progress.xpInLevel, progress.xpForNext)}`;
+    const percent = levelFraction(progress.xpInLevel, progress.xpForNext) * 100;
+    const mobile = variant === "mobile";
+    return html`
+      <span
+        data-account-level
+        class=${mobile ? "absolute -top-1 -left-1 z-10" : "flex items-center"}
+        title=${title}
+      >
+        <level-badge
+          .level=${progress.level}
+          .prestige=${progress.prestige}
+          .legend=${progress.legend}
+          .size=${mobile ? 16 : 22}
+        ></level-badge>
+      </span>
+      <span
+        data-account-xp-bar
+        class="pointer-events-none absolute ${mobile
+          ? "-bottom-1.5 left-0 right-0"
+          : "bottom-1 left-4 right-4"}"
+        aria-hidden="true"
+      >
+        ${xpBar(percent, { heightClass: "h-[3px]" })}
+      </span>
+    `;
+  }
+
   // Avatar / spinner / person icon / email badge, shared by both triggers.
   // `ids` is populated for the desktop instance only — NavAccountButton and
   // CrazyGamesAccountButton drive that one by id — while the data-account-*
@@ -454,9 +518,10 @@ export class NavAccountMenu extends LitElement {
         @click=${this.handleTriggerClick}
         class="nav-menu-item relative h-10 rounded-full flex items-center justify-center gap-2 px-3 bg-transparent border border-white/20 text-white/80 hover:text-white cursor-pointer transition-colors [&.active]:text-white"
         data-page="page-account"
-        data-i18n-aria-label="main.account"
+        aria-label=${this.triggerLabel()}
         data-i18n-title="main.account"
       >
+        ${this.renderLevel("desktop")}
         ${this.renderIdentityIcons({
           ids: true,
           iconClass: "w-5 h-5",
@@ -484,7 +549,7 @@ export class NavAccountMenu extends LitElement {
         @click=${this.handleTriggerClick}
         class="nav-menu-item h-10 flex items-center justify-center gap-1 pl-1 pr-1.5 rounded-full text-white/90 cursor-pointer transition-colors"
         data-page="page-account"
-        data-i18n-aria-label="main.account"
+        aria-label=${this.triggerLabel()}
         data-i18n-title="main.account"
       >
         <span class="relative flex items-center justify-center w-8 h-8">
@@ -493,6 +558,7 @@ export class NavAccountMenu extends LitElement {
             iconClass: "w-7 h-7",
             badgeClass: "absolute -bottom-0.5 -right-0.5",
           })}
+          ${this.renderLevel("mobile")}
         </span>
         <!-- The sign-in label is desktop-only; on the top bar the icon alone is
              the affordance, so keep the element (the shared updater toggles it)

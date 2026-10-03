@@ -277,6 +277,7 @@ export class LangSelector extends LitElement {
       "purchase-button",
       "custom-currency-card",
       "fluent-slider",
+      "nav-account-menu",
       "news-modal",
       "account-modal",
       "game-stats-modal",
