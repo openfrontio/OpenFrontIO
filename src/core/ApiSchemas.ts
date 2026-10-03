@@ -118,6 +118,20 @@ export const ProgressSchema = z.object({
   lifetimeXp: z.number(),
   legend: z.boolean(),
   canPrestige: z.boolean(),
+  // /users/@me only, for the provisional XP figure shown at death
+  // (src/client/ProvisionalXp.ts). What the player has used today (UTC) of
+  // the per-day XP allowances. Optional, and a malformed block reads as
+  // absent: it must never fail the progress object around it.
+  daily: z
+    .object({
+      privateGames: z.number(),
+      singleplayerGames: z.number(),
+      firstGameClaimed: z.boolean(),
+    })
+    .optional()
+    .catch(undefined),
+  // The player's subscription XP multiplier; 1000 = none.
+  subscriberPermille: z.number().optional().catch(undefined),
 });
 export type Progress = z.infer<typeof ProgressSchema>;
 
@@ -189,6 +203,32 @@ export const PublicProgressSchema = z.object({
 });
 export type PublicProgress = z.infer<typeof PublicProgressSchema>;
 
+// The rules a game's XP is scored under (XpRules in the API's
+// ProgressionConfig.ts): integers, with multipliers in permille.
+export const XpRulesSchema = z.object({
+  minAliveTicks: z.number().int(),
+  gameXp: z.number().int(),
+  xpPerMinute: z.number().int(),
+  timeCapMinutes: z.number().int(),
+  ffaPlacementMax: z.number().int(),
+  ffaWin: z.number().int(),
+  fullLobbyHumans: z.number().int(),
+  teamWin: z.number().int(),
+  teamWinMinAlivePermille: z.number().int(),
+  hvnWin: z.number().int(),
+  firstGameOfDay: z.number().int(),
+  featXp: z.number().int(),
+  maxFeatsPerGame: z.number().int(),
+  publicPermille: z.number().int(),
+  rankedPermille: z.number().int(),
+  privatePermille: z.number().int(),
+  singleplayerPermille: z.number().int(),
+  privateMinHumans: z.number().int(),
+  privateGamesPerDay: z.number().int(),
+  singleplayerGamesPerDay: z.number().int(),
+});
+export type XpRules = z.infer<typeof XpRulesSchema>;
+
 // GET /public/progression/config — the level curve. No auth, cacheable.
 export const ProgressionConfigSchema = z.object({
   version: z.number(),
@@ -201,6 +241,14 @@ export const ProgressionConfigSchema = z.object({
       cumulativeXp: z.number(),
     }),
   ),
+  // The revision of the API's XP formula (computeXp). The client carries a
+  // copy of one revision, for the provisional figure shown at death, and
+  // shows none when this is absent or names another revision.
+  formula: z.number().optional().catch(undefined),
+  // The rules that formula runs on. Absent from older APIs; a malformed block
+  // only loses the provisional figure, never the level curve.
+  xp: XpRulesSchema.optional().catch(undefined),
+  prestige: z.object({ caps: z.number() }).optional().catch(undefined),
 });
 export type ProgressionConfig = z.infer<typeof ProgressionConfigSchema>;
 

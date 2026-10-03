@@ -8,11 +8,12 @@ import {
   translateText,
   TUTORIAL_VIDEO_URL,
 } from "../../../client/Utils";
+import type { Progress } from "../../../core/ApiSchemas";
 import { Pattern } from "../../../core/CosmeticSchemas";
 import { EventBus } from "../../../core/EventBus";
 import { RankedType } from "../../../core/game/Game";
 import { GameUpdateType } from "../../../core/game/GameUpdates";
-import { getUserMe } from "../../Api";
+import { getUserMe, invalidateUserMe } from "../../Api";
 import "../../components/CosmeticCard";
 import { cosmeticSelectionLabel } from "../../components/CosmeticPresentation";
 import "../../components/GameXpPanel";
@@ -30,6 +31,12 @@ import { isDesktopShell } from "../../DesktopShell";
 import { Platform } from "../../Platform";
 import { resolveXpAccount } from "../../ProgressionAccount";
 import { fetchProgressionConfig, pollGameXp } from "../../ProgressionApi";
+import {
+  loadProvisionalXp,
+  type ProvisionalXp,
+  provisionalXpRules,
+  reconcileXp,
+} from "../../ProvisionalXpAtDeath";
 import { PlaySoundEffectEvent } from "../../sound/Sounds";
 import { steamSDK } from "../../SteamSDK";
 import { SendWinnerEvent } from "../../Transport";
@@ -61,6 +68,9 @@ export class WinModal extends LitElement implements Controller {
   // Polling starts once, at the end of the game.
   private xpPolling = false;
   private xpAbort: AbortController | null = null;
+  // The provisional figure shown at death, if any: the server's figure is
+  // compared with it when the game ends.
+  private provisionalXp: ProvisionalXp | null = null;
 
   private _title: string;
 
@@ -431,7 +441,9 @@ export class WinModal extends LitElement implements Controller {
   /**
    * Fills the XP section. `gameOver` is false when the player died while the
    * game carries on: the server only awards XP once the game is archived, so
-   * that just says so, and the poll starts when the game really ends.
+   * that shows a provisional figure worked out here (or, when there can't be
+   * one, says XP comes at the end), and the poll starts when the game really
+   * ends.
    */
   private async updateXp(gameOver: boolean): Promise<void> {
     if (this.xpPolling) return;
@@ -439,6 +451,16 @@ export class WinModal extends LitElement implements Controller {
       const game = this.game;
       // Spectators and replay viewers have no XP of their own.
       if (game.config().isReplay() || !game.myPlayer()) return;
+      if (!gameOver) {
+        // A provisional figure starts from where the player is now, and
+        // counts today's allowances as they are now: ask /users/@me afresh
+        // (the page's copy is from when the game started, and a game left
+        // earlier may have been scored since).
+        const config = await fetchProgressionConfig();
+        if (config !== false && provisionalXpRules(config) !== null) {
+          invalidateUserMe();
+        }
+      }
       const account = await resolveXpAccount();
       // /users/@me failed while there is a session: a signed-in player must
       // not be told to sign in over a network blip, so say nothing.
@@ -454,28 +476,92 @@ export class WinModal extends LitElement implements Controller {
       }
       // /users/@me carries progress whenever progression is on (level 1
       // before a first scored game); absent means off: no section at all.
-      if (account.me.player.progress === undefined) return;
+      const progress = account.me.player.progress;
+      if (progress === undefined) return;
       // The game may have ended while this was resolving; the end-of-game
       // call owns the section from then on.
       if (this.xpPolling) return;
       if (!gameOver) {
-        this.xpView = { kind: "awaiting_end" };
+        const provisional = await this.loadProvisionalXp(progress);
+        if (this.xpPolling) return;
+        if (provisional === null) {
+          this.xpView = { kind: "awaiting_end" };
+          return;
+        }
+        this.provisionalXp = provisional;
+        this.xpView = { kind: "provisional", provisional, confirming: false };
         return;
       }
       this.xpPolling = true;
-      this.xpView = { kind: "calculating" };
+      const provisional = this.provisionalXp;
+      // A provisional figure stays up while the server's is fetched.
+      this.xpView =
+        provisional === null
+          ? { kind: "calculating" }
+          : { kind: "provisional", provisional, confirming: true };
       this.xpAbort = new AbortController();
       const result = await pollGameXp(game.gameID(), {
         signal: this.xpAbort.signal,
       });
-      // Timed out, signed out or unreadable: hide rather than show an error
-      // (or, worse, a zero).
-      this.xpView =
-        result === null ? { kind: "hidden" } : { kind: "result", data: result };
+      if (result === null) {
+        // Timed out, signed out or unreadable: hide rather than show an error
+        // (or, worse, a zero). A provisional figure stays, still provisional.
+        this.xpView =
+          provisional === null
+            ? { kind: "hidden" }
+            : { kind: "provisional", provisional, confirming: false };
+        return;
+      }
+      if (provisional === null) {
+        this.xpView = { kind: "result", data: result };
+        return;
+      }
+      const outcome = reconcileXp(provisional.result, result);
+      if (outcome.drift) {
+        // Not explained by what only the end of the game adds: the client's
+        // copy of the formula may have drifted from the server's.
+        console.warn("Provisional XP differed from the server's", {
+          gameId: result.gameId,
+          provisional: outcome.provisionalTotal,
+          server: result.eligible ? result.breakdown.total : null,
+          provisionalResult: provisional.result,
+          serverResult: result.eligible
+            ? result.breakdown
+            : { reason: result.reason },
+          inputs: provisional.inputs,
+        });
+      }
+      this.xpView = {
+        kind: "result",
+        data: result,
+        reconciled: { provisional, outcome },
+      };
     } catch (err) {
       console.warn("WinModal: XP section failed", err);
       this.xpView = { kind: "hidden" };
     }
+  }
+
+  // The provisional XP figure for a player who has just died, or null when
+  // there can't be one (see loadProvisionalXp).
+  private async loadProvisionalXp(
+    progress: Progress,
+  ): Promise<ProvisionalXp | null> {
+    const progression = await fetchProgressionConfig();
+    if (progression === false || provisionalXpRules(progression) === null) {
+      return null;
+    }
+    const game = this.game;
+    const myClientID = game.myClientID();
+    if (myClientID === undefined) return null;
+    return loadProvisionalXp({
+      gameId: game.gameID(),
+      myClientID,
+      config: game.config().gameConfig(),
+      progress,
+      progression,
+      humanStats: () => game.worker.humanStats(),
+    });
   }
 
   private _handleExit() {
