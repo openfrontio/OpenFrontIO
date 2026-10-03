@@ -111,6 +111,7 @@
     "tab_clans": "Clans",
     "tab_friends": "Friends",
     "tab_games": "Games",
+    "tab_progression": "Progression",
     "tab_stats": "Stats",
     "title": "Account",
     "unclaimed_rewards": "Unclaimed Rewards",
@@ -1661,9 +1662,17 @@
     "troops": "Troops"
   },
   "player_profile": {
+    "current_run": "Current run",
+    "current_run_prestige": "Current run · Prestige {prestige}",
+    "first_run": "First run",
+    "legend_run": "Legend · Prestige {prestige}",
     "loading": "Loading profile...",
+    "milestone_not_yet": "Not yet",
+    "milestones": "Milestones",
     "no_clans": "This player isn't in any clans.",
+    "no_prestige": "Hasn't prestiged yet",
     "not_found": "Player profile not found",
+    "prestige_history": "Prestige history",
     "share": "Share Profile",
     "title": "Player Profile",
     "view": "View Profile"
