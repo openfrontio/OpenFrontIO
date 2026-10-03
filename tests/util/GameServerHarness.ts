@@ -115,6 +115,7 @@ export interface ClientOpts {
   spectator?: boolean;
   trusted?: boolean;
   platform?: Client["platform"];
+  levelBadge?: Client["levelBadge"];
 }
 
 let nextClient = 1;
@@ -142,6 +143,7 @@ export function makeClient(opts: ClientOpts = {}): Client {
     opts.spectator ?? false,
     opts.trusted ?? false,
     opts.platform,
+    opts.levelBadge,
   );
 }
 

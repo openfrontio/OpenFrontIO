@@ -304,7 +304,18 @@ export const ClanTagSchema = z
   .regex(/^[a-zA-Z0-9]{2,5}$/)
   .nullable();
 
-const ClientInfoSchema = z.object({
+// A player's level as a name badge: the display subset of the API's
+// /users/@me `progress`. Stamped onto the lobby roster by the game server from
+// its own /users/@me lookup, never taken from the client. Display-only — the
+// simulation never reads it, so it cannot desync.
+export const LevelBadgeSchema = z.object({
+  level: zb.uint(),
+  prestige: zb.uint(),
+  legend: z.boolean(),
+});
+export type LevelBadge = z.infer<typeof LevelBadgeSchema>;
+
+export const ClientInfoSchema = z.object({
   clientID: z.string(),
   username: UsernameSchema,
   clanTag: ClanTagSchema,
@@ -320,6 +331,15 @@ const ClientInfoSchema = z.object({
   // preview can honour the pins instead of re-deriving teams that the server
   // will overrule at start. Absent when the game isn't matchmade.
   teamIndex: zb.uint().optional(),
+  // Signed-in players' level, for the badge next to their name. Absent for
+  // guests, when the API has progression off or the lookup failed, and on
+  // anonymized entries (a badge beside an anonymous name would point out the
+  // veterans). Must stay the LAST field and a single object: its one presence
+  // bit is the eighth and last bit of this object's one-byte header, so an
+  // entry without it encodes byte-identically to one from before it existed,
+  // and a pre-badge frame still decodes. Another field here would need a
+  // second header byte — fold it into the badge instead.
+  levelBadge: LevelBadgeSchema.optional(),
 });
 
 export const GameInfoSchema = z.object({
@@ -443,6 +463,9 @@ export interface ClientInfo {
   spectator?: boolean;
   // Server-pinned team slot for matchmade team games; absent when not matchmade.
   teamIndex?: number;
+  // Server-stamped level for the name badge. Display-only; never set on
+  // anonymized entries.
+  levelBadge?: LevelBadge;
 }
 export enum LogSeverity {
   Debug = "DEBUG",
