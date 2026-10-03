@@ -55,7 +55,7 @@ export class IconProgram {
     this.flagAtlas = flagAtlas;
     this.maxPlayers = maxPlayers;
 
-    this.program = createProgram(gl, iconVertSrc, iconFragSrc);
+    this.program = createProgram(gl, iconVertSrc, iconFragSrc, "IconProgram");
     gl.useProgram(this.program);
 
     // Texture unit bindings

@@ -57,7 +57,12 @@ export class StatusIconProgram {
     this.playerDataTex = playerDataTex;
     this.maxPlayers = maxPlayers;
 
-    this.program = createProgram(gl, statusVertSrc, statusFragSrc);
+    this.program = createProgram(
+      gl,
+      statusVertSrc,
+      statusFragSrc,
+      "StatusIconProgram",
+    );
     gl.useProgram(this.program);
 
     // Texture unit bindings

@@ -80,7 +80,7 @@ export class BarPass {
     this.veterancyHealthBonus = config.warshipVeterancyHealthBonus();
 
     // --- Shader program ---
-    this.program = createProgram(gl, barVertSrc, barFragSrc);
+    this.program = createProgram(gl, barVertSrc, barFragSrc, "BarPass");
     this.uCamera = gl.getUniformLocation(this.program, "uCamera")!;
     this.uBarSize = gl.getUniformLocation(this.program, "uBarSize")!;
     this.uBarOffset = gl.getUniformLocation(this.program, "uBarOffset")!;
