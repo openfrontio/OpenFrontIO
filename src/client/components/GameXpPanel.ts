@@ -750,10 +750,17 @@ export class GameXpPanel extends LitElement {
               >`,
             )}
           </div>
-          <div class="min-w-0 flex-1 pt-3.5">
+          <div class="@container min-w-0 flex-1 pt-3.5">
             ${this.renderSegmentedBar(fill, levelUp !== null, progressText)}
-            <div class="mt-1 grid h-5 grid-cols-[1fr_auto_1fr] items-center">
-              <span></span>
+            <!-- The counter centred under the bar, the level's progress at
+                 its right end. A bar too narrow for both side by side (a
+                 phone) stacks them, centred, so they never run together.
+                 Fixed heights either way: nothing moves during the reveal. -->
+            <div
+              data-xp-counter-row
+              class="mt-1 flex h-9 flex-col items-center @min-[16rem]:grid @min-[16rem]:h-5 @min-[16rem]:grid-cols-[1fr_auto_1fr] @min-[16rem]:gap-x-2"
+            >
+              <span class="hidden @min-[16rem]:block"></span>
               <span
                 data-xp-total
                 class="text-sm font-bold tabular-nums transition-colors ${applying ===
@@ -769,7 +776,7 @@ export class GameXpPanel extends LitElement {
               </span>
               <span
                 data-xp-header-level
-                class="truncate text-right text-[11px] tabular-nums text-white/60"
+                class="max-w-full truncate text-center text-[11px] tabular-nums text-white/60 @min-[16rem]:text-right"
               >
                 ${progressText}
               </span>
