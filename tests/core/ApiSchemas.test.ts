@@ -121,3 +121,36 @@ describe("UserMeResponseSchema subscription.provider", () => {
     );
   });
 });
+
+// "Show my profile in search engines" turned off. Optional so an older API
+// still parses (account settings then show no search row); a malformed value
+// reads as absent rather than failing the /users/@me parse, like levelHidden.
+describe("UserMeResponseSchema searchHidden", () => {
+  const parseWith = (player: Record<string, unknown>) =>
+    UserMeResponseSchema.parse({ user: {}, player });
+
+  it("reads true and false", () => {
+    expect(
+      parseWith({ ...samplePlayer(), searchHidden: true }).player.searchHidden,
+    ).toBe(true);
+    expect(
+      parseWith({ ...samplePlayer(), searchHidden: false }).player.searchHidden,
+    ).toBe(false);
+  });
+
+  it("is undefined when the API does not send it", () => {
+    expect(parseWith(samplePlayer()).player.searchHidden).toBeUndefined();
+  });
+
+  it("reads a malformed value as absent instead of failing the parse", () => {
+    for (const bad of [null, "yes", 1, {}]) {
+      const parsed = parseWith({
+        ...samplePlayer(),
+        levelHidden: true,
+        searchHidden: bad,
+      });
+      expect(parsed.player.searchHidden).toBeUndefined();
+      expect(parsed.player.levelHidden).toBe(true);
+    }
+  });
+});
