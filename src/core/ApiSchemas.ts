@@ -199,6 +199,21 @@ export const PublicProgressSchema = z.object({
   // is left out.
   xpInLevel: z.number().optional(),
   xpForNext: z.number().optional(),
+  // For the profile's Progression tab. Optional, and a malformed list reads
+  // as absent rather than failing the whole response (the level still shows).
+  // When each prestige rank was entered (ISO dates), ordered by rank.
+  prestigeHistory: z
+    .array(z.object({ rank: z.number(), at: z.string() }))
+    .optional()
+    .catch(undefined),
+  // The first time each milestone level (10/25/50/75/100) was reached in each
+  // prestige run (ISO dates), ordered by run then level.
+  milestones: z
+    .array(
+      z.object({ prestige: z.number(), level: z.number(), at: z.string() }),
+    )
+    .optional()
+    .catch(undefined),
 });
 export type PublicProgress = z.infer<typeof PublicProgressSchema>;
 
