@@ -326,7 +326,7 @@ export class PlayerProfileModal extends BaseModal {
   private renderNotFound() {
     return html`
       <div
-        class="mx-auto flex max-w-md flex-col items-center px-6 py-12 text-center"
+        class="mx-auto flex max-w-2xl flex-col items-center px-6 py-12 text-center"
         data-not-found
       >
         <div
@@ -352,7 +352,7 @@ export class PlayerProfileModal extends BaseModal {
         <h2 class="text-xl font-bold text-white">
           ${translateText("player_profile.not_found_title")}
         </h2>
-        <p class="mt-2 text-sm text-white/60">
+        <p class="mt-2 max-w-md text-sm text-white/60">
           ${translateText("player_profile.not_found_body")}
         </p>
         ${this.openedLink === null
@@ -363,7 +363,11 @@ export class PlayerProfileModal extends BaseModal {
             >
               ${this.openedLink}
             </p>`}
-        <div class="mt-6 flex flex-wrap justify-center gap-3">
+        <!-- Side by side where there's room, stacked on a phone. -->
+        <div
+          class="mt-6 flex flex-col items-stretch justify-center gap-3 sm:flex-row sm:items-center"
+          data-not-found-actions
+        >
           <o-button
             variant="primary"
             size="md"
