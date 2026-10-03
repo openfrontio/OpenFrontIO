@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { VoteRound } from "../../src/server/VoteTally";
+import { isStrictMajority, VoteRound } from "../../src/server/VoteTally";
 
 describe("VoteRound", () => {
   it("returns null until a candidate has a strict majority of IPs", () => {
@@ -79,5 +79,41 @@ describe("VoteRound.resultAmong", () => {
     const round = new VoteRound<string>();
     round.add("a", "a", "1.1.1.1");
     expect(round.resultAmong(new Set())).toBeNull();
+  });
+});
+
+describe("isStrictMajority", () => {
+  it("needs more than half the electorate", () => {
+    expect(isStrictMajority(1, 1)).toBe(true);
+    expect(isStrictMajority(1, 2)).toBe(false);
+    expect(isStrictMajority(2, 3)).toBe(true);
+    expect(isStrictMajority(2, 4)).toBe(false);
+    expect(isStrictMajority(0, 0)).toBe(false);
+  });
+});
+
+describe("VoteRound.standings", () => {
+  it("lists every candidate in first-vote order with its unique IPs", () => {
+    const round = new VoteRound<string>();
+    round.add("b", "B", "1.1.1.1");
+    round.add("a", "A", "2.2.2.2");
+    round.add("a", "A", "3.3.3.3");
+    round.add("a", "A", "3.3.3.3");
+    expect(round.standings()).toEqual([
+      { key: "b", value: "B", votes: 1 },
+      { key: "a", value: "A", votes: 2 },
+    ]);
+    expect([...round.backers("a")]).toEqual(["2.2.2.2", "3.3.3.3"]);
+    expect(round.backers("missing").size).toBe(0);
+    expect(round.voters()).toEqual(new Set(["1.1.1.1", "2.2.2.2", "3.3.3.3"]));
+  });
+
+  it("counts only the given IPs, like resultAmong", () => {
+    const round = new VoteRound<string>();
+    round.add("a", "A", "1.1.1.1");
+    round.add("a", "A", "2.2.2.2");
+    expect(round.standings(new Set(["2.2.2.2", "9.9.9.9"]))).toEqual([
+      { key: "a", value: "A", votes: 1 },
+    ]);
   });
 });

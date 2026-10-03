@@ -1910,23 +1910,32 @@ export class GameServer {
       winner: winner?.winner,
     });
 
-    // The record carries the first winning voter's stats, unchecked. Before
-    // the vote can also be made to agree on stats, measure how often honest
-    // voters actually differ: a "split" here means they did.
+    // The record carries the stats a majority of the electorate voted for
+    // alongside the winner, when there is such a version (see
+    // WinnerVote.archivedStats). statsAgreed tells the API whether there was:
+    // per-player stats only count (e.g. for XP) when it is true. A game that
+    // ends without a decided winner has no stats and is never agreed.
+    const archived = this.winnerVote.archivedStats();
+    const statsAgreed = archived?.agreed ?? false;
+    // Keeps the agreement rate measurable: a "split" means the winner's
+    // voters sent more than one version of the stats.
     const agreement = this.winnerVote.statsAgreement();
     if (agreement !== null) {
       const split = agreement.versions > 1;
-      this.log[split ? "warn" : "info"]("winner stats agreement", {
-        gameID: this.id,
-        statsAgreement: split ? "split" : "agreed",
-        ...agreement,
-      });
+      this.log[split || !agreement.agreed ? "warn" : "info"](
+        "winner stats agreement",
+        {
+          gameID: this.id,
+          statsAgreement: split ? "split" : "agreed",
+          ...agreement,
+        },
+      );
     }
 
     // Players must stay in the same order as the game start info.
     const playerRecords: PlayerRecord[] = this.gameStartInfo.players.map(
       (player) => {
-        const stats = winner?.allPlayersStats[player.clientID];
+        const stats = archived?.stats[player.clientID];
         if (stats === undefined) {
           this.log.debug(
             `Unable to find stats for clientID ${player.clientID}`,
@@ -1964,6 +1973,7 @@ export class GameServer {
         this.gameStartInfo.tribes,
         [...this.reports.values()],
         this.publicGameType,
+        statsAgreed,
       ),
     );
   }
