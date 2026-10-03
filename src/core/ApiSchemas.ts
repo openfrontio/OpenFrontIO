@@ -362,6 +362,12 @@ export const UserMeResponseSchema = z.object({
     // absent too, like `progress`: the server parses this response at join,
     // so a bad value must never fail the parse and reject the join.
     levelHidden: z.boolean().optional().catch(undefined),
+    // "Show my profile in search engines" turned off: the public profile page
+    // (openfront.io/player/<publicId>) is served noindex. It still opens for
+    // anyone with the link, and link previews are unchanged. Optional so an
+    // older API without the setting still parses — absent hides the row in
+    // account settings. A malformed value reads as absent, like levelHidden.
+    searchHidden: z.boolean().optional().catch(undefined),
     clans: z
       .array(
         z.object({
@@ -464,6 +470,11 @@ export type UserMeResponse = z.infer<typeof UserMeResponseSchema>;
 
 // PUT /users/@me/level_visibility { hidden } — the stored setting, echoed.
 export const LevelVisibilityResponseSchema = z.object({
+  hidden: z.boolean(),
+});
+
+// PUT /users/@me/search_visibility { hidden } — the stored setting, echoed.
+export const SearchVisibilityResponseSchema = z.object({
   hidden: z.boolean(),
 });
 export type UserSubscription = NonNullable<

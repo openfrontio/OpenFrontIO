@@ -2,7 +2,12 @@ import { html, LitElement, nothing, TemplateResult } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
 import { UserMeResponse } from "../../core/ApiSchemas";
 import { isSteamPrimaryUser } from "../AccountIdentity";
-import { deleteAccount, setLevelVisibility, setMarketingConsent } from "../Api";
+import {
+  deleteAccount,
+  setLevelVisibility,
+  setMarketingConsent,
+  setSearchVisibility,
+} from "../Api";
 import { clearLocalSession, linkGoogle, sendMagicLink } from "../Auth";
 import { crazyGamesSDK } from "../CrazyGamesSDK";
 import { isDesktopShell } from "../DesktopShell";
@@ -20,8 +25,9 @@ type UserMeUser = UserMeResponse["user"];
 
 /**
  * Account settings: marketing-consent control (with the bind-an-email flow when
- * the account has no verified email), privacy ("hide my level"), third-party
- * identity tokens and self-service account deletion.
+ * the account has no verified email), privacy ("hide my level", "keep my
+ * profile out of search engines"), third-party identity tokens and
+ * self-service account deletion.
  *
  * Extracted from AccountModal so the standalone account-settings modal opened
  * from the nav profile menu and the account modal's settings tab render the
@@ -35,6 +41,7 @@ export class AccountSettingsPanel extends LitElement {
   @state() private email: string = "";
   @state() private consentBusy: boolean = false;
   @state() private levelVisibilityBusy: boolean = false;
+  @state() private searchVisibilityBusy: boolean = false;
   @state() private deleteDialogOpen: boolean = false;
   @state() private deleteBusy: boolean = false;
 
@@ -130,13 +137,16 @@ export class AccountSettingsPanel extends LitElement {
     `;
   }
 
-  // Privacy: "Show my level to other players". Only when /users/@me carries the
-  // setting at all — an older API without it gets no card.
+  // Privacy: "Show my level to other players" and "Show my profile in search
+  // engines". Each row only when /users/@me carries its setting at all, and
+  // the card only when it carries either — an older API without them gets no
+  // card.
   private renderPrivacyCard(): TemplateResult | typeof nothing {
     const levelHidden = this.player?.levelHidden;
-    if (levelHidden === undefined) return nothing;
-    const shown = !levelHidden;
-    const title = translateText("account_modal.level_visibility_title");
+    const searchHidden = this.player?.searchHidden;
+    if (levelHidden === undefined && searchHidden === undefined) {
+      return nothing;
+    }
     return html`
       <div class="bg-white/5 rounded-xl border border-white/10 p-6">
         <div
@@ -144,33 +154,66 @@ export class AccountSettingsPanel extends LitElement {
         >
           ${translateText("account_modal.privacy_title")}
         </div>
-        <div class="flex items-center justify-between gap-4">
-          <div class="flex-1">
-            <div class="text-white font-medium">${title}</div>
-            <div class="text-white/50 text-sm mt-1">
-              ${translateText("account_modal.level_visibility_desc")}
-            </div>
-          </div>
-          <button
-            role="switch"
-            aria-checked=${shown ? "true" : "false"}
-            aria-label=${title}
-            ?disabled=${this.levelVisibilityBusy}
-            @click=${() => this.setLevelShown(!shown)}
-            class="relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-malibu-blue/50 disabled:opacity-60 ${shown
-              ? "bg-malibu-blue shadow-[var(--shadow-malibu-blue-pill)]"
-              : "bg-white/15"}"
-          >
-            <span
-              class="inline-block h-4 w-4 transform rounded-full bg-white transition-transform duration-200 ${shown
-                ? "translate-x-6"
-                : "translate-x-1"}"
-            ></span>
-          </button>
+        ${levelHidden === undefined
+          ? nothing
+          : html`${this.renderPrivacySwitchRow(
+              translateText("account_modal.level_visibility_title"),
+              translateText("account_modal.level_visibility_desc"),
+              !levelHidden,
+              this.levelVisibilityBusy,
+              (shown) => this.setLevelShown(shown),
+            )}
+            ${this.renderLevelPreview(!levelHidden)}`}
+        ${searchHidden === undefined
+          ? nothing
+          : html`<div
+              class=${levelHidden === undefined
+                ? ""
+                : "mt-4 pt-4 border-t border-white/10"}
+            >
+              ${this.renderPrivacySwitchRow(
+                translateText("account_modal.search_visibility_title"),
+                translateText("account_modal.search_visibility_desc"),
+                !searchHidden,
+                this.searchVisibilityBusy,
+                (shown) => this.setSearchShown(shown),
+              )}
+            </div>`}
+      </div>
+    `;
+  }
+
+  // One Privacy row: title, description and the same role="switch" toggle as
+  // the email-updates card. On = shown.
+  private renderPrivacySwitchRow(
+    title: string,
+    description: string,
+    shown: boolean,
+    busy: boolean,
+    setShown: (shown: boolean) => void,
+  ): TemplateResult {
+    return html`
+      <div class="flex items-center justify-between gap-4">
+        <div class="flex-1">
+          <div class="text-white font-medium">${title}</div>
+          <div class="text-white/50 text-sm mt-1">${description}</div>
         </div>
-        ${this.renderLevelPreview(shown)}
-        <!-- "Show my profile in search engines" goes here, below a divider,
-             once the public profile page ships. -->
+        <button
+          role="switch"
+          aria-checked=${shown ? "true" : "false"}
+          aria-label=${title}
+          ?disabled=${busy}
+          @click=${() => setShown(!shown)}
+          class="relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-malibu-blue/50 disabled:opacity-60 ${shown
+            ? "bg-malibu-blue shadow-[var(--shadow-malibu-blue-pill)]"
+            : "bg-white/15"}"
+        >
+          <span
+            class="inline-block h-4 w-4 transform rounded-full bg-white transition-transform duration-200 ${shown
+              ? "translate-x-6"
+              : "translate-x-1"}"
+          ></span>
+        </button>
       </div>
     `;
   }
@@ -399,6 +442,35 @@ export class AccountSettingsPanel extends LitElement {
     if (!result.ok && result.code === "failed") {
       await showInGameAlert(
         translateText("account_modal.level_visibility_failed"),
+      );
+    }
+  }
+
+  private async setSearchShown(shown: boolean): Promise<void> {
+    const player = this.player;
+    if (!player || player.searchHidden === undefined) return;
+    if (this.searchVisibilityBusy) return;
+    const previous = player.searchHidden;
+    const hidden = !shown;
+    if (previous === hidden) return;
+
+    // Optimistic, like the level toggle: `player` is the cached /users/@me
+    // profile. The switch is disabled until the server answers; a failure
+    // puts it back.
+    this.searchVisibilityBusy = true;
+    player.searchHidden = hidden;
+    this.requestUpdate();
+
+    const result = await setSearchVisibility(hidden);
+    player.searchHidden = result.ok ? result.hidden : previous;
+    this.searchVisibilityBusy = false;
+    this.requestUpdate();
+
+    // 401: logOut() has already run and the signed-out state takes over —
+    // nothing to tell the player here.
+    if (!result.ok && result.code === "failed") {
+      await showInGameAlert(
+        translateText("account_modal.search_visibility_failed"),
       );
     }
   }
