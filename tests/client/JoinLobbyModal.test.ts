@@ -38,7 +38,12 @@ vi.mock("howler", () => ({
 }));
 
 import { JoinLobbyModal } from "../../src/client/JoinLobbyModal";
-import { GameMode, GameType } from "../../src/core/game/Game";
+import {
+  Difficulty,
+  GameMapType,
+  GameMode,
+  GameType,
+} from "../../src/core/game/Game";
 import { UserSettings } from "../../src/core/game/UserSettings";
 
 function resetUserSettingsState() {
@@ -370,5 +375,67 @@ describe("JoinLobbyModal Steam invite button", () => {
 
     expect(header.querySelector("copy-button")).not.toBeNull();
     expect(header.querySelector(INVITE)).not.toBeNull();
+  });
+});
+
+describe("JoinLobbyModal map preview", () => {
+  const PREVIEW = "[data-test-map-preview]";
+  const SETTINGS = "[data-test-lobby-settings]";
+
+  function renderConfig(config: Record<string, unknown>): HTMLElement {
+    const modal = new JoinLobbyModal();
+    (modal as unknown as { gameConfig: unknown }).gameConfig = {
+      gameMap: GameMapType.World,
+      gameType: GameType.Private,
+      gameMode: GameMode.FFA,
+      difficulty: Difficulty.Easy,
+      disabledUnits: [],
+      ...config,
+    };
+    const container = document.createElement("div");
+    render(
+      (
+        modal as unknown as { renderGameConfig(): unknown }
+      ).renderGameConfig() as never,
+      container,
+    );
+    return container;
+  }
+
+  it("shows the thumbnail of the lobby's map", () => {
+    const image = renderConfig({
+      gameMap: GameMapType.Africa,
+    }).querySelector<HTMLImageElement>(`${PREVIEW} img`);
+
+    expect(image?.getAttribute("src")).toContain("maps/africa/thumbnail.webp");
+  });
+
+  // The preview used to be an 80px square with object-cover, which cropped
+  // every non-square map (World showed only its central half). It must show
+  // the whole map, so it scales to fit instead of filling a fixed box.
+  it("fits the whole map instead of cropping it to a fixed square", () => {
+    const classes =
+      renderConfig({}).querySelector(`${PREVIEW} img`)?.getAttribute("class") ??
+      "";
+
+    expect(classes).toContain("object-contain");
+    expect(classes).not.toContain("object-cover");
+  });
+
+  it("hides itself when the thumbnail fails to load", () => {
+    const preview = renderConfig({}).querySelector<HTMLElement>(PREVIEW)!;
+
+    preview.querySelector("img")!.dispatchEvent(new Event("error"));
+
+    expect(preview.style.display).toBe("none");
+  });
+
+  // Tags, not one card per setting: a lobby with many settings has to stay
+  // readable next to the preview without pushing the player list away.
+  it("lists each notable setting as one tag next to the preview", () => {
+    const tags = (config: Record<string, unknown>) =>
+      renderConfig(config).querySelectorAll(`${SETTINGS} > span`).length;
+
+    expect(tags({ infiniteGold: true, instantBuild: true })).toBe(tags({}) + 2);
   });
 });
