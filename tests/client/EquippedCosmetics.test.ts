@@ -1,11 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { ResolvedCosmetic } from "../../src/client/Cosmetics";
-import { subTabForItem } from "../../src/client/Store";
 import {
+  equippedCosmetics,
   matchesStoreItem,
   storeRouteFor,
-  wornCosmetics,
-} from "../../src/client/WornCosmetics";
+} from "../../src/client/EquippedCosmetics";
+import { subTabForItem } from "../../src/client/Store";
 import { PlayerCosmetics } from "../../src/core/Schemas";
 
 function catalogEntry(
@@ -38,7 +38,7 @@ function effectEntry(
   } as ResolvedCosmetic;
 }
 
-const wornPattern: PlayerCosmetics = {
+const equippedPattern: PlayerCosmetics = {
   pattern: {
     name: "hearts",
     patternData: "AAAAAA",
@@ -50,28 +50,28 @@ const wornPattern: PlayerCosmetics = {
   },
 };
 
-describe("wornCosmetics", () => {
-  it("matches a worn pattern to its colour variant in the catalog", () => {
-    const [worn] = wornCosmetics(wornPattern, [
+describe("equippedCosmetics", () => {
+  it("matches a equipped pattern to its colour variant in the catalog", () => {
+    const [equipped] = equippedCosmetics(equippedPattern, [
       catalogEntry("pattern:hearts", "pattern", "purchasable"),
       catalogEntry("pattern:hearts:red", "pattern", "owned"),
     ]);
 
-    expect(worn.key).toBe("pattern:hearts:red");
-    expect(worn.relationship).toBe("owned");
-    expect(worn.pattern?.name).toBe("hearts");
+    expect(equipped.key).toBe("pattern:hearts:red");
+    expect(equipped.relationship).toBe("owned");
+    expect(equipped.pattern?.name).toBe("hearts");
   });
 
   it("still renders a pattern the catalog doesn't list", () => {
-    const [worn] = wornCosmetics(wornPattern, []);
+    const [equipped] = equippedCosmetics(equippedPattern, []);
 
-    expect(worn.relationship).toBe("unknown");
-    expect(worn.pattern?.patternData).toBe("AAAAAA");
-    expect(storeRouteFor(worn)).toBeNull();
+    expect(equipped.relationship).toBe("unknown");
+    expect(equipped.pattern?.patternData).toBe("AAAAAA");
+    expect(storeRouteFor(equipped)).toBeNull();
   });
 
   it("lists skins, crowns and every effect slot", () => {
-    const worn = wornCosmetics(
+    const equipped = equippedCosmetics(
       {
         skin: { name: "mountain", url: "/skin.png" },
         crown: { name: "gold", url: "/crown.png" },
@@ -86,43 +86,43 @@ describe("wornCosmetics", () => {
       [],
     );
 
-    expect(worn.map((w) => w.key)).toEqual([
+    expect(equipped.map((w) => w.key)).toEqual([
       "skin:mountain",
       "crown:gold",
       "effect:nukeTrail:embers",
       "effect:transportShipTrail:foam",
     ]);
-    expect(worn[0].imageUrl).toBe("/skin.png");
+    expect(equipped[0].imageUrl).toBe("/skin.png");
   });
 
   it("skips the flag, which the panel already shows", () => {
-    expect(wornCosmetics({ flag: "us" }, [])).toEqual([]);
+    expect(equippedCosmetics({ flag: "us" }, [])).toEqual([]);
   });
 });
 
 describe("storeRouteFor", () => {
   it("links a purchasable item to its store tile", () => {
-    const [worn] = wornCosmetics(wornPattern, [
+    const [equipped] = equippedCosmetics(equippedPattern, [
       catalogEntry("pattern:hearts:red", "pattern", "purchasable"),
     ]);
 
-    expect(storeRouteFor(worn)).toBe(
+    expect(storeRouteFor(equipped)).toBe(
       "#modal=store&tab=cosmetics&item=pattern%3Ahearts%3Ared",
     );
   });
 
   it("offers no link for owned or blocked items", () => {
     for (const relationship of ["owned", "blocked"] as const) {
-      const [worn] = wornCosmetics(wornPattern, [
+      const [equipped] = equippedCosmetics(equippedPattern, [
         catalogEntry("pattern:hearts:red", "pattern", relationship),
       ]);
-      expect(storeRouteFor(worn)).toBeNull();
+      expect(storeRouteFor(equipped)).toBeNull();
     }
   });
 
   it("matches an effect whose catalog key differs from its name", () => {
     // the catalog keys effects by their map key, which need not be the name
-    const [worn] = wornCosmetics(
+    const [equipped] = equippedCosmetics(
       { effects: { nukeTrail: { name: "embers", effectType: "nukeTrail" } } },
       [
         effectEntry(
@@ -134,17 +134,17 @@ describe("storeRouteFor", () => {
       ],
     );
 
-    expect(worn.key).toBe("effect:nukeTrail:ember_v2");
-    expect(worn.relationship).toBe("purchasable");
+    expect(equipped.key).toBe("effect:nukeTrail:ember_v2");
+    expect(equipped.relationship).toBe("purchasable");
   });
 
   it("sends effects to their tab, which has no per-item target", () => {
-    const [worn] = wornCosmetics(
+    const [equipped] = equippedCosmetics(
       { effects: { nukeTrail: { name: "embers", effectType: "nukeTrail" } } },
       [catalogEntry("effect:nukeTrail:embers", "effect", "purchasable")],
     );
 
-    expect(storeRouteFor(worn)).toBe("#modal=store&tab=effects");
+    expect(storeRouteFor(equipped)).toBe("#modal=store&tab=effects");
   });
 });
 

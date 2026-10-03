@@ -13,8 +13,12 @@ import {
   resolveCosmetics,
   translateCosmetic,
 } from "../Cosmetics";
+import {
+  EquippedCosmetic,
+  equippedCosmetics,
+  storeRouteFor,
+} from "../EquippedCosmetics";
 import { translateText } from "../Utils";
-import { storeRouteFor, WornCosmetic, wornCosmetics } from "../WornCosmetics";
 import "./EffectPreview";
 import { renderPatternPreview } from "./PatternPreview";
 
@@ -27,12 +31,12 @@ const rarityRing: Record<string, string> = {
 };
 
 /**
- * The cosmetics a player is wearing, as a row of small tiles under their name.
+ * The cosmetics a player has equipped, as a row of small tiles under their name.
  * Tiles the viewer doesn't own link to that item in the store, opened in a new
  * tab so the running game is left alone.
  */
-@customElement("worn-cosmetics-row")
-export class WornCosmeticsRow extends LitElement {
+@customElement("equipped-cosmetics-row")
+export class EquippedCosmeticsRow extends LitElement {
   @property({ attribute: false })
   cosmetics: PlayerCosmetics = {};
 
@@ -63,8 +67,8 @@ export class WornCosmeticsRow extends LitElement {
     this.userMe = userMe;
   }
 
-  private openStore(worn: WornCosmetic) {
-    const route = storeRouteFor(worn);
+  private openStore(equipped: EquippedCosmetic) {
+    const route = storeRouteFor(equipped);
     if (route === null) return;
     window.open(
       new URL(route, `${window.location.origin}/`).toString(),
@@ -73,26 +77,28 @@ export class WornCosmeticsRow extends LitElement {
     );
   }
 
-  private displayName(worn: WornCosmetic): string {
-    if (worn.type === "crown") return translateCosmetic("crowns", worn.name);
-    if (worn.type === "effect") return translateCosmetic("effects", worn.name);
-    return translateCosmetic("territory_patterns.pattern", worn.name);
+  private displayName(equipped: EquippedCosmetic): string {
+    if (equipped.type === "crown")
+      return translateCosmetic("crowns", equipped.name);
+    if (equipped.type === "effect")
+      return translateCosmetic("effects", equipped.name);
+    return translateCosmetic("territory_patterns.pattern", equipped.name);
   }
 
-  private renderPreview(worn: WornCosmetic): TemplateResult {
-    if (worn.pattern !== null) {
-      return renderPatternPreview(worn.pattern, 48, 48);
+  private renderPreview(equipped: EquippedCosmetic): TemplateResult {
+    if (equipped.pattern !== null) {
+      return renderPatternPreview(equipped.pattern, 48, 48);
     }
-    if (worn.imageUrl !== null) {
+    if (equipped.imageUrl !== null) {
       return html`<img
-        src=${worn.imageUrl}
+        src=${equipped.imageUrl}
         alt=""
         class="h-full w-full object-contain pointer-events-none"
         draggable="false"
         loading="lazy"
       />`;
     }
-    const effect = worn.resolved?.cosmetic as Effect | undefined;
+    const effect = equipped.resolved?.cosmetic as Effect | undefined;
     if (effect === undefined) {
       return html`<span class="text-xs font-bold text-white/40">?</span>`;
     }
@@ -113,10 +119,10 @@ export class WornCosmeticsRow extends LitElement {
     ></trail-swatch>`;
   }
 
-  private renderTile(worn: WornCosmetic): TemplateResult {
-    const name = this.displayName(worn);
-    const buyable = storeRouteFor(worn) !== null;
-    const rarity = worn.resolved?.cosmetic?.rarity ?? "";
+  private renderTile(equipped: EquippedCosmetic): TemplateResult {
+    const name = this.displayName(equipped);
+    const buyable = storeRouteFor(equipped) !== null;
+    const rarity = equipped.resolved?.cosmetic?.rarity ?? "";
     const ring = rarityRing[rarity] ?? "ring-white/15";
     const label = buyable
       ? translateText("player_panel.cosmetic_get_label", { name })
@@ -132,10 +138,10 @@ export class WornCosmeticsRow extends LitElement {
         ?disabled=${!buyable}
         @click=${(e: Event) => {
           e.stopPropagation();
-          this.openStore(worn);
+          this.openStore(equipped);
         }}
       >
-        ${this.renderPreview(worn)}
+        ${this.renderPreview(equipped)}
         ${buyable
           ? html`<span
               class="absolute bottom-0 right-0 rounded-tl bg-malibu-blue px-1 text-[10px] font-black leading-tight text-white"
@@ -148,11 +154,11 @@ export class WornCosmeticsRow extends LitElement {
   }
 
   render() {
-    const worn = wornCosmetics(
+    const equipped = equippedCosmetics(
       this.cosmetics,
       resolveCosmetics(this.catalog, this.userMe, null),
     );
-    if (worn.length === 0) return nothing;
+    if (equipped.length === 0) return nothing;
 
     return html`
       <div class="flex items-center gap-2">
@@ -162,7 +168,7 @@ export class WornCosmeticsRow extends LitElement {
           ${translateText("player_panel.cosmetics")}
         </span>
         <div class="flex flex-wrap items-center gap-1.5">
-          ${worn.map((w) => this.renderTile(w))}
+          ${equipped.map((w) => this.renderTile(w))}
         </div>
       </div>
     `;

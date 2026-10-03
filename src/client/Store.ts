@@ -28,12 +28,12 @@ import {
   resolveCosmetics,
   ResolvedCosmetic,
 } from "./Cosmetics";
+import { matchesStoreItem } from "./EquippedCosmetics";
 import {
   priceStringToCents,
   reportPendingSteamAuthorizations,
 } from "./Payments";
 import { translateText } from "./Utils";
-import { matchesStoreItem } from "./WornCosmetics";
 
 type StoreTab =
   | "cosmetics"

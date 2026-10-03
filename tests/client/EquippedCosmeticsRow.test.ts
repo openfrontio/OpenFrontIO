@@ -17,7 +17,7 @@ vi.mock("../../src/client/Utils", () => ({
   translateText: (key: string) => key,
 }));
 
-import { WornCosmeticsRow } from "../../src/client/components/WornCosmeticsRow";
+import { EquippedCosmeticsRow } from "../../src/client/components/EquippedCosmeticsRow";
 
 function crownEntry(
   relationship: ResolvedCosmetic["relationship"],
@@ -31,11 +31,13 @@ function crownEntry(
   };
 }
 
-async function renderRow(): Promise<WornCosmeticsRow> {
-  if (!customElements.get("worn-cosmetics-row")) {
-    customElements.define("worn-cosmetics-row", WornCosmeticsRow);
+async function renderRow(): Promise<EquippedCosmeticsRow> {
+  if (!customElements.get("equipped-cosmetics-row")) {
+    customElements.define("equipped-cosmetics-row", EquippedCosmeticsRow);
   }
-  const el = document.createElement("worn-cosmetics-row") as WornCosmeticsRow;
+  const el = document.createElement(
+    "equipped-cosmetics-row",
+  ) as EquippedCosmeticsRow;
   el.cosmetics = { crown: { name: "gold", url: "/crown.png" } };
   document.body.appendChild(el);
   await el.updateComplete;
@@ -45,7 +47,7 @@ async function renderRow(): Promise<WornCosmeticsRow> {
   return el;
 }
 
-describe("worn-cosmetics-row", () => {
+describe("equipped-cosmetics-row", () => {
   beforeEach(() => {
     document.body.innerHTML = "";
     resolveCosmetics.mockReturnValue([]);

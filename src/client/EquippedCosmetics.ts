@@ -1,10 +1,10 @@
 import { PlayerCosmetics, PlayerPattern } from "../core/Schemas";
 import { ResolvedCosmetic } from "./Cosmetics";
 
-export type WornCosmeticType = "pattern" | "skin" | "crown" | "effect";
+export type EquippedCosmeticType = "pattern" | "skin" | "crown" | "effect";
 
-export type WornCosmetic = {
-  type: WornCosmeticType;
+export type EquippedCosmetic = {
+  type: EquippedCosmeticType;
   /** Catalog key, same format `resolveCosmetics` produces. */
   key: string;
   name: string;
@@ -18,21 +18,21 @@ export type WornCosmetic = {
   relationship: ResolvedCosmetic["relationship"] | "unknown";
 };
 
-function keyForWornPattern(pattern: PlayerPattern): string {
+function keyForEquippedPattern(pattern: PlayerPattern): string {
   return pattern.colorPalette
     ? `pattern:${pattern.name}:${pattern.colorPalette.name}`
     : `pattern:${pattern.name}`;
 }
 
 /**
- * The cosmetics a player is wearing, paired with the viewer's catalog so the
+ * The cosmetics a player has equipped, paired with the viewer's catalog so the
  * UI knows whether the viewer already owns each one. Flags are left out: the
  * panel already shows the flag, and nation flags aren't store items.
  */
-export function wornCosmetics(
+export function equippedCosmetics(
   cosmetics: PlayerCosmetics,
   catalog: ResolvedCosmetic[],
-): WornCosmetic[] {
+): EquippedCosmetic[] {
   const byKey = new Map(catalog.map((r) => [r.key, r]));
   // the catalog keys effects by their map key, which need not equal the
   // effect's name, so match on effectType plus the name both sides carry
@@ -41,17 +41,17 @@ export function wornCosmetics(
       .filter((r) => r.type === "effect")
       .map((r) => [`${r.effectType}:${r.cosmetic?.name}`, r]),
   );
-  const worn: WornCosmetic[] = [];
+  const equipped: EquippedCosmetic[] = [];
 
   const add = (
-    type: WornCosmeticType,
+    type: EquippedCosmeticType,
     key: string,
     name: string,
     pattern: PlayerPattern | null,
     imageUrl: string | null,
   ) => {
     const resolved = byKey.get(key) ?? null;
-    worn.push({
+    equipped.push({
       type,
       key,
       name,
@@ -65,7 +65,7 @@ export function wornCosmetics(
   if (cosmetics.pattern) {
     add(
       "pattern",
-      keyForWornPattern(cosmetics.pattern),
+      keyForEquippedPattern(cosmetics.pattern),
       cosmetics.pattern.name,
       cosmetics.pattern,
       null,
@@ -101,19 +101,19 @@ export function wornCosmetics(
     );
   }
 
-  return worn;
+  return equipped;
 }
 
 /**
  * Hash route that opens the store on the item, for `ModalRouter`. Effects only
  * get their tab — the effects grid has no per-item target.
  */
-export function storeRouteFor(worn: WornCosmetic): string | null {
-  if (worn.relationship !== "purchasable") return null;
-  if (worn.type === "effect") {
+export function storeRouteFor(equipped: EquippedCosmetic): string | null {
+  if (equipped.relationship !== "purchasable") return null;
+  if (equipped.type === "effect") {
     return "#modal=store&tab=effects";
   }
-  return `#modal=store&tab=cosmetics&item=${encodeURIComponent(worn.key)}`;
+  return `#modal=store&tab=cosmetics&item=${encodeURIComponent(equipped.key)}`;
 }
 
 /**
