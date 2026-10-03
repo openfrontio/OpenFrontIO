@@ -1,6 +1,7 @@
 import { Howl } from "howler";
 import { assetUrl } from "../../core/AssetUrls";
 import { EventBus } from "../../core/EventBus";
+import { Platform } from "../Platform";
 import { AudioMixer, PlayableCategory } from "./AudioMixer";
 import {
   AmbienceTrack,
@@ -36,14 +37,15 @@ export class SoundManager {
       // defeat cues — so a game never hard-cuts to silence, per the sound
       // designer's note. The menu theme (MenuMusic.ts) covers the home page.
       this.backgroundMusic = new Howl({
-        src: [assetUrl("sounds/music/gameplay.mp3")],
+        src: [assetUrl("sounds/music/gameplay.m4a")],
         loop: true,
         volume: 0,
-        // Stream it. Howler's default Web Audio path XHRs the whole file and
-        // decodes it to PCM before the first note, and this track is 4.6 MB,
+        // Stream it outside iOS. Howler's default Web Audio path XHRs the whole file and
+        // decodes it to PCM before the first note, and this track is 3.41 MB,
         // so play() queued behind tens of seconds of silence at game start on
-        // a slow connection. Cues and ambience stay on Web Audio.
-        html5: true,
+        // a slow connection. On iOS, use Web Audio so volume and mute controls
+        // work. Cues and ambience stay on Web Audio.
+        html5: !Platform.isIOS,
       });
       this.mixer.register(this.backgroundMusic, "music");
     });
