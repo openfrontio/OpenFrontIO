@@ -1,4 +1,8 @@
 import { ClientID, ClientInfo, GameID, LevelBadge } from "../core/Schemas";
+import {
+  ownHiddenLevelBadge,
+  refreshOwnHiddenLevelBadge,
+} from "./OwnLevelBadge";
 
 // Level badges from the last lobby roster this tab was sent, so in-game UI
 // can show them after the lobby is gone. The roster (lobby_info) only flows
@@ -16,26 +20,41 @@ import { ClientID, ClientInfo, GameID, LevelBadge } from "../core/Schemas";
 
 let rosterGameID: GameID | null = null;
 let badges = new Map<ClientID, LevelBadge>();
+// The viewer's own clientID when they were on that roster.
+let rosterSelf: ClientID | null = null;
 
 export function rememberLobbyRoster(
   gameID: GameID,
   clients: readonly ClientInfo[] | undefined,
+  myClientID?: ClientID,
 ): void {
   const next = new Map<ClientID, LevelBadge>();
+  let self: ClientID | null = null;
   for (const c of clients ?? []) {
     if (c.levelBadge !== undefined) next.set(c.clientID, c.levelBadge);
+    if (c.clientID === myClientID) self = myClientID;
+  }
+  if (gameID !== rosterGameID) {
+    // Once per game: the viewer's own badge if they hide their level (their
+    // roster entry carries none). From the memoised /users/@me.
+    void refreshOwnHiddenLevelBadge();
   }
   rosterGameID = gameID;
   badges = next;
+  rosterSelf = self;
 }
 
 // The player's badge in game `gameID`, or undefined when they have none (a
-// guest, an anonymized name, progression off) or this tab never saw them in
-// that game's lobby.
+// guest, an anonymized name, progression off, their level hidden) or this tab
+// never saw them in that game's lobby. The viewer's own badge still shows
+// while they hide their level: it comes from their own /users/@me then.
 export function lobbyLevelBadge(
   gameID: GameID,
   clientID: ClientID | null,
 ): LevelBadge | undefined {
   if (clientID === null || gameID !== rosterGameID) return undefined;
-  return badges.get(clientID);
+  return (
+    badges.get(clientID) ??
+    (clientID === rosterSelf ? ownHiddenLevelBadge() : undefined)
+  );
 }
