@@ -1627,6 +1627,8 @@
     "betrayals": "Betrayals",
     "break_alliance": "Break Alliance",
     "chat": "Chat",
+    "cosmetic_get_label": "{name} (Get it in the store)",
+    "cosmetics": "Equipped",
     "emotes": "Emojis",
     "flip_rocket_trajectory": "Flip rocket trajectory",
     "gold": "Gold",

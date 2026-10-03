@@ -14,6 +14,7 @@ import {
 import { TileRef } from "../../../core/game/GameMap";
 import { Emoji, flattenedEmojiTable } from "../../../core/Util";
 import { fetchLobbyListed } from "../../Api";
+import "../../components/EquippedCosmeticsRow";
 import { actionButton } from "../../components/ui/ActionButton";
 import "../../components/ui/Divider";
 import { Controller } from "../../Controller";
@@ -1058,6 +1059,11 @@ export class PlayerPanel extends LitElement implements Controller {
                     <div class="mb-1">
                       ${this.renderIdentityRow(other, viewer)}
                     </div>
+
+                    <!-- Cosmetics the player has equipped -->
+                    <equipped-cosmetics-row
+                      .cosmetics=${other.cosmetics}
+                    ></equipped-cosmetics-row>
 
                     ${this.sendTarget && !isSpectator
                       ? html`
