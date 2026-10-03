@@ -404,6 +404,57 @@ describe("RankedLeaderboardEntrySchema accountUsername", () => {
   });
 });
 
+describe("leaderboard entry level fields", () => {
+  const ranked = {
+    rank: 1,
+    elo: 1500,
+    peakElo: 1600,
+    wins: 10,
+    losses: 5,
+    total: 15,
+    public_id: "abc123",
+    accountUsername: "bob.4821",
+  };
+  const mapped = {
+    rank: 1,
+    playerId: "abc123",
+    accountUsername: "bob.4821",
+    elo: 1500,
+    games: 15,
+    wins: 10,
+    losses: 5,
+    winRate: 2 / 3,
+  };
+  const level = { level: 42, prestige: 3, legend: false };
+
+  it("parses a ranked entry from an API without level fields", () => {
+    const result = RankedLeaderboardEntrySchema.parse(ranked);
+    expect(result.level).toBeUndefined();
+    expect(result.prestige).toBeUndefined();
+    expect(result.legend).toBeUndefined();
+  });
+
+  it("keeps a ranked entry's level fields", () => {
+    expect(
+      RankedLeaderboardEntrySchema.parse({ ...ranked, ...level }),
+    ).toMatchObject(level);
+  });
+
+  it("rejects a ranked entry with a malformed level", () => {
+    expect(
+      RankedLeaderboardEntrySchema.safeParse({ ...ranked, level: "42" })
+        .success,
+    ).toBe(false);
+  });
+
+  it("parses a mapped entry with and without level fields", () => {
+    expect(PlayerLeaderboardEntrySchema.parse(mapped).level).toBeUndefined();
+    expect(
+      PlayerLeaderboardEntrySchema.parse({ ...mapped, ...level }),
+    ).toMatchObject(level);
+  });
+});
+
 describe("PlayerGameModeFilterSchema", () => {
   it.each(["ffa", "team", "hvn", "ranked"])("accepts %s", (value) => {
     expect(PlayerGameModeFilterSchema.safeParse(value).success).toBe(true);

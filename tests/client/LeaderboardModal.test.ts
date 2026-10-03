@@ -641,6 +641,156 @@ describe("LeaderboardModal", () => {
     });
   });
 
+  describe("Level badges", () => {
+    type Level = { level: number; prestige: number; legend: boolean };
+    const entry = (rank: number, publicId: string, level?: Level) => ({
+      rank,
+      elo: 1500 - rank,
+      peakElo: 1500,
+      wins: 1,
+      losses: 1,
+      total: 2,
+      public_id: publicId,
+      accountUsername: publicId,
+      ...level,
+    });
+    const prestiged: Level = { level: 12, prestige: 2, legend: false };
+    const legend: Level = { level: 100, prestige: 10, legend: true };
+    const unprestiged: Level = { level: 80, prestige: 0, legend: false };
+
+    const load = async (
+      ladders: Record<string, unknown[]>,
+      userPublicId?: string,
+    ) => {
+      if (userPublicId) {
+        const { getUserMe } = await import("../../src/client/Api");
+        (getUserMe as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+          player: { publicId: userPublicId },
+        });
+      }
+      (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce(
+        jsonRes({ "1v1": [], "2v2": [], ...ladders }),
+      );
+      const playerList = getPlayerList()!;
+      await playerList.loadPlayerLeaderboard(true);
+      await playerList.updateComplete;
+      return playerList;
+    };
+
+    // The name cell's leading element, keyed by the row's public id: "badge",
+    // "slot", or "name" when the name comes first.
+    const leading = (root: Element | null) =>
+      Object.fromEntries(
+        Array.from(root?.querySelectorAll("tr") ?? []).map((tr) => {
+          const name = tr.querySelector("player-name") as
+            | (Element & { publicId: string })
+            | null;
+          const first = name?.parentElement?.firstElementChild;
+          const kind =
+            first?.tagName === "LEVEL-BADGE"
+              ? "badge"
+              : first?.hasAttribute("data-level-slot")
+                ? "slot"
+                : "name";
+          return [name?.publicId, kind];
+        }),
+      );
+    const tbody = () => modal.querySelector("leaderboard-player-list tbody");
+
+    it("badges prestiged players and Legends in front of the name, with a slot for the rest", async () => {
+      await load({
+        "1v1": [
+          entry(1, "p-legend", legend),
+          entry(2, "p-prestiged", prestiged),
+          entry(3, "p-zero", unprestiged),
+          entry(4, "p-none"),
+        ],
+      });
+
+      expect(leading(tbody())).toEqual({
+        "p-legend": "badge",
+        "p-prestiged": "badge",
+        "p-zero": "slot",
+        "p-none": "slot",
+      });
+      const badges = tbody()!.querySelectorAll("level-badge");
+      const [legendBadge, prestigeBadge] = Array.from(badges) as Array<
+        Element & { level: number; prestige: number; legend: boolean }
+      >;
+      expect(legendBadge.legend).toBe(true);
+      expect(prestigeBadge).toMatchObject({ level: 12, prestige: 2 });
+      expect(prestigeBadge.getAttribute("size")).toBe("24");
+
+      const slot = tbody()!.querySelector("[data-level-slot]")!;
+      expect(slot.getAttribute("aria-hidden")).toBe("true");
+      expect((slot as HTMLElement).style.width).toBe("24px");
+    });
+
+    it("leaves the board unchanged when no row has a badge", async () => {
+      await load({
+        "1v1": [entry(1, "p-zero", unprestiged), entry(2, "p-none")],
+      });
+
+      expect(leading(tbody())).toEqual({ "p-zero": "name", "p-none": "name" });
+      expect(tbody()!.querySelector("level-badge")).toBeNull();
+    });
+
+    it("decides the slot per ladder", async () => {
+      await load({
+        "1v1": [entry(1, "p-prestiged", prestiged), entry(2, "p-none")],
+        "2v2": [entry(1, "duo-zero", unprestiged), entry(2, "duo-none")],
+      });
+      expect(leading(tbody())).toEqual({
+        "p-prestiged": "badge",
+        "p-none": "slot",
+      });
+
+      await showLadder("players2v2");
+      expect(leading(tbody())).toEqual({
+        "duo-zero": "name",
+        "duo-none": "name",
+      });
+    });
+
+    it("badges the pinned row of a prestiged player", async () => {
+      const playerList = await load(
+        { "1v1": [entry(1, "p-prestiged", prestiged)] },
+        "p-prestiged",
+      );
+      playerList.showStickyUser = true;
+      await playerList.updateComplete;
+
+      const tfoot = modal.querySelector("leaderboard-player-list tfoot");
+      expect(leading(tfoot)).toEqual({ "p-prestiged": "badge" });
+    });
+
+    it("keeps a slot on the pinned row when only other rows have badges", async () => {
+      const playerList = await load(
+        {
+          "1v1": [entry(1, "p-prestiged", prestiged), entry(2, "p-zero")],
+        },
+        "p-zero",
+      );
+      playerList.showStickyUser = true;
+      await playerList.updateComplete;
+
+      const tfoot = modal.querySelector("leaderboard-player-list tfoot");
+      expect(leading(tfoot)).toEqual({ "p-zero": "slot" });
+    });
+
+    it("leaves the pinned row unchanged when no row has a badge", async () => {
+      const playerList = await load(
+        { "1v1": [entry(1, "p-zero", unprestiged)] },
+        "p-zero",
+      );
+      playerList.showStickyUser = true;
+      await playerList.updateComplete;
+
+      const tfoot = modal.querySelector("leaderboard-player-list tfoot");
+      expect(leading(tfoot)).toEqual({ "p-zero": "name" });
+    });
+  });
+
   describe("Modal Functionality", () => {
     it("should initialize with default state", () => {
       expect(modal).toBeTruthy();
