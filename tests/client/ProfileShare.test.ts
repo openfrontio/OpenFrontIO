@@ -166,3 +166,154 @@ describe("<profile-share>", () => {
     expect(el.querySelectorAll("[data-share]")).toHaveLength(3);
   });
 });
+
+describe("<profile-share> as a menu, for a moment", () => {
+  const MOMENT_URL = `${URL_}?moment=level50`;
+  const MOMENT_LINE = "I just reached Level 50 on OpenFront!";
+  let el: ProfileShare;
+  let openSpy: ReturnType<typeof vi.spyOn>;
+
+  async function render(): Promise<void> {
+    el = document.createElement("profile-share") as ProfileShare;
+    el.layout = "menu";
+    el.label = "Share Level 50";
+    el.url = MOMENT_URL;
+    el.text = MOMENT_LINE;
+    document.body.appendChild(el);
+    await el.updateComplete;
+  }
+
+  const trigger = () =>
+    el.querySelector<HTMLButtonElement>('[data-share="menu"]')!;
+  const menu = () => el.querySelector<HTMLElement>("[data-share-menu]");
+  const item = (action: string) =>
+    el.querySelector<HTMLButtonElement>(
+      `[data-share-menu] [data-share="${action}"]`,
+    );
+
+  async function open(): Promise<void> {
+    trigger().click();
+    await el.updateComplete;
+  }
+
+  beforeEach(() => {
+    copyToClipboardMock.mockReset();
+    copyToClipboardMock.mockResolvedValue(undefined);
+    platform.isTouch = false;
+    openSpy = vi.spyOn(window, "open").mockImplementation(() => null);
+  });
+
+  afterEach(() => {
+    el?.remove();
+    openSpy.mockRestore();
+    Reflect.deleteProperty(navigator, "share");
+  });
+
+  it("is one labelled button until opened", async () => {
+    await render();
+    expect(el.querySelectorAll("[data-share]")).toHaveLength(1);
+    expect(trigger().textContent).toContain("Share Level 50");
+    expect(trigger().getAttribute("aria-haspopup")).toBe("menu");
+    expect(trigger().getAttribute("aria-expanded")).toBe("false");
+    expect(menu()).toBeNull();
+  });
+
+  it("opens the same three actions as a menu, focusing the first", async () => {
+    await render();
+    await open();
+    expect(trigger().getAttribute("aria-expanded")).toBe("true");
+    expect(menu()?.getAttribute("role")).toBe("menu");
+    const actions = [...menu()!.querySelectorAll("[role=menuitem]")].map((b) =>
+      b.getAttribute("data-share"),
+    );
+    expect(actions).toEqual(["copy", "x", "discord"]);
+    await Promise.resolve();
+    expect(document.activeElement).toBe(item("copy"));
+  });
+
+  it("shares the moment's link and line, then closes", async () => {
+    await render();
+    await open();
+    item("copy")!.click();
+    await el.updateComplete;
+    expect(copyToClipboardMock).toHaveBeenCalledWith(MOMENT_URL);
+    expect(menu()).toBeNull();
+    expect(document.activeElement).toBe(trigger());
+
+    await open();
+    item("x")!.click();
+    expect(openSpy).toHaveBeenCalledWith(
+      xShareUrl(MOMENT_URL, MOMENT_LINE),
+      "_blank",
+      "noopener,noreferrer",
+    );
+
+    await open();
+    item("discord")!.click();
+    await vi.waitFor(() =>
+      expect(copyToClipboardMock).toHaveBeenCalledWith(
+        `${MOMENT_LINE}\n${MOMENT_URL}`,
+      ),
+    );
+  });
+
+  it("closes on Escape, keeping the key from what holds it", async () => {
+    await render();
+    await open();
+    const outer = vi.fn();
+    document.body.addEventListener("keydown", outer);
+    item("copy")!.dispatchEvent(
+      new KeyboardEvent("keydown", { key: "Escape", bubbles: true }),
+    );
+    await el.updateComplete;
+    document.body.removeEventListener("keydown", outer);
+    expect(menu()).toBeNull();
+    expect(outer).not.toHaveBeenCalled();
+    expect(document.activeElement).toBe(trigger());
+  });
+
+  it("moves between the items with the arrow keys", async () => {
+    await render();
+    await open();
+    await Promise.resolve();
+    const key = (k: string) =>
+      (document.activeElement as HTMLElement).dispatchEvent(
+        new KeyboardEvent("keydown", { key: k, bubbles: true }),
+      );
+    key("ArrowDown");
+    expect(document.activeElement).toBe(item("x"));
+    key("End");
+    expect(document.activeElement).toBe(item("discord"));
+    key("ArrowDown");
+    expect(document.activeElement).toBe(item("copy"));
+    key("ArrowUp");
+    expect(document.activeElement).toBe(item("discord"));
+  });
+
+  it("closes on a press outside it", async () => {
+    await render();
+    await open();
+    document.body.dispatchEvent(new Event("pointerdown", { bubbles: true }));
+    await el.updateComplete;
+    expect(menu()).toBeNull();
+  });
+
+  it("opens the share sheet straight away on a touch device", async () => {
+    platform.isTouch = true;
+    const share = vi.fn(async () => undefined);
+    Object.defineProperty(navigator, "share", {
+      value: share,
+      configurable: true,
+    });
+    await render();
+    expect(trigger().hasAttribute("aria-haspopup")).toBe(false);
+    trigger().click();
+    await el.updateComplete;
+    expect(menu()).toBeNull();
+    expect(share).toHaveBeenCalledWith({
+      title: "player_profile.title",
+      text: MOMENT_LINE,
+      url: MOMENT_URL,
+    });
+  });
+});
