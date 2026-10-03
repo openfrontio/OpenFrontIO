@@ -1,5 +1,6 @@
 import { Howl } from "howler";
 import { assetUrl } from "../../core/AssetUrls";
+import { Platform } from "../Platform";
 import { AudioMixer } from "./AudioMixer";
 
 // Long enough not to sound like a cut, short enough that the lobby is not
@@ -183,13 +184,14 @@ export function startMenuMusic(mixer: AudioMixer): void {
     if (theme !== null) return;
     try {
       theme = new Howl({
-        src: [assetUrl("sounds/music/menu-theme.mp3")],
+        src: [assetUrl("sounds/music/menu-theme.m4a")],
         loop: true,
         volume: 0,
-        // Stream rather than decode 2.2 MB up front -- see the gameplay track
-        // in SoundManager. This one starts on the player's first click, so the
-        // wait would land right when they are trying to use the page.
-        html5: true,
+        // Stream rather than decode 1.89 MB up front outside iOS -- see the
+        // gameplay track in SoundManager. This one starts on the player's first
+        // click, so the wait would land right when they are trying to use the
+        // page. On iOS, use Web Audio so volume and mute controls work.
+        html5: !Platform.isIOS,
       });
       // Armed before play(), so the "play" handler is on the Howl no matter
       // how quickly playback starts. Every start, including the re-arm after
