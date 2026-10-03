@@ -8,6 +8,7 @@ import {
   type PublicProgress,
 } from "../core/ApiSchemas";
 import { fetchPublicPlayerProfile } from "./Api";
+import "./components/baseComponents/Button";
 import "./components/baseComponents/stats/PlayerGameHistoryView";
 import type { PlayerGameHistoryCache } from "./components/baseComponents/stats/PlayerGameHistoryView";
 import "./components/baseComponents/stats/PlayerStatsTree";
@@ -16,9 +17,12 @@ import "./components/clan/ClanCard";
 import "./components/PlayerName";
 import "./components/ProfileCard";
 import "./components/ProfileProgression";
+import "./components/ProfileShare";
 import { modalHeader } from "./components/ui/ModalHeader";
 import { usernameText } from "./components/ui/UsernameText";
 import { verifiedBadge } from "./components/ui/VerifiedBadge";
+import { modalRouter } from "./ModalRouter";
+import { resolveXpAccount } from "./ProgressionAccount";
 import { fetchPublicPlayerProgress } from "./ProgressionApi";
 import { playerProfileUrl } from "./utilities/PlayerProfileUrl";
 import { currentPagePath, translateText } from "./Utils";
@@ -39,6 +43,12 @@ export class PlayerProfileModal extends BaseModal {
   // Level / XP, when progression is on and the player has any.
   @state() private progress: PublicProgress | null = null;
   @state() private loading = false;
+  // Only a signed-out viewer is offered the game itself (the visitor
+  // banner). False until known, so a signed-in player never sees it flash.
+  @state() private viewerSignedOut = false;
+  // The link this profile was opened from (`openfront.io/player/<id>`), when
+  // it was opened from one: the not-found state shows it.
+  @state() private openedLink: string | null = null;
   private openedFrom: ProfileOrigin | null = null;
   // Mirrors the account modal's Games tab: keep the accumulated history list +
   // cursor across tab switches (and the game-stats detour) so re-entering Games
@@ -230,11 +240,19 @@ export class PlayerProfileModal extends BaseModal {
     if (this.loading) {
       return this.renderLoadingSpinner(translateText("player_profile.loading"));
     }
-    if (!this.profileLoaded()) {
+    const publicId = this.publicId;
+    if (!this.profileLoaded() || publicId === null) {
       return this.renderNotFound();
     }
     // The card heads the stats; games and wins stay in the stats below it.
+    // A visitor who doesn't play yet is offered the game above it, and the
+    // ways to share the profile follow it.
+    //
+    // A "Show my profile in search engines" setting will join the account
+    // settings' Privacy card once the API carries the flag and the site
+    // Worker honours it with noindex; profile links are indexable until then.
     return html`
+      ${this.viewerSignedOut ? this.renderVisitorBanner() : nothing}
       ${this.progress === null
         ? nothing
         : html`<profile-card
@@ -243,9 +261,39 @@ export class PlayerProfileModal extends BaseModal {
             .clanTag=${this.clans[0]?.tag ?? null}
             .progress=${this.progress}
           ></profile-card>`}
+      <profile-share
+        class="mb-[18px] block"
+        .url=${playerProfileUrl(publicId)}
+        .name=${this.username ?? publicId}
+      ></profile-share>
       <player-stats-tree-view
         .statsTree=${this.statsTree}
       ></player-stats-tree-view>
+    `;
+  }
+
+  private renderVisitorBanner() {
+    return html`
+      <div
+        class="mb-4 flex flex-wrap items-center gap-4 rounded-xl border border-sky-400/35 bg-gradient-to-r from-sky-700/35 to-sky-700/10 px-4 py-3.5"
+        data-visitor-banner
+      >
+        <div class="min-w-0 flex-[1_1_240px]">
+          <div class="text-[15px] font-bold text-white">
+            ${translateText("player_profile.visitor_title")}
+          </div>
+          <div class="mt-0.5 text-[13px] text-white/65">
+            ${translateText("player_profile.visitor_body")}
+          </div>
+        </div>
+        <o-button
+          class="shrink-0"
+          variant="primary"
+          size="md"
+          translationKey="player_profile.play"
+          @click=${() => this.goHome()}
+        ></o-button>
+      </div>
     `;
   }
 
@@ -277,13 +325,91 @@ export class PlayerProfileModal extends BaseModal {
 
   private renderNotFound() {
     return html`
-      <div class="flex flex-col items-center justify-center p-12 text-center">
-        <span class="text-4xl mb-4">📊</span>
-        <p class="text-white/40 text-sm">
-          ${translateText("player_profile.not_found")}
+      <div
+        class="mx-auto flex max-w-2xl flex-col items-center px-6 py-12 text-center"
+        data-not-found
+      >
+        <div
+          class="mb-5 flex h-20 w-20 items-center justify-center rounded-full border border-white/10 bg-white/5 text-white/50"
+        >
+          <svg
+            width="40"
+            height="40"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.8"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            aria-hidden="true"
+          >
+            <circle cx="9" cy="8" r="4" />
+            <path d="M2 21v-1a6 6 0 0 1 6-6h2a6 6 0 0 1 3 .8" />
+            <path d="M17 14.5a2.5 2.5 0 1 1 3.2 2.4c-.7.2-1.2.8-1.2 1.6" />
+            <path d="M19 21h.01" />
+          </svg>
+        </div>
+        <h2 class="text-xl font-bold text-white">
+          ${translateText("player_profile.not_found_title")}
+        </h2>
+        <p class="mt-2 max-w-md text-sm text-white/60">
+          ${translateText("player_profile.not_found_body")}
         </p>
+        ${this.openedLink === null
+          ? nothing
+          : html`<p
+              class="mt-3 break-all font-mono text-xs text-white/35"
+              data-opened-link
+            >
+              ${this.openedLink}
+            </p>`}
+        <!-- Side by side where there's room, stacked on a phone. -->
+        <div
+          class="mt-6 flex flex-col items-stretch justify-center gap-3 sm:flex-row sm:items-center"
+          data-not-found-actions
+        >
+          <o-button
+            variant="primary"
+            size="md"
+            translationKey="player_profile.play"
+            data-action="play"
+            @click=${() => this.goHome()}
+          ></o-button>
+          <o-button
+            variant="secondary"
+            size="md"
+            translationKey="player_profile.view_leaderboard"
+            data-action="leaderboard"
+            @click=${() => this.openLeaderboard()}
+          ></o-button>
+        </div>
       </div>
     `;
+  }
+
+  // Close the profile onto the home page (the URL follows: see ModalRouter).
+  private goHome(): void {
+    this.close();
+  }
+
+  private openLeaderboard(): void {
+    this.close();
+    document
+      .querySelector<HTMLElement & { open(): void }>("leaderboard-modal")
+      ?.open();
+  }
+
+  // Signed-out viewers get the visitor banner. The same "signed in" rule as
+  // the XP surfaces (a guest session is not a sign-in); an account whose
+  // details didn't load is treated as signed in, so it isn't pitched to.
+  private async loadViewer(gen: number): Promise<void> {
+    let signedOut: boolean;
+    try {
+      signedOut = (await resolveXpAccount()).kind === "signed_out";
+    } catch {
+      signedOut = false;
+    }
+    if (gen === this.loadGeneration) this.viewerSignedOut = signedOut;
   }
 
   protected onOpen(args?: Record<string, unknown>): void {
@@ -327,6 +453,9 @@ export class PlayerProfileModal extends BaseModal {
     this.gameHistoryCache = null;
     this.gamesScrollTop = 0;
     this.restoreGamesScrollAfterOpen = false;
+    this.openedLink = modalRouter.isPathRouted("profile")
+      ? `${window.location.host}${window.location.pathname}`
+      : null;
     this.loading = publicId !== null;
     if (publicId !== null) {
       void this.loadProfile(publicId);
@@ -340,6 +469,7 @@ export class PlayerProfileModal extends BaseModal {
     // can't reject a stale same-player load started before an earlier close.
     const current = () =>
       gen === this.loadGeneration && this.publicId === publicId;
+    void this.loadViewer(gen);
     // The level is a nice-to-have: it lands whenever it arrives and never
     // holds up the profile (its request can take up to its own timeout).
     // Only shown alongside a loaded profile (see renderProfile).

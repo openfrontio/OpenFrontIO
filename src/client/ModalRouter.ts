@@ -7,7 +7,21 @@
  *
  * Lobby modals (join/host) and matchmaking are intentionally not registered:
  * they have their own URL state (path-based) or none at all.
+ *
+ * A modal can also be opened by a path link (`/player/<id>`, see
+ * registerPath). While it stays open the URL keeps that path, with tab
+ * changes written to `?tab=`; closing it returns the URL to the home page, so
+ * a reload doesn't reopen it. Opening another modal, in-app or from the hash,
+ * hands the URL to the hash and leaves the path the same way.
  */
+
+import { pagePin } from "./PagePin";
+
+/** Parses a page location into a modal's open() args, or null if it isn't one. */
+export type PathRouteParser = (location: {
+  pathname: string;
+  search: string;
+}) => Record<string, unknown> | null;
 
 interface RegistryEntry {
   /** Custom element tag, e.g. "store-modal". */
@@ -32,9 +46,55 @@ class ModalRouter {
   private currentName: string | null = null;
   /** True while we're routing from the URL (suppress modal→URL sync). */
   private routingFromUrl = false;
+  private pathRoutes = new Map<string, PathRouteParser>();
+  /** Name of the modal the URL's path (not its hash) reflects, if any. */
+  private pathRoutedName: string | null = null;
 
   register(name: string, entry: RegistryEntry): void {
     this.registry.set(name, entry);
+  }
+
+  /** Let a registered modal be opened by a path link as well as the hash. */
+  registerPath(name: string, parse: PathRouteParser): void {
+    this.pathRoutes.set(name, parse);
+  }
+
+  /**
+   * Open the modal the current path names, if one does. Returns true when it
+   * did (the open itself is asynchronous, as for routeFromHash).
+   */
+  routeFromPath(): boolean {
+    for (const [name, parse] of this.pathRoutes) {
+      const entry = this.registry.get(name);
+      if (entry === undefined) continue;
+      const args = parse(window.location);
+      if (args === null) continue;
+      this.pathRoutedName = name;
+      void this.openRegistered(name, entry, args);
+      return true;
+    }
+    return false;
+  }
+
+  /** True while the named modal is open from a path link. */
+  isPathRouted(name: string): boolean {
+    return this.pathRoutedName === name;
+  }
+
+  // The path link has had its say: put the URL back to the home page. The
+  // home page keeps the page's version pin when it has one (see
+  // currentPagePath in Utils, which this mirrors without its imports). A
+  // `#modal=` hash stays: it's another modal's, and that modal is still open.
+  private leavePath(): void {
+    if (this.pathRoutedName === null) return;
+    this.pathRoutedName = null;
+    const commit = pagePin();
+    history.replaceState(
+      history.state,
+      "",
+      (commit === null ? "/" : `/v/${commit}/`) +
+        (this.isHashRouted() ? window.location.hash : ""),
+    );
   }
 
   /**
@@ -64,6 +124,11 @@ class ModalRouter {
       args[key] = value;
     });
 
+    // The hash names the modal now, as when one opens in-app (syncOpened).
+    // Left on, the path would outlive the modal it names: the router stops
+    // tracking that modal, so its close wouldn't clear the path, and the next
+    // reload would open it again.
+    this.leavePath();
     void this.openRegistered(name, entry, args);
     return true;
   }
@@ -97,6 +162,8 @@ class ModalRouter {
   syncOpened(name: string, args?: Record<string, unknown>): void {
     if (this.routingFromUrl) return; // we're driving the modal from the URL; don't loop
     if (!this.registry.has(name)) return;
+    // Another modal (or this one again) opened in-app: the hash takes over.
+    this.leavePath();
     this.currentName = name;
     this.writeHash(name, args);
   }
@@ -104,6 +171,13 @@ class ModalRouter {
   /** Called by BaseModal.close() when a router-managed modal closes. */
   syncClosed(name: string): void {
     if (this.routingFromUrl) return;
+    // The path names this modal whichever modal the router last recorded, so
+    // its close always leaves the path.
+    if (this.pathRoutedName === name) {
+      if (this.currentName === name) this.currentName = null;
+      this.leavePath();
+      return;
+    }
     if (this.currentName !== name) return; // not the active routed modal
     this.currentName = null;
     this.replaceHash("");
@@ -113,6 +187,24 @@ class ModalRouter {
   syncTab(name: string, tab: string): void {
     if (this.routingFromUrl) return;
     if (this.currentName !== name) return;
+    if (this.pathRoutedName === name) {
+      // Opened from a path: the path stays, and the tab rides as `?tab=`.
+      const search = new URLSearchParams(window.location.search);
+      if (tab) {
+        search.set("tab", tab);
+      } else {
+        search.delete("tab");
+      }
+      const query = search.toString();
+      history.replaceState(
+        history.state,
+        "",
+        window.location.pathname +
+          (query ? `?${query}` : "") +
+          window.location.hash,
+      );
+      return;
+    }
     const params = this.currentHashParams();
     params.set("modal", name);
     if (tab) {
@@ -127,6 +219,8 @@ class ModalRouter {
   syncArgs(name: string, args: Record<string, unknown>): void {
     if (this.routingFromUrl) return;
     if (this.currentName !== name) return;
+    // The path is the state of a path-routed modal; don't add a hash to it.
+    if (this.pathRoutedName === name) return;
     const params = this.currentHashParams();
     params.set("modal", name);
     for (const [key, value] of Object.entries(args)) {
