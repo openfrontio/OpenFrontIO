@@ -1292,6 +1292,13 @@ export const GameEndInfoSchema = GameStartInfoSchema.extend({
   // Absent on singleplayer records and on records read back from the API,
   // which scrubs them like persistentID.
   reports: PlayerReportSchema.array().optional(),
+  // Set by game servers only: true when the players' stats in this record are
+  // the version a majority of the electorate sent with the winning vote (the
+  // same rule that decides the winner), false when no version reached one or
+  // no winner was decided. Absent on singleplayer records, which no vote
+  // backs, and on records from servers that predate the check. Only true
+  // counts as agreed.
+  statsAgreed: z.boolean().optional(),
 });
 export type GameEndInfo = z.infer<typeof GameEndInfoSchema>;
 
