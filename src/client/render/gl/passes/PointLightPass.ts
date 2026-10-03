@@ -133,6 +133,7 @@ export class PointLightPass {
       gl,
       shaderSrc(lightVertSrc, { MAX_LIGHT_TYPES }),
       lightFragSrc,
+      "PointLightPass",
     );
     this.uLightCam = gl.getUniformLocation(this.lightProg, "uCamera")!;
     this.uRadiusMultiplier = gl.getUniformLocation(
