@@ -1671,11 +1671,21 @@
     "milestones": "Milestones",
     "no_clans": "This player isn't in any clans.",
     "no_prestige": "Hasn't prestiged yet",
-    "not_found": "Player profile not found",
+    "not_found_body": "We couldn't find a player at this link. It may be mistyped, or the account may have been deleted.",
+    "not_found_title": "Player not found",
+    "play": "Play OpenFront",
     "prestige_history": "Prestige history",
     "share": "Share Profile",
+    "share_copy_link": "Copy link",
+    "share_discord": "Copy for Discord",
+    "share_native": "Share",
+    "share_text": "Check out {name}'s profile on OpenFront",
+    "share_x": "Share on X",
     "title": "Player Profile",
-    "view": "View Profile"
+    "view": "View Profile",
+    "view_leaderboard": "View leaderboard",
+    "visitor_body": "Conquer the map in a free multiplayer strategy game, right in your browser.",
+    "visitor_title": "New to OpenFront?"
   },
   "player_stats_table": {
     "arrived": "Arrived",
