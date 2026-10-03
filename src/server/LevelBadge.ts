@@ -1,11 +1,21 @@
 import { Progress } from "../core/ApiSchemas";
 import { LevelBadge } from "../core/Schemas";
 
-// The roster's level badge for a joining player, from the `progress` of the
-// game server's own /users/@me lookup — never from anything the client sent.
-// Undefined (no badge) when the response has no progress: a guest, the API
-// has progression off, or the field was malformed (UserMeResponseSchema
-// already reads a malformed object as absent).
+// The roster's level badge for a joining player, from the `player` of the game
+// server's own /users/@me lookup — never from anything the client sent. No
+// badge when the player chose to hide their level (`levelHidden`); an API
+// without the setting omits the field, which reads as shown.
+export function levelBadgeForPlayer(player: {
+  progress?: Progress;
+  levelHidden?: boolean;
+}): LevelBadge | undefined {
+  if (player.levelHidden === true) return undefined;
+  return levelBadgeFromProgress(player.progress);
+}
+
+// The badge from a /users/@me `progress`. Undefined (no badge) when there is
+// no progress: a guest, the API has progression off, or the field was
+// malformed (UserMeResponseSchema already reads a malformed object as absent).
 //
 // The API types these as plain numbers, but the wire encodes level and
 // prestige as unsigned varints, and a value the codec rejects would throw

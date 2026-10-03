@@ -332,7 +332,9 @@ export const ClientInfoSchema = z.object({
   // will overrule at start. Absent when the game isn't matchmade.
   teamIndex: zb.uint().optional(),
   // Signed-in players' level, for the badge next to their name. Absent for
-  // guests, when the API has progression off or the lookup failed, and on
+  // guests, for players who hide their level (even from themselves: their
+  // own client draws its own badge from its local /users/@me instead), when
+  // the API has progression off or the lookup failed, and on
   // anonymized entries (a badge beside an anonymous name would point out the
   // veterans). Must stay the LAST field and a single object: its one presence
   // bit is the eighth and last bit of this object's one-byte header, so an

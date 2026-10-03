@@ -11,7 +11,10 @@ import {
   decodeServerMessage,
   encodeServerMessage,
 } from "../../src/core/ZbinWire";
-import { levelBadgeFromProgress } from "../../src/server/LevelBadge";
+import {
+  levelBadgeForPlayer,
+  levelBadgeFromProgress,
+} from "../../src/server/LevelBadge";
 import { makeClient, makeGame } from "../util/GameServerHarness";
 
 // The game server stamps each signed-in player's level onto the lobby roster
@@ -85,6 +88,77 @@ describe("levelBadgeFromProgress: stamping from /users/@me", () => {
 
   it("stamps nothing for a guest (no lookup at all)", () => {
     expect(levelBadgeFromProgress(undefined)).toBeUndefined();
+  });
+});
+
+describe("levelBadgeForPlayer: hide my level", () => {
+  it("parses /users/@me with and without levelHidden", () => {
+    expect(userMe({ progress }).player.levelHidden).toBeUndefined();
+    expect(userMe({ progress, levelHidden: true }).player.levelHidden).toBe(
+      true,
+    );
+    expect(userMe({ progress, levelHidden: false }).player.levelHidden).toBe(
+      false,
+    );
+  });
+
+  it("stamps nothing when the player hides their level", () => {
+    const me = userMe({ progress, levelHidden: true });
+    expect(levelBadgeForPlayer(me.player)).toBeUndefined();
+  });
+
+  it("stamps the badge when the level is shown", () => {
+    const me = userMe({ progress, levelHidden: false });
+    expect(levelBadgeForPlayer(me.player)).toEqual({
+      level: 37,
+      prestige: 2,
+      legend: false,
+    });
+  });
+
+  it("stamps the badge when an older API omits the setting", () => {
+    expect(levelBadgeForPlayer(userMe({ progress }).player)).toEqual({
+      level: 37,
+      prestige: 2,
+      legend: false,
+    });
+  });
+
+  it("still stamps nothing without progress, hidden or not", () => {
+    expect(levelBadgeForPlayer(userMe().player)).toBeUndefined();
+    expect(
+      levelBadgeForPlayer(userMe({ levelHidden: false }).player),
+    ).toBeUndefined();
+  });
+
+  it("a hidden player's entry carries no badge on the wire, for anyone", () => {
+    const game = makeGame({ config: { gameType: GameType.Private } });
+    game.joinClient(
+      makeClient({
+        clientID: "hide0001",
+        username: "Hider",
+        publicId: "hide-pub",
+        levelBadge: levelBadgeForPlayer(
+          userMe({ progress, levelHidden: true }).player,
+        ),
+      }),
+    );
+    game.joinClient(
+      makeClient({ clientID: "peer0001", username: "Peer", publicId: "p-pub" }),
+    );
+    for (const viewer of ["hide0001", "peer0001"]) {
+      const msg: ServerMessage = {
+        type: "lobby_info",
+        lobby: game.gameInfo(viewer),
+        myClientID: viewer,
+      };
+      const back = decodeServerMessage(
+        encodeServerMessage(msg, undefined),
+        undefined,
+      );
+      if (back.type !== "lobby_info") throw new Error("wrong type");
+      expect(byId(back.lobby, "hide0001")).not.toHaveProperty("levelBadge");
+    }
   });
 });
 

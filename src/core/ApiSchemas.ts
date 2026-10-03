@@ -354,6 +354,12 @@ export const UserMeResponseSchema = z.object({
     // reads as absent: drift in this cosmetic field must never fail the whole
     // /users/@me parse, which would make the player look signed out.
     progress: ProgressSchema.optional().catch(undefined),
+    // "Hide my level": true when the player opted out of showing their level
+    // to others. They still earn XP and see their own level; the game server
+    // then leaves the badge off their lobby roster entry. Optional so an older
+    // API without the setting still parses — absent reads as shown, and the
+    // account settings hide the Privacy card.
+    levelHidden: z.boolean().optional(),
     clans: z
       .array(
         z.object({
@@ -453,6 +459,11 @@ export const UserMeResponseSchema = z.object({
   }),
 });
 export type UserMeResponse = z.infer<typeof UserMeResponseSchema>;
+
+// PUT /users/@me/level_visibility { hidden } — the stored setting, echoed.
+export const LevelVisibilityResponseSchema = z.object({
+  hidden: z.boolean(),
+});
 export type UserSubscription = NonNullable<
   NonNullable<UserMeResponse["player"]["subscription"]>
 >;
