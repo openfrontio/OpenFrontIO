@@ -319,12 +319,12 @@ describe("subscription-panel", () => {
     });
 
     // An admin can give a grant an end date, so the date no longer means
-    // Steam. The server says who gave it.
-    it("tells a player with a dated admin grant who gave it and when it ends", async () => {
+    // Steam. The server says who gave it; the copy names only the end date.
+    it("tells a player with a dated admin grant when it ends", async () => {
       el.sub = sub({ provider: null, grantSource: "admin" });
       await el.updateComplete;
       expect(text()).toContain(
-        `account_modal.sub_granted_by_admin_until ${PERIOD_END_TEXT}`,
+        `account_modal.sub_granted_until ${PERIOD_END_TEXT}`,
       );
       expect(text()).not.toContain("account_modal.sub_granted_from_purchase");
       expect(text()).not.toContain("free_play.after_grant_heading");
@@ -332,11 +332,20 @@ describe("subscription-panel", () => {
       expect(buttonKeys()).toEqual([]);
     });
 
+    it("uses the same neutral dated copy for a Discord-role grant", async () => {
+      el.sub = sub({ provider: null, grantSource: "discord_role" });
+      await el.updateComplete;
+      expect(text()).toContain(
+        `account_modal.sub_granted_until ${PERIOD_END_TEXT}`,
+      );
+      expect(text()).not.toContain("account_modal.sub_granted_from_purchase");
+    });
+
     it("keeps the Steam copy for a grant the server says came from Steam", async () => {
       el.sub = sub({ provider: null, grantSource: "steam" });
       await el.updateComplete;
       expect(text()).toContain("account_modal.sub_granted_from_purchase");
-      expect(text()).not.toContain("account_modal.sub_granted_by_admin_until");
+      expect(text()).not.toContain("account_modal.sub_granted_until");
     });
 
     it("uses the open-ended copy for an admin grant with no end date", async () => {
@@ -347,7 +356,7 @@ describe("subscription-panel", () => {
       });
       await el.updateComplete;
       expect(text()).toContain("account_modal.sub_granted_indefinite");
-      expect(text()).not.toContain("account_modal.sub_granted_by_admin_until");
+      expect(text()).not.toContain("account_modal.sub_granted_until");
     });
   });
 

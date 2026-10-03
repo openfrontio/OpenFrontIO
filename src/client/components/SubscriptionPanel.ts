@@ -282,11 +282,12 @@ export class SubscriptionPanel extends LitElement {
    * `renderManageOnWeb`.
    *
    * Three variants, on facts the server sends rather than a guess. A Steam
-   * ownership grant is a fixed free month and gets the purchase copy. An admin
-   * comp gets its own, naming its end date when it has one. Telling an
-   * admin-comped player their access came from a Steam purchase would be a
-   * fresh instance of exactly the dishonesty this panel exists to remove, and
-   * an end date no longer tells the two apart (see `isSteamGrant`).
+   * ownership grant is a fixed free month and gets the purchase copy. Any other
+   * grant (an admin comp, a Discord role) gets neutral free-access copy, naming
+   * its end date when it has one, and never saying who granted it. Telling such
+   * a player their access came from a Steam purchase would be a fresh instance
+   * of exactly the dishonesty this panel exists to remove, and an end date no
+   * longer tells the two apart (see `isSteamGrant`).
    */
   private renderGrantedNote(tierName: string): TemplateResult {
     if (!isSteamGrant(this.sub)) {
@@ -294,7 +295,7 @@ export class SubscriptionPanel extends LitElement {
       return html`
         <p class="text-[11px] text-center text-white/40 leading-snug">
           ${date
-            ? translateText("account_modal.sub_granted_by_admin_until", {
+            ? translateText("account_modal.sub_granted_until", {
                 date,
               })
             : translateText("account_modal.sub_granted_indefinite")}
