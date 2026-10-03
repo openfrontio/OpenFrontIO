@@ -150,6 +150,8 @@ export class GameXpPanel extends LitElement {
   @state() private barDurationMs = CLIMB_MS;
   private animationToken = 0;
   private timers: ReturnType<typeof setTimeout>[] = [];
+  // The result last announced as settled (see updated()).
+  private settledView: GameXpPanelState | null = null;
 
   createRenderRoot() {
     return this;
@@ -173,6 +175,21 @@ export class GameXpPanel extends LitElement {
     } else if (changed.has("onScreen") && !this.onScreen) {
       this.skipReveal();
     }
+  }
+
+  // Tells the host once a result is showing in full: its reveal has ended or
+  // been skipped, or there was none. Once per result (`detail` is the view).
+  protected updated(): void {
+    const view = this.view;
+    if (view.kind !== "result" || this.reveal !== null) return;
+    if (this.settledView === view) return;
+    this.settledView = view;
+    this.dispatchEvent(
+      new CustomEvent<GameXpPanelState>("xp-reveal-settled", {
+        detail: view,
+        bubbles: true,
+      }),
+    );
   }
 
   private clearTimers(): void {

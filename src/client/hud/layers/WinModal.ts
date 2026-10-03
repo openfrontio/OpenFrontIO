@@ -17,6 +17,7 @@ import "../../components/CosmeticCard";
 import { cosmeticSelectionLabel } from "../../components/CosmeticPresentation";
 import "../../components/GameXpPanel";
 import type { GameXpPanelState } from "../../components/GameXpPanel";
+import "../../components/ProfileShare";
 import "../../components/PurchaseButton";
 import "../../components/SteamWishlist";
 import { Controller } from "../../Controller";
@@ -27,6 +28,12 @@ import {
 } from "../../Cosmetics";
 import { crazyGamesSDK } from "../../CrazyGamesSDK";
 import { isDesktopShell } from "../../DesktopShell";
+import {
+  gameShareMoment,
+  momentShareLabel,
+  momentShareText,
+  momentShareUrl,
+} from "../../MomentShare";
 import { Platform } from "../../Platform";
 import { resolveXpAccount } from "../../ProgressionAccount";
 import { fetchProgressionConfig, pollGameXp } from "../../ProgressionApi";
@@ -61,6 +68,14 @@ export class WinModal extends LitElement implements Controller {
   // Polling starts once, at the end of the game.
   private xpPolling = false;
   private xpAbort: AbortController | null = null;
+  // The XP result the panel has finished revealing (or skipped to the end
+  // of): the share button waits for it.
+  @state()
+  private xpSettled: GameXpPanelState | null = null;
+  // The signed-in player's public ID, for the share link. Empty when signed
+  // out (or unknown): no share button.
+  @state()
+  private sharePublicId = "";
 
   private _title: string;
 
@@ -89,18 +104,22 @@ export class WinModal extends LitElement implements Controller {
           <game-xp-panel
             .view=${this.xpView}
             .onScreen=${this.isVisible}
+            @xp-reveal-settled=${(e: CustomEvent<GameXpPanelState>) =>
+              (this.xpSettled = e.detail)}
           ></game-xp-panel>
           ${this.innerHtml()}
         </div>
         <!-- Leaving is the quieter action, on the left; staying in the game
-             is the main one, on the right. -->
-        <div class="mt-4 flex justify-between gap-2.5 shrink-0">
+             is the main one, on the right. Sharing a milestone sits between
+             them, or on its own row above where three don't fit. -->
+        <div class="mt-4 flex flex-wrap justify-between gap-2.5 shrink-0">
           ${this.actionButton(
             "quiet",
             translateText("win_modal.exit"),
             () => this._handleExit(),
             "exit",
           )}
+          ${this.renderShare()}
           ${this.isRankedGame
             ? this.actionButton(
                 "main",
@@ -141,6 +160,31 @@ export class WinModal extends LitElement implements Controller {
     >
       <span class="relative">${label}</span>
     </button>`;
+  }
+
+  // Sharing a milestone or becoming a Legend, once the reveal has shown it.
+  // Only for the server's result (gameShareMoment), and only for a signed-in
+  // player with a profile to link to.
+  private renderShare(): TemplateResult | null {
+    if (this.sharePublicId === "" || this.xpSettled !== this.xpView) {
+      return null;
+    }
+    const moment = gameShareMoment(this.xpView);
+    if (moment === null || moment.kind === "prestige") return null;
+    // Three labelled buttons fit side by side from md up; below that (and
+    // beside a ranked game's requeue button) it takes a row of its own.
+    const placement = this.isRankedGame
+      ? "order-first basis-full"
+      : "order-first basis-full md:order-none md:basis-0 md:flex-1";
+    return html`<profile-share
+      data-win-share
+      class="flex ${placement}"
+      layout="menu"
+      .label=${momentShareLabel(moment)}
+      .url=${momentShareUrl(this.sharePublicId, moment)}
+      .text=${momentShareText(moment)}
+      triggerClass="win-action win-action-quiet w-full"
+    ></profile-share>`;
   }
 
   private renderActionStyles(): TemplateResult {
@@ -455,6 +499,7 @@ export class WinModal extends LitElement implements Controller {
       // /users/@me carries progress whenever progression is on (level 1
       // before a first scored game); absent means off: no section at all.
       if (account.me.player.progress === undefined) return;
+      this.sharePublicId = account.me.player.publicId;
       // The game may have ended while this was resolving; the end-of-game
       // call owns the section from then on.
       if (this.xpPolling) return;
