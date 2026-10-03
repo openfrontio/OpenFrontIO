@@ -194,6 +194,7 @@ export class AccountModal extends BaseModal {
         <div class="p-6">${this.renderTab(tab)}</div>
       </div>
       <prestige-flow
+        .publicId=${this.userMeResponse?.player?.publicId ?? ""}
         @prestiged=${this.handlePrestiged}
         @prestige-stale=${this.handlePrestigeStale}
       ></prestige-flow>

@@ -7,8 +7,9 @@ import {
   svg,
   TemplateResult,
 } from "lit";
-import { customElement, state } from "lit/decorators.js";
+import { customElement, property, state } from "lit/decorators.js";
 import type { PrestigeResponse, Progress } from "../../core/ApiSchemas";
+import { momentShareText, momentShareUrl } from "../MomentShare";
 import {
   clampPrestige,
   MAX_PRESTIGE,
@@ -19,6 +20,7 @@ import { prestigeMe } from "../ProgressionApi";
 import { translateText } from "../Utils";
 import "./CapIcon";
 import "./LevelBadge";
+import "./ProfileShare";
 
 // Prestiging, start to finish: the confirmation (the new emblem, where it sits
 // on the prestige track, what it unlocks, and that it can't be undone), then a
@@ -115,6 +117,8 @@ function newIdempotencyKey(): string {
 
 @customElement("prestige-flow")
 export class PrestigeFlow extends LitElement {
+  // The player's public ID, for the ceremony's share link. Empty: no share.
+  @property({ type: String }) publicId = "";
   @state() private stage: Stage = "closed";
   // Progress before prestiging.
   @state() private prior: Progress | null = null;
@@ -720,6 +724,7 @@ export class PrestigeFlow extends LitElement {
               ${translateText("prestige.ceremony_title", { rank })}
             </div>`
           : nothing}
+        ${done ? this.renderShare(rank) : nothing}
         ${done
           ? html`<button
               type="button"
@@ -740,6 +745,25 @@ export class PrestigeFlow extends LitElement {
             class="prestige-flash absolute inset-0"
           ></div>`
         : nothing}
+    </div>`;
+  }
+
+  // Sharing the new rank, between the title and Continue. The ceremony
+  // skips (or, done, does nothing) on any click; the row keeps its clicks.
+  private renderShare(rank: number): TemplateResult | typeof nothing {
+    if (this.publicId === "") return nothing;
+    const moment = { kind: "prestige", rank } as const;
+    return html`<div
+      data-prestige-share
+      class="prestige-fade mt-6"
+      @click=${(e: Event) => e.stopPropagation()}
+    >
+      <profile-share
+        solid
+        centered
+        .url=${momentShareUrl(this.publicId, moment)}
+        .text=${momentShareText(moment)}
+      ></profile-share>
     </div>`;
   }
 
