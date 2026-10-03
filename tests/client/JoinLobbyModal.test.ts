@@ -380,6 +380,7 @@ describe("JoinLobbyModal Steam invite button", () => {
 
 describe("JoinLobbyModal map preview", () => {
   const PREVIEW = "[data-test-map-preview]";
+  const SETTINGS = "[data-test-lobby-settings]";
 
   function renderConfig(config: Record<string, unknown>): HTMLElement {
     const modal = new JoinLobbyModal();
@@ -402,13 +403,11 @@ describe("JoinLobbyModal map preview", () => {
   }
 
   it("shows the thumbnail of the lobby's map", () => {
-    const preview = renderConfig({
+    const image = renderConfig({
       gameMap: GameMapType.Africa,
-    }).querySelector<HTMLImageElement>(PREVIEW);
+    }).querySelector<HTMLImageElement>(`${PREVIEW} img`);
 
-    expect(preview?.getAttribute("src")).toContain(
-      "maps/africa/thumbnail.webp",
-    );
+    expect(image?.getAttribute("src")).toContain("maps/africa/thumbnail.webp");
   });
 
   // The preview used to be an 80px square with object-cover, which cropped
@@ -416,26 +415,27 @@ describe("JoinLobbyModal map preview", () => {
   // the whole map, so it scales to fit instead of filling a fixed box.
   it("fits the whole map instead of cropping it to a fixed square", () => {
     const classes =
-      renderConfig({}).querySelector(PREVIEW)?.getAttribute("class") ?? "";
+      renderConfig({}).querySelector(`${PREVIEW} img`)?.getAttribute("class") ??
+      "";
 
     expect(classes).toContain("object-contain");
     expect(classes).not.toContain("object-cover");
   });
 
   it("hides itself when the thumbnail fails to load", () => {
-    const preview = renderConfig({}).querySelector<HTMLImageElement>(PREVIEW)!;
+    const preview = renderConfig({}).querySelector<HTMLElement>(PREVIEW)!;
 
-    preview.dispatchEvent(new Event("error"));
+    preview.querySelector("img")!.dispatchEvent(new Event("error"));
 
     expect(preview.style.display).toBe("none");
   });
 
-  it("still lists the lobby's notable settings next to the preview", () => {
-    const cards = (config: Record<string, unknown>) =>
-      renderConfig(config).querySelectorAll("lobby-config-item").length;
+  // Tags, not one card per setting: a lobby with many settings has to stay
+  // readable next to the preview without pushing the player list away.
+  it("lists each notable setting as one tag next to the preview", () => {
+    const tags = (config: Record<string, unknown>) =>
+      renderConfig(config).querySelectorAll(`${SETTINGS} > span`).length;
 
-    expect(cards({ infiniteGold: true, instantBuild: true })).toBe(
-      cards({}) + 2,
-    );
+    expect(tags({ infiniteGold: true, instantBuild: true })).toBe(tags({}) + 2);
   });
 });
