@@ -48,6 +48,7 @@ vi.mock("howler", () => {
   return { Howl: MockHowl, Howler: { volume: howlerVolume } };
 });
 
+import { Platform } from "../../../src/client/Platform";
 import {
   AudioMixer,
   resetAudioMixerForTest,
@@ -120,6 +121,23 @@ describe("background music", () => {
     // of silence at game start. Ambience and cues stay on Web Audio, so this
     // has to stay specific to the music track.
     expect(find("gameplay.m4a").html5).toBe(true);
+  });
+
+  it("uses Web Audio on iOS", () => {
+    // For the music where we normally use html5: true for streaming.
+    // Using html: false makes mute and volume controls work on iOS,
+    // and (but that's not the point here) avoids a 1 or 2-second gap at the loop seam.
+    soundManager.dispose();
+    mixer.dispose();
+    howlInstances.length = 0;
+    const previousIsIOS = Platform.isIOS;
+    Platform.isIOS = true;
+    try {
+      build();
+      expect(find("gameplay.m4a").html5).toBe(false);
+    } finally {
+      Platform.isIOS = previousIsIOS;
+    }
   });
 
   it("follows the music slider through the mixer", () => {
