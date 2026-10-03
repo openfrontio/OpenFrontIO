@@ -11,7 +11,8 @@
  * A modal can also be opened by a path link (`/player/<id>`, see
  * registerPath). While it stays open the URL keeps that path, with tab
  * changes written to `?tab=`; closing it returns the URL to the home page, so
- * a reload doesn't reopen it.
+ * a reload doesn't reopen it. Opening another modal, in-app or from the hash,
+ * hands the URL to the hash and leaves the path the same way.
  */
 
 import { pagePin } from "./PagePin";
@@ -82,7 +83,8 @@ class ModalRouter {
 
   // The path link has had its say: put the URL back to the home page. The
   // home page keeps the page's version pin when it has one (see
-  // currentPagePath in Utils, which this mirrors without its imports).
+  // currentPagePath in Utils, which this mirrors without its imports). A
+  // `#modal=` hash stays: it's another modal's, and that modal is still open.
   private leavePath(): void {
     if (this.pathRoutedName === null) return;
     this.pathRoutedName = null;
@@ -90,7 +92,8 @@ class ModalRouter {
     history.replaceState(
       history.state,
       "",
-      commit === null ? "/" : `/v/${commit}/`,
+      (commit === null ? "/" : `/v/${commit}/`) +
+        (this.isHashRouted() ? window.location.hash : ""),
     );
   }
 
@@ -121,6 +124,11 @@ class ModalRouter {
       args[key] = value;
     });
 
+    // The hash names the modal now, as when one opens in-app (syncOpened).
+    // Left on, the path would outlive the modal it names: the router stops
+    // tracking that modal, so its close wouldn't clear the path, and the next
+    // reload would open it again.
+    this.leavePath();
     void this.openRegistered(name, entry, args);
     return true;
   }
@@ -163,12 +171,15 @@ class ModalRouter {
   /** Called by BaseModal.close() when a router-managed modal closes. */
   syncClosed(name: string): void {
     if (this.routingFromUrl) return;
-    if (this.currentName !== name) return; // not the active routed modal
-    this.currentName = null;
+    // The path names this modal whichever modal the router last recorded, so
+    // its close always leaves the path.
     if (this.pathRoutedName === name) {
+      if (this.currentName === name) this.currentName = null;
       this.leavePath();
       return;
     }
+    if (this.currentName !== name) return; // not the active routed modal
+    this.currentName = null;
     this.replaceHash("");
   }
 

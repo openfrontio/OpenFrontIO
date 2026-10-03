@@ -43,12 +43,22 @@ vi.mock(
   () => ({}),
 );
 
+import { BaseModal } from "../../src/client/components/BaseModal";
 import { modalRouter } from "../../src/client/ModalRouter";
 import { initNavigation } from "../../src/client/Navigation";
 import { PlayerProfileModal } from "../../src/client/PlayerProfileModal";
 import { playerProfileRouteArgs } from "../../src/client/utilities/PlayerProfileUrl";
 
 type ModalShell = HTMLElement & { updateComplete: Promise<boolean> };
+
+// Stand-ins for other router-managed modals: a popup (like account settings,
+// which the nav menu opens by setting the hash) and an inline page.
+class TestPopupModal extends BaseModal {
+  protected routerName = "test-popup";
+}
+class TestPageModal extends BaseModal {
+  protected routerName = "test-page";
+}
 
 const profile = {
   createdAt: "2026-01-01T00:00:00.000Z",
@@ -85,8 +95,19 @@ describe("public profile page", () => {
       pageId: "page-profile",
     });
     modalRouter.registerPath("profile", playerProfileRouteArgs);
+    modalRouter.register("test-popup", { tag: "test-popup-modal" });
+    modalRouter.register("test-page", {
+      tag: "test-page-modal",
+      pageId: "page-test",
+    });
     if (!customElements.get("player-profile-modal")) {
       customElements.define("player-profile-modal", PlayerProfileModal);
+    }
+    if (!customElements.get("test-popup-modal")) {
+      customElements.define("test-popup-modal", TestPopupModal);
+    }
+    if (!customElements.get("test-page-modal")) {
+      customElements.define("test-page-modal", TestPageModal);
     }
   });
 
@@ -195,6 +216,92 @@ describe("public profile page", () => {
       await settle(() => expect(modal.isOpen()).toBe(true));
       expect(fetchPublicPlayerProfileMock).toHaveBeenCalledWith("aB3dE5fX");
       expect(modalRouter.isPathRouted("profile")).toBe(false);
+    });
+  });
+
+  describe("with another modal opened over it", () => {
+    let popup: TestPopupModal;
+    let page: TestPageModal;
+
+    beforeEach(async () => {
+      popup = document.createElement("test-popup-modal") as TestPopupModal;
+      document.body.appendChild(popup);
+      page = document.createElement("test-page-modal") as TestPageModal;
+      page.id = "page-test";
+      page.setAttribute("inline", "");
+      page.className = "hidden page-content";
+      document.body.appendChild(page);
+      await Promise.all([popup.updateComplete, page.updateComplete]);
+    });
+
+    afterEach(() => {
+      if (popup.isOpen()) popup.close();
+      popup.remove();
+      page.remove();
+    });
+
+    // What the nav menu does: set the hash, which Main hands to the router.
+    async function openFromHash(other: BaseModal, name: string) {
+      window.location.hash = `#modal=${name}`;
+      expect(modalRouter.routeFromHash()).toBe(true);
+      await vi.waitFor(() => expect(other.isOpen()).toBe(true));
+    }
+
+    // Main re-routes the URL on reload, popstate and hashchange.
+    function expectUrlNotToReopenProfile() {
+      expect(modalRouter.isPathRouted("profile")).toBe(false);
+      expect(modalRouter.routeFromPath()).toBe(false);
+      expect(modalRouter.routeFromHash()).toBe(false);
+      expect(modal.isOpen()).toBe(false);
+    }
+
+    it("leaves the profile's link once a hash-opened modal and then the profile close", async () => {
+      await openFromPath("/player/abc12345");
+      await openFromHash(popup, "test-popup");
+      expect(modal.isOpen()).toBe(true);
+      expect(url()).toBe("/#modal=test-popup");
+
+      popup.close();
+      expect(url()).toBe("/");
+      modal.close();
+      expect(url()).toBe("/");
+      expectUrlNotToReopenProfile();
+    });
+
+    it("keeps the other modal's hash when the profile closes first", async () => {
+      await openFromPath("/player/abc12345");
+      await openFromHash(popup, "test-popup");
+
+      modal.close();
+      expect(url()).toBe("/#modal=test-popup");
+      expect(popup.isOpen()).toBe(true);
+
+      popup.close();
+      expect(url()).toBe("/");
+      expectUrlNotToReopenProfile();
+    });
+
+    it("leaves the profile's link when a hash-opened page replaces it", async () => {
+      await openFromPath("/player/abc12345");
+      await openFromHash(page, "test-page");
+      expect(modal.isOpen()).toBe(false);
+      expect(url()).toBe("/#modal=test-page");
+
+      page.close();
+      expect(url()).toBe("/");
+      expectUrlNotToReopenProfile();
+    });
+
+    it("hands the URL to a modal opened in-app, as before", async () => {
+      await openFromPath("/player/abc12345");
+      popup.open();
+      expect(url()).toBe("/#modal=test-popup");
+
+      popup.close();
+      expect(url()).toBe("/");
+      modal.close();
+      expect(url()).toBe("/");
+      expectUrlNotToReopenProfile();
     });
   });
 
