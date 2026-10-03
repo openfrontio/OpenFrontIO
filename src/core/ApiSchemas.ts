@@ -358,8 +358,10 @@ export const UserMeResponseSchema = z.object({
     // to others. They still earn XP and see their own level; the game server
     // then leaves the badge off their lobby roster entry. Optional so an older
     // API without the setting still parses — absent reads as shown, and the
-    // account settings hide the Privacy card.
-    levelHidden: z.boolean().optional(),
+    // account settings hide the Privacy card. A malformed value reads as
+    // absent too, like `progress`: the server parses this response at join,
+    // so a bad value must never fail the parse and reject the join.
+    levelHidden: z.boolean().optional().catch(undefined),
     clans: z
       .array(
         z.object({
