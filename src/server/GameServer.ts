@@ -82,6 +82,19 @@ import {
 // to play and missed it; after this they are taken to have come to watch.
 const LATE_JOIN_GRACE_MS = 5_000;
 
+// How long the per-player stats stay open after the winner is decided when no
+// stats version has a majority yet (see ArchivedStats in Consensus.ts). The
+// winner is decided at the first majority, so one forged vote among it leaves
+// the honest version a vote short; the window lets the voters still to come
+// make it up. Honest clients run the same lockstep simulation and reach the
+// win tick on the same turn, so their votes trail the deciding one by network
+// latency and client lag — well under a second or two in practice. 5s covers
+// a slow client with room to spare while keeping the record (and anything
+// holding the game for it) waiting only briefly, and only in games whose
+// voters disagree: when a version already has a majority, or everyone still
+// playing has voted, the record is archived at once.
+export const STATS_VOTE_WINDOW_MS = 5_000;
+
 export type JoinResult =
   | "joined"
   | "kicked"
@@ -239,6 +252,10 @@ export class GameServer {
   // The end-of-game winner vote and the running live-stats vote: both
   // IP-weighted majorities among the players (see Consensus.ts).
   private readonly winnerVote = new WinnerVote();
+  // Set once the record has been handed to the archive; it never is twice.
+  private archived = false;
+  // Pending while the stats are open after the winner was decided.
+  private statsWindowTimer: ReturnType<typeof setTimeout> | undefined;
   private readonly liveStatsVote = new LiveStatsVote();
 
   // Player reports filed this game, keyed "<reportedBy>:<reported>" so each
@@ -1481,6 +1498,17 @@ export class GameServer {
   }
 
   async end() {
+    // A winner already decided whose stats are still open is archived now,
+    // while the roster is intact: once end() returns, GameManager drops the
+    // game and nothing else would archive it.
+    try {
+      this.settleStatsOrArchive(true);
+    } catch (error) {
+      this.log.error("Error archiving game record with open stats", {
+        gameId: this.id,
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
     this.ended = true;
     // Close all WebSocket connections
     if (this.endTurnIntervalID) {
@@ -1504,7 +1532,7 @@ export class GameServer {
         this.log.info("no clients joined, not archiving game", {
           gameID: this.id,
         });
-      } else if (this.winnerVote.winner() !== null) {
+      } else if (this.archived) {
         this.log.info("game already archived", {
           gameID: this.id,
         });
@@ -1904,6 +1932,12 @@ export class GameServer {
   }
 
   private archiveGame() {
+    if (this.archived) return;
+    this.archived = true;
+    if (this.statsWindowTimer !== undefined) {
+      clearTimeout(this.statsWindowTimer);
+      this.statsWindowTimer = undefined;
+    }
     const winner = this.winnerVote.winner();
     this.log.info("archiving game", {
       gameID: this.id,
@@ -1988,7 +2022,9 @@ export class GameServer {
   //
   // The record is archived once, when the winner vote resolves (or at
   // end() if it never does), and reports only travel with it — so anything
-  // filed after that has nowhere to go and is refused rather than kept.
+  // filed after that has nowhere to go and is refused rather than kept. The
+  // stats window (STATS_VOTE_WINDOW_MS) can hold the record back a little
+  // past the decision; reports stay refused from the decision on.
   private handleReport(client: Client, clientMsg: ClientReportMessage) {
     const { reported, reason } = clientMsg;
     if (
@@ -2056,12 +2092,24 @@ export class GameServer {
     if (
       this.desync.isDesynced(client.clientID) ||
       this.isKicked(client.clientID) ||
-      this.winnerVote.winner() !== null ||
+      this.archived ||
       client.reportedWinner !== null
     ) {
       return;
     }
     client.reportedWinner = clientMsg.winner;
+
+    // Decided but not yet archived: the stats are open. The vote only counts
+    // toward them, and only if it backs the decided winner.
+    if (this.winnerVote.winner() !== null) {
+      const counted = this.winnerVote.castStats(clientMsg, client.ip);
+      this.log.info("received stats vote after the winner was decided", {
+        clientID: client.clientID,
+        counted,
+      });
+      this.settleStatsOrArchive();
+      return;
+    }
 
     const activeUniqueIPs = this.clients.votingUniqueIPs();
     const { key: winnerKey, votes } = this.winnerVote.cast(
@@ -2088,7 +2136,46 @@ export class GameServer {
         winnerKey,
       },
     );
-    this.archiveGame();
+    this.settleStatsOrArchive();
+  }
+
+  // Once the winner is decided: archives as soon as the stats are settled —
+  // a version holds a majority, everyone still playing has voted, or `force`
+  // (the window ran out, or the game is ending) — and otherwise opens the
+  // stats window. Counts only still-connected players' IPs, as the shrink
+  // re-tally does, so departed voters count no more than their winner vote.
+  private settleStatsOrArchive(force = false): void {
+    if (this.archived || this.winnerVote.winner() === null) return;
+    const votingIPs = new Set(this.clients.players().map((c) => c.ip));
+    const settled = this.winnerVote.settleStatsAmong(
+      votingIPs,
+      force || this.everyVoterHasVoted(),
+    );
+    if (settled) {
+      this.archiveGame();
+      return;
+    }
+    if (this.statsWindowTimer === undefined) {
+      this.log.info("winner decided, stats open for late votes", {
+        gameID: this.id,
+        windowMs: STATS_VOTE_WINDOW_MS,
+      });
+      this.statsWindowTimer = setTimeout(() => {
+        this.statsWindowTimer = undefined;
+        this.settleStatsOrArchive(true);
+      }, STATS_VOTE_WINDOW_MS);
+    }
+  }
+
+  // Whether every player still connected who may vote has voted.
+  private everyVoterHasVoted(): boolean {
+    return this.clients
+      .players()
+      .filter(
+        (c) =>
+          !this.desync.isDesynced(c.clientID) && !this.isKicked(c.clientID),
+      )
+      .every((c) => c.reportedWinner !== null);
   }
 
   // Votes are otherwise only tallied when one arrives (handleWinner), so a
@@ -2099,7 +2186,13 @@ export class GameServer {
   // winnerless (e.g. game s5bcKtj8). Re-tally whenever the electorate
   // shrinks, counting only votes from still-active IPs (see resultAmong).
   private checkWinnerAfterElectorateShrink() {
-    if (this.winnerVote.winner() !== null || this.ended) {
+    if (this.ended) {
+      return;
+    }
+    // Decided already: a departure can settle open stats (see
+    // settleStatsOrArchive), never the winner.
+    if (this.winnerVote.winner() !== null) {
+      this.settleStatsOrArchive();
       return;
     }
     const activeIPs = new Set(this.clients.active().map((c) => c.ip));
@@ -2110,7 +2203,7 @@ export class GameServer {
     this.log.info(
       `Winner determined by ${result.votes}/${activeIPs.size} active IPs after electorate shrank`,
     );
-    this.archiveGame();
+    this.settleStatsOrArchive();
   }
 
   // Clients each send a live stats snapshot every ~10s tagged with the turn it

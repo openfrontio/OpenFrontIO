@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { GameType } from "../../src/core/game/Game";
 import { AllPlayersStats, PartialGameRecord } from "../../src/core/Schemas";
 import { Client } from "../../src/server/Client";
-import { GameServer } from "../../src/server/GameServer";
+import { GameServer, STATS_VOTE_WINDOW_MS } from "../../src/server/GameServer";
 import {
   cid,
   makeClient,
@@ -15,7 +15,9 @@ import {
 // The archived record's per-player stats must be the version a majority of
 // the electorate sent with the winning vote, and info.statsAgreed says whether
 // there was one. The winner itself is decided exactly as before: on the
-// winner alone, at the same vote. Driven through a real GameServer: votes
+// winner alone, at the same vote. When the stats have no majority at that
+// vote, the record waits up to STATS_VOTE_WINDOW_MS for the voters still to
+// come. Driven through a real GameServer: votes
 // arrive as winner messages on the clients' sockets, and the outcome is the
 // record handed to the archive.
 describe("winner vote stats agreement", () => {
@@ -151,15 +153,66 @@ describe("winner vote stats agreement", () => {
     expect(archivedStatsOfA()).toEqual(honest[A]);
   });
 
-  it("decides the winner as before but does not agree when no stats version has a majority", async () => {
-    const {
-      clients: [forger, b],
-    } = gameWith(["1.1.1.1", "2.2.2.2", "3.3.3.3"]);
+  // A forger inside the deciding majority of three: the winner is decided at
+  // the second vote with the stats split 1-1, and the third player has not
+  // voted yet.
+  async function forgerInsideMajority() {
+    const { game, clients } = gameWith(["1.1.1.1", "2.2.2.2", "3.3.3.3"]);
+    const [forger, b] = clients;
     await vote(forger, forged);
-    expect(archive).not.toHaveBeenCalled();
-    // 2 of 3 decides the winner at this vote, exactly as before. The stats
-    // are 1 and 1: neither is a majority.
     await vote(b, honest);
+    return { game, clients };
+  }
+
+  const decidedLog = () =>
+    log.info.mock.calls.filter(([msg]: [string]) =>
+      msg.startsWith("Winner determined by"),
+    );
+
+  it("decides the winner at the same vote, and holds only the record for late stats votes", async () => {
+    await forgerInsideMajority();
+
+    // Decided exactly as before: at 2 of 3, at this vote.
+    expect(decidedLog()).toHaveLength(1);
+    expect(decidedLog()[0][0]).toBe("Winner determined by 2/3 active IPs");
+    // Only the record waits.
+    expect(archive).not.toHaveBeenCalled();
+  });
+
+  it("archives the honest stats, agreed, when a late honest vote lands in the window", async () => {
+    const {
+      clients: [, , c],
+    } = await forgerInsideMajority();
+    vi.advanceTimersByTime(STATS_VOTE_WINDOW_MS - 1_000);
+    expect(archive).not.toHaveBeenCalled();
+
+    await vote(c, honest);
+
+    // Archived at that vote, without waiting out the window.
+    expect(record().winner).toEqual(["player", A]);
+    expect(record().statsAgreed).toBe(true);
+    expect(archivedStatsOfA()).toEqual(honest[A]);
+    expect(agreementCall("warn")?.[1]).toMatchObject({
+      statsAgreement: "split",
+      agreed: true,
+      voters: 3,
+      versions: 2,
+      archivedBackers: 2,
+    });
+
+    // The timer it cancelled never archives again.
+    vi.advanceTimersByTime(STATS_VOTE_WINDOW_MS * 2);
+    expect(archive).toHaveBeenCalledTimes(1);
+  });
+
+  it("archives once, unagreed, when the window runs out", async () => {
+    const {
+      game,
+      clients: [, , c],
+    } = await forgerInsideMajority();
+    vi.advanceTimersByTime(STATS_VOTE_WINDOW_MS - 1);
+    expect(archive).not.toHaveBeenCalled();
+    vi.advanceTimersByTime(1);
 
     expect(record().winner).toEqual(["player", A]);
     expect(record().statsAgreed).toBe(false);
@@ -170,21 +223,134 @@ describe("winner vote stats agreement", () => {
       statsAgreement: "split",
       agreed: false,
     });
+
+    // Votes after archiving are rejected, and ending the game does not
+    // archive it a second time.
+    await vote(c, honest);
+    await game.end();
+    vi.advanceTimersByTime(STATS_VOTE_WINDOW_MS * 2);
+    expect(archive).toHaveBeenCalledTimes(1);
   });
 
-  it("archives the most-backed stats, unagreed, when they fall short of a majority", async () => {
+  it("archives the most-backed stats, unagreed, when the window runs out short of a majority", async () => {
     const {
       clients: [forger, b, c],
     } = gameWith(["1.1.1.1", "2.2.2.2", "3.3.3.3", "4.4.4.4"]);
     await vote(forger, forged);
     await vote(b, honest);
-    expect(archive).not.toHaveBeenCalled();
     // 3 of 4 decides the winner; the honest stats have 2 of 4.
     await vote(c, honest);
+    expect(archive).not.toHaveBeenCalled();
+    vi.advanceTimersByTime(STATS_VOTE_WINDOW_MS);
 
     expect(record().winner).toEqual(["player", A]);
     expect(record().statsAgreed).toBe(false);
     expect(archivedStatsOfA()).toEqual(honest[A]);
+  });
+
+  it("archives at once, without a window, when everyone has already voted", async () => {
+    const {
+      clients: [forger, b],
+    } = gameWith(["1.1.1.1", "2.2.2.2"]);
+    await vote(forger, forged);
+    // Both voted and the stats split 1-1: nobody is left to break the tie.
+    await vote(b, honest);
+
+    expect(record().statsAgreed).toBe(false);
+    vi.advanceTimersByTime(STATS_VOTE_WINDOW_MS * 2);
+    expect(archive).toHaveBeenCalledTimes(1);
+  });
+
+  it("counts an earlier vote for another winner as having voted", async () => {
+    const {
+      clients: [forger, b, c],
+    } = gameWith(["1.1.1.1", "2.2.2.2", "3.3.3.3"]);
+    await mockWsOf(c).emit({
+      type: "winner",
+      winner: ["player", C],
+      allPlayersStats: honest,
+    });
+    await vote(forger, forged);
+    await vote(b, honest);
+
+    // Decided 2 of 3; everyone has voted, so no window.
+    expect(record().winner).toEqual(["player", A]);
+    expect(record().statsAgreed).toBe(false);
+  });
+
+  it("gives a late vote for another winner no say in the stats", async () => {
+    const {
+      clients: [, , c],
+    } = await forgerInsideMajority();
+    await mockWsOf(c).emit({
+      type: "winner",
+      winner: ["player", C],
+      allPlayersStats: honest,
+    });
+
+    // c has voted, so everyone has: archived at once, still split.
+    expect(record().winner).toEqual(["player", A]);
+    expect(record().statsAgreed).toBe(false);
+  });
+
+  it("re-counts among the players still connected when a voter leaves in the window", async () => {
+    const {
+      clients: [forger, , c],
+    } = await forgerInsideMajority();
+    // The forger leaves: their vote stops counting, as in the shrink
+    // re-tally. The honest stats hold 1 of the 2 still here -- not yet.
+    await disconnect(forger);
+    expect(archive).not.toHaveBeenCalled();
+    await vote(c, honest);
+
+    expect(record().statsAgreed).toBe(true);
+    expect(archivedStatsOfA()).toEqual(honest[A]);
+  });
+
+  it("archives at once when the last player yet to vote leaves in the window", async () => {
+    const {
+      clients: [, , c],
+    } = await forgerInsideMajority();
+    await disconnect(c);
+
+    expect(record().winner).toEqual(["player", A]);
+    expect(record().statsAgreed).toBe(false);
+    vi.advanceTimersByTime(STATS_VOTE_WINDOW_MS * 2);
+    expect(archive).toHaveBeenCalledTimes(1);
+  });
+
+  it("archives an open record when the game ends, before it can be dropped", async () => {
+    const { game } = await forgerInsideMajority();
+    expect(archive).not.toHaveBeenCalled();
+
+    // GameManager drops a game right after end(); the record must be out by
+    // then, counted against the roster as it stood.
+    await game.end();
+    expect(record().winner).toEqual(["player", A]);
+    expect(record().statsAgreed).toBe(false);
+    expect(log.info.mock.calls.map(([msg]: [string]) => msg)).toContain(
+      "game already archived",
+    );
+
+    vi.advanceTimersByTime(STATS_VOTE_WINDOW_MS * 2);
+    await game.end();
+    expect(archive).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not hold the record of a game whose stats agree at the decision", async () => {
+    const {
+      clients: [a, b],
+    } = gameWith(["1.1.1.1", "2.2.2.2", "3.3.3.3"]);
+    await vote(a, honest);
+    await vote(b, honest);
+    // Archived at the deciding vote, as before the window existed.
+    expect(record().statsAgreed).toBe(true);
+    expect(
+      log.info.mock.calls.some(
+        ([msg]: [string]) =>
+          msg === "winner decided, stats open for late votes",
+      ),
+    ).toBe(false);
   });
 
   it("agrees with the lone voter of a one-player game, as the winner vote does", async () => {
