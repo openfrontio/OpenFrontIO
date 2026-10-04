@@ -188,6 +188,31 @@ describe("<prestige-flow>", () => {
     expect(describeCosmetic).not.toHaveBeenCalled();
   });
 
+  it("keeps the titles white, whatever the rank's colour", async () => {
+    flow.open(AT_100);
+    await settle();
+    expect(q("[data-prestige-confirm] h2.prestige-title")).not.toBeNull();
+    // The rule both titles use: plain white, never the rank's --tier.
+    const css = [...document.body.querySelectorAll("style")]
+      .map((s) => s.textContent ?? "")
+      .join("\n");
+    const rule = /\.prestige-title \{([^}]*)\}/.exec(css)![1];
+    expect(rule).toContain("color: #ffffff");
+    expect(rule).not.toContain("--tier");
+    expect(rule).not.toContain("background");
+
+    // The ceremony's title slam uses the same rule.
+    q("[data-prestige-confirm]")!.dispatchEvent(
+      new KeyboardEvent("keydown", { key: "Escape", bubbles: true }),
+    );
+    await settle();
+    flow.celebrate(AT_100, PRESTIGED);
+    await settle(5000);
+    expect(
+      q("[data-prestige-title]")!.classList.contains("prestige-title"),
+    ).toBe(true);
+  });
+
   it("holds up the player's badge as it is now, not the new rank's", async () => {
     flow.open(AT_100);
     await settle();

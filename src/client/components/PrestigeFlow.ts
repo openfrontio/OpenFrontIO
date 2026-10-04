@@ -1071,14 +1071,12 @@ export class PrestigeFlow extends LitElement {
       [data-prestige-new-badge] {
         filter: drop-shadow(0 0 24px var(--tier));
       }
+      /* The titles ("Enter Prestige 5", and the ceremony's "Prestige 5") are
+         white for every rank: the rank's colour is the emblem's, the glow's
+         and the honeycomb's, never the words'. Nothing here reads --tier. */
       .prestige-title {
-        background: linear-gradient(90deg, #fde047, var(--tier), #fde047);
-        -webkit-background-clip: text;
-        background-clip: text;
-        color: transparent;
-        filter: drop-shadow(
-          0 0 18px color-mix(in srgb, var(--tier) 70%, transparent)
-        );
+        color: #ffffff;
+        filter: drop-shadow(0 0 18px rgba(255, 255, 255, 0.35));
       }
       .prestige-fade {
         animation: prestige-rise 500ms ease-out both;
