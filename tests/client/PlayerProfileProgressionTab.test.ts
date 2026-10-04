@@ -13,10 +13,18 @@ vi.mock("../../src/client/Api", () => ({
     results: [],
     nextCursor: null,
   })),
+  claimReward: vi.fn(),
+  getUserMe: vi.fn(async () => false),
+  invalidateUserMe: vi.fn(),
 }));
 
 vi.mock("../../src/client/ProgressionApi", () => ({
   fetchPublicPlayerProgress: fetchPublicPlayerProgressMock,
+  fetchProgressionConfig: vi.fn(async () => false),
+}));
+
+vi.mock("../../src/client/InGameModal", () => ({
+  showInGameAlert: vi.fn(async () => {}),
 }));
 
 // The visitor banner asks who is viewing; these tests don't sign anyone in.
@@ -131,6 +139,41 @@ describe("Player profile Progression tab", () => {
     });
     expect(modal.querySelectorAll("[data-prestige-tile]")).toHaveLength(2);
     expect(modal.querySelector("[data-current-run]")).not.toBeNull();
+  });
+
+  it("pops the tab in once per opening, not again on switching back", async () => {
+    fetchPublicPlayerProgressMock.mockResolvedValue(withProgress);
+    const shown = async () => {
+      let el: Element | null = null;
+      await settle(() => {
+        el = modal.querySelector("profile-progression");
+        expect(el?.querySelector("[data-milestones]")).not.toBeNull();
+      });
+      return el as unknown as HTMLElement;
+    };
+    modal.open({ publicID: "abcd1234" });
+    await settle(() => {
+      expect(tabText()).toContain("account_modal.tab_progression");
+    });
+    modal.setActiveTab("progression");
+    expect((await shown()).classList.contains("pp-anim")).toBe(true);
+
+    modal.setActiveTab("stats");
+    await settle(() => {
+      expect(modal.querySelector("profile-progression")).toBeNull();
+    });
+    modal.setActiveTab("progression");
+    const again = await shown();
+    expect(again.classList.contains("pp-anim")).toBe(false);
+    expect(
+      again
+        .querySelector<HTMLElement>("[data-pp]")
+        ?.style.getPropertyValue("--i"),
+    ).toBe("");
+
+    // A fresh opening of the profile pops in again.
+    modal.open({ publicID: "abcd1234", tab: "progression" });
+    expect((await shown()).classList.contains("pp-anim")).toBe(true);
   });
 
   it("has no tab for a player without progress", async () => {

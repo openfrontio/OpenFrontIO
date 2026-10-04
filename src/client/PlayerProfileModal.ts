@@ -28,6 +28,9 @@ import { currentPagePath, translateText } from "./Utils";
 
 export { playerProfileUrl };
 
+// Every opening of a profile, numbered: keys the once-per-opening flourishes.
+let profileOpenings = 0;
+
 /** Where a profile was opened from, i.e. where its Back button leads. */
 export type ProfileOrigin = "clan" | "leaderboard" | "account";
 
@@ -58,6 +61,8 @@ export class PlayerProfileModal extends BaseModal {
   // last left on) before this player's progress arrived. The tab only exists
   // for a player with progress, so it's selected once that lands.
   private wantsProgressionTab = false;
+  // Counts fresh openings, to key the profile card's once-per-open flourish.
+  private openCount = 0;
 
   protected modalConfig() {
     return {
@@ -254,6 +259,7 @@ export class PlayerProfileModal extends BaseModal {
             .username=${this.username ?? this.publicId ?? ""}
             .clanTag=${this.clans[0]?.tag ?? null}
             .progress=${this.progress}
+            .openKey=${`profile-${this.openCount}`}
           ></profile-card>`}
       <profile-share
         class="mb-[18px] block"
@@ -270,8 +276,12 @@ export class PlayerProfileModal extends BaseModal {
     // The tab is hidden without progress; should it still be selected (a new
     // player opened on top), show the Stats content rather than nothing.
     if (this.progress === null) return this.renderProfile();
+    // Keyed like the card's flourish: the tab pops in once per opening, not
+    // again on a tab switch.
     return html`<profile-progression
       .progress=${this.progress}
+      .publicId=${this.publicId}
+      .popKey=${`profile-${this.openCount}`}
     ></profile-progression>`;
   }
 
@@ -401,6 +411,9 @@ export class PlayerProfileModal extends BaseModal {
     // helpers re-set it right after open() so back() routes home; the
     // return-from-stats path above skips this and keeps the origin intact.
     this.openedFrom = null;
+    // A new opening: the profile card plays its flourish again.
+    // Counted across every profile modal, so no two openings share a key.
+    this.openCount = ++profileOpenings;
     this.publicId = publicId;
     this.username = null;
     this.statsTree = null;
@@ -457,9 +470,11 @@ export class PlayerProfileModal extends BaseModal {
   private openGameStats(gameId: string): void {
     this.gamesScrollTop = this.modalEl?.getScrollTop() ?? 0;
     const statsModal = document.querySelector<
-      HTMLElement & { openFromProfile(gameId: string): void }
+      HTMLElement & {
+        openFromProfile(gameId: string, profilePublicId?: string): void;
+      }
     >("game-stats-modal");
-    statsModal?.openFromProfile(gameId);
+    statsModal?.openFromProfile(gameId, this.publicId ?? undefined);
   }
 
   private viewGame(gameId: string): void {

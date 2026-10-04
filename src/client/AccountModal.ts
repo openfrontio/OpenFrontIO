@@ -66,6 +66,8 @@ export class AccountModal extends BaseModal {
 
   @state() private email: string = "";
   @state() private isLoadingUser: boolean = false;
+  // Counts openings, to key the profile card's once-per-open flourish.
+  private openCount = 0;
   // Set on CrazyGames when a CrazyGames user is signed in. Their identity comes
   // from the SDK, not our backend user object.
   @state() private crazyGamesUser: CrazyGamesUser | null = null;
@@ -483,6 +485,7 @@ export class AccountModal extends BaseModal {
       .username=${player.username ?? player.publicId}
       .clanTag=${player.clans?.[0]?.tag ?? null}
       .progress=${player.progress}
+      .openKey=${`account-${this.openCount}`}
       prestigeable
       @prestige-request=${this.handlePrestigeRequest}
     ></profile-card>`;
@@ -995,6 +998,8 @@ export class AccountModal extends BaseModal {
   }
 
   protected onOpen(args?: Record<string, unknown>): void {
+    // A new opening: the full profile card plays its flourish again.
+    this.openCount++;
     this.isLoadingUser = true;
     consumeLinkResult(args);
     this.loginError = consumeLoginResult(args);

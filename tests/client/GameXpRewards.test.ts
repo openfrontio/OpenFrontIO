@@ -37,6 +37,7 @@ vi.mock("../../src/client/components/CosmeticPreview", () => {
 
 import "../../src/client/components/GameXpPanel";
 import type { GameXpPanel } from "../../src/client/components/GameXpPanel";
+import "../../src/client/components/PastGameXpCard";
 import { summarizeGameRewards } from "../../src/client/GameRewards";
 import type {
   GameXpEligible,
@@ -164,16 +165,15 @@ describe("game-xp-panel level rewards", () => {
 
   async function mount(
     data: GameXpEligible,
-    opts: { compact?: boolean; reveal?: boolean } = {},
+    opts: { reveal?: boolean } = {},
   ): Promise<void> {
     panel?.remove();
     panel = document.createElement("game-xp-panel") as GameXpPanel;
-    panel.compact = opts.compact ?? false;
     panel.view = { kind: "result", data };
     document.body.appendChild(panel);
     await settle();
     // Most tests look at the final state: skip the reveal, as a player can.
-    if (!opts.reveal && !panel.compact) {
+    if (!opts.reveal) {
       section().click();
       await settle();
     }
@@ -203,10 +203,18 @@ describe("game-xp-panel level rewards", () => {
     document.body.appendChild(panel);
     await settle();
     expect(row()).toBeNull();
-    // The past-game summary has no rewards row either.
-    await mount(single(), { compact: true });
-    expect(section().getAttribute("data-xp-state")).toBe("result");
-    expect(row()).toBeNull();
+    // The past-game summary (its own card) has no rewards row either.
+    const past = document.createElement("past-game-xp-card") as HTMLElement & {
+      view: unknown;
+      updateComplete: Promise<boolean>;
+    };
+    past.view = { kind: "result", data: single() };
+    document.body.appendChild(past);
+    await past.updateComplete;
+    expect(past.querySelector("[data-past-xp]")).not.toBeNull();
+    expect(past.querySelector("[data-xp-rewards]")).toBeNull();
+    expect(past.querySelector("[data-xp-claim]")).toBeNull();
+    past.remove();
     await mount(single());
     expect(row()).not.toBeNull();
     // A game that paid nothing has no row.

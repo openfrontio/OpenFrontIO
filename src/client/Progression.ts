@@ -304,6 +304,16 @@ export const XP_LINE_KEYS: readonly XpLineKey[] = [
   "feats",
 ];
 
+// Each breakdown line's label.
+export const XP_LINE_LABEL_KEYS: Record<XpLineKey, string> = {
+  played: "progression.line_played",
+  time: "progression.line_time",
+  placement: "progression.line_placement",
+  win: "progression.line_win",
+  firstGame: "progression.line_first_game",
+  feats: "progression.line_feats",
+};
+
 /** The breakdown lines worth showing: the non-zero ones, in a fixed order. */
 export function visibleXpLines(
   breakdown: XpBreakdown,
@@ -325,6 +335,28 @@ export function visibleMultipliers(
     out.push({ key: "subscriber", permille: breakdown.subscriberPermille });
   }
   return out;
+}
+
+/**
+ * The multipliers worth showing, each with the XP it added (negative for a
+ * cut), so that the sources and these lines add up to the total — or null
+ * where that can't be known.
+ *
+ * The API applies both multipliers in one step and rounds once:
+ * total = round(subtotal × game × subscriber). With one multiplier in play,
+ * what it added is exactly total − subtotal. With both, how much each added
+ * depends on which is applied first, and the breakdown doesn't say — so
+ * neither line gets an amount rather than one that might be wrong.
+ */
+export function multiplierAmounts(
+  breakdown: XpBreakdown,
+): { key: "game" | "subscriber"; permille: number; amount: number | null }[] {
+  const multipliers = visibleMultipliers(breakdown);
+  const exact = multipliers.length === 1;
+  return multipliers.map((m) => ({
+    ...m,
+    amount: exact ? breakdown.total - breakdown.subtotal : null,
+  }));
 }
 
 /**
@@ -353,6 +385,9 @@ export function apportionXp(
   return out;
 }
 
+// The ineligibility reason for a game played before player levels existed.
+export const BEFORE_PROGRESSION = "before_progression";
+
 // Ineligibility reasons with their own copy. Anything else — including reasons
 // the API adds later — gets the generic line. Keys spelled out in full so the
 // translation checks can see them.
@@ -365,6 +400,8 @@ const INELIGIBLE_REASON_KEYS: Record<string, string> = {
   daily_cap: "progression.ineligible_daily_cap",
   // The game's stats were not agreed on by the players' votes.
   unverified: "progression.ineligible_unverified",
+  // Played before player levels launched: never scored.
+  [BEFORE_PROGRESSION]: "progression.xp_before_levels",
 };
 
 export function ineligibleReasonKey(reason: string): string {

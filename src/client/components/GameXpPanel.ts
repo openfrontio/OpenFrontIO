@@ -24,11 +24,11 @@ import {
   levelFraction,
   levelsReachedInGame,
   MAX_LEVEL,
-  multiplierPercent,
   reachedLegendThisGame,
   subscriberTierOf,
   visibleMultipliers,
   visibleXpLines,
+  XP_LINE_LABEL_KEYS,
   type XpLineKey,
 } from "../Progression";
 import { translateText } from "../Utils";
@@ -38,7 +38,7 @@ import "./CosmeticPreview";
 import "./LevelBadge";
 import "./PlutoniumIcon";
 import type { RewardsChangedDetail } from "./RewardsPanel";
-import { formatXp, xpBar, xpProgressText } from "./XpBar";
+import { formatXp, xpBonusText, xpProgressText } from "./XpBar";
 
 // What the XP section of a finished game is showing. The caller owns the
 // fetching; this element only renders, so every state can be set directly.
@@ -52,15 +52,6 @@ export type GameXpPanelState =
   // Waiting for the server to process the game. Never shows a number.
   | { kind: "calculating" }
   | { kind: "result"; data: GameXpResponse };
-
-const LINE_LABEL_KEYS: Record<XpLineKey, string> = {
-  played: "progression.line_played",
-  time: "progression.line_time",
-  placement: "progression.line_placement",
-  win: "progression.line_win",
-  firstGame: "progression.line_first_game",
-  feats: "progression.line_feats",
-};
 
 // Segments the big bar is drawn in. The gaps are decoration: the fill is one
 // continuous sweep underneath them.
@@ -183,20 +174,20 @@ function finalLineValues(data: GameXpEligible): number[] {
 @customElement("game-xp-panel")
 export class GameXpPanel extends LitElement {
   @property({ attribute: false }) view: GameXpPanelState = { kind: "hidden" };
-  // Past-game view (GameStatsModal): a static summary, no reveal.
-  @property({ type: Boolean }) compact = false;
   // Whether anyone can see the panel (WinModal hides it with its modal). The
   // reveal only plays on screen: a result that arrives while it is off screen
   // shows in its final state, and going off screen mid-reveal ends it there.
   @property({ attribute: false }) onScreen = true;
 
   // The reveal in progress, or null once it has finished (or when there is
-  // none: the compact view, reduced motion, a skip). Null renders the final
+  // none: reduced motion, a skip). Null renders the final
   // state, which is also where the reveal ends.
   @state() private reveal: RevealFrame | null = null;
   @state() private barAnimate = false;
   @state() private barDurationMs = CLIMB_MS;
   private animationToken = 0;
+  // The Legend result already announced (see announceLegend).
+  private announcedLegend: GameXpEligible | null = null;
   private timers: ReturnType<typeof setTimeout>[] = [];
   // The result last announced as settled (see updated()).
   private settledView: GameXpPanelState | null = null;
@@ -232,33 +223,14 @@ export class GameXpPanel extends LitElement {
       const s = this.view;
       if (s.kind === "result" && s.data.eligible) {
         if ((s.data.flares ?? []).length > 0) this.loadCatalog();
-      }
-    }
-    if (changed.has("view") || changed.has("compact")) {
-      const s = this.view;
-      if (s.kind === "result" && s.data.eligible && this.onScreen) {
-        this.startReveal(s.data);
+        if (this.onScreen) this.startReveal(s.data);
+        else this.skipReveal();
       } else {
         this.skipReveal();
       }
     } else if (changed.has("onScreen") && !this.onScreen) {
       this.skipReveal();
     }
-  }
-
-  // Tells the host once a result is showing in full: its reveal has ended or
-  // been skipped, or there was none. Once per result (`detail` is the view).
-  protected updated(): void {
-    const view = this.view;
-    if (view.kind !== "result" || this.reveal !== null) return;
-    if (this.settledView === view) return;
-    this.settledView = view;
-    this.dispatchEvent(
-      new CustomEvent<GameXpPanelState>("xp-reveal-settled", {
-        detail: view,
-        bubbles: true,
-      }),
-    );
   }
 
   private clearTimers(): void {
@@ -285,7 +257,7 @@ export class GameXpPanel extends LitElement {
   // the end.
   private startReveal(data: GameXpEligible): void {
     this.clearTimers();
-    if (this.compact || prefersReducedMotion()) {
+    if (prefersReducedMotion()) {
       this.reveal = null;
       return;
     }
@@ -432,6 +404,13 @@ export class GameXpPanel extends LitElement {
         const legend = reached >= MAX_LEVEL && data.after.legend;
         at(t, () => {
           this.barAnimate = false;
+          // Becoming a Legend: when the page takes the moment full screen
+          // (the Legend ceremony), the panel rests on its final state behind
+          // it instead of playing its own, smaller one.
+          if (legend && this.announceLegend(data)) {
+            this.skipReveal();
+            return;
+          }
           patch({
             level: Math.min(MAX_LEVEL, reached),
             levelUp: reached,
@@ -579,6 +558,55 @@ export class GameXpPanel extends LitElement {
     });
   }
 
+  // Tells the host once a result is showing in full: its reveal has ended or
+  // been skipped, or there was none. Once per result (`detail` is the view).
+  private announceSettled(): void {
+    const view = this.view;
+    if (view.kind !== "result" || this.reveal !== null) return;
+    if (this.settledView === view) return;
+    this.settledView = view;
+    this.dispatchEvent(
+      new CustomEvent<GameXpPanelState>("xp-reveal-settled", {
+        detail: view,
+        bubbles: true,
+      }),
+    );
+  }
+
+  // Tells the page this result made the player a Legend, once per result:
+  // `xp-legend` (detail: the result), cancelable. A listener that takes the
+  // moment (plays the Legend ceremony) cancels it. Only ever for a result the
+  // server sent (a `result` view), never anything provisional.
+  private announceLegend(data: GameXpEligible): boolean {
+    if (this.announcedLegend === data) return false;
+    this.announcedLegend = data;
+    const event = new CustomEvent<GameXpEligible>("xp-legend", {
+      detail: data,
+      bubbles: true,
+      composed: true,
+      cancelable: true,
+    });
+    return !this.dispatchEvent(event);
+  }
+
+  protected updated(changed: PropertyValues<this>): void {
+    super.updated(changed);
+    this.announceSettled();
+    // A Legend result shown without its reveal reaching level 100 (reduced
+    // motion, a skip, or it arrived while the popup was hidden) still gets
+    // its moment, once it's on screen.
+    const s = this.view;
+    if (
+      s.kind === "result" &&
+      s.data.eligible &&
+      this.reveal === null &&
+      this.onScreen &&
+      reachedLegendThisGame(s.data)
+    ) {
+      this.announceLegend(s.data);
+    }
+  }
+
   // Ends any reveal on its final state (a no-op when none is playing).
   private skipReveal(): void {
     this.clearTimers();
@@ -684,14 +712,14 @@ export class GameXpPanel extends LitElement {
   private captionContent(caption: Caption): TemplateResult {
     switch (caption.kind) {
       case "line":
-        return html`${translateText(LINE_LABEL_KEYS[caption.key])}
+        return html`${translateText(XP_LINE_LABEL_KEYS[caption.key])}
           <span class="text-yellow-300"
             >${translateText("progression.xp_total", {
               xp: formatXp(caption.amount),
             })}</span
           >`;
       case "multiplier":
-        return html`${this.bonusText(caption.key, caption.permille)}`;
+        return html`${xpBonusText(caption.key, caption.permille)}`;
       case "heading":
         return html`${translateText("progression.xp_heading")}`;
       case "level_up":
@@ -865,10 +893,17 @@ export class GameXpPanel extends LitElement {
               >`,
             )}
           </div>
-          <div class="min-w-0 flex-1 pt-3.5">
+          <div class="@container min-w-0 flex-1 pt-3.5">
             ${this.renderSegmentedBar(fill, levelUp !== null, progressText)}
-            <div class="mt-1 grid h-5 grid-cols-[1fr_auto_1fr] items-center">
-              <span></span>
+            <!-- The counter centred under the bar, the level's progress at
+                 its right end. A bar too narrow for both side by side (a
+                 phone) stacks them, centred, so they never run together.
+                 Fixed heights either way: nothing moves during the reveal. -->
+            <div
+              data-xp-counter-row
+              class="mt-1 flex h-9 flex-col items-center @min-[16rem]:grid @min-[16rem]:h-5 @min-[16rem]:grid-cols-[1fr_auto_1fr] @min-[16rem]:gap-x-2"
+            >
+              <span class="hidden @min-[16rem]:block"></span>
               <span
                 data-xp-total
                 class="text-sm font-bold tabular-nums transition-colors ${applying ===
@@ -884,7 +919,7 @@ export class GameXpPanel extends LitElement {
               </span>
               <span
                 data-xp-header-level
-                class="truncate text-right text-[11px] tabular-nums text-white/60"
+                class="max-w-full truncate text-center text-[11px] tabular-nums text-white/60 @min-[16rem]:text-right"
               >
                 ${progressText}
               </span>
@@ -1901,21 +1936,6 @@ export class GameXpPanel extends LitElement {
     </div>`;
   }
 
-  // A multiplier as a line of its own, the way Overwatch shows a group
-  // bonus: "+100% XP (SOVEREIGN BONUS)", "+20% XP (SUBSCRIBER BONUS)" for a
-  // boost from no known tier, or "−50% XP (GAME TYPE)" for a cut.
-  private bonusText(key: "game" | "subscriber", permille: number): string {
-    const percent = multiplierPercent(permille);
-    const tier = key === "subscriber" ? subscriberTierOf(permille) : null;
-    return translateText(
-      percent >= 0 ? "progression.bonus_line" : "progression.penalty_line",
-      {
-        percent: Math.abs(percent),
-        source: translateText(`progression.multiplier_${tier?.tier ?? key}`),
-      },
-    );
-  }
-
   // The multiplier lines under the counter. During the reveal their row
   // slides open when the first multiplier's wipe has crossed the cards, and
   // each line pops in as its multiplier lands.
@@ -1946,7 +1966,7 @@ export class GameXpPanel extends LitElement {
             1000
               ? "xp-bonus-line"
               : "text-sky-300"} ${this.slideSlotClass(shown)}"
-            >${this.bonusText(m.key, m.permille)}</span
+            >${xpBonusText(m.key, m.permille)}</span
           >`;
         })}
       </div>`,
@@ -1982,72 +2002,13 @@ export class GameXpPanel extends LitElement {
           ? `--wipe-delay: ${Math.round(wipeStart(i, lines.length) * WIPE_MS)}ms; --wipe-ms: ${Math.round(WIPE_CARD_SHARE * WIPE_MS)}ms`
           : undefined;
         return this.renderXpCard(
-          translateText(LINE_LABEL_KEYS[line.key]),
+          translateText(XP_LINE_LABEL_KEYS[line.key]),
           translateText("progression.xp_total", { xp: formatXp(values[i]) }),
           `text-yellow-300 border-yellow-400/20 ${tone} ${wipe}`,
           { line: line.key, shown, style },
         );
       })}
     </div>`;
-  }
-
-  // ---------------------------------------------------------------------------
-  // Compact panel (GameStatsModal, a past game): a static summary.
-  // ---------------------------------------------------------------------------
-
-  private renderCompact(data: GameXpEligible): TemplateResult {
-    const { after } = data;
-    return this.frame(
-      html`
-        ${this.renderStyles()}
-        <div class="flex items-center justify-between gap-3">
-          <div class="flex min-w-0 items-center gap-2">
-            <level-badge
-              .level=${after.level}
-              .prestige=${after.prestige}
-              .legend=${after.legend}
-              .size=${28}
-            ></level-badge>
-            <div class="min-w-0">
-              <div class="text-sm font-semibold">
-                ${after.legend
-                  ? translateText("progression.legend")
-                  : translateText("progression.level", { level: after.level })}
-              </div>
-              <div class="text-xs text-white/60">
-                ${xpProgressText(after.xpInLevel, after.xpForNext)}
-              </div>
-            </div>
-          </div>
-          <div class="shrink-0 text-right">
-            <div class="text-xs text-white/60">
-              ${translateText("progression.xp_heading")}
-            </div>
-            <div
-              data-xp-total
-              class="text-lg font-bold text-green-400 tabular-nums"
-            >
-              ${translateText("progression.xp_total", {
-                xp: formatXp(data.breakdown.total),
-              })}
-            </div>
-          </div>
-        </div>
-        <div class="mt-2">
-          ${xpBar(levelFraction(after.xpInLevel, after.xpForNext) * 100, {
-            valueText: xpProgressText(after.xpInLevel, after.xpForNext),
-          })}
-        </div>
-        ${this.renderBonuses(data)} ${this.renderBreakdown(data)}
-        ${data.breakdown.leftEarly
-          ? html`<p data-xp-left-early class="m-0 mt-3 text-xs text-amber-300">
-              ${translateText("progression.left_early")}
-            </p>`
-          : nothing}
-      `,
-      "result",
-      this.panelAccent(data),
-    );
   }
 
   render() {
@@ -2068,9 +2029,7 @@ export class GameXpPanel extends LitElement {
             "ineligible",
           );
         }
-        return this.compact
-          ? this.renderCompact(s.data)
-          : this.renderFull(s.data);
+        return this.renderFull(s.data);
     }
   }
 }
