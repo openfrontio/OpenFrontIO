@@ -169,7 +169,8 @@ describe("<profile-card> opening flourish", () => {
     cards.push(card);
     document.body.appendChild(card);
     await card.updateComplete;
-    // The pulse is measured after the first render.
+    // The pulse is measured after the first render, once the badge has drawn.
+    await new Promise((r) => setTimeout(r, 0));
     await card.updateComplete;
     return {
       card,
@@ -204,6 +205,17 @@ describe("<profile-card> opening flourish", () => {
     expect(svg.querySelector("pattern")!.id).not.toBe(
       section.querySelector(":scope > svg pattern")!.id,
     );
+  });
+
+  it("draws its patterns as SVG, so they show", async () => {
+    const { card, section } = await show({ openKey: freshKey() });
+    const SVG = "http://www.w3.org/2000/svg";
+    for (const path of [
+      section.querySelector(":scope > svg pattern path")!,
+      pulseOf(card)!.querySelector("pattern path")!,
+    ]) {
+      expect(path.namespaceURI).toBe(SVG);
+    }
   });
 
   it("removes the pulse once it has played", async () => {

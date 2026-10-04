@@ -1,4 +1,12 @@
-import { html, LitElement, nothing, PropertyValues, TemplateResult } from "lit";
+import {
+  html,
+  LitElement,
+  nothing,
+  PropertyValues,
+  svg,
+  SVGTemplateResult,
+  TemplateResult,
+} from "lit";
 import { customElement, property, state } from "lit/decorators.js";
 import { clampPrestige, levelFraction } from "../Progression";
 import { translateText } from "../Utils";
@@ -135,20 +143,33 @@ export class ProfileCard extends LitElement {
     super.updated(changed);
     if (!this.intro || this.pulseMeasured) return;
     this.pulseMeasured = true;
+    void this.startPulse();
+  }
+
+  // Measures where the pulse starts (the badge's middle) and how far it runs,
+  // once the badge has drawn itself at its size, then starts it.
+  private async startPulse(): Promise<void> {
     const card = this.querySelector<HTMLElement>('[data-profile-card="full"]');
     if (card === null) return;
+    const badgeEl = card.querySelector<LitElement>("level-badge");
+    await badgeEl?.updateComplete;
+    if (!this.isConnected || !this.intro) return;
     const box = card.getBoundingClientRect();
     // Not laid out (a hidden page): no pulse.
     if (box.width === 0 || box.height === 0) return;
-    const badge = card.querySelector("level-badge")?.getBoundingClientRect();
+    // In the card's own pixels: the modal around it may still be scaling in.
+    const scale = card.offsetWidth > 0 ? card.offsetWidth / box.width : 1;
+    const width = box.width * scale;
+    const height = box.height * scale;
+    const badge = badgeEl?.getBoundingClientRect();
     const origin = badge && badge.width > 0 ? badge : box;
-    const cx = origin.left + origin.width / 2 - box.left;
-    const cy = origin.top + origin.height / 2 - box.top;
+    const cx = (origin.left + origin.width / 2 - box.left) * scale;
+    const cy = (origin.top + origin.height / 2 - box.top) * scale;
     const far = Math.max(
       Math.hypot(cx, cy),
-      Math.hypot(box.width - cx, cy),
-      Math.hypot(cx, box.height - cy),
-      Math.hypot(box.width - cx, box.height - cy),
+      Math.hypot(width - cx, cy),
+      Math.hypot(cx, height - cy),
+      Math.hypot(width - cx, height - cy),
     );
     const kind = this.progress?.legend ? "gold" : "blue";
     this.pulse = {
@@ -319,7 +340,7 @@ export class ProfileCard extends LitElement {
   // `pulse` draws the brighter copy the opening pulse lights up.
   private renderPattern(
     id: string,
-    paths: TemplateResult,
+    paths: SVGTemplateResult,
     extra: { className: string; style?: string },
   ): TemplateResult {
     return html`<svg
@@ -345,8 +366,10 @@ export class ProfileCard extends LitElement {
     stroke: string,
     opacity: number,
     width: number,
-  ): TemplateResult {
-    return html`<path
+  ): SVGTemplateResult {
+    // svg``, not html``: a fragment on its own is parsed as HTML, which
+    // would make an HTML element named "path" that draws nothing.
+    return svg`<path
       d="M30 0 L60 17.32 L60 51.96 L30 69.28 L0 51.96 L0 17.32 Z M30 69.28 L30 103.92"
       fill="none"
       stroke=${stroke}
@@ -373,7 +396,7 @@ export class ProfileCard extends LitElement {
   private renderPulse(pulse: Pulse): TemplateResult {
     const paths =
       pulse.kind === "gold"
-        ? html`${this.hexPath("#f59e0b", 0.25, 6)}${this.hexPath(
+        ? svg`${this.hexPath("#f59e0b", 0.25, 6)}${this.hexPath(
             "#fde68a",
             0.8,
             1.8,
