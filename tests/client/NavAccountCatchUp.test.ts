@@ -237,3 +237,71 @@ describe("nav-account-menu catch-up", () => {
     expect(popping()).toBe(false);
   });
 });
+
+describe("nav-account-menu layout", () => {
+  let el: NavAccountMenu;
+
+  beforeEach(() => {
+    if (!customElements.get("nav-account-menu")) {
+      customElements.define("nav-account-menu", NavAccountMenu);
+    }
+  });
+
+  afterEach(() => {
+    el?.remove();
+  });
+
+  async function mount(variant: "desktop" | "mobile"): Promise<void> {
+    el = document.createElement("nav-account-menu") as NavAccountMenu;
+    el.variant = variant;
+    document.body.appendChild(el);
+    await el.updateComplete;
+  }
+
+  async function send(progress: Progress | undefined): Promise<void> {
+    const u = userMe(before) as unknown as { player: { progress?: Progress } };
+    if (progress === undefined) delete u.player.progress;
+    else u.player.progress = progress;
+    document.dispatchEvent(new CustomEvent("userMeResponse", { detail: u }));
+    await el.updateComplete;
+  }
+
+  it("keeps the desktop bar under the badge and avatar row, clear of the avatar", async () => {
+    await mount("desktop");
+    await send(undefined);
+    const row = el.querySelector<HTMLElement>("[data-account-identity]")!;
+    // No progress: no bar, and the row adds no padding for one.
+    expect(el.querySelector("[data-account-xp-bar]")).toBeNull();
+    expect(row.classList.contains("pb-1.5")).toBe(false);
+    const avatar = el.querySelector("[data-account-avatar]");
+
+    await send(before);
+    const bar = el.querySelector<HTMLElement>("[data-account-xp-bar]")!;
+    // The bar sits in the row's own bottom padding, spanning badge and
+    // avatar only, and the avatar is a size smaller so it doesn't overhang.
+    expect(bar.parentElement).toBe(row);
+    expect(bar.className).toContain("bottom-0 left-0 right-0");
+    expect(row.classList.contains("pb-1.5")).toBe(true);
+    expect(row.className).toContain("[&_[data-account-avatar]]:h-7");
+    expect(row.querySelector("[data-account-level]")).not.toBeNull();
+    expect(row.querySelector("[data-account-avatar]")).not.toBeNull();
+    // The chevron is outside the row, so the bar never runs under it.
+    const chevron = el.querySelector(
+      "[data-account-trigger]",
+    )!.lastElementChild!;
+    expect(chevron.tagName.toLowerCase()).toBe("svg");
+    expect(row.contains(chevron)).toBe(false);
+    // The avatar NavAccountButton drives is the same element as before.
+    expect(el.querySelector("[data-account-avatar]")).toBe(avatar);
+  });
+
+  it("keeps the mobile bar under the avatar", async () => {
+    await mount("mobile");
+    await send(before);
+    const bar = el.querySelector<HTMLElement>("[data-account-xp-bar]")!;
+    expect(bar.className).toContain("-bottom-1.5 left-0 right-0");
+    expect(
+      bar.parentElement!.querySelector("[data-account-avatar]"),
+    ).not.toBeNull();
+  });
+});

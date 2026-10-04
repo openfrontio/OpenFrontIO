@@ -569,9 +569,6 @@ export class NavAccountMenu extends LitElement {
       progress.legend,
     );
     const title = `${label} · ${xpProgressText(progress.xpInLevel, progress.xpForNext)}`;
-    const percent =
-      this.barOverride ??
-      levelFraction(progress.xpInLevel, progress.xpForNext) * 100;
     const mobile = variant === "mobile";
     return html`
       ${this.levelPop
@@ -614,11 +611,26 @@ export class NavAccountMenu extends LitElement {
           .size=${mobile ? 16 : 22}
         ></level-badge>
       </span>
+    `;
+  }
+
+  // The thin XP bar under the trigger's level badge and avatar. Desktop: in
+  // the row's bottom padding, so the avatar never overhangs it. Mobile: just
+  // under the avatar.
+  private renderXpBar(
+    variant: "desktop" | "mobile",
+  ): TemplateResult | typeof nothing {
+    const progress = this.shownProgress;
+    if (progress === null) return nothing;
+    const percent =
+      this.barOverride ??
+      levelFraction(progress.xpInLevel, progress.xpForNext) * 100;
+    return html`
       <span
         data-account-xp-bar
-        class="pointer-events-none absolute ${mobile
+        class="pointer-events-none absolute ${variant === "mobile"
           ? "-bottom-1.5 left-0 right-0"
-          : "bottom-1 left-4 right-4"}"
+          : "bottom-0 left-0 right-0"}"
         aria-hidden="true"
       >
         ${xpBar(percent, {
@@ -712,12 +724,25 @@ export class NavAccountMenu extends LitElement {
         aria-label=${this.triggerLabel()}
         data-i18n-title="main.account"
       >
-        ${this.renderLevel("desktop")}
-        ${this.renderIdentityIcons({
-          ids: true,
-          iconClass: "w-5 h-5",
-          badgeClass: "absolute bottom-1 right-1",
-        })}
+        <!-- The badge and the avatar, with the XP bar under both in the row's
+             bottom padding: the avatar is a size smaller while there is a
+             bar, so it clears it. The row is always here (only its classes
+             change): the avatar and icons inside are driven imperatively by
+             NavAccountButton and must not be re-created. -->
+        <span
+          data-account-identity
+          class="relative flex items-center gap-2 ${this.shownProgress !== null
+            ? "pb-1.5 [&_[data-account-avatar]]:h-7 [&_[data-account-avatar]]:w-7"
+            : ""}"
+        >
+          ${this.renderLevel("desktop")}
+          ${this.renderIdentityIcons({
+            ids: true,
+            iconClass: "w-5 h-5",
+            badgeClass: "absolute -top-1 -right-1.5",
+          })}
+          ${this.renderXpBar("desktop")}
+        </span>
         <span
           id="nav-account-signin-text"
           data-account-signin-text
@@ -749,7 +774,7 @@ export class NavAccountMenu extends LitElement {
             iconClass: "w-7 h-7",
             badgeClass: "absolute -bottom-0.5 -right-0.5",
           })}
-          ${this.renderLevel("mobile")}
+          ${this.renderLevel("mobile")} ${this.renderXpBar("mobile")}
         </span>
         <!-- The sign-in label is desktop-only; on the top bar the icon alone is
              the affordance, so keep the element (the shared updater toggles it)
