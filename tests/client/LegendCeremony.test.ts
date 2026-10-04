@@ -12,12 +12,18 @@ import {
   legendCeremonySeen,
   markLegendCeremonySeen,
 } from "../../src/client/components/LegendCeremony";
+import type { ProfileShare } from "../../src/client/components/ProfileShare";
+import { playerProfileUrl } from "../../src/client/utilities/PlayerProfileUrl";
 
 if (!customElements.get("legend-ceremony")) {
   customElements.define("legend-ceremony", LegendCeremony);
 }
 
-const MOMENT = { lifetimeXp: 2106720, at: new Date("2026-10-03T12:00:00Z") };
+const MOMENT = {
+  lifetimeXp: 2106720,
+  at: new Date("2026-10-03T12:00:00Z"),
+  publicId: "wonder01",
+};
 
 describe("<legend-ceremony>", () => {
   let ceremony: LegendCeremony;
@@ -196,6 +202,104 @@ describe("<legend-ceremony>", () => {
     expect(root()!.hasAttribute("data-skipped")).toBe(true);
     expect(q("[data-legend-continue]")).not.toBeNull();
     expect(q(".lc-flash")).toBeNull();
+  });
+
+  describe("the share row", () => {
+    const share = () => q("[data-legend-share]");
+    const shareEl = () => q<ProfileShare>("[data-legend-share] profile-share");
+
+    it("comes in at the end, between the line and Continue", async () => {
+      ceremony.show(MOMENT);
+      await settle(LEGEND_CEREMONY_MS - 1);
+      expect(beat()).toBe("line");
+      expect(share()).toBeNull();
+      await settle(1);
+      expect(beat()).toBe("done");
+      const row = share()!;
+      expect(row).not.toBeNull();
+      const line = q("[data-legend-line]")!;
+      const cont = q("[data-legend-continue]")!;
+      expect(
+        line.compareDocumentPosition(row) & Node.DOCUMENT_POSITION_FOLLOWING,
+      ).toBeTruthy();
+      expect(
+        row.compareDocumentPosition(cont) & Node.DOCUMENT_POSITION_FOLLOWING,
+      ).toBeTruthy();
+      // Simply there: no rise or fade of its own.
+      expect(row.classList.contains("lc-rise")).toBe(false);
+      expect(row.classList.contains("lc-final-in")).toBe(false);
+      // Continue still takes the focus.
+      expect(document.activeElement).toBe(cont);
+    });
+
+    it("shares the player's Legend moment, solid and centred", async () => {
+      ceremony.show(MOMENT);
+      await settle(LEGEND_CEREMONY_MS);
+      const el = shareEl()!;
+      expect(el.url).toBe(`${playerProfileUrl("wonder01")}?moment=legend`);
+      expect(el.text).toBe("progression.share_text_legend");
+      expect(el.solid).toBe(true);
+      expect(el.centered).toBe(true);
+      await el.updateComplete;
+      expect(el.querySelectorAll("button[data-share]").length).toBeGreaterThan(
+        0,
+      );
+    });
+
+    it("is there at once when skipped", async () => {
+      ceremony.show(MOMENT);
+      await settle(1000);
+      root()!.click();
+      await settle();
+      expect(share()).not.toBeNull();
+    });
+
+    it("keeps its clicks from the ceremony", async () => {
+      const closed = vi.fn();
+      ceremony.addEventListener("legend-ceremony-closed", closed);
+      ceremony.show(MOMENT);
+      await settle(LEGEND_CEREMONY_MS);
+      const reached = vi.fn();
+      root()!.addEventListener("click", reached);
+      share()!.click();
+      await settle();
+      expect(reached).not.toHaveBeenCalled();
+      expect(root()).not.toBeNull();
+      expect(closed).not.toHaveBeenCalled();
+    });
+
+    it("isn't there without a public ID", async () => {
+      ceremony.show({ ...MOMENT, publicId: "" });
+      await settle(LEGEND_CEREMONY_MS);
+      expect(beat()).toBe("done");
+      expect(share()).toBeNull();
+      expect(q("[data-legend-continue]")).not.toBeNull();
+    });
+
+    it("Tab moves between the share buttons and Continue", async () => {
+      ceremony.show(MOMENT);
+      await settle(LEGEND_CEREMONY_MS);
+      await shareEl()!.updateComplete;
+      const buttons = [
+        ...root()!.querySelectorAll<HTMLButtonElement>("button"),
+      ];
+      const cont = q<HTMLButtonElement>("[data-legend-continue]")!;
+      expect(buttons[buttons.length - 1]).toBe(cont);
+      expect(buttons.length).toBeGreaterThan(1);
+      const tab = (shiftKey = false) =>
+        root()!.dispatchEvent(
+          new KeyboardEvent("keydown", { key: "Tab", shiftKey, bubbles: true }),
+        );
+      expect(document.activeElement).toBe(cont);
+      tab();
+      expect(document.activeElement).toBe(buttons[0]);
+      tab(true);
+      expect(document.activeElement).toBe(cont);
+      tab(true);
+      expect(document.activeElement).toBe(buttons[buttons.length - 2]);
+      // Still open: Tab never closes or leaves it.
+      expect(root()).not.toBeNull();
+    });
   });
 
   it("ignores a second show while it's up", async () => {

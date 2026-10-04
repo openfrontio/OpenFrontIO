@@ -166,7 +166,11 @@ export class WinModal extends LitElement implements Controller {
     if (ceremony === null) return;
     e.preventDefault();
     markLegendCeremonySeen(publicId);
-    ceremony.show({ lifetimeXp: e.detail.after.lifetimeXp, at: new Date() });
+    ceremony.show({
+      lifetimeXp: e.detail.after.lifetimeXp,
+      at: new Date(),
+      publicId,
+    });
   };
 
   private onLegendCeremonyClosed = (): void => {

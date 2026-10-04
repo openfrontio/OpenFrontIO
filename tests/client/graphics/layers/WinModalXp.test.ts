@@ -491,6 +491,12 @@ describe("WinModal XP section", () => {
       expect(
         ceremony()!.querySelector("[data-legend-line] b")!.textContent,
       ).toBe((2106720).toLocaleString());
+      // The player's own Legend moment to share.
+      expect(
+        ceremony()!.querySelector<HTMLElement & { url: string }>(
+          "[data-legend-share] profile-share",
+        )!.url,
+      ).toBe(`${playerProfileUrl("me")}?moment=legend`);
       ceremony()!
         .querySelector<HTMLButtonElement>("[data-legend-continue]")!
         .click();
