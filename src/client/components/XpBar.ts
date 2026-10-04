@@ -1,10 +1,32 @@
 import { html, nothing, TemplateResult } from "lit";
+import { multiplierPercent, subscriberTierOf } from "../Progression";
 import { translateText } from "../Utils";
 
-// Shared bits of the level / XP UI: number formatting and the progress bar.
+// Shared bits of the level / XP UI: number formatting, multiplier lines and
+// the progress bar.
 
 export function formatXp(amount: number): string {
   return Math.round(amount).toLocaleString();
+}
+
+/**
+ * A multiplier as a line of its own, the way Overwatch shows a group bonus:
+ * "+100% XP (SOVEREIGN BONUS)", "+20% XP (SUBSCRIBER BONUS)" for a boost from
+ * no known tier, or "−50% XP (GAME TYPE)" for a cut.
+ */
+export function xpBonusText(
+  key: "game" | "subscriber",
+  permille: number,
+): string {
+  const percent = multiplierPercent(permille);
+  const tier = key === "subscriber" ? subscriberTierOf(permille) : null;
+  return translateText(
+    percent >= 0 ? "progression.bonus_line" : "progression.penalty_line",
+    {
+      percent: Math.abs(percent),
+      source: translateText(`progression.multiplier_${tier?.tier ?? key}`),
+    },
+  );
 }
 
 /** "1,234 / 5,000 XP", or "Max level" when there is no next level. */

@@ -13,6 +13,7 @@ import {
   levelBand,
   levelFraction,
   levelRewardReasonKey,
+  multiplierAmounts,
   multiplierPercent,
   subscriberTierOf,
   visibleMultipliers,
@@ -211,6 +212,38 @@ describe("progression helpers", () => {
     ).toEqual(["game", "subscriber"]);
   });
 
+  it("gives a multiplier its exact amount only when it is the only one", () => {
+    // The boost alone: what it added is total − subtotal.
+    expect(multiplierAmounts(breakdown)).toEqual([
+      { key: "subscriber", permille: 1250, amount: 43 },
+    ]);
+    // A game-type cut alone, the same way (negative).
+    expect(
+      multiplierAmounts({
+        ...breakdown,
+        gamePermille: 500,
+        subscriberPermille: 1000,
+        total: 88,
+      }),
+    ).toEqual([{ key: "game", permille: 500, amount: -87 }]);
+    // Both: the API rounds once over the product, so how much each added
+    // depends on an order it doesn't record. No amounts, not a guess.
+    expect(
+      multiplierAmounts({
+        ...breakdown,
+        gamePermille: 500,
+        subscriberPermille: 2000,
+        total: 175,
+      }),
+    ).toEqual([
+      { key: "game", permille: 500, amount: null },
+      { key: "subscriber", permille: 2000, amount: null },
+    ]);
+    expect(
+      multiplierAmounts({ ...breakdown, subscriberPermille: 1000 }),
+    ).toEqual([]);
+  });
+
   it("formats permille multipliers", () => {
     expect(multiplierPercent(1200)).toBe(20);
     expect(multiplierPercent(1250)).toBe(25);
@@ -265,6 +298,15 @@ describe("progression helpers", () => {
     expect(key).toBe("progression.ineligible_unverified");
     expect(en.progression.ineligible_unverified).toBe(
       "This game's results couldn't be verified, so it didn't earn XP.",
+    );
+  });
+
+  it("explains a game played before levels existed", () => {
+    expect(ineligibleReasonKey("before_progression")).toBe(
+      "progression.xp_before_levels",
+    );
+    expect(en.progression.xp_before_levels).toBe(
+      "Played before levels existed, so there's no XP for this game.",
     );
   });
 

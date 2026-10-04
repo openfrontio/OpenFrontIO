@@ -447,6 +447,114 @@ describe("WinModal XP section", () => {
     expect(panel()!.querySelector("[data-xp-next-badge]")).toBeNull();
   });
 
+  describe("the Legend ceremony", () => {
+    // P10 L99 -> 100: this game makes the player a Legend.
+    const legendResult = () =>
+      eligible({
+        before: { prestige: 10, level: 99, xpInLevel: 4400, xpForNext: 4510 },
+        after: {
+          ...eligible().after,
+          prestige: 10,
+          level: 100,
+          xpInLevel: 0,
+          xpForNext: 0,
+          legend: true,
+          lifetimeXp: 2106720,
+        },
+        levelsReached: [{ prestige: 10, level: 100 }],
+      });
+    const ceremony = () =>
+      document.body.querySelector<HTMLElement>("[data-legend-ceremony]");
+    const revealing = () => panel()?.dataset.xpRevealing === "true";
+
+    beforeEach(() => localStorage.clear());
+
+    it("takes the level-100 moment full screen, then returns to the settled popup", async () => {
+      stubXpEndpoint([() => json(legendResult())]);
+      await mount(makeGame({ ended: true }));
+      expect(xpState()).toBe("result");
+      // The reveal plays up to level 100 first.
+      let steps = 0;
+      while (ceremony() === null && steps++ < 200) {
+        expect(revealing()).toBe(true);
+        await settle(50);
+      }
+      expect(ceremony()).not.toBeNull();
+      // The popup rests on its final state behind it.
+      expect(revealing()).toBe(false);
+      expect(panel()!.querySelector("[data-xp-legend]")).not.toBeNull();
+      expect(localStorage.getItem("legendCeremonySeen:me")).not.toBeNull();
+      expect(ceremony()!.textContent).not.toContain("2,106,720");
+
+      await settle(7000);
+      expect(ceremony()!.dataset.beat).toBe("done");
+      expect(
+        ceremony()!.querySelector("[data-legend-line] b")!.textContent,
+      ).toBe((2106720).toLocaleString());
+      ceremony()!
+        .querySelector<HTMLButtonElement>("[data-legend-continue]")!
+        .click();
+      await settle();
+      expect(ceremony()).toBeNull();
+      expect(xpState()).toBe("result");
+      expect(revealing()).toBe(false);
+      expect(document.activeElement).toBe(
+        modal.querySelector('[data-win-action="keep"]'),
+      );
+    });
+
+    it("plays it when the reveal is skipped before level 100", async () => {
+      stubXpEndpoint([() => json(legendResult())]);
+      await mount(makeGame({ ended: true }));
+      await finishReveal();
+      expect(ceremony()).not.toBeNull();
+    });
+
+    it("plays it once per account", async () => {
+      localStorage.setItem("legendCeremonySeen:me", "1");
+      stubXpEndpoint([() => json(legendResult())]);
+      await mount(makeGame({ ended: true }));
+      // The panel's own Legend moment plays instead.
+      let sawCaption = false;
+      for (let i = 0; i < 200 && revealing(); i++) {
+        if (panel()!.querySelector("[data-xp-caption-legend]")) {
+          sawCaption = true;
+        }
+        await settle(50);
+      }
+      expect(sawCaption).toBe(true);
+      expect(ceremony()).toBeNull();
+    });
+
+    it("never for anything but the server's Legend result", async () => {
+      // Waiting on the server: nothing yet.
+      stubXpEndpoint([notFound, notFound, () => json(eligible())]);
+      await mount(makeGame({ ended: true }));
+      expect(xpState()).toBe("calculating");
+      expect(ceremony()).toBeNull();
+      // An ordinary result.
+      await settle(6_000);
+      await finishReveal();
+      expect(xpState()).toBe("result");
+      expect(ceremony()).toBeNull();
+    });
+
+    it("never for a player who was a Legend already", async () => {
+      const already = legendResult();
+      stubXpEndpoint([
+        () =>
+          json({
+            ...already,
+            before: { prestige: 10, level: 100, xpInLevel: 0, xpForNext: 0 },
+            levelsReached: [],
+          }),
+      ]);
+      await mount(makeGame({ ended: true }));
+      await finishReveal();
+      expect(ceremony()).toBeNull();
+    });
+  });
+
   it("shows a player who was already a Legend as one throughout the reveal", async () => {
     stubXpEndpoint([
       () =>
