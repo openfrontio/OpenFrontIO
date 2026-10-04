@@ -570,7 +570,7 @@ export class GameXpPanel extends LitElement {
     return this.frame(
       html`<div class="flex items-center gap-2 text-sm text-white/80">
         <span
-          class="w-4 h-4 shrink-0 border-2 border-white/30 border-t-white/80 rounded-full animate-spin"
+          class="w-4 h-4 shrink-0 border-2 border-white/30 border-t-white/80 rounded-full animate-spin motion-reduce:animate-none"
           aria-hidden="true"
         ></span>
         <span>${translateText("progression.calculating")}</span>
@@ -692,7 +692,7 @@ export class GameXpPanel extends LitElement {
         data-xp-bar-fill
         class="h-full bg-yellow-400 shadow-[0_0_10px_rgba(250,204,21,0.7)] ${this
           .barAnimate
-          ? "transition-[width] ease-linear"
+          ? "xp-bar-filling transition-[width] ease-linear"
           : ""}"
         style="width: ${fillPercent}%; transition-duration: ${this
           .barDurationMs}ms"
@@ -878,6 +878,54 @@ export class GameXpPanel extends LitElement {
       }
       .xp-bar-flash {
         animation: xp-bar-flash 450ms ease-in-out 2;
+      }
+      /* While the bar fills, its leading edge glows white-hot and a sheen
+         runs along the fill. Both are pseudo-elements clipped to the fill;
+         the sheen moves by transform, one tile per loop. */
+      [data-xp-panel] [data-xp-bar-fill] {
+        position: relative;
+        overflow: hidden;
+      }
+      [data-xp-panel] [data-xp-bar-fill]::after {
+        content: "";
+        position: absolute;
+        top: 0;
+        bottom: 0;
+        right: 0;
+        width: 42px;
+        pointer-events: none;
+        background: linear-gradient(
+          90deg,
+          rgba(255, 255, 255, 0),
+          rgba(255, 250, 210, 0.95)
+        );
+        opacity: 0;
+        transition: opacity 160ms ease-out;
+      }
+      [data-xp-panel] .xp-bar-filling::after {
+        opacity: 1;
+      }
+      [data-xp-panel] .xp-bar-filling::before {
+        content: "";
+        position: absolute;
+        top: 0;
+        bottom: 0;
+        left: -48px;
+        right: 0;
+        pointer-events: none;
+        background-image: repeating-linear-gradient(
+          115deg,
+          rgba(255, 255, 255, 0) 0 10px,
+          rgba(255, 255, 255, 0.28) 10px 14px,
+          rgba(255, 255, 255, 0) 14px 24px
+        );
+        background-size: 48px 100%;
+        animation: xp-bar-sheen 420ms linear infinite;
+      }
+      @keyframes xp-bar-sheen {
+        to {
+          transform: translateX(48px);
+        }
       }
       @keyframes xp-badge-pop {
         0% {
@@ -1136,6 +1184,10 @@ export class GameXpPanel extends LitElement {
         filter: drop-shadow(0 0 10px rgba(250, 204, 21, 0.8));
       }
       @media (prefers-reduced-motion: reduce) {
+        [data-xp-panel] .xp-bar-filling::before,
+        [data-xp-panel] .xp-bar-filling::after {
+          display: none;
+        }
         .xp-caption-in,
         .xp-levelup-in,
         .xp-bar-flash,
