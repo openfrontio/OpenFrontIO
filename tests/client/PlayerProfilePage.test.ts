@@ -305,34 +305,6 @@ describe("public profile page", () => {
     });
   });
 
-  describe("visitor banner", () => {
-    it("invites a signed-out viewer to play, and Play goes home", async () => {
-      viewer.kind = "signed_out";
-      await openFromPath("/player/aB3dE5fX");
-      await settle(() =>
-        expect(modal.querySelector("[data-visitor-banner]")).not.toBeNull(),
-      );
-      const banner = modal.querySelector("[data-visitor-banner]")!;
-      expect(banner.textContent).toContain("player_profile.visitor_title");
-      expect(banner.textContent).toContain("player_profile.visitor_body");
-
-      (banner.querySelector("o-button button") as HTMLElement).click();
-      expect(modal.isOpen()).toBe(false);
-      expect(url()).toBe("/");
-    });
-
-    it("is hidden from a signed-in player", async () => {
-      viewer.kind = "signed_in";
-      await openFromPath("/player/aB3dE5fX");
-      await settle(() =>
-        expect(modal.querySelector("profile-share")).not.toBeNull(),
-      );
-      await new Promise((r) => setTimeout(r, 0));
-      await modal.updateComplete;
-      expect(modal.querySelector("[data-visitor-banner]")).toBeNull();
-    });
-  });
-
   it("offers the canonical link to share", async () => {
     await openFromPath("/player/aB3dE5fX");
     await settle(() =>

@@ -22,7 +22,6 @@ import { modalHeader } from "./components/ui/ModalHeader";
 import { usernameText } from "./components/ui/UsernameText";
 import { verifiedBadge } from "./components/ui/VerifiedBadge";
 import { modalRouter } from "./ModalRouter";
-import { resolveXpAccount } from "./ProgressionAccount";
 import { fetchPublicPlayerProgress } from "./ProgressionApi";
 import { playerProfileUrl } from "./utilities/PlayerProfileUrl";
 import { currentPagePath, translateText } from "./Utils";
@@ -43,9 +42,6 @@ export class PlayerProfileModal extends BaseModal {
   // Level / XP, when progression is on and the player has any.
   @state() private progress: PublicProgress | null = null;
   @state() private loading = false;
-  // Only a signed-out viewer is offered the game itself (the visitor
-  // banner). False until known, so a signed-in player never sees it flash.
-  @state() private viewerSignedOut = false;
   // The link this profile was opened from (`openfront.io/player/<id>`), when
   // it was opened from one: the not-found state shows it.
   @state() private openedLink: string | null = null;
@@ -244,15 +240,13 @@ export class PlayerProfileModal extends BaseModal {
     if (!this.profileLoaded() || publicId === null) {
       return this.renderNotFound();
     }
-    // The card heads the stats; games and wins stay in the stats below it.
-    // A visitor who doesn't play yet is offered the game above it, and the
-    // ways to share the profile follow it.
+    // The card heads the stats; games and wins stay in the stats below it,
+    // and the ways to share the profile follow it.
     //
     // A "Show my profile in search engines" setting will join the account
     // settings' Privacy card once the API carries the flag and the site
     // Worker honours it with noindex; profile links are indexable until then.
     return html`
-      ${this.viewerSignedOut ? this.renderVisitorBanner() : nothing}
       ${this.progress === null
         ? nothing
         : html`<profile-card
@@ -269,31 +263,6 @@ export class PlayerProfileModal extends BaseModal {
       <player-stats-tree-view
         .statsTree=${this.statsTree}
       ></player-stats-tree-view>
-    `;
-  }
-
-  private renderVisitorBanner() {
-    return html`
-      <div
-        class="mb-4 flex flex-wrap items-center gap-4 rounded-xl border border-sky-400/35 bg-gradient-to-r from-sky-700/35 to-sky-700/10 px-4 py-3.5"
-        data-visitor-banner
-      >
-        <div class="min-w-0 flex-[1_1_240px]">
-          <div class="text-[15px] font-bold text-white">
-            ${translateText("player_profile.visitor_title")}
-          </div>
-          <div class="mt-0.5 text-[13px] text-white/65">
-            ${translateText("player_profile.visitor_body")}
-          </div>
-        </div>
-        <o-button
-          class="shrink-0"
-          variant="primary"
-          size="md"
-          translationKey="player_profile.play"
-          @click=${() => this.goHome()}
-        ></o-button>
-      </div>
     `;
   }
 
@@ -399,19 +368,6 @@ export class PlayerProfileModal extends BaseModal {
       ?.open();
   }
 
-  // Signed-out viewers get the visitor banner. The same "signed in" rule as
-  // the XP surfaces (a guest session is not a sign-in); an account whose
-  // details didn't load is treated as signed in, so it isn't pitched to.
-  private async loadViewer(gen: number): Promise<void> {
-    let signedOut: boolean;
-    try {
-      signedOut = (await resolveXpAccount()).kind === "signed_out";
-    } catch {
-      signedOut = false;
-    }
-    if (gen === this.loadGeneration) this.viewerSignedOut = signedOut;
-  }
-
   protected onOpen(args?: Record<string, unknown>): void {
     const publicId =
       typeof args?.publicID === "string" && args.publicID.length > 0
@@ -469,7 +425,6 @@ export class PlayerProfileModal extends BaseModal {
     // can't reject a stale same-player load started before an earlier close.
     const current = () =>
       gen === this.loadGeneration && this.publicId === publicId;
-    void this.loadViewer(gen);
     // The level is a nice-to-have: it lands whenever it arrives and never
     // holds up the profile (its request can take up to its own timeout).
     // Only shown alongside a loaded profile (see renderProfile).

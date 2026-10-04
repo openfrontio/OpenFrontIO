@@ -1683,9 +1683,7 @@
     "share_x": "Share on X",
     "title": "Player Profile",
     "view": "View Profile",
-    "view_leaderboard": "View leaderboard",
-    "visitor_body": "Conquer the map in a free multiplayer strategy game, right in your browser.",
-    "visitor_title": "New to OpenFront?"
+    "view_leaderboard": "View leaderboard"
   },
   "player_stats_table": {
     "arrived": "Arrived",
