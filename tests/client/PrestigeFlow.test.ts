@@ -40,6 +40,12 @@ if (!customElements.get("profile-card")) {
   customElements.define("profile-card", ProfileCard);
 }
 
+type Badge = HTMLElement & {
+  prestige: number;
+  level: number;
+  legend: boolean;
+};
+
 const AT_100: Progress = {
   prestige: 3,
   level: 100,
@@ -143,7 +149,8 @@ describe("<prestige-flow>", () => {
     vi.unstubAllGlobals();
   });
 
-  const q = (sel: string) => document.body.querySelector<HTMLElement>(sel);
+  const q = <T extends HTMLElement = HTMLElement>(sel: string) =>
+    document.body.querySelector<T>(sel);
   async function settle(ms = 0): Promise<void> {
     await vi.advanceTimersByTimeAsync(ms);
     await flow.updateComplete;
@@ -179,6 +186,17 @@ describe("<prestige-flow>", () => {
     // No exclusive cosmetic at rank 4: the config has none for it.
     expect(q("[data-prestige-unlock='cosmetic']")).toBeNull();
     expect(describeCosmetic).not.toHaveBeenCalled();
+  });
+
+  it("holds up the player's badge as it is now, not the new rank's", async () => {
+    flow.open(AT_100);
+    await settle();
+    const hero = q<Badge>("[data-prestige-confirm] .prestige-emblem")!;
+    expect(hero.hasAttribute("data-prestige-current-badge")).toBe(true);
+    expect([hero.prestige, hero.level, hero.legend]).toEqual([3, 100, false]);
+    // The new rank is what the title, the track and the tiles are about.
+    const tile = q<Badge>("[data-prestige-unlock='emblem'] level-badge")!;
+    expect([tile.prestige, tile.level]).toEqual([4, 1]);
   });
 
   it("marks earned, next and locked ranks on the track", async () => {
@@ -340,9 +358,13 @@ describe("<prestige-flow>", () => {
     // page behind.
     expect(ceremony()!.hasAttribute("data-from-confirm")).toBe(true);
     expect(q("[data-prestige-new-badge]")).toBeNull();
+    // The old badge went with the confirmation, under the flash.
+    expect(q("[data-prestige-current-badge]")).toBeNull();
 
     await settle(300);
-    expect(q("[data-prestige-new-badge]")).not.toBeNull();
+    // Out of the flash: the new rank's emblem.
+    const revealed = q<Badge>("[data-prestige-new-badge] level-badge")!;
+    expect([revealed.prestige, revealed.level]).toEqual([4, 1]);
     await settle(2500);
     expect(ceremony()!.getAttribute("data-beat")).toBe("done");
     expect(q("[data-prestige-title]")!.textContent).toContain(
@@ -612,6 +634,9 @@ describe("<prestige-flow>", () => {
       expect(submit).toHaveBeenCalledTimes(1);
       expect(root().dataset.handoff).toBe("charge");
       expect(charge()).toBe(1);
+      // The same badge keeps charging: the player's P3, no swap.
+      const held = q<Badge>("[data-prestige-current-badge]")!;
+      expect(held.prestige).toBe(3);
       // The honeycomb's charge layer joins the idle one, which stays.
       expect(
         q("[data-prestige-overlay] .prestige-charge-comb.hx-charge"),
@@ -627,6 +652,7 @@ describe("<prestige-flow>", () => {
       expect(q("[data-prestige-confirm]")).toBeNull();
       const ceremony = q("[data-prestige-ceremony]")!;
       expect(ceremony.dataset.beat).toBe("shatter");
+      expect(held.isConnected).toBe(false);
       // The same honeycomb carries on into the ceremony, now bursting.
       expect(idle.isConnected).toBe(true);
       expect(idle.classList.contains("hx-burst")).toBe(true);
@@ -671,6 +697,7 @@ describe("<prestige-flow>", () => {
       expect(charge()).toBe(0);
       expect(fill()).toBe("scaleX(0)");
       expect(document.activeElement).toBe(confirmButton());
+      expect(q<Badge>("[data-prestige-current-badge]")!.prestige).toBe(3);
       // Nothing is left scheduled to take over later.
       await settle(HANDOFF_MS * 2);
       expect(q("[data-prestige-ceremony]")).toBeNull();

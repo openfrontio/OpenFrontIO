@@ -31,17 +31,19 @@ import { describeFlareCosmetic, FlareCosmeticView } from "./FlareCosmetic";
 import "./LevelBadge";
 import { formatXp } from "./XpBar";
 
-// Prestiging, start to finish: the confirmation (the new emblem, where it sits
-// on the prestige track, what it unlocks, and that it can't be undone), then a
-// full-screen ceremony: the new emblem shatters into a flash, re-forms, and
-// the new rank slams in. Tapping skips the ceremony to its end.
+// Prestiging, start to finish: the confirmation (the player's badge as it is
+// now, the rank it leads to on the prestige track, what that rank unlocks,
+// and that it can't be undone), then a full-screen ceremony: the old badge
+// shatters into a flash, the new rank's emblem forms out of it, and the new
+// rank slams in. Tapping skips the ceremony to its end.
 //
-// Holding the confirm button charges the emblem (it grows, brightens and
-// glows with the hold, and trembles near the end). A full hold hands straight
-// over to the ceremony with the same emblem: the confirmation fades away, the
-// emblem moves to the middle and keeps charging, its tremble growing into a
-// shake, and the ceremony takes over at the flash, once the server has
-// answered and the charge has run.
+// Holding the confirm button charges the player's badge (it grows, brightens
+// and glows with the hold, and trembles near the end). A full hold hands
+// straight over to the ceremony with that same badge: the confirmation fades
+// away, the badge moves to the middle and keeps charging, its tremble growing
+// into a shake, and the ceremony takes over at the flash, once the server has
+// answered and the charge has run. The old badge goes under the flash, and
+// the new emblem is revealed out of it.
 //
 // Emits `prestiged` (detail: PrestigeResponse) as soon as the server agrees,
 // so the page behind can update while the ceremony plays.
@@ -437,16 +439,25 @@ export class PrestigeFlow extends LitElement {
           ${translateText("prestige.title", { rank })}
         </h2>
 
-        <div class="prestige-float relative mt-10">
+        <!-- The player's badge as it is now: the one the hold charges, and
+             the one that shatters at the flash. -->
+        <div
+          class="prestige-float relative mt-10"
+          style="--hero: ${TIER_COLORS[
+            prestigeTier(clampPrestige(before.prestige))
+          ]}"
+        >
           <div
             aria-hidden="true"
             class="absolute -inset-10 rounded-full"
-            style="background: radial-gradient(circle, color-mix(in srgb, var(--tier) 40%, transparent) 0%, transparent 70%)"
+            style="background: radial-gradient(circle, color-mix(in srgb, var(--hero) 40%, transparent) 0%, transparent 70%)"
           ></div>
           <level-badge
             class="prestige-emblem relative"
-            .level=${1}
-            .prestige=${rank}
+            data-prestige-current-badge
+            .level=${before.level}
+            .prestige=${before.prestige}
+            .legend=${before.legend}
             .size=${170}
           ></level-badge>
         </div>
@@ -1103,7 +1114,9 @@ export class PrestigeFlow extends LitElement {
         /* A block: an inline custom element would ignore the transform. */
         display: block;
         transform: scale(calc(1 + var(--hold, 0) * 0.14));
-        filter: drop-shadow(0 0 calc(22px + var(--hold, 0) * 46px) var(--tier))
+        filter: drop-shadow(
+            0 0 calc(22px + var(--hold, 0) * 46px) var(--hero, var(--tier))
+          )
           brightness(calc(1 + var(--hold, 0) * 0.7));
       }
       /* Nearly there: it trembles. */
