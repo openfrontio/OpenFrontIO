@@ -4,15 +4,17 @@ import {
   clampPrestige,
   levelBand,
   MAX_LEVEL,
-  PrestigeTier,
-  prestigeTier,
+  prestigeAccent,
+  prestigeStyle,
+  PrestigeStyle,
 } from "../Progression";
 import { translateText } from "../Utils";
 
 // A player's level as a small emblem: the number inside a frame whose SHAPE
 // (not just colour, for colour-blind players) changes every ten levels, a
-// prestige emblem around it once they have prestiged (itself a different
-// shape per rank group, see prestigeTier), and its own look for Legend.
+// prestige emblem around it once they have prestiged (a different outline
+// and colour for every rank, see prestigeStyle), and its own look for
+// Legend.
 //
 // Drawn on a 32x32 grid so it scales from the 16px nav badge up to the profile
 // header without separate art.
@@ -48,6 +50,15 @@ function starPoints(
   }
   return out.join(" ");
 }
+
+const pointList = (pts: readonly (readonly [number, number])[]): string =>
+  pts.map(([x, y]) => `${x.toFixed(2)},${y.toFixed(2)}`).join(" ");
+
+// A point `r` from the centre at `deg` degrees (0 = right, -90 = up).
+const polar = (deg: number, r: number): [number, number] => [
+  16 + r * Math.cos((deg * Math.PI) / 180),
+  16 + r * Math.sin((deg * Math.PI) / 180),
+];
 
 const CROWN = "M2 9 L9 15 L16 4 L23 15 L30 9 L27 29 H5 Z";
 
@@ -142,7 +153,7 @@ const BANDS: readonly BandStyle[] = [
 ];
 
 // The light colour of each band's frame (its Tailwind stroke, written out),
-// by levelBand: the profile card's glow behind the badge.
+// by levelBand: the profile card's glow behind an unprestiged badge.
 const BAND_ACCENTS = [
   "#cbd5e1",
   "#6ee7b7",
@@ -157,9 +168,26 @@ const BAND_ACCENTS = [
   "#fef08a",
 ] as const;
 
-/** The badge's accent colour, for a glow or a highlight around it. */
-export function levelBadgeAccent(level: number, legend: boolean): string {
-  return legend ? "#facc15" : BAND_ACCENTS[levelBand(level)];
+const LEGEND_ACCENT = "#facc15";
+const LEGEND_GLOW = "rgba(250,204,21,0.85)";
+
+// Side margin, as a share of the badge's size, for a winged emblem (P5,
+// P10): the wings reach past the badge's box, and must never touch the name
+// beside it.
+export const WINGED_MARGIN = 0.12;
+
+/**
+ * The badge's accent colour, for a glow or a highlight around it: the
+ * prestige rank's own colour once prestiged, the level band's before.
+ */
+export function levelBadgeAccent(
+  level: number,
+  legend: boolean,
+  prestige = 0,
+): string {
+  if (legend) return LEGEND_ACCENT;
+  if (clampPrestige(prestige) > 0) return prestigeAccent(prestige);
+  return BAND_ACCENTS[levelBand(level)];
 }
 
 function displayLevel(level: number): number {
@@ -182,6 +210,146 @@ export function levelBadgeLabel(
   return `${levelText}, ${translateText("progression.prestige", { prestige: p })}`;
 }
 
+// ---------------------------------------------------------------------------
+// Emblem primitives, on the 32x32 grid.
+// ---------------------------------------------------------------------------
+
+function disc(
+  r: number,
+  fill: string,
+  stroke: string,
+  width: number,
+): SVGTemplateResult {
+  return svg`<circle cx="16" cy="16" r=${r} fill=${fill} stroke=${stroke}
+    stroke-width=${width}></circle>`;
+}
+
+function poly(
+  points: string,
+  fill: string,
+  stroke: string,
+  width: number,
+): SVGTemplateResult {
+  return svg`<polygon points=${points} fill=${fill} stroke=${stroke}
+    stroke-width=${width} stroke-linejoin="round"></polygon>`;
+}
+
+// One wing (the left), mirrored for the right. `k` scales it out from the
+// badge's side.
+const WING: readonly (readonly [number, number])[] = [
+  [9, 5],
+  [-4, 1],
+  [0.5, 7],
+  [-5, 8.5],
+  [0, 12.5],
+  [-4.5, 15.5],
+  [0.5, 17.5],
+  [-2, 22],
+  [6, 21.5],
+  [8, 16],
+];
+
+function wings(
+  fill: string,
+  stroke: string,
+  width: number,
+  k: number,
+): SVGTemplateResult {
+  const left = WING.map(
+    ([x, y]) => [8 + (x - 8) * k, 13 + (y - 13) * k] as const,
+  );
+  const right = left.map(([x, y]) => [32 - x, y] as const);
+  return svg`${poly(pointList(left), fill, stroke, width)}${poly(
+    pointList(right),
+    fill,
+    stroke,
+    width,
+  )}`;
+}
+
+// Seven leaves up each side, from the foot of the badge to its shoulders.
+function laurel(fill: string, stroke: string): SVGTemplateResult {
+  const r = 15.3;
+  const leaves: SVGTemplateResult[] = [];
+  for (let i = 0; i < 7; i++) {
+    const deg = 128 + ((252 - 128) * i) / 6;
+    const [cx, cy] = polar(deg, r);
+    const rot = deg + 90 - 28;
+    for (const [x, turn] of [
+      [cx, rot],
+      [32 - cx, -rot],
+    ]) {
+      leaves.push(svg`<ellipse cx=${x.toFixed(2)} cy=${cy.toFixed(2)} rx="3"
+        ry="1.45" transform="rotate(${turn.toFixed(2)} ${x.toFixed(2)} ${cy.toFixed(2)})"
+        fill=${fill} stroke=${stroke} stroke-width="0.8"></ellipse>`);
+    }
+  }
+  return svg`${leaves}`;
+}
+
+// Points rising from behind the badge's rim at the given angles.
+function spikes(
+  angles: readonly number[],
+  lengths: readonly number[],
+  fill: string,
+  stroke: string,
+): SVGTemplateResult {
+  return svg`${angles.map((deg, i) =>
+    poly(
+      pointList([
+        polar(deg - 9, 12.8),
+        polar(deg, lengths[i]),
+        polar(deg + 9, 12.8),
+      ]),
+      fill,
+      stroke,
+      1,
+    ),
+  )}`;
+}
+
+const PRISM = [
+  "#ff4f9a",
+  "#ffa53b",
+  "#ffe45c",
+  "#47e0a0",
+  "#46b4ff",
+  "#a46bff",
+];
+
+// Rays in every colour, for the last rank.
+function prismRays(n: number, outer: number, inner: number): SVGTemplateResult {
+  const half = 180 / n;
+  return svg`${Array.from({ length: n }, (_, i) => {
+    const deg = -90 + (i * 360) / n;
+    return poly(
+      pointList([
+        polar(deg - half, inner),
+        polar(deg, outer),
+        polar(deg + half, inner),
+      ]),
+      PRISM[i % PRISM.length],
+      "#ffffff",
+      0.6,
+    );
+  })}`;
+}
+
+// A five-point star on top of the badge: a milestone rank.
+function topStar(
+  fill: string,
+  stroke: string,
+  cy: number,
+  outer: number,
+  inner: number,
+): SVGTemplateResult {
+  return poly(starPoints(5, outer, inner, -90, cy), fill, stroke, 0.9);
+}
+
+// Gradients need a document-unique id: many badges share a page, and a
+// reference to an id in a hidden badge would draw nothing.
+let gradientCount = 0;
+
 @customElement("level-badge")
 export class LevelBadge extends LitElement {
   @property({ type: Number }) level = 1;
@@ -189,6 +357,8 @@ export class LevelBadge extends LitElement {
   @property({ type: Boolean }) legend = false;
   // Rendered size in CSS pixels (square). 16 is the smallest supported.
   @property({ type: Number }) size = 24;
+
+  private readonly prismId = `level-badge-prism-${++gradientCount}`;
 
   createRenderRoot() {
     return this;
@@ -240,86 +410,99 @@ export class LevelBadge extends LitElement {
 
   // The prestige emblem, drawn BEHIND the (shrunken) level frame so it reads
   // as a mark of rank around the whole badge rather than a sticker on it.
-  // The tier's shape carries the rank group even at 16px; the numeral tab is
-  // added where there is room for it.
-  private renderPrestigeEmblem(tier: PrestigeTier): SVGTemplateResult {
-    switch (tier) {
-      case "ring":
-        return svg`<circle
-          cx="16" cy="16" r="14.6"
-          class="fill-none stroke-amber-500"
-          stroke-width="2.4"
-        ></circle>`;
-      case "double":
-        return svg`
-          <circle cx="16" cy="16" r="15" class="fill-none stroke-slate-200"
-            stroke-width="1.6"></circle>
-          <circle cx="16" cy="16" r="12.4" class="fill-none stroke-slate-300"
-            stroke-width="1.2"></circle>`;
-      case "sunburst":
-        return svg`<polygon
-          points=${starPoints(16, 16, 12.6)}
-          class="fill-yellow-400 stroke-yellow-100"
-          stroke-width="0.8"
-          stroke-linejoin="round"
-        ></polygon>`;
-      case "radiant":
-        // Eight long rays behind a gold burst: a silhouette no other tier
-        // has, so the last rank stands apart even at 16px.
-        return svg`
-          <polygon points=${starPoints(8, 17.5, 8.5, -90)}
-            class="fill-fuchsia-500 stroke-fuchsia-200" stroke-width="0.8"
-            stroke-linejoin="round"></polygon>
-          <polygon points=${starPoints(16, 14.8, 12.4, -78.75)}
-            class="fill-yellow-300 stroke-yellow-100" stroke-width="0.5"
-            stroke-linejoin="round"></polygon>`;
-      case "none":
-        return svg``;
+  // Every rank has its own outline in its own colour, so ranks read apart
+  // even at 16px; the numeral tab is added where there is room for it.
+  private renderPrestigeEmblem(style: PrestigeStyle): SVGTemplateResult {
+    const { base, light, dark } = style;
+    switch (style.outline) {
+      case "plain":
+        return disc(15, base, light, 1.6);
+      case "points":
+        return svg`${poly(starPoints(4, 19, 9.5, -45), base, light, 1.1)}${disc(
+          14,
+          base,
+          light,
+          1.4,
+        )}`;
+      case "laurel":
+        return svg`${laurel(base, light)}${disc(13.6, base, light, 1.4)}`;
+      case "star":
+        return svg`${poly(starPoints(8, 18.2, 13.2), base, light, 1)}${disc(
+          13.4,
+          base,
+          light,
+          1.2,
+        )}`;
+      case "wings":
+        return svg`${wings(base, light, 1.1, 0.9)}${disc(14.4, base, light, 2.2)}${disc(
+          12.5,
+          "none",
+          light,
+          0.9,
+        )}${topStar(light, dark, 2.6, 4.8, 2.1)}`;
+      case "tiara":
+        return svg`${spikes(
+          [-150, -120, -90, -60, -30],
+          [16.8, 18.2, 19.8, 18.2, 16.8],
+          base,
+          light,
+        )}${disc(14, base, light, 1.4)}`;
+      case "compass":
+        return svg`${poly(starPoints(4, 16.8, 6, -45), base, light, 1)}${poly(
+          starPoints(4, 19.8, 6.5, -90),
+          base,
+          light,
+          1.1,
+        )}${disc(13.4, base, light, 1.2)}`;
+      case "sun":
+        return svg`${poly(starPoints(16, 18, 14.2), base, light, 0.8)}${disc(
+          13.8,
+          base,
+          light,
+          1.2,
+        )}`;
+      case "crystal":
+        return svg`${poly(starPoints(6, 19.5, 10.5), base, light, 1.1)}${disc(
+          13.4,
+          base,
+          light,
+          1.2,
+        )}`;
+      case "prismatic":
+        // Rays in every colour behind big wings and a prismatic medal.
+        return svg`<defs>
+            <linearGradient id=${this.prismId} x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0" stop-color="#ff5fa8"></stop>
+              <stop offset="0.5" stop-color="#9d5cff"></stop>
+              <stop offset="1" stop-color="#38bdf8"></stop>
+            </linearGradient>
+          </defs>
+          ${prismRays(12, 19.8, 12.5)}${wings(light, "#ffffff", 1, 1.1)}${disc(
+            14.6,
+            `url(#${this.prismId})`,
+            "#ffffff",
+            2,
+          )}${disc(12.4, "none", "#ffffff", 0.8)}${topStar(
+            "#ffffff",
+            dark,
+            2.2,
+            5.2,
+            2.3,
+          )}`;
     }
   }
 
-  // One to three gems along the top of the emblem: the rank WITHIN its group
-  // (P1/P2/P3 share a ring, P4/P5/P6 a double ring, …), so ranks read apart
-  // at a glance and at sizes too small for the numeral tab. P10 is its own
-  // group and needs none.
-  private renderRankGems(
-    prestige: number,
-    tier: PrestigeTier,
-  ): SVGTemplateResult | typeof nothing {
-    if (tier === "none" || tier === "radiant") return nothing;
-    const count = ((prestige - 1) % 3) + 1;
-    const angles =
-      count === 1 ? [-90] : count === 2 ? [-104, -76] : [-118, -90, -62];
-    const r = tier === "sunburst" ? 15.2 : 14.6;
-    return svg`${angles.map((deg) => {
-      const a = (deg * Math.PI) / 180;
-      const x = (16 + r * Math.cos(a)).toFixed(2);
-      const y = 16 + r * Math.sin(a);
-      const points = [
-        `${x},${(y - 2.9).toFixed(2)}`,
-        `${(Number(x) + 2.3).toFixed(2)},${y.toFixed(2)}`,
-        `${x},${(y + 2.9).toFixed(2)}`,
-        `${(Number(x) - 2.3).toFixed(2)},${y.toFixed(2)}`,
-      ].join(" ");
-      return svg`<polygon
-        data-rank-gem
-        points=${points}
-        class="fill-sky-200 stroke-zinc-900"
-        stroke-width="0.9"
-        stroke-linejoin="round"
-      ></polygon>`;
-    })}`;
-  }
-
   private renderPrestigeTab(
-    prestige: number,
+    style: PrestigeStyle,
   ): SVGTemplateResult | typeof nothing {
-    // Below 24px the numeral is unreadable; the emblem's shape still says
-    // which group and the accessible name carries the exact rank.
+    // Below 24px the numeral is unreadable; the emblem's outline still says
+    // which rank and the accessible name carries it too.
     if (this.size < 24) return nothing;
+    const wide = style.rank >= 10;
     return svg`
-      <rect x=${prestige >= 10 ? 8.5 : 10} y="25" width=${prestige >= 10 ? 15 : 12} height="7.5" rx="2"
-        class="fill-zinc-900 stroke-yellow-300" stroke-width="1"></rect>
+      <rect data-prestige-tab x=${wide ? 8.5 : 10} y="25" width=${wide ? 15 : 12}
+        height="7.5" rx="2" class="fill-zinc-900" stroke=${style.light}
+        stroke-width="1"></rect>
       <text
         x="16" y="29"
         text-anchor="middle"
@@ -327,21 +510,32 @@ export class LevelBadge extends LitElement {
         font-size="6.5"
         font-weight="800"
         font-family="Inter, Arial, sans-serif"
-        class="fill-yellow-200"
-        textLength=${prestige >= 10 ? 12 : nothing}
+        fill=${style.light}
+        textLength=${wide ? 12 : nothing}
         lengthAdjust="spacingAndGlyphs"
-      >${translateText("progression.prestige_short", { prestige })}</text>`;
+      >${translateText("progression.prestige_short", { prestige: style.rank })}</text>`;
   }
 
   // The level frame and number, shrunk inside the prestige emblem when there
-  // is one.
-  private renderFrame(band: BandStyle, prestiged: boolean): SVGTemplateResult {
+  // is one. The frame keeps its level band's SHAPE either way (levels still
+  // progress within a run), but once prestiged it takes the rank's colours.
+  private renderFrame(
+    band: BandStyle,
+    style: PrestigeStyle | null,
+  ): SVGTemplateResult {
     const inner = svg`
-      <g class=${band.colors} stroke-width="2" stroke-linejoin="round">
+      <g
+        data-level-frame
+        class=${style === null ? band.colors : nothing}
+        fill=${style?.frame ?? nothing}
+        stroke=${style?.light ?? nothing}
+        stroke-width="2"
+        stroke-linejoin="round"
+      >
         ${band.shape}
       </g>
       ${this.renderNumber(band)}`;
-    if (!prestiged) return inner;
+    if (style === null) return inner;
     // A little larger at nav size, where the number needs every pixel.
     const scale = this.size < 24 ? 0.78 : 0.72;
     return svg`<g transform="translate(16 ${this.size < 24 ? 16 : 15}) scale(${scale}) translate(-16 -16)">
@@ -349,8 +543,23 @@ export class LevelBadge extends LitElement {
     </g>`;
   }
 
+  // Legend: a black crown with a gold star on a gold sunburst halo, gems on
+  // its points.
   private renderLegend(): SVGTemplateResult {
+    const gems: [number, number, string][] = [
+      [2, 9, "#38bdf8"],
+      [16, 4, "#f43f5e"],
+      [30, 9, "#38bdf8"],
+    ];
     return svg`
+      <polygon
+        data-legend-halo
+        points=${starPoints(20, 18.5, 14.2, -90, 17)}
+        fill="#facc15"
+        stroke="#fef9c3"
+        stroke-width="0.7"
+        stroke-linejoin="round"
+      ></polygon>
       <path
         d=${CROWN}
         class="fill-zinc-950 stroke-yellow-400"
@@ -361,6 +570,10 @@ export class LevelBadge extends LitElement {
         points=${starPoints(5, 7, 3, -90, 20.5)}
         class="fill-yellow-300"
       ></polygon>
+      ${gems.map(
+        ([cx, cy, fill]) => svg`<circle data-legend-gem cx=${cx} cy=${cy}
+          r="2.1" fill=${fill} stroke="#fef9c3" stroke-width="0.8"></circle>`,
+      )}
     `;
   }
 
@@ -368,13 +581,15 @@ export class LevelBadge extends LitElement {
     const band = BANDS[levelBand(this.level)];
     const label = this.label();
     const px = Math.max(16, this.size);
-    const prestige = clampPrestige(this.prestige);
-    const tier = this.legend ? "none" : prestigeTier(prestige);
-    const glow = this.legend
-      ? "drop-shadow-[0_0_3px_rgba(250,204,21,0.6)]"
-      : tier === "radiant"
-        ? "drop-shadow-[0_0_3px_rgba(232,121,249,0.7)]"
-        : "";
+    const style = this.legend ? null : prestigeStyle(this.prestige);
+    const glow = this.legend ? LEGEND_GLOW : (style?.glow ?? null);
+    const margin = style?.winged ? Math.round(px * WINGED_MARGIN) : 0;
+    const inline = [
+      glow !== null ? `filter: drop-shadow(0 0 3px ${glow})` : "",
+      margin > 0 ? `margin-left: ${margin}px; margin-right: ${margin}px` : "",
+    ]
+      .filter((s) => s !== "")
+      .join("; ");
     return html`<svg
       viewBox="0 0 32 32"
       width=${px}
@@ -382,17 +597,18 @@ export class LevelBadge extends LitElement {
       role="img"
       aria-label=${label}
       data-level-band=${this.legend ? "legend" : levelBand(this.level)}
-      data-prestige-tier=${tier}
-      class="block shrink-0 overflow-visible ${glow}"
+      data-prestige-tier=${style?.id ?? "none"}
+      data-winged=${style?.winged ? "true" : nothing}
+      class="block shrink-0 overflow-visible"
+      style=${inline === "" ? nothing : inline}
     >
       <title>${label}</title>
       ${this.legend
         ? this.renderLegend()
         : svg`
-          ${this.renderPrestigeEmblem(tier)}
-          ${this.renderFrame(band, tier !== "none")}
-          ${this.renderRankGems(prestige, tier)}
-          ${tier !== "none" ? this.renderPrestigeTab(prestige) : nothing}
+          ${style !== null ? this.renderPrestigeEmblem(style) : nothing}
+          ${this.renderFrame(band, style)}
+          ${style !== null ? this.renderPrestigeTab(style) : nothing}
         `}
     </svg>`;
   }

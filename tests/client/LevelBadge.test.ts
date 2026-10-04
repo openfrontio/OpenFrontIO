@@ -6,7 +6,11 @@ vi.mock("../../src/client/Utils", () => ({
     params ? `${key}:${JSON.stringify(params)}` : key,
 }));
 
-import { LevelBadge } from "../../src/client/components/LevelBadge";
+import {
+  LevelBadge,
+  levelBadgeAccent,
+  WINGED_MARGIN,
+} from "../../src/client/components/LevelBadge";
 import {
   apportionXp,
   ineligibleReasonKey,
@@ -14,6 +18,8 @@ import {
   levelFraction,
   levelRewardReasonKey,
   multiplierPercent,
+  prestigeAccent,
+  prestigeStyle,
   subscriberTierOf,
   visibleMultipliers,
   visibleXpLines,
@@ -115,39 +121,135 @@ describe("<level-badge>", () => {
       .querySelector("svg")
       ?.getAttribute("data-prestige-tier");
 
-  it("draws a prestige emblem whose shape changes by rank group", async () => {
-    expect(await tierOf({ level: 12, prestige: 0 })).toBe("none");
-    expect(await tierOf({ level: 12, prestige: 1 })).toBe("ring");
-    expect(await tierOf({ level: 12, prestige: 3 })).toBe("ring");
-    expect(await tierOf({ level: 12, prestige: 4 })).toBe("double");
-    expect(await tierOf({ level: 12, prestige: 7 })).toBe("sunburst");
-    expect(await tierOf({ level: 12, prestige: 10 })).toBe("radiant");
+  const RANK_IDS = [
+    "bronze",
+    "silver",
+    "jade",
+    "sapphire",
+    "amethyst",
+    "crimson",
+    "ember",
+    "gold",
+    "diamond",
+    "prismatic",
+  ];
 
-    // Shape, not just colour: every tier's markup differs.
+  it("gives every prestige rank its own style", async () => {
+    expect(await tierOf({ level: 12, prestige: 0 })).toBe("none");
+    for (let p = 1; p <= 10; p++) {
+      expect(await tierOf({ level: 12, prestige: p })).toBe(RANK_IDS[p - 1]);
+    }
+    // Out-of-range ranks clamp to a drawable one.
+    expect(await tierOf({ level: 12, prestige: 14 })).toBe("prismatic");
+
+    // Outline, not just colour: with every colour stripped, each rank's
+    // markup still differs.
     const markup = new Set<string>();
-    for (const prestige of [1, 4, 7, 10]) {
-      const badge = await render({ level: 12, prestige, size: 16 });
+    for (let p = 1; p <= 10; p++) {
+      const badge = await render({ level: 12, prestige: p, size: 16 });
       markup.add(
-        markupWithoutComments(badge.querySelector("svg")!).replace(
-          /class="[^"]*"/g,
-          "",
-        ),
+        markupWithoutComments(badge.querySelector("svg")!)
+          .replace(/(class|fill|stroke|style|id|data-[a-z-]+)="[^"]*"/g, "")
+          .replace(/url\(#[^)]*\)/g, ""),
       );
     }
-    expect(markup.size).toBe(4);
+    expect(markup.size).toBe(10);
   });
 
-  it("tells ranks within a group apart with one to three gems", async () => {
-    const gems = async (prestige: number, size = 16) =>
-      (await render({ level: 12, prestige, size })).querySelectorAll(
-        "[data-rank-gem]",
-      ).length;
-    expect(await gems(0)).toBe(0);
-    expect([await gems(1), await gems(2), await gems(3)]).toEqual([1, 2, 3]);
-    expect([await gems(4), await gems(5), await gems(6)]).toEqual([1, 2, 3]);
-    expect([await gems(7), await gems(8), await gems(9)]).toEqual([1, 2, 3]);
-    // The last rank is its own group, told apart by its silhouette.
-    expect(await gems(10)).toBe(0);
+  it("colours each rank on its own, and its glow on the milestone ranks", async () => {
+    const colours = new Set<string>();
+    for (let p = 1; p <= 10; p++) {
+      const style = prestigeStyle(p)!;
+      expect(style.rank).toBe(p);
+      colours.add(style.base);
+      // Milestone ranks (P5, P10) glow and have wings; no other rank does.
+      expect(style.milestone).toBe(p === 5 || p === 10);
+      expect(style.glow !== null).toBe(p === 5 || p === 10);
+      expect(style.winged).toBe(p === 5 || p === 10);
+      const svg = (await render({ level: 12, prestige: p })).querySelector(
+        "svg",
+      )!;
+      expect((svg.getAttribute("style") ?? "").includes("drop-shadow")).toBe(
+        p === 5 || p === 10,
+      );
+    }
+    expect(colours.size).toBe(10);
+    expect(prestigeStyle(0)).toBeNull();
+    expect(prestigeAccent(0)).toBe("#facc15");
+    expect(prestigeAccent(5)).toBe("#c084fc");
+  });
+
+  it("draws no rank gems: the outline says the rank", async () => {
+    for (const prestige of [0, 1, 2, 3, 4, 7, 10]) {
+      const badge = await render({ level: 12, prestige, size: 16 });
+      expect(badge.querySelectorAll("[data-rank-gem]").length).toBe(0);
+    }
+  });
+
+  it("tints the level frame to the rank only once prestiged", async () => {
+    const frame = async (prestige: number) =>
+      (await render({ level: 42, prestige, size: 40 })).querySelector(
+        "[data-level-frame]",
+      )!;
+    // P0: the level band's own colours.
+    let g = await frame(0);
+    expect(g.getAttribute("class")).toContain("fill-blue-700");
+    expect(g.getAttribute("fill")).toBeNull();
+    // Prestiged: the band's shape in the rank's colours.
+    for (const p of [1, 4, 10]) {
+      g = await frame(p);
+      const style = prestigeStyle(p)!;
+      expect(g.getAttribute("class")).toBeNull();
+      expect(g.getAttribute("fill")).toBe(style.frame);
+      expect(g.getAttribute("stroke")).toBe(style.light);
+      expect(g.querySelector("polygon")?.getAttribute("points")).toBe(
+        "16,1.5 29,9 29,23 16,30.5 3,23 3,9",
+      );
+    }
+    // The number stays white with its dark outline.
+    const text = (await render({ level: 42, prestige: 6 })).querySelector(
+      "text",
+    )!;
+    expect(text.getAttribute("class")).toBe("fill-white");
+    expect(text.getAttribute("stroke")).toBe("rgb(0 0 0 / 0.55)");
+  });
+
+  it("tints the numeral tab to the rank", async () => {
+    const badge = await render({ level: 12, prestige: 6, size: 40 });
+    const tab = badge.querySelector("[data-prestige-tab]")!;
+    expect(tab.getAttribute("stroke")).toBe(prestigeStyle(6)!.light);
+    const label = [...badge.querySelectorAll("text")].find((t) =>
+      t.textContent?.includes("prestige_short"),
+    )!;
+    expect(label.getAttribute("fill")).toBe(prestigeStyle(6)!.light);
+  });
+
+  it("gives winged ranks side margin, so the wings never touch a name", async () => {
+    const svgOf = async (prestige: number, size: number) =>
+      (await render({ level: 12, prestige, size })).querySelector("svg")!;
+    for (const size of [24, 28, 64]) {
+      const margin = `${Math.round(size * WINGED_MARGIN)}px`;
+      for (const p of [5, 10]) {
+        const svg = await svgOf(p, size);
+        expect(svg.getAttribute("data-winged")).toBe("true");
+        expect(svg.style.marginLeft).toBe(margin);
+        expect(svg.style.marginRight).toBe(margin);
+      }
+      for (const p of [0, 1, 4, 6, 9]) {
+        const svg = await svgOf(p, size);
+        expect(svg.getAttribute("data-winged")).toBeNull();
+        expect(svg.style.marginLeft).toBe("");
+      }
+    }
+    expect(WINGED_MARGIN).toBeCloseTo(0.12);
+  });
+
+  it("uses the rank's colour for the badge's accent", () => {
+    expect(levelBadgeAccent(42, false)).toBe("#93c5fd");
+    expect(levelBadgeAccent(42, false, 0)).toBe("#93c5fd");
+    expect(levelBadgeAccent(42, false, 3)).toBe("#34d399");
+    expect(levelBadgeAccent(42, false, 10)).toBe("#f472b6");
+    expect(levelBadgeAccent(100, true, 10)).toBe("#facc15");
   });
 
   it("labels the rank where there is room, and always in the name", async () => {
@@ -164,7 +266,7 @@ describe("<level-badge>", () => {
     ).toEqual(["12"]);
   });
 
-  it("gives Legend its own look", async () => {
+  it("gives Legend its own look: the crown on a gold halo, gems on its points", async () => {
     const badge = await render({
       level: 100,
       prestige: 10,
@@ -176,6 +278,11 @@ describe("<level-badge>", () => {
     expect(svg.getAttribute("data-prestige-tier")).toBe("none");
     expect(svg.getAttribute("aria-label")).toBe("progression.legend");
     expect(svg.querySelector("text")).toBeNull();
+    expect(svg.querySelector("[data-legend-halo]")).not.toBeNull();
+    expect(svg.querySelectorAll("[data-legend-gem]").length).toBe(3);
+    // A stronger glow than any rank's, and no wings to make room for.
+    expect(svg.getAttribute("style")).toContain("rgba(250,204,21,0.85)");
+    expect(svg.getAttribute("data-winged")).toBeNull();
   });
 });
 

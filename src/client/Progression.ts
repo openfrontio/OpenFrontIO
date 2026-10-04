@@ -24,19 +24,191 @@ export function clampPrestige(prestige: number): number {
 }
 
 /**
- * The prestige emblem drawn around a badge. Each tier is a different SHAPE,
- * not just a colour (colour-blind players): a ring, a double ring, a
- * sunburst, and a denser glowing burst for the last rank.
+ * The outline of a prestige emblem, drawn around the level frame. Every rank
+ * has its own, so ranks read apart by SHAPE as well as colour (colour-blind
+ * players): a plain medal, four points, a laurel, an eight-point star, wings,
+ * a tiara, compass rays, a sun, a crystal, and prismatic rays with big wings.
  */
-export type PrestigeTier = "none" | "ring" | "double" | "sunburst" | "radiant";
+export type PrestigeOutline =
+  | "plain"
+  | "points"
+  | "laurel"
+  | "star"
+  | "wings"
+  | "tiara"
+  | "compass"
+  | "sun"
+  | "crystal"
+  | "prismatic";
 
-export function prestigeTier(prestige: number): PrestigeTier {
+/** How one prestige rank is drawn ("Heraldry": a colour and outline each). */
+export interface PrestigeStyle {
+  rank: number;
+  // Stable id, for the badge's data-prestige-tier ("bronze" … "prismatic").
+  id: string;
+  outline: PrestigeOutline;
+  // The emblem's fill, its outline and number tab colour, and its shadow.
+  base: string;
+  light: string;
+  dark: string;
+  // The inner level frame's fill once prestiged: base darkened toward dark.
+  frame: string;
+  // The rank's colour on other surfaces: the ceremony's glow, a card's halo.
+  accent: string;
+  // P5 and P10 are milestone ranks: a star on top, wings, and a glow.
+  milestone: boolean;
+  // CSS colour of the emblem's glow, or null for none.
+  glow: string | null;
+  // Wings reach past the badge's box; where it sits next to text it gets
+  // side margin so they never touch a name.
+  winged: boolean;
+}
+
+const PRESTIGE_STYLES: readonly PrestigeStyle[] = [
+  {
+    rank: 1,
+    id: "bronze",
+    outline: "plain",
+    base: "#a8642f",
+    light: "#f2b77f",
+    dark: "#3d200b",
+    frame: "#7b4720",
+    accent: "#e2924f",
+    milestone: false,
+    glow: null,
+    winged: false,
+  },
+  {
+    rank: 2,
+    id: "silver",
+    outline: "points",
+    base: "#8792a5",
+    light: "#f1f5f9",
+    dark: "#232a35",
+    frame: "#5d6676",
+    accent: "#e2e8f0",
+    milestone: false,
+    glow: null,
+    winged: false,
+  },
+  {
+    rank: 3,
+    id: "jade",
+    outline: "laurel",
+    base: "#0f9d6a",
+    light: "#86efc4",
+    dark: "#053b27",
+    frame: "#0b744e",
+    accent: "#34d399",
+    milestone: false,
+    glow: null,
+    winged: false,
+  },
+  {
+    rank: 4,
+    id: "sapphire",
+    outline: "star",
+    base: "#2457d6",
+    light: "#a8c6ff",
+    dark: "#0a1a4a",
+    frame: "#193d9b",
+    accent: "#60a5fa",
+    milestone: false,
+    glow: null,
+    winged: false,
+  },
+  {
+    rank: 5,
+    id: "amethyst",
+    outline: "wings",
+    base: "#8b3ee0",
+    light: "#e4c6ff",
+    dark: "#2a0b52",
+    frame: "#6229a4",
+    accent: "#c084fc",
+    milestone: true,
+    glow: "rgba(196,140,255,0.85)",
+    winged: true,
+  },
+  {
+    rank: 6,
+    id: "crimson",
+    outline: "tiara",
+    base: "#cc2236",
+    light: "#ffa3ae",
+    dark: "#4a0812",
+    frame: "#951727",
+    accent: "#f43f5e",
+    milestone: false,
+    glow: null,
+    winged: false,
+  },
+  {
+    rank: 7,
+    id: "ember",
+    outline: "compass",
+    base: "#ec6a10",
+    light: "#ffd19e",
+    dark: "#561f02",
+    frame: "#ad4b0a",
+    accent: "#fb923c",
+    milestone: false,
+    glow: null,
+    winged: false,
+  },
+  {
+    rank: 8,
+    id: "gold",
+    outline: "sun",
+    base: "#e3ad06",
+    light: "#fff2a8",
+    dark: "#4f3700",
+    frame: "#a57b03",
+    accent: "#facc15",
+    milestone: false,
+    glow: null,
+    winged: false,
+  },
+  {
+    rank: 9,
+    id: "diamond",
+    outline: "crystal",
+    base: "#3fbfe0",
+    light: "#effdff",
+    dark: "#08414f",
+    frame: "#288aa3",
+    accent: "#67e8f9",
+    milestone: false,
+    glow: null,
+    winged: false,
+  },
+  {
+    rank: 10,
+    id: "prismatic",
+    outline: "prismatic",
+    base: "#ec4899",
+    light: "#ffd1ec",
+    dark: "#3d0a2a",
+    frame: "#a32e6a",
+    accent: "#f472b6",
+    milestone: true,
+    glow: "rgba(244,114,182,0.9)",
+    winged: true,
+  },
+];
+
+/** How a prestige rank is drawn; null at prestige 0 (no emblem). */
+export function prestigeStyle(prestige: number): PrestigeStyle | null {
   const p = clampPrestige(prestige);
-  if (p === 0) return "none";
-  if (p <= 3) return "ring";
-  if (p <= 6) return "double";
-  if (p <= 9) return "sunburst";
-  return "radiant";
+  return p === 0 ? null : PRESTIGE_STYLES[p - 1];
+}
+
+// The colour of an unprestiged badge's moments (and of Legend).
+const UNPRESTIGED_ACCENT = "#facc15";
+
+/** A prestige rank's colour, for glows and highlights around its emblem. */
+export function prestigeAccent(prestige: number): string {
+  return prestigeStyle(prestige)?.accent ?? UNPRESTIGED_ACCENT;
 }
 
 // Levels called out when reached: the end-of-game XP panel gives one reached

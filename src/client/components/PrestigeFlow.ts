@@ -10,12 +10,7 @@ import {
 import { customElement, property, state } from "lit/decorators.js";
 import type { PrestigeResponse, Progress } from "../../core/ApiSchemas";
 import { momentShareText, momentShareUrl } from "../MomentShare";
-import {
-  clampPrestige,
-  MAX_PRESTIGE,
-  PrestigeTier,
-  prestigeTier,
-} from "../Progression";
+import { clampPrestige, MAX_PRESTIGE, prestigeAccent } from "../Progression";
 import { prestigeMe } from "../ProgressionApi";
 import { translateText } from "../Utils";
 import "./CapIcon";
@@ -48,14 +43,6 @@ export const HOLD_MS = 1500;
 
 // Ranks that come with an exclusive cosmetic (the levels plan, §3.4).
 const COSMETIC_RANKS = [1, 5, 10];
-
-const TIER_COLORS: Record<PrestigeTier, string> = {
-  none: "#facc15",
-  ring: "#f59e0b",
-  double: "#e2e8f0",
-  sunburst: "#facc15",
-  radiant: "#d946ef",
-};
 
 // The honeycomb baked into the menu background (resources/images/
 // background.webp, 2500x1382): flat-topped hexes with 147px sides, one of
@@ -333,7 +320,7 @@ export class PrestigeFlow extends LitElement {
       aria-modal="true"
       aria-labelledby="prestige-confirm-title"
       class="prestige-ceremony fixed inset-0 z-[10020] flex flex-col items-center overflow-y-auto px-4 py-8 text-white"
-      style="--tier: ${TIER_COLORS[prestigeTier(rank)]}"
+      style="--tier: ${prestigeAccent(rank)}"
     >
       ${this.renderCeremonyStyles()}
       <div aria-hidden="true" class="prestige-backdrop fixed inset-0"></div>
@@ -641,7 +628,7 @@ export class PrestigeFlow extends LitElement {
   private renderCeremony(before: Progress): TemplateResult {
     const after = this.outcome?.progress;
     const rank = after?.prestige ?? this.nextRank(before);
-    const color = TIER_COLORS[prestigeTier(rank)];
+    const color = prestigeAccent(rank);
     const shattered = this.reached("shatter");
     const revealed = this.reached("reveal");
     const done = this.beat === "done";
