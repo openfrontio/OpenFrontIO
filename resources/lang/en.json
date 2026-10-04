@@ -1316,6 +1316,12 @@
     "win_score_tooltip": "Weighted wins based on clan participation and match difficulty",
     "your_ranking": "Your Ranking"
   },
+  "legend_ceremony": {
+    "continue": "Continue",
+    "label": "You became a Legend",
+    "lifetime_xp": "{xp} lifetime XP",
+    "top_of_track": "The top of the track"
+  },
   "main": {
     "account": "Account",
     "clans": "Clans",
