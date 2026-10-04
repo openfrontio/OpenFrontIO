@@ -4,34 +4,54 @@ import {
   render as litRender,
   nothing,
   PropertyValues,
-  svg,
   TemplateResult,
 } from "lit";
 import { customElement, state } from "lit/decorators.js";
-import type { PrestigeResponse, Progress } from "../../core/ApiSchemas";
+import type {
+  PrestigeResponse,
+  Progress,
+  ProgressionConfig,
+  TrackFlare,
+} from "../../core/ApiSchemas";
 import {
   clampPrestige,
   MAX_PRESTIGE,
   PrestigeTier,
   prestigeTier,
 } from "../Progression";
-import { prestigeMe } from "../ProgressionApi";
+import { fetchProgressionConfig, prestigeMe } from "../ProgressionApi";
 import { translateText } from "../Utils";
 import "./CapIcon";
+import {
+  ensureCeremonyStyles,
+  prefersReducedMotion,
+  renderHoneycomb,
+} from "./Ceremony";
+import { describeFlareCosmetic, FlareCosmeticView } from "./FlareCosmetic";
 import "./LevelBadge";
+import { formatXp } from "./XpBar";
 
-// Prestiging, start to finish: the confirmation (the new emblem, where it sits
-// on the prestige track, what it unlocks, and that it can't be undone), then a
-// full-screen ceremony: the level-100 badge charges up and shatters, the new
-// prestige emblem forms out of the flash, and the new rank slams in with its
-// rewards. Tapping skips the ceremony to its end.
+// Prestiging, start to finish: the confirmation (the player's badge as it is
+// now, the rank it leads to on the prestige track, what that rank unlocks,
+// and that it can't be undone), then a full-screen ceremony: the old badge
+// shatters into a flash, the new rank's emblem forms out of it, and the new
+// rank slams in. Tapping skips the ceremony to its end.
+//
+// Holding the confirm button charges the player's badge (it grows, brightens
+// and glows with the hold, and trembles near the end). A full hold hands
+// straight over to the ceremony with that same badge: the confirmation fades
+// away, the badge moves to the middle and keeps charging, its tremble growing
+// into a shake, and the ceremony takes over at the flash, once the server has
+// answered and the charge has run. The old badge goes under the flash, and
+// the new emblem is revealed out of it.
 //
 // Emits `prestiged` (detail: PrestigeResponse) as soon as the server agrees,
 // so the page behind can update while the ceremony plays.
 
 type Stage = "closed" | "confirm" | "submitting" | "ceremony";
 
-// The ceremony's beats, in ms from its start.
+// The ceremony's beats, in ms from its start. A ceremony that follows the
+// confirmation starts at the shatter: the charge already happened there.
 const BEATS = {
   shatter: 1900,
   reveal: 2100,
@@ -43,9 +63,18 @@ const BEAT_ORDER: Beat[] = ["charge", "shatter", "reveal", "title", "done"];
 
 // How long the confirm button must be held down to prestige.
 export const HOLD_MS = 1500;
-
-// Ranks that come with an exclusive cosmetic (the levels plan, §3.4).
-const COSMETIC_RANKS = [1, 5, 10];
+// From a full hold to the ceremony's flash, while the emblem keeps charging
+// (longer if the server takes longer to answer).
+export const HANDOFF_MS = 2200;
+// The same, under reduced motion: a quick crossfade.
+export const HANDOFF_FADE_MS = 180;
+// Past this much of the hold, the emblem trembles.
+const HOT_AT = 0.75;
+// Where the ceremony's emblem sits: the middle across, this far above the
+// middle (its 260px stage over a 224px block for the title and Continue).
+const CEREMONY_EMBLEM_LIFT = 112;
+// The emblem's move to there.
+const HANDOFF_MOVE_MS = 650;
 
 const TIER_COLORS: Record<PrestigeTier, string> = {
   none: "#facc15",
@@ -55,51 +84,40 @@ const TIER_COLORS: Record<PrestigeTier, string> = {
   radiant: "#d946ef",
 };
 
-// The honeycomb baked into the menu background (resources/images/
-// background.webp, 2500x1382): flat-topped hexes with 147px sides, one of
-// whose rows of horizontal edges runs along y=1260 with an edge centred on
-// x=144. Measured from the image, so traced hexes sit on its own lines when
-// drawn over it at the same scale and position (cover, centred). `d` is each
-// hex's distance from the middle, 0..1, for the waves.
-const HONEYCOMB = (() => {
-  const width = 2500;
-  const height = 1382;
-  const side = 147;
-  const halfHeight = (Math.sqrt(3) * side) / 2;
-  const originX = 144;
-  const originY = 1260 - halfHeight;
-  const hexes: { points: string; d: number }[] = [];
-  const maxDist = Math.hypot(width / 2, height / 2);
-  for (let col = -2; col <= Math.ceil(width / (1.5 * side)) + 1; col++) {
-    const cx = originX + col * 1.5 * side;
-    const shift = col % 2 === 0 ? 0 : halfHeight;
-    for (let row = -2; row <= Math.ceil(height / (2 * halfHeight)) + 2; row++) {
-      const cy = originY - shift - row * 2 * halfHeight;
-      if (cx < -side || cx > width + side) continue;
-      if (cy < -halfHeight * 2 || cy > height + halfHeight * 2) continue;
-      const points = [0, 60, 120, 180, 240, 300]
-        .map((deg) => {
-          const a = (deg * Math.PI) / 180;
-          return `${(cx + side * Math.cos(a)).toFixed(1)},${(cy + side * Math.sin(a)).toFixed(1)}`;
-        })
-        .join(" ");
-      const d = Math.min(
-        1,
-        Math.hypot(cx - width / 2, cy - height / 2) / maxDist,
-      );
-      hexes.push({ points, d: Number(d.toFixed(3)) });
-    }
-  }
-  return { width, height, hexes };
-})();
-
-function prefersReducedMotion(): boolean {
-  try {
-    return window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
-  } catch {
-    return false;
-  }
+/** The Caps every prestige grants, when the config says. */
+export function prestigeCaps(config: ProgressionConfig | null): number | null {
+  const caps = config?.prestige?.caps;
+  return typeof caps === "number" && caps > 0 ? caps : null;
 }
+
+/** The flare staff attached to entering prestige `rank`, if any. */
+export function prestigeFlare(
+  config: ProgressionConfig | null,
+  rank: number,
+): TrackFlare | null {
+  return (
+    config?.flares.find((f) => f.kind === "prestige" && f.prestige === rank) ??
+    null
+  );
+}
+
+// The shake the hold's tremble grows into over the handoff, sharper towards
+// the flash. Individual translate/rotate properties, so it never fights the
+// move to the middle (which animates transform).
+const HANDOFF_SHAKE = (() => {
+  const steps = 44;
+  const frames: string[] = [];
+  for (let i = 0; i <= steps; i++) {
+    const p = i / steps;
+    const a = 1.5 + 7.5 * p * p;
+    const sx = [1, -1, 0.6, -0.8][i % 4];
+    const sy = [-0.6, 0.8, 1, -1][i % 4];
+    frames.push(
+      `${(p * 100).toFixed(2)}% { translate: ${(sx * a).toFixed(2)}px ${(sy * a * 0.7).toFixed(2)}px; rotate: ${(sx * (0.2 + 2.6 * p * p)).toFixed(2)}deg; }`,
+    );
+  }
+  return `@keyframes prestige-handoff-shake { ${frames.join(" ")} }`;
+})();
 
 // The key for a prestige from each rank, kept until that prestige succeeds.
 // Closing and reopening the confirmation must not mint a new one: if an
@@ -123,18 +141,32 @@ export class PrestigeFlow extends LitElement {
   @state() private error: "failed" | "signed_out" | null = null;
   @state() private beat: Beat = "charge";
   // True when the ceremony follows the confirmation, whose backdrop it takes
-  // over as is: fading in again would show the page behind for a moment.
-  private fromConfirm = false;
+  // over as is.
+  @state() private fromConfirm = false;
   // The confirm button's hold, and when it started (null when up). The fill
-  // is written straight to its element each frame (setFill), so a hold
-  // re-renders the overlay only when it starts and ends.
+  // and the emblem's charge (--hold) are written straight to their elements
+  // each frame (setFill), so a hold re-renders the overlay only when it starts
+  // and ends.
   @state() private holding = false;
   private holdStart: number | null = null;
   private holdFrame = 0;
+  // A full hold handing over to the ceremony: "charge" moves and charges the
+  // emblem, "fade" (reduced motion) just crossfades. Null otherwise.
+  @state() private handoff: "charge" | "fade" | null = null;
+  private handoffMove: Animation | null = null;
+  // What the new rank grants, from the progression config: the Caps, and a
+  // rank-exclusive cosmetic when staff put one on the track.
+  @state() private config: ProgressionConfig | null = null;
+  @state() private exclusive: FlareCosmeticView | null = null;
+  private openToken = 0;
 
   // Replaceable for tests and previews.
   submit: (idempotencyKey: string) => ReturnType<typeof prestigeMe> =
     prestigeMe;
+  fetchConfig: () => Promise<ProgressionConfig | false> =
+    fetchProgressionConfig;
+  describeCosmetic: (flare: TrackFlare) => Promise<FlareCosmeticView | null> =
+    describeFlareCosmetic;
 
   private portal: HTMLDivElement | null = null;
   private timers: ReturnType<typeof setTimeout>[] = [];
@@ -146,6 +178,7 @@ export class PrestigeFlow extends LitElement {
 
   connectedCallback() {
     super.connectedCallback();
+    ensureCeremonyStyles();
     this.portal = document.createElement("div");
     document.body.appendChild(this.portal);
     // Capture, so the overlay sees keys before the page behind it does.
@@ -161,6 +194,7 @@ export class PrestigeFlow extends LitElement {
     document.removeEventListener("visibilitychange", this.onFocusLost);
     this.clearTimers();
     this.endHold();
+    this.stopHandoffMove();
     if (this.portal) {
       litRender(html``, this.portal);
       this.portal.remove();
@@ -177,6 +211,10 @@ export class PrestigeFlow extends LitElement {
     this.outcome = null;
     this.error = null;
     this.holding = false;
+    this.handoff = null;
+    this.fromConfirm = false;
+    this.config = null;
+    this.exclusive = null;
     let key = pendingKeys.get(progress.prestige);
     if (key === undefined) {
       key = newIdempotencyKey();
@@ -184,7 +222,32 @@ export class PrestigeFlow extends LitElement {
     }
     this.idempotencyKey = key;
     this.stage = "confirm";
+    void this.loadRewards(this.nextRank(progress), ++this.openToken);
     void this.updateComplete.then(() => this.focusConfirmButton());
+  }
+
+  // The real Caps amount and the rank's exclusive cosmetic, when the config
+  // has them; the tiles fall back to what they said before otherwise.
+  private async loadRewards(rank: number, token: number): Promise<void> {
+    let config: ProgressionConfig | false;
+    try {
+      config = await this.fetchConfig();
+    } catch {
+      config = false;
+    }
+    if (token !== this.openToken || !this.isOpen) return;
+    if (!config) return;
+    this.config = config;
+    const flare = prestigeFlare(config, rank);
+    if (flare === null) return;
+    let view: FlareCosmeticView | null;
+    try {
+      view = await this.describeCosmetic(flare);
+    } catch {
+      view = null;
+    }
+    if (token !== this.openToken || !this.isOpen) return;
+    this.exclusive = view;
   }
 
   protected updated(changed: PropertyValues): void {
@@ -279,7 +342,8 @@ export class PrestigeFlow extends LitElement {
     this.prior = before;
     this.outcome = result;
     this.fromConfirm = false;
-    this.startCeremony();
+    this.handoff = null;
+    this.startCeremony("charge");
   }
 
   get isOpen(): boolean {
@@ -289,6 +353,8 @@ export class PrestigeFlow extends LitElement {
   private close(): void {
     this.clearTimers();
     this.endHold();
+    this.stopHandoffMove();
+    this.handoff = null;
     this.stage = "closed";
   }
 
@@ -297,17 +363,48 @@ export class PrestigeFlow extends LitElement {
     return nothing;
   }
 
+  // One overlay for the whole flow: the backdrop and the honeycomb stay put
+  // (never restarting) while the confirmation hands over to the ceremony on
+  // top of them.
   private renderOverlay(): TemplateResult | typeof nothing {
-    if (this.prior === null) return nothing;
-    switch (this.stage) {
-      case "closed":
-        return nothing;
-      case "confirm":
-      case "submitting":
-        return this.renderConfirm(this.prior);
-      case "ceremony":
-        return this.renderCeremony(this.prior);
-    }
+    const before = this.prior;
+    if (before === null || this.stage === "closed") return nothing;
+    const ceremony = this.stage === "ceremony";
+    const rank = ceremony
+      ? (this.outcome?.progress.prestige ?? this.nextRank(before))
+      : this.nextRank(before);
+    // The charge layer: the honeycomb pulsing in toward the emblem, over the
+    // idle one, while it charges (the handoff, or the ceremony's charge). It
+    // fades out at the shatter.
+    const charging =
+      this.handoff === "charge" || (ceremony && this.beat !== "done");
+    const chargeFading = ceremony && this.beat !== "charge";
+    return html`<div
+      data-prestige-overlay
+      class="prestige-ceremony fixed inset-0 z-[10020] text-white"
+      style="--tier: ${TIER_COLORS[prestigeTier(rank)]}"
+    >
+      ${this.renderStyles()}
+      <div aria-hidden="true" class="ceremony-backdrop absolute inset-0"></div>
+      ${renderHoneycomb(this.honeycombMode(), {
+        className: "prestige-honeycomb",
+      })}
+      ${charging
+        ? renderHoneycomb("hx-charge", {
+            className: `prestige-honeycomb prestige-charge-comb ${chargeFading ? "is-off" : ""}`,
+          })
+        : nothing}
+      <div aria-hidden="true" class="ceremony-vignette absolute inset-0"></div>
+      ${ceremony ? this.renderCeremony(before) : this.renderConfirm(before)}
+    </div>`;
+  }
+
+  private honeycombMode(): string {
+    if (this.stage !== "ceremony") return "hx-idle";
+    if (this.beat === "done") return "hx-idle";
+    // While the emblem charges, only the charge layer shows.
+    if (this.beat === "charge") return "";
+    return "hx-burst";
   }
 
   // ---------------------------------------------------------------------------
@@ -324,20 +421,16 @@ export class PrestigeFlow extends LitElement {
     const holding = this.holding && !submitting;
     return html`<div
       data-prestige-confirm
+      data-handoff=${this.handoff ?? nothing}
+      ?data-holding=${holding}
       tabindex="-1"
       role="dialog"
       aria-modal="true"
       aria-labelledby="prestige-confirm-title"
-      class="prestige-ceremony fixed inset-0 z-[10020] flex flex-col items-center overflow-y-auto px-4 py-8 text-white"
-      style="--tier: ${TIER_COLORS[prestigeTier(rank)]}"
+      class="absolute inset-0 flex flex-col items-center overflow-y-auto px-4 py-8"
     >
-      ${this.renderCeremonyStyles()}
-      <div aria-hidden="true" class="prestige-backdrop fixed inset-0"></div>
-      ${this.renderHoneycomb("hx-idle")}
-      <div aria-hidden="true" class="prestige-vignette fixed inset-0"></div>
-
       <div
-        class="prestige-fade relative my-auto flex w-full max-w-2xl flex-col items-center text-center"
+        class="prestige-fade prestige-body relative my-auto flex w-full max-w-2xl flex-col items-center text-center"
       >
         <h2
           id="prestige-confirm-title"
@@ -346,16 +439,25 @@ export class PrestigeFlow extends LitElement {
           ${translateText("prestige.title", { rank })}
         </h2>
 
-        <div class="prestige-float relative mt-10">
+        <!-- The player's badge as it is now: the one the hold charges, and
+             the one that shatters at the flash. -->
+        <div
+          class="prestige-float relative mt-10"
+          style="--hero: ${TIER_COLORS[
+            prestigeTier(clampPrestige(before.prestige))
+          ]}"
+        >
           <div
             aria-hidden="true"
             class="absolute -inset-10 rounded-full"
-            style="background: radial-gradient(circle, color-mix(in srgb, var(--tier) 40%, transparent) 0%, transparent 70%)"
+            style="background: radial-gradient(circle, color-mix(in srgb, var(--hero) 40%, transparent) 0%, transparent 70%)"
           ></div>
           <level-badge
             class="prestige-emblem relative"
-            .level=${1}
-            .prestige=${rank}
+            data-prestige-current-badge
+            .level=${before.level}
+            .prestige=${before.prestige}
+            .legend=${before.legend}
             .size=${170}
           ></level-badge>
         </div>
@@ -462,9 +564,15 @@ export class PrestigeFlow extends LitElement {
     </ol>`;
   }
 
-  // What the new rank unlocks, as tiles.
+  // What the new rank unlocks, as tiles: its emblem, the Caps every prestige
+  // grants, and the rank's exclusive cosmetic when there is one.
   private renderUnlocks(rank: number): TemplateResult {
-    const tiles: { key: string; icon: TemplateResult; label: string }[] = [
+    const caps = prestigeCaps(this.config);
+    const tiles: {
+      key: string;
+      icon: TemplateResult;
+      label: TemplateResult | string;
+    }[] = [
       {
         key: "emblem",
         icon: html`<level-badge
@@ -477,24 +585,40 @@ export class PrestigeFlow extends LitElement {
       {
         key: "caps",
         icon: html`<cap-icon .size=${48}></cap-icon>`,
-        label: translateText("prestige.gain_caps"),
+        label:
+          caps === null
+            ? translateText("prestige.gain_caps")
+            : html`<span
+                  data-prestige-caps-amount
+                  class="block text-lg font-black tracking-normal text-white"
+                  >${formatXp(caps)}</span
+                ><span class="mt-0.5 block"
+                  >${translateText("prestige.caps")}</span
+                >`,
       },
     ];
-    if (COSMETIC_RANKS.includes(rank)) {
+    const exclusive = this.exclusive;
+    if (exclusive !== null) {
       tiles.push({
         key: "cosmetic",
-        icon: html`<svg
-          viewBox="0 0 24 24"
-          width="40"
-          height="40"
-          aria-hidden="true"
+        icon: html`<div
+          data-prestige-cosmetic-preview
+          class="grid h-12 w-12 place-items-center overflow-hidden rounded-md bg-white/5 p-0.5"
         >
-          <path
-            fill="var(--tier)"
-            d="M12 2l2.4 6.6L21 11l-6.6 2.4L12 20l-2.4-6.6L3 11l6.6-2.4z"
-          />
-        </svg>`,
-        label: translateText("prestige.gain_cosmetic"),
+          ${exclusive.preview}
+        </div>`,
+        label: html`<span
+            data-prestige-cosmetic-name
+            class="block text-[13px] font-black normal-case tracking-normal text-white"
+            >${exclusive.name}</span
+          ><span class="mt-0.5 block"
+            >${exclusive.typeLabel === ""
+              ? translateText("prestige.exclusive_untyped", { rank })
+              : translateText("prestige.exclusive", {
+                  type: exclusive.typeLabel,
+                  rank,
+                })}</span
+          >`,
       });
     }
     return html`<div class="mt-6 w-full">
@@ -523,8 +647,8 @@ export class PrestigeFlow extends LitElement {
     </div>`;
   }
 
-  // Holding the confirm button fills it; letting go early empties it again.
-  // A full hold prestiges.
+  // Holding the confirm button fills it and charges the emblem; letting go
+  // early empties both again. A full hold prestiges.
   private startHold(): void {
     if (this.stage !== "confirm" || this.holdStart !== null) return;
     this.holdStart = performance.now();
@@ -554,12 +678,27 @@ export class PrestigeFlow extends LitElement {
     this.setFill(0);
   }
 
-  // How full the confirm button is, 0..1.
+  // How far through the hold, 0..1: the button's fill, and the emblem's
+  // charge (--hold on the confirmation, which its styles read), trembling
+  // past HOT_AT.
   private setFill(progress: number): void {
     const fill = this.portal?.querySelector<HTMLElement>(
       "[data-prestige-confirm-button] .prestige-hold-fill",
     );
     if (fill) fill.style.transform = `scaleX(${progress})`;
+    const root = this.portal?.querySelector<HTMLElement>(
+      "[data-prestige-confirm]",
+    );
+    if (root) {
+      root.style.setProperty("--hold", String(progress));
+      root.toggleAttribute("data-hot", progress > HOT_AT);
+    }
+  }
+
+  private wait(ms: number): Promise<void> {
+    return new Promise((resolve) => {
+      this.timers.push(setTimeout(resolve, ms));
+    });
   }
 
   private async confirm(): Promise<void> {
@@ -569,8 +708,18 @@ export class PrestigeFlow extends LitElement {
     this.stage = "submitting";
     this.setFill(1);
     const prior = this.prior;
-    const response = await this.submit(this.idempotencyKey);
+    const completed = performance.now();
+    // The request goes out at once; the handoff plays while it's out.
+    const request = this.submit(this.idempotencyKey);
+    const reduced = prefersReducedMotion();
+    this.handoff = reduced ? "fade" : "charge";
+    await this.updateComplete;
+    if (!reduced) this.startHandoffMove();
+    const response = await request;
+    // Closed (or taken off the page) while the request was out.
+    if (this.stage !== "submitting") return;
     if (!response.ok) {
+      this.reverseHandoff();
       if (response.reason === "refused") {
         // The server won't prestige from here: the page is out of date. Drop
         // the key and let the page reload where the player really is.
@@ -598,8 +747,67 @@ export class PrestigeFlow extends LitElement {
         composed: true,
       }),
     );
+    // The flash lands when the charge has run, or when the answer arrived if
+    // that took longer.
+    const left =
+      (reduced ? HANDOFF_FADE_MS : HANDOFF_MS) -
+      (performance.now() - completed);
+    if (left > 0) await this.wait(left);
+    if (this.stage !== "submitting") return;
+    this.stopHandoffMove();
+    this.handoff = null;
     this.fromConfirm = true;
-    this.startCeremony();
+    this.startCeremony(reduced ? "done" : "shatter");
+  }
+
+  // The emblem, from wherever it is (bob and tremble included), to where the
+  // ceremony's sits; its tremble becomes the handoff's growing shake.
+  private startHandoffMove(): void {
+    const float = this.portal?.querySelector<HTMLElement>(
+      "[data-prestige-confirm] .prestige-float",
+    );
+    if (!float || typeof float.animate !== "function") return;
+    const current = getComputedStyle(float).transform;
+    const from = new DOMMatrixReadOnly(
+      current === "none" || current === "" ? undefined : current,
+    );
+    const r = float.getBoundingClientRect();
+    const cx = r.left + r.width / 2 - from.e;
+    const cy = r.top + r.height / 2 - from.f;
+    const tx = window.innerWidth / 2 - cx;
+    const ty = window.innerHeight / 2 - CEREMONY_EMBLEM_LIFT - cy;
+    float.style.animation = `prestige-handoff-shake ${HANDOFF_MS}ms linear forwards`;
+    this.handoffMove = float.animate(
+      [
+        { transform: from.toString() },
+        { transform: `translate(${tx}px, ${ty}px) scale(1.25)` },
+      ],
+      {
+        duration: HANDOFF_MOVE_MS,
+        easing: "cubic-bezier(.45,0,.2,1)",
+        fill: "forwards",
+      },
+    );
+  }
+
+  // The request failed: the emblem goes back where it was and settles into
+  // its hover again, and the confirmation comes back.
+  private reverseHandoff(): void {
+    const move = this.handoffMove;
+    this.handoffMove = null;
+    this.handoff = null;
+    const float = this.portal?.querySelector<HTMLElement>(
+      "[data-prestige-confirm] .prestige-float",
+    );
+    if (float) float.style.animation = "";
+    if (move === null) return;
+    move.onfinish = () => move.cancel();
+    move.reverse();
+  }
+
+  private stopHandoffMove(): void {
+    this.handoffMove?.cancel();
+    this.handoffMove = null;
   }
 
   // ---------------------------------------------------------------------------
@@ -611,16 +819,21 @@ export class PrestigeFlow extends LitElement {
     this.timers = [];
   }
 
-  private startCeremony(): void {
+  // Plays the ceremony from `from` (the charge, the shatter when the
+  // confirmation's handoff already charged the emblem, or straight to the
+  // end under reduced motion).
+  private startCeremony(from: Beat): void {
     this.clearTimers();
     this.stage = "ceremony";
-    if (prefersReducedMotion()) {
+    if (prefersReducedMotion() || from === "done") {
       this.beat = "done";
       return;
     }
-    this.beat = "charge";
+    this.beat = from;
+    const offset = from === "charge" ? 0 : BEATS[from];
     for (const [beat, at] of Object.entries(BEATS) as [Beat, number][]) {
-      this.timers.push(setTimeout(() => (this.beat = beat), at));
+      if (at <= offset) continue;
+      this.timers.push(setTimeout(() => (this.beat = beat), at - offset));
     }
   }
 
@@ -637,7 +850,6 @@ export class PrestigeFlow extends LitElement {
   private renderCeremony(before: Progress): TemplateResult {
     const after = this.outcome?.progress;
     const rank = after?.prestige ?? this.nextRank(before);
-    const color = TIER_COLORS[prestigeTier(rank)];
     const shattered = this.reached("shatter");
     const revealed = this.reached("reveal");
     const done = this.beat === "done";
@@ -652,17 +864,9 @@ export class PrestigeFlow extends LitElement {
       aria-label=${translateText("prestige.ceremony_title", { rank })}
       data-beat=${this.beat}
       ?data-from-confirm=${this.fromConfirm}
-      class="prestige-ceremony fixed inset-0 z-[10030] flex flex-col items-center justify-center overflow-hidden text-white"
-      style="--tier: ${color}"
+      class="absolute inset-0 flex flex-col items-center justify-center overflow-hidden"
       @click=${() => this.skipCeremony()}
     >
-      ${this.renderCeremonyStyles()}
-      <div aria-hidden="true" class="prestige-backdrop absolute inset-0"></div>
-      ${this.renderHoneycomb(
-        !shattered ? "hx-charge" : done ? "hx-idle" : "hx-burst",
-      )}
-      <div aria-hidden="true" class="prestige-vignette absolute inset-0"></div>
-
       <div class="relative grid h-[260px] w-[260px] place-items-center">
         ${!shattered
           ? html`<div aria-hidden="true" class="absolute inset-0">
@@ -685,7 +889,7 @@ export class PrestigeFlow extends LitElement {
           : nothing}
         ${shattered && !done
           ? html`<div aria-hidden="true" class="absolute inset-0">
-              <span class="prestige-shockwave"></span>
+              <span class="ceremony-shockwave"></span>
               ${shards.map(
                 (deg) =>
                   html`<span
@@ -715,7 +919,7 @@ export class PrestigeFlow extends LitElement {
               data-prestige-title
               class="${done
                 ? ""
-                : "prestige-slam"} prestige-title text-5xl font-black uppercase italic tracking-wide sm:text-7xl"
+                : "ceremony-slam"} prestige-title text-5xl font-black uppercase italic tracking-wide sm:text-7xl"
             >
               ${translateText("prestige.ceremony_title", { rank })}
             </div>`
@@ -735,128 +939,24 @@ export class PrestigeFlow extends LitElement {
           : nothing}
       </div>
       ${shattered && !this.reached("title")
-        ? html`<div
-            aria-hidden="true"
-            class="prestige-flash absolute inset-0"
-          ></div>`
+        ? html`<div aria-hidden="true" class="ceremony-flash"></div>`
         : nothing}
     </div>`;
   }
 
-  // The menu's honeycomb, traced in cyan over the background image's own hex
-  // lines (see HONEYCOMB) and lit in waves: in toward the badge while it
-  // charges, out from it when it shatters, then a slow shimmer.
-  private renderHoneycomb(mode: string): TemplateResult {
-    return html`<svg
-      aria-hidden="true"
-      class="prestige-honeycomb absolute inset-0 h-full w-full ${mode}"
-      viewBox="0 0 ${HONEYCOMB.width} ${HONEYCOMB.height}"
-      preserveAspectRatio="xMidYMid slice"
-    >
-      ${HONEYCOMB.hexes.map(
-        (hex) =>
-          svg`<polygon
-            class="hx"
-            points=${hex.points}
-            style="--d: ${hex.d}"
-          ></polygon>`,
-      )}
-    </svg>`;
-  }
-
-  private renderCeremonyStyles(): TemplateResult {
+  private renderStyles(): TemplateResult {
     return html`<style>
-      /* The menu background, as it sits behind every page, but at full
-         strength: the moment has the whole screen to itself. */
-      .prestige-backdrop {
-        background-color: #070d18;
-        background-image: var(--background-image-url);
-        background-size: cover;
-        background-position: center;
-        filter: brightness(0.7);
-        animation: prestige-fade-in 400ms ease-out both;
-      }
-      /* Darker in the middle and at the edges, so the badge and the words
-         read over the map. */
-      .prestige-vignette {
-        background: radial-gradient(
-          ellipse at 50% 45%,
-          rgba(3, 6, 12, 0.55) 0%,
-          rgba(3, 6, 12, 0.15) 45%,
-          rgba(3, 6, 12, 0.75) 100%
-        );
-        animation: prestige-fade-in 400ms ease-out both;
-      }
-      [data-from-confirm] .prestige-backdrop,
-      [data-from-confirm] .prestige-vignette {
-        animation: none;
-      }
       .prestige-honeycomb {
-        filter: drop-shadow(0 0 6px #00c8ff);
+        --hx-color: #00c8ff;
       }
-      .hx {
-        fill: none;
-        stroke: #00c8ff;
-        stroke-width: 9;
-        stroke-linejoin: round;
+      /* The charge layer fades in over the idle honeycomb, and out again at
+         the shatter. */
+      .prestige-charge-comb {
+        animation: ceremony-fade-in 500ms ease-out both;
+        transition: opacity 400ms ease-out;
+      }
+      .prestige-charge-comb.is-off {
         opacity: 0;
-      }
-      /* Inward: the outermost hexes light first, the wave closing on the
-         badge, over and over while it charges. */
-      .hx-charge .hx {
-        animation: hx-pulse 1100ms ease-in-out infinite;
-        animation-delay: calc((1 - var(--d)) * 900ms);
-      }
-      @keyframes hx-pulse {
-        0%,
-        100% {
-          opacity: 0;
-        }
-        35% {
-          opacity: 0.85;
-        }
-      }
-      /* Outward: one burst from the badge to the edges of the screen. */
-      .hx-burst .hx {
-        animation: hx-burst 1500ms ease-out both;
-        animation-delay: calc(var(--d) * 700ms);
-      }
-      @keyframes hx-burst {
-        0% {
-          opacity: 0;
-          stroke: #ffffff;
-        }
-        12% {
-          opacity: 1;
-          stroke: #ffffff;
-        }
-        40% {
-          opacity: 0.9;
-          stroke: #00c8ff;
-        }
-        100% {
-          opacity: 0.12;
-          stroke: #00c8ff;
-        }
-      }
-      /* At rest: a slow shimmer rolling outward. */
-      .hx-idle .hx {
-        animation: hx-idle 4s ease-in-out infinite;
-        animation-delay: calc(var(--d) * 2s);
-      }
-      @keyframes hx-idle {
-        0%,
-        100% {
-          opacity: 0.08;
-        }
-        50% {
-          opacity: 0.45;
-        }
-      }
-      @keyframes prestige-fade-in {
-        from {
-          opacity: 0;
-        }
       }
       /* The level-100 badge gathering power: a growing glow and a shake
          that builds to the shatter. */
@@ -927,41 +1027,6 @@ export class PrestigeFlow extends LitElement {
           transform: rotate(var(--a)) translateX(30px) scale(0.4);
         }
       }
-      .prestige-flash {
-        background: white;
-        animation: prestige-flash 700ms ease-out both;
-        pointer-events: none;
-      }
-      @keyframes prestige-flash {
-        0% {
-          opacity: 0.95;
-        }
-        100% {
-          opacity: 0;
-        }
-      }
-      .prestige-shockwave {
-        position: absolute;
-        top: 50%;
-        left: 50%;
-        width: 200px;
-        height: 200px;
-        margin: -100px 0 0 -100px;
-        border-radius: 9999px;
-        border: 6px solid var(--tier);
-        box-shadow: 0 0 30px var(--tier);
-        animation: prestige-shockwave 800ms ease-out both;
-      }
-      @keyframes prestige-shockwave {
-        from {
-          transform: scale(0.6);
-          opacity: 1;
-        }
-        to {
-          transform: scale(3.2);
-          opacity: 0;
-        }
-      }
       /* The old badge in pieces, flung outward. */
       .prestige-shard {
         position: absolute;
@@ -1006,30 +1071,12 @@ export class PrestigeFlow extends LitElement {
       [data-prestige-new-badge] {
         filter: drop-shadow(0 0 24px var(--tier));
       }
+      /* The titles ("Enter Prestige 5", and the ceremony's "Prestige 5") are
+         white for every rank: the rank's colour is the emblem's, the glow's
+         and the honeycomb's, never the words'. Nothing here reads --tier. */
       .prestige-title {
-        background: linear-gradient(90deg, #fde047, var(--tier), #fde047);
-        -webkit-background-clip: text;
-        background-clip: text;
-        color: transparent;
-        filter: drop-shadow(
-          0 0 18px color-mix(in srgb, var(--tier) 70%, transparent)
-        );
-      }
-      .prestige-slam {
-        animation: prestige-slam 520ms cubic-bezier(0.2, 0.9, 0.3, 1.2) both;
-      }
-      @keyframes prestige-slam {
-        0% {
-          opacity: 0;
-          transform: scale(2.6) skewX(-8deg);
-        }
-        55% {
-          opacity: 1;
-          transform: scale(0.94) skewX(-8deg);
-        }
-        100% {
-          transform: none;
-        }
+        color: #ffffff;
+        filter: drop-shadow(0 0 18px rgba(255, 255, 255, 0.35));
       }
       .prestige-fade {
         animation: prestige-rise 500ms ease-out both;
@@ -1053,8 +1100,73 @@ export class PrestigeFlow extends LitElement {
           transform: translateY(-8px);
         }
       }
+      /* The hold charges the emblem: it grows, brightens and glows with
+         --hold (written by setFill), easing back when let go early. */
+      [data-prestige-confirm] {
+        transition: --hold 250ms ease-out;
+      }
+      [data-prestige-confirm][data-holding] {
+        transition: none;
+      }
       .prestige-emblem {
-        filter: drop-shadow(0 0 22px var(--tier));
+        /* A block: an inline custom element would ignore the transform. */
+        display: block;
+        transform: scale(calc(1 + var(--hold, 0) * 0.14));
+        filter: drop-shadow(
+            0 0 calc(22px + var(--hold, 0) * 46px) var(--hero, var(--tier))
+          )
+          brightness(calc(1 + var(--hold, 0) * 0.7));
+      }
+      /* Nearly there: it trembles. */
+      [data-prestige-confirm][data-hot] .prestige-float {
+        animation: prestige-tremble 90ms linear infinite;
+      }
+      @keyframes prestige-tremble {
+        0% {
+          transform: translate(0, 0);
+        }
+        25% {
+          transform: translate(1.5px, -1px);
+        }
+        50% {
+          transform: translate(-1px, 1.5px);
+        }
+        75% {
+          transform: translate(1px, 1px);
+        }
+      }
+      /* The handoff: the confirmation leaves, the emblem stays and keeps
+         charging (--hold 1 to 1.75) on its way to the middle. */
+      .prestige-body > * {
+        transition:
+          opacity 260ms ease-out,
+          transform 260ms ease-out;
+      }
+      [data-handoff="charge"] .prestige-body > :not(.prestige-float) {
+        opacity: 0;
+        transform: translateY(16px);
+        pointer-events: none;
+      }
+      [data-handoff="charge"] .prestige-body > h2 {
+        transform: translateY(-18px);
+      }
+      [data-prestige-confirm][data-handoff="charge"] {
+        animation: prestige-overcharge ${HANDOFF_MS}ms
+          cubic-bezier(0.5, 0, 0.9, 0.55) forwards;
+      }
+      @keyframes prestige-overcharge {
+        from {
+          --hold: 1;
+        }
+        to {
+          --hold: 1.75;
+        }
+      }
+      ${HANDOFF_SHAKE}
+      /* Reduced motion: a quick crossfade instead. */
+      [data-handoff="fade"] .prestige-body {
+        opacity: 0;
+        transition: opacity ${HANDOFF_FADE_MS}ms ease-out;
       }
       /* The confirm button, filling while it's held. */
       .prestige-hold {
@@ -1070,6 +1182,7 @@ export class PrestigeFlow extends LitElement {
         transform: scaleX(0);
         transform-origin: left;
         background: linear-gradient(90deg, #fff3b0, #ffffff);
+        box-shadow: 6px 0 14px rgba(255, 255, 255, 0.8);
         opacity: 0.6;
         transition: transform 250ms ease-out;
       }
@@ -1116,16 +1229,22 @@ export class PrestigeFlow extends LitElement {
         background: linear-gradient(180deg, #13223c, #0a1322);
       }
       @media (prefers-reduced-motion: reduce) {
-        .hx-charge .hx,
-        .hx-burst .hx,
-        .hx-idle .hx,
         .prestige-charge,
         .prestige-particle,
         .prestige-reveal,
-        .prestige-slam,
         .prestige-fade,
-        .prestige-float {
+        .prestige-float,
+        .prestige-charge-comb,
+        [data-prestige-confirm][data-hot] .prestige-float {
           animation: none;
+        }
+        /* The glow still follows the hold; the emblem doesn't move. */
+        .prestige-emblem {
+          transform: none;
+        }
+        /* The ceremony's end state fades in where the confirmation was. */
+        [data-prestige-ceremony][data-from-confirm] > * {
+          animation: ceremony-fade-in 220ms ease-out both;
         }
       }
     </style>`;

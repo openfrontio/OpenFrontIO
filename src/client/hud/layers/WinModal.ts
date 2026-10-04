@@ -8,6 +8,7 @@ import {
   translateText,
   TUTORIAL_VIDEO_URL,
 } from "../../../client/Utils";
+import type { GameXpEligible } from "../../../core/ApiSchemas";
 import { Pattern } from "../../../core/CosmeticSchemas";
 import { EventBus } from "../../../core/EventBus";
 import { RankedType } from "../../../core/game/Game";
@@ -17,6 +18,12 @@ import "../../components/CosmeticCard";
 import { cosmeticSelectionLabel } from "../../components/CosmeticPresentation";
 import "../../components/GameXpPanel";
 import type { GameXpPanelState } from "../../components/GameXpPanel";
+import "../../components/LegendCeremony";
+import {
+  type LegendCeremony,
+  legendCeremonySeen,
+  markLegendCeremonySeen,
+} from "../../components/LegendCeremony";
 import "../../components/PurchaseButton";
 import "../../components/SteamWishlist";
 import { Controller } from "../../Controller";
@@ -61,6 +68,8 @@ export class WinModal extends LitElement implements Controller {
   // Polling starts once, at the end of the game.
   private xpPolling = false;
   private xpAbort: AbortController | null = null;
+  // Whose XP the section shows: the Legend ceremony plays once per account.
+  private xpPublicId: string | null = null;
 
   private _title: string;
 
@@ -89,6 +98,7 @@ export class WinModal extends LitElement implements Controller {
           <game-xp-panel
             .view=${this.xpView}
             .onScreen=${this.isVisible}
+            @xp-legend=${this.onXpLegend}
           ></game-xp-panel>
           ${this.innerHtml()}
         </div>
@@ -120,8 +130,29 @@ export class WinModal extends LitElement implements Controller {
         </div>
         ${this.renderActionStyles()}
       </div>
+      <legend-ceremony
+        @legend-ceremony-closed=${this.onLegendCeremonyClosed}
+      ></legend-ceremony>
     `;
   }
+
+  // The server's result for this game made the player a Legend: the moment
+  // gets the whole screen, the first time on this account. The XP section
+  // rests on its final state behind it, so Continue comes back to the
+  // settled popup.
+  private onXpLegend = (e: CustomEvent<GameXpEligible>): void => {
+    const publicId = this.xpPublicId;
+    if (publicId === null || legendCeremonySeen(publicId)) return;
+    const ceremony = this.querySelector<LegendCeremony>("legend-ceremony");
+    if (ceremony === null) return;
+    e.preventDefault();
+    markLegendCeremonySeen(publicId);
+    ceremony.show({ lifetimeXp: e.detail.after.lifetimeXp, at: new Date() });
+  };
+
+  private onLegendCeremonyClosed = (): void => {
+    this.querySelector<HTMLElement>('[data-win-action="keep"]')?.focus();
+  };
 
   // The modal's own buttons, textured like the store's tiles and buy buttons:
   // a tinted gradient with a coloured border, and on hover they lift, glow
@@ -455,6 +486,7 @@ export class WinModal extends LitElement implements Controller {
       // /users/@me carries progress whenever progression is on (level 1
       // before a first scored game); absent means off: no section at all.
       if (account.me.player.progress === undefined) return;
+      this.xpPublicId = account.me.player.publicId ?? null;
       // The game may have ended while this was resolving; the end-of-game
       // call owns the section from then on.
       if (this.xpPolling) return;
