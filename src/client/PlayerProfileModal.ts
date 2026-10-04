@@ -28,6 +28,9 @@ import { currentPagePath, translateText } from "./Utils";
 
 export { playerProfileUrl };
 
+// Every opening of a profile, numbered: keys the once-per-opening flourishes.
+let profileOpenings = 0;
+
 /** Where a profile was opened from, i.e. where its Back button leads. */
 export type ProfileOrigin = "clan" | "leaderboard" | "account";
 
@@ -273,8 +276,12 @@ export class PlayerProfileModal extends BaseModal {
     // The tab is hidden without progress; should it still be selected (a new
     // player opened on top), show the Stats content rather than nothing.
     if (this.progress === null) return this.renderProfile();
+    // Keyed like the card's flourish: the tab pops in once per opening, not
+    // again on a tab switch.
     return html`<profile-progression
       .progress=${this.progress}
+      .publicId=${this.publicId}
+      .popKey=${`profile-${this.openCount}`}
     ></profile-progression>`;
   }
 
@@ -405,7 +412,8 @@ export class PlayerProfileModal extends BaseModal {
     // return-from-stats path above skips this and keeps the origin intact.
     this.openedFrom = null;
     // A new opening: the profile card plays its flourish again.
-    this.openCount++;
+    // Counted across every profile modal, so no two openings share a key.
+    this.openCount = ++profileOpenings;
     this.publicId = publicId;
     this.username = null;
     this.statsTree = null;
