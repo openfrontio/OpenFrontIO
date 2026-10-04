@@ -1772,11 +1772,6 @@ export class AiAttackBehavior {
       return false;
     }
 
-    // Don't donate if the game has a winner
-    if (this.game.getWinner() !== null) {
-      return false;
-    }
-
     // Skip donating based on difficulty
     const { difficulty } = this.game.config().gameConfig();
     switch (difficulty) {

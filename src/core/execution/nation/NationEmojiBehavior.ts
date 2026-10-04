@@ -49,6 +49,9 @@ export const EMOJI_OVERWHELMED = (
   ["💀", "🆘", "😱", "🥺", "😭", "😞", "🫡", "👋"] as const
 ).map(emojiId);
 export const EMOJI_CONGRATULATE = (["👏"] as const).map(emojiId);
+export const EMOJI_VICTORY = (["👑", "🥇", "😎", "💪", "😀"] as const).map(
+  emojiId,
+);
 export const EMOJI_SCARED_OF_THREAT = (["🙏", "🥺"] as const).map(emojiId);
 export const EMOJI_BORED = (["🥱"] as const).map(emojiId);
 export const EMOJI_HANDSHAKE = (["🤝"] as const).map(emojiId);
@@ -146,21 +149,26 @@ export class NationEmojiBehavior {
     }
   }
 
-  // Check if game is over - send congratulations
+  // Check if game is over - celebrate our win or congratulate the winner
   private congratulateWinner(): void {
     const winner = this.game.getWinner();
     if (winner === null) return;
 
     this.gameOver = true;
 
+    if (winner === this.player || winner === this.player.team()) {
+      // Half of the winning nations celebrate
+      if (this.random.chance(2)) {
+        this.sendEmoji(AllPlayers, EMOJI_VICTORY);
+      }
+      return;
+    }
+
     const isTeamGame =
       this.game.config().gameConfig().gameMode === GameMode.Team;
 
     if (isTeamGame) {
       // Team game: all nations congratulate if another team won
-      // Don't congratulate if it's our own team
-      if (winner === this.player.team()) return;
-
       this.sendEmoji(AllPlayers, EMOJI_CONGRATULATE);
     } else {
       // FFA game: The largest nation congratulates if a human player won
@@ -204,21 +212,26 @@ export class NationEmojiBehavior {
   }
 
   private annoyTraitors(): void {
-    if (!this.random.chance(40)) return;
+    if (!this.random.chance(3)) return;
 
-    const traitors = this.game
-      .players()
-      .filter(
-        (p) =>
-          p.type() === PlayerType.Human &&
-          !p.isFriendly(this.player) &&
-          p.isTraitor(),
-      );
+    for (const traitor of this.game.players()) {
+      if (traitor.type() !== PlayerType.Human || !traitor.isTraitor()) continue;
+      // Only one nation mocks each traitor, otherwise every nation on the map piles on
+      if (this.traitorMocker(traitor) !== this.player) continue;
+      this.sendEmoji(traitor, EMOJI_CLOWN);
+    }
+  }
 
-    if (traitors.length === 0) return;
-
-    const traitor = this.random.randElement(traitors);
-    this.sendEmoji(traitor, EMOJI_CLOWN);
+  // The most hostile nation (usually the betrayed one), first in player order on ties
+  private traitorMocker(traitor: Player): Player | null {
+    let mocker: Player | null = null;
+    for (const p of this.game.players()) {
+      if (p.type() !== PlayerType.Nation || p.isFriendly(traitor)) continue;
+      if (mocker === null || p.relation(traitor) < mocker.relation(traitor)) {
+        mocker = p;
+      }
+    }
+    return mocker;
   }
 
   private findRat(): void {
