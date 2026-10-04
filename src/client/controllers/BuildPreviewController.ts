@@ -37,15 +37,6 @@ import {
 import { UIState } from "../UIState";
 import { GameView } from "../view";
 
-/** True for nuke types (AtomBomb, HydrogenBomb) and DefensePost: ghost is preserved after placement so user can place multiple or keep selection (Enter/key confirm). */
-export function shouldPreserveGhostAfterBuild(unitType: UnitType): boolean {
-  return (
-    unitType === UnitType.AtomBomb ||
-    unitType === UnitType.HydrogenBomb ||
-    unitType === UnitType.DefensePost
-  );
-}
-
 // tSamIntercept value used to flag an untargetable (impassable) destination:
 // draws the red X marker essentially at the destination while leaving the
 // visible line unchanged (1.0 would mean "no marker").
@@ -570,7 +561,9 @@ export class BuildPreviewController implements Controller {
           isNuke ? this.uiState.upgradeMultiplier || 1 : undefined,
         ),
       );
-      if (!shouldPreserveGhostAfterBuild(unitType)) {
+      // Ghost stays selected for repeated placement (Escape clears it) when
+      // the player turned that on for this type in settings.
+      if (!this.userSettings.keepBuildSelected(unitType)) {
         this.removeGhostStructure();
       }
     } else {

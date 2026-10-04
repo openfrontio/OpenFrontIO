@@ -2,42 +2,49 @@ import { describe, expect, test, vi } from "vitest";
 import {
   BuildPreviewController,
   samThreatensNukePreview,
-  shouldPreserveGhostAfterBuild,
 } from "../../../src/client/controllers/BuildPreviewController";
 import { MouseUpEvent } from "../../../src/client/InputHandler";
 import { BuildUnitIntentEvent } from "../../../src/client/Transport";
 import { EventBus } from "../../../src/core/EventBus";
 import { UnitType } from "../../../src/core/game/Game";
 
-describe("BuildPreviewController ghost preservation (locked nuke / Enter confirm)", () => {
-  describe("shouldPreserveGhostAfterBuild", () => {
-    test("returns true for AtomBomb so ghost is not cleared after placement", () => {
-      expect(shouldPreserveGhostAfterBuild(UnitType.AtomBomb)).toBe(true);
-    });
+describe("BuildPreviewController keep-selected setting", () => {
+  // Places a defense post on the map with the setting on or off, and returns
+  // what uiState.ghostStructure was left at.
+  function placeDefensePost(keepSelected: boolean) {
+    const game = {
+      isValidCoord: () => true,
+      ref: (x: number, y: number) => y * 10 + x,
+      myPlayer: () => null,
+    };
+    const uiState = { ghostStructure: UnitType.DefensePost as UnitType | null };
+    const keepBuildSelected = vi.fn(() => keepSelected);
+    const controller = new BuildPreviewController(
+      game as any,
+      new EventBus(),
+      uiState as any,
+      { screenToWorldCoordinates: () => ({ x: 3, y: 4 }) } as any,
+      { updateGhostPreview: () => {}, updateNukeTrajectory: () => {} } as any,
+      { nukeAllianceSafetyDuration: () => 0, keepBuildSelected } as any,
+    );
+    (controller as any).ghostUnit = {
+      buildableUnit: {
+        type: UnitType.DefensePost,
+        canBuild: 1,
+        canUpgrade: false,
+      },
+    };
+    (controller as any).requestConfirmStructure(new MouseUpEvent(0, 0));
+    expect(keepBuildSelected).toHaveBeenCalledWith(UnitType.DefensePost);
+    return uiState.ghostStructure;
+  }
 
-    test("returns true for HydrogenBomb so ghost is not cleared after placement", () => {
-      expect(shouldPreserveGhostAfterBuild(UnitType.HydrogenBomb)).toBe(true);
-    });
+  test("keeps the ghost selected after placing when the setting is on", () => {
+    expect(placeDefensePost(true)).toBe(UnitType.DefensePost);
+  });
 
-    test("returns true for DefensePost so several can be placed in a row", () => {
-      expect(shouldPreserveGhostAfterBuild(UnitType.DefensePost)).toBe(true);
-    });
-
-    test("returns false for City so ghost is cleared after placement", () => {
-      expect(shouldPreserveGhostAfterBuild(UnitType.City)).toBe(false);
-    });
-
-    test("returns false for Factory so ghost is cleared after placement", () => {
-      expect(shouldPreserveGhostAfterBuild(UnitType.Factory)).toBe(false);
-    });
-
-    test("returns false for other buildable types (Port, MissileSilo, SAMLauncher, Warship, MIRV)", () => {
-      expect(shouldPreserveGhostAfterBuild(UnitType.Port)).toBe(false);
-      expect(shouldPreserveGhostAfterBuild(UnitType.MissileSilo)).toBe(false);
-      expect(shouldPreserveGhostAfterBuild(UnitType.SAMLauncher)).toBe(false);
-      expect(shouldPreserveGhostAfterBuild(UnitType.Warship)).toBe(false);
-      expect(shouldPreserveGhostAfterBuild(UnitType.MIRV)).toBe(false);
-    });
+  test("clears the ghost after placing when the setting is off", () => {
+    expect(placeDefensePost(false)).toBeNull();
   });
 });
 
@@ -98,7 +105,10 @@ describe("BuildPreviewController confirm with the pointer off the map", () => {
     const transformHandler = {
       screenToWorldCoordinates: () => ({ x: worldX, y: worldY }),
     };
-    const userSettings = { nukeAllianceSafetyDuration: () => 0 };
+    const userSettings = {
+      nukeAllianceSafetyDuration: () => 0,
+      keepBuildSelected: () => false,
+    };
     const eventBus = new EventBus();
     const emitted: unknown[] = [];
     vi.spyOn(eventBus, "emit").mockImplementation((e) => {

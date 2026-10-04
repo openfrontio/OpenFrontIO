@@ -15,6 +15,33 @@ import {
 import { isDesktopShell } from "../../client/DesktopShell";
 import { Cosmetics } from "../CosmeticSchemas";
 import { PlayerPattern } from "../Schemas";
+import { UnitType } from "./Game";
+
+/**
+ * Buildables that can stay selected after one is placed, until Escape.
+ * `name` doubles as the storage key suffix and the unit_type.* translation
+ * key. Nukes default on: they always stayed selected before this was a setting.
+ */
+export const KEEP_BUILD_SELECTED_UNITS: readonly {
+  type: UnitType;
+  name: string;
+  defaultOn: boolean;
+}[] = [
+  { type: UnitType.City, name: "city", defaultOn: false },
+  { type: UnitType.Factory, name: "factory", defaultOn: false },
+  { type: UnitType.Port, name: "port", defaultOn: false },
+  { type: UnitType.DefensePost, name: "defense_post", defaultOn: false },
+  { type: UnitType.MissileSilo, name: "missile_silo", defaultOn: false },
+  { type: UnitType.SAMLauncher, name: "sam_launcher", defaultOn: false },
+  { type: UnitType.Warship, name: "warship", defaultOn: false },
+  { type: UnitType.AtomBomb, name: "atom_bomb", defaultOn: true },
+  { type: UnitType.HydrogenBomb, name: "hydrogen_bomb", defaultOn: true },
+  { type: UnitType.MIRV, name: "mirv", defaultOn: false },
+];
+
+function keepBuildSelectedKey(name: string): string {
+  return `settings.keepBuildSelected.${name}`;
+}
 
 export function getDefaultKeybinds(isMac: boolean): Record<string, string> {
   return {
@@ -510,6 +537,21 @@ export class UserSettings {
 
   toggleGoToPlayer() {
     this.setBool("settings.goToPlayer", !this.goToPlayer());
+  }
+
+  keepBuildSelected(type: UnitType): boolean {
+    const unit = KEEP_BUILD_SELECTED_UNITS.find((u) => u.type === type);
+    if (unit === undefined) return false;
+    return this.getBool(keepBuildSelectedKey(unit.name), unit.defaultOn);
+  }
+
+  toggleKeepBuildSelected(type: UnitType) {
+    const unit = KEEP_BUILD_SELECTED_UNITS.find((u) => u.type === type);
+    if (unit === undefined) return;
+    this.setBool(
+      keepBuildSelectedKey(unit.name),
+      !this.keepBuildSelected(type),
+    );
   }
 
   nukeAllianceSafetyDuration(): number {
