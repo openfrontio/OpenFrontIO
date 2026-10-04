@@ -12,7 +12,7 @@ import { Pattern } from "../../../core/CosmeticSchemas";
 import { EventBus } from "../../../core/EventBus";
 import { RankedType } from "../../../core/game/Game";
 import { GameUpdateType } from "../../../core/game/GameUpdates";
-import { getUserMe } from "../../Api";
+import { getUserMe, invalidateUserMe } from "../../Api";
 import "../../components/CosmeticCard";
 import { cosmeticSelectionLabel } from "../../components/CosmeticPresentation";
 import "../../components/GameXpPanel";
@@ -517,6 +517,11 @@ export class WinModal extends LitElement implements Controller {
       // (or, worse, a zero).
       this.xpView =
         result === null ? { kind: "hidden" } : { kind: "result", data: result };
+      // A game that unlocked cosmetics changed what the player owns: the
+      // Locker (and everything else reading /users/@me) refetches.
+      if (result?.eligible && (result.flares ?? []).length > 0) {
+        invalidateUserMe();
+      }
     } catch (err) {
       console.warn("WinModal: XP section failed", err);
       this.xpView = { kind: "hidden" };

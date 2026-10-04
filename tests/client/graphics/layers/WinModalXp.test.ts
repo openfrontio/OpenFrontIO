@@ -1,10 +1,12 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-const { getUserMe, fetchProgressionConfig, isLoggedIn } = vi.hoisted(() => ({
-  getUserMe: vi.fn(),
-  fetchProgressionConfig: vi.fn(),
-  isLoggedIn: vi.fn(),
-}));
+const { getUserMe, invalidateUserMe, fetchProgressionConfig, isLoggedIn } =
+  vi.hoisted(() => ({
+    getUserMe: vi.fn(),
+    invalidateUserMe: vi.fn(),
+    fetchProgressionConfig: vi.fn(),
+    isLoggedIn: vi.fn(),
+  }));
 
 vi.mock("../../../../src/client/Utils", () => ({
   translateText: (key: string, params?: Record<string, string | number>) =>
@@ -15,7 +17,7 @@ vi.mock("../../../../src/client/Utils", () => ({
   TUTORIAL_VIDEO_URL: "https://example.com/tutorial",
 }));
 
-vi.mock("../../../../src/client/Api", () => ({ getUserMe }));
+vi.mock("../../../../src/client/Api", () => ({ getUserMe, invalidateUserMe }));
 
 vi.mock("../../../../src/client/Auth", () => ({
   getAuthHeader: vi.fn(async () => "Bearer test-token"),
@@ -881,6 +883,36 @@ describe("WinModal XP section", () => {
     await finishReveal();
     expect(xpState()).toBe("hidden");
     expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("refreshes /users/@me after a game that unlocked cosmetics", async () => {
+    stubXpEndpoint([() => json(eligible())]);
+    await mount(makeGame({ ended: true }));
+    expect(xpState()).toBe("result");
+    expect(invalidateUserMe).not.toHaveBeenCalled();
+
+    modal.remove();
+    stubXpEndpoint([
+      () =>
+        json(
+          eligible({
+            flares: [
+              {
+                kind: "level",
+                prestige: 0,
+                level: 5,
+                flareId: "9",
+                flareName: "flag:obey_flag",
+                cosmetic: { type: "flag", name: "obey_flag", url: null },
+              },
+            ],
+          }),
+        ),
+    ]);
+    await mount(makeGame({ ended: true }));
+    expect(xpState()).toBe("result");
+    // So the Locker sees what the game unlocked.
+    expect(invalidateUserMe).toHaveBeenCalledTimes(1);
   });
 
   it("waits for the game to end when the player dies mid-game", async () => {
