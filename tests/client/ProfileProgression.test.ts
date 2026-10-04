@@ -5,6 +5,18 @@ vi.mock("../../src/client/Utils", () => ({
     params ? `${key}:${JSON.stringify(params)}` : key,
 }));
 
+vi.mock("../../src/client/Api", () => ({
+  claimReward: vi.fn(),
+  getUserMe: vi.fn(async () => false),
+  invalidateUserMe: vi.fn(),
+}));
+vi.mock("../../src/client/InGameModal", () => ({
+  showInGameAlert: vi.fn(async () => {}),
+}));
+vi.mock("../../src/client/ProgressionApi", () => ({
+  fetchProgressionConfig: vi.fn(async () => false),
+}));
+
 import {
   formatProgressDate,
   milestoneRuns,
@@ -187,13 +199,20 @@ describe("milestoneRuns", () => {
 });
 
 describe("<profile-progression>", () => {
+  // Without a reward config: the history and milestones alone.
   async function render(p: PublicProgress): Promise<ProfileProgression> {
     const el = document.createElement(
       "profile-progression",
     ) as ProfileProgression;
+    el.loadConfig = async () => false;
+    el.loadUserMe = async () => false;
     el.progress = p;
     document.body.appendChild(el);
-    await el.updateComplete;
+    await vi.waitFor(async () => {
+      await el.updateComplete;
+      expect(el.querySelector("[data-milestones]")).not.toBeNull();
+    });
+    expect(el.querySelector("reward-track")).toBeNull();
     return el;
   }
 

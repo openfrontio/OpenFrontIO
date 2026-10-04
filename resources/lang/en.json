@@ -1960,6 +1960,33 @@
     "unavailable_unreachable": "The game could not be downloaded. Check your connection and try again.",
     "watch_classic": "Watch the old replay instead"
   },
+  "reward_track": {
+    "after_level_100": "After level 100",
+    "caps_amount": "{amount} Caps",
+    "claim_caps": "+{amount} Caps",
+    "claim_count": "{count, plural, one {# level reward to claim} other {# level rewards to claim}}",
+    "claim_plutonium": "+{amount} Plutonium",
+    "earlier": "Earlier levels",
+    "key_claimed": "Claimed",
+    "key_locked": "Locked",
+    "key_ready": "Ready to claim",
+    "later": "Later levels",
+    "legend_reward": "Legend reward",
+    "legend_sub": "The top of the track",
+    "levels_label": "Levels and their rewards",
+    "plus": "+{amount}",
+    "prestige_reward": "Prestige {rank} reward",
+    "strip_end_legend": "100 → Legend",
+    "strip_end_prestige": "100 → P{rank}",
+    "strip_label": "Levels 1 to 100. Choose a level to show it on the track.",
+    "strip_level": "Level {level}",
+    "strip_start": "Lv 1",
+    "strip_value": "Showing levels {lo} to {hi}",
+    "strip_you": "You · {level}",
+    "title": "Reward track · Prestige {prestige}",
+    "title_first_run": "Reward track · First run",
+    "you": "You"
+  },
   "rewards_modal": {
     "title": "Rewards"
   },
