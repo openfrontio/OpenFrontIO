@@ -47,6 +47,8 @@ export class PlayerProfileModal extends BaseModal {
   private restoreGamesScrollAfterOpen = false;
   // Bumped on every profile load so a superseded in-flight response is dropped.
   private loadGeneration = 0;
+  // Counts fresh openings, to key the profile card's once-per-open flourish.
+  private openCount = 0;
 
   protected modalConfig() {
     return {
@@ -226,6 +228,7 @@ export class PlayerProfileModal extends BaseModal {
             .username=${this.username ?? this.publicId ?? ""}
             .clanTag=${this.clans[0]?.tag ?? null}
             .progress=${this.progress}
+            .openKey=${`profile-${this.openCount}`}
           ></profile-card>`}
       <player-stats-tree-view
         .statsTree=${this.statsTree}
@@ -287,6 +290,8 @@ export class PlayerProfileModal extends BaseModal {
     // helpers re-set it right after open() so back() routes home; the
     // return-from-stats path above skips this and keeps the origin intact.
     this.openedFrom = null;
+    // A new opening: the profile card plays its flourish again.
+    this.openCount++;
     this.publicId = publicId;
     this.username = null;
     this.statsTree = null;
