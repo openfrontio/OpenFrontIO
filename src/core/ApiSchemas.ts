@@ -102,6 +102,11 @@ export const RewardSchema = z.object({
   amount: z.string(),
   reason: z.string(),
   note: z.string().nullable(),
+  // On a level reward (`level_up` / `level_milestone`): the level it was
+  // paid for, and the prestige run it was reached in. Absent on every other
+  // reward, and on an API that predates them.
+  level: z.number().optional(),
+  prestige: z.number().optional(),
 });
 export type Reward = z.infer<typeof RewardSchema>;
 
