@@ -1100,6 +1100,8 @@ export class PrestigeFlow extends LitElement {
         transition: none;
       }
       .prestige-emblem {
+        /* A block: an inline custom element would ignore the transform. */
+        display: block;
         transform: scale(calc(1 + var(--hold, 0) * 0.14));
         filter: drop-shadow(0 0 calc(22px + var(--hold, 0) * 46px) var(--tier))
           brightness(calc(1 + var(--hold, 0) * 0.7));
