@@ -317,3 +317,154 @@ describe("<profile-share> as a menu, for a moment", () => {
     });
   });
 });
+
+describe("<profile-share> ring", () => {
+  let el: ProfileShare;
+  // The device, as matchMedia reports it.
+  let media: { fine: boolean; reduced: boolean };
+  // What animate() hands back: the ring's latest animation.
+  let anim: { playState: AnimationPlayState; currentTime: number | null };
+  let animate: ReturnType<typeof vi.fn>;
+
+  async function render(layout: "row" | "menu"): Promise<void> {
+    el = document.createElement("profile-share") as ProfileShare;
+    el.layout = layout;
+    el.label = "Share Level 50";
+    el.url = URL_;
+    el.triggerClass = "win-action win-action-quiet w-full";
+    document.body.appendChild(el);
+    await el.updateComplete;
+  }
+
+  const trigger = () =>
+    el.querySelector<HTMLButtonElement>('[data-share="menu"]')!;
+  const rings = () => [...el.querySelectorAll("[data-share-ring]")];
+  const hover = (target: Element, pointerType = "mouse") =>
+    target.dispatchEvent(new PointerEvent("pointerenter", { pointerType }));
+
+  beforeEach(() => {
+    platform.isTouch = false;
+    media = { fine: true, reduced: false };
+    vi.stubGlobal("matchMedia", (query: string) => ({
+      media: query,
+      matches: query.includes("prefers-reduced-motion")
+        ? media.reduced
+        : query.includes("pointer: fine")
+          ? media.fine
+          : false,
+    }));
+    anim = { playState: "running", currentTime: 0 };
+    animate = vi.fn(() => anim);
+    Object.defineProperty(HTMLElement.prototype, "animate", {
+      value: animate,
+      configurable: true,
+      writable: true,
+    });
+  });
+
+  afterEach(() => {
+    el?.remove();
+    vi.unstubAllGlobals();
+    Reflect.deleteProperty(HTMLElement.prototype, "animate");
+  });
+
+  it("renders its own ring beside the menu's trigger, not on it", async () => {
+    await render("menu");
+    const [ring] = rings();
+    expect(rings()).toHaveLength(1);
+    expect(ring.getAttribute("aria-hidden")).toBe("true");
+    // In the trigger's wrapper (the trigger clips its own content), sized
+    // to it: 4px outside, 2px thick.
+    expect(ring.parentElement).toBe(trigger().parentElement);
+    expect(trigger().contains(ring)).toBe(false);
+    expect(ring.className).toMatch(/\babsolute\b/);
+    expect(ring.className).toMatch(/-inset-1/);
+    expect(ring.className).toMatch(/border-2/);
+    expect(ring.className).toMatch(/opacity-0/);
+  });
+
+  it("renders one ring inside each of the row's buttons", async () => {
+    await render("row");
+    const buttons = [...el.querySelectorAll("button[data-share]")];
+    expect(buttons).toHaveLength(3);
+    for (const b of buttons) {
+      expect(b.querySelectorAll(":scope > [data-share-ring]")).toHaveLength(1);
+    }
+  });
+
+  it("flashes once when a mouse moves onto the trigger", async () => {
+    await render("menu");
+    hover(trigger());
+    expect(animate).toHaveBeenCalledTimes(1);
+    expect(animate.mock.contexts[0]).toBe(rings()[0]);
+    expect(animate).toHaveBeenCalledWith(
+      [
+        { offset: 0, opacity: 0.95, transform: "scale(1)", easing: "linear" },
+        {
+          offset: 0.2,
+          opacity: 0.95,
+          transform: "scale(1)",
+          easing: "ease-out",
+        },
+        { offset: 1, opacity: 0, transform: "scale(1.04)" },
+      ],
+      { duration: 400 },
+    );
+  });
+
+  it("ignores a new hover while the ring is still playing", async () => {
+    await render("menu");
+    hover(trigger());
+    anim.currentTime = 250;
+    hover(trigger());
+    expect(animate).toHaveBeenCalledTimes(1);
+    // Done: the next hover plays it again.
+    anim.playState = "finished";
+    anim.currentTime = 400;
+    hover(trigger());
+    expect(animate).toHaveBeenCalledTimes(2);
+  });
+
+  it("flashes each row button's own ring", async () => {
+    await render("row");
+    const x = el.querySelector('[data-share="x"]')!;
+    hover(x);
+    expect(animate).toHaveBeenCalledTimes(1);
+    expect(animate.mock.contexts[0]).toBe(x.querySelector("[data-share-ring]"));
+  });
+
+  it("flashes on keyboard focus (focus-visible), not on other focus", async () => {
+    await render("menu");
+    const visible = vi.spyOn(trigger(), "matches");
+    visible.mockReturnValue(false);
+    trigger().focus();
+    expect(animate).not.toHaveBeenCalled();
+    trigger().blur();
+    visible.mockImplementation((sel: string) => sel === ":focus-visible");
+    trigger().focus();
+    expect(animate).toHaveBeenCalledTimes(1);
+  });
+
+  it("leaves touch and pen hovers alone", async () => {
+    await render("menu");
+    hover(trigger(), "touch");
+    hover(trigger(), "pen");
+    expect(animate).not.toHaveBeenCalled();
+  });
+
+  it("has no ring under reduced motion", async () => {
+    media.reduced = true;
+    await render("menu");
+    expect(rings()).toHaveLength(0);
+    hover(trigger());
+    expect(animate).not.toHaveBeenCalled();
+  });
+
+  it("has no ring with a coarse pointer", async () => {
+    media.fine = false;
+    await render("row");
+    expect(rings()).toHaveLength(0);
+    hover(el.querySelector('[data-share="copy"]')!);
+    expect(animate).not.toHaveBeenCalled();
+  });
+});

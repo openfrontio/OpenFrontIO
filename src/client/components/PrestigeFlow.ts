@@ -750,12 +750,13 @@ export class PrestigeFlow extends LitElement {
 
   // Sharing the new rank, between the title and Continue. The ceremony
   // skips (or, done, does nothing) on any click; the row keeps its clicks.
+  // It is simply there, without the rise the Continue button has.
   private renderShare(rank: number): TemplateResult | typeof nothing {
     if (this.publicId === "") return nothing;
     const moment = { kind: "prestige", rank } as const;
     return html`<div
       data-prestige-share
-      class="prestige-fade mt-6"
+      class="mt-6"
       @click=${(e: Event) => e.stopPropagation()}
     >
       <profile-share

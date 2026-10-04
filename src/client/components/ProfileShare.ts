@@ -35,12 +35,57 @@ export function useNativeShare(): boolean {
 }
 
 const BUTTON_BASE =
-  "inline-flex min-h-[38px] items-center gap-2 rounded-[10px] border px-3.5 text-[13px] font-semibold text-white transition-colors focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-white/30";
+  "relative inline-flex min-h-[38px] items-center gap-2 rounded-[10px] border px-3.5 text-[13px] font-semibold text-white transition-colors focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-white/30";
 // On a panel, the buttons are a light tint of it.
 const BUTTON = `${BUTTON_BASE} border-white/15 bg-white/5 hover:bg-white/10`;
 // Over a busy backdrop (the prestige ceremony's honeycomb), they need a
 // backing of their own to read.
 const BUTTON_SOLID = `${BUTTON_BASE} border-white/20 bg-zinc-900/85 shadow-lg backdrop-blur-sm hover:bg-zinc-800/95`;
+
+// The share ring: a quick yellow flash around a share button when a mouse
+// moves onto it or the keyboard focuses it. At full strength at once, held,
+// then out while it grows a little. Once per hover: a new hover while one is
+// still playing is ignored. Only where there is a real hover (a mouse or a
+// trackpad), never on touch, and not at all under reduced motion.
+//
+// The ring is an element of its own, never a pseudo-element on the button:
+// the menu's trigger takes its classes from the host, and WinModal's
+// .win-action::after is already its hover light streak.
+const RING_HOLD_MS = 80;
+const RING_FADE_MS = 320;
+const RING_MS = RING_HOLD_MS + RING_FADE_MS;
+const RING_OPACITY = 0.95;
+const RING_KEYFRAMES: Keyframe[] = [
+  { offset: 0, opacity: RING_OPACITY, transform: "scale(1)", easing: "linear" },
+  {
+    offset: RING_HOLD_MS / RING_MS,
+    opacity: RING_OPACITY,
+    transform: "scale(1)",
+    easing: "ease-out",
+  },
+  { offset: 1, opacity: 0, transform: "scale(1.04)" },
+];
+// 4px outside the button, 2px thick. Its radius is the button's plus 4: set
+// when it plays, since the menu's trigger can be any shape. 14px fits the
+// row's 10px buttons.
+const RING =
+  "pointer-events-none absolute -inset-1 rounded-[14px] border-2 border-solid border-[rgba(250,204,21,0.95)] opacity-0 shadow-[0_0_12px_rgba(250,204,21,0.45)]";
+
+/** Whether this device shows the share ring: a fine hover pointer, motion on. */
+export function shareRingEnabled(): boolean {
+  if (typeof window === "undefined" || typeof window.matchMedia !== "function")
+    return false;
+  return (
+    window.matchMedia("(hover: hover) and (pointer: fine)").matches &&
+    !window.matchMedia("(prefers-reduced-motion: reduce)").matches
+  );
+}
+
+const ringTemplate = html`<span
+  data-share-ring
+  class=${RING}
+  aria-hidden="true"
+></span>`;
 
 const MENU_ITEM =
   "flex min-h-10 w-full items-center gap-2.5 rounded-lg border-0 bg-transparent px-3 text-left text-sm font-semibold text-white transition-colors hover:bg-white/10 focus-visible:bg-white/10 focus-visible:outline-hidden";
@@ -145,6 +190,8 @@ export class ProfileShare extends LitElement {
   // a live region.
   @state() private announcement = "";
   @state() private menuOpen = false;
+  // The animation each ring last played, to leave it alone while it plays.
+  private rings = new WeakMap<Element, Animation>();
 
   createRenderRoot() {
     return this;
@@ -215,6 +262,55 @@ export class ProfileShare extends LitElement {
         void this.copy(discordShareText(this.url, this.shareText()));
         return;
     }
+  }
+
+  // ---------------------------------------------------------------------------
+  // Ring
+  // ---------------------------------------------------------------------------
+
+  // In the row the ring is inside its button. The menu's trigger clips its
+  // own content (.win-action is overflow: hidden), so there the ring is
+  // beside it, in the wrapper, which is exactly the trigger's size.
+  private ringOf(button: HTMLElement): HTMLElement | null {
+    return (
+      button.querySelector<HTMLElement>("[data-share-ring]") ??
+      button.parentElement?.querySelector<HTMLElement>(
+        ":scope > [data-share-ring]",
+      ) ??
+      null
+    );
+  }
+
+  private playRing(button: HTMLElement): void {
+    const ring = this.ringOf(button);
+    if (ring === null || typeof ring.animate !== "function") return;
+    if (!shareRingEnabled()) return;
+    // Still playing: leave it. (Read from currentTime rather than playState
+    // alone, so a paused, scrubbed timeline counts too.)
+    const last = this.rings.get(ring);
+    if (last !== undefined && last.playState !== "finished") {
+      const t = last.currentTime === null ? RING_MS : Number(last.currentTime);
+      if (t < RING_MS) return;
+    }
+    const radius = parseFloat(getComputedStyle(button).borderTopLeftRadius);
+    if (Number.isFinite(radius)) ring.style.borderRadius = `${radius + 4}px`;
+    this.rings.set(ring, ring.animate(RING_KEYFRAMES, { duration: RING_MS }));
+  }
+
+  private onRingPointer(e: PointerEvent): void {
+    if (e.pointerType === "mouse")
+      this.playRing(e.currentTarget as HTMLElement);
+  }
+
+  private onRingFocus(e: FocusEvent): void {
+    const button = e.currentTarget as HTMLElement;
+    let visible = false;
+    try {
+      visible = button.matches(":focus-visible");
+    } catch {
+      // No :focus-visible support: no ring on focus.
+    }
+    if (visible) this.playRing(button);
   }
 
   // ---------------------------------------------------------------------------
@@ -311,11 +407,14 @@ export class ProfileShare extends LitElement {
         aria-haspopup=${native ? nothing : "menu"}
         aria-expanded=${native ? nothing : String(this.menuOpen)}
         @click=${() => this.onTrigger()}
+        @pointerenter=${(e: PointerEvent) => this.onRingPointer(e)}
+        @focus=${(e: FocusEvent) => this.onRingFocus(e)}
       >
         <span class="relative inline-flex items-center gap-2"
           >${shareIcon}<span>${this.label}</span></span
         >
       </button>
+      ${shareRingEnabled() ? ringTemplate : nothing}
       ${this.menuOpen
         ? html`<div
             data-share-menu
@@ -359,8 +458,10 @@ export class ProfileShare extends LitElement {
       class=${this.solid ? BUTTON_SOLID : BUTTON}
       data-share=${action}
       @click=${onClick}
+      @pointerenter=${(e: PointerEvent) => this.onRingPointer(e)}
+      @focus=${(e: FocusEvent) => this.onRingFocus(e)}
     >
-      ${icon}<span>${label}</span>
+      ${icon}<span>${label}</span>${shareRingEnabled() ? ringTemplate : nothing}
     </button>`;
   }
 

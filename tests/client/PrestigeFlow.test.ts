@@ -492,6 +492,8 @@ describe("<prestige-flow>", () => {
     expect(row).not.toBeNull();
     expect(row.previousElementSibling).toBe(q("[data-prestige-title]"));
     expect(row.nextElementSibling).toBe(q("[data-prestige-continue]"));
+    // Simply there: no rise-in (Continue keeps its own).
+    expect(row.classList.contains("prestige-fade")).toBe(false);
     const share = row.querySelector("profile-share") as HTMLElement & {
       url: string;
       text: string;
