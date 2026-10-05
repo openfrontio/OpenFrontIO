@@ -11,7 +11,7 @@ import {
   isNukeExplosionEffect,
   Skin,
 } from "../core/CosmeticSchemas";
-import { PlayerPattern } from "../core/Schemas";
+import { PlayerPattern } from "../core/WireSchemas";
 import { getUserMe } from "./Api";
 import { userAuth } from "./Auth";
 import "./components/baseComponents/Button";

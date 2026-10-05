@@ -24,8 +24,6 @@ import {
   ClientID,
   GameConfig,
   GameID,
-  GameStartInfo,
-  GameStartInfoSchema,
   Intent,
   StampedIntent,
   TeamCountConfig,
@@ -54,6 +52,8 @@ import {
   ServerRedirectMessage,
   ServerStartGameMessage,
   ServerTurnMessage,
+  WireGameStartInfo,
+  WireGameStartInfoSchema,
 } from "../core/WireSchemas";
 import { createGameWireContext, encodeServerMessage } from "../core/ZbinWire";
 import { archive, finalizeGameRecord } from "./Archive";
@@ -220,11 +220,11 @@ export class GameServer {
   private lastPingUpdate = 0;
 
   // Note: This can be undefined if accessed before the game starts.
-  private gameStartInfo!: GameStartInfo;
+  private gameStartInfo!: WireGameStartInfo;
   // Wire-only copy of gameStartInfo sent to clients. Identical to
   // gameStartInfo unless disableClanTags is set, in which case clan tags
   // are stripped from players. Archive uses the original gameStartInfo.
-  private wireGameStartInfo!: GameStartInfo;
+  private wireGameStartInfo!: WireGameStartInfo;
 
   // clientID dictionary for the binary wire, seeded from gameStartInfo.players
   // at start (clients seed theirs from the same array in the start message).
@@ -1099,7 +1099,7 @@ export class GameServer {
     delete config.allowedPublicIds;
     delete config.nameRevealPublicIds;
 
-    const result = GameStartInfoSchema.safeParse({
+    const result = WireGameStartInfoSchema.safeParse({
       gameID: this.id,
       lobbyCreatedAt: this.createdAt,
       visibleAt: this.visibleAt,
@@ -1120,7 +1120,7 @@ export class GameServer {
       this.log.error("Error parsing game start info", { message: error });
       return;
     }
-    this.gameStartInfo = result.data satisfies GameStartInfo;
+    this.gameStartInfo = result.data satisfies WireGameStartInfo;
     this.telemetry.emit(
       "match_started",
       {

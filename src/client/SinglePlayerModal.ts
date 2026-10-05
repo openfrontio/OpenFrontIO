@@ -13,8 +13,9 @@ import {
   maps,
   UnitType,
 } from "../core/game/GameTypes";
-import { PlayerCosmetics, TeamCountConfig } from "../core/Schemas";
+import { TeamCountConfig } from "../core/Schemas";
 import { generateID } from "../core/SharedUtil";
+import { PlayerCosmetics } from "../core/WireSchemas";
 import { responseHasLinkedIdentity } from "./AccountIdentity";
 import "./components/baseComponents/Button";
 import "./components/baseComponents/Modal";

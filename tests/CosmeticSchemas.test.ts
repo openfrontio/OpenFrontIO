@@ -15,8 +15,11 @@ import {
   SubscriptionSchema,
   TrailEffectAttributesSchema,
 } from "../src/core/CosmeticSchemas";
-import { PlayerCosmeticsSchema, PlayerEffectSchema } from "../src/core/Schemas";
-import { PlayerCosmeticRefsSchema } from "../src/core/WireSchemas";
+import {
+  PlayerCosmeticRefsSchema,
+  PlayerCosmeticsSchema,
+  PlayerEffectSchema,
+} from "../src/core/WireSchemas";
 
 describe("Effect cosmetic schemas", () => {
   const base = {

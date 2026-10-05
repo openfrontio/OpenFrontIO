@@ -23,7 +23,8 @@ import { GameLike, UnitPredicate } from "../../core/game/ReadViews";
 import { TerrainMapData } from "../../core/game/TerrainMapLoader";
 import { TerraNulliusImpl } from "../../core/game/TerraNulliusImpl";
 import { UnitGrid } from "../../core/game/UnitGrid";
-import { ClientID, GameID, Player, PlayerCosmetics } from "../../core/Schemas";
+import { ClientID, GameID } from "../../core/Schemas";
+import { PlayerCosmetics, WirePlayer } from "../../core/WireSchemas";
 import { computeAllianceClusters } from "../render/frame/derive/AllianceClusters";
 import { extractAttackRings } from "../render/frame/derive/AttackRings";
 import { extractNukeTelegraphs } from "../render/frame/derive/NukeTelegraphs";
@@ -149,7 +150,7 @@ export class GameView implements GameLike {
     private _myUsername: string,
     private _myClanTag: string | null,
     private _gameID: GameID,
-    humans: Player[],
+    humans: WirePlayer[],
   ) {
     this._map = this._mapData.gameMap;
     this.lastUpdate = null;

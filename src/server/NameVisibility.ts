@@ -1,8 +1,8 @@
 import { anonWordName } from "../core/AnonNames";
 import { GameMode } from "../core/game/GameTypes";
-import { ClientID, GameConfig, GameStartInfo } from "../core/Schemas";
+import { ClientID, GameConfig } from "../core/Schemas";
 import { simpleHash } from "../core/Util";
-import { GameInfo } from "../core/WireSchemas";
+import { GameInfo, WireGameStartInfo } from "../core/WireSchemas";
 import { Client } from "./Client";
 
 // Who may see whose real identity, and what each viewer is shown instead.
@@ -149,9 +149,9 @@ export class NameVisibility {
   startInfoFor(
     viewer: ClientID,
     isAdmin: boolean,
-    real: GameStartInfo,
-    wire: GameStartInfo,
-  ): GameStartInfo {
+    real: WireGameStartInfo,
+    wire: WireGameStartInfo,
+  ): WireGameStartInfo {
     const config = this.view.config();
     const revealClanTags = isAdmin && config.gameMode === GameMode.FFA;
     if (!config.anonymizeNames) {

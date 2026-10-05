@@ -6,7 +6,7 @@
 
 import { type Colord, colord } from "colord";
 import type { Team } from "../../core/game/GameTypes";
-import type { PlayerCosmetics } from "../../core/Schemas";
+import type { PlayerCosmetics } from "../../core/WireSchemas";
 import type { Theme } from "../theme/ThemeProvider";
 
 /**

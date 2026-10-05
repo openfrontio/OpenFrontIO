@@ -26,7 +26,6 @@ type Pkg =
 
 // src/core files that do not end up in the engine.
 const FUTURE: Record<string, Pkg> = {
-  "src/core/CosmeticRefs.ts": "engine-api",
   "src/core/Schemas.ts": "engine-api",
   "src/core/StatsSchemas.ts": "engine-api",
   "src/core/game/GameMap.ts": "engine-api",
@@ -41,7 +40,6 @@ const FUTURE: Record<string, Pkg> = {
   "src/core/DetMath.ts": "engine-lib",
   "src/core/EventBus.ts": "engine-lib",
   "src/core/Format.ts": "engine-lib",
-  "src/core/PatternDecoder.ts": "engine-lib",
   "src/core/PseudoRandom.ts": "engine-lib",
   "src/core/Util.ts": "engine-lib",
   "src/core/configuration/Config.ts": "engine-lib",
@@ -68,6 +66,7 @@ const FUTURE: Record<string, Pkg> = {
   "src/core/CloseCodes.ts": "shared",
   "src/core/ClusterConfig.ts": "shared",
   "src/core/CosmeticSchemas.ts": "shared",
+  "src/core/PatternDecoder.ts": "shared",
   "src/core/ServerList.ts": "shared",
   "src/core/SharedUtil.ts": "shared",
   "src/core/WireSchemas.ts": "shared",
@@ -94,7 +93,7 @@ const ALLOWED: Record<Pkg, Pkg[]> = {
 const ENGINE_SIDE = new Set<Pkg>(["engine", "engine-lib", "engine-api"]);
 
 // npm dependencies the deterministic packages may use.
-const ENGINE_NPM = new Set(["zod", "zod/v4", "jose"]);
+const ENGINE_NPM = new Set(["zod", "zod/v4"]);
 
 /**
  * Known violations, as "<from> -> <to>" where <from> is a file or a package

@@ -2,12 +2,6 @@ import quickChatData from "resources/QuickChat.json";
 import { z } from "zod";
 import { zb } from "../../zbin";
 import {
-  ColorPaletteSchema,
-  CosmeticNameSchema,
-  EffectTypeSchema,
-  PatternDataSchema,
-} from "./CosmeticRefs";
-import {
   AllPlayers,
   Difficulty,
   Duos,
@@ -95,13 +89,7 @@ export type GameConfig = z.infer<typeof GameConfigSchema>;
 
 export type AllPlayersStats = z.infer<typeof AllPlayersStatsSchema>;
 export type Player = z.infer<typeof PlayerSchema>;
-export type PlayerCosmetics = z.infer<typeof PlayerCosmeticsSchema>;
 
-export type PlayerPattern = z.infer<typeof PlayerPatternSchema>;
-export type PlayerColor = z.infer<typeof PlayerColorSchema>;
-export type PlayerSkin = z.infer<typeof PlayerSkinSchema>;
-export type PlayerCrown = z.infer<typeof PlayerCrownSchema>;
-export type PlayerEffect = z.infer<typeof PlayerEffectSchema>;
 export type GameStartInfo = z.infer<typeof GameStartInfoSchema>;
 
 // Deliberately looser than MAX_USERNAME_LENGTH, which caps what the form will
@@ -604,56 +592,10 @@ export const TurnSchema = z.object({
   hash: zb.float().nullable().optional(),
 });
 
-export const FlagSchema = z.string();
-
-export const PlayerPatternSchema = z.object({
-  name: CosmeticNameSchema,
-  patternData: PatternDataSchema,
-  colorPalette: ColorPaletteSchema.optional(),
-});
-
-export const PlayerColorSchema = z.object({
-  color: z.string(),
-});
-
-export const PlayerSkinSchema = z.object({
-  name: CosmeticNameSchema,
-  url: z.string(),
-});
-
-export const PlayerCrownSchema = z.object({
-  name: CosmeticNameSchema,
-  url: z.string(),
-});
-
-// A resolved effect is just an identity: which effect, of which type. Its
-// attributes (the visual style) are resolved from the cosmetics catalog by
-// (effectType, name), so this needs no per-type variants — a new effectType
-// just becomes a new EFFECT_TYPES entry, no change here.
-export const PlayerEffectSchema = z.object({
-  name: CosmeticNameSchema,
-  effectType: EffectTypeSchema,
-});
-
-// Server converts refs to the actual cosmetics here
-export const PlayerCosmeticsSchema = z.object({
-  flag: FlagSchema.optional(),
-  pattern: PlayerPatternSchema.optional(),
-  color: PlayerColorSchema.optional(),
-  skin: PlayerSkinSchema.optional(),
-  crown: PlayerCrownSchema.optional(),
-  // Resolved effects keyed by slot (effectType for trails, nukeType for nuke
-  // explosions).
-  effects: z.record(z.string(), PlayerEffectSchema).optional(),
-  // Plays under the verified account username — renders the blue check.
-  verified: z.boolean().optional(),
-});
-
 export const PlayerSchema = z.object({
   clientID: ID,
   username: UsernameSchema,
   clanTag: ClanTagSchema,
-  cosmetics: PlayerCosmeticsSchema.optional(),
   isLobbyCreator: z.boolean().optional(),
   friends: z.array(ID).optional(),
   // Server-stamped team slot for matchmade team games (index into the

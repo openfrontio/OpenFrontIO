@@ -1,6 +1,6 @@
 import { colord } from "colord";
 import { resolvePlayerColors } from "../../src/client/view/PlayerColors";
-import type { PlayerCosmetics } from "../../src/core/Schemas";
+import type { PlayerCosmetics } from "../../src/core/WireSchemas";
 
 const theme = {
   borderColor: () => colord("#111111"),

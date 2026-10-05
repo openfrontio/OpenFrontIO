@@ -1,6 +1,11 @@
 import { z } from "zod";
 import { zb } from "../../zbin";
-import { CosmeticNameSchema } from "./CosmeticRefs";
+import {
+  ColorPaletteSchema,
+  CosmeticNameSchema,
+  EffectTypeSchema,
+  PatternDataSchema,
+} from "./CosmeticSchemas";
 import type { GameEvent } from "./EventBus";
 import { GameMapSize, GameMapType } from "./game/GameTypes";
 import { ArchivedPlayerStatsSchema, PlayerStatsSchema } from "./StatsSchemas";
@@ -100,6 +105,22 @@ export type ClientHashMessage = z.infer<typeof ClientHashSchema>;
 export type ClientSpectateMessage = z.infer<typeof ClientSpectateMessageSchema>;
 
 export type PlayerCosmeticRefs = z.infer<typeof PlayerCosmeticRefsSchema>;
+
+export type PlayerCosmetics = z.infer<typeof PlayerCosmeticsSchema>;
+
+export type PlayerPattern = z.infer<typeof PlayerPatternSchema>;
+
+export type PlayerColor = z.infer<typeof PlayerColorSchema>;
+
+export type PlayerSkin = z.infer<typeof PlayerSkinSchema>;
+
+export type PlayerCrown = z.infer<typeof PlayerCrownSchema>;
+
+export type PlayerEffect = z.infer<typeof PlayerEffectSchema>;
+
+export type WirePlayer = z.infer<typeof WirePlayerSchema>;
+
+export type WireGameStartInfo = z.infer<typeof WireGameStartInfoSchema>;
 
 export type GameInfo = z.infer<typeof GameInfoSchema>;
 
@@ -373,6 +394,67 @@ export const PlayerCosmeticRefsSchema = z.object({
   verified: z.boolean().optional(),
 });
 
+export const FlagSchema = z.string();
+
+export const PlayerPatternSchema = z.object({
+  name: CosmeticNameSchema,
+  patternData: PatternDataSchema,
+  colorPalette: ColorPaletteSchema.optional(),
+});
+
+export const PlayerColorSchema = z.object({
+  color: z.string(),
+});
+
+export const PlayerSkinSchema = z.object({
+  name: CosmeticNameSchema,
+  url: z.string(),
+});
+
+export const PlayerCrownSchema = z.object({
+  name: CosmeticNameSchema,
+  url: z.string(),
+});
+
+// A resolved effect is just an identity: which effect, of which type. Its
+// attributes (the visual style) are resolved from the cosmetics catalog by
+// (effectType, name), so this needs no per-type variants — a new effectType
+// just becomes a new EFFECT_TYPES entry, no change here.
+export const PlayerEffectSchema = z.object({
+  name: CosmeticNameSchema,
+  effectType: EffectTypeSchema,
+});
+
+// Server converts refs to the actual cosmetics here
+export const PlayerCosmeticsSchema = z.object({
+  flag: FlagSchema.optional(),
+  pattern: PlayerPatternSchema.optional(),
+  color: PlayerColorSchema.optional(),
+  skin: PlayerSkinSchema.optional(),
+  crown: PlayerCrownSchema.optional(),
+  // Resolved effects keyed by slot (effectType for trails, nukeType for nuke
+  // explosions).
+  effects: z.record(z.string(), PlayerEffectSchema).optional(),
+  // Plays under the verified account username — renders the blue check.
+  verified: z.boolean().optional(),
+});
+
+// A player as the server sends and records it: what the engine reads
+// (PlayerSchema) plus the cosmetics only the client renders. zbin encodes
+// fields in shape order, so cosmetics keeps its place after clanTag.
+const { clientID, username, clanTag, ...playerRest } = PlayerSchema.shape;
+export const WirePlayerSchema = z.object({
+  clientID,
+  username,
+  clanTag,
+  cosmetics: PlayerCosmeticsSchema.optional(),
+  ...playerRest,
+});
+
+export const WireGameStartInfoSchema = GameStartInfoSchema.extend({
+  players: WirePlayerSchema.array(),
+});
+
 //
 // Server
 //
@@ -398,17 +480,17 @@ export const ServerPrestartMessageSchema = z.object({
 // private lobby's join secret. Random, never a function of the id, and never
 // accepted back: the server reads it from nowhere, so it grants nothing.
 //
-// Not part of GameStartInfoSchema on purpose. That object is archived into the
-// publicly downloadable game record and emitted to telemetry; a token sitting
-// next to the game id in a public record is exactly the derivation this exists
-// to prevent. It rides the two server->client messages instead.
+// Not part of WireGameStartInfoSchema on purpose. That object is archived into
+// the publicly downloadable game record and emitted to telemetry; a token
+// sitting next to the game id in a public record is exactly the derivation
+// this exists to prevent. It rides the two server->client messages instead.
 const GroupToken = z.string().min(1).max(64);
 
 export const ServerStartGameMessageSchema = z.object({
   type: z.literal("start"),
   // Turns the client missed if they are late to the game.
   turns: TurnSchema.array(),
-  gameStartInfo: GameStartInfoSchema,
+  gameStartInfo: WireGameStartInfoSchema,
   lobbyCreatedAt: zb.uint(),
   // The clientID assigned to this connection by the server.
   // Absent for replays where the viewer has no player identity.
@@ -651,7 +733,7 @@ export const ClientMessageSchema = zb.discriminatedUnion("type", [
 // Records
 //
 
-export const PlayerRecordSchema = PlayerSchema.extend({
+export const PlayerRecordSchema = WirePlayerSchema.extend({
   persistentID: PersistentIdSchema.nullable(), // WARNING: PII
   stats: PlayerStatsSchema,
 });

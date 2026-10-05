@@ -26,7 +26,8 @@ import {
   UnitUpdate,
 } from "../../src/core/game/GameUpdates";
 import { TerrainMapData } from "../../src/core/game/TerrainMapLoader";
-import { Player, PlayerCosmetics } from "../../src/core/Schemas";
+import { Player } from "../../src/core/Schemas";
+import { PlayerCosmetics } from "../../src/core/WireSchemas";
 
 /** Theme stub — returns deterministic colors so PlayerView's color math works. */
 export function stubTheme(): Theme {

@@ -29,7 +29,6 @@ import { createGameRunner } from "../../../../src/core/GameRunner";
 import {
   GameConfig,
   GameStartInfo,
-  Player,
   StampedIntent,
   Turn,
 } from "../../../../src/core/Schemas";
@@ -41,6 +40,8 @@ import {
   GameRecord,
   GameRecordSchema,
   PlayerRecord,
+  WireGameStartInfo,
+  WirePlayer,
 } from "../../../../src/core/WireSchemas";
 import { NodeGameMapLoader } from "../../../perf/fullgame/NodeGameMapLoader";
 
@@ -56,7 +57,7 @@ export const mapLoader = new NodeGameMapLoader(
 export interface ArchiveOptions {
   gameID: string;
   config: GameConfig;
-  players: Player[];
+  players: WirePlayer[];
   ticks: number;
   tribes?: GameStartInfo["tribes"];
   /** Intents the clients send for turn `tick`, given the live game. */
@@ -66,13 +67,13 @@ export interface ArchiveOptions {
 export interface ArchivedGame {
   record: GameRecord;
   /** What the live clients received. */
-  wireStart: GameStartInfo;
+  wireStart: WireGameStartInfo;
 }
 
 export async function playAndArchive(
   opts: ArchiveOptions,
 ): Promise<ArchivedGame> {
-  const start: GameStartInfo = {
+  const start: WireGameStartInfo = {
     gameID: opts.gameID,
     lobbyCreatedAt: 1_700_000_000_000,
     config: opts.config,
@@ -171,7 +172,10 @@ export function config(overrides: Partial<GameConfig> = {}): GameConfig {
   };
 }
 
-export function human(n: number, overrides: Partial<Player> = {}): Player {
+export function human(
+  n: number,
+  overrides: Partial<WirePlayer> = {},
+): WirePlayer {
   return {
     clientID: `client00${n}`,
     username: `Human ${n}`,

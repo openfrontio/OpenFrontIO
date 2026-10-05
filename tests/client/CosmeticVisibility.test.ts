@@ -5,7 +5,7 @@ import { createRenderSettings } from "../../src/client/render/gl/RenderSettings"
 import { UserSettings } from "../../src/client/UserSettings";
 import { visibleCosmetics } from "../../src/client/view/CosmeticVisibility";
 import { GameUpdateType } from "../../src/core/game/GameUpdates";
-import type { PlayerCosmetics } from "../../src/core/Schemas";
+import type { PlayerCosmetics } from "../../src/core/WireSchemas";
 import {
   makeEmptyGu,
   makeGameView,

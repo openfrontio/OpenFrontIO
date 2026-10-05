@@ -1,6 +1,6 @@
 import { html, LitElement, nothing } from "lit";
 import { customElement, state } from "lit/decorators.js";
-import { PlayerPattern, PlayerSkin } from "../../core/Schemas";
+import { PlayerPattern, PlayerSkin } from "../../core/WireSchemas";
 import { getPlayerCosmetics } from "../Cosmetics";
 import { PATTERN_KEY, USER_SETTINGS_CHANGED_EVENT } from "../UserSettings";
 import { generatePreviewDataUrl } from "./PatternPreview";

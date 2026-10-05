@@ -25,7 +25,7 @@ import { SettingsTheme } from "../../../src/client/theme/ThemeProvider";
 import type { PlayerView } from "../../../src/client/view";
 import { playerTypeFromEnum } from "../../../src/client/view/EntityState";
 import type { Cosmetics } from "../../../src/core/CosmeticSchemas";
-import type { PlayerCosmetics } from "../../../src/core/Schemas";
+import type { PlayerCosmetics } from "../../../src/core/WireSchemas";
 
 const player = (
   smallID: number,

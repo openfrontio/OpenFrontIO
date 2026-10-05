@@ -10,7 +10,7 @@ import {
   Skin,
   Subscription,
 } from "../../core/CosmeticSchemas";
-import { PlayerPattern } from "../../core/Schemas";
+import { PlayerPattern } from "../../core/WireSchemas";
 import { ResolvedCosmetic } from "../Cosmetics";
 import { translateText } from "../Utils";
 import "./CapIcon";

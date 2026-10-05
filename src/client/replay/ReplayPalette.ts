@@ -14,7 +14,7 @@
  */
 
 import { assetUrl } from "../../core/AssetUrls";
-import type { PlayerCosmetics } from "../../core/Schemas";
+import type { PlayerCosmetics } from "../../core/WireSchemas";
 import { createThemeSettings } from "../render/gl/RenderSettings";
 import {
   PALETTE_SIZE,

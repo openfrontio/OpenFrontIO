@@ -18,8 +18,8 @@ import type { CosmeticCard } from "../../src/client/components/CosmeticCard";
 import type { EffectsGrid } from "../../src/client/components/EffectsGrid";
 import type { InventoryLoadoutBar } from "../../src/client/components/InventoryLoadoutBar";
 import type { UserMeResponse } from "../../src/core/ApiSchemas";
-import { EFFECT_TYPES } from "../../src/core/CosmeticRefs";
 import {
+  EFFECT_TYPES,
   NUKE_EXPLOSION_TYPES,
   type Cosmetics,
   type EffectType,

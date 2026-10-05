@@ -1,17 +1,17 @@
 import countries from "resources/countries.json";
 
 import { isTemporaryUsername } from "../core/ApiSchemas";
-import { decodePatternData } from "../core/CosmeticRefs";
 import { Cosmetics, findEffectForSlot } from "../core/CosmeticSchemas";
+import { decodePatternData } from "../core/PatternDecoder";
 import {
   PlayerColor,
+  PlayerCosmeticRefs,
   PlayerCosmetics,
   PlayerCrown,
   PlayerEffect,
   PlayerPattern,
   PlayerSkin,
-} from "../core/Schemas";
-import { PlayerCosmeticRefs } from "../core/WireSchemas";
+} from "../core/WireSchemas";
 
 const countryCodes = countries.filter((c) => !c.restricted).map((c) => c.code);
 

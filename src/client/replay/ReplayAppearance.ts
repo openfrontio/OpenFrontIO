@@ -10,7 +10,10 @@
  */
 
 import { assetUrl } from "../../core/AssetUrls";
-import type { GameStartInfo, PlayerCosmetics } from "../../core/Schemas";
+import type {
+  PlayerCosmetics,
+  WireGameStartInfo,
+} from "../../core/WireSchemas";
 import { fetchCosmetics, getCachedCosmetics } from "../Cosmetics";
 import type { MapRenderer } from "../render/gl";
 import type { SpiralSink } from "../render/gl/utils/PlayerPalette";
@@ -38,7 +41,7 @@ export class ReplayAppearance {
   constructor(
     /** The replay's player dictionary. Grows as appends arrive. */
     private readonly players: readonly PlayerStatic[],
-    gameStartInfo: GameStartInfo,
+    gameStartInfo: WireGameStartInfo,
     private readonly userSettings: UserSettings,
     private readonly spirals: SpiralSink,
   ) {

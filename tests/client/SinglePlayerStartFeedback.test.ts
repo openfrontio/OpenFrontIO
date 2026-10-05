@@ -1,6 +1,6 @@
 import { render } from "lit";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { PlayerCosmetics } from "../../src/core/Schemas";
+import type { PlayerCosmetics } from "../../src/core/WireSchemas";
 
 const cosmeticsMocks = vi.hoisted(() => ({
   getPlayerCosmetics: vi.fn(),

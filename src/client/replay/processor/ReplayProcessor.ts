@@ -27,12 +27,15 @@ import {
   HashUpdate,
 } from "../../../core/game/GameUpdates";
 import { createGameRunner } from "../../../core/GameRunner";
-import { GameStartInfo, GameStartInfoSchema } from "../../../core/Schemas";
 import {
   decompressGameRecord,
   toWireGameStartInfo,
 } from "../../../core/SharedUtil";
-import { GameRecord } from "../../../core/WireSchemas";
+import {
+  GameRecord,
+  WireGameStartInfo,
+  WireGameStartInfoSchema,
+} from "../../../core/WireSchemas";
 import { StreamingEncoder } from "../codec/encode/StreamingEncoder";
 import type { GzipFn, ReplayAppend, ReplayBase } from "../codec/ReplayTypes";
 import { terrainOf } from "../codec/Terrain";
@@ -103,8 +106,8 @@ export class ReplayDesyncError extends Error {
  * this goes into the replay header), then the server's wire blanking is
  * applied.
  */
-export function wireGameStartInfo(record: GameRecord): GameStartInfo {
-  return toWireGameStartInfo(GameStartInfoSchema.parse(record.info));
+export function wireGameStartInfo(record: GameRecord): WireGameStartInfo {
+  return toWireGameStartInfo(WireGameStartInfoSchema.parse(record.info));
 }
 
 export async function processGameRecord(

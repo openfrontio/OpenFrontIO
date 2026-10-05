@@ -2,7 +2,7 @@ import { Config } from "src/core/configuration/Config";
 import { ClientEnv } from "../client/ClientEnv";
 import { reloadForUpdate, translateText } from "../client/Utils";
 import { EventBus } from "../core/EventBus";
-import { ClientID, GameID, GameStartInfo } from "../core/Schemas";
+import { ClientID, GameID } from "../core/Schemas";
 import { replacer } from "../core/SharedUtil";
 import { findClosestBy } from "../core/Util";
 import {
@@ -11,6 +11,7 @@ import {
   LobbyInfoEvent,
   PlayerCosmeticRefs,
   ServerMessage,
+  WireGameStartInfo,
 } from "../core/WireSchemas";
 import { TileRef } from "../core/game/GameMap";
 import { GameMapLoader } from "../core/game/GameMapLoader";
@@ -102,7 +103,7 @@ export interface LobbyConfig {
   gameID: GameID;
   turnstileToken: string | null;
   // GameStartInfo only exists when playing a singleplayer game.
-  gameStartInfo?: GameStartInfo;
+  gameStartInfo?: WireGameStartInfo;
   // GameRecord exists when replaying an archived game.
   gameRecord?: GameRecord;
   // Watch without playing.

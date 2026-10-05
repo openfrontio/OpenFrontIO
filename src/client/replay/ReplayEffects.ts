@@ -11,7 +11,7 @@
  */
 
 import type { Cosmetics } from "../../core/CosmeticSchemas";
-import type { PlayerCosmetics } from "../../core/Schemas";
+import type { PlayerCosmetics } from "../../core/WireSchemas";
 import type { MapRenderer } from "../render/gl";
 import {
   EFFECT_PALETTE_BLOCKS,

@@ -18,7 +18,7 @@ import {
 } from "../../../../src/client/replay/processor/ReplayProcessor";
 import { Game } from "../../../../src/core/game/Game";
 import { GameMapType, GameMode } from "../../../../src/core/game/GameTypes";
-import { Player } from "../../../../src/core/Schemas";
+import { WirePlayer } from "../../../../src/core/WireSchemas";
 import {
   config,
   human,
@@ -80,7 +80,7 @@ describe("replay processor", () => {
       ticks,
       intents: (game, t) => {
         const size = game.width() * game.height();
-        const id = (p: Player) => game.playerByClientID(p.clientID)!.id();
+        const id = (p: WirePlayer) => game.playerByClientID(p.clientID)!.id();
         switch (t) {
           case 5:
             return [

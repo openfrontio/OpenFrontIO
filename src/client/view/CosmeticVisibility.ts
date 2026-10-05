@@ -1,5 +1,5 @@
 import { effectTypeForSlot } from "../../core/CosmeticSchemas";
-import type { PlayerCosmetics } from "../../core/Schemas";
+import type { PlayerCosmetics } from "../../core/WireSchemas";
 import type { GraphicsOverrides } from "../render/gl/GraphicsOverrides";
 
 export type CosmeticVisibility = NonNullable<GraphicsOverrides["cosmetics"]>;

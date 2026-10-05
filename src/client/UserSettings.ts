@@ -1,5 +1,5 @@
 import { Cosmetics } from "../core/CosmeticSchemas";
-import { PlayerPattern } from "../core/Schemas";
+import { PlayerPattern } from "../core/WireSchemas";
 import {
   GraphicsOverrides,
   GraphicsOverridesSchema,

@@ -3,7 +3,7 @@ import { renderNavVersion } from "src/client/GameVersion";
 import { UserMeResponse } from "../core/ApiSchemas";
 import { assetUrl } from "../core/AssetUrls";
 import { EventBus } from "../core/EventBus";
-import { GAME_ID_REGEX, GameStartInfo } from "../core/Schemas";
+import { GAME_ID_REGEX } from "../core/Schemas";
 import { toWireGameStartInfo } from "../core/SharedUtil";
 import {
   GameInfo,
@@ -11,6 +11,7 @@ import {
   GroupTokenEvent,
   LobbyInfoEvent,
   PublicGameInfo,
+  WireGameStartInfo,
 } from "../core/WireSchemas";
 import { GameEnv } from "../core/configuration/Env";
 import "./AccountModal";
@@ -252,7 +253,7 @@ export interface JoinLobbyEvent {
   // Multiplayer games only have gameID, gameConfig is not known until game starts.
   gameID: string;
   // GameConfig only exists when playing a singleplayer game.
-  gameStartInfo?: GameStartInfo;
+  gameStartInfo?: WireGameStartInfo;
   // GameRecord exists when replaying an archived game.
   gameRecord?: GameRecord;
   source?: "public" | "private" | "host" | "matchmaking" | "singleplayer";

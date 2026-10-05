@@ -19,8 +19,12 @@ import {
   Skin,
   Subscription,
 } from "../core/CosmeticSchemas";
-import { PlayerCosmetics, PlayerEffect, PlayerPattern } from "../core/Schemas";
-import { PlayerCosmeticRefs } from "../core/WireSchemas";
+import {
+  PlayerCosmeticRefs,
+  PlayerCosmetics,
+  PlayerEffect,
+  PlayerPattern,
+} from "../core/WireSchemas";
 import {
   changeSubscriptionTier,
   getApiBase,

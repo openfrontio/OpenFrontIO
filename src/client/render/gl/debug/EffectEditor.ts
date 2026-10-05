@@ -10,8 +10,8 @@
 
 import type GUI from "lil-gui";
 import type { Controller } from "lil-gui";
-import { EFFECT_TYPES } from "../../../../core/CosmeticRefs";
 import {
+  EFFECT_TYPES,
   type EffectAttributesFor,
   type EffectType,
   NUKE_EXPLOSION_TYPES,

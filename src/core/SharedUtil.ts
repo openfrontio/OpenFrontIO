@@ -2,14 +2,7 @@ import DOMPurify from "dompurify";
 import { customAlphabet } from "nanoid";
 import { resolveTribeNameData } from "./execution/utils/TribeNames";
 import { GameType, PlayerType } from "./game/GameTypes";
-import {
-  GameConfig,
-  GameID,
-  GameStartInfo,
-  Tribe,
-  Turn,
-  Winner,
-} from "./Schemas";
+import { GameConfig, GameID, Tribe, Turn, Winner } from "./Schemas";
 import { LOBBY_LABEL_MAX, simpleHash } from "./Util";
 import {
   GameRecord,
@@ -17,6 +10,7 @@ import {
   PlayerRecord,
   PlayerReport,
   PublicGameType,
+  WireGameStartInfo,
 } from "./WireSchemas";
 
 export function sanitize(name: string): string {
@@ -44,7 +38,9 @@ export function onlyImages(html: string) {
 // or team games with either setting diverge from the recorded hashes.
 // Singleplayer records were simulated (and archived) with the real values —
 // no server, no blanking — so they replay as-is.
-export function toWireGameStartInfo(info: GameStartInfo): GameStartInfo {
+export function toWireGameStartInfo(
+  info: WireGameStartInfo,
+): WireGameStartInfo {
   const config = info.config;
   if (config.gameType === GameType.Singleplayer) {
     return info;

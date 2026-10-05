@@ -1,8 +1,9 @@
 import { Colord, colord } from "colord";
 import { base64url } from "jose";
 import { PatternDecoder } from "../../core/PatternDecoder";
-import { ClientID, PlayerCosmetics } from "../../core/Schemas";
+import { ClientID } from "../../core/Schemas";
 import { createRandomName } from "../../core/SharedUtil";
+import { PlayerCosmetics } from "../../core/WireSchemas";
 import { TileRef } from "../../core/game/GameMap";
 import {
   BuildableUnit,
