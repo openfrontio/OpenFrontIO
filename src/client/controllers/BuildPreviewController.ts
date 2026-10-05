@@ -16,6 +16,7 @@ import {
   BuildableUnit,
   bulkCost,
   PlayerBuildableUnitType,
+  Structures,
   UnitType,
 } from "../../core/game/Game";
 import { TileRef } from "../../core/game/GameMap";
@@ -133,13 +134,13 @@ export class BuildPreviewController implements Controller {
           // follows the cursor, so smooth it the same way as the icon. When
           // upgrading, the circle is anchored to the existing structure's tile
           // (stationary, correctly snapped) — leave it alone in that case.
-          const radiusFollowsCursor = !(
-            ghost.canUpgrade && ghost.upgradeTargetTile !== null
-          );
+          const radiusFollowsCursor =
+            !ghost.snapToPlacement &&
+            !(ghost.canUpgrade && ghost.upgradeTargetTile !== null);
           this.view.updateGhostPreview({
             ...ghost,
-            tileX: w.x - 0.5,
-            tileY: w.y - 0.5,
+            tileX: ghost.snapToPlacement ? ghost.tileX : w.x - 0.5,
+            tileY: ghost.snapToPlacement ? ghost.tileY : w.y - 0.5,
             ...(radiusFollowsCursor
               ? { radiusTileX: w.x - 0.5, radiusTileY: w.y - 0.5 }
               : {}),
@@ -436,6 +437,10 @@ export class BuildPreviewController implements Controller {
     if (!myPlayer) return null;
 
     const u = this.ghostUnit.buildableUnit;
+    const placementTile =
+      u.canUpgrade === false && Structures.has(u.type) && u.canBuild !== false
+        ? u.canBuild
+        : tileRef;
 
     // Upgrade-target tile — only when upgrading an existing unit.
     let upgradeTargetTile: number | null = null;
@@ -463,8 +468,8 @@ export class BuildPreviewController implements Controller {
         rangeRadius = this.game.config().defensePostRange();
         break;
     }
-    let radiusTileX = this.game.x(tileRef);
-    let radiusTileY = this.game.y(tileRef);
+    let radiusTileX = this.game.x(placementTile);
+    let radiusTileY = this.game.y(placementTile);
     if (
       rangeRadius > 0 &&
       u.canUpgrade !== false &&
@@ -488,8 +493,9 @@ export class BuildPreviewController implements Controller {
     }
     return {
       ghostType: u.type,
-      tileX: this.game.x(tileRef),
-      tileY: this.game.y(tileRef),
+      tileX: this.game.x(placementTile),
+      tileY: this.game.y(placementTile),
+      snapToPlacement: placementTile !== tileRef,
       radiusTileX,
       radiusTileY,
       canBuild: u.canBuild !== false,

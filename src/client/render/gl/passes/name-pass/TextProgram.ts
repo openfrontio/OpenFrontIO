@@ -67,6 +67,7 @@ export class TextProgram {
       gl,
       shaderSrc(nameVertSrc, { MAX_CHARS, LINES_PER_PLAYER }),
       nameFragSrc,
+      "TextProgram",
     );
 
     // Texture unit bindings

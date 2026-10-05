@@ -160,6 +160,7 @@ export class StructurePass {
         // First row of the structures block in the shared effect palette.
         STRUCT_EFFECT_ROW_BASE: STRUCTURES_EFFECT_BLOCK * MAX_TRAIL_COLORS,
       }),
+      "StructurePass",
     );
     this.uLocalPlayerID = gl.getUniformLocation(
       this.program,
