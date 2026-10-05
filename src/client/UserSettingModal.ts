@@ -6,6 +6,7 @@ import {
   AudioCategory,
   getDefaultKeybinds,
   GRAPHICS_KEY,
+  KEEP_BUILD_SELECTED_UNITS,
   USER_SETTINGS_CHANGED_EVENT,
   UserSettings,
 } from "../core/game/UserSettings";
@@ -1833,6 +1834,26 @@ export class UserSettingModal extends BaseModal {
         @change=${this.sliderNukeAllianceSafetyDuration}
       ></setting-slider>
 
+      <h2
+        class="text-blue-200 text-xl font-bold mt-8 mb-3 border-b border-white/10 pb-2"
+      >
+        ${translateText("user_setting.keep_build_selected_title")}
+      </h2>
+      ${KEEP_BUILD_SELECTED_UNITS.map(
+        (unit) => html`
+          <setting-toggle
+            label="${translateText(`unit_type.${unit.name}`)}"
+            description="${translateText(
+              "user_setting.keep_build_selected_desc",
+              { unit: translateText(`unit_type.${unit.name}`) },
+            )}"
+            id="keep-build-selected-${unit.name}-toggle"
+            .checked=${this.userSettings.keepBuildSelected(unit.type)}
+            @change=${() =>
+              this.userSettings.toggleKeepBuildSelected(unit.type)}
+          ></setting-toggle>
+        `,
+      )}
       ${this.showEasterEggSettings
         ? html`
             <setting-slider
