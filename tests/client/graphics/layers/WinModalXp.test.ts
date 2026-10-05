@@ -55,7 +55,12 @@ vi.mock("../../../../src/client/CrazyGamesSDK", () => ({
   },
 }));
 
+// The game fetches the XP section when it starts and the Legend ceremony
+// ahead of its moment; here both are loaded up front, as they are by the
+// time a game ends.
+import "../../../../src/client/components/GameXpPanel";
 import type { GameXpPanel } from "../../../../src/client/components/GameXpPanel";
+import "../../../../src/client/components/LegendCeremony";
 import "../../../../src/client/hud/layers/WinModal";
 import type { WinModal } from "../../../../src/client/hud/layers/WinModal";
 import { playerProfileUrl } from "../../../../src/client/utilities/PlayerProfileUrl";
@@ -186,10 +191,14 @@ describe("WinModal XP section", () => {
     vi.restoreAllMocks();
   });
 
-  async function mount(game: GameView): Promise<void> {
+  async function mount(
+    game: GameView,
+    prepare?: (modal: WinModal) => void,
+  ): Promise<void> {
     modal = document.createElement("win-modal") as WinModal;
     modal.game = game;
     modal.eventBus = new EventBus();
+    prepare?.(modal);
     // Pin the promo slot to the pattern promo (the Steam wishlist one needs
     // ResizeObserver, which jsdom lacks).
     Object.assign(modal as unknown as { rand: number }, { rand: 0.75 });
@@ -545,6 +554,53 @@ describe("WinModal XP section", () => {
       await finishReveal();
       expect(xpState()).toBe("result");
       expect(ceremony()).toBeNull();
+    });
+
+    it("falls back to the panel's own Legend moment when the ceremony can't load", async () => {
+      vi.spyOn(console, "warn").mockImplementation(() => {});
+      stubXpEndpoint([() => json(legendResult())]);
+      await mount(makeGame({ ended: true }), (m) => {
+        m.loadLegendCeremony = () => Promise.reject(new Error("offline"));
+      });
+      let sawCaption = false;
+      for (let i = 0; i < 200 && revealing(); i++) {
+        if (panel()!.querySelector("[data-xp-caption-legend]")) {
+          sawCaption = true;
+        }
+        await settle(50);
+      }
+      expect(sawCaption).toBe(true);
+      expect(ceremony()).toBeNull();
+      // Not marked seen: it never played.
+      expect(localStorage.getItem("legendCeremonySeen:me")).toBeNull();
+    });
+
+    it("is fetched only for a player who could become a Legend", async () => {
+      const load = vi.fn(
+        () => import("../../../../src/client/components/LegendCeremony"),
+      );
+      stubXpEndpoint([() => json(eligible())]);
+      await mount(makeGame({ ended: true }), (m) => {
+        m.loadLegendCeremony = load;
+      });
+      await finishReveal();
+      expect(load).not.toHaveBeenCalled();
+      modal.remove();
+
+      // On the last prestige run: fetched before the result is in.
+      getUserMe.mockResolvedValue({
+        ...signedIn,
+        player: {
+          ...signedIn.player,
+          progress: { ...signedIn.player.progress, prestige: 10, level: 99 },
+        },
+      });
+      stubXpEndpoint([notFound]);
+      await mount(makeGame({ ended: true }), (m) => {
+        m.loadLegendCeremony = load;
+      });
+      expect(xpState()).toBe("calculating");
+      expect(load).toHaveBeenCalledTimes(1);
     });
 
     it("never for a player who was a Legend already", async () => {
