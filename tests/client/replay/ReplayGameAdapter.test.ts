@@ -5,6 +5,10 @@
  * how a change to the HUD is meant to be caught.
  */
 
+import { Cell, GameType, UnitType } from "@openfront/engine-api/game/GameTypes";
+import { GameUpdateType } from "@openfront/engine-api/game/GameUpdates";
+import { Config } from "@openfront/engine-lib/configuration/Config";
+import { EventBus } from "@openfront/engine-lib/EventBus";
 import "../../../src/client/hud/layers/EventsDisplay";
 import type { EventsDisplay } from "../../../src/client/hud/layers/EventsDisplay";
 import "../../../src/client/hud/layers/PlayerInfoOverlay";
@@ -15,10 +19,6 @@ import type { UnitState } from "../../../src/client/render/types";
 import type { ReplayReader } from "../../../src/client/replay/codec/decode/ReplayReader";
 import type { ReplayFrame } from "../../../src/client/replay/codec/ReplayTypes";
 import { ReplayGameView } from "../../../src/client/replay/ReplayGameAdapter";
-import { Config } from "../../../src/core/configuration/Config";
-import { EventBus } from "../../../src/core/EventBus";
-import { Cell, GameType, UnitType } from "../../../src/core/game/GameTypes";
-import { GameUpdateType } from "../../../src/core/game/GameUpdates";
 import { setup } from "../../util/Setup";
 import { config as gameConfig } from "./util/ArchiveGame";
 import { openReader, recordGame, type RecordedGame } from "./util/RecordGame";

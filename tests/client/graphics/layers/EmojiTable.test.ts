@@ -1,3 +1,6 @@
+import { AllPlayers } from "@openfront/engine-api/game/GameTypes";
+import { flattenedEmojiTable } from "@openfront/engine-api/Schemas";
+import { EventBus } from "@openfront/engine-lib/EventBus";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import "../../../../src/client/hud/layers/EmojiTable";
 import type { EmojiTable } from "../../../../src/client/hud/layers/EmojiTable";
@@ -8,9 +11,6 @@ import {
 import type { TransformHandler } from "../../../../src/client/TransformHandler";
 import { SendEmojiIntentEvent } from "../../../../src/client/Transport";
 import type { GameView } from "../../../../src/client/view";
-import { EventBus } from "../../../../src/core/EventBus";
-import { AllPlayers } from "../../../../src/core/game/GameTypes";
-import { flattenedEmojiTable } from "../../../../src/core/Schemas";
 
 describe("EmojiTable event bus wiring", () => {
   let table: EmojiTable;

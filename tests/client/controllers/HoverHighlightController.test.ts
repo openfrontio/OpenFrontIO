@@ -1,4 +1,8 @@
-import { PlayerInfo, PlayerType, UnitType } from "src/core/game/GameTypes";
+import {
+  PlayerInfo,
+  PlayerType,
+  UnitType,
+} from "@openfront/engine-api/game/GameTypes";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { HoverHighlightController } from "../../../src/client/controllers/HoverHighlightController";
 import { MouseMoveEvent } from "../../../src/client/InputHandler";

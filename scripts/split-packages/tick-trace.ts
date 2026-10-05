@@ -17,30 +17,30 @@
  *
  * Prod records are fetched once into .tick-records/ (gitignored).
  */
-import { createHash, Hash } from "crypto";
-import fs from "fs";
-import path from "path";
-import { fileURLToPath } from "url";
 import {
   Difficulty,
   GameMapSize,
   GameMapType,
   GameMode,
   GameType,
-} from "../../src/core/game/GameTypes";
+} from "@openfront/engine-api/game/GameTypes";
 import {
   ErrorUpdate,
   GameUpdateType,
   GameUpdateViewData,
   HashUpdate,
-} from "../../src/core/game/GameUpdates";
-import { createGameRunner } from "../../src/core/GameRunner";
-import { GameStartInfo, Turn } from "../../src/core/Schemas";
+} from "@openfront/engine-api/game/GameUpdates";
+import { GameStartInfo, Turn } from "@openfront/engine-api/Schemas";
+import { createGameRunner } from "@openfront/engine/GameRunner";
 import {
   decompressGameRecord,
   toWireGameStartInfo,
-} from "../../src/core/SharedUtil";
-import { GameRecord } from "../../src/core/WireSchemas";
+} from "@openfront/shared/SharedUtil";
+import { GameRecord } from "@openfront/shared/WireSchemas";
+import { createHash, Hash } from "crypto";
+import fs from "fs";
+import path from "path";
+import { fileURLToPath } from "url";
 import { NodeGameMapLoader } from "../../tests/perf/fullgame/NodeGameMapLoader";
 
 const ROOT = path.resolve(

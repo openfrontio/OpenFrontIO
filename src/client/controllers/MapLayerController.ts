@@ -6,12 +6,12 @@
  * so the game starts without blocking on layer PNGs.
  */
 
-import { GameMapLoader } from "../../core/game/GameMapLoader";
-import { GameMapSize, GameMapType } from "../../core/game/GameTypes";
+import { GameMapLoader } from "@openfront/engine-api/game/GameMapLoader";
+import { GameMapSize, GameMapType } from "@openfront/engine-api/game/GameTypes";
 import {
   loadLayerImages,
   TerrainMapData,
-} from "../../core/game/TerrainMapLoader";
+} from "@openfront/engine-lib/game/TerrainMapLoader";
 import { Controller } from "../Controller";
 import { MapRenderer } from "../render/gl";
 import { UserSettings } from "../UserSettings";

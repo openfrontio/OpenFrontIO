@@ -1,10 +1,10 @@
-import { html, LitElement, nothing, TemplateResult } from "lit";
-import { customElement, property, state } from "lit/decorators.js";
 import {
   isTemporaryUsername,
   PutUsernameResponse,
   UserMeResponse,
-} from "../../core/ApiSchemas";
+} from "@openfront/shared/ApiSchemas";
+import { html, LitElement, nothing, TemplateResult } from "lit";
+import { customElement, property, state } from "lit/decorators.js";
 import { updateUsername, UpdateUsernameResult } from "../Api";
 import { showInGameAlert, showInGameConfirm } from "../InGameModal";
 import { sanitizeAccountPersona } from "../PlayerName";

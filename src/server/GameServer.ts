@@ -1,12 +1,3 @@
-import { createHash, randomBytes } from "crypto";
-import ipAnonymize from "ip-anonymize";
-import { Logger } from "winston";
-import WebSocket from "ws";
-import { z } from "zod";
-import { ZbContext } from "../../zbin";
-import { isAdminRole } from "../core/ApiSchemas";
-import { CloseCode, CloseReason } from "../core/CloseCodes";
-import { GameEnv } from "../core/configuration/Env";
 import {
   GameMode,
   GameType,
@@ -14,12 +5,8 @@ import {
   PlayerInfo,
   PlayerType,
   RankedType,
-} from "../core/game/GameTypes";
-import { maps } from "../core/game/Maps.gen";
-import {
-  assignTeamsLobbyPreview,
-  resolveTeamsList,
-} from "../core/game/TeamAssignment";
+} from "@openfront/engine-api/game/GameTypes";
+import { maps } from "@openfront/engine-api/game/Maps.gen";
 import {
   ClientID,
   GameConfig,
@@ -29,8 +16,15 @@ import {
   TeamCountConfig,
   Tribe,
   Turn,
-} from "../core/Schemas";
-import { createPartialGameRecord } from "../core/SharedUtil";
+} from "@openfront/engine-api/Schemas";
+import {
+  assignTeamsLobbyPreview,
+  resolveTeamsList,
+} from "@openfront/engine-lib/game/TeamAssignment";
+import { isAdminRole } from "@openfront/shared/ApiSchemas";
+import { CloseCode, CloseReason } from "@openfront/shared/CloseCodes";
+import { GameEnv } from "@openfront/shared/configuration/Env";
+import { createPartialGameRecord } from "@openfront/shared/SharedUtil";
 import {
   ClientMessage,
   ClientReportMessage,
@@ -54,8 +48,17 @@ import {
   ServerTurnMessage,
   WireGameStartInfo,
   WireGameStartInfoSchema,
-} from "../core/WireSchemas";
-import { createGameWireContext, encodeServerMessage } from "../core/ZbinWire";
+} from "@openfront/shared/WireSchemas";
+import {
+  createGameWireContext,
+  encodeServerMessage,
+} from "@openfront/shared/ZbinWire";
+import { ZbContext } from "@openfront/zbin";
+import { createHash, randomBytes } from "crypto";
+import ipAnonymize from "ip-anonymize";
+import { Logger } from "winston";
+import WebSocket from "ws";
+import { z } from "zod";
 import { archive, finalizeGameRecord } from "./Archive";
 import { Client } from "./Client";
 import { applyGameConfigPatch, hostCheatsEnabled } from "./ConfigPatch";

@@ -1,8 +1,8 @@
+import type { GameStartInfo } from "@openfront/engine-api/Schemas";
+import { EventBus } from "@openfront/engine-lib/EventBus";
+import type { ClientMessage } from "@openfront/shared/WireSchemas";
 import { gunzipSync } from "node:zlib";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { EventBus } from "../../src/core/EventBus";
-import type { GameStartInfo } from "../../src/core/Schemas";
-import type { ClientMessage } from "../../src/core/WireSchemas";
 
 vi.mock("../../src/client/Auth", () => ({
   getAuthHeader: vi.fn(async () => "Bearer test-jwt"),

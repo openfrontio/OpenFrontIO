@@ -1,3 +1,17 @@
+import { GameMode, GameType } from "@openfront/engine-api/game/GameTypes";
+import {
+  ADMIN_BOT_CLIENT_ID,
+  type GameConfig,
+  GameConfigSchema,
+  type GameID,
+  ID,
+  IntentSchema,
+} from "@openfront/engine-api/Schemas";
+import {
+  type LobbyAccent,
+  LobbyAccentSchema,
+  LobbyLabelSchema,
+} from "@openfront/shared/WireSchemas";
 import crypto from "crypto";
 import type {
   Express,
@@ -8,20 +22,6 @@ import type {
 } from "express";
 import type { Logger } from "winston";
 import { z } from "zod";
-import { GameMode, GameType } from "../core/game/GameTypes";
-import {
-  ADMIN_BOT_CLIENT_ID,
-  type GameConfig,
-  GameConfigSchema,
-  type GameID,
-  ID,
-  IntentSchema,
-} from "../core/Schemas";
-import {
-  type LobbyAccent,
-  LobbyAccentSchema,
-  LobbyLabelSchema,
-} from "../core/WireSchemas";
 import type { GameManager } from "./GameManager";
 import type { GameServer } from "./GameServer";
 import { ServerEnv } from "./ServerEnv";

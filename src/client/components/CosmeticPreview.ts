@@ -1,5 +1,3 @@
-import { html, LitElement, nothing, TemplateResult } from "lit";
-import { customElement, property, state } from "lit/decorators.js";
 import {
   Crown,
   Effect,
@@ -9,8 +7,10 @@ import {
   Pattern,
   Skin,
   Subscription,
-} from "../../core/CosmeticSchemas";
-import { PlayerPattern } from "../../core/WireSchemas";
+} from "@openfront/shared/CosmeticSchemas";
+import { PlayerPattern } from "@openfront/shared/WireSchemas";
+import { html, LitElement, nothing, TemplateResult } from "lit";
+import { customElement, property, state } from "lit/decorators.js";
 import { ResolvedCosmetic } from "../Cosmetics";
 import { translateText } from "../Utils";
 import "./CapIcon";

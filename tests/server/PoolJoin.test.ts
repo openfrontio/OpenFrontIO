@@ -1,12 +1,12 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { GameType } from "../../src/core/game/GameTypes";
+import { GameType } from "@openfront/engine-api/game/GameTypes";
 import {
   GameConfig,
   GameConfigSchema,
   PoolConfig,
   PoolConfigSchema,
-} from "../../src/core/Schemas";
-import { CreateGameInputSchema } from "../../src/core/WorkerSchemas";
+} from "@openfront/engine-api/Schemas";
+import { CreateGameInputSchema } from "@openfront/shared/WorkerSchemas";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { poolIndexFor } from "../../src/server/PoolRouting";
 import {
   cid,

@@ -1,15 +1,19 @@
-import { html, LitElement } from "lit";
-import { customElement, property } from "lit/decorators.js";
-import { assetUrl } from "../../core/AssetUrls";
-import { renderTroops } from "../../core/Format";
+import {
+  GameMode,
+  PlayerType,
+  Team,
+} from "@openfront/engine-api/game/GameTypes";
+import { renderTroops } from "@openfront/engine-lib/Format";
 import {
   doomsdayClockDrain,
   doomsdayClockRequiredTiles,
   doomsdayClockRotQuota,
   doomsdayClockTroopFloor,
   doomsdayClockWaveState,
-} from "../../core/game/DoomsdayClock";
-import { GameMode, PlayerType, Team } from "../../core/game/GameTypes";
+} from "@openfront/engine-lib/game/DoomsdayClock";
+import { assetUrl } from "@openfront/shared/AssetUrls";
+import { html, LitElement } from "lit";
+import { customElement, property } from "lit/decorators.js";
 import { themeProvider } from "../theme/ThemeProvider";
 import { translateText } from "../Utils";
 import { GameView } from "../view";

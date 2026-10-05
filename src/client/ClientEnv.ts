@@ -1,10 +1,14 @@
+import { GameID } from "@openfront/engine-api/Schemas";
+import { simpleHash } from "@openfront/engine-lib/Util";
+import { ClusterConfig } from "@openfront/shared/ClusterConfig";
+import {
+  GameEnv,
+  JwksSchema,
+  parseGameEnv,
+} from "@openfront/shared/configuration/Env";
+import { ServerList } from "@openfront/shared/ServerList";
 import { JWK } from "jose";
 import { z } from "zod";
-import { ClusterConfig } from "../core/ClusterConfig";
-import { GameID } from "../core/Schemas";
-import { ServerList } from "../core/ServerList";
-import { simpleHash } from "../core/Util";
-import { GameEnv, JwksSchema, parseGameEnv } from "../core/configuration/Env";
 
 /**
  * No server is known: the API's list has not loaded (or carries none for

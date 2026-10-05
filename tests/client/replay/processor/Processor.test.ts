@@ -6,6 +6,9 @@
  * against the hashes the "live" clients recorded.
  */
 
+import { GameMapType, GameMode } from "@openfront/engine-api/game/GameTypes";
+import { Game } from "@openfront/engine/game/Game";
+import { WirePlayer } from "@openfront/shared/WireSchemas";
 import { PlayerTypeEnum } from "../../../../src/client/render/types";
 import { ReplayReader } from "../../../../src/client/replay/codec/decode/ReplayReader";
 import type {
@@ -16,9 +19,6 @@ import {
   processGameRecord,
   ReplayDesyncError,
 } from "../../../../src/client/replay/processor/ReplayProcessor";
-import { Game } from "../../../../src/core/game/Game";
-import { GameMapType, GameMode } from "../../../../src/core/game/GameTypes";
-import { WirePlayer } from "../../../../src/core/WireSchemas";
 import {
   config,
   human,

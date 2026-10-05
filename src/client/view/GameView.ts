@@ -1,5 +1,4 @@
-import { Config } from "../../core/configuration/Config";
-import { GameMap, TileRef } from "../../core/game/GameMap";
+import { GameMap, TileRef } from "@openfront/engine-api/game/GameMap";
 import {
   Cell,
   formatPlayerDisplayName,
@@ -12,19 +11,20 @@ import {
   Tick,
   UnitInfo,
   UnitType,
-} from "../../core/game/GameTypes";
+} from "@openfront/engine-api/game/GameTypes";
 import {
   GameUpdateType,
   GameUpdateViewData,
   SpawnPhaseEndUpdate,
-} from "../../core/game/GameUpdates";
-import { unpackMotionPlans } from "../../core/game/MotionPlans";
-import { GameLike, UnitPredicate } from "../../core/game/ReadViews";
-import { TerrainMapData } from "../../core/game/TerrainMapLoader";
-import { TerraNulliusImpl } from "../../core/game/TerraNulliusImpl";
-import { UnitGrid } from "../../core/game/UnitGrid";
-import { ClientID, GameID } from "../../core/Schemas";
-import { PlayerCosmetics, WirePlayer } from "../../core/WireSchemas";
+} from "@openfront/engine-api/game/GameUpdates";
+import { GameLike, UnitPredicate } from "@openfront/engine-api/game/ReadViews";
+import { ClientID, GameID } from "@openfront/engine-api/Schemas";
+import { Config } from "@openfront/engine-lib/configuration/Config";
+import { unpackMotionPlans } from "@openfront/engine-lib/game/MotionPlans";
+import { TerrainMapData } from "@openfront/engine-lib/game/TerrainMapLoader";
+import { TerraNulliusImpl } from "@openfront/engine-lib/game/TerraNulliusImpl";
+import { UnitGrid } from "@openfront/engine-lib/game/UnitGrid";
+import { PlayerCosmetics, WirePlayer } from "@openfront/shared/WireSchemas";
 import { computeAllianceClusters } from "../render/frame/derive/AllianceClusters";
 import { extractAttackRings } from "../render/frame/derive/AttackRings";
 import { extractNukeTelegraphs } from "../render/frame/derive/NukeTelegraphs";
@@ -947,7 +947,7 @@ export class GameView implements GameLike {
     return this._map.waterVersion();
   }
   /** Map layers defined in the map's info.json, if any. */
-  layers(): import("../../core/game/GameMapLoader").MapLayer[] {
+  layers(): import("@openfront/engine-api/game/GameMapLoader").MapLayer[] {
     return this._mapData.layers ?? [];
   }
   isValidCoord(x: number, y: number): boolean {

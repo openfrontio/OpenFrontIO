@@ -1,9 +1,12 @@
-import { AttackExecution } from "../src/core/execution/AttackExecution";
-import { SpawnExecution } from "../src/core/execution/SpawnExecution";
-import { Game, Player } from "../src/core/game/Game";
-import { PlayerInfo, PlayerType } from "../src/core/game/GameTypes";
-import { GameUpdateType, PlayerUpdate } from "../src/core/game/GameUpdates";
-import { GameID } from "../src/core/Schemas";
+import { PlayerInfo, PlayerType } from "@openfront/engine-api/game/GameTypes";
+import {
+  GameUpdateType,
+  PlayerUpdate,
+} from "@openfront/engine-api/game/GameUpdates";
+import { GameID } from "@openfront/engine-api/Schemas";
+import { AttackExecution } from "@openfront/engine/execution/AttackExecution";
+import { SpawnExecution } from "@openfront/engine/execution/SpawnExecution";
+import { Game, Player } from "@openfront/engine/game/Game";
 import { setup } from "./util/Setup";
 
 let game: Game;

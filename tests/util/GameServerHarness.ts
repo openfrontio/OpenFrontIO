@@ -6,17 +6,17 @@
 // "p1" / "creator-cid" placeholders older tests used — those tests could only
 // pass by mocking the Schemas module. Use cid() to spell a readable id.
 
-import { vi } from "vitest";
-import { GameConfig } from "../../src/core/Schemas";
+import { GameConfig } from "@openfront/engine-api/Schemas";
 import {
   ClientMessage,
   PublicGameType,
   ServerMessage,
-} from "../../src/core/WireSchemas";
+} from "@openfront/shared/WireSchemas";
+import { ZbContext } from "@openfront/zbin";
+import { vi } from "vitest";
 import { Client } from "../../src/server/Client";
 import { GameServer, GameServerDeps } from "../../src/server/GameServer";
 import { type MatchTelemetryEmitter } from "../../src/server/telemetry/MatchTelemetry";
-import { ZbContext } from "../../zbin";
 import { clientFrame, decodeSentServerMessage, testGameConfig } from "./Wire";
 
 // A schema-valid 8-char id from a readable tag: cid("p1") === "p1000000".

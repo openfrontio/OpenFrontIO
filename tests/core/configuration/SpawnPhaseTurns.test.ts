@@ -1,5 +1,5 @@
+import { GameType } from "@openfront/engine-api/game/GameTypes";
 import { describe, expect, test } from "vitest";
-import { GameType } from "../../../src/core/game/GameTypes";
 import { setup } from "../../util/Setup";
 
 // 10 ticks = 1 second of game time.

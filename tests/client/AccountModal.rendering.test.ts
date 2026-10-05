@@ -1,5 +1,5 @@
+import type { UserMeResponse } from "@openfront/shared/ApiSchemas";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { UserMeResponse } from "../../src/core/ApiSchemas";
 
 // ─── Mocks (mirrors tests/client/clan/ClanModalTestUtils.ts factories) ──────
 
@@ -31,7 +31,7 @@ vi.mock("../../src/client/Utils", () => ({
   getMapName: vi.fn((m: string) => m),
   renderDuration: vi.fn(() => ""),
 }));
-vi.mock("../../src/core/Format", () => ({
+vi.mock("@openfront/engine-lib/Format", () => ({
   renderNumber: vi.fn((n: number) => String(n)),
 }));
 

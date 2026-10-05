@@ -1,9 +1,9 @@
+import { Cell } from "@openfront/engine-api/game/GameTypes";
 import { describe, expect, test } from "vitest";
 import {
   alignClusterOrder,
   Slot,
 } from "../../../../src/client/controllers/AttackingTroopsController";
-import { Cell } from "../../../../src/core/game/GameTypes";
 
 // Slots only need the `dst` fields populated for `alignClusterOrder` — it
 // compares the new positions against the previous targets to decide whether

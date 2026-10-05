@@ -1,9 +1,9 @@
+import { TileRef } from "@openfront/engine-api/game/GameMap";
+import { PlayerInfo, PlayerType } from "@openfront/engine-api/game/GameTypes";
+import { calculateBoundingBox, inscribed } from "@openfront/engine-lib/Util";
+import { PlayerExecution } from "@openfront/engine/execution/PlayerExecution";
+import { Game, Player } from "@openfront/engine/game/Game";
 import { beforeEach, describe, expect, test } from "vitest";
-import { PlayerExecution } from "../../../src/core/execution/PlayerExecution";
-import { Game, Player } from "../../../src/core/game/Game";
-import { TileRef } from "../../../src/core/game/GameMap";
-import { PlayerInfo, PlayerType } from "../../../src/core/game/GameTypes";
-import { calculateBoundingBox, inscribed } from "../../../src/core/Util";
 import { setup } from "../../util/Setup";
 
 // The annexation checks (surroundedBySamePlayer / isSurrounded) run on a

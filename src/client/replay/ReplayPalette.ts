@@ -13,8 +13,8 @@
  * this when the graphics settings change.
  */
 
-import { assetUrl } from "../../core/AssetUrls";
-import type { PlayerCosmetics } from "../../core/WireSchemas";
+import { assetUrl } from "@openfront/shared/AssetUrls";
+import type { PlayerCosmetics } from "@openfront/shared/WireSchemas";
 import { createThemeSettings } from "../render/gl/RenderSettings";
 import {
   PALETTE_SIZE,

@@ -1,17 +1,17 @@
-import { css, html, LitElement } from "lit";
-import { customElement, state } from "lit/decorators.js";
-import { translateText } from "../../../client/Utils";
-import { assetUrl } from "../../../core/AssetUrls";
-import { EventBus } from "../../../core/EventBus";
-import { renderNumber } from "../../../core/Format";
-import { TileRef } from "../../../core/game/GameMap";
+import { TileRef } from "@openfront/engine-api/game/GameMap";
 import {
   BuildableUnit,
   BuildMenus,
   Gold,
   PlayerBuildableUnitType,
   UnitType,
-} from "../../../core/game/GameTypes";
+} from "@openfront/engine-api/game/GameTypes";
+import { EventBus } from "@openfront/engine-lib/EventBus";
+import { renderNumber } from "@openfront/engine-lib/Format";
+import { assetUrl } from "@openfront/shared/AssetUrls";
+import { css, html, LitElement } from "lit";
+import { customElement, state } from "lit/decorators.js";
+import { translateText } from "../../../client/Utils";
 import { Controller } from "../../Controller";
 import {
   CloseViewEvent,

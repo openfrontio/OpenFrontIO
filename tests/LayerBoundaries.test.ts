@@ -2,9 +2,10 @@
  * Enforces the import graph between the engine, its public API, the code
  * shared by client and server, and the apps (#1701, docs/EnginePackageSplit.md).
  *
- * Every src/core file is assigned to the package it will live in. An import
- * edge outside the allowed graph fails unless ALLOWLIST lists it; a listed
- * edge that no longer occurs fails too, so the list only shrinks.
+ * Every file belongs to the package its directory names (packages/<pkg>/src,
+ * src/client, src/server). An import edge outside the allowed graph fails
+ * unless ALLOWLIST lists it; a listed edge that no longer occurs fails too,
+ * so the list only shrinks.
  */
 import fs from "fs";
 import path from "path";
@@ -24,59 +25,8 @@ type Pkg =
   | "server"
   | "resources";
 
-// src/core files that do not end up in the engine.
-const FUTURE: Record<string, Pkg> = {
-  "src/core/Schemas.ts": "engine-api",
-  "src/core/StatsSchemas.ts": "engine-api",
-  "src/core/game/GameMap.ts": "engine-api",
-  "src/core/game/GameMapLoader.ts": "engine-api",
-  "src/core/game/GameTypes.ts": "engine-api",
-  "src/core/game/GameUpdates.ts": "engine-api",
-  "src/core/game/Maps.gen.ts": "engine-api",
-  "src/core/game/ReadViews.ts": "engine-api",
-  "src/core/worker/WorkerMessages.ts": "engine-api",
-
-  "src/core/AssetPaths.ts": "engine-lib",
-  "src/core/DetMath.ts": "engine-lib",
-  "src/core/EventBus.ts": "engine-lib",
-  "src/core/Format.ts": "engine-lib",
-  "src/core/PseudoRandom.ts": "engine-lib",
-  "src/core/Util.ts": "engine-lib",
-  "src/core/configuration/Config.ts": "engine-lib",
-  "src/core/execution/Util.ts": "engine-lib",
-  "src/core/execution/utils/TribeNames.ts": "engine-lib",
-  "src/core/game/DoomsdayClock.ts": "engine-lib",
-  "src/core/game/FetchGameMapLoader.ts": "engine-lib",
-  "src/core/game/GameMapImpl.ts": "engine-lib",
-  "src/core/game/GameUpdateUtils.ts": "engine-lib",
-  "src/core/game/MotionPlans.ts": "engine-lib",
-  "src/core/game/TeamAssignment.ts": "engine-lib",
-  "src/core/game/TerraNulliusImpl.ts": "engine-lib",
-  "src/core/game/TerrainMapLoader.ts": "engine-lib",
-  "src/core/game/TileSet.ts": "engine-lib",
-  "src/core/game/UnitGrid.ts": "engine-lib",
-  "src/core/game/Veterancy.ts": "engine-lib",
-  "src/core/snapshot/SnapshotType.ts": "engine-lib",
-
-  "src/core/AnonNames.ts": "shared",
-  "src/core/ApiSchemas.ts": "shared",
-  "src/core/AssetUrls.ts": "shared",
-  "src/core/Base64.ts": "shared",
-  "src/core/ClanApiSchemas.ts": "shared",
-  "src/core/CloseCodes.ts": "shared",
-  "src/core/ClusterConfig.ts": "shared",
-  "src/core/CosmeticSchemas.ts": "shared",
-  "src/core/PatternDecoder.ts": "shared",
-  "src/core/ServerList.ts": "shared",
-  "src/core/SharedUtil.ts": "shared",
-  "src/core/WireSchemas.ts": "shared",
-  "src/core/WorkerSchemas.ts": "shared",
-  "src/core/ZbinWire.ts": "shared",
-  "src/core/configuration/Env.ts": "shared",
-};
-
 // The only engine file the apps may load: the simulation worker.
-const ENGINE_ENTRY = "src/core/worker/Worker.worker.ts";
+const ENGINE_ENTRY = "packages/engine/src/worker/Worker.worker.ts";
 
 const ALLOWED: Record<Pkg, Pkg[]> = {
   "engine-api": ["engine-api", "zbin", "resources"],
@@ -96,18 +46,27 @@ const ENGINE_SIDE = new Set<Pkg>(["engine", "engine-lib", "engine-api"]);
 const ENGINE_NPM = new Set(["zod", "zod/v4"]);
 
 /**
- * Known violations, as "<from> -> <to>" where <from> is a file or a package
- * and <to> is a file. Shrinks to the replay-processor exception by the end of
- * the split; never add to it.
+ * Known violations, as "<from file> -> <to file>"; never add to it.
+ *
+ * The replay processor runs createGameRunner in its own worker. It moves
+ * behind an engine worker entry with the Node engine host (#1701 follow-up).
  */
 const ALLOWLIST: string[] = [
-  "client -> src/core/GameRunner.ts",
-  "client -> src/core/game/Game.ts",
+  "src/client/replay/processor/ReplayProcessor.ts -> packages/engine/src/GameRunner.ts",
+  "src/client/replay/processor/ReplayProcessor.ts -> packages/engine/src/game/Game.ts",
+];
+
+const PACKAGES: Pkg[] = [
+  "engine",
+  "engine-api",
+  "engine-lib",
+  "shared",
+  "zbin",
 ];
 
 function packageOf(file: string): Pkg | null {
-  if (file.startsWith("src/core/")) return FUTURE[file] ?? "engine";
-  if (file.startsWith("zbin/")) return "zbin";
+  const m = /^packages\/([^/]+)\/src\//.exec(file);
+  if (m && (PACKAGES as string[]).includes(m[1])) return m[1] as Pkg;
   if (file.startsWith("src/client/")) return "client";
   if (file.startsWith("src/server/")) return "server";
   if (file.startsWith("resources/")) return "resources";
@@ -182,6 +141,12 @@ function resolve(
     target = probe(path.posix.join(path.posix.dirname(from), bare));
   } else if (bare.startsWith("src/") || bare.startsWith("resources/")) {
     target = probe(bare);
+  } else if (bare.startsWith("@openfront/")) {
+    // Workspace packages export "./*" -> "./src/*.ts" (zbin also ".").
+    const [, pkg, ...sub] = bare.split("/");
+    target = probe(
+      `packages/${pkg}/src/${sub.length > 0 ? sub.join("/") : "index"}`,
+    );
   } else {
     return { npm: bare };
   }
@@ -193,10 +158,9 @@ function violations(): { edges: Set<string>; determinism: string[] } {
   const edges = new Set<string>();
   const determinism: string[] = [];
   const files = [
-    ...walk("src/core"),
+    ...PACKAGES.flatMap((pkg) => walk(`packages/${pkg}/src`)),
     ...walk("src/client"),
     ...walk("src/server"),
-    ...walk("zbin"),
   ];
   for (const file of files) {
     const from = packageOf(file)!;
@@ -214,10 +178,7 @@ function violations(): { edges: Set<string>; determinism: string[] } {
       if (to === "engine" && from === "client" && r.file === ENGINE_ENTRY) {
         continue;
       }
-      // Engine-side edges are listed per file; app edges per package, since
-      // dozens of app files share each engine target.
-      const key = from === "client" || from === "server" ? from : file;
-      edges.add(`${key} -> ${r.file}`);
+      edges.add(`${file} -> ${r.file}`);
     }
     if (ENGINE_SIDE.has(from)) {
       const text = fs.readFileSync(path.join(ROOT, file), "utf8");

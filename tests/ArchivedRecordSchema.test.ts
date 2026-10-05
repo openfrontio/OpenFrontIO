@@ -2,7 +2,7 @@ import {
   AnalyticsRecordSchema,
   ArchivedAnalyticsRecordSchema,
   GameRecordSchema,
-} from "../src/core/WireSchemas";
+} from "@openfront/shared/WireSchemas";
 
 // A record as an old build would have written it: no `nations` in the config,
 // no `clanTag` on players, a username that fails today's tighter regex, and a

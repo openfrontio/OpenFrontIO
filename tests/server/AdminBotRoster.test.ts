@@ -1,5 +1,5 @@
+import { GameType } from "@openfront/engine-api/game/GameTypes";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { GameType } from "../../src/core/game/GameTypes";
 import { registerAdminBotRoutes } from "../../src/server/AdminBotRoutes";
 import { Client } from "../../src/server/Client";
 import { GameServer } from "../../src/server/GameServer";

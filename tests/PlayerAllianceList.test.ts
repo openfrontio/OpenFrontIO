@@ -1,7 +1,7 @@
-import { AllianceRequestExecution } from "../src/core/execution/alliance/AllianceRequestExecution";
-import { BreakAllianceExecution } from "../src/core/execution/alliance/BreakAllianceExecution";
-import { Game, Player } from "../src/core/game/Game";
-import { PlayerType } from "../src/core/game/GameTypes";
+import { PlayerType } from "@openfront/engine-api/game/GameTypes";
+import { AllianceRequestExecution } from "@openfront/engine/execution/alliance/AllianceRequestExecution";
+import { BreakAllianceExecution } from "@openfront/engine/execution/alliance/BreakAllianceExecution";
+import { Game, Player } from "@openfront/engine/game/Game";
 import { playerInfo, setup } from "./util/Setup";
 
 /**

@@ -1,6 +1,6 @@
+import type { UserMeResponse } from "@openfront/shared/ApiSchemas";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { MAX_USERNAME_LENGTH } from "../src/client/validations/username";
-import type { UserMeResponse } from "../src/core/ApiSchemas";
 
 // The identity bar pulls in the whole client bootstrap (auth, Steam,
 // CrazyGames, the clan API). Stub the boundaries so the test exercises the

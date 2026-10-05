@@ -5,7 +5,7 @@
  * draw() is pure GPU: uniforms + one drawArraysInstanced call.
  */
 
-import type { Config } from "src/core/configuration/Config";
+import type { Config } from "@openfront/engine-lib/configuration/Config";
 import type { RendererConfig, UnitState } from "../../types";
 import {
   SMOOTHED_NUKE_TYPES,

@@ -8,8 +8,8 @@
  * through InputHandler → MouseMoveEvent on the EventBus, so we just listen.
  */
 
-import { EventBus } from "../../core/EventBus";
-import { UnitType } from "../../core/game/GameTypes";
+import { UnitType } from "@openfront/engine-api/game/GameTypes";
+import { EventBus } from "@openfront/engine-lib/EventBus";
 import { Controller } from "../Controller";
 import { MouseMoveEvent } from "../InputHandler";
 import { MapRenderer } from "../render/gl";

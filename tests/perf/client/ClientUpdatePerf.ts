@@ -32,28 +32,28 @@
  */
 import "./Shims"; // must be first: browser-global shims for client code
 
-import fs from "fs";
-import path from "path";
-import { fileURLToPath } from "url";
-import { GameView } from "../../../src/client/view/GameView";
-import { WebGLFrameBuilder } from "../../../src/client/WebGLFrameBuilder";
-import type { WorkerClient } from "../../../src/client/WorkerClient";
-import { Config } from "../../../src/core/configuration/Config";
 import {
   Difficulty,
   GameMapSize,
   GameMapType,
   GameMode,
   GameType,
-} from "../../../src/core/game/GameTypes";
+} from "@openfront/engine-api/game/GameTypes";
 import {
   GameUpdateType,
   GameUpdateViewData,
   HashUpdate,
-} from "../../../src/core/game/GameUpdates";
-import { loadTerrainMap } from "../../../src/core/game/TerrainMapLoader";
-import { createGameRunner } from "../../../src/core/GameRunner";
-import { GameConfig, GameStartInfo } from "../../../src/core/Schemas";
+} from "@openfront/engine-api/game/GameUpdates";
+import { GameConfig, GameStartInfo } from "@openfront/engine-api/Schemas";
+import { Config } from "@openfront/engine-lib/configuration/Config";
+import { loadTerrainMap } from "@openfront/engine-lib/game/TerrainMapLoader";
+import { createGameRunner } from "@openfront/engine/GameRunner";
+import fs from "fs";
+import path from "path";
+import { fileURLToPath } from "url";
+import { GameView } from "../../../src/client/view/GameView";
+import { WebGLFrameBuilder } from "../../../src/client/WebGLFrameBuilder";
+import type { WorkerClient } from "../../../src/client/WorkerClient";
 import { NodeGameMapLoader } from "../fullgame/NodeGameMapLoader";
 import {
   CpuProfiler,

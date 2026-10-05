@@ -1,11 +1,11 @@
-import fs from "fs";
-import path from "path";
 import {
   GameMapLoader,
   MapData,
   MapManifest,
-} from "../../../src/core/game/GameMapLoader";
-import { GameMapType } from "../../../src/core/game/GameTypes";
+} from "@openfront/engine-api/game/GameMapLoader";
+import { GameMapType } from "@openfront/engine-api/game/GameTypes";
+import fs from "fs";
+import path from "path";
 
 /**
  * Loads real production maps from resources/maps/ via the filesystem,

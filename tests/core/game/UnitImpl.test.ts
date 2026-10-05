@@ -1,10 +1,10 @@
-import { Game, Player } from "../../../src/core/game/Game";
 import {
   MessageType,
   PlayerInfo,
   PlayerType,
   UnitType,
-} from "../../../src/core/game/GameTypes";
+} from "@openfront/engine-api/game/GameTypes";
+import { Game, Player } from "@openfront/engine/game/Game";
 import { setup } from "../../util/Setup";
 
 describe("UnitImpl", () => {

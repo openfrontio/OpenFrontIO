@@ -1,6 +1,6 @@
+import { Difficulty } from "@openfront/engine-api/game/GameTypes";
 import { html, TemplateResult } from "lit";
 import medalIconRaw from "../../../../resources/images/MedalIconWhite.svg?raw";
-import { Difficulty } from "../../../core/game/GameTypes";
 import { translateText } from "../../Utils";
 
 // CSS mask that renders the medal glyph; tint it via `background-color`.

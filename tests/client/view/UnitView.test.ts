@@ -5,14 +5,14 @@
  * that the trickier missile-readiness math is correct.
  */
 
-import { describe, expect, it } from "vitest";
-import { UnitView } from "../../../src/client/view/UnitView";
 import {
   TrainType,
   TransportShipState,
   UnitType,
   WarshipState,
-} from "../../../src/core/game/GameTypes";
+} from "@openfront/engine-api/game/GameTypes";
+import { describe, expect, it } from "vitest";
+import { UnitView } from "../../../src/client/view/UnitView";
 import { makeGameView, makeUnitUpdate, stubConfig } from "../../util/viewStubs";
 
 describe("UnitView accessors", () => {

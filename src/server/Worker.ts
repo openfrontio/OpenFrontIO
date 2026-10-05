@@ -1,17 +1,8 @@
-import compression from "compression";
-import express, { NextFunction, Request, Response } from "express";
-import rateLimit from "express-rate-limit";
-import http from "http";
-import ipAnonymize from "ip-anonymize";
-import path from "path";
-import { fileURLToPath } from "url";
-import { WebSocket, WebSocketServer } from "ws";
-import { z } from "zod";
-import { CloseCode, CloseReason } from "../core/CloseCodes";
-import { GameEnv } from "../core/configuration/Env";
-import { GameType } from "../core/game/GameTypes";
-import { ID, isValidGameID } from "../core/Schemas";
-import { generateID, replacer } from "../core/SharedUtil";
+import { GameType } from "@openfront/engine-api/game/GameTypes";
+import { ID, isValidGameID } from "@openfront/engine-api/Schemas";
+import { CloseCode, CloseReason } from "@openfront/shared/CloseCodes";
+import { GameEnv } from "@openfront/shared/configuration/Env";
+import { generateID, replacer } from "@openfront/shared/SharedUtil";
 import {
   ClientMessage,
   ClientPlatformSchema,
@@ -21,9 +12,21 @@ import {
   MIN_HOSTED_LOBBY_AUTO_START_MS,
   MIN_HOSTED_LOBBY_PLAYERS,
   ServerErrorMessage,
-} from "../core/WireSchemas";
-import { CreateGameInputSchema } from "../core/WorkerSchemas";
-import { decodeClientMessage, encodeServerMessage } from "../core/ZbinWire";
+} from "@openfront/shared/WireSchemas";
+import { CreateGameInputSchema } from "@openfront/shared/WorkerSchemas";
+import {
+  decodeClientMessage,
+  encodeServerMessage,
+} from "@openfront/shared/ZbinWire";
+import compression from "compression";
+import express, { NextFunction, Request, Response } from "express";
+import rateLimit from "express-rate-limit";
+import http from "http";
+import ipAnonymize from "ip-anonymize";
+import path from "path";
+import { fileURLToPath } from "url";
+import { WebSocket, WebSocketServer } from "ws";
+import { z } from "zod";
 import { registerAdminBotRoutes } from "./AdminBotRoutes";
 import { censorPlayer } from "./Censor";
 import { Client } from "./Client";

@@ -1,5 +1,5 @@
+import { GameMapImpl } from "@openfront/engine-lib/game/GameMapImpl";
 import { describe, expect, it } from "vitest";
-import { GameMapImpl } from "../../../src/core/game/GameMapImpl";
 
 describe("GameMap.isValidRef", () => {
   const map = new GameMapImpl(10, 8, new Uint8Array(10 * 8), 0);

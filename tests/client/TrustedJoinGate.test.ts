@@ -1,8 +1,11 @@
+import { GameMapType, GameMode } from "@openfront/engine-api/game/GameTypes";
+import type { GameConfig } from "@openfront/engine-api/Schemas";
+import type {
+  PublicGameInfo,
+  PublicGames,
+} from "@openfront/shared/WireSchemas";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ClientEnv } from "../../src/client/ClientEnv";
-import { GameMapType, GameMode } from "../../src/core/game/GameTypes";
-import type { GameConfig } from "../../src/core/Schemas";
-import type { PublicGameInfo, PublicGames } from "../../src/core/WireSchemas";
 
 // Same socket stand-in as GameModeSelectorGatingWiring: keep the update
 // callback so a lobby snapshot can be pushed in and a card rendered.

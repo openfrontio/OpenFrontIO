@@ -1,5 +1,5 @@
-import { GameEvent } from "../../core/EventBus";
-import { UnitType } from "../../core/game/GameTypes";
+import { UnitType } from "@openfront/engine-api/game/GameTypes";
+import { GameEvent } from "@openfront/engine-lib/EventBus";
 
 /** HUD elements (or, for "territory", the map ring) the tutorial can draw attention to. */
 export type TutorialHighlight =

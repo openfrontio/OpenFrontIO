@@ -6,9 +6,16 @@
  * (src/client/replay/codec) can use them in a worker and get the same records as
  * the live client.
  */
-import { PlayerID, PlayerType, TrainType } from "../../core/game/GameTypes";
-import { PlayerUpdate, UnitUpdate } from "../../core/game/GameUpdates";
-import { ATTACK_DELTA_OUTGOING } from "../../core/game/GameUpdateUtils";
+import {
+  PlayerID,
+  PlayerType,
+  TrainType,
+} from "@openfront/engine-api/game/GameTypes";
+import {
+  PlayerUpdate,
+  UnitUpdate,
+} from "@openfront/engine-api/game/GameUpdates";
+import { ATTACK_DELTA_OUTGOING } from "@openfront/engine-lib/game/GameUpdateUtils";
 import {
   PlayerState,
   PlayerStatic,

@@ -1,17 +1,17 @@
-import { AttackExecution } from "../src/core/execution/AttackExecution";
-import { NationAllianceBehavior } from "../src/core/execution/nation/NationAllianceBehavior";
-import { NationEmojiBehavior } from "../src/core/execution/nation/NationEmojiBehavior";
-import { findRunawayLeader } from "../src/core/execution/nation/NationUtils";
-import { AiAttackBehavior } from "../src/core/execution/utils/AiAttackBehavior";
-import { AllianceRequest, Game, Player } from "../src/core/game/Game";
 import {
   Difficulty,
   GameMode,
   PlayerInfo,
   PlayerType,
   Tick,
-} from "../src/core/game/GameTypes";
-import { PseudoRandom } from "../src/core/PseudoRandom";
+} from "@openfront/engine-api/game/GameTypes";
+import { PseudoRandom } from "@openfront/engine-lib/PseudoRandom";
+import { AttackExecution } from "@openfront/engine/execution/AttackExecution";
+import { NationAllianceBehavior } from "@openfront/engine/execution/nation/NationAllianceBehavior";
+import { NationEmojiBehavior } from "@openfront/engine/execution/nation/NationEmojiBehavior";
+import { findRunawayLeader } from "@openfront/engine/execution/nation/NationUtils";
+import { AiAttackBehavior } from "@openfront/engine/execution/utils/AiAttackBehavior";
+import { AllianceRequest, Game, Player } from "@openfront/engine/game/Game";
 import { setup } from "./util/Setup";
 
 /**

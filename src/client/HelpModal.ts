@@ -1,3 +1,4 @@
+import { assetUrl } from "@openfront/shared/AssetUrls";
 import { html } from "lit";
 import { customElement, query, state } from "lit/decorators.js";
 import {
@@ -6,7 +7,6 @@ import {
   translateText,
   TUTORIAL_VIDEO_URL,
 } from "../client/Utils";
-import { assetUrl } from "../core/AssetUrls";
 import { BaseModal } from "./components/BaseModal";
 import "./components/Difficulties";
 import { modalHeader } from "./components/ui/ModalHeader";

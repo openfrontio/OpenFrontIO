@@ -1,15 +1,15 @@
+import type { UserMeResponse } from "@openfront/shared/ApiSchemas";
+import {
+  EFFECT_TYPES,
+  NUKE_EXPLOSION_TYPES,
+  type Cosmetics,
+} from "@openfront/shared/CosmeticSchemas";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { purchaseCosmetic } from "../../src/client/Cosmetics";
 import { EFFECTS_KEY, UserSettings } from "../../src/client/UserSettings";
 import type { CosmeticCard } from "../../src/client/components/CosmeticCard";
 import "../../src/client/components/EffectsGrid";
 import type { EffectsGrid } from "../../src/client/components/EffectsGrid";
-import type { UserMeResponse } from "../../src/core/ApiSchemas";
-import {
-  EFFECT_TYPES,
-  NUKE_EXPLOSION_TYPES,
-  type Cosmetics,
-} from "../../src/core/CosmeticSchemas";
 
 vi.mock("../../src/client/Cosmetics", async (importOriginal) => ({
   ...(await importOriginal<typeof import("../../src/client/Cosmetics")>()),

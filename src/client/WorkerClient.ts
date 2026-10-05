@@ -1,5 +1,4 @@
-import { getCdnBase } from "../core/AssetUrls";
-import { TileRef } from "../core/game/GameMap";
+import { TileRef } from "@openfront/engine-api/game/GameMap";
 import {
   BuildableUnit,
   Cell,
@@ -8,11 +7,15 @@ import {
   PlayerBuildableUnitType,
   PlayerID,
   PlayerProfile,
-} from "../core/game/GameTypes";
-import { ErrorUpdate, GameUpdateViewData } from "../core/game/GameUpdates";
-import { ClientID, GameStartInfo, Turn } from "../core/Schemas";
-import { generateID } from "../core/SharedUtil";
-import { WorkerMessage } from "../core/worker/WorkerMessages";
+} from "@openfront/engine-api/game/GameTypes";
+import {
+  ErrorUpdate,
+  GameUpdateViewData,
+} from "@openfront/engine-api/game/GameUpdates";
+import { ClientID, GameStartInfo, Turn } from "@openfront/engine-api/Schemas";
+import { WorkerMessage } from "@openfront/engine-api/worker/WorkerMessages";
+import { getCdnBase } from "@openfront/shared/AssetUrls";
+import { generateID } from "@openfront/shared/SharedUtil";
 
 // Inlined as a same-origin Blob (Vite's `?worker&inline`), sidestepping the
 // cross-origin `new Worker(url)` restriction that would otherwise apply when
@@ -21,7 +24,7 @@ import { WorkerMessage } from "../core/worker/WorkerMessages";
 // instead of inside the main bundle.
 async function createGameWorker(): Promise<Worker> {
   const { default: GameWorker } =
-    await import("../core/worker/Worker.worker.ts?worker&inline");
+    await import("@openfront/engine/worker/Worker.worker?worker&inline");
   return new GameWorker();
 }
 

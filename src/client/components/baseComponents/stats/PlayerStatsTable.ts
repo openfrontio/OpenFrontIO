@@ -1,12 +1,12 @@
-import { LitElement, html, nothing, type TemplateResult } from "lit";
-import { customElement, property } from "lit/decorators.js";
-import { renderNumber } from "../../../../core/Format";
 import {
   PlayerStats,
   boatUnits,
   bombUnits,
   otherUnits,
-} from "../../../../core/StatsSchemas";
+} from "@openfront/engine-api/StatsSchemas";
+import { renderNumber } from "@openfront/engine-lib/Format";
+import { LitElement, html, nothing, type TemplateResult } from "lit";
+import { customElement, property } from "lit/decorators.js";
 import { translateText } from "../../../Utils";
 
 // Display order for the buildings table. Declared as a Record rather than a

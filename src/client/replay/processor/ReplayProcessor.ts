@@ -19,23 +19,23 @@
  * turns up is the game that was played.
  */
 
-import { Game } from "../../../core/game/Game";
-import { GameMapLoader } from "../../../core/game/GameMapLoader";
+import { GameMapLoader } from "@openfront/engine-api/game/GameMapLoader";
 import {
   GameUpdateType,
   GameUpdateViewData,
   HashUpdate,
-} from "../../../core/game/GameUpdates";
-import { createGameRunner } from "../../../core/GameRunner";
+} from "@openfront/engine-api/game/GameUpdates";
+import { Game } from "@openfront/engine/game/Game";
+import { createGameRunner } from "@openfront/engine/GameRunner";
 import {
   decompressGameRecord,
   toWireGameStartInfo,
-} from "../../../core/SharedUtil";
+} from "@openfront/shared/SharedUtil";
 import {
   GameRecord,
   WireGameStartInfo,
   WireGameStartInfoSchema,
-} from "../../../core/WireSchemas";
+} from "@openfront/shared/WireSchemas";
 import { StreamingEncoder } from "../codec/encode/StreamingEncoder";
 import type { GzipFn, ReplayAppend, ReplayBase } from "../codec/ReplayTypes";
 import { terrainOf } from "../codec/Terrain";

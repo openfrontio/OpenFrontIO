@@ -21,26 +21,29 @@
  *
  * Exits non-zero if the replay diverges from the recorded hashes.
  */
+import { PlayerInfo, PlayerType } from "@openfront/engine-api/game/GameTypes";
+import {
+  GameUpdateType,
+  HashUpdate,
+} from "@openfront/engine-api/game/GameUpdates";
+import { GameStartInfo } from "@openfront/engine-api/Schemas";
+import { Config } from "@openfront/engine-lib/configuration/Config";
+import { loadTerrainMap } from "@openfront/engine-lib/game/TerrainMapLoader";
+import { PseudoRandom } from "@openfront/engine-lib/PseudoRandom";
+import { simpleHash } from "@openfront/engine-lib/Util";
+import { Executor } from "@openfront/engine/execution/ExecutionManager";
+import { createGame } from "@openfront/engine/game/GameImpl";
+import { createNationsForGame } from "@openfront/engine/game/NationCreation";
+import { GameRunner } from "@openfront/engine/GameRunner";
+import {
+  decompressGameRecord,
+  toWireGameStartInfo,
+} from "@openfront/shared/SharedUtil";
+import { GameRecord, GameRecordSchema } from "@openfront/shared/WireSchemas";
 import { execSync } from "child_process";
 import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
-import { Config } from "../../src/core/configuration/Config";
-import { Executor } from "../../src/core/execution/ExecutionManager";
-import { createGame } from "../../src/core/game/GameImpl";
-import { PlayerInfo, PlayerType } from "../../src/core/game/GameTypes";
-import { GameUpdateType, HashUpdate } from "../../src/core/game/GameUpdates";
-import { createNationsForGame } from "../../src/core/game/NationCreation";
-import { loadTerrainMap } from "../../src/core/game/TerrainMapLoader";
-import { GameRunner } from "../../src/core/GameRunner";
-import { PseudoRandom } from "../../src/core/PseudoRandom";
-import { GameStartInfo } from "../../src/core/Schemas";
-import {
-  decompressGameRecord,
-  toWireGameStartInfo,
-} from "../../src/core/SharedUtil";
-import { simpleHash } from "../../src/core/Util";
-import { GameRecord, GameRecordSchema } from "../../src/core/WireSchemas";
 import { NodeGameMapLoader } from "../perf/fullgame/NodeGameMapLoader";
 
 const PROJECT_ROOT = path.resolve(

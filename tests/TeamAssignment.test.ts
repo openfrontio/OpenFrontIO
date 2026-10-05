@@ -6,8 +6,11 @@ import {
   PlayerType,
   Quads,
   Trios,
-} from "../src/core/game/GameTypes";
-import { assignTeams, resolveTeamsList } from "../src/core/game/TeamAssignment";
+} from "@openfront/engine-api/game/GameTypes";
+import {
+  assignTeams,
+  resolveTeamsList,
+} from "@openfront/engine-lib/game/TeamAssignment";
 
 const teams = [ColoredTeams.Red, ColoredTeams.Blue];
 

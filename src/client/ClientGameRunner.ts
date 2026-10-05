@@ -1,10 +1,26 @@
-import { Config } from "src/core/configuration/Config";
-import { ClientEnv } from "../client/ClientEnv";
-import { reloadForUpdate, translateText } from "../client/Utils";
-import { EventBus } from "../core/EventBus";
-import { ClientID, GameID } from "../core/Schemas";
-import { replacer } from "../core/SharedUtil";
-import { findClosestBy } from "../core/Util";
+import { ClientID, GameID } from "@openfront/engine-api/Schemas";
+import { TileRef } from "@openfront/engine-api/game/GameMap";
+import { GameMapLoader } from "@openfront/engine-api/game/GameMapLoader";
+import {
+  BuildableUnit,
+  PlayerType,
+  Structures,
+  UnitType,
+} from "@openfront/engine-api/game/GameTypes";
+import {
+  ErrorUpdate,
+  GameUpdateType,
+  GameUpdateViewData,
+  HashUpdate,
+} from "@openfront/engine-api/game/GameUpdates";
+import { EventBus } from "@openfront/engine-lib/EventBus";
+import { findClosestBy } from "@openfront/engine-lib/Util";
+import { Config } from "@openfront/engine-lib/configuration/Config";
+import {
+  loadTerrainMap,
+  TerrainMapData,
+} from "@openfront/engine-lib/game/TerrainMapLoader";
+import { replacer } from "@openfront/shared/SharedUtil";
 import {
   GameRecord,
   GroupTokenEvent,
@@ -12,22 +28,9 @@ import {
   PlayerCosmeticRefs,
   ServerMessage,
   WireGameStartInfo,
-} from "../core/WireSchemas";
-import { TileRef } from "../core/game/GameMap";
-import { GameMapLoader } from "../core/game/GameMapLoader";
-import {
-  BuildableUnit,
-  PlayerType,
-  Structures,
-  UnitType,
-} from "../core/game/GameTypes";
-import {
-  ErrorUpdate,
-  GameUpdateType,
-  GameUpdateViewData,
-  HashUpdate,
-} from "../core/game/GameUpdates";
-import { loadTerrainMap, TerrainMapData } from "../core/game/TerrainMapLoader";
+} from "@openfront/shared/WireSchemas";
+import { ClientEnv } from "../client/ClientEnv";
+import { reloadForUpdate, translateText } from "../client/Utils";
 import { isDesktopShell } from "./DesktopShell";
 import { GameMetrics } from "./GameMetrics";
 import { showInGameAlert } from "./InGameModal";

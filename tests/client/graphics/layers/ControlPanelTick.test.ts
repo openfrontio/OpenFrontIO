@@ -2,13 +2,13 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 // Side-effect import: the @customElement decorator registers <control-panel>
 // when the module is evaluated, and a type-only reference would not evaluate it.
+import { EventBus } from "@openfront/engine-lib/EventBus";
 import "../../../../src/client/hud/layers/ControlPanel";
 import type { ControlPanel } from "../../../../src/client/hud/layers/ControlPanel";
 import { AttackRatioEvent } from "../../../../src/client/InputHandler";
 import type { UIState } from "../../../../src/client/UIState";
 import { UserSettings } from "../../../../src/client/UserSettings";
 import type { GameView } from "../../../../src/client/view";
-import { EventBus } from "../../../../src/core/EventBus";
 
 describe("control-panel keybind attack ratio and tick visibility", () => {
   let panel: ControlPanel;

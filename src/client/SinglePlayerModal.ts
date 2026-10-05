@@ -1,9 +1,3 @@
-import { html, TemplateResult } from "lit";
-import { customElement, state } from "lit/decorators.js";
-import { translateText } from "../client/Utils";
-import { UserMeResponse } from "../core/ApiSchemas";
-import { assetUrl } from "../core/AssetUrls";
-import { DoomsdayClockSpeed } from "../core/game/DoomsdayClock";
 import {
   Difficulty,
   GameMapSize,
@@ -12,10 +6,16 @@ import {
   GameType,
   maps,
   UnitType,
-} from "../core/game/GameTypes";
-import { TeamCountConfig } from "../core/Schemas";
-import { generateID } from "../core/SharedUtil";
-import { PlayerCosmetics } from "../core/WireSchemas";
+} from "@openfront/engine-api/game/GameTypes";
+import { TeamCountConfig } from "@openfront/engine-api/Schemas";
+import { DoomsdayClockSpeed } from "@openfront/engine-lib/game/DoomsdayClock";
+import { UserMeResponse } from "@openfront/shared/ApiSchemas";
+import { assetUrl } from "@openfront/shared/AssetUrls";
+import { generateID } from "@openfront/shared/SharedUtil";
+import { PlayerCosmetics } from "@openfront/shared/WireSchemas";
+import { html, TemplateResult } from "lit";
+import { customElement, state } from "lit/decorators.js";
+import { translateText } from "../client/Utils";
 import { responseHasLinkedIdentity } from "./AccountIdentity";
 import "./components/baseComponents/Button";
 import "./components/baseComponents/Modal";

@@ -1,14 +1,14 @@
-import { html, LitElement } from "lit";
-import { customElement } from "lit/decorators.js";
-import { EventBus } from "../../../core/EventBus";
-import { renderNumber } from "../../../core/Format";
 import {
   BuildableUnit,
   BuildMenus,
   Gold,
   PlayerBuildableUnitType,
   UnitType,
-} from "../../../core/game/GameTypes";
+} from "@openfront/engine-api/game/GameTypes";
+import { EventBus } from "@openfront/engine-lib/EventBus";
+import { renderNumber } from "@openfront/engine-lib/Format";
+import { html, LitElement } from "lit";
+import { customElement } from "lit/decorators.js";
 import { Controller } from "../../Controller";
 import { ToggleStructureEvent } from "../../InputHandler";
 import { UIState } from "../../UIState";

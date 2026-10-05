@@ -11,38 +11,38 @@
  * with GameRecordSchema, as the archive API serves it.
  */
 
-import path from "path";
-import { fileURLToPath } from "url";
-import { Game } from "../../../../src/core/game/Game";
 import {
   Difficulty,
   GameMapSize,
   GameMapType,
   GameMode,
   GameType,
-} from "../../../../src/core/game/GameTypes";
+} from "@openfront/engine-api/game/GameTypes";
 import {
   GameUpdateType,
   HashUpdate,
-} from "../../../../src/core/game/GameUpdates";
-import { createGameRunner } from "../../../../src/core/GameRunner";
+} from "@openfront/engine-api/game/GameUpdates";
 import {
   GameConfig,
   GameStartInfo,
   StampedIntent,
   Turn,
-} from "../../../../src/core/Schemas";
+} from "@openfront/engine-api/Schemas";
+import { Game } from "@openfront/engine/game/Game";
+import { createGameRunner } from "@openfront/engine/GameRunner";
 import {
   createPartialGameRecord,
   toWireGameStartInfo,
-} from "../../../../src/core/SharedUtil";
+} from "@openfront/shared/SharedUtil";
 import {
   GameRecord,
   GameRecordSchema,
   PlayerRecord,
   WireGameStartInfo,
   WirePlayer,
-} from "../../../../src/core/WireSchemas";
+} from "@openfront/shared/WireSchemas";
+import path from "path";
+import { fileURLToPath } from "url";
 import { NodeGameMapLoader } from "../../../perf/fullgame/NodeGameMapLoader";
 
 const PROJECT_ROOT = path.resolve(

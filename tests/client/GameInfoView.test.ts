@@ -1,13 +1,13 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   Difficulty,
   GameMapSize,
   GameMapType,
   GameMode,
   GameType,
-} from "../../src/core/game/GameTypes";
-import type { GameConfig } from "../../src/core/Schemas";
-import type { AnalyticsRecord } from "../../src/core/WireSchemas";
+} from "@openfront/engine-api/game/GameTypes";
+import type { GameConfig } from "@openfront/engine-api/Schemas";
+import type { AnalyticsRecord } from "@openfront/shared/WireSchemas";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("../../src/client/Api", () => ({
   fetchGameById: vi.fn(async () => false),

@@ -1,3 +1,23 @@
+import {
+  Difficulty,
+  GameMapSize,
+  GameMapType,
+  GameMode,
+  UnitType,
+} from "@openfront/engine-api/game/GameTypes";
+import {
+  GameConfig,
+  isValidGameID,
+  TeamCountConfig,
+} from "@openfront/engine-api/Schemas";
+import { EventBus } from "@openfront/engine-lib/EventBus";
+import { DoomsdayClockSpeed } from "@openfront/engine-lib/game/DoomsdayClock";
+import { GameEnv } from "@openfront/shared/configuration/Env";
+import {
+  ClientInfo,
+  LOBBY_QUEUE_CUTOFF_MS,
+  LobbyInfoEvent,
+} from "@openfront/shared/WireSchemas";
 import { html, nothing } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
 import { ClientEnv } from "src/client/ClientEnv";
@@ -8,22 +28,6 @@ import {
   showToast,
   translateText,
 } from "../client/Utils";
-import { GameEnv } from "../core/configuration/Env";
-import { EventBus } from "../core/EventBus";
-import { DoomsdayClockSpeed } from "../core/game/DoomsdayClock";
-import {
-  Difficulty,
-  GameMapSize,
-  GameMapType,
-  GameMode,
-  UnitType,
-} from "../core/game/GameTypes";
-import { GameConfig, isValidGameID, TeamCountConfig } from "../core/Schemas";
-import {
-  ClientInfo,
-  LOBBY_QUEUE_CUTOFF_MS,
-  LobbyInfoEvent,
-} from "../core/WireSchemas";
 import { createLobby, getUserMe, queueLobby, setLobbyListed } from "./Api";
 import "./components/baseComponents/Modal";
 import { BaseModal } from "./components/BaseModal";

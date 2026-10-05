@@ -8,7 +8,7 @@
  * fallback the viewer offers when it can't show a game.
  */
 
-import type { GameRecord } from "../../core/WireSchemas";
+import type { GameRecord } from "@openfront/shared/WireSchemas";
 import { ClientEnv } from "../ClientEnv";
 import { UserSettings } from "../UserSettings";
 import { currentPagePath } from "../Utils";

@@ -1,6 +1,6 @@
+import { LiveStream, StreamsFeed } from "@openfront/shared/ApiSchemas";
 import { LitElement, html } from "lit";
 import { customElement, state } from "lit/decorators.js";
-import { LiveStream, StreamsFeed } from "../core/ApiSchemas";
 import { crazyGamesSDK } from "./CrazyGamesSDK";
 import { isDesktopShell } from "./DesktopShell";
 import { broadcastKey, streamsFeed, watchUrl } from "./StreamsFeed";

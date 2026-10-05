@@ -1,4 +1,4 @@
-import type { ClientPlatform } from "../core/WireSchemas";
+import type { ClientPlatform } from "@openfront/shared/WireSchemas";
 import { crazyGamesSDK } from "./CrazyGamesSDK";
 import { isDesktopShell } from "./DesktopShell";
 

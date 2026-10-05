@@ -1,6 +1,10 @@
+import {
+  ColoredTeams,
+  GameMode,
+  Team,
+} from "@openfront/engine-api/game/GameTypes";
 import { html, LitElement } from "lit";
 import { customElement, property } from "lit/decorators.js";
-import { ColoredTeams, GameMode, Team } from "../../core/game/GameTypes";
 import { translateText } from "../Utils";
 import { GameView, PlayerView } from "../view";
 

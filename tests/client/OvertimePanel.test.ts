@@ -1,6 +1,10 @@
+import {
+  ColoredTeams,
+  GameMode,
+  Team,
+} from "@openfront/engine-api/game/GameTypes";
 import { OvertimePanel } from "../../src/client/components/OvertimePanel";
 import type { GameView, PlayerView } from "../../src/client/view";
-import { ColoredTeams, GameMode, Team } from "../../src/core/game/GameTypes";
 
 // Keys pass through with their params appended, so assertions can check both
 // which string is shown and what it was filled with.

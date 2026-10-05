@@ -1,5 +1,5 @@
-import { Cosmetics } from "../core/CosmeticSchemas";
-import { PlayerPattern } from "../core/WireSchemas";
+import { Cosmetics } from "@openfront/shared/CosmeticSchemas";
+import { PlayerPattern } from "@openfront/shared/WireSchemas";
 import {
   GraphicsOverrides,
   GraphicsOverridesSchema,

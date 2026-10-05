@@ -1,12 +1,12 @@
-import { WinCheckExecution } from "../../../src/core/execution/WinCheckExecution";
-import { Game } from "../../../src/core/game/Game";
-import { GameImpl } from "../../../src/core/game/GameImpl";
 import {
   PlayerInfo,
   PlayerType,
   UnitType,
-} from "../../../src/core/game/GameTypes";
-import { snapshotGame } from "../../../src/core/snapshot/GameSnapshot";
+} from "@openfront/engine-api/game/GameTypes";
+import { WinCheckExecution } from "@openfront/engine/execution/WinCheckExecution";
+import { Game } from "@openfront/engine/game/Game";
+import { GameImpl } from "@openfront/engine/game/GameImpl";
+import { snapshotGame } from "@openfront/engine/snapshot/GameSnapshot";
 import { setup } from "../../util/Setup";
 import { diffGraphs, diffSnapshots, roundTrip } from "../../util/Snapshot";
 

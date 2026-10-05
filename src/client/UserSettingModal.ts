@@ -1,7 +1,7 @@
+import type { MapLayer } from "@openfront/engine-api/game/GameMapLoader";
 import { html, nothing } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import { formatKeyForDisplay, translateText } from "../client/Utils";
-import type { MapLayer } from "../core/game/GameMapLoader";
 import "./components/baseComponents/setting/SettingKeybind";
 import { SettingKeybind } from "./components/baseComponents/setting/SettingKeybind";
 import "./components/baseComponents/setting/SettingNumber";

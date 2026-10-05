@@ -1,13 +1,16 @@
-import { WinCheckExecution } from "../src/core/execution/WinCheckExecution";
-import { Game } from "../src/core/game/Game";
 import {
   GameMode,
   PlayerInfo,
   PlayerType,
   RankedType,
-} from "../src/core/game/GameTypes";
-import { GameUpdateType, WinUpdate } from "../src/core/game/GameUpdates";
-import { GameConfig } from "../src/core/Schemas";
+} from "@openfront/engine-api/game/GameTypes";
+import {
+  GameUpdateType,
+  WinUpdate,
+} from "@openfront/engine-api/game/GameUpdates";
+import { GameConfig } from "@openfront/engine-api/Schemas";
+import { WinCheckExecution } from "@openfront/engine/execution/WinCheckExecution";
+import { Game } from "@openfront/engine/game/Game";
 import { setup } from "./util/Setup";
 
 async function setupTeamGame(config: Partial<GameConfig>): Promise<Game> {

@@ -1,3 +1,8 @@
+import {
+  PlayerInfo,
+  PlayerType,
+  UnitType,
+} from "@openfront/engine-api/game/GameTypes";
 import Benchmark from "benchmark";
 import { dirname } from "path";
 import { fileURLToPath } from "url";
@@ -5,11 +10,6 @@ import {
   buildNukeTrajectory,
   SAMInfo,
 } from "../../src/client/render/gl/utils/NukeTrajectory";
-import {
-  PlayerInfo,
-  PlayerType,
-  UnitType,
-} from "../../src/core/game/GameTypes";
 import { setup } from "../util/Setup";
 
 // Setup giant world map scenario with 2 players for in-game pipeline testing

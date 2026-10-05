@@ -19,7 +19,7 @@ import {
   RailroadConstructionUpdate,
   RailroadDestructionUpdate,
   RailroadSnapUpdate,
-} from "../../../core/game/GameUpdates";
+} from "@openfront/engine-api/game/GameUpdates";
 
 // Regular enum (not const enum) for cross-package use.
 export enum RailType {

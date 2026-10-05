@@ -8,7 +8,7 @@
  * processor, so this build never tries to simulate them.
  */
 
-import { GameRecord, GameRecordSchema } from "../../core/WireSchemas";
+import { GameRecord, GameRecordSchema } from "@openfront/shared/WireSchemas";
 import { getApiBase } from "../ApiBase";
 import { ClientEnv } from "../ClientEnv";
 

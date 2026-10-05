@@ -1,13 +1,13 @@
-import { ConstructionExecution } from "../src/core/execution/ConstructionExecution";
-import { NationStructureBehavior } from "../src/core/execution/nation/NationStructureBehavior";
 import {
   Difficulty,
   GameMode,
   PlayerInfo,
   PlayerType,
   UnitType,
-} from "../src/core/game/GameTypes";
-import { PseudoRandom } from "../src/core/PseudoRandom";
+} from "@openfront/engine-api/game/GameTypes";
+import { PseudoRandom } from "@openfront/engine-lib/PseudoRandom";
+import { ConstructionExecution } from "@openfront/engine/execution/ConstructionExecution";
+import { NationStructureBehavior } from "@openfront/engine/execution/nation/NationStructureBehavior";
 import { createGame, L, W } from "./core/pathfinding/_fixtures";
 
 // size x size with a lake in the middle half: `nation` owns the west coast, `other` the

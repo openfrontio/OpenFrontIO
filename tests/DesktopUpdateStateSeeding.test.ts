@@ -1,3 +1,9 @@
+import { GameMapType, GameMode } from "@openfront/engine-api/game/GameTypes";
+import type { GameConfig } from "@openfront/engine-api/Schemas";
+import type {
+  PublicGameInfo,
+  PublicGames,
+} from "@openfront/shared/WireSchemas";
 import {
   afterEach,
   beforeEach,
@@ -12,9 +18,6 @@ import type {
   DesktopUpdateBridge,
   DesktopUpdateState,
 } from "../src/client/DesktopShell";
-import { GameMapType, GameMode } from "../src/core/game/GameTypes";
-import type { GameConfig } from "../src/core/Schemas";
-import type { PublicGameInfo, PublicGames } from "../src/core/WireSchemas";
 
 // Both consumers open a public-lobby WebSocket the moment they connect. jsdom
 // has no WebSocket worth talking to and this file is about the seed, not the

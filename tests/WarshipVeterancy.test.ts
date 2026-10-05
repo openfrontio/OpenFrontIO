@@ -1,6 +1,10 @@
-import { ShellExecution } from "../src/core/execution/ShellExecution";
-import { Game, Player, Unit } from "../src/core/game/Game";
-import { PlayerInfo, PlayerType, UnitType } from "../src/core/game/GameTypes";
+import {
+  PlayerInfo,
+  PlayerType,
+  UnitType,
+} from "@openfront/engine-api/game/GameTypes";
+import { ShellExecution } from "@openfront/engine/execution/ShellExecution";
+import { Game, Player, Unit } from "@openfront/engine/game/Game";
 import { setup } from "./util/Setup";
 
 const coastX = 7;

@@ -1,3 +1,4 @@
+import { assetUrl } from "@openfront/shared/AssetUrls";
 import { Howl } from "howler";
 import {
   html,
@@ -5,7 +6,6 @@ import {
   ReactiveControllerHost,
   TemplateResult,
 } from "lit";
-import { assetUrl } from "../../core/AssetUrls";
 import { UserSettings } from "../UserSettings";
 import { translateText } from "../Utils";
 

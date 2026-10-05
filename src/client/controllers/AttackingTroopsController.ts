@@ -8,9 +8,9 @@
  * worker poll cadence (200ms) and the animation duration (250ms) are matched
  * to what the old CSS transition did.
  */
-import { EventBus } from "../../core/EventBus";
-import { renderTroops } from "../../core/Format";
-import { Cell, PlayerType } from "../../core/game/GameTypes";
+import { Cell, PlayerType } from "@openfront/engine-api/game/GameTypes";
+import { EventBus } from "@openfront/engine-lib/EventBus";
+import { renderTroops } from "@openfront/engine-lib/Format";
 import { Controller } from "../Controller";
 import { AlternateViewEvent } from "../InputHandler";
 import { MapRenderer } from "../render/gl";

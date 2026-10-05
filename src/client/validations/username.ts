@@ -1,9 +1,9 @@
-import { z } from "zod";
 import {
   ClanTagSchema,
   RENDERABLE_NAME_CHARS,
   UsernameSchema,
-} from "../../core/Schemas";
+} from "@openfront/engine-api/Schemas";
+import { z } from "zod";
 import { translateText } from "../Utils";
 
 export const MIN_USERNAME_LENGTH = 3;

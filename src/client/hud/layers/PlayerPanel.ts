@@ -1,10 +1,4 @@
-import { html, LitElement } from "lit";
-import { customElement, state } from "lit/decorators.js";
-import Countries from "resources/countries.json" with { type: "json" };
-import { assetUrl } from "../../../core/AssetUrls";
-import { EventBus } from "../../../core/EventBus";
-import { renderNumber, renderTroops } from "../../../core/Format";
-import { TileRef } from "../../../core/game/GameMap";
+import { TileRef } from "@openfront/engine-api/game/GameMap";
 import {
   AllPlayers,
   GameType,
@@ -12,8 +6,14 @@ import {
   PlayerProfile,
   PlayerType,
   Relation,
-} from "../../../core/game/GameTypes";
-import { Emoji, flattenedEmojiTable } from "../../../core/Schemas";
+} from "@openfront/engine-api/game/GameTypes";
+import { Emoji, flattenedEmojiTable } from "@openfront/engine-api/Schemas";
+import { EventBus } from "@openfront/engine-lib/EventBus";
+import { renderNumber, renderTroops } from "@openfront/engine-lib/Format";
+import { assetUrl } from "@openfront/shared/AssetUrls";
+import { html, LitElement } from "lit";
+import { customElement, state } from "lit/decorators.js";
+import Countries from "resources/countries.json" with { type: "json" };
 import { fetchLobbyListed } from "../../Api";
 import { actionButton } from "../../components/ui/ActionButton";
 import "../../components/ui/Divider";

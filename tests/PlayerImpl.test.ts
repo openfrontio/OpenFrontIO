@@ -1,5 +1,9 @@
-import { Game, Player } from "../src/core/game/Game";
-import { PlayerInfo, PlayerType, UnitType } from "../src/core/game/GameTypes";
+import {
+  PlayerInfo,
+  PlayerType,
+  UnitType,
+} from "@openfront/engine-api/game/GameTypes";
+import { Game, Player } from "@openfront/engine/game/Game";
 import { setup } from "./util/Setup";
 
 let game: Game;

@@ -1,10 +1,5 @@
-import { Colord, colord } from "colord";
-import { base64url } from "jose";
-import { PatternDecoder } from "../../core/PatternDecoder";
-import { ClientID } from "../../core/Schemas";
-import { createRandomName } from "../../core/SharedUtil";
-import { PlayerCosmetics } from "../../core/WireSchemas";
-import { TileRef } from "../../core/game/GameMap";
+import { ClientID } from "@openfront/engine-api/Schemas";
+import { TileRef } from "@openfront/engine-api/game/GameMap";
 import {
   BuildableUnit,
   Cell,
@@ -20,13 +15,18 @@ import {
   Team,
   Tick,
   UnitType,
-} from "../../core/game/GameTypes";
+} from "@openfront/engine-api/game/GameTypes";
 import {
   AllianceView,
   AttackUpdate,
   PlayerUpdate,
-} from "../../core/game/GameUpdates";
-import { PlayerLike } from "../../core/game/ReadViews";
+} from "@openfront/engine-api/game/GameUpdates";
+import { PlayerLike } from "@openfront/engine-api/game/ReadViews";
+import { PatternDecoder } from "@openfront/shared/PatternDecoder";
+import { createRandomName } from "@openfront/shared/SharedUtil";
+import { PlayerCosmetics } from "@openfront/shared/WireSchemas";
+import { Colord, colord } from "colord";
+import { base64url } from "jose";
 import { UserSettings } from "../UserSettings";
 import { PlayerState, PlayerStatic, PlayerTypeEnum } from "../render/types";
 import { themeProvider } from "../theme/ThemeProvider";

@@ -1,10 +1,8 @@
-import { ClientEnv } from "src/client/ClientEnv";
-import { renderNavVersion } from "src/client/GameVersion";
-import { UserMeResponse } from "../core/ApiSchemas";
-import { assetUrl } from "../core/AssetUrls";
-import { EventBus } from "../core/EventBus";
-import { GAME_ID_REGEX } from "../core/Schemas";
-import { toWireGameStartInfo } from "../core/SharedUtil";
+import { GAME_ID_REGEX } from "@openfront/engine-api/Schemas";
+import { EventBus } from "@openfront/engine-lib/EventBus";
+import { UserMeResponse } from "@openfront/shared/ApiSchemas";
+import { assetUrl } from "@openfront/shared/AssetUrls";
+import { toWireGameStartInfo } from "@openfront/shared/SharedUtil";
 import {
   GameInfo,
   GameRecord,
@@ -12,8 +10,10 @@ import {
   LobbyInfoEvent,
   PublicGameInfo,
   WireGameStartInfo,
-} from "../core/WireSchemas";
-import { GameEnv } from "../core/configuration/Env";
+} from "@openfront/shared/WireSchemas";
+import { GameEnv } from "@openfront/shared/configuration/Env";
+import { ClientEnv } from "src/client/ClientEnv";
+import { renderNavVersion } from "src/client/GameVersion";
 import "./AccountModal";
 import "./AccountSettingsModal";
 import { adGatekeeper } from "./AdGatekeeper";

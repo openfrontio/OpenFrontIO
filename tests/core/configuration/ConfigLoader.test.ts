@@ -1,6 +1,6 @@
+import { GameEnv, parseGameEnv } from "@openfront/shared/configuration/Env";
 import { ClientEnv } from "src/client/ClientEnv";
 import { beforeEach, describe, expect, test, vi } from "vitest";
-import { GameEnv, parseGameEnv } from "../../../src/core/configuration/Env";
 
 describe("parseGameEnv", () => {
   test("maps 'dev' to GameEnv.Dev", () => {

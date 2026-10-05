@@ -4,13 +4,13 @@ import {
   PlayerType,
   UnitType,
   type GameUpdates,
-} from "../../../../src/core/game/GameTypes";
+} from "@openfront/engine-api/game/GameTypes";
 import {
   GameUpdateType,
   type GameUpdateViewData,
   type PlayerUpdate,
   type UnitUpdate,
-} from "../../../../src/core/game/GameUpdates";
+} from "@openfront/engine-api/game/GameUpdates";
 
 export function emptyUpdates(): GameUpdates {
   const updates = {} as Record<number, unknown[]>;

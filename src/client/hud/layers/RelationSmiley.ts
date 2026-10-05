@@ -1,6 +1,6 @@
+import { Relation } from "@openfront/engine-api/game/GameTypes";
 import { html, LitElement } from "lit";
 import { customElement, property } from "lit/decorators.js";
-import { Relation } from "../../../core/game/GameTypes";
 
 type FaceData = {
   color: string;

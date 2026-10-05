@@ -1,11 +1,11 @@
-import { describe, expect, test } from "vitest";
-import { MarkDisconnectedExecution } from "../../../src/core/execution/MarkDisconnectedExecution";
-import { GameImpl } from "../../../src/core/game/GameImpl";
 import {
   GameMode,
   PlayerInfo,
   PlayerType,
-} from "../../../src/core/game/GameTypes";
+} from "@openfront/engine-api/game/GameTypes";
+import { MarkDisconnectedExecution } from "@openfront/engine/execution/MarkDisconnectedExecution";
+import { GameImpl } from "@openfront/engine/game/GameImpl";
+import { describe, expect, test } from "vitest";
 import { setup } from "../../util/Setup";
 
 describe("Win Attribution Bug Fix", () => {

@@ -1,6 +1,10 @@
-import { MirvExecution } from "../src/core/execution/MIRVExecution";
-import { Game, Player } from "../src/core/game/Game";
-import { PlayerInfo, PlayerType, UnitType } from "../src/core/game/GameTypes";
+import {
+  PlayerInfo,
+  PlayerType,
+  UnitType,
+} from "@openfront/engine-api/game/GameTypes";
+import { MirvExecution } from "@openfront/engine/execution/MIRVExecution";
+import { Game, Player } from "@openfront/engine/game/Game";
 import { setup } from "./util/Setup";
 import { executeTicks } from "./util/utils";
 

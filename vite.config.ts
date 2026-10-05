@@ -1,3 +1,8 @@
+import {
+  type AssetManifest,
+  buildAssetUrl,
+} from "@openfront/engine-lib/AssetPaths";
+import { rewriteAssetsForCdn } from "@openfront/shared/AssetUrls";
 import tailwindcss from "@tailwindcss/vite";
 import fs from "fs";
 import http from "http";
@@ -7,8 +12,6 @@ import { fileURLToPath } from "url";
 import { defineConfig, loadEnv, type Plugin } from "vite";
 import { createHtmlPlugin } from "vite-plugin-html";
 import { configDefaults } from "vitest/config";
-import { type AssetManifest, buildAssetUrl } from "./src/core/AssetPaths";
-import { rewriteAssetsForCdn } from "./src/core/AssetUrls";
 import {
   buildPublicAssetManifest,
   copyRootPublicFiles,

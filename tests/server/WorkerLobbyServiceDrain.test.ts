@@ -1,7 +1,7 @@
+import { PublicLobbyMessage } from "@openfront/shared/WireSchemas";
 import EventEmitter from "events";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { WebSocket } from "ws";
-import { PublicLobbyMessage } from "../../src/core/WireSchemas";
 import { WorkerLobbyService } from "../../src/server/WorkerLobbyService";
 import { mockLogger } from "../util/GameServerHarness";
 import { decodeSentLobbyMessage } from "../util/Wire";

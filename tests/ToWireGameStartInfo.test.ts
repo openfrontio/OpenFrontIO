@@ -1,7 +1,7 @@
+import { GameType } from "@openfront/engine-api/game/GameTypes";
+import { GameStartInfo } from "@openfront/engine-api/Schemas";
+import { toWireGameStartInfo } from "@openfront/shared/SharedUtil";
 import { describe, expect, it } from "vitest";
-import { GameType } from "../src/core/game/GameTypes";
-import { GameStartInfo } from "../src/core/Schemas";
-import { toWireGameStartInfo } from "../src/core/SharedUtil";
 
 function startInfo(config: Record<string, unknown>): GameStartInfo {
   return {

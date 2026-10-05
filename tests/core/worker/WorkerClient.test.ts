@@ -1,9 +1,9 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { WorkerClient } from "../../../src/client/WorkerClient";
 import type {
   PlayerActionsResultMessage,
   WorkerMessage,
-} from "../../../src/core/worker/WorkerMessages";
+} from "@openfront/engine-api/worker/WorkerMessages";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { WorkerClient } from "../../../src/client/WorkerClient";
 
 type MockWorker = {
   postMessage: (message: unknown) => void;

@@ -1,4 +1,3 @@
-import { describe, expect, it } from "vitest";
 import {
   commitsMatch,
   isCommitLike,
@@ -13,7 +12,8 @@ import {
   versionedPath,
   versionedPathForGame,
   versionMatches,
-} from "../../src/core/ServerList";
+} from "@openfront/shared/ServerList";
+import { describe, expect, it } from "vitest";
 
 const OWN = "bfd5563a11111111111111111111111111111111";
 const OLD = "5ccc50a722222222222222222222222222222222";

@@ -1,7 +1,3 @@
-import { Config } from "../../../src/core/configuration/Config";
-import { NationExecution } from "../../../src/core/execution/NationExecution";
-import { SpawnExecution } from "../../../src/core/execution/SpawnExecution";
-import { Game } from "../../../src/core/game/Game";
 import {
   Cell,
   Difficulty,
@@ -9,7 +5,11 @@ import {
   PlayerInfo,
   PlayerType,
   UnitType,
-} from "../../../src/core/game/GameTypes";
+} from "@openfront/engine-api/game/GameTypes";
+import { Config } from "@openfront/engine-lib/configuration/Config";
+import { NationExecution } from "@openfront/engine/execution/NationExecution";
+import { SpawnExecution } from "@openfront/engine/execution/SpawnExecution";
+import { Game } from "@openfront/engine/game/Game";
 import { setup } from "../../util/Setup";
 import { expectSnapshotRoundTrip } from "../../util/Snapshot";
 import { TestConfig, UseRealAttackLogic } from "../../util/TestConfig";

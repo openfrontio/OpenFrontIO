@@ -1,14 +1,14 @@
-import { describe, expect, it } from "vitest";
 import {
   ServerLobbyInfoMessageSchema,
   ServerStartGameMessageSchema,
   type ServerLobbyInfoMessage,
   type ServerStartGameMessage,
-} from "../../src/core/WireSchemas";
+} from "@openfront/shared/WireSchemas";
 import {
   decodeServerMessage,
   encodeServerMessage,
-} from "../../src/core/ZbinWire";
+} from "@openfront/shared/ZbinWire";
+import { describe, expect, it } from "vitest";
 import { testGameConfig } from "../util/Wire";
 
 // OPE-423. The opaque per-game grouping token on the two server->client

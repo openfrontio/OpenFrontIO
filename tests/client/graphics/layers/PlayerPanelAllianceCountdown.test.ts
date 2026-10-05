@@ -19,7 +19,7 @@ vi.mock("../../../../src/client/Utils", () => ({
   translateText: vi.fn((key: string) => key),
   renderDuration: vi.fn(),
 }));
-vi.mock("../../../../src/core/Format", () => ({
+vi.mock("@openfront/engine-lib/Format", () => ({
   renderNumber: vi.fn(),
   renderTroops: vi.fn(),
 }));

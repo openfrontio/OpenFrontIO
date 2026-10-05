@@ -1,21 +1,21 @@
-import EventEmitter from "events";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { WebSocket } from "ws";
 import {
   Difficulty,
   GameMapSize,
   GameMapType,
   GameMode,
   GameType,
-} from "../../src/core/game/GameTypes";
-import { sanitizeLobbyLabel } from "../../src/core/SharedUtil";
-import { LOBBY_LABEL_MAX } from "../../src/core/Util";
+} from "@openfront/engine-api/game/GameTypes";
+import { LOBBY_LABEL_MAX } from "@openfront/engine-lib/Util";
+import { sanitizeLobbyLabel } from "@openfront/shared/SharedUtil";
 import {
   FEATURED_LOBBY_AUTO_START_MS,
   HOSTED_LOBBY_AUTO_START_MS,
   LobbyLabelSchema,
   MAX_HOSTED_LOBBIES,
-} from "../../src/core/WireSchemas";
+} from "@openfront/shared/WireSchemas";
+import EventEmitter from "events";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { WebSocket } from "ws";
 import { GameManager } from "../../src/server/GameManager";
 import {
   GamePhase,

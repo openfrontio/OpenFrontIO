@@ -1,12 +1,12 @@
-import Benchmark from "benchmark";
-import { dirname } from "path";
-import { fileURLToPath } from "url";
-import { MirvExecution } from "../../src/core/execution/MIRVExecution";
 import {
   PlayerInfo,
   PlayerType,
   UnitType,
-} from "../../src/core/game/GameTypes";
+} from "@openfront/engine-api/game/GameTypes";
+import { MirvExecution } from "@openfront/engine/execution/MIRVExecution";
+import Benchmark from "benchmark";
+import { dirname } from "path";
+import { fileURLToPath } from "url";
 import { setup } from "../util/Setup";
 
 // Setup sparse territory scenario (small target area)

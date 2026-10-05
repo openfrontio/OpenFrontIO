@@ -1,10 +1,14 @@
-import { Game, Player } from "../src/core/game/Game";
-import { TileRef } from "../src/core/game/GameMap";
-import { PlayerInfo, PlayerType, UnitType } from "../src/core/game/GameTypes";
+import { TileRef } from "@openfront/engine-api/game/GameMap";
+import {
+  PlayerInfo,
+  PlayerType,
+  UnitType,
+} from "@openfront/engine-api/game/GameTypes";
+import { Game, Player } from "@openfront/engine/game/Game";
 import {
   WaterPathFinder,
   WaterPathMemo,
-} from "../src/core/pathfinding/PathFinder";
+} from "@openfront/engine/pathfinding/PathFinder";
 import { setup } from "./util/Setup";
 
 let game: Game;

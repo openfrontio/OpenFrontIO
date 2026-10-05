@@ -1,6 +1,6 @@
+import { Difficulty, GameMapType } from "@openfront/engine-api/game/GameTypes";
 import { LitElement, html } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
-import { Difficulty, GameMapType } from "../../../core/game/GameTypes";
 import { terrainMapFileLoader } from "../../TerrainMapFileLoader";
 import { translateText } from "../../Utils";
 import { starIcon } from "./MapFavorites";

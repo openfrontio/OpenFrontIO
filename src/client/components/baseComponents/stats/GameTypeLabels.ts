@@ -1,4 +1,4 @@
-import { GameMode } from "../../../../core/game/GameTypes";
+import { GameMode } from "@openfront/engine-api/game/GameTypes";
 import { translateText } from "../../../Utils";
 
 // Shared game-type labelling for the paginated history lists (clan + player).

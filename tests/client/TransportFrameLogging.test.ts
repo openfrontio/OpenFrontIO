@@ -1,7 +1,7 @@
+import { EventBus } from "@openfront/engine-lib/EventBus";
+import type { ServerMessage } from "@openfront/shared/WireSchemas";
+import { encodeServerMessage } from "@openfront/shared/ZbinWire";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { EventBus } from "../../src/core/EventBus";
-import type { ServerMessage } from "../../src/core/WireSchemas";
-import { encodeServerMessage } from "../../src/core/ZbinWire";
 
 // OPE-423. Transport's onmessage catch used to log the raw frame. That catch
 // wraps the downstream handler as well as the decode, so any exception thrown

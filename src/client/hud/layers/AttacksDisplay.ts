@@ -1,18 +1,18 @@
-import { html, LitElement } from "lit";
-import { customElement, state } from "lit/decorators.js";
-import { assetUrl } from "../../../core/AssetUrls";
-import { EventBus } from "../../../core/EventBus";
-import { renderTroops } from "../../../core/Format";
 import {
   MessageType,
   PlayerType,
   UnitType,
-} from "../../../core/game/GameTypes";
+} from "@openfront/engine-api/game/GameTypes";
 import {
   AttackUpdate,
   GameUpdateType,
   UnitIncomingUpdate,
-} from "../../../core/game/GameUpdates";
+} from "@openfront/engine-api/game/GameUpdates";
+import { EventBus } from "@openfront/engine-lib/EventBus";
+import { renderTroops } from "@openfront/engine-lib/Format";
+import { assetUrl } from "@openfront/shared/AssetUrls";
+import { html, LitElement } from "lit";
+import { customElement, state } from "lit/decorators.js";
 import { Controller } from "../../Controller";
 import { themeProvider } from "../../theme/ThemeProvider";
 import {

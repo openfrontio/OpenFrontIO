@@ -1,7 +1,7 @@
-import { SpawnExecution } from "../src/core/execution/SpawnExecution";
-import { Player } from "../src/core/game/Game";
-import { PlayerInfo, PlayerType } from "../src/core/game/GameTypes";
-import { GameID } from "../src/core/Schemas";
+import { PlayerInfo, PlayerType } from "@openfront/engine-api/game/GameTypes";
+import { GameID } from "@openfront/engine-api/Schemas";
+import { SpawnExecution } from "@openfront/engine/execution/SpawnExecution";
+import { Player } from "@openfront/engine/game/Game";
 import { setup } from "./util/Setup";
 
 describe("Territory management", () => {

@@ -17,15 +17,19 @@
  * delta comes from the trade or train economy alone. All randomness is
  * PseudoRandom seeded from game ticks, so runs are deterministic.
  */
-import { Config } from "../src/core/configuration/Config";
-import { FactoryExecution } from "../src/core/execution/FactoryExecution";
-import { PortExecution } from "../src/core/execution/PortExecution";
-import { Game, Player, Unit } from "../src/core/game/Game";
-import { PlayerInfo, PlayerType, UnitType } from "../src/core/game/GameTypes";
+import {
+  PlayerInfo,
+  PlayerType,
+  UnitType,
+} from "@openfront/engine-api/game/GameTypes";
 import {
   GOLD_INDEX_TRAIN_OTHER,
   GOLD_INDEX_TRAIN_SELF,
-} from "../src/core/StatsSchemas";
+} from "@openfront/engine-api/StatsSchemas";
+import { Config } from "@openfront/engine-lib/configuration/Config";
+import { FactoryExecution } from "@openfront/engine/execution/FactoryExecution";
+import { PortExecution } from "@openfront/engine/execution/PortExecution";
+import { Game, Player, Unit } from "@openfront/engine/game/Game";
 import { setup } from "./util/Setup";
 
 function sig(x: number): number {

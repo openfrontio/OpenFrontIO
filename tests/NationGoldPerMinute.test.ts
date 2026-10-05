@@ -22,13 +22,6 @@
  * PseudoRandom seeded from the fixed game ID and nation names, so runs are
  * deterministic.
  */
-import fs from "fs";
-import path from "path";
-import { fileURLToPath } from "url";
-import { Config } from "../src/core/configuration/Config";
-import { NationExecution } from "../src/core/execution/NationExecution";
-import { RecomputeRailClusterExecution } from "../src/core/execution/RecomputeRailClusterExecution";
-import { Game, Player } from "../src/core/game/Game";
 import {
   Cell,
   Difficulty,
@@ -36,7 +29,14 @@ import {
   PlayerInfo,
   PlayerType,
   UnitType,
-} from "../src/core/game/GameTypes";
+} from "@openfront/engine-api/game/GameTypes";
+import { Config } from "@openfront/engine-lib/configuration/Config";
+import { NationExecution } from "@openfront/engine/execution/NationExecution";
+import { RecomputeRailClusterExecution } from "@openfront/engine/execution/RecomputeRailClusterExecution";
+import { Game, Player } from "@openfront/engine/game/Game";
+import fs from "fs";
+import path from "path";
+import { fileURLToPath } from "url";
 import { setup } from "./util/Setup";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));

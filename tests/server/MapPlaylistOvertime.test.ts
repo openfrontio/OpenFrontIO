@@ -1,6 +1,6 @@
+import { GameMode } from "@openfront/engine-api/game/GameTypes";
+import { GameConfigSchema } from "@openfront/engine-api/Schemas";
 import { describe, expect, it, vi } from "vitest";
-import { GameMode } from "../../src/core/game/GameTypes";
-import { GameConfigSchema } from "../../src/core/Schemas";
 import { MapPlaylist } from "../../src/server/MapPlaylist";
 
 vi.mock("../../src/server/MapLandTiles", () => ({

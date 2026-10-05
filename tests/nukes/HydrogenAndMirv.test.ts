@@ -1,11 +1,11 @@
-import { MirvExecution } from "src/core/execution/MIRVExecution";
-import { ConstructionExecution } from "../../src/core/execution/ConstructionExecution";
-import { Game, Player } from "../../src/core/game/Game";
 import {
   PlayerInfo,
   PlayerType,
   UnitType,
-} from "../../src/core/game/GameTypes";
+} from "@openfront/engine-api/game/GameTypes";
+import { ConstructionExecution } from "@openfront/engine/execution/ConstructionExecution";
+import { MirvExecution } from "@openfront/engine/execution/MIRVExecution";
+import { Game, Player } from "@openfront/engine/game/Game";
 import { setup } from "../util/Setup";
 import { TestConfig } from "../util/TestConfig";
 

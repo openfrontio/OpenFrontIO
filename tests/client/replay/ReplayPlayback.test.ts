@@ -1,9 +1,9 @@
+import { GameType } from "@openfront/engine-api/game/GameTypes";
 import { gunzip as gunzipCb } from "zlib";
 import {
   ReplayPlayback,
   STEP_LIMIT,
 } from "../../../src/client/replay/ReplayPlayback";
-import { GameType } from "../../../src/core/game/GameTypes";
 import { setup } from "../../util/Setup";
 import { openReader, recordGame, type RecordedGame } from "./util/RecordGame";
 

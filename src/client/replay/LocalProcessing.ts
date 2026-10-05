@@ -4,8 +4,8 @@
  * change, then the new frames as they're processed.
  */
 
-import { getCdnBase } from "../../core/AssetUrls";
-import type { GameRecord } from "../../core/WireSchemas";
+import { getCdnBase } from "@openfront/shared/AssetUrls";
+import type { GameRecord } from "@openfront/shared/WireSchemas";
 import type { ReplayAppend, ReplayBase } from "./codec/ReplayTypes";
 import type { ProcessorRequest, ProcessorResponse } from "./ProcessorMessages";
 

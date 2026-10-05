@@ -1,6 +1,3 @@
-import { LitElement, html } from "lit";
-import { customElement, property, state } from "lit/decorators.js";
-import { repeat } from "lit/directives/repeat.js";
 import {
   ColoredTeams,
   Duos,
@@ -12,11 +9,14 @@ import {
   Team,
   Trios,
   formatPlayerDisplayName,
-} from "../../core/game/GameTypes";
-import { assignTeamsLobbyPreview } from "../../core/game/TeamAssignment";
-import { ClientID, TeamCountConfig } from "../../core/Schemas";
-import { createRandomName } from "../../core/SharedUtil";
-import { ClientInfo } from "../../core/WireSchemas";
+} from "@openfront/engine-api/game/GameTypes";
+import { ClientID, TeamCountConfig } from "@openfront/engine-api/Schemas";
+import { assignTeamsLobbyPreview } from "@openfront/engine-lib/game/TeamAssignment";
+import { createRandomName } from "@openfront/shared/SharedUtil";
+import { ClientInfo } from "@openfront/shared/WireSchemas";
+import { LitElement, html } from "lit";
+import { customElement, property, state } from "lit/decorators.js";
+import { repeat } from "lit/directives/repeat.js";
 import { Theme, themeProvider } from "../theme/ThemeProvider";
 import { UserSettings } from "../UserSettings";
 import {

@@ -1,11 +1,11 @@
-import { renderDuration, translateText } from "../../client/Utils";
 import {
   Difficulty,
   GameMapSize,
   GameMode,
   GameType,
-} from "../../core/game/GameTypes";
-import { GameConfig } from "../../core/Schemas";
+} from "@openfront/engine-api/game/GameTypes";
+import { GameConfig } from "@openfront/engine-api/Schemas";
+import { renderDuration, translateText } from "../../client/Utils";
 
 // Non-default settings worth surfacing, shared by the join modal (post-join
 // config view and open-lobby rows) and the custom-lobby info tooltip on

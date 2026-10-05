@@ -1,5 +1,3 @@
-import { describe, expect, test } from "vitest";
-import { Game } from "../../../src/core/game/Game";
 import {
   ColoredTeams,
   GameMode,
@@ -8,7 +6,9 @@ import {
   PlayerType,
   Quads,
   Team,
-} from "../../../src/core/game/GameTypes";
+} from "@openfront/engine-api/game/GameTypes";
+import { Game } from "@openfront/engine/game/Game";
+import { describe, expect, test } from "vitest";
 import { setup } from "../../util/Setup";
 
 describe("Core Simulation - Team Resolution and Assignment", () => {

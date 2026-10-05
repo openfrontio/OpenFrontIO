@@ -10,15 +10,15 @@ vi.mock("../../../src/client/hud/layers/BuildMenu", () => ({
 vi.mock("../../../src/client/Utils", () => ({
   translateText: (key: string) => key,
 }));
-vi.mock("../../../src/core/Format", () => ({
+vi.mock("@openfront/engine-lib/Format", () => ({
   renderNumber: (num: number) => num.toString(),
 }));
 
+import { TileRef } from "@openfront/engine-api/game/GameMap";
 import {
   centerButtonElement,
   MenuElementParams,
 } from "../../../src/client/hud/layers/RadialMenuElements";
-import { TileRef } from "../../../src/core/game/GameMap";
 
 describe("RadialMenu center button - spawn phase", () => {
   it("clicking the center button during the spawn phase spawns on the tile", () => {

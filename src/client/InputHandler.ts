@@ -1,5 +1,8 @@
-import { EventBus, GameEvent } from "../core/EventBus";
-import { PlayerBuildableUnitType, UnitType } from "../core/game/GameTypes";
+import {
+  PlayerBuildableUnitType,
+  UnitType,
+} from "@openfront/engine-api/game/GameTypes";
+import { EventBus, GameEvent } from "@openfront/engine-lib/EventBus";
 import { Platform } from "./Platform";
 import { UIState } from "./UIState";
 import {

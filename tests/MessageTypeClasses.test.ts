@@ -1,6 +1,6 @@
+import { MessageType } from "@openfront/engine-api/game/GameTypes";
 import { vi, type MockInstance } from "vitest";
 import { getMessageTypeClasses, severityColors } from "../src/client/Utils";
-import { MessageType } from "../src/core/game/GameTypes";
 
 describe("getMessageTypeClasses", () => {
   // Spy on console.warn to track when the default case is hit

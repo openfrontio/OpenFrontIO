@@ -1,5 +1,3 @@
-import IntlMessageFormat from "intl-messageformat";
-import { DoomsdayClockSpeed } from "../core/game/DoomsdayClock";
 import {
   Duos,
   GameMode,
@@ -10,9 +8,11 @@ import {
   Quads,
   Team,
   Trios,
-} from "../core/game/GameTypes";
-import { GameConfig } from "../core/Schemas";
-import { stripVersionPrefix } from "../core/ServerList";
+} from "@openfront/engine-api/game/GameTypes";
+import { GameConfig } from "@openfront/engine-api/Schemas";
+import { DoomsdayClockSpeed } from "@openfront/engine-lib/game/DoomsdayClock";
+import { stripVersionPrefix } from "@openfront/shared/ServerList";
+import IntlMessageFormat from "intl-messageformat";
 import { ClientEnv } from "./ClientEnv";
 import type { LangSelector } from "./LangSelector";
 import { pagePin } from "./PagePin";

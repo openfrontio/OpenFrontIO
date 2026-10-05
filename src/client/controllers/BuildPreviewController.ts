@@ -7,19 +7,19 @@
  * is valid, and pushes preview data straight to the WebGL view.
  */
 
-import { EventBus } from "../../core/EventBus";
-import {
-  listNukeBreakAlliance,
-  wouldNukeBreakAlliance,
-} from "../../core/execution/Util";
-import { TileRef } from "../../core/game/GameMap";
+import { TileRef } from "@openfront/engine-api/game/GameMap";
 import {
   BuildableUnit,
   bulkCost,
   PlayerBuildableUnitType,
   Structures,
   UnitType,
-} from "../../core/game/GameTypes";
+} from "@openfront/engine-api/game/GameTypes";
+import { EventBus } from "@openfront/engine-lib/EventBus";
+import {
+  listNukeBreakAlliance,
+  wouldNukeBreakAlliance,
+} from "@openfront/engine-lib/execution/Util";
 import { Controller } from "../Controller";
 import {
   ConfirmGhostStructureEvent,

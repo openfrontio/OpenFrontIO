@@ -1,5 +1,5 @@
+import { GameMapType } from "@openfront/engine-api/game/GameTypes";
 import { TemplateResult, html } from "lit";
-import { GameMapType } from "../../../core/game/GameTypes";
 
 const FAVORITES_KEY = "map-favorites";
 

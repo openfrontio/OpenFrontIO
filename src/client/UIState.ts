@@ -1,4 +1,4 @@
-import { PlayerBuildableUnitType } from "../core/game/GameTypes";
+import { PlayerBuildableUnitType } from "@openfront/engine-api/game/GameTypes";
 
 export interface UIState {
   attackRatio: number;

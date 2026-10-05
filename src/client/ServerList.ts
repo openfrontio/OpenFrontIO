@@ -1,5 +1,4 @@
-import { z } from "zod";
-import { GameID } from "../core/Schemas";
+import { GameID } from "@openfront/engine-api/Schemas";
 import {
   commitsMatch,
   isCommitLike,
@@ -11,7 +10,8 @@ import {
   servesBuild,
   versionedPathForGame,
   versionMatches,
-} from "../core/ServerList";
+} from "@openfront/shared/ServerList";
+import { z } from "zod";
 import { getApiBase } from "./ApiBase";
 import { ClientEnv } from "./ClientEnv";
 import { isDesktopShell } from "./DesktopShell";

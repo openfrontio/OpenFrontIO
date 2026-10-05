@@ -27,7 +27,7 @@ vi.mock("../../../../src/client/Utils", () => ({
   getTranslatedPlayerTeamLabel: vi.fn(() => ""),
   getSvgAspectRatio: vi.fn(() => 1),
 }));
-vi.mock("../../../../src/core/Format", () => ({
+vi.mock("@openfront/engine-lib/Format", () => ({
   renderNumber: vi.fn(() => "0"),
   renderTroops: vi.fn(() => "0"),
 }));
@@ -39,9 +39,9 @@ vi.mock("../../../../src/client/hud/PlayerIcons", () => ({
   getPlayerIcons: vi.fn(() => []),
 }));
 
+import { PlayerType } from "@openfront/engine-api/game/GameTypes";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { PlayerInfoOverlay } from "../../../../src/client/hud/layers/PlayerInfoOverlay";
-import { PlayerType } from "../../../../src/core/game/GameTypes";
 
 // Flattens the mocked-html template tree into one string for assertions.
 function flatten(node: unknown): string {

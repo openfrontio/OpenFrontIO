@@ -1,7 +1,4 @@
-import newsItemsFallback from "resources/news.json";
-import streamsFallback from "resources/streams.json";
-import { z } from "zod";
-import type { NewsItem, StreamsFeed } from "../core/ApiSchemas";
+import type { NewsItem, StreamsFeed } from "@openfront/shared/ApiSchemas";
 import {
   ClaimAllRewardsResponse,
   ClaimAllRewardsResponseSchema,
@@ -46,12 +43,15 @@ import {
   TribeStatsResponseSchema,
   UserMeResponse,
   UserMeResponseSchema,
-} from "../core/ApiSchemas";
+} from "@openfront/shared/ApiSchemas";
 import {
   AnalyticsRecord,
   ArchivedAnalyticsRecordSchema,
   GameInfo,
-} from "../core/WireSchemas";
+} from "@openfront/shared/WireSchemas";
+import newsItemsFallback from "resources/news.json";
+import streamsFallback from "resources/streams.json";
+import { z } from "zod";
 import { getApiBase, getAudience } from "./ApiBase";
 import {
   getAuthHeader,

@@ -1,7 +1,7 @@
+import { GameMapType } from "@openfront/engine-api/game/GameTypes";
+import { UserMeResponse } from "@openfront/shared/ApiSchemas";
+import { PublicGameInfo } from "@openfront/shared/WireSchemas";
 import { html, nothing, svg, TemplateResult } from "lit";
-import { UserMeResponse } from "../../core/ApiSchemas";
-import { GameMapType } from "../../core/game/GameTypes";
-import { PublicGameInfo } from "../../core/WireSchemas";
 import { responseHasLinkedIdentity } from "../AccountIdentity";
 import { crazyGamesSDK } from "../CrazyGamesSDK";
 import { terrainMapFileLoader } from "../TerrainMapFileLoader";

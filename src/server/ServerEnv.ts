@@ -1,10 +1,13 @@
+import { GameID } from "@openfront/engine-api/Schemas";
+import { simpleHash } from "@openfront/engine-lib/Util";
+import {
+  ClusterConfig,
+  InstanceLetterSchema,
+} from "@openfront/shared/ClusterConfig";
+import { GameEnv, parseGameEnv } from "@openfront/shared/configuration/Env";
+import { generateGameID } from "@openfront/shared/SharedUtil";
 import { JWK } from "jose";
 import { z } from "zod";
-import { ClusterConfig, InstanceLetterSchema } from "../core/ClusterConfig";
-import { GameEnv, parseGameEnv } from "../core/configuration/Env";
-import { GameID } from "../core/Schemas";
-import { generateGameID } from "../core/SharedUtil";
-import { simpleHash } from "../core/Util";
 
 const JwksSchema = z.object({
   keys: z

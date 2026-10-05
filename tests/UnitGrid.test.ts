@@ -1,5 +1,9 @@
-import { PlayerInfo, PlayerType, UnitType } from "../src/core/game/GameTypes";
-import { UnitGrid } from "../src/core/game/UnitGrid";
+import {
+  PlayerInfo,
+  PlayerType,
+  UnitType,
+} from "@openfront/engine-api/game/GameTypes";
+import { UnitGrid } from "@openfront/engine-lib/game/UnitGrid";
 import { setup } from "./util/Setup";
 
 async function checkRange(

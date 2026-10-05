@@ -1,5 +1,5 @@
-import { UnitType } from "../../../src/core/game/GameTypes";
-import { Cluster, TrainStation } from "../../../src/core/game/TrainStation";
+import { UnitType } from "@openfront/engine-api/game/GameTypes";
+import { Cluster, TrainStation } from "@openfront/engine/game/TrainStation";
 
 const createStation = (id: number = 1): TrainStation => {
   const station = new TrainStation(

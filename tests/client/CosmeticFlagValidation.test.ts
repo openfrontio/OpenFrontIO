@@ -1,3 +1,4 @@
+import type { UserMeResponse } from "@openfront/shared/ApiSchemas";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { getUserMe } from "../../src/client/Api";
 import {
@@ -5,7 +6,6 @@ import {
   invalidateCosmetics,
 } from "../../src/client/Cosmetics";
 import { FLAG_KEY, UserSettings } from "../../src/client/UserSettings";
-import type { UserMeResponse } from "../../src/core/ApiSchemas";
 
 vi.mock("../../src/client/Api", async (importOriginal) => ({
   ...(await importOriginal<typeof import("../../src/client/Api")>()),

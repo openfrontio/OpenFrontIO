@@ -1,22 +1,22 @@
-import { vi } from "vitest";
-import type { Game } from "../../../src/core/game/Game";
 import {
   Cell,
   GameMapSize,
   GameMapType,
   PlayerType,
-} from "../../../src/core/game/GameTypes";
-import { GameID } from "../../../src/core/Schemas";
+} from "@openfront/engine-api/game/GameTypes";
+import { GameID } from "@openfront/engine-api/Schemas";
+import type { Game } from "@openfront/engine/game/Game";
+import { vi } from "vitest";
 import { setup } from "../../util/Setup";
 
 const mockResolveTribeNameData = vi.fn();
 
-vi.mock("../../../src/core/execution/utils/TribeNames", () => ({
+vi.mock("@openfront/engine-lib/execution/utils/TribeNames", () => ({
   resolveTribeNameData: (...args: unknown[]) =>
     mockResolveTribeNameData(...args),
 }));
 
-import { TribeSpawner } from "../../../src/core/execution/TribeSpawner";
+import { TribeSpawner } from "@openfront/engine/execution/TribeSpawner";
 
 const GAME_ID: GameID = "test_game_id";
 

@@ -1,6 +1,10 @@
+import {
+  ColoredTeams,
+  PlayerType,
+  Team,
+} from "@openfront/engine-api/game/GameTypes";
+import { simpleHash } from "@openfront/engine-lib/Util";
 import { Colord, colord, LabaColor } from "colord";
-import { ColoredTeams, PlayerType, Team } from "../../core/game/GameTypes";
-import { simpleHash } from "../../core/Util";
 import { PALETTE_NAMES } from "../render/gl/GraphicsOverrides";
 import {
   createThemeSettings,

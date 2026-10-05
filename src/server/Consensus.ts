@@ -1,6 +1,9 @@
+import { AllPlayersStats, ClientID } from "@openfront/engine-api/Schemas";
+import {
+  ClientSendWinnerMessage,
+  LiveStats,
+} from "@openfront/shared/WireSchemas";
 import { createHash } from "crypto";
-import { AllPlayersStats, ClientID } from "../core/Schemas";
-import { ClientSendWinnerMessage, LiveStats } from "../core/WireSchemas";
 import { VoteRound } from "./VoteTally";
 
 // The simulation runs on the clients, so the outcomes the server has to

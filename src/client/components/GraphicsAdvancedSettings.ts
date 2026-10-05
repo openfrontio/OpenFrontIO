@@ -1,6 +1,6 @@
+import type { MapLayer } from "@openfront/engine-api/game/GameMapLoader";
 import { html, LitElement, nothing } from "lit";
 import { customElement, property } from "lit/decorators.js";
-import type { MapLayer } from "../../core/game/GameMapLoader";
 import { migrateLegacyGraphicsSettings } from "../GraphicsPresets";
 import { isLayerVisible, layerAlpha } from "../MapLayerSettings";
 import { type GraphicsOverrides } from "../render/gl";

@@ -1,8 +1,8 @@
-import { AllianceRejectExecution } from "../src/core/execution/alliance/AllianceRejectExecution";
-import { AllianceRequestExecution } from "../src/core/execution/alliance/AllianceRequestExecution";
-import { NukeExecution } from "../src/core/execution/NukeExecution";
-import { Game, Player } from "../src/core/game/Game";
-import { PlayerType, UnitType } from "../src/core/game/GameTypes";
+import { PlayerType, UnitType } from "@openfront/engine-api/game/GameTypes";
+import { AllianceRejectExecution } from "@openfront/engine/execution/alliance/AllianceRejectExecution";
+import { AllianceRequestExecution } from "@openfront/engine/execution/alliance/AllianceRequestExecution";
+import { NukeExecution } from "@openfront/engine/execution/NukeExecution";
+import { Game, Player } from "@openfront/engine/game/Game";
 import { playerInfo, setup } from "./util/Setup";
 import { constructionExecution } from "./util/utils";
 

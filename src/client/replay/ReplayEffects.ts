@@ -10,8 +10,8 @@
  * the trail uses the player's colour.
  */
 
-import type { Cosmetics } from "../../core/CosmeticSchemas";
-import type { PlayerCosmetics } from "../../core/WireSchemas";
+import type { Cosmetics } from "@openfront/shared/CosmeticSchemas";
+import type { PlayerCosmetics } from "@openfront/shared/WireSchemas";
 import type { MapRenderer } from "../render/gl";
 import {
   EFFECT_PALETTE_BLOCKS,

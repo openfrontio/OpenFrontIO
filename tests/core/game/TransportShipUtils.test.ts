@@ -1,9 +1,9 @@
+import { TileRef } from "@openfront/engine-api/game/GameMap";
+import { PlayerInfo, PlayerType } from "@openfront/engine-api/game/GameTypes";
+import { SpawnExecution } from "@openfront/engine/execution/SpawnExecution";
+import { Game, Player } from "@openfront/engine/game/Game";
+import { canBuildTransportShip } from "@openfront/engine/game/TransportShipUtils";
 import { describe, expect, it } from "vitest";
-import { SpawnExecution } from "../../../src/core/execution/SpawnExecution";
-import { Game, Player } from "../../../src/core/game/Game";
-import { TileRef } from "../../../src/core/game/GameMap";
-import { PlayerInfo, PlayerType } from "../../../src/core/game/GameTypes";
-import { canBuildTransportShip } from "../../../src/core/game/TransportShipUtils";
 import { createGame, L, W } from "../pathfinding/_fixtures";
 
 function addPlayer(game: Game, tile: TileRef, id: string = "test"): Player {

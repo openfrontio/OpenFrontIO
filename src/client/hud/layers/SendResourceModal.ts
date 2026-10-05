@@ -1,8 +1,8 @@
+import { EventBus } from "@openfront/engine-lib/EventBus";
+import { renderTroops } from "@openfront/engine-lib/Format";
+import { within } from "@openfront/engine-lib/Util";
 import { html, LitElement } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
-import { EventBus } from "../../../core/EventBus";
-import { renderTroops } from "../../../core/Format";
-import { within } from "../../../core/Util";
 import {
   SendDonateGoldIntentEvent,
   SendDonateTroopsIntentEvent,

@@ -1,17 +1,17 @@
-import { html, LitElement, TemplateResult } from "lit";
-import { customElement, property, state } from "lit/decorators.js";
-import { assetUrl } from "../../../core/AssetUrls";
-import { EventBus } from "../../../core/EventBus";
-import { renderNumber, renderTroops } from "../../../core/Format";
-import { TileRef } from "../../../core/game/GameMap";
+import { TileRef } from "@openfront/engine-api/game/GameMap";
 import {
   PlayerProfile,
   PlayerType,
   Relation,
   UnitType,
-} from "../../../core/game/GameTypes";
-import { AllianceView } from "../../../core/game/GameUpdates";
-import { UnitLike } from "../../../core/game/ReadViews";
+} from "@openfront/engine-api/game/GameTypes";
+import { AllianceView } from "@openfront/engine-api/game/GameUpdates";
+import { UnitLike } from "@openfront/engine-api/game/ReadViews";
+import { EventBus } from "@openfront/engine-lib/EventBus";
+import { renderNumber, renderTroops } from "@openfront/engine-lib/Format";
+import { assetUrl } from "@openfront/shared/AssetUrls";
+import { html, LitElement, TemplateResult } from "lit";
+import { customElement, property, state } from "lit/decorators.js";
 import { Controller } from "../../Controller";
 import {
   ContextMenuEvent,

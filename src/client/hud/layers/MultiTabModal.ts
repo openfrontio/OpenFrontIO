@@ -1,8 +1,8 @@
+import { GameType } from "@openfront/engine-api/game/GameTypes";
+import { GameEnv } from "@openfront/shared/configuration/Env";
 import { LitElement, html } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
 import { ClientEnv } from "src/client/ClientEnv";
-import { GameEnv } from "../../../core/configuration/Env";
-import { GameType } from "../../../core/game/GameTypes";
 import { Controller } from "../../Controller";
 import { MultiTabDetector } from "../../MultiTabDetector";
 import { translateText } from "../../Utils";

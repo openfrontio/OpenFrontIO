@@ -2,9 +2,9 @@ import { describe, expect, it } from "vitest";
 
 // Side-effect import: the @customElement decorator registers <build-menu>
 // when the module is evaluated, and a type-only reference would not evaluate it.
+import { BuildableUnit, UnitType } from "@openfront/engine-api/game/GameTypes";
 import "../../../../src/client/hud/layers/BuildMenu";
 import type { BuildMenu } from "../../../../src/client/hud/layers/BuildMenu";
-import { BuildableUnit, UnitType } from "../../../../src/core/game/GameTypes";
 
 function makeMenu(): BuildMenu {
   return document.createElement("build-menu") as BuildMenu;

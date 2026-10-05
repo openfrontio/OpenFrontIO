@@ -1,16 +1,16 @@
-import { describe, expect, it } from "vitest";
-import type { PlayerState } from "../src/client/render/types";
-import { applyStateUpdate } from "../src/client/view/PlayerStateUpdate";
-import { PlayerType } from "../src/core/game/GameTypes";
-import {
-  diffPlayerUpdate,
-  packAttackTroopDeltas,
-} from "../src/core/game/GameUpdateUtils";
+import { PlayerType } from "@openfront/engine-api/game/GameTypes";
 import {
   AttackUpdate,
   GameUpdateType,
   PlayerUpdate,
-} from "../src/core/game/GameUpdates";
+} from "@openfront/engine-api/game/GameUpdates";
+import {
+  diffPlayerUpdate,
+  packAttackTroopDeltas,
+} from "@openfront/engine-lib/game/GameUpdateUtils";
+import { describe, expect, it } from "vitest";
+import type { PlayerState } from "../src/client/render/types";
+import { applyStateUpdate } from "../src/client/view/PlayerStateUpdate";
 import { makePlayerUpdate } from "./util/viewStubs";
 
 function makePlayerState(overrides: Partial<PlayerState> = {}): PlayerState {

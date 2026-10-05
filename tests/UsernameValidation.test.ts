@@ -1,3 +1,7 @@
+import {
+  RENDERABLE_NAME_CHAR_RE,
+  UsernameSchema,
+} from "@openfront/engine-api/Schemas";
 import { readFileSync } from "fs";
 import { describe, expect, it } from "vitest";
 import {
@@ -7,7 +11,6 @@ import {
   MIN_USERNAME_LENGTH,
   validateUsername,
 } from "../src/client/validations/username";
-import { RENDERABLE_NAME_CHAR_RE, UsernameSchema } from "../src/core/Schemas";
 
 describe("free-form username length", () => {
   it("matches the account-username cap", () => {

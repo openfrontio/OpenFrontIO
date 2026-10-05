@@ -1,3 +1,7 @@
+import { RankedType } from "@openfront/engine-api/game/GameTypes";
+import { GameUpdateType } from "@openfront/engine-api/game/GameUpdates";
+import { EventBus } from "@openfront/engine-lib/EventBus";
+import { Pattern } from "@openfront/shared/CosmeticSchemas";
 import { html, LitElement, TemplateResult } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import {
@@ -8,10 +12,6 @@ import {
   translateText,
   TUTORIAL_VIDEO_URL,
 } from "../../../client/Utils";
-import { Pattern } from "../../../core/CosmeticSchemas";
-import { EventBus } from "../../../core/EventBus";
-import { RankedType } from "../../../core/game/GameTypes";
-import { GameUpdateType } from "../../../core/game/GameUpdates";
 import { getUserMe } from "../../Api";
 import "../../components/CosmeticCard";
 import { cosmeticSelectionLabel } from "../../components/CosmeticPresentation";

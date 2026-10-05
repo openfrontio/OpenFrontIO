@@ -1,6 +1,6 @@
+import { GameConfig } from "@openfront/engine-api/Schemas";
+import { Config } from "@openfront/engine-lib/configuration/Config";
 import { describe, expect, it } from "vitest";
-import { Config } from "../src/core/configuration/Config";
-import { GameConfig } from "../src/core/Schemas";
 
 const dummyGameConfig = {} as unknown as GameConfig;
 

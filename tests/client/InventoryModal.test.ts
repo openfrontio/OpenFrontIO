@@ -1,3 +1,11 @@
+import type { UserMeResponse } from "@openfront/shared/ApiSchemas";
+import {
+  EFFECT_TYPES,
+  NUKE_EXPLOSION_TYPES,
+  type Cosmetics,
+  type EffectType,
+  type NukeExplosionType,
+} from "@openfront/shared/CosmeticSchemas";
 import type { LitElement } from "lit";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { getUserMe } from "../../src/client/Api";
@@ -17,14 +25,6 @@ import {
 import type { CosmeticCard } from "../../src/client/components/CosmeticCard";
 import type { EffectsGrid } from "../../src/client/components/EffectsGrid";
 import type { InventoryLoadoutBar } from "../../src/client/components/InventoryLoadoutBar";
-import type { UserMeResponse } from "../../src/core/ApiSchemas";
-import {
-  EFFECT_TYPES,
-  NUKE_EXPLOSION_TYPES,
-  type Cosmetics,
-  type EffectType,
-  type NukeExplosionType,
-} from "../../src/core/CosmeticSchemas";
 
 vi.mock("../../src/client/Api", async (importOriginal) => ({
   ...(await importOriginal<typeof import("../../src/client/Api")>()),

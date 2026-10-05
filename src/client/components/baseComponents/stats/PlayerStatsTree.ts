@@ -1,23 +1,23 @@
-import { LitElement, PropertyValues, TemplateResult, html, nothing } from "lit";
-import { customElement, property, state } from "lit/decorators.js";
-import {
-  PlayerRecentStats,
-  PlayerStatsGameMode,
-  PlayerStatsGameModes,
-  PlayerStatsLeaf,
-  PlayerStatsTree,
-} from "../../../../core/ApiSchemas";
 import {
   Difficulty,
   GameMode,
   GameType,
   RankedType,
   isDifficulty,
-} from "../../../../core/game/GameTypes";
+} from "@openfront/engine-api/game/GameTypes";
 import {
   ATTACK_INDEX_MAX_RECV,
   PlayerStats,
-} from "../../../../core/StatsSchemas";
+} from "@openfront/engine-api/StatsSchemas";
+import {
+  PlayerRecentStats,
+  PlayerStatsGameMode,
+  PlayerStatsGameModes,
+  PlayerStatsLeaf,
+  PlayerStatsTree,
+} from "@openfront/shared/ApiSchemas";
+import { LitElement, PropertyValues, TemplateResult, html, nothing } from "lit";
+import { customElement, property, state } from "lit/decorators.js";
 import { translateText } from "../../../Utils";
 import "./PlayerStatsSummary";
 import "./PlayerStatsTable";

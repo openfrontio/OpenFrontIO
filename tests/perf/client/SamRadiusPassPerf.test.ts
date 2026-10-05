@@ -13,12 +13,12 @@
  */
 import "./Shims"; // Browser-global shims for client code
 
+import { UnitType } from "@openfront/engine-api/game/GameTypes";
 import { performance } from "perf_hooks";
 import { describe, expect, it } from "vitest";
 import { SAMRadiusPass } from "../../../src/client/render/gl/passes/SamRadiusPass";
 import { createRenderSettings } from "../../../src/client/render/gl/RenderSettings";
 import { UnitState } from "../../../src/client/render/types/Renderer";
-import { UnitType } from "../../../src/core/game/GameTypes";
 import { GcTracker, summarizeGcEvents } from "../fullgame/GcProfiler";
 import { TickStats } from "../fullgame/Profiler";
 

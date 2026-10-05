@@ -1,13 +1,9 @@
-import fs from "fs";
-import path from "path";
-import { fileURLToPath } from "url";
-import { Game, Player } from "../../src/core/game/Game";
-import { TileRef } from "../../src/core/game/GameMap";
+import { TileRef } from "@openfront/engine-api/game/GameMap";
 import {
   GameMapLoader,
   MapData,
   MapManifest,
-} from "../../src/core/game/GameMapLoader";
+} from "@openfront/engine-api/game/GameMapLoader";
 import {
   AllPlayers,
   Difficulty,
@@ -16,17 +12,11 @@ import {
   GameMode,
   GameType,
   UnitType,
-} from "../../src/core/game/GameTypes";
+} from "@openfront/engine-api/game/GameTypes";
 import {
   ErrorUpdate,
   GameUpdateViewData,
-} from "../../src/core/game/GameUpdates";
-import {
-  createGameRunner,
-  createGameRunnerFromSnapshot,
-  GameRunner,
-} from "../../src/core/GameRunner";
-import { PseudoRandom } from "../../src/core/PseudoRandom";
+} from "@openfront/engine-api/game/GameUpdates";
 import {
   flattenedEmojiTable,
   GameConfig,
@@ -34,7 +24,17 @@ import {
   Intent,
   StampedIntent,
   Turn,
-} from "../../src/core/Schemas";
+} from "@openfront/engine-api/Schemas";
+import { PseudoRandom } from "@openfront/engine-lib/PseudoRandom";
+import { Game, Player } from "@openfront/engine/game/Game";
+import {
+  createGameRunner,
+  createGameRunnerFromSnapshot,
+  GameRunner,
+} from "@openfront/engine/GameRunner";
+import fs from "fs";
+import path from "path";
+import { fileURLToPath } from "url";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 

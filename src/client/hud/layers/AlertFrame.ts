@@ -1,10 +1,10 @@
-import { LitElement, css, html } from "lit";
-import { customElement, state } from "lit/decorators.js";
-import { PlayerType } from "../../../core/game/GameTypes";
+import { PlayerType } from "@openfront/engine-api/game/GameTypes";
 import {
   BrokeAllianceUpdate,
   GameUpdateType,
-} from "../../../core/game/GameUpdates";
+} from "@openfront/engine-api/game/GameUpdates";
+import { LitElement, css, html } from "lit";
+import { customElement, state } from "lit/decorators.js";
 import { Controller } from "../../Controller";
 import { UserSettings } from "../../UserSettings";
 import { GameView, PlayerView } from "../../view";

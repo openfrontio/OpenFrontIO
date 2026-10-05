@@ -9,11 +9,11 @@
  * again when those change.
  */
 
-import { assetUrl } from "../../core/AssetUrls";
+import { assetUrl } from "@openfront/shared/AssetUrls";
 import type {
   PlayerCosmetics,
   WireGameStartInfo,
-} from "../../core/WireSchemas";
+} from "@openfront/shared/WireSchemas";
 import { fetchCosmetics, getCachedCosmetics } from "../Cosmetics";
 import type { MapRenderer } from "../render/gl";
 import type { SpiralSink } from "../render/gl/utils/PlayerPalette";

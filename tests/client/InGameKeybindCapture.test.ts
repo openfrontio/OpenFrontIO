@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { EventBus } from "@openfront/engine-lib/EventBus";
 import "../../src/client/components/baseComponents/setting/SettingKeybind";
 import {
   AlternateViewEvent,
@@ -7,7 +8,6 @@ import {
 } from "../../src/client/InputHandler";
 import { KEYBINDS_KEY, UserSettings } from "../../src/client/UserSettings";
 import type { GameView } from "../../src/client/view";
-import { EventBus } from "../../src/core/EventBus";
 
 // The settings modal is reachable in-game now, so the keybind editor captures
 // key presses over a live game. SettingKeybind calls preventDefault() but not

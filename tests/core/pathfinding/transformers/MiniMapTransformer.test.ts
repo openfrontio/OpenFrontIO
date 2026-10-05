@@ -1,7 +1,7 @@
+import { GameMapImpl } from "@openfront/engine-lib/game/GameMapImpl";
+import { MiniMapTransformer } from "@openfront/engine/pathfinding/transformers/MiniMapTransformer";
+import { PathFinder } from "@openfront/engine/pathfinding/types";
 import { describe, expect, it } from "vitest";
-import { GameMapImpl } from "../../../../src/core/game/GameMapImpl";
-import { MiniMapTransformer } from "../../../../src/core/pathfinding/transformers/MiniMapTransformer";
-import { PathFinder } from "../../../../src/core/pathfinding/types";
 
 describe("MiniMapTransformer", () => {
   // Create test maps: main map is 10x10, minimap is 5x5 (2x downscale)

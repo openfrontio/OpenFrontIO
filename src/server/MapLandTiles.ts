@@ -1,7 +1,7 @@
+import { GameMapType } from "@openfront/engine-api/game/GameTypes";
+import { normalizeAssetPath } from "@openfront/engine-lib/AssetPaths";
 import fs from "fs/promises";
 import path from "path";
-import { normalizeAssetPath } from "src/core/AssetPaths";
-import { GameMapType } from "src/core/game/GameTypes";
 import { fileURLToPath } from "url";
 import { logger } from "./Logger";
 import { getRuntimeAssetManifest } from "./RuntimeAssetManifest";

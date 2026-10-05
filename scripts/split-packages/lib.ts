@@ -201,6 +201,9 @@ export function specifierFor(
     /\/index\.[a-z.]+$/.test(target) && !/index(\.[a-z]+)?$/.test(bareOrig);
   const fromPkg = packageOf(fromFile);
   const toPkg = packageOf(target);
+  // resources/ is shared data every package reaches through the tsconfig
+  // `paths` alias; keep that form.
+  if (bareOrig.startsWith("resources/")) return original;
 
   let withoutExt = target.replace(EXT_RE, "");
   if (origIsIndexDir) withoutExt = path.dirname(withoutExt);

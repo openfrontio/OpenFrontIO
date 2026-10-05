@@ -1,3 +1,4 @@
+import { ColoredTeams, PlayerType } from "@openfront/engine-api/game/GameTypes";
 import { colord, Colord, extend } from "colord";
 import labPlugin from "colord/plugins/lab";
 import lchPlugin from "colord/plugins/lch";
@@ -9,7 +10,6 @@ import {
 } from "../src/client/theme/ColorAllocator";
 import { SettingsTheme } from "../src/client/theme/ThemeProvider";
 import type { PlayerView } from "../src/client/view/PlayerView";
-import { ColoredTeams, PlayerType } from "../src/core/game/GameTypes";
 
 extend([labPlugin, lchPlugin]);
 

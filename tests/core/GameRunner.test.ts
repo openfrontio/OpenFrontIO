@@ -1,12 +1,12 @@
-import { NationExecution } from "../../src/core/execution/NationExecution";
-import { SpawnExecution } from "../../src/core/execution/SpawnExecution";
 import {
   Cell,
   Nation,
   PlayerInfo,
   PlayerType,
-} from "../../src/core/game/GameTypes";
-import { GameConfig, GameID } from "../../src/core/Schemas";
+} from "@openfront/engine-api/game/GameTypes";
+import { GameConfig, GameID } from "@openfront/engine-api/Schemas";
+import { NationExecution } from "@openfront/engine/execution/NationExecution";
+import { SpawnExecution } from "@openfront/engine/execution/SpawnExecution";
 import { setup } from "../util/Setup";
 import { executeTicks } from "../util/utils";
 

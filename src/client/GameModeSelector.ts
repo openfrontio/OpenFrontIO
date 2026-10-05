@@ -1,7 +1,3 @@
-import { html, LitElement, nothing, type TemplateResult } from "lit";
-import { customElement, state } from "lit/decorators.js";
-import { ClientEnv } from "src/client/ClientEnv";
-import { UserMeResponse } from "../core/ApiSchemas";
 import {
   Duos,
   GameMapType,
@@ -10,8 +6,12 @@ import {
   HumansVsNations,
   Quads,
   Trios,
-} from "../core/game/GameTypes";
-import { PublicGameInfo, PublicGames } from "../core/WireSchemas";
+} from "@openfront/engine-api/game/GameTypes";
+import { UserMeResponse } from "@openfront/shared/ApiSchemas";
+import { PublicGameInfo, PublicGames } from "@openfront/shared/WireSchemas";
+import { html, LitElement, nothing, type TemplateResult } from "lit";
+import { customElement, state } from "lit/decorators.js";
+import { ClientEnv } from "src/client/ClientEnv";
 import { getDesktopSessionState } from "./Auth";
 import "./components/IOSAddToHomeScreenBanner";
 import {

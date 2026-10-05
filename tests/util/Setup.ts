@@ -1,10 +1,4 @@
-import fs from "fs";
-import path from "path";
-import { fileURLToPath } from "url";
-import { Config } from "../../src/core/configuration/Config";
-import { Game } from "../../src/core/game/Game";
-import { createGame } from "../../src/core/game/GameImpl";
-import { MapManifest } from "../../src/core/game/GameMapLoader";
+import { MapManifest } from "@openfront/engine-api/game/GameMapLoader";
 import {
   Difficulty,
   GameMapSize,
@@ -14,9 +8,15 @@ import {
   Nation,
   PlayerInfo,
   PlayerType,
-} from "../../src/core/game/GameTypes";
-import { genTerrainFromBin } from "../../src/core/game/TerrainMapLoader";
-import { GameConfig } from "../../src/core/Schemas";
+} from "@openfront/engine-api/game/GameTypes";
+import { GameConfig } from "@openfront/engine-api/Schemas";
+import { Config } from "@openfront/engine-lib/configuration/Config";
+import { genTerrainFromBin } from "@openfront/engine-lib/game/TerrainMapLoader";
+import { Game } from "@openfront/engine/game/Game";
+import { createGame } from "@openfront/engine/game/GameImpl";
+import fs from "fs";
+import path from "path";
+import { fileURLToPath } from "url";
 import { TestConfig } from "./TestConfig";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
