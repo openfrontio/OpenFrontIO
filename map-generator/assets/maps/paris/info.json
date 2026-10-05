@@ -1,0 +1,362 @@
+{
+  "id": "Paris",
+  "name": "Paris",
+  "translation_key": "map.paris",
+  "categories": ["europe", "new"],
+  "multiplayer_frequency": 3,
+  "nations": [
+    {
+      "coordinates": [1702, 321],
+      "name": "Amérique",
+      "flag": "fr"
+    },
+    {
+      "coordinates": [1363, 661],
+      "name": "Archives",
+      "flag": "fr"
+    },
+    {
+      "coordinates": [1389, 775],
+      "name": "Arsenal",
+      "flag": "fr"
+    },
+    {
+      "coordinates": [1322, 561],
+      "name": "Arts-et-Métiers",
+      "flag": "fr"
+    },
+    {
+      "coordinates": [289, 798],
+      "name": "Auteuil",
+      "flag": "fr"
+    },
+    {
+      "coordinates": [896, 224],
+      "name": "Batignolles",
+      "flag": "fr"
+    },
+    {
+      "coordinates": [2071, 986],
+      "name": "Bel-Air",
+      "flag": "fr"
+    },
+    {
+      "coordinates": [1604, 487],
+      "name": "Belleville",
+      "flag": "fr"
+    },
+    {
+      "coordinates": [1608, 1021],
+      "name": "Bercy",
+      "flag": "fr"
+    },
+    {
+      "coordinates": [686, 526],
+      "name": "Chaillot",
+      "flag": "fr"
+    },
+    {
+      "coordinates": [850, 531],
+      "name": "Champs-Élysées",
+      "flag": "fr"
+    },
+    {
+      "coordinates": [1788, 716],
+      "name": "Charonne",
+      "flag": "fr"
+    },
+    {
+      "coordinates": [1084, 456],
+      "name": "Chaussée-d'Antin",
+      "flag": "fr"
+    },
+    {
+      "coordinates": [1201, 183],
+      "name": "Clignancourt",
+      "flag": "fr"
+    },
+    {
+      "coordinates": [1539, 373],
+      "name": "Combat",
+      "flag": "fr"
+    },
+    {
+      "coordinates": [1178, 451],
+      "name": "Faubourg-Montmartre",
+      "flag": "fr"
+    },
+    {
+      "coordinates": [798, 446],
+      "name": "Faubourg-du-Roule",
+      "flag": "fr"
+    },
+    {
+      "coordinates": [1293, 170],
+      "name": "Goutte-d'Or",
+      "flag": "fr"
+    },
+    {
+      "coordinates": [1100, 183],
+      "name": "Grandes-Carrières",
+      "flag": "fr"
+    },
+    {
+      "coordinates": [680, 795],
+      "name": "Grenelle",
+      "flag": "fr"
+    },
+    {
+      "coordinates": [761, 693],
+      "name": "Gros-Caillou",
+      "flag": "fr"
+    },
+    {
+      "coordinates": [1424, 407],
+      "name": "Hôpital Saint-Louis",
+      "flag": "fr"
+    },
+    {
+      "coordinates": [933, 688],
+      "name": "Invalides",
+      "flag": "fr"
+    },
+    {
+      "coordinates": [1321, 919],
+      "name": "Jardin des Plantes",
+      "flag": "fr"
+    },
+    {
+      "coordinates": [555, 965],
+      "name": "Javel",
+      "flag": "fr"
+    },
+    {
+      "coordinates": [1397, 163],
+      "name": "La Chapelle",
+      "flag": "fr"
+    },
+    {
+      "coordinates": [944, 493],
+      "name": "La Madeleine",
+      "flag": "fr"
+    },
+    {
+      "coordinates": [385, 605],
+      "name": "La Muette",
+      "flag": "fr"
+    },
+    {
+      "coordinates": [1553, 693],
+      "name": "La Roquette",
+      "flag": "fr"
+    },
+    {
+      "coordinates": [1377, 982],
+      "name": "La Salpêtrière",
+      "flag": "fr"
+    },
+    {
+      "coordinates": [1487, 263],
+      "name": "La Villette",
+      "flag": "fr"
+    },
+    {
+      "coordinates": [1199, 623],
+      "name": "Les Halles",
+      "flag": "fr"
+    },
+    {
+      "coordinates": [1287, 1194],
+      "name": "Maison-Blanche",
+      "flag": "fr"
+    },
+    {
+      "coordinates": [1070, 986],
+      "name": "Montparnasse",
+      "flag": "fr"
+    },
+    {
+      "coordinates": [1014, 849],
+      "name": "Notre-Dame-des-Champs",
+      "flag": "fr"
+    },
+    {
+      "coordinates": [1121, 849],
+      "name": "Odéon",
+      "flag": "fr"
+    },
+    {
+      "coordinates": [1113, 588],
+      "name": "Palais Royal",
+      "flag": "fr"
+    },
+    {
+      "coordinates": [1120, 1182],
+      "name": "Parc-de-Montsouris",
+      "flag": "fr"
+    },
+    {
+      "coordinates": [1001, 1143],
+      "name": "Petit-Montrouge",
+      "flag": "fr"
+    },
+    {
+      "coordinates": [1977, 1047],
+      "name": "Picpus",
+      "flag": "fr"
+    },
+    {
+      "coordinates": [763, 292],
+      "name": "Plaine-de-Monceau",
+      "flag": "fr"
+    },
+    {
+      "coordinates": [897, 1079],
+      "name": "Plaisance",
+      "flag": "fr"
+    },
+    {
+      "coordinates": [1584, 144],
+      "name": "Pont-de-Flandre",
+      "flag": "fr"
+    },
+    {
+      "coordinates": [477, 483],
+      "name": "Porte-Dauphine",
+      "flag": "fr"
+    },
+    {
+      "coordinates": [1276, 456],
+      "name": "Porte-Saint-Denis",
+      "flag": "fr"
+    },
+    {
+      "coordinates": [1684, 600],
+      "name": "Père-Lachaise",
+      "flag": "fr"
+    },
+    {
+      "coordinates": [1194, 356],
+      "name": "Rochechouart",
+      "flag": "fr"
+    },
+    {
+      "coordinates": [1512, 625],
+      "name": "Saint-Ambroise",
+      "flag": "fr"
+    },
+    {
+      "coordinates": [1781, 550],
+      "name": "Saint-Fargeau",
+      "flag": "fr"
+    },
+    {
+      "coordinates": [1080, 720],
+      "name": "Saint-Germain-des-Prés",
+      "flag": "fr"
+    },
+    {
+      "coordinates": [1097, 651],
+      "name": "Saint-Germain-l'Auxerrois",
+      "flag": "fr"
+    },
+    {
+      "coordinates": [1330, 720],
+      "name": "Saint-Gervais",
+      "flag": "fr"
+    },
+    {
+      "coordinates": [728, 1034],
+      "name": "Saint-Lambert",
+      "flag": "fr"
+    },
+    {
+      "coordinates": [1202, 814],
+      "name": "Sorbonne",
+      "flag": "fr"
+    },
+    {
+      "coordinates": [670, 356],
+      "name": "Ternes",
+      "flag": "fr"
+    },
+    {
+      "coordinates": [1182, 919],
+      "name": "Val-de-Grâce",
+      "flag": "fr"
+    },
+    {
+      "coordinates": [1038, 551],
+      "name": "Vendôme",
+      "flag": "fr"
+    },
+    {
+      "coordinates": [864, 801],
+      "name": "École Militaire",
+      "flag": "fr"
+    },
+    {
+      "coordinates": [953, 150],
+      "name": "Épinettes",
+      "flag": "fr"
+    },
+    {
+      "coordinates": [1293, 814],
+      "name": "Île de la Cité",
+      "flag": "fr"
+    }
+  ],
+  "custom_tribes": [
+    "Bonne-Nouvelle",
+    "Croulebarbe",
+    "Enfants-Rouges",
+    "Europe",
+    "Folie-Méricourt",
+    "Gaillon",
+    "Gare d'Austerlitz",
+    "Mail",
+    "Monnaie",
+    "Necker",
+    "Porte-Saint-Martin",
+    "Quinze-Vingts",
+    "Saint-Georges",
+    "Saint-Merri",
+    "Saint-Thomas-d'Aquin",
+    "Saint-Victor",
+    "Saint-Vincent-de-Paul",
+    "Sainte-Avoye",
+    "Sainte-Marguerite",
+    "Vivienne",
+    "Tour Eiffel",
+    "Louvre",
+    "Notre-Dame",
+    "Sacré-Cœur",
+    "Bastille",
+    "Pigalle",
+    "Châtelet",
+    "République",
+    "Nation",
+    "Trocadéro",
+    "Arc de Triomphe",
+    "Panthéon",
+    "Gare du Nord",
+    "Gare de Lyon",
+    "Oberkampf",
+    "Canal Saint-Martin",
+    "Butte-aux-Cailles",
+    "Le Marais",
+    "Buttes-Chaumont",
+    "Bercy Village",
+    "Place d'Italie",
+    "Denfert-Rochereau",
+    "Porte Maillot",
+    "Stalingrad",
+    "Ménilmontant",
+    "Barbès",
+    "Alésia",
+    "Beaugrenelle",
+    "Porte de Versailles",
+    "Parc Monceau"
+  ],
+  "themes": ["europe"]
+}
