@@ -14,6 +14,7 @@ import {
 } from "../../core/game/Game";
 import { assignTeamsLobbyPreview } from "../../core/game/TeamAssignment";
 import { UserSettings } from "../../core/game/UserSettings";
+import { unpackLevelBadge } from "../../core/LevelBadgeWire";
 import {
   ClientID,
   ClientInfo,
@@ -614,7 +615,7 @@ export class LobbyTeamView extends LitElement {
   private visibleLevelBadge(client: ClientInfo): LevelBadge | undefined {
     const anonymized =
       this.userSettings.anonymousNames() && !this.isCurrentPlayer(client);
-    return anonymized ? undefined : client.levelBadge;
+    return anonymized ? undefined : unpackLevelBadge(client.levelBadge);
   }
 
   private anyVisibleLevelBadge(clients: readonly ClientInfo[]): boolean {

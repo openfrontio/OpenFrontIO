@@ -3,9 +3,12 @@ import "../../../src/client/components/LobbyPlayerView";
 import type { LobbyTeamView } from "../../../src/client/components/LobbyPlayerView";
 import { GameMode, HumansVsNations } from "../../../src/core/game/Game";
 import { UserSettings } from "../../../src/core/game/UserSettings";
+import { packLevelBadge } from "../../../src/core/LevelBadgeWire";
 import type { ClientInfo, LevelBadge } from "../../../src/core/Schemas";
 
 const BADGE: LevelBadge = { level: 42, prestige: 2, legend: false };
+// As the roster carries it.
+const BADGE_WIRE = packLevelBadge(BADGE)!;
 
 function client(
   clientID: string,
@@ -83,7 +86,7 @@ describe("lobby level badges", () => {
   it("puts a 24px badge in front of the name in FFA pills", async () => {
     const view = await mount({
       currentClientID: "me",
-      clients: [client("me", { levelBadge: BADGE }), client("guest")],
+      clients: [client("me", { levelBadge: BADGE_WIRE }), client("guest")],
     });
 
     // No alignment slot in the wrapped pills.
@@ -93,7 +96,9 @@ describe("lobby level badges", () => {
   it("passes the badge's level, prestige and legend through", async () => {
     const view = await mount({
       clients: [
-        client("vet", { levelBadge: { level: 7, prestige: 3, legend: true } }),
+        client("vet", {
+          levelBadge: packLevelBadge({ level: 7, prestige: 3, legend: true }),
+        }),
       ],
     });
 
@@ -111,7 +116,7 @@ describe("lobby level badges", () => {
     const view = await mount({
       clients: [
         client("player"),
-        client("watcher", { spectator: true, levelBadge: BADGE }),
+        client("watcher", { spectator: true, levelBadge: BADGE_WIRE }),
         client("lurker", { spectator: true }),
       ],
     });
@@ -127,7 +132,7 @@ describe("lobby level badges", () => {
     const view = await mount({
       gameMode: GameMode.Team,
       teamCount: HumansVsNations,
-      clients: [client("vet", { levelBadge: BADGE }), client("guest")],
+      clients: [client("vet", { levelBadge: BADGE_WIRE }), client("guest")],
     });
 
     expect(playerRows(view)).toEqual([
@@ -163,7 +168,7 @@ describe("lobby level badges", () => {
       gameMode: GameMode.Team,
       teamCount: 2,
       clients: [
-        client("vet", { levelBadge: BADGE }),
+        client("vet", { levelBadge: BADGE_WIRE }),
         client("a"),
         client("b"),
         client("c"),
@@ -192,8 +197,8 @@ describe("lobby level badges", () => {
       const view = await mount({
         currentClientID: "me",
         clients: [
-          client("me", { levelBadge: BADGE }),
-          client("other", { levelBadge: BADGE }),
+          client("me", { levelBadge: BADGE_WIRE }),
+          client("other", { levelBadge: BADGE_WIRE }),
         ],
       });
 
@@ -208,7 +213,7 @@ describe("lobby level badges", () => {
         gameMode: GameMode.Team,
         teamCount: HumansVsNations,
         currentClientID: "me",
-        clients: [client("me"), client("other", { levelBadge: BADGE })],
+        clients: [client("me"), client("other", { levelBadge: BADGE_WIRE })],
       });
 
       expect(view.querySelector("level-badge")).toBeNull();

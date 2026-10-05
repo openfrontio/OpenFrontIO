@@ -1,6 +1,7 @@
 import WebSocket from "ws";
 import { TokenPayload } from "../core/ApiSchemas";
 import { Tick } from "../core/game/Game";
+import { packLevelBadge } from "../core/LevelBadgeWire";
 import {
   ClientID,
   ClientPlatform,
@@ -15,6 +16,10 @@ export class Client {
   public hashes: Map<Tick, number> = new Map();
 
   public reportedWinner: Winner | null = null;
+
+  // levelBadge as the lobby roster carries it (ClientInfo.levelBadge), packed
+  // once here rather than for every entry of every per-recipient broadcast.
+  public readonly wireLevelBadge: number | undefined;
 
   constructor(
     public readonly clientID: ClientID,
@@ -40,5 +45,7 @@ export class Client {
     // From the server's /users/@me lookup at join (levelBadgeFromProgress);
     // undefined for guests or when the API sent no progress. Display-only.
     public readonly levelBadge: LevelBadge | undefined = undefined,
-  ) {}
+  ) {
+    this.wireLevelBadge = packLevelBadge(levelBadge);
+  }
 }
