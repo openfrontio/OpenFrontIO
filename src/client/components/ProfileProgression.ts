@@ -11,11 +11,10 @@ import { showInGameAlert } from "../InGameModal";
 import { clampPrestige, MAX_LEVEL, MILESTONE_LEVELS } from "../Progression";
 import { fetchProgressionConfig } from "../ProgressionApi";
 import { translateText } from "../Utils";
-import { prefersReducedMotion } from "./Ceremony";
+import { prefersReducedMotion } from "../utilities/ReducedMotion";
 import { describeFlareCosmetic, type FlareCosmeticView } from "./FlareCosmetic";
 import "./LevelBadge";
 import type { RewardsChangedDetail } from "./RewardsPanel";
-import { rewardTrackModel, trackHasRewards } from "./RewardTrack";
 
 // The profile's Progression tab: the reward track of the current prestige
 // run, when each prestige rank was entered, and the milestone levels reached
@@ -142,6 +141,21 @@ const POP_MS = 380;
 // viewer's own profile) before showing the rest without it.
 const TRACK_WAIT_MS = 2500;
 
+type RewardTrackModule = typeof import("./RewardTrack");
+
+// The reward track is most of this tab's code and only ever shows here, so
+// it stays out of the startup bundle: fetched the first time the tab opens,
+// alongside the data the tab already waits for. A failed fetch is tried
+// again the next time.
+let rewardTrackModule: Promise<RewardTrackModule> | null = null;
+function loadRewardTrack(): Promise<RewardTrackModule> {
+  rewardTrackModule ??= import("./RewardTrack").catch((err: unknown) => {
+    rewardTrackModule = null;
+    throw err;
+  });
+  return rewardTrackModule;
+}
+
 // The tab openings that already popped in, by popKey.
 const poppedKeys = new Set<string>();
 
@@ -149,6 +163,7 @@ interface TrackData {
   config: ProgressionConfig;
   // The owner's unclaimed rewards; null when the viewer isn't the player.
   rewards: Reward[] | null;
+  model: RewardTrackModule["rewardTrackModel"];
 }
 
 @customElement("profile-progression")
@@ -168,6 +183,7 @@ export class ProfileProgression extends LitElement {
   alert: (message: string) => Promise<unknown> = showInGameAlert;
   describeCosmetic: (flare: TrackFlare) => Promise<FlareCosmeticView | null> =
     describeFlareCosmetic;
+  loadTrackModule: () => Promise<RewardTrackModule> = loadRewardTrack;
 
   @state() private ready = false;
   @state() private track: TrackData | null = null;
@@ -202,9 +218,9 @@ export class ProfileProgression extends LitElement {
     }
   }
 
-  // The track needs the reward config, and whether the viewer is this
-  // player (their unclaimed rewards then give each level's status). The tab
-  // holds for it, so everything pops in together in order; past
+  // The track needs its own code, the reward config, and whether the viewer
+  // is this player (their unclaimed rewards then give each level's status).
+  // The tab holds for it, so everything pops in together in order; past
   // TRACK_WAIT_MS the rest shows without it, and the track joins on arrival.
   private async loadTrack(publicId: string | null): Promise<void> {
     const token = ++this.loadToken;
@@ -213,11 +229,15 @@ export class ProfileProgression extends LitElement {
     const timer = setTimeout(() => {
       if (token === this.loadToken) this.ready = true;
     }, TRACK_WAIT_MS);
-    const [config, me] = await Promise.all([
+    const [config, me, trackModule] = await Promise.all([
       this.loadConfig().catch(() => false as const),
       publicId === null
         ? Promise.resolve(false as const)
         : this.loadUserMe().catch(() => false as const),
+      this.loadTrackModule().catch((err: unknown) => {
+        console.warn("ProfileProgression: reward track failed to load", err);
+        return null;
+      }),
     ]);
     clearTimeout(timer);
     if (token !== this.loadToken) return;
@@ -226,7 +246,11 @@ export class ProfileProgression extends LitElement {
         ? (me.player.rewards ?? [])
         : null;
     this.track =
-      config !== false && trackHasRewards(config) ? { config, rewards } : null;
+      trackModule !== null &&
+      config !== false &&
+      trackModule.trackHasRewards(config)
+        ? { config, rewards, model: trackModule.rewardTrackModel }
+        : null;
     this.ready = true;
   }
 
@@ -239,8 +263,7 @@ export class ProfileProgression extends LitElement {
     if (this.claiming || track === null || progress === null) return;
     const owned = track.rewards;
     if (owned === null) return;
-    const ids =
-      rewardTrackModel(progress, track.config, owned).claim?.ids ?? [];
+    const ids = track.model(progress, track.config, owned).claim?.ids ?? [];
     if (ids.length === 0) return;
     this.claiming = true;
     try {

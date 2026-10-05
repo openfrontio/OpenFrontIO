@@ -11,10 +11,10 @@ import {
   MAX_LEVEL,
   MAX_PRESTIGE,
 } from "../Progression";
+import { prefersReducedMotion } from "../utilities/ReducedMotion";
 import { translateText } from "../Utils";
 import "./baseComponents/Button";
 import "./CapIcon";
-import { prefersReducedMotion } from "./Ceremony";
 import {
   describeFlareCosmetic,
   type FlareCosmeticView,

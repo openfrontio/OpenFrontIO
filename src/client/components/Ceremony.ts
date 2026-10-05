@@ -85,13 +85,8 @@ export function renderHoneycomb(
   </svg>`;
 }
 
-export function prefersReducedMotion(): boolean {
-  try {
-    return window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
-  } catch {
-    return false;
-  }
-}
+// Re-exported for the ceremonies, which take their helpers from here.
+export { prefersReducedMotion } from "../utilities/ReducedMotion";
 
 const STYLE_ID = "ceremony-styles";
 

@@ -56,6 +56,10 @@ vi.mock(
   () => ({}),
 );
 
+// The tab fetches the reward track's code when it first opens; loaded up
+// front here so the waits below are about the tab, not the test's
+// first-time transform of that module.
+import "../../src/client/components/RewardTrack";
 import { modalRouter } from "../../src/client/ModalRouter";
 import { initNavigation } from "../../src/client/Navigation";
 import { PlayerProfileModal } from "../../src/client/PlayerProfileModal";
@@ -136,8 +140,8 @@ describe("Player profile Progression tab", () => {
     modal.setActiveTab("progression");
     await settle(() => {
       expect(modal.querySelector("profile-progression")).not.toBeNull();
+      expect(modal.querySelectorAll("[data-prestige-tile]")).toHaveLength(2);
     });
-    expect(modal.querySelectorAll("[data-prestige-tile]")).toHaveLength(2);
     expect(modal.querySelector("[data-current-run]")).not.toBeNull();
   });
 
