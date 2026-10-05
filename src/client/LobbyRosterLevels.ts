@@ -1,4 +1,5 @@
-import { ClientID, ClientInfo, GameID, LevelBadge } from "../core/Schemas";
+import { LevelBadge, unpackLevelBadge } from "../core/LevelBadgeWire";
+import { ClientID, ClientInfo, GameID } from "../core/Schemas";
 
 // Level badges from the last lobby roster this tab was sent, so in-game UI
 // can show them after the lobby is gone. The roster (lobby_info) only flows
@@ -13,15 +14,18 @@ import { ClientID, ClientInfo, GameID, LevelBadge } from "../core/Schemas";
 //
 // Per-viewer like the roster itself: anonymized entries arrive without a
 // badge, so nothing here can reveal one.
+//
+// Kept in wire form (packLevelBadge) — a roster arrives every second, a badge
+// is read only when a panel opens — and unpacked on read.
 
 let rosterGameID: GameID | null = null;
-let badges = new Map<ClientID, LevelBadge>();
+let badges = new Map<ClientID, number>();
 
 export function rememberLobbyRoster(
   gameID: GameID,
   clients: readonly ClientInfo[] | undefined,
 ): void {
-  const next = new Map<ClientID, LevelBadge>();
+  const next = new Map<ClientID, number>();
   for (const c of clients ?? []) {
     if (c.levelBadge !== undefined) next.set(c.clientID, c.levelBadge);
   }
@@ -30,12 +34,12 @@ export function rememberLobbyRoster(
 }
 
 // The player's badge in game `gameID`, or undefined when they have none (a
-// guest, an anonymized name, progression off) or this tab never saw them in
-// that game's lobby.
+// guest, an anonymized name, progression off, a value out of range) or this
+// tab never saw them in that game's lobby.
 export function lobbyLevelBadge(
   gameID: GameID,
   clientID: ClientID | null,
 ): LevelBadge | undefined {
   if (clientID === null || gameID !== rosterGameID) return undefined;
-  return badges.get(clientID);
+  return unpackLevelBadge(badges.get(clientID));
 }
