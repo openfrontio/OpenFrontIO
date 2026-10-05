@@ -7,11 +7,11 @@ import {
   PlayerProfile,
   PlayerType,
   Relation,
-  Unit,
   UnitType,
 } from "../../../core/game/Game";
 import { TileRef } from "../../../core/game/GameMap";
 import { AllianceView } from "../../../core/game/GameUpdates";
+import { UnitLike } from "../../../core/game/ReadViews";
 import { Controller } from "../../Controller";
 import {
   ContextMenuEvent,
@@ -61,7 +61,7 @@ function euclideanDistWorld(
 }
 
 function distSortUnitWorld(coord: { x: number; y: number }, game: GameView) {
-  return (a: Unit | UnitView, b: Unit | UnitView) => {
+  return (a: UnitLike, b: UnitLike) => {
     const distA = euclideanDistWorld(coord, a.tile(), game);
     const distB = euclideanDistWorld(coord, b.tile(), game);
     return distA - distB;

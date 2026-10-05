@@ -1,14 +1,14 @@
-import { UnitView } from "../../client/view";
-import { PlayerID, Unit, UnitType } from "./Game";
+import { PlayerID, UnitType } from "./Game";
 import { GameMap, TileRef } from "./GameMap";
+import { UnitLike } from "./ReadViews";
 
 export type UnitPredicate = (value: {
-  unit: Unit | UnitView;
+  unit: UnitLike;
   distSquared: number;
 }) => boolean;
 
-export class UnitGrid {
-  private grid: Map<UnitType, Set<Unit | UnitView>>[][];
+export class UnitGrid<U extends UnitLike = UnitLike> {
+  private grid: Map<UnitType, Set<U>>[][];
   private readonly cellSize = 100;
 
   constructor(private gm: GameMap) {
@@ -17,7 +17,7 @@ export class UnitGrid {
       .map(() =>
         Array(Math.ceil(gm.width() / this.cellSize))
           .fill(null)
-          .map(() => new Map<UnitType, Set<Unit | UnitView>>()),
+          .map(() => new Map<UnitType, Set<U>>()),
       );
   }
 
@@ -25,13 +25,13 @@ export class UnitGrid {
    * Per cell (row-major), each type's units in set order. Entry order decides
    * query result order, and it is not derivable from the units themselves.
    */
-  snapshot(unitRef: (u: Unit) => number): [UnitType, number[]][][] {
+  snapshot(unitRef: (u: U) => number): [UnitType, number[]][][] {
     const out: [UnitType, number[]][][] = [];
     for (const row of this.grid) {
       for (const cell of row) {
         const entries: [UnitType, number[]][] = [];
         for (const [type, units] of cell) {
-          entries.push([type, [...units].map((u) => unitRef(u as Unit))]);
+          entries.push([type, [...units].map((u) => unitRef(u))]);
         }
         out.push(entries);
       }
@@ -41,7 +41,7 @@ export class UnitGrid {
 
   restoreSnapshot(
     cells: [UnitType, number[]][][],
-    unit: (ref: number) => Unit,
+    unit: (ref: number) => U,
   ): void {
     const width = this.grid[0]?.length ?? 0;
     cells.forEach((entries, i) => {
@@ -58,7 +58,7 @@ export class UnitGrid {
   }
 
   // Add a unit to the grid
-  addUnit(unit: Unit | UnitView) {
+  addUnit(unit: U) {
     const tile = unit.tile();
     const [gridX, gridY] = this.getGridCoords(this.gm.x(tile), this.gm.y(tile));
 
@@ -67,21 +67,18 @@ export class UnitGrid {
       if (unitSet !== undefined) {
         unitSet.add(unit);
       } else {
-        this.grid[gridY][gridX].set(
-          unit.type(),
-          new Set<Unit | UnitView>([unit]),
-        );
+        this.grid[gridY][gridX].set(unit.type(), new Set<U>([unit]));
       }
     }
   }
 
   // Remove a unit from the grid
-  removeUnit(unit: Unit | UnitView) {
+  removeUnit(unit: U) {
     const tile = unit.tile();
     this.removeUnitByTile(unit, tile);
   }
 
-  removeUnitByTile(unit: Unit | UnitView, tile: TileRef) {
+  removeUnitByTile(unit: U, tile: TileRef) {
     const [gridX, gridY] = this.getGridCoords(this.gm.x(tile), this.gm.y(tile));
 
     if (this.isValidCell(gridX, gridY)) {
@@ -95,7 +92,7 @@ export class UnitGrid {
   /**
    * Move an unit to its new cell if it changed
    */
-  updateUnitCell(unit: Unit | UnitView) {
+  updateUnitCell(unit: U) {
     const newTile = unit.tile();
     const oldTile = unit.lastTile();
     if (newTile === oldTile) return;
@@ -147,10 +144,7 @@ export class UnitGrid {
     return { startGridX, endGridX, startGridY, endGridY };
   }
 
-  private squaredDistanceFromTile(
-    unit: Unit | UnitView,
-    tile: TileRef,
-  ): number {
+  private squaredDistanceFromTile(unit: U, tile: TileRef): number {
     const x = this.gm.x(tile);
     const y = this.gm.y(tile);
     const tileX = this.gm.x(unit.tile());
@@ -169,8 +163,8 @@ export class UnitGrid {
     types: readonly UnitType[] | UnitType,
     predicate?: UnitPredicate,
     includeUnderConstruction: boolean = false,
-  ): Array<{ unit: Unit | UnitView; distSquared: number }> {
-    const nearby: Array<{ unit: Unit | UnitView; distSquared: number }> = [];
+  ): Array<{ unit: U; distSquared: number }> {
+    const nearby: Array<{ unit: U; distSquared: number }> = [];
     const gm = this.gm;
     const x = gm.x(tile);
     const y = gm.y(tile);
@@ -233,7 +227,7 @@ export class UnitGrid {
   }
 
   private unitIsInRange(
-    unit: Unit | UnitView,
+    unit: U,
     tile: TileRef,
     rangeSquared: number,
     playerId?: PlayerID,
@@ -294,7 +288,7 @@ export class UnitGrid {
     tile: TileRef,
     searchRange: number,
     types: readonly UnitType[],
-    predicate: (unit: Unit | UnitView) => boolean,
+    predicate: (unit: U) => boolean,
     playerId?: PlayerID,
     includeUnderConstruction: boolean = false,
   ): boolean {

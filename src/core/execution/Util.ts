@@ -1,7 +1,7 @@
-import { GameView } from "../../client/view";
 import { NukeMagnitude } from "../configuration/Config";
-import { Game, Player, Structures } from "../game/Game";
+import { Structures } from "../game/Game";
 import { euclDistFN, GameMap, TileRef } from "../game/GameMap";
+import { EnginePlayerLike, GameLike } from "../game/ReadViews";
 import { ReadonlyTileSet } from "../game/TileSet";
 
 export interface NukeBlastParams {
@@ -37,7 +37,7 @@ export function computeNukeBlastCounts(
 }
 
 export interface NukeAllianceCheckParams {
-  game: Game | GameView;
+  game: GameLike;
   targetTile: TileRef;
   magnitude: NukeMagnitude;
   allySmallIds?: Set<number>;
@@ -304,8 +304,8 @@ export function closestTwoTiles(
  * @returns The tile reference for the territory center, or null if no valid center found
  */
 export function calculateTerritoryCenter(
-  game: Game,
-  target: Player,
+  game: GameLike,
+  target: EnginePlayerLike,
 ): TileRef | null {
   const borderTiles = target.borderTiles();
   if (borderTiles.size === 0) return null;

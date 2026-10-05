@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { UnitView } from "../../client/view";
 import { Config } from "../configuration/Config";
 import {
   SharedWaterCache,
@@ -130,7 +129,7 @@ export class GameImpl implements Game {
   private attackTroopsQuads: number[] = [];
   private motionPlanRecords: MotionPlanRecord[] = [];
   private planDrivenUnitIds = new Set<number>();
-  private unitGrid: UnitGrid;
+  private unitGrid: UnitGrid<Unit>;
   private _unitMap = new Map<number, Unit>();
 
   private playerTeams: Team[] = [];
@@ -170,7 +169,7 @@ export class GameImpl implements Game {
     this._terraNullius = new TerraNulliusImpl();
     this._width = _map.width();
     this._height = _map.height();
-    this.unitGrid = new UnitGrid(this._map);
+    this.unitGrid = new UnitGrid<Unit>(this._map);
     this._waterManager = new WaterManager(
       this._map,
       this.miniGameMap,
@@ -1216,7 +1215,7 @@ export class GameImpl implements Game {
       tile,
       searchRange,
       types,
-      predicate as (unit: Unit | UnitView) => boolean,
+      predicate,
       playerId,
       includeUnderConstruction,
     );

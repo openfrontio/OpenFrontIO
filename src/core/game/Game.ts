@@ -13,6 +13,7 @@ import {
 } from "./GameUpdates";
 import { MotionPlanRecord } from "./MotionPlans";
 import { RailNetwork } from "./RailNetwork";
+import { EngineGameLike, EnginePlayerLike, EngineUnitLike } from "./ReadViews";
 import { Stats } from "./Stats";
 import { ReadonlyTileSet } from "./TileSet";
 import { UnitPredicate } from "./UnitGrid";
@@ -476,7 +477,7 @@ export function isUnit(unit: unknown): unit is Unit {
   );
 }
 
-export interface Unit {
+export interface Unit extends EngineUnitLike {
   isUnit(): this is Unit;
 
   // Common properties.
@@ -591,7 +592,7 @@ export interface DisconnectSnapshot {
   wasAlive: boolean;
 }
 
-export interface Player {
+export interface Player extends EnginePlayerLike {
   // Basic Info
   smallID(): number;
   info(): PlayerInfo;
@@ -785,7 +786,7 @@ export interface Player {
   bestTransportShipSpawn(tile: TileRef): TileRef | false;
 }
 
-export interface Game extends GameMap {
+export interface Game extends EngineGameLike {
   // Map & Dimensions
   isOnMap(cell: Cell): boolean;
   width(): number;

@@ -1,24 +1,26 @@
 import { z } from "zod";
-import { PlayerView } from "../../client/view";
 import { AssetManifest } from "../AssetUrls";
 import { ClusterConfig } from "../ClusterConfig";
 import { exp, log, pow, pow2 } from "../DetMath";
 import { DoomsdayClockSpeed } from "../game/DoomsdayClock";
 import {
   Difficulty,
-  Game,
   GameType,
   Gold,
-  Player,
   PlayerInfo,
   PlayerType,
   TerrainType,
   TerraNullius,
   Tick,
-  Unit,
   UnitInfo,
   UnitType,
 } from "../game/Game";
+import {
+  EngineGameLike,
+  EnginePlayerLike,
+  EngineUnitLike,
+  PlayerLike,
+} from "../game/ReadViews";
 import { GameConfig, TeamCountConfig } from "../Schemas";
 import { NukeType } from "../StatsSchemas";
 import { assertNever, sigmoid, toInt, within } from "../Util";
@@ -472,7 +474,7 @@ export class Config {
   trainGold(
     rel: "self" | "team" | "ally" | "other",
     citiesVisited: number,
-    player: Player | PlayerView,
+    player: PlayerLike,
   ): Gold {
     // No penalty for the first 10 cities.
     citiesVisited = Math.max(0, citiesVisited - 9);
@@ -504,7 +506,7 @@ export class Config {
     return this.trainStationMaxRange() * 1.4142;
   }
 
-  tradeShipGold(dist: number, player: Player | PlayerView): Gold {
+  tradeShipGold(dist: number, player: PlayerLike): Gold {
     // Sigmoid: concave start, sharp S-curve middle, linear end - heavily punishes trades under range debuff.
     const debuff = this.tradeShipShortRangeDebuff();
     const baseGold = 75_000 / (1 + exp(-0.03 * (dist - debuff))) + 50 * dist;
@@ -608,7 +610,7 @@ export class Config {
         break;
       case UnitType.MIRV:
         info = {
-          cost: (game: Game, player: Player) => {
+          cost: (game: EngineGameLike, player: EnginePlayerLike) => {
             if (
               player.type() === PlayerType.Human &&
               this.hasInfiniteGoldFor(player)
@@ -692,13 +694,13 @@ export class Config {
     return info;
   }
 
-  private hasInfiniteGoldFor(player: Player | PlayerView): boolean {
+  private hasInfiniteGoldFor(player: PlayerLike): boolean {
     if (this.infiniteGold()) return true;
     const hc = this._gameConfig.hostCheats;
     return (hc?.infiniteGold ?? false) && player.isLobbyCreator();
   }
 
-  private hasInfiniteTroopsFor(player: Player | PlayerView): boolean {
+  private hasInfiniteTroopsFor(player: PlayerLike): boolean {
     if (this.infiniteTroops()) return true;
     return (
       (this._gameConfig.hostCheats?.infiniteTroops ?? false) &&
@@ -714,7 +716,7 @@ export class Config {
     );
   }
 
-  private goldMultiplierFor(player: Player | PlayerView): number {
+  private goldMultiplierFor(player: PlayerLike): number {
     const base = this.goldMultiplier();
     const hc = this._gameConfig.hostCheats;
     if (hc?.goldMultiplier && player.isLobbyCreator()) {
@@ -723,7 +725,7 @@ export class Config {
     return base;
   }
 
-  public conquerGoldAmount(captured: Player): Gold {
+  public conquerGoldAmount(captured: PlayerLike): Gold {
     if (
       captured.type() === PlayerType.Bot ||
       captured.type() === PlayerType.Nation
@@ -746,8 +748,12 @@ export class Config {
   private costWrapper(
     costFn: (units: number) => number,
     ...types: UnitType[]
-  ): (g: Game, p: Player, extraUnits?: number) => bigint {
-    return (game: Game, player: Player, extraUnits: number = 0) => {
+  ): (g: EngineGameLike, p: EnginePlayerLike, extraUnits?: number) => bigint {
+    return (
+      game: EngineGameLike,
+      player: EnginePlayerLike,
+      extraUnits: number = 0,
+    ) => {
       if (
         player.type() === PlayerType.Human &&
         this.hasInfiniteGoldFor(player)
@@ -764,7 +770,7 @@ export class Config {
     };
   }
 
-  defaultDonationAmount(sender: Player): number {
+  defaultDonationAmount(sender: PlayerLike): number {
     return Math.floor(sender.troops() / 3);
   }
   donateCooldown(): Tick {
@@ -963,7 +969,10 @@ export class Config {
     };
   }
 
-  boatAttackAmount(attacker: Player, defender: Player | TerraNullius): number {
+  boatAttackAmount(
+    attacker: PlayerLike,
+    defender: PlayerLike | TerraNullius,
+  ): number {
     return Math.floor(attacker.troops() / 5);
   }
 
@@ -983,7 +992,7 @@ export class Config {
     return within(totalPorts / 3, 4, totalPorts);
   }
 
-  attackAmount(attacker: Player, defender: Player | TerraNullius) {
+  attackAmount(attacker: PlayerLike, defender: PlayerLike | TerraNullius) {
     if (attacker.type() === PlayerType.Bot) {
       return attacker.troops() / 20;
     } else {
@@ -1012,7 +1021,7 @@ export class Config {
     return this.hasInfiniteTroopsForInfo(playerInfo) ? 1_000_000 : 25_000;
   }
 
-  maxTroops(player: Player | PlayerView): number {
+  maxTroops(player: PlayerLike): number {
     const maxTroops =
       player.type() === PlayerType.Human && this.hasInfiniteTroopsFor(player)
         ? 1_000_000_000
@@ -1046,7 +1055,7 @@ export class Config {
     }
   }
 
-  troopIncreaseRate(player: Player | PlayerView): number {
+  troopIncreaseRate(player: PlayerLike): number {
     const max = this.maxTroops(player);
 
     let toAdd = 10 + pow(player.troops(), 0.73) / 4;
@@ -1080,7 +1089,7 @@ export class Config {
     return Math.min(player.troops() + toAdd, max) - player.troops();
   }
 
-  goldAdditionRate(player: Player | PlayerView): Gold {
+  goldAdditionRate(player: PlayerLike): Gold {
     const multiplier = this.goldMultiplierFor(player);
     let baseRate: bigint;
     if (player.type() === PlayerType.Bot) {
@@ -1145,7 +1154,7 @@ export class Config {
     return Math.floor(this.SAMCooldown() / 2);
   }
 
-  dynamicSamRange(sam: Unit, currentTick: number): number {
+  dynamicSamRange(sam: EngineUnitLike, currentTick: number): number {
     const state = sam.samLauncherState();
     if (state === undefined || state.upgradeStartTick === undefined) {
       return this.samRange(sam.level());

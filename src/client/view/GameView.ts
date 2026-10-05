@@ -8,7 +8,6 @@ import {
   TerrainType,
   TerraNullius,
   Tick,
-  Unit,
   UnitInfo,
   UnitType,
 } from "../../core/game/Game";
@@ -19,6 +18,7 @@ import {
   SpawnPhaseEndUpdate,
 } from "../../core/game/GameUpdates";
 import { unpackMotionPlans } from "../../core/game/MotionPlans";
+import { GameLike } from "../../core/game/ReadViews";
 import { TerrainMapData } from "../../core/game/TerrainMapLoader";
 import { TerraNulliusImpl } from "../../core/game/TerraNulliusImpl";
 import { UnitGrid, UnitPredicate } from "../../core/game/UnitGrid";
@@ -57,7 +57,7 @@ function readCosmeticVisibility(): CosmeticVisibility {
   return new UserSettings().graphicsOverrides().cosmetics ?? {};
 }
 
-export class GameView implements GameMap {
+export class GameView implements GameLike {
   private lastUpdate: GameUpdateViewData | null;
   private startTick: Tick | null = null;
   private smallIDToID = new Map<number, PlayerID>();
@@ -118,7 +118,7 @@ export class GameView implements GameMap {
   /** Alliance clusters: allies changed, or a player was added. */
   private _clustersDirty = true;
 
-  private unitGrid: UnitGrid;
+  private unitGrid: UnitGrid<UnitView>;
   private readonly motion = new MotionPlanResolver();
   /** How the resolver moves this view's units. */
   private readonly plannedUnits: PlannedUnits = {
@@ -153,7 +153,7 @@ export class GameView implements GameMap {
   ) {
     this._map = this._mapData.gameMap;
     this.lastUpdate = null;
-    this.unitGrid = new UnitGrid(this._map);
+    this.unitGrid = new UnitGrid<UnitView>(this._map);
     this._cosmetics = new Map(
       humans.map((h) => [h.clientID, h.cosmetics ?? {}]),
     );
@@ -700,7 +700,7 @@ export class GameView implements GameMap {
       tile,
       searchRange,
       types,
-      predicate as (unit: Unit | UnitView) => boolean,
+      predicate,
       playerId,
       includeUnderConstruction,
     );
