@@ -1771,6 +1771,7 @@
     "gain_emblem": "Prestige {rank} emblem",
     "irreversible": "This can't be undone",
     "keep_holding": "Keep holding…",
+    "load_failed": "Couldn't open Prestige. Check your connection and try again.",
     "ready": "Level 100! Until you prestige, XP only adds to your lifetime total.",
     "stale": "Your level changed since this page loaded, so your account has been refreshed.",
     "stale_failed": "Your level changed since this page loaded. Reload the page to see where you are.",

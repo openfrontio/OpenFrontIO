@@ -10,7 +10,7 @@ import {
 import { customElement, property, state } from "lit/decorators.js";
 import { clampPrestige, levelFraction } from "../Progression";
 import { translateText } from "../Utils";
-import { prefersReducedMotion } from "./Ceremony";
+import { prefersReducedMotion } from "../utilities/ReducedMotion";
 import "./LevelBadge";
 import { levelBadgeAccent } from "./LevelBadge";
 import { formatXp, xpProgressText } from "./XpBar";
