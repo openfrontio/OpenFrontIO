@@ -1027,3 +1027,79 @@ describe("PublicLobbySocket.start on a page its own game server rendered", () =>
     expect(onUpdateAvailable).toHaveBeenCalledTimes(1);
   });
 });
+
+// A versioned replay shell (replay.<domain>/<gameId>) runs the full client,
+// but the replay host answers /wN/lobbies with 404, so a lobby socket there
+// can never open — and the slow retry would re-dial it for as long as the
+// tab stays open.
+describe("PublicLobbySocket.start on a replay shell host", () => {
+  const dialed: string[] = [];
+  class RecordingWebSocket {
+    static OPEN = 1;
+    readyState = 0;
+    binaryType = "";
+    constructor(public url: string) {
+      dialed.push(url);
+    }
+    addEventListener() {}
+    close() {}
+  }
+
+  beforeEach(() => {
+    vi.useFakeTimers();
+    dialed.length = 0;
+    mocks.ensureServerList.mockReset();
+    mocks.ensureServerList.mockResolvedValue("api");
+    mocks.refreshServerList.mockReset();
+    mocks.refreshServerList.mockResolvedValue("api");
+    vi.stubGlobal("WebSocket", RecordingWebSocket);
+    vi.stubGlobal("location", { hostname: "replay.openfront.io" });
+    ClientEnv.reset();
+    (window as any).BOOTSTRAP_CONFIG = {
+      gameEnv: "prod",
+      numWorkers: 2,
+      turnstileSiteKey: "k",
+      jwtAudience: "openfront.io",
+      instanceId: "test",
+      gitCommit: "5ccc50a722222222222222222222222222222222",
+    };
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.unstubAllGlobals();
+    vi.restoreAllMocks();
+    ClientEnv.reset();
+    delete (window as any).BOOTSTRAP_CONFIG;
+  });
+
+  it("never opens the lobby feed, nor schedules a retry", async () => {
+    const onGaveUp = vi.fn();
+    const socket = new PublicLobbySocket(vi.fn(), { onGaveUp });
+
+    await socket.start();
+    await socket.start({ refreshList: true });
+    await vi.advanceTimersByTimeAsync(10 * 60_000);
+
+    expect(dialed).toEqual([]);
+    expect(mocks.ensureServerList).not.toHaveBeenCalled();
+    expect(mocks.refreshServerList).not.toHaveBeenCalled();
+    expect((socket as any).wsReconnectTimeout).toBeNull();
+    // The caller's list stops spinning instead of waiting on a feed that
+    // will never arrive.
+    expect(onGaveUp).toHaveBeenCalledTimes(2);
+    socket.stop();
+  });
+
+  it("still opens the feed on the game's own origin", async () => {
+    vi.stubGlobal("location", { hostname: "openfront.io" });
+    (window as any).BOOTSTRAP_CONFIG.serverHost = "blue.openfront.io";
+    const socket = new PublicLobbySocket(vi.fn(), {});
+
+    await socket.start();
+
+    expect(dialed).toHaveLength(1);
+    expect(dialed[0]).toMatch(/\/w[01]\/lobbies\?platform=/);
+    socket.stop();
+  });
+});

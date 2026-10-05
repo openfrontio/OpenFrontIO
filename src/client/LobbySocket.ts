@@ -11,6 +11,7 @@ import {
 } from "./ServerList";
 import { describeSocketClose } from "./SocketClose";
 import { translateText } from "./Utils";
+import { isReplayShellHost } from "./VersionedReplay";
 
 interface LobbySocketOptions {
   reconnectDelay?: number;
@@ -71,6 +72,16 @@ export class PublicLobbySocket {
   // cached list answers discovery at once, and may still name the server that
   // just died, so the dial waits for ServerList.refreshServerList instead.
   async start(options?: { refreshList?: boolean }) {
+    // A versioned replay shell has no lobby feed: its bundle dials its own
+    // origin, and the replay host answers /wN/lobbies with 404. Dialing would
+    // only fail, and since the slow retry never stops, an idle replay tab
+    // would re-dial every GAVE_UP_RETRY_MS for as long as it stays open.
+    // Report it as given up so a caller showing the list stops spinning.
+    if (isReplayShellHost(window.location.hostname)) {
+      this.stop();
+      this.onGaveUp?.();
+      return;
+    }
     this.stopped = false;
     this.generation++;
     this.wsConnectionAttempts = 0;
