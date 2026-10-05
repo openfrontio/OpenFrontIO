@@ -1,0 +1,596 @@
+{
+  "categories": ["europe", "countries"],
+  "custom_tribes": [
+    {
+      "coordinates": [1197, 672],
+      "name": "Znamianka"
+    },
+    {
+      "coordinates": [83, 758],
+      "name": "Berehove"
+    },
+    {
+      "coordinates": [1364, 1356],
+      "name": "Yalta"
+    },
+    {
+      "coordinates": [1891, 577],
+      "name": "Starobilsk"
+    },
+    {
+      "coordinates": [524, 219],
+      "name": "Sarny"
+    },
+    {
+      "coordinates": [746, 1170],
+      "name": "Bolhrad"
+    },
+    {
+      "coordinates": [1287, 124],
+      "name": "Shostka"
+    },
+    {
+      "coordinates": [1655, 997],
+      "name": "Berdiansk"
+    },
+    {
+      "coordinates": [657, 718],
+      "name": "Mohyliv-Podilskyi"
+    },
+    {
+      "coordinates": [928, 363],
+      "name": "Irpin"
+    },
+    {
+      "coordinates": [1072, 1019],
+      "name": "Ochakiv"
+    },
+    {
+      "coordinates": [1444, 399],
+      "name": "Okhtyrka"
+    },
+    {
+      "coordinates": [1553, 703],
+      "name": "Pavlohrad"
+    },
+    {
+      "coordinates": [261, 385],
+      "name": "Chervonohrad"
+    },
+    {
+      "coordinates": [925, 667],
+      "name": "Uman"
+    },
+    {
+      "coordinates": [349, 705],
+      "name": "Kolomyia"
+    },
+    {
+      "coordinates": [1435, 1091],
+      "name": "Henichesk"
+    },
+    {
+      "coordinates": [1166, 350],
+      "name": "Pryluky"
+    },
+    {
+      "coordinates": [1787, 783],
+      "name": "Makiivka"
+    },
+    {
+      "coordinates": [1389, 864],
+      "name": "Nikopol"
+    },
+    {
+      "coordinates": [1620, 1221],
+      "name": "Kerch"
+    },
+    {
+      "coordinates": [1643, 481],
+      "name": "Chuhuiv"
+    },
+    {
+      "coordinates": [743, 471],
+      "name": "Berdychiv"
+    },
+    {
+      "coordinates": [179, 585],
+      "name": "Truskavets"
+    },
+    {
+      "coordinates": [1032, 822],
+      "name": "Yuzhnoukrainsk"
+    },
+    {
+      "coordinates": [985, 186],
+      "name": "Slavutych"
+    },
+    {
+      "coordinates": [848, 834],
+      "name": "Podilsk"
+    },
+    {
+      "coordinates": [749, 288],
+      "name": "Korosten"
+    },
+    {
+      "coordinates": [1271, 1000],
+      "name": "Nova Kakhovka"
+    },
+    {
+      "coordinates": [529, 395],
+      "name": "Netishyn"
+    },
+    {
+      "coordinates": [1544, 863],
+      "name": "Orikhiv"
+    },
+    {
+      "coordinates": [1742, 619],
+      "name": "Sviatohirsk"
+    },
+    {
+      "coordinates": [1302, 460],
+      "name": "Myrhorod"
+    },
+    {
+      "coordinates": [312, 241],
+      "name": "Kovel"
+    },
+    {
+      "coordinates": [939, 1088],
+      "name": "Bilhorod-Dnistrovskyi"
+    },
+    {
+      "coordinates": [1275, 1246],
+      "name": "Yevpatoriia"
+    },
+    {
+      "coordinates": [521, 679],
+      "name": "Kamianets-Podilskyi"
+    },
+    {
+      "coordinates": [1413, 706],
+      "name": "Kamianske"
+    },
+    {
+      "coordinates": [1061, 442],
+      "name": "Pereiaslav"
+    },
+    {
+      "coordinates": [1498, 1272],
+      "name": "Feodosiia"
+    },
+    {
+      "coordinates": [1499, 982],
+      "name": "Melitopol"
+    },
+    {
+      "coordinates": [914, 487],
+      "name": "Bila Tserkva"
+    },
+    {
+      "coordinates": [1110, 584],
+      "name": "Smila"
+    },
+    {
+      "coordinates": [257, 783],
+      "name": "Rakhiv"
+    },
+    {
+      "coordinates": [1257, 236],
+      "name": "Konotop"
+    },
+    {
+      "coordinates": [635, 350],
+      "name": "Novohrad-Volynskyi"
+    },
+    {
+      "coordinates": [1879, 714],
+      "name": "Alchevsk"
+    },
+    {
+      "coordinates": [425, 437],
+      "name": "Kremenets"
+    },
+    {
+      "coordinates": [1224, 1099],
+      "name": "Skadovsk"
+    },
+    {
+      "coordinates": [1689, 714],
+      "name": "Dobropillia"
+    },
+    {
+      "coordinates": [1282, 608],
+      "name": "Kremenchuk"
+    },
+    {
+      "coordinates": [1747, 503],
+      "name": "Kupiansk"
+    },
+    {
+      "coordinates": [433, 622],
+      "name": "Chortkiv"
+    },
+    {
+      "coordinates": [691, 619],
+      "name": "Zhmerynka"
+    },
+    {
+      "coordinates": [274, 620],
+      "name": "Kalush"
+    },
+    {
+      "coordinates": [1110, 270],
+      "name": "Nizhyn"
+    },
+    {
+      "coordinates": [1706, 829],
+      "name": "Vuhledar"
+    },
+    {
+      "coordinates": [833, 656],
+      "name": "Haisyn"
+    },
+    {
+      "coordinates": [1790, 694],
+      "name": "Bakhmut"
+    },
+    {
+      "coordinates": [1389, 1164],
+      "name": "Dzhankoi"
+    },
+    {
+      "coordinates": [440, 216],
+      "name": "Varash"
+    },
+    {
+      "coordinates": [270, 306],
+      "name": "Volodymyr"
+    },
+    {
+      "coordinates": [1603, 644],
+      "name": "Lozova"
+    },
+    {
+      "coordinates": [925, 232],
+      "name": "Chornobyl"
+    },
+    {
+      "coordinates": [1006, 392],
+      "name": "Boryspil"
+    },
+    {
+      "coordinates": [1845, 633],
+      "name": "Sievierodonetsk"
+    },
+    {
+      "coordinates": [155, 763],
+      "name": "Khust"
+    },
+    {
+      "coordinates": [1235, 451],
+      "name": "Lubny"
+    },
+    {
+      "coordinates": [144, 536],
+      "name": "Sambir"
+    },
+    {
+      "coordinates": [1712, 768],
+      "name": "Selydove"
+    },
+    {
+      "coordinates": [771, 1222],
+      "name": "Izmail"
+    },
+    {
+      "coordinates": [294, 716],
+      "name": "Yaremche"
+    },
+    {
+      "coordinates": [1597, 848],
+      "name": "Huliaipole"
+    },
+    {
+      "coordinates": [428, 382],
+      "name": "Dubno"
+    },
+    {
+      "coordinates": [993, 784],
+      "name": "Pervomaisk"
+    },
+    {
+      "coordinates": [1535, 915],
+      "name": "Tokmak"
+    },
+    {
+      "coordinates": [574, 422],
+      "name": "Shepetivka"
+    },
+    {
+      "coordinates": [891, 440],
+      "name": "Fastiv"
+    },
+    {
+      "coordinates": [1247, 680],
+      "name": "Oleksandriia"
+    },
+    {
+      "coordinates": [1800, 647],
+      "name": "Siversk"
+    },
+    {
+      "coordinates": [1049, 864],
+      "name": "Voznesensk"
+    },
+    {
+      "coordinates": [1790, 741],
+      "name": "Horlivka"
+    },
+    {
+      "coordinates": [1710, 592],
+      "name": "Izium"
+    },
+    {
+      "coordinates": [1734, 858],
+      "name": "Volnovakha"
+    },
+    {
+      "coordinates": [91, 719],
+      "name": "Mukachevo"
+    },
+    {
+      "coordinates": [1391, 1328],
+      "name": "Alushta"
+    },
+    {
+      "coordinates": [973, 1070],
+      "name": "Chornomorsk"
+    },
+    {
+      "coordinates": [217, 581],
+      "name": "Stryi"
+    },
+    {
+      "coordinates": [1766, 648],
+      "name": "Mykolaivka"
+    },
+    {
+      "coordinates": [988, 364],
+      "name": "Brovary"
+    },
+    {
+      "coordinates": [1419, 877],
+      "name": "Enerhodar"
+    },
+    {
+      "coordinates": [1762, 770],
+      "name": "Avdiivka"
+    },
+    {
+      "coordinates": [1710, 795],
+      "name": "Kurakhove"
+    },
+    {
+      "coordinates": [1699, 746],
+      "name": "Pokrovsk"
+    },
+    {
+      "coordinates": [1811, 754],
+      "name": "Yenakiieve"
+    },
+    {
+      "coordinates": [1773, 726],
+      "name": "Toretsk"
+    },
+    {
+      "coordinates": [1798, 675],
+      "name": "Soledar"
+    },
+    {
+      "coordinates": [1770, 689],
+      "name": "Chasiv Yar"
+    },
+    {
+      "coordinates": [1770, 628],
+      "name": "Lyman"
+    },
+    {
+      "coordinates": [1288, 989],
+      "name": "Kakhovka"
+    },
+    {
+      "coordinates": [179, 565],
+      "name": "Drohobych"
+    }
+  ],
+  "id": "Ukraine",
+  "map": {
+    "height": 1408,
+    "num_land_tiles": 1322149,
+    "width": 2056
+  },
+  "map16x": {
+    "height": 352,
+    "num_land_tiles": 77048,
+    "width": 514
+  },
+  "map4x": {
+    "height": 704,
+    "num_land_tiles": 322464,
+    "width": 1028
+  },
+  "multiplayer_frequency": 1,
+  "name": "Ukraine",
+  "nations": [
+    {
+      "coordinates": [958, 375],
+      "flag": "ua",
+      "name": "Kyiv"
+    },
+    {
+      "coordinates": [237, 481],
+      "flag": "ua",
+      "name": "Lviv"
+    },
+    {
+      "coordinates": [381, 322],
+      "flag": "ua",
+      "name": "Lutsk"
+    },
+    {
+      "coordinates": [484, 346],
+      "flag": "ua",
+      "name": "Rivne"
+    },
+    {
+      "coordinates": [751, 409],
+      "flag": "ua",
+      "name": "Zhytomyr"
+    },
+    {
+      "coordinates": [43, 689],
+      "flag": "ua",
+      "name": "Uzhhorod"
+    },
+    {
+      "coordinates": [313, 638],
+      "flag": "ua",
+      "name": "Ivano-Frankivsk"
+    },
+    {
+      "coordinates": [411, 530],
+      "flag": "ua",
+      "name": "Ternopil"
+    },
+    {
+      "coordinates": [566, 553],
+      "flag": "ua",
+      "name": "Khmelnytskyi"
+    },
+    {
+      "coordinates": [449, 744],
+      "flag": "ua",
+      "name": "Chernivtsi"
+    },
+    {
+      "coordinates": [732, 586],
+      "flag": "ua",
+      "name": "Vinnytsia"
+    },
+    {
+      "coordinates": [1130, 550],
+      "flag": "ua",
+      "name": "Cherkasy"
+    },
+    {
+      "coordinates": [1151, 707],
+      "flag": "ua",
+      "name": "Kropyvnytskyi"
+    },
+    {
+      "coordinates": [1122, 961],
+      "flag": "ua",
+      "name": "Mykolaiv"
+    },
+    {
+      "coordinates": [981, 1041],
+      "flag": "ua",
+      "name": "Odesa"
+    },
+    {
+      "coordinates": [1192, 1015],
+      "flag": "ua",
+      "name": "Kherson"
+    },
+    {
+      "coordinates": [1472, 819],
+      "flag": "ua",
+      "name": "Zaporizhzhia"
+    },
+    {
+      "coordinates": [1460, 717],
+      "flag": "ua",
+      "name": "Dnipro"
+    },
+    {
+      "coordinates": [1278, 807],
+      "flag": "ua",
+      "name": "Kryvyi Rih"
+    },
+    {
+      "coordinates": [1407, 524],
+      "flag": "ua",
+      "name": "Poltava"
+    },
+    {
+      "coordinates": [1593, 454],
+      "flag": "ua",
+      "name": "Kharkiv"
+    },
+    {
+      "coordinates": [1433, 295],
+      "flag": "ua",
+      "name": "Sumy"
+    },
+    {
+      "coordinates": [1044, 190],
+      "flag": "ua",
+      "name": "Chernihiv"
+    },
+    {
+      "coordinates": [1935, 696],
+      "flag": "ua",
+      "name": "Luhansk"
+    },
+    {
+      "coordinates": [1768, 790],
+      "flag": "ua",
+      "name": "Donetsk"
+    },
+    {
+      "coordinates": [1739, 941],
+      "flag": "ua",
+      "name": "Mariupol"
+    },
+    {
+      "coordinates": [1744, 669],
+      "flag": "ua",
+      "name": "Kramatorsk"
+    },
+    {
+      "coordinates": [1746, 649],
+      "flag": "ua",
+      "name": "Sloviansk"
+    },
+    {
+      "coordinates": [1737, 689],
+      "flag": "ua",
+      "name": "Druzhkivka"
+    },
+    {
+      "coordinates": [1755, 703],
+      "flag": "ua",
+      "name": "Kostiantynivka"
+    },
+    {
+      "coordinates": [1736, 710],
+      "flag": "ua",
+      "name": "Mykolaipillia"
+    },
+    {
+      "coordinates": [1357, 1285],
+      "flag": "ua",
+      "name": "Simferopol"
+    },
+    {
+      "coordinates": [1293, 1337],
+      "flag": "ua",
+      "name": "Sevastopol"
+    }
+  ],
+  "themes": ["ukraine"],
+  "translation_key": "map.ukraine"
+}
