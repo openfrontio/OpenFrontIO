@@ -208,7 +208,7 @@ export class StructureLevelPass {
     };
 
     // Compile shaders
-    this.program = createProgram(gl, vertSrc, fragSrc);
+    this.program = createProgram(gl, vertSrc, fragSrc, "StructureLevelPass");
 
     // Texture unit bindings
     gl.useProgram(this.program);

@@ -171,7 +171,7 @@ export class WorldTextPass {
     this.base = atlas.base;
 
     // Compile shaders
-    this.program = createProgram(gl, vertSrc, fragSrc);
+    this.program = createProgram(gl, vertSrc, fragSrc, "WorldTextPass");
 
     // Texture unit bindings
     gl.useProgram(this.program);
