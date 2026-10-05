@@ -9,6 +9,21 @@ import {
 import { getApiBase } from "./Api";
 import { getAuthHeader } from "./Auth";
 
+export const FRIEND_REQUESTS_UPDATED_EVENT = "friend-requests-updated";
+
+/**
+ * Keep every friend-request surface in the tab on the same server snapshot.
+ * The account page and nav notification poller both fetch this resource, so
+ * whichever one refreshes first publishes the result for the other.
+ */
+export function publishFriendRequests(requests: FriendRequestsResponse): void {
+  document.dispatchEvent(
+    new CustomEvent<FriendRequestsResponse>(FRIEND_REQUESTS_UPDATED_EVENT, {
+      detail: requests,
+    }),
+  );
+}
+
 async function friendsFetch(
   path: string,
   options?: RequestInit,

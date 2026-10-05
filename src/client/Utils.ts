@@ -488,6 +488,12 @@ function getCachedLangSelector(): LangSelector | null {
   return found;
 }
 
+/** The locale selected in OpenFront's language picker, with a safe UI fallback. */
+export const getCurrentLanguage = (): string => {
+  const lang = getCachedLangSelector()?.currentLang ?? "en";
+  return lang === "debug" ? "en" : lang;
+};
+
 /** Language codes whose script reads right-to-left (resources/lang/metadata.json). */
 const RTL_LANGUAGES = new Set(["ar", "fa", "he"]);
 
