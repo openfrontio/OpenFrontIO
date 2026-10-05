@@ -2,6 +2,7 @@ import { html, LitElement } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import { assetUrl } from "../../../core/AssetUrls";
 import { EventBus } from "../../../core/EventBus";
+import { renderTroops } from "../../../core/Format";
 import { MessageType, PlayerType, UnitType } from "../../../core/game/Game";
 import {
   AttackUpdate,
@@ -21,7 +22,7 @@ import {
   SendAttackIntentEvent,
 } from "../../Transport";
 import { UIState } from "../../UIState";
-import { renderTroops, translateText } from "../../Utils";
+import { translateText } from "../../Utils";
 import { GameView, PlayerView, UnitView } from "../../view";
 import { getColoredSprite } from "../SpriteLoader";
 const soldierIcon = assetUrl("images/SoldierIcon.svg");

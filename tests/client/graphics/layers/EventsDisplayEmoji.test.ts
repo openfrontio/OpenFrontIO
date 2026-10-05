@@ -29,9 +29,11 @@ vi.mock("lit/directives/unsafe-html.js", () => ({
 
 vi.mock("../../../../src/client/Utils", () => ({
   translateText: vi.fn((key: string) => key),
+  getMessageTypeClasses: vi.fn(() => ""),
+}));
+vi.mock("../../../../src/core/Format", () => ({
   renderNumber: vi.fn(),
   renderTroops: vi.fn(),
-  getMessageTypeClasses: vi.fn(() => ""),
 }));
 
 import { beforeEach, describe, expect, it, vi } from "vitest";

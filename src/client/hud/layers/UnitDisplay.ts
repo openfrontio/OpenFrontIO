@@ -1,6 +1,7 @@
 import { html, LitElement } from "lit";
 import { customElement } from "lit/decorators.js";
 import { EventBus } from "../../../core/EventBus";
+import { renderNumber } from "../../../core/Format";
 import {
   BuildableUnit,
   BuildMenus,
@@ -12,7 +13,7 @@ import { Controller } from "../../Controller";
 import { ToggleStructureEvent } from "../../InputHandler";
 import { UIState } from "../../UIState";
 import { UserSettings } from "../../UserSettings";
-import { renderNumber, translateText } from "../../Utils";
+import { translateText } from "../../Utils";
 import { GameView } from "../../view";
 import {
   atomBombIcon,

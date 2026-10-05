@@ -35,9 +35,11 @@ vi.mock("../../../../src/client/Utils", () => ({
     const text = translations[key] ?? key;
     return params ? `${text} ${JSON.stringify(params)}` : text;
   }),
+  getMessageTypeClasses: vi.fn(() => ""),
+}));
+vi.mock("../../../../src/core/Format", () => ({
   renderNumber: vi.fn(),
   renderTroops: vi.fn(),
-  getMessageTypeClasses: vi.fn(() => ""),
 }));
 
 import { beforeEach, describe, expect, it, vi } from "vitest";

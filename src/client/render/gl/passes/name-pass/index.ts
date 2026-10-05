@@ -28,7 +28,7 @@ import { PlayerTypeEnum } from "../../../types";
 import type { RenderSettings } from "../../RenderSettings";
 import { createFullscreenQuad } from "../../utils/GlUtils";
 
-import { renderTroops } from "../../../../Utils";
+import { renderTroops } from "../../../../../core/Format";
 import type { GlyphTables } from "./AtlasData";
 import {
   buildEmojiLookup,

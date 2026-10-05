@@ -14,6 +14,8 @@ import { TileRef } from "../../../src/core/game/GameMap";
 
 vi.mock("../../../src/client/Utils", () => ({
   translateText: vi.fn((key: string) => key),
+}));
+vi.mock("../../../src/core/Format", () => ({
   renderNumber: vi.fn((num: number) => num.toString()),
 }));
 

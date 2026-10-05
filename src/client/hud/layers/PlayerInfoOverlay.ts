@@ -2,6 +2,7 @@ import { html, LitElement, TemplateResult } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
 import { assetUrl } from "../../../core/AssetUrls";
 import { EventBus } from "../../../core/EventBus";
+import { renderNumber, renderTroops } from "../../../core/Format";
 import {
   PlayerProfile,
   PlayerType,
@@ -22,8 +23,6 @@ import { TransformHandler } from "../../TransformHandler";
 import {
   getTranslatedPlayerTeamLabel,
   renderDuration,
-  renderNumber,
-  renderTroops,
   translateText,
 } from "../../Utils";
 import { GameView, PlayerView, UnitView } from "../../view";

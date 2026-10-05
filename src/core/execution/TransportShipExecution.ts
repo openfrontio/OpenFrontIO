@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { renderTroops } from "../../client/Utils";
+import { renderTroops } from "../Format";
 import {
   Execution,
   Game,

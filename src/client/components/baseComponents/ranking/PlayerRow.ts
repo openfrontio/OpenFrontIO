@@ -6,7 +6,8 @@ import {
 } from "lit";
 import { customElement, property } from "lit/decorators.js";
 import { assetUrl } from "../../../../core/AssetUrls";
-import { renderNumber, translateText } from "../../../Utils";
+import { renderNumber } from "../../../../core/Format";
+import { translateText } from "../../../Utils";
 import { PlayerInfo, RANK_TYPE_LABEL_KEYS, RankType } from "./GameInfoRanking";
 
 const goldCoinIcon = assetUrl("images/GoldCoinIcon.svg");

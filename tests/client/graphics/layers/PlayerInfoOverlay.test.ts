@@ -24,10 +24,12 @@ vi.mock("lit/decorators.js", () => ({
 vi.mock("../../../../src/client/Utils", () => ({
   translateText: vi.fn((key: string) => key),
   renderDuration: vi.fn(() => ""),
-  renderNumber: vi.fn(() => "0"),
-  renderTroops: vi.fn(() => "0"),
   getTranslatedPlayerTeamLabel: vi.fn(() => ""),
   getSvgAspectRatio: vi.fn(() => 1),
+}));
+vi.mock("../../../../src/core/Format", () => ({
+  renderNumber: vi.fn(() => "0"),
+  renderTroops: vi.fn(() => "0"),
 }));
 
 vi.mock("../../../../src/client/hud/PlayerIcons", () => ({

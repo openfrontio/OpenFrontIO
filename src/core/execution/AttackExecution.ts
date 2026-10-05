@@ -1,6 +1,6 @@
 import { z } from "zod";
-import { renderTroops } from "../../client/Utils";
 import { AttackLogicInput } from "../configuration/Config";
+import { renderTroops } from "../Format";
 import {
   Attack,
   Difficulty,

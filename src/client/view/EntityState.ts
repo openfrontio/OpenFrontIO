@@ -129,7 +129,7 @@ export function playerTypeFromEnum(t: PlayerTypeEnum): PlayerType {
 
 // First-emission updates from the engine always include every field; these
 // builders assert non-null for that contract. Subsequent diffs are partial
-// and flow through applyStateUpdate() (GameUpdateUtils).
+// and flow through applyStateUpdate() (PlayerStateUpdate).
 export function playerStaticFromUpdate(pu: PlayerUpdate): PlayerStatic {
   return {
     smallID: pu.smallID!,

@@ -1,11 +1,11 @@
 import { z } from "zod";
-import { renderNumber } from "../../client/Utils";
 import { UnitView } from "../../client/view";
 import { Config } from "../configuration/Config";
 import {
   SharedWaterCache,
   SharedWaterCacheSnapshot,
 } from "../execution/nation/SharedWaterCache";
+import { renderNumber } from "../Format";
 import { AbstractGraph } from "../pathfinding/algorithms/AbstractGraph";
 import { WaterPathFinder } from "../pathfinding/PathFinder";
 import { PathFinder } from "../pathfinding/types";

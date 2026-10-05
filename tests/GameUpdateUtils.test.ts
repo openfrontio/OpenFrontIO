@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
 import type { PlayerState } from "../src/client/render/types";
+import { applyStateUpdate } from "../src/client/view/PlayerStateUpdate";
 import { PlayerType } from "../src/core/game/Game";
 import {
-  applyStateUpdate,
   diffPlayerUpdate,
   packAttackTroopDeltas,
 } from "../src/core/game/GameUpdateUtils";

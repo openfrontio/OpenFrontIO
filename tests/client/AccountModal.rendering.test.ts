@@ -28,9 +28,11 @@ vi.mock("../../src/client/Utils", () => ({
   showToast: vi.fn(),
   getDiscordAvatarUrl: vi.fn(() => null),
   copyToClipboard: vi.fn(),
-  renderNumber: vi.fn((n: number) => String(n)),
   getMapName: vi.fn((m: string) => m),
   renderDuration: vi.fn(() => ""),
+}));
+vi.mock("../../src/core/Format", () => ({
+  renderNumber: vi.fn((n: number) => String(n)),
 }));
 
 vi.mock("../../src/client/CrazyGamesSDK", () => ({

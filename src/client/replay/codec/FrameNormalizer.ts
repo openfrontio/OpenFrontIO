@@ -15,7 +15,6 @@
  */
 
 import type { PlayerID } from "../../../core/game/Game";
-import { applyStateUpdate } from "../../../core/game/GameUpdateUtils";
 import {
   GameUpdateType,
   type GameUpdateViewData,
@@ -41,6 +40,7 @@ import {
   unitStateFromUpdate,
 } from "../../view/EntityState";
 import { MotionPlanResolver } from "../../view/MotionPlanResolver";
+import { applyStateUpdate } from "../../view/PlayerStateUpdate";
 import type { MiscUpdates } from "./ReplayTypes";
 
 /**

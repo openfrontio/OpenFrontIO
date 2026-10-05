@@ -9,13 +9,13 @@
  * to what the old CSS transition did.
  */
 import { EventBus } from "../../core/EventBus";
+import { renderTroops } from "../../core/Format";
 import { Cell, PlayerType } from "../../core/game/Game";
 import { Controller } from "../Controller";
 import { AlternateViewEvent } from "../InputHandler";
 import { MapRenderer } from "../render/gl";
 import type { AttackTroopLabel } from "../render/gl/passes/WorldTextPass";
 import { UserSettings } from "../UserSettings";
-import { renderTroops } from "../Utils";
 import { GameView } from "../view";
 
 // Aquarius (#3fa9f5) for outgoing, red-400 (#f87171) for incoming.

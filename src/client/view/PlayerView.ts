@@ -20,7 +20,6 @@ import {
   UnitType,
 } from "../../core/game/Game";
 import { TileRef } from "../../core/game/GameMap";
-import { applyStateUpdate } from "../../core/game/GameUpdateUtils";
 import {
   AllianceView,
   AttackUpdate,
@@ -33,6 +32,7 @@ import { type CosmeticOwner, visibleCosmetics } from "./CosmeticVisibility";
 import { playerStateFromUpdate, playerStaticFromUpdate } from "./EntityState";
 import { GameView } from "./GameView";
 import { resolvePlayerColors } from "./PlayerColors";
+import { applyStateUpdate } from "./PlayerStateUpdate";
 import { UnitView } from "./UnitView";
 
 const userSettings: UserSettings = new UserSettings();

@@ -18,9 +18,11 @@ vi.mock("lit/decorators.js", () => ({
 vi.mock("../../../../src/client/Utils", () => ({
   translateText: vi.fn((key: string) => key),
   renderDuration: vi.fn(),
+  showToast: vi.fn(),
+}));
+vi.mock("../../../../src/core/Format", () => ({
   renderNumber: vi.fn(),
   renderTroops: vi.fn(),
-  showToast: vi.fn(),
 }));
 
 vi.mock("../../../../src/client/components/ui/ActionButton", () => ({

@@ -1,6 +1,7 @@
 import { html, LitElement } from "lit";
 import { customElement, property } from "lit/decorators.js";
 import { assetUrl } from "../../core/AssetUrls";
+import { renderTroops } from "../../core/Format";
 import {
   doomsdayClockDrain,
   doomsdayClockRequiredTiles,
@@ -10,7 +11,7 @@ import {
 } from "../../core/game/DoomsdayClock";
 import { GameMode, PlayerType, Team } from "../../core/game/Game";
 import { themeProvider } from "../theme/ThemeProvider";
-import { renderTroops, translateText } from "../Utils";
+import { translateText } from "../Utils";
 import { GameView } from "../view";
 
 const doomsdayClockIcon = assetUrl("images/DoomsdayClockSkull.svg");

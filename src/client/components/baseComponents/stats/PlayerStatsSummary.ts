@@ -2,7 +2,8 @@ import { LitElement, html, nothing } from "lit";
 import { customElement, property } from "lit/decorators.js";
 import type { PlayerStatsLeaf } from "../../../../core/ApiSchemas";
 import { assetUrl } from "../../../../core/AssetUrls";
-import { renderNumber, translateText } from "../../../Utils";
+import { renderNumber } from "../../../../core/Format";
+import { translateText } from "../../../Utils";
 
 type PlayerSummaryMetricKey =
   | "cities"

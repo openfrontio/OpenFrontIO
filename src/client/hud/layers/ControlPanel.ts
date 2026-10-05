@@ -3,6 +3,7 @@ import { customElement, state } from "lit/decorators.js";
 import { keyed } from "lit/directives/keyed.js";
 import { assetUrl } from "../../../core/AssetUrls";
 import { EventBus } from "../../../core/EventBus";
+import { renderNumber, renderTroops } from "../../../core/Format";
 import { ClientID } from "../../../core/Schemas";
 import { Config } from "../../../core/configuration/Config";
 import { GameMode, GameType, Gold } from "../../../core/game/Game";
@@ -12,12 +13,7 @@ import { Controller } from "../../Controller";
 import { AttackRatioEvent } from "../../InputHandler";
 import { UIState } from "../../UIState";
 import { USER_SETTINGS_CHANGED_EVENT, UserSettings } from "../../UserSettings";
-import {
-  getGamesPlayed,
-  renderNumber,
-  renderTroops,
-  translateText,
-} from "../../Utils";
+import { getGamesPlayed, translateText } from "../../Utils";
 import { GameView } from "../../view";
 import { PlayerView } from "../../view/PlayerView";
 import { goldCoinIcon, soldierIcon } from "../HotbarIcons";

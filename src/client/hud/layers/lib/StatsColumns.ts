@@ -1,11 +1,7 @@
+import { renderNumber, renderTroops } from "../../../../core/Format";
 import { PlayerType, UnitType } from "../../../../core/game/Game";
 import type { ColumnId, StatsTableKind } from "../../../StatsConstants";
-import {
-  formatPercentage,
-  renderNumber,
-  renderTroops,
-  translateText,
-} from "../../../Utils";
+import { formatPercentage, translateText } from "../../../Utils";
 import type { GameView, PlayerView } from "../../../view";
 import {
   allianceIcon,

@@ -9,6 +9,8 @@ vi.mock("../../../src/client/hud/layers/BuildMenu", () => ({
 // Mock Utils to avoid touching DOM (document) during tests
 vi.mock("../../../src/client/Utils", () => ({
   translateText: (key: string) => key,
+}));
+vi.mock("../../../src/core/Format", () => ({
   renderNumber: (num: number) => num.toString(),
 }));
 

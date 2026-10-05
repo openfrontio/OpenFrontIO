@@ -37,9 +37,11 @@ vi.mock("../../../../src/client/Utils", () => ({
     (key: string, params?: Record<string, string | number>) =>
       params?.name !== undefined ? String(params.name) : key,
   ),
+  getMessageTypeClasses: vi.fn(() => ""),
+}));
+vi.mock("../../../../src/core/Format", () => ({
   renderNumber: vi.fn(),
   renderTroops: vi.fn(),
-  getMessageTypeClasses: vi.fn(() => ""),
 }));
 
 import { beforeEach, describe, expect, it, vi } from "vitest";

@@ -1,5 +1,6 @@
 import { assetUrl } from "../../../core/AssetUrls";
 import { Config } from "../../../core/configuration/Config";
+import { renderNumber } from "../../../core/Format";
 import {
   AllPlayers,
   BuildableAttacks,
@@ -15,7 +16,7 @@ import {
 import { TileRef } from "../../../core/game/GameMap";
 import { Emoji, findClosestBy, flattenedEmojiTable } from "../../../core/Util";
 import { UIState } from "../../UIState";
-import { renderNumber, translateText } from "../../Utils";
+import { translateText } from "../../Utils";
 import { GameView, PlayerView } from "../../view";
 import { BuildItemDisplay, BuildMenu, flattenedBuildTable } from "./BuildMenu";
 import { ChatIntegration } from "./ChatIntegration";

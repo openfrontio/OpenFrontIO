@@ -1,13 +1,14 @@
 import { html, LitElement } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
 import { EventBus } from "../../../core/EventBus";
+import { renderTroops } from "../../../core/Format";
 import { within } from "../../../core/Util";
 import {
   SendDonateGoldIntentEvent,
   SendDonateTroopsIntentEvent,
 } from "../../Transport";
 import { UIState } from "../../UIState";
-import { renderTroops, translateText } from "../../Utils";
+import { translateText } from "../../Utils";
 import { GameView, PlayerView } from "../../view";
 
 @customElement("send-resource-modal")

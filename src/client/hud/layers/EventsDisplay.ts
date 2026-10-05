@@ -24,14 +24,10 @@ import { onlyImages } from "../../../core/Util";
 import { GoToPlayerEvent, GoToUnitEvent } from "../../TransformHandler";
 import { GameView, PlayerView, UnitView } from "../../view";
 
+import { renderNumber, renderTroops } from "../../../core/Format";
 import { PlaySoundEffectEvent } from "../../sound/Sounds";
 import { UIState } from "../../UIState";
-import {
-  getMessageTypeClasses,
-  renderNumber,
-  renderTroops,
-  translateText,
-} from "../../Utils";
+import { getMessageTypeClasses, translateText } from "../../Utils";
 
 interface GameEvent {
   description: string;
