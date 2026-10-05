@@ -20,7 +20,12 @@ import {
   LobbyInfoEvent,
   PublicGameInfo,
 } from "../core/Schemas";
-import { GameMode, GameType, HumansVsNations } from "../core/game/Game";
+import {
+  GameMode,
+  GameType,
+  HumansVsNations,
+  UnitTranslations,
+} from "../core/game/Game";
 import { getApiBase } from "./Api";
 import { crazyGamesSDK } from "./CrazyGamesSDK";
 import { PublicLobbySocket } from "./LobbySocket";
@@ -402,7 +407,10 @@ export class JoinLobbyModal extends BaseModal {
     // Nation count for this map isn't loaded pre-join, so the numeric-nations
     // default comparison is skipped in the row chips.
     const settings = c ? notableLobbySettings(c, null) : [];
-    const disabledUnitCount = c?.disabledUnits?.length ?? 0;
+    const disabledUnits =
+      c?.disabledUnits?.map((u) =>
+        translateText(UnitTranslations.get(u) ?? u),
+      ) ?? [];
     const enabled = translateText("common.enabled");
     // A featured lobby names itself; the map drops to the subtitle so nothing
     // is lost. Interpolated by lit as TEXT, never markup — emoji render because
@@ -456,7 +464,7 @@ export class JoinLobbyModal extends BaseModal {
               : ""}
           </div>
           <span class="text-xs text-white/60">${subtitleLine}</span>
-          ${settings.length > 0 || disabledUnitCount > 0
+          ${settings.length > 0 || disabledUnits.length > 0
             ? html`<div class="flex flex-wrap gap-1 mt-1">
                 ${settings.map((s) => {
                   // Some labels (e.g. game_settings.bots) already end with ": " or ": ".
@@ -468,13 +476,12 @@ export class JoinLobbyModal extends BaseModal {
                       : `${label}: ${s.value}`}</span
                   >`;
                 })}
-                ${disabledUnitCount > 0
-                  ? html`<span
-                      class="px-1.5 py-0.5 bg-red-500/20 text-red-200 text-[10px] rounded font-bold border border-red-500/30"
-                      >${translateText("private_lobby.disabled_units")}:
-                      ${disabledUnitCount}</span
-                    >`
-                  : ""}
+                ${disabledUnits.map((unit) => {
+                  return html`<span
+                    class="px-1.5 py-0.5 bg-red-500/20 text-red-200 text-[10px] rounded font-bold border border-red-500/30"
+                    >${unit}</span
+                  >`;
+                })}
               </div>`
             : ""}
         </div>
