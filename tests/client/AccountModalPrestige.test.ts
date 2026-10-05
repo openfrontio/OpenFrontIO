@@ -62,6 +62,7 @@ vi.stubGlobal("localStorage", {
 
 import { AccountModal } from "../../src/client/AccountModal";
 import { getUserMe, invalidateUserMe } from "../../src/client/Api";
+import type { PrestigeFlow } from "../../src/client/components/PrestigeFlow";
 import { showInGameAlert } from "../../src/client/InGameModal";
 
 const AT_100 = {
@@ -140,6 +141,33 @@ describe("AccountModal — after a prestige", () => {
     await new Promise((r) => setTimeout(r, 0));
     await modal.updateComplete;
   };
+
+  it("opens the prestige flow on the press", async () => {
+    // Already on its way: the card offers Prestige.
+    await modal.loadPrestigeFlow();
+    expect(customElements.get("prestige-flow")).toBeDefined();
+    modal
+      .querySelector("profile-card")!
+      .dispatchEvent(
+        new CustomEvent("prestige-request", { bubbles: true, composed: true }),
+      );
+    await vi.waitFor(() =>
+      expect((flow() as unknown as PrestigeFlow).isOpen).toBe(true),
+    );
+  });
+
+  it("says so when the prestige flow can't be fetched", async () => {
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+    modal.loadPrestigeFlow = () => Promise.reject(new Error("offline"));
+    modal
+      .querySelector("profile-card")!
+      .dispatchEvent(
+        new CustomEvent("prestige-request", { bubbles: true, composed: true }),
+      );
+    await vi.waitFor(() =>
+      expect(showInGameAlert).toHaveBeenCalledWith("prestige.load_failed"),
+    );
+  });
 
   it("shows the new rank, lists a replayed reward once, and tells the header", async () => {
     vi.mocked(getUserMe).mockResolvedValueOnce(userMe(AFTER, [REWARD]));

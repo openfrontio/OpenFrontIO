@@ -32,7 +32,6 @@ import type { CreatorChangedDetail } from "./components/CreatorCodePanel";
 import "./components/CurrencyDisplay";
 import "./components/Difficulties";
 import "./components/FriendsList";
-import "./components/PrestigeFlow";
 import type { PrestigeFlow } from "./components/PrestigeFlow";
 import "./components/ProfileCard";
 import "./components/RewardsPanel";
@@ -60,6 +59,21 @@ const LOGIN_ERROR_KEYS: Record<LoginResult, string> = {
   no_account: "account_modal.login_no_account",
 };
 
+// The prestige confirmation and ceremony only ever open for a player at level
+// 100, so they stay out of the startup bundle: fetched as soon as the card
+// offers Prestige, well before the press. A failed fetch is tried again on
+// the next press.
+let prestigeFlowModule: Promise<unknown> | null = null;
+function loadPrestigeFlow(): Promise<unknown> {
+  prestigeFlowModule ??= import("./components/PrestigeFlow").catch(
+    (err: unknown) => {
+      prestigeFlowModule = null;
+      throw err;
+    },
+  );
+  return prestigeFlowModule;
+}
+
 @customElement("account-modal")
 export class AccountModal extends BaseModal {
   protected routerName = "account";
@@ -68,6 +82,8 @@ export class AccountModal extends BaseModal {
   @state() private isLoadingUser: boolean = false;
   // Counts openings, to key the profile card's once-per-open flourish.
   private openCount = 0;
+  // Replaceable for tests.
+  loadPrestigeFlow: () => Promise<unknown> = loadPrestigeFlow;
   // Set on CrazyGames when a CrazyGames user is signed in. Their identity comes
   // from the SDK, not our backend user object.
   @state() private crazyGamesUser: CrazyGamesUser | null = null;
@@ -478,6 +494,11 @@ export class AccountModal extends BaseModal {
   ): TemplateResult | typeof nothing {
     const player = this.userMeResponse?.player;
     if (!player?.publicId || !player.progress) return nothing;
+    if (player.progress.canPrestige) {
+      this.loadPrestigeFlow().catch((err: unknown) =>
+        console.warn("AccountModal: prestige flow failed to load", err),
+      );
+    }
     return html`<profile-card
       class=${variant === "full" ? "mb-4 block" : "block"}
       .variant=${variant}
@@ -490,7 +511,17 @@ export class AccountModal extends BaseModal {
     ></profile-card>`;
   }
 
-  private handlePrestigeRequest = (): void => {
+  private handlePrestigeRequest = async (): Promise<void> => {
+    if (!this.userMeResponse?.player?.progress) return;
+    try {
+      // Normally loaded already (see renderProfileCard).
+      await this.loadPrestigeFlow();
+    } catch (err) {
+      console.warn("AccountModal: prestige flow failed to load", err);
+      await showInGameAlert(translateText("prestige.load_failed"));
+      return;
+    }
+    // The account as it is now: it may have been re-read meanwhile.
     const progress = this.userMeResponse?.player?.progress;
     if (!progress) return;
     this.querySelector<PrestigeFlow>("prestige-flow")?.open(progress);
