@@ -6,7 +6,7 @@ import {
   Quads,
   Trios,
 } from "../../src/core/game/GameTypes";
-import { ServerStartGameMessage } from "../../src/core/Schemas";
+import { ServerStartGameMessage } from "../../src/core/WireSchemas";
 import { createGameWireContext } from "../../src/core/ZbinWire";
 import {
   cid,

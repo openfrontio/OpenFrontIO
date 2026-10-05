@@ -6,7 +6,7 @@ import { z } from "zod";
 import { ZbContext } from "../../zbin";
 import { isAdminRole } from "../core/ApiSchemas";
 import { CloseCode, CloseReason } from "../core/CloseCodes";
-import { GameEnv } from "../core/configuration/Config";
+import { GameEnv } from "../core/configuration/Env";
 import {
   GameMode,
   GameType,
@@ -22,16 +22,23 @@ import {
 } from "../core/game/TeamAssignment";
 import {
   ClientID,
+  GameConfig,
+  GameID,
+  GameStartInfo,
+  GameStartInfoSchema,
+  Intent,
+  StampedIntent,
+  TeamCountConfig,
+  Tribe,
+  Turn,
+} from "../core/Schemas";
+import { createPartialGameRecord } from "../core/SharedUtil";
+import {
   ClientMessage,
   ClientReportMessage,
   ClientSendLiveStatsMessage,
   ClientSendWinnerMessage,
-  GameConfig,
-  GameID,
   GameInfo,
-  GameStartInfo,
-  GameStartInfoSchema,
-  Intent,
   LobbyAccent,
   PartialGameRecord,
   PlayerLiveStats,
@@ -47,12 +54,7 @@ import {
   ServerRedirectMessage,
   ServerStartGameMessage,
   ServerTurnMessage,
-  StampedIntent,
-  TeamCountConfig,
-  Tribe,
-  Turn,
-} from "../core/Schemas";
-import { createPartialGameRecord } from "../core/Util";
+} from "../core/WireSchemas";
 import { createGameWireContext, encodeServerMessage } from "../core/ZbinWire";
 import { archive, finalizeGameRecord } from "./Archive";
 import { Client } from "./Client";

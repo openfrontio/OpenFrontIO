@@ -1,7 +1,7 @@
 import { html, nothing, svg, TemplateResult } from "lit";
 import { UserMeResponse } from "../../core/ApiSchemas";
 import { GameMapType } from "../../core/game/GameTypes";
-import { PublicGameInfo } from "../../core/Schemas";
+import { PublicGameInfo } from "../../core/WireSchemas";
 import { responseHasLinkedIdentity } from "../AccountIdentity";
 import { crazyGamesSDK } from "../CrazyGamesSDK";
 import { terrainMapFileLoader } from "../TerrainMapFileLoader";

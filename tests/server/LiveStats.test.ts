@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { PlayerLiveStats } from "../../src/core/Schemas";
+import { PlayerLiveStats } from "../../src/core/WireSchemas";
 import { registerAdminBotRoutes } from "../../src/server/AdminBotRoutes";
 import { Client } from "../../src/server/Client";
 import { ServerEnv } from "../../src/server/ServerEnv";

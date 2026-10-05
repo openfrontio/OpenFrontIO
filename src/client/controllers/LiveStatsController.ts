@@ -1,5 +1,5 @@
 import { EventBus } from "../../core/EventBus";
-import { LiveStats, PlayerLiveStats } from "../../core/Schemas";
+import { LiveStats, PlayerLiveStats } from "../../core/WireSchemas";
 import { Controller } from "../Controller";
 import { SendLiveStatsEvent } from "../Transport";
 import { GameView } from "../view";

@@ -6,7 +6,7 @@ import {
   PublicGameType,
   PublicGameTypeSchema,
   ScheduledPublicGameTypeSchema,
-} from "../core/Schemas";
+} from "../core/WireSchemas";
 import { InternalGameInfo, InternalGameInfoSchema } from "./IPCBridgeSchema";
 import { ServerEnv } from "./ServerEnv";
 

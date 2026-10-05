@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { EventBus } from "../../src/core/EventBus";
-import type { ServerMessage } from "../../src/core/Schemas";
+import type { ServerMessage } from "../../src/core/WireSchemas";
 import { encodeServerMessage } from "../../src/core/ZbinWire";
 
 // OPE-423. Transport's onmessage catch used to log the raw frame. That catch

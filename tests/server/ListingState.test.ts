@@ -3,7 +3,7 @@ import {
   FEATURED_LOBBY_AUTO_START_MS,
   HOSTED_LOBBY_AUTO_START_MS,
   LobbyLabelSchema,
-} from "../../src/core/Schemas";
+} from "../../src/core/WireSchemas";
 import { ListingState } from "../../src/server/ListingState";
 
 // The listing state on its own. How the game acts on it — rejecting a

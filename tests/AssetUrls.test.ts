@@ -1,5 +1,6 @@
 import { describe, expect, test } from "vitest";
-import { buildAssetUrl, rewriteAssetsForCdn } from "../src/core/AssetUrls";
+import { buildAssetUrl } from "../src/core/AssetPaths";
+import { rewriteAssetsForCdn } from "../src/core/AssetUrls";
 
 describe("AssetUrls", () => {
   test("returns hashed URLs for direct asset matches", () => {

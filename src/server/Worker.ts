@@ -8,21 +8,20 @@ import { fileURLToPath } from "url";
 import { WebSocket, WebSocketServer } from "ws";
 import { z } from "zod";
 import { CloseCode, CloseReason } from "../core/CloseCodes";
-import { GameEnv } from "../core/configuration/Config";
+import { GameEnv } from "../core/configuration/Env";
 import { GameType } from "../core/game/GameTypes";
+import { ID, isValidGameID } from "../core/Schemas";
+import { generateID, replacer } from "../core/SharedUtil";
 import {
   ClientMessage,
   ClientPlatformSchema,
   HOSTED_LOBBY_AUTO_START_MS,
-  ID,
-  isValidGameID,
   MAX_HOSTED_LOBBIES,
   MAX_HOSTED_LOBBY_PLAYERS,
   MIN_HOSTED_LOBBY_AUTO_START_MS,
   MIN_HOSTED_LOBBY_PLAYERS,
   ServerErrorMessage,
-} from "../core/Schemas";
-import { generateID, replacer } from "../core/Util";
+} from "../core/WireSchemas";
 import { CreateGameInputSchema } from "../core/WorkerSchemas";
 import { decodeClientMessage, encodeServerMessage } from "../core/ZbinWire";
 import { registerAdminBotRoutes } from "./AdminBotRoutes";

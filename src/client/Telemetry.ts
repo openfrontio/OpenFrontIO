@@ -5,7 +5,7 @@ import type {
   LogLevel,
   TransportItem,
 } from "@grafana/faro-web-sdk";
-import { GameEnv } from "../core/configuration/Config";
+import { GameEnv } from "../core/configuration/Env";
 import { ClientEnv } from "./ClientEnv";
 import { clientPlatform } from "./ClientPlatform";
 

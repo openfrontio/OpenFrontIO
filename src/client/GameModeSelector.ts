@@ -11,7 +11,7 @@ import {
   Quads,
   Trios,
 } from "../core/game/GameTypes";
-import { PublicGameInfo, PublicGames } from "../core/Schemas";
+import { PublicGameInfo, PublicGames } from "../core/WireSchemas";
 import { getDesktopSessionState } from "./Auth";
 import "./components/IOSAddToHomeScreenBanner";
 import {

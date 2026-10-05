@@ -34,16 +34,13 @@ import { createNationsForGame } from "../../src/core/game/NationCreation";
 import { loadTerrainMap } from "../../src/core/game/TerrainMapLoader";
 import { GameRunner } from "../../src/core/GameRunner";
 import { PseudoRandom } from "../../src/core/PseudoRandom";
-import {
-  GameRecord,
-  GameRecordSchema,
-  GameStartInfo,
-} from "../../src/core/Schemas";
+import { GameStartInfo } from "../../src/core/Schemas";
 import {
   decompressGameRecord,
-  simpleHash,
   toWireGameStartInfo,
-} from "../../src/core/Util";
+} from "../../src/core/SharedUtil";
+import { simpleHash } from "../../src/core/Util";
+import { GameRecord, GameRecordSchema } from "../../src/core/WireSchemas";
 import { NodeGameMapLoader } from "../perf/fullgame/NodeGameMapLoader";
 
 const PROJECT_ROOT = path.resolve(

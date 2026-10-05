@@ -10,11 +10,8 @@ import {
   retryServerList,
 } from "../src/client/ServerList";
 import { GameMapType, GameMode } from "../src/core/game/GameTypes";
-import type {
-  GameConfig,
-  PublicGameInfo,
-  PublicGames,
-} from "../src/core/Schemas";
+import type { GameConfig } from "../src/core/Schemas";
+import type { PublicGameInfo, PublicGames } from "../src/core/WireSchemas";
 
 // The component opens a public-lobby WebSocket the moment it connects. jsdom
 // has no WebSocket worth talking to and this file is about the gate, not the

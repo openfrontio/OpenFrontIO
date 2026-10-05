@@ -21,7 +21,7 @@ import { fetchReplayRecord } from "../../../src/client/replay/ReplayRecord";
 import { replayStore } from "../../../src/client/replay/ReplayStore";
 import { ReplayViewer } from "../../../src/client/replay/ReplayViewer";
 import { loadTerrainMap } from "../../../src/core/game/TerrainMapLoader";
-import type { GameRecord } from "../../../src/core/Schemas";
+import type { GameRecord } from "../../../src/core/WireSchemas";
 
 vi.mock("../../../src/client/replay/ReplayRecord", () => ({
   fetchReplayRecord: vi.fn(),

@@ -1,4 +1,4 @@
-import { assetUrl } from "../AssetUrls";
+import { AssetManifest, buildAssetUrl } from "../AssetPaths";
 import { FetchGameMapLoader } from "../game/FetchGameMapLoader";
 import { ErrorUpdate, GameUpdateViewData } from "../game/GameUpdates";
 import {
@@ -20,10 +20,16 @@ import {
   WorkerMessage,
 } from "./WorkerMessages";
 
+// Injected by Vite at build time (vite.config.ts `define`).
+declare const __ASSET_MANIFEST__: AssetManifest | undefined;
+
 const ctx: Worker = self as any;
-globalThis.__ASSET_MANIFEST__ = __ASSET_MANIFEST__;
 let gameRunner: Promise<GameRunner> | null = null;
-const mapLoader = new FetchGameMapLoader((path) => assetUrl(`maps/${path}`));
+// From the init message; workers have no `window` to read it from.
+let cdnBase = "";
+const mapLoader = new FetchGameMapLoader((path) =>
+  buildAssetUrl(`maps/${path}`, __ASSET_MANIFEST__ ?? {}, cdnBase),
+);
 // Yield threshold; not a backlog cap. Used to avoid monopolizing the worker task
 // and flooding the main thread with messages during catch-up.
 const MAX_TICKS_BEFORE_YIELD = 4;
@@ -150,8 +156,8 @@ ctx.addEventListener("message", async (e: MessageEvent<MainThreadMessage>) => {
     case "init":
       try {
         // Set before createGameRunner so map fetches via mapLoader pick up the
-        // CDN base. Workers have no `window`, so AssetUrls falls back to this.
-        globalThis.__CDN_BASE__ = message.cdnBase;
+        // CDN base.
+        cdnBase = message.cdnBase;
         gameRunner = (
           message.snapshot !== undefined
             ? createGameRunnerFromSnapshot(

@@ -4,11 +4,7 @@ import { ClusterConfig } from "../core/ClusterConfig";
 import { GameID } from "../core/Schemas";
 import { ServerList } from "../core/ServerList";
 import { simpleHash } from "../core/Util";
-import {
-  GameEnv,
-  JwksSchema,
-  parseGameEnv,
-} from "../core/configuration/Config";
+import { GameEnv, JwksSchema, parseGameEnv } from "../core/configuration/Env";
 
 /**
  * No server is known: the API's list has not loaded (or carries none for

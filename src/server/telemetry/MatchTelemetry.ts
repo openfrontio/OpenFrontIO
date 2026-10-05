@@ -1,8 +1,5 @@
-import type {
-  GameConfig,
-  GameStartInfo,
-  PublicGameType,
-} from "../../core/Schemas";
+import type { GameConfig, GameStartInfo } from "../../core/Schemas";
+import type { PublicGameType } from "../../core/WireSchemas";
 
 export interface TelemetryPlayerIdentity {
   clientId: string;

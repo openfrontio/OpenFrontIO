@@ -20,7 +20,7 @@ import { Controller } from "../../Controller";
 import { SendAllianceRequestIntentEvent } from "../../Transport";
 import { UserSettings } from "../../UserSettings";
 
-import { onlyImages } from "../../../core/Util";
+import { onlyImages } from "../../../core/SharedUtil";
 import { GoToPlayerEvent, GoToUnitEvent } from "../../TransformHandler";
 import { GameView, PlayerView, UnitView } from "../../view";
 

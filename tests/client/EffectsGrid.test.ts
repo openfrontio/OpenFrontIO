@@ -5,8 +5,8 @@ import type { CosmeticCard } from "../../src/client/components/CosmeticCard";
 import "../../src/client/components/EffectsGrid";
 import type { EffectsGrid } from "../../src/client/components/EffectsGrid";
 import type { UserMeResponse } from "../../src/core/ApiSchemas";
+import { EFFECT_TYPES } from "../../src/core/CosmeticRefs";
 import {
-  EFFECT_TYPES,
   NUKE_EXPLOSION_TYPES,
   type Cosmetics,
 } from "../../src/core/CosmeticSchemas";

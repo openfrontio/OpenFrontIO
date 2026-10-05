@@ -11,7 +11,7 @@ import {
 } from "../core/game/GameTypes";
 import { ErrorUpdate, GameUpdateViewData } from "../core/game/GameUpdates";
 import { ClientID, GameStartInfo, Turn } from "../core/Schemas";
-import { generateID } from "../core/Util";
+import { generateID } from "../core/SharedUtil";
 import { WorkerMessage } from "../core/worker/WorkerMessages";
 
 // Inlined as a same-origin Blob (Vite's `?worker&inline`), sidestepping the

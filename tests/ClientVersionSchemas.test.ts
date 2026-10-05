@@ -5,7 +5,7 @@ import {
   PublicLobbyMessageSchema,
   ServerErrorSchema,
   ServerMessageSchema,
-} from "../src/core/Schemas";
+} from "../src/core/WireSchemas";
 import { zb } from "../zbin";
 
 const COMMIT = "a".repeat(40);

@@ -5,7 +5,7 @@ import {
   MAX_HOSTED_LOBBY_PLAYERS,
   MIN_HOSTED_LOBBY_AUTO_START_MS,
   MIN_HOSTED_LOBBY_PLAYERS,
-} from "../../core/Schemas";
+} from "../../core/WireSchemas";
 import { translateText } from "../Utils";
 import "./FluentSlider";
 

@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { ServerMessage } from "../../src/core/Schemas";
+import type { ServerMessage } from "../../src/core/WireSchemas";
 import { createGameWireContext } from "../../src/core/ZbinWire";
 import {
   cid,

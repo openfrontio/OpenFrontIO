@@ -2,12 +2,12 @@ import { Game, Player } from "../src/core/game/Game";
 import { PlayerInfo, PlayerType, UnitType } from "../src/core/game/GameTypes";
 import { Stats } from "../src/core/game/Stats";
 import { StatsImpl } from "../src/core/game/StatsImpl";
+import { replacer } from "../src/core/SharedUtil";
 import {
   ATTACK_INDEX_MAX_RECV,
   ATTACK_INDEX_RECV,
   PlayerStats,
 } from "../src/core/StatsSchemas";
-import { replacer } from "../src/core/Util";
 import { setup } from "./util/Setup";
 
 let stats: Stats;

@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { GameType } from "../../src/core/game/GameTypes";
-import { AllPlayersStats, PartialGameRecord } from "../../src/core/Schemas";
+import { AllPlayersStats } from "../../src/core/Schemas";
+import { PartialGameRecord } from "../../src/core/WireSchemas";
 import { Client } from "../../src/server/Client";
 import {
   cid,

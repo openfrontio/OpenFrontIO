@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, Mock, vi } from "vitest";
 import { CloseCode, CloseReason } from "../../src/core/CloseCodes";
 import { EventBus } from "../../src/core/EventBus";
-import { ServerMessage } from "../../src/core/Schemas";
+import { ServerMessage } from "../../src/core/WireSchemas";
 import {
   decodeClientMessage,
   encodeServerMessage,

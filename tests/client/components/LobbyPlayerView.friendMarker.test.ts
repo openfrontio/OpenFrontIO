@@ -3,7 +3,7 @@ import "../../../src/client/components/LobbyPlayerView";
 import type { LobbyTeamView } from "../../../src/client/components/LobbyPlayerView";
 import { UserSettings } from "../../../src/client/UserSettings";
 import { GameMode } from "../../../src/core/game/GameTypes";
-import type { ClientInfo } from "../../../src/core/Schemas";
+import type { ClientInfo } from "../../../src/core/WireSchemas";
 
 function client(
   clientID: string,

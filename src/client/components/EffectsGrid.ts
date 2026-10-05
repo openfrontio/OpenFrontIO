@@ -1,10 +1,10 @@
 import { html, LitElement, nothing, PropertyValues, TemplateResult } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
 import { UserMeResponse } from "../../core/ApiSchemas";
+import { EFFECT_TYPES } from "../../core/CosmeticRefs";
 import {
   Cosmetics,
   Effect,
-  EFFECT_TYPES,
   EffectType,
   isNukeExplosionEffect,
   NUKE_EXPLOSION_TYPES,

@@ -6,7 +6,7 @@ import {
   PublicGameInfo,
   PublicGames,
   PublicGameType,
-} from "../src/core/Schemas";
+} from "../src/core/WireSchemas";
 import { lobbyFrame } from "./util/Wire";
 
 const mocks = vi.hoisted(() => ({

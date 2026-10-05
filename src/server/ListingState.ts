@@ -1,9 +1,9 @@
+import { sanitizeLobbyLabel } from "../core/SharedUtil";
 import {
   FEATURED_LOBBY_AUTO_START_MS,
   HOSTED_LOBBY_AUTO_START_MS,
   LobbyAccent,
-} from "../core/Schemas";
-import { sanitizeLobbyLabel } from "../core/Util";
+} from "../core/WireSchemas";
 
 // A private lobby's presence in the public lobby browser: whether it is
 // listed, since when (which drives the auto-start deadline), and the

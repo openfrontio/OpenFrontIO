@@ -9,7 +9,7 @@ import type {
 // on the critical path of every page load. /pure defers it to the first
 // loadStripe() call, i.e. to the first time a priced store tile renders.
 import { loadStripe } from "@stripe/stripe-js/pure";
-import { GameEnv } from "../core/configuration/Config";
+import { GameEnv } from "../core/configuration/Env";
 import { ClientEnv } from "./ClientEnv";
 import {
   createInlinePaymentIntent,

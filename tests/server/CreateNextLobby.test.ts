@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { ServerNewLobbyMessage } from "../../src/core/Schemas";
+import { ServerNewLobbyMessage } from "../../src/core/WireSchemas";
 import {
   makeClient as harnessClient,
   makeGame as harnessGame,

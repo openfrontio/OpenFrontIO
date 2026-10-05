@@ -7,7 +7,7 @@ import {
   maxColorsFor,
   slotAttributes,
 } from "../src/client/render/gl/debug/EffectEditorState";
-import { EFFECT_TYPES } from "../src/core/CosmeticSchemas";
+import { EFFECT_TYPES } from "../src/core/CosmeticRefs";
 
 describe("slotAttributes", () => {
   test("every slot's default state validates for every type it offers", () => {

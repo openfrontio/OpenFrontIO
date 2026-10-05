@@ -1,6 +1,6 @@
 /** Messages between the viewer and the processing worker. */
 
-import type { GameRecord } from "../../core/Schemas";
+import type { GameRecord } from "../../core/WireSchemas";
 import type { ReplayAppend, ReplayBase } from "./codec/ReplayTypes";
 
 export interface ProcessorRequest {

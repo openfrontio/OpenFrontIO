@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { GameMode, GameType } from "../../src/core/game/GameTypes";
-import { ClientMessage, PartialGameRecord } from "../../src/core/Schemas";
+import { ClientMessage, PartialGameRecord } from "../../src/core/WireSchemas";
 import { createGameWireContext } from "../../src/core/ZbinWire";
 import {
   cid,

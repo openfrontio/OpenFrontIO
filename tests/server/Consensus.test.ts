@@ -1,9 +1,6 @@
 import { describe, expect, it } from "vitest";
-import {
-  AllPlayersStats,
-  ClientSendWinnerMessage,
-  LiveStats,
-} from "../../src/core/Schemas";
+import { AllPlayersStats } from "../../src/core/Schemas";
+import { ClientSendWinnerMessage, LiveStats } from "../../src/core/WireSchemas";
 import {
   createGameWireContext,
   decodeClientMessage,

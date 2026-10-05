@@ -3,17 +3,16 @@ import { renderNavVersion } from "src/client/GameVersion";
 import { UserMeResponse } from "../core/ApiSchemas";
 import { assetUrl } from "../core/AssetUrls";
 import { EventBus } from "../core/EventBus";
+import { GAME_ID_REGEX, GameStartInfo } from "../core/Schemas";
+import { toWireGameStartInfo } from "../core/SharedUtil";
 import {
-  GAME_ID_REGEX,
   GameInfo,
   GameRecord,
-  GameStartInfo,
   GroupTokenEvent,
   LobbyInfoEvent,
   PublicGameInfo,
-} from "../core/Schemas";
-import { toWireGameStartInfo } from "../core/Util";
-import { GameEnv } from "../core/configuration/Config";
+} from "../core/WireSchemas";
+import { GameEnv } from "../core/configuration/Env";
 import "./AccountModal";
 import "./AccountSettingsModal";
 import { adGatekeeper } from "./AdGatekeeper";

@@ -5,7 +5,7 @@ import {
   type AssetManifest,
   encodeAssetPath,
   normalizeAssetPath,
-} from "../core/AssetUrls";
+} from "../core/AssetPaths";
 
 const HASHED_PUBLIC_ASSET_GLOBS = [
   "changelog.md",

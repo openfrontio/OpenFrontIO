@@ -1,12 +1,11 @@
 import z from "zod";
+import { GameID, ID } from "../core/Schemas";
+import { replacer } from "../core/SharedUtil";
 import {
-  GameID,
   GameRecord,
   GameRecordSchema,
-  ID,
   PartialGameRecord,
-} from "../core/Schemas";
-import { replacer } from "../core/Util";
+} from "../core/WireSchemas";
 import { registeredSite } from "./ClusterCheckin";
 import { logger } from "./Logger";
 import { ServerEnv } from "./ServerEnv";

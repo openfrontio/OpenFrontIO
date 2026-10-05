@@ -1,7 +1,8 @@
 import { gunzipSync } from "node:zlib";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { EventBus } from "../../src/core/EventBus";
-import type { ClientMessage, GameStartInfo } from "../../src/core/Schemas";
+import type { GameStartInfo } from "../../src/core/Schemas";
+import type { ClientMessage } from "../../src/core/WireSchemas";
 
 vi.mock("../../src/client/Auth", () => ({
   getAuthHeader: vi.fn(async () => "Bearer test-jwt"),

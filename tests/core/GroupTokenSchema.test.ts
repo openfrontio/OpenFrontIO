@@ -4,7 +4,7 @@ import {
   ServerStartGameMessageSchema,
   type ServerLobbyInfoMessage,
   type ServerStartGameMessage,
-} from "../../src/core/Schemas";
+} from "../../src/core/WireSchemas";
 import {
   decodeServerMessage,
   encodeServerMessage,

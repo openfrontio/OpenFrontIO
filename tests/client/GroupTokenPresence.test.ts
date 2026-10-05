@@ -13,7 +13,7 @@ import {
   GroupTokenEvent,
   type ServerMessage,
   type ServerStartGameMessage,
-} from "../../src/core/Schemas";
+} from "../../src/core/WireSchemas";
 import { testGameConfig } from "../util/Wire";
 
 // OPE-423, client half. Two rules, both of which Main and ClientGameRunner

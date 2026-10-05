@@ -7,12 +7,12 @@
 // pass by mocking the Schemas module. Use cid() to spell a readable id.
 
 import { vi } from "vitest";
+import { GameConfig } from "../../src/core/Schemas";
 import {
   ClientMessage,
-  GameConfig,
   PublicGameType,
   ServerMessage,
-} from "../../src/core/Schemas";
+} from "../../src/core/WireSchemas";
 import { Client } from "../../src/server/Client";
 import { GameServer, GameServerDeps } from "../../src/server/GameServer";
 import { type MatchTelemetryEmitter } from "../../src/server/telemetry/MatchTelemetry";

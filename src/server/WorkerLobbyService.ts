@@ -1,14 +1,14 @@
 import http from "http";
 import { WebSocket, WebSocketServer } from "ws";
 import { CloseCode, CloseReason } from "../core/CloseCodes";
+import { GameConfig } from "../core/Schemas";
 import {
   ClientPlatform,
   ClientPlatformSchema,
-  GameConfig,
   PublicGameInfo,
   PublicGames,
   PublicLobbyMessage,
-} from "../core/Schemas";
+} from "../core/WireSchemas";
 import { encodeLobbyMessage } from "../core/ZbinWire";
 import { GameManager } from "./GameManager";
 import {

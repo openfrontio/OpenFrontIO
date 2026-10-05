@@ -10,11 +10,11 @@
 // `groupToken: undefined` for every singleplayer game, and a strip that only
 // exists as a line inside a console.log call is a strip nothing defends.
 
+import type { GameConfig } from "../core/Schemas";
 import type {
-  GameConfig,
   ServerMessage,
   ServerStartGameMessage,
-} from "../core/Schemas";
+} from "../core/WireSchemas";
 import { GameMode, GameType } from "../core/game/GameTypes";
 import type { PresencePayload } from "./DesktopPresence";
 

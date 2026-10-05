@@ -4,13 +4,6 @@ import { EventBus } from "../core/EventBus";
 import {
   AllPlayersStats,
   ClientID,
-  ClientMessage,
-  ClientSendWinnerMessage,
-  PartialGameRecord,
-  PartialGameRecordSchema,
-  PlayerRecord,
-  ServerMessage,
-  ServerStartGameMessage,
   StampedIntent,
   Turn,
 } from "../core/Schemas";
@@ -18,7 +11,16 @@ import {
   createPartialGameRecord,
   decompressGameRecord,
   replacer,
-} from "../core/Util";
+} from "../core/SharedUtil";
+import {
+  ClientMessage,
+  ClientSendWinnerMessage,
+  PartialGameRecord,
+  PartialGameRecordSchema,
+  PlayerRecord,
+  ServerMessage,
+  ServerStartGameMessage,
+} from "../core/WireSchemas";
 import { getApiBase } from "./Api";
 import { getAuthHeader, getPersistentID } from "./Auth";
 import { LobbyConfig } from "./ClientGameRunner";

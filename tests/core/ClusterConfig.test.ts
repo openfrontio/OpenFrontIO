@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { ClusterConfigSchema } from "../../src/core/ClusterConfig";
 import { GAME_ID_REGEX } from "../../src/core/Schemas";
-import { generateGameID } from "../../src/core/Util";
+import { generateGameID } from "../../src/core/SharedUtil";
 
 const entry = (host: string, numWorkers = 2) => ({ host, numWorkers });
 

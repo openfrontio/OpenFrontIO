@@ -5,7 +5,7 @@ import rateLimit from "express-rate-limit";
 import http from "http";
 import path from "path";
 import { fileURLToPath } from "url";
-import { GameEnv } from "../core/configuration/Config";
+import { GameEnv } from "../core/configuration/Env";
 import {
   applyCheckinState,
   CHECKIN_INTERVAL_MS,

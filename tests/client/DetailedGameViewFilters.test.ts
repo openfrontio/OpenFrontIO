@@ -21,7 +21,8 @@ import {
   HumansVsNations,
   Quads,
 } from "../../src/core/game/GameTypes";
-import { GameConfig, PublicGameInfo } from "../../src/core/Schemas";
+import { GameConfig } from "../../src/core/Schemas";
+import { PublicGameInfo } from "../../src/core/WireSchemas";
 
 function config(overrides: Partial<GameConfig> = {}): GameConfig {
   return {

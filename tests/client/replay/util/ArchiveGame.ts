@@ -28,18 +28,20 @@ import {
 import { createGameRunner } from "../../../../src/core/GameRunner";
 import {
   GameConfig,
-  GameRecord,
-  GameRecordSchema,
   GameStartInfo,
   Player,
-  PlayerRecord,
   StampedIntent,
   Turn,
 } from "../../../../src/core/Schemas";
 import {
   createPartialGameRecord,
   toWireGameStartInfo,
-} from "../../../../src/core/Util";
+} from "../../../../src/core/SharedUtil";
+import {
+  GameRecord,
+  GameRecordSchema,
+  PlayerRecord,
+} from "../../../../src/core/WireSchemas";
 import { NodeGameMapLoader } from "../../../perf/fullgame/NodeGameMapLoader";
 
 const PROJECT_ROOT = path.resolve(

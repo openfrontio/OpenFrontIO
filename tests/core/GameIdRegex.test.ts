@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { GAME_ID_REGEX, ID, isValidGameID } from "../../src/core/Schemas";
-import { generateID } from "../../src/core/Util";
+import { generateID } from "../../src/core/SharedUtil";
 
 // Game ids are permanent archive keys, so the accepted range must cover every
 // id ever minted: the historical 8-char format and the upcoming 10-char

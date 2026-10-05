@@ -8,12 +8,12 @@ import {
   retryServerList,
 } from "../src/client/ServerList";
 import { GameMapType, GameMode } from "../src/core/game/GameTypes";
+import type { GameConfig } from "../src/core/Schemas";
 import type {
-  GameConfig,
   PublicGameInfo,
   PublicGames,
   PublicGameType,
-} from "../src/core/Schemas";
+} from "../src/core/WireSchemas";
 
 // DetailedGameViewModal opens a public-lobby WebSocket via a class-field
 // PublicLobbySocket the moment the component is constructed. jsdom has no

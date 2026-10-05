@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { ClientEnv, NoServerError } from "../../src/client/ClientEnv";
-import { GameEnv } from "../../src/core/configuration/Config";
+import { GameEnv } from "../../src/core/configuration/Env";
 import { ServerList } from "../../src/core/ServerList";
 
 // Multi-server v2, roadmap item 2 (docs/MultiServer.md): the page becomes a

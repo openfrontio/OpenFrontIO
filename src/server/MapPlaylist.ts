@@ -15,11 +15,8 @@ import {
   UnitType,
 } from "../core/game/GameTypes";
 import { PseudoRandom } from "../core/PseudoRandom";
-import {
-  GameConfig,
-  ScheduledPublicGameType,
-  TeamCountConfig,
-} from "../core/Schemas";
+import { GameConfig, TeamCountConfig } from "../core/Schemas";
+import { ScheduledPublicGameType } from "../core/WireSchemas";
 import { logger } from "./Logger";
 import { getMapLandTiles } from "./MapLandTiles";
 

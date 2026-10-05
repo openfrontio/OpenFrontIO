@@ -35,8 +35,12 @@ import {
   HashUpdate,
 } from "../../src/core/game/GameUpdates";
 import { createGameRunner } from "../../src/core/GameRunner";
-import { GameRecord, GameStartInfo, Turn } from "../../src/core/Schemas";
-import { decompressGameRecord, toWireGameStartInfo } from "../../src/core/Util";
+import { GameStartInfo, Turn } from "../../src/core/Schemas";
+import {
+  decompressGameRecord,
+  toWireGameStartInfo,
+} from "../../src/core/SharedUtil";
+import { GameRecord } from "../../src/core/WireSchemas";
 import { NodeGameMapLoader } from "../../tests/perf/fullgame/NodeGameMapLoader";
 
 const ROOT = path.resolve(

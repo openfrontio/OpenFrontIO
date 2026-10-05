@@ -1,7 +1,8 @@
 import { anonWordName } from "../core/AnonNames";
 import { GameMode } from "../core/game/GameTypes";
-import { ClientID, GameConfig, GameInfo, GameStartInfo } from "../core/Schemas";
+import { ClientID, GameConfig, GameStartInfo } from "../core/Schemas";
 import { simpleHash } from "../core/Util";
+import { GameInfo } from "../core/WireSchemas";
 import { Client } from "./Client";
 
 // Who may see whose real identity, and what each viewer is shown instead.

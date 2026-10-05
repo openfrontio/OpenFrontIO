@@ -13,8 +13,10 @@ import {
   Trios,
 } from "../../core/game/GameTypes";
 import { assignTeamsLobbyPreview } from "../../core/game/TeamAssignment";
-import { ClientID, ClientInfo, TeamCountConfig } from "../../core/Schemas";
-import { createRandomName, formatPlayerDisplayName } from "../../core/Util";
+import { ClientID, TeamCountConfig } from "../../core/Schemas";
+import { createRandomName } from "../../core/SharedUtil";
+import { formatPlayerDisplayName } from "../../core/Util";
+import { ClientInfo } from "../../core/WireSchemas";
 import { Theme, themeProvider } from "../theme/ThemeProvider";
 import { UserSettings } from "../UserSettings";
 import {

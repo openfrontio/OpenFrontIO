@@ -16,10 +16,12 @@ import {
   type GameID,
   ID,
   IntentSchema,
+} from "../core/Schemas";
+import {
   type LobbyAccent,
   LobbyAccentSchema,
   LobbyLabelSchema,
-} from "../core/Schemas";
+} from "../core/WireSchemas";
 import type { GameManager } from "./GameManager";
 import type { GameServer } from "./GameServer";
 import { ServerEnv } from "./ServerEnv";

@@ -2,7 +2,7 @@ import {
   PlayerStatsLeafSchema,
   PlayerStatsTreeSchema,
 } from "../src/core/ApiSchemas";
-import { AllPlayersStats, ClientSendWinnerMessage } from "../src/core/Schemas";
+import { AllPlayersStats } from "../src/core/Schemas";
 import {
   ALLIANCE_INDEX_LONGEST_HELD,
   ATTACK_INDEX_MAX_RECV,
@@ -13,6 +13,7 @@ import {
   PlayerStatsSchema,
   TILE_INDEX_DRAWDOWN_TROUGH,
 } from "../src/core/StatsSchemas";
+import { ClientSendWinnerMessage } from "../src/core/WireSchemas";
 import {
   createGameWireContext,
   decodeClientMessage,

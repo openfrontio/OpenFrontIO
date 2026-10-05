@@ -9,18 +9,20 @@ import {
 } from "../../src/core/game/GameTypes";
 import {
   ADMIN_BOT_CLIENT_ID,
+  GameConfig,
+  StampedIntent,
+  Turn,
+} from "../../src/core/Schemas";
+import { replacer } from "../../src/core/SharedUtil";
+import {
   ClientMessage,
   ClientMessageSchema,
-  GameConfig,
   LogSeverity,
   PublicLobbyMessage,
   PublicLobbyMessageSchema,
   ServerMessage,
   ServerMessageSchema,
-  StampedIntent,
-  Turn,
-} from "../../src/core/Schemas";
-import { replacer } from "../../src/core/Util";
+} from "../../src/core/WireSchemas";
 import {
   createGameWireContext,
   decodeClientMessage,

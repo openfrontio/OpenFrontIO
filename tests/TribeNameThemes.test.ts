@@ -1,7 +1,7 @@
 import { resolveTribeNameData } from "../src/core/execution/utils/TribeNames";
 import { GameMapType, PlayerType } from "../src/core/game/GameTypes";
 import { PseudoRandom } from "../src/core/PseudoRandom";
-import { createRandomName } from "../src/core/Util";
+import { createRandomName } from "../src/core/SharedUtil";
 
 describe("resolveTribeNameData", () => {
   test("returns default theme when called with no arguments", () => {

@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { EventBus } from "../../src/core/EventBus";
-import type { GameStartInfo, ServerMessage } from "../../src/core/Schemas";
+import type { GameStartInfo } from "../../src/core/Schemas";
+import type { ServerMessage } from "../../src/core/WireSchemas";
 
 vi.mock("../../src/client/Auth", () => ({
   getAuthHeader: vi.fn(async () => "Bearer test-jwt"),

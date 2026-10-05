@@ -51,7 +51,7 @@ import {
   AnalyticsRecord,
   ArchivedAnalyticsRecordSchema,
   GameInfo,
-} from "../core/Schemas";
+} from "../core/WireSchemas";
 import { getApiBase, getAudience } from "./ApiBase";
 import {
   getAuthHeader,

@@ -1,6 +1,6 @@
 import EventEmitter from "events";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { PublicGameType } from "../../src/core/Schemas";
+import { PublicGameType } from "../../src/core/WireSchemas";
 import { InternalGameInfo } from "../../src/server/IPCBridgeSchema";
 import { MasterLobbyService } from "../../src/server/MasterLobbyService";
 import { startPolling } from "../../src/server/PollingLoop";

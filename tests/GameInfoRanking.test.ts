@@ -9,7 +9,7 @@ import {
   GameMode,
   GameType,
 } from "../src/core/game/GameTypes";
-import { AnalyticsRecord, GameConfig } from "../src/core/Schemas";
+import { GameConfig } from "../src/core/Schemas";
 import {
   GOLD_INDEX_STEAL,
   GOLD_INDEX_TRADE,
@@ -17,6 +17,7 @@ import {
   GOLD_INDEX_TRAIN_SELF,
   GOLD_INDEX_WAR,
 } from "../src/core/StatsSchemas";
+import { AnalyticsRecord } from "../src/core/WireSchemas";
 
 describe("Ranking class", () => {
   const mockConfig: GameConfig = {

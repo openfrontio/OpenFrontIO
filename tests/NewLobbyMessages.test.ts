@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { ServerMessageSchema } from "../src/core/Schemas";
+import { ServerMessageSchema } from "../src/core/WireSchemas";
 
 // Wire message that powers reusing a private lobby for back-to-back games:
 // the server's "new_lobby" broadcast carrying the successor's id. (Creation

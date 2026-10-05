@@ -1,6 +1,6 @@
 import { ClientEnv, NoServerError } from "src/client/ClientEnv";
 import { CloseCode } from "../core/CloseCodes";
-import { PublicGames } from "../core/Schemas";
+import { PublicGames } from "../core/WireSchemas";
 import { decodeLobbyMessage } from "../core/ZbinWire";
 import { clientPlatform } from "./ClientPlatform";
 import { showInGameAlert } from "./InGameModal";

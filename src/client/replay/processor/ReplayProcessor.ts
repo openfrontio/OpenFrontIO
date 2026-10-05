@@ -27,12 +27,12 @@ import {
   HashUpdate,
 } from "../../../core/game/GameUpdates";
 import { createGameRunner } from "../../../core/GameRunner";
+import { GameStartInfo, GameStartInfoSchema } from "../../../core/Schemas";
 import {
-  GameRecord,
-  GameStartInfo,
-  GameStartInfoSchema,
-} from "../../../core/Schemas";
-import { decompressGameRecord, toWireGameStartInfo } from "../../../core/Util";
+  decompressGameRecord,
+  toWireGameStartInfo,
+} from "../../../core/SharedUtil";
+import { GameRecord } from "../../../core/WireSchemas";
 import { StreamingEncoder } from "../codec/encode/StreamingEncoder";
 import type { GzipFn, ReplayAppend, ReplayBase } from "../codec/ReplayTypes";
 import { terrainOf } from "../codec/Terrain";

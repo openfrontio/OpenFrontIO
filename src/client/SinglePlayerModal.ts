@@ -14,7 +14,7 @@ import {
   UnitType,
 } from "../core/game/GameTypes";
 import { PlayerCosmetics, TeamCountConfig } from "../core/Schemas";
-import { generateID } from "../core/Util";
+import { generateID } from "../core/SharedUtil";
 import { responseHasLinkedIdentity } from "./AccountIdentity";
 import "./components/baseComponents/Button";
 import "./components/baseComponents/Modal";

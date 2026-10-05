@@ -2,17 +2,16 @@ import { Config } from "src/core/configuration/Config";
 import { ClientEnv } from "../client/ClientEnv";
 import { reloadForUpdate, translateText } from "../client/Utils";
 import { EventBus } from "../core/EventBus";
+import { ClientID, GameID, GameStartInfo } from "../core/Schemas";
+import { replacer } from "../core/SharedUtil";
+import { findClosestBy } from "../core/Util";
 import {
-  ClientID,
-  GameID,
   GameRecord,
-  GameStartInfo,
   GroupTokenEvent,
   LobbyInfoEvent,
   PlayerCosmeticRefs,
   ServerMessage,
-} from "../core/Schemas";
-import { findClosestBy, replacer } from "../core/Util";
+} from "../core/WireSchemas";
 import { TileRef } from "../core/game/GameMap";
 import { GameMapLoader } from "../core/game/GameMapLoader";
 import {

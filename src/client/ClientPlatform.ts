@@ -1,4 +1,4 @@
-import type { ClientPlatform } from "../core/Schemas";
+import type { ClientPlatform } from "../core/WireSchemas";
 import { crazyGamesSDK } from "./CrazyGamesSDK";
 import { isDesktopShell } from "./DesktopShell";
 

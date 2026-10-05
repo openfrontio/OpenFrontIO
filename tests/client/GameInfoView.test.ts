@@ -6,7 +6,8 @@ import {
   GameMode,
   GameType,
 } from "../../src/core/game/GameTypes";
-import type { AnalyticsRecord, GameConfig } from "../../src/core/Schemas";
+import type { GameConfig } from "../../src/core/Schemas";
+import type { AnalyticsRecord } from "../../src/core/WireSchemas";
 
 vi.mock("../../src/client/Api", () => ({
   fetchGameById: vi.fn(async () => false),

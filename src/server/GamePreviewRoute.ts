@@ -4,8 +4,9 @@ import { parse } from "node-html-parser";
 import path from "path";
 import type { Logger } from "winston";
 import { z } from "zod";
-import { GAME_ID_REGEX, GameInfo } from "../core/Schemas";
-import { replacer } from "../core/Util";
+import { GAME_ID_REGEX } from "../core/Schemas";
+import { replacer } from "../core/SharedUtil";
+import { GameInfo } from "../core/WireSchemas";
 import type { GameManager } from "./GameManager";
 import {
   buildPreview,

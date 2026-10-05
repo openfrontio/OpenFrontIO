@@ -18,8 +18,13 @@ import {
 } from "../core/game/GameTypes";
 import {
   AllPlayersStats,
-  ClientHashMessage,
   ClientID,
+  GameConfig,
+  Intent,
+  Winner,
+} from "../core/Schemas";
+import {
+  ClientHashMessage,
   ClientIntentMessage,
   ClientJoinMessage,
   ClientMessage,
@@ -29,13 +34,10 @@ import {
   ClientSendLiveStatsMessage,
   ClientSendWinnerMessage,
   ClientSpectateMessage,
-  GameConfig,
-  Intent,
   LiveStats,
   ReportReason,
   ServerMessage,
-  Winner,
-} from "../core/Schemas";
+} from "../core/WireSchemas";
 import {
   createGameWireContext,
   decodeServerMessage,

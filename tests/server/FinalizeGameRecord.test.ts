@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
-import { PartialGameRecord } from "../../src/core/Schemas";
+import { PartialGameRecord } from "../../src/core/WireSchemas";
 import { finalizeGameRecord } from "../../src/server/Archive";
 
 // The deployment stamps finalizeGameRecord adds before upload. `site` groups

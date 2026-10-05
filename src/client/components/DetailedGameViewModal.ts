@@ -3,7 +3,7 @@ import { customElement, state } from "lit/decorators.js";
 import { repeat } from "lit/directives/repeat.js";
 import { UserMeResponse } from "../../core/ApiSchemas";
 import { GameMapType } from "../../core/game/GameTypes";
-import { PublicGameInfo, PublicGames } from "../../core/Schemas";
+import { PublicGameInfo, PublicGames } from "../../core/WireSchemas";
 import { getDesktopSessionState } from "../Auth";
 import { crazyGamesSDK } from "../CrazyGamesSDK";
 import {

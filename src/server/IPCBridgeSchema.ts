@@ -1,9 +1,9 @@
 import { z } from "zod";
+import { GameConfigSchema } from "../core/Schemas";
 import {
-  GameConfigSchema,
   PublicGameInfoSchema,
   PublicGameTypeSchema,
-} from "../core/Schemas";
+} from "../core/WireSchemas";
 
 export type InternalGameInfo = z.infer<typeof InternalGameInfoSchema>;
 export type InternalPublicGames = z.infer<typeof InternalPublicGamesSchema>;

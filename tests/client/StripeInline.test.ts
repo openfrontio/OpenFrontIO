@@ -19,7 +19,7 @@ import {
   stripeKeyMatchesEnv,
   stripePublishableKey,
 } from "../../src/client/StripeInline";
-import { GameEnv } from "../../src/core/configuration/Config";
+import { GameEnv } from "../../src/core/configuration/Env";
 
 const envMock = ClientEnv.env as unknown as ReturnType<typeof vi.fn>;
 const keyMock = ClientEnv.stripePublishableKey as unknown as ReturnType<

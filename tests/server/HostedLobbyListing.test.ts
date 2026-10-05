@@ -8,13 +8,14 @@ import {
   GameMode,
   GameType,
 } from "../../src/core/game/GameTypes";
+import { sanitizeLobbyLabel } from "../../src/core/SharedUtil";
+import { LOBBY_LABEL_MAX } from "../../src/core/Util";
 import {
   FEATURED_LOBBY_AUTO_START_MS,
   HOSTED_LOBBY_AUTO_START_MS,
   LobbyLabelSchema,
   MAX_HOSTED_LOBBIES,
-} from "../../src/core/Schemas";
-import { LOBBY_LABEL_MAX, sanitizeLobbyLabel } from "../../src/core/Util";
+} from "../../src/core/WireSchemas";
 import { GameManager } from "../../src/server/GameManager";
 import {
   GamePhase,

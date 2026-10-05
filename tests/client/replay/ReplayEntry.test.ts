@@ -14,7 +14,7 @@ import {
 } from "../../../src/client/replay/ReplayEntry";
 import { fetchReplayRecord } from "../../../src/client/replay/ReplayRecord";
 import { UserSettings } from "../../../src/client/UserSettings";
-import type { GameRecord } from "../../../src/core/Schemas";
+import type { GameRecord } from "../../../src/core/WireSchemas";
 
 // jsdom can't change location.hostname, so a test says whether this page
 // is a replay shell.

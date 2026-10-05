@@ -7,8 +7,8 @@ import {
   UserMeResponseSchema,
 } from "../core/ApiSchemas";
 import { CloseCode, CloseReason } from "../core/CloseCodes";
-import { GameEnv } from "../core/configuration/Config";
-import { PersistentIdSchema } from "../core/Schemas";
+import { GameEnv } from "../core/configuration/Env";
+import { PersistentIdSchema } from "../core/WireSchemas";
 import { ServerEnv } from "./ServerEnv";
 
 type TokenVerificationResult =

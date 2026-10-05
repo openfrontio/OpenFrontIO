@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { ClientJoinMessageSchema } from "../../src/core/Schemas";
+import { ClientJoinMessageSchema } from "../../src/core/WireSchemas";
 
 const JOIN = {
   type: "join" as const,

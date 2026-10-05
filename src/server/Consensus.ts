@@ -1,10 +1,6 @@
 import { createHash } from "crypto";
-import {
-  AllPlayersStats,
-  ClientID,
-  ClientSendWinnerMessage,
-  LiveStats,
-} from "../core/Schemas";
+import { AllPlayersStats, ClientID } from "../core/Schemas";
+import { ClientSendWinnerMessage, LiveStats } from "../core/WireSchemas";
 import { VoteRound } from "./VoteTally";
 
 // The simulation runs on the clients, so the outcomes the server has to

@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { EventBus } from "../../src/core/EventBus";
-import { ServerMessage } from "../../src/core/Schemas";
+import { ServerMessage } from "../../src/core/WireSchemas";
 import {
   createGameWireContext,
   decodeClientMessage,

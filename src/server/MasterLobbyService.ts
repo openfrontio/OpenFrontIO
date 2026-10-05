@@ -4,7 +4,7 @@ import {
   MAX_HOSTED_LOBBIES,
   PublicGameType,
   SCHEDULED_PUBLIC_GAME_TYPES,
-} from "../core/Schemas";
+} from "../core/WireSchemas";
 import {
   InternalGameInfo,
   InternalGameInfoSchema,

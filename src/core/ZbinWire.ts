@@ -20,15 +20,15 @@
 // escape path inline.
 
 import { ZbContext } from "../../zbin";
+import { CLIENT_ID_MAPPING } from "./Schemas";
 import {
-  CLIENT_ID_MAPPING,
   ClientMessage,
   ClientMessageSchema,
   PublicLobbyMessage,
   PublicLobbyMessageSchema,
   ServerMessage,
   ServerMessageSchema,
-} from "./Schemas";
+} from "./WireSchemas";
 
 // Indexes are varints: the first 127 roster entries cost one byte per id,
 // the rest two. Large events (1000+ clients) fit comfortably; if a roster

@@ -5,7 +5,7 @@
  */
 
 import { getCdnBase } from "../../core/AssetUrls";
-import type { GameRecord } from "../../core/Schemas";
+import type { GameRecord } from "../../core/WireSchemas";
 import type { ReplayAppend, ReplayBase } from "./codec/ReplayTypes";
 import type { ProcessorRequest, ProcessorResponse } from "./ProcessorMessages";
 

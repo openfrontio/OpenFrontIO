@@ -7,11 +7,8 @@ import { fileURLToPath } from "url";
 import { defineConfig, loadEnv, type Plugin } from "vite";
 import { createHtmlPlugin } from "vite-plugin-html";
 import { configDefaults } from "vitest/config";
-import {
-  type AssetManifest,
-  buildAssetUrl,
-  rewriteAssetsForCdn,
-} from "./src/core/AssetUrls";
+import { type AssetManifest, buildAssetUrl } from "./src/core/AssetPaths";
+import { rewriteAssetsForCdn } from "./src/core/AssetUrls";
 import {
   buildPublicAssetManifest,
   copyRootPublicFiles,

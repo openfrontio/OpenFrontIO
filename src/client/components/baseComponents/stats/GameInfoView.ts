@@ -5,7 +5,7 @@ import {
   type TemplateResult,
 } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
-import { type GameEndInfo } from "../../../../core/Schemas";
+import { type GameEndInfo } from "../../../../core/WireSchemas";
 import {
   GameMode,
   GameType,

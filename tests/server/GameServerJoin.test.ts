@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { GameEnv } from "../../src/core/configuration/Config";
+import { GameEnv } from "../../src/core/configuration/Env";
 import { GameType } from "../../src/core/game/GameTypes";
 import { ServerEnv } from "../../src/server/ServerEnv";
 import {

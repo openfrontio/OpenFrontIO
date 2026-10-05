@@ -4,7 +4,7 @@
  * left to the author and to run.ts, which rewrites every importer.
  *
  * Usage: npx tsx scripts/split-packages/cut.ts <from> <to> <name,name,...>
- * A re-export is named "export:<specifier>".
+ * A re-export is named "export:<specifier>"; `declare global` is "global".
  */
 import fs from "fs";
 import ts from "typescript";
@@ -29,6 +29,7 @@ const declName = (s: ts.Statement): string | null => {
     const n = s.declarationList.declarations[0].name;
     return ts.isIdentifier(n) ? n.text : null;
   }
+  if (ts.isModuleDeclaration(s)) return s.name.getText(); // "global"
   if (ts.isExportDeclaration(s))
     return "export:" + (s.moduleSpecifier as ts.StringLiteral)?.text;
   return null;

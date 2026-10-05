@@ -11,15 +11,14 @@ import {
 } from "../client/Utils";
 import { assetUrl } from "../core/AssetUrls";
 import { EventBus } from "../core/EventBus";
+import { GAME_ID_REGEX, GameConfig } from "../core/Schemas";
 import {
   ClientInfo,
-  GAME_ID_REGEX,
-  GameConfig,
   GameInfo,
   GameRecordSchema,
   LobbyInfoEvent,
   PublicGameInfo,
-} from "../core/Schemas";
+} from "../core/WireSchemas";
 import { GameMode, GameType, HumansVsNations } from "../core/game/GameTypes";
 import { getApiBase } from "./Api";
 import { crazyGamesSDK } from "./CrazyGamesSDK";

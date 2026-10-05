@@ -25,6 +25,8 @@ type Pkg =
 
 // src/core files that do not end up in the engine.
 const FUTURE: Record<string, Pkg> = {
+  "src/core/AssetPaths.ts": "engine-api",
+  "src/core/CosmeticRefs.ts": "engine-api",
   "src/core/DetMath.ts": "engine-api",
   "src/core/EventBus.ts": "engine-api",
   "src/core/Format.ts": "engine-api",
@@ -35,6 +37,7 @@ const FUTURE: Record<string, Pkg> = {
   "src/core/Util.ts": "engine-api",
   "src/core/configuration/Config.ts": "engine-api",
   "src/core/execution/Util.ts": "engine-api",
+  "src/core/execution/utils/TribeNames.ts": "engine-api",
   "src/core/game/DoomsdayClock.ts": "engine-api",
   "src/core/game/FetchGameMapLoader.ts": "engine-api",
   "src/core/game/GameMap.ts": "engine-api",
@@ -43,8 +46,8 @@ const FUTURE: Record<string, Pkg> = {
   "src/core/game/GameUpdateUtils.ts": "engine-api",
   "src/core/game/GameUpdates.ts": "engine-api",
   "src/core/game/Maps.gen.ts": "engine-api",
-  "src/core/game/ReadViews.ts": "engine-api",
   "src/core/game/MotionPlans.ts": "engine-api",
+  "src/core/game/ReadViews.ts": "engine-api",
   "src/core/game/TeamAssignment.ts": "engine-api",
   "src/core/game/TerraNulliusImpl.ts": "engine-api",
   "src/core/game/TerrainMapLoader.ts": "engine-api",
@@ -63,8 +66,11 @@ const FUTURE: Record<string, Pkg> = {
   "src/core/ClusterConfig.ts": "shared",
   "src/core/CosmeticSchemas.ts": "shared",
   "src/core/ServerList.ts": "shared",
+  "src/core/SharedUtil.ts": "shared",
+  "src/core/WireSchemas.ts": "shared",
   "src/core/WorkerSchemas.ts": "shared",
   "src/core/ZbinWire.ts": "shared",
+  "src/core/configuration/Env.ts": "shared",
 };
 
 // The only engine file the apps may load: the simulation worker.
@@ -91,14 +97,6 @@ const ENGINE_NPM = new Set(["zod", "zod/v4", "jose"]);
 const ALLOWLIST: string[] = [
   "client -> src/core/GameRunner.ts",
   "client -> src/core/game/Game.ts",
-  "src/core/Schemas.ts -> src/core/CosmeticSchemas.ts",
-  "src/core/Util.ts -> npm:dompurify",
-  "src/core/Util.ts -> npm:nanoid",
-  "src/core/Util.ts -> src/core/execution/utils/TribeNames.ts",
-  "src/core/configuration/Config.ts -> src/core/AssetUrls.ts",
-  "src/core/configuration/Config.ts -> src/core/ClusterConfig.ts",
-  "src/core/game/BinaryLoaderGameMapLoader.ts -> src/core/AssetUrls.ts",
-  "src/core/worker/Worker.worker.ts -> src/core/AssetUrls.ts",
 ];
 
 function packageOf(file: string): Pkg | null {

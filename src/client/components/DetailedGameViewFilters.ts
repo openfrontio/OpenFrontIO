@@ -5,7 +5,7 @@ import {
   Quads,
   Trios,
 } from "../../core/game/GameTypes";
-import { PublicGameInfo, PublicGames } from "../../core/Schemas";
+import { PublicGameInfo, PublicGames } from "../../core/WireSchemas";
 
 /**
  * Filtering, ordering and saved-profile logic for the Detailed View lobby

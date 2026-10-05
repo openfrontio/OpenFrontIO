@@ -8,14 +8,14 @@ import {
   GameMode,
   GameType,
 } from "../../src/core/game/GameTypes";
+import { GameConfig } from "../../src/core/Schemas";
 import {
   ClientMessage,
-  GameConfig,
   PublicLobbyMessage,
   PublicLobbyMessageSchema,
   ServerMessage,
   ServerMessageSchema,
-} from "../../src/core/Schemas";
+} from "../../src/core/WireSchemas";
 import {
   encodeClientMessage,
   encodeLobbyMessage,

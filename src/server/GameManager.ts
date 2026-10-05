@@ -7,12 +7,8 @@ import {
   GameMode,
   GameType,
 } from "../core/game/GameTypes";
-import {
-  ClientPlatformSchema,
-  GameConfig,
-  GameID,
-  PublicGameType,
-} from "../core/Schemas";
+import { GameConfig, GameID } from "../core/Schemas";
+import { ClientPlatformSchema, PublicGameType } from "../core/WireSchemas";
 import { Client } from "./Client";
 import { GamePhase, GameServer, JoinResult } from "./GameServer";
 import {

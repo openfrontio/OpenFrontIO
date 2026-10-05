@@ -8,7 +8,7 @@ import {
   showToast,
   translateText,
 } from "../client/Utils";
-import { GameEnv } from "../core/configuration/Config";
+import { GameEnv } from "../core/configuration/Env";
 import { EventBus } from "../core/EventBus";
 import { DoomsdayClockSpeed } from "../core/game/DoomsdayClock";
 import {
@@ -18,14 +18,12 @@ import {
   GameMode,
   UnitType,
 } from "../core/game/GameTypes";
+import { GameConfig, isValidGameID, TeamCountConfig } from "../core/Schemas";
 import {
   ClientInfo,
-  GameConfig,
-  isValidGameID,
   LOBBY_QUEUE_CUTOFF_MS,
   LobbyInfoEvent,
-  TeamCountConfig,
-} from "../core/Schemas";
+} from "../core/WireSchemas";
 import { createLobby, getUserMe, queueLobby, setLobbyListed } from "./Api";
 import "./components/baseComponents/Modal";
 import { BaseModal } from "./components/BaseModal";

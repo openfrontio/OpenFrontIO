@@ -8,7 +8,7 @@ import {
   DisplayMessageUpdate,
   GameUpdateType,
 } from "../../../core/game/GameUpdates";
-import { onlyImages } from "../../../core/Util";
+import { onlyImages } from "../../../core/SharedUtil";
 import { Controller } from "../../Controller";
 import { GameView } from "../../view";
 
