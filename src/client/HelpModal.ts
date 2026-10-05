@@ -11,16 +11,26 @@ import { UserSettings } from "../core/game/UserSettings";
 import { BaseModal } from "./components/BaseModal";
 import "./components/Difficulties";
 import { modalHeader } from "./components/ui/ModalHeader";
+import { KeyboardLayoutController } from "./KeyboardLayout";
 import { Platform } from "./Platform";
 import { TroubleshootingModal } from "./TroubleshootingModal";
 
 @customElement("help-modal")
 export class HelpModal extends BaseModal {
+  private keyboardLayout = new KeyboardLayoutController(this);
   protected routerName = "help";
 
   @state() private keybinds: Record<string, string> = this.getKeybinds();
   @query("#tutorial-video-iframe") private videoIframe?: HTMLIFrameElement;
   @query("#tutorial-video-player") private videoPlayer?: HTMLVideoElement;
+
+  connectedCallback() {
+    super.connectedCallback();
+  }
+
+  disconnectedCallback() {
+    super.disconnectedCallback();
+  }
 
   private getKeybinds(): Record<string, string> {
     return new UserSettings().keybinds(Platform.isMac);
@@ -49,7 +59,20 @@ export class HelpModal extends BaseModal {
       Comma: "<",
     };
 
+    if (
+      (code === "Period" || code === "Comma") &&
+      this.keyboardLayout.map?.has(code)
+    ) {
+      return this.keyboardLayout.map.get(code)!.toUpperCase();
+    }
     if (specialLabels[code]) return specialLabels[code];
+    if (
+      this.keyboardLayout.map &&
+      this.keyboardLayout.map.has(code) &&
+      !code.startsWith("Digit") &&
+      !code.startsWith("Numpad")
+    )
+      return this.keyboardLayout.map.get(code)!.toUpperCase();
     if (code.startsWith("Key") && code.length === 4) return code.slice(3);
     if (code.startsWith("Digit")) return code.slice(5);
     if (code.startsWith("Numpad")) return `Num ${code.slice(6)}`;

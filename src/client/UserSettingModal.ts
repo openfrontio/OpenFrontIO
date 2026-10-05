@@ -1,6 +1,12 @@
 import { html, nothing } from "lit";
 import { customElement, state } from "lit/decorators.js";
-import { formatKeyForDisplay, translateText } from "../client/Utils";
+import { KeyboardLayoutController } from "./KeyboardLayout";
+
+import {
+  formatKeyForDisplay,
+  resolveKeybindLabel,
+  translateText,
+} from "../client/Utils";
 import type { MapLayer } from "../core/game/TerrainMapLoader";
 import {
   AudioCategory,
@@ -81,6 +87,7 @@ const PREVIEW_CEILING_MS = 10_000;
 
 @customElement("user-setting")
 export class UserSettingModal extends BaseModal {
+  private keyboardLayout = new KeyboardLayoutController(this);
   private currentUiScale: number | undefined;
   protected routerName: string | undefined = "settings";
 
@@ -346,8 +353,8 @@ export class UserSettingModal extends BaseModal {
 
   private getKeyChar(action: string): string {
     const entry = this.userKeybinds[action];
-    if (!entry) return formatKeyForDisplay(this.defaultKeybinds[action] || "");
-    return entry.key || formatKeyForDisplay(entry.value || "");
+    const defaultCode = this.defaultKeybinds[action] || "";
+    return resolveKeybindLabel(entry, defaultCode, this.keyboardLayout.map);
   }
 
   private handleEasterEggKey = (e: KeyboardEvent) => {
