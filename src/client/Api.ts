@@ -48,7 +48,7 @@ import {
   UserMeResponseSchema,
 } from "../core/ApiSchemas";
 import {
-  AnalyticsRecord,
+  ArchivedAnalyticsRecord,
   ArchivedAnalyticsRecordSchema,
   GameInfo,
 } from "../core/Schemas";
@@ -2142,7 +2142,7 @@ export { getApiBase, getAudience };
 
 export async function fetchGameById(
   gameId: string,
-): Promise<AnalyticsRecord | false> {
+): Promise<ArchivedAnalyticsRecord | false> {
   try {
     const url = `${getApiBase()}/game/${encodeURIComponent(gameId)}`;
     const res = await fetch(url, {
