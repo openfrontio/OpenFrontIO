@@ -1,5 +1,5 @@
 /**
- * Full-game performance harness for src/core.
+ * Full-game performance harness for the engine.
  *
  * Runs the real simulation pipeline (GameRunner + Executor + real Config,
  * nations from the map manifest, bots) headlessly on a production map for a

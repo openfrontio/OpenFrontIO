@@ -1,7 +1,7 @@
 import { GameID } from "@openfront/engine-api/Schemas";
 import { AttackExecution } from "@openfront/engine/execution/AttackExecution";
 import { SpawnExecution } from "@openfront/engine/execution/SpawnExecution";
-//import { TransportShipExecution } from "../../../src/core/execution/TransportShipExecution";
+//import { TransportShipExecution } from "@openfront/engine/execution/TransportShipExecution";
 import { TileRef } from "@openfront/engine-api/game/GameMap";
 import {
   GameType,

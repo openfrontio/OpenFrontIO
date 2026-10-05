@@ -274,7 +274,7 @@ export class SettingsTheme implements Theme {
 
 /**
  * Client-side source of truth for the active theme. Themes were moved out of
- * `src/core` (the simulation never reads colors); this singleton replaces the
+ * the engine (the simulation never reads colors); this singleton replaces the
  * old `Config.theme()` accessor.
  */
 class ThemeProvider {

@@ -139,7 +139,7 @@ export function servesBuild(
  * build, else null. Never a fenced server.
  *
  * `pickIndex` chooses among the candidates and is given their count; it is
- * injected both so tests can pin the draw and because src/core carries no
+ * injected both so tests can pin the draw and because this file carries no
  * floating-point math — the client passes
  * `(n) => Math.floor(Math.random() * n)`. An index outside the range is
  * clamped, so a miscounting caller still lands on a server.

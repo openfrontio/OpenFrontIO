@@ -1167,13 +1167,13 @@ export class Config {
   }
 
   /** Max-health boost per veterancy level, as an integer percent of base max
-   *  health. Integer-only to keep src/core deterministic (no float constants). */
+   *  health. Integer-only to keep the engine deterministic (no float constants). */
   warshipVeterancyHealthBonus(): number {
     return 20;
   }
 
   /** Shell-damage boost per veterancy level, as an integer percent of the
-   *  rolled damage. Integer-only to keep src/core deterministic. */
+   *  rolled damage. Integer-only to keep the engine deterministic. */
   warshipVeterancyShellDamageBonus(): number {
     return 20;
   }

@@ -125,7 +125,7 @@ export interface Execution {
   tick(ticks: number): void;
   /**
    * Serializes this execution for a game snapshot (see
-   * src/core/snapshot/README.md). Every class registers an
+   * packages/engine/src/snapshot/README.md). Every class registers an
    * ExecutionSnapshotType in snapshot/ExecutionRegistry.ts.
    */
   snapshot(w: SnapshotWriter): ExecRecord;

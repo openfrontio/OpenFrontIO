@@ -100,7 +100,7 @@ export async function createGameRunner(
 }
 
 /**
- * Rebuilds a runner from a snapshot (see src/core/snapshot). The game resumes
+ * Rebuilds a runner from a snapshot (see snapshot/README.md). The game resumes
  * at the snapshot's tick: the first turn added afterwards is the turn for
  * that tick. Only runtime details (game id, listing) come from `gameStart`;
  * the config, players and all state come from the snapshot.

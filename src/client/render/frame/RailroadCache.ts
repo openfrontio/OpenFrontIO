@@ -9,7 +9,7 @@
  * Uint8Array ready for GPU upload.
  *
  * Ported verbatim from openfront-workspace/packages/shim/src/railroad-cache.ts;
- * only imports changed (types come from src/core/game/GameUpdates instead of
+ * only imports changed (types come from engine-api game/GameUpdates instead of
  * the shim's local types module).
  */
 

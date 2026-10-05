@@ -7,7 +7,7 @@ import { describe, expect, it } from "vitest";
 import { createGame, L, W } from "./_fixtures";
 
 // Spawns player and **expands territory** via getSpawnTiles (euclidean dist 4)
-// Ref: src/core/execution/Util.ts
+// Ref: packages/engine-lib/src/execution/Util.ts
 function addPlayer(game: Game, tile: TileRef, id: string = "test"): Player {
   const info = new PlayerInfo(id, PlayerType.Human, null, `${id}_id`);
   game.addPlayer(info);

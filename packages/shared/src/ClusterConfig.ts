@@ -12,7 +12,7 @@ import { z } from "zod";
 // NUM_WORKERS; docs/MultiServer.md, "Server identity") — and ServerEnv.cluster
 // synthesizes a one-entry map from them for the page it renders. The fleet
 // as a whole is the API registry's list
-// (src/core/ServerList.ts), which clients read; the one-entry map is the
+// (packages/shared/src/ServerList.ts), which clients read; the one-entry map is the
 // page's fallback when that list is unavailable.
 
 export const ClusterEntrySchema = z.object({

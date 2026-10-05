@@ -27,6 +27,9 @@ jobs:
       - name: Setup npm
         run: npm install --global --ignore-scripts npm@12.1.0
       - run: npm ci
+      # Root project plus each package's own tsconfig (engine, engine-api and
+      # engine-lib get no DOM and no Node types).
+      - run: npm run typecheck
       - run: npm run build-prod
       - uses: actions/upload-artifact@v7
         with:

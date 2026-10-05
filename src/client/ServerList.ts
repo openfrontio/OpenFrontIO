@@ -772,7 +772,7 @@ function ownServerLetter(list: ServerList, own: string): string | null {
   return servesBuild(list, letter, own) ? letter : null;
 }
 
-// The one place the client's randomness lives: src/core carries no
+// The one place the client's randomness lives: the shared ServerList carries no
 // floating-point math, so it takes an index rather than a draw.
 function randomIndex(count: number): number {
   return Math.floor(Math.random() * count);

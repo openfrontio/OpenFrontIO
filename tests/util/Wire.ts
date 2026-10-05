@@ -1,5 +1,5 @@
 // Helpers for tests that drive the game WebSocket, which carries zbin binary
-// frames rather than JSON (see src/core/ZbinWire.ts).
+// frames rather than JSON (see packages/shared/src/ZbinWire.ts).
 
 import {
   Difficulty,

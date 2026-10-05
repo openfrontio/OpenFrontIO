@@ -171,8 +171,8 @@ describe("pickServerForBuild", () => {
     expect(pickServerForBuild(LIST, "bfd5563a", () => 1)).toBe("e");
   });
 
-  // src/core takes no floating-point math, so the chooser hands back an
-  // integer. A caller that miscounts must still land on a server.
+  // The shared ServerList takes no floating-point math, so the chooser hands
+  // back an integer. A caller that miscounts must still land on a server.
   it("clamps an index outside the candidate range", () => {
     expect(pickServerForBuild(LIST, "bfd5563a", () => 99)).toBe("e");
     expect(pickServerForBuild(LIST, "bfd5563a", () => -1)).toBe("d");
