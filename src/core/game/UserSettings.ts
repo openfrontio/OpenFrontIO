@@ -37,6 +37,7 @@ export function getDefaultKeybinds(isMac: boolean): Record<string, string> {
     retaliateAttack: "Shift+KeyR",
     requestAlliance: "KeyK",
     breakAlliance: "KeyL",
+    quickChat: "KeyH",
     swapDirection: "KeyU",
     zoomOut: "KeyQ",
     zoomIn: "KeyE",
@@ -1010,6 +1011,19 @@ export class UserSettings {
 
   setAttackRatio(value: number): void {
     this.setFloat("settings.attackRatio", value);
+  }
+
+  quickChatOpacity(): number {
+    const value = this.getFloat("settings.quickChatOpacity", 0.8);
+    return Number.isFinite(value) ? Math.max(0.3, Math.min(1, value)) : 0.8;
+  }
+
+  setQuickChatOpacity(value: number): void {
+    if (!Number.isFinite(value)) return;
+    this.setFloat(
+      "settings.quickChatOpacity",
+      Math.max(0.3, Math.min(1, value)),
+    );
   }
 
   // Returns {} if missing, unparseable, or fails schema validation.

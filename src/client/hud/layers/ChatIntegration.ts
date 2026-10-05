@@ -1,5 +1,3 @@
-import { EventBus } from "../../../core/EventBus";
-import { SendQuickChatEvent } from "../../Transport";
 import { translateText } from "../../Utils";
 import { GameView, PlayerView } from "../../view";
 import { ChatModal, QuickChatPhrase, quickChatPhrases } from "./ChatModal";
@@ -8,10 +6,7 @@ import { COLORS, MenuElement, MenuElementParams } from "./RadialMenuElements";
 export class ChatIntegration {
   private ctModal: ChatModal;
 
-  constructor(
-    private game: GameView,
-    private eventBus: EventBus,
-  ) {
+  constructor(private game: GameView) {
     this.ctModal = document.querySelector("chat-modal") as ChatModal;
 
     if (!this.ctModal) {
@@ -70,12 +65,10 @@ export class ChatIntegration {
                   recipient,
                 );
               } else {
-                this.eventBus.emit(
-                  new SendQuickChatEvent(
-                    recipient,
-                    `${category.id}.${phrase.key}`,
-                    undefined,
-                  ),
+                this.ctModal.sendQuickChat(
+                  myPlayer,
+                  recipient,
+                  `${category.id}.${phrase.key}`,
                 );
               }
             },
