@@ -678,10 +678,11 @@ export class GameServer {
     this.ingress.attach(client);
     this.startLobbyInfoBroadcast();
 
-    // Filling up starts host-less games (public, matchmade, admin bot). A
-    // host's lobby cap only turns players away: the host still starts it.
+    // Filling up starts host-less games (public, matchmade, admin bot) and
+    // listed lobbies. An unlisted lobby's player limit only turns players
+    // away: its host still starts it.
     if (
-      this.creatorPersistentID === undefined &&
+      (this.creatorPersistentID === undefined || this.isListed()) &&
       this.playerCount() >= (this.gameConfig.maxPlayers ?? Infinity)
     ) {
       this.hasReachedMaxPlayerCount = true;

@@ -94,8 +94,9 @@ describe("private lobby player cap", () => {
     expect(game.joinClient(makeClient("p4"))).toBe("rejected");
   });
 
-  it("does not auto-start a host's lobby when it fills", () => {
-    // The host starts their own lobby; filling the cap is not a start signal.
+  it("does not auto-start an unlisted host lobby when it fills", () => {
+    // The host starts their own lobby; filling the limit is not a start
+    // signal. (A listed lobby still starts when full, see HostedLobbyListing.)
     const game = makeGame(1);
     game.joinClient(makeClient("p1"));
     expect(game.phase()).toBe(GamePhase.Lobby);

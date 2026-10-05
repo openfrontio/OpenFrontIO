@@ -1,4 +1,4 @@
-import { html, LitElement, render as litRender } from "lit";
+import { html, LitElement, render as litRender, PropertyValues } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
 import {
   HOSTED_LOBBY_AUTO_START_MS,
@@ -27,11 +27,26 @@ const MAX_START_MINUTES = HOSTED_LOBBY_AUTO_START_MS / 60_000;
 export class ListLobbyDialog extends LitElement {
   // Players already seated; the cap must leave room for at least one more.
   @property({ type: Number }) currentPlayers = 1;
+  // The player limit the host already set, if any: the cap starts there
+  // instead of at the maximum, so listing doesn't quietly raise it.
+  @property({ attribute: false }) suggestedMaxPlayers: number | undefined;
 
   @state() private startMinutes = MAX_START_MINUTES;
   @state() private maxPlayers = MAX_HOSTED_LOBBY_PLAYERS;
 
   private portal: HTMLDivElement | null = null;
+
+  protected willUpdate(changed: PropertyValues<this>) {
+    if (
+      changed.has("suggestedMaxPlayers") &&
+      this.suggestedMaxPlayers !== undefined
+    ) {
+      this.maxPlayers = Math.min(
+        MAX_HOSTED_LOBBY_PLAYERS,
+        this.suggestedMaxPlayers,
+      );
+    }
+  }
 
   createRenderRoot() {
     return this;
