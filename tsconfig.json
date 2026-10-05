@@ -31,6 +31,7 @@
     "tests/**/*",
     "src/scripts",
     "scripts/replay",
+    "scripts/split-packages",
     "vite.config.ts"
   ],
   "exclude": ["node_modules"]
