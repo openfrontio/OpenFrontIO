@@ -4,6 +4,7 @@ import {
   rememberLobbyRoster,
 } from "../../src/client/LobbyRosterLevels";
 import type { UserMeResponse } from "../../src/core/ApiSchemas";
+import { packLevelBadge } from "../../src/core/LevelBadgeWire";
 
 const getUserMe = vi.hoisted(() =>
   vi.fn<() => Promise<UserMeResponse | false>>(async () => false),
@@ -11,6 +12,8 @@ const getUserMe = vi.hoisted(() =>
 vi.mock("../../src/client/Api", () => ({ getUserMe }));
 
 const VET = { level: 100, prestige: 10, legend: true };
+// As the roster carries it.
+const VET_WIRE = packLevelBadge(VET)!;
 
 describe("lobbyLevelBadge", () => {
   it("returns the badge from the last roster of that game", () => {
@@ -19,7 +22,7 @@ describe("lobbyLevelBadge", () => {
         clientID: "vet00001",
         username: "Veteran",
         clanTag: null,
-        levelBadge: VET,
+        levelBadge: VET_WIRE,
       },
       { clientID: "guest001", username: "Guest", clanTag: null },
     ]);
@@ -35,7 +38,7 @@ describe("lobbyLevelBadge", () => {
         clientID: "vet00001",
         username: "Veteran",
         clanTag: null,
-        levelBadge: VET,
+        levelBadge: VET_WIRE,
       },
     ]);
     expect(lobbyLevelBadge("game0002", "vet00001")).toBeUndefined();
@@ -48,7 +51,7 @@ describe("lobbyLevelBadge", () => {
         clientID: "vet00001",
         username: "Veteran",
         clanTag: null,
-        levelBadge: VET,
+        levelBadge: VET_WIRE,
       },
     ]);
     rememberLobbyRoster("game0001", [
@@ -128,5 +131,37 @@ describe("lobbyLevelBadge: the viewer's own badge while they hide their level", 
     rememberLobbyRoster(id, roster, "late0001");
     await settle();
     expect(lobbyLevelBadge(id, "late0001")).toBeUndefined();
+  });
+});
+
+describe("lobbyLevelBadge decodes the packed roster value", () => {
+  it.each([
+    { level: 1, prestige: 0, legend: false },
+    { level: 57, prestige: 3, legend: false },
+    { level: 100, prestige: 10, legend: false },
+    { level: 100, prestige: 10, legend: true },
+  ])("back to %o", (badge) => {
+    rememberLobbyRoster("game0004", [
+      {
+        clientID: "pl000001",
+        username: "Player",
+        clanTag: null,
+        levelBadge: packLevelBadge(badge),
+      },
+    ]);
+    expect(lobbyLevelBadge("game0004", "pl000001")).toEqual(badge);
+  });
+
+  it("reads a value no server sends as no badge, without throwing", () => {
+    const clients = [0, 101, 11 * 128 + 5, 4096 + 5, -1, 1.5].map((v, i) => ({
+      clientID: `bad0000${i}`,
+      username: "Odd",
+      clanTag: null,
+      levelBadge: v,
+    }));
+    rememberLobbyRoster("game0005", clients);
+    for (const c of clients) {
+      expect(lobbyLevelBadge("game0005", c.clientID)).toBeUndefined();
+    }
   });
 });

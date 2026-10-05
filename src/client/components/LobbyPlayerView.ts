@@ -14,6 +14,7 @@ import {
 } from "../../core/game/Game";
 import { assignTeamsLobbyPreview } from "../../core/game/TeamAssignment";
 import { UserSettings } from "../../core/game/UserSettings";
+import { unpackLevelBadge } from "../../core/LevelBadgeWire";
 import {
   ClientID,
   ClientInfo,
@@ -648,9 +649,11 @@ export class LobbyTeamView extends LitElement {
   // falls back to the one from their own /users/@me.
   private visibleLevelBadge(client: ClientInfo): LevelBadge | undefined {
     if (this.isCurrentPlayer(client)) {
-      return client.levelBadge ?? this._ownHiddenBadge;
+      return unpackLevelBadge(client.levelBadge) ?? this._ownHiddenBadge;
     }
-    return this.userSettings.anonymousNames() ? undefined : client.levelBadge;
+    return this.userSettings.anonymousNames()
+      ? undefined
+      : unpackLevelBadge(client.levelBadge);
   }
 
   private anyVisibleLevelBadge(clients: readonly ClientInfo[]): boolean {

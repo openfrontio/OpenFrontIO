@@ -39,6 +39,7 @@ import { rememberLobbyRoster } from "../../../../src/client/LobbyRosterLevels";
 import { PlayerView } from "../../../../src/client/view";
 import { PlayerType } from "../../../../src/core/game/Game";
 import { UserSettings } from "../../../../src/core/game/UserSettings";
+import { packLevelBadge } from "../../../../src/core/LevelBadgeWire";
 
 // With lit mocked, html`` yields { strings, values }: flatten one back into
 // markup so the identity row can be checked as text.
@@ -82,13 +83,13 @@ describe("PlayerPanel - level badge", () => {
         clientID: "me",
         username: "me",
         clanTag: null,
-        levelBadge: { level: 12, prestige: 0, legend: false },
+        levelBadge: packLevelBadge({ level: 12, prestige: 0, legend: false }),
       },
       {
         clientID: "vet",
         username: "vet",
         clanTag: null,
-        levelBadge: { level: 42, prestige: 3, legend: true },
+        levelBadge: packLevelBadge({ level: 42, prestige: 3, legend: true }),
       },
       { clientID: "guest", username: "guest", clanTag: null },
     ]);

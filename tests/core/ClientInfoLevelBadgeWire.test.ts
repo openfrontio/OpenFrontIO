@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
 import {
+  LevelBadge,
+  packLevelBadge,
+  unpackLevelBadge,
+} from "../../src/core/LevelBadgeWire";
+import {
   ClanTagSchema,
   ClientInfo,
   ClientInfoSchema,
@@ -15,6 +20,8 @@ import {
   encodeServerMessage,
 } from "../../src/core/ZbinWire";
 import { zb } from "../../zbin";
+
+const pack = (badge: LevelBadge): number => packLevelBadge(badge)!;
 
 // The roster's level badge rides lobby_info as the last, optional field of
 // ClientInfo. These pin the wire contract that comment in Schemas.ts promises:
@@ -53,17 +60,32 @@ const FULL: ClientInfo = {
 };
 
 describe("ClientInfo.levelBadge on the wire", () => {
-  it.each([
+  it.each<LevelBadge>([
     { level: 1, prestige: 0, legend: false },
     { level: 37, prestige: 2, legend: false },
     { level: 100, prestige: 10, legend: true },
-  ])("round-trips a badge %o", (levelBadge) => {
+  ])("round-trips a badge %o as one packed integer", (badge) => {
+    const levelBadge = pack(badge);
     for (const base of [PLAIN, FULL]) {
       const entry = { ...base, levelBadge };
-      expect(NewClientInfo.parseBytes(NewClientInfo.serialize(entry))).toEqual(
-        entry,
-      );
+      const back = NewClientInfo.parseBytes(NewClientInfo.serialize(entry));
+      expect(back).toEqual(entry);
+      expect(unpackLevelBadge(back.levelBadge)).toEqual(badge);
     }
+  });
+
+  it("costs one byte per badge at prestige 0 and two at most", () => {
+    const size = (levelBadge?: number) =>
+      NewClientInfo.serialize({ ...PLAIN, levelBadge }).byteLength;
+    const none = size();
+    expect(size(pack({ level: 1, prestige: 0, legend: false })) - none).toBe(1);
+    expect(size(pack({ level: 100, prestige: 0, legend: false })) - none).toBe(
+      1,
+    );
+    expect(size(pack({ level: 1, prestige: 1, legend: false })) - none).toBe(2);
+    expect(size(pack({ level: 100, prestige: 10, legend: true })) - none).toBe(
+      2,
+    );
   });
 
   it("round-trips an entry without one, leaving it absent", () => {
@@ -92,14 +114,22 @@ describe("ClientInfo.levelBadge on the wire", () => {
   });
 
   it("rejects a badge the codec cannot carry rather than mis-encoding it", () => {
-    // The server sanitises API values before stamping (levelBadgeFromProgress)
-    // because of this: an invalid badge throws out of the whole broadcast.
-    expect(() =>
-      NewClientInfo.serialize({
-        ...PLAIN,
-        levelBadge: { level: 1.5, prestige: 0, legend: false },
-      }),
-    ).toThrow();
+    // Never reached in practice: the server only sends packLevelBadge output.
+    for (const levelBadge of [1.5, -1]) {
+      expect(() => NewClientInfo.serialize({ ...PLAIN, levelBadge })).toThrow();
+    }
+  });
+
+  it("decodes a packed value no server sends, which the accessor then drops", () => {
+    // The schema puts no range on the field, so one bad entry cannot fail
+    // the whole roster's parse; unpackLevelBadge reads it as no badge.
+    for (const levelBadge of [0, 101, 11 * 128 + 5, 4096 + 5, 2 ** 40]) {
+      const back = NewClientInfo.parseBytes(
+        NewClientInfo.serialize({ ...PLAIN, levelBadge }),
+      );
+      expect(back.levelBadge).toBe(levelBadge);
+      expect(unpackLevelBadge(back.levelBadge)).toBeUndefined();
+    }
   });
 
   it("carries badges through a full lobby_info frame", () => {
@@ -110,13 +140,16 @@ describe("ClientInfo.levelBadge on the wire", () => {
         gameID: "gM3xQ1zR",
         serverTime: 1_700_000_000_000,
         clients: [
-          { ...PLAIN, levelBadge: { level: 12, prestige: 1, legend: false } },
+          {
+            ...PLAIN,
+            levelBadge: pack({ level: 12, prestige: 1, legend: false }),
+          },
           FULL,
           {
             clientID: "Zz8wVu5t",
             username: "charlie",
             clanTag: null,
-            levelBadge: { level: 100, prestige: 10, legend: true },
+            levelBadge: pack({ level: 100, prestige: 10, legend: true }),
           },
         ],
       },
