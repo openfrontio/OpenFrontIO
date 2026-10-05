@@ -187,7 +187,7 @@ export class LeaderboardPlayerList extends LitElement {
       this.scheduleStickyVisibilityCheck();
       this.schedulePlayerFillCheck();
     } catch (err) {
-      console.error("loadPlayerLeaderboard: request failed", err);
+      console.warn("loadPlayerLeaderboard: request failed", err);
       if (reset) {
         this.error = translateText("leaderboard_modal.error");
       } else {

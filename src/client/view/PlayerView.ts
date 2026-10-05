@@ -1,6 +1,5 @@
 import { Colord, colord } from "colord";
 import { base64url } from "jose";
-import { ColorPalette } from "../../core/CosmeticSchemas";
 import { PatternDecoder } from "../../core/PatternDecoder";
 import { ClientID, PlayerCosmetics } from "../../core/Schemas";
 import { createRandomName } from "../../core/Util";
@@ -31,7 +30,9 @@ import { UserSettings } from "../../core/game/UserSettings";
 import { PlayerState, PlayerStatic, PlayerTypeEnum } from "../render/types";
 import { themeProvider } from "../theme/ThemeProvider";
 import { type CosmeticOwner, visibleCosmetics } from "./CosmeticVisibility";
+import { playerStateFromUpdate, playerStaticFromUpdate } from "./EntityState";
 import { GameView } from "./GameView";
+import { resolvePlayerColors } from "./PlayerColors";
 import { UnitView } from "./UnitView";
 
 const userSettings: UserSettings = new UserSettings();
@@ -39,75 +40,6 @@ const userSettings: UserSettings = new UserSettings();
 const FRIENDLY_TINT_TARGET = { r: 0, g: 255, b: 0, a: 1 };
 const EMBARGO_TINT_TARGET = { r: 255, g: 0, b: 0, a: 1 };
 const BORDER_TINT_RATIO = 0.35;
-
-function gamePlayerTypeToEnum(t: PlayerType): PlayerTypeEnum {
-  switch (t) {
-    case PlayerType.Human:
-      return PlayerTypeEnum.Human;
-    case PlayerType.Bot:
-      return PlayerTypeEnum.Bot;
-    case PlayerType.Nation:
-      return PlayerTypeEnum.Nation;
-    default:
-      return PlayerTypeEnum.Bot;
-  }
-}
-
-// First-emission updates from the engine always include every field; these
-// builders assert non-null for that contract. Subsequent diffs are partial
-// and flow through applyStateUpdate() below.
-function staticFromUpdate(pu: PlayerUpdate): PlayerStatic {
-  return {
-    smallID: pu.smallID!,
-    id: pu.id,
-    name: pu.name!,
-    displayName: pu.displayName!,
-    clanTag: pu.clanTag ?? null,
-    clientID: pu.clientID ?? null,
-    playerType: gamePlayerTypeToEnum(pu.playerType!),
-    team: pu.team ?? null,
-    isLobbyCreator: pu.isLobbyCreator!,
-  };
-}
-
-function stateFromUpdate(pu: PlayerUpdate): PlayerState {
-  // embargoes: Set<PlayerID strings> on the wire, but the renderer stores
-  // smallIDs (numbers). GameView fills these in via setEmbargoes() because
-  // it has the PlayerID → smallID lookup table.
-  return {
-    smallID: pu.smallID!,
-    isAlive: pu.isAlive!,
-    isDisconnected: pu.isDisconnected!,
-    killedBy: pu.killedBy ?? null,
-    deathPosition: pu.deathPosition ?? null,
-    tilesOwned: pu.tilesOwned!,
-    gold: Number(pu.gold!),
-    tradeGold: Number(pu.tradeGold ?? 0n),
-    trainGold: Number(pu.trainGold ?? 0n),
-    piracyGold: Number(pu.piracyGold ?? 0n),
-    goldEarned: Number(pu.goldEarned ?? 0n),
-    troops: pu.troops!,
-    isTraitor: pu.isTraitor!,
-    traitorRemainingTicks: Math.max(0, pu.traitorRemainingTicks ?? 0),
-    inDoomsdayClock: pu.inDoomsdayClock ?? false,
-    isDecaying: pu.isDecaying ?? false,
-    markedDoomsdayClockTick: pu.markedDoomsdayClockTick ?? -1,
-    betrayals: pu.betrayals!,
-    hasSpawned: pu.hasSpawned!,
-    spawnTile: pu.spawnTile,
-    lastDeleteUnitTick: pu.lastDeleteUnitTick!,
-    allies: pu.allies!.slice(),
-    embargoes: [],
-    targets: pu.targets!.slice(),
-    outgoingAttacks: pu.outgoingAttacks!,
-    incomingAttacks: pu.incomingAttacks!,
-    outgoingAllianceRequests: pu.outgoingAllianceRequests!.slice(),
-    alliances: pu.alliances!,
-    // Respect the client-side "Disable emojis" setting: when off, never surface
-    // emoji data to any renderer/overlay that reads this shared state (#4430).
-    outgoingEmojis: userSettings.emojis() ? pu.outgoingEmojis! : [],
-  };
-}
 
 export class PlayerView {
   public anonymousName: string | null = null;
@@ -143,10 +75,15 @@ export class PlayerView {
     /** Everything the player has equipped, before visibility settings. */
     public readonly equippedCosmetics: PlayerCosmetics,
   ) {
-    this.state = stateFromUpdate(data);
-    this.static = staticFromUpdate(data);
+    this.state = playerStateFromUpdate(data);
+    // Respect the client-side "Disable emojis" setting: when off, never surface
+    // emoji data to any renderer/overlay that reads this shared state (#4430).
+    if (!userSettings.emojis()) {
+      this.state.outgoingEmojis = [];
+    }
+    this.static = playerStaticFromUpdate(data);
 
-    // First emission always carries name + playerType (see staticFromUpdate).
+    // First emission always carries name + playerType (see playerStaticFromUpdate).
     if (data.clientID === game.myClientID()) {
       this.anonymousName = data.name!;
     } else {
@@ -195,40 +132,17 @@ export class PlayerView {
   private computeColors(): void {
     const theme = themeProvider.current();
 
-    const defaultTerritoryColor = theme.territoryColor(this);
-    const defaultBorderColor = theme.borderColor(defaultTerritoryColor);
-
     const pattern = this.cosmetics.pattern;
-    if (pattern) {
-      pattern.colorPalette ??= {
-        name: "",
-        primaryColor: defaultTerritoryColor.toHex(),
-        secondaryColor: defaultBorderColor.toHex(),
-      } satisfies ColorPalette;
-    }
-
-    if (this.team() === null) {
-      this._territoryColor = colord(
-        this.cosmetics.color?.color ??
-          pattern?.colorPalette?.primaryColor ??
-          defaultTerritoryColor.toHex(),
-      );
-    } else {
-      this._territoryColor = defaultTerritoryColor;
-    }
-
-    this._structureColors = theme.structureColors(this._territoryColor);
-
-    const maybeFocusedBorderColor =
-      this.game.myClientID() === this.static.clientID
-        ? theme.focusedBorderColor()
-        : defaultBorderColor;
-
-    this._borderColor = new Colord(
-      pattern?.colorPalette?.secondaryColor ??
-        this.cosmetics.color?.color ??
-        maybeFocusedBorderColor.toHex(),
+    const colors = resolvePlayerColors(
+      theme,
+      theme.territoryColor(this),
+      this.cosmetics,
+      this.team(),
+      this.game.myClientID() === this.static.clientID,
     );
+    this._territoryColor = colors.territory;
+    this._borderColor = colors.border;
+    this._structureColors = theme.structureColors(this._territoryColor);
 
     // Rail color (only used for the local player's rails): white for
     // visibility, flipped to black when the territory is too light for white

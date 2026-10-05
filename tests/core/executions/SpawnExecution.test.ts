@@ -1,7 +1,12 @@
 import { describe, expect, it } from "vitest";
 import { SpawnExecution } from "../../../src/core/execution/SpawnExecution";
 import { getSpawnTiles } from "../../../src/core/execution/Util";
-import { Game, GameType, PlayerType } from "../../../src/core/game/Game";
+import {
+  Game,
+  GameType,
+  PlayerInfo,
+  PlayerType,
+} from "../../../src/core/game/Game";
 import { TileRef } from "../../../src/core/game/GameMap";
 import { playerInfo, setup } from "../../util/Setup";
 
@@ -58,6 +63,76 @@ function findTestTiles(game: Game) {
   }
   return { landTileA, nudgeTile, landTileB, oceanTile };
 }
+
+describe("SpawnExecution spawn tile stat", () => {
+  // playerInfo() gives a null clientID, and stats are keyed by clientID, so a
+  // human with a client is built by hand here.
+  const human = (name: string) =>
+    new PlayerInfo(name, PlayerType.Human, `client_${name}`, name);
+
+  const spawnAt = (game: Game, info: PlayerInfo, tile?: TileRef) => {
+    const exec = new SpawnExecution("test-game", info, tile, true);
+    exec.init(game, 0);
+    exec.tick(0);
+  };
+
+  async function spawnPhaseGame(infos: PlayerInfo[], randomSpawn = false) {
+    return setup(
+      "ocean_and_land",
+      { gameType: GameType.Public, randomSpawn },
+      infos,
+      undefined,
+      undefined,
+      false,
+    );
+  }
+
+  it("records the spawn centre, and a later re-pick overwrites it", async () => {
+    const p1 = human("p1");
+    const game = await spawnPhaseGame([p1]);
+    const { landTileA, landTileB } = findTestTiles(game);
+
+    spawnAt(game, p1, landTileA);
+    expect(game.stats().stats()[p1.clientID!]?.spawnTile).toBe(landTileA);
+
+    spawnAt(game, p1, landTileB);
+    expect(game.stats().stats()[p1.clientID!]?.spawnTile).toBe(landTileB);
+    expect(game.player(p1.id).spawnTile()).toBe(landTileB);
+  });
+
+  it("keeps the previous tile when a re-pick is rejected", async () => {
+    const p1 = human("p1");
+    const game = await spawnPhaseGame([p1]);
+    const { landTileA, oceanTile } = findTestTiles(game);
+
+    spawnAt(game, p1, landTileA);
+    spawnAt(game, p1, oceanTile);
+
+    expect(game.stats().stats()[p1.clientID!]?.spawnTile).toBe(landTileA);
+  });
+
+  it("records the tile the game chose under random spawn", async () => {
+    const p1 = human("p1");
+    const game = await spawnPhaseGame([p1], true);
+
+    spawnAt(game, p1);
+
+    const chosen = game.player(p1.id).spawnTile();
+    expect(chosen).toEqual(expect.any(Number));
+    expect(game.stats().stats()[p1.clientID!]?.spawnTile).toBe(chosen);
+  });
+
+  it("records nothing for a player without a client", async () => {
+    const noClient = playerInfo("NoClient", PlayerType.Human);
+    const game = await spawnPhaseGame([noClient]);
+    const { landTileA } = findTestTiles(game);
+
+    spawnAt(game, noClient, landTileA);
+
+    expect(game.player(noClient.id).spawnTile()).toBe(landTileA);
+    expect(Object.keys(game.stats().stats())).toEqual([]);
+  });
+});
 
 describe("SpawnExecution Transactional Rollback & Self-Collision", () => {
   it("rolls back to previous tiles and spawn center on invalid placement (ocean)", async () => {

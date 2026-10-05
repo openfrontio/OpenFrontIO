@@ -1,3 +1,4 @@
+import { z } from "zod";
 import {
   AllPlayers,
   Difficulty,
@@ -10,6 +11,17 @@ import {
 } from "../../game/Game";
 import { TileRef } from "../../game/GameMap";
 import { PseudoRandom } from "../../PseudoRandom";
+import type {
+  SnapshotReader,
+  SnapshotWriter,
+} from "../../snapshot/SnapshotContext";
+import {
+  readVersioned,
+  snapshotType,
+  Versioned,
+  zRef,
+} from "../../snapshot/SnapshotType";
+import { assertNever } from "../../Util";
 import { ConstructionExecution } from "../ConstructionExecution";
 import {
   EMOJI_WARSHIP_RETALIATION,
@@ -32,6 +44,37 @@ export class NationWarshipBehavior {
     private player: Player,
     private emojiBehavior: NationEmojiBehavior,
   ) {}
+
+  snapshot(w: SnapshotWriter): Versioned {
+    // Sets are iterated in order and may hold dead units.
+    const units = (set: Set<Unit>) => [...set].map((u) => w.unit(u));
+    return w.versioned(NationWarshipBehaviorSnapshot, {
+      trackedTransportShips: units(this.trackedTransportShips),
+      trackedTradeShips: units(this.trackedTradeShips),
+      trackedIncomingTransportShips: units(this.trackedIncomingTransportShips),
+      dealtWithTransportShip: units(this.dealtWithTransportShip),
+    });
+  }
+
+  /** Fills a prototype-only shell; only assigns (see README). */
+  restoreSnapshot(
+    raw: unknown,
+    r: SnapshotReader,
+    random: PseudoRandom,
+    player: Player,
+    emojiBehavior: NationEmojiBehavior,
+  ): void {
+    const s = readVersioned(NationWarshipBehaviorSnapshot, raw);
+    const units = (refs: number[]) => new Set(refs.map((i) => r.unit(i)));
+    this.random = random;
+    this.game = r.game;
+    this.player = player;
+    this.emojiBehavior = emojiBehavior;
+    this.trackedTransportShips = units(s.trackedTransportShips);
+    this.trackedTradeShips = units(s.trackedTradeShips);
+    this.trackedIncomingTransportShips = units(s.trackedIncomingTransportShips);
+    this.dealtWithTransportShip = units(s.dealtWithTransportShip);
+  }
 
   maybeSpawnWarship(): boolean {
     if (this.player === null) throw new Error("not initialized");
@@ -229,6 +272,11 @@ export class NationWarshipBehavior {
       return;
     }
 
+    // One of ours already patrols there (sent by any trigger): don't pile up more
+    if (this.warshipsCovering(tile).length > 0) {
+      return;
+    }
+
     // Don't send too many warships
     if (this.player.units(UnitType.Warship).length >= 10) {
       this.maybeMoveWarship(tile);
@@ -253,6 +301,96 @@ export class NationWarshipBehavior {
       this.emojiBehavior.maybeSendEmoji(enemy, EMOJI_WARSHIP_RETALIATION);
       this.player.updateRelation(enemy, reason === "trade" ? -7.5 : -15);
     }
+  }
+
+  // Send a squad at the fleet blocking our boats, all at once or not at all:
+  // Hard as many ships as they have, Impossible one more
+  clearSeaLane(blocker: Unit): void {
+    if (this.game.config().isUnitDisabled(UnitType.Warship)) return;
+    const { difficulty } = this.game.config().gameConfig();
+    const target = blocker.tile();
+    const fleet = this.hostileWarshipsNear(target);
+    let wanted: number;
+    switch (difficulty) {
+      case Difficulty.Easy:
+      case Difficulty.Medium:
+        return;
+      case Difficulty.Hard:
+        wanted = fleet;
+        break;
+      case Difficulty.Impossible:
+        wanted = fleet + 1;
+        break;
+      default:
+        assertNever(difficulty);
+    }
+
+    const covering = this.warshipsCovering(target);
+    const component = this.game.getWaterComponent(target);
+    // Ships with enemies around their patrol tile are busy; pulling them away would thrash
+    const spare = this.player
+      .units(UnitType.Warship)
+      .filter((w) => {
+        const state = w.warshipState();
+        return (
+          !covering.includes(w) &&
+          state.state === "patrolling" &&
+          this.game.getWaterComponent(w.tile()) === component &&
+          (state.patrolTile === undefined ||
+            this.hostileWarshipsNear(state.patrolTile) === 0)
+        );
+      })
+      .sort(
+        (a, b) =>
+          this.game.manhattanDist(a.tile(), target) -
+          this.game.manhattanDist(b.tile(), target),
+      );
+    const recruits = spare.slice(0, Math.max(0, wanted - covering.length));
+    const builds = wanted - covering.length - recruits.length;
+    // Ships sent in one by one get sunk one by one
+    if (builds > 0) {
+      if (this.player.units(UnitType.Warship).length + builds > 10) return;
+      // Each ship we own raises the price of the next
+      let total = 0n;
+      for (let i = 0; i < builds; i++) {
+        total += this.cost(UnitType.Warship, i);
+      }
+      if (this.player.gold() < total) return;
+      if (this.player.canBuild(UnitType.Warship, target) === false) return;
+    }
+    for (const w of recruits) {
+      w.updateWarshipState({ patrolTile: target });
+    }
+    for (let i = 0; i < builds; i++) {
+      this.game.addExecution(
+        new ConstructionExecution(this.player, UnitType.Warship, target),
+      );
+    }
+  }
+
+  private hostileWarshipsNear(tile: TileRef): number {
+    return this.game
+      .nearbyUnits(
+        tile,
+        this.game.config().warshipTargettingRange(),
+        UnitType.Warship,
+      )
+      .filter(({ unit }) => unit.owner().canAttackPlayer(this.player, true))
+      .length;
+  }
+
+  // Our warships on the same water whose patrol area includes `tile`
+  private warshipsCovering(tile: TileRef): Unit[] {
+    const component = this.game.getWaterComponent(tile);
+    const patrolRange = this.game.config().warshipPatrolRange();
+    return this.player.units(UnitType.Warship).filter((w) => {
+      const patrolTile = w.warshipState().patrolTile;
+      return (
+        patrolTile !== undefined &&
+        this.game.getWaterComponent(w.tile()) === component &&
+        this.game.manhattanDist(patrolTile, tile) <= patrolRange
+      );
+    });
   }
 
   private maybeMoveWarship(tile: TileRef): void {
@@ -459,7 +597,18 @@ export class NationWarshipBehavior {
     this.emojiBehavior.sendEmoji(AllPlayers, EMOJI_WARSHIP_RETALIATION);
   }
 
-  private cost(type: UnitType): Gold {
-    return this.game.unitInfo(type).cost(this.game, this.player);
+  private cost(type: UnitType, extraUnits: number = 0): Gold {
+    return this.game.unitInfo(type).cost(this.game, this.player, extraUnits);
   }
 }
+
+export const NationWarshipBehaviorSnapshot = snapshotType({
+  name: "NationWarshipBehavior",
+  version: 1,
+  schema: z.object({
+    trackedTransportShips: z.array(zRef()),
+    trackedTradeShips: z.array(zRef()),
+    trackedIncomingTransportShips: z.array(zRef()),
+    dealtWithTransportShip: z.array(zRef()),
+  }),
+});

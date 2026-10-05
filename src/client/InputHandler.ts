@@ -893,6 +893,11 @@ export class InputHandler {
     if (event.button > 0) {
       return;
     }
+    // The release listener is global so map drags can end over the HUD. A HUD
+    // click has no matching map pointerdown and must not reuse stale map state.
+    if (!this.pointerDown || !this.pointers.has(event.pointerId)) {
+      return;
+    }
     this.pointerDown = false;
     this.pointers.clear();
 
@@ -932,6 +937,21 @@ export class InputHandler {
         this.eventBus.emit(new WarshipSelectionBoxCancelEvent());
       }
     }
+
+    // macOS treats Ctrl+Left as secondary-click (context menu). Skip the
+    // primary-click path so we don't also fire an attack (#4918), and do it
+    // before modifier menus: if buildMenuModifier is rebound to ControlLeft,
+    // we'd otherwise emit ShowBuildMenuEvent and still get ContextMenuEvent.
+    // Mac-only: on Win/Linux event.ctrlKey is also true for Right Ctrl, which
+    // is not the default build-menu bind and must still attack. Spawn-phase
+    // Ctrl+click still needs MouseUpEvent — contextmenu is ignored then.
+    if (Platform.isMac && event.ctrlKey && !this.gameView.inSpawnPhase()) {
+      this.suppressNextTap = false;
+      return;
+    }
+
+    // Modifier menus: on Win/Linux Ctrl is the default build-menu key, so a
+    // ctrl+left must still reach ShowBuildMenuEvent (Mac already returned).
     if (this.activeKeys.has(this.keybinds.buildMenuModifier)) {
       this.suppressNextTap = false;
       this.eventBus.emit(new ShowBuildMenuEvent(event.clientX, event.clientY));
@@ -1042,12 +1062,15 @@ export class InputHandler {
       return;
     }
 
-    this.pointers.set(event.pointerId, event);
-
     if (!this.pointerDown) {
       this.eventBus.emit(new MouseOverEvent(event.clientX, event.clientY));
       return;
     }
+
+    if (!this.pointers.has(event.pointerId)) {
+      return;
+    }
+    this.pointers.set(event.pointerId, event);
 
     if (this.pointers.size === 1) {
       const deltaX = event.clientX - this.lastPointerX;

@@ -10,9 +10,8 @@ import {
 } from "../../../client/Utils";
 import { Pattern } from "../../../core/CosmeticSchemas";
 import { EventBus } from "../../../core/EventBus";
-import { GameType, RankedType } from "../../../core/game/Game";
+import { RankedType } from "../../../core/game/Game";
 import { GameUpdateType } from "../../../core/game/GameUpdates";
-import { syncAchievements } from "../../AchievementSignal";
 import { getUserMe } from "../../Api";
 import "../../components/CosmeticCard";
 import { cosmeticSelectionLabel } from "../../components/CosmeticPresentation";
@@ -321,23 +320,6 @@ export class WinModal extends LitElement implements Controller {
     }
     const updates = this.game.updatesSinceLastTick();
     const winUpdates = updates?.[GameUpdateType.Win] ?? [];
-    // Only games the server archives are ingested, and only ingested games
-    // can produce an achievement row. Singleplayer and replays produce none,
-    // ever, so polling for one there spends the whole schedule on a certain
-    // miss. Same pair of checks the rest of the HUD uses to mean "not a
-    // server game" (see MultiTabModal, GameRightSidebar).
-    const config = this.game.config();
-    const isServerGame =
-      config.gameConfig().gameType !== GameType.Singleplayer &&
-      !config.isReplay();
-    // Achievements are awarded server-side during ingest, which the game
-    // server triggers from the winner vote these updates drive. Fire and
-    // forget: the sync retries on its own and the startup reconcile is the
-    // backstop, so nothing here needs to await or report. One game end is one
-    // sync, so this sits outside the loop.
-    if (isServerGame && winUpdates.length > 0) {
-      void syncAchievements({ gameId: this.game.gameID() });
-    }
     winUpdates.forEach((wu) => {
       if (wu.winner === undefined) {
         // Match cancelled (e.g. a ranked 2v2 that didn't fill or fully

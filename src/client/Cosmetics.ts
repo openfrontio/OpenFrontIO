@@ -31,9 +31,11 @@ import {
   getApiBase,
   getUserMe,
   invalidateUserMe,
+  openSubscriptionPortal,
   purchaseCosmeticPack,
   purchaseWithCurrency,
 } from "./Api";
+import { isDesktopShell } from "./DesktopShell";
 import { showInGameAlert, showInGameConfirm } from "./InGameModal";
 import {
   classifyPurchaseReturn,
@@ -336,11 +338,42 @@ async function purchaseOverGrant(
   if (outcome.outcome === "error" && outcome.refetchCatalog) {
     invalidateCosmetics();
   }
+  if (outcome.outcome === "error" && outcome.manageBilling) {
+    return promptManageBilling(outcome.message);
+  }
   const message = purchaseOutcomeMessage(
     outcome,
     "store.subscription_purchase_success",
   );
   if (message !== null) await showInGameAlert(message);
+}
+
+/**
+ * Checkout refused a new subscription because the player's Stripe one failed
+ * to renew. /users/@me does not return a past_due subscription, so the
+ * account panel's Manage button is gone and this is the only way left to the
+ * billing portal, which does admit past_due. The desktop build must not link
+ * out to a payment page (see SubscriptionPanel.renderManageOnWeb), so it only
+ * says where to go.
+ */
+async function promptManageBilling(message: string): Promise<void> {
+  if (isDesktopShell()) {
+    await showInGameAlert(translateText("store.subscription_past_due_desktop"));
+    return;
+  }
+  const confirmed = await showInGameConfirm(message, {
+    variant: "warning",
+    confirmText: translateText("store.manage_billing"),
+  });
+  if (!confirmed) return;
+  const url = await openSubscriptionPortal();
+  if (url === false) {
+    await showInGameAlert(
+      translateText("account_modal.subscription_portal_failed"),
+    );
+    return;
+  }
+  window.open(url, "_blank", "noopener,noreferrer");
 }
 
 export async function purchaseCosmetic(
@@ -513,6 +546,9 @@ export async function purchaseCosmetic(
       // longer sells; drop it so the next open refetches.
       if (outcome.outcome === "error" && outcome.refetchCatalog) {
         invalidateCosmetics();
+      }
+      if (outcome.outcome === "error" && outcome.manageBilling) {
+        return promptManageBilling(outcome.message);
       }
       const message = purchaseOutcomeMessage(
         outcome,
@@ -826,7 +862,7 @@ export async function fetchCosmetics(): Promise<Cosmetics | null> {
         signal: AbortSignal.timeout(COSMETICS_FETCH_TIMEOUT_MS),
       });
       if (!response.ok) {
-        console.error(`HTTP error! status: ${response.status}`);
+        console.warn(`HTTP error! status: ${response.status}`);
         return null;
       }
       const result = CosmeticsSchema.safeParse(await response.json());
@@ -840,7 +876,7 @@ export async function fetchCosmetics(): Promise<Cosmetics | null> {
       __cosmeticsCache = result.data;
       return result.data;
     } catch (error) {
-      console.error("Error getting cosmetics:", error);
+      console.warn("Error getting cosmetics:", error);
       return null;
     }
   })();

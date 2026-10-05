@@ -4,7 +4,9 @@ import { GameConfig, GameConfigPatch } from "../core/Schemas";
 // partial GameConfig. Only the keys listed here are taken from it. gameType
 // and the listing flag are deliberately absent: each has its own guarded path
 // (handleIntent rejects a switch to Public; listing goes through the
-// authenticated listing endpoint). maxPlayers is handled on its own below.
+// authenticated listing endpoint). `pool` is absent because every member of
+// a pool has to agree on it and a patch reaches exactly one GameServer.
+// maxPlayers is handled on its own below.
 
 // Copied whenever the patch carries them.
 const COPIED_KEYS = [

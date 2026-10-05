@@ -1,3 +1,4 @@
+import { z } from "zod";
 import { renderTroops } from "../../client/Utils";
 import {
   Execution,
@@ -14,6 +15,18 @@ import { MotionPlanRecord } from "../game/MotionPlans";
 import { targetTransportTile } from "../game/TransportShipUtils";
 import { WaterPathFinder } from "../pathfinding/PathFinder";
 import { PathStatus } from "../pathfinding/types";
+import { execSnapshotType } from "../snapshot/ExecutionSnapshot";
+import {
+  restoreWaterPathFinder,
+  WaterPathFinderSchema,
+  waterPathFinderState,
+} from "../snapshot/PathfinderSnapshots";
+import type {
+  ExecRecord,
+  SnapshotReader,
+  SnapshotWriter,
+} from "../snapshot/SnapshotContext";
+import { zInt, zNum, zPlayerRef, zRef, zTile } from "../snapshot/SnapshotType";
 import { AttackExecution } from "./AttackExecution";
 
 const malusForRetreat = 25;
@@ -28,8 +41,6 @@ export class TransportShipExecution implements Execution {
   private mg: Game;
   private target: Player | TerraNullius;
   private pathFinder: WaterPathFinder;
-
-  private static _staggerCounter = 0;
 
   private dst: TileRef | null;
   private src: TileRef | null;
@@ -62,8 +73,7 @@ export class TransportShipExecution implements Execution {
     this.lastMove = ticks;
     this.mg = mg;
     this.target = mg.owner(this.ref);
-    const stagger =
-      TransportShipExecution._staggerCounter++ % WaterPathFinder.STAGGER_SPREAD;
+    const stagger = mg.nextShipStagger("transportShip");
     this.pathFinder = new WaterPathFinder(mg, stagger);
 
     if (
@@ -334,4 +344,81 @@ export class TransportShipExecution implements Execution {
       request.reject();
     }
   }
+
+  snapshot(w: SnapshotWriter): ExecRecord {
+    // Fields init() leaves unset on an early return are stored as undefined.
+    return TransportShipExecutionSnapshot.write({
+      active: this.active,
+      initialized: this.mg !== undefined,
+      ticksPerMove: this.ticksPerMove,
+      lastMove: this.lastMove,
+      target: this.target === undefined ? undefined : w.owner(this.target),
+      pathFinder:
+        this.pathFinder === undefined
+          ? undefined
+          : waterPathFinderState(this.pathFinder),
+      dst: this.dst,
+      src: this.src,
+      retreatDst: this.retreatDst,
+      boat: this.boat === undefined ? undefined : w.unit(this.boat),
+      motionPlanId: this.motionPlanId,
+      motionPlanDst: this.motionPlanDst,
+      originalOwner: w.player(this.originalOwner),
+      attacker: w.player(this.attacker),
+      ref: this.ref,
+      troops: this.troops,
+    });
+  }
+
+  restoreSnapshot(s: TransportShipExecutionState, r: SnapshotReader): void {
+    this.active = s.active;
+    if (s.initialized) this.mg = r.game;
+    this.ticksPerMove = s.ticksPerMove;
+    if (s.lastMove !== undefined) this.lastMove = s.lastMove;
+    if (s.target !== undefined) this.target = r.owner(s.target);
+    if (s.pathFinder !== undefined) {
+      this.pathFinder = restoreWaterPathFinder(r.game, s.pathFinder);
+    }
+    if (s.dst !== undefined) this.dst = s.dst;
+    if (s.src !== undefined) this.src = s.src;
+    this.retreatDst = s.retreatDst;
+    if (s.boat !== undefined) this.boat = r.unit(s.boat);
+    this.motionPlanId = s.motionPlanId;
+    this.motionPlanDst = s.motionPlanDst;
+    this.originalOwner = r.player(s.originalOwner);
+    this.attacker = r.player(s.attacker);
+    this.ref = s.ref;
+    this.troops = s.troops;
+  }
 }
+
+const TransportShipExecutionStateSchema = z.object({
+  active: z.boolean(),
+  initialized: z.boolean(),
+  ticksPerMove: zInt(),
+  lastMove: zInt().optional(),
+  target: zPlayerRef().optional(),
+  pathFinder: WaterPathFinderSchema.optional(),
+  dst: zTile().nullable().optional(),
+  src: zTile().nullable().optional(),
+  /** Unresolved (null), none found (false), or the retreat tile. */
+  retreatDst: z.union([zTile(), z.literal(false)]).nullable(),
+  boat: zRef().optional(),
+  motionPlanId: zInt(),
+  motionPlanDst: zTile().nullable(),
+  originalOwner: zPlayerRef(),
+  attacker: zPlayerRef(),
+  // Unvalidated until init() checks it.
+  ref: zInt(),
+  troops: zNum(),
+});
+type TransportShipExecutionState = z.infer<
+  typeof TransportShipExecutionStateSchema
+>;
+
+export const TransportShipExecutionSnapshot = execSnapshotType({
+  name: "TransportShip",
+  version: 1,
+  schema: TransportShipExecutionStateSchema,
+  cls: () => TransportShipExecution,
+});

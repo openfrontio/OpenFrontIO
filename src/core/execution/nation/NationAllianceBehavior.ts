@@ -1,3 +1,4 @@
+import { z } from "zod";
 import {
   Difficulty,
   Game,
@@ -7,6 +8,15 @@ import {
   Relation,
 } from "../../game/Game";
 import { PseudoRandom } from "../../PseudoRandom";
+import type {
+  SnapshotReader,
+  SnapshotWriter,
+} from "../../snapshot/SnapshotContext";
+import {
+  readVersioned,
+  snapshotType,
+  Versioned,
+} from "../../snapshot/SnapshotType";
 import { assertNever } from "../../Util";
 import { AllianceExtensionExecution } from "../alliance/AllianceExtensionExecution";
 import { AllianceRequestExecution } from "../alliance/AllianceRequestExecution";
@@ -17,7 +27,7 @@ import {
   EMOJI_SCARED_OF_THREAT,
   NationEmojiBehavior,
 } from "./NationEmojiBehavior";
-import { findJuiciestTarget } from "./NationUtils";
+import { findJuiciestTarget, findRunawayLeader } from "./NationUtils";
 
 export class NationAllianceBehavior {
   constructor(
@@ -26,6 +36,26 @@ export class NationAllianceBehavior {
     private player: Player,
     private emojiBehavior: NationEmojiBehavior,
   ) {}
+
+  /** No state of its own; the owner supplies the shared references. */
+  snapshot(w: SnapshotWriter): Versioned {
+    return w.versioned(NationAllianceBehaviorSnapshot, {});
+  }
+
+  /** Fills a prototype-only shell; only assigns (see README). */
+  restoreSnapshot(
+    raw: unknown,
+    r: SnapshotReader,
+    random: PseudoRandom,
+    player: Player,
+    emojiBehavior: NationEmojiBehavior,
+  ): void {
+    readVersioned(NationAllianceBehaviorSnapshot, raw);
+    this.random = random;
+    this.game = r.game;
+    this.player = player;
+    this.emojiBehavior = emojiBehavior;
+  }
 
   handleAllianceRequests() {
     if (this.game.config().disableAlliances()) return;
@@ -106,6 +136,10 @@ export class NationAllianceBehavior {
     if (this.hasTooManyAlliances(otherPlayer)) {
       return false;
     }
+    // Don't help a runaway leader grow even further (Medium and up)
+    if (this.isRunawayLeader(otherPlayer)) {
+      return false;
+    }
     // Before caring about the relation, first check if the otherPlayer is a threat
     // Easy (dumb) nations are blinded by hatred, they don't care about threats, they care about the relation
     // Impossible (smart) nations on the other hand are analyzing the facts
@@ -167,6 +201,10 @@ export class NationAllianceBehavior {
     } else {
       return otherPlayerAlliances >= totalPlayers * 0.25;
     }
+  }
+
+  private isRunawayLeader(otherPlayer: Player): boolean {
+    return findRunawayLeader(this.game) === otherPlayer;
   }
 
   private isConfused(): boolean {
@@ -466,3 +504,9 @@ export class NationAllianceBehavior {
     this.player.breakAlliance(alliance);
   }
 }
+
+export const NationAllianceBehaviorSnapshot = snapshotType({
+  name: "NationAllianceBehavior",
+  version: 1,
+  schema: z.object({}),
+});

@@ -1,3 +1,4 @@
+import { z } from "zod";
 import { renderTroops } from "../../client/Utils";
 import { AttackLogicInput } from "../configuration/Config";
 import {
@@ -15,6 +16,21 @@ import {
 } from "../game/Game";
 import { GameMap, TileRef } from "../game/GameMap";
 import { PseudoRandom } from "../PseudoRandom";
+import { execSnapshotType } from "../snapshot/ExecutionSnapshot";
+import type {
+  ExecRecord,
+  SnapshotReader,
+  SnapshotWriter,
+} from "../snapshot/SnapshotContext";
+import {
+  zInt,
+  zNum,
+  zPlayerRef,
+  zRandom,
+  zRef,
+  zTile,
+  zTiles,
+} from "../snapshot/SnapshotType";
 import { assertNever } from "../Util";
 import { FlatBinaryHeap } from "./utils/FlatBinaryHeap"; // adjust path if needed
 
@@ -472,4 +488,76 @@ export class AttackExecution implements Execution {
   isActive(): boolean {
     return this.active;
   }
+
+  snapshot(w: SnapshotWriter): ExecRecord {
+    return AttackExecutionSnapshot.write({
+      active: this.active,
+      initialized: this.mg !== undefined,
+      toConquer: this.toConquer.getState(),
+      random: w.random(this.random),
+      target: this.target === undefined ? null : w.owner(this.target),
+      attack: this.attack === null ? null : w.attack(this.attack),
+      startTroops: this.startTroops,
+      owner: w.player(this._owner),
+      targetID: this._targetID,
+      sourceTile: this.sourceTile,
+      removeTroops: this.removeTroops,
+    });
+  }
+
+  restoreSnapshot(s: AttackExecutionState, r: SnapshotReader): void {
+    this.active = s.active;
+    this.toConquer = FlatBinaryHeap.fromState(s.toConquer);
+    this.random = r.random(s.random);
+    if (s.initialized) {
+      this.mg = r.game;
+      this.map = r.game.map();
+    }
+    if (s.target !== null) {
+      this.target = r.owner(s.target);
+      // Set together with target in init(); small ids are the stored refs.
+      this.ownerSmallID = s.owner;
+      this.targetSmallID = s.target;
+    }
+    this.attack = s.attack === null ? null : r.attack(s.attack);
+    // Scratch buffers, overwritten before every read.
+    this.nbuf = [0, 0, 0, 0];
+    this.nbuf2 = [0, 0, 0, 0];
+    this.startTroops = s.startTroops;
+    this._owner = r.player(s.owner);
+    this._targetID = s.targetID;
+    this.sourceTile = s.sourceTile;
+    this.removeTroops = s.removeTroops;
+  }
 }
+
+const AttackExecutionStateSchema = z.object({
+  active: z.boolean(),
+  initialized: z.boolean(),
+  // Exact heap layout: ties between equal priorities dequeue by position.
+  toConquer: z.object({
+    pri: z.custom<Float32Array>(
+      (v) => v instanceof Float32Array,
+      "expected float32s",
+    ),
+    tiles: zTiles(),
+    capacity: zInt(),
+  }),
+  random: zRandom(),
+  /** Null until init() resolves the target. */
+  target: zPlayerRef().nullable(),
+  attack: zRef().nullable(),
+  startTroops: zNum().nullable(),
+  owner: zPlayerRef(),
+  targetID: z.string().nullable(),
+  sourceTile: zTile().nullable(),
+  removeTroops: z.boolean(),
+});
+type AttackExecutionState = z.infer<typeof AttackExecutionStateSchema>;
+
+export const AttackExecutionSnapshot = execSnapshotType({
+  name: "Attack",
+  version: 1,
+  schema: AttackExecutionStateSchema,
+  cls: () => AttackExecution,
+});

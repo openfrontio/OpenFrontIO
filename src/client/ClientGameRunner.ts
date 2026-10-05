@@ -35,6 +35,7 @@ import {
 } from "../core/game/UserSettings";
 import { WorkerClient } from "../core/worker/WorkerClient";
 import { isDesktopShell } from "./DesktopShell";
+import { GameMetrics } from "./GameMetrics";
 import { showInGameAlert } from "./InGameModal";
 import {
   AutoUpgradeEvent,
@@ -52,6 +53,7 @@ import {
 import { pagePin } from "./PagePin";
 import { groupTokenOf, loggableStartMessage } from "./PresenceGroup";
 import { versionedPathForMismatchedGame } from "./ServerList";
+import { reportGameError } from "./Telemetry";
 import { terrainMapFileLoader } from "./TerrainMapFileLoader";
 import { GoToPlayerEvent } from "./TransformHandler";
 import {
@@ -106,6 +108,9 @@ export interface LobbyConfig {
   gameRecord?: GameRecord;
   // Watch without playing.
   spectator?: boolean;
+  // Host only: the play token the lobby was created under, used for the
+  // first join so the host joins as the creator (see createLobby).
+  creatorToken?: string;
 }
 
 export interface JoinLobbyResult {
@@ -549,6 +554,7 @@ function mountWebGLFrameLoop(
   transformHandler: import("./TransformHandler").TransformHandler,
   gameView: GameView,
   eventBus: EventBus,
+  onFrame: (nowMs: number) => void,
 ): { builder: WebGLFrameBuilder; stopFrameLoop: () => void } {
   const gameMap = terrainMap.gameMap;
   const mapWidth = gameMap.width();
@@ -609,7 +615,8 @@ function mountWebGLFrameLoop(
   // renderer's captured frame callback (which draws). One RAF = one
   // synchronized camera-update + WebGL render.
   let rafId: number | null = null;
-  const driveFrame = (): void => {
+  const driveFrame = (nowMs: number): void => {
+    onFrame(nowMs);
     syncCamera();
     rafId = requestAnimationFrame(driveFrame);
   };
@@ -852,6 +859,7 @@ async function createClientGame(
       mapLayerController,
     );
 
+    const metrics = new GameMetrics(lobbyConfig.gameID, clientID);
     const { builder: webglBuilder, stopFrameLoop } = mountWebGLFrameLoop(
       gameMap,
       view,
@@ -860,6 +868,7 @@ async function createClientGame(
       gameRenderer.transformHandler,
       gameView,
       eventBus,
+      (nowMs) => metrics.recordFrame(nowMs),
     );
 
     // Releases all WebGL/DOM resources this game created. Without it, stopping
@@ -894,6 +903,7 @@ async function createClientGame(
       webglBuilder,
       graphicsListenerAbort,
       disposeRenderer,
+      metrics,
     );
   } catch (err) {
     soundManager.dispose();
@@ -906,6 +916,10 @@ export class ClientGameRunner {
   private isActive = false;
 
   private turnsSeen = 0;
+  // True from a (re)join request until the server's start message answers it.
+  // Live turns that land in that window arrive ahead of turnsSeen and are
+  // dropped; the start message replays them, so dropping them is expected.
+  private awaitingStart = true;
   private lastMousePosition: { x: number; y: number } | null = null;
 
   private lastMessageTime: number = 0;
@@ -929,6 +943,7 @@ export class ClientGameRunner {
     private webglBuilder: WebGLFrameBuilder | null = null,
     private graphicsListenerAbort: AbortController | null = null,
     private disposeRenderer: (() => void) | null = null,
+    private metrics: GameMetrics | null = null,
   ) {
     this.lastMessageTime = Date.now();
   }
@@ -954,6 +969,7 @@ export class ClientGameRunner {
 
     this.isActive = true;
     this.lastMessageTime = Date.now();
+    this.metrics?.start();
     setTimeout(() => {
       this.connectionCheckInterval = setInterval(
         () => this.onConnectionCheck(),
@@ -1009,6 +1025,9 @@ export class ClientGameRunner {
       this.gameView.update(gu);
       this.webglBuilder?.update(this.gameView);
       this.renderer.tick();
+      if (gu.tickExecutionDuration !== undefined) {
+        this.metrics?.recordTickExecution(gu.tickExecutionDuration);
+      }
 
       // Emit tick metrics event for performance overlay
       this.eventBus.emit(
@@ -1021,6 +1040,7 @@ export class ClientGameRunner {
 
     const onconnect = () => {
       console.log("Connected to game server!");
+      this.awaitingStart = true;
       this.transport.rejoinGame(this.turnsSeen);
     };
 
@@ -1029,6 +1049,7 @@ export class ClientGameRunner {
       this.lastMessageTime = Date.now();
       if (message.type === "start") {
         console.log("starting game! in client game runner");
+        this.awaitingStart = false;
 
         if (this.gameView.config().isRandomSpawn()) {
           const goToPlayer = () => {
@@ -1051,7 +1072,7 @@ export class ClientGameRunner {
                 this.clientID,
                 true,
                 false,
-                translateText("error_modal.spawn_failed.title"),
+                "error_modal.spawn_failed.title",
               );
               return;
             }
@@ -1102,6 +1123,11 @@ export class ClientGameRunner {
           "error_modal.connection_error",
         );
       }
+      if (message.type === "pong") {
+        this.metrics?.recordRoundTrip(
+          Math.floor(performance.now()) - message.sentAt,
+        );
+      }
       if (message.type === "new_lobby") {
         // The host reused this private lobby: surface the successor id so the
         // group can hop over. NewLobbyPrompt navigates the host and prompts
@@ -1124,11 +1150,17 @@ export class ClientGameRunner {
         if (this.lastTickReceiveTime > 0) {
           // Calculate delay between receiving turn messages
           this.currentTickDelay = now - this.lastTickReceiveTime;
+          // Only the wire is worth measuring; a local game paces itself.
+          if (!this.transport.isLocal) {
+            this.metrics?.recordTickInterval(this.currentTickDelay);
+          }
         }
         this.lastTickReceiveTime = now;
 
         if (this.turnsSeen !== message.turn.turnNumber) {
-          console.error(
+          // Expected while the start message is still on its way (every
+          // multiplayer game start hits this); an error once it has arrived.
+          (this.awaitingStart ? console.debug : console.error)(
             `got wrong turn have turns ${this.turnsSeen}, received turn ${message.turn.turnNumber}`,
           );
         } else {
@@ -1167,6 +1199,7 @@ export class ClientGameRunner {
     if (!this.isActive) return;
 
     this.isActive = false;
+    this.metrics?.stop();
     this.worker.cleanup();
     this.transport.leaveGame();
     if (this.connectionCheckInterval) {
@@ -1575,6 +1608,8 @@ function showErrorModal(
   if (document.querySelector("#error-modal")) {
     return;
   }
+
+  reportGameError(error, message, gameID, clientID, heading);
 
   const translatedError = translateText(error);
   const displayError = translatedError === error ? error : translatedError;

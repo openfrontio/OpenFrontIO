@@ -388,6 +388,7 @@ export class CosmeticCard extends LitElement {
     } ${this.rarityHoverClass(rarity)}`;
     const priced = active.cosmetic as {
       artist?: string;
+      aiDisclosed?: boolean;
       priceHard?: number;
     } | null;
     const usdValue =
@@ -418,7 +419,7 @@ export class CosmeticCard extends LitElement {
     `;
     const name = html`<span
       data-cosmetic-name
-      class="w-full whitespace-normal break-words px-3 pt-3 text-center text-sm font-bold leading-tight text-white ${this
+      class="w-full capitalize  whitespace-normal break-words px-3 pt-3 text-center text-sm font-bold leading-tight text-white ${this
         .interactive
         ? "cursor-pointer"
         : ""}"
@@ -491,6 +492,7 @@ export class CosmeticCard extends LitElement {
         ${this.interactive && active.cosmetic !== null
           ? html`<cosmetic-info
                 .artist=${priced?.artist}
+                .aiDisclosed=${priced?.aiDisclosed}
                 .rarity=${rarity}
                 .colorPalette=${active.colorPalette?.name}
                 .showAdFree=${active.relationship === "purchasable" &&

@@ -7,6 +7,7 @@ import {
   PartialGameRecord,
 } from "../core/Schemas";
 import { replacer } from "../core/Util";
+import { registeredSite } from "./ClusterCheckin";
 import { logger } from "./Logger";
 import { ServerEnv } from "./ServerEnv";
 
@@ -84,5 +85,6 @@ export function finalizeGameRecord(
     gitCommit: ServerEnv.gitCommit(),
     subdomain: ServerEnv.subdomain(),
     domain: ServerEnv.domain(),
+    site: registeredSite(),
   };
 }

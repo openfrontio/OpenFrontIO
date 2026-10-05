@@ -1,5 +1,11 @@
+import { z } from "zod";
 import { TrainExecution } from "../execution/TrainExecution";
 import { PseudoRandom } from "../PseudoRandom";
+import type {
+  SnapshotReader,
+  SnapshotWriter,
+} from "../snapshot/SnapshotContext";
+import { snapshotType, zInt, zRef } from "../snapshot/SnapshotType";
 import { Game, Player, Unit, UnitType } from "./Game";
 import { TileRef } from "./GameMap";
 import { GameUpdateType } from "./GameUpdates";
@@ -59,8 +65,7 @@ export function createTrainStopHandlers(
 
 export class TrainStation {
   id: number = -1; // assigned by StationManager
-  private readonly stopHandlers: Partial<Record<UnitType, TrainStopHandler>> =
-    {};
+  private stopHandlers: Partial<Record<UnitType, TrainStopHandler>> = {};
   private cluster: Cluster | null = null;
   private railroads: Set<Railroad> = new Set();
   // Quick lookup from neighboring station to connecting railroad
@@ -155,7 +160,46 @@ export class TrainStation {
       handler.onStop(this.mg, this, trainExecution);
     }
   }
+
+  snapshot(w: SnapshotWriter): TrainStationState {
+    return {
+      id: this.id,
+      unit: w.unit(this.unit),
+      cluster: this.cluster ? w.cluster(this.cluster) : null,
+      railroads: [...this.railroads].map((r) => w.railroad(r)),
+      railroadByNeighbor: [...this.railroadByNeighbor].map(([s, r]) => [
+        w.station(s),
+        w.railroad(r),
+      ]),
+    };
+  }
+
+  /** Fills a prototype-only shell; see RestorableExecution.restoreSnapshot. */
+  restoreSnapshot(s: TrainStationState, r: SnapshotReader): void {
+    this.mg = r.game;
+    this.id = s.id;
+    this.unit = r.unit(s.unit);
+    this.stopHandlers = createTrainStopHandlers(new PseudoRandom(0));
+    this.cluster = s.cluster !== null ? r.cluster(s.cluster) : null;
+    this.railroads = new Set(s.railroads.map((i) => r.railroad(i)));
+    this.railroadByNeighbor = new Map(
+      s.railroadByNeighbor.map(([st, rr]) => [r.station(st), r.railroad(rr)]),
+    );
+  }
 }
+
+export const TrainStationSnapshot = snapshotType({
+  name: "TrainStation",
+  version: 1,
+  schema: z.object({
+    id: zInt(),
+    unit: zRef(),
+    cluster: zRef().nullable(),
+    railroads: z.array(zRef()),
+    railroadByNeighbor: z.array(z.tuple([zRef(), zRef()])),
+  }),
+});
+export type TrainStationState = z.infer<typeof TrainStationSnapshot.schema>;
 
 /**
  * Cluster of connected stations
@@ -245,7 +289,30 @@ export class Cluster {
     this.stations.clear();
     this.tradeStations.clear();
   }
+
+  snapshot(w: SnapshotWriter): ClusterState {
+    return {
+      stations: [...this.stations].map((s) => w.station(s)),
+      tradeStations: [...this.tradeStations].map((s) => w.station(s)),
+    };
+  }
+
+  /** Fills a prototype-only shell; see RestorableExecution.restoreSnapshot. */
+  restoreSnapshot(s: ClusterState, r: SnapshotReader): void {
+    this.stations = new Set(s.stations.map((i) => r.station(i)));
+    this.tradeStations = new Set(s.tradeStations.map((i) => r.station(i)));
+  }
 }
+
+export const ClusterSnapshot = snapshotType({
+  name: "Cluster",
+  version: 1,
+  schema: z.object({
+    stations: z.array(zRef()),
+    tradeStations: z.array(zRef()),
+  }),
+});
+export type ClusterState = z.infer<typeof ClusterSnapshot.schema>;
 
 function rel(
   player: Player,

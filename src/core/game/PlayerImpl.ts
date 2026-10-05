@@ -1,5 +1,26 @@
+import { z } from "zod";
 import { PseudoRandom } from "../PseudoRandom";
 import { ClientID } from "../Schemas";
+import {
+  newPlayerInfo,
+  playerInfoData,
+  PlayerInfoSchema,
+  UnitTypeSchema,
+} from "../snapshot/CommonSchemas";
+import type {
+  SnapshotReader,
+  SnapshotWriter,
+} from "../snapshot/SnapshotContext";
+import {
+  snapshotType,
+  zInt,
+  zNum,
+  zPlayerRef,
+  zRandom,
+  zRef,
+  zTile,
+  zTiles,
+} from "../snapshot/SnapshotType";
 import {
   assertNever,
   findClosestBy,
@@ -45,17 +66,17 @@ import {
 import { GameImpl } from "./GameImpl";
 import { andFN, manhattanDistFN, TileRef } from "./GameMap";
 import {
-  ATTACK_DELTA_INCOMING,
-  ATTACK_DELTA_OUTGOING,
-  diffPlayerUpdate,
-  packAttackTroopDeltas,
-} from "./GameUpdateUtils";
-import {
   AllianceView,
   AttackUpdate,
   GameUpdateType,
   PlayerUpdate,
 } from "./GameUpdates";
+import {
+  ATTACK_DELTA_INCOMING,
+  ATTACK_DELTA_OUTGOING,
+  diffPlayerUpdate,
+  packAttackTroopDeltas,
+} from "./GameUpdateUtils";
 import { ReadonlyTileSet, TileSet } from "./TileSet";
 import {
   bumpTraversalGeneration,
@@ -142,15 +163,12 @@ export class PlayerImpl implements Player {
   /** Bumped on every change that can alter a per-type answer over _units: add, remove, ownership
    *  transfer, level-up, construction toggle (see UnitImpl). Keys the three memos below. */
   public _myUnitsVersion = 0;
-  private readonly myUnitsMemo = new Map<
-    UnitType,
-    { version: number; list: Unit[] }
-  >();
-  private readonly myUnitCountMemo = new Map<
+  private myUnitsMemo = new Map<UnitType, { version: number; list: Unit[] }>();
+  private myUnitCountMemo = new Map<
     UnitType,
     { version: number; count: number }
   >();
-  private readonly myUnitsOwnedMemo = new Map<
+  private myUnitsOwnedMemo = new Map<
     UnitType,
     { version: number; owned: number }
   >();
@@ -191,9 +209,9 @@ export class PlayerImpl implements Player {
   constructor(
     private mg: GameImpl,
     private _smallID: number,
-    private readonly playerInfo: PlayerInfo,
+    private playerInfo: PlayerInfo,
     startTroops: number,
-    private readonly _team: Team | null,
+    private _team: Team | null,
   ) {
     this._troops = toInt(startTroops);
     this._gold = mg.config().startingGold(playerInfo);
@@ -1151,7 +1169,13 @@ export class PlayerImpl implements Player {
     if (gold <= 0n) return false;
     const removed = this.removeGold(gold);
     if (removed === 0n) return false;
+    // Must be read before addGold: the recipient's balance at this instant is
+    // the only chance to record how broke they were when the gold landed.
+    const recipientGoldBefore = recipient.gold();
     recipient.addGold(removed);
+    this.mg
+      .stats()
+      .goldDonationReceived(recipient, removed, recipientGoldBefore);
 
     this.sentDonations.push(new Donation(recipient, this.mg.ticks()));
     this.mg.addUpdate({
@@ -1937,4 +1961,219 @@ export class PlayerImpl implements Player {
   bestTransportShipSpawn(targetTile: TileRef): TileRef | false {
     return bestShoreDeploymentSource(this.mg, this, targetTile) ?? false;
   }
+
+  snapshot(w: SnapshotWriter): PlayerState {
+    const box = this.largestClusterBoundingBox;
+    return {
+      smallID: this._smallID,
+      info: playerInfoData(this.playerInfo),
+      team: this._team,
+      lastTileChange: this._lastTileChange,
+      tileChangeVersion: this._tileChangeVersion,
+      random: w.random(this._pseudo_random),
+      gold: this._gold,
+      troops: this._troops,
+      tradeGold: this._tradeGold,
+      trainGold: this._trainGold,
+      piracyGold: this._piracyGold,
+      goldEarned: this._goldEarned,
+      markedTraitorTick: this.markedTraitorTick,
+      markedDoomsdayClockTick: this.markedDoomsdayClockTick,
+      rottedAtTick: this.rottedAtTick,
+      betrayalCount: this._betrayalCount,
+      embargoes: [...this.embargoes.values()].map((e) => ({
+        target: w.player(e.target),
+        createdAt: e.createdAt,
+        isTemporary: e.isTemporary,
+      })),
+      tiles: w.tiles(this._tiles),
+      borderTiles: w.tiles(this._borderTiles),
+      units: this._units.map((u) => w.unit(u)),
+      unitsVersion: this._myUnitsVersion,
+      pastOutgoingAllianceRequests: this.pastOutgoingAllianceRequests.map((r) =>
+        w.allianceRequest(r),
+      ),
+      expiredAlliances: this._expiredAlliances.map((a) =>
+        w.alliance(a as MutableAlliance),
+      ),
+      targets: this.targets_.map((t) => ({
+        tick: t.tick,
+        target: w.player(t.target),
+      })),
+      outgoingEmojis: this.outgoingEmojis_.map((e) => ({ ...e })),
+      outgoingQuickChats: [...this.outgoingQuickChats_],
+      sentDonations: this.sentDonations.map((d) => ({
+        recipient: w.player(d.recipient),
+        tick: d.tick,
+      })),
+      relations: [...this.relations].map(([p, r]) => [w.player(p), r]),
+      lastDeleteUnitTick: this.lastDeleteUnitTick,
+      lastEmbargoAllTick: this.lastEmbargoAllTick,
+      incomingAttacks: this._incomingAttacks.map((a) => w.attack(a)),
+      outgoingAttacks: this._outgoingAttacks.map((a) => w.attack(a)),
+      outgoingLandAttacks: this._outgoingLandAttacks.map((a) => w.attack(a)),
+      alliances: this._alliances.map((a) => w.alliance(a)),
+      spawnTile: this._spawnTile ?? null,
+      isDisconnected: this._isDisconnected,
+      disconnectSnapshot: this._disconnectSnapshot
+        ? { ...this._disconnectSnapshot }
+        : null,
+      // Never assigned until the first PlayerExecution tick; keep that apart
+      // from an explicit null.
+      largestClusterBoundingBox: box
+        ? {
+            minX: box.min.x,
+            minY: box.min.y,
+            maxX: box.max.x,
+            maxY: box.max.y,
+          }
+        : box,
+      numUnitsConstructed: Object.entries(this.numUnitsConstructed).map(
+        ([type, n]) => [type as UnitType, n],
+      ),
+    };
+  }
+
+  /** Fills a prototype-only shell; see RestorableExecution.restoreSnapshot. */
+  restoreSnapshot(s: PlayerState, r: SnapshotReader): void {
+    this.mg = r.game;
+    this._smallID = s.smallID;
+    this.playerInfo = r.game.findPlayerInfo(s.info.id) ?? newPlayerInfo(s.info);
+    this._team = s.team;
+    this._lastTileChange = s.lastTileChange;
+    this._tileChangeVersion = s.tileChangeVersion;
+    this._pseudo_random = r.random(s.random);
+    this._gold = s.gold;
+    this._troops = s.troops;
+    this._tradeGold = s.tradeGold;
+    this._trainGold = s.trainGold;
+    this._piracyGold = s.piracyGold;
+    this._goldEarned = s.goldEarned;
+    this.markedTraitorTick = s.markedTraitorTick;
+    this.markedDoomsdayClockTick = s.markedDoomsdayClockTick;
+    this.rottedAtTick = s.rottedAtTick;
+    this._betrayalCount = s.betrayalCount;
+    this.embargoes = new Map();
+    for (const e of s.embargoes) {
+      this.embargoes.set(r.playerID(e.target), {
+        target: r.player(e.target),
+        createdAt: e.createdAt,
+        isTemporary: e.isTemporary,
+      });
+    }
+    this._tiles = new TileSet(s.tiles);
+    this._borderTiles = new TileSet(s.borderTiles);
+    this._units = s.units.map((u) => r.unit(u));
+    this._myUnitsVersion = s.unitsVersion;
+    this.myUnitsMemo = new Map();
+    this.myUnitCountMemo = new Map();
+    this.myUnitsOwnedMemo = new Map();
+    this.pastOutgoingAllianceRequests = s.pastOutgoingAllianceRequests.map(
+      (i) => r.allianceRequest<AllianceRequest>(i),
+    );
+    this._expiredAlliances = s.expiredAlliances.map((i) => r.alliance(i));
+    this.targets_ = s.targets.map((t) => ({
+      tick: t.tick,
+      target: r.player(t.target),
+    }));
+    this.outgoingEmojis_ = s.outgoingEmojis.map((e) => ({ ...e }));
+    this.outgoingQuickChats_ = new Map(s.outgoingQuickChats);
+    this.sentDonations = s.sentDonations.map(
+      (d) => new Donation(r.player(d.recipient), d.tick),
+    );
+    this.relations = new Map(
+      s.relations.map(([p, rel]) => [r.player(p), rel] as const),
+    );
+    this.lastDeleteUnitTick = s.lastDeleteUnitTick;
+    this.lastEmbargoAllTick = s.lastEmbargoAllTick;
+    this._incomingAttacks = s.incomingAttacks.map((i) => r.attack(i));
+    this._outgoingAttacks = s.outgoingAttacks.map((i) => r.attack(i));
+    this._outgoingLandAttacks = s.outgoingLandAttacks.map((i) => r.attack(i));
+    this._alliances = s.alliances.map((i) => r.alliance(i));
+    this._spawnTile = s.spawnTile ?? undefined;
+    this._isDisconnected = s.isDisconnected;
+    this._disconnectSnapshot = s.disconnectSnapshot
+      ? { ...s.disconnectSnapshot }
+      : null;
+    this.lastSentUpdate = undefined;
+    const box = s.largestClusterBoundingBox;
+    this.largestClusterBoundingBox = box
+      ? {
+          min: new Cell(box.minX, box.minY),
+          max: new Cell(box.maxX, box.maxY),
+        }
+      : (box as null);
+    this.numUnitsConstructed = Object.fromEntries(s.numUnitsConstructed);
+    this.nearbyMemo = null;
+  }
 }
+
+export const PlayerSnapshot = snapshotType({
+  name: "Player",
+  version: 1,
+  schema: z.object({
+    smallID: zInt(),
+    info: PlayerInfoSchema,
+    team: z.string().nullable(),
+    lastTileChange: zInt(),
+    tileChangeVersion: zInt(),
+    random: zRandom(),
+    gold: z.bigint(),
+    troops: z.bigint(),
+    tradeGold: z.bigint(),
+    trainGold: z.bigint(),
+    piracyGold: z.bigint(),
+    goldEarned: z.bigint(),
+    markedTraitorTick: zInt(),
+    markedDoomsdayClockTick: zInt(),
+    rottedAtTick: zInt(),
+    betrayalCount: zInt(),
+    embargoes: z.array(
+      z.object({
+        target: zPlayerRef(),
+        createdAt: zInt(),
+        isTemporary: z.boolean(),
+      }),
+    ),
+    tiles: zTiles(),
+    borderTiles: zTiles(),
+    units: z.array(zRef()),
+    unitsVersion: zInt(),
+    pastOutgoingAllianceRequests: z.array(zRef()),
+    expiredAlliances: z.array(zRef()),
+    targets: z.array(z.object({ tick: zInt(), target: zPlayerRef() })),
+    outgoingEmojis: z.array(
+      z.object({
+        message: z.string(),
+        senderID: zInt(),
+        recipientID: z.union([zInt(), z.literal(AllPlayers)]),
+        createdAt: zInt(),
+      }),
+    ),
+    outgoingQuickChats: z.array(z.tuple([zInt(), zInt()])),
+    sentDonations: z.array(z.object({ recipient: zPlayerRef(), tick: zInt() })),
+    relations: z.array(z.tuple([zPlayerRef(), zNum()])),
+    lastDeleteUnitTick: zInt(),
+    lastEmbargoAllTick: zInt(),
+    incomingAttacks: z.array(zRef()),
+    outgoingAttacks: z.array(zRef()),
+    outgoingLandAttacks: z.array(zRef()),
+    alliances: z.array(zRef()),
+    spawnTile: zTile().nullable(),
+    isDisconnected: z.boolean(),
+    disconnectSnapshot: z
+      .object({
+        currentTick: zInt(),
+        teamTiles: zInt(),
+        totalLand: zInt(),
+        wasAlive: z.boolean(),
+      })
+      .nullable(),
+    largestClusterBoundingBox: z
+      .object({ minX: zInt(), minY: zInt(), maxX: zInt(), maxY: zInt() })
+      .nullable()
+      .optional(),
+    numUnitsConstructed: z.array(z.tuple([UnitTypeSchema, zInt()])),
+  }),
+});
+export type PlayerState = z.infer<typeof PlayerSnapshot.schema>;

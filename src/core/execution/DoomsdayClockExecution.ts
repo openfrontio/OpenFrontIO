@@ -1,3 +1,4 @@
+import { z } from "zod";
 import {
   doomsdayClockDrain,
   doomsdayClockRequiredTiles,
@@ -17,6 +18,13 @@ import {
   UnitType,
 } from "../game/Game";
 import { TileRef } from "../game/GameMap";
+import { execSnapshotType } from "../snapshot/ExecutionSnapshot";
+import type {
+  ExecRecord,
+  SnapshotReader,
+  SnapshotWriter,
+} from "../snapshot/SnapshotContext";
+import { zInt, zPlayerRef, zTiles } from "../snapshot/SnapshotType";
 
 /**
  * Doomsday Clock (anti-stall). Once armed, every side must hold a rising
@@ -385,4 +393,59 @@ export class DoomsdayClockExecution implements Execution {
   activeDuringSpawnPhase(): boolean {
     return false;
   }
+
+  snapshot(w: SnapshotWriter): ExecRecord {
+    return DoomsdayClockExecutionSnapshot.write({
+      active: this.active,
+      initialized: this.mg !== null,
+      // Both maps in insertion order: the front is iterated when rot spreads.
+      rotState: [...this.rotState].map(([player, st]) => ({
+        player,
+        since: st.since,
+        held: st.held,
+        frontTiles: w.tiles(st.front.keys()),
+        frontRotted: [...st.front.values()],
+      })),
+    });
+  }
+
+  restoreSnapshot(s: DoomsdayClockState, r: SnapshotReader): void {
+    this.active = s.active;
+    this.mg = s.initialized ? r.game : null;
+    this.rotState = new Map(
+      s.rotState.map((st) => [
+        st.player,
+        {
+          since: st.since,
+          held: st.held,
+          front: new Map(
+            Array.from(st.frontTiles, (t, i) => [t, st.frontRotted[i]]),
+          ),
+        },
+      ]),
+    );
+  }
 }
+
+const DoomsdayClockStateSchema = z.object({
+  active: z.boolean(),
+  initialized: z.boolean(),
+  rotState: z.array(
+    z.object({
+      player: zPlayerRef(),
+      since: zInt(),
+      held: zInt(),
+      frontTiles: zTiles(),
+      // Rotted-neighbour count per front tile, same order as frontTiles.
+      frontRotted: z.array(zInt()),
+    }),
+  ),
+});
+type DoomsdayClockState = z.infer<typeof DoomsdayClockStateSchema>;
+
+export const DoomsdayClockExecutionSnapshot = execSnapshotType({
+  name: "DoomsdayClock",
+  version: 1,
+  schema: DoomsdayClockStateSchema,
+  cls: () => DoomsdayClockExecution,
+});

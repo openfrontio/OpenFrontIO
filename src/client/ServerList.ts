@@ -124,6 +124,11 @@ let lastAttempt: { at: number; failed: boolean } | null = null;
 let pickedLetter: string | null = null;
 let pollTimer: ReturnType<typeof setTimeout> | null = null;
 let polling = false;
+// A match is running (setServerListInGame). See scheduleNextPoll.
+let inGame = false;
+// A beat came due while the heartbeat was paused (hidden tab, or in a match)
+// and was skipped; it runs when the pause lifts. See scheduleNextPoll.
+let beatSkipped = false;
 let reachable: boolean | null = null;
 // Consecutive unanswered attempts (a 5xx is one), reset by any other
 // answer. Only this, and not
@@ -167,6 +172,7 @@ export function resetServerList(): void {
   inflight = null;
   lastAttempt = null;
   pickedLetter = null;
+  inGame = false;
   reachable = null;
   consecutiveFailures = 0;
   manualRetry.reset();
@@ -440,12 +446,15 @@ export function startServerListPolling(): void {
     return;
   }
   polling = true;
+  document.addEventListener("visibilitychange", onVisibilityChange);
   runPoll();
 }
 
 /** Test-only; also used by resetServerList. */
 export function stopServerListPolling(): void {
   polling = false;
+  beatSkipped = false;
+  document.removeEventListener("visibilitychange", onVisibilityChange);
   if (pollTimer !== null) {
     clearTimeout(pollTimer);
     pollTimer = null;
@@ -466,15 +475,47 @@ function runPoll(): void {
 // updated for the attempt that just settled -- so an answered attempt that
 // carried no list (a 404 for this site) waits the base interval rather than
 // inheriting an earlier outage's backoff.
+//
+// A hidden tab does not beat, and neither does one in a match. Most open
+// tabs are in the background or playing; nobody can click Join from either,
+// the reachability UI is not on screen (the desktop status bar hides itself
+// in-game), a running game already knows its server, and ensureServerList
+// serves the cached list whatever its age. So a beat that comes due while
+// paused is skipped and runs the moment the pause lifts. That is never sooner
+// than it was due, so switching tabs or leaving a match cannot add requests.
 function scheduleNextPoll(gotList: boolean): void {
   if (!polling) return;
   pollTimer = setTimeout(
     () => {
       pollTimer = null;
+      if (heartbeatPaused()) {
+        beatSkipped = true;
+        return;
+      }
       runPoll();
     },
     gotList ? REFRESH_INTERVAL_MS : retryDelayMs(consecutiveFailures),
   );
+}
+
+function heartbeatPaused(): boolean {
+  return document.hidden || inGame;
+}
+
+function onVisibilityChange(): void {
+  if (heartbeatPaused() || !polling || !beatSkipped) return;
+  beatSkipped = false;
+  runPoll();
+}
+
+/**
+ * Told by Main.setInGameSignal, the single point where "a match is running"
+ * is published. The heartbeat pauses for the length of the match and runs
+ * the beat it skipped, if any, on the way back to the menu.
+ */
+export function setServerListInGame(value: boolean): void {
+  inGame = value;
+  onVisibilityChange();
 }
 
 /**

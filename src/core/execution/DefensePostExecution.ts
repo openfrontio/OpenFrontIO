@@ -1,4 +1,12 @@
+import { z } from "zod";
 import { Execution, Game, Unit } from "../game/Game";
+import { execSnapshotType } from "../snapshot/ExecutionSnapshot";
+import type {
+  ExecRecord,
+  SnapshotReader,
+  SnapshotWriter,
+} from "../snapshot/SnapshotContext";
+import { zInt, zRef } from "../snapshot/SnapshotType";
 import { ShellExecution } from "./ShellExecution";
 
 export class DefensePostExecution implements Execution {
@@ -105,4 +113,41 @@ export class DefensePostExecution implements Execution {
   activeDuringSpawnPhase(): boolean {
     return false;
   }
+
+  snapshot(w: SnapshotWriter): ExecRecord {
+    return DefensePostExecutionSnapshot.write({
+      active: this.active,
+      initialized: this.mg !== undefined,
+      post: w.unit(this.post),
+      target: w.unitOrNull(this.target),
+      lastShellAttack: this.lastShellAttack,
+      alreadySentShell: [...this.alreadySentShell].map((u) => w.unit(u)),
+    });
+  }
+
+  restoreSnapshot(s: DefensePostState, r: SnapshotReader): void {
+    this.active = s.active;
+    if (s.initialized) this.mg = r.game;
+    this.post = r.unit(s.post);
+    this.target = r.unitOrNull(s.target);
+    this.lastShellAttack = s.lastShellAttack;
+    this.alreadySentShell = new Set(s.alreadySentShell.map((i) => r.unit(i)));
+  }
 }
+
+const DefensePostStateSchema = z.object({
+  active: z.boolean(),
+  initialized: z.boolean(),
+  post: zRef(),
+  target: zRef().nullable(),
+  lastShellAttack: zInt(),
+  alreadySentShell: z.array(zRef()),
+});
+type DefensePostState = z.infer<typeof DefensePostStateSchema>;
+
+export const DefensePostExecutionSnapshot = execSnapshotType({
+  name: "DefensePost",
+  version: 1,
+  schema: DefensePostStateSchema,
+  cls: () => DefensePostExecution,
+});

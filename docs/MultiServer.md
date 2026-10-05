@@ -498,6 +498,15 @@ blue for a game that lived on a host its list could not name.
   rest of boot, and the list is refreshed every 30s on success. Each fetch
   is bounded (4s), so offline singleplayer waits seconds at worst and never
   hangs.
+- **A hidden tab does not beat, and neither does one in a match.** A beat
+  that comes due while `document.hidden`, or while a match is running
+  (`setServerListInGame`, called from `Main.setInGameSignal`), is skipped
+  and runs when the pause lifts — never sooner than it was due, so switching
+  tabs or leaving a match adds no requests. Nobody can click Join from
+  either state, the desktop status bar hides itself in-game, a running game
+  already knows its server, and `ensureServerList()` serves the cached list
+  whatever its age, so the only cost is a list that is revalidated on return
+  instead of while nobody was looking.
 - **Failed attempts back off.** `retryDelayMs(consecutiveFailures)` is the
   schedule, and it is a pure function so it can be read without a clock: 10s
   after the first unanswered attempt, doubling on each further consecutive

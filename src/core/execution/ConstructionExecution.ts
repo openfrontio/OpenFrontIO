@@ -1,5 +1,14 @@
+import { z } from "zod";
 import { Execution, Game, Player, Tick, Unit, UnitType } from "../game/Game";
 import { TileRef } from "../game/GameMap";
+import { UnitTypeSchema } from "../snapshot/CommonSchemas";
+import { execSnapshotType } from "../snapshot/ExecutionSnapshot";
+import type {
+  ExecRecord,
+  SnapshotReader,
+  SnapshotWriter,
+} from "../snapshot/SnapshotContext";
+import { zInt, zPlayerRef, zRef } from "../snapshot/SnapshotType";
 import { CityExecution } from "./CityExecution";
 import { DefensePostExecution } from "./DefensePostExecution";
 import { FactoryExecution } from "./FactoryExecution";
@@ -179,4 +188,52 @@ export class ConstructionExecution implements Execution {
   activeDuringSpawnPhase(): boolean {
     return false;
   }
+
+  snapshot(w: SnapshotWriter): ExecRecord {
+    return ConstructionExecutionSnapshot.write({
+      active: this.active,
+      initialized: this.mg !== undefined,
+      player: w.player(this.player),
+      constructionType: this.constructionType,
+      tile: this.tile,
+      rocketDirectionUp: this.rocketDirectionUp,
+      amount: this.amount,
+      structure: w.unitOrNull(this.structure),
+      ticksUntilComplete: this.ticksUntilComplete,
+    });
+  }
+
+  restoreSnapshot(s: ConstructionState, r: SnapshotReader): void {
+    this.active = s.active;
+    if (s.initialized) this.mg = r.game;
+    this.player = r.player(s.player);
+    this.constructionType = s.constructionType;
+    this.tile = s.tile;
+    this.rocketDirectionUp = s.rocketDirectionUp;
+    this.amount = s.amount;
+    this.structure = r.unitOrNull(s.structure);
+    this.ticksUntilComplete = s.ticksUntilComplete as Tick;
+  }
 }
+
+const ConstructionStateSchema = z.object({
+  active: z.boolean(),
+  initialized: z.boolean(),
+  player: zPlayerRef(),
+  constructionType: UnitTypeSchema,
+  // Validated in init, so a pending execution may hold any number.
+  tile: zInt(),
+  rocketDirectionUp: z.boolean().optional(),
+  amount: zInt().optional(),
+  structure: zRef().nullable(),
+  // Unset until a structure with a build time is placed.
+  ticksUntilComplete: zInt().optional(),
+});
+type ConstructionState = z.infer<typeof ConstructionStateSchema>;
+
+export const ConstructionExecutionSnapshot = execSnapshotType({
+  name: "Construction",
+  version: 1,
+  schema: ConstructionStateSchema,
+  cls: () => ConstructionExecution,
+});

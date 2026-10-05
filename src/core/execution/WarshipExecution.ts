@@ -1,3 +1,4 @@
+import { z } from "zod";
 import {
   Execution,
   Game,
@@ -11,6 +12,25 @@ import { TileRef } from "../game/GameMap";
 import { WaterPathFinder } from "../pathfinding/PathFinder";
 import { PathStatus } from "../pathfinding/types";
 import { PseudoRandom } from "../PseudoRandom";
+import { execSnapshotType } from "../snapshot/ExecutionSnapshot";
+import {
+  restoreWaterPathFinder,
+  WaterPathFinderSchema,
+  waterPathFinderState,
+} from "../snapshot/PathfinderSnapshots";
+import type {
+  ExecRecord,
+  SnapshotReader,
+  SnapshotWriter,
+} from "../snapshot/SnapshotContext";
+import {
+  zInt,
+  zNum,
+  zPlayerRef,
+  zRandom,
+  zRef,
+  zTile,
+} from "../snapshot/SnapshotType";
 import { findMinimumBy } from "../Util";
 import { ShellExecution } from "./ShellExecution";
 
@@ -822,4 +842,76 @@ export class WarshipExecution implements Execution {
     }
     return undefined;
   }
+
+  snapshot(w: SnapshotWriter): ExecRecord {
+    return WarshipExecutionSnapshot.write({
+      input: isUnit(this.input)
+        ? { unit: w.unit(this.input) }
+        : {
+            owner: w.player(this.input.owner),
+            patrolTile: this.input.patrolTile,
+          },
+      initialized: this.mg !== undefined,
+      random: this.random === undefined ? null : w.random(this.random),
+      warship: this.warship === undefined ? null : w.unit(this.warship),
+      pathfinder:
+        this.pathfinder === undefined
+          ? null
+          : waterPathFinderState(this.pathfinder),
+      lastShellAttack: this.lastShellAttack,
+      alreadySentShell: [...this.alreadySentShell].map((u) => w.unit(u)),
+      lastManualMoveTickRetreatDisabled: this.lastManualMoveTickRetreatDisabled,
+      lastObservedPatrolTile: this.lastObservedPatrolTile,
+      activeHealingRemainder: this.activeHealingRemainder,
+      lastEmittedCombat: this.lastEmittedCombat,
+    });
+  }
+
+  restoreSnapshot(s: WarshipExecutionState, r: SnapshotReader): void {
+    this.input =
+      "unit" in s.input
+        ? r.unit(s.input.unit)
+        : { owner: r.player(s.input.owner), patrolTile: s.input.patrolTile };
+    if (s.initialized) this.mg = r.game;
+    if (s.random !== null) this.random = r.random(s.random);
+    if (s.warship !== null) this.warship = r.unit(s.warship);
+    if (s.pathfinder !== null) {
+      this.pathfinder = restoreWaterPathFinder(r.game, s.pathfinder);
+    }
+    this.lastShellAttack = s.lastShellAttack;
+    this.alreadySentShell = new Set(s.alreadySentShell.map((i) => r.unit(i)));
+    this.lastManualMoveTickRetreatDisabled =
+      s.lastManualMoveTickRetreatDisabled;
+    this.lastObservedPatrolTile = s.lastObservedPatrolTile;
+    this.activeHealingRemainder = s.activeHealingRemainder;
+    this.lastEmittedCombat = s.lastEmittedCombat;
+  }
 }
+
+const WarshipExecutionStateSchema = z.object({
+  /** An existing warship, or the params to build one in init(). */
+  input: z.union([
+    z.object({ unit: zRef() }),
+    z.object({ owner: zPlayerRef(), patrolTile: zTile() }),
+  ]),
+  initialized: z.boolean(),
+  random: zRandom().nullable(),
+  /** Null before init() or when the spawn failed. */
+  warship: zRef().nullable(),
+  pathfinder: WaterPathFinderSchema.nullable(),
+  lastShellAttack: zInt(),
+  /** In insertion order. */
+  alreadySentShell: z.array(zRef()),
+  lastManualMoveTickRetreatDisabled: zInt(),
+  lastObservedPatrolTile: zTile().optional(),
+  activeHealingRemainder: zNum(),
+  lastEmittedCombat: z.boolean(),
+});
+type WarshipExecutionState = z.infer<typeof WarshipExecutionStateSchema>;
+
+export const WarshipExecutionSnapshot = execSnapshotType({
+  name: "Warship",
+  version: 1,
+  schema: WarshipExecutionStateSchema,
+  cls: () => WarshipExecution,
+});

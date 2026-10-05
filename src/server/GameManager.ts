@@ -169,7 +169,9 @@ export class GameManager {
           // start with an empty roster, emitting a playerless match_started
           // and running turns for nobody until the reaper caught up.
           if (game.numClients() === 0) {
-            this.log.info("not starting game, no clients connected", {
+            // Debug, not info: this fires on every tick until the reaper
+            // runs, which on idle staging previews was ~700k lines a day.
+            this.log.debug("not starting game, no clients connected", {
               gameID: id,
             });
           } else {
@@ -200,6 +202,10 @@ export class GameManager {
       }
 
       if (phase === GamePhase.Finished) {
+        // The expected end of a game that hit the cap, not a fault.
+        if (game.pastMaxDuration()) {
+          this.log.info("game past max duration", { gameID: id });
+        }
         try {
           game.end();
         } catch (error) {

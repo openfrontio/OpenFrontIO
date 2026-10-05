@@ -2,12 +2,24 @@ import {
   PlayerStatsLeafSchema,
   PlayerStatsTreeSchema,
 } from "../src/core/ApiSchemas";
+import { AllPlayersStats, ClientSendWinnerMessage } from "../src/core/Schemas";
 import {
   ALLIANCE_INDEX_LONGEST_HELD,
   ATTACK_INDEX_MAX_RECV,
+  BOAT_INDEX_LOST,
+  DONATION_INDEX_GOLD_RECV,
+  DONATION_INDEX_GOLD_RECV_BROKE,
+  GOLD_INDEX_DONATE_RECV,
   PlayerStatsSchema,
   TILE_INDEX_DRAWDOWN_TROUGH,
 } from "../src/core/StatsSchemas";
+import {
+  createGameWireContext,
+  decodeClientMessage,
+  encodeClientMessage,
+} from "../src/core/ZbinWire";
+
+const CLIENT = "AbCdEfGh";
 
 function testPlayerSchema(
   json: string,
@@ -183,11 +195,66 @@ describe("PlayerStats new fields", () => {
     expect(parsed?.peakTroops).toBe(250000n);
   });
 
+  it("parses a boat loss count", () => {
+    const parsed = PlayerStatsSchema.parse({
+      boats: { trans: ["4", "3", "0", "1", "2"] },
+    });
+    expect(parsed?.boats?.trans?.[BOAT_INDEX_LOST]).toBe(2n);
+  });
+
+  it("parses a banked record written before boat losses existed", () => {
+    const parsed = PlayerStatsSchema.parse({
+      boats: { trans: ["4", "3", "0", "1"], trade: ["9", "8", "1", "0"] },
+    });
+    expect(parsed?.boats?.trans?.[BOAT_INDEX_LOST]).toBeUndefined();
+    expect(parsed?.boats?.trade?.[BOAT_INDEX_LOST]).toBeUndefined();
+  });
+
+  it("parses donation counts and the gold they carried", () => {
+    const parsed = PlayerStatsSchema.parse({
+      donations: ["7", "3"],
+      gold: ["1", "2", "3", "4", "5", "6", "900000"],
+    });
+    expect(parsed?.donations?.[DONATION_INDEX_GOLD_RECV]).toBe(7n);
+    expect(parsed?.donations?.[DONATION_INDEX_GOLD_RECV_BROKE]).toBe(3n);
+    expect(parsed?.gold?.[GOLD_INDEX_DONATE_RECV]).toBe(900000n);
+  });
+
+  it("parses a banked record written before donations were counted", () => {
+    const parsed = PlayerStatsSchema.parse({
+      gold: ["1", "2", "3", "4", "5", "6"],
+    });
+    expect(parsed?.donations).toBeUndefined();
+    expect(parsed?.gold?.[GOLD_INDEX_DONATE_RECV]).toBeUndefined();
+  });
+
+  it("parses a spawn tile", () => {
+    const parsed = PlayerStatsSchema.parse({ spawnTile: 123456 });
+    expect(parsed?.spawnTile).toBe(123456);
+  });
+
+  it("carries a spawn tile over the binary wire", () => {
+    const stats: AllPlayersStats = {
+      [CLIENT]: { attacks: [1n], donations: [2n], spawnTile: 98765 },
+    };
+    const players = [{ clientID: CLIENT }];
+    const decoded = decodeClientMessage(
+      encodeClientMessage(
+        { type: "winner", winner: ["player", CLIENT], allPlayersStats: stats },
+        createGameWireContext(players),
+      ),
+      createGameWireContext(players),
+    ) as ClientSendWinnerMessage;
+    expect(decoded.allPlayersStats[CLIENT]).toEqual(stats[CLIENT]);
+  });
+
   it("parses a record with none of the new fields", () => {
     const parsed = PlayerStatsSchema.parse({ attacks: ["1", "2", "3"] });
+    expect(parsed?.spawnTile).toBeUndefined();
     expect(parsed?.tiles).toBeUndefined();
     expect(parsed?.alliances).toBeUndefined();
     expect(parsed?.peakTroops).toBeUndefined();
+    expect(parsed?.donations).toBeUndefined();
     expect(parsed?.attacks?.[ATTACK_INDEX_MAX_RECV]).toBeUndefined();
   });
 });

@@ -19,7 +19,11 @@ vi.mock("../../src/client/Utils", () => ({
     params ? `${key} ${Object.values(params).join(" ")}` : key,
 }));
 
-import { cancelSubscription, invalidateUserMe } from "../../src/client/Api";
+import {
+  cancelSubscription,
+  invalidateUserMe,
+  openSubscriptionPortal,
+} from "../../src/client/Api";
 import { SubscriptionPanel } from "../../src/client/components/SubscriptionPanel";
 import {
   showInGameAlert,
@@ -137,6 +141,61 @@ describe("subscription-panel", () => {
     });
   });
 
+  // The renewal bounced. Stripe is still retrying, and the portal is where
+  // the card gets fixed, so it is the only thing on offer.
+  describe("past_due", () => {
+    beforeEach(async () => {
+      el.sub = sub({
+        status: "past_due",
+        currentPeriodEnd: null,
+        provider: "stripe",
+      });
+      await el.updateComplete;
+    });
+
+    afterEach(() => {
+      delete (window as unknown as { openfrontDesktop?: unknown })
+        .openfrontDesktop;
+    });
+
+    const keys = () =>
+      Array.from(el.querySelectorAll("o-button")).map((b) =>
+        b.getAttribute("translationKey"),
+      );
+
+    it("says the payment failed and offers only Manage billing", async () => {
+      expect(text()).toContain("account_modal.sub_past_due_note");
+      expect(keys()).toEqual(["store.manage_billing"]);
+      expect(text()).not.toContain("account_modal.cancel_subscription");
+    });
+
+    it("opens the billing portal", async () => {
+      const open = vi.spyOn(window, "open").mockImplementation(() => null);
+      el.querySelector("o-button")!.dispatchEvent(
+        new MouseEvent("click", { bubbles: true }),
+      );
+      await vi.waitFor(() =>
+        expect(open).toHaveBeenCalledWith(
+          "https://portal.example",
+          "_blank",
+          "noopener,noreferrer",
+        ),
+      );
+      expect(openSubscriptionPortal).toHaveBeenCalled();
+      open.mockRestore();
+    });
+
+    it("says where billing is managed inside the desktop shell", async () => {
+      (window as unknown as { openfrontDesktop?: unknown }).openfrontDesktop = {
+        steam: {},
+      };
+      el.requestUpdate();
+      await el.updateComplete;
+      expect(keys()).toEqual([]);
+      expect(text()).toContain("account_modal.manage_subscription_on_web");
+    });
+  });
+
   it("swaps the actions for a subscription that is winding down", async () => {
     el.sub = sub({ cancelAtPeriodEnd: true });
     await el.updateComplete;
@@ -183,12 +242,42 @@ describe("subscription-panel", () => {
     });
 
     it("says the access ends instead of claiming it renews", () => {
-      expect(text()).toContain("account_modal.sub_granted_ends_on");
+      expect(text()).toContain("account_modal.sub_granted_perks_end_on");
       expect(text()).not.toContain("account_modal.sub_renews_on");
     });
 
     it("says what the subscription actually is", () => {
       expect(text()).toContain("account_modal.sub_granted_from_purchase");
+    });
+
+    // The forum complaint in one line: "ends" read as the game ending. The
+    // panel names the tier on the date line and lists what stays afterwards.
+    it("names the tier's perks on the date line, not access", () => {
+      expect(text()).toContain(
+        `account_modal.sub_granted_perks_end_on plutonium ${PERIOD_END_TEXT}`,
+      );
+    });
+
+    it("lists what the player keeps once the month ends", () => {
+      expect(text()).toContain("free_play.after_grant_heading");
+      expect(text()).toContain("free_play.full_game");
+      // Only the desktop build is ad-free for everyone; the website is not.
+      expect(text()).not.toContain("free_play.ad_free_steam");
+    });
+
+    it("promises ad-free play only inside the desktop shell", async () => {
+      (window as unknown as { openfrontDesktop?: unknown }).openfrontDesktop = {
+        steam: {},
+      };
+      try {
+        el.sub = granted();
+        el.requestUpdate();
+        await el.updateComplete;
+        expect(text()).toContain("free_play.ad_free_steam");
+      } finally {
+        delete (window as unknown as { openfrontDesktop?: unknown })
+          .openfrontDesktop;
+      }
     });
 
     // Not a link — the desktop build must not hand over a route to a payment
@@ -224,7 +313,8 @@ describe("subscription-panel", () => {
       await el.updateComplete;
       expect(text()).toContain("account_modal.sub_granted_indefinite");
       expect(text()).not.toContain("account_modal.sub_granted_from_purchase");
-      expect(text()).not.toContain("account_modal.sub_granted_ends_on");
+      expect(text()).not.toContain("account_modal.sub_granted_perks_end_on");
+      expect(text()).not.toContain("free_play.after_grant_heading");
       expect(text()).not.toContain("account_modal.cancel_subscription");
     });
   });
@@ -262,7 +352,7 @@ describe("subscription-panel", () => {
 
     it("still renders the renews line", () => {
       expect(text()).toContain("account_modal.sub_renews_on");
-      expect(text()).not.toContain("account_modal.sub_granted_ends_on");
+      expect(text()).not.toContain("account_modal.sub_granted_perks_end_on");
     });
   });
 

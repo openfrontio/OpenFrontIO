@@ -52,7 +52,7 @@ export class LeaderboardClanTable extends LitElement {
         }),
       );
     } catch (error) {
-      console.error("loadClanLeaderboard: request failed", error);
+      console.warn("loadClanLeaderboard: request failed", error);
       this.error = translateText("leaderboard_modal.error");
     } finally {
       this.isLoading = false;

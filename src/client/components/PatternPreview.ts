@@ -1,6 +1,7 @@
 import { Colord } from "colord";
 import { base64url } from "jose";
-import { html, TemplateResult } from "lit";
+import { html, LitElement, PropertyValues, TemplateResult } from "lit";
+import { customElement, property } from "lit/decorators.js";
 import { DefaultPattern } from "../../core/CosmeticSchemas";
 import { PatternDecoder } from "../../core/PatternDecoder";
 import { PlayerPattern } from "../../core/Schemas";
@@ -14,12 +15,74 @@ export function renderPatternPreview(
   if (pattern === null) {
     return renderBlankPreview();
   }
-  return html`<img
-    src="${generatePreviewDataUrl(pattern, width, height)}"
-    alt="Pattern preview"
-    class="w-full h-full object-contain [image-rendering:pixelated] pointer-events-none"
-    draggable="false"
-  />`;
+  return html`<pattern-preview-canvas
+    .pattern=${pattern}
+    .targetWidth=${width}
+    .targetHeight=${height}
+  ></pattern-preview-canvas>`;
+}
+
+/**
+ * Paints straight into its own canvas rather than a PNG data URL, so a grid
+ * of these never pays for an encode and keeps nothing alive once removed.
+ */
+@customElement("pattern-preview-canvas")
+export class PatternPreviewCanvas extends LitElement {
+  @property({ attribute: false }) pattern!: PlayerPattern;
+  @property({ attribute: false }) targetWidth = 150;
+  @property({ attribute: false }) targetHeight = 150;
+
+  private paintedKey: string | null = null;
+
+  createRenderRoot() {
+    return this;
+  }
+
+  connectedCallback() {
+    super.connectedCallback();
+    this.classList.add("block", "h-full", "w-full");
+    // Reconnecting doesn't re-render, but disconnecting released the pixels.
+    if (this.hasUpdated) this.paint();
+  }
+
+  disconnectedCallback() {
+    super.disconnectedCallback();
+    // WebKit keeps a canvas's backing store until it is resized to nothing,
+    // even once detached, and iOS caps total canvas memory per page.
+    const canvas = this.querySelector("canvas");
+    if (canvas) {
+      canvas.width = 0;
+      canvas.height = 0;
+    }
+    this.paintedKey = null;
+  }
+
+  render() {
+    return html`<canvas
+      role="img"
+      aria-label=${translateText("cosmetics.pattern_preview")}
+      class="w-full h-full object-contain [image-rendering:pixelated] pointer-events-none"
+    ></canvas>`;
+  }
+
+  protected updated(changed: PropertyValues<this>): void {
+    super.updated(changed);
+    this.paint();
+  }
+
+  private paint(): void {
+    const canvas = this.querySelector("canvas");
+    const key = previewKey(this.pattern, this.targetWidth, this.targetHeight);
+    if (canvas === null || key === this.paintedKey) return;
+    this.paintedKey = paintPattern(
+      canvas,
+      this.pattern,
+      this.targetWidth,
+      this.targetHeight,
+    )
+      ? key
+      : null;
+  }
 }
 
 function renderBlankPreview(): TemplateResult {
@@ -52,24 +115,32 @@ const patternCache = new Map<string, string>();
 const DEFAULT_PRIMARY = new Colord("#ffffff").toRgb();
 const DEFAULT_SECONDARY = new Colord("#000000").toRgb();
 
-export function generatePreviewDataUrl(
-  pattern?: PlayerPattern,
-  width?: number,
-  height?: number,
+function previewKey(
+  pattern: PlayerPattern,
+  width: number | undefined,
+  height: number | undefined,
 ): string {
-  pattern ??= DefaultPattern;
-  const patternLookupKey = [
+  return [
     pattern.name,
+    pattern.patternData,
     pattern.colorPalette?.primaryColor ?? "undefined",
     pattern.colorPalette?.secondaryColor ?? "undefined",
     width,
     height,
   ].join("-");
+}
 
-  if (patternCache.has(patternLookupKey)) {
-    return patternCache.get(patternLookupKey)!;
-  }
-
+/**
+ * Sizes `canvas` to the largest whole number of pattern tiles that fits
+ * width × height (one tile at minimum; the tile's own size when a dimension
+ * is omitted) and paints the pattern into it. False if the data won't decode.
+ */
+function paintPattern(
+  canvas: HTMLCanvasElement,
+  pattern: PlayerPattern,
+  width?: number,
+  height?: number,
+): boolean {
   let decoder: PatternDecoder;
   try {
     decoder = new PatternDecoder(
@@ -82,7 +153,9 @@ export function generatePreviewDataUrl(
     );
   } catch (e) {
     console.error("Error decoding pattern", e);
-    return "";
+    canvas.width = 0;
+    canvas.height = 0;
+    return false;
   }
 
   const scaledWidth = decoder.scaledWidth();
@@ -97,10 +170,11 @@ export function generatePreviewDataUrl(
       ? scaledHeight
       : Math.max(1, Math.floor(height / scaledHeight)) * scaledHeight;
 
-  const canvas = document.createElement("canvas");
   canvas.width = width;
   canvas.height = height;
-  const ctx = canvas.getContext("2d");
+  // CPU-backed: painted once and never animated, and on a GPU-backed canvas
+  // toDataURL is a synchronous GPU readback.
+  const ctx = canvas.getContext("2d", { willReadFrequently: true });
   if (!ctx) throw new Error("2D context not supported");
 
   const imageData = ctx.createImageData(width, height);
@@ -123,7 +197,22 @@ export function generatePreviewDataUrl(
   }
 
   ctx.putImageData(imageData, 0, 0);
+  return true;
+}
+
+export function generatePreviewDataUrl(
+  pattern?: PlayerPattern,
+  width?: number,
+  height?: number,
+): string {
+  pattern ??= DefaultPattern;
+  const key = previewKey(pattern, width, height);
+  const cached = patternCache.get(key);
+  if (cached !== undefined) return cached;
+
+  const canvas = document.createElement("canvas");
+  if (!paintPattern(canvas, pattern, width, height)) return "";
   const dataUrl = canvas.toDataURL("image/png");
-  patternCache.set(patternLookupKey, dataUrl);
+  patternCache.set(key, dataUrl);
   return dataUrl;
 }

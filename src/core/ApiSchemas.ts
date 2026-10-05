@@ -162,6 +162,19 @@ export function isVerifiedUsername(
   );
 }
 
+// Third-party sites a player can prove account ownership to with a short-lived
+// identity token (POST /users/@me/identity_token). Admin-managed on the API
+// and served by GET /public/identity_token/audiences.
+export const IdentityTokenAudiencesResponseSchema = z.object({
+  audiences: z.array(z.string()),
+});
+
+export const IdentityTokenResponseSchema = z.object({
+  token: z.string(),
+  expiresAt: z.string(),
+});
+export type IdentityTokenResponse = z.infer<typeof IdentityTokenResponseSchema>;
+
 export const UserMeResponseSchema = z.object({
   user: z.object({
     discord: DiscordUserSchema.optional(),
@@ -295,6 +308,12 @@ export const UserMeResponseSchema = z.object({
         provider: z.string().nullable().optional(),
       })
       .nullable(),
+    // A Stripe subscription whose renewal failed and is still being retried,
+    // sent only when `subscription` is null. It entitles nothing, which is
+    // why it is not `subscription`: every caller reads that as "subscribed".
+    // It exists so the account can say the payment failed and offer the
+    // billing portal. Optional so an older API without the field still parses.
+    pastDueSubscription: z.object({ tier: z.string() }).nullable().optional(),
     // Marketing-email consent state (client-driven consent). `consented` is the
     // player's current decision; `hasEmail` is whether a verified contact email
     // exists to subscribe. Optional so an older API without the field is treated

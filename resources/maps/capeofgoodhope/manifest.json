@@ -1,0 +1,337 @@
+{
+  "additionalNations": [
+    {
+      "coordinates": [1722, 914],
+      "flag": "za",
+      "name": "Helderberg Rural"
+    },
+    {
+      "coordinates": [499, 952],
+      "flag": "za",
+      "name": "Muizenberg"
+    },
+    {
+      "coordinates": [1228, 462],
+      "flag": "za",
+      "name": "Kuilsrivier"
+    },
+    {
+      "coordinates": [325, 355],
+      "flag": "za",
+      "name": "Waterfront"
+    },
+    {
+      "coordinates": [622, 426],
+      "flag": "za",
+      "name": "Pinelands"
+    },
+    {
+      "coordinates": [795, 440],
+      "flag": "za",
+      "name": "Bishop Lavis"
+    },
+    {
+      "coordinates": [1107, 591],
+      "flag": "za",
+      "name": "Blackheath"
+    },
+    {
+      "coordinates": [1253, 720],
+      "flag": "za",
+      "name": "Eersterevier"
+    },
+    {
+      "coordinates": [1348, 1567],
+      "flag": "za",
+      "name": "Rooiels"
+    },
+    {
+      "coordinates": [220, 1221],
+      "flag": "za",
+      "name": "Scarborough"
+    },
+    {
+      "coordinates": [220, 1117],
+      "flag": "za",
+      "name": "Ocean View"
+    },
+    {
+      "coordinates": [182, 915],
+      "flag": "za",
+      "name": "Noordhoek"
+    },
+    {
+      "coordinates": [148, 646],
+      "flag": "za",
+      "name": "Llandudno"
+    },
+    {
+      "coordinates": [277, 378],
+      "flag": "za",
+      "name": "Green Point"
+    },
+    {
+      "coordinates": [251, 422],
+      "flag": "za",
+      "name": "Sea Point"
+    },
+    {
+      "coordinates": [236, 555],
+      "flag": "za",
+      "name": "Camps Bay"
+    },
+    {
+      "coordinates": [563, 794],
+      "flag": "za",
+      "name": "Grassy Park"
+    },
+    {
+      "coordinates": [561, 673],
+      "flag": "za",
+      "name": "Lansdowne"
+    },
+    {
+      "coordinates": [319, 462],
+      "flag": "za",
+      "name": "Seilbahn"
+    },
+    {
+      "coordinates": [474, 611],
+      "flag": "za",
+      "name": "Rondebosch"
+    },
+    {
+      "coordinates": [340, 689],
+      "flag": "za",
+      "name": "Kenilworth"
+    },
+    {
+      "coordinates": [336, 800],
+      "flag": "za",
+      "name": "Constantia"
+    },
+    {
+      "coordinates": [378, 860],
+      "flag": "za",
+      "name": "Tokai"
+    },
+    {
+      "coordinates": [747, 666],
+      "flag": "za",
+      "name": "Nyanga"
+    },
+    {
+      "coordinates": [521, 105],
+      "flag": "za",
+      "name": "Table View"
+    },
+    {
+      "coordinates": [680, 820],
+      "flag": "za",
+      "name": "Philippi"
+    },
+    {
+      "coordinates": [963, 205],
+      "flag": "za",
+      "name": "Brackenfell"
+    },
+    {
+      "coordinates": [228, 1023],
+      "flag": "za",
+      "name": "Sunnydale"
+    },
+    {
+      "coordinates": [460, 832],
+      "flag": "za",
+      "name": "Constantia"
+    },
+    {
+      "coordinates": [920, 422],
+      "flag": "za",
+      "name": "Tiger Valley"
+    },
+    {
+      "coordinates": [877, 332],
+      "flag": "za",
+      "name": "Parow"
+    },
+    {
+      "coordinates": [813, 232],
+      "flag": "za",
+      "name": "Welgemoed"
+    },
+    {
+      "coordinates": [778, 250],
+      "flag": "za",
+      "name": "Plattekloof"
+    },
+    {
+      "coordinates": [383, 602],
+      "flag": "za",
+      "name": "Newlands"
+    },
+    {
+      "coordinates": [220, 472],
+      "flag": "za",
+      "name": "Clifton"
+    },
+    {
+      "coordinates": [436, 1330],
+      "flag": "za",
+      "name": "Boulders"
+    }
+  ],
+  "categories": ["new", "africa"],
+  "id": "CapeOfGoodHope",
+  "map": {
+    "height": 1928,
+    "num_land_tiles": 1807478,
+    "width": 1928
+  },
+  "map16x": {
+    "height": 482,
+    "num_land_tiles": 109883,
+    "width": 482
+  },
+  "map4x": {
+    "height": 964,
+    "num_land_tiles": 447475,
+    "width": 964
+  },
+  "multiplayer_frequency": 4,
+  "name": "Cape Of Good Hope",
+  "nations": [
+    {
+      "coordinates": [467, 395],
+      "flag": "Cape Town",
+      "name": "Cape Town"
+    },
+    {
+      "coordinates": [521, 207],
+      "flag": "za",
+      "name": "Milnerton"
+    },
+    {
+      "coordinates": [992, 352],
+      "flag": "za",
+      "name": "Belville"
+    },
+    {
+      "coordinates": [382, 1024],
+      "flag": "za",
+      "name": "Fish Hoek"
+    },
+    {
+      "coordinates": [400, 1265],
+      "flag": "za",
+      "name": "Simon's Town"
+    },
+    {
+      "coordinates": [460, 20],
+      "flag": "za",
+      "name": "Bloubergstrand"
+    },
+    {
+      "coordinates": [949, 55],
+      "flag": "za",
+      "name": "Durbanville"
+    },
+    {
+      "coordinates": [1189, 280],
+      "flag": "za",
+      "name": "Kraaifontein"
+    },
+    {
+      "coordinates": [1464, 427],
+      "flag": "za",
+      "name": "Stellensboch"
+    },
+    {
+      "coordinates": [160, 772],
+      "flag": "za",
+      "name": "Hout Bay"
+    },
+    {
+      "coordinates": [430, 702],
+      "flag": "za",
+      "name": "Wynberg"
+    },
+    {
+      "coordinates": [1420, 872],
+      "flag": "za",
+      "name": "Somerset West"
+    },
+    {
+      "coordinates": [127, 1089],
+      "flag": "za",
+      "name": "Kommetjie"
+    },
+    {
+      "coordinates": [1498, 1115],
+      "flag": "za",
+      "name": "Gordon's Bay"
+    },
+    {
+      "coordinates": [1649, 1322],
+      "flag": "za",
+      "name": "Kogelberg"
+    },
+    {
+      "coordinates": [1368, 1740],
+      "flag": "za",
+      "name": "Pringle Bay"
+    },
+    {
+      "coordinates": [1752, 1703],
+      "flag": "za",
+      "name": "Bettysbaai"
+    },
+    {
+      "coordinates": [1062, 782],
+      "flag": "za",
+      "name": "Khaleyitsha"
+    },
+    {
+      "coordinates": [1206, 820],
+      "flag": "za",
+      "name": "Macassar"
+    },
+    {
+      "coordinates": [1442, 1005],
+      "flag": "za",
+      "name": "Strand"
+    },
+    {
+      "coordinates": [791, 797],
+      "flag": "za",
+      "name": "Mitchell's Plain"
+    },
+    {
+      "coordinates": [893, 585],
+      "flag": "za",
+      "name": "Matroosfontein"
+    },
+    {
+      "coordinates": [476, 1725],
+      "flag": "Good Hope",
+      "name": "Cape Point"
+    },
+    {
+      "coordinates": [209, 55],
+      "flag": "za",
+      "name": "Robben Island"
+    },
+    {
+      "coordinates": [698, 293],
+      "flag": "za",
+      "name": "Goodwood"
+    },
+    {
+      "coordinates": [750, 1067],
+      "flag": "za",
+      "name": "Seal Island"
+    }
+  ],
+  "themes": ["africa"],
+  "translation_key": "map.capeofgoodhope"
+}

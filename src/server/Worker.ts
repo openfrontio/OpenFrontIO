@@ -12,8 +12,14 @@ import { GameEnv } from "../core/configuration/Config";
 import { GameType } from "../core/game/Game";
 import {
   ClientMessage,
+  ClientPlatformSchema,
+  HOSTED_LOBBY_AUTO_START_MS,
   ID,
+  isValidGameID,
   MAX_HOSTED_LOBBIES,
+  MAX_HOSTED_LOBBY_PLAYERS,
+  MIN_HOSTED_LOBBY_AUTO_START_MS,
+  MIN_HOSTED_LOBBY_PLAYERS,
   ServerErrorMessage,
 } from "../core/Schemas";
 import { generateID, replacer } from "../core/Util";
@@ -25,9 +31,10 @@ import { Client } from "./Client";
 import { gameApiCors } from "./GameApiCors";
 import { GameManager } from "./GameManager";
 import { registerGamePreviewRoute } from "./GamePreviewRoute";
-import type { GameServer } from "./GameServer";
+import { GamePhase, type GameServer } from "./GameServer";
 import { isSteamAuthenticated, planJoinVerify, verifyJoin } from "./JoinVerify";
-import { getUserMe, verifyClientToken } from "./jwt";
+import { getUserMe, userMeFailureClose, verifyClientToken } from "./jwt";
+import { payForLobbyQueue, queueListedLobby } from "./LobbyQueuePayment";
 import { logger } from "./Logger";
 import { resolveVerifiedJoin } from "./Privilege";
 
@@ -35,7 +42,9 @@ import { MapPlaylist } from "./MapPlaylist";
 import { setNoStoreHeaders } from "./NoStoreHeaders";
 import { PrivilegeRefresher } from "./PrivilegeRefresher";
 import { startRankedCheckinLoops } from "./RankedCheckin";
+import { rejoinOrClose } from "./Rejoin";
 import { ServerEnv } from "./ServerEnv";
+import { SingleplayerPresence } from "./SingleplayerPresence";
 import { applyStaticAssetCacheControl } from "./StaticAssetCache";
 import { createMatchTelemetryEmitter } from "./telemetry/BufferedMatchTelemetryEmitter";
 import { MAX_WEBSOCKET_PAYLOAD_BYTES } from "./telemetry/MatchTelemetryConfig";
@@ -76,6 +85,7 @@ export async function startWorker() {
 
   // Initialize lobby service (handles WebSocket upgrade routing)
   const lobbyService = new WorkerLobbyService(server, wss, gm, log);
+  const singleplayerPresence = new SingleplayerPresence();
 
   setTimeout(
     () => {
@@ -94,7 +104,7 @@ export async function startWorker() {
   );
 
   if (ServerEnv.otelEnabled()) {
-    initWorkerMetrics(gm);
+    initWorkerMetrics(gm, lobbyService, singleplayerPresence);
   }
 
   const privilegeRefresher = new PrivilegeRefresher(
@@ -270,11 +280,27 @@ export async function startWorker() {
       return res.status(401).json({ error: "Invalid token" });
     }
 
-    const parsed = z.object({ listed: z.boolean() }).safeParse(req.body);
+    const parsed = z
+      .object({
+        listed: z.boolean(),
+        autoStartMs: z
+          .number()
+          .int()
+          .min(MIN_HOSTED_LOBBY_AUTO_START_MS)
+          .max(HOSTED_LOBBY_AUTO_START_MS)
+          .optional(),
+        maxPlayers: z
+          .number()
+          .int()
+          .min(MIN_HOSTED_LOBBY_PLAYERS)
+          .max(MAX_HOSTED_LOBBY_PLAYERS)
+          .optional(),
+      })
+      .safeParse(req.body);
     if (!parsed.success) {
       return res.status(400).json({ error: z.prettifyError(parsed.error) });
     }
-    const { listed } = parsed.data;
+    const { listed, autoStartMs, maxPlayers } = parsed.data;
 
     const game = gm.game(req.params.id);
     if (game === null) {
@@ -310,6 +336,12 @@ export async function startWorker() {
         return res.status(409).json({ error: "listing_host_cheats_enabled" });
       }
 
+      // A cap at or below the current head count would advertise a lobby
+      // nobody can join.
+      if (maxPlayers !== undefined && maxPlayers <= game.numPlayers()) {
+        return res.status(409).json({ error: "listing_max_players_too_low" });
+      }
+
       // Dev has no subscription backend; skip the check so the feature is
       // testable locally (same precedent as Turnstile).
       if (ServerEnv.env() !== GameEnv.Dev) {
@@ -343,11 +375,75 @@ export async function startWorker() {
       }
     }
 
-    game.setListed(listed);
+    game.setListed(listed, { autoStartMs, maxPlayers });
     log.info(`lobby listing ${listed ? "enabled" : "disabled"}`, {
       gameID: game.id,
+      autoStartMs,
+      maxPlayers,
     });
     res.json({ listed });
+  });
+
+  // The host of a listed lobby pays (plutonium, charged by the API with the
+  // host's token) to put it in the public Special queue, right behind the
+  // lobby that's counting down.
+  app.post("/api/game/:id/queue", async (req, res) => {
+    const authHeader = req.headers.authorization;
+    if (!authHeader?.startsWith("Bearer ")) {
+      return res.status(400).json({ error: "Authorization header required" });
+    }
+    const token = authHeader.substring("Bearer ".length);
+    const auth = await verifyClientToken(token);
+    if (auth.type !== "success") {
+      return res.status(401).json({ error: "Invalid token" });
+    }
+
+    const game = gm.game(req.params.id);
+    if (game === null) {
+      return res.status(404).json({ error: "Game not found" });
+    }
+    const outcome = await queueListedLobby(
+      {
+        isCreator: (id) => game.isCreator(id),
+        isPublic: () => game.isPublic(),
+        isListed: () => game.isListed(),
+        isQueued: () => game.isQueued(),
+        inLobby: () => game.phase() === GamePhase.Lobby && !game.hasStarted(),
+        startsAt: () => game.gameInfo().startsAt,
+        autoStartAt: () => game.autoStartAt(),
+        queueForPublic: () => game.queueForPublic(),
+      },
+      auth.persistentId,
+      // Dev has no payment backend; skip the charge so the feature is
+      // testable locally (same precedent as the listing subscription check).
+      ServerEnv.env() === GameEnv.Dev
+        ? async () => ({ type: "success" })
+        : () => payForLobbyQueue(token, game.id),
+    );
+    if (outcome.status === 502) {
+      log.warn("lobby queue payment failed", { gameID: game.id });
+    } else if (outcome.status === 200) {
+      log.info("lobby queued for public play", { gameID: game.id });
+    }
+    res.status(outcome.status).json(outcome.body);
+  });
+
+  // Singleplayer games run in the browser; the client beats here once a
+  // minute so the worker can export how many are in progress (see
+  // SingleplayerPresence). The id is client-minted and routes here by hash,
+  // exactly like the game socket would.
+  app.post("/api/singleplayer/:id/heartbeat", (req, res) => {
+    const gameID = req.params.id;
+    if (!isValidGameID(gameID)) {
+      res.status(400).json({ error: "Invalid game ID" });
+      return;
+    }
+    const platform = ClientPlatformSchema.safeParse(req.body?.platform);
+    singleplayerPresence.heartbeat(
+      gameID,
+      platform.success ? platform.data : "unknown",
+    );
+    res.status(204).end();
   });
 
   app.get("/api/game/:id/exists", async (req, res) => {
@@ -484,18 +580,15 @@ export async function startWorker() {
             gameID: clientMsg.gameID,
             persistentID: persistentId,
           });
-          const wasFound = gm.rejoinClient(
+          rejoinOrClose(
+            gm,
+            log,
+            workerId,
             ws,
             persistentId,
             clientMsg.gameID,
             clientMsg.lastTurn,
           );
-          if (!wasFound) {
-            log.warn(
-              `game ${clientMsg.gameID} not found on worker ${workerId}`,
-            );
-            ws.close(CloseCode.GameNotFound, CloseReason.GameNotFound);
-          }
           return;
         }
 
@@ -639,7 +732,8 @@ export async function startWorker() {
               persistentID: persistentId,
               gameID: clientMsg.gameID,
             });
-            ws.close(CloseCode.InternalError, CloseReason.AccountLookupFailed);
+            const { code, reason } = userMeFailureClose(result);
+            ws.close(code, reason);
             return;
           }
           flares = result.response.player.flares;
@@ -757,6 +851,15 @@ export async function startWorker() {
             workerId,
           });
           ws.close(CloseCode.Forbidden, CloseReason.NotTrusted);
+        } else if (joinResult === "redirected") {
+          // Normal, not a rejection code: the game already sent this client
+          // where to go, and Normal is the client's silent branch, so no
+          // dialog appears while it navigates.
+          log.info("client redirected to a pool sibling", {
+            gameID: clientMsg.gameID,
+            workerId,
+          });
+          ws.close(CloseCode.Normal, CloseReason.PoolRedirect);
         } else if (joinResult === "ended") {
           log.info(`client tried to join ended game ${clientMsg.gameID}`, {
             gameID: clientMsg.gameID,

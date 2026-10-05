@@ -73,6 +73,14 @@ export class ServerEnv {
     if (!v) return undefined;
     return v;
   }
+  // Optional: the Grafana Faro collector the browser client reports to.
+  // Absent keeps client telemetry off. A public ingest URL, not a secret,
+  // so it travels through BOOTSTRAP_CONFIG like the Stripe key.
+  static faroCollectorUrl(): string | undefined {
+    const v = process.env.FARO_COLLECTOR_URL;
+    if (!v) return undefined;
+    return v;
+  }
   static jwtAudience(): string {
     const v = process.env.DOMAIN;
     if (!v) {

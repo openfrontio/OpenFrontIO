@@ -1,3 +1,4 @@
+import { z } from "zod";
 import {
   Difficulty,
   Game,
@@ -11,16 +12,27 @@ import {
   Unit,
   UnitType,
 } from "../../game/Game";
-import { TileRef, euclDistFN } from "../../game/GameMap";
+import { euclDistFN, TileRef } from "../../game/GameMap";
 import { UniversalPathFinding } from "../../pathfinding/PathFinder";
 import { PseudoRandom } from "../../PseudoRandom";
+import type {
+  SnapshotReader,
+  SnapshotWriter,
+} from "../../snapshot/SnapshotContext";
+import {
+  readVersioned,
+  snapshotType,
+  Versioned,
+  zInt,
+  zTile,
+} from "../../snapshot/SnapshotType";
 import { assertNever, boundingBoxTiles } from "../../Util";
 import { NukeExecution } from "../NukeExecution";
 import { UpgradeStructureExecution } from "../UpgradeStructureExecution";
 import { closestTwoTiles } from "../Util";
 import { AiAttackBehavior } from "../utils/AiAttackBehavior";
 import { EMOJI_NUKE, NationEmojiBehavior } from "./NationEmojiBehavior";
-import { randTerritoryTileArray } from "./NationUtils";
+import { findRunawayLeader, randTerritoryTileArray } from "./NationUtils";
 
 /** Cap on silo levels reachable via maybeDestroyEnemySam's upgrade fallback. */
 const MAX_NATION_SILO_UPGRADE_LEVEL = 5;
@@ -34,8 +46,11 @@ const HIGH_DENSITY_NUKE_THRESHOLD = 1 / 75;
 /** Minimum sum of structure levels a player needs to qualify as a high-density nuke target. */
 const MIN_LEVEL_SUM_FOR_HIGH_DENSITY_NUKE = 5;
 
+/** Share of the non-fallout land above which every FFA nation nukes the crown. */
+const CROWN_NEAR_WIN_SHARE = 0.5;
+
 export class NationNukeBehavior {
-  private readonly recentlySentNukes: [
+  private recentlySentNukes: [
     Tick,
     TileRef,
     UnitType.AtomBomb | UnitType.HydrogenBomb,
@@ -45,7 +60,7 @@ export class NationNukeBehavior {
   private hydrogenBombsLaunched = 0;
   private hydrogenBombPerceivedCost = this.cost(UnitType.HydrogenBomb);
   // Make 1/3 of nations "hydro-nations" that only throw hydrogen bombs (to reduce atom bomb spam)
-  private readonly isHydroNation: boolean = this.random.chance(3);
+  private isHydroNation: boolean = this.random.chance(3);
 
   constructor(
     private random: PseudoRandom,
@@ -54,6 +69,50 @@ export class NationNukeBehavior {
     private attackBehavior: AiAttackBehavior,
     private emojiBehavior: NationEmojiBehavior,
   ) {}
+
+  snapshot(w: SnapshotWriter): Versioned {
+    return w.versioned(NationNukeBehaviorSnapshot, {
+      recentlySentNukes: this.recentlySentNukes.map(
+        ([tick, tile, type]) =>
+          [tick, tile, type] as [number, number, NukeType],
+      ),
+      atomBombsLaunched: this.atomBombsLaunched,
+      atomBombPerceivedCost: this.atomBombPerceivedCost,
+      hydrogenBombsLaunched: this.hydrogenBombsLaunched,
+      hydrogenBombPerceivedCost: this.hydrogenBombPerceivedCost,
+      isHydroNation: this.isHydroNation,
+    });
+  }
+
+  /**
+   * Fills a prototype-only shell; only assigns (see README). Field
+   * initializers do not run, so isHydroNation's PRNG draw is not repeated.
+   */
+  restoreSnapshot(
+    raw: unknown,
+    r: SnapshotReader,
+    random: PseudoRandom,
+    player: Player,
+    attackBehavior: AiAttackBehavior,
+    emojiBehavior: NationEmojiBehavior,
+  ): void {
+    const s = readVersioned(NationNukeBehaviorSnapshot, raw);
+    this.random = random;
+    this.game = r.game;
+    this.player = player;
+    this.attackBehavior = attackBehavior;
+    this.emojiBehavior = emojiBehavior;
+    this.recentlySentNukes = s.recentlySentNukes.map(([tick, tile, type]) => [
+      tick,
+      tile,
+      type,
+    ]);
+    this.atomBombsLaunched = s.atomBombsLaunched;
+    this.atomBombPerceivedCost = s.atomBombPerceivedCost;
+    this.hydrogenBombsLaunched = s.hydrogenBombsLaunched;
+    this.hydrogenBombPerceivedCost = s.hydrogenBombPerceivedCost;
+    this.isHydroNation = s.isHydroNation;
+  }
 
   maybeSendNuke() {
     const silos = this.player.units(UnitType.MissileSilo);
@@ -210,7 +269,7 @@ export class NationNukeBehavior {
 
         if (crown && crown !== this.player && !this.player.isFriendly(crown)) {
           const crownShare = crown.numTilesOwned() / numTilesWithoutFallout;
-          if (crownShare > 0.5) {
+          if (crownShare > CROWN_NEAR_WIN_SHARE) {
             return crown;
           }
         }
@@ -332,13 +391,20 @@ export class NationNukeBehavior {
     }
 
     const firstPlaceShare = firstPlace.numTilesOwned() / numTilesWithoutFallout;
-    const myShare = this.player.numTilesOwned() / numTilesWithoutFallout;
+    if (firstPlaceShare > CROWN_NEAR_WIN_SHARE) {
+      return firstPlace;
+    }
+
+    // Below that, only a runaway leader that is far enough ahead of us.
+    // Its neighbors react first, everyone else once the gap is twice as big.
+    if (findRunawayLeader(this.game) !== firstPlace) {
+      return null;
+    }
 
     let threshold: number;
     switch (difficulty) {
       case Difficulty.Easy:
-        threshold = 0.4; // 40%
-        break;
+        return null; // Never notices a runaway leader
       case Difficulty.Medium:
         threshold = 0.3; // 30%
         break;
@@ -351,8 +417,11 @@ export class NationNukeBehavior {
       default:
         assertNever(difficulty);
     }
+    if (!this.player.sharesBorderWith(firstPlace)) {
+      threshold *= 2;
+    }
 
-    // Check if first place has threshold% more tile-percentage of the map than us
+    const myShare = this.player.numTilesOwned() / numTilesWithoutFallout;
     if (firstPlaceShare - myShare > threshold) {
       return firstPlace;
     }
@@ -1102,3 +1171,27 @@ export class NationNukeBehavior {
     return this.game.unitInfo(type).cost(this.game, this.player);
   }
 }
+
+type NukeType = UnitType.AtomBomb | UnitType.HydrogenBomb;
+
+export const NationNukeBehaviorSnapshot = snapshotType({
+  name: "NationNukeBehavior",
+  version: 1,
+  schema: z.object({
+    recentlySentNukes: z.array(
+      z.tuple([
+        zInt(),
+        zTile(),
+        z.union([
+          z.literal(UnitType.AtomBomb),
+          z.literal(UnitType.HydrogenBomb),
+        ]),
+      ]),
+    ),
+    atomBombsLaunched: zInt(),
+    atomBombPerceivedCost: z.bigint(),
+    hydrogenBombsLaunched: zInt(),
+    hydrogenBombPerceivedCost: z.bigint(),
+    isHydroNation: z.boolean(),
+  }),
+});

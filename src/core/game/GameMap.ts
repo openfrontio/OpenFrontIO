@@ -1,3 +1,5 @@
+import { z } from "zod";
+import { snapshotType, zBytes, zInt, zTiles } from "../snapshot/SnapshotType";
 import { Cell, TerrainType } from "./Game";
 
 export type TileRef = number;
@@ -255,26 +257,43 @@ export class GameMapImpl implements GameMap {
     return this.waterVersion_;
   }
 
+  // Original terrain byte of every tile whose terrain changed (water nukes),
+  // in first-edit order. Lets a snapshot store terrain as a diff against the
+  // map file and verify the file it will be restored onto is the same one.
+  private pristineTerrain: Map<TileRef, number> | null = null;
+
+  private noteTerrainEdit(ref: TileRef): void {
+    this.pristineTerrain ??= new Map();
+    if (!this.pristineTerrain.has(ref)) {
+      this.pristineTerrain.set(ref, this.terrain[ref]);
+    }
+  }
+
   setWater(ref: TileRef): void {
     if (!this.isLand(ref) || this.isImpassable(ref)) return;
+    this.noteTerrainEdit(ref);
     this.waterVersion_++;
     this.terrain[ref] = 0; // Lake water: no land, no ocean, no shoreline, magnitude 0
     this.numLandTiles_--;
   }
 
   setShorelineBit(ref: TileRef): void {
+    this.noteTerrainEdit(ref);
     this.terrain[ref] |= 1 << GameMapImpl.SHORELINE_BIT;
   }
 
   clearShorelineBit(ref: TileRef): void {
+    this.noteTerrainEdit(ref);
     this.terrain[ref] &= ~(1 << GameMapImpl.SHORELINE_BIT);
   }
 
   setOcean(ref: TileRef): void {
+    this.noteTerrainEdit(ref);
     this.terrain[ref] |= 1 << GameMapImpl.OCEAN_BIT;
   }
 
   setMagnitude(ref: TileRef, value: number): void {
+    this.noteTerrainEdit(ref);
     this.terrain[ref] =
       (this.terrain[ref] & ~GameMapImpl.MAGNITUDE_MASK) |
       (value & GameMapImpl.MAGNITUDE_MASK);
@@ -570,6 +589,7 @@ export class GameMapImpl implements GameMap {
     const terrainChanged = this.terrain[tile] !== terrainByte;
     if (terrainChanged) {
       const wasLand = this.isLand(tile);
+      this.noteTerrainEdit(tile);
       this.terrain[tile] = terrainByte;
       const isNowLand = Boolean(terrainByte & (1 << GameMapImpl.IS_LAND_BIT));
       // Water-derived caches key on waterVersion(): a packed update that flips
@@ -580,7 +600,117 @@ export class GameMapImpl implements GameMap {
     }
     return terrainChanged;
   }
+
+  /**
+   * Position-weighted sum of the map file's terrain bytes. Additive so the
+   * edited tiles can be swapped back to their original bytes without a
+   * second pass.
+   */
+  // The map file never changes, so its hash is computed once.
+  private pristineHashCache: number | null = null;
+
+  private pristineHash(): number {
+    this.pristineHashCache ??= this.computePristineHash();
+    return this.pristineHashCache;
+  }
+
+  private computePristineHash(): number {
+    const mix = (i: number, b: number) =>
+      Math.imul(b + 1, Math.imul(i + 1, 0x9e3779b1) ^ 0x85ebca6b);
+    let h = 0;
+    const terrain = this.terrain;
+    for (let i = 0; i < terrain.length; i++) h = (h + mix(i, terrain[i])) | 0;
+    if (this.pristineTerrain !== null) {
+      for (const [ref, orig] of this.pristineTerrain) {
+        h = (h - mix(ref, terrain[ref]) + mix(ref, orig)) | 0;
+      }
+    }
+    return h >>> 0;
+  }
+
+  /**
+   * Terrain as a diff against the map file, plus fallout and defense bits.
+   * Owner bits are not stored: every player's ordered tile list already says
+   * who owns what, and restore writes them from there.
+   */
+  snapshot(): GameMapState {
+    const edits = [...(this.pristineTerrain ?? new Map<TileRef, number>())];
+    const fallout: TileRef[] = [];
+    const defense: TileRef[] = [];
+    const falloutMask = 1 << GameMapImpl.FALLOUT_BIT;
+    const defenseMask = 1 << GameMapImpl.DEFENSE_BONUS_BIT;
+    const state = this.state;
+    for (let i = 0; i < state.length; i++) {
+      const v = state[i];
+      if (v & falloutMask) fallout.push(i);
+      if (v & defenseMask) defense.push(i);
+    }
+    return {
+      width: this.width_,
+      height: this.height_,
+      pristineHash: this.pristineHash(),
+      editTiles: Uint32Array.from(edits, ([ref]) => ref),
+      editOriginal: Uint8Array.from(edits, ([, orig]) => orig),
+      editCurrent: Uint8Array.from(edits, ([ref]) => this.terrain[ref]),
+      fallout: Uint32Array.from(fallout),
+      defense: Uint32Array.from(defense),
+      numLandTiles: this.numLandTiles_,
+      waterVersion: this.waterVersion_,
+      numTilesWithFallout: this._numTilesWithFallout,
+    };
+  }
+
+  /** Applies a snapshot to a map freshly loaded from the same map file. */
+  restoreSnapshot(s: GameMapState): void {
+    if (s.width !== this.width_ || s.height !== this.height_) {
+      throw new Error(
+        `snapshot map is ${s.width}x${s.height}, loaded map is ${this.width_}x${this.height_}`,
+      );
+    }
+    if (this.pristineTerrain !== null || this.state.some((v) => v !== 0)) {
+      throw new Error("snapshot must be restored onto a freshly loaded map");
+    }
+    if (this.pristineHash() !== s.pristineHash) {
+      throw new Error(
+        "map file differs from the one the snapshot was taken on",
+      );
+    }
+    s.editTiles.forEach((ref, i) => {
+      if (this.terrain[ref] !== s.editOriginal[i]) {
+        throw new Error(`terrain of tile ${ref} differs from the snapshot`);
+      }
+      this.noteTerrainEdit(ref);
+      this.terrain[ref] = s.editCurrent[i];
+    });
+    for (const ref of s.fallout)
+      this.state[ref] |= 1 << GameMapImpl.FALLOUT_BIT;
+    for (const ref of s.defense) {
+      this.state[ref] |= 1 << GameMapImpl.DEFENSE_BONUS_BIT;
+    }
+    this.numLandTiles_ = s.numLandTiles;
+    this.waterVersion_ = s.waterVersion;
+    this._numTilesWithFallout = s.numTilesWithFallout;
+  }
 }
+
+export const GameMapSnapshot = snapshotType({
+  name: "GameMap",
+  version: 1,
+  schema: z.object({
+    width: zInt(),
+    height: zInt(),
+    pristineHash: zInt(),
+    editTiles: zTiles(),
+    editOriginal: zBytes(),
+    editCurrent: zBytes(),
+    fallout: zTiles(),
+    defense: zTiles(),
+    numLandTiles: zInt(),
+    waterVersion: zInt(),
+    numTilesWithFallout: zInt(),
+  }),
+});
+export type GameMapState = z.infer<typeof GameMapSnapshot.schema>;
 
 export function euclDistFN(
   root: TileRef,

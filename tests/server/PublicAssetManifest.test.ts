@@ -134,11 +134,15 @@ describe("PublicAssetManifest", () => {
 
     expect(firstIconHref).not.toBe(secondIconHref);
     expect(firstManifestHref).not.toBe(secondManifestHref);
-    expect(firstOutput).toContain(firstIconHref);
-    expect(firstOutput).not.toContain(secondIconHref);
+    expect(firstOutput).toContain(
+      getExpectedRelativeEmittedPath(firstManifestHref, firstIconHref),
+    );
+    expect(firstOutput).not.toContain(
+      getExpectedRelativeEmittedPath(firstManifestHref, secondIconHref),
+    );
   });
 
-  test("rewrites root-relative web manifest icon paths to hashed URLs", async () => {
+  test("rewrites root-relative web manifest icon paths to hashed paths relative to the manifest", async () => {
     const { resourcesDir, outDir } = await createTempResources();
 
     await fs.mkdir(path.join(resourcesDir, "icons"), { recursive: true });
@@ -154,13 +158,54 @@ describe("PublicAssetManifest", () => {
     const assetManifest = buildPublicAssetManifest([resourcesDir]);
     createHashedPublicAssetFiles([resourcesDir], outDir, assetManifest);
 
-    const emittedManifest = await emitHashedAsset(
-      outDir,
-      assetManifest["manifest.json"],
+    const manifestHref = assetManifest["manifest.json"];
+    const iconHref = assetManifest["icons/app-icon.png"];
+    const emittedManifest = JSON.parse(
+      await emitHashedAsset(outDir, manifestHref),
+    ) as { icons: Array<{ src: string }> };
+
+    // The manifest is served under the CDN prefix (/game_assets/_assets/...),
+    // and the browser resolves icon srcs against the manifest URL, so a
+    // root-relative /_assets/... src would escape the prefix and 404.
+    const iconSrc = emittedManifest.icons[0].src;
+    expect(iconSrc).toBe(
+      getExpectedRelativeEmittedPath(manifestHref, iconHref),
+    );
+    expect(iconSrc).toMatch(/^icons\/app-icon\.[0-9a-f]{12}\.png$/);
+    expect(iconSrc).not.toMatch(/^\//);
+    expect(iconSrc).not.toContain("_assets/");
+    expect(iconSrc).not.toBe("/icons/app-icon.png");
+  });
+
+  test("rewrites nested web manifest icon paths relative to the manifest", async () => {
+    const { resourcesDir, outDir } = await createTempResources();
+
+    await fs.mkdir(path.join(resourcesDir, "icons", "pwa"), {
+      recursive: true,
+    });
+    await writeWebManifestFixture(resourcesDir, [
+      { src: "icons/pwa/maskable.png" },
+    ]);
+    await fs.writeFile(
+      path.join(resourcesDir, "icons", "pwa", "maskable.png"),
+      "icon-v1",
+      "utf8",
     );
 
-    expect(emittedManifest).toContain(assetManifest["icons/app-icon.png"]);
-    expect(emittedManifest).not.toContain('"/icons/app-icon.png"');
+    const assetManifest = buildPublicAssetManifest([resourcesDir]);
+    createHashedPublicAssetFiles([resourcesDir], outDir, assetManifest);
+
+    const manifestHref = assetManifest["manifest.json"];
+    const iconHref = assetManifest["icons/pwa/maskable.png"];
+    const emittedManifest = JSON.parse(
+      await emitHashedAsset(outDir, manifestHref),
+    ) as { icons: Array<{ src: string }> };
+
+    const iconSrc = emittedManifest.icons[0].src;
+    expect(iconSrc).toBe(
+      getExpectedRelativeEmittedPath(manifestHref, iconHref),
+    );
+    expect(iconSrc).toMatch(/^icons\/pwa\/maskable\.[0-9a-f]{12}\.png$/);
   });
 
   test("fails when web manifest references a missing local icon", async () => {

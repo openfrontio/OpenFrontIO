@@ -146,7 +146,7 @@ class StreamsFeedPoller {
       // getStreams() swallows fetch and validation errors itself, but it can still throw
       // if the bundled fallback ever fails to parse. Scheduling below is outside this
       // try for that reason: one bad fetch must not end polling for the whole session.
-      console.error("streams-feed: fetch failed", e);
+      console.warn("streams-feed: fetch failed", e);
     } finally {
       // If a reset happened, the newer tick owns the flag — leave it alone.
       if (current()) this.tickInFlight = false;

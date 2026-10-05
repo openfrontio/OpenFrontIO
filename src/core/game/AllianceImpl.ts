@@ -1,3 +1,9 @@
+import { z } from "zod";
+import type {
+  SnapshotReader,
+  SnapshotWriter,
+} from "../snapshot/SnapshotContext";
+import { snapshotType, zInt, zPlayerRef } from "../snapshot/SnapshotType";
 import { Game, MutableAlliance, Player, Tick } from "./Game";
 import { GameUpdateType } from "./GameUpdates";
 
@@ -8,11 +14,11 @@ export class AllianceImpl implements MutableAlliance {
   private expiresAt_: Tick;
 
   constructor(
-    private readonly mg: Game,
-    readonly requestor_: Player,
-    readonly recipient_: Player,
-    private readonly createdAt_: Tick,
-    private readonly id_: number,
+    private mg: Game,
+    public requestor_: Player,
+    public recipient_: Player,
+    private createdAt_: Tick,
+    private id_: number,
   ) {
     this.expiresAt_ = createdAt_ + mg.config().allianceDuration();
   }
@@ -88,4 +94,43 @@ export class AllianceImpl implements MutableAlliance {
   expiresAt(): Tick {
     return this.expiresAt_;
   }
+
+  snapshot(w: SnapshotWriter): AllianceState {
+    return {
+      id: this.id_,
+      requestor: w.player(this.requestor_),
+      recipient: w.player(this.recipient_),
+      createdAt: this.createdAt_,
+      expiresAt: this.expiresAt_,
+      extensionRequestedRequestor: this.extensionRequestedRequestor_,
+      extensionRequestedRecipient: this.extensionRequestedRecipient_,
+    };
+  }
+
+  /** Fills a prototype-only shell; see RestorableExecution.restoreSnapshot. */
+  restoreSnapshot(s: AllianceState, r: SnapshotReader): void {
+    this.mg = r.game;
+    this.id_ = s.id;
+    this.requestor_ = r.player(s.requestor);
+    this.recipient_ = r.player(s.recipient);
+    this.createdAt_ = s.createdAt;
+    this.expiresAt_ = s.expiresAt;
+    this.extensionRequestedRequestor_ = s.extensionRequestedRequestor;
+    this.extensionRequestedRecipient_ = s.extensionRequestedRecipient;
+  }
 }
+
+export const AllianceSnapshot = snapshotType({
+  name: "Alliance",
+  version: 1,
+  schema: z.object({
+    id: zInt(),
+    requestor: zPlayerRef(),
+    recipient: zPlayerRef(),
+    createdAt: zInt(),
+    expiresAt: zInt(),
+    extensionRequestedRequestor: z.boolean(),
+    extensionRequestedRecipient: z.boolean(),
+  }),
+});
+export type AllianceState = z.infer<typeof AllianceSnapshot.schema>;

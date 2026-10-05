@@ -13,6 +13,7 @@ export enum GameMapType {
   Arctic = "Arctic", // map-generator/assets/maps/arctic/info.json
   Asia = "Asia", // map-generator/assets/maps/asia/info.json
   Australia = "Australia", // map-generator/assets/maps/australia/info.json
+  BabelMandebStrait = "Bab el-Mandeb Strait", // map-generator/assets/maps/babelmandebstrait/info.json
   Baikal = "Baikal", // map-generator/assets/maps/baikal/info.json
   BaikalNukeWars = "Baikal Nuke Wars", // map-generator/assets/maps/baikalnukewars/info.json
   BajaCalifornia = "Baja California", // map-generator/assets/maps/bajacalifornia/info.json
@@ -29,6 +30,7 @@ export enum GameMapType {
   BritanniaClassic = "Britannia Classic", // map-generator/assets/maps/britanniaclassic/info.json
   CanaryIslands = "Canary Islands", // map-generator/assets/maps/canaryislands/info.json
   CapeCod = "Cape Cod", // map-generator/assets/maps/capecod/info.json
+  CapeOfGoodHope = "Cape Of Good Hope", // map-generator/assets/maps/capeofgoodhope/info.json
   Caribbean = "Caribbean", // map-generator/assets/maps/caribbean/info.json
   CaspianSea = "Caspian Sea", // map-generator/assets/maps/caspiansea/info.json
   Caucasus = "Caucasus", // map-generator/assets/maps/caucasus/info.json
@@ -56,7 +58,6 @@ export enum GameMapType {
   Germany = "Germany", // map-generator/assets/maps/germany/info.json
   GiantWorldMap = "Giant World Map", // map-generator/assets/maps/giantworldmap/info.json
   GreatLakes = "Great Lakes", // map-generator/assets/maps/greatlakes/info.json
-  Guanabara = "Rio de Janeiro", // map-generator/assets/maps/guanabara/info.json
   GulfOfGuinea = "Gulf Of Guinea", // map-generator/assets/maps/gulfofguinea/info.json
   GulfOfMexico = "Gulf Of Mexico", // map-generator/assets/maps/gulfofmexico/info.json
   GulfOfStLawrence = "Gulf of St. Lawrence", // map-generator/assets/maps/gulfofstlawrence/info.json
@@ -64,6 +65,7 @@ export enum GameMapType {
   Hawaii = "Hawaii", // map-generator/assets/maps/hawaii/info.json
   Hecatestrait = "Hecate Strait", // map-generator/assets/maps/hecatestrait/info.json
   HongKong = "Hong Kong", // map-generator/assets/maps/hongkong/info.json
+  HornOfAfrica = "Horn Of Africa", // map-generator/assets/maps/hornofafrica/info.json
   Iceland = "Iceland", // map-generator/assets/maps/iceland/info.json
   IndianSubcontinent = "Indian Subcontinent", // map-generator/assets/maps/indiansubcontinent/info.json
   IrishSea = "Irish Sea", // map-generator/assets/maps/irishsea/info.json
@@ -78,6 +80,7 @@ export enum GameMapType {
   Lisbon = "Lisbon", // map-generator/assets/maps/lisbon/info.json
   LosAngeles = "Los Angeles", // map-generator/assets/maps/losangeles/info.json
   Luna = "Luna", // map-generator/assets/maps/luna/info.json
+  Madagascar = "Madagascar", // map-generator/assets/maps/madagascar/info.json
   Manicouagan = "Manicouagan", // map-generator/assets/maps/manicouagan/info.json
   MareNostrum = "Mare Nostrum", // map-generator/assets/maps/marenostrum/info.json
   Mars = "Mars", // map-generator/assets/maps/mars/info.json
@@ -99,6 +102,7 @@ export enum GameMapType {
   Pluto = "Pluto", // map-generator/assets/maps/pluto/info.json
   PulicatLake = "Pulicat Lake", // map-generator/assets/maps/pulicatlake/info.json
   QingChina = "Qing China", // map-generator/assets/maps/qingchina/info.json
+  RioDeJaneiro = "Rio de Janeiro", // map-generator/assets/maps/riodejaneiro/info.json
   Russia = "Russia", // map-generator/assets/maps/russia/info.json
   SanFrancisco = "San Francisco", // map-generator/assets/maps/sanfrancisco/info.json
   Scandinavia = "Scandinavia", // map-generator/assets/maps/scandinavia/info.json
@@ -122,6 +126,7 @@ export enum GameMapType {
   TradersDream = "Traders Dream", // map-generator/assets/maps/tradersdream/info.json
   TwoLakes = "Two Lakes", // map-generator/assets/maps/twolakes/info.json
   UnitedStates = "United States", // map-generator/assets/maps/unitedstates/info.json
+  VancouverIsland = "Vancouver Island", // map-generator/assets/maps/vancouverisland/info.json
   Venice = "Venice", // map-generator/assets/maps/venice/info.json
   Vietnam = "Vietnam", // map-generator/assets/maps/vietnam/info.json
   WarshipWarship = "Warship Warship", // map-generator/assets/maps/warshipwarship/info.json
@@ -365,6 +370,19 @@ export const maps: readonly MapInfo[] = [
     themes: ["oceania"],
   },
   {
+    id: "BabelMandebStrait",
+    type: GameMapType.BabelMandebStrait,
+    translationKey: "map.babelmandebstrait",
+    categories: ["new", "africa", "asia"],
+    multiplayerFrequency: 5,
+    ffaFrequency: -1,
+    teamFrequency: 10,
+    specialFrequency: -1,
+    defaultNationCount: 26,
+    specialTeamCount: 2,
+    themes: ["africa", "asia"],
+  },
+  {
     id: "Baikal",
     type: GameMapType.Baikal,
     translationKey: "map.baikal",
@@ -554,13 +572,25 @@ export const maps: readonly MapInfo[] = [
     id: "CapeCod",
     type: GameMapType.CapeCod,
     translationKey: "map.capecod",
-    categories: ["north_america", "new"],
+    categories: ["north_america"],
     multiplayerFrequency: 4,
     ffaFrequency: -1,
     teamFrequency: -1,
     specialFrequency: -1,
     defaultNationCount: 31,
     themes: ["north_america"],
+  },
+  {
+    id: "CapeOfGoodHope",
+    type: GameMapType.CapeOfGoodHope,
+    translationKey: "map.capeofgoodhope",
+    categories: ["new", "africa"],
+    multiplayerFrequency: 4,
+    ffaFrequency: -1,
+    teamFrequency: -1,
+    specialFrequency: -1,
+    defaultNationCount: 26,
+    themes: ["africa"],
   },
   {
     id: "Caribbean",
@@ -603,7 +633,7 @@ export const maps: readonly MapInfo[] = [
     id: "CentralAmerica",
     type: GameMapType.CentralAmerica,
     translationKey: "map.centralamerica",
-    categories: ["new", "north_america"],
+    categories: ["north_america"],
     multiplayerFrequency: 5,
     ffaFrequency: -1,
     teamFrequency: -1,
@@ -615,19 +645,121 @@ export const maps: readonly MapInfo[] = [
     id: "ChannelIslands",
     type: GameMapType.ChannelIslands,
     translationKey: "map.channelislands",
-    categories: ["new", "north_america"],
-    multiplayerFrequency: 7,
+    categories: ["north_america"],
+    multiplayerFrequency: 4,
     ffaFrequency: -1,
-    teamFrequency: -1,
+    teamFrequency: 7,
     specialFrequency: -1,
     defaultNationCount: 44,
-    themes: ["north_america"],
+    themes: ["north_america", "western"],
+    customTribes: [
+      { name: "Abenaki Tribe" },
+      { name: "Absentee Shawnee Tribe" },
+      { name: "Acoma Pueblo Tribe" },
+      { name: "Ahtna Tribe" },
+      { name: "Aleut Tribe" },
+      { name: "Alutiiq Tribe" },
+      { name: "Apache Tribe" },
+      { name: "Apalachee Tribe" },
+      { name: "Arapaho Tribe" },
+      { name: "Arikara Tribe" },
+      { name: "Assiniboine Tribe" },
+      { name: "Barbareño Tribe" },
+      { name: "Blackfeet Tribe" },
+      { name: "Caddo Tribe" },
+      { name: "Cahuilla Tribe" },
+      { name: "Calusa Tribe" },
+      { name: "Catawba Tribe" },
+      { name: "Cayuga Tribe" },
+      { name: "Chemehuevi Tribe" },
+      { name: "Cherokee Tribe" },
+      { name: "Cheyenne Tribe" },
+      { name: "Chickasaw Tribe" },
+      { name: "Chitimacha Tribe" },
+      { name: "Choctaw Tribe" },
+      { name: "Chumash Tribe" },
+      { name: "Clatsop Tribe" },
+      { name: "Coast Miwok Tribe" },
+      { name: "Comanche Tribe" },
+      { name: "Cowlitz Tribe" },
+      { name: "Cree Tribe" },
+      { name: "Creek Tribe" },
+      { name: "Crow Tribe" },
+      { name: "Dakota Tribe" },
+      { name: "Delaware Tribe" },
+      { name: "Haida Tribe" },
+      { name: "Havasupai Tribe" },
+      { name: "Hopi Tribe" },
+      { name: "Huron Tribe" },
+      { name: "Ineseño Tribe" },
+      { name: "Inupiat Tribe" },
+      { name: "Iowa Tribe" },
+      { name: "Iroquois Tribe" },
+      { name: "Isleta Pueblo Tribe" },
+      { name: "Karuk Tribe" },
+      { name: "Kawaiisu Tribe" },
+      { name: "Keweenaw Bay Indian Community" },
+      { name: "Kiowa Tribe" },
+      { name: "Klamath Tribe" },
+      { name: "Kootenai Tribe" },
+      { name: "Kumeyaay Tribe" },
+      { name: "Laguna Pueblo Tribe" },
+      { name: "Lakota Tribe" },
+      { name: "Lumbee Tribe" },
+      { name: "Lummi Tribe" },
+      { name: "Luiseño Tribe" },
+      { name: "Makah Tribe" },
+      { name: "Mandau Tribe" },
+      { name: "Menominee Tribe" },
+      { name: "Miami Tribe" },
+      { name: "Miccosukee Tribe" },
+      { name: "Mi'kmaq Tribe" },
+      { name: "Modoc Tribe" },
+      { name: "Mohawk Tribe" },
+      { name: "Mohegan Tribe" },
+      { name: "Mojave Tribe" },
+      { name: "Muscogee Tribe" },
+      { name: "Navajo Tribe" },
+      { name: "Nez Perce Tribe" },
+      { name: "Nicoleño Tribe" },
+      { name: "Nipmuc Tribe" },
+      { name: "Nooksack Tribe" },
+      { name: "Ojibwe Tribe" },
+      { name: "Omaha Tribe" },
+      { name: "Oneida Tribe" },
+      { name: "Onondaga Tribe" },
+      { name: "Osage Tribe" },
+      { name: "Otoe-Missouria Tribe" },
+      { name: "Ottawa Tribe" },
+      { name: "Paiute Tribe" },
+      { name: "Pawnee Tribe" },
+      { name: "Penobscot Tribe" },
+      { name: "Peoria Tribe" },
+      { name: "Pequot Tribe" },
+      { name: "Pima Tribe" },
+      { name: "Pomo Tribe" },
+      { name: "Ponca Tribe" },
+      { name: "Potawatomi Tribe" },
+      { name: "Powhatan Tribe" },
+      { name: "Pueblo Tribe" },
+      { name: "Quapaw Tribe" },
+      { name: "Quechan Tribe" },
+      { name: "Quinault Tribe" },
+      { name: "Seminole Tribe" },
+      { name: "Seneca Tribe" },
+      { name: "Serrano Tribe" },
+      { name: "Shawnee Tribe" },
+      { name: "Shoshone Tribe" },
+      { name: "Tlingit Tribe" },
+      { name: "Tongva Tribe" },
+      { name: "Ventureño Tribe" },
+    ],
   },
   {
     id: "China",
     type: GameMapType.China,
     translationKey: "map.china",
-    categories: ["countries", "asia", "new"],
+    categories: ["countries", "asia"],
     multiplayerFrequency: 8,
     ffaFrequency: -1,
     teamFrequency: -1,
@@ -1299,17 +1431,6 @@ export const maps: readonly MapInfo[] = [
     themes: ["north_america"],
   },
   {
-    id: "Guanabara",
-    type: GameMapType.Guanabara,
-    translationKey: "map.guanabara",
-    categories: ["south_america"],
-    multiplayerFrequency: 5,
-    ffaFrequency: -1,
-    teamFrequency: -1,
-    specialFrequency: -1,
-    defaultNationCount: 30,
-  },
-  {
     id: "GulfOfGuinea",
     type: GameMapType.GulfOfGuinea,
     translationKey: "map.gulfofguinea",
@@ -1325,7 +1446,7 @@ export const maps: readonly MapInfo[] = [
     id: "GulfOfMexico",
     type: GameMapType.GulfOfMexico,
     translationKey: "map.gulfofmexico",
-    categories: ["north_america", "new"],
+    categories: ["north_america"],
     multiplayerFrequency: 5,
     ffaFrequency: -1,
     teamFrequency: -1,
@@ -1387,12 +1508,24 @@ export const maps: readonly MapInfo[] = [
     type: GameMapType.HongKong,
     translationKey: "map.hongkong",
     categories: ["asia"],
-    multiplayerFrequency: 6,
+    multiplayerFrequency: 8,
     ffaFrequency: -1,
     teamFrequency: -1,
     specialFrequency: -1,
     defaultNationCount: 71,
     themes: ["asia"],
+  },
+  {
+    id: "HornOfAfrica",
+    type: GameMapType.HornOfAfrica,
+    translationKey: "map.hornofafrica",
+    categories: ["africa", "new"],
+    multiplayerFrequency: 5,
+    ffaFrequency: -1,
+    teamFrequency: -1,
+    specialFrequency: -1,
+    defaultNationCount: 29,
+    themes: ["africa"],
   },
   {
     id: "Iceland",
@@ -1706,6 +1839,20 @@ export const maps: readonly MapInfo[] = [
     forcedModifiers: ["isWaterNukes:50"],
   },
   {
+    id: "Madagascar",
+    type: GameMapType.Madagascar,
+    translationKey: "map.madagascar",
+    categories: ["new", "africa"],
+    multiplayerFrequency: 5,
+    ffaFrequency: -1,
+    teamFrequency: 10,
+    specialFrequency: -1,
+    defaultNationCount: 34,
+    specialTeamCount: 2,
+    forcedModifiers: ["isWaterNukes:50"],
+    themes: ["africa"],
+  },
+  {
     id: "Manicouagan",
     type: GameMapType.Manicouagan,
     translationKey: "map.manicouagan",
@@ -1953,6 +2100,18 @@ export const maps: readonly MapInfo[] = [
     specialFrequency: -1,
     defaultNationCount: 32,
     themes: ["asia"],
+  },
+  {
+    id: "RioDeJaneiro",
+    type: GameMapType.RioDeJaneiro,
+    translationKey: "map.riodejaneiro",
+    categories: ["south_america", "new"],
+    multiplayerFrequency: 4,
+    ffaFrequency: -1,
+    teamFrequency: -1,
+    specialFrequency: -1,
+    defaultNationCount: 30,
+    themes: ["south_america"],
   },
   {
     id: "Russia",
@@ -2279,6 +2438,18 @@ export const maps: readonly MapInfo[] = [
     themes: ["north_america"],
   },
   {
+    id: "VancouverIsland",
+    type: GameMapType.VancouverIsland,
+    translationKey: "map.vancouverisland",
+    categories: ["north_america", "new"],
+    multiplayerFrequency: 4,
+    ffaFrequency: -1,
+    teamFrequency: -1,
+    specialFrequency: -1,
+    defaultNationCount: 32,
+    themes: ["north_america"],
+  },
+  {
     id: "Venice",
     type: GameMapType.Venice,
     translationKey: "map.venice",
@@ -2342,7 +2513,7 @@ export const maps: readonly MapInfo[] = [
     id: "YangtzeRiver",
     type: GameMapType.YangtzeRiver,
     translationKey: "map.yangtzeriver",
-    categories: ["new", "asia"],
+    categories: ["asia"],
     multiplayerFrequency: 3,
     ffaFrequency: -1,
     teamFrequency: -1,

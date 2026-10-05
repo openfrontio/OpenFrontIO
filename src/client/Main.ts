@@ -17,7 +17,6 @@ import { GameEnv } from "../core/configuration/Config";
 import { UserSettings } from "../core/game/UserSettings";
 import "./AccountModal";
 import "./AccountSettingsModal";
-import { syncAchievements } from "./AchievementSignal";
 import { adGatekeeper } from "./AdGatekeeper";
 import { loadAdmiral, onAdmiralMeasured } from "./Admiral";
 import { getUserMe, invalidateUserMe } from "./Api";
@@ -37,11 +36,16 @@ import {
   nextBootInterrupt,
   parseClaimPromptStore,
   runBootInterrupt,
+  steamGrantStringsReady,
 } from "./BootInterrupts";
 import "./ChangeUsernameModal";
 import "./ClanModal";
 import { joinLobby, type JoinLobbyResult } from "./ClientGameRunner";
-import { getPlayerCosmeticsRefs, handlePurchaseReturn } from "./Cosmetics";
+import {
+  getPlayerCosmeticsRefs,
+  handlePurchaseReturn,
+  translateCosmetic,
+} from "./Cosmetics";
 import { updateCrazyGamesNavButton } from "./CrazyGamesAccountButton";
 import { crazyGamesSDK } from "./CrazyGamesSDK";
 import {
@@ -98,10 +102,18 @@ import { RewardsModal } from "./RewardsModal";
 import {
   ensureServerList,
   redirectToGameVersion,
+  setServerListInGame,
   startServerListPolling,
 } from "./ServerList";
 import "./SinglePlayerModal";
 import { SinglePlayerModal } from "./SinglePlayerModal";
+import {
+  parseSteamGrantStore,
+  recordSteamGrant,
+  STEAM_GRANT_NOTICE_KEY,
+  steamGrantEndedDue,
+  steamGrantWelcomeDue,
+} from "./SteamGrantNotices";
 import { steamHandoffMode } from "./SteamHandoff";
 import "./SteamHandoffModal";
 import { SteamHandoffModal } from "./SteamHandoffModal";
@@ -112,8 +124,10 @@ import {
 } from "./SteamLink";
 import "./SteamLinkModal";
 import { SteamLinkModal } from "./SteamLinkModal";
+import { steamSDK } from "./SteamSDK";
 import { StoreModal } from "./Store";
 import "./SubscriptionModal";
+import { initTelemetry } from "./Telemetry";
 import { TokenLoginModal } from "./TokenLoginModal";
 import {
   SendKickPlayerIntentEvent,
@@ -145,6 +159,8 @@ import "./components/BannedModal";
 import "./components/DesktopStatusBar";
 import "./components/MarketingConsentToast";
 import "./components/PurchaseNudgeModal";
+import { classicReplayHref } from "./replay/ReplayEntry";
+import { parseReplayViewerHash } from "./replay/ReplayViewerRoute";
 import { initAudioMixer } from "./sound/AudioMixer";
 import { startMenuMusic } from "./sound/MenuMusic";
 import {
@@ -244,17 +260,21 @@ export interface JoinLobbyEvent {
   publicLobbyInfo?: GameInfo | PublicGameInfo;
   // Watch without playing.
   spectator?: boolean;
+  // Host only: the play token the lobby was created under (see createLobby).
+  creatorToken?: string;
 }
 
 /**
  * The single point where "a match is running" is published.
  *
- * Two consumers, and they must never disagree:
+ * Three consumers, and they must never disagree:
  *   - the `.in-game` body class, which the client's own markup keys off to hide
  *     the footer, the nav bars and the desktop update snackbar;
  *   - the Electron shell's updater, which pauses asset downloads and version
  *     polling in-game so a cache-bust cannot saturate a player's connection
- *     mid-match.
+ *     mid-match;
+ *   - the server-list heartbeat, which pauses in-game: a running match already
+ *     knows its server, so polling /cluster.json through it buys nothing.
  *
  * Every add/remove of that class goes through here. Setting the class without
  * telling the shell leaves the updater's pause dead; telling the shell without
@@ -267,6 +287,7 @@ export interface JoinLobbyEvent {
  */
 function setInGameSignal(inGame: boolean): void {
   document.body.classList.toggle("in-game", inGame);
+  setServerListInGame(inGame);
   void desktopUpdate()
     ?.setInGame?.(inGame)
     ?.catch(() => {});
@@ -274,6 +295,8 @@ function setInGameSignal(inGame: boolean): void {
 
 class Client {
   private lobbyHandle: JoinLobbyResult | null = null;
+  /** The game the replay viewer is showing, once it has replaced the menu. */
+  private replayViewerID: string | null = null;
   private eventBus: EventBus = new EventBus();
 
   private currentUrl: string | null = null;
@@ -328,6 +351,9 @@ class Client {
     capturePagePin();
 
     flushReloadToast();
+
+    // Stale key still in existing players' storage; nothing reads it.
+    localStorage.removeItem("achievements.pushed");
 
     // A store referral banner / account "copy link" hands out `/c/<code>`.
     // There's nothing to open here yet -- the code only does anything once
@@ -496,6 +522,11 @@ class Client {
 
     window.addEventListener("beforeunload", async () => {
       console.log("Browser is closing");
+      if (this.replayViewerID !== null) {
+        // Leaving the replay viewer always navigates, so the same applies:
+        // nothing else clears the in-game signal it set.
+        setInGameSignal(false);
+      }
       if (this.lobbyHandle !== null) {
         // Leaving a game by navigating away (the popstate path's
         // `window.location.href = "/"`, or a desktop renderer reload) tears the
@@ -679,6 +710,22 @@ class Client {
         });
         adGatekeeper.start();
       }
+      // Before the dispatch: <username-input> reads this store when it picks
+      // the lapse notice's wording, and the record has to be current by then.
+      const grantStoreBefore = parseSteamGrantStore(
+        localStorage.getItem(STEAM_GRANT_NOTICE_KEY),
+      );
+      const grantStore = recordSteamGrant(
+        grantStoreBefore,
+        userMeResponse,
+        Date.now(),
+      );
+      if (grantStore !== grantStoreBefore) {
+        localStorage.setItem(
+          STEAM_GRANT_NOTICE_KEY,
+          JSON.stringify(grantStore),
+        );
+      }
       // Snapshot in, dispatch and comparison inside — see
       // lapseShownAfterDispatch for why the snapshot cannot be read there.
       const lapseShown = lapseShownAfterDispatch(
@@ -693,6 +740,11 @@ class Client {
             }),
           ),
         () => localStorage.getItem(LAPSE_NOTICE_KEY),
+      );
+      // Re-read, not `grantStore`: a lapse notice that carried the grant
+      // sign-off marked it shown from inside the dispatch above.
+      const grantStoreAfterDispatch = parseSteamGrantStore(
+        localStorage.getItem(STEAM_GRANT_NOTICE_KEY),
       );
 
       if (userMeResponse !== false) {
@@ -762,11 +814,22 @@ class Client {
             username,
             usernameBase,
             lapseNoticeDue: lapseShown,
+            grantWelcomeDue: steamGrantWelcomeDue(
+              grantStoreAfterDispatch,
+              userMeResponse,
+              Date.now(),
+            ),
+            grantEndedDue: steamGrantEndedDue(
+              grantStoreAfterDispatch,
+              userMeResponse,
+              Date.now(),
+            ),
+            grantStringsReady: steamGrantStringsReady(translateText),
             rewardCount: rewards.length,
             claimPromptDue: claimPromptDue(claimStore, Date.now(), publicId),
             claimStringsReady: claimPromptStringsReady(translateText),
           }),
-          { claimStore, publicId },
+          { claimStore, grantStore: grantStoreAfterDispatch, publicId },
           {
             translate: translateText,
             confirm: (body, heading, confirmText) =>
@@ -777,12 +840,21 @@ class Client {
                 variant: "warning",
                 confirmText,
               }),
+            alert: async (body, heading) => {
+              await showInGameAlert(body, { heading });
+            },
+            tierName: (tier) => translateCosmetic("subscriptions", tier),
             navigate: (hash) => {
               window.location.hash = hash;
             },
             openRewards: () => this.rewardsModal?.openWithRewards(rewards),
             storeClaimPrompt: (store) =>
               localStorage.setItem(CLAIM_PROMPT_KEY, JSON.stringify(store)),
+            storeSteamGrant: (store) =>
+              localStorage.setItem(
+                STEAM_GRANT_NOTICE_KEY,
+                JSON.stringify(store),
+              ),
             now: () => Date.now(),
           },
         );
@@ -796,30 +868,10 @@ class Client {
     // it was fetched under is still current.
     let authGeneration = 0;
 
-    // Catches anything the post-game poll missed: a player who quit before the
-    // game was archived, an earlier failed push, or a player who has just
-    // linked a platform account and has a whole history to hand over.
-    //
-    // Hung off every established session rather than off boot alone, because
-    // a session can arrive later than boot: recovered from the status bar, or
-    // signed into mid-session through the link modal -- the very case that
-    // last bullet names. Keyed by player id so it runs once per session and
-    // not again on each later profile refresh, while still re-running when a
-    // different account signs in (the record is per-player too).
-    let achievementsSyncedFor: string | null = null;
-    const reconcileAchievements = (userMeResponse: UserMeResponse | false) => {
-      if (userMeResponse === false) return;
-      const playerId = userMeResponse.player.publicId;
-      if (achievementsSyncedFor === playerId) return;
-      achievementsSyncedFor = playerId;
-      void syncAchievements();
-    };
-
     const applyUserMe =
       (generation: number) => (userMeResponse: UserMeResponse | false) => {
         if (generation !== authGeneration) return;
         void onUserMe(userMeResponse);
-        reconcileAchievements(userMeResponse);
       };
 
     // A session dropped in the background — an expired refresh token, a 401 on
@@ -849,7 +901,6 @@ class Client {
       applyUserMe(initialAuthGeneration)(false);
     } else {
       // JWT appears valid: fetch the profile and apply it if still current.
-      // applyUserMe carries the achievements reconcile.
       getUserMe().then(applyUserMe(initialAuthGeneration));
     }
 
@@ -927,6 +978,17 @@ class Client {
     });
 
     const onHashUpdate = () => {
+      if (this.replayViewerID !== null) {
+        this.leaveReplayViewer();
+        return;
+      }
+      // Checked before the join modal is closed below: closing it resets
+      // the URL, which would drop the hash before handleUrl reads it.
+      const replayViewerID = parseReplayViewerHash(window.location.hash);
+      if (replayViewerID !== null) {
+        void this.openReplayViewer(replayViewerID);
+        return;
+      }
       // Router-managed hash changes (#modal=...) are handled by the router
       // syncing in/out; we don't need to tear down the lobby state for them.
       if (modalRouter.isHashRouted()) {
@@ -948,6 +1010,24 @@ class Client {
     };
 
     const onPopState = () => {
+      // Steam hardware back button fix (Issue #5514):
+      // If we navigate back to root on Steam, push state forward so the back button doesn't exit the app
+      // and show the blank 'Starting' screen.
+      if (
+        steamSDK.isOnSteam() &&
+        (window.location.hash === "" || window.location.hash === "#")
+      ) {
+        history.pushState(
+          null,
+          "",
+          window.location.pathname + window.location.search,
+        );
+      }
+
+      if (this.replayViewerID !== null) {
+        this.leaveReplayViewer();
+        return;
+      }
       if (this.currentUrl !== null && this.lobbyHandle !== null) {
         console.info("Game is active");
 
@@ -989,6 +1069,19 @@ class Client {
     window.addEventListener("hashchange", onHashUpdate);
     window.addEventListener("join-changed", onJoinChanged);
 
+    if (
+      steamSDK.isOnSteam() &&
+      (window.location.hash === "" || window.location.hash === "#")
+    ) {
+      // Push an initial state so the hardware back button has something to pop,
+      // triggering our onPopState trap above instead of exiting the app.
+      history.pushState(
+        null,
+        "",
+        window.location.pathname + window.location.search,
+      );
+    }
+
     function updateSliderProgress(slider: HTMLInputElement) {
       const percent =
         ((Number(slider.value) - Number(slider.min)) /
@@ -1005,6 +1098,52 @@ class Client {
         updateSliderProgress(slider);
         slider.addEventListener("input", () => updateSliderProgress(slider));
       });
+  }
+
+  /**
+   * Replace the menu with the replay viewer. Leaving it reloads the page,
+   * like leaving a game.
+   */
+  private async openReplayViewer(gameID: string): Promise<void> {
+    // Opening the viewer fires both popstate and hashchange, and both can
+    // get here (CrazyGames awaits its SDK first). Only the first opens it.
+    if (this.replayViewerID !== null) return;
+    this.replayViewerID = gameID;
+    let ReplayViewer: typeof import("./replay/ReplayViewer").ReplayViewer;
+    try {
+      ({ ReplayViewer } = await import("./replay/ReplayViewer"));
+    } catch (err) {
+      // The viewer's chunk didn't load (a network error, or a deploy that
+      // replaced it). The menu is still up, so fall back to the client-side
+      // replay. It's a full page load, which also picks up a new deploy.
+      console.error("replay viewer failed to load:", err);
+      this.replayViewerID = null;
+      window.location.assign(classicReplayHref(gameID));
+      return;
+    }
+    this.gameModeSelector.stop();
+    hideMenuChrome();
+    setInGameSignal(true);
+    const viewer = new ReplayViewer();
+    viewer.gameID = gameID;
+    document.body.appendChild(viewer);
+  }
+
+  /**
+   * The URL changed under the viewer (Back, or an edited hash). The menu
+   * isn't there to route it, so load the page again: another replay opens
+   * its viewer, anything else goes home, like leaving a game.
+   */
+  private leaveReplayViewer(): void {
+    const gameID = parseReplayViewerHash(window.location.hash);
+    // Opening the viewer fires both popstate and hashchange, and the first
+    // one opens it. The second still points at the open replay.
+    if (gameID === this.replayViewerID) return;
+    if (gameID !== null) {
+      window.location.reload();
+    } else {
+      window.location.href = homeHref();
+    }
   }
 
   private async handleUrl() {
@@ -1055,6 +1194,13 @@ class Client {
     // Decode the hash first to handle encoded characters
     const decodedHash = decodeURIComponent(hash);
     const params = new URLSearchParams(decodedHash.split("?")[1] || "");
+
+    // The replay viewer takes over the page (loaded on demand).
+    const replayViewerID = parseReplayViewerHash(hash);
+    if (replayViewerID !== null) {
+      await this.openReplayViewer(replayViewerID);
+      return;
+    }
 
     // The `/c/<code>` share-link path is stashed (and stripped) by
     // consumeCreatorCodePath() at the very start of initialize(), before this
@@ -1424,6 +1570,7 @@ class Client {
           : undefined),
       gameRecord: lobby.gameRecord,
       spectator: lobby.spectator,
+      creatorToken: lobby.creatorToken,
     });
 
     if (this.mostRecentJoinEvent !== event.timeStamp) {
@@ -1855,6 +2002,10 @@ const hideCrazyGamesElements = () => {
 
 // Initialize the client when the DOM is loaded
 const bootstrap = () => {
+  // First, so the error hooks are in place for everything below. No-op
+  // without a collector URL (see Telemetry.ts); never awaited.
+  void initTelemetry();
+
   // Prevent Safari's page-level pinch-zoom, which ignores `user-scalable=no`
   // on iOS and can softlock the HUD. See issue #2330.
   installSafariPinchZoomBlocker();

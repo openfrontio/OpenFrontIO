@@ -1,3 +1,4 @@
+import { z } from "zod";
 import {
   AllPlayers,
   Difficulty,
@@ -9,6 +10,17 @@ import {
   Tick,
 } from "../../game/Game";
 import { PseudoRandom } from "../../PseudoRandom";
+import type {
+  SnapshotReader,
+  SnapshotWriter,
+} from "../../snapshot/SnapshotContext";
+import {
+  readVersioned,
+  snapshotType,
+  Versioned,
+  zInt,
+  zPlayerRef,
+} from "../../snapshot/SnapshotType";
 import { flattenedEmojiTable } from "../../Util";
 import { EmojiExecution } from "../EmojiExecution";
 
@@ -45,7 +57,7 @@ export const EMOJI_DONATION_TOO_SMALL = (["❓", "🥱"] as const).map(emojiId);
 export const EMOJI_GREET = (["👋"] as const).map(emojiId);
 
 export class NationEmojiBehavior {
-  private readonly lastEmojiSent = new Map<Player, Tick>();
+  private lastEmojiSent = new Map<Player, Tick>();
   private gameOver = false;
 
   constructor(
@@ -53,6 +65,32 @@ export class NationEmojiBehavior {
     private game: Game,
     private player: Player,
   ) {}
+
+  snapshot(w: SnapshotWriter): Versioned {
+    return w.versioned(NationEmojiBehaviorSnapshot, {
+      lastEmojiSent: [...this.lastEmojiSent].map(
+        ([p, tick]) => [w.player(p), tick] as [number, number],
+      ),
+      gameOver: this.gameOver,
+    });
+  }
+
+  /** Fills a prototype-only shell; only assigns (see README). */
+  restoreSnapshot(
+    raw: unknown,
+    r: SnapshotReader,
+    random: PseudoRandom,
+    player: Player,
+  ): void {
+    const s = readVersioned(NationEmojiBehaviorSnapshot, raw);
+    this.random = random;
+    this.game = r.game;
+    this.player = player;
+    this.lastEmojiSent = new Map(
+      s.lastEmojiSent.map(([p, tick]) => [r.player(p), tick]),
+    );
+    this.gameOver = s.gameOver;
+  }
 
   maybeSendCasualEmoji() {
     if (this.gameOver) return;
@@ -342,3 +380,12 @@ export function respondToMIRV(
     ),
   );
 }
+
+export const NationEmojiBehaviorSnapshot = snapshotType({
+  name: "NationEmojiBehavior",
+  version: 1,
+  schema: z.object({
+    lastEmojiSent: z.array(z.tuple([zPlayerRef(), zInt()])),
+    gameOver: z.boolean(),
+  }),
+});

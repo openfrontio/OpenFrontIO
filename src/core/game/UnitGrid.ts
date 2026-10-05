@@ -21,6 +21,37 @@ export class UnitGrid {
       );
   }
 
+  /**
+   * Per cell (row-major), each type's units in set order. Entry order decides
+   * query result order, and it is not derivable from the units themselves.
+   */
+  snapshot(unitRef: (u: Unit) => number): [UnitType, number[]][][] {
+    const out: [UnitType, number[]][][] = [];
+    for (const row of this.grid) {
+      for (const cell of row) {
+        const entries: [UnitType, number[]][] = [];
+        for (const [type, units] of cell) {
+          entries.push([type, [...units].map((u) => unitRef(u as Unit))]);
+        }
+        out.push(entries);
+      }
+    }
+    return out;
+  }
+
+  restoreSnapshot(
+    cells: [UnitType, number[]][][],
+    unit: (ref: number) => Unit,
+  ): void {
+    const width = this.grid[0]?.length ?? 0;
+    cells.forEach((entries, i) => {
+      const cell = this.grid[Math.floor(i / width)][i % width];
+      for (const [type, refs] of entries) {
+        cell.set(type, new Set(refs.map(unit)));
+      }
+    });
+  }
+
   // Get grid coordinates from pixel coordinates
   private getGridCoords(x: number, y: number): [number, number] {
     return [Math.floor(x / this.cellSize), Math.floor(y / this.cellSize)];

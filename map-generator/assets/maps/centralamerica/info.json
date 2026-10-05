@@ -2,7 +2,7 @@
   "id": "CentralAmerica",
   "name": "Central America",
   "translation_key": "map.centralamerica",
-  "categories": ["new", "north_america"],
+  "categories": ["north_america"],
   "multiplayer_frequency": 5,
   "nations": [
     {

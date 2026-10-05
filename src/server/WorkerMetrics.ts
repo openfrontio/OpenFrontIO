@@ -7,10 +7,16 @@ import * as dotenv from "dotenv";
 import { GameManager } from "./GameManager";
 import { getOtelResource, getPromLabels } from "./OtelResource";
 import { ServerEnv } from "./ServerEnv";
+import { SingleplayerPresence } from "./SingleplayerPresence";
+import { WorkerLobbyService } from "./WorkerLobbyService";
 
 dotenv.config();
 
-export function initWorkerMetrics(gameManager: GameManager): void {
+export function initWorkerMetrics(
+  gameManager: GameManager,
+  lobbyService: WorkerLobbyService,
+  singleplayerPresence: SingleplayerPresence,
+): void {
   // Create resource with worker information
   const resource = getOtelResource();
 
@@ -56,6 +62,22 @@ export function initWorkerMetrics(gameManager: GameManager): void {
     },
   );
 
+  const lobbyClientsGauge = meter.createObservableGauge(
+    "openfront.lobby_clients.gauge",
+    {
+      description:
+        "Number of clients connected to the /lobbies WebSocket on this worker",
+    },
+  );
+
+  const singleplayerGamesGauge = meter.createObservableGauge(
+    "openfront.singleplayer_games.gauge",
+    {
+      description:
+        "Number of in-browser singleplayer games heartbeating to this worker",
+    },
+  );
+
   const desyncsGauge = meter.createObservableGauge("openfront.desyncs.gauge", {
     description: "Number of detected desyncs on active games on this worker",
   });
@@ -75,6 +97,23 @@ export function initWorkerMetrics(gameManager: GameManager): void {
   connectedClientsGauge.addCallback((result) => {
     const labels = getPromLabels();
     for (const [platform, count] of gameManager.activeClientsByPlatform()) {
+      result.observe(count, { ...labels, "openfront.platform": platform });
+    }
+  });
+
+  lobbyClientsGauge.addCallback((result) => {
+    const labels = getPromLabels();
+    for (const [platform, count] of lobbyService.connectedClientsByPlatform()) {
+      result.observe(count, { ...labels, "openfront.platform": platform });
+    }
+  });
+
+  singleplayerGamesGauge.addCallback((result) => {
+    const labels = getPromLabels();
+    for (const [
+      platform,
+      count,
+    ] of singleplayerPresence.activeGamesByPlatform()) {
       result.observe(count, { ...labels, "openfront.platform": platform });
     }
   });

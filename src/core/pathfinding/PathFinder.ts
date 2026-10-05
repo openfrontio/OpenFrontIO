@@ -302,6 +302,41 @@ export class WaterPathFinder implements SteppingPathFinder<TileRef> {
   invalidate(): void {
     this.stepper.invalidate();
   }
+
+  /** Stagger and traversal progress, for game snapshots. */
+  getState() {
+    return {
+      stagger: this._stagger,
+      memoized: this._memoized,
+      waterGraphVersion: this._waterGraphVersion,
+      rebuilt: this._rebuilt,
+      staggerCountdown: this._staggerCountdown,
+      pendingVersion: this._pendingVersion,
+      stepper: this.stepper.getState() as {
+        path: Uint32Array | null;
+        pathIndex: number;
+        lastTo: TileRef | null;
+      },
+    };
+  }
+
+  /**
+   * Rebuilds a pathfinder from getState(). A ship still waiting out its
+   * stagger countdown keeps its old path but, unlike in the live game, would
+   * route any new query on the current water graph: the stale one is gone.
+   */
+  static fromState(
+    game: Game,
+    s: ReturnType<WaterPathFinder["getState"]>,
+  ): WaterPathFinder {
+    const pf = new WaterPathFinder(game, s.stagger, s.memoized);
+    pf._waterGraphVersion = s.waterGraphVersion;
+    pf._rebuilt = s.rebuilt;
+    pf._staggerCountdown = s.staggerCountdown;
+    pf._pendingVersion = s.pendingVersion;
+    pf.stepper.setState(s.stepper);
+    return pf;
+  }
 }
 
 function tileStepperConfig(game: Game): StepperConfig<TileRef> {

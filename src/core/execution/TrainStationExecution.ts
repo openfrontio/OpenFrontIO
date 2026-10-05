@@ -1,6 +1,14 @@
+import { z } from "zod";
 import { Execution, Game, Unit, UnitType } from "../game/Game";
 import { TrainStation } from "../game/TrainStation";
 import { PseudoRandom } from "../PseudoRandom";
+import { execSnapshotType } from "../snapshot/ExecutionSnapshot";
+import type {
+  ExecRecord,
+  SnapshotReader,
+  SnapshotWriter,
+} from "../snapshot/SnapshotContext";
+import { zInt, zRandom, zRef } from "../snapshot/SnapshotType";
 import { TrainExecution } from "./TrainExecution";
 
 export class TrainStationExecution implements Execution {
@@ -103,4 +111,51 @@ export class TrainStationExecution implements Execution {
   activeDuringSpawnPhase(): boolean {
     return false;
   }
+
+  snapshot(w: SnapshotWriter): ExecRecord {
+    return TrainStationExecutionSnapshot.write({
+      active: this.active,
+      initialized: this.mg !== undefined,
+      unit: w.unit(this.unit),
+      spawnTrains: this.spawnTrains,
+      // Only created by init, and only for stations that spawn trains.
+      random: this.random === undefined ? null : w.random(this.random),
+      station: this.station === null ? null : w.station(this.station),
+      numCars: this.numCars,
+      lastSpawnTick: this.lastSpawnTick,
+      ticksCooldown: this.ticksCooldown,
+    });
+  }
+
+  restoreSnapshot(s: TrainStationExecState, r: SnapshotReader): void {
+    this.active = s.active;
+    if (s.initialized) this.mg = r.game;
+    this.unit = r.unit(s.unit);
+    this.spawnTrains = s.spawnTrains;
+    if (s.random !== null) this.random = r.random(s.random);
+    this.station = s.station === null ? null : r.station(s.station);
+    this.numCars = s.numCars;
+    this.lastSpawnTick = s.lastSpawnTick;
+    this.ticksCooldown = s.ticksCooldown;
+  }
 }
+
+const TrainStationExecStateSchema = z.object({
+  active: z.boolean(),
+  initialized: z.boolean(),
+  unit: zRef(),
+  spawnTrains: z.boolean().optional(),
+  random: zRandom().nullable(),
+  station: zRef().nullable(),
+  numCars: zInt(),
+  lastSpawnTick: zInt(),
+  ticksCooldown: zInt(),
+});
+type TrainStationExecState = z.infer<typeof TrainStationExecStateSchema>;
+
+export const TrainStationExecutionSnapshot = execSnapshotType({
+  name: "TrainStation",
+  version: 1,
+  schema: TrainStationExecStateSchema,
+  cls: () => TrainStationExecution,
+});

@@ -53,7 +53,12 @@ export class HomepagePromos extends LitElement {
     document.addEventListener("userMeResponse", this.onUserMeResponse);
     document.addEventListener("join-lobby", this.onJoinLobby);
     document.addEventListener("leave-lobby", this.onLeaveLobby);
-    this.topAdMutation = new MutationObserver(() => this.syncTopAd());
+    // Fires on every DOM change in the page, so it must not measure: it only
+    // notices the banner element arriving or leaving, and the observers
+    // syncTopAd attaches to the banner itself track its size and position.
+    this.topAdMutation = new MutationObserver(() => {
+      if (this.findTopAd() !== this.topAdEl) this.syncTopAd();
+    });
     // subtree: the banner is nested inside a wrapper (#pw-oop-flex_container),
     // so watching body's direct children alone misses it.
     this.topAdMutation.observe(document.body, {
@@ -78,10 +83,15 @@ export class HomepagePromos extends LitElement {
       ?.style.removeProperty("min-height");
   }
 
-  private syncTopAd(): void {
-    const el =
+  private findTopAd(): HTMLElement | null {
+    return (
       document.getElementById("pw-oop-flex") ??
-      document.getElementById("adBanner");
+      document.getElementById("adBanner")
+    );
+  }
+
+  private syncTopAd(): void {
+    const el = this.findTopAd();
     if (el !== this.topAdEl) {
       this.topAdResize?.disconnect();
       this.topAdResize = null;
@@ -169,18 +179,22 @@ export class HomepagePromos extends LitElement {
 
   public close(): void {
     this.adLoaded = false;
-    try {
-      // Destroy gutter rails and the header ad; bottom_rail persists into
-      // spawn phase. These are no-selector units, registered under pw-oop-
-      // ids (see destroyBottomRail). The header ad must go too: nothing hides
-      // #pw-oop-flex_container in-game and its docked state is fixed at the
-      // viewport top, so it would sit over the map.
-      window.ramp.destroyUnits("pw-oop-left_rail");
-      window.ramp.destroyUnits("pw-oop-right_rail");
-      window.ramp.destroyUnits("pw-oop-flex");
-      console.log("successfully destroyed gutter rails and header ad");
-    } catch (e) {
-      console.error("error destroying gutter rails and header ad", e);
+    // index.html stubs window.ramp; without ramp.js (an ad blocker) there is
+    // no destroyUnits and no units to destroy.
+    if (typeof window.ramp?.destroyUnits === "function") {
+      try {
+        // Destroy gutter rails and the header ad; bottom_rail persists into
+        // spawn phase. These are no-selector units, registered under pw-oop-
+        // ids (see destroyBottomRail). The header ad must go too: nothing hides
+        // #pw-oop-flex_container in-game and its docked state is fixed at the
+        // viewport top, so it would sit over the map.
+        window.ramp.destroyUnits("pw-oop-left_rail");
+        window.ramp.destroyUnits("pw-oop-right_rail");
+        window.ramp.destroyUnits("pw-oop-flex");
+        console.log("successfully destroyed gutter rails and header ad");
+      } catch (e) {
+        console.warn("error destroying gutter rails and header ad", e);
+      }
     }
     // Adblock-detected users get NO in-game ads (the AdGatekeeper latch is
     // permanent, surviving the blocker being disabled), so the corner video
@@ -206,11 +220,11 @@ export class HomepagePromos extends LitElement {
           window.ramp.spaAddAds([{ type: "bottom_rail" }]);
           console.log("Bottom rail ad loaded");
         } catch (e) {
-          console.error("Failed to add bottom_rail ad:", e);
+          console.warn("Failed to add bottom_rail ad:", e);
         }
       });
     } catch (error) {
-      console.error("Failed to load bottom_rail ad:", error);
+      console.warn("Failed to load bottom_rail ad:", error);
     }
   }
 
@@ -224,7 +238,7 @@ export class HomepagePromos extends LitElement {
       window.ramp.destroyUnits("pw-oop-bottom_rail");
       console.log("Bottom rail ad destroyed");
     } catch (e) {
-      console.error("Error destroying bottom_rail ad:", e);
+      console.warn("Error destroying bottom_rail ad:", e);
     }
   }
 
@@ -257,7 +271,7 @@ export class HomepagePromos extends LitElement {
         }
       });
     } catch (error) {
-      console.error("Failed to load gutter rails and header ad:", error);
+      console.warn("Failed to load gutter rails and header ad:", error);
     }
   }
 
@@ -281,14 +295,14 @@ export class HomepagePromos extends LitElement {
               console.log("corner_ad_video loaded");
             })
             .catch((e: unknown) => {
-              console.error("Failed to display corner_ad_video:", e);
+              console.warn("Failed to display corner_ad_video:", e);
             });
         } catch (e) {
-          console.error("Failed to add corner_ad_video:", e);
+          console.warn("Failed to add corner_ad_video:", e);
         }
       });
     } catch (error) {
-      console.error("Failed to load corner_ad_video:", error);
+      console.warn("Failed to load corner_ad_video:", error);
     }
   }
 
@@ -306,10 +320,10 @@ export class HomepagePromos extends LitElement {
         .catch(() => window.ramp.destroyUnits("pw-oop-corner_ad_video"))
         .then(() => console.log("corner_ad_video destroyed"))
         .catch((e: unknown) => {
-          console.error("Error destroying corner_ad_video:", e);
+          console.warn("Error destroying corner_ad_video:", e);
         });
     } catch (e) {
-      console.error("Error destroying corner_ad_video:", e);
+      console.warn("Error destroying corner_ad_video:", e);
     }
   }
 }

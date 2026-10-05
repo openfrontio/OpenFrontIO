@@ -542,6 +542,10 @@ export class BuildPreviewController implements Controller {
       );
       this.removeGhostStructure();
     } else if (this.ghostUnit.buildableUnit.canBuild) {
+      // The pointer can be released just off the map edge before the
+      // throttled hover refresh marks the ghost unbuildable; there is no
+      // tile to build on, so keep the ghost and wait for a click on the map.
+      if (!this.game.isValidCoord(tile.x, tile.y)) return;
       const unitType = this.ghostUnit.buildableUnit.type;
       const targetTile = this.game.ref(tile.x, tile.y);
 
@@ -669,7 +673,7 @@ export class BuildPreviewController implements Controller {
       if (existing) {
         return existing.level() + 1;
       } else {
-        console.error("Failed to find existing SAMLauncher for upgrade");
+        console.warn("Failed to find existing SAMLauncher for upgrade");
       }
     }
     return 1;

@@ -7,6 +7,7 @@ import {
   makeClient,
   makeGame,
   makeMockWs,
+  mockLogger,
   mockWsOf,
   startGame,
 } from "../util/GameServerHarness";
@@ -76,6 +77,36 @@ describe("GameServer.joinClient — environment guards", () => {
       expect(game.joinClient(account("second"))).toBe("joined");
       expect(mockWsOf(first).close).not.toHaveBeenCalled();
       expect(game.numClients()).toBe(2);
+    });
+  });
+
+  describe("full lobby", () => {
+    it("rejects a late joiner with full-lobby, at debug rather than warn", () => {
+      const log = mockLogger();
+      const game = makeGame({
+        config: { gameType: GameType.Public, maxPlayers: 2 },
+        log,
+      });
+      expect(game.joinClient(makeClient({ clientID: cid("a") }))).toBe(
+        "joined",
+      );
+      expect(game.joinClient(makeClient({ clientID: cid("b") }))).toBe(
+        "joined",
+      );
+      const late = makeClient({ clientID: cid("c") });
+      expect(game.joinClient(late)).toBe("rejected");
+      expect(mockWsOf(late).sent()).toContainEqual({
+        type: "error",
+        error: "full-lobby",
+      });
+      expect(game.numClients()).toBe(2);
+      // Every filled public lobby turns away a stream of late joiners; this
+      // is routine, not something worth a warn line per attempt.
+      expect(log.warn).not.toHaveBeenCalled();
+      expect(log.debug).toHaveBeenCalledWith(
+        expect.stringContaining("cannot add client, game full"),
+        expect.objectContaining({ clientID: cid("c") }),
+      );
     });
   });
 

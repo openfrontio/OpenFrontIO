@@ -222,6 +222,11 @@ export default defineConfig(({ mode }) => {
       env.TURNSTILE_SITE_KEY ?? "1x00000000000000000000AA",
     ),
     jwtAudience: JSON.stringify(env.DOMAIN ?? "localhost"),
+    // Dev only: set FARO_COLLECTOR_URL in .env to point a local client at a
+    // collector; unset drops the guarded line, exactly as in production.
+    faroCollectorUrl: env.FARO_COLLECTOR_URL
+      ? JSON.stringify(env.FARO_COLLECTOR_URL)
+      : undefined,
     instanceId: JSON.stringify(env.INSTANCE_ID ?? "DEV_ID"),
     manifestHref: buildAssetUrl("manifest.json", assetManifest, cdnBase),
     faviconHref: buildAssetUrl("images/Favicon.svg", assetManifest, cdnBase),
@@ -307,6 +312,14 @@ export default defineConfig(({ mode }) => {
       globals: true,
       environment: "jsdom",
       setupFiles: "./tests/setup.ts",
+      // Node 25 turned Web Storage on by default, where `localStorage` is a
+      // built-in global that evaluates to undefined unless --localstorage-file
+      // is passed. It shadows the jsdom localStorage vitest installs, so every
+      // test touching UserSettings dies on "Cannot read properties of
+      // undefined (reading 'getItem')". Turn Node's own Web Storage off in the
+      // test workers so jsdom always provides it. No-op on Node 24, which keeps
+      // Web Storage behind a flag.
+      execArgv: ["--no-experimental-webstorage"],
       // Git worktrees live inside the repo, so their tests match the default
       // glob and run against that worktree's own (often stale) source and
       // node_modules. Anyone with a worktree checked out sees failures that
@@ -324,6 +337,24 @@ export default defineConfig(({ mode }) => {
     root: "./",
     base: "/",
     publicDir: isProduction ? false : "resources",
+
+    // Vite's JS preload helper (`__vitePreload`, used by dynamic import())
+    // resolves a chunk's dependency list against `base`, so with base "/" the
+    // helper chunks behind e.g. the lazy Faro import were requested from the
+    // page origin, where nothing serves /assets/ (openfront.io answered 503,
+    // and the import() rejected, so telemetry never started). Emitting those
+    // references relative makes the helper resolve them against
+    // import.meta.url, i.e. wherever the importing chunk itself was loaded
+    // from -- the CDN in production, same-origin in dev -- without baking
+    // CDN_BASE into the bundle (the Docker build does not have it). HTML keeps
+    // Vite's /assets/ refs so rewriteAssetsForCdn can turn them into the
+    // request-time EJS placeholder.
+    experimental: {
+      renderBuiltUrl(_filename, { hostType }) {
+        if (hostType === "js") return { relative: true };
+        return undefined;
+      },
+    },
 
     resolve: {
       tsconfigPaths: true,

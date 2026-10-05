@@ -1,16 +1,24 @@
+import { z } from "zod";
 import {
   AllPlayers,
   Difficulty,
   Game,
   Gold,
   Player,
-  PlayerID,
   PlayerType,
-  Tick,
   UnitType,
 } from "../../game/Game";
 import { TileRef } from "../../game/GameMap";
 import { PseudoRandom } from "../../PseudoRandom";
+import type {
+  SnapshotReader,
+  SnapshotWriter,
+} from "../../snapshot/SnapshotContext";
+import {
+  readVersioned,
+  snapshotType,
+  Versioned,
+} from "../../snapshot/SnapshotType";
 import { assertNever } from "../../Util";
 import { MirvExecution } from "../MIRVExecution";
 import { calculateTerritoryCenter } from "../Util";
@@ -27,7 +35,6 @@ export class NationMIRVBehavior {
   // Shared across all NationMIRVBehavior instances.
   // Tracks the last tick a MIRV was sent at each player, so multiple nations don't pile-on the same target.
   // Especially important for games with very high starting gold settings.
-  private static recentMirvTargets = new Map<PlayerID, Tick>();
 
   constructor(
     private random: PseudoRandom,
@@ -35,6 +42,26 @@ export class NationMIRVBehavior {
     private player: Player,
     private emojiBehavior: NationEmojiBehavior,
   ) {}
+
+  /** No state of its own; the owner supplies the shared references. */
+  snapshot(w: SnapshotWriter): Versioned {
+    return w.versioned(NationMIRVBehaviorSnapshot, {});
+  }
+
+  /** Fills a prototype-only shell; only assigns (see README). */
+  restoreSnapshot(
+    raw: unknown,
+    r: SnapshotReader,
+    random: PseudoRandom,
+    player: Player,
+    emojiBehavior: NationEmojiBehavior,
+  ): void {
+    readVersioned(NationMIRVBehaviorSnapshot, raw);
+    this.random = random;
+    this.game = r.game;
+    this.player = player;
+    this.emojiBehavior = emojiBehavior;
+  }
 
   private get hesitationOdds(): number {
     const { difficulty } = this.game.config().gameConfig();
@@ -228,13 +255,13 @@ export class NationMIRVBehavior {
 
   // MIRV Cooldown Methods
   private wasRecentlyMirved(target: Player): boolean {
-    const lastTick = NationMIRVBehavior.recentMirvTargets.get(target.id());
+    const lastTick = this.game.nationMirvTargets().get(target.id());
     if (lastTick === undefined) return false;
     return this.game.ticks() - lastTick < MIRV_COOLDOWN_TICKS;
   }
 
   private recordMirvHit(target: Player): void {
-    NationMIRVBehavior.recentMirvTargets.set(target.id(), this.game.ticks());
+    this.game.nationMirvTargets().set(target.id(), this.game.ticks());
   }
 
   // MIRV Helper Methods
@@ -294,3 +321,9 @@ export class NationMIRVBehavior {
     return this.game.unitInfo(type).cost(this.game, this.player);
   }
 }
+
+export const NationMIRVBehaviorSnapshot = snapshotType({
+  name: "NationMIRVBehavior",
+  version: 1,
+  schema: z.object({}),
+});

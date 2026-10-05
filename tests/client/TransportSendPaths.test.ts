@@ -219,6 +219,38 @@ describe("Transport send paths", () => {
     });
   });
 
+  describe("join", () => {
+    // The host's first join presents the token the lobby was created under,
+    // so an identity change between create and join (a cookieless guest's
+    // JWT refresh mints a new one) can't cost them the creator seat.
+    it("joins with the creator token once, then with a fresh play token", async () => {
+      const creatorToken = "0a1b2c3d-4e5f-4a6b-8c7d-9e0f1a2b3c4d";
+      const { transport } = makeTransport({
+        creatorToken,
+        turnstileToken: null,
+        cosmetics: {},
+      });
+      transports.push(transport);
+      transport.connect(
+        () => {},
+        () => {},
+      );
+      const ws = FakeWebSocket.instances[0];
+      ws.serverOpen();
+
+      await transport.joinGame();
+      await transport.joinGame();
+
+      const tokens = decodeFrames(ws).map((m) =>
+        m.type === "join" ? m.token : m.type,
+      );
+      expect(tokens).toEqual([
+        creatorToken,
+        "8f1d2c3e-4b5a-4c6d-8e7f-90a1b2c3d4e5",
+      ]);
+    });
+  });
+
   describe("winner and hash", () => {
     it("sends the winner over an open socket", () => {
       const { eventBus, ws } = connected();
