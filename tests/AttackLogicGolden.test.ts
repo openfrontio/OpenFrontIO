@@ -12,10 +12,9 @@
  */
 import { AttackLogicInput, Config } from "../src/core/configuration/Config";
 import { PlayerType, TerrainType } from "../src/core/game/Game";
-import { UserSettings } from "../src/core/game/UserSettings";
 import { GameConfig } from "../src/core/Schemas";
 
-const config = new Config({} as GameConfig, new UserSettings(), false);
+const config = new Config({} as GameConfig, false);
 
 type Defender = NonNullable<AttackLogicInput["defender"]>;
 

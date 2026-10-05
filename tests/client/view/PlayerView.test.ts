@@ -7,6 +7,7 @@
  */
 
 import { beforeEach, describe, expect, it } from "vitest";
+import { UserSettings } from "../../../src/client/UserSettings";
 import { PlayerView } from "../../../src/client/view/PlayerView";
 import {
   AllPlayers,
@@ -14,7 +15,6 @@ import {
   PlayerType,
 } from "../../../src/core/game/Game";
 import { GameUpdateType } from "../../../src/core/game/GameUpdates";
-import { UserSettings } from "../../../src/core/game/UserSettings";
 import {
   makeEmptyGu,
   makeGameView,

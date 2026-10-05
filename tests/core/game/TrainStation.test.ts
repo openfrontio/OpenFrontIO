@@ -14,7 +14,6 @@ import {
   UnitType,
 } from "../../../src/core/game/Game";
 import { Cluster, TrainStation } from "../../../src/core/game/TrainStation";
-import { UserSettings } from "../../../src/core/game/UserSettings";
 import { GameConfig } from "../../../src/core/Schemas";
 
 vi.mock("../../../src/core/game/Game");
@@ -231,7 +230,7 @@ describe("Config.trainGold trade stop penalty", () => {
       disableNavMesh: false,
       randomSpawn: false,
     };
-    config = new Config(gameConfig, new UserSettings(), false);
+    config = new Config(gameConfig, false);
     mockPlayer = { isLobbyCreator: () => false } as unknown as Player;
   });
 

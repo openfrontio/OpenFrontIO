@@ -1,10 +1,10 @@
 import { z } from "zod";
-import { translateText } from "../../client/Utils";
 import {
   ClanTagSchema,
   RENDERABLE_NAME_CHARS,
   UsernameSchema,
-} from "../Schemas";
+} from "../../core/Schemas";
+import { translateText } from "../Utils";
 
 export const MIN_USERNAME_LENGTH = 3;
 // Matches MAX_ACCOUNT_USERNAME_LENGTH so a free-form name can't outgrow the

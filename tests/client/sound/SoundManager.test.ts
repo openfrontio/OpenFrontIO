@@ -57,8 +57,8 @@ import {
   PlaySoundEffectEvent,
   SetAmbienceEvent,
 } from "../../../src/client/sound/Sounds";
+import { UserSettings } from "../../../src/client/UserSettings";
 import { EventBus } from "../../../src/core/EventBus";
-import { UserSettings } from "../../../src/core/game/UserSettings";
 
 function resetSettings() {
   localStorage.clear();

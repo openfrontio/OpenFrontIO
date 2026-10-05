@@ -8,10 +8,10 @@ import {
   PlayerBuildableUnitType,
   UnitType,
 } from "../../../core/game/Game";
-import { UserSettings } from "../../../core/game/UserSettings";
 import { Controller } from "../../Controller";
 import { ToggleStructureEvent } from "../../InputHandler";
 import { UIState } from "../../UIState";
+import { UserSettings } from "../../UserSettings";
 import { renderNumber, translateText } from "../../Utils";
 import { GameView } from "../../view";
 import {

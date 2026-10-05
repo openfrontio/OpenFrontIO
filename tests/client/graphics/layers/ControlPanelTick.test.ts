@@ -6,9 +6,9 @@ import "../../../../src/client/hud/layers/ControlPanel";
 import type { ControlPanel } from "../../../../src/client/hud/layers/ControlPanel";
 import { AttackRatioEvent } from "../../../../src/client/InputHandler";
 import type { UIState } from "../../../../src/client/UIState";
+import { UserSettings } from "../../../../src/client/UserSettings";
 import type { GameView } from "../../../../src/client/view";
 import { EventBus } from "../../../../src/core/EventBus";
-import { UserSettings } from "../../../../src/core/game/UserSettings";
 
 describe("control-panel keybind attack ratio and tick visibility", () => {
   let panel: ControlPanel;

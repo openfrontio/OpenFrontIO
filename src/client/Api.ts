@@ -52,7 +52,6 @@ import {
   ArchivedAnalyticsRecordSchema,
   GameInfo,
 } from "../core/Schemas";
-import { UserSettings } from "../core/game/UserSettings";
 import { getApiBase, getAudience } from "./ApiBase";
 import {
   getAuthHeader,
@@ -63,6 +62,7 @@ import {
 } from "./Auth";
 import { ClientEnv } from "./ClientEnv";
 import { ensureServerList } from "./ServerList";
+import { UserSettings } from "./UserSettings";
 
 export async function fetchPlayerById(
   playerId: string,

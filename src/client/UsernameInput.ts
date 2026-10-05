@@ -3,14 +3,6 @@ import { customElement, property, state } from "lit/decorators.js";
 import { translateText } from "../client/Utils";
 import { UserMeResponse } from "../core/ApiSchemas";
 import { sanitizeClanTag } from "../core/Util";
-import {
-  MAX_CLAN_TAG_LENGTH,
-  MAX_USERNAME_LENGTH,
-  MIN_CLAN_TAG_LENGTH,
-  MIN_USERNAME_LENGTH,
-  validateClanTag,
-  validateUsername,
-} from "../core/validations/username";
 import { getUserMe, invalidateUserMe } from "./Api";
 import { checkClanTagOwnership } from "./ClanApi";
 import { verifiedBadge } from "./components/ui/VerifiedBadge";
@@ -37,6 +29,14 @@ import {
   steamGrantEndedShown,
 } from "./SteamGrantNotices";
 import { steamSDK } from "./SteamSDK";
+import {
+  MAX_CLAN_TAG_LENGTH,
+  MAX_USERNAME_LENGTH,
+  MIN_CLAN_TAG_LENGTH,
+  MIN_USERNAME_LENGTH,
+  validateClanTag,
+  validateUsername,
+} from "./validations/username";
 
 interface LangSelectorLike {
   currentLang?: string;

@@ -1,20 +1,20 @@
+import { Cosmetics } from "../core/CosmeticSchemas";
+import { PlayerPattern } from "../core/Schemas";
 import {
   GraphicsOverrides,
   GraphicsOverridesSchema,
   GraphicsPresets,
   GraphicsPresetsSchema,
-} from "../../client/render/gl/GraphicsOverrides";
+} from "./render/gl/GraphicsOverrides";
 import {
   COLUMN_IDS,
   ColumnId,
   DEFAULT_STATS_COLUMNS,
   StatsTableKind,
-} from "../../client/StatsConstants";
+} from "./StatsConstants";
 // DesktopShell.ts imports nothing, so this cannot introduce an import cycle
 // (verified with madge: 58 cycles before and after, none involving it).
-import { isDesktopShell } from "../../client/DesktopShell";
-import { Cosmetics } from "../CosmeticSchemas";
-import { PlayerPattern } from "../Schemas";
+import { isDesktopShell } from "./DesktopShell";
 
 export function getDefaultKeybinds(isMac: boolean): Record<string, string> {
   return {

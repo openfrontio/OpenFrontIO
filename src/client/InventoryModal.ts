@@ -11,15 +11,6 @@ import {
   isNukeExplosionEffect,
   Skin,
 } from "../core/CosmeticSchemas";
-import {
-  CROWN_KEY,
-  EFFECTS_KEY,
-  FLAG_KEY,
-  MAX_LOADOUTS,
-  PATTERN_KEY,
-  USER_SETTINGS_CHANGED_EVENT,
-  UserSettings,
-} from "../core/game/UserSettings";
 import { PlayerPattern } from "../core/Schemas";
 import { getUserMe } from "./Api";
 import { userAuth } from "./Auth";
@@ -48,6 +39,15 @@ import {
   ResolvedCosmetic,
   resolvedToPlayerPattern,
 } from "./Cosmetics";
+import {
+  CROWN_KEY,
+  EFFECTS_KEY,
+  FLAG_KEY,
+  MAX_LOADOUTS,
+  PATTERN_KEY,
+  USER_SETTINGS_CHANGED_EVENT,
+  UserSettings,
+} from "./UserSettings";
 import { translateText } from "./Utils";
 
 type OwnershipState = "loading" | "guest" | "loaded" | "error";

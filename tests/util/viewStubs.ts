@@ -10,6 +10,7 @@ import { colord } from "colord";
 import { Theme } from "../../src/client/theme/ThemeProvider";
 import { GameView } from "../../src/client/view/GameView";
 import { PlayerView } from "../../src/client/view/PlayerView";
+import { WorkerClient } from "../../src/client/WorkerClient";
 import { Config } from "../../src/core/configuration/Config";
 import {
   NameViewData,
@@ -26,7 +27,6 @@ import {
 } from "../../src/core/game/GameUpdates";
 import { TerrainMapData } from "../../src/core/game/TerrainMapLoader";
 import { Player, PlayerCosmetics } from "../../src/core/Schemas";
-import { WorkerClient } from "../../src/core/worker/WorkerClient";
 
 /** Theme stub — returns deterministic colors so PlayerView's color math works. */
 export function stubTheme(): Theme {

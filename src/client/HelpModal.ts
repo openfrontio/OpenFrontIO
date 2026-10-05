@@ -7,12 +7,12 @@ import {
   TUTORIAL_VIDEO_URL,
 } from "../client/Utils";
 import { assetUrl } from "../core/AssetUrls";
-import { UserSettings } from "../core/game/UserSettings";
 import { BaseModal } from "./components/BaseModal";
 import "./components/Difficulties";
 import { modalHeader } from "./components/ui/ModalHeader";
 import { Platform } from "./Platform";
 import { TroubleshootingModal } from "./TroubleshootingModal";
+import { UserSettings } from "./UserSettings";
 
 @customElement("help-modal")
 export class HelpModal extends BaseModal {

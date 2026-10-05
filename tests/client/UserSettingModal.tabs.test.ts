@@ -5,7 +5,7 @@ import { modalRouter } from "../../src/client/ModalRouter";
 import type { UIState } from "../../src/client/UIState";
 import "../../src/client/UserSettingModal";
 import type { UserSettingModal } from "../../src/client/UserSettingModal";
-import { UserSettings } from "../../src/core/game/UserSettings";
+import { UserSettings } from "../../src/client/UserSettings";
 
 type TestModal = UserSettingModal & {
   updateComplete: Promise<unknown>;

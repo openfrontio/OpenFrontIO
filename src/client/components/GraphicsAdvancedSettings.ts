@@ -1,16 +1,16 @@
 import { html, LitElement, nothing } from "lit";
 import { customElement, property } from "lit/decorators.js";
 import type { MapLayer } from "../../core/game/TerrainMapLoader";
-import {
-  GRAPHICS_KEY,
-  USER_SETTINGS_CHANGED_EVENT,
-  UserSettings,
-} from "../../core/game/UserSettings";
 import { migrateLegacyGraphicsSettings } from "../GraphicsPresets";
 import { isLayerVisible, layerAlpha } from "../MapLayerSettings";
 import { type GraphicsOverrides } from "../render/gl";
 import { COSMETICS_SHOW_FROM } from "../render/gl/GraphicsOverrides";
 import renderDefaults from "../render/gl/render-settings.json";
+import {
+  GRAPHICS_KEY,
+  USER_SETTINGS_CHANGED_EVENT,
+  UserSettings,
+} from "../UserSettings";
 import { translateText } from "../Utils";
 import "./baseComponents/setting/SettingColor";
 import "./baseComponents/setting/SettingSelect";

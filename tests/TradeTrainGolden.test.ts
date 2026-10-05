@@ -16,11 +16,10 @@
  */
 import { Config } from "../src/core/configuration/Config";
 import { Player } from "../src/core/game/Game";
-import { UserSettings } from "../src/core/game/UserSettings";
 import { GameConfig } from "../src/core/Schemas";
 
 function makeConfig(gameConfig: Partial<GameConfig> = {}): Config {
-  return new Config(gameConfig as GameConfig, new UserSettings(), false);
+  return new Config(gameConfig as GameConfig, false);
 }
 
 const config = makeConfig();

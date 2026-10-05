@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { WorkerClient } from "../../../src/core/worker/WorkerClient";
+import { WorkerClient } from "../../../src/client/WorkerClient";
 import type {
   PlayerActionsResultMessage,
   WorkerMessage,

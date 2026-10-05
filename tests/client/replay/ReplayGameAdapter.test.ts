@@ -19,7 +19,6 @@ import { Config } from "../../../src/core/configuration/Config";
 import { EventBus } from "../../../src/core/EventBus";
 import { Cell, GameType, UnitType } from "../../../src/core/game/Game";
 import { GameUpdateType } from "../../../src/core/game/GameUpdates";
-import { UserSettings } from "../../../src/core/game/UserSettings";
 import { setup } from "../../util/Setup";
 import { config as gameConfig } from "./util/ArchiveGame";
 import { openReader, recordGame, type RecordedGame } from "./util/RecordGame";
@@ -80,7 +79,7 @@ describe("ReplayGameAdapter", () => {
     // same fixture the processor tests use.
     adapter = new ReplayGameView(
       reader.header.players,
-      new Config(gameConfig(), new UserSettings(), true, false, true),
+      new Config(gameConfig(), true, false, true),
       reader.header.mapWidth,
       reader.header.mapHeight,
       reader.header.numLandTiles,

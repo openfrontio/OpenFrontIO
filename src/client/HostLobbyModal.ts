@@ -18,7 +18,6 @@ import {
   GameMode,
   UnitType,
 } from "../core/game/Game";
-import { UserSettings } from "../core/game/UserSettings";
 import {
   ClientInfo,
   GameConfig,
@@ -46,6 +45,7 @@ import { fetchCosmetics, InsufficientCurrency } from "./Cosmetics";
 import { crazyGamesSDK } from "./CrazyGamesSDK";
 import { JoinLobbyEvent } from "./Main";
 import { terrainMapFileLoader } from "./TerrainMapFileLoader";
+import { UserSettings } from "./UserSettings";
 import {
   getBotsForCompactMap,
   getNationsForCompactMap,

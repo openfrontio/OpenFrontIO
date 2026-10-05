@@ -11,7 +11,7 @@ import {
   MIN_ACCOUNT_USERNAME_LENGTH,
   MIN_USERNAME_LENGTH,
   validateAccountUsername,
-} from "../core/validations/username";
+} from "./validations/username";
 
 // What name a player plays under, resolved in one place.
 //

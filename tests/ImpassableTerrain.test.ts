@@ -21,7 +21,6 @@ import {
 import { createGame } from "../src/core/game/GameImpl";
 import { TileRef } from "../src/core/game/GameMap";
 import { genTerrainFromBin } from "../src/core/game/TerrainMapLoader";
-import { UserSettings } from "../src/core/game/UserSettings";
 import { PathFinding } from "../src/core/pathfinding/PathFinder";
 import { PseudoRandom } from "../src/core/PseudoRandom";
 import { GameConfig } from "../src/core/Schemas";
@@ -106,7 +105,7 @@ async function setupImpassableGame(
     instantBuild: true,
     randomSpawn: false,
   };
-  const config = new TestConfig(gameConfig, new UserSettings(), false);
+  const config = new TestConfig(gameConfig, false);
 
   const game = createGame(humans, [], gameMap, miniGameMap, config);
   game.endSpawnPhase();

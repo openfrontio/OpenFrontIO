@@ -13,10 +13,10 @@ import {
   Trios,
 } from "../../core/game/Game";
 import { assignTeamsLobbyPreview } from "../../core/game/TeamAssignment";
-import { UserSettings } from "../../core/game/UserSettings";
 import { ClientID, ClientInfo, TeamCountConfig } from "../../core/Schemas";
 import { createRandomName, formatPlayerDisplayName } from "../../core/Util";
 import { Theme, themeProvider } from "../theme/ThemeProvider";
+import { UserSettings } from "../UserSettings";
 import {
   getTranslatedPlayerTeamLabel,
   resolveTeamClanTag,

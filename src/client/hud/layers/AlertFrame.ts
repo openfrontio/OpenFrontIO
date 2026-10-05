@@ -5,8 +5,8 @@ import {
   BrokeAllianceUpdate,
   GameUpdateType,
 } from "../../../core/game/GameUpdates";
-import { UserSettings } from "../../../core/game/UserSettings";
 import { Controller } from "../../Controller";
+import { UserSettings } from "../../UserSettings";
 import { GameView, PlayerView } from "../../view";
 
 // Parameters for the alert animation

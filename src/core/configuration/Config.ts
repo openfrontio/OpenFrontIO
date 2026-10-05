@@ -19,7 +19,6 @@ import {
   UnitInfo,
   UnitType,
 } from "../game/Game";
-import { UserSettings } from "../game/UserSettings";
 import { GameConfig, TeamCountConfig } from "../Schemas";
 import { NukeType } from "../StatsSchemas";
 import { assertNever, sigmoid, toInt, within } from "../Util";
@@ -269,7 +268,6 @@ export class Config {
   private unitInfoCache = new Map<UnitType, UnitInfo>();
   constructor(
     private _gameConfig: GameConfig,
-    private _userSettings: UserSettings | null,
     private _isReplay: boolean,
     public readonly listed: boolean = false,
     private _spectator: boolean = false,
@@ -346,13 +344,6 @@ export class Config {
 
   gameConfig(): GameConfig {
     return this._gameConfig;
-  }
-
-  userSettings(): UserSettings {
-    if (this._userSettings === null) {
-      throw new Error("userSettings is null");
-    }
-    return this._userSettings;
   }
 
   cityTroopIncrease(): number {

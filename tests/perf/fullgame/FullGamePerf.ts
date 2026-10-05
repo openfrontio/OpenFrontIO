@@ -247,7 +247,7 @@ async function main(): Promise<void> {
   // Mirrors createGameRunner(), but assembled by hand so the execution
   // profiler can be attached before GameRunner.init() adds the initial
   // executions (nations, bots, spawn timer, win check).
-  const config = new Config(gameConfig, null, false);
+  const config = new Config(gameConfig, false);
   const mapLoader = new NodeGameMapLoader(
     path.join(PROJECT_ROOT, "resources/maps"),
   );

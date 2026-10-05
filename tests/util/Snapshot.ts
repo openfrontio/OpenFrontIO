@@ -10,7 +10,6 @@ import {
   MapManifest,
 } from "../../src/core/game/TerrainMapLoader";
 import { TileSet } from "../../src/core/game/TileSet";
-import { UserSettings } from "../../src/core/game/UserSettings";
 import { AStar } from "../../src/core/pathfinding/algorithms/AStar";
 import { AbstractGraphAStar } from "../../src/core/pathfinding/algorithms/AStar.AbstractGraph";
 import { AStarRail } from "../../src/core/pathfinding/algorithms/AStar.Rail";
@@ -63,7 +62,7 @@ export async function restoreTestGame(
 ): Promise<Game> {
   const maps = await loadTestMaps(mapName);
   return restoreGame(bytes, {
-    config: (gc) => new ConfigClass(gc, new UserSettings(), false),
+    config: (gc) => new ConfigClass(gc, false),
     ...maps,
   });
 }

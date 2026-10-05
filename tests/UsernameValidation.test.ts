@@ -1,13 +1,13 @@
 import { readFileSync } from "fs";
 import { describe, expect, it } from "vitest";
-import { RENDERABLE_NAME_CHAR_RE, UsernameSchema } from "../src/core/Schemas";
 import {
   AccountUsernameSchema,
   MAX_ACCOUNT_USERNAME_LENGTH,
   MAX_USERNAME_LENGTH,
   MIN_USERNAME_LENGTH,
   validateUsername,
-} from "../src/core/validations/username";
+} from "../src/client/validations/username";
+import { RENDERABLE_NAME_CHAR_RE, UsernameSchema } from "../src/core/Schemas";
 
 describe("free-form username length", () => {
   it("matches the account-username cap", () => {

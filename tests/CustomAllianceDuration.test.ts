@@ -5,7 +5,7 @@ import { GameConfig } from "../src/core/Schemas";
 // The "custom alliances" lobby control writes customAllianceDuration (minutes):
 // 0 disables alliances, 1-15 sets the alliance duration, unset = default.
 function cfg(over: Partial<GameConfig>): Config {
-  return new Config(over as unknown as GameConfig, null, false);
+  return new Config(over as unknown as GameConfig, false);
 }
 
 describe("custom alliance duration", () => {

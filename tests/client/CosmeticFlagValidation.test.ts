@@ -4,8 +4,8 @@ import {
   getPlayerCosmeticsRefs,
   invalidateCosmetics,
 } from "../../src/client/Cosmetics";
+import { FLAG_KEY, UserSettings } from "../../src/client/UserSettings";
 import type { UserMeResponse } from "../../src/core/ApiSchemas";
-import { FLAG_KEY, UserSettings } from "../../src/core/game/UserSettings";
 
 vi.mock("../../src/client/Api", async (importOriginal) => ({
   ...(await importOriginal<typeof import("../../src/client/Api")>()),

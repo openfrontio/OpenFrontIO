@@ -12,9 +12,9 @@ import {
   loadLayerImages,
   TerrainMapData,
 } from "../../core/game/TerrainMapLoader";
-import { UserSettings } from "../../core/game/UserSettings";
 import { Controller } from "../Controller";
 import { MapRenderer } from "../render/gl";
+import { UserSettings } from "../UserSettings";
 
 export class MapLayerController implements Controller {
   constructor(

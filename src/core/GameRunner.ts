@@ -1,4 +1,3 @@
-import { placeName, placeSpawnName } from "../client/hud/NameBoxCalculator";
 import { Config } from "./configuration/Config";
 import { DoomsdayClockExecution } from "./execution/DoomsdayClockExecution";
 import { Executor } from "./execution/ExecutionManager";
@@ -26,6 +25,7 @@ import { createGame } from "./game/GameImpl";
 import { TileRef } from "./game/GameMap";
 import { GameMapLoader } from "./game/GameMapLoader";
 import { ErrorUpdate, GameUpdateViewData } from "./game/GameUpdates";
+import { placeName, placeSpawnName } from "./game/NameBoxCalculator";
 import { createNationsForGame } from "./game/NationCreation";
 import { loadTerrainMap as loadGameMap } from "./game/TerrainMapLoader";
 import { PseudoRandom } from "./PseudoRandom";
@@ -43,7 +43,7 @@ export async function createGameRunner(
   mapLoader: GameMapLoader,
   callBack: (gu: GameUpdateViewData | ErrorUpdate) => void,
 ): Promise<GameRunner> {
-  const config = new Config(gameStart.config, null, false, gameStart.listed);
+  const config = new Config(gameStart.config, false, gameStart.listed);
   const gameMap = await loadGameMap(
     gameStart.config.gameMap,
     gameStart.config.gameMapSize,
@@ -119,7 +119,7 @@ export async function createGameRunnerFromSnapshot(
     true, // restore mutates the maps; never onto a shared, used copy
   );
   const game = restoreGame(snapshot, {
-    config: (gc) => new Config(gc, null, false, gameStart.listed),
+    config: (gc) => new Config(gc, false, gameStart.listed),
     gameMap: gameMap.gameMap,
     miniGameMap: gameMap.miniGameMap,
     teamGameSpawnAreas: gameMap.teamGameSpawnAreas,

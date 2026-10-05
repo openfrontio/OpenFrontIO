@@ -14,7 +14,6 @@ import {
 } from "../core/Schemas";
 import { toWireGameStartInfo } from "../core/Util";
 import { GameEnv } from "../core/configuration/Config";
-import { UserSettings } from "../core/game/UserSettings";
 import "./AccountModal";
 import "./AccountSettingsModal";
 import { adGatekeeper } from "./AdGatekeeper";
@@ -143,6 +142,7 @@ import {
   type TurnstileToken,
 } from "./TurnstileToken";
 import "./UserSettingModal";
+import { UserSettings } from "./UserSettings";
 import "./UsernameInput";
 import { UsernameInput } from "./UsernameInput";
 import {

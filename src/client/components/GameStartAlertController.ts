@@ -6,7 +6,7 @@ import {
   TemplateResult,
 } from "lit";
 import { assetUrl } from "../../core/AssetUrls";
-import { UserSettings } from "../../core/game/UserSettings";
+import { UserSettings } from "../UserSettings";
 import { translateText } from "../Utils";
 
 /**

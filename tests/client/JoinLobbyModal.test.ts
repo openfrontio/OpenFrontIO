@@ -38,8 +38,8 @@ vi.mock("howler", () => ({
 }));
 
 import { JoinLobbyModal } from "../../src/client/JoinLobbyModal";
+import { UserSettings } from "../../src/client/UserSettings";
 import { GameMode, GameType } from "../../src/core/game/Game";
-import { UserSettings } from "../../src/core/game/UserSettings";
 
 function resetUserSettingsState() {
   localStorage.clear();

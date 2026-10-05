@@ -19,7 +19,6 @@ import {
   Skin,
   Subscription,
 } from "../core/CosmeticSchemas";
-import { UserSettings } from "../core/game/UserSettings";
 import {
   PlayerCosmeticRefs,
   PlayerCosmetics,
@@ -44,6 +43,7 @@ import {
   startPurchase,
 } from "./Payments";
 import { STEAM_TIER_CHANGE_IN_APP } from "./SubscriptionPolicy";
+import { UserSettings } from "./UserSettings";
 import { translateText } from "./Utils";
 
 export const TEMP_FLARE_OFFSET = 1 * 60 * 1000; // 1 minute

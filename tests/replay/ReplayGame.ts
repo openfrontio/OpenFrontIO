@@ -164,7 +164,7 @@ async function main(): Promise<void> {
   );
 
   // Mirrors createGameRunner() with a filesystem map loader.
-  const config = new Config(info.config, null, false);
+  const config = new Config(info.config, false);
   const mapLoader = new NodeGameMapLoader(
     path.join(PROJECT_ROOT, "resources/maps"),
   );

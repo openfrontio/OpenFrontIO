@@ -1,4 +1,4 @@
-import { getCdnBase } from "../AssetUrls";
+import { getCdnBase } from "../core/AssetUrls";
 import {
   BuildableUnit,
   Cell,
@@ -7,12 +7,12 @@ import {
   PlayerBuildableUnitType,
   PlayerID,
   PlayerProfile,
-} from "../game/Game";
-import { TileRef } from "../game/GameMap";
-import { ErrorUpdate, GameUpdateViewData } from "../game/GameUpdates";
-import { ClientID, GameStartInfo, Turn } from "../Schemas";
-import { generateID } from "../Util";
-import { WorkerMessage } from "./WorkerMessages";
+} from "../core/game/Game";
+import { TileRef } from "../core/game/GameMap";
+import { ErrorUpdate, GameUpdateViewData } from "../core/game/GameUpdates";
+import { ClientID, GameStartInfo, Turn } from "../core/Schemas";
+import { generateID } from "../core/Util";
+import { WorkerMessage } from "../core/worker/WorkerMessages";
 
 // Inlined as a same-origin Blob (Vite's `?worker&inline`), sidestepping the
 // cross-origin `new Worker(url)` restriction that would otherwise apply when
@@ -21,7 +21,7 @@ import { WorkerMessage } from "./WorkerMessages";
 // instead of inside the main bundle.
 async function createGameWorker(): Promise<Worker> {
   const { default: GameWorker } =
-    await import("./Worker.worker.ts?worker&inline");
+    await import("../core/worker/Worker.worker.ts?worker&inline");
   return new GameWorker();
 }
 

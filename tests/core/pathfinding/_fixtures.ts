@@ -11,7 +11,6 @@ import {
 } from "../../../src/core/game/Game";
 import { createGame as createGameImpl } from "../../../src/core/game/GameImpl";
 import { GameMapImpl } from "../../../src/core/game/GameMap";
-import { UserSettings } from "../../../src/core/game/UserSettings";
 import { GameConfig } from "../../../src/core/Schemas";
 import { TestConfig } from "../../util/TestConfig";
 
@@ -152,7 +151,7 @@ export function createGame(
     randomSpawn: false,
     ...configOverrides,
   };
-  const config = new TestConfig(gameConfig, new UserSettings(), false);
+  const config = new TestConfig(gameConfig, false);
 
   return createGameImpl(
     [],

@@ -36,8 +36,8 @@ vi.mock("../../../../src/client/Utils", () => ({
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { EventsDisplay } from "../../../../src/client/hud/layers/EventsDisplay";
+import { UserSettings } from "../../../../src/client/UserSettings";
 import { GameUpdateType } from "../../../../src/core/game/GameUpdates";
-import { UserSettings } from "../../../../src/core/game/UserSettings";
 
 function resetSettings() {
   localStorage.clear();

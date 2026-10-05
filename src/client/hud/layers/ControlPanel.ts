@@ -8,13 +8,10 @@ import { Config } from "../../../core/configuration/Config";
 import { GameMode, GameType, Gold } from "../../../core/game/Game";
 import { TileRef } from "../../../core/game/GameMap";
 import { GameUpdateType } from "../../../core/game/GameUpdates";
-import {
-  USER_SETTINGS_CHANGED_EVENT,
-  UserSettings,
-} from "../../../core/game/UserSettings";
 import { Controller } from "../../Controller";
 import { AttackRatioEvent } from "../../InputHandler";
 import { UIState } from "../../UIState";
+import { USER_SETTINGS_CHANGED_EVENT, UserSettings } from "../../UserSettings";
 import {
   getGamesPlayed,
   renderNumber,

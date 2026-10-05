@@ -18,7 +18,6 @@ import {
   genTerrainFromBin,
   MapManifest,
 } from "../../src/core/game/TerrainMapLoader";
-import { UserSettings } from "../../src/core/game/UserSettings";
 import { GameConfig } from "../../src/core/Schemas";
 import { TestConfig } from "./TestConfig";
 
@@ -75,7 +74,7 @@ export async function setup(
     randomSpawn: false,
     ..._gameConfig,
   };
-  const config = new ConfigClass(gameConfig, new UserSettings(), false);
+  const config = new ConfigClass(gameConfig, false);
 
   const game = createGame(humans, nations, gameMap, miniGameMap, config);
   if (autoEndSpawnPhase) game.endSpawnPhase();

@@ -2,9 +2,9 @@ import { afterEach, describe, expect, test } from "vitest";
 import { GraphicsOverridesSchema } from "../../src/client/render/gl/GraphicsOverrides";
 import { applyGraphicsOverrides } from "../../src/client/render/gl/RenderOverrides";
 import { createRenderSettings } from "../../src/client/render/gl/RenderSettings";
+import { UserSettings } from "../../src/client/UserSettings";
 import { visibleCosmetics } from "../../src/client/view/CosmeticVisibility";
 import { GameUpdateType } from "../../src/core/game/GameUpdates";
-import { UserSettings } from "../../src/core/game/UserSettings";
 import type { PlayerCosmetics } from "../../src/core/Schemas";
 import {
   makeEmptyGu,

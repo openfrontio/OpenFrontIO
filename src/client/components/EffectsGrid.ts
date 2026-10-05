@@ -11,15 +11,15 @@ import {
   NukeExplosionType,
 } from "../../core/CosmeticSchemas";
 import {
-  EFFECTS_KEY,
-  USER_SETTINGS_CHANGED_EVENT,
-  UserSettings,
-} from "../../core/game/UserSettings";
-import {
   resolveCosmetics,
   ResolvedCosmetic,
   translateCosmetic,
 } from "../Cosmetics";
+import {
+  EFFECTS_KEY,
+  USER_SETTINGS_CHANGED_EVENT,
+  UserSettings,
+} from "../UserSettings";
 import { translateText } from "../Utils";
 import "./CosmeticCard";
 import { cosmeticSelectionLabel } from "./CosmeticPresentation";

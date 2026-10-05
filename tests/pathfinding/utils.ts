@@ -16,7 +16,6 @@ import {
   genTerrainFromBin,
   MapManifest,
 } from "../../src/core/game/TerrainMapLoader";
-import { UserSettings } from "../../src/core/game/UserSettings";
 import { AStarWater } from "../../src/core/pathfinding/algorithms/AStar.Water";
 import { AStarWaterHierarchical } from "../../src/core/pathfinding/algorithms/AStar.WaterHierarchical";
 import { PathFinding } from "../../src/core/pathfinding/PathFinder";
@@ -272,7 +271,6 @@ export async function setupFromPath(
       randomSpawn: false,
       ...gameConfig,
     },
-    new UserSettings(),
     false,
   );
 

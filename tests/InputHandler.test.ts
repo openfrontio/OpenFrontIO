@@ -17,10 +17,10 @@ import {
 } from "../src/client/InputHandler";
 import { Platform } from "../src/client/Platform";
 import { UIState } from "../src/client/UIState";
+import { KEYBINDS_KEY, UserSettings } from "../src/client/UserSettings";
 import { GameView, PlayerView, UnitView } from "../src/client/view";
 import { EventBus } from "../src/core/EventBus";
 import { UnitType } from "../src/core/game/Game";
-import { KEYBINDS_KEY, UserSettings } from "../src/core/game/UserSettings";
 
 class MockPointerEvent {
   button: number;

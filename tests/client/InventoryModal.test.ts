@@ -5,6 +5,15 @@ import { userAuth } from "../../src/client/Auth";
 import { fetchCosmetics } from "../../src/client/Cosmetics";
 import "../../src/client/InventoryModal";
 import type { InventoryModal } from "../../src/client/InventoryModal";
+import {
+  CROWN_KEY,
+  EFFECTS_KEY,
+  FLAG_KEY,
+  LOADOUTS_KEY,
+  MAX_LOADOUTS,
+  PATTERN_KEY,
+  UserSettings,
+} from "../../src/client/UserSettings";
 import type { CosmeticCard } from "../../src/client/components/CosmeticCard";
 import type { EffectsGrid } from "../../src/client/components/EffectsGrid";
 import type { InventoryLoadoutBar } from "../../src/client/components/InventoryLoadoutBar";
@@ -16,15 +25,6 @@ import {
   type EffectType,
   type NukeExplosionType,
 } from "../../src/core/CosmeticSchemas";
-import {
-  CROWN_KEY,
-  EFFECTS_KEY,
-  FLAG_KEY,
-  LOADOUTS_KEY,
-  MAX_LOADOUTS,
-  PATTERN_KEY,
-  UserSettings,
-} from "../../src/core/game/UserSettings";
 
 vi.mock("../../src/client/Api", async (importOriginal) => ({
   ...(await importOriginal<typeof import("../../src/client/Api")>()),

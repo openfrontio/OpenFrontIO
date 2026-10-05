@@ -1,6 +1,5 @@
 import { Colord, colord, LabaColor } from "colord";
 import { ColoredTeams, PlayerType, Team } from "../../core/game/Game";
-import { UserSettings } from "../../core/game/UserSettings";
 import { simpleHash } from "../../core/Util";
 import { PALETTE_NAMES } from "../render/gl/GraphicsOverrides";
 import {
@@ -8,6 +7,7 @@ import {
   ThemeName,
   ThemeSettings,
 } from "../render/gl/RenderSettings";
+import { UserSettings } from "../UserSettings";
 import { PlayerView } from "../view";
 import { ColorAllocator } from "./ColorAllocator";
 

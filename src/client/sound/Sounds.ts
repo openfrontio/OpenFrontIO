@@ -1,6 +1,6 @@
 import { assetUrl } from "../../core/AssetUrls";
 import { GameEvent } from "../../core/EventBus";
-import { AudioCategory } from "../../core/game/UserSettings";
+import { AudioCategory } from "../UserSettings";
 
 export type SoundEffect =
   | "ka-ching"

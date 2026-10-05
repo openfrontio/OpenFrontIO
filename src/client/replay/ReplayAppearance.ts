@@ -10,13 +10,13 @@
  */
 
 import { assetUrl } from "../../core/AssetUrls";
-import type { UserSettings } from "../../core/game/UserSettings";
 import type { GameStartInfo, PlayerCosmetics } from "../../core/Schemas";
 import { fetchCosmetics, getCachedCosmetics } from "../Cosmetics";
 import type { MapRenderer } from "../render/gl";
 import type { SpiralSink } from "../render/gl/utils/PlayerPalette";
 import type { PlayerStatic } from "../render/types";
 import { themeProvider } from "../theme/ThemeProvider";
+import type { UserSettings } from "../UserSettings";
 import { applyReplayEffects } from "./ReplayEffects";
 import type { ReplayGameView } from "./ReplayGameAdapter";
 import {

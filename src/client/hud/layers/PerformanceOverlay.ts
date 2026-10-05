@@ -1,17 +1,17 @@
 import { LitElement, css, html } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
 import { EventBus } from "../../../core/EventBus";
-import {
-  PERFORMANCE_OVERLAY_KEY,
-  USER_SETTINGS_CHANGED_EVENT,
-  UserSettings,
-} from "../../../core/game/UserSettings";
 import { Controller } from "../../Controller";
 import {
   TickMetricsEvent,
   TogglePerformanceOverlayEvent,
 } from "../../InputHandler";
 import type { LangSelector } from "../../LangSelector";
+import {
+  PERFORMANCE_OVERLAY_KEY,
+  USER_SETTINGS_CHANGED_EVENT,
+  UserSettings,
+} from "../../UserSettings";
 import { translateText } from "../../Utils";
 import { FrameProfiler } from "../FrameProfiler";
 

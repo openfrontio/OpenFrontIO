@@ -7,14 +7,14 @@ import type { InventoryModal } from "../../src/client/InventoryModal";
 import { modalRouter } from "../../src/client/ModalRouter";
 import "../../src/client/Store";
 import type { StoreModal } from "../../src/client/Store";
-import type { CosmeticCard } from "../../src/client/components/CosmeticCard";
-import type { UserMeResponse } from "../../src/core/ApiSchemas";
-import type { Cosmetics } from "../../src/core/CosmeticSchemas";
 import {
   PATTERN_KEY,
   USER_SETTINGS_CHANGED_EVENT,
   UserSettings,
-} from "../../src/core/game/UserSettings";
+} from "../../src/client/UserSettings";
+import type { CosmeticCard } from "../../src/client/components/CosmeticCard";
+import type { UserMeResponse } from "../../src/core/ApiSchemas";
+import type { Cosmetics } from "../../src/core/CosmeticSchemas";
 
 vi.mock("../../src/client/Api", async (importOriginal) => ({
   ...(await importOriginal<typeof import("../../src/client/Api")>()),

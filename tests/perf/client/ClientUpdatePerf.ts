@@ -37,6 +37,7 @@ import path from "path";
 import { fileURLToPath } from "url";
 import { GameView } from "../../../src/client/view/GameView";
 import { WebGLFrameBuilder } from "../../../src/client/WebGLFrameBuilder";
+import type { WorkerClient } from "../../../src/client/WorkerClient";
 import { Config } from "../../../src/core/configuration/Config";
 import {
   Difficulty,
@@ -53,7 +54,6 @@ import {
 import { loadTerrainMap } from "../../../src/core/game/TerrainMapLoader";
 import { createGameRunner } from "../../../src/core/GameRunner";
 import { GameConfig, GameStartInfo } from "../../../src/core/Schemas";
-import type { WorkerClient } from "../../../src/core/worker/WorkerClient";
 import { NodeGameMapLoader } from "../fullgame/NodeGameMapLoader";
 import {
   CpuProfiler,
@@ -355,7 +355,7 @@ async function main(): Promise<void> {
 
   // Client side: own Config + own map load, mirroring createClientGame (the
   // real client and worker each load their own copy of the map).
-  const clientConfig = new Config(gameConfig, null, false);
+  const clientConfig = new Config(gameConfig, false);
   const clientMapData = await loadTerrainMap(
     gameConfig.gameMap,
     gameConfig.gameMapSize,

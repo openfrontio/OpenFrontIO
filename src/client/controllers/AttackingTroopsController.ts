@@ -10,11 +10,11 @@
  */
 import { EventBus } from "../../core/EventBus";
 import { Cell, PlayerType } from "../../core/game/Game";
-import { UserSettings } from "../../core/game/UserSettings";
 import { Controller } from "../Controller";
 import { AlternateViewEvent } from "../InputHandler";
 import { MapRenderer } from "../render/gl";
 import type { AttackTroopLabel } from "../render/gl/passes/WorldTextPass";
+import { UserSettings } from "../UserSettings";
 import { renderTroops } from "../Utils";
 import { GameView } from "../view";
 
