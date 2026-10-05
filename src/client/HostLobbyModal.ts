@@ -21,7 +21,7 @@ import {
 import { UserSettings } from "../core/game/UserSettings";
 import {
   ClientInfo,
-  GameConfig,
+  GameConfigPatch,
   LobbyInfoEvent,
   TeamCountConfig,
   isValidGameID,
@@ -74,6 +74,8 @@ export class HostLobbyModal extends BaseModal {
   @state() private donateTroops: boolean = false;
   @state() private maxTimer: boolean = false;
   @state() private maxTimerValue: number | undefined = undefined;
+  @state() private playerLimit: boolean = false;
+  @state() private playerLimitValue: number | undefined = undefined;
   @state() private startDelayValue: number | undefined = 3;
   @state() private instantBuild: boolean = false;
   @state() private randomSpawn: boolean = false;
@@ -348,6 +350,23 @@ export class HostLobbyModal extends BaseModal {
         .onToggle=${this.handleMaxTimerToggle}
         .onInput=${this.handleMaxTimerValueChanges}
         .onKeyDown=${this.handleMaxTimerValueKeyDown}
+      ></toggle-input-card>`,
+      html`<toggle-input-card
+        .labelKey=${"host_modal.player_limit"}
+        .checked=${this.playerLimit}
+        .inputId=${"player-limit-value"}
+        .inputMin=${2}
+        .inputMax=${1000}
+        .inputValue=${this.playerLimitValue}
+        .inputAriaLabel=${translateText("host_modal.player_limit")}
+        .inputPlaceholder=${translateText(
+          "host_modal.player_limit_placeholder",
+        )}
+        .defaultInputValue=${50}
+        .minValidOnEnable=${2}
+        .onToggle=${this.handlePlayerLimitToggle}
+        .onInput=${this.handlePlayerLimitValueChanges}
+        .onKeyDown=${this.handlePlayerLimitValueKeyDown}
       ></toggle-input-card>`,
       html`<input-card
         .labelKey=${"host_modal.start_delay"}
@@ -841,6 +860,8 @@ export class HostLobbyModal extends BaseModal {
     this.donateTroops = false;
     this.maxTimer = false;
     this.maxTimerValue = undefined;
+    this.playerLimit = false;
+    this.playerLimitValue = undefined;
     this.startDelayValue = 3;
     this.instantBuild = false;
     this.randomSpawn = false;
@@ -1283,6 +1304,29 @@ export class HostLobbyModal extends BaseModal {
     this.putGameConfig();
   };
 
+  private handlePlayerLimitToggle = (
+    checked: boolean,
+    value: number | string | undefined,
+  ) => {
+    this.playerLimit = checked;
+    this.playerLimitValue = toOptionalNumber(value);
+    this.putGameConfig();
+  };
+
+  private handlePlayerLimitValueKeyDown = (e: KeyboardEvent) => {
+    preventDisallowedKeys(e, ["-", "+", "e", "E", "."]);
+  };
+
+  private handlePlayerLimitValueChanges = (e: Event) => {
+    const input = e.target as HTMLInputElement;
+    const value = parseBoundedIntegerFromInput(input, { min: 2, max: 1000 });
+    if (value === undefined) {
+      return;
+    }
+    this.playerLimitValue = value;
+    this.putGameConfig();
+  };
+
   private handleStartDelayValueKeyDown = (e: KeyboardEvent) => {
     preventDisallowedKeys(e, ["-", "+", "e", "E", "."]);
   };
@@ -1423,6 +1467,11 @@ export class HostLobbyModal extends BaseModal {
               this.defaultNationCount,
             ),
             maxTimerValue: this.maxTimer === true ? this.maxTimerValue : null,
+            // null lifts the cap; the server keeps players already seated.
+            maxPlayers:
+              this.playerLimit === true && this.playerLimitValue !== undefined
+                ? this.playerLimitValue
+                : null,
             startDelay: this.startDelayValue,
             goldMultiplier:
               this.goldMultiplier === true ? this.goldMultiplierValue : null,
@@ -1468,7 +1517,7 @@ export class HostLobbyModal extends BaseModal {
                       : null,
                 }
               : undefined,
-          } satisfies Partial<GameConfig>,
+          } satisfies GameConfigPatch,
         },
         bubbles: true,
         composed: true,

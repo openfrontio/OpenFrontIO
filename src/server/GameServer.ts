@@ -27,6 +27,7 @@ import {
   ClientSendLiveStatsMessage,
   ClientSendWinnerMessage,
   GameConfig,
+  GameConfigPatch,
   GameID,
   GameInfo,
   GameStartInfo,
@@ -322,7 +323,7 @@ export class GameServer {
       : undefined;
   }
 
-  public updateGameConfig(gameConfig: Partial<GameConfig>): void {
+  public updateGameConfig(gameConfig: GameConfigPatch): void {
     applyGameConfigPatch(this.gameConfig, gameConfig);
   }
 
@@ -635,7 +636,12 @@ export class GameServer {
     this.ingress.attach(client);
     this.startLobbyInfoBroadcast();
 
-    if (this.playerCount() >= (this.gameConfig.maxPlayers ?? Infinity)) {
+    // Filling up starts host-less games (public, matchmade, admin bot). A
+    // host's lobby cap only turns players away: the host still starts it.
+    if (
+      this.creatorPersistentID === undefined &&
+      this.playerCount() >= (this.gameConfig.maxPlayers ?? Infinity)
+    ) {
       this.hasReachedMaxPlayerCount = true;
     }
 

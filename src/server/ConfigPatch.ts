@@ -1,10 +1,10 @@
-import { GameConfig } from "../core/Schemas";
+import { GameConfig, GameConfigPatch } from "../core/Schemas";
 
 // The host edits its lobby through update_game_config, which carries a
-// partial GameConfig. Only the keys listed here are taken from it. gameType,
-// maxPlayers and the listing flag are deliberately absent: each has its own
-// guarded path (handleIntent rejects a switch to Public; listing goes through
-// the authenticated listing endpoint).
+// partial GameConfig. Only the keys listed here are taken from it. gameType
+// and the listing flag are deliberately absent: each has its own guarded path
+// (handleIntent rejects a switch to Public; listing goes through the
+// authenticated listing endpoint). maxPlayers is handled on its own below.
 
 // Copied whenever the patch carries them.
 const COPIED_KEYS = [
@@ -73,13 +73,22 @@ function copyNullable<K extends NullableKey>(
 // Applies a host's config patch to a game's stored config, in place.
 export function applyGameConfigPatch(
   target: GameConfig,
-  patch: Partial<GameConfig>,
+  patch: GameConfigPatch,
 ): void {
+  // maxPlayers is nullable on the wire but not in GameConfig, so it is split
+  // off and applied on its own below.
+  const { maxPlayers, ...rest } = patch;
   for (const key of COPIED_KEYS) {
-    copy(target, patch, key);
+    copy(target, rest, key);
   }
   for (const key of NULLABLE_KEYS) {
-    copyNullable(target, patch, key);
+    copyNullable(target, rest, key);
+  }
+  // The host's player cap: null lifts it, undefined leaves it alone. Lowering
+  // it below the seated count kicks no one; it only turns away further
+  // players (spectators never count, see GameServer.joinClient).
+  if (maxPlayers !== undefined) {
+    target.maxPlayers = maxPlayers ?? undefined;
   }
   // Unconditional on purpose: the host clears cheats by omitting hostCheats
   // (the full config it sends has hostCheats: undefined when the toggle is
