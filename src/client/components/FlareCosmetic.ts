@@ -1,6 +1,15 @@
 import { html, TemplateResult } from "lit";
 import type { TrackFlare } from "../../core/ApiSchemas";
-import type { ResolvedCosmetic } from "../Cosmetics";
+import {
+  fetchCosmetics,
+  resolveCosmetics,
+  type ResolvedCosmetic,
+} from "../Cosmetics";
+import {
+  cosmeticSelectionLabel,
+  cosmeticTypeLabel,
+} from "./CosmeticPresentation";
+import "./CosmeticPreview";
 
 // A track flare's cosmetic, the way the store shows it: its preview, its name
 // and what kind of cosmetic it is. For the prestige confirmation's
@@ -66,8 +75,7 @@ function fallbackPreview(url: string | null | undefined): TemplateResult {
 /**
  * Describes the cosmetic a flare unlocks, from the cosmetics catalog when it
  * has the item, else from what the flare itself says. Null when the flare
- * isn't a cosmetic. The catalog and the preview components are loaded on
- * demand: most confirmations have no exclusive tile.
+ * isn't a cosmetic.
  */
 export async function describeFlareCosmetic(
   flare: TrackFlare,
@@ -75,23 +83,16 @@ export async function describeFlareCosmetic(
   const cosmetic = flare.cosmetic ?? null;
   if (cosmetic === null) return null;
   let resolved: ResolvedCosmetic | null = null;
-  let presentation: typeof import("./CosmeticPresentation") | null = null;
   try {
-    const [catalog, pres] = await Promise.all([
-      import("../Cosmetics"),
-      import("./CosmeticPresentation"),
-      import("./CosmeticPreview"),
-    ]);
-    presentation = pres;
-    const cosmetics = await catalog.fetchCosmetics();
+    const cosmetics = await fetchCosmetics();
     resolved = findFlareCosmetic(
-      catalog.resolveCosmetics(cosmetics, false, null),
+      resolveCosmetics(cosmetics, false, null),
       flare.flareName,
     );
   } catch (err) {
     console.warn("describeFlareCosmetic: catalog unavailable", err);
   }
-  if (resolved === null || presentation === null) {
+  if (resolved === null) {
     return {
       name: plainName(cosmetic.name),
       typeLabel: "",
@@ -99,8 +100,8 @@ export async function describeFlareCosmetic(
     };
   }
   return {
-    name: presentation.cosmeticSelectionLabel(resolved),
-    typeLabel: presentation.cosmeticTypeLabel(resolved),
+    name: cosmeticSelectionLabel(resolved),
+    typeLabel: cosmeticTypeLabel(resolved),
     preview: html`<cosmetic-preview
       class="block h-full w-full"
       .resolved=${resolved}
