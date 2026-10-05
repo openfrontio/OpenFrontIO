@@ -2,6 +2,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { UserMeResponseSchema } from "../../src/core/ApiSchemas";
 import { GameType } from "../../src/core/game/Game";
 import {
+  packLevelBadge,
+  unpackLevelBadge,
+} from "../../src/core/LevelBadgeWire";
+import {
   GameConfig,
   GameInfo,
   LevelBadge,
@@ -72,7 +76,8 @@ describe("levelBadgeFromProgress: stamping from /users/@me", () => {
   });
 
   it("stamps nothing for values the wire cannot carry", () => {
-    // These would otherwise throw out of every lobby_info broadcast.
+    // The roster packs a badge into one integer (level 1..100, prestige
+    // 0..10); anything outside that is dropped rather than sent wrong.
     for (const bad of [
       { level: 0 },
       { level: -1 },
@@ -81,8 +86,21 @@ describe("levelBadgeFromProgress: stamping from /users/@me", () => {
       { prestige: -1 },
       { prestige: 1.5 },
       { level: Number.MAX_SAFE_INTEGER + 2 },
+      { level: 101 },
+      { level: 128 },
+      { prestige: 11 },
+      { prestige: 16 },
     ]) {
       expect(levelBadgeFromProgress({ ...progress, ...bad })).toBeUndefined();
+    }
+  });
+
+  it("stamps the edge values", () => {
+    for (const edge of [
+      { level: 1, prestige: 0, legend: false },
+      { level: 100, prestige: 10, legend: true },
+    ]) {
+      expect(levelBadgeFromProgress({ ...progress, ...edge })).toEqual(edge);
     }
   });
 
@@ -176,6 +194,9 @@ const VET: LevelBadge = { level: 100, prestige: 10, legend: true };
 const MID: LevelBadge = { level: 37, prestige: 2, legend: false };
 const byId = (info: GameInfo, id: string) =>
   info.clients!.find((c) => c.clientID === id)!;
+// The entry's badge, unpacked from its wire form.
+const badgeOf = (info: GameInfo, id: string) =>
+  unpackLevelBadge(byId(info, id).levelBadge);
 
 describe("lobby roster carries the server-stamped badge", () => {
   beforeEach(() => vi.useFakeTimers());
@@ -220,8 +241,10 @@ describe("lobby roster carries the server-stamped badge", () => {
 
   it("names on: every signed-in player's badge, none for the guest", () => {
     const info = lobby().gameInfo("guest001");
-    expect(byId(info, "vet00001").levelBadge).toEqual(VET);
-    expect(byId(info, "mid00001").levelBadge).toEqual(MID);
+    // On the roster as the packed integer, decoding to the stamped badge.
+    expect(byId(info, "vet00001").levelBadge).toBe(packLevelBadge(VET));
+    expect(badgeOf(info, "vet00001")).toEqual(VET);
+    expect(badgeOf(info, "mid00001")).toEqual(MID);
     expect(byId(info, "guest001").levelBadge).toBeUndefined();
   });
 
@@ -237,7 +260,7 @@ describe("lobby roster carries the server-stamped badge", () => {
       undefined,
     );
     if (back.type !== "lobby_info") throw new Error("wrong type");
-    expect(byId(back.lobby, "vet00001").levelBadge).toEqual(VET);
+    expect(badgeOf(back.lobby, "vet00001")).toEqual(VET);
     expect(byId(back.lobby, "guest001").levelBadge).toBeUndefined();
   });
 
@@ -253,7 +276,7 @@ describe("lobby roster carries the server-stamped badge", () => {
 
   it("anonymizeNames: a player still sees their own badge", () => {
     const info = lobby({ anonymizeNames: true }).gameInfo("vet00001");
-    expect(byId(info, "vet00001").levelBadge).toEqual(VET);
+    expect(badgeOf(info, "vet00001")).toEqual(VET);
     expect(byId(info, "mid00001").levelBadge).toBeUndefined();
   });
 
@@ -262,8 +285,8 @@ describe("lobby roster carries the server-stamped badge", () => {
       anonymizeNames: true,
       nameReveals: ["guest001"],
     }).gameInfo("guest001");
-    expect(byId(info, "vet00001").levelBadge).toEqual(VET);
-    expect(byId(info, "mid00001").levelBadge).toEqual(MID);
+    expect(badgeOf(info, "vet00001")).toEqual(VET);
+    expect(badgeOf(info, "mid00001")).toEqual(MID);
   });
 
   it("anonymizeNames: a pinned teammate's badge shows with their real name", () => {
@@ -272,11 +295,28 @@ describe("lobby roster carries the server-stamped badge", () => {
       ["g-pub"],
     ]).gameInfo("mid00001");
     expect(byId(info, "vet00001").username).toBe("Veteran");
-    expect(byId(info, "vet00001").levelBadge).toEqual(VET);
+    expect(badgeOf(info, "vet00001")).toEqual(VET);
   });
 
   it("anonymizeNames: the public HTTP view (no viewer) shows no badges", () => {
     const info = lobby({ anonymizeNames: true }).gameInfo();
     for (const c of info.clients!) expect(c.levelBadge).toBeUndefined();
+  });
+});
+
+describe("Client packs its badge once, at construction", () => {
+  it("holds the wire form beside the readable one", () => {
+    const c = makeClient({ clientID: "vet00001", levelBadge: VET });
+    expect(c.levelBadge).toEqual(VET);
+    expect(c.wireLevelBadge).toBe(packLevelBadge(VET));
+  });
+
+  it("has no wire badge for a guest or a badge it cannot pack", () => {
+    expect(makeClient({ clientID: "guest001" }).wireLevelBadge).toBeUndefined();
+    const odd = makeClient({
+      clientID: "odd00001",
+      levelBadge: { level: 101, prestige: 0, legend: false },
+    });
+    expect(odd.wireLevelBadge).toBeUndefined();
   });
 });

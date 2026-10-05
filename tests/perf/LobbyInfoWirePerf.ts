@@ -1,5 +1,6 @@
 import Benchmark from "benchmark";
 import { Progress } from "../../src/core/ApiSchemas";
+import { packLevelBadge } from "../../src/core/LevelBadgeWire";
 import {
   ClientInfo,
   ServerLobbyInfoMessage,
@@ -18,7 +19,7 @@ import { testGameConfig } from "../util/Wire";
  * While a game is in its lobby the server sends every connected client a
  * lobby_info frame once a second (GameServer.broadcastLobbyInfo), encoding it
  * once PER RECIPIENT — so one broadcast of an N-player lobby is N encodes of
- * an N-entry roster. This measures, for 10 / 50 / 150 clients:
+ * an N-entry roster. This measures, for 10 / 50 / 125 / 150 clients:
  *
  *   - the encoded frame size with no badges and with a badge on every entry
  *     (the worst case: everyone signed in, progression on, nobody hidden);
@@ -71,7 +72,8 @@ function roster(n: number, withBadges: boolean): ClientInfo[] {
             prestige: Math.floor(rand() * 11),
             legend: false,
           };
-    if (withBadges) c.levelBadge = badge;
+    // The roster carries a badge packed into one integer.
+    if (withBadges) c.levelBadge = packLevelBadge(badge);
     return c;
   });
 }
@@ -105,7 +107,7 @@ function bench(name: string, fn: () => void): Benchmark {
 
 console.log("=== lobby_info frame size (bytes) ===");
 console.log("clients | no badges | all badges | delta | delta/entry");
-for (const n of [10, 50, 150]) {
+for (const n of [10, 50, 125, 150]) {
   const plain = encodeServerMessage(lobbyInfo(roster(n, false)), undefined);
   const badged = encodeServerMessage(lobbyInfo(roster(n, true)), undefined);
   const delta = badged.byteLength - plain.byteLength;
@@ -120,7 +122,7 @@ console.log("\n=== encode / decode time (benchmark.js, mean ± rme) ===");
 console.log(
   "clients | badges | encode 1 frame | broadcast (x N) | decode 1 frame",
 );
-for (const n of [10, 50, 150]) {
+for (const n of [10, 50, 125, 150]) {
   for (const withBadges of [false, true]) {
     const msg = lobbyInfo(roster(n, withBadges));
     const bytes = encodeServerMessage(msg, undefined);

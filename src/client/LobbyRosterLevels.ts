@@ -1,4 +1,5 @@
-import { ClientID, ClientInfo, GameID, LevelBadge } from "../core/Schemas";
+import { LevelBadge, unpackLevelBadge } from "../core/LevelBadgeWire";
+import { ClientID, ClientInfo, GameID } from "../core/Schemas";
 import {
   ownHiddenLevelBadge,
   refreshOwnHiddenLevelBadge,
@@ -17,9 +18,12 @@ import {
 //
 // Per-viewer like the roster itself: anonymized entries arrive without a
 // badge, so nothing here can reveal one.
+//
+// Kept in wire form (packLevelBadge) — a roster arrives every second, a badge
+// is read only when a panel opens — and unpacked on read.
 
 let rosterGameID: GameID | null = null;
-let badges = new Map<ClientID, LevelBadge>();
+let badges = new Map<ClientID, number>();
 // The viewer's own clientID when they were on that roster.
 let rosterSelf: ClientID | null = null;
 
@@ -28,7 +32,7 @@ export function rememberLobbyRoster(
   clients: readonly ClientInfo[] | undefined,
   myClientID?: ClientID,
 ): void {
-  const next = new Map<ClientID, LevelBadge>();
+  const next = new Map<ClientID, number>();
   let self: ClientID | null = null;
   for (const c of clients ?? []) {
     if (c.levelBadge !== undefined) next.set(c.clientID, c.levelBadge);
@@ -45,16 +49,17 @@ export function rememberLobbyRoster(
 }
 
 // The player's badge in game `gameID`, or undefined when they have none (a
-// guest, an anonymized name, progression off, their level hidden) or this tab
-// never saw them in that game's lobby. The viewer's own badge still shows
-// while they hide their level: it comes from their own /users/@me then.
+// guest, an anonymized name, progression off, their level hidden, a value out
+// of range) or this tab never saw them in that game's lobby. The viewer's own
+// badge still shows while they hide their level: it comes from their own
+// /users/@me then.
 export function lobbyLevelBadge(
   gameID: GameID,
   clientID: ClientID | null,
 ): LevelBadge | undefined {
   if (clientID === null || gameID !== rosterGameID) return undefined;
   return (
-    badges.get(clientID) ??
+    unpackLevelBadge(badges.get(clientID)) ??
     (clientID === rosterSelf ? ownHiddenLevelBadge() : undefined)
   );
 }
