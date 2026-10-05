@@ -9,6 +9,7 @@ vi.mock("../../src/client/Utils", () => ({
 import {
   LevelBadge,
   levelBadgeAccent,
+  PRISM_GRADIENT_ID,
   WINGED_MARGIN,
 } from "../../src/client/components/LevelBadge";
 import {
@@ -265,6 +266,150 @@ describe("<level-badge>", () => {
     expect(
       [...badge.querySelectorAll("text")].map((t) => t.textContent),
     ).toEqual(["12"]);
+  });
+
+  describe("in a long list", () => {
+    let host: HTMLElement | undefined;
+
+    afterEach(() => {
+      host?.remove();
+      host = undefined;
+    });
+
+    async function list(
+      rows: Partial<LevelBadge>[],
+      parent: ParentNode = document.body,
+    ): Promise<LevelBadge[]> {
+      host = document.createElement("div");
+      const badges = rows.map((props) => {
+        const badge = document.createElement("level-badge") as LevelBadge;
+        Object.assign(badge, props);
+        host!.append(badge);
+        return badge;
+      });
+      parent.append(host);
+      await Promise.all(badges.map((b) => b.updateComplete));
+      return badges;
+    }
+
+    const lobby = (n: number): Partial<LevelBadge>[] =>
+      Array.from({ length: n }, (_, i) => ({
+        level: 1 + ((i * 37) % 100),
+        prestige: i % 11,
+        legend: i === 7,
+        size: i % 2 === 0 ? 24 : 16,
+      }));
+
+    it("defines the prismatic gradient once, not once per badge", async () => {
+      const badges = await list(lobby(150));
+      const prismatic = badges.filter((b) => b.prestige === 10 && !b.legend);
+      expect(prismatic.length).toBeGreaterThan(10);
+
+      expect(document.querySelectorAll("linearGradient")).toHaveLength(1);
+      expect(document.querySelectorAll(`#${PRISM_GRADIENT_ID}`)).toHaveLength(
+        1,
+      );
+      expect(document.querySelectorAll("filter")).toHaveLength(0);
+      // No badge carries definitions of its own.
+      for (const badge of badges) {
+        expect(badge.querySelector("defs, linearGradient, filter")).toBeNull();
+      }
+      // Every prismatic medal points at the shared gradient.
+      for (const badge of prismatic) {
+        const fills = [...badge.querySelectorAll("circle")].map((c) =>
+          c.getAttribute("fill"),
+        );
+        expect(fills).toContain(`url(#${PRISM_GRADIENT_ID})`);
+      }
+      // The shared gradient never hides: a gradient under display:none
+      // paints nothing in some browsers.
+      const defs = document.querySelector("[data-level-badge-defs]")!;
+      expect(defs.closest("level-badge")).toBeNull();
+      expect(defs.getAttribute("style")).not.toContain("display");
+    });
+
+    it("puts the gradient back when the page around it is replaced", async () => {
+      await list([{ level: 12, prestige: 10 }]);
+      document.body.innerHTML = "";
+      host = undefined;
+      expect(document.getElementById(PRISM_GRADIENT_ID)).toBeNull();
+      await list([{ level: 12, prestige: 10 }]);
+      expect(document.querySelectorAll(`#${PRISM_GRADIENT_ID}`)).toHaveLength(
+        1,
+      );
+    });
+
+    it("gives a badge inside a shadow root the gradient there", async () => {
+      const outer = document.createElement("div");
+      document.body.append(outer);
+      const shadow = outer.attachShadow({ mode: "open" });
+      try {
+        await list(
+          [
+            { level: 12, prestige: 10 },
+            { level: 40, prestige: 10 },
+          ],
+          shadow,
+        );
+        // url(#id) resolves within the badge's own tree.
+        expect(shadow.querySelectorAll(`#${PRISM_GRADIENT_ID}`)).toHaveLength(
+          1,
+        );
+      } finally {
+        outer.remove();
+      }
+    });
+
+    it("adds no gradient for a list without the last rank", async () => {
+      document.body.innerHTML = "";
+      await list(lobby(150).filter((p) => p.prestige !== 10));
+      expect(document.getElementById(PRISM_GRADIENT_ID)).toBeNull();
+    });
+
+    it("shares one drawing between badges of a look, with each its own number", async () => {
+      const [a, b, c] = await list([
+        { level: 42, prestige: 3, size: 40 },
+        { level: 47, prestige: 3, size: 40 },
+        { level: 42, prestige: 4, size: 40 },
+      ]);
+      const texts = (badge: LevelBadge) =>
+        [...badge.querySelectorAll("text")].map((t) => t.textContent);
+      expect(texts(a)).toEqual([
+        "42",
+        'progression.prestige_short:{"prestige":3}',
+      ]);
+      expect(texts(b)).toEqual([
+        "47",
+        'progression.prestige_short:{"prestige":3}',
+      ]);
+      expect(texts(c)).toEqual([
+        "42",
+        'progression.prestige_short:{"prestige":4}',
+      ]);
+      const shapes = (badge: LevelBadge) => {
+        const svg = badge.querySelector("svg")!.cloneNode(true) as Element;
+        svg.querySelectorAll("text, title").forEach((t) => t.remove());
+        return svg.innerHTML.replace(/<!--[^]*?-->/g, "");
+      };
+      expect(shapes(a)).toBe(shapes(b));
+      expect(shapes(a)).not.toBe(shapes(c));
+    });
+
+    it("redraws when a badge's level, rank or size changes", async () => {
+      const [badge] = await list([{ level: 9, prestige: 0, size: 24 }]);
+      expect(badge.querySelector("svg circle")).not.toBeNull();
+      badge.level = 10;
+      await badge.updateComplete;
+      expect(badge.querySelector("[data-level-frame] rect")).not.toBeNull();
+      expect(badge.querySelector("text")?.textContent).toBe("10");
+      badge.prestige = 10;
+      await badge.updateComplete;
+      expect(badge.querySelector("[data-prestige-tab]")).not.toBeNull();
+      expect(document.getElementById(PRISM_GRADIENT_ID)).not.toBeNull();
+      badge.size = 16;
+      await badge.updateComplete;
+      expect(badge.querySelector("[data-prestige-tab]")).toBeNull();
+    });
   });
 
   it("gives Legend its own look: the crown on a gold halo, gems on its points", async () => {
