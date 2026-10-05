@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { Game, Player, Unit } from "../../game/Game";
-import { euclDistFN, TileRef } from "../../game/GameMap";
+import { TileRef } from "../../game/GameMap";
+import { euclDistFN } from "../../game/GameMapImpl";
 import {
   Difficulty,
   GameMode,

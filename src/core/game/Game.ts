@@ -36,10 +36,14 @@ import {
 import { GameUpdate, PlayerUpdate, UnitUpdate } from "./GameUpdates";
 import { MotionPlanRecord } from "./MotionPlans";
 import { RailNetwork } from "./RailNetwork";
-import { EngineGameLike, EnginePlayerLike, EngineUnitLike } from "./ReadViews";
+import {
+  EngineGameLike,
+  EnginePlayerLike,
+  EngineUnitLike,
+  ReadonlyTileSet,
+  UnitPredicate,
+} from "./ReadViews";
 import { Stats } from "./Stats";
-import { ReadonlyTileSet } from "./TileSet";
-import { UnitPredicate } from "./UnitGrid";
 
 export interface OwnerComp {
   owner: Player;

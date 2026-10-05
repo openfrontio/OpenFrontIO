@@ -23,7 +23,6 @@ import {
   UnitType,
 } from "./game/GameTypes";
 import { PlayerStatsSchema } from "./StatsSchemas";
-import { flattenedEmojiTable } from "./Util";
 
 export type GameID = string;
 export type ClientID = string;
@@ -347,6 +346,26 @@ export const SafeString = z
     /^([a-zA-Z0-9\s.,!?@#$%&*()\-_+=[\]{}|;:"'/\u00a9|\u00ae|[\u2000-\u3300]|\ud83c[\ud000-\udfff]|\ud83d[\ud000-\udfff]|\ud83e[\ud000-\udfff]|[üÜ])*$/u,
   )
   .max(1000);
+
+export const emojiTable = [
+  ["😀", "😊", "🥰", "😇", "😎"],
+  ["😞", "🥺", "😭", "😱", "😡"],
+  ["😈", "🤡", "🥱", "🫡", "🖕"],
+  ["👋", "👏", "✋", "🙏", "💪"],
+  ["👍", "👎", "🫴", "🤌", "🤦‍♂️"],
+  ["🤝", "🆘", "🕊️", "🏳️", "⏳"],
+  ["🔥", "💥", "💀", "☢️", "⚠️"],
+  ["↖️", "⬆️", "↗️", "👑", "🥇"],
+  ["⬅️", "🎯", "➡️", "🥈", "🥉"],
+  ["↙️", "⬇️", "↘️", "❤️", "💔"],
+  ["💰", "⚓", "⛵", "🏡", "🛡️"],
+  ["🏭", "🚂", "❓", "🐔", "🐀"],
+] as const;
+
+// 2d to 1d array
+export const flattenedEmojiTable = emojiTable.flat();
+
+export type Emoji = (typeof flattenedEmojiTable)[number];
 
 const EmojiSchema = zb.uint({ max: flattenedEmojiTable.length - 1 });
 

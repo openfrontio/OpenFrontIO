@@ -1,3 +1,4 @@
+import { decodePatternData } from "./CosmeticRefs";
 import { PlayerPattern } from "./Schemas";
 
 export class PatternDecoder {
@@ -38,35 +39,4 @@ export class PatternDecoder {
   scaledWidth(): number {
     return this.width << this.scale;
   }
-}
-
-export function decodePatternData(
-  b64: string,
-  base64urlDecode: (input: string) => Uint8Array,
-): { height: number; width: number; scale: number; bytes: Uint8Array } {
-  const bytes = base64urlDecode(b64);
-
-  if (bytes.length < 3) {
-    throw new Error("Pattern data is too short to contain required metadata.");
-  }
-
-  const version = bytes[0];
-  if (version !== 0) {
-    throw new Error(`Unrecognized pattern version ${version}.`);
-  }
-
-  const byte1 = bytes[1];
-  const byte2 = bytes[2];
-  const scale = byte1 & 0x07;
-
-  const width = (((byte2 & 0x03) << 5) | ((byte1 >> 3) & 0x1f)) + 2;
-  const height = ((byte2 >> 2) & 0x3f) + 2;
-
-  const expectedBits = width * height;
-  const expectedBytes = (expectedBits + 7) >> 3; // Equivalent to: ceil(expectedBits / 8);
-  if (bytes.length - 3 < expectedBytes) {
-    throw new Error("Pattern data is too short for the specified dimensions.");
-  }
-
-  return { height, width, scale, bytes };
 }

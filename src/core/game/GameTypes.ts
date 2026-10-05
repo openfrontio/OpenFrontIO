@@ -1,5 +1,5 @@
 import { ClientID } from "../Schemas";
-import { formatPlayerDisplayName } from "../Util";
+
 import { TileRef } from "./GameMap";
 import { GameUpdate, GameUpdateType } from "./GameUpdates";
 import { EngineGameLike, EnginePlayerLike } from "./ReadViews";
@@ -499,4 +499,11 @@ export interface NameViewData {
   x: number;
   y: number;
   size: number;
+}
+
+export function formatPlayerDisplayName(
+  username: string,
+  clanTag?: string | null,
+): string {
+  return clanTag ? `[${clanTag}] ${username}` : username;
 }

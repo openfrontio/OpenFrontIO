@@ -4,6 +4,7 @@ import { fileURLToPath } from "url";
 import { Game } from "../../src/core/game/Game";
 import { createGame, GameImpl } from "../../src/core/game/GameImpl";
 import { TileRef } from "../../src/core/game/GameMap";
+import { MapManifest } from "../../src/core/game/GameMapLoader";
 import {
   Difficulty,
   GameMapSize,
@@ -12,10 +13,7 @@ import {
   GameType,
   PlayerInfo,
 } from "../../src/core/game/GameTypes";
-import {
-  genTerrainFromBin,
-  MapManifest,
-} from "../../src/core/game/TerrainMapLoader";
+import { genTerrainFromBin } from "../../src/core/game/TerrainMapLoader";
 import { AStarWater } from "../../src/core/pathfinding/algorithms/AStar.Water";
 import { AStarWaterHierarchical } from "../../src/core/pathfinding/algorithms/AStar.WaterHierarchical";
 import { PathFinding } from "../../src/core/pathfinding/PathFinder";

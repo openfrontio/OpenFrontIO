@@ -12,7 +12,7 @@ import { GameView } from "../../src/client/view/GameView";
 import { PlayerView } from "../../src/client/view/PlayerView";
 import { WorkerClient } from "../../src/client/WorkerClient";
 import { Config } from "../../src/core/configuration/Config";
-import { GameMapImpl } from "../../src/core/game/GameMap";
+import { GameMapImpl } from "../../src/core/game/GameMapImpl";
 import {
   NameViewData,
   PlayerType,

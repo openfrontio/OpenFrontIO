@@ -10,7 +10,7 @@
  */
 
 import type { Config } from "../../../core/configuration/Config";
-import type { MapLayer } from "../../../core/game/TerrainMapLoader";
+import type { MapLayer } from "../../../core/game/GameMapLoader";
 import { translateText } from "../../Utils";
 import type { SpiralRibbon } from "../frame/SpiralTrails";
 import type {

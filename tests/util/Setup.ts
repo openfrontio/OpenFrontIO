@@ -4,6 +4,7 @@ import { fileURLToPath } from "url";
 import { Config } from "../../src/core/configuration/Config";
 import { Game } from "../../src/core/game/Game";
 import { createGame } from "../../src/core/game/GameImpl";
+import { MapManifest } from "../../src/core/game/GameMapLoader";
 import {
   Difficulty,
   GameMapSize,
@@ -14,10 +15,7 @@ import {
   PlayerInfo,
   PlayerType,
 } from "../../src/core/game/GameTypes";
-import {
-  genTerrainFromBin,
-  MapManifest,
-} from "../../src/core/game/TerrainMapLoader";
+import { genTerrainFromBin } from "../../src/core/game/TerrainMapLoader";
 import { GameConfig } from "../../src/core/Schemas";
 import { TestConfig } from "./TestConfig";
 

@@ -75,11 +75,12 @@ import {
   RailNetworkImpl,
   RailNetworkSnapshot,
 } from "./RailNetworkImpl";
+import { UnitPredicate } from "./ReadViews";
 import { Stats } from "./Stats";
 import { StatsImpl, StatsSnapshot } from "./StatsImpl";
 import { assignTeams, resolveTeamsList } from "./TeamAssignment";
 import { TerraNulliusImpl } from "./TerraNulliusImpl";
-import { UnitGrid, UnitPredicate } from "./UnitGrid";
+import { UnitGrid } from "./UnitGrid";
 import { WaterManager, WaterManagerSnapshot } from "./WaterManager";
 
 export function createGame(

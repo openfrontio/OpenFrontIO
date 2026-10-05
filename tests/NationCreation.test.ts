@@ -1,4 +1,8 @@
 import {
+  AdditionalNation,
+  Nation as ManifestNation,
+} from "../src/core/game/GameMapLoader";
+import {
   Difficulty,
   GameMapSize,
   GameMapType,
@@ -7,10 +11,6 @@ import {
   Nation,
 } from "../src/core/game/GameTypes";
 import { createNationsForGame } from "../src/core/game/NationCreation";
-import {
-  AdditionalNation,
-  Nation as ManifestNation,
-} from "../src/core/game/TerrainMapLoader";
 import { PseudoRandom } from "../src/core/PseudoRandom";
 import { GameConfig, GameStartInfo } from "../src/core/Schemas";
 

@@ -1,4 +1,5 @@
 import { TileRef } from "./GameMap";
+import { ReadonlyTileSet } from "./ReadViews";
 
 // Deleted dense slots hold this sentinel. Tile refs are grid indices and map
 // coordinates are capped at 65535, so the largest possible ref is
@@ -8,20 +9,6 @@ const TOMBSTONE = 0xffffffff;
 // Hash-table slot states (slots otherwise hold indices into `dense`).
 const EMPTY = -1;
 const DELETED = -2;
-
-/**
- * The read surface of TileSet, mirroring the parts of ReadonlySet that
- * simulation code uses. A native Set<TileRef> also satisfies this interface.
- */
-export interface ReadonlyTileSet {
-  readonly size: number;
-  has(tile: TileRef): boolean;
-  forEach(
-    callback: (tile: TileRef, tile2: TileRef, set: ReadonlyTileSet) => void,
-  ): void;
-  values(): IterableIterator<TileRef>;
-  [Symbol.iterator](): IterableIterator<TileRef>;
-}
 
 /**
  * An insertion-ordered set of tile refs with compact storage: values live in

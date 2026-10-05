@@ -9,6 +9,7 @@ import {
   Tick,
 } from "../../game/GameTypes";
 import { PseudoRandom } from "../../PseudoRandom";
+import { flattenedEmojiTable } from "../../Schemas";
 import type {
   SnapshotReader,
   SnapshotWriter,
@@ -20,7 +21,6 @@ import {
   zInt,
   zPlayerRef,
 } from "../../snapshot/SnapshotType";
-import { flattenedEmojiTable } from "../../Util";
 import { EmojiExecution } from "../EmojiExecution";
 
 const emojiId = (e: (typeof flattenedEmojiTable)[number]) =>

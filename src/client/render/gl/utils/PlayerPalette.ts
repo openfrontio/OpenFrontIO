@@ -7,13 +7,13 @@
 
 import type { Colord } from "colord";
 import { base64url } from "jose";
+import { decodePatternData } from "../../../../core/CosmeticRefs";
 import {
   findEffect,
   isTrailEffect,
   TRAIL_EFFECT_TYPES,
   type Cosmetics,
 } from "../../../../core/CosmeticSchemas";
-import { decodePatternData } from "../../../../core/PatternDecoder";
 import type { PlayerCosmetics } from "../../../../core/Schemas";
 import type { SpiralParams } from "../../frame/SpiralTrails";
 import {

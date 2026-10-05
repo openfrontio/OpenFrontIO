@@ -1,8 +1,8 @@
 import { NukeMagnitude } from "../configuration/Config";
-import { euclDistFN, GameMap, TileRef } from "../game/GameMap";
+import { GameMap, TileRef } from "../game/GameMap";
+import { euclDistFN } from "../game/GameMapImpl";
 import { Structures } from "../game/GameTypes";
-import { EnginePlayerLike, GameLike } from "../game/ReadViews";
-import { ReadonlyTileSet } from "../game/TileSet";
+import { EnginePlayerLike, GameLike, ReadonlyTileSet } from "../game/ReadViews";
 
 export interface NukeBlastParams {
   gm: GameMap;

@@ -42,7 +42,8 @@ import {
   UnitParams,
 } from "./Game";
 import { GameImpl } from "./GameImpl";
-import { andFN, manhattanDistFN, TileRef } from "./GameMap";
+import { TileRef } from "./GameMap";
+import { andFN, manhattanDistFN } from "./GameMapImpl";
 import {
   AllianceInfo,
   AllPlayers,
@@ -79,7 +80,8 @@ import {
   diffPlayerUpdate,
   packAttackTroopDeltas,
 } from "./GameUpdateUtils";
-import { ReadonlyTileSet, TileSet } from "./TileSet";
+import { ReadonlyTileSet } from "./ReadViews";
+import { TileSet } from "./TileSet";
 import {
   bumpTraversalGeneration,
   tileTraversalScratch,

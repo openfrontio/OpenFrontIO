@@ -1,8 +1,8 @@
 import countries from "resources/countries.json";
 
 import { isTemporaryUsername } from "../core/ApiSchemas";
+import { decodePatternData } from "../core/CosmeticRefs";
 import { Cosmetics, findEffectForSlot } from "../core/CosmeticSchemas";
-import { decodePatternData } from "../core/PatternDecoder";
 import {
   PlayerColor,
   PlayerCosmetics,

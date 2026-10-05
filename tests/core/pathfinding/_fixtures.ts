@@ -2,7 +2,7 @@
 
 import { Game } from "../../../src/core/game/Game";
 import { createGame as createGameImpl } from "../../../src/core/game/GameImpl";
-import { GameMapImpl } from "../../../src/core/game/GameMap";
+import { GameMapImpl } from "../../../src/core/game/GameMapImpl";
 import {
   Difficulty,
   GameMapSize,

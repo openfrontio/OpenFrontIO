@@ -7,8 +7,6 @@ import {
   TerraNullius,
   UnitType,
 } from "./GameTypes";
-import { ReadonlyTileSet } from "./TileSet";
-import { UnitPredicate } from "./UnitGrid";
 
 /*
  * Read-only views of game state that rules code (Config, UnitGrid,
@@ -78,3 +76,22 @@ export interface EngineUnitLike extends UnitLike {
 export interface EngineGameLike extends GameLike {
   mirvsLaunched(): number;
 }
+
+/**
+ * The read surface of TileSet, mirroring the parts of ReadonlySet that
+ * simulation code uses. A native Set<TileRef> also satisfies this interface.
+ */
+export interface ReadonlyTileSet {
+  readonly size: number;
+  has(tile: TileRef): boolean;
+  forEach(
+    callback: (tile: TileRef, tile2: TileRef, set: ReadonlyTileSet) => void,
+  ): void;
+  values(): IterableIterator<TileRef>;
+  [Symbol.iterator](): IterableIterator<TileRef>;
+}
+
+export type UnitPredicate = (value: {
+  unit: UnitLike;
+  distSquared: number;
+}) => boolean;

@@ -8,7 +8,8 @@ import {
 import { AttackImpl, AttackSnapshot } from "../game/AttackImpl";
 import { Attack, Execution, Game, MutableAlliance, Unit } from "../game/Game";
 import { GameImpl, GameSnapshot } from "../game/GameImpl";
-import { GameMap, GameMapImpl, GameMapSnapshot } from "../game/GameMap";
+import { GameMap } from "../game/GameMap";
+import { GameMapImpl, GameMapSnapshot } from "../game/GameMapImpl";
 import { Nation, TeamGameSpawnAreas } from "../game/GameTypes";
 import { PlayerImpl, PlayerSnapshot } from "../game/PlayerImpl";
 import { Railroad, RailroadSnapshot } from "../game/Railroad";

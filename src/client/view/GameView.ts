@@ -2,6 +2,7 @@ import { Config } from "../../core/configuration/Config";
 import { GameMap, TileRef } from "../../core/game/GameMap";
 import {
   Cell,
+  formatPlayerDisplayName,
   GameUpdates,
   PlayerID,
   PlayerType,
@@ -18,12 +19,11 @@ import {
   SpawnPhaseEndUpdate,
 } from "../../core/game/GameUpdates";
 import { unpackMotionPlans } from "../../core/game/MotionPlans";
-import { GameLike } from "../../core/game/ReadViews";
+import { GameLike, UnitPredicate } from "../../core/game/ReadViews";
 import { TerrainMapData } from "../../core/game/TerrainMapLoader";
 import { TerraNulliusImpl } from "../../core/game/TerraNulliusImpl";
-import { UnitGrid, UnitPredicate } from "../../core/game/UnitGrid";
+import { UnitGrid } from "../../core/game/UnitGrid";
 import { ClientID, GameID, Player, PlayerCosmetics } from "../../core/Schemas";
-import { formatPlayerDisplayName } from "../../core/Util";
 import { computeAllianceClusters } from "../render/frame/derive/AllianceClusters";
 import { extractAttackRings } from "../render/frame/derive/AttackRings";
 import { extractNukeTelegraphs } from "../render/frame/derive/NukeTelegraphs";
@@ -946,7 +946,7 @@ export class GameView implements GameLike {
     return this._map.waterVersion();
   }
   /** Map layers defined in the map's info.json, if any. */
-  layers(): import("../../core/game/TerrainMapLoader").MapLayer[] {
+  layers(): import("../../core/game/GameMapLoader").MapLayer[] {
     return this._mapData.layers ?? [];
   }
   isValidCoord(x: number, y: number): boolean {

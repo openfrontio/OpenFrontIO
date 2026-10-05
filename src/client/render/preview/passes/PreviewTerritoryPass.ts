@@ -9,7 +9,7 @@
  */
 
 import { base64url } from "jose";
-import { decodePatternData } from "../../../../core/PatternDecoder";
+import { decodePatternData } from "../../../../core/CosmeticRefs";
 import { SkinAtlasArray } from "../../gl/passes/SkinAtlasArray";
 import { TerritoryPass } from "../../gl/passes/TerritoryPass";
 import type { RenderSettings } from "../../gl/RenderSettings";

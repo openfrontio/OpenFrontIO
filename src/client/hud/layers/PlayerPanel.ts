@@ -13,7 +13,7 @@ import {
   PlayerType,
   Relation,
 } from "../../../core/game/GameTypes";
-import { Emoji, flattenedEmojiTable } from "../../../core/Util";
+import { Emoji, flattenedEmojiTable } from "../../../core/Schemas";
 import { fetchLobbyListed } from "../../Api";
 import { actionButton } from "../../components/ui/ActionButton";
 import "../../components/ui/Divider";

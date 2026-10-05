@@ -5,10 +5,8 @@ import { Config } from "../../src/core/configuration/Config";
 import { FlatBinaryHeap } from "../../src/core/execution/utils/FlatBinaryHeap";
 import { Game } from "../../src/core/game/Game";
 import { GameMap } from "../../src/core/game/GameMap";
-import {
-  genTerrainFromBin,
-  MapManifest,
-} from "../../src/core/game/TerrainMapLoader";
+import { MapManifest } from "../../src/core/game/GameMapLoader";
+import { genTerrainFromBin } from "../../src/core/game/TerrainMapLoader";
 import { TileSet } from "../../src/core/game/TileSet";
 import { AStar } from "../../src/core/pathfinding/algorithms/AStar";
 import { AbstractGraphAStar } from "../../src/core/pathfinding/algorithms/AStar.AbstractGraph";

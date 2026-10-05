@@ -17,6 +17,7 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 type Pkg =
   | "engine"
   | "engine-api"
+  | "engine-lib"
   | "shared"
   | "zbin"
   | "client"
@@ -25,37 +26,39 @@ type Pkg =
 
 // src/core files that do not end up in the engine.
 const FUTURE: Record<string, Pkg> = {
-  "src/core/AssetPaths.ts": "engine-api",
   "src/core/CosmeticRefs.ts": "engine-api",
-  "src/core/DetMath.ts": "engine-api",
-  "src/core/EventBus.ts": "engine-api",
-  "src/core/Format.ts": "engine-api",
-  "src/core/PatternDecoder.ts": "engine-api",
-  "src/core/PseudoRandom.ts": "engine-api",
   "src/core/Schemas.ts": "engine-api",
   "src/core/StatsSchemas.ts": "engine-api",
-  "src/core/Util.ts": "engine-api",
-  "src/core/configuration/Config.ts": "engine-api",
-  "src/core/execution/Util.ts": "engine-api",
-  "src/core/execution/utils/TribeNames.ts": "engine-api",
-  "src/core/game/DoomsdayClock.ts": "engine-api",
-  "src/core/game/FetchGameMapLoader.ts": "engine-api",
   "src/core/game/GameMap.ts": "engine-api",
   "src/core/game/GameMapLoader.ts": "engine-api",
   "src/core/game/GameTypes.ts": "engine-api",
-  "src/core/game/GameUpdateUtils.ts": "engine-api",
   "src/core/game/GameUpdates.ts": "engine-api",
   "src/core/game/Maps.gen.ts": "engine-api",
-  "src/core/game/MotionPlans.ts": "engine-api",
   "src/core/game/ReadViews.ts": "engine-api",
-  "src/core/game/TeamAssignment.ts": "engine-api",
-  "src/core/game/TerraNulliusImpl.ts": "engine-api",
-  "src/core/game/TerrainMapLoader.ts": "engine-api",
-  "src/core/game/TileSet.ts": "engine-api",
-  "src/core/game/UnitGrid.ts": "engine-api",
-  "src/core/game/Veterancy.ts": "engine-api",
-  "src/core/snapshot/SnapshotType.ts": "engine-api",
   "src/core/worker/WorkerMessages.ts": "engine-api",
+
+  "src/core/AssetPaths.ts": "engine-lib",
+  "src/core/DetMath.ts": "engine-lib",
+  "src/core/EventBus.ts": "engine-lib",
+  "src/core/Format.ts": "engine-lib",
+  "src/core/PatternDecoder.ts": "engine-lib",
+  "src/core/PseudoRandom.ts": "engine-lib",
+  "src/core/Util.ts": "engine-lib",
+  "src/core/configuration/Config.ts": "engine-lib",
+  "src/core/execution/Util.ts": "engine-lib",
+  "src/core/execution/utils/TribeNames.ts": "engine-lib",
+  "src/core/game/DoomsdayClock.ts": "engine-lib",
+  "src/core/game/FetchGameMapLoader.ts": "engine-lib",
+  "src/core/game/GameMapImpl.ts": "engine-lib",
+  "src/core/game/GameUpdateUtils.ts": "engine-lib",
+  "src/core/game/MotionPlans.ts": "engine-lib",
+  "src/core/game/TeamAssignment.ts": "engine-lib",
+  "src/core/game/TerraNulliusImpl.ts": "engine-lib",
+  "src/core/game/TerrainMapLoader.ts": "engine-lib",
+  "src/core/game/TileSet.ts": "engine-lib",
+  "src/core/game/UnitGrid.ts": "engine-lib",
+  "src/core/game/Veterancy.ts": "engine-lib",
+  "src/core/snapshot/SnapshotType.ts": "engine-lib",
 
   "src/core/AnonNames.ts": "shared",
   "src/core/ApiSchemas.ts": "shared",
@@ -78,13 +81,17 @@ const ENGINE_ENTRY = "src/core/worker/Worker.worker.ts";
 
 const ALLOWED: Record<Pkg, Pkg[]> = {
   "engine-api": ["engine-api", "zbin", "resources"],
-  engine: ["engine", "engine-api", "zbin", "resources"],
-  shared: ["shared", "engine-api", "zbin", "resources"],
+  "engine-lib": ["engine-lib", "engine-api", "zbin", "resources"],
+  engine: ["engine", "engine-lib", "engine-api", "zbin", "resources"],
+  shared: ["shared", "engine-lib", "engine-api", "zbin", "resources"],
   zbin: ["zbin"],
-  client: ["client", "shared", "engine-api", "zbin", "resources"],
-  server: ["server", "shared", "engine-api", "zbin", "resources"],
+  client: ["client", "shared", "engine-lib", "engine-api", "zbin", "resources"],
+  server: ["server", "shared", "engine-lib", "engine-api", "zbin", "resources"],
   resources: [],
 };
+
+// Packages that run inside the simulation and must stay deterministic.
+const ENGINE_SIDE = new Set<Pkg>(["engine", "engine-lib", "engine-api"]);
 
 // npm dependencies the deterministic packages may use.
 const ENGINE_NPM = new Set(["zod", "zod/v4", "jose"]);
@@ -197,10 +204,7 @@ function violations(): { edges: Set<string>; determinism: string[] } {
     for (const spec of specifiers(file)) {
       const r = resolve(file, spec);
       if ("npm" in r) {
-        if (
-          (from === "engine" || from === "engine-api") &&
-          !ENGINE_NPM.has(r.npm)
-        ) {
+        if (ENGINE_SIDE.has(from) && !ENGINE_NPM.has(r.npm)) {
           edges.add(`${file} -> npm:${r.npm}`);
         }
         continue;
@@ -216,7 +220,7 @@ function violations(): { edges: Set<string>; determinism: string[] } {
       const key = from === "client" || from === "server" ? from : file;
       edges.add(`${key} -> ${r.file}`);
     }
-    if (from === "engine" || from === "engine-api") {
+    if (ENGINE_SIDE.has(from)) {
       const text = fs.readFileSync(path.join(ROOT, file), "utf8");
       for (const m of text.matchAll(/Math\.random|Date\.now|new Date\b/g)) {
         const line = text.slice(0, m.index).split("\n").length;

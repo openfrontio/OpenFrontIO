@@ -1,8 +1,11 @@
 import fs from "fs";
 import path from "path";
-import { GameMapLoader, MapData } from "../../../src/core/game/GameMapLoader";
+import {
+  GameMapLoader,
+  MapData,
+  MapManifest,
+} from "../../../src/core/game/GameMapLoader";
 import { GameMapType } from "../../../src/core/game/GameTypes";
-import { MapManifest } from "../../../src/core/game/TerrainMapLoader";
 
 /**
  * Loads real production maps from resources/maps/ via the filesystem,

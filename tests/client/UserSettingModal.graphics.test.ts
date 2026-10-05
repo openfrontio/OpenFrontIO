@@ -7,7 +7,7 @@ import {
   USER_SETTINGS_CHANGED_EVENT,
   UserSettings,
 } from "../../src/client/UserSettings";
-import type { MapLayer } from "../../src/core/game/TerrainMapLoader";
+import type { MapLayer } from "../../src/core/game/GameMapLoader";
 
 type TestModal = UserSettingModal & {
   updateComplete: Promise<unknown>;

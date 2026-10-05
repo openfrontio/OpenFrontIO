@@ -24,6 +24,7 @@ import { NukeExecution } from "../../../src/core/execution/NukeExecution";
 import { SpawnExecution } from "../../../src/core/execution/SpawnExecution";
 import { TransportShipExecution } from "../../../src/core/execution/TransportShipExecution";
 import { Execution, Game } from "../../../src/core/game/Game";
+import { type MapManifest } from "../../../src/core/game/GameMapLoader";
 import {
   GameType,
   PlayerInfo,
@@ -32,7 +33,6 @@ import {
 } from "../../../src/core/game/GameTypes";
 import {
   genTerrainFromBin,
-  type MapManifest,
   type TerrainMapData,
 } from "../../../src/core/game/TerrainMapLoader";
 import { setup } from "../../util/Setup";

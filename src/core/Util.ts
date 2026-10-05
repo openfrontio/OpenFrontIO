@@ -251,38 +251,12 @@ export function withinInt(num: bigint, min: bigint, max: bigint): bigint {
   return minInt(atLeastMin, max);
 }
 
-export const emojiTable = [
-  ["😀", "😊", "🥰", "😇", "😎"],
-  ["😞", "🥺", "😭", "😱", "😡"],
-  ["😈", "🤡", "🥱", "🫡", "🖕"],
-  ["👋", "👏", "✋", "🙏", "💪"],
-  ["👍", "👎", "🫴", "🤌", "🤦‍♂️"],
-  ["🤝", "🆘", "🕊️", "🏳️", "⏳"],
-  ["🔥", "💥", "💀", "☢️", "⚠️"],
-  ["↖️", "⬆️", "↗️", "👑", "🥇"],
-  ["⬅️", "🎯", "➡️", "🥈", "🥉"],
-  ["↙️", "⬇️", "↘️", "❤️", "💔"],
-  ["💰", "⚓", "⛵", "🏡", "🛡️"],
-  ["🏭", "🚂", "❓", "🐔", "🐀"],
-] as const;
-// 2d to 1d array
-export const flattenedEmojiTable = emojiTable.flat();
-
-export type Emoji = (typeof flattenedEmojiTable)[number];
-
 export function sigmoid(
   value: number,
   decayRate: number,
   midpoint: number,
 ): number {
   return 1 / (1 + exp(-decayRate * (value - midpoint)));
-}
-
-export function formatPlayerDisplayName(
-  username: string,
-  clanTag?: string | null,
-): string {
-  return clanTag ? `[${clanTag}] ${username}` : username;
 }
 
 // Longest label a featured lobby may show in the browser. Long enough for

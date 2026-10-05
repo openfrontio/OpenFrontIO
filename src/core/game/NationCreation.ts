@@ -1,5 +1,6 @@
 import { PseudoRandom } from "../PseudoRandom";
 import { GameStartInfo } from "../Schemas";
+import { AdditionalNation, Nation as ManifestNation } from "./GameMapLoader";
 import {
   Cell,
   GameMapSize,
@@ -10,7 +11,6 @@ import {
   PlayerInfo,
   PlayerType,
 } from "./GameTypes";
-import { AdditionalNation, Nation as ManifestNation } from "./TerrainMapLoader";
 
 /**
  * Creates the nations array for a game.

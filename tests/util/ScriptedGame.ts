@@ -3,7 +3,11 @@ import path from "path";
 import { fileURLToPath } from "url";
 import { Game, Player } from "../../src/core/game/Game";
 import { TileRef } from "../../src/core/game/GameMap";
-import { GameMapLoader, MapData } from "../../src/core/game/GameMapLoader";
+import {
+  GameMapLoader,
+  MapData,
+  MapManifest,
+} from "../../src/core/game/GameMapLoader";
 import {
   AllPlayers,
   Difficulty,
@@ -17,7 +21,6 @@ import {
   ErrorUpdate,
   GameUpdateViewData,
 } from "../../src/core/game/GameUpdates";
-import { MapManifest } from "../../src/core/game/TerrainMapLoader";
 import {
   createGameRunner,
   createGameRunnerFromSnapshot,
@@ -25,13 +28,13 @@ import {
 } from "../../src/core/GameRunner";
 import { PseudoRandom } from "../../src/core/PseudoRandom";
 import {
+  flattenedEmojiTable,
   GameConfig,
   GameStartInfo,
   Intent,
   StampedIntent,
   Turn,
 } from "../../src/core/Schemas";
-import { flattenedEmojiTable } from "../../src/core/Util";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 

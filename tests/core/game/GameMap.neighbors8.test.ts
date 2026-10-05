@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { GameMapImpl } from "../../../src/core/game/GameMap";
+import { GameMapImpl } from "../../../src/core/game/GameMapImpl";
 
 describe("GameMap.neighbors8", () => {
   // A 3x3 map:

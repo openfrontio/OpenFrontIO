@@ -1,11 +1,9 @@
 import { describe, expect, test } from "vitest";
 import { GraphicsOverridesSchema } from "../src/client/render/gl/GraphicsOverrides";
 import type { GameMapLoader, MapData } from "../src/core/game/GameMapLoader";
+import { type MapLayer } from "../src/core/game/GameMapLoader";
 import { GameMapSize, GameMapType } from "../src/core/game/GameTypes";
-import {
-  loadTerrainMap,
-  type MapLayer,
-} from "../src/core/game/TerrainMapLoader";
+import { loadTerrainMap } from "../src/core/game/TerrainMapLoader";
 import { validateLayer } from "./util/layerValidation";
 
 describe("Map layer feature", () => {

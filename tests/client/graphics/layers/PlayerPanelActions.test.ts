@@ -47,7 +47,7 @@ import {
   GameType,
   PlayerType,
 } from "../../../../src/core/game/GameTypes";
-import { flattenedEmojiTable } from "../../../../src/core/Util";
+import { flattenedEmojiTable } from "../../../../src/core/Schemas";
 
 const mockActionButton = actionButton as unknown as ReturnType<typeof vi.fn>;
 

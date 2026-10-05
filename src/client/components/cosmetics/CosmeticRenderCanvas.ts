@@ -1,6 +1,7 @@
 import { base64url } from "jose";
 import { html, LitElement, nothing, PropertyValues } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
+import { decodePatternData } from "../../../core/CosmeticRefs";
 import {
   Effect,
   isNukeExplosionEffect,
@@ -8,7 +9,6 @@ import {
   Pattern,
   Skin,
 } from "../../../core/CosmeticSchemas";
-import { decodePatternData } from "../../../core/PatternDecoder";
 import { ResolvedCosmetic } from "../../Cosmetics";
 import {
   CosmeticPreviewConfig,

@@ -1,11 +1,6 @@
 import { GameMap, TileRef } from "./GameMap";
 import { PlayerID, UnitType } from "./GameTypes";
-import { UnitLike } from "./ReadViews";
-
-export type UnitPredicate = (value: {
-  unit: UnitLike;
-  distSquared: number;
-}) => boolean;
+import { UnitLike, UnitPredicate } from "./ReadViews";
 
 export class UnitGrid<U extends UnitLike = UnitLike> {
   private grid: Map<UnitType, Set<U>>[][];

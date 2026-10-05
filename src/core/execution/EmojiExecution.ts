@@ -2,6 +2,7 @@ import { z } from "zod";
 import { Execution, Game, Player } from "../game/Game";
 import { AllPlayers, PlayerID } from "../game/GameTypes";
 import { PseudoRandom } from "../PseudoRandom";
+import { flattenedEmojiTable } from "../Schemas";
 import { execSnapshotType } from "../snapshot/ExecutionSnapshot";
 import type {
   ExecRecord,
@@ -9,7 +10,6 @@ import type {
   SnapshotWriter,
 } from "../snapshot/SnapshotContext";
 import { zNum, zPlayerRef, zRandom } from "../snapshot/SnapshotType";
-import { flattenedEmojiTable } from "../Util";
 import { respondToEmoji } from "./nation/NationEmojiBehavior";
 
 export class EmojiExecution implements Execution {

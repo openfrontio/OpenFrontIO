@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { GameMapImpl } from "../../../src/core/game/GameMap";
+import { GameMapImpl } from "../../../src/core/game/GameMapImpl";
 import { UniversalPathFinding } from "../../../src/core/pathfinding/PathFinder";
 import { PathStatus } from "../../../src/core/pathfinding/types";
 

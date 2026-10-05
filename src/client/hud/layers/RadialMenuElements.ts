@@ -14,7 +14,8 @@ import {
   Structures,
   UnitType,
 } from "../../../core/game/GameTypes";
-import { Emoji, findClosestBy, flattenedEmojiTable } from "../../../core/Util";
+import { Emoji, flattenedEmojiTable } from "../../../core/Schemas";
+import { findClosestBy } from "../../../core/Util";
 import { UIState } from "../../UIState";
 import { translateText } from "../../Utils";
 import { GameView, PlayerView } from "../../view";
