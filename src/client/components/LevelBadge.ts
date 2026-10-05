@@ -8,6 +8,13 @@ import {
   prestigeTier,
 } from "../Progression";
 import { translateText } from "../Utils";
+import {
+  badgeArrived,
+  dequeueBadge,
+  queueBadge,
+  shouldStagger,
+  type StaggeredBadge,
+} from "./LevelBadgeFill";
 
 // A player's level as a small emblem: the number inside a frame whose SHAPE
 // (not just colour, for colour-blind players) changes every ten levels, a
@@ -162,15 +169,45 @@ export function levelBadgeLabel(
 }
 
 @customElement("level-badge")
-export class LevelBadge extends LitElement {
+export class LevelBadge extends LitElement implements StaggeredBadge {
   @property({ type: Number }) level = 1;
   @property({ type: Number }) prestige = 0;
   @property({ type: Boolean }) legend = false;
   // Rendered size in CSS pixels (square). 16 is the smallest supported.
   @property({ type: Number }) size = 24;
 
+  // With the `stagger` attribute (long lists): when many badges appear at
+  // once, this one first holds its square empty and is drawn on a later
+  // frame (see LevelBadgeFill). Decided once, at its first render.
+  private waiting = false;
+
   createRenderRoot() {
     return this;
+  }
+
+  connectedCallback(): void {
+    super.connectedCallback();
+    if (!this.hasUpdated && this.hasAttribute("stagger")) badgeArrived();
+    else if (this.waiting) queueBadge(this);
+  }
+
+  disconnectedCallback(): void {
+    super.disconnectedCallback();
+    if (this.waiting) dequeueBadge(this);
+  }
+
+  protected willUpdate(): void {
+    if (!this.hasUpdated && this.hasAttribute("stagger") && shouldStagger()) {
+      this.waiting = true;
+      queueBadge(this);
+    }
+  }
+
+  /** Draws a badge that is waiting its turn in a long list. */
+  draw(): void {
+    if (!this.waiting) return;
+    this.waiting = false;
+    this.requestUpdate();
   }
 
   /** Accessible name, e.g. "Level 42, Prestige 3". */
@@ -344,9 +381,18 @@ export class LevelBadge extends LitElement {
   }
 
   render() {
+    const px = Math.max(16, this.size);
+    if (this.waiting) {
+      // The drawn badge's exact box, so nothing moves when it is drawn.
+      return html`<span
+        class="block shrink-0"
+        style="width:${px}px;height:${px}px"
+        aria-hidden="true"
+        data-badge-waiting
+      ></span>`;
+    }
     const band = BANDS[levelBand(this.level)];
     const label = this.label();
-    const px = Math.max(16, this.size);
     const prestige = clampPrestige(this.prestige);
     const tier = this.legend ? "none" : prestigeTier(prestige);
     const glow = this.legend
