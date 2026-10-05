@@ -148,10 +148,27 @@ export class HostLobbyModal extends BaseModal {
   // showing the opposite of the real listed state.
   private listingRequestInFlight = false;
 
+  // The lobby whose player limit has been read from lobby info. Read once per
+  // lobby, so later broadcasts don't snap the field back while the host edits.
+  private playerLimitLoadedFor: string | null = null;
+
   private readonly handleLobbyInfo = (event: LobbyInfoEvent) => {
     const lobby = event.lobby;
     if (!this.lobbyId || lobby.gameID !== this.lobbyId) {
       return;
+    }
+    // A host returning to an existing lobby (?host) starts with default
+    // settings; without this, their next change of any setting would send
+    // maxPlayers: null and clear the lobby's cap. Only a cap the server
+    // already has is adopted, so a fresh lobby's first broadcast can't undo
+    // a limit the host just switched on.
+    if (this.playerLimitLoadedFor !== this.lobbyId) {
+      this.playerLimitLoadedFor = this.lobbyId;
+      const maxPlayers = lobby.gameConfig?.maxPlayers;
+      if (maxPlayers !== undefined) {
+        this.playerLimit = true;
+        this.playerLimitValue = maxPlayers;
+      }
     }
     if ("serverTime" in lobby && typeof lobby.serverTime === "number") {
       this.serverTimeOffset = calculateServerTimeOffset(lobby.serverTime);
@@ -999,6 +1016,7 @@ export class HostLobbyModal extends BaseModal {
     this.maxTimerValue = undefined;
     this.playerLimit = false;
     this.playerLimitValue = undefined;
+    this.playerLimitLoadedFor = null;
     this.startDelayValue = 3;
     this.instantBuild = false;
     this.randomSpawn = false;
@@ -1623,10 +1641,14 @@ export class HostLobbyModal extends BaseModal {
             ),
             maxTimerValue: this.maxTimer === true ? this.maxTimerValue : null,
             // null lifts the cap; the server keeps players already seated.
+            // Until the lobby's own cap has been read from lobby info, "off"
+            // may just mean "not loaded yet", so leave the cap alone.
             maxPlayers:
               this.playerLimit === true && this.playerLimitValue !== undefined
                 ? this.playerLimitValue
-                : null,
+                : this.playerLimitLoadedFor === this.lobbyId
+                  ? null
+                  : undefined,
             startDelay: this.startDelayValue,
             goldMultiplier:
               this.goldMultiplier === true ? this.goldMultiplierValue : null,

@@ -102,6 +102,16 @@ describe("private lobby player cap", () => {
     expect(game.phase()).toBe(GamePhase.Lobby);
   });
 
+  it("rejects the host's limit once the lobby is listed", () => {
+    // Listing picks its own cap (10-100, above the seated count); the host
+    // can't then move it outside those checks through update_game_config.
+    const game = makeGame();
+    game.setListed(true, { maxPlayers: 20 });
+    expect(setCap(game, 2)).toBe(409);
+    expect(setCap(game, null)).toBe(409);
+    expect(game.gameInfo().gameConfig?.maxPlayers).toBe(20);
+  });
+
   it("still auto-starts a host-less lobby (admin bot, matchmaking) when full", () => {
     const game = harnessGame({
       config: { gameType: GameType.Private, maxPlayers: 1 },
