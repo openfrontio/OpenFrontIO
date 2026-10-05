@@ -705,6 +705,47 @@ describe("<profile-progression> with the track", () => {
     expect(el.querySelector("reward-track")).toBeNull();
   });
 
+  it("shows the rest without the track when the track can't be fetched", async () => {
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+    const el = document.createElement(
+      "profile-progression",
+    ) as ProfileProgression;
+    el.loadConfig = async () => config();
+    el.loadUserMe = async () => false;
+    el.loadTrackModule = () => Promise.reject(new Error("offline"));
+    el.progress = P3;
+    document.body.appendChild(el);
+    await vi.waitFor(async () => {
+      await el.updateComplete;
+      expect(el.querySelector("[data-milestones]")).not.toBeNull();
+    });
+    expect(el.querySelector("[data-prestige-history]")).not.toBeNull();
+    expect(el.querySelector("reward-track")).toBeNull();
+  });
+
+  it("fetches the track alongside the data it waits for", async () => {
+    let answerConfig!: (c: ProgressionConfig) => void;
+    const loadTrack = vi.fn(
+      () => import("../../src/client/components/RewardTrack"),
+    );
+    const el = document.createElement(
+      "profile-progression",
+    ) as ProfileProgression;
+    el.loadConfig = () => new Promise((resolve) => (answerConfig = resolve));
+    el.loadUserMe = async () => false;
+    el.loadTrackModule = loadTrack;
+    el.progress = P3;
+    document.body.appendChild(el);
+    await el.updateComplete;
+    // Asked for while the config is still out.
+    expect(loadTrack).toHaveBeenCalledTimes(1);
+    answerConfig(config());
+    await vi.waitFor(async () => {
+      await el.updateComplete;
+      expect(el.querySelector("reward-track")).not.toBeNull();
+    });
+  });
+
   describe("Claim all", () => {
     it("claims only this run's level rewards, then updates and tells the page", async () => {
       const claim = vi.fn(async (id: string) => ({
