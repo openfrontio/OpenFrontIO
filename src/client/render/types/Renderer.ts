@@ -238,7 +238,7 @@ export interface GhostPreviewData {
   showCost: boolean;
   /** True if the player has enough gold to afford this build (drives label color). */
   canAfford: boolean;
-  ghostRailPaths: TileRef[][]; // TileRef paths (City/Port only)
+  ghostRailPaths: TileRef[][]; // TileRef paths for City/Port/Factory previews
   overlappingRailroads: TileRef[]; // TileRefs containing rails in snap zone
   ownerID: number; // Player's smallID (for color)
   /** Tile position of existing structure being upgraded (null if fresh build). */

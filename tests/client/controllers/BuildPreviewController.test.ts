@@ -151,3 +151,44 @@ describe("BuildPreviewController confirm with the pointer off the map", () => {
     expect(intent?.tile).toBe(43);
   });
 });
+
+describe("BuildPreviewController worker-query cadence", () => {
+  test("throttles buildable preview queries to at most once per 50ms", () => {
+    const buildables = vi.fn(() => new Promise<never>(() => undefined));
+    const player = { buildables };
+    const game = {
+      isValidCoord: () => true,
+      ref: () => 42,
+      isImpassable: () => false,
+      myPlayer: () => player,
+    };
+    const controller = new BuildPreviewController(
+      game as any,
+      new EventBus(),
+      { ghostStructure: UnitType.Factory } as any,
+      {
+        screenToWorldCoordinates: () => ({ x: 4, y: 2 }),
+      } as any,
+      {} as any,
+      {} as any,
+    );
+    (controller as any).ghostUnit = {
+      buildableUnit: {
+        type: UnitType.Factory,
+        canBuild: false,
+        canUpgrade: false,
+      },
+    };
+    vi.spyOn(performance, "now")
+      .mockReturnValueOnce(100)
+      .mockReturnValueOnce(120)
+      .mockReturnValueOnce(151);
+
+    controller.renderGhost();
+    controller.renderGhost();
+    controller.renderGhost();
+
+    expect(buildables).toHaveBeenCalledTimes(2);
+    vi.restoreAllMocks();
+  });
+});

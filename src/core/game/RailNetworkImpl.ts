@@ -87,6 +87,64 @@ export interface RailPathFinderService {
   findStationsPath(from: TrainStation, to: TrainStation): TrainStation[];
 }
 
+interface RailGraphStation {
+  tile(): TileRef;
+  neighbors(): RailGraphStation[];
+}
+
+interface NearbyGraphStation<T extends RailGraphStation> {
+  station: T;
+  distSquared: number;
+}
+
+interface GhostRailroad {
+  from: GhostTrainStation;
+  to: GhostTrainStation;
+  tiles: TileRef[];
+  /** True when this geometry would be introduced by the proposed build. */
+  ghost: boolean;
+}
+
+/**
+ * A lightweight station used to dry-run the same connection rules as the live
+ * rail network without mutating game state or allocating real station IDs.
+ */
+class GhostTrainStation implements RailGraphStation {
+  private railroads = new Set<GhostRailroad>();
+
+  constructor(
+    private tileRef: TileRef,
+    readonly unit: Unit | null,
+    readonly canConnect: boolean,
+  ) {}
+
+  tile(): TileRef {
+    return this.tileRef;
+  }
+
+  neighbors(): GhostTrainStation[] {
+    const result: GhostTrainStation[] = [];
+    for (const rail of this.railroads) {
+      result.push(rail.from === this ? rail.to : rail.from);
+    }
+    return result;
+  }
+
+  addRailroad(railroad: GhostRailroad): void {
+    this.railroads.add(railroad);
+  }
+
+  removeRailroad(railroad: GhostRailroad): void {
+    this.railroads.delete(railroad);
+  }
+}
+
+interface GhostRailNetworkState {
+  stationsByUnit: Map<Unit, GhostTrainStation>;
+  railroads: Set<GhostRailroad>;
+  proposedFactory: GhostTrainStation | null;
+}
+
 class RailPathFinderServiceImpl implements RailPathFinderService {
   constructor(private game: Game) {}
 
@@ -261,22 +319,12 @@ export class RailNetworkImpl implements RailNetwork {
     return Array.from(tiles).sort((a, b) => a - b);
   }
 
-  private canSnapToExistingRailway(tile: TileRef): boolean {
-    return this.railGrid.query(tile, this.stationRadius).size > 0;
-  }
-
   computeGhostRailPaths(unitType: UnitType, tile: TileRef): TileRef[][] {
     if (![UnitType.City, UnitType.Port, UnitType.Factory].includes(unitType)) {
       return [];
     }
 
-    if (this.canSnapToExistingRailway(tile)) {
-      return [];
-    }
-
     const maxRange = this.game.config().trainStationMaxRange();
-    const minRangeSquared = this.game.config().trainStationMinRange() ** 2;
-    const maxPathSize = this.game.config().railroadMaxSize();
 
     // A City or Port only joins the rail network when a Factory is already in
     // range (see CityExecution/PortExecution). A Factory always becomes a
@@ -285,64 +333,261 @@ export class RailNetworkImpl implements RailNetwork {
     const buildingFactory = unitType === UnitType.Factory;
     if (
       !buildingFactory &&
+      this.railGrid.query(tile, this.stationRadius).size
+    ) {
+      return [];
+    }
+    if (
+      !buildingFactory &&
       !this.game.hasUnitNearby(tile, maxRange, UnitType.Factory)
     ) {
       return [];
     }
 
-    const neighbors = this.game.nearbyUnits(tile, maxRange, [
+    const state = this.createGhostRailNetworkState();
+    if (buildingFactory) {
+      this.planFactoryGhostNetwork(state, tile, maxRange);
+    } else {
+      const station = new GhostTrainStation(tile, null, true);
+      this.connectGhostStation(state, station);
+    }
+
+    return Array.from(state.railroads)
+      .filter((railroad) => railroad.ghost)
+      .map((railroad) => railroad.tiles);
+  }
+
+  /**
+   * Simulate the station activation order caused by placing a Factory.
+   * Existing Ports detect the new Factory in their already-running execution
+   * before the new FactoryExecution runs. The Factory station comes next, then
+   * FactoryExecution promotes completed Cities and any remaining structures in
+   * the same UnitGrid order returned by nearbyUnits().
+   */
+  private planFactoryGhostNetwork(
+    state: GhostRailNetworkState,
+    tile: TileRef,
+    maxRange: number,
+  ): void {
+    const structures = this.game.nearbyUnits(tile, maxRange, [
       UnitType.City,
       UnitType.Factory,
       UnitType.Port,
     ]);
-    neighbors.sort((a, b) => a.distSquared - b.distSquared);
 
-    const paths: TileRef[][] = [];
-    const connectedStations: TrainStation[] = [];
-    for (const neighbor of neighbors) {
-      // Limit to the closest 5 stations to avoid running too many pathfinding calls.
-      if (paths.length >= 5) break;
-      if (neighbor.distSquared <= minRangeSquared) continue;
+    const pendingPorts = structures
+      .map(({ unit }) => unit)
+      .filter(
+        (unit) =>
+          unit.type() === UnitType.Port && !state.stationsByUnit.has(unit),
+      )
+      // Existing execution order follows construction order, represented by
+      // monotonically increasing unit IDs.
+      .sort((a, b) => a.id() - b.id());
 
-      const neighborStation = this._stationManager.findStation(neighbor.unit);
+    for (const port of pendingPorts) {
+      this.addAndConnectGhostStation(state, port.tile(), port);
+    }
 
-      // Building a factory connects to nearby structures even if they aren't
-      // stations yet — they get promoted to stations when the factory is
-      // built. For a city/port, only existing stations are relevant.
-      let targetTile: TileRef;
-      if (neighborStation) {
-        const alreadyReachable = connectedStations.some(
-          (s) =>
-            this.distanceFrom(
-              neighborStation,
-              s,
-              this.maxConnectionDistance - 1,
-            ) !== -1,
-        );
-        if (alreadyReachable) continue;
-        targetTile = neighborStation.tile();
-      } else if (buildingFactory) {
-        targetTile = neighbor.unit.tile();
-      } else {
-        continue;
-      }
+    const factory = new GhostTrainStation(tile, null, true);
+    state.proposedFactory = factory;
+    this.connectGhostStation(state, factory);
 
-      // A completed city has already made its one-time station check, so the
-      // factory promotes it after creating its own station. The city then
-      // initiates the real connection back to the factory.
-      const path =
-        !neighborStation && neighbor.unit.type() === UnitType.City
-          ? this.pathService.findTilePath(targetTile, tile)
-          : this.pathService.findTilePath(tile, targetTile);
-      if (path.length > 0 && path.length < maxPathSize) {
-        paths.push(path);
-        if (neighborStation) {
-          connectedStations.push(neighborStation);
-        }
+    for (const { unit } of structures) {
+      if (state.stationsByUnit.has(unit)) continue;
+      this.addAndConnectGhostStation(state, unit.tile(), unit);
+    }
+  }
+
+  private createGhostRailNetworkState(): GhostRailNetworkState {
+    const stationsByUnit = new Map<Unit, GhostTrainStation>();
+    const stationCopies = new Map<TrainStation, GhostTrainStation>();
+    const railroads = new Set<GhostRailroad>();
+
+    for (const station of this._stationManager.getAll()) {
+      const copy = new GhostTrainStation(
+        station.tile(),
+        station.unit,
+        station.getCluster() !== null,
+      );
+      stationsByUnit.set(station.unit, copy);
+      stationCopies.set(station, copy);
+    }
+
+    const copiedRailroads = new Set<Railroad>();
+    for (const station of this._stationManager.getAll()) {
+      for (const railroad of station.getRailroads()) {
+        if (copiedRailroads.has(railroad)) continue;
+        copiedRailroads.add(railroad);
+        const from = stationCopies.get(railroad.from);
+        const to = stationCopies.get(railroad.to);
+        if (!from || !to) continue;
+        const copy: GhostRailroad = {
+          from,
+          to,
+          tiles: railroad.tiles,
+          ghost: false,
+        };
+        from.addRailroad(copy);
+        to.addRailroad(copy);
+        railroads.add(copy);
       }
     }
 
-    return paths;
+    return { stationsByUnit, railroads, proposedFactory: null };
+  }
+
+  private addAndConnectGhostStation(
+    state: GhostRailNetworkState,
+    tile: TileRef,
+    unit: Unit,
+  ): GhostTrainStation {
+    const station = new GhostTrainStation(tile, unit, true);
+    state.stationsByUnit.set(unit, station);
+    this.connectGhostStation(state, station);
+    return station;
+  }
+
+  private connectGhostStation(
+    state: GhostRailNetworkState,
+    station: GhostTrainStation,
+  ): void {
+    if (this.splitGhostRailroadsAtStation(state, station)) return;
+
+    const neighbors: NearbyGraphStation<GhostTrainStation>[] = [];
+    const nearbyUnits = this.game.nearbyUnits(
+      station.tile(),
+      this.game.config().trainStationMaxRange(),
+      [UnitType.City, UnitType.Factory, UnitType.Port],
+    );
+    for (const { unit, distSquared } of nearbyUnits) {
+      const neighbor = state.stationsByUnit.get(unit);
+      if (!neighbor || neighbor === station || !neighbor.canConnect) continue;
+      neighbors.push({ station: neighbor, distSquared });
+    }
+
+    const proposedFactory = state.proposedFactory;
+    if (proposedFactory && proposedFactory !== station) {
+      const distSquared = this.tileDistanceSquared(
+        station.tile(),
+        proposedFactory.tile(),
+      );
+      const maxRange = this.game.config().trainStationMaxRange();
+      if (distSquared <= maxRange * maxRange) {
+        neighbors.push({ station: proposedFactory, distSquared });
+      }
+    }
+    neighbors.sort((a, b) => a.distSquared - b.distSquared);
+
+    this.planNearbyConnections(station, neighbors, (to, path) => {
+      const railroad: GhostRailroad = {
+        from: station,
+        to,
+        tiles: path,
+        ghost: true,
+      };
+      station.addRailroad(railroad);
+      to.addRailroad(railroad);
+      state.railroads.add(railroad);
+    });
+  }
+
+  private splitGhostRailroadsAtStation(
+    state: GhostRailNetworkState,
+    station: GhostTrainStation,
+  ): boolean {
+    const railroads = this.ghostRailroadsNear(
+      state,
+      station.tile(),
+      this.stationRadius,
+    );
+    let splitAny = false;
+
+    for (const railroad of railroads) {
+      const closestIndex = this.closestTileIndex(
+        railroad.tiles,
+        station.tile(),
+      );
+      if (closestIndex === 0 || closestIndex >= railroad.tiles.length) {
+        continue;
+      }
+
+      railroad.from.removeRailroad(railroad);
+      railroad.to.removeRailroad(railroad);
+      state.railroads.delete(railroad);
+
+      const fromHalf: GhostRailroad = {
+        from: railroad.from,
+        to: station,
+        tiles: railroad.tiles.slice(0, closestIndex),
+        ghost: railroad.ghost,
+      };
+      const toHalf: GhostRailroad = {
+        from: station,
+        to: railroad.to,
+        tiles: railroad.tiles.slice(closestIndex),
+        ghost: railroad.ghost,
+      };
+      railroad.from.addRailroad(fromHalf);
+      station.addRailroad(fromHalf);
+      station.addRailroad(toHalf);
+      railroad.to.addRailroad(toHalf);
+      state.railroads.add(fromHalf);
+      state.railroads.add(toHalf);
+      splitAny = true;
+    }
+
+    return splitAny;
+  }
+
+  private ghostRailroadsNear(
+    state: GhostRailNetworkState,
+    tile: TileRef,
+    radius: number,
+  ): GhostRailroad[] {
+    const tileX = this.game.x(tile);
+    const tileY = this.game.y(tile);
+    const minCellX = Math.floor((tileX - radius) / this.gridCellSize);
+    const maxCellX = Math.floor((tileX + radius) / this.gridCellSize);
+    const minCellY = Math.floor((tileY - radius) / this.gridCellSize);
+    const maxCellY = Math.floor((tileY + radius) / this.gridCellSize);
+
+    return Array.from(state.railroads).filter((railroad) =>
+      railroad.tiles.some((railTile) => {
+        const cellX = Math.floor(this.game.x(railTile) / this.gridCellSize);
+        const cellY = Math.floor(this.game.y(railTile) / this.gridCellSize);
+        return (
+          cellX >= minCellX &&
+          cellX <= maxCellX &&
+          cellY >= minCellY &&
+          cellY <= maxCellY
+        );
+      }),
+    );
+  }
+
+  private closestTileIndex(tiles: TileRef[], target: TileRef): number {
+    if (tiles.length === 0) return -1;
+    const targetX = this.game.x(target);
+    const targetY = this.game.y(target);
+    let closestIndex = 0;
+    let closestDistance = Infinity;
+    for (let i = 0; i < tiles.length; i++) {
+      const dx = this.game.x(tiles[i]) - targetX;
+      const dy = this.game.y(tiles[i]) - targetY;
+      const distance = dx * dx + dy * dy;
+      if (distance < closestDistance) {
+        closestIndex = i;
+        closestDistance = distance;
+      }
+    }
+    return closestIndex;
+  }
+
+  private tileDistanceSquared(a: TileRef, b: TileRef): number {
+    const dx = this.game.x(a) - this.game.x(b);
+    const dy = this.game.y(a) - this.game.y(b);
+    return dx * dx + dy * dy;
   }
 
   private connectToNearbyStations(station: TrainStation) {
@@ -354,33 +599,25 @@ export class RailNetworkImpl implements RailNetwork {
 
     const editedClusters = new Set<Cluster>();
     neighbors.sort((a, b) => a.distSquared - b.distSquared);
-
+    const candidates: NearbyGraphStation<TrainStation>[] = [];
     for (const neighbor of neighbors) {
       if (neighbor.unit === station.unit) continue;
       const neighborStation = this._stationManager.findStation(neighbor.unit);
       if (!neighborStation) continue;
-
-      const distanceToStation = this.distanceFrom(
-        neighborStation,
-        station,
-        this.maxConnectionDistance,
-      );
-
-      const neighborCluster = neighborStation.getCluster();
-      if (neighborCluster === null) continue;
-      const connectionAvailable =
-        distanceToStation > this.maxConnectionDistance ||
-        distanceToStation === -1;
-      if (
-        connectionAvailable &&
-        neighbor.distSquared > this.game.config().trainStationMinRange() ** 2
-      ) {
-        if (this.connect(station, neighborStation)) {
-          neighborCluster.addStation(station);
-          editedClusters.add(neighborCluster);
-        }
-      }
+      if (neighborStation.getCluster() === null) continue;
+      candidates.push({
+        station: neighborStation,
+        distSquared: neighbor.distSquared,
+      });
     }
+
+    this.planNearbyConnections(station, candidates, (neighbor, path) => {
+      this.connectWithPath(station, neighbor, path);
+      const neighborCluster = neighbor.getCluster();
+      if (neighborCluster === null) return;
+      neighborCluster.addStation(station);
+      editedClusters.add(neighborCluster);
+    });
 
     // If multiple clusters own the new station, merge them into a single cluster
     if (editedClusters.size > 1) {
@@ -407,32 +644,63 @@ export class RailNetworkImpl implements RailNetwork {
     cluster.clear();
   }
 
-  private connect(from: TrainStation, to: TrainStation) {
-    const path = this.pathService.findTilePath(from.tile(), to.tile());
+  private connectWithPath(
+    from: TrainStation,
+    to: TrainStation,
+    path: TileRef[],
+  ): void {
+    const railroad = new Railroad(from, to, path, this.nextId++);
+    this.game.addUpdate({
+      type: GameUpdateType.RailroadConstructionEvent,
+      id: railroad.id,
+      tiles: railroad.tiles,
+    });
+    from.addRailroad(railroad);
+    to.addRailroad(railroad);
+    this.railGrid.register(railroad);
+  }
+
+  private validRailPath(from: TileRef, to: TileRef): TileRef[] | null {
+    const path = this.pathService.findTilePath(from, to);
     if (path.length > 0 && path.length < this.game.config().railroadMaxSize()) {
-      const railroad = new Railroad(from, to, path, this.nextId++);
-      this.game.addUpdate({
-        type: GameUpdateType.RailroadConstructionEvent,
-        id: railroad.id,
-        tiles: railroad.tiles,
-      });
-      from.addRailroad(railroad);
-      to.addRailroad(railroad);
-      this.railGrid.register(railroad);
-      return true;
+      return path;
     }
-    return false;
+    return null;
+  }
+
+  private planNearbyConnections<T extends RailGraphStation>(
+    station: T,
+    neighbors: NearbyGraphStation<T>[],
+    connect: (neighbor: T, path: TileRef[]) => void,
+  ): void {
+    const minRangeSquared = this.game.config().trainStationMinRange() ** 2;
+    for (const neighbor of neighbors) {
+      const distanceToStation = this.distanceFrom(
+        neighbor.station,
+        station,
+        this.maxConnectionDistance,
+      );
+      const connectionAvailable =
+        distanceToStation > this.maxConnectionDistance ||
+        distanceToStation === -1;
+      if (!connectionAvailable || neighbor.distSquared <= minRangeSquared) {
+        continue;
+      }
+
+      const path = this.validRailPath(station.tile(), neighbor.station.tile());
+      if (path !== null) connect(neighbor.station, path);
+    }
   }
 
   private distanceFrom(
-    start: TrainStation,
-    dest: TrainStation,
+    start: RailGraphStation,
+    dest: RailGraphStation,
     maxDistance: number,
   ): number {
     if (start === dest) return 0;
 
-    const visited = new Set<TrainStation>();
-    const queue: Array<{ station: TrainStation; distance: number }> = [
+    const visited = new Set<RailGraphStation>();
+    const queue: Array<{ station: RailGraphStation; distance: number }> = [
       { station: start, distance: 0 },
     ];
 
