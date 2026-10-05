@@ -49,6 +49,16 @@ const MIN_LEVEL_SUM_FOR_HIGH_DENSITY_NUKE = 5;
 /** Share of the non-fallout land above which every FFA nation nukes the crown. */
 const CROWN_NEAR_WIN_SHARE = 0.5;
 
+/** Minimum share of a blast that must hit enemy land (not water, fallout or unowned land). */
+const MIN_BLAST_COVERAGE: Record<NukeType, number> = {
+  [UnitType.AtomBomb]: 0.25,
+  // Below this, an atom bomb on solid enemy land destroys more tiles per gold
+  [UnitType.HydrogenBomb]: 0.4,
+};
+
+/** Tile score bonus for a blast that hits nothing but enemy land. */
+const FULL_BLAST_COVERAGE_VALUE = 50_000;
+
 export class NationNukeBehavior {
   private recentlySentNukes: [
     Tick,
@@ -139,27 +149,12 @@ export class NationNukeBehavior {
       return;
     }
 
-    const hydroCost = this.getPerceivedNukeCost(UnitType.HydrogenBomb);
-    const atomCost = this.getPerceivedNukeCost(UnitType.AtomBomb);
-    let nukeType: UnitType;
-    if (
-      !this.game.config().isUnitDisabled(UnitType.HydrogenBomb) &&
-      this.player.gold() >= hydroCost
-    ) {
-      nukeType = UnitType.HydrogenBomb;
-    } else if (
-      !this.game.config().isUnitDisabled(UnitType.AtomBomb) &&
-      (!this.isHydroNation || this.isUnderHeavyAttack()) &&
-      this.player.gold() >= atomCost
-    ) {
-      nukeType = UnitType.AtomBomb;
-    } else {
+    const nukeTypes = this.nukeTypesToTry();
+    if (nukeTypes.length === 0) {
       return;
     }
-    const range = this.game.config().nukeMagnitudes(nukeType).outer;
 
     const structures = nukeTarget.units(Structures.types);
-    const structureTiles = structures.map((u) => u.tile());
     const difficulty = this.game.config().gameConfig().difficulty;
     // Use more random tiles on Impossible difficulty to improve chances of finding a perfect SAM outranging spot
     const numRandomTiles = difficulty === Difficulty.Impossible ? 30 : 10;
@@ -169,14 +164,66 @@ export class NationNukeBehavior {
       nukeTarget,
       numRandomTiles,
     );
-    const allTiles = randomTiles.concat(structureTiles);
-
-    let bestTile: TileRef | null = null;
-    let bestValue = -1; // -1 is important, so that we can also nuke land without structures
+    const candidates = new Set(
+      randomTiles.concat(structures.map((u) => u.tile())),
+    );
     this.removeOldNukeEvents();
 
-    outer: for (const tile of new Set(allTiles)) {
-      if (tile === null) continue;
+    for (const nukeType of nukeTypes) {
+      const tile = this.findBestNukeTile(
+        nukeType,
+        nukeTarget,
+        candidates,
+        silos,
+        structures,
+      );
+      if (tile !== null) {
+        this.sendNuke(tile, nukeType, nukeTarget);
+        return;
+      }
+    }
+    if (difficulty === Difficulty.Impossible) {
+      this.maybeDestroyEnemySam(nukeTarget);
+    }
+  }
+
+  /** Hydrogen bomb first; on Hard & Impossible, an atom bomb if no spot is worth a hydrogen bomb. */
+  private nukeTypesToTry(): NukeType[] {
+    const config = this.game.config();
+    const difficulty = config.gameConfig().difficulty;
+    const types: NukeType[] = [];
+    if (
+      !config.isUnitDisabled(UnitType.HydrogenBomb) &&
+      this.player.gold() >= this.getPerceivedNukeCost(UnitType.HydrogenBomb)
+    ) {
+      types.push(UnitType.HydrogenBomb);
+    }
+    if (
+      (types.length === 0 ||
+        difficulty === Difficulty.Hard ||
+        difficulty === Difficulty.Impossible) &&
+      !config.isUnitDisabled(UnitType.AtomBomb) &&
+      (!this.isHydroNation || this.isUnderHeavyAttack()) &&
+      this.player.gold() >= this.getPerceivedNukeCost(UnitType.AtomBomb)
+    ) {
+      types.push(UnitType.AtomBomb);
+    }
+    return types;
+  }
+
+  private findBestNukeTile(
+    nukeType: NukeType,
+    nukeTarget: Player,
+    candidates: Set<TileRef>,
+    silos: Unit[],
+    structures: Unit[],
+  ): TileRef | null {
+    const difficulty = this.game.config().gameConfig().difficulty;
+    const range = this.game.config().nukeMagnitudes(nukeType).outer;
+    const scored: { tile: TileRef; score: number }[] = [];
+
+    outer: for (const tile of candidates) {
+      // Cheap pre-filter, blastHitsFriendlyLand() checks the whole blast of the winner
       const boundingBox = boundingBoxTiles(this.game, tile, range)
         // Add radius / 2 in case there is a piece of unwanted territory inside the outer radius that we miss.
         .concat(boundingBoxTiles(this.game, tile, Math.floor(range / 2)));
@@ -188,13 +235,12 @@ export class NationNukeBehavior {
       const spawnTile = this.player.canBuild(nukeType, tile);
       if (spawnTile === false) continue;
 
-      // In team games, avoid nuking the same position as a teammate
-      if (
-        this.game.config().gameConfig().gameMode === GameMode.Team &&
-        difficulty !== Difficulty.Easy &&
-        this.isTeammateAlreadyNukingThisSpot(tile, nukeType)
-      ) {
-        continue;
+      // Above Easy, skip spots that are already being nuked or where the blast would be mostly wasted
+      let coverage = 0;
+      if (difficulty !== Difficulty.Easy) {
+        if (this.isNukeAlreadyLandingNear(tile, nukeType)) continue;
+        coverage = this.enemyLandBlastCoverage(tile, nukeType);
+        if (coverage < MIN_BLAST_COVERAGE[nukeType]) continue;
       }
 
       // On Hard & Impossible, avoid trajectories that can be intercepted by enemy SAMs
@@ -207,19 +253,21 @@ export class NationNukeBehavior {
       }
 
       const value = this.nukeTileScore(tile, silos, structures, nukeType);
-      if (value > bestValue) {
-        bestTile = tile;
-        bestValue = value;
+      // Impossible only nukes spots with structure value
+      if (difficulty === Difficulty.Impossible ? value <= 0 : value < 0) {
+        continue;
       }
+      scored.push({
+        tile,
+        score: value + coverage * FULL_BLAST_COVERAGE_VALUE,
+      });
     }
-    if (
-      bestTile !== null &&
-      (bestValue > 0 || difficulty !== Difficulty.Impossible)
-    ) {
-      this.sendNuke(bestTile, nukeType, nukeTarget);
-    } else if (difficulty === Difficulty.Impossible) {
-      this.maybeDestroyEnemySam(nukeTarget);
-    }
+    // Stable sort: on ties the earlier candidate wins
+    scored.sort((a, b) => b.score - a.score);
+    const best = scored.find(
+      ({ tile }) => !this.blastHitsFriendlyLand(tile, nukeType),
+    );
+    return best?.tile ?? null;
   }
 
   findBestNukeTarget(): Player | null {
@@ -567,48 +615,77 @@ export class NationNukeBehavior {
     }
   }
 
-  private isTeammateAlreadyNukingThisSpot(
-    tile: TileRef,
-    nukeType: UnitType.AtomBomb | UnitType.HydrogenBomb,
-  ): boolean {
-    // Get the inner radius for our nuke type
-    const ourInnerRadius = this.game.config().nukeMagnitudes(nukeType).inner;
-
-    // Get all active nukes in the game
-    const activeNukes = this.game.units(
+  /** Whether our inner blast would overlap the inner blast of any player's nuke in flight. */
+  private isNukeAlreadyLandingNear(tile: TileRef, nukeType: NukeType): boolean {
+    const config = this.game.config();
+    const ourInnerRadius = config.nukeMagnitudes(nukeType).inner;
+    const nukesInFlight = this.game.units(
       UnitType.AtomBomb,
       UnitType.HydrogenBomb,
+      UnitType.MIRVWarhead,
     );
-
-    // Check if any teammate's nuke blast radius overlaps with ours
-    for (const nuke of activeNukes) {
-      const nukeOwner = nuke.owner();
-
-      // Skip our own nukes and non-teammate nukes
-      if (nukeOwner === this.player || !this.player.isFriendly(nukeOwner)) {
-        continue;
-      }
-
-      // Get the target tile of the teammate's nuke
+    for (const nuke of nukesInFlight) {
       const targetTile = nuke.targetTile();
-      if (!targetTile) continue;
-
-      // Get the blast radius of the teammate's nuke
-      const teammateInnerRadius = this.game
-        .config()
-        .nukeMagnitudes(nuke.type()).inner;
-
-      // Check if the blast zones overlap
-      // They overlap if distance between targets < sum of the two radii
-      const distSquared = this.game.euclideanDistSquared(tile, targetTile);
-      const sumRadius = ourInnerRadius + teammateInnerRadius;
-      const sumRadiusSquared = sumRadius * sumRadius;
-
-      if (distSquared <= sumRadiusSquared) {
+      if (targetTile === undefined) continue;
+      const sumRadius =
+        ourInnerRadius + config.nukeMagnitudes(nuke.type()).inner;
+      if (
+        this.game.euclideanDistSquared(tile, targetTile) <=
+        sumRadius * sumRadius
+      ) {
         return true;
       }
     }
+    return false;
+  }
 
+  /**
+   * Grid-sampled share of the blast that hits enemy land. Inner radius tiles
+   * count double, as the outer ring is only partially destroyed.
+   */
+  private enemyLandBlastCoverage(center: TileRef, nukeType: NukeType): number {
+    const { inner, outer } = this.game.config().nukeMagnitudes(nukeType);
+    const step = Math.max(1, Math.floor(outer / 10));
+    const cx = this.game.x(center);
+    const cy = this.game.y(center);
+    let total = 0;
+    let enemyLand = 0;
+    for (let dy = -outer; dy <= outer; dy += step) {
+      for (let dx = -outer; dx <= outer; dx += step) {
+        const distSquared = dx * dx + dy * dy;
+        if (distSquared > outer * outer) continue;
+        const weight = distSquared <= inner * inner ? 2 : 1;
+        total += weight;
+        if (!this.game.isValidCoord(cx + dx, cy + dy)) continue;
+        // Water, fallout and unowned land have no player owner
+        const owner = this.game.owner(this.game.ref(cx + dx, cy + dy));
+        if (owner.isPlayer() && !this.player.isFriendly(owner, true)) {
+          enemyLand += weight;
+        }
+      }
+    }
+    return enemyLand / total;
+  }
+
+  /** Whether any tile in the blast belongs to us, a teammate or an ally (even AFK ones). */
+  private blastHitsFriendlyLand(center: TileRef, nukeType: NukeType): boolean {
+    const friendlyIds = new Set(
+      this.game
+        .players()
+        .filter((p) => this.player.isFriendly(p, true))
+        .map((p) => p.smallID()),
+    );
+    const outer = this.game.config().nukeMagnitudes(nukeType).outer;
+    const cx = this.game.x(center);
+    const cy = this.game.y(center);
+    for (let dy = -outer; dy <= outer; dy++) {
+      for (let dx = -outer; dx <= outer; dx++) {
+        if (dx * dx + dy * dy > outer * outer) continue;
+        if (!this.game.isValidCoord(cx + dx, cy + dy)) continue;
+        const ownerId = this.game.ownerID(this.game.ref(cx + dx, cy + dy));
+        if (friendlyIds.has(ownerId)) return true;
+      }
+    }
     return false;
   }
 
@@ -701,14 +778,11 @@ export class NationNukeBehavior {
 
     const owner = this.game.owner(t);
     if (owner === nukeTarget) return true;
-    // On Hard & Impossible, allow TerraNullius (hit small islands) and in team games other non-friendly players
+    // On Hard & Impossible, allow TerraNullius (hit small islands) and other players unless they are teammates or allies (even AFK ones)
     if (
       (difficulty === Difficulty.Hard ||
         difficulty === Difficulty.Impossible) &&
-      (!owner.isPlayer() ||
-        (this.game.config().gameConfig().gameMode === GameMode.Team &&
-          owner.isPlayer() &&
-          !this.player.isFriendly(owner)))
+      (!owner.isPlayer() || !this.player.isFriendly(owner, true))
     ) {
       return true;
     }
