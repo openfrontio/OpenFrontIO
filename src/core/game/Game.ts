@@ -408,6 +408,8 @@ export interface Attack {
   removeBorderTile(tile: TileRef): void;
   clearBorder(): void;
   borderSize(): number;
+  // Target tiles this attack is about to fight over.
+  borderTiles(): ReadonlySet<TileRef>;
   clusteredPositions(): TileRef[];
 }
 

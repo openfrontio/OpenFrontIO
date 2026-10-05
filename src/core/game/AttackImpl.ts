@@ -91,6 +91,10 @@ export class AttackImpl implements Attack {
     return this._borderSize;
   }
 
+  borderTiles(): ReadonlySet<TileRef> {
+    return this._border;
+  }
+
   clearBorder(): void {
     this._borderSize = 0;
     this._border.clear();
