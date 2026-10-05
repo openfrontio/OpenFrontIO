@@ -9,7 +9,7 @@ import type { TransformHandler } from "../../../../src/client/TransformHandler";
 import { SendEmojiIntentEvent } from "../../../../src/client/Transport";
 import type { GameView } from "../../../../src/client/view";
 import { EventBus } from "../../../../src/core/EventBus";
-import { AllPlayers } from "../../../../src/core/game/Game";
+import { AllPlayers } from "../../../../src/core/game/GameTypes";
 import { flattenedEmojiTable } from "../../../../src/core/Util";
 
 describe("EmojiTable event bus wiring", () => {

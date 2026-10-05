@@ -6,7 +6,7 @@ import {
   GameMode,
   GameType,
   UnitType,
-} from "../../src/core/game/Game";
+} from "../../src/core/game/GameTypes";
 import {
   ADMIN_BOT_CLIENT_ID,
   ClientMessage,

@@ -1,6 +1,11 @@
 import { NationExecution } from "../../src/core/execution/NationExecution";
 import { SpawnExecution } from "../../src/core/execution/SpawnExecution";
-import { Cell, Nation, PlayerInfo, PlayerType } from "../../src/core/game/Game";
+import {
+  Cell,
+  Nation,
+  PlayerInfo,
+  PlayerType,
+} from "../../src/core/game/GameTypes";
 import { GameConfig, GameID } from "../../src/core/Schemas";
 import { setup } from "../util/Setup";
 import { executeTicks } from "../util/utils";

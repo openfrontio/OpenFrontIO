@@ -6,7 +6,7 @@ import {
   shouldBlockMultiplayerAction,
   shouldBlockSocketSourcedAction,
 } from "../src/client/GameModeSelector";
-import { GameType } from "../src/core/game/Game";
+import { GameType } from "../src/core/game/GameTypes";
 
 describe("shouldBlockMultiplayerAction", () => {
   it("allows everything when no desktop update state has arrived", () => {

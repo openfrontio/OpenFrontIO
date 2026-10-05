@@ -1,7 +1,7 @@
 import { LitElement, html, nothing } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import { EventBus, GameEvent } from "../../../core/EventBus";
-import { GameMode, GameType, Team } from "../../../core/game/Game";
+import { GameMode, GameType, Team } from "../../../core/game/GameTypes";
 import { Controller } from "../../Controller";
 import { themeProvider } from "../../theme/ThemeProvider";
 import { TransformHandler } from "../../TransformHandler";

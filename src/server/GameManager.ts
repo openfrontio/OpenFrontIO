@@ -6,7 +6,7 @@ import {
   GameMapType,
   GameMode,
   GameType,
-} from "../core/game/Game";
+} from "../core/game/GameTypes";
 import {
   ClientPlatformSchema,
   GameConfig,

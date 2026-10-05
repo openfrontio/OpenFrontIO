@@ -1,14 +1,7 @@
 import { z } from "zod";
-import {
-  Execution,
-  Game,
-  GameType,
-  isUnit,
-  Player,
-  Unit,
-  UnitType,
-} from "../game/Game";
+import { Execution, Game, isUnit, Player, Unit } from "../game/Game";
 import { TileRef } from "../game/GameMap";
+import { GameType, UnitType } from "../game/GameTypes";
 import { PseudoRandom } from "../PseudoRandom";
 import { execSnapshotType } from "../snapshot/ExecutionSnapshot";
 import type {

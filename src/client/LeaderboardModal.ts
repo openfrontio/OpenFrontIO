@@ -1,6 +1,6 @@
 import { html } from "lit";
 import { customElement, query, state } from "lit/decorators.js";
-import { RankedType } from "../core/game/Game";
+import { RankedType } from "../core/game/GameTypes";
 import { BaseModal } from "./components/BaseModal";
 import "./components/leaderboard/LeaderboardClanTable";
 import type { LeaderboardClanTable } from "./components/leaderboard/LeaderboardClanTable";

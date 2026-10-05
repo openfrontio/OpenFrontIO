@@ -1,11 +1,6 @@
 import { MirvExecution } from "../src/core/execution/MIRVExecution";
-import {
-  Game,
-  Player,
-  PlayerInfo,
-  PlayerType,
-  UnitType,
-} from "../src/core/game/Game";
+import { Game, Player } from "../src/core/game/Game";
+import { PlayerInfo, PlayerType, UnitType } from "../src/core/game/GameTypes";
 import { setup } from "./util/Setup";
 import { executeTicks } from "./util/utils";
 

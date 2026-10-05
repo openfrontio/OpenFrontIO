@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { GameMode } from "../../src/core/game/Game";
+import { GameMode } from "../../src/core/game/GameTypes";
 import { GameStartInfo } from "../../src/core/Schemas";
 import { Client } from "../../src/server/Client";
 import {

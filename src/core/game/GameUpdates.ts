@@ -1,4 +1,5 @@
 import { AllPlayersStats, ClientID, Winner } from "../Schemas";
+import { TileRef } from "./GameMap";
 import {
   EmojiMessage,
   GameUpdates,
@@ -15,8 +16,7 @@ import {
   TransportShipState,
   UnitType,
   WarshipState,
-} from "./Game";
-import { TileRef } from "./GameMap";
+} from "./GameTypes";
 
 export interface GameUpdateViewData {
   tick: number;

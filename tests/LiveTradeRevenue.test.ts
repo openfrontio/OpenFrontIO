@@ -1,4 +1,5 @@
-import { Game, PlayerInfo, PlayerType } from "../src/core/game/Game";
+import { Game } from "../src/core/game/Game";
+import { PlayerInfo, PlayerType } from "../src/core/game/GameTypes";
 import { setup } from "./util/Setup";
 
 // Live leaderboard gold-rate columns ("Ship Trade Gold/min", "Train Trade

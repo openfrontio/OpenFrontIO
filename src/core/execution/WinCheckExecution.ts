@@ -1,15 +1,13 @@
 import { z } from "zod";
 import { GameEvent } from "../EventBus";
+import { Execution, Game, Player } from "../game/Game";
 import {
   ColoredTeams,
-  Execution,
-  Game,
   GameMode,
-  Player,
   PlayerType,
   RankedType,
   Team,
-} from "../game/Game";
+} from "../game/GameTypes";
 import { execSnapshotType } from "../snapshot/ExecutionSnapshot";
 import type { ExecRecord, SnapshotReader } from "../snapshot/SnapshotContext";
 

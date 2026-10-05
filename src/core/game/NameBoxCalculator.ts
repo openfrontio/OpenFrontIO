@@ -1,5 +1,6 @@
 import { calculateBoundingBox } from "../Util";
-import { Cell, Game, NameViewData, Player } from "./Game";
+import { Game, Player } from "./Game";
+import { Cell, NameViewData } from "./GameTypes";
 
 export interface Point {
   x: number;

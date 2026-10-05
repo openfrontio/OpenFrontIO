@@ -7,7 +7,7 @@ import {
   PlayerInfo,
   PlayerType,
   UnitType,
-} from "../src/core/game/Game";
+} from "../src/core/game/GameTypes";
 import { setup } from "./util/Setup";
 
 // The half_land_half_ocean map is 16x16:

@@ -1,6 +1,6 @@
 import { Colord } from "colord";
 import { assetUrl } from "../../core/AssetUrls";
-import { TrainType, UnitType } from "../../core/game/Game";
+import { TrainType, UnitType } from "../../core/game/GameTypes";
 import { Theme } from "../theme/ThemeProvider";
 import { UnitView } from "../view";
 const atomBombSprite = assetUrl("sprites/atombomb.png");

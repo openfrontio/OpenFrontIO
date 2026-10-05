@@ -1,14 +1,12 @@
 import { ConstructionExecution } from "../../src/core/execution/ConstructionExecution";
 import { NukeExecution } from "../../src/core/execution/NukeExecution";
+import { Game, Player, Unit } from "../../src/core/game/Game";
+import { TileRef } from "../../src/core/game/GameMap";
 import {
-  Game,
-  Player,
   PlayerInfo,
   PlayerType,
-  Unit,
   UnitType,
-} from "../../src/core/game/Game";
-import { TileRef } from "../../src/core/game/GameMap";
+} from "../../src/core/game/GameTypes";
 import { GameUpdateType, UnitUpdate } from "../../src/core/game/GameUpdates";
 import {
   GridPathPlan,

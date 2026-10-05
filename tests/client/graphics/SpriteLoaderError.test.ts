@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { getColoredSprite } from "../../../src/client/hud/SpriteLoader";
 import type { Theme } from "../../../src/client/theme/ThemeProvider";
 import type { UnitView } from "../../../src/client/view";
-import { UnitType } from "../../../src/core/game/Game";
+import { UnitType } from "../../../src/core/game/GameTypes";
 
 function makeUnit(): UnitView {
   return {

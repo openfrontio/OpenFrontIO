@@ -1,12 +1,6 @@
 import { ShellExecution } from "../src/core/execution/ShellExecution";
-import {
-  Game,
-  Player,
-  PlayerInfo,
-  PlayerType,
-  Unit,
-  UnitType,
-} from "../src/core/game/Game";
+import { Game, Player, Unit } from "../src/core/game/Game";
+import { PlayerInfo, PlayerType, UnitType } from "../src/core/game/GameTypes";
 import { setup } from "./util/Setup";
 
 const coastX = 7;

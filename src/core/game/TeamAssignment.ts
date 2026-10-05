@@ -10,7 +10,7 @@ import {
   Quads,
   Team,
   Trios,
-} from "./Game";
+} from "./GameTypes";
 
 export function assignTeams(
   players: PlayerInfo[],

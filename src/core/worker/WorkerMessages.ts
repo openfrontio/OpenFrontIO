@@ -1,3 +1,4 @@
+import { TileRef } from "../game/GameMap";
 import {
   BuildableUnit,
   PlayerActions,
@@ -5,8 +6,7 @@ import {
   PlayerBuildableUnitType,
   PlayerID,
   PlayerProfile,
-} from "../game/Game";
-import { TileRef } from "../game/GameMap";
+} from "../game/GameTypes";
 import { ErrorUpdate, GameUpdateViewData } from "../game/GameUpdates";
 import { ClientID, GameStartInfo, Turn } from "../Schemas";
 

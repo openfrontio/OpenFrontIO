@@ -1,10 +1,5 @@
-import {
-  Game,
-  Player,
-  PlayerInfo,
-  PlayerType,
-  UnitType,
-} from "../src/core/game/Game";
+import { Game, Player } from "../src/core/game/Game";
+import { PlayerInfo, PlayerType, UnitType } from "../src/core/game/GameTypes";
 import { Stats } from "../src/core/game/Stats";
 import { StatsImpl } from "../src/core/game/StatsImpl";
 import {

@@ -15,24 +15,22 @@ import {
   zTiles,
 } from "../snapshot/SnapshotType";
 import { simpleHash, toInt, withinInt } from "../Util";
+import { AllUnitParams, Player, Unit } from "./Game";
+import { GameImpl } from "./GameImpl";
+import { TileRef } from "./GameMap";
 import {
-  AllUnitParams,
   MessageType,
   NukeState,
-  Player,
   SamLauncherState,
   TerraNullius,
   Tick,
   TrainType,
   TrajectoryTile,
   TransportShipState,
-  Unit,
   UnitInfo,
   UnitType,
   WarshipState,
-} from "./Game";
-import { GameImpl } from "./GameImpl";
-import { TileRef } from "./GameMap";
+} from "./GameTypes";
 import { GameUpdateType, UnitUpdate } from "./GameUpdates";
 import { PlayerImpl } from "./PlayerImpl";
 import { maxHealthWithVeterancy } from "./Veterancy";

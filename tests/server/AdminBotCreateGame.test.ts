@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { GameType } from "../../src/core/game/Game";
+import { GameType } from "../../src/core/game/GameTypes";
 import { registerAdminBotRoutes } from "../../src/server/AdminBotRoutes";
 
 function mockRes() {

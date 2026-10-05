@@ -4,14 +4,16 @@ import { Executor } from "./execution/ExecutionManager";
 import { RecomputeRailClusterExecution } from "./execution/RecomputeRailClusterExecution";
 import { SpawnTimerExecution } from "./execution/SpawnTimerExecution";
 import { WinCheckExecution } from "./execution/WinCheckExecution";
+import { Game, Player } from "./game/Game";
+import { createGame } from "./game/GameImpl";
+import { TileRef } from "./game/GameMap";
+import { GameMapLoader } from "./game/GameMapLoader";
 import {
   AllPlayers,
   BuildableUnit,
-  Game,
   GameType,
   GameUpdates,
   NameViewData,
-  Player,
   PlayerActions,
   PlayerBorderTiles,
   PlayerBuildableUnitType,
@@ -20,10 +22,7 @@ import {
   PlayerProfile,
   PlayerType,
   UnitType,
-} from "./game/Game";
-import { createGame } from "./game/GameImpl";
-import { TileRef } from "./game/GameMap";
-import { GameMapLoader } from "./game/GameMapLoader";
+} from "./game/GameTypes";
 import { ErrorUpdate, GameUpdateViewData } from "./game/GameUpdates";
 import { placeName, placeSpawnName } from "./game/NameBoxCalculator";
 import { createNationsForGame } from "./game/NationCreation";

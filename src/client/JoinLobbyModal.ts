@@ -20,7 +20,7 @@ import {
   LobbyInfoEvent,
   PublicGameInfo,
 } from "../core/Schemas";
-import { GameMode, GameType, HumansVsNations } from "../core/game/Game";
+import { GameMode, GameType, HumansVsNations } from "../core/game/GameTypes";
 import { getApiBase } from "./Api";
 import { crazyGamesSDK } from "./CrazyGamesSDK";
 import { PublicLobbySocket } from "./LobbySocket";

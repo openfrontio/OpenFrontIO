@@ -4,14 +4,13 @@ import { NationEmojiBehavior } from "../src/core/execution/nation/NationEmojiBeh
 import { NationWarshipBehavior } from "../src/core/execution/nation/NationWarshipBehavior";
 import { TransportShipExecution } from "../src/core/execution/TransportShipExecution";
 import { AiAttackBehavior } from "../src/core/execution/utils/AiAttackBehavior";
+import { Game, Player } from "../src/core/game/Game";
 import {
   Difficulty,
-  Game,
-  Player,
   PlayerInfo,
   PlayerType,
   UnitType,
-} from "../src/core/game/Game";
+} from "../src/core/game/GameTypes";
 import { PseudoRandom } from "../src/core/PseudoRandom";
 import { createGame, L, W } from "./core/pathfinding/_fixtures";
 import { setup } from "./util/Setup";

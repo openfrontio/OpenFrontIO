@@ -15,7 +15,7 @@ import type {
   ServerMessage,
   ServerStartGameMessage,
 } from "../core/Schemas";
-import { GameMode, GameType } from "../core/game/Game";
+import { GameMode, GameType } from "../core/game/GameTypes";
 import type { PresencePayload } from "./DesktopPresence";
 
 // The token this server message carries, if it carries one.

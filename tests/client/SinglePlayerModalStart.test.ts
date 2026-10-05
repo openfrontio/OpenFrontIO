@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { UnitType } from "../../src/core/game/Game";
+import { UnitType } from "../../src/core/game/GameTypes";
 
 vi.mock("../../src/client/Cosmetics", () => ({
   getPlayerCosmetics: vi.fn(async () => ({})),

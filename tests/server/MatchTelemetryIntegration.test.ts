@@ -6,7 +6,7 @@ import {
   GameMapType,
   GameMode,
   GameType,
-} from "../../src/core/game/Game";
+} from "../../src/core/game/GameTypes";
 import { ADMIN_BOT_CLIENT_ID } from "../../src/core/Schemas";
 import { createGameWireContext } from "../../src/core/ZbinWire";
 import { GameManager } from "../../src/server/GameManager";

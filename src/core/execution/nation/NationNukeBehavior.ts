@@ -1,18 +1,16 @@
 import { z } from "zod";
+import { Game, Player, Unit } from "../../game/Game";
+import { euclDistFN, TileRef } from "../../game/GameMap";
 import {
   Difficulty,
-  Game,
   GameMode,
   Gold,
-  Player,
   PlayerType,
   Relation,
   Structures,
   Tick,
-  Unit,
   UnitType,
-} from "../../game/Game";
-import { euclDistFN, TileRef } from "../../game/GameMap";
+} from "../../game/GameTypes";
 import { UniversalPathFinding } from "../../pathfinding/PathFinder";
 import { PseudoRandom } from "../../PseudoRandom";
 import type {

@@ -1,5 +1,6 @@
-import { Game, Player, TerraNullius } from "../../game/Game";
+import { Game, Player } from "../../game/Game";
 import { TileRef } from "../../game/GameMap";
+import { TerraNullius } from "../../game/GameTypes";
 import {
   bumpTraversalGeneration,
   tileTraversalScratch,

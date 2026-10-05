@@ -5,21 +5,20 @@ import { NationEmojiBehavior } from "../src/core/execution/nation/NationEmojiBeh
 import { NukeExecution } from "../src/core/execution/NukeExecution";
 import { PlayerExecution } from "../src/core/execution/PlayerExecution";
 import { AiAttackBehavior } from "../src/core/execution/utils/AiAttackBehavior";
+import { Game, Player } from "../src/core/game/Game";
+import { createGame } from "../src/core/game/GameImpl";
+import { TileRef } from "../src/core/game/GameMap";
 import {
   Difficulty,
-  Game,
   GameMapSize,
   GameMapType,
   GameMode,
   GameType,
-  Player,
   PlayerInfo,
   PlayerType,
   TerrainType,
   UnitType,
-} from "../src/core/game/Game";
-import { createGame } from "../src/core/game/GameImpl";
-import { TileRef } from "../src/core/game/GameMap";
+} from "../src/core/game/GameTypes";
 import { genTerrainFromBin } from "../src/core/game/TerrainMapLoader";
 import { PathFinding } from "../src/core/pathfinding/PathFinder";
 import { PseudoRandom } from "../src/core/PseudoRandom";

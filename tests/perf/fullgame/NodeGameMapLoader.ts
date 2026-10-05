@@ -1,7 +1,7 @@
 import fs from "fs";
 import path from "path";
-import { GameMapType } from "../../../src/core/game/Game";
 import { GameMapLoader, MapData } from "../../../src/core/game/GameMapLoader";
+import { GameMapType } from "../../../src/core/game/GameTypes";
 import { MapManifest } from "../../../src/core/game/TerrainMapLoader";
 
 /**

@@ -1,5 +1,6 @@
 import { AttackExecution } from "../src/core/execution/AttackExecution";
-import { Game, Player, PlayerInfo, PlayerType } from "../src/core/game/Game";
+import { Game, Player } from "../src/core/game/Game";
+import { PlayerInfo, PlayerType } from "../src/core/game/GameTypes";
 import {
   ATTACK_INDEX_MAX_RECV,
   ATTACK_INDEX_RECV,

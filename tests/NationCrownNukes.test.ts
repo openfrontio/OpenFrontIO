@@ -2,13 +2,8 @@ import { NationAllianceBehavior } from "../src/core/execution/nation/NationAllia
 import { NationEmojiBehavior } from "../src/core/execution/nation/NationEmojiBehavior";
 import { NationNukeBehavior } from "../src/core/execution/nation/NationNukeBehavior";
 import { AiAttackBehavior } from "../src/core/execution/utils/AiAttackBehavior";
-import {
-  Difficulty,
-  Game,
-  Player,
-  PlayerInfo,
-  PlayerType,
-} from "../src/core/game/Game";
+import { Game, Player } from "../src/core/game/Game";
+import { Difficulty, PlayerInfo, PlayerType } from "../src/core/game/GameTypes";
 import { PseudoRandom } from "../src/core/PseudoRandom";
 import { setup } from "./util/Setup";
 

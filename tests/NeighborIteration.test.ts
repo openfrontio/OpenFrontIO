@@ -1,7 +1,8 @@
 import { AttackExecution } from "../src/core/execution/AttackExecution";
 import { SpawnExecution } from "../src/core/execution/SpawnExecution";
-import { Game, Player, PlayerInfo, PlayerType } from "../src/core/game/Game";
+import { Game, Player } from "../src/core/game/Game";
 import { TileRef } from "../src/core/game/GameMap";
+import { PlayerInfo, PlayerType } from "../src/core/game/GameTypes";
 import { GameID } from "../src/core/Schemas";
 import { setup } from "./util/Setup";
 

@@ -12,7 +12,7 @@ import {
   TransportShipState,
   UnitType,
   WarshipState,
-} from "../../../src/core/game/Game";
+} from "../../../src/core/game/GameTypes";
 import { makeGameView, makeUnitUpdate, stubConfig } from "../../util/viewStubs";
 
 describe("UnitView accessors", () => {

@@ -13,7 +13,7 @@ import {
   RankedType,
   Trios,
   UnitType,
-} from "../core/game/Game";
+} from "../core/game/GameTypes";
 import { PseudoRandom } from "../core/PseudoRandom";
 import {
   GameConfig,

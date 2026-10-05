@@ -1,5 +1,5 @@
 import { TemplateResult, html } from "lit";
-import { GameMapType } from "../../../core/game/Game";
+import { GameMapType } from "../../../core/game/GameTypes";
 
 const FAVORITES_KEY = "map-favorites";
 

@@ -2,21 +2,20 @@ import { GameUpdateType } from "src/core/game/GameUpdates";
 import { vi, type Mocked } from "vitest";
 import { Config } from "../../../src/core/configuration/Config";
 import { TrainExecution } from "../../../src/core/execution/TrainExecution";
+import { Game, Player, Unit } from "../../../src/core/game/Game";
 import {
   Difficulty,
-  Game,
   GameMapSize,
   GameMapType,
   GameMode,
   GameType,
-  Player,
-  Unit,
   UnitType,
-} from "../../../src/core/game/Game";
+} from "../../../src/core/game/GameTypes";
 import { Cluster, TrainStation } from "../../../src/core/game/TrainStation";
 import { GameConfig } from "../../../src/core/Schemas";
 
 vi.mock("../../../src/core/game/Game");
+vi.mock("../../../src/core/game/GameTypes");
 vi.mock("../../../src/core/execution/TrainExecution");
 vi.mock("../../../src/core/PseudoRandom");
 

@@ -13,7 +13,7 @@ import {
   GameType,
   RankedType,
   isDifficulty,
-} from "../../../../core/game/Game";
+} from "../../../../core/game/GameTypes";
 import {
   ATTACK_INDEX_MAX_RECV,
   PlayerStats,

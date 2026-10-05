@@ -1,4 +1,5 @@
-import { Game, PlayerInfo, PlayerType } from "../src/core/game/Game";
+import { Game } from "../src/core/game/Game";
+import { PlayerInfo, PlayerType } from "../src/core/game/GameTypes";
 import { setup } from "./util/Setup";
 
 // OFM live standings: killedBy + deathPosition are stored on the player's stats

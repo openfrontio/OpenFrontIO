@@ -1,7 +1,7 @@
 import { describe, expect, test } from "vitest";
 import { GraphicsOverridesSchema } from "../src/client/render/gl/GraphicsOverrides";
-import { GameMapSize, GameMapType } from "../src/core/game/Game";
 import type { GameMapLoader, MapData } from "../src/core/game/GameMapLoader";
+import { GameMapSize, GameMapType } from "../src/core/game/GameTypes";
 import {
   loadTerrainMap,
   type MapLayer,

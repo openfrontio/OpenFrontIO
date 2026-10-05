@@ -4,15 +4,14 @@ import { PlayerExecution } from "../src/core/execution/PlayerExecution";
 import { TransportShipExecution } from "../src/core/execution/TransportShipExecution";
 import { getSpawnTiles } from "../src/core/execution/Util";
 import { WarshipExecution } from "../src/core/execution/WarshipExecution";
+import { Game, Player } from "../src/core/game/Game";
 import {
-  Game,
   GameMode,
   HumansVsNations,
-  Player,
   PlayerInfo,
   PlayerType,
   UnitType,
-} from "../src/core/game/Game";
+} from "../src/core/game/GameTypes";
 import { toInt } from "../src/core/Util";
 import { setup } from "./util/Setup";
 import { UseRealAttackLogic } from "./util/TestConfig";

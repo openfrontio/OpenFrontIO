@@ -4,6 +4,7 @@ import Countries from "resources/countries.json" with { type: "json" };
 import { assetUrl } from "../../../core/AssetUrls";
 import { EventBus } from "../../../core/EventBus";
 import { renderNumber, renderTroops } from "../../../core/Format";
+import { TileRef } from "../../../core/game/GameMap";
 import {
   AllPlayers,
   GameType,
@@ -11,8 +12,7 @@ import {
   PlayerProfile,
   PlayerType,
   Relation,
-} from "../../../core/game/Game";
-import { TileRef } from "../../../core/game/GameMap";
+} from "../../../core/game/GameTypes";
 import { Emoji, flattenedEmojiTable } from "../../../core/Util";
 import { fetchLobbyListed } from "../../Api";
 import { actionButton } from "../../components/ui/ActionButton";

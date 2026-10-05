@@ -1,11 +1,6 @@
 import { z } from "zod";
-import {
-  Execution,
-  Game,
-  MessageType,
-  Player,
-  PlayerID,
-} from "../../game/Game";
+import { Execution, Game, Player } from "../../game/Game";
+import { MessageType, PlayerID } from "../../game/GameTypes";
 import { execSnapshotType } from "../../snapshot/ExecutionSnapshot";
 import type {
   ExecRecord,

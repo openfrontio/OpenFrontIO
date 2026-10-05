@@ -1,4 +1,5 @@
 import { getCdnBase } from "../core/AssetUrls";
+import { TileRef } from "../core/game/GameMap";
 import {
   BuildableUnit,
   Cell,
@@ -7,8 +8,7 @@ import {
   PlayerBuildableUnitType,
   PlayerID,
   PlayerProfile,
-} from "../core/game/Game";
-import { TileRef } from "../core/game/GameMap";
+} from "../core/game/GameTypes";
 import { ErrorUpdate, GameUpdateViewData } from "../core/game/GameUpdates";
 import { ClientID, GameStartInfo, Turn } from "../core/Schemas";
 import { generateID } from "../core/Util";

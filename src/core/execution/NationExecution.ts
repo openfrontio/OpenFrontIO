@@ -1,18 +1,16 @@
 import { z } from "zod";
+import { Execution, Game, Player } from "../game/Game";
+import { TileRef } from "../game/GameMap";
 import {
   Difficulty,
-  Execution,
-  Game,
   GameMode,
   Nation,
-  Player,
   PlayerID,
   PlayerType,
   Relation,
   TerrainType,
   UnitType,
-} from "../game/Game";
-import { TileRef } from "../game/GameMap";
+} from "../game/GameTypes";
 import { PseudoRandom } from "../PseudoRandom";
 import { GameID } from "../Schemas";
 import {

@@ -3,11 +3,11 @@ import type {
   Execution,
   MutableAlliance,
   Player,
-  TerraNullius,
   Unit,
 } from "../game/Game";
 import type { GameImpl } from "../game/GameImpl";
 import type { TileRef } from "../game/GameMap";
+import type { TerraNullius } from "../game/GameTypes";
 import type { Railroad } from "../game/Railroad";
 import type { Cluster, TrainStation } from "../game/TrainStation";
 import { PseudoRandom } from "../PseudoRandom";

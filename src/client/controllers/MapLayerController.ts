@@ -6,8 +6,8 @@
  * so the game starts without blocking on layer PNGs.
  */
 
-import { GameMapSize, GameMapType } from "../../core/game/Game";
 import { GameMapLoader } from "../../core/game/GameMapLoader";
+import { GameMapSize, GameMapType } from "../../core/game/GameTypes";
 import {
   loadLayerImages,
   TerrainMapData,

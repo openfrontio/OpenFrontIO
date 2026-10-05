@@ -1,11 +1,11 @@
+import { Game } from "../src/core/game/Game";
 import {
   ColoredTeams,
   Duos,
-  Game,
   GameMode,
   PlayerInfo,
   PlayerType,
-} from "../src/core/game/Game";
+} from "../src/core/game/GameTypes";
 import { playerInfo, setup } from "./util/Setup";
 
 let game: Game;

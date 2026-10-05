@@ -1,3 +1,4 @@
+import { TileRef } from "../../core/game/GameMap";
 import {
   NukeState,
   Tick,
@@ -5,8 +6,7 @@ import {
   TransportShipState,
   UnitType,
   WarshipState,
-} from "../../core/game/Game";
-import { TileRef } from "../../core/game/GameMap";
+} from "../../core/game/GameTypes";
 import { UnitUpdate } from "../../core/game/GameUpdates";
 import { UnitLike } from "../../core/game/ReadViews";
 import type { UnitState } from "../render/types";

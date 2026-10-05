@@ -13,14 +13,14 @@
 
 import path from "path";
 import { fileURLToPath } from "url";
+import { Game } from "../../../../src/core/game/Game";
 import {
   Difficulty,
-  Game,
   GameMapSize,
   GameMapType,
   GameMode,
   GameType,
-} from "../../../../src/core/game/Game";
+} from "../../../../src/core/game/GameTypes";
 import {
   GameUpdateType,
   HashUpdate,

@@ -1,7 +1,11 @@
 import { describe, expect, test } from "vitest";
 import { MarkDisconnectedExecution } from "../../../src/core/execution/MarkDisconnectedExecution";
-import { GameMode, PlayerInfo, PlayerType } from "../../../src/core/game/Game";
 import { GameImpl } from "../../../src/core/game/GameImpl";
+import {
+  GameMode,
+  PlayerInfo,
+  PlayerType,
+} from "../../../src/core/game/GameTypes";
 import { setup } from "../../util/Setup";
 
 describe("Win Attribution Bug Fix", () => {

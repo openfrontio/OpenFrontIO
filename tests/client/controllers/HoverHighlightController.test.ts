@@ -1,4 +1,4 @@
-import { PlayerInfo, PlayerType, UnitType } from "src/core/game/Game";
+import { PlayerInfo, PlayerType, UnitType } from "src/core/game/GameTypes";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { HoverHighlightController } from "../../../src/client/controllers/HoverHighlightController";
 import { MouseMoveEvent } from "../../../src/client/InputHandler";

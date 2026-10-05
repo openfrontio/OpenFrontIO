@@ -1,6 +1,7 @@
 import { assetUrl } from "../../../core/AssetUrls";
 import { Config } from "../../../core/configuration/Config";
 import { renderNumber } from "../../../core/Format";
+import { TileRef } from "../../../core/game/GameMap";
 import {
   AllPlayers,
   BuildableAttacks,
@@ -12,8 +13,7 @@ import {
   STRUCTURE_BULK_STEPS,
   Structures,
   UnitType,
-} from "../../../core/game/Game";
-import { TileRef } from "../../../core/game/GameMap";
+} from "../../../core/game/GameTypes";
 import { Emoji, findClosestBy, flattenedEmojiTable } from "../../../core/Util";
 import { UIState } from "../../UIState";
 import { translateText } from "../../Utils";

@@ -1,7 +1,8 @@
 import { AllianceRejectExecution } from "../src/core/execution/alliance/AllianceRejectExecution";
 import { AllianceRequestExecution } from "../src/core/execution/alliance/AllianceRequestExecution";
 import { NukeExecution } from "../src/core/execution/NukeExecution";
-import { Game, Player, PlayerType, UnitType } from "../src/core/game/Game";
+import { Game, Player } from "../src/core/game/Game";
+import { PlayerType, UnitType } from "../src/core/game/GameTypes";
 import { playerInfo, setup } from "./util/Setup";
 import { constructionExecution } from "./util/utils";
 

@@ -1,5 +1,6 @@
 import { z } from "zod";
-import { Game, Player, PlayerType } from "../../game/Game";
+import { Game, Player } from "../../game/Game";
+import { PlayerType } from "../../game/GameTypes";
 import type {
   SnapshotReader,
   SnapshotWriter,

@@ -89,7 +89,7 @@ import {
   GameType,
   PlayerInfo,
   PlayerType,
-} from "../../src/core/game/Game";
+} from "../../src/core/game/GameTypes";
 import { setup } from "../util/Setup";
 
 type ModalShell = HTMLElement & {

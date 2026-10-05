@@ -1,11 +1,6 @@
-import {
-  Game,
-  Player,
-  PlayerInfo,
-  PlayerType,
-  UnitType,
-} from "../src/core/game/Game";
+import { Game, Player } from "../src/core/game/Game";
 import { TileRef } from "../src/core/game/GameMap";
+import { PlayerInfo, PlayerType, UnitType } from "../src/core/game/GameTypes";
 import {
   WaterPathFinder,
   WaterPathMemo,

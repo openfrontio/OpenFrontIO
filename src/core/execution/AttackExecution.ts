@@ -1,20 +1,17 @@
 import { z } from "zod";
 import { AttackLogicInput } from "../configuration/Config";
 import { renderTroops } from "../Format";
+import { Attack, Execution, Game, Player } from "../game/Game";
+import { GameMap, TileRef } from "../game/GameMap";
 import {
-  Attack,
   Difficulty,
-  Execution,
-  Game,
   MessageType,
-  Player,
   PlayerID,
   PlayerType,
   TerrainType,
   TerraNullius,
   UnitType,
-} from "../game/Game";
-import { GameMap, TileRef } from "../game/GameMap";
+} from "../game/GameTypes";
 import { PseudoRandom } from "../PseudoRandom";
 import { execSnapshotType } from "../snapshot/ExecutionSnapshot";
 import type {

@@ -1,15 +1,15 @@
 import { Config } from "../../../src/core/configuration/Config";
 import { NationExecution } from "../../../src/core/execution/NationExecution";
 import { SpawnExecution } from "../../../src/core/execution/SpawnExecution";
+import { Game } from "../../../src/core/game/Game";
 import {
   Cell,
   Difficulty,
-  Game,
   Nation,
   PlayerInfo,
   PlayerType,
   UnitType,
-} from "../../../src/core/game/Game";
+} from "../../../src/core/game/GameTypes";
 import { setup } from "../../util/Setup";
 import { expectSnapshotRoundTrip } from "../../util/Snapshot";
 import { TestConfig, UseRealAttackLogic } from "../../util/TestConfig";

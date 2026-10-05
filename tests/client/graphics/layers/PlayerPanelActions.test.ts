@@ -46,7 +46,7 @@ import {
   AllPlayers,
   GameType,
   PlayerType,
-} from "../../../../src/core/game/Game";
+} from "../../../../src/core/game/GameTypes";
 import { flattenedEmojiTable } from "../../../../src/core/Util";
 
 const mockActionButton = actionButton as unknown as ReturnType<typeof vi.fn>;

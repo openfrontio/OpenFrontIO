@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { GameType, RankedType } from "../../src/core/game/Game";
+import { GameType, RankedType } from "../../src/core/game/GameTypes";
 import { ClientMessage } from "../../src/core/Schemas";
 import { createGameWireContext } from "../../src/core/ZbinWire";
 import { Client } from "../../src/server/Client";

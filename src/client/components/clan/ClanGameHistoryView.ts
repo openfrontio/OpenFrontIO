@@ -1,7 +1,7 @@
 import { html, LitElement, nothing, type TemplateResult } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
 import { assetUrl } from "../../../core/AssetUrls";
-import { GameMapType } from "../../../core/game/Game";
+import { GameMapType } from "../../../core/game/GameTypes";
 import {
   type ClanGame,
   type ClanGameFilter,

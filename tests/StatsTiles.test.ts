@@ -1,4 +1,5 @@
-import { Game, PlayerInfo, PlayerType } from "../src/core/game/Game";
+import { Game } from "../src/core/game/Game";
+import { PlayerInfo, PlayerType } from "../src/core/game/GameTypes";
 import { StatsImpl } from "../src/core/game/StatsImpl";
 import {
   ALLIANCE_INDEX_PEAK_CONCURRENT,

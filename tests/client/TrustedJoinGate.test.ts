@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ClientEnv } from "../../src/client/ClientEnv";
-import { GameMapType, GameMode } from "../../src/core/game/Game";
+import { GameMapType, GameMode } from "../../src/core/game/GameTypes";
 import type {
   GameConfig,
   PublicGameInfo,

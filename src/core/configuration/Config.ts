@@ -14,7 +14,7 @@ import {
   Tick,
   UnitInfo,
   UnitType,
-} from "../game/Game";
+} from "../game/GameTypes";
 import {
   EngineGameLike,
   EnginePlayerLike,

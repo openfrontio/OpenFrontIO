@@ -22,7 +22,7 @@ import {
   RankedType,
   Trios,
   UnitType,
-} from "./game/Game";
+} from "./game/GameTypes";
 import { ArchivedPlayerStatsSchema, PlayerStatsSchema } from "./StatsSchemas";
 import { flattenedEmojiTable, LOBBY_LABEL_MAX } from "./Util";
 

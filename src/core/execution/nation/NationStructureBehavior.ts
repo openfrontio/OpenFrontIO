@@ -1,17 +1,14 @@
 import { z } from "zod";
+import { Attack, Game, Player, Unit } from "../../game/Game";
+import { TileRef } from "../../game/GameMap";
 import {
-  Attack,
   Difficulty,
-  Game,
   GameMode,
   Gold,
-  Player,
   PlayerType,
   Structures,
-  Unit,
   UnitType,
-} from "../../game/Game";
-import { TileRef } from "../../game/GameMap";
+} from "../../game/GameTypes";
 import { Cluster } from "../../game/TrainStation";
 import { PseudoRandom } from "../../PseudoRandom";
 import type {

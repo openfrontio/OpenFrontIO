@@ -45,7 +45,7 @@ vi.mock("../../../../src/core/Format", () => ({
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { EventsDisplay } from "../../../../src/client/hud/layers/EventsDisplay";
 import { PlaySoundEffectEvent } from "../../../../src/client/sound/Sounds";
-import { MessageType } from "../../../../src/core/game/Game";
+import { MessageType } from "../../../../src/core/game/GameTypes";
 import { GameUpdateType } from "../../../../src/core/game/GameUpdates";
 
 interface Ed {

@@ -1,15 +1,13 @@
 import { z } from "zod";
+import { Game, Player, Unit } from "../../game/Game";
+import { TileRef } from "../../game/GameMap";
 import {
   AllPlayers,
   Difficulty,
-  Game,
   Gold,
-  Player,
   PlayerType,
-  Unit,
   UnitType,
-} from "../../game/Game";
-import { TileRef } from "../../game/GameMap";
+} from "../../game/GameTypes";
 import { PseudoRandom } from "../../PseudoRandom";
 import type {
   SnapshotReader,

@@ -1,7 +1,8 @@
 import { FactoryExecution } from "../../../src/core/execution/FactoryExecution";
 import { PortExecution } from "../../../src/core/execution/PortExecution";
-import { PlayerType, Unit, UnitType } from "../../../src/core/game/Game";
+import { Unit } from "../../../src/core/game/Game";
 import { TileRef } from "../../../src/core/game/GameMap";
+import { PlayerType, UnitType } from "../../../src/core/game/GameTypes";
 import {
   RailNetworkImpl,
   StationManagerImpl,

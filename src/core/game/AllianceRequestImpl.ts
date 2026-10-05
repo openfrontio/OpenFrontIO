@@ -4,8 +4,9 @@ import type {
   SnapshotWriter,
 } from "../snapshot/SnapshotContext";
 import { snapshotType, zInt, zPlayerRef } from "../snapshot/SnapshotType";
-import { AllianceRequest, Player, Tick } from "./Game";
+import { AllianceRequest, Player } from "./Game";
 import { GameImpl } from "./GameImpl";
+import { Tick } from "./GameTypes";
 import { AllianceRequestUpdate, GameUpdateType } from "./GameUpdates";
 
 export class AllianceRequestImpl implements AllianceRequest {

@@ -6,17 +6,10 @@ import {
   AllianceRequestSnapshot,
 } from "../game/AllianceRequestImpl";
 import { AttackImpl, AttackSnapshot } from "../game/AttackImpl";
-import {
-  Attack,
-  Execution,
-  Game,
-  MutableAlliance,
-  Nation,
-  TeamGameSpawnAreas,
-  Unit,
-} from "../game/Game";
+import { Attack, Execution, Game, MutableAlliance, Unit } from "../game/Game";
 import { GameImpl, GameSnapshot } from "../game/GameImpl";
 import { GameMap, GameMapImpl, GameMapSnapshot } from "../game/GameMap";
+import { Nation, TeamGameSpawnAreas } from "../game/GameTypes";
 import { PlayerImpl, PlayerSnapshot } from "../game/PlayerImpl";
 import { Railroad, RailroadSnapshot } from "../game/Railroad";
 import { StatsImpl } from "../game/StatsImpl";

@@ -12,7 +12,7 @@ import { html, LitElement, nothing } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
 import { Config } from "../../core/configuration/Config";
 import { EventBus } from "../../core/EventBus";
-import { Cell, PlayerType } from "../../core/game/Game";
+import { Cell, PlayerType } from "../../core/game/GameTypes";
 import { loadTerrainMap } from "../../core/game/TerrainMapLoader";
 import type { GameStartInfo } from "../../core/Schemas";
 import { MapLayerController } from "../controllers/MapLayerController";

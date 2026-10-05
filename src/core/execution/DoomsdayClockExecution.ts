@@ -8,16 +8,9 @@ import {
   rotFrontNoise,
   rotSpeckleNoise,
 } from "../game/DoomsdayClock";
-import {
-  Execution,
-  Game,
-  GameMode,
-  Player,
-  PlayerType,
-  Team,
-  UnitType,
-} from "../game/Game";
+import { Execution, Game, Player } from "../game/Game";
 import { TileRef } from "../game/GameMap";
+import { GameMode, PlayerType, Team, UnitType } from "../game/GameTypes";
 import { execSnapshotType } from "../snapshot/ExecutionSnapshot";
 import type {
   ExecRecord,

@@ -1,13 +1,13 @@
 import { describe, expect, it } from "vitest";
 import { SpawnExecution } from "../../../src/core/execution/SpawnExecution";
 import { getSpawnTiles } from "../../../src/core/execution/Util";
+import { Game } from "../../../src/core/game/Game";
+import { TileRef } from "../../../src/core/game/GameMap";
 import {
-  Game,
   GameType,
   PlayerInfo,
   PlayerType,
-} from "../../../src/core/game/Game";
-import { TileRef } from "../../../src/core/game/GameMap";
+} from "../../../src/core/game/GameTypes";
 import { playerInfo, setup } from "../../util/Setup";
 
 function findTestTiles(game: Game) {

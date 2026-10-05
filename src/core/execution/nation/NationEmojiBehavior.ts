@@ -1,14 +1,13 @@
 import { z } from "zod";
+import { Game, Player } from "../../game/Game";
 import {
   AllPlayers,
   Difficulty,
-  Game,
   GameMode,
-  Player,
   PlayerType,
   Relation,
   Tick,
-} from "../../game/Game";
+} from "../../game/GameTypes";
 import { PseudoRandom } from "../../PseudoRandom";
 import type {
   SnapshotReader,

@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { GameMapType, GameMode } from "../../src/core/game/Game";
+import { GameMapType, GameMode } from "../../src/core/game/GameTypes";
 import { MapPlaylist } from "../../src/server/MapPlaylist";
 
 const land = vi.hoisted(() => ({ tiles: 0 }));

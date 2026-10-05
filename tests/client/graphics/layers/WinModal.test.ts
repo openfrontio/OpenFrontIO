@@ -7,7 +7,7 @@ import {
 import type { PurchaseButton } from "../../../../src/client/components/PurchaseButton";
 import "../../../../src/client/hud/layers/WinModal";
 import type { WinModal } from "../../../../src/client/hud/layers/WinModal";
-import { RankedType } from "../../../../src/core/game/Game";
+import { RankedType } from "../../../../src/core/game/GameTypes";
 
 vi.mock("../../../../src/client/Utils", () => ({
   translateText: vi.fn((key: string) => {

@@ -20,14 +20,8 @@
 import { Config } from "../src/core/configuration/Config";
 import { FactoryExecution } from "../src/core/execution/FactoryExecution";
 import { PortExecution } from "../src/core/execution/PortExecution";
-import {
-  Game,
-  Player,
-  PlayerInfo,
-  PlayerType,
-  Unit,
-  UnitType,
-} from "../src/core/game/Game";
+import { Game, Player, Unit } from "../src/core/game/Game";
+import { PlayerInfo, PlayerType, UnitType } from "../src/core/game/GameTypes";
 import {
   GOLD_INDEX_TRAIN_OTHER,
   GOLD_INDEX_TRAIN_SELF,

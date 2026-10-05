@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { GameType } from "../src/core/game/Game";
+import { GameType } from "../src/core/game/GameTypes";
 import { GameStartInfo } from "../src/core/Schemas";
 import { toWireGameStartInfo } from "../src/core/Util";
 

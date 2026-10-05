@@ -2,9 +2,10 @@ import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
 import { Config } from "../../src/core/configuration/Config";
+import { Game } from "../../src/core/game/Game";
+import { createGame } from "../../src/core/game/GameImpl";
 import {
   Difficulty,
-  Game,
   GameMapSize,
   GameMapType,
   GameMode,
@@ -12,8 +13,7 @@ import {
   Nation,
   PlayerInfo,
   PlayerType,
-} from "../../src/core/game/Game";
-import { createGame } from "../../src/core/game/GameImpl";
+} from "../../src/core/game/GameTypes";
 import {
   genTerrainFromBin,
   MapManifest,

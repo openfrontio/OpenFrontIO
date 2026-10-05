@@ -1,4 +1,4 @@
-import { GameMapType } from "./Game";
+import { GameMapType } from "./GameTypes";
 import { MapManifest } from "./TerrainMapLoader";
 
 export interface GameMapLoader {

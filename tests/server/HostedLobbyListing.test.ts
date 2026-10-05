@@ -7,7 +7,7 @@ import {
   GameMapType,
   GameMode,
   GameType,
-} from "../../src/core/game/Game";
+} from "../../src/core/game/GameTypes";
 import {
   FEATURED_LOBBY_AUTO_START_MS,
   HOSTED_LOBBY_AUTO_START_MS,

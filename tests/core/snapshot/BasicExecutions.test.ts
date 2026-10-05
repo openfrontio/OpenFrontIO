@@ -22,15 +22,14 @@ import { RetreatExecution } from "../../../src/core/execution/RetreatExecution";
 import { SpawnExecution } from "../../../src/core/execution/SpawnExecution";
 import { TargetPlayerExecution } from "../../../src/core/execution/TargetPlayerExecution";
 import { UpgradeStructureExecution } from "../../../src/core/execution/UpgradeStructureExecution";
+import { Game, Player } from "../../../src/core/game/Game";
 import {
   AllPlayers,
-  Game,
   GameType,
-  Player,
   PlayerInfo,
   PlayerType,
   UnitType,
-} from "../../../src/core/game/Game";
+} from "../../../src/core/game/GameTypes";
 import { setup } from "../../util/Setup";
 import { expectSnapshotRoundTrip } from "../../util/Snapshot";
 

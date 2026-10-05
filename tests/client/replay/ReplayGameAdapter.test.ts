@@ -17,7 +17,7 @@ import type { ReplayFrame } from "../../../src/client/replay/codec/ReplayTypes";
 import { ReplayGameView } from "../../../src/client/replay/ReplayGameAdapter";
 import { Config } from "../../../src/core/configuration/Config";
 import { EventBus } from "../../../src/core/EventBus";
-import { Cell, GameType, UnitType } from "../../../src/core/game/Game";
+import { Cell, GameType, UnitType } from "../../../src/core/game/GameTypes";
 import { GameUpdateType } from "../../../src/core/game/GameUpdates";
 import { setup } from "../../util/Setup";
 import { config as gameConfig } from "./util/ArchiveGame";

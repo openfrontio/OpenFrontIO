@@ -13,7 +13,7 @@
  */
 
 import type { Config } from "../../../../core/configuration/Config";
-import { UnitType } from "../../../../core/game/Game";
+import { UnitType } from "../../../../core/game/GameTypes";
 import { maxHealthWithVeterancy } from "../../../../core/game/Veterancy";
 import type { RendererConfig, UnitState } from "../../types";
 import { UT_MISSILE_SILO, UT_SAM_LAUNCHER } from "../../types";

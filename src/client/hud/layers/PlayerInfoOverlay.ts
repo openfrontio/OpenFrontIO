@@ -3,13 +3,13 @@ import { customElement, property, state } from "lit/decorators.js";
 import { assetUrl } from "../../../core/AssetUrls";
 import { EventBus } from "../../../core/EventBus";
 import { renderNumber, renderTroops } from "../../../core/Format";
+import { TileRef } from "../../../core/game/GameMap";
 import {
   PlayerProfile,
   PlayerType,
   Relation,
   UnitType,
-} from "../../../core/game/Game";
-import { TileRef } from "../../../core/game/GameMap";
+} from "../../../core/game/GameTypes";
 import { AllianceView } from "../../../core/game/GameUpdates";
 import { UnitLike } from "../../../core/game/ReadViews";
 import { Controller } from "../../Controller";

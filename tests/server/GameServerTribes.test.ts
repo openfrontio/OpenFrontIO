@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { GameType } from "../../src/core/game/Game";
+import { GameType } from "../../src/core/game/GameTypes";
 import { createGameWireContext } from "../../src/core/ZbinWire";
 import { Client } from "../../src/server/Client";
 import { GameServer } from "../../src/server/GameServer";

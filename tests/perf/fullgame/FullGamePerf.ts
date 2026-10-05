@@ -38,14 +38,14 @@ import path from "path";
 import { fileURLToPath } from "url";
 import { Config } from "../../../src/core/configuration/Config";
 import { Executor } from "../../../src/core/execution/ExecutionManager";
+import { createGame } from "../../../src/core/game/GameImpl";
 import {
   Difficulty,
   GameMapSize,
   GameMapType,
   GameMode,
   GameType,
-} from "../../../src/core/game/Game";
-import { createGame } from "../../../src/core/game/GameImpl";
+} from "../../../src/core/game/GameTypes";
 import { GameUpdateType, HashUpdate } from "../../../src/core/game/GameUpdates";
 import { createNationsForGame } from "../../../src/core/game/NationCreation";
 import { loadTerrainMap } from "../../../src/core/game/TerrainMapLoader";

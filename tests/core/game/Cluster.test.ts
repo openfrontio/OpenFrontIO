@@ -1,4 +1,4 @@
-import { UnitType } from "../../../src/core/game/Game";
+import { UnitType } from "../../../src/core/game/GameTypes";
 import { Cluster, TrainStation } from "../../../src/core/game/TrainStation";
 
 const createStation = (id: number = 1): TrainStation => {

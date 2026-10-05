@@ -8,7 +8,7 @@ import {
   withGroupToken,
 } from "../../src/client/PresenceGroup";
 import { EventBus } from "../../src/core/EventBus";
-import { GameMode, GameType } from "../../src/core/game/Game";
+import { GameMode, GameType } from "../../src/core/game/GameTypes";
 import {
   GroupTokenEvent,
   type ServerMessage,

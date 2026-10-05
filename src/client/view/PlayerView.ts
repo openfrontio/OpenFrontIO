@@ -3,6 +3,7 @@ import { base64url } from "jose";
 import { PatternDecoder } from "../../core/PatternDecoder";
 import { ClientID, PlayerCosmetics } from "../../core/Schemas";
 import { createRandomName } from "../../core/Util";
+import { TileRef } from "../../core/game/GameMap";
 import {
   BuildableUnit,
   Cell,
@@ -18,8 +19,7 @@ import {
   Team,
   Tick,
   UnitType,
-} from "../../core/game/Game";
-import { TileRef } from "../../core/game/GameMap";
+} from "../../core/game/GameTypes";
 import {
   AllianceView,
   AttackUpdate,

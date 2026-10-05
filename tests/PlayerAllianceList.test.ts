@@ -1,6 +1,7 @@
 import { AllianceRequestExecution } from "../src/core/execution/alliance/AllianceRequestExecution";
 import { BreakAllianceExecution } from "../src/core/execution/alliance/BreakAllianceExecution";
-import { Game, Player, PlayerType } from "../src/core/game/Game";
+import { Game, Player } from "../src/core/game/Game";
+import { PlayerType } from "../src/core/game/GameTypes";
 import { playerInfo, setup } from "./util/Setup";
 
 /**

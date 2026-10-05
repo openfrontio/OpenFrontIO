@@ -13,7 +13,11 @@ import type {
   ReplayAppend,
   ReplayFrame,
 } from "../../../../src/client/replay/codec/ReplayTypes";
-import { GameType, PlayerType, UnitType } from "../../../../src/core/game/Game";
+import {
+  GameType,
+  PlayerType,
+  UnitType,
+} from "../../../../src/core/game/GameTypes";
 import { GameUpdateType } from "../../../../src/core/game/GameUpdates";
 import { setup } from "../../../util/Setup";
 import {

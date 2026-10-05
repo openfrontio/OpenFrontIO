@@ -1,17 +1,17 @@
 import fs from "fs";
 import path, { dirname } from "path";
 import { fileURLToPath } from "url";
+import { Game } from "../../src/core/game/Game";
+import { createGame, GameImpl } from "../../src/core/game/GameImpl";
+import { TileRef } from "../../src/core/game/GameMap";
 import {
   Difficulty,
-  Game,
   GameMapSize,
   GameMapType,
   GameMode,
   GameType,
   PlayerInfo,
-} from "../../src/core/game/Game";
-import { createGame, GameImpl } from "../../src/core/game/GameImpl";
-import { TileRef } from "../../src/core/game/GameMap";
+} from "../../src/core/game/GameTypes";
 import {
   genTerrainFromBin,
   MapManifest,

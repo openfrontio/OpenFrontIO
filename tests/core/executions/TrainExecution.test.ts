@@ -1,7 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { TrainExecution } from "../../../src/core/execution/TrainExecution";
-import { PlayerInfo, PlayerType, UnitType } from "../../../src/core/game/Game";
 import { TileRef } from "../../../src/core/game/GameMap";
+import {
+  PlayerInfo,
+  PlayerType,
+  UnitType,
+} from "../../../src/core/game/GameTypes";
 import { Railroad } from "../../../src/core/game/Railroad";
 import { TrainStation } from "../../../src/core/game/TrainStation";
 import { setup } from "../../util/Setup";

@@ -1,6 +1,6 @@
 import WebSocket from "ws";
 import { TokenPayload } from "../core/ApiSchemas";
-import { Tick } from "../core/game/Game";
+import { Tick } from "../core/game/GameTypes";
 import {
   ClientID,
   ClientPlatform,

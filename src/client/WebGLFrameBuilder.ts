@@ -8,7 +8,7 @@ import {
   type NukeExplosionAttributes,
   type NukeExplosionType,
 } from "../core/CosmeticSchemas";
-import { PlayerType } from "../core/game/Game";
+import { PlayerType } from "../core/game/GameTypes";
 import { getCachedCosmetics } from "./Cosmetics";
 import { buildTerrainRowSpans } from "./render/frame/derive/TerrainRowSpans";
 import { uploadFrameData } from "./render/frame/Upload";

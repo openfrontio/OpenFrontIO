@@ -11,9 +11,10 @@ import {
   zTile,
   zTiles,
 } from "../snapshot/SnapshotType";
-import { Attack, Player, TerraNullius } from "./Game";
+import { Attack, Player } from "./Game";
 import { GameImpl } from "./GameImpl";
 import { TileRef } from "./GameMap";
+import { TerraNullius } from "./GameTypes";
 import { PlayerImpl } from "./PlayerImpl";
 
 export class AttackImpl implements Attack {

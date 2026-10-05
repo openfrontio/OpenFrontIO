@@ -1,5 +1,6 @@
 import { z } from "zod";
-import { Execution, Game, GameType, Player } from "../game/Game";
+import { Execution, Game, Player } from "../game/Game";
+import { GameType } from "../game/GameTypes";
 import { execSnapshotType } from "../snapshot/ExecutionSnapshot";
 import type {
   ExecRecord,

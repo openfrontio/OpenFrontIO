@@ -1,5 +1,6 @@
 ﻿import { z } from "zod";
-import { Execution, Game, Player, Structures } from "../game/Game";
+import { Execution, Game, Player } from "../game/Game";
+import { Structures } from "../game/GameTypes";
 import { PseudoRandom } from "../PseudoRandom";
 import { execSnapshotType } from "../snapshot/ExecutionSnapshot";
 import type {

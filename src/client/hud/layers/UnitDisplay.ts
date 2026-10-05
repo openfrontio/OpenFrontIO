@@ -8,7 +8,7 @@ import {
   Gold,
   PlayerBuildableUnitType,
   UnitType,
-} from "../../../core/game/Game";
+} from "../../../core/game/GameTypes";
 import { Controller } from "../../Controller";
 import { ToggleStructureEvent } from "../../InputHandler";
 import { UIState } from "../../UIState";

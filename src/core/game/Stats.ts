@@ -5,8 +5,9 @@ import {
   OtherUnitType,
   PlayerStats,
 } from "../StatsSchemas";
-import { Player, TerraNullius } from "./Game";
+import { Player } from "./Game";
 import { TileRef } from "./GameMap";
+import { TerraNullius } from "./GameTypes";
 
 export interface Stats {
   getPlayerStats(player: Player): PlayerStats | null;

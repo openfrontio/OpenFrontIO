@@ -1,4 +1,5 @@
-import { Game, GameMode } from "../../../src/core/game/Game";
+import { Game } from "../../../src/core/game/Game";
+import { GameMode } from "../../../src/core/game/GameTypes";
 import { GameRunner } from "../../../src/core/GameRunner";
 import { GameConfig, GameStartInfo } from "../../../src/core/Schemas";
 import { EXECUTION_SNAPSHOT_TYPES } from "../../../src/core/snapshot/ExecutionRegistry";

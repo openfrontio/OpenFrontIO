@@ -4,7 +4,8 @@ import type {
   SnapshotWriter,
 } from "../snapshot/SnapshotContext";
 import { snapshotType, zInt, zPlayerRef } from "../snapshot/SnapshotType";
-import { Game, MutableAlliance, Player, Tick } from "./Game";
+import { Game, MutableAlliance, Player } from "./Game";
+import { Tick } from "./GameTypes";
 import { GameUpdateType } from "./GameUpdates";
 
 export class AllianceImpl implements MutableAlliance {

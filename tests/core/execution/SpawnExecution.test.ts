@@ -1,7 +1,7 @@
 import { Executor } from "../../../src/core/execution/ExecutionManager";
 import { SpawnExecution } from "../../../src/core/execution/SpawnExecution";
 import { SpawnTimerExecution } from "../../../src/core/execution/SpawnTimerExecution";
-import { PlayerInfo, PlayerType } from "../../../src/core/game/Game";
+import { PlayerInfo, PlayerType } from "../../../src/core/game/GameTypes";
 import { setup } from "../../util/Setup";
 
 describe("Spawn execution", () => {

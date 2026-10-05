@@ -1,13 +1,13 @@
 import { describe, expect, it } from "vitest";
 import { UpgradeStructureExecution } from "../../../src/core/execution/UpgradeStructureExecution";
+import type { TileRef } from "../../../src/core/game/GameMap";
 import {
   GameType,
   MAX_UPGRADE_AMOUNT,
   PlayerInfo,
   PlayerType,
   UnitType,
-} from "../../../src/core/game/Game";
-import type { TileRef } from "../../../src/core/game/GameMap";
+} from "../../../src/core/game/GameTypes";
 import { setup } from "../../util/Setup";
 
 describe("UpgradeStructureExecution", () => {

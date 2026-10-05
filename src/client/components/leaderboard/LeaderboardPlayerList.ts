@@ -4,7 +4,7 @@ import {
   PlayerLeaderboardEntry,
   RankedLeaderboardEntry,
 } from "../../../core/ApiSchemas";
-import { RankedType } from "../../../core/game/Game";
+import { RankedType } from "../../../core/game/GameTypes";
 import { fetchPlayerLeaderboard, getUserMe } from "../../Api";
 import { translateText } from "../../Utils";
 import "../PlayerName";

@@ -1,5 +1,5 @@
 import { EventBus, GameEvent } from "../core/EventBus";
-import { PlayerBuildableUnitType, UnitType } from "../core/game/Game";
+import { PlayerBuildableUnitType, UnitType } from "../core/game/GameTypes";
 import { Platform } from "./Platform";
 import { UIState } from "./UIState";
 import {

@@ -1,6 +1,7 @@
 import { z } from "zod";
-import { Execution, Game, Player, Tick, Unit, UnitType } from "../game/Game";
+import { Execution, Game, Player, Unit } from "../game/Game";
 import { TileRef } from "../game/GameMap";
+import { Tick, UnitType } from "../game/GameTypes";
 import { UnitTypeSchema } from "../snapshot/CommonSchemas";
 import { execSnapshotType } from "../snapshot/ExecutionSnapshot";
 import type {

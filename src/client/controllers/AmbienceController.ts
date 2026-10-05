@@ -1,5 +1,5 @@
 import { EventBus } from "../../core/EventBus";
-import { UnitType } from "../../core/game/Game";
+import { UnitType } from "../../core/game/GameTypes";
 import { Controller } from "../Controller";
 import { AmbienceTrack, SetAmbienceEvent } from "../sound/Sounds";
 import { TransformHandler } from "../TransformHandler";

@@ -1,4 +1,4 @@
-import { GameType } from "../../src/core/game/Game";
+import { GameType } from "../../src/core/game/GameTypes";
 import { GameStartInfo } from "../../src/core/Schemas";
 import { Client } from "../../src/server/Client";
 import { GameServer } from "../../src/server/GameServer";

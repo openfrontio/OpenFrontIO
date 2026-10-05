@@ -11,7 +11,7 @@
  * AttackScenarios.test.ts for end-to-end numbers on real maps.
  */
 import { AttackLogicInput, Config } from "../src/core/configuration/Config";
-import { PlayerType, TerrainType } from "../src/core/game/Game";
+import { PlayerType, TerrainType } from "../src/core/game/GameTypes";
 import { GameConfig } from "../src/core/Schemas";
 
 const config = new Config({} as GameConfig, false);

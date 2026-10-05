@@ -1,5 +1,5 @@
 import { renderNumber, renderTroops } from "../../../../core/Format";
-import { PlayerType, UnitType } from "../../../../core/game/Game";
+import { PlayerType, UnitType } from "../../../../core/game/GameTypes";
 import type { ColumnId, StatsTableKind } from "../../../StatsConstants";
 import { formatPercentage, translateText } from "../../../Utils";
 import type { GameView, PlayerView } from "../../../view";

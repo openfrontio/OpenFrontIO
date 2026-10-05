@@ -4,14 +4,14 @@ import { translateText } from "../../../client/Utils";
 import { assetUrl } from "../../../core/AssetUrls";
 import { EventBus } from "../../../core/EventBus";
 import { renderNumber } from "../../../core/Format";
+import { TileRef } from "../../../core/game/GameMap";
 import {
   BuildableUnit,
   BuildMenus,
   Gold,
   PlayerBuildableUnitType,
   UnitType,
-} from "../../../core/game/Game";
-import { TileRef } from "../../../core/game/GameMap";
+} from "../../../core/game/GameTypes";
 import { Controller } from "../../Controller";
 import {
   CloseViewEvent,

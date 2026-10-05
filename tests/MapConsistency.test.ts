@@ -6,7 +6,7 @@ import {
   GameMapType,
   MapInfo,
   maps,
-} from "../src/core/game/Game";
+} from "../src/core/game/GameTypes";
 import { validateLayer } from "./util/layerValidation";
 
 // ── Helpers ──────────────────────────────────────────────────────────────────

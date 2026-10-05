@@ -19,8 +19,8 @@
  */
 
 import type { Config } from "../../core/configuration/Config";
-import type { PlayerType, Team, UnitType } from "../../core/game/Game";
 import type { TileRef } from "../../core/game/GameMap";
+import type { PlayerType, Team, UnitType } from "../../core/game/GameTypes";
 import { GameUpdateType } from "../../core/game/GameUpdates";
 import { OWNER_MASK } from "../render/gl/utils/TileCodec";
 import type {

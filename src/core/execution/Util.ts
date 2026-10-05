@@ -1,6 +1,6 @@
 import { NukeMagnitude } from "../configuration/Config";
-import { Structures } from "../game/Game";
 import { euclDistFN, GameMap, TileRef } from "../game/GameMap";
+import { Structures } from "../game/GameTypes";
 import { EnginePlayerLike, GameLike } from "../game/ReadViews";
 import { ReadonlyTileSet } from "../game/TileSet";
 

@@ -1,3 +1,4 @@
+import { GameMap, TileRef } from "./GameMap";
 import {
   Gold,
   PlayerID,
@@ -5,8 +6,7 @@ import {
   SamLauncherState,
   TerraNullius,
   UnitType,
-} from "./Game";
-import { GameMap, TileRef } from "./GameMap";
+} from "./GameTypes";
 import { ReadonlyTileSet } from "./TileSet";
 import { UnitPredicate } from "./UnitGrid";
 

@@ -14,7 +14,7 @@ import {
   PlayerInfo,
   PlayerType,
   RankedType,
-} from "../core/game/Game";
+} from "../core/game/GameTypes";
 import { maps } from "../core/game/Maps.gen";
 import {
   assignTeamsLobbyPreview,

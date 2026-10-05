@@ -4,7 +4,7 @@ import {
   GameMapSize,
   GameMode,
   GameType,
-} from "../../core/game/Game";
+} from "../../core/game/GameTypes";
 import { GameConfig } from "../../core/Schemas";
 
 // Non-default settings worth surfacing, shared by the join modal (post-join

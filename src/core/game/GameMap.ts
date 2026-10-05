@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { snapshotType, zBytes, zInt, zTiles } from "../snapshot/SnapshotType";
-import { Cell, TerrainType } from "./Game";
+import { Cell, TerrainType } from "./GameTypes";
 
 export type TileRef = number;
 

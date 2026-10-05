@@ -3,16 +3,14 @@ import { NationAllianceBehavior } from "../src/core/execution/nation/NationAllia
 import { NationEmojiBehavior } from "../src/core/execution/nation/NationEmojiBehavior";
 import { findRunawayLeader } from "../src/core/execution/nation/NationUtils";
 import { AiAttackBehavior } from "../src/core/execution/utils/AiAttackBehavior";
+import { AllianceRequest, Game, Player } from "../src/core/game/Game";
 import {
-  AllianceRequest,
   Difficulty,
-  Game,
   GameMode,
-  Player,
   PlayerInfo,
   PlayerType,
   Tick,
-} from "../src/core/game/Game";
+} from "../src/core/game/GameTypes";
 import { PseudoRandom } from "../src/core/PseudoRandom";
 import { setup } from "./util/Setup";
 

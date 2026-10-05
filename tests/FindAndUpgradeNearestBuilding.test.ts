@@ -1,8 +1,8 @@
 import { describe, expect, test, vi } from "vitest";
 import { SendUpgradeStructureIntentEvent } from "../src/client/Transport";
 import { EventBus } from "../src/core/EventBus";
-import { UnitType } from "../src/core/game/Game";
 import { TileRef } from "../src/core/game/GameMap";
+import { UnitType } from "../src/core/game/GameTypes";
 
 /**
  * NOTE: The `findAndUpgradeNearestBuilding` function below is a test-local

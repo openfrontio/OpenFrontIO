@@ -3,16 +3,14 @@ import { NationAllianceBehavior } from "../src/core/execution/nation/NationAllia
 import { NationEmojiBehavior } from "../src/core/execution/nation/NationEmojiBehavior";
 import { NationNukeBehavior } from "../src/core/execution/nation/NationNukeBehavior";
 import { AiAttackBehavior } from "../src/core/execution/utils/AiAttackBehavior";
+import { Game, Player, Unit } from "../src/core/game/Game";
+import { TileRef } from "../src/core/game/GameMap";
 import {
   Difficulty,
-  Game,
-  Player,
   PlayerInfo,
   PlayerType,
-  Unit,
   UnitType,
-} from "../src/core/game/Game";
-import { TileRef } from "../src/core/game/GameMap";
+} from "../src/core/game/GameTypes";
 import { PseudoRandom } from "../src/core/PseudoRandom";
 import { setup } from "./util/Setup";
 import { TestConfig } from "./util/TestConfig";

@@ -12,7 +12,7 @@ import {
   GameType,
   maps,
   UnitType,
-} from "../core/game/Game";
+} from "../core/game/GameTypes";
 import { PlayerCosmetics, TeamCountConfig } from "../core/Schemas";
 import { generateID } from "../core/Util";
 import { responseHasLinkedIdentity } from "./AccountIdentity";

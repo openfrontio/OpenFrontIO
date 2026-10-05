@@ -1,6 +1,6 @@
 import { assetUrl } from "../AssetUrls";
-import { GameMapType } from "./Game";
 import { GameMapLoader, MapData } from "./GameMapLoader";
+import { GameMapType } from "./GameTypes";
 import { MapManifest } from "./TerrainMapLoader";
 
 export class BinaryLoaderGameMapLoader implements GameMapLoader {

@@ -35,19 +35,23 @@ import { AllianceRequestImpl } from "./AllianceRequestImpl";
 import {
   Alliance,
   AllianceRequest,
+  Execution,
+  Game,
+  MutableAlliance,
+  Player,
+  Unit,
+} from "./Game";
+import { GameMap, TileRef } from "./GameMap";
+import {
   Cell,
   ColoredTeams,
   Duos,
   EmojiMessage,
-  Execution,
-  Game,
   GameMode,
   GameUpdates,
   HumansVsNations,
   MessageType,
-  MutableAlliance,
   Nation,
-  Player,
   PlayerID,
   PlayerInfo,
   PlayerType,
@@ -59,11 +63,9 @@ import {
   TerraNullius,
   Tick,
   Trios,
-  Unit,
   UnitInfo,
   UnitType,
-} from "./Game";
-import { GameMap, TileRef } from "./GameMap";
+} from "./GameTypes";
 import { GameUpdate, GameUpdateType } from "./GameUpdates";
 import { MotionPlanRecord, packMotionPlans } from "./MotionPlans";
 import { PlayerImpl } from "./PlayerImpl";

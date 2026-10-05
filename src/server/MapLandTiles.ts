@@ -1,7 +1,7 @@
 import fs from "fs/promises";
 import path from "path";
 import { normalizeAssetPath } from "src/core/AssetUrls";
-import { GameMapType } from "src/core/game/Game";
+import { GameMapType } from "src/core/game/GameTypes";
 import { fileURLToPath } from "url";
 import { logger } from "./Logger";
 import { getRuntimeAssetManifest } from "./RuntimeAssetManifest";

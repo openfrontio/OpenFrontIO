@@ -1,5 +1,5 @@
 import { resolveTribeNameData } from "../src/core/execution/utils/TribeNames";
-import { GameMapType, PlayerType } from "../src/core/game/Game";
+import { GameMapType, PlayerType } from "../src/core/game/GameTypes";
 import { PseudoRandom } from "../src/core/PseudoRandom";
 import { createRandomName } from "../src/core/Util";
 

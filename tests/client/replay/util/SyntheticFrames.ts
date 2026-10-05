@@ -4,7 +4,7 @@ import {
   PlayerType,
   UnitType,
   type GameUpdates,
-} from "../../../../src/core/game/Game";
+} from "../../../../src/core/game/GameTypes";
 import {
   GameUpdateType,
   type GameUpdateViewData,

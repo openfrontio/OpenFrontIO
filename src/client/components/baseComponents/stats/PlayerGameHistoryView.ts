@@ -11,7 +11,7 @@ import {
   type PublicPlayerGame,
 } from "../../../../core/ApiSchemas";
 import { assetUrl } from "../../../../core/AssetUrls";
-import { GameMapType } from "../../../../core/game/Game";
+import { GameMapType } from "../../../../core/game/GameTypes";
 import { fetchPublicPlayerGames } from "../../../Api";
 import { ClientEnv } from "../../../ClientEnv";
 import { terrainMapFileLoader } from "../../../TerrainMapFileLoader";

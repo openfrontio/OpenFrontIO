@@ -1,4 +1,4 @@
-import { GameType } from "../core/game/Game";
+import { GameType } from "../core/game/GameTypes";
 import { ClientID, Intent } from "../core/Schemas";
 import { hostCheatsEnabled } from "./ConfigPatch";
 

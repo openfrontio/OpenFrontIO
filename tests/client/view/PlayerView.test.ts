@@ -13,7 +13,7 @@ import {
   AllPlayers,
   EmojiMessage,
   PlayerType,
-} from "../../../src/core/game/Game";
+} from "../../../src/core/game/GameTypes";
 import { GameUpdateType } from "../../../src/core/game/GameUpdates";
 import {
   makeEmptyGu,

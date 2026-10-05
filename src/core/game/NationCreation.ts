@@ -9,7 +9,7 @@ import {
   Nation,
   PlayerInfo,
   PlayerType,
-} from "./Game";
+} from "./GameTypes";
 import { AdditionalNation, Nation as ManifestNation } from "./TerrainMapLoader";
 
 /**

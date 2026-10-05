@@ -3,7 +3,11 @@ import { customElement, state } from "lit/decorators.js";
 import { assetUrl } from "../../../core/AssetUrls";
 import { EventBus } from "../../../core/EventBus";
 import { renderTroops } from "../../../core/Format";
-import { MessageType, PlayerType, UnitType } from "../../../core/game/Game";
+import {
+  MessageType,
+  PlayerType,
+  UnitType,
+} from "../../../core/game/GameTypes";
 import {
   AttackUpdate,
   GameUpdateType,

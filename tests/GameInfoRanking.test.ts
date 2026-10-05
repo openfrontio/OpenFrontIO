@@ -8,7 +8,7 @@ import {
   GameMapType,
   GameMode,
   GameType,
-} from "../src/core/game/Game";
+} from "../src/core/game/GameTypes";
 import { AnalyticsRecord, GameConfig } from "../src/core/Schemas";
 import {
   GOLD_INDEX_STEAL,

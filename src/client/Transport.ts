@@ -7,6 +7,7 @@ import {
   isTerminalClose,
 } from "../core/CloseCodes";
 import { EventBus, EventConstructor, GameEvent } from "../core/EventBus";
+import { TileRef } from "../core/game/GameMap";
 import {
   AllPlayers,
   GameType,
@@ -14,8 +15,7 @@ import {
   PlayerID,
   Tick,
   UnitType,
-} from "../core/game/Game";
-import { TileRef } from "../core/game/GameMap";
+} from "../core/game/GameTypes";
 import {
   AllPlayersStats,
   ClientHashMessage,

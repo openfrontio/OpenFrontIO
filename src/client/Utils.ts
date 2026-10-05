@@ -10,7 +10,7 @@ import {
   Quads,
   Team,
   Trios,
-} from "../core/game/Game";
+} from "../core/game/GameTypes";
 import { GameConfig } from "../core/Schemas";
 import { stripVersionPrefix } from "../core/ServerList";
 import { ClientEnv } from "./ClientEnv";

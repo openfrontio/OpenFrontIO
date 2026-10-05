@@ -1,4 +1,4 @@
-import type { EmojiMessage } from "./Game";
+import type { EmojiMessage } from "./GameTypes";
 import {
   AllianceView,
   AttackUpdate,

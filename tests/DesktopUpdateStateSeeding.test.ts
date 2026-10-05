@@ -12,7 +12,7 @@ import type {
   DesktopUpdateBridge,
   DesktopUpdateState,
 } from "../src/client/DesktopShell";
-import { GameMapType, GameMode } from "../src/core/game/Game";
+import { GameMapType, GameMode } from "../src/core/game/GameTypes";
 import type {
   GameConfig,
   PublicGameInfo,

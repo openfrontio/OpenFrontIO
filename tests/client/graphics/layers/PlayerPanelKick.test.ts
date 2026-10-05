@@ -47,7 +47,7 @@ import {
 import { showToast } from "../../../../src/client/Utils";
 import { PlayerView } from "../../../../src/client/view";
 import { EventBus } from "../../../../src/core/EventBus";
-import { GameType, PlayerType } from "../../../../src/core/game/Game";
+import { GameType, PlayerType } from "../../../../src/core/game/GameTypes";
 
 const mockActionButton = actionButton as unknown as ReturnType<typeof vi.fn>;
 

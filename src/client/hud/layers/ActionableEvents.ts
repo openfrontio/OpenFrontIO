@@ -1,7 +1,7 @@
 import { html, LitElement } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import { EventBus } from "../../../core/EventBus";
-import { MessageType, Tick } from "../../../core/game/Game";
+import { MessageType, Tick } from "../../../core/game/GameTypes";
 import {
   AllianceExtensionUpdate,
   AllianceRequestReplyUpdate,

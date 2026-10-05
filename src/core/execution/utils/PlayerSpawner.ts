@@ -1,4 +1,5 @@
-import { Game, PlayerType } from "../../game/Game";
+import { Game } from "../../game/Game";
+import { PlayerType } from "../../game/GameTypes";
 import { GameID } from "../../Schemas";
 import { SpawnExecution } from "../SpawnExecution";
 

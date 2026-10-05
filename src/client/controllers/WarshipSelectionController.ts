@@ -1,7 +1,7 @@
-import { Cell } from "src/core/game/Game";
+import { Cell } from "src/core/game/GameTypes";
 import { EventBus } from "../../core/EventBus";
-import { UnitType } from "../../core/game/Game";
 import { TileRef } from "../../core/game/GameMap";
+import { UnitType } from "../../core/game/GameTypes";
 import { Controller } from "../Controller";
 import {
   CloseViewEvent,

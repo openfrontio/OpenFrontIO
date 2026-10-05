@@ -1,6 +1,6 @@
 import { html, nothing, svg, TemplateResult } from "lit";
 import { UserMeResponse } from "../../core/ApiSchemas";
-import { GameMapType } from "../../core/game/Game";
+import { GameMapType } from "../../core/game/GameTypes";
 import { PublicGameInfo } from "../../core/Schemas";
 import { responseHasLinkedIdentity } from "../AccountIdentity";
 import { crazyGamesSDK } from "../CrazyGamesSDK";

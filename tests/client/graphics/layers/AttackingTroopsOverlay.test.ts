@@ -3,7 +3,7 @@ import {
   alignClusterOrder,
   Slot,
 } from "../../../../src/client/controllers/AttackingTroopsController";
-import { Cell } from "../../../../src/core/game/Game";
+import { Cell } from "../../../../src/core/game/GameTypes";
 
 // Slots only need the `dst` fields populated for `alignClusterOrder` — it
 // compares the new positions against the previous targets to decide whether

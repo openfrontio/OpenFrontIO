@@ -1,8 +1,9 @@
 import DOMPurify from "dompurify";
 import { customAlphabet } from "nanoid";
 import { exp } from "./DetMath";
-import { Cell, GameType, PlayerType, Unit } from "./game/Game";
 import { GameMap, TileRef } from "./game/GameMap";
+import { Cell, GameType, PlayerType } from "./game/GameTypes";
+import { UnitLike } from "./game/ReadViews";
 import { TileSet } from "./game/TileSet";
 import {
   GameConfig,
@@ -52,11 +53,11 @@ export function distSort(
 
 export function distSortUnit(
   gm: GameMap,
-  target: Unit | TileRef,
-): (a: Unit, b: Unit) => number {
+  target: UnitLike | TileRef,
+): (a: UnitLike, b: UnitLike) => number {
   const targetRef = typeof target === "number" ? target : target.tile();
 
-  return (a: Unit, b: Unit) => {
+  return (a: UnitLike, b: UnitLike) => {
     return (
       gm.manhattanDist(a.tile(), targetRef) -
       gm.manhattanDist(b.tile(), targetRef)

@@ -45,7 +45,7 @@ import {
   GameMapType,
   GameMode,
   GameType,
-} from "../../../src/core/game/Game";
+} from "../../../src/core/game/GameTypes";
 import {
   GameUpdateType,
   GameUpdateViewData,

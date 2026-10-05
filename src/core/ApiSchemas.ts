@@ -8,7 +8,7 @@ import {
   GameType,
   HumansVsNations,
   RankedType,
-} from "./game/Game";
+} from "./game/GameTypes";
 
 const RequiredClanTagSchema = ClanTagSchema.unwrap();
 

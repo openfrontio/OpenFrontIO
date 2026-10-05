@@ -1,7 +1,7 @@
 import { AmbienceController } from "../../../src/client/controllers/AmbienceController";
 import { SetAmbienceEvent } from "../../../src/client/sound/Sounds";
 import { EventBus } from "../../../src/core/EventBus";
-import { UnitType } from "../../../src/core/game/Game";
+import { UnitType } from "../../../src/core/game/GameTypes";
 
 describe("AmbienceController", () => {
   let eventBus: EventBus;

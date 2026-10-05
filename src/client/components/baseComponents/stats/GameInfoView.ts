@@ -10,7 +10,7 @@ import {
   GameMode,
   GameType,
   type GameMapType,
-} from "../../../../core/game/Game";
+} from "../../../../core/game/GameTypes";
 import { fetchGameById } from "../../../Api";
 import { terrainMapFileLoader } from "../../../TerrainMapFileLoader";
 import { getMapName, renderDuration, translateText } from "../../../Utils";

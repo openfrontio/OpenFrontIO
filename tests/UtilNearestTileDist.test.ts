@@ -2,8 +2,9 @@ import {
   nearestTileDist,
   nearestTileDistCapped,
 } from "../src/core/execution/Util";
-import { Game, PlayerInfo, PlayerType } from "../src/core/game/Game";
+import { Game } from "../src/core/game/Game";
 import { GameMap, TileRef } from "../src/core/game/GameMap";
+import { PlayerInfo, PlayerType } from "../src/core/game/GameTypes";
 import { TileSet } from "../src/core/game/TileSet";
 import { PseudoRandom } from "../src/core/PseudoRandom";
 import { setup } from "./util/Setup";

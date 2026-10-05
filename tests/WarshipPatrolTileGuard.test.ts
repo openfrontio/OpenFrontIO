@@ -1,12 +1,7 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import { WarshipExecution } from "../src/core/execution/WarshipExecution";
-import {
-  Game,
-  PlayerInfo,
-  PlayerType,
-  Unit,
-  UnitType,
-} from "../src/core/game/Game";
+import { Game, Unit } from "../src/core/game/Game";
+import { PlayerInfo, PlayerType, UnitType } from "../src/core/game/GameTypes";
 import { setup } from "./util/Setup";
 
 // coastX matches the other warship tests: on "half_land_half_ocean" the water

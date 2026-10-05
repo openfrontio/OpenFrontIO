@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { GameType } from "../../../src/core/game/Game";
+import { GameType } from "../../../src/core/game/GameTypes";
 import { setup } from "../../util/Setup";
 
 // 10 ticks = 1 second of game time.

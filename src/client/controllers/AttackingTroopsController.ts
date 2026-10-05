@@ -10,7 +10,7 @@
  */
 import { EventBus } from "../../core/EventBus";
 import { renderTroops } from "../../core/Format";
-import { Cell, PlayerType } from "../../core/game/Game";
+import { Cell, PlayerType } from "../../core/game/GameTypes";
 import { Controller } from "../Controller";
 import { AlternateViewEvent } from "../InputHandler";
 import { MapRenderer } from "../render/gl";

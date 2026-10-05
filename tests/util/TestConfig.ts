@@ -4,7 +4,7 @@ import {
   Config,
   NukeMagnitude,
 } from "../../src/core/configuration/Config";
-import { Tick, UnitType } from "../../src/core/game/Game";
+import { Tick, UnitType } from "../../src/core/game/GameTypes";
 
 export class TestConfig extends Config {
   private _proximityBonusPortsNb: number = 0;

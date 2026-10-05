@@ -1,16 +1,13 @@
 import { z } from "zod";
 import { renderTroops } from "../Format";
+import { Execution, Game, Player, Unit } from "../game/Game";
+import { TileRef } from "../game/GameMap";
 import {
-  Execution,
-  Game,
   MessageType,
-  Player,
   PlayerType,
   TerraNullius,
-  Unit,
   UnitType,
-} from "../game/Game";
-import { TileRef } from "../game/GameMap";
+} from "../game/GameTypes";
 import { MotionPlanRecord } from "../game/MotionPlans";
 import { targetTransportTile } from "../game/TransportShipUtils";
 import { WaterPathFinder } from "../pathfinding/PathFinder";

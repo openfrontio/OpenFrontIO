@@ -2,13 +2,8 @@ import { AllianceRequestExecution } from "src/core/execution/alliance/AllianceRe
 import { GameUpdateType } from "src/core/game/GameUpdates";
 import { MirvExecution } from "../src/core/execution/MIRVExecution";
 import { NukeExecution } from "../src/core/execution/NukeExecution";
-import {
-  Game,
-  Player,
-  PlayerInfo,
-  PlayerType,
-  UnitType,
-} from "../src/core/game/Game";
+import { Game, Player } from "../src/core/game/Game";
+import { PlayerInfo, PlayerType, UnitType } from "../src/core/game/GameTypes";
 import { setup } from "./util/Setup";
 import { TestConfig } from "./util/TestConfig";
 

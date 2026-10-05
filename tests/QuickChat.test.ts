@@ -1,7 +1,8 @@
 import en from "../resources/lang/en.json";
 import quickChatData from "../resources/QuickChat.json";
 import { QuickChatExecution } from "../src/core/execution/QuickChatExecution";
-import { Game, Player, PlayerType } from "../src/core/game/Game";
+import { Game, Player } from "../src/core/game/Game";
+import { PlayerType } from "../src/core/game/GameTypes";
 import { GameUpdateType } from "../src/core/game/GameUpdates";
 import { QuickChatKeySchema } from "../src/core/Schemas";
 import { playerInfo, setup } from "./util/Setup";

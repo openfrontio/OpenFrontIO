@@ -1,18 +1,14 @@
 import { z } from "zod";
 import { atan2 } from "../DetMath";
+import { Execution, Game, isUnit, Player, Unit } from "../game/Game";
+import { TileRef } from "../game/GameMap";
 import {
-  Execution,
-  Game,
-  isUnit,
   MessageType,
-  Player,
   Structures,
   TerraNullius,
   TrajectoryTile,
-  Unit,
   UnitType,
-} from "../game/Game";
-import { TileRef } from "../game/GameMap";
+} from "../game/GameTypes";
 import { UniversalPathFinding } from "../pathfinding/PathFinder";
 import { ParabolaUniversalPathFinder } from "../pathfinding/PathFinder.Parabola";
 import { PathStatus } from "../pathfinding/types";

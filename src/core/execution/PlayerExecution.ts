@@ -1,15 +1,8 @@
 import { z } from "zod";
 import { Config } from "../configuration/Config";
-import {
-  Cell,
-  Execution,
-  Game,
-  Player,
-  PlayerType,
-  Structures,
-  UnitType,
-} from "../game/Game";
+import { Execution, Game, Player } from "../game/Game";
 import { GameMap, TileRef } from "../game/GameMap";
+import { Cell, PlayerType, Structures, UnitType } from "../game/GameTypes";
 import {
   bumpTraversalGeneration,
   tileTraversalScratch,

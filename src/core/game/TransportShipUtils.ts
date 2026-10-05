@@ -1,6 +1,7 @@
 import { SpatialQuery } from "../pathfinding/spatial/SpatialQuery";
-import { Game, Player, UnitType } from "./Game";
+import { Game, Player } from "./Game";
 import { TileRef } from "./GameMap";
+import { UnitType } from "./GameTypes";
 
 export function canBuildTransportShip(
   game: Game,

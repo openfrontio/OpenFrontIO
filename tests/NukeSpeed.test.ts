@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { Config } from "../src/core/configuration/Config";
-import { UnitType } from "../src/core/game/Game";
+import { UnitType } from "../src/core/game/GameTypes";
 import { GameConfig } from "../src/core/Schemas";
 
 const cfg = new Config({} as unknown as GameConfig, false);

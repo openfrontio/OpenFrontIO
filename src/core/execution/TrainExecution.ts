@@ -1,13 +1,7 @@
 import { z } from "zod";
-import {
-  Execution,
-  Game,
-  Player,
-  TrainType,
-  Unit,
-  UnitType,
-} from "../game/Game";
+import { Execution, Game, Player, Unit } from "../game/Game";
 import { TileRef } from "../game/GameMap";
+import { TrainType, UnitType } from "../game/GameTypes";
 import { MotionPlanRecord } from "../game/MotionPlans";
 import { RailNetwork } from "../game/RailNetwork";
 import { getOrientedRailroad, OrientedRailroad } from "../game/Railroad";

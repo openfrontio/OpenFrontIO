@@ -14,7 +14,7 @@
  * out: frames keep theirs.
  */
 
-import type { PlayerID } from "../../../core/game/Game";
+import type { PlayerID } from "../../../core/game/GameTypes";
 import {
   GameUpdateType,
   type GameUpdateViewData,

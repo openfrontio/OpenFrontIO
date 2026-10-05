@@ -6,13 +6,12 @@ import { SpawnExecution } from "../../../src/core/execution/SpawnExecution";
 import { TradeShipExecution } from "../../../src/core/execution/TradeShipExecution";
 import { TransportShipExecution } from "../../../src/core/execution/TransportShipExecution";
 import { WarshipExecution } from "../../../src/core/execution/WarshipExecution";
+import { Game, Player } from "../../../src/core/game/Game";
 import {
-  Game,
-  Player,
   PlayerInfo,
   PlayerType,
   UnitType,
-} from "../../../src/core/game/Game";
+} from "../../../src/core/game/GameTypes";
 import { setup } from "../../util/Setup";
 import { expectSnapshotRoundTrip } from "../../util/Snapshot";
 import { executeTicks } from "../../util/utils";

@@ -11,7 +11,7 @@ import {
   Quads,
   Team,
   Trios,
-} from "../../core/game/Game";
+} from "../../core/game/GameTypes";
 import { assignTeamsLobbyPreview } from "../../core/game/TeamAssignment";
 import { ClientID, ClientInfo, TeamCountConfig } from "../../core/Schemas";
 import { createRandomName, formatPlayerDisplayName } from "../../core/Util";

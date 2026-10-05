@@ -2,7 +2,7 @@ import { GameRightSidebar } from "../src/client/hud/layers/GameRightSidebar";
 import { SendWinnerEvent } from "../src/client/Transport";
 import type { GameView } from "../src/client/view";
 import { EventBus } from "../src/core/EventBus";
-import { GameType } from "../src/core/game/Game";
+import { GameType } from "../src/core/game/GameTypes";
 
 vi.mock("../src/client/Utils", async (importOriginal) => ({
   ...(await importOriginal<typeof import("../src/client/Utils")>()),

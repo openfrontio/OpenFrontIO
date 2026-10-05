@@ -50,8 +50,9 @@ import {
   unitTypeToBombUnit,
   unitTypeToOtherUnit,
 } from "../StatsSchemas";
-import { Player, PlayerType, TerraNullius } from "./Game";
+import { Player } from "./Game";
 import { TileRef } from "./GameMap";
+import { PlayerType, TerraNullius } from "./GameTypes";
 import { Stats } from "./Stats";
 
 type BigIntLike = bigint | number;

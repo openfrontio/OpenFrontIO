@@ -10,7 +10,7 @@ import {
   HumansVsNations,
   Quads,
   Trios,
-} from "../core/game/Game";
+} from "../core/game/GameTypes";
 import { PublicGameInfo, PublicGames } from "../core/Schemas";
 import { getDesktopSessionState } from "./Auth";
 import "./components/IOSAddToHomeScreenBanner";

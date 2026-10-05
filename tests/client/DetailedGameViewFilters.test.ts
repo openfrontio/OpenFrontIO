@@ -20,7 +20,7 @@ import {
   GameType,
   HumansVsNations,
   Quads,
-} from "../../src/core/game/Game";
+} from "../../src/core/game/GameTypes";
 import { GameConfig, PublicGameInfo } from "../../src/core/Schemas";
 
 function config(overrides: Partial<GameConfig> = {}): GameConfig {

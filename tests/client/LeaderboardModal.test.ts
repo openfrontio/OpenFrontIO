@@ -134,7 +134,7 @@ beforeEach(() => {
 
 import "../../src/client/components/baseComponents/Modal";
 import { LeaderboardModal } from "../../src/client/LeaderboardModal";
-import { RankedType } from "../../src/core/game/Game";
+import { RankedType } from "../../src/core/game/GameTypes";
 
 describe("LeaderboardModal", () => {
   let modal: LeaderboardModal;

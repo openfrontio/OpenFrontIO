@@ -22,7 +22,7 @@ vi.mock("lit/directives/unsafe-html.js", () => ({
 }));
 
 import { ActionableEvents } from "../../../../src/client/hud/layers/ActionableEvents";
-import { MessageType } from "../../../../src/core/game/Game";
+import { MessageType } from "../../../../src/core/game/GameTypes";
 
 describe("ActionableEvents - alliance renewal cleanup (allianceID based)", () => {
   function makeRenewal(

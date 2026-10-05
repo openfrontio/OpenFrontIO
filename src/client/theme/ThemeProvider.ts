@@ -1,5 +1,5 @@
 import { Colord, colord, LabaColor } from "colord";
-import { ColoredTeams, PlayerType, Team } from "../../core/game/Game";
+import { ColoredTeams, PlayerType, Team } from "../../core/game/GameTypes";
 import { simpleHash } from "../../core/Util";
 import { PALETTE_NAMES } from "../render/gl/GraphicsOverrides";
 import {

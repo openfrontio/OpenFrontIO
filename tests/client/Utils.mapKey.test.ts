@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { normaliseMapKey, presenceMapKey } from "../../src/client/Utils";
-import { GameMapType, maps } from "../../src/core/game/Game";
+import { GameMapType, maps } from "../../src/core/game/GameTypes";
 
 describe("normaliseMapKey", () => {
   it("resolves tourney maps to their asset directory, not their display name", () => {

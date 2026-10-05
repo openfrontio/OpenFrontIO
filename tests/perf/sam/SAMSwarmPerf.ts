@@ -14,12 +14,12 @@ import path from "path";
 import { performance } from "perf_hooks";
 import { fileURLToPath } from "url";
 import { SAMLauncherExecution } from "../../../src/core/execution/SAMLauncherExecution";
+import { Unit } from "../../../src/core/game/Game";
 import {
   PlayerInfo,
   PlayerType,
-  Unit,
   UnitType,
-} from "../../../src/core/game/Game";
+} from "../../../src/core/game/GameTypes";
 import { setup } from "../../util/Setup";
 import { GcTracker, summarizeGcEvents } from "../fullgame/GcProfiler";
 import {

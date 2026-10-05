@@ -1,11 +1,10 @@
 import { PlayerExecution } from "../../../src/core/execution/PlayerExecution";
+import { Game, Player } from "../../../src/core/game/Game";
 import {
-  Game,
-  Player,
   PlayerInfo,
   PlayerType,
   UnitType,
-} from "../../../src/core/game/Game";
+} from "../../../src/core/game/GameTypes";
 import { setup } from "../../util/Setup";
 import { executeTicks } from "../../util/utils";
 

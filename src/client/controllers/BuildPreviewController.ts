@@ -12,14 +12,14 @@ import {
   listNukeBreakAlliance,
   wouldNukeBreakAlliance,
 } from "../../core/execution/Util";
+import { TileRef } from "../../core/game/GameMap";
 import {
   BuildableUnit,
   bulkCost,
   PlayerBuildableUnitType,
   Structures,
   UnitType,
-} from "../../core/game/Game";
-import { TileRef } from "../../core/game/GameMap";
+} from "../../core/game/GameTypes";
 import { Controller } from "../Controller";
 import {
   ConfirmGhostStructureEvent,

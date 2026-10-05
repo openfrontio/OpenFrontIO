@@ -5,7 +5,7 @@ import {
 } from "../src/client/hud/layers/TeamStats";
 import { UserSettings } from "../src/client/UserSettings";
 import type { GameView, PlayerView } from "../src/client/view";
-import { PlayerType } from "../src/core/game/Game";
+import { PlayerType } from "../src/core/game/GameTypes";
 import { playerInfo, setup } from "./util/Setup";
 
 describe("aggregateTeamValues", () => {

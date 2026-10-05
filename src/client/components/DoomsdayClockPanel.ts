@@ -9,7 +9,7 @@ import {
   doomsdayClockTroopFloor,
   doomsdayClockWaveState,
 } from "../../core/game/DoomsdayClock";
-import { GameMode, PlayerType, Team } from "../../core/game/Game";
+import { GameMode, PlayerType, Team } from "../../core/game/GameTypes";
 import { themeProvider } from "../theme/ThemeProvider";
 import { translateText } from "../Utils";
 import { GameView } from "../view";

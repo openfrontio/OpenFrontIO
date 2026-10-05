@@ -1,14 +1,13 @@
+import { Game, Player } from "../../game/Game";
+import { TileRef } from "../../game/GameMap";
 import {
   Cell,
   Difficulty,
-  Game,
   GameMode,
-  Player,
   PlayerType,
   Structures,
   UnitType,
-} from "../../game/Game";
-import { TileRef } from "../../game/GameMap";
+} from "../../game/GameTypes";
 import { PseudoRandom } from "../../PseudoRandom";
 import { assertNever, calculateBoundingBox } from "../../Util";
 

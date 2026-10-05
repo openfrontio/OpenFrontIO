@@ -1,15 +1,14 @@
 import { ConstructionExecution } from "../../../src/core/execution/ConstructionExecution";
 import { MissileSiloExecution } from "../../../src/core/execution/MissileSiloExecution";
 import { NukeExecution } from "../../../src/core/execution/NukeExecution";
+import { Game, Player } from "../../../src/core/game/Game";
 import {
-  Game,
   GameMode,
   MessageType,
-  Player,
   PlayerInfo,
   PlayerType,
   UnitType,
-} from "../../../src/core/game/Game";
+} from "../../../src/core/game/GameTypes";
 import { OTHER_INDEX_DESTROY } from "../../../src/core/StatsSchemas";
 import { setup } from "../../util/Setup";
 import { TestConfig } from "../../util/TestConfig";

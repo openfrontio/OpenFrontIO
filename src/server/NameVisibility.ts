@@ -1,5 +1,5 @@
 import { anonWordName } from "../core/AnonNames";
-import { GameMode } from "../core/game/Game";
+import { GameMode } from "../core/game/GameTypes";
 import { ClientID, GameConfig, GameInfo, GameStartInfo } from "../core/Schemas";
 import { simpleHash } from "../core/Util";
 import { Client } from "./Client";

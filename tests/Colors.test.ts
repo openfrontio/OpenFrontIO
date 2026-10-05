@@ -9,7 +9,7 @@ import {
 } from "../src/client/theme/ColorAllocator";
 import { SettingsTheme } from "../src/client/theme/ThemeProvider";
 import type { PlayerView } from "../src/client/view/PlayerView";
-import { ColoredTeams, PlayerType } from "../src/core/game/Game";
+import { ColoredTeams, PlayerType } from "../src/core/game/GameTypes";
 
 extend([labPlugin, lchPlugin]);
 

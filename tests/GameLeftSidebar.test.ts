@@ -4,7 +4,7 @@ import type { TeamStats } from "../src/client/hud/layers/TeamStats";
 import { UserSettings } from "../src/client/UserSettings";
 import type { GameView, PlayerView } from "../src/client/view";
 import { EventBus } from "../src/core/EventBus";
-import { GameMode } from "../src/core/game/Game";
+import { GameMode } from "../src/core/game/GameTypes";
 
 describe("GameLeftSidebar", () => {
   beforeEach(() => {

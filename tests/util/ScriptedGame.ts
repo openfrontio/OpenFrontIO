@@ -1,19 +1,18 @@
 import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
+import { Game, Player } from "../../src/core/game/Game";
+import { TileRef } from "../../src/core/game/GameMap";
+import { GameMapLoader, MapData } from "../../src/core/game/GameMapLoader";
 import {
   AllPlayers,
   Difficulty,
-  Game,
   GameMapSize,
   GameMapType,
   GameMode,
   GameType,
-  Player,
   UnitType,
-} from "../../src/core/game/Game";
-import { TileRef } from "../../src/core/game/GameMap";
-import { GameMapLoader, MapData } from "../../src/core/game/GameMapLoader";
+} from "../../src/core/game/GameTypes";
 import {
   ErrorUpdate,
   GameUpdateViewData,

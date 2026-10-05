@@ -1,11 +1,11 @@
 import { WinCheckExecution } from "../src/core/execution/WinCheckExecution";
+import { Game } from "../src/core/game/Game";
 import {
-  Game,
   GameMode,
   PlayerInfo,
   PlayerType,
   RankedType,
-} from "../src/core/game/Game";
+} from "../src/core/game/GameTypes";
 import { GameUpdateType, WinUpdate } from "../src/core/game/GameUpdates";
 import { GameConfig } from "../src/core/Schemas";
 import { setup } from "./util/Setup";

@@ -9,7 +9,7 @@ import {
   mapCategoryOrder,
   MapInfo,
   maps,
-} from "../../../core/game/Game";
+} from "../../../core/game/GameTypes";
 import { translateText } from "../../Utils";
 import "./MapDisplay";
 import { getFavoriteMaps, starIcon, toggleFavoriteMap } from "./MapFavorites";

@@ -3,7 +3,7 @@ import {
   ReplayPlayback,
   STEP_LIMIT,
 } from "../../../src/client/replay/ReplayPlayback";
-import { GameType } from "../../../src/core/game/Game";
+import { GameType } from "../../../src/core/game/GameTypes";
 import { setup } from "../../util/Setup";
 import { openReader, recordGame, type RecordedGame } from "./util/RecordGame";
 

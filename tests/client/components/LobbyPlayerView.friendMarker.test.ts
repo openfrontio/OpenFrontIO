@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it } from "vitest";
 import "../../../src/client/components/LobbyPlayerView";
 import type { LobbyTeamView } from "../../../src/client/components/LobbyPlayerView";
 import { UserSettings } from "../../../src/client/UserSettings";
-import { GameMode } from "../../../src/core/game/Game";
+import { GameMode } from "../../../src/core/game/GameTypes";
 import type { ClientInfo } from "../../../src/core/Schemas";
 
 function client(

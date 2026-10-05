@@ -6,9 +6,9 @@ import {
   OwnerComp,
   Unit,
   UnitParams,
-  UnitType,
 } from "../game/Game";
 import { TileRef } from "../game/GameMap";
+import { UnitType } from "../game/GameTypes";
 import { WaterPathFinder } from "../pathfinding/PathFinder";
 import { PathStatus } from "../pathfinding/types";
 import { PseudoRandom } from "../PseudoRandom";

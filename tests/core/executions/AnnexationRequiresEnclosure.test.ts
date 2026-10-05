@@ -1,12 +1,8 @@
 import { beforeEach, describe, expect, test } from "vitest";
 import { PlayerExecution } from "../../../src/core/execution/PlayerExecution";
-import {
-  Game,
-  Player,
-  PlayerInfo,
-  PlayerType,
-} from "../../../src/core/game/Game";
+import { Game, Player } from "../../../src/core/game/Game";
 import { TileRef } from "../../../src/core/game/GameMap";
+import { PlayerInfo, PlayerType } from "../../../src/core/game/GameTypes";
 import { calculateBoundingBox, inscribed } from "../../../src/core/Util";
 import { setup } from "../../util/Setup";
 

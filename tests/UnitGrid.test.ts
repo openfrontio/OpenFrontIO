@@ -1,4 +1,4 @@
-import { PlayerInfo, PlayerType, UnitType } from "../src/core/game/Game";
+import { PlayerInfo, PlayerType, UnitType } from "../src/core/game/GameTypes";
 import { UnitGrid } from "../src/core/game/UnitGrid";
 import { setup } from "./util/Setup";
 

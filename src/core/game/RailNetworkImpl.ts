@@ -5,8 +5,9 @@ import type {
   SnapshotWriter,
 } from "../snapshot/SnapshotContext";
 import { snapshotType, zInt, zRef } from "../snapshot/SnapshotType";
-import { Game, Unit, UnitType } from "./Game";
+import { Game, Unit } from "./Game";
 import { TileRef } from "./GameMap";
+import { UnitType } from "./GameTypes";
 import { GameUpdateType } from "./GameUpdates";
 import { RailNetwork } from "./RailNetwork";
 import { Railroad } from "./Railroad";

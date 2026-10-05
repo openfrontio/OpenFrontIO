@@ -1,14 +1,7 @@
 import { z } from "zod";
-import {
-  Execution,
-  Game,
-  GameType,
-  Player,
-  PlayerInfo,
-  PlayerType,
-  SpawnArea,
-} from "../game/Game";
+import { Execution, Game, Player } from "../game/Game";
 import { TileRef } from "../game/GameMap";
+import { GameType, PlayerInfo, PlayerType, SpawnArea } from "../game/GameTypes";
 import { PseudoRandom } from "../PseudoRandom";
 import { GameID } from "../Schemas";
 import {

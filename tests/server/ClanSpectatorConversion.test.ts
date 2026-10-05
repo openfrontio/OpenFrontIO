@@ -5,7 +5,7 @@ import {
   GameMode,
   Quads,
   Trios,
-} from "../../src/core/game/Game";
+} from "../../src/core/game/GameTypes";
 import { ServerStartGameMessage } from "../../src/core/Schemas";
 import { createGameWireContext } from "../../src/core/ZbinWire";
 import {

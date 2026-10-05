@@ -2,7 +2,11 @@ import { SoundEffectController } from "../../../src/client/controllers/SoundEffe
 import { PlaySoundEffectEvent } from "../../../src/client/sound/Sounds";
 import { SendSpawnIntentEvent } from "../../../src/client/Transport";
 import { EventBus } from "../../../src/core/EventBus";
-import { MessageType, PlayerType, UnitType } from "../../../src/core/game/Game";
+import {
+  MessageType,
+  PlayerType,
+  UnitType,
+} from "../../../src/core/game/GameTypes";
 import { GameUpdateType } from "../../../src/core/game/GameUpdates";
 
 describe("SoundEffectController", () => {

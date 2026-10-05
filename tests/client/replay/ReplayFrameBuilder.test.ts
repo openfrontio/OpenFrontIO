@@ -23,14 +23,13 @@ import { ConstructionExecution } from "../../../src/core/execution/ConstructionE
 import { NukeExecution } from "../../../src/core/execution/NukeExecution";
 import { SpawnExecution } from "../../../src/core/execution/SpawnExecution";
 import { TransportShipExecution } from "../../../src/core/execution/TransportShipExecution";
+import { Execution, Game } from "../../../src/core/game/Game";
 import {
-  Execution,
-  Game,
   GameType,
   PlayerInfo,
   PlayerType,
   UnitType,
-} from "../../../src/core/game/Game";
+} from "../../../src/core/game/GameTypes";
 import {
   genTerrainFromBin,
   type MapManifest,

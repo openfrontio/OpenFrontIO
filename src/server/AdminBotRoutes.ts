@@ -8,7 +8,7 @@ import type {
 } from "express";
 import type { Logger } from "winston";
 import { z } from "zod";
-import { GameMode, GameType } from "../core/game/Game";
+import { GameMode, GameType } from "../core/game/GameTypes";
 import {
   ADMIN_BOT_CLIENT_ID,
   type GameConfig,

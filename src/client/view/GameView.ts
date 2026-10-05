@@ -1,4 +1,5 @@
 import { Config } from "../../core/configuration/Config";
+import { GameMap, TileRef } from "../../core/game/GameMap";
 import {
   Cell,
   GameUpdates,
@@ -10,8 +11,7 @@ import {
   Tick,
   UnitInfo,
   UnitType,
-} from "../../core/game/Game";
-import { GameMap, TileRef } from "../../core/game/GameMap";
+} from "../../core/game/GameTypes";
 import {
   GameUpdateType,
   GameUpdateViewData,

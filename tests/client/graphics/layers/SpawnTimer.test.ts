@@ -4,7 +4,7 @@ import type { SpawnTimer } from "../../../../src/client/hud/layers/SpawnTimer";
 import { SpawnBarVisibleEvent } from "../../../../src/client/hud/layers/SpawnTimer";
 import type { GameView } from "../../../../src/client/view";
 import { EventBus } from "../../../../src/core/EventBus";
-import { GameMode, GameType } from "../../../../src/core/game/Game";
+import { GameMode, GameType } from "../../../../src/core/game/GameTypes";
 
 function makePlayer(team: string | null, tiles: number) {
   return { team: () => team, numTilesOwned: () => tiles };

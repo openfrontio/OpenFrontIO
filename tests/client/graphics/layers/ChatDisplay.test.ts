@@ -27,7 +27,7 @@ vi.mock("lit/directives/unsafe-html.js", () => ({
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ChatDisplay } from "../../../../src/client/hud/layers/ChatDisplay";
-import { MessageType } from "../../../../src/core/game/Game";
+import { MessageType } from "../../../../src/core/game/GameTypes";
 import { GameUpdateType } from "../../../../src/core/game/GameUpdates";
 
 interface Cd {

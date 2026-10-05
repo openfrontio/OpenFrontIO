@@ -1,14 +1,14 @@
 import { describe, expect, test } from "vitest";
+import { Game } from "../../../src/core/game/Game";
 import {
   ColoredTeams,
-  Game,
   GameMode,
   HumansVsNations,
   PlayerInfo,
   PlayerType,
   Quads,
   Team,
-} from "../../../src/core/game/Game";
+} from "../../../src/core/game/GameTypes";
 import { setup } from "../../util/Setup";
 
 describe("Core Simulation - Team Resolution and Assignment", () => {

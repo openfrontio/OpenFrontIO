@@ -12,13 +12,13 @@ import { GameView } from "../../src/client/view/GameView";
 import { PlayerView } from "../../src/client/view/PlayerView";
 import { WorkerClient } from "../../src/client/WorkerClient";
 import { Config } from "../../src/core/configuration/Config";
+import { GameMapImpl } from "../../src/core/game/GameMap";
 import {
   NameViewData,
   PlayerType,
   Team,
   UnitType,
-} from "../../src/core/game/Game";
-import { GameMapImpl } from "../../src/core/game/GameMap";
+} from "../../src/core/game/GameTypes";
 import {
   GameUpdateType,
   GameUpdateViewData,

@@ -9,7 +9,7 @@
  */
 
 import { EventBus } from "../../core/EventBus";
-import { UnitType } from "../../core/game/Game";
+import { UnitType } from "../../core/game/GameTypes";
 import { Controller } from "../Controller";
 import { MouseMoveEvent } from "../InputHandler";
 import { MapRenderer } from "../render/gl";

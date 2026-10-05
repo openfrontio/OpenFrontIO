@@ -6,7 +6,7 @@ import {
   PlayerType,
   Quads,
   Trios,
-} from "../src/core/game/Game";
+} from "../src/core/game/GameTypes";
 import { assignTeams, resolveTeamsList } from "../src/core/game/TeamAssignment";
 
 const teams = [ColoredTeams.Red, ColoredTeams.Blue];

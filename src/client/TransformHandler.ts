@@ -1,5 +1,5 @@
 import { EventBus, GameEvent } from "../core/EventBus";
-import { Cell } from "../core/game/Game";
+import { Cell } from "../core/game/GameTypes";
 import {
   CenterCameraEvent,
   DragEvent,

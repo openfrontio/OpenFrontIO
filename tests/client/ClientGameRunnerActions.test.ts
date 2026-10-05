@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { EventBus } from "../../src/core/EventBus";
-import { UnitType } from "../../src/core/game/Game";
 import { TileRef } from "../../src/core/game/GameMap";
+import { UnitType } from "../../src/core/game/GameTypes";
 
 // ClientGameRunner's left-click handling: spawn intents during the spawn
 // phase, the lazy myPlayer lookup, attack intents, and the auto-boat

@@ -2,7 +2,7 @@ import { LitElement, html, nothing } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import { EventBus } from "../../../core/EventBus";
 import { renderNumber } from "../../../core/Format";
-import { PlayerType, Relation, UnitType } from "../../../core/game/Game";
+import { PlayerType, Relation, UnitType } from "../../../core/game/GameTypes";
 import { Controller } from "../../Controller";
 import { Platform } from "../../Platform";
 import { GoToPlayerEvent } from "../../TransformHandler";

@@ -9,7 +9,7 @@ import { WebSocket, WebSocketServer } from "ws";
 import { z } from "zod";
 import { CloseCode, CloseReason } from "../core/CloseCodes";
 import { GameEnv } from "../core/configuration/Config";
-import { GameType } from "../core/game/Game";
+import { GameType } from "../core/game/GameTypes";
 import {
   ClientMessage,
   ClientPlatformSchema,

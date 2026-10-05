@@ -1,5 +1,5 @@
 import { ClientID } from "../Schemas";
-import { TerraNullius } from "./Game";
+import { TerraNullius } from "./GameTypes";
 
 export class TerraNulliusImpl implements TerraNullius {
   constructor() {}

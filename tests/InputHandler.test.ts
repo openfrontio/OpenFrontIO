@@ -20,7 +20,7 @@ import { UIState } from "../src/client/UIState";
 import { KEYBINDS_KEY, UserSettings } from "../src/client/UserSettings";
 import { GameView, PlayerView, UnitView } from "../src/client/view";
 import { EventBus } from "../src/core/EventBus";
-import { UnitType } from "../src/core/game/Game";
+import { UnitType } from "../src/core/game/GameTypes";
 
 class MockPointerEvent {
   button: number;

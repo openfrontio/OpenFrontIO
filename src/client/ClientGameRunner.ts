@@ -13,14 +13,14 @@ import {
   ServerMessage,
 } from "../core/Schemas";
 import { findClosestBy, replacer } from "../core/Util";
+import { TileRef } from "../core/game/GameMap";
+import { GameMapLoader } from "../core/game/GameMapLoader";
 import {
   BuildableUnit,
   PlayerType,
   Structures,
   UnitType,
-} from "../core/game/Game";
-import { TileRef } from "../core/game/GameMap";
-import { GameMapLoader } from "../core/game/GameMapLoader";
+} from "../core/game/GameTypes";
 import {
   ErrorUpdate,
   GameUpdateType,

@@ -20,7 +20,7 @@ import {
   Quads,
   Trios,
   UnitType,
-} from "../../core/game/Game";
+} from "../../core/game/GameTypes";
 import { TeamCountConfig } from "../../core/Schemas";
 import { translateText } from "../Utils";
 import "./Difficulties";

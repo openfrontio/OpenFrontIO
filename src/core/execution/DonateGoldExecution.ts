@@ -1,13 +1,6 @@
 import { z } from "zod";
-import {
-  Difficulty,
-  Execution,
-  Game,
-  Gold,
-  Player,
-  PlayerID,
-  PlayerType,
-} from "../game/Game";
+import { Execution, Game, Player } from "../game/Game";
+import { Difficulty, Gold, PlayerID, PlayerType } from "../game/GameTypes";
 import { PseudoRandom } from "../PseudoRandom";
 import { execSnapshotType } from "../snapshot/ExecutionSnapshot";
 import type {

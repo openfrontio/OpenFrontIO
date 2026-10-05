@@ -1,6 +1,7 @@
 import { DonateGoldExecution } from "../src/core/execution/DonateGoldExecution";
 import { SpawnExecution } from "../src/core/execution/SpawnExecution";
-import { Game, Player, PlayerInfo, PlayerType } from "../src/core/game/Game";
+import { Game, Player } from "../src/core/game/Game";
+import { PlayerInfo, PlayerType } from "../src/core/game/GameTypes";
 import {
   DONATION_BROKE_GOLD_THRESHOLD,
   DONATION_INDEX_GOLD_RECV,

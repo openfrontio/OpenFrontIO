@@ -17,7 +17,7 @@ import {
   GameMapType,
   GameMode,
   UnitType,
-} from "../core/game/Game";
+} from "../core/game/GameTypes";
 import {
   ClientInfo,
   GameConfig,

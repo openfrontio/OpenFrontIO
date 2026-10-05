@@ -1,22 +1,19 @@
 import { z } from "zod";
+import { Attack, Game, Player, Unit } from "../../game/Game";
+import { TileRef } from "../../game/GameMap";
 import {
-  Attack,
   Cell,
   Difficulty,
-  Game,
   GameMode,
   GameType,
   HumansVsNations,
-  Player,
   PlayerID,
   PlayerType,
   Relation,
   Structures,
   TerraNullius,
-  Unit,
   UnitType,
-} from "../../game/Game";
-import { TileRef } from "../../game/GameMap";
+} from "../../game/GameTypes";
 import {
   canBuildTransportShip,
   targetTransportTile,

@@ -1,6 +1,6 @@
 import { LitElement, html } from "lit";
 import { customElement, state } from "lit/decorators.js";
-import { GameMode, GameType, RankedType } from "../../../core/game/Game";
+import { GameMode, GameType, RankedType } from "../../../core/game/GameTypes";
 import { GameUpdateType } from "../../../core/game/GameUpdates";
 import { Controller } from "../../Controller";
 import { translateText } from "../../Utils";

@@ -9,8 +9,8 @@ import {
 } from "../../../src/client/hud/layers/RadialMenuElements";
 import { BuildUnitIntentEvent } from "../../../src/client/Transport";
 import { GameView, PlayerView } from "../../../src/client/view";
-import { UnitType } from "../../../src/core/game/Game";
 import { TileRef } from "../../../src/core/game/GameMap";
+import { UnitType } from "../../../src/core/game/GameTypes";
 
 vi.mock("../../../src/client/Utils", () => ({
   translateText: vi.fn((key: string) => key),
@@ -21,8 +21,8 @@ vi.mock("../../../src/core/Format", () => ({
 
 vi.mock("../../../src/client/hud/layers/BuildMenu", async () => {
   const { UnitType } = await vi.importActual<
-    typeof import("../../../src/core/game/Game")
-  >("../../../src/core/game/Game");
+    typeof import("../../../src/core/game/GameTypes")
+  >("../../../src/core/game/GameTypes");
   return {
     flattenedBuildTable: [
       {

@@ -1,5 +1,11 @@
 import { z } from "zod";
-import { Cell, Nation, PlayerInfo, PlayerType, UnitType } from "../game/Game";
+import {
+  Cell,
+  Nation,
+  PlayerInfo,
+  PlayerType,
+  UnitType,
+} from "../game/GameTypes";
 import type { SnapshotReader } from "./SnapshotContext";
 
 export const PlayerInfoSchema = z.object({

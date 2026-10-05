@@ -1,4 +1,4 @@
-import { GameMapType, UnitType } from "../../core/game/Game";
+import { GameMapType, UnitType } from "../../core/game/GameTypes";
 import { GameConfig } from "../../core/Schemas";
 
 /**

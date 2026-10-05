@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { zb, ZbEncodeError } from "../../zbin";
-import { UnitType } from "./game/Game";
+import { UnitType } from "./game/GameTypes";
 
 export const bombUnits = ["abomb", "hbomb", "mirv", "mirvw"] as const;
 export const BombUnitSchema = z.enum(bombUnits);

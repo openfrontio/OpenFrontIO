@@ -32,22 +32,28 @@ import {
 import { AttackImpl } from "./AttackImpl";
 import {
   Alliance,
-  AllianceInfo,
   AllianceRequest,
-  AllPlayers,
   Attack,
+  DisconnectSnapshot,
+  Embargo,
+  MutableAlliance,
+  Player,
+  Unit,
+  UnitParams,
+} from "./Game";
+import { GameImpl } from "./GameImpl";
+import { andFN, manhattanDistFN, TileRef } from "./GameMap";
+import {
+  AllianceInfo,
+  AllPlayers,
   BuildableUnit,
   Cell,
   ColoredTeams,
-  DisconnectSnapshot,
-  Embargo,
   EmojiMessage,
   GameMode,
   GameType,
   Gold,
   MAX_UPGRADE_AMOUNT,
-  MutableAlliance,
-  Player,
   PlayerBuildable,
   PlayerBuildableUnitType,
   PlayerID,
@@ -59,12 +65,8 @@ import {
   Team,
   TerraNullius,
   Tick,
-  Unit,
-  UnitParams,
   UnitType,
-} from "./Game";
-import { GameImpl } from "./GameImpl";
-import { andFN, manhattanDistFN, TileRef } from "./GameMap";
+} from "./GameTypes";
 import {
   AllianceView,
   AttackUpdate,

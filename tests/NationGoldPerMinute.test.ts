@@ -28,16 +28,15 @@ import { fileURLToPath } from "url";
 import { Config } from "../src/core/configuration/Config";
 import { NationExecution } from "../src/core/execution/NationExecution";
 import { RecomputeRailClusterExecution } from "../src/core/execution/RecomputeRailClusterExecution";
+import { Game, Player } from "../src/core/game/Game";
 import {
   Cell,
   Difficulty,
-  Game,
   Nation,
-  Player,
   PlayerInfo,
   PlayerType,
   UnitType,
-} from "../src/core/game/Game";
+} from "../src/core/game/GameTypes";
 import { setup } from "./util/Setup";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));

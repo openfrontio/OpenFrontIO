@@ -16,7 +16,8 @@ import {
   processGameRecord,
   ReplayDesyncError,
 } from "../../../../src/client/replay/processor/ReplayProcessor";
-import { Game, GameMapType, GameMode } from "../../../../src/core/game/Game";
+import { Game } from "../../../../src/core/game/Game";
+import { GameMapType, GameMode } from "../../../../src/core/game/GameTypes";
 import { Player } from "../../../../src/core/Schemas";
 import {
   config,

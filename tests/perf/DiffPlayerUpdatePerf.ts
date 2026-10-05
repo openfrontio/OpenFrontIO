@@ -1,5 +1,5 @@
 import Benchmark from "benchmark";
-import { PlayerType } from "../../src/core/game/Game";
+import { PlayerType } from "../../src/core/game/GameTypes";
 import { diffPlayerUpdate } from "../../src/core/game/GameUpdateUtils";
 import {
   AllianceView,

@@ -41,7 +41,7 @@ vi.mock("../../../../src/client/hud/PlayerIcons", () => ({
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { PlayerInfoOverlay } from "../../../../src/client/hud/layers/PlayerInfoOverlay";
-import { PlayerType } from "../../../../src/core/game/Game";
+import { PlayerType } from "../../../../src/core/game/GameTypes";
 
 // Flattens the mocked-html template tree into one string for assertions.
 function flatten(node: unknown): string {

@@ -5,7 +5,7 @@ import {
   GameMode,
   GameType,
   Nation,
-} from "../src/core/game/Game";
+} from "../src/core/game/GameTypes";
 import { createNationsForGame } from "../src/core/game/NationCreation";
 import {
   AdditionalNation,

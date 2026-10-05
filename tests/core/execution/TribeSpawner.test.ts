@@ -5,7 +5,7 @@ import {
   GameMapSize,
   GameMapType,
   PlayerType,
-} from "../../../src/core/game/Game";
+} from "../../../src/core/game/GameTypes";
 import { GameID } from "../../../src/core/Schemas";
 import { setup } from "../../util/Setup";
 

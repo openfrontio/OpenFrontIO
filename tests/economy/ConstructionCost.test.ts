@@ -1,11 +1,10 @@
 import { ConstructionExecution } from "../../src/core/execution/ConstructionExecution";
+import { Game, Player } from "../../src/core/game/Game";
 import {
-  Game,
-  Player,
   PlayerInfo,
   PlayerType,
   UnitType,
-} from "../../src/core/game/Game";
+} from "../../src/core/game/GameTypes";
 import { setup } from "../util/Setup";
 
 // Regression test: the ghost/build-menu price of a structure must not double-count

@@ -6,7 +6,7 @@ import {
   DIFFICULTY_TROOP_PERCENT,
   DifficultyInfo,
 } from "../../src/client/components/DifficultyInfo";
-import { Difficulty, PlayerType } from "../../src/core/game/Game";
+import { Difficulty, PlayerType } from "../../src/core/game/GameTypes";
 import { playerInfo, setup } from "../util/Setup";
 
 const DIFFICULTIES = [

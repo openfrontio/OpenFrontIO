@@ -1,5 +1,5 @@
 import { customElement } from "lit/decorators.js";
-import type { Team } from "../../../core/game/Game";
+import type { Team } from "../../../core/game/GameTypes";
 import { type StatsRow, StatsTable } from "../../components/StatsTable";
 import type { ColumnId } from "../../StatsConstants";
 import { translateText } from "../../Utils";
