@@ -207,6 +207,7 @@ export class FxSpritePass {
       gl,
       shaderSrc(spriteVertSrc, { FX_TYPE_COUNT }),
       spriteFragSrc,
+      "FxSpritePass",
     );
     this.uCamera = gl.getUniformLocation(this.program, "uCamera")!;
     this.uFxUV = gl.getUniformLocation(this.program, "uFxUV")!;
