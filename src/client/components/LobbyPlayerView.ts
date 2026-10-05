@@ -664,6 +664,9 @@ export class LobbyTeamView extends LitElement {
   // without one gets an empty space the same size instead, so the names in a
   // column line up; column layouts pass it only when someone in the list has
   // a visible badge, so a list with no badges renders exactly as before.
+  // `stagger`: a full lobby's badges arriving at once are drawn over the
+  // next few frames instead of all in one (see LevelBadgeFill); a few at a
+  // time, like a player joining, are drawn straight away.
   private renderLevelBadge(client: ClientInfo, slot: boolean) {
     const badge = this.visibleLevelBadge(client);
     if (badge === undefined) {
@@ -675,6 +678,7 @@ export class LobbyTeamView extends LitElement {
         : html``;
     }
     return html`<level-badge
+      stagger
       class="inline-block align-[-7px] shrink-0 mr-1.5"
       .level=${badge.level}
       .prestige=${badge.prestige}
