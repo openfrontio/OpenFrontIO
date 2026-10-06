@@ -72,18 +72,29 @@ function runChild(
         log.warn(`could not lower replay priority: ${error}`, { gameID });
       }
     }
+    // Settles exactly once. "exit" may never follow "error" (a failed spawn
+    // or send), and a stuck promise would stall this worker's queue for good.
+    let settled = false;
+    const finish = (result: ReplayedWinner | null) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      resolve(result);
+    };
     const timer = setTimeout(() => {
       log.error("winner replay timed out", { gameID, timeoutMs: TIMEOUT_MS });
       child.kill("SIGKILL");
+      finish(null);
     }, TIMEOUT_MS);
     child.on("message", (msg: ReplayResponse) => {
       response = msg;
     });
     child.on("error", (error) => {
       log.error(`winner replay process error: ${error}`, { gameID });
+      child.kill("SIGKILL");
+      finish(null);
     });
     child.on("exit", (code, signal) => {
-      clearTimeout(timer);
       const res = response as ReplayResponse | null;
       if (res?.ok) {
         log.info("winner replay finished", {
@@ -91,7 +102,7 @@ function runChild(
           durationMs: Date.now() - start,
           tick: res.result.tick,
         });
-        resolve(res.result);
+        finish(res.result);
         return;
       }
       log.error("winner replay failed", {
@@ -100,8 +111,13 @@ function runChild(
         code,
         signal,
       });
-      resolve(null);
+      finish(null);
     });
-    child.send({ gameStart, turns } satisfies ReplayRequest);
+    child.send({ gameStart, turns } satisfies ReplayRequest, (error) => {
+      if (error === null) return;
+      log.error(`could not send game to winner replay: ${error}`, { gameID });
+      child.kill("SIGKILL");
+      finish(null);
+    });
   });
 }
