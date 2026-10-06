@@ -1,7 +1,7 @@
 import { TileRef } from "@openfront/engine-api/game/GameMap";
 import { PlayerActions } from "@openfront/engine-api/game/GameTypes";
-import { EventBus } from "@openfront/engine-lib/EventBus";
 import { assetUrl } from "@openfront/shared/AssetUrls";
+import { EventBus } from "@openfront/shared/EventBus";
 import { Controller } from "../../Controller";
 import { TransformHandler } from "../../TransformHandler";
 import { UIState } from "../../UIState";

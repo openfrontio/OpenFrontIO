@@ -25,6 +25,8 @@ import {
 } from "@openfront/engine-api/game/GameTypes";
 import {
   AllianceView,
+  ATTACK_DELTA_INCOMING,
+  ATTACK_DELTA_OUTGOING,
   AttackUpdate,
   GameUpdateType,
   PlayerUpdate,
@@ -32,12 +34,6 @@ import {
 import { ReadonlyTileSet } from "@openfront/engine-api/game/ReadViews";
 import { ClientID } from "@openfront/engine-api/Schemas";
 import { andFN, manhattanDistFN } from "@openfront/engine-lib/game/GameMapImpl";
-import {
-  ATTACK_DELTA_INCOMING,
-  ATTACK_DELTA_OUTGOING,
-  diffPlayerUpdate,
-  packAttackTroopDeltas,
-} from "@openfront/engine-lib/game/GameUpdateUtils";
 import { TileSet } from "@openfront/engine-lib/game/TileSet";
 import { PseudoRandom } from "@openfront/engine-lib/PseudoRandom";
 import {
@@ -82,6 +78,7 @@ import {
   UnitParams,
 } from "./Game";
 import { GameImpl } from "./GameImpl";
+import { diffPlayerUpdate, packAttackTroopDeltas } from "./GameUpdateUtils";
 import {
   bumpTraversalGeneration,
   tileTraversalScratch,

@@ -5,12 +5,12 @@ import {
   PlayerType,
   UnitType,
 } from "@openfront/engine-api/game/GameTypes";
-import { getSpawnTiles } from "@openfront/engine-lib/execution/Util";
 import { toInt } from "@openfront/engine-lib/Util";
 import { AttackExecution } from "@openfront/engine/execution/AttackExecution";
 import { MarkDisconnectedExecution } from "@openfront/engine/execution/MarkDisconnectedExecution";
 import { PlayerExecution } from "@openfront/engine/execution/PlayerExecution";
 import { TransportShipExecution } from "@openfront/engine/execution/TransportShipExecution";
+import { getSpawnTiles } from "@openfront/engine/execution/Util";
 import { WarshipExecution } from "@openfront/engine/execution/WarshipExecution";
 import { Game, Player } from "@openfront/engine/game/Game";
 import { setup } from "./util/Setup";

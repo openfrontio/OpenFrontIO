@@ -11,7 +11,7 @@ import {
   TargetPlayerUpdate,
   UnitIncomingUpdate,
 } from "@openfront/engine-api/game/GameUpdates";
-import { EventBus } from "@openfront/engine-lib/EventBus";
+import { EventBus } from "@openfront/shared/EventBus";
 import { html, LitElement } from "lit";
 import { customElement, query, state } from "lit/decorators.js";
 import { DirectiveResult } from "lit/directive.js";

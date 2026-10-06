@@ -1,4 +1,4 @@
-import { EventBus } from "@openfront/engine-lib/EventBus";
+import { EventBus } from "@openfront/shared/EventBus";
 import { Controller } from "../Controller";
 import { AmbienceController } from "../controllers/AmbienceController";
 import { AttackingTroopsController } from "../controllers/AttackingTroopsController";
