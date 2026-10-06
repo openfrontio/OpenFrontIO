@@ -14,8 +14,6 @@ import {
 import { GameEnv } from "@openfront/shared/configuration/Env";
 import { ClientEnv } from "src/client/ClientEnv";
 import { renderNavVersion } from "src/client/GameVersion";
-import "./AccountModal";
-import "./AccountSettingsModal";
 import { adGatekeeper } from "./AdGatekeeper";
 import { loadAdmiral, onAdmiralMeasured } from "./Admiral";
 import { getUserMe, invalidateUserMe } from "./Api";
@@ -37,8 +35,6 @@ import {
   runBootInterrupt,
   steamGrantStringsReady,
 } from "./BootInterrupts";
-import "./ChangeUsernameModal";
-import "./ClanModal";
 import type { JoinLobbyResult } from "./ClientGameRunner";
 import {
   getPlayerCosmeticsRefs,
@@ -68,17 +64,15 @@ import {
   shouldBlockJoin,
 } from "./GameModeSelector";
 import { GameStartingModal } from "./GameStartingModal";
-import "./GameStatsModal";
-import { HelpModal } from "./HelpModal";
+import type { HelpModal } from "./HelpModal";
 import "./HomepagePromos";
 import { HostLobbyModal as HostPrivateLobbyModal } from "./HostLobbyModal";
 import { showInGameAlert, showInGameConfirm } from "./InGameModal";
-import "./InventoryModal";
 import { JoinLobbyModal } from "./JoinLobbyModal";
 import "./LangSelector";
 import { LangSelector } from "./LangSelector";
 import { initLayout } from "./Layout";
-import "./LeaderboardModal";
+import { loadModal, prefetchModals } from "./LazyModals";
 import {
   SendKickPlayerIntentEvent,
   SendToggleGameStartTimer,
@@ -94,10 +88,8 @@ import {
 import { modalRouter } from "./ModalRouter";
 import { updateAccountNavButton } from "./NavAccountButton";
 import { initNavigation } from "./Navigation";
-import "./NewsModal";
 import { capturePagePin } from "./PagePin";
 import { fallbackPlayerName, LAPSE_NOTICE_KEY } from "./PlayerName";
-import "./PlayerProfileModal";
 import {
   GroupTokenTracker,
   presenceLobbyId,
@@ -131,7 +123,6 @@ import "./SteamLinkModal";
 import { SteamLinkModal } from "./SteamLinkModal";
 import { steamSDK } from "./SteamSDK";
 import { StoreModal } from "./Store";
-import "./SubscriptionModal";
 import { initTelemetry } from "./Telemetry";
 import { TokenLoginModal } from "./TokenLoginModal";
 import {
@@ -142,7 +133,6 @@ import {
   type TurnstileApi,
   type TurnstileToken,
 } from "./TurnstileToken";
-import "./UserSettingModal";
 import { UserSettings } from "./UserSettings";
 import "./UsernameInput";
 import { UsernameInput } from "./UsernameInput";
@@ -177,7 +167,6 @@ import "./components/Footer";
 import "./components/MainLayout";
 import "./components/MobileNavBar";
 import "./components/PlayPage";
-import "./components/RankedModal";
 import "./components/baseComponents/Button";
 import "./components/baseComponents/Modal";
 import "./styles.css";
@@ -611,23 +600,28 @@ class Client {
       this.handleMatchmakingRequeue.bind(this),
     );
 
-    const hlpModal = document.querySelector("help-modal") as HelpModal;
-    if (!hlpModal || !(hlpModal instanceof HelpModal)) {
+    const hlpModal = document.querySelector("help-modal") as HelpModal | null;
+    if (!hlpModal) {
       console.warn("Help modal element not found");
     }
     const helpButton = document.getElementById("help-button");
     if (helpButton) {
       helpButton.addEventListener("click", () => {
-        if (hlpModal && hlpModal instanceof HelpModal) {
-          hlpModal.open();
-        }
+        loadModal("help-modal").then(
+          () => hlpModal?.open(),
+          (err) => console.error("help-modal failed to load:", err),
+        );
       });
     }
     // Tutorial entry points (play-page card, help page): back to the play page
     // if needed (so a username problem is visible), then a default solo game
     // with the guide on.
     document.addEventListener("start-tutorial", () => {
-      if (hlpModal?.isOpen()) hlpModal.close();
+      // The help modal loads on demand (see LazyModals); until it has, it
+      // can't be open.
+      if (customElements.get("help-modal") && hlpModal?.isOpen()) {
+        hlpModal.close();
+      }
       if (this.usernameInput && !this.usernameInput.canPlay()) return;
       void (
         document.querySelector("single-player-modal") as SinglePlayerModal
@@ -2039,6 +2033,7 @@ const bootstrap = () => {
   new Client().initialize();
   initNavigation();
   prefetchGameClient();
+  prefetchModals();
 
   // Hide elements immediately
   hideCrazyGamesElements();

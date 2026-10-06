@@ -7,6 +7,7 @@ import { html, nothing } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import { ClientEnv } from "src/client/ClientEnv";
 import { fetchPublicPlayerProfile } from "./Api";
+import "./ClanModal";
 import "./components/baseComponents/stats/PlayerGameHistoryView";
 import type { PlayerGameHistoryCache } from "./components/baseComponents/stats/PlayerGameHistoryView";
 import "./components/baseComponents/stats/PlayerStatsTree";
@@ -16,6 +17,8 @@ import "./components/PlayerName";
 import { modalHeader } from "./components/ui/ModalHeader";
 import { usernameText } from "./components/ui/UsernameText";
 import { verifiedBadge } from "./components/ui/VerifiedBadge";
+import "./GameStatsModal";
+import "./LeaderboardModal";
 import { playerProfileUrl } from "./utilities/PlayerProfileUrl";
 import { currentPagePath, translateText } from "./Utils";
 
