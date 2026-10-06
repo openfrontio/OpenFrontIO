@@ -41,7 +41,7 @@ OpenFront.io is a real-time multiplayer territorial strategy game. There are fou
 | `@openfront/engine-api` | `packages/engine-api` | The contract with the engine: intent/config schemas, game types and enums, `GameUpdates`, the worker protocol, the `GameMap` interface, read-view interfaces |
 | `@openfront/engine-lib` | `packages/engine-lib` | Engine code that also runs outside the engine: the tile grid (`GameMapImpl`), terrain loading, the rules `Config`, `UnitGrid`, PRNG, `DetMath`, formatting   |
 | `@openfront/engine`     | `packages/engine`     | The simulation: executions, `*Impl`, pathfinding, snapshots, `GameRunner`, the worker entry                                                                  |
-| `@openfront/shared`     | `packages/shared`     | Client/server code that isn't simulation: wire and HTTP schemas, `ZbinWire`, env, asset URLs, `FetchGameMapLoader`                                           |
+| `@openfront/shared`     | `packages/shared`     | Client/server code that isn't simulation: wire and HTTP schemas, `ZbinWire`, env, asset URLs, map loaders (`GameMapLoader`, `FetchGameMapLoader`)            |
 | `@openfront/zbin`       | `packages/zbin`       | Binary wire format for zod schemas                                                                                                                           |
 
 Import them as `@openfront/<pkg>/<path>` (e.g. `@openfront/engine-api/game/GameMap`); paths mirror `packages/<pkg>/src/`. The allowed graph is enforced by `tests/LayerBoundaries.test.ts`:

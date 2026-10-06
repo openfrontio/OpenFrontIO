@@ -35,6 +35,7 @@ import { Executor } from "@openfront/engine/execution/ExecutionManager";
 import { createGame } from "@openfront/engine/game/GameImpl";
 import { createNationsForGame } from "@openfront/engine/game/NationCreation";
 import { GameRunner } from "@openfront/engine/GameRunner";
+import { loadMapFiles } from "@openfront/shared/GameMapLoader";
 import {
   decompressGameRecord,
   toWireGameStartInfo,
@@ -169,10 +170,7 @@ async function main(): Promise<void> {
     path.join(PROJECT_ROOT, "resources/maps"),
   );
   const terrain = await loadTerrainMap(
-    info.config.gameMap,
-    info.config.gameMapSize,
-    mapLoader,
-    false,
+    await loadMapFiles(mapLoader, info.config.gameMap, info.config.gameMapSize),
   );
   const random = new PseudoRandom(simpleHash(gameStart.gameID));
   const humans = gameStart.players.map(
