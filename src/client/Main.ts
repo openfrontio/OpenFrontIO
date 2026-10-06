@@ -39,7 +39,7 @@ import {
 } from "./BootInterrupts";
 import "./ChangeUsernameModal";
 import "./ClanModal";
-import { joinLobby, type JoinLobbyResult } from "./ClientGameRunner";
+import type { JoinLobbyResult } from "./ClientGameRunner";
 import {
   getPlayerCosmeticsRefs,
   handlePurchaseReturn,
@@ -59,6 +59,7 @@ import {
   type DesktopUpdateState,
 } from "./DesktopShell";
 import "./FeaturedStream";
+import { loadGameClient, prefetchGameClient } from "./GameClientLoader";
 import "./GameModeSelector";
 import {
   GameModeSelector,
@@ -78,6 +79,11 @@ import "./LangSelector";
 import { LangSelector } from "./LangSelector";
 import { initLayout } from "./Layout";
 import "./LeaderboardModal";
+import {
+  SendKickPlayerIntentEvent,
+  SendToggleGameStartTimer,
+  SendUpdateGameConfigIntentEvent,
+} from "./LobbyEvents";
 import "./Matchmaking";
 import { MatchmakingModal } from "./Matchmaking";
 import {
@@ -129,11 +135,6 @@ import "./SubscriptionModal";
 import { initTelemetry } from "./Telemetry";
 import { TokenLoginModal } from "./TokenLoginModal";
 import {
-  SendKickPlayerIntentEvent,
-  SendToggleGameStartTimer,
-  SendUpdateGameConfigIntentEvent,
-} from "./Transport";
-import {
   requestTurnstileToken,
   resolveTurnstileToken,
   TURNSTILE_LOAD_FAILED_CODE,
@@ -152,6 +153,7 @@ import {
   homeHref,
   incrementGamesPlayed,
   presenceMapKey,
+  reloadForUpdate,
   translateText,
 } from "./Utils";
 import { isReplayShellHost } from "./VersionedReplay";
@@ -1551,6 +1553,20 @@ class Client {
     // asked for separately.
     const resolvedName =
       this.usernameInput?.resolvedName() ?? fallbackPlayerName();
+    let joinLobby: typeof import("./ClientGameRunner").joinLobby;
+    try {
+      ({ joinLobby } = await loadGameClient());
+    } catch (err) {
+      // The game's chunk didn't load (a network error, or a deploy that
+      // replaced it). A full page load also picks up a new deploy, unless the
+      // player has since left or started another join.
+      console.error("game client failed to load:", err);
+      if (this.mostRecentJoinEvent !== event.timeStamp) return;
+      // The URL names the singleplayer game now, which no server has.
+      if (isSingleplayer) history.replaceState(null, "", "/");
+      reloadForUpdate();
+      return;
+    }
     const newLobbyHandle = joinLobby(this.eventBus, {
       gameID: lobby.gameID,
       cosmetics: await getPlayerCosmeticsRefs({
@@ -2022,6 +2038,7 @@ const bootstrap = () => {
   initLayout();
   new Client().initialize();
   initNavigation();
+  prefetchGameClient();
 
   // Hide elements immediately
   hideCrazyGamesElements();

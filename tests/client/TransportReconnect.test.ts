@@ -43,7 +43,8 @@ vi.mock("../../src/client/Utils", () => ({
 }));
 
 import type { LobbyConfig } from "../../src/client/ClientGameRunner";
-import { SendSpectateEvent, Transport } from "../../src/client/Transport";
+import { SendSpectateEvent } from "../../src/client/LobbyEvents";
+import { Transport } from "../../src/client/Transport";
 
 type Script = (ws: FakeWebSocket) => void;
 

@@ -61,6 +61,21 @@ const NETWORK = /\b(fetch|XMLHttpRequest|WebSocket|importScripts)\b/g;
 const INEXACT_MATH =
   /\bMath\.(a?cosh?|a?sinh?|a?tanh?|atan2|cbrt|exp|expm1|hypot|log|log1p|log2|log10|pow)\b/g;
 
+/**
+ * The game client: the homepage loads it only once a game is joining
+ * (src/client/GameClientLoader.ts), and the store's cosmetic previews only
+ * once one opens. Whatever the homepage imports statically is in its first
+ * download.
+ */
+const GAME_CLIENT =
+  /^src\/client\/((hud|view|controllers|render)\/.*|ClientGameRunner|Transport|LocalServer|InputHandler|TransformHandler|WebGLFrameBuilder|WorkerClient)\.ts$/;
+
+/** Renderer settings the homepage's settings screens read too. */
+const HOMEPAGE_RENDER_SETTINGS = new Set([
+  "src/client/render/gl/GraphicsOverrides.ts",
+  "src/client/render/gl/RenderSettings.ts",
+]);
+
 /** Known violations, as "<from file> -> <to file>"; never add to it. */
 const ALLOWLIST: string[] = [];
 
@@ -123,6 +138,27 @@ function specifiers(file: string): string[] {
   };
   visit(sf);
   return out;
+}
+
+/**
+ * The imports and re-exports left once TypeScript compiles the source: an
+ * import used only as a type is erased, so it loads nothing.
+ */
+function runtimeSpecifiers(source: string): string[] {
+  const js = ts.transpileModule(source, {
+    compilerOptions: {
+      module: ts.ModuleKind.ESNext,
+      target: ts.ScriptTarget.ESNext,
+    },
+  }).outputText;
+  const sf = ts.createSourceFile("out.js", js, ts.ScriptTarget.Latest);
+  return sf.statements.flatMap((s) =>
+    (ts.isImportDeclaration(s) || ts.isExportDeclaration(s)) &&
+    s.moduleSpecifier &&
+    ts.isStringLiteral(s.moduleSpecifier)
+      ? [s.moduleSpecifier.text]
+      : [],
+  );
 }
 
 function probe(base: string): string | null {
@@ -220,8 +256,37 @@ function violations(): {
   return { edges, determinism, inexactMath, io };
 }
 
+/**
+ * The game client files the homepage loads up front, each as the chain of
+ * static imports from src/client/Main.ts that reaches it.
+ */
+function homepageGameImports(): string[] {
+  const ENTRY = "src/client/Main.ts";
+  const importer = new Map<string, string>([[ENTRY, ""]]);
+  const queue = [ENTRY];
+  const found: string[] = [];
+  while (queue.length > 0) {
+    const file = queue.shift()!;
+    const text = fs.readFileSync(path.join(ROOT, file), "utf8");
+    for (const spec of runtimeSpecifiers(text)) {
+      const r = resolve(file, spec);
+      if ("npm" in r || importer.has(r.file)) continue;
+      importer.set(r.file, file);
+      if (GAME_CLIENT.test(r.file) && !HOMEPAGE_RENDER_SETTINGS.has(r.file)) {
+        const chain = [r.file];
+        for (let f = file; f !== ""; f = importer.get(f)!) chain.unshift(f);
+        found.push(chain.join(" -> "));
+      } else if (/\.(ts|js|mjs)$/.test(r.file)) {
+        queue.push(r.file);
+      }
+    }
+  }
+  return found.sort();
+}
+
 describe("layer boundaries", () => {
   const { edges, determinism, inexactMath, io } = violations();
+  const homepageGame = homepageGameImports();
 
   test("no import edges outside the allowed graph", () => {
     const allowed = new Set(ALLOWLIST);
@@ -266,6 +331,25 @@ describe("layer boundaries", () => {
     ]) {
       expect(hits(src), src).toBe(false);
     }
+  });
+
+  test("the homepage loads the game client only on demand", () => {
+    expect(homepageGame).toEqual([]);
+  });
+
+  test("the homepage check follows only imports that load something", () => {
+    expect(
+      runtimeSpecifiers(`
+        import { a } from "./a";
+        import { B } from "./b";
+        import type { C } from "./c";
+        import { type D } from "./d";
+        import "./e";
+        export { f } from "./f";
+        const x: B | C | D = a;
+        const g = () => import("./g");
+      `),
+    ).toEqual(["./a", "./e", "./f"]);
   });
 
   test("engine code loads nothing over the network", () => {
