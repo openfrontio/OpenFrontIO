@@ -92,6 +92,7 @@ describe("WorkerClient.initialize", () => {
       );
     }
     await expect(ready).rejects.toThrow("bad map");
+    expect(worker.terminated).toBe(true);
   });
 
   test("a map that can't load stops the worker", async () => {

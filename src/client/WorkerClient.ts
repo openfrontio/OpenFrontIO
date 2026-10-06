@@ -113,6 +113,8 @@ export class WorkerClient {
           this.isInitialized = true;
           resolve();
         } else if (message.type === "init_error") {
+          // No game will own this client, so nothing would stop the worker.
+          this.cleanup();
           reject(new Error(message.error));
         }
       });
@@ -129,7 +131,7 @@ export class WorkerClient {
 
       setTimeout(() => {
         if (!this.isInitialized) {
-          this.messageHandlers.delete(messageId);
+          this.cleanup();
           reject(new Error("Worker initialization timeout"));
         }
       }, 60000);

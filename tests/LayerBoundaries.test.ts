@@ -45,6 +45,12 @@ const ENGINE_SIDE = new Set<Pkg>(["engine", "engine-lib", "engine-api"]);
 // npm dependencies the deterministic packages may use.
 const ENGINE_NPM = new Set(["zod", "zod/v4"]);
 
+/**
+ * Network APIs, matched as any reference (an alias such as `const f = fetch`
+ * counts). The engine is handed everything it needs: maps come in `init`.
+ */
+const NETWORK = /\b(fetch|XMLHttpRequest|WebSocket|importScripts)\b/g;
+
 /** Known violations, as "<from file> -> <to file>"; never add to it. */
 const ALLOWLIST: string[] = [];
 
@@ -188,11 +194,7 @@ function violations(): {
         }
       };
       find(/Math\.random|Date\.now|new Date\b/g, determinism);
-      // The engine is handed everything it needs (maps come in `init`).
-      find(
-        /\bfetch\s*(\?\.\s*)?\(|XMLHttpRequest|importScripts|\bWebSocket\b/g,
-        io,
-      );
+      find(NETWORK, io);
     }
   }
   return { edges, determinism, io };
@@ -218,5 +220,23 @@ describe("layer boundaries", () => {
 
   test("engine code loads nothing over the network", () => {
     expect(io).toEqual([]);
+  });
+
+  test("the network check catches calls and references alike", () => {
+    const hits = (src: string) => [...src.matchAll(NETWORK)].length > 0;
+    for (const src of [
+      "fetch(url)",
+      "fetch (url)",
+      "fetch?.(url)",
+      "globalThis.fetch(url)",
+      "const request = fetch; request(url)",
+      "new XMLHttpRequest()",
+      "new WebSocket(url)",
+    ]) {
+      expect(hits(src), src).toBe(true);
+    }
+    for (const src of ["prefetch(url)", "refetchAll()", "fetched += 1"]) {
+      expect(hits(src), src).toBe(false);
+    }
   });
 });
