@@ -7,7 +7,7 @@ import {
 import {
   diffPlayerUpdate,
   packAttackTroopDeltas,
-} from "@openfront/engine-lib/game/GameUpdateUtils";
+} from "@openfront/engine/game/GameUpdateUtils";
 import { describe, expect, it } from "vitest";
 import type { PlayerState } from "../src/client/render/types";
 import { applyStateUpdate } from "../src/client/view/PlayerStateUpdate";

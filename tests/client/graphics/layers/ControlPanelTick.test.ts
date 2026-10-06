@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 // Side-effect import: the @customElement decorator registers <control-panel>
 // when the module is evaluated, and a type-only reference would not evaluate it.
-import { EventBus } from "@openfront/engine-lib/EventBus";
+import { EventBus } from "@openfront/shared/EventBus";
 import "../../../../src/client/hud/layers/ControlPanel";
 import type { ControlPanel } from "../../../../src/client/hud/layers/ControlPanel";
 import { AttackRatioEvent } from "../../../../src/client/InputHandler";

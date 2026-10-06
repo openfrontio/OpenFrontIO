@@ -4,8 +4,8 @@ import {
   PlayerInfo,
   PlayerType,
 } from "@openfront/engine-api/game/GameTypes";
-import { getSpawnTiles } from "@openfront/engine-lib/execution/Util";
 import { SpawnExecution } from "@openfront/engine/execution/SpawnExecution";
+import { getSpawnTiles } from "@openfront/engine/execution/Util";
 import { Game } from "@openfront/engine/game/Game";
 import { describe, expect, it } from "vitest";
 import { playerInfo, setup } from "../../util/Setup";

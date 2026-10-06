@@ -5,8 +5,8 @@ import {
   PlayerBuildableUnitType,
   UnitType,
 } from "@openfront/engine-api/game/GameTypes";
-import { EventBus } from "@openfront/engine-lib/EventBus";
 import { renderNumber } from "@openfront/engine-lib/Format";
+import { EventBus } from "@openfront/shared/EventBus";
 import { html, LitElement } from "lit";
 import { customElement } from "lit/decorators.js";
 import { Controller } from "../../Controller";
