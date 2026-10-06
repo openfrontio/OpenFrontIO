@@ -15,13 +15,17 @@ const modules: Record<string, () => Promise<unknown>> = {
   "account-settings-modal": () => import("./AccountSettingsModal"),
   "change-username-modal": () => import("./ChangeUsernameModal"),
   "clan-modal": () => import("./ClanModal"),
+  "detailed-view-modal": () => import("./components/DetailedGameViewModal"),
   "game-stats-modal": () => import("./GameStatsModal"),
   "help-modal": () => import("./HelpModal"),
+  "host-lobby-modal": () => import("./HostLobbyModal"),
   "inventory-modal": () => import("./InventoryModal"),
+  "join-lobby-modal": () => import("./JoinLobbyModal"),
   "leaderboard-modal": () => import("./LeaderboardModal"),
   "news-modal": () => import("./NewsModal"),
   "player-profile-modal": () => import("./PlayerProfileModal"),
   "ranked-modal": () => import("./components/RankedModal"),
+  "single-player-modal": () => import("./SinglePlayerModal"),
   "store-modal": () => import("./Store"),
   "subscription-modal": () => import("./SubscriptionModal"),
   "troubleshooting-modal": () => import("./TroubleshootingModal"),
@@ -31,6 +35,16 @@ const modules: Record<string, () => Promise<unknown>> = {
 /** Loads the module that defines `tag`, if it's one loaded on demand. */
 export async function loadModal(tag: string): Promise<void> {
   await modules[tag]?.();
+}
+
+/**
+ * Calls `open` once `tag`'s module has loaded, for code that opens one of
+ * these modals directly rather than through showPage or the modal router.
+ */
+export function whenModalLoaded(tag: string, open: () => void): void {
+  loadModal(tag).then(open, (err) =>
+    console.error(`${tag} failed to load:`, err),
+  );
 }
 
 export function prefetchModals(): void {

@@ -10,6 +10,7 @@ import { EventBus } from "@openfront/shared/EventBus";
 import fs from "node:fs";
 import path from "node:path";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
+import { loadModal } from "../../src/client/LazyModals";
 import { SendKickPlayerIntentEvent } from "../../src/client/LobbyEvents";
 import { capturePagePin } from "../../src/client/PagePin";
 import { translateText } from "../../src/client/Utils";
@@ -256,7 +257,22 @@ describe("Client.initialize() booted from Main.ts module scope", () => {
     expect(localStorage.getItem("achievements.pushed")).toBeNull();
   });
 
+  it("hands the lobby modals the event bus before a loader can open them", async () => {
+    const seen: unknown[] = [];
+    for (const tag of ["host-lobby-modal", "join-lobby-modal"]) {
+      await loadModal(tag);
+      // Read as soon as loadModal settles: what an opener would find.
+      seen.push(
+        (document.querySelector(tag) as unknown as { eventBus: unknown })
+          .eventBus,
+      );
+    }
+    expect(seen.every((bus) => bus instanceof EventBus)).toBe(true);
+  });
+
   it("routes a hashchange through onHashUpdate", async () => {
+    // It loads on demand; until it has, there's nothing to close.
+    await loadModal("join-lobby-modal");
     const joinModal = document.querySelector("join-lobby-modal") as unknown as {
       close: () => void;
     };
@@ -631,6 +647,7 @@ describe("Client.initialize() booted from Main.ts module scope", () => {
   // Last: the viewer replaces the menu, and any later hash change would
   // then leave the page.
   it("opens the replay viewer when the hash changes to one, though closing the join modal resets the URL", async () => {
+    await loadModal("join-lobby-modal");
     const joinModal = document.querySelector("join-lobby-modal") as unknown as {
       close: () => void;
     };
