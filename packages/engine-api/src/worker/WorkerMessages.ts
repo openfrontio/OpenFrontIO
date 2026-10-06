@@ -1,5 +1,4 @@
 import { TileRef } from "../game/GameMap";
-import { MapFiles } from "../game/GameMapLoader";
 import {
   BuildableUnit,
   PlayerActions,
@@ -9,6 +8,7 @@ import {
   PlayerProfile,
 } from "../game/GameTypes";
 import { ErrorUpdate, GameUpdateViewData } from "../game/GameUpdates";
+import { MapFiles } from "../game/MapFiles";
 import { ClientID, GameStartInfo, Turn } from "../Schemas";
 
 export type WorkerMessageType =

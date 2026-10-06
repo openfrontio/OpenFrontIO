@@ -1,4 +1,4 @@
-import type { MapLayer } from "@openfront/engine-api/game/GameMapLoader";
+import type { MapLayer } from "@openfront/engine-api/game/MapFiles";
 import { html, nothing } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import { formatKeyForDisplay, translateText } from "../client/Utils";
