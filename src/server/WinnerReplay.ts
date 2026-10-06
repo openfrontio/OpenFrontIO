@@ -9,8 +9,10 @@ import { logger } from "./Logger";
 // When clients disagree on a game's winner, the server replays the game
 // itself (see GameServer.settleWinner). A replay is a whole game's worth of
 // simulation, so it runs in a subprocess at the lowest CPU priority, where it
-// can only use time the live games' turn loops leave over. Nothing waits on
-// it but the game record, so it may take as long as it needs, up to a limit.
+// can only use time the live games' turn loops leave over, and first in line
+// for the OOM killer (WinnerReplayChild.ts), so memory pressure kills it
+// before a game worker. Nothing waits on it but the game record, so it may
+// take as long as it needs, up to a limit.
 
 const log = logger.child({ component: "WinnerReplay" });
 
