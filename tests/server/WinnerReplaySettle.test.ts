@@ -9,6 +9,7 @@ import type { ReplayedWinner } from "@openfront/engine/WinnerReplay";
 import { PartialGameRecord } from "@openfront/shared/WireSchemas";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { Client } from "../../src/server/Client";
+import { winnerReplayMetrics } from "../../src/server/WinnerReplay";
 import {
   cid,
   makeClient,
@@ -71,6 +72,17 @@ describe("settling a disputed winner vote by replay", () => {
   const archived = () => archive.mock.calls.map(([record]) => record);
   const archivedOnce = () =>
     vi.waitFor(() => expect(archive).toHaveBeenCalledTimes(1));
+  // Runs `fn` and returns how the outcome counters moved.
+  const outcomesDuring = async (fn: () => Promise<void>) => {
+    const before = { ...winnerReplayMetrics.outcomes };
+    await fn();
+    const after = winnerReplayMetrics.outcomes;
+    return {
+      agreed: after.agreed - before.agreed,
+      overturned: after.overturned - before.overturned,
+      failed: after.failed - before.failed,
+    };
+  };
 
   it("archives a unanimous vote without replaying", async () => {
     const { clients } = play([A, B]);
@@ -96,8 +108,15 @@ describe("settling a disputed winner vote by replay", () => {
     expect(archive).not.toHaveBeenCalled();
 
     const stats = { [C]: { conquests: [3n] } } as AllPlayersStats;
-    resolveReplay({ winner: ["player", C], allPlayersStats: stats, tick: 90 });
-    await archivedOnce();
+    const counted = await outcomesDuring(async () => {
+      resolveReplay({
+        winner: ["player", C],
+        allPlayersStats: stats,
+        tick: 90,
+      });
+      await archivedOnce();
+    });
+    expect(counted).toEqual({ agreed: 0, overturned: 1, failed: 0 });
 
     const [record] = archived();
     expect(record.info.winner).toEqual(["player", C]);
@@ -112,10 +131,28 @@ describe("settling a disputed winner vote by replay", () => {
     await vote(clients[0], ["player", A]);
     await vote(clients[1], ["player", A]);
 
-    resolveReplay(null);
-    await archivedOnce();
+    const counted = await outcomesDuring(async () => {
+      resolveReplay(null);
+      await archivedOnce();
+    });
 
     expect(archived()[0].info.winner).toEqual(["player", A]);
+    expect(counted).toEqual({ agreed: 0, overturned: 0, failed: 1 });
+  });
+
+  it("counts a replay that confirms the vote as agreed", async () => {
+    const { clients } = play([A, B, C]);
+    await vote(clients[2], ["player", C]);
+    await vote(clients[0], ["player", A]);
+    await vote(clients[1], ["player", A]);
+
+    const counted = await outcomesDuring(async () => {
+      resolveReplay({ winner: ["player", A], allPlayersStats: {}, tick: 90 });
+      await archivedOnce();
+    });
+
+    expect(archived()[0].info.winner).toEqual(["player", A]);
+    expect(counted).toEqual({ agreed: 1, overturned: 0, failed: 0 });
   });
 
   it("replays a game that ends with no majority", async () => {

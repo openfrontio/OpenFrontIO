@@ -83,7 +83,11 @@ import {
   noopMatchTelemetryEmitter,
   type MatchTelemetryEmitter,
 } from "./telemetry/MatchTelemetry";
-import { replayWinnerInChild, type WinnerReplayer } from "./WinnerReplay";
+import {
+  replayWinnerInChild,
+  winnerReplayMetrics,
+  type WinnerReplayer,
+} from "./WinnerReplay";
 
 // Outcome of GameServer.joinClient. The worker maps each to a close code.
 // A non-spectator join landing this soon after start() is someone who meant
@@ -1940,12 +1944,14 @@ export class GameServer {
       .replayWinner(this.wireGameStartInfo, turns)
       .then((replayed) => {
         if (replayed === null) {
+          winnerReplayMetrics.outcomes.failed++;
           this.archiveGame(voted, turns, endTime);
           return;
         }
         const agrees =
           JSON.stringify(replayed.winner ?? null) ===
           JSON.stringify(voted?.winner ?? null);
+        winnerReplayMetrics.outcomes[agrees ? "agreed" : "overturned"]++;
         this.log[agrees ? "info" : "warn"]("winner replay result", {
           gameID: this.id,
           voted: voted?.winner,

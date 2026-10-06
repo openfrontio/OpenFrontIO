@@ -44,11 +44,29 @@ export type WinnerReplayer = (
   turns: Turn[],
 ) => Promise<ReplayedWinner | null>;
 
+// This worker's replays, as WorkerMetrics reports them.
+export const winnerReplayMetrics = {
+  // Replays waiting their turn or running.
+  pending: 0,
+  // Finished runs (failed ones included) and their total run time, queue
+  // wait excluded.
+  runs: 0,
+  seconds: 0,
+  // How disputed votes settled (GameServer.settleWinner): the replay agreed
+  // with the vote, overturned it, or failed and the vote stood.
+  outcomes: { agreed: 0, overturned: 0, failed: 0 },
+};
+
 // One replay at a time per worker; the rest wait their turn.
 let queue: Promise<unknown> = Promise.resolve();
 
 export const replayWinnerInChild: WinnerReplayer = (gameStart, turns) => {
-  const run = queue.then(() => runChild(gameStart, turns));
+  winnerReplayMetrics.pending++;
+  const run = queue
+    .then(() => runChild(gameStart, turns))
+    .finally(() => {
+      winnerReplayMetrics.pending--;
+    });
   queue = run;
   return run;
 };
@@ -81,6 +99,8 @@ function runChild(
       if (settled) return;
       settled = true;
       clearTimeout(timer);
+      winnerReplayMetrics.runs++;
+      winnerReplayMetrics.seconds += (Date.now() - start) / 1000;
       resolve(result);
     };
     const timer = setTimeout(() => {
