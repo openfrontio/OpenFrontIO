@@ -1,3 +1,6 @@
+import { GameMode } from "@openfront/engine-api/game/GameTypes";
+import { packLevelBadge } from "@openfront/shared/LevelBadgeWire";
+import type { ClientInfo } from "@openfront/shared/WireSchemas";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { LevelBadge as LevelBadgeElement } from "../../../src/client/components/LevelBadge";
 import {
@@ -8,10 +11,7 @@ import {
 } from "../../../src/client/components/LevelBadgeFill";
 import "../../../src/client/components/LobbyPlayerView";
 import type { LobbyTeamView } from "../../../src/client/components/LobbyPlayerView";
-import { GameMode } from "../../../src/core/game/Game";
-import { UserSettings } from "../../../src/core/game/UserSettings";
-import { packLevelBadge } from "../../../src/core/LevelBadgeWire";
-import type { ClientInfo } from "../../../src/core/Schemas";
+import { UserSettings } from "../../../src/client/UserSettings";
 
 // A full lobby's badges arrive in one render; past a handful they are drawn
 // over the following frames (LevelBadgeFill) instead of all in one.

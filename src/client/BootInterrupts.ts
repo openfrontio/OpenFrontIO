@@ -13,7 +13,10 @@
 // on the answer, which makes the ordering testable without a DOM and leaves one
 // place to add the fifth contender.
 
-import { isTemporaryUsername, type UserMeResponse } from "../core/ApiSchemas";
+import {
+  isTemporaryUsername,
+  type UserMeResponse,
+} from "@openfront/shared/ApiSchemas";
 import { lapseNoticeDue } from "./PlayerName";
 import {
   steamGrantEndedShown,

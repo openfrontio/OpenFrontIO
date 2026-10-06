@@ -1,16 +1,17 @@
-import { html, LitElement, TemplateResult } from "lit";
-import { customElement, property, state } from "lit/decorators.js";
-import { assetUrl } from "../../../core/AssetUrls";
-import { EventBus } from "../../../core/EventBus";
+import { TileRef } from "@openfront/engine-api/game/GameMap";
 import {
   PlayerProfile,
   PlayerType,
   Relation,
-  Unit,
   UnitType,
-} from "../../../core/game/Game";
-import { TileRef } from "../../../core/game/GameMap";
-import { AllianceView } from "../../../core/game/GameUpdates";
+} from "@openfront/engine-api/game/GameTypes";
+import { AllianceView } from "@openfront/engine-api/game/GameUpdates";
+import { UnitLike } from "@openfront/engine-api/game/ReadViews";
+import { EventBus } from "@openfront/engine-lib/EventBus";
+import { renderNumber, renderTroops } from "@openfront/engine-lib/Format";
+import { assetUrl } from "@openfront/shared/AssetUrls";
+import { html, LitElement, TemplateResult } from "lit";
+import { customElement, property, state } from "lit/decorators.js";
 import { Controller } from "../../Controller";
 import {
   ContextMenuEvent,
@@ -22,8 +23,6 @@ import { TransformHandler } from "../../TransformHandler";
 import {
   getTranslatedPlayerTeamLabel,
   renderDuration,
-  renderNumber,
-  renderTroops,
   translateText,
 } from "../../Utils";
 import { GameView, PlayerView, UnitView } from "../../view";
@@ -62,7 +61,7 @@ function euclideanDistWorld(
 }
 
 function distSortUnitWorld(coord: { x: number; y: number }, game: GameView) {
-  return (a: Unit | UnitView, b: Unit | UnitView) => {
+  return (a: UnitLike, b: UnitLike) => {
     const distA = euclideanDistWorld(coord, a.tile(), game);
     const distB = euclideanDistWorld(coord, b.tile(), game);
     return distA - distB;

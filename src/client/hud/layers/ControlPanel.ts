@@ -1,26 +1,19 @@
+import { TileRef } from "@openfront/engine-api/game/GameMap";
+import { GameMode, GameType, Gold } from "@openfront/engine-api/game/GameTypes";
+import { GameUpdateType } from "@openfront/engine-api/game/GameUpdates";
+import { ClientID } from "@openfront/engine-api/Schemas";
+import { Config } from "@openfront/engine-lib/configuration/Config";
+import { EventBus } from "@openfront/engine-lib/EventBus";
+import { renderNumber, renderTroops } from "@openfront/engine-lib/Format";
+import { assetUrl } from "@openfront/shared/AssetUrls";
 import { LitElement, html } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import { keyed } from "lit/directives/keyed.js";
-import { assetUrl } from "../../../core/AssetUrls";
-import { EventBus } from "../../../core/EventBus";
-import { ClientID } from "../../../core/Schemas";
-import { Config } from "../../../core/configuration/Config";
-import { GameMode, GameType, Gold } from "../../../core/game/Game";
-import { TileRef } from "../../../core/game/GameMap";
-import { GameUpdateType } from "../../../core/game/GameUpdates";
-import {
-  USER_SETTINGS_CHANGED_EVENT,
-  UserSettings,
-} from "../../../core/game/UserSettings";
 import { Controller } from "../../Controller";
 import { AttackRatioEvent } from "../../InputHandler";
 import { UIState } from "../../UIState";
-import {
-  getGamesPlayed,
-  renderNumber,
-  renderTroops,
-  translateText,
-} from "../../Utils";
+import { USER_SETTINGS_CHANGED_EVENT, UserSettings } from "../../UserSettings";
+import { getGamesPlayed, translateText } from "../../Utils";
 import { GameView } from "../../view";
 import { PlayerView } from "../../view/PlayerView";
 import { goldCoinIcon, soldierIcon } from "../HotbarIcons";

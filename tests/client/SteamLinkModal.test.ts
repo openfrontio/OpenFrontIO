@@ -1,5 +1,5 @@
+import type { UserMeResponse } from "@openfront/shared/ApiSchemas";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { UserMeResponse } from "../../src/core/ApiSchemas";
 
 // ─── Mocks ───────────────────────────────────────────────────────────────
 

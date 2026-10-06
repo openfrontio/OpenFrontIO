@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 // GameRenderer only uses GameStartingModal as a type, so importing it there
 // never registers the custom element; register it here.
+import { EventBus } from "@openfront/engine-lib/EventBus";
 import "../../../src/client/GameStartingModal";
 import {
   createRenderer,
@@ -11,7 +12,6 @@ import type { WinModal } from "../../../src/client/hud/layers/WinModal";
 import { ShowEmojiMenuEvent } from "../../../src/client/InputHandler";
 import type { MapRenderer } from "../../../src/client/render/gl";
 import type { GameView } from "../../../src/client/view";
-import { EventBus } from "../../../src/core/EventBus";
 
 // Every custom element createRenderer looks up with document.querySelector.
 const HUD_TAGS = [

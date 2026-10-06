@@ -132,9 +132,9 @@ beforeEach(() => {
   );
 });
 
+import { RankedType } from "@openfront/engine-api/game/GameTypes";
 import "../../src/client/components/baseComponents/Modal";
 import { LeaderboardModal } from "../../src/client/LeaderboardModal";
-import { RankedType } from "../../src/core/game/Game";
 
 describe("LeaderboardModal", () => {
   let modal: LeaderboardModal;

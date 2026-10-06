@@ -1,10 +1,10 @@
-import { html, LitElement, nothing, PropertyValues } from "lit";
-import { customElement, property, query, state } from "lit/decorators.js";
+import { RankedType } from "@openfront/engine-api/game/GameTypes";
 import {
   PlayerLeaderboardEntry,
   RankedLeaderboardEntry,
-} from "../../../core/ApiSchemas";
-import { RankedType } from "../../../core/game/Game";
+} from "@openfront/shared/ApiSchemas";
+import { html, LitElement, nothing, PropertyValues } from "lit";
+import { customElement, property, query, state } from "lit/decorators.js";
 import { fetchPlayerLeaderboard, getUserMe } from "../../Api";
 import { translateText } from "../../Utils";
 import { isPrestigedOrLegend, levelBadgeSlot } from "../LevelBadgeSlot";

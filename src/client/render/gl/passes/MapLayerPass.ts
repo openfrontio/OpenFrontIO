@@ -52,6 +52,7 @@ export class MapLayerPass {
       gl,
       shaderSrc(layerVertSrc, { MAP_W: mapW, MAP_H: mapH }),
       shaderSrc(layerFragSrc, { MAP_W: mapW, MAP_H: mapH }),
+      "MapLayerPass",
     );
     this.uCamera = gl.getUniformLocation(this.program, "uCamera")!;
     this.uPlacement = gl.getUniformLocation(this.program, "uPlacement")!;

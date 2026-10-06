@@ -2,7 +2,7 @@
  * CosmeticPreviewRenderer — lightweight WebGL2 renderer for in-game store cosmetic previewing.
  */
 
-import type { Config } from "../../../core/configuration/Config";
+import type { Config } from "@openfront/engine-lib/configuration/Config";
 import type { SpiralParams } from "../frame/SpiralTrails";
 import { Camera } from "../gl/Camera";
 import { initGL } from "../gl/initGL";

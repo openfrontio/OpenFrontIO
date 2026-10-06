@@ -1,4 +1,3 @@
-import { describe, expect, it } from "vitest";
 import {
   Difficulty,
   GameMapSize,
@@ -6,21 +5,23 @@ import {
   GameMode,
   GameType,
   UnitType,
-} from "../../src/core/game/Game";
+} from "@openfront/engine-api/game/GameTypes";
 import {
   ADMIN_BOT_CLIENT_ID,
+  GameConfig,
+  StampedIntent,
+  Turn,
+} from "@openfront/engine-api/Schemas";
+import { replacer } from "@openfront/shared/SharedUtil";
+import {
   ClientMessage,
   ClientMessageSchema,
-  GameConfig,
   LogSeverity,
   PublicLobbyMessage,
   PublicLobbyMessageSchema,
   ServerMessage,
   ServerMessageSchema,
-  StampedIntent,
-  Turn,
-} from "../../src/core/Schemas";
-import { replacer } from "../../src/core/Util";
+} from "@openfront/shared/WireSchemas";
 import {
   createGameWireContext,
   decodeClientMessage,
@@ -29,8 +30,9 @@ import {
   encodeClientMessage,
   encodeLobbyMessage,
   encodeServerMessage,
-} from "../../src/core/ZbinWire";
-import { ZbDecodeError } from "../../zbin";
+} from "@openfront/shared/ZbinWire";
+import { ZbDecodeError } from "@openfront/zbin";
+import { describe, expect, it } from "vitest";
 
 const PLAYERS = [
   { clientID: "aB3dEf7h" },
