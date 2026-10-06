@@ -1304,11 +1304,17 @@ class Client {
           : steamHandoffMode(this.userSettings, window.location.search);
       if (handoff !== "none" && this.steamHandoffModal !== null) {
         const modal = this.steamHandoffModal;
-        whenModalLoaded("steam-handoff-modal", () =>
-          modal.offer(lobbyId, handoff, () => {
-            this.steamHandoffDeclinedFor = lobbyId;
-            void this.handleUrl();
-          }),
+        const decline = () => {
+          this.steamHandoffDeclinedFor = lobbyId;
+          void this.handleUrl();
+        };
+        loadModal("steam-handoff-modal").then(
+          () => modal.offer(lobbyId, handoff, decline),
+          (err) => {
+            // Join in the browser rather than leave the link doing nothing.
+            console.error("steam-handoff-modal failed to load:", err);
+            decline();
+          },
         );
         return;
       }
@@ -2001,6 +2007,9 @@ class Client {
   ) {
     if (!this.matchmakingModal) return;
     whenModalLoaded("matchmaking-modal", () => {
+      // A game that started while it loaded has the screen now, and the
+      // game-start teardown couldn't close a modal that hadn't loaded.
+      if (menuChromeIsTornDown()) return;
       // Always set the mode: dispatchers without a detail (homepage button,
       // requeue URL) mean 1v1 and must reset a lingering 2v2 selection.
       this.matchmakingModal.mode = event.detail?.mode === "2v2" ? "2v2" : "1v1";
