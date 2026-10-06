@@ -1,14 +1,14 @@
-import { jwtVerify } from "jose";
-import { z } from "zod";
 import {
   TokenPayload,
   TokenPayloadSchema,
   UserMeResponse,
   UserMeResponseSchema,
-} from "../core/ApiSchemas";
-import { CloseCode, CloseReason } from "../core/CloseCodes";
-import { GameEnv } from "../core/configuration/Config";
-import { PersistentIdSchema } from "../core/Schemas";
+} from "@openfront/shared/ApiSchemas";
+import { CloseCode, CloseReason } from "@openfront/shared/CloseCodes";
+import { GameEnv } from "@openfront/shared/configuration/Env";
+import { PersistentIdSchema } from "@openfront/shared/WireSchemas";
+import { jwtVerify } from "jose";
+import { z } from "zod";
 import { ServerEnv } from "./ServerEnv";
 
 type TokenVerificationResult =

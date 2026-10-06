@@ -31,6 +31,14 @@
     {
       "key": "trade_partners",
       "requiresPlayer": false
+    },
+    {
+      "key": "send_troops_to",
+      "requiresPlayer": true
+    },
+    {
+      "key": "send_gold_to",
+      "requiresPlayer": true
     }
   ],
   "attack": [
@@ -52,6 +60,14 @@
     },
     {
       "key": "build_warships",
+      "requiresPlayer": false
+    },
+    {
+      "key": "betray",
+      "requiresPlayer": true
+    },
+    {
+      "key": "build_sams",
       "requiresPlayer": false
     }
   ],
@@ -75,6 +91,10 @@
     {
       "key": "build_posts",
       "requiresPlayer": false
+    },
+    {
+      "key": "make_ally",
+      "requiresPlayer": true
     }
   ],
   "greet": [
@@ -171,6 +191,10 @@
     {
       "key": "coastline",
       "requiresPlayer": false
+    },
+    {
+      "key": "join_discord",
+      "requiresPlayer": false
     }
   ],
   "warnings": [
@@ -241,6 +265,14 @@
     {
       "key": "stop_trading_all",
       "requiresPlayer": false
+    },
+    {
+      "key": "disconnected",
+      "requiresPlayer": true
+    },
+    {
+      "key": "pirating",
+      "requiresPlayer": true
     }
   ]
 }

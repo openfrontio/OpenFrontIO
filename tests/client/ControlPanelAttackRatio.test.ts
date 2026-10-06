@@ -2,12 +2,12 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 // Side-effect import: the @customElement decorator registers <control-panel>
 // when the module is evaluated, and a type-only reference would not evaluate it.
+import { EventBus } from "@openfront/engine-lib/EventBus";
 import "../../src/client/hud/layers/ControlPanel";
 import type { ControlPanel } from "../../src/client/hud/layers/ControlPanel";
 import type { UIState } from "../../src/client/UIState";
+import { UserSettings } from "../../src/client/UserSettings";
 import type { GameView } from "../../src/client/view";
-import { EventBus } from "../../src/core/EventBus";
-import { UserSettings } from "../../src/core/game/UserSettings";
 
 // ControlPanel caches the attack ratio for the lifetime of the game. The
 // settings modal is reachable mid-match now, so the cached value has to follow

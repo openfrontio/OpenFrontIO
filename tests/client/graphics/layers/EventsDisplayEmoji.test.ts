@@ -29,15 +29,17 @@ vi.mock("lit/directives/unsafe-html.js", () => ({
 
 vi.mock("../../../../src/client/Utils", () => ({
   translateText: vi.fn((key: string) => key),
-  renderNumber: vi.fn(),
-  renderTroops: vi.fn(),
   getMessageTypeClasses: vi.fn(() => ""),
 }));
+vi.mock("@openfront/engine-lib/Format", () => ({
+  renderNumber: vi.fn(),
+  renderTroops: vi.fn(),
+}));
 
+import { GameUpdateType } from "@openfront/engine-api/game/GameUpdates";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { EventsDisplay } from "../../../../src/client/hud/layers/EventsDisplay";
-import { GameUpdateType } from "../../../../src/core/game/GameUpdates";
-import { UserSettings } from "../../../../src/core/game/UserSettings";
+import { UserSettings } from "../../../../src/client/UserSettings";
 
 function resetSettings() {
   localStorage.clear();

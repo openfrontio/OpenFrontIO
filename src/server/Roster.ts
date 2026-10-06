@@ -1,6 +1,6 @@
+import { ClientID } from "@openfront/engine-api/Schemas";
+import { CloseCode, CloseReason } from "@openfront/shared/CloseCodes";
 import WebSocket from "ws";
-import { CloseCode, CloseReason } from "../core/CloseCodes";
-import { ClientID } from "../core/Schemas";
 import { Client } from "./Client";
 
 // Who is in the game: everyone who ever joined, who is connected right now,

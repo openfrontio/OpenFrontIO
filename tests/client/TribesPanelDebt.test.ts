@@ -49,9 +49,9 @@ vi.mock("../../src/client/Utils", async (importOriginal) => ({
     vars ? `${key}:${JSON.stringify(vars)}` : key,
 }));
 
+import type { UserMeResponse } from "@openfront/shared/ApiSchemas";
 import "../../src/client/components/TribesPanel";
 import type { TribesPanel } from "../../src/client/components/TribesPanel";
-import type { UserMeResponse } from "../../src/core/ApiSchemas";
 
 const PRICE_HARD = 200;
 const BOOST_PRICE_HARD = 50;

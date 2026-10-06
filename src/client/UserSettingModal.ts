@@ -1,14 +1,7 @@
+import type { MapLayer } from "@openfront/engine-api/game/GameMapLoader";
 import { html, nothing } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import { formatKeyForDisplay, translateText } from "../client/Utils";
-import type { MapLayer } from "../core/game/TerrainMapLoader";
-import {
-  AudioCategory,
-  getDefaultKeybinds,
-  GRAPHICS_KEY,
-  USER_SETTINGS_CHANGED_EVENT,
-  UserSettings,
-} from "../core/game/UserSettings";
 import "./components/baseComponents/setting/SettingKeybind";
 import { SettingKeybind } from "./components/baseComponents/setting/SettingKeybind";
 import "./components/baseComponents/setting/SettingNumber";
@@ -41,6 +34,13 @@ import { audioControls, playCue } from "./sound/CuePlayer";
 import type { CueCategory } from "./sound/Sounds";
 import { canHandOffToSteam } from "./SteamHandoff";
 import type { UIState } from "./UIState";
+import {
+  AudioCategory,
+  getDefaultKeybinds,
+  GRAPHICS_KEY,
+  USER_SETTINGS_CHANGED_EVENT,
+  UserSettings,
+} from "./UserSettings";
 
 /**
  * Logged with no payload, ever.

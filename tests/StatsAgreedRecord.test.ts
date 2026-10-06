@@ -1,13 +1,16 @@
-import { describe, expect, it } from "vitest";
+import { GameStartInfoSchema } from "@openfront/engine-api/Schemas";
+import {
+  createPartialGameRecord,
+  replacer,
+} from "@openfront/shared/SharedUtil";
 import {
   ArchivedAnalyticsRecordSchema,
   GameEndInfoSchema,
   GameRecordSchema,
-  GameStartInfoSchema,
   PartialGameRecordSchema,
   PlayerRecord,
-} from "../src/core/Schemas";
-import { createPartialGameRecord, replacer } from "../src/core/Util";
+} from "@openfront/shared/WireSchemas";
+import { describe, expect, it } from "vitest";
 import { testGameConfig } from "./util/Wire";
 
 // info.statsAgreed tells the API whether the record's per-player stats are the

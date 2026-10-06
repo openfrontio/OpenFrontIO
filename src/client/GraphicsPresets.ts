@@ -1,6 +1,6 @@
-import { UserSettings } from "../core/game/UserSettings";
 import { GraphicsOverridesSchema, type GraphicsOverrides } from "./render/gl";
 import builtinPresets from "./render/gl/graphics-presets.json";
+import { UserSettings } from "./UserSettings";
 import { translateText } from "./Utils";
 
 // Built-in presets, defined in graphics-presets.json — each entry's overrides

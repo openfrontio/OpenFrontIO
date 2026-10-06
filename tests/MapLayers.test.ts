@@ -1,11 +1,12 @@
+import type {
+  GameMapLoader,
+  MapData,
+} from "@openfront/engine-api/game/GameMapLoader";
+import { type MapLayer } from "@openfront/engine-api/game/GameMapLoader";
+import { GameMapSize, GameMapType } from "@openfront/engine-api/game/GameTypes";
+import { loadTerrainMap } from "@openfront/engine-lib/game/TerrainMapLoader";
 import { describe, expect, test } from "vitest";
 import { GraphicsOverridesSchema } from "../src/client/render/gl/GraphicsOverrides";
-import { GameMapSize, GameMapType } from "../src/core/game/Game";
-import type { GameMapLoader, MapData } from "../src/core/game/GameMapLoader";
-import {
-  loadTerrainMap,
-  type MapLayer,
-} from "../src/core/game/TerrainMapLoader";
 import { validateLayer } from "./util/layerValidation";
 
 describe("Map layer feature", () => {

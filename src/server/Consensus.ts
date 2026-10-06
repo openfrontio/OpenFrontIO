@@ -1,10 +1,9 @@
-import { createHash } from "crypto";
+import { AllPlayersStats, ClientID } from "@openfront/engine-api/Schemas";
 import {
-  AllPlayersStats,
-  ClientID,
   ClientSendWinnerMessage,
   LiveStats,
-} from "../core/Schemas";
+} from "@openfront/shared/WireSchemas";
+import { createHash } from "crypto";
 import { isStrictMajority, Standing, VoteRound } from "./VoteTally";
 
 // The simulation runs on the clients, so the outcomes the server has to

@@ -1,18 +1,18 @@
 import {
+  AdditionalNation,
+  Nation as ManifestNation,
+} from "@openfront/engine-api/game/GameMapLoader";
+import {
   Difficulty,
   GameMapSize,
   GameMapType,
   GameMode,
   GameType,
   Nation,
-} from "../src/core/game/Game";
-import { createNationsForGame } from "../src/core/game/NationCreation";
-import {
-  AdditionalNation,
-  Nation as ManifestNation,
-} from "../src/core/game/TerrainMapLoader";
-import { PseudoRandom } from "../src/core/PseudoRandom";
-import { GameConfig, GameStartInfo } from "../src/core/Schemas";
+} from "@openfront/engine-api/game/GameTypes";
+import { GameConfig, GameStartInfo } from "@openfront/engine-api/Schemas";
+import { PseudoRandom } from "@openfront/engine-lib/PseudoRandom";
+import { createNationsForGame } from "@openfront/engine/game/NationCreation";
 
 function makeManifestNations(count: number): ManifestNation[] {
   const result: ManifestNation[] = [];

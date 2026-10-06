@@ -6,15 +6,15 @@
  * what the FrameBuilder relies on when populating PlayerState.
  */
 
-import { beforeEach, describe, expect, it } from "vitest";
-import { PlayerView } from "../../../src/client/view/PlayerView";
 import {
   AllPlayers,
   EmojiMessage,
   PlayerType,
-} from "../../../src/core/game/Game";
-import { GameUpdateType } from "../../../src/core/game/GameUpdates";
-import { UserSettings } from "../../../src/core/game/UserSettings";
+} from "@openfront/engine-api/game/GameTypes";
+import { GameUpdateType } from "@openfront/engine-api/game/GameUpdates";
+import { beforeEach, describe, expect, it } from "vitest";
+import { UserSettings } from "../../../src/client/UserSettings";
+import { PlayerView } from "../../../src/client/view/PlayerView";
 import {
   makeEmptyGu,
   makeGameView,

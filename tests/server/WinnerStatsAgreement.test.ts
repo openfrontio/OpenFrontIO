@@ -1,6 +1,7 @@
+import { GameType } from "@openfront/engine-api/game/GameTypes";
+import { AllPlayersStats } from "@openfront/engine-api/Schemas";
+import { PartialGameRecord } from "@openfront/shared/WireSchemas";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { GameType } from "../../src/core/game/Game";
-import { AllPlayersStats, PartialGameRecord } from "../../src/core/Schemas";
 import { Client } from "../../src/server/Client";
 import { GameServer, STATS_VOTE_WINDOW_MS } from "../../src/server/GameServer";
 import {

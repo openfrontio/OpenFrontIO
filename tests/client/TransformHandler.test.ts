@@ -1,3 +1,4 @@
+import { EventBus } from "@openfront/engine-lib/EventBus";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   GOTO_INTERVAL_MS,
@@ -5,7 +6,6 @@ import {
   TransformHandler,
 } from "../../src/client/TransformHandler";
 import type { GameView } from "../../src/client/view";
-import { EventBus } from "../../src/core/EventBus";
 
 function makeHandler() {
   const game = {

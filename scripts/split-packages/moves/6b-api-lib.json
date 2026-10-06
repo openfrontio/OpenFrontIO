@@ -1,0 +1,56 @@
+{
+  "symbols": [
+    {
+      "from": "src/core/game/GameMap.ts",
+      "to": "src/core/game/GameMapImpl.ts",
+      "names": [
+        "GameMapImpl",
+        "GameMapSnapshot",
+        "GameMapState",
+        "euclDistFN",
+        "manhattanDistFN",
+        "rectDistFN",
+        "isometricDistFN",
+        "hexDistFN",
+        "andFN"
+      ]
+    },
+    {
+      "from": "src/core/game/TileSet.ts",
+      "to": "src/core/game/ReadViews.ts",
+      "names": ["ReadonlyTileSet"]
+    },
+    {
+      "from": "src/core/game/UnitGrid.ts",
+      "to": "src/core/game/ReadViews.ts",
+      "names": ["UnitPredicate"]
+    },
+    {
+      "from": "src/core/game/TerrainMapLoader.ts",
+      "to": "src/core/game/GameMapLoader.ts",
+      "names": [
+        "MapMetadata",
+        "MapManifest",
+        "LayerPlacement",
+        "MapLayer",
+        "Nation",
+        "AdditionalNation"
+      ]
+    },
+    {
+      "from": "src/core/Util.ts",
+      "to": "src/core/Schemas.ts",
+      "names": ["emojiTable", "flattenedEmojiTable", "Emoji"]
+    },
+    {
+      "from": "src/core/Util.ts",
+      "to": "src/core/game/GameTypes.ts",
+      "names": ["formatPlayerDisplayName"]
+    },
+    {
+      "from": "src/core/PatternDecoder.ts",
+      "to": "src/core/CosmeticRefs.ts",
+      "names": ["decodePatternData"]
+    }
+  ]
+}
