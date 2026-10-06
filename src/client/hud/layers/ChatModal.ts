@@ -4,7 +4,7 @@ import { customElement, query } from "lit/decorators.js";
 import { PlayerType } from "@openfront/engine-api/game/GameTypes";
 import { GameView, PlayerView } from "../../view";
 
-import { EventBus } from "@openfront/engine-lib/EventBus";
+import { EventBus } from "@openfront/shared/EventBus";
 import quickChatData from "resources/QuickChat.json";
 import { CloseViewEvent } from "../../InputHandler";
 import { SendQuickChatEvent } from "../../Transport";

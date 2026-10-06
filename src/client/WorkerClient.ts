@@ -1,4 +1,5 @@
 import { TileRef } from "@openfront/engine-api/game/GameMap";
+import { MapFiles } from "@openfront/engine-api/game/GameMapLoader";
 import {
   BuildableUnit,
   Cell,
@@ -13,16 +14,23 @@ import {
   GameUpdateViewData,
 } from "@openfront/engine-api/game/GameUpdates";
 import { ClientID, GameStartInfo, Turn } from "@openfront/engine-api/Schemas";
-import { WorkerMessage } from "@openfront/engine-api/worker/WorkerMessages";
-import { getCdnBase } from "@openfront/shared/AssetUrls";
+import {
+  InitMessage,
+  WorkerMessage,
+} from "@openfront/engine-api/worker/WorkerMessages";
+import {
+  loadMapFiles,
+  mapFilesTransfer,
+} from "@openfront/engine-lib/game/MapFiles";
 import { generateID } from "@openfront/shared/SharedUtil";
+import { terrainMapFileLoader } from "./TerrainMapFileLoader";
 
 // Inlined as a same-origin Blob (Vite's `?worker&inline`), sidestepping the
 // cross-origin `new Worker(url)` restriction that would otherwise apply when
 // the worker bundle is served from the CDN. The dynamic import keeps the
 // ~700 KB base64 payload in its own chunk, fetched when a game starts,
 // instead of inside the main bundle.
-async function createGameWorker(): Promise<Worker> {
+export async function createGameWorker(): Promise<Worker> {
   const { default: GameWorker } =
     await import("@openfront/engine/worker/Worker.worker?worker&inline");
   return new GameWorker();
@@ -79,7 +87,21 @@ export class WorkerClient {
   }
 
   async initialize(): Promise<void> {
-    const worker = await createGameWorker();
+    // The engine fetches nothing: it gets the map in the init message.
+    const { gameMap, gameMapSize } = this.gameStartInfo.config;
+    const created = createGameWorker();
+    let map: MapFiles;
+    try {
+      map = await loadMapFiles(terrainMapFileLoader, gameMap, gameMapSize);
+    } catch (err) {
+      // Nothing will use the worker; don't leave it running.
+      created.then(
+        (w) => w.terminate(),
+        () => {},
+      );
+      throw err;
+    }
+    const worker = await created;
     this.worker = worker;
     worker.addEventListener("message", this.handleWorkerMessage.bind(this));
 
@@ -90,21 +112,26 @@ export class WorkerClient {
         if (message.type === "initialized") {
           this.isInitialized = true;
           resolve();
+        } else if (message.type === "init_error") {
+          // No game will own this client, so nothing would stop the worker.
+          this.cleanup();
+          reject(new Error(message.error));
         }
       });
 
-      worker.postMessage({
+      const init: InitMessage = {
         type: "init",
         id: messageId,
         gameStartInfo: this.gameStartInfo,
         clientID: this.clientID,
-        cdnBase: getCdnBase(),
+        map,
         snapshot: this.snapshotToRestore,
-      });
+      };
+      worker.postMessage(init, mapFilesTransfer(map));
 
       setTimeout(() => {
         if (!this.isInitialized) {
-          this.messageHandlers.delete(messageId);
+          this.cleanup();
           reject(new Error("Worker initialization timeout"));
         }
       }, 60000);

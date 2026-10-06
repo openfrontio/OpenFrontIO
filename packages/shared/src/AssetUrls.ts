@@ -4,7 +4,7 @@
 import {
   type AssetManifest,
   buildAssetUrl,
-} from "@openfront/engine-lib/AssetPaths";
+} from "@openfront/shared/AssetPaths";
 
 declare global {
   var __ASSET_MANIFEST__: AssetManifest | undefined;

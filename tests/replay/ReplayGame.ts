@@ -27,10 +27,10 @@ import {
   HashUpdate,
 } from "@openfront/engine-api/game/GameUpdates";
 import { GameStartInfo } from "@openfront/engine-api/Schemas";
-import { Config } from "@openfront/engine-lib/configuration/Config";
 import { loadTerrainMap } from "@openfront/engine-lib/game/TerrainMapLoader";
 import { PseudoRandom } from "@openfront/engine-lib/PseudoRandom";
 import { simpleHash } from "@openfront/engine-lib/Util";
+import { EngineConfig } from "@openfront/engine/configuration/EngineConfig";
 import { Executor } from "@openfront/engine/execution/ExecutionManager";
 import { createGame } from "@openfront/engine/game/GameImpl";
 import { createNationsForGame } from "@openfront/engine/game/NationCreation";
@@ -164,7 +164,7 @@ async function main(): Promise<void> {
   );
 
   // Mirrors createGameRunner() with a filesystem map loader.
-  const config = new Config(info.config, false);
+  const config = new EngineConfig(info.config, false);
   const mapLoader = new NodeGameMapLoader(
     path.join(PROJECT_ROOT, "resources/maps"),
   );

@@ -1,5 +1,5 @@
-import { EventBus } from "@openfront/engine-lib/EventBus";
 import { CloseCode, CloseReason } from "@openfront/shared/CloseCodes";
+import { EventBus } from "@openfront/shared/EventBus";
 import { ServerMessage } from "@openfront/shared/WireSchemas";
 import {
   decodeClientMessage,
