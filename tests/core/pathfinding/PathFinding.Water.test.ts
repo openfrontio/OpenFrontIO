@@ -1,11 +1,11 @@
-import { beforeAll, describe, expect, it, vi } from "vitest";
-import { Game } from "../../../src/core/game/Game";
-import { TileRef } from "../../../src/core/game/GameMap";
-import { PathFinding } from "../../../src/core/pathfinding/PathFinder";
+import { TileRef } from "@openfront/engine-api/game/GameMap";
+import { Game } from "@openfront/engine/game/Game";
+import { PathFinding } from "@openfront/engine/pathfinding/PathFinder";
 import {
   PathStatus,
   SteppingPathFinder,
-} from "../../../src/core/pathfinding/types";
+} from "@openfront/engine/pathfinding/types";
+import { beforeAll, describe, expect, it, vi } from "vitest";
 import { setup } from "../../util/Setup";
 import { createGame, L, W } from "./_fixtures";
 

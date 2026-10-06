@@ -1,14 +1,14 @@
-import { html, LitElement } from "lit";
-import { customElement, state } from "lit/decorators.js";
-import { EventBus } from "../../../core/EventBus";
-import { MessageType, Tick } from "../../../core/game/Game";
+import { MessageType, Tick } from "@openfront/engine-api/game/GameTypes";
 import {
   AllianceExtensionUpdate,
   AllianceRequestReplyUpdate,
   AllianceRequestUpdate,
   BrokeAllianceUpdate,
   GameUpdateType,
-} from "../../../core/game/GameUpdates";
+} from "@openfront/engine-api/game/GameUpdates";
+import { EventBus } from "@openfront/engine-lib/EventBus";
+import { html, LitElement } from "lit";
+import { customElement, state } from "lit/decorators.js";
 import { Controller } from "../../Controller";
 import { PlaySoundEffectEvent } from "../../sound/Sounds";
 import { GoToPlayerEvent } from "../../TransformHandler";

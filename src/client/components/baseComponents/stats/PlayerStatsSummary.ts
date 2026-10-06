@@ -1,8 +1,9 @@
+import { renderNumber } from "@openfront/engine-lib/Format";
+import type { PlayerStatsLeaf } from "@openfront/shared/ApiSchemas";
+import { assetUrl } from "@openfront/shared/AssetUrls";
 import { LitElement, html, nothing } from "lit";
 import { customElement, property } from "lit/decorators.js";
-import type { PlayerStatsLeaf } from "../../../../core/ApiSchemas";
-import { assetUrl } from "../../../../core/AssetUrls";
-import { renderNumber, translateText } from "../../../Utils";
+import { translateText } from "../../../Utils";
 
 type PlayerSummaryMetricKey =
   | "cities"

@@ -1,10 +1,10 @@
+import { GameMode, GameType } from "@openfront/engine-api/game/GameTypes";
+import { EventBus } from "@openfront/engine-lib/EventBus";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import "../../../../src/client/hud/layers/SpawnTimer";
 import type { SpawnTimer } from "../../../../src/client/hud/layers/SpawnTimer";
 import { SpawnBarVisibleEvent } from "../../../../src/client/hud/layers/SpawnTimer";
 import type { GameView } from "../../../../src/client/view";
-import { EventBus } from "../../../../src/core/EventBus";
-import { GameMode, GameType } from "../../../../src/core/game/Game";
 
 function makePlayer(team: string | null, tiles: number) {
   return { team: () => team, numTilesOwned: () => tiles };

@@ -76,10 +76,7 @@ import {
   SoundEffect,
   soundEffectUrls,
 } from "../../../src/client/sound/Sounds";
-import {
-  AudioCategory,
-  UserSettings,
-} from "../../../src/core/game/UserSettings";
+import { AudioCategory, UserSettings } from "../../../src/client/UserSettings";
 
 function resetSettings() {
   localStorage.clear();

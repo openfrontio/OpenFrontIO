@@ -1,8 +1,8 @@
+import { PlayerType } from "@openfront/engine-api/game/GameTypes";
+import { EventBus } from "@openfront/engine-lib/EventBus";
+import { assetUrl } from "@openfront/shared/AssetUrls";
 import { html, LitElement } from "lit";
 import { customElement, property } from "lit/decorators.js";
-import { assetUrl } from "../../../core/AssetUrls";
-import { EventBus } from "../../../core/EventBus";
-import { PlayerType } from "../../../core/game/Game";
 import { actionButton } from "../../components/ui/ActionButton";
 import { showInGameConfirm } from "../../InGameModal";
 import { SendKickPlayerIntentEvent } from "../../Transport";

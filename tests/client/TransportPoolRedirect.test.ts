@@ -1,6 +1,6 @@
+import { CloseReason } from "@openfront/shared/CloseCodes";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { LobbyConfig } from "../../src/client/ClientGameRunner";
-import { CloseReason } from "../../src/core/CloseCodes";
 
 const modalMocks = vi.hoisted(() => ({
   showInGameConfirm: vi.fn<(message: string) => Promise<boolean>>(),
@@ -31,9 +31,9 @@ vi.mock("src/client/ClientEnv", async (importOriginal) => {
   };
 });
 
+import { EventBus } from "@openfront/engine-lib/EventBus";
+import { encodeServerMessage } from "@openfront/shared/ZbinWire";
 import { Transport } from "../../src/client/Transport";
-import { EventBus } from "../../src/core/EventBus";
-import { encodeServerMessage } from "../../src/core/ZbinWire";
 
 const ENTRY = "aaaa1111";
 const SIBLING = "bbbb2222";

@@ -1,4 +1,4 @@
-import type { AudioCategory } from "../../core/game/UserSettings";
+import type { AudioCategory } from "../UserSettings";
 import type { CueCategory, SoundEffect } from "./Sounds";
 
 /**

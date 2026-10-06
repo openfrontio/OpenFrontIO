@@ -1,5 +1,5 @@
+import { assetUrl } from "@openfront/shared/AssetUrls";
 import { Howl } from "howler";
-import { assetUrl } from "../../core/AssetUrls";
 import { AudioMixer } from "./AudioMixer";
 
 // Long enough not to sound like a cut, short enough that the lobby is not

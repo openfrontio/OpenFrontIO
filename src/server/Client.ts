@@ -1,14 +1,12 @@
-import WebSocket from "ws";
-import { TokenPayload } from "../core/ApiSchemas";
-import { Tick } from "../core/game/Game";
-import { packLevelBadge } from "../core/LevelBadgeWire";
+import { Tick } from "@openfront/engine-api/game/GameTypes";
+import { ClientID, Winner } from "@openfront/engine-api/Schemas";
+import { TokenPayload } from "@openfront/shared/ApiSchemas";
 import {
-  ClientID,
-  ClientPlatform,
-  LevelBadge,
-  PlayerCosmetics,
-  Winner,
-} from "../core/Schemas";
+  type LevelBadge,
+  packLevelBadge,
+} from "@openfront/shared/LevelBadgeWire";
+import { ClientPlatform, PlayerCosmetics } from "@openfront/shared/WireSchemas";
+import WebSocket from "ws";
 
 export class Client {
   public lastPing: number = Date.now();

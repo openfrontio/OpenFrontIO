@@ -1,6 +1,6 @@
 import { PlayerStats } from "../src/client/hud/layers/PlayerStats";
+import { UserSettings } from "../src/client/UserSettings";
 import type { GameView, PlayerView } from "../src/client/view";
-import { UserSettings } from "../src/core/game/UserSettings";
 
 function player(id: string, tiles: number): PlayerView {
   return {

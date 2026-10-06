@@ -34,12 +34,12 @@ vi.mock("../../../../src/client/InGameModal", () => ({
   showInGameAlert: vi.fn(),
 }));
 
+import { PlayerType } from "@openfront/engine-api/game/GameTypes";
+import { packLevelBadge } from "@openfront/shared/LevelBadgeWire";
 import { PlayerPanel } from "../../../../src/client/hud/layers/PlayerPanel";
 import { rememberLobbyRoster } from "../../../../src/client/LobbyRosterLevels";
+import { UserSettings } from "../../../../src/client/UserSettings";
 import { PlayerView } from "../../../../src/client/view";
-import { PlayerType } from "../../../../src/core/game/Game";
-import { UserSettings } from "../../../../src/core/game/UserSettings";
-import { packLevelBadge } from "../../../../src/core/LevelBadgeWire";
 
 // With lit mocked, html`` yields { strings, values }: flatten one back into
 // markup so the identity row can be checked as text.

@@ -128,7 +128,7 @@ function installLangSelector() {
 
 async function main() {
   installLangSelector();
-  const { GameMode } = await import(SRC + "core/game/Game.ts");
+  const { GameMode } = await import("@openfront/engine-api/game/GameTypes");
   await import(SRC + "client/components/LobbyPlayerView.ts");
 
   type View = HTMLElement & {

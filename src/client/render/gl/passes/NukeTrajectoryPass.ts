@@ -71,7 +71,12 @@ export class NukeTrajectoryPass {
     this.settings = settings;
 
     // --- Line program ---
-    this.lineProgram = createProgram(gl, vertSrc, fragSrc);
+    this.lineProgram = createProgram(
+      gl,
+      vertSrc,
+      fragSrc,
+      "NukeTrajectoryPass.lineProgram",
+    );
     this.uLineCamera = gl.getUniformLocation(this.lineProgram, "uCamera")!;
     this.uLineP0 = gl.getUniformLocation(this.lineProgram, "uP0")!;
     this.uLineP1 = gl.getUniformLocation(this.lineProgram, "uP1")!;
@@ -147,7 +152,12 @@ export class NukeTrajectoryPass {
     gl.bindVertexArray(null);
 
     // --- Marker program ---
-    this.markerProgram = createProgram(gl, markerVertSrc, markerFragSrc);
+    this.markerProgram = createProgram(
+      gl,
+      markerVertSrc,
+      markerFragSrc,
+      "NukeTrajectoryPass.markerProgram",
+    );
     this.uMarkerCamera = gl.getUniformLocation(this.markerProgram, "uCamera")!;
     this.uMarkerP0 = gl.getUniformLocation(this.markerProgram, "uP0")!;
     this.uMarkerP1 = gl.getUniformLocation(this.markerProgram, "uP1")!;

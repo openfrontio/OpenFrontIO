@@ -1,10 +1,10 @@
+import type { UserMeResponse } from "@openfront/shared/ApiSchemas";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   ownHiddenLevelBadge,
   ownHiddenLevelBadgeFrom,
   refreshOwnHiddenLevelBadge,
 } from "../../src/client/OwnLevelBadge";
-import type { UserMeResponse } from "../../src/core/ApiSchemas";
 
 const getUserMe = vi.hoisted(() =>
   vi.fn<() => Promise<UserMeResponse | false>>(async () => false),

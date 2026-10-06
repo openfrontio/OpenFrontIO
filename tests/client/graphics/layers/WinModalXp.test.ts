@@ -53,12 +53,12 @@ vi.mock("../../../../src/client/CrazyGamesSDK", () => ({
   },
 }));
 
+import { GameUpdateType } from "@openfront/engine-api/game/GameUpdates";
+import { EventBus } from "@openfront/engine-lib/EventBus";
 import type { GameXpPanel } from "../../../../src/client/components/GameXpPanel";
 import "../../../../src/client/hud/layers/WinModal";
 import type { WinModal } from "../../../../src/client/hud/layers/WinModal";
 import type { GameView } from "../../../../src/client/view";
-import { EventBus } from "../../../../src/core/EventBus";
-import { GameUpdateType } from "../../../../src/core/game/GameUpdates";
 
 const GAME_ID = "gXPTEST01";
 const XP_URL = `https://api.test/users/@me/xp/${GAME_ID}`;

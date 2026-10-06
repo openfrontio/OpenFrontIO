@@ -1,11 +1,11 @@
-import { html, LitElement, type TemplateResult } from "lit";
-import { customElement, property, state } from "lit/decorators.js";
 import {
   RANKED_BREAKDOWN_KEYS,
   TEAM_BREAKDOWN_KEYS,
   type ClanMemberStats,
   type ClanMemberWL,
-} from "../../../core/ClanApiSchemas";
+} from "@openfront/shared/ClanApiSchemas";
+import { html, LitElement, type TemplateResult } from "lit";
+import { customElement, property, state } from "lit/decorators.js";
 import { translateText } from "../../Utils";
 import { renderWLBarRow } from "./ClanShared";
 

@@ -1,8 +1,8 @@
+import { Game } from "@openfront/engine/game/Game";
+import { DebugSpan } from "@openfront/engine/utilities/DebugSpan";
 import { readdirSync, readFileSync } from "fs";
 import { dirname, join } from "path";
 import { fileURLToPath } from "url";
-import { Game } from "../../../../src/core/game/Game.js";
-import { DebugSpan } from "../../../../src/core/utilities/DebugSpan.js";
 import { setupFromPath } from "../../utils.js";
 
 // Available comparison adapters

@@ -1,3 +1,24 @@
+import { GameType } from "@openfront/engine-api/game/GameTypes";
+import { ID, isValidGameID } from "@openfront/engine-api/Schemas";
+import { CloseCode, CloseReason } from "@openfront/shared/CloseCodes";
+import { GameEnv } from "@openfront/shared/configuration/Env";
+import { generateID, replacer } from "@openfront/shared/SharedUtil";
+import {
+  ClientMessage,
+  ClientPlatformSchema,
+  HOSTED_LOBBY_AUTO_START_MS,
+  LevelBadge,
+  MAX_HOSTED_LOBBIES,
+  MAX_HOSTED_LOBBY_PLAYERS,
+  MIN_HOSTED_LOBBY_AUTO_START_MS,
+  MIN_HOSTED_LOBBY_PLAYERS,
+  ServerErrorMessage,
+} from "@openfront/shared/WireSchemas";
+import { CreateGameInputSchema } from "@openfront/shared/WorkerSchemas";
+import {
+  decodeClientMessage,
+  encodeServerMessage,
+} from "@openfront/shared/ZbinWire";
 import compression from "compression";
 import express, { NextFunction, Request, Response } from "express";
 import rateLimit from "express-rate-limit";
@@ -7,25 +28,6 @@ import path from "path";
 import { fileURLToPath } from "url";
 import { WebSocket, WebSocketServer } from "ws";
 import { z } from "zod";
-import { CloseCode, CloseReason } from "../core/CloseCodes";
-import { GameEnv } from "../core/configuration/Config";
-import { GameType } from "../core/game/Game";
-import {
-  ClientMessage,
-  ClientPlatformSchema,
-  HOSTED_LOBBY_AUTO_START_MS,
-  ID,
-  isValidGameID,
-  LevelBadge,
-  MAX_HOSTED_LOBBIES,
-  MAX_HOSTED_LOBBY_PLAYERS,
-  MIN_HOSTED_LOBBY_AUTO_START_MS,
-  MIN_HOSTED_LOBBY_PLAYERS,
-  ServerErrorMessage,
-} from "../core/Schemas";
-import { generateID, replacer } from "../core/Util";
-import { CreateGameInputSchema } from "../core/WorkerSchemas";
-import { decodeClientMessage, encodeServerMessage } from "../core/ZbinWire";
 import { registerAdminBotRoutes } from "./AdminBotRoutes";
 import { censorPlayer } from "./Censor";
 import { Client } from "./Client";
