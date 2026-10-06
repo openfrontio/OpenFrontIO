@@ -14,6 +14,7 @@ import {
   cid,
   makeClient,
   makeGame,
+  mockLogger,
   mockWsOf,
   startGame,
 } from "../util/GameServerHarness";
@@ -30,6 +31,7 @@ describe("settling a disputed winner vote by replay", () => {
   let archive: ReturnType<
     typeof vi.fn<(r: PartialGameRecord) => Promise<void>>
   >;
+  let log: ReturnType<typeof mockLogger>;
   let resolveReplay: (r: ReplayedWinner | null) => void;
   let replayWinner: ReturnType<
     typeof vi.fn<
@@ -41,6 +43,7 @@ describe("settling a disputed winner vote by replay", () => {
     vi.useFakeTimers();
     vi.setSystemTime(1_700_000_000_000);
     archive = vi.fn(async () => {});
+    log = mockLogger();
     replayWinner = vi.fn(
       () =>
         new Promise<ReplayedWinner | null>((resolve) => {
@@ -58,9 +61,14 @@ describe("settling a disputed winner vote by replay", () => {
     const game = makeGame({
       config: { gameType: GameType.Public },
       deps: { archive, replayWinner },
+      log,
     });
     const clients = ids.map((clientID, i) =>
-      makeClient({ clientID, ip: `1.1.1.${i + 1}` }),
+      makeClient({
+        clientID,
+        ip: `1.1.1.${i + 1}`,
+        publicId: `pub-${clientID}`,
+      }),
     );
     clients.forEach((c) => game.joinClient(c));
     startGame(game);
@@ -72,6 +80,15 @@ describe("settling a disputed winner vote by replay", () => {
   const archived = () => archive.mock.calls.map(([record]) => record);
   const archivedOnce = () =>
     vi.waitFor(() => expect(archive).toHaveBeenCalledTimes(1));
+  // The "wrong winner vote" lines: who voted wrong, for what.
+  const wrongVotes = () =>
+    log.warn.mock.calls
+      .filter(([msg]: [string]) => msg === "wrong winner vote")
+      .map(([, meta]: [string, Record<string, unknown>]) => ({
+        publicID: meta.publicID,
+        voted: meta.voted,
+        outcome: meta.outcome,
+      }));
   // Runs `fn` and returns how the outcome counters moved.
   const outcomesDuring = async (fn: () => Promise<void>) => {
     const before = { ...winnerReplayMetrics.outcomes };
@@ -117,6 +134,11 @@ describe("settling a disputed winner vote by replay", () => {
       await archivedOnce();
     });
     expect(counted).toEqual({ agreed: 0, overturned: 1, failed: 0 });
+    // The majority was wrong; C, the lone dissenter, was right.
+    expect(wrongVotes()).toEqual([
+      { publicID: `pub-${A}`, voted: ["player", A], outcome: "overturned" },
+      { publicID: `pub-${B}`, voted: ["player", A], outcome: "overturned" },
+    ]);
 
     const [record] = archived();
     expect(record.info.winner).toEqual(["player", C]);
@@ -138,6 +160,8 @@ describe("settling a disputed winner vote by replay", () => {
 
     expect(archived()[0].info.winner).toEqual(["player", A]);
     expect(counted).toEqual({ agreed: 0, overturned: 0, failed: 1 });
+    // Without a replay result nobody is proven wrong.
+    expect(wrongVotes()).toEqual([]);
   });
 
   it("counts a replay that confirms the vote as agreed", async () => {
@@ -153,6 +177,10 @@ describe("settling a disputed winner vote by replay", () => {
 
     expect(archived()[0].info.winner).toEqual(["player", A]);
     expect(counted).toEqual({ agreed: 1, overturned: 0, failed: 0 });
+    // The vote stood, but C claimed the win and was wrong.
+    expect(wrongVotes()).toEqual([
+      { publicID: `pub-${C}`, voted: ["player", C], outcome: "agreed" },
+    ]);
   });
 
   it("replays a game that ends with no majority", async () => {

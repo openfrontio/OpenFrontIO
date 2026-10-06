@@ -1948,10 +1948,10 @@ export class GameServer {
           this.archiveGame(voted, turns, endTime);
           return;
         }
-        const agrees =
-          JSON.stringify(replayed.winner ?? null) ===
-          JSON.stringify(voted?.winner ?? null);
-        winnerReplayMetrics.outcomes[agrees ? "agreed" : "overturned"]++;
+        const replayedKey = JSON.stringify(replayed.winner ?? null);
+        const agrees = replayedKey === JSON.stringify(voted?.winner ?? null);
+        const outcome = agrees ? "agreed" : "overturned";
+        winnerReplayMetrics.outcomes[outcome]++;
         this.log[agrees ? "info" : "warn"]("winner replay result", {
           gameID: this.id,
           voted: voted?.winner,
@@ -1959,6 +1959,26 @@ export class GameServer {
           winTick: replayed.tick,
           agrees,
         });
+        // A vote is the client's own simulation's result, so an honest,
+        // in-sync client votes what the replay found (desynced clients'
+        // votes were dropped). One line per voter who didn't, departed ones
+        // included, so they can be counted per player: likely cheaters.
+        for (const client of this.clients.all().values()) {
+          if (
+            client.reportedWinner === null ||
+            JSON.stringify(client.reportedWinner ?? null) === replayedKey
+          ) {
+            continue;
+          }
+          this.log.warn("wrong winner vote", {
+            gameID: this.id,
+            publicID: client.publicId,
+            clientID: client.clientID,
+            voted: client.reportedWinner,
+            replayed: replayed.winner,
+            outcome,
+          });
+        }
         this.archiveGame(replayed, turns, endTime);
       })
       .catch((error) => {
