@@ -7,7 +7,7 @@
  *   grid shows but names stay visible.
  */
 
-import { EventBus } from "@openfront/engine-lib/EventBus";
+import { EventBus } from "@openfront/shared/EventBus";
 import { Controller } from "../Controller";
 import { AlternateViewEvent, ToggleCoordinateGridEvent } from "../InputHandler";
 import { MapRenderer } from "../render/gl";

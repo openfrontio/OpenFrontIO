@@ -1,4 +1,4 @@
-import { EventBus } from "@openfront/engine-lib/EventBus";
+import { EventBus } from "@openfront/shared/EventBus";
 import { LiveStats, PlayerLiveStats } from "@openfront/shared/WireSchemas";
 import { Controller } from "../Controller";
 import { SendLiveStatsEvent } from "../Transport";

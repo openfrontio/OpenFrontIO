@@ -4,8 +4,8 @@ import {
   GameType,
   HumansVsNations,
 } from "@openfront/engine-api/game/GameTypes";
-import { EventBus } from "@openfront/engine-lib/EventBus";
 import { assetUrl } from "@openfront/shared/AssetUrls";
+import { EventBus } from "@openfront/shared/EventBus";
 import {
   ClientInfo,
   GameInfo,

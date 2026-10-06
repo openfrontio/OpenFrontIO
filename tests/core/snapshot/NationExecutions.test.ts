@@ -6,7 +6,7 @@ import {
   PlayerType,
   UnitType,
 } from "@openfront/engine-api/game/GameTypes";
-import { Config } from "@openfront/engine-lib/configuration/Config";
+import { EngineConfig } from "@openfront/engine/configuration/EngineConfig";
 import { NationExecution } from "@openfront/engine/execution/NationExecution";
 import { SpawnExecution } from "@openfront/engine/execution/SpawnExecution";
 import { Game } from "@openfront/engine/game/Game";
@@ -39,7 +39,7 @@ const TRIBES: [number, number][] = [
 
 async function nationGame(
   difficulty: Difficulty,
-  ConfigClass: typeof Config = TestConfig,
+  ConfigClass: typeof EngineConfig = TestConfig,
 ): Promise<Game> {
   const nations = NATIONS.map(
     ([name, x, y], i) =>

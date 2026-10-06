@@ -6,7 +6,6 @@ import {
   PlayerType,
   UnitType,
 } from "@openfront/engine-api/game/GameTypes";
-import { calculateTerritoryCenter } from "@openfront/engine-lib/execution/Util";
 import { PseudoRandom } from "@openfront/engine-lib/PseudoRandom";
 import {
   readVersioned,
@@ -21,6 +20,7 @@ import type {
   SnapshotWriter,
 } from "../../snapshot/SnapshotContext";
 import { MirvExecution } from "../MIRVExecution";
+import { calculateTerritoryCenter } from "../Util";
 import {
   EMOJI_NUKE,
   NationEmojiBehavior,

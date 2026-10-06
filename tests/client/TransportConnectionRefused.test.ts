@@ -45,7 +45,7 @@ vi.mock("src/client/ClientEnv", async (importOriginal) => {
   };
 });
 
-import { EventBus } from "@openfront/engine-lib/EventBus";
+import { EventBus } from "@openfront/shared/EventBus";
 import { ClientEnv, NoServerError } from "../../src/client/ClientEnv";
 import { Transport } from "../../src/client/Transport";
 

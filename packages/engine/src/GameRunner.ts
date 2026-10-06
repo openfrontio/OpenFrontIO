@@ -20,10 +20,10 @@ import {
   GameUpdateViewData,
 } from "@openfront/engine-api/game/GameUpdates";
 import { ClientID, GameStartInfo, Turn } from "@openfront/engine-api/Schemas";
-import { Config } from "@openfront/engine-lib/configuration/Config";
 import { loadTerrainMap as loadGameMap } from "@openfront/engine-lib/game/TerrainMapLoader";
 import { PseudoRandom } from "@openfront/engine-lib/PseudoRandom";
 import { simpleHash } from "@openfront/engine-lib/Util";
+import { EngineConfig } from "./configuration/EngineConfig";
 import { DoomsdayClockExecution } from "./execution/DoomsdayClockExecution";
 import { Executor } from "./execution/ExecutionManager";
 import { RecomputeRailClusterExecution } from "./execution/RecomputeRailClusterExecution";
@@ -45,7 +45,7 @@ export async function createGameRunner(
   mapLoader: GameMapLoader,
   callBack: (gu: GameUpdateViewData | ErrorUpdate) => void,
 ): Promise<GameRunner> {
-  const config = new Config(gameStart.config, false, gameStart.listed);
+  const config = new EngineConfig(gameStart.config, false, gameStart.listed);
   const gameMap = await loadGameMap(
     gameStart.config.gameMap,
     gameStart.config.gameMapSize,
@@ -121,7 +121,7 @@ export async function createGameRunnerFromSnapshot(
     true, // restore mutates the maps; never onto a shared, used copy
   );
   const game = restoreGame(snapshot, {
-    config: (gc) => new Config(gc, false, gameStart.listed),
+    config: (gc) => new EngineConfig(gc, false, gameStart.listed),
     gameMap: gameMap.gameMap,
     miniGameMap: gameMap.miniGameMap,
     teamGameSpawnAreas: gameMap.teamGameSpawnAreas,
