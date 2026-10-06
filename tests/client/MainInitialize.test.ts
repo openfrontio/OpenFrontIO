@@ -10,6 +10,7 @@ import { EventBus } from "@openfront/shared/EventBus";
 import fs from "node:fs";
 import path from "node:path";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
+import { loadModal } from "../../src/client/LazyModals";
 import { SendKickPlayerIntentEvent } from "../../src/client/LobbyEvents";
 import { capturePagePin } from "../../src/client/PagePin";
 import { translateText } from "../../src/client/Utils";
@@ -628,9 +629,57 @@ describe("Client.initialize() booted from Main.ts module scope", () => {
     });
   });
 
+  it("ignores the replay viewer hash while a game is running", async () => {
+    mocks.joinLobby.mockClear();
+    let resolveJoin: () => void = () => {};
+    mocks.joinLobby.mockReturnValueOnce({
+      prestart: new Promise<void>(() => {}),
+      join: new Promise<void>((resolve) => {
+        resolveJoin = resolve;
+      }),
+      stop: () => true,
+    });
+    const input = document.querySelector("username-input") as unknown as {
+      canPlay: () => boolean;
+    };
+    input.canPlay = () => true;
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    try {
+      document.dispatchEvent(
+        new CustomEvent("join-lobby", {
+          detail: { gameID: "AbCd5678", source: "private" },
+          bubbles: true,
+        }),
+      );
+      await vi.waitFor(() => expect(mocks.joinLobby).toHaveBeenCalled());
+      resolveJoin();
+      // The in-game entry, which Main keeps as the game's URL.
+      await vi.waitFor(() =>
+        expect(window.location.href).toMatch(/game\/AbCd5678/),
+      );
+      const gameUrl = window.location.href;
+      const replaceSpy = vi.spyOn(history, "replaceState");
+
+      window.location.hash = "#replay-viewer=dqKzit4cWu";
+      window.dispatchEvent(new Event("hashchange"));
+      await new Promise((r) => setTimeout(r, 50));
+      expect(document.querySelector("replay-viewer")).toBeNull();
+      expect(warn).toHaveBeenCalledWith(
+        "replay viewer: ignored, a game is running",
+      );
+      // The game's URL is put back.
+      expect(replaceSpy).toHaveBeenCalledWith(null, "", gameUrl);
+      replaceSpy.mockRestore();
+    } finally {
+      // Leave, so the viewer can open in the next test.
+      document.dispatchEvent(new CustomEvent("leave-lobby"));
+      warn.mockRestore();
+    }
+  });
+
   // Last: the viewer replaces the menu, and any later hash change would
   // then leave the page.
-  it("opens the replay viewer when the hash changes to one, though closing the join modal resets the URL", async () => {
+  it("opens the replay viewer when the hash changes to one, tearing the menu down like a game start", async () => {
     const joinModal = document.querySelector("join-lobby-modal") as unknown as {
       close: () => void;
     };
@@ -638,6 +687,20 @@ describe("Client.initialize() booted from Main.ts module scope", () => {
     const closeSpy = vi
       .spyOn(joinModal, "close")
       .mockImplementation(() => history.replaceState(null, "", "/"));
+    // The viewer tears the menu down like a game start. A modal the router
+    // opened clears the hash when it closes (ModalRouter.syncClosed).
+    const gameStarting = vi.fn();
+    document.addEventListener("game-starting", gameStarting);
+    // Loaded on demand: the router loads a modal before opening it.
+    await loadModal("news-modal");
+    const news = document.querySelector("news-modal") as unknown as {
+      close: () => void;
+    };
+    const newsClose = vi
+      .spyOn(news, "close")
+      .mockImplementation(() =>
+        history.replaceState(null, "", window.location.pathname),
+      );
     window.location.hash = "#replay-viewer=dqKzit4cWu";
     window.dispatchEvent(new Event("hashchange"));
     await vi.waitFor(() =>
@@ -646,6 +709,12 @@ describe("Client.initialize() booted from Main.ts module scope", () => {
           ?.gameID,
       ).toBe("dqKzit4cWu"),
     );
+    expect(gameStarting).toHaveBeenCalledOnce();
+    expect(newsClose).toHaveBeenCalled();
+    // Kept, so a reload opens the replay again.
+    expect(window.location.hash).toBe("#replay-viewer=dqKzit4cWu");
+    document.removeEventListener("game-starting", gameStarting);
+    newsClose.mockRestore();
     closeSpy.mockRestore();
   });
 });

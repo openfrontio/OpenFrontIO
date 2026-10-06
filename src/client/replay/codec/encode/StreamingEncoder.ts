@@ -20,12 +20,10 @@ import type { EncodeCtx } from "../EntitySchema";
 import { FrameNormalizer } from "../FrameNormalizer";
 import {
   DEFAULT_KEYFRAME_INTERVAL,
-  EVENT_LISTS,
   type EncodedChunk,
   type GzipFn,
   type ReplayAppend,
   type ReplayBase,
-  type ReplayEvents,
 } from "../ReplayTypes";
 import { EventCollector } from "./EventCollector";
 import { FrameEncoder } from "./FrameEncoder";
@@ -70,10 +68,6 @@ export class StreamingEncoder {
     chunks: 0,
     players: 0,
     unitTypes: 0,
-    events: Object.fromEntries(EVENT_LISTS.map((k) => [k, 0])) as Record<
-      (typeof EVENT_LISTS)[number],
-      number
-    >,
   };
 
   constructor(private readonly opts: EncoderOptions) {
@@ -159,14 +153,7 @@ export class StreamingEncoder {
    * chunk handed out, which is harmless since no frame reaches them.
    */
   async takeAppend(limit = Infinity): Promise<ReplayAppend> {
-    const events = {
-      spawnPhaseEnd: this.events.spawnPhaseEnd,
-    } as ReplayEvents;
-    for (const key of EVENT_LISTS) {
-      const list = this.events[key];
-      (events[key] as unknown[]) = list.slice(this.sent.events[key]);
-      this.sent.events[key] = list.length;
-    }
+    const events = this.events.take();
     let chunks = this.sent.chunks;
     while (chunks < this.chunkEnds.length && this.chunkEnds[chunks] <= limit) {
       chunks++;
