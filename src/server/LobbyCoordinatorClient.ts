@@ -1,12 +1,12 @@
-import winston from "winston";
-import WebSocket from "ws";
-import { z } from "zod";
-import { CloseCode } from "../core/CloseCodes";
+import { CloseCode } from "@openfront/shared/CloseCodes";
 import {
   PublicGameType,
   PublicGameTypeSchema,
   ScheduledPublicGameTypeSchema,
-} from "../core/Schemas";
+} from "@openfront/shared/WireSchemas";
+import winston from "winston";
+import WebSocket from "ws";
+import { z } from "zod";
 import { InternalGameInfo, InternalGameInfoSchema } from "./IPCBridgeSchema";
 import { ServerEnv } from "./ServerEnv";
 

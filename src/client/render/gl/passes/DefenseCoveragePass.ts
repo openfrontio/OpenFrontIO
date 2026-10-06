@@ -100,6 +100,7 @@ export class DefenseCoveragePass {
       gl,
       coverageVertSrc,
       shaderSrc(coverageFragSrc, { OWNER_MASK: TILE_DEFINES.OWNER_MASK }),
+      "DefenseCoveragePass",
     );
     this.uMapSize = gl.getUniformLocation(this.program, "uMapSize")!;
     this.uRange = gl.getUniformLocation(this.program, "uRange")!;

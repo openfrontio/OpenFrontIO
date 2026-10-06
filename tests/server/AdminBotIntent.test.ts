@@ -1,7 +1,7 @@
+import { GameType } from "@openfront/engine-api/game/GameTypes";
+import { ADMIN_BOT_CLIENT_ID } from "@openfront/engine-api/Schemas";
+import { createGameWireContext } from "@openfront/shared/ZbinWire";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { GameType } from "../../src/core/game/Game";
-import { ADMIN_BOT_CLIENT_ID } from "../../src/core/Schemas";
-import { createGameWireContext } from "../../src/core/ZbinWire";
 import { GameServer } from "../../src/server/GameServer";
 import {
   cid,

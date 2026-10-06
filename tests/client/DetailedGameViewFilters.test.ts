@@ -1,3 +1,13 @@
+import {
+  Duos,
+  GameMapType,
+  GameMode,
+  GameType,
+  HumansVsNations,
+  Quads,
+} from "@openfront/engine-api/game/GameTypes";
+import { GameConfig } from "@openfront/engine-api/Schemas";
+import { PublicGameInfo } from "@openfront/shared/WireSchemas";
 import { beforeEach, describe, expect, it } from "vitest";
 import {
   DEFAULT_FILTERS,
@@ -13,15 +23,6 @@ import {
   normalizeFilters,
   saveFilterProfile,
 } from "../../src/client/components/DetailedGameViewFilters";
-import {
-  Duos,
-  GameMapType,
-  GameMode,
-  GameType,
-  HumansVsNations,
-  Quads,
-} from "../../src/core/game/Game";
-import { GameConfig, PublicGameInfo } from "../../src/core/Schemas";
 
 function config(overrides: Partial<GameConfig> = {}): GameConfig {
   return {

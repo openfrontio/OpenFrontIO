@@ -53,6 +53,8 @@ vi.mock("../../../../src/client/CrazyGamesSDK", () => ({
   },
 }));
 
+import { GameUpdateType } from "@openfront/engine-api/game/GameUpdates";
+import { EventBus } from "@openfront/engine-lib/EventBus";
 // The game fetches the XP section when it starts and the Legend ceremony
 // ahead of its moment; here both are loaded up front, as they are by the
 // time a game ends.
@@ -62,8 +64,6 @@ import "../../../../src/client/components/LegendCeremony";
 import "../../../../src/client/hud/layers/WinModal";
 import type { WinModal } from "../../../../src/client/hud/layers/WinModal";
 import type { GameView } from "../../../../src/client/view";
-import { EventBus } from "../../../../src/core/EventBus";
-import { GameUpdateType } from "../../../../src/core/game/GameUpdates";
 
 const GAME_ID = "gXPTEST01";
 const XP_URL = `https://api.test/users/@me/xp/${GAME_ID}`;

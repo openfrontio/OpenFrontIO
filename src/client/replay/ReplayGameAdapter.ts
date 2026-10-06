@@ -18,10 +18,14 @@
  * tests rely on that.
  */
 
-import type { Config } from "../../core/configuration/Config";
-import type { PlayerType, Team, UnitType } from "../../core/game/Game";
-import type { TileRef } from "../../core/game/GameMap";
-import { GameUpdateType } from "../../core/game/GameUpdates";
+import type { TileRef } from "@openfront/engine-api/game/GameMap";
+import type {
+  PlayerType,
+  Team,
+  UnitType,
+} from "@openfront/engine-api/game/GameTypes";
+import { GameUpdateType } from "@openfront/engine-api/game/GameUpdates";
+import type { Config } from "@openfront/engine-lib/configuration/Config";
 import { OWNER_MASK } from "../render/gl/utils/TileCodec";
 import type {
   NameEntry,

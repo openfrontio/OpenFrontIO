@@ -7,7 +7,7 @@ import (
 	"flag"
 	"fmt"
 	"image"
-	_ "image/png"
+	"image/png"
 	"log"
 	"log/slog"
 	"os"
@@ -105,6 +105,10 @@ func processMap(ctx context.Context, name string, isTest bool) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("failed to read map file %s: %w", inputPath, err)
 	}
+	sourceImg, _, err := image.DecodeConfig(bytes.NewReader(imageBuffer))
+	if err != nil {
+		return "", fmt.Errorf("failed to decode map file %s: %w", inputPath, err)
+	}
 
 	// Read the info.json file
 	manifestPath := filepath.Join(inputMapDir, name, "info.json")
@@ -186,13 +190,21 @@ func processMap(ctx context.Context, name string, isTest bool) (string, error) {
 				if err != nil {
 					return "", fmt.Errorf("map %s: layer %q PNG not found at %s: %w", name, layerID, srcPng, err)
 				}
-				// Validate dimensions match image.png.
 				img, _, err := image.DecodeConfig(bytes.NewReader(pngData))
 				if err != nil {
 					return "", fmt.Errorf("map %s: layer %q PNG failed to decode: %w", name, layerID, err)
 				}
-				if img.Width != result.Map.Width || img.Height != result.Map.Height {
-					return "", fmt.Errorf("map %s: layer %q PNG dimensions (%dx%d) do not match map (%dx%d)", name, layerID, img.Width, img.Height, result.Map.Width, result.Map.Height)
+				matchesMap := img.Width == result.Map.Width && img.Height == result.Map.Height
+				matchesSource := img.Width == sourceImg.Width && img.Height == sourceImg.Height
+				if !matchesMap && !matchesSource {
+					return "", fmt.Errorf("map %s: layer %q PNG dimensions (%dx%d) do not match image.png (%dx%d)", name, layerID, img.Width, img.Height, sourceImg.Width, sourceImg.Height)
+				}
+				// Crop like the terrain so layers can be exported at image.png's size.
+				if !matchesMap {
+					pngData, err = cropPNG(pngData, result.Map.Width, result.Map.Height)
+					if err != nil {
+						return "", fmt.Errorf("map %s: layer %q PNG failed to crop: %w", name, layerID, err)
+					}
 				}
 				if err := os.WriteFile(dstPng, pngData, 0644); err != nil {
 					return "", fmt.Errorf("failed to write layer PNG for %s/%s: %w", name, layerID, err)
@@ -212,6 +224,26 @@ func processMap(ctx context.Context, name string, isTest bool) (string, error) {
 		return "", fmt.Errorf("failed to write manifest for %s: %w", name, err)
 	}
 	return manifestOutPath, nil
+}
+
+// cropPNG keeps the top-left width x height pixels of a PNG, preserving its color model (e.g. palette).
+func cropPNG(data []byte, width, height int) ([]byte, error) {
+	img, err := png.Decode(bytes.NewReader(data))
+	if err != nil {
+		return nil, err
+	}
+	sub, ok := img.(interface {
+		SubImage(image.Rectangle) image.Image
+	})
+	if !ok {
+		return nil, fmt.Errorf("unsupported PNG image type %T", img)
+	}
+	var buf bytes.Buffer
+	enc := png.Encoder{CompressionLevel: png.BestCompression}
+	if err := enc.Encode(&buf, sub.SubImage(image.Rect(0, 0, width, height))); err != nil {
+		return nil, err
+	}
+	return buf.Bytes(), nil
 }
 
 // parseMapsFlag validates and parses the --maps command-line argument.

@@ -19,20 +19,23 @@
  * turns up is the game that was played.
  */
 
-import { Game } from "../../../core/game/Game";
-import { GameMapLoader } from "../../../core/game/GameMapLoader";
+import { GameMapLoader } from "@openfront/engine-api/game/GameMapLoader";
 import {
   GameUpdateType,
   GameUpdateViewData,
   HashUpdate,
-} from "../../../core/game/GameUpdates";
-import { createGameRunner } from "../../../core/GameRunner";
+} from "@openfront/engine-api/game/GameUpdates";
+import { Game } from "@openfront/engine/game/Game";
+import { createGameRunner } from "@openfront/engine/GameRunner";
+import {
+  decompressGameRecord,
+  toWireGameStartInfo,
+} from "@openfront/shared/SharedUtil";
 import {
   GameRecord,
-  GameStartInfo,
-  GameStartInfoSchema,
-} from "../../../core/Schemas";
-import { decompressGameRecord, toWireGameStartInfo } from "../../../core/Util";
+  WireGameStartInfo,
+  WireGameStartInfoSchema,
+} from "@openfront/shared/WireSchemas";
 import { StreamingEncoder } from "../codec/encode/StreamingEncoder";
 import type { GzipFn, ReplayAppend, ReplayBase } from "../codec/ReplayTypes";
 import { terrainOf } from "../codec/Terrain";
@@ -103,8 +106,8 @@ export class ReplayDesyncError extends Error {
  * this goes into the replay header), then the server's wire blanking is
  * applied.
  */
-export function wireGameStartInfo(record: GameRecord): GameStartInfo {
-  return toWireGameStartInfo(GameStartInfoSchema.parse(record.info));
+export function wireGameStartInfo(record: GameRecord): WireGameStartInfo {
+  return toWireGameStartInfo(WireGameStartInfoSchema.parse(record.info));
 }
 
 export async function processGameRecord(

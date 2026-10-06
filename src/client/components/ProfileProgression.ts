@@ -1,11 +1,11 @@
-import { html, LitElement, nothing, PropertyValues, TemplateResult } from "lit";
-import { customElement, property, state } from "lit/decorators.js";
 import type {
   ProgressionConfig,
   PublicProgress,
   Reward,
   TrackFlare,
-} from "../../core/ApiSchemas";
+} from "@openfront/shared/ApiSchemas";
+import { html, LitElement, nothing, PropertyValues, TemplateResult } from "lit";
+import { customElement, property, state } from "lit/decorators.js";
 import { claimReward, getUserMe, invalidateUserMe } from "../Api";
 import { showInGameAlert } from "../InGameModal";
 import { clampPrestige, MAX_LEVEL, MILESTONE_LEVELS } from "../Progression";

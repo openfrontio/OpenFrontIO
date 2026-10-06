@@ -6,6 +6,7 @@ vi.mock("../../src/client/Utils", () => ({
     params ? `${key}:${JSON.stringify(params)}` : key,
 }));
 
+import type { XpBreakdown } from "@openfront/shared/ApiSchemas";
 import { LevelBadge } from "../../src/client/components/LevelBadge";
 import {
   apportionXp,
@@ -19,7 +20,6 @@ import {
   visibleMultipliers,
   visibleXpLines,
 } from "../../src/client/Progression";
-import type { XpBreakdown } from "../../src/core/ApiSchemas";
 
 if (!customElements.get("level-badge")) {
   customElements.define("level-badge", LevelBadge);

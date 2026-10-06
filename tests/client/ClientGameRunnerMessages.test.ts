@@ -1,7 +1,7 @@
+import { GameUpdateType } from "@openfront/engine-api/game/GameUpdates";
+import { EventBus } from "@openfront/engine-lib/EventBus";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { capturePagePin, resetPagePinForTests } from "../../src/client/PagePin";
-import { EventBus } from "../../src/core/EventBus";
-import { GameUpdateType } from "../../src/core/game/GameUpdates";
 
 // ClientGameRunner's server-message handling, driven through captured
 // callbacks: the lobby-phase onmessage joinLobby installs on the transport,
@@ -46,7 +46,7 @@ vi.mock("../../src/client/Utils", () => ({
   createCanvas: () => document.createElement("canvas"),
   homeHref: () => "/",
 }));
-vi.mock("../../src/core/game/TerrainMapLoader", () => ({
+vi.mock("@openfront/engine-lib/game/TerrainMapLoader", () => ({
   loadTerrainMap: vi.fn(async () => ({}) as never),
 }));
 vi.mock("../../src/client/TerrainMapFileLoader", () => ({
@@ -85,7 +85,7 @@ vi.mock("../../src/client/view", () => ({
   GameView: class {},
   PlayerView: class {},
 }));
-vi.mock("../../src/core/worker/WorkerClient", () => ({
+vi.mock("../../src/client/WorkerClient", () => ({
   WorkerClient: class {},
 }));
 vi.mock("../../src/client/Transport", async (importOriginal) => {
@@ -103,6 +103,7 @@ vi.mock("../../src/client/Transport", async (importOriginal) => {
   return { ...actual, Transport: MockTransport };
 });
 
+import { loadTerrainMap } from "@openfront/engine-lib/game/TerrainMapLoader";
 import {
   ClientGameRunner,
   joinLobby,
@@ -110,7 +111,6 @@ import {
 } from "../../src/client/ClientGameRunner";
 import { SendHashEvent } from "../../src/client/Transport";
 import { reloadForUpdate } from "../../src/client/Utils";
-import { loadTerrainMap } from "../../src/core/game/TerrainMapLoader";
 
 function makeLobbyConfig(withStartInfo: boolean): LobbyConfig {
   return {

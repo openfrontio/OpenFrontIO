@@ -1,12 +1,12 @@
-import { html, nothing } from "lit";
-import { customElement, state } from "lit/decorators.js";
-import { ClientEnv } from "src/client/ClientEnv";
 import {
   isVerifiedUsername,
   type PlayerProfile,
   type PlayerStatsTree,
   type PublicProgress,
-} from "../core/ApiSchemas";
+} from "@openfront/shared/ApiSchemas";
+import { html, nothing } from "lit";
+import { customElement, state } from "lit/decorators.js";
+import { ClientEnv } from "src/client/ClientEnv";
 import { fetchPublicPlayerProfile } from "./Api";
 import "./components/baseComponents/stats/PlayerGameHistoryView";
 import type { PlayerGameHistoryCache } from "./components/baseComponents/stats/PlayerGameHistoryView";

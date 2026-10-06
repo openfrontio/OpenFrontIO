@@ -1,12 +1,12 @@
-import fs from "fs";
-import path from "path";
 import {
   type CustomTribe,
   GameMapName,
   GameMapType,
   MapInfo,
   maps,
-} from "../src/core/game/Game";
+} from "@openfront/engine-api/game/GameTypes";
+import fs from "fs";
+import path from "path";
 import { validateLayer } from "./util/layerValidation";
 
 // ── Helpers ──────────────────────────────────────────────────────────────────

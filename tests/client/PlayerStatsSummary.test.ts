@@ -23,15 +23,15 @@ vi.mock("../../src/client/Utils", async (importOriginal) => {
   };
 });
 
+import type {
+  PlayerStatsLeaf,
+  PlayerStatsTree,
+} from "@openfront/shared/ApiSchemas";
 import {
   PlayerStatsSummary,
   buildPlayerStatsSummary,
 } from "../../src/client/components/baseComponents/stats/PlayerStatsSummary";
 import { PlayerStatsTreeView } from "../../src/client/components/baseComponents/stats/PlayerStatsTree";
-import type {
-  PlayerStatsLeaf,
-  PlayerStatsTree,
-} from "../../src/core/ApiSchemas";
 
 const leaf: PlayerStatsLeaf = {
   wins: 3n,

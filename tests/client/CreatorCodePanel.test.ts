@@ -20,12 +20,12 @@ vi.mock("../../src/client/Utils", async (importOriginal) => ({
     vars ? `${key}:${JSON.stringify(vars)}` : key,
 }));
 
+import type { UserMeResponse } from "@openfront/shared/ApiSchemas";
 import "../../src/client/components/CreatorCodePanel";
 import type {
   CreatorChangedDetail,
   CreatorCodePanel,
 } from "../../src/client/components/CreatorCodePanel";
-import type { UserMeResponse } from "../../src/core/ApiSchemas";
 
 type CreatorBinding = NonNullable<UserMeResponse["player"]["creator"]>;
 

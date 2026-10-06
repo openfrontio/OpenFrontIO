@@ -1,14 +1,14 @@
+import { MessageType } from "@openfront/engine-api/game/GameTypes";
+import {
+  DisplayMessageUpdate,
+  GameUpdateType,
+} from "@openfront/engine-api/game/GameUpdates";
+import { EventBus } from "@openfront/engine-lib/EventBus";
+import { onlyImages } from "@openfront/shared/SharedUtil";
 import { html, LitElement } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import { DirectiveResult } from "lit/directive.js";
 import { unsafeHTML, UnsafeHTMLDirective } from "lit/directives/unsafe-html.js";
-import { EventBus } from "../../../core/EventBus";
-import { MessageType } from "../../../core/game/Game";
-import {
-  DisplayMessageUpdate,
-  GameUpdateType,
-} from "../../../core/game/GameUpdates";
-import { onlyImages } from "../../../core/Util";
 import { Controller } from "../../Controller";
 import { GameView } from "../../view";
 

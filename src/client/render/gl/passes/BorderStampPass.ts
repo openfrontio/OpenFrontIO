@@ -63,6 +63,7 @@ export class BorderStampPass {
         PALETTE_SIZE: getPaletteSize(),
         ...TILE_DEFINES,
       }),
+      "BorderStampPass",
     );
     this.uCam = gl.getUniformLocation(this.program, "uCamera")!;
     this.uMapSize = gl.getUniformLocation(this.program, "uMapSize")!;

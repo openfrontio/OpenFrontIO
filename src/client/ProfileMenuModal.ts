@@ -1,6 +1,6 @@
+import { UserMeResponse } from "@openfront/shared/ApiSchemas";
 import { TemplateResult } from "lit";
 import { state } from "lit/decorators.js";
-import { UserMeResponse } from "../core/ApiSchemas";
 import { getUserMe } from "./Api";
 import { BaseModal } from "./components/BaseModal";
 import { modalHeader } from "./components/ui/ModalHeader";
