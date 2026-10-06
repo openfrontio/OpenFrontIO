@@ -5,6 +5,7 @@ import {
 import { html, LitElement, nothing, TemplateResult } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import { fetchTribeLeaderboard } from "../../Api";
+import { loadModal } from "../../LazyModals";
 import { translateText } from "../../Utils";
 import "../PlayerName";
 
@@ -90,11 +91,13 @@ export class LeaderboardTribeTable extends LitElement {
   // Same handoff the ranked tab uses: the profile modal's back button reopens
   // the leaderboard.
   private openProfile(publicId: string) {
-    document
-      .querySelector<
-        HTMLElement & { openFromLeaderboard(publicId: string): void }
-      >("player-profile-modal")
-      ?.openFromLeaderboard(publicId);
+    void loadModal("player-profile-modal").then(() =>
+      document
+        .querySelector<
+          HTMLElement & { openFromLeaderboard(publicId: string): void }
+        >("player-profile-modal")
+        ?.openFromLeaderboard(publicId),
+    );
   }
 
   private renderLoading() {

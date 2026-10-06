@@ -6,6 +6,7 @@ import {
 import { html, LitElement, nothing, PropertyValues } from "lit";
 import { customElement, property, query, state } from "lit/decorators.js";
 import { fetchPlayerLeaderboard, getUserMe } from "../../Api";
+import { loadModal } from "../../LazyModals";
 import { translateText } from "../../Utils";
 import "../PlayerName";
 
@@ -210,11 +211,13 @@ export class LeaderboardPlayerList extends LitElement {
   // Same handoff as the clan views: the profile modal's back button reopens
   // the leaderboard (its loaded pages survive the close).
   private openProfile(publicId: string) {
-    document
-      .querySelector<
-        HTMLElement & { openFromLeaderboard(publicId: string): void }
-      >("player-profile-modal")
-      ?.openFromLeaderboard(publicId);
+    void loadModal("player-profile-modal").then(() =>
+      document
+        .querySelector<
+          HTMLElement & { openFromLeaderboard(publicId: string): void }
+        >("player-profile-modal")
+        ?.openFromLeaderboard(publicId),
+    );
   }
 
   // TODO: consider IntersectionObserver for better visibility detection?
