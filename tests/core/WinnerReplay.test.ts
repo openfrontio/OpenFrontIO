@@ -4,6 +4,7 @@ import {
   WinUpdate,
 } from "@openfront/engine-api/game/GameUpdates";
 import { GameStartInfo, Turn } from "@openfront/engine-api/Schemas";
+import { loadMapFiles } from "@openfront/engine-lib/game/MapFiles";
 import { createGameRunner } from "@openfront/engine/GameRunner";
 import { replayWinner } from "@openfront/engine/WinnerReplay";
 import { describe, expect, it } from "vitest";
@@ -23,6 +24,14 @@ function gameStart(): GameStartInfo {
   });
   return { ...start, players: start.players.slice(0, 2) };
 }
+
+// The plains files, as the host would read and pass them in.
+const mapFiles = () =>
+  loadMapFiles(
+    new TestDataMapLoader("plains"),
+    gameStart().config.gameMap,
+    GameMapSize.Normal,
+  );
 
 // Plays the game live, the way a client would, and returns its turn log and
 // the Win update the live game produced.
@@ -71,11 +80,7 @@ describe("replayWinner", () => {
     const { turns, win } = await playLive(P2);
     expect(win.winner).toEqual(["player", P1]);
 
-    const replayed = await replayWinner(
-      gameStart(),
-      turns,
-      new TestDataMapLoader("plains"),
-    );
+    const replayed = await replayWinner(gameStart(), turns, await mapFiles());
 
     expect(replayed.winner).toEqual(win.winner);
     expect(replayed.allPlayersStats).toEqual(win.allPlayersStats);
@@ -84,11 +89,7 @@ describe("replayWinner", () => {
 
   it("follows the turn log, not anyone's claim", async () => {
     const { turns } = await playLive(P1);
-    const replayed = await replayWinner(
-      gameStart(),
-      turns,
-      new TestDataMapLoader("plains"),
-    );
+    const replayed = await replayWinner(gameStart(), turns, await mapFiles());
     expect(replayed.winner).toEqual(["player", P2]);
   });
 
@@ -97,7 +98,7 @@ describe("replayWinner", () => {
     const replayed = await replayWinner(
       gameStart(),
       turns.slice(0, -20),
-      new TestDataMapLoader("plains"),
+      await mapFiles(),
     );
     expect(replayed.winner).toBeUndefined();
     expect(replayed.tick).toBeNull();

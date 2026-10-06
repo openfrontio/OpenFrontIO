@@ -6,6 +6,7 @@ import {
   MapManifest,
 } from "@openfront/engine-api/game/GameMapLoader";
 import { GameMapType } from "@openfront/engine-api/game/GameTypes";
+import { loadMapFiles } from "@openfront/engine-lib/game/MapFiles";
 import { replayWinner } from "@openfront/engine/WinnerReplay";
 import fs from "fs";
 import { readMapFile } from "./MapFiles";
@@ -46,8 +47,19 @@ try {
   // not Linux
 }
 
+// The engine reads nothing itself: the map files are read here and passed in.
+async function replay(req: ReplayRequest) {
+  const { gameMap, gameMapSize } = req.gameStart.config;
+  const map = await loadMapFiles(
+    new ServerGameMapLoader(),
+    gameMap,
+    gameMapSize,
+  );
+  return replayWinner(req.gameStart, req.turns, map);
+}
+
 process.once("message", (req: ReplayRequest) => {
-  replayWinner(req.gameStart, req.turns, new ServerGameMapLoader())
+  replay(req)
     .then(
       (result): ReplayResponse => ({ ok: true, result }),
       (error: unknown): ReplayResponse => ({
