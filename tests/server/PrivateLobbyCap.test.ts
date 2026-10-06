@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { GameType } from "../../src/core/game/Game";
-import { UpdateGameConfigIntentSchema } from "../../src/core/Schemas";
+import { GameType } from "@openfront/engine-api/game/GameTypes";
+import { UpdateGameConfigIntentSchema } from "@openfront/engine-api/Schemas";
 import { GamePhase } from "../../src/server/GameServer";
 import {
   cid,

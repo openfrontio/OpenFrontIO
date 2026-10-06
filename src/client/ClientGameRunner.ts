@@ -1,39 +1,36 @@
-import { Config } from "src/core/configuration/Config";
-import { ClientEnv } from "../client/ClientEnv";
-import { reloadForUpdate, translateText } from "../client/Utils";
-import { EventBus } from "../core/EventBus";
-import {
-  ClientID,
-  GameID,
-  GameRecord,
-  GameStartInfo,
-  GroupTokenEvent,
-  LobbyInfoEvent,
-  PlayerCosmeticRefs,
-  ServerMessage,
-} from "../core/Schemas";
-import { findClosestBy, replacer } from "../core/Util";
+import { ClientID, GameID } from "@openfront/engine-api/Schemas";
+import { TileRef } from "@openfront/engine-api/game/GameMap";
+import { GameMapLoader } from "@openfront/engine-api/game/GameMapLoader";
 import {
   BuildableUnit,
   PlayerType,
   Structures,
   UnitType,
-} from "../core/game/Game";
-import { TileRef } from "../core/game/GameMap";
-import { GameMapLoader } from "../core/game/GameMapLoader";
+} from "@openfront/engine-api/game/GameTypes";
 import {
   ErrorUpdate,
   GameUpdateType,
   GameUpdateViewData,
   HashUpdate,
-} from "../core/game/GameUpdates";
-import { loadTerrainMap, TerrainMapData } from "../core/game/TerrainMapLoader";
+} from "@openfront/engine-api/game/GameUpdates";
+import { findClosestBy } from "@openfront/engine-lib/Util";
+import { Config } from "@openfront/engine-lib/configuration/Config";
 import {
-  GRAPHICS_KEY,
-  USER_SETTINGS_CHANGED_EVENT,
-  UserSettings,
-} from "../core/game/UserSettings";
-import { WorkerClient } from "../core/worker/WorkerClient";
+  loadTerrainMap,
+  TerrainMapData,
+} from "@openfront/engine-lib/game/TerrainMapLoader";
+import { EventBus } from "@openfront/shared/EventBus";
+import { replacer } from "@openfront/shared/SharedUtil";
+import {
+  GameRecord,
+  GroupTokenEvent,
+  LobbyInfoEvent,
+  PlayerCosmeticRefs,
+  ServerMessage,
+  WireGameStartInfo,
+} from "@openfront/shared/WireSchemas";
+import { ClientEnv } from "../client/ClientEnv";
+import { reloadForUpdate, translateText } from "../client/Utils";
 import { isDesktopShell } from "./DesktopShell";
 import { GameMetrics } from "./GameMetrics";
 import { showInGameAlert } from "./InGameModal";
@@ -69,8 +66,14 @@ import {
   SendUpgradeStructureIntentEvent,
   Transport,
 } from "./Transport";
+import {
+  GRAPHICS_KEY,
+  USER_SETTINGS_CHANGED_EVENT,
+  UserSettings,
+} from "./UserSettings";
 import { createCanvas } from "./Utils";
 import { WebGLFrameBuilder } from "./WebGLFrameBuilder";
+import { WorkerClient } from "./WorkerClient";
 import { MapLayerController } from "./controllers/MapLayerController";
 import { createRenderer, GameRenderer } from "./hud/GameRenderer";
 import { goldRateTracker } from "./hud/layers/lib/GoldRateTracker";
@@ -103,7 +106,7 @@ export interface LobbyConfig {
   gameID: GameID;
   turnstileToken: string | null;
   // GameStartInfo only exists when playing a singleplayer game.
-  gameStartInfo?: GameStartInfo;
+  gameStartInfo?: WireGameStartInfo;
   // GameRecord exists when replaying an archived game.
   gameRecord?: GameRecord;
   // Watch without playing.
@@ -681,7 +684,6 @@ async function createClientGame(
   }
   const config = new Config(
     lobbyConfig.gameStartInfo.config,
-    userSettings,
     lobbyConfig.gameRecord !== undefined,
     lobbyConfig.gameStartInfo.listed,
     lobbyConfig.spectator === true,

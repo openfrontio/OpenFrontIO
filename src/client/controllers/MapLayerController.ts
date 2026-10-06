@@ -6,15 +6,15 @@
  * so the game starts without blocking on layer PNGs.
  */
 
-import { GameMapSize, GameMapType } from "../../core/game/Game";
-import { GameMapLoader } from "../../core/game/GameMapLoader";
+import { GameMapLoader } from "@openfront/engine-api/game/GameMapLoader";
+import { GameMapSize, GameMapType } from "@openfront/engine-api/game/GameTypes";
 import {
   loadLayerImages,
   TerrainMapData,
-} from "../../core/game/TerrainMapLoader";
-import { UserSettings } from "../../core/game/UserSettings";
+} from "@openfront/engine-lib/game/TerrainMapLoader";
 import { Controller } from "../Controller";
 import { MapRenderer } from "../render/gl";
+import { UserSettings } from "../UserSettings";
 
 export class MapLayerController implements Controller {
   constructor(

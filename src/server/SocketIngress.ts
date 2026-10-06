@@ -1,9 +1,13 @@
+import { ClientID } from "@openfront/engine-api/Schemas";
+import { CloseCode, CloseReason } from "@openfront/shared/CloseCodes";
+import {
+  ClientMessage,
+  ClientMessageSchema,
+} from "@openfront/shared/WireSchemas";
+import { decodeClientMessageUnvalidated } from "@openfront/shared/ZbinWire";
+import { ZbContext } from "@openfront/zbin";
 import { Logger } from "winston";
 import { z } from "zod";
-import { ZbContext } from "../../zbin";
-import { CloseCode, CloseReason } from "../core/CloseCodes";
-import { ClientID, ClientMessage, ClientMessageSchema } from "../core/Schemas";
-import { decodeClientMessageUnvalidated } from "../core/ZbinWire";
 import { Client } from "./Client";
 import { ClientMsgRateLimiter } from "./ClientMsgRateLimiter";
 import { MatchTelemetryRecorder } from "./MatchTelemetryRecorder";

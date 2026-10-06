@@ -1,9 +1,9 @@
-import { z } from "zod";
 import {
   readVersioned,
   SnapshotError,
   snapshotType,
-} from "../../../src/core/snapshot/SnapshotType";
+} from "@openfront/engine-lib/snapshot/SnapshotType";
+import { z } from "zod";
 
 // A record type as it would look after two layout changes.
 const Widget = snapshotType({

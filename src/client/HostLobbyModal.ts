@@ -1,3 +1,23 @@
+import {
+  Difficulty,
+  GameMapSize,
+  GameMapType,
+  GameMode,
+  UnitType,
+} from "@openfront/engine-api/game/GameTypes";
+import {
+  GameConfigPatch,
+  isValidGameID,
+  TeamCountConfig,
+} from "@openfront/engine-api/Schemas";
+import { DoomsdayClockSpeed } from "@openfront/engine-lib/game/DoomsdayClock";
+import { GameEnv } from "@openfront/shared/configuration/Env";
+import { EventBus } from "@openfront/shared/EventBus";
+import {
+  ClientInfo,
+  LOBBY_QUEUE_CUTOFF_MS,
+  LobbyInfoEvent,
+} from "@openfront/shared/WireSchemas";
 import { html, nothing } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
 import { ClientEnv } from "src/client/ClientEnv";
@@ -8,25 +28,6 @@ import {
   showToast,
   translateText,
 } from "../client/Utils";
-import { GameEnv } from "../core/configuration/Config";
-import { EventBus } from "../core/EventBus";
-import { DoomsdayClockSpeed } from "../core/game/DoomsdayClock";
-import {
-  Difficulty,
-  GameMapSize,
-  GameMapType,
-  GameMode,
-  UnitType,
-} from "../core/game/Game";
-import { UserSettings } from "../core/game/UserSettings";
-import {
-  ClientInfo,
-  GameConfigPatch,
-  isValidGameID,
-  LOBBY_QUEUE_CUTOFF_MS,
-  LobbyInfoEvent,
-  TeamCountConfig,
-} from "../core/Schemas";
 import { createLobby, getUserMe, queueLobby, setLobbyListed } from "./Api";
 import "./components/baseComponents/Modal";
 import { BaseModal } from "./components/BaseModal";
@@ -46,6 +47,7 @@ import { fetchCosmetics, InsufficientCurrency } from "./Cosmetics";
 import { crazyGamesSDK } from "./CrazyGamesSDK";
 import { JoinLobbyEvent } from "./Main";
 import { terrainMapFileLoader } from "./TerrainMapFileLoader";
+import { UserSettings } from "./UserSettings";
 import {
   getBotsForCompactMap,
   getNationsForCompactMap,

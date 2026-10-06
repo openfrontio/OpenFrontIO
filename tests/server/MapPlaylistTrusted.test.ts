@@ -1,5 +1,5 @@
+import { GameConfig, GameConfigSchema } from "@openfront/engine-api/Schemas";
 import { describe, expect, it, vi } from "vitest";
-import { GameConfig, GameConfigSchema } from "../../src/core/Schemas";
 import { MapPlaylist } from "../../src/server/MapPlaylist";
 
 vi.mock("../../src/server/MapLandTiles", () => ({

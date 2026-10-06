@@ -1,6 +1,4 @@
-import { html, LitElement, nothing, PropertyValues, TemplateResult } from "lit";
-import { customElement, property, state } from "lit/decorators.js";
-import { UserMeResponse } from "../../core/ApiSchemas";
+import { UserMeResponse } from "@openfront/shared/ApiSchemas";
 import {
   Cosmetics,
   Effect,
@@ -9,17 +7,19 @@ import {
   isNukeExplosionEffect,
   NUKE_EXPLOSION_TYPES,
   NukeExplosionType,
-} from "../../core/CosmeticSchemas";
-import {
-  EFFECTS_KEY,
-  USER_SETTINGS_CHANGED_EVENT,
-  UserSettings,
-} from "../../core/game/UserSettings";
+} from "@openfront/shared/CosmeticSchemas";
+import { html, LitElement, nothing, PropertyValues, TemplateResult } from "lit";
+import { customElement, property, state } from "lit/decorators.js";
 import {
   resolveCosmetics,
   ResolvedCosmetic,
   translateCosmetic,
 } from "../Cosmetics";
+import {
+  EFFECTS_KEY,
+  USER_SETTINGS_CHANGED_EVENT,
+  UserSettings,
+} from "../UserSettings";
 import { translateText } from "../Utils";
 import "./CosmeticCard";
 import { cosmeticSelectionLabel } from "./CosmeticPresentation";

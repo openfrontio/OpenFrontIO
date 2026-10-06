@@ -1,11 +1,11 @@
-import { html, LitElement, render as litRender, PropertyValues } from "lit";
-import { customElement, property, state } from "lit/decorators.js";
 import {
   HOSTED_LOBBY_AUTO_START_MS,
   MAX_HOSTED_LOBBY_PLAYERS,
   MIN_HOSTED_LOBBY_AUTO_START_MS,
   MIN_HOSTED_LOBBY_PLAYERS,
-} from "../../core/Schemas";
+} from "@openfront/shared/WireSchemas";
+import { html, LitElement, render as litRender, PropertyValues } from "lit";
+import { customElement, property, state } from "lit/decorators.js";
 import { translateText } from "../Utils";
 import "./FluentSlider";
 

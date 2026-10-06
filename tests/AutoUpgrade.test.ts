@@ -1,5 +1,5 @@
+import { EventBus } from "@openfront/shared/EventBus";
 import { AutoUpgradeEvent } from "../src/client/InputHandler";
-import { EventBus } from "../src/core/EventBus";
 
 describe("AutoUpgrade Feature", () => {
   let eventBus: EventBus;

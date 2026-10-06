@@ -1,3 +1,4 @@
+import { StreamsFeed } from "@openfront/shared/ApiSchemas";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { getStreams } from "../../../src/client/Api";
 import { ClientEnv } from "../../../src/client/ClientEnv";
@@ -6,7 +7,6 @@ import {
   featuredStream,
   isOffFrame,
 } from "../../../src/client/FeaturedStream";
-import { StreamsFeed } from "../../../src/core/ApiSchemas";
 
 const entry = {
   platform: "twitch" as const,

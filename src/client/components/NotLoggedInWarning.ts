@@ -1,6 +1,6 @@
+import { UserMeResponse } from "@openfront/shared/ApiSchemas";
 import { LitElement, html } from "lit";
 import { customElement, state } from "lit/decorators.js";
-import { UserMeResponse } from "../../core/ApiSchemas";
 import { responseHasLinkedIdentity } from "../AccountIdentity";
 import { translateText } from "../Utils";
 

@@ -1,15 +1,15 @@
-import { Config } from "../../../src/core/configuration/Config";
-import { NationExecution } from "../../../src/core/execution/NationExecution";
-import { SpawnExecution } from "../../../src/core/execution/SpawnExecution";
 import {
   Cell,
   Difficulty,
-  Game,
   Nation,
   PlayerInfo,
   PlayerType,
   UnitType,
-} from "../../../src/core/game/Game";
+} from "@openfront/engine-api/game/GameTypes";
+import { EngineConfig } from "@openfront/engine/configuration/EngineConfig";
+import { NationExecution } from "@openfront/engine/execution/NationExecution";
+import { SpawnExecution } from "@openfront/engine/execution/SpawnExecution";
+import { Game } from "@openfront/engine/game/Game";
 import { setup } from "../../util/Setup";
 import { expectSnapshotRoundTrip } from "../../util/Snapshot";
 import { TestConfig, UseRealAttackLogic } from "../../util/TestConfig";
@@ -39,7 +39,7 @@ const TRIBES: [number, number][] = [
 
 async function nationGame(
   difficulty: Difficulty,
-  ConfigClass: typeof Config = TestConfig,
+  ConfigClass: typeof EngineConfig = TestConfig,
 ): Promise<Game> {
   const nations = NATIONS.map(
     ([name, x, y], i) =>

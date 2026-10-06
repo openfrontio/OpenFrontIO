@@ -1,6 +1,6 @@
+import { Reward } from "@openfront/shared/ApiSchemas";
 import { html, LitElement, TemplateResult } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
-import { Reward } from "../../core/ApiSchemas";
 import {
   claimAllRewards,
   claimReward,

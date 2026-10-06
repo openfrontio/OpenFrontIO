@@ -38,6 +38,10 @@ vi.mock("../../src/client/Payments", async (importOriginal) => ({
   startPurchase: vi.fn(async () => ({ outcome: "redirecting" })),
 }));
 
+import type {
+  Cosmetics,
+  Subscription,
+} from "@openfront/shared/CosmeticSchemas";
 import {
   changeSubscriptionTier,
   getUserMe,
@@ -55,7 +59,6 @@ import {
 } from "../../src/client/InGameModal";
 import { startPurchase } from "../../src/client/Payments";
 import { translateText } from "../../src/client/Utils";
-import type { Cosmetics, Subscription } from "../../src/core/CosmeticSchemas";
 
 const startPurchaseMock = startPurchase as unknown as ReturnType<typeof vi.fn>;
 const alertMock = showInGameAlert as unknown as ReturnType<typeof vi.fn>;

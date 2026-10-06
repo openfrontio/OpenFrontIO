@@ -11,8 +11,8 @@ vi.mock("../../src/client/DesktopPresence", () => ({
   },
 }));
 
+import { LobbyInfoEvent } from "@openfront/shared/WireSchemas";
 import { HostLobbyModal } from "../../src/client/HostLobbyModal";
-import { LobbyInfoEvent } from "../../src/core/Schemas";
 
 const LOBBY = "ABCD1234";
 
