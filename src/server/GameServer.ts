@@ -1927,10 +1927,8 @@ export class GameServer {
   private settleWinner() {
     const voted = this.winnerVote.winner();
     const candidates = this.winnerVote.candidates();
-    if (candidates === 0 || (candidates === 1 && voted !== null)) {
-      this.archiveGame(voted);
-      return;
-    }
+    // TEST BRANCH, DO NOT MERGE: replay every game, not just disputed ones,
+    // so the whole flow can be exercised on a preview deploy.
     // The record as of now; the game may run on while the replay does.
     const turns = this.turns.slice();
     const endTime = Date.now();
