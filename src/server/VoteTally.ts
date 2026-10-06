@@ -37,6 +37,11 @@ export class VoteRound<T> {
     return candidate.ips.size;
   }
 
+  // How many distinct values have been voted for.
+  size(): number {
+    return this.candidates.size;
+  }
+
   // Returns the winning value once some candidate holds a strict majority of
   // `totalUniqueIPs` (isStrictMajority), else null. The first candidate voted
   // for wins if, through shared IPs, more than one holds a majority.

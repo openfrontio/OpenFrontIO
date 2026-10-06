@@ -118,6 +118,11 @@ export class WinnerVote {
     return { stats, agreed };
   }
 
+  // How many different winners the votes so far have named.
+  candidates(): number {
+    return this.round.size();
+  }
+
   // Records a vote from `ip`. Returns the candidate's key and how many unique
   // IPs back it after this vote.
   cast(
