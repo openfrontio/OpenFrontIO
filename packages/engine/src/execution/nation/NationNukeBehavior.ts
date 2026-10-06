@@ -9,7 +9,6 @@ import {
   Tick,
   UnitType,
 } from "@openfront/engine-api/game/GameTypes";
-import { closestTwoTiles } from "@openfront/engine-lib/execution/Util";
 import { euclDistFN } from "@openfront/engine-lib/game/GameMapImpl";
 import { PseudoRandom } from "@openfront/engine-lib/PseudoRandom";
 import {
@@ -29,6 +28,7 @@ import type {
 } from "../../snapshot/SnapshotContext";
 import { NukeExecution } from "../NukeExecution";
 import { UpgradeStructureExecution } from "../UpgradeStructureExecution";
+import { closestTwoTiles } from "../Util";
 import { AiAttackBehavior } from "../utils/AiAttackBehavior";
 import { EMOJI_NUKE, NationEmojiBehavior } from "./NationEmojiBehavior";
 import { findRunawayLeader, randTerritoryTileArray } from "./NationUtils";

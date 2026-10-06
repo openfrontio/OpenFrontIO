@@ -1,7 +1,7 @@
 import { GAME_ID_REGEX } from "@openfront/engine-api/Schemas";
-import { EventBus } from "@openfront/engine-lib/EventBus";
 import { UserMeResponse } from "@openfront/shared/ApiSchemas";
 import { assetUrl } from "@openfront/shared/AssetUrls";
+import { EventBus } from "@openfront/shared/EventBus";
 import { toWireGameStartInfo } from "@openfront/shared/SharedUtil";
 import {
   GameInfo,

@@ -1,4 +1,4 @@
-import { EventBus } from "@openfront/engine-lib/EventBus";
+import { EventBus } from "@openfront/shared/EventBus";
 import {
   InputHandler,
   ZOOM_DELTA_DIVISOR,

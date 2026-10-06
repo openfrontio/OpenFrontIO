@@ -4,7 +4,7 @@ import {
   StampedIntent,
   Turn,
 } from "@openfront/engine-api/Schemas";
-import { EventBus } from "@openfront/engine-lib/EventBus";
+import { EventBus } from "@openfront/shared/EventBus";
 import {
   createPartialGameRecord,
   decompressGameRecord,

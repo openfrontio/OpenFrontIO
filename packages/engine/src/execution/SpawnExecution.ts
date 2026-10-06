@@ -6,7 +6,6 @@ import {
   SpawnArea,
 } from "@openfront/engine-api/game/GameTypes";
 import { GameID } from "@openfront/engine-api/Schemas";
-import { getSpawnTiles } from "@openfront/engine-lib/execution/Util";
 import { PseudoRandom } from "@openfront/engine-lib/PseudoRandom";
 import { zNum, zRandom } from "@openfront/engine-lib/snapshot/SnapshotType";
 import { simpleHash } from "@openfront/engine-lib/Util";
@@ -25,6 +24,7 @@ import type {
 } from "../snapshot/SnapshotContext";
 import { PlayerExecution } from "./PlayerExecution";
 import { TribeExecution } from "./TribeExecution";
+import { getSpawnTiles } from "./Util";
 
 type Spawn = { center: TileRef; tiles: TileRef[] };
 

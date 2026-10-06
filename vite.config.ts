@@ -1,7 +1,7 @@
 import {
   type AssetManifest,
   buildAssetUrl,
-} from "@openfront/engine-lib/AssetPaths";
+} from "@openfront/shared/AssetPaths";
 import { rewriteAssetsForCdn } from "@openfront/shared/AssetUrls";
 import tailwindcss from "@tailwindcss/vite";
 import fs from "fs";

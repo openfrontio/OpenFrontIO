@@ -2,7 +2,7 @@
  * Gold-per-minute benchmark of a full nation game.
  *
  * Spawns every nation from the world map manifest at Impossible difficulty
- * with the real production Config (real attack logic, nukes, trade routing —
+ * with the real production EngineConfig (real attack logic, nukes, trade routing —
  * not the TestConfig stubs) and lets the real NationExecutions play the game:
  * expanding, warring, and building their own ports, factories and cities.
  * Nothing is scripted; every port and train line exists because a nation
@@ -30,7 +30,7 @@ import {
   PlayerType,
   UnitType,
 } from "@openfront/engine-api/game/GameTypes";
-import { Config } from "@openfront/engine-lib/configuration/Config";
+import { EngineConfig } from "@openfront/engine/configuration/EngineConfig";
 import { NationExecution } from "@openfront/engine/execution/NationExecution";
 import { RecomputeRailClusterExecution } from "@openfront/engine/execution/RecomputeRailClusterExecution";
 import { Game, Player } from "@openfront/engine/game/Game";
@@ -152,7 +152,7 @@ async function runNationGame(minutes: number): Promise<{
     { difficulty: Difficulty.Impossible },
     [],
     undefined,
-    Config,
+    EngineConfig,
     false, // keep the spawn phase open so nations can place themselves
     nations,
   );

@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import type { TileRef } from "@openfront/engine-api/game/GameMap";
-import { EventBus } from "@openfront/engine-lib/EventBus";
+import { EventBus } from "@openfront/shared/EventBus";
 import { PlayerActionHandler } from "../../../../src/client/hud/layers/PlayerActionHandler";
 import { SendSpawnIntentEvent } from "../../../../src/client/Transport";
 import type { UIState } from "../../../../src/client/UIState";
