@@ -8,7 +8,7 @@
 import { Cell, GameType, UnitType } from "@openfront/engine-api/game/GameTypes";
 import { GameUpdateType } from "@openfront/engine-api/game/GameUpdates";
 import { Config } from "@openfront/engine-lib/configuration/Config";
-import { EventBus } from "@openfront/engine-lib/EventBus";
+import { EventBus } from "@openfront/shared/EventBus";
 import "../../../src/client/hud/layers/EventsDisplay";
 import type { EventsDisplay } from "../../../src/client/hud/layers/EventsDisplay";
 import "../../../src/client/hud/layers/PlayerInfoOverlay";

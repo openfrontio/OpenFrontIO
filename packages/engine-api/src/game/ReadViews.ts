@@ -3,14 +3,13 @@ import {
   Gold,
   PlayerID,
   PlayerType,
-  SamLauncherState,
   TerraNullius,
   UnitType,
 } from "./GameTypes";
 
 /*
  * Read-only views of game state that rules code (Config, UnitGrid,
- * execution/Util) runs on. The engine's Player/Unit/Game and the client's
+ * execution/NukeAlliance) runs on. The engine's Player/Unit/Game and the client's
  * PlayerView/UnitView/GameView both satisfy them, so the same rules run on
  * either side without the rules importing the engine or the client.
  *
@@ -56,25 +55,6 @@ export interface GameLike extends GameMap {
     types: UnitType | readonly UnitType[],
     predicate?: UnitPredicate,
   ): Array<{ unit: UnitLike; distSquared: number }>;
-}
-
-/*
- * State only the engine tracks, read by rules the client never evaluates
- * (build costs, SAM range, MIRV targeting). The views don't carry it.
- */
-
-export interface EnginePlayerLike extends PlayerLike {
-  unitsOwned(type: UnitType): number;
-  unitsConstructed(type: UnitType): number;
-  borderTiles(): ReadonlyTileSet;
-}
-
-export interface EngineUnitLike extends UnitLike {
-  samLauncherState(): SamLauncherState | undefined;
-}
-
-export interface EngineGameLike extends GameLike {
-  mirvsLaunched(): number;
 }
 
 /**

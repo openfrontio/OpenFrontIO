@@ -5,6 +5,7 @@
  * viewer plays as it grows, and stores once it's done.
  */
 
+import type { ConnectMessage } from "@openfront/engine-api/worker/WorkerMessages";
 import type { GameRecord } from "@openfront/shared/WireSchemas";
 import {
   gunzipInBrowser,
@@ -19,7 +20,10 @@ import {
   type ProcessingHandlers,
 } from "../../../src/client/replay/LocalProcessing";
 import { processGameRecord } from "../../../src/client/replay/processor/ReplayProcessor";
-import type { ProcessorResponse } from "../../../src/client/replay/ProcessorMessages";
+import type {
+  ProcessorRequest,
+  ProcessorResponse,
+} from "../../../src/client/replay/ProcessorMessages";
 import { ReplayPlayback } from "../../../src/client/replay/ReplayPlayback";
 import {
   config,
@@ -28,6 +32,7 @@ import {
   playAndArchive,
   spawnOnLand,
 } from "./util/ArchiveGame";
+import { directEngine } from "./util/DirectEngine";
 
 /** Stands in for the worker: the test says what it answers. */
 class FakeWorker extends EventTarget {
@@ -61,10 +66,26 @@ const RECORD = { info: { gameID: "abcd1234" } } as unknown as GameRecord;
 describe("processInBrowser", () => {
   test("passes the record on, then relays what the worker says", async () => {
     const worker = new FakeWorker();
+    const engine = new FakeWorker();
     const { h, calls } = handlers();
-    processInBrowser(RECORD, h, async () => worker as unknown as Worker);
+    processInBrowser(
+      RECORD,
+      h,
+      async () => worker as unknown as Worker,
+      async () => engine as unknown as Worker,
+    );
     await vi.waitFor(() => expect(worker.posted).toHaveLength(1));
-    expect(worker.posted[0]).toMatchObject({ record: RECORD });
+    // The two workers get the ends of one channel.
+    const request = worker.posted[0] as ProcessorRequest;
+    expect(request.record).toBe(RECORD);
+    expect(engine.posted).toEqual([
+      { type: "connect", port: expect.any(MessagePort) },
+    ]);
+    const { port } = engine.posted[0] as ConnectMessage;
+    const received = new Promise((r) => (port.onmessage = (e) => r(e.data)));
+    request.engine.postMessage("hello");
+    expect(await received).toBe("hello");
+    port.close();
 
     worker.answer({ type: "progress", percent: 10 });
     worker.answer({ type: "start", base: {} as ReplayBase });
@@ -73,23 +94,59 @@ describe("processInBrowser", () => {
     worker.answer({ type: "done" });
     expect(calls).toEqual(["progress 10", "start", "append", "append", "done"]);
     expect(worker.terminated).toBe(true);
+    expect(engine.terminated).toBe(true);
   });
 
   test("a failure is reported once, and says whether it was a desync", async () => {
     const worker = new FakeWorker();
+    const engine = new FakeWorker();
     const { h, calls } = handlers();
-    processInBrowser(RECORD, h, async () => worker as unknown as Worker);
+    processInBrowser(
+      RECORD,
+      h,
+      async () => worker as unknown as Worker,
+      async () => engine as unknown as Worker,
+    );
     await vi.waitFor(() => expect(worker.posted).toHaveLength(1));
     worker.answer({ type: "error", message: "diverged", desync: true });
     worker.answer({ type: "progress", percent: 50 }); // after the end
     expect(calls).toEqual(["error diverged true"]);
     expect(worker.terminated).toBe(true);
+    expect(engine.terminated).toBe(true);
+  });
+
+  test("the engine worker failing is a failure", async () => {
+    const worker = new FakeWorker();
+    const engine = new FakeWorker();
+    const { h, calls } = handlers();
+    processInBrowser(
+      RECORD,
+      h,
+      async () => worker as unknown as Worker,
+      async () => engine as unknown as Worker,
+    );
+    await vi.waitFor(() => expect(worker.posted).toHaveLength(1));
+    // An ErrorEvent; Node 24 has no ErrorEvent global.
+    engine.dispatchEvent(
+      Object.assign(new Event("error"), { message: "crashed" }),
+    );
+    expect(calls).toEqual(["error crashed false"]);
+    expect(worker.terminated).toBe(true);
+    expect(engine.terminated).toBe(true);
   });
 
   test("a worker that can't start is a failure", async () => {
+    const engine = new FakeWorker();
     const { h, calls } = handlers();
-    processInBrowser(RECORD, h, () => Promise.reject(new Error("no workers")));
+    processInBrowser(
+      RECORD,
+      h,
+      () => Promise.reject(new Error("no workers")),
+      async () => engine as unknown as Worker,
+    );
     await vi.waitFor(() => expect(calls).toEqual(["error no workers false"]));
+    // The one that did start is stopped.
+    expect(engine.terminated).toBe(true);
   });
 
   test("cancelled, it stops the worker and says nothing more", async () => {
@@ -97,15 +154,23 @@ describe("processInBrowser", () => {
     const { h, calls } = handlers();
     let started!: () => void;
     const ready = new Promise<void>((r) => (started = r));
-    const p = processInBrowser(RECORD, h, async () => {
-      await ready;
-      return worker as unknown as Worker;
-    });
+    const engine = new FakeWorker();
+    const p = processInBrowser(
+      RECORD,
+      h,
+      async () => {
+        await ready;
+        return worker as unknown as Worker;
+      },
+      async () => engine as unknown as Worker,
+    );
     p.cancel();
     started();
     await vi.waitFor(() => expect(worker.terminated).toBe(true));
+    expect(engine.terminated).toBe(true);
     worker.answer({ type: "progress", percent: 10 });
     expect(worker.posted).toEqual([]);
+    expect(engine.posted).toEqual([]);
     expect(calls).toEqual([]);
   });
 });
@@ -122,6 +187,7 @@ test("the browser's compression makes a replay the viewer plays as it grows", as
   let base!: ReplayBase;
   const appends: ReplayAppend[] = [];
   const result = await processGameRecord(record, {
+    engine: directEngine(),
     mapLoader,
     gzip: gzipInBrowser,
     keyframeInterval: 20,

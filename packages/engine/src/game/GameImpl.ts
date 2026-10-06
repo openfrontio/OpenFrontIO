@@ -20,7 +20,6 @@ import {
   TerraNullius,
   Tick,
   Trios,
-  UnitInfo,
   UnitType,
 } from "@openfront/engine-api/game/GameTypes";
 import {
@@ -34,7 +33,6 @@ import {
   Winner,
 } from "@openfront/engine-api/Schemas";
 import { ATTACK_INDEX_SENT } from "@openfront/engine-api/StatsSchemas";
-import { Config } from "@openfront/engine-lib/configuration/Config";
 import { renderNumber } from "@openfront/engine-lib/Format";
 import {
   MotionPlanRecord,
@@ -56,6 +54,7 @@ import {
 } from "@openfront/engine-lib/snapshot/SnapshotType";
 import { simpleHash } from "@openfront/engine-lib/Util";
 import { z } from "zod";
+import { EngineConfig } from "../configuration/EngineConfig";
 import {
   SharedWaterCache,
   SharedWaterCacheSnapshot,
@@ -79,6 +78,7 @@ import { AllianceRequestImpl } from "./AllianceRequestImpl";
 import {
   Alliance,
   AllianceRequest,
+  EngineUnitInfo,
   Execution,
   Game,
   MutableAlliance,
@@ -101,7 +101,7 @@ export function createGame(
   nations: Nation[],
   gameMap: GameMap,
   miniGameMap: GameMap,
-  config: Config,
+  config: EngineConfig,
   teamGameSpawnAreas?: TeamGameSpawnAreas,
 ): Game {
   const stats = new StatsImpl();
@@ -172,7 +172,7 @@ export class GameImpl implements Game {
     private _nations: Nation[],
     private _map: GameMap,
     private miniGameMap: GameMap,
-    private _config: Config,
+    private _config: EngineConfig,
     private _stats: Stats,
     teamGameSpawnAreas?: TeamGameSpawnAreas,
     // Restoring a snapshot: skip team and player setup, the snapshot
@@ -413,7 +413,7 @@ export class GameImpl implements Game {
     return total;
   }
 
-  unitInfo(type: UnitType): UnitInfo {
+  unitInfo(type: UnitType): EngineUnitInfo {
     return this.config().unitInfo(type);
   }
 
@@ -506,7 +506,7 @@ export class GameImpl implements Game {
   hasPlayer(id: PlayerID): boolean {
     return this._players.has(id);
   }
-  config(): Config {
+  config(): EngineConfig {
     return this._config;
   }
 

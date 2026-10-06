@@ -1,6 +1,6 @@
 import { GameMode, type Team } from "@openfront/engine-api/game/GameTypes";
-import type { EventBus } from "@openfront/engine-lib/EventBus";
 import { assetUrl } from "@openfront/shared/AssetUrls";
+import type { EventBus } from "@openfront/shared/EventBus";
 import { Colord } from "colord";
 import { html, LitElement } from "lit";
 import { customElement, property, query, state } from "lit/decorators.js";

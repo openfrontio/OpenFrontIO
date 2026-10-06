@@ -3,7 +3,6 @@ import {
   ArchivedPlayerStatsSchema,
   PlayerStatsSchema,
 } from "@openfront/engine-api/StatsSchemas";
-import type { GameEvent } from "@openfront/engine-lib/EventBus";
 import { LOBBY_LABEL_MAX } from "@openfront/engine-lib/Util";
 import { zb } from "@openfront/zbin";
 import { z } from "zod";
@@ -13,6 +12,7 @@ import {
   EffectTypeSchema,
   PatternDataSchema,
 } from "./CosmeticSchemas";
+import type { GameEvent } from "./EventBus";
 
 import {
   AllPlayersStatsSchema,

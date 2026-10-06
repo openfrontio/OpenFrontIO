@@ -4,7 +4,6 @@ import {
   TeamGameSpawnAreas,
 } from "@openfront/engine-api/game/GameTypes";
 import { GameConfig, GameConfigSchema } from "@openfront/engine-api/Schemas";
-import { Config } from "@openfront/engine-lib/configuration/Config";
 import {
   GameMapImpl,
   GameMapSnapshot,
@@ -17,6 +16,7 @@ import {
   VersionedSchema,
 } from "@openfront/engine-lib/snapshot/SnapshotType";
 import { z } from "zod";
+import { EngineConfig } from "../configuration/EngineConfig";
 import { AllianceImpl, AllianceSnapshot } from "../game/AllianceImpl";
 import {
   AllianceRequestImpl,
@@ -256,7 +256,7 @@ export function readSnapshotHeader(bytes: Uint8Array): SnapshotHeader {
 }
 
 export interface RestoreDeps {
-  config: (gameConfig: GameConfig) => Config;
+  config: (gameConfig: GameConfig) => EngineConfig;
   /** Freshly loaded maps for header.gameConfig; they are mutated. */
   gameMap: GameMap;
   miniGameMap: GameMap;

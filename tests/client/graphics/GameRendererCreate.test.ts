@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 // GameRenderer only uses GameStartingModal as a type, so importing it there
 // never registers the custom element; register it here.
-import { EventBus } from "@openfront/engine-lib/EventBus";
+import { EventBus } from "@openfront/shared/EventBus";
 import "../../../src/client/GameStartingModal";
 import {
   createRenderer,

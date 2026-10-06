@@ -3,7 +3,7 @@ import {
   DisplayMessageUpdate,
   GameUpdateType,
 } from "@openfront/engine-api/game/GameUpdates";
-import { EventBus } from "@openfront/engine-lib/EventBus";
+import { EventBus } from "@openfront/shared/EventBus";
 import { onlyImages } from "@openfront/shared/SharedUtil";
 import { html, LitElement } from "lit";
 import { customElement, state } from "lit/decorators.js";
