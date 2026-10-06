@@ -22,6 +22,7 @@ const modules: Record<string, () => Promise<unknown>> = {
   "news-modal": () => import("./NewsModal"),
   "player-profile-modal": () => import("./PlayerProfileModal"),
   "ranked-modal": () => import("./components/RankedModal"),
+  "store-modal": () => import("./Store"),
   "subscription-modal": () => import("./SubscriptionModal"),
   "troubleshooting-modal": () => import("./TroubleshootingModal"),
   "user-setting": () => import("./UserSettingModal"),
