@@ -17,7 +17,10 @@
 // recognise a former grant holder by. Hence a per-account record in
 // localStorage, written while the grant is visible and consulted after.
 
-import { isGrantedSubscription, type UserMeResponse } from "../core/ApiSchemas";
+import {
+  isGrantedSubscription,
+  type UserMeResponse,
+} from "@openfront/shared/ApiSchemas";
 
 /** localStorage key holding the SteamGrantStore below. */
 export const STEAM_GRANT_NOTICE_KEY = "steamGrantNotice";

@@ -1,14 +1,14 @@
 // Hardening: resource bounds, the decode error contract, and the silent
 // failure modes that a round-trip test cannot see.
-import { describe, expect, it } from "vitest";
-import { z } from "zod";
 import {
   ByteWriter,
   MAX_DECODE_ITEMS,
   zb,
   ZbDecodeError,
   ZbEncodeError,
-} from "../../zbin";
+} from "@openfront/zbin";
+import { describe, expect, it } from "vitest";
+import { z } from "zod";
 
 const bytesOf = (...ns: number[]) => new Uint8Array(ns);
 

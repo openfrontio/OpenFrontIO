@@ -1,3 +1,4 @@
+import { TileRef } from "@openfront/engine-api/game/GameMap";
 import {
   NukeState,
   Tick,
@@ -5,9 +6,9 @@ import {
   TransportShipState,
   UnitType,
   WarshipState,
-} from "../../core/game/Game";
-import { TileRef } from "../../core/game/GameMap";
-import { UnitUpdate } from "../../core/game/GameUpdates";
+} from "@openfront/engine-api/game/GameTypes";
+import { UnitUpdate } from "@openfront/engine-api/game/GameUpdates";
+import { UnitLike } from "@openfront/engine-api/game/ReadViews";
 import type { UnitState } from "../render/types";
 import { TrainType as RendererTrainType } from "../render/types";
 import { applyUnitUpdateInPlace, unitStateFromUpdate } from "./EntityState";
@@ -27,7 +28,7 @@ function numToTrainType(n: number | null): TrainType | undefined {
   }
 }
 
-export class UnitView {
+export class UnitView implements UnitLike {
   public _wasUpdated = true;
   public lastPos: TileRef[] = [];
   /** Long-lived renderer state — mutated in place by update(). */

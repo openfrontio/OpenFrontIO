@@ -1,9 +1,9 @@
-import { html, LitElement, nothing, TemplateResult } from "lit";
-import { customElement, state } from "lit/decorators.js";
 import {
   TribeLeaderboardEntry,
   TribeLeaderboardResponse,
-} from "../../../core/ApiSchemas";
+} from "@openfront/shared/ApiSchemas";
+import { html, LitElement, nothing, TemplateResult } from "lit";
+import { customElement, state } from "lit/decorators.js";
 import { fetchTribeLeaderboard } from "../../Api";
 import { translateText } from "../../Utils";
 import "../PlayerName";

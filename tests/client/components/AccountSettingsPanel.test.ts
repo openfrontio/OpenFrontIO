@@ -1,6 +1,6 @@
+import type { UserMeResponse } from "@openfront/shared/ApiSchemas";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { AccountSettingsPanel } from "../../../src/client/components/AccountSettingsPanel";
-import type { UserMeResponse } from "../../../src/core/ApiSchemas";
 
 type UserMePlayer = UserMeResponse["player"];
 type UserMeUser = UserMeResponse["user"];

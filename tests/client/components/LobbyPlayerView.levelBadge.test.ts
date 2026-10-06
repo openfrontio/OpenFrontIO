@@ -1,11 +1,15 @@
+import {
+  GameMode,
+  HumansVsNations,
+} from "@openfront/engine-api/game/GameTypes";
+import type { UserMeResponse } from "@openfront/shared/ApiSchemas";
+import type { LevelBadge } from "@openfront/shared/LevelBadgeWire";
+import { packLevelBadge } from "@openfront/shared/LevelBadgeWire";
+import type { ClientInfo } from "@openfront/shared/WireSchemas";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import "../../../src/client/components/LobbyPlayerView";
 import type { LobbyTeamView } from "../../../src/client/components/LobbyPlayerView";
-import type { UserMeResponse } from "../../../src/core/ApiSchemas";
-import { GameMode, HumansVsNations } from "../../../src/core/game/Game";
-import { UserSettings } from "../../../src/core/game/UserSettings";
-import { packLevelBadge } from "../../../src/core/LevelBadgeWire";
-import type { ClientInfo, LevelBadge } from "../../../src/core/Schemas";
+import { UserSettings } from "../../../src/client/UserSettings";
 
 // The viewer's own /users/@me, for the "hide my level" fallback. Signed out
 // unless a test says otherwise.

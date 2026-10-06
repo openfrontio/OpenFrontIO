@@ -1,15 +1,15 @@
-import Benchmark from "benchmark";
-import { Progress } from "../../src/core/ApiSchemas";
-import { packLevelBadge } from "../../src/core/LevelBadgeWire";
+import { Progress } from "@openfront/shared/ApiSchemas";
+import { packLevelBadge } from "@openfront/shared/LevelBadgeWire";
 import {
   ClientInfo,
   ServerLobbyInfoMessage,
   ServerMessage,
-} from "../../src/core/Schemas";
+} from "@openfront/shared/WireSchemas";
 import {
   decodeServerMessage,
   encodeServerMessage,
-} from "../../src/core/ZbinWire";
+} from "@openfront/shared/ZbinWire";
+import Benchmark from "benchmark";
 import * as LevelBadgeModule from "../../src/server/LevelBadge";
 import { testGameConfig } from "../util/Wire";
 

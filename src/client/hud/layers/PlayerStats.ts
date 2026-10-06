@@ -1,5 +1,5 @@
+import type { EventBus } from "@openfront/engine-lib/EventBus";
 import { customElement } from "lit/decorators.js";
-import type { EventBus } from "../../../core/EventBus";
 import { type StatsRow, StatsTable } from "../../components/StatsTable";
 import { GoToPlayerEvent } from "../../TransformHandler";
 import type { GameView } from "../../view";

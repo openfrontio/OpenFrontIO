@@ -1,6 +1,6 @@
+import { UserMeResponse } from "@openfront/shared/ApiSchemas";
 import { html, TemplateResult } from "lit";
 import { customElement } from "lit/decorators.js";
-import { UserMeResponse } from "../core/ApiSchemas";
 import "./components/AccountSettingsPanel";
 import type { AccountSettingsPanel } from "./components/AccountSettingsPanel";
 import { consumeLinkResult } from "./LinkResult";

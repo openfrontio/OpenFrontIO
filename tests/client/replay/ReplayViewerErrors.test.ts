@@ -5,6 +5,8 @@
  * with the client-side replay offered - never an endless "Preparing".
  */
 
+import { loadTerrainMap } from "@openfront/engine-lib/game/TerrainMapLoader";
+import type { GameRecord } from "@openfront/shared/WireSchemas";
 import type { SettingsModal } from "../../../src/client/hud/layers/SettingsModal";
 import { MapRenderer } from "../../../src/client/render/gl";
 import type {
@@ -20,8 +22,6 @@ import { ReplayPlayback } from "../../../src/client/replay/ReplayPlayback";
 import { fetchReplayRecord } from "../../../src/client/replay/ReplayRecord";
 import { replayStore } from "../../../src/client/replay/ReplayStore";
 import { ReplayViewer } from "../../../src/client/replay/ReplayViewer";
-import { loadTerrainMap } from "../../../src/core/game/TerrainMapLoader";
-import type { GameRecord } from "../../../src/core/Schemas";
 
 vi.mock("../../../src/client/replay/ReplayRecord", () => ({
   fetchReplayRecord: vi.fn(),
@@ -32,10 +32,13 @@ vi.mock("../../../src/client/replay/ReplayStore", () => ({
 vi.mock("../../../src/client/replay/LocalProcessing", () => ({
   processInBrowser: vi.fn(),
 }));
-vi.mock("../../../src/core/game/TerrainMapLoader", async (importOriginal) => ({
-  ...(await importOriginal<object>()),
-  loadTerrainMap: vi.fn(),
-}));
+vi.mock(
+  "@openfront/engine-lib/game/TerrainMapLoader",
+  async (importOriginal) => ({
+    ...(await importOriginal<object>()),
+    loadTerrainMap: vi.fn(),
+  }),
+);
 vi.mock("../../../src/client/render/gl", async (importOriginal) => ({
   ...(await importOriginal<object>()),
   preloadAtlasData: vi.fn(async () => {}),

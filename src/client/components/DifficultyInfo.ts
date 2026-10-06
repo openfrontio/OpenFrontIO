@@ -1,6 +1,6 @@
+import { Difficulty } from "@openfront/engine-api/game/GameTypes";
 import { html, LitElement, nothing } from "lit";
 import { customElement, property } from "lit/decorators.js";
-import { Difficulty } from "../../core/game/Game";
 import { translateText } from "../Utils";
 
 /**

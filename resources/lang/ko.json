@@ -83,7 +83,6 @@
     "reward_daily": "일일 구독 보상",
     "reward_signup_bonus": "구독 가입 보너스",
     "sign_in_desc": "통계와 진행 상황을 저장하려면 로그인하세요",
-    "sub_granted_ends_on": "무료 이용 종료: {date}",
     "sub_granted_from_purchase": "Steam 구매 시 무료로 제공됩니다. 청구되지 않으며 갱신되지 않으므로 관리하거나 취소할 필요가 없습니다.",
     "sub_granted_indefinite": "계정에 무료 이용 권한이 부여되었습니다. 청구되지 않으므로 관리하거나 취소할 필요가 없습니다.",
     "sub_price_monthly": "{price}/월",
@@ -135,7 +134,8 @@
     "username_temporary_notice": "기존 이름이 다른 플레이어에게 선점되었습니다. 새 이름을 선택하세요 — 이번 이름 변경은 무료입니다.",
     "username_temporary_prompt": "기존 사용자명이 다른 플레이어에게 선점되었습니다. 지금 새 사용자명을 선택하시겠습니까? 이름 변경은 무료입니다.",
     "username_temporary_prompt_confirm": "이름 선택",
-    "username_title": "사용자명"
+    "username_title": "사용자명",
+    "sub_granted_ends_on": "무료 이용 종료: {date}"
   },
   "account_settings_modal": {
     "title": "계정 설정"

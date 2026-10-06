@@ -1,10 +1,10 @@
+import type { UserMeResponse } from "@openfront/shared/ApiSchemas";
+import { packLevelBadge } from "@openfront/shared/LevelBadgeWire";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   lobbyLevelBadge,
   rememberLobbyRoster,
 } from "../../src/client/LobbyRosterLevels";
-import type { UserMeResponse } from "../../src/core/ApiSchemas";
-import { packLevelBadge } from "../../src/core/LevelBadgeWire";
 
 const getUserMe = vi.hoisted(() =>
   vi.fn<() => Promise<UserMeResponse | false>>(async () => false),

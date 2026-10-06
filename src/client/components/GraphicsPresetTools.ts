@@ -1,10 +1,10 @@
 import { html, LitElement, nothing } from "lit";
 import { customElement, state } from "lit/decorators.js";
-import { UserSettings } from "../../core/game/UserSettings";
 import {
   migrateLegacyGraphicsSettings,
   parseGraphicsOverridesJson,
 } from "../GraphicsPresets";
+import { UserSettings } from "../UserSettings";
 import { translateText } from "../Utils";
 
 /**

@@ -9,9 +9,9 @@
  * smallID lookup, tick tracking, and tile delta accumulation.
  */
 
+import { UnitType } from "@openfront/engine-api/game/GameTypes";
+import { GameUpdateType } from "@openfront/engine-api/game/GameUpdates";
 import { describe, expect, it } from "vitest";
-import { UnitType } from "../../../src/core/game/Game";
-import { GameUpdateType } from "../../../src/core/game/GameUpdates";
 import {
   makeEmptyGu,
   makeGameView,

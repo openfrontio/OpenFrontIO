@@ -1,18 +1,16 @@
-import { NukeExecution } from "../../../src/core/execution/NukeExecution";
-import { SAMLauncherExecution } from "../../../src/core/execution/SAMLauncherExecution";
-import { SpawnExecution } from "../../../src/core/execution/SpawnExecution";
-import { UpgradeStructureExecution } from "../../../src/core/execution/UpgradeStructureExecution";
 import {
-  Game,
   MessageType,
-  Player,
   PlayerInfo,
   PlayerType,
-  Unit,
   UnitType,
-} from "../../../src/core/game/Game";
-import { GameID } from "../../../src/core/Schemas";
-import { NukeType } from "../../../src/core/StatsSchemas";
+} from "@openfront/engine-api/game/GameTypes";
+import { GameID } from "@openfront/engine-api/Schemas";
+import { NukeType } from "@openfront/engine-api/StatsSchemas";
+import { NukeExecution } from "@openfront/engine/execution/NukeExecution";
+import { SAMLauncherExecution } from "@openfront/engine/execution/SAMLauncherExecution";
+import { SpawnExecution } from "@openfront/engine/execution/SpawnExecution";
+import { UpgradeStructureExecution } from "@openfront/engine/execution/UpgradeStructureExecution";
+import { Game, Player, Unit } from "@openfront/engine/game/Game";
 import { setup } from "../../util/Setup";
 import { TestConfig } from "../../util/TestConfig";
 import { constructionExecution, executeTicks } from "../../util/utils";

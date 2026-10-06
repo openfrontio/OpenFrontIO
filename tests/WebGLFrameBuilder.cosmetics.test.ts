@@ -1,10 +1,10 @@
+import type { PlayerCosmetics } from "@openfront/shared/WireSchemas";
 import { colord } from "colord";
 import { describe, expect, it } from "vitest";
 import { WebGLFrameBuilder } from "../src/client/WebGLFrameBuilder";
 import { STRUCTURES_EFFECT_BLOCK } from "../src/client/render/gl/utils/ColorUtils";
 import type { PlayerStatic } from "../src/client/render/types";
 import type { CosmeticVisibility } from "../src/client/view/CosmeticVisibility";
-import type { PlayerCosmetics } from "../src/core/Schemas";
 
 const SID = 3;
 
