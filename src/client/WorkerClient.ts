@@ -1,4 +1,5 @@
 import { TileRef } from "@openfront/engine-api/game/GameMap";
+import { MapFiles } from "@openfront/engine-api/game/GameMapLoader";
 import {
   BuildableUnit,
   Cell,
@@ -88,10 +89,19 @@ export class WorkerClient {
   async initialize(): Promise<void> {
     // The engine fetches nothing: it gets the map in the init message.
     const { gameMap, gameMapSize } = this.gameStartInfo.config;
-    const [worker, map] = await Promise.all([
-      createGameWorker(),
-      loadMapFiles(terrainMapFileLoader, gameMap, gameMapSize),
-    ]);
+    const created = createGameWorker();
+    let map: MapFiles;
+    try {
+      map = await loadMapFiles(terrainMapFileLoader, gameMap, gameMapSize);
+    } catch (err) {
+      // Nothing will use the worker; don't leave it running.
+      created.then(
+        (w) => w.terminate(),
+        () => {},
+      );
+      throw err;
+    }
+    const worker = await created;
     this.worker = worker;
     worker.addEventListener("message", this.handleWorkerMessage.bind(this));
 
@@ -102,6 +112,8 @@ export class WorkerClient {
         if (message.type === "initialized") {
           this.isInitialized = true;
           resolve();
+        } else if (message.type === "init_error") {
+          reject(new Error(message.error));
         }
       });
 

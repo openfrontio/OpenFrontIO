@@ -6,7 +6,8 @@
  * thread.
  */
 
-import { GameMapType } from "@openfront/engine-api/game/GameTypes";
+import { GameMapSize, GameMapType } from "@openfront/engine-api/game/GameTypes";
+import { loadMapFiles } from "@openfront/engine-lib/game/MapFiles";
 import type {
   ReplayAppend,
   ReplayBase,
@@ -51,19 +52,28 @@ async function process(
   return { result, replay: { base, append: mergeAppends(appends) } };
 }
 
-test("processing on the engine worker makes the same replay", async () => {
-  // The engine loads nothing: the map comes in its init message.
-  const fetch = vi.fn(() => Promise.reject(new Error("the engine fetched")));
+// The engine loads nothing: the map comes in its init message.
+const fetch = vi.fn(() => Promise.reject(new Error("the engine fetched")));
+// After connect the worker answers on the port, never on `self`.
+const self = Object.assign(new EventTarget(), { postMessage: vi.fn() });
+
+beforeAll(async () => {
   vi.stubGlobal("fetch", fetch);
-  // After connect the worker answers on the port, never on `self`.
-  const self = Object.assign(new EventTarget(), { postMessage: vi.fn() });
   vi.stubGlobal("self", self);
   await import("@openfront/engine/worker/Worker.worker");
+});
+
+/** Connects the worker to a new channel, as LocalProcessing does. */
+function connect(): MessagePort {
   const channel = new MessageChannel();
   new PageEnd(self).postMessage({ type: "connect", port: channel.port1 }, [
     channel.port1,
   ]);
+  return channel.port2;
+}
 
+test("processing on the engine worker makes the same replay", async () => {
+  const port = connect();
   const { record } = await playAndArchive({
     gameID: "procWRKR1",
     config: config({ gameMap: GameMapType.Onion, bots: 5 }),
@@ -76,10 +86,28 @@ test("processing on the engine worker makes the same replay", async () => {
 
   const direct = await process(record, directEngine());
   const viaWorker = await process(record, (gameStart, map) =>
-    startWorkerEngine(channel.port2, gameStart, map),
+    startWorkerEngine(port, gameStart, map),
   );
   expect(viaWorker.result.totalTicks).toBe(230);
   expect(viaWorker.replay).toEqual(direct.replay);
   expect(self.postMessage).not.toHaveBeenCalled();
   expect(fetch).not.toHaveBeenCalled();
 }, 60_000);
+
+test("a game the engine can't start fails with the engine's reason", async () => {
+  const onion = await loadMapFiles(
+    mapLoader,
+    GameMapType.Onion,
+    GameMapSize.Normal,
+  );
+  const gameStart = {
+    gameID: "procWRKR2",
+    lobbyCreatedAt: 1_700_000_000_000,
+    config: config({ gameMap: GameMapType.Pangaea }),
+    players: [human(1)],
+  };
+  // Answered at once, not after the init timeout.
+  await expect(startWorkerEngine(connect(), gameStart, onion)).rejects.toThrow(
+    /couldn't start the game: only .* was passed/,
+  );
+}, 10_000);

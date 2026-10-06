@@ -189,7 +189,10 @@ function violations(): {
       };
       find(/Math\.random|Date\.now|new Date\b/g, determinism);
       // The engine is handed everything it needs (maps come in `init`).
-      find(/\bfetch\(|XMLHttpRequest|importScripts|\bWebSocket\b/g, io);
+      find(
+        /\bfetch\s*(\?\.\s*)?\(|XMLHttpRequest|importScripts|\bWebSocket\b/g,
+        io,
+      );
     }
   }
   return { edges, determinism, io };

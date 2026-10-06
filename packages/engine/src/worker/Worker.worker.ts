@@ -4,6 +4,7 @@ import {
 } from "@openfront/engine-api/game/GameUpdates";
 import {
   AttackClusteredPositionsResultMessage,
+  InitErrorMessage,
   InitializedMessage,
   MainThreadMessage,
   PlayerActionsErrorMessage,
@@ -177,13 +178,26 @@ async function onMessage(e: MessageEvent<MainThreadMessage>) {
                 mapLoader,
                 gameUpdate,
               )
-        ).then((gr) => {
-          sendMessage({
-            type: "initialized",
-            id: message.id,
-          } as InitializedMessage);
-          return gr;
-        });
+        ).then(
+          (gr) => {
+            sendMessage({
+              type: "initialized",
+              id: message.id,
+            } as InitializedMessage);
+            return gr;
+          },
+          (error: unknown) => {
+            sendMessage({
+              type: "init_error",
+              id: message.id,
+              error: error instanceof Error ? error.message : String(error),
+            } as InitErrorMessage);
+            throw error;
+          },
+        );
+        // The failure is reported above; later messages still see it when
+        // they await gameRunner.
+        gameRunner.catch(() => {});
       } catch (error) {
         console.error("Failed to initialize game runner:", error);
         throw error;

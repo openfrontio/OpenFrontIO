@@ -282,7 +282,11 @@ export class GameRunner {
       ...(packedAttackUpdates ? { packedAttackUpdates } : {}),
       ...(packedNukeImpacts ? { packedNukeImpacts } : {}),
       updates: updates,
-      ...(viewDataChanged ? { playerNameViewData: this.playerViewData } : {}),
+      // A copy: hosts hold several ticks' updates before reading them, and
+      // the record changes in place on later ticks.
+      ...(viewDataChanged
+        ? { playerNameViewData: { ...this.playerViewData } }
+        : {}),
       tickExecutionDuration: tickExecutionDuration,
       pendingTurns: pendingTurns ?? 0,
     });

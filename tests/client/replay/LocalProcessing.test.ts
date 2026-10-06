@@ -126,7 +126,10 @@ describe("processInBrowser", () => {
       async () => engine as unknown as Worker,
     );
     await vi.waitFor(() => expect(worker.posted).toHaveLength(1));
-    engine.dispatchEvent(new ErrorEvent("error", { message: "crashed" }));
+    // An ErrorEvent; Node 24 has no ErrorEvent global.
+    engine.dispatchEvent(
+      Object.assign(new Event("error"), { message: "crashed" }),
+    );
     expect(calls).toEqual(["error crashed false"]);
     expect(worker.terminated).toBe(true);
     expect(engine.terminated).toBe(true);

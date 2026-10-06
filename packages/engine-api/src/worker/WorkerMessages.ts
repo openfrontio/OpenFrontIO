@@ -15,6 +15,7 @@ export type WorkerMessageType =
   | "init"
   | "connect"
   | "initialized"
+  | "init_error"
   | "turn"
   | "run_turns"
   | "run_turns_result"
@@ -82,6 +83,12 @@ export interface RunTurnsMessage extends BaseWorkerMessage {
 // Messages from worker to main thread
 export interface InitializedMessage extends BaseWorkerMessage {
   type: "initialized";
+}
+
+/** The game couldn't be started; `error` says why. */
+export interface InitErrorMessage extends BaseWorkerMessage {
+  type: "init_error";
+  error: string;
 }
 
 export interface GameUpdateMessage extends BaseWorkerMessage {
@@ -210,6 +217,7 @@ export type MainThreadMessage =
 // Message send from worker
 export type WorkerMessage =
   | InitializedMessage
+  | InitErrorMessage
   | GameUpdateMessage
   | GameUpdateBatchMessage
   | RunTurnsResultMessage

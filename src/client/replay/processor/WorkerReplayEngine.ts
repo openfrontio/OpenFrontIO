@@ -20,7 +20,7 @@ import type { ReplayEngine } from "./ReplayProcessor";
 const INIT_TIMEOUT_MS = 60_000;
 
 /** Starts the game on the engine. The map files are moved, not copied. */
-export function startWorkerEngine(
+export async function startWorkerEngine(
   port: MessagePort,
   gameStart: GameStartInfo,
   map: MapFiles,
@@ -72,18 +72,19 @@ export function startWorkerEngine(
     () => fail(new Error("the engine worker didn't start the game in time")),
     INIT_TIMEOUT_MS,
   );
-  return request(
-    { type: "init", gameStartInfo: gameStart, clientID: undefined, map },
-    mapFilesTransfer(map),
-  ).then(
-    () => {
-      clearTimeout(timeout);
-      return engine;
-    },
-    (err: Error) => {
-      clearTimeout(timeout);
-      port.close();
-      throw err;
-    },
-  );
+  try {
+    const msg = await request(
+      { type: "init", gameStartInfo: gameStart, clientID: undefined, map },
+      mapFilesTransfer(map),
+    );
+    if (msg.type === "init_error") {
+      throw new Error(`the engine couldn't start the game: ${msg.error}`);
+    }
+    return engine;
+  } catch (err) {
+    port.close();
+    throw err;
+  } finally {
+    clearTimeout(timeout);
+  }
 }
