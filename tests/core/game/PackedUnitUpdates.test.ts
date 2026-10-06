@@ -1,10 +1,13 @@
-import { describe, expect, it } from "vitest";
 import { UnitType } from "@openfront/engine-api/game/GameTypes";
-import { GameUpdateType, UnitUpdate } from "@openfront/engine-api/game/GameUpdates";
+import {
+  GameUpdateType,
+  UnitUpdate,
+} from "@openfront/engine-api/game/GameUpdates";
 import {
   PackedUnitUpdateDecoder,
   packUnitUpdates as packUnitUpdatesFn,
-} from "@openfront/engine/game/PackedUnitUpdates";
+} from "@openfront/engine-lib/game/PackedUnitUpdates";
+import { describe, expect, it } from "vitest";
 
 describe("PackedUnitUpdates", () => {
   it("packs and unpacks a complex UnitUpdate without fidelity loss", () => {
@@ -44,7 +47,7 @@ describe("PackedUnitUpdates", () => {
       samUpgrade: undefined,
     };
 
-    const { packedUnitUpdates, packedMissileTimers } = packUnitUpdatesFn([original]);
+    const { packedUnitUpdates } = packUnitUpdatesFn([original]);
 
     const decoder = new PackedUnitUpdateDecoder(packedUnitUpdates, 0);
     const unpacked = decoder.toUnitUpdate();
@@ -118,10 +121,10 @@ describe("PackedUnitUpdates", () => {
       nukeState: {
         targetedBySam: true,
         waitTicks: 10,
-      }
+      },
     };
 
-    const { packedUnitUpdates, packedMissileTimers } = packUnitUpdatesFn([original]);
+    const { packedUnitUpdates } = packUnitUpdatesFn([original]);
 
     const decoder = new PackedUnitUpdateDecoder(packedUnitUpdates, 0);
     const unpacked = decoder.toUnitUpdate();

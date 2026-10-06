@@ -24,41 +24,40 @@
 
 import "./Shims"; // must be first: browser-global shims for client code
 
-import path from "path";
-import { fileURLToPath } from "url";
-import { GameView } from "../../../src/client/view/GameView";
-import { WebGLFrameBuilder } from "../../../src/client/WebGLFrameBuilder";
-import { Config } from "../../../src/core/configuration/Config";
-import { CityExecution } from "../../../src/core/execution/CityExecution";
-import { FactoryExecution } from "../../../src/core/execution/FactoryExecution";
-import { MirvExecution } from "../../../src/core/execution/MIRVExecution";
-import { MissileSiloExecution } from "../../../src/core/execution/MissileSiloExecution";
-import { NukeExecution } from "../../../src/core/execution/NukeExecution";
-import { PortExecution } from "../../../src/core/execution/PortExecution";
-import { SAMLauncherExecution } from "../../../src/core/execution/SAMLauncherExecution";
-import { WarshipExecution } from "../../../src/core/execution/WarshipExecution";
+import { TileRef } from "@openfront/engine-api/game/GameMap";
 import {
   Difficulty,
   GameMapSize,
   GameMapType,
   GameMode,
   GameType,
-  Player,
-  PlayerInfo,
-  PlayerType,
-  Unit,
   UnitType,
-} from "../../../src/core/game/Game";
-import { TileRef } from "../../../src/core/game/GameMap";
-import { loadTerrainMap } from "../../../src/core/game/TerrainMapLoader";
+} from "@openfront/engine-api/game/GameTypes";
 import {
+  ErrorUpdate,
   GameUpdateType,
   GameUpdateViewData,
   HashUpdate,
-} from "../../../src/core/game/GameUpdates";
-import { createGameRunner } from "../../../src/core/GameRunner";
-import { GameConfig, GameStartInfo } from "../../../src/core/Schemas";
-import type { WorkerClient } from "../../../src/core/worker/WorkerClient";
+} from "@openfront/engine-api/game/GameUpdates";
+import { GameConfig, GameStartInfo } from "@openfront/engine-api/Schemas";
+import { Config } from "@openfront/engine-lib/configuration/Config";
+import { loadTerrainMap } from "@openfront/engine-lib/game/TerrainMapLoader";
+import { CityExecution } from "@openfront/engine/execution/CityExecution";
+import { FactoryExecution } from "@openfront/engine/execution/FactoryExecution";
+import { MirvExecution } from "@openfront/engine/execution/MIRVExecution";
+import { MissileSiloExecution } from "@openfront/engine/execution/MissileSiloExecution";
+import { NukeExecution } from "@openfront/engine/execution/NukeExecution";
+import { PortExecution } from "@openfront/engine/execution/PortExecution";
+import { SAMLauncherExecution } from "@openfront/engine/execution/SAMLauncherExecution";
+import { WarshipExecution } from "@openfront/engine/execution/WarshipExecution";
+import { Player, Unit } from "@openfront/engine/game/Game";
+import { createGameRunner } from "@openfront/engine/GameRunner";
+import { loadMapFiles } from "@openfront/shared/GameMapLoader";
+import path from "path";
+import { fileURLToPath } from "url";
+import { GameView } from "../../../src/client/view/GameView";
+import { WebGLFrameBuilder } from "../../../src/client/WebGLFrameBuilder";
+import type { WorkerClient } from "../../../src/client/WorkerClient";
 import { NodeGameMapLoader } from "../fullgame/NodeGameMapLoader";
 import { TickStats } from "../fullgame/Profiler";
 
@@ -245,7 +244,11 @@ function seedPlayerTerritory(
 
       const neighbors = game.neighbors(curr);
       for (const next of neighbors) {
-        if (!visited.has(next) && game.isLand(next) && !game.isImpassable(next)) {
+        if (
+          !visited.has(next) &&
+          game.isLand(next) &&
+          !game.isImpassable(next)
+        ) {
           visited.add(next);
           queue.push(next);
         }
@@ -265,7 +268,9 @@ function setupPlayerEndGame(
   const ports: Unit[] = [];
   const silos: Unit[] = [];
 
-  const landTiles = territory.filter((t) => game.isLand(t) && !game.isImpassable(t));
+  const landTiles = territory.filter(
+    (t) => game.isLand(t) && !game.isImpassable(t),
+  );
   const shoreTiles = landTiles.filter((t) => game.isShore(t));
 
   const occupiedTiles = new Set<TileRef>();
@@ -338,7 +343,11 @@ function setupPlayerEndGame(
     );
     if (freeLand) {
       try {
-        const factory = (player as any).buildUnit(UnitType.Factory, freeLand, {});
+        const factory = (player as any).buildUnit(
+          UnitType.Factory,
+          freeLand,
+          {},
+        );
         occupiedTiles.add(freeLand);
         game.addExecution(new FactoryExecution(factory));
         factoriesSpawned++;
@@ -432,15 +441,20 @@ async function main(): Promise<void> {
     path.join(PROJECT_ROOT, "resources/maps"),
   );
 
-  let currentGu: GameUpdateViewData | null = null;
+  let currentGu: GameUpdateViewData | null;
   let lastHash: HashUpdate | undefined;
   let fatalError: string | undefined;
 
+  const mapFiles = await loadMapFiles(
+    mapLoader,
+    gameConfig.gameMap,
+    gameConfig.gameMapSize,
+  );
   const runner = await createGameRunner(
     gameStart,
     undefined,
-    mapLoader,
-    (gu) => {
+    mapFiles,
+    (gu: GameUpdateViewData | ErrorUpdate) => {
       if ("errMsg" in gu) {
         fatalError = `${gu.errMsg}\n${gu.stack ?? ""}`;
         return;
@@ -449,12 +463,8 @@ async function main(): Promise<void> {
     },
   );
 
-  const clientConfig = new Config(gameConfig, null, false);
-  const clientMapData = await loadTerrainMap(
-    gameConfig.gameMap,
-    gameConfig.gameMapSize,
-    mapLoader,
-  );
+  const clientConfig = new Config(gameConfig, false);
+  const clientMapData = await loadTerrainMap(mapFiles);
   const gameView = new GameView(
     {} as unknown as WorkerClient,
     clientConfig,
@@ -473,11 +483,16 @@ async function main(): Promise<void> {
 
   runner.game.endSpawnPhase();
 
-  const players = runner.game.allPlayers().filter((p) => p.isPlayer());
+  const players = runner.game.allPlayers().filter((p: Player) => p.isPlayer());
   const mapW = runner.game.map().width();
   const mapH = runner.game.map().height();
 
-  function findShoreInQuadrant(xMin: number, xMax: number, yMin: number, yMax: number): TileRef {
+  function findShoreInQuadrant(
+    xMin: number,
+    xMax: number,
+    yMin: number,
+    yMax: number,
+  ): TileRef {
     for (let y = Math.floor(yMin); y < Math.floor(yMax); y += 3) {
       for (let x = Math.floor(xMin); x < Math.floor(xMax); x += 3) {
         const ref = runner.game.ref(x, y);
@@ -494,7 +509,10 @@ async function main(): Promise<void> {
         }
       }
     }
-    return runner.game.ref(Math.floor((xMin + xMax) / 2), Math.floor((yMin + yMax) / 2));
+    return runner.game.ref(
+      Math.floor((xMin + xMax) / 2),
+      Math.floor((yMin + yMax) / 2),
+    );
   }
 
   const centers = [
@@ -596,7 +614,9 @@ async function main(): Promise<void> {
   let tileUpdatesTotal = 0;
 
   const measureTicks = opts.totalTicks - opts.prerollTicks;
-  console.log(`Recording next ${measureTicks} ticks through flight and interception...`);
+  console.log(
+    `Recording next ${measureTicks} ticks through flight and interception...`,
+  );
 
   for (let i = 0; i < measureTicks; i++) {
     const currentTick = opts.prerollTicks + i;
@@ -670,12 +690,17 @@ async function main(): Promise<void> {
   console.log(`\n--- Peak Load State ---`);
   console.log(`Peak concurrent units on board: ${maxUnits}`);
   console.log(`Total tile updates: ${tileUpdatesTotal}`);
-  console.log(`Peak burst latency: ${fmtMs(maxBurstMs)}ms on tick #${maxBurstTick}`);
+  console.log(`Total unit updates: ${unitUpdatesTotal}`);
+  console.log(
+    `Peak burst latency: ${fmtMs(maxBurstMs)}ms on tick #${maxBurstTick}`,
+  );
   console.log(
     `Sim final hash: ${lastHash ? `${lastHash.hash} (tick ${lastHash.tick})` : "n/a"} | View hash: ${viewHash}`,
   );
 
-  console.log(`\n--- Main-Thread Burst per Tick (${sTotal.count} measured ticks) ---`);
+  console.log(
+    `\n--- Main-Thread Burst per Tick (${sTotal.count} measured ticks) ---`,
+  );
   const rows = [
     [
       "clone (serialize+deserialize)",

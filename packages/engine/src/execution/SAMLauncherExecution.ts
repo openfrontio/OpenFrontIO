@@ -122,7 +122,8 @@ class SAMTargetingSystem {
   }
 
   private isTargetableAt(tile: TileRef, src: TileRef, dst: TileRef): boolean {
-    const targetRangeSquared = this.mg.config().defaultNukeTargetableRange() ** 2;
+    const targetRangeSquared =
+      this.mg.config().defaultNukeTargetableRange() ** 2;
     return (
       this.mg.euclideanDistSquared(tile, dst) < targetRangeSquared ||
       this.mg.euclideanDistSquared(tile, src) < targetRangeSquared
@@ -166,7 +167,9 @@ class SAMTargetingSystem {
       if (
         distSq <= allowed * allowed &&
         nukeTicks >= samTicks &&
-        src !== undefined && dst !== undefined && this.isTargetableAt(tile, src, dst)
+        src !== undefined &&
+        dst !== undefined &&
+        this.isTargetableAt(tile, src, dst)
       ) {
         return {
           tick: nukeTicks - samTicks,
@@ -228,9 +231,7 @@ class SAMTargetingSystem {
 
     const targetTile =
       unit.targetTile() ??
-      (trajectory.length > 0
-        ? trajectory[trajectory.length - 1]
-        : samTile);
+      (trajectory.length > 0 ? trajectory[trajectory.length - 1] : samTile);
 
     const distToSilo = this.mg.manhattanDist(samTile, targetTile);
 

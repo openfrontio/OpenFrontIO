@@ -20,12 +20,12 @@ import {
 } from "@openfront/engine-api/game/GameUpdates";
 import { GameLike, UnitPredicate } from "@openfront/engine-api/game/ReadViews";
 import { ClientID, GameID } from "@openfront/engine-api/Schemas";
+import { Config } from "@openfront/engine-lib/configuration/Config";
+import { unpackMotionPlans } from "@openfront/engine-lib/game/MotionPlans";
 import {
   PackedUnitUpdateDecoder,
   UNIT_UPDATE_STRIDE,
-} from "@openfront/engine/game/PackedUnitUpdates";
-import { Config } from "@openfront/engine-lib/configuration/Config";
-import { unpackMotionPlans } from "@openfront/engine-lib/game/MotionPlans";
+} from "@openfront/engine-lib/game/PackedUnitUpdates";
 import { TerrainMapData } from "@openfront/engine-lib/game/TerrainMapLoader";
 import { TerraNulliusImpl } from "@openfront/engine-lib/game/TerraNulliusImpl";
 import { UnitGrid } from "@openfront/engine-lib/game/UnitGrid";
@@ -404,7 +404,9 @@ export class GameView implements GameLike {
         unit.lastPos = unit.lastPos.slice(-1);
       }
     }
-    const unitUpdates = gu.packedUnitUpdates ? [] : (gu.updates[GameUpdateType.Unit] || []);
+    const unitUpdates = gu.packedUnitUpdates
+      ? []
+      : gu.updates[GameUpdateType.Unit] || [];
     if (gu.packedUnitUpdates) {
       const { packedUnitUpdates, packedMissileTimers } = gu;
       const timersMap = new Map<number, number[]>();
@@ -419,7 +421,11 @@ export class GameView implements GameLike {
         }
       }
 
-      for (let offset = 0; offset < packedUnitUpdates.length; offset += UNIT_UPDATE_STRIDE) {
+      for (
+        let offset = 0;
+        offset < packedUnitUpdates.length;
+        offset += UNIT_UPDATE_STRIDE
+      ) {
         const decoder = new PackedUnitUpdateDecoder(packedUnitUpdates, offset);
         const update = decoder.toUnitUpdate() as UnitUpdate;
         update.missileTimerQueue = timersMap.get(update.id) ?? [];
@@ -621,12 +627,21 @@ export class GameView implements GameLike {
     ev.conquestEvents.length = 0;
     ev.bonusEvents.length = 0;
 
-    const unitUpdates = gu.packedUnitUpdates ? [] : (gu.updates[GameUpdateType.Unit] || []);
+    const unitUpdates = gu.packedUnitUpdates
+      ? []
+      : gu.updates[GameUpdateType.Unit] || [];
     if (gu.packedUnitUpdates) {
-      // Re-unpacking is fine, it's just object creation for dead units, which is fast, 
+      // Re-unpacking is fine, it's just object creation for dead units, which is fast,
       // or we just decode the fields we need directly without creating objects!
-      for (let offset = 0; offset < gu.packedUnitUpdates.length; offset += UNIT_UPDATE_STRIDE) {
-        const decoder = new PackedUnitUpdateDecoder(gu.packedUnitUpdates, offset);
+      for (
+        let offset = 0;
+        offset < gu.packedUnitUpdates.length;
+        offset += UNIT_UPDATE_STRIDE
+      ) {
+        const decoder = new PackedUnitUpdateDecoder(
+          gu.packedUnitUpdates,
+          offset,
+        );
         if (!decoder.isActive) {
           ev.deadUnits.push({
             unitType: decoder.unitType,
