@@ -1,8 +1,5 @@
-import { Colord, colord } from "colord";
-import { base64url } from "jose";
-import { PatternDecoder } from "../../core/PatternDecoder";
-import { ClientID, PlayerCosmetics } from "../../core/Schemas";
-import { createRandomName } from "../../core/Util";
+import { ClientID } from "@openfront/engine-api/Schemas";
+import { TileRef } from "@openfront/engine-api/game/GameMap";
 import {
   BuildableUnit,
   Cell,
@@ -18,21 +15,26 @@ import {
   Team,
   Tick,
   UnitType,
-} from "../../core/game/Game";
-import { TileRef } from "../../core/game/GameMap";
-import { applyStateUpdate } from "../../core/game/GameUpdateUtils";
+} from "@openfront/engine-api/game/GameTypes";
 import {
   AllianceView,
   AttackUpdate,
   PlayerUpdate,
-} from "../../core/game/GameUpdates";
-import { UserSettings } from "../../core/game/UserSettings";
+} from "@openfront/engine-api/game/GameUpdates";
+import { PlayerLike } from "@openfront/engine-api/game/ReadViews";
+import { PatternDecoder } from "@openfront/shared/PatternDecoder";
+import { createRandomName } from "@openfront/shared/SharedUtil";
+import { PlayerCosmetics } from "@openfront/shared/WireSchemas";
+import { Colord, colord } from "colord";
+import { base64url } from "jose";
+import { UserSettings } from "../UserSettings";
 import { PlayerState, PlayerStatic, PlayerTypeEnum } from "../render/types";
 import { themeProvider } from "../theme/ThemeProvider";
 import { type CosmeticOwner, visibleCosmetics } from "./CosmeticVisibility";
 import { playerStateFromUpdate, playerStaticFromUpdate } from "./EntityState";
 import { GameView } from "./GameView";
 import { resolvePlayerColors } from "./PlayerColors";
+import { applyStateUpdate } from "./PlayerStateUpdate";
 import { UnitView } from "./UnitView";
 
 const userSettings: UserSettings = new UserSettings();
@@ -41,7 +43,7 @@ const FRIENDLY_TINT_TARGET = { r: 0, g: 255, b: 0, a: 1 };
 const EMBARGO_TINT_TARGET = { r: 255, g: 0, b: 0, a: 1 };
 const BORDER_TINT_RATIO = 0.35;
 
-export class PlayerView {
+export class PlayerView implements PlayerLike {
   public anonymousName: string | null = null;
   private decoder?: PatternDecoder;
 

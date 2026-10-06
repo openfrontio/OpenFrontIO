@@ -1,5 +1,5 @@
-import { Progress } from "../core/ApiSchemas";
-import { LevelBadge, packLevelBadge } from "../core/LevelBadgeWire";
+import { Progress } from "@openfront/shared/ApiSchemas";
+import { LevelBadge, packLevelBadge } from "@openfront/shared/LevelBadgeWire";
 
 // The roster's level badge for a joining player, from the `progress` of the
 // game server's own /users/@me lookup — never from anything the client sent.

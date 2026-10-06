@@ -1,4 +1,4 @@
-import type { PaymentsProvider } from "../core/ApiSchemas";
+import type { PaymentsProvider } from "@openfront/shared/ApiSchemas";
 import {
   createPaymentsCheckout,
   finalizeSteamOrder,

@@ -1,5 +1,4 @@
-import { z } from "zod";
-import { GameID } from "../core/Schemas";
+import { GameID } from "@openfront/engine-api/Schemas";
 import {
   commitsMatch,
   isCommitLike,
@@ -11,7 +10,8 @@ import {
   servesBuild,
   versionedPathForGame,
   versionMatches,
-} from "../core/ServerList";
+} from "@openfront/shared/ServerList";
+import { z } from "zod";
 import { getApiBase } from "./ApiBase";
 import { ClientEnv } from "./ClientEnv";
 import { isDesktopShell } from "./DesktopShell";
@@ -772,7 +772,7 @@ function ownServerLetter(list: ServerList, own: string): string | null {
   return servesBuild(list, letter, own) ? letter : null;
 }
 
-// The one place the client's randomness lives: src/core carries no
+// The one place the client's randomness lives: the shared ServerList carries no
 // floating-point math, so it takes an index rather than a draw.
 function randomIndex(count: number): number {
   return Math.floor(Math.random() * count);

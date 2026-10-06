@@ -1,13 +1,13 @@
-import { describe, expect, it } from "vitest";
 import {
   LEVEL_BADGE_MAX_LEVEL,
   LEVEL_BADGE_MAX_PRESTIGE,
   LevelBadge,
   packLevelBadge,
   unpackLevelBadge,
-} from "../../src/core/LevelBadgeWire";
-import { ClientInfoSchema } from "../../src/core/Schemas";
-import { zb } from "../../zbin";
+} from "@openfront/shared/LevelBadgeWire";
+import { ClientInfoSchema } from "@openfront/shared/WireSchemas";
+import { zb } from "@openfront/zbin";
+import { describe, expect, it } from "vitest";
 
 // The roster carries a badge as one packed integer: level in bits 0-6,
 // prestige in bits 7-10, legend in bit 11.

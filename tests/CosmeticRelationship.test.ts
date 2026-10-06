@@ -1,9 +1,9 @@
+import { UserMeResponse } from "@openfront/shared/ApiSchemas";
+import { Crown } from "@openfront/shared/CosmeticSchemas";
 import {
   cosmeticRelationship,
   crownRelationship,
 } from "../src/client/Cosmetics";
-import { UserMeResponse } from "../src/core/ApiSchemas";
-import { Crown } from "../src/core/CosmeticSchemas";
 
 function makeUserMe(flares: string[]): UserMeResponse {
   return {

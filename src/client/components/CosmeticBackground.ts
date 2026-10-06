@@ -1,11 +1,8 @@
+import { PlayerPattern, PlayerSkin } from "@openfront/shared/WireSchemas";
 import { html, LitElement, nothing } from "lit";
 import { customElement, state } from "lit/decorators.js";
-import {
-  PATTERN_KEY,
-  USER_SETTINGS_CHANGED_EVENT,
-} from "../../core/game/UserSettings";
-import { PlayerPattern, PlayerSkin } from "../../core/Schemas";
 import { getPlayerCosmetics } from "../Cosmetics";
+import { PATTERN_KEY, USER_SETTINGS_CHANGED_EVENT } from "../UserSettings";
 import { generatePreviewDataUrl } from "./PatternPreview";
 
 // Fills its (positioned) parent with the local player's selected cosmetic, so the

@@ -1,11 +1,11 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { EventBus } from "../../src/core/EventBus";
-import { ServerMessage } from "../../src/core/Schemas";
+import { EventBus } from "@openfront/engine-lib/EventBus";
+import { ServerMessage } from "@openfront/shared/WireSchemas";
 import {
   createGameWireContext,
   decodeClientMessage,
   encodeServerMessage,
-} from "../../src/core/ZbinWire";
+} from "@openfront/shared/ZbinWire";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { testGameConfig } from "../util/Wire";
 
 // Transport's send paths: intent events on the bus leave the socket as

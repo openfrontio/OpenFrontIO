@@ -1,9 +1,9 @@
+import type { UserMeResponse } from "@openfront/shared/ApiSchemas";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { fetchCosmetics } from "../../src/client/Cosmetics";
 import "../../src/client/Store";
 import type { StoreModal } from "../../src/client/Store";
 import type { TribesPanel } from "../../src/client/components/TribesPanel";
-import type { UserMeResponse } from "../../src/core/ApiSchemas";
 
 // The store's own network is out of scope here: the tribes panel fetches the
 // player's tribe names as soon as it learns the player is logged in, and the

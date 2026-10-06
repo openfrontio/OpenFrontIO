@@ -1,7 +1,8 @@
-import { anonWordName } from "../core/AnonNames";
-import { GameMode } from "../core/game/Game";
-import { ClientID, GameConfig, GameInfo, GameStartInfo } from "../core/Schemas";
-import { simpleHash } from "../core/Util";
+import { GameMode } from "@openfront/engine-api/game/GameTypes";
+import { ClientID, GameConfig } from "@openfront/engine-api/Schemas";
+import { simpleHash } from "@openfront/engine-lib/Util";
+import { anonWordName } from "@openfront/shared/AnonNames";
+import { GameInfo, WireGameStartInfo } from "@openfront/shared/WireSchemas";
 import { Client } from "./Client";
 
 // Who may see whose real identity, and what each viewer is shown instead.
@@ -148,9 +149,9 @@ export class NameVisibility {
   startInfoFor(
     viewer: ClientID,
     isAdmin: boolean,
-    real: GameStartInfo,
-    wire: GameStartInfo,
-  ): GameStartInfo {
+    real: WireGameStartInfo,
+    wire: WireGameStartInfo,
+  ): WireGameStartInfo {
     const config = this.view.config();
     const revealClanTags = isAdmin && config.gameMode === GameMode.FFA;
     if (!config.anonymizeNames) {

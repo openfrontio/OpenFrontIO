@@ -1,25 +1,24 @@
-import { describe, expect, it } from "vitest";
-import { z } from "zod";
+import { ClanTagSchema, UsernameSchema } from "@openfront/engine-api/Schemas";
 import {
   LevelBadge,
   packLevelBadge,
   unpackLevelBadge,
-} from "../../src/core/LevelBadgeWire";
+} from "@openfront/shared/LevelBadgeWire";
 import {
-  ClanTagSchema,
   ClientInfo,
   ClientInfoSchema,
   ClientJoinMessageSchema,
   ServerMessage,
-  UsernameSchema,
-} from "../../src/core/Schemas";
+} from "@openfront/shared/WireSchemas";
 import {
   decodeClientMessage,
   decodeServerMessage,
   encodeClientMessage,
   encodeServerMessage,
-} from "../../src/core/ZbinWire";
-import { zb } from "../../zbin";
+} from "@openfront/shared/ZbinWire";
+import { zb } from "@openfront/zbin";
+import { describe, expect, it } from "vitest";
+import { z } from "zod";
 
 const pack = (badge: LevelBadge): number => packLevelBadge(badge)!;
 

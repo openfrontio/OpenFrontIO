@@ -1,5 +1,6 @@
-import { LevelBadge, unpackLevelBadge } from "../core/LevelBadgeWire";
-import { ClientID, ClientInfo, GameID } from "../core/Schemas";
+import { ClientID, GameID } from "@openfront/engine-api/Schemas";
+import { LevelBadge, unpackLevelBadge } from "@openfront/shared/LevelBadgeWire";
+import { ClientInfo } from "@openfront/shared/WireSchemas";
 
 // Level badges from the last lobby roster this tab was sent, so in-game UI
 // can show them after the lobby is gone. The roster (lobby_info) only flows

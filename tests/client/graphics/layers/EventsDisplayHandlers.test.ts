@@ -35,16 +35,18 @@ vi.mock("../../../../src/client/Utils", () => ({
     const text = translations[key] ?? key;
     return params ? `${text} ${JSON.stringify(params)}` : text;
   }),
-  renderNumber: vi.fn(),
-  renderTroops: vi.fn(),
   getMessageTypeClasses: vi.fn(() => ""),
 }));
+vi.mock("@openfront/engine-lib/Format", () => ({
+  renderNumber: vi.fn(),
+  renderTroops: vi.fn(),
+}));
 
+import { MessageType } from "@openfront/engine-api/game/GameTypes";
+import { GameUpdateType } from "@openfront/engine-api/game/GameUpdates";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { EventsDisplay } from "../../../../src/client/hud/layers/EventsDisplay";
 import { PlaySoundEffectEvent } from "../../../../src/client/sound/Sounds";
-import { MessageType } from "../../../../src/core/game/Game";
-import { GameUpdateType } from "../../../../src/core/game/GameUpdates";
 
 interface Ed {
   events: { description: string; type: MessageType; focusID?: number }[];

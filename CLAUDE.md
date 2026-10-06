@@ -15,6 +15,7 @@ npm run lint             # Oxlint + ESLint
 npm run lint:fix         # Oxlint + ESLint with auto-fix
 npm run format           # Prettier
 npm run build-prod       # Production build
+npm run typecheck        # tsc for the root project and each package
 ```
 
 **Run a single test file:**
@@ -28,10 +29,27 @@ npx vitest NationAllianceBehavior --run # match by name pattern
 
 OpenFront.io is a real-time multiplayer territorial strategy game. There are four components:
 
-1. **`src/core/`** — Deterministic game simulation. Pure TypeScript with **no external dependencies**. Must remain fully deterministic (seeded PRNG, no floating-point math). Runs in a Web Worker thread. All `src/core` changes **must** include tests.
+1. **The engine** — Deterministic game simulation, split into npm workspace packages under `packages/` (see below). Pure TypeScript with **no external dependencies** beyond zod. Must remain fully deterministic (seeded PRNG, no floating-point math). Runs in a Web Worker thread. All `packages/engine`, `packages/engine-api` and `packages/engine-lib` changes **must** include tests.
 2. **`src/client/`** — Rendering (Pixi.js/WebGL), UI (Lit web components + Tailwind CSS 4), WebSocket communication.
 3. **`src/server/`** — Game coordination, intent relay, WebSocket management (Node.js/Express/ws).
 4. **API** — Closed-source Cloudflare Worker handling auth, stats, cosmetics, monetization. Not in this repo.
+
+### Packages
+
+| Package                 | Directory             | Contents                                                                                                                                                     |
+| ----------------------- | --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `@openfront/engine-api` | `packages/engine-api` | The contract with the engine: intent/config schemas, game types and enums, `GameUpdates`, the worker protocol, the `GameMap` interface, read-view interfaces |
+| `@openfront/engine-lib` | `packages/engine-lib` | Engine code that also runs outside the engine: the tile grid (`GameMapImpl`), terrain loading, the rules `Config`, `UnitGrid`, PRNG, `DetMath`, formatting   |
+| `@openfront/engine`     | `packages/engine`     | The simulation: executions, `*Impl`, pathfinding, snapshots, `GameRunner`, the worker entry                                                                  |
+| `@openfront/shared`     | `packages/shared`     | Client/server code that isn't simulation: wire and HTTP schemas, `ZbinWire`, env, asset URLs                                                                 |
+| `@openfront/zbin`       | `packages/zbin`       | Binary wire format for zod schemas                                                                                                                           |
+
+Import them as `@openfront/<pkg>/<path>` (e.g. `@openfront/engine-api/game/GameMap`); paths mirror `packages/<pkg>/src/`. The allowed graph is enforced by `tests/LayerBoundaries.test.ts`:
+
+- `engine-api` imports only zod, `zbin` and `resources/*.json`; `engine-lib` adds `engine-api`; `engine` adds `engine-lib`. None of them may import `shared`, `src/client` or `src/server`, use `Math.random`/`Date.now`/`new Date`, or touch DOM or Node APIs (their tsconfigs have no DOM and no Node types).
+- `shared` may import `engine-api` and `engine-lib`, never `engine`.
+- `src/client` and `src/server` import `engine-api`, `engine-lib` and `shared`; the client loads `engine` only through `packages/engine/src/worker/Worker.worker.ts` (the replay processor is a temporary, allowlisted exception).
+- Rules that run on both sides (e.g. `Config.maxTroops`) take `PlayerLike`/`UnitLike`/`GameLike` from `engine-api/game/ReadViews.ts` and live in `engine-lib`; both the engine objects and the client views implement.
 
 ### Simulation Flow (Intent → Execution)
 
@@ -44,9 +62,10 @@ The game simulation runs **on each client**, not the server. The server only rel
 5. Core calls `executeNextTick()` — all executions run and mutate game state
 6. Core sends **GameUpdates** back to client → client renders
 
-Intents and all wire messages are Zod-validated schemas defined in `src/core/Schemas.ts`.
+Intents are Zod-validated schemas defined in `packages/engine-api/src/Schemas.ts`; client↔server
+messages and game records are in `packages/shared/src/WireSchemas.ts`.
 Every WebSocket frame is a compact binary encoding of those schemas
-(`src/core/ZbinWire.ts`, library docs in `zbin/README.md`). HTTP stays JSON.
+(`packages/shared/src/ZbinWire.ts`, library docs in `packages/zbin/README.md`). HTTP stays JSON.
 
 ### CDN / Static Assets
 
@@ -54,19 +73,21 @@ The game server only serves `index.html` and the WebSocket. All other assets (JS
 
 ## Key Files
 
-| File                        | Purpose                                |
-| --------------------------- | -------------------------------------- |
-| `src/core/Schemas.ts`       | All intent/message types (Zod schemas) |
-| `src/core/GameRunner.ts`    | Simulation orchestrator                |
-| `src/core/game/GameImpl.ts` | Game state implementation              |
-| `src/server/GameServer.ts`  | Main WebSocket server, game loop       |
-| `src/server/Master.ts`      | Lobby and game registry                |
-| `tests/util/Setup.ts`       | Test helper — creates test games       |
-| `docs/Architecture.md`      | Architecture overview                  |
-| `zbin/README.md`            | Binary wire format for zod schemas     |
-| `docs/Auth.md`              | JWT/auth flow                          |
-| `docs/API.md`               | Public API endpoints                   |
-| `vite.config.ts`            | Build config, CDN handling             |
+| File                                   | Purpose                                    |
+| -------------------------------------- | ------------------------------------------ |
+| `packages/engine-api/src/Schemas.ts`   | Intent and game config types (Zod schemas) |
+| `packages/shared/src/WireSchemas.ts`   | Client/server message types (Zod schemas)  |
+| `packages/engine/src/GameRunner.ts`    | Simulation orchestrator                    |
+| `packages/engine/src/game/GameImpl.ts` | Game state implementation                  |
+| `src/server/GameServer.ts`             | Main WebSocket server, game loop           |
+| `src/server/Master.ts`                 | Lobby and game registry                    |
+| `tests/util/Setup.ts`                  | Test helper — creates test games           |
+| `tests/LayerBoundaries.test.ts`        | Enforces the package import rules          |
+| `docs/Architecture.md`                 | Architecture overview                      |
+| `packages/zbin/README.md`              | Binary wire format for zod schemas         |
+| `docs/Auth.md`                         | JWT/auth flow                              |
+| `docs/API.md`                          | Public API endpoints                       |
+| `vite.config.ts`                       | Build config, CDN handling                 |
 
 ## UI Text / i18n
 

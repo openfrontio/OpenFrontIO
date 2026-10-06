@@ -1,9 +1,9 @@
+import { packLevelBadge } from "@openfront/shared/LevelBadgeWire";
 import { describe, expect, it } from "vitest";
 import {
   lobbyLevelBadge,
   rememberLobbyRoster,
 } from "../../src/client/LobbyRosterLevels";
-import { packLevelBadge } from "../../src/core/LevelBadgeWire";
 
 const VET = { level: 100, prestige: 10, legend: true };
 // As the roster carries it.

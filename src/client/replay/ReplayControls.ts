@@ -6,9 +6,9 @@
  *   replay-speed (detail: speed), replay-menu
  */
 
+import { assetUrl } from "@openfront/shared/AssetUrls";
 import { html, LitElement, nothing } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
-import { assetUrl } from "../../core/AssetUrls";
 import { crazyGamesSDK } from "../CrazyGamesSDK";
 import { isDesktopShell } from "../DesktopShell";
 import { homeHref, translateText } from "../Utils";

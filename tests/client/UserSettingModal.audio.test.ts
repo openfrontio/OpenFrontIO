@@ -13,7 +13,7 @@ import type { UserSettingModal } from "../../src/client/UserSettingModal";
 import {
   type AudioCategory,
   UserSettings,
-} from "../../src/core/game/UserSettings";
+} from "../../src/client/UserSettings";
 
 // Deliberately not importing AudioMixer: it pulls howler into the import graph
 // of every test that mounts a settings modal, which is the reason CuePlayer

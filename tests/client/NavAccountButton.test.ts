@@ -1,7 +1,7 @@
+import type { DiscordUser, UserMeResponse } from "@openfront/shared/ApiSchemas";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { updateAccountNavButton } from "../../src/client/NavAccountButton";
 import { getDiscordAvatarUrl } from "../../src/client/Utils";
-import type { DiscordUser, UserMeResponse } from "../../src/core/ApiSchemas";
 
 vi.mock("../../src/client/Utils", () => ({
   translateText: vi.fn((key: string) => key),

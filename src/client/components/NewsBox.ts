@@ -1,7 +1,7 @@
+import type { NewsItem } from "@openfront/shared/ApiSchemas";
+import type { ClientPlatform } from "@openfront/shared/WireSchemas";
 import { LitElement, html, nothing } from "lit";
 import { customElement, state } from "lit/decorators.js";
-import type { NewsItem } from "../../core/ApiSchemas";
-import type { ClientPlatform } from "../../core/Schemas";
 import { getNews } from "../Api";
 import { clientPlatform } from "../ClientPlatform";
 import { renderMarkdown } from "../Markdown";

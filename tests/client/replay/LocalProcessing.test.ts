@@ -5,6 +5,7 @@
  * viewer plays as it grows, and stores once it's done.
  */
 
+import type { GameRecord } from "@openfront/shared/WireSchemas";
 import {
   gunzipInBrowser,
   gzipInBrowser,
@@ -20,7 +21,6 @@ import {
 import { processGameRecord } from "../../../src/client/replay/processor/ReplayProcessor";
 import type { ProcessorResponse } from "../../../src/client/replay/ProcessorMessages";
 import { ReplayPlayback } from "../../../src/client/replay/ReplayPlayback";
-import type { GameRecord } from "../../../src/core/Schemas";
 import {
   config,
   human,

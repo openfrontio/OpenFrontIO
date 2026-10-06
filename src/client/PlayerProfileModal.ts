@@ -1,12 +1,12 @@
-import { html, nothing } from "lit";
-import { customElement, state } from "lit/decorators.js";
-import { ClientEnv } from "src/client/ClientEnv";
 import {
   isVerifiedUsername,
   type PlayerProfile,
   type PlayerStatsTree,
   type PublicProgress,
-} from "../core/ApiSchemas";
+} from "@openfront/shared/ApiSchemas";
+import { html, nothing } from "lit";
+import { customElement, state } from "lit/decorators.js";
+import { ClientEnv } from "src/client/ClientEnv";
 import { fetchPublicPlayerProfile } from "./Api";
 import "./components/baseComponents/stats/PlayerGameHistoryView";
 import type { PlayerGameHistoryCache } from "./components/baseComponents/stats/PlayerGameHistoryView";
@@ -363,9 +363,11 @@ export class PlayerProfileModal extends BaseModal {
   private openGameStats(gameId: string): void {
     this.gamesScrollTop = this.modalEl?.getScrollTop() ?? 0;
     const statsModal = document.querySelector<
-      HTMLElement & { openFromProfile(gameId: string): void }
+      HTMLElement & {
+        openFromProfile(gameId: string, profilePublicId?: string): void;
+      }
     >("game-stats-modal");
-    statsModal?.openFromProfile(gameId);
+    statsModal?.openFromProfile(gameId, this.publicId ?? undefined);
   }
 
   private viewGame(gameId: string): void {

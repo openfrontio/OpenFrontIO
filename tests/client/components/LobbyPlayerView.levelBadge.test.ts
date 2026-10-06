@@ -1,10 +1,14 @@
+import {
+  GameMode,
+  HumansVsNations,
+} from "@openfront/engine-api/game/GameTypes";
+import type { LevelBadge } from "@openfront/shared/LevelBadgeWire";
+import { packLevelBadge } from "@openfront/shared/LevelBadgeWire";
+import type { ClientInfo } from "@openfront/shared/WireSchemas";
 import { beforeEach, describe, expect, it } from "vitest";
 import "../../../src/client/components/LobbyPlayerView";
 import type { LobbyTeamView } from "../../../src/client/components/LobbyPlayerView";
-import { GameMode, HumansVsNations } from "../../../src/core/game/Game";
-import { UserSettings } from "../../../src/core/game/UserSettings";
-import { packLevelBadge } from "../../../src/core/LevelBadgeWire";
-import type { ClientInfo, LevelBadge } from "../../../src/core/Schemas";
+import { UserSettings } from "../../../src/client/UserSettings";
 
 const BADGE: LevelBadge = { level: 42, prestige: 2, legend: false };
 // As the roster carries it.

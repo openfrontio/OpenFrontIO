@@ -1,6 +1,7 @@
-import { Config } from "../../core/configuration/Config";
+import { GameMap, TileRef } from "@openfront/engine-api/game/GameMap";
 import {
   Cell,
+  formatPlayerDisplayName,
   GameUpdates,
   PlayerID,
   PlayerType,
@@ -8,24 +9,22 @@ import {
   TerrainType,
   TerraNullius,
   Tick,
-  Unit,
   UnitInfo,
   UnitType,
-} from "../../core/game/Game";
-import { GameMap, TileRef } from "../../core/game/GameMap";
+} from "@openfront/engine-api/game/GameTypes";
 import {
   GameUpdateType,
   GameUpdateViewData,
   SpawnPhaseEndUpdate,
-} from "../../core/game/GameUpdates";
-import { unpackMotionPlans } from "../../core/game/MotionPlans";
-import { TerrainMapData } from "../../core/game/TerrainMapLoader";
-import { TerraNulliusImpl } from "../../core/game/TerraNulliusImpl";
-import { UnitGrid, UnitPredicate } from "../../core/game/UnitGrid";
-import { UserSettings } from "../../core/game/UserSettings";
-import { ClientID, GameID, Player, PlayerCosmetics } from "../../core/Schemas";
-import { formatPlayerDisplayName } from "../../core/Util";
-import { WorkerClient } from "../../core/worker/WorkerClient";
+} from "@openfront/engine-api/game/GameUpdates";
+import { GameLike, UnitPredicate } from "@openfront/engine-api/game/ReadViews";
+import { ClientID, GameID } from "@openfront/engine-api/Schemas";
+import { Config } from "@openfront/engine-lib/configuration/Config";
+import { unpackMotionPlans } from "@openfront/engine-lib/game/MotionPlans";
+import { TerrainMapData } from "@openfront/engine-lib/game/TerrainMapLoader";
+import { TerraNulliusImpl } from "@openfront/engine-lib/game/TerraNulliusImpl";
+import { UnitGrid } from "@openfront/engine-lib/game/UnitGrid";
+import { PlayerCosmetics, WirePlayer } from "@openfront/shared/WireSchemas";
 import { computeAllianceClusters } from "../render/frame/derive/AllianceClusters";
 import { extractAttackRings } from "../render/frame/derive/AttackRings";
 import { extractNukeTelegraphs } from "../render/frame/derive/NukeTelegraphs";
@@ -38,7 +37,9 @@ import { TrailManager } from "../render/frame/TrailManager";
 import type { FrameData, NameEntry } from "../render/types";
 import { STRUCTURE_TYPES } from "../render/types";
 import { TRAIL_TYPES } from "../render/types/UnitType";
+import { UserSettings } from "../UserSettings";
 import { resolveTeamClanTag } from "../Utils";
+import { WorkerClient } from "../WorkerClient";
 import type { CosmeticVisibility } from "./CosmeticVisibility";
 import {
   applyPackedAttackTroops,
@@ -57,7 +58,7 @@ function readCosmeticVisibility(): CosmeticVisibility {
   return new UserSettings().graphicsOverrides().cosmetics ?? {};
 }
 
-export class GameView implements GameMap {
+export class GameView implements GameLike {
   private lastUpdate: GameUpdateViewData | null;
   private startTick: Tick | null = null;
   private smallIDToID = new Map<number, PlayerID>();
@@ -118,7 +119,7 @@ export class GameView implements GameMap {
   /** Alliance clusters: allies changed, or a player was added. */
   private _clustersDirty = true;
 
-  private unitGrid: UnitGrid;
+  private unitGrid: UnitGrid<UnitView>;
   private readonly motion = new MotionPlanResolver();
   /** How the resolver moves this view's units. */
   private readonly plannedUnits: PlannedUnits = {
@@ -149,11 +150,11 @@ export class GameView implements GameMap {
     private _myUsername: string,
     private _myClanTag: string | null,
     private _gameID: GameID,
-    humans: Player[],
+    humans: WirePlayer[],
   ) {
     this._map = this._mapData.gameMap;
     this.lastUpdate = null;
-    this.unitGrid = new UnitGrid(this._map);
+    this.unitGrid = new UnitGrid<UnitView>(this._map);
     this._cosmetics = new Map(
       humans.map((h) => [h.clientID, h.cosmetics ?? {}]),
     );
@@ -700,7 +701,7 @@ export class GameView implements GameMap {
       tile,
       searchRange,
       types,
-      predicate as (unit: Unit | UnitView) => boolean,
+      predicate,
       playerId,
       includeUnderConstruction,
     );
@@ -946,7 +947,7 @@ export class GameView implements GameMap {
     return this._map.waterVersion();
   }
   /** Map layers defined in the map's info.json, if any. */
-  layers(): import("../../core/game/TerrainMapLoader").MapLayer[] {
+  layers(): import("@openfront/engine-api/game/GameMapLoader").MapLayer[] {
     return this._mapData.layers ?? [];
   }
   isValidCoord(x: number, y: number): boolean {

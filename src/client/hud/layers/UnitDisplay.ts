@@ -1,18 +1,19 @@
-import { html, LitElement } from "lit";
-import { customElement } from "lit/decorators.js";
-import { EventBus } from "../../../core/EventBus";
 import {
   BuildableUnit,
   BuildMenus,
   Gold,
   PlayerBuildableUnitType,
   UnitType,
-} from "../../../core/game/Game";
-import { UserSettings } from "../../../core/game/UserSettings";
+} from "@openfront/engine-api/game/GameTypes";
+import { EventBus } from "@openfront/engine-lib/EventBus";
+import { renderNumber } from "@openfront/engine-lib/Format";
+import { html, LitElement } from "lit";
+import { customElement } from "lit/decorators.js";
 import { Controller } from "../../Controller";
 import { ToggleStructureEvent } from "../../InputHandler";
 import { UIState } from "../../UIState";
-import { renderNumber, translateText } from "../../Utils";
+import { UserSettings } from "../../UserSettings";
+import { translateText } from "../../Utils";
 import { GameView } from "../../view";
 import {
   atomBombIcon,

@@ -1,6 +1,3 @@
-import { MissileSiloExecution } from "../src/core/execution/MissileSiloExecution";
-import { NationExecution } from "../src/core/execution/NationExecution";
-import { SAMLauncherExecution } from "../src/core/execution/SAMLauncherExecution";
 import {
   Cell,
   Difficulty,
@@ -8,7 +5,10 @@ import {
   PlayerInfo,
   PlayerType,
   UnitType,
-} from "../src/core/game/Game";
+} from "@openfront/engine-api/game/GameTypes";
+import { MissileSiloExecution } from "@openfront/engine/execution/MissileSiloExecution";
+import { NationExecution } from "@openfront/engine/execution/NationExecution";
+import { SAMLauncherExecution } from "@openfront/engine/execution/SAMLauncherExecution";
 import { setup } from "./util/Setup";
 import { executeTicks } from "./util/utils";
 

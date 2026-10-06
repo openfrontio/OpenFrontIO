@@ -1,20 +1,17 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { UserMeResponseSchema } from "../../src/core/ApiSchemas";
-import { GameType } from "../../src/core/game/Game";
+import { GameType } from "@openfront/engine-api/game/GameTypes";
+import { GameConfig } from "@openfront/engine-api/Schemas";
+import { UserMeResponseSchema } from "@openfront/shared/ApiSchemas";
 import {
+  LevelBadge,
   packLevelBadge,
   unpackLevelBadge,
-} from "../../src/core/LevelBadgeWire";
-import {
-  GameConfig,
-  GameInfo,
-  LevelBadge,
-  ServerMessage,
-} from "../../src/core/Schemas";
+} from "@openfront/shared/LevelBadgeWire";
+import { GameInfo, ServerMessage } from "@openfront/shared/WireSchemas";
 import {
   decodeServerMessage,
   encodeServerMessage,
-} from "../../src/core/ZbinWire";
+} from "@openfront/shared/ZbinWire";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { levelBadgeFromProgress } from "../../src/server/LevelBadge";
 import { makeClient, makeGame } from "../util/GameServerHarness";
 
