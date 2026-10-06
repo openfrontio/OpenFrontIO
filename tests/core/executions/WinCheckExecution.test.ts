@@ -1,13 +1,13 @@
-import { WinCheckExecution } from "../../../src/core/execution/WinCheckExecution";
 import {
   ColoredTeams,
   GameMode,
-  Player,
   PlayerInfo,
   PlayerType,
   RankedType,
   Team,
-} from "../../../src/core/game/Game";
+} from "@openfront/engine-api/game/GameTypes";
+import { WinCheckExecution } from "@openfront/engine/execution/WinCheckExecution";
+import { Player } from "@openfront/engine/game/Game";
 import { playerInfo, setup } from "../../util/Setup";
 
 describe("WinCheckExecution", () => {

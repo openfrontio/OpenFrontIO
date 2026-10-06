@@ -12,7 +12,7 @@ import {
   type RailroadSnapUpdate,
   type SpawnPhaseEndUpdate,
   type UnitUpdate,
-} from "../../../../core/game/GameUpdates";
+} from "@openfront/engine-api/game/GameUpdates";
 import type { NormalizedFrame } from "../FrameNormalizer";
 import {
   RailroadEventKind,

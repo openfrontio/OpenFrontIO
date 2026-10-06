@@ -1,33 +1,30 @@
-import fs from "fs";
-import path from "path";
-import { fileURLToPath } from "url";
-import { Config } from "../../src/core/configuration/Config";
-import { FlatBinaryHeap } from "../../src/core/execution/utils/FlatBinaryHeap";
-import { Game } from "../../src/core/game/Game";
-import { GameMap } from "../../src/core/game/GameMap";
-import {
-  genTerrainFromBin,
-  MapManifest,
-} from "../../src/core/game/TerrainMapLoader";
-import { TileSet } from "../../src/core/game/TileSet";
-import { UserSettings } from "../../src/core/game/UserSettings";
-import { AStar } from "../../src/core/pathfinding/algorithms/AStar";
-import { AbstractGraphAStar } from "../../src/core/pathfinding/algorithms/AStar.AbstractGraph";
-import { AStarRail } from "../../src/core/pathfinding/algorithms/AStar.Rail";
-import { AStarWater } from "../../src/core/pathfinding/algorithms/AStar.Water";
-import { AStarWaterBounded } from "../../src/core/pathfinding/algorithms/AStar.WaterBounded";
-import { AStarWaterHierarchical } from "../../src/core/pathfinding/algorithms/AStar.WaterHierarchical";
-import { BFSGrid } from "../../src/core/pathfinding/algorithms/BFS.Grid";
+import { GameMap } from "@openfront/engine-api/game/GameMap";
+import { MapManifest } from "@openfront/engine-api/game/GameMapLoader";
+import { Config } from "@openfront/engine-lib/configuration/Config";
+import { genTerrainFromBin } from "@openfront/engine-lib/game/TerrainMapLoader";
+import { TileSet } from "@openfront/engine-lib/game/TileSet";
+import { FlatBinaryHeap } from "@openfront/engine/execution/utils/FlatBinaryHeap";
+import { Game } from "@openfront/engine/game/Game";
+import { AStar } from "@openfront/engine/pathfinding/algorithms/AStar";
+import { AbstractGraphAStar } from "@openfront/engine/pathfinding/algorithms/AStar.AbstractGraph";
+import { AStarRail } from "@openfront/engine/pathfinding/algorithms/AStar.Rail";
+import { AStarWater } from "@openfront/engine/pathfinding/algorithms/AStar.Water";
+import { AStarWaterBounded } from "@openfront/engine/pathfinding/algorithms/AStar.WaterBounded";
+import { AStarWaterHierarchical } from "@openfront/engine/pathfinding/algorithms/AStar.WaterHierarchical";
+import { BFSGrid } from "@openfront/engine/pathfinding/algorithms/BFS.Grid";
 import {
   BucketQueue,
   MinHeap,
-} from "../../src/core/pathfinding/algorithms/PriorityQueue";
-import { WaterPathMemo } from "../../src/core/pathfinding/PathFinder";
+} from "@openfront/engine/pathfinding/algorithms/PriorityQueue";
+import { WaterPathMemo } from "@openfront/engine/pathfinding/PathFinder";
 import {
   restoreGame,
   snapshotGame,
-} from "../../src/core/snapshot/GameSnapshot";
-import { decodeSnapshotValue } from "../../src/core/snapshot/SnapshotCodec";
+} from "@openfront/engine/snapshot/GameSnapshot";
+import { decodeSnapshotValue } from "@openfront/engine/snapshot/SnapshotCodec";
+import fs from "fs";
+import path from "path";
+import { fileURLToPath } from "url";
 import { TestConfig } from "./TestConfig";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -63,7 +60,7 @@ export async function restoreTestGame(
 ): Promise<Game> {
   const maps = await loadTestMaps(mapName);
   return restoreGame(bytes, {
-    config: (gc) => new ConfigClass(gc, new UserSettings(), false),
+    config: (gc) => new ConfigClass(gc, false),
     ...maps,
   });
 }

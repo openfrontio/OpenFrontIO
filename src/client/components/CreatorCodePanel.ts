@@ -1,6 +1,6 @@
+import { UserMeResponse } from "@openfront/shared/ApiSchemas";
 import { html, LitElement, nothing, TemplateResult } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
-import { UserMeResponse } from "../../core/ApiSchemas";
 import {
   clearCreatorCode,
   getUserMe,

@@ -3,7 +3,7 @@ import {
   AudioCategory,
   USER_SETTINGS_CHANGED_EVENT,
   UserSettings,
-} from "../../core/game/UserSettings";
+} from "../UserSettings";
 import { setAudioControls, setCuePlayer } from "./CuePlayer";
 import {
   AmbienceTrack,

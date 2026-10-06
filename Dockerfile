@@ -6,13 +6,19 @@ RUN npm install --global --ignore-scripts npm@12.1.0
 # Build stage - install ALL dependencies and build
 FROM base AS build
 ENV HUSKY=0
-# Copy package files first for better caching
+# Copy package files first for better caching. The workspace manifests come
+# along so npm ci can link node_modules/@openfront/* to packages/*.
 COPY package*.json .npmrc ./
+COPY packages/engine/package.json ./packages/engine/
+COPY packages/engine-api/package.json ./packages/engine-api/
+COPY packages/engine-lib/package.json ./packages/engine-lib/
+COPY packages/shared/package.json ./packages/shared/
+COPY packages/zbin/package.json ./packages/zbin/
 RUN --mount=type=cache,target=/root/.npm \
     npm ci --ignore-scripts
 
 # Copy only what's needed for build
-COPY tsconfig.json ./
+COPY tsconfig.json tsconfig.base.json ./
 COPY vite.config.ts ./
 COPY eslint.config.js ./
 COPY index.html ./
@@ -20,7 +26,7 @@ COPY client-api.json ./
 COPY resources ./resources
 COPY proprietary ./proprietary
 COPY src ./src
-COPY zbin ./zbin
+COPY packages ./packages
 # build-prod runs scripts/buildAssetHashes.ts after vite, to emit
 # static/asset-hashes.json and static/core-version.txt for the desktop
 # release descriptor. Without this the image build fails at that step with
@@ -37,6 +43,11 @@ FROM base AS prod-deps
 ENV HUSKY=0
 ENV NPM_CONFIG_IGNORE_SCRIPTS=1
 COPY package*.json .npmrc ./
+COPY packages/engine/package.json ./packages/engine/
+COPY packages/engine-api/package.json ./packages/engine-api/
+COPY packages/engine-lib/package.json ./packages/engine-lib/
+COPY packages/shared/package.json ./packages/shared/
+COPY packages/zbin/package.json ./packages/zbin/
 RUN --mount=type=cache,target=/root/.npm \
     npm ci --omit=dev --ignore-scripts
 
@@ -78,10 +89,12 @@ COPY resources ./resources
 
 # Remove maps because they are not used by the server.
 RUN rm -rf ./resources/maps
-COPY tsconfig.json ./
+COPY tsconfig.json tsconfig.base.json ./
 COPY client-api.json ./
 COPY src ./src
-COPY zbin ./zbin
+# node_modules/@openfront/* are symlinks into packages/; without this copy
+# they dangle and the server dies at boot.
+COPY packages ./packages
 
 
 ARG GIT_COMMIT=unknown

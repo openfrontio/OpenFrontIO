@@ -1,3 +1,4 @@
+import { GameType } from "@openfront/engine-api/game/GameTypes";
 import { describe, expect, it } from "vitest";
 import {
   joinIsGateable,
@@ -6,7 +7,6 @@ import {
   shouldBlockMultiplayerAction,
   shouldBlockSocketSourcedAction,
 } from "../src/client/GameModeSelector";
-import { GameType } from "../src/core/game/Game";
 
 describe("shouldBlockMultiplayerAction", () => {
   it("allows everything when no desktop update state has arrived", () => {

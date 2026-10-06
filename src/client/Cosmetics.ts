@@ -1,9 +1,9 @@
-import { assetUrl } from "src/core/AssetUrls";
 import {
   isGrantedSubscription,
   UserMeResponse,
   UserSubscription,
-} from "../core/ApiSchemas";
+} from "@openfront/shared/ApiSchemas";
+import { assetUrl } from "@openfront/shared/AssetUrls";
 import {
   ColorPalette,
   CosmeticPack,
@@ -18,14 +18,13 @@ import {
   Pattern,
   Skin,
   Subscription,
-} from "../core/CosmeticSchemas";
-import { UserSettings } from "../core/game/UserSettings";
+} from "@openfront/shared/CosmeticSchemas";
 import {
   PlayerCosmeticRefs,
   PlayerCosmetics,
   PlayerEffect,
   PlayerPattern,
-} from "../core/Schemas";
+} from "@openfront/shared/WireSchemas";
 import {
   changeSubscriptionTier,
   getApiBase,
@@ -44,6 +43,7 @@ import {
   startPurchase,
 } from "./Payments";
 import { STEAM_TIER_CHANGE_IN_APP } from "./SubscriptionPolicy";
+import { UserSettings } from "./UserSettings";
 import { translateText } from "./Utils";
 
 export const TEMP_FLARE_OFFSET = 1 * 60 * 1000; // 1 minute

@@ -1,5 +1,3 @@
-import IntlMessageFormat from "intl-messageformat";
-import { DoomsdayClockSpeed } from "../core/game/DoomsdayClock";
 import {
   Duos,
   GameMode,
@@ -10,9 +8,11 @@ import {
   Quads,
   Team,
   Trios,
-} from "../core/game/Game";
-import { GameConfig } from "../core/Schemas";
-import { stripVersionPrefix } from "../core/ServerList";
+} from "@openfront/engine-api/game/GameTypes";
+import { GameConfig } from "@openfront/engine-api/Schemas";
+import { DoomsdayClockSpeed } from "@openfront/engine-lib/game/DoomsdayClock";
+import { stripVersionPrefix } from "@openfront/shared/ServerList";
+import IntlMessageFormat from "intl-messageformat";
 import { ClientEnv } from "./ClientEnv";
 import type { LangSelector } from "./LangSelector";
 import { pagePin } from "./PagePin";
@@ -304,10 +304,6 @@ export function renderDuration(totalSeconds: number): string {
   return parts.join(" ");
 }
 
-export function renderTroops(troops: number): string {
-  return renderNumber(troops / 10);
-}
-
 export async function copyToClipboard(
   text: string,
   onSuccess?: () => void,
@@ -325,38 +321,6 @@ export async function copyToClipboard(
   } catch (err) {
     console.warn("Failed to copy to clipboard", err);
     throw err;
-  }
-}
-
-export function renderNumber(
-  num: number | bigint,
-  fixedPoints?: number,
-): string {
-  num = Number(num);
-  num = Math.max(num, 0);
-
-  if (num >= 10_000_000_000) {
-    const value = Math.floor(num / 100000000) / 10;
-    return value.toFixed(fixedPoints ?? 1) + "B";
-  } else if (num >= 1_000_000_000) {
-    const value = Math.floor(num / 10000000) / 100;
-    return value.toFixed(fixedPoints ?? 2) + "B";
-  } else if (num >= 10_000_000) {
-    const value = Math.floor(num / 100000) / 10;
-    return value.toFixed(fixedPoints ?? 1) + "M";
-  } else if (num >= 1_000_000) {
-    const value = Math.floor(num / 10000) / 100;
-    return value.toFixed(fixedPoints ?? 2) + "M";
-  } else if (num >= 100000) {
-    return Math.floor(num / 1000) + "K";
-  } else if (num >= 10000) {
-    const value = Math.floor(num / 100) / 10;
-    return value.toFixed(fixedPoints ?? 1) + "K";
-  } else if (num >= 1000) {
-    const value = Math.floor(num / 10) / 100;
-    return value.toFixed(fixedPoints ?? 2) + "K";
-  } else {
-    return Math.floor(num).toString();
   }
 }
 

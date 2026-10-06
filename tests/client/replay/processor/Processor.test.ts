@@ -6,6 +6,9 @@
  * against the hashes the "live" clients recorded.
  */
 
+import { GameMapType, GameMode } from "@openfront/engine-api/game/GameTypes";
+import { Game } from "@openfront/engine/game/Game";
+import { WirePlayer } from "@openfront/shared/WireSchemas";
 import { PlayerTypeEnum } from "../../../../src/client/render/types";
 import { ReplayReader } from "../../../../src/client/replay/codec/decode/ReplayReader";
 import type {
@@ -16,8 +19,6 @@ import {
   processGameRecord,
   ReplayDesyncError,
 } from "../../../../src/client/replay/processor/ReplayProcessor";
-import { Game, GameMapType, GameMode } from "../../../../src/core/game/Game";
-import { Player } from "../../../../src/core/Schemas";
 import {
   config,
   human,
@@ -79,7 +80,7 @@ describe("replay processor", () => {
       ticks,
       intents: (game, t) => {
         const size = game.width() * game.height();
-        const id = (p: Player) => game.playerByClientID(p.clientID)!.id();
+        const id = (p: WirePlayer) => game.playerByClientID(p.clientID)!.id();
         switch (t) {
           case 5:
             return [

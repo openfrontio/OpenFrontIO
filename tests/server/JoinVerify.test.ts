@@ -1,5 +1,5 @@
+import type { TokenPayload } from "@openfront/shared/ApiSchemas";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import type { TokenPayload } from "../../src/core/ApiSchemas";
 import {
   isSteamAuthenticated,
   planJoinVerify,

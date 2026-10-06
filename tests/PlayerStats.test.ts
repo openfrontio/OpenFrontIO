@@ -1,3 +1,4 @@
+import { UserSettings } from "../src/client/UserSettings";
 import {
   goldCoinIcon,
   guildIcon,
@@ -8,7 +9,6 @@ import {
 import { PlayerStats } from "../src/client/hud/layers/PlayerStats";
 import { columnsFor } from "../src/client/hud/layers/lib/StatsColumns";
 import type { GameView, PlayerView } from "../src/client/view";
-import { UserSettings } from "../src/core/game/UserSettings";
 
 function player(
   id: string,

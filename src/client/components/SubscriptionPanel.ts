@@ -1,11 +1,11 @@
-import { html, LitElement, nothing, TemplateResult } from "lit";
-import { customElement, property } from "lit/decorators.js";
 import {
   isGrantedSubscription,
   isSteamGrant,
   UserSubscription,
-} from "../../core/ApiSchemas";
-import { Subscription } from "../../core/CosmeticSchemas";
+} from "@openfront/shared/ApiSchemas";
+import { Subscription } from "@openfront/shared/CosmeticSchemas";
+import { html, LitElement, nothing, TemplateResult } from "lit";
+import { customElement, property } from "lit/decorators.js";
 import {
   cancelSubscription,
   invalidateUserMe,

@@ -1,8 +1,4 @@
-import {
-  PlayerStatsLeafSchema,
-  PlayerStatsTreeSchema,
-} from "../src/core/ApiSchemas";
-import { AllPlayersStats, ClientSendWinnerMessage } from "../src/core/Schemas";
+import { AllPlayersStats } from "@openfront/engine-api/Schemas";
 import {
   ALLIANCE_INDEX_LONGEST_HELD,
   ATTACK_INDEX_MAX_RECV,
@@ -12,12 +8,17 @@ import {
   GOLD_INDEX_DONATE_RECV,
   PlayerStatsSchema,
   TILE_INDEX_DRAWDOWN_TROUGH,
-} from "../src/core/StatsSchemas";
+} from "@openfront/engine-api/StatsSchemas";
+import {
+  PlayerStatsLeafSchema,
+  PlayerStatsTreeSchema,
+} from "@openfront/shared/ApiSchemas";
+import { ClientSendWinnerMessage } from "@openfront/shared/WireSchemas";
 import {
   createGameWireContext,
   decodeClientMessage,
   encodeClientMessage,
-} from "../src/core/ZbinWire";
+} from "@openfront/shared/ZbinWire";
 
 const CLIENT = "AbCdEfGh";
 
