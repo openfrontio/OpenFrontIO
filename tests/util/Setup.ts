@@ -10,8 +10,8 @@ import {
   PlayerType,
 } from "@openfront/engine-api/game/GameTypes";
 import { GameConfig } from "@openfront/engine-api/Schemas";
-import { Config } from "@openfront/engine-lib/configuration/Config";
 import { genTerrainFromBin } from "@openfront/engine-lib/game/TerrainMapLoader";
+import { EngineConfig } from "@openfront/engine/configuration/EngineConfig";
 import { Game } from "@openfront/engine/game/Game";
 import { createGame } from "@openfront/engine/game/GameImpl";
 import fs from "fs";
@@ -26,7 +26,7 @@ export async function setup(
   _gameConfig: Partial<GameConfig> = {},
   humans: PlayerInfo[] = [],
   currentDir: string = __dirname,
-  ConfigClass: typeof Config = TestConfig,
+  ConfigClass: typeof EngineConfig = TestConfig,
   autoEndSpawnPhase: boolean = true,
   nations: Nation[] = [],
 ): Promise<Game> {
