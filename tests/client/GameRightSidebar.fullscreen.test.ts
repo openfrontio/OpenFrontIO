@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { EventBus } from "@openfront/engine-lib/EventBus";
+import { EventBus } from "@openfront/shared/EventBus";
 import "../../src/client/hud/layers/GameRightSidebar";
 import type { GameRightSidebar } from "../../src/client/hud/layers/GameRightSidebar";
 import type { GameView } from "../../src/client/view";

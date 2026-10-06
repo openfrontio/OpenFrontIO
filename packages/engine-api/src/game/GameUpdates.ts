@@ -75,6 +75,15 @@ export interface GameUpdateViewData {
   packedNukeImpacts?: Uint32Array;
 }
 
+/**
+ * Direction lane of a `packedAttackUpdates` quad: which of the owner's attack
+ * arrays the index addresses. Encoder (PlayerImpl.toUpdate →
+ * packAttackTroopDeltas) and decoder (client GameView.update) must both use
+ * these.
+ */
+export const ATTACK_DELTA_OUTGOING = 0;
+export const ATTACK_DELTA_INCOMING = 1;
+
 export interface ErrorUpdate {
   errMsg: string;
   stack?: string;

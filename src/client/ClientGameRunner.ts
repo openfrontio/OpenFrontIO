@@ -13,13 +13,13 @@ import {
   GameUpdateViewData,
   HashUpdate,
 } from "@openfront/engine-api/game/GameUpdates";
-import { EventBus } from "@openfront/engine-lib/EventBus";
 import { findClosestBy } from "@openfront/engine-lib/Util";
 import { Config } from "@openfront/engine-lib/configuration/Config";
 import {
   loadTerrainMap,
   TerrainMapData,
 } from "@openfront/engine-lib/game/TerrainMapLoader";
+import { EventBus } from "@openfront/shared/EventBus";
 import { replacer } from "@openfront/shared/SharedUtil";
 import {
   GameRecord,

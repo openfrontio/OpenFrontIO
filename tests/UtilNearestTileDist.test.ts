@@ -1,11 +1,11 @@
 import { GameMap, TileRef } from "@openfront/engine-api/game/GameMap";
 import { PlayerInfo, PlayerType } from "@openfront/engine-api/game/GameTypes";
+import { TileSet } from "@openfront/engine-lib/game/TileSet";
+import { PseudoRandom } from "@openfront/engine-lib/PseudoRandom";
 import {
   nearestTileDist,
   nearestTileDistCapped,
-} from "@openfront/engine-lib/execution/Util";
-import { TileSet } from "@openfront/engine-lib/game/TileSet";
-import { PseudoRandom } from "@openfront/engine-lib/PseudoRandom";
+} from "@openfront/engine/execution/Util";
 import { Game } from "@openfront/engine/game/Game";
 import { setup } from "./util/Setup";
 

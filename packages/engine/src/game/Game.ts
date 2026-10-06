@@ -34,15 +34,15 @@ import {
   UnitUpdate,
 } from "@openfront/engine-api/game/GameUpdates";
 import {
-  EngineGameLike,
-  EnginePlayerLike,
-  EngineUnitLike,
+  GameLike,
+  PlayerLike,
   ReadonlyTileSet,
+  UnitLike,
   UnitPredicate,
 } from "@openfront/engine-api/game/ReadViews";
 import { AllPlayersStats, ClientID } from "@openfront/engine-api/Schemas";
-import { Config } from "@openfront/engine-lib/configuration/Config";
 import { MotionPlanRecord } from "@openfront/engine-lib/game/MotionPlans";
+import type { EngineConfig } from "../configuration/EngineConfig";
 import { AbstractGraph } from "../pathfinding/algorithms/AbstractGraph";
 import { PathFinder } from "../pathfinding/types";
 import type { ExecRecord, SnapshotWriter } from "../snapshot/SnapshotContext";
@@ -191,14 +191,20 @@ export function isUnit(unit: unknown): unit is Unit {
   );
 }
 
-export interface Unit extends EngineUnitLike {
+export interface EngineUnitInfo extends UnitInfo {
+  // extraUnits shifts the cost curve as if the player already had that many
+  // additional units/levels — used to price the later steps of a bulk upgrade.
+  cost: (game: Game, player: Player, extraUnits?: number) => Gold;
+}
+
+export interface Unit extends UnitLike {
   isUnit(): this is Unit;
 
   // Common properties.
   id(): number;
   type(): UnitType;
   owner(): Player;
-  info(): UnitInfo;
+  info(): EngineUnitInfo;
   isMarkedForDeletion(): boolean;
   markForDeletion(): void;
   isOverdueDeletion(): boolean;
@@ -299,7 +305,7 @@ export interface DisconnectSnapshot {
   wasAlive: boolean;
 }
 
-export interface Player extends EnginePlayerLike {
+export interface Player extends PlayerLike {
   // Basic Info
   smallID(): number;
   info(): PlayerInfo;
@@ -493,7 +499,7 @@ export interface Player extends EnginePlayerLike {
   bestTransportShipSpawn(tile: TileRef): TileRef | false;
 }
 
-export interface Game extends EngineGameLike {
+export interface Game extends GameLike {
   // Map & Dimensions
   isOnMap(cell: Cell): boolean;
   width(): number;
@@ -558,7 +564,7 @@ export interface Game extends EngineGameLike {
     allPlayersStats: AllPlayersStats,
   ): void;
   getWinner(): Player | Team | null;
-  config(): Config;
+  config(): EngineConfig;
   isPaused(): boolean;
   setPaused(paused: boolean): void;
 
@@ -569,7 +575,7 @@ export interface Game extends EngineGameLike {
   units(types: readonly UnitType[]): Unit[];
   units(type: UnitType, type2?: UnitType, type3?: UnitType): Unit[];
   unitCount(type: UnitType): number;
-  unitInfo(type: UnitType): UnitInfo;
+  unitInfo(type: UnitType): EngineUnitInfo;
   hasUnitNearby(
     tile: TileRef,
     searchRange: number,

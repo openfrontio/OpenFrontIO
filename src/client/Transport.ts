@@ -15,16 +15,16 @@ import {
   Winner,
 } from "@openfront/engine-api/Schemas";
 import {
-  EventBus,
-  EventConstructor,
-  GameEvent,
-} from "@openfront/engine-lib/EventBus";
-import {
   CloseCode,
   CloseReason,
   isCloseReason,
   isTerminalClose,
 } from "@openfront/shared/CloseCodes";
+import {
+  EventBus,
+  EventConstructor,
+  GameEvent,
+} from "@openfront/shared/EventBus";
 import {
   ClientHashMessage,
   ClientIntentMessage,
