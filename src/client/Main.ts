@@ -1558,8 +1558,12 @@ class Client {
       ({ joinLobby } = await loadGameClient());
     } catch (err) {
       // The game's chunk didn't load (a network error, or a deploy that
-      // replaced it). A full page load also picks up a new deploy.
+      // replaced it). A full page load also picks up a new deploy, unless the
+      // player has since left or started another join.
       console.error("game client failed to load:", err);
+      if (this.mostRecentJoinEvent !== event.timeStamp) return;
+      // The URL names the singleplayer game now, which no server has.
+      if (isSingleplayer) history.replaceState(null, "", "/");
       reloadForUpdate();
       return;
     }
