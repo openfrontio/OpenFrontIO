@@ -1,6 +1,7 @@
+import { GameType } from "@openfront/engine-api/game/GameTypes";
+import { Winner } from "@openfront/engine-api/Schemas";
+import { PartialGameRecord } from "@openfront/shared/WireSchemas";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { GameType } from "../../src/core/game/Game";
-import { PartialGameRecord, Winner } from "../../src/core/Schemas";
 import { Client } from "../../src/server/Client";
 import {
   cid,

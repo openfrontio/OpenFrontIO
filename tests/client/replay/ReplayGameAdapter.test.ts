@@ -5,6 +5,10 @@
  * how a change to the HUD is meant to be caught.
  */
 
+import { Cell, GameType, UnitType } from "@openfront/engine-api/game/GameTypes";
+import { GameUpdateType } from "@openfront/engine-api/game/GameUpdates";
+import { Config } from "@openfront/engine-lib/configuration/Config";
+import { EventBus } from "@openfront/shared/EventBus";
 import "../../../src/client/hud/layers/EventsDisplay";
 import type { EventsDisplay } from "../../../src/client/hud/layers/EventsDisplay";
 import "../../../src/client/hud/layers/PlayerInfoOverlay";
@@ -15,11 +19,6 @@ import type { UnitState } from "../../../src/client/render/types";
 import type { ReplayReader } from "../../../src/client/replay/codec/decode/ReplayReader";
 import type { ReplayFrame } from "../../../src/client/replay/codec/ReplayTypes";
 import { ReplayGameView } from "../../../src/client/replay/ReplayGameAdapter";
-import { Config } from "../../../src/core/configuration/Config";
-import { EventBus } from "../../../src/core/EventBus";
-import { Cell, GameType, UnitType } from "../../../src/core/game/Game";
-import { GameUpdateType } from "../../../src/core/game/GameUpdates";
-import { UserSettings } from "../../../src/core/game/UserSettings";
 import { setup } from "../../util/Setup";
 import { config as gameConfig } from "./util/ArchiveGame";
 import { openReader, recordGame, type RecordedGame } from "./util/RecordGame";
@@ -80,7 +79,7 @@ describe("ReplayGameAdapter", () => {
     // same fixture the processor tests use.
     adapter = new ReplayGameView(
       reader.header.players,
-      new Config(gameConfig(), new UserSettings(), true, false, true),
+      new Config(gameConfig(), true, false, true),
       reader.header.mapWidth,
       reader.header.mapHeight,
       reader.header.numLandTiles,

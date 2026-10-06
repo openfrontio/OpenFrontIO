@@ -83,7 +83,6 @@
     "reward_daily": "Phần thưởng hằng ngày cho người đăng ký",
     "reward_signup_bonus": "Phần thưởng khi đăng ký gói",
     "sign_in_desc": "Đăng nhập để lưu lại thống kê và tiến độ của bạn",
-    "sub_granted_ends_on": "Quyền truy cập miễn phí kết thúc vào {date}",
     "sub_granted_from_purchase": "Được tặng kèm miễn phí khi bạn mua trên Steam. Không bị tính phí và không tự gia hạn, vì vậy không có gì để quản lý hoặc hủy.",
     "sub_granted_indefinite": "Quyền truy cập miễn phí đã được cấp cho tài khoản của bạn. Không bị tính phí, vì vậy không có gì để quản lý hoặc hủy.",
     "sub_price_monthly": "{price}/tháng",
@@ -135,7 +134,8 @@
     "username_temporary_notice": "Tên tài khoản của bạn đã được người chơi khác lấy. Hãy chọn một cái tên mới - lần đổi tên này là miễn phí.",
     "username_temporary_prompt": "Tên tài khoản của bạn đã được người chơi khác lấy. Bạn có muốn chọn tên mới ngay bây giờ không? Việc đổi tên là miễn phí.",
     "username_temporary_prompt_confirm": "Chọn một cái tên",
-    "username_title": "Tên tài khoản"
+    "username_title": "Tên tài khoản",
+    "sub_granted_ends_on": "Quyền truy cập miễn phí kết thúc vào {date}"
   },
   "account_settings_modal": {
     "title": "Cài đặt tài khoản"
@@ -454,7 +454,7 @@
     "banned": "Tài khoản này đã bị cấm.",
     "cannot_join": "Bạn không thể tham gia trận đấu này.",
     "clan_verification_failed": "Không thể xác minh tư cách thành viên clan của bạn.",
-    "cosmetics_forbidden": "Một trong những vật trang trí bạn đã chọn không có sẵn trên tài khoản này.",
+    "cosmetics_forbidden": "Một trong những đồ trang trí bạn đã chọn không có sẵn trên tài khoản này.",
     "forbidden": "Bạn không có quyền truy cập máy chủ này.",
     "game_ended": "Trận đấu này đã kết thúc.",
     "game_not_found": "Không tìm thấy trận đấu.",
@@ -655,13 +655,13 @@
     "pane_empty": "Không có phòng",
     "pane_ffa": "Đấu tự do (FFA)",
     "pane_heading": "{name} ({count})",
-    "pane_hosted": "Đã tạo",
+    "pane_hosted": "Phòng người chơi tạo",
     "pane_special": "Đặc biệt",
     "pane_team": "Đội",
     "per_team": "Số người chơi mỗi đội",
     "profile_name": "Tên trang cá nhân",
     "profiles": "Trang cá nhân",
-    "queue_position": "Hàng đợi: {position}",
+    "queue_position": "Có sau: {position}",
     "reset": "Đặt lại",
     "save_profile": "Lưu",
     "source": "Nguồn gốc",
@@ -910,9 +910,9 @@
     "cosmetics_nuke_trails_label": "Đường bay tên lửa",
     "cosmetics_railroads_desc": "Màu tuỳ chỉnh cho đường ray",
     "cosmetics_railroads_label": "Đường ray",
-    "cosmetics_show_from_desc": "Chọn hiển thị vật trang trí của ai. Vật trang trí của bạn luôn được hiển thị.",
+    "cosmetics_show_from_desc": "Chọn hiển thị đồ trang trí của ai. Đồ trang trí của bạn luôn được hiển thị.",
     "cosmetics_show_from_everyone": "Mọi người",
-    "cosmetics_show_from_label": "Hiển thị vật trang trí từ",
+    "cosmetics_show_from_label": "Hiển thị đồ trang trí từ",
     "cosmetics_show_from_self": "Chỉ mình tôi",
     "cosmetics_show_from_teammates": "Đội của tôi",
     "cosmetics_structures_desc": "Màu tuỳ chỉnh cho công trình",
@@ -989,7 +989,7 @@
     "sand_color_desc": "Màu nền cho bờ biển.",
     "sand_color_label": "Màu địa hình bờ biển",
     "save_preset_label": "Lưu",
-    "section_cosmetics": "Vật trang trí",
+    "section_cosmetics": "Đồ trang trí",
     "section_effects": "Hiệu ứng",
     "section_lighting": "Ánh sáng",
     "section_map": "Bản đồ",
@@ -1118,8 +1118,8 @@
     "assigned_teams": "Đội đã xếp người chơi vào",
     "auto_start_timer": "Thời gian còn lại trước khi trò chơi tự động bắt đầu",
     "crowded": "Mức độ đông đúc",
-    "donate_gold": "Tặng vàng",
-    "donate_troops": "Tặng quân",
+    "donate_gold": "Gửi vàng",
+    "donate_troops": "Gửi quân",
     "empty_team": "Trống",
     "empty_teams": "Đội trống",
     "hard_nations": "Quốc gia mức khó",
@@ -1151,7 +1151,7 @@
     "view_subscriptions": "Xem các gói định kỳ",
     "visibility_private": "Riêng tư",
     "visibility_public": "Công khai",
-    "waiting": "Đang chờ người chơi..."
+    "waiting": "Đang đợi người chơi..."
   },
   "inventory": {
     "equipped": "Đã sử dụng",
@@ -1168,7 +1168,7 @@
     "loadout_saved": "Lưu combo đồ trang trí {name}",
     "loadout_slot": "Đồ trang trí {name}",
     "no_owned_crowns": "Bạn chưa sở hữu vương miện nào.",
-    "no_owned_effects_of_type": "Bạn chưa sở hữu hiệu ứng cho {type} nào.",
+    "no_owned_effects_of_type": "Bạn chưa sở hữu hiệu ứng nào cho {type}.",
     "no_owned_skins": "Bạn chưa sở hữu skin nào.",
     "retry": "Thử lại",
     "selected_cosmetic": "Đã chọn {name}",
@@ -1210,7 +1210,7 @@
     "goldIncomePerMin": "Số vàng kiếm được/Phút",
     "launchers": "Số bệ phóng",
     "maxtroops": "Số quân tối đa",
-    "owned": "Đã sở hữu",
+    "owned": "Đất đã chiếm",
     "piracyGoldPerMin": "Số vàng cướp được/Phút",
     "player": "Người chơi",
     "playerType": "Loại người chơi",
@@ -1367,7 +1367,7 @@
     "levant": "Levant",
     "lisbon": "Lisbon",
     "losangeles": "Los Angeles",
-    "luna": "Luna",
+    "luna": "Mặt Trăng",
     "manicouagan": "Hồ Manicouagan",
     "map": "Bản đồ",
     "marenostrum": "Địa Trung Hải",
@@ -1393,7 +1393,7 @@
     "sanfrancisco": "San Francisco",
     "scandinavia": "Scandinavia",
     "sierpinski": "Thảm Sierpinski",
-    "sol": "Sol",
+    "sol": "Hệ Mặt Trời",
     "southamerica": "Nam Mỹ",
     "southeastasia": "Đông Nam Á",
     "straitofgibraltar": "Eo biển Gibraltar",
@@ -1471,7 +1471,7 @@
     "limit_upsell": "Nhận lượt đấu xếp hạng không giới hạn",
     "must_login": "Bạn bắt buộc phải đăng nhập để được ghép trận đấu xếp hạng.",
     "no_elo": "Chưa có ELO",
-    "queue_size": "Người chơi đang chờ: {count}",
+    "queue_size": "Số người đang đợi: {count}",
     "rejected": "Tính năng ghép trận hiện không dùng được. Vui lòng thử lại sau.",
     "replaced": "Bạn đã tham gia ghép trận ở một tab hoặc cửa sổ khác.",
     "searching": "Đang tìm trận...",
@@ -1531,8 +1531,8 @@
   },
   "overtime": {
     "first_place": "Top 1: {name} ({pct}%)",
-    "started": "Đã vào thời gian sau giờ! Diện tích lãnh thổ cần thiết để chiến thắng đang giảm xuống.",
-    "title": "Thời gian sau giờ",
+    "started": "Đã quá giờ! Diện tích lãnh thổ cần thiết để chiến thắng đang giảm xuống.",
+    "title": "Quá giờ",
     "to_win": "Giữ trên {pct}% để chiến thắng"
   },
   "performance_overlay": {
@@ -1760,7 +1760,7 @@
     "trusted_tooltip_title": "Phòng chỉ tài khoản đáng tin cậy",
     "trusted_unlocked": "Chỉ tài khoản đáng tin cậy. Tài khoản của bạn đáng tin cậy.",
     "upcoming": "Sắp tới",
-    "waiting_for_players": "Đang chờ người chơi"
+    "waiting_for_players": "Đang đợi người chơi"
   },
   "purchase_nudge": {
     "body": "Có vẻ bạn thích chơi OpenFront! Hãy cân nhắc ủng hộ chúng tôi bằng cách mua một vật phẩm — bất kỳ giao dịch nào cũng giúp bạn loại bỏ quảng cáo vĩnh viễn.",
@@ -1890,7 +1890,7 @@
     "confirm_subscribe_over_grant_no_days": "Bắt đầu đăng ký {tier} ngay bây giờ? Quyền truy cập miễn phí của bạn sẽ kết thúc ngay lập tức, và thời gian còn lại sẽ không được hoàn lại và không được cộng vào thời gian trả phí của bạn.",
     "confirm_tier_change_steam": "Đăng ký {tier} ngay? Gói mới của bạn sẽ có hiệu lực ngay với giá đầy đủ và phần còn lại của tháng hiện tại sẽ không được hoàn lại tiền.",
     "confirm_upgrade": "Nâng cấp lên gói {tier}? Bạn sẽ chỉ phải thanh toán phần chênh lệch theo tỷ lệ ngay bây giờ.",
-    "cosmetics": "Vật trang trí",
+    "cosmetics": "Đồ trang trí",
     "crowns": "Vương miện",
     "currency_pack_purchase_success": "Mua gói tiền tệ thành công!",
     "custom_amount": "Chọn số lượng",
@@ -1979,8 +1979,8 @@
     "your_tribes_heading": "Tên bộ tộc của bạn"
   },
   "streaming_now": {
-    "live_count": "{count} người đang live",
-    "title": "Đang live",
+    "live_count": "{count} người đang stream",
+    "title": "Đang stream",
     "viewers": "{count} người đang xem",
     "watch": "Xem {name}"
   },

@@ -6,13 +6,13 @@
  * cannot be re-defined in the file's single jsdom, so a second import of Main
  * (after vi.resetModules) would throw on the first `customElements.define`.
  */
+import { EventBus } from "@openfront/shared/EventBus";
 import fs from "node:fs";
 import path from "node:path";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { capturePagePin } from "../../src/client/PagePin";
 import { SendKickPlayerIntentEvent } from "../../src/client/Transport";
 import { translateText } from "../../src/client/Utils";
-import { EventBus } from "../../src/core/EventBus";
 
 const mocks = vi.hoisted(() => ({
   userAuth: vi.fn(async (): Promise<unknown> => false),

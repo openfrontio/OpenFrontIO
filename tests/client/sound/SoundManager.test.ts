@@ -48,6 +48,7 @@ vi.mock("howler", () => {
   return { Howl: MockHowl, Howler: { volume: howlerVolume } };
 });
 
+import { EventBus } from "@openfront/shared/EventBus";
 import {
   AudioMixer,
   resetAudioMixerForTest,
@@ -57,8 +58,7 @@ import {
   PlaySoundEffectEvent,
   SetAmbienceEvent,
 } from "../../../src/client/sound/Sounds";
-import { EventBus } from "../../../src/core/EventBus";
-import { UserSettings } from "../../../src/core/game/UserSettings";
+import { UserSettings } from "../../../src/client/UserSettings";
 
 function resetSettings() {
   localStorage.clear();

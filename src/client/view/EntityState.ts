@@ -6,9 +6,16 @@
  * (src/client/replay/codec) can use them in a worker and get the same records as
  * the live client.
  */
-import { PlayerID, PlayerType, TrainType } from "../../core/game/Game";
-import { PlayerUpdate, UnitUpdate } from "../../core/game/GameUpdates";
-import { ATTACK_DELTA_OUTGOING } from "../../core/game/GameUpdateUtils";
+import {
+  PlayerID,
+  PlayerType,
+  TrainType,
+} from "@openfront/engine-api/game/GameTypes";
+import {
+  ATTACK_DELTA_OUTGOING,
+  PlayerUpdate,
+  UnitUpdate,
+} from "@openfront/engine-api/game/GameUpdates";
 import {
   PlayerState,
   PlayerStatic,
@@ -129,7 +136,7 @@ export function playerTypeFromEnum(t: PlayerTypeEnum): PlayerType {
 
 // First-emission updates from the engine always include every field; these
 // builders assert non-null for that contract. Subsequent diffs are partial
-// and flow through applyStateUpdate() (GameUpdateUtils).
+// and flow through applyStateUpdate() (PlayerStateUpdate).
 export function playerStaticFromUpdate(pu: PlayerUpdate): PlayerStatic {
   return {
     smallID: pu.smallID!,

@@ -1,4 +1,3 @@
-import { describe, expect, it } from "vitest";
 import {
   Difficulty,
   GameMapSize,
@@ -6,8 +5,9 @@ import {
   GameMode,
   GameType,
   UnitType,
-} from "../../src/core/game/Game";
-import { GameConfig } from "../../src/core/Schemas";
+} from "@openfront/engine-api/game/GameTypes";
+import { GameConfig } from "@openfront/engine-api/Schemas";
+import { describe, expect, it } from "vitest";
 import {
   applyGameConfigPatch,
   hostCheatsEnabled,

@@ -1,13 +1,12 @@
-import { beforeEach, describe, expect, test, vi } from "vitest";
-import { NukeExecution } from "../../../src/core/execution/NukeExecution";
-import { PlayerExecution } from "../../../src/core/execution/PlayerExecution";
 import {
-  Game,
-  Player,
   PlayerInfo,
   PlayerType,
   UnitType,
-} from "../../../src/core/game/Game";
+} from "@openfront/engine-api/game/GameTypes";
+import { NukeExecution } from "@openfront/engine/execution/NukeExecution";
+import { PlayerExecution } from "@openfront/engine/execution/PlayerExecution";
+import { Game, Player } from "@openfront/engine/game/Game";
+import { beforeEach, describe, expect, test, vi } from "vitest";
 import { setup } from "../../util/Setup";
 import { TestConfig } from "../../util/TestConfig";
 import { executeTicks } from "../../util/utils";

@@ -38,8 +38,7 @@ function stage(staticFiles: Record<string, string>): string {
     // Rewrites both the static `from "./X"` form and the dynamic
     // `import("./X")` form; `"../../static"` is deliberately left alone, since
     // pointing the CLI at the fixture build output is the whole trick.
-    .replace(/"\.\/(\w+)"/g, '"../../../src/server/$1"')
-    .replace(/"\.\.\/core\//g, '"../../../src/core/');
+    .replace(/"\.\/(\w+)"/g, '"../../../src/server/$1"');
   fs.writeFileSync(path.join(serverDir, "RenderDesktopDescriptor.ts"), source);
 
   for (const [name, content] of Object.entries(staticFiles)) {
