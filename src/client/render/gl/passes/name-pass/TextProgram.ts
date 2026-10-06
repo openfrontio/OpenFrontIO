@@ -6,7 +6,7 @@
  * and bound at draw time but not owned/deleted by this class.
  */
 
-import { assetUrl } from "src/core/AssetUrls";
+import { assetUrl } from "@openfront/shared/AssetUrls";
 import type { RenderSettings } from "../../RenderSettings";
 import nameFragSrc from "../../shaders/name/name.frag.glsl?raw";
 import nameVertSrc from "../../shaders/name/name.vert.glsl?raw";
@@ -67,6 +67,7 @@ export class TextProgram {
       gl,
       shaderSrc(nameVertSrc, { MAX_CHARS, LINES_PER_PLAYER }),
       nameFragSrc,
+      "TextProgram",
     );
 
     // Texture unit bindings

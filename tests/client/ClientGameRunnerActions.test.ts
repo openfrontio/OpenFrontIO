@@ -1,7 +1,7 @@
+import { TileRef } from "@openfront/engine-api/game/GameMap";
+import { UnitType } from "@openfront/engine-api/game/GameTypes";
+import { EventBus } from "@openfront/shared/EventBus";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { EventBus } from "../../src/core/EventBus";
-import { UnitType } from "../../src/core/game/Game";
-import { TileRef } from "../../src/core/game/GameMap";
 
 // ClientGameRunner's left-click handling: spawn intents during the spawn
 // phase, the lazy myPlayer lookup, attack intents, and the auto-boat
@@ -26,7 +26,7 @@ vi.mock("../../src/client/Utils", () => ({
   createCanvas: () => document.createElement("canvas"),
   homeHref: () => "/",
 }));
-vi.mock("../../src/core/game/TerrainMapLoader", () => ({
+vi.mock("@openfront/engine-lib/game/TerrainMapLoader", () => ({
   loadTerrainMap: vi.fn(async () => ({}) as never),
 }));
 vi.mock("../../src/client/TerrainMapFileLoader", () => ({
@@ -65,7 +65,7 @@ vi.mock("../../src/client/view", () => ({
   GameView: class {},
   PlayerView: class {},
 }));
-vi.mock("../../src/core/worker/WorkerClient", () => ({
+vi.mock("../../src/client/WorkerClient", () => ({
   WorkerClient: class {},
 }));
 

@@ -83,7 +83,6 @@
     "reward_daily": "Récompense quotidienne de l'abonnement",
     "reward_signup_bonus": "Bonus de souscription à un abonnement",
     "sign_in_desc": "Connectez-vous pour enregistrer vos statistiques et progrès",
-    "sub_granted_ends_on": "L'accès gratuit prend fin le {date}",
     "sub_granted_from_purchase": "Inclus gratuitement avec votre achat Steam. Il n'est pas facturé et ne se renouvelle pas, il n'y a donc rien à gérer ou à annuler.",
     "sub_granted_indefinite": "Accès gratuit accordé à votre compte. Ce n'est pas facturé, il n'y a donc rien à gérer ou à annuler.",
     "sub_price_monthly": "{price}/mois",
@@ -106,7 +105,7 @@
     "tab_stats": "Statistiques",
     "title": "Compte",
     "unclaimed_rewards": "Récompenses non récupérées",
-    "username_bare_taken_body": "«{requested}» est déjà détenu par un autre abonné. Vous pouvez l'utiliser en ajoutant un nombre, comme «{requested}».1234\", mais ça n'affichera pas le badge vérifié. Cette action utilise votre changement de nom. Voulez-vous utiliser un nombre ?",
+    "username_bare_taken_body": "\"{requested}\" est déjà détenu par un autre abonné. Vous pouvez l'utiliser en ajoutant un nombre, comme \"{requested}.1234\", mais ça n'affichera pas le badge vérifié. Cette action utilise votre changement de nom. Voulez-vous utiliser un nombre ?",
     "username_bare_taken_confirm": "Utiliser un nombre",
     "username_bare_taken_heading": "Ce nom est déjà utilisé",
     "username_bare_unavailable": "\"{requested}\" est déjà pris, votre nom est donc maintenant \"{name}\". Cette action a utilisé votre changement de nom — vous pouvez le changer à nouveau le {date}.",
@@ -135,7 +134,8 @@
     "username_temporary_notice": "Votre nom a été pris par un autre joueur. Choisissez-en un nouveau — ce changement ne coûtera rien.",
     "username_temporary_prompt": "Votre nom a été pris par un autre joueur. Voulez-vous en choisir un nouveau maintenant — ce changement ne coûtera rien.",
     "username_temporary_prompt_confirm": "Choisir un nom",
-    "username_title": "Nom"
+    "username_title": "Nom",
+    "sub_granted_ends_on": "L'accès gratuit prend fin le {date}"
   },
   "account_settings_modal": {
     "title": "Paramètres de compte"
@@ -553,7 +553,7 @@
     "unlimited_ranked_info": "Jouez autant de parties classées que vous le souhaitez.",
     "usd_value": "Valeur : {usd}",
     "verified_name": "Nom d’utilisateur vérifié",
-    "verified_name_info": "Votre nom d’utilisateur est réservé à votre compte et affiche un badge de vérification en jeu."
+    "verified_name_info": "Votre nom d’utilisateur est réservé à votre compte et affiche un badge vérifié en jeu."
   },
   "creator_code": {
     "change": "Changer",

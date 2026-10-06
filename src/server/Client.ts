@@ -1,12 +1,8 @@
+import { Tick } from "@openfront/engine-api/game/GameTypes";
+import { ClientID, Winner } from "@openfront/engine-api/Schemas";
+import { TokenPayload } from "@openfront/shared/ApiSchemas";
+import { ClientPlatform, PlayerCosmetics } from "@openfront/shared/WireSchemas";
 import WebSocket from "ws";
-import { TokenPayload } from "../core/ApiSchemas";
-import { Tick } from "../core/game/Game";
-import {
-  ClientID,
-  ClientPlatform,
-  PlayerCosmetics,
-  Winner,
-} from "../core/Schemas";
 
 export class Client {
   public lastPing: number = Date.now();

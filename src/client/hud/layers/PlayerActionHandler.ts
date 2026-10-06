@@ -1,5 +1,5 @@
-import { EventBus } from "../../../core/EventBus";
-import { TileRef } from "../../../core/game/GameMap";
+import { TileRef } from "@openfront/engine-api/game/GameMap";
+import { EventBus } from "@openfront/shared/EventBus";
 import {
   SendAllianceExtensionIntentEvent,
   SendAllianceRequestIntentEvent,

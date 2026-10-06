@@ -1,12 +1,3 @@
-import { createHash, randomBytes } from "crypto";
-import ipAnonymize from "ip-anonymize";
-import { Logger } from "winston";
-import WebSocket from "ws";
-import { z } from "zod";
-import { ZbContext } from "../../zbin";
-import { isAdminRole } from "../core/ApiSchemas";
-import { CloseCode, CloseReason } from "../core/CloseCodes";
-import { GameEnv } from "../core/configuration/Config";
 import {
   GameMode,
   GameType,
@@ -14,24 +5,32 @@ import {
   PlayerInfo,
   PlayerType,
   RankedType,
-} from "../core/game/Game";
-import { maps } from "../core/game/Maps.gen";
+} from "@openfront/engine-api/game/GameTypes";
+import { maps } from "@openfront/engine-api/game/Maps.gen";
+import {
+  ClientID,
+  GameConfig,
+  GameID,
+  Intent,
+  StampedIntent,
+  TeamCountConfig,
+  Tribe,
+  Turn,
+} from "@openfront/engine-api/Schemas";
 import {
   assignTeamsLobbyPreview,
   resolveTeamsList,
-} from "../core/game/TeamAssignment";
+} from "@openfront/engine-lib/game/TeamAssignment";
+import { isAdminRole } from "@openfront/shared/ApiSchemas";
+import { CloseCode, CloseReason } from "@openfront/shared/CloseCodes";
+import { GameEnv } from "@openfront/shared/configuration/Env";
+import { createPartialGameRecord } from "@openfront/shared/SharedUtil";
 import {
-  ClientID,
   ClientMessage,
   ClientReportMessage,
   ClientSendLiveStatsMessage,
   ClientSendWinnerMessage,
-  GameConfig,
-  GameID,
   GameInfo,
-  GameStartInfo,
-  GameStartInfoSchema,
-  Intent,
   LobbyAccent,
   PartialGameRecord,
   PlayerLiveStats,
@@ -47,13 +46,19 @@ import {
   ServerRedirectMessage,
   ServerStartGameMessage,
   ServerTurnMessage,
-  StampedIntent,
-  TeamCountConfig,
-  Tribe,
-  Turn,
-} from "../core/Schemas";
-import { createPartialGameRecord } from "../core/Util";
-import { createGameWireContext, encodeServerMessage } from "../core/ZbinWire";
+  WireGameStartInfo,
+  WireGameStartInfoSchema,
+} from "@openfront/shared/WireSchemas";
+import {
+  createGameWireContext,
+  encodeServerMessage,
+} from "@openfront/shared/ZbinWire";
+import { ZbContext } from "@openfront/zbin";
+import { createHash, randomBytes } from "crypto";
+import ipAnonymize from "ip-anonymize";
+import { Logger } from "winston";
+import WebSocket from "ws";
+import { z } from "zod";
 import { archive, finalizeGameRecord } from "./Archive";
 import { Client } from "./Client";
 import { applyGameConfigPatch, hostCheatsEnabled } from "./ConfigPatch";
@@ -218,11 +223,11 @@ export class GameServer {
   private lastPingUpdate = 0;
 
   // Note: This can be undefined if accessed before the game starts.
-  private gameStartInfo!: GameStartInfo;
+  private gameStartInfo!: WireGameStartInfo;
   // Wire-only copy of gameStartInfo sent to clients. Identical to
   // gameStartInfo unless disableClanTags is set, in which case clan tags
   // are stripped from players. Archive uses the original gameStartInfo.
-  private wireGameStartInfo!: GameStartInfo;
+  private wireGameStartInfo!: WireGameStartInfo;
 
   // clientID dictionary for the binary wire, seeded from gameStartInfo.players
   // at start (clients seed theirs from the same array in the start message).
@@ -1097,7 +1102,7 @@ export class GameServer {
     delete config.allowedPublicIds;
     delete config.nameRevealPublicIds;
 
-    const result = GameStartInfoSchema.safeParse({
+    const result = WireGameStartInfoSchema.safeParse({
       gameID: this.id,
       lobbyCreatedAt: this.createdAt,
       visibleAt: this.visibleAt,
@@ -1118,7 +1123,7 @@ export class GameServer {
       this.log.error("Error parsing game start info", { message: error });
       return;
     }
-    this.gameStartInfo = result.data satisfies GameStartInfo;
+    this.gameStartInfo = result.data satisfies WireGameStartInfo;
     this.telemetry.emit(
       "match_started",
       {

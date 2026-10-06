@@ -1,7 +1,7 @@
+import type { StreamsFeed } from "@openfront/shared/ApiSchemas";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { formatViewers } from "../../../src/client/components/StreamingNow";
 import { streamsFeed, watchUrl } from "../../../src/client/StreamsFeed";
-import type { StreamsFeed } from "../../../src/core/ApiSchemas";
 
 const getStreams = vi.fn<() => Promise<StreamsFeed>>();
 vi.mock("../../../src/client/Api", async (importOriginal) => ({

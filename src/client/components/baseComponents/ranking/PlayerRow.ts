@@ -1,3 +1,5 @@
+import { renderNumber } from "@openfront/engine-lib/Format";
+import { assetUrl } from "@openfront/shared/AssetUrls";
 import {
   LitElement,
   html,
@@ -5,8 +7,7 @@ import {
   type TemplateResult,
 } from "lit";
 import { customElement, property } from "lit/decorators.js";
-import { assetUrl } from "../../../../core/AssetUrls";
-import { renderNumber, translateText } from "../../../Utils";
+import { translateText } from "../../../Utils";
 import { PlayerInfo, RANK_TYPE_LABEL_KEYS, RankType } from "./GameInfoRanking";
 
 const goldCoinIcon = assetUrl("images/GoldCoinIcon.svg");

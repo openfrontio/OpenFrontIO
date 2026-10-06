@@ -1,15 +1,15 @@
-import http from "http";
-import { WebSocket, WebSocketServer } from "ws";
-import { CloseCode, CloseReason } from "../core/CloseCodes";
+import { GameConfig } from "@openfront/engine-api/Schemas";
+import { CloseCode, CloseReason } from "@openfront/shared/CloseCodes";
 import {
   ClientPlatform,
   ClientPlatformSchema,
-  GameConfig,
   PublicGameInfo,
   PublicGames,
   PublicLobbyMessage,
-} from "../core/Schemas";
-import { encodeLobbyMessage } from "../core/ZbinWire";
+} from "@openfront/shared/WireSchemas";
+import { encodeLobbyMessage } from "@openfront/shared/ZbinWire";
+import http from "http";
+import { WebSocket, WebSocketServer } from "ws";
 import { GameManager } from "./GameManager";
 import {
   InternalGameInfo,
