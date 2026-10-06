@@ -286,6 +286,7 @@ function homepageGameImports(): string[] {
 
 describe("layer boundaries", () => {
   const { edges, determinism, inexactMath, io } = violations();
+  const homepageGame = homepageGameImports();
 
   test("no import edges outside the allowed graph", () => {
     const allowed = new Set(ALLOWLIST);
@@ -333,7 +334,7 @@ describe("layer boundaries", () => {
   });
 
   test("the homepage loads the game client only on demand", () => {
-    expect(homepageGameImports()).toEqual([]);
+    expect(homepageGame).toEqual([]);
   });
 
   test("the homepage check follows only imports that load something", () => {
