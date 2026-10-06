@@ -1,5 +1,7 @@
 import type { EmojiMessage } from "@openfront/engine-api/game/GameTypes";
 import {
+  ATTACK_DELTA_INCOMING,
+  ATTACK_DELTA_OUTGOING,
   AllianceView,
   AttackUpdate,
   GameUpdateType,
@@ -214,15 +216,6 @@ function attackArrayMembershipEqual(
   }
   return true;
 }
-
-/**
- * Direction lane of a `packedAttackUpdates` quad: which of the owner's attack
- * arrays the index addresses. Encoder (PlayerImpl.toUpdate →
- * packAttackTroopDeltas) and decoder (client GameView.update) must both use
- * these.
- */
-export const ATTACK_DELTA_OUTGOING = 0;
-export const ATTACK_DELTA_INCOMING = 1;
 
 /**
  * Push a `[ownerSmallID, direction, index, troops]` quad onto `out` for each

@@ -4,7 +4,7 @@ import {
   UnitType,
 } from "@openfront/engine-api/game/GameTypes";
 import { GameUpdateType } from "@openfront/engine-api/game/GameUpdates";
-import { EventBus } from "@openfront/engine-lib/EventBus";
+import { EventBus } from "@openfront/shared/EventBus";
 import { SoundEffectController } from "../../../src/client/controllers/SoundEffectController";
 import { PlaySoundEffectEvent } from "../../../src/client/sound/Sounds";
 import { SendSpawnIntentEvent } from "../../../src/client/Transport";

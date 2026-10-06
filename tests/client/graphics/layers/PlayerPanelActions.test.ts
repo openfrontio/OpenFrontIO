@@ -42,7 +42,7 @@ import {
   PlayerType,
 } from "@openfront/engine-api/game/GameTypes";
 import { flattenedEmojiTable } from "@openfront/engine-api/Schemas";
-import { EventBus } from "@openfront/engine-lib/EventBus";
+import { EventBus } from "@openfront/shared/EventBus";
 import { actionButton } from "../../../../src/client/components/ui/ActionButton";
 import { PlayerPanel } from "../../../../src/client/hud/layers/PlayerPanel";
 import {

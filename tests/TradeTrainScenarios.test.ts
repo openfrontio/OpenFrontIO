@@ -26,7 +26,7 @@ import {
   GOLD_INDEX_TRAIN_OTHER,
   GOLD_INDEX_TRAIN_SELF,
 } from "@openfront/engine-api/StatsSchemas";
-import { Config } from "@openfront/engine-lib/configuration/Config";
+import { EngineConfig } from "@openfront/engine/configuration/EngineConfig";
 import { FactoryExecution } from "@openfront/engine/execution/FactoryExecution";
 import { PortExecution } from "@openfront/engine/execution/PortExecution";
 import { Game, Player, Unit } from "@openfront/engine/game/Game";
@@ -204,7 +204,10 @@ async function runTradeScenario(s: TradeScenario): Promise<{
   // TestConfig stubs proximityBonusPortsNb to 0; restore the real weighting
   // so destination picks favor closer ports like they do in production.
   game.config().proximityBonusPortsNb = (totalPorts: number) =>
-    Config.prototype.proximityBonusPortsNb.call(game.config(), totalPorts);
+    EngineConfig.prototype.proximityBonusPortsNb.call(
+      game.config(),
+      totalPorts,
+    );
   // Port cost doubles per port up to 1M each; enough for any fleet size.
   a.addGold(10_000_000_000n);
   b.addGold(10_000_000_000n);

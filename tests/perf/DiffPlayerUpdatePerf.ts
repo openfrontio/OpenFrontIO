@@ -5,7 +5,7 @@ import {
   GameUpdateType,
   PlayerUpdate,
 } from "@openfront/engine-api/game/GameUpdates";
-import { diffPlayerUpdate } from "@openfront/engine-lib/game/GameUpdateUtils";
+import { diffPlayerUpdate } from "@openfront/engine/game/GameUpdateUtils";
 import Benchmark from "benchmark";
 
 /**
