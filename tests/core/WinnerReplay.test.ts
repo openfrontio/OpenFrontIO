@@ -4,9 +4,9 @@ import {
   WinUpdate,
 } from "@openfront/engine-api/game/GameUpdates";
 import { GameStartInfo, Turn } from "@openfront/engine-api/Schemas";
-import { loadMapFiles } from "@openfront/engine-lib/game/MapFiles";
 import { createGameRunner } from "@openfront/engine/GameRunner";
 import { replayWinner } from "@openfront/engine/WinnerReplay";
+import { loadMapFiles } from "@openfront/shared/GameMapLoader";
 import { describe, expect, it } from "vitest";
 import { scriptedGameStart, TestDataMapLoader } from "../util/ScriptedGame";
 
@@ -42,7 +42,7 @@ async function playLive(
   const runner = await createGameRunner(
     gameStart(),
     undefined,
-    new TestDataMapLoader("plains"),
+    await mapFiles(),
     (gu) => {
       if ("errMsg" in gu) throw new Error(gu.errMsg);
       win ??= gu.updates[GameUpdateType.Win][0] ?? null;

@@ -1,16 +1,15 @@
-import { MapFiles } from "@openfront/engine-api/game/GameMapLoader";
 import {
   ErrorUpdate,
   GameUpdateType,
   WinUpdate,
 } from "@openfront/engine-api/game/GameUpdates";
+import { MapFiles } from "@openfront/engine-api/game/MapFiles";
 import {
   AllPlayersStats,
   GameStartInfo,
   Turn,
   Winner,
 } from "@openfront/engine-api/Schemas";
-import { mapFilesLoader } from "@openfront/engine-lib/game/MapFiles";
 import { createGameRunner } from "./GameRunner";
 
 export interface ReplayedWinner {
@@ -36,18 +35,13 @@ export async function replayWinner(
 ): Promise<ReplayedWinner> {
   let win: WinUpdate | null = null;
   let error: ErrorUpdate | null = null;
-  const runner = await createGameRunner(
-    gameStart,
-    undefined,
-    mapFilesLoader(map),
-    (gu) => {
-      if ("errMsg" in gu) {
-        error = gu;
-        return;
-      }
-      win ??= gu.updates[GameUpdateType.Win][0] ?? null;
-    },
-  );
+  const runner = await createGameRunner(gameStart, undefined, map, (gu) => {
+    if ("errMsg" in gu) {
+      error = gu;
+      return;
+    }
+    win ??= gu.updates[GameUpdateType.Win][0] ?? null;
+  });
   for (const turn of turns) {
     runner.addTurn(turn);
     if (!runner.executeNextTick()) {

@@ -1,13 +1,13 @@
 // The winner-replay subprocess (see WinnerReplay.ts): receives one game's
 // start info and turns, replays them, sends back the result and exits.
+import { GameMapType } from "@openfront/engine-api/game/GameTypes";
+import { MapManifest } from "@openfront/engine-api/game/MapFiles";
+import { replayWinner } from "@openfront/engine/WinnerReplay";
 import {
   GameMapLoader,
+  loadMapFiles,
   MapData,
-  MapManifest,
-} from "@openfront/engine-api/game/GameMapLoader";
-import { GameMapType } from "@openfront/engine-api/game/GameTypes";
-import { loadMapFiles } from "@openfront/engine-lib/game/MapFiles";
-import { replayWinner } from "@openfront/engine/WinnerReplay";
+} from "@openfront/shared/GameMapLoader";
 import fs from "fs";
 import { readMapFile } from "./MapFiles";
 import type { ReplayRequest, ReplayResponse } from "./WinnerReplay";
