@@ -1,5 +1,5 @@
+import { GameType } from "@openfront/engine-api/game/GameTypes";
 import { describe, expect, it, vi } from "vitest";
-import { GameType } from "../../src/core/game/Game";
 import { registerAdminBotRoutes } from "../../src/server/AdminBotRoutes";
 
 function mockRes() {

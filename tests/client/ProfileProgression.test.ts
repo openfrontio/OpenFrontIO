@@ -18,15 +18,15 @@ vi.mock("../../src/client/ProgressionApi", () => ({
 }));
 
 import {
+  type PublicProgress,
+  PublicProgressSchema,
+} from "@openfront/shared/ApiSchemas";
+import {
   formatProgressDate,
   milestoneRuns,
   prestigeTiles,
   ProfileProgression,
 } from "../../src/client/components/ProfileProgression";
-import {
-  type PublicProgress,
-  PublicProgressSchema,
-} from "../../src/core/ApiSchemas";
 
 if (!customElements.get("profile-progression")) {
   customElements.define("profile-progression", ProfileProgression);

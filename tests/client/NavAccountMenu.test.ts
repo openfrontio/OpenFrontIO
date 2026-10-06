@@ -31,9 +31,9 @@ vi.mock("../../src/client/Utils", () => ({
   showToast,
 }));
 
+import type { UserMeResponse } from "@openfront/shared/ApiSchemas";
 import { NavAccountMenu } from "../../src/client/components/NavAccountMenu";
 import { updateAccountNavButton } from "../../src/client/NavAccountButton";
-import type { UserMeResponse } from "../../src/core/ApiSchemas";
 
 function userMe(subscribed = false, publicId = "p"): UserMeResponse {
   return {

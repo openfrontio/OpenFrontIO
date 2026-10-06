@@ -1,7 +1,7 @@
+import { GAME_ID_REGEX } from "@openfront/engine-api/Schemas";
+import { ClusterConfigSchema } from "@openfront/shared/ClusterConfig";
+import { generateGameID } from "@openfront/shared/SharedUtil";
 import { describe, expect, it } from "vitest";
-import { ClusterConfigSchema } from "../../src/core/ClusterConfig";
-import { GAME_ID_REGEX } from "../../src/core/Schemas";
-import { generateGameID } from "../../src/core/Util";
 
 const entry = (host: string, numWorkers = 2) => ({ host, numWorkers });
 

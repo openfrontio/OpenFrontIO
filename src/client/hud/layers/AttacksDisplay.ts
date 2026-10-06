@@ -1,13 +1,18 @@
-import { html, LitElement } from "lit";
-import { customElement, state } from "lit/decorators.js";
-import { assetUrl } from "../../../core/AssetUrls";
-import { EventBus } from "../../../core/EventBus";
-import { MessageType, PlayerType, UnitType } from "../../../core/game/Game";
+import {
+  MessageType,
+  PlayerType,
+  UnitType,
+} from "@openfront/engine-api/game/GameTypes";
 import {
   AttackUpdate,
   GameUpdateType,
   UnitIncomingUpdate,
-} from "../../../core/game/GameUpdates";
+} from "@openfront/engine-api/game/GameUpdates";
+import { EventBus } from "@openfront/engine-lib/EventBus";
+import { renderTroops } from "@openfront/engine-lib/Format";
+import { assetUrl } from "@openfront/shared/AssetUrls";
+import { html, LitElement } from "lit";
+import { customElement, state } from "lit/decorators.js";
 import { Controller } from "../../Controller";
 import { themeProvider } from "../../theme/ThemeProvider";
 import {
@@ -21,7 +26,7 @@ import {
   SendAttackIntentEvent,
 } from "../../Transport";
 import { UIState } from "../../UIState";
-import { renderTroops, translateText } from "../../Utils";
+import { translateText } from "../../Utils";
 import { GameView, PlayerView, UnitView } from "../../view";
 import { getColoredSprite } from "../SpriteLoader";
 const soldierIcon = assetUrl("images/SoldierIcon.svg");

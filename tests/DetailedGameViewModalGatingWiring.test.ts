@@ -1,3 +1,10 @@
+import { GameMapType, GameMode } from "@openfront/engine-api/game/GameTypes";
+import type { GameConfig } from "@openfront/engine-api/Schemas";
+import type {
+  PublicGameInfo,
+  PublicGames,
+  PublicGameType,
+} from "@openfront/shared/WireSchemas";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ClientEnv } from "../src/client/ClientEnv";
 import type { DesktopUpdateState } from "../src/client/DesktopShell";
@@ -7,13 +14,6 @@ import {
   resetServerList,
   retryServerList,
 } from "../src/client/ServerList";
-import { GameMapType, GameMode } from "../src/core/game/Game";
-import type {
-  GameConfig,
-  PublicGameInfo,
-  PublicGames,
-  PublicGameType,
-} from "../src/core/Schemas";
 
 // DetailedGameViewModal opens a public-lobby WebSocket via a class-field
 // PublicLobbySocket the moment the component is constructed. jsdom has no

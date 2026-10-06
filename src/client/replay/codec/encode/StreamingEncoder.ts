@@ -13,7 +13,7 @@
  * processed (src/client/replay/LocalProcessing.ts).
  */
 
-import type { GameUpdateViewData } from "../../../../core/game/GameUpdates";
+import type { GameUpdateViewData } from "@openfront/engine-api/game/GameUpdates";
 import type { PlayerStatic } from "../../../render/types";
 import { BinaryWriter } from "../BinaryWriter";
 import type { EncodeCtx } from "../EntitySchema";

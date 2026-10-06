@@ -7,7 +7,7 @@ import {
   ProgressionConfigSchema,
   type PublicProgress,
   PublicProgressSchema,
-} from "../core/ApiSchemas";
+} from "@openfront/shared/ApiSchemas";
 // ApiBase rather than Api: this module is imported by in-game UI (WinModal)
 // whose tests stub Api wholesale.
 import { getApiBase } from "./ApiBase";

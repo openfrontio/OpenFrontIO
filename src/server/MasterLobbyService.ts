@@ -1,10 +1,10 @@
-import { Worker } from "cluster";
-import winston from "winston";
 import {
   MAX_HOSTED_LOBBIES,
   PublicGameType,
   SCHEDULED_PUBLIC_GAME_TYPES,
-} from "../core/Schemas";
+} from "@openfront/shared/WireSchemas";
+import { Worker } from "cluster";
+import winston from "winston";
 import {
   InternalGameInfo,
   InternalGameInfoSchema,

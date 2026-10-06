@@ -1,5 +1,5 @@
+import { GameType } from "@openfront/engine-api/game/GameTypes";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { GameType } from "../../src/core/game/Game";
 import { GamePhase } from "../../src/server/GameServer";
 import {
   makeClient,

@@ -14,13 +14,12 @@
  * This is a test of the formulas, not of the simulation. See
  * TradeTrainScenarios.test.ts for end-to-end numbers on real maps.
  */
-import { Config } from "../src/core/configuration/Config";
-import { Player } from "../src/core/game/Game";
-import { UserSettings } from "../src/core/game/UserSettings";
-import { GameConfig } from "../src/core/Schemas";
+import { GameConfig } from "@openfront/engine-api/Schemas";
+import { Config } from "@openfront/engine-lib/configuration/Config";
+import { Player } from "@openfront/engine/game/Game";
 
 function makeConfig(gameConfig: Partial<GameConfig> = {}): Config {
-  return new Config(gameConfig as GameConfig, new UserSettings(), false);
+  return new Config(gameConfig as GameConfig, false);
 }
 
 const config = makeConfig();

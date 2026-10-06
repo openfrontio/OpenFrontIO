@@ -1,7 +1,10 @@
+import type {
+  GameXpEligible,
+  GameXpResponse,
+} from "@openfront/shared/ApiSchemas";
 import { html, LitElement, nothing, PropertyValues, TemplateResult } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
 import { keyed } from "lit/directives/keyed.js";
-import type { GameXpEligible, GameXpResponse } from "../../core/ApiSchemas";
 import {
   apportionXp,
   ineligibleReasonKey,
