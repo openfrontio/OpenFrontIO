@@ -1354,14 +1354,14 @@ class Client {
     }
   }
 
-  // Returns the requeue mode ("/?requeue" = 1v1, "/?requeue=2v2" = 2v2), or
-  // null when the URL has no requeue param.
   private refreshStore(): void {
     // The store loads on demand (see LazyModals); until it has, there's
     // nothing to refresh.
     if (customElements.get("store-modal")) this.storeModal?.refresh();
   }
 
+  // Returns the requeue mode ("/?requeue" = 1v1, "/?requeue=2v2" = 2v2), or
+  // null when the URL has no requeue param.
   private consumeRequeueUrl(): "1v1" | "2v2" | null {
     const searchParams = new URLSearchParams(window.location.search);
     if (!searchParams.has("requeue")) {
