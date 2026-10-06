@@ -1,8 +1,5 @@
-import {
-  GameMapLoader,
-  MapData,
-} from "@openfront/engine-api/game/GameMapLoader";
 import { GameMapType } from "@openfront/engine-api/game/GameTypes";
+import { GameMapLoader, MapData } from "./GameMapLoader";
 
 export class FetchGameMapLoader implements GameMapLoader {
   private maps: Map<GameMapType, MapData>;

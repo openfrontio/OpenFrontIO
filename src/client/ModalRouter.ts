@@ -9,6 +9,8 @@
  * they have their own URL state (path-based) or none at all.
  */
 
+import { loadModal } from "./LazyModals";
+
 interface RegistryEntry {
   /** Custom element tag, e.g. "store-modal". */
   tag: string;
@@ -74,8 +76,17 @@ class ModalRouter {
     args: Record<string, unknown>,
   ): Promise<void> {
     // The custom element may not be upgraded yet (e.g. routed on initial load
-    // before its module has finished evaluating). Wait so el.open is defined.
+    // before its module has finished evaluating, or a modal loaded on demand;
+    // see LazyModals). Wait so el.open is defined.
+    try {
+      await loadModal(entry.tag);
+    } catch (err) {
+      console.error(`${entry.tag} failed to load:`, err);
+      return;
+    }
     await customElements.whenDefined(entry.tag);
+    // A slow load can land after the URL has moved on to another modal.
+    if (this.currentHashParams().get("modal") !== name) return;
 
     this.routingFromUrl = true;
     try {
