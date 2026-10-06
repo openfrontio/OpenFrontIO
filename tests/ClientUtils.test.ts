@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 // Mock the 'maps' array from '@openfront/engine-api/game/GameTypes' to ensure consistent test results
 // for normaliseMapKey without relying on actual game data.
@@ -19,11 +19,13 @@ vi.mock("@openfront/engine-api/game/GameTypes", async (importOriginal) => {
 });
 
 import { renderTroops } from "@openfront/engine-lib/Format";
+import { LangSelector } from "../src/client/LangSelector";
 import {
   formatKeyForDisplay,
   formatPercentage,
   normaliseMapKey,
   renderDuration,
+  translateText,
 } from "../src/client/Utils";
 
 describe("normaliseMapKey", () => {
@@ -61,67 +63,69 @@ describe("normaliseMapKey", () => {
 });
 
 describe("renderDuration", () => {
+  beforeEach(() => {
+    const selector = new LangSelector();
+    selector.translations = {
+      "common.duration_hour_short": "h",
+      "common.duration_minute_short": "min",
+      "common.duration_second_short": "s",
+    };
+    selector.defaultTranslations = selector.translations;
+    document.body.appendChild(selector);
+  });
+
+  afterEach(() => {
+    document.body.innerHTML = "";
+    (translateText as any).langSelector = null;
+  });
+
   it('should return "0s" for 0 seconds', () => {
-    expect(renderDuration(0)).toBe("0common.duration_second_short");
+    expect(renderDuration(0)).toBe("0s");
   });
 
   it('should return "0s" for fractional seconds less than 1', () => {
-    expect(renderDuration(0.5)).toBe("0common.duration_second_short");
-    expect(renderDuration(0.999)).toBe("0common.duration_second_short");
+    expect(renderDuration(0.5)).toBe("0s");
+    expect(renderDuration(0.999)).toBe("0s");
   });
 
   it("should return only seconds for durations less than a minute", () => {
-    expect(renderDuration(5)).toBe("5common.duration_second_short");
-    expect(renderDuration(59)).toBe("59common.duration_second_short");
+    expect(renderDuration(5)).toBe("5s");
+    expect(renderDuration(59)).toBe("59s");
   });
 
   it("should return only minutes for durations exactly a minute", () => {
-    expect(renderDuration(60)).toBe("1common.duration_minute_short");
+    expect(renderDuration(60)).toBe("1min");
   });
 
   it("should return minutes and seconds for durations over a minute", () => {
-    expect(renderDuration(65)).toBe(
-      "1common.duration_minute_short 5common.duration_second_short",
-    );
-    expect(renderDuration(120)).toBe("2common.duration_minute_short");
-    expect(renderDuration(125)).toBe(
-      "2common.duration_minute_short 5common.duration_second_short",
-    );
+    expect(renderDuration(65)).toBe("1min 5s");
+    expect(renderDuration(120)).toBe("2min");
+    expect(renderDuration(125)).toBe("2min 5s");
   });
 
   it("should return only hours for durations exactly an hour", () => {
-    expect(renderDuration(3600)).toBe("1common.duration_hour_short");
+    expect(renderDuration(3600)).toBe("1h");
   });
 
   it("should return hours and minutes for durations over an hour", () => {
-    expect(renderDuration(3660)).toBe(
-      "1common.duration_hour_short 1common.duration_minute_short",
-    );
-    expect(renderDuration(7200)).toBe("2common.duration_hour_short");
-    expect(renderDuration(7260)).toBe(
-      "2common.duration_hour_short 1common.duration_minute_short",
-    );
+    expect(renderDuration(3660)).toBe("1h 1min");
+    expect(renderDuration(7200)).toBe("2h");
+    expect(renderDuration(7260)).toBe("2h 1min");
   });
 
   it("should return hours, minutes, and seconds for full durations", () => {
-    expect(renderDuration(3665)).toBe(
-      "1common.duration_hour_short 1common.duration_minute_short 5common.duration_second_short",
-    );
-    expect(renderDuration(93784)).toBe(
-      "26common.duration_hour_short 3common.duration_minute_short 4common.duration_second_short",
-    ); // 1 day, 2 hours, 3 minutes, 4 seconds
+    expect(renderDuration(3665)).toBe("1h 1min 5s");
+    expect(renderDuration(93784)).toBe("26h 3min 4s"); // 1 day, 2 hours, 3 minutes, 4 seconds
   });
 
   it("should handle large durations correctly", () => {
-    expect(renderDuration(360000)).toBe("100common.duration_hour_short");
-    expect(renderDuration(360000 + 1234)).toBe(
-      "100common.duration_hour_short 20common.duration_minute_short 34common.duration_second_short",
-    );
+    expect(renderDuration(360000)).toBe("100h");
+    expect(renderDuration(360000 + 1234)).toBe("100h 20min 34s");
   });
 
   it('should return "0s" for negative input', () => {
-    expect(renderDuration(-10)).toBe("0common.duration_second_short");
-    expect(renderDuration(-0.1)).toBe("0common.duration_second_short");
+    expect(renderDuration(-10)).toBe("0s");
+    expect(renderDuration(-0.1)).toBe("0s");
   });
 });
 
