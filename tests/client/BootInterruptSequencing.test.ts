@@ -40,6 +40,7 @@ vi.mock("../../src/client/SteamSDK", () => ({
   steamSDK: { isOnSteam: () => false, getUser: vi.fn(async () => null) },
 }));
 
+import type { UserMeResponse } from "@openfront/shared/ApiSchemas";
 import {
   lapseShownAfterDispatch,
   nextBootInterrupt,
@@ -48,7 +49,6 @@ import {
 } from "../../src/client/BootInterrupts";
 import { LAPSE_NOTICE_KEY } from "../../src/client/PlayerName";
 import { UsernameInput } from "../../src/client/UsernameInput";
-import type { UserMeResponse } from "../../src/core/ApiSchemas";
 
 // Lapsed, still inside the grace window, and holding unclaimed rewards — the
 // pair that collides.

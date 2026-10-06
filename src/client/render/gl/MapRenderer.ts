@@ -11,8 +11,8 @@
  * touch MapRenderer — they never import GPURenderer or Camera.
  */
 
-import type { Config } from "../../../core/configuration/Config";
-import type { MapLayer } from "../../../core/game/TerrainMapLoader";
+import type { MapLayer } from "@openfront/engine-api/game/GameMapLoader";
+import type { Config } from "@openfront/engine-lib/configuration/Config";
 import type { SpiralRibbon } from "../frame/SpiralTrails";
 import type {
   AttackRingInput,

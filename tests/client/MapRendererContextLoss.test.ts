@@ -1,8 +1,8 @@
+import type { Config } from "@openfront/engine-lib/configuration/Config";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { MapRenderer } from "../../src/client/render/gl/MapRenderer";
 import type { RenderSettings } from "../../src/client/render/gl/RenderSettings";
 import type { RendererConfig } from "../../src/client/render/types";
-import type { Config } from "../../src/core/configuration/Config";
 
 const stub = vi.hoisted(() => ({
   constructed: 0,

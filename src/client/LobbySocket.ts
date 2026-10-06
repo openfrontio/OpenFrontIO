@@ -1,7 +1,7 @@
+import { CloseCode } from "@openfront/shared/CloseCodes";
+import { PublicGames } from "@openfront/shared/WireSchemas";
+import { decodeLobbyMessage } from "@openfront/shared/ZbinWire";
 import { ClientEnv, NoServerError } from "src/client/ClientEnv";
-import { CloseCode } from "../core/CloseCodes";
-import { PublicGames } from "../core/Schemas";
-import { decodeLobbyMessage } from "../core/ZbinWire";
 import { clientPlatform } from "./ClientPlatform";
 import { showInGameAlert } from "./InGameModal";
 import {

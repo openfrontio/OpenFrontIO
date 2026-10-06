@@ -1,13 +1,14 @@
-import { FactoryExecution } from "../../../src/core/execution/FactoryExecution";
-import { PortExecution } from "../../../src/core/execution/PortExecution";
-import { PlayerType, Unit, UnitType } from "../../../src/core/game/Game";
-import { TileRef } from "../../../src/core/game/GameMap";
+import { TileRef } from "@openfront/engine-api/game/GameMap";
+import { PlayerType, UnitType } from "@openfront/engine-api/game/GameTypes";
+import { FactoryExecution } from "@openfront/engine/execution/FactoryExecution";
+import { PortExecution } from "@openfront/engine/execution/PortExecution";
+import { Unit } from "@openfront/engine/game/Game";
 import {
   RailNetworkImpl,
   StationManagerImpl,
-} from "../../../src/core/game/RailNetworkImpl";
-import { Railroad } from "../../../src/core/game/Railroad";
-import { Cluster } from "../../../src/core/game/TrainStation";
+} from "@openfront/engine/game/RailNetworkImpl";
+import { Railroad } from "@openfront/engine/game/Railroad";
+import { Cluster } from "@openfront/engine/game/TrainStation";
 import { playerInfo, setup } from "../../util/Setup";
 
 // Mock types

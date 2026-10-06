@@ -1,12 +1,15 @@
-import { EventBus, GameEvent } from "../core/EventBus";
-import { PlayerBuildableUnitType, UnitType } from "../core/game/Game";
+import {
+  PlayerBuildableUnitType,
+  UnitType,
+} from "@openfront/engine-api/game/GameTypes";
+import { EventBus, GameEvent } from "@openfront/engine-lib/EventBus";
+import { Platform } from "./Platform";
+import { UIState } from "./UIState";
 import {
   KEYBINDS_KEY,
   USER_SETTINGS_CHANGED_EVENT,
   UserSettings,
-} from "../core/game/UserSettings";
-import { Platform } from "./Platform";
-import { UIState } from "./UIState";
+} from "./UserSettings";
 import { ReplaySpeedMultiplier } from "./utilities/ReplaySpeedMultiplier";
 import { GameView, UnitView } from "./view";
 

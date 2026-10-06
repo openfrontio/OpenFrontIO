@@ -7,7 +7,7 @@
 // mismatched replay just navigates to that URL and the shell's build
 // simulates the game with the rules it was played under.
 
-import { GameID } from "../core/Schemas";
+import { GameID } from "@openfront/engine-api/Schemas";
 
 // Canonical replay URL for a game. The replay host derives from the JWT
 // audience exactly like getApiBase() derives api.<audience>. Null in dev

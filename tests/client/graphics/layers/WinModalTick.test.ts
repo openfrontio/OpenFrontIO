@@ -1,11 +1,11 @@
+import { GameUpdateType } from "@openfront/engine-api/game/GameUpdates";
+import { EventBus } from "@openfront/engine-lib/EventBus";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { fetchCosmetics } from "../../../../src/client/Cosmetics";
 import "../../../../src/client/hud/layers/WinModal";
 import type { WinModal } from "../../../../src/client/hud/layers/WinModal";
 import { SendWinnerEvent } from "../../../../src/client/Transport";
 import type { GameView } from "../../../../src/client/view";
-import { EventBus } from "../../../../src/core/EventBus";
-import { GameUpdateType } from "../../../../src/core/game/GameUpdates";
 
 vi.mock("../../../../src/client/Utils", () => ({
   translateText: vi.fn((key: string) => key),

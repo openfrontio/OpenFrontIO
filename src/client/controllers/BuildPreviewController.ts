@@ -7,20 +7,19 @@
  * is valid, and pushes preview data straight to the WebGL view.
  */
 
-import { EventBus } from "../../core/EventBus";
-import {
-  listNukeBreakAlliance,
-  wouldNukeBreakAlliance,
-} from "../../core/execution/Util";
+import { TileRef } from "@openfront/engine-api/game/GameMap";
 import {
   BuildableUnit,
   bulkCost,
   PlayerBuildableUnitType,
   Structures,
   UnitType,
-} from "../../core/game/Game";
-import { TileRef } from "../../core/game/GameMap";
-import { UserSettings } from "../../core/game/UserSettings";
+} from "@openfront/engine-api/game/GameTypes";
+import { EventBus } from "@openfront/engine-lib/EventBus";
+import {
+  listNukeBreakAlliance,
+  wouldNukeBreakAlliance,
+} from "@openfront/engine-lib/execution/Util";
 import { Controller } from "../Controller";
 import {
   ConfirmGhostStructureEvent,
@@ -36,6 +35,7 @@ import {
   SendUpgradeStructureIntentEvent,
 } from "../Transport";
 import { UIState } from "../UIState";
+import { UserSettings } from "../UserSettings";
 import { GameView } from "../view";
 
 /** True for nuke types (AtomBomb, HydrogenBomb): ghost is preserved after placement so user can place multiple or keep selection (Enter/key confirm). */

@@ -1,12 +1,12 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { ClientEnv } from "../src/client/ClientEnv";
-import { PublicLobbySocket } from "../src/client/LobbySocket";
-import type { ServerListStatus } from "../src/client/ServerList";
 import {
   PublicGameInfo,
   PublicGames,
   PublicGameType,
-} from "../src/core/Schemas";
+} from "@openfront/shared/WireSchemas";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { ClientEnv } from "../src/client/ClientEnv";
+import { PublicLobbySocket } from "../src/client/LobbySocket";
+import type { ServerListStatus } from "../src/client/ServerList";
 import { lobbyFrame } from "./util/Wire";
 
 const mocks = vi.hoisted(() => ({

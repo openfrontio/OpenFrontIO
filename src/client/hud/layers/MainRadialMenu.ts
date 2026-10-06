@@ -1,7 +1,7 @@
-import { assetUrl } from "../../../core/AssetUrls";
-import { EventBus } from "../../../core/EventBus";
-import { PlayerActions } from "../../../core/game/Game";
-import { TileRef } from "../../../core/game/GameMap";
+import { TileRef } from "@openfront/engine-api/game/GameMap";
+import { PlayerActions } from "@openfront/engine-api/game/GameTypes";
+import { EventBus } from "@openfront/engine-lib/EventBus";
+import { assetUrl } from "@openfront/shared/AssetUrls";
 import { Controller } from "../../Controller";
 import { TransformHandler } from "../../TransformHandler";
 import { UIState } from "../../UIState";

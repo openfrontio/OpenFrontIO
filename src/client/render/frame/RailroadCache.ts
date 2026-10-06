@@ -9,7 +9,7 @@
  * Uint8Array ready for GPU upload.
  *
  * Ported verbatim from openfront-workspace/packages/shim/src/railroad-cache.ts;
- * only imports changed (types come from src/core/game/GameUpdates instead of
+ * only imports changed (types come from engine-api game/GameUpdates instead of
  * the shim's local types module).
  */
 
@@ -19,7 +19,7 @@ import {
   RailroadConstructionUpdate,
   RailroadDestructionUpdate,
   RailroadSnapUpdate,
-} from "../../../core/game/GameUpdates";
+} from "@openfront/engine-api/game/GameUpdates";
 
 // Regular enum (not const enum) for cross-package use.
 export enum RailType {
