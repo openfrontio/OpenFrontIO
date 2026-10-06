@@ -1,4 +1,4 @@
-import { EventBus } from "@openfront/engine-lib/EventBus";
+import { EventBus } from "@openfront/shared/EventBus";
 import type { ServerMessage } from "@openfront/shared/WireSchemas";
 import { encodeServerMessage } from "@openfront/shared/ZbinWire";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";

@@ -5,15 +5,10 @@ import {
   RankedType,
   Team,
 } from "@openfront/engine-api/game/GameTypes";
-import { GameEvent } from "@openfront/engine-lib/EventBus";
 import { z } from "zod";
-import { Execution, Game, Player } from "../game/Game";
+import { Execution, Game } from "../game/Game";
 import { execSnapshotType } from "../snapshot/ExecutionSnapshot";
 import type { ExecRecord, SnapshotReader } from "../snapshot/SnapshotContext";
-
-export class WinEvent implements GameEvent {
-  constructor(public readonly winner: Player) {}
-}
 
 export class WinCheckExecution implements Execution {
   private active = true;

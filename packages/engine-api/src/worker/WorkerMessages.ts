@@ -1,4 +1,5 @@
 import { TileRef } from "../game/GameMap";
+import { MapFiles } from "../game/GameMapLoader";
 import {
   BuildableUnit,
   HumanStatsSnapshot,
@@ -13,8 +14,12 @@ import { ClientID, GameStartInfo, Turn } from "../Schemas";
 
 export type WorkerMessageType =
   | "init"
+  | "connect"
   | "initialized"
+  | "init_error"
   | "turn"
+  | "run_turns"
+  | "run_turns_result"
   | "game_update"
   | "game_update_batch"
   | "game_error"
@@ -47,9 +52,20 @@ export interface InitMessage extends BaseWorkerMessage {
   type: "init";
   gameStartInfo: GameStartInfo;
   clientID: ClientID | undefined;
-  cdnBase: string;
+  /** The game's map. The engine loads nothing itself. */
+  map: MapFiles;
   /** Resume from this game snapshot instead of starting a new game. */
   snapshot?: Uint8Array;
+}
+
+/**
+ * From now on, take messages from this port and answer on it, not the page.
+ * Lets the page start the engine for another worker (replay processing) and
+ * leave the two to talk directly.
+ */
+export interface ConnectMessage extends BaseWorkerMessage {
+  type: "connect";
+  port: MessagePort;
 }
 
 export interface TurnMessage extends BaseWorkerMessage {
@@ -57,9 +73,25 @@ export interface TurnMessage extends BaseWorkerMessage {
   turn: Turn;
 }
 
+/**
+ * Runs the turns at once, without yielding between ticks, and answers with
+ * a RunTurnsResultMessage. For replay processing, which wants the game as
+ * fast as it runs rather than in time with the turns.
+ */
+export interface RunTurnsMessage extends BaseWorkerMessage {
+  type: "run_turns";
+  turns: Turn[];
+}
+
 // Messages from worker to main thread
 export interface InitializedMessage extends BaseWorkerMessage {
   type: "initialized";
+}
+
+/** The game couldn't be started; `error` says why. */
+export interface InitErrorMessage extends BaseWorkerMessage {
+  type: "init_error";
+  error: string;
 }
 
 export interface GameUpdateMessage extends BaseWorkerMessage {
@@ -70,6 +102,16 @@ export interface GameUpdateMessage extends BaseWorkerMessage {
 export interface GameUpdateBatchMessage extends BaseWorkerMessage {
   type: "game_update_batch";
   gameUpdates: GameUpdateViewData[];
+}
+
+/**
+ * One update per tick that ran. On a tick error the run stops there: fewer
+ * updates than turns, and `error` says why.
+ */
+export interface RunTurnsResultMessage extends BaseWorkerMessage {
+  type: "run_turns_result";
+  gameUpdates: GameUpdateViewData[];
+  error?: ErrorUpdate;
 }
 
 export interface GameErrorMessage extends BaseWorkerMessage {
@@ -173,7 +215,9 @@ export interface HumanStatsResultMessage extends BaseWorkerMessage {
 // Union types for type safety
 export type MainThreadMessage =
   | InitMessage
+  | ConnectMessage
   | TurnMessage
+  | RunTurnsMessage
   | PlayerActionsMessage
   | PlayerBuildablesMessage
   | PlayerProfileMessage
@@ -186,8 +230,10 @@ export type MainThreadMessage =
 // Message send from worker
 export type WorkerMessage =
   | InitializedMessage
+  | InitErrorMessage
   | GameUpdateMessage
   | GameUpdateBatchMessage
+  | RunTurnsResultMessage
   | GameErrorMessage
   | PlayerActionsResultMessage
   | PlayerActionsErrorMessage

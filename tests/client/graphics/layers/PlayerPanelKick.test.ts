@@ -35,7 +35,7 @@ vi.mock("../../../../src/client/InGameModal", () => ({
 }));
 
 import { GameType, PlayerType } from "@openfront/engine-api/game/GameTypes";
-import { EventBus } from "@openfront/engine-lib/EventBus";
+import { EventBus } from "@openfront/shared/EventBus";
 import { actionButton } from "../../../../src/client/components/ui/ActionButton";
 import { PlayerModerationModal } from "../../../../src/client/hud/layers/PlayerModerationModal";
 import { PlayerPanel } from "../../../../src/client/hud/layers/PlayerPanel";
