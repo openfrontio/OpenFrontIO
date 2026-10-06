@@ -10,6 +10,9 @@ export class ClanCard extends LitElement {
   @property({ type: Object }) clan!: ClanInfo;
   @property() clanRole?: string;
   @property({ type: Boolean }) pending = false;
+  // Set on cards in the browser's boosted block; rides along on clan-select
+  // so a join from there can be attributed to it.
+  @property() source?: "boosted";
 
   createRenderRoot() {
     return this;
@@ -23,7 +26,7 @@ export class ClanCard extends LitElement {
   private onClick() {
     this.dispatchEvent(
       new CustomEvent("clan-select", {
-        detail: { tag: this.clan.tag },
+        detail: { tag: this.clan.tag, source: this.source },
         bubbles: true,
         composed: true,
       }),
@@ -96,6 +99,13 @@ export class ClanCard extends LitElement {
               ></currency-display>
             </div>
           </div>
+          ${this.clan.boosted
+            ? html`<span
+                data-boosted
+                class="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full shrink-0 bg-fuchsia-500/20 text-fuchsia-300 border border-fuchsia-500/30"
+                >${translateText("clan_modal.boosted")}</span
+              >`
+            : ""}
           ${this.renderBadge()}
           <svg
             xmlns="http://www.w3.org/2000/svg"

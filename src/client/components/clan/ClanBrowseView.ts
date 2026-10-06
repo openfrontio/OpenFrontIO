@@ -126,6 +126,9 @@ export class ClanBrowseView extends LitElement {
     const filtered = (this.browseData?.results ?? []).filter(
       (clan) => !this.myClanRoles.has(clan.tag),
     );
+    const boostedBlock = (this.browseData?.boostedBlock ?? []).filter(
+      (clan) => !this.myClanRoles.has(clan.tag),
+    );
 
     return html`
       <div class="space-y-4">
@@ -182,6 +185,26 @@ export class ClanBrowseView extends LitElement {
           ? html`<p class="text-red-400 text-sm text-center py-4">
               ${this.errorMsg}
             </p>`
+          : ""}
+        ${boostedBlock.length > 0
+          ? html`<section
+              data-boosted-block
+              class="space-y-3 rounded-2xl border border-fuchsia-500/30 bg-fuchsia-500/5 p-3"
+            >
+              <h3
+                class="text-[10px] font-bold text-fuchsia-300 uppercase tracking-wider px-1"
+              >
+                ${translateText("clan_modal.boosted_clans")}
+              </h3>
+              ${boostedBlock.map(
+                (clan) =>
+                  html`<clan-card
+                    .clan=${clan}
+                    source="boosted"
+                    ?pending=${pendingTags.has(clan.tag)}
+                  ></clan-card>`,
+              )}
+            </section>`
           : ""}
 
         <div class="space-y-3">

@@ -1,6 +1,9 @@
 import {
   type ClanBansResponse,
   ClanBansResponseSchema,
+  ClanBoostPurchaseResponseSchema,
+  type ClanBoostStatus,
+  ClanBoostStatusSchema,
   type ClanBrowseResponse,
   ClanBrowseResponseSchema,
   type ClanBrowseSort,
@@ -28,6 +31,8 @@ const CLAN_EXISTS_FETCH_TIMEOUT_MS = 3000;
 export type {
   ClanBan,
   ClanBansResponse,
+  ClanBoostStatus,
+  ClanBoostTier,
   ClanBrowseResponse,
   ClanBrowseSort,
   ClanDiscord,
@@ -271,13 +276,17 @@ export async function fetchClanMembers(
   }
 }
 
+// `source: "boosted"` marks a join started from the browser's boosted block
+// (analytics only).
 export async function joinClan(
   tag: string,
+  source?: "boosted",
 ): Promise<
   { status: "joined" | "requested" } | { error: string; reason?: string }
 > {
   try {
-    const res = await clanFetch(`/clans/${encodeURIComponent(tag)}/join`, {
+    const qs = source ? `?source=${source}` : "";
+    const res = await clanFetch(`/clans/${encodeURIComponent(tag)}/join${qs}`, {
       method: "POST",
     });
     if (res.status === 409) {
@@ -762,5 +771,59 @@ export async function fetchClanBans(
     return parsed.data;
   } catch {
     return false;
+  }
+}
+
+export async function fetchClanBoostStatus(
+  tag: string,
+): Promise<ClanBoostStatus | false> {
+  try {
+    const res = await clanFetch(`/clans/${encodeURIComponent(tag)}/boost`);
+    if (!res.ok) return false;
+    const parsed = ClanBoostStatusSchema.safeParse(await res.json());
+    if (!parsed.success) {
+      console.warn("fetchClanBoostStatus: Zod validation failed", parsed.error);
+      return false;
+    }
+    return parsed.data;
+  } catch {
+    return false;
+  }
+}
+
+// Refusal codes from POST /clans/:tag/boost, each with a translation key.
+const BOOST_ERRORS: Record<string, string> = {
+  not_enough_members: "clan_modal.boost_error_not_enough_members",
+  not_recently_active: "clan_modal.boost_error_not_recently_active",
+  daily_limit: "clan_modal.boost_error_daily_limit",
+  insufficient_balance: "clan_modal.boost_error_insufficient_balance",
+};
+
+export async function buyClanBoost(
+  tag: string,
+  tier: string,
+  idempotencyKey: string,
+): Promise<{ endsAt: string } | { error: string }> {
+  try {
+    const res = await clanFetch(`/clans/${encodeURIComponent(tag)}/boost`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ tier, idempotencyKey }),
+    });
+    if (res.status === 403)
+      return { error: "clan_modal.boost_error_forbidden" };
+    if (!res.ok) {
+      const body = (await res.json().catch(() => ({}))) as { code?: string };
+      return {
+        error:
+          (body.code && BOOST_ERRORS[body.code]) ??
+          "clan_modal.boost_error_failed",
+      };
+    }
+    const parsed = ClanBoostPurchaseResponseSchema.safeParse(await res.json());
+    if (!parsed.success) return { error: "clan_modal.boost_error_failed" };
+    return { endsAt: parsed.data.endsAt };
+  } catch {
+    return { error: "clan_modal.error_network" };
   }
 }

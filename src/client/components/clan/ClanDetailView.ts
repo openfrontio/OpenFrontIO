@@ -16,11 +16,13 @@ import {
 import { translateText } from "../../Utils";
 import "../ConfirmDialog";
 import "../CopyButton";
+import "./ClanBoostDialog";
 import "./ClanDonateDialog";
 import {
   type ClanRole,
   defaultOrderForSort,
   filterMembersBySearch,
+  formatBoostRemaining,
   renderLoadingSpinner,
   renderMemberPagination,
   renderMemberRow,
@@ -38,6 +40,7 @@ export class ClanDetailView extends LitElement {
   }
 
   @property() clanTag = "";
+  @property() joinSource: "boosted" | undefined = undefined;
   @property() myPublicId: string | null = null;
   @property({ type: Object }) myClanRoles: Map<string, ClanRole> = new Map();
   @property({ type: Array }) myPendingRequests: {
@@ -70,6 +73,7 @@ export class ClanDetailView extends LitElement {
   @state() private membersLoadInFlight = false;
   @state() private memberSearch = "";
   @state() private donateOpen = false;
+  @state() private boostOpen = false;
   private memberSearchDebounce: ReturnType<typeof setTimeout> | null = null;
   private memberLoadSeq = 0;
   private asyncGeneration = 0;
@@ -292,7 +296,7 @@ export class ClanDetailView extends LitElement {
     if (!this.selectedClan || this.actionPending) return;
     this.actionPending = true;
     try {
-      const result = await joinClan(this.selectedClan.tag);
+      const result = await joinClan(this.selectedClan.tag, this.joinSource);
       if ("error" in result) {
         if (result.error === "clan_modal.sign_in_for_clans") {
           window.showPage?.("page-account");
@@ -396,6 +400,27 @@ export class ClanDetailView extends LitElement {
     );
   }
 
+  // The purchase is done; refresh the clan so the time left and the clan's
+  // balance show what was bought.
+  private async handleBoosted(e: CustomEvent<{ endsAt: string }>) {
+    this.boostOpen = false;
+    const clan = this.selectedClan;
+    if (!clan) return;
+    showToast(
+      translateText("clan_modal.boost_success", {
+        tag: clan.tag,
+        remaining: formatBoostRemaining(e.detail.endsAt) ?? "",
+      }),
+      "green",
+    );
+    const gen = this.asyncGeneration;
+    const detail = await fetchClanDetail(clan.tag);
+    if (!detail || gen !== this.asyncGeneration || this.clanTag !== clan.tag) {
+      return;
+    }
+    this.selectedClan = detail;
+  }
+
   private onSearchInput(e: Event) {
     const search = (e.target as HTMLInputElement).value.trim();
     if (search === this.memberSearch) return;
@@ -450,7 +475,18 @@ export class ClanDetailView extends LitElement {
       `;
     }
 
+    const boostLeft = formatBoostRemaining(clan.boostEndsAt);
     const actions = html`
+      ${boostLeft
+        ? html`<div
+            data-boost-left
+            class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-bold bg-fuchsia-500/15 text-fuchsia-300 border border-fuchsia-500/30"
+          >
+            ${translateText("clan_modal.boost_time_left", {
+              remaining: boostLeft,
+            })}
+          </div>`
+        : ""}
       <div class="flex flex-wrap gap-3">
         ${this.renderActionButtons(
           isMember,
@@ -468,6 +504,14 @@ export class ClanDetailView extends LitElement {
             ) => void this.handleDonated(e)}
             @cancel=${() => (this.donateOpen = false)}
           ></clan-donate-dialog>`
+        : ""}
+      ${this.boostOpen && (isLeader || isOfficer)
+        ? html`<clan-boost-dialog
+            .clanTag=${clan.tag}
+            @boosted=${(e: CustomEvent<{ endsAt: string }>) =>
+              void this.handleBoosted(e)}
+            @cancel=${() => (this.boostOpen = false)}
+          ></clan-boost-dialog>`
         : ""}
     `;
 
@@ -844,6 +888,15 @@ export class ClanDetailView extends LitElement {
       `);
     }
     if (isLeader || isOfficer) {
+      buttons.push(html`
+        <button
+          data-action="boost"
+          @click=${() => (this.boostOpen = true)}
+          class="flex-1 px-6 py-3 text-sm font-bold text-white uppercase tracking-wider bg-gradient-to-r from-fuchsia-600 to-fuchsia-700 hover:from-fuchsia-500 hover:to-fuchsia-600 rounded-xl transition-all border border-white/5"
+        >
+          ${translateText("clan_modal.boost")}
+        </button>
+      `);
       buttons.push(html`
         <button
           @click=${() =>

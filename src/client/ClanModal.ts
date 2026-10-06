@@ -116,6 +116,9 @@ export class ClanModal extends BaseModal {
   private openedFromProfile: string | null = null;
   private openedFromProfileOrigin: ProfileOrigin | null = null;
   private previousListTab: ListTab = "my-clans";
+  // Set when the open clan was picked from the browser's boosted block, so a
+  // join from its detail page is attributed to the block.
+  private joinSource: "boosted" | undefined = undefined;
 
   private get onListView(): boolean {
     return this.view === "list" && !this.selectedClanTag;
@@ -521,6 +524,7 @@ export class ClanModal extends BaseModal {
       }
       return html`<clan-detail-view
         .clanTag=${this.selectedClanTag}
+        .joinSource=${this.joinSource}
         .cachedClan=${this.selectedClan}
         .myPublicId=${this.myPublicId}
         .myClanRoles=${this.myClanRoles}
@@ -652,13 +656,15 @@ export class ClanModal extends BaseModal {
             @browse-updated=${(e: CustomEvent<BrowseState>) => {
               this.browseCache = e.detail;
             }}
-            @clan-select=${(e: CustomEvent<{ tag: string }>) =>
-              this.openDetail(e.detail.tag)}
+            @clan-select=${(
+              e: CustomEvent<{ tag: string; source?: "boosted" }>,
+            ) => this.openDetail(e.detail.tag, e.detail.source)}
           ></clan-browse-view>`}
     `;
   }
 
-  private openDetail(tag: string) {
+  private openDetail(tag: string, source?: "boosted") {
+    this.joinSource = source;
     if (this.selectedClanTag !== tag) {
       // History cache is per-clan (see `gameHistoryCache` declaration),
       // so it must be cleared on tag change. `detailCache` is left
