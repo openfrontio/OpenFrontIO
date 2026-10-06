@@ -20,9 +20,9 @@ import { Controller } from "../../Controller";
 import { SendAllianceRequestIntentEvent } from "../../Transport";
 import { UserSettings } from "../../UserSettings";
 
-import { onlyImages } from "@openfront/shared/SharedUtil";
 import { GoToPlayerEvent, GoToUnitEvent } from "../../TransformHandler";
 import { GameView, PlayerView, UnitView } from "../../view";
+import { onlyImages } from "./OnlyImages";
 
 import { renderNumber, renderTroops } from "@openfront/engine-lib/Format";
 import { PlaySoundEffectEvent } from "../../sound/Sounds";

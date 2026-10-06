@@ -257,6 +257,12 @@ describe("Client.initialize() booted from Main.ts module scope", () => {
     expect(localStorage.getItem("achievements.pushed")).toBeNull();
   });
 
+  it("starts the menu audio once its chunk loads", async () => {
+    // Its own chunk, so the page doesn't wait on howler.
+    const { audioMixer } = await import("../../src/client/sound/AudioMixer");
+    await vi.waitFor(() => expect(audioMixer()).not.toBeNull());
+  });
+
   it("hands the lobby modals the event bus before a loader can open them", async () => {
     const seen: unknown[] = [];
     for (const tag of ["host-lobby-modal", "join-lobby-modal"]) {
@@ -504,10 +510,12 @@ describe("Client.initialize() booted from Main.ts module scope", () => {
      * open a queue WebSocket, and the claim under test is only whether any
      * join reaches close().
      */
-    function spyOnMatchmakingModal(): {
+    async function spyOnMatchmakingModal(): Promise<{
       close: ReturnType<typeof vi.spyOn>;
       restore: () => void;
-    } {
+    }> {
+      // It loads on demand; spy on the loaded one.
+      await loadModal("matchmaking-modal");
       const modal = document.querySelector("matchmaking-modal") as unknown as {
         isOpen: () => boolean;
         close: () => void;
@@ -547,7 +555,7 @@ describe("Client.initialize() booted from Main.ts module scope", () => {
       messages.length = 0;
       mocks.joinLobby.mockClear();
       stubJoinLobbyReturn();
-      const matchmaking = spyOnMatchmakingModal();
+      const matchmaking = await spyOnMatchmakingModal();
 
       try {
         document.dispatchEvent(
@@ -588,7 +596,7 @@ describe("Client.initialize() booted from Main.ts module scope", () => {
       messages.length = 0;
       mocks.joinLobby.mockClear();
       stubJoinLobbyReturn();
-      const matchmaking = spyOnMatchmakingModal();
+      const matchmaking = await spyOnMatchmakingModal();
 
       try {
         document.dispatchEvent(

@@ -78,8 +78,7 @@ import {
   SendToggleGameStartTimer,
   SendUpdateGameConfigIntentEvent,
 } from "./LobbyEvents";
-import "./Matchmaking";
-import { MatchmakingModal } from "./Matchmaking";
+import type { MatchmakingModal } from "./Matchmaking";
 import {
   hideMenuChrome,
   menuChromeIsTornDown,
@@ -95,7 +94,7 @@ import {
   presenceLobbyId,
   withGroupToken,
 } from "./PresenceGroup";
-import { RewardsModal } from "./RewardsModal";
+import type { RewardsModal } from "./RewardsModal";
 import {
   ensureServerList,
   redirectToGameVersion,
@@ -111,19 +110,18 @@ import {
   steamGrantWelcomeDue,
 } from "./SteamGrantNotices";
 import { steamHandoffMode } from "./SteamHandoff";
-import "./SteamHandoffModal";
-import { SteamHandoffModal } from "./SteamHandoffModal";
+import type { SteamHandoffModal } from "./SteamHandoffModal";
 import {
   isSteamLinkHash,
   parseSteamLinkToken,
   resumePendingSteamLink,
+  type PendingLinkModal,
 } from "./SteamLink";
-import "./SteamLinkModal";
-import { SteamLinkModal } from "./SteamLinkModal";
+import type { SteamLinkModal } from "./SteamLinkModal";
 import { steamSDK } from "./SteamSDK";
 import type { StoreModal } from "./Store";
 import { initTelemetry } from "./Telemetry";
-import { TokenLoginModal } from "./TokenLoginModal";
+import type { TokenLoginModal } from "./TokenLoginModal";
 import {
   requestTurnstileToken,
   resolveTurnstileToken,
@@ -154,8 +152,6 @@ import "./components/MarketingConsentToast";
 import "./components/PurchaseNudgeModal";
 import { classicReplayHref } from "./replay/ReplayEntry";
 import { parseReplayViewerHash } from "./replay/ReplayViewerRoute";
-import { initAudioMixer } from "./sound/AudioMixer";
-import { startMenuMusic } from "./sound/MenuMusic";
 import {
   installCtrlWheelZoomBlocker,
   installDoubleTapZoomBlocker,
@@ -304,6 +300,18 @@ class Client {
   private rewardsModal: RewardsModal;
   private steamLinkModal: SteamLinkModal;
   private steamHandoffModal: SteamHandoffModal | null = null;
+  // The Steam link modal loads on demand (see LazyModals), so it's opened
+  // through this, which loads it first.
+  private readonly steamLink: PendingLinkModal = {
+    openWithToken: async (token) => {
+      await loadModal("steam-link-modal");
+      await this.steamLinkModal?.openWithToken(token);
+    },
+    openForCodeEntry: async () => {
+      await loadModal("steam-link-modal");
+      await this.steamLinkModal?.openForCodeEntry();
+    },
+  };
   private steamHandoffDeclinedFor: string | null = null;
   private mostRecentJoinEvent: number;
   // A join the player has committed to but that has not reached a lobbyHandle
@@ -363,7 +371,20 @@ class Client {
 
     // One mixer for the page: the menu theme here and the SoundManager a game
     // creates later both route through it, so the volume sliders reach both.
-    startMenuMusic(initAudioMixer(this.userSettings));
+    // It and howler are their own chunk, so the page doesn't wait on them. A
+    // game that got there first has made the mixer already, and the menu
+    // theme has no business starting under it.
+    Promise.all([
+      import("./sound/AudioMixer"),
+      import("./sound/MenuMusic"),
+    ]).then(
+      ([{ audioMixer, initAudioMixer }, { startMenuMusic }]) => {
+        if (audioMixer() === null) {
+          startMenuMusic(initAudioMixer(this.userSettings));
+        }
+      },
+      (err) => console.error("Menu audio failed to load:", err),
+    );
 
     // Snapshot the lapse-notice marker SYNCHRONOUSLY, before the first await.
     //
@@ -643,35 +664,26 @@ class Client {
     this.tokenLoginModal = document.querySelector(
       "token-login",
     ) as TokenLoginModal;
-    if (
-      !this.tokenLoginModal ||
-      !(this.tokenLoginModal instanceof TokenLoginModal)
-    ) {
+    if (!this.tokenLoginModal) {
       console.warn("Token login modal element not found");
     }
 
     this.matchmakingModal = document.querySelector(
       "matchmaking-modal",
     ) as MatchmakingModal;
-    if (
-      !this.matchmakingModal ||
-      !(this.matchmakingModal instanceof MatchmakingModal)
-    ) {
+    if (!this.matchmakingModal) {
       console.warn("Matchmaking modal element not found");
     }
 
     this.rewardsModal = document.querySelector("rewards-modal") as RewardsModal;
-    if (!this.rewardsModal || !(this.rewardsModal instanceof RewardsModal)) {
+    if (!this.rewardsModal) {
       console.warn("Rewards modal element not found");
     }
 
     this.steamLinkModal = document.querySelector(
       "steam-link-modal",
     ) as SteamLinkModal;
-    if (
-      !this.steamLinkModal ||
-      !(this.steamLinkModal instanceof SteamLinkModal)
-    ) {
+    if (!this.steamLinkModal) {
       console.warn("Steam link modal element not found");
     }
 
@@ -761,7 +773,7 @@ class Client {
         // because a guest account satisfies it (POST /auth/refresh mints one
         // for any visitor). resumePendingSteamLink owns the real predicate,
         // next to the consumption it protects — see its comment.
-        if (resumePendingSteamLink(userMeResponse, this.steamLinkModal)) {
+        if (resumePendingSteamLink(userMeResponse, this.steamLink)) {
           return;
         }
 
@@ -840,7 +852,10 @@ class Client {
             navigate: (hash) => {
               window.location.hash = hash;
             },
-            openRewards: () => this.rewardsModal?.openWithRewards(rewards),
+            openRewards: () =>
+              whenModalLoaded("rewards-modal", () =>
+                this.rewardsModal?.openWithRewards(rewards),
+              ),
             storeClaimPrompt: (store) =>
               localStorage.setItem(CLAIM_PROMPT_KEY, JSON.stringify(store)),
             storeSteamGrant: (store) =>
@@ -1209,7 +1224,10 @@ class Client {
         strip,
         alertAndStrip,
         alert: (message: string) => showInGameAlert(message),
-        openTokenLogin: (token) => this.tokenLoginModal.openWithToken(token),
+        openTokenLogin: (token) =>
+          whenModalLoaded("token-login", () =>
+            this.tokenLoginModal.openWithToken(token),
+          ),
         refreshStore: () => this.refreshStore(),
         reload: () => window.location.reload(),
       });
@@ -1225,7 +1243,9 @@ class Client {
       }
 
       strip();
-      this.tokenLoginModal.openWithToken(token);
+      whenModalLoaded("token-login", () =>
+        this.tokenLoginModal.openWithToken(token),
+      );
       return;
     }
 
@@ -1239,7 +1259,7 @@ class Client {
       // the Steam build is on this machine. A typed code can come from a phone.
       this.userSettings.markSteamBuildSeen();
       strip();
-      void this.steamLinkModal?.openWithToken(steamLinkToken);
+      void this.steamLink.openWithToken(steamLinkToken);
       return;
     }
 
@@ -1251,7 +1271,7 @@ class Client {
     // lands on instead (see SteamLink.ts's isSteamLinkHash).
     if (isSteamLinkHash(hash)) {
       strip();
-      void this.steamLinkModal?.openForCodeEntry();
+      void this.steamLink.openForCodeEntry();
       return;
     }
 
@@ -1283,10 +1303,13 @@ class Client {
           ? "none"
           : steamHandoffMode(this.userSettings, window.location.search);
       if (handoff !== "none" && this.steamHandoffModal !== null) {
-        this.steamHandoffModal.offer(lobbyId, handoff, () => {
-          this.steamHandoffDeclinedFor = lobbyId;
-          void this.handleUrl();
-        });
+        const modal = this.steamHandoffModal;
+        whenModalLoaded("steam-handoff-modal", () =>
+          modal.offer(lobbyId, handoff, () => {
+            this.steamHandoffDeclinedFor = lobbyId;
+            void this.handleUrl();
+          }),
+        );
         return;
       }
       // Joining needs the API's server list (multi-server v2): the id's
@@ -1371,6 +1394,12 @@ class Client {
 
   private loadedHostModal(): HostPrivateLobbyModal | null {
     return customElements.get("host-lobby-modal") ? this.hostModal : null;
+  }
+
+  private loadedMatchmakingModal(): MatchmakingModal | null {
+    return customElements.get("matchmaking-modal")
+      ? this.matchmakingModal
+      : null;
   }
 
   private refreshStore(): void {
@@ -1466,7 +1495,10 @@ class Client {
     // that is lying to them. Scoped to the source that owns that modal: a
     // deep link refused while someone is legitimately queued must not cancel
     // their queue.
-    if (lobby.source === "matchmaking" && this.matchmakingModal?.isOpen()) {
+    if (
+      lobby.source === "matchmaking" &&
+      this.loadedMatchmakingModal()?.isOpen()
+    ) {
       this.matchmakingModal.close();
     }
     // false: the web never refuses here any more, so the only feedback left
@@ -1955,7 +1987,7 @@ class Client {
   private handleMatchmakingRequeue(
     event: CustomEvent<{ mode?: "1v1" | "2v2" } | undefined>,
   ) {
-    if (this.matchmakingModal?.requeue()) {
+    if (this.loadedMatchmakingModal()?.requeue()) {
       return;
     }
     if (event.detail?.mode !== undefined) {
@@ -1968,10 +2000,12 @@ class Client {
     event: CustomEvent<{ mode?: "1v1" | "2v2" } | undefined>,
   ) {
     if (!this.matchmakingModal) return;
-    // Always set the mode: dispatchers without a detail (homepage button,
-    // requeue URL) mean 1v1 and must reset a lingering 2v2 selection.
-    this.matchmakingModal.mode = event.detail?.mode === "2v2" ? "2v2" : "1v1";
-    this.matchmakingModal.open();
+    whenModalLoaded("matchmaking-modal", () => {
+      // Always set the mode: dispatchers without a detail (homepage button,
+      // requeue URL) mean 1v1 and must reset a lingering 2v2 selection.
+      this.matchmakingModal.mode = event.detail?.mode === "2v2" ? "2v2" : "1v1";
+      this.matchmakingModal.open();
+    });
   }
 
   private handleKickPlayer(event: CustomEvent) {
