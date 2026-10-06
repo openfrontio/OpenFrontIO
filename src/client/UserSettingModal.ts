@@ -1542,6 +1542,26 @@ export class UserSettingModal extends BaseModal {
         @change=${this.handleKeybindChange}
       ></setting-keybind>
 
+      <setting-keybind
+        action="emojiMenu"
+        label=${translateText("user_setting.emoji_menu")}
+        description=${translateText("user_setting.emoji_menu_desc")}
+        defaultKey=${this.defaultKeybinds.emojiMenu}
+        .value=${this.getKeyValue("emojiMenu")}
+        .display=${this.getKeyChar("emojiMenu")}
+        @change=${this.handleKeybindChange}
+      ></setting-keybind>
+
+      <setting-keybind
+        action="quickChat"
+        label=${translateText("user_setting.quick_chat")}
+        description=${translateText("user_setting.quick_chat_desc")}
+        defaultKey=${this.defaultKeybinds.quickChat}
+        .value=${this.getKeyValue("quickChat")}
+        .display=${this.getKeyChar("quickChat")}
+        @change=${this.handleKeybindChange}
+      ></setting-keybind>
+
       <h2
         class="text-blue-200 text-xl font-bold mt-8 mb-3 border-b border-white/10 pb-2"
       >

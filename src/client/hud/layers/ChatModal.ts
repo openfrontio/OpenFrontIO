@@ -6,7 +6,8 @@ import { GameView, PlayerView } from "../../view";
 
 import { EventBus } from "@openfront/shared/EventBus";
 import quickChatData from "resources/QuickChat.json";
-import { CloseViewEvent } from "../../InputHandler";
+import { CloseViewEvent, ShowChatMenuEvent } from "../../InputHandler";
+import { TransformHandler } from "../../TransformHandler";
 import { SendQuickChatEvent } from "../../Transport";
 import { translateText } from "../../Utils";
 
@@ -47,6 +48,7 @@ export class ChatModal extends LitElement {
   public eventBus: EventBus;
 
   public g: GameView;
+  public transformHandler: TransformHandler;
 
   quickChatPhrases: Record<
     string,
@@ -192,6 +194,16 @@ export class ChatModal extends LitElement {
       if (!this.hidden) {
         this.close();
       }
+    });
+    // Quick chat shortcut: open for the player under the cursor.
+    eventBus.on(ShowChatMenuEvent, (e) => {
+      const myPlayer = this.g.myPlayer();
+      if (!myPlayer?.isAlive()) return;
+      const cell = this.transformHandler.screenToWorldCoordinates(e.x, e.y);
+      if (!this.g.isValidCoord(cell.x, cell.y)) return;
+      const owner = this.g.owner(this.g.ref(cell.x, cell.y));
+      if (!owner.isPlayer() || owner === myPlayer) return;
+      this.open(myPlayer, owner as PlayerView);
     });
   }
 

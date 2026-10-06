@@ -1,3 +1,4 @@
+import { Emoji, flattenedEmojiTable } from "@openfront/engine-api/Schemas";
 import { Cosmetics } from "@openfront/shared/CosmeticSchemas";
 import { PlayerPattern } from "@openfront/shared/WireSchemas";
 import {
@@ -37,6 +38,8 @@ export function getDefaultKeybinds(isMac: boolean): Record<string, string> {
     retaliateAttack: "Shift+KeyR",
     requestAlliance: "KeyK",
     breakAlliance: "KeyL",
+    emojiMenu: "KeyF",
+    quickChat: "KeyV",
     swapDirection: "KeyU",
     zoomOut: "KeyQ",
     zoomIn: "KeyE",
@@ -50,7 +53,7 @@ export function getDefaultKeybinds(isMac: boolean): Record<string, string> {
     boxSelectWarships: "ShiftLeft",
     shiftKey: "ShiftLeft",
     resetGfx: "KeyR",
-    selectAllWarships: "KeyF",
+    selectAllWarships: "KeyX",
     pauseGame: "KeyP",
     gameSpeedUp: "Period",
     gameSpeedDown: "Comma",
@@ -186,6 +189,7 @@ export const ACTIVE_LOADOUT_KEY = "settings.activeLoadout";
 // Keep the existing storage key so the rename does not reset saved columns.
 export const PLAYER_STATS_COLUMNS_KEY = "settings.leaderboardColumns";
 export const TEAM_STATS_COLUMNS_KEY = "settings.teamStatsColumns";
+export const FAVORITE_EMOJIS_KEY = "settings.favoriteEmojis";
 const STATS_COLUMNS_KEYS: Record<StatsTableKind, string> = {
   player: PLAYER_STATS_COLUMNS_KEY,
   team: TEAM_STATS_COLUMNS_KEY,
@@ -836,6 +840,28 @@ export class UserSettings {
 
   setStatsColumns(kind: StatsTableKind, ids: ColumnId[]): void {
     this.setString(STATS_COLUMNS_KEYS[kind], JSON.stringify(ids));
+  }
+
+  /**
+   * The emoji table's favorites, one entry per slot, null for an empty slot.
+   * Unknown or corrupt entries read as empty.
+   */
+  favoriteEmojis(): (Emoji | null)[] {
+    const raw = this.getString(FAVORITE_EMOJIS_KEY, "");
+    if (!raw) return [];
+    try {
+      const parsed: unknown = JSON.parse(raw);
+      if (!Array.isArray(parsed)) return [];
+      return parsed.map((e) =>
+        flattenedEmojiTable.includes(e) ? (e as Emoji) : null,
+      );
+    } catch {
+      return [];
+    }
+  }
+
+  setFavoriteEmojis(slots: readonly (Emoji | null)[]): void {
+    this.setString(FAVORITE_EMOJIS_KEY, JSON.stringify(slots));
   }
 
   /**

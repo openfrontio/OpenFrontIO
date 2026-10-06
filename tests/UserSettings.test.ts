@@ -2,6 +2,7 @@ import {
   ACTIVE_LOADOUT_KEY,
   CROWN_KEY,
   EFFECTS_KEY,
+  FAVORITE_EMOJIS_KEY,
   FLAG_KEY,
   LOADOUTS_KEY,
   MAX_LOADOUTS,
@@ -591,8 +592,17 @@ describe("getDefaultKeybinds", () => {
     const keybinds = getDefaultKeybinds(false);
     expect(keybinds.boxSelectWarships).toBe("ShiftLeft");
     expect(keybinds.resetGfx).toBe("KeyR");
-    expect(keybinds.selectAllWarships).toBe("KeyF");
+    expect(keybinds.selectAllWarships).toBe("KeyX");
+    expect(keybinds.emojiMenu).toBe("KeyF");
+    expect(keybinds.quickChat).toBe("KeyV");
     expect(keybinds.buildMenuModifier).toBe("ControlLeft");
+  });
+
+  it("never gives two actions the same letter key", () => {
+    const letters = Object.values(getDefaultKeybinds(false)).filter((k) =>
+      /^Key[A-Z]$/.test(k),
+    );
+    expect(new Set(letters).size).toBe(letters.length);
   });
 
   it("handles Mac-specific modifier keys correctly", () => {
@@ -626,5 +636,27 @@ describe("UserSettings replay viewer", () => {
     expect(new UserSettings().replayViewer()).toBe(true);
     new UserSettings().setReplayViewer(false);
     expect(new UserSettings().replayViewer()).toBe(false);
+  });
+});
+
+describe("UserSettings favorite emojis", () => {
+  beforeEach(resetUserSettingsState);
+
+  it("has no favorites by default", () => {
+    expect(new UserSettings().favoriteEmojis()).toEqual([]);
+  });
+
+  it("round-trips slots, keeping empty ones in place", () => {
+    new UserSettings().setFavoriteEmojis(["👍", null, "💀"]);
+    expect(new UserSettings().favoriteEmojis()).toEqual(["👍", null, "💀"]);
+  });
+
+  it("reads unknown emojis as empty slots and corrupt storage as none", () => {
+    localStorage.setItem(FAVORITE_EMOJIS_KEY, JSON.stringify(["🍕", "👍"]));
+    expect(new UserSettings().favoriteEmojis()).toEqual([null, "👍"]);
+
+    resetUserSettingsState();
+    localStorage.setItem(FAVORITE_EMOJIS_KEY, "not json");
+    expect(new UserSettings().favoriteEmojis()).toEqual([]);
   });
 });

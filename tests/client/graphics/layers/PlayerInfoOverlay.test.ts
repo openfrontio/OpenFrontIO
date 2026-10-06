@@ -26,6 +26,7 @@ vi.mock("../../../../src/client/Utils", () => ({
   renderDuration: vi.fn(() => ""),
   getTranslatedPlayerTeamLabel: vi.fn(() => ""),
   getSvgAspectRatio: vi.fn(() => 1),
+  formatKeyForDisplay: vi.fn(() => "F"),
 }));
 vi.mock("@openfront/engine-lib/Format", () => ({
   renderNumber: vi.fn(() => "0"),
@@ -40,7 +41,7 @@ vi.mock("../../../../src/client/hud/PlayerIcons", () => ({
 }));
 
 import { PlayerType } from "@openfront/engine-api/game/GameTypes";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { PlayerInfoOverlay } from "../../../../src/client/hud/layers/PlayerInfoOverlay";
 
 // Flattens the mocked-html template tree into one string for assertions.
@@ -121,5 +122,51 @@ describe("PlayerInfoOverlay", () => {
     expect(out).toContain("Bob");
     expect(out).toContain("text-white");
     expect(out).not.toContain("text-green-500");
+  });
+
+  describe("emoji button", () => {
+    const realWidth = window.innerWidth;
+    const realMatchMedia = window.matchMedia;
+
+    function showWith(width: number, touch: boolean): string {
+      Object.defineProperty(window, "innerWidth", {
+        value: width,
+        configurable: true,
+      });
+      window.matchMedia = vi.fn(() => ({ matches: touch })) as never;
+      overlay.game = makeGame({
+        isFriendly: () => false,
+        isAlliedWith: () => false,
+        smallID: () => 1,
+      }) as never;
+      overlay.maybeShow(10, 10);
+      return flatten(overlay.render());
+    }
+
+    afterEach(() => {
+      Object.defineProperty(window, "innerWidth", {
+        value: realWidth,
+        configurable: true,
+      });
+      window.matchMedia = realMatchMedia;
+    });
+
+    it("shows on wide screens with a mouse, widening the panel", () => {
+      const out = showWith(1200, false);
+      expect(out).toContain("player_panel.emotes");
+      expect(out).toContain("sm:w-[548px]");
+    });
+
+    it("hides below 1200px so the panel doesn't cover the leaderboard", () => {
+      const out = showWith(1199, false);
+      expect(out).not.toContain("player_panel.emotes");
+      expect(out).toContain("sm:w-[500px]");
+    });
+
+    it("hides on touch devices", () => {
+      const out = showWith(1400, true);
+      expect(out).not.toContain("player_panel.emotes");
+      expect(out).toContain("sm:w-[500px]");
+    });
   });
 });
