@@ -4,7 +4,11 @@
  * and `playerNameViewData` is attached only on ticks where the worker
  * recomputed name placements. See GameUpdateViewData in GameUpdates.ts.
  */
-import { GameType, PlayerInfo, PlayerType } from "@openfront/engine-api/game/GameTypes";
+import {
+  GameType,
+  PlayerInfo,
+  PlayerType,
+} from "@openfront/engine-api/game/GameTypes";
 import {
   GameUpdateType,
   GameUpdateViewData,
@@ -236,7 +240,7 @@ describe("GameRunner payload cadence", () => {
       },
       isActive: () => active,
       activeDuringSpawnPhase: () => true,
-      snapshot: () => ({} as never),
+      snapshot: () => ({}) as never,
     });
     tick(); // tick 2: execution inits, Alice tile unchanged in spawn phase -> undefined
     expect(byTick.get(2)!.playerNameViewData).toBeUndefined();

@@ -17,7 +17,6 @@ import {
 import { maxHealthWithVeterancy } from "@openfront/engine-lib/game/Veterancy";
 import {
   snapshotType,
-  zBytes,
   zInt,
   zNum,
   zPlayerRef,

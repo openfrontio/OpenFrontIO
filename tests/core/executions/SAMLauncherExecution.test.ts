@@ -108,11 +108,7 @@ describe("SAM", () => {
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const nuke = attacker.buildUnit(UnitType.AtomBomb, game.ref(1, 1), {
       targetTile: game.ref(3, 1),
-      trajectory: [
-        game.ref(1, 1),
-        game.ref(2, 1),
-        game.ref(3, 1),
-      ],
+      trajectory: [game.ref(1, 1), game.ref(2, 1), game.ref(3, 1)],
     });
     executeTicks(game, 3);
 
@@ -124,19 +120,11 @@ describe("SAM", () => {
     game.addExecution(new SAMLauncherExecution(defender, null, sam));
     attacker.buildUnit(UnitType.AtomBomb, game.ref(2, 1), {
       targetTile: game.ref(3, 1),
-      trajectory: [
-        game.ref(1, 1),
-        game.ref(2, 1),
-        game.ref(3, 1),
-      ],
+      trajectory: [game.ref(1, 1), game.ref(2, 1), game.ref(3, 1)],
     });
     attacker.buildUnit(UnitType.AtomBomb, game.ref(1, 2), {
       targetTile: game.ref(1, 3),
-      trajectory: [
-        game.ref(1, 1),
-        game.ref(1, 2),
-        game.ref(1, 3),
-      ],
+      trajectory: [game.ref(1, 1), game.ref(1, 2), game.ref(1, 3)],
     });
     expect(attacker.units(UnitType.AtomBomb)).toHaveLength(2);
 
@@ -151,11 +139,7 @@ describe("SAM", () => {
 
     attacker.buildUnit(UnitType.MIRVWarhead, game.ref(1, 1), {
       targetTile: game.ref(3, 1),
-      trajectory: [
-        game.ref(1, 1),
-        game.ref(2, 1),
-        game.ref(3, 1),
-      ],
+      trajectory: [game.ref(1, 1), game.ref(2, 1), game.ref(3, 1)],
     });
     executeTicks(game, 3);
 
@@ -217,11 +201,7 @@ describe("SAM", () => {
     expect(sam.isInCooldown()).toBeFalsy();
     const nuke = attacker.buildUnit(UnitType.AtomBomb, game.ref(1, 1), {
       targetTile: game.ref(1, 3),
-      trajectory: [
-        game.ref(1, 1),
-        game.ref(2, 1),
-        game.ref(3, 1),
-      ],
+      trajectory: [game.ref(1, 1), game.ref(2, 1), game.ref(3, 1)],
     });
 
     executeTicks(game, 3);
@@ -245,11 +225,7 @@ describe("SAM", () => {
     game.addExecution(new SAMLauncherExecution(defender, null, sam2));
     const nuke = attacker.buildUnit(UnitType.AtomBomb, game.ref(1, 1), {
       targetTile: game.ref(1, 3),
-      trajectory: [
-        game.ref(1, 1),
-        game.ref(1, 2),
-        game.ref(1, 3),
-      ],
+      trajectory: [game.ref(1, 1), game.ref(1, 2), game.ref(1, 3)],
     });
 
     executeTicks(game, 3);
@@ -355,11 +331,7 @@ describe("SAM", () => {
     // Distant AtomBomb landing far away (at 10, 1)
     attacker.buildUnit(UnitType.AtomBomb, game.ref(2, 1), {
       targetTile: game.ref(10, 1),
-      trajectory: [
-        game.ref(2, 1),
-        game.ref(5, 3),
-        game.ref(10, 1),
-      ],
+      trajectory: [game.ref(2, 1), game.ref(5, 3), game.ref(10, 1)],
     });
 
     // Close AtomBomb targeting right on the SAM (1, 1)
@@ -368,11 +340,7 @@ describe("SAM", () => {
       game.ref(1, 2),
       {
         targetTile: game.ref(1, 1),
-        trajectory: [
-          game.ref(1, 1),
-          game.ref(1, 2),
-          game.ref(1, 1),
-        ],
+        trajectory: [game.ref(1, 1), game.ref(1, 2), game.ref(1, 1)],
       },
     );
 
@@ -394,20 +362,12 @@ describe("SAM", () => {
 
     const nuke1 = attacker.buildUnit(UnitType.AtomBomb, game.ref(2, 1), {
       targetTile: game.ref(3, 1),
-      trajectory: [
-        game.ref(1, 1),
-        game.ref(2, 1),
-        game.ref(3, 1),
-      ],
+      trajectory: [game.ref(1, 1), game.ref(2, 1), game.ref(3, 1)],
     });
 
     const nuke2 = attacker.buildUnit(UnitType.AtomBomb, game.ref(1, 2), {
       targetTile: game.ref(1, 3),
-      trajectory: [
-        game.ref(1, 1),
-        game.ref(1, 2),
-        game.ref(1, 3),
-      ],
+      trajectory: [game.ref(1, 1), game.ref(1, 2), game.ref(1, 3)],
     });
 
     executeTicks(game, 3);
@@ -437,11 +397,7 @@ describe("SAM", () => {
         game.ref(1, 2 + i),
         {
           targetTile: game.ref(1, 15 + i),
-          trajectory: [
-            game.ref(1, 1),
-            game.ref(1, 2 + i),
-            game.ref(1, 15 + i),
-          ],
+          trajectory: [game.ref(1, 1), game.ref(1, 2 + i), game.ref(1, 15 + i)],
         },
       );
       warheads.push(warhead);

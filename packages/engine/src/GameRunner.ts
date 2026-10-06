@@ -24,6 +24,7 @@ import {
 } from "@openfront/engine-api/game/GameUpdates";
 import { MapFiles } from "@openfront/engine-api/game/MapFiles";
 import { ClientID, GameStartInfo, Turn } from "@openfront/engine-api/Schemas";
+import { packUnitUpdates } from "@openfront/engine-lib/game/PackedUnitUpdates";
 import { loadTerrainMap } from "@openfront/engine-lib/game/TerrainMapLoader";
 import { PseudoRandom } from "@openfront/engine-lib/PseudoRandom";
 import { simpleHash } from "@openfront/engine-lib/Util";
@@ -38,7 +39,6 @@ import { createGame } from "./game/GameImpl";
 import { humanDisconnects, humanStatsSnapshot } from "./game/HumanStats";
 import { placeName, placeSpawnName } from "./game/NameBoxCalculator";
 import { createNationsForGame } from "./game/NationCreation";
-import { packUnitUpdates } from "./game/PackedUnitUpdates";
 import {
   readSnapshotHeader,
   restoreGame,
@@ -288,7 +288,6 @@ export class GameRunner {
       }
       viewDataChanged = true;
     }
-
 
     const packedTileUpdates = this.game.drainPackedTileUpdates();
     const packedMotionPlans = this.game.drainPackedMotionPlans();
