@@ -150,10 +150,13 @@ npm run dev:prod
 ## 🏗️ Project Structure
 
 - `/src/client` - Frontend game client
-- `/src/core` - Deterministic game simulation
 - `/src/server` - Backend game server
+- `/packages/engine` - Deterministic game simulation (`@openfront/engine`)
+- `/packages/engine-api` - The engine's contract: types, schemas, game updates and the worker protocol (`@openfront/engine-api`)
+- `/packages/engine-lib` - Engine code also used outside the engine: map grid, rules, helpers (`@openfront/engine-lib`)
+- `/packages/shared` - Code shared by client and server: wire schemas, env, asset URLs (`@openfront/shared`)
+- `/packages/zbin` - Compact binary wire format for zod schemas (self-contained, zod-only)
 - `/resources` - Static assets (images, maps, etc.)
-- `/zbin` - Compact binary wire format for zod schemas (self-contained, zod-only)
 
 ## 🤝 Contributing
 

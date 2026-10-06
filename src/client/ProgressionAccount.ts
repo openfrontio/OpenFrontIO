@@ -1,4 +1,4 @@
-import type { UserMeResponse } from "../core/ApiSchemas";
+import type { UserMeResponse } from "@openfront/shared/ApiSchemas";
 import { hasLinkedIdentity } from "./AccountIdentity";
 import { getUserMe } from "./Api";
 import { isLoggedIn } from "./Auth";

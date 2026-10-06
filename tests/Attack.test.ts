@@ -1,16 +1,18 @@
-import { AttackExecution } from "../src/core/execution/AttackExecution";
-import { SpawnExecution } from "../src/core/execution/SpawnExecution";
-import { TransportShipExecution } from "../src/core/execution/TransportShipExecution";
+import { TileRef } from "@openfront/engine-api/game/GameMap";
 import {
-  Game,
-  Player,
   PlayerInfo,
   PlayerType,
   UnitType,
-} from "../src/core/game/Game";
-import { TileRef } from "../src/core/game/GameMap";
-import { GameUpdateType, UnitUpdate } from "../src/core/game/GameUpdates";
-import { GameID } from "../src/core/Schemas";
+} from "@openfront/engine-api/game/GameTypes";
+import {
+  GameUpdateType,
+  UnitUpdate,
+} from "@openfront/engine-api/game/GameUpdates";
+import { GameID } from "@openfront/engine-api/Schemas";
+import { AttackExecution } from "@openfront/engine/execution/AttackExecution";
+import { SpawnExecution } from "@openfront/engine/execution/SpawnExecution";
+import { TransportShipExecution } from "@openfront/engine/execution/TransportShipExecution";
+import { Game, Player } from "@openfront/engine/game/Game";
 import { setup } from "./util/Setup";
 import { TestConfig } from "./util/TestConfig";
 import { constructionExecution } from "./util/utils";

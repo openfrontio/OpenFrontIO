@@ -1,5 +1,4 @@
-import { assetUrl } from "../../../core/AssetUrls";
-import { Config } from "../../../core/configuration/Config";
+import { TileRef } from "@openfront/engine-api/game/GameMap";
 import {
   AllPlayers,
   BuildableAttacks,
@@ -11,11 +10,14 @@ import {
   STRUCTURE_BULK_STEPS,
   Structures,
   UnitType,
-} from "../../../core/game/Game";
-import { TileRef } from "../../../core/game/GameMap";
-import { Emoji, findClosestBy, flattenedEmojiTable } from "../../../core/Util";
+} from "@openfront/engine-api/game/GameTypes";
+import { Emoji, flattenedEmojiTable } from "@openfront/engine-api/Schemas";
+import { Config } from "@openfront/engine-lib/configuration/Config";
+import { renderNumber } from "@openfront/engine-lib/Format";
+import { findClosestBy } from "@openfront/engine-lib/Util";
+import { assetUrl } from "@openfront/shared/AssetUrls";
 import { UIState } from "../../UIState";
-import { renderNumber, translateText } from "../../Utils";
+import { translateText } from "../../Utils";
 import { GameView, PlayerView } from "../../view";
 import { BuildItemDisplay, BuildMenu, flattenedBuildTable } from "./BuildMenu";
 import { ChatIntegration } from "./ChatIntegration";
@@ -24,7 +26,7 @@ import { PlayerActionHandler } from "./PlayerActionHandler";
 import { PlayerPanel } from "./PlayerPanel";
 import { TooltipItem } from "./RadialMenu";
 
-import { EventBus } from "../../../core/EventBus";
+import { EventBus } from "@openfront/engine-lib/EventBus";
 import {
   BuildUnitIntentEvent,
   SendUpgradeStructureIntentEvent,

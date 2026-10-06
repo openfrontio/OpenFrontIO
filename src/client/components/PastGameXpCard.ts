@@ -1,6 +1,9 @@
+import type {
+  GameXpEligible,
+  GameXpResponse,
+} from "@openfront/shared/ApiSchemas";
 import { html, LitElement, nothing, svg, TemplateResult } from "lit";
 import { customElement, property } from "lit/decorators.js";
-import type { GameXpEligible, GameXpResponse } from "../../core/ApiSchemas";
 import {
   BEFORE_PROGRESSION,
   ineligibleReasonKey,

@@ -1,6 +1,6 @@
+import { Product } from "@openfront/shared/CosmeticSchemas";
 import { html, LitElement, nothing } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
-import { Product } from "../../core/CosmeticSchemas";
 import type { InsufficientCurrency, PurchaseResult } from "../Cosmetics";
 import { showInGameAlert } from "../InGameModal";
 import { translateText } from "../Utils";

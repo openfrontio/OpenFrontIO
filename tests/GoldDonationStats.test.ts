@@ -1,12 +1,13 @@
-import { DonateGoldExecution } from "../src/core/execution/DonateGoldExecution";
-import { SpawnExecution } from "../src/core/execution/SpawnExecution";
-import { Game, Player, PlayerInfo, PlayerType } from "../src/core/game/Game";
+import { PlayerInfo, PlayerType } from "@openfront/engine-api/game/GameTypes";
 import {
   DONATION_BROKE_GOLD_THRESHOLD,
   DONATION_INDEX_GOLD_RECV,
   DONATION_INDEX_GOLD_RECV_BROKE,
   GOLD_INDEX_DONATE_RECV,
-} from "../src/core/StatsSchemas";
+} from "@openfront/engine-api/StatsSchemas";
+import { DonateGoldExecution } from "@openfront/engine/execution/DonateGoldExecution";
+import { SpawnExecution } from "@openfront/engine/execution/SpawnExecution";
+import { Game, Player } from "@openfront/engine/game/Game";
 import { setup } from "./util/Setup";
 
 let game: Game;

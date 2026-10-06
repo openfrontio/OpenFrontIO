@@ -1,3 +1,4 @@
+import { EFFECT_TYPES } from "@openfront/shared/CosmeticSchemas";
 import { describe, expect, test } from "vitest";
 import {
   catalogSnippet,
@@ -7,7 +8,6 @@ import {
   maxColorsFor,
   slotAttributes,
 } from "../src/client/render/gl/debug/EffectEditorState";
-import { EFFECT_TYPES } from "../src/core/CosmeticSchemas";
 
 describe("slotAttributes", () => {
   test("every slot's default state validates for every type it offers", () => {
