@@ -13,7 +13,7 @@ import {
   PlayerType,
   UnitType,
 } from "@openfront/engine-api/game/GameTypes";
-import { Config } from "@openfront/engine-lib/configuration/Config";
+import { EngineConfig } from "@openfront/engine/configuration/EngineConfig";
 import { NationExecution } from "@openfront/engine/execution/NationExecution";
 import { RecomputeRailClusterExecution } from "@openfront/engine/execution/RecomputeRailClusterExecution";
 import fs from "fs";
@@ -48,7 +48,7 @@ test("world map nations: trade ships and trains round-trip", async () => {
     { difficulty: Difficulty.Impossible },
     [],
     undefined,
-    Config,
+    EngineConfig,
     false,
     nations,
   );

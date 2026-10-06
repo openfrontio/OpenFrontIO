@@ -1,8 +1,8 @@
 import { GameMap } from "@openfront/engine-api/game/GameMap";
 import { MapManifest } from "@openfront/engine-api/game/GameMapLoader";
-import { Config } from "@openfront/engine-lib/configuration/Config";
 import { genTerrainFromBin } from "@openfront/engine-lib/game/TerrainMapLoader";
 import { TileSet } from "@openfront/engine-lib/game/TileSet";
+import { EngineConfig } from "@openfront/engine/configuration/EngineConfig";
 import { FlatBinaryHeap } from "@openfront/engine/execution/utils/FlatBinaryHeap";
 import { Game } from "@openfront/engine/game/Game";
 import { AStar } from "@openfront/engine/pathfinding/algorithms/AStar";
@@ -51,12 +51,12 @@ export async function loadTestMaps(
 
 /**
  * Restores a snapshot of a game built by tests/util/Setup on `mapName`, with
- * the given Config class (TestConfig and its variants override behavior).
+ * the given EngineConfig class (TestConfig and its variants override behavior).
  */
 export async function restoreTestGame(
   bytes: Uint8Array,
   mapName: string,
-  ConfigClass: typeof Config = TestConfig,
+  ConfigClass: typeof EngineConfig = TestConfig,
 ): Promise<Game> {
   const maps = await loadTestMaps(mapName);
   return restoreGame(bytes, {
@@ -66,7 +66,7 @@ export async function restoreTestGame(
 }
 
 /**
- * Snapshot, restore into a fresh game (with the same Config class as the
+ * Snapshot, restore into a fresh game (with the same EngineConfig class as the
  * original), and return both with the bytes.
  */
 export async function roundTrip(game: Game, mapName: string) {
@@ -74,7 +74,7 @@ export async function roundTrip(game: Game, mapName: string) {
   const restored = await restoreTestGame(
     bytes,
     mapName,
-    game.config().constructor as typeof Config,
+    game.config().constructor as typeof EngineConfig,
   );
   return { bytes, restored, again: snapshotGame(restored) };
 }
@@ -149,8 +149,9 @@ export const DERIVED_FIELDS = new Set<string>([
   "nearbyMemo",
   // SharedWaterCache
   "playerWater",
-  // Config
+  // Config / EngineConfig
   "unitInfoCache",
+  "engineUnitInfoCache",
   // executions: basic
   "nbuf", // PlayerExecution scratch neighbor buffers
   "nbuf8",

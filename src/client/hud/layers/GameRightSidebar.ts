@@ -1,6 +1,6 @@
 import { GameType } from "@openfront/engine-api/game/GameTypes";
-import { EventBus } from "@openfront/engine-lib/EventBus";
 import { assetUrl } from "@openfront/shared/AssetUrls";
+import { EventBus } from "@openfront/shared/EventBus";
 import { html, LitElement } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import { createNextLobby } from "../../Api";

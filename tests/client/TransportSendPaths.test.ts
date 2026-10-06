@@ -1,4 +1,4 @@
-import { EventBus } from "@openfront/engine-lib/EventBus";
+import { EventBus } from "@openfront/shared/EventBus";
 import { ServerMessage } from "@openfront/shared/WireSchemas";
 import {
   createGameWireContext,

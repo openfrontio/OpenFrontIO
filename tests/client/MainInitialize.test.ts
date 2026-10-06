@@ -6,7 +6,7 @@
  * cannot be re-defined in the file's single jsdom, so a second import of Main
  * (after vi.resetModules) would throw on the first `customElements.define`.
  */
-import { EventBus } from "@openfront/engine-lib/EventBus";
+import { EventBus } from "@openfront/shared/EventBus";
 import fs from "node:fs";
 import path from "node:path";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";

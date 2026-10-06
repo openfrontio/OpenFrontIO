@@ -46,15 +46,13 @@ const ENGINE_SIDE = new Set<Pkg>(["engine", "engine-lib", "engine-api"]);
 const ENGINE_NPM = new Set(["zod", "zod/v4"]);
 
 /**
- * Known violations, as "<from file> -> <to file>"; never add to it.
- *
- * The replay processor runs createGameRunner in its own worker. It moves
- * behind an engine worker entry with the Node engine host (#1701 follow-up).
+ * Network APIs, matched as any reference (an alias such as `const f = fetch`
+ * counts). The engine is handed everything it needs: maps come in `init`.
  */
-const ALLOWLIST: string[] = [
-  "src/client/replay/processor/ReplayProcessor.ts -> packages/engine/src/GameRunner.ts",
-  "src/client/replay/processor/ReplayProcessor.ts -> packages/engine/src/game/Game.ts",
-];
+const NETWORK = /\b(fetch|XMLHttpRequest|WebSocket|importScripts)\b/g;
+
+/** Known violations, as "<from file> -> <to file>"; never add to it. */
+const ALLOWLIST: string[] = [];
 
 const PACKAGES: Pkg[] = [
   "engine",
@@ -154,9 +152,14 @@ function resolve(
   return { file: target };
 }
 
-function violations(): { edges: Set<string>; determinism: string[] } {
+function violations(): {
+  edges: Set<string>;
+  determinism: string[];
+  io: string[];
+} {
   const edges = new Set<string>();
   const determinism: string[] = [];
+  const io: string[] = [];
   const files = [
     ...PACKAGES.flatMap((pkg) => walk(`packages/${pkg}/src`)),
     ...walk("src/client"),
@@ -182,19 +185,23 @@ function violations(): { edges: Set<string>; determinism: string[] } {
     }
     if (ENGINE_SIDE.has(from)) {
       const text = fs.readFileSync(path.join(ROOT, file), "utf8");
-      for (const m of text.matchAll(/Math\.random|Date\.now|new Date\b/g)) {
-        const line = text.slice(0, m.index).split("\n").length;
-        const src = text.split("\n")[line - 1].trim();
-        if (src.startsWith("//") || src.startsWith("*")) continue;
-        determinism.push(`${file}:${line}: ${m[0]}`);
-      }
+      const find = (re: RegExp, out: string[]) => {
+        for (const m of text.matchAll(re)) {
+          const line = text.slice(0, m.index).split("\n").length;
+          const src = text.split("\n")[line - 1].trim();
+          if (src.startsWith("//") || src.startsWith("*")) continue;
+          out.push(`${file}:${line}: ${m[0]}`);
+        }
+      };
+      find(/Math\.random|Date\.now|new Date\b/g, determinism);
+      find(NETWORK, io);
     }
   }
-  return { edges, determinism };
+  return { edges, determinism, io };
 }
 
 describe("layer boundaries", () => {
-  const { edges, determinism } = violations();
+  const { edges, determinism, io } = violations();
 
   test("no import edges outside the allowed graph", () => {
     const allowed = new Set(ALLOWLIST);
@@ -209,5 +216,27 @@ describe("layer boundaries", () => {
 
   test("engine code uses no wall-clock or unseeded randomness", () => {
     expect(determinism).toEqual([]);
+  });
+
+  test("engine code loads nothing over the network", () => {
+    expect(io).toEqual([]);
+  });
+
+  test("the network check catches calls and references alike", () => {
+    const hits = (src: string) => [...src.matchAll(NETWORK)].length > 0;
+    for (const src of [
+      "fetch(url)",
+      "fetch (url)",
+      "fetch?.(url)",
+      "globalThis.fetch(url)",
+      "const request = fetch; request(url)",
+      "new XMLHttpRequest()",
+      "new WebSocket(url)",
+    ]) {
+      expect(hits(src), src).toBe(true);
+    }
+    for (const src of ["prefetch(url)", "refetchAll()", "fetched += 1"]) {
+      expect(hits(src), src).toBe(false);
+    }
   });
 });

@@ -5,10 +5,10 @@ import {
   Structures,
   UnitType,
 } from "@openfront/engine-api/game/GameTypes";
-import { Config } from "@openfront/engine-lib/configuration/Config";
 import { zInt, zPlayerRef } from "@openfront/engine-lib/snapshot/SnapshotType";
 import { getMode, simpleHash } from "@openfront/engine-lib/Util";
 import { z } from "zod";
+import { EngineConfig } from "../configuration/EngineConfig";
 import { Execution, Game, Player } from "../game/Game";
 import {
   bumpTraversalGeneration,
@@ -27,7 +27,7 @@ const TICKS_PER_CLUSTER_CALC = 20;
 export class PlayerExecution implements Execution {
   private ticksPerClusterCalc = TICKS_PER_CLUSTER_CALC;
 
-  private config: Config;
+  private config: EngineConfig;
   private lastCalc = 0;
   private mg: Game;
   // Direct GameMap reference to skip the Game delegation hop in hot loops.

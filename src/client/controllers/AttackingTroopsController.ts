@@ -9,8 +9,8 @@
  * to what the old CSS transition did.
  */
 import { Cell, PlayerType } from "@openfront/engine-api/game/GameTypes";
-import { EventBus } from "@openfront/engine-lib/EventBus";
 import { renderTroops } from "@openfront/engine-lib/Format";
+import { EventBus } from "@openfront/shared/EventBus";
 import { Controller } from "../Controller";
 import { AlternateViewEvent } from "../InputHandler";
 import { MapRenderer } from "../render/gl";

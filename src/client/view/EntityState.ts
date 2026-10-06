@@ -12,10 +12,10 @@ import {
   TrainType,
 } from "@openfront/engine-api/game/GameTypes";
 import {
+  ATTACK_DELTA_OUTGOING,
   PlayerUpdate,
   UnitUpdate,
 } from "@openfront/engine-api/game/GameUpdates";
-import { ATTACK_DELTA_OUTGOING } from "@openfront/engine-lib/game/GameUpdateUtils";
 import {
   PlayerState,
   PlayerStatic,

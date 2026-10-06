@@ -4,6 +4,7 @@ import {
 } from "@openfront/engine-api/game/GameUpdates";
 import {
   AttackClusteredPositionsResultMessage,
+  InitErrorMessage,
   InitializedMessage,
   MainThreadMessage,
   PlayerActionsErrorMessage,
@@ -11,28 +12,23 @@ import {
   PlayerBorderTilesResultMessage,
   PlayerBuildablesResultMessage,
   PlayerProfileResultMessage,
+  RunTurnsResultMessage,
   SnapshotResultMessage,
   TransportShipSpawnResultMessage,
   WorkerMessage,
 } from "@openfront/engine-api/worker/WorkerMessages";
-import { AssetManifest, buildAssetUrl } from "@openfront/engine-lib/AssetPaths";
-import { FetchGameMapLoader } from "@openfront/engine-lib/game/FetchGameMapLoader";
+import { mapFilesLoader } from "@openfront/engine-lib/game/MapFiles";
 import {
   createGameRunner,
   createGameRunnerFromSnapshot,
   GameRunner,
 } from "../GameRunner";
 
-// Injected by Vite at build time (vite.config.ts `define`).
-declare const __ASSET_MANIFEST__: AssetManifest | undefined;
-
 const ctx: Worker = self as any;
+// Where answers go: the page that started this worker, or the port it
+// handed over (connect).
+let out: Pick<MessagePort, "postMessage"> = ctx;
 let gameRunner: Promise<GameRunner> | null = null;
-// From the init message; workers have no `window` to read it from.
-let cdnBase = "";
-const mapLoader = new FetchGameMapLoader((path) =>
-  buildAssetUrl(`maps/${path}`, __ASSET_MANIFEST__ ?? {}, cdnBase),
-);
 // Yield threshold; not a backlog cap. Used to avoid monopolizing the worker task
 // and flooding the main thread with messages during catch-up.
 const MAX_TICKS_BEFORE_YIELD = 4;
@@ -122,6 +118,17 @@ function sendGameUpdateBatch(gameUpdates: GameUpdateViewData[]): void {
     return;
   }
 
+  out.postMessage(
+    {
+      type: "game_update_batch",
+      gameUpdates,
+    } as WorkerMessage,
+    transfersOf(gameUpdates),
+  );
+}
+
+/** The updates' packed buffers, moved to the receiver instead of copied. */
+function transfersOf(gameUpdates: GameUpdateViewData[]): Transferable[] {
   const transfers: Transferable[] = [];
   for (const gu of gameUpdates) {
     transfers.push(gu.packedTileUpdates.buffer);
@@ -138,29 +145,24 @@ function sendGameUpdateBatch(gameUpdates: GameUpdateViewData[]): void {
       transfers.push(gu.packedNukeImpacts.buffer);
     }
   }
-
-  ctx.postMessage(
-    {
-      type: "game_update_batch",
-      gameUpdates,
-    } as WorkerMessage,
-    transfers,
-  );
+  return transfers;
 }
 
 function sendMessage(message: WorkerMessage) {
-  ctx.postMessage(message);
+  out.postMessage(message);
 }
 
-ctx.addEventListener("message", async (e: MessageEvent<MainThreadMessage>) => {
+async function onMessage(e: MessageEvent<MainThreadMessage>) {
   const message = e.data;
 
   switch (message.type) {
+    case "connect":
+      out = message.port;
+      message.port.onmessage = onMessage;
+      break;
     case "init":
       try {
-        // Set before createGameRunner so map fetches via mapLoader pick up the
-        // CDN base.
-        cdnBase = message.cdnBase;
+        const mapLoader = mapFilesLoader(message.map);
         gameRunner = (
           message.snapshot !== undefined
             ? createGameRunnerFromSnapshot(
@@ -176,13 +178,26 @@ ctx.addEventListener("message", async (e: MessageEvent<MainThreadMessage>) => {
                 mapLoader,
                 gameUpdate,
               )
-        ).then((gr) => {
-          sendMessage({
-            type: "initialized",
-            id: message.id,
-          } as InitializedMessage);
-          return gr;
-        });
+        ).then(
+          (gr) => {
+            sendMessage({
+              type: "initialized",
+              id: message.id,
+            } as InitializedMessage);
+            return gr;
+          },
+          (error: unknown) => {
+            sendMessage({
+              type: "init_error",
+              id: message.id,
+              error: error instanceof Error ? error.message : String(error),
+            } as InitErrorMessage);
+            throw error;
+          },
+        );
+        // The failure is reported above; later messages still see it when
+        // they await gameRunner.
+        gameRunner.catch(() => {});
       } catch (error) {
         console.error("Failed to initialize game runner:", error);
         throw error;
@@ -204,6 +219,36 @@ ctx.addEventListener("message", async (e: MessageEvent<MainThreadMessage>) => {
       }
       break;
 
+    case "run_turns": {
+      if (!gameRunner) {
+        throw new Error("Game runner not initialized");
+      }
+      const gr = await gameRunner;
+      const gameUpdates: GameUpdateViewData[] = [];
+      let error: ErrorUpdate | undefined;
+      tickUpdateSink = (gu) => {
+        if ("updates" in gu) gameUpdates.push(gu);
+        else if ("errMsg" in gu) error = gu;
+      };
+      try {
+        for (const turn of message.turns) gr.addTurn(turn);
+        while (gr.pendingTurns() > 0 && gr.executeNextTick()) {
+          // Each tick's update arrives through tickUpdateSink.
+        }
+      } finally {
+        tickUpdateSink = null;
+      }
+      out.postMessage(
+        {
+          type: "run_turns_result",
+          id: message.id,
+          gameUpdates,
+          error,
+        } as RunTurnsResultMessage,
+        transfersOf(gameUpdates),
+      );
+      break;
+    }
     case "player_actions":
       if (!gameRunner) {
         sendMessage({
@@ -348,7 +393,7 @@ ctx.addEventListener("message", async (e: MessageEvent<MainThreadMessage>) => {
       } catch (error) {
         console.error("Failed to snapshot game:", error);
       }
-      ctx.postMessage(
+      out.postMessage(
         {
           type: "snapshot_result",
           id: message.id,
@@ -361,7 +406,9 @@ ctx.addEventListener("message", async (e: MessageEvent<MainThreadMessage>) => {
     default:
       console.warn("Unknown message :", message);
   }
-});
+}
+
+ctx.addEventListener("message", onMessage);
 
 // Error handling
 ctx.addEventListener("error", (error) => {
