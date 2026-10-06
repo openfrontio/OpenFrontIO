@@ -1,8 +1,8 @@
 /**
  * Golden-value tests for the trade-ship and train economy formulas:
- * `Config.tradeShipGold`, `Config.tradeShipSaturation`,
- * `Config.tradeShipSpawnRate`, `Config.trainGold`, `Config.trainSaturation`
- * and `Config.trainSpawnRate`.
+ * `EngineConfig.tradeShipGold`, `EngineConfig.tradeShipSaturation`,
+ * `EngineConfig.tradeShipSpawnRate`, `EngineConfig.trainGold`, `EngineConfig.trainSaturation`
+ * and `EngineConfig.trainSpawnRate`.
  *
  * These pin the *exact* numeric output of each formula across a grid of
  * inputs, the same way AttackLogicGolden.test.ts pins the attack formula.
@@ -15,11 +15,11 @@
  * TradeTrainScenarios.test.ts for end-to-end numbers on real maps.
  */
 import { GameConfig } from "@openfront/engine-api/Schemas";
-import { Config } from "@openfront/engine-lib/configuration/Config";
+import { EngineConfig } from "@openfront/engine/configuration/EngineConfig";
 import { Player } from "@openfront/engine/game/Game";
 
-function makeConfig(gameConfig: Partial<GameConfig> = {}): Config {
-  return new Config(gameConfig as GameConfig, false);
+function makeConfig(gameConfig: Partial<GameConfig> = {}): EngineConfig {
+  return new EngineConfig(gameConfig as GameConfig, false);
 }
 
 const config = makeConfig();

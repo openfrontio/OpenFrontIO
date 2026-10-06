@@ -1,4 +1,4 @@
-import { AssetManifest } from "@openfront/engine-lib/AssetPaths";
+import { AssetManifest } from "@openfront/shared/AssetPaths";
 import { z } from "zod";
 import { ClusterConfig } from "../ClusterConfig";
 

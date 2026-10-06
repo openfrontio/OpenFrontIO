@@ -8,7 +8,6 @@ import {
   TrainType,
   TrajectoryTile,
   TransportShipState,
-  UnitInfo,
   UnitType,
   WarshipState,
 } from "@openfront/engine-api/game/GameTypes";
@@ -34,7 +33,7 @@ import type {
   SnapshotReader,
   SnapshotWriter,
 } from "../snapshot/SnapshotContext";
-import { AllUnitParams, Player, Unit } from "./Game";
+import { AllUnitParams, EngineUnitInfo, Player, Unit } from "./Game";
 import { GameImpl } from "./GameImpl";
 import { PlayerImpl } from "./PlayerImpl";
 
@@ -241,7 +240,7 @@ export class UnitImpl implements Unit {
     return this._owner;
   }
 
-  info(): UnitInfo {
+  info(): EngineUnitInfo {
     return this.mg.unitInfo(this._type);
   }
 

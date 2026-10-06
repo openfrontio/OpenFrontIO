@@ -1,4 +1,4 @@
-import { buildAssetUrl } from "@openfront/engine-lib/AssetPaths";
+import { buildAssetUrl } from "@openfront/shared/AssetPaths";
 import ejs from "ejs";
 import type { Response } from "express";
 import fs from "fs/promises";
