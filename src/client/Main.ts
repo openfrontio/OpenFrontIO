@@ -122,7 +122,7 @@ import {
 import "./SteamLinkModal";
 import { SteamLinkModal } from "./SteamLinkModal";
 import { steamSDK } from "./SteamSDK";
-import { StoreModal } from "./Store";
+import type { StoreModal } from "./Store";
 import { initTelemetry } from "./Telemetry";
 import { TokenLoginModal } from "./TokenLoginModal";
 import {
@@ -133,6 +133,8 @@ import {
   type TurnstileApi,
   type TurnstileToken,
 } from "./TurnstileToken";
+// Before the first userMeResponse, for the modals that load after it.
+import "./UserMeBroadcast";
 import { UserSettings } from "./UserSettings";
 import "./UsernameInput";
 import { UsernameInput } from "./UsernameInput";
@@ -629,16 +631,11 @@ class Client {
     });
 
     this.storeModal = document.getElementById("page-item-store") as StoreModal;
-    if (!this.storeModal || !(this.storeModal instanceof StoreModal)) {
-      console.warn("Store modal element not found");
-    }
-
-    this.storeModal.refresh();
 
     window.addEventListener("showPage", (e: any) => {
       if (typeof e?.detail === "string" && e.detail === "page-play") {
         setTimeout(() => {
-          this.storeModal.refresh();
+          this.refreshStore();
         }, 50);
       }
     });
@@ -1210,7 +1207,7 @@ class Client {
         alertAndStrip,
         alert: (message: string) => showInGameAlert(message),
         openTokenLogin: (token) => this.tokenLoginModal.openWithToken(token),
-        refreshStore: () => this.storeModal.refresh(),
+        refreshStore: () => this.refreshStore(),
         reload: () => window.location.reload(),
       });
       return;
@@ -1337,7 +1334,10 @@ class Client {
       const affiliateCode = decodedHash.replace("#affiliate=", "");
       strip();
       if (affiliateCode) {
-        this.storeModal?.open({ affiliateCode });
+        loadModal("store-modal").then(
+          () => this.storeModal?.open({ affiliateCode }),
+          (err) => console.error("store-modal failed to load:", err),
+        );
       }
     }
     if (decodedHash.startsWith("#refresh")) {
@@ -1356,6 +1356,12 @@ class Client {
 
   // Returns the requeue mode ("/?requeue" = 1v1, "/?requeue=2v2" = 2v2), or
   // null when the URL has no requeue param.
+  private refreshStore(): void {
+    // The store loads on demand (see LazyModals); until it has, there's
+    // nothing to refresh.
+    if (customElements.get("store-modal")) this.storeModal?.refresh();
+  }
+
   private consumeRequeueUrl(): "1v1" | "2v2" | null {
     const searchParams = new URLSearchParams(window.location.search);
     if (!searchParams.has("requeue")) {

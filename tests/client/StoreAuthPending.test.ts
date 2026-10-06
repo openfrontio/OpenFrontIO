@@ -17,6 +17,15 @@ vi.mock("../../src/client/Cosmetics", async (importOriginal) => ({
   fetchCosmetics: vi.fn(async () => null),
 }));
 
+// What Main had broadcast before the store loaded: nothing, unless a test
+// says otherwise.
+const broadcast = vi.hoisted(() => ({
+  last: null as { response: UserMeResponse | false } | null,
+}));
+vi.mock("../../src/client/UserMeBroadcast", () => ({
+  lastUserMeResponse: () => broadcast.last,
+}));
+
 const steamOnly = {
   user: { steam: { id: "76561198000000000" } },
   player: { publicId: "p", flares: [], currency: { hard: 0, soft: 0 } },
@@ -46,6 +55,7 @@ describe("StoreModal while auth is pending", () => {
 
   afterEach(() => {
     store.remove();
+    broadcast.last = null;
     vi.mocked(fetchCosmetics).mockReset();
     vi.mocked(fetchCosmetics).mockResolvedValue(null);
   });
@@ -141,5 +151,35 @@ describe("StoreModal while auth is pending", () => {
       "store.tribes_login_required",
     );
     expect(signInPrompt()).toBeNull();
+  });
+
+  // The store loads on demand, usually after Main's broadcast went out.
+  it("picks up a broadcast that went out before it loaded", async () => {
+    store.remove();
+    broadcast.last = { response: steamOnly };
+    store = document.createElement("store-modal") as StoreModal;
+    store.inline = true;
+    document.body.appendChild(store);
+    await openTribes();
+    await vi.waitFor(async () => {
+      await settle();
+      expect(tribesPanel()).not.toBeNull();
+    });
+    expect(warningButton()).toBeNull();
+    expect(signInPrompt()).toBeNull();
+  });
+
+  it("shows the warning for a no-session broadcast that went out before it loaded", async () => {
+    store.remove();
+    broadcast.last = { response: false };
+    store = document.createElement("store-modal") as StoreModal;
+    store.inline = true;
+    document.body.appendChild(store);
+    await openTribes();
+    await vi.waitFor(async () => {
+      await settle();
+      expect(warningButton()).not.toBeNull();
+      expect(signInPrompt()).not.toBeNull();
+    });
   });
 });
