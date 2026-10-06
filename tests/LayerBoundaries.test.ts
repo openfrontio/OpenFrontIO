@@ -25,8 +25,10 @@ type Pkg =
   | "server"
   | "resources";
 
-// The only engine file the apps may load: the simulation worker.
+// The only engine files the apps may load: the simulation worker for the
+// client, and the winner replay for the server (src/server/WinnerReplay.ts).
 const ENGINE_ENTRY = "packages/engine/src/worker/Worker.worker.ts";
+const SERVER_ENGINE_ENTRY = "packages/engine/src/WinnerReplay.ts";
 
 const ALLOWED: Record<Pkg, Pkg[]> = {
   "engine-api": ["engine-api", "zbin", "resources"],
@@ -189,6 +191,13 @@ function violations(): {
       if (to === null) continue;
       if (ALLOWED[from].includes(to)) continue;
       if (to === "engine" && from === "client" && r.file === ENGINE_ENTRY) {
+        continue;
+      }
+      if (
+        to === "engine" &&
+        from === "server" &&
+        r.file === SERVER_ENGINE_ENTRY
+      ) {
         continue;
       }
       edges.add(`${file} -> ${r.file}`);
