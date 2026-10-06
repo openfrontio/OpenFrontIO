@@ -48,6 +48,7 @@ import { GameConfig, GameStartInfo } from "@openfront/engine-api/Schemas";
 import { Config } from "@openfront/engine-lib/configuration/Config";
 import { loadTerrainMap } from "@openfront/engine-lib/game/TerrainMapLoader";
 import { createGameRunner } from "@openfront/engine/GameRunner";
+import { loadMapFiles } from "@openfront/shared/GameMapLoader";
 import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
@@ -343,7 +344,7 @@ async function main(): Promise<void> {
   const runner = await createGameRunner(
     gameStart,
     undefined,
-    mapLoader,
+    await loadMapFiles(mapLoader, gameConfig.gameMap, gameConfig.gameMapSize),
     (gu) => {
       if ("errMsg" in gu) {
         fatalError = `${gu.errMsg}\n${gu.stack ?? ""}`;
@@ -357,9 +358,7 @@ async function main(): Promise<void> {
   // real client and worker each load their own copy of the map).
   const clientConfig = new Config(gameConfig, false);
   const clientMapData = await loadTerrainMap(
-    gameConfig.gameMap,
-    gameConfig.gameMapSize,
-    mapLoader,
+    await loadMapFiles(mapLoader, gameConfig.gameMap, gameConfig.gameMapSize),
   );
   const gameView = new GameView(
     {} as unknown as WorkerClient, // only stored; async query methods unused here

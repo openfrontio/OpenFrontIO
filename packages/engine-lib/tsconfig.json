@@ -1,9 +1,10 @@
 {
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
-    // The engine runs in a Web Worker: no DOM (window, document), no Node.
-    "lib": ["ES2022", "WebWorker"],
+    // The engine runs anywhere (worker, Node): only the host APIs in
+    // engine-api/globals.d.ts, no DOM, WebWorker or Node types.
+    "lib": ["ES2022"],
     "types": []
   },
-  "include": ["src/**/*"]
+  "include": ["src/**/*", "../engine-api/globals.d.ts"]
 }

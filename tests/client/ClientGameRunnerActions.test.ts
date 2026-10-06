@@ -26,11 +26,9 @@ vi.mock("../../src/client/Utils", () => ({
   createCanvas: () => document.createElement("canvas"),
   homeHref: () => "/",
 }));
-vi.mock("@openfront/engine-lib/game/TerrainMapLoader", () => ({
-  loadTerrainMap: vi.fn(async () => ({}) as never),
-}));
 vi.mock("../../src/client/TerrainMapFileLoader", () => ({
   terrainMapFileLoader: {},
+  loadCachedTerrainMap: vi.fn(async () => ({}) as never),
 }));
 vi.mock("../../src/client/hud/GameRenderer", () => ({
   createRenderer: vi.fn(),

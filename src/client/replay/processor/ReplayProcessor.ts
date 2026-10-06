@@ -20,21 +20,15 @@
  */
 
 import {
-  GameMapLoader,
-  MapFiles,
-} from "@openfront/engine-api/game/GameMapLoader";
-import {
   ErrorUpdate,
   GameUpdateType,
   GameUpdateViewData,
   HashUpdate,
 } from "@openfront/engine-api/game/GameUpdates";
+import { MapFiles } from "@openfront/engine-api/game/MapFiles";
 import { GameStartInfo, Turn } from "@openfront/engine-api/Schemas";
-import {
-  loadMapFiles,
-  mapFilesLoader,
-} from "@openfront/engine-lib/game/MapFiles";
 import { loadTerrainMap } from "@openfront/engine-lib/game/TerrainMapLoader";
+import { GameMapLoader, loadMapFiles } from "@openfront/shared/GameMapLoader";
 import {
   decompressGameRecord,
   toWireGameStartInfo,
@@ -165,15 +159,9 @@ export async function processGameRecord(
     gameStart.config.gameMap,
     gameStart.config.gameMapSize,
   );
-  // The map as the game starts, built from copies of the files (fresh), so
-  // the engine can take the files over.
-  const { gameMap } = await loadTerrainMap(
-    map.map,
-    map.mapSize,
-    mapFilesLoader(map),
-    false,
-    true,
-  );
+  // The map as the game starts, built from copies of the files, so the
+  // engine can take the files over.
+  const { gameMap } = await loadTerrainMap(structuredClone(map));
   const encoder = new StreamingEncoder({
     mapWidth: gameMap.width(),
     mapHeight: gameMap.height(),
