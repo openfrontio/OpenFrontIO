@@ -982,13 +982,18 @@ class Client {
       // the URL, which would drop the hash before handleUrl reads it.
       const replayViewerID = parseReplayViewerHash(window.location.hash);
       if (replayViewerID !== null) {
-        // Not over a game that's running (or a lobby being waited in): the
-        // viewer would open on top of it. Put the game's URL back.
-        if (this.lobbyHandle !== null) {
+        // Not over a game that's running, a lobby being waited in, or a join
+        // still on its way to one: the viewer would open on top of it. Drop
+        // the hash, so a reload goes back to the game rather than the viewer.
+        // currentUrl is only set once the game starts.
+        if (this.gameUnderway()) {
           console.warn("replay viewer: ignored, a game is running");
-          if (this.currentUrl !== null) {
-            history.replaceState(null, "", this.currentUrl);
-          }
+          history.replaceState(
+            null,
+            "",
+            this.currentUrl ??
+              window.location.pathname + window.location.search,
+          );
           return;
         }
         void this.openReplayViewer(replayViewerID);
@@ -1153,6 +1158,11 @@ class Client {
     hideMenuChrome();
   }
 
+  /** A game or lobby is up, or a join is on its way to one. */
+  private gameUnderway(): boolean {
+    return this.lobbyHandle !== null || this.joinInFlight;
+  }
+
   /**
    * Replace the menu with the replay viewer. Leaving it reloads the page,
    * like leaving a game.
@@ -1172,6 +1182,12 @@ class Client {
       console.error("replay viewer failed to load:", err);
       this.replayViewerID = null;
       window.location.assign(classicReplayHref(gameID));
+      return;
+    }
+    // A join may have started while the chunk loaded.
+    if (this.gameUnderway()) {
+      console.warn("replay viewer: ignored, a game started");
+      this.replayViewerID = null;
       return;
     }
     // The same teardown as starting a game: the featured stream, ads and

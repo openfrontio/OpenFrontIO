@@ -90,6 +90,9 @@ describe("openReplayViewer", () => {
     expect(window.location.hash).toBe("");
     expect(sessionStorage.length).toBe(0);
 
+    // Only that game: another one opened from this page gets the viewer.
+    expect(openReplayViewer("efgh5678", record("test"))).toBe(true);
+
     // Opened from anywhere else, the viewer is tried again.
     history.replaceState(null, "", "/");
     expect(openReplayViewer("abcd1234", record("test"))).toBe(true);
@@ -98,10 +101,12 @@ describe("openReplayViewer", () => {
   test("on a replay shell the client-side replay is the shell's own page", () => {
     // /game/<id> only exists on the game-server origin.
     expect(classicReplayHref("abcd1234")).toMatch(
-      /\/game\/abcd1234\?classic-replay$/,
+      /\/game\/abcd1234\?classic-replay=abcd1234$/,
     );
     shell.host = true;
-    expect(classicReplayHref("abcd1234")).toBe("/abcd1234?classic-replay");
+    expect(classicReplayHref("abcd1234")).toBe(
+      "/abcd1234?classic-replay=abcd1234",
+    );
   });
 });
 

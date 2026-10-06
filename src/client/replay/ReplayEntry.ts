@@ -34,11 +34,15 @@ export function versionedViewerUrl(gameID: string): Promise<string | null> {
  * and JoinLobbyModal would send it straight back to the viewer. It's in the
  * URL rather than in storage, which a tab may not have, so the fallback
  * can't loop. Opening the game from anywhere else tries the viewer again.
+ * The value is the game's ID, so another game opened from this page (typed
+ * into the join modal) still gets the viewer.
  */
 const CLASSIC_PARAM = "classic-replay";
 
-function onClassicReplayPage(): boolean {
-  return new URLSearchParams(window.location.search).has(CLASSIC_PARAM);
+function sentBackToClassic(gameID: string): boolean {
+  return (
+    new URLSearchParams(window.location.search).get(CLASSIC_PARAM) === gameID
+  );
 }
 
 /** Where the "watch the old replay" button goes (the game's page). */
@@ -48,7 +52,7 @@ export function classicReplayHref(gameID: string): string {
   const page = isReplayShellHost(window.location.hostname)
     ? `/${encodeURIComponent(gameID)}`
     : currentPagePath(ClientEnv.gamePath(gameID));
-  return `${page}?${CLASSIC_PARAM}`;
+  return `${page}?${CLASSIC_PARAM}=${encodeURIComponent(gameID)}`;
 }
 
 /** The page URL that opens the viewer for a game. */
@@ -64,7 +68,7 @@ export function replayViewerHref(gameID: string): string {
  */
 export function openReplayViewer(gameID: string, record: GameRecord): boolean {
   if (!new UserSettings().replayViewer()) return false;
-  if (onClassicReplayPage()) return false;
+  if (sentBackToClassic(gameID)) return false;
   handOverRecord(gameID, record);
   const href = replayViewerHref(gameID);
   // Main opens the viewer on hashchange. Setting the same hash again
