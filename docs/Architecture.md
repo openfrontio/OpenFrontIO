@@ -11,7 +11,7 @@ The game is split into four components:
    - `packages/shared` (`@openfront/shared`) - client/server code that is not simulation: wire and HTTP schemas, the binary wire codec, environment, asset URLs and the map loaders (`GameMapLoader`, which also loads thumbnails and layer images for the client).
    - `packages/zbin` (`@openfront/zbin`) - the binary wire format library.
 
-   The client and server import `engine-api`, `engine-lib` and `shared`; only the simulation worker loads `engine`. `engine-api` depends on nothing but zod and zbin. `tests/LayerBoundaries.test.ts` enforces these rules, and `engine`, `engine-api` and `engine-lib` are type-checked without DOM or Node types (`npm run typecheck`).
+   The client and server import `engine-api`, `engine-lib` and `shared`; only the simulation worker loads `engine`. `engine-api` depends on nothing but zod and zbin. `tests/LayerBoundaries.test.ts` enforces these rules, and `engine`, `engine-api` and `engine-lib` are type-checked against ES2022 plus the few host APIs in `packages/engine-api/globals.d.ts` (`console`, `performance`, `TextEncoder`/`TextDecoder`), so a browser or Node API anywhere but the worker entry fails `npm run typecheck`.
 
    The engine is hermetic: it loads nothing itself. Its host (`WorkerClient` for a game, the replay processor for a replay) loads the map files (`loadMapFiles`) and passes them in the worker's `init` message, which hands them to `createGameRunner`, and the boundary test fails on network calls in engine code.
 
