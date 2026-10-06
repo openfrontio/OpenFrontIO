@@ -16,12 +16,12 @@ vi.mock("../../src/client/components/CosmeticPresentation", () => ({
 }));
 vi.mock("../../src/client/components/CosmeticPreview", () => ({}));
 
+import type { TrackFlare } from "@openfront/shared/ApiSchemas";
 import {
   describeFlareCosmetic,
   findFlareCosmetic,
 } from "../../src/client/components/FlareCosmetic";
 import type { ResolvedCosmetic } from "../../src/client/Cosmetics";
-import type { TrackFlare } from "../../src/core/ApiSchemas";
 
 const item = (type: string, key: string): ResolvedCosmetic =>
   ({

@@ -8,13 +8,13 @@ vi.mock("../../src/client/ApiBase", () => ({
   getApiBase: () => "https://api.test",
 }));
 
+import type { GameXpResponse } from "@openfront/shared/ApiSchemas";
 import { getAuthHeader } from "../../src/client/Auth";
 import {
   type GameXpFetchResult,
   pollGameXp,
   prestigeMe,
 } from "../../src/client/ProgressionApi";
-import type { GameXpResponse } from "../../src/core/ApiSchemas";
 
 const ineligible: GameXpResponse = {
   gameId: "g1",

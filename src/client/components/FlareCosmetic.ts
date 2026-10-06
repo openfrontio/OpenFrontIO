@@ -1,5 +1,5 @@
+import type { TrackFlare } from "@openfront/shared/ApiSchemas";
 import { html, TemplateResult } from "lit";
-import type { TrackFlare } from "../../core/ApiSchemas";
 import {
   fetchCosmetics,
   resolveCosmetics,

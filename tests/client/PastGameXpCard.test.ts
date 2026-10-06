@@ -5,11 +5,11 @@ vi.mock("../../src/client/Utils", () => ({
     params ? `${key}:${JSON.stringify(params)}` : key,
 }));
 
+import type { GameXpEligible } from "@openfront/shared/ApiSchemas";
 import {
   PastGameXpCard,
   type PastGameXpView,
 } from "../../src/client/components/PastGameXpCard";
-import type { GameXpEligible } from "../../src/core/ApiSchemas";
 
 if (!customElements.get("past-game-xp-card")) {
   customElements.define("past-game-xp-card", PastGameXpCard);

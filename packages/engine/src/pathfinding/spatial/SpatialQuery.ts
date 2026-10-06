@@ -1,0 +1,315 @@
+import { TileRef } from "@openfront/engine-api/game/GameMap";
+import { TerraNullius } from "@openfront/engine-api/game/GameTypes";
+import { Game, Player } from "../../game/Game";
+import {
+  bumpTraversalGeneration,
+  tileTraversalScratch,
+} from "../../game/TileTraversalScratch";
+import { DebugSpan } from "../../utilities/DebugSpan";
+import { PathFinding } from "../PathFinder";
+import { AStarWaterBounded } from "../algorithms/AStar.WaterBounded";
+
+type Owner = Player | TerraNullius;
+
+const REFINE_MAX_SEARCH_AREA = 100 * 100;
+
+// Water components touching a player's shoreline, memoised per player. Valid
+// while neither the player's tiles (hence border) nor the map's water changed.
+// Rebuilding it scanned every border tile on every transport-ship query, which
+// nations issue many times per tick.
+interface ReachableCache {
+  tileVersion: number;
+  waterVersion: number;
+  components: Set<number>;
+}
+const reachableComponents = new WeakMap<Player, ReachableCache>();
+
+export class SpatialQuery {
+  private boundedAStar: AStarWaterBounded | null = null;
+
+  constructor(private game: Game) {}
+
+  private getBoundedAStar(): AStarWaterBounded {
+    this.boundedAStar ??= new AStarWaterBounded(
+      this.game.map(),
+      REFINE_MAX_SEARCH_AREA,
+    );
+
+    return this.boundedAStar;
+  }
+
+  /**
+   * Find nearest tile matching predicate using BFS traversal.
+   * Uses Manhattan distance filter, ignores terrain barriers.
+   */
+  private bfsNearest(
+    from: TileRef,
+    maxDist: number,
+    predicate: (t: TileRef) => boolean,
+  ): TileRef | null {
+    const map = this.game.map();
+    // `from` can trace back to a network intent. `visited` is a Uint32Array, so
+    // a fractional ref makes `visited[t] = gen` a silent no-op that always reads
+    // back undefined — the dedup fails and the stack grows until it OOMs. Every
+    // caller is individually guarded today; this keeps the trap from being
+    // re-armed by a future one.
+    if (!map.isValidRef(from)) return null;
+    const scratch = tileTraversalScratch(this.game);
+    const gen = bumpTraversalGeneration(scratch);
+    const visited = scratch.visited;
+    const stack = scratch.stack;
+    stack.length = 0;
+
+    // Strict < keeps the first candidate at the minimum distance, so the
+    // winner depends only on the deterministic traversal order (LIFO with
+    // neighbors visited in the shared N, S, W, E order).
+    let best: TileRef | null = null;
+    let bestDist = Infinity;
+
+    const mark = (t: TileRef) => {
+      visited[t] = gen;
+      stack.push(t);
+      if (predicate(t)) {
+        const dist = map.manhattanDist(from, t);
+        if (dist < bestDist) {
+          best = t;
+          bestDist = dist;
+        }
+      }
+    };
+
+    if (maxDist >= 0) {
+      mark(from);
+    }
+    const visit = (n: TileRef) => {
+      if (visited[n] !== gen && map.manhattanDist(from, n) <= maxDist) {
+        mark(n);
+      }
+    };
+    while (stack.length > 0) {
+      const curr = stack.pop()!;
+      map.forEachNeighbor(curr, visit);
+    }
+
+    return best;
+  }
+
+  /**
+   * Find closest shore tile by land BFS.
+   * Works for both players and terra nullius.
+   */
+  closestShore(
+    owner: Owner,
+    tile: TileRef,
+    maxDist: number = 50,
+  ): TileRef | null {
+    const gm = this.game;
+    const ownerId = owner.smallID();
+
+    const isValidTile = (t: TileRef) => {
+      if (!gm.isShore(t) || !gm.isLand(t)) return false;
+      const tOwner = gm.ownerID(t);
+      return tOwner === ownerId;
+    };
+
+    return this.bfsNearest(tile, maxDist, isValidTile);
+  }
+
+  /**
+   * Find the closest shore tile owned by `targetOwner` near `tile` that sits on
+   * a water component reachable from `attacker`'s own shoreline.
+   *
+   * Unlike {@link closestShore}, this skips shores that only border a
+   * disconnected water body (e.g. an inland lake) that the attacker's boats
+   * could never traverse. Returns null when no reachable target shore exists
+   * within `maxDist`.
+   */
+  closestReachableShore(
+    targetOwner: Owner,
+    attacker: Player,
+    tile: TileRef,
+    maxDist: number = 50,
+  ): TileRef | null {
+    const gm = this.game;
+    const targetId = targetOwner.smallID();
+
+    // Water components adjacent to the attacker's own shoreline.
+    const reachable = this.reachableComponents(attacker);
+    if (reachable.size === 0) return null;
+
+    const isValidTile = (t: TileRef) => {
+      if (!gm.isShore(t) || !gm.isLand(t)) return false;
+      if (gm.ownerID(t) !== targetId) return false;
+      const component = gm.getWaterComponent(t);
+      return component !== null && reachable.has(component);
+    };
+
+    // The start tile is at distance 0, so when it qualifies no BFS can beat
+    // it (bfsNearest keeps the first candidate at the minimum distance, and
+    // marks `tile` first). This is the common case when a caller re-checks a
+    // landing tile it already found.
+    if (maxDist >= 0 && gm.map().isValidRef(tile) && isValidTile(tile)) {
+      return tile;
+    }
+
+    return this.bfsNearest(tile, maxDist, isValidTile);
+  }
+
+  private reachableComponents(attacker: Player): Set<number> {
+    const gm = this.game;
+    const tileVersion = attacker.tileChangeVersion();
+    const waterVersion = gm.map().waterVersion();
+    const cached = reachableComponents.get(attacker);
+    if (
+      cached !== undefined &&
+      cached.tileVersion === tileVersion &&
+      cached.waterVersion === waterVersion
+    ) {
+      return cached.components;
+    }
+    const components = new Set<number>();
+    attacker.borderTiles().forEach((t) => {
+      if (!gm.isShore(t) || !gm.isLand(t)) return;
+      const component = gm.getWaterComponent(t);
+      if (component !== null) components.add(component);
+    });
+    reachableComponents.set(attacker, {
+      tileVersion,
+      waterVersion,
+      components,
+    });
+    return components;
+  }
+
+  /**
+   * Find closest shore tile by water pathfinding.
+   * Returns null for terra nullius (no borderTiles).
+   */
+  closestShoreByWater(owner: Owner, target: TileRef): TileRef | null {
+    return DebugSpan.wrap("SpatialQuery.closestShoreByWater", () => {
+      if (!owner.isPlayer()) return null;
+
+      const gm = this.game;
+      const player = owner as Player;
+
+      // Target must be water or shore (land adjacent to water)
+      if (!gm.isWater(target) && !gm.isShore(target)) return null;
+
+      const targetComponent = gm.getWaterComponent(target);
+      if (targetComponent === null) return null;
+
+      const isValidTile = (t: TileRef) => {
+        if (!gm.isShore(t) || !gm.isLand(t)) return false;
+        const tComponent = gm.getWaterComponent(t);
+        return tComponent === targetComponent;
+      };
+
+      // Single pass over the border set (Array.from + filter walked it twice
+      // and allocated a full copy).
+      const shores: TileRef[] = [];
+      player.borderTiles().forEach((t) => {
+        if (isValidTile(t)) shores.push(t);
+      });
+      if (shores.length === 0) return null;
+
+      const path = PathFinding.Water(gm).findPath(shores, target);
+      if (!path || path.length === 0) return null;
+
+      return DebugSpan.wrap("SpatialQuery.refineStartTile", () =>
+        this.refineStartTile(path, shores, gm),
+      );
+    });
+  }
+
+  private refineStartTile(
+    path: TileRef[],
+    shores: TileRef[],
+    gm: Game,
+  ): TileRef {
+    const CANDIDATE_RADIUS = 20;
+    const MIN_WAYPOINT_DIST = 50;
+    const MAX_WAYPOINT_DIST = 200;
+    const PADDING = 10;
+
+    if (path.length <= MIN_WAYPOINT_DIST) {
+      return path[0];
+    }
+
+    const bestTile = path[0];
+    const map = gm.map();
+
+    const candidates = shores.filter(
+      (s) => map.manhattanDist(s, bestTile) <= CANDIDATE_RADIUS,
+    );
+
+    if (candidates.length <= 1) return bestTile;
+
+    // Precompute candidate bounds
+    let candMinX = map.x(candidates[0]);
+    let candMaxX = candMinX;
+    let candMinY = map.y(candidates[0]);
+    let candMaxY = candMinY;
+
+    for (let i = 1; i < candidates.length; i++) {
+      const sx = map.x(candidates[i]);
+      const sy = map.y(candidates[i]);
+      candMinX = Math.min(candMinX, sx);
+      candMaxX = Math.max(candMaxX, sx);
+      candMinY = Math.min(candMinY, sy);
+      candMaxY = Math.max(candMaxY, sy);
+    }
+
+    // Binary search for furthest waypoint that keeps bounds within limit
+    let lo = MIN_WAYPOINT_DIST;
+    let hi = Math.min(MAX_WAYPOINT_DIST, path.length - 1);
+    let bestWaypointIdx = lo;
+
+    for (let i = 0; i < 5 && lo <= hi; i++) {
+      const mid = (lo + hi) >> 1;
+      const wp = path[mid];
+      const wpX = map.x(wp);
+      const wpY = map.y(wp);
+
+      const minX = Math.min(candMinX, wpX) - PADDING;
+      const maxX = Math.max(candMaxX, wpX) + PADDING;
+      const minY = Math.min(candMinY, wpY) - PADDING;
+      const maxY = Math.max(candMaxY, wpY) + PADDING;
+
+      const area = (maxX - minX + 1) * (maxY - minY + 1);
+      if (area <= REFINE_MAX_SEARCH_AREA) {
+        bestWaypointIdx = mid;
+        lo = mid + 1;
+      } else {
+        hi = mid - 1;
+      }
+    }
+
+    const waypoint = path[bestWaypointIdx];
+    const wpX = map.x(waypoint);
+    const wpY = map.y(waypoint);
+
+    const bounds = {
+      minX: Math.max(0, Math.min(candMinX, wpX) - PADDING),
+      maxX: Math.min(map.width() - 1, Math.max(candMaxX, wpX) + PADDING),
+      minY: Math.max(0, Math.min(candMinY, wpY) - PADDING),
+      maxY: Math.min(map.height() - 1, Math.max(candMaxY, wpY) + PADDING),
+    };
+
+    const boundsArea =
+      (bounds.maxX - bounds.minX + 1) * (bounds.maxY - bounds.minY + 1);
+    if (boundsArea > REFINE_MAX_SEARCH_AREA) return bestTile;
+
+    const refinedPath = this.getBoundedAStar().searchBounded(
+      candidates,
+      waypoint,
+      bounds,
+    );
+
+    DebugSpan.set("$candidates", () => candidates);
+    DebugSpan.set("$refinedPath", () => refinedPath);
+    DebugSpan.set("$originalBestTile", () => bestTile);
+    DebugSpan.set("$newBestTile", () => refinedPath?.[0] ?? bestTile);
+
+    return refinedPath?.[0] ?? bestTile;
+  }
+}

@@ -1,14 +1,14 @@
-import { base64url } from "jose";
-import { html, LitElement, nothing, PropertyValues } from "lit";
-import { customElement, property, state } from "lit/decorators.js";
 import {
   Effect,
   isNukeExplosionEffect,
   NukeExplosionAttributes,
   Pattern,
   Skin,
-} from "../../../core/CosmeticSchemas";
-import { decodePatternData } from "../../../core/PatternDecoder";
+} from "@openfront/shared/CosmeticSchemas";
+import { decodePatternData } from "@openfront/shared/PatternDecoder";
+import { base64url } from "jose";
+import { html, LitElement, nothing, PropertyValues } from "lit";
+import { customElement, property, state } from "lit/decorators.js";
 import { ResolvedCosmetic } from "../../Cosmetics";
 import {
   CosmeticPreviewConfig,

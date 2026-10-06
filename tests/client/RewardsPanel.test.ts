@@ -15,8 +15,8 @@ vi.mock("../../src/client/InGameModal", () => ({
   showInGameAlert: vi.fn(),
 }));
 
+import type { Reward } from "@openfront/shared/ApiSchemas";
 import { RewardsPanel } from "../../src/client/components/RewardsPanel";
-import type { Reward } from "../../src/core/ApiSchemas";
 
 if (!customElements.get("rewards-panel")) {
   customElements.define("rewards-panel", RewardsPanel);

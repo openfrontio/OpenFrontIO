@@ -1,3 +1,4 @@
+import type { UserMeResponse } from "@openfront/shared/ApiSchemas";
 import { describe, expect, it } from "vitest";
 import {
   parseSteamGrantStore,
@@ -11,7 +12,6 @@ import {
   steamGrantWelcomeDue,
   type SteamGrantStore,
 } from "../../src/client/SteamGrantNotices";
-import type { UserMeResponse } from "../../src/core/ApiSchemas";
 
 const ME = "player-public-id";
 const NOW = Date.parse("2026-09-19T12:00:00.000Z");

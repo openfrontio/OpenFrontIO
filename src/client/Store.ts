@@ -1,8 +1,15 @@
+import {
+  isGrantedSubscription,
+  UserMeResponse,
+} from "@openfront/shared/ApiSchemas";
+import {
+  CosmeticPack,
+  Cosmetics,
+  Product,
+} from "@openfront/shared/CosmeticSchemas";
 import type { PropertyValues, TemplateResult } from "lit";
 import { html } from "lit";
 import { customElement, state } from "lit/decorators.js";
-import { isGrantedSubscription, UserMeResponse } from "../core/ApiSchemas";
-import { CosmeticPack, Cosmetics, Product } from "../core/CosmeticSchemas";
 import { BaseModal } from "./components/BaseModal";
 import "./components/CosmeticCard";
 import { cosmeticSelectionLabel } from "./components/CosmeticPresentation";

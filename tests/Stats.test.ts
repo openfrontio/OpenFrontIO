@@ -1,18 +1,17 @@
 import {
-  Game,
-  Player,
   PlayerInfo,
   PlayerType,
   UnitType,
-} from "../src/core/game/Game";
-import { Stats } from "../src/core/game/Stats";
-import { StatsImpl } from "../src/core/game/StatsImpl";
+} from "@openfront/engine-api/game/GameTypes";
 import {
   ATTACK_INDEX_MAX_RECV,
   ATTACK_INDEX_RECV,
   PlayerStats,
-} from "../src/core/StatsSchemas";
-import { replacer } from "../src/core/Util";
+} from "@openfront/engine-api/StatsSchemas";
+import { Game, Player } from "@openfront/engine/game/Game";
+import { Stats } from "@openfront/engine/game/Stats";
+import { StatsImpl } from "@openfront/engine/game/StatsImpl";
+import { replacer } from "@openfront/shared/SharedUtil";
 import { setup } from "./util/Setup";
 
 let stats: Stats;

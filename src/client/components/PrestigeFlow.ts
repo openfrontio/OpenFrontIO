@@ -1,3 +1,9 @@
+import type {
+  PrestigeResponse,
+  Progress,
+  ProgressionConfig,
+  TrackFlare,
+} from "@openfront/shared/ApiSchemas";
 import {
   html,
   LitElement,
@@ -7,12 +13,6 @@ import {
   TemplateResult,
 } from "lit";
 import { customElement, state } from "lit/decorators.js";
-import type {
-  PrestigeResponse,
-  Progress,
-  ProgressionConfig,
-  TrackFlare,
-} from "../../core/ApiSchemas";
 import {
   clampPrestige,
   MAX_PRESTIGE,

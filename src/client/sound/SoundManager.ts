@@ -1,6 +1,6 @@
+import { EventBus } from "@openfront/engine-lib/EventBus";
+import { assetUrl } from "@openfront/shared/AssetUrls";
 import { Howl } from "howler";
-import { assetUrl } from "../../core/AssetUrls";
-import { EventBus } from "../../core/EventBus";
 import { AudioMixer, PlayableCategory } from "./AudioMixer";
 import {
   AmbienceTrack,

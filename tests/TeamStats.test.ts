@@ -1,11 +1,11 @@
+import { PlayerType } from "@openfront/engine-api/game/GameTypes";
 import { columnById } from "../src/client/hud/layers/lib/StatsColumns";
 import {
   aggregateTeamValues,
   TeamStats,
 } from "../src/client/hud/layers/TeamStats";
+import { UserSettings } from "../src/client/UserSettings";
 import type { GameView, PlayerView } from "../src/client/view";
-import { PlayerType } from "../src/core/game/Game";
-import { UserSettings } from "../src/core/game/UserSettings";
 import { playerInfo, setup } from "./util/Setup";
 
 describe("aggregateTeamValues", () => {

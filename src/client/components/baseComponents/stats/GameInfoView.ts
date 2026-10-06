@@ -1,4 +1,10 @@
 import {
+  GameMode,
+  GameType,
+  type GameMapType,
+} from "@openfront/engine-api/game/GameTypes";
+import { type GameEndInfo } from "@openfront/shared/WireSchemas";
+import {
   html,
   LitElement,
   nothing,
@@ -6,12 +12,6 @@ import {
   type TemplateResult,
 } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
-import { type GameEndInfo } from "../../../../core/Schemas";
-import {
-  GameMode,
-  GameType,
-  type GameMapType,
-} from "../../../../core/game/Game";
 import { fetchGameById } from "../../../Api";
 import { terrainMapFileLoader } from "../../../TerrainMapFileLoader";
 import { getMapName, renderDuration, translateText } from "../../../Utils";

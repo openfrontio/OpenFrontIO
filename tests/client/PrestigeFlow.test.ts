@@ -17,6 +17,12 @@ vi.mock("../../src/client/ProgressionApi", () => ({
   fetchProgressionConfig: vi.fn(async () => false),
 }));
 
+import type {
+  PrestigeResponse,
+  Progress,
+  ProgressionConfig,
+  TrackFlare,
+} from "@openfront/shared/ApiSchemas";
 import { html } from "lit";
 import type { FlareCosmeticView } from "../../src/client/components/FlareCosmetic";
 import {
@@ -26,12 +32,6 @@ import {
   PrestigeFlow,
 } from "../../src/client/components/PrestigeFlow";
 import { ProfileCard } from "../../src/client/components/ProfileCard";
-import type {
-  PrestigeResponse,
-  Progress,
-  ProgressionConfig,
-  TrackFlare,
-} from "../../src/core/ApiSchemas";
 
 if (!customElements.get("prestige-flow")) {
   customElements.define("prestige-flow", PrestigeFlow);
