@@ -46,6 +46,27 @@ describe("HostLobbyModal player limit from lobby info", () => {
     expect(modal.playerLimitValue).toBe(40);
   });
 
+  it("keeps an edit the host made before the first lobby info", () => {
+    // That broadcast can still carry the old cap; adopting it would make the
+    // next settings change send the old cap back.
+    const modal = new HostLobbyModal() as any;
+    modal.lobbyId = LOBBY;
+    modal.putGameConfig = vi.fn();
+    modal.handlePlayerLimitToggle(true, 40);
+    modal.handleLobbyInfo(lobbyInfo(30));
+    expect(modal.playerLimit).toBe(true);
+    expect(modal.playerLimitValue).toBe(40);
+  });
+
+  it("keeps the host switching the limit off before the first lobby info", () => {
+    const modal = new HostLobbyModal() as any;
+    modal.lobbyId = LOBBY;
+    modal.putGameConfig = vi.fn();
+    modal.handlePlayerLimitToggle(false, undefined);
+    modal.handleLobbyInfo(lobbyInfo(30));
+    expect(modal.playerLimit).toBe(false);
+  });
+
   it("leaves the card alone for a lobby without a cap", () => {
     const modal = new HostLobbyModal() as any;
     modal.lobbyId = LOBBY;
@@ -99,5 +120,19 @@ describe("HostLobbyModal player limit from lobby info", () => {
     modal.lobbyId = LOBBY;
     modal.handleLobbyInfo(lobbyInfo(30, "OTHER999"));
     expect(modal.playerLimit).toBe(false);
+  });
+});
+
+// The listing dialog's minimum cap is one above the seated players; spectators
+// take no seat (the server's listing check doesn't count them either).
+describe("HostLobbyModal seated player count", () => {
+  it("leaves spectators out", () => {
+    const modal = new HostLobbyModal() as any;
+    modal.clients = [
+      { clientID: "a", username: "a" },
+      { clientID: "b", username: "b", spectator: false },
+      { clientID: "c", username: "c", spectator: true },
+    ];
+    expect(modal.seatedPlayerCount()).toBe(2);
   });
 });

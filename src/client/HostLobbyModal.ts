@@ -150,8 +150,9 @@ export class HostLobbyModal extends BaseModal {
   // showing the opposite of the real listed state.
   private listingRequestInFlight = false;
 
-  // The lobby whose player limit has been read from lobby info. Read once per
-  // lobby, so later broadcasts don't snap the field back while the host edits.
+  // The lobby whose player limit is settled: read from its first lobby info,
+  // or edited by the host before that arrived. Either way later broadcasts
+  // don't snap the field back.
   private playerLimitLoadedFor: string | null = null;
 
   private readonly handleLobbyInfo = (event: LobbyInfoEvent) => {
@@ -794,7 +795,7 @@ export class HostLobbyModal extends BaseModal {
 
         ${this.showListLobbyDialog
           ? html`<list-lobby-dialog
-              .currentPlayers=${this.clients.length}
+              .currentPlayers=${this.seatedPlayerCount()}
               .suggestedMaxPlayers=${this.playerLimit
                 ? this.playerLimitValue
                 : undefined}
@@ -1472,6 +1473,7 @@ export class HostLobbyModal extends BaseModal {
   ) => {
     this.playerLimit = checked;
     this.playerLimitValue = toOptionalNumber(value);
+    this.markPlayerLimitSettled();
     this.putGameConfig();
   };
 
@@ -1486,8 +1488,21 @@ export class HostLobbyModal extends BaseModal {
       return;
     }
     this.playerLimitValue = value;
+    this.markPlayerLimitSettled();
     this.putGameConfig();
   };
+
+  // The host's own edit is what the card should show from now on: a lobby
+  // info still carrying the old cap must not replace it.
+  private markPlayerLimitSettled() {
+    this.playerLimitLoadedFor = this.lobbyId;
+  }
+
+  // Players holding a seat. Spectators take none, matching the server's
+  // listing check.
+  private seatedPlayerCount(): number {
+    return this.clients.filter((c) => c.spectator !== true).length;
+  }
 
   private handleStartDelayValueKeyDown = (e: KeyboardEvent) => {
     preventDisallowedKeys(e, ["-", "+", "e", "E", "."]);

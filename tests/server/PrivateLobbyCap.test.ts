@@ -112,6 +112,36 @@ describe("private lobby player cap", () => {
     expect(game.gameInfo().gameConfig?.maxPlayers).toBe(20);
   });
 
+  it("starts a host-less lobby when the admin bot lowers its cap to the seated count", () => {
+    // The full check otherwise only runs on a join, so the lobby would sit
+    // there full until someone else tried to join.
+    const game = harnessGame({
+      config: { gameType: GameType.Private, maxPlayers: 10 },
+    });
+    game.joinClient(makeClient("p1"));
+    game.joinClient(makeClient("p2"));
+    expect(game.phase()).toBe(GamePhase.Lobby);
+    const status = game.handleIntent(
+      { type: "update_game_config", config: { maxPlayers: 2 } },
+      {
+        clientID: cid("bot"),
+        isLobbyCreator: false,
+        isAdmin: true,
+        isAdminBot: true,
+      },
+    ).status;
+    expect(status).toBe(200);
+    expect(game.phase()).toBe(GamePhase.Active);
+  });
+
+  it("does not start an unlisted host lobby when its cap is lowered to the seated count", () => {
+    const game = makeGame();
+    game.joinClient(makeClient("p1"));
+    game.joinClient(makeClient("p2"));
+    expect(setCap(game, 2)).toBe(200);
+    expect(game.phase()).toBe(GamePhase.Lobby);
+  });
+
   it("still auto-starts a host-less lobby (admin bot, matchmaking) when full", () => {
     const game = harnessGame({
       config: { gameType: GameType.Private, maxPlayers: 1 },
