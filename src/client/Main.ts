@@ -66,13 +66,13 @@ import {
 import { GameStartingModal } from "./GameStartingModal";
 import type { HelpModal } from "./HelpModal";
 import "./HomepagePromos";
-import { HostLobbyModal as HostPrivateLobbyModal } from "./HostLobbyModal";
+import type { HostLobbyModal as HostPrivateLobbyModal } from "./HostLobbyModal";
 import { showInGameAlert, showInGameConfirm } from "./InGameModal";
-import { JoinLobbyModal } from "./JoinLobbyModal";
+import type { JoinLobbyModal } from "./JoinLobbyModal";
 import "./LangSelector";
 import { LangSelector } from "./LangSelector";
 import { initLayout } from "./Layout";
-import { loadModal, prefetchModals } from "./LazyModals";
+import { loadModal, prefetchModals, whenModalLoaded } from "./LazyModals";
 import {
   SendKickPlayerIntentEvent,
   SendToggleGameStartTimer,
@@ -102,8 +102,7 @@ import {
   setServerListInGame,
   startServerListPolling,
 } from "./ServerList";
-import "./SinglePlayerModal";
-import { SinglePlayerModal } from "./SinglePlayerModal";
+import type { SinglePlayerModal } from "./SinglePlayerModal";
 import {
   parseSteamGrantStore,
   recordSteamGrant,
@@ -164,7 +163,6 @@ import {
 } from "./utilities/DisableSafariPinchZoom";
 
 import "./components/DesktopNavBar";
-import "./components/DetailedGameViewModal";
 import "./components/Footer";
 import "./components/MainLayout";
 import "./components/MobileNavBar";
@@ -625,9 +623,11 @@ class Client {
         hlpModal.close();
       }
       if (this.usernameInput && !this.usernameInput.canPlay()) return;
-      void (
-        document.querySelector("single-player-modal") as SinglePlayerModal
-      )?.startTutorial();
+      whenModalLoaded("single-player-modal", () => {
+        void (
+          document.querySelector("single-player-modal") as SinglePlayerModal
+        )?.startTutorial();
+      });
     });
 
     this.storeModal = document.getElementById("page-item-store") as StoreModal;
@@ -923,22 +923,29 @@ class Client {
       this.desktopUpdateState = state;
     });
 
+    // Both load on demand (see LazyModals). whenDefined resolves while a
+    // modal's module is still evaluating, so they have the bus before
+    // whatever loaded them can open them.
     this.hostModal = document.querySelector(
       "host-lobby-modal",
     ) as HostPrivateLobbyModal;
-    if (!this.hostModal || !(this.hostModal instanceof HostPrivateLobbyModal)) {
+    if (!this.hostModal) {
       console.warn("Host private lobby modal element not found");
     } else {
-      this.hostModal.eventBus = this.eventBus;
+      void customElements.whenDefined("host-lobby-modal").then(() => {
+        this.hostModal.eventBus = this.eventBus;
+      });
     }
 
     this.joinModal = document.querySelector(
       "join-lobby-modal",
     ) as JoinLobbyModal;
-    if (!this.joinModal || !(this.joinModal instanceof JoinLobbyModal)) {
+    if (!this.joinModal) {
       console.warn("Join lobby modal element not found");
     } else {
-      this.joinModal.eventBus = this.eventBus;
+      void customElements.whenDefined("join-lobby-modal").then(() => {
+        this.joinModal.eventBus = this.eventBus;
+      });
     }
 
     // Attempt to join lobby from the current URL once the document is ready.
@@ -990,7 +997,7 @@ class Client {
       }
 
       // Reset the UI to its initial state.
-      this.joinModal?.close();
+      this.loadedJoinModal()?.close();
 
       onJoinChanged();
     };
@@ -1140,12 +1147,6 @@ class Client {
   }
 
   private async handleUrl() {
-    // Wait for modal custom elements to be defined
-    await Promise.all([
-      customElements.whenDefined("join-lobby-modal"),
-      customElements.whenDefined("host-lobby-modal"),
-    ]);
-
     // Check if CrazyGames SDK is enabled first (no hash needed in CrazyGames)
     if (crazyGamesSDK.isOnCrazyGames()) {
       const lobbyId = await crazyGamesSDK.getInviteGameId();
@@ -1155,8 +1156,10 @@ class Client {
         // Wait 2 seconds to ensure all elements are actually loaded,
         // On low end-chromebooks the join modal was not registered in time.
         await new Promise((resolve) => setTimeout(resolve, 2000));
-        window.showPage?.("page-join-lobby");
-        this.joinModal?.open({ lobbyId });
+        whenModalLoaded("join-lobby-modal", () => {
+          window.showPage?.("page-join-lobby");
+          this.joinModal?.open({ lobbyId });
+        });
         console.log(`CrazyGames: joining lobby ${lobbyId} from invite param`);
         return;
       }
@@ -1166,7 +1169,7 @@ class Client {
         console.log(
           `CrazyGames: joining instant multiplayer lobby from CrazyGames`,
         );
-        this.hostModal.open();
+        whenModalLoaded("host-lobby-modal", () => this.hostModal.open());
       }
     });
 
@@ -1258,8 +1261,10 @@ class Client {
     if (isReplayShellHost(window.location.hostname)) {
       const replayGameId = window.location.pathname.slice(1);
       if (GAME_ID_REGEX.test(replayGameId)) {
-        window.showPage?.("page-join-lobby");
-        this.joinModal.open({ lobbyId: replayGameId });
+        whenModalLoaded("join-lobby-modal", () => {
+          window.showPage?.("page-join-lobby");
+          this.joinModal.open({ lobbyId: replayGameId });
+        });
         console.log(`joining replay ${replayGameId}`);
         return;
       }
@@ -1313,7 +1318,9 @@ class Client {
         // open() reveals the inline page itself (it calls showPage internally).
         // Calling showPage first would open the modal once with no args and
         // spuriously create a lobby before this attach call runs.
-        this.hostModal.open({ existingLobbyId: lobbyId });
+        whenModalLoaded("host-lobby-modal", () =>
+          this.hostModal.open({ existingLobbyId: lobbyId }),
+        );
         console.log(`reopening host lobby ${lobbyId}`);
         return;
       }
@@ -1322,8 +1329,10 @@ class Client {
       const spectate = new URLSearchParams(window.location.search).has(
         "spectate",
       );
-      window.showPage?.("page-join-lobby");
-      this.joinModal.open({ lobbyId, spectate });
+      whenModalLoaded("join-lobby-modal", () => {
+        window.showPage?.("page-join-lobby");
+        this.joinModal.open({ lobbyId, spectate });
+      });
       console.log(`${spectate ? "spectating" : "joining"} lobby ${lobbyId}`);
       return;
     }
@@ -1352,6 +1361,16 @@ class Client {
         }),
       );
     }
+  }
+
+  // The lobby modals load on demand (see LazyModals); until one has, it
+  // can't be open, so there's nothing to close.
+  private loadedJoinModal(): JoinLobbyModal | null {
+    return customElements.get("join-lobby-modal") ? this.joinModal : null;
+  }
+
+  private loadedHostModal(): HostPrivateLobbyModal | null {
+    return customElements.get("host-lobby-modal") ? this.hostModal : null;
   }
 
   private refreshStore(): void {
@@ -1437,8 +1456,8 @@ class Client {
     // "joined, waiting", and HostLobbyModal after the server lobby exists.
     // Refusing without closing those would leave the UI claiming a lobby the
     // client never entered, with the game starting without them.
-    this.joinModal?.close();
-    this.hostModal?.close();
+    this.loadedJoinModal()?.close();
+    this.loadedHostModal()?.close();
     // Matchmaking dispatches its own join once the server matches it, so a
     // refusal here leaves its modal sitting on "waiting for a game" over a
     // match that will never be entered. close() is the same teardown its Back
@@ -1523,7 +1542,12 @@ class Client {
       setInGameSignal(false);
     }
     if (lobby.source === "public") {
-      this.joinModal?.open({
+      // Awaited so the modal opens before the join goes on to close it. A
+      // modal that won't load doesn't stop the join.
+      await loadModal("join-lobby-modal").catch((err) =>
+        console.error("join-lobby-modal failed to load:", err),
+      );
+      this.loadedJoinModal()?.open({
         lobbyId: lobby.gameID,
         lobbyInfo: lobby.publicLobbyInfo,
       });
@@ -1627,10 +1651,10 @@ class Client {
       // visible page — the other lobby modal. If that one is still armed,
       // its onClose leaves the lobby and disconnects the player mid
       // game-start (host or joiner, depending on close order).
-      this.hostModal?.disarmLeaveOnClose();
-      this.joinModal?.disarmLeaveOnClose();
-      this.hostModal?.closeWithoutLeaving();
-      this.joinModal?.closeWithoutLeaving();
+      this.loadedHostModal()?.disarmLeaveOnClose();
+      this.loadedJoinModal()?.disarmLeaveOnClose();
+      this.loadedHostModal()?.closeWithoutLeaving();
+      this.loadedJoinModal()?.closeWithoutLeaving();
       [
         "single-player-modal",
         "game-starting-modal",
@@ -1683,7 +1707,7 @@ class Client {
     });
 
     this.lobbyHandle.join.then(() => {
-      this.joinModal?.closeWithoutLeaving();
+      this.loadedJoinModal()?.closeWithoutLeaving();
       this.gameModeSelector.stop();
       incrementGamesPlayed();
 
@@ -1809,12 +1833,11 @@ class Client {
       }
       await this.handleLeaveLobby();
     }
-    // A cold-start invite can beat the modal's own upgrade, which would make
-    // open() a silent no-op (the CrazyGames invite path waits for the same
-    // reason).
-    await customElements.whenDefined("join-lobby-modal");
-    window.showPage?.("page-join-lobby");
-    this.joinModal?.open({ lobbyId: gameId });
+    // The modal loads on demand (see LazyModals).
+    whenModalLoaded("join-lobby-modal", () => {
+      window.showPage?.("page-join-lobby");
+      this.joinModal?.open({ lobbyId: gameId });
+    });
     console.log(`joining lobby ${gameId} from desktop invite`);
   }
 
@@ -1901,7 +1924,7 @@ class Client {
       document.dispatchEvent(new CustomEvent("menu-restored"));
     }
 
-    if (this.joinModal.isOpen()) {
+    if (this.loadedJoinModal()?.isOpen()) {
       this.joinModal.close();
       if (
         event?.detail.cause === "full-lobby" ||
