@@ -41,9 +41,9 @@ import { PlayerModerationModal } from "../../../../src/client/hud/layers/PlayerM
 import { PlayerPanel } from "../../../../src/client/hud/layers/PlayerPanel";
 import { PlayerReportModal } from "../../../../src/client/hud/layers/PlayerReportModal";
 import { showInGameConfirm } from "../../../../src/client/InGameModal";
+import { SendKickPlayerIntentEvent } from "../../../../src/client/LobbyEvents";
 import {
   PlayerReportedEvent,
-  SendKickPlayerIntentEvent,
   SendPlayerReportEvent,
 } from "../../../../src/client/Transport";
 import { showToast } from "../../../../src/client/Utils";
