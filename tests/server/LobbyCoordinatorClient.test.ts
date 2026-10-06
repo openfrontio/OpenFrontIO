@@ -1,6 +1,6 @@
+import { CloseCode } from "@openfront/shared/CloseCodes";
 import EventEmitter from "events";
 import { afterEach, beforeEach, describe, expect, it, Mock, vi } from "vitest";
-import { CloseCode } from "../../src/core/CloseCodes";
 import {
   COORDINATOR_STALE_MS,
   CoordinatorCloseCode,

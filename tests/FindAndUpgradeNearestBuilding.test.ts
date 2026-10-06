@@ -1,8 +1,8 @@
+import { TileRef } from "@openfront/engine-api/game/GameMap";
+import { UnitType } from "@openfront/engine-api/game/GameTypes";
+import { EventBus } from "@openfront/engine-lib/EventBus";
 import { describe, expect, test, vi } from "vitest";
 import { SendUpgradeStructureIntentEvent } from "../src/client/Transport";
-import { EventBus } from "../src/core/EventBus";
-import { UnitType } from "../src/core/game/Game";
-import { TileRef } from "../src/core/game/GameMap";
 
 /**
  * NOTE: The `findAndUpgradeNearestBuilding` function below is a test-local

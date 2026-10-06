@@ -8,14 +8,14 @@
  * worker poll cadence (200ms) and the animation duration (250ms) are matched
  * to what the old CSS transition did.
  */
-import { EventBus } from "../../core/EventBus";
-import { Cell, PlayerType } from "../../core/game/Game";
-import { UserSettings } from "../../core/game/UserSettings";
+import { Cell, PlayerType } from "@openfront/engine-api/game/GameTypes";
+import { EventBus } from "@openfront/engine-lib/EventBus";
+import { renderTroops } from "@openfront/engine-lib/Format";
 import { Controller } from "../Controller";
 import { AlternateViewEvent } from "../InputHandler";
 import { MapRenderer } from "../render/gl";
 import type { AttackTroopLabel } from "../render/gl/passes/WorldTextPass";
-import { renderTroops } from "../Utils";
+import { UserSettings } from "../UserSettings";
 import { GameView } from "../view";
 
 // Aquarius (#3fa9f5) for outgoing, red-400 (#f87171) for incoming.

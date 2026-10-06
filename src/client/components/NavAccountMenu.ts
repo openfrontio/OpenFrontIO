@@ -1,3 +1,4 @@
+import { Progress, UserMeResponse } from "@openfront/shared/ApiSchemas";
 import {
   html,
   LitElement,
@@ -8,7 +9,6 @@ import {
 } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
 import { ifDefined } from "lit/directives/if-defined.js";
-import { Progress, UserMeResponse } from "../../core/ApiSchemas";
 import { hasLinkedIdentity } from "../AccountIdentity";
 import { logOut } from "../Auth";
 import { crazyGamesSDK, type CrazyGamesUser } from "../CrazyGamesSDK";

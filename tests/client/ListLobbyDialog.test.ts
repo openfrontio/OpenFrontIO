@@ -1,10 +1,10 @@
-import { describe, expect, it } from "vitest";
-import "../../src/client/components/ListLobbyDialog";
-import { ListLobbyDialog } from "../../src/client/components/ListLobbyDialog";
 import {
   MAX_HOSTED_LOBBY_PLAYERS,
   MIN_HOSTED_LOBBY_PLAYERS,
-} from "../../src/core/Schemas";
+} from "@openfront/shared/WireSchemas";
+import { describe, expect, it } from "vitest";
+import "../../src/client/components/ListLobbyDialog";
+import { ListLobbyDialog } from "../../src/client/components/ListLobbyDialog";
 
 function dialog(currentPlayers: number): ListLobbyDialog {
   const el = document.createElement("list-lobby-dialog") as ListLobbyDialog;

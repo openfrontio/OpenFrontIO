@@ -35,15 +35,15 @@ vi.mock("../../src/client/components/CosmeticPreview", () => {
   return {};
 });
 
-import "../../src/client/components/GameXpPanel";
-import type { GameXpPanel } from "../../src/client/components/GameXpPanel";
-import "../../src/client/components/PastGameXpCard";
-import { summarizeGameRewards } from "../../src/client/GameRewards";
 import type {
   GameXpEligible,
   GameXpFlare,
   GameXpReward,
-} from "../../src/core/ApiSchemas";
+} from "@openfront/shared/ApiSchemas";
+import "../../src/client/components/GameXpPanel";
+import type { GameXpPanel } from "../../src/client/components/GameXpPanel";
+import "../../src/client/components/PastGameXpCard";
+import { summarizeGameRewards } from "../../src/client/GameRewards";
 
 function reward(
   level: number,

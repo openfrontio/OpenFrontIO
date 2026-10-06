@@ -1,6 +1,6 @@
+import { CloseCode, CloseReason } from "@openfront/shared/CloseCodes";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { LobbyConfig } from "../../src/client/ClientGameRunner";
-import { CloseCode, CloseReason } from "../../src/core/CloseCodes";
 
 const modalMocks = vi.hoisted(() => ({
   showInGameConfirm:
@@ -45,9 +45,9 @@ vi.mock("src/client/ClientEnv", async (importOriginal) => {
   };
 });
 
+import { EventBus } from "@openfront/engine-lib/EventBus";
 import { ClientEnv, NoServerError } from "../../src/client/ClientEnv";
 import { Transport } from "../../src/client/Transport";
-import { EventBus } from "../../src/core/EventBus";
 
 class FakeWebSocket {
   static readonly CONNECTING = 0;

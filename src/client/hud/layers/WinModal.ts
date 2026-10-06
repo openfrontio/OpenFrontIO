@@ -1,3 +1,8 @@
+import { RankedType } from "@openfront/engine-api/game/GameTypes";
+import { GameUpdateType } from "@openfront/engine-api/game/GameUpdates";
+import { EventBus } from "@openfront/engine-lib/EventBus";
+import type { GameXpEligible } from "@openfront/shared/ApiSchemas";
+import { Pattern } from "@openfront/shared/CosmeticSchemas";
 import { html, LitElement, TemplateResult } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import {
@@ -8,11 +13,6 @@ import {
   translateText,
   TUTORIAL_VIDEO_URL,
 } from "../../../client/Utils";
-import type { GameXpEligible } from "../../../core/ApiSchemas";
-import { Pattern } from "../../../core/CosmeticSchemas";
-import { EventBus } from "../../../core/EventBus";
-import { RankedType } from "../../../core/game/Game";
-import { GameUpdateType } from "../../../core/game/GameUpdates";
 import { getUserMe, invalidateUserMe } from "../../Api";
 import "../../components/CosmeticCard";
 import { cosmeticSelectionLabel } from "../../components/CosmeticPresentation";

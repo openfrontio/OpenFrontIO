@@ -1,4 +1,4 @@
-import type { GameXpFlare, GameXpReward } from "../core/ApiSchemas";
+import type { GameXpFlare, GameXpReward } from "@openfront/shared/ApiSchemas";
 import { claimReward } from "./Api";
 import {
   cosmeticSelectionLabel,

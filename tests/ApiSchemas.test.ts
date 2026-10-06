@@ -24,7 +24,7 @@ import {
   TribeNameSchema,
   TribeStatsResponseSchema,
   UserMeResponseSchema,
-} from "../src/core/ApiSchemas";
+} from "@openfront/shared/ApiSchemas";
 
 describe("UserMeResponseSchema ban", () => {
   const ban = UserMeResponseSchema.shape.ban;

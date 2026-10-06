@@ -1,13 +1,18 @@
+import {
+  PlayerType,
+  Relation,
+  UnitType,
+} from "@openfront/engine-api/game/GameTypes";
+import { EventBus } from "@openfront/engine-lib/EventBus";
+import { renderNumber } from "@openfront/engine-lib/Format";
 import { LitElement, html, nothing } from "lit";
 import { customElement, state } from "lit/decorators.js";
-import { EventBus } from "../../../core/EventBus";
-import { PlayerType, Relation, UnitType } from "../../../core/game/Game";
-import { UserSettings } from "../../../core/game/UserSettings";
 import { Controller } from "../../Controller";
 import { Platform } from "../../Platform";
 import { GoToPlayerEvent } from "../../TransformHandler";
 import { UIState } from "../../UIState";
-import { renderNumber, textDirection, translateText } from "../../Utils";
+import { UserSettings } from "../../UserSettings";
+import { textDirection, translateText } from "../../Utils";
 import { GameView } from "../../view";
 import { PlayerView } from "../../view/PlayerView";
 import {

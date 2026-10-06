@@ -1,8 +1,8 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type {
   PrestigeResponse,
   UserMeResponse,
-} from "../../src/core/ApiSchemas";
+} from "@openfront/shared/ApiSchemas";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 // Mocks as in AccountModal.rendering.test.ts.
 vi.mock("../../src/client/Api", () => ({

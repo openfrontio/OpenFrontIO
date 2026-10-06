@@ -1,4 +1,4 @@
-import { PseudoRandom } from "../src/core/PseudoRandom";
+import { PseudoRandom } from "@openfront/engine-lib/PseudoRandom";
 
 describe("PseudoRandom", () => {
   test("same seed produces an identical sequence", () => {

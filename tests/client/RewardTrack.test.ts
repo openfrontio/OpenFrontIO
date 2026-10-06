@@ -19,6 +19,14 @@ vi.mock("../../src/client/ProgressionApi", () => ({
   fetchProgressionConfig: vi.fn(async () => false),
 }));
 
+import type {
+  ProgressionConfig,
+  PublicProgress,
+  Reward,
+  TrackFlare,
+  UserMeResponse,
+} from "@openfront/shared/ApiSchemas";
+import { ProgressionConfigSchema } from "@openfront/shared/ApiSchemas";
 import {
   POP_CAP,
   ProfileProgression,
@@ -31,14 +39,6 @@ import {
   trackEnd,
   trackHasRewards,
 } from "../../src/client/components/RewardTrack";
-import type {
-  ProgressionConfig,
-  PublicProgress,
-  Reward,
-  TrackFlare,
-  UserMeResponse,
-} from "../../src/core/ApiSchemas";
-import { ProgressionConfigSchema } from "../../src/core/ApiSchemas";
 
 if (!customElements.get("profile-progression")) {
   customElements.define("profile-progression", ProfileProgression);

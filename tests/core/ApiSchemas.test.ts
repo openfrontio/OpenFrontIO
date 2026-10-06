@@ -1,5 +1,5 @@
+import { UserMeResponseSchema } from "@openfront/shared/ApiSchemas";
 import { describe, expect, it } from "vitest";
-import { UserMeResponseSchema } from "../../src/core/ApiSchemas";
 
 function samplePlayer() {
   return {

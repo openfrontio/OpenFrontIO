@@ -1,6 +1,6 @@
+import type { FriendEntry } from "@openfront/shared/ApiSchemas";
 import { html, LitElement, TemplateResult } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
-import type { FriendEntry } from "../../core/ApiSchemas";
 import {
   acceptFriendRequest,
   deleteFriendRequest,

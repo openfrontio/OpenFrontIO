@@ -1,18 +1,17 @@
-import { Logger } from "winston";
-import WebSocket from "ws";
 import {
   Difficulty,
   GameMapSize,
   GameMapType,
   GameMode,
   GameType,
-} from "../core/game/Game";
+} from "@openfront/engine-api/game/GameTypes";
+import { GameConfig, GameID } from "@openfront/engine-api/Schemas";
 import {
   ClientPlatformSchema,
-  GameConfig,
-  GameID,
   PublicGameType,
-} from "../core/Schemas";
+} from "@openfront/shared/WireSchemas";
+import { Logger } from "winston";
+import WebSocket from "ws";
 import { Client } from "./Client";
 import { GamePhase, GameServer, JoinResult } from "./GameServer";
 import {

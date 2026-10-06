@@ -1,3 +1,7 @@
+import {
+  StreamsFeedSchema,
+  StreamsFeed as StreamsFeedType,
+} from "@openfront/shared/ApiSchemas";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import streamsFallback from "../../../resources/streams.json";
 import { getStreams } from "../../../src/client/Api";
@@ -6,10 +10,6 @@ import {
   isFeedFresh,
   streamsFeed,
 } from "../../../src/client/StreamsFeed";
-import {
-  StreamsFeedSchema,
-  StreamsFeed as StreamsFeedType,
-} from "../../../src/core/ApiSchemas";
 
 vi.mock("../../../src/client/Api", () => ({ getStreams: vi.fn() }));
 const getStreamsMock = vi.mocked(getStreams);

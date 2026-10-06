@@ -1,12 +1,12 @@
-import { html, nothing, TemplateResult } from "lit";
-import { customElement, state } from "lit/decorators.js";
-import { ClientEnv } from "src/client/ClientEnv";
 import {
   PlayerStatsTree,
   PrestigeResponse,
   UserMeResponse,
-} from "../core/ApiSchemas";
-import { assetUrl } from "../core/AssetUrls";
+} from "@openfront/shared/ApiSchemas";
+import { assetUrl } from "@openfront/shared/AssetUrls";
+import { html, nothing, TemplateResult } from "lit";
+import { customElement, state } from "lit/decorators.js";
+import { ClientEnv } from "src/client/ClientEnv";
 import { hasLinkedIdentity } from "./AccountIdentity";
 import { fetchPlayerById, getUserMe, invalidateUserMe } from "./Api";
 import {

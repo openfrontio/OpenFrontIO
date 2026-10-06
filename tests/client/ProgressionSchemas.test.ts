@@ -1,10 +1,10 @@
-import { describe, expect, it } from "vitest";
 import {
   GameXpResponseSchema,
   ProgressionConfigSchema,
   PublicProgressSchema,
   UserMeResponseSchema,
-} from "../../src/core/ApiSchemas";
+} from "@openfront/shared/ApiSchemas";
+import { describe, expect, it } from "vitest";
 
 const progress = {
   prestige: 2,

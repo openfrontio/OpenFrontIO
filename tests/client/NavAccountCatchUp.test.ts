@@ -19,13 +19,13 @@ vi.mock("../../src/client/Utils", () => ({
   showToast: vi.fn(),
 }));
 
+import type { Progress, UserMeResponse } from "@openfront/shared/ApiSchemas";
 import {
   NAV_CATCH_UP_MS,
   NAV_LEVEL_POP_MS,
   NavAccountMenu,
   navCatchUp,
 } from "../../src/client/components/NavAccountMenu";
-import type { Progress, UserMeResponse } from "../../src/core/ApiSchemas";
 
 const at = (
   level: number,
