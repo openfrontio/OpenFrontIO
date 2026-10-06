@@ -48,8 +48,8 @@ vi.mock("howler", () => {
   return { Howl: MockHowl, Howler: { volume: howlerVolume } };
 });
 
-import { Platform } from "../../../src/client/Platform";
 import { EventBus } from "@openfront/shared/EventBus";
+import { Platform } from "../../../src/client/Platform";
 import {
   AudioMixer,
   resetAudioMixerForTest,
