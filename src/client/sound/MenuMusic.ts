@@ -72,6 +72,8 @@ function rampGain(target: number, t: number): number {
 export function startMenuMusic(mixer: AudioMixer): void {
   let theme: Howl | null = null;
   let teardownFadeIn: (() => void) | null = null;
+  let inMenu = true;
+  const retiring = new Set<Howl>();
 
   /**
    * Stops the ramp wherever it is, leaving the volume untouched.
@@ -95,6 +97,7 @@ export function startMenuMusic(mixer: AudioMixer): void {
    * the channel itself in the meantime, so nothing is lost by waiting.
    */
   const settle = (howl: Howl) => {
+    if (theme !== howl || !inMenu) return;
     cancelFadeIn();
     mixer.register(howl, "music");
   };
@@ -117,9 +120,8 @@ export function startMenuMusic(mixer: AudioMixer): void {
     let rampTimer: ReturnType<typeof setInterval> | null = null;
 
     const beginRamp = () => {
-      // Nothing to hear and nothing to ramp on a channel the player has
-      // turned off, so hand it over rather than run an interval writing zero
-      // eighty times. Registered, the mixer brings it up if music comes back.
+      if (theme !== howl || !inMenu) return;
+      // The channel may have been disabled while the stream was loading.
       //
       // isAudible, not volumeFor: the question is whether the channel is
       // genuinely silent, not whether it happens to be silent this instant.
@@ -129,7 +131,11 @@ export function startMenuMusic(mixer: AudioMixer): void {
       // the per-tick read exists to prevent. A ducked channel still ramps;
       // the tick already writes it silent and hands it back in position.
       if (!mixer.isAudible("music")) {
-        settle(howl);
+        cancelFadeIn();
+        theme = null;
+        howl.stop();
+        howl.unload();
+        arm();
         return;
       }
       const startedAt = performance.now();
@@ -180,7 +186,8 @@ export function startMenuMusic(mixer: AudioMixer): void {
   };
 
   const start = () => {
-    if (theme !== null) return;
+    if (!inMenu || theme !== null || !mixer.isAudible("music")) return;
+    disarm();
     try {
       theme = new Howl({
         src: [assetUrl("sounds/music/menu-theme.mp3")],
@@ -206,13 +213,11 @@ export function startMenuMusic(mixer: AudioMixer): void {
   // one arriving while the listeners are still up -- cannot stack a duplicate.
   const arm = () => {
     disarm();
-    document.addEventListener("pointerdown", start, { once: true });
-    document.addEventListener("keydown", start, { once: true });
+    document.addEventListener("pointerdown", start);
+    document.addEventListener("keydown", start);
   };
 
-  // Both come off together. `once` only removes the listener that fired, so
-  // after a pointerdown the keydown one is still live and would otherwise
-  // start the menu theme over the top of a game.
+  // Remove both gesture listeners when playback or a game starts.
   const disarm = () => {
     document.removeEventListener("pointerdown", start);
     document.removeEventListener("keydown", start);
@@ -220,7 +225,26 @@ export function startMenuMusic(mixer: AudioMixer): void {
 
   arm();
 
+  mixer.onChange((category) => {
+    if (category !== "music" || mixer.isAudible("music")) return;
+    cancelFadeIn();
+    for (const ending of retiring) {
+      ending.stop();
+      ending.unload();
+    }
+    retiring.clear();
+    if (theme !== null) {
+      const disabled = theme;
+      theme = null;
+      mixer.unregister(disabled);
+      disabled.stop();
+      disabled.unload();
+    }
+    if (inMenu) arm();
+  });
+
   document.addEventListener("game-starting", () => {
+    inMenu = false;
     disarm();
     if (theme === null) return;
     const ending = theme;
@@ -240,11 +264,16 @@ export function startMenuMusic(mixer: AudioMixer): void {
       return;
     }
     ending.fade(from, 0, MENU_FADE_MS);
+    retiring.add(ending);
     ending.once("fade", () => {
+      retiring.delete(ending);
       ending.stop();
       ending.unload();
     });
   });
 
-  document.addEventListener("menu-restored", arm);
+  document.addEventListener("menu-restored", () => {
+    inMenu = true;
+    arm();
+  });
 }

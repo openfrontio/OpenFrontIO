@@ -101,6 +101,7 @@ function build(overrides: Record<string, number | boolean> = {}) {
   settings = new UserSettings();
   for (const [key, value] of Object.entries(overrides)) {
     if (typeof value === "boolean") {
+      if (key === "muted") settings.setAudioMuted(value);
       if (key === "muteOnBlur") settings.setMuteOnBlur(value);
       if (key === "alertsWhenUnfocused") settings.setAlertsWhenUnfocused(value);
     } else if (typeof value === "number") {
@@ -146,6 +147,198 @@ describe("cue routing", () => {
 });
 
 describe("channel volumes", () => {
+  it("does not initialize Howler on a persistently muted cold load", async () => {
+    const stored = new UserSettings();
+    stored.resetAudioOnce();
+    stored.setAudioVolume("master", 0.8);
+    stored.setAudioMuted(true);
+    (
+      UserSettings as unknown as { cache: Map<string, string | null> }
+    ).cache.clear();
+    mixer = initAudioMixer(new UserSettings());
+
+    expect(howlerVolume).not.toHaveBeenCalled();
+    for (const category of [
+      "master",
+      "music",
+      "effects",
+      "alerts",
+      "ambience",
+      "interface",
+    ] as const) {
+      expect(mixer.isAudible(category)).toBe(false);
+    }
+    mixer.play("click");
+    mixer.play("nuke-warning");
+    await expect(mixer.previewCue("effects")).resolves.toBeUndefined();
+    expect(howlInstances).toHaveLength(0);
+    expect(new UserSettings().audioVolume("master")).toBeCloseTo(0.8);
+  });
+
+  it("unloads every cue and settles queued previews when globally muted", async () => {
+    build({ master: 0.6, effects: 0.5, alerts: 0.4, interface: 0.3 });
+    mixer.play("click");
+    mixer.play("nuke-warning");
+    const preview = mixer.previewCue("effects");
+    expect(howlInstances).toHaveLength(3);
+    settings.setAudioMuted(true);
+    for (const howl of howlInstances) {
+      expect(howl.unload).toHaveBeenCalledTimes(1);
+    }
+    await expect(preview).resolves.toBeUndefined();
+    mixer.play("click");
+    mixer.play("nuke-warning");
+    await expect(mixer.previewCue("effects")).resolves.toBeUndefined();
+    expect(howlInstances).toHaveLength(3);
+
+    // Changing levels while muted never starts audio. Unmute restores the
+    // current levels but never replays any of the discarded one-shots.
+    settings.setAudioVolume("alerts", 0);
+    settings.setAudioVolume("effects", 0.7);
+    settings.setAudioMuted(false);
+    expect(howlInstances).toHaveLength(3);
+    expect(howlerVolume).toHaveBeenLastCalledWith(0.36);
+    expect(mixer.volumeFor("effects")).toBeCloseTo(0.49);
+    mixer.play("nuke-warning");
+    expect(howlInstances).toHaveLength(3);
+    mixer.play("click");
+    expect(howlInstances).toHaveLength(4);
+    expect(howlInstances[3].play).toHaveBeenCalledTimes(1);
+  });
+
+  it("re-suspends late unlocks while globally muted and permits audio again on unmute", () => {
+    build({ master: 0.8 });
+    const ctx = Object.assign(new EventTarget(), {
+      state: "running",
+      suspend: vi.fn().mockResolvedValue(undefined),
+    });
+    (Howler as any).ctx = ctx;
+    try {
+      settings.setAudioMuted(true);
+      expect(howlerVolume).toHaveBeenLastCalledWith(0);
+      expect(ctx.suspend).toHaveBeenCalledTimes(1);
+      expect((Howler as any).state).toBe("suspended");
+      ctx.dispatchEvent(new Event("statechange"));
+      expect(ctx.suspend).toHaveBeenCalledTimes(2);
+      settings.setAudioMuted(false);
+      expect(howlerVolume).toHaveBeenLastCalledWith(perceptualGain(0.8));
+      ctx.dispatchEvent(new Event("statechange"));
+      expect(ctx.suspend).toHaveBeenCalledTimes(2);
+      expect(mixer.isAudible("master")).toBe(true);
+      mixer.dispose();
+      settings.setAudioMuted(true);
+      ctx.dispatchEvent(new Event("statechange"));
+      expect(ctx.suspend).toHaveBeenCalledTimes(2);
+    } finally {
+      (Howler as any).ctx = undefined;
+    }
+  });
+
+  it("leaves a zero master silent after unmuting", () => {
+    build({ master: 0, muted: true });
+    settings.setAudioMuted(false);
+    expect(mixer.isAudible("master")).toBe(false);
+    expect(howlerVolume).not.toHaveBeenCalled();
+    mixer.play("click");
+    expect(howlInstances).toHaveLength(0);
+  });
+
+  it("does not initialize Howler for a disabled master", () => {
+    build({ master: 0 });
+    expect(howlerVolume).not.toHaveBeenCalled();
+    mixer.play("click");
+    mixer.play("nuke-warning");
+    expect(howlInstances).toHaveLength(0);
+  });
+
+  it("unloads active and queued cues when their channel is disabled", async () => {
+    build({ effects: 1 });
+    mixer.play("build-city");
+    const preview = mixer.previewCue("effects");
+    const howl = howlInstances[0];
+    settings.setAudioVolume("effects", 0);
+    expect(howl.unload).toHaveBeenCalled();
+    await expect(preview).resolves.toBeUndefined();
+    mixer.play("build-city");
+    expect(howlInstances).toHaveLength(1);
+    settings.setAudioVolume("effects", 1);
+    mixer.play("build-city");
+    expect(howlInstances).toHaveLength(2);
+  });
+
+  it("suspends the context immediately when master is disabled", () => {
+    build({ master: 1 });
+    const suspend = vi.fn().mockResolvedValue(undefined);
+    (Howler as any).ctx = { state: "running", suspend };
+    try {
+      settings.setAudioVolume("master", 0);
+      expect(suspend).toHaveBeenCalledTimes(1);
+      // Howler's next play must see suspension and call its auto-resume path.
+      expect((Howler as any).state).toBe("suspended");
+    } finally {
+      (Howler as any).ctx = undefined;
+    }
+  });
+
+  it("suspends when the last enabled channel is disabled", () => {
+    build({
+      master: 1,
+      music: 0,
+      effects: 1,
+      alerts: 0,
+      ambience: 0,
+      interface: 0,
+    });
+    const suspend = vi.fn().mockResolvedValue(undefined);
+    (Howler as any).ctx = { state: "running", suspend };
+    try {
+      settings.setAudioVolume("effects", 0);
+      expect(suspend).toHaveBeenCalledTimes(1);
+    } finally {
+      (Howler as any).ctx = undefined;
+    }
+  });
+
+  it("re-suspends a late unlock while disabled and stops watching on disposal", () => {
+    build({ master: 1 });
+    const ctx = Object.assign(new EventTarget(), {
+      state: "running",
+      suspend: vi.fn().mockResolvedValue(undefined),
+    });
+    (Howler as any).ctx = ctx;
+    try {
+      settings.setAudioVolume("master", 0);
+      ctx.dispatchEvent(new Event("statechange"));
+      expect(ctx.suspend).toHaveBeenCalledTimes(2);
+      ctx.state = "suspended";
+      ctx.dispatchEvent(new Event("statechange"));
+      expect(ctx.suspend).toHaveBeenCalledTimes(2);
+      settings.setAudioVolume("master", 1);
+      ctx.state = "running";
+      ctx.dispatchEvent(new Event("statechange"));
+      expect(ctx.suspend).toHaveBeenCalledTimes(2);
+      mixer.dispose();
+      settings.setAudioVolume("master", 0);
+      ctx.dispatchEvent(new Event("statechange"));
+      expect(ctx.suspend).toHaveBeenCalledTimes(2);
+    } finally {
+      (Howler as any).ctx = undefined;
+    }
+  });
+
+  it("applies master gain when the first channel is enabled", () => {
+    build({
+      master: 0.5,
+      music: 0,
+      effects: 0,
+      alerts: 0,
+      ambience: 0,
+      interface: 0,
+    });
+    expect(howlerVolume).not.toHaveBeenCalled();
+    settings.setAudioVolume("effects", 1);
+    expect(howlerVolume).toHaveBeenLastCalledWith(0.25);
+  });
   it("squares the slider into an audio taper", () => {
     build({ effects: 0.5 });
     expect(mixer.volumeFor("effects")).toBeCloseTo(perceptualGain(0.5));
@@ -200,6 +393,35 @@ describe("channel volumes", () => {
   });
 });
 
+describe("audio session", () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  it("requests ambient mixing when the Audio Session API exists", () => {
+    const audioSession = { type: "auto" };
+    vi.stubGlobal("navigator", { audioSession });
+    build({ master: 0 });
+    expect(audioSession.type).toBe("ambient");
+  });
+
+  it("works without the Audio Session API", () => {
+    vi.stubGlobal("navigator", {});
+    expect(() => build({ master: 0 })).not.toThrow();
+  });
+
+  it("keeps mute working when the browser rejects the session type", () => {
+    const audioSession = {
+      set type(_value: string) {
+        throw new Error("unsupported");
+      },
+    };
+    vi.stubGlobal("navigator", { audioSession });
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+    build({ master: 0 });
+    mixer.play("click");
+    expect(howlInstances).toHaveLength(0);
+  });
+});
+
 describe("per-channel budgets", () => {
   it("steals the oldest effect rather than an alert", () => {
     build({ effects: 1, alerts: 1 });
@@ -223,15 +445,10 @@ describe("per-channel budgets", () => {
     expect(ms).toBeGreaterThan(0);
   });
 
-  it("stops an evicted cue outright when the channel is silent", () => {
-    // fade(0, 0, ...) never completes in Howler, so fading here would leave
-    // the cue playing outside its budget with the interval and listener
-    // leaked for the rest of the session.
+  it("does not load silent cues at all", () => {
     build({ effects: 0 });
     for (let i = 0; i < 7; i++) mixer.play("build-city");
-    const howl = howlInstances.find((h) => h.src.includes("build-city"));
-    expect(howl.fade).not.toHaveBeenCalled();
-    expect(howl.stop).toHaveBeenCalled();
+    expect(howlInstances).toHaveLength(0);
   });
 
   it("drops the newest interface tick rather than stuttering the ratchet", () => {

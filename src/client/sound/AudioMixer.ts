@@ -117,6 +117,7 @@ interface ActiveSound {
  */
 export class AudioMixer {
   private volumes = new Map<AudioCategory, number>();
+  private muted: boolean;
   private focused = true;
   private ambienceEnvelope = 1;
   /** Loops (music, ambience) whose volume must follow their channel. */
@@ -126,12 +127,26 @@ export class AudioMixer {
   private disposers: (() => void)[] = [];
   private changeListeners = new Set<(category: PlayableCategory) => void>();
   private limiter: DynamicsCompressorNode | null = null;
+  private watchedContext: AudioContext | null = null;
+  private readonly onContextStateChange = () => this.suspendIfDisabled();
 
   constructor(private readonly userSettings: UserSettings) {
+    this.muted = userSettings.audioMuted();
+    // HTML audio defaults to exclusive playback on iOS. Game audio should
+    // mix with the player's music and obey the device's silent switch.
+    this.safely("configure audio session", () => {
+      const session = (
+        navigator as Navigator & {
+          audioSession?: { type: string };
+        }
+      ).audioSession;
+      if (session) session.type = "ambient";
+    });
     for (const category of [...PLAYABLE, "master" as const]) {
       this.volumes.set(category, this.userSettings.audioVolume(category));
       this.followSetting(category);
     }
+    this.followMute();
     this.followFocus();
     this.applyAll();
     // After applyAll on purpose: Howler builds its AudioContext lazily, and
@@ -193,6 +208,11 @@ export class AudioMixer {
   }
 
   dispose(): void {
+    this.watchedContext?.removeEventListener(
+      "statechange",
+      this.onContextStateChange,
+    );
+    this.watchedContext = null;
     this.safely("remove limiter", () => this.removeLimiter());
     this.disposers.forEach((off) => off());
     this.disposers = [];
@@ -209,6 +229,7 @@ export class AudioMixer {
 
   /** Final gain for a channel: slider, trim, and the focus duck. */
   volumeFor(category: PlayableCategory): number {
+    if (this.muted) return 0;
     const slider = perceptualGain(this.volumes.get(category) ?? 0);
     const envelope = category === "ambience" ? this.ambienceEnvelope : 1;
     return (
@@ -217,6 +238,7 @@ export class AudioMixer {
   }
 
   isAudible(category: AudioCategory): boolean {
+    if (this.muted) return false;
     if ((this.volumes.get("master") ?? 0) === 0) return false;
     if (category === "master") return true;
     return (this.volumes.get(category) ?? 0) > 0;
@@ -246,10 +268,46 @@ export class AudioMixer {
 
   private applyAll(): void {
     // Master is the one real GainNode Howler exposes; the rest is fan-out.
-    this.safely("set master volume", () =>
-      Howler.volume(perceptualGain(this.volumes.get("master") ?? 0)),
-    );
+    // A volume write creates Howler's AudioContext. Don't activate audio on a
+    // page that starts disabled, even just to write a zero gain.
+    if (Howler.ctx || PLAYABLE.some((category) => this.isAudible(category))) {
+      this.safely("set master volume", () =>
+        Howler.volume(
+          this.muted ? 0 : perceptualGain(this.volumes.get("master") ?? 0),
+        ),
+      );
+    }
     for (const category of PLAYABLE) this.applyTo(category);
+    this.suspendIfDisabled();
+  }
+
+  private suspendIfDisabled(): void {
+    if (PLAYABLE.some((category) => this.isAudible(category))) return;
+    const ctx = Howler.ctx as AudioContext | undefined;
+    if (!ctx || ctx.state === "closed" || typeof ctx.suspend !== "function")
+      return;
+    if (
+      this.watchedContext !== ctx &&
+      typeof ctx.addEventListener === "function"
+    ) {
+      this.watchedContext?.removeEventListener(
+        "statechange",
+        this.onContextStateChange,
+      );
+      this.watchedContext = ctx;
+      ctx.addEventListener("statechange", this.onContextStateChange);
+    }
+    // Howler 2.2 checks its own state to auto-resume, not ctx.state. A pending
+    // unlock/resume can finish after muting; keep it suspended in that case.
+    (Howler as typeof Howler & { state: string }).state = "suspended";
+    if (ctx.state === "suspended") return;
+    this.safely("suspend disabled audio", () => {
+      void ctx
+        .suspend()
+        .catch((error) =>
+          console.warn("AudioMixer: failed to suspend disabled audio", error),
+        );
+    });
   }
 
   /**
@@ -264,6 +322,13 @@ export class AudioMixer {
 
   private applyTo(category: PlayableCategory): void {
     const volume = this.volumeFor(category);
+    if (!this.isAudible(category)) {
+      // Unloading cancels queued plays as well as sounds already running.
+      // Gain zero alone still leaves a live audio session on Safari.
+      for (const [name, howl] of this.cache) {
+        if (categoryOf(name) === category) this.discard(name, howl);
+      }
+    }
     this.safely(`apply ${category} volume`, () => {
       this.registered.forEach((registeredCategory, howl) => {
         if (registeredCategory === category) howl.volume(volume);
@@ -284,9 +349,31 @@ export class AudioMixer {
       const raw = (event as CustomEvent<string>).detail;
       const parsed = typeof raw === "number" ? raw : parseFloat(raw);
       if (isNaN(parsed)) return;
+      const wasEnabled = PLAYABLE.some((channel) => this.isAudible(channel));
       this.volumes.set(category, parsed);
-      if (category === "master") this.applyAll();
-      else this.applyTo(category);
+      if (category === "master" || !wasEnabled) this.applyAll();
+      else {
+        this.applyTo(category);
+        this.suspendIfDisabled();
+      }
+      if (this.limiter === null) {
+        this.safely("install limiter", () => this.installLimiter());
+      }
+    };
+    globalThis.addEventListener(type, handler);
+    this.disposers.push(() => globalThis.removeEventListener(type, handler));
+  }
+
+  private followMute(): void {
+    const type = `${USER_SETTINGS_CHANGED_EVENT}:settings.audio.muted`;
+    const handler = () => {
+      this.muted = this.userSettings.audioMuted();
+      // Notify every loop owner so muting unloads it, including queued starts
+      // and retiring fades. They retain which tracks may resume on unmute.
+      this.applyAll();
+      if (this.limiter === null) {
+        this.safely("install limiter", () => this.installLimiter());
+      }
     };
     globalThis.addEventListener(type, handler);
     this.disposers.push(() => globalThis.removeEventListener(type, handler));
@@ -330,6 +417,7 @@ export class AudioMixer {
   /** Plays a cue on its own channel, within that channel's budget. */
   play(name: SoundEffect): void {
     const category = categoryOf(name);
+    if (!this.isAudible(category) || this.volumeFor(category) === 0) return;
     this.safely(`play sound ${name}`, () => {
       const inCategory = this.active.filter((s) => s.category === category);
       if (inCategory.length >= BUDGET[category]) {

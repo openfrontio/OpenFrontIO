@@ -566,6 +566,11 @@ export class UserSettingModal extends BaseModal {
     this.requestUpdate();
   }
 
+  private toggleAudioMuted(e: Event) {
+    this.userSettings.setAudioMuted((e.target as HTMLInputElement).checked);
+    this.requestUpdate();
+  }
+
   private toggleMuteOnBlur(e: Event) {
     this.userSettings.setMuteOnBlur((e.target as HTMLInputElement).checked);
     // Re-render so the dependent "keep alerts audible" row follows.
@@ -635,11 +640,14 @@ export class UserSettingModal extends BaseModal {
     // — master 0, channels at their defaults — every button would otherwise
     // read "turn this category up", blaming a slider that is already up. The
     // master row has no Test button, so that hint cannot even be followed.
+    const allMuted = this.userSettings.audioMuted();
     const masterMuted = !controls.isAudible("master");
-    const muted = masterMuted || !controls.isAudible(category);
-    const hint = masterMuted
-      ? "user_setting.audio_test_master_muted"
-      : "user_setting.audio_test_muted";
+    const muted = allMuted || masterMuted || !controls.isAudible(category);
+    const hint = allMuted
+      ? "user_setting.audio_test_all_muted"
+      : masterMuted
+        ? "user_setting.audio_test_master_muted"
+        : "user_setting.audio_test_muted";
     const pending = this.previewing.has(category);
     return html`
       <button
@@ -684,6 +692,14 @@ export class UserSettingModal extends BaseModal {
   private renderAudioSettings() {
     const muteOnBlur = this.userSettings.muteOnBlur();
     return html`
+      <setting-toggle
+        label="${translateText("user_setting.audio_mute_all")}"
+        description="${translateText("user_setting.audio_mute_all_desc")}"
+        id="audio-mute-all-toggle"
+        .checked=${this.userSettings.audioMuted()}
+        @change=${this.toggleAudioMuted}
+      ></setting-toggle>
+
       ${AUDIO_TAB_ORDER.map((category) => this.renderVolumeSlider(category))}
 
       <setting-toggle

@@ -118,6 +118,7 @@ const AUDIO_CHANNELS = [
 /** Everything "reset to defaults" clears, so the read-through sees a clean slate. */
 const AUDIO_RESET_KEYS: readonly string[] = [
   ...AUDIO_CHANNELS.map((category) => `settings.audio.${category}`),
+  "settings.audio.muted",
   "settings.audio.muteOnBlur",
   "settings.audio.alertsWhenUnfocused",
   // The legacy keys too: leaving them would have the read-through hand the
@@ -900,6 +901,15 @@ export class UserSettings {
     }
   }
 
+  /** A persistent global mute that leaves every channel's slider untouched. */
+  audioMuted(): boolean {
+    return this.getBool("settings.audio.muted", false);
+  }
+
+  setAudioMuted(value: boolean): void {
+    this.setBool("settings.audio.muted", value);
+  }
+
   muteOnBlur(): boolean {
     // Off by default (Josh, 11 Sept 2026): the game keeps playing when the
     // window loses focus unless the player asks otherwise. alertsWhenUnfocused
@@ -935,6 +945,7 @@ export class UserSettings {
         String(this.audioVolume(category)),
       );
     }
+    this.emitChange("settings.audio.muted", String(this.audioMuted()));
     this.emitChange("settings.audio.muteOnBlur", String(this.muteOnBlur()));
     this.emitChange(
       "settings.audio.alertsWhenUnfocused",

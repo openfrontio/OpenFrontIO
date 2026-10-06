@@ -34,6 +34,8 @@ vi.mock("howler", () => ({
     play() {
       return alertMocks.play();
     }
+
+    unload() {}
   },
 }));
 
@@ -89,6 +91,7 @@ describe("JoinLobbyModal lobby start alert default", () => {
   });
 
   it("auto-arms and preloads without showing the manual-arm toast", () => {
+    new UserSettings().setAudioVolume("master", 1);
     new UserSettings().setLobbyStartAlerts(true);
     const dispatchSpy = vi.spyOn(window, "dispatchEvent");
     const modal = trackingModal();
@@ -114,6 +117,7 @@ describe("JoinLobbyModal lobby start alert default", () => {
   });
 
   it("still plays the chime when notification permission is denied", () => {
+    new UserSettings().setAudioVolume("master", 1);
     new UserSettings().setLobbyStartAlerts(true);
     const modal = trackingModal();
     (modal as any).startTrackingLobby("first");

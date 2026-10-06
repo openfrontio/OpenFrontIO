@@ -19,8 +19,10 @@ const AMBIENCE_FADE_MS = 500;
  */
 export class SoundManager {
   private backgroundMusic: Howl | null = null;
+  private musicRequested = false;
   private ambienceTracks = new Map<AmbienceTrack, Howl>();
   private currentAmbience: AmbienceTrack | null = null;
+  private ambienceNeedsStart = false;
   private fadingOut = new Set<Howl>();
   private fadingIn = new Set<Howl>();
   private onPlaySoundEffect: (e: PlaySoundEffectEvent) => void;
@@ -31,6 +33,27 @@ export class SoundManager {
     private readonly eventBus: EventBus,
     private readonly mixer: AudioMixer,
   ) {
+    this.initializeBackgroundMusic();
+
+    this.onPlaySoundEffect = (e) => this.mixer.play(e.effect);
+    this.onSetAmbience = (e) => this.setAmbience(e.track, e.gain);
+    eventBus.on(PlaySoundEffectEvent, this.onPlaySoundEffect);
+    eventBus.on(SetAmbienceEvent, this.onSetAmbience);
+
+    this.stopFollowingVolume = this.mixer.onChange((category) => {
+      if (category === "music") {
+        if (!this.mixer.isAudible("music")) this.unloadBackgroundMusic();
+        else if (this.musicRequested) this.playBackgroundMusic();
+      }
+      if (category === "ambience") {
+        if (!this.mixer.isAudible("ambience")) this.unloadAmbience();
+        else this.retargetAmbience();
+      }
+    });
+  }
+
+  private initializeBackgroundMusic(): void {
+    if (this.backgroundMusic !== null || !this.mixer.isAudible("music")) return;
     this.safely("initialize background music", () => {
       // One track that keeps looping — including through the victory and
       // defeat cues — so a game never hard-cuts to silence, per the sound
@@ -47,23 +70,18 @@ export class SoundManager {
       });
       this.mixer.register(this.backgroundMusic, "music");
     });
-
-    this.onPlaySoundEffect = (e) => this.mixer.play(e.effect);
-    this.onSetAmbience = (e) => this.setAmbience(e.track, e.gain);
-    eventBus.on(PlaySoundEffectEvent, this.onPlaySoundEffect);
-    eventBus.on(SetAmbienceEvent, this.onSetAmbience);
-
-    // Ambience is crossfaded here rather than registered with the mixer, so
-    // the mixer cannot stomp a fade in progress. Re-target on every change.
-    this.stopFollowingVolume = this.mixer.onChange((category) => {
-      if (category === "ambience") this.retargetAmbience();
-    });
   }
 
   dispose(): void {
     this.eventBus.off(PlaySoundEffectEvent, this.onPlaySoundEffect);
     this.eventBus.off(SetAmbienceEvent, this.onSetAmbience);
     this.stopFollowingVolume();
+    this.unloadBackgroundMusic();
+    this.unloadAmbience();
+    this.currentAmbience = null;
+  }
+
+  private unloadBackgroundMusic(): void {
     if (this.backgroundMusic !== null) {
       const music = this.backgroundMusic;
       this.mixer.unregister(music);
@@ -71,14 +89,17 @@ export class SoundManager {
       this.safely("unload background music", () => music.unload());
       this.backgroundMusic = null;
     }
+  }
+
+  private unloadAmbience(): void {
     this.ambienceTracks.forEach((sound) => {
+      sound.off("fade");
       this.safely("stop ambience track", () => sound.stop());
       this.safely("unload ambience track", () => sound.unload());
     });
     this.ambienceTracks.clear();
     this.fadingOut.clear();
     this.fadingIn.clear();
-    this.currentAmbience = null;
   }
 
   private safely(action: string, fn: () => void): void {
@@ -90,6 +111,9 @@ export class SoundManager {
   }
 
   public playBackgroundMusic(): void {
+    this.musicRequested = true;
+    if (!this.mixer.isAudible("music")) return;
+    this.initializeBackgroundMusic();
     this.safely("play background music", () => {
       if (this.backgroundMusic !== null && !this.backgroundMusic.playing()) {
         this.backgroundMusic.play();
@@ -98,6 +122,7 @@ export class SoundManager {
   }
 
   public stopBackgroundMusic(): void {
+    this.musicRequested = false;
     this.safely("stop background music", () => this.backgroundMusic?.stop());
   }
 
@@ -122,30 +147,11 @@ export class SoundManager {
       // change listener back through retargetAmbience(), snap the outgoing
       // loop to silence, and turn the fade below into a hard cut.
       this.fadeOutCurrent();
+      this.currentAmbience = null;
       this.mixer.setAmbienceEnvelope(gain);
       this.currentAmbience = track;
-      if (track === null) return;
-
-      const target = this.mixer.volumeFor("ambience");
-      const howl = this.getOrLoadAmbience(track);
-      if (howl === null) return;
-      // Cancel a pending fade-out stop in case this track is coming straight
-      // back; if it is still audibly fading, keep the running instance rather
-      // than layering a second one on top.
-      howl.off("fade");
-      this.fadingOut.delete(howl);
-      if (!howl.playing()) howl.play();
-      // Howler's fade only completes while the volume is moving toward the
-      // target, so any fade whose start equals its end hangs and leaks its
-      // interval. Zero is the common case, but panning between two structures
-      // at a constant zoom can also re-enter with the loop already at target.
-      const from = howl.volume() as number;
-      if (target === 0 || from === target) {
-        this.fadingIn.delete(howl);
-        howl.volume(target);
-      } else {
-        this.fadeInTo(howl, from, target);
-      }
+      this.ambienceNeedsStart = track !== null;
+      this.retargetAmbience();
     });
   }
 
@@ -173,6 +179,33 @@ export class SoundManager {
    */
   private retargetAmbience(): void {
     if (this.currentAmbience === null) return;
+    if (!this.mixer.isAudible("ambience")) return;
+    const target = this.mixer.volumeFor("ambience");
+    if (
+      this.ambienceNeedsStart ||
+      !this.ambienceTracks.has(this.currentAmbience)
+    ) {
+      if (target === 0) return;
+      this.safely("resume ambience", () => {
+        const howl = this.getOrLoadAmbience(this.currentAmbience!);
+        if (howl === null) return;
+        // A cached loop may still be fading out, or already stopped, when it
+        // is revisited while focus-muted. Cancel the old stop before resuming.
+        howl.off("fade");
+        this.fadingOut.delete(howl);
+        if (!howl.playing()) howl.play();
+        this.ambienceNeedsStart = false;
+        const from = howl.volume() as number;
+        // Howler never completes a fade whose endpoints are equal.
+        if (from === target) {
+          this.fadingIn.delete(howl);
+          howl.volume(target);
+        } else {
+          this.fadeInTo(howl, from, target);
+        }
+      });
+      return;
+    }
     const howl = this.ambienceTracks.get(this.currentAmbience);
     if (howl === undefined || this.fadingOut.has(howl)) return;
     this.safely("retarget ambience", () => {

@@ -22,6 +22,8 @@ vi.mock("howler", () => ({
     play() {
       return alertMocks.play();
     }
+
+    unload() {}
   },
 }));
 
@@ -760,6 +762,7 @@ describe("MatchmakingModal game-start alert", () => {
   });
 
   it("uses the lobby bell and alerts only after a ranked match is assigned", async () => {
+    new UserSettings().setAudioVolume("master", 1);
     const joined = await openAndJoin("1v1");
     modal = joined.modal;
     document.body.append(modal);
@@ -833,6 +836,7 @@ describe("MatchmakingModal game-start alert", () => {
   });
 
   it("arms from the saved default without a toast or permission prompt", async () => {
+    new UserSettings().setAudioVolume("master", 1);
     new UserSettings().setLobbyStartAlerts(true);
     const dispatchSpy = vi.spyOn(window, "dispatchEvent");
     const joined = await openAndJoin("1v1");

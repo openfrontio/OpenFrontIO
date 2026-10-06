@@ -29,7 +29,9 @@ vi.mock("howler", () => {
       if (!this._listeners.has(event)) this._listeners.set(event, new Map());
       this._listeners.get(event)!.set(id ?? -1, cb);
     });
-    off = vi.fn();
+    off = vi.fn((event: string) => {
+      this._listeners.delete(event);
+    });
     _listeners = new Map<string, Map<number, () => void>>();
     _fire(event: string, id: number) {
       const cb = this._listeners.get(event)?.get(id);
@@ -78,11 +80,12 @@ let settings: UserSettings;
 let mixer: AudioMixer;
 let soundManager: SoundManager;
 
-function build({ ambience = 1, music = 1 } = {}) {
+function build({ ambience = 1, music = 1, muted = false } = {}) {
   settings = new UserSettings();
   settings.setAudioVolume("ambience", ambience);
   settings.setAudioVolume("music", music);
   settings.setAudioVolume("effects", 1);
+  settings.setAudioMuted(muted);
   mixer = new AudioMixer(settings);
   eventBus = new EventBus();
   soundManager = new SoundManager(eventBus, mixer);
@@ -104,7 +107,98 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
+describe("global mute", () => {
+  it("keeps a muted cold start unloaded and resumes only the requested current tracks", () => {
+    soundManager.dispose();
+    mixer.dispose();
+    howlInstances.length = 0;
+    build({ muted: true });
+    soundManager.playBackgroundMusic();
+    eventBus.emit(new SetAmbienceEvent("city", 0.1));
+    eventBus.emit(new SetAmbienceEvent("factory", 0.05));
+    eventBus.emit(new PlaySoundEffectEvent("build-city"));
+    expect(howlInstances).toHaveLength(0);
+
+    settings.setAudioMuted(false);
+    expect(find("gameplay.mp3").play).toHaveBeenCalledTimes(1);
+    expect(find("factory.mp3").play).toHaveBeenCalledTimes(1);
+    expect(find("factory.mp3").fade).toHaveBeenCalledWith(0, 0.05, 500);
+    expect(howlInstances).toHaveLength(2);
+    expect(find("city.mp3")).toBeUndefined();
+  });
+
+  it("unloads music and both sides of an ambience crossfade on mute", () => {
+    soundManager.playBackgroundMusic();
+    eventBus.emit(new SetAmbienceEvent("city", 0.1));
+    eventBus.emit(new SetAmbienceEvent("factory", 0.1));
+    const before = [...howlInstances];
+    settings.setAudioMuted(true);
+    for (const howl of before) {
+      expect(howl.stop).toHaveBeenCalled();
+      expect(howl.unload).toHaveBeenCalledTimes(1);
+    }
+    // New muted requests replace intent without creating any sources.
+    eventBus.emit(new SetAmbienceEvent("missile-silo", 0.2));
+    expect(howlInstances).toHaveLength(before.length);
+    settings.setAudioMuted(false);
+    const resumed = howlInstances.slice(before.length);
+    expect(resumed).toHaveLength(2);
+    expect(resumed[0].src).toContain("gameplay.mp3");
+    expect(resumed[1].src).toContain("missile-silo.mp3");
+  });
+
+  it("does not restart music or ambience that was stopped while muted", () => {
+    soundManager.playBackgroundMusic();
+    eventBus.emit(new SetAmbienceEvent("city", 0.1));
+    settings.setAudioMuted(true);
+    const count = howlInstances.length;
+    soundManager.stopBackgroundMusic();
+    eventBus.emit(new SetAmbienceEvent(null, 0));
+    settings.setAudioMuted(false);
+    expect(howlInstances).toHaveLength(count);
+  });
+});
+
 describe("background music", () => {
+  it("does not construct or play music when its channel starts disabled", () => {
+    soundManager.dispose();
+    mixer.dispose();
+    howlInstances.length = 0;
+    build({ music: 0 });
+    soundManager.playBackgroundMusic();
+    expect(find("gameplay.mp3")).toBeUndefined();
+    settings.setAudioVolume("music", 1);
+    expect(find("gameplay.mp3").play).toHaveBeenCalledTimes(1);
+  });
+
+  it.each(["master", "music"] as const)(
+    "unloads music immediately when %s is disabled",
+    (category) => {
+      soundManager.playBackgroundMusic();
+      const music = find("gameplay.mp3");
+      settings.setAudioVolume(category, 0);
+      expect(music.stop).toHaveBeenCalled();
+      expect(music.unload).toHaveBeenCalled();
+      soundManager.playBackgroundMusic();
+      expect(music.play).toHaveBeenCalledTimes(1);
+      settings.setAudioVolume(category, 1);
+      const tracks = howlInstances.filter((h) =>
+        h.src.includes("gameplay.mp3"),
+      );
+      expect(tracks).toHaveLength(2);
+      expect(tracks[1].play).toHaveBeenCalledTimes(1);
+    },
+  );
+
+  it("does not resume music after an explicit stop", () => {
+    soundManager.playBackgroundMusic();
+    soundManager.stopBackgroundMusic();
+    settings.setAudioVolume("music", 0);
+    settings.setAudioVolume("music", 1);
+    expect(
+      howlInstances.filter((h) => h.src.includes("gameplay.mp3")),
+    ).toHaveLength(1);
+  });
   it("is a single looping track, not a playlist", () => {
     const music = find("gameplay.mp3");
     expect(music).toBeDefined();
@@ -148,6 +242,66 @@ describe("cue playback", () => {
 });
 
 describe("ambience", () => {
+  it("does not load disabled ambience and resumes the current track at its envelope", () => {
+    settings.setAudioVolume("ambience", 0);
+    eventBus.emit(new SetAmbienceEvent("city", 0.1));
+    eventBus.emit(new SetAmbienceEvent("factory", 0.05));
+    expect(find("city.mp3")).toBeUndefined();
+    expect(find("factory.mp3")).toBeUndefined();
+    settings.setAudioVolume("ambience", 1);
+    const factory = find("factory.mp3");
+    expect(factory.play).toHaveBeenCalledTimes(1);
+    expect(factory.fade).toHaveBeenCalledWith(0, 0.05, 500);
+  });
+
+  it("restarts a cached loop revisited at a zero envelope", () => {
+    eventBus.emit(new SetAmbienceEvent("city", 0.1));
+    const city = find("city.mp3");
+    city._fire("fade", -1);
+    eventBus.emit(new SetAmbienceEvent("factory", 0.1));
+    city._fire("fade", -1);
+    expect(city.stop).toHaveBeenCalledTimes(1);
+
+    eventBus.emit(new SetAmbienceEvent("city", 0));
+    expect(city.play).toHaveBeenCalledTimes(1);
+    eventBus.emit(new SetAmbienceEvent("city", 0.2));
+    expect(city.play).toHaveBeenCalledTimes(2);
+    expect(city.fade).toHaveBeenLastCalledWith(0, 0.2, 500);
+  });
+
+  it.each([false, true])(
+    "resumes a focus-muted revisit with completed outgoing fade=%s",
+    (finishFade) => {
+      settings.setMuteOnBlur(true);
+      eventBus.emit(new SetAmbienceEvent("city", 0.1));
+      const city = find("city.mp3");
+      city._fire("fade", -1);
+      eventBus.emit(new SetAmbienceEvent("factory", 0.1));
+      if (finishFade) city._fire("fade", -1);
+      // A pending outgoing fade still owns the playing loop.
+      city.playing.mockReturnValue(!finishFade);
+      vi.mocked(document.hasFocus).mockReturnValue(false);
+      window.dispatchEvent(new Event("blur"));
+      eventBus.emit(new SetAmbienceEvent("city", 0.1));
+      expect(city.play).toHaveBeenCalledTimes(1);
+
+      vi.mocked(document.hasFocus).mockReturnValue(true);
+      window.dispatchEvent(new Event("focus"));
+      expect(city.play).toHaveBeenCalledTimes(finishFade ? 2 : 1);
+      expect(city.fade).toHaveBeenLastCalledWith(0, 0.1, 500);
+      const stops = city.stop.mock.calls.length;
+      city._fire("fade", -1);
+      expect(city.stop).toHaveBeenCalledTimes(stops);
+    },
+  );
+
+  it("unloads both sides of a crossfade when ambience is disabled", () => {
+    eventBus.emit(new SetAmbienceEvent("city", 0.1));
+    eventBus.emit(new SetAmbienceEvent("factory", 0.1));
+    settings.setAudioVolume("ambience", 0);
+    expect(find("city.mp3").unload).toHaveBeenCalled();
+    expect(find("factory.mp3").unload).toHaveBeenCalled();
+  });
   it("starts the requested loop and fades it up", () => {
     eventBus.emit(new SetAmbienceEvent("city", 0.1));
     const city = find("city.mp3");
@@ -270,13 +424,13 @@ describe("ambience", () => {
     const city = find("city.mp3");
     settings.setAudioVolume("ambience", 0);
     eventBus.emit(new SetAmbienceEvent("city", 0));
-    expect(city.volumes[city.volumes.length - 1]).toBe(0);
+    expect(city.unload).toHaveBeenCalled();
     settings.setAudioVolume("ambience", 1);
 
     eventBus.emit(new SetAmbienceEvent("factory", 0.1));
 
     // It is stopped and silent; it must not be carrying factory's level.
-    expect(city.volumes[city.volumes.length - 1]).toBe(0);
+    expect(city.play).toHaveBeenCalledTimes(1);
   });
 
   it("fades a revisited loop in rather than cutting to full", () => {
@@ -288,11 +442,10 @@ describe("ambience", () => {
     eventBus.emit(new SetAmbienceEvent("city", 0));
     settings.setAudioVolume("ambience", 1);
     eventBus.emit(new SetAmbienceEvent("factory", 0.1));
-    const city = find("city.mp3");
-    city.fade.mockClear();
-
     eventBus.emit(new SetAmbienceEvent("city", 0.1));
 
+    const cities = howlInstances.filter((h) => h.src.includes("city.mp3"));
+    const city = cities[cities.length - 1];
     expect(city.fade).toHaveBeenCalledTimes(1);
     expect(city.fade.mock.calls[0][0]).toBe(0);
   });

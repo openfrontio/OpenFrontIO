@@ -48,7 +48,9 @@ vi.mock("howler", () => {
   return { Howl: MockHowl, Howler: { volume: vi.fn() } };
 });
 
+import { AudioMixer } from "../../../src/client/sound/AudioMixer";
 import { startMenuMusic } from "../../../src/client/sound/MenuMusic";
+import { UserSettings } from "../../../src/client/UserSettings";
 
 // Rebuilt per test: these carry implementations, which clearAllMocks keeps but
 // restoreAllMocks would not.
@@ -57,6 +59,7 @@ let musicLevel: number;
 // The channel as the sliders have it, ignoring the focus duck -- which is
 // exactly the distinction isAudible draws and volumeFor does not.
 let musicAudible: boolean;
+let onMusicChange: (category: string) => void;
 
 const buildMixer = () => {
   // Real defaults: slider 0.5, squared by perceptualGain, times the -1 dB
@@ -68,6 +71,10 @@ const buildMixer = () => {
     unregister: vi.fn(),
     volumeFor: vi.fn(() => musicLevel),
     isAudible: vi.fn(() => musicAudible),
+    onChange: vi.fn((listener) => {
+      onMusicChange = listener;
+      return () => {};
+    }),
   };
 };
 
@@ -111,6 +118,48 @@ const lastVolume = (howl: any) => {
 };
 
 describe("menu music", () => {
+  it("follows global mute through the real mixer and re-arms only in the menu", () => {
+    localStorage.clear();
+    (
+      UserSettings as unknown as { cache: Map<string, string | null> }
+    ).cache.clear();
+    const settings = new UserSettings();
+    settings.setAudioVolume("master", 0.8);
+    settings.setAudioMuted(true);
+    const realMixer = new AudioMixer(settings);
+    try {
+      startMenuMusic(realMixer);
+      document.dispatchEvent(new Event("pointerdown"));
+      expect(themes()).toHaveLength(0);
+      settings.setAudioMuted(false);
+      // Unmute retains the existing user-gesture requirement.
+      expect(themes()).toHaveLength(0);
+      document.dispatchEvent(new Event("pointerdown"));
+      expect(themes()).toHaveLength(1);
+
+      // Muting cancels a play still queued behind loading.
+      settings.setAudioMuted(true);
+      expect(themes()[0].stop).toHaveBeenCalledTimes(1);
+      expect(themes()[0].unload).toHaveBeenCalledTimes(1);
+      themes()[0].begin();
+      settings.setAudioMuted(false);
+      document.dispatchEvent(new Event("keydown"));
+      expect(themes()).toHaveLength(2);
+
+      // A retiring fade must stop too, without resurrecting the menu track
+      // after the game has taken over.
+      themes()[1].volume.mockReturnValue(0.2);
+      document.dispatchEvent(new Event("game-starting"));
+      settings.setAudioMuted(true);
+      expect(themes()[1].unload).toHaveBeenCalledTimes(1);
+      settings.setAudioMuted(false);
+      document.dispatchEvent(new Event("pointerdown"));
+      expect(themes()).toHaveLength(2);
+    } finally {
+      realMixer.dispose();
+    }
+  });
+
   it("streams the theme rather than decoding it up front", () => {
     startMenuMusic(mixer);
     // Browsers block audio until a gesture, so the Howl is only built here.
@@ -232,9 +281,10 @@ describe("menu music", () => {
     musicAudible = false;
     theme.begin();
 
-    // Muted by the time it starts, so there is no ramp at all -- the mixer
-    // takes it on directly and writes the silent channel volume itself.
-    expect(mixer.register).toHaveBeenCalledWith(theme, "music");
+    // Muted by the time it starts, so cancel playback instead of keeping a
+    // silent HTML audio element running.
+    expect(theme.unload).toHaveBeenCalled();
+    expect(mixer.register).not.toHaveBeenCalled();
     vi.advanceTimersByTime(2100);
     expect(volumeWrites(theme).length).toBe(beforeStart);
   });
@@ -364,19 +414,64 @@ describe("menu music", () => {
     expect(db).toBeGreaterThan(-30);
   });
 
-  it("does not attempt a hanging fade when the channel is silent", () => {
+  it("does not load or play the theme when the channel is disabled", () => {
     buildMixer();
     musicLevel = 0;
     musicAudible = false;
     startMenuMusic(mixer);
     document.dispatchEvent(new Event("pointerdown"));
 
+    expect(themes()).toHaveLength(0);
+    expect(mixer.register).not.toHaveBeenCalled();
+  });
+
+  it("keeps listening for a gesture after music is enabled", () => {
+    musicAudible = false;
+    startMenuMusic(mixer);
+    document.dispatchEvent(new Event("pointerdown"));
+    document.dispatchEvent(new Event("keydown"));
+    expect(themes()).toHaveLength(0);
+    musicAudible = true;
+    document.dispatchEvent(new Event("pointerdown"));
+    expect(themes()).toHaveLength(1);
+    expect(themes()[0].play).toHaveBeenCalledTimes(1);
+  });
+
+  it.each([false, true])(
+    "unloads disabled music even while loading or ramping (%s)",
+    (begun) => {
+      vi.useFakeTimers();
+      startMenuMusic(mixer);
+      document.dispatchEvent(new Event("pointerdown"));
+      const theme = themes()[0];
+      if (begun) theme.begin();
+      musicAudible = false;
+      onMusicChange("music");
+      expect(theme.stop).toHaveBeenCalled();
+      expect(theme.unload).toHaveBeenCalled();
+      theme.begin();
+      vi.advanceTimersByTime(2100);
+      expect(mixer.register).not.toHaveBeenCalled();
+      musicAudible = true;
+      document.dispatchEvent(new Event("pointerdown"));
+      expect(themes()).toHaveLength(2);
+    },
+  );
+
+  it("stops the outgoing menu fade when music is disabled during game start", () => {
+    startMenuMusic(mixer);
+    document.dispatchEvent(new Event("pointerdown"));
     const theme = themes()[0];
-    theme.begin();
-    // A ramp toward zero never reaches a level worth registering at, so the
-    // theme would otherwise stay unregistered for the session.
-    expect(theme.fade).not.toHaveBeenCalled();
-    expect(mixer.register).toHaveBeenCalledWith(theme, "music");
+    theme.volume.mockReturnValue(0.2);
+    document.dispatchEvent(new Event("game-starting"));
+    expect(theme.fade).toHaveBeenCalled();
+    musicAudible = false;
+    onMusicChange("music");
+    expect(theme.stop).toHaveBeenCalled();
+    expect(theme.unload).toHaveBeenCalled();
+    musicAudible = true;
+    document.dispatchEvent(new Event("pointerdown"));
+    expect(themes()).toHaveLength(1);
   });
 
   it("ramps again on the start after a menu restore", () => {

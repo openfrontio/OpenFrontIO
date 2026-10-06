@@ -123,6 +123,104 @@ describe("user-setting audio tab", () => {
     setCuePlayer(null);
   });
 
+  it.each([false, true])(
+    "puts a labeled mute control before the sliders (in-game: %s)",
+    async (inGame) => {
+      const el = await mountAudioTab({ inGame });
+      const rows = [...el.querySelectorAll("setting-toggle, setting-slider")];
+      expect(rows[0].id).toBe("audio-mute-all-toggle");
+      expect(rows[0].textContent).toContain("user_setting.audio_mute_all");
+      const box = checkbox(el, "audio-mute-all-toggle");
+      expect(box.closest("label")).not.toBeNull();
+      expect(box.checked).toBe(false);
+      expect(box.disabled).toBe(false);
+    },
+  );
+
+  it("preserves all levels and restores previews when global mute is turned off", async () => {
+    const settings = new UserSettings();
+    CATEGORIES.forEach((category, i) =>
+      settings.setAudioVolume(category, (i + 1) / 10),
+    );
+    setAudioControls(
+      stubControls({
+        audible: (category) =>
+          !settings.audioMuted() && settings.audioVolume(category) > 0,
+      }),
+    );
+    const el = await mountAudioTab();
+    checkbox(el, "audio-mute-all-toggle").click();
+    await el.updateComplete;
+
+    expect(settings.audioMuted()).toBe(true);
+    CATEGORIES.forEach((category, i) => {
+      expect(settings.audioVolume(category)).toBeCloseTo((i + 1) / 10);
+      expect(
+        (
+          el.querySelector(`#audio-${category}-slider`) as unknown as {
+            value: number;
+          }
+        ).value,
+      ).toBe((i + 1) * 10);
+      expect(
+        (
+          el.querySelector(
+            `#audio-${category}-slider input`,
+          ) as HTMLInputElement
+        ).disabled,
+      ).toBe(false);
+    });
+    for (const category of TESTABLE) {
+      expect(testButton(el, category)!.disabled).toBe(true);
+      expect(testButton(el, category)!.title).toBe(
+        "user_setting.audio_test_all_muted",
+      );
+    }
+
+    slide(el, "effects", 0);
+    await el.updateComplete;
+    expect(settings.audioMuted()).toBe(true);
+    checkbox(el, "audio-mute-all-toggle").click();
+    await el.updateComplete;
+    expect(settings.audioMuted()).toBe(false);
+    expect(settings.audioVolume("master")).toBeCloseTo(0.1);
+    expect(settings.audioVolume("effects")).toBe(0);
+    expect(testButton(el, "effects")!.disabled).toBe(true);
+    expect(testButton(el, "effects")!.title).toBe(
+      "user_setting.audio_test_muted",
+    );
+    expect(testButton(el, "alerts")!.disabled).toBe(false);
+    expect(testButton(el, "interface")!.disabled).toBe(false);
+  });
+
+  it("shows a saved mute after reopening Settings with a fresh settings cache", async () => {
+    const el = await mountAudioTab();
+    checkbox(el, "audio-mute-all-toggle").click();
+    await el.updateComplete;
+    el.close();
+    el.remove();
+    (
+      UserSettings as unknown as { cache: Map<string, string | null> }
+    ).cache.clear();
+
+    const reopened = await mountAudioTab({ inGame: true });
+    expect(checkbox(reopened, "audio-mute-all-toggle").checked).toBe(true);
+    expect(new UserSettings().audioMuted()).toBe(true);
+  });
+
+  it("clears a clicked global mute when resetting audio", async () => {
+    const el = await mountAudioTab();
+    const box = () => checkbox(el, "audio-mute-all-toggle");
+    box().click();
+    await el.updateComplete;
+    expect(box().checked).toBe(true);
+    (el.querySelector("#audio-reset") as HTMLButtonElement).click();
+    await el.updateComplete;
+    expect(box().checked).toBe(false);
+    expect(new UserSettings().audioMuted()).toBe(false);
+    expect(localStorage.getItem("settings.audio.muted")).toBeNull();
+  });
+
   it("renders the six channels in mixer order", async () => {
     const el = await mountAudioTab();
     expect([...el.querySelectorAll("setting-slider")].map((s) => s.id)).toEqual(
@@ -449,11 +547,14 @@ describe("user-setting audio tab", () => {
 
     const required = [
       ...CATEGORIES.flatMap((c) => [`audio_${c}`, `audio_${c}_desc`]),
+      "audio_mute_all",
+      "audio_mute_all_desc",
       "audio_mute_on_blur",
       "audio_mute_on_blur_desc",
       "audio_alerts_when_unfocused",
       "audio_alerts_when_unfocused_desc",
       "audio_test",
+      "audio_test_all_muted",
       "audio_test_muted",
       "audio_test_master_muted",
       "audio_reset",

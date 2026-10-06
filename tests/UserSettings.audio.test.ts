@@ -128,6 +128,56 @@ describe("audio focus settings", () => {
   });
 });
 
+describe("global audio mute", () => {
+  beforeEach(resetUserSettingsState);
+
+  it("defaults off without changing the web's silent master default", () => {
+    const settings = new UserSettings();
+    expect(settings.audioMuted()).toBe(false);
+    settings.setAudioMuted(true);
+    settings.setAudioMuted(false);
+    expect(settings.audioVolume("master")).toBe(0);
+  });
+
+  it("persists through a cache reset and new instance without changing levels", () => {
+    const settings = new UserSettings();
+    const channels = ["master", "music", ...INHERITS_EFFECTS] as const;
+    channels.forEach((channel, i) => settings.setAudioVolume(channel, i / 10));
+    settings.setAudioMuted(true);
+    expect(localStorage.getItem("settings.audio.muted")).toBe("true");
+
+    (
+      UserSettings as unknown as { cache: Map<string, string | null> }
+    ).cache.clear();
+    const reloaded = new UserSettings();
+    expect(reloaded.audioMuted()).toBe(true);
+    channels.forEach((channel, i) =>
+      expect(reloaded.audioVolume(channel)).toBeCloseTo(i / 10),
+    );
+
+    reloaded.setAudioMuted(false);
+    expect(settings.audioMuted()).toBe(false);
+    channels.forEach((channel, i) =>
+      expect(settings.audioVolume(channel)).toBeCloseTo(i / 10),
+    );
+  });
+
+  it("announces mute and unmute through the settings event", () => {
+    const seen: unknown[] = [];
+    const type = `${USER_SETTINGS_CHANGED_EVENT}:settings.audio.muted`;
+    const listener = (e: Event) => seen.push((e as CustomEvent).detail);
+    globalThis.addEventListener(type, listener);
+    try {
+      const settings = new UserSettings();
+      settings.setAudioMuted(true);
+      settings.setAudioMuted(false);
+      expect(seen).toEqual(["true", "false"]);
+    } finally {
+      globalThis.removeEventListener(type, listener);
+    }
+  });
+});
+
 describe("legacy volume accessors", () => {
   beforeEach(resetUserSettingsState);
 
@@ -296,6 +346,7 @@ describe("resetAudio", () => {
     s.setAudioVolume("master", 0.2);
     s.setAudioVolume("music", 0.3);
     s.setAudioVolume("effects", 0.4);
+    s.setAudioMuted(true);
     s.setMuteOnBlur(true);
     s.setAlertsWhenUnfocused(false);
     localStorage.setItem("settings.backgroundMusicVolume", "0.9");
@@ -310,6 +361,7 @@ describe("resetAudio", () => {
       "settings.audio.alerts",
       "settings.audio.ambience",
       "settings.audio.interface",
+      "settings.audio.muted",
       "settings.audio.muteOnBlur",
       "settings.audio.alertsWhenUnfocused",
       "settings.backgroundMusicVolume",
@@ -323,6 +375,7 @@ describe("resetAudio", () => {
     const s = new UserSettings();
     s.setAudioVolume("master", 0.2);
     s.setAudioVolume("effects", 0.1);
+    s.setAudioMuted(true);
     s.setMuteOnBlur(true);
     s.setAlertsWhenUnfocused(false);
 
@@ -337,6 +390,7 @@ describe("resetAudio", () => {
     expect(after.audioVolume("alerts")).toBeCloseTo(0.8);
     expect(after.audioVolume("ambience")).toBeCloseTo(0.4);
     expect(after.audioVolume("interface")).toBeCloseTo(0.5);
+    expect(after.audioMuted()).toBe(false);
     expect(after.muteOnBlur()).toBe(false);
     expect(after.alertsWhenUnfocused()).toBe(true);
   });
@@ -345,8 +399,10 @@ describe("resetAudio", () => {
     pretendDesktopShell();
     const s = new UserSettings();
     s.setAudioVolume("master", 0.2);
+    s.setAudioMuted(true);
     s.resetAudio();
     expect(new UserSettings().audioVolume("master")).toBeCloseTo(0.9);
+    expect(new UserSettings().audioMuted()).toBe(false);
   });
 
   it("is safe to call twice, and on empty storage", () => {
@@ -363,6 +419,7 @@ describe("resetAudio", () => {
   it("announces resolved values for a channel and for the blur toggles", () => {
     const seen: Record<string, unknown[]> = {
       effects: [],
+      muted: [],
       muteOnBlur: [],
       alertsWhenUnfocused: [],
     };
@@ -387,6 +444,7 @@ describe("resetAudio", () => {
       globalThis.removeEventListener(type, l);
     }
     expect(seen.effects).toEqual(["0.7"]);
+    expect(seen.muted).toEqual(["false"]);
     expect(seen.muteOnBlur).toEqual(["false"]);
     expect(seen.alertsWhenUnfocused).toEqual(["true"]);
   });
@@ -441,12 +499,14 @@ describe("one-time audio reset", () => {
 
     s.setAudioVolume("master", 0.3);
     s.setAudioVolume("ambience", 0.9);
+    s.setAudioMuted(true);
     s.setMuteOnBlur(true);
 
     expect(new UserSettings().resetAudioOnce()).toBe(false);
     const after = new UserSettings();
     expect(after.audioVolume("master")).toBeCloseTo(0.3);
     expect(after.audioVolume("ambience")).toBeCloseTo(0.9);
+    expect(after.audioMuted()).toBe(true);
     expect(after.muteOnBlur()).toBe(true);
   });
 

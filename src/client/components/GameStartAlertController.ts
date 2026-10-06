@@ -6,7 +6,7 @@ import {
   ReactiveControllerHost,
   TemplateResult,
 } from "lit";
-import { UserSettings } from "../UserSettings";
+import { USER_SETTINGS_CHANGED_EVENT, UserSettings } from "../UserSettings";
 import { translateText } from "../Utils";
 
 /**
@@ -17,9 +17,8 @@ import { translateText } from "../Utils";
  */
 export class GameStartAlertController implements ReactiveController {
   private armed = false;
-  // SoundManager exists only after the game is running. Keep an independent
-  // Howl at full volume so an alert the player explicitly armed is available
-  // during the wait and is not silenced by an SFX slider that defaults to 0.
+  // SoundManager exists only after the game is running. The independent chime
+  // respects master and alert muting, rather than the effects channel.
   private sound: Howl | null = null;
   private readonly userSettings = new UserSettings();
 
@@ -32,10 +31,24 @@ export class GameStartAlertController implements ReactiveController {
 
   hostConnected(): void {
     document.addEventListener("game-starting", this.handleGameStarting);
+    for (const category of ["master", "alerts", "muted"]) {
+      globalThis.addEventListener(
+        `${USER_SETTINGS_CHANGED_EVENT}:settings.audio.${category}`,
+        this.handleAudioChange,
+      );
+    }
   }
 
   hostDisconnected(): void {
     document.removeEventListener("game-starting", this.handleGameStarting);
+    for (const category of ["master", "alerts", "muted"]) {
+      globalThis.removeEventListener(
+        `${USER_SETTINGS_CHANGED_EVENT}:settings.audio.${category}`,
+        this.handleAudioChange,
+      );
+    }
+    this.sound?.unload();
+    this.sound = null;
   }
 
   renderBell(): TemplateResult {
@@ -76,7 +89,7 @@ export class GameStartAlertController implements ReactiveController {
     // Preload without the manual-arm toast or another permission prompt. For
     // click-driven joins this also creates Howler's context under the join
     // gesture; deep-link joins still follow the browser's autoplay policy.
-    if (this.armed) this.loadSound();
+    if (this.armed && this.audioEnabled()) this.loadSound();
     this.host.requestUpdate();
   }
 
@@ -108,7 +121,21 @@ export class GameStartAlertController implements ReactiveController {
     ) {
       void Notification.requestPermission();
     }
-    this.loadSound();
+    if (this.audioEnabled()) this.loadSound();
+  };
+
+  private audioEnabled(): boolean {
+    return (
+      !this.userSettings.audioMuted() &&
+      this.userSettings.audioVolume("master") > 0 &&
+      this.userSettings.audioVolume("alerts") > 0
+    );
+  }
+
+  private readonly handleAudioChange = (): void => {
+    if (this.audioEnabled()) return;
+    this.sound?.unload();
+    this.sound = null;
   };
 
   private loadSound(): Howl {
@@ -122,13 +149,12 @@ export class GameStartAlertController implements ReactiveController {
     if (!this.armed || !this.isWaitingForGame()) return;
 
     try {
-      this.loadSound().play();
+      if (this.audioEnabled()) this.loadSound().play();
     } catch (error) {
       console.warn("Failed to play game-start alert sound", error);
     }
 
-    // The chime is unconditional. The desktop notification is an additional
-    // channel where the browser and OS permit it, not a fallback for audio.
+    // Notifications remain available when game audio is disabled.
     if (
       typeof Notification === "undefined" ||
       Notification.permission !== "granted"
