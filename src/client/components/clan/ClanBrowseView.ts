@@ -1,6 +1,10 @@
 import { html, LitElement } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
-import { type ClanBrowseResponse, fetchClans } from "../../ClanApi";
+import {
+  type ClanBrowseResponse,
+  type ClanBrowseSort,
+  fetchClans,
+} from "../../ClanApi";
 import { translateText } from "../../Utils";
 import "./ClanCard";
 import { type ClanRole, renderLoadingSpinner } from "./ClanShared";
@@ -9,7 +13,15 @@ export interface BrowseState {
   data: ClanBrowseResponse | null;
   page: number;
   query: string;
+  sort: ClanBrowseSort;
 }
+
+const browseSortOptions: { value: ClanBrowseSort; labelKey: string }[] = [
+  { value: "random", labelKey: "clan_modal.sort_browse_random" },
+  { value: "memberCount", labelKey: "clan_modal.sort_browse_members" },
+  { value: "winScore", labelKey: "clan_modal.sort_browse_win_score" },
+  { value: "name", labelKey: "clan_modal.sort_browse_name" },
+];
 
 @customElement("clan-browse-view")
 export class ClanBrowseView extends LitElement {
@@ -24,6 +36,7 @@ export class ClanBrowseView extends LitElement {
   @state() private searchQuery = "";
   @state() private browseData: ClanBrowseResponse | null = null;
   @state() private browsePage = 1;
+  @state() private browseSort: ClanBrowseSort = "random";
   @state() private loading = false;
   @state() private errorMsg = "";
   private searchDebounce: ReturnType<typeof setTimeout> | null = null;
@@ -36,6 +49,7 @@ export class ClanBrowseView extends LitElement {
           data: this.browseData,
           page: this.browsePage,
           query: this.searchQuery,
+          sort: this.browseSort,
         } satisfies BrowseState,
         bubbles: true,
         composed: true,
@@ -48,9 +62,15 @@ export class ClanBrowseView extends LitElement {
     this.loading = true;
     this.errorMsg = "";
     try {
+      // Reuse the shuffle bucket of the last response, so the order holds
+      // if the hour turns mid-browse. The server only honours the previous
+      // hour, so a long-open modal still moves on.
       const data = await fetchClans(
         this.searchQuery || undefined,
         this.browsePage,
+        undefined,
+        this.browseSort,
+        this.browseData?.bucket,
       );
       if (gen !== this.asyncGeneration) return;
       if (data === false) throw new Error("fetch failed");
@@ -73,12 +93,19 @@ export class ClanBrowseView extends LitElement {
     }, 400);
   }
 
+  private onSortChange(sort: ClanBrowseSort) {
+    this.browseSort = sort;
+    this.browsePage = 1;
+    this.loadBrowse();
+  }
+
   connectedCallback() {
     super.connectedCallback();
     if (this.cachedState?.data) {
       this.browseData = this.cachedState.data;
       this.browsePage = this.cachedState.page;
       this.searchQuery = this.cachedState.query;
+      this.browseSort = this.cachedState.sort;
     } else {
       this.loadBrowse();
     }
@@ -102,25 +129,53 @@ export class ClanBrowseView extends LitElement {
 
     return html`
       <div class="space-y-4">
-        <div class="relative">
-          <input
-            type="text"
-            .value=${this.searchQuery}
-            @input=${(e: Event) => this.onSearchInput(e)}
-            class="w-full pl-10 pr-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-white/20 focus:outline-none focus:ring-2 focus:ring-malibu-blue/50 focus:border-malibu-blue/50 transition-all font-medium hover:bg-white/10 text-sm"
-            placeholder="${translateText("clan_modal.search_placeholder")}"
-          />
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            class="w-4 h-4 text-white/30 absolute left-3 top-1/2 -translate-y-1/2"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-            stroke-width="2"
-          >
-            <circle cx="11" cy="11" r="8" />
-            <path d="m21 21-4.35-4.35" />
-          </svg>
+        <div class="flex flex-col sm:flex-row gap-2">
+          <div class="relative flex-1">
+            <input
+              type="text"
+              .value=${this.searchQuery}
+              @input=${(e: Event) => this.onSearchInput(e)}
+              class="w-full pl-10 pr-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-white/20 focus:outline-none focus:ring-2 focus:ring-malibu-blue/50 focus:border-malibu-blue/50 transition-all font-medium hover:bg-white/10 text-sm"
+              placeholder="${translateText("clan_modal.search_placeholder")}"
+            />
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              class="w-4 h-4 text-white/30 absolute left-3 top-1/2 -translate-y-1/2"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+              stroke-width="2"
+            >
+              <circle cx="11" cy="11" r="8" />
+              <path d="m21 21-4.35-4.35" />
+            </svg>
+          </div>
+          <div class="flex items-center gap-2 shrink-0">
+            <label
+              class="text-[10px] font-bold text-white/40 uppercase tracking-wider hidden sm:inline"
+            >
+              ${translateText("clan_modal.sort_by")}
+            </label>
+            <select
+              @change=${(e: Event) =>
+                this.onSortChange(
+                  (e.target as HTMLSelectElement).value as ClanBrowseSort,
+                )}
+              class="flex-1 sm:flex-none h-full min-h-10 pl-3 pr-8 bg-white/5 border border-white/10 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-malibu-blue/50 focus:border-malibu-blue/50 transition-all font-medium hover:bg-white/10 text-sm appearance-none bg-no-repeat bg-[right_0.5rem_center] bg-[length:1rem] bg-[url('data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22rgba(255,255,255,0.5)%22 stroke-width=%222%22><path stroke-linecap=%22round%22 stroke-linejoin=%22round%22 d=%22m6 9 6 6 6-6%22/></svg>')]"
+            >
+              ${browseSortOptions.map(
+                (opt) => html`
+                  <option
+                    value=${opt.value}
+                    ?selected=${opt.value === this.browseSort}
+                    class="bg-neutral-900"
+                  >
+                    ${translateText(opt.labelKey)}
+                  </option>
+                `,
+              )}
+            </select>
+          </div>
         </div>
 
         ${this.errorMsg

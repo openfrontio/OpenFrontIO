@@ -83,11 +83,23 @@ export const DiscordInviteResponseSchema = z.object({
   approximate_presence_count: z.number().optional(),
 });
 
+export const ClanBrowseSortSchema = z.enum([
+  "random",
+  "memberCount",
+  "winScore",
+  "name",
+]);
+export type ClanBrowseSort = z.infer<typeof ClanBrowseSortSchema>;
+
 export const ClanBrowseResponseSchema = z.object({
   results: ClanInfoSchema.array(),
   total: z.number(),
   page: z.number(),
   limit: z.number(),
+  // The hour bucket the default shuffle was seeded with; sent back on later
+  // pages so the order holds across the hour. Optional for API deploys that
+  // predate the shuffle.
+  bucket: z.number().optional(),
 });
 export type ClanBrowseResponse = z.infer<typeof ClanBrowseResponseSchema>;
 

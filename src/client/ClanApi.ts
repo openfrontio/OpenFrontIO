@@ -3,6 +3,7 @@ import {
   ClanBansResponseSchema,
   type ClanBrowseResponse,
   ClanBrowseResponseSchema,
+  type ClanBrowseSort,
   type ClanDiscord,
   type ClanDonationsResponse,
   ClanDonationsResponseSchema,
@@ -28,6 +29,7 @@ export type {
   ClanBan,
   ClanBansResponse,
   ClanBrowseResponse,
+  ClanBrowseSort,
   ClanDiscord,
   ClanDonation,
   ClanDonationsResponse,
@@ -94,16 +96,61 @@ export async function fetchClanLeaderboard(): Promise<
   }
 }
 
+const CLAN_BROWSE_SEED_KEY = "clanBrowseSeed";
+
+// Seeds the browse list's default shuffle. Signed in, the public id, so the
+// order follows the player across devices; signed out, a random value kept in
+// localStorage. Never the persistent id, which must not leave the client.
+async function clanBrowseSeed(): Promise<string> {
+  const me = await getUserMe();
+  if (me) return me.player.publicId;
+  try {
+    const stored = localStorage.getItem(CLAN_BROWSE_SEED_KEY);
+    if (stored) return stored;
+    const fresh = crypto.randomUUID().replace(/-/g, "");
+    localStorage.setItem(CLAN_BROWSE_SEED_KEY, fresh);
+    return fresh;
+  } catch {
+    // Storage blocked: every visitor shares the hour's order.
+    return "";
+  }
+}
+
+// Server sort field and direction for each browse option. Search ignores
+// "random" and keeps the server's alphabetical default.
+const BROWSE_SORT_PARAMS: Record<
+  ClanBrowseSort,
+  { sortField: string; sortOrder?: "ASC" | "DESC" }
+> = {
+  random: { sortField: "random" },
+  memberCount: { sortField: "memberCount", sortOrder: "DESC" },
+  winScore: { sortField: "winScore", sortOrder: "DESC" },
+  name: { sortField: "name", sortOrder: "ASC" },
+};
+
 export async function fetchClans(
   search?: string,
   page = 1,
   limit = 20,
+  sort: ClanBrowseSort = "random",
+  bucket?: number,
 ): Promise<ClanBrowseResponse | false> {
   try {
     const params = new URLSearchParams();
     params.set("page", String(page));
     params.set("limit", String(limit));
-    if (search && search.length >= 2) params.set("search", search);
+    const searching = !!search && search.length >= 2;
+    if (searching) params.set("search", search);
+    if (!(searching && sort === "random")) {
+      const { sortField, sortOrder } = BROWSE_SORT_PARAMS[sort];
+      params.set("sortField", sortField);
+      if (sortOrder) params.set("sortOrder", sortOrder);
+    }
+    if (sort === "random" && !searching) {
+      const seed = await clanBrowseSeed();
+      if (seed) params.set("seed", seed);
+      if (bucket !== undefined) params.set("bucket", String(bucket));
+    }
     const res = await clanFetch(`/clans?${params}`);
     if (!res.ok) return false;
     const json = await res.json();
