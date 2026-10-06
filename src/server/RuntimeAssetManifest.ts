@@ -1,4 +1,4 @@
-import type { AssetManifest } from "@openfront/engine-lib/AssetPaths";
+import type { AssetManifest } from "@openfront/shared/AssetPaths";
 import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
