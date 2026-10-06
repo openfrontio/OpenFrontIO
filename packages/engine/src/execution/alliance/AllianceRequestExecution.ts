@@ -3,7 +3,7 @@ import {
   PlayerID,
   UnitType,
 } from "@openfront/engine-api/game/GameTypes";
-import { wouldNukeBreakAlliance } from "@openfront/engine-lib/execution/Util";
+import { wouldNukeBreakAlliance } from "@openfront/engine-lib/execution/NukeAlliance";
 import { zPlayerRef, zRef } from "@openfront/engine-lib/snapshot/SnapshotType";
 import { z } from "zod";
 import { AllianceRequest, Execution, Game, Player } from "../../game/Game";

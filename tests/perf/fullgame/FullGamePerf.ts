@@ -1,7 +1,7 @@
 /**
  * Full-game performance harness for the engine.
  *
- * Runs the real simulation pipeline (GameRunner + Executor + real Config,
+ * Runs the real simulation pipeline (GameRunner + Executor + real EngineConfig,
  * nations from the map manifest, bots) headlessly on a production map for a
  * configurable number of ticks, then reports:
  *
@@ -44,10 +44,10 @@ import {
   HashUpdate,
 } from "@openfront/engine-api/game/GameUpdates";
 import { GameConfig, GameStartInfo } from "@openfront/engine-api/Schemas";
-import { Config } from "@openfront/engine-lib/configuration/Config";
 import { loadTerrainMap } from "@openfront/engine-lib/game/TerrainMapLoader";
 import { PseudoRandom } from "@openfront/engine-lib/PseudoRandom";
 import { simpleHash } from "@openfront/engine-lib/Util";
+import { EngineConfig } from "@openfront/engine/configuration/EngineConfig";
 import { Executor } from "@openfront/engine/execution/ExecutionManager";
 import { createGame } from "@openfront/engine/game/GameImpl";
 import { createNationsForGame } from "@openfront/engine/game/NationCreation";
@@ -250,7 +250,7 @@ async function main(): Promise<void> {
   // Mirrors createGameRunner(), but assembled by hand so the execution
   // profiler can be attached before GameRunner.init() adds the initial
   // executions (nations, bots, spawn timer, win check).
-  const config = new Config(gameConfig, false);
+  const config = new EngineConfig(gameConfig, false);
   const mapLoader = new NodeGameMapLoader(
     path.join(PROJECT_ROOT, "resources/maps"),
   );
