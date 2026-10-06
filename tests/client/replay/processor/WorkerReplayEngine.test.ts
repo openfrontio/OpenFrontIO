@@ -7,9 +7,6 @@
  */
 
 import { GameMapType } from "@openfront/engine-api/game/GameTypes";
-import fs from "fs";
-import path from "path";
-import { fileURLToPath } from "url";
 import type {
   ReplayAppend,
   ReplayBase,
@@ -25,11 +22,6 @@ import {
 } from "../util/ArchiveGame";
 import { directEngine } from "../util/DirectEngine";
 import { gzip, mergeAppends } from "../util/RecordGame";
-
-const RESOURCES = path.resolve(
-  path.dirname(fileURLToPath(import.meta.url)),
-  "../../../../resources",
-);
 
 /** The page's side of the engine worker: what it posts arrives at `self`. */
 class PageEnd {
@@ -60,11 +52,9 @@ async function process(
 }
 
 test("processing on the engine worker makes the same replay", async () => {
-  // The worker loads maps over fetch, from the paths the CDN serves.
-  vi.stubGlobal("fetch", async (url: string) => {
-    const file = path.join(RESOURCES, new URL(url, "http://cdn").pathname);
-    return new Response(fs.readFileSync(file));
-  });
+  // The engine loads nothing: the map comes in its init message.
+  const fetch = vi.fn(() => Promise.reject(new Error("the engine fetched")));
+  vi.stubGlobal("fetch", fetch);
   // After connect the worker answers on the port, never on `self`.
   const self = Object.assign(new EventTarget(), { postMessage: vi.fn() });
   vi.stubGlobal("self", self);
@@ -85,10 +75,11 @@ test("processing on the engine worker makes the same replay", async () => {
   });
 
   const direct = await process(record, directEngine());
-  const viaWorker = await process(record, (gameStart) =>
-    startWorkerEngine(channel.port2, gameStart, ""),
+  const viaWorker = await process(record, (gameStart, map) =>
+    startWorkerEngine(channel.port2, gameStart, map),
   );
   expect(viaWorker.result.totalTicks).toBe(230);
   expect(viaWorker.replay).toEqual(direct.replay);
   expect(self.postMessage).not.toHaveBeenCalled();
+  expect(fetch).not.toHaveBeenCalled();
 }, 60_000);

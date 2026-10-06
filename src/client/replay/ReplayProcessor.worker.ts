@@ -5,8 +5,8 @@
  * LocalProcessing.ts.
  */
 
-import { FetchGameMapLoader } from "@openfront/engine-lib/game/FetchGameMapLoader";
 import { assetUrl } from "@openfront/shared/AssetUrls";
+import { FetchGameMapLoader } from "@openfront/shared/FetchGameMapLoader";
 import { gzipInBrowser } from "./BrowserGzip";
 import {
   processGameRecord,
@@ -29,7 +29,7 @@ ctx.addEventListener("message", (e: MessageEvent<ProcessorRequest>) => {
   // (same as Worker.worker.ts).
   globalThis.__CDN_BASE__ = cdnBase;
   processGameRecord(record, {
-    engine: (gameStart) => startWorkerEngine(engine, gameStart, cdnBase),
+    engine: (gameStart, map) => startWorkerEngine(engine, gameStart, map),
     mapLoader,
     gzip: gzipInBrowser,
     onProgress: (p) => send({ type: "progress", percent: p.percent }),

@@ -16,27 +16,18 @@ import {
   TransportShipSpawnResultMessage,
   WorkerMessage,
 } from "@openfront/engine-api/worker/WorkerMessages";
-import { AssetManifest, buildAssetUrl } from "@openfront/engine-lib/AssetPaths";
-import { FetchGameMapLoader } from "@openfront/engine-lib/game/FetchGameMapLoader";
+import { mapFilesLoader } from "@openfront/engine-lib/game/MapFiles";
 import {
   createGameRunner,
   createGameRunnerFromSnapshot,
   GameRunner,
 } from "../GameRunner";
 
-// Injected by Vite at build time (vite.config.ts `define`).
-declare const __ASSET_MANIFEST__: AssetManifest | undefined;
-
 const ctx: Worker = self as any;
 // Where answers go: the page that started this worker, or the port it
 // handed over (connect).
 let out: Pick<MessagePort, "postMessage"> = ctx;
 let gameRunner: Promise<GameRunner> | null = null;
-// From the init message; workers have no `window` to read it from.
-let cdnBase = "";
-const mapLoader = new FetchGameMapLoader((path) =>
-  buildAssetUrl(`maps/${path}`, __ASSET_MANIFEST__ ?? {}, cdnBase),
-);
 // Yield threshold; not a backlog cap. Used to avoid monopolizing the worker task
 // and flooding the main thread with messages during catch-up.
 const MAX_TICKS_BEFORE_YIELD = 4;
@@ -170,9 +161,7 @@ async function onMessage(e: MessageEvent<MainThreadMessage>) {
       break;
     case "init":
       try {
-        // Set before createGameRunner so map fetches via mapLoader pick up the
-        // CDN base.
-        cdnBase = message.cdnBase;
+        const mapLoader = mapFilesLoader(message.map);
         gameRunner = (
           message.snapshot !== undefined
             ? createGameRunnerFromSnapshot(

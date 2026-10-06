@@ -146,9 +146,14 @@ function resolve(
   return { file: target };
 }
 
-function violations(): { edges: Set<string>; determinism: string[] } {
+function violations(): {
+  edges: Set<string>;
+  determinism: string[];
+  io: string[];
+} {
   const edges = new Set<string>();
   const determinism: string[] = [];
+  const io: string[] = [];
   const files = [
     ...PACKAGES.flatMap((pkg) => walk(`packages/${pkg}/src`)),
     ...walk("src/client"),
@@ -174,19 +179,24 @@ function violations(): { edges: Set<string>; determinism: string[] } {
     }
     if (ENGINE_SIDE.has(from)) {
       const text = fs.readFileSync(path.join(ROOT, file), "utf8");
-      for (const m of text.matchAll(/Math\.random|Date\.now|new Date\b/g)) {
-        const line = text.slice(0, m.index).split("\n").length;
-        const src = text.split("\n")[line - 1].trim();
-        if (src.startsWith("//") || src.startsWith("*")) continue;
-        determinism.push(`${file}:${line}: ${m[0]}`);
-      }
+      const find = (re: RegExp, out: string[]) => {
+        for (const m of text.matchAll(re)) {
+          const line = text.slice(0, m.index).split("\n").length;
+          const src = text.split("\n")[line - 1].trim();
+          if (src.startsWith("//") || src.startsWith("*")) continue;
+          out.push(`${file}:${line}: ${m[0]}`);
+        }
+      };
+      find(/Math\.random|Date\.now|new Date\b/g, determinism);
+      // The engine is handed everything it needs (maps come in `init`).
+      find(/\bfetch\(|XMLHttpRequest|importScripts|\bWebSocket\b/g, io);
     }
   }
-  return { edges, determinism };
+  return { edges, determinism, io };
 }
 
 describe("layer boundaries", () => {
-  const { edges, determinism } = violations();
+  const { edges, determinism, io } = violations();
 
   test("no import edges outside the allowed graph", () => {
     const allowed = new Set(ALLOWLIST);
@@ -201,5 +211,9 @@ describe("layer boundaries", () => {
 
   test("engine code uses no wall-clock or unseeded randomness", () => {
     expect(determinism).toEqual([]);
+  });
+
+  test("engine code loads nothing over the network", () => {
+    expect(io).toEqual([]);
   });
 });

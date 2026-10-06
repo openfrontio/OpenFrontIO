@@ -19,7 +19,10 @@
  * turns up is the game that was played.
  */
 
-import { GameMapLoader } from "@openfront/engine-api/game/GameMapLoader";
+import {
+  GameMapLoader,
+  MapFiles,
+} from "@openfront/engine-api/game/GameMapLoader";
 import {
   ErrorUpdate,
   GameUpdateType,
@@ -27,6 +30,10 @@ import {
   HashUpdate,
 } from "@openfront/engine-api/game/GameUpdates";
 import { GameStartInfo, Turn } from "@openfront/engine-api/Schemas";
+import {
+  loadMapFiles,
+  mapFilesLoader,
+} from "@openfront/engine-lib/game/MapFiles";
 import { loadTerrainMap } from "@openfront/engine-lib/game/TerrainMapLoader";
 import {
   decompressGameRecord,
@@ -61,9 +68,12 @@ export interface ReplayEngine {
 }
 
 export interface ProcessOptions {
-  /** Starts an engine on the game. */
-  engine: (gameStart: GameStartInfo) => Promise<ReplayEngine>;
-  /** Loads the map for the replay header's terrain. */
+  /**
+   * Starts an engine on the game. It may take the map files over (move
+   * them to a worker): processing is done with them by then.
+   */
+  engine: (gameStart: GameStartInfo, map: MapFiles) => Promise<ReplayEngine>;
+  /** Loads the map, for the engine and the replay header's terrain. */
   mapLoader: GameMapLoader;
   gzip: GzipFn;
   keyframeInterval?: number;
@@ -150,12 +160,17 @@ export async function processGameRecord(
   let mismatch: HashMismatch | null = null;
   let hashedTurn = -1;
 
-  // The map as the game starts. The engine loads its own copy and changes
-  // it as the game goes, so this one is never shared with it.
-  const { gameMap } = await loadTerrainMap(
+  const map = await loadMapFiles(
+    opts.mapLoader,
     gameStart.config.gameMap,
     gameStart.config.gameMapSize,
-    opts.mapLoader,
+  );
+  // The map as the game starts, built from copies of the files (fresh), so
+  // the engine can take the files over.
+  const { gameMap } = await loadTerrainMap(
+    map.map,
+    map.mapSize,
+    mapFilesLoader(map),
     false,
     true,
   );
@@ -171,7 +186,7 @@ export async function processGameRecord(
     numLandTiles: gameMap.numLandTiles(),
   });
 
-  const engine = await opts.engine(gameStart);
+  const engine = await opts.engine(gameStart, map);
   try {
     opts.onStart?.(encoder.base);
 

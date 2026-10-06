@@ -13,9 +13,16 @@ import {
   GameUpdateViewData,
 } from "@openfront/engine-api/game/GameUpdates";
 import { ClientID, GameStartInfo, Turn } from "@openfront/engine-api/Schemas";
-import { WorkerMessage } from "@openfront/engine-api/worker/WorkerMessages";
-import { getCdnBase } from "@openfront/shared/AssetUrls";
+import {
+  InitMessage,
+  WorkerMessage,
+} from "@openfront/engine-api/worker/WorkerMessages";
+import {
+  loadMapFiles,
+  mapFilesTransfer,
+} from "@openfront/engine-lib/game/MapFiles";
 import { generateID } from "@openfront/shared/SharedUtil";
+import { terrainMapFileLoader } from "./TerrainMapFileLoader";
 
 // Inlined as a same-origin Blob (Vite's `?worker&inline`), sidestepping the
 // cross-origin `new Worker(url)` restriction that would otherwise apply when
@@ -79,7 +86,12 @@ export class WorkerClient {
   }
 
   async initialize(): Promise<void> {
-    const worker = await createGameWorker();
+    // The engine fetches nothing: it gets the map in the init message.
+    const { gameMap, gameMapSize } = this.gameStartInfo.config;
+    const [worker, map] = await Promise.all([
+      createGameWorker(),
+      loadMapFiles(terrainMapFileLoader, gameMap, gameMapSize),
+    ]);
     this.worker = worker;
     worker.addEventListener("message", this.handleWorkerMessage.bind(this));
 
@@ -93,14 +105,15 @@ export class WorkerClient {
         }
       });
 
-      worker.postMessage({
+      const init: InitMessage = {
         type: "init",
         id: messageId,
         gameStartInfo: this.gameStartInfo,
         clientID: this.clientID,
-        cdnBase: getCdnBase(),
+        map,
         snapshot: this.snapshotToRestore,
-      });
+      };
+      worker.postMessage(init, mapFilesTransfer(map));
 
       setTimeout(() => {
         if (!this.isInitialized) {

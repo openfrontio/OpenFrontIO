@@ -4,27 +4,28 @@
  * worker instead (WorkerReplayEngine).
  */
 
+import { MapFiles } from "@openfront/engine-api/game/GameMapLoader";
 import {
   ErrorUpdate,
   GameUpdateViewData,
 } from "@openfront/engine-api/game/GameUpdates";
 import { GameStartInfo } from "@openfront/engine-api/Schemas";
+import { mapFilesLoader } from "@openfront/engine-lib/game/MapFiles";
 import { Game } from "@openfront/engine/game/Game";
 import { createGameRunner } from "@openfront/engine/GameRunner";
 import type { ReplayEngine } from "../../../../src/client/replay/processor/ReplayProcessor";
-import { mapLoader } from "./ArchiveGame";
 
 export function directEngine(
   onTick?: (game: Game, gu: GameUpdateViewData) => void,
-): (gameStart: GameStartInfo) => Promise<ReplayEngine> {
-  return async (gameStart) => {
+): (gameStart: GameStartInfo, map: MapFiles) => Promise<ReplayEngine> {
+  return async (gameStart, map) => {
     let gameUpdates: GameUpdateViewData[] = [];
     let error: ErrorUpdate | undefined;
     // The callback only runs from executeNextTick, once `runner` is set.
     const runner = await createGameRunner(
       gameStart,
       undefined,
-      mapLoader,
+      mapFilesLoader(map),
       (gu) => {
         if ("errMsg" in gu) {
           error = gu;

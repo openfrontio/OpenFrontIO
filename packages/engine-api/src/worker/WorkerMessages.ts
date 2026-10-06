@@ -1,4 +1,5 @@
 import { TileRef } from "../game/GameMap";
+import { MapFiles } from "../game/GameMapLoader";
 import {
   BuildableUnit,
   PlayerActions,
@@ -47,7 +48,8 @@ export interface InitMessage extends BaseWorkerMessage {
   type: "init";
   gameStartInfo: GameStartInfo;
   clientID: ClientID | undefined;
-  cdnBase: string;
+  /** The game's map. The engine loads nothing itself. */
+  map: MapFiles;
   /** Resume from this game snapshot instead of starting a new game. */
   snapshot?: Uint8Array;
 }
