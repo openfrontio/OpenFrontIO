@@ -6,13 +6,13 @@
  * The live side is a spectator (no local player), as the viewer is.
  */
 
-import { type MapManifest } from "@openfront/engine-api/game/GameMapLoader";
 import {
   GameType,
   PlayerInfo,
   PlayerType,
   UnitType,
 } from "@openfront/engine-api/game/GameTypes";
+import { type MapManifest } from "@openfront/engine-api/game/MapFiles";
 import {
   genTerrainFromBin,
   type TerrainMapData,
