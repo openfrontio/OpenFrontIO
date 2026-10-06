@@ -168,6 +168,49 @@ describe("ClanModal — rendering", () => {
     });
   });
 
+  describe("browse sort dropdown", () => {
+    it("loads with the random sort, then refetches page 1 with the picked sort and the pinned bucket", async () => {
+      const { fetchClans } = await import("../../../src/client/ClanApi");
+      const fetchMock = fetchClans as ReturnType<typeof vi.fn>;
+      const page = {
+        results: [makeClan({ tag: "OTH", name: "Other Clan" })],
+        total: 1,
+        page: 1,
+        limit: 20,
+        bucket: 42,
+      };
+      fetchMock.mockResolvedValueOnce(page).mockResolvedValueOnce(page);
+      setState(modal, "activeTab" as keyof ClanModal, "browse" as never);
+      await waitForSubComponent(modal, "clan-browse-view");
+
+      expect(fetchMock).toHaveBeenLastCalledWith(
+        undefined,
+        1,
+        undefined,
+        "random",
+        undefined,
+      );
+
+      const select = modal.querySelector(
+        "clan-browse-view select",
+      ) as HTMLSelectElement;
+      const values = Array.from(select.options).map((o) => o.value);
+      expect(values).toEqual(["random", "memberCount", "winScore", "name"]);
+
+      select.value = "winScore";
+      select.dispatchEvent(new Event("change"));
+      await vi.waitFor(() =>
+        expect(fetchMock).toHaveBeenLastCalledWith(
+          undefined,
+          1,
+          undefined,
+          "winScore",
+          42,
+        ),
+      );
+    });
+  });
+
   // ── 2. My Clans tab passes role to renderClanCard ───────────────────────
 
   describe("My Clans tab passes role from myClanRoles map", () => {
