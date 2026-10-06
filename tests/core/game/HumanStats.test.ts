@@ -1,9 +1,10 @@
+import { PlayerInfo, PlayerType } from "@openfront/engine-api/game/GameTypes";
+import { AttackExecution } from "@openfront/engine/execution/AttackExecution";
+import { MarkDisconnectedExecution } from "@openfront/engine/execution/MarkDisconnectedExecution";
+import { SpawnExecution } from "@openfront/engine/execution/SpawnExecution";
+import { Game } from "@openfront/engine/game/Game";
+import { humanStatsSnapshot } from "@openfront/engine/game/HumanStats";
 import { describe, expect, it } from "vitest";
-import { AttackExecution } from "../../../src/core/execution/AttackExecution";
-import { MarkDisconnectedExecution } from "../../../src/core/execution/MarkDisconnectedExecution";
-import { SpawnExecution } from "../../../src/core/execution/SpawnExecution";
-import { Game, PlayerInfo, PlayerType } from "../../../src/core/game/Game";
-import { humanStatsSnapshot } from "../../../src/core/game/HumanStats";
 import { setup } from "../../util/Setup";
 import { executeTicks } from "../../util/utils";
 

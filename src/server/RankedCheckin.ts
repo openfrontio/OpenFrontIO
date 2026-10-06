@@ -1,6 +1,6 @@
+import { isCommitLike, isSiteLike } from "@openfront/shared/ServerList";
 import type winston from "winston";
 import { z } from "zod";
-import { isCommitLike, isSiteLike } from "../core/ServerList";
 import { registeredSite } from "./ClusterCheckin";
 import type { GameManager } from "./GameManager";
 import type { MapPlaylist } from "./MapPlaylist";

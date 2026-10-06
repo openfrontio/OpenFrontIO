@@ -1,3 +1,10 @@
+import { GameMode, GameType } from "@openfront/engine-api/game/GameTypes";
+import { EventBus } from "@openfront/engine-lib/EventBus";
+import {
+  GroupTokenEvent,
+  type ServerMessage,
+  type ServerStartGameMessage,
+} from "@openfront/shared/WireSchemas";
 import { describe, expect, it, vi } from "vitest";
 import type { PresencePayload } from "../../src/client/DesktopPresence";
 import {
@@ -7,13 +14,6 @@ import {
   presenceLobbyId,
   withGroupToken,
 } from "../../src/client/PresenceGroup";
-import { EventBus } from "../../src/core/EventBus";
-import { GameMode, GameType } from "../../src/core/game/Game";
-import {
-  GroupTokenEvent,
-  type ServerMessage,
-  type ServerStartGameMessage,
-} from "../../src/core/Schemas";
 import { testGameConfig } from "../util/Wire";
 
 // OPE-423, client half. Two rules, both of which Main and ClientGameRunner

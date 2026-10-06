@@ -11,7 +11,7 @@ import {
   USER_SETTINGS_CHANGED_EVENT,
   UserSettings,
   getDefaultKeybinds,
-} from "../src/core/game/UserSettings";
+} from "../src/client/UserSettings";
 
 // UserSettings keeps a static in-memory cache and the active player id; reset
 // both so each test reads fresh from the (cleared) localStorage as logged out.

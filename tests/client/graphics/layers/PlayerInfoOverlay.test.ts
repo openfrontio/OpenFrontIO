@@ -24,10 +24,12 @@ vi.mock("lit/decorators.js", () => ({
 vi.mock("../../../../src/client/Utils", () => ({
   translateText: vi.fn((key: string) => key),
   renderDuration: vi.fn(() => ""),
-  renderNumber: vi.fn(() => "0"),
-  renderTroops: vi.fn(() => "0"),
   getTranslatedPlayerTeamLabel: vi.fn(() => ""),
   getSvgAspectRatio: vi.fn(() => 1),
+}));
+vi.mock("@openfront/engine-lib/Format", () => ({
+  renderNumber: vi.fn(() => "0"),
+  renderTroops: vi.fn(() => "0"),
 }));
 
 vi.mock("../../../../src/client/hud/PlayerIcons", () => ({
@@ -37,9 +39,9 @@ vi.mock("../../../../src/client/hud/PlayerIcons", () => ({
   getPlayerIcons: vi.fn(() => []),
 }));
 
+import { PlayerType } from "@openfront/engine-api/game/GameTypes";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { PlayerInfoOverlay } from "../../../../src/client/hud/layers/PlayerInfoOverlay";
-import { PlayerType } from "../../../../src/core/game/Game";
 
 // Flattens the mocked-html template tree into one string for assertions.
 function flatten(node: unknown): string {

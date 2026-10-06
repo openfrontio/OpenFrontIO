@@ -1,7 +1,7 @@
+import type { UserMeResponse } from "@openfront/shared/ApiSchemas";
+import { CloseCode, CloseReason } from "@openfront/shared/CloseCodes";
 import type { Mock } from "vitest";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { UserMeResponse } from "../../src/core/ApiSchemas";
-import { CloseCode, CloseReason } from "../../src/core/CloseCodes";
 
 const apiMocks = vi.hoisted(() => ({
   getUserMe: vi.fn(),
@@ -80,7 +80,7 @@ vi.mock("../../src/client/Utils", () => ({
 }));
 
 import { MatchmakingModal } from "../../src/client/Matchmaking";
-import { UserSettings } from "../../src/core/game/UserSettings";
+import { UserSettings } from "../../src/client/UserSettings";
 
 class FakeWebSocket {
   static readonly CONNECTING = 0;

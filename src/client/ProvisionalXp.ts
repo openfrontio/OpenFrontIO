@@ -1,11 +1,15 @@
-import type { XpRules } from "../core/ApiSchemas";
-import { GameMode, GameType, HumansVsNations } from "../core/game/Game";
+import {
+  GameMode,
+  GameType,
+  HumansVsNations,
+} from "@openfront/engine-api/game/GameTypes";
 import {
   ATTACK_INDEX_SENT,
   BOAT_INDEX_SENT,
   OTHER_INDEX_BUILT,
   type PlayerStats,
-} from "../core/StatsSchemas";
+} from "@openfront/engine-api/StatsSchemas";
+import type { XpRules } from "@openfront/shared/ApiSchemas";
 
 // A copy of the API's XP formula (computeXp in the API's
 // lib/progression/Xp.ts), for the PROVISIONAL figure shown when a player dies

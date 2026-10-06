@@ -1,5 +1,5 @@
+import { GAME_ID_REGEX } from "@openfront/engine-api/Schemas";
 import { afterEach, describe, expect, test, vi } from "vitest";
-import { GAME_ID_REGEX } from "../../src/core/Schemas";
 import { ServerEnv } from "../../src/server/ServerEnv";
 
 // A deployed server's identity, as deploy.sh writes it into the env file.

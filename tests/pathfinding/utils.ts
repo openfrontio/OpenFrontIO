@@ -1,33 +1,30 @@
-import fs from "fs";
-import path, { dirname } from "path";
-import { fileURLToPath } from "url";
+import { TileRef } from "@openfront/engine-api/game/GameMap";
+import { MapManifest } from "@openfront/engine-api/game/GameMapLoader";
 import {
   Difficulty,
-  Game,
   GameMapSize,
   GameMapType,
   GameMode,
   GameType,
   PlayerInfo,
-} from "../../src/core/game/Game";
-import { createGame, GameImpl } from "../../src/core/game/GameImpl";
-import { TileRef } from "../../src/core/game/GameMap";
-import {
-  genTerrainFromBin,
-  MapManifest,
-} from "../../src/core/game/TerrainMapLoader";
-import { UserSettings } from "../../src/core/game/UserSettings";
-import { AStarWater } from "../../src/core/pathfinding/algorithms/AStar.Water";
-import { AStarWaterHierarchical } from "../../src/core/pathfinding/algorithms/AStar.WaterHierarchical";
-import { PathFinding } from "../../src/core/pathfinding/PathFinder";
-import { PathFinderBuilder } from "../../src/core/pathfinding/PathFinderBuilder";
-import { StepperConfig } from "../../src/core/pathfinding/PathFinderStepper";
-import { MiniMapTransformer } from "../../src/core/pathfinding/transformers/MiniMapTransformer";
+} from "@openfront/engine-api/game/GameTypes";
+import { GameConfig } from "@openfront/engine-api/Schemas";
+import { genTerrainFromBin } from "@openfront/engine-lib/game/TerrainMapLoader";
+import { Game } from "@openfront/engine/game/Game";
+import { createGame, GameImpl } from "@openfront/engine/game/GameImpl";
+import { AStarWater } from "@openfront/engine/pathfinding/algorithms/AStar.Water";
+import { AStarWaterHierarchical } from "@openfront/engine/pathfinding/algorithms/AStar.WaterHierarchical";
+import { PathFinding } from "@openfront/engine/pathfinding/PathFinder";
+import { PathFinderBuilder } from "@openfront/engine/pathfinding/PathFinderBuilder";
+import { StepperConfig } from "@openfront/engine/pathfinding/PathFinderStepper";
+import { MiniMapTransformer } from "@openfront/engine/pathfinding/transformers/MiniMapTransformer";
 import {
   PathStatus,
   SteppingPathFinder,
-} from "../../src/core/pathfinding/types";
-import { GameConfig } from "../../src/core/Schemas";
+} from "@openfront/engine/pathfinding/types";
+import fs from "fs";
+import path, { dirname } from "path";
+import { fileURLToPath } from "url";
 import { TestConfig } from "../util/TestConfig";
 
 export type BenchmarkRoute = {
@@ -272,7 +269,6 @@ export async function setupFromPath(
       randomSpawn: false,
       ...gameConfig,
     },
-    new UserSettings(),
     false,
   );
 

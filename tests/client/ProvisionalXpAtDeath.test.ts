@@ -1,3 +1,15 @@
+import type { HumanStatsSnapshot } from "@openfront/engine-api/game/GameTypes";
+import {
+  GameMode,
+  GameType,
+  HumansVsNations,
+} from "@openfront/engine-api/game/GameTypes";
+import type {
+  GameXpResponse,
+  Progress,
+  ProgressionConfig,
+  XpRules,
+} from "@openfront/shared/ApiSchemas";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { XpGameConfig, XpResult } from "../../src/client/ProvisionalXp";
 import {
@@ -7,14 +19,6 @@ import {
   provisionalXpContext,
   reconcileXp,
 } from "../../src/client/ProvisionalXpAtDeath";
-import type {
-  GameXpResponse,
-  Progress,
-  ProgressionConfig,
-  XpRules,
-} from "../../src/core/ApiSchemas";
-import { GameMode, GameType, HumansVsNations } from "../../src/core/game/Game";
-import type { HumanStatsSnapshot } from "../../src/core/game/HumanStats";
 
 // Test inputs, not the API's live tuning: every expectation below is worked
 // out from these.

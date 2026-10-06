@@ -1,10 +1,10 @@
 import { describe, expect, it } from "vitest";
 
+import type { TileRef } from "@openfront/engine-api/game/GameMap";
+import { EventBus } from "@openfront/engine-lib/EventBus";
 import { PlayerActionHandler } from "../../../../src/client/hud/layers/PlayerActionHandler";
 import { SendSpawnIntentEvent } from "../../../../src/client/Transport";
 import type { UIState } from "../../../../src/client/UIState";
-import { EventBus } from "../../../../src/core/EventBus";
-import type { TileRef } from "../../../../src/core/game/GameMap";
 
 describe("PlayerActionHandler.handleSpawn", () => {
   it("emits a SendSpawnIntentEvent for the clicked tile", () => {

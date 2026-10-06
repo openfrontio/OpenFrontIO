@@ -1,4 +1,4 @@
-import type { XpBreakdown } from "../core/ApiSchemas";
+import type { XpBreakdown } from "@openfront/shared/ApiSchemas";
 
 // Pure helpers behind the level / XP UI. No DOM, no fetches — so the rules the
 // components follow are unit-testable on their own.

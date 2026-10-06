@@ -1,12 +1,12 @@
+import type { HumanStatsSnapshot } from "@openfront/engine-api/game/GameTypes";
+import { GameMode } from "@openfront/engine-api/game/GameTypes";
 import type {
   GameXpEligible,
   GameXpResponse,
   Progress,
   ProgressionConfig,
   XpRules,
-} from "../core/ApiSchemas";
-import { GameMode } from "../core/game/Game";
-import type { HumanStatsSnapshot } from "../core/game/HumanStats";
+} from "@openfront/shared/ApiSchemas";
 import {
   applyMultipliers,
   computeXp,

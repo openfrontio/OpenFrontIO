@@ -55,14 +55,14 @@ vi.mock("../../../../src/client/CrazyGamesSDK", () => ({
   },
 }));
 
+import type { HumanStatsSnapshot } from "@openfront/engine-api/game/GameTypes";
+import { GameMode, GameType } from "@openfront/engine-api/game/GameTypes";
+import { GameUpdateType } from "@openfront/engine-api/game/GameUpdates";
+import { EventBus } from "@openfront/engine-lib/EventBus";
 import type { GameXpPanel } from "../../../../src/client/components/GameXpPanel";
 import "../../../../src/client/hud/layers/WinModal";
 import type { WinModal } from "../../../../src/client/hud/layers/WinModal";
 import type { GameView } from "../../../../src/client/view";
-import { EventBus } from "../../../../src/core/EventBus";
-import { GameMode, GameType } from "../../../../src/core/game/Game";
-import { GameUpdateType } from "../../../../src/core/game/GameUpdates";
-import type { HumanStatsSnapshot } from "../../../../src/core/game/HumanStats";
 
 const GAME_ID = "gPROVXP01";
 const XP_URL = `https://api.test/users/@me/xp/${GAME_ID}`;
