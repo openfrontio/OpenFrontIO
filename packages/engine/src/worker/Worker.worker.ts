@@ -11,6 +11,7 @@ import {
   PlayerBorderTilesResultMessage,
   PlayerBuildablesResultMessage,
   PlayerProfileResultMessage,
+  RunTurnsResultMessage,
   SnapshotResultMessage,
   TransportShipSpawnResultMessage,
   WorkerMessage,
@@ -27,6 +28,9 @@ import {
 declare const __ASSET_MANIFEST__: AssetManifest | undefined;
 
 const ctx: Worker = self as any;
+// Where answers go: the page that started this worker, or the port it
+// handed over (connect).
+let out: Pick<MessagePort, "postMessage"> = ctx;
 let gameRunner: Promise<GameRunner> | null = null;
 // From the init message; workers have no `window` to read it from.
 let cdnBase = "";
@@ -122,6 +126,17 @@ function sendGameUpdateBatch(gameUpdates: GameUpdateViewData[]): void {
     return;
   }
 
+  out.postMessage(
+    {
+      type: "game_update_batch",
+      gameUpdates,
+    } as WorkerMessage,
+    transfersOf(gameUpdates),
+  );
+}
+
+/** The updates' packed buffers, moved to the receiver instead of copied. */
+function transfersOf(gameUpdates: GameUpdateViewData[]): Transferable[] {
   const transfers: Transferable[] = [];
   for (const gu of gameUpdates) {
     transfers.push(gu.packedTileUpdates.buffer);
@@ -138,24 +153,21 @@ function sendGameUpdateBatch(gameUpdates: GameUpdateViewData[]): void {
       transfers.push(gu.packedNukeImpacts.buffer);
     }
   }
-
-  ctx.postMessage(
-    {
-      type: "game_update_batch",
-      gameUpdates,
-    } as WorkerMessage,
-    transfers,
-  );
+  return transfers;
 }
 
 function sendMessage(message: WorkerMessage) {
-  ctx.postMessage(message);
+  out.postMessage(message);
 }
 
-ctx.addEventListener("message", async (e: MessageEvent<MainThreadMessage>) => {
+async function onMessage(e: MessageEvent<MainThreadMessage>) {
   const message = e.data;
 
   switch (message.type) {
+    case "connect":
+      out = message.port;
+      message.port.onmessage = onMessage;
+      break;
     case "init":
       try {
         // Set before createGameRunner so map fetches via mapLoader pick up the
@@ -204,6 +216,36 @@ ctx.addEventListener("message", async (e: MessageEvent<MainThreadMessage>) => {
       }
       break;
 
+    case "run_turns": {
+      if (!gameRunner) {
+        throw new Error("Game runner not initialized");
+      }
+      const gr = await gameRunner;
+      const gameUpdates: GameUpdateViewData[] = [];
+      let error: ErrorUpdate | undefined;
+      tickUpdateSink = (gu) => {
+        if ("updates" in gu) gameUpdates.push(gu);
+        else if ("errMsg" in gu) error = gu;
+      };
+      try {
+        for (const turn of message.turns) gr.addTurn(turn);
+        while (gr.pendingTurns() > 0 && gr.executeNextTick()) {
+          // Each tick's update arrives through tickUpdateSink.
+        }
+      } finally {
+        tickUpdateSink = null;
+      }
+      out.postMessage(
+        {
+          type: "run_turns_result",
+          id: message.id,
+          gameUpdates,
+          error,
+        } as RunTurnsResultMessage,
+        transfersOf(gameUpdates),
+      );
+      break;
+    }
     case "player_actions":
       if (!gameRunner) {
         sendMessage({
@@ -348,7 +390,7 @@ ctx.addEventListener("message", async (e: MessageEvent<MainThreadMessage>) => {
       } catch (error) {
         console.error("Failed to snapshot game:", error);
       }
-      ctx.postMessage(
+      out.postMessage(
         {
           type: "snapshot_result",
           id: message.id,
@@ -361,7 +403,9 @@ ctx.addEventListener("message", async (e: MessageEvent<MainThreadMessage>) => {
     default:
       console.warn("Unknown message :", message);
   }
-});
+}
+
+ctx.addEventListener("message", onMessage);
 
 // Error handling
 ctx.addEventListener("error", (error) => {

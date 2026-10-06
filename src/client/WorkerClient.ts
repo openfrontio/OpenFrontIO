@@ -22,7 +22,7 @@ import { generateID } from "@openfront/shared/SharedUtil";
 // the worker bundle is served from the CDN. The dynamic import keeps the
 // ~700 KB base64 payload in its own chunk, fetched when a game starts,
 // instead of inside the main bundle.
-async function createGameWorker(): Promise<Worker> {
+export async function createGameWorker(): Promise<Worker> {
   const { default: GameWorker } =
     await import("@openfront/engine/worker/Worker.worker?worker&inline");
   return new GameWorker();

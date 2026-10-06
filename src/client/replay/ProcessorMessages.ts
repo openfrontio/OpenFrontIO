@@ -6,6 +6,8 @@ import type { ReplayAppend, ReplayBase } from "./codec/ReplayTypes";
 export interface ProcessorRequest {
   record: GameRecord;
   cdnBase: string;
+  /** A port to the engine's worker, which the page started. */
+  engine: MessagePort;
 }
 
 export type ProcessorResponse =

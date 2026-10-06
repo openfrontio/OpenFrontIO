@@ -1,6 +1,8 @@
 /**
- * Worker that turns a game record into a replay with this build's core
- * (processGameRecord in src/client/replay/processor). See LocalProcessing.ts.
+ * Worker that turns a game record into a replay with this build's engine
+ * (processGameRecord in src/client/replay/processor). The engine runs in a
+ * worker of its own, which the page starts and hands over a port to. See
+ * LocalProcessing.ts.
  */
 
 import { FetchGameMapLoader } from "@openfront/engine-lib/game/FetchGameMapLoader";
@@ -10,6 +12,7 @@ import {
   processGameRecord,
   ReplayDesyncError,
 } from "./processor/ReplayProcessor";
+import { startWorkerEngine } from "./processor/WorkerReplayEngine";
 import type { ProcessorRequest, ProcessorResponse } from "./ProcessorMessages";
 
 const ctx = self as unknown as Worker;
@@ -21,11 +24,12 @@ function send(msg: ProcessorResponse, transfer: Transferable[] = []): void {
 }
 
 ctx.addEventListener("message", (e: MessageEvent<ProcessorRequest>) => {
-  const { record, cdnBase } = e.data;
+  const { record, cdnBase, engine } = e.data;
   // Workers have no `window`, so AssetUrls reads the CDN base from here
   // (same as Worker.worker.ts).
   globalThis.__CDN_BASE__ = cdnBase;
   processGameRecord(record, {
+    engine: (gameStart) => startWorkerEngine(engine, gameStart, cdnBase),
     mapLoader,
     gzip: gzipInBrowser,
     onProgress: (p) => send({ type: "progress", percent: p.percent }),

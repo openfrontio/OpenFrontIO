@@ -48,7 +48,7 @@ Import them as `@openfront/<pkg>/<path>` (e.g. `@openfront/engine-api/game/GameM
 
 - `engine-api` imports only zod, `zbin` and `resources/*.json`; `engine-lib` adds `engine-api`; `engine` adds `engine-lib`. None of them may import `shared`, `src/client` or `src/server`, use `Math.random`/`Date.now`/`new Date`, or touch DOM or Node APIs (their tsconfigs have no DOM and no Node types).
 - `shared` may import `engine-api` and `engine-lib`, never `engine`.
-- `src/client` and `src/server` import `engine-api`, `engine-lib` and `shared`; the client loads `engine` only through `packages/engine/src/worker/Worker.worker.ts` (the replay processor is a temporary, allowlisted exception).
+- `src/client` and `src/server` import `engine-api`, `engine-lib` and `shared`; the client loads `engine` only through `packages/engine/src/worker/Worker.worker.ts`.
 - Rules that run on both sides (e.g. `Config.maxTroops`) take `PlayerLike`/`UnitLike`/`GameLike` from `engine-api/game/ReadViews.ts` and live in `engine-lib`; both the engine objects and the client views implement.
 
 ### Simulation Flow (Intent → Execution)

@@ -45,16 +45,8 @@ const ENGINE_SIDE = new Set<Pkg>(["engine", "engine-lib", "engine-api"]);
 // npm dependencies the deterministic packages may use.
 const ENGINE_NPM = new Set(["zod", "zod/v4"]);
 
-/**
- * Known violations, as "<from file> -> <to file>"; never add to it.
- *
- * The replay processor runs createGameRunner in its own worker. It moves
- * behind an engine worker entry with the Node engine host (#1701 follow-up).
- */
-const ALLOWLIST: string[] = [
-  "src/client/replay/processor/ReplayProcessor.ts -> packages/engine/src/GameRunner.ts",
-  "src/client/replay/processor/ReplayProcessor.ts -> packages/engine/src/game/Game.ts",
-];
+/** Known violations, as "<from file> -> <to file>"; never add to it. */
+const ALLOWLIST: string[] = [];
 
 const PACKAGES: Pkg[] = [
   "engine",
