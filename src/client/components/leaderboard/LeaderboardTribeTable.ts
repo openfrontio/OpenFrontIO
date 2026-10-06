@@ -91,12 +91,14 @@ export class LeaderboardTribeTable extends LitElement {
   // Same handoff the ranked tab uses: the profile modal's back button reopens
   // the leaderboard.
   private openProfile(publicId: string) {
-    void loadModal("player-profile-modal").then(() =>
-      document
-        .querySelector<
-          HTMLElement & { openFromLeaderboard(publicId: string): void }
-        >("player-profile-modal")
-        ?.openFromLeaderboard(publicId),
+    loadModal("player-profile-modal").then(
+      () =>
+        document
+          .querySelector<
+            HTMLElement & { openFromLeaderboard(publicId: string): void }
+          >("player-profile-modal")
+          ?.openFromLeaderboard(publicId),
+      (err) => console.error("player-profile-modal failed to load:", err),
     );
   }
 

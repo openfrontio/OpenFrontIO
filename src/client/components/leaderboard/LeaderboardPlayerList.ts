@@ -211,12 +211,14 @@ export class LeaderboardPlayerList extends LitElement {
   // Same handoff as the clan views: the profile modal's back button reopens
   // the leaderboard (its loaded pages survive the close).
   private openProfile(publicId: string) {
-    void loadModal("player-profile-modal").then(() =>
-      document
-        .querySelector<
-          HTMLElement & { openFromLeaderboard(publicId: string): void }
-        >("player-profile-modal")
-        ?.openFromLeaderboard(publicId),
+    loadModal("player-profile-modal").then(
+      () =>
+        document
+          .querySelector<
+            HTMLElement & { openFromLeaderboard(publicId: string): void }
+          >("player-profile-modal")
+          ?.openFromLeaderboard(publicId),
+      (err) => console.error("player-profile-modal failed to load:", err),
     );
   }
 

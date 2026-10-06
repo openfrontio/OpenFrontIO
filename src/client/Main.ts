@@ -607,7 +607,10 @@ class Client {
     const helpButton = document.getElementById("help-button");
     if (helpButton) {
       helpButton.addEventListener("click", () => {
-        void loadModal("help-modal").then(() => hlpModal?.open());
+        loadModal("help-modal").then(
+          () => hlpModal?.open(),
+          (err) => console.error("help-modal failed to load:", err),
+        );
       });
     }
     // Tutorial entry points (play-page card, help page): back to the play page

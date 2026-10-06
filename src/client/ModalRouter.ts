@@ -85,6 +85,8 @@ class ModalRouter {
       return;
     }
     await customElements.whenDefined(entry.tag);
+    // A slow load can land after the URL has moved on to another modal.
+    if (this.currentHashParams().get("modal") !== name) return;
 
     this.routingFromUrl = true;
     try {
