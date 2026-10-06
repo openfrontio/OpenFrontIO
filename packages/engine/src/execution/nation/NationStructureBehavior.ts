@@ -7,10 +7,6 @@ import {
   Structures,
   UnitType,
 } from "@openfront/engine-api/game/GameTypes";
-import {
-  nearestTileDist,
-  nearestTileDistCapped,
-} from "@openfront/engine-lib/execution/Util";
 import { PseudoRandom } from "@openfront/engine-lib/PseudoRandom";
 import {
   readVersioned,
@@ -28,6 +24,7 @@ import type {
 } from "../../snapshot/SnapshotContext";
 import { ConstructionExecution } from "../ConstructionExecution";
 import { UpgradeStructureExecution } from "../UpgradeStructureExecution";
+import { nearestTileDist, nearestTileDistCapped } from "../Util";
 import { randTerritoryTileArray } from "./NationUtils";
 
 /**

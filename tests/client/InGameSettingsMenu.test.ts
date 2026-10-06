@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { EventBus } from "@openfront/engine-lib/EventBus";
+import { EventBus } from "@openfront/shared/EventBus";
 import en from "../../resources/lang/en.json";
 import { crazyGamesSDK } from "../../src/client/CrazyGamesSDK";
 import {

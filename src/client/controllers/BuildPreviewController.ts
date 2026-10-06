@@ -15,11 +15,11 @@ import {
   Structures,
   UnitType,
 } from "@openfront/engine-api/game/GameTypes";
-import { EventBus } from "@openfront/engine-lib/EventBus";
 import {
   listNukeBreakAlliance,
   wouldNukeBreakAlliance,
-} from "@openfront/engine-lib/execution/Util";
+} from "@openfront/engine-lib/execution/NukeAlliance";
+import { EventBus } from "@openfront/shared/EventBus";
 import { Controller } from "../Controller";
 import {
   ConfirmGhostStructureEvent,

@@ -1,7 +1,7 @@
 import { RankedType } from "@openfront/engine-api/game/GameTypes";
 import { GameUpdateType } from "@openfront/engine-api/game/GameUpdates";
-import { EventBus } from "@openfront/engine-lib/EventBus";
 import { Pattern } from "@openfront/shared/CosmeticSchemas";
+import { EventBus } from "@openfront/shared/EventBus";
 import { html, LitElement, TemplateResult } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import {

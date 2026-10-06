@@ -54,7 +54,7 @@ vi.mock("../../../../src/client/CrazyGamesSDK", () => ({
 }));
 
 import { GameUpdateType } from "@openfront/engine-api/game/GameUpdates";
-import { EventBus } from "@openfront/engine-lib/EventBus";
+import { EventBus } from "@openfront/shared/EventBus";
 import type { GameXpPanel } from "../../../../src/client/components/GameXpPanel";
 import "../../../../src/client/hud/layers/WinModal";
 import type { WinModal } from "../../../../src/client/hud/layers/WinModal";
