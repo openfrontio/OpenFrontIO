@@ -8,7 +8,7 @@ import {
 } from "@openfront/engine-api/game/GameTypes";
 import { GameUpdateType } from "@openfront/engine-api/game/GameUpdates";
 import { GameConfig } from "@openfront/engine-api/Schemas";
-import { Config } from "@openfront/engine-lib/configuration/Config";
+import { EngineConfig } from "@openfront/engine/configuration/EngineConfig";
 import { TrainExecution } from "@openfront/engine/execution/TrainExecution";
 import { Game, Player, Unit } from "@openfront/engine/game/Game";
 import { Cluster, TrainStation } from "@openfront/engine/game/TrainStation";
@@ -208,8 +208,8 @@ describe("TrainStation", () => {
   });
 });
 
-describe("Config.trainGold trade stop penalty", () => {
-  let config: Config;
+describe("EngineConfig.trainGold trade stop penalty", () => {
+  let config: EngineConfig;
   let mockPlayer: Player;
 
   beforeEach(() => {
@@ -229,7 +229,7 @@ describe("Config.trainGold trade stop penalty", () => {
       disableNavMesh: false,
       randomSpawn: false,
     };
-    config = new Config(gameConfig, false);
+    config = new EngineConfig(gameConfig, false);
     mockPlayer = { isLobbyCreator: () => false } as unknown as Player;
   });
 
