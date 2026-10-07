@@ -1003,7 +1003,7 @@ describe("ClanModal — handlers", () => {
 
   describe("boosted block", () => {
     it("labels boosted clans, and a join from the block is attributed to it", async () => {
-      const { fetchClans, joinClan } =
+      const { fetchClanDetail, fetchClans, joinClan } =
         await import("../../../src/client/ClanApi");
       const boosted = makeClan({ tag: "BST", name: "Boosted", boosted: true });
       (fetchClans as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
@@ -1013,6 +1013,11 @@ describe("ClanModal — handlers", () => {
         page: 1,
         limit: 20,
       });
+      // The detail page loads the clan that was clicked, so the join below
+      // names it rather than the shared mock's default tag.
+      (fetchClanDetail as ReturnType<typeof vi.fn>).mockResolvedValueOnce(
+        boosted,
+      );
       setState(modal, "myPublicId" as keyof ClanModal, "test-player" as never);
       setState(modal, "activeTab" as keyof ClanModal, "browse" as never);
       const browse = await waitForSubComponent(modal, "clan-browse-view");
@@ -1033,7 +1038,7 @@ describe("ClanModal — handlers", () => {
         .find((b) => b.textContent?.trim() === "clan_modal.join_clan")!
         .click();
       await flushAsync(detail);
-      expect(joinClan).toHaveBeenLastCalledWith("TST", "boosted");
+      expect(joinClan).toHaveBeenLastCalledWith("BST", "boosted");
     });
   });
 });
