@@ -8,8 +8,10 @@ import type {
 import {
   filterMembersBySearch,
   filterRequestsBySearch,
+  formatBoostRemaining,
   renderMemberStats,
 } from "../../../src/client/components/clan/ClanShared";
+import { translateText } from "../../../src/client/Utils";
 
 const members: ClanMember[] = [
   { publicId: "Alice123", role: "leader", joinedAt: "2024-01-01T00:00:00Z" },
@@ -210,5 +212,34 @@ describe("filterRequestsBySearch", () => {
 
   it("returns empty array when nothing matches", () => {
     expect(filterRequestsBySearch(requests, "zzz")).toEqual([]);
+  });
+});
+
+describe("formatBoostRemaining", () => {
+  const NOW = Date.parse("2026-10-07T12:00:00Z");
+  const at = (ms: number) => new Date(NOW + ms).toISOString();
+  const MIN = 60_000;
+  const HOUR = 60 * MIN;
+
+  it("is null without a boost or once it has ended", () => {
+    expect(formatBoostRemaining(null, NOW)).toBeNull();
+    expect(formatBoostRemaining(undefined, NOW)).toBeNull();
+    expect(formatBoostRemaining(at(0), NOW)).toBeNull();
+    expect(formatBoostRemaining(at(-HOUR), NOW)).toBeNull();
+  });
+
+  it("shows hours and minutes under a day, rounding up", () => {
+    expect(formatBoostRemaining(at(3 * HOUR + 11 * MIN + 1), NOW)).toBe(
+      translateText("clan_modal.boost_remaining", { hours: 3, minutes: 12 }),
+    );
+  });
+
+  it("shows days and hours from a day out", () => {
+    expect(formatBoostRemaining(at(7 * 24 * HOUR - MIN), NOW)).toBe(
+      translateText("clan_modal.boost_remaining_days", { days: 6, hours: 23 }),
+    );
+    expect(formatBoostRemaining(at(24 * HOUR), NOW)).toBe(
+      translateText("clan_modal.boost_remaining_days", { days: 1, hours: 0 }),
+    );
   });
 });
