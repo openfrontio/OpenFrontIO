@@ -20,6 +20,10 @@ vi.mock("@openfront/engine-lib/game/TerrainMapLoader", () => ({
   })),
 }));
 
+vi.mock("@openfront/shared/GameMapLoader", () => ({
+  loadMapFiles: vi.fn(async () => ({})),
+}));
+
 vi.mock("../../src/client/render/gl", async (importOriginal) => {
   const actual =
     await importOriginal<typeof import("../../src/client/render/gl")>();
@@ -41,9 +45,14 @@ vi.mock("../../src/client/view/GameView", () => ({
   GameView: class {},
 }));
 
-vi.mock("../../src/client/UserSettings", () => ({
-  userSettings: {},
-}));
+vi.mock("../../src/client/UserSettings", async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import("../../src/client/UserSettings")>();
+  return {
+    ...actual,
+    userSettings: actual.userSettings ?? {},
+  };
+});
 
 import { createClientGame } from "../../src/client/ClientGameRunner";
 

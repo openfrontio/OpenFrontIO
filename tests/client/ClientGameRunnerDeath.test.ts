@@ -10,6 +10,7 @@ const saveSoloSnapshotMock = vi.fn();
 vi.mock("../../src/client/SinglePlayerSaveManager", () => ({
   clearSoloSave: (...args: any[]) => clearSoloSaveMock(...args),
   saveSoloSnapshot: (...args: any[]) => saveSoloSnapshotMock(...args),
+  compressSnapshot: vi.fn(async (raw: Uint8Array) => raw),
 }));
 
 vi.mock("../../src/client/Auth", () => ({
@@ -28,9 +29,14 @@ vi.mock("../../src/client/sound/SoundManager", () => ({
   },
 }));
 
-vi.mock("../../src/client/UserSettings", () => ({
-  userSettings: {},
-}));
+vi.mock("../../src/client/UserSettings", async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import("../../src/client/UserSettings")>();
+  return {
+    ...actual,
+    userSettings: actual.userSettings ?? {},
+  };
+});
 
 vi.mock("../../src/client/Utils", () => ({
   translateText: (k: string) => k,

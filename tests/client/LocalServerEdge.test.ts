@@ -19,7 +19,7 @@ vi.mock("src/client/ClientEnv", () => ({
   },
 }));
 
-vi.mock("../../src/core/snapshot/GameSnapshot", () => ({
+vi.mock("@openfront/engine/snapshot/GameSnapshot", () => ({
   readSnapshotHeader: vi.fn(() => ({
     format: 1,
     gitCommit: "DEV",
