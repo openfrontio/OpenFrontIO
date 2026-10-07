@@ -9,6 +9,7 @@ import {
   filterMembersBySearch,
   filterRequestsBySearch,
   formatBoostRemaining,
+  renderMemberSortControl,
   renderMemberStats,
 } from "../../../src/client/components/clan/ClanShared";
 import { translateText } from "../../../src/client/Utils";
@@ -241,5 +242,26 @@ describe("formatBoostRemaining", () => {
     expect(formatBoostRemaining(at(24 * HOUR), NOW)).toBe(
       translateText("clan_modal.boost_remaining_days", { days: 1, hours: 0 }),
     );
+  });
+});
+
+describe("renderMemberSortControl", () => {
+  it("draws its chevron as an element beside the select", () => {
+    const host = document.createElement("div");
+    render(
+      renderMemberSortControl(
+        "default",
+        "asc",
+        () => {},
+        () => {},
+      ),
+      host,
+    );
+    const select = host.querySelector("select")!;
+    expect(select).toBeTruthy();
+    expect(select.className).not.toContain("bg-[url");
+    expect(
+      select.parentElement!.querySelector("[data-chevron] svg"),
+    ).toBeTruthy();
   });
 });
