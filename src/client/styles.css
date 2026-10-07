@@ -754,3 +754,5 @@ unit-display .tutorial-highlight::after {
 .remove-player-btn:hover {
   background: #ef4444;
 }
+
+@import "./styles/halloween.css";
