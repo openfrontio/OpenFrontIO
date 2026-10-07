@@ -449,7 +449,8 @@ export function filterRequestsBySearch(
   );
 }
 
-// "3h 12m" until a clan boost ends; null once it has ended.
+// "3h 12m" (or "6d 23h" from a day out) until a clan boost ends; null once
+// it has ended.
 export function formatBoostRemaining(
   endsAt: string | null | undefined,
   now: number = Date.now(),
@@ -458,8 +459,15 @@ export function formatBoostRemaining(
   const ms = new Date(endsAt).getTime() - now;
   if (!(ms > 0)) return null;
   const totalMinutes = Math.ceil(ms / 60_000);
+  const hours = Math.floor(totalMinutes / 60);
+  if (hours >= 24) {
+    return translateText("clan_modal.boost_remaining_days", {
+      days: Math.floor(hours / 24),
+      hours: hours % 24,
+    });
+  }
   return translateText("clan_modal.boost_remaining", {
-    hours: Math.floor(totalMinutes / 60),
+    hours,
     minutes: totalMinutes % 60,
   });
 }

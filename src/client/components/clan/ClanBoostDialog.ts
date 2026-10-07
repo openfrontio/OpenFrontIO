@@ -13,6 +13,7 @@ import "../PlutoniumIcon";
 import { formatBoostRemaining } from "./ClanShared";
 
 const HOUR_MS = 60 * 60 * 1000;
+const DAY_MS = 24 * HOUR_MS;
 
 // Same shape as ClanDonateDialog's: UUID when available, random hex outside
 // secure contexts. 8–64 chars, as the API requires.
@@ -20,6 +21,14 @@ function newIdempotencyKey(): string {
   if (typeof crypto.randomUUID === "function") return crypto.randomUUID();
   const bytes = crypto.getRandomValues(new Uint8Array(16));
   return Array.from(bytes, (b) => b.toString(16).padStart(2, "0")).join("");
+}
+
+// Tier lengths: whole days as days ("7 days"), anything else as hours.
+function formatDuration(ms: number): string {
+  if (ms >= DAY_MS && ms % DAY_MS === 0) {
+    return translateText("clan_modal.boost_days", { days: ms / DAY_MS });
+  }
+  return formatHours(ms);
 }
 
 function formatHours(ms: number): string {
@@ -50,6 +59,8 @@ export class ClanBoostDialog extends LitElement {
 
   private idempotencyKey = newIdempotencyKey();
   private portal: HTMLDivElement | null = null;
+  // The Boost button that opened the dialog, refocused when it closes.
+  private previouslyFocused: HTMLElement | null = null;
 
   createRenderRoot() {
     return this;
@@ -57,18 +68,46 @@ export class ClanBoostDialog extends LitElement {
 
   connectedCallback() {
     super.connectedCallback();
+    this.previouslyFocused =
+      document.activeElement instanceof HTMLElement
+        ? document.activeElement
+        : null;
     this.portal = document.createElement("div");
     document.body.appendChild(this.portal);
+    // Capture phase, so this runs before the clan modal's own window Escape
+    // handler (BaseModal) and can stop it: Escape closes this dialog only.
+    window.addEventListener("keydown", this.onKeydown, true);
     void this.loadStatus();
   }
 
   disconnectedCallback() {
     super.disconnectedCallback();
+    window.removeEventListener("keydown", this.onKeydown, true);
     if (this.portal) {
       litRender(html``, this.portal);
       this.portal.remove();
       this.portal = null;
     }
+    if (this.previouslyFocused?.isConnected) this.previouslyFocused.focus();
+    this.previouslyFocused = null;
+  }
+
+  private onKeydown = (e: KeyboardEvent) => {
+    if (e.key !== "Escape") return;
+    e.preventDefault();
+    e.stopPropagation();
+    this.cancel();
+  };
+
+  // Focus the dialog once its content (loaded async) has rendered.
+  private focusDialog() {
+    void this.updateComplete.then(() => {
+      const target =
+        this.portal?.querySelector<HTMLElement>(
+          '[role="radio"][aria-checked="true"]',
+        ) ?? this.portal?.querySelector<HTMLElement>('[role="dialog"]');
+      target?.focus();
+    });
   }
 
   private async loadStatus() {
@@ -76,10 +115,12 @@ export class ClanBoostDialog extends LitElement {
     if (!this.isConnected) return;
     if (status === false) {
       this.loadFailed = true;
+      this.focusDialog();
       return;
     }
     this.status = status;
     this.selectedTier = status.tiers[0]?.tier ?? null;
+    this.focusDialog();
   }
 
   private tier(): ClanBoostTier | null {
@@ -193,7 +234,7 @@ export class ClanBoostDialog extends LitElement {
         <span class="text-xs font-bold uppercase tracking-wider">
           ${translateText(`clan_modal.boost_tier_${tier.tier}`)}
         </span>
-        <span class="text-[11px]">${formatHours(tier.durationMs)}</span>
+        <span class="text-[11px]">${formatDuration(tier.durationMs)}</span>
         <span class="flex items-center gap-1 text-sm font-bold">
           ${tier.currency === "hard"
             ? html`<plutonium-icon .size=${14}></plutonium-icon>`
@@ -255,6 +296,11 @@ export class ClanBoostDialog extends LitElement {
         class="mt-4 rounded-xl border p-3 text-xs border-fuchsia-500/30 bg-fuchsia-500/10 text-fuchsia-200"
       >
         <p class="font-bold">${translateText("clan_modal.boost_final")}</p>
+        ${tier?.currency === "hard"
+          ? html`<p class="mt-1">
+              ${translateText("clan_modal.boost_final_hard")}
+            </p>`
+          : ""}
       </div>
     `;
   }
@@ -268,9 +314,16 @@ export class ClanBoostDialog extends LitElement {
         }}
       >
         <div
-          class="relative mx-4 w-full max-w-md p-6 rounded-2xl border border-fuchsia-500/50 bg-surface shadow-2xl"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="clan-boost-dialog-title"
+          tabindex="-1"
+          class="relative mx-4 w-full max-w-md p-6 rounded-2xl border border-fuchsia-500/50 bg-surface shadow-2xl focus:outline-none"
         >
-          <h2 class="text-lg font-bold text-white mb-1">
+          <h2
+            id="clan-boost-dialog-title"
+            class="text-lg font-bold text-white mb-1"
+          >
             ${translateText("clan_modal.boost_title", { tag: this.clanTag })}
           </h2>
           <p class="text-white/50 text-xs mb-4">

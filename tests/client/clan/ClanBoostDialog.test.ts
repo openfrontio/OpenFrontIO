@@ -212,6 +212,113 @@ describe("clan-boost-dialog", () => {
     expect(buyButton().disabled).toBe(true);
   });
 
+  it("is a labelled modal dialog, focused on the selected tier once loaded", async () => {
+    await open();
+    const box = q('[role="dialog"]')!;
+    expect(box.getAttribute("aria-modal")).toBe("true");
+    expect(
+      document.getElementById(box.getAttribute("aria-labelledby")!)!
+        .textContent,
+    ).toContain("clan_modal.boost_title");
+    expect(document.activeElement).toBe(tierButton("spark"));
+  });
+
+  it("Escape cancels the dialog only, not the clan modal underneath", async () => {
+    const underneath = vi.fn();
+    window.addEventListener("keydown", underneath);
+    try {
+      await open();
+      const cancel = vi.fn();
+      dialog.addEventListener("cancel", cancel);
+      document.body.dispatchEvent(
+        new KeyboardEvent("keydown", { key: "Escape", bubbles: true }),
+      );
+      expect(cancel).toHaveBeenCalledTimes(1);
+      expect(underneath).not.toHaveBeenCalled();
+
+      // Other keys pass through untouched.
+      document.body.dispatchEvent(
+        new KeyboardEvent("keydown", { key: "a", bubbles: true }),
+      );
+      expect(underneath).toHaveBeenCalledTimes(1);
+    } finally {
+      window.removeEventListener("keydown", underneath);
+    }
+  });
+
+  it("stops listening for Escape once detached", async () => {
+    await open();
+    const cancel = vi.fn();
+    dialog.addEventListener("cancel", cancel);
+    dialog.remove();
+    document.body.dispatchEvent(
+      new KeyboardEvent("keydown", { key: "Escape", bubbles: true }),
+    );
+    expect(cancel).not.toHaveBeenCalled();
+  });
+
+  it("gives focus back to what opened it", async () => {
+    const opener = document.createElement("button");
+    document.body.appendChild(opener);
+    opener.focus();
+    await open();
+    expect(document.activeElement).not.toBe(opener);
+    dialog.remove();
+    expect(document.activeElement).toBe(opener);
+    opener.remove();
+  });
+
+  it("shows Plutonium tiers in days, with the real-money note", async () => {
+    await open(
+      status({
+        tiers: [
+          {
+            tier: "headline",
+            currency: "hard",
+            price: "300",
+            durationMs: 7 * 24 * HOUR,
+            weight: 3,
+          },
+        ],
+        hardBalance: "500",
+      }),
+    );
+    expect(tierButton("headline").textContent).toContain(
+      'clan_modal.boost_days:{"days":7}',
+    );
+    expect(document.body.textContent).toContain("clan_modal.boost_final_hard");
+    expect(q("[data-clan-balance]")!.textContent).toContain("cosmetics.hard");
+    expect(buyButton().disabled).toBe(false);
+  });
+
+  it("blocks a Plutonium tier the clan can't afford", async () => {
+    await open(
+      status({
+        tiers: [
+          {
+            tier: "sponsor",
+            currency: "hard",
+            price: "80",
+            durationMs: 24 * HOUR,
+            weight: 3,
+          },
+        ],
+        hardBalance: "79",
+      }),
+    );
+    expect(alertText()).toContain(
+      "clan_modal.boost_error_insufficient_balance",
+    );
+    expect(buyButton().disabled).toBe(true);
+  });
+
+  it("leaves the real-money note off caps tiers", async () => {
+    await open();
+    expect(document.body.textContent).not.toContain(
+      "clan_modal.boost_final_hard",
+    );
+  });
+
   it("cancel emits cancel and removes the overlay on detach", async () => {
     await open();
     const cancel = vi.fn();
