@@ -9,7 +9,7 @@ import quickChatData from "resources/QuickChat.json";
 import { CloseViewEvent, ShowChatMenuEvent } from "../../InputHandler";
 import { TransformHandler } from "../../TransformHandler";
 import { SendQuickChatEvent } from "../../Transport";
-import { translateText } from "../../Utils";
+import { hasOwnTranslation, translateText } from "../../Utils";
 
 export type QuickChatPhrase = {
   key: string;
@@ -215,10 +215,11 @@ export class ChatModal extends LitElement {
   }
 
   // Long phrases have a short label for their chip; the rest show in full.
+  // A language without its own short label shows the full phrase, which is
+  // translated, rather than the English short label.
   private chipLabel(category: string, key: string, full: string): string {
     const shortKey = `chat.short.${category}.${key}`;
-    const short = translateText(shortKey);
-    return short === shortKey ? full : short;
+    return hasOwnTranslation(shortKey) ? translateText(shortKey) : full;
   }
 
   private renderWithBlank(text: string) {

@@ -15,10 +15,18 @@ function lookup(key: string): string {
   return typeof node === "string" ? node : key;
 }
 
+// Whether the player's language has its own short chip labels.
+let ownShortLabels = true;
+
 vi.mock("../../src/client/Utils", async (importOriginal) => {
   const actual =
     await importOriginal<typeof import("../../src/client/Utils")>();
-  return { ...actual, translateText: (key: string) => lookup(key) };
+  return {
+    ...actual,
+    translateText: (key: string) => lookup(key),
+    hasOwnTranslation: (key: string) =>
+      (ownShortLabels || !key.startsWith("chat.short.")) && lookup(key) !== key,
+  };
 });
 
 describe("ChatModal", () => {
@@ -60,6 +68,7 @@ describe("ChatModal", () => {
     );
 
   beforeEach(async () => {
+    ownShortLabels = true;
     me = player("Me", 1, 100);
     bob = player("Bob", 2, 300);
     players = [
@@ -184,6 +193,16 @@ describe("ChatModal", () => {
     expect(button.title).toBe(
       "Let's make peace. This is a stalemate, we will both lose.",
     );
+  });
+
+  it("shows the full phrase when the player's language lacks the short label", async () => {
+    ownShortLabels = false;
+    allPhrasesSwitch().click();
+    await modal.updateComplete;
+    expect(chip("Peace? Stalemate.")).toBeUndefined();
+    expect(
+      chip("Let's make peace. This is a stalemate, we will both lose."),
+    ).toBeDefined();
   });
 
   it("asks for the player a phrase names, then sends with that player", async () => {
