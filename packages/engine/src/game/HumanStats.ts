@@ -21,7 +21,19 @@ export function humanStatsSnapshot(game: Game): HumanStatsSnapshot {
   return {
     tick: game.ticks(),
     // A copy: the live object keeps changing as the game runs.
-    stats: structuredClone(game.stats().stats()),
+    stats: deepCopy(game.stats().stats()),
     disconnectedAt,
   };
+}
+
+// The stats are plain objects and arrays of numbers, bigints and strings.
+// structuredClone is a host API the engine may not use.
+function deepCopy<T>(value: T): T {
+  if (Array.isArray(value)) return value.map(deepCopy) as T;
+  if (value !== null && typeof value === "object") {
+    const copy: Record<string, unknown> = {};
+    for (const [key, v] of Object.entries(value)) copy[key] = deepCopy(v);
+    return copy as T;
+  }
+  return value;
 }
