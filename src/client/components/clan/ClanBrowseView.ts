@@ -189,10 +189,10 @@ export class ClanBrowseView extends LitElement {
         ${boostedBlock.length > 0
           ? html`<section
               data-boosted-block
-              class="space-y-3 rounded-2xl border border-fuchsia-500/30 bg-fuchsia-500/5 p-3"
+              class="space-y-3 rounded-2xl border border-malibu-blue/50 bg-malibu-blue/5 shadow-malibu-blue p-3"
             >
               <h3
-                class="text-[10px] font-bold text-fuchsia-300 uppercase tracking-wider px-1"
+                class="text-[10px] font-bold text-aquarius uppercase tracking-wider px-1"
               >
                 ${translateText("clan_modal.boosted_clans")}
               </h3>

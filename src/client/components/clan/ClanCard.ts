@@ -102,7 +102,7 @@ export class ClanCard extends LitElement {
           ${this.clan.boosted
             ? html`<span
                 data-boosted
-                class="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full shrink-0 bg-fuchsia-500/20 text-fuchsia-300 border border-fuchsia-500/30"
+                class="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full shrink-0 bg-malibu-blue/15 text-aquarius border border-malibu-blue/40 shadow-malibu-blue-pill"
                 >${translateText("clan_modal.boosted")}</span
               >`
             : ""}
