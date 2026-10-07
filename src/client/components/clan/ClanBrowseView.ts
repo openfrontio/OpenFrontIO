@@ -159,25 +159,44 @@ export class ClanBrowseView extends LitElement {
             >
               ${translateText("clan_modal.sort_by")}
             </label>
-            <select
-              @change=${(e: Event) =>
-                this.onSortChange(
-                  (e.target as HTMLSelectElement).value as ClanBrowseSort,
+            <div class="relative flex-1 sm:flex-none h-full">
+              <select
+                aria-label=${translateText("clan_modal.sort_by")}
+                @change=${(e: Event) =>
+                  this.onSortChange(
+                    (e.target as HTMLSelectElement).value as ClanBrowseSort,
+                  )}
+                class="w-full h-full min-h-10 appearance-none pl-3 pr-9 bg-white/5 border border-white/10 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-malibu-blue/50 focus:border-malibu-blue/50 transition-all font-medium hover:bg-white/10 text-sm"
+              >
+                ${browseSortOptions.map(
+                  (opt) => html`
+                    <option
+                      value=${opt.value}
+                      ?selected=${opt.value === this.browseSort}
+                      class="bg-neutral-900"
+                    >
+                      ${translateText(opt.labelKey)}
+                    </option>
+                  `,
                 )}
-              class="flex-1 sm:flex-none h-full min-h-10 pl-3 pr-8 bg-white/5 border border-white/10 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-malibu-blue/50 focus:border-malibu-blue/50 transition-all font-medium hover:bg-white/10 text-sm appearance-none bg-no-repeat bg-[right_0.5rem_center] bg-[length:1rem] bg-[url('data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22rgba(255,255,255,0.5)%22 stroke-width=%222%22><path stroke-linecap=%22round%22 stroke-linejoin=%22round%22 d=%22m6 9 6 6 6-6%22/></svg>')]"
-            >
-              ${browseSortOptions.map(
-                (opt) => html`
-                  <option
-                    value=${opt.value}
-                    ?selected=${opt.value === this.browseSort}
-                    class="bg-neutral-900"
-                  >
-                    ${translateText(opt.labelKey)}
-                  </option>
-                `,
-              )}
-            </select>
+              </select>
+              <!-- Same chevron as ui/StyledSelect: a real element, since an
+                   arbitrary bg-[url(...)] class with spaces in the SVG never
+                   compiles. -->
+              <span
+                data-chevron
+                class="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-white/60"
+                aria-hidden="true"
+              >
+                <svg class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                  <path
+                    fill-rule="evenodd"
+                    d="M5.23 7.21a.75.75 0 0 1 1.06.02L10 10.94l3.71-3.71a.75.75 0 1 1 1.06 1.06l-4.24 4.24a.75.75 0 0 1-1.06 0L5.21 8.29a.75.75 0 0 1 .02-1.08z"
+                    clip-rule="evenodd"
+                  />
+                </svg>
+              </span>
+            </div>
           </div>
         </div>
 

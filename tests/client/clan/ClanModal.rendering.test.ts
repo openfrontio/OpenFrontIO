@@ -194,6 +194,9 @@ describe("ClanModal — rendering", () => {
       const select = modal.querySelector(
         "clan-browse-view select",
       ) as HTMLSelectElement;
+      expect(
+        select.parentElement!.querySelector("[data-chevron] svg"),
+      ).toBeTruthy();
       const values = Array.from(select.options).map((o) => o.value);
       expect(values).toEqual(["random", "memberCount", "winScore", "name"]);
 
