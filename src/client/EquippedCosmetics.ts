@@ -1,4 +1,4 @@
-import { PlayerCosmetics, PlayerPattern } from "../core/Schemas";
+import { PlayerCosmetics, PlayerPattern } from "@openfront/shared/WireSchemas";
 import { ResolvedCosmetic } from "./Cosmetics";
 
 export type EquippedCosmeticType = "pattern" | "skin" | "crown" | "effect";

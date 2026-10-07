@@ -1,3 +1,4 @@
+import { PlayerCosmetics } from "@openfront/shared/WireSchemas";
 import { describe, expect, it } from "vitest";
 import { ResolvedCosmetic } from "../../src/client/Cosmetics";
 import {
@@ -6,7 +7,6 @@ import {
   storeRouteFor,
 } from "../../src/client/EquippedCosmetics";
 import { subTabForItem } from "../../src/client/Store";
-import { PlayerCosmetics } from "../../src/core/Schemas";
 
 function catalogEntry(
   key: string,
