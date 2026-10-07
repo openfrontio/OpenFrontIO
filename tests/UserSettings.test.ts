@@ -660,3 +660,47 @@ describe("UserSettings favorite emojis", () => {
     expect(new UserSettings().favoriteEmojis()).toEqual([]);
   });
 });
+
+describe("UserSettings keybinds with new defaults", () => {
+  beforeEach(resetUserSettingsState);
+
+  const store = (binds: Record<string, unknown>) =>
+    localStorage.setItem("settings.keybinds", JSON.stringify(binds));
+
+  it("unbinds a default that lands on a key the player already uses", () => {
+    store({ boatAttack: { value: "KeyV", key: "v" } });
+    const keybinds = new UserSettings().keybinds(false);
+
+    expect(keybinds.boatAttack).toBe("KeyV");
+    expect(keybinds.quickChat).toBeUndefined();
+    // Saved as unbound, so the settings modal shows it that way too.
+    expect(new UserSettings().parsedUserKeybinds().quickChat).toEqual({
+      value: "Null",
+      key: "",
+    });
+  });
+
+  it("keeps a player's own F for select-all-warships over the emoji menu", () => {
+    store({ selectAllWarships: { value: "KeyF", key: "f" } });
+    const keybinds = new UserSettings().keybinds(false);
+
+    expect(keybinds.selectAllWarships).toBe("KeyF");
+    expect(keybinds.emojiMenu).toBeUndefined();
+  });
+
+  it("leaves defaults alone when nothing clashes", () => {
+    store({ boatAttack: { value: "KeyH", key: "h" } });
+    const keybinds = new UserSettings().keybinds(false);
+
+    expect(keybinds.emojiMenu).toBe("KeyF");
+    expect(keybinds.quickChat).toBe("KeyV");
+    expect(new UserSettings().parsedUserKeybinds().quickChat).toBeUndefined();
+  });
+
+  it("lets modifier keys stay shared", () => {
+    store({ altKey: { value: "AltLeft", key: "Alt" } });
+    expect(new UserSettings().keybinds(false).emojiMenuModifier).toBe(
+      "AltLeft",
+    );
+  });
+});

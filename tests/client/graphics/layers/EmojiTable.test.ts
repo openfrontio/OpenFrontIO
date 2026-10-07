@@ -203,13 +203,40 @@ describe("EmojiTable event bus wiring", () => {
       expect(slots()[2].textContent).toContain("💀");
     });
 
-    it("removes a favorite dragged off the slots", async () => {
+    it("removes a favorite dropped off the slots", async () => {
       new UserSettings().setFavoriteEmojis(["👍"]);
       await open();
       drag(slots()[0], "dragstart");
+      drag(groupButton("💀"), "dragover");
+      drag(groupButton("💀"), "drop");
       drag(slots()[0], "dragend");
 
       expect(new UserSettings().favoriteEmojis()[0]).toBeNull();
+    });
+
+    it("keeps a favorite when the drag is cancelled", async () => {
+      new UserSettings().setFavoriteEmojis(["👍"]);
+      await open();
+      drag(slots()[0], "dragstart");
+      drag(slots()[0], "dragend"); // Escape: no drop event
+
+      expect(new UserSettings().favoriteEmojis()[0]).toBe("👍");
+    });
+
+    it("moves a favorite dropped on another slot", async () => {
+      new UserSettings().setFavoriteEmojis(["👍"]);
+      await open();
+      drag(slots()[0], "dragstart");
+      drag(slots()[3], "dragover");
+      drag(slots()[3], "drop");
+      drag(slots()[0], "dragend");
+
+      expect(new UserSettings().favoriteEmojis().slice(0, 4)).toEqual([
+        null,
+        null,
+        null,
+        "👍",
+      ]);
     });
 
     it("ignores a group emoji dropped outside the slots", async () => {

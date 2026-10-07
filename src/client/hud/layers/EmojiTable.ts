@@ -116,6 +116,8 @@ export class EmojiTable extends LitElement {
       <div
         class="fixed inset-0 bg-black/15 backdrop-brightness-110 flex items-start sm:items-center justify-center z-10002 pt-4 sm:pt-0"
         @click=${this.handleBackdropClick}
+        @dragover=${this.dragOverElsewhere}
+        @drop=${this.dropElsewhere}
       >
         <div class="relative">
           <!-- Close button -->
@@ -231,14 +233,25 @@ export class EmojiTable extends LitElement {
     this.dragOverSlot = null;
   }
 
-  // drop runs before dragend, so a drag still set here missed every slot. A
-  // favorite dragged off its slot that way is removed.
+  // Anywhere else in the table accepts a dragged favorite, and dropping it
+  // there removes it. A slot's drop runs first and clears `dragged`, so
+  // drops on slots never get here. A cancelled drag (Escape) never drops, so
+  // it keeps the favorite.
+  private dragOverElsewhere = (e: DragEvent) => {
+    if (this.dragged && this.dragged.fromSlot !== null) e.preventDefault();
+  };
+
+  private dropElsewhere = (e: DragEvent) => {
+    if (!this.dragged || this.dragged.fromSlot === null) return;
+    e.preventDefault();
+    const next = [...this.favorites];
+    next[this.dragged.fromSlot] = null;
+    this.saveFavorites(next);
+    this.dragged = null;
+    this.dragOverSlot = null;
+  };
+
   private endDrag = () => {
-    if (this.dragged && this.dragged.fromSlot !== null) {
-      const next = [...this.favorites];
-      next[this.dragged.fromSlot] = null;
-      this.saveFavorites(next);
-    }
     this.dragged = null;
     this.dragOverSlot = null;
   };

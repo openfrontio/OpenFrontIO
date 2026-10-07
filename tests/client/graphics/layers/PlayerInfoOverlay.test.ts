@@ -124,6 +124,34 @@ describe("PlayerInfoOverlay", () => {
     expect(out).not.toContain("text-green-500");
   });
 
+  it("keeps its target while the pointer is on the panel", () => {
+    const game = makeGame({
+      isFriendly: () => false,
+      isAlliedWith: () => false,
+      smallID: () => 1,
+    });
+    overlay.game = game as never;
+    overlay.maybeShow(10, 10);
+    expect(flatten(overlay.render())).toContain("Bob");
+
+    // The pointer moves onto the panel, over Carol's land.
+    overlay["onPanelEnter"]();
+    game.owner = (() => ({
+      ...hovered,
+      displayName: () => "Carol",
+      id: () => "carol",
+      smallID: () => 3,
+    })) as never;
+    overlay["onMouseEvent"]({ x: 400, y: 5 } as never);
+    expect(flatten(overlay.render())).toContain("Bob");
+
+    // Off the panel, mouse moves retarget again.
+    overlay["onPanelLeave"]();
+    overlay["lastMouseUpdate"] = 0;
+    overlay["onMouseEvent"]({ x: 400, y: 5 } as never);
+    expect(flatten(overlay.render())).toContain("Carol");
+  });
+
   describe("emoji button", () => {
     const realWidth = window.innerWidth;
     const realMatchMedia = window.matchMedia;

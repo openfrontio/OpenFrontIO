@@ -1128,6 +1128,7 @@ export class UserSettings {
   }
 
   keybinds(isMac: boolean): Record<string, string> {
+    this.unbindDefaultsOnPlayerKeys(isMac);
     const merged = {
       ...getDefaultKeybinds(isMac),
       ...this.normalizedUserKeybinds(),
@@ -1142,6 +1143,35 @@ export class UserSettings {
     }
 
     return merged;
+  }
+
+  /**
+   * Storage only holds the actions a player changed, so a default added or
+   * moved later can land on a key they already use for something else, and
+   * one press would fire both. When that happens, save the default as
+   * unbound (as the settings modal's Unbind does): the player's own choice
+   * wins, and the settings modal shows the default as unbound too.
+   */
+  private unbindDefaultsOnPlayerKeys(isMac: boolean): void {
+    const user = this.normalizedUserKeybinds();
+    // Modifier keys are shared on purpose (e.g. Alt for altKey and
+    // emojiMenuModifier), so only ordinary keys count as clashes.
+    const taken = new Set(
+      Object.values(user).filter(
+        (v) =>
+          v !== "Null" && !/^(Alt|Shift|Control|Meta)(Left|Right)$/.test(v),
+      ),
+    );
+    const defaults = getDefaultKeybinds(isMac);
+    const clashing = Object.keys(defaults).filter(
+      (action) => !(action in user) && taken.has(defaults[action]),
+    );
+    if (clashing.length === 0) return;
+    const stored = this.parsedUserKeybinds();
+    for (const action of clashing) {
+      stored[action] = { value: "Null", key: "" };
+    }
+    this.setKeybinds(stored);
   }
 
   setKeybinds(value: string | Record<string, any>): void {

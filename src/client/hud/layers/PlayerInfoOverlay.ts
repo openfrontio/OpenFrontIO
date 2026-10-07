@@ -136,7 +136,17 @@ export class PlayerInfoOverlay extends LitElement implements Controller {
     this._isActive = true;
   }
 
+  // While the pointer is on the panel (moving to its emoji button), keep the
+  // target: mouse moves still arrive from the window, and the tile under the
+  // panel would otherwise retarget or hide it.
+  private pointerOnPanel = false;
+  private onPanelEnter = () => (this.pointerOnPanel = true);
+  private onPanelLeave = () => (this.pointerOnPanel = false);
+
   private onMouseEvent(event: MouseMoveEvent) {
+    if (this.pointerOnPanel) {
+      return;
+    }
     const now = Date.now();
     if (now - this.lastMouseUpdate < 100) {
       return;
@@ -146,6 +156,7 @@ export class PlayerInfoOverlay extends LitElement implements Controller {
   }
 
   public hide() {
+    this.pointerOnPanel = false;
     this.setVisible(false);
     this.unit = null;
     this.player = null;
@@ -696,6 +707,8 @@ export class PlayerInfoOverlay extends LitElement implements Controller {
           class="bg-gray-800/92 backdrop-blur-sm shadow-xs min-[1200px]:rounded-lg sm:rounded-b-lg shadow-lg text-white text-lg lg:text-base w-full ${this.showEmojiButton()
             ? "sm:w-[548px]"
             : "sm:w-[500px]"} overflow-hidden ${containerClasses}"
+          @mouseenter=${this.onPanelEnter}
+          @mouseleave=${this.onPanelLeave}
         >
           ${this.player ? this.renderPlayerInfo(this.player) : ""}
           ${this.unit ? this.renderUnitInfo(this.unit) : ""}
