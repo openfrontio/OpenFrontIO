@@ -610,6 +610,14 @@ export const GameConfigSchema = z.object({
   pool: PoolConfigSchema.optional(),
 });
 
+// What a host sends in update_game_config. maxPlayers is the private-lobby
+// player cap: nullable so the host can lift it (null clears, undefined leaves
+// it alone), and at least 2 so a lobby can't be capped down to the host alone.
+export const GameConfigPatchSchema = GameConfigSchema.partial().extend({
+  maxPlayers: zb.uint({ min: 2, max: 1000 }).nullable().optional(),
+});
+export type GameConfigPatch = z.infer<typeof GameConfigPatchSchema>;
+
 export const TeamSchema = z.string();
 
 export const SafeString = z
@@ -811,7 +819,7 @@ export const UpdateGameConfigIntentSchema = z.object({
   type: z.literal("update_game_config"),
   // zb.json: too rare and too config-shaped to deserve a binary layout —
   // rides the binary wire as length-prefixed JSON.
-  config: zb.json(GameConfigSchema.partial()),
+  config: zb.json(GameConfigPatchSchema),
 });
 
 export const ToggleGameStartTimerIntentSchema = z.object({

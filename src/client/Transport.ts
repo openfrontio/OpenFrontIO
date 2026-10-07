@@ -29,7 +29,7 @@ import {
   ClientSendLiveStatsMessage,
   ClientSendWinnerMessage,
   ClientSpectateMessage,
-  GameConfig,
+  GameConfigPatch,
   Intent,
   LiveStats,
   ReportReason,
@@ -213,7 +213,7 @@ export class SendKickPlayerIntentEvent implements GameEvent {
 }
 
 export class SendUpdateGameConfigIntentEvent implements GameEvent {
-  constructor(public readonly config: Partial<GameConfig>) {}
+  constructor(public readonly config: GameConfigPatch) {}
 }
 
 export class SendToggleGameStartTimer implements GameEvent {

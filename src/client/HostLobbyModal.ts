@@ -21,7 +21,7 @@ import {
 import { UserSettings } from "../core/game/UserSettings";
 import {
   ClientInfo,
-  GameConfig,
+  GameConfigPatch,
   isValidGameID,
   LOBBY_QUEUE_CUTOFF_MS,
   LobbyInfoEvent,
@@ -80,6 +80,8 @@ export class HostLobbyModal extends BaseModal {
   @state() private donateTroops: boolean = false;
   @state() private maxTimer: boolean = false;
   @state() private maxTimerValue: number | undefined = undefined;
+  @state() private playerLimit: boolean = false;
+  @state() private playerLimitValue: number | undefined = undefined;
   @state() private startDelayValue: number | undefined = 3;
   @state() private instantBuild: boolean = false;
   @state() private randomSpawn: boolean = false;
@@ -146,10 +148,28 @@ export class HostLobbyModal extends BaseModal {
   // showing the opposite of the real listed state.
   private listingRequestInFlight = false;
 
+  // The lobby whose player limit is settled: read from its first lobby info,
+  // or edited by the host before that arrived. Either way later broadcasts
+  // don't snap the field back.
+  private playerLimitLoadedFor: string | null = null;
+
   private readonly handleLobbyInfo = (event: LobbyInfoEvent) => {
     const lobby = event.lobby;
     if (!this.lobbyId || lobby.gameID !== this.lobbyId) {
       return;
+    }
+    // A host returning to an existing lobby (?host) starts with default
+    // settings; without this, their next change of any setting would send
+    // maxPlayers: null and clear the lobby's cap. Only a cap the server
+    // already has is adopted, so a fresh lobby's first broadcast can't undo
+    // a limit the host just switched on.
+    if (this.playerLimitLoadedFor !== this.lobbyId) {
+      this.playerLimitLoadedFor = this.lobbyId;
+      const maxPlayers = lobby.gameConfig?.maxPlayers;
+      if (maxPlayers !== undefined) {
+        this.playerLimit = true;
+        this.playerLimitValue = maxPlayers;
+      }
     }
     if ("serverTime" in lobby && typeof lobby.serverTime === "number") {
       this.serverTimeOffset = calculateServerTimeOffset(lobby.serverTime);
@@ -434,6 +454,23 @@ export class HostLobbyModal extends BaseModal {
         .onToggle=${this.handleMaxTimerToggle}
         .onInput=${this.handleMaxTimerValueChanges}
         .onKeyDown=${this.handleMaxTimerValueKeyDown}
+      ></toggle-input-card>`,
+      html`<toggle-input-card
+        .labelKey=${"host_modal.player_limit"}
+        .checked=${this.playerLimit}
+        .inputId=${"player-limit-value"}
+        .inputMin=${2}
+        .inputMax=${1000}
+        .inputValue=${this.playerLimitValue}
+        .inputAriaLabel=${translateText("host_modal.player_limit")}
+        .inputPlaceholder=${translateText(
+          "host_modal.player_limit_placeholder",
+        )}
+        .defaultInputValue=${50}
+        .minValidOnEnable=${2}
+        .onToggle=${this.handlePlayerLimitToggle}
+        .onInput=${this.handlePlayerLimitValueChanges}
+        .onKeyDown=${this.handlePlayerLimitValueKeyDown}
       ></toggle-input-card>`,
       html`<input-card
         .labelKey=${"host_modal.start_delay"}
@@ -756,7 +793,10 @@ export class HostLobbyModal extends BaseModal {
 
         ${this.showListLobbyDialog
           ? html`<list-lobby-dialog
-              .currentPlayers=${this.clients.length}
+              .currentPlayers=${this.seatedPlayerCount()}
+              .suggestedMaxPlayers=${this.playerLimit
+                ? this.playerLimitValue
+                : undefined}
               @cancel=${() => (this.showListLobbyDialog = false)}
               @confirm=${(e: CustomEvent<ListLobbyOptions>) => {
                 this.showListLobbyDialog = false;
@@ -975,6 +1015,9 @@ export class HostLobbyModal extends BaseModal {
     this.donateTroops = false;
     this.maxTimer = false;
     this.maxTimerValue = undefined;
+    this.playerLimit = false;
+    this.playerLimitValue = undefined;
+    this.playerLimitLoadedFor = null;
     this.startDelayValue = 3;
     this.instantBuild = false;
     this.randomSpawn = false;
@@ -1422,6 +1465,43 @@ export class HostLobbyModal extends BaseModal {
     this.putGameConfig();
   };
 
+  private handlePlayerLimitToggle = (
+    checked: boolean,
+    value: number | string | undefined,
+  ) => {
+    this.playerLimit = checked;
+    this.playerLimitValue = toOptionalNumber(value);
+    this.markPlayerLimitSettled();
+    this.putGameConfig();
+  };
+
+  private handlePlayerLimitValueKeyDown = (e: KeyboardEvent) => {
+    preventDisallowedKeys(e, ["-", "+", "e", "E", "."]);
+  };
+
+  private handlePlayerLimitValueChanges = (e: Event) => {
+    const input = e.target as HTMLInputElement;
+    const value = parseBoundedIntegerFromInput(input, { min: 2, max: 1000 });
+    if (value === undefined) {
+      return;
+    }
+    this.playerLimitValue = value;
+    this.markPlayerLimitSettled();
+    this.putGameConfig();
+  };
+
+  // The host's own edit is what the card should show from now on: a lobby
+  // info still carrying the old cap must not replace it.
+  private markPlayerLimitSettled() {
+    this.playerLimitLoadedFor = this.lobbyId;
+  }
+
+  // Players holding a seat. Spectators take none, matching the server's
+  // listing check.
+  private seatedPlayerCount(): number {
+    return this.clients.filter((c) => c.spectator !== true).length;
+  }
+
   private handleStartDelayValueKeyDown = (e: KeyboardEvent) => {
     preventDisallowedKeys(e, ["-", "+", "e", "E", "."]);
   };
@@ -1488,10 +1568,18 @@ export class HostLobbyModal extends BaseModal {
     options?: ListLobbyOptions,
   ) {
     this.listingRequestInFlight = true;
+    const wasListed = this.publiclyListed;
     this.publiclyListed = checked;
     const result = await setLobbyListed(this.lobbyId, checked, options);
     if (result.ok) {
       this.publiclyListed = result.listed;
+      // Listing replaces the player limit with the dialog's cap (the server
+      // applies it only on the unlisted -> listed transition); mirror it so
+      // the card is right if the host later unlists.
+      if (!wasListed && result.listed && options?.maxPlayers !== undefined) {
+        this.playerLimit = true;
+        this.playerLimitValue = options.maxPlayers;
+      }
     } else {
       this.publiclyListed = !checked;
       this.showListingError(result.error);
@@ -1567,6 +1655,15 @@ export class HostLobbyModal extends BaseModal {
               this.defaultNationCount,
             ),
             maxTimerValue: this.maxTimer === true ? this.maxTimerValue : null,
+            // null lifts the cap; the server keeps players already seated.
+            // Until the lobby's own cap has been read from lobby info, "off"
+            // may just mean "not loaded yet", so leave the cap alone.
+            maxPlayers:
+              this.playerLimit === true && this.playerLimitValue !== undefined
+                ? this.playerLimitValue
+                : this.playerLimitLoadedFor === this.lobbyId
+                  ? null
+                  : undefined,
             startDelay: this.startDelayValue,
             goldMultiplier:
               this.goldMultiplier === true ? this.goldMultiplierValue : null,
@@ -1612,7 +1709,7 @@ export class HostLobbyModal extends BaseModal {
                       : null,
                 }
               : undefined,
-          } satisfies Partial<GameConfig>,
+          } satisfies GameConfigPatch,
         },
         bubbles: true,
         composed: true,

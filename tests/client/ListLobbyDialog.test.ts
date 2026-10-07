@@ -31,3 +31,26 @@ describe("ListLobbyDialog player cap", () => {
     );
   });
 });
+
+describe("ListLobbyDialog suggested cap", () => {
+  const cap = (el: ListLobbyDialog): number =>
+    (el as unknown as { maxPlayers: number }).maxPlayers;
+
+  async function suggested(value: number | undefined) {
+    const el = dialog(1);
+    el.suggestedMaxPlayers = value;
+    document.body.appendChild(el);
+    await el.updateComplete;
+    el.remove();
+    return el;
+  }
+
+  it("starts at the host's player limit", async () => {
+    expect(cap(await suggested(25))).toBe(25);
+  });
+
+  it("starts at the maximum without one, or when it is above the maximum", async () => {
+    expect(cap(await suggested(undefined))).toBe(MAX_HOSTED_LOBBY_PLAYERS);
+    expect(cap(await suggested(500))).toBe(MAX_HOSTED_LOBBY_PLAYERS);
+  });
+});

@@ -1166,6 +1166,8 @@
     "nation_players": "Nations",
     "player": "Player",
     "player_immunity_duration": "PVP immunity duration (minutes)",
+    "player_limit": "Player limit",
+    "player_limit_placeholder": "Players",
     "player_whitelist": "Player Whitelist (public IDs)",
     "player_whitelist_placeholder": "comma separated",
     "players": "Players",
