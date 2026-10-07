@@ -118,9 +118,11 @@ describe("buyClanBoost", () => {
     ["not_recently_active", "clan_modal.boost_error_not_recently_active"],
     ["daily_limit", "clan_modal.boost_error_daily_limit"],
     ["insufficient_balance", "clan_modal.boost_error_insufficient_balance"],
-    ["unknown_tier", "clan_modal.boost_error_failed"],
+    ["unknown_tier", "clan_modal.boost_error_unknown_tier"],
+    ["idempotency_conflict", "clan_modal.boost_error_key_conflict"],
+    ["something_new", "clan_modal.boost_error_failed"],
   ])("maps refusal %s to %s", async (code, key) => {
-    mockFetch(() => res(400, { code }));
+    mockFetch(() => res(code === "idempotency_conflict" ? 409 : 400, { code }));
     expect(await buyClanBoost("TST", "spark", "k".repeat(8))).toEqual({
       error: key,
     });

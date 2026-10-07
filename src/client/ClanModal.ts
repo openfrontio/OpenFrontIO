@@ -587,9 +587,10 @@ export class ClanModal extends BaseModal {
           this.openPlayerProfile(e.detail.publicId)}
         @navigate-manage=${() => (this.view = "manage")}
         @navigate-requests=${() => (this.view = "requests")}
-        @clan-donated=${(e: CustomEvent<{ clan: ClanInfo }>) => {
-          // Fresh detail after a donation: the header treasury and the My
-          // Clans card both show balances, so both pick up the new figures.
+        @clan-refreshed=${(e: CustomEvent<{ clan: ClanInfo }>) => {
+          // Fresh detail after a donation or a boost purchase: the header
+          // treasury and the My Clans card both show balances, so both pick
+          // up the new figures (and the boost's time left).
           this.selectedClan = e.detail.clan;
           this.myClans = this.myClans.map((c) =>
             c.tag === e.detail.clan.tag

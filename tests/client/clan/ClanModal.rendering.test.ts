@@ -169,7 +169,7 @@ describe("ClanModal — rendering", () => {
   });
 
   describe("browse sort dropdown", () => {
-    it("loads with the random sort, then refetches page 1 with the picked sort and the pinned bucket", async () => {
+    it("loads with the random sort, then refetches page 1 with the picked sort and a fresh bucket", async () => {
       const { fetchClans } = await import("../../../src/client/ClanApi");
       const fetchMock = fetchClans as ReturnType<typeof vi.fn>;
       const page = {
@@ -208,9 +208,66 @@ describe("ClanModal — rendering", () => {
           1,
           undefined,
           "winScore",
+          undefined,
+        ),
+      );
+    });
+
+    it("pages with the bucket of the last response", async () => {
+      const { fetchClans } = await import("../../../src/client/ClanApi");
+      const fetchMock = fetchClans as ReturnType<typeof vi.fn>;
+      const page = {
+        results: [makeClan({ tag: "OTH", name: "Other Clan" })],
+        total: 40,
+        page: 1,
+        limit: 20,
+        bucket: 42,
+      };
+      fetchMock.mockResolvedValueOnce(page).mockResolvedValueOnce(page);
+      setState(modal, "activeTab" as keyof ClanModal, "browse" as never);
+      await waitForSubComponent(modal, "clan-browse-view");
+      await vi.waitFor(() => expect(modal.textContent).toContain("1 / 2"));
+
+      const next = Array.from(
+        modal.querySelectorAll<HTMLButtonElement>("clan-browse-view button"),
+      ).find((b) => b.textContent?.trim() === ">")!;
+      next.click();
+      await vi.waitFor(() =>
+        expect(fetchMock).toHaveBeenLastCalledWith(
+          undefined,
+          2,
+          undefined,
+          "random",
           42,
         ),
       );
+    });
+
+    it("shows A–Z, not Random, while searching", async () => {
+      const { fetchClans } = await import("../../../src/client/ClanApi");
+      const fetchMock = fetchClans as ReturnType<typeof vi.fn>;
+      const page = { results: [], total: 0, page: 1, limit: 20 };
+      fetchMock.mockResolvedValueOnce(page);
+      setState(modal, "activeTab" as keyof ClanModal, "browse" as never);
+      const view = await waitForSubComponent(modal, "clan-browse-view");
+
+      const input = modal.querySelector(
+        "clan-browse-view input",
+      ) as HTMLInputElement;
+      input.value = "wolf";
+      input.dispatchEvent(new Event("input"));
+      await (view as unknown as { updateComplete: Promise<boolean> })
+        .updateComplete;
+
+      const select = modal.querySelector(
+        "clan-browse-view select",
+      ) as HTMLSelectElement;
+      expect(Array.from(select.options).map((o) => o.value)).toEqual([
+        "memberCount",
+        "winScore",
+        "name",
+      ]);
+      expect(select.value).toBe("name");
     });
   });
 

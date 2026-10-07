@@ -78,8 +78,14 @@ export class ClanDetailView extends LitElement {
   private memberLoadSeq = 0;
   private asyncGeneration = 0;
 
+  // Re-renders once a minute so the boost's "time left" counts down.
+  private boostTicker: ReturnType<typeof setInterval> | null = null;
+
   connectedCallback() {
     super.connectedCallback();
+    this.boostTicker = setInterval(() => {
+      if (this.selectedClan?.boostEndsAt) this.requestUpdate();
+    }, 60_000);
     if (this.cachedDetail && this.cachedDetail.tag === this.clanTag) {
       this.restoreFromCache(this.cachedDetail);
     } else if (this.clanTag) {
@@ -115,6 +121,8 @@ export class ClanDetailView extends LitElement {
   }
 
   disconnectedCallback() {
+    if (this.boostTicker) clearInterval(this.boostTicker);
+    this.boostTicker = null;
     if (this.memberSearchDebounce) clearTimeout(this.memberSearchDebounce);
     this.memberLoadSeq++;
     super.disconnectedCallback();
@@ -390,14 +398,7 @@ export class ClanDetailView extends LitElement {
     if (!detail || gen !== this.asyncGeneration || this.clanTag !== clan.tag) {
       return;
     }
-    this.selectedClan = detail;
-    this.dispatchEvent(
-      new CustomEvent("clan-donated", {
-        detail: { clan: detail },
-        bubbles: true,
-        composed: true,
-      }),
-    );
+    this.applyRefreshedClan(detail);
   }
 
   // The purchase is done; refresh the clan so the time left and the clan's
@@ -418,7 +419,20 @@ export class ClanDetailView extends LitElement {
     if (!detail || gen !== this.asyncGeneration || this.clanTag !== clan.tag) {
       return;
     }
+    this.applyRefreshedClan(detail);
+  }
+
+  // Shows the refetched clan and hands it up to ClanModal, which keeps its
+  // own copy (and the My Clans card balances) for when the view is re-entered.
+  private applyRefreshedClan(detail: ClanInfo) {
     this.selectedClan = detail;
+    this.dispatchEvent(
+      new CustomEvent("clan-refreshed", {
+        detail: { clan: detail },
+        bubbles: true,
+        composed: true,
+      }),
+    );
   }
 
   private onSearchInput(e: Event) {

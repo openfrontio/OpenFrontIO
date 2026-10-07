@@ -361,6 +361,21 @@ describe("fetchClans", () => {
     expect(lastUrl().searchParams.get("seed")).toBe(first);
   });
 
+  it("keeps page 1's seed for the pages after it, even across a sign-in", async () => {
+    vi.mocked(getUserMe).mockResolvedValue(false);
+    localStorage.setItem("clanBrowseSeed", "anonseed");
+    const lastUrl = spyBrowse();
+
+    await fetchClans(undefined, 1);
+    vi.mocked(getUserMe).mockResolvedValue(userWithClans([]));
+    await fetchClans(undefined, 2);
+    expect(lastUrl().searchParams.get("seed")).toBe("anonseed");
+
+    // A fresh page 1 picks up the signed-in seed.
+    await fetchClans(undefined, 1);
+    expect(lastUrl().searchParams.get("seed")).toBe("p1");
+  });
+
   it("passes a pinned bucket back", async () => {
     const lastUrl = spyBrowse();
     await fetchClans(undefined, 2, 20, "random", 491234);
