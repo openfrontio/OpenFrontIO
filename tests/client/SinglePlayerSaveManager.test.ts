@@ -1,8 +1,10 @@
+import { GameID, GameStartInfo, Turn } from "@openfront/engine-api/Schemas";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   clearMemorySnapshots,
   clearSoloSave,
   closeSnapshotDatabase,
+  compressSnapshot,
   decompressSoloTurns,
   deleteSnapshotBytes,
   getActiveIdentity,
@@ -18,8 +20,6 @@ import {
   saveSoloSnapshot,
   uint8ArrayToBase64,
 } from "../../src/client/SinglePlayerSaveManager";
-import { GameID, GameStartInfo, Turn } from "../../src/core/Schemas";
-import { compressSnapshot } from "../../src/core/snapshot/GameSnapshot";
 
 let mockPlatform = "web";
 let mockPersistentId = "user_abc_123";

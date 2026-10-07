@@ -202,7 +202,6 @@ async function onMessage(e: MessageEvent<MainThreadMessage>) {
         // The failure is reported above; later messages still see it when
         // they await gameRunner.
         gameRunner.catch(() => {});
->>>>>>> upstream/main:packages/engine/src/worker/Worker.worker.ts
       } catch (error) {
         console.error("Failed to initialize game runner:", error);
         throw error;

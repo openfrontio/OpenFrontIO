@@ -302,17 +302,13 @@ export class SinglePlayerModal extends BaseModal {
         | "corrupt"
         | "unavailable"
         | undefined;
-      if (save.hasSnapshot || (save as { snapshot?: string }).snapshot) {
+      if (save.hasSnapshot) {
         const snapData = await getSoloSnapshot();
         if (attempt !== this.resumeAttempt) return;
-        if (snapData && "status" in snapData) {
-          if (snapData.status === "success") {
-            resumeSnapshot = snapData.snapshot;
-          } else {
-            snapshotFailedReason = snapData.status;
-          }
-        } else if (snapData && (snapData as any).snapshot) {
-          resumeSnapshot = (snapData as any).snapshot;
+        if (snapData.status === "success") {
+          resumeSnapshot = snapData.snapshot;
+        } else {
+          snapshotFailedReason = snapData.status;
         }
       }
       const lastTurnNum =

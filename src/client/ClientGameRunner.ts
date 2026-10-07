@@ -14,13 +14,16 @@ import {
 } from "@openfront/engine-api/game/GameUpdates";
 import { findClosestBy } from "@openfront/engine-lib/Util";
 import { Config } from "@openfront/engine-lib/configuration/Config";
-import { TerrainMapData } from "@openfront/engine-lib/game/TerrainMapLoader";
+import {
+  loadTerrainMap,
+  TerrainMapData,
+} from "@openfront/engine-lib/game/TerrainMapLoader";
 import {
   readSnapshotHeader,
   restoreMapsFromSnapshot,
 } from "@openfront/engine/snapshot/GameSnapshot";
 import { EventBus } from "@openfront/shared/EventBus";
-import { GameMapLoader } from "@openfront/shared/GameMapLoader";
+import { GameMapLoader, loadMapFiles } from "@openfront/shared/GameMapLoader";
 import { replacer } from "@openfront/shared/SharedUtil";
 import {
   GameRecord,
@@ -700,11 +703,11 @@ async function createClientGame(
 
   if (lobbyConfig.resumeSnapshot) {
     gameMap = await loadTerrainMap(
-      lobbyConfig.gameStartInfo.config.gameMap,
-      lobbyConfig.gameStartInfo.config.gameMapSize,
-      mapLoader,
-      false, // Layer images loaded off the critical path after game start.
-      true, // fresh copy for snapshot restoration
+      await loadMapFiles(
+        mapLoader,
+        lobbyConfig.gameStartInfo.config.gameMap,
+        lobbyConfig.gameStartInfo.config.gameMapSize,
+      ),
     );
   } else if (terrainLoad) {
     gameMap = await terrainLoad;
@@ -1105,8 +1108,14 @@ export class ClientGameRunner {
         gu.tick % 50 === 0
       ) {
         this.snapshotInFlight = true;
-        this.worker
-          .snapshot()
+        let timer: ReturnType<typeof setTimeout> | undefined;
+        const timeoutPromise = new Promise<never>((_, reject) => {
+          timer = setTimeout(
+            () => reject(new Error("Worker snapshot timed out")),
+            5000,
+          );
+        });
+        Promise.race([this.worker.snapshot(), timeoutPromise])
           .then(async ({ bytes, tick }) => {
             const compressed = await compressSnapshot(bytes);
             return { compressed, snapshotTick: tick };
@@ -1124,7 +1133,7 @@ export class ClientGameRunner {
                 compressed,
                 snapshotTick,
               );
-              if (this.hasWinner || this.playerDied || !this.isActive) {
+              if (this.hasWinner || this.playerDied) {
                 clearSoloSave(gameID);
               }
             }
@@ -1133,6 +1142,9 @@ export class ClientGameRunner {
             console.warn("Auto-snapshot failed:", err);
           })
           .finally(() => {
+            if (timer !== undefined) {
+              clearTimeout(timer);
+            }
             this.snapshotInFlight = false;
           });
       }

@@ -111,7 +111,7 @@ describe("SinglePlayerModal start", () => {
     const modal = createModal();
     modal.resumeSave = {
       gameID: "save_snap",
-      snapshot: "dummy_data",
+      hasSnapshot: true,
       numTurns: 10,
     } as any;
 
@@ -132,7 +132,12 @@ describe("SinglePlayerModal start", () => {
     // Only one snapshot fetch initiated
     expect(snapSpy).toHaveBeenCalledTimes(1);
 
-    resolveSnapshot({ snapshot: new Uint8Array([1, 2, 3]) });
+    resolveSnapshot({
+      status: "success",
+      snapshot: new Uint8Array([1, 2, 3]),
+      gameStartInfo: {} as any,
+      numTurns: 10,
+    });
     await Promise.all([firstResume, secondResume]);
 
     expect(modal.resumeInFlight).toBe(false);
@@ -143,7 +148,7 @@ describe("SinglePlayerModal start", () => {
     const modal = createModal();
     modal.resumeSave = {
       gameID: "save_snap",
-      snapshot: "dummy_data",
+      hasSnapshot: true,
       numTurns: 10,
     } as any;
 
@@ -167,7 +172,12 @@ describe("SinglePlayerModal start", () => {
     modal.onClose();
     expect(modal.resumeInFlight).toBe(false);
 
-    resolveSnapshot({ snapshot: new Uint8Array([1, 2, 3]) });
+    resolveSnapshot({
+      status: "success",
+      snapshot: new Uint8Array([1, 2, 3]),
+      gameStartInfo: {} as any,
+      numTurns: 10,
+    });
     await resumePromise;
 
     // Stale resume must not dispatch join-lobby
@@ -179,7 +189,7 @@ describe("SinglePlayerModal start", () => {
     const modal = createModal();
     modal.resumeSave = {
       gameID: "save_snap",
-      snapshot: "dummy_data",
+      hasSnapshot: true,
       numTurns: 10,
     } as any;
 
@@ -203,7 +213,12 @@ describe("SinglePlayerModal start", () => {
     const startPromise = modal.startGame();
     expect(modal.resumeInFlight).toBe(false);
 
-    resolveSnapshot({ snapshot: new Uint8Array([1, 2, 3]) });
+    resolveSnapshot({
+      status: "success",
+      snapshot: new Uint8Array([1, 2, 3]),
+      gameStartInfo: {} as any,
+      numTurns: 10,
+    });
     await Promise.all([resumePromise, startPromise]);
 
     // Only the new game start dispatched, not the stale resume

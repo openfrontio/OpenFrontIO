@@ -1,8 +1,8 @@
+import { GameUpdateType } from "@openfront/engine-api/game/GameUpdates";
+import { GameID, GameStartInfo } from "@openfront/engine-api/Schemas";
+import { EventBus } from "@openfront/shared/EventBus";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { SendWinnerEvent } from "../../src/client/Transport";
-import { EventBus } from "../../src/core/EventBus";
-import { GameUpdateType } from "../../src/core/game/GameUpdates";
-import { GameID, GameStartInfo } from "../../src/core/Schemas";
 
 const clearSoloSaveMock = vi.fn();
 const saveSoloSnapshotMock = vi.fn();
@@ -10,6 +10,7 @@ const saveSoloSnapshotMock = vi.fn();
 vi.mock("../../src/client/SinglePlayerSaveManager", () => ({
   clearSoloSave: (...args: any[]) => clearSoloSaveMock(...args),
   saveSoloSnapshot: (...args: any[]) => saveSoloSnapshotMock(...args),
+  compressSnapshot: vi.fn(async (raw: Uint8Array) => raw),
 }));
 
 vi.mock("../../src/client/Auth", () => ({
@@ -26,10 +27,6 @@ vi.mock("../../src/client/sound/SoundManager", () => ({
     playBackgroundMusic() {}
     dispose() {}
   },
-}));
-
-vi.mock("../../src/client/UserSettings", () => ({
-  userSettings: {},
 }));
 
 vi.mock("../../src/client/Utils", () => ({
@@ -77,8 +74,7 @@ describe("ClientGameRunner death detection and save clearing", () => {
       }),
       snapshot: vi.fn(async () => ({
         bytes: new Uint8Array([1, 2, 3]),
-        snapshot: new Uint8Array([1, 2, 3]),
-        tick: 50,
+        tick: 52,
       })),
     };
 
@@ -204,8 +200,51 @@ describe("ClientGameRunner death detection and save clearing", () => {
     expect(saveSoloSnapshotMock).toHaveBeenCalledWith(
       expect.anything(),
       expect.anything(),
-      50,
+      52,
     );
+  });
+
+  it("clears snapshotInFlight when worker.snapshot() hangs and times out", async () => {
+    vi.useFakeTimers();
+    try {
+      mockWorker.snapshot = vi.fn().mockReturnValue(new Promise(() => {}));
+      const runner = createRunner(true);
+      runner.start();
+
+      // Tick 50 triggers auto-snapshot
+      workerCallback({
+        tick: 50,
+        updates: { [GameUpdateType.Hash]: [] },
+      });
+
+      expect(mockWorker.snapshot).toHaveBeenCalledTimes(1);
+
+      // Fast-forward past the 5000ms timeout
+      await vi.advanceTimersByTimeAsync(5000);
+
+      // Now mockWorker.snapshot resolves normally for the next attempt
+      mockWorker.snapshot = vi.fn().mockResolvedValue({
+        bytes: new Uint8Array([1, 2, 3]),
+        tick: 105,
+      });
+
+      // Tick 100 triggers auto-snapshot again
+      workerCallback({
+        tick: 100,
+        updates: { [GameUpdateType.Hash]: [] },
+      });
+
+      await vi.waitFor(() => {
+        expect(mockWorker.snapshot).toHaveBeenCalledTimes(1);
+        expect(saveSoloSnapshotMock).toHaveBeenCalledWith(
+          expect.anything(),
+          expect.anything(),
+          105,
+        );
+      });
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it("clears saved snapshot if player dies or winner is declared while saveSoloSnapshot is in flight", async () => {
@@ -241,5 +280,39 @@ describe("ClientGameRunner death detection and save clearing", () => {
     await vi.waitFor(() => {
       expect(clearSoloSaveMock).toHaveBeenCalledWith("game123");
     });
+  });
+
+  it("retains saved snapshot if runner is stopped while saveSoloSnapshot is in flight", async () => {
+    let resolveSave!: () => void;
+    saveSoloSnapshotMock.mockImplementation(
+      () =>
+        new Promise<void>((resolve) => {
+          resolveSave = resolve;
+        }),
+    );
+
+    const runner = createRunner(true);
+    runner.start();
+
+    // Trigger auto-snapshot at tick 50
+    workerCallback({
+      tick: 50,
+      updates: { [GameUpdateType.Hash]: [] },
+    });
+
+    await vi.waitFor(() => {
+      expect(saveSoloSnapshotMock).toHaveBeenCalledTimes(1);
+    });
+
+    clearSoloSaveMock.mockClear();
+
+    // Runner is stopped (e.g. player quits/navigates away)
+    (runner as any).isActive = false;
+
+    // saveSoloSnapshot completes
+    resolveSave();
+
+    await new Promise((r) => setTimeout(r, 20));
+    expect(clearSoloSaveMock).not.toHaveBeenCalled();
   });
 });
