@@ -26,11 +26,11 @@ import {
 } from "../client/Utils";
 import { getApiBase } from "./Api";
 import { crazyGamesSDK } from "./CrazyGamesSDK";
+import { SendSpectateEvent } from "./LobbyEvents";
 import { PublicLobbySocket } from "./LobbySocket";
 import { JoinLobbyEvent } from "./Main";
 import { ensureServerList, redirectToGameVersion } from "./ServerList";
 import { terrainMapFileLoader } from "./TerrainMapFileLoader";
-import { SendSpectateEvent } from "./Transport";
 import { normaliseMapKey } from "./Utils";
 import { findVersionedShell } from "./VersionedReplay";
 import { BaseModal } from "./components/BaseModal";

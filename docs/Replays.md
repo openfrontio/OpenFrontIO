@@ -18,9 +18,10 @@ viewer either way.
    so a record only replays on the build that played it. A record from
    another build is sent to that build's versioned shell,
    `replay.<domain>/<gameID>` (#4934).
-3. **Process.** A worker re-runs the record with the core and encodes
-   every tick. It checks every hash the live clients agreed on and stops
-   at the first mismatch.
+3. **Process.** A worker re-runs the record on the engine's own worker
+   (the one live games use, connected to it by a `MessageChannel`) and
+   encodes every tick. It checks every hash the live clients agreed on
+   and stops at the first mismatch.
 4. **Play while processing.** The worker sends the fixed header fields
    first, then new frames every few seconds (the first batch after about
    a second). Frames are only sent once a later hash has matched, so if a
@@ -74,7 +75,8 @@ The files to start from:
 | `codec/decode/ReplayReader`     | Rebuilds the game state at any frame           |
 | `codec/EntitySchema`            | Player and unit fields, shared by both sides   |
 | `processor/ReplayProcessor`     | Re-runs a record, checks hashes, feeds encoder |
-| `LocalProcessing`               | Runs the processor in a worker                 |
+| `processor/WorkerReplayEngine`  | Drives the engine worker over its port         |
+| `LocalProcessing`               | Starts both workers and connects them          |
 | `ReplayPlayback`                | Play, pause, speed and seek                    |
 | `ReplayFrameBuilder`            | Decoded frames to the renderer's `FrameData`   |
 | `ReplayGameAdapter`             | Makes a frame look like `GameView` for the HUD |

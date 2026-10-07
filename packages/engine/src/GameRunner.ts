@@ -1,5 +1,4 @@
 import { TileRef } from "@openfront/engine-api/game/GameMap";
-import { GameMapLoader } from "@openfront/engine-api/game/GameMapLoader";
 import {
   AllPlayers,
   BuildableUnit,
@@ -21,8 +20,9 @@ import {
   GameUpdateType,
   GameUpdateViewData,
 } from "@openfront/engine-api/game/GameUpdates";
+import { MapFiles } from "@openfront/engine-api/game/MapFiles";
 import { ClientID, GameStartInfo, Turn } from "@openfront/engine-api/Schemas";
-import { loadTerrainMap as loadGameMap } from "@openfront/engine-lib/game/TerrainMapLoader";
+import { loadTerrainMap } from "@openfront/engine-lib/game/TerrainMapLoader";
 import { PseudoRandom } from "@openfront/engine-lib/PseudoRandom";
 import { simpleHash } from "@openfront/engine-lib/Util";
 import { EngineConfig } from "./configuration/EngineConfig";
@@ -44,17 +44,11 @@ import {
 export async function createGameRunner(
   gameStart: GameStartInfo,
   clientID: ClientID | undefined,
-  mapLoader: GameMapLoader,
+  map: MapFiles,
   callBack: (gu: GameUpdateViewData | ErrorUpdate) => void,
 ): Promise<GameRunner> {
   const config = new EngineConfig(gameStart.config, false, gameStart.listed);
-  const gameMap = await loadGameMap(
-    gameStart.config.gameMap,
-    gameStart.config.gameMapSize,
-    mapLoader,
-    false, // Worker never renders layers — skip image loading to save memory.
-    true, // The game mutates its maps; never share them with another game.
-  );
+  const gameMap = await loadGameMap(gameStart.config, map);
   const random = new PseudoRandom(simpleHash(gameStart.gameID));
 
   const humans = gameStart.players.map((p) => {
@@ -101,6 +95,20 @@ export async function createGameRunner(
   return gr;
 }
 
+/** The game's maps, from its map's files (which the game takes over). */
+function loadGameMap(
+  config: Pick<GameStartInfo["config"], "gameMap" | "gameMapSize">,
+  map: MapFiles,
+) {
+  if (map.map !== config.gameMap || map.mapSize !== config.gameMapSize) {
+    throw new Error(
+      `the game is on ${config.gameMap} (${config.gameMapSize}), ` +
+        `the files passed are ${map.map} (${map.mapSize})`,
+    );
+  }
+  return loadTerrainMap(map);
+}
+
 /**
  * Rebuilds a runner from a snapshot (see snapshot/README.md). The game resumes
  * at the snapshot's tick: the first turn added afterwards is the turn for
@@ -111,17 +119,11 @@ export async function createGameRunnerFromSnapshot(
   gameStart: GameStartInfo,
   snapshot: Uint8Array,
   clientID: ClientID | undefined,
-  mapLoader: GameMapLoader,
+  map: MapFiles,
   callBack: (gu: GameUpdateViewData | ErrorUpdate) => void,
 ): Promise<GameRunner> {
   const header = readSnapshotHeader(snapshot);
-  const gameMap = await loadGameMap(
-    header.gameConfig.gameMap,
-    header.gameConfig.gameMapSize,
-    mapLoader,
-    false,
-    true, // restore mutates the maps; never onto a shared, used copy
-  );
+  const gameMap = await loadGameMap(header.gameConfig, map);
   const game = restoreGame(snapshot, {
     config: (gc) => new EngineConfig(gc, false, gameStart.listed),
     gameMap: gameMap.gameMap,
@@ -364,7 +366,11 @@ export class GameRunner {
       ...(packedAttackUpdates ? { packedAttackUpdates } : {}),
       ...(packedNukeImpacts ? { packedNukeImpacts } : {}),
       updates: updates,
-      ...(viewDataChanged ? { playerNameViewData: this.playerViewData } : {}),
+      // A copy: hosts hold several ticks' updates before reading them, and
+      // the record changes in place on later ticks.
+      ...(viewDataChanged
+        ? { playerNameViewData: { ...this.playerViewData } }
+        : {}),
       tickExecutionDuration: tickExecutionDuration,
       pendingTurns: pendingTurns ?? 0,
     });

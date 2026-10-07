@@ -39,6 +39,7 @@ import {
   SoloSaveState,
 } from "./SinglePlayerSaveManager";
 import { steamSDK } from "./SteamSDK";
+import { lastUserMeResponse } from "./UserMeBroadcast";
 import { UsernameInput } from "./UsernameInput";
 import { UserSettings } from "./UserSettings";
 import {
@@ -247,6 +248,13 @@ export class SinglePlayerModal extends BaseModal {
       "game-starting",
       this.handleGameStarting as EventListener,
     );
+    // It loads on demand (see LazyModals), usually after Main's broadcast
+    // went out.
+    const last = lastUserMeResponse();
+    if (last !== null) {
+      this.userMeResponse = last.response;
+      this.applyAchievements(last.response);
+    }
     void this.loadNationCount();
     this.resumeSave = getSoloSave();
     if (clientPlatform() === "steam") {

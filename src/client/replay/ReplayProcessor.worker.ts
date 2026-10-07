@@ -1,16 +1,19 @@
 /**
- * Worker that turns a game record into a replay with this build's core
- * (processGameRecord in src/client/replay/processor). See LocalProcessing.ts.
+ * Worker that turns a game record into a replay with this build's engine
+ * (processGameRecord in src/client/replay/processor). The engine runs in a
+ * worker of its own, which the page starts and hands over a port to. See
+ * LocalProcessing.ts.
  */
 
-import { FetchGameMapLoader } from "@openfront/engine-lib/game/FetchGameMapLoader";
 import { assetUrl } from "@openfront/shared/AssetUrls";
+import { FetchGameMapLoader } from "@openfront/shared/FetchGameMapLoader";
 import { gzipInBrowser } from "./BrowserGzip";
 import {
   processGameRecord,
   ReplayDesyncError,
 } from "./processor/ReplayProcessor";
 import { extractSnapshotFromRecord } from "./processor/SnapshotExtractor";
+import { startWorkerEngine } from "./processor/WorkerReplayEngine";
 import type { ProcessorRequest, ProcessorResponse } from "./ProcessorMessages";
 
 const ctx = self as unknown as Worker;
@@ -58,6 +61,7 @@ ctx.addEventListener("message", (e: MessageEvent<ProcessorRequest>) => {
   }
 
   processGameRecord(req.record, {
+    engine: (gameStart, map) => startWorkerEngine(req.engine, gameStart, map),
     mapLoader,
     gzip: gzipInBrowser,
     onProgress: (p) => send({ type: "progress", percent: p.percent }),

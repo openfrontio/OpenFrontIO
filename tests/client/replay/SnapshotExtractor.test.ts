@@ -10,7 +10,11 @@ import {
   createGameRunnerFromSnapshot,
 } from "@openfront/engine/GameRunner";
 import { decompressGameRecord } from "@openfront/shared/SharedUtil";
+import { loadMapFiles } from "@openfront/shared/GameMapLoader";
 import { config, human, mapLoader, playAndArchive } from "./util/ArchiveGame";
+
+const loadMap = (c: { gameMap: GameMapType; gameMapSize: GameMapSize }) =>
+  loadMapFiles(mapLoader, c.gameMap, c.gameMapSize);
 
 describe("SnapshotExtractor", () => {
   test("extracts playable snapshot at target tick and converts other humans to bots", async () => {
@@ -55,7 +59,7 @@ describe("SnapshotExtractor", () => {
       result.gameStartInfo,
       result.snapshot,
       "MYCLIENT1",
-      mapLoader,
+      await loadMap(result.gameStartInfo.config),
       (gu: GameUpdateViewData | ErrorUpdate) => {
         if (!("errMsg" in gu)) {
           updateReceived = true;
@@ -111,7 +115,7 @@ describe("SnapshotExtractor", () => {
     const preRunner = await createGameRunner(
       record.info,
       undefined,
-      mapLoader,
+      await loadMap(record.info.config),
       () => {},
     );
     const turns = decompressGameRecord(record).turns;
@@ -140,7 +144,7 @@ describe("SnapshotExtractor", () => {
       result.gameStartInfo,
       result.snapshot,
       "MYCLIENT2",
-      mapLoader,
+      await loadMap(result.gameStartInfo.config),
       () => {},
     );
 
@@ -190,7 +194,7 @@ describe("SnapshotExtractor", () => {
     const preRunner = await createGameRunner(
       record.info,
       undefined,
-      mapLoader,
+      await loadMap(record.info.config),
       () => {},
     );
     const turns = decompressGameRecord(record).turns;
@@ -224,7 +228,7 @@ describe("SnapshotExtractor", () => {
       result.gameStartInfo,
       result.snapshot,
       "MYCLIENT3",
-      mapLoader,
+      await loadMap(result.gameStartInfo.config),
       () => {},
     );
 
@@ -284,7 +288,7 @@ describe("SnapshotExtractor", () => {
       result.gameStartInfo,
       result.snapshot,
       "MYCLIENT_DIFF",
-      mapLoader,
+      await loadMap(result.gameStartInfo.config),
       () => {},
     );
 

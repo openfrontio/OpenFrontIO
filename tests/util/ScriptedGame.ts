@@ -1,10 +1,5 @@
 import { TileRef } from "@openfront/engine-api/game/GameMap";
 import {
-  GameMapLoader,
-  MapData,
-  MapManifest,
-} from "@openfront/engine-api/game/GameMapLoader";
-import {
   AllPlayers,
   Difficulty,
   GameMapSize,
@@ -17,6 +12,7 @@ import {
   ErrorUpdate,
   GameUpdateViewData,
 } from "@openfront/engine-api/game/GameUpdates";
+import { MapManifest } from "@openfront/engine-api/game/MapFiles";
 import {
   flattenedEmojiTable,
   GameConfig,
@@ -32,6 +28,12 @@ import {
   createGameRunnerFromSnapshot,
   GameRunner,
 } from "@openfront/engine/GameRunner";
+import { readSnapshotHeader } from "@openfront/engine/snapshot/GameSnapshot";
+import {
+  GameMapLoader,
+  loadMapFiles,
+  MapData,
+} from "@openfront/shared/GameMapLoader";
 import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
@@ -103,10 +105,11 @@ export async function createScriptedRunner(
   mapName: string,
   gameStart: GameStartInfo,
 ): Promise<GameRunner> {
+  const { gameMap, gameMapSize } = gameStart.config;
   return createGameRunner(
     gameStart,
     undefined,
-    new TestDataMapLoader(mapName),
+    await loadMapFiles(new TestDataMapLoader(mapName), gameMap, gameMapSize),
     recordErrors,
   );
 }
@@ -117,11 +120,12 @@ export async function restoreScriptedRunner(
   snapshot: Uint8Array,
   onUpdate?: (gu: GameUpdateViewData | ErrorUpdate) => void,
 ): Promise<GameRunner> {
+  const { gameMap, gameMapSize } = readSnapshotHeader(snapshot).gameConfig;
   return createGameRunnerFromSnapshot(
     gameStart,
     snapshot,
     undefined,
-    new TestDataMapLoader(mapName),
+    await loadMapFiles(new TestDataMapLoader(mapName), gameMap, gameMapSize),
     (gu) => {
       recordErrors(gu);
       onUpdate?.(gu);

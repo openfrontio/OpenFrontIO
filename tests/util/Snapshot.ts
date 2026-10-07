@@ -1,5 +1,5 @@
 import { GameMap } from "@openfront/engine-api/game/GameMap";
-import { MapManifest } from "@openfront/engine-api/game/GameMapLoader";
+import { MapManifest } from "@openfront/engine-api/game/MapFiles";
 import { genTerrainFromBin } from "@openfront/engine-lib/game/TerrainMapLoader";
 import { TileSet } from "@openfront/engine-lib/game/TileSet";
 import { EngineConfig } from "@openfront/engine/configuration/EngineConfig";

@@ -3,14 +3,13 @@ import {
   type GameUpdateViewData,
 } from "@openfront/engine-api/game/GameUpdates";
 import {
-  compressSnapshot,
-  decompressSnapshot,
   readSnapshotHeader,
   SNAPSHOT_FORMAT_VERSION,
 } from "@openfront/engine/snapshot/GameSnapshot";
 import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
+import { gunzipSync, gzipSync } from "zlib";
 import {
   createScriptedRunner,
   restoreScriptedRunner,
@@ -52,7 +51,7 @@ describe("snapshot fixtures from earlier builds", { timeout: 120_000 }, () => {
       if (fs.existsSync(file)) return;
       const runner = await createScriptedRunner(MAP, start);
       while (runner.game.ticks() < FIXTURE_TICK) stepScripted(runner);
-      fs.writeFileSync(file, await compressSnapshot(runner.snapshot()));
+      fs.writeFileSync(file, gzipSync(runner.snapshot()));
     },
   );
 
@@ -61,8 +60,8 @@ describe("snapshot fixtures from earlier builds", { timeout: 120_000 }, () => {
   });
 
   test.each(fixtures())("%s restores and keeps playing", async (name) => {
-    const bytes = await decompressSnapshot(
-      new Uint8Array(fs.readFileSync(path.join(DIR, name))),
+    const bytes = new Uint8Array(
+      gunzipSync(fs.readFileSync(path.join(DIR, name))),
     );
     const header = readSnapshotHeader(bytes);
     expect(header.startTick).not.toBeNull();

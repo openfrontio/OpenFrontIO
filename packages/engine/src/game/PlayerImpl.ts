@@ -1058,18 +1058,19 @@ export class PlayerImpl implements Player {
     }
     const recipientID =
       recipient === AllPlayers ? AllPlayers : recipient.smallID();
-    const prevMsgs = this.outgoingEmojis_.filter(
-      (msg) => msg.recipientID === recipientID,
-    );
-    for (const msg of prevMsgs) {
-      if (
-        this.mg.ticks() - msg.createdAt <
-        this.mg.config().emojiMessageCooldown()
-      ) {
-        return false;
-      }
-    }
-    return true;
+    const window = this.mg.config().emojiMessageWindow();
+    const recent = this.outgoingEmojis_.filter(
+      (msg) =>
+        msg.recipientID === recipientID &&
+        this.mg.ticks() - msg.createdAt < window,
+    ).length;
+    // Nations reply to emojis and pace their own with this check, so they
+    // keep one per window rather than replying to every emoji in a batch.
+    const limit =
+      this.type() === PlayerType.Human
+        ? this.mg.config().emojiMessageLimit()
+        : 1;
+    return recent < limit;
   }
 
   canSendQuickChat(recipient: Player): boolean {

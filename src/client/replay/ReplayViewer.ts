@@ -11,7 +11,6 @@
 import { Cell, Difficulty, PlayerType } from "@openfront/engine-api/game/GameTypes";
 import type { GameStartInfo } from "@openfront/engine-api/Schemas";
 import { Config } from "@openfront/engine-lib/configuration/Config";
-import { loadTerrainMap } from "@openfront/engine-lib/game/TerrainMapLoader";
 import { EventBus } from "@openfront/shared/EventBus";
 import { generateID } from "@openfront/shared/SharedUtil";
 import type { GameRecord } from "@openfront/shared/WireSchemas";
@@ -50,7 +49,10 @@ import {
   type PlayerState,
   type PlayerStatusData,
 } from "../render/types";
-import { terrainMapFileLoader } from "../TerrainMapFileLoader";
+import {
+  loadCachedTerrainMap,
+  terrainMapFileLoader,
+} from "../TerrainMapFileLoader";
 import type { TransformHandler } from "../TransformHandler";
 import { GoToPlayerEvent } from "../TransformHandler";
 import { PauseGameIntentEvent } from "../Transport";
@@ -398,12 +400,7 @@ export class ReplayViewer extends LitElement {
     const header = playback.header;
     const gsi = header.gameStartInfo as GameStartInfo;
     const [terrain] = await Promise.all([
-      loadTerrainMap(
-        gsi.config.gameMap,
-        gsi.config.gameMapSize,
-        terrainMapFileLoader,
-        false,
-      ),
+      loadCachedTerrainMap(gsi.config.gameMap, gsi.config.gameMapSize),
       preloadAtlasData(),
     ]);
     if (this.abort.signal.aborted) return;

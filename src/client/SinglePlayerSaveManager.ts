@@ -5,10 +5,46 @@ import {
   Turn,
   TurnSchema,
 } from "@openfront/engine-api/Schemas";
-import { decompressSnapshot } from "@openfront/engine/snapshot/GameSnapshot";
 import { getPersistentID } from "./Auth";
 import { clientPlatform } from "./ClientPlatform";
 import { steamSDK } from "./SteamSDK";
+
+async function pipeBytes(
+  bytes: Uint8Array,
+  transform: CompressionStream | DecompressionStream,
+): Promise<Uint8Array> {
+  const reader = new ReadableStream<BufferSource>({
+    start(controller) {
+      controller.enqueue(bytes as Uint8Array<ArrayBuffer>);
+      controller.close();
+    },
+  })
+    .pipeThrough(transform)
+    .getReader();
+  const chunks: Uint8Array[] = [];
+  let length = 0;
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    chunks.push(value as Uint8Array);
+    length += value.length;
+  }
+  const out = new Uint8Array(length);
+  let offset = 0;
+  for (const c of chunks) {
+    out.set(c, offset);
+    offset += c.length;
+  }
+  return out;
+}
+
+export function compressSnapshot(bytes: Uint8Array): Promise<Uint8Array> {
+  return pipeBytes(bytes, new CompressionStream("gzip"));
+}
+
+export function decompressSnapshot(bytes: Uint8Array): Promise<Uint8Array> {
+  return pipeBytes(bytes, new DecompressionStream("gzip"));
+}
 
 export function uint8ArrayToBase64(bytes: Uint8Array): string {
   let binary = "";

@@ -6,12 +6,14 @@ The game is split into four components:
 
 2. **core** - Deterministic simulation. It is pure TypeScript/JavaScript code with no external dependencies. It must be fully deterministic. It lives in npm workspace packages:
    - `packages/engine` (`@openfront/engine`) - the simulation itself: executions, game state, pathfinding, snapshots and the worker entry.
-   - `packages/engine-api` (`@openfront/engine-api`) - the contract between the engine and its hosts: intent and config schemas, game types and enums, game updates, the worker protocol, the `GameMap` interface and the read interfaces (`PlayerLike`, `UnitLike`, `GameLike`) that let the same rules run on engine objects and client views.
-   - `packages/engine-lib` (`@openfront/engine-lib`) - engine code that also runs outside the engine, so the client can interpret what the engine does: the tile grid (`GameMapImpl`), terrain loading, the rules `Config`, `UnitGrid`, the seeded PRNG and deterministic math.
-   - `packages/shared` (`@openfront/shared`) - client/server code that is not simulation: wire and HTTP schemas, the binary wire codec, environment and asset URLs.
+   - `packages/engine-api` (`@openfront/engine-api`) - the contract between the engine and its hosts: intent and config schemas, game types and enums, game updates, the worker protocol, the `GameMap` interface, the map files (`MapFiles`, the manifest) and the read interfaces (`PlayerLike`, `UnitLike`, `GameLike`) that let the same rules run on engine objects and client views.
+   - `packages/engine-lib` (`@openfront/engine-lib`) - engine code that also runs outside the engine, so the client can interpret what the engine does: the tile grid (`GameMapImpl`), building the maps from a map's files, the rules `Config`, `UnitGrid`, the seeded PRNG and deterministic math.
+   - `packages/shared` (`@openfront/shared`) - client/server code that is not simulation: wire and HTTP schemas, the binary wire codec, environment, asset URLs and the map loaders (`GameMapLoader`, which also loads thumbnails and layer images for the client).
    - `packages/zbin` (`@openfront/zbin`) - the binary wire format library.
 
-   The client and server import `engine-api`, `engine-lib` and `shared`; only the simulation worker loads `engine`. `engine-api` depends on nothing but zod and zbin. `tests/LayerBoundaries.test.ts` enforces these rules, and `engine`, `engine-api` and `engine-lib` are type-checked without DOM or Node types (`npm run typecheck`).
+   The client and server import `engine-api`, `engine-lib` and `shared`; only the simulation worker loads `engine`. `engine-api` depends on nothing but zod and zbin. `tests/LayerBoundaries.test.ts` enforces these rules, and `engine`, `engine-api` and `engine-lib` are type-checked against ES2022 plus the few host APIs in `packages/engine-api/globals.d.ts` (`console`, `performance`, `TextEncoder`/`TextDecoder`), so a browser or Node API anywhere but the worker entry fails `npm run typecheck`.
+
+   The engine is hermetic: it loads nothing itself. Its host (`WorkerClient` for a game, the replay processor for a replay) loads the map files (`loadMapFiles`) and passes them in the worker's `init` message, which hands them to `createGameRunner`, and the boundary test fails on network calls in engine code.
 
 3. **server** - Handles coordination and relays of intents/requests
 

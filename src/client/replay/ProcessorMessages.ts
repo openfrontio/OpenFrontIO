@@ -9,6 +9,8 @@ export type ProcessorRequest =
       type?: "process";
       record: GameRecord;
       cdnBase: string;
+      /** A port to the engine's worker, which the page started. */
+      engine: MessagePort;
     }
   | {
       type: "extract_snapshot";

@@ -4,7 +4,7 @@
  * to the local clientID.
  */
 
-import { GameMapLoader } from "@openfront/engine-api/game/GameMapLoader";
+import { GameMapLoader, loadMapFiles } from "@openfront/shared/GameMapLoader";
 import {
   Difficulty,
   GameType,
@@ -48,10 +48,15 @@ export async function extractSnapshotFromRecord(
   const gameStart = wireGameStartInfo(opts.record);
 
   let tickError: string | undefined;
+  const mapFiles = await loadMapFiles(
+    opts.mapLoader,
+    gameStart.config.gameMap,
+    gameStart.config.gameMapSize,
+  );
   const runner = await createGameRunner(
     gameStart,
     undefined,
-    opts.mapLoader,
+    mapFiles,
     (gu: GameUpdateViewData | ErrorUpdate) => {
       if ("errMsg" in gu) {
         tickError = `${gu.errMsg}\n${gu.stack ?? ""}`;

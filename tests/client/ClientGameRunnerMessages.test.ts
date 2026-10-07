@@ -46,11 +46,9 @@ vi.mock("../../src/client/Utils", () => ({
   createCanvas: () => document.createElement("canvas"),
   homeHref: () => "/",
 }));
-vi.mock("@openfront/engine-lib/game/TerrainMapLoader", () => ({
-  loadTerrainMap: vi.fn(async () => ({}) as never),
-}));
 vi.mock("../../src/client/TerrainMapFileLoader", () => ({
   terrainMapFileLoader: {},
+  loadCachedTerrainMap: vi.fn(async () => ({}) as never),
 }));
 vi.mock("../../src/client/hud/GameRenderer", () => ({
   createRenderer: vi.fn(),
@@ -114,12 +112,12 @@ vi.mock("../../src/client/Transport", async (importOriginal) => {
   return { ...actual, Transport: MockTransport };
 });
 
-import { loadTerrainMap } from "@openfront/engine-lib/game/TerrainMapLoader";
 import {
   ClientGameRunner,
   joinLobby,
   LobbyConfig,
 } from "../../src/client/ClientGameRunner";
+import { loadCachedTerrainMap } from "../../src/client/TerrainMapFileLoader";
 import { SendHashEvent } from "../../src/client/Transport";
 import { reloadForUpdate } from "../../src/client/Utils";
 
@@ -236,12 +234,7 @@ describe("joinLobby lobby-phase messages", () => {
     });
 
     await expect(result.prestart).resolves.toBeUndefined();
-    expect(loadTerrainMap).toHaveBeenCalledWith(
-      "world",
-      "medium",
-      expect.anything(),
-      false,
-    );
+    expect(loadCachedTerrainMap).toHaveBeenCalledWith("world", "medium");
   });
 
   it("shows the connection-error modal when start carries no gameStartInfo", async () => {

@@ -1,6 +1,5 @@
 import { ClientID, GameID, Turn } from "@openfront/engine-api/Schemas";
 import { TileRef } from "@openfront/engine-api/game/GameMap";
-import { GameMapLoader } from "@openfront/engine-api/game/GameMapLoader";
 import {
   BuildableUnit,
   PlayerType,
@@ -20,11 +19,11 @@ import {
   TerrainMapData,
 } from "@openfront/engine-lib/game/TerrainMapLoader";
 import {
-  compressSnapshot,
   readSnapshotHeader,
   restoreMapsFromSnapshot,
 } from "@openfront/engine/snapshot/GameSnapshot";
 import { EventBus } from "@openfront/shared/EventBus";
+import { GameMapLoader, loadMapFiles } from "@openfront/shared/GameMapLoader";
 import { replacer } from "@openfront/shared/SharedUtil";
 import {
   GameRecord,
@@ -55,9 +54,16 @@ import {
 import { pagePin } from "./PagePin";
 import { groupTokenOf, loggableStartMessage } from "./PresenceGroup";
 import { versionedPathForMismatchedGame } from "./ServerList";
-import { clearSoloSave, saveSoloSnapshot } from "./SinglePlayerSaveManager";
+import {
+  clearSoloSave,
+  compressSnapshot,
+  saveSoloSnapshot,
+} from "./SinglePlayerSaveManager";
 import { reportGameError } from "./Telemetry";
-import { terrainMapFileLoader } from "./TerrainMapFileLoader";
+import {
+  loadCachedTerrainMap,
+  terrainMapFileLoader,
+} from "./TerrainMapFileLoader";
 import { GoToPlayerEvent } from "./TransformHandler";
 import {
   MoveWarshipIntentEvent,
@@ -183,8 +189,8 @@ export function joinLobby(
   let pendingPreloadKey: string | null = null;
   let pendingPreloadStreak = 0;
   const requestTerrainLoad = (
-    map: Parameters<typeof loadTerrainMap>[0],
-    mapSize: Parameters<typeof loadTerrainMap>[1],
+    map: Parameters<typeof loadCachedTerrainMap>[0],
+    mapSize: Parameters<typeof loadCachedTerrainMap>[1],
   ): Promise<TerrainMapData> => {
     const key = `${map}:${mapSize}`;
     const existing = terrainLoads.get(key);
@@ -192,12 +198,7 @@ export function joinLobby(
       terrainLoad = existing;
       return existing;
     }
-    const load = loadTerrainMap(
-      map,
-      mapSize,
-      terrainMapFileLoader,
-      false, // Layer images loaded off the critical path after game start.
-    );
+    const load = loadCachedTerrainMap(map, mapSize);
     terrainLoads.set(key, load);
     terrainLoad = load;
     void load.catch((e) => {
@@ -702,20 +703,18 @@ export async function createClientGame(
 
   if (lobbyConfig.resumeSnapshot) {
     gameMap = await loadTerrainMap(
-      lobbyConfig.gameStartInfo.config.gameMap,
-      lobbyConfig.gameStartInfo.config.gameMapSize,
-      mapLoader,
-      false, // Layer images loaded off the critical path after game start.
-      true, // fresh copy for snapshot restoration
+      await loadMapFiles(
+        mapLoader,
+        lobbyConfig.gameStartInfo.config.gameMap,
+        lobbyConfig.gameStartInfo.config.gameMapSize,
+      ),
     );
   } else if (terrainLoad) {
     gameMap = await terrainLoad;
   } else {
-    gameMap = await loadTerrainMap(
+    gameMap = await loadCachedTerrainMap(
       lobbyConfig.gameStartInfo.config.gameMap,
       lobbyConfig.gameStartInfo.config.gameMapSize,
-      mapLoader,
-      false, // Layer images loaded off the critical path after game start.
     );
   }
   // Kick off the font-atlas fetch so it overlaps with worker init; the
