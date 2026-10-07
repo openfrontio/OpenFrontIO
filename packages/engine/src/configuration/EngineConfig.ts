@@ -440,8 +440,16 @@ export class EngineConfig extends Config {
   emojiMessageDuration(): Tick {
     return 5 * 10;
   }
-  emojiMessageCooldown(): Tick {
+  /** The window emojiMessageLimit counts over. */
+  emojiMessageWindow(): Tick {
     return 5 * 10;
+  }
+  /**
+   * How many emojis a human can send one recipient (or everyone) per
+   * emojiMessageWindow, so a few can go out in a quick batch.
+   */
+  emojiMessageLimit(): number {
+    return 5;
   }
   quickChatCooldown(): Tick {
     return 3 * 10;

@@ -39,6 +39,7 @@ import {
   priceStringToCents,
   reportPendingSteamAuthorizations,
 } from "./Payments";
+import { lastUserMeResponse } from "./UserMeBroadcast";
 import { translateText } from "./Utils";
 
 type StoreTab =
@@ -104,6 +105,9 @@ export class StoreModal extends BaseModal {
   connectedCallback() {
     super.connectedCallback();
     document.addEventListener("userMeResponse", this.onUserMeEvent);
+    // The store loads on demand, usually after Main's broadcast went out.
+    const last = lastUserMeResponse();
+    if (last !== null) void this.onUserMe(last.response);
     this.addEventListener("open-cosmetic-preview", this.onOpenCosmeticPreview);
     // Rows re-wrap on resize, so which currencies share a row changes with it.
     if (typeof ResizeObserver !== "undefined") {

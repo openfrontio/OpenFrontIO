@@ -4,7 +4,6 @@ import { LitElement, html, nothing } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import { getNews } from "../Api";
 import { clientPlatform } from "../ClientPlatform";
-import { renderMarkdown } from "../Markdown";
 import { translateText } from "../Utils";
 
 export type { NewsItem };
@@ -54,6 +53,9 @@ const typeLabelColors: Record<string, string> = {
 export class NewsBox extends LitElement {
   @state() private items: NewsItem[] = [];
   @state() private activeIndex = 0;
+  // The markdown renderer is its own chunk, loaded alongside the news.
+  private renderMarkdown: typeof import("../Markdown").renderMarkdown | null =
+    null;
   private cycleTimer: ReturnType<typeof setInterval> | null = null;
 
   createRenderRoot() {
@@ -67,7 +69,12 @@ export class NewsBox extends LitElement {
 
   private async loadNews() {
     try {
-      const allItems = filterNewsByPlatform(await getNews(), clientPlatform());
+      const [news, { renderMarkdown }] = await Promise.all([
+        getNews(),
+        import("../Markdown"),
+      ]);
+      this.renderMarkdown = renderMarkdown;
+      const allItems = filterNewsByPlatform(news, clientPlatform());
       // Reset stale dismissed list when all items would be hidden
       const visible = getVisibleNewsItems(allItems);
       if (visible.length === 0 && allItems.length > 0) {
@@ -151,7 +158,7 @@ export class NewsBox extends LitElement {
                 >`}
             <span
               class="text-xs text-white/50 block [&_a]:text-blue-300 [&_a:hover]:text-blue-200"
-              >${renderMarkdown(
+              >${this.renderMarkdown?.(
                 item.descriptionTranslationKey
                   ? translateText(item.descriptionTranslationKey)
                   : (item.description ?? ""),

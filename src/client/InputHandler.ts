@@ -3,6 +3,7 @@ import {
   UnitType,
 } from "@openfront/engine-api/game/GameTypes";
 import { EventBus, GameEvent } from "@openfront/shared/EventBus";
+import { favoriteSlotForKey } from "./EmojiKeys";
 import { Platform } from "./Platform";
 import { UIState } from "./UIState";
 import {
@@ -157,6 +158,16 @@ export class ShowEmojiMenuEvent implements GameEvent {
   ) {}
 }
 
+/** Emitted by the emoji table whenever it opens or closes. */
+export class EmojiTableVisibleEvent implements GameEvent {
+  constructor(public readonly visible: boolean) {}
+}
+
+/** A favorites slot's key was pressed while the emoji table is open. */
+export class EmojiKeyEvent implements GameEvent {
+  constructor(public readonly slot: number) {}
+}
+
 export class DoBoatAttackEvent implements GameEvent {}
 
 export class DoGroundAttackEvent implements GameEvent {}
@@ -225,6 +236,13 @@ interface WebKitGestureEvent extends Event {
 export class InputHandler {
   private lastPointerX: number = 0;
   private lastPointerY: number = 0;
+
+  private lastMouseX: number = 0;
+  private lastMouseY: number = 0;
+
+  private emojiTableOpen = false;
+  /** Favorite keys pressed while the emoji table was open. */
+  private emojiKeysDown = new Set<string>();
 
   private lastPointerDownX: number = 0;
   private lastPointerDownY: number = 0;
@@ -296,8 +314,34 @@ export class InputHandler {
     // game's events. off() first so a second initialize() cannot double it.
     this.eventBus.off(UnitSelectionEvent, this.onUnitSelection);
     this.eventBus.on(UnitSelectionEvent, this.onUnitSelection);
+    this.eventBus.off(EmojiTableVisibleEvent, this.onEmojiTableVisible);
+    this.eventBus.on(EmojiTableVisibleEvent, this.onEmojiTableVisible);
 
     this.initializePointerAndKeyboardEvents();
+  }
+
+  private onEmojiTableVisible = (e: EmojiTableVisibleEvent) => {
+    this.emojiTableOpen = e.visible;
+    this.emojiKeysDown.clear();
+    if (e.visible) {
+      // Stop panning/zooming with a favorite key held from before the table
+      // opened; the table owns those keys now.
+      for (const code of this.activeKeys) {
+        if (favoriteSlotForKey(this.unmodifiedKey(code)) !== null) {
+          this.activeKeys.delete(code);
+        }
+      }
+    }
+  };
+
+  private unmodifiedKey(code: string) {
+    return {
+      code,
+      shiftKey: false,
+      ctrlKey: false,
+      metaKey: false,
+      altKey: false,
+    };
   }
 
   private onUnitSelection = (e: UnitSelectionEvent) => {
@@ -580,6 +624,8 @@ export class InputHandler {
     window.addEventListener(
       "mousemove",
       (e) => {
+        this.lastMouseX = e.clientX;
+        this.lastMouseY = e.clientY;
         if (e.movementX || e.movementY) {
           this.eventBus.emit(new MouseMoveEvent(e.clientX, e.clientY));
         }
@@ -668,6 +714,30 @@ export class InputHandler {
       (e) => {
         const isTextInput = this.isTextInputTarget(e.target);
         if (isTextInput && e.code !== "Escape") {
+          return;
+        }
+
+        // The emoji menu key works on keydown, unlike most keybinds, so a
+        // favorite key typed right after it (before it is released) already
+        // goes to the table instead of panning the map. Pressed again, it
+        // closes the table, like Escape.
+        if (this.keybindMatchesEvent(e, this.keybinds.emojiMenu) && !e.repeat) {
+          e.preventDefault();
+          if (this.emojiTableOpen) {
+            this.eventBus.emit(new CloseViewEvent());
+          } else {
+            this.eventBus.emit(
+              new ShowEmojiMenuEvent(this.lastMouseX, this.lastMouseY),
+            );
+          }
+          return;
+        }
+
+        // Favorite keys are handled on keyup; keep them away from the game's
+        // keybinds (and from activeKeys) while the table is open.
+        if (this.emojiTableOpen && favoriteSlotForKey(e) !== null) {
+          e.preventDefault();
+          this.emojiKeysDown.add(e.code);
           return;
         }
 
@@ -808,6 +878,20 @@ export class InputHandler {
           this.activeKeys.delete("NumpadSubtract");
           this.activeKeys.delete(this.keybinds.zoomIn);
           this.activeKeys.delete(this.keybinds.zoomOut);
+        }
+
+        if (this.emojiTableOpen) {
+          const slot = favoriteSlotForKey(e);
+          if (slot !== null) {
+            e.preventDefault();
+            this.activeKeys.delete(e.code);
+            // Only a press made while the table was open sends; releasing a
+            // key held from before (say, to pan) doesn't.
+            if (this.emojiKeysDown.delete(e.code)) {
+              this.eventBus.emit(new EmojiKeyEvent(slot));
+            }
+            return;
+          }
         }
 
         outerLoop: for (const item of this.keybindAndEvent) {
@@ -1412,6 +1496,7 @@ export class InputHandler {
     );
     this.listenerAbort?.abort();
     this.listenerAbort = null;
+    this.eventBus.off(EmojiTableVisibleEvent, this.onEmojiTableVisible);
     this.eventBus.off(UnitSelectionEvent, this.onUnitSelection);
     // Includes the 800ms long-press timer a touch pointerdown arms: aborting
     // the listeners does not cancel it, so without this it can still fire
@@ -1420,6 +1505,8 @@ export class InputHandler {
     // renderer has already removed.
     this.resetPointerState();
     this.activeKeys.clear();
+    this.emojiTableOpen = false;
+    this.emojiKeysDown.clear();
     this.keybindAndEvent = [];
     this.keybinds = {};
   }

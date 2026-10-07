@@ -48,6 +48,7 @@ vi.mock("howler", () => {
   return { Howl: MockHowl, Howler: { volume: vi.fn() } };
 });
 
+import { Platform } from "../../../src/client/Platform";
 import { startMenuMusic } from "../../../src/client/sound/MenuMusic";
 
 // Rebuilt per test: these carry implementations, which clearAllMocks keeps but
@@ -119,10 +120,23 @@ describe("menu music", () => {
     const theme = themes()[0];
     expect(theme).toBeDefined();
     expect(theme.loop).toBe(true);
-    // 2.2 MB decoded up front is a wait landing exactly when the player has
+    // 1.89 MB decoded up front is a wait landing exactly when the player has
     // just clicked something, so this one streams like the gameplay track.
     expect(theme.html5).toBe(true);
     expect(theme.play).toHaveBeenCalled();
+  });
+
+  it("uses Web Audio on iOS", () => {
+    const previousIsIOS = Platform.isIOS;
+    Platform.isIOS = true;
+    try {
+      startMenuMusic(mixer);
+      document.dispatchEvent(new Event("pointerdown"));
+
+      expect(themes()[0].html5).toBe(false);
+    } finally {
+      Platform.isIOS = previousIsIOS;
+    }
   });
 
   it("ramps up from silence instead of arriving at full level", () => {

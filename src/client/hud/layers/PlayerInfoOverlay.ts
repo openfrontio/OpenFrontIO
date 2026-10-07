@@ -18,9 +18,12 @@ import {
   MouseMoveEvent,
   TouchEvent,
 } from "../../InputHandler";
+import { Platform } from "../../Platform";
 import { themeProvider } from "../../theme/ThemeProvider";
 import { TransformHandler } from "../../TransformHandler";
+import { UserSettings } from "../../UserSettings";
 import {
+  formatKeyForDisplay,
   getTranslatedPlayerTeamLabel,
   renderDuration,
   translateText,
@@ -32,6 +35,7 @@ import {
   getPlayerIcons,
   IMAGE_ICON_KIND,
 } from "../PlayerIcons";
+import { ShowPlayerEmojiMenuEvent } from "./EmojiTable";
 import { ImmunityBarVisibleEvent } from "./ImmunityTimer";
 import { CloseRadialMenuEvent } from "./RadialMenu";
 import "./RelationSmiley";
@@ -40,6 +44,7 @@ const soldierIconAquarius = assetUrl("images/SoldierIconAquarius.svg");
 const allianceIcon = assetUrl("images/AllianceIcon.svg");
 const traitorIcon = assetUrl("images/TraitorIcon.svg");
 const warshipIcon = assetUrl("images/BattleshipIconWhite.svg");
+const emojiIcon = assetUrl("images/EmojiIconWhite.svg");
 const cityIcon = assetUrl("images/CityIconWhite.svg");
 const factoryIcon = assetUrl("images/FactoryIconWhite.svg");
 const goldCoinIcon = assetUrl("images/GoldCoinIcon.svg");
@@ -98,6 +103,15 @@ export class PlayerInfoOverlay extends LitElement implements Controller {
 
   private _isActive = false;
 
+  private userSettings = new UserSettings();
+
+  // The emoji button (and the 48px of panel width it needs) only shows on
+  // wide screens with a mouse: narrower, the wider panel covers other HUD like
+  // the leaderboard, and touch devices have no keyboard shortcut to show.
+  private showEmojiButton(): boolean {
+    return window.innerWidth >= 1200 && !Platform.isTouch;
+  }
+
   private get barOffset(): number {
     return (this.spawnBarVisible ? 7 : 0) + (this.immunityBarVisible ? 7 : 0);
   }
@@ -122,7 +136,17 @@ export class PlayerInfoOverlay extends LitElement implements Controller {
     this._isActive = true;
   }
 
+  // While the pointer is on the panel (moving to its emoji button), keep the
+  // target: mouse moves still arrive from the window, and the tile under the
+  // panel would otherwise retarget or hide it.
+  private pointerOnPanel = false;
+  private onPanelEnter = () => (this.pointerOnPanel = true);
+  private onPanelLeave = () => (this.pointerOnPanel = false);
+
   private onMouseEvent(event: MouseMoveEvent) {
+    if (this.pointerOnPanel) {
+      return;
+    }
     const now = Date.now();
     if (now - this.lastMouseUpdate < 100) {
       return;
@@ -132,6 +156,7 @@ export class PlayerInfoOverlay extends LitElement implements Controller {
   }
 
   public hide() {
+    this.pointerOnPanel = false;
     this.setVisible(false);
     this.unit = null;
     this.player = null;
@@ -329,7 +354,8 @@ export class PlayerInfoOverlay extends LitElement implements Controller {
       capacity = 41.0;
     } else {
       // >= 1024px: sm:w-[500px], font-size text-lg (18px, 10.8px/char).
-      // space = 336px / 10.8px = 31.1 chars.
+      // space = 336px / 10.8px = 31.1 chars. The emoji button, when shown,
+      // brings its own 48px of panel width, so it doesn't change this.
       capacity = 31.1;
     }
 
@@ -448,8 +474,32 @@ export class PlayerInfoOverlay extends LitElement implements Controller {
       ></span>`;
     }
 
+    const emojiKey = formatKeyForDisplay(
+      this.userSettings.keybinds(Platform.isMac).emojiMenu,
+    );
+
     return html`
       <div class="flex items-start gap-1 lg:gap-2 p-1 lg:p-1.5">
+        ${myPlayer && this.showEmojiButton()
+          ? html`<button
+              class="flex items-center gap-0.5 self-center shrink-0 px-1 py-0.5 border rounded-md border-gray-500 hover:bg-white/10 cursor-pointer"
+              title=${translateText("player_panel.emotes")}
+              @click=${(e: MouseEvent) => {
+                e.stopPropagation();
+                this.eventBus.emit(new ShowPlayerEmojiMenuEvent(player));
+                this.hide();
+              }}
+            >
+              <img src=${emojiIcon} alt="" class="w-4 h-4 lg:w-5 lg:h-5" />
+              ${emojiKey
+                ? html`<span
+                    class="text-xs font-mono text-gray-300"
+                    translate="no"
+                    >${emojiKey}</span
+                  >`
+                : ""}
+            </button>`
+          : ""}
         <!-- Left: Gold & Troop bar -->
         <div class="flex flex-col gap-1 shrink-0 w-28 md:w-36">
           <div class="flex items-center gap-1">
@@ -654,7 +704,11 @@ export class PlayerInfoOverlay extends LitElement implements Controller {
         @contextmenu=${(e: MouseEvent) => e.preventDefault()}
       >
         <div
-          class="bg-gray-800/92 backdrop-blur-sm shadow-xs min-[1200px]:rounded-lg sm:rounded-b-lg shadow-lg text-white text-lg lg:text-base w-full sm:w-[500px] overflow-hidden ${containerClasses}"
+          class="bg-gray-800/92 backdrop-blur-sm shadow-xs min-[1200px]:rounded-lg sm:rounded-b-lg shadow-lg text-white text-lg lg:text-base w-full ${this.showEmojiButton()
+            ? "sm:w-[548px]"
+            : "sm:w-[500px]"} overflow-hidden ${containerClasses}"
+          @mouseenter=${this.onPanelEnter}
+          @mouseleave=${this.onPanelLeave}
         >
           ${this.player ? this.renderPlayerInfo(this.player) : ""}
           ${this.unit ? this.renderUnitInfo(this.unit) : ""}
