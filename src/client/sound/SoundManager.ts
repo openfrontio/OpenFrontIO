@@ -35,7 +35,7 @@ export class SoundManager {
     private readonly eventBus: EventBus,
     private readonly mixer: AudioMixer,
   ) {
-    this.buildBackgroundMusic(streamsMusic());
+    this.buildBackgroundMusic();
 
     this.onPlaySoundEffect = (e) => this.mixer.play(e.effect);
     this.onSetAmbience = (e) => this.setAmbience(e.track, e.gain);
@@ -55,13 +55,8 @@ export class SoundManager {
    * including through the victory and defeat cues — so a game never hard-cuts
    * to silence, per the sound designer's note. The menu theme (MenuMusic.ts)
    * covers the home page.
-   *
-   * `preload` is a parameter rather than just `streamsMusic()` because a
-   * rebuild after a failed load must not fetch on its own: that would retry
-   * on a loop for as long as the file kept failing. A rebuild waits to be
-   * asked, the way AudioMixer's discarded cues do.
    */
-  private buildBackgroundMusic(preload: boolean): void {
+  private buildBackgroundMusic(): void {
     this.safely("initialize background music", () => {
       const music = new Howl({
         src: [assetUrl("sounds/music/gameplay.mp3")],
@@ -77,11 +72,17 @@ export class SoundManager {
         // Audio is the only path with a working gain. Cues are unaffected
         // because they are already Web Audio.
         html5: streamsMusic(),
-        // Web Audio holds the whole track decoded to PCM -- 209 seconds of
-        // 44.1 kHz stereo is ~74 MB, an order of magnitude more than the file
-        // -- so on iOS nothing is fetched or decoded until the music channel
-        // is actually audible. See startMusicIfAudible.
-        preload,
+        // Never, on any platform. This runs in the constructor, before anyone
+        // knows whether the player has music on, and Howler's default would
+        // start fetching right here: the whole 4.6 MB buffered on a media
+        // element, or on iOS decoded to ~74 MB of PCM (209 s of 44.1 kHz
+        // stereo). The web defaults every channel to silence until the player
+        // opts in, so that is mostly spent on players who hear nothing.
+        //
+        // startMusicIfAudible does the one fetch, once the channel is
+        // audible. It also means a rebuild after a failed load cannot retry
+        // on a loop, the way AudioMixer's discarded cues cannot.
+        preload: false,
       });
       this.backgroundMusic = music;
       // Bound without an id, like AudioMixer's: Howler emits loaderror with a
@@ -115,7 +116,7 @@ export class SoundManager {
     this.safely("unload failed background music", () => failed.unload());
     this.backgroundMusic = null;
     this.musicStarted = false;
-    this.buildBackgroundMusic(false);
+    this.buildBackgroundMusic();
   }
 
   dispose(): void {

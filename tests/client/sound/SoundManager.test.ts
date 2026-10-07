@@ -170,6 +170,31 @@ describe("background music", () => {
     });
   });
 
+  it("never fetches the track from the constructor", () => {
+    // The Howl is built before anyone knows whether the player has music on,
+    // and Howler's default preload would start the fetch right there: 4.6 MB
+    // buffered on a media element, or ~74 MB of PCM on iOS. The web defaults
+    // every channel to silence, so most of that is spent on players who hear
+    // nothing. startMusicIfAudible does the one fetch instead.
+    expect(find("gameplay.mp3").preload).toBe(false);
+    expect(find("gameplay.mp3").load).not.toHaveBeenCalled();
+  });
+
+  it("defers the fetch until music is audible on every platform", () => {
+    soundManager.dispose();
+    mixer.dispose();
+    howlInstances.length = 0;
+    build({ music: 0 });
+
+    const music = find("gameplay.mp3");
+    soundManager.playBackgroundMusic();
+    expect(music.load).not.toHaveBeenCalled();
+
+    settings.setAudioVolume("music", 1);
+    expect(music.load).toHaveBeenCalled();
+    expect(music.play).toHaveBeenCalled();
+  });
+
   it("does not fetch or decode the track on iOS until music is audible", () => {
     // Web Audio holds the whole track as PCM -- ~74 MB for this one, against
     // a 4.6 MB file -- and the web defaults every channel to silence, so a
