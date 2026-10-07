@@ -1,14 +1,14 @@
-import { GameMapLoader } from "@openfront/engine-api/game/GameMapLoader";
 import { GameMapSize, GameMapType } from "@openfront/engine-api/game/GameTypes";
+import { loadTerrainMap } from "@openfront/engine-lib/game/TerrainMapLoader";
+import { createGameRunner } from "@openfront/engine/GameRunner";
 import {
   loadMapFiles,
-  mapFilesLoader,
   mapFilesTransfer,
-} from "@openfront/engine-lib/game/MapFiles";
-import { loadTerrainMap } from "@openfront/engine-lib/game/TerrainMapLoader";
+} from "@openfront/shared/GameMapLoader";
 import path from "path";
 import { fileURLToPath } from "url";
 import { NodeGameMapLoader } from "../../perf/fullgame/NodeGameMapLoader";
+import { scriptedGameStart } from "../../util/ScriptedGame";
 
 const maps = new NodeGameMapLoader(
   path.resolve(
@@ -17,34 +17,7 @@ const maps = new NodeGameMapLoader(
   ),
 );
 
-/** The map loadTerrainMap builds, as plain data to compare. */
-async function terrain(
-  loader: GameMapLoader,
-  map: GameMapType,
-  size: GameMapSize,
-) {
-  const t = await loadTerrainMap(map, size, loader, false, true);
-  const bytes = (m: typeof t.gameMap) =>
-    Array.from({ length: m.width() * m.height() }, (_, i) => m.terrainByte(i));
-  return {
-    width: t.gameMap.width(),
-    numLandTiles: t.gameMap.numLandTiles(),
-    game: bytes(t.gameMap),
-    mini: bytes(t.miniGameMap),
-    nations: t.nations,
-  };
-}
-
 describe("MapFiles", () => {
-  for (const size of [GameMapSize.Normal, GameMapSize.Compact]) {
-    test(`the passed files build the same ${size} map as loading it`, async () => {
-      const files = await loadMapFiles(maps, GameMapType.Onion, size);
-      expect(
-        await terrain(mapFilesLoader(files), GameMapType.Onion, size),
-      ).toEqual(await terrain(maps, GameMapType.Onion, size));
-    });
-  }
-
   test("only the bins the size reads are loaded and moved", async () => {
     const normal = await loadMapFiles(
       maps,
@@ -68,16 +41,75 @@ describe("MapFiles", () => {
     ]);
   });
 
-  test("asking for another map or a bin that wasn't passed fails", async () => {
+  test("each size builds its maps from its own bins", async () => {
+    const normal = await loadMapFiles(
+      maps,
+      GameMapType.Onion,
+      GameMapSize.Normal,
+    );
+    const { map, map4x, map16x } = normal.manifest;
+    const normalNations = structuredClone(normal.manifest.nations);
+    const n = await loadTerrainMap(normal);
+    expect([n.gameMap.width(), n.gameMap.height()]).toEqual([
+      map.width,
+      map.height,
+    ]);
+    expect([n.miniGameMap.width(), n.miniGameMap.height()]).toEqual([
+      map4x.width,
+      map4x.height,
+    ]);
+    expect(n.nations).toEqual(normalNations);
+
+    const c = await loadTerrainMap(
+      await loadMapFiles(maps, GameMapType.Onion, GameMapSize.Compact),
+    );
+    expect([c.gameMap.width(), c.gameMap.height()]).toEqual([
+      map4x.width,
+      map4x.height,
+    ]);
+    expect([c.miniGameMap.width(), c.miniGameMap.height()]).toEqual([
+      map16x.width,
+      map16x.height,
+    ]);
+    // Compact maps are half the size, and so are the nations' positions.
+    expect(c.nations.map((nation) => nation.coordinates)).toEqual(
+      normalNations.map((nation) =>
+        nation.coordinates?.map((v) => Math.floor(v / 2)),
+      ),
+    );
+  });
+
+  test("a bin the size reads but wasn't passed fails", async () => {
     const files = await loadMapFiles(
       maps,
       GameMapType.Onion,
+      GameMapSize.Normal,
+    );
+    await expect(
+      loadTerrainMap({ ...files, mapBin: undefined }),
+    ).rejects.toThrow(/map\.bin of .* was not passed/);
+  });
+
+  test("a game doesn't start on another map's files", async () => {
+    const start = scriptedGameStart({
+      gameMap: GameMapType.Onion,
+      gameMapSize: GameMapSize.Compact,
+    });
+    const otherSize = await loadMapFiles(
+      maps,
+      GameMapType.Onion,
+      GameMapSize.Normal,
+    );
+    await expect(
+      createGameRunner(start, undefined, otherSize, () => {}),
+    ).rejects.toThrow(/the files passed are/);
+    const otherMap = await loadMapFiles(
+      maps,
+      GameMapType.Pangaea,
       GameMapSize.Compact,
     );
-    const loader = mapFilesLoader(files);
-    expect(() => loader.getMapData(GameMapType.World)).toThrow(/only/);
-    await expect(loader.getMapData(GameMapType.Onion).mapBin()).rejects.toThrow(
-      /map\.bin/,
-    );
+    await expect(
+      createGameRunner(start, undefined, otherMap, () => {}),
+    ).rejects.toThrow(/the files passed are/);
   });
 });

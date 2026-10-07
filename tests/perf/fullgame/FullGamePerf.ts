@@ -52,6 +52,7 @@ import { Executor } from "@openfront/engine/execution/ExecutionManager";
 import { createGame } from "@openfront/engine/game/GameImpl";
 import { createNationsForGame } from "@openfront/engine/game/NationCreation";
 import { GameRunner } from "@openfront/engine/GameRunner";
+import { loadMapFiles } from "@openfront/shared/GameMapLoader";
 import fs from "fs";
 import v8 from "node:v8";
 import path from "path";
@@ -255,9 +256,7 @@ async function main(): Promise<void> {
     path.join(PROJECT_ROOT, "resources/maps"),
   );
   const terrain = await loadTerrainMap(
-    gameConfig.gameMap,
-    gameConfig.gameMapSize,
-    mapLoader,
+    await loadMapFiles(mapLoader, gameConfig.gameMap, gameConfig.gameMapSize),
   );
   const random = new PseudoRandom(simpleHash(gameStart.gameID));
   const nations = createNationsForGame(

@@ -375,6 +375,14 @@ export class HelpModal extends BaseModal {
                   </tr>
                   <tr class="hover:bg-white/5 transition-colors">
                     <td class="py-3 ps-4 border-b border-white/5">
+                      ${this.renderKey(keybinds.emojiMenu)}
+                    </td>
+                    <td class="py-3 border-b border-white/5 text-white/70">
+                      ${translateText("help_modal.action_emote")}
+                    </td>
+                  </tr>
+                  <tr class="hover:bg-white/5 transition-colors">
+                    <td class="py-3 ps-4 border-b border-white/5">
                       ${this.renderKey(keybinds.centerCamera)}
                     </td>
                     <td class="py-3 border-b border-white/5 text-white/70">

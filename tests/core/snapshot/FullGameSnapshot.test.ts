@@ -44,20 +44,51 @@ interface Reference {
   execTypes: Set<string>;
 }
 
+// Snapshot type name by execution class prototype.
+const EXEC_TYPE_BY_PROTO = new Map<object, string>(
+  EXECUTION_SNAPSHOT_TYPES.map((t) => [t.cls().prototype, t.name]),
+);
+
+// The first time a live execution's type hasn't shown up in a snapshot yet,
+// returns that type (once per type). Short-lived executions such as a MIRV in
+// flight can otherwise fall entirely between checkpoints.
+function firstUnseenLiveType(
+  game: Game,
+  seen: ReadonlySet<string>,
+  tried: Set<string>,
+): string | null {
+  const execs = (game as unknown as { executions(): object[] }).executions();
+  for (const e of execs) {
+    const name = EXEC_TYPE_BY_PROTO.get(Object.getPrototypeOf(e) as object);
+    if (name !== undefined && !seen.has(name) && !tried.has(name)) {
+      tried.add(name);
+      return name;
+    }
+  }
+  return null;
+}
+
 async function playReference(start: GameStartInfo): Promise<Reference> {
   const runner = await createScriptedRunner(MAP, start);
   const hashes: number[] = [];
   const checkpoints = new Map<number, Uint8Array>();
   const execTypes = new Set<string>();
+  const triedTypes = new Set<string>();
   let winnerTick: number | null = null;
   while (runner.game.ticks() < TICKS) {
     const tick = runner.game.ticks();
+    const unseen = firstUnseenLiveType(runner.game, execTypes, triedTypes);
     if (
       tick % CHECK_EVERY === 0 ||
-      (tick >= WINDOW_START && tick < WINDOW_START + WINDOW_TICKS)
+      (tick >= WINDOW_START && tick < WINDOW_START + WINDOW_TICKS) ||
+      unseen !== null
     ) {
       const bytes = runner.snapshot();
-      if (tick % CHECK_EVERY === 0) checkpoints.set(tick, bytes);
+      // An extra checkpoint for a new type gets the same byte-identical
+      // restore check as the regular ones.
+      if (tick % CHECK_EVERY === 0 || unseen !== null) {
+        checkpoints.set(tick, bytes);
+      }
       execTypesIn(bytes, execTypes);
     }
     stepScripted(runner);
