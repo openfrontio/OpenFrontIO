@@ -1,0 +1,49 @@
+{
+  "categories": ["new", "europe", "countries"],
+  "id": "Benelux",
+  "map": {
+    "height": 1020,
+    "num_land_tiles": 387574,
+    "width": 1052
+  },
+  "map16x": {
+    "height": 255,
+    "num_land_tiles": 22892,
+    "width": 263
+  },
+  "map4x": {
+    "height": 510,
+    "num_land_tiles": 94998,
+    "width": 526
+  },
+  "multiplayer_frequency": 5,
+  "name": "Benelux",
+  "nations": [
+    {
+      "coordinates": [426, 386],
+      "flag": "nl",
+      "name": "Netherlands"
+    },
+    {
+      "coordinates": [447, 752],
+      "flag": "Wallonia",
+      "name": "Wallonia"
+    },
+    {
+      "coordinates": [745, 929],
+      "flag": "lu",
+      "name": "Luxembourg"
+    },
+    {
+      "coordinates": [339, 684],
+      "flag": "Flanders",
+      "name": "Flanders"
+    },
+    {
+      "coordinates": [662, 195],
+      "flag": "Frisian_flag",
+      "name": "Friesland"
+    }
+  ],
+  "translation_key": "map.benelux"
+}
