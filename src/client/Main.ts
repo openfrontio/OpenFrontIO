@@ -170,7 +170,6 @@ import "./styles/core/typography.css";
 import "./styles/core/variables.css";
 import "./styles/layout/container.css";
 import "./styles/layout/header.css";
-import "./styles/modal/chat.css";
 
 declare global {
   interface Window {

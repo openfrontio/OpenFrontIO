@@ -152,21 +152,26 @@ describe("PlayerInfoOverlay", () => {
     expect(flatten(overlay.render())).toContain("Carol");
   });
 
-  describe("emoji button", () => {
+  describe("chat and emoji buttons", () => {
     const realWidth = window.innerWidth;
     const realMatchMedia = window.matchMedia;
 
-    function showWith(width: number, touch: boolean): string {
+    function showWith(width: number, touch: boolean, me?: unknown): string {
       Object.defineProperty(window, "innerWidth", {
         value: width,
         configurable: true,
       });
       window.matchMedia = vi.fn(() => ({ matches: touch })) as never;
-      overlay.game = makeGame({
-        isFriendly: () => false,
-        isAlliedWith: () => false,
-        smallID: () => 1,
-      }) as never;
+      const game = makeGame(
+        me ?? {
+          isFriendly: () => false,
+          isAlliedWith: () => false,
+          smallID: () => 1,
+        },
+      );
+      // Hovering my own land: the owner is me.
+      if (me) game.owner = (() => me) as never;
+      overlay.game = game as never;
       overlay.maybeShow(10, 10);
       return flatten(overlay.render());
     }
@@ -179,20 +184,33 @@ describe("PlayerInfoOverlay", () => {
       window.matchMedia = realMatchMedia;
     });
 
-    it("shows on wide screens with a mouse, widening the panel", () => {
+    it("show on wide screens with a mouse, widening the panel", () => {
       const out = showWith(1200, false);
+      expect(out).toContain("player_panel.chat");
       expect(out).toContain("player_panel.emotes");
       expect(out).toContain("sm:w-[548px]");
     });
 
-    it("hides below 1200px so the panel doesn't cover the leaderboard", () => {
+    it("leave out chat when hovering my own territory", () => {
+      const out = showWith(1200, false, {
+        ...hovered,
+        isFriendly: () => true,
+        isAlliedWith: () => false,
+      });
+      expect(out).not.toContain("player_panel.chat");
+      expect(out).toContain("player_panel.emotes");
+    });
+
+    it("hide below 1200px so the panel doesn't cover the leaderboard", () => {
       const out = showWith(1199, false);
+      expect(out).not.toContain("player_panel.chat");
       expect(out).not.toContain("player_panel.emotes");
       expect(out).toContain("sm:w-[500px]");
     });
 
-    it("hides on touch devices", () => {
+    it("hide on touch devices", () => {
       const out = showWith(1400, true);
+      expect(out).not.toContain("player_panel.chat");
       expect(out).not.toContain("player_panel.emotes");
       expect(out).toContain("sm:w-[500px]");
     });

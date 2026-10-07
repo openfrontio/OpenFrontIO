@@ -69,6 +69,10 @@
     {
       "key": "build_sams",
       "requiresPlayer": false
+    },
+    {
+      "key": "crown",
+      "requiresPlayer": false
     }
   ],
   "defend": [
