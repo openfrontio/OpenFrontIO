@@ -1,7 +1,7 @@
+import { ColorPalette, Pattern } from "@openfront/shared/CosmeticSchemas";
 import { colord } from "colord";
 import { html, LitElement, nothing, PropertyValues, TemplateResult } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
-import { ColorPalette, Pattern } from "../../core/CosmeticSchemas";
 import {
   getCachedCosmetics,
   ResolvedCosmetic,

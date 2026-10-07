@@ -29,7 +29,12 @@ export class NightCompositePass {
     this.settings = settings;
 
     // --- Composite program ---
-    this.compositeProg = createProgram(gl, fullscreenVertSrc, compositeFragSrc);
+    this.compositeProg = createProgram(
+      gl,
+      fullscreenVertSrc,
+      compositeFragSrc,
+      "NightCompositePass",
+    );
     this.uCompositeAmbient = gl.getUniformLocation(
       this.compositeProg,
       "uAmbient",

@@ -3,8 +3,8 @@
  * (processGameRecord in src/client/replay/processor). See LocalProcessing.ts.
  */
 
-import { assetUrl } from "../../core/AssetUrls";
-import { FetchGameMapLoader } from "../../core/game/FetchGameMapLoader";
+import { FetchGameMapLoader } from "@openfront/engine-lib/game/FetchGameMapLoader";
+import { assetUrl } from "@openfront/shared/AssetUrls";
 import { gzipInBrowser } from "./BrowserGzip";
 import {
   processGameRecord,

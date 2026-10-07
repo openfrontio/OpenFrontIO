@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { EventBus } from "@openfront/shared/EventBus";
 import en from "../../resources/lang/en.json";
 import { crazyGamesSDK } from "../../src/client/CrazyGamesSDK";
 import {
@@ -9,7 +10,6 @@ import {
 import { PauseGameIntentEvent } from "../../src/client/Transport";
 import "../../src/client/UserSettingModal";
 import type { UserSettingModal } from "../../src/client/UserSettingModal";
-import { EventBus } from "../../src/core/EventBus";
 
 type TestMenu = SettingsModal & { updateComplete: Promise<unknown> };
 type TestSettings = UserSettingModal & {

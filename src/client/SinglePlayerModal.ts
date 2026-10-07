@@ -1,9 +1,3 @@
-import { html, TemplateResult } from "lit";
-import { customElement, state } from "lit/decorators.js";
-import { getMapName, translateText } from "../client/Utils";
-import { UserMeResponse } from "../core/ApiSchemas";
-import { assetUrl } from "../core/AssetUrls";
-import { DoomsdayClockSpeed } from "../core/game/DoomsdayClock";
 import {
   Difficulty,
   GameMapSize,
@@ -12,10 +6,16 @@ import {
   GameType,
   maps,
   UnitType,
-} from "../core/game/Game";
-import { UserSettings } from "../core/game/UserSettings";
-import { PlayerCosmetics, TeamCountConfig } from "../core/Schemas";
-import { generateID } from "../core/Util";
+} from "@openfront/engine-api/game/GameTypes";
+import { TeamCountConfig } from "@openfront/engine-api/Schemas";
+import { DoomsdayClockSpeed } from "@openfront/engine-lib/game/DoomsdayClock";
+import { UserMeResponse } from "@openfront/shared/ApiSchemas";
+import { assetUrl } from "@openfront/shared/AssetUrls";
+import { generateID } from "@openfront/shared/SharedUtil";
+import { PlayerCosmetics } from "@openfront/shared/WireSchemas";
+import { html, TemplateResult } from "lit";
+import { customElement, state } from "lit/decorators.js";
+import { getMapName, translateText } from "../client/Utils";
 import { responseHasLinkedIdentity } from "./AccountIdentity";
 import { clientPlatform } from "./ClientPlatform";
 import "./components/baseComponents/Button";
@@ -40,6 +40,7 @@ import {
 } from "./SinglePlayerSaveManager";
 import { steamSDK } from "./SteamSDK";
 import { UsernameInput } from "./UsernameInput";
+import { UserSettings } from "./UserSettings";
 import {
   getBotsForCompactMap,
   getNationsForCompactMap,

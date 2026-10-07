@@ -4,20 +4,19 @@
  * and `playerNameViewData` is attached only on ticks where the worker
  * recomputed name placements. See GameUpdateViewData in GameUpdates.ts.
  */
-import { Executor } from "../src/core/execution/ExecutionManager";
-import { SpawnExecution } from "../src/core/execution/SpawnExecution";
 import {
-  Game,
-  Player,
   PlayerInfo,
   PlayerType,
   UnitType,
-} from "../src/core/game/Game";
+} from "@openfront/engine-api/game/GameTypes";
 import {
   GameUpdateType,
   GameUpdateViewData,
-} from "../src/core/game/GameUpdates";
-import { GameRunner } from "../src/core/GameRunner";
+} from "@openfront/engine-api/game/GameUpdates";
+import { Executor } from "@openfront/engine/execution/ExecutionManager";
+import { SpawnExecution } from "@openfront/engine/execution/SpawnExecution";
+import { Game, Player } from "@openfront/engine/game/Game";
+import { GameRunner } from "@openfront/engine/GameRunner";
 import { setup } from "./util/Setup";
 
 const gameID = "game_id";

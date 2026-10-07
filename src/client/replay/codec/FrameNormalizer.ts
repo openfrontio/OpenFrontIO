@@ -14,18 +14,17 @@
  * out: frames keep theirs.
  */
 
-import type { PlayerID } from "../../../core/game/Game";
-import { applyStateUpdate } from "../../../core/game/GameUpdateUtils";
+import type { PlayerID } from "@openfront/engine-api/game/GameTypes";
 import {
   GameUpdateType,
   type GameUpdateViewData,
   type PlayerUpdate,
   type UnitUpdate,
-} from "../../../core/game/GameUpdates";
+} from "@openfront/engine-api/game/GameUpdates";
 import {
   unpackMotionPlans,
   type MotionPlanRecord,
-} from "../../../core/game/MotionPlans";
+} from "@openfront/engine-lib/game/MotionPlans";
 import type {
   NameEntry,
   PlayerState,
@@ -41,6 +40,7 @@ import {
   unitStateFromUpdate,
 } from "../../view/EntityState";
 import { MotionPlanResolver } from "../../view/MotionPlanResolver";
+import { applyStateUpdate } from "../../view/PlayerStateUpdate";
 import type { MiscUpdates } from "./ReplayTypes";
 
 /**

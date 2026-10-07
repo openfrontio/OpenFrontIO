@@ -1,12 +1,4 @@
-import { ClientEnv, NoServerError } from "src/client/ClientEnv";
-import { ZbContext } from "../../zbin";
-import {
-  CloseCode,
-  CloseReason,
-  isCloseReason,
-  isTerminalClose,
-} from "../core/CloseCodes";
-import { EventBus, EventConstructor, GameEvent } from "../core/EventBus";
+import { TileRef } from "@openfront/engine-api/game/GameMap";
 import {
   AllPlayers,
   GameType,
@@ -14,12 +6,27 @@ import {
   PlayerID,
   Tick,
   UnitType,
-} from "../core/game/Game";
-import { TileRef } from "../core/game/GameMap";
+} from "@openfront/engine-api/game/GameTypes";
 import {
   AllPlayersStats,
-  ClientHashMessage,
   ClientID,
+  GameConfig,
+  Intent,
+  Winner,
+} from "@openfront/engine-api/Schemas";
+import {
+  CloseCode,
+  CloseReason,
+  isCloseReason,
+  isTerminalClose,
+} from "@openfront/shared/CloseCodes";
+import {
+  EventBus,
+  EventConstructor,
+  GameEvent,
+} from "@openfront/shared/EventBus";
+import {
+  ClientHashMessage,
   ClientIntentMessage,
   ClientJoinMessage,
   ClientMessage,
@@ -29,18 +36,17 @@ import {
   ClientSendLiveStatsMessage,
   ClientSendWinnerMessage,
   ClientSpectateMessage,
-  GameConfig,
-  Intent,
   LiveStats,
   ReportReason,
   ServerMessage,
-  Winner,
-} from "../core/Schemas";
+} from "@openfront/shared/WireSchemas";
 import {
   createGameWireContext,
   decodeServerMessage,
   encodeClientMessage,
-} from "../core/ZbinWire";
+} from "@openfront/shared/ZbinWire";
+import { ZbContext } from "@openfront/zbin";
+import { ClientEnv, NoServerError } from "src/client/ClientEnv";
 import { getPlayToken } from "./Auth";
 import { LobbyConfig } from "./ClientGameRunner";
 import { clientPlatform } from "./ClientPlatform";

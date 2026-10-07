@@ -190,6 +190,8 @@
   "chat": {
     "attack": {
       "attack": "Attack [P1]!",
+      "betray": "Betray [P1]!",
+      "build_sams": "Build SAMs!",
       "build_warships": "Build Warships!",
       "finish": "Let's finish off [P1]!",
       "focus": "Focus fire on [P1]!",
@@ -210,7 +212,8 @@
       "build_posts": "Build Defense Posts!",
       "defend": "Defend [P1]!",
       "defend_from": "Defend from [P1]!",
-      "dont_attack": "Don’t attack [P1]!"
+      "dont_attack": "Don’t attack [P1]!",
+      "make_ally": "Ally with [P1]!"
     },
     "from": "From {user}: {msg}",
     "greet": {
@@ -236,6 +239,8 @@
       "gold": "Please give me gold!",
       "help_defend": "Help me defend against [P1]!",
       "no_attack": "Please don't attack me!",
+      "send_gold_to": "Send gold to [P1]!",
+      "send_troops_to": "Send troops to [P1]!",
       "sorry_attack": "Sorry, I didn’t mean to attack.",
       "trade_partners": "Let's be trade partners!",
       "troops": "Please give me troops!",
@@ -246,6 +251,7 @@
       "coastline": "Please let me get a coastline.",
       "fun": "This game is fun!",
       "go": "Let’s go!",
+      "join_discord": "You should join the OpenFront Discord server!",
       "pr": "When will my PR finally get merged...?",
       "strategy": "Nice strategy!",
       "team_up": "Let’s team up against [P1]!"
@@ -262,12 +268,14 @@
       "betrayed_me": "[P1] betrayed me!",
       "cheating": "[P1] is cheating!",
       "danger_base": "[P1] is unprotected!",
+      "disconnected": "[P1] has disconnected!",
       "getting_big": "[P1] is growing too fast!",
       "has_allies": "[P1] has many allies.",
       "mirv_ready": "[P1] has enough gold to launch a MIRV!",
       "mirv_soon": "[P1] can launch a MIRV soon!",
       "no_allies": "[P1] has no allies.",
       "number1_warning": "The #1 player will win soon unless we team up!",
+      "pirating": "[P1] is pirating all of our trade!",
       "saving_for_mirv": "[P1] is saving up to launch a MIRV.",
       "snowballing": "[P1] is snowballing too fast!",
       "stalemate": "Let's make peace. This is a stalemate, we will both lose.",

@@ -18,8 +18,8 @@ import {
   saveSoloSnapshot,
   uint8ArrayToBase64,
 } from "../../src/client/SinglePlayerSaveManager";
-import { GameID, GameStartInfo, Turn } from "../../src/core/Schemas";
-import { compressSnapshot } from "../../src/core/snapshot/GameSnapshot";
+import { GameID, GameStartInfo, Turn } from "@openfront/engine-api/Schemas";
+import { compressSnapshot } from "@openfront/engine/snapshot/GameSnapshot";
 
 let mockPlatform = "web";
 let mockPersistentId = "user_abc_123";

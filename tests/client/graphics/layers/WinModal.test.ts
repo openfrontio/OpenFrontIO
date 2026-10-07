@@ -1,3 +1,4 @@
+import { RankedType } from "@openfront/engine-api/game/GameTypes";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { PurchaseButton } from "../../../../src/client/components/PurchaseButton";
 import {
@@ -8,7 +9,6 @@ import {
 import "../../../../src/client/hud/layers/WinModal";
 import type { WinModal } from "../../../../src/client/hud/layers/WinModal";
 import * as saveManager from "../../../../src/client/SinglePlayerSaveManager";
-import { RankedType } from "../../../../src/core/game/Game";
 
 vi.mock("../../../../src/client/Utils", () => ({
   translateText: vi.fn((key: string) => {

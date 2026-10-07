@@ -1,9 +1,9 @@
+import { UserMeResponse } from "@openfront/shared/ApiSchemas";
+import { CloseCode, isTerminalClose } from "@openfront/shared/CloseCodes";
+import { isCommitLike } from "@openfront/shared/ServerList";
 import { html } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import { ClientEnv } from "src/client/ClientEnv";
-import { UserMeResponse } from "../core/ApiSchemas";
-import { CloseCode, isTerminalClose } from "../core/CloseCodes";
-import { isCommitLike } from "../core/ServerList";
 import { responseHasLinkedIdentity } from "./AccountIdentity";
 import { getUserMe, invalidateUserMe } from "./Api";
 import { getPlayToken } from "./Auth";

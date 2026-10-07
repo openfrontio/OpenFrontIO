@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { EventBus } from "../../src/core/EventBus";
-import type { ClientMessage, GameStartInfo } from "../../src/core/Schemas";
+import type { GameStartInfo } from "@openfront/engine-api/Schemas";
+import { EventBus } from "@openfront/shared/EventBus";
+import type { ClientMessage } from "@openfront/shared/WireSchemas";
 
 const saveSoloGameMock = vi.fn();
 const clearSoloSaveMock = vi.fn();

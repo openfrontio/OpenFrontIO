@@ -1,21 +1,21 @@
-import { WinCheckExecution } from "../../../src/core/execution/WinCheckExecution";
 import {
-  Game,
   PlayerInfo,
   PlayerType,
   UnitType,
-} from "../../../src/core/game/Game";
-import { GameImpl } from "../../../src/core/game/GameImpl";
+} from "@openfront/engine-api/game/GameTypes";
+import { WinCheckExecution } from "@openfront/engine/execution/WinCheckExecution";
+import { Game } from "@openfront/engine/game/Game";
+import { GameImpl } from "@openfront/engine/game/GameImpl";
 import {
   readSnapshotHeader,
   restoreMapsFromSnapshot,
   snapshotGame,
-} from "../../../src/core/snapshot/GameSnapshot";
+} from "@openfront/engine/snapshot/GameSnapshot";
 import {
   decodeSnapshotValue,
   encodeSnapshotValue,
-} from "../../../src/core/snapshot/SnapshotCodec";
-import { SnapshotError } from "../../../src/core/snapshot/SnapshotType";
+} from "@openfront/engine/snapshot/SnapshotCodec";
+import { SnapshotError } from "@openfront/engine-lib/snapshot/SnapshotType";
 import { setup } from "../../util/Setup";
 import {
   diffGraphs,

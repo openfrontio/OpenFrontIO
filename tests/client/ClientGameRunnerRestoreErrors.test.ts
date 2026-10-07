@@ -1,19 +1,22 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { GameID } from "../../src/core/Schemas";
-import { GameMapType, GameType } from "../../src/core/game/Game";
+import {
+  GameMapType,
+  GameType,
+} from "@openfront/engine-api/game/GameTypes";
+import { GameID } from "@openfront/engine-api/Schemas";
 
 const mockWorkerInstance = {
   initialize: vi.fn(async () => {}),
   cleanup: vi.fn(),
 };
 
-vi.mock("../../src/core/worker/WorkerClient", () => ({
+vi.mock("../../src/client/WorkerClient", () => ({
   WorkerClient: vi.fn().mockImplementation(function () {
     return mockWorkerInstance;
   }),
 }));
 
-vi.mock("../../src/core/game/TerrainMapLoader", () => ({
+vi.mock("@openfront/engine-lib/game/TerrainMapLoader", () => ({
   loadTerrainMap: vi.fn(async () => ({
     gameMap: {},
     miniGameMap: {},
@@ -32,7 +35,7 @@ vi.mock("../../src/client/render/gl", async (importOriginal) => {
 const mockRestoreMaps = vi.fn();
 const mockReadHeader = vi.fn();
 
-vi.mock("../../src/core/snapshot/GameSnapshot", () => ({
+vi.mock("@openfront/engine/snapshot/GameSnapshot", () => ({
   restoreMapsFromSnapshot: (...args: any[]) => mockRestoreMaps(...args),
   readSnapshotHeader: (...args: any[]) => mockReadHeader(...args),
 }));

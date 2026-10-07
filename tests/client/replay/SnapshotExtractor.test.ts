@@ -1,20 +1,15 @@
 import { describe, expect, test } from "vitest";
 import { extractSnapshotFromRecord } from "../../../src/client/replay/processor/SnapshotExtractor";
-import { NationExecution } from "../../../src/core/execution/NationExecution";
-import { TribeExecution } from "../../../src/core/execution/TribeExecution";
-import {
-  Difficulty,
-  GameMapSize,
-  GameMapType,
-  GameMode,
-  GameType,
-  PlayerType,
-} from "../../../src/core/game/Game";
+import { GameMapSize, GameMapType, GameMode, GameType, PlayerType, Difficulty } from "@openfront/engine-api/game/GameTypes";
+import { ErrorUpdate, GameUpdateViewData } from "@openfront/engine-api/game/GameUpdates";
+import { NationExecution } from "@openfront/engine/execution/NationExecution";
+import { TribeExecution } from "@openfront/engine/execution/TribeExecution";
+import { Player } from "@openfront/engine/game/Game";
 import {
   createGameRunner,
   createGameRunnerFromSnapshot,
-} from "../../../src/core/GameRunner";
-import { decompressGameRecord } from "../../../src/core/Util";
+} from "@openfront/engine/GameRunner";
+import { decompressGameRecord } from "@openfront/shared/SharedUtil";
 import { config, human, mapLoader, playAndArchive } from "./util/ArchiveGame";
 
 describe("SnapshotExtractor", () => {
@@ -61,7 +56,7 @@ describe("SnapshotExtractor", () => {
       result.snapshot,
       "MYCLIENT1",
       mapLoader,
-      (gu) => {
+      (gu: GameUpdateViewData | ErrorUpdate) => {
         if (!("errMsg" in gu)) {
           updateReceived = true;
         }
@@ -78,7 +73,7 @@ describe("SnapshotExtractor", () => {
     expect(human2?.type()).toBe(PlayerType.Human);
 
     // Verify Human 1 was converted to Bot/Nation
-    const human1 = game.allPlayers().find((p) => p.name() === "Human 1");
+    const human1 = game.allPlayers().find((p: Player) => p.name() === "Human 1");
     expect(human1).not.toBeUndefined();
     expect(human1?.type()).toBe(PlayerType.Nation);
     expect(human1?.clientID()).toBeNull();
@@ -127,7 +122,7 @@ describe("SnapshotExtractor", () => {
     const preGame = preRunner.game;
     const nationPlayer = preGame
       .players()
-      .find((p) => p.type() === PlayerType.Nation);
+      .find((p: Player) => p.type() === PlayerType.Nation);
     expect(nationPlayer).toBeDefined();
     const nationID = nationPlayer!.id();
     const nationName = nationPlayer!.name();
@@ -206,7 +201,7 @@ describe("SnapshotExtractor", () => {
     const preGame = preRunner.game;
     const botPlayer = preGame
       .players()
-      .find((p) => p.type() === PlayerType.Bot && p.name() === "SaharaNomads");
+      .find((p: Player) => p.type() === PlayerType.Bot && p.name() === "SaharaNomads");
     expect(botPlayer).toBeDefined();
 
     const hasTribeExecBefore = (preGame as any)
@@ -297,9 +292,9 @@ describe("SnapshotExtractor", () => {
     const initializedNationExecs = (game as any)
       .executions()
       .filter(
-        (e: unknown) =>
+        (e: unknown): e is NationExecution =>
           e instanceof NationExecution && e.isActive() && e.isInitialized(),
-      ) as NationExecution[];
+      );
 
     expect(initializedNationExecs.length).toBeGreaterThan(0);
     for (const exec of initializedNationExecs) {
@@ -317,8 +312,9 @@ describe("SnapshotExtractor", () => {
     const allNationExecs = (game as any)
       .executions()
       .filter(
-        (e: unknown) => e instanceof NationExecution && e.isActive(),
-      ) as NationExecution[];
+        (e: unknown): e is NationExecution =>
+          e instanceof NationExecution && e.isActive(),
+      );
 
     for (const exec of allNationExecs) {
       expect(exec.isInitialized()).toBe(true);

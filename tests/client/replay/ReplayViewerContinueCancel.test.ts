@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { extractSnapshotInWorker } from "../../../src/client/replay/LocalProcessing";
 import { fetchReplayRecord } from "../../../src/client/replay/ReplayRecord";
 import { ReplayViewer } from "../../../src/client/replay/ReplayViewer";
-import { Difficulty } from "../../../src/core/game/Game";
+import { Difficulty } from "@openfront/engine-api/game/GameTypes";
 
 vi.mock("../../../src/client/replay/ReplayRecord", () => ({
   fetchReplayRecord: vi.fn(),
@@ -17,7 +17,7 @@ vi.mock("../../../src/client/replay/ReplayStore", () => ({
   replayStore: { get: vi.fn(), put: vi.fn(), remove: vi.fn() },
 }));
 
-vi.mock("../../../src/core/game/TerrainMapLoader", async (importOriginal) => ({
+vi.mock("@openfront/engine-lib/game/TerrainMapLoader", async (importOriginal) => ({
   ...(await importOriginal<object>()),
   loadTerrainMap: vi.fn(),
 }));

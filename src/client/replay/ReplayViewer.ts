@@ -8,19 +8,15 @@
  * build is sent to that build's versioned shell.
  */
 
+import { Cell, Difficulty, PlayerType } from "@openfront/engine-api/game/GameTypes";
+import type { GameStartInfo } from "@openfront/engine-api/Schemas";
+import { Config } from "@openfront/engine-lib/configuration/Config";
+import { loadTerrainMap } from "@openfront/engine-lib/game/TerrainMapLoader";
+import { EventBus } from "@openfront/shared/EventBus";
+import { generateID } from "@openfront/shared/SharedUtil";
+import type { GameRecord } from "@openfront/shared/WireSchemas";
 import { html, LitElement, nothing } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
-import { Config } from "../../core/configuration/Config";
-import { EventBus } from "../../core/EventBus";
-import { Cell, Difficulty, PlayerType } from "../../core/game/Game";
-import { loadTerrainMap } from "../../core/game/TerrainMapLoader";
-import {
-  GRAPHICS_KEY,
-  USER_SETTINGS_CHANGED_EVENT,
-  UserSettings,
-} from "../../core/game/UserSettings";
-import type { GameRecord, GameStartInfo } from "../../core/Schemas";
-import { generateID } from "../../core/Util";
 import { MapLayerController } from "../controllers/MapLayerController";
 import { ViewModeController } from "../controllers/ViewModeController";
 import "../hud/layers/EventsDisplay";
@@ -58,6 +54,11 @@ import { terrainMapFileLoader } from "../TerrainMapFileLoader";
 import type { TransformHandler } from "../TransformHandler";
 import { GoToPlayerEvent } from "../TransformHandler";
 import { PauseGameIntentEvent } from "../Transport";
+import {
+  GRAPHICS_KEY,
+  USER_SETTINGS_CHANGED_EVENT,
+  UserSettings,
+} from "../UserSettings";
 import { translateText } from "../Utils";
 import { gunzipInBrowser } from "./BrowserGzip";
 import type {
@@ -108,7 +109,6 @@ async function openPlayback(
   const gsi = source.base.gameStartInfo as GameStartInfo;
   const config = new Config(
     gsi.config,
-    userSettings,
     /* isReplay */ true,
     /* listed */ false,
     /* spectator */ true,

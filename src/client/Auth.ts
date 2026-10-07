@@ -1,8 +1,8 @@
+import { TokenPayload, TokenPayloadSchema } from "@openfront/shared/ApiSchemas";
+import { base64urlToUuid } from "@openfront/shared/Base64";
 import { decodeJwt } from "jose";
-import { UserSettings } from "src/core/game/UserSettings";
+import { UserSettings } from "src/client/UserSettings";
 import { z } from "zod";
-import { TokenPayload, TokenPayloadSchema } from "../core/ApiSchemas";
-import { base64urlToUuid } from "../core/Base64";
 import { getApiBase, getAudience } from "./Api";
 import { ClientEnv } from "./ClientEnv";
 import { crazyGamesSDK } from "./CrazyGamesSDK";

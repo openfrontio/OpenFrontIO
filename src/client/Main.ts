@@ -1,21 +1,19 @@
-import { ClientEnv } from "src/client/ClientEnv";
-import { renderNavVersion } from "src/client/GameVersion";
-import { UserMeResponse } from "../core/ApiSchemas";
-import { assetUrl } from "../core/AssetUrls";
-import { EventBus } from "../core/EventBus";
+import { GAME_ID_REGEX, Turn } from "@openfront/engine-api/Schemas";
+import { UserMeResponse } from "@openfront/shared/ApiSchemas";
+import { assetUrl } from "@openfront/shared/AssetUrls";
+import { EventBus } from "@openfront/shared/EventBus";
+import { toWireGameStartInfo } from "@openfront/shared/SharedUtil";
 import {
-  GAME_ID_REGEX,
   GameInfo,
   GameRecord,
-  GameStartInfo,
   GroupTokenEvent,
   LobbyInfoEvent,
   PublicGameInfo,
-  Turn,
-} from "../core/Schemas";
-import { toWireGameStartInfo } from "../core/Util";
-import { GameEnv } from "../core/configuration/Config";
-import { UserSettings } from "../core/game/UserSettings";
+  WireGameStartInfo,
+} from "@openfront/shared/WireSchemas";
+import { GameEnv } from "@openfront/shared/configuration/Env";
+import { ClientEnv } from "./ClientEnv";
+import { renderNavVersion } from "./GameVersion";
 import "./AccountModal";
 import "./AccountSettingsModal";
 import { adGatekeeper } from "./AdGatekeeper";
@@ -144,6 +142,7 @@ import {
   type TurnstileToken,
 } from "./TurnstileToken";
 import "./UserSettingModal";
+import { UserSettings } from "./UserSettings";
 import "./UsernameInput";
 import { UsernameInput } from "./UsernameInput";
 import {
@@ -254,7 +253,7 @@ export interface JoinLobbyEvent {
   // Multiplayer games only have gameID, gameConfig is not known until game starts.
   gameID: string;
   // GameConfig only exists when playing a singleplayer game.
-  gameStartInfo?: GameStartInfo;
+  gameStartInfo?: WireGameStartInfo;
   // GameRecord exists when replaying an archived game.
   gameRecord?: GameRecord;
   source?: "public" | "private" | "host" | "matchmaking" | "singleplayer";

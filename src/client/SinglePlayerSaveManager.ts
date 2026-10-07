@@ -4,8 +4,8 @@ import {
   GameStartInfoSchema,
   Turn,
   TurnSchema,
-} from "../core/Schemas";
-import { decompressSnapshot } from "../core/snapshot/GameSnapshot";
+} from "@openfront/engine-api/Schemas";
+import { decompressSnapshot } from "@openfront/engine/snapshot/GameSnapshot";
 import { getPersistentID } from "./Auth";
 import { clientPlatform } from "./ClientPlatform";
 import { steamSDK } from "./SteamSDK";
@@ -436,7 +436,7 @@ export function saveSoloGame(
       gameStartInfo,
       turns,
       numTurns:
-        existing?.gameID === gameStartInfo.gameID && hasSnapshot
+        existing && existing.gameID === gameStartInfo.gameID && hasSnapshot
           ? existing.numTurns
           : turns.length,
       platform: clientPlatform(),

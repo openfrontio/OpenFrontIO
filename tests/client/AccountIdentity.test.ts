@@ -1,10 +1,10 @@
+import { UserMeResponse } from "@openfront/shared/ApiSchemas";
 import { describe, expect, it } from "vitest";
 import {
   hasLinkedIdentity,
   isSteamPrimaryUser,
   responseHasLinkedIdentity,
 } from "../../src/client/AccountIdentity";
-import { UserMeResponse } from "../../src/core/ApiSchemas";
 
 type User = UserMeResponse["user"];
 

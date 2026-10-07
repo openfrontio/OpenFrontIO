@@ -1,16 +1,16 @@
-import fs from "fs";
-import path from "path";
-import { fileURLToPath } from "url";
 import {
   GameUpdateType,
   type GameUpdateViewData,
-} from "../../../src/core/game/GameUpdates";
+} from "@openfront/engine-api/game/GameUpdates";
 import {
   compressSnapshot,
   decompressSnapshot,
   readSnapshotHeader,
   SNAPSHOT_FORMAT_VERSION,
-} from "../../../src/core/snapshot/GameSnapshot";
+} from "@openfront/engine/snapshot/GameSnapshot";
+import fs from "fs";
+import path from "path";
+import { fileURLToPath } from "url";
 import {
   createScriptedRunner,
   restoreScriptedRunner,

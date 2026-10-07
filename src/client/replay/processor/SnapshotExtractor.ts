@@ -4,16 +4,22 @@
  * to the local clientID.
  */
 
+import { GameMapLoader } from "@openfront/engine-api/game/GameMapLoader";
 import {
   Difficulty,
   GameType,
   PlayerID,
   PlayerType,
-} from "../../../core/game/Game";
-import { GameMapLoader } from "../../../core/game/GameMapLoader";
-import { createGameRunner } from "../../../core/GameRunner";
-import { ClientID, GameRecord, GameStartInfo } from "../../../core/Schemas";
-import { decompressGameRecord, generateID } from "../../../core/Util";
+} from "@openfront/engine-api/game/GameTypes";
+import {
+  ErrorUpdate,
+  GameUpdateViewData,
+} from "@openfront/engine-api/game/GameUpdates";
+import { ClientID } from "@openfront/engine-api/Schemas";
+import { Player } from "@openfront/engine/game/Game";
+import { createGameRunner } from "@openfront/engine/GameRunner";
+import { decompressGameRecord, generateID } from "@openfront/shared/SharedUtil";
+import { GameRecord, WireGameStartInfo } from "@openfront/shared/WireSchemas";
 import { wireGameStartInfo } from "./ReplayProcessor";
 
 export interface ExtractSnapshotOptions {
@@ -27,7 +33,7 @@ export interface ExtractSnapshotOptions {
 
 export interface ExtractedSnapshotResult {
   snapshot: Uint8Array;
-  gameStartInfo: GameStartInfo;
+  gameStartInfo: WireGameStartInfo;
 }
 
 /**
@@ -46,7 +52,7 @@ export async function extractSnapshotFromRecord(
     gameStart,
     undefined,
     opts.mapLoader,
-    (gu) => {
+    (gu: GameUpdateViewData | ErrorUpdate) => {
       if ("errMsg" in gu) {
         tickError = `${gu.errMsg}\n${gu.stack ?? ""}`;
       }
@@ -73,7 +79,7 @@ export async function extractSnapshotFromRecord(
       ? game.player(opts.chosenPlayerID)
       : null) ??
     game.playerByClientID(opts.chosenPlayerID) ??
-    game.players().find((p) => p.name() === opts.chosenPlayerID) ??
+    game.players().find((p: Player) => p.name() === opts.chosenPlayerID) ??
     null;
   if (!chosenPlayer) {
     throw new Error(`Player with ID ${opts.chosenPlayerID} not found`);
@@ -106,7 +112,7 @@ export async function extractSnapshotFromRecord(
       : undefined) ?? {};
 
   const newGameID = generateID();
-  const singlePlayerGameStart: GameStartInfo = {
+  const singlePlayerGameStart: WireGameStartInfo = {
     ...gameStart,
     gameID: newGameID,
     players: [

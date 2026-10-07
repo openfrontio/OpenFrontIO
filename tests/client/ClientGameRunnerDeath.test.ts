@@ -1,8 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { SendWinnerEvent } from "../../src/client/Transport";
-import { EventBus } from "../../src/core/EventBus";
-import { GameUpdateType } from "../../src/core/game/GameUpdates";
-import { GameID, GameStartInfo } from "../../src/core/Schemas";
+import { GameUpdateType } from "@openfront/engine-api/game/GameUpdates";
+import { GameID, GameStartInfo } from "@openfront/engine-api/Schemas";
+import { EventBus } from "@openfront/shared/EventBus";
 
 const clearSoloSaveMock = vi.fn();
 const saveSoloSnapshotMock = vi.fn();

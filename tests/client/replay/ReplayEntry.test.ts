@@ -5,6 +5,7 @@
  * viewer sent the game back.
  */
 
+import type { GameRecord } from "@openfront/shared/WireSchemas";
 import { ClientEnv } from "../../../src/client/ClientEnv";
 import {
   classicReplayHref,
@@ -13,8 +14,7 @@ import {
   versionedViewerUrl,
 } from "../../../src/client/replay/ReplayEntry";
 import { fetchReplayRecord } from "../../../src/client/replay/ReplayRecord";
-import { UserSettings } from "../../../src/core/game/UserSettings";
-import type { GameRecord } from "../../../src/core/Schemas";
+import { UserSettings } from "../../../src/client/UserSettings";
 
 // jsdom can't change location.hostname, so a test says whether this page
 // is a replay shell.

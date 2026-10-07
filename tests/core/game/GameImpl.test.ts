@@ -1,21 +1,19 @@
-import { GameID } from "../../../src/core/Schemas";
-import { AttackExecution } from "../../../src/core/execution/AttackExecution";
-import { NationExecution } from "../../../src/core/execution/NationExecution";
-import { SpawnExecution } from "../../../src/core/execution/SpawnExecution";
-import { TribeExecution } from "../../../src/core/execution/TribeExecution";
-//import { TransportShipExecution } from "../../../src/core/execution/TransportShipExecution";
-import { AllianceRequestExecution } from "../../../src/core/execution/alliance/AllianceRequestExecution";
+import { TileRef } from "@openfront/engine-api/game/GameMap";
 import {
   Difficulty,
-  Game,
   GameType,
-  Player,
   PlayerInfo,
   PlayerType,
-} from "../../../src/core/game/Game";
-import { GameImpl } from "../../../src/core/game/GameImpl";
-import { TileRef } from "../../../src/core/game/GameMap";
-import { GameUpdateType } from "../../../src/core/game/GameUpdates";
+} from "@openfront/engine-api/game/GameTypes";
+import { GameUpdateType } from "@openfront/engine-api/game/GameUpdates";
+import { GameID } from "@openfront/engine-api/Schemas";
+import { AllianceRequestExecution } from "@openfront/engine/execution/alliance/AllianceRequestExecution";
+import { AttackExecution } from "@openfront/engine/execution/AttackExecution";
+import { NationExecution } from "@openfront/engine/execution/NationExecution";
+import { SpawnExecution } from "@openfront/engine/execution/SpawnExecution";
+import { TribeExecution } from "@openfront/engine/execution/TribeExecution";
+import { Game, Player } from "@openfront/engine/game/Game";
+import { GameImpl } from "@openfront/engine/game/GameImpl";
 import { setup } from "../../util/Setup";
 
 const gameID: GameID = "game_id";

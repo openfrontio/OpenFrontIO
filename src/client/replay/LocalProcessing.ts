@@ -4,8 +4,9 @@
  * change, then the new frames as they're processed.
  */
 
-import { getCdnBase } from "../../core/AssetUrls";
-import type { GameRecord } from "../../core/Schemas";
+import type { Difficulty } from "@openfront/engine-api/game/GameTypes";
+import { getCdnBase } from "@openfront/shared/AssetUrls";
+import type { GameRecord, WireGameStartInfo } from "@openfront/shared/WireSchemas";
 import type { ReplayAppend, ReplayBase } from "./codec/ReplayTypes";
 import type { ProcessorRequest, ProcessorResponse } from "./ProcessorMessages";
 
@@ -105,12 +106,12 @@ export async function extractSnapshotInWorker(
   targetTick: number,
   chosenPlayerID: string,
   localClientID: string,
-  difficulty?: import("../../core/game/Game").Difficulty,
+  difficulty?: Difficulty,
   createWorker: () => Promise<Worker> = createProcessorWorker,
   signal?: AbortSignal,
 ): Promise<{
   snapshot: Uint8Array;
-  gameStartInfo: import("../../core/Schemas").GameStartInfo;
+  gameStartInfo: WireGameStartInfo;
 }> {
   if (signal?.aborted) {
     throw (

@@ -1,3 +1,18 @@
+import { GAME_ID_REGEX, GameConfig } from "@openfront/engine-api/Schemas";
+import {
+  GameMode,
+  GameType,
+  HumansVsNations,
+} from "@openfront/engine-api/game/GameTypes";
+import { assetUrl } from "@openfront/shared/AssetUrls";
+import { EventBus } from "@openfront/shared/EventBus";
+import {
+  ClientInfo,
+  GameInfo,
+  GameRecordSchema,
+  LobbyInfoEvent,
+  PublicGameInfo,
+} from "@openfront/shared/WireSchemas";
 import { html, TemplateResult } from "lit";
 import { customElement, property, query, state } from "lit/decorators.js";
 import { ClientEnv } from "src/client/ClientEnv";
@@ -9,18 +24,6 @@ import {
   renderDuration,
   translateText,
 } from "../client/Utils";
-import { assetUrl } from "../core/AssetUrls";
-import { EventBus } from "../core/EventBus";
-import {
-  ClientInfo,
-  GAME_ID_REGEX,
-  GameConfig,
-  GameInfo,
-  GameRecordSchema,
-  LobbyInfoEvent,
-  PublicGameInfo,
-} from "../core/Schemas";
-import { GameMode, GameType, HumansVsNations } from "../core/game/Game";
 import { getApiBase } from "./Api";
 import { crazyGamesSDK } from "./CrazyGamesSDK";
 import { PublicLobbySocket } from "./LobbySocket";

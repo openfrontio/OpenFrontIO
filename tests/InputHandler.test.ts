@@ -1,3 +1,5 @@
+import { UnitType } from "@openfront/engine-api/game/GameTypes";
+import { EventBus } from "@openfront/shared/EventBus";
 import {
   AlternateViewEvent,
   AutoUpgradeEvent,
@@ -6,7 +8,9 @@ import {
   ContextMenuEvent,
   DragEvent,
   InputHandler,
+  MouseDownEvent,
   MouseOverEvent,
+  MouseUpEvent,
   TouchLongPressStartEvent,
   UnitSelectionEvent,
   WarshipSelectionBoxCancelEvent,
@@ -15,10 +19,8 @@ import {
 } from "../src/client/InputHandler";
 import { Platform } from "../src/client/Platform";
 import { UIState } from "../src/client/UIState";
+import { KEYBINDS_KEY, UserSettings } from "../src/client/UserSettings";
 import { GameView, PlayerView, UnitView } from "../src/client/view";
-import { EventBus } from "../src/core/EventBus";
-import { UnitType } from "../src/core/game/Game";
-import { KEYBINDS_KEY, UserSettings } from "../src/core/game/UserSettings";
 
 class MockPointerEvent {
   button: number;
@@ -49,6 +51,26 @@ class MockPointerEvent {
 }
 
 global.PointerEvent = MockPointerEvent as any;
+
+function dispatchDomPointer(
+  target: EventTarget,
+  type: "pointerdown" | "pointermove" | "pointerup" | "pointercancel",
+  x: number,
+  y: number,
+  pointerId = 1,
+): void {
+  const event = new Event(type, { bubbles: true, composed: true });
+  Object.assign(event, {
+    button: 0,
+    clientX: x,
+    clientY: y,
+    x,
+    y,
+    pointerId,
+    pointerType: "mouse",
+  });
+  target.dispatchEvent(event);
+}
 
 describe("InputHandler AutoUpgrade", () => {
   let inputHandler: InputHandler;
@@ -544,6 +566,114 @@ describe("InputHandler AutoUpgrade", () => {
   });
 
   describe("Pointer Event Handling", () => {
+    test("passes a toast tap through to the game input", () => {
+      const mouseDown = vi.fn();
+      const mouseUp = vi.fn();
+      eventBus.on(MouseDownEvent, mouseDown);
+      eventBus.on(MouseUpEvent, mouseUp);
+      inputHandler["userSettings"].leftClickOpensMenu = () => false;
+      inputHandler.initialize();
+      const toast = document.createElement("div");
+      toast.setAttribute("data-game-input-pass-through", "");
+      document.body.appendChild(toast);
+
+      dispatchDomPointer(toast, "pointerdown", 100, 100);
+      dispatchDomPointer(toast, "pointerup", 101, 101);
+      toast.remove();
+
+      expect(mouseDown).toHaveBeenCalledOnce();
+      expect(mouseUp).toHaveBeenCalledOnce();
+    });
+
+    test("cancels game input when a toast interaction becomes a drag", () => {
+      const mouseUp = vi.fn();
+      eventBus.on(MouseUpEvent, mouseUp);
+      inputHandler["userSettings"].leftClickOpensMenu = () => false;
+      inputHandler.initialize();
+      const toast = document.createElement("div");
+      toast.setAttribute("data-game-input-pass-through", "");
+      document.body.appendChild(toast);
+
+      dispatchDomPointer(toast, "pointerdown", 100, 100);
+      dispatchDomPointer(toast, "pointermove", 110, 100);
+      dispatchDomPointer(toast, "pointerup", 180, 100);
+      toast.remove();
+
+      expect(inputHandler["pointerDown"]).toBe(false);
+      expect(inputHandler["pointers"].size).toBe(0);
+      expect(mouseUp).not.toHaveBeenCalled();
+    });
+
+    test("does not convert a cancelled toast gesture into a game tap", () => {
+      const mouseUp = vi.fn();
+      eventBus.on(MouseUpEvent, mouseUp);
+      inputHandler["userSettings"].leftClickOpensMenu = () => false;
+      inputHandler.initialize();
+      const toast = document.createElement("div");
+      toast.setAttribute("data-game-input-pass-through", "");
+      document.body.appendChild(toast);
+
+      dispatchDomPointer(toast, "pointerdown", 100, 100);
+      dispatchDomPointer(toast, "pointercancel", 101, 101);
+      toast.remove();
+
+      expect(inputHandler["pointerDown"]).toBe(false);
+      expect(inputHandler["pointers"].size).toBe(0);
+      expect(mouseUp).not.toHaveBeenCalled();
+    });
+
+    test("preserves an existing map pointer when a toast tap ends", () => {
+      const mouseUp = vi.fn();
+      eventBus.on(MouseUpEvent, mouseUp);
+      inputHandler["userSettings"].leftClickOpensMenu = () => false;
+      inputHandler.initialize();
+      const toast = document.createElement("div");
+      toast.setAttribute("data-game-input-pass-through", "");
+      document.body.appendChild(toast);
+
+      dispatchDomPointer(mockCanvas, "pointerdown", 20, 20, 1);
+      dispatchDomPointer(toast, "pointerdown", 100, 100, 2);
+      dispatchDomPointer(toast, "pointerup", 101, 101, 2);
+
+      expect(inputHandler["pointerDown"]).toBe(true);
+      expect(inputHandler["pointers"].size).toBe(1);
+      expect(inputHandler["pointers"].has(1)).toBe(true);
+      expect(mouseUp).not.toHaveBeenCalled();
+
+      dispatchDomPointer(window, "pointerup", 20, 20, 1);
+      toast.remove();
+
+      expect(mouseUp).toHaveBeenCalledOnce();
+    });
+
+    test("preserves an existing map pointer when a toast drag starts", () => {
+      const mouseUp = vi.fn();
+      eventBus.on(MouseUpEvent, mouseUp);
+      inputHandler["userSettings"].leftClickOpensMenu = () => false;
+      inputHandler.initialize();
+      const toast = document.createElement("div");
+      toast.setAttribute("data-game-input-pass-through", "");
+      document.body.appendChild(toast);
+
+      dispatchDomPointer(mockCanvas, "pointerdown", 20, 20, 1);
+      dispatchDomPointer(toast, "pointerdown", 100, 100, 2);
+      dispatchDomPointer(toast, "pointermove", 104, 100, 2);
+
+      expect(inputHandler["pointers"].size).toBe(2);
+
+      dispatchDomPointer(toast, "pointermove", 110, 100, 2);
+
+      expect(inputHandler["pointerDown"]).toBe(true);
+      expect(inputHandler["pointers"].size).toBe(1);
+      expect(inputHandler["pointers"].has(1)).toBe(true);
+      expect(inputHandler["pointers"].has(2)).toBe(false);
+
+      dispatchDomPointer(window, "pointerup", 20, 20, 1);
+      toast.remove();
+
+      expect(mouseUp).toHaveBeenCalledOnce();
+    });
+
     test("should ignore a pointerup without a matching canvas pointerdown", () => {
       const mockEmit = vi.spyOn(eventBus, "emit");
 

@@ -1,5 +1,7 @@
-import type { Difficulty } from "../../core/game/Game";
-import type { GameRecord, GameStartInfo } from "../../core/Schemas";
+/** Messages between the viewer and the processing worker. */
+
+import type { Difficulty } from "@openfront/engine-api/game/GameTypes";
+import type { GameRecord, WireGameStartInfo } from "@openfront/shared/WireSchemas";
 import type { ReplayAppend, ReplayBase } from "./codec/ReplayTypes";
 
 export type ProcessorRequest =
@@ -32,5 +34,5 @@ export type ProcessorResponse =
   | {
       type: "snapshot_extracted";
       snapshot: Uint8Array;
-      gameStartInfo: GameStartInfo;
+      gameStartInfo: WireGameStartInfo;
     };

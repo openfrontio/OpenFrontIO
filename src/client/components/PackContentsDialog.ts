@@ -1,3 +1,4 @@
+import { CosmeticPack } from "@openfront/shared/CosmeticSchemas";
 import {
   html,
   LitElement,
@@ -6,7 +7,6 @@ import {
   TemplateResult,
 } from "lit";
 import { customElement, property } from "lit/decorators.js";
-import { CosmeticPack } from "../../core/CosmeticSchemas";
 import { ResolvedCosmetic } from "../Cosmetics";
 import { translateText } from "../Utils";
 import "./CosmeticCard";
