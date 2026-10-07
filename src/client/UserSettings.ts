@@ -38,6 +38,7 @@ export function getDefaultKeybinds(isMac: boolean): Record<string, string> {
     retaliateAttack: "Shift+KeyR",
     requestAlliance: "KeyK",
     breakAlliance: "KeyL",
+    targetPlayer: "KeyN",
     emojiMenu: "KeyF",
     quickChat: "KeyR",
     swapDirection: "KeyU",

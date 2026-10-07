@@ -15,6 +15,10 @@ import { customElement, property, state } from "lit/decorators.js";
 import { Controller } from "../../Controller";
 import {
   ContextMenuEvent,
+  DoBoatAttackEvent,
+  DoBreakAllianceEvent,
+  DoRequestAllianceEvent,
+  DoTargetPlayerEvent,
   MouseMoveEvent,
   TouchEvent,
 } from "../../InputHandler";
@@ -47,6 +51,10 @@ const traitorIcon = assetUrl("images/TraitorIcon.svg");
 const warshipIcon = assetUrl("images/BattleshipIconWhite.svg");
 const emojiIcon = assetUrl("images/EmojiIconWhite.svg");
 const chatIcon = assetUrl("images/ChatIconWhite.svg");
+const requestAllianceIcon = assetUrl("images/AllianceIconWhite.svg");
+const breakAllianceIcon = assetUrl("images/TraitorIconWhite.svg");
+const targetIcon = assetUrl("images/TargetIconWhite.svg");
+const boatIcon = assetUrl("images/BoatIconWhite.svg");
 const cityIcon = assetUrl("images/CityIconWhite.svg");
 const factoryIcon = assetUrl("images/FactoryIconWhite.svg");
 const goldCoinIcon = assetUrl("images/GoldCoinIcon.svg");
@@ -88,6 +96,20 @@ export class PlayerInfoOverlay extends LitElement implements Controller {
 
   @state()
   private player: PlayerView | null = null;
+  /** The tile the panel was shown for; the action buttons act on it. */
+  private tile: TileRef | null = null;
+  /** What I can do to the hovered player, for its action buttons. */
+  @state() private playerActions: {
+    player: PlayerView;
+    requestAlliance: boolean;
+    breakAlliance: boolean;
+    target: boolean;
+    boat: boolean;
+  } | null = null;
+  private playerActionsFor: PlayerView | null = null;
+  private playerActionsFetchedAt = 0;
+  /** Bumped per fetch and per action I take; older answers are dropped. */
+  private playerActionsVersion = 0;
 
   @state()
   private playerProfile: PlayerProfile | null = null;
@@ -107,10 +129,10 @@ export class PlayerInfoOverlay extends LitElement implements Controller {
 
   private userSettings = new UserSettings();
 
-  // The chat and emoji buttons (and the 48px of panel width they need) only
-  // show on wide screens with a mouse: narrower, the wider panel covers other
-  // HUD like the leaderboard, and touch devices have no keyboard shortcut to
-  // show.
+  // The shortcut buttons (chat and emoji on the left, player actions on the
+  // right, and the panel width they need) only show on wide screens with a
+  // mouse: narrower, the wider panel covers other HUD like the leaderboard,
+  // and touch devices have no keyboard shortcut to show.
   private showShortcutButtons(): boolean {
     return window.innerWidth >= 1200 && !Platform.isTouch;
   }
@@ -136,7 +158,37 @@ export class PlayerInfoOverlay extends LitElement implements Controller {
     this.eventBus.on(ImmunityBarVisibleEvent, (e) => {
       this.immunityBarVisible = e.visible;
     });
+    this.eventBus.on(DoRequestAllianceEvent, (e) =>
+      this.markActionTaken(e.tile, "requestAlliance"),
+    );
+    this.eventBus.on(DoBreakAllianceEvent, (e) =>
+      this.markActionTaken(e.tile, "breakAlliance"),
+    );
+    this.eventBus.on(DoTargetPlayerEvent, (e) =>
+      this.markActionTaken(e.tile, "target"),
+    );
     this._isActive = true;
+  }
+
+  // Once I act on the shown player (button or keybind), drop that button
+  // right away: the game only sees the intent a turn later, so asking now
+  // would still offer it. The next refresh, a second later, shows the real
+  // state. A keybind (no tile) acts under the cursor, which is the shown
+  // player unless the pointer is on the panel.
+  private markActionTaken(
+    tile: TileRef | undefined,
+    action: "requestAlliance" | "breakAlliance" | "target",
+  ) {
+    const actions = this.playerActions;
+    if (!actions || actions.player !== this.player) return;
+    const onShownPlayer =
+      tile === undefined
+        ? this._isInfoVisible && !this.pointerOnPanel
+        : tile === this.tile;
+    if (!onShownPlayer) return;
+    this.playerActionsVersion++;
+    this.playerActionsFetchedAt = Date.now();
+    this.playerActions = { ...actions, [action]: false };
   }
 
   // While the pointer is on the panel (moving to its emoji button), keep the
@@ -179,9 +231,11 @@ export class PlayerInfoOverlay extends LitElement implements Controller {
 
     if (owner && owner.isPlayer()) {
       this.player = owner as PlayerView;
+      this.tile = tile;
       this.player.profile().then((p) => {
         this.playerProfile = p;
       });
+      this.refreshPlayerActions(this.player, tile);
       this.setVisible(true);
     } else if (!this.game.isLand(tile)) {
       const units = this.game
@@ -196,7 +250,48 @@ export class PlayerInfoOverlay extends LitElement implements Controller {
     }
   }
 
+  // Asks what I can do to the hovered player when it changes, and at most
+  // once a second while it stays (alliances and boat reach change in play).
+  private refreshPlayerActions(player: PlayerView, tile: TileRef) {
+    const myPlayer = this.game.myPlayer();
+    if (!myPlayer || player === myPlayer || !this.showShortcutButtons()) {
+      return;
+    }
+    const now = Date.now();
+    if (
+      this.playerActionsFor === player &&
+      now - this.playerActionsFetchedAt < 1000
+    ) {
+      return;
+    }
+    this.playerActionsFor = player;
+    this.playerActionsFetchedAt = now;
+    const version = ++this.playerActionsVersion;
+    myPlayer
+      .actions(tile, [UnitType.TransportShip])
+      .then((actions) => {
+        if (version !== this.playerActionsVersion) return;
+        const can = actions.interaction;
+        this.playerActions = {
+          player,
+          requestAlliance: can?.canSendAllianceRequest ?? false,
+          breakAlliance: can?.canBreakAlliance ?? false,
+          target: can?.canTarget ?? false,
+          boat: actions.buildableUnits.some(
+            (u) => u.type === UnitType.TransportShip && u.canBuild !== false,
+          ),
+        };
+      })
+      .catch((error) => {
+        console.warn("Failed to check player actions:", error);
+      });
+  }
+
   tick() {
+    // Keep the action buttons current while the mouse rests on a player.
+    if (this._isInfoVisible && this.player && this.tile !== null) {
+      this.refreshPlayerActions(this.player, this.tile);
+    }
     this.requestUpdate();
   }
 
@@ -357,8 +452,9 @@ export class PlayerInfoOverlay extends LitElement implements Controller {
       capacity = 41.0;
     } else {
       // >= 1024px: sm:w-[500px], font-size text-lg (18px, 10.8px/char).
-      // space = 336px / 10.8px = 31.1 chars. The emoji button, when shown,
-      // brings its own 48px of panel width, so it doesn't change this.
+      // space = 336px / 10.8px = 31.1 chars. The shortcut buttons, when
+      // shown, bring their own panel width (34px left, 64px right), so they
+      // don't change this.
       capacity = 31.1;
     }
 
@@ -387,8 +483,9 @@ export class PlayerInfoOverlay extends LitElement implements Controller {
     onClick: () => void,
   ) {
     const key = keybind ? formatKeyForDisplay(keybind) : "";
+    // Icon only, with the key as a corner badge, to keep the panel narrow.
     return html`<button
-      class="flex items-center gap-0.5 px-1 py-0.5 border rounded-md border-gray-500 hover:bg-white/10 cursor-pointer"
+      class="relative flex items-center justify-center size-6.5 border rounded-md border-gray-500 hover:bg-white/10 cursor-pointer"
       title=${title}
       @click=${(e: MouseEvent) => {
         e.stopPropagation();
@@ -396,9 +493,11 @@ export class PlayerInfoOverlay extends LitElement implements Controller {
         this.hide();
       }}
     >
-      <img src=${icon} alt="" class="w-4 h-4 lg:w-5 lg:h-5" />
+      <img src=${icon} alt="" class="size-5 object-contain" />
       ${key
-        ? html`<span class="text-xs font-mono text-gray-300" translate="no"
+        ? html`<span
+            class="pointer-events-none absolute -bottom-1 -right-1 px-0.5 rounded-sm bg-gray-800 text-[9px] leading-tight font-mono text-gray-300"
+            translate="no"
             >${key}</span
           >`
         : ""}
@@ -626,8 +725,71 @@ export class PlayerInfoOverlay extends LitElement implements Controller {
             ${this.displayUnitCount(player, UnitType.Warship, warshipIcon)}
           </div>
         </div>
+        ${myPlayer && this.showShortcutButtons()
+          ? this.renderActionButtons(player, myPlayer, keybinds)
+          : ""}
       </div>
     `;
+  }
+
+  // Right side: what I can do to the player, each with its keybind. Request
+  // and break alliance share a slot, as only one applies at a time. The
+  // column keeps its width when empty, so the panel doesn't shift.
+  private renderActionButtons(
+    player: PlayerView,
+    myPlayer: PlayerView,
+    keybinds: Record<string, string>,
+  ) {
+    const can =
+      player !== myPlayer && this.playerActions?.player === player
+        ? this.playerActions
+        : null;
+    const tile = this.tile ?? undefined;
+    const buttons: TemplateResult[] = [];
+    if (can?.requestAlliance) {
+      buttons.push(
+        this.renderShortcutButton(
+          requestAllianceIcon,
+          translateText("player_panel.send_alliance"),
+          keybinds.requestAlliance,
+          () => this.eventBus.emit(new DoRequestAllianceEvent(tile)),
+        ),
+      );
+    } else if (can?.breakAlliance) {
+      buttons.push(
+        this.renderShortcutButton(
+          breakAllianceIcon,
+          translateText("player_panel.break_alliance"),
+          keybinds.breakAlliance,
+          () => this.eventBus.emit(new DoBreakAllianceEvent(tile)),
+        ),
+      );
+    }
+    if (can?.target) {
+      buttons.push(
+        this.renderShortcutButton(
+          targetIcon,
+          translateText("player_panel.target"),
+          keybinds.targetPlayer,
+          () => this.eventBus.emit(new DoTargetPlayerEvent(tile)),
+        ),
+      );
+    }
+    if (can?.boat) {
+      buttons.push(
+        this.renderShortcutButton(
+          boatIcon,
+          translateText("user_setting.boat_attack"),
+          keybinds.boatAttack,
+          () => this.eventBus.emit(new DoBoatAttackEvent(tile)),
+        ),
+      );
+    }
+    return html`<div
+      class="grid grid-rows-2 grid-flow-col auto-cols-max justify-end gap-1 self-center shrink-0 w-14"
+    >
+      ${buttons}
+    </div>`;
   }
 
   private renderTroopBar(
@@ -729,7 +891,7 @@ export class PlayerInfoOverlay extends LitElement implements Controller {
       >
         <div
           class="bg-gray-800/92 backdrop-blur-sm shadow-xs min-[1200px]:rounded-lg sm:rounded-b-lg shadow-lg text-white text-lg lg:text-base w-full ${this.showShortcutButtons()
-            ? "sm:w-[548px]"
+            ? "sm:w-[598px]"
             : "sm:w-[500px]"} overflow-hidden ${containerClasses}"
           @mouseenter=${this.onPanelEnter}
           @mouseleave=${this.onPanelLeave}

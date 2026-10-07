@@ -2416,6 +2416,8 @@
     "tab_gameplay": "Gameplay",
     "tab_graphics": "Graphics",
     "tab_keybinds": "Keybinds",
+    "target_player": "Target Player",
+    "target_player_desc": "Mark the player whose tile is under your cursor as a target for you and your allies.",
     "title": "Settings",
     "toggle_terrain": "Toggle Terrain",
     "toggle_view": "Toggle View",
