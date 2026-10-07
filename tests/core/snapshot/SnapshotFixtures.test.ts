@@ -1,14 +1,14 @@
 import {
+  GameUpdateType,
+  type GameUpdateViewData,
+} from "@openfront/engine-api/game/GameUpdates";
+import {
   readSnapshotHeader,
   SNAPSHOT_FORMAT_VERSION,
 } from "@openfront/engine/snapshot/GameSnapshot";
 import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
-import {
-  GameUpdateType,
-  type GameUpdateViewData,
-} from "@openfront/engine-api/game/GameUpdates";
 import { gunzipSync, gzipSync } from "zlib";
 import {
   createScriptedRunner,

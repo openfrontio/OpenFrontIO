@@ -1,4 +1,3 @@
-import { GameView } from "../../../src/client/view/GameView";
 import {
   PlayerInfo,
   PlayerType,
@@ -24,6 +23,7 @@ import { TransportShipExecution } from "@openfront/engine/execution/TransportShi
 import { WarshipExecution } from "@openfront/engine/execution/WarshipExecution";
 import { Game, Player } from "@openfront/engine/game/Game";
 import { GameRunner } from "@openfront/engine/GameRunner";
+import { GameView } from "../../../src/client/view/GameView";
 import { setup } from "../../util/Setup";
 import { expectSnapshotRoundTrip, roundTrip } from "../../util/Snapshot";
 import { executeTicks } from "../../util/utils";

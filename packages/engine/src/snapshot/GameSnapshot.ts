@@ -45,7 +45,7 @@ import {
 
 import {
   decodeRoot,
-  Root,
+  type Root,
   SNAPSHOT_FORMAT_VERSION,
   SNAPSHOT_MAGIC,
 } from "@openfront/engine-lib/snapshot/MapSnapshot";
@@ -55,7 +55,7 @@ export {
   restoreMapsFromSnapshot,
   SNAPSHOT_FORMAT_VERSION,
   SNAPSHOT_MAGIC,
-  SnapshotHeader,
+  type SnapshotHeader,
 } from "@openfront/engine-lib/snapshot/MapSnapshot";
 
 const EXEC_TYPES = EXECUTION_SNAPSHOT_TYPES;

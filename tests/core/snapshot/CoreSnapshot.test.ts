@@ -3,6 +3,7 @@ import {
   PlayerType,
   UnitType,
 } from "@openfront/engine-api/game/GameTypes";
+import { SnapshotError } from "@openfront/engine-lib/snapshot/SnapshotType";
 import { WinCheckExecution } from "@openfront/engine/execution/WinCheckExecution";
 import { Game } from "@openfront/engine/game/Game";
 import { GameImpl } from "@openfront/engine/game/GameImpl";
@@ -15,7 +16,6 @@ import {
   decodeSnapshotValue,
   encodeSnapshotValue,
 } from "@openfront/engine/snapshot/SnapshotCodec";
-import { SnapshotError } from "@openfront/engine-lib/snapshot/SnapshotType";
 import { setup } from "../../util/Setup";
 import {
   diffGraphs,
