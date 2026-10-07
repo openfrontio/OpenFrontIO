@@ -10,7 +10,6 @@
     "@openfront/engine-api": "0.0.0",
     "@openfront/engine-lib": "0.0.0",
     "@openfront/zbin": "0.0.0",
-    "dompurify": "^3.4.13",
     "jose": "^6.2.3",
     "nanoid": "^5.1.16",
     "zod": "^4.4.2"

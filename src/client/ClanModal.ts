@@ -25,7 +25,9 @@ import "./components/CopyButton";
 import "./components/CurrencyDisplay";
 import { modalHeader } from "./components/ui/ModalHeader";
 import { signedOutNotice } from "./components/ui/SignedOutNotice";
+import "./GameStatsModal";
 import { modalRouter } from "./ModalRouter";
+import "./PlayerProfileModal";
 import type { ProfileOrigin } from "./PlayerProfileModal";
 import { translateText } from "./Utils";
 

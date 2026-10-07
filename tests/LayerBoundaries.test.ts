@@ -70,6 +70,12 @@ const INEXACT_MATH =
 const GAME_CLIENT =
   /^src\/client\/((hud|view|controllers|render)\/.*|ClientGameRunner|Transport|LocalServer|InputHandler|TransformHandler|WebGLFrameBuilder|WorkerClient)\.ts$/;
 
+/**
+ * The modals the homepage loads on demand: whatever src/client/LazyModals.ts
+ * imports.
+ */
+const LAZY_MODALS = "src/client/LazyModals.ts";
+
 /** Renderer settings the homepage's settings screens read too. */
 const HOMEPAGE_RENDER_SETTINGS = new Set([
   "src/client/render/gl/GraphicsOverrides.ts",
@@ -257,11 +263,21 @@ function violations(): {
 }
 
 /**
- * The game client files the homepage loads up front, each as the chain of
- * static imports from src/client/Main.ts that reaches it.
+ * The game client files and on-demand modals the homepage loads up front, each
+ * as the chain of static imports from src/client/Main.ts that reaches it.
  */
-function homepageGameImports(): string[] {
+function homepageOnDemandImports(): string[] {
   const ENTRY = "src/client/Main.ts";
+  const lazyModals = new Set(
+    [
+      ...fs
+        .readFileSync(path.join(ROOT, LAZY_MODALS), "utf8")
+        .matchAll(/import\("([^"]+)"\)/g),
+    ].flatMap((m) => {
+      const r = resolve(LAZY_MODALS, m[1]);
+      return "npm" in r ? [] : [r.file];
+    }),
+  );
   const importer = new Map<string, string>([[ENTRY, ""]]);
   const queue = [ENTRY];
   const found: string[] = [];
@@ -272,7 +288,10 @@ function homepageGameImports(): string[] {
       const r = resolve(file, spec);
       if ("npm" in r || importer.has(r.file)) continue;
       importer.set(r.file, file);
-      if (GAME_CLIENT.test(r.file) && !HOMEPAGE_RENDER_SETTINGS.has(r.file)) {
+      if (
+        (GAME_CLIENT.test(r.file) && !HOMEPAGE_RENDER_SETTINGS.has(r.file)) ||
+        lazyModals.has(r.file)
+      ) {
         const chain = [r.file];
         for (let f = file; f !== ""; f = importer.get(f)!) chain.unshift(f);
         found.push(chain.join(" -> "));
@@ -286,7 +305,7 @@ function homepageGameImports(): string[] {
 
 describe("layer boundaries", () => {
   const { edges, determinism, inexactMath, io } = violations();
-  const homepageGame = homepageGameImports();
+  const homepageOnDemand = homepageOnDemandImports();
 
   test("no import edges outside the allowed graph", () => {
     const allowed = new Set(ALLOWLIST);
@@ -333,8 +352,8 @@ describe("layer boundaries", () => {
     }
   });
 
-  test("the homepage loads the game client only on demand", () => {
-    expect(homepageGame).toEqual([]);
+  test("the homepage loads the game client and its modals only on demand", () => {
+    expect(homepageOnDemand).toEqual([]);
   });
 
   test("the homepage check follows only imports that load something", () => {
