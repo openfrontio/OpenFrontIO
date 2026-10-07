@@ -272,7 +272,6 @@
       },
       "warnings": {
         "mirv_ready": "[P1] can MIRV now!",
-        "number1_warning": "Team up vs #1!",
         "pirating": "[P1] is pirating",
         "saving_for_mirv": "[P1] saving for MIRV",
         "snowballing": "[P1] is snowballing",
@@ -293,7 +292,6 @@
       "mirv_ready": "[P1] has enough gold to launch a MIRV!",
       "mirv_soon": "[P1] can launch a MIRV soon!",
       "no_allies": "[P1] has no allies.",
-      "number1_warning": "The #1 player will win soon unless we team up!",
       "pirating": "[P1] is pirating all of our trade!",
       "saving_for_mirv": "[P1] is saving up to launch a MIRV.",
       "snowballing": "[P1] is snowballing too fast!",

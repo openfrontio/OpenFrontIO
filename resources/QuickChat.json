@@ -215,10 +215,6 @@
       "requiresPlayer": true
     },
     {
-      "key": "number1_warning",
-      "requiresPlayer": false
-    },
-    {
       "key": "stalemate",
       "requiresPlayer": false
     },
