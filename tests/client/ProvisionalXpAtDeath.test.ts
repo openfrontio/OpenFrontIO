@@ -165,6 +165,39 @@ describe("provisionalXpContext", () => {
     });
     expect(derived.ctx.subscriberPermille).toBe(1200);
   });
+
+  it("starts the day afresh once the day the allowances are for has ended", () => {
+    const daily = {
+      day: "2026-10-02",
+      privateGames: 3,
+      singleplayerGames: 1,
+      firstGameClaimed: true,
+    };
+    const at = (iso: string) =>
+      provisionalXpContext({
+        snapshot: ffaSnapshot(),
+        myClientID: "me",
+        config: FFA,
+        progress: { ...PROGRESS, daily },
+        now: Date.parse(iso),
+      });
+    // Fetched at 23:40 UTC; died later the same day: the counts stand.
+    const sameDay = at("2026-10-02T23:55:00Z");
+    if (sameDay === "retry") throw new Error("expected a context");
+    expect(sameDay.ctx.daily).toEqual({
+      privateGames: 3,
+      singleplayerGames: 1,
+      firstGameClaimed: true,
+    });
+    // Died after midnight UTC: the API starts the new day from none used.
+    const nextDay = at("2026-10-03T00:15:00Z");
+    if (nextDay === "retry") throw new Error("expected a context");
+    expect(nextDay.ctx.daily).toEqual({
+      privateGames: 0,
+      singleplayerGames: 0,
+      firstGameClaimed: false,
+    });
+  });
 });
 
 describe("buildProvisionalXp", () => {
@@ -306,6 +339,32 @@ describe("buildProvisionalXp", () => {
       build({ progression: progression({ formula: undefined }) }),
     ).toBeNull();
     expect(build({ progression: progression({ xp: undefined }) })).toBeNull();
+  });
+
+  it("has nothing to show for a singleplayer game while the API requires the stats vote", () => {
+    const singleplayer = { ...FFA, gameType: GameType.Singleplayer };
+    expect(
+      build({
+        config: singleplayer,
+        progression: progression({ requireStatsAgreed: true }),
+      }),
+    ).toBeNull();
+    // An API that doesn't say is taken to require it.
+    expect(build({ config: singleplayer })).toBeNull();
+    // Staging scores unverified games: a figure, at the singleplayer rate.
+    const staging = build({
+      config: singleplayer,
+      progression: progression({ requireStatsAgreed: false }),
+    });
+    if (staging === null || staging === "retry") throw new Error();
+    expect(staging.response).toMatchObject({
+      eligible: true,
+      breakdown: { firstGame: 0, gamePermille: 250 },
+    });
+    // A multiplayer game carries the vote, so it still gets a figure.
+    expect(
+      build({ progression: progression({ requireStatsAgreed: true }) }),
+    ).not.toBeNull();
   });
 });
 
@@ -490,5 +549,19 @@ describe("loadProvisionalXp", () => {
     });
     await vi.advanceTimersByTimeAsync(1_000);
     expect(await pending).toBeNull();
+  });
+
+  it("doesn't ask the game for a singleplayer death the API won't score", async () => {
+    const humanStats = vi.fn<() => Promise<HumanStatsSnapshot>>();
+    const provisional = await loadProvisionalXp({
+      gameId: "game1",
+      myClientID: "me",
+      config: { ...FFA, gameType: GameType.Singleplayer },
+      progress: PROGRESS,
+      progression: progression({ requireStatsAgreed: true }),
+      humanStats,
+    });
+    expect(provisional).toBeNull();
+    expect(humanStats).not.toHaveBeenCalled();
   });
 });

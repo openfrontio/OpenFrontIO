@@ -1,5 +1,5 @@
 import type { HumanStatsSnapshot } from "@openfront/engine-api/game/GameTypes";
-import { GameMode } from "@openfront/engine-api/game/GameTypes";
+import { GameMode, GameType } from "@openfront/engine-api/game/GameTypes";
 import type {
   GameXpEligible,
   GameXpResponse,
@@ -13,6 +13,7 @@ import {
   ffaOutlasted,
   NO_DAILY_XP,
   PROVISIONAL_XP_FORMULA,
+  type DailyXpState,
   type XpBreakdown,
   type XpContext,
   type XpGameConfig,
@@ -69,6 +70,33 @@ export function provisionalXpRules(config: ProgressionConfig): XpRules | null {
 }
 
 /**
+ * Whether the API can score this game at all. While it requires the
+ * end-of-game stats vote (requireStatsAgreed, production), a singleplayer
+ * game, which never carries that vote, scores nothing, so there is no figure
+ * to show for it. An API that doesn't say is taken to require it.
+ */
+export function apiScoresGame(
+  progression: ProgressionConfig,
+  config: XpGameConfig,
+): boolean {
+  return (
+    progression.requireStatsAgreed === false ||
+    config.gameType !== GameType.Singleplayer
+  );
+}
+
+// The day's allowances as they stand on `now`'s UTC day. The API stamps them
+// with the day they are for; once that day is over they have reset, as they
+// have for the API, which goes by the UTC day the game ends.
+function dailyOn(daily: Progress["daily"], now: number): DailyXpState {
+  if (daily === undefined) return NO_DAILY_XP;
+  const today = new Date(now).toISOString().slice(0, 10);
+  if (daily.day !== undefined && today > daily.day) return NO_DAILY_XP;
+  const { privateGames, singleplayerGames, firstGameClaimed } = daily;
+  return { privateGames, singleplayerGames, firstGameClaimed };
+}
+
+/**
  * computeXp's context for the local player at the moment they died, from the
  * worker's stats snapshot. "retry" when the snapshot doesn't show the death
  * yet (the simulation stamps it a tick after the last tile falls).
@@ -78,13 +106,16 @@ export function provisionalXpRules(config: ProgressionConfig): XpRules | null {
  * (a dead player can't win FFA; a team's result is pending), no feats (they
  * are judged on the finished game), and no leave (the player is still here).
  * The first game of the day is known now: the daily state from /users/@me
- * says whether it is still open, and the game type whether this game pays it.
+ * says whether it is still open (unless its day has ended since), and the
+ * game type whether this game pays it.
  */
 export function provisionalXpContext(input: {
   snapshot: HumanStatsSnapshot;
   myClientID: string;
   config: XpGameConfig;
   progress: Progress;
+  // When the player died (epoch ms); now unless a test says otherwise.
+  now?: number;
 }): { ctx: XpContext; disconnectedOpponents: number } | "retry" {
   const { snapshot, myClientID, config, progress } = input;
   const myStats = snapshot.stats[myClientID];
@@ -130,7 +161,7 @@ export function provisionalXpContext(input: {
       spawnedHumans,
       opponentsOutlasted,
       featCount: 0,
-      daily: progress.daily ?? NO_DAILY_XP,
+      daily: dailyOn(progress.daily, input.now ?? Date.now()),
       subscriberPermille: progress.subscriberPermille ?? 1000,
     },
     disconnectedOpponents,
@@ -202,9 +233,12 @@ export function buildProvisionalXp(input: {
   config: XpGameConfig;
   progress: Progress;
   progression: ProgressionConfig;
+  now?: number;
 }): ProvisionalXp | "retry" | null {
   const rules = provisionalXpRules(input.progression);
-  if (rules === null) return null;
+  if (rules === null || !apiScoresGame(input.progression, input.config)) {
+    return null;
+  }
   const derived = provisionalXpContext(input);
   if (derived === "retry") return "retry";
   const { ctx, disconnectedOpponents } = derived;
@@ -269,13 +303,19 @@ export interface LoadProvisionalXpOptions {
 
 /**
  * Works out the provisional figure from the running game. Null when there is
- * none to show: another formula revision, no rules, a snapshot that never
- * shows the death, a worker that doesn't answer, or the caller gave up.
+ * none to show: another formula revision, no rules, a game the API won't
+ * score, a snapshot that never shows the death, a worker that doesn't
+ * answer, or the caller gave up.
  */
 export async function loadProvisionalXp(
   opts: LoadProvisionalXpOptions,
 ): Promise<ProvisionalXp | null> {
-  if (provisionalXpRules(opts.progression) === null) return null;
+  if (
+    provisionalXpRules(opts.progression) === null ||
+    !apiScoresGame(opts.progression, opts.config)
+  ) {
+    return null;
+  }
   const attempts = opts.attempts ?? 10;
   const retryMs = opts.retryMs ?? 300;
   const timeoutMs = opts.timeoutMs ?? 5_000;

@@ -127,6 +127,9 @@ export const ProgressSchema = z.object({
   // absent: it must never fail the progress object around it.
   daily: z
     .object({
+      // The UTC day ("YYYY-MM-DD", the server's clock) the counts are for.
+      // A game ending on a later day starts from none used.
+      day: z.string().optional().catch(undefined),
       privateGames: z.number(),
       singleplayerGames: z.number(),
       firstGameClaimed: z.boolean(),
@@ -248,6 +251,11 @@ export const ProgressionConfigSchema = z.object({
   // copy of one revision, for the provisional figure shown at death, and
   // shows none when this is absent or names another revision.
   formula: z.number().optional().catch(undefined),
+  // Whether the API scores only games whose end-of-game vote agreed on the
+  // stats (true in production). A singleplayer game never carries that vote,
+  // so while this is true it scores nothing, and no provisional figure is
+  // shown for it.
+  requireStatsAgreed: z.boolean().optional().catch(undefined),
   // The rules that formula runs on. Absent from older APIs; a malformed block
   // only loses the provisional figure, never the level curve.
   xp: XpRulesSchema.optional().catch(undefined),
