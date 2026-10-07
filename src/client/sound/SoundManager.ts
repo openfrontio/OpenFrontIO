@@ -35,11 +35,35 @@ export class SoundManager {
     private readonly eventBus: EventBus,
     private readonly mixer: AudioMixer,
   ) {
+    this.buildBackgroundMusic(streamsMusic());
+
+    this.onPlaySoundEffect = (e) => this.mixer.play(e.effect);
+    this.onSetAmbience = (e) => this.setAmbience(e.track, e.gain);
+    eventBus.on(PlaySoundEffectEvent, this.onPlaySoundEffect);
+    eventBus.on(SetAmbienceEvent, this.onSetAmbience);
+
+    // Ambience is crossfaded here rather than registered with the mixer, so
+    // the mixer cannot stomp a fade in progress. Re-target on every change.
+    this.stopFollowingVolume = this.mixer.onChange((category) => {
+      if (category === "ambience") this.retargetAmbience();
+      if (category === "music") this.startMusicIfAudible();
+    });
+  }
+
+  /**
+   * Builds the looping gameplay track. One track that keeps looping —
+   * including through the victory and defeat cues — so a game never hard-cuts
+   * to silence, per the sound designer's note. The menu theme (MenuMusic.ts)
+   * covers the home page.
+   *
+   * `preload` is a parameter rather than just `streamsMusic()` because a
+   * rebuild after a failed load must not fetch on its own: that would retry
+   * on a loop for as long as the file kept failing. A rebuild waits to be
+   * asked, the way AudioMixer's discarded cues do.
+   */
+  private buildBackgroundMusic(preload: boolean): void {
     this.safely("initialize background music", () => {
-      // One track that keeps looping — including through the victory and
-      // defeat cues — so a game never hard-cuts to silence, per the sound
-      // designer's note. The menu theme (MenuMusic.ts) covers the home page.
-      this.backgroundMusic = new Howl({
+      const music = new Howl({
         src: [assetUrl("sounds/music/gameplay.mp3")],
         loop: true,
         volume: 0,
@@ -57,22 +81,41 @@ export class SoundManager {
         // 44.1 kHz stereo is ~74 MB, an order of magnitude more than the file
         // -- so on iOS nothing is fetched or decoded until the music channel
         // is actually audible. See startMusicIfAudible.
-        preload: streamsMusic(),
+        preload,
       });
-      this.mixer.register(this.backgroundMusic, "music");
+      this.backgroundMusic = music;
+      // Bound without an id, like AudioMixer's: Howler emits loaderror with a
+      // null id for everything but a media-element error, and an id-bound
+      // listener would be dead code for the cases that matter.
+      music.once("loaderror", () => this.replaceFailedMusic(music));
+      // Nothing is playing after a rejected play(), so let a later change try
+      // again rather than latching the track off for the rest of the game.
+      music.on("playerror", () => {
+        this.musicStarted = false;
+      });
+      this.mixer.register(music, "music");
     });
+  }
 
-    this.onPlaySoundEffect = (e) => this.mixer.play(e.effect);
-    this.onSetAmbience = (e) => this.setAmbience(e.track, e.gain);
-    eventBus.on(PlaySoundEffectEvent, this.onPlaySoundEffect);
-    eventBus.on(SetAmbienceEvent, this.onSetAmbience);
-
-    // Ambience is crossfaded here rather than registered with the mixer, so
-    // the mixer cannot stomp a fade in progress. Re-target on every change.
-    this.stopFollowingVolume = this.mixer.onChange((category) => {
-      if (category === "ambience") this.retargetAmbience();
-      if (category === "music") this.startMusicIfAudible();
-    });
+  /**
+   * Swaps in a fresh Howl after a load that failed.
+   *
+   * The dead one cannot simply be retried: the play() that was queued behind
+   * the failed load is still sitting in Howler's queue, so a later successful
+   * load would drain that one as well as the one the retry asks for, and the
+   * track would play over itself. Replacing it drops the queue with it.
+   *
+   * Deliberate rather than giving up: a blip on the CDN should not mean a
+   * silent game, and the retry only costs a fetch when the player's own
+   * volume change asks for one.
+   */
+  private replaceFailedMusic(failed: Howl): void {
+    if (this.backgroundMusic !== failed) return;
+    this.mixer.unregister(failed);
+    this.safely("unload failed background music", () => failed.unload());
+    this.backgroundMusic = null;
+    this.musicStarted = false;
+    this.buildBackgroundMusic(false);
   }
 
   dispose(): void {
@@ -133,12 +176,17 @@ export class SoundManager {
     // all start when the load lands, so the track would play over itself
     // once per tick of the drag that started it.
     this.musicStarted = true;
-    this.safely("play background music", () => {
+    try {
       // Howler's play() queues behind a load but does not start one, so an
       // unloaded Howl would sit there silently forever without this.
       if (music.state() === "unloaded") music.load();
       music.play();
-    });
+    } catch (err) {
+      // Not safely(), which would leave the latch set on a throw: nothing
+      // started, so a later change should be free to try again.
+      this.musicStarted = false;
+      console.warn("SoundManager: failed to play background music", err);
+    }
   }
 
   public stopBackgroundMusic(): void {

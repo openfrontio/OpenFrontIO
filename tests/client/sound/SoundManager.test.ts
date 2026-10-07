@@ -38,6 +38,13 @@ vi.mock("howler", () => {
       if (!this._listeners.has(event)) this._listeners.set(event, new Map());
       this._listeners.get(event)!.set(id ?? -1, cb);
     });
+    // Kept separate from once(): _fire deletes a once() listener, and these
+    // have to survive being fired.
+    on = vi.fn((event: string, cb: () => void, id?: number) => {
+      if (!this._persistent.has(event)) this._persistent.set(event, new Map());
+      this._persistent.get(event)!.set(id ?? -1, cb);
+    });
+    _persistent = new Map<string, Map<number, () => void>>();
     off = vi.fn();
     _listeners = new Map<string, Map<number, () => void>>();
     _fire(event: string, id: number) {
@@ -46,6 +53,7 @@ vi.mock("howler", () => {
         this._listeners.get(event)!.delete(id);
         cb();
       }
+      this._persistent.get(event)?.get(id)?.();
     }
     constructor(opts: any) {
       this.src = opts.src[0];
@@ -210,6 +218,44 @@ describe("background music", () => {
       expect(music.load).toHaveBeenCalled();
       expect(music.play).toHaveBeenCalled();
     });
+  });
+
+  it("can try again after a load that failed", () => {
+    // The latch must not make one bad fetch permanent: a blip on the CDN
+    // would otherwise mean a silent game, since every later slider change
+    // reads the latch and declines.
+    const failed = find("gameplay.mp3");
+    soundManager.playBackgroundMusic();
+    expect(failed.play).toHaveBeenCalledTimes(1);
+
+    failed._fire("loaderror", -1);
+
+    // Replaced rather than reset: the play() queued behind the failed load is
+    // still in Howler's queue, so reusing the Howl would start the track
+    // twice once a later load succeeded.
+    expect(failed.unload).toHaveBeenCalled();
+    const tracks = howlInstances.filter((h) => h.src.includes("gameplay.mp3"));
+    const replacement = tracks[tracks.length - 1];
+    expect(replacement).not.toBe(failed);
+    // Does not fetch on its own, or a permanently failing file would retry in
+    // a loop.
+    expect(replacement.preload).toBe(false);
+
+    settings.setAudioVolume("music", 1);
+    expect(replacement.load).toHaveBeenCalled();
+    expect(replacement.play).toHaveBeenCalled();
+  });
+
+  it("releases the latch when playback itself is rejected", () => {
+    const music = find("gameplay.mp3");
+    soundManager.playBackgroundMusic();
+    expect(music.play).toHaveBeenCalledTimes(1);
+
+    // Nothing is playing after a rejected play(), so a later change should be
+    // free to ask again on the same Howl -- it loaded fine.
+    music._fire("playerror", -1);
+    settings.setAudioVolume("music", 1);
+    expect(music.play).toHaveBeenCalledTimes(2);
   });
 
   it("follows the music slider through the mixer", () => {

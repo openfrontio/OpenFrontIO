@@ -73,6 +73,9 @@ export function startMenuMusic(mixer: AudioMixer): void {
   let theme: Howl | null = null;
   // Whether the home page is the thing on screen, so the theme may start.
   let armed = false;
+  // Whether the player has interacted, so a play() can survive the autoplay
+  // policy. Never cleared: activation is sticky for the life of the document.
+  let gestured = false;
   let teardownFadeIn: (() => void) | null = null;
 
   /**
@@ -214,12 +217,19 @@ export function startMenuMusic(mixer: AudioMixer): void {
     }
   };
 
+  // Records the interaction before starting, so a start declined for a silent
+  // channel still leaves the document activated for a later one.
+  const onGesture = () => {
+    gestured = true;
+    start();
+  };
+
   // Removing first keeps arm() idempotent, so a second "menu-restored" -- or
   // one arriving while the listeners are still up -- cannot stack a duplicate.
   const arm = () => {
     disarm();
-    document.addEventListener("pointerdown", start, { once: true });
-    document.addEventListener("keydown", start, { once: true });
+    document.addEventListener("pointerdown", onGesture, { once: true });
+    document.addEventListener("keydown", onGesture, { once: true });
     armed = true;
   };
 
@@ -228,8 +238,8 @@ export function startMenuMusic(mixer: AudioMixer): void {
   // start the menu theme over the top of a game.
   const disarm = () => {
     armed = false;
-    document.removeEventListener("pointerdown", start);
-    document.removeEventListener("keydown", start);
+    document.removeEventListener("pointerdown", onGesture);
+    document.removeEventListener("keydown", onGesture);
   };
 
   arm();
@@ -239,15 +249,30 @@ export function startMenuMusic(mixer: AudioMixer): void {
    * on a silent channel and the gesture listeners are `once` -- so the click
    * that opened the settings menu has already been spent.
    *
-   * Gated on `armed` rather than just on `theme`: between "game-starting" and
-   * "menu-restored" there is no menu to play over, and a slider move during a
-   * game would otherwise start the menu theme on top of the gameplay track.
+   * Three conditions, and all of them are load-bearing:
    *
-   * Safe for autoplay without a gesture of its own: the channel only changes
-   * because the player moved a slider, which is one.
+   * `turnedOn` -- the channel went from silent to audible, rather than merely
+   * being notified. The mixer notifies this listener on every focus change
+   * too (followFocus -> applyAll -> applyTo), whatever muteOnBlur is set to,
+   * and alt-tabbing is not a request to start the music.
+   *
+   * `armed` -- between "game-starting" and "menu-restored" there is no menu to
+   * play over, and a slider move during a game would otherwise start the menu
+   * theme on top of the gameplay track.
+   *
+   * `gestured` -- a play() with nothing behind it is rejected by the autoplay
+   * policy, and Howler does not retry it on unlock. onPlayError still settles
+   * the Howl, so `theme` would be left non-null and the player's real first
+   * click would return early: the menu would stay silent until a lobby was
+   * joined and left.
    */
+  let wasAudible = mixer.isAudible("music");
   mixer.onChange((category) => {
-    if (category === "music" && armed) start();
+    if (category !== "music") return;
+    const audible = mixer.isAudible("music");
+    const turnedOn = audible && !wasAudible;
+    wasAudible = audible;
+    if (turnedOn && armed && gestured) start();
   });
 
   document.addEventListener("game-starting", () => {

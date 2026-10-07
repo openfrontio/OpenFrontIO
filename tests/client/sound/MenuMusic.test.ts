@@ -442,6 +442,37 @@ describe("menu music", () => {
     expect(themes()[0].play).toHaveBeenCalled();
   });
 
+  it("does not start before the player has interacted", () => {
+    // The mixer notifies this listener on every focus change as well, whatever
+    // muteOnBlur says. A play() with no gesture behind it is rejected by the
+    // autoplay policy and Howler does not retry on unlock, so the settled Howl
+    // would leave `theme` non-null and the real first click would return
+    // early -- a menu silent until a lobby had been joined and left.
+    startMenuMusic(mixer);
+    notifyChange("music");
+
+    expect(themes()).toHaveLength(0);
+
+    // The click still starts it.
+    document.dispatchEvent(new Event("pointerdown"));
+    expect(themes()).toHaveLength(1);
+  });
+
+  it("does not start on a switch-on that no gesture preceded", () => {
+    // Belt to the transition check's braces: even a genuine silent-to-audible
+    // change cannot start playback until the document has been activated,
+    // because the rejected play() would strand a settled Howl in `theme`.
+    buildMixer();
+    musicLevel = 0;
+    musicAudible = false;
+    startMenuMusic(mixer);
+
+    musicLevel = 0.5 * 0.5 * 0.89;
+    musicAudible = true;
+    notifyChange("music");
+    expect(themes()).toHaveLength(0);
+  });
+
   it("does not start over a running game when music is turned on", () => {
     startMenuMusic(mixer);
     document.dispatchEvent(new Event("pointerdown"));
