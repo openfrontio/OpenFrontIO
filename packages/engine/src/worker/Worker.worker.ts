@@ -18,7 +18,6 @@ import {
   TransportShipSpawnResultMessage,
   WorkerMessage,
 } from "@openfront/engine-api/worker/WorkerMessages";
-import { mapFilesLoader } from "@openfront/engine-lib/game/MapFiles";
 import {
   createGameRunner,
   createGameRunnerFromSnapshot,
@@ -163,20 +162,19 @@ async function onMessage(e: MessageEvent<MainThreadMessage>) {
       break;
     case "init":
       try {
-        const mapLoader = mapFilesLoader(message.map);
         gameRunner = (
           message.snapshot !== undefined
             ? createGameRunnerFromSnapshot(
                 message.gameStartInfo,
                 message.snapshot,
                 message.clientID,
-                mapLoader,
+                message.map,
                 gameUpdate,
               )
             : createGameRunner(
                 message.gameStartInfo,
                 message.clientID,
-                mapLoader,
+                message.map,
                 gameUpdate,
               )
         ).then(
