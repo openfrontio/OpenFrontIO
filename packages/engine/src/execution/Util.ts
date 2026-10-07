@@ -132,39 +132,32 @@ export function closestTwoTiles(
     return null;
   }
 
-  let i = 0;
-  let j = 0;
   let minDistance = Infinity;
   let result = { x: xSorted[0], y: ySorted[0] };
 
-  while (i < xSorted.length && j < ySorted.length) {
-    const currentX = xSorted[i];
-    const currentY = ySorted[j];
+  let lo = 0;
+  for (const cx of xSorted) {
+    const cxX = cx % w;
+    const cxY = (cx / w) | 0;
 
-    const cxX = currentX % w;
-    const cyX = currentY % w;
-    const distance =
-      Math.abs(cxX - cyX) +
-      Math.abs(((currentX / w) | 0) - ((currentY / w) | 0));
-
-    if (distance < minDistance) {
-      minDistance = distance;
-      result = { x: currentX, y: currentY };
+    while (lo < ySorted.length && cxX - (ySorted[lo] % w) >= minDistance) {
+      lo++;
     }
 
-    // If we're at the end of X, must move Y forward
-    if (i === xSorted.length - 1) {
-      j++;
-    }
-    // If we're at the end of Y, must move X forward
-    else if (j === ySorted.length - 1) {
-      i++;
-    }
-    // Otherwise, move whichever pointer has smaller x value
-    else if (cxX < cyX) {
-      i++;
-    } else {
-      j++;
+    for (let j = lo; j < ySorted.length; j++) {
+      const cy = ySorted[j];
+      const cyX = cy % w;
+      const dx = cyX - cxX;
+      if (dx >= minDistance) {
+        break;
+      }
+      const cyY = (cy / w) | 0;
+      const dist = (dx < 0 ? -dx : dx) + Math.abs(cxY - cyY);
+      if (dist < minDistance) {
+        minDistance = dist;
+        result = { x: cx, y: cy };
+        if (minDistance === 0) return result;
+      }
     }
   }
 
