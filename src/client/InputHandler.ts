@@ -158,13 +158,6 @@ export class ShowEmojiMenuEvent implements GameEvent {
   ) {}
 }
 
-export class ShowChatMenuEvent implements GameEvent {
-  constructor(
-    public readonly x: number,
-    public readonly y: number,
-  ) {}
-}
-
 /** Emitted by the emoji table whenever it opens or closes. */
 export class EmojiTableVisibleEvent implements GameEvent {
   constructor(public readonly visible: boolean) {}
@@ -424,15 +417,6 @@ export class InputHandler {
     this.addKeybindAndEvent(this.keybinds.breakAlliance, () => {
       this.eventBus.emit(new DoBreakAllianceEvent());
     });
-    this.addKeybindAndEvent(
-      this.keybinds.quickChat,
-      () => {
-        this.eventBus.emit(
-          new ShowChatMenuEvent(this.lastMouseX, this.lastMouseY),
-        );
-      },
-      (e: KeyboardEvent) => !e.repeat,
-    );
     this.addKeybindAndEvent(
       this.keybinds.pauseGame,
       () => {

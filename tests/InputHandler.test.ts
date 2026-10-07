@@ -14,7 +14,6 @@ import {
   MouseDownEvent,
   MouseOverEvent,
   MouseUpEvent,
-  ShowChatMenuEvent,
   ShowEmojiMenuEvent,
   TouchLongPressStartEvent,
   UnitSelectionEvent,
@@ -1384,20 +1383,6 @@ describe("InputHandler AutoUpgrade", () => {
       expect(emitted).toHaveLength(1);
       expect(emitted[0].x).toBe(120);
       expect(emitted[0].y).toBe(340);
-    });
-
-    test("V opens quick chat at the last mouse position", () => {
-      const emitted: ShowChatMenuEvent[] = [];
-      eventBus.on(ShowChatMenuEvent, (e) => emitted.push(e));
-
-      window.dispatchEvent(
-        new MouseEvent("mousemove", { clientX: 50, clientY: 60 }),
-      );
-      window.dispatchEvent(new KeyboardEvent("keyup", { code: "KeyV" }));
-
-      expect(emitted).toHaveLength(1);
-      expect(emitted[0].x).toBe(50);
-      expect(emitted[0].y).toBe(60);
     });
 
     test("F closes the emoji table when it is already open", () => {

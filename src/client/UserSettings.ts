@@ -39,7 +39,6 @@ export function getDefaultKeybinds(isMac: boolean): Record<string, string> {
     requestAlliance: "KeyK",
     breakAlliance: "KeyL",
     emojiMenu: "KeyF",
-    quickChat: "KeyV",
     swapDirection: "KeyU",
     zoomOut: "KeyQ",
     zoomIn: "KeyE",

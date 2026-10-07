@@ -594,7 +594,6 @@ describe("getDefaultKeybinds", () => {
     expect(keybinds.resetGfx).toBe("KeyR");
     expect(keybinds.selectAllWarships).toBe("KeyX");
     expect(keybinds.emojiMenu).toBe("KeyF");
-    expect(keybinds.quickChat).toBe("KeyV");
     expect(keybinds.buildMenuModifier).toBe("ControlLeft");
   });
 
@@ -668,13 +667,13 @@ describe("UserSettings keybinds with new defaults", () => {
     localStorage.setItem("settings.keybinds", JSON.stringify(binds));
 
   it("unbinds a default that lands on a key the player already uses", () => {
-    store({ boatAttack: { value: "KeyV", key: "v" } });
+    store({ boatAttack: { value: "KeyX", key: "x" } });
     const keybinds = new UserSettings().keybinds(false);
 
-    expect(keybinds.boatAttack).toBe("KeyV");
-    expect(keybinds.quickChat).toBeUndefined();
+    expect(keybinds.boatAttack).toBe("KeyX");
+    expect(keybinds.selectAllWarships).toBeUndefined();
     // Saved as unbound, so the settings modal shows it that way too.
-    expect(new UserSettings().parsedUserKeybinds().quickChat).toEqual({
+    expect(new UserSettings().parsedUserKeybinds().selectAllWarships).toEqual({
       value: "Null",
       key: "",
     });
@@ -693,8 +692,10 @@ describe("UserSettings keybinds with new defaults", () => {
     const keybinds = new UserSettings().keybinds(false);
 
     expect(keybinds.emojiMenu).toBe("KeyF");
-    expect(keybinds.quickChat).toBe("KeyV");
-    expect(new UserSettings().parsedUserKeybinds().quickChat).toBeUndefined();
+    expect(keybinds.selectAllWarships).toBe("KeyX");
+    expect(
+      new UserSettings().parsedUserKeybinds().selectAllWarships,
+    ).toBeUndefined();
   });
 
   it("lets modifier keys stay shared", () => {
