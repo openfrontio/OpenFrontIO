@@ -67,6 +67,12 @@ describe("ChatModal quick chat shortcut", () => {
     expect(open).toHaveBeenCalledWith(myPlayer, otherPlayer);
   });
 
+  it("doesn't open from the player info panel once I'm dead", () => {
+    alive = false;
+    eventBus.emit(new ShowPlayerChatEvent(otherPlayer as never));
+    expect(open).not.toHaveBeenCalled();
+  });
+
   it("does nothing once I'm dead", () => {
     alive = false;
     tileOwner = otherPlayer;

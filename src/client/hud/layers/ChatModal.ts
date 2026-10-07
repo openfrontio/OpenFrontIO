@@ -258,7 +258,8 @@ export class ChatModal extends LitElement {
         @input=${(e: Event) =>
           (this.search = (e.target as HTMLInputElement).value)}
         @keydown=${(e: KeyboardEvent) => {
-          if (e.key === "Enter" && players.length > 0) {
+          // Enter that confirms an IME composition isn't a pick.
+          if (e.key === "Enter" && !e.isComposing && players.length > 0) {
             this.sendPending(players[0]);
           }
         }}
@@ -342,7 +343,7 @@ export class ChatModal extends LitElement {
     });
     eventBus.on(ShowPlayerChatEvent, (e) => {
       const myPlayer = this.g.myPlayer();
-      if (myPlayer) this.open(myPlayer, e.player);
+      if (myPlayer?.isAlive()) this.open(myPlayer, e.player);
     });
   }
 

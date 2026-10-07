@@ -223,6 +223,19 @@ describe("ChatModal", () => {
     expect(sent[0].target).toBe("small");
   });
 
+  it("ignores Enter that confirms an IME composition", async () => {
+    modal.openWithSelection("attack", "focus", me, bob);
+    await modal.updateComplete;
+
+    modal
+      .querySelector("input")!
+      .dispatchEvent(
+        new KeyboardEvent("keydown", { key: "Enter", isComposing: true }),
+      );
+    expect(sent).toHaveLength(0);
+    expect(modal.isOpen).toBe(true);
+  });
+
   it("goes back from the player picker to the phrases", async () => {
     modal.openWithSelection("attack", "focus", me, bob);
     await modal.updateComplete;
