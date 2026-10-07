@@ -44,6 +44,7 @@ export class ClanBrowseView extends LitElement {
   @state() private loading = false;
   @state() private errorMsg = "";
   private searchDebounce: ReturnType<typeof setTimeout> | null = null;
+  private pinnedBucket: number | undefined = undefined;
   private asyncGeneration = 0;
 
   private emitState() {
@@ -66,19 +67,21 @@ export class ClanBrowseView extends LitElement {
     this.loading = true;
     this.errorMsg = "";
     try {
-      // Reuse the shuffle bucket of the last response, so the order holds
-      // if the hour turns mid-browse. The server only honours the previous
+      // Paging reuses the shuffle bucket of the last response, so the order
+      // holds if the hour turns mid-browse; a new sort or search drops it
+      // and takes the current hour. The server only honours the previous
       // hour, so a long-open modal still moves on.
       const data = await fetchClans(
         this.searchQuery || undefined,
         this.browsePage,
         undefined,
         this.browseSort,
-        this.browseData?.bucket,
+        this.pinnedBucket,
       );
       if (gen !== this.asyncGeneration) return;
       if (data === false) throw new Error("fetch failed");
       this.browseData = data;
+      this.pinnedBucket = data.bucket;
       this.emitState();
     } catch {
       if (gen !== this.asyncGeneration) return;
@@ -93,6 +96,7 @@ export class ClanBrowseView extends LitElement {
     if (this.searchDebounce) clearTimeout(this.searchDebounce);
     this.searchDebounce = setTimeout(() => {
       this.browsePage = 1;
+      this.pinnedBucket = undefined;
       this.loadBrowse();
     }, 400);
   }
@@ -100,6 +104,7 @@ export class ClanBrowseView extends LitElement {
   private onSortChange(sort: ClanBrowseSort) {
     this.browseSort = sort;
     this.browsePage = 1;
+    this.pinnedBucket = undefined;
     this.loadBrowse();
   }
 
@@ -110,6 +115,7 @@ export class ClanBrowseView extends LitElement {
       this.browsePage = this.cachedState.page;
       this.searchQuery = this.cachedState.query;
       this.browseSort = this.cachedState.sort;
+      this.pinnedBucket = this.cachedState.data.bucket;
     } else {
       this.loadBrowse();
     }
@@ -133,6 +139,14 @@ export class ClanBrowseView extends LitElement {
     const boostedBlock = (this.browseData?.boostedBlock ?? []).filter(
       (clan) => !this.myClanRoles.has(clan.tag),
     );
+    // A search has no shuffle: the server lists it A–Z unless another sort
+    // is picked, so the dropdown shows that instead of "Random".
+    const searching = this.searchQuery.length >= 2;
+    const shownSort =
+      searching && this.browseSort === "random" ? "name" : this.browseSort;
+    const sortOptions = searching
+      ? browseSortOptions.filter((opt) => opt.value !== "random")
+      : browseSortOptions;
 
     return html`
       <div class="space-y-4">
@@ -172,11 +186,11 @@ export class ClanBrowseView extends LitElement {
                   )}
                 class="w-full h-full min-h-10 appearance-none pl-3 pr-9 bg-white/5 border border-white/10 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-malibu-blue/50 focus:border-malibu-blue/50 transition-all font-medium hover:bg-white/10 text-sm"
               >
-                ${browseSortOptions.map(
+                ${sortOptions.map(
                   (opt) => html`
                     <option
                       value=${opt.value}
-                      ?selected=${opt.value === this.browseSort}
+                      .selected=${opt.value === shownSort}
                       class="bg-neutral-900"
                     >
                       ${translateText(opt.labelKey)}

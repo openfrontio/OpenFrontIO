@@ -132,6 +132,58 @@ describe("clan-boost-dialog", () => {
     expect(buyClanBoost.mock.calls[0][2]).toBe(buyClanBoost.mock.calls[1][2]);
   });
 
+  it("locks the tier after a network failure, so the retry is the same purchase", async () => {
+    await open();
+    buyClanBoost.mockResolvedValue({ error: "clan_modal.error_network" });
+    buyButton().click();
+    await flush(dialog);
+
+    expect(tierButton("surge").disabled).toBe(true);
+    tierButton("surge").click();
+    await flush(dialog);
+    expect(tierButton("spark").getAttribute("aria-checked")).toBe("true");
+
+    buyButton().click();
+    await flush(dialog);
+    expect(buyClanBoost.mock.calls.map((c) => c[1])).toEqual([
+      "spark",
+      "spark",
+    ]);
+  });
+
+  it("a refusal with an answer leaves the tier free to change", async () => {
+    await open();
+    buyClanBoost.mockResolvedValue({
+      error: "clan_modal.boost_error_daily_limit",
+    });
+    buyButton().click();
+    await flush(dialog);
+    expect(tierButton("surge").disabled).toBe(false);
+  });
+
+  it("is a labelled radio group the arrow keys move through", async () => {
+    await open();
+    const group = q('[role="radiogroup"]')!;
+    expect(group.getAttribute("aria-label")).toBe(
+      "clan_modal.boost_tier_label",
+    );
+    expect(tierButton("spark").tabIndex).toBe(0);
+    expect(tierButton("surge").tabIndex).toBe(-1);
+
+    tierButton("spark").dispatchEvent(
+      new KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true }),
+    );
+    await flush(dialog);
+    expect(tierButton("surge").getAttribute("aria-checked")).toBe("true");
+    expect(document.activeElement).toBe(tierButton("surge"));
+
+    tierButton("surge").dispatchEvent(
+      new KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true }),
+    );
+    await flush(dialog);
+    expect(tierButton("spark").getAttribute("aria-checked")).toBe("true");
+  });
+
   it("shows the server's refusal", async () => {
     await open();
     buyClanBoost.mockResolvedValue({

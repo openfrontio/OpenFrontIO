@@ -121,6 +121,10 @@ async function clanBrowseSeed(): Promise<string> {
   }
 }
 
+// The seed page 1 was fetched with, reused for the pages after it: signing in
+// mid-browse would otherwise switch seeds and repeat or skip clans.
+let pagedBrowseSeed: string | null = null;
+
 // Server sort field and direction for each browse option. Search ignores
 // "random" and keeps the server's alphabetical default.
 const BROWSE_SORT_PARAMS: Record<
@@ -152,7 +156,10 @@ export async function fetchClans(
       if (sortOrder) params.set("sortOrder", sortOrder);
     }
     if (sort === "random" && !searching) {
-      const seed = await clanBrowseSeed();
+      if (page === 1 || pagedBrowseSeed === null) {
+        pagedBrowseSeed = await clanBrowseSeed();
+      }
+      const seed = pagedBrowseSeed;
       if (seed) params.set("seed", seed);
       if (bucket !== undefined) params.set("bucket", String(bucket));
     }
@@ -797,6 +804,8 @@ const BOOST_ERRORS: Record<string, string> = {
   not_recently_active: "clan_modal.boost_error_not_recently_active",
   daily_limit: "clan_modal.boost_error_daily_limit",
   insufficient_balance: "clan_modal.boost_error_insufficient_balance",
+  unknown_tier: "clan_modal.boost_error_unknown_tier",
+  idempotency_conflict: "clan_modal.boost_error_key_conflict",
 };
 
 export async function buyClanBoost(

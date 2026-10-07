@@ -968,7 +968,12 @@ describe("ClanModal — handlers", () => {
 
       const endsAt = new Date(Date.now() + 2 * 3_600_000).toISOString();
       (fetchClanDetail as ReturnType<typeof vi.fn>).mockResolvedValueOnce(
-        makeClan({ boostEndsAt: endsAt }),
+        makeClan({ boostEndsAt: endsAt, softBalance: "750" }),
+      );
+      setState(
+        modal,
+        "myClans" as keyof ClanModal,
+        [makeClan({ softBalance: "1000" })] as never,
       );
       modal
         .querySelector("clan-boost-dialog")!
@@ -982,6 +987,15 @@ describe("ClanModal — handlers", () => {
       );
       expect(fetchClanDetail).toHaveBeenLastCalledWith("TST");
       expect(modal.querySelector("[data-boost-left]")).toBeTruthy();
+
+      // The modal's own copy is refreshed too, so leaving for Manage and
+      // coming back still shows the boost and the post-purchase balance.
+      const m = modal as unknown as {
+        selectedClan: ClanInfo | null;
+        myClans: ClanInfo[];
+      };
+      expect(m.selectedClan?.boostEndsAt).toBe(endsAt);
+      expect(m.myClans[0].softBalance).toBe("750");
     });
 
     it("shows a running boost's time left to everyone", async () => {
@@ -991,6 +1005,21 @@ describe("ClanModal — handlers", () => {
       expect(modal.querySelector("[data-boost-left]")?.textContent).toContain(
         "clan_modal.boost_time_left",
       );
+    });
+
+    it("counts the time left down while the view is open", async () => {
+      vi.useFakeTimers({ shouldAdvanceTime: true });
+      try {
+        const detailView = await openDetailAs(null, {
+          boostEndsAt: new Date(Date.now() + 90_000).toISOString(),
+        });
+        expect(modal.querySelector("[data-boost-left]")).toBeTruthy();
+        await vi.advanceTimersByTimeAsync(120_000);
+        await flushAsync(detailView);
+        expect(modal.querySelector("[data-boost-left]")).toBeNull();
+      } finally {
+        vi.useRealTimers();
+      }
     });
 
     it("hides the time left once the boost has ended", async () => {

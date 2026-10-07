@@ -45,7 +45,9 @@ function formatHours(ms: number): string {
  *
  * Emits `boosted` ({ endsAt }) on success and `cancel` when dismissed. One
  * idempotency key per open, reused for every submit, so a retry after a dead
- * network cannot buy twice.
+ * network cannot buy twice. After such a failure the purchase may have gone
+ * through, so the tier is locked: the retry replays that purchase rather
+ * than meeting the key again with another tier (which the server refuses).
  */
 @customElement("clan-boost-dialog")
 export class ClanBoostDialog extends LitElement {
@@ -56,6 +58,8 @@ export class ClanBoostDialog extends LitElement {
   @state() private selectedTier: string | null = null;
   @state() private submitting = false;
   @state() private serverError: string | null = null;
+  // Set once a submit failed without a server answer; see the class comment.
+  @state() private tierLocked = false;
 
   private idempotencyKey = newIdempotencyKey();
   private portal: HTMLDivElement | null = null;
@@ -174,9 +178,32 @@ export class ClanBoostDialog extends LitElement {
   }
 
   private selectTier(tier: string) {
-    if (this.submitting || tier === this.selectedTier) return;
+    if (this.submitting || this.tierLocked || tier === this.selectedTier) {
+      return;
+    }
     this.selectedTier = tier;
     this.serverError = null;
+  }
+
+  // Radio-group keys: the arrows move the selection, and focus with it.
+  private onTierKeydown(e: KeyboardEvent) {
+    const step =
+      e.key === "ArrowRight" || e.key === "ArrowDown"
+        ? 1
+        : e.key === "ArrowLeft" || e.key === "ArrowUp"
+          ? -1
+          : 0;
+    const tiers = this.status?.tiers ?? [];
+    if (step === 0 || tiers.length === 0) return;
+    e.preventDefault();
+    const at = tiers.findIndex((t) => t.tier === this.selectedTier);
+    const next = tiers[(at + step + tiers.length) % tiers.length];
+    this.selectTier(next.tier);
+    void this.updateComplete.then(() =>
+      this.portal
+        ?.querySelector<HTMLElement>(`[data-tier="${this.selectedTier}"]`)
+        ?.focus(),
+    );
   }
 
   private cancel() {
@@ -196,6 +223,7 @@ export class ClanBoostDialog extends LitElement {
         this.idempotencyKey,
       );
       if ("error" in result) {
+        if (result.error === "clan_modal.error_network") this.tierLocked = true;
         this.serverError = translateText(result.error, {
           currency: this.currencyLabel(tier.currency),
           min: this.status?.eligibility.minMembers ?? 0,
@@ -224,8 +252,9 @@ export class ClanBoostDialog extends LitElement {
         type="button"
         role="radio"
         aria-checked=${selected}
+        tabindex=${selected ? 0 : -1}
         data-tier=${tier.tier}
-        ?disabled=${this.submitting}
+        ?disabled=${this.submitting || (this.tierLocked && !selected)}
         @click=${() => this.selectTier(tier.tier)}
         class="flex-1 flex flex-col items-center gap-1 px-3 py-2.5 rounded-xl border transition-all ${selected
           ? "bg-malibu-blue/15 border-aquarius/70 ring-2 ring-malibu-blue/40 text-white"
@@ -259,7 +288,12 @@ export class ClanBoostDialog extends LitElement {
     const running = formatBoostRemaining(status.boostEndsAt);
     const error = this.serverError ?? this.blocker();
     return html`
-      <div role="radiogroup" class="flex gap-2 mb-4">
+      <div
+        role="radiogroup"
+        aria-label=${translateText("clan_modal.boost_tier_label")}
+        @keydown=${(e: KeyboardEvent) => this.onTierKeydown(e)}
+        class="flex gap-2 mb-4"
+      >
         ${status.tiers.map((t) => this.renderTier(t))}
       </div>
 
