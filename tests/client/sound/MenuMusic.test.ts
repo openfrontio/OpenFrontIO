@@ -7,6 +7,14 @@ vi.mock("howler", () => {
     src: string;
     loop: boolean;
     html5: boolean;
+    preload: boolean;
+    _state: "unloaded" | "loaded";
+    state = vi.fn(() => this._state);
+    // Mirrors Howler: play() queues behind a load but never starts one.
+    load = vi.fn(() => {
+      this._state = "loaded";
+      return this;
+    });
     // Howler queues play() on a Howl that has not loaded and returns at once,
     // and only emits "play" when the media element really starts. For an
     // html5 stream that gap is a network fetch, so the test double has to
@@ -42,6 +50,8 @@ vi.mock("howler", () => {
       this.src = opts.src[0];
       this.loop = opts.loop ?? false;
       this.html5 = opts.html5 ?? false;
+      this.preload = opts.preload ?? true;
+      this._state = this.preload ? "loaded" : "unloaded";
       howlInstances.push(this);
     }
   }
@@ -58,17 +68,25 @@ let musicLevel: number;
 // The channel as the sliders have it, ignoring the focus duck -- which is
 // exactly the distinction isAudible draws and volumeFor does not.
 let musicAudible: boolean;
+// MenuMusic subscribes to the music channel; this is how a test drives it.
+let notifyChange: (category: string) => void;
 
 const buildMixer = () => {
   // Real defaults: slider 0.5, squared by perceptualGain, times the -1 dB
   // music trim.
   musicLevel = 0.5 * 0.5 * 0.89;
   musicAudible = true;
+  const listeners = new Set<(category: string) => void>();
+  notifyChange = (category) => listeners.forEach((fn) => fn(category));
   mixer = {
     register: vi.fn(),
     unregister: vi.fn(),
     volumeFor: vi.fn(() => musicLevel),
     isAudible: vi.fn(() => musicAudible),
+    onChange: vi.fn((fn: (category: string) => void) => {
+      listeners.add(fn);
+      return () => listeners.delete(fn);
+    }),
   };
 };
 
@@ -378,19 +396,112 @@ describe("menu music", () => {
     expect(db).toBeGreaterThan(-30);
   });
 
-  it("does not attempt a hanging fade when the channel is silent", () => {
+  it("does not attempt a hanging fade when the channel goes silent", () => {
+    startMenuMusic(mixer);
+    document.dispatchEvent(new Event("pointerdown"));
+
+    // Muted after the theme was built but before playback began -- the only
+    // way the ramp still meets a silent channel, now that start() declines on
+    // one outright.
+    const theme = themes()[0];
+    musicLevel = 0;
+    musicAudible = false;
+    theme.begin();
+    // A ramp toward zero never reaches a level worth registering at, so the
+    // theme would otherwise stay unregistered for the session.
+    expect(theme.fade).not.toHaveBeenCalled();
+    expect(mixer.register).toHaveBeenCalledWith(theme, "music");
+  });
+
+  it("builds nothing while the music channel is off", () => {
+    // On the Web Audio path (iOS) building the theme means holding the whole
+    // track decoded, so a player with music off must not pay for it.
     buildMixer();
     musicLevel = 0;
     musicAudible = false;
     startMenuMusic(mixer);
     document.dispatchEvent(new Event("pointerdown"));
 
-    const theme = themes()[0];
-    theme.begin();
-    // A ramp toward zero never reaches a level worth registering at, so the
-    // theme would otherwise stay unregistered for the session.
-    expect(theme.fade).not.toHaveBeenCalled();
-    expect(mixer.register).toHaveBeenCalledWith(theme, "music");
+    expect(themes()).toHaveLength(0);
+  });
+
+  it("starts when the player turns music on later", () => {
+    buildMixer();
+    musicLevel = 0;
+    musicAudible = false;
+    startMenuMusic(mixer);
+    // Spends the gesture listeners while the channel is still silent.
+    document.dispatchEvent(new Event("pointerdown"));
+    expect(themes()).toHaveLength(0);
+
+    musicLevel = 0.5 * 0.5 * 0.89;
+    musicAudible = true;
+    notifyChange("music");
+
+    expect(themes()).toHaveLength(1);
+    expect(themes()[0].play).toHaveBeenCalled();
+  });
+
+  it("does not start before the player has interacted", () => {
+    // The mixer notifies this listener on every focus change as well, whatever
+    // muteOnBlur says. A play() with no gesture behind it is rejected by the
+    // autoplay policy and Howler does not retry on unlock, so the settled Howl
+    // would leave `theme` non-null and the real first click would return
+    // early -- a menu silent until a lobby had been joined and left.
+    startMenuMusic(mixer);
+    notifyChange("music");
+
+    expect(themes()).toHaveLength(0);
+
+    // The click still starts it.
+    document.dispatchEvent(new Event("pointerdown"));
+    expect(themes()).toHaveLength(1);
+  });
+
+  it("does not start on a switch-on that no gesture preceded", () => {
+    // Belt to the transition check's braces: even a genuine silent-to-audible
+    // change cannot start playback until the document has been activated,
+    // because the rejected play() would strand a settled Howl in `theme`.
+    buildMixer();
+    musicLevel = 0;
+    musicAudible = false;
+    startMenuMusic(mixer);
+
+    musicLevel = 0.5 * 0.5 * 0.89;
+    musicAudible = true;
+    notifyChange("music");
+    expect(themes()).toHaveLength(0);
+  });
+
+  it("does not start over a running game when music is turned on", () => {
+    startMenuMusic(mixer);
+    document.dispatchEvent(new Event("pointerdown"));
+    document.dispatchEvent(new Event("game-starting"));
+
+    // The gameplay track owns the music channel from here, and a slider move
+    // must not bring the menu theme back on top of it.
+    notifyChange("music");
+    expect(themes()).toHaveLength(1);
+  });
+
+  it("loads the theme itself on iOS, where nothing is preloaded", () => {
+    const previousIsIOS = Platform.isIOS;
+    Platform.isIOS = true;
+    try {
+      startMenuMusic(mixer);
+      document.dispatchEvent(new Event("pointerdown"));
+
+      // Deferred so a player who never turns music on never downloads or
+      // decodes the theme -- which on Web Audio is held as PCM, far larger
+      // than the file. Howler's play() queues behind a load but never starts
+      // one, so the theme needs loading explicitly here.
+      const theme = themes()[0];
+      expect(theme.preload).toBe(false);
+      expect(theme.load).toHaveBeenCalled();
+      expect(theme.play).toHaveBeenCalled();
+    } finally {
+      Platform.isIOS = previousIsIOS;
+    }
   });
 
   it("ramps again on the start after a menu restore", () => {
