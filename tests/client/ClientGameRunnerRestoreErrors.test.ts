@@ -45,15 +45,6 @@ vi.mock("../../src/client/view/GameView", () => ({
   GameView: class {},
 }));
 
-vi.mock("../../src/client/UserSettings", async (importOriginal) => {
-  const actual =
-    await importOriginal<typeof import("../../src/client/UserSettings")>();
-  return {
-    ...actual,
-    userSettings: actual.userSettings ?? {},
-  };
-});
-
 import { createClientGame } from "../../src/client/ClientGameRunner";
 
 describe("createClientGame worker cleanup on restore failure", () => {

@@ -29,15 +29,6 @@ vi.mock("../../src/client/sound/SoundManager", () => ({
   },
 }));
 
-vi.mock("../../src/client/UserSettings", async (importOriginal) => {
-  const actual =
-    await importOriginal<typeof import("../../src/client/UserSettings")>();
-  return {
-    ...actual,
-    userSettings: actual.userSettings ?? {},
-  };
-});
-
 vi.mock("../../src/client/Utils", () => ({
   translateText: (k: string) => k,
   homeHref: () => "/",
