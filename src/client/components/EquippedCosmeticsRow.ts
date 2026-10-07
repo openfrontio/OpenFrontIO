@@ -1,12 +1,12 @@
-import { html, LitElement, nothing, TemplateResult } from "lit";
-import { customElement, property, state } from "lit/decorators.js";
-import { UserMeResponse } from "../../core/ApiSchemas";
+import { UserMeResponse } from "@openfront/shared/ApiSchemas";
 import {
   Cosmetics,
   Effect,
   isNukeExplosionEffect,
-} from "../../core/CosmeticSchemas";
-import { PlayerCosmetics } from "../../core/Schemas";
+} from "@openfront/shared/CosmeticSchemas";
+import { PlayerCosmetics } from "@openfront/shared/WireSchemas";
+import { html, LitElement, nothing, TemplateResult } from "lit";
+import { customElement, property, state } from "lit/decorators.js";
 import { getUserMe } from "../Api";
 import {
   fetchCosmetics,
