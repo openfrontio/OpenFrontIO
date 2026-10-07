@@ -4,13 +4,13 @@ import {
   GameUpdateType,
 } from "@openfront/engine-api/game/GameUpdates";
 import { EventBus } from "@openfront/shared/EventBus";
-import { onlyImages } from "@openfront/shared/SharedUtil";
 import { html, LitElement } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import { DirectiveResult } from "lit/directive.js";
 import { unsafeHTML, UnsafeHTMLDirective } from "lit/directives/unsafe-html.js";
 import { Controller } from "../../Controller";
 import { GameView } from "../../view";
+import { onlyImages } from "./OnlyImages";
 
 interface ChatEvent {
   description: string;

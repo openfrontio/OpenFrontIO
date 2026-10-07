@@ -125,6 +125,13 @@ describe("checkTrustedBot", () => {
     expect(r.action).toBe("pass");
   });
 
+  it("passes for openfront-backport[bot]", () => {
+    const r = checkTrustedBot(
+      makePR({ user: { login: "openfront-backport[bot]" } }),
+    );
+    expect(r.action).toBe("pass");
+  });
+
   it("returns next for a regular author", () => {
     expect(checkTrustedBot(makePR({ user: { login: "alice" } })).action).toBe(
       "next",

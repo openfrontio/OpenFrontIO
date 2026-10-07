@@ -746,6 +746,18 @@
       "warship": "Warship"
     }
   },
+  "emoji_table": {
+    "diplomacy": "Diplomacy",
+    "directions": "Directions",
+    "faces": "Faces",
+    "favorite_remove_hint": "Drag out to remove",
+    "favorites": "Favorites",
+    "favorites_hint": "Drag emojis here to give them a shortcut key",
+    "favorites_hint_touch": "Drag emojis here to keep them handy",
+    "gestures": "Gestures",
+    "ranks": "Ranks",
+    "things": "Things"
+  },
   "error_modal": {
     "connection_error": "Connection error!",
     "connection_lost": "Lost connection to the game server and could not reconnect. Refresh the page to try rejoining.",
@@ -798,6 +810,7 @@
     "request_alliance": "{name} requests an alliance!",
     "retreating": "retreating",
     "sent_emoji": "Sent {name}: {emoji}",
+    "sent_emoji_all": "Sent everyone: {emoji}",
     "sent_gold_to_player": "Sent {gold} gold to {name}",
     "sent_troops_to_player": "Sent {troops} troops to {name}",
     "trade_ship_captured": "Your trade ship was captured by {name}",
@@ -2304,6 +2317,8 @@
     "easter_bug_count_label": "Bug Count",
     "easter_writing_speed_desc": "Adjust how fast you pretend to code (x1–x100)",
     "easter_writing_speed_label": "Writing Speed Multiplier",
+    "emoji_menu": "Emoji Menu",
+    "emoji_menu_desc": "Open the emoji menu for the player whose tile is under your cursor.",
     "emoji_menu_modifier": "Emoji Menu Modifier",
     "emoji_menu_modifier_desc": "Hold this key while clicking to open the emoji menu.",
     "emojis_desc": "Toggle whether emojis are shown in game",

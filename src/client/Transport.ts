@@ -10,7 +10,6 @@ import {
 import {
   AllPlayersStats,
   ClientID,
-  GameConfigPatch,
   Intent,
   Winner,
 } from "@openfront/engine-api/Schemas";
@@ -52,6 +51,12 @@ import { LobbyConfig } from "./ClientGameRunner";
 import { clientPlatform } from "./ClientPlatform";
 import { isDesktopShell } from "./DesktopShell";
 import { showInGameConfirm } from "./InGameModal";
+import {
+  SendKickPlayerIntentEvent,
+  SendSpectateEvent,
+  SendToggleGameStartTimer,
+  SendUpdateGameConfigIntentEvent,
+} from "./LobbyEvents";
 import { LocalServer } from "./LocalServer";
 import { describeSocketClose } from "./SocketClose";
 import { homeHref, translateText } from "./Utils";
@@ -212,23 +217,6 @@ export class MoveWarshipIntentEvent implements GameEvent {
     public readonly unitIds: number[],
     public readonly tile: number,
   ) {}
-}
-
-export class SendKickPlayerIntentEvent implements GameEvent {
-  constructor(public readonly target: string) {}
-}
-
-export class SendUpdateGameConfigIntentEvent implements GameEvent {
-  constructor(public readonly config: GameConfigPatch) {}
-}
-
-export class SendToggleGameStartTimer implements GameEvent {
-  constructor() {}
-}
-
-// Switch between playing and watching from the lobby screen.
-export class SendSpectateEvent implements GameEvent {
-  constructor(public readonly spectator: boolean) {}
 }
 
 // One-shot marker that this lobby has already sent us to a sibling, so a
