@@ -21,7 +21,7 @@ import {
 import {
   readSnapshotHeader,
   restoreMapsFromSnapshot,
-} from "@openfront/engine/snapshot/GameSnapshot";
+} from "@openfront/engine-lib/snapshot/MapSnapshot";
 import { EventBus } from "@openfront/shared/EventBus";
 import { GameMapLoader, loadMapFiles } from "@openfront/shared/GameMapLoader";
 import { replacer } from "@openfront/shared/SharedUtil";
