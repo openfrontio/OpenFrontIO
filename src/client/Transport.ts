@@ -1,12 +1,4 @@
-import { ClientEnv, NoServerError } from "src/client/ClientEnv";
-import { ZbContext } from "../../zbin";
-import {
-  CloseCode,
-  CloseReason,
-  isCloseReason,
-  isTerminalClose,
-} from "../core/CloseCodes";
-import { EventBus, EventConstructor, GameEvent } from "../core/EventBus";
+import { TileRef } from "@openfront/engine-api/game/GameMap";
 import {
   AllPlayers,
   GameType,
@@ -14,12 +6,26 @@ import {
   PlayerID,
   Tick,
   UnitType,
-} from "../core/game/Game";
-import { TileRef } from "../core/game/GameMap";
+} from "@openfront/engine-api/game/GameTypes";
 import {
   AllPlayersStats,
-  ClientHashMessage,
   ClientID,
+  Intent,
+  Winner,
+} from "@openfront/engine-api/Schemas";
+import {
+  CloseCode,
+  CloseReason,
+  isCloseReason,
+  isTerminalClose,
+} from "@openfront/shared/CloseCodes";
+import {
+  EventBus,
+  EventConstructor,
+  GameEvent,
+} from "@openfront/shared/EventBus";
+import {
+  ClientHashMessage,
   ClientIntentMessage,
   ClientJoinMessage,
   ClientMessage,
@@ -29,23 +35,28 @@ import {
   ClientSendLiveStatsMessage,
   ClientSendWinnerMessage,
   ClientSpectateMessage,
-  GameConfig,
-  Intent,
   LiveStats,
   ReportReason,
   ServerMessage,
-  Winner,
-} from "../core/Schemas";
+} from "@openfront/shared/WireSchemas";
 import {
   createGameWireContext,
   decodeServerMessage,
   encodeClientMessage,
-} from "../core/ZbinWire";
+} from "@openfront/shared/ZbinWire";
+import { ZbContext } from "@openfront/zbin";
+import { ClientEnv, NoServerError } from "src/client/ClientEnv";
 import { getPlayToken } from "./Auth";
 import { LobbyConfig } from "./ClientGameRunner";
 import { clientPlatform } from "./ClientPlatform";
 import { isDesktopShell } from "./DesktopShell";
 import { showInGameConfirm } from "./InGameModal";
+import {
+  SendKickPlayerIntentEvent,
+  SendSpectateEvent,
+  SendToggleGameStartTimer,
+  SendUpdateGameConfigIntentEvent,
+} from "./LobbyEvents";
 import { LocalServer } from "./LocalServer";
 import { describeSocketClose } from "./SocketClose";
 import { homeHref, translateText } from "./Utils";
@@ -206,23 +217,6 @@ export class MoveWarshipIntentEvent implements GameEvent {
     public readonly unitIds: number[],
     public readonly tile: number,
   ) {}
-}
-
-export class SendKickPlayerIntentEvent implements GameEvent {
-  constructor(public readonly target: string) {}
-}
-
-export class SendUpdateGameConfigIntentEvent implements GameEvent {
-  constructor(public readonly config: Partial<GameConfig>) {}
-}
-
-export class SendToggleGameStartTimer implements GameEvent {
-  constructor() {}
-}
-
-// Switch between playing and watching from the lobby screen.
-export class SendSpectateEvent implements GameEvent {
-  constructor(public readonly spectator: boolean) {}
 }
 
 // One-shot marker that this lobby has already sent us to a sibling, so a

@@ -1,6 +1,6 @@
+import type { SteamUser } from "@openfront/shared/ApiSchemas";
 import { LitElement, html } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
-import type { SteamUser } from "../../../../core/ApiSchemas";
 import { translateText } from "../../../Utils";
 
 @customElement("steam-user-header")

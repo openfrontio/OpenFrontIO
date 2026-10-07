@@ -1,7 +1,3 @@
-import { html, LitElement, nothing, type TemplateResult } from "lit";
-import { customElement, state } from "lit/decorators.js";
-import { ClientEnv } from "src/client/ClientEnv";
-import { UserMeResponse } from "../core/ApiSchemas";
 import {
   Duos,
   GameMapType,
@@ -10,8 +6,12 @@ import {
   HumansVsNations,
   Quads,
   Trios,
-} from "../core/game/Game";
-import { PublicGameInfo, PublicGames } from "../core/Schemas";
+} from "@openfront/engine-api/game/GameTypes";
+import { UserMeResponse } from "@openfront/shared/ApiSchemas";
+import { PublicGameInfo, PublicGames } from "@openfront/shared/WireSchemas";
+import { html, LitElement, nothing, type TemplateResult } from "lit";
+import { customElement, state } from "lit/decorators.js";
+import { ClientEnv } from "src/client/ClientEnv";
 import { getDesktopSessionState } from "./Auth";
 import "./components/IOSAddToHomeScreenBanner";
 import {
@@ -31,9 +31,10 @@ import {
   type DesktopSessionState,
   type DesktopUpdateState,
 } from "./DesktopShell";
-import { HostLobbyModal } from "./HostLobbyModal";
+import type { HostLobbyModal } from "./HostLobbyModal";
 import { showInGameAlert } from "./InGameModal";
-import { JoinLobbyModal } from "./JoinLobbyModal";
+import type { JoinLobbyModal } from "./JoinLobbyModal";
+import { whenModalLoaded } from "./LazyModals";
 import { PublicLobbySocket } from "./LobbySocket";
 import { JoinLobbyEvent } from "./Main";
 import {
@@ -45,7 +46,7 @@ import {
   retryServerList,
   type BackendReachabilityDetail,
 } from "./ServerList";
-import { SinglePlayerModal } from "./SinglePlayerModal";
+import type { SinglePlayerModal } from "./SinglePlayerModal";
 import { UsernameInput } from "./UsernameInput";
 import {
   calculateServerTimeOffset,
@@ -818,9 +819,11 @@ export class GameModeSelector extends LitElement {
 
   private openSinglePlayerModal = () => {
     if (!this.validateUsername()) return;
-    (
-      document.querySelector("single-player-modal") as SinglePlayerModal
-    )?.open();
+    whenModalLoaded("single-player-modal", () =>
+      (
+        document.querySelector("single-player-modal") as SinglePlayerModal
+      )?.open(),
+    );
   };
 
   // Handled in Main, which also serves the help page's tutorial button.
@@ -832,13 +835,17 @@ export class GameModeSelector extends LitElement {
   private openHostLobby = () => {
     if (this.blockedFromApiAction()) return;
     if (!this.validateUsername()) return;
-    (document.querySelector("host-lobby-modal") as HostLobbyModal)?.open();
+    whenModalLoaded("host-lobby-modal", () =>
+      (document.querySelector("host-lobby-modal") as HostLobbyModal)?.open(),
+    );
   };
 
   private openJoinLobby = () => {
     if (this.blockedFromApiAction()) return;
     if (!this.validateUsername()) return;
-    (document.querySelector("join-lobby-modal") as JoinLobbyModal)?.open();
+    whenModalLoaded("join-lobby-modal", () =>
+      (document.querySelector("join-lobby-modal") as JoinLobbyModal)?.open(),
+    );
   };
 
   // Number of open hosted lobbies waiting in the browser; shown as a chip

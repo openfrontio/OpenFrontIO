@@ -1,10 +1,9 @@
-import { createHash } from "crypto";
+import { AllPlayersStats, ClientID } from "@openfront/engine-api/Schemas";
 import {
-  AllPlayersStats,
-  ClientID,
   ClientSendWinnerMessage,
   LiveStats,
-} from "../core/Schemas";
+} from "@openfront/shared/WireSchemas";
+import { createHash } from "crypto";
 import { VoteRound } from "./VoteTally";
 
 // The simulation runs on the clients, so the outcomes the server has to
@@ -69,6 +68,11 @@ export class WinnerVote {
   // The winning message once a majority has backed one, else null.
   winner(): ClientSendWinnerMessage | null {
     return this.decided;
+  }
+
+  // How many different winners the votes so far have named.
+  candidates(): number {
+    return this.round.size();
   }
 
   // Records a vote from `ip`. Returns the candidate's key and how many unique

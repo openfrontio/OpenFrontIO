@@ -1,15 +1,13 @@
-import { DeleteUnitExecution } from "../src/core/execution/DeleteUnitExecution";
-import { SpawnExecution } from "../src/core/execution/SpawnExecution";
+import { TileRef } from "@openfront/engine-api/game/GameMap";
 import {
-  Game,
-  Player,
   PlayerInfo,
   PlayerType,
-  Unit,
   UnitType,
-} from "../src/core/game/Game";
-import { TileRef } from "../src/core/game/GameMap";
-import { GameID } from "../src/core/Schemas";
+} from "@openfront/engine-api/game/GameTypes";
+import { GameID } from "@openfront/engine-api/Schemas";
+import { DeleteUnitExecution } from "@openfront/engine/execution/DeleteUnitExecution";
+import { SpawnExecution } from "@openfront/engine/execution/SpawnExecution";
+import { Game, Player, Unit } from "@openfront/engine/game/Game";
 import { setup } from "./util/Setup";
 import { executeTicks } from "./util/utils";
 

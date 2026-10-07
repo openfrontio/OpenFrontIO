@@ -19,6 +19,7 @@ vi.mock("../../src/client/Utils", () => ({
     params ? `${key} ${Object.values(params).join(" ")}` : key,
 }));
 
+import type { UserSubscription } from "@openfront/shared/ApiSchemas";
 import {
   cancelSubscription,
   invalidateUserMe,
@@ -29,7 +30,6 @@ import {
   showInGameAlert,
   showInGameConfirm,
 } from "../../src/client/InGameModal";
-import type { UserSubscription } from "../../src/core/ApiSchemas";
 
 const PERIOD_END = new Date("2026-09-01T00:00:00Z");
 // The panel's own format (toLocaleDateString, short month), evaluated here so

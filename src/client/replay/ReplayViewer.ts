@@ -8,18 +8,12 @@
  * build is sent to that build's versioned shell.
  */
 
+import { Cell, PlayerType } from "@openfront/engine-api/game/GameTypes";
+import type { GameStartInfo } from "@openfront/engine-api/Schemas";
+import { Config } from "@openfront/engine-lib/configuration/Config";
+import { EventBus } from "@openfront/shared/EventBus";
 import { html, LitElement, nothing } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
-import { Config } from "../../core/configuration/Config";
-import { EventBus } from "../../core/EventBus";
-import { Cell, PlayerType } from "../../core/game/Game";
-import { loadTerrainMap } from "../../core/game/TerrainMapLoader";
-import {
-  GRAPHICS_KEY,
-  USER_SETTINGS_CHANGED_EVENT,
-  UserSettings,
-} from "../../core/game/UserSettings";
-import type { GameStartInfo } from "../../core/Schemas";
 import { MapLayerController } from "../controllers/MapLayerController";
 import { ViewModeController } from "../controllers/ViewModeController";
 import "../hud/layers/EventsDisplay";
@@ -52,10 +46,18 @@ import {
   type PlayerState,
   type PlayerStatusData,
 } from "../render/types";
-import { terrainMapFileLoader } from "../TerrainMapFileLoader";
+import {
+  loadCachedTerrainMap,
+  terrainMapFileLoader,
+} from "../TerrainMapFileLoader";
 import type { TransformHandler } from "../TransformHandler";
 import { GoToPlayerEvent } from "../TransformHandler";
 import { PauseGameIntentEvent } from "../Transport";
+import {
+  GRAPHICS_KEY,
+  USER_SETTINGS_CHANGED_EVENT,
+  UserSettings,
+} from "../UserSettings";
 import { translateText } from "../Utils";
 import { gunzipInBrowser } from "./BrowserGzip";
 import type {
@@ -97,7 +99,6 @@ async function openPlayback(
   const gsi = source.base.gameStartInfo as GameStartInfo;
   const config = new Config(
     gsi.config,
-    userSettings,
     /* isReplay */ true,
     /* listed */ false,
     /* spectator */ true,
@@ -378,12 +379,7 @@ export class ReplayViewer extends LitElement {
     const header = playback.header;
     const gsi = header.gameStartInfo as GameStartInfo;
     const [terrain] = await Promise.all([
-      loadTerrainMap(
-        gsi.config.gameMap,
-        gsi.config.gameMapSize,
-        terrainMapFileLoader,
-        false,
-      ),
+      loadCachedTerrainMap(gsi.config.gameMap, gsi.config.gameMapSize),
       preloadAtlasData(),
     ]);
     if (this.abort.signal.aborted) return;

@@ -1,3 +1,11 @@
+import type { UserMeResponse } from "@openfront/shared/ApiSchemas";
+import {
+  EFFECT_TYPES,
+  NUKE_EXPLOSION_TYPES,
+  type Cosmetics,
+  type EffectType,
+  type NukeExplosionType,
+} from "@openfront/shared/CosmeticSchemas";
 import type { LitElement } from "lit";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { getUserMe } from "../../src/client/Api";
@@ -5,17 +13,6 @@ import { userAuth } from "../../src/client/Auth";
 import { fetchCosmetics } from "../../src/client/Cosmetics";
 import "../../src/client/InventoryModal";
 import type { InventoryModal } from "../../src/client/InventoryModal";
-import type { CosmeticCard } from "../../src/client/components/CosmeticCard";
-import type { EffectsGrid } from "../../src/client/components/EffectsGrid";
-import type { InventoryLoadoutBar } from "../../src/client/components/InventoryLoadoutBar";
-import type { UserMeResponse } from "../../src/core/ApiSchemas";
-import {
-  EFFECT_TYPES,
-  NUKE_EXPLOSION_TYPES,
-  type Cosmetics,
-  type EffectType,
-  type NukeExplosionType,
-} from "../../src/core/CosmeticSchemas";
 import {
   CROWN_KEY,
   EFFECTS_KEY,
@@ -24,7 +21,10 @@ import {
   MAX_LOADOUTS,
   PATTERN_KEY,
   UserSettings,
-} from "../../src/core/game/UserSettings";
+} from "../../src/client/UserSettings";
+import type { CosmeticCard } from "../../src/client/components/CosmeticCard";
+import type { EffectsGrid } from "../../src/client/components/EffectsGrid";
+import type { InventoryLoadoutBar } from "../../src/client/components/InventoryLoadoutBar";
 
 vi.mock("../../src/client/Api", async (importOriginal) => ({
   ...(await importOriginal<typeof import("../../src/client/Api")>()),

@@ -1,0 +1,428 @@
+import { TileRef } from "@openfront/engine-api/game/GameMap";
+import {
+  BuildableUnit,
+  Cell,
+  PlayerActions,
+  PlayerBorderTiles,
+  PlayerBuildableUnitType,
+  PlayerID,
+  PlayerProfile,
+} from "@openfront/engine-api/game/GameTypes";
+import {
+  ErrorUpdate,
+  GameUpdateViewData,
+} from "@openfront/engine-api/game/GameUpdates";
+import { MapFiles } from "@openfront/engine-api/game/MapFiles";
+import { ClientID, GameStartInfo, Turn } from "@openfront/engine-api/Schemas";
+import {
+  InitMessage,
+  WorkerMessage,
+} from "@openfront/engine-api/worker/WorkerMessages";
+import {
+  loadMapFiles,
+  mapFilesTransfer,
+} from "@openfront/shared/GameMapLoader";
+import { generateID } from "@openfront/shared/SharedUtil";
+import { terrainMapFileLoader } from "./TerrainMapFileLoader";
+
+// Inlined as a same-origin Blob (Vite's `?worker&inline`), sidestepping the
+// cross-origin `new Worker(url)` restriction that would otherwise apply when
+// the worker bundle is served from the CDN. The dynamic import keeps the
+// ~700 KB base64 payload in its own chunk, fetched when a game starts,
+// instead of inside the main bundle.
+export async function createGameWorker(): Promise<Worker> {
+  const { default: GameWorker } =
+    await import("@openfront/engine/worker/Worker.worker?worker&inline");
+  return new GameWorker();
+}
+
+export interface WorkerSnapshotResult {
+  bytes: Uint8Array;
+  tick: number;
+}
+
+export class WorkerClient {
+  private worker: Worker | null = null;
+  private isInitialized = false;
+  private messageHandlers: Map<string, (message: WorkerMessage) => void>;
+  private gameUpdateCallback?: (
+    update: GameUpdateViewData | ErrorUpdate,
+  ) => void;
+  public initialUpdate: GameUpdateViewData | null = null;
+
+  public consumeInitialUpdate(): GameUpdateViewData | null {
+    const update = this.initialUpdate;
+    this.initialUpdate = null;
+    return update;
+  }
+
+  constructor(
+    private gameStartInfo: GameStartInfo,
+    private clientID: ClientID | undefined,
+    /** Resume from this game snapshot instead of starting a new game. */
+    private snapshotToRestore?: Uint8Array,
+  ) {
+    this.messageHandlers = new Map();
+  }
+
+  private handleWorkerMessage(event: MessageEvent<WorkerMessage>) {
+    const message = event.data;
+
+    switch (message.type) {
+      case "game_update":
+        if (this.gameUpdateCallback && message.gameUpdate) {
+          this.gameUpdateCallback(message.gameUpdate);
+        }
+        break;
+      case "game_update_batch":
+        if (this.gameUpdateCallback && message.gameUpdates) {
+          for (const gu of message.gameUpdates) {
+            this.gameUpdateCallback(gu);
+          }
+        }
+        break;
+      case "game_error":
+        if (this.gameUpdateCallback && message.error) {
+          this.gameUpdateCallback(message.error);
+        }
+        break;
+
+      case "initialized":
+        if (message.initialUpdate) {
+          this.initialUpdate = message.initialUpdate;
+        }
+        if (message.id && this.messageHandlers.has(message.id)) {
+          const handler = this.messageHandlers.get(message.id)!;
+          handler(message);
+          this.messageHandlers.delete(message.id);
+        }
+        break;
+
+      default:
+        if (message.id && this.messageHandlers.has(message.id)) {
+          const handler = this.messageHandlers.get(message.id)!;
+          handler(message);
+          this.messageHandlers.delete(message.id);
+        }
+        break;
+    }
+  }
+
+  async initialize(): Promise<void> {
+    // The engine fetches nothing: it gets the map in the init message.
+    const { gameMap, gameMapSize } = this.gameStartInfo.config;
+    const created = createGameWorker();
+    let map: MapFiles;
+    try {
+      map = await loadMapFiles(terrainMapFileLoader, gameMap, gameMapSize);
+    } catch (err) {
+      // Nothing will use the worker; don't leave it running.
+      created.then(
+        (w) => w.terminate(),
+        () => {},
+      );
+      throw err;
+    }
+    const worker = await created;
+    this.worker = worker;
+    worker.addEventListener("message", this.handleWorkerMessage.bind(this));
+
+    return new Promise((resolve, reject) => {
+      const messageId = generateID();
+
+      this.messageHandlers.set(messageId, (message) => {
+        if (message.type === "initialized") {
+          this.isInitialized = true;
+          if (message.initialUpdate) {
+            this.initialUpdate = message.initialUpdate;
+          }
+          resolve();
+        } else if (message.type === "init_error") {
+          // No game will own this client, so nothing would stop the worker.
+          this.cleanup();
+          reject(new Error(message.error));
+        }
+      });
+
+      const init: InitMessage = {
+        type: "init",
+        id: messageId,
+        gameStartInfo: this.gameStartInfo,
+        clientID: this.clientID,
+        map,
+        snapshot: this.snapshotToRestore,
+      };
+      worker.postMessage(init, mapFilesTransfer(map));
+
+      setTimeout(() => {
+        if (!this.isInitialized) {
+          this.cleanup();
+          reject(new Error("Worker initialization timeout"));
+        }
+      }, 60000);
+    });
+  }
+
+  start(gameUpdate: (gu: GameUpdateViewData | ErrorUpdate) => void) {
+    if (!this.isInitialized) {
+      throw new Error("Failed to initialize pathfinder");
+    }
+    this.gameUpdateCallback = gameUpdate;
+    if (this.initialUpdate) {
+      const update = this.initialUpdate;
+      this.initialUpdate = null;
+      this.gameUpdateCallback(update);
+    }
+  }
+
+  sendTurn(turn: Turn) {
+    if (!this.isInitialized) {
+      throw new Error("Worker not initialized");
+    }
+
+    this.worker!.postMessage({
+      type: "turn",
+      turn,
+    });
+  }
+
+  /** Serializes the worker's game at its current tick (uncompressed). */
+  snapshot(gitCommit?: string): Promise<WorkerSnapshotResult> {
+    return new Promise((resolve, reject) => {
+      if (!this.isInitialized) {
+        reject(new Error("Worker not initialized"));
+        return;
+      }
+
+      const messageId = generateID();
+
+      this.messageHandlers.set(messageId, (message) => {
+        if (message.type === "snapshot_result") {
+          if (message.snapshot === null) {
+            reject(new Error("Snapshot failed"));
+          } else {
+            resolve({
+              bytes: message.snapshot,
+              tick: message.tick,
+            });
+          }
+        }
+      });
+
+      this.worker!.postMessage({
+        type: "snapshot",
+        id: messageId,
+        gitCommit,
+      });
+    });
+  }
+
+  playerProfile(playerID: number): Promise<PlayerProfile> {
+    return new Promise((resolve, reject) => {
+      if (!this.isInitialized) {
+        reject(new Error("Worker not initialized"));
+        return;
+      }
+
+      const messageId = generateID();
+
+      this.messageHandlers.set(messageId, (message) => {
+        if (
+          message.type === "player_profile_result" &&
+          message.result !== undefined
+        ) {
+          resolve(message.result);
+        }
+      });
+
+      this.worker!.postMessage({
+        type: "player_profile",
+        id: messageId,
+        playerID: playerID,
+      });
+    });
+  }
+
+  playerBorderTiles(playerID: PlayerID): Promise<PlayerBorderTiles> {
+    return new Promise((resolve, reject) => {
+      if (!this.isInitialized) {
+        reject(new Error("Worker not initialized"));
+        return;
+      }
+
+      const messageId = generateID();
+
+      this.messageHandlers.set(messageId, (message) => {
+        if (
+          message.type === "player_border_tiles_result" &&
+          message.result !== undefined
+        ) {
+          resolve(message.result);
+        }
+      });
+
+      this.worker!.postMessage({
+        type: "player_border_tiles",
+        id: messageId,
+        playerID: playerID,
+      });
+    });
+  }
+
+  playerInteraction(
+    playerID: PlayerID,
+    x?: number,
+    y?: number,
+    units?: readonly PlayerBuildableUnitType[] | null,
+  ): Promise<PlayerActions> {
+    return new Promise((resolve, reject) => {
+      if (!this.isInitialized) {
+        reject(new Error("Worker not initialized"));
+        return;
+      }
+      const messageId = generateID();
+      const cleanup = (timer: ReturnType<typeof setTimeout>) => {
+        clearTimeout(timer);
+        this.messageHandlers.delete(messageId);
+      };
+      const timeout = setTimeout(() => {
+        cleanup(timeout);
+        console.warn(`player_actions request timed out (request ${messageId})`);
+        reject(new Error("player_actions request timed out"));
+      }, 5000);
+
+      this.messageHandlers.set(messageId, (message) => {
+        if (message.type === "player_actions_result") {
+          cleanup(timeout);
+          resolve(message.result);
+        } else if (message.type === "player_actions_error") {
+          cleanup(timeout);
+          reject(new Error(message.error));
+        }
+      });
+
+      this.worker!.postMessage({
+        type: "player_actions",
+        id: messageId,
+        playerID,
+        x,
+        y,
+        units,
+      });
+    });
+  }
+
+  playerBuildables(
+    playerID: PlayerID,
+    x?: number,
+    y?: number,
+    units?: readonly PlayerBuildableUnitType[],
+  ): Promise<BuildableUnit[]> {
+    return new Promise((resolve, reject) => {
+      if (!this.isInitialized) {
+        reject(new Error("Worker not initialized"));
+        return;
+      }
+
+      const messageId = generateID();
+
+      this.messageHandlers.set(messageId, (message) => {
+        if (
+          message.type === "player_buildables_result" &&
+          message.result !== undefined
+        ) {
+          resolve(message.result);
+        }
+      });
+
+      this.worker!.postMessage({
+        type: "player_buildables",
+        id: messageId,
+        playerID,
+        x,
+        y,
+        units,
+      });
+    });
+  }
+
+  attackClusteredPositions(
+    playerID: number,
+    attackID?: string,
+  ): Promise<{ id: string; positions: Cell[] }[]> {
+    return new Promise((resolve, reject) => {
+      if (!this.isInitialized) {
+        reject(new Error("Worker not initialized"));
+        return;
+      }
+
+      const messageId = generateID();
+
+      const timeout = setTimeout(() => {
+        this.messageHandlers.delete(messageId);
+        reject(new Error("attack_clustered_positions request timed out"));
+      }, 5000);
+
+      this.messageHandlers.set(messageId, (message) => {
+        clearTimeout(timeout);
+        if (message.type !== "attack_clustered_positions_result") {
+          reject(
+            new Error(
+              `Unexpected message type for attackClusteredPositions: ${message.type}`,
+            ),
+          );
+          return;
+        }
+        resolve(
+          message.attacks.map((a) => ({
+            id: a.id,
+            positions: a.positions.map((c) => new Cell(c.x, c.y)),
+          })),
+        );
+      });
+
+      this.worker!.postMessage({
+        type: "attack_clustered_positions",
+        id: messageId,
+        playerID,
+        attackID,
+      });
+    });
+  }
+
+  transportShipSpawn(
+    playerID: PlayerID,
+    targetTile: TileRef,
+  ): Promise<TileRef | false> {
+    return new Promise((resolve, reject) => {
+      if (!this.isInitialized) {
+        reject(new Error("Worker not initialized"));
+        return;
+      }
+
+      const messageId = generateID();
+
+      this.messageHandlers.set(messageId, (message) => {
+        if (
+          message.type === "transport_ship_spawn_result" &&
+          message.result !== undefined
+        ) {
+          resolve(message.result);
+        }
+      });
+
+      this.worker!.postMessage({
+        type: "transport_ship_spawn",
+        id: messageId,
+        playerID: playerID,
+        targetTile: targetTile,
+      });
+    });
+  }
+
+  cleanup() {
+    this.worker?.terminate();
+    this.messageHandlers.clear();
+    this.gameUpdateCallback = undefined;
+  }
+}

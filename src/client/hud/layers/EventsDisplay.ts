@@ -1,9 +1,4 @@
-import { html, LitElement } from "lit";
-import { customElement, query, state } from "lit/decorators.js";
-import { DirectiveResult } from "lit/directive.js";
-import { unsafeHTML, UnsafeHTMLDirective } from "lit/directives/unsafe-html.js";
-import { EventBus } from "../../../core/EventBus";
-import { AllPlayers, MessageType } from "../../../core/game/Game";
+import { AllPlayers, MessageType } from "@openfront/engine-api/game/GameTypes";
 import {
   AllianceExpiredUpdate,
   AllianceRequestReplyUpdate,
@@ -15,29 +10,32 @@ import {
   GameUpdateType,
   TargetPlayerUpdate,
   UnitIncomingUpdate,
-} from "../../../core/game/GameUpdates";
-import { UserSettings } from "../../../core/game/UserSettings";
+} from "@openfront/engine-api/game/GameUpdates";
+import { EventBus } from "@openfront/shared/EventBus";
+import { html, LitElement } from "lit";
+import { customElement, query, state } from "lit/decorators.js";
+import { DirectiveResult } from "lit/directive.js";
+import { unsafeHTML, UnsafeHTMLDirective } from "lit/directives/unsafe-html.js";
 import { Controller } from "../../Controller";
 import { SendAllianceRequestIntentEvent } from "../../Transport";
+import { UserSettings } from "../../UserSettings";
 
-import { onlyImages } from "../../../core/Util";
 import { GoToPlayerEvent, GoToUnitEvent } from "../../TransformHandler";
 import { GameView, PlayerView, UnitView } from "../../view";
+import { onlyImages } from "./OnlyImages";
 
+import { renderNumber, renderTroops } from "@openfront/engine-lib/Format";
 import { PlaySoundEffectEvent } from "../../sound/Sounds";
 import { UIState } from "../../UIState";
-import {
-  getMessageTypeClasses,
-  renderNumber,
-  renderTroops,
-  translateText,
-} from "../../Utils";
+import { getMessageTypeClasses, translateText } from "../../Utils";
 
 interface GameEvent {
   description: string;
   unsafeDescription?: boolean;
   type: MessageType;
   highlight?: boolean;
+  /** Show in the small feed even if the type is normally tier 1. */
+  minor?: boolean;
   createdAt: number;
   onDelete?: () => void;
   focusID?: number;
@@ -531,9 +529,6 @@ export class EventsDisplay extends LitElement implements Controller {
   }
 
   onEmojiMessageEvent(update: EmojiUpdate) {
-    // Honor the "Disable emojis" setting: don't surface received emojis in the
-    // events feed either (#4430).
-    if (!this.userSettings.emojis()) return;
     const myPlayer = this.game.myPlayer();
     if (!myPlayer) return;
 
@@ -546,6 +541,10 @@ export class EventsDisplay extends LitElement implements Controller {
     ) as PlayerView;
 
     if (recipient === myPlayer) {
+      // Honor the "Disable emojis" setting: don't surface received emojis in
+      // the events feed either (#4430). Confirmations of emojis you sent
+      // still show, since the setting doesn't stop you sending them.
+      if (!this.userSettings.emojis()) return;
       this.addEvent({
         description: `${sender.displayName()}: ${update.emoji.message}`,
         unsafeDescription: true,
@@ -562,9 +561,19 @@ export class EventsDisplay extends LitElement implements Controller {
         }),
         unsafeDescription: true,
         type: MessageType.CHAT,
-        highlight: true,
+        minor: true,
         createdAt: this.game.ticks(),
         focusID: recipient.smallID(),
+      });
+    } else if (sender === myPlayer) {
+      this.addEvent({
+        description: translateText("events_display.sent_emoji_all", {
+          emoji: update.emoji.message,
+        }),
+        unsafeDescription: true,
+        type: MessageType.CHAT,
+        minor: true,
+        createdAt: this.game.ticks(),
       });
     }
   }
@@ -665,7 +674,9 @@ export class EventsDisplay extends LitElement implements Controller {
     const tier1Events: GameEvent[] = [];
     let tier2Events: GameEvent[] = [];
     for (const event of this.events) {
-      (isTier1(event.type) ? tier1Events : tier2Events).push(event);
+      (isTier1(event.type) && !event.minor ? tier1Events : tier2Events).push(
+        event,
+      );
     }
     tier1Events.sort((a, b) => a.createdAt - b.createdAt);
     tier2Events.sort((a, b) => a.createdAt - b.createdAt);

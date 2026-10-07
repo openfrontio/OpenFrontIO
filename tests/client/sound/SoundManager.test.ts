@@ -48,6 +48,8 @@ vi.mock("howler", () => {
   return { Howl: MockHowl, Howler: { volume: howlerVolume } };
 });
 
+import { EventBus } from "@openfront/shared/EventBus";
+import { Platform } from "../../../src/client/Platform";
 import {
   AudioMixer,
   resetAudioMixerForTest,
@@ -57,8 +59,7 @@ import {
   PlaySoundEffectEvent,
   SetAmbienceEvent,
 } from "../../../src/client/sound/Sounds";
-import { EventBus } from "../../../src/core/EventBus";
-import { UserSettings } from "../../../src/core/game/UserSettings";
+import { UserSettings } from "../../../src/client/UserSettings";
 
 function resetSettings() {
   localStorage.clear();
@@ -106,7 +107,7 @@ afterEach(() => {
 
 describe("background music", () => {
   it("is a single looping track, not a playlist", () => {
-    const music = find("gameplay.mp3");
+    const music = find("gameplay.m4a");
     expect(music).toBeDefined();
     expect(music.loop).toBe(true);
     expect(howlInstances.filter((h) => h.src.includes("music/")).length).toBe(
@@ -116,23 +117,40 @@ describe("background music", () => {
 
   it("streams instead of waiting for the whole file to decode", () => {
     // Howler's default Web Audio path downloads and decodes the entire track
-    // before the first note. gameplay.mp3 is 4.6 MB, which was tens of seconds
+    // before the first note. gameplay.m4a is 3.41 MB, which was tens of seconds
     // of silence at game start. Ambience and cues stay on Web Audio, so this
     // has to stay specific to the music track.
-    expect(find("gameplay.mp3").html5).toBe(true);
+    expect(find("gameplay.m4a").html5).toBe(true);
+  });
+
+  it("uses Web Audio on iOS", () => {
+    // For the music where we normally use html5: true for streaming.
+    // Using html: false makes mute and volume controls work on iOS,
+    // and (but that's not the point here) avoids a 1 or 2-second gap at the loop seam.
+    soundManager.dispose();
+    mixer.dispose();
+    howlInstances.length = 0;
+    const previousIsIOS = Platform.isIOS;
+    Platform.isIOS = true;
+    try {
+      build();
+      expect(find("gameplay.m4a").html5).toBe(false);
+    } finally {
+      Platform.isIOS = previousIsIOS;
+    }
   });
 
   it("follows the music slider through the mixer", () => {
     settings.setAudioVolume("music", 0.5);
     // 0.5 squared for the audio taper, then the -1 dB music trim.
     expect(
-      find("gameplay.mp3").volumes[find("gameplay.mp3").volumes.length - 1],
+      find("gameplay.m4a").volumes[find("gameplay.m4a").volumes.length - 1],
     ).toBeCloseTo(0.25 * 0.89);
   });
 
   it("only starts once", () => {
     soundManager.playBackgroundMusic();
-    const music = find("gameplay.mp3");
+    const music = find("gameplay.m4a");
     music.playing.mockReturnValue(true);
     soundManager.playBackgroundMusic();
     expect(music.play).toHaveBeenCalledTimes(1);
@@ -310,7 +328,7 @@ describe("ambience", () => {
 describe("teardown", () => {
   it("stops and unloads everything it owns", () => {
     eventBus.emit(new SetAmbienceEvent("city", 0.1));
-    const music = find("gameplay.mp3");
+    const music = find("gameplay.m4a");
     const city = find("city.mp3");
 
     soundManager.dispose();

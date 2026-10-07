@@ -1,7 +1,7 @@
+import { UserMeResponse } from "@openfront/shared/ApiSchemas";
+import { Cosmetics } from "@openfront/shared/CosmeticSchemas";
 import { html, TemplateResult } from "lit";
 import { customElement, state } from "lit/decorators.js";
-import { UserMeResponse } from "../core/ApiSchemas";
-import { Cosmetics } from "../core/CosmeticSchemas";
 import { renderFreePlayPerks } from "./components/FreePlayPerks";
 import "./components/SubscriptionPanel";
 import { fetchCosmetics } from "./Cosmetics";

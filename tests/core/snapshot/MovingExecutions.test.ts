@@ -1,30 +1,29 @@
 import { GameView } from "../../../src/client/view/GameView";
-import { AttackExecution } from "../../../src/core/execution/AttackExecution";
-import { BoatRetreatExecution } from "../../../src/core/execution/BoatRetreatExecution";
-import { Executor } from "../../../src/core/execution/ExecutionManager";
-import { FactoryExecution } from "../../../src/core/execution/FactoryExecution";
-import { RetreatExecution } from "../../../src/core/execution/RetreatExecution";
-import { SpawnExecution } from "../../../src/core/execution/SpawnExecution";
-import { TradeShipExecution } from "../../../src/core/execution/TradeShipExecution";
-import { TransportShipExecution } from "../../../src/core/execution/TransportShipExecution";
-import { WarshipExecution } from "../../../src/core/execution/WarshipExecution";
 import {
-  Game,
-  Player,
   PlayerInfo,
   PlayerType,
   UnitType,
-} from "../../../src/core/game/Game";
+} from "@openfront/engine-api/game/GameTypes";
 import {
   createGameUpdatesMap,
   GameUpdateType,
   GameUpdateViewData,
-} from "../../../src/core/game/GameUpdates";
+} from "@openfront/engine-api/game/GameUpdates";
 import {
   MotionPlanRecord,
   packMotionPlans,
-} from "../../../src/core/game/MotionPlans";
-import { GameRunner } from "../../../src/core/GameRunner";
+} from "@openfront/engine-lib/game/MotionPlans";
+import { AttackExecution } from "@openfront/engine/execution/AttackExecution";
+import { BoatRetreatExecution } from "@openfront/engine/execution/BoatRetreatExecution";
+import { Executor } from "@openfront/engine/execution/ExecutionManager";
+import { FactoryExecution } from "@openfront/engine/execution/FactoryExecution";
+import { RetreatExecution } from "@openfront/engine/execution/RetreatExecution";
+import { SpawnExecution } from "@openfront/engine/execution/SpawnExecution";
+import { TradeShipExecution } from "@openfront/engine/execution/TradeShipExecution";
+import { TransportShipExecution } from "@openfront/engine/execution/TransportShipExecution";
+import { WarshipExecution } from "@openfront/engine/execution/WarshipExecution";
+import { Game, Player } from "@openfront/engine/game/Game";
+import { GameRunner } from "@openfront/engine/GameRunner";
 import { setup } from "../../util/Setup";
 import { expectSnapshotRoundTrip, roundTrip } from "../../util/Snapshot";
 import { executeTicks } from "../../util/utils";

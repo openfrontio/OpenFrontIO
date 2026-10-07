@@ -1,6 +1,6 @@
-import type { UserSettings } from "../core/game/UserSettings";
 import { clientPlatform } from "./ClientPlatform";
 import { Platform } from "./Platform";
+import type { UserSettings } from "./UserSettings";
 
 const STEAM_APP_ID = 3560670;
 

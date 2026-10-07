@@ -1,12 +1,12 @@
+import { GameMapType, GameMode } from "@openfront/engine-api/game/GameTypes";
+import type { GameConfig } from "@openfront/engine-api/Schemas";
+import type {
+  PublicGameInfo,
+  PublicGames,
+} from "@openfront/shared/WireSchemas";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ClientEnv } from "../src/client/ClientEnv";
 import type { DesktopUpdateState } from "../src/client/DesktopShell";
-import { GameMapType, GameMode } from "../src/core/game/Game";
-import type {
-  GameConfig,
-  PublicGameInfo,
-  PublicGames,
-} from "../src/core/Schemas";
 
 // The component opens a public-lobby WebSocket the moment it connects. jsdom
 // has no WebSocket worth talking to and this test is about the gate, not the
@@ -27,6 +27,12 @@ vi.mock("../src/client/LobbySocket", () => ({
     start(): void {}
     stop(): void {}
   },
+}));
+
+// The lobby modals load on demand; the stubs below stand in for loaded ones.
+vi.mock("../src/client/LazyModals", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../src/client/LazyModals")>()),
+  whenModalLoaded: (_tag: string, open: () => void) => open(),
 }));
 
 // Registers <game-mode-selector> as a side effect.

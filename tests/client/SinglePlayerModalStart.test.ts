@@ -1,8 +1,8 @@
+import { GameMapType, UnitType } from "@openfront/engine-api/game/GameTypes";
 import { render } from "lit";
 import { describe, expect, it, vi } from "vitest";
 import * as inGameModal from "../../src/client/InGameModal";
 import * as saveManager from "../../src/client/SinglePlayerSaveManager";
-import { GameMapType, UnitType } from "../../src/core/game/Game";
 
 vi.mock("../../src/client/Cosmetics", () => ({
   getPlayerCosmetics: vi.fn(async () => ({})),

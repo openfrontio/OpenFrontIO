@@ -1,0 +1,10 @@
+{
+  "extends": "../../../../tsconfig.base.json",
+  "compilerOptions": {
+    // The worker entry and its protocol talk to the page: they get the
+    // WebWorker lib, which the rest of the engine doesn't.
+    "lib": ["ES2022", "WebWorker"],
+    "types": []
+  },
+  "include": ["./**/*", "../../../engine-api/src/worker/**/*"]
+}

@@ -1,7 +1,8 @@
+import { UserMeResponse } from "@openfront/shared/ApiSchemas";
 import { LitElement, html } from "lit";
 import { customElement, state } from "lit/decorators.js";
-import { UserMeResponse } from "../../core/ApiSchemas";
 import { responseHasLinkedIdentity } from "../AccountIdentity";
+import { lastUserMeResponse } from "../UserMeBroadcast";
 import { translateText } from "../Utils";
 
 @customElement("not-logged-in-warning")
@@ -29,6 +30,10 @@ export class NotLoggedInWarning extends LitElement {
       "userMeResponse",
       this._onUserMe as EventListener,
     );
+    // It's part of the store, which loads on demand, usually after Main's
+    // broadcast went out.
+    const last = lastUserMeResponse();
+    if (last !== null) this.linked = responseHasLinkedIdentity(last.response);
   }
 
   disconnectedCallback() {
