@@ -480,7 +480,7 @@ export class ClanDetailView extends LitElement {
       ${boostLeft
         ? html`<div
             data-boost-left
-            class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-bold bg-fuchsia-500/15 text-fuchsia-300 border border-fuchsia-500/30"
+            class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-bold bg-malibu-blue/15 text-aquarius border border-malibu-blue/40 shadow-malibu-blue-pill"
           >
             ${translateText("clan_modal.boost_time_left", {
               remaining: boostLeft,
@@ -892,7 +892,7 @@ export class ClanDetailView extends LitElement {
         <button
           data-action="boost"
           @click=${() => (this.boostOpen = true)}
-          class="flex-1 px-6 py-3 text-sm font-bold text-white uppercase tracking-wider bg-gradient-to-r from-fuchsia-600 to-fuchsia-700 hover:from-fuchsia-500 hover:to-fuchsia-600 rounded-xl transition-all border border-white/5"
+          class="flex-1 px-6 py-3 text-sm font-bold text-white uppercase tracking-wider bg-malibu-blue hover:bg-aquarius active:bg-malibu-blue/80 rounded-xl transition-all"
         >
           ${translateText("clan_modal.boost")}
         </button>

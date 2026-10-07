@@ -228,7 +228,7 @@ export class ClanBoostDialog extends LitElement {
         ?disabled=${this.submitting}
         @click=${() => this.selectTier(tier.tier)}
         class="flex-1 flex flex-col items-center gap-1 px-3 py-2.5 rounded-xl border transition-all ${selected
-          ? "bg-fuchsia-500/15 border-fuchsia-400/70 ring-2 ring-fuchsia-400/40 text-white"
+          ? "bg-malibu-blue/15 border-aquarius/70 ring-2 ring-malibu-blue/40 text-white"
           : "bg-white/5 border-white/10 text-white/50 hover:bg-white/10 hover:text-white"} disabled:opacity-50 disabled:pointer-events-none"
       >
         <span class="text-xs font-bold uppercase tracking-wider">
@@ -280,7 +280,7 @@ export class ClanBoostDialog extends LitElement {
           })}
         </p>
         ${running
-          ? html`<p class="text-fuchsia-300">
+          ? html`<p class="text-aquarius">
               ${translateText("clan_modal.boost_running", {
                 remaining: running,
               })}
@@ -293,7 +293,7 @@ export class ClanBoostDialog extends LitElement {
         : ""}
 
       <div
-        class="mt-4 rounded-xl border p-3 text-xs border-fuchsia-500/30 bg-fuchsia-500/10 text-fuchsia-200"
+        class="mt-4 rounded-xl border p-3 text-xs border-malibu-blue/30 bg-malibu-blue/10 text-dawn-blue"
       >
         <p class="font-bold">${translateText("clan_modal.boost_final")}</p>
         ${tier?.currency === "hard"
@@ -318,7 +318,7 @@ export class ClanBoostDialog extends LitElement {
           aria-modal="true"
           aria-labelledby="clan-boost-dialog-title"
           tabindex="-1"
-          class="relative mx-4 w-full max-w-md p-6 rounded-2xl border border-fuchsia-500/50 bg-surface shadow-2xl focus:outline-none"
+          class="relative mx-4 w-full max-w-md p-6 rounded-2xl border border-malibu-blue/50 bg-surface shadow-2xl focus:outline-none"
         >
           <h2
             id="clan-boost-dialog-title"
@@ -346,7 +346,7 @@ export class ClanBoostDialog extends LitElement {
               data-action="buy-boost"
               @click=${() => void this.submit()}
               ?disabled=${!this.canSubmit()}
-              class="flex-1 px-4 py-2.5 text-xs font-bold uppercase tracking-wider rounded-xl text-white transition-all disabled:opacity-50 disabled:pointer-events-none border-0 bg-fuchsia-600 hover:bg-fuchsia-700"
+              class="flex-1 px-4 py-2.5 text-xs font-bold uppercase tracking-wider rounded-xl text-white transition-all disabled:opacity-50 disabled:pointer-events-none border-0 bg-malibu-blue hover:bg-aquarius"
             >
               ${translateText(
                 this.submitting
