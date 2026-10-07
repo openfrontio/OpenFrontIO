@@ -1,7 +1,15 @@
-import { describe, expect, test } from "vitest";
-import { extractSnapshotFromRecord } from "../../../src/client/replay/processor/SnapshotExtractor";
-import { GameMapSize, GameMapType, GameMode, GameType, PlayerType, Difficulty } from "@openfront/engine-api/game/GameTypes";
-import { ErrorUpdate, GameUpdateViewData } from "@openfront/engine-api/game/GameUpdates";
+import {
+  Difficulty,
+  GameMapSize,
+  GameMapType,
+  GameMode,
+  GameType,
+  PlayerType,
+} from "@openfront/engine-api/game/GameTypes";
+import {
+  ErrorUpdate,
+  GameUpdateViewData,
+} from "@openfront/engine-api/game/GameUpdates";
 import { NationExecution } from "@openfront/engine/execution/NationExecution";
 import { TribeExecution } from "@openfront/engine/execution/TribeExecution";
 import { Player } from "@openfront/engine/game/Game";
@@ -9,8 +17,10 @@ import {
   createGameRunner,
   createGameRunnerFromSnapshot,
 } from "@openfront/engine/GameRunner";
-import { decompressGameRecord } from "@openfront/shared/SharedUtil";
 import { loadMapFiles } from "@openfront/shared/GameMapLoader";
+import { decompressGameRecord } from "@openfront/shared/SharedUtil";
+import { describe, expect, test } from "vitest";
+import { extractSnapshotFromRecord } from "../../../src/client/replay/processor/SnapshotExtractor";
 import { config, human, mapLoader, playAndArchive } from "./util/ArchiveGame";
 
 const loadMap = (c: { gameMap: GameMapType; gameMapSize: GameMapSize }) =>
@@ -77,7 +87,9 @@ describe("SnapshotExtractor", () => {
     expect(human2?.type()).toBe(PlayerType.Human);
 
     // Verify Human 1 was converted to Bot/Nation
-    const human1 = game.allPlayers().find((p: Player) => p.name() === "Human 1");
+    const human1 = game
+      .allPlayers()
+      .find((p: Player) => p.name() === "Human 1");
     expect(human1).not.toBeUndefined();
     expect(human1?.type()).toBe(PlayerType.Nation);
     expect(human1?.clientID()).toBeNull();
@@ -205,7 +217,10 @@ describe("SnapshotExtractor", () => {
     const preGame = preRunner.game;
     const botPlayer = preGame
       .players()
-      .find((p: Player) => p.type() === PlayerType.Bot && p.name() === "SaharaNomads");
+      .find(
+        (p: Player) =>
+          p.type() === PlayerType.Bot && p.name() === "SaharaNomads",
+      );
     expect(botPlayer).toBeDefined();
 
     const hasTribeExecBefore = (preGame as any)

@@ -4,7 +4,6 @@
  * to the local clientID.
  */
 
-import { GameMapLoader, loadMapFiles } from "@openfront/shared/GameMapLoader";
 import {
   Difficulty,
   GameType,
@@ -18,6 +17,7 @@ import {
 import { ClientID } from "@openfront/engine-api/Schemas";
 import { Player } from "@openfront/engine/game/Game";
 import { createGameRunner } from "@openfront/engine/GameRunner";
+import { GameMapLoader, loadMapFiles } from "@openfront/shared/GameMapLoader";
 import { decompressGameRecord, generateID } from "@openfront/shared/SharedUtil";
 import { GameRecord, WireGameStartInfo } from "@openfront/shared/WireSchemas";
 import { wireGameStartInfo } from "./ReplayProcessor";
