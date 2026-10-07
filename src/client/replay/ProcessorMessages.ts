@@ -1,7 +1,10 @@
 /** Messages between the viewer and the processing worker. */
 
 import type { Difficulty } from "@openfront/engine-api/game/GameTypes";
-import type { GameRecord, WireGameStartInfo } from "@openfront/shared/WireSchemas";
+import type {
+  GameRecord,
+  WireGameStartInfo,
+} from "@openfront/shared/WireSchemas";
 import type { ReplayAppend, ReplayBase } from "./codec/ReplayTypes";
 
 export type ProcessorRequest =

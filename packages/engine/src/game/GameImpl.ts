@@ -63,6 +63,8 @@ import {
   SharedWaterCache,
   SharedWaterCacheSnapshot,
 } from "../execution/nation/SharedWaterCache";
+import { NationExecution } from "../execution/NationExecution";
+import { TribeExecution } from "../execution/TribeExecution";
 import { AbstractGraph } from "../pathfinding/algorithms/AbstractGraph";
 import { WaterPathFinder } from "../pathfinding/PathFinder";
 import { PathFinder } from "../pathfinding/types";
@@ -89,8 +91,6 @@ import {
   Player,
   Unit,
 } from "./Game";
-import { NationExecution } from "../execution/NationExecution";
-import { TribeExecution } from "../execution/TribeExecution";
 
 import { PlayerImpl } from "./PlayerImpl";
 import { RailNetwork } from "./RailNetwork";

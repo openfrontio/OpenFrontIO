@@ -10,7 +10,10 @@
 import type { Difficulty } from "@openfront/engine-api/game/GameTypes";
 import type { ConnectMessage } from "@openfront/engine-api/worker/WorkerMessages";
 import { getCdnBase } from "@openfront/shared/AssetUrls";
-import type { GameRecord, WireGameStartInfo } from "@openfront/shared/WireSchemas";
+import type {
+  GameRecord,
+  WireGameStartInfo,
+} from "@openfront/shared/WireSchemas";
 import { createGameWorker } from "../WorkerClient";
 import type { ReplayAppend, ReplayBase } from "./codec/ReplayTypes";
 import type { ProcessorRequest, ProcessorResponse } from "./ProcessorMessages";

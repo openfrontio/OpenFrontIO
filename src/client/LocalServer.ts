@@ -4,6 +4,7 @@ import {
   StampedIntent,
   Turn,
 } from "@openfront/engine-api/Schemas";
+import { readSnapshotHeader } from "@openfront/engine/snapshot/GameSnapshot";
 import { EventBus } from "@openfront/shared/EventBus";
 import {
   createPartialGameRecord,
@@ -19,11 +20,10 @@ import {
   ServerMessage,
   ServerStartGameMessage,
 } from "@openfront/shared/WireSchemas";
-import { readSnapshotHeader } from "@openfront/engine/snapshot/GameSnapshot";
-import { ClientEnv } from "./ClientEnv";
 import { z } from "zod";
 import { getApiBase } from "./Api";
 import { getAuthHeader, getPersistentID } from "./Auth";
+import { ClientEnv } from "./ClientEnv";
 import { LobbyConfig } from "./ClientGameRunner";
 import {
   GameSpeedDownIntentEvent,

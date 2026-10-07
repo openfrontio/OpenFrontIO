@@ -8,7 +8,11 @@
  * build is sent to that build's versioned shell.
  */
 
-import { Cell, Difficulty, PlayerType } from "@openfront/engine-api/game/GameTypes";
+import {
+  Cell,
+  Difficulty,
+  PlayerType,
+} from "@openfront/engine-api/game/GameTypes";
 import type { GameStartInfo } from "@openfront/engine-api/Schemas";
 import { Config } from "@openfront/engine-lib/configuration/Config";
 import { EventBus } from "@openfront/shared/EventBus";

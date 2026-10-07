@@ -1,9 +1,6 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
-import {
-  GameMapType,
-  GameType,
-} from "@openfront/engine-api/game/GameTypes";
+import { GameMapType, GameType } from "@openfront/engine-api/game/GameTypes";
 import { GameID } from "@openfront/engine-api/Schemas";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mockWorkerInstance = {
   initialize: vi.fn(async () => {}),

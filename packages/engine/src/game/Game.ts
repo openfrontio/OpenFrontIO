@@ -41,7 +41,11 @@ import {
   UnitLike,
   UnitPredicate,
 } from "@openfront/engine-api/game/ReadViews";
-import { AllPlayersStats, ClientID, GameID } from "@openfront/engine-api/Schemas";
+import {
+  AllPlayersStats,
+  ClientID,
+  GameID,
+} from "@openfront/engine-api/Schemas";
 import { MotionPlanRecord } from "@openfront/engine-lib/game/MotionPlans";
 import type { EngineConfig } from "../configuration/EngineConfig";
 import { AbstractGraph } from "../pathfinding/algorithms/AbstractGraph";

@@ -8,6 +8,10 @@ import {
   GameUpdateType,
   GameUpdateViewData,
 } from "@openfront/engine-api/game/GameUpdates";
+import {
+  MotionPlanRecord,
+  packMotionPlans,
+} from "@openfront/engine-lib/game/MotionPlans";
 import { AttackExecution } from "@openfront/engine/execution/AttackExecution";
 import { BoatRetreatExecution } from "@openfront/engine/execution/BoatRetreatExecution";
 import { Executor } from "@openfront/engine/execution/ExecutionManager";
@@ -19,10 +23,6 @@ import { TransportShipExecution } from "@openfront/engine/execution/TransportShi
 import { WarshipExecution } from "@openfront/engine/execution/WarshipExecution";
 import { Game, Player } from "@openfront/engine/game/Game";
 import { GameRunner } from "@openfront/engine/GameRunner";
-import {
-  MotionPlanRecord,
-  packMotionPlans,
-} from "@openfront/engine-lib/game/MotionPlans";
 import { GameView } from "../../../src/client/view/GameView";
 import { setup } from "../../util/Setup";
 import { expectSnapshotRoundTrip, roundTrip } from "../../util/Snapshot";

@@ -1,7 +1,7 @@
+import { Difficulty } from "@openfront/engine-api/game/GameTypes";
+import { assetUrl } from "@openfront/shared/AssetUrls";
 import { html, LitElement, nothing } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
-import { assetUrl } from "@openfront/shared/AssetUrls";
-import { Difficulty } from "@openfront/engine-api/game/GameTypes";
 import { translateText } from "../Utils";
 import { formatGameTime } from "./ReplayControls";
 
