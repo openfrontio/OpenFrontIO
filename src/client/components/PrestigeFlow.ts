@@ -955,6 +955,10 @@ export class PrestigeFlow extends LitElement {
   private renderShare(rank: number): TemplateResult | typeof nothing {
     if (this.publicId === "") return nothing;
     const moment = { kind: "prestige", rank } as const;
+    // The rank is the server's: one the card route wouldn't draw drops the
+    // row rather than sharing a link that unfurls without a card.
+    const url = momentShareUrl(this.publicId, moment);
+    if (url === null) return nothing;
     return html`<div
       data-prestige-share
       class="mt-6"
@@ -963,7 +967,7 @@ export class PrestigeFlow extends LitElement {
       <profile-share
         solid
         centered
-        .url=${momentShareUrl(this.publicId, moment)}
+        .url=${url}
         .text=${momentShareText(moment)}
       ></profile-share>
     </div>`;

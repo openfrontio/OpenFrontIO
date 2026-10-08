@@ -395,6 +395,8 @@ export class LegendCeremony extends LitElement {
   private renderShare(moment: LegendMoment): TemplateResult | typeof nothing {
     if (moment.publicId === "") return nothing;
     const share = { kind: "legend" } as const;
+    const url = momentShareUrl(moment.publicId, share);
+    if (url === null) return nothing;
     return html`<div
       data-legend-share
       class="lc-share"
@@ -403,7 +405,7 @@ export class LegendCeremony extends LitElement {
       <profile-share
         solid
         centered
-        .url=${momentShareUrl(moment.publicId, share)}
+        .url=${url}
         .text=${momentShareText(share)}
       ></profile-share>
     </div>`;

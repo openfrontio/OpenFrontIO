@@ -244,6 +244,8 @@ export class WinModal extends LitElement implements Controller {
     }
     const moment = gameShareMoment(this.xpView);
     if (moment === null || moment.kind === "prestige") return null;
+    const url = momentShareUrl(this.sharePublicId, moment);
+    if (url === null) return null;
     // Three labelled buttons fit side by side from md up; below that (and
     // beside a ranked game's requeue button) it takes a row of its own.
     const placement = this.isRankedGame
@@ -254,7 +256,7 @@ export class WinModal extends LitElement implements Controller {
       class="flex ${placement}"
       layout="menu"
       .label=${momentShareLabel(moment)}
-      .url=${momentShareUrl(this.sharePublicId, moment)}
+      .url=${url}
       .text=${momentShareText(moment)}
       triggerClass="win-action win-action-quiet w-full"
     ></profile-share>`;

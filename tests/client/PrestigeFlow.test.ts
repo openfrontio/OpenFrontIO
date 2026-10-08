@@ -836,6 +836,20 @@ describe("<prestige-flow>", () => {
     expect(q("[data-prestige-continue]")).not.toBeNull();
     expect(shareRow()).toBeNull();
   });
+
+  it("drops the share row for a rank the card route wouldn't draw", async () => {
+    flow.publicId = "wonder01";
+    // A surprising server rank: shared, its link would unfurl with no card.
+    flow.celebrate(AT_100, {
+      ...PRESTIGED,
+      progress: { ...PRESTIGED.progress, prestige: 11 },
+    });
+    await settle(300);
+    q("[data-prestige-ceremony]")!.click();
+    await settle();
+    expect(q("[data-prestige-continue]")).not.toBeNull();
+    expect(shareRow()).toBeNull();
+  });
 });
 
 describe("<profile-card> prestige button", () => {
