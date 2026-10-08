@@ -1,10 +1,10 @@
 import { Howl, Howler } from "howler";
-import { Platform } from "../Platform";
 import {
   AudioCategory,
   USER_SETTINGS_CHANGED_EVENT,
   UserSettings,
 } from "../../core/game/UserSettings";
+import { Platform } from "../Platform";
 import { setAudioControls, setCuePlayer } from "./CuePlayer";
 import {
   AmbienceTrack,
