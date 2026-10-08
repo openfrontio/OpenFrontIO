@@ -55,6 +55,31 @@ describe("MotionPlanResolver", () => {
     expect(u.pos.get(1)).toBe(60);
   });
 
+  test("fractional train speed accumulates without dropping partial movement", () => {
+    const r = new MotionPlanResolver();
+    const u = units([1]);
+    const path = Array.from({ length: 20 }, (_, i) => i);
+    r.applyRecords([
+      {
+        kind: "train",
+        engineUnitId: 1,
+        carUnitIds: [],
+        planId: 1,
+        startTick: 0,
+        speed: 2.6,
+        spacing: 2,
+        path,
+      },
+    ]);
+
+    r.advance(1, u.store);
+    expect(u.pos.get(1)).toBe(2);
+    r.advance(2, u.store);
+    expect(u.pos.get(1)).toBe(5);
+    r.advance(3, u.store);
+    expect(u.pos.get(1)).toBe(7);
+  });
+
   test("a unit that's gone loses its plan", () => {
     const r = new MotionPlanResolver();
     const u = units([]);

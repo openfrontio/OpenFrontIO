@@ -5,12 +5,58 @@ import {
   UnitType,
 } from "@openfront/engine-api/game/GameTypes";
 import { TrainExecution } from "@openfront/engine/execution/TrainExecution";
+import { unpackMotionPlans } from "@openfront/engine-lib/game/MotionPlans";
 import { Railroad } from "@openfront/engine/game/Railroad";
 import { TrainStation } from "@openfront/engine/game/TrainStation";
 import { describe, expect, it } from "vitest";
 import { setup } from "../../util/Setup";
 
 describe("TrainExecution", () => {
+  it("stacks a 30% speed bonus per nearby Oil Mine for factory-origin trains", async () => {
+    const game = await setup("plains", { instantBuild: true }, [
+      new PlayerInfo("p1", PlayerType.Human, null, "p1"),
+    ]);
+    const player = game.player("p1")!;
+
+    for (let t = 0; t <= 20; t++) player.conquer(t);
+
+    const factory = player.buildUnit(UnitType.Factory, 0, {});
+    player.buildUnit(UnitType.OilMine, 2, {});
+    player.buildUnit(UnitType.OilMine, 4, {});
+    const destination = player.buildUnit(UnitType.City, 20, {});
+
+    const sourceStation = new TrainStation(game, factory);
+    const destinationStation = new TrainStation(game, destination);
+    const net = game.railNetwork();
+    const stationManager = net.stationManager();
+    stationManager.addStation(sourceStation);
+    stationManager.addStation(destinationStation);
+
+    const railroad = new Railroad(
+      sourceStation,
+      destinationStation,
+      Array.from({ length: 21 }, (_, i) => i),
+      1,
+    );
+    sourceStation.addRailroad(railroad);
+    destinationStation.addRailroad(railroad);
+
+    const exec = new TrainExecution(
+      net,
+      player,
+      sourceStation,
+      destinationStation,
+      1,
+    );
+    exec.init(game, 0);
+
+    const packed = game.drainPackedMotionPlans();
+    expect(packed).not.toBeNull();
+    expect(unpackMotionPlans(packed!)[0]).toMatchObject({
+      speed: 3.2,
+    });
+  });
+
   it("re-resolves intermediate stations when railroad is split in transit", async () => {
     const game = await setup("plains", { instantBuild: true }, [
       new PlayerInfo("p1", PlayerType.Human, null, "p1"),

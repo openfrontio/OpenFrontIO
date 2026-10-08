@@ -31,6 +31,7 @@ export class TrainExecution implements Execution {
   private stations: TrainStation[] = [];
   private currentRailroad: OrientedRailroad | null = null;
   private speed: number = 2;
+  private speedRemainder: number = 0;
   private _tradeStopsVisited: number = 0;
   private pathTiles: TileRef[] = [];
   private pathIndex: number = 0;
@@ -98,6 +99,7 @@ export class TrainExecution implements Execution {
       this.pathIndex = 1;
     }
     this.pathTiles = pathTiles;
+    this.speed = this.trainSpeedFromOilMines();
 
     const plan: MotionPlanRecord = {
       kind: "train",
@@ -199,19 +201,35 @@ export class TrainExecution implements Execution {
    * Save the tiles the train go through so the cars can reuse them
    * Don't simply save the tiles the engine uses, otherwise the spacing will be dictated by the train speed
    */
-  private saveTraversedTiles(from: number, speed: number) {
+  private saveTraversedTiles(from: number, steps: number) {
     if (!this.currentRailroad) {
       return;
     }
     let tileToSave: number = from;
     for (
       let i = 0;
-      i < speed && tileToSave < this.currentRailroad.getTiles().length;
+      i < steps && tileToSave < this.currentRailroad.getTiles().length;
       i++
     ) {
       this.saveTile(this.currentRailroad.getTiles()[tileToSave]);
       tileToSave = tileToSave + 1;
     }
+  }
+
+  private trainSpeedFromOilMines(): number {
+    if (this.mg === null || this.source.unit.type() !== UnitType.Factory) {
+      return 2;
+    }
+
+    const oilMines = this.mg
+      .nearbyUnits(
+        this.source.tile(),
+        this.mg.config().trainStationMaxRange(),
+        UnitType.OilMine,
+      )
+      .filter(({ unit }) => unit.owner() === this.source.unit.owner()).length;
+
+    return 2 * this.mg.config().oilMineTrainSpeedMultiplier(oilMines);
   }
 
   private saveTile(tile: TileRef) {
@@ -278,8 +296,11 @@ export class TrainExecution implements Execution {
     if (this.currentRailroad === null || !this.canTradeWithDestination()) {
       return null;
     }
-    this.saveTraversedTiles(this.currentTile, this.speed);
-    this.currentTile = this.currentTile + this.speed;
+    const movement = Math.floor(this.speed + this.speedRemainder);
+    this.speedRemainder =
+      this.speed + this.speedRemainder - movement;
+    this.saveTraversedTiles(this.currentTile, movement);
+    this.currentTile = this.currentTile + movement;
     const leftOver = this.currentTile - this.currentRailroad.getTiles().length;
     if (leftOver >= 0) {
       // Station reached, pick the next station
@@ -333,6 +354,7 @@ export class TrainExecution implements Execution {
           ? null
           : { railroad: w.railroad(rr.railroad), forward: rr.forward },
       speed: this.speed,
+      speedRemainder: this.speedRemainder,
       tradeStopsVisited: this._tradeStopsVisited,
       pathTiles: w.tiles(this.pathTiles),
       pathIndex: this.pathIndex,
@@ -363,6 +385,7 @@ export class TrainExecution implements Execution {
             s.currentRailroad.forward,
           );
     this.speed = s.speed;
+    this.speedRemainder = s.speedRemainder ?? 0;
     this._tradeStopsVisited = s.tradeStopsVisited;
     this.pathTiles = Array.from(s.pathTiles);
     this.pathIndex = s.pathIndex;
@@ -388,7 +411,8 @@ const TrainExecutionStateSchema = z.object({
   currentRailroad: z
     .object({ railroad: zRef(), forward: z.boolean() })
     .nullable(),
-  speed: zInt(),
+  speed: z.number().positive(),
+  speedRemainder: z.number().min(0).max(1).optional(),
   tradeStopsVisited: zInt(),
   pathTiles: zTiles(),
   pathIndex: zInt(),

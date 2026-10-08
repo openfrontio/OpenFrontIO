@@ -212,6 +212,15 @@ export class EngineConfig extends Config {
     return Math.max(1, Math.floor(rate / this.trainSaturation(numTrainUnits)));
   }
 
+  /** Speed bonus granted by each friendly Oil Mine near a train's origin Factory. */
+  oilMineTrainSpeedBonusPerMine(): number {
+    return 0.3;
+  }
+
+  oilMineTrainSpeedMultiplier(numOilMines: number): number {
+    return 1 + Math.max(0, numOilMines) * this.oilMineTrainSpeedBonusPerMine();
+  }
+
   trainGold(
     rel: "self" | "team" | "ally" | "other",
     citiesVisited: number,

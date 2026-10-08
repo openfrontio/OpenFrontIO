@@ -5,6 +5,11 @@ export enum PackedMotionPlanKind {
   TrainRailPathSet = 2,
 }
 
+// Train speeds use fixed-point hundredths on the packed wire format while
+// keeping legacy integer speeds readable. The high bit marks the new encoding.
+const TRAIN_SPEED_FIXED_POINT = 100;
+const TRAIN_SPEED_FIXED_POINT_FLAG = 0x80000000;
+
 export interface GridPathPlan {
   kind: "grid";
   unitId: number;
@@ -93,7 +98,10 @@ export function packMotionPlans(
         out[offset++] = record.engineUnitId >>> 0;
         out[offset++] = record.planId >>> 0;
         out[offset++] = record.startTick >>> 0;
-        out[offset++] = record.speed >>> 0;
+        const packedSpeed =
+          Math.round(record.speed * TRAIN_SPEED_FIXED_POINT) |
+          TRAIN_SPEED_FIXED_POINT_FLAG;
+        out[offset++] = packedSpeed >>> 0;
         out[offset++] = record.spacing >>> 0;
         out[offset++] = carCount >>> 0;
         out[offset++] = pathLen >>> 0;
@@ -171,7 +179,11 @@ export function unpackMotionPlans(packed: Uint32Array): MotionPlanRecord[] {
         const engineUnitId = packed[offset + 2] >>> 0;
         const planId = packed[offset + 3] >>> 0;
         const startTick = packed[offset + 4] >>> 0;
-        const speed = packed[offset + 5] >>> 0;
+        const packedSpeed = packed[offset + 5] >>> 0;
+        const speed =
+          (packedSpeed & TRAIN_SPEED_FIXED_POINT_FLAG) !== 0
+            ? (packedSpeed & 0x7fffffff) / TRAIN_SPEED_FIXED_POINT
+            : packedSpeed;
         const spacing = packed[offset + 6] >>> 0;
         const carCount = packed[offset + 7] >>> 0;
         const pathLen = packed[offset + 8] >>> 0;
