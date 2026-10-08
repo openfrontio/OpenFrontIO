@@ -40,8 +40,9 @@ export class Client {
     public readonly trusted: boolean = false,
     // Client-reported and unverified; metric dimension only.
     public readonly platform: ClientPlatform | "unknown" = "unknown",
-    // From the server's /users/@me lookup at join (levelBadgeFromProgress);
-    // undefined for guests or when the API sent no progress. Display-only.
+    // From the server's /users/@me lookup at join (levelBadgeForPlayer);
+    // undefined for guests, players who hide their level, or when the API sent
+    // no progress. Display-only.
     public readonly levelBadge: LevelBadge | undefined = undefined,
   ) {
     this.wireLevelBadge = packLevelBadge(levelBadge);

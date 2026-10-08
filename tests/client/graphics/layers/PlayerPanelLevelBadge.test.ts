@@ -29,14 +29,26 @@ vi.mock("../../../../src/client/components/ui/ActionButton", () => ({
 
 vi.mock("../../../../src/client/components/LevelBadge", () => ({}));
 
+const getUserMe = vi.hoisted(() =>
+  vi.fn<() => Promise<UserMeResponse | false>>(async () => false),
+);
+vi.mock("../../../../src/client/Api", async (importOriginal) => ({
+  ...(await importOriginal<object>()),
+  getUserMe,
+}));
+
 vi.mock("../../../../src/client/InGameModal", () => ({
   showInGameConfirm: vi.fn(),
   showInGameAlert: vi.fn(),
 }));
 
-import { PlayerType } from "@openfront/engine-api/game/GameTypes";
+import { GameType, PlayerType } from "@openfront/engine-api/game/GameTypes";
+import type { UserMeResponse } from "@openfront/shared/ApiSchemas";
 import { packLevelBadge } from "@openfront/shared/LevelBadgeWire";
-import { PlayerPanel } from "../../../../src/client/hud/layers/PlayerPanel";
+import {
+  ownLevelBadgeFrom,
+  PlayerPanel,
+} from "../../../../src/client/hud/layers/PlayerPanel";
 import { rememberLobbyRoster } from "../../../../src/client/LobbyRosterLevels";
 import { UserSettings } from "../../../../src/client/UserSettings";
 import { PlayerView } from "../../../../src/client/view";
@@ -153,5 +165,120 @@ describe("PlayerPanel - level badge", () => {
     const own = row(player("me"));
     expect(own).toContain("<level-badge");
     expect(own).toContain(".level=12");
+  });
+});
+
+const progress = {
+  prestige: 2,
+  level: 37,
+  xpInLevel: 0,
+  xpForNext: 900,
+  lifetimeXp: 123456,
+  legend: false,
+  canPrestige: false,
+};
+function userMe(player: Record<string, unknown>): UserMeResponse {
+  return {
+    user: {},
+    player: { publicId: "me-pub", ...player },
+  } as unknown as UserMeResponse;
+}
+
+describe("PlayerPanel - your own badge without the lobby roster", () => {
+  let panel: PlayerPanel;
+
+  // A refresh or late join: this tab saw only another game's lobby.
+  async function initPanel(gameID = "game-2") {
+    panel = new PlayerPanel();
+    (panel as any).g = {
+      gameID: () => gameID,
+      myClientID: () => "me",
+      config: () => ({
+        gameConfig: () => ({ gameType: GameType.Public }),
+      }),
+    };
+    (panel as any).eventBus = { on: vi.fn() };
+    (panel as any).renderTraitorBadge = () => "";
+    (panel as any).renderRelationPillIfNation = () => "";
+    panel.init();
+    await getUserMe.mock.results[0]?.value;
+    await Promise.resolve();
+  }
+
+  const row = (other: PlayerView) =>
+    flatten((panel as any).renderIdentityRow(other, player("me")));
+
+  beforeEach(() => {
+    localStorage.clear();
+    (
+      UserSettings as unknown as { cache: Map<string, string | null> }
+    ).cache.clear();
+    getUserMe.mockReset();
+    rememberLobbyRoster("game-1", [
+      {
+        clientID: "me",
+        username: "me",
+        clanTag: null,
+        levelBadge: packLevelBadge({ level: 12, prestige: 0, legend: false }),
+      },
+      {
+        clientID: "vet",
+        username: "vet",
+        clanTag: null,
+        levelBadge: packLevelBadge({ level: 42, prestige: 3, legend: true }),
+      },
+    ]);
+  });
+
+  test("shows your own badge from /users/@me, and nobody else's", async () => {
+    getUserMe.mockResolvedValue(userMe({ progress }));
+    await initPanel();
+
+    const own = row(player("me"));
+    expect(own).toContain("<level-badge");
+    expect(own).toContain(".level=37");
+    expect(own).toContain(".prestige=2");
+    expect(row(player("vet"))).not.toContain("<level-badge");
+  });
+
+  test("prefers the roster's badge when this tab saw the lobby", async () => {
+    getUserMe.mockResolvedValue(userMe({ progress }));
+    await initPanel("game-1");
+    expect(row(player("me"))).toContain(".level=12");
+  });
+
+  test("still shows you your own badge when you hide your level", async () => {
+    getUserMe.mockResolvedValue(userMe({ progress, levelHidden: true }));
+    await initPanel();
+    expect(row(player("me"))).toContain(".level=37");
+  });
+
+  test("shows nothing signed out or without progress", async () => {
+    getUserMe.mockResolvedValue(false);
+    await initPanel();
+    expect(row(player("me"))).not.toContain("<level-badge");
+
+    getUserMe.mockReset();
+    getUserMe.mockResolvedValue(userMe({}));
+    await initPanel();
+    expect(row(player("me"))).not.toContain("<level-badge");
+  });
+});
+
+describe("ownLevelBadgeFrom", () => {
+  test("is the badge from /users/@me progress", () => {
+    expect(ownLevelBadgeFrom(userMe({ progress }))).toEqual({
+      level: 37,
+      prestige: 2,
+      legend: false,
+    });
+  });
+
+  test("drops values the badge cannot show, like the server does", () => {
+    for (const bad of [{ level: 0 }, { level: 101 }, { prestige: 11 }]) {
+      expect(
+        ownLevelBadgeFrom(userMe({ progress: { ...progress, ...bad } })),
+      ).toBeUndefined();
+    }
   });
 });

@@ -41,7 +41,6 @@ let arrivals = 0;
 let countDone = false;
 let idleWaiters: (() => void)[] = [];
 
-/** Counts a staggered badge put on the page, before its first render. */
 export function badgeArrived(): void {
   arrivals++;
 }
@@ -64,14 +63,12 @@ export function shouldStagger(): boolean {
   return arrivals > STAGGER_ABOVE;
 }
 
-/** Queues a badge to be drawn on a later frame. */
 export function queueBadge(badge: StaggeredBadge): void {
   waiting.add(badge);
   unsorted = true;
   schedule();
 }
 
-/** Takes a badge out of the queue (removed from the page before its turn). */
 export function dequeueBadge(badge: StaggeredBadge): void {
   if (!waiting.delete(badge) || waiting.size > 0) return;
   if (frame !== null) {
@@ -81,12 +78,10 @@ export function dequeueBadge(badge: StaggeredBadge): void {
   settle();
 }
 
-/** Badges still waiting to be drawn. */
 export function pendingBadges(): number {
   return waiting.size;
 }
 
-/** True while a frame is booked to draw waiting badges. */
 export function badgeFrameScheduled(): boolean {
   return frame !== null;
 }
