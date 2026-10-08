@@ -1,5 +1,4 @@
 import { TileRef } from "@openfront/engine-api/game/GameMap";
-import { MapFiles } from "@openfront/engine-api/game/GameMapLoader";
 import {
   BuildableUnit,
   Cell,
@@ -13,6 +12,7 @@ import {
   ErrorUpdate,
   GameUpdateViewData,
 } from "@openfront/engine-api/game/GameUpdates";
+import { MapFiles } from "@openfront/engine-api/game/MapFiles";
 import { ClientID, GameStartInfo, Turn } from "@openfront/engine-api/Schemas";
 import {
   InitMessage,
@@ -21,7 +21,7 @@ import {
 import {
   loadMapFiles,
   mapFilesTransfer,
-} from "@openfront/engine-lib/game/MapFiles";
+} from "@openfront/shared/GameMapLoader";
 import { generateID } from "@openfront/shared/SharedUtil";
 import { terrainMapFileLoader } from "./TerrainMapFileLoader";
 

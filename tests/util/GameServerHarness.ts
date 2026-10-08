@@ -171,6 +171,8 @@ export interface GameOpts {
 export function makeGame(opts: GameOpts = {}): GameServer {
   const deps: Partial<GameServerDeps> = {
     archive: vi.fn(async () => {}),
+    // A failed replay: a disputed vote archives its own result.
+    replayWinner: vi.fn(async () => null),
     fetchTribes: vi.fn(async () => []),
   };
   if (opts.telemetry !== undefined) deps.telemetry = opts.telemetry;

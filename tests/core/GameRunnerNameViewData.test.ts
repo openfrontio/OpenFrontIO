@@ -7,6 +7,7 @@
 import { GameMapType } from "@openfront/engine-api/game/GameTypes";
 import { GameUpdateViewData } from "@openfront/engine-api/game/GameUpdates";
 import { createGameRunner } from "@openfront/engine/GameRunner";
+import { loadMapFiles } from "@openfront/shared/GameMapLoader";
 import { toWireGameStartInfo } from "@openfront/shared/SharedUtil";
 import {
   config,
@@ -26,7 +27,12 @@ test("an update's name placements don't change as later ticks run", async () => 
     data: NonNullable<GameUpdateViewData["playerNameViewData"]>;
     atTick: string;
   }[] = [];
-  const runner = await createGameRunner(start, undefined, mapLoader, (gu) => {
+  const map = await loadMapFiles(
+    mapLoader,
+    start.config.gameMap,
+    start.config.gameMapSize,
+  );
+  const runner = await createGameRunner(start, undefined, map, (gu) => {
     if ("updates" in gu && gu.playerNameViewData !== undefined) {
       held.push({
         data: gu.playerNameViewData,

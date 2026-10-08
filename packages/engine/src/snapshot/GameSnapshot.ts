@@ -101,7 +101,7 @@ export interface SnapshotOptions {
 
 /**
  * Serializes the whole core simulation at the current tick boundary (between
- * executeNextTick calls). The result is uncompressed; see compressSnapshot.
+ * executeNextTick calls). The result is uncompressed.
  */
 export function snapshotGame(
   game: Game,
@@ -405,42 +405,4 @@ export function restoreGame(bytes: Uint8Array, deps: RestoreDeps): Game {
     for (const tile of p.tiles()) map.setOwnerID(tile, id);
   }
   return game;
-}
-
-/** gzip, via CompressionStream (browser, worker and Node 18+). */
-export function compressSnapshot(bytes: Uint8Array): Promise<Uint8Array> {
-  return pipeBytes(bytes, new CompressionStream("gzip"));
-}
-
-export function decompressSnapshot(bytes: Uint8Array): Promise<Uint8Array> {
-  return pipeBytes(bytes, new DecompressionStream("gzip"));
-}
-
-async function pipeBytes(
-  bytes: Uint8Array,
-  transform: CompressionStream | DecompressionStream,
-): Promise<Uint8Array> {
-  const reader = new ReadableStream<BufferSource>({
-    start(controller) {
-      controller.enqueue(bytes as Uint8Array<ArrayBuffer>);
-      controller.close();
-    },
-  })
-    .pipeThrough(transform)
-    .getReader();
-  const chunks: Uint8Array[] = [];
-  let length = 0;
-  for (;;) {
-    const { done, value } = await reader.read();
-    if (done) break;
-    chunks.push(value);
-    length += value.length;
-  }
-  const out = new Uint8Array(length);
-  let offset = 0;
-  for (const c of chunks) {
-    out.set(c, offset);
-    offset += c.length;
-  }
-  return out;
 }
