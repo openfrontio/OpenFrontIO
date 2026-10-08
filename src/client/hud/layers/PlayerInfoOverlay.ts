@@ -257,6 +257,15 @@ export class PlayerInfoOverlay extends LitElement implements Controller {
     if (!myPlayer || player === myPlayer || !this.showShortcutButtons()) {
       return;
     }
+    // No buttons while players spawn (the game would drop the actions), or
+    // once the shown tile has changed hands (the answer would be about its
+    // new owner).
+    if (this.game.inSpawnPhase() || this.game.owner(tile) !== player) {
+      this.playerActionsVersion++;
+      this.playerActionsFor = null;
+      this.playerActions = null;
+      return;
+    }
     const now = Date.now();
     if (
       this.playerActionsFor === player &&
@@ -752,7 +761,8 @@ export class PlayerInfoOverlay extends LitElement implements Controller {
           requestAllianceIcon,
           translateText("player_panel.send_alliance"),
           keybinds.requestAlliance,
-          () => this.eventBus.emit(new DoRequestAllianceEvent(tile)),
+          () =>
+            this.eventBus.emit(new DoRequestAllianceEvent(tile, player.id())),
         ),
       );
     } else if (can?.breakAlliance) {
@@ -761,7 +771,7 @@ export class PlayerInfoOverlay extends LitElement implements Controller {
           breakAllianceIcon,
           translateText("player_panel.break_alliance"),
           keybinds.breakAlliance,
-          () => this.eventBus.emit(new DoBreakAllianceEvent(tile)),
+          () => this.eventBus.emit(new DoBreakAllianceEvent(tile, player.id())),
         ),
       );
     }
@@ -771,7 +781,7 @@ export class PlayerInfoOverlay extends LitElement implements Controller {
           targetIcon,
           translateText("player_panel.target"),
           keybinds.targetPlayer,
-          () => this.eventBus.emit(new DoTargetPlayerEvent(tile)),
+          () => this.eventBus.emit(new DoTargetPlayerEvent(tile, player.id())),
         ),
       );
     }

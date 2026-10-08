@@ -327,6 +327,21 @@ describe("player actions from keybinds and panel buttons", () => {
     expect(requests[0].recipient).toBe(enemy);
   });
 
+  it("drops a panel action once its tile has changed hands", async () => {
+    const { eventBus, myPlayer } = setup({
+      actions: { interaction: { canTarget: true } },
+    });
+    const targets: SendTargetPlayerIntentEvent[] = [];
+    eventBus.on(SendTargetPlayerIntentEvent, (e) => targets.push(e));
+
+    // The panel showed someone else; enemy1 owns the tile now.
+    eventBus.emit(new DoTargetPlayerEvent(PANEL_TILE, "someone-else"));
+    await flushPromises();
+
+    expect(myPlayer.actions).not.toHaveBeenCalled();
+    expect(targets).toHaveLength(0);
+  });
+
   it("ignores panel actions during the spawn phase", async () => {
     const { eventBus, myPlayer } = setup({ inSpawnPhase: true });
 

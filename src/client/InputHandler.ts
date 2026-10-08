@@ -1,6 +1,7 @@
 import { TileRef } from "@openfront/engine-api/game/GameMap";
 import {
   PlayerBuildableUnitType,
+  PlayerID,
   UnitType,
 } from "@openfront/engine-api/game/GameTypes";
 import { EventBus, GameEvent } from "@openfront/shared/EventBus";
@@ -179,6 +180,8 @@ export class EmojiKeyEvent implements GameEvent {
 
 // The player actions below act on the tile under the cursor (their
 // keybinds), or on `tile` when given (the player info panel's buttons).
+// `playerID` is the player the panel showed: if the tile has changed hands
+// since, the action is dropped rather than hitting its new owner.
 
 export class DoBoatAttackEvent implements GameEvent {
   constructor(public readonly tile?: TileRef) {}
@@ -189,15 +192,24 @@ export class DoGroundAttackEvent implements GameEvent {}
 export class DoRetaliateAttackEvent implements GameEvent {}
 
 export class DoRequestAllianceEvent implements GameEvent {
-  constructor(public readonly tile?: TileRef) {}
+  constructor(
+    public readonly tile?: TileRef,
+    public readonly playerID?: PlayerID,
+  ) {}
 }
 
 export class DoBreakAllianceEvent implements GameEvent {
-  constructor(public readonly tile?: TileRef) {}
+  constructor(
+    public readonly tile?: TileRef,
+    public readonly playerID?: PlayerID,
+  ) {}
 }
 
 export class DoTargetPlayerEvent implements GameEvent {
-  constructor(public readonly tile?: TileRef) {}
+  constructor(
+    public readonly tile?: TileRef,
+    public readonly playerID?: PlayerID,
+  ) {}
 }
 
 export class AttackRatioEvent implements GameEvent {

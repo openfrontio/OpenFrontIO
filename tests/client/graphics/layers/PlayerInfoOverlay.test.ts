@@ -96,6 +96,7 @@ describe("PlayerInfoOverlay", () => {
     ref: () => 42,
     owner: () => hovered,
     myPlayer: () => myPlayer,
+    inSpawnPhase: () => false,
     config: () => ({
       isUnitDisabled: () => true,
       maxTroops: () => 1000,
@@ -336,6 +337,10 @@ describe("PlayerInfoOverlay", () => {
       expect(sent[1]).toBeInstanceOf(DoTargetPlayerEvent);
       expect(sent[2]).toBeInstanceOf(DoBoatAttackEvent);
       expect(sent.map((e) => e.tile)).toEqual([42, 42, 42]);
+      // Alliance and target also name the shown player, so a tile that
+      // changes hands meanwhile doesn't redirect them.
+      expect(sent[0].playerID).toBe("bob");
+      expect(sent[1].playerID).toBe("bob");
     });
 
     it("drop Send Alliance as soon as I click it", async () => {
@@ -384,6 +389,34 @@ describe("PlayerInfoOverlay", () => {
       expect(flatten(overlay.render())).not.toContain(
         "player_panel.send_alliance",
       );
+    });
+
+    it("show none while players are still spawning", async () => {
+      const actions = vi.fn();
+      const game = makeGame({
+        isFriendly: () => false,
+        isAlliedWith: () => false,
+        smallID: () => 1,
+        actions,
+      });
+      game.inSpawnPhase = () => true;
+      overlay.game = game as never;
+      overlay.maybeShow(10, 10);
+
+      expect(actions).not.toHaveBeenCalled();
+      expect(flatten(overlay.render())).not.toContain("player_panel.target");
+    });
+
+    it("drop them once the shown tile changes hands", async () => {
+      const { actions } = await hoverBob({ canTarget: true }, false);
+      overlay["onPanelEnter"](); // the pointer rests on the panel
+      const game = overlay.game as unknown as { owner: () => unknown };
+      game.owner = () => ({ ...hovered, id: () => "carol" });
+      overlay["playerActionsFetchedAt"] = 0;
+      overlay.tick();
+
+      expect(actions).toHaveBeenCalledTimes(1);
+      expect(flatten(overlay.render())).not.toContain("player_panel.target");
     });
 
     it("don't ask about my own territory", async () => {
