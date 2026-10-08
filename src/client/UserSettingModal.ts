@@ -1544,6 +1544,16 @@ export class UserSettingModal extends BaseModal {
       ></setting-keybind>
 
       <setting-keybind
+        action="targetPlayer"
+        label=${translateText("user_setting.target_player")}
+        description=${translateText("user_setting.target_player_desc")}
+        defaultKey=${this.defaultKeybinds.targetPlayer}
+        .value=${this.getKeyValue("targetPlayer")}
+        .display=${this.getKeyChar("targetPlayer")}
+        @change=${this.handleKeybindChange}
+      ></setting-keybind>
+
+      <setting-keybind
         action="emojiMenu"
         label=${translateText("user_setting.emoji_menu")}
         description=${translateText("user_setting.emoji_menu_desc")}

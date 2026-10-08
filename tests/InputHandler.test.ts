@@ -7,6 +7,7 @@ import {
   ConfirmGhostStructureEvent,
   ContextMenuEvent,
   DoBoatAttackEvent,
+  DoTargetPlayerEvent,
   DragEvent,
   EmojiKeyEvent,
   EmojiTableVisibleEvent,
@@ -1350,6 +1351,35 @@ describe("InputHandler AutoUpgrade", () => {
       );
 
       expect(uiState.ghostStructure).toBe(UnitType.City);
+    });
+  });
+
+  describe("Target player keybind", () => {
+    beforeEach(() => {
+      inputHandler.destroy();
+      inputHandler = new InputHandler(
+        mockGameView,
+        {
+          attackRatio: 20,
+          ghostStructure: null,
+          rocketDirectionUp: true,
+          upgradeMultiplier: 1,
+        },
+        mockCanvas,
+        eventBus,
+      );
+      inputHandler.initialize();
+    });
+
+    test("N targets the player under the cursor", () => {
+      const targets: DoTargetPlayerEvent[] = [];
+      eventBus.on(DoTargetPlayerEvent, (e) => targets.push(e));
+
+      window.dispatchEvent(new KeyboardEvent("keyup", { code: "KeyN" }));
+
+      expect(targets).toHaveLength(1);
+      // No tile: the runner uses the one under the cursor.
+      expect(targets[0].tile).toBeUndefined();
     });
   });
 
