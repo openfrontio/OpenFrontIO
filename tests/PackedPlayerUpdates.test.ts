@@ -16,6 +16,8 @@ import {
 import { Executor } from "@openfront/engine/execution/ExecutionManager";
 import { SpawnExecution } from "@openfront/engine/execution/SpawnExecution";
 import { Game, Player } from "@openfront/engine/game/Game";
+import { Railroad } from "@openfront/engine/game/Railroad";
+import { TrainStation } from "@openfront/engine/game/TrainStation";
 import { GameRunner } from "@openfront/engine/GameRunner";
 import { setup } from "./util/Setup";
 
@@ -219,5 +221,60 @@ describe("GameRunner payload cadence", () => {
     const nextPlayerUpdates = nextGu.updates[GameUpdateType.Player];
     // Alice's static fields are omitted in partial update diff
     expect(nextPlayerUpdates.find((u) => u.id === "alice_id")).toBeUndefined();
+  });
+
+  test("snapshotViewData includes railroad construction and pending alliance requests", () => {
+    tick(); // 1
+    tick(); // 2
+    game.endSpawnPhase();
+    tick(); // 3
+
+    const alice = game.player("alice_id");
+    const bobInfo = new PlayerInfo(
+      "bob",
+      PlayerType.Human,
+      "bob_client",
+      "bob_id",
+    );
+    game.addPlayer(bobInfo);
+    const bob = game.player("bob_id");
+
+    const req = alice.createAllianceRequest(bob);
+    expect(req).not.toBeNull();
+    expect(game.allianceRequests()).toHaveLength(1);
+
+    // Build two cities and connect their stations with a railroad
+    alice.addGold(1_000_000n);
+    const c1 = alice.buildUnit(UnitType.City, game.ref(15, 15), {});
+    const c2 = alice.buildUnit(UnitType.City, game.ref(15, 30), {});
+    const s1 = new TrainStation(game, c1);
+    const s2 = new TrainStation(game, c2);
+    const railroad = new Railroad(s1, s2, [c1.tile(), c2.tile()], 42);
+    s1.addRailroad(railroad);
+    s2.addRailroad(railroad);
+    game.railNetwork().stationManager().addStation(s1);
+    game.railNetwork().stationManager().addStation(s2);
+
+    const railroads = game.railNetwork().railroads();
+    expect(railroads).toHaveLength(1);
+    expect(railroads[0]).toBe(railroad);
+
+    const runner = new GameRunner(
+      game,
+      new Executor(game, gameID, "alice_client"),
+      () => {},
+    );
+
+    const snapshotView = runner.snapshotViewData();
+    const allianceReqs = snapshotView.updates[GameUpdateType.AllianceRequest];
+    expect(allianceReqs).toHaveLength(1);
+    expect(allianceReqs[0]).toEqual(req!.toUpdate());
+
+    const railUpdates =
+      snapshotView.updates[GameUpdateType.RailroadConstructionEvent];
+    expect(railUpdates.length).toBe(railroads.length);
+    for (const r of railroads) {
+      expect(railUpdates.some((u) => u.id === r.id)).toBe(true);
+    }
   });
 });

@@ -291,7 +291,7 @@ export class PlayerImpl implements Player {
     // most players. The singletons are never mutated — updates are
     // structured-cloned before leaving the worker.
     let outgoingAllianceRequests = EMPTY_STRING_ARRAY;
-    for (const ar of this.mg.allianceRequests) {
+    for (const ar of this.mg.allianceRequests()) {
       if (ar.requestor() === this) {
         if (outgoingAllianceRequests === EMPTY_STRING_ARRAY) {
           outgoingAllianceRequests = [];
@@ -755,11 +755,11 @@ export class PlayerImpl implements Player {
   }
 
   incomingAllianceRequests(): AllianceRequest[] {
-    return this.mg.allianceRequests.filter((ar) => ar.recipient() === this);
+    return this.mg.allianceRequests().filter((ar) => ar.recipient() === this);
   }
 
   outgoingAllianceRequests(): AllianceRequest[] {
-    return this.mg.allianceRequests.filter((ar) => ar.requestor() === this);
+    return this.mg.allianceRequests().filter((ar) => ar.requestor() === this);
   }
 
   alliances(): MutableAlliance[] {
