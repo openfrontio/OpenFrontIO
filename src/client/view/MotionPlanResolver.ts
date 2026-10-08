@@ -27,6 +27,7 @@ interface TrainMotionPlan {
   usedTilesBuf: Uint32Array;
   usedHead: number;
   usedLen: number;
+  speedRemainder: number;
   lastAdvancedTick: number;
 }
 
@@ -108,6 +109,7 @@ export class MotionPlanResolver {
           ),
           usedHead: 0,
           usedLen: 0,
+          speedRemainder: 0,
           lastAdvancedTick: record.startTick,
         });
         this.trainUnitToEngine.set(record.engineUnitId, record.engineUnitId);
@@ -208,10 +210,13 @@ export class MotionPlanResolver {
       for (let step = 0; step < steps; step++) {
         const cursor = plan.cursor;
         if (cursor >= lastIndex) break;
-        for (let i = 0; i < plan.speed && cursor + i < path.length; i++) {
+        const movement = Math.floor(plan.speed + plan.speedRemainder);
+        plan.speedRemainder =
+          plan.speed + plan.speedRemainder - movement;
+        for (let i = 0; i < movement && cursor + i < path.length; i++) {
           pushUsed(path[cursor + i]);
         }
-        plan.cursor = Math.min(lastIndex, cursor + plan.speed);
+        plan.cursor = Math.min(lastIndex, cursor + movement);
 
         for (let i = plan.carUnitIds.length - 1; i >= 0; --i) {
           const carId = plan.carUnitIds[i];
