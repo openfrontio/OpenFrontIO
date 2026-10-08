@@ -21,17 +21,9 @@
   --filter-toxic-swamp: hue-rotate(80deg) sepia(0.3) brightness(0.65) saturate(1.2) contrast(1.15);
 }
 
-/* Base body styles & Spooky Spiderweb Cursor (Homepage only) */
+/* Base body styles (Homepage only) */
 body.halloween-theme:not(.in-game) {
   background-color: #1a0b26 !important;
-  cursor: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='32' height='32' style='font-size: 24px'><text y='24'>🕸️</text></svg>") 16 16, auto !important;
-}
-
-/* Interactive elements get a Pumpkin cursor (Homepage only) */
-body.halloween-theme:not(.in-game) button, 
-body.halloween-theme:not(.in-game) a,
-body.halloween-theme:not(.in-game) [role="button"] {
-  cursor: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='32' height='32' style='font-size: 24px'><text y='24'>🎃</text></svg>") 16 16, pointer !important;
 }
 
 /* Background image filter overrides - Calmed, dark moody night tint */
@@ -191,8 +183,8 @@ body.halloween-theme:not(.in-game)::before {
   content: "" !important;
   display: block !important;
   position: fixed !important;
-  top: 10px !important;
-  left: 10px !important;
+  top: 0px !important;
+  left: 0px !important;
   width: 100px !important;
   height: 100px !important;
   background-image: var(--hw-cobweb-svg) !important;
