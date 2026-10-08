@@ -224,6 +224,29 @@ export class UnitDisplay extends LitElement implements Controller {
             this.keybinds["buildMIRV"]?.key ?? "0",
           )}
         </div>
+        <div class="grid grid-rows-1 grid-flow-col gap-0.5 w-fit mx-auto">
+          ${this.renderUnitItem(
+            oilMineIcon,
+            this._oilMines,
+            UnitType.OilMine,
+            "oil_mine",
+            this.keybinds["buildOilMine"]?.key ?? "Shift+Digit1",
+          )}
+          ${this.renderUnitItem(
+            goldMineIcon,
+            this._goldMines,
+            UnitType.GoldMine,
+            "gold_mine",
+            this.keybinds["buildGoldMine"]?.key ?? "Shift+Digit2",
+          )}
+          ${this.renderUnitItem(
+            diamondMineIcon,
+            this._diamondMines,
+            UnitType.DiamondMine,
+            "diamond_mine",
+            this.keybinds["buildDiamondMine"]?.key ?? "Shift+Digit3",
+          )}
+        </div>
       </div>
     `;
   }
@@ -331,29 +354,6 @@ export class UnitDisplay extends LitElement implements Controller {
               ? html`<span class="text-xs">${renderNumber(number)}</span>`
               : null}
           </div>
-        </div>
-        <div class="grid grid-rows-1 grid-flow-col gap-0.5 w-fit mx-auto">
-          ${this.renderUnitItem(
-            oilMineIcon,
-            this._oilMines,
-            UnitType.OilMine,
-            "oil_mine",
-            this.keybinds["buildOilMine"]?.key ?? "Shift+Digit1",
-          )}
-          ${this.renderUnitItem(
-            goldMineIcon,
-            this._goldMines,
-            UnitType.GoldMine,
-            "gold_mine",
-            this.keybinds["buildGoldMine"]?.key ?? "Shift+Digit2",
-          )}
-          ${this.renderUnitItem(
-            diamondMineIcon,
-            this._diamondMines,
-            UnitType.DiamondMine,
-            "diamond_mine",
-            this.keybinds["buildDiamondMine"]?.key ?? "Shift+Digit3",
-          )}
         </div>
       </div>
     `;
