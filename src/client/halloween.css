@@ -16,9 +16,12 @@
   --hw-cobweb-spider-svg: url("data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMDAgMTAwIiBmaWxsPSJub25lIiBzdHJva2U9IndoaXRlIiBzdHJva2Utd2lkdGg9IjQiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCI+CiAgPHBhdGggZD0iTTAsMCBMMTAwLDAgTTAsMCBMOTIsMzYgTTAsMCBMNjgsNjggTTAsMCBMMzYsOTIgTTAsMCBMMCwxMDAiIG9wYWNpdHk9IjAuOCIvPgogIDxwYXRoIGQ9Ik0zMCwwIFEyNSwzIDI3LDEwIFEyMiwxNCAyMCwyMCBRMTQsMjIgMTAsMjcgUTMsMjUgMCwzMCIgb3BhY2l0eT0iMC45Ii8+CiAgPHBhdGggZD0iTTYwLDAgUTUwLDYgNTQsMjAgUTQ0LDI4IDQwLDQwIFEyOCw0NCAyMCw1NCBRNiw1MCAwLDYwIiBvcGFjaXR5PSIwLjg1Ii8+CiAgPHBhdGggZD0iTTQwLDQwIEw0MCw3NSIgc3Ryb2tlPSJ3aGl0ZSIgc3Ryb2tlLXdpZHRoPSIyIiBvcGFjaXR5PSIwLjYiLz4KICA8ZWxsaXBzZSBjeD0iNDAiIGN5PSI4MCIgcng9IjUiIHJ5PSI2IiBmaWxsPSJ3aGl0ZSIgc3Ryb2tlPSJub25lIi8+CiAgPHBhdGggZD0iTTM1LDc3IFEzMCw3MyAyNyw3OCBNMzUsODEgUTI5LDgxIDI2LDg1IE00NSw3NyBRNTAsNzMgNTMsNzggTTQ1LDgxIFE1MSw4MSA1NCw4NSIgc3Ryb2tlPSJ3aGl0ZSIgc3Ryb2tlLXdpZHRoPSIyIi8+Cjwvc3ZnPg==");
 
   /* Map Theme Filter Presets - Balanced cinematic saturation (colorblind & eye-strain safe) */
-  --filter-haunted-moonlight: hue-rotate(220deg) sepia(0.25) brightness(0.7) saturate(1.2) contrast(1.2);
-  --filter-blood-moon: hue-rotate(330deg) sepia(0.35) brightness(0.68) saturate(1.25) contrast(1.22);
-  --filter-toxic-swamp: hue-rotate(80deg) sepia(0.3) brightness(0.65) saturate(1.2) contrast(1.15);
+  --filter-haunted-moonlight: hue-rotate(220deg) sepia(0.25) brightness(0.7)
+    saturate(1.2) contrast(1.2);
+  --filter-blood-moon: hue-rotate(330deg) sepia(0.35) brightness(0.68)
+    saturate(1.25) contrast(1.22);
+  --filter-toxic-swamp: hue-rotate(80deg) sepia(0.3) brightness(0.65)
+    saturate(1.2) contrast(1.15);
 }
 
 /* Base body styles (Homepage only) */
@@ -28,7 +31,8 @@ body.halloween-theme:not(.in-game) {
 
 /* Background image filter overrides - Calmed, dark moody night tint */
 body.halloween-theme:not(.in-game) #background-layer {
-  filter: hue-rotate(340deg) sepia(0.45) brightness(0.55) saturate(1.25) contrast(1.05) !important;
+  filter: hue-rotate(340deg) sepia(0.45) brightness(0.55) saturate(1.25)
+    contrast(1.05) !important;
 }
 
 /* Creepy dark vignette over the background (Made lighter so it's not pure black) */
@@ -36,14 +40,20 @@ body.halloween-theme:not(.in-game) #hex-grid::after {
   content: "";
   position: absolute;
   inset: 0;
-  background: radial-gradient(circle at center, transparent 40%, rgba(0, 0, 0, 0.7) 100%);
+  background: radial-gradient(
+    circle at center,
+    transparent 40%,
+    rgba(0, 0, 0, 0.7) 100%
+  );
   pointer-events: none;
   z-index: 1;
 }
 
 /* --- Gradient Halloween Logo --- */
 /* Desktop Logo */
-body.halloween-theme:not(.in-game) #hex-grid > div.hidden.lg\:block:not(#background-layer) {
+body.halloween-theme:not(.in-game)
+  #hex-grid
+  > div.hidden.lg\:block:not(#background-layer) {
   background-image: none !important; /* Remove original static image */
   -webkit-mask-image: var(--desktop-logo-image-url);
   mask-image: var(--desktop-logo-image-url);
@@ -58,7 +68,9 @@ body.halloween-theme:not(.in-game) #hex-grid > div.hidden.lg\:block:not(#backgro
 }
 
 /* Mobile Logo */
-body.halloween-theme:not(.in-game) #hex-grid > div.lg\:hidden:not(#background-layer) {
+body.halloween-theme:not(.in-game)
+  #hex-grid
+  > div.lg\:hidden:not(#background-layer) {
   background-image: none !important;
   -webkit-mask-image: var(--mobile-logo-image-url);
   mask-image: var(--mobile-logo-image-url);
@@ -97,7 +109,8 @@ body.halloween-theme:not(.in-game) #sidebar-menu {
 body.halloween-theme:not(.in-game) desktop-nav-bar img,
 body.halloween-theme:not(.in-game) mobile-nav-bar img,
 body.halloween-theme:not(.in-game) img[src*="OpenFrontLogo"] {
-  filter: hue-rotate(150deg) saturate(1.7) brightness(1.3) drop-shadow(0 0 10px rgba(255, 122, 0, 0.8));
+  filter: hue-rotate(150deg) saturate(1.7) brightness(1.3)
+    drop-shadow(0 0 10px rgba(255, 122, 0, 0.8));
   animation: hw-candle-flicker 3.2s infinite ease-in-out !important;
 }
 
@@ -206,7 +219,10 @@ body.halloween-theme:not(.in-game) button.bg-cyber-yellow::after,
 body.halloween-theme:not(.in-game) button[class*="bg-cyber-yellow"]::after,
 body.halloween-theme:not(.in-game) button.\!text-gray-900::after,
 body.halloween-theme:not(.in-game) button[class*="text-gray-900"]::after,
-body.halloween-theme:not(.in-game) game-mode-selector div[class*="flex-1"] button::after,
+body.halloween-theme:not(.in-game)
+  game-mode-selector
+  div[class*="flex-1"]
+  button::after,
 body.halloween-theme:not(.in-game) game-mode-selector .flex-1 button::after {
   content: "" !important;
   display: block !important;
@@ -226,8 +242,14 @@ body.halloween-theme:not(.in-game) game-mode-selector .flex-1 button::after {
 }
 
 /* 2. Create Lobby Button - Top-Left Cobweb */
-body.halloween-theme:not(.in-game) game-mode-selector .grid button:first-child::before,
-body.halloween-theme:not(.in-game) game-mode-selector div[class*="grid-cols-3"] button:first-child::before {
+body.halloween-theme:not(.in-game)
+  game-mode-selector
+  .grid
+  button:first-child::before,
+body.halloween-theme:not(.in-game)
+  game-mode-selector
+  div[class*="grid-cols-3"]
+  button:first-child::before {
   content: "" !important;
   display: block !important;
   position: absolute !important;
@@ -259,35 +281,61 @@ body.halloween-theme:not(.in-game) .bg-malibu-blue\/20:not(button) {
 /* --- Blood Crimson Moon Lobby Map Cards --- */
 /* Optimized with high contrast (1.35) so coastlines and terrain remain distinct for colorblind players */
 body.halloween-theme:not(.in-game) game-mode-selector button.rounded-2xl img,
-body.halloween-theme:not(.in-game) game-mode-selector button[class*="rounded-2xl"] img {
+body.halloween-theme:not(.in-game)
+  game-mode-selector
+  button[class*="rounded-2xl"]
+  img {
   filter: var(--filter-haunted-moonlight) !important;
-  transition: filter 0.3s ease-in-out, transform 0.25s ease-in-out !important;
+  transition:
+    filter 0.3s ease-in-out,
+    transform 0.25s ease-in-out !important;
 }
 
 /* On hover: map terrain flares with warm crimson light */
-body.halloween-theme:not(.in-game) game-mode-selector button.rounded-2xl:hover img,
-body.halloween-theme:not(.in-game) game-mode-selector button[class*="rounded-2xl"]:hover img {
-  filter: hue-rotate(335deg) sepia(0.45) brightness(0.85) saturate(1.35) contrast(1.35) !important;
+body.halloween-theme:not(.in-game)
+  game-mode-selector
+  button.rounded-2xl:hover
+  img,
+body.halloween-theme:not(.in-game)
+  game-mode-selector
+  button[class*="rounded-2xl"]:hover
+  img {
+  filter: hue-rotate(335deg) sepia(0.45) brightness(0.85) saturate(1.35)
+    contrast(1.35) !important;
 }
 
 /* Map Card Container: Blood-orange outline and shadow */
 body.halloween-theme:not(.in-game) game-mode-selector button.rounded-2xl,
-body.halloween-theme:not(.in-game) game-mode-selector button[class*="rounded-2xl"] {
+body.halloween-theme:not(.in-game)
+  game-mode-selector
+  button[class*="rounded-2xl"] {
   border: 1.5px solid rgba(255, 69, 0, 0.45) !important;
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.7), 0 0 10px rgba(255, 69, 0, 0.2) !important;
-  transition: border-color 0.25s ease, box-shadow 0.25s ease !important;
+  box-shadow:
+    0 4px 15px rgba(0, 0, 0, 0.7),
+    0 0 10px rgba(255, 69, 0, 0.2) !important;
+  transition:
+    border-color 0.25s ease,
+    box-shadow 0.25s ease !important;
 }
 
 /* On hover: intense glowing crimson/blood-orange border */
 body.halloween-theme:not(.in-game) game-mode-selector button.rounded-2xl:hover,
-body.halloween-theme:not(.in-game) game-mode-selector button[class*="rounded-2xl"]:hover {
+body.halloween-theme:not(.in-game)
+  game-mode-selector
+  button[class*="rounded-2xl"]:hover {
   border-color: #ff3b30 !important;
-  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.8), 0 0 22px rgba(255, 59, 48, 0.6), inset 0 0 12px rgba(255, 69, 0, 0.2) !important;
+  box-shadow:
+    0 6px 20px rgba(0, 0, 0, 0.8),
+    0 0 22px rgba(255, 59, 48, 0.6),
+    inset 0 0 12px rgba(255, 69, 0, 0.2) !important;
 }
 
 /* Map Title inside card bottom bar: Glowing Blood Orange */
 body.halloween-theme:not(.in-game) game-mode-selector button.rounded-2xl p,
-body.halloween-theme:not(.in-game) game-mode-selector button[class*="rounded-2xl"] p {
+body.halloween-theme:not(.in-game)
+  game-mode-selector
+  button[class*="rounded-2xl"]
+  p {
   color: #ff6347 !important;
   text-shadow: 0 0 8px rgba(255, 69, 0, 0.7) !important;
 }
@@ -295,57 +343,92 @@ body.halloween-theme:not(.in-game) game-mode-selector button[class*="rounded-2xl
 /* Accessibility: High contrast mode support for colorblind/low-vision players */
 @media (prefers-contrast: more) {
   body.halloween-theme:not(.in-game) game-mode-selector button.rounded-2xl img,
-  body.halloween-theme:not(.in-game) game-mode-selector button[class*="rounded-2xl"] img {
+  body.halloween-theme:not(.in-game)
+    game-mode-selector
+    button[class*="rounded-2xl"]
+    img {
     filter: contrast(1.4) brightness(0.9) !important;
   }
   body.halloween-theme:not(.in-game) game-mode-selector button.rounded-2xl,
-  body.halloween-theme:not(.in-game) game-mode-selector button[class*="rounded-2xl"] {
+  body.halloween-theme:not(.in-game)
+    game-mode-selector
+    button[class*="rounded-2xl"] {
     border: 2px solid #ffffff !important;
   }
 }
 
 /* Modular classes for future filter rotations */
-.map-theme-haunted img { filter: var(--filter-haunted-moonlight) !important; }
-.map-theme-bloodmoon img { filter: var(--filter-blood-moon) !important; }
-.map-theme-toxic img { filter: var(--filter-toxic-swamp) !important; }
+.map-theme-haunted img {
+  filter: var(--filter-haunted-moonlight) !important;
+}
+.map-theme-bloodmoon img {
+  filter: var(--filter-blood-moon) !important;
+}
+.map-theme-toxic img {
+  filter: var(--filter-toxic-swamp) !important;
+}
 
 /* Animations */
 @keyframes hw-float-ghost {
-  0% { top: 0px; transform: scale(1); }
-  50% { top: -8px; transform: scale(1.1); }
-  100% { top: 0px; transform: scale(1); }
+  0% {
+    top: 0px;
+    transform: scale(1);
+  }
+  50% {
+    top: -8px;
+    transform: scale(1.1);
+  }
+  100% {
+    top: 0px;
+    transform: scale(1);
+  }
 }
 
 @keyframes hw-glow-pulse-orange {
-  from { box-shadow: 0 0 5px var(--hw-orange); }
-  to { box-shadow: 0 0 20px var(--hw-orange); }
+  from {
+    box-shadow: 0 0 5px var(--hw-orange);
+  }
+  to {
+    box-shadow: 0 0 20px var(--hw-orange);
+  }
 }
 
 /* Organic Jack-o'-Lantern Candlelight Flame Flicker */
 @keyframes hw-candle-flicker {
-  0%, 100% {
-    filter: hue-rotate(150deg) saturate(1.7) brightness(1.3) drop-shadow(0 0 8px rgba(255, 122, 0, 0.75));
+  0%,
+  100% {
+    filter: hue-rotate(150deg) saturate(1.7) brightness(1.3)
+      drop-shadow(0 0 8px rgba(255, 122, 0, 0.75));
   }
   20% {
-    filter: hue-rotate(152deg) saturate(1.8) brightness(1.38) drop-shadow(0 0 13px rgba(255, 140, 0, 0.85)) drop-shadow(0 0 3px rgba(255, 200, 50, 0.45));
+    filter: hue-rotate(152deg) saturate(1.8) brightness(1.38)
+      drop-shadow(0 0 13px rgba(255, 140, 0, 0.85))
+      drop-shadow(0 0 3px rgba(255, 200, 50, 0.45));
   }
   45% {
-    filter: hue-rotate(148deg) saturate(1.55) brightness(1.22) drop-shadow(0 0 6px rgba(255, 100, 0, 0.65));
+    filter: hue-rotate(148deg) saturate(1.55) brightness(1.22)
+      drop-shadow(0 0 6px rgba(255, 100, 0, 0.65));
   }
   65% {
-    filter: hue-rotate(151deg) saturate(1.75) brightness(1.34) drop-shadow(0 0 11px rgba(255, 130, 0, 0.8)) drop-shadow(0 0 2px rgba(255, 180, 50, 0.4));
+    filter: hue-rotate(151deg) saturate(1.75) brightness(1.34)
+      drop-shadow(0 0 11px rgba(255, 130, 0, 0.8))
+      drop-shadow(0 0 2px rgba(255, 180, 50, 0.4));
   }
   85% {
-    filter: hue-rotate(149deg) saturate(1.6) brightness(1.25) drop-shadow(0 0 7px rgba(255, 110, 0, 0.7));
+    filter: hue-rotate(149deg) saturate(1.6) brightness(1.25)
+      drop-shadow(0 0 7px rgba(255, 110, 0, 0.7));
   }
 }
 
 @keyframes hw-candle-text-flicker {
-  0%, 100% {
+  0%,
+  100% {
     text-shadow: 0 0 8px rgba(255, 122, 0, 0.75);
   }
   20% {
-    text-shadow: 0 0 12px rgba(255, 140, 0, 0.85), 0 0 3px rgba(255, 200, 50, 0.45);
+    text-shadow:
+      0 0 12px rgba(255, 140, 0, 0.85),
+      0 0 3px rgba(255, 200, 50, 0.45);
   }
   45% {
     text-shadow: 0 0 6px rgba(255, 100, 0, 0.65);
