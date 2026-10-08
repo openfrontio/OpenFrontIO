@@ -29,6 +29,7 @@ import {
   WarshipState,
 } from "@openfront/engine-api/game/GameTypes";
 import {
+  AllianceRequestUpdate,
   GameUpdate,
   PlayerUpdate,
   UnitUpdate,
@@ -159,6 +160,7 @@ export interface AllianceRequest {
   recipient(): Player;
   createdAt(): Tick;
   status(): "pending" | "accepted" | "rejected";
+  toUpdate(): AllianceRequestUpdate;
 }
 
 export interface Alliance {
@@ -542,6 +544,7 @@ export interface Game extends GameLike {
 
   // Alliances
   expireAlliance(alliance: Alliance): void;
+  allianceRequests(): AllianceRequest[];
 
   // Immunity timer
   isSpawnImmunityActive(): boolean;

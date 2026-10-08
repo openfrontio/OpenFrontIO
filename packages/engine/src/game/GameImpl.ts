@@ -133,7 +133,7 @@ export class GameImpl implements Game {
   private _height: number;
   _terraNullius: TerraNulliusImpl;
 
-  allianceRequests: AllianceRequestImpl[] = [];
+  private _allianceRequests: AllianceRequestImpl[] = [];
 
   private nextPlayerID = 1;
   private _nextUnitID = 1;
@@ -447,13 +447,13 @@ export class GameImpl implements Game {
       return null;
     }
     const ar = new AllianceRequestImpl(requestor, recipient, this._ticks, this);
-    this.allianceRequests.push(ar);
+    this._allianceRequests.push(ar);
     this.addUpdate(ar.toUpdate());
     return ar;
   }
 
   acceptAllianceRequest(request: AllianceRequestImpl) {
-    this.allianceRequests = this.allianceRequests.filter(
+    this._allianceRequests = this._allianceRequests.filter(
       (ar) => ar !== request,
     );
 
@@ -491,7 +491,7 @@ export class GameImpl implements Game {
   }
 
   rejectAllianceRequest(request: AllianceRequestImpl) {
-    this.allianceRequests = this.allianceRequests.filter(
+    this._allianceRequests = this._allianceRequests.filter(
       (ar) => ar !== request,
     );
     (request.requestor() as PlayerImpl).pastOutgoingAllianceRequests.push(
@@ -948,6 +948,10 @@ export class GameImpl implements Game {
       player1ID: alliance.requestor().smallID(),
       player2ID: alliance.recipient().smallID(),
     });
+  }
+
+  public allianceRequests(): AllianceRequest[] {
+    return this._allianceRequests;
   }
 
   public removeAlliancesByPlayerSilently(player: Player): void {
@@ -1464,7 +1468,7 @@ export class GameImpl implements Game {
       players: [...this._players.values()].map((p) => w.player(p)),
       execs,
       unInitExecs,
-      allianceRequests: this.allianceRequests.map((r) => w.allianceRequest(r)),
+      allianceRequests: this._allianceRequests.map((r) => w.allianceRequest(r)),
       nextPlayerID: this.nextPlayerID,
       nextUnitID: this._nextUnitID,
       nextAllianceID: this.nextAllianceID,
@@ -1513,7 +1517,7 @@ export class GameImpl implements Game {
     this._startTick = s.startTick;
     this.execs = s.execs.map((i) => r.exec(i));
     this.unInitExecs = s.unInitExecs.map((i) => r.exec(i));
-    this.allianceRequests = s.allianceRequests.map((i) =>
+    this._allianceRequests = s.allianceRequests.map((i) =>
       r.allianceRequest<AllianceRequestImpl>(i),
     );
     this.nextPlayerID = s.nextPlayerID;

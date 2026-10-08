@@ -203,6 +203,16 @@ export class GameRunner {
       }
     }
 
+    for (const railroad of this.game.railNetwork().railroads()) {
+      updates[GameUpdateType.RailroadConstructionEvent].push(
+        railroad.toConstructionUpdate(),
+      );
+    }
+
+    for (const req of this.game.allianceRequests()) {
+      updates[GameUpdateType.AllianceRequest].push(req.toUpdate());
+    }
+
     if (!this.game.inSpawnPhase()) {
       updates[GameUpdateType.SpawnPhaseEnd].push({
         type: GameUpdateType.SpawnPhaseEnd,
