@@ -1,5 +1,5 @@
 /**
- * Extracts a playable singleplayer game snapshot from a GameRecord at a given tick.
+ * Extracts a playable singleplayer game snapshot from game start info and turns at a given tick.
  * Converts other human players into AI bots (NationExecution) and binds the chosen player
  * to the local clientID.
  */
@@ -14,49 +14,42 @@ import {
   ErrorUpdate,
   GameUpdateViewData,
 } from "@openfront/engine-api/game/GameUpdates";
-import { ClientID } from "@openfront/engine-api/Schemas";
-import { Player } from "@openfront/engine/game/Game";
-import { createGameRunner } from "@openfront/engine/GameRunner";
-import { GameMapLoader, loadMapFiles } from "@openfront/shared/GameMapLoader";
-import { decompressGameRecord, generateID } from "@openfront/shared/SharedUtil";
-import { GameRecord, WireGameStartInfo } from "@openfront/shared/WireSchemas";
-import { wireGameStartInfo } from "./ReplayProcessor";
+import { MapFiles } from "@openfront/engine-api/game/MapFiles";
+import { ClientID, GameStartInfo, Turn } from "@openfront/engine-api/Schemas";
+import { Player } from "../game/Game";
+import { createGameRunner } from "../GameRunner";
 
 export interface ExtractSnapshotOptions {
-  record: GameRecord;
+  gameStartInfo: GameStartInfo;
+  turns: Turn[];
+  mapFiles: MapFiles;
   targetTick: number;
   chosenPlayerID: PlayerID;
   localClientID: ClientID;
   difficulty?: Difficulty;
-  mapLoader: GameMapLoader;
+  newGameID?: string;
 }
 
 export interface ExtractedSnapshotResult {
   snapshot: Uint8Array;
-  gameStartInfo: WireGameStartInfo;
+  gameStartInfo: GameStartInfo;
 }
 
 /**
- * Re-runs a game record headless up to targetTick, configures the chosen player
+ * Re-runs turns headless up to targetTick, configures the chosen player
  * as the local human player and converts all other players to AI bots, then captures
  * a snapshot ready for singleplayer game resumption.
  */
-export async function extractSnapshotFromRecord(
+export async function extractSnapshot(
   opts: ExtractSnapshotOptions,
 ): Promise<ExtractedSnapshotResult> {
-  const { turns } = decompressGameRecord({ ...opts.record });
-  const gameStart = wireGameStartInfo(opts.record);
-
+  const gameStart = opts.gameStartInfo;
   let tickError: string | undefined;
-  const mapFiles = await loadMapFiles(
-    opts.mapLoader,
-    gameStart.config.gameMap,
-    gameStart.config.gameMapSize,
-  );
+
   const runner = await createGameRunner(
     gameStart,
     undefined,
-    mapFiles,
+    opts.mapFiles,
     (gu: GameUpdateViewData | ErrorUpdate) => {
       if ("errMsg" in gu) {
         tickError = `${gu.errMsg}\n${gu.stack ?? ""}`;
@@ -67,9 +60,9 @@ export async function extractSnapshotFromRecord(
   const game = runner.game;
   const target = Math.max(0, opts.targetTick);
 
-  for (let i = 0; i < turns.length; i++) {
-    const turn = turns[i];
-    if (turn.turnNumber > target) break;
+  for (let i = 0; i < opts.turns.length; i++) {
+    const turn = opts.turns[i];
+    if (turn.turnNumber >= target) break;
     runner.addTurn(turn);
     if (!runner.executeNextTick() || tickError !== undefined) {
       throw new Error(
@@ -110,22 +103,20 @@ export async function extractSnapshotFromRecord(
 
   const snapshot = runner.snapshot();
 
-  const originalCosmetics =
-    (originalClientID !== null
+  const originalPlayer =
+    originalClientID !== null
       ? gameStart.players.find((p) => p.clientID === originalClientID)
-          ?.cosmetics
-      : undefined) ?? {};
+      : undefined;
 
-  const newGameID = generateID();
-  const singlePlayerGameStart: WireGameStartInfo = {
+  const singlePlayerGameStart: GameStartInfo = {
     ...gameStart,
-    gameID: newGameID,
+    gameID: opts.newGameID ?? gameStart.gameID,
     players: [
       {
+        ...(originalPlayer ?? {}),
         clientID: opts.localClientID,
         username: chosenPlayer.name(),
         clanTag: chosenPlayer.clanTag(),
-        cosmetics: originalCosmetics,
       },
     ],
     config: {

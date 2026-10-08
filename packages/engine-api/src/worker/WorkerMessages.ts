@@ -1,6 +1,7 @@
 import { TileRef } from "../game/GameMap";
 import {
   BuildableUnit,
+  Difficulty,
   PlayerActions,
   PlayerBorderTiles,
   PlayerBuildableUnitType,
@@ -36,7 +37,10 @@ export type WorkerMessageType =
   | "transport_ship_spawn"
   | "transport_ship_spawn_result"
   | "snapshot"
-  | "snapshot_result";
+  | "snapshot_result"
+  | "extract_snapshot"
+  | "extract_snapshot_result"
+  | "extract_snapshot_error";
 
 // Base interface for all messages
 interface BaseWorkerMessage {
@@ -202,6 +206,29 @@ export interface SnapshotResultMessage extends BaseWorkerMessage {
   tick: number;
 }
 
+export interface ExtractSnapshotMessage extends BaseWorkerMessage {
+  type: "extract_snapshot";
+  gameStartInfo: GameStartInfo;
+  turns: Turn[];
+  map: MapFiles;
+  targetTick: number;
+  chosenPlayerID: PlayerID;
+  localClientID: ClientID;
+  difficulty?: Difficulty;
+  newGameID?: string;
+}
+
+export interface ExtractSnapshotResultMessage extends BaseWorkerMessage {
+  type: "extract_snapshot_result";
+  snapshot: Uint8Array;
+  gameStartInfo: GameStartInfo;
+}
+
+export interface ExtractSnapshotErrorMessage extends BaseWorkerMessage {
+  type: "extract_snapshot_error";
+  error: string;
+}
+
 // Union types for type safety
 export type MainThreadMessage =
   | InitMessage
@@ -214,7 +241,8 @@ export type MainThreadMessage =
   | PlayerBorderTilesMessage
   | AttackClusteredPositionsMessage
   | TransportShipSpawnMessage
-  | SnapshotMessage;
+  | SnapshotMessage
+  | ExtractSnapshotMessage;
 
 // Message send from worker
 export type WorkerMessage =
@@ -231,4 +259,6 @@ export type WorkerMessage =
   | PlayerBorderTilesResultMessage
   | AttackClusteredPositionsResultMessage
   | TransportShipSpawnResultMessage
-  | SnapshotResultMessage;
+  | SnapshotResultMessage
+  | ExtractSnapshotResultMessage
+  | ExtractSnapshotErrorMessage;

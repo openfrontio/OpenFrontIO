@@ -17,14 +17,43 @@ import {
   createGameRunner,
   createGameRunnerFromSnapshot,
 } from "@openfront/engine/GameRunner";
-import { loadMapFiles } from "@openfront/shared/GameMapLoader";
-import { decompressGameRecord } from "@openfront/shared/SharedUtil";
+import { extractSnapshot } from "@openfront/engine/snapshot/SnapshotExtractor";
+import { GameMapLoader, loadMapFiles } from "@openfront/shared/GameMapLoader";
+import { decompressGameRecord, generateID } from "@openfront/shared/SharedUtil";
+import { GameRecord } from "@openfront/shared/WireSchemas";
 import { describe, expect, test } from "vitest";
-import { extractSnapshotFromRecord } from "../../../src/client/replay/processor/SnapshotExtractor";
+import { wireGameStartInfo } from "../../../src/client/replay/processor/ReplayProcessor";
 import { config, human, mapLoader, playAndArchive } from "./util/ArchiveGame";
 
 const loadMap = (c: { gameMap: GameMapType; gameMapSize: GameMapSize }) =>
   loadMapFiles(mapLoader, c.gameMap, c.gameMapSize);
+
+async function extractSnapshotFromRecord(opts: {
+  record: GameRecord;
+  targetTick: number;
+  chosenPlayerID: string;
+  localClientID: string;
+  difficulty?: Difficulty;
+  mapLoader: GameMapLoader;
+}) {
+  const { turns } = decompressGameRecord({ ...opts.record });
+  const gameStart = wireGameStartInfo(opts.record);
+  const mapFiles = await loadMapFiles(
+    opts.mapLoader,
+    gameStart.config.gameMap,
+    gameStart.config.gameMapSize,
+  );
+  return extractSnapshot({
+    gameStartInfo: gameStart,
+    turns,
+    mapFiles,
+    targetTick: opts.targetTick,
+    chosenPlayerID: opts.chosenPlayerID,
+    localClientID: opts.localClientID,
+    difficulty: opts.difficulty,
+    newGameID: generateID(),
+  });
+}
 
 describe("SnapshotExtractor", () => {
   test("extracts playable snapshot at target tick and converts other humans to bots", async () => {
@@ -340,5 +369,43 @@ describe("SnapshotExtractor", () => {
       expect(exec.currentAttackRate()).toBeGreaterThanOrEqual(30);
       expect(exec.currentAttackRate()).toBeLessThanOrEqual(50);
     }
+  });
+
+  test("extracts playable snapshot at target tick 0 without executing turn 0", async () => {
+    const p1 = human(1);
+    const gameConfig = config({
+      gameMap: GameMapType.World,
+      gameMapSize: GameMapSize.Normal,
+      gameMode: GameMode.FFA,
+      gameType: GameType.Public,
+      bots: 2,
+    });
+
+    const { record } = await playAndArchive({
+      gameID: "TESTTICK0",
+      config: gameConfig,
+      players: [p1],
+      ticks: 10,
+    });
+
+    const result = await extractSnapshotFromRecord({
+      record,
+      targetTick: 0,
+      chosenPlayerID: "client001",
+      localClientID: "MYCLIENT0",
+      mapLoader,
+    });
+
+    const restoredRunner = await createGameRunnerFromSnapshot(
+      result.gameStartInfo,
+      result.snapshot,
+      "MYCLIENT0",
+      await loadMap(result.gameStartInfo.config),
+      () => {},
+    );
+
+    const game = restoredRunner.game;
+    expect(game.ticks()).toBe(0);
+    expect(game.inSpawnPhase()).toBe(true);
   });
 });

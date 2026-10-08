@@ -12,7 +12,6 @@ import {
   processGameRecord,
   ReplayDesyncError,
 } from "./processor/ReplayProcessor";
-import { extractSnapshotFromRecord } from "./processor/SnapshotExtractor";
 import { startWorkerEngine } from "./processor/WorkerReplayEngine";
 import type { ProcessorRequest, ProcessorResponse } from "./ProcessorMessages";
 
@@ -29,36 +28,6 @@ ctx.addEventListener("message", (e: MessageEvent<ProcessorRequest>) => {
   // Workers have no `window`, so AssetUrls reads the CDN base from here
   // (same as Worker.worker.ts).
   globalThis.__CDN_BASE__ = req.cdnBase;
-
-  if (req.type === "extract_snapshot") {
-    extractSnapshotFromRecord({
-      record: req.record,
-      targetTick: req.targetTick,
-      chosenPlayerID: req.chosenPlayerID,
-      localClientID: req.localClientID,
-      difficulty: req.difficulty,
-      mapLoader,
-    }).then(
-      (res) => {
-        send(
-          {
-            type: "snapshot_extracted",
-            snapshot: res.snapshot,
-            gameStartInfo: res.gameStartInfo,
-          },
-          [res.snapshot.buffer],
-        );
-      },
-      (err: unknown) => {
-        send({
-          type: "error",
-          desync: false,
-          message: err instanceof Error ? err.message : String(err),
-        });
-      },
-    );
-    return;
-  }
 
   processGameRecord(req.record, {
     engine: (gameStart, map) => startWorkerEngine(req.engine, gameStart, map),

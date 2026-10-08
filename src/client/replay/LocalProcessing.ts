@@ -8,14 +8,28 @@
  */
 
 import type { Difficulty } from "@openfront/engine-api/game/GameTypes";
-import type { ConnectMessage } from "@openfront/engine-api/worker/WorkerMessages";
-import { getCdnBase } from "@openfront/shared/AssetUrls";
+import type { MapFiles } from "@openfront/engine-api/game/MapFiles";
+import type { Turn } from "@openfront/engine-api/Schemas";
+import type {
+  ConnectMessage,
+  ExtractSnapshotMessage,
+  WorkerMessage,
+} from "@openfront/engine-api/worker/WorkerMessages";
+import { assetUrl, getCdnBase } from "@openfront/shared/AssetUrls";
+import { FetchGameMapLoader } from "@openfront/shared/FetchGameMapLoader";
+import {
+  GameMapLoader,
+  loadMapFiles,
+  mapFilesTransfer,
+} from "@openfront/shared/GameMapLoader";
+import { decompressGameRecord, generateID } from "@openfront/shared/SharedUtil";
 import type {
   GameRecord,
   WireGameStartInfo,
 } from "@openfront/shared/WireSchemas";
 import { createGameWorker } from "../WorkerClient";
 import type { ReplayAppend, ReplayBase } from "./codec/ReplayTypes";
+import { wireGameStartInfo } from "./processor/ReplayProcessor";
 import type { ProcessorRequest, ProcessorResponse } from "./ProcessorMessages";
 
 export interface ProcessingHandlers {
@@ -127,8 +141,9 @@ export async function extractSnapshotInWorker(
   chosenPlayerID: string,
   localClientID: string,
   difficulty?: Difficulty,
-  createWorker: () => Promise<Worker> = createProcessorWorker,
+  createWorker: () => Promise<Worker> = createGameWorker,
   signal?: AbortSignal,
+  mapLoader?: GameMapLoader,
 ): Promise<{
   snapshot: Uint8Array;
   gameStartInfo: WireGameStartInfo;
@@ -147,6 +162,32 @@ export async function extractSnapshotInWorker(
       new DOMException("The operation was aborted.", "AbortError")
     );
   }
+
+  let turns: Turn[] = [];
+  let gameStart: WireGameStartInfo;
+  let mapFiles: MapFiles | undefined;
+  if (record.info && "config" in record.info) {
+    turns = decompressGameRecord({ ...record }).turns;
+    gameStart = wireGameStartInfo(record);
+    const loader =
+      mapLoader ?? new FetchGameMapLoader((path) => assetUrl(`maps/${path}`));
+    mapFiles = await loadMapFiles(
+      loader,
+      gameStart.config.gameMap,
+      gameStart.config.gameMapSize,
+    );
+  } else {
+    gameStart = record as unknown as WireGameStartInfo;
+  }
+
+  if (signal?.aborted) {
+    worker.terminate();
+    throw (
+      signal.reason ??
+      new DOMException("The operation was aborted.", "AbortError")
+    );
+  }
+
   return new Promise((resolve, reject) => {
     const onAbort = () => {
       worker.terminate();
@@ -161,32 +202,34 @@ export async function extractSnapshotInWorker(
       signal?.removeEventListener("abort", onAbort);
     };
 
-    worker.addEventListener("message", (e: MessageEvent<ProcessorResponse>) => {
+    worker.addEventListener("message", (e: MessageEvent<WorkerMessage>) => {
       const msg = e.data;
-      if (msg.type === "snapshot_extracted") {
+      if (msg.type === "extract_snapshot_result") {
         cleanup();
         worker.terminate();
         resolve({ snapshot: msg.snapshot, gameStartInfo: msg.gameStartInfo });
-      } else if (msg.type === "error") {
+      } else if (msg.type === "extract_snapshot_error") {
         cleanup();
         worker.terminate();
-        reject(new Error(msg.message));
+        reject(new Error(msg.error));
       }
     });
     worker.addEventListener("error", (e) => {
       cleanup();
       worker.terminate();
-      reject(new Error(e.message || "the replay worker failed"));
+      reject(new Error(e.message || "the worker failed"));
     });
-    const request: ProcessorRequest = {
+    const request: ExtractSnapshotMessage = {
       type: "extract_snapshot",
-      record,
+      gameStartInfo: gameStart,
+      turns,
+      map: mapFiles as MapFiles,
       targetTick,
       chosenPlayerID,
       localClientID,
       difficulty,
-      cdnBase: getCdnBase(),
+      newGameID: generateID(),
     };
-    worker.postMessage(request);
+    worker.postMessage(request, mapFiles ? mapFilesTransfer(mapFiles) : []);
   });
 }
