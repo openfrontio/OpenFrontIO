@@ -10,6 +10,7 @@ import {
   ClanInfoSchema,
   ClanJoinRequestSchema,
   ClanMemberSchema,
+  ClanMembersResponseSchema,
 } from "@openfront/shared/ClanApiSchemas";
 import { describe, expect, it } from "vitest";
 
@@ -131,8 +132,8 @@ describe("ClanMemberSchema", () => {
     expect(result).toMatchObject({ level: 100, prestige: 10, legend: true });
   });
 
-  it("rejects a malformed legend flag", () => {
-    const result = ClanMemberSchema.safeParse({
+  it("drops a malformed legend flag instead of rejecting the member", () => {
+    const result = ClanMemberSchema.parse({
       role: "member",
       joinedAt: "2024-03-01T09:30:00.000Z",
       publicId: "abc123",
@@ -140,7 +141,30 @@ describe("ClanMemberSchema", () => {
       prestige: 0,
       legend: "yes",
     });
-    expect(result.success).toBe(false);
+    expect(result).toMatchObject({ publicId: "abc123", level: 5 });
+    expect(result.legend).toBeUndefined();
+  });
+
+  it("still parses a member list with one malformed row", () => {
+    const row = (publicId: string, prestige: unknown) => ({
+      role: "member",
+      joinedAt: "2024-03-01T09:30:00.000Z",
+      publicId,
+      level: 40,
+      prestige,
+      legend: false,
+    });
+    const result = ClanMembersResponseSchema.parse({
+      results: [row("good", 2), row("bad", null), row("high", 400)],
+      total: 3,
+      page: 1,
+      limit: 10,
+    });
+    expect(result.results.map((m) => m.prestige)).toEqual([
+      2,
+      undefined,
+      undefined,
+    ]);
   });
 
   it("rejects null publicId", () => {

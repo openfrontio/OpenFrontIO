@@ -19,6 +19,7 @@ import {
   PutCreatorResponseSchema,
   PutUsernameResponseSchema,
   RankedLeaderboardEntrySchema,
+  RankedLeaderboardResponseSchema,
   RewardSchema,
   TribeLeaderboardResponseSchema,
   TribeNameSchema,
@@ -440,11 +441,55 @@ describe("leaderboard entry level fields", () => {
     ).toMatchObject(level);
   });
 
-  it("rejects a ranked entry with a malformed level", () => {
+  it.each([
+    ["a string level", { level: "42" }],
+    ["a null prestige", { prestige: null }],
+    ["a numeric legend", { legend: 1 }],
+    ["level 0", { level: 0 }],
+    ["level 101", { level: 101 }],
+    ["a fractional level", { level: 4.5 }],
+    ["a negative prestige", { prestige: -1 }],
+    ["prestige 11", { prestige: 11 }],
+  ])("drops %s instead of rejecting the entry", (_, bad) => {
+    const result = RankedLeaderboardEntrySchema.parse({
+      ...ranked,
+      ...level,
+      ...bad,
+    });
+    const [key] = Object.keys(bad) as (keyof typeof level)[];
+    expect(result[key]).toBeUndefined();
+    expect(result.public_id).toBe("abc123");
+  });
+
+  it("keeps the edges of the level range", () => {
     expect(
-      RankedLeaderboardEntrySchema.safeParse({ ...ranked, level: "42" })
-        .success,
-    ).toBe(false);
+      RankedLeaderboardEntrySchema.parse({
+        ...ranked,
+        level: 1,
+        prestige: 0,
+        legend: false,
+      }),
+    ).toMatchObject({ level: 1, prestige: 0 });
+    expect(
+      RankedLeaderboardEntrySchema.parse({
+        ...ranked,
+        level: 100,
+        prestige: 10,
+        legend: true,
+      }),
+    ).toMatchObject({ level: 100, prestige: 10 });
+  });
+
+  it("still parses a ladder with one malformed row", () => {
+    const result = RankedLeaderboardResponseSchema.parse({
+      "1v1": [
+        { ...ranked, ...level },
+        { ...ranked, public_id: "bad", ...level, legend: 1 },
+      ],
+    });
+    expect(result["1v1"]).toHaveLength(2);
+    expect(result["1v1"][0]).toMatchObject(level);
+    expect(result["1v1"][1].legend).toBeUndefined();
   });
 
   it("parses a mapped entry with and without level fields", () => {

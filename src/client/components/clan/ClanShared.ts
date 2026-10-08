@@ -417,7 +417,12 @@ export function renderMemberRow(
           <div class="flex items-center justify-between gap-2">
             <div class="min-w-0 flex items-center gap-2">
               ${levelBadgeSlot(member, hasLevel(member), levelSlot)}
-              ${playerNameLink(host, member.username, member.publicId)}
+              ${playerNameLink(
+                host,
+                member.username,
+                member.publicId,
+                "min-w-0",
+              )}
             </div>
             <div class="flex items-center gap-2 shrink-0">
               <span

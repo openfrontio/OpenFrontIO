@@ -316,6 +316,7 @@ export class LeaderboardPlayerList extends LitElement {
               <div class="flex items-center gap-2 min-w-0">
                 ${levelBadgeSlot(entry, isPrestigedOrLegend(entry), badgeSlot)}
                 <player-name
+                  class="min-w-0"
                   .username=${entry.accountUsername}
                   .publicId=${entry.playerId}
                   .nameClass=${"font-bold text-white truncate text-base hover:underline"}
@@ -382,6 +383,7 @@ export class LeaderboardPlayerList extends LitElement {
           <div class="flex items-center gap-2">
             ${levelBadgeSlot(player, isPrestigedOrLegend(player), badgeSlot)}
             <player-name
+              class="min-w-0"
               .username=${player.accountUsername}
               .publicId=${player.playerId}
               .nameClass=${"font-bold text-blue-300 truncate text-base hover:underline"}
@@ -534,9 +536,10 @@ export class LeaderboardPlayerList extends LitElement {
     if (this.hasLoadedPlayers && this.playerData.length === 0)
       return this.renderNoData();
 
-    // Level badges mark prestiged players and Legends only. Rows without one
-    // keep an empty slot so names line up — but only once some loaded row in
-    // this ladder has a badge, so the board is unchanged until then.
+    // Level badges mark prestiged players and Legends only (see
+    // isPrestigedOrLegend for why). Rows without one keep an empty slot so
+    // names line up — but only once some loaded row in this ladder has a
+    // badge, so the board is unchanged until then.
     const badgeSlot = this.playerData.some(isPrestigedOrLegend);
 
     return html`

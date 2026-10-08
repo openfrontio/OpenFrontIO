@@ -133,6 +133,7 @@ beforeEach(() => {
 });
 
 import { RankedType } from "@openfront/engine-api/game/GameTypes";
+import { RankedLeaderboardResponseSchema } from "@openfront/shared/ApiSchemas";
 import "../../src/client/components/baseComponents/Modal";
 import { LeaderboardModal } from "../../src/client/LeaderboardModal";
 
@@ -776,6 +777,48 @@ describe("LeaderboardModal", () => {
 
       const tfoot = modal.querySelector("leaderboard-player-list tfoot");
       expect(leading(tfoot)).toEqual({ "p-zero": "slot" });
+    });
+
+    it("shows no badge for a row whose level fields were malformed", async () => {
+      // Through the real schema: one bad row loses its badge, not the ladder.
+      const ladder = RankedLeaderboardResponseSchema.parse({
+        "1v1": [
+          entry(1, "p-prestiged", prestiged),
+          { ...entry(2, "p-bad-legend", prestiged), legend: 1 },
+          { ...entry(3, "p-level-zero", prestiged), level: 0 },
+          { ...entry(4, "p-null-prestige", legend), prestige: null },
+        ],
+      });
+      await load(ladder);
+
+      expect(leading(tbody())).toEqual({
+        "p-prestiged": "badge",
+        "p-bad-legend": "slot",
+        "p-level-zero": "slot",
+        "p-null-prestige": "slot",
+      });
+    });
+
+    it("staggers the badges and lets the names shrink beside them", async () => {
+      const playerList = await load(
+        { "1v1": [entry(1, "p-prestiged", prestiged), entry(2, "p-zero")] },
+        "p-zero",
+      );
+      playerList.showStickyUser = true;
+      await playerList.updateComplete;
+
+      expect(
+        tbody()!.querySelector("level-badge")!.hasAttribute("stagger"),
+      ).toBe(true);
+      // A flex item's min-width defaults to its content, which would stop the
+      // truncating name from shrinking beside the badge.
+      const names = modal.querySelectorAll(
+        "leaderboard-player-list player-name",
+      );
+      expect(names.length).toBe(3);
+      for (const name of Array.from(names)) {
+        expect(name.classList.contains("min-w-0")).toBe(true);
+      }
     });
 
     it("leaves the pinned row unchanged when no row has a badge", async () => {

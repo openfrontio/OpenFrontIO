@@ -12,6 +12,10 @@ import {
 } from "@openfront/engine-api/game/GameTypes";
 import { z } from "zod";
 import { base64urlToUuid } from "./Base64";
+import {
+  LEVEL_BADGE_MAX_LEVEL,
+  LEVEL_BADGE_MAX_PRESTIGE,
+} from "./LevelBadgeWire";
 
 const RequiredClanTagSchema = ClanTagSchema.unwrap();
 
@@ -195,11 +199,25 @@ export type PublicProgress = z.infer<typeof PublicProgressSchema>;
 // A player's level as stamped onto rows in other players' lists (the ranked
 // leaderboard, clan member lists), for drawing a level badge. Sent together
 // for a player with progress; absent for one without, while progression is
-// off, and from an API that predates them.
+// off, and from an API that predates them. Display-only, so a malformed or
+// out-of-range value reads as absent (that row shows no badge) rather than
+// failing the whole list's parse or drawing a level the player doesn't have.
 export const RowLevelFields = {
-  level: z.number().optional(),
-  prestige: z.number().optional(),
-  legend: z.boolean().optional(),
+  level: z
+    .number()
+    .int()
+    .min(1)
+    .max(LEVEL_BADGE_MAX_LEVEL)
+    .optional()
+    .catch(undefined),
+  prestige: z
+    .number()
+    .int()
+    .min(0)
+    .max(LEVEL_BADGE_MAX_PRESTIGE)
+    .optional()
+    .catch(undefined),
+  legend: z.boolean().optional().catch(undefined),
 };
 
 // GET /public/progression/config — the level curve. No auth, cacheable.

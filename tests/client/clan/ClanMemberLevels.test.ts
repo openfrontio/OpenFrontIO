@@ -96,6 +96,38 @@ describe("renderMemberRow level badge", () => {
   it("renders the name alone when no slot is asked for", () => {
     expect(leading(renderRow(member("a")))).toEqual({ a: "name" });
   });
+
+  it("shows no badge for a member with a field dropped as malformed", () => {
+    // The schema reads a malformed field as absent; a partial level must not
+    // be drawn with a guessed prestige or legend flag.
+    for (const partial of [
+      { level: 33, legend: false },
+      { level: 33, prestige: 4 },
+      { prestige: 4, legend: true },
+    ]) {
+      expect(membersHaveLevels([member("a", partial)])).toBe(false);
+      expect(leading(renderRow(member("a", partial), true))).toEqual({
+        a: "slot",
+      });
+    }
+  });
+
+  it("staggers the badge", () => {
+    const host = renderRow(member("a", prestiged), true);
+    expect(host.querySelector("level-badge")!.hasAttribute("stagger")).toBe(
+      true,
+    );
+  });
+
+  it("keeps the name truncating beside the badge", () => {
+    const host = renderRow(member("a", prestiged), true);
+    const name = host.querySelector("player-name")!;
+    // A flex item's min-width defaults to its content, which would stop the
+    // truncating name from shrinking beside the badge.
+    expect(name.classList.contains("min-w-0")).toBe(true);
+    expect(name.parentElement!.classList.contains("min-w-0")).toBe(true);
+    expect(name.parentElement!.classList.contains("flex")).toBe(true);
+  });
 });
 
 describe("ClanDetailView member levels", () => {

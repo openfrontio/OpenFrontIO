@@ -4,7 +4,8 @@ import "./LevelBadge";
 /**
  * A row's level fields as the API sends them on leaderboard and clan member
  * rows: all three present for a player with progress, all absent otherwise
- * (no progress yet, or progression switched off).
+ * (no progress yet, or progression switched off). The schema drops a
+ * malformed field on its own, so a row can also arrive with only some.
  */
 export interface LevelFields {
   level?: number;
@@ -12,14 +13,32 @@ export interface LevelFields {
   legend?: boolean;
 }
 
-/** True when the row carries a level to draw. */
-export function hasLevel(row: LevelFields): boolean {
-  return row.level !== undefined;
+/**
+ * The row's badge, or undefined unless all three fields are present: with
+ * one dropped as malformed the row shows no badge rather than a guessed one.
+ */
+function rowBadge(row: LevelFields): Required<LevelFields> | undefined {
+  const { level, prestige, legend } = row;
+  if (level === undefined || prestige === undefined || legend === undefined) {
+    return undefined;
+  }
+  return { level, prestige, legend };
 }
 
-/** True when the row has prestiged at least once or is a Legend. */
+/** True when the row carries a level to draw. */
+export function hasLevel(row: LevelFields): boolean {
+  return rowBadge(row) !== undefined;
+}
+
+/**
+ * True when the row has prestiged at least once or is a Legend. The ranked
+ * leaderboard badges only these players, so that the badge stays rare enough
+ * there to mean something and the board doesn't get cluttered; clan member
+ * lists and the lobby roster badge anyone with a level.
+ */
 export function isPrestigedOrLegend(row: LevelFields): boolean {
-  return hasLevel(row) && (row.legend === true || (row.prestige ?? 0) > 0);
+  const badge = rowBadge(row);
+  return badge !== undefined && (badge.legend || badge.prestige > 0);
 }
 
 /**
@@ -27,6 +46,8 @@ export function isPrestigedOrLegend(row: LevelFields): boolean {
  * an empty slot of the same width so names stay lined up with the rows that
  * do have one. With `reserveSlot` false (no row in the list has a badge),
  * renders nothing at all, so lists look unchanged until levels appear.
+ * Badges are `stagger`ed: a page of them arriving at once is drawn over a
+ * few frames (see LevelBadgeFill).
  */
 export function levelBadgeSlot(
   row: LevelFields,
@@ -34,12 +55,14 @@ export function levelBadgeSlot(
   reserveSlot: boolean,
   size = 24,
 ): TemplateResult | typeof nothing {
-  if (show && row.level !== undefined) {
+  const badge = show ? rowBadge(row) : undefined;
+  if (badge !== undefined) {
     return html`<level-badge
+      stagger
       class="shrink-0"
-      .level=${row.level}
-      .prestige=${row.prestige ?? 0}
-      ?legend=${row.legend ?? false}
+      .level=${badge.level}
+      .prestige=${badge.prestige}
+      ?legend=${badge.legend}
       size=${size}
     ></level-badge>`;
   }
