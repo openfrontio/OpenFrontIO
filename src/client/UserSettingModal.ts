@@ -158,6 +158,14 @@ export class UserSettingModal extends BaseModal {
   private displayRequestId = 0;
 
   private displaySettleTimer: ReturnType<typeof setTimeout> | undefined;
+  private lastHasKeyboard = Platform.hasKeyboard;
+
+  private handleKeyboardDetection = () => {
+    if (Platform.hasKeyboard && !this.lastHasKeyboard) {
+      this.lastHasKeyboard = true;
+      this.requestUpdate();
+    }
+  };
 
   connectedCallback() {
     super.connectedCallback();
@@ -168,6 +176,8 @@ export class UserSettingModal extends BaseModal {
       this.routerName = undefined;
     }
     this.loadKeybindsFromStorage();
+    this.lastHasKeyboard = Platform.hasKeyboard;
+    window.addEventListener("keydown", this.handleKeyboardDetection);
     globalThis.addEventListener(
       `${USER_SETTINGS_CHANGED_EVENT}:${GRAPHICS_KEY}`,
       this.onGraphicsChanged,
@@ -175,6 +185,7 @@ export class UserSettingModal extends BaseModal {
   }
 
   disconnectedCallback() {
+    window.removeEventListener("keydown", this.handleKeyboardDetection);
     globalThis.removeEventListener(
       `${USER_SETTINGS_CHANGED_EVENT}:${GRAPHICS_KEY}`,
       this.onGraphicsChanged,
@@ -360,8 +371,8 @@ export class UserSettingModal extends BaseModal {
     if (!this.isModalOpen || this.showEasterEggSettings) return;
 
     // Validate that the event target is inside this component
-    const target = e.target as Node;
-    if (!this.contains(target)) {
+    const target = e.target;
+    if (!(target instanceof Node) || !this.contains(target)) {
       return;
     }
 
@@ -774,7 +785,7 @@ export class UserSettingModal extends BaseModal {
         // validates a requested tab against this list -- lands
         // open({ tab: "keybinds" }) on Gameplay instead of selecting a tab
         // with nothing behind it.
-        ...(Platform.isTouch
+        ...(Platform.isTouch && !Platform.hasKeyboard
           ? []
           : [
               {
@@ -2045,6 +2056,7 @@ export class UserSettingModal extends BaseModal {
   }
 
   protected onOpen(args?: Record<string, unknown>): void {
+    this.lastHasKeyboard = Platform.hasKeyboard;
     window.addEventListener("keydown", this.handleEasterEggKey);
     // Keybinds are editable from either instance and were only read in
     // connectedCallback, so re-read them or the other one renders stale.
