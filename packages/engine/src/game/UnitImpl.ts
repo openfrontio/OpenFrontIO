@@ -254,9 +254,6 @@ export class UnitImpl implements Unit {
       case UnitType.SAMLauncher:
       case UnitType.City:
       case UnitType.Factory:
-      case UnitType.OilMine:
-      case UnitType.GoldMine:
-      case UnitType.DiamondMine:
         this.mg.stats().unitCapture(newOwner, this._type);
         this.mg.stats().unitLose(this._owner, this._type);
         break;
@@ -390,9 +387,6 @@ export class UnitImpl implements Unit {
         case UnitType.SAMLauncher:
         case UnitType.Warship:
         case UnitType.Factory:
-        case UnitType.OilMine:
-        case UnitType.GoldMine:
-        case UnitType.DiamondMine:
           this.mg.stats().unitDestroy(destroyer, this._type);
           this.mg.stats().unitLose(this.owner(), this._type);
           break;
