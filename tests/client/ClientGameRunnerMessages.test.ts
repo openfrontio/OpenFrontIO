@@ -86,7 +86,7 @@ vi.mock("../../src/client/view", () => ({
 vi.mock("../../src/client/WorkerClient", () => ({
   WorkerClient: class {},
 }));
-vi.mock("@openfront/engine/snapshot/GameSnapshot", () => ({
+vi.mock("@openfront/engine-lib/snapshot/MapSnapshot", () => ({
   readSnapshotHeader: vi.fn((bytes: Uint8Array) => ({
     format: 1,
     gitCommit: "test-commit",

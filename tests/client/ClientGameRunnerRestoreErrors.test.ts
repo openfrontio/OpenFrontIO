@@ -36,7 +36,7 @@ vi.mock("../../src/client/render/gl", async (importOriginal) => {
 const mockRestoreMaps = vi.fn();
 const mockReadHeader = vi.fn();
 
-vi.mock("@openfront/engine/snapshot/GameSnapshot", () => ({
+vi.mock("@openfront/engine-lib/snapshot/MapSnapshot", () => ({
   restoreMapsFromSnapshot: (...args: any[]) => mockRestoreMaps(...args),
   readSnapshotHeader: (...args: any[]) => mockReadHeader(...args),
 }));
