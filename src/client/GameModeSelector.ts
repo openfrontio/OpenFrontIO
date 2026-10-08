@@ -22,6 +22,7 @@ import {
   trustRequiredDialog,
   viewerIsSignedIn,
   viewerIsTrusted,
+  type TrustRequiredContext,
 } from "./components/LobbyCard";
 import { crazyGamesSDK } from "./CrazyGamesSDK";
 import {
@@ -312,7 +313,8 @@ export class GameModeSelector extends LitElement {
   // red for a trusted player before it does.
   @state() private viewerTrustKnown: boolean = false;
   @state() private viewerSignedIn: boolean = false;
-  @state() private showTrustRequired: boolean = false;
+  // Which trust popup is open: a trusted-only lobby's, ranked's, or none.
+  @state() private trustRequiredFor: TrustRequiredContext | null = null;
   @state() private desktopSessionState: DesktopSessionState | null = null;
   // The DEBOUNCED outage signal, not the raw per-attempt one: see
   // multiplayerAllowedForBackend for why one missed heartbeat must not dim
@@ -771,10 +773,11 @@ export class GameModeSelector extends LitElement {
           ${this.renderUpcomingHeading()}
         </section>
 
-        ${this.showTrustRequired
+        ${this.trustRequiredFor !== null
           ? trustRequiredDialog(
               this.viewerSignedIn,
-              () => (this.showTrustRequired = false),
+              () => (this.trustRequiredFor = null),
+              this.trustRequiredFor,
             )
           : nothing}
       </div>
@@ -831,6 +834,12 @@ export class GameModeSelector extends LitElement {
   private openRankedMenu = () => {
     if (this.blockedFromApiAction()) return;
     if (!this.validateUsername()) return;
+    // Ranked admits trusted accounts only. Before /users/@me has answered the
+    // tier is unknown, so the ranked modal decides then.
+    if (this.viewerTrustKnown && !this.viewerTrusted) {
+      this.trustRequiredFor = "ranked";
+      return;
+    }
     window.showPage?.("page-ranked");
   };
 
@@ -1021,7 +1030,7 @@ export class GameModeSelector extends LitElement {
     if (this.blockedFromLobbyJoin()) return;
     if (!this.validateUsername()) return;
     if (!canJoinTrustedLobby(lobby, this.viewerTrusted)) {
-      this.showTrustRequired = true;
+      this.trustRequiredFor = "lobby";
       return;
     }
 

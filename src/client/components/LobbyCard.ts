@@ -37,26 +37,36 @@ export function canJoinTrustedLobby(
   return lobby.gameConfig?.trusted !== true || viewerTrusted;
 }
 
+/** Where the trust popup is shown: a trusted-only lobby, or ranked. */
+export type TrustRequiredContext = "lobby" | "ranked";
+
+const TRUST_REQUIRED_KEYS: Record<TrustRequiredContext, string> = {
+  lobby: "public_lobby.trust_required",
+  ranked: "mode_selector.ranked_trust_required",
+};
+
 /**
- * Popup shown instead of attempting to join a trusted-only lobby the viewer
- * can't get into (the server would refuse them anyway). Tells them how to
- * become trusted rather than letting the join fail: a signed-out viewer is
- * told to sign in first, since trust only attaches to an account. CrazyGames
- * has no purchases, so its variants only suggest playing more games.
+ * Popup shown instead of attempting to join a trusted-only lobby, or ranked,
+ * when the viewer can't get in (the server would refuse them anyway). Tells
+ * them how to become trusted rather than letting the join fail: a signed-out
+ * viewer is told to sign in first, since trust only attaches to an account.
+ * CrazyGames has no purchases, so its variants only suggest playing more games.
  */
 export function trustRequiredDialog(
   signedIn: boolean,
   onClose: () => void,
+  context: TrustRequiredContext = "lobby",
 ): TemplateResult {
+  const prefix = TRUST_REQUIRED_KEYS[context];
   const body = crazyGamesSDK.isOnCrazyGames()
     ? signedIn
-      ? "public_lobby.trust_required_body_crazygames"
-      : "public_lobby.trust_required_body_signed_out_crazygames"
+      ? `${prefix}_body_crazygames`
+      : `${prefix}_body_signed_out_crazygames`
     : signedIn
-      ? "public_lobby.trust_required_body"
-      : "public_lobby.trust_required_body_signed_out";
+      ? `${prefix}_body`
+      : `${prefix}_body_signed_out`;
   return html`<confirm-dialog
-    .heading=${translateText("public_lobby.trust_required_title")}
+    .heading=${translateText(`${prefix}_title`)}
     .message=${translateText(body)}
     variant="warning"
     .showClose=${true}

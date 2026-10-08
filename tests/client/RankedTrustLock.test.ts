@@ -23,7 +23,10 @@ import "../../src/client/GameModeSelector";
 type Selector = HTMLElement & { updateComplete: Promise<unknown> };
 
 function me(trustTier: "trusted" | "untrusted"): UserMeResponse {
-  return { user: {}, player: { trustTier } } as unknown as UserMeResponse;
+  return {
+    user: { email: "player@example.com" },
+    player: { trustTier },
+  } as unknown as UserMeResponse;
 }
 
 async function mount(): Promise<Selector> {
@@ -102,5 +105,82 @@ describe("Ranked button trust lock", () => {
     lastBroadcast.current = { response: me("trusted") };
     const selector = await mount();
     expect(rankedLock(selector)?.dataset.trust).toBe("unlocked");
+  });
+});
+
+describe("Ranked button trust popup", () => {
+  let showPage: ReturnType<typeof vi.fn>;
+
+  beforeEach(() => {
+    showPage = vi.fn();
+    (window as unknown as { showPage: unknown }).showPage = showPage;
+  });
+
+  afterEach(() => {
+    delete (window as unknown as { showPage?: unknown }).showPage;
+  });
+
+  function rankedButton(selector: Selector): HTMLButtonElement {
+    const button = [
+      ...selector.querySelectorAll<HTMLButtonElement>("button"),
+    ].find((b) => b.textContent?.includes("mode_selector.ranked_title"));
+    expect(button).toBeDefined();
+    return button!;
+  }
+
+  async function clickRanked(selector: Selector): Promise<void> {
+    rankedButton(selector).click();
+    await selector.updateComplete;
+  }
+
+  const dialog = (selector: Selector) =>
+    selector.querySelector("confirm-dialog") as
+      | (HTMLElement & { heading: string; message: string })
+      | null;
+
+  it("shows the ranked trust popup instead of opening ranked when untrusted", async () => {
+    const selector = await mount();
+    await broadcast(selector, me("untrusted"));
+    await clickRanked(selector);
+    expect(showPage).not.toHaveBeenCalled();
+    expect(dialog(selector)?.heading).toBe(
+      "mode_selector.ranked_trust_required_title",
+    );
+    expect(dialog(selector)?.message).toBe(
+      "mode_selector.ranked_trust_required_body",
+    );
+  });
+
+  it("tells a signed-out viewer to sign in first", async () => {
+    const selector = await mount();
+    await broadcast(selector, false);
+    await clickRanked(selector);
+    expect(showPage).not.toHaveBeenCalled();
+    expect(dialog(selector)?.message).toBe(
+      "mode_selector.ranked_trust_required_body_signed_out",
+    );
+  });
+
+  it("closes the popup on dismiss", async () => {
+    const selector = await mount();
+    await broadcast(selector, me("untrusted"));
+    await clickRanked(selector);
+    dialog(selector)!.dispatchEvent(new CustomEvent("cancel"));
+    await selector.updateComplete;
+    expect(dialog(selector)).toBeNull();
+  });
+
+  it("opens ranked for a trusted viewer", async () => {
+    const selector = await mount();
+    await broadcast(selector, me("trusted"));
+    await clickRanked(selector);
+    expect(showPage).toHaveBeenCalledWith("page-ranked");
+    expect(dialog(selector)).toBeNull();
+  });
+
+  it("opens ranked before /users/@me has answered", async () => {
+    const selector = await mount();
+    await clickRanked(selector);
+    expect(showPage).toHaveBeenCalledWith("page-ranked");
   });
 });
