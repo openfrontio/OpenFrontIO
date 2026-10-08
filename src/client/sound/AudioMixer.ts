@@ -4,6 +4,7 @@ import {
   USER_SETTINGS_CHANGED_EVENT,
   UserSettings,
 } from "../../core/game/UserSettings";
+import { Platform } from "../Platform";
 import { setAudioControls, setCuePlayer } from "./CuePlayer";
 import {
   AmbienceTrack,
@@ -15,6 +16,26 @@ import {
 
 /** Every channel a sound can actually play on. */
 export type PlayableCategory = Exclude<AudioCategory, "master">;
+
+/**
+ * Whether the two music tracks stream from a media element instead of being
+ * decoded into memory up front.
+ *
+ * False only on iOS, which ignores volume writes to a media element: a
+ * streamed track there cannot be turned down or muted at all, which is the
+ * whole of #5457. Web Audio is the only path with a working gain, so iOS
+ * takes it despite the cost -- the decoded track is roughly an order of
+ * magnitude larger than the file, so it is never loaded until the music
+ * channel is audible (SoundManager, MenuMusic).
+ *
+ * Cues and ambience are Web Audio everywhere and were never affected.
+ *
+ * A function, not a constant: it is read when a track is built, so a test can
+ * stand in a different platform without re-importing the module graph.
+ */
+export function streamsMusic(): boolean {
+  return !Platform.isIOS;
+}
 
 const PLAYABLE: readonly PlayableCategory[] = [
   "music",
@@ -143,17 +164,25 @@ export class AudioMixer {
    * Splices a limiter between Howler's master gain and the speakers, so a
    * burst of concurrent cues cannot clip.
    *
-   * It covers the cue channels and ambience, and NOT the music. Howler has no
-   * createMediaElementSource anywhere in it -- the only connection into the
-   * graph is the Web Audio path -- so an html5 Howl plays straight out of its
-   * media element and past all of this. Both music tracks are html5 now, by
-   * design, so that they stream instead of decoding megabytes up front.
+   * It covers the cue channels and ambience, and -- everywhere streamsMusic()
+   * is true -- NOT the music. Howler has no createMediaElementSource anywhere
+   * in it, so the only connection into the graph is the Web Audio path and a
+   * streamed music Howl plays straight out of its media element past all of
+   * this.
    *
    * That gap is acceptable and worth being explicit about rather than letting
    * the name imply otherwise. The music is a mastered stereo bounce already
    * carrying a -1 dB trim and only ever one track plays at a time; the summing
    * risk was always the cue layer, where the per-channel budgets allow up to
    * 16 voices at once with nothing holding the sum down.
+   *
+   * On iOS the music IS routed through here, because it has to be Web Audio to
+   * have a working volume at all. Left alone deliberately: at the default
+   * music slider the track peaks around -13 dBFS, far below the -3 dB
+   * threshold, so the limiter is transparent. It only engages with the slider
+   * near the top, where this bounce's inter-sample peaks (+0.11 and +0.19
+   * dBTP) clear the threshold -- and a couple of dB of reduction shared with
+   * the cues is the better failure than letting the sum clip.
    *
    * This is not a level control. No make-up gain, and no reduction: headroom
    * is the -2 dB re-bounce's job, this is only for concurrency.

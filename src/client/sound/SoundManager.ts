@@ -1,8 +1,7 @@
 import { Howl } from "howler";
 import { assetUrl } from "../../core/AssetUrls";
 import { EventBus } from "../../core/EventBus";
-import { Platform } from "../Platform";
-import { AudioMixer, PlayableCategory } from "./AudioMixer";
+import { AudioMixer, PlayableCategory, streamsMusic } from "./AudioMixer";
 import {
   AmbienceTrack,
   ambienceUrls,
@@ -20,6 +19,10 @@ const AMBIENCE_FADE_MS = 500;
  */
 export class SoundManager {
   private backgroundMusic: Howl | null = null;
+  /** The game wants music playing, whether or not it is audible right now. */
+  private wantsMusic = false;
+  /** play() has been called, so it must not be called a second time. */
+  private musicStarted = false;
   private ambienceTracks = new Map<AmbienceTrack, Howl>();
   private currentAmbience: AmbienceTrack | null = null;
   private fadingOut = new Set<Howl>();
@@ -32,23 +35,7 @@ export class SoundManager {
     private readonly eventBus: EventBus,
     private readonly mixer: AudioMixer,
   ) {
-    this.safely("initialize background music", () => {
-      // One track that keeps looping — including through the victory and
-      // defeat cues — so a game never hard-cuts to silence, per the sound
-      // designer's note. The menu theme (MenuMusic.ts) covers the home page.
-      this.backgroundMusic = new Howl({
-        src: [assetUrl("sounds/music/gameplay.m4a")],
-        loop: true,
-        volume: 0,
-        // Stream it outside iOS. Howler's default Web Audio path XHRs the whole file and
-        // decodes it to PCM before the first note, and this track is 3.41 MB,
-        // so play() queued behind tens of seconds of silence at game start on
-        // a slow connection. On iOS, use Web Audio so volume and mute controls
-        // work. Cues and ambience stay on Web Audio.
-        html5: !Platform.isIOS,
-      });
-      this.mixer.register(this.backgroundMusic, "music");
-    });
+    this.buildBackgroundMusic();
 
     this.onPlaySoundEffect = (e) => this.mixer.play(e.effect);
     this.onSetAmbience = (e) => this.setAmbience(e.track, e.gain);
@@ -59,7 +46,77 @@ export class SoundManager {
     // the mixer cannot stomp a fade in progress. Re-target on every change.
     this.stopFollowingVolume = this.mixer.onChange((category) => {
       if (category === "ambience") this.retargetAmbience();
+      if (category === "music") this.startMusicIfAudible();
     });
+  }
+
+  /**
+   * Builds the looping gameplay track. One track that keeps looping —
+   * including through the victory and defeat cues — so a game never hard-cuts
+   * to silence, per the sound designer's note. The menu theme (MenuMusic.ts)
+   * covers the home page.
+   */
+  private buildBackgroundMusic(): void {
+    this.safely("initialize background music", () => {
+      const music = new Howl({
+        src: [assetUrl("sounds/music/gameplay.mp3")],
+        loop: true,
+        volume: 0,
+        // Stream it. Howler's default Web Audio path XHRs the whole file and
+        // decodes it to PCM before the first note, and this track is 4.6 MB,
+        // so play() queued behind tens of seconds of silence at game start on
+        // a slow connection. Cues and ambience stay on Web Audio.
+        //
+        // iOS is the exception: it ignores volume on a media element, so a
+        // streamed track cannot be turned down or muted there at all, and Web
+        // Audio is the only path with a working gain. Cues are unaffected
+        // because they are already Web Audio.
+        html5: streamsMusic(),
+        // Never, on any platform. This runs in the constructor, before anyone
+        // knows whether the player has music on, and Howler's default would
+        // start fetching right here: the whole 4.6 MB buffered on a media
+        // element, or on iOS decoded to ~74 MB of PCM (209 s of 44.1 kHz
+        // stereo). The web defaults every channel to silence until the player
+        // opts in, so that is mostly spent on players who hear nothing.
+        //
+        // startMusicIfAudible does the one fetch, once the channel is
+        // audible. It also means a rebuild after a failed load cannot retry
+        // on a loop, the way AudioMixer's discarded cues cannot.
+        preload: false,
+      });
+      this.backgroundMusic = music;
+      // Bound without an id, like AudioMixer's: Howler emits loaderror with a
+      // null id for everything but a media-element error, and an id-bound
+      // listener would be dead code for the cases that matter.
+      music.once("loaderror", () => this.replaceFailedMusic(music));
+      // Nothing is playing after a rejected play(), so let a later change try
+      // again rather than latching the track off for the rest of the game.
+      music.on("playerror", () => {
+        this.musicStarted = false;
+      });
+      this.mixer.register(music, "music");
+    });
+  }
+
+  /**
+   * Swaps in a fresh Howl after a load that failed.
+   *
+   * The dead one cannot simply be retried: the play() that was queued behind
+   * the failed load is still sitting in Howler's queue, so a later successful
+   * load would drain that one as well as the one the retry asks for, and the
+   * track would play over itself. Replacing it drops the queue with it.
+   *
+   * Deliberate rather than giving up: a blip on the CDN should not mean a
+   * silent game, and the retry only costs a fetch when the player's own
+   * volume change asks for one.
+   */
+  private replaceFailedMusic(failed: Howl): void {
+    if (this.backgroundMusic !== failed) return;
+    this.mixer.unregister(failed);
+    this.safely("unload failed background music", () => failed.unload());
+    this.backgroundMusic = null;
+    this.musicStarted = false;
+    this.buildBackgroundMusic();
   }
 
   dispose(): void {
@@ -92,14 +149,53 @@ export class SoundManager {
   }
 
   public playBackgroundMusic(): void {
-    this.safely("play background music", () => {
-      if (this.backgroundMusic !== null && !this.backgroundMusic.playing()) {
-        this.backgroundMusic.play();
-      }
-    });
+    this.wantsMusic = true;
+    this.startMusicIfAudible();
+  }
+
+  /**
+   * Starts the track, loading it first if it is not loaded yet.
+   *
+   * Gated on the channel being audible because on the Web Audio path (iOS)
+   * loading means holding the whole track decoded, and the web defaults every
+   * channel to silence until the player opts in -- so a player who never
+   * turns music on would otherwise pay the download and the decode for
+   * something they never hear. Called again whenever the music channel
+   * changes, so turning the slider up mid-game still starts it.
+   *
+   * isAudible, not volumeFor: the question is whether the player has the
+   * channel on at all, not whether it happens to be ducked this instant.
+   * Starting a track because the window regained focus would be wrong.
+   */
+  private startMusicIfAudible(): void {
+    const music = this.backgroundMusic;
+    if (music === null || !this.wantsMusic || this.musicStarted) return;
+    if (!this.mixer.isAudible("music")) return;
+    // Latched before play(), not after, and in preference to playing(): this
+    // runs on every tick of a slider drag, and a Howl still loading reports
+    // playing() === false while play() queues another sound each time. Those
+    // all start when the load lands, so the track would play over itself
+    // once per tick of the drag that started it.
+    this.musicStarted = true;
+    try {
+      // Howler's play() queues behind a load but does not start one, so an
+      // unloaded Howl would sit there silently forever without this.
+      if (music.state() === "unloaded") music.load();
+      music.play();
+    } catch (err) {
+      // Not safely(), which would leave the latch set on a throw: nothing
+      // started, so a later change should be free to try again.
+      this.musicStarted = false;
+      console.warn("SoundManager: failed to play background music", err);
+    }
   }
 
   public stopBackgroundMusic(): void {
+    // Both cleared so a later volume change does not read a stale intent and
+    // start the track again through startMusicIfAudible, while a later
+    // playBackgroundMusic() still can.
+    this.wantsMusic = false;
+    this.musicStarted = false;
     this.safely("stop background music", () => this.backgroundMusic?.stop());
   }
 
