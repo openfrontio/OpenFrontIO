@@ -169,8 +169,6 @@ export class AccountSettingsPanel extends LitElement {
           </button>
         </div>
         ${this.renderLevelPreview(shown)}
-        <!-- "Show my profile in search engines" goes here, below a divider,
-             once the public profile page ships. -->
       </div>
     `;
   }

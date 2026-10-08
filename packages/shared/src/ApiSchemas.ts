@@ -362,9 +362,10 @@ export const UserMeResponseSchema = z.object({
     // then leaves the badge off their lobby roster entry. Optional so an older
     // API without the setting still parses — absent reads as shown, and the
     // account settings hide the Privacy card. A malformed value reads as
-    // absent too, like `progress`: the server parses this response at join,
-    // so a bad value must never fail the parse and reject the join.
-    levelHidden: z.boolean().optional().catch(undefined),
+    // hidden: the server parses this response at join, so a bad value must
+    // never fail the parse and reject the join, and when the setting can't be
+    // read the private answer is the safe one.
+    levelHidden: z.boolean().optional().catch(true),
     clans: z
       .array(
         z.object({

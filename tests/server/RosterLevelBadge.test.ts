@@ -117,13 +117,13 @@ describe("levelBadgeForPlayer: hide my level", () => {
     );
   });
 
-  it("reads a malformed levelHidden as absent instead of failing the parse", () => {
-    for (const bad of [null, "yes", 1, {}]) {
+  it("reads a malformed levelHidden as hidden instead of failing the parse", () => {
+    for (const bad of [null, "yes", "true", 1, 0, {}]) {
       const me = userMe({ progress, levelHidden: bad });
-      expect(me.player.levelHidden).toBeUndefined();
+      expect(me.player.levelHidden).toBe(true);
       expect(me.player.progress).toBeDefined();
-      // Absent reads as shown, so the badge is still stamped.
-      expect(levelBadgeForPlayer(me.player)).toBeDefined();
+      // Fails closed: no badge for a setting that can't be read.
+      expect(levelBadgeForPlayer(me.player)).toBeUndefined();
     }
   });
 
