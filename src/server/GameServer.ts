@@ -270,6 +270,9 @@ export class GameServer {
   private archived = false;
   // Pending while the stats are open after the winner was decided.
   private statsWindowTimer: ReturnType<typeof setTimeout> | undefined;
+  // The players' IPs when the winner was decided: the electorate the stats
+  // are settled among from then on (see settleStatsOrArchive).
+  private statsElectorate: ReadonlySet<string> | undefined;
   private readonly liveStatsVote = new LiveStatsVote();
 
   // Player reports filed this game, keyed "<reportedBy>:<reported>" so each
@@ -2254,13 +2257,20 @@ export class GameServer {
   // a version holds a majority, everyone still playing has voted, `force`
   // (the window ran out, or the game is ending), or the winner is disputed
   // (the replay supplies the stats; the vote's are only its fallback) — and
-  // otherwise opens the stats window. Counts only still-connected players' IPs, as the shrink
-  // re-tally does, so departed voters count no more than their winner vote.
+  // otherwise opens the stats window.
+  //
+  // The stats are settled among the players connected when the winner was
+  // decided, and that electorate is kept: a player who leaves afterwards
+  // still counts, with any stats vote they cast. Otherwise the honest voters
+  // leaving the win screen could shrink the electorate until a version
+  // nobody else backed held a majority of whoever was left. A departure can
+  // still end the window early (everyone still here has voted), but only
+  // ever as a forced, unagreed settle.
   private settleStatsOrArchive(force = false): void {
     if (this.archived || this.winnerVote.winner() === null) return;
-    const votingIPs = new Set(this.clients.players().map((c) => c.ip));
+    this.statsElectorate ??= new Set(this.clients.players().map((c) => c.ip));
     const settled = this.winnerVote.settleStatsAmong(
-      votingIPs,
+      this.statsElectorate,
       force || this.winnerDisputed() || this.everyVoterHasVoted(),
     );
     if (settled) {

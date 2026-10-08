@@ -294,18 +294,33 @@ describe("winner vote stats agreement", () => {
     expect(record().statsAgreed).toBe(false);
   });
 
-  it("re-counts among the players still connected when a voter leaves in the window", async () => {
+  it("keeps a departed voter in the electorate when they leave in the window", async () => {
     const {
       clients: [forger, , c],
     } = await forgerInsideMajority();
-    // The forger leaves: their vote stops counting, as in the shrink
-    // re-tally. The honest stats hold 1 of the 2 still here -- not yet.
+    // The forger leaves: the electorate is still the three IPs at the
+    // decision, so the honest stats hold 1 of 3 -- not yet.
     await disconnect(forger);
     expect(archive).not.toHaveBeenCalled();
     await vote(c, honest);
 
     expect(record().statsAgreed).toBe(true);
     expect(archivedStatsOfA()).toEqual(honest[A]);
+  });
+
+  it("never lets honest voters leaving hand the forged stats a majority", async () => {
+    const {
+      clients: [, b, c],
+    } = await forgerInsideMajority();
+    // The honest voter closes the win screen, then the last player leaves
+    // without voting. Among the one player left the forged stats would be
+    // 1 of 1; among the electorate at the decision they are 1 of 3.
+    await disconnect(b);
+    expect(archive).not.toHaveBeenCalled();
+    await disconnect(c);
+
+    expect(record().winner).toEqual(["player", A]);
+    expect(record().statsAgreed).toBe(false);
   });
 
   it("archives at once when the last player yet to vote leaves in the window", async () => {
