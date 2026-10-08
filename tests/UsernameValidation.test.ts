@@ -1,7 +1,9 @@
 import {
+  JoinUsernameSchema,
   RENDERABLE_NAME_CHAR_RE,
   UsernameSchema,
 } from "@openfront/engine-api/Schemas";
+import { ClientJoinMessageSchema } from "@openfront/shared/WireSchemas";
 import { readFileSync } from "fs";
 import { describe, expect, it } from "vitest";
 import {
@@ -47,6 +49,31 @@ describe("free-form username length", () => {
     const legacy = "a".repeat(MAX_USERNAME_LENGTH + 5);
     expect(UsernameSchema.safeParse(legacy).success).toBe(true);
     expect(validateUsername(legacy).isValid).toBe(false);
+  });
+
+  it("enforces the cap on JoinUsernameSchema and ClientJoinMessageSchema", () => {
+    expect(
+      JoinUsernameSchema.safeParse("a".repeat(MAX_USERNAME_LENGTH)).success,
+    ).toBe(true);
+    expect(
+      JoinUsernameSchema.safeParse("a".repeat(MAX_USERNAME_LENGTH + 1)).success,
+    ).toBe(false);
+
+    const baseJoin = {
+      type: "join" as const,
+      token: "123e4567-e89b-12d3-a456-426614174000",
+      gameID: "abcd1234",
+      username: "a".repeat(MAX_USERNAME_LENGTH),
+      clanTag: null,
+      turnstileToken: null,
+    };
+    expect(ClientJoinMessageSchema.safeParse(baseJoin).success).toBe(true);
+    expect(
+      ClientJoinMessageSchema.safeParse({
+        ...baseJoin,
+        username: "a".repeat(MAX_USERNAME_LENGTH + 1),
+      }).success,
+    ).toBe(false);
   });
 });
 

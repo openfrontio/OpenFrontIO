@@ -1,18 +1,14 @@
 import {
   ClanTagSchema,
+  MAX_USERNAME_LENGTH,
+  MIN_USERNAME_LENGTH,
   RENDERABLE_NAME_CHARS,
   UsernameSchema,
 } from "@openfront/engine-api/Schemas";
 import { z } from "zod";
 import { translateText } from "../Utils";
 
-export const MIN_USERNAME_LENGTH = 3;
-// Matches MAX_ACCOUNT_USERNAME_LENGTH so a free-form name can't outgrow the
-// verified name it sits beside. Enforced here rather than in UsernameSchema,
-// which has to stay wide enough to read the names already written into
-// archived game records. A stored name from before the cap is trimmed to fit
-// rather than rejected (see clampUsername in UsernameInput).
-export const MAX_USERNAME_LENGTH = 20;
+export { MAX_USERNAME_LENGTH, MIN_USERNAME_LENGTH };
 export const MIN_CLAN_TAG_LENGTH = 2;
 export const MAX_CLAN_TAG_LENGTH = 5;
 
