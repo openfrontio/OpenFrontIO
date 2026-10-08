@@ -22,6 +22,7 @@ import { MissileSiloExecution } from "./MissileSiloExecution";
 import { NukeExecution } from "./NukeExecution";
 import { PortExecution } from "./PortExecution";
 import { SAMLauncherExecution } from "./SAMLauncherExecution";
+import { TrainStationExecution } from "./TrainStationExecution";
 import { WarshipExecution } from "./WarshipExecution";
 
 export class ConstructionExecution implements Execution {
@@ -167,6 +168,16 @@ export class ConstructionExecution implements Execution {
       case UnitType.OilMine:
       case UnitType.GoldMine:
       case UnitType.DiamondMine:
+        if (
+          this.mg.hasUnitNearby(
+            this.structure!.tile(),
+            this.mg.config().trainStationMaxRange(),
+            UnitType.Factory,
+          ) &&
+          !this.structure!.hasTrainStation()
+        ) {
+          this.mg.addExecution(new TrainStationExecution(this.structure!));
+        }
         break;
       default:
         console.warn(
