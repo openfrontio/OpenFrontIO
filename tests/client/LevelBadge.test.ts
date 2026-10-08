@@ -6,7 +6,11 @@ vi.mock("../../src/client/Utils", () => ({
     params ? `${key}:${JSON.stringify(params)}` : key,
 }));
 
-import type { XpBreakdown } from "@openfront/shared/ApiSchemas";
+import { GameType } from "@openfront/engine-api/game/GameTypes";
+import {
+  GameXpResponseSchema,
+  type XpBreakdown,
+} from "@openfront/shared/ApiSchemas";
 import { LevelBadge } from "../../src/client/components/LevelBadge";
 import {
   apportionXp,
@@ -203,6 +207,39 @@ describe("progression helpers", () => {
     ]);
   });
 
+  it("shows XP no known source accounts for as its own line", () => {
+    // A row scored when the first-game bonus was stored as `firstWinOfDay`.
+    const parsed = GameXpResponseSchema.parse({
+      gameId: "g",
+      eligible: true,
+      breakdown: {
+        played: 50,
+        time: 100,
+        firstWinOfDay: 200,
+        subtotal: 350,
+        gamePermille: 1000,
+        subscriberPermille: 1000,
+        total: 350,
+      },
+      before: { prestige: 0, level: 1, xpInLevel: 0, xpForNext: 100 },
+      after: {
+        prestige: 0,
+        level: 3,
+        xpInLevel: 0,
+        xpForNext: 100,
+        lifetimeXp: 350,
+        legend: false,
+        canPrestige: false,
+      },
+    });
+    if (!parsed.eligible) throw new Error("expected eligible");
+    expect(visibleXpLines(parsed.breakdown)).toEqual([
+      { key: "played", amount: 50 },
+      { key: "time", amount: 100 },
+      { key: "other", amount: 200 },
+    ]);
+    expect(en.progression.line_other).toBe("Other");
+  });
   it("lists only the multipliers that are not 1x", () => {
     expect(visibleMultipliers(breakdown)).toEqual([
       { key: "subscriber", permille: 1250 },
@@ -301,6 +338,24 @@ describe("progression helpers", () => {
     );
   });
 
+  it("tells a singleplayer game it doesn't earn XP, not that it couldn't be verified", () => {
+    expect(ineligibleReasonKey("unverified", GameType.Singleplayer)).toBe(
+      "progression.ineligible_singleplayer",
+    );
+    expect(en.progression.ineligible_singleplayer).toBe(
+      "Singleplayer games don't earn XP.",
+    );
+    // Only that reason: the others say what happened in any game.
+    expect(ineligibleReasonKey("too_short", GameType.Singleplayer)).toBe(
+      "progression.ineligible_too_short",
+    );
+    expect(ineligibleReasonKey("unverified", GameType.Public)).toBe(
+      "progression.ineligible_unverified",
+    );
+    expect(ineligibleReasonKey("unverified", null)).toBe(
+      "progression.ineligible_unverified",
+    );
+  });
   it("explains a game played before levels existed", () => {
     expect(ineligibleReasonKey("before_progression")).toBe(
       "progression.xp_before_levels",

@@ -1,4 +1,4 @@
-import { LitElement, html } from "lit";
+import { LitElement, PropertyValues, html } from "lit";
 import { customElement, property, query, state } from "lit/decorators.js";
 import { documentStylesSheet } from "./SharedStyles";
 
@@ -64,16 +64,24 @@ export class OModal extends LitElement {
     }
   }
 
-  protected updated(changed: Map<string, unknown>): void {
-    super.updated?.(changed);
+  protected updated(changed: PropertyValues<this>): void {
+    super.updated(changed);
     // A tab opened directly (a link, the last tab used) may sit past the edge
-    // of a scrolled tab row: bring it into view.
+    // of a scrolled tab row: scroll the row, and only the row, to it.
+    // scrollIntoView would also scroll the modal's content and the page.
     if (!changed.has("activeTab") || !this.activeTab) return;
-    const tab = [
-      ...this.renderRoot.querySelectorAll<HTMLElement>('[role="tab"]'),
-    ].find((t) => t.dataset.key === this.activeTab);
-    if (typeof tab?.scrollIntoView === "function") {
-      tab.scrollIntoView({ block: "nearest", inline: "nearest" });
+    const row = this.renderRoot.querySelector<HTMLElement>('[role="tablist"]');
+    if (row === null || row.scrollWidth <= row.clientWidth) return;
+    const tab = [...row.querySelectorAll<HTMLElement>('[role="tab"]')].find(
+      (t) => t.dataset.key === this.activeTab,
+    );
+    if (tab === undefined) return;
+    const rowBox = row.getBoundingClientRect();
+    const tabBox = tab.getBoundingClientRect();
+    if (tabBox.left < rowBox.left) {
+      row.scrollLeft += tabBox.left - rowBox.left;
+    } else if (tabBox.right > rowBox.right) {
+      row.scrollLeft += tabBox.right - rowBox.right;
     }
   }
 

@@ -5,7 +5,7 @@ import { html, LitElement } from "lit";
 import { customElement, property } from "lit/decorators.js";
 import { actionButton } from "../../components/ui/ActionButton";
 import { showInGameConfirm } from "../../InGameModal";
-import { SendKickPlayerIntentEvent } from "../../Transport";
+import { SendKickPlayerIntentEvent } from "../../LobbyEvents";
 import { translateText } from "../../Utils";
 import { PlayerView } from "../../view";
 const kickIcon = assetUrl("images/ExitIconWhite.svg");

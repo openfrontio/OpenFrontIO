@@ -15,6 +15,7 @@
  * hands the URL to the hash and leaves the path the same way.
  */
 
+import { loadModal } from "./LazyModals";
 import { pagePin } from "./PagePin";
 
 /** Parses a page location into a modal's open() args, or null if it isn't one. */
@@ -139,8 +140,23 @@ class ModalRouter {
     args: Record<string, unknown>,
   ): Promise<void> {
     // The custom element may not be upgraded yet (e.g. routed on initial load
-    // before its module has finished evaluating). Wait so el.open is defined.
+    // before its module has finished evaluating, or a modal loaded on demand;
+    // see LazyModals). Wait so el.open is defined.
+    try {
+      await loadModal(entry.tag);
+    } catch (err) {
+      console.error(`${entry.tag} failed to load:`, err);
+      return;
+    }
     await customElements.whenDefined(entry.tag);
+    // A slow load can land after the URL has moved on to another modal. The
+    // URL names this one by its hash, or by its path while path-routed.
+    if (
+      this.currentHashParams().get("modal") !== name &&
+      this.pathRoutedName !== name
+    ) {
+      return;
+    }
 
     this.routingFromUrl = true;
     try {

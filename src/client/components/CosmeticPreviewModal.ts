@@ -13,7 +13,6 @@ import {
   cosmeticRarityBadgeClass,
   cosmeticRarityLabel,
 } from "./CosmeticPresentation";
-import "./cosmetics/CosmeticRenderCanvas";
 import type { CosmeticRenderCanvas } from "./cosmetics/CosmeticRenderCanvas";
 
 export const TEAM_COLORS = [
@@ -71,6 +70,11 @@ export class CosmeticPreviewModal extends LitElement {
 
   connectedCallback() {
     super.connectedCallback();
+    // The WebGL preview is its own chunk, loaded when a preview first opens
+    // rather than with the homepage. Lit upgrades the element once it's here.
+    import("./cosmetics/CosmeticRenderCanvas").catch((err) =>
+      console.warn("Failed to load the cosmetic preview:", err),
+    );
     // Capture phase so this runs before the parent Store/Inventory modal's
     // own window-level Escape handler (BaseModal), which would otherwise
     // close the parent along with the preview.

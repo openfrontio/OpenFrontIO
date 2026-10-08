@@ -15,7 +15,7 @@ import {
 import { customElement, property, state } from "lit/decorators.js";
 import { momentShareText, momentShareUrl } from "../MomentShare";
 import {
-  clampPrestige,
+  MAX_LEVEL,
   MAX_PRESTIGE,
   PrestigeTier,
   prestigeTier,
@@ -85,6 +85,38 @@ const TIER_COLORS: Record<PrestigeTier, string> = {
   sunburst: "#facc15",
   radiant: "#d946ef",
 };
+
+/**
+ * The last prestige rank, Legend coming after it: the config's, so the ladder
+ * ends where the server's does, and the client's own until it has arrived.
+ */
+export function lastPrestigeRank(config: ProgressionConfig | null): number {
+  const max = config?.maxPrestige;
+  return max !== undefined && max > 0 ? max : MAX_PRESTIGE;
+}
+
+/** The level cap, the same way: the config's, else the client's own. */
+export function levelCap(config: ProgressionConfig | null): number {
+  const max = config?.maxLevel;
+  return max !== undefined && max > 0 ? max : MAX_LEVEL;
+}
+
+/** A player's prestige rank, kept on the ladder. */
+export function prestigeRank(
+  prestige: number,
+  config: ProgressionConfig | null,
+): number {
+  if (!Number.isFinite(prestige)) return 0;
+  return Math.min(lastPrestigeRank(config), Math.max(0, Math.floor(prestige)));
+}
+
+/** The rank a prestige from `prestige` leads to. */
+export function nextPrestigeRank(
+  prestige: number,
+  config: ProgressionConfig | null,
+): number {
+  return Math.min(lastPrestigeRank(config), prestigeRank(prestige, config) + 1);
+}
 
 /** The Caps every prestige grants, when the config says. */
 export function prestigeCaps(config: ProgressionConfig | null): number | null {
@@ -196,9 +228,9 @@ export class PrestigeFlow extends LitElement {
     window.removeEventListener("keydown", this.onKeyDown, true);
     window.removeEventListener("blur", this.onFocusLost);
     document.removeEventListener("visibilitychange", this.onFocusLost);
-    this.clearTimers();
-    this.endHold();
-    this.stopHandoffMove();
+    // Off the page, the flow is over: a request still out is answered (see
+    // confirm()), but no ceremony plays for it.
+    this.close();
     if (this.portal) {
       litRender(html``, this.portal);
       this.portal.remove();
@@ -226,13 +258,14 @@ export class PrestigeFlow extends LitElement {
     }
     this.idempotencyKey = key;
     this.stage = "confirm";
-    void this.loadRewards(this.nextRank(progress), ++this.openToken);
+    void this.loadRewards(++this.openToken);
     void this.updateComplete.then(() => this.focusConfirmButton());
   }
 
   // The real Caps amount and the rank's exclusive cosmetic, when the config
-  // has them; the tiles fall back to what they said before otherwise.
-  private async loadRewards(rank: number, token: number): Promise<void> {
+  // has them; the tiles fall back to what they said before otherwise. The
+  // config also says where the ladder ends, so the rank is read after it.
+  private async loadRewards(token: number): Promise<void> {
     let config: ProgressionConfig | false;
     try {
       config = await this.fetchConfig();
@@ -240,9 +273,9 @@ export class PrestigeFlow extends LitElement {
       config = false;
     }
     if (token !== this.openToken || !this.isOpen) return;
-    if (!config) return;
+    if (!config || this.prior === null) return;
     this.config = config;
-    const flare = prestigeFlare(config, rank);
+    const flare = prestigeFlare(config, this.nextRank(this.prior));
     if (flare === null) return;
     let view: FlareCosmeticView | null;
     try {
@@ -415,8 +448,12 @@ export class PrestigeFlow extends LitElement {
   // Confirmation
   // ---------------------------------------------------------------------------
 
+  private rankOf(progress: Progress): number {
+    return prestigeRank(progress.prestige, this.config);
+  }
+
   private nextRank(before: Progress): number {
-    return Math.min(MAX_PRESTIGE, clampPrestige(before.prestige) + 1);
+    return nextPrestigeRank(before.prestige, this.config);
   }
 
   private renderConfirm(before: Progress): TemplateResult {
@@ -447,9 +484,7 @@ export class PrestigeFlow extends LitElement {
              the one that shatters at the flash. -->
         <div
           class="prestige-float relative mt-10"
-          style="--hero: ${TIER_COLORS[
-            prestigeTier(clampPrestige(before.prestige))
-          ]}"
+          style="--hero: ${TIER_COLORS[prestigeTier(this.rankOf(before))]}"
         >
           <div
             aria-hidden="true"
@@ -466,7 +501,7 @@ export class PrestigeFlow extends LitElement {
           ></level-badge>
         </div>
 
-        ${this.renderTrack(clampPrestige(before.prestige), rank)}
+        ${this.renderTrack(this.rankOf(before), rank)}
         ${this.renderUnlocks(rank)}
 
         <p class="m-0 mt-6 max-w-md text-sm text-white/75">
@@ -541,7 +576,10 @@ export class PrestigeFlow extends LitElement {
   // Every rank in a row, Legend at the end: the ones already earned lit, the
   // one about to be entered raised, the rest dimmed.
   private renderTrack(current: number, next: number): TemplateResult {
-    const ranks = Array.from({ length: MAX_PRESTIGE }, (_, i) => i + 1);
+    const ranks = Array.from(
+      { length: lastPrestigeRank(this.config) },
+      (_, i) => i + 1,
+    );
     const state = (rank: number) =>
       rank === next ? "next" : rank <= current ? "earned" : "locked";
     return html`<ol
@@ -563,7 +601,11 @@ export class PrestigeFlow extends LitElement {
           </li>`,
       )}
       <li data-rank="legend" data-state="locked" class="prestige-track-locked">
-        <level-badge .level=${100} .legend=${true} .size=${26}></level-badge>
+        <level-badge
+          .level=${levelCap(this.config)}
+          .legend=${true}
+          .size=${26}
+        ></level-badge>
       </li>
     </ol>`;
   }
@@ -720,6 +762,19 @@ export class PrestigeFlow extends LitElement {
     await this.updateComplete;
     if (!reduced) this.startHandoffMove();
     const response = await request;
+    if (response.ok) {
+      // Prestiged, whatever became of the flow meanwhile: the key is spent,
+      // and the page behind must hear of it even if no ceremony follows.
+      if (prior) pendingKeys.delete(prior.prestige);
+      this.outcome = response.data;
+      this.dispatchEvent(
+        new CustomEvent<PrestigeResponse>("prestiged", {
+          detail: response.data,
+          bubbles: true,
+          composed: true,
+        }),
+      );
+    }
     // Closed (or taken off the page) while the request was out.
     if (this.stage !== "submitting") return;
     if (!response.ok) {
@@ -742,15 +797,6 @@ export class PrestigeFlow extends LitElement {
       void this.updateComplete.then(() => this.focusConfirmButton());
       return;
     }
-    if (prior) pendingKeys.delete(prior.prestige);
-    this.outcome = response.data;
-    this.dispatchEvent(
-      new CustomEvent<PrestigeResponse>("prestiged", {
-        detail: response.data,
-        bubbles: true,
-        composed: true,
-      }),
-    );
     // The flash lands when the charge has run, or when the answer arrived if
     // that took longer.
     const left =
@@ -885,7 +931,7 @@ export class PrestigeFlow extends LitElement {
               </div>
               <div class="prestige-charge relative">
                 <level-badge
-                  .level=${100}
+                  .level=${levelCap(this.config)}
                   .prestige=${before.prestige}
                   .size=${200}
                 ></level-badge>

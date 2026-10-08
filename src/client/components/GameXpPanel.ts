@@ -1,3 +1,4 @@
+import type { GameType } from "@openfront/engine-api/game/GameTypes";
 import type {
   GameXpEligible,
   GameXpResponse,
@@ -110,10 +111,11 @@ interface RevealFrame {
 }
 
 // Bar position of a level/progress pair, in level units. Level 100 has no
-// next level and reads as a full bar.
+// next level and reads as a full bar. A full level stays just short of the
+// next, so the position never reads as a level the player hasn't reached.
 function positionOf(level: number, xpInLevel: number, xpForNext: number) {
   if (level >= MAX_LEVEL) return MAX_LEVEL;
-  return level + levelFraction(xpInLevel, xpForNext);
+  return level + Math.min(1 - 1e-6, levelFraction(xpInLevel, xpForNext));
 }
 
 // The source cards' final values: the award split across them, so a
@@ -133,6 +135,9 @@ export class GameXpPanel extends LitElement {
   // reveal only plays on screen: a result that arrives while it is off screen
   // shows in its final state, and going off screen mid-reveal ends it there.
   @property({ attribute: false }) onScreen = true;
+  // The finished game's type, when known: picks the copy for a game that
+  // didn't earn XP (see ineligibleReasonKey).
+  @property({ attribute: false }) gameType: GameType | null = null;
 
   // The reveal in progress, or null once it has finished (or when there is
   // none: reduced motion, a skip). Null renders the final
@@ -181,18 +186,10 @@ export class GameXpPanel extends LitElement {
     this.timers.push(setTimeout(fn, ms));
   }
 
-  // The reveal. For each XP source a caption rolls in over the bar ("TIME
-  // PLAYED +340 XP"), the bar climbs by that much, the counter under it
-  // counts up, and the source's card lands in the grid below. When the bar
-  // reaches the end of a level, everything stops for the level-up moment:
-  // the bar flashes, the caption becomes "LEVEL 24!", the badge at the end
-  // pops with a burst, and the level-up card appears. Then the bar empties
-  // and the climb carries on. Each multiplier then slams in and is applied to
-  // the cards on screen: a wipe runs across them, first to last, turning each
-  // value over to its multiplied share (340 → 408) as it passes, with the
-  // counter and bar going up with it; the bonus line then lands under the
-  // counter. Becoming a Legend is its own, longer moment. Tapping skips to
-  // the end.
+  // Tapping the panel skips to the end. Each multiplier is applied to the
+  // source cards already on screen, turning each over to its share of the
+  // multiplied award, rather than to the subtotal, so the cards always add
+  // up to the counter.
   private startReveal(data: GameXpEligible): void {
     this.clearTimers();
     if (prefersReducedMotion()) {
@@ -264,6 +261,13 @@ export class GameXpPanel extends LitElement {
     // `totalMs` is how long the climbing takes, pauses aside. Returns when it
     // ends.
     let position = start;
+    // The levels to stop on, in order, as the server reports them: flooring
+    // the bar's interpolated position skips the first one when the player
+    // starts the game on a full bar.
+    const pendingLevels = levelsReachedInGame(data)
+      .map((l) => l.level)
+      .filter((l) => l > data.before.level && l <= MAX_LEVEL)
+      .sort((a, b) => a - b);
     const climb = (
       t: number,
       to: number,
@@ -292,8 +296,8 @@ export class GameXpPanel extends LitElement {
       }
       position = to;
       const boundaries: number[] = [];
-      for (let b = Math.floor(from) + 1; b <= Math.floor(to); b++) {
-        if (b <= MAX_LEVEL) boundaries.push(b);
+      while (pendingLevels.length > 0 && pendingLevels[0] <= to) {
+        boundaries.push(pendingLevels.shift()!);
       }
       const distance = to - from;
       const legMs = (a: number, b: number) =>
@@ -1456,7 +1460,7 @@ export class GameXpPanel extends LitElement {
       case "result":
         if (!s.data.eligible) {
           return this.renderNote(
-            ineligibleReasonKey(s.data.reason),
+            ineligibleReasonKey(s.data.reason, this.gameType),
             "ineligible",
           );
         }

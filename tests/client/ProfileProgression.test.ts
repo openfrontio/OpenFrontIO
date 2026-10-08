@@ -177,24 +177,52 @@ describe("milestoneRuns", () => {
     ]);
   });
 
-  it("drops levels that aren't milestones, runs past the current one, and repeats", () => {
+  it("drops runs past the current one, impossible levels, and repeats", () => {
     const runs = milestoneRuns(
       progress({
         prestige: 1,
         level: 5,
         milestones: [
-          { prestige: 1, level: 30, at: "2026-09-01T00:00:00.000Z" },
           { prestige: 4, level: 10, at: "2026-09-01T00:00:00.000Z" },
+          { prestige: 1, level: 0, at: "2026-09-01T00:00:00.000Z" },
+          { prestige: 1, level: 12.5, at: "2026-09-01T00:00:00.000Z" },
           { prestige: 0, level: 10, at: "2026-08-01T00:00:00.000Z" },
           { prestige: 0, level: 10, at: "2026-08-09T00:00:00.000Z" },
         ],
       }),
     );
     expect(runs.map((r) => r.prestige)).toEqual([1, 0]);
+    expect(runs[0].slots.map((s) => s.level)).toEqual([10, 25, 50, 75, 100]);
     expect(runs[0].slots.every((s) => !s.reached)).toBe(true);
     expect(runs[1].slots).toEqual([
       { level: 10, reached: true, at: "2026-08-01T00:00:00.000Z" },
     ]);
+  });
+
+  it("shows a milestone level the API has and the client doesn't know", () => {
+    // Say the server adds 40: it shows in place, in this run and earlier ones.
+    const runs = milestoneRuns(
+      progress({
+        prestige: 1,
+        level: 45,
+        milestones: [
+          { prestige: 1, level: 40, at: "2026-09-02T00:00:00.000Z" },
+          { prestige: 1, level: 10, at: "2026-09-01T00:00:00.000Z" },
+          { prestige: 0, level: 40, at: "2026-08-02T00:00:00.000Z" },
+          { prestige: 0, level: 10, at: "2026-08-01T00:00:00.000Z" },
+        ],
+      }),
+    );
+    expect(runs[0].slots.map((s) => [s.level, s.reached])).toEqual([
+      [10, true],
+      [25, true],
+      [40, true],
+      [50, false],
+      [75, false],
+      [100, false],
+    ]);
+    expect(runs[0].slots[2].at).toBe("2026-09-02T00:00:00.000Z");
+    expect(runs[1].slots.map((s) => s.level)).toEqual([10, 40]);
   });
 });
 
