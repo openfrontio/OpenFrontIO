@@ -38,6 +38,8 @@ const waitingSquares = (view: Element) =>
   view.querySelectorAll("level-badge > [data-badge-waiting]");
 const drawnBadges = (view: Element) =>
   view.querySelectorAll("level-badge > svg[role=img]");
+const ariaHiddenBadges = (view: Element) =>
+  view.querySelectorAll('level-badge[aria-hidden="true"]');
 
 // Mounts the view and lets every badge finish its first render, but no
 // animation frame: what the first paint shows.
@@ -100,11 +102,15 @@ describe("lobby badges arriving many at once", { timeout: 20_000 }, () => {
         expect(waitingSquares(view).length).toBe(150 * perPlayer);
         expect(drawnBadges(view).length).toBe(0);
         expect(badgeFrameScheduled()).toBe(true);
+        // A waiting badge has no name yet, so it is out of the
+        // accessibility tree until drawn.
+        expect(ariaHiddenBadges(view).length).toBe(150 * perPlayer);
 
         await badgesDrawn();
 
         expect(waitingSquares(view).length).toBe(0);
         expect(drawnBadges(view).length).toBe(150 * perPlayer);
+        expect(ariaHiddenBadges(view).length).toBe(0);
         expect(pendingBadges()).toBe(0);
         expect(badgeFrameScheduled()).toBe(false);
         // Each one is the player's own badge.
@@ -126,6 +132,7 @@ describe("lobby badges arriving many at once", { timeout: 20_000 }, () => {
 
     expect(drawnBadges(view).length).toBe(8);
     expect(waitingSquares(view).length).toBe(0);
+    expect(ariaHiddenBadges(view).length).toBe(0);
     expect(pendingBadges()).toBe(0);
   });
 

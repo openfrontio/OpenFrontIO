@@ -87,6 +87,7 @@ vi.mock(
   },
 );
 
+import { GameType } from "@openfront/engine-api/game/GameTypes";
 import { GameStatsModal } from "../../src/client/GameStatsModal";
 import { modalRouter } from "../../src/client/ModalRouter";
 import { initNavigation } from "../../src/client/Navigation";
@@ -331,10 +332,17 @@ describe("game stats XP", () => {
   }
 
   // GameInfoView has loaded the game: it ended `agoMs` ago.
-  function gameLoaded(gameId: string, agoMs: number): void {
+  function gameLoaded(
+    gameId: string,
+    agoMs: number,
+    gameType = GameType.Public,
+  ): void {
     modal.querySelector("game-info-view")!.dispatchEvent(
       new CustomEvent("game-info-loaded", {
-        detail: { gameId, info: { end: Date.now() - agoMs } },
+        detail: {
+          gameId,
+          info: { end: Date.now() - agoMs, config: { gameType } },
+        },
         bubbles: true,
       }),
     );
@@ -376,6 +384,36 @@ describe("game stats XP", () => {
     await vi.waitFor(async () => expect(await cardState()).toBe("ineligible"));
     expect(modal.querySelector("[data-past-xp-note]")!.textContent).toBe(
       "progression.ineligible_not_spawned",
+    );
+  });
+
+  it("tells a singleplayer game it doesn't earn XP, once the game has loaded", async () => {
+    fetchMyGameXp.mockResolvedValue({
+      status: "ok",
+      data: { gameId: "g8", eligible: false, reason: "unverified" },
+    });
+    await open("g8");
+    await vi.waitFor(() => expect(fetchMyGameXp).toHaveBeenCalled());
+    await idle();
+    // Never the multiplayer line first: it waits for the game's type.
+    expect(await cardState()).toBeNull();
+    gameLoaded("g8", 60_000, GameType.Singleplayer);
+    await vi.waitFor(async () => expect(await cardState()).toBe("ineligible"));
+    expect(modal.querySelector("[data-past-xp-note]")!.textContent).toBe(
+      "progression.ineligible_singleplayer",
+    );
+  });
+
+  it("says a multiplayer game's results couldn't be verified", async () => {
+    fetchMyGameXp.mockResolvedValue({
+      status: "ok",
+      data: { gameId: "g9", eligible: false, reason: "unverified" },
+    });
+    await open("g9");
+    gameLoaded("g9", 60_000, GameType.Public);
+    await vi.waitFor(async () => expect(await cardState()).toBe("ineligible"));
+    expect(modal.querySelector("[data-past-xp-note]")!.textContent).toBe(
+      "progression.ineligible_unverified",
     );
   });
 

@@ -1,19 +1,5 @@
 import { GameMapSize, GameMapType, TeamGameSpawnAreas } from "./GameTypes";
 
-export interface GameMapLoader {
-  getMapData(map: GameMapType): MapData;
-}
-
-export interface MapData {
-  mapBin: () => Promise<Uint8Array>;
-  map4xBin: () => Promise<Uint8Array>;
-  map16xBin: () => Promise<Uint8Array>;
-  manifest: () => Promise<MapManifest>;
-  webpPath: string;
-  /** Load a map layer PNG by layer id. Returns an ImageBitmap. */
-  layerPng: (layerId: string) => Promise<ImageBitmap>;
-}
-
 /**
  * The files one map needs at one size, already loaded: the engine gets
  * these in its init message and never fetches. Normal games use map.bin

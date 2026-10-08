@@ -7,7 +7,7 @@
  */
 
 import { GameMapSize, GameMapType } from "@openfront/engine-api/game/GameTypes";
-import { loadMapFiles } from "@openfront/engine-lib/game/MapFiles";
+import { loadMapFiles } from "@openfront/shared/GameMapLoader";
 import type {
   ReplayAppend,
   ReplayBase,
@@ -108,6 +108,6 @@ test("a game the engine can't start fails with the engine's reason", async () =>
   };
   // Answered at once, not after the init timeout.
   await expect(startWorkerEngine(connect(), gameStart, onion)).rejects.toThrow(
-    /couldn't start the game: only .* was passed/,
+    /couldn't start the game: .*the files passed are/,
   );
 }, 10_000);

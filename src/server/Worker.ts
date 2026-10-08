@@ -37,7 +37,7 @@ import { registerGamePreviewRoute } from "./GamePreviewRoute";
 import { GamePhase, type GameServer } from "./GameServer";
 import { isSteamAuthenticated, planJoinVerify, verifyJoin } from "./JoinVerify";
 import { getUserMe, userMeFailureClose, verifyClientToken } from "./jwt";
-import { levelBadgeFromProgress } from "./LevelBadge";
+import { levelBadgeForPlayer } from "./LevelBadge";
 import { payForLobbyQueue, queueListedLobby } from "./LobbyQueuePayment";
 import { logger } from "./Logger";
 import { resolveVerifiedJoin } from "./Privilege";
@@ -748,8 +748,8 @@ export async function startWorker() {
           accountUsername = result.response.player;
           trusted = result.response.player.trustTier === "trusted";
           // Display-only: the roster badge comes from this lookup alone, never
-          // from the join message.
-          levelBadge = levelBadgeFromProgress(result.response.player.progress);
+          // from the join message. None when the player hides their level.
+          levelBadge = levelBadgeForPlayer(result.response.player);
 
           if (allowedFlares !== undefined) {
             const allowed =

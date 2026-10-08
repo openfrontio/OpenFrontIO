@@ -30,6 +30,7 @@ import {
 } from "@openfront/engine-api/Schemas";
 import { Game } from "@openfront/engine/game/Game";
 import { createGameRunner } from "@openfront/engine/GameRunner";
+import { loadMapFiles } from "@openfront/shared/GameMapLoader";
 import {
   createPartialGameRecord,
   toWireGameStartInfo,
@@ -87,7 +88,11 @@ export async function playAndArchive(
   const runner = await createGameRunner(
     wireStart,
     opts.players[0]?.clientID,
-    mapLoader,
+    await loadMapFiles(
+      mapLoader,
+      wireStart.config.gameMap,
+      wireStart.config.gameMapSize,
+    ),
     (gu) => {
       if ("errMsg" in gu) {
         error = `${gu.errMsg}\n${gu.stack ?? ""}`;

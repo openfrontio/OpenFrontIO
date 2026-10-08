@@ -14,8 +14,6 @@ import {
 import { GameEnv } from "@openfront/shared/configuration/Env";
 import { ClientEnv } from "src/client/ClientEnv";
 import { renderNavVersion } from "src/client/GameVersion";
-import "./AccountModal";
-import "./AccountSettingsModal";
 import { adGatekeeper } from "./AdGatekeeper";
 import { loadAdmiral, onAdmiralMeasured } from "./Admiral";
 import { getUserMe, invalidateUserMe } from "./Api";
@@ -37,9 +35,7 @@ import {
   runBootInterrupt,
   steamGrantStringsReady,
 } from "./BootInterrupts";
-import "./ChangeUsernameModal";
-import "./ClanModal";
-import { joinLobby, type JoinLobbyResult } from "./ClientGameRunner";
+import type { JoinLobbyResult } from "./ClientGameRunner";
 import {
   getPlayerCosmeticsRefs,
   handlePurchaseReturn,
@@ -59,6 +55,7 @@ import {
   type DesktopUpdateState,
 } from "./DesktopShell";
 import "./FeaturedStream";
+import { loadGameClient, prefetchGameClient } from "./GameClientLoader";
 import "./GameModeSelector";
 import {
   GameModeSelector,
@@ -67,17 +64,20 @@ import {
   shouldBlockJoin,
 } from "./GameModeSelector";
 import { GameStartingModal } from "./GameStartingModal";
-import "./GameStatsModal";
-import { HelpModal } from "./HelpModal";
+import type { HelpModal } from "./HelpModal";
 import "./HomepagePromos";
 import { HostLobbyModal as HostPrivateLobbyModal } from "./HostLobbyModal";
 import { showInGameAlert, showInGameConfirm } from "./InGameModal";
-import "./InventoryModal";
 import { JoinLobbyModal } from "./JoinLobbyModal";
 import "./LangSelector";
 import { LangSelector } from "./LangSelector";
 import { initLayout } from "./Layout";
-import "./LeaderboardModal";
+import { loadModal, prefetchModals } from "./LazyModals";
+import {
+  SendKickPlayerIntentEvent,
+  SendToggleGameStartTimer,
+  SendUpdateGameConfigIntentEvent,
+} from "./LobbyEvents";
 import "./Matchmaking";
 import { MatchmakingModal } from "./Matchmaking";
 import {
@@ -88,10 +88,8 @@ import {
 import { modalRouter } from "./ModalRouter";
 import { updateAccountNavButton } from "./NavAccountButton";
 import { initNavigation } from "./Navigation";
-import "./NewsModal";
 import { capturePagePin } from "./PagePin";
 import { fallbackPlayerName, LAPSE_NOTICE_KEY } from "./PlayerName";
-import "./PlayerProfileModal";
 import {
   GroupTokenTracker,
   presenceLobbyId,
@@ -125,14 +123,8 @@ import "./SteamLinkModal";
 import { SteamLinkModal } from "./SteamLinkModal";
 import { steamSDK } from "./SteamSDK";
 import { StoreModal } from "./Store";
-import "./SubscriptionModal";
 import { initTelemetry } from "./Telemetry";
 import { TokenLoginModal } from "./TokenLoginModal";
-import {
-  SendKickPlayerIntentEvent,
-  SendToggleGameStartTimer,
-  SendUpdateGameConfigIntentEvent,
-} from "./Transport";
 import {
   requestTurnstileToken,
   resolveTurnstileToken,
@@ -141,7 +133,6 @@ import {
   type TurnstileApi,
   type TurnstileToken,
 } from "./TurnstileToken";
-import "./UserSettingModal";
 import { UserSettings } from "./UserSettings";
 import "./UsernameInput";
 import { UsernameInput } from "./UsernameInput";
@@ -152,6 +143,7 @@ import {
   homeHref,
   incrementGamesPlayed,
   presenceMapKey,
+  reloadForUpdate,
   translateText,
 } from "./Utils";
 import { isReplayShellHost } from "./VersionedReplay";
@@ -175,7 +167,6 @@ import "./components/Footer";
 import "./components/MainLayout";
 import "./components/MobileNavBar";
 import "./components/PlayPage";
-import "./components/RankedModal";
 import "./components/baseComponents/Button";
 import "./components/baseComponents/Modal";
 import "./styles.css";
@@ -609,23 +600,28 @@ class Client {
       this.handleMatchmakingRequeue.bind(this),
     );
 
-    const hlpModal = document.querySelector("help-modal") as HelpModal;
-    if (!hlpModal || !(hlpModal instanceof HelpModal)) {
+    const hlpModal = document.querySelector("help-modal") as HelpModal | null;
+    if (!hlpModal) {
       console.warn("Help modal element not found");
     }
     const helpButton = document.getElementById("help-button");
     if (helpButton) {
       helpButton.addEventListener("click", () => {
-        if (hlpModal && hlpModal instanceof HelpModal) {
-          hlpModal.open();
-        }
+        loadModal("help-modal").then(
+          () => hlpModal?.open(),
+          (err) => console.error("help-modal failed to load:", err),
+        );
       });
     }
     // Tutorial entry points (play-page card, help page): back to the play page
     // if needed (so a username problem is visible), then a default solo game
     // with the guide on.
     document.addEventListener("start-tutorial", () => {
-      if (hlpModal?.isOpen()) hlpModal.close();
+      // The help modal loads on demand (see LazyModals); until it has, it
+      // can't be open.
+      if (customElements.get("help-modal") && hlpModal?.isOpen()) {
+        hlpModal.close();
+      }
       if (this.usernameInput && !this.usernameInput.canPlay()) return;
       void (
         document.querySelector("single-player-modal") as SinglePlayerModal
@@ -1551,6 +1547,20 @@ class Client {
     // asked for separately.
     const resolvedName =
       this.usernameInput?.resolvedName() ?? fallbackPlayerName();
+    let joinLobby: typeof import("./ClientGameRunner").joinLobby;
+    try {
+      ({ joinLobby } = await loadGameClient());
+    } catch (err) {
+      // The game's chunk didn't load (a network error, or a deploy that
+      // replaced it). A full page load also picks up a new deploy, unless the
+      // player has since left or started another join.
+      console.error("game client failed to load:", err);
+      if (this.mostRecentJoinEvent !== event.timeStamp) return;
+      // The URL names the singleplayer game now, which no server has.
+      if (isSingleplayer) history.replaceState(null, "", "/");
+      reloadForUpdate();
+      return;
+    }
     const newLobbyHandle = joinLobby(this.eventBus, {
       gameID: lobby.gameID,
       cosmetics: await getPlayerCosmeticsRefs({
@@ -2022,6 +2032,8 @@ const bootstrap = () => {
   initLayout();
   new Client().initialize();
   initNavigation();
+  prefetchGameClient();
+  prefetchModals();
 
   // Hide elements immediately
   hideCrazyGamesElements();

@@ -25,8 +25,10 @@ type Pkg =
   | "server"
   | "resources";
 
-// The only engine file the apps may load: the simulation worker.
+// The only engine files the apps may load: the simulation worker for the
+// client, and the winner replay for the server (src/server/WinnerReplay.ts).
 const ENGINE_ENTRY = "packages/engine/src/worker/Worker.worker.ts";
+const SERVER_ENGINE_ENTRY = "packages/engine/src/WinnerReplay.ts";
 
 const ALLOWED: Record<Pkg, Pkg[]> = {
   "engine-api": ["engine-api", "zbin", "resources"],
@@ -50,6 +52,35 @@ const ENGINE_NPM = new Set(["zod", "zod/v4"]);
  * counts). The engine is handed everything it needs: maps come in `init`.
  */
 const NETWORK = /\b(fetch|XMLHttpRequest|WebSocket|importScripts)\b/g;
+
+/**
+ * Math functions the spec lets each JS engine approximate its own way, so
+ * two browsers could simulate the same game differently. The rest (sqrt,
+ * floor, imul...) are exact. Use engine-lib's DetMath instead.
+ */
+const INEXACT_MATH =
+  /\bMath\.(a?cosh?|a?sinh?|a?tanh?|atan2|cbrt|exp|expm1|hypot|log|log1p|log2|log10|pow)\b/g;
+
+/**
+ * The game client: the homepage loads it only once a game is joining
+ * (src/client/GameClientLoader.ts), and the store's cosmetic previews only
+ * once one opens. Whatever the homepage imports statically is in its first
+ * download.
+ */
+const GAME_CLIENT =
+  /^src\/client\/((hud|view|controllers|render)\/.*|ClientGameRunner|Transport|LocalServer|InputHandler|TransformHandler|WebGLFrameBuilder|WorkerClient)\.ts$/;
+
+/**
+ * The modals the homepage loads on demand: whatever src/client/LazyModals.ts
+ * imports.
+ */
+const LAZY_MODALS = "src/client/LazyModals.ts";
+
+/** Renderer settings the homepage's settings screens read too. */
+const HOMEPAGE_RENDER_SETTINGS = new Set([
+  "src/client/render/gl/GraphicsOverrides.ts",
+  "src/client/render/gl/RenderSettings.ts",
+]);
 
 /** Known violations, as "<from file> -> <to file>"; never add to it. */
 const ALLOWLIST: string[] = [];
@@ -115,6 +146,27 @@ function specifiers(file: string): string[] {
   return out;
 }
 
+/**
+ * The imports and re-exports left once TypeScript compiles the source: an
+ * import used only as a type is erased, so it loads nothing.
+ */
+function runtimeSpecifiers(source: string): string[] {
+  const js = ts.transpileModule(source, {
+    compilerOptions: {
+      module: ts.ModuleKind.ESNext,
+      target: ts.ScriptTarget.ESNext,
+    },
+  }).outputText;
+  const sf = ts.createSourceFile("out.js", js, ts.ScriptTarget.Latest);
+  return sf.statements.flatMap((s) =>
+    (ts.isImportDeclaration(s) || ts.isExportDeclaration(s)) &&
+    s.moduleSpecifier &&
+    ts.isStringLiteral(s.moduleSpecifier)
+      ? [s.moduleSpecifier.text]
+      : [],
+  );
+}
+
 function probe(base: string): string | null {
   for (const cand of [
     base,
@@ -155,10 +207,12 @@ function resolve(
 function violations(): {
   edges: Set<string>;
   determinism: string[];
+  inexactMath: string[];
   io: string[];
 } {
   const edges = new Set<string>();
   const determinism: string[] = [];
+  const inexactMath: string[] = [];
   const io: string[] = [];
   const files = [
     ...PACKAGES.flatMap((pkg) => walk(`packages/${pkg}/src`)),
@@ -181,6 +235,13 @@ function violations(): {
       if (to === "engine" && from === "client" && r.file === ENGINE_ENTRY) {
         continue;
       }
+      if (
+        to === "engine" &&
+        from === "server" &&
+        r.file === SERVER_ENGINE_ENTRY
+      ) {
+        continue;
+      }
       edges.add(`${file} -> ${r.file}`);
     }
     if (ENGINE_SIDE.has(from)) {
@@ -189,19 +250,62 @@ function violations(): {
         for (const m of text.matchAll(re)) {
           const line = text.slice(0, m.index).split("\n").length;
           const src = text.split("\n")[line - 1].trim();
-          if (src.startsWith("//") || src.startsWith("*")) continue;
+          if (/^(\/\/|\/\*|\*)/.test(src)) continue;
           out.push(`${file}:${line}: ${m[0]}`);
         }
       };
       find(/Math\.random|Date\.now|new Date\b/g, determinism);
+      find(INEXACT_MATH, inexactMath);
       find(NETWORK, io);
     }
   }
-  return { edges, determinism, io };
+  return { edges, determinism, inexactMath, io };
+}
+
+/**
+ * The game client files and on-demand modals the homepage loads up front, each
+ * as the chain of static imports from src/client/Main.ts that reaches it.
+ */
+function homepageOnDemandImports(): string[] {
+  const ENTRY = "src/client/Main.ts";
+  const lazyModals = new Set(
+    [
+      ...fs
+        .readFileSync(path.join(ROOT, LAZY_MODALS), "utf8")
+        .matchAll(/import\("([^"]+)"\)/g),
+    ].flatMap((m) => {
+      const r = resolve(LAZY_MODALS, m[1]);
+      return "npm" in r ? [] : [r.file];
+    }),
+  );
+  const importer = new Map<string, string>([[ENTRY, ""]]);
+  const queue = [ENTRY];
+  const found: string[] = [];
+  while (queue.length > 0) {
+    const file = queue.shift()!;
+    const text = fs.readFileSync(path.join(ROOT, file), "utf8");
+    for (const spec of runtimeSpecifiers(text)) {
+      const r = resolve(file, spec);
+      if ("npm" in r || importer.has(r.file)) continue;
+      importer.set(r.file, file);
+      if (
+        (GAME_CLIENT.test(r.file) && !HOMEPAGE_RENDER_SETTINGS.has(r.file)) ||
+        lazyModals.has(r.file)
+      ) {
+        const chain = [r.file];
+        for (let f = file; f !== ""; f = importer.get(f)!) chain.unshift(f);
+        found.push(chain.join(" -> "));
+      } else if (/\.(ts|js|mjs)$/.test(r.file)) {
+        queue.push(r.file);
+      }
+    }
+  }
+  return found.sort();
 }
 
 describe("layer boundaries", () => {
-  const { edges, determinism, io } = violations();
+  const { edges, determinism, inexactMath, io } = violations();
+  const homepageOnDemand = homepageOnDemandImports();
 
   test("no import edges outside the allowed graph", () => {
     const allowed = new Set(ALLOWLIST);
@@ -216,6 +320,55 @@ describe("layer boundaries", () => {
 
   test("engine code uses no wall-clock or unseeded randomness", () => {
     expect(determinism).toEqual([]);
+  });
+
+  test("engine code uses only exactly specified Math functions", () => {
+    expect(inexactMath).toEqual([]);
+  });
+
+  test("the Math check catches each approximated function", () => {
+    const hits = (src: string) => [...src.matchAll(INEXACT_MATH)].length > 0;
+    for (const src of [
+      "Math.sin(a)",
+      "Math.acosh(a)",
+      "Math.atan(a)",
+      "Math.atan2(y, x)",
+      "Math.log1p(a)",
+      "Math.pow(a, b)",
+      "const f = Math.exp",
+    ]) {
+      expect(hits(src), src).toBe(true);
+    }
+    for (const src of [
+      "Math.sqrt(a)",
+      "Math.floor(a)",
+      "Math.imul(a, b)",
+      "Math.PI",
+      "Math.LN2",
+      "DetMath.exp(a)",
+      "logger.log(a)",
+    ]) {
+      expect(hits(src), src).toBe(false);
+    }
+  });
+
+  test("the homepage loads the game client and its modals only on demand", () => {
+    expect(homepageOnDemand).toEqual([]);
+  });
+
+  test("the homepage check follows only imports that load something", () => {
+    expect(
+      runtimeSpecifiers(`
+        import { a } from "./a";
+        import { B } from "./b";
+        import type { C } from "./c";
+        import { type D } from "./d";
+        import "./e";
+        export { f } from "./f";
+        const x: B | C | D = a;
+        const g = () => import("./g");
+      `),
+    ).toEqual(["./a", "./e", "./f"]);
   });
 
   test("engine code loads nothing over the network", () => {
