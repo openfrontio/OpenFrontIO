@@ -516,7 +516,9 @@ export class WinModal extends LitElement implements Controller {
         this.xpView = { kind: "result", data: result };
         return;
       }
-      const outcome = reconcileXp(provisional.result, result);
+      const outcome = reconcileXp(provisional.result, result, {
+        disconnectedOpponents: provisional.inputs.disconnectedOpponents,
+      });
       if (outcome.drift) {
         // Not explained by what only the end of the game adds: the client's
         // copy of the formula may have drifted from the server's.

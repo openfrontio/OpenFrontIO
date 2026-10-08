@@ -62,6 +62,8 @@ const DIFFERENCE_KEYS: Partial<Record<XpDifference, string>> = {
   team_win: "progression.reconcile_team_win",
   feats: "progression.reconcile_feats",
   daily_cap: "progression.reconcile_daily_cap",
+  multiplier: "progression.reconcile_multiplier",
+  reconnect: "progression.reconcile_reconnect",
   other: "progression.reconcile_other",
 };
 

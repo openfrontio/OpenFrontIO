@@ -181,20 +181,65 @@ describe("provisionalXpContext", () => {
         progress: { ...PROGRESS, daily },
         now: Date.parse(iso),
       });
-    // Fetched at 23:40 UTC; died later the same day: the counts stand.
-    const sameDay = at("2026-10-02T23:55:00Z");
-    if (sameDay === "retry") throw new Error("expected a context");
-    expect(sameDay.ctx.daily).toEqual({
+    const counted = {
       privateGames: 3,
       singleplayerGames: 1,
       firstGameClaimed: true,
-    });
-    // Died after midnight UTC: the API starts the new day from none used.
-    const nextDay = at("2026-10-03T00:15:00Z");
-    if (nextDay === "retry") throw new Error("expected a context");
-    expect(nextDay.ctx.daily).toEqual({
+    };
+    const dailyAt = (iso: string) => {
+      const derived = at(iso);
+      if (derived === "retry") throw new Error("expected a context");
+      return derived.ctx.daily;
+    };
+    // Died later the same day: the counts stand.
+    expect(dailyAt("2026-10-02T23:55:00Z")).toEqual(counted);
+    // The stamp is the server's day, seconds old: a local clock 90 minutes
+    // fast past midnight doesn't overrule it (that would show a first-game
+    // bonus the server won't pay).
+    expect(dailyAt("2026-10-03T00:30:00Z")).toEqual(counted);
+    expect(dailyAt("2026-10-03T11:59:59Z")).toEqual(counted);
+    // Well into the next day the stamp is plainly from an earlier one: the
+    // API starts the new day from none used.
+    expect(dailyAt("2026-10-03T12:00:00Z")).toEqual({
       privateGames: 0,
       singleplayerGames: 0,
+      firstGameClaimed: false,
+    });
+  });
+
+  it("reads undated allowances the way that can't overstate the figure", () => {
+    const at = (day: string | undefined) => {
+      const derived = provisionalXpContext({
+        snapshot: ffaSnapshot(),
+        myClientID: "me",
+        config: FFA,
+        progress: {
+          ...PROGRESS,
+          daily: {
+            day,
+            privateGames: 3,
+            singleplayerGames: 1,
+            firstGameClaimed: false,
+          },
+        },
+        now: Date.parse("2026-10-09T09:00:00Z"),
+      });
+      if (derived === "retry") throw new Error("expected a context");
+      return derived.ctx.daily;
+    };
+    // No stamp, or one that doesn't read as a day: the caps as given, and the
+    // first-game bonus not claimed (nor the counts reset, however old).
+    for (const day of [undefined, "yesterday", "2026-13-45"]) {
+      expect(at(day)).toEqual({
+        privateGames: 3,
+        singleplayerGames: 1,
+        firstGameClaimed: true,
+      });
+    }
+    // Today's stamp: as given, the first game still open.
+    expect(at("2026-10-09")).toEqual({
+      privateGames: 3,
+      singleplayerGames: 1,
       firstGameClaimed: false,
     });
   });
@@ -331,6 +376,16 @@ describe("buildProvisionalXp", () => {
       eligible: false,
       reason: "no_action",
     });
+  });
+
+  it("has nothing to show when the rules make the figure no number", () => {
+    // The schema allows fullLobbyHumans 0, which divides the placement by
+    // zero, on the server as here.
+    expect(
+      build({
+        progression: progression({ xp: { ...RULES, fullLobbyHumans: 0 } }),
+      }),
+    ).toBeNull();
   });
 
   it("has nothing to show for another formula revision or without rules", () => {
@@ -480,6 +535,78 @@ describe("reconcileXp", () => {
         server({ time: 120, subtotal: 170, total: 204 }),
       ),
     ).toMatchObject({ matched: false, differences: ["other"], drift: true });
+  });
+
+  it("puts a changed multiplier down to the config or the subscription, not drift", () => {
+    // The API retuned the game type's multiplier (formula unchanged):
+    // 163 * 1.3 * 1.2 = 254.28.
+    expect(
+      reconcileXp(provisional, server({ gamePermille: 1300, total: 254 })),
+    ).toEqual({
+      matched: false,
+      differences: ["multiplier"],
+      provisionalTotal: 196,
+      drift: false,
+    });
+    // The subscription lapsed before the game was scored, and the team won.
+    expect(
+      reconcileXp(
+        provisional,
+        server({
+          win: 150,
+          subtotal: 313,
+          subscriberPermille: 1000,
+          total: 313,
+        }),
+      ),
+    ).toMatchObject({ differences: ["team_win", "multiplier"], drift: false });
+    // A changed multiplier doesn't hide a line that differs unexplained.
+    expect(
+      reconcileXp(
+        provisional,
+        server({ time: 120, subtotal: 170, gamePermille: 1300, total: 265 }),
+      ),
+    ).toMatchObject({ differences: ["multiplier", "other"], drift: true });
+  });
+
+  it("puts a lower placement down to an opponent who came back", () => {
+    // Placed 18 at death with an opponent disconnected: 181 * 1.2 = 217.2.
+    const placed: XpResult = {
+      eligible: true,
+      breakdown: { ...breakdown, placement: 18, subtotal: 181, total: 217 },
+      daily: { privateGames: 0, singleplayerGames: 0, firstGameClaimed: true },
+    };
+    // They came back, so the server placed 10: 173 * 1.2 = 207.6.
+    const scored = server({ placement: 10, subtotal: 173, total: 208 });
+    expect(reconcileXp(placed, scored, { disconnectedOpponents: 1 })).toEqual({
+      matched: false,
+      differences: ["reconnect"],
+      provisionalTotal: 217,
+      drift: false,
+    });
+    // With nobody disconnected at death, nothing explains it.
+    expect(reconcileXp(placed, scored)).toMatchObject({
+      differences: ["other"],
+      drift: true,
+    });
+    // Nor when more than the placement differs.
+    expect(
+      reconcileXp(
+        placed,
+        server({ placement: 10, time: 120, subtotal: 180, total: 216 }),
+        { disconnectedOpponents: 1 },
+      ),
+    ).toMatchObject({ differences: ["other"], drift: true });
+    // A higher placement on the server isn't a returning opponent either.
+    expect(
+      reconcileXp(
+        placed,
+        server({ placement: 30, subtotal: 193, total: 232 }),
+        {
+          disconnectedOpponents: 1,
+        },
+      ),
+    ).toMatchObject({ differences: ["other"], drift: true });
   });
 
   it("explains an unverified game and the daily limit without flagging drift", () => {

@@ -117,7 +117,13 @@ const PROGRESS = {
   lifetimeXp: 850,
   legend: false,
   canPrestige: false,
-  daily: { privateGames: 0, singleplayerGames: 0, firstGameClaimed: false },
+  daily: {
+    // The server's day, as /users/@me stamps it.
+    day: new Date().toISOString().slice(0, 10),
+    privateGames: 0,
+    singleplayerGames: 0,
+    firstGameClaimed: false,
+  },
   subscriberPermille: 1000,
 };
 
@@ -549,6 +555,45 @@ describe("WinModal provisional XP at death", () => {
           opponentsOutlasted: 1,
         }),
       }),
+    );
+  });
+
+  it("puts a lower placement down to an opponent who came back, without logging drift", async () => {
+    const warn = vi.spyOn(console, "warn");
+    // "blip" had disconnected when "me" died, so counted as out before:
+    // placement floor(150 * 2 * 4 / (3 * 20)) = 20, 283 in all. Back a moment
+    // later, the server doesn't count them: floor(150 * 1 * 4 / (3 * 20)) =
+    // 10 placement, 273.
+    const withBlip = (): HumanStatsSnapshot => {
+      const s = snapshot();
+      return {
+        ...s,
+        stats: { ...s.stats, blip: { attacks: [5n] } },
+        disconnectedAt: { blip: 3900 },
+      };
+    };
+    stubXpEndpoint(() =>
+      json(
+        serverXp({
+          breakdown: { ...BREAKDOWN, placement: 10, subtotal: 273, total: 273 },
+          after: { ...serverXp().after, xpInLevel: 23, lifetimeXp: 1123 },
+        }),
+      ),
+    );
+    const { game, end } = makeGame({ stats: withBlip });
+    await mount(game);
+    await finishReveal();
+    expect(total()).toContain('"xp":"283"');
+
+    await endGame(end);
+    expect(xpState()).toBe("result");
+    expect(notes()).toEqual([
+      'progression.provisional_was:{"xp":"283"}',
+      "progression.reconcile_reconnect",
+    ]);
+    expect(warn).not.toHaveBeenCalledWith(
+      "Provisional XP differed from the server's",
+      expect.anything(),
     );
   });
 

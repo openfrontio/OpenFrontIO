@@ -85,14 +85,37 @@ export function apiScoresGame(
   );
 }
 
-// The day's allowances as they stand on `now`'s UTC day. The API stamps them
-// with the day they are for; once that day is over they have reset, as they
-// have for the API, which goes by the UTC day the game ends.
+const DAY_MS = 24 * 60 * 60 * 1000;
+// How far the local clock has to be past the end of the stamped day before it
+// is taken to have rolled over. The stamp is the server's day, from a
+// /users/@me fetched at death, so it is seconds old and the local clock adds
+// next to nothing; what it can add is a wrong clock (a fast one, or one set
+// to the wrong time zone) resetting the counts on the server's same day and
+// showing a first-game bonus the server won't pay. Keeping a day's counts too
+// long only ever understates the figure, so the margin is generous.
+const DAY_ROLLOVER_MARGIN_MS = 12 * 60 * 60 * 1000;
+
+// The day's allowances as they stand when the player died. The API stamps
+// them with the UTC day they are for (its own clock); they reset once that
+// day is over, as they do for the API, which goes by the UTC day the game
+// ends.
+//
+// Counts with no day stamp (an older API, or a stamp that doesn't read) are
+// of unknown age, so they are read the way that can't overstate the figure:
+// the caps as given (counts only grow within a day, so stale ones are higher)
+// and the first-game bonus as taken. If it was open after all, the server's
+// figure adds it and says the day's allowances changed.
 function dailyOn(daily: Progress["daily"], now: number): DailyXpState {
   if (daily === undefined) return NO_DAILY_XP;
-  const today = new Date(now).toISOString().slice(0, 10);
-  if (daily.day !== undefined && today > daily.day) return NO_DAILY_XP;
   const { privateGames, singleplayerGames, firstGameClaimed } = daily;
+  const dayStart =
+    daily.day !== undefined && /^\d{4}-\d{2}-\d{2}$/.test(daily.day)
+      ? Date.parse(`${daily.day}T00:00:00Z`)
+      : NaN;
+  if (!Number.isFinite(dayStart)) {
+    return { privateGames, singleplayerGames, firstGameClaimed: true };
+  }
+  if (now >= dayStart + DAY_MS + DAY_ROLLOVER_MARGIN_MS) return NO_DAILY_XP;
   return { privateGames, singleplayerGames, firstGameClaimed };
 }
 
@@ -243,6 +266,9 @@ export function buildProvisionalXp(input: {
   if (derived === "retry") return "retry";
   const { ctx, disconnectedOpponents } = derived;
   const result = computeXp(ctx, rules);
+  // Rules the API's schema allows but that divide by zero (fullLobbyHumans
+  // 0) score NaN, here as on the server: show nothing rather than that.
+  if (result.eligible && !Number.isFinite(result.breakdown.total)) return null;
   let response: GameXpResponse;
   if (result.eligible) {
     const projected = projectProgress(
@@ -366,6 +392,13 @@ export type XpDifference =
   // up (or freed), or the first-game-of-the-day bonus taken by another game
   // (or the game scored on another UTC day).
   | "daily_cap"
+  // A multiplier changed before the game was scored: the game type's (the
+  // API's numbers were retuned) or the player's subscription (started or
+  // lapsed).
+  | "multiplier"
+  // An opponent counted as gone when the player died had only disconnected,
+  // and came back: the server doesn't count them as outlasted.
+  | "reconnect"
   // Anything else.
   | "other";
 
@@ -375,14 +408,18 @@ export interface XpReconciliation {
   differences: XpDifference[];
   // The provisional total, null when the provisional figure was ineligible.
   provisionalTotal: number | null;
-  // A difference the end-of-game sources (team win, feats, verification, the
-  // daily cap) don't explain: the formula copy may have drifted.
+  // A difference the known sources (team win, feats, verification, the daily
+  // cap, a multiplier change, a returning opponent) don't explain: the
+  // formula copy may have drifted.
   drift: boolean;
 }
 
 export function reconcileXp(
   provisional: XpResult,
   server: GameXpResponse,
+  // ProvisionalXpInputs.disconnectedOpponents: opponents counted as gone at
+  // death who may have come back.
+  { disconnectedOpponents = 0 }: { disconnectedOpponents?: number } = {},
 ): XpReconciliation {
   const provisionalTotal = provisional.eligible
     ? provisional.breakdown.total
@@ -430,17 +467,35 @@ export function reconcileXp(
   // The first game of the day is known at death (from /users/@me), so it
   // only differs when the day's state changed before the game was scored.
   if (s.firstGame !== p.firstGame) differences.push("daily_cap");
+  // The multipliers are numbers the API may retune (its config `version`, as
+  // opposed to `formula`), and a subscription can start or lapse before the
+  // game is scored: a change there is not the formula drifting.
+  if (
+    s.gamePermille !== p.gamePermille ||
+    s.subscriberPermille !== p.subscriberPermille
+  ) {
+    differences.push("multiplier");
+  }
   // The provisional figure with the server's end-of-game lines (and its
-  // first-game line) in their place: if that lands on the server's total,
-  // nothing else changed.
-  const expected = applyMultipliers(
-    p.subtotal - endOfGameXp(p) + endOfGameXp(s),
-    p.gamePermille,
-    p.subscriberPermille,
-  );
-  const drift = expected !== s.total;
-  if (drift) differences.push("other");
-  return differ(differences, drift);
+  // first-game line) in their place, under the server's multipliers: if that
+  // lands on the server's total, nothing else changed.
+  const atServer = (subtotal: number) =>
+    applyMultipliers(subtotal, s.gamePermille, s.subscriberPermille);
+  const subtotal = p.subtotal - endOfGameXp(p) + endOfGameXp(s);
+  if (atServer(subtotal) === s.total) return differ(differences);
+  // An opponent who had disconnected when the player died was counted as
+  // outlasted; one who came back isn't, on the server. When the server's
+  // lower placement is the whole of the difference, that is the reason.
+  if (
+    disconnectedOpponents > 0 &&
+    s.placement < p.placement &&
+    atServer(subtotal - p.placement + s.placement) === s.total
+  ) {
+    differences.push("reconnect");
+    return differ(differences);
+  }
+  differences.push("other");
+  return differ(differences, true);
 }
 
 function endOfGameXp(b: Pick<XpBreakdown, "win" | "firstGame" | "feats">) {
