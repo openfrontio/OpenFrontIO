@@ -1,3 +1,4 @@
+import type { GameType } from "@openfront/engine-api/game/GameTypes";
 import { html } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import "./components/baseComponents/stats/GameInfoView";
@@ -36,6 +37,8 @@ export class GameStatsModal extends BaseModal {
   @state() private gameId: string | null = null;
   // The XP the signed-in player earned in this game, if any.
   @state() private xpView: PastGameXpView = { kind: "hidden" };
+  // The open game's type, once GameInfoView has loaded its record.
+  @state() private gameType: GameType | null = null;
   // Cancels the current XP lookup (and its polling) on close or a new game.
   private xpAbort: AbortController | null = null;
   private openedFrom: "account" | "clan" | "profile" | null = null;
@@ -77,6 +80,7 @@ export class GameStatsModal extends BaseModal {
           .gameId=${this.gameId}
           .afterSummary=${html`<past-game-xp-card
             .view=${this.xpView}
+            .gameType=${this.gameType}
           ></past-game-xp-card>`}
           @game-info-loaded=${this.onGameInfoLoaded}
         ></game-info-view>
@@ -89,6 +93,7 @@ export class GameStatsModal extends BaseModal {
       typeof args?.gameID === "string" && args.gameID.length > 0
         ? args.gameID
         : null;
+    this.gameType = null;
     this.resetXp();
     if (this.gameId !== null) {
       this.xpAbort = new AbortController();
@@ -98,6 +103,9 @@ export class GameStatsModal extends BaseModal {
 
   private onGameInfoLoaded = (e: CustomEvent<GameInfoLoadedDetail>): void => {
     this.gameEnd = { gameId: e.detail.gameId, end: e.detail.info?.end ?? null };
+    if (e.detail.gameId === this.gameId) {
+      this.gameType = e.detail.info?.config.gameType ?? null;
+    }
     const waiters = this.gameEndWaiters;
     this.gameEndWaiters = [];
     for (const wake of waiters) wake();
@@ -145,6 +153,12 @@ export class GameStatsModal extends BaseModal {
       if (result.status === "ok") {
         await card;
         if (signal.aborted) return;
+        // This reason reads differently for a singleplayer game, and the
+        // game's type comes with its record.
+        if (!result.data.eligible && result.data.reason === "unverified") {
+          await this.gameEndedAt(gameId, signal);
+          if (signal.aborted) return;
+        }
         this.xpView = { kind: "result", data: result.data };
         return;
       }
