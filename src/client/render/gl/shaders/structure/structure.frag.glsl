@@ -113,6 +113,51 @@ float sdPolygon(vec2 p, float R, float n, float rot) {
   return length(p) * cos(a) - R * cos(an);
 }
 
+float sdSegment(vec2 p, vec2 a, vec2 b) {
+  vec2 ab = b - a;
+  float h = clamp(dot(p - a, ab) / max(dot(ab, ab), 1.0e-6), 0.0, 1.0);
+  return length(p - mix(a, b, h));
+}
+
+float lineAlpha(vec2 p, vec2 a, vec2 b, float width) {
+  float aa = fwidth(p.x) + fwidth(p.y);
+  return 1.0 - smoothstep(width, width + max(aa, 0.004), sdSegment(p, a, b));
+}
+
+// Dedicated mine glyphs. These are procedural rather than atlas-backed so they
+// cannot disappear because of sprite-atlas dimensions or asset decoding.
+float mineGlyphAlpha(vec2 p, float atlasIdx) {
+  float alpha = 0.0;
+
+  if (atlasIdx < 6.5) {
+    // Oil derrick / pumpjack.
+    alpha = max(alpha, lineAlpha(p, vec2(-0.22, 0.24), vec2(0.0, -0.20), 0.035));
+    alpha = max(alpha, lineAlpha(p, vec2(0.22, 0.24), vec2(0.0, -0.20), 0.035));
+    alpha = max(alpha, lineAlpha(p, vec2(-0.24, 0.24), vec2(0.24, 0.24), 0.035));
+    alpha = max(alpha, lineAlpha(p, vec2(-0.17, 0.04), vec2(0.17, 0.04), 0.03));
+    alpha = max(alpha, lineAlpha(p, vec2(-0.22, -0.20), vec2(0.22, -0.20), 0.035));
+    alpha = max(alpha, lineAlpha(p, vec2(0.0, -0.20), vec2(0.0, 0.32), 0.03));
+  } else if (atlasIdx < 7.5) {
+    // Gold pickaxe.
+    alpha = max(alpha, lineAlpha(p, vec2(-0.22, 0.22), vec2(0.20, -0.22), 0.035));
+    alpha = max(alpha, lineAlpha(p, vec2(-0.27, 0.23), vec2(0.02, 0.30), 0.04));
+    alpha = max(alpha, lineAlpha(p, vec2(0.02, 0.30), vec2(0.27, 0.22), 0.04));
+  } else {
+    // Diamond gem with internal facets.
+    alpha = max(alpha, lineAlpha(p, vec2(-0.28, 0.12), vec2(-0.12, 0.28), 0.03));
+    alpha = max(alpha, lineAlpha(p, vec2(-0.12, 0.28), vec2(0.12, 0.28), 0.03));
+    alpha = max(alpha, lineAlpha(p, vec2(0.12, 0.28), vec2(0.28, 0.12), 0.03));
+    alpha = max(alpha, lineAlpha(p, vec2(0.28, 0.12), vec2(0.0, -0.28), 0.03));
+    alpha = max(alpha, lineAlpha(p, vec2(0.0, -0.28), vec2(-0.28, 0.12), 0.03));
+    alpha = max(alpha, lineAlpha(p, vec2(-0.28, 0.12), vec2(0.28, 0.12), 0.025));
+    alpha = max(alpha, lineAlpha(p, vec2(-0.12, 0.28), vec2(0.0, 0.12), 0.025));
+    alpha = max(alpha, lineAlpha(p, vec2(0.12, 0.28), vec2(0.0, 0.12), 0.025));
+    alpha = max(alpha, lineAlpha(p, vec2(0.0, 0.12), vec2(0.0, -0.28), 0.025));
+  }
+
+  return clamp(alpha, 0.0, 1.0);
+}
+
 // Per-structure-type shape SDF.
 // Atlas indices: 0=City, 1=Port, 2=Factory, 3=DefensePost, 4=SAM,
 // 5=Silo, 6=Oil Mine, 7=Gold Mine, 8=Diamond Mine
@@ -202,17 +247,21 @@ void main() {
   // Only show icon detail when zoomed in enough
   float iconAlpha = 0.0;
   if (vZoom > uDotsThreshold) {
-    // Clamp UV to this atlas column to prevent bleeding into neighbours
-    // when uIconFill shrinks the icon (expanding UV range beyond column).
-    float colStart = vAtlasIdx / float(ATLAS_COLS);
-    float colEnd = (vAtlasIdx + 1.0) / float(ATLAS_COLS);
-    vec2 safeUV = vec2(clamp(vAtlasUV.x, colStart, colEnd), clamp(vAtlasUV.y, 0.0, 1.0));
-    vec4 iconSample = texture(uAtlas, safeUV);
-    // Zero out icon outside the valid UV region (clamped pixels would repeat the edge)
-    float inBounds = step(colStart, vAtlasUV.x) * step(vAtlasUV.x, colEnd)
-                   * step(0.0, vAtlasUV.y) * step(vAtlasUV.y, 1.0);
-    // Clip to fill area so icon doesn't bleed into the border ring.
-    iconAlpha = iconSample.a * borderMask * inBounds;
+    if (vAtlasIdx >= 5.5) {
+      iconAlpha = mineGlyphAlpha(vLocalPos, vAtlasIdx) * borderMask;
+    } else {
+      // Clamp UV to this atlas column to prevent bleeding into neighbours
+      // when uIconFill shrinks the icon (expanding UV range beyond column).
+      float colStart = vAtlasIdx / float(BASE_ATLAS_COLS);
+      float colEnd = (vAtlasIdx + 1.0) / float(BASE_ATLAS_COLS);
+      vec2 safeUV = vec2(clamp(vAtlasUV.x, colStart, colEnd), clamp(vAtlasUV.y, 0.0, 1.0));
+      vec4 iconSample = texture(uAtlas, safeUV);
+      // Zero out icon outside the valid UV region (clamped pixels would repeat the edge)
+      float inBounds = step(colStart, vAtlasUV.x) * step(vAtlasUV.x, colEnd)
+                     * step(0.0, vAtlasUV.y) * step(vAtlasUV.y, 1.0);
+      // Clip to fill area so icon doesn't bleed into the border ring.
+      iconAlpha = iconSample.a * borderMask * inBounds;
+    }
   }
 
   // Composite: tinted icon over player-colored shape.
