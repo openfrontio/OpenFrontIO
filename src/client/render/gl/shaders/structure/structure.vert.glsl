@@ -62,11 +62,15 @@ void main() {
 
   vLocalPos = aPos - 0.5;
 
-  // Atlas UV: icons stay the same world size regardless of shape scaling,
-  // and are further shrunk by per-shape iconFill (0-1) to add padding inside the frame.
+  // Classic structures use the six-column sprite atlas. Mines use procedural
+  // glyphs in the fragment shader, so their UVs are unused.
   float uvExpand = shapeScale / uIconFills[shapeIdx];
   float scaledX = 0.5 + (aPos.x - 0.5) * uvExpand;
   float scaledY = 0.5 + (aPos.y - 0.5) * uvExpand;
-  float colU = (aInst1.x + scaledX) / float(ATLAS_COLS);
-  vAtlasUV = vec2(colU, scaledY);
+  if (aInst1.x < 5.5) {
+    float colU = (aInst1.x + scaledX) / float(BASE_ATLAS_COLS);
+    vAtlasUV = vec2(colU, scaledY);
+  } else {
+    vAtlasUV = vec2(scaledX, scaledY);
+  }
 }
