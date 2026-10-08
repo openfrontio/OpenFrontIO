@@ -449,11 +449,12 @@ body.halloween-theme:not(.in-game) h2::after {
 }
 
 body.halloween-theme:not(.in-game) h1::before {
-  content: "👻\00a0 ";
-  position: relative;
+  content: "👻";
+  position: absolute;
+  transform: translateX(-100%);
+  margin-left: -10px;
   animation: hw-float-ghost 3s ease-in-out reverse;
   text-shadow: none !important;
-  font-size: 1.2em;
 }
 
 @media (prefers-reduced-motion: reduce) {
