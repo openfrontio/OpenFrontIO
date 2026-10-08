@@ -700,7 +700,11 @@ export const PlayerStatsTreeSchema = z.object({
   Singleplayer: GameModeStatsSchema.optional(),
   Public: GameModeStatsSchema.optional(),
   Private: GameModeStatsSchema.optional(),
-  Ranked: z.partialRecord(z.enum(RankedType), PlayerStatsLeafSchema).optional(),
+  // Keyed by any string, not RankedType: the API reports every ranked type a
+  // player has played, including ones added after this build shipped, and an
+  // unknown key must not fail the whole profile. The UI shows only the types
+  // it knows (PlayerStatsTree.availableRankedTypes).
+  Ranked: z.record(z.string(), PlayerStatsLeafSchema).optional(),
   recent: PlayerRecentStatsTreeSchema.optional(),
 });
 export type PlayerStatsTree = z.infer<typeof PlayerStatsTreeSchema>;

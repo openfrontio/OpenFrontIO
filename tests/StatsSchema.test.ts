@@ -157,6 +157,16 @@ describe("PlayerStatsTreeSchema", () => {
     ).toThrow();
   });
 
+  test("accepts a ranked type this build does not know", () => {
+    const leaf = { wins: "1", losses: "2", total: "3", stats: {} };
+    const result = PlayerStatsTreeSchema.parse({
+      Ranked: { "1v1": leaf, ffa: leaf },
+    });
+
+    expect(result.Ranked?.["1v1"]?.total).toBe(3n);
+    expect(result.Ranked?.ffa?.total).toBe(3n);
+  });
+
   test("accepts Humans Vs Nations as a separate profile stats mode", () => {
     const result = PlayerStatsTreeSchema.parse({
       Public: {
