@@ -1618,6 +1618,9 @@ export class PlayerImpl implements Player {
       case UnitType.SAMLauncher:
       case UnitType.City:
       case UnitType.Factory:
+      case UnitType.OilMine:
+      case UnitType.GoldMine:
+      case UnitType.DiamondMine:
         return this.landBasedStructureSpawn(targetTile, validTiles);
       default:
         assertNever(unitType);

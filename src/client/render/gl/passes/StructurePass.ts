@@ -57,6 +57,14 @@ const STRUCTURE_ORDER = [
 
 const ATLAS_COLS = STRUCTURE_ORDER.length;
 
+// Until the sprite atlas is regenerated with dedicated mine columns, mines
+// reuse existing structure glyphs. The gameplay types remain distinct.
+const MINE_ICON_FALLBACKS: Record<string, string> = {
+  "Oil Mine": UT_FACTORY,
+  "Gold Mine": UT_CITY,
+  "Diamond Mine": UT_MISSILE_SILO,
+};
+
 // ---------------------------------------------------------------------------
 // Instance data layout
 // ---------------------------------------------------------------------------
@@ -142,11 +150,23 @@ export class StructurePass {
 
     // Build unitType string → atlas column mapping
     for (let i = 0; i < header.unitTypes.length; i++) {
+      const unitType = header.unitTypes[i];
       const col = STRUCTURE_ORDER.indexOf(
-        header.unitTypes[i] as (typeof STRUCTURE_ORDER)[number],
+        unitType as (typeof STRUCTURE_ORDER)[number],
       );
       if (col >= 0) {
-        this.typeToAtlasCol.set(header.unitTypes[i], col);
+        this.typeToAtlasCol.set(unitType, col);
+        continue;
+      }
+
+      const fallback = MINE_ICON_FALLBACKS[unitType];
+      if (fallback !== undefined) {
+        const fallbackCol = STRUCTURE_ORDER.indexOf(
+          fallback as (typeof STRUCTURE_ORDER)[number],
+        );
+        if (fallbackCol >= 0) {
+          this.typeToAtlasCol.set(unitType, fallbackCol);
+        }
       }
     }
 
