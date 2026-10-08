@@ -19,7 +19,7 @@ import {
 import { makeClient, makeGame } from "../util/GameServerHarness";
 
 // The game server stamps each signed-in player's level onto the lobby roster
-// from its own /users/@me lookup (Worker.ts join -> levelBadgeFromProgress ->
+// from its own /users/@me lookup (Worker.ts join -> levelBadgeForPlayer ->
 // Client.levelBadge -> NameVisibility.lobbyClients). Display-only.
 
 const progress = {
@@ -298,6 +298,26 @@ describe("lobby roster carries the server-stamped badge", () => {
   it("anonymizeNames: the public HTTP view (no viewer) shows no badges", () => {
     const info = lobby({ anonymizeNames: true }).gameInfo();
     for (const c of info.clients!) expect(c.levelBadge).toBeUndefined();
+  });
+
+  it("names on: a hidden player's entry has no badge, even in the public HTTP view", () => {
+    const game = lobby();
+    game.joinClient(
+      makeClient({
+        clientID: "hide0001",
+        username: "Hider",
+        publicId: "hide-pub",
+        levelBadge: levelBadgeForPlayer(
+          userMe({ progress, levelHidden: true }).player,
+        ),
+      }),
+    );
+    for (const viewer of [undefined, "hide0001", "vet00001"]) {
+      const info = game.gameInfo(viewer);
+      expect(byId(info, "hide0001").username).toBe("Hider");
+      expect(byId(info, "hide0001").levelBadge).toBeUndefined();
+      expect(badgeOf(info, "vet00001")).toEqual(VET);
+    }
   });
 });
 
