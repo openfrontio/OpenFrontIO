@@ -97,6 +97,26 @@ export class PlayerExecution implements Execution {
     const goldFromWorkers = this.config.goldAdditionRate(this.player);
     this.player.addGold(goldFromWorkers);
 
+    const mineIncomeInterval = this.config.mineIncomeInterval();
+    for (const unit of this.player.units()) {
+      if (
+        unit.isUnderConstruction() ||
+        !unit.isActive() ||
+        (unit.type() !== UnitType.OilMine &&
+          unit.type() !== UnitType.GoldMine &&
+          unit.type() !== UnitType.DiamondMine)
+      ) {
+        continue;
+      }
+      if ((ticks + unit.id()) % mineIncomeInterval !== 0) {
+        continue;
+      }
+      this.player.addGold(
+        this.config.mineIncome(unit.type(), unit.level(), this.player),
+        unit.tile(),
+      );
+    }
+
     // Record stats
     this.mg.stats().goldWork(this.player, goldFromWorkers);
 
