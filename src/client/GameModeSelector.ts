@@ -720,7 +720,7 @@ export class GameModeSelector extends LitElement {
               ? trustLockIcon(
                   true,
                   translateText("mode_selector.ranked_trust_tooltip_title"),
-                  "top-1 right-1",
+                  "bottom-1 right-1",
                 )
               : nothing,
           )}
