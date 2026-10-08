@@ -677,7 +677,7 @@ export async function getSoloSnapshot(
 export function clearSoloSave(gameID?: GameID): void {
   try {
     const current = getSoloSave();
-    if (gameID && current && current.gameID !== gameID) {
+    if (gameID && current?.gameID !== gameID) {
       return;
     }
     const targetGameID = gameID ?? current?.gameID;

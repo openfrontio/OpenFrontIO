@@ -240,6 +240,31 @@ describe("SinglePlayerSaveManager", () => {
     ).not.toBe(null);
   });
 
+  it("clearSoloSave with gameID returns without clearing if current save is missing, but clears unconditionally without gameID", () => {
+    // When no scoped key resolves (e.g. steam unresolved) and a legacy save is in localStorage
+    mockPlatform = "steam";
+    mockSteamId = null;
+
+    const legacyState = {
+      version: 1,
+      gameID: "legacy_game",
+      savedAt: 12345,
+      gameStartInfo: dummyStartInfo(),
+      turns: [],
+      numTurns: 10,
+    };
+    localStorage.setItem(LEGACY_SOLO_SAVE_KEY, JSON.stringify(legacyState));
+    expect(getSoloSave()).toBe(null);
+
+    // Call clearSoloSave with a gameID when current save is missing: does not clear legacy save
+    clearSoloSave("some_other_game" as GameID);
+    expect(localStorage.getItem(LEGACY_SOLO_SAVE_KEY)).not.toBe(null);
+
+    // Call clearSoloSave without gameID: clears unconditionally
+    clearSoloSave();
+    expect(localStorage.getItem(LEGACY_SOLO_SAVE_KEY)).toBe(null);
+  });
+
   it("re-expands sparse turns sequentially", () => {
     const sparseTurns: Turn[] = [
       { turnNumber: 1, intents: [{ type: "attack" } as any] },
