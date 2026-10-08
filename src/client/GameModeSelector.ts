@@ -18,6 +18,7 @@ import {
   canJoinTrustedLobby,
   lobbyCard,
   mapAspectRatios,
+  trustLockIcon,
   trustRequiredDialog,
   viewerIsSignedIn,
   viewerIsTrusted,
@@ -47,6 +48,7 @@ import {
   type BackendReachabilityDetail,
 } from "./ServerList";
 import type { SinglePlayerModal } from "./SinglePlayerModal";
+import { lastUserMeResponse } from "./UserMeBroadcast";
 import { UsernameInput } from "./UsernameInput";
 import {
   calculateServerTimeOffset,
@@ -306,6 +308,9 @@ export class GameModeSelector extends LitElement {
   @state() private inputValid: boolean = true;
   @state() private desktopUpdateState: DesktopUpdateState | null = null;
   @state() private viewerTrusted: boolean = false;
+  // Whether a userMeResponse has arrived, so the Ranked lock doesn't flash
+  // red for a trusted player before it does.
+  @state() private viewerTrustKnown: boolean = false;
   @state() private viewerSignedIn: boolean = false;
   @state() private showTrustRequired: boolean = false;
   @state() private desktopSessionState: DesktopSessionState | null = null;
@@ -409,6 +414,9 @@ export class GameModeSelector extends LitElement {
       this.onDesktopUpdateState,
     );
     document.addEventListener("userMeResponse", this.onUserMe);
+    // play-page renders this after Main may already have broadcast.
+    const last = lastUserMeResponse();
+    if (last !== null) this.applyUserMe(last.response);
     if (isDesktopShell()) {
       // Seed BOTH from their current values. This element is rendered by
       // <play-page> on a Lit microtask, so it cannot exist yet when the status
@@ -492,9 +500,13 @@ export class GameModeSelector extends LitElement {
   };
 
   private onUserMe = (e: Event) => {
-    const me = (e as CustomEvent<UserMeResponse | false>).detail;
+    this.applyUserMe((e as CustomEvent<UserMeResponse | false>).detail);
+  };
+
+  private applyUserMe(me: UserMeResponse | false): void {
     this.viewerSignedIn = viewerIsSignedIn(me);
     this.viewerTrusted = viewerIsTrusted(me);
+    this.viewerTrustKnown = true;
     // A CrazyGames sign-in surfaces as a userMeResponse without a linked
     // identity, so re-read the SDK profile alongside it.
     if (crazyGamesSDK.isOnCrazyGames()) {
@@ -502,7 +514,7 @@ export class GameModeSelector extends LitElement {
         if (user !== null) this.viewerSignedIn = true;
       });
     }
-  };
+  }
 
   private onDesktopSessionState = (e: Event) => {
     const next = (e as CustomEvent<DesktopSessionState>).detail;
@@ -704,6 +716,16 @@ export class GameModeSelector extends LitElement {
             SECONDARY_ACTION,
             undefined,
             true,
+            // Ranked admits trusted accounts only: green and open when the
+            // viewer is trusted, red and closed otherwise. On the corner, like
+            // Join's count badge, so it clears the label on narrow buttons.
+            this.viewerTrustKnown
+              ? trustLockIcon(
+                  this.viewerTrusted,
+                  translateText("mode_selector.ranked_trust_tooltip_title"),
+                  "-top-2 -right-2",
+                )
+              : nothing,
           )}
           ${this.renderSmallActionCard(
             translateText("main.join"),
@@ -920,6 +942,7 @@ export class GameModeSelector extends LitElement {
     // the solo card is never gated (see openSinglePlayerModal) and must never
     // show as disabled here.
     gated: boolean = false,
+    adornment: TemplateResult | typeof nothing = nothing,
   ) {
     const blocked =
       gated &&
@@ -947,6 +970,7 @@ export class GameModeSelector extends LitElement {
               >${badge}</span
             >`
           : nothing}
+        ${adornment}
       </button>
     `;
   }

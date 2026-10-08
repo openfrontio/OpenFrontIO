@@ -335,6 +335,7 @@ function customInfoIcon(
 export function trustLockIcon(
   viewerTrusted: boolean,
   tooltipTitle: string = translateText("public_lobby.trusted_tooltip_title"),
+  position: string = "bottom-2 right-2",
 ): TemplateResult {
   const label = translateText(
     viewerTrusted
@@ -342,7 +343,7 @@ export function trustLockIcon(
       : "public_lobby.trusted_locked",
   );
   return html`<span
-    class="${BADGE} group/trust absolute bottom-2 right-2 flex items-center px-1.5 py-1 ${viewerTrusted
+    class="${BADGE} group/trust absolute ${position} flex items-center px-1.5 py-1 ${viewerTrusted
       ? "text-green-400"
       : "text-red-400"}"
     aria-label=${label}
