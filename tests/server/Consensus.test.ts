@@ -461,10 +461,10 @@ describe("WinnerVote open stats", () => {
     expect(vote.winner()?.winner).toEqual(["player", P1]);
   });
 
-  it("counts only still-active IPs, like the shrink re-tally", () => {
+  it("counts only the votes of the electorate it is given", () => {
     const vote = forgerDecides();
-    // The forger left: the honest stats hold 1 of the 2 still here -- not a
-    // majority -- until the third player votes.
+    // An electorate without the forger: the honest stats hold 1 of its 2 IPs
+    // -- not a majority -- until the third player votes.
     const remaining = new Set(["2.2.2.2", "3.3.3.3"]);
     expect(vote.settleStatsAmong(remaining, false)).toBe(false);
     vote.castStats(voteWith(["player", P1], honest), "3.3.3.3");

@@ -93,7 +93,8 @@ describe("winner vote stats agreement", () => {
     expect(agreementCall("warn")).toBeUndefined();
     expect(agreementCall("info")?.[1]).toMatchObject({
       statsAgreement: "agreed",
-      agreed: true,
+      source: "vote",
+      statsAgreed: true,
       voters: 2,
       versions: 1,
     });
@@ -130,7 +131,8 @@ describe("winner vote stats agreement", () => {
     // Still logged as a split, so forgeries stay visible.
     expect(agreementCall("warn")?.[1]).toMatchObject({
       statsAgreement: "split",
-      agreed: true,
+      source: "vote",
+      statsAgreed: true,
       voters: 2,
       versions: 2,
       archivedBackers: 2,
@@ -195,7 +197,8 @@ describe("winner vote stats agreement", () => {
     expect(archivedStatsOfA()).toEqual(honest[A]);
     expect(agreementCall("warn")?.[1]).toMatchObject({
       statsAgreement: "split",
-      agreed: true,
+      source: "vote",
+      statsAgreed: true,
       voters: 3,
       versions: 2,
       archivedBackers: 2,
@@ -222,7 +225,8 @@ describe("winner vote stats agreement", () => {
     expect(archivedStatsOfA()).toEqual(forged[A]);
     expect(agreementCall("warn")?.[1]).toMatchObject({
       statsAgreement: "split",
-      agreed: false,
+      source: "vote",
+      statsAgreed: false,
     });
 
     // Votes after archiving are rejected, and ending the game does not

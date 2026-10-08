@@ -173,6 +173,7 @@ describe("Roster", () => {
 
     expect(roster.active()).toHaveLength(4);
     expect(roster.players()).toEqual([p1, p2, p3]);
+    expect(roster.votingIPs()).toEqual(new Set(["1.1.1.1", "2.2.2.2"]));
     expect(roster.votingUniqueIPs()).toBe(2);
   });
 

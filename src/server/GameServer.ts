@@ -106,6 +106,10 @@ const LATE_JOIN_GRACE_MS = 5_000;
 // playing has voted, the record is archived at once.
 export const STATS_VOTE_WINDOW_MS = 5_000;
 
+// Where an archived record's stats came from: the winner vote, or the
+// server's own replay of a disputed game.
+type StatsSource = "vote" | "replay";
+
 export type JoinResult =
   | "joined"
   | "kicked"
@@ -2030,6 +2034,7 @@ export class GameServer {
           { stats: replayed.allPlayersStats, agreed: true },
           turns,
           endTime,
+          "replay",
         );
       })
       .catch((error) => {
@@ -2053,6 +2058,7 @@ export class GameServer {
     archived: ArchivedStats | null,
     turns: Turn[] = this.turns,
     endTime: number = Date.now(),
+    source: StatsSource = "vote",
   ) {
     this.log.info("archiving game", {
       gameID: this.id,
@@ -2061,24 +2067,12 @@ export class GameServer {
 
     // The record carries the stats a majority of the electorate voted for
     // alongside the winner, when there is such a version (see
-    // WinnerVote.archivedStats). statsAgreed tells the API whether there was:
-    // per-player stats only count (e.g. for XP) when it is true. A game that
-    // ends without a decided winner has no stats and is never agreed.
+    // WinnerVote.archivedStats), or the replay's. statsAgreed tells the API
+    // whether they are agreed: per-player stats only count (e.g. for XP) when
+    // it is true. A game that ends without a decided winner has no stats and
+    // is never agreed.
     const statsAgreed = archived?.agreed ?? false;
-    // Keeps the agreement rate measurable: a "split" means the winner's
-    // voters sent more than one version of the stats.
-    const agreement = this.winnerVote.statsAgreement();
-    if (agreement !== null) {
-      const split = agreement.versions > 1;
-      this.log[split || !agreement.agreed ? "warn" : "info"](
-        "winner stats agreement",
-        {
-          gameID: this.id,
-          statsAgreement: split ? "split" : "agreed",
-          ...agreement,
-        },
-      );
-    }
+    if (archived !== null) this.logStatsAgreement(statsAgreed, source);
 
     // Players must stay in the same order as the game start info.
     const playerRecords: PlayerRecord[] = this.gameStartInfo.players.map(
@@ -2123,6 +2117,37 @@ export class GameServer {
         this.publicGameType,
         statsAgreed,
       ),
+    );
+  }
+
+  // Keeps the agreement rate measurable: one line per record that carries
+  // stats, with the record's statsAgreed and where its stats came from. The
+  // vote's split is logged either way ("split": the winner's voters sent more
+  // than one version of the stats); archivedBackers only when the vote
+  // supplied the stats, since a replay archives none of the voted versions.
+  private logStatsAgreement(statsAgreed: boolean, source: StatsSource): void {
+    const agreement = this.winnerVote.statsAgreement();
+    const split = agreement !== null && agreement.versions > 1;
+    const vote =
+      agreement === null
+        ? {}
+        : {
+            statsAgreement: split ? "split" : "agreed",
+            voters: agreement.voters,
+            versions: agreement.versions,
+            topBackers: agreement.topBackers,
+            ...(source === "vote"
+              ? { archivedBackers: agreement.archivedBackers }
+              : {}),
+          };
+    this.log[split || !statsAgreed ? "warn" : "info"](
+      "winner stats agreement",
+      {
+        gameID: this.id,
+        source,
+        statsAgreed,
+        ...vote,
+      },
     );
   }
 
@@ -2202,8 +2227,10 @@ export class GameServer {
     }
   }
 
+  // Only a started game has a winner to vote on, and a record to archive.
   private handleWinner(client: Client, clientMsg: ClientSendWinnerMessage) {
     if (
+      this.stage !== "started" ||
       this.desync.isDesynced(client.clientID) ||
       this.isKicked(client.clientID) ||
       this.archived ||
@@ -2260,15 +2287,16 @@ export class GameServer {
   // otherwise opens the stats window.
   //
   // The stats are settled among the players connected when the winner was
-  // decided, and that electorate is kept: a player who leaves afterwards
-  // still counts, with any stats vote they cast. Otherwise the honest voters
-  // leaving the win screen could shrink the electorate until a version
-  // nobody else backed held a majority of whoever was left. A departure can
-  // still end the window early (everyone still here has voted), but only
-  // ever as a forced, unagreed settle.
+  // decided, counted by IP like the winner vote (Roster.votingIPs, which
+  // leaves out spectators), and that electorate is kept: a player who leaves
+  // afterwards still counts, with any stats vote they cast. Otherwise the
+  // honest voters leaving the win screen could shrink the electorate until a
+  // version nobody else backed held a majority of whoever was left. A
+  // departure can still end the window early (everyone still here has
+  // voted), but only ever as a forced, unagreed settle.
   private settleStatsOrArchive(force = false): void {
     if (this.archived || this.winnerVote.winner() === null) return;
-    this.statsElectorate ??= new Set(this.clients.players().map((c) => c.ip));
+    this.statsElectorate ??= this.clients.votingIPs();
     const settled = this.winnerVote.settleStatsAmong(
       this.statsElectorate,
       force || this.winnerDisputed() || this.everyVoterHasVoted(),
@@ -2306,7 +2334,8 @@ export class GameServer {
   // of being eliminated — before their own client simulates the win tick and
   // votes — leaving the winner's vote wedged at 1 of 2 and the game archived
   // winnerless (e.g. game s5bcKtj8). Re-tally whenever the electorate
-  // shrinks, counting only votes from still-active IPs (see resultAmong).
+  // shrinks, counting only the votes of the IPs still voting: connected
+  // players, never spectators (Roster.votingIPs; see resultAmong).
   private checkWinnerAfterElectorateShrink() {
     if (this.ended) {
       return;
@@ -2317,13 +2346,13 @@ export class GameServer {
       this.settleStatsOrArchive();
       return;
     }
-    const activeIPs = new Set(this.clients.active().map((c) => c.ip));
-    const result = this.winnerVote.tallyAmong(activeIPs);
+    const votingIPs = this.clients.votingIPs();
+    const result = this.winnerVote.tallyAmong(votingIPs);
     if (result === null) {
       return;
     }
     this.log.info(
-      `Winner determined by ${result.votes}/${activeIPs.size} active IPs after electorate shrank`,
+      `Winner determined by ${result.votes}/${votingIPs.size} active IPs after electorate shrank`,
     );
     this.settleStatsOrArchive();
   }

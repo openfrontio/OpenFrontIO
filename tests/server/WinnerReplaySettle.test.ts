@@ -91,6 +91,19 @@ describe("settling a disputed winner vote by replay", () => {
         voted: meta.voted,
         outcome: meta.outcome,
       }));
+  // The one "winner stats agreement" line, and the level it was logged at.
+  const agreementLog = () => {
+    const lines = (["info", "warn"] as const).flatMap((level) =>
+      log[level].mock.calls
+        .filter(([msg]: [string]) => msg === "winner stats agreement")
+        .map(([, meta]: [string, Record<string, unknown>]) => ({
+          level,
+          meta,
+        })),
+    );
+    expect(lines).toHaveLength(1);
+    return lines[0];
+  };
   // Runs `fn` and returns how the outcome counters moved.
   const outcomesDuring = async (fn: () => Promise<void>) => {
     const before = { ...winnerReplayMetrics.outcomes };
@@ -173,6 +186,47 @@ describe("settling a disputed winner vote by replay", () => {
     const [record] = archived();
     expect(record.info.winner).toEqual(["player", A]);
     expect(record.info.statsAgreed).toBe(false);
+    expect(agreementLog()).toEqual({
+      level: "warn",
+      meta: expect.objectContaining({
+        source: "vote",
+        statsAgreed: false,
+        statsAgreement: "split",
+        versions: 3,
+        archivedBackers: 1,
+      }),
+    });
+  });
+
+  it("logs the replay's stats as the agreed ones, not the vote's", async () => {
+    const { clients } = play([A, B, C, D, E]);
+    await vote(clients[2], ["player", C]);
+    await vote(clients[0], ["player", A], {
+      [A]: { conquests: [1n] },
+    } as AllPlayersStats);
+    await vote(clients[1], ["player", A], {
+      [A]: { conquests: [2n] },
+    } as AllPlayersStats);
+    await vote(clients[3], ["player", A], {
+      [A]: { conquests: [3n] },
+    } as AllPlayersStats);
+
+    resolveReplay({ winner: ["player", A], allPlayersStats: {}, tick: 90 });
+    await archivedOnce();
+
+    expect(archived()[0].info.statsAgreed).toBe(true);
+    // The vote's split is still logged, but none of its versions was
+    // archived, so it names no backers for the archived stats.
+    const { level, meta } = agreementLog();
+    expect(level).toBe("warn");
+    expect(meta).toMatchObject({
+      source: "replay",
+      statsAgreed: true,
+      statsAgreement: "split",
+      versions: 3,
+    });
+    expect(meta).not.toHaveProperty("archivedBackers");
+    expect(meta).not.toHaveProperty("agreed");
   });
 
   it("falls back to the vote's winner when the replay fails", async () => {
@@ -223,6 +277,11 @@ describe("settling a disputed winner vote by replay", () => {
     resolveReplay({ winner: ["player", B], allPlayersStats: {}, tick: 90 });
     await archivedOnce();
     expect(archived()[0].info.winner).toEqual(["player", B]);
+    // No decided winner, so no vote split to report: only the record's.
+    expect(agreementLog()).toEqual({
+      level: "info",
+      meta: { gameID: expect.any(String), source: "replay", statsAgreed: true },
+    });
   });
 
   it("archives winnerless without replaying when nobody voted", async () => {

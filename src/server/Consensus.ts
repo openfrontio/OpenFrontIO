@@ -57,9 +57,10 @@ export function statsDigest(stats: AllPlayersStats): string {
 // votes after the electorate shrank. If no version has a majority then, the
 // stats stay open for a short window (GameServer.STATS_VOTE_WINDOW_MS): voters
 // who had not yet voted may still vote, with effect only on the stats of the
-// decided winner, and the stats are counted the way the shrink path counts --
-// only still-active IPs' votes, against the still-active electorate -- until
-// one version has a majority, everyone left has voted, or time runs out.
+// decided winner, and the stats are counted among the electorate at the
+// decision -- only those IPs' votes, against that many, players who left
+// since included (GameServer.settleStatsOrArchive) -- until one version has
+// a majority, everyone left has voted, or time runs out.
 // Without the window, one forged vote among the deciding majority would leave
 // the honest version a vote short every time.
 export interface ArchivedStats {
