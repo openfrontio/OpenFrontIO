@@ -37,11 +37,6 @@ import structureFragSrc from "../shaders/structure/structure.frag.glsl?raw";
 import structureVertSrc from "../shaders/structure/structure.vert.glsl?raw";
 
 const iconAtlasUrl = assetUrl("atlases/icon-atlas.png");
-const mineStructureIconUrls = [
-  assetUrl("images/OilMineStructureIcon.svg"),
-  assetUrl("images/GoldMineStructureIcon.svg"),
-  assetUrl("images/DiamondMineStructureIcon.svg"),
-];
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -163,10 +158,14 @@ export class StructurePass {
     // Compile shaders
     this.program = createProgram(
       gl,
-      shaderSrc(structureVertSrc, { ATLAS_COLS }),
+      shaderSrc(structureVertSrc, {
+        ATLAS_COLS,
+        BASE_ATLAS_COLS,
+      }),
       shaderSrc(structureFragSrc, {
         PALETTE_SIZE: getPaletteSize(),
         ATLAS_COLS,
+        BASE_ATLAS_COLS,
         // First row of the structures block in the shared effect palette.
         STRUCT_EFFECT_ROW_BASE: STRUCTURES_EFFECT_BLOCK * MAX_TRAIL_COLORS,
       }),
@@ -289,58 +288,15 @@ export class StructurePass {
   }
 
   private async loadAtlas(): Promise<void> {
-    const base = new Image();
-    base.crossOrigin = "anonymous";
-    base.src = iconAtlasUrl;
-    await base.decode();
-
-    const mineIcons = await Promise.all(
-      mineStructureIconUrls.map(async (url) => {
-        const img = new Image();
-        img.crossOrigin = "anonymous";
-        img.src = url;
-        await img.decode();
-        return img;
-      }),
-    );
-
-    const columnWidth = base.width / BASE_ATLAS_COLS;
-    if (!Number.isInteger(columnWidth)) {
-      throw new Error(
-        `Expected icon atlas width to be divisible by ${BASE_ATLAS_COLS}, got ${base.width}`,
-      );
-    }
-
-    const canvas = document.createElement("canvas");
-    canvas.width = base.width + columnWidth * mineIcons.length;
-    canvas.height = base.height;
-
-    const ctx = canvas.getContext("2d");
-    if (ctx === null) {
-      throw new Error("Failed to create icon atlas canvas context");
-    }
-
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    ctx.drawImage(base, 0, 0);
-
-    const iconSize = Math.min(columnWidth - 12, base.height - 12);
-    const y = (base.height - iconSize) / 2;
-    mineIcons.forEach((icon, index) => {
-      const x = base.width + index * columnWidth + (columnWidth - iconSize) / 2;
-      ctx.drawImage(icon, x, y, iconSize, iconSize);
-    });
+    const img = new Image();
+    img.crossOrigin = "anonymous";
+    img.src = iconAtlasUrl;
+    await img.decode();
 
     const gl = this.gl;
     gl.activeTexture(gl.TEXTURE1);
     gl.bindTexture(gl.TEXTURE_2D, this.atlasTex);
-    gl.texImage2D(
-      gl.TEXTURE_2D,
-      0,
-      gl.RGBA,
-      gl.RGBA,
-      gl.UNSIGNED_BYTE,
-      canvas,
-    );
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, img);
     gl.generateMipmap(gl.TEXTURE_2D);
     gl.texParameteri(
       gl.TEXTURE_2D,
@@ -348,7 +304,6 @@ export class StructurePass {
       gl.LINEAR_MIPMAP_LINEAR,
     );
   }
-
   setLocalPlayer(smallID: number): void {
     this.localPlayerID = smallID;
   }
