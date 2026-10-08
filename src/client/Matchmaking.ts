@@ -43,7 +43,9 @@ export class MatchmakingModal extends BaseModal {
   @state() private socket: WebSocket | null = null;
   @state() private gameID: string | null = null;
   @state() private limitReached = false;
-  // Ranked admits trusted accounts only; the matchmaking service enforces it.
+  // The matchmaking service refused this account as untrusted (4103). Only
+  // the service decides: it gates ranked on trust behind a flag, so the
+  // client never pre-checks trustTier.
   @state() private notTrusted = false;
   @state() private queueSize: number | null = null;
   private selectedClanTag: string | null = null;
@@ -499,12 +501,7 @@ export class MatchmakingModal extends BaseModal {
     this.limitReached = false;
     this.queueSize = null;
     this.reconnectAttempts = 0;
-    // Skip the queue for an account the API already reports as untrusted.
-    // A missing or null tier is left to the matchmaking service to decide.
-    this.notTrusted = userMe.player.trustTier === "untrusted";
-    if (this.notTrusted) {
-      return;
-    }
+    this.notTrusted = false;
     this.connect();
   }
 

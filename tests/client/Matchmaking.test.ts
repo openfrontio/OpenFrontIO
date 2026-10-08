@@ -434,18 +434,9 @@ describe("MatchmakingModal trust gate", () => {
     return (modal as unknown as { notTrusted: boolean }).notTrusted;
   }
 
-  it("does not queue an account the API reports as untrusted", async () => {
-    apiMocks.getUserMe.mockResolvedValue(withTrust("untrusted"));
-    const modal = new MatchmakingModal();
-    modal.open();
-    await vi.waitFor(() => expect(notTrusted(modal)).toBe(true));
-    await vi.runAllTimersAsync();
-
-    expect(modal.isOpen()).toBe(true);
-    expect(sockets).toHaveLength(0);
-  });
-
-  it.each(["trusted", null, undefined] as const)(
+  // The service gates ranked on trust behind a flag, so the client must
+  // queue whatever the tier says and leave the decision to the 4103 close.
+  it.each(["untrusted", "trusted", null, undefined] as const)(
     "queues an account whose tier is %s",
     async (tier) => {
       apiMocks.getUserMe.mockResolvedValue(withTrust(tier));
