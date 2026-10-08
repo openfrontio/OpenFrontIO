@@ -134,6 +134,28 @@ describe("moment links and lines", () => {
     );
   });
 
+  // The card route answers only level 2..100 and prestige 1..10 (anything
+  // else is a 400, unfurling with no image): a slug is in that range or
+  // refused, and a refused one has no link.
+  it.each([
+    [{ kind: "level", level: 1 }, null],
+    [{ kind: "level", level: 2 }, "level2"],
+    [{ kind: "level", level: 100 }, "level100"],
+    [{ kind: "level", level: 101 }, null],
+    [{ kind: "level", level: 50.5 }, null],
+    [{ kind: "level", level: Number.NaN }, null],
+    [{ kind: "prestige", rank: 0 }, null],
+    [{ kind: "prestige", rank: 1 }, "prestige1"],
+    [{ kind: "prestige", rank: 10 }, "prestige10"],
+    [{ kind: "prestige", rank: 11 }, null],
+    [{ kind: "prestige", rank: 1.5 }, null],
+  ] as const)("slugs %o as %s", (moment, slug) => {
+    expect(momentSlug(moment)).toBe(slug);
+    expect(momentShareUrl("wonder01", moment)).toBe(
+      slug === null ? null : `${playerProfileUrl("wonder01")}?moment=${slug}`,
+    );
+  });
+
   it("words the line and the button for each moment", () => {
     expect(momentShareText({ kind: "level", level: 50 })).toBe(
       'progression.share_text_level:{"level":50}',

@@ -19,5 +19,9 @@
     "scripts/split-packages",
     "vite.config.ts"
   ],
-  "exclude": ["node_modules"]
+  "exclude": [
+    "node_modules",
+    // Only the engine packages' own projects read it, without the DOM lib.
+    "packages/engine-api/globals.d.ts"
+  ]
 }

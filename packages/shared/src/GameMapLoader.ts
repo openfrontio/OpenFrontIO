@@ -1,8 +1,20 @@
-import {
-  GameMapLoader,
-  MapFiles,
-} from "@openfront/engine-api/game/GameMapLoader";
 import { GameMapSize, GameMapType } from "@openfront/engine-api/game/GameTypes";
+import { MapFiles, MapManifest } from "@openfront/engine-api/game/MapFiles";
+
+/** Where a host gets a map's files, its thumbnail and its layer images. */
+export interface GameMapLoader {
+  getMapData(map: GameMapType): MapData;
+}
+
+export interface MapData {
+  mapBin: () => Promise<Uint8Array>;
+  map4xBin: () => Promise<Uint8Array>;
+  map16xBin: () => Promise<Uint8Array>;
+  manifest: () => Promise<MapManifest>;
+  webpPath: string;
+  /** Load a map layer PNG by layer id. Returns an ImageBitmap. */
+  layerPng: (layerId: string) => Promise<ImageBitmap>;
+}
 
 /** Loads the files a game on this map and size reads (see MapFiles). */
 export async function loadMapFiles(
@@ -32,29 +44,4 @@ export function mapFilesTransfer(files: MapFiles): ArrayBuffer[] {
   return [files.mapBin, files.map4xBin, files.map16xBin].flatMap((bin) =>
     bin === undefined ? [] : [bin.buffer as ArrayBuffer],
   );
-}
-
-/** A loader that serves the given files and loads nothing. */
-export function mapFilesLoader(files: MapFiles): GameMapLoader {
-  const bin = (data: Uint8Array | undefined, name: string) => async () => {
-    if (data === undefined) {
-      throw new Error(`${name} of ${files.map} was not passed`);
-    }
-    return data;
-  };
-  return {
-    getMapData(map) {
-      if (map !== files.map) {
-        throw new Error(`only ${files.map} was passed, not ${map}`);
-      }
-      return {
-        manifest: async () => files.manifest,
-        mapBin: bin(files.mapBin, "map.bin"),
-        map4xBin: bin(files.map4xBin, "map4x.bin"),
-        map16xBin: bin(files.map16xBin, "map16x.bin"),
-        webpPath: "",
-        layerPng: () => Promise.reject(new Error("map layers are not passed")),
-      };
-    },
-  };
 }

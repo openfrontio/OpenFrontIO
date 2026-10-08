@@ -1,8 +1,12 @@
+import { GameType } from "@openfront/engine-api/game/GameTypes";
 import type { XpBreakdown } from "@openfront/shared/ApiSchemas";
 
 // Pure helpers behind the level / XP UI. No DOM, no fetches — so the rules the
 // components follow are unit-testable on their own.
 
+// The badge art is cut for a 100-level track with 10 prestige ranks (see
+// levelBand, prestigeTier), so the caps stay client constants: raising either
+// on the server needs new art, not only a new number.
 export const MAX_LEVEL = 100;
 export const MAX_PRESTIGE = 10;
 
@@ -213,7 +217,8 @@ export function prestigeAccent(prestige: number): string {
 
 // Levels called out when reached: the end-of-game XP panel gives one reached
 // this game its own "new milestone" card (100 is the Legend card at the last
-// prestige).
+// prestige). Must match the server's milestone list, which dates them on the
+// profile.
 export const MILESTONE_LEVELS: readonly number[] = [10, 25, 50, 75, 100];
 
 export function isMilestoneLevel(level: number): boolean {
@@ -287,7 +292,7 @@ export function multiplierPercent(permille: number): number {
   return Math.round(permille - 1000) / 10;
 }
 
-export type XpLineKey =
+type XpSourceKey =
   | "played"
   | "time"
   | "placement"
@@ -295,7 +300,11 @@ export type XpLineKey =
   | "firstGame"
   | "feats";
 
-export const XP_LINE_KEYS: readonly XpLineKey[] = [
+// "other" is XP in the subtotal that no known source accounts for: a source
+// this client doesn't know, or one stored under an older name.
+export type XpLineKey = XpSourceKey | "other";
+
+export const XP_LINE_KEYS: readonly XpSourceKey[] = [
   "played",
   "time",
   "placement",
@@ -312,15 +321,23 @@ export const XP_LINE_LABEL_KEYS: Record<XpLineKey, string> = {
   win: "progression.line_win",
   firstGame: "progression.line_first_game",
   feats: "progression.line_feats",
+  other: "progression.line_other",
 };
 
-/** The breakdown lines worth showing: the non-zero ones, in a fixed order. */
+/**
+ * The breakdown lines worth showing: the non-zero ones, in a fixed order, then
+ * whatever of the subtotal they leave unaccounted for, so the lines add up to
+ * the subtotal and no line is credited with XP another source earned.
+ */
 export function visibleXpLines(
   breakdown: XpBreakdown,
 ): { key: XpLineKey; amount: number }[] {
-  return XP_LINE_KEYS.map((key) => ({ key, amount: breakdown[key] })).filter(
-    (line) => line.amount !== 0,
-  );
+  const lines: { key: XpLineKey; amount: number }[] = XP_LINE_KEYS.map(
+    (key) => ({ key, amount: breakdown[key] }),
+  ).filter((line) => line.amount !== 0);
+  const other = breakdown.subtotal - lines.reduce((a, l) => a + l.amount, 0);
+  if (other > 0) lines.push({ key: "other", amount: other });
+  return lines;
 }
 
 /** The multipliers worth showing: anything other than 1x. */
@@ -404,7 +421,16 @@ const INELIGIBLE_REASON_KEYS: Record<string, string> = {
   [BEFORE_PROGRESSION]: "progression.xp_before_levels",
 };
 
-export function ineligibleReasonKey(reason: string): string {
+// A singleplayer game never carries the end-of-game vote, so the server
+// always marks it unverified: callers that know the game's type pass it, and
+// it gets its own line instead.
+export function ineligibleReasonKey(
+  reason: string,
+  gameType?: GameType | null,
+): string {
+  if (reason === "unverified" && gameType === GameType.Singleplayer) {
+    return "progression.ineligible_singleplayer";
+  }
   return Object.prototype.hasOwnProperty.call(INELIGIBLE_REASON_KEYS, reason)
     ? INELIGIBLE_REASON_KEYS[reason]
     : "progression.ineligible_generic";

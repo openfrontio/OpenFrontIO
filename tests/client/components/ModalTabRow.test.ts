@@ -38,18 +38,46 @@ describe("o-modal tab row", () => {
     }
   });
 
-  it("brings the active tab into view when it changes", async () => {
-    // jsdom has no scrollIntoView; give tabs one that records the call.
-    const seen: string[] = [];
+  // jsdom does no layout: give the row a width and each tab a box, 100px
+  // apiece from the row's left edge, moved by the row's scroll.
+  function layOut(modal: OModal, rowWidth: number): HTMLElement {
+    const row = tabRow(modal);
+    const tabEls = [...row.querySelectorAll<HTMLElement>('[role="tab"]')];
+    Object.defineProperty(row, "clientWidth", { value: rowWidth });
+    Object.defineProperty(row, "scrollWidth", { value: tabEls.length * 100 });
+    row.getBoundingClientRect = () => new DOMRect(0, 0, rowWidth, 40);
+    tabEls.forEach((tab, i) => {
+      tab.getBoundingClientRect = () =>
+        new DOMRect(i * 100 - row.scrollLeft, 0, 100, 40);
+    });
+    return row;
+  }
+
+  it("scrolls the row, and only the row, to the active tab when it changes", async () => {
+    const scrolled: string[] = [];
     Object.defineProperty(HTMLElement.prototype, "scrollIntoView", {
       configurable: true,
       value: function (this: HTMLElement) {
-        seen.push(this.dataset.key ?? "");
+        scrolled.push(this.dataset.key ?? "");
       },
     });
     const modal = await render("stats");
+    const row = layOut(modal, 250);
     modal.activeTab = "progression";
     await modal.updateComplete;
-    expect(seen[seen.length - 1]).toBe("progression");
+    // The last tab spans 300-400: its right edge meets the row's.
+    expect(row.scrollLeft).toBe(150);
+    modal.activeTab = "stats";
+    await modal.updateComplete;
+    expect(row.scrollLeft).toBe(0);
+    expect(scrolled).toEqual([]);
+  });
+
+  it("leaves a row that fits alone", async () => {
+    const modal = await render("stats");
+    const row = layOut(modal, 400);
+    modal.activeTab = "progression";
+    await modal.updateComplete;
+    expect(row.scrollLeft).toBe(0);
   });
 });

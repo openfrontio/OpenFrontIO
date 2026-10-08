@@ -210,6 +210,40 @@ describe("public profile page", () => {
       expect(url()).toBe("/#modal=profile&publicID=other123");
     });
 
+    it("hands the URL to another player's profile opened over this one", async () => {
+      await openFromPath("/player/aB3dE5fX?tab=games");
+      fetchPublicPlayerProfileMock.mockResolvedValue(false);
+      // A profile reached from inside the open one (a roster, say).
+      modal.open({ publicID: "other123" });
+      expect(fetchPublicPlayerProfileMock).toHaveBeenLastCalledWith("other123");
+      expect(modalRouter.isPathRouted("profile")).toBe(false);
+      expect(url()).toBe("/#modal=profile&publicID=other123");
+
+      // Tab changes land on the new player's URL, not the old path.
+      modal.setActiveTab("clans");
+      expect(url()).toBe("/#modal=profile&publicID=other123&tab=clans");
+
+      // And the not-found panel doesn't name the old player's link.
+      await settle(() =>
+        expect(modal.querySelector("[data-not-found]")).not.toBeNull(),
+      );
+      expect(modal.querySelector("[data-opened-link]")).toBeNull();
+    });
+
+    it("moves the hash on to another player's profile opened over this one", async () => {
+      modal.openFromLeaderboard("aB3dE5fX");
+      expect(url()).toBe("/#modal=profile&publicID=aB3dE5fX");
+      modal.open({ publicID: "other123", tab: "clans" });
+      expect(url()).toBe("/#modal=profile&publicID=other123&tab=clans");
+    });
+
+    it("leaves the URL alone when the same profile is reopened", async () => {
+      await openFromPath("/player/aB3dE5fX");
+      modal.open({ publicID: "aB3dE5fX", tab: "games" });
+      expect(modalRouter.isPathRouted("profile")).toBe(true);
+      expect(url()).toBe("/player/aB3dE5fX?tab=games");
+    });
+
     it("still opens from the hash form", async () => {
       history.replaceState(null, "", "/#modal=profile&publicID=aB3dE5fX");
       expect(modalRouter.routeFromHash()).toBe(true);

@@ -36,8 +36,10 @@ import {
   RewardTrack,
   rewardTrackModel,
   stripPercent,
+  TRACK_LEVEL_LIMIT,
   trackEnd,
   trackHasRewards,
+  trackMaxLevel,
 } from "../../src/client/components/RewardTrack";
 
 if (!customElements.get("profile-progression")) {
@@ -99,6 +101,20 @@ function config(extra: Partial<ProgressionConfig> = {}): ProgressionConfig {
     prestige: { caps: 2500 },
     flares: FLARES,
     ...extra,
+  });
+}
+
+// The same config with another level cap: the curve and amounts run to it.
+function cappedConfig(maxLevel: number): ProgressionConfig {
+  return config({
+    maxLevel,
+    levels: Array.from({ length: maxLevel }, (_, i) => ({
+      level: i + 1,
+      xpToNext: 100,
+      cumulativeXp: 0,
+      caps: capsAt(i + 1),
+      plutonium: plutoniumAt(i + 1),
+    })),
   });
 }
 
@@ -245,6 +261,48 @@ describe("rewardTrackModel", () => {
     );
   });
 
+  it("builds the track to the config's level cap, not the client's", () => {
+    const raised = rewardTrackModel(progress(3, 115), cappedConfig(120), null);
+    expect(raised.maxLevel).toBe(120);
+    expect(raised.nodes).toHaveLength(120);
+    expect(raised.nodes[119]).toMatchObject({ level: 120, caps: 200 });
+    expect(raised.level).toBe(115);
+    expect(stripPercent(120, 120)).toBe(100);
+    expect(stripPercent(115, 120)).toBeCloseTo((114 / 119) * 100);
+
+    const lowered = rewardTrackModel(progress(3, 70), cappedConfig(60), null);
+    expect(lowered.nodes).toHaveLength(60);
+    // A level past the cap is the cap.
+    expect(lowered.level).toBe(60);
+    expect(lowered.nodes[59].current).toBe(true);
+  });
+
+  it("falls back to the client's cap, and bounds a runaway one", () => {
+    expect(trackMaxLevel(config({ maxLevel: 0 }))).toBe(100);
+    expect(trackMaxLevel(config({ maxLevel: 1.5 }))).toBe(100);
+    expect(trackMaxLevel(config({ maxLevel: 1e9 }))).toBe(TRACK_LEVEL_LIMIT);
+  });
+
+  it("shows the owner no claim status when level rewards don't say their level", () => {
+    // An API that doesn't stamp level/prestige: the rows can't be placed, so
+    // a passed level without one can't be read as claimed.
+    const m = rewardTrackModel(progress(3, 47), config(), [
+      reward({ id: "unplaced" }),
+      reward({ id: "daily", reason: "subscription_daily" }),
+    ]);
+    expect(m.owner).toBe(true);
+    expect(m.statuses).toBe(false);
+    expect(m.claim).toBeNull();
+    expect(m.nodes[10].status).toBe("passed");
+    expect(m.nodes[60].status).toBe("locked");
+    // Other kinds of reward never carry a level: they don't count.
+    const ok = rewardTrackModel(progress(3, 47), config(), [
+      reward({ id: "daily", reason: "subscription_daily" }),
+    ]);
+    expect(ok.statuses).toBe(true);
+    expect(ok.nodes[10].status).toBe("claimed");
+  });
+
   it("ends a run in the next rank, with its exclusive when there is one", () => {
     expect(trackEnd(config(), 4)).toEqual({
       legend: false,
@@ -322,12 +380,12 @@ describe("<reward-track>", () => {
     it("puts the knob and 'You' at the player's level, and the run's end", async () => {
       const el = await mount(progress(3, 47), ownerRewards());
       const knob = el.querySelector<HTMLElement>("[data-strip-knob]")!;
-      expect(knob.style.left).toBe(`${stripPercent(47)}%`);
+      expect(knob.style.left).toBe(`${stripPercent(47, 100)}%`);
       const you = el.querySelector<HTMLElement>("[data-strip-you]")!;
       expect(you.textContent).toBe('reward_track.strip_you:{"level":47}');
-      expect(you.style.left).toBe(`${stripPercent(47)}%`);
+      expect(you.style.left).toBe(`${stripPercent(47, 100)}%`);
       expect(el.querySelector("[data-strip-end]")?.textContent).toBe(
-        'reward_track.strip_end_prestige:{"rank":4}',
+        'reward_track.strip_end_prestige:{"level":100,"rank":4}',
       );
       expect(el.querySelector("[data-strip-start]")?.textContent).toBe(
         "reward_track.strip_start",
@@ -340,7 +398,7 @@ describe("<reward-track>", () => {
       const el = await mount(progress(4, 96), []);
       expect(el.querySelector("[data-strip-you]")).toBeNull();
       expect(el.querySelector("[data-strip-end]")?.textContent).toBe(
-        'reward_track.strip_you:{"level":96} · reward_track.strip_end_prestige:{"rank":5}',
+        'reward_track.strip_you:{"level":96} · reward_track.strip_end_prestige:{"level":100,"rank":5}',
       );
     });
 
@@ -452,6 +510,56 @@ describe("<reward-track>", () => {
     });
   });
 
+  describe("level cap", () => {
+    it("draws, scales and ends the track at the config's cap", async () => {
+      const el = await mount(progress(10, 120, true), [], cappedConfig(120));
+      expect(el.querySelectorAll("[data-level]")).toHaveLength(120);
+      const strip = el.querySelector("[data-track-strip]")!;
+      expect(strip.getAttribute("aria-valuemax")).toBe("120");
+      expect(strip.getAttribute("aria-label")).toBe(
+        'reward_track.strip_label:{"max":120}',
+      );
+      expect(
+        el.querySelector<HTMLElement>("[data-strip-knob]")!.style.left,
+      ).toBe("100%");
+      expect(
+        [...el.querySelectorAll("[data-strip-tick]")].map((t) =>
+          Number(t.getAttribute("data-strip-tick")),
+        ),
+      ).toEqual([10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 110]);
+      expect(el.querySelector("[data-strip-end]")?.textContent).toContain(
+        'reward_track.strip_end_legend:{"level":120}',
+      );
+      expect(el.querySelector<HTMLElement>(".rt-line")!.style.width).toBe(
+        "calc(119 * var(--rt-w))",
+      );
+      // The Legend badge is the top level's (the player's), not 100's.
+      const badge = (level: number) =>
+        el.querySelector(`[data-level="${level}"] level-badge`) as
+          | (HTMLElement & { legend: boolean })
+          | null;
+      expect(badge(100)?.legend).toBe(false);
+      expect(badge(120)?.legend).toBe(true);
+      const end = el.querySelector("[data-track-end]")!;
+      expect(end.textContent).toContain(
+        'reward_track.after_level:{"level":120}',
+      );
+      expect(
+        (end.querySelector("level-badge") as HTMLElement & { level: number })
+          .level,
+      ).toBe(120);
+    });
+
+    it("draws no level past a lowered cap", async () => {
+      const el = await mount(progress(3, 40), [], cappedConfig(60));
+      expect(el.querySelectorAll("[data-level]")).toHaveLength(60);
+      expect(el.querySelector(`[data-level="61"]`)).toBeNull();
+      expect(
+        el.querySelector("[data-track-strip]")!.getAttribute("aria-valuemax"),
+      ).toBe("60");
+    });
+  });
+
   describe("end card", () => {
     it("tags the next rank's exclusive inside the card", async () => {
       const el = await mount(progress(4, 96), []);
@@ -549,6 +657,23 @@ describe("<reward-track>", () => {
       const el = await mount(progress(3, 47), []);
       expect(el.querySelector("[data-track-claim]")).toBeNull();
       expect(el.querySelector("[data-track-legend]")).not.toBeNull();
+    });
+
+    it("shows the owner no statuses, and warns, when rewards don't say their level", async () => {
+      const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+      try {
+        const el = await mount(progress(3, 47), [reward({ id: "unplaced" })]);
+        expect(el.querySelector("[data-track-claim]")).toBeNull();
+        expect(el.querySelector("[data-track-legend]")).toBeNull();
+        expect(
+          el.querySelector("[data-claimed], [data-ready], [data-locked]"),
+        ).toBeNull();
+        // Still their profile: "You" at their level.
+        expect(el.querySelector("[data-you]")).not.toBeNull();
+        expect(warn).toHaveBeenCalledTimes(1);
+      } finally {
+        warn.mockRestore();
+      }
     });
 
     it("shows a visitor the track without claim status", async () => {
@@ -813,6 +938,52 @@ describe("<profile-progression> with the track", () => {
       ).not.toBeNull();
     });
 
+    it("stops claiming once the tab is closed, and reloads if it's back", async () => {
+      const answers: Array<() => void> = [];
+      const claim = vi.fn(
+        (_id: string) =>
+          new Promise<{ currency: { soft: number; hard: number } }>((resolve) =>
+            answers.push(() => resolve({ currency: { soft: 1, hard: 1 } })),
+          ),
+      );
+      const alert = vi.fn(async () => {});
+      let reads = 0;
+      const el = await mount({ me: userMe(ownerRewards()), claim, alert });
+      el.loadUserMe = async () => {
+        reads++;
+        return userMe(ownerRewards().filter((r) => r.id !== "l45"));
+      };
+      const changed = vi.fn();
+      el.addEventListener("rewards-changed", changed);
+      el.querySelector<HTMLElement>("[data-claim-all]")!.click();
+      await vi.waitFor(() => expect(claim).toHaveBeenCalledTimes(1));
+      invalidateUserMeMock.mockClear();
+      el.remove();
+      answers[0]();
+      await new Promise((r) => setTimeout(r, 0));
+      // The claim in flight finished; no more were sent, nothing was shown.
+      expect(claim).toHaveBeenCalledTimes(1);
+      expect(invalidateUserMeMock).toHaveBeenCalled();
+      expect(changed).not.toHaveBeenCalled();
+      expect(alert).not.toHaveBeenCalled();
+      expect(reads).toBe(0);
+
+      // Shown again: the track is read afresh, and Claim all works.
+      document.body.appendChild(el);
+      await vi.waitFor(async () => {
+        await el.updateComplete;
+        await el.querySelector<RewardTrack>("reward-track")?.updateComplete;
+        expect(el.querySelector("[data-claim-count]")?.textContent).toContain(
+          '{"count":3}',
+        );
+      });
+      expect(reads).toBeGreaterThan(0);
+      const button = el.querySelector("[data-claim-all]") as HTMLElement & {
+        disable: boolean;
+      };
+      expect(button.disable).toBe(false);
+    });
+
     it("stops and says so when a claim fails", async () => {
       const claim = vi.fn(async (id: string) =>
         id === "l46" ? (false as const) : { currency: { soft: 1, hard: 1 } },
@@ -888,6 +1059,15 @@ describe("<profile-progression> with the track", () => {
       // A new opening pops in again.
       const reopened = await mount({ popKey: "profile-8" });
       expect(reopened.classList.contains("pp-anim")).toBe(true);
+    });
+
+    it("remembers only the latest opening", async () => {
+      (await mount({ popKey: "profile-20" })).remove();
+      (await mount({ popKey: "profile-21" })).remove();
+      // Openings only count up, so an older key is never seen again; one
+      // that were would pop in, as nothing is kept for it.
+      const older = await mount({ popKey: "profile-20" });
+      expect(older.classList.contains("pp-anim")).toBe(true);
     });
 
     it("doesn't pop in under reduced motion", async () => {

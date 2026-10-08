@@ -1,3 +1,4 @@
+import type { GameType } from "@openfront/engine-api/game/GameTypes";
 import type {
   GameXpEligible,
   GameXpResponse,
@@ -43,6 +44,9 @@ const BADGE_SIZE = 30;
 @customElement("past-game-xp-card")
 export class PastGameXpCard extends LitElement {
   @property({ attribute: false }) view: PastGameXpView = { kind: "hidden" };
+  // The game's type, once its record has loaded: picks the copy for a game
+  // that didn't earn XP (see ineligibleReasonKey).
+  @property({ attribute: false }) gameType: GameType | null = null;
 
   createRenderRoot() {
     return this;
@@ -322,7 +326,7 @@ export class PastGameXpCard extends LitElement {
         }
         return this.renderNote(
           this.circledIcon("info"),
-          translateText(ineligibleReasonKey(s.data.reason)),
+          translateText(ineligibleReasonKey(s.data.reason, this.gameType)),
           "ineligible",
           "text-white/70",
         );

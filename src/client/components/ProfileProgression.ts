@@ -74,17 +74,18 @@ export function prestigeTiles(progress: PublicProgress): PrestigeTile[] {
 /**
  * Milestones grouped by prestige run, newest run first.
  *
- * The current run lists every milestone level: reached ones dated (or undated
- * when the level says it was reached but the list has no record of it), the
- * rest as "not yet". Earlier runs list only what they recorded, and a run
- * that recorded nothing is left out.
+ * The API owns which levels are milestones, so every level it records shows.
+ * The current run also lists the milestone levels this client knows: reached
+ * ones dated (or undated when the level says it was reached but the list has
+ * no record of it), the rest as "not yet". Earlier runs list only what they
+ * recorded, and a run that recorded nothing is left out.
  */
 export function milestoneRuns(progress: PublicProgress): MilestoneRun[] {
   const current = clampPrestige(progress.prestige);
   const byRun = new Map<number, Map<number, string>>();
   for (const m of progress.milestones ?? []) {
-    // Only the milestone levels, and never a run past the current one.
-    if (!MILESTONE_LEVELS.includes(m.level)) continue;
+    // Any level the API recorded, but never a run past the current one.
+    if (!Number.isInteger(m.level) || m.level < 1) continue;
     if (!Number.isInteger(m.prestige) || m.prestige < 0) continue;
     if (m.prestige > current) continue;
     let run = byRun.get(m.prestige);
@@ -95,12 +96,16 @@ export function milestoneRuns(progress: PublicProgress): MilestoneRun[] {
     if (!run.has(m.level)) run.set(m.level, m.at);
   }
 
+  const ascending = (a: number, b: number) => a - b;
   const currentRun = byRun.get(current) ?? new Map<number, string>();
+  const currentLevels = [
+    ...new Set([...MILESTONE_LEVELS, ...currentRun.keys()]),
+  ].sort(ascending);
   const runs: MilestoneRun[] = [
     {
       prestige: current,
       current: true,
-      slots: MILESTONE_LEVELS.map((level) => {
+      slots: currentLevels.map((level) => {
         const at = currentRun.get(level) ?? null;
         return {
           level,
@@ -118,9 +123,9 @@ export function milestoneRuns(progress: PublicProgress): MilestoneRun[] {
     runs.push({
       prestige,
       current: false,
-      slots: MILESTONE_LEVELS.filter((level) => run.has(level)).map(
-        (level) => ({ level, reached: true, at: run.get(level)! }),
-      ),
+      slots: [...run.keys()]
+        .sort(ascending)
+        .map((level) => ({ level, reached: true, at: run.get(level)! })),
     });
   }
   return runs;
@@ -156,8 +161,9 @@ function loadRewardTrack(): Promise<RewardTrackModule> {
   return rewardTrackModule;
 }
 
-// The tab openings that already popped in, by popKey.
-const poppedKeys = new Set<string>();
+// The opening that last popped in. Each opening of the profile has a new key,
+// so only the latest is ever shown again.
+let lastPoppedKey: string | undefined;
 
 interface TrackData {
   config: ProgressionConfig;
@@ -190,6 +196,8 @@ export class ProfileProgression extends LitElement {
   @state() private claiming = false;
   private loadedFor: string | null | undefined = undefined;
   private loadToken = 0;
+  // Bumped when the tab goes away: a Claim all in progress stops there.
+  private claimToken = 0;
   private popDecided = false;
   private popping = false;
   private popTimer: ReturnType<typeof setTimeout> | null = null;
@@ -201,10 +209,14 @@ export class ProfileProgression extends LitElement {
   connectedCallback(): void {
     super.connectedCallback();
     ensureProfileProgressionStyles();
+    // Back after a Claim all was cut short: its button works again, and the
+    // track is read afresh (loadedFor was cleared).
+    if (this.claiming) this.claiming = false;
   }
 
   disconnectedCallback(): void {
     super.disconnectedCallback();
+    this.claimToken++;
     if (this.popTimer !== null) clearTimeout(this.popTimer);
     this.popTimer = null;
     this.endPop();
@@ -268,7 +280,7 @@ export class ProfileProgression extends LitElement {
 
   // Claims this run's level rewards one by one — never another kind of
   // reward (a subscription daily, a win's Caps) — then tells the page, like
-  // RewardsPanel does.
+  // RewardsPanel does. Closing the tab stops it after the claim in flight.
   private async claimAll(): Promise<void> {
     const track = this.track;
     const progress = this.progress;
@@ -277,6 +289,7 @@ export class ProfileProgression extends LitElement {
     if (owned === null) return;
     const ids = track.model(progress, track.config, owned).claim?.ids ?? [];
     if (ids.length === 0) return;
+    const token = this.claimToken;
     this.claiming = true;
     try {
       let currency: RewardsChangedDetail["currency"] = null;
@@ -284,6 +297,7 @@ export class ProfileProgression extends LitElement {
       let failed = false;
       let resync = false;
       for (const id of ids) {
+        if (token !== this.claimToken) break;
         const result = await this.claim(id);
         if (result === false) {
           failed = true;
@@ -294,6 +308,13 @@ export class ProfileProgression extends LitElement {
         // same, so the account is re-read below.
         if (result === "not_found") resync = true;
         else currency = result.currency;
+      }
+      if (token !== this.claimToken) {
+        // Gone: nothing here to update. The page reads the account afresh,
+        // and so does this tab if it comes back.
+        if (claimed.size > 0) invalidateUserMe();
+        this.loadedFor = undefined;
+        return;
       }
       if (claimed.size > 0) {
         invalidateUserMe();
@@ -318,7 +339,7 @@ export class ProfileProgression extends LitElement {
         await this.alert(translateText("account_modal.claim_failed"));
       }
     } finally {
-      this.claiming = false;
+      if (token === this.claimToken) this.claiming = false;
     }
   }
 
@@ -337,8 +358,8 @@ export class ProfileProgression extends LitElement {
   private startPop(): void {
     const key = this.popKey;
     if (key !== undefined) {
-      if (poppedKeys.has(key)) return;
-      poppedKeys.add(key);
+      if (key === lastPoppedKey) return;
+      lastPoppedKey = key;
     }
     if (prefersReducedMotion()) return;
     this.popping = true;

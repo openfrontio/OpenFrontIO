@@ -44,7 +44,8 @@ export function isLevelReward(reward: Reward): boolean {
  *           was claimed already: /users/@me lists only unclaimed ones);
  * ready   — passed, with a reward still to claim;
  * locked  — not reached yet;
- * passed  — reached, for a visitor, who doesn't see claim status.
+ * passed  — reached, for a visitor, who doesn't see claim status (nor does
+ *           the owner when their rewards don't say which level they're for).
  */
 export type TrackNodeStatus = "claimed" | "ready" | "locked" | "passed";
 
@@ -62,7 +63,7 @@ export interface TrackNode {
 export interface TrackEnd {
   // A P10 run ends in Legend rather than another rank.
   legend: boolean;
-  // The rank entered after level 100 (unused for Legend).
+  // The rank entered after the run's last level (unused for Legend).
   rank: number;
   // The Caps that prestige grants; null when the config doesn't say, and
   // for Legend.
@@ -80,7 +81,12 @@ export interface TrackClaim {
 export interface RewardTrackModel {
   run: number;
   level: number;
+  // The run's last level: the config's cap.
+  maxLevel: number;
   owner: boolean;
+  // Whether the nodes carry claim status: the owner's, unless their rewards
+  // don't say which level and run each is for (see rewardTrackModel).
+  statuses: boolean;
   nodes: TrackNode[];
   end: TrackEnd;
   // The owner's unclaimed level rewards on this run; null for a visitor.
@@ -100,6 +106,17 @@ export function trackHasRewards(config: ProgressionConfig): boolean {
       (l) => l.caps !== undefined || l.plutonium !== undefined,
     ) || config.flares.some((f) => f.kind === "level" && f.cosmetic)
   );
+}
+
+// More levels than this and the config is wrong, not the track short: the
+// track draws a node per level.
+export const TRACK_LEVEL_LIMIT = 1000;
+
+/** The run's last level: the config's cap, or MAX_LEVEL when it has none. */
+export function trackMaxLevel(config: ProgressionConfig): number {
+  const max = config.maxLevel;
+  if (!Number.isInteger(max) || max < 2) return MAX_LEVEL;
+  return Math.min(max, TRACK_LEVEL_LIMIT);
 }
 
 function amount(value: string): bigint {
@@ -163,29 +180,40 @@ export function rewardTrackModel(
   rewards: readonly Reward[] | null,
 ): RewardTrackModel {
   const run = clampPrestige(progress.prestige);
+  const maxLevel = trackMaxLevel(config);
   const current = Math.min(
-    MAX_LEVEL,
+    maxLevel,
     Math.max(
       1,
       Number.isFinite(progress.level) ? Math.floor(progress.level) : 1,
     ),
   );
   const owner = rewards !== null;
-  const mine = (rewards ?? []).filter(
-    (r) => isLevelReward(r) && r.prestige === run,
-  );
+  // A passed level with no reward row reads as claimed, which holds only
+  // when every level reward says its level and run: from an API that doesn't
+  // stamp them, every passed level would read as claimed while the rewards
+  // sit unclaimed. Then the owner sees the track as a visitor does.
+  const statuses =
+    owner &&
+    !rewards.some(
+      (r) =>
+        isLevelReward(r) && (r.level === undefined || r.prestige === undefined),
+    );
+  const mine = statuses
+    ? rewards.filter((r) => isLevelReward(r) && r.prestige === run)
+    : [];
   const waiting = new Set(
     mine.flatMap((r) => (r.level === undefined ? [] : [r.level])),
   );
   const amounts = new Map(config.levels.map((l) => [l.level, l]));
   const flares = levelFlares(config, run);
   const nodes: TrackNode[] = [];
-  for (let level = 1; level <= MAX_LEVEL; level++) {
+  for (let level = 1; level <= maxLevel; level++) {
     const row = amounts.get(level);
     const passed = level <= current;
     let status: TrackNodeStatus;
     if (!passed) status = "locked";
-    else if (!owner) status = "passed";
+    else if (!statuses) status = "passed";
     else status = waiting.has(level) ? "ready" : "claimed";
     nodes.push({
       level,
@@ -197,7 +225,7 @@ export function rewardTrackModel(
       status,
     });
   }
-  const claim: TrackClaim | null = owner
+  const claim: TrackClaim | null = statuses
     ? {
         ids: mine.map((r) => r.id),
         caps: mine
@@ -211,19 +239,22 @@ export function rewardTrackModel(
   return {
     run,
     level: current,
+    maxLevel,
     owner,
+    statuses,
     nodes,
     end: trackEnd(config, run),
     claim,
   };
 }
 
-/** Where a level sits on the 1–100 strip, as a percentage. */
-export function stripPercent(level: number): number {
-  return ((level - 1) / (MAX_LEVEL - 1)) * 100;
+/** Where a level sits on the strip of levels 1 to maxLevel, as a percentage. */
+export function stripPercent(level: number, maxLevel: number): number {
+  return ((level - 1) / (maxLevel - 1)) * 100;
 }
 
-// Past this level the "You" label would run into the end label: they merge.
+// Past this far along the strip (a percentage) the "You" label would run
+// into the end label: they merge.
 export const STRIP_MERGE_AFTER = 85;
 
 export interface ClaimAllDetail {
@@ -298,6 +329,7 @@ export class RewardTrack extends LitElement {
   @state() private atEnd = false;
 
   private model: RewardTrackModel | null = null;
+  private warnedUnplaced = false;
   private requested = new Set<string>();
   private scrolledToLevel = false;
   private frame = 0;
@@ -336,6 +368,12 @@ export class RewardTrack extends LitElement {
           ? null
           : rewardTrackModel(this.progress, this.config, this.rewards);
       if (changed.has("progress")) this.scrolledToLevel = false;
+      if (this.model?.owner && !this.model.statuses && !this.warnedUnplaced) {
+        this.warnedUnplaced = true;
+        console.warn(
+          "RewardTrack: level rewards without a level or prestige; claim status hidden",
+        );
+      }
       this.resolveCosmetics();
     }
   }
@@ -348,6 +386,10 @@ export class RewardTrack extends LitElement {
       this.resizeObserver.observe(scroller);
     }
     this.onLayout();
+  }
+
+  private maxLevel(): number {
+    return this.model?.maxLevel ?? MAX_LEVEL;
   }
 
   private scroller(): HTMLElement | null {
@@ -421,12 +463,13 @@ export class RewardTrack extends LitElement {
     const { w, pad } = this.nodeWidth(scroller);
     const left = scroller.scrollLeft;
     const width = scroller.clientWidth;
+    const max = this.maxLevel();
     const lo = Math.min(
-      MAX_LEVEL,
+      max,
       Math.max(1, Math.ceil((left - pad) / w - 0.25) + 1),
     );
     const hi = Math.min(
-      MAX_LEVEL,
+      max,
       Math.max(lo, Math.floor((left + width - pad) / w + 0.25)),
     );
     if (lo !== this.range.lo || hi !== this.range.hi) this.range = { lo, hi };
@@ -490,7 +533,7 @@ export class RewardTrack extends LitElement {
     const scroller = this.scroller();
     if (scroller === null) return;
     const { w, pad } = this.nodeWidth(scroller);
-    const clamped = Math.min(MAX_LEVEL, Math.max(1, Math.round(level)));
+    const clamped = Math.min(this.maxLevel(), Math.max(1, Math.round(level)));
     this.scrollTrackTo(
       pad + (clamped - 1) * w + w / 2 - scroller.clientWidth / 2,
       smooth,
@@ -506,7 +549,7 @@ export class RewardTrack extends LitElement {
       1,
       Math.max(0, (event.clientX - box.left) / box.width),
     );
-    return 1 + Math.round(fraction * (MAX_LEVEL - 1));
+    return 1 + Math.round(fraction * (this.maxLevel() - 1));
   }
 
   private onStripDown = (event: PointerEvent): void => {
@@ -536,7 +579,7 @@ export class RewardTrack extends LitElement {
     } else if (event.key === "PageUp") target = middle - span;
     else if (event.key === "PageDown") target = middle + span;
     else if (event.key === "Home") target = 1;
-    else if (event.key === "End") target = MAX_LEVEL;
+    else if (event.key === "End") target = this.maxLevel();
     if (target === null) return;
     event.preventDefault();
     this.jumpTo(target, true);
@@ -571,7 +614,7 @@ export class RewardTrack extends LitElement {
           ? this.renderClaimBar(claim)
           : nothing}
         ${this.renderStrip(model)} ${this.renderTrack(model)}
-        ${model.owner ? this.renderKey() : nothing}
+        ${model.statuses ? this.renderKey() : nothing}
       </section>
     `;
   }
@@ -619,14 +662,20 @@ export class RewardTrack extends LitElement {
 
   private renderStrip(model: RewardTrackModel): TemplateResult {
     const end = model.end;
+    const max = model.maxLevel;
     const endText = end.legend
-      ? translateText("reward_track.strip_end_legend")
-      : translateText("reward_track.strip_end_prestige", { rank: end.rank });
+      ? translateText("reward_track.strip_end_legend", { level: max })
+      : translateText("reward_track.strip_end_prestige", {
+          level: max,
+          rank: end.rank,
+        });
     const youText = model.owner
       ? translateText("reward_track.strip_you", { level: model.level })
       : translateText("reward_track.strip_level", { level: model.level });
-    const merged = model.level > STRIP_MERGE_AFTER;
-    const pct = (level: number) => `${stripPercent(level)}%`;
+    const merged = stripPercent(model.level, max) > STRIP_MERGE_AFTER;
+    const pct = (level: number) => `${stripPercent(level, max)}%`;
+    const ticks: number[] = [];
+    for (let t = 10; t < max; t += 10) ticks.push(t);
     const { lo, hi } = this.range;
     return html`<div
       class="rt-strip"
@@ -634,9 +683,9 @@ export class RewardTrack extends LitElement {
       data-pp
       role="slider"
       tabindex="0"
-      aria-label=${translateText("reward_track.strip_label")}
+      aria-label=${translateText("reward_track.strip_label", { max })}
       aria-valuemin="1"
-      aria-valuemax=${MAX_LEVEL}
+      aria-valuemax=${max}
       aria-valuenow=${Math.round((lo + hi) / 2)}
       aria-valuetext=${translateText("reward_track.strip_value", { lo, hi })}
       @pointerdown=${this.onStripDown}
@@ -668,7 +717,7 @@ export class RewardTrack extends LitElement {
       </div>
       <div class="rt-rail" data-strip-rail>
         <div class="rt-rail-fill" style="width:${pct(model.level)}"></div>
-        ${[10, 20, 30, 40, 50, 60, 70, 80, 90].map(
+        ${ticks.map(
           (t) =>
             html`<div
               class="rt-tick"
@@ -694,8 +743,10 @@ export class RewardTrack extends LitElement {
         <div
           class="rt-window"
           data-strip-window
-          style="left:calc(${pct(lo)} - 4px);width:calc(${stripPercent(hi) -
-          stripPercent(lo)}% + 8px)"
+          style="left:calc(${pct(lo)} - 4px);width:calc(${stripPercent(
+            hi,
+            max,
+          ) - stripPercent(lo, max)}% + 8px)"
         ></div>
         <div
           class="rt-knob"
@@ -724,7 +775,11 @@ export class RewardTrack extends LitElement {
           role="list"
           aria-label=${translateText("reward_track.levels_label")}
         >
-          <div class="rt-line" aria-hidden="true"></div>
+          <div
+            aria-hidden="true"
+            class="rt-line"
+            style="width:calc(${model.maxLevel - 1} * var(--rt-w))"
+          ></div>
           <div
             aria-hidden="true"
             class="rt-line-fill"
@@ -748,7 +803,8 @@ export class RewardTrack extends LitElement {
   }
 
   private renderNode(node: TrackNode, model: RewardTrackModel): TemplateResult {
-    const legendBadge = this.progress?.legend === true && node.level === 100;
+    const legendBadge =
+      this.progress?.legend === true && node.level === model.maxLevel;
     let dot: TemplateResult;
     if (node.current) {
       dot = html`<div class="rt-you-ring">
@@ -877,6 +933,7 @@ export class RewardTrack extends LitElement {
         >${translateText("reward_track.you")}</span
       >`;
     }
+    if (!model.statuses) return nothing;
     switch (node.status) {
       case "claimed":
         return html`<span data-claimed>${CHECK}</span>`;
@@ -897,7 +954,7 @@ export class RewardTrack extends LitElement {
         <div class="rt-end-head">
           ${end.legend
             ? html`<level-badge
-                .level=${100}
+                .level=${model.maxLevel}
                 .prestige=${model.run}
                 .legend=${true}
                 .size=${44}
@@ -909,7 +966,9 @@ export class RewardTrack extends LitElement {
               ></level-badge>`}
           <div class="leading-tight whitespace-nowrap">
             <div class="rt-kicker">
-              ${translateText("reward_track.after_level_100")}
+              ${translateText("reward_track.after_level", {
+                level: model.maxLevel,
+              })}
             </div>
             <div class="rt-end-title" data-end-title>
               ${end.legend
@@ -988,7 +1047,7 @@ reward-track .rt-claim {
   background: linear-gradient(90deg, rgba(250, 204, 21, 0.14), rgba(250, 204, 21, 0.04));
 }
 
-/* The run strip: levels 1-100 at a glance. */
+/* The run strip: the whole run at a glance. */
 reward-track .rt-strip {
   position: relative; margin: 0 4px 8px; padding: 21px 0 6px;
   touch-action: none; cursor: pointer; user-select: none; outline: none;
@@ -1067,7 +1126,7 @@ reward-track .rt-line, reward-track .rt-line-fill {
   position: absolute; top: 68px; height: 4px; border-radius: 2px;
   left: calc(6px + var(--rt-w) / 2);
 }
-reward-track .rt-line { width: calc(99 * var(--rt-w)); background: rgba(255, 255, 255, 0.12); }
+reward-track .rt-line { background: rgba(255, 255, 255, 0.12); }
 reward-track .rt-line-fill {
   background: linear-gradient(90deg, #facc15, #fbbf24);
   box-shadow: 0 0 8px rgba(250, 204, 21, 0.6);

@@ -156,6 +156,38 @@ describe("AccountModal — after a prestige", () => {
     );
   });
 
+  it("fetches the prestige flow when /users/@me lands, not on render", async () => {
+    const load = vi.fn(async () => undefined);
+    modal.loadPrestigeFlow = load;
+    modal.requestUpdate();
+    await modal.updateComplete;
+    expect(modal.querySelector("profile-card")).not.toBeNull();
+    expect(load).not.toHaveBeenCalled();
+
+    // Opening reads /users/@me: a player who can prestige.
+    vi.mocked(getUserMe).mockResolvedValueOnce(userMe(AT_100));
+    modal.open();
+    await vi.waitFor(() => expect(load).toHaveBeenCalledTimes(1));
+    await settle();
+    modal.requestUpdate();
+    await modal.updateComplete;
+    expect(load).toHaveBeenCalledTimes(1);
+
+    // A broadcast /users/@me (the header's re-read, a sign-in) too.
+    document.dispatchEvent(
+      new CustomEvent("userMeResponse", { detail: userMe(AT_100) }),
+    );
+    expect(load).toHaveBeenCalledTimes(2);
+
+    // Not for a player who can't.
+    document.dispatchEvent(
+      new CustomEvent("userMeResponse", {
+        detail: userMe({ ...AFTER, canPrestige: false }),
+      }),
+    );
+    expect(load).toHaveBeenCalledTimes(2);
+  });
+
   it("says so when the prestige flow can't be fetched", async () => {
     vi.spyOn(console, "warn").mockImplementation(() => {});
     modal.loadPrestigeFlow = () => Promise.reject(new Error("offline"));

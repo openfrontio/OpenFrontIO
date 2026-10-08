@@ -133,6 +133,7 @@ export class WinModal extends LitElement implements Controller {
             .onScreen=${this.isVisible}
             @xp-reveal-settled=${(e: CustomEvent<GameXpPanelState>) =>
               (this.xpSettled = e.detail)}
+            .gameType=${this.game?.config().gameConfig().gameType ?? null}
             @xp-legend=${this.onXpLegend}
           ></game-xp-panel>
           ${this.innerHtml()}
@@ -211,6 +212,17 @@ export class WinModal extends LitElement implements Controller {
     );
   }
 
+  // The first of those: where the last run is comes from the config, as the
+  // server may move it, and from the client's own constant only without one.
+  private async preloadIfLastRun(prestige: number): Promise<void> {
+    const config = await fetchProgressionConfig();
+    const last =
+      config !== false && config.maxPrestige > 0
+        ? config.maxPrestige
+        : MAX_PRESTIGE;
+    if (prestige >= last) this.preloadLegendCeremony();
+  }
+
   private onLegendCeremonyClosed = (): void => {
     this.querySelector<HTMLElement>('[data-win-action="keep"]')?.focus();
   };
@@ -244,6 +256,8 @@ export class WinModal extends LitElement implements Controller {
     }
     const moment = gameShareMoment(this.xpView);
     if (moment === null || moment.kind === "prestige") return null;
+    const url = momentShareUrl(this.sharePublicId, moment);
+    if (url === null) return null;
     // Three labelled buttons fit side by side from md up; below that (and
     // beside a ranked game's requeue button) it takes a row of its own.
     const placement = this.isRankedGame
@@ -254,7 +268,7 @@ export class WinModal extends LitElement implements Controller {
       class="flex ${placement}"
       layout="menu"
       .label=${momentShareLabel(moment)}
-      .url=${momentShareUrl(this.sharePublicId, moment)}
+      .url=${url}
       .text=${momentShareText(moment)}
       triggerClass="win-action win-action-quiet w-full"
     ></profile-share>`;
@@ -578,9 +592,7 @@ export class WinModal extends LitElement implements Controller {
       if (progress === undefined) return;
       this.sharePublicId = account.me.player.publicId;
       this.xpPublicId = account.me.player.publicId ?? null;
-      if (progress.prestige >= MAX_PRESTIGE && !progress.legend) {
-        this.preloadLegendCeremony();
-      }
+      if (!progress.legend) void this.preloadIfLastRun(progress.prestige);
       // The game may have ended while this was resolving; the end-of-game
       // call owns the section from then on.
       if (this.xpPolling) return;

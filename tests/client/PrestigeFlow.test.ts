@@ -34,6 +34,9 @@ import {
   HANDOFF_FADE_MS,
   HANDOFF_MS,
   HOLD_MS,
+  lastPrestigeRank,
+  levelCap,
+  nextPrestigeRank,
   PrestigeFlow,
 } from "../../src/client/components/PrestigeFlow";
 import { ProfileCard } from "../../src/client/components/ProfileCard";
@@ -239,6 +242,64 @@ describe("<prestige-flow>", () => {
     expect(stateOf("4")).toBe("next");
     expect(stateOf("5")).toBe("locked");
     expect(stateOf("legend")).toBe("locked");
+  });
+
+  it("ends the ladder where the config does", async () => {
+    fetchConfig.mockResolvedValue({
+      ...CONFIG,
+      maxPrestige: 12,
+      maxLevel: 120,
+    });
+    flow.open({ ...AT_100, prestige: 10 });
+    await settle();
+    const ranks = [
+      ...document.body.querySelectorAll<HTMLElement>(
+        "[data-prestige-track] [data-rank]",
+      ),
+    ].map((li) => li.dataset.rank);
+    expect(ranks).toEqual([
+      ...Array.from({ length: 12 }, (_, i) => String(i + 1)),
+      "legend",
+    ]);
+    // Ranks left to earn: the next one, not Prestige 10 again.
+    expect(q("[data-prestige-confirm]")!.textContent).toContain(
+      'prestige.title:{"rank":11}',
+    );
+    expect(q("[data-prestige-track] [data-rank='11']")!.dataset.state).toBe(
+      "next",
+    );
+    expect(
+      q<Badge>("[data-prestige-track] [data-rank='legend'] level-badge")!.level,
+    ).toBe(120);
+    // The exclusive cosmetic is Prestige 11's (none), not Prestige 10's,
+    // which this player already holds.
+    expect(q("[data-prestige-unlock='cosmetic']")).toBeNull();
+    expect(describeCosmetic).not.toHaveBeenCalled();
+  });
+
+  it("falls back to the client's own ladder without a config", async () => {
+    fetchConfig.mockResolvedValue(false);
+    flow.open({ ...AT_100, prestige: 9 });
+    await settle();
+    expect(
+      document.body.querySelectorAll("[data-prestige-track] [data-rank]"),
+    ).toHaveLength(11);
+    expect(q("[data-prestige-confirm]")!.textContent).toContain(
+      'prestige.title:{"rank":10}',
+    );
+  });
+
+  it("reads the ladder's end and the level cap from the config", () => {
+    const wider = { ...CONFIG, maxPrestige: 12, maxLevel: 120 };
+    expect(lastPrestigeRank(null)).toBe(10);
+    expect(lastPrestigeRank(wider)).toBe(12);
+    expect(lastPrestigeRank({ ...CONFIG, maxPrestige: 0 })).toBe(10);
+    expect(levelCap(null)).toBe(100);
+    expect(levelCap(wider)).toBe(120);
+    expect(nextPrestigeRank(10, null)).toBe(10);
+    expect(nextPrestigeRank(10, wider)).toBe(11);
+    expect(nextPrestigeRank(15, wider)).toBe(12);
+    expect(nextPrestigeRank(Number.NaN, wider)).toBe(1);
   });
 
   it("lists the rank's exclusive cosmetic from the config", async () => {
@@ -469,6 +530,40 @@ describe("<prestige-flow>", () => {
     expect(stale).toHaveBeenCalledTimes(1);
     expect(flow.isOpen).toBe(false);
     expect(q("[data-prestige-error]")).toBeNull();
+  });
+
+  it("still reports a prestige that lands after the flow was taken down", async () => {
+    let finish!: (v: Awaited<ReturnType<PrestigeFlow["submit"]>>) => void;
+    submit.mockReturnValueOnce(new Promise((r) => (finish = r)));
+    const prestiged = vi.fn();
+    flow.addEventListener("prestiged", (e) =>
+      prestiged((e as CustomEvent).detail),
+    );
+    flow.open({ ...AT_100, prestige: 5 });
+    await settle();
+    await hold();
+    expect(submit).toHaveBeenCalledTimes(1);
+
+    flow.remove();
+    expect(flow.isOpen).toBe(false);
+    const landed = {
+      ...PRESTIGED,
+      progress: { ...PRESTIGED.progress, prestige: 6 },
+    };
+    finish({ ok: true, data: landed });
+    await settle(HANDOFF_MS + 4000);
+    expect(prestiged).toHaveBeenCalledWith(landed);
+    // No ceremony for a flow that's gone.
+    expect(q("[data-prestige-ceremony]")).toBeNull();
+
+    // The key is spent: a later prestige from rank 5 is a new one.
+    document.body.appendChild(flow);
+    await settle();
+    flow.open({ ...AT_100, prestige: 5 });
+    await settle();
+    await hold();
+    expect(submit).toHaveBeenCalledTimes(2);
+    expect(submit.mock.calls[1][0]).not.toBe(submit.mock.calls[0][0]);
   });
 
   it("lets go of the hold when the button loses focus", async () => {
@@ -833,6 +928,20 @@ describe("<prestige-flow>", () => {
 
   it("has no share row without a public ID", async () => {
     await ceremonyDone();
+    expect(q("[data-prestige-continue]")).not.toBeNull();
+    expect(shareRow()).toBeNull();
+  });
+
+  it("drops the share row for a rank the card route wouldn't draw", async () => {
+    flow.publicId = "wonder01";
+    // A surprising server rank: shared, its link would unfurl with no card.
+    flow.celebrate(AT_100, {
+      ...PRESTIGED,
+      progress: { ...PRESTIGED.progress, prestige: 11 },
+    });
+    await settle(300);
+    q("[data-prestige-ceremony]")!.click();
+    await settle();
     expect(q("[data-prestige-continue]")).not.toBeNull();
     expect(shareRow()).toBeNull();
   });

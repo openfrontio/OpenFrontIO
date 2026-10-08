@@ -32,6 +32,7 @@ import {
 } from "@openfront/engine-api/game/GameUpdates";
 import { GameStartInfo, Turn } from "@openfront/engine-api/Schemas";
 import { createGameRunner } from "@openfront/engine/GameRunner";
+import { loadMapFiles } from "@openfront/shared/GameMapLoader";
 import {
   decompressGameRecord,
   toWireGameStartInfo,
@@ -204,7 +205,11 @@ async function traceGame(
   const runner = await createGameRunner(
     gameStart,
     undefined,
-    mapLoader,
+    await loadMapFiles(
+      mapLoader,
+      gameStart.config.gameMap,
+      gameStart.config.gameMapSize,
+    ),
     (gu: GameUpdateViewData | ErrorUpdate) => {
       if ("errMsg" in gu) error = `${gu.errMsg}\n${gu.stack ?? ""}`;
       else pending = gu;

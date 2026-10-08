@@ -8,6 +8,7 @@ import { html, nothing } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import { ClientEnv } from "src/client/ClientEnv";
 import { fetchPublicPlayerProfile } from "./Api";
+import "./ClanModal";
 import "./components/baseComponents/Button";
 import "./components/baseComponents/stats/PlayerGameHistoryView";
 import type { PlayerGameHistoryCache } from "./components/baseComponents/stats/PlayerGameHistoryView";
@@ -21,9 +22,14 @@ import "./components/ProfileShare";
 import { modalHeader } from "./components/ui/ModalHeader";
 import { usernameText } from "./components/ui/UsernameText";
 import { verifiedBadge } from "./components/ui/VerifiedBadge";
+import "./GameStatsModal";
+import "./LeaderboardModal";
 import { modalRouter } from "./ModalRouter";
 import { fetchPublicPlayerProgress } from "./ProgressionApi";
-import { playerProfileUrl } from "./utilities/PlayerProfileUrl";
+import {
+  parsePlayerProfilePath,
+  playerProfileUrl,
+} from "./utilities/PlayerProfileUrl";
 import { currentPagePath, translateText } from "./Utils";
 
 export { playerProfileUrl };
@@ -378,6 +384,21 @@ export class PlayerProfileModal extends BaseModal {
       ?.open();
   }
 
+  // Opening another player's profile over this one: BaseModal syncs the URL
+  // only when a modal first opens, which would leave it naming the last
+  // player (its `/player/<id>` path, or its `#modal=` hash), with tab changes
+  // written onto that and a reload opening the wrong profile. Hand the URL to
+  // the new player as an in-app open does. The router ignores this while it
+  // is the one opening the modal (from a path or the hash).
+  public override open(args?: Record<string, unknown>): void {
+    const wasOpen = this.isOpen();
+    const before = this.publicId;
+    super.open(args);
+    if (wasOpen && this.isOpen() && this.publicId !== before) {
+      modalRouter.syncOpened(this.routerName, args);
+    }
+  }
+
   protected onOpen(args?: Record<string, unknown>): void {
     const publicId =
       typeof args?.publicID === "string" && args.publicID.length > 0
@@ -422,9 +443,14 @@ export class PlayerProfileModal extends BaseModal {
     this.gameHistoryCache = null;
     this.gamesScrollTop = 0;
     this.restoreGamesScrollAfterOpen = false;
-    this.openedLink = modalRouter.isPathRouted("profile")
-      ? `${window.location.host}${window.location.pathname}`
-      : null;
+    // Only while the path is this player's: the URL can still name the last
+    // one for the moment (see open()).
+    this.openedLink =
+      publicId !== null &&
+      modalRouter.isPathRouted("profile") &&
+      parsePlayerProfilePath(window.location.pathname) === publicId
+        ? `${window.location.host}${window.location.pathname}`
+        : null;
     this.loading = publicId !== null;
     if (publicId !== null) {
       void this.loadProfile(publicId);
