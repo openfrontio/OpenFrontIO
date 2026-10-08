@@ -7,6 +7,7 @@ import { userAuth } from "../Auth";
 import { crazyGamesSDK } from "../CrazyGamesSDK";
 import { translateText } from "../Utils";
 import { BaseModal } from "./BaseModal";
+import { trustLockIcon, viewerIsTrusted } from "./LobbyCard";
 import { modalHeader } from "./ui/ModalHeader";
 
 @customElement("ranked-modal")
@@ -17,6 +18,9 @@ export class RankedModal extends BaseModal {
   @state() private elo2v2: number | string = "...";
   @state() private userMeResponse: UserMeResponse | false = false;
   @state() private errorMessage: string | null = null;
+  // Hides the trust lock until /users/@me answers, so a trusted player
+  // doesn't see it flash red first.
+  @state() private loading = true;
   // CrazyGames players authenticate through the SDK, not a linked
   // Discord/Google/email account, so track that separately for ranked.
   @state() private crazyGamesSignedIn = false;
@@ -75,6 +79,7 @@ export class RankedModal extends BaseModal {
   }
 
   protected override async onOpen(): Promise<void> {
+    this.loading = true;
     this.elo = "...";
     this.elo2v2 = "...";
     this.errorMessage = null;
@@ -92,6 +97,7 @@ export class RankedModal extends BaseModal {
       this.elo = translateText("map_component.error");
       this.elo2v2 = translateText("map_component.error");
     } finally {
+      this.loading = false;
       this.updateElo();
     }
   }
@@ -145,10 +151,19 @@ export class RankedModal extends BaseModal {
   }
 
   private renderCard(title: string, subtitle: string, onClick: () => void) {
+    // Ranked admits trusted accounts only: a green open lock when the
+    // player's account is trusted, a red closed one otherwise.
+    const lock =
+      this.loading || this.errorMessage !== null
+        ? ""
+        : trustLockIcon(
+            viewerIsTrusted(this.userMeResponse),
+            translateText("mode_selector.ranked_trust_tooltip_title"),
+          );
     return html`
       <button
         @click=${onClick}
-        class="flex flex-col w-full h-28 sm:h-32 rounded-2xl bg-malibu-blue border-0 transition-all duration-200 hover:bg-aquarius hover:scale-[1.03] hover:shadow-[var(--shadow-action-card-hover)] active:bg-malibu-blue/80 active:scale-[0.98] p-6 items-center justify-center gap-3"
+        class="relative flex flex-col w-full h-28 sm:h-32 rounded-2xl bg-malibu-blue border-0 transition-all duration-200 hover:bg-aquarius hover:scale-[1.03] hover:shadow-[var(--shadow-action-card-hover)] active:bg-malibu-blue/80 active:scale-[0.98] p-6 items-center justify-center gap-3"
       >
         <div class="flex flex-col items-center gap-1 text-center">
           <h3
@@ -162,6 +177,7 @@ export class RankedModal extends BaseModal {
             ${subtitle}
           </p>
         </div>
+        ${lock}
       </button>
     `;
   }

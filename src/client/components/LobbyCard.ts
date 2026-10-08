@@ -332,7 +332,10 @@ function customInfoIcon(
 }
 
 /** Bottom-right lock: red and closed when the viewer can't join, green and open when they can. */
-function trustLockIcon(viewerTrusted: boolean): TemplateResult {
+export function trustLockIcon(
+  viewerTrusted: boolean,
+  tooltipTitle: string = translateText("public_lobby.trusted_tooltip_title"),
+): TemplateResult {
   const label = translateText(
     viewerTrusted
       ? "public_lobby.trusted_unlocked"
@@ -349,9 +352,7 @@ function trustLockIcon(viewerTrusted: boolean): TemplateResult {
       role="tooltip"
       class="pointer-events-none absolute bottom-full right-0 mb-1.5 hidden w-max max-w-48 flex-col gap-0.5 whitespace-normal rounded-lg border border-white/10 bg-zinc-900 px-3 py-2 text-left text-xs normal-case tracking-normal text-white shadow-xl group-hover/trust:flex"
     >
-      <span class="font-bold"
-        >${translateText("public_lobby.trusted_tooltip_title")}</span
-      >
+      <span class="font-bold">${tooltipTitle}</span>
       <span class="text-white/80">${label}</span>
     </span>
     <svg

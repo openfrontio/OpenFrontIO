@@ -1593,6 +1593,7 @@
     "ranked_2v2_title": "2v2",
     "ranked_pairing_note": "In team modes, clanmates and friends in the queue are placed on the same team where possible. Friends are paired first, then clanmates. If your ratings are too far apart you'll be matched separately to keep games fair.",
     "ranked_title": "Ranked",
+    "ranked_trust_tooltip_title": "Trusted ranked",
     "retry_lobbies": "Retry",
     "servers_unreachable": "Can't connect to the OpenFront servers",
     "teams_count": "{teamCount} teams",
