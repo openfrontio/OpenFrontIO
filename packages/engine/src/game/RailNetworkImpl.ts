@@ -254,7 +254,16 @@ export class RailNetworkImpl implements RailNetwork {
   }
 
   overlappingRailroads(unitType: UnitType, tile: TileRef): TileRef[] {
-    if (![UnitType.City, UnitType.Port, UnitType.Factory].includes(unitType)) {
+    if (
+      ![
+        UnitType.City,
+        UnitType.Port,
+        UnitType.Factory,
+        UnitType.OilMine,
+        UnitType.GoldMine,
+        UnitType.DiamondMine,
+      ].includes(unitType)
+    ) {
       return [];
     }
     const tiles = new Set<TileRef>();
@@ -271,7 +280,16 @@ export class RailNetworkImpl implements RailNetwork {
   }
 
   computeGhostRailPaths(unitType: UnitType, tile: TileRef): TileRef[][] {
-    if (![UnitType.City, UnitType.Port, UnitType.Factory].includes(unitType)) {
+    if (
+      ![
+        UnitType.City,
+        UnitType.Port,
+        UnitType.Factory,
+        UnitType.OilMine,
+        UnitType.GoldMine,
+        UnitType.DiamondMine,
+      ].includes(unitType)
+    ) {
       return [];
     }
 
@@ -299,6 +317,9 @@ export class RailNetworkImpl implements RailNetwork {
       UnitType.City,
       UnitType.Factory,
       UnitType.Port,
+      UnitType.OilMine,
+      UnitType.GoldMine,
+      UnitType.DiamondMine,
     ]);
     neighbors.sort((a, b) => a.distSquared - b.distSquared);
 
@@ -354,7 +375,14 @@ export class RailNetworkImpl implements RailNetwork {
     const neighbors = this.game.nearbyUnits(
       station.tile(),
       this.game.config().trainStationMaxRange(),
-      [UnitType.City, UnitType.Factory, UnitType.Port],
+      [
+        UnitType.City,
+        UnitType.Factory,
+        UnitType.Port,
+        UnitType.OilMine,
+        UnitType.GoldMine,
+        UnitType.DiamondMine,
+      ],
     );
 
     const editedClusters = new Set<Cluster>();
