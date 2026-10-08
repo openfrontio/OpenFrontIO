@@ -30,6 +30,7 @@ const loadPlatform = async ({
 };
 
 afterEach(() => {
+  delete (window as any)?.__hasKeyboard;
   vi.unstubAllGlobals();
   vi.clearAllMocks();
 });
@@ -148,8 +149,59 @@ describe("Platform", () => {
 
     expect(() => platform.isTouch).not.toThrow();
     expect(platform.isTouch).toBe(false);
+    expect(platform.hasKeyboard).toBe(false);
     expect(platform.isMobileWidth).toBe(false);
     expect(platform.isTabletWidth).toBe(false);
     expect(platform.isDesktopWidth).toBe(false);
+  });
+
+  it("detects keyboard from pointer or keydown", async () => {
+    vi.stubGlobal("matchMedia", () => ({ matches: false }));
+    const p = await loadPlatform({ userAgent: "Mozilla/5.0" });
+    vi.spyOn(p, "isTouch", "get").mockReturnValue(true);
+
+    const input = document.createElement("input");
+    input.type = "text";
+    document.body.appendChild(input);
+    input.dispatchEvent(new KeyboardEvent("keydown", { bubbles: true }));
+    expect(p.hasKeyboard).toBe(false);
+
+    const checkbox = document.createElement("input");
+    checkbox.type = "checkbox";
+    document.body.appendChild(checkbox);
+    checkbox.dispatchEvent(new KeyboardEvent("keydown", { bubbles: true }));
+    expect(p.hasKeyboard).toBe(true);
+
+    input.remove();
+    checkbox.remove();
+  });
+
+  it("recognizes inputs inside shadow root using composedPath", async () => {
+    vi.stubGlobal("matchMedia", () => ({ matches: false }));
+    const p = await loadPlatform({ userAgent: "Mozilla/5.0" });
+    vi.spyOn(p, "isTouch", "get").mockReturnValue(true);
+
+    const host = document.createElement("div");
+    const shadow = host.attachShadow({ mode: "open" });
+    const shadowInput = document.createElement("input");
+    shadowInput.type = "text";
+    shadow.appendChild(shadowInput);
+    document.body.appendChild(host);
+
+    shadowInput.dispatchEvent(
+      new KeyboardEvent("keydown", { bubbles: true, composed: true }),
+    );
+    expect(p.hasKeyboard).toBe(false);
+
+    const shadowCheckbox = document.createElement("input");
+    shadowCheckbox.type = "checkbox";
+    shadow.appendChild(shadowCheckbox);
+
+    shadowCheckbox.dispatchEvent(
+      new KeyboardEvent("keydown", { bubbles: true, composed: true }),
+    );
+    expect(p.hasKeyboard).toBe(true);
+
+    host.remove();
   });
 });

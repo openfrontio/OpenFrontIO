@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import en from "../../resources/lang/en.json";
 
+import type { OModal } from "../../src/client/components/baseComponents/Modal";
 import {
   DISPLAY_SETTLE_TIMEOUT_MS,
   type DesktopDisplayPrefsPatch,
@@ -219,6 +220,7 @@ describe("Keybinds tab on touch devices", () => {
   beforeEach(resetDom);
 
   afterEach(() => {
+    delete (window as any).__hasKeyboard;
     vi.restoreAllMocks();
   });
 
@@ -232,6 +234,38 @@ describe("Keybinds tab on touch devices", () => {
     vi.spyOn(Platform, "isTouch", "get").mockReturnValue(true);
     const el = await mount();
     expect(tabKeys(el)).not.toContain("keybinds");
+  });
+
+  it("is present on a touch device when a keyboard is detected", async () => {
+    vi.spyOn(Platform, "isTouch", "get").mockReturnValue(true);
+    vi.spyOn(Platform, "hasKeyboard", "get").mockReturnValue(true);
+    const el = await mount();
+    expect(tabKeys(el)).toContain("keybinds");
+  });
+
+  it("shows keybinds tab when a key is pressed while open on touch", async () => {
+    vi.spyOn(Platform, "isTouch", "get").mockReturnValue(true);
+    let hasKbd = false;
+    vi.spyOn(Platform, "hasKeyboard", "get").mockImplementation(() => hasKbd);
+    const el = await mount();
+    el.open();
+    await flush(el);
+    const oModal = el.querySelector<OModal>("o-modal");
+    await oModal?.updateComplete;
+    expect(
+      oModal?.shadowRoot?.querySelector(
+        'button[role="tab"][data-key="keybinds"]',
+      ),
+    ).toBeNull();
+    hasKbd = true;
+    window.dispatchEvent(new KeyboardEvent("keydown", { bubbles: true }));
+    await flush(el);
+    await oModal?.updateComplete;
+    expect(
+      oModal?.shadowRoot?.querySelector(
+        'button[role="tab"][data-key="keybinds"]',
+      ),
+    ).not.toBeNull();
   });
 
   // Removed from the list, not merely hidden -- so a deep link or a bookmark
