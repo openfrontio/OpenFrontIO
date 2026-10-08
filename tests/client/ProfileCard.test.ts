@@ -6,6 +6,7 @@ vi.mock("../../src/client/Utils", () => ({
 }));
 
 import {
+  PLAYED_OPEN_KEYS_KEPT,
   ProfileCard,
   type ProfileCardProgress,
 } from "../../src/client/components/ProfileCard";
@@ -240,6 +241,21 @@ describe("<profile-card> opening flourish", () => {
     // A new opening plays it again.
     const reopened = await show({ openKey: freshKey() });
     expect(pulseOf(reopened.card)).not.toBeNull();
+  });
+
+  it("remembers only the latest openings, not every one", async () => {
+    const oldest = freshKey();
+    await show({ openKey: oldest });
+    let latest = oldest;
+    for (let i = 0; i < PLAYED_OPEN_KEYS_KEPT; i++) {
+      latest = freshKey();
+      await show({ openKey: latest });
+    }
+    // The latest are still remembered.
+    expect(pulseOf((await show({ openKey: latest })).card)).toBeNull();
+    // The oldest has been let go: its page has long since opened again
+    // under a new key, so it never comes up.
+    expect(pulseOf((await show({ openKey: oldest })).card)).not.toBeNull();
   });
 
   it("never on the compact card", async () => {

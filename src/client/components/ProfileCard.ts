@@ -57,8 +57,11 @@ const GOLD_PULSE_END = "profile-card-gold-ring";
 // pattern from a display:none subtree).
 let nextPatternId = 0;
 
-// The pages that already played their opening flourish, by openKey.
-const playedOpenKeys = new Set<string>();
+// The openings that already played their flourish, by openKey, most recent
+// last. A page names each opening anew, so only its latest key can come up
+// again: a few are kept (a page can open over another), not every one ever.
+export const PLAYED_OPEN_KEYS_KEPT = 8;
+const playedOpenKeys: string[] = [];
 
 function isEmbedded(): boolean {
   try {
@@ -133,8 +136,9 @@ export class ProfileCard extends LitElement {
     this.introDecided = true;
     const key = this.openKey;
     if (key !== undefined) {
-      if (playedOpenKeys.has(key)) return;
-      playedOpenKeys.add(key);
+      if (playedOpenKeys.includes(key)) return;
+      playedOpenKeys.push(key);
+      if (playedOpenKeys.length > PLAYED_OPEN_KEYS_KEPT) playedOpenKeys.shift();
     }
     this.intro = flourishAllowed();
   }

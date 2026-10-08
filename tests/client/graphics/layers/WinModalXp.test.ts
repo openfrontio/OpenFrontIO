@@ -594,6 +594,47 @@ describe("WinModal XP section", () => {
       expect(load).toHaveBeenCalledTimes(1);
     });
 
+    it("goes by the config's last prestige rank, the client's only without one", async () => {
+      const load = vi.fn(
+        () => import("../../../../src/client/components/LegendCeremony"),
+      );
+      const atPrestige = (prestige: number) =>
+        getUserMe.mockResolvedValue({
+          ...signedIn,
+          player: {
+            ...signedIn.player,
+            progress: { ...signedIn.player.progress, prestige, level: 99 },
+          },
+        });
+      const mountAt = async (prestige: number) => {
+        atPrestige(prestige);
+        stubXpEndpoint([notFound]);
+        await mount(makeGame({ ended: true }), (m) => {
+          m.loadLegendCeremony = load;
+        });
+      };
+      fetchProgressionConfig.mockResolvedValue({
+        version: 1,
+        maxLevel: 100,
+        maxPrestige: 12,
+        levels: [],
+      });
+
+      // Ranks left to earn on the server's ladder: not the last run.
+      await mountAt(10);
+      expect(load).not.toHaveBeenCalled();
+      modal.remove();
+
+      await mountAt(12);
+      expect(load).toHaveBeenCalledTimes(1);
+      modal.remove();
+
+      // No config: the client's own ladder.
+      fetchProgressionConfig.mockResolvedValue(false);
+      await mountAt(10);
+      expect(load).toHaveBeenCalledTimes(2);
+    });
+
     it("never for a player who was a Legend already", async () => {
       const already = legendResult();
       stubXpEndpoint([
