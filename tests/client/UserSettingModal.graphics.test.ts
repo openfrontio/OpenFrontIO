@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from "vitest";
 
-import type { MapLayer } from "@openfront/engine-api/game/GameMapLoader";
+import type { MapLayer } from "@openfront/engine-api/game/MapFiles";
 import "../../src/client/UserSettingModal";
 import type { UserSettingModal } from "../../src/client/UserSettingModal";
 import {

@@ -41,9 +41,11 @@ import { modalHeader } from "./components/ui/ModalHeader";
 import { steamGlyph, steamLinkButton } from "./components/ui/SteamLinkButton";
 import { crazyGamesSDK, type CrazyGamesUser } from "./CrazyGamesSDK";
 import { desktopLinkGate, isDesktopShell } from "./DesktopShell";
+import "./GameStatsModal";
 import { showInGameAlert } from "./InGameModal";
 import { consumeLinkResult } from "./LinkResult";
 import { consumeLoginResult, LoginResult } from "./LoginResult";
+import "./PlayerProfileModal";
 import { steamSDK } from "./SteamSDK";
 import { playerProfileUrl } from "./utilities/PlayerProfileUrl";
 import { currentPagePath, translateText } from "./Utils";
@@ -60,9 +62,9 @@ const LOGIN_ERROR_KEYS: Record<LoginResult, string> = {
 };
 
 // The prestige confirmation and ceremony only ever open for a player at level
-// 100, so they stay out of the startup bundle: fetched as soon as the card
-// offers Prestige, well before the press. A failed fetch is tried again on
-// the next press.
+// 100, so they stay out of the startup bundle: fetched as soon as the account
+// says the card will offer Prestige, well before the press. A failed fetch is
+// tried again on the next press.
 let prestigeFlowModule: Promise<unknown> | null = null;
 function loadPrestigeFlow(): Promise<unknown> {
   prestigeFlowModule ??= import("./components/PrestigeFlow").catch(
@@ -113,6 +115,7 @@ export class AccountModal extends BaseModal {
       if (customEvent.detail) {
         const previousPublicId = this.userMeResponse?.player?.publicId;
         this.userMeResponse = customEvent.detail as UserMeResponse;
+        this.prefetchPrestigeFlow();
         // Reset whenever the player identity changes (login, or switching to a
         // different account) so stats/history from the previous player don't
         // linger.
@@ -494,11 +497,6 @@ export class AccountModal extends BaseModal {
   ): TemplateResult | typeof nothing {
     const player = this.userMeResponse?.player;
     if (!player?.publicId || !player.progress) return nothing;
-    if (player.progress.canPrestige) {
-      this.loadPrestigeFlow().catch((err: unknown) =>
-        console.warn("AccountModal: prestige flow failed to load", err),
-      );
-    }
     return html`<profile-card
       class=${variant === "full" ? "mb-4 block" : "block"}
       .variant=${variant}
@@ -511,10 +509,19 @@ export class AccountModal extends BaseModal {
     ></profile-card>`;
   }
 
+  // Fetches the prestige flow when /users/@me says the card will offer
+  // Prestige, so it's there by the press.
+  private prefetchPrestigeFlow(): void {
+    if (!this.userMeResponse?.player?.progress?.canPrestige) return;
+    this.loadPrestigeFlow().catch((err: unknown) =>
+      console.warn("AccountModal: prestige flow failed to load", err),
+    );
+  }
+
   private handlePrestigeRequest = async (): Promise<void> => {
     if (!this.userMeResponse?.player?.progress) return;
     try {
-      // Normally loaded already (see renderProfileCard).
+      // Normally loaded already (see prefetchPrestigeFlow).
       await this.loadPrestigeFlow();
     } catch (err) {
       console.warn("AccountModal: prestige flow failed to load", err);
@@ -973,7 +980,10 @@ export class AccountModal extends BaseModal {
     invalidateUserMe();
     await reauthAfterCrazyGamesChange();
     const userMe = await getUserMe();
-    if (userMe) this.userMeResponse = userMe;
+    if (userMe) {
+      this.userMeResponse = userMe;
+      this.prefetchPrestigeFlow();
+    }
     this.crazyGamesUser = profile;
     this.requestUpdate();
   }
@@ -1041,6 +1051,7 @@ export class AccountModal extends BaseModal {
       .then((userMe) => {
         if (userMe) {
           this.userMeResponse = userMe;
+          this.prefetchPrestigeFlow();
           if (this.userMeResponse?.player?.publicId) {
             this.loadPlayerProfile(this.userMeResponse.player.publicId);
           }

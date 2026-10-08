@@ -203,13 +203,25 @@ export async function prestigeMe(
   }
 }
 
-let progressionConfig: Promise<ProgressionConfig | false> | null = null;
+// The server's max-age for the config: a deploy that changes it has to reach
+// open tabs within this.
+const PROGRESSION_CONFIG_TTL_MS = 60_000;
+
+let progressionConfig: {
+  request: Promise<ProgressionConfig | false>;
+  at: number;
+} | null = null;
 
 // GET /public/progression/config — the level curve, and whether progression is
-// on at all (404 when it is off). Memoised for the page's lifetime; a failure
-// is not, so a later caller can try again.
+// on at all (404 when it is off). Memoised for as long as the server says it
+// stays fresh; a failure is not, so a later caller can try again.
 export function fetchProgressionConfig(): Promise<ProgressionConfig | false> {
-  if (progressionConfig !== null) return progressionConfig;
+  if (
+    progressionConfig !== null &&
+    Date.now() - progressionConfig.at < PROGRESSION_CONFIG_TTL_MS
+  ) {
+    return progressionConfig.request;
+  }
   const request = (async (): Promise<ProgressionConfig | false> => {
     try {
       const res = await fetch(`${getApiBase()}/public/progression/config`, {
@@ -231,11 +243,13 @@ export function fetchProgressionConfig(): Promise<ProgressionConfig | false> {
       return false;
     }
   })();
-  progressionConfig = request;
+  const entry = { request, at: Date.now() };
+  progressionConfig = entry;
   void request.then((config) => {
-    if (config === false && progressionConfig === request) {
-      progressionConfig = null;
-    }
+    if (progressionConfig !== entry) return;
+    // Fresh from the response, like the server's max-age.
+    if (config === false) progressionConfig = null;
+    else entry.at = Date.now();
   });
   return request;
 }

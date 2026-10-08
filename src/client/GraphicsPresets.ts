@@ -1,5 +1,8 @@
-import { GraphicsOverridesSchema, type GraphicsOverrides } from "./render/gl";
 import builtinPresets from "./render/gl/graphics-presets.json";
+import {
+  GraphicsOverridesSchema,
+  type GraphicsOverrides,
+} from "./render/gl/GraphicsOverrides";
 import { UserSettings } from "./UserSettings";
 import { translateText } from "./Utils";
 
