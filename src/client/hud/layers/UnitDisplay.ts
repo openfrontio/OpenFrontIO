@@ -27,6 +27,9 @@ import {
   portIcon,
   samLauncherIcon,
   warshipIcon,
+  oilMineIcon,
+  goldMineIcon,
+  diamondMineIcon,
 } from "../HotbarIcons";
 import { TutorialHighlight, TutorialHighlightEvent } from "../Tutorial";
 
@@ -40,6 +43,9 @@ export class UnitDisplay extends LitElement implements Controller {
   private _cities = 0;
   private _warships = 0;
   private _factories = 0;
+  private _oilMines = 0;
+  private _goldMines = 0;
+  private _diamondMines = 0;
   private _missileSilo = 0;
   private _port = 0;
   private _defensePost = 0;
@@ -124,6 +130,9 @@ export class UnitDisplay extends LitElement implements Controller {
     this._samLauncher = player.totalUnitLevels(UnitType.SAMLauncher);
     this._factories = player.totalUnitLevels(UnitType.Factory);
     this._warships = player.totalUnitLevels(UnitType.Warship);
+    this._oilMines = player.totalUnitLevels(UnitType.OilMine);
+    this._goldMines = player.totalUnitLevels(UnitType.GoldMine);
+    this._diamondMines = player.totalUnitLevels(UnitType.DiamondMine);
     this.requestUpdate();
   }
 
@@ -322,6 +331,29 @@ export class UnitDisplay extends LitElement implements Controller {
               ? html`<span class="text-xs">${renderNumber(number)}</span>`
               : null}
           </div>
+        </div>
+        <div class="grid grid-rows-1 grid-flow-col gap-0.5 w-fit mx-auto">
+          ${this.renderUnitItem(
+            oilMineIcon,
+            this._oilMines,
+            UnitType.OilMine,
+            "oil_mine",
+            this.keybinds["buildOilMine"]?.key ?? "Shift+Digit1",
+          )}
+          ${this.renderUnitItem(
+            goldMineIcon,
+            this._goldMines,
+            UnitType.GoldMine,
+            "gold_mine",
+            this.keybinds["buildGoldMine"]?.key ?? "Shift+Digit2",
+          )}
+          ${this.renderUnitItem(
+            diamondMineIcon,
+            this._diamondMines,
+            UnitType.DiamondMine,
+            "diamond_mine",
+            this.keybinds["buildDiamondMine"]?.key ?? "Shift+Digit3",
+          )}
         </div>
       </div>
     `;
