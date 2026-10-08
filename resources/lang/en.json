@@ -1970,7 +1970,7 @@
     "watch_classic": "Watch the old replay instead"
   },
   "reward_track": {
-    "after_level_100": "After level 100",
+    "after_level": "After level {level}",
     "caps_amount": "{amount} Caps",
     "claim_caps": "+{amount} Caps",
     "claim_count": "{count, plural, one {# level reward to claim} other {# level rewards to claim}}",
@@ -1985,9 +1985,9 @@
     "levels_label": "Levels and their rewards",
     "plus": "+{amount}",
     "prestige_reward": "Prestige {rank} reward",
-    "strip_end_legend": "100 → Legend",
-    "strip_end_prestige": "100 → P{rank}",
-    "strip_label": "Levels 1 to 100. Choose a level to show it on the track.",
+    "strip_end_legend": "{level} → Legend",
+    "strip_end_prestige": "{level} → P{rank}",
+    "strip_label": "Levels 1 to {max}. Choose a level to show it on the track.",
     "strip_level": "Level {level}",
     "strip_start": "Lv 1",
     "strip_value": "Showing levels {lo} to {hi}",
