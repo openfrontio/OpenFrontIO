@@ -281,27 +281,32 @@ export class SubscriptionPanel extends LitElement {
    * replaced by static copy — no anchor, no click handler, same shape as
    * `renderManageOnWeb`.
    *
-   * Three variants, on facts the server sends rather than a guess. A Steam
-   * ownership grant is a fixed free month and gets the purchase copy. Any other
-   * grant (an admin comp, a Discord role) gets neutral free-access copy, naming
-   * its end date when it has one, and never saying who granted it. Telling such
-   * a player their access came from a Steam purchase would be a fresh instance
-   * of exactly the dishonesty this panel exists to remove, and an end date no
-   * longer tells the two apart (see `isSteamGrant`).
+   * Two variants, on facts the server sends rather than a guess. A grant a
+   * Steam month is currently funding gets the purchase copy. Any other grant
+   * (an admin comp, a Discord role) gets neutral free-access copy that never
+   * says who granted it. Telling such a player their access came from a Steam
+   * purchase would be a fresh instance of exactly the dishonesty this panel
+   * exists to remove, and an end date no longer tells the two apart (see
+   * `isSteamGrant`).
+   *
+   * The neutral note is undated whether or not the grant has an end: the date
+   * line above (`renderPeriodLine`) already names it, and saying it twice in
+   * two framings reads as two different things ending. The key is called
+   * "indefinite" from when only open-ended grants reached it; its copy states
+   * no duration either way.
    */
   private renderGrantedNote(tierName: string): TemplateResult {
     if (!isSteamGrant(this.sub)) {
-      const date = this.periodEnd();
       return html`
         <p class="text-[11px] text-center text-white/40 leading-snug">
-          ${date
-            ? translateText("account_modal.sub_granted_until", {
-                date,
-              })
-            : translateText("account_modal.sub_granted_indefinite")}
+          ${translateText("account_modal.sub_granted_indefinite")}
         </p>
       `;
     }
+    // The copy names where this month came from and nothing about what
+    // follows it: a Steam month can be extending a comp that outlives it (see
+    // `isSteamGrant`). English no longer uses {tier}; it is still passed for
+    // translations made before that.
     return html`
       <div class="flex flex-col gap-3">
         <p class="text-[11px] text-center text-white/40 leading-snug">

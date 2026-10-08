@@ -395,17 +395,27 @@ export function isGrantedSubscription(
 }
 
 /**
- * Is this the free month that comes with a Steam purchase?
+ * Is a Steam month currently funding this grant?
+ *
+ * Not the same as "the subscription was bought on Steam". The server answers
+ * "steam" for a row Steam created AND for an admin comp or Discord-role grant
+ * that a Steam month is extending in place; once that month is spent the row
+ * goes back to its own grantor and stays entitled. So this says where the
+ * current period came from, and nothing about what happens when it ends.
  *
  * The one definition, shared by the account panel and the Steam grant notices,
- * both of which tell the player their access came with a purchase. An admin
- * can give a grant an end date too, so the date alone does not say that.
+ * both of which tell the player their current access came with a purchase. An
+ * admin can give a grant an end date too, so the date alone does not say that.
  *
  *   "steam"   — yes.
  *   any other value — no: an admin comp or a Discord-role grant.
- *   undefined — the server predates the field. Such a server cannot write a
- *               dated admin grant either (both arrived in one deploy), so the
- *               old rule still holds there: a dated grant is a Steam month.
+ *   undefined — the server predates the field, and the old rule still holds
+ *               there: a dated grant is a Steam month. Such a server cannot
+ *               write a dated admin grant (both arrived in one deploy). Nor
+ *               a dated Discord-role grant without Steam: the role sync
+ *               inserts those open-ended, and only a Steam month extending
+ *               one gives it a date — which the current server reports as
+ *               "steam" too, so the fallback and the field agree.
  */
 export function isSteamGrant(
   sub: UserSubscription | null | undefined,

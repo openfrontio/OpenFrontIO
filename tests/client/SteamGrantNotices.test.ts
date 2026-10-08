@@ -50,6 +50,7 @@ function recorded(overrides: Partial<SteamGrantStore[string]> = {}) {
     [ME]: {
       periodEnd: MONTH_END,
       tier: "warlord",
+      steam: true,
       welcomed: false,
       endedShown: false,
       seenAt: NOW,
@@ -111,6 +112,19 @@ describe("parseSteamGrantStore", () => {
     expect(parseSteamGrantStore(raw)).toEqual(recorded());
   });
 
+  // Written before records said which grant they were, when every dated
+  // grant counted as a Steam month.
+  it("reads a record without `steam` as a Steam month", () => {
+    const legacy: Record<string, unknown> = { ...recorded()[ME] };
+    delete legacy.steam;
+    expect(parseSteamGrantStore(JSON.stringify({ [ME]: legacy }))).toEqual(
+      recorded(),
+    );
+    expect(
+      parseSteamGrantStore(JSON.stringify(recorded({ steam: "yes" as never }))),
+    ).toEqual({});
+  });
+
   it("treats garbage as empty", () => {
     expect(parseSteamGrantStore(null)).toEqual({});
     expect(parseSteamGrantStore("{")).toEqual({});
@@ -121,6 +135,16 @@ describe("parseSteamGrantStore", () => {
 describe("recordSteamGrant", () => {
   it("records a Steam month the first time it is seen", () => {
     expect(recordSteamGrant({}, steamMonth(), NOW)).toEqual(recorded());
+  });
+
+  // Kept so its lapse notice can drop "resubscribe", marked so it is never
+  // welcomed or signed off as a Steam purchase.
+  it("records a dated non-Steam grant as not Steam", () => {
+    for (const grantSource of ["admin", "discord_role"]) {
+      expect(recordSteamGrant({}, me({ grantSource }), NOW)).toEqual(
+        recorded({ steam: false }),
+      );
+    }
   });
 
   it("returns the same store when nothing changed", () => {
@@ -152,6 +176,7 @@ describe("recordSteamGrant", () => {
       [ME]: {
         periodEnd: later,
         tier: "sovereign",
+        steam: true,
         welcomed: false,
         endedShown: false,
         seenAt: NOW,
@@ -227,6 +252,14 @@ describe("steamGrantWelcomeDue", () => {
 
   it("is not owed for anything that is not a Steam month", () => {
     expect(steamGrantWelcomeDue(recorded(), adminComp(), NOW)).toBe(false);
+    const datedComp = me({ grantSource: "admin" });
+    expect(
+      steamGrantWelcomeDue(
+        recordSteamGrant({}, datedComp, NOW),
+        datedComp,
+        NOW,
+      ),
+    ).toBe(false);
     expect(steamGrantWelcomeDue(recorded(), paid(), NOW)).toBe(false);
     expect(steamGrantWelcomeDue(recorded(), nothing(), NOW)).toBe(false);
   });
@@ -274,6 +307,14 @@ describe("steamGrantEnded", () => {
   it("finds nothing without a record or an account", () => {
     expect(steamGrantEnded({}, nothing(), after)).toBeNull();
     expect(steamGrantEnded(recorded(), false, after)).toBeNull();
+  });
+
+  // The lapse notice still needs to know it was a grant, but the sign-off
+  // names a Steam purchase and is owed only for one.
+  it("finds an ended non-Steam grant but owes it no sign-off", () => {
+    const store = recorded({ steam: false });
+    expect(steamGrantEnded(store, nothing(), after)).toEqual(store[ME]);
+    expect(steamGrantEndedDue(store, nothing(), after)).toBe(false);
   });
 
   it("owes the sign-off exactly once", () => {
