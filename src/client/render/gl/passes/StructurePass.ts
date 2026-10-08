@@ -2,7 +2,7 @@
  * StructurePass — GPU-rendered structures with icon sprites.
  *
  * Renders a filled circle in player color with a white icon overlay,
- * sampled from a pre-built 6-column sprite atlas (generate-sprite-atlases.mjs).
+ * sampled from the structure icon atlas; mine icons are appended to the existing atlas at runtime.
  *
  * Two LODs based on zoom:
  *   - zoom > 0.5: full icon with circle background
@@ -37,6 +37,11 @@ import structureFragSrc from "../shaders/structure/structure.frag.glsl?raw";
 import structureVertSrc from "../shaders/structure/structure.vert.glsl?raw";
 
 const iconAtlasUrl = assetUrl("atlases/icon-atlas.png");
+const mineStructureIconUrls = [
+  assetUrl("images/OilMineStructureIcon.svg"),
+  assetUrl("images/GoldMineStructureIcon.svg"),
+  assetUrl("images/DiamondMineStructureIcon.svg"),
+];
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -53,17 +58,13 @@ const STRUCTURE_ORDER = [
   UT_DEFENSE_POST,
   UT_SAM_LAUNCHER,
   UT_MISSILE_SILO,
+  "Oil Mine",
+  "Gold Mine",
+  "Diamond Mine",
 ] as const;
 
 const ATLAS_COLS = STRUCTURE_ORDER.length;
-
-// Until the sprite atlas is regenerated with dedicated mine columns, mines
-// reuse existing structure glyphs. The gameplay types remain distinct.
-const MINE_ICON_FALLBACKS: Record<string, string> = {
-  "Oil Mine": UT_FACTORY,
-  "Gold Mine": UT_CITY,
-  "Diamond Mine": UT_MISSILE_SILO,
-};
+const BASE_ATLAS_COLS = 6;
 
 // ---------------------------------------------------------------------------
 // Instance data layout
@@ -123,7 +124,7 @@ export class StructurePass {
 
   private instanceCount = 0;
 
-  /** unitType string → atlas column index (0–5) */
+  /** unitType string → atlas column index (0–8) */
   private typeToAtlasCol = new Map<string, number>();
   private mapW: number;
 
@@ -156,17 +157,6 @@ export class StructurePass {
       );
       if (col >= 0) {
         this.typeToAtlasCol.set(unitType, col);
-        continue;
-      }
-
-      const fallback = MINE_ICON_FALLBACKS[unitType];
-      if (fallback !== undefined) {
-        const fallbackCol = STRUCTURE_ORDER.indexOf(
-          fallback as (typeof STRUCTURE_ORDER)[number],
-        );
-        if (fallbackCol >= 0) {
-          this.typeToAtlasCol.set(unitType, fallbackCol);
-        }
       }
     }
 
@@ -299,14 +289,58 @@ export class StructurePass {
   }
 
   private async loadAtlas(): Promise<void> {
-    const img = new Image();
-    img.crossOrigin = "anonymous";
-    img.src = iconAtlasUrl;
-    await img.decode();
+    const base = new Image();
+    base.crossOrigin = "anonymous";
+    base.src = iconAtlasUrl;
+    await base.decode();
+
+    const mineIcons = await Promise.all(
+      mineStructureIconUrls.map(async (url) => {
+        const img = new Image();
+        img.crossOrigin = "anonymous";
+        img.src = url;
+        await img.decode();
+        return img;
+      }),
+    );
+
+    const columnWidth = base.width / BASE_ATLAS_COLS;
+    if (!Number.isInteger(columnWidth)) {
+      throw new Error(
+        `Expected icon atlas width to be divisible by ${BASE_ATLAS_COLS}, got ${base.width}`,
+      );
+    }
+
+    const canvas = document.createElement("canvas");
+    canvas.width = base.width + columnWidth * mineIcons.length;
+    canvas.height = base.height;
+
+    const ctx = canvas.getContext("2d");
+    if (ctx === null) {
+      throw new Error("Failed to create icon atlas canvas context");
+    }
+
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.drawImage(base, 0, 0);
+
+    const iconSize = Math.min(columnWidth - 12, base.height - 12);
+    const y = (base.height - iconSize) / 2;
+    mineIcons.forEach((icon, index) => {
+      const x = base.width + index * columnWidth + (columnWidth - iconSize) / 2;
+      ctx.drawImage(icon, x, y, iconSize, iconSize);
+    });
+
     const gl = this.gl;
     gl.activeTexture(gl.TEXTURE1);
     gl.bindTexture(gl.TEXTURE_2D, this.atlasTex);
-    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, img);
+    gl.texImage2D(
+      gl.TEXTURE_2D,
+      0,
+      gl.RGBA,
+      gl.RGBA,
+      gl.UNSIGNED_BYTE,
+      canvas,
+    );
     gl.generateMipmap(gl.TEXTURE_2D);
     gl.texParameteri(
       gl.TEXTURE_2D,
