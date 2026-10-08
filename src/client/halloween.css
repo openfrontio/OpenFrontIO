@@ -457,7 +457,11 @@ body.halloween-theme:not(.in-game) h1::before {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  body.halloween-theme:not(.in-game) h1::before {
-    animation: none;
+  body.halloween-theme:not(.in-game) h1::before,
+  body.halloween-theme:not(.in-game) desktop-nav-bar img,
+  body.halloween-theme:not(.in-game) mobile-nav-bar img,
+  body.halloween-theme:not(.in-game) img[src*="OpenFrontLogo"],
+  body.halloween-theme:not(.in-game) .l-header__highlightText {
+    animation: none !important;
   }
 }

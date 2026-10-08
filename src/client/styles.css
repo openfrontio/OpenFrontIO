@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@import "./halloween.css";
 
 @custom-variant dark (&:where(.dark, .dark *));
 @custom-variant hover (&:hover);
@@ -754,5 +755,3 @@ unit-display .tutorial-highlight::after {
 .remove-player-btn:hover {
   background: #ef4444;
 }
-
-@import "./halloween.css";
