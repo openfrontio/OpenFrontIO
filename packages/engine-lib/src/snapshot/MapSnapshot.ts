@@ -6,7 +6,6 @@ import { decodeSnapshotValue } from "./SnapshotCodec";
 import {
   readVersioned,
   SnapshotError,
-  snapshotType,
   VersionedSchema,
   zInt,
   zTiles,
@@ -104,19 +103,15 @@ export function readSnapshotHeader(bytes: Uint8Array): SnapshotHeader {
   };
 }
 
-const PlayerTilesSnapshot = snapshotType({
-  name: "Player",
-  version: 1,
-  schema: z
-    .object({
-      smallID: zInt(),
-      info: z.object({
-        id: z.string(),
-      }),
-      tiles: zTiles(),
-    })
-    .passthrough(),
-});
+const PlayerTilesSchema = z
+  .object({
+    smallID: zInt(),
+    info: z.object({
+      id: z.string(),
+    }),
+    tiles: zTiles(),
+  })
+  .passthrough();
 
 /**
  * Restores map edits (water nukes, fallout, defense) and tile ownership from a
@@ -137,9 +132,15 @@ export function restoreMapsFromSnapshot(
       readVersioned(GameMapSnapshot, root.miniMap),
     );
   }
-  const players = root.players.map((p) =>
-    readVersioned(PlayerTilesSnapshot, p),
-  );
+  const players = root.players.map((p) => {
+    const parsed = PlayerTilesSchema.safeParse(p.d);
+    if (!parsed.success) {
+      throw new SnapshotError(
+        `Player v${p.v}: invalid data: ${parsed.error.message}`,
+      );
+    }
+    return parsed.data;
+  });
   for (const p of players) {
     const id = p.smallID;
     const tiles = p.tiles;
