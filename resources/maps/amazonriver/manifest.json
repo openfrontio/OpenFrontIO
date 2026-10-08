@@ -125,5 +125,6 @@
       "name": "Baia"
     }
   ],
+  "themes": ["south_america"],
   "translation_key": "map.amazonriver"
 }

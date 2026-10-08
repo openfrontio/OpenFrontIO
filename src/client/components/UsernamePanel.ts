@@ -1,25 +1,33 @@
+import {
+  isTemporaryUsername,
+  PutUsernameResponse,
+  UserMeResponse,
+} from "@openfront/shared/ApiSchemas";
 import { html, LitElement, nothing, TemplateResult } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
-import { isTemporaryUsername, UserMeResponse } from "../../core/ApiSchemas";
+import { updateUsername, UpdateUsernameResult } from "../Api";
+import { showInGameAlert, showInGameConfirm } from "../InGameModal";
+import { sanitizeAccountPersona } from "../PlayerName";
+import { steamSDK } from "../SteamSDK";
+import { showToastAfterReload, translateText } from "../Utils";
 import {
   MAX_ACCOUNT_USERNAME_LENGTH,
   MIN_ACCOUNT_USERNAME_LENGTH,
   validateAccountUsername,
-} from "../../core/validations/username";
-import { updateUsername, UpdateUsernameResult } from "../Api";
-import { showInGameConfirm } from "../InGameModal";
-import { translateText } from "../Utils";
+} from "../validations/username";
 import "./baseComponents/Button";
 import { usernameText } from "./ui/UsernameText";
 
 type UserMePlayer = UserMeResponse["player"];
 
 /**
- * Account-username management card for the Account tab. Renders the
- * server-resolved display name as-is (never assembles base + suffix), the
- * set/change form with client-side validation and the 30-day cooldown, the
- * grace-period warning for lapsed claim holders, and the free-rename notice
- * after a TEMPORARY#### server rename.
+ * Account-username management. Renders the server-resolved display name as-is
+ * (never assembles base + suffix), the set/change form with client-side
+ * validation and the 30-day cooldown, the grace-period warning for lapsed claim
+ * holders, and the free-rename notice after a TEMPORARY#### server rename.
+ *
+ * Hosted by the change-username modal, which supplies the title — this renders
+ * the card only.
  */
 @customElement("username-panel")
 export class UsernamePanel extends LitElement {
@@ -38,7 +46,45 @@ export class UsernamePanel extends LitElement {
       // Prefill with the base only — never put ".suffix" in the input.
       this.draft = this.player?.usernameBase ?? "";
       this.error = "";
+      if (this.draft === "" && !this.player?.username)
+        void this.seedFromPersona();
     }
+  }
+
+  // A player with no account name at all arrives at an empty form and has to
+  // invent something. Seed it with their Steam persona instead — the name they
+  // already answer to, and the one the claim prompt just told them they could
+  // have.
+  //
+  // Only when the account has no name at all — neither a base NOR a resolved
+  // display name. Both are checked because they can disagree: a response
+  // carrying `username` without `usernameBase` (an older API, a partial
+  // payload) would otherwise read as nameless and seed a persona into the
+  // rename box of a player who already has a name.
+  //
+  // Reduced through sanitizeAccountPersona, not sanitizePersona — the account
+  // charset is narrower than the in-game one, so "Zoë" would otherwise be
+  // seeded into a field that then refuses to save it. A persona with nothing
+  // usable left leaves the field empty; an empty field beats a prefilled error.
+  //
+  // This is a suggestion in a text box and nothing more. It writes no storage
+  // and does not touch the in-game name, so the name the player joins under is
+  // still whatever /users/@me returns after they save (the panel reloads on
+  // success) — never this string.
+  private async seedFromPersona(): Promise<void> {
+    // Only the persona name is read. Nothing else from the Steam identity is
+    // touched here, and none of it is logged.
+    const persona = await steamSDK
+      .getUser()
+      .then((user) => user?.name ?? null)
+      .catch(() => null);
+    const seed = sanitizeAccountPersona(persona);
+    if (seed === null) return;
+    // The player may have started typing, or a fresh profile may have landed,
+    // while getUser() was in flight. Either way the field is no longer ours.
+    if (this.draft !== "") return;
+    if (this.player?.usernameBase || this.player?.username) return;
+    this.draft = seed;
   }
 
   // The date the player may next self-rename, or null when a rename is
@@ -115,17 +161,91 @@ export class UsernamePanel extends LitElement {
     if (!confirmed) return;
 
     this.busy = true;
-    const result = await updateUsername(name);
+    await this.finishSave(name, await updateUsername(name), false);
+  }
 
+  // The second half of a save. `chosenSuffix` is true when the player has
+  // already said yes to the numbered form in this very flow, so the post-save
+  // explanation is not repeated at them.
+  private async finishSave(
+    name: string,
+    result: UpdateUsernameResult,
+    chosenSuffix: boolean,
+  ): Promise<void> {
     if (result.ok) {
-      // Reload so every consumer starts from a fresh /users/@me; the account
-      // modal reopens via #modal=account showing the new name. Keep the form
-      // locked (busy) while the reload happens.
+      // Against an API that predates the strict rule, a held bare name still
+      // arrives as a 200 that already spent the rename. Say so before the
+      // reload; otherwise they land on a name they never chose.
+      if (!chosenSuffix) {
+        await this.warnBareClaimUnavailable(name, result.data);
+      }
+      // Reload so every consumer starts from a fresh /users/@me. The hash goes
+      // first: #modal=change-username survives a reload and would reopen this
+      // modal on a rename that is already done. Keep the form locked (busy)
+      // while the reload happens.
+      showToastAfterReload(translateText("account_modal.username_saved"));
+      history.replaceState(
+        history.state,
+        "",
+        window.location.pathname + window.location.search,
+      );
       window.location.reload();
+      return;
+    }
+    if (result.code === "bare_taken" && !chosenSuffix) {
+      // Nothing was written. Offer the numbered form as a choice; "no" leaves
+      // them at the box with their rename unspent (spec, 10 Sept 2026). Keep
+      // the form locked (busy) while the dialog is up so a second Enter
+      // can't start another save underneath it.
+      const takeSuffixed = await showInGameConfirm(
+        translateText("account_modal.username_bare_taken_body", {
+          requested: result.base,
+        }),
+        {
+          heading: translateText("account_modal.username_bare_taken_heading"),
+          variant: "warning",
+          confirmText: translateText(
+            "account_modal.username_bare_taken_confirm",
+          ),
+        },
+      );
+      if (!takeSuffixed) {
+        this.busy = false;
+        return;
+      }
+      await this.finishSave(
+        name,
+        await updateUsername(name, { acceptSuffixed: true }),
+        true,
+      );
       return;
     }
     this.busy = false;
     this.error = this.errorMessage(result);
+  }
+
+  // Nothing to say for `claimed` (they got what they asked for) or
+  // `not_eligible` (a suffix is just how free names work — a message there
+  // would be noise on an ordinary rename). `undefined` means the API predates
+  // the field, so behaviour is unchanged.
+  private async warnBareClaimUnavailable(
+    requested: string,
+    data: PutUsernameResponse,
+  ): Promise<void> {
+    if (data.bareClaim !== "unavailable") return;
+    const next = data.nextUsernameChangeAt;
+    await showInGameAlert(
+      next === null
+        ? translateText("account_modal.username_bare_unavailable_no_date", {
+            requested,
+            name: data.username,
+          })
+        : translateText("account_modal.username_bare_unavailable", {
+            requested,
+            name: data.username,
+            date: this.formatDate(new Date(next)),
+          }),
+    );
   }
 
   private errorMessage(
@@ -135,6 +255,8 @@ export class UsernamePanel extends LitElement {
       case "profane":
         return translateText("account_modal.username_error_profane");
       case "taken":
+        return translateText("account_modal.username_error_taken");
+      case "bare_taken":
         return translateText("account_modal.username_error_taken");
       case "cooldown": {
         // Only reachable via a race (e.g. a rename on another device) — the
@@ -157,28 +279,69 @@ export class UsernamePanel extends LitElement {
 
   private renderNotices(): TemplateResult | typeof nothing {
     if (this.isTemporary()) {
-      return html`
-        <div
-          class="mt-3 px-3 py-2 rounded-lg border border-amber-500/50 bg-amber-900/30 text-amber-200 text-sm"
-        >
-          ${translateText("account_modal.username_temporary_notice")}
-        </div>
-      `;
+      return this.renderNotice(
+        translateText("account_modal.username_temporary_notice"),
+      );
     }
     const claimExpiresAt = this.player.usernameClaimExpiresAt;
     if (this.player.usernameStatus === "claimed" && claimExpiresAt) {
-      return html`
-        <div
-          class="mt-3 px-3 py-2 rounded-lg border border-amber-500/50 bg-amber-900/30 text-amber-200 text-sm"
-        >
-          ${translateText("account_modal.username_grace_warning", {
-            name: this.player.usernameBase ?? "",
-            date: this.formatDate(new Date(claimExpiresAt)),
-          })}
-        </div>
-      `;
+      return this.renderNotice(
+        translateText("account_modal.username_grace_warning", {
+          name: this.player.usernameBase ?? "",
+          date: this.formatDate(new Date(claimExpiresAt)),
+        }),
+      );
     }
     return nothing;
+  }
+
+  private renderNotice(message: string): TemplateResult {
+    return html`
+      <div
+        class="flex items-start gap-2.5 px-3 py-2.5 rounded-lg border border-amber-500/40 bg-amber-500/10 text-amber-200 text-sm"
+      >
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.8"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          class="w-4 h-4 shrink-0 mt-0.5"
+          aria-hidden="true"
+        >
+          <path
+            d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"
+          />
+          <line x1="12" y1="9" x2="12" y2="13" />
+          <line x1="12" y1="17" x2="12.01" y2="17" />
+        </svg>
+        <span>${message}</span>
+      </div>
+    `;
+  }
+
+  // Cooldown state as a pill: locked until a date, or free to change now.
+  private renderCooldownPill(cooldownEnd: Date | null): TemplateResult {
+    const base =
+      "inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[11px] font-bold uppercase tracking-wider border shrink-0";
+    if (cooldownEnd === null) {
+      return html`<span
+        class="${base} bg-green-500/10 border-green-500/30 text-green-300"
+      >
+        <span class="w-1.5 h-1.5 rounded-full bg-green-400"></span>
+        ${translateText("account_modal.username_change_ready")}
+      </span>`;
+    }
+    return html`<span
+      class="${base} bg-amber-500/10 border-amber-500/30 text-amber-300"
+    >
+      <span class="w-1.5 h-1.5 rounded-full bg-amber-400"></span>
+      ${translateText("account_modal.username_locked_until", {
+        date: this.formatDate(cooldownEnd),
+      })}
+    </span>`;
   }
 
   render() {
@@ -192,51 +355,74 @@ export class UsernamePanel extends LitElement {
       !this.busy &&
       trimmed.length >= MIN_ACCOUNT_USERNAME_LENGTH &&
       this.error === "";
+
     return html`
-      <div class="bg-white/5 rounded-xl border border-white/10 p-6">
-        <h3 class="text-lg font-bold text-white mb-4 flex items-center gap-2">
-          <span class="text-blue-400">🏷️</span>
-          ${translateText("account_modal.username_title")}
-        </h3>
-        ${this.player.username
-          ? html`<div class="text-white text-lg font-medium">
-              ${usernameText(this.player.username)}
-            </div>`
-          : html`<div class="text-white/50 text-sm">
-              ${translateText("account_modal.username_not_set")}
-            </div>`}
-        ${this.renderNotices()}
-        <div class="mt-4 flex items-stretch gap-2">
-          <input
-            type="text"
-            .value=${this.draft}
-            @input=${this.handleInput}
-            @keydown=${(e: KeyboardEvent) => {
-              if (e.key === "Enter" && canSave) void this.handleSave();
-            }}
-            placeholder=${translateText("account_modal.username_placeholder")}
-            maxlength=${MAX_ACCOUNT_USERNAME_LENGTH}
-            ?disabled=${locked || this.busy}
-            class="flex-1 min-w-0 px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-white/20 focus:outline-none focus:ring-2 focus:ring-malibu-blue/50 focus:border-malibu-blue/50 transition-all font-medium hover:bg-white/10 disabled:opacity-50 disabled:hover:bg-white/5"
-          />
-          <o-button
-            variant="primary"
-            size="md"
-            translationKey="account_modal.username_save"
-            .disable=${!canSave}
-            @click=${this.handleSave}
-          ></o-button>
+      <div class="flex flex-col gap-4">
+        <div
+          class="rounded-xl border border-white/10 bg-gradient-to-br from-white/10 to-white/[0.02] p-5 flex flex-col gap-4"
+        >
+          <div class="flex items-start justify-between gap-3 flex-wrap">
+            <div class="flex flex-col gap-1 min-w-0">
+              <span
+                class="text-[10px] uppercase tracking-widest text-white/40 font-bold"
+              >
+                ${translateText("account_modal.username_current_label")}
+              </span>
+              ${this.player.username
+                ? html`<div
+                    class="text-xl font-bold text-white leading-tight break-all"
+                  >
+                    ${usernameText(this.player.username, "text-white")}
+                  </div>`
+                : html`<div class="text-sm text-white/50">
+                    ${translateText("account_modal.username_not_set")}
+                  </div>`}
+            </div>
+            ${this.renderCooldownPill(cooldownEnd)}
+          </div>
+          ${this.renderNotices()}
+
+          <div class="border-t border-white/10 pt-4 flex flex-col gap-2">
+            <label
+              for="username-panel-input"
+              class="text-[10px] uppercase tracking-widest text-white/40 font-bold"
+            >
+              ${translateText("account_modal.username_new_label")}
+            </label>
+            <input
+              id="username-panel-input"
+              type="text"
+              .value=${this.draft}
+              @input=${this.handleInput}
+              @keydown=${(e: KeyboardEvent) => {
+                if (e.key === "Enter" && canSave) void this.handleSave();
+              }}
+              placeholder=${translateText("account_modal.username_placeholder")}
+              maxlength=${MAX_ACCOUNT_USERNAME_LENGTH}
+              ?disabled=${locked || this.busy}
+              class="w-full px-4 py-3 bg-white/5 border rounded-xl text-white placeholder-white/20 focus:outline-none focus:ring-2 transition-all font-medium hover:bg-white/10 disabled:opacity-50 disabled:hover:bg-white/5 ${this
+                .error
+                ? "border-red-500/50 focus:ring-red-500/40 focus:border-red-500/50"
+                : "border-white/10 focus:ring-malibu-blue/50 focus:border-malibu-blue/50"}"
+            />
+            <div class="flex items-start justify-between gap-3 min-h-[1.25rem]">
+              <span class="text-sm text-red-400">${this.error}</span>
+              <span
+                class="text-xs text-white/30 tabular-nums shrink-0 leading-5"
+              >
+                ${trimmed.length}/${MAX_ACCOUNT_USERNAME_LENGTH}
+              </span>
+            </div>
+            <o-button
+              variant="primary"
+              width="block"
+              size="md"
+              translationKey="account_modal.username_save"
+              .disable=${!canSave}
+              @click=${this.handleSave}
+            ></o-button>
+          </div>
         </div>
-        ${locked
-          ? html`<div class="mt-2 text-white/50 text-sm">
-              ${translateText("account_modal.username_cooldown_until", {
-                date: this.formatDate(cooldownEnd),
-              })}
-            </div>`
-          : nothing}
-        ${this.error
-          ? html`<div class="mt-2 text-red-400 text-sm">${this.error}</div>`
-          : nothing}
       </div>
     `;
   }

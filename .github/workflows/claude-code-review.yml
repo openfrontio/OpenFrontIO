@@ -1,0 +1,39 @@
+# Thin caller for the shared review workflow in openfrontio/.github. Only the
+# trigger and the `paths` filter live here; the prompt, tool allowlist,
+# primary/backup account fallback and posting gate are in the shared file:
+# https://github.com/openfrontio/.github/blob/main/.github/workflows/claude-code-review.yml
+#
+# pull_request_target, not pull_request: most PRs here come from forks, and a
+# plain pull_request run from a fork gets no secrets. The shared workflow
+# detects this event and switches to the fork-safe auth mode (base-branch
+# checkout, explicit github_token, comments as github-actions[bot]). Same
+# pattern as pr-gate.yml and pr-author.yml.
+name: 🤖 Claude Code Review
+
+on:
+  pull_request_target:
+    types: [opened, synchronize, ready_for_review, reopened]
+    paths:
+      # TypeScript sources (packages/*, src/client, src/server)
+      - "packages/**/*.ts"
+      - "src/**/*.ts"
+      - "tests/**/*.ts"
+      - "scripts/**/*.ts"
+      # Root-level configs: vite.config.ts
+      - "*.ts"
+      - "package.json"
+
+jobs:
+  review:
+    uses: openfrontio/.github/.github/workflows/claude-code-review.yml@main
+    with:
+      runner: ubuntu-latest
+    secrets: inherit
+    # pull-requests: write is the minimum for `gh pr comment` and the inline
+    # comment tool; id-token: write is for the action's OIDC exchange with the
+    # Claude GitHub App (unused under pull_request_target, harmless).
+    permissions:
+      contents: read
+      pull-requests: write
+      issues: read
+      id-token: write

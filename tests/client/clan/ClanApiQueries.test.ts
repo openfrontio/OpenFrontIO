@@ -9,10 +9,12 @@ vi.mock("../../../src/client/Auth", () => ({
   getAuthHeader: vi.fn(async () => "Bearer test-token"),
 }));
 
+import type { UserMeResponse } from "@openfront/shared/ApiSchemas";
 import { getUserMe } from "../../../src/client/Api";
 import {
   checkClanTagOwnership,
   fetchClanDetail,
+  fetchClanDonations,
   fetchClanExists,
   fetchClanGames,
   fetchClanLeaderboard,
@@ -20,7 +22,6 @@ import {
   fetchClanRequests,
   fetchClans,
 } from "../../../src/client/ClanApi";
-import type { UserMeResponse } from "../../../src/core/ApiSchemas";
 
 const userWithClans = (tags: string[]): UserMeResponse =>
   ({
@@ -238,6 +239,38 @@ describe("fetchClanDetail", () => {
     const result = await fetchClanDetail("TEST");
     expect(result).toBe(false);
   });
+
+  it("passes through the clan balances as bigint strings", async () => {
+    mockFetch(() =>
+      okJson({
+        ...clanInfo,
+        softBalance: "9007199254740993",
+        hardBalance: "0",
+      }),
+    );
+    const result = await fetchClanDetail("TEST");
+    expect(result).not.toBe(false);
+    if (result !== false) {
+      // Exact, not rounded: a Number round-trip would lose the trailing 3.
+      expect(result.softBalance).toBe("9007199254740993");
+      expect(result.hardBalance).toBe("0");
+    }
+  });
+
+  it("parses a response with no balances (older API)", async () => {
+    mockFetch(() => okJson(clanInfo));
+    const result = await fetchClanDetail("TEST");
+    expect(result).not.toBe(false);
+    if (result !== false) {
+      expect(result.softBalance).toBeUndefined();
+      expect(result.hardBalance).toBeUndefined();
+    }
+  });
+
+  it("returns false when a balance arrives as a number", async () => {
+    mockFetch(() => okJson({ ...clanInfo, softBalance: 1000 }));
+    expect(await fetchClanDetail("TEST")).toBe(false);
+  });
 });
 
 describe("fetchClans", () => {
@@ -346,6 +379,24 @@ describe("fetchClanMembers", () => {
     const url = new URL(calledUrl);
     expect(url.searchParams.get("page")).toBe("3");
     expect(url.searchParams.get("limit")).toBe("50");
+  });
+
+  it("passes a trimmed member search with pagination and sorting", async () => {
+    const fetchSpy = vi.fn(
+      (_input: string | URL | Request, _init?: RequestInit) =>
+        Promise.resolve(okJson(membersResponse)),
+    );
+    vi.stubGlobal("fetch", fetchSpy);
+
+    await fetchClanMembers("TEST", 3, 50, "winsTotal", "desc", "  d3G1QO8Z  ");
+
+    const calledUrl = fetchSpy.mock.calls[0]![0] as string;
+    const url = new URL(calledUrl);
+    expect(url.searchParams.get("page")).toBe("3");
+    expect(url.searchParams.get("limit")).toBe("50");
+    expect(url.searchParams.get("sort")).toBe("winsTotal");
+    expect(url.searchParams.get("order")).toBe("desc");
+    expect(url.searchParams.get("search")).toBe("d3G1QO8Z");
   });
 
   it("includes the optional pendingRequests field", async () => {
@@ -585,5 +636,108 @@ describe("fetchClanGames", () => {
       string
     >;
     expect(headers.Authorization).toBe("Bearer test-token");
+  });
+});
+
+describe("fetchClanDonations", () => {
+  const donationsResponse = {
+    results: [
+      {
+        id: "1834",
+        currencyType: "soft",
+        amount: "500",
+        reason: "clan_donation",
+        note: null,
+        createdBy: "Xk3pQ9",
+        createdByUsername: "evan.0042",
+        createdAt: "2026-08-26T02:10:31.512Z",
+      },
+    ],
+    total: 27,
+    page: 1,
+    limit: 10,
+  };
+
+  const spyFetch = () => {
+    const fetchSpy = vi.fn(
+      (_input: string | URL | Request, _init?: RequestInit) =>
+        Promise.resolve(okJson(donationsResponse)),
+    );
+    vi.stubGlobal("fetch", fetchSpy);
+    return fetchSpy;
+  };
+
+  it("returns parsed data on success", async () => {
+    mockFetch(() => okJson(donationsResponse));
+    const result = await fetchClanDonations("TEST");
+    expect(result).toEqual(donationsResponse);
+  });
+
+  it("sends page and limit defaults and omits currencyType when unset", async () => {
+    const fetchSpy = spyFetch();
+    await fetchClanDonations("TEST");
+    const url = new URL(fetchSpy.mock.calls[0]![0] as string);
+    expect(url.pathname).toBe("/clans/TEST/donations");
+    expect(url.searchParams.get("page")).toBe("1");
+    expect(url.searchParams.get("limit")).toBe("10");
+    // The endpoint 400s on an empty value, so the key must be absent.
+    expect(url.searchParams.has("currencyType")).toBe(false);
+  });
+
+  it("forwards page, limit and currencyType when provided", async () => {
+    const fetchSpy = spyFetch();
+    await fetchClanDonations("TEST", {
+      page: 3,
+      limit: 25,
+      currencyType: "hard",
+    });
+    const url = new URL(fetchSpy.mock.calls[0]![0] as string);
+    expect(url.searchParams.get("page")).toBe("3");
+    expect(url.searchParams.get("limit")).toBe("25");
+    expect(url.searchParams.get("currencyType")).toBe("hard");
+  });
+
+  it("URL-encodes the tag", async () => {
+    const fetchSpy = spyFetch();
+    await fetchClanDonations("a/b");
+    expect(fetchSpy.mock.calls[0]![0] as string).toContain(
+      "/clans/a%2Fb/donations?",
+    );
+  });
+
+  it("returns forbidden on HTTP 403", async () => {
+    mockFetch(() => failRes(403));
+    await expect(fetchClanDonations("TEST")).resolves.toEqual({
+      error: "forbidden",
+    });
+  });
+
+  it("returns failed on other non-OK statuses", async () => {
+    mockFetch(() => failRes(500));
+    await expect(fetchClanDonations("TEST")).resolves.toEqual({
+      error: "failed",
+    });
+  });
+
+  it("returns failed on a transport error", async () => {
+    mockFetch(() => Promise.reject(new Error("offline")));
+    await expect(fetchClanDonations("TEST")).resolves.toEqual({
+      error: "failed",
+    });
+  });
+
+  it("returns failed when the body does not match the schema", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    // amount must be a string (bigint on the wire), not a number.
+    mockFetch(() =>
+      okJson({
+        ...donationsResponse,
+        results: [{ ...donationsResponse.results[0], amount: 500 }],
+      }),
+    );
+    await expect(fetchClanDonations("TEST")).resolves.toEqual({
+      error: "failed",
+    });
+    warn.mockRestore();
   });
 });

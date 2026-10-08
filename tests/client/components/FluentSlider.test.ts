@@ -37,8 +37,8 @@ describe("FluentSlider", () => {
       slider.min = 10;
       slider.max = 300;
       slider.step = 5;
-      slider.labelKey = "host_modal.bots";
-      slider.disabledKey = "host_modal.bots_disabled";
+      slider.labelKey = "game_settings.bots";
+      slider.disabledKey = "common.disabled";
 
       await slider.updateComplete;
 
@@ -46,8 +46,8 @@ describe("FluentSlider", () => {
       expect(slider.min).toBe(10);
       expect(slider.max).toBe(300);
       expect(slider.step).toBe(5);
-      expect(slider.labelKey).toBe("host_modal.bots");
-      expect(slider.disabledKey).toBe("host_modal.bots_disabled");
+      expect(slider.labelKey).toBe("game_settings.bots");
+      expect(slider.disabledKey).toBe("common.disabled");
     });
   });
 

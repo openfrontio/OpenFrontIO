@@ -28,17 +28,24 @@ export const MAX_TRAIL_COLORS = 8;
  * The effect-palette texture stacks one MAX_TRAIL_COLORS-row block per
  * trail-styled effectType: block 0 = transportShipTrail, block 1 = nukeTrail
  * (matching the nuke bit in trail.frag.glsl), block 2 = structures (read by
- * structure.frag.glsl), block 3 = warship (read by unit.frag.glsl). Bump this
+ * structure.frag.glsl), block 3 = warship and block 4 = train (both read by
+ * unit.frag.glsl), block 5 = railroad (read by railroad.frag.glsl). Bump this
  * if another trail-styled effectType is added (and give its consumer shader
  * the new rowBase).
  */
-export const EFFECT_PALETTE_BLOCKS = 4;
+export const EFFECT_PALETTE_BLOCKS = 6;
 
 /** Block index of the structures effect within the effect-palette texture. */
 export const STRUCTURES_EFFECT_BLOCK = 2;
 
 /** Block index of the warship effect within the effect-palette texture. */
 export const WARSHIP_EFFECT_BLOCK = 3;
+
+/** Block index of the train effect within the effect-palette texture. */
+export const TRAIN_EFFECT_BLOCK = 4;
+
+/** Block index of the railroad effect within the effect-palette texture. */
+export const RAILROAD_EFFECT_BLOCK = 5;
 
 // ---------- Terrain ----------
 
@@ -60,6 +67,14 @@ const DEEP_WATER_BASE: readonly [number, number, number] = hexToRgb(
 )!;
 
 /**
+ * Default map background color, from `terrain.backgroundColor` in
+ * render-settings.json; used as a fallback when no override is supplied.
+ */
+const BACKGROUND_BASE: readonly [number, number, number] = hexToRgb(
+  renderDefaults.terrain.backgroundColor,
+)!;
+
+/**
  * Compute a static RGBA8 texture from raw terrain bytes.
  * The single source of truth for terrain colors.
  *
@@ -76,6 +91,7 @@ const DEEP_WATER_BASE: readonly [number, number, number] = hexToRgb(
  */
 /** Encode one terrain byte → RGBA, writing into `out[offset..offset+3]`. */
 export interface TerrainColorOverrides {
+  backgroundColor?: readonly [number, number, number];
   oceanColor?: readonly [number, number, number];
   sandColor?: readonly [number, number, number];
   plainsColor?: readonly [number, number, number];
@@ -89,6 +105,7 @@ export function encodeTerrainTile(
   offset: number,
   colors?: TerrainColorOverrides,
 ): void {
+  const backgroundColor = colors?.backgroundColor;
   const oceanColor = colors?.oceanColor;
   const sandColor = colors?.sandColor;
   const plainsColor = colors?.plainsColor;
@@ -108,12 +125,12 @@ export function encodeTerrainTile(
     plains: plainsColor ?? [190, 220, 138],
     highland: highlandColor ?? [200, 183, 138],
     mountain: mountainColor ?? [230, 230, 230],
-    peak: [60, 60, 60],
+    peak: backgroundColor ?? BACKGROUND_BASE,
   };
 
   // Impassable terrain: render as the map background colour so it blends
   // with the area outside the map quad. Must match the clear colour in
-  // Renderer.ts drawBaseLayer(): gl.clearColor(60/255, 60/255, 60/255).
+  // Renderer.ts drawBaseLayer() (settings.terrain.backgroundColor).
   if (isLand && magnitude === 31) {
     [r, g, b] = terrainColors.peak;
   } else if (isLand && isShoreline) {

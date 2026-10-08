@@ -1,5 +1,4 @@
 import fs from "fs";
-import { globSync } from "glob";
 
 type Nation = {
   name?: string;
@@ -11,7 +10,7 @@ type Manifest = {
 
 describe("Map manifests: nation name constraints", () => {
   test("All nations' names must be ≤ 27 printable Extended-ASCII characters", () => {
-    const manifestPaths = globSync("resources/maps/**/manifest.json");
+    const manifestPaths = fs.globSync("resources/maps/**/manifest.json");
 
     expect(manifestPaths.length).toBeGreaterThan(0);
 

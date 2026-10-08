@@ -21,6 +21,7 @@ export type {
   PlayerStatic,
   PlayerStatusData,
   RendererConfig,
+  TerrainRect,
   UnitState,
 } from "./Renderer";
 
@@ -37,6 +38,7 @@ export {
   NUKE_TYPES,
   SMOOTHED_NUKE_TYPES,
   STRUCTURE_TYPES,
+  TRAIL_TYPES,
   UT_ATOM_BOMB,
   UT_CITY,
   UT_DEFENSE_POST,

@@ -42,8 +42,15 @@ For license history, see [LICENSING.md](LICENSING.md).
 
 ## 📋 Prerequisites
 
-- [npm](https://www.npmjs.com/) (v10.9.2 or higher)
+- [Node.js](https://nodejs.org/) v24.15.0 or newer in the Node 24 release line
+- [npm](https://www.npmjs.com/) v12.1.0 or newer in the npm 12 release line
 - A modern web browser (Chrome, Firefox, Edge, etc.)
+
+Node.js may bundle an older npm version. Upgrade it before installing project dependencies:
+
+```bash
+npm install --global --ignore-scripts npm@12.1.0
+```
 
 ## 🚀 Installation
 
@@ -60,7 +67,9 @@ For license history, see [LICENSING.md](LICENSING.md).
    npm run inst
    ```
 
-   Do NOT use `npm install` nor `npm i` but instead use our `npm run inst`. It runs the safer `npm ci --ignore-scripts` to install dependencies exactly according to the versions in `package-lock.json` and doesn't run scripts. This can prevent being hit by a supply chain attack.
+   Do NOT use `npm install` nor `npm i` for project dependencies. Use `npm run inst`; it runs the safer `npm ci --ignore-scripts` to install exactly the versions in `package-lock.json` without running lifecycle scripts.
+
+   The repository also rejects dependency releases less than seven days old and dependencies sourced from Git, remote URLs, local tarballs, or directories. Wait until a new release passes the seven-day window before updating it; security exceptions require explicit maintainer review.
 
 ## 🎮 Running the Game
 
@@ -121,13 +130,13 @@ npm run dev:prod
   npm run format
   ```
 
-- **Lint code**:
+- **Lint code with Oxlint and ESLint**:
 
   ```bash
   npm run lint
   ```
 
-- **Lint and fix code**:
+- **Lint and fix code with Oxlint and ESLint**:
 
   ```bash
   npm run lint:fix
@@ -141,8 +150,12 @@ npm run dev:prod
 ## 🏗️ Project Structure
 
 - `/src/client` - Frontend game client
-- `/src/core` - Deterministic game simulation
 - `/src/server` - Backend game server
+- `/packages/engine` - Deterministic game simulation (`@openfront/engine`)
+- `/packages/engine-api` - The engine's contract: types, schemas, game updates and the worker protocol (`@openfront/engine-api`)
+- `/packages/engine-lib` - Engine code also used outside the engine: map grid, rules, helpers (`@openfront/engine-lib`)
+- `/packages/shared` - Code shared by client and server: wire schemas, env, asset URLs (`@openfront/shared`)
+- `/packages/zbin` - Compact binary wire format for zod schemas (self-contained, zod-only)
 - `/resources` - Static assets (images, maps, etc.)
 
 ## 🤝 Contributing

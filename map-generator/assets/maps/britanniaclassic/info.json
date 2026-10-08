@@ -121,5 +121,6 @@
       "name": "Franks",
       "flag": "1_Franks"
     }
-  ]
+  ],
+  "themes": ["europe"]
 }

@@ -24,6 +24,7 @@ export class SkinAtlasArray {
   /** url → layer index. Layers are assigned in iteration order at construction. */
   private layers = new Map<string, number>();
   private onLayerReady: (url: string, layer: number) => void;
+  private disposed = false;
 
   /**
    * @param urls Unique skin URLs needed for this game. If empty, the atlas is
@@ -62,6 +63,7 @@ export class SkinAtlasArray {
     const img = new Image();
     img.crossOrigin = "anonymous";
     img.onload = () => {
+      if (this.disposed) return;
       this.uploadImage(img, layer);
       this.onLayerReady(url, layer);
     };
@@ -134,6 +136,7 @@ export class SkinAtlasArray {
   }
 
   dispose(): void {
+    this.disposed = true;
     this.gl.deleteTexture(this.tex);
     this.layers.clear();
   }

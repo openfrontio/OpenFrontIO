@@ -196,5 +196,6 @@
       "name": "Kazakhstan"
     }
   ],
+  "themes": ["asia", "africa"],
   "translation_key": "map.mena"
 }

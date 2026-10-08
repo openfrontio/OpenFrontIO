@@ -21,34 +21,78 @@
   "name": "MilkyWay",
   "nations": [
     {
-      "coordinates": [775, 757],
-      "flag": "",
+      "coordinates": [869, 886],
+      "flag": "Abbasid Caliphate",
       "name": "Sagittarius A*"
     },
     {
-      "coordinates": [967, 247],
-      "flag": "",
-      "name": "Perseus Arm"
-    },
-    {
-      "coordinates": [478, 1139],
-      "flag": "",
-      "name": "Centaurus Arm"
-    },
-    {
-      "coordinates": [840, 1048],
+      "coordinates": [816, 1188],
       "flag": "un",
       "name": "Empire of Mankind"
     },
     {
-      "coordinates": [1055, 1330],
-      "flag": "",
-      "name": "Aliens"
+      "flag": "Black Flag",
+      "name": "Xenomorphs"
     },
     {
-      "coordinates": [531, 164],
-      "flag": "Cthulhu Republic",
+      "flag": "",
+      "name": "Navi"
+    },
+    {
+      "flag": "",
+      "name": "Eridians"
+    },
+    {
+      "flag": "",
+      "name": "Decepticons"
+    },
+    {
+      "flag": "",
+      "name": "Predators"
+    },
+    {
+      "flag": "Black Flag",
+      "name": "Astrophage"
+    },
+    {
+      "flag": "Socialist_flag",
+      "name": "Galaxy Empire"
+    },
+    {
+      "flag": "FlagOfMars",
+      "name": "Martians"
+    },
+    {
+      "flag": "",
+      "name": "Qu"
+    },
+    {
+      "flag": "",
+      "name": "Star People"
+    },
+    {
+      "flag": "Black Flag",
+      "name": "The Flood"
+    },
+    {
+      "flag": "Black Flag",
       "name": "The Void"
+    },
+    {
+      "flag": "Socialist_flag",
+      "name": "Kryptonians"
+    },
+    {
+      "flag": "Socialist_flag",
+      "name": "Viltrum"
+    },
+    {
+      "flag": "Black Flag",
+      "name": "Symbiotes"
+    },
+    {
+      "flag": "Liberalism_flag",
+      "name": "Confederacy of Systems"
     }
   ],
   "translation_key": "map.milkyway"

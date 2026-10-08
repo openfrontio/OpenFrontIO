@@ -1,0 +1,217 @@
+import { GameType } from "@openfront/engine-api/game/GameTypes";
+import { PartialGameRecord } from "@openfront/shared/WireSchemas";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import {
+  cid,
+  makeClient,
+  makeGame,
+  mockLogger,
+  mockWsOf,
+  startGame,
+} from "../util/GameServerHarness";
+
+// What the game writes into the record it archives, driven through real
+// joins and starts and read off the injected archive.
+
+// Lets the fetchTribes .then/.catch chain settle.
+async function flushMicrotasks() {
+  await Promise.resolve();
+  await Promise.resolve();
+}
+
+describe("archived game records", () => {
+  let archive: ReturnType<
+    typeof vi.fn<(r: PartialGameRecord) => Promise<void>>
+  >;
+
+  beforeEach(() => {
+    vi.useFakeTimers();
+    archive = vi.fn(async () => {});
+  });
+
+  afterEach(() => {
+    vi.clearAllTimers();
+    vi.useRealTimers();
+  });
+
+  const archived = () => archive.mock.calls[0][0];
+
+  it("preserves simulation inputs (teamIndex, friends, isLobbyCreator) so replays stay in sync", async () => {
+    // Matchmade 2v2: the server stamps teamIndex on the game start info and
+    // every client pins teams from it. The archived record is replayed
+    // through the same team assignment, so these fields must survive
+    // archiving — dropping them makes replays re-derive different teams and
+    // desync from the recorded hashes.
+    const ALICE = cid("alice");
+    const BOB = cid("bob");
+    const game = makeGame({
+      config: { gameType: GameType.Public },
+      creatorPersistentID: "alice-pid",
+      matchmakingTeams: [["alice-pub"], ["bob-pub"]],
+      deps: { archive },
+    });
+    const alice = makeClient({
+      clientID: ALICE,
+      persistentID: "alice-pid",
+      username: "alice",
+      clanTag: "AA",
+      publicId: "alice-pub",
+      friends: ["bob-pub"],
+      ip: "1.1.1.1",
+    });
+    const bob = makeClient({
+      clientID: BOB,
+      persistentID: "bob-pid",
+      username: "bob",
+      publicId: "bob-pub",
+      ip: "2.2.2.2",
+    });
+    game.joinClient(alice);
+    game.joinClient(bob);
+    startGame(game);
+
+    // Both back the same winner: 2 of 2 IPs archives the game.
+    for (const c of [alice, bob]) {
+      await mockWsOf(c).emit({
+        type: "winner",
+        winner: ["player", ALICE],
+        allPlayersStats: {},
+      });
+    }
+
+    expect(archive).toHaveBeenCalledTimes(1);
+    const [a, b] = archived().info.players;
+    expect(a).toMatchObject({
+      clientID: ALICE,
+      username: "alice",
+      clanTag: "AA",
+      persistentID: "alice-pid",
+      teamIndex: 0,
+      friends: [BOB],
+      isLobbyCreator: true,
+    });
+    expect(b).toMatchObject({
+      clientID: BOB,
+      teamIndex: 1,
+      isLobbyCreator: false,
+    });
+    // No friends in the game is recorded as the field being absent.
+    expect(b.friends).toBeUndefined();
+    expect(archived().info.winner).toEqual(["player", ALICE]);
+  });
+
+  it("records a player the winner vote has no stats for without a warn line", async () => {
+    // A player who left or never spawned before the vote is absent from
+    // allPlayersStats. That is routine in almost every archived game, and it
+    // used to produce one warn line per such player: with the other noise
+    // gone, it was ~40% of prod warn volume. The record simply carries no
+    // stats for them, so this is debug, not warn.
+    const ALICE = cid("alice");
+    const BOB = cid("bob");
+    const log = mockLogger();
+    const game = makeGame({
+      config: { gameType: GameType.Public },
+      deps: { archive },
+      log,
+    });
+    const alice = makeClient({
+      clientID: ALICE,
+      persistentID: "alice-pid",
+      publicId: "alice-pub",
+      ip: "1.1.1.1",
+    });
+    const bob = makeClient({
+      clientID: BOB,
+      persistentID: "bob-pid",
+      publicId: "bob-pub",
+      ip: "2.2.2.2",
+    });
+    game.joinClient(alice);
+    game.joinClient(bob);
+    startGame(game);
+
+    const stats = { attacks: [1n] };
+    for (const c of [alice, bob]) {
+      await mockWsOf(c).emit({
+        type: "winner",
+        winner: ["player", ALICE],
+        allPlayersStats: { [ALICE]: stats },
+      });
+    }
+
+    expect(archive).toHaveBeenCalledTimes(1);
+    const [a, b] = archived().info.players;
+    expect(a).toMatchObject({ clientID: ALICE, stats });
+    expect(b.clientID).toBe(BOB);
+    expect(b.stats).toBeUndefined();
+    expect(log.warn).not.toHaveBeenCalled();
+    expect(log.debug).toHaveBeenCalledWith(
+      expect.stringContaining(`Unable to find stats for clientID ${BOB}`),
+    );
+  });
+
+  it("carries custom tribe names into the archived record for infra ingest and replays", async () => {
+    const fetchTribes = vi.fn(async () => [
+      { name: "Dragon Riders" },
+      { name: "Night Wolves" },
+    ]);
+    const game = makeGame({
+      config: { gameType: GameType.Public, bots: 2 },
+      deps: { archive, fetchTribes },
+    });
+    game.joinClient(makeClient({ publicId: "someone-pub" }));
+
+    game.prestart();
+    await flushMicrotasks();
+    game.start();
+    // Ending an unfinished game archives it as it stands.
+    await game.end();
+
+    expect(archive).toHaveBeenCalledTimes(1);
+    expect(archived().info.tribes).toEqual([
+      { name: "Dragon Riders" },
+      { name: "Night Wolves" },
+    ]);
+  });
+
+  it("omits tribes from the archived record when none were fetched", async () => {
+    const game = makeGame({
+      config: { gameType: GameType.Public, bots: 2 },
+      deps: { archive },
+    });
+    game.joinClient(makeClient());
+
+    startGame(game);
+    await game.end();
+
+    expect(archive).toHaveBeenCalledTimes(1);
+    expect(archived().info.tribes).toBeUndefined();
+  });
+
+  it("records the public lobby type for infra's per-type join rates", async () => {
+    const game = makeGame({
+      config: { gameType: GameType.Public },
+      publicGameType: "special",
+      deps: { archive },
+    });
+    game.joinClient(makeClient());
+
+    startGame(game);
+    await game.end();
+
+    expect(archived().info.publicGameType).toBe("special");
+  });
+
+  it("omits the public lobby type for a game with none", async () => {
+    const game = makeGame({
+      config: { gameType: GameType.Private },
+      deps: { archive },
+    });
+    game.joinClient(makeClient());
+
+    startGame(game);
+    await game.end();
+
+    expect(archived().info.publicGameType).toBeUndefined();
+  });
+});

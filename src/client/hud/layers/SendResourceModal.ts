@@ -1,13 +1,14 @@
+import { renderTroops } from "@openfront/engine-lib/Format";
+import { within } from "@openfront/engine-lib/Util";
+import { EventBus } from "@openfront/shared/EventBus";
 import { html, LitElement } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
-import { EventBus } from "../../../core/EventBus";
-import { within } from "../../../core/Util";
 import {
   SendDonateGoldIntentEvent,
   SendDonateTroopsIntentEvent,
 } from "../../Transport";
 import { UIState } from "../../UIState";
-import { renderTroops, translateText } from "../../Utils";
+import { translateText } from "../../Utils";
 import { GameView, PlayerView } from "../../view";
 
 @customElement("send-resource-modal")
@@ -213,7 +214,7 @@ export class SendResourceModal extends LitElement {
         ? translateText("send_troops_modal.aria_slider")
         : translateText("send_gold_modal.aria_slider"),
 
-    summarySend: () => translateText("common.summary_send"),
+    summarySend: () => translateText("common.send"),
     summaryKeep: () => translateText("common.summary_keep"),
 
     closeLabel: () => translateText("common.close"),
@@ -223,16 +224,13 @@ export class SendResourceModal extends LitElement {
     cap: () => translateText("common.cap_label"),
     capTooltip: () => translateText("common.cap_tooltip"),
 
+    // Troops and gold share one tooltip format: the amount is already
+    // rendered with its own unit before it reaches here.
     sliderTooltip: (percent: number, amountStr: string) =>
-      this.mode === "troops"
-        ? translateText("send_troops_modal.slider_tooltip", {
-            percent,
-            amount: amountStr,
-          })
-        : translateText("send_gold_modal.slider_tooltip", {
-            percent,
-            amount: amountStr,
-          }),
+      translateText("common.slider_tooltip", {
+        percent,
+        amount: amountStr,
+      }),
 
     capacityNote: (amountStr: string) =>
       translateText("send_troops_modal.capacity_note", { amount: amountStr }),

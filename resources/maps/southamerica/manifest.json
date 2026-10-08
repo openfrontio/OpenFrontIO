@@ -146,5 +146,6 @@
       "name": "São Paulo"
     }
   ],
+  "themes": ["south_america"],
   "translation_key": "map.southamerica"
 }

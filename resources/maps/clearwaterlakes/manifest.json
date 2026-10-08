@@ -1,19 +1,19 @@
 {
-  "categories": ["new", "north_america"],
+  "categories": ["north_america"],
   "id": "ClearwaterLakes",
   "map": {
     "height": 1656,
-    "num_land_tiles": 841443,
+    "num_land_tiles": 841410,
     "width": 1872
   },
   "map16x": {
     "height": 414,
-    "num_land_tiles": 44152,
+    "num_land_tiles": 44150,
     "width": 468
   },
   "map4x": {
     "height": 828,
-    "num_land_tiles": 197284,
+    "num_land_tiles": 197274,
     "width": 936
   },
   "multiplayer_frequency": 3,
@@ -85,5 +85,6 @@
       "name": "Baie Crafton"
     }
   ],
+  "themes": ["north_america"],
   "translation_key": "map.clearwaterlakes"
 }

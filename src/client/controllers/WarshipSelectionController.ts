@@ -1,7 +1,6 @@
-import { Cell } from "src/core/game/Game";
-import { EventBus } from "../../core/EventBus";
-import { UnitType } from "../../core/game/Game";
-import { TileRef } from "../../core/game/GameMap";
+import { TileRef } from "@openfront/engine-api/game/GameMap";
+import { Cell, UnitType } from "@openfront/engine-api/game/GameTypes";
+import { EventBus } from "@openfront/shared/EventBus";
 import { Controller } from "../Controller";
 import {
   CloseViewEvent,
@@ -275,19 +274,32 @@ export class WarshipSelectionController implements Controller {
     this.eventBus.emit(new UnitSelectionEvent(null, true, selected));
   }
 
-  private onSelectAllWarships() {
+  private getAllWarships(): UnitView[] {
     const myPlayer = this.game.myPlayer();
-    if (!myPlayer) return;
-
-    const allWarships = this.game
+    if (!myPlayer) return [];
+    return this.game
       .units(UnitType.Warship)
       .filter((u) => u.isActive() && u.owner() === myPlayer);
+  }
+
+  public selectedAllWarships(): boolean {
+    const allWarships = this.getAllWarships();
+    return (
+      allWarships.length > 0 &&
+      this.multiSelectedWarships.length === allWarships.length
+    );
+  }
+
+  private onSelectAllWarships() {
+    const allWarships = this.getAllWarships();
     if (allWarships.length === 0) return;
 
     if (this.selectedUnit) {
       this.eventBus.emit(new UnitSelectionEvent(this.selectedUnit, false));
     }
-    this.eventBus.emit(new UnitSelectionEvent(null, true, allWarships));
+    this.eventBus.emit(
+      new UnitSelectionEvent(null, !this.selectedAllWarships(), allWarships),
+    );
   }
 
   /**

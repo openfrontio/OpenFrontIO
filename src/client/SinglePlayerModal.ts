@@ -1,9 +1,3 @@
-import { html, TemplateResult } from "lit";
-import { customElement, state } from "lit/decorators.js";
-import { translateText } from "../client/Utils";
-import { UserMeResponse } from "../core/ApiSchemas";
-import { assetUrl } from "../core/AssetUrls";
-import { DoomsdayClockSpeed } from "../core/game/DoomsdayClock";
 import {
   Difficulty,
   GameMapSize,
@@ -12,10 +6,17 @@ import {
   GameType,
   maps,
   UnitType,
-} from "../core/game/Game";
-import { TeamCountConfig } from "../core/Schemas";
-import { generateID } from "../core/Util";
-import { hasLinkedAccount } from "./Api";
+} from "@openfront/engine-api/game/GameTypes";
+import { TeamCountConfig } from "@openfront/engine-api/Schemas";
+import { DoomsdayClockSpeed } from "@openfront/engine-lib/game/DoomsdayClock";
+import { UserMeResponse } from "@openfront/shared/ApiSchemas";
+import { assetUrl } from "@openfront/shared/AssetUrls";
+import { generateID } from "@openfront/shared/SharedUtil";
+import { PlayerCosmetics } from "@openfront/shared/WireSchemas";
+import { html, TemplateResult } from "lit";
+import { customElement, state } from "lit/decorators.js";
+import { translateText } from "../client/Utils";
+import { responseHasLinkedIdentity } from "./AccountIdentity";
 import "./components/baseComponents/Button";
 import "./components/baseComponents/Modal";
 import { BaseModal } from "./components/BaseModal";
@@ -23,10 +24,15 @@ import "./components/GameConfigSettings";
 import { MEDAL_ORDER, medalIcon } from "./components/map/Medals";
 import "./components/ToggleInputCard";
 import { modalHeader } from "./components/ui/ModalHeader";
-import { getPlayerCosmetics } from "./Cosmetics";
+import { getPlayerCosmetics, prewarmCosmetics } from "./Cosmetics";
 import { crazyGamesSDK } from "./CrazyGamesSDK";
+import { GameStartingModal } from "./GameStartingModal";
+import { showInGameAlert } from "./InGameModal";
 import { JoinLobbyEvent } from "./Main";
+import { fallbackPlayerName, ResolvedPlayerName } from "./PlayerName";
+import { lastUserMeResponse } from "./UserMeBroadcast";
 import { UsernameInput } from "./UsernameInput";
+import { UserSettings } from "./UserSettings";
 import {
   getBotsForCompactMap,
   getNationsForCompactMap,
@@ -40,6 +46,54 @@ import {
 } from "./utilities/GameConfigHelpers";
 
 import { terrainMapFileLoader } from "./TerrainMapFileLoader";
+
+/**
+ * Ceiling on how long a Start Game click will wait for the player's name and
+ * cosmetics before starting on defaults.
+ *
+ * A backstop for a wait that never settles, but not only that: the bounds
+ * beneath it chain rather than sit in parallel — getPlayerCosmetics reaches
+ * getUserMe, which awaits userAuth's 10s-bounded /auth/refresh before issuing
+ * its own 10s-bounded /users/@me — so a genuinely slow leg can exceed this and
+ * be pre-empted. That is accepted: the cost is one single-player game on
+ * default cosmetics, against a Start button that would otherwise sit at
+ * "Starting…" for however long the chain takes. prewarmCosmetics() spends
+ * that time while the player is still choosing, which is what keeps the case
+ * rare rather than routine.
+ */
+export const START_PREPARE_DEADLINE_MS = 15_000;
+
+/**
+ * Ceiling on the CrazyGames midgame ad, deliberately far above
+ * START_PREPARE_DEADLINE_MS: an ad creative routinely runs 15-30s and it has
+ * to gate the start, because dispatching behind one puts gameplay — spawn
+ * selection included — under a still-visible overlay. This exists only for an
+ * SDK that never calls adFinished or adError at all. Off CrazyGames,
+ * requestMidgameAd() resolves immediately and none of this is reached.
+ */
+export const MIDGAME_AD_DEADLINE_MS = 60_000;
+
+/**
+ * `work`, or `onDeadline()` if it has not settled within `ms`. The timer is
+ * always cleared, so the fast path costs nothing.
+ */
+function withDeadline<T>(
+  work: Promise<T>,
+  ms: number,
+  onDeadline: () => T,
+): Promise<T> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const deadline = new Promise<T>((resolve) => {
+    timer = setTimeout(() => resolve(onDeadline()), ms);
+  });
+  return Promise.race([work, deadline]).finally(() => clearTimeout(timer));
+}
+
+/** What a start has to wait for before it can dispatch join-lobby. */
+type StartPreparation = {
+  resolvedName: ResolvedPlayerName;
+  cosmetics: PlayerCosmetics;
+};
 
 const DEFAULT_OPTIONS = {
   selectedMap: GameMapType.World,
@@ -65,6 +119,8 @@ const DEFAULT_OPTIONS = {
   waterNukes: false,
   doomsdayClock: false,
   doomsdayClockSpeed: "normal" as DoomsdayClockSpeed,
+  overtime: false,
+  overtimeStartMinutes: undefined as number | undefined,
 } as const;
 
 // A map earns achievements only if it has nations to conquer — the same rule
@@ -153,6 +209,19 @@ export class SinglePlayerModal extends BaseModal {
   @state() private doomsdayClock: boolean = DEFAULT_OPTIONS.doomsdayClock;
   @state() private doomsdayClockSpeed: DoomsdayClockSpeed =
     DEFAULT_OPTIONS.doomsdayClockSpeed;
+  @state() private overtime: boolean = DEFAULT_OPTIONS.overtime;
+  @state() private overtimeStartMinutes: number | undefined =
+    DEFAULT_OPTIONS.overtimeStartMinutes;
+  // Drives the Start Game button's busy state. Without it the click produces
+  // nothing visible until every await in startGame() settles, which reads as
+  // a hang rather than as loading whenever the network is slow or absent.
+  @state() private starting: boolean = false;
+  // Identifies the current start attempt. Bumped on every start and on every
+  // close, so an attempt that outlives its modal can tell it has been retired.
+  private startAttempt: number = 0;
+  // Which attempt the starting overlay is up for, so a retired attempt's
+  // cleanup cannot hide the overlay a newer attempt has shown.
+  private overlayAttempt: number = 0;
 
   private mapLoader = terrainMapFileLoader;
 
@@ -162,6 +231,13 @@ export class SinglePlayerModal extends BaseModal {
       "userMeResponse",
       this.handleUserMeResponse as EventListener,
     );
+    // It loads on demand (see LazyModals), usually after Main's broadcast
+    // went out.
+    const last = lastUserMeResponse();
+    if (last !== null) {
+      this.userMeResponse = last.response;
+      this.applyAchievements(last.response);
+    }
     void this.loadNationCount();
   }
 
@@ -259,7 +335,7 @@ export class SinglePlayerModal extends BaseModal {
       title: translateText("main.solo") || "Solo",
       onBack: () => this.close(),
       ariaLabel: translateText("common.back"),
-      rightContent: hasLinkedAccount(this.userMeResponse)
+      rightContent: responseHasLinkedIdentity(this.userMeResponse)
         ? html`<button
               @click=${this.toggleAchievements}
               class="flex items-center gap-2 px-3 py-2 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 transition-all shrink-0 ${this
@@ -332,14 +408,14 @@ export class SinglePlayerModal extends BaseModal {
   protected renderBody() {
     const inputCards = [
       html`<toggle-input-card
-        .labelKey=${"single_modal.max_timer"}
+        .labelKey=${"game_settings.max_timer"}
         .checked=${this.maxTimer}
         .inputId=${"end-timer-value"}
         .inputMin=${1}
         .inputMax=${120}
         .inputValue=${this.maxTimerValue}
-        .inputAriaLabel=${translateText("single_modal.max_timer")}
-        .inputPlaceholder=${translateText("single_modal.max_timer_placeholder")}
+        .inputAriaLabel=${translateText("game_settings.max_timer")}
+        .inputPlaceholder=${translateText("game_settings.mins_placeholder")}
         .defaultInputValue=${30}
         .minValidOnEnable=${1}
         .onToggle=${this.handleMaxTimerToggle}
@@ -347,17 +423,15 @@ export class SinglePlayerModal extends BaseModal {
         .onKeyDown=${this.handleMaxTimerValueKeyDown}
       ></toggle-input-card>`,
       html`<toggle-input-card
-        .labelKey=${"single_modal.gold_multiplier"}
+        .labelKey=${"game_settings.gold_multiplier"}
         .checked=${this.goldMultiplier}
         .inputId=${"gold-multiplier-value"}
         .inputMin=${0.1}
         .inputMax=${1000}
         .inputStep=${"any"}
         .inputValue=${this.goldMultiplierValue}
-        .inputAriaLabel=${translateText("single_modal.gold_multiplier")}
-        .inputPlaceholder=${translateText(
-          "single_modal.gold_multiplier_placeholder",
-        )}
+        .inputAriaLabel=${translateText("game_settings.gold_multiplier")}
+        .inputPlaceholder=${"2.0x"}
         .defaultInputValue=${2}
         .minValidOnEnable=${0.1}
         .onToggle=${this.handleGoldMultiplierToggle}
@@ -365,17 +439,15 @@ export class SinglePlayerModal extends BaseModal {
         .onKeyDown=${this.handleGoldMultiplierValueKeyDown}
       ></toggle-input-card>`,
       html`<toggle-input-card
-        .labelKey=${"single_modal.starting_gold"}
+        .labelKey=${"game_settings.starting_gold"}
         .checked=${this.startingGold}
         .inputId=${"starting-gold-value"}
         .inputMin=${0.1}
         .inputMax=${1000}
         .inputStep=${"any"}
         .inputValue=${this.startingGoldValue}
-        .inputAriaLabel=${translateText("single_modal.starting_gold")}
-        .inputPlaceholder=${translateText(
-          "single_modal.starting_gold_placeholder",
-        )}
+        .inputAriaLabel=${translateText("game_settings.starting_gold")}
+        .inputPlaceholder=${"5"}
         .defaultInputValue=${5}
         .minValidOnEnable=${0.1}
         .onToggle=${this.handleStartingGoldToggle}
@@ -383,20 +455,35 @@ export class SinglePlayerModal extends BaseModal {
         .onKeyDown=${this.handleStartingGoldValueKeyDown}
       ></toggle-input-card>`,
       html`<toggle-input-card
-        .labelKey=${"single_modal.custom_alliances"}
+        .labelKey=${"game_settings.custom_alliances"}
         .checked=${this.customAlliances}
         .inputMin=${0}
         .inputMax=${15}
         .inputStep=${1}
         .inputValue=${this.customAllianceMinutes}
-        .inputAriaLabel=${translateText("single_modal.custom_alliances")}
-        .inputPlaceholder=${translateText("single_modal.mins_placeholder")}
+        .inputAriaLabel=${translateText("game_settings.custom_alliances")}
+        .inputPlaceholder=${translateText("game_settings.mins_placeholder")}
         .defaultInputValue=${0}
         .minValidOnEnable=${0}
         .zeroLabel=${`(${translateText("public_game_modifier.disable_alliances")})`}
         .onToggle=${this.handleCustomAlliancesToggle}
         .onInput=${this.handleCustomAllianceMinutesInput}
         .onKeyDown=${this.handleCustomAllianceMinutesKeyDown}
+      ></toggle-input-card>`,
+      html`<toggle-input-card
+        .labelKey=${"game_settings.overtime"}
+        .checked=${this.overtime}
+        .inputMin=${1}
+        .inputMax=${120}
+        .inputStep=${1}
+        .inputValue=${this.overtimeStartMinutes}
+        .inputAriaLabel=${translateText("game_settings.overtime")}
+        .inputPlaceholder=${translateText("game_settings.mins_placeholder")}
+        .defaultInputValue=${30}
+        .minValidOnEnable=${1}
+        .onToggle=${this.handleOvertimeToggle}
+        .onInput=${this.handleOvertimeMinutesInput}
+        .onKeyDown=${this.handleOvertimeMinutesKeyDown}
       ></toggle-input-card>`,
     ];
 
@@ -426,45 +513,45 @@ export class SinglePlayerModal extends BaseModal {
                 selected: this.teamCount,
               },
               options: {
-                titleKey: "single_modal.options_title",
+                titleKey: "game_settings.options",
                 bots: {
                   value: this.bots,
-                  labelKey: "single_modal.bots",
-                  disabledKey: "single_modal.bots_disabled",
+                  labelKey: "game_settings.bots",
+                  disabledKey: "common.disabled",
                 },
                 nations: {
                   value: this.nations,
                   defaultValue: this.defaultNationCount,
-                  labelKey: "single_modal.nations",
-                  disabledKey: "single_modal.nations_disabled",
+                  labelKey: "game_settings.nations",
+                  disabledKey: "common.disabled",
                 },
                 toggles: [
                   {
-                    labelKey: "single_modal.instant_build",
+                    labelKey: "game_settings.instant_build",
                     checked: this.instantBuild,
                   },
                   {
-                    labelKey: "single_modal.random_spawn",
+                    labelKey: "game_settings.random_spawn",
                     checked: this.randomSpawn,
                   },
                   {
-                    labelKey: "single_modal.infinite_gold",
+                    labelKey: "game_settings.infinite_gold",
                     checked: this.infiniteGold,
                   },
                   {
-                    labelKey: "single_modal.infinite_troops",
+                    labelKey: "game_settings.infinite_troops",
                     checked: this.infiniteTroops,
                   },
                   {
-                    labelKey: "single_modal.compact_map",
+                    labelKey: "game_settings.compact_map",
                     checked: this.compactMap,
                   },
                   {
-                    labelKey: "single_modal.water_nukes",
+                    labelKey: "game_settings.water_nukes",
                     checked: this.waterNukes,
                   },
                   {
-                    labelKey: "single_modal.doomsday_clock",
+                    labelKey: "game_settings.doomsday_clock",
                     checked: this.doomsdayClock,
                     doomsdayClockSpeed: this.doomsdayClockSpeed,
                   },
@@ -472,7 +559,7 @@ export class SinglePlayerModal extends BaseModal {
                 inputCards,
               },
               unitTypes: {
-                titleKey: "single_modal.enables_title",
+                titleKey: "game_settings.disable_units",
                 disabledUnits: this.disabledUnits,
               },
             }}
@@ -492,7 +579,8 @@ export class SinglePlayerModal extends BaseModal {
 
         <!-- Footer Action -->
         <div class="p-6 border-t border-white/10 bg-black/20 shrink-0">
-          ${hasLinkedAccount(this.userMeResponse) && this.hasOptionsChanged()
+          ${responseHasLinkedIdentity(this.userMeResponse) &&
+          this.hasOptionsChanged()
             ? html`<div
                 class="mb-4 px-4 py-3 rounded-xl bg-yellow-500/20 border border-yellow-500/30 text-yellow-400 text-xs font-bold uppercase tracking-wider text-center"
               >
@@ -503,7 +591,10 @@ export class SinglePlayerModal extends BaseModal {
             variant="primary"
             width="block"
             size="lg"
-            translationKey="single_modal.start"
+            translationKey=${this.starting
+              ? "game_settings.starting"
+              : "game_settings.start"}
+            .disable=${this.starting}
             @click=${this.startGame}
           ></o-button>
         </div>
@@ -532,12 +623,55 @@ export class SinglePlayerModal extends BaseModal {
       // Pace only matters when the mode is on (startGame drops it when off).
       (this.doomsdayClock &&
         this.doomsdayClockSpeed !== DEFAULT_OPTIONS.doomsdayClockSpeed) ||
+      this.overtime !== DEFAULT_OPTIONS.overtime ||
       this.disabledUnits.length > 0
     );
   }
 
   protected onClose(): void {
-    // Reset all transient form state to ensure clean slate
+    // Retires whatever start is still in flight. resetOptions() below hands
+    // back a live button, so the player can close, reopen and start again
+    // while the previous attempt is still resolving — and that attempt is
+    // now describing settings the modal no longer holds. Without this, both
+    // attempts dispatch join-lobby with different gameIDs and whichever
+    // resolves last wins, which can be the one the player abandoned.
+    this.startAttempt++;
+    // If the retired attempt still owned the starting overlay it never
+    // dispatched join-lobby, so nothing downstream will hide it: without
+    // this, dismissing the modal mid-preparation leaves a full-screen
+    // overlay blocking the menu until the preparation deadline settles.
+    if (this.overlayAttempt !== 0) {
+      this.overlayAttempt = 0;
+      const startingModal = document.querySelector("game-starting-modal");
+      if (startingModal instanceof GameStartingModal) {
+        startingModal.hide();
+      }
+    }
+    this.resetOptions();
+  }
+
+  /**
+   * Starts a solo game on the default settings without opening the modal,
+   * with the in-game tutorial switched back on (the play page's Tutorial
+   * card for new players).
+   */
+  public async startTutorial(): Promise<void> {
+    // The modal never opens on this path, so onOpen's prewarm never runs.
+    // Overlap it with the manifest load below.
+    void prewarmCosmetics();
+    this.resetOptions();
+    // A nation count of 0 means "nations disabled"; wait for the real one.
+    await this.loadNationCount();
+    new UserSettings().setTutorialDismissed(false);
+    await this.startGame();
+  }
+
+  // Reset all transient form state to ensure clean slate
+  private resetOptions(): void {
+    // Belt and braces with the finally in startGame(): closing and reopening
+    // the modal must always give the player a live Start button back, whatever
+    // left the previous attempt in flight.
+    this.starting = false;
     this.selectedMap = DEFAULT_OPTIONS.selectedMap;
     this.selectedDifficulty = DEFAULT_OPTIONS.selectedDifficulty;
     this.gameMode = DEFAULT_OPTIONS.gameMode;
@@ -563,10 +697,19 @@ export class SinglePlayerModal extends BaseModal {
     this.waterNukes = DEFAULT_OPTIONS.waterNukes;
     this.doomsdayClock = DEFAULT_OPTIONS.doomsdayClock;
     this.doomsdayClockSpeed = DEFAULT_OPTIONS.doomsdayClockSpeed;
+    this.overtime = DEFAULT_OPTIONS.overtime;
+    this.overtimeStartMinutes = DEFAULT_OPTIONS.overtimeStartMinutes;
   }
 
   protected onOpen(): void {
     void this.loadNationCount();
+    // Spend the cosmetics round trip while the player is picking a map, not
+    // after they commit. startGame() still resolves cosmetics properly; this
+    // only moves the network time off the click, for the slow-but-reachable
+    // case. It does not help when the backend is unreachable: fetchCosmetics
+    // deliberately does not cache a failure, so the click re-pays one bounded
+    // attempt. Remembering an unreachable backend is OPE-403.
+    void prewarmCosmetics();
   }
 
   private handleSelectRandomMap() {
@@ -632,25 +775,25 @@ export class SinglePlayerModal extends BaseModal {
     const { labelKey, checked } = customEvent.detail;
 
     switch (labelKey) {
-      case "single_modal.instant_build":
+      case "game_settings.instant_build":
         this.instantBuild = checked;
         break;
-      case "single_modal.random_spawn":
+      case "game_settings.random_spawn":
         this.randomSpawn = checked;
         break;
-      case "single_modal.infinite_gold":
+      case "game_settings.infinite_gold":
         this.infiniteGold = checked;
         break;
-      case "single_modal.infinite_troops":
+      case "game_settings.infinite_troops":
         this.infiniteTroops = checked;
         break;
-      case "single_modal.compact_map":
+      case "game_settings.compact_map":
         this.handleCompactMapChange(checked);
         break;
-      case "single_modal.water_nukes":
+      case "game_settings.water_nukes":
         this.waterNukes = checked;
         break;
-      case "single_modal.doomsday_clock":
+      case "game_settings.doomsday_clock":
         this.doomsdayClock = checked;
         break;
       default:
@@ -716,6 +859,31 @@ export class SinglePlayerModal extends BaseModal {
   ) => {
     this.customAlliances = checked;
     this.customAllianceMinutes = toOptionalNumber(value);
+  };
+
+  private handleOvertimeToggle = (
+    checked: boolean,
+    value: number | string | undefined,
+  ) => {
+    this.overtime = checked;
+    this.overtimeStartMinutes = toOptionalNumber(value);
+  };
+
+  private handleOvertimeMinutesKeyDown = (e: KeyboardEvent) => {
+    preventDisallowedKeys(e, ["-", "+", "e"]);
+  };
+
+  private handleOvertimeMinutesInput = (e: Event) => {
+    const input = e.target as HTMLInputElement;
+    const value = parseBoundedIntegerFromInput(input, {
+      min: 1,
+      max: 120,
+      stripPattern: /[e+-]/gi,
+    });
+    if (value === undefined) {
+      return;
+    }
+    this.overtimeStartMinutes = value;
   };
 
   private handleCustomAllianceMinutesKeyDown = (e: KeyboardEvent) => {
@@ -798,13 +966,94 @@ export class SinglePlayerModal extends BaseModal {
     this.teamCount = value;
   }
 
+  /**
+   * The name and cosmetics the dispatch needs, bounded so neither can outlive
+   * the button waiting on them.
+   *
+   * Both waits can reach code with no bound of its own — the Steam name seed
+   * is a bare IPC call, cosmetics reach the network — and both degrade to
+   * something playable: the interim generated name, default cosmetics. A slow
+   * resolution here is a cost with nothing to show for it, so
+   * START_PREPARE_DEADLINE_MS cuts it short rather than pinning Start at
+   * "Starting…" for the rest of the session, which would take startTutorial()
+   * down with it on the re-entrancy guard.
+   *
+   * The midgame ad is deliberately not part of this — see awaitMidgameAd.
+   */
+  private async resolveNameAndCosmetics(
+    usernameInput: UsernameInput | null,
+  ): Promise<StartPreparation> {
+    const nameNow = () => usernameInput?.resolvedName() ?? fallbackPlayerName();
+
+    const prepared = await withDeadline(
+      (async (): Promise<StartPreparation> => {
+        // Wait for the one-shot Steam name-seed to settle before reading
+        // getUsername(), so a fast single-player start uses the Steam persona
+        // rather than the interim generated anon name.
+        await usernameInput?.whenSeeded();
+        // Name and badge from one resolution, as on the multiplayer join path.
+        const resolvedName = nameNow();
+        // onOpen() prewarmed the caches this reads, so it normally resolves
+        // without touching the network at all.
+        return {
+          resolvedName,
+          cosmetics: await getPlayerCosmetics({
+            verified: resolvedName.verified,
+          }),
+        };
+      })(),
+      START_PREPARE_DEADLINE_MS,
+      () => {
+        console.warn(
+          "Start preparation exceeded its deadline; starting on defaults",
+        );
+        const resolvedName = nameNow();
+        return {
+          resolvedName,
+          cosmetics: resolvedName.verified ? { verified: true } : {},
+        };
+      },
+    );
+
+    return prepared;
+  }
+
+  /**
+   * The CrazyGames midgame ad, on a bound of its own.
+   *
+   * Separate from resolveNameAndCosmetics because an ad is not the same kind
+   * of wait. It is the player watching something, legitimately for longer than
+   * START_PREPARE_DEADLINE_MS — racing it there cut real creatives short and
+   * dropped the player into spawn selection underneath a live overlay. So the
+   * ad gates the start, the button staying busy while it plays is correct
+   * rather than a hang, and MIDGAME_AD_DEADLINE_MS is sized only to catch an
+   * SDK that has stopped answering (requestMidgameAd resolves solely from its
+   * adFinished/adError callbacks).
+   *
+   * Only ever called for a start that is still live — an ad shown for a game
+   * that will not start is worse than no ad. Off CrazyGames this resolves
+   * immediately.
+   */
+  private awaitMidgameAd(): Promise<void> {
+    return withDeadline(
+      crazyGamesSDK.requestMidgameAd(),
+      MIDGAME_AD_DEADLINE_MS,
+      () => {
+        console.warn("Midgame ad never signalled completion; starting anyway");
+      },
+    );
+  }
+
   private async startGame() {
+    // A second click while the first is still resolving would dispatch a
+    // second join-lobby for a different gameID.
+    if (this.starting) return;
     // Validate and clamp maxTimer setting before starting
     let finalMaxTimerValue: number | undefined = undefined;
     if (this.maxTimer) {
       if (!this.maxTimerValue || this.maxTimerValue <= 0) {
         console.error("Max timer is enabled but no valid value is set");
-        alert(
+        await showInGameAlert(
           translateText("single_modal.max_timer_invalid") ||
             "Please enter a valid max timer value (1-120 minutes)",
         );
@@ -820,93 +1069,159 @@ export class SinglePlayerModal extends BaseModal {
       finalMaxTimerValue = Math.max(1, Math.min(120, this.maxTimerValue));
     }
 
-    console.log(
-      `Starting single player game with map: ${GameMapType[this.selectedMap as keyof typeof GameMapType]}${this.useRandomMap ? " (Randomly selected)" : ""}`,
-    );
-    const clientID = generateID();
-    const gameID = generateID();
+    // Everything past this point awaits something, some of it network-bound.
+    // Hold the button in its busy state until join-lobby is away so the wait
+    // reads as loading rather than as a dead click.
+    this.starting = true;
+    const attempt = ++this.startAttempt;
+    // The full-screen starting overlay, up from the click rather than at
+    // prestart: it also covers Main's own awaits after the dispatch. On
+    // success GameRenderer hides it (a canPlay() refusal hides it in
+    // handleJoinLobby); an attempt that never dispatches reaches neither, so
+    // onClose (or the finally below, for exits without a close) releases it.
+    const startingModal = document.querySelector("game-starting-modal");
+    const overlay =
+      startingModal instanceof GameStartingModal ? startingModal : null;
+    this.overlayAttempt = attempt;
+    overlay?.show();
+    try {
+      console.log(
+        `Starting single player game with map: ${GameMapType[this.selectedMap as keyof typeof GameMapType]}${this.useRandomMap ? " (Randomly selected)" : ""}`,
+      );
+      const clientID = generateID();
+      const gameID = generateID();
 
-    const usernameInput = document.querySelector(
-      "username-input",
-    ) as UsernameInput;
+      const usernameInput = document.querySelector(
+        "username-input",
+      ) as UsernameInput | null;
 
-    // Wait for the one-shot Steam name-seed to settle before reading
-    // getUsername(), so a fast single-player start uses the Steam persona
-    // rather than the interim generated anon name. Always resolves.
-    await usernameInput?.whenSeeded();
+      // Resolved before the dispatch rather than inside it, so every wait is
+      // attributable to the busy button above, and bounded so none of them
+      // can outlive it.
+      const { resolvedName, cosmetics } =
+        await this.resolveNameAndCosmetics(usernameInput);
 
-    await crazyGamesSDK.requestMidgameAd();
+      // Retired while this was resolving — the modal was closed, and possibly
+      // reopened and started again. The live attempt owns the start; this one
+      // would otherwise race it into join-lobby with stale settings.
+      //
+      // A start has exactly two side effects that leave this component, and
+      // BOTH must sit behind this check. Anything added here that escapes the
+      // component needs the same gate:
+      //   1. awaitMidgameAd() — shows the player a real ad, so an abandoned
+      //      attempt reaching it advertises a game that never starts, and a
+      //      reopened modal can put a second request in flight beside it.
+      //   2. the join-lobby dispatch — and everything downstream of it,
+      //      including Main's gameplayStart() and incrementGamesPlayed().
+      // resolveNameAndCosmetics() above is deliberately NOT gated: its only
+      // writes are validating stored cosmetic selections against the catalog
+      // and profile, which happens on any cosmetics resolution (menu
+      // background, store, inventory) rather than as a consequence of this
+      // start.
+      if (attempt !== this.startAttempt) return;
 
-    this.dispatchEvent(
-      new CustomEvent("join-lobby", {
-        detail: {
-          gameID: gameID,
-          gameStartInfo: {
+      await this.awaitMidgameAd();
+
+      // The ad is long enough that the modal can be closed while it runs.
+      if (attempt !== this.startAttempt) return;
+
+      this.dispatchEvent(
+        new CustomEvent("join-lobby", {
+          detail: {
             gameID: gameID,
-            players: [
-              {
-                clientID,
-                username: usernameInput.getUsername(),
-                clanTag: usernameInput.getClanTag() ?? null,
-                cosmetics: await getPlayerCosmetics(),
+            gameStartInfo: {
+              gameID: gameID,
+              players: [
+                {
+                  clientID,
+                  username: resolvedName.name,
+                  clanTag: usernameInput?.getClanTag() ?? null,
+                  cosmetics,
+                },
+              ],
+              config: {
+                gameMap: this.selectedMap,
+                gameMapSize: this.compactMap
+                  ? GameMapSize.Compact
+                  : GameMapSize.Normal,
+                gameType: GameType.Singleplayer,
+                gameMode: this.gameMode,
+                playerTeams: this.teamCount,
+                difficulty: this.selectedDifficulty,
+                maxTimerValue: finalMaxTimerValue,
+                bots: this.bots,
+                infiniteGold: this.infiniteGold,
+                donateGold: this.gameMode === GameMode.Team,
+                donateTroops: this.gameMode === GameMode.Team,
+                infiniteTroops: this.infiniteTroops,
+                instantBuild: this.instantBuild,
+                randomSpawn: this.randomSpawn,
+                disabledUnits: this.disabledUnits.filter(
+                  (unit): unit is UnitType =>
+                    Object.values(UnitType).includes(unit),
+                ),
+                nations: sliderToNationsConfig(
+                  this.nations,
+                  this.defaultNationCount,
+                ),
+                ...(this.goldMultiplier && this.goldMultiplierValue
+                  ? { goldMultiplier: this.goldMultiplierValue }
+                  : {}),
+                ...(this.startingGold && this.startingGoldValue !== undefined
+                  ? {
+                      startingGold: Math.round(
+                        this.startingGoldValue * 1_000_000,
+                      ),
+                    }
+                  : {}),
+                ...(this.customAlliances
+                  ? { customAllianceDuration: this.customAllianceMinutes ?? 0 }
+                  : {}),
+                ...(this.waterNukes ? { waterNukes: true } : {}),
+                ...(this.doomsdayClock
+                  ? {
+                      doomsdayClock: {
+                        enabled: true,
+                        speed: this.doomsdayClockSpeed,
+                      },
+                    }
+                  : {}),
+                ...(this.overtime
+                  ? {
+                      overtime: {
+                        enabled: true,
+                        startMinutes: this.overtimeStartMinutes ?? 30,
+                      },
+                    }
+                  : {}),
               },
-            ],
-            config: {
-              gameMap: this.selectedMap,
-              gameMapSize: this.compactMap
-                ? GameMapSize.Compact
-                : GameMapSize.Normal,
-              gameType: GameType.Singleplayer,
-              gameMode: this.gameMode,
-              playerTeams: this.teamCount,
-              difficulty: this.selectedDifficulty,
-              maxTimerValue: finalMaxTimerValue,
-              bots: this.bots,
-              infiniteGold: this.infiniteGold,
-              donateGold: this.gameMode === GameMode.Team,
-              donateTroops: this.gameMode === GameMode.Team,
-              infiniteTroops: this.infiniteTroops,
-              instantBuild: this.instantBuild,
-              randomSpawn: this.randomSpawn,
-              disabledUnits: this.disabledUnits
-                .map((u) => Object.values(UnitType).find((ut) => ut === u))
-                .filter((ut): ut is UnitType => ut !== undefined),
-              nations: sliderToNationsConfig(
-                this.nations,
-                this.defaultNationCount,
-              ),
-              ...(this.goldMultiplier && this.goldMultiplierValue
-                ? { goldMultiplier: this.goldMultiplierValue }
-                : {}),
-              ...(this.startingGold && this.startingGoldValue !== undefined
-                ? {
-                    startingGold: Math.round(
-                      this.startingGoldValue * 1_000_000,
-                    ),
-                  }
-                : {}),
-              ...(this.customAlliances
-                ? { customAllianceDuration: this.customAllianceMinutes ?? 0 }
-                : {}),
-              ...(this.waterNukes ? { waterNukes: true } : {}),
-              ...(this.doomsdayClock
-                ? {
-                    doomsdayClock: {
-                      enabled: true,
-                      speed: this.doomsdayClockSpeed,
-                    },
-                  }
-                : {}),
+              lobbyCreatedAt: Date.now(), // ms; server should be authoritative in MP
             },
-            lobbyCreatedAt: Date.now(), // ms; server should be authoritative in MP
-          },
-          source: "singleplayer",
-        } satisfies JoinLobbyEvent,
-        bubbles: true,
-        composed: true,
-      }),
-    );
-    this.close();
+            source: "singleplayer",
+          } satisfies JoinLobbyEvent,
+          bubbles: true,
+          composed: true,
+        }),
+      );
+      // The overlay is the join pipeline's now — GameRenderer or Main's
+      // canPlay() refusal hides it. Disowning it keeps the close below (and
+      // any later onClose) from taking it down mid game-load.
+      this.overlayAttempt = 0;
+      this.close();
+    } finally {
+      // Only if this attempt is still the live one: a retired attempt
+      // settling later must not clear the busy state of the one that
+      // replaced it.
+      if (attempt === this.startAttempt) this.starting = false;
+      // An attempt that still owns the overlay dispatched nothing, so no
+      // downstream hide point will ever fire for it. onClose normally
+      // releases it the moment the modal is dismissed; this catches exits
+      // without a close, like resolveNameAndCosmetics() throwing.
+      if (this.overlayAttempt === attempt) {
+        this.overlayAttempt = 0;
+        overlay?.hide();
+      }
+    }
   }
 
   private async loadNationCount() {

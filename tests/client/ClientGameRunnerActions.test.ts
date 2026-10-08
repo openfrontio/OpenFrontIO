@@ -1,0 +1,353 @@
+import { TileRef } from "@openfront/engine-api/game/GameMap";
+import { UnitType } from "@openfront/engine-api/game/GameTypes";
+import { EventBus } from "@openfront/shared/EventBus";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+
+// ClientGameRunner's left-click handling: spawn intents during the spawn
+// phase, the lazy myPlayer lookup, attack intents, and the auto-boat
+// distance limit. Heavy renderer/audio/worker modules are mocked at import.
+
+vi.mock("../../src/client/ClientEnv", () => ({
+  ClientEnv: { gitCommit: () => "test-commit" },
+}));
+vi.mock("../../src/client/Auth", () => ({
+  getPlayToken: async () => "8f1d2c3e-4b5a-4c6d-8e7f-90a1b2c3d4e5",
+}));
+vi.mock("../../src/client/LocalServer", () => ({
+  LocalServer: class {},
+}));
+vi.mock("../../src/client/InGameModal", () => ({
+  showInGameAlert: vi.fn(async () => {}),
+  showInGameConfirm: vi.fn(async () => false),
+}));
+vi.mock("../../src/client/Utils", () => ({
+  translateText: (key: string) => key,
+  reloadForUpdate: vi.fn(),
+  createCanvas: () => document.createElement("canvas"),
+  homeHref: () => "/",
+}));
+vi.mock("../../src/client/TerrainMapFileLoader", () => ({
+  terrainMapFileLoader: {},
+  loadCachedTerrainMap: vi.fn(async () => ({}) as never),
+}));
+vi.mock("../../src/client/hud/GameRenderer", () => ({
+  createRenderer: vi.fn(),
+}));
+vi.mock("../../src/client/hud/layers/lib/GoldRateTracker", () => ({
+  goldRateTracker: { resetAll: vi.fn() },
+}));
+vi.mock("../../src/client/theme/ThemeProvider", () => ({
+  themeProvider: { reset: vi.fn() },
+}));
+vi.mock("../../src/client/sound/SoundManager", () => ({
+  SoundManager: class {},
+}));
+vi.mock("../../src/client/render/gl", () => ({
+  GLUnavailableError: class extends Error {},
+  MapRenderer: class {},
+  applyGraphicsOverrides: vi.fn(),
+  createRenderSettings: vi.fn(() => ({})),
+  deepAssign: vi.fn(),
+  preloadAtlasData: vi.fn(async () => {}),
+  renderDpr: () => 1,
+  showGLGate: vi.fn(),
+  trackGLInit: vi.fn(),
+}));
+vi.mock("../../src/client/WebGLFrameBuilder", () => ({
+  WebGLFrameBuilder: class {},
+}));
+vi.mock("../../src/client/controllers/MapLayerController", () => ({
+  MapLayerController: class {},
+}));
+vi.mock("../../src/client/view", () => ({
+  GameView: class {},
+  PlayerView: class {},
+}));
+vi.mock("../../src/client/WorkerClient", () => ({
+  WorkerClient: class {},
+}));
+
+import {
+  ClientGameRunner,
+  LobbyConfig,
+} from "../../src/client/ClientGameRunner";
+import {
+  DoRequestAllianceEvent,
+  DoTargetPlayerEvent,
+  MouseMoveEvent,
+  MouseUpEvent,
+} from "../../src/client/InputHandler";
+import {
+  SendAllianceRequestIntentEvent,
+  SendAttackIntentEvent,
+  SendBoatAttackIntentEvent,
+  SendSpawnIntentEvent,
+  SendTargetPlayerIntentEvent,
+} from "../../src/client/Transport";
+
+const TILE = 77 as TileRef;
+const CLICK = { x: 10, y: 20 };
+
+// Runner around fully mocked collaborators; started so clicks are handled.
+function makeRunner(overrides: {
+  inSpawnPhase?: boolean;
+  hasOwner?: boolean;
+  playerByClientID?: () => unknown;
+  actions?: Record<string, unknown>;
+  boatDistSquared?: number;
+}) {
+  const eventBus = new EventBus();
+  const myPlayer = {
+    actions: vi.fn(async () => overrides.actions ?? {}),
+    troops: () => 100,
+  };
+  const gameView = {
+    config: () => ({ isRandomSpawn: () => false, isReplay: () => false }),
+    inSpawnPhase: () => overrides.inSpawnPhase ?? false,
+    myPlayer: () => null,
+    isValidCoord: () => true,
+    ref: () => TILE,
+    isLand: () => true,
+    hasOwner: () => overrides.hasOwner ?? false,
+    owner: () => ({ id: () => "enemy1" }),
+    playerByClientID: vi.fn(overrides.playerByClientID ?? (() => myPlayer)),
+    euclideanDistSquared: () => overrides.boatDistSquared ?? 0,
+  };
+  const input = { initialize: vi.fn(), destroy: vi.fn() };
+  const runner = new ClientGameRunner(
+    { gameID: "game1234" } as LobbyConfig,
+    "c0000001",
+    eventBus,
+    {
+      initialize: vi.fn(),
+      tick: vi.fn(),
+      uiState: { attackRatio: 0.5, ghostStructure: null },
+      transformHandler: {
+        screenToWorldCoordinates: vi.fn(() => ({ x: 1, y: 2 })),
+      },
+    } as never,
+    input as never,
+    {
+      updateCallback: vi.fn(),
+      rejoinGame: vi.fn(),
+      leaveGame: vi.fn(),
+      isLocal: true,
+    } as never,
+    { start: vi.fn(), sendTurn: vi.fn(), cleanup: vi.fn() } as never,
+    gameView as never,
+    { playBackgroundMusic: vi.fn(), dispose: vi.fn() } as never,
+    { goToPlayer: () => false } as never,
+  );
+  runner.start();
+  return { runner, eventBus, gameView, myPlayer, input };
+}
+
+const flushPromises = () => new Promise((r) => setTimeout(r, 0));
+
+beforeEach(() => {
+  vi.spyOn(console, "log").mockImplementation(() => {});
+});
+
+afterEach(() => {
+  vi.restoreAllMocks();
+});
+
+describe("left click", () => {
+  it("emits a spawn intent when clicking unowned land during the spawn phase", () => {
+    const { eventBus } = makeRunner({ inSpawnPhase: true });
+    const spawns: SendSpawnIntentEvent[] = [];
+    eventBus.on(SendSpawnIntentEvent, (e) => spawns.push(e));
+
+    eventBus.emit(new MouseUpEvent(CLICK.x, CLICK.y));
+
+    expect(spawns).toHaveLength(1);
+    expect(spawns[0].tile).toBe(TILE);
+  });
+
+  it("lazily resolves myPlayer by clientID and emits an attack intent", async () => {
+    const { eventBus, gameView } = makeRunner({
+      hasOwner: true,
+      actions: { canAttack: true, buildableUnits: [] },
+    });
+    const attacks: SendAttackIntentEvent[] = [];
+    eventBus.on(SendAttackIntentEvent, (e) => attacks.push(e));
+
+    eventBus.emit(new MouseUpEvent(CLICK.x, CLICK.y));
+    await flushPromises();
+
+    expect(gameView.playerByClientID).toHaveBeenCalledWith("c0000001");
+    expect(attacks).toHaveLength(1);
+    expect(attacks[0].targetID).toBe("enemy1");
+    expect(attacks[0].troops).toBe(50); // 100 troops * 0.5 attack ratio
+  });
+
+  it("does nothing when the player is not in the view yet", async () => {
+    const { eventBus, gameView } = makeRunner({
+      hasOwner: true,
+      playerByClientID: () => null,
+    });
+    const attacks: SendAttackIntentEvent[] = [];
+    eventBus.on(SendAttackIntentEvent, (e) => attacks.push(e));
+    const boats: SendBoatAttackIntentEvent[] = [];
+    eventBus.on(SendBoatAttackIntentEvent, (e) => boats.push(e));
+
+    eventBus.emit(new MouseUpEvent(CLICK.x, CLICK.y));
+    await flushPromises();
+
+    // The lazy-lookup branch was reached and returned early: no intent of
+    // either kind went out.
+    expect(gameView.playerByClientID).toHaveBeenCalledWith("c0000001");
+    expect(attacks).toHaveLength(0);
+    expect(boats).toHaveLength(0);
+  });
+});
+
+describe("auto boat", () => {
+  const boatActions = {
+    canAttack: false,
+    buildableUnits: [{ type: UnitType.TransportShip, canBuild: 5 as TileRef }],
+  };
+
+  it("boat-attacks land within the distance limit", async () => {
+    const { eventBus } = makeRunner({
+      hasOwner: true,
+      actions: boatActions,
+      boatDistSquared: 99 * 99,
+    });
+    const boats: SendBoatAttackIntentEvent[] = [];
+    eventBus.on(SendBoatAttackIntentEvent, (e) => boats.push(e));
+
+    eventBus.emit(new MouseUpEvent(CLICK.x, CLICK.y));
+    await flushPromises();
+
+    expect(boats).toHaveLength(1);
+    expect(boats[0].dst).toBe(TILE);
+    expect(boats[0].troops).toBe(50);
+  });
+
+  it("does not boat-attack past the distance limit", async () => {
+    const { eventBus } = makeRunner({
+      hasOwner: true,
+      actions: boatActions,
+      boatDistSquared: 100 * 100,
+    });
+    const boats: SendBoatAttackIntentEvent[] = [];
+    eventBus.on(SendBoatAttackIntentEvent, (e) => boats.push(e));
+
+    eventBus.emit(new MouseUpEvent(CLICK.x, CLICK.y));
+    await flushPromises();
+
+    expect(boats).toHaveLength(0);
+  });
+});
+
+describe("stop() (OPE-411)", () => {
+  it("calls input.destroy()", () => {
+    const { runner, input } = makeRunner({});
+
+    runner.stop();
+
+    expect(input.destroy).toHaveBeenCalledTimes(1);
+  });
+
+  it("tolerates a second stop()", () => {
+    const { runner, input } = makeRunner({});
+
+    runner.stop();
+    runner.stop();
+
+    expect(input.destroy).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe("player actions from keybinds and panel buttons", () => {
+  const PANEL_TILE = 5 as TileRef;
+  const enemy = { id: () => "enemy1", isPlayer: () => true };
+
+  function setup(overrides: Parameters<typeof makeRunner>[0]) {
+    const made = makeRunner(overrides);
+    made.gameView.owner = (() => enemy) as never;
+    return made;
+  }
+
+  it("targets the player under the cursor (the N key)", async () => {
+    const { eventBus, myPlayer } = setup({
+      actions: { interaction: { canTarget: true } },
+    });
+    const targets: SendTargetPlayerIntentEvent[] = [];
+    eventBus.on(SendTargetPlayerIntentEvent, (e) => targets.push(e));
+
+    eventBus.emit(new MouseMoveEvent(CLICK.x, CLICK.y));
+    eventBus.emit(new DoTargetPlayerEvent());
+    await flushPromises();
+
+    expect(myPlayer.actions).toHaveBeenCalledWith(TILE);
+    expect(targets.map((e) => e.targetID)).toEqual(["enemy1"]);
+  });
+
+  it("acts on a panel button's own tile, without needing the cursor", async () => {
+    const { eventBus, myPlayer } = setup({
+      actions: { interaction: { canTarget: true } },
+    });
+    const targets: SendTargetPlayerIntentEvent[] = [];
+    eventBus.on(SendTargetPlayerIntentEvent, (e) => targets.push(e));
+
+    eventBus.emit(new DoTargetPlayerEvent(PANEL_TILE));
+    await flushPromises();
+
+    expect(myPlayer.actions).toHaveBeenCalledWith(PANEL_TILE);
+    expect(targets).toHaveLength(1);
+  });
+
+  it("doesn't target when the game says it can't", async () => {
+    const { eventBus } = setup({
+      actions: { interaction: { canTarget: false } },
+    });
+    const targets: SendTargetPlayerIntentEvent[] = [];
+    eventBus.on(SendTargetPlayerIntentEvent, (e) => targets.push(e));
+
+    eventBus.emit(new DoTargetPlayerEvent(PANEL_TILE));
+    await flushPromises();
+
+    expect(targets).toHaveLength(0);
+  });
+
+  it("requests an alliance with the panel's player", async () => {
+    const { eventBus, myPlayer } = setup({
+      actions: { interaction: { canSendAllianceRequest: true } },
+    });
+    const requests: SendAllianceRequestIntentEvent[] = [];
+    eventBus.on(SendAllianceRequestIntentEvent, (e) => requests.push(e));
+
+    eventBus.emit(new DoRequestAllianceEvent(PANEL_TILE));
+    await flushPromises();
+
+    expect(myPlayer.actions).toHaveBeenCalledWith(PANEL_TILE);
+    expect(requests).toHaveLength(1);
+    expect(requests[0].recipient).toBe(enemy);
+  });
+
+  it("drops a panel action once its tile has changed hands", async () => {
+    const { eventBus, myPlayer } = setup({
+      actions: { interaction: { canTarget: true } },
+    });
+    const targets: SendTargetPlayerIntentEvent[] = [];
+    eventBus.on(SendTargetPlayerIntentEvent, (e) => targets.push(e));
+
+    // The panel showed someone else; enemy1 owns the tile now.
+    eventBus.emit(new DoTargetPlayerEvent(PANEL_TILE, "someone-else"));
+    await flushPromises();
+
+    expect(myPlayer.actions).not.toHaveBeenCalled();
+    expect(targets).toHaveLength(0);
+  });
+
+  it("ignores panel actions during the spawn phase", async () => {
+    const { eventBus, myPlayer } = setup({ inSpawnPhase: true });
+
+    eventBus.emit(new DoTargetPlayerEvent(PANEL_TILE));
+    await flushPromises();
+
+    expect(myPlayer.actions).not.toHaveBeenCalled();
+  });
+});

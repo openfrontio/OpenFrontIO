@@ -1,8 +1,12 @@
+import {
+  formatPlayerDisplayName,
+  GameMode,
+  maps,
+} from "@openfront/engine-api/game/GameTypes";
+import { ClanTagSchema, UsernameSchema } from "@openfront/engine-api/Schemas";
+import { buildAssetUrl } from "@openfront/shared/AssetPaths";
+import { GameInfo } from "@openfront/shared/WireSchemas";
 import { z } from "zod";
-import { buildAssetUrl } from "../core/AssetUrls";
-import { ClanTagSchema, GameInfo, UsernameSchema } from "../core/Schemas";
-import { formatPlayerDisplayName } from "../core/Util";
-import { GameMode } from "../core/game/Game";
 import { getRuntimeAssetManifest } from "./RuntimeAssetManifest";
 import { ServerEnv } from "./ServerEnv";
 
@@ -191,8 +195,12 @@ export async function buildPreview(
   const winner = parseWinner(publicInfo?.info?.winner, players);
   const duration = publicInfo?.info?.duration;
 
-  // Normalize map name to match filesystem (lowercase, no spaces or special chars)
-  const normalizedMap = map ? map.toLowerCase().replace(/[\s.()]+/g, "") : null;
+  // Asset dirs are the map id lowercased; display names usually normalize to
+  // the same string, but not always (e.g. "Tourney 2 Teams" → maps/tourney1/).
+  const mapId = map ? (maps.find((m) => m.type === map)?.id ?? map) : null;
+  const normalizedMap = mapId
+    ? mapId.toLowerCase().replace(/[\s.()]+/g, "")
+    : null;
 
   const mapThumbnail = normalizedMap
     ? buildAbsoluteAssetUrl(

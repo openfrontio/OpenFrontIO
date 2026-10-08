@@ -7,34 +7,78 @@
   "multiplayer_frequency": 8,
   "nations": [
     {
-      "coordinates": [775, 757],
+      "coordinates": [869, 886],
       "name": "Sagittarius A*",
-      "flag": ""
+      "flag": "Abbasid Caliphate"
     },
     {
-      "coordinates": [967, 247],
-      "name": "Perseus Arm",
-      "flag": ""
-    },
-    {
-      "coordinates": [478, 1139],
-      "name": "Centaurus Arm",
-      "flag": ""
-    },
-    {
-      "coordinates": [840, 1048],
+      "coordinates": [816, 1188],
       "name": "Empire of Mankind",
       "flag": "un"
     },
     {
-      "coordinates": [1055, 1330],
-      "name": "Aliens",
+      "name": "Xenomorphs",
+      "flag": "Black Flag"
+    },
+    {
+      "name": "Navi",
       "flag": ""
     },
     {
-      "coordinates": [531, 164],
+      "name": "Eridians",
+      "flag": ""
+    },
+    {
+      "name": "Decepticons",
+      "flag": ""
+    },
+    {
+      "name": "Predators",
+      "flag": ""
+    },
+    {
+      "name": "Astrophage",
+      "flag": "Black Flag"
+    },
+    {
+      "name": "Galaxy Empire",
+      "flag": "Socialist_flag"
+    },
+    {
+      "name": "Martians",
+      "flag": "FlagOfMars"
+    },
+    {
+      "name": "Qu",
+      "flag": ""
+    },
+    {
+      "name": "Star People",
+      "flag": ""
+    },
+    {
+      "name": "The Flood",
+      "flag": "Black Flag"
+    },
+    {
       "name": "The Void",
-      "flag": "Cthulhu Republic"
+      "flag": "Black Flag"
+    },
+    {
+      "name": "Kryptonians",
+      "flag": "Socialist_flag"
+    },
+    {
+      "name": "Viltrum",
+      "flag": "Socialist_flag"
+    },
+    {
+      "name": "Symbiotes",
+      "flag": "Black Flag"
+    },
+    {
+      "name": "Confederacy of Systems",
+      "flag": "Liberalism_flag"
     }
   ]
 }

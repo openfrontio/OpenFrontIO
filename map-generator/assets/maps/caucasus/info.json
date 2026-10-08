@@ -110,5 +110,6 @@
       "name": "Eastern Anatolia",
       "flag": "tr"
     }
-  ]
+  ],
+  "themes": ["europe", "asia"]
 }

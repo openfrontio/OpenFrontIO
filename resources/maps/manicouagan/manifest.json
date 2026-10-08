@@ -75,5 +75,6 @@
       "name": "Lamontagne"
     }
   ],
+  "themes": ["north_america"],
   "translation_key": "map.manicouagan"
 }

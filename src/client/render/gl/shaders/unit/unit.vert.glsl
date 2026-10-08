@@ -14,6 +14,7 @@ uniform float uHBombGlowScale; // quad enlargement for the hydrogen bomb glow ha
 
 out vec2  vQuadPos;     // quad coords [0,1] — drives the radial glow falloff
 out vec2  vCellUV;      // sprite cell coords; the central 1/scale region is the sprite
+out vec2  vWorldPos;    // world-space tile coords — drives the train effect's gradient
 flat out float vAtlasCol;
 flat out float vOwnerID;
 flat out float vFlags;  // 0.0 = normal, 1.0 = flicker, 2.0 = angry
@@ -46,6 +47,7 @@ void main() {
 
   vec2 center = vec2(worldX + 0.5, worldY + 0.5);
   vec2 worldPos = center + (aPos - 0.5) * halfSize * 2.0;
+  vWorldPos = worldPos;
 
   vec3 clip = uCamera * vec3(worldPos, 1.0);
   gl_Position = vec4(clip.xy, 0.0, 1.0);

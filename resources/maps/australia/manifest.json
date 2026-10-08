@@ -55,5 +55,6 @@
       "name": "Tasmania"
     }
   ],
+  "themes": ["oceania"],
   "translation_key": "map.australia"
 }

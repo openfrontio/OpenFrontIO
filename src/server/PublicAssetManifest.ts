@@ -1,12 +1,11 @@
-import { createHash } from "crypto";
-import fs from "fs";
-import { globSync } from "glob";
-import path from "path";
 import {
   type AssetManifest,
   encodeAssetPath,
   normalizeAssetPath,
-} from "../core/AssetUrls";
+} from "@openfront/shared/AssetPaths";
+import { createHash } from "crypto";
+import fs from "fs";
+import path from "path";
 
 const HASHED_PUBLIC_ASSET_GLOBS = [
   "changelog.md",
@@ -22,15 +21,6 @@ const HASHED_PUBLIC_ASSET_GLOBS = [
   "sounds/**/*",
   "sprites/**/*",
 ] as const;
-
-const ROOT_PUBLIC_FILES = new Set([
-  "LICENSE",
-  "ads.txt",
-  "privacy-policy.html",
-  "robots.txt",
-  "terms-of-service.html",
-  "version.txt",
-]);
 
 const manifestCache = new Map<string, AssetManifest>();
 
@@ -50,6 +40,15 @@ type DerivedPublicAssetRenderer = {
 
 function toPosixPath(filePath: string): string {
   return filePath.split(path.sep).join(path.posix.sep);
+}
+
+function toRelativePosixPath(
+  rootDir: string,
+  dirent: { parentPath: string; name: string },
+): string {
+  // when cwd is used in globSync, dirent.parentPath is "."
+  const absolutePath = path.join(dirent.parentPath, dirent.name);
+  return toPosixPath(path.relative(rootDir, absolutePath));
 }
 
 function createContentHash(filePath: string): string {
@@ -149,9 +148,13 @@ function renderWebManifestAsset({
       );
     }
 
+    // The browser resolves a manifest icon's src against the manifest's own
+    // URL, and in production that is the CDN's /game_assets prefix, so a
+    // root-relative /_assets/... src would 404 at the CDN origin. Write it
+    // relative to the emitted manifest instead, like the BMFont pages.
     return {
       ...icon,
-      src: referencedHashedUrl,
+      src: getEmittedAssetRelativePath("manifest.json", referencedHashedUrl),
     };
   });
   return `${JSON.stringify(manifest, null, 2)}\n`;
@@ -245,6 +248,13 @@ export function getResourcesDir(rootDir: string = process.cwd()): string {
   return path.join(rootDir, "resources");
 }
 
+// Everything under resources/public/ is served verbatim at the site root, with
+// stable URLs: the policy pages, robots.txt, the press kit (whose image URLs
+// outlets hotlink), and Apple Pay's domain-verification file.
+export function getPublicDir(resourcesDir: string): string {
+  return path.join(resourcesDir, "public");
+}
+
 export function getProprietaryDir(rootDir: string = process.cwd()): string {
   return path.join(rootDir, "proprietary");
 }
@@ -266,37 +276,31 @@ function resolveSourceFile(relativePath: string, sourceDirs: string[]): string {
   return path.join(resolveSourceDir(relativePath, sourceDirs), relativePath);
 }
 
-export function shouldKeepRootPublicFile(relativePath: string): boolean {
-  return ROOT_PUBLIC_FILES.has(normalizeAssetPath(relativePath));
-}
-
 export function listHashedPublicAssetPaths(sourceDirs: string[]): string[] {
   const files = new Set<string>();
-  for (const dir of sourceDirs) {
-    if (!fs.existsSync(dir)) continue;
+  for (const sourceDir of sourceDirs) {
+    if (!fs.existsSync(sourceDir)) continue;
     for (const pattern of HASHED_PUBLIC_ASSET_GLOBS) {
-      for (const file of globSync(pattern, {
-        cwd: dir,
-        nodir: true,
-        dot: false,
-        posix: true,
+      for (const dirent of fs.globSync(pattern, {
+        cwd: sourceDir,
+        withFileTypes: true, // return dirent to exclude directories (like nodir: true)
+        exclude: ["**/.*", ".*"], // .gitignore etc (like dot: false)
       })) {
-        files.add(normalizeAssetPath(file));
+        if (dirent.isDirectory()) continue;
+        files.add(normalizeAssetPath(toRelativePosixPath(sourceDir, dirent))); // convert dirent (like posix:true)
       }
     }
   }
   return [...files].sort();
 }
 
-export function listRootPublicFiles(resourcesDir: string): string[] {
-  return globSync("**/*", {
-    cwd: resourcesDir,
-    nodir: true,
-    dot: false,
-    posix: true,
-  })
-    .map((file) => normalizeAssetPath(file))
-    .filter((file) => shouldKeepRootPublicFile(file))
+// A plain walk rather than a glob: dot-directories (.well-known) are served too.
+export function listRootPublicFiles(publicDir: string): string[] {
+  if (!fs.existsSync(publicDir)) return [];
+  return fs
+    .readdirSync(publicDir, { recursive: true, withFileTypes: true })
+    .filter((dirent) => dirent.isFile() && dirent.name !== ".DS_Store")
+    .map((dirent) => normalizeAssetPath(toRelativePosixPath(publicDir, dirent)))
     .sort();
 }
 
@@ -371,16 +375,65 @@ export function createHashedPublicAssetFiles(
   }
 }
 
-export function copyRootPublicFiles(
-  resourcesDir: string,
-  outDir: string,
-): void {
-  for (const relativePath of listRootPublicFiles(resourcesDir)) {
-    const sourcePath = path.join(resourcesDir, relativePath);
+export function copyRootPublicFiles(publicDir: string, outDir: string): void {
+  for (const relativePath of listRootPublicFiles(publicDir)) {
+    const sourcePath = path.join(publicDir, relativePath);
     const outputPath = path.join(outDir, relativePath);
     fs.mkdirSync(path.dirname(outputPath), { recursive: true });
     fs.copyFileSync(sourcePath, outputPath);
   }
+}
+
+// Path -> content type for every root file, plus a "<dir>/" entry for each
+// directory with an index.html. The site Worker serves exactly what this lists,
+// from sites/<site>/v/<short>/root/<path> (update.sh uploads both).
+export type RootFilesIndex = Record<string, string>;
+
+export const ROOT_FILES_INDEX = "root-files.json";
+
+const ROOT_FILE_TYPES: Record<string, string> = {
+  "": "text/plain; charset=utf-8",
+  ".html": "text/html; charset=utf-8",
+  ".txt": "text/plain; charset=utf-8",
+  ".png": "image/png",
+  ".jpg": "image/jpeg",
+  ".jpeg": "image/jpeg",
+  ".webp": "image/webp",
+  ".svg": "image/svg+xml",
+  ".pdf": "application/pdf",
+  ".zip": "application/zip",
+};
+
+function rootFileContentType(relativePath: string): string {
+  const ext = path.posix.extname(relativePath).toLowerCase();
+  const type = ROOT_FILE_TYPES[ext];
+  if (type === undefined) {
+    throw new Error(
+      `No content type for root file ${relativePath}; add ${ext} to ROOT_FILE_TYPES`,
+    );
+  }
+  return type;
+}
+
+export function buildRootFilesIndex(publicDir: string): RootFilesIndex {
+  const index: RootFilesIndex = {};
+  for (const relativePath of listRootPublicFiles(publicDir)) {
+    const contentType = rootFileContentType(relativePath);
+    index[relativePath] = contentType;
+    if (path.posix.basename(relativePath) === "index.html") {
+      const dir = path.posix.dirname(relativePath);
+      if (dir !== ".") index[`${dir}/`] = contentType;
+    }
+  }
+  return index;
+}
+
+export function writeRootFilesIndex(publicDir: string, outDir: string): void {
+  fs.mkdirSync(outDir, { recursive: true });
+  fs.writeFileSync(
+    path.join(outDir, ROOT_FILES_INDEX),
+    `${JSON.stringify(buildRootFilesIndex(publicDir), null, 2)}\n`,
+  );
 }
 
 export function writePublicAssetManifest(

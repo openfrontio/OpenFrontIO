@@ -50,5 +50,6 @@
       "name": "Northern Island"
     }
   ],
+  "themes": ["asia"],
   "translation_key": "map.yenisei"
 }

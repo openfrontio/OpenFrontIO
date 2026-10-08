@@ -1,13 +1,20 @@
 import { PlayerStats } from "../src/client/hud/layers/PlayerStats";
+import { UserSettings } from "../src/client/UserSettings";
 import type { GameView, PlayerView } from "../src/client/view";
-import { UserSettings } from "../src/core/game/UserSettings";
 
 function player(id: string, tiles: number): PlayerView {
   return {
     id: () => id,
+    smallID: () => 0,
+    name: () => id,
     displayName: () => id,
+    clanTag: () => null,
     numTilesOwned: () => tiles,
     gold: () => BigInt(tiles),
+    tradeGold: () => 0,
+    trainGold: () => 0,
+    piracyGold: () => 0,
+    goldEarned: () => 0,
     troops: () => tiles,
     totalUnitLevels: () => tiles,
     isAlive: () => true,
@@ -20,6 +27,7 @@ function gameWith(players: PlayerView[], me: PlayerView | null): GameView {
     myPlayer: () => me,
     playerViews: () => players,
     config: () => ({ maxTroops: () => 100 }),
+    ticks: () => 600,
     numLandTiles: () => 100,
     numTilesWithFallout: () => 0,
   } as unknown as GameView;

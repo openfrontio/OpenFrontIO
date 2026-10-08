@@ -1,0 +1,30 @@
+{
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  "env": {
+    "browser": true,
+    "node": true
+  },
+  "ignorePatterns": [
+    "src/server/gatekeeper/**",
+    "tests/pathfinding/playground/**"
+  ],
+  "categories": {
+    "correctness": "off",
+    "suspicious": "off",
+    "pedantic": "off",
+    "perf": "off",
+    "style": "off",
+    "restriction": "off",
+    "nursery": "off"
+  },
+  "options": {
+    "typeAware": true
+  },
+  "rules": {
+    "typescript/no-explicit-any": "off",
+    "typescript/prefer-nullish-coalescing": "error",
+    "eqeqeq": "error",
+    "no-case-declarations": "error",
+    "no-unused-vars": "off"
+  }
+}

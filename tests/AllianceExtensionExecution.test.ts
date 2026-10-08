@@ -1,6 +1,7 @@
-import { AllianceExtensionExecution } from "../src/core/execution/alliance/AllianceExtensionExecution";
-import { AllianceRequestExecution } from "../src/core/execution/alliance/AllianceRequestExecution";
-import { Game, MessageType, Player, PlayerType } from "../src/core/game/Game";
+import { MessageType, PlayerType } from "@openfront/engine-api/game/GameTypes";
+import { AllianceExtensionExecution } from "@openfront/engine/execution/alliance/AllianceExtensionExecution";
+import { AllianceRequestExecution } from "@openfront/engine/execution/alliance/AllianceRequestExecution";
+import { Game, Player } from "@openfront/engine/game/Game";
 import { playerInfo, setup } from "./util/Setup";
 
 let game: Game;
@@ -134,6 +135,8 @@ describe("AllianceExtensionExecution", () => {
       player2.id(),
       undefined,
       { name: player1.displayName() },
+      undefined,
+      player1.id(),
     );
     expect(displayMessageSpy).toHaveBeenCalledTimes(1);
 

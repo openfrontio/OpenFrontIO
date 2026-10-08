@@ -1,6 +1,6 @@
+import type { FriendEntry } from "@openfront/shared/ApiSchemas";
 import { html, LitElement, TemplateResult } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
-import type { FriendEntry } from "../../core/ApiSchemas";
 import {
   acceptFriendRequest,
   deleteFriendRequest,
@@ -9,10 +9,37 @@ import {
   removeFriend,
   sendFriendRequest,
 } from "../FriendsApi";
+import { showInGameConfirm } from "../InGameModal";
 import { showToast, translateText } from "../Utils";
-import "./PlayerName";
+import { playerNameLink } from "./ui/PlayerNameLink";
 
 const PAGE_LIMIT = 20;
+
+/**
+ * Accept a pasted profile share link (`…#modal=profile&publicID=abc12345`) and
+ * keep only the id, mirroring the private-lobby join box. Only strings that are
+ * actually URLs are touched: usernames render as `wonder #5005`, so a bare `#`
+ * must be left alone.
+ */
+export function extractPublicIdFromUrl(input: string): string {
+  // Schemes are case-insensitive, so `HTTPS://…` is a real link too.
+  if (!/^https?:\/\//i.test(input)) return input;
+  let url: URL;
+  try {
+    url = new URL(input);
+  } catch {
+    // Half-typed and malformed URLs land here on every keystroke — expected,
+    // so don't log; just hand the raw text back for the server to reject.
+    return input;
+  }
+  // Modals are hash-routed (`…/#modal=profile&publicID=abc12345`), so the id is
+  // in the fragment, not the query string — `url.searchParams` is always empty
+  // here. Parse the fragment's own `key=value&…` pairs instead.
+  const params = new URLSearchParams(url.hash.replace(/^#/, ""));
+  const publicId = params.get("publicID");
+  if (publicId === null || publicId === "") return input;
+  return publicId;
+}
 
 @customElement("friends-list")
 export class FriendsList extends LitElement {
@@ -96,7 +123,13 @@ export class FriendsList extends LitElement {
   }
 
   private async handleSend(): Promise<void> {
-    const target = this.addInput.trim();
+    // Names render as `wonder #5005` — with a non-breaking space (see
+    // usernameText) that survives a copy-paste — but resolve on the stored
+    // `wonder.5005` form, so accept either. `\s` covers the nbsp. Public ids
+    // never contain "#".
+    const target = extractPublicIdFromUrl(this.addInput.trim())
+      .trim()
+      .replace(/\s*#\s*/g, ".");
     if (!target) return;
     if (target === this.myPublicId) {
       showToast(translateText("friends.cannot_friend_self"), "red");
@@ -180,7 +213,7 @@ export class FriendsList extends LitElement {
 
   private async handleRemove(publicId: string): Promise<void> {
     if (this.actionPending) return;
-    const confirmed = window.confirm(
+    const confirmed = await showInGameConfirm(
       translateText("friends.confirm_remove", { publicId }),
     );
     if (!confirmed) return;
@@ -209,24 +242,12 @@ export class FriendsList extends LitElement {
       case "bad_request":
         return "friends.error_bad_request";
       default:
-        return "friends.error_generic";
+        return "common.error_generic";
     }
   }
 
   private formatDate(iso: string): string {
     return new Date(iso).toLocaleDateString();
-  }
-
-  // Bubble up to the account modal, which opens the player profile modal
-  // (and its back button returns here). Same handoff as clan/leaderboard rows.
-  private viewProfile(publicId: string): void {
-    this.dispatchEvent(
-      new CustomEvent<{ publicId: string }>("view-profile", {
-        detail: { publicId },
-        bubbles: true,
-        composed: true,
-      }),
-    );
   }
 
   render(): TemplateResult {
@@ -273,13 +294,15 @@ export class FriendsList extends LitElement {
             type="text"
             .value=${this.addInput}
             @input=${(e: Event) =>
-              (this.addInput = (e.target as HTMLInputElement).value)}
+              (this.addInput = extractPublicIdFromUrl(
+                (e.target as HTMLInputElement).value,
+              ))}
             @keydown=${(e: KeyboardEvent) => {
               if (e.key === "Enter") void this.handleSend();
             }}
             class="flex-1 px-4 py-2 bg-white/5 border border-white/10 rounded-lg text-white placeholder-white/30 focus:outline-none focus:ring-2 focus:ring-malibu-blue/50 focus:border-malibu-blue/50 transition-all font-mono text-sm"
             placeholder=${translateText("friends.public_id_placeholder")}
-            maxlength="25"
+            maxlength="200"
             ?disabled=${this.actionPending}
           />
           <button
@@ -343,12 +366,7 @@ export class FriendsList extends LitElement {
         class="flex items-center gap-3 bg-white/5 rounded-lg border border-white/10 p-3"
       >
         <div class="flex-1 min-w-0">
-          <player-name
-            .username=${entry.username}
-            .publicId=${entry.publicId}
-            .nameClass=${"font-bold text-blue-300 truncate hover:underline"}
-            .onNameClick=${() => this.viewProfile(entry.publicId)}
-          ></player-name>
+          ${playerNameLink(this, entry.username, entry.publicId)}
           <div class="text-white/30 text-[10px] mt-0.5">
             ${this.formatDate(entry.createdAt)}
           </div>
@@ -417,12 +435,7 @@ export class FriendsList extends LitElement {
                 class="flex items-center gap-3 bg-white/5 rounded-lg border border-white/10 p-3"
               >
                 <div class="flex-1 min-w-0">
-                  <player-name
-                    .username=${f.username}
-                    .publicId=${f.publicId}
-                    .nameClass=${"font-bold text-blue-300 truncate hover:underline"}
-                    .onNameClick=${() => this.viewProfile(f.publicId)}
-                  ></player-name>
+                  ${playerNameLink(this, f.username, f.publicId)}
                   <div class="text-white/30 text-[10px] mt-0.5">
                     ${translateText("friends.friends_since", {
                       date: this.formatDate(f.createdAt),

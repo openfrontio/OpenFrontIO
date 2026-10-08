@@ -1,21 +1,22 @@
-import { vi } from "vitest";
-import type { Game } from "../../../src/core/game/Game";
 import {
+  Cell,
   GameMapSize,
   GameMapType,
   PlayerType,
-} from "../../../src/core/game/Game";
-import { GameID } from "../../../src/core/Schemas";
+} from "@openfront/engine-api/game/GameTypes";
+import { GameID } from "@openfront/engine-api/Schemas";
+import type { Game } from "@openfront/engine/game/Game";
+import { vi } from "vitest";
 import { setup } from "../../util/Setup";
 
 const mockResolveTribeNameData = vi.fn();
 
-vi.mock("../../../src/core/execution/utils/TribeNames", () => ({
+vi.mock("@openfront/engine-lib/execution/utils/TribeNames", () => ({
   resolveTribeNameData: (...args: unknown[]) =>
     mockResolveTribeNameData(...args),
 }));
 
-import { TribeSpawner } from "../../../src/core/execution/TribeSpawner";
+import { TribeSpawner } from "@openfront/engine/execution/TribeSpawner";
 
 const GAME_ID: GameID = "test_game_id";
 
@@ -217,6 +218,123 @@ describe("TribeSpawner", () => {
     }
   });
 
+  test("purchased names each go to exactly one tribe", async () => {
+    const game = await setup("plains", { bots: 5, gameMap: GameMapType.Asia });
+
+    mockResolveTribeNameData.mockReturnValue({
+      prefixes: ["Alpha"],
+      suffixes: ["Tribe"],
+    });
+
+    const spawner = new TribeSpawner(game, GAME_ID);
+    const execs = spawner.spawnTribes(5, ["Dragon Riders", "Night Wolves"]);
+
+    expect(execs).toHaveLength(5);
+    const names = execs.map(
+      (e) => (e as unknown as { playerInfo: { name: string } }).playerInfo.name,
+    );
+    expect(names.filter((n) => n === "Dragon Riders")).toHaveLength(1);
+    expect(names.filter((n) => n === "Night Wolves")).toHaveLength(1);
+    expect(names.filter((n) => n === "Alpha Tribe")).toHaveLength(3);
+  });
+
+  test("purchased names beyond the open slots are dropped from the tail", async () => {
+    const game = await setup("plains", { bots: 2, gameMap: GameMapType.Asia });
+
+    mockResolveTribeNameData.mockReturnValue({
+      prefixes: ["Alpha"],
+      suffixes: ["Tribe"],
+    });
+
+    const spawner = new TribeSpawner(game, GAME_ID);
+    const execs = spawner.spawnTribes(2, [
+      "First Name",
+      "Second Name",
+      "Third Name",
+    ]);
+
+    const names = execs.map(
+      (e) => (e as unknown as { playerInfo: { name: string } }).playerInfo.name,
+    );
+    expect(names).toContain("First Name");
+    expect(names).toContain("Second Name");
+    expect(names).not.toContain("Third Name");
+  });
+
+  test("positioned map tribes keep their slots ahead of purchased names", async () => {
+    const game = await setup("plains", { bots: 2, gameMap: GameMapType.Asia });
+    const tile = findLandTile(game);
+
+    mockResolveTribeNameData.mockReturnValue({
+      prefixes: ["Alpha"],
+      suffixes: ["Tribe"],
+      customTribes: [
+        { name: "Positioned", coordinates: [game.x(tile), game.y(tile)] },
+      ],
+    });
+
+    const spawner = new TribeSpawner(game, GAME_ID);
+    const execs = spawner.spawnTribes(2, ["Bought One", "Bought Two"]);
+
+    const names = execs.map(
+      (e) => (e as unknown as { playerInfo: { name: string } }).playerInfo.name,
+    );
+    expect(names).toContain("Positioned");
+    expect(names).toContain("Bought One");
+    expect(names).not.toContain("Bought Two");
+  });
+
+  test("purchased assignment is identical for the same game id", async () => {
+    const game = await setup("plains", { bots: 6, gameMap: GameMapType.Asia });
+
+    mockResolveTribeNameData.mockReturnValue({
+      prefixes: ["Alpha", "Beta", "Gamma"],
+      suffixes: ["Tribe", "Clan"],
+    });
+
+    const purchased = ["Dragon Riders", "Night Wolves"];
+    const spawn = () =>
+      new TribeSpawner(game, GAME_ID)
+        .spawnTribes(6, purchased)
+        .map(
+          (e) =>
+            (e as unknown as { playerInfo: { name: string; id: string } })
+              .playerInfo,
+        );
+
+    const first = spawn();
+    const second = spawn();
+    expect(second.map((p) => p.name)).toEqual(first.map((p) => p.name));
+    expect(second.map((p) => p.id)).toEqual(first.map((p) => p.id));
+  });
+
+  test("no purchased names leaves the organic sequence unchanged", async () => {
+    const game = await setup("plains", { bots: 4, gameMap: GameMapType.Asia });
+
+    mockResolveTribeNameData.mockReturnValue({
+      prefixes: ["Alpha", "Beta", "Gamma"],
+      suffixes: ["Tribe", "Clan"],
+    });
+
+    const spawn = (purchased?: string[]) =>
+      purchased === undefined
+        ? new TribeSpawner(game, GAME_ID).spawnTribes(4)
+        : new TribeSpawner(game, GAME_ID).spawnTribes(4, purchased);
+    const infos = (execs: ReturnType<typeof spawn>) =>
+      execs.map(
+        (e) =>
+          (e as unknown as { playerInfo: { name: string; id: string } })
+            .playerInfo,
+      );
+
+    // An empty purchased list must not shift the PRNG stream — the names
+    // AND ids must match the no-argument (replay-compatible) path.
+    const withoutArg = infos(spawn());
+    const withEmpty = infos(spawn([]));
+    expect(withEmpty.map((p) => p.name)).toEqual(withoutArg.map((p) => p.name));
+    expect(withEmpty.map((p) => p.id)).toEqual(withoutArg.map((p) => p.id));
+  });
+
   test("all players spawn on valid land tiles", async () => {
     const game = await setup("plains", {
       bots: 0,
@@ -242,5 +360,49 @@ describe("TribeSpawner", () => {
       expect(tile).toBeDefined();
       expect(game.isLand(tile)).toBe(true);
     }
+  });
+
+  test("constructor ignores out-of-bounds nation cells without throwing", async () => {
+    const game = await setup("plains", { bots: 1, gameMap: GameMapType.Asia });
+
+    mockResolveTribeNameData.mockReturnValue({
+      prefixes: ["Test"],
+      suffixes: ["Tribe"],
+    });
+
+    const oobCell = new Cell(99999, 99999);
+    // Must not throw despite the out-of-bounds cell.
+    const spawner = new TribeSpawner(game, GAME_ID, [oobCell]);
+    const execs = spawner.spawnTribes(1);
+
+    expect(execs).toHaveLength(1);
+    // Tribe should still spawn normally (random, no fixed tile).
+    expect(execs[0].tile).toBeUndefined();
+  });
+
+  test("valid nation cell prevents positioned tribe from occupying that tile", async () => {
+    const game = await setup("plains", { bots: 1, gameMap: GameMapType.Asia });
+    const tile = findLandTile(game);
+    expect(game.hasOwner(tile)).toBe(false);
+    const x = game.x(tile);
+    const y = game.y(tile);
+
+    mockResolveTribeNameData.mockReturnValue({
+      prefixes: ["Test"],
+      suffixes: ["Tribe"],
+      customTribes: [{ name: "Occupied", coordinates: [x, y] }],
+    });
+
+    // A nation already sits on this tile.
+    const nationCell = new Cell(x, y);
+    const spawner = new TribeSpawner(game, GAME_ID, [nationCell]);
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const execs = spawner.spawnTribes(1);
+
+    expect(execs).toHaveLength(1);
+    // The positioned tribe was rejected (tile occupied by nation), so
+    // it falls back to a random spawn with no fixed tile.
+    expect(execs[0].tile).toBeUndefined();
+    expect(warnSpy).toHaveBeenCalled();
   });
 });

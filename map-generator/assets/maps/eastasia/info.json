@@ -6,23 +6,8 @@
   "multiplayer_frequency": 5,
   "nations": [
     {
-      "coordinates": [1150, 660],
+      "coordinates": [1157, 614],
       "name": "Hokkaido",
-      "flag": "jp"
-    },
-    {
-      "coordinates": [1005, 843],
-      "name": "Tohoku",
-      "flag": "jp"
-    },
-    {
-      "coordinates": [858, 1045],
-      "name": "Chubu",
-      "flag": "jp"
-    },
-    {
-      "coordinates": [948, 1037],
-      "name": "Kanto",
       "flag": "jp"
     },
     {
@@ -31,12 +16,7 @@
       "flag": "Sakhalin"
     },
     {
-      "coordinates": [571, 1116],
-      "name": "Chugoku",
-      "flag": "jp"
-    },
-    {
-      "coordinates": [595, 1190],
+      "coordinates": [631, 1174],
       "name": "Shikoku",
       "flag": "jp"
     },
@@ -46,7 +26,7 @@
       "flag": "jp"
     },
     {
-      "coordinates": [274, 1058],
+      "coordinates": [265, 1010],
       "name": "South Korea",
       "flag": "kr"
     },
@@ -56,53 +36,8 @@
       "flag": "kp"
     },
     {
-      "coordinates": [15, 795],
-      "name": "China",
-      "flag": "cn"
-    },
-    {
-      "coordinates": [230, 75],
-      "name": "Russia",
-      "flag": "ru"
-    },
-    {
-      "coordinates": [898, 923],
-      "name": "Sado Island",
-      "flag": "jp"
-    },
-    {
-      "coordinates": [592, 1031],
-      "name": "Oki Islands",
-      "flag": "jp"
-    },
-    {
-      "coordinates": [741, 1108],
-      "name": "Kyoto",
-      "flag": "jp"
-    },
-    {
-      "coordinates": [219, 972],
-      "name": "Seoul",
-      "flag": "kr"
-    },
-    {
-      "coordinates": [976, 1073],
+      "coordinates": [979, 1073],
       "name": "Tokyo",
-      "flag": "jp"
-    },
-    {
-      "coordinates": [911, 1079],
-      "name": "Mount Fuji",
-      "flag": "jp"
-    },
-    {
-      "coordinates": [1298, 564],
-      "name": "Shiretoko Peninsula",
-      "flag": "jp"
-    },
-    {
-      "coordinates": [435, 1311],
-      "name": "Sakurajima",
       "flag": "jp"
     },
     {
@@ -111,9 +46,75 @@
       "flag": "jp"
     },
     {
-      "coordinates": [731, 1115],
-      "name": "Kinki",
+      "coordinates": [740, 480],
+      "name": "Primorsky Krai",
+      "flag": "ru"
+    },
+    {
+      "coordinates": [25, 80],
+      "name": "Inner Mongolia",
+      "flag": "cn"
+    },
+    {
+      "coordinates": [334, 24],
+      "name": "Amur",
+      "flag": "ru"
+    },
+    {
+      "coordinates": [1443, 512],
+      "name": "Kuril Islands",
+      "flag": "Sakhalin"
+    },
+    {
+      "coordinates": [69, 581],
+      "name": "Jilin",
+      "flag": "cn"
+    },
+    {
+      "coordinates": [932, 89],
+      "name": "Khabarovsk Krai",
+      "flag": "ru"
+    },
+    {
+      "coordinates": [582, 1098],
+      "name": "Chugoku",
       "flag": "jp"
+    },
+    {
+      "coordinates": [773, 1102],
+      "name": "Kyoto",
+      "flag": "jp"
+    },
+    {
+      "coordinates": [1037, 835],
+      "name": "Tohoku",
+      "flag": "jp"
+    },
+    {
+      "coordinates": [328, 478],
+      "name": "Heilongjiang",
+      "flag": "cn"
+    },
+    {
+      "coordinates": [868, 1052],
+      "name": "Chubu",
+      "flag": "jp"
+    },
+    {
+      "coordinates": [991, 987],
+      "name": "Kanto",
+      "flag": "jp"
+    },
+    {
+      "coordinates": [191, 1201],
+      "name": "Jeju Island",
+      "flag": "kr"
+    },
+    {
+      "coordinates": [581, 224],
+      "name": "Jewish Autonomous Oblast",
+      "flag": "ru"
     }
-  ]
+  ],
+  "themes": ["asia"]
 }

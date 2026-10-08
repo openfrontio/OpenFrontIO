@@ -17,6 +17,7 @@
     "nameDebug": false
   },
   "terrain": {
+    "backgroundColor": "#3c3c3c",
     "oceanColor": "#4785b5",
     "sandColor": "#CCCB9E",
     "plainsColor": "#BEDC8A",
@@ -233,7 +234,8 @@
     "statusOutlineWidth": 6,
     "hoverFadeAlpha": 0.5,
     "hoverGlowWidth": 5,
-    "hoverGlowAlpha": 0.75
+    "hoverGlowAlpha": 0.75,
+    "flagAlpha": 1
   },
   "fx": {
     "shockwaveRingWidth": 0.04,
@@ -247,7 +249,11 @@
     "debrisFadeOut": 0.8,
     "conquestLifetimeMs": 2500,
     "conquestFadeIn": 0.1,
-    "conquestFadeOut": 0.6
+    "conquestFadeOut": 0.6,
+    "nukeRadiusAtom": 70,
+    "nukeRadiusHydro": 160,
+    "nukeRadiusMirv": 70,
+    "debrisDensity": 1
   },
   "nukeTrajectory": {
     "lineWidth": 2.5,
@@ -341,6 +347,7 @@
   },
   "altView": {
     "gridFontSize": 24,
+    "fillAlpha": 0.15,
     "recolorStructures": true
   },
   "tileDrip": {
@@ -352,24 +359,24 @@
       "intensity": 1.2
     },
     "Port": {
-      "radius": 12,
-      "intensity": 1
+      "radius": 18,
+      "intensity": 1.2
     },
     "Factory": {
-      "radius": 12,
-      "intensity": 1
+      "radius": 18,
+      "intensity": 1.2
     },
     "Defense Post": {
-      "radius": 10,
-      "intensity": 0.9
+      "radius": 18,
+      "intensity": 1.2
     },
     "SAM Launcher": {
-      "radius": 10,
-      "intensity": 0.9
+      "radius": 18,
+      "intensity": 1.2
     },
     "Missile Silo": {
-      "radius": 10,
-      "intensity": 0.9
+      "radius": 18,
+      "intensity": 1.2
     },
     "Transport": {
       "radius": 6,

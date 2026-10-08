@@ -8,7 +8,7 @@ import {
   fetchClanRequests,
 } from "../../ClanApi";
 import { translateText } from "../../Utils";
-import "../PlayerName";
+import { playerNameLink } from "../ui/PlayerNameLink";
 import {
   filterRequestsBySearch,
   formatClanDate,
@@ -135,6 +135,7 @@ export class ClanRequestsView extends LitElement {
         </div>
         ${renderMemberSearchInput(
           (e) => this.onSearchInput(e),
+          this.memberSearch,
           "clan_modal.search_requests_placeholder",
         )}
         ${filtered.length === 0
@@ -153,10 +154,7 @@ export class ClanRequestsView extends LitElement {
                       class="flex items-center gap-3 bg-white/5 rounded-xl border border-white/10 p-4"
                     >
                       <div class="flex-1 min-w-0">
-                        <player-name
-                          .username=${req.username}
-                          .publicId=${req.publicId}
-                        ></player-name>
+                        ${playerNameLink(this, req.username, req.publicId)}
                         <span class="text-white/30 text-[10px]">
                           ${translateText("clan_modal.requested_on", {
                             tag: this.selectedClan?.tag ?? this.clanTag,

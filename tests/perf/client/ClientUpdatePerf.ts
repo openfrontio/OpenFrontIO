@@ -32,28 +32,29 @@
  */
 import "./Shims"; // must be first: browser-global shims for client code
 
-import fs from "fs";
-import path from "path";
-import { fileURLToPath } from "url";
-import { GameView } from "../../../src/client/view/GameView";
-import { WebGLFrameBuilder } from "../../../src/client/WebGLFrameBuilder";
-import { Config } from "../../../src/core/configuration/Config";
 import {
   Difficulty,
   GameMapSize,
   GameMapType,
   GameMode,
   GameType,
-} from "../../../src/core/game/Game";
+} from "@openfront/engine-api/game/GameTypes";
 import {
   GameUpdateType,
   GameUpdateViewData,
   HashUpdate,
-} from "../../../src/core/game/GameUpdates";
-import { loadTerrainMap } from "../../../src/core/game/TerrainMapLoader";
-import { createGameRunner } from "../../../src/core/GameRunner";
-import { GameConfig, GameStartInfo } from "../../../src/core/Schemas";
-import type { WorkerClient } from "../../../src/core/worker/WorkerClient";
+} from "@openfront/engine-api/game/GameUpdates";
+import { GameConfig, GameStartInfo } from "@openfront/engine-api/Schemas";
+import { Config } from "@openfront/engine-lib/configuration/Config";
+import { loadTerrainMap } from "@openfront/engine-lib/game/TerrainMapLoader";
+import { createGameRunner } from "@openfront/engine/GameRunner";
+import { loadMapFiles } from "@openfront/shared/GameMapLoader";
+import fs from "fs";
+import path from "path";
+import { fileURLToPath } from "url";
+import { GameView } from "../../../src/client/view/GameView";
+import { WebGLFrameBuilder } from "../../../src/client/WebGLFrameBuilder";
+import type { WorkerClient } from "../../../src/client/WorkerClient";
 import { NodeGameMapLoader } from "../fullgame/NodeGameMapLoader";
 import {
   CpuProfiler,
@@ -169,8 +170,8 @@ function createGlStub() {
     setLocalRailColor: noop("setLocalRailColor"),
     updateSpawnOverlay: noop("updateSpawnOverlay"),
     initSkinAtlas: noop("initSkinAtlas"),
-    applyTerrainDelta: (refs: number[]) =>
-      bump("applyTerrainDelta", refs.length),
+    applyTerrainRects: (rects: unknown[]) =>
+      bump("applyTerrainRects", rects.length),
     // uploadFrameData dispatch targets (FrameUploadTarget)
     uploadTileAndTrailState: noop("uploadTileAndTrailState"),
     uploadLiveDelta: (_: unknown, changed: unknown[]) => {
@@ -343,7 +344,7 @@ async function main(): Promise<void> {
   const runner = await createGameRunner(
     gameStart,
     undefined,
-    mapLoader,
+    await loadMapFiles(mapLoader, gameConfig.gameMap, gameConfig.gameMapSize),
     (gu) => {
       if ("errMsg" in gu) {
         fatalError = `${gu.errMsg}\n${gu.stack ?? ""}`;
@@ -355,11 +356,9 @@ async function main(): Promise<void> {
 
   // Client side: own Config + own map load, mirroring createClientGame (the
   // real client and worker each load their own copy of the map).
-  const clientConfig = new Config(gameConfig, null, false);
+  const clientConfig = new Config(gameConfig, false);
   const clientMapData = await loadTerrainMap(
-    gameConfig.gameMap,
-    gameConfig.gameMapSize,
-    mapLoader,
+    await loadMapFiles(mapLoader, gameConfig.gameMap, gameConfig.gameMapSize),
   );
   const gameView = new GameView(
     {} as unknown as WorkerClient, // only stored; async query methods unused here

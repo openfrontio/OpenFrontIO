@@ -4,6 +4,8 @@ import {
   type ClanBrowseResponse,
   ClanBrowseResponseSchema,
   type ClanDiscord,
+  type ClanDonationsResponse,
+  ClanDonationsResponseSchema,
   type ClanGameFilter,
   type ClanGamesResponse,
   ClanGamesResponseSchema,
@@ -17,7 +19,7 @@ import {
   ClanRequestsResponseSchema,
   DiscordInviteResponseSchema,
   JoinClanResponseSchema,
-} from "../core/ClanApiSchemas";
+} from "@openfront/shared/ClanApiSchemas";
 import { getApiBase, getUserMe } from "./Api";
 import { getAuthHeader } from "./Auth";
 
@@ -27,6 +29,8 @@ export type {
   ClanBansResponse,
   ClanBrowseResponse,
   ClanDiscord,
+  ClanDonation,
+  ClanDonationsResponse,
   ClanGame,
   ClanGameFilter,
   ClanGamePlayer,
@@ -39,7 +43,7 @@ export type {
   ClanMemberStats,
   ClanMemberWL,
   ClanRequestsResponse,
-} from "../core/ClanApiSchemas";
+} from "@openfront/shared/ClanApiSchemas";
 
 async function clanFetch(
   path: string,
@@ -194,6 +198,7 @@ export async function fetchClanMembers(
   limit = 20,
   sort: ClanMemberSort = "default",
   order?: ClanMemberOrder,
+  search?: string,
 ): Promise<ClanMembersResponse | false> {
   try {
     const params = new URLSearchParams();
@@ -201,6 +206,8 @@ export async function fetchClanMembers(
     params.set("limit", String(limit));
     if (sort !== "default") params.set("sort", sort);
     if (order) params.set("order", order);
+    const normalizedSearch = search?.trim();
+    if (normalizedSearch) params.set("search", normalizedSearch);
     const res = await clanFetch(
       `/clans/${encodeURIComponent(tag)}/members?${params}`,
     );
@@ -602,6 +609,82 @@ export async function fetchClanGames(
     const parsed = ClanGamesResponseSchema.safeParse(json);
     if (!parsed.success) {
       console.warn("fetchClanGames: Zod validation failed", parsed.error);
+      return { error: "failed" };
+    }
+    return parsed.data;
+  } catch {
+    return { error: "failed" };
+  }
+}
+
+export type ClanCurrencyType = "soft" | "hard";
+
+/**
+ * Moves currency from the caller's own wallet into the clan treasury. One-way
+ * and final: the API never credits a clan balance back to a player.
+ *
+ * `amount` is a decimal integer string — balances are int64 server-side and a
+ * JSON number would silently lose precision past 2^53. A network failure just
+ * reports itself; the player retries by clicking Donate again. That retry is
+ * safe even if the dead request actually went through, because the dialog
+ * reuses the same `idempotencyKey` for its whole lifetime and the server
+ * replays the original 201 without moving more currency.
+ */
+export async function donateToClan(
+  tag: string,
+  currencyType: ClanCurrencyType,
+  amount: string,
+  idempotencyKey: string,
+): Promise<true | { error: string }> {
+  let res: Response;
+  try {
+    res = await clanFetch(`/clans/${encodeURIComponent(tag)}/donate`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ currencyType, amount, idempotencyKey }),
+    });
+  } catch {
+    return { error: "clan_modal.error_network" };
+  }
+  // 201 for a fresh donation and for an idempotent replay alike.
+  if (res.ok) return true;
+  if (res.status === 401) return { error: "clan_modal.sign_in_for_clans" };
+  if (res.status === 403) return { error: "clan_modal.donate_not_member" };
+  if (res.status === 400) {
+    const body = await res.json().catch(() => ({}));
+    const msg = (body as { message?: string }).message ?? "";
+    if (msg === "Insufficient balance") {
+      return { error: "clan_modal.donate_insufficient" };
+    }
+  }
+  return { error: "clan_modal.error_failed" };
+}
+
+export type ClanDonationsFetchError = "forbidden" | "failed";
+
+/**
+ * Members-only page of donations made to the clan, newest first. `currencyType`
+ * narrows to one currency (and scopes `total`); omitted means both. The
+ * endpoint rejects empty query values, so a param is only sent when set.
+ */
+export async function fetchClanDonations(
+  tag: string,
+  opts: { page?: number; limit?: number; currencyType?: ClanCurrencyType } = {},
+): Promise<ClanDonationsResponse | { error: ClanDonationsFetchError }> {
+  try {
+    const params = new URLSearchParams();
+    params.set("page", String(opts.page ?? 1));
+    params.set("limit", String(opts.limit ?? 10));
+    if (opts.currencyType) params.set("currencyType", opts.currencyType);
+    const res = await clanFetch(
+      `/clans/${encodeURIComponent(tag)}/donations?${params}`,
+    );
+    if (res.status === 403) return { error: "forbidden" };
+    if (!res.ok) return { error: "failed" };
+    const json = await res.json();
+    const parsed = ClanDonationsResponseSchema.safeParse(json);
+    if (!parsed.success) {
+      console.warn("fetchClanDonations: Zod validation failed", parsed.error);
       return { error: "failed" };
     }
     return parsed.data;

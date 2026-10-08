@@ -21,10 +21,15 @@ jobs:
         with:
           submodules: false
       - name: Setup node
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@v7
         with:
           node-version: 24
+      - name: Setup npm
+        run: npm install --global --ignore-scripts npm@12.1.0
       - run: npm ci
+      # Root project plus each package's own tsconfig (engine, engine-api and
+      # engine-lib get no DOM and no Node types).
+      - run: npm run typecheck
       - run: npm run build-prod
       - uses: actions/upload-artifact@v7
         with:
@@ -40,24 +45,28 @@ jobs:
         with:
           submodules: false
       - name: Setup node
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@v7
         with:
           node-version: 24
+      - name: Setup npm
+        run: npm install --global --ignore-scripts npm@12.1.0
       - run: npm ci
       - run: npm run test:coverage
 
-  eslint:
-    name: 🔍 ESLint
+  lint:
+    name: 🔍 Lint
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v7
-      - uses: actions/setup-node@v6
+      - uses: actions/setup-node@v7
         with:
           node-version: "24"
           cache: "npm"
+      - name: Setup npm
+        run: npm install --global --ignore-scripts npm@12.1.0
       - run: npm ci
-      - run: npx eslint --format gha
+      - run: npm run lint:github
 
   prettier:
     name: 🎨 Prettier
@@ -65,10 +74,12 @@ jobs:
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v7
-      - uses: actions/setup-node@v6
+      - uses: actions/setup-node@v7
         with:
           node-version: "24"
           cache: "npm"
+      - name: Setup npm
+        run: npm install --global --ignore-scripts npm@12.1.0
       - run: npm ci
       - run: npx prettier --check .
 
@@ -78,11 +89,13 @@ jobs:
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v7
-      - uses: actions/setup-node@v6
+      - uses: actions/setup-node@v7
         with:
           node-version: "24"
           cache: "npm"
-      - uses: actions/setup-go@v6
+      - name: Setup npm
+        run: npm install --global --ignore-scripts npm@12.1.0
+      - uses: actions/setup-go@v7
         with:
           go-version-file: map-generator/go.mod
           cache-dependency-path: map-generator/go.sum

@@ -40,5 +40,6 @@
       "name": "Tasmania",
       "flag": "aus_tas"
     }
-  ]
+  ],
+  "themes": ["oceania"]
 }

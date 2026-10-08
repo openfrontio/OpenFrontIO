@@ -6,13 +6,10 @@
  * Pre-built by generate-sprite-atlases.mjs.
  */
 
-import type { Config } from "../../../../../core/configuration/Config";
+import type { Config } from "@openfront/engine-lib/configuration/Config";
 import type { ConquestFx, DeadUnitFx, RendererConfig } from "../../../types";
 import {
   STRUCTURE_TYPES,
-  UT_ATOM_BOMB,
-  UT_HYDROGEN_BOMB,
-  UT_MIRV_WARHEAD,
   UT_SHELL,
   UT_TRAIN,
   UT_WARSHIP,
@@ -20,9 +17,10 @@ import {
 import { DynamicInstanceBuffer } from "../../DynamicBuffer";
 import type { RenderSettings } from "../../RenderSettings";
 import { createProgram, shaderSrc } from "../../utils/GlUtils";
+import { nukeExplosionRadius } from "./FxSettings";
 
+import { assetUrl } from "@openfront/shared/AssetUrls";
 import fxAtlasMeta from "resources/atlases/fx-atlas-meta.json";
-import { assetUrl } from "src/core/AssetUrls";
 
 import spriteFragSrc from "../../shaders/fx/sprite.frag.glsl?raw";
 import spriteVertSrc from "../../shaders/fx/sprite.vert.glsl?raw";
@@ -134,17 +132,6 @@ const FX_CONFIG: FxTypeConfig[] = [
 ];
 
 // ---------------------------------------------------------------------------
-// Nuke explosion radii — visual-only (FxLayer source, not Config). These are
-// the shockwave/debris scatter sizes, not the gameplay damage radii.
-// ---------------------------------------------------------------------------
-
-export const NUKE_EXPLOSION_RADII: Readonly<Record<string, number>> = {
-  [UT_ATOM_BOMB]: 70,
-  [UT_HYDROGEN_BOMB]: 160,
-  [UT_MIRV_WARHEAD]: 70,
-};
-
-// ---------------------------------------------------------------------------
 // Nuke debris plan
 // ---------------------------------------------------------------------------
 
@@ -220,6 +207,7 @@ export class FxSpritePass {
       gl,
       shaderSrc(spriteVertSrc, { FX_TYPE_COUNT }),
       spriteFragSrc,
+      "FxSpritePass",
     );
     this.uCamera = gl.getUniformLocation(this.program, "uCamera")!;
     this.uFxUV = gl.getUniformLocation(this.program, "uFxUV")!;
@@ -281,39 +269,46 @@ export class FxSpritePass {
   // Atlas loading
   // -------------------------------------------------------------------------
 
+  private isDisposed = false;
+
   private async loadAtlas(): Promise<void> {
-    const img = new Image();
-    img.crossOrigin = "anonymous";
-    img.src = fxAtlasUrl;
-    await img.decode();
-    const gl = this.gl;
+    try {
+      const img = new Image();
+      img.crossOrigin = "anonymous";
+      img.src = fxAtlasUrl;
+      await img.decode();
+      if (this.isDisposed) return;
+      const gl = this.gl;
 
-    gl.bindTexture(gl.TEXTURE_2D, this.atlasTex);
-    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, img);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+      gl.bindTexture(gl.TEXTURE_2D, this.atlasTex);
+      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, img);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
 
-    const meta = fxAtlasMeta;
-    const uvData = new Float32Array(FX_TYPE_COUNT * 4);
-    const worldData = new Float32Array(FX_TYPE_COUNT * 4);
+      const meta = fxAtlasMeta;
+      const uvData = new Float32Array(FX_TYPE_COUNT * 4);
+      const worldData = new Float32Array(FX_TYPE_COUNT * 4);
 
-    for (let i = 0; i < FX_TYPE_COUNT; i++) {
-      const row = meta.rows[i];
-      uvData[i * 4 + 0] = row.yOffset / meta.height;
-      uvData[i * 4 + 1] = row.height / meta.height;
-      uvData[i * 4 + 2] = row.worldWidth / meta.width;
-      uvData[i * 4 + 3] = 0;
-      worldData[i * 4 + 0] = row.worldWidth;
-      worldData[i * 4 + 1] = row.worldHeight;
-      worldData[i * 4 + 2] = 0;
-      worldData[i * 4 + 3] = 0;
+      for (let i = 0; i < FX_TYPE_COUNT; i++) {
+        const row = meta.rows[i];
+        uvData[i * 4 + 0] = row.yOffset / meta.height;
+        uvData[i * 4 + 1] = row.height / meta.height;
+        uvData[i * 4 + 2] = row.worldWidth / meta.width;
+        uvData[i * 4 + 3] = 0;
+        worldData[i * 4 + 0] = row.worldWidth;
+        worldData[i * 4 + 1] = row.worldHeight;
+        worldData[i * 4 + 2] = 0;
+        worldData[i * 4 + 3] = 0;
+      }
+
+      gl.useProgram(this.program);
+      gl.uniform4fv(this.uFxUV, uvData);
+      gl.uniform4fv(this.uFxWorld, worldData);
+
+      this.atlasReady = true;
+    } catch (e) {
+      console.warn("Failed to load fx atlas:", e);
     }
-
-    gl.useProgram(this.program);
-    gl.uniform4fv(this.uFxUV, uvData);
-    gl.uniform4fv(this.uFxWorld, worldData);
-
-    this.atlasReady = true;
   }
 
   // -------------------------------------------------------------------------
@@ -357,7 +352,7 @@ export class FxSpritePass {
     const x = unit.pos % this.mapW;
     const y = (unit.pos - x) / this.mapW;
 
-    const nukeRadius = NUKE_EXPLOSION_RADII[typeName];
+    const nukeRadius = nukeExplosionRadius(this.settings.fx, typeName);
     if (nukeRadius !== undefined) {
       if (unit.reachedTarget) {
         this.spawnNukeSprites(x, y, nukeRadius, now, unit.pos);
@@ -398,8 +393,9 @@ export class FxSpritePass {
     this.pushFx(x, y, FX_NUKE, now);
 
     let debrisIdx = 0;
+    const densityScale = this.settings.fx.debrisDensity;
     for (const { type, radiusFactor, density } of DEBRIS_PLAN) {
-      const count = Math.max(0, Math.floor(radius * density));
+      const count = Math.max(0, Math.floor(radius * density * densityScale));
       const r = radius * radiusFactor;
       for (let i = 0; i < count; i++) {
         const seed = pos * 997 + debrisIdx++;
@@ -535,6 +531,7 @@ export class FxSpritePass {
   }
 
   dispose(): void {
+    this.isDisposed = true;
     const gl = this.gl;
     gl.deleteProgram(this.program);
     this.instanceBuf.dispose();

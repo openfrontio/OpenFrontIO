@@ -1,14 +1,12 @@
-import { Config, NukeMagnitude } from "../../src/core/configuration/Config";
+import { Tick, UnitType } from "@openfront/engine-api/game/GameTypes";
+import { NukeMagnitude } from "@openfront/engine-lib/configuration/Config";
 import {
-  Game,
-  Player,
-  TerraNullius,
-  Tick,
-  UnitType,
-} from "../../src/core/game/Game";
-import { TileRef } from "../../src/core/game/GameMap";
+  AttackLogicInput,
+  AttackLogicResult,
+  EngineConfig,
+} from "@openfront/engine/configuration/EngineConfig";
 
-export class TestConfig extends Config {
+export class TestConfig extends EngineConfig {
   private _proximityBonusPortsNb: number = 0;
   private _defaultNukeSpeed: number = 4;
   private _spawnImmunityDuration: number = 0;
@@ -76,48 +74,12 @@ export class TestConfig extends Config {
     return this._nationSpawnImmunityDuration;
   }
 
-  attackLogic(
-    gm: Game,
-    attackTroops: number,
-    attacker: Player,
-    defender: Player | TerraNullius,
-    tileToConquer: TileRef,
-  ): {
-    attackerTroopLoss: number;
-    defenderTroopLoss: number;
-    tilesPerTickUsed: number;
-  } {
-    return { attackerTroopLoss: 1, defenderTroopLoss: 1, tilesPerTickUsed: 1 };
-  }
-
-  attackTilesPerTick(
-    attackTroops: number,
-    attacker: Player,
-    defender: Player | TerraNullius,
-    numAdjacentTilesWithEnemy: number,
-  ): number {
-    return 1;
+  attackLogic(_input: AttackLogicInput): AttackLogicResult {
+    return { attackerTroopLoss: 1, defenderTroopLoss: 1, tickFraction: 1 };
   }
 }
 export class UseRealAttackLogic extends TestConfig {
-  attackLogic(
-    gm: Game,
-    attackTroops: number,
-    attacker: Player,
-    defender: Player | TerraNullius,
-    tileToConquer: TileRef,
-  ): {
-    attackerTroopLoss: number;
-    defenderTroopLoss: number;
-    tilesPerTickUsed: number;
-  } {
-    return Config.prototype.attackLogic.call(
-      this,
-      gm,
-      attackTroops,
-      attacker,
-      defender,
-      tileToConquer,
-    );
+  attackLogic(input: AttackLogicInput): AttackLogicResult {
+    return EngineConfig.prototype.attackLogic.call(this, input);
   }
 }

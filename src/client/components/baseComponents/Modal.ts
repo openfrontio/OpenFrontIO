@@ -91,7 +91,7 @@ export class OModal extends LitElement {
     return html`
       <div
         role="tablist"
-        class="flex justify-center border-b border-white/10 px-4 lg:px-6 gap-1 shrink-0"
+        class="flex flex-wrap justify-center border-b border-white/10 px-4 lg:px-6 gap-1 shrink-0"
       >
         ${this.tabs.map((tab) => {
           const active = this.activeTab === tab.key;
@@ -131,7 +131,7 @@ export class OModal extends LitElement {
 
     const wrapperClass = this.inline
       ? "relative flex flex-col w-full h-full m-0 max-w-full max-h-none shadow-none"
-      : `relative flex flex-col w-full h-full lg:w-[90%] lg:h-auto lg:min-w-[400px] lg:max-w-[900px] lg:m-8 lg:rounded-lg shadow-[0_20px_60px_rgba(0,0,0,0.8)] lg:max-h-[calc(100vh-4rem)] ${
+      : `relative flex flex-col w-full h-full lg:w-[90%] lg:h-auto lg:min-w-[400px] lg:max-w-[900px] lg:m-8 lg:rounded-lg lg:max-h-[calc(100vh-4rem)] ${
           this.alwaysMaximized ? "h-auto" : ""
         }`;
     const wrapperStyle =

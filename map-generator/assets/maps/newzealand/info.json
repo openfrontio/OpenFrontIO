@@ -1,0 +1,427 @@
+{
+  "id": "NewZealand",
+  "name": "New Zealand",
+  "translation_key": "map.newzealand",
+  "categories": ["new", "oceania"],
+  "multiplayer_frequency": 5,
+  "nations": [
+    {
+      "coordinates": [1096, 415],
+      "name": "Te Tai Tokerau",
+      "flag": "Maori flag"
+    },
+    {
+      "coordinates": [1198, 666],
+      "name": "Tamaki",
+      "flag": "Maori flag"
+    },
+    {
+      "coordinates": [1380, 731],
+      "name": "Hauraki",
+      "flag": "Maori flag"
+    },
+    {
+      "coordinates": [1299, 994],
+      "name": "Tainui",
+      "flag": "Maori flag"
+    },
+    {
+      "coordinates": [1424, 876],
+      "name": "Tauranga Moana",
+      "flag": "Maori flag"
+    },
+    {
+      "coordinates": [1452, 988],
+      "name": "Te Arawa Waka",
+      "flag": "Maori flag"
+    },
+    {
+      "coordinates": [1554, 938],
+      "name": "Mataatua",
+      "flag": "Maori flag"
+    },
+    {
+      "coordinates": [1703, 998],
+      "name": "Te Tai Rawhiti",
+      "flag": "Maori flag"
+    },
+    {
+      "coordinates": [1493, 1322],
+      "name": "Takitimu",
+      "flag": "Maori flag"
+    },
+    {
+      "coordinates": [1164, 1168],
+      "name": "Hauauru",
+      "flag": "Maori flag"
+    },
+    {
+      "coordinates": [1308, 1495],
+      "name": "Te Moana O Raukawa",
+      "flag": "Maori flag"
+    },
+    {
+      "coordinates": [924, 1593],
+      "name": "Te Tau Ihu",
+      "flag": "Maori flag"
+    },
+    {
+      "coordinates": [681, 2013],
+      "name": "Waipounamu",
+      "flag": "Maori flag"
+    },
+    {
+      "coordinates": [1832, 2278],
+      "name": "Rekohu",
+      "flag": "nz-chatham"
+    },
+    {
+      "coordinates": [253, 2707],
+      "name": "Rakiura",
+      "flag": "Maori flag"
+    },
+    {
+      "coordinates": [27, 2958],
+      "name": "Motu Maha",
+      "flag": "Maori flag"
+    },
+    {
+      "coordinates": [31, 3404],
+      "name": "Macquarie Island",
+      "flag": "au"
+    },
+    {
+      "coordinates": [200, 3201],
+      "name": "Campbell Island",
+      "flag": "nz"
+    },
+    {
+      "coordinates": [1757, 3257],
+      "name": "Antipodes Islands",
+      "flag": "nz"
+    },
+    {
+      "coordinates": [1883, 20],
+      "name": "Rangitahua",
+      "flag": "Maori flag"
+    }
+  ],
+  "additionalNations": [
+    {
+      "coordinates": [998, 359],
+      "name": "Far North",
+      "flag": "nz"
+    },
+    {
+      "coordinates": [1156, 494],
+      "name": "Whangarei",
+      "flag": "nz"
+    },
+    {
+      "coordinates": [1083, 519],
+      "name": "Kaipara",
+      "flag": "nz"
+    },
+    {
+      "coordinates": [1208, 716],
+      "name": "Auckland",
+      "flag": "nz-auckland"
+    },
+    {
+      "coordinates": [1330, 649],
+      "name": "Thames-Coromandel",
+      "flag": "nz"
+    },
+    {
+      "coordinates": [1247, 804],
+      "name": "Waikato",
+      "flag": "nz"
+    },
+    {
+      "coordinates": [1291, 864],
+      "name": "Hamilton",
+      "flag": "nz"
+    },
+    {
+      "coordinates": [1358, 852],
+      "name": "Matamata-Piako",
+      "flag": "nz"
+    },
+    {
+      "coordinates": [1419, 828],
+      "name": "Western Bay of Plenty",
+      "flag": "nz"
+    },
+    {
+      "coordinates": [1278, 937],
+      "name": "Otorohanga",
+      "flag": "nz"
+    },
+    {
+      "coordinates": [1255, 1021],
+      "name": "Waitomo",
+      "flag": "nz"
+    },
+    {
+      "coordinates": [1358, 941],
+      "name": "South Waikato",
+      "flag": "nz"
+    },
+    {
+      "coordinates": [1420, 929],
+      "name": "Rotorua",
+      "flag": "nz"
+    },
+    {
+      "coordinates": [1481, 920],
+      "name": "Kawerau",
+      "flag": "nz"
+    },
+    {
+      "coordinates": [1518, 996],
+      "name": "Whakatane",
+      "flag": "nz"
+    },
+    {
+      "coordinates": [1429, 1039],
+      "name": "Taupo",
+      "flag": "nz"
+    },
+    {
+      "coordinates": [1623, 928],
+      "name": "Opotiki",
+      "flag": "nz"
+    },
+    {
+      "coordinates": [1707, 972],
+      "name": "Gisborne",
+      "flag": "nz"
+    },
+    {
+      "coordinates": [1643, 1071],
+      "name": "Wairoa",
+      "flag": "nz"
+    },
+    {
+      "coordinates": [1537, 1181],
+      "name": "Napier",
+      "flag": "nz-napier"
+    },
+    {
+      "coordinates": [1470, 1203],
+      "name": "Hastings",
+      "flag": "nz"
+    },
+    {
+      "coordinates": [1340, 1106],
+      "name": "Ruapehu",
+      "flag": "nz"
+    },
+    {
+      "coordinates": [1145, 1117],
+      "name": "New Plymouth",
+      "flag": "nz"
+    },
+    {
+      "coordinates": [1135, 1210],
+      "name": "South Taranaki",
+      "flag": "nz"
+    },
+    {
+      "coordinates": [1225, 1151],
+      "name": "Stratford",
+      "flag": "nz"
+    },
+    {
+      "coordinates": [1250, 1243],
+      "name": "Whanganui",
+      "flag": "nz"
+    },
+    {
+      "coordinates": [1303, 1297],
+      "name": "Rangitikei",
+      "flag": "nz"
+    },
+    {
+      "coordinates": [1317, 1369],
+      "name": "Manawatu",
+      "flag": "nz"
+    },
+    {
+      "coordinates": [1303, 1427],
+      "name": "Horowhenua",
+      "flag": "nz"
+    },
+    {
+      "coordinates": [1274, 1477],
+      "name": "Kapiti Coast",
+      "flag": "nz"
+    },
+    {
+      "coordinates": [1255, 1514],
+      "name": "Porirua",
+      "flag": "nz-porirua"
+    },
+    {
+      "coordinates": [1221, 1551],
+      "name": "Wellington",
+      "flag": "nz-wellington"
+    },
+    {
+      "coordinates": [1287, 1518],
+      "name": "Upper Hutt",
+      "flag": "nz-upper hutt"
+    },
+    {
+      "coordinates": [1259, 1568],
+      "name": "Lower Hutt",
+      "flag": "nz"
+    },
+    {
+      "coordinates": [1323, 1548],
+      "name": "South Wairarapa",
+      "flag": "nz"
+    },
+    {
+      "coordinates": [1370, 1531],
+      "name": "Carterton",
+      "flag": "nz"
+    },
+    {
+      "coordinates": [1410, 1468],
+      "name": "Masterton",
+      "flag": "nz"
+    },
+    {
+      "coordinates": [1486, 1293],
+      "name": "Central Hawke's Bay",
+      "flag": "nz"
+    },
+    {
+      "coordinates": [1460, 1354],
+      "name": "Tararua",
+      "flag": "nz"
+    },
+    {
+      "coordinates": [1386, 1364],
+      "name": "Palmerston North",
+      "flag": "nz"
+    },
+    {
+      "coordinates": [1014, 1597],
+      "name": "Nelson",
+      "flag": "nz-nelson"
+    },
+    {
+      "coordinates": [1034, 1671],
+      "name": "Marlborough",
+      "flag": "nz"
+    },
+    {
+      "coordinates": [900, 1523],
+      "name": "Tasman",
+      "flag": "nz"
+    },
+    {
+      "coordinates": [782, 1715],
+      "name": "Buller",
+      "flag": "nz"
+    },
+    {
+      "coordinates": [729, 1826],
+      "name": "Grey",
+      "flag": "nz"
+    },
+    {
+      "coordinates": [563, 1992],
+      "name": "Westland",
+      "flag": "nz"
+    },
+    {
+      "coordinates": [1066, 1767],
+      "name": "Kaikoura",
+      "flag": "nz"
+    },
+    {
+      "coordinates": [942, 1867],
+      "name": "Hurunui",
+      "flag": "nz"
+    },
+    {
+      "coordinates": [893, 1975],
+      "name": "Waimakariri",
+      "flag": "nz"
+    },
+    {
+      "coordinates": [964, 2069],
+      "name": "Christchurch",
+      "flag": "nz-christchurch"
+    },
+    {
+      "coordinates": [840, 2067],
+      "name": "Selwyn",
+      "flag": "nz"
+    },
+    {
+      "coordinates": [756, 2096],
+      "name": "Ashburton",
+      "flag": "nz"
+    },
+    {
+      "coordinates": [718, 2172],
+      "name": "Timaru",
+      "flag": "nz"
+    },
+    {
+      "coordinates": [694, 2227],
+      "name": "Waimate",
+      "flag": "nz"
+    },
+    {
+      "coordinates": [614, 2157],
+      "name": "Mackenzie",
+      "flag": "nz"
+    },
+    {
+      "coordinates": [655, 2339],
+      "name": "Waitaki",
+      "flag": "nz"
+    },
+    {
+      "coordinates": [612, 2455],
+      "name": "Dunedin",
+      "flag": "nz-dunedin"
+    },
+    {
+      "coordinates": [495, 2550],
+      "name": "Clutha",
+      "flag": "nz"
+    },
+    {
+      "coordinates": [425, 2488],
+      "name": "Gore",
+      "flag": "nz"
+    },
+    {
+      "coordinates": [269, 2428],
+      "name": "Southland",
+      "flag": "nz"
+    },
+    {
+      "coordinates": [392, 2225],
+      "name": "Queenstown-Lakes",
+      "flag": "nz"
+    },
+    {
+      "coordinates": [490, 2325],
+      "name": "Central Otago",
+      "flag": "nz-otago"
+    },
+    {
+      "coordinates": [347, 2610],
+      "name": "Invercargill",
+      "flag": "nz"
+    }
+  ],
+  "themes": ["oceania"]
+}

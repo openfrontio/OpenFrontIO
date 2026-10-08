@@ -1,11 +1,11 @@
-import type { ColumnDef } from "../src/client/hud/layers/lib/StatsColumns";
+import { PlayerType } from "@openfront/engine-api/game/GameTypes";
+import { columnById } from "../src/client/hud/layers/lib/StatsColumns";
 import {
   aggregateTeamValues,
   TeamStats,
 } from "../src/client/hud/layers/TeamStats";
+import { UserSettings } from "../src/client/UserSettings";
 import type { GameView, PlayerView } from "../src/client/view";
-import { PlayerType } from "../src/core/game/Game";
-import { UserSettings } from "../src/core/game/UserSettings";
 import { playerInfo, setup } from "./util/Setup";
 
 describe("aggregateTeamValues", () => {
@@ -25,32 +25,32 @@ describe("aggregateTeamValues", () => {
     otherAlivePlayer.addGold(30n);
     deadPlayer.addGold(100n);
 
-    const selected: ColumnDef[] = [
-      {
-        id: "tiles",
-        labelKey: "leaderboard.owned",
-        valueAlignment: "end",
-        value: (player) => player.numTilesOwned(),
-        renderValue: (value) => `tiles:${value}`,
-      },
-      {
-        id: "gold",
-        labelKey: "leaderboard.gold",
-        valueAlignment: "end",
-        value: (player) => Number(player.gold()),
-        renderValue: (value) => `gold:${value}`,
-      },
-    ];
+    expect(
+      Object.fromEntries(
+        aggregateTeamValues(
+          game.allPlayers() as unknown as PlayerView[],
+          [columnById("tiles"), columnById("gold")],
+          game as unknown as GameView,
+        ),
+      ),
+    ).toEqual({ tiles: 20, gold: 80 });
+  });
+
+  it("skips columns that have no number behind them", async () => {
+    const game = await setup("plains", {}, [
+      playerInfo("alive", PlayerType.Human),
+    ]);
+    game.player("alive").conquer(game.ref(0, 0));
 
     expect(
       Object.fromEntries(
         aggregateTeamValues(
           game.allPlayers() as unknown as PlayerView[],
-          selected,
+          [columnById("rank"), columnById("player"), columnById("tiles")],
           game as unknown as GameView,
         ),
       ),
-    ).toEqual({ tiles: 20, gold: 80 });
+    ).toEqual({ tiles: 1 });
   });
 });
 
@@ -66,16 +66,26 @@ describe("TeamStats", () => {
     const players = [
       {
         id: () => "blue-player",
+        smallID: () => 0,
         team: () => "Blue",
         numTilesOwned: () => 10,
         gold: () => 10n,
+        tradeGold: () => 0,
+        trainGold: () => 0,
+        piracyGold: () => 0,
+        goldEarned: () => 0,
         isAlive: () => true,
       },
       {
         id: () => "red-player",
+        smallID: () => 1,
         team: () => "Red",
         numTilesOwned: () => 5,
         gold: () => 20n,
+        tradeGold: () => 0,
+        trainGold: () => 0,
+        piracyGold: () => 0,
+        goldEarned: () => 0,
         isAlive: () => true,
       },
     ] as unknown as PlayerView[];
@@ -83,6 +93,7 @@ describe("TeamStats", () => {
       myPlayer: () => players[0],
       playerViews: () => players,
       config: () => ({ maxTroops: () => 100 }),
+      ticks: () => 600,
       numLandTiles: () => 100,
       numTilesWithFallout: () => 0,
     } as unknown as GameView;

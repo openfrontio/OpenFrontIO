@@ -65,5 +65,6 @@
       "name": "Hilo"
     }
   ],
+  "themes": ["oceania"],
   "translation_key": "map.hawaii"
 }

@@ -1,7 +1,7 @@
+import { ReservedClanTagsResponseSchema } from "@openfront/shared/ClanApiSchemas";
+import { CosmeticsSchema } from "@openfront/shared/CosmeticSchemas";
 import { base64url } from "jose";
 import { Logger } from "winston";
-import { ReservedClanTagsResponseSchema } from "../core/ClanApiSchemas";
-import { CosmeticsSchema } from "../core/CosmeticSchemas";
 import { startPolling } from "./PollingLoop";
 import {
   FailOpenPrivilegeChecker,
@@ -15,7 +15,6 @@ export class PrivilegeRefresher {
   private privilegeChecker: PrivilegeChecker | null = null;
   private failOpenPrivilegeChecker: PrivilegeChecker =
     new FailOpenPrivilegeChecker();
-  private cosmeticFlagUrls: Set<string> = new Set();
 
   private log: Logger;
 
@@ -38,10 +37,6 @@ export class PrivilegeRefresher {
 
   public get(): PrivilegeChecker {
     return this.privilegeChecker ?? this.failOpenPrivilegeChecker;
-  }
-
-  public getCosmeticFlagUrls(): Set<string> {
-    return this.cosmeticFlagUrls;
   }
 
   private async loadPrivilegeChecker(): Promise<void> {
@@ -101,9 +96,6 @@ export class PrivilegeRefresher {
         result.data,
         base64url.decode,
         reservedClanTags,
-      );
-      this.cosmeticFlagUrls = new Set(
-        Object.values(result.data.flags).map((f) => f.url),
       );
       this.log.info(
         `Privilege checker loaded successfully (${reservedClanTags.size} reserved clan tags)`,

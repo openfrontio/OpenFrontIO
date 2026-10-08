@@ -1,5 +1,5 @@
 {
-  "categories": ["asia", "new"],
+  "categories": ["asia"],
   "id": "CaspianSea",
   "map": {
     "height": 1728,
@@ -97,5 +97,7 @@
       }
     ]
   },
+  "team_frequency": 10,
+  "themes": ["asia"],
   "translation_key": "map.caspiansea"
 }

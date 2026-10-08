@@ -80,5 +80,6 @@
       "flag": "Circassia",
       "name": "Circassia"
     }
-  ]
+  ],
+  "themes": ["europe", "asia"]
 }

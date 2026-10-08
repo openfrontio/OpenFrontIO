@@ -53,8 +53,8 @@ Using AI tools is fine — but you **MUST** understand the code you are submitti
 
 ### Prerequisites
 
-- **Node.js**: A recent version.
-- **npm**: Version 10.9.2 or higher.
+- **Node.js**: Version 24.15.0 or newer in the Node 24 release line.
+- **npm**: Version 12.1.0 or newer in the npm 12 release line. If Node.js bundled an older version, run `npm install --global --ignore-scripts npm@12.1.0` before installing project dependencies.
 - **Git**: For version control.
 
 ### Installation
@@ -66,10 +66,14 @@ Using AI tools is fine — but you **MUST** understand the code you are submitti
    cd OpenFrontIO
    ```
 3. **Install dependencies**:
+
    > **Important**: Use `npm run inst` instead of `npm install`. This runs `npm ci --ignore-scripts` to ensure a consistent and secure environment.
+
    ```bash
    npm run inst
    ```
+
+   Dependency releases must be at least seven days old. Git, remote URL, local tarball, and directory dependencies are rejected; any security exception requires explicit maintainer review.
 
 ### Running the Game
 
@@ -101,7 +105,7 @@ git checkout -b fix/issue-number-bug-name
 
 ### Coding Standards
 
-We enforce code quality using ESLint and Prettier. All code must follow existing style patterns, and new features should not break existing functionality.
+We enforce code quality using Oxlint, ESLint, and Prettier. ESLint remains during the Oxlint migration as a compatibility backstop. All code must follow existing style patterns, and new features should not break existing functionality.
 
 - **Format Code**: `npm run format`
 - **Lint Code**: `npm run lint`
@@ -114,7 +118,7 @@ All new features and bug fixes should include relevant tests. We use **Vitest**.
 - **Run Tests**: `npm test`
 - **Run Coverage**: `npm run test:coverage`
 
-**Note**: All code changes in `src/core` **MUST** be tested to ensure game logic stability.
+**Note**: All code changes in `packages/engine`, `packages/engine-api` and `packages/engine-lib` **MUST** be tested to ensure game logic stability.
 
 ## Submitting a Pull Request
 
@@ -160,6 +164,12 @@ Translators are welcome! We use Crowdin for translations. To help translate Open
 3. Sign up or log in, then join the project.
 4. Select the language you want to translate. If your language isn't listed, click "Request New Language".
 5. Translate the strings.
+
+Each language carries a flag, set by the `svg` string in the `lang` section and
+matched to a file in `resources/flags/`. Where a language isn't tied to a single
+country, use a script or community icon rather than a national flag — for example
+`zh-hant` (the glyph 繁) for Traditional Chinese, alongside `catalonia`, `eo` and
+`toki_pona`.
 
 Feel free to ask questions in the translation Discord server!
 

@@ -6,27 +6,28 @@
  * minimal stubs for their dependencies.
  */
 
-import { colord } from "colord";
-import { Theme } from "../../src/client/theme/ThemeProvider";
-import { GameView } from "../../src/client/view/GameView";
-import { PlayerView } from "../../src/client/view/PlayerView";
-import { Config } from "../../src/core/configuration/Config";
 import {
   NameViewData,
   PlayerType,
   Team,
   UnitType,
-} from "../../src/core/game/Game";
-import { GameMapImpl } from "../../src/core/game/GameMap";
+} from "@openfront/engine-api/game/GameTypes";
 import {
   GameUpdateType,
   GameUpdateViewData,
   PlayerUpdate,
   UnitUpdate,
-} from "../../src/core/game/GameUpdates";
-import { TerrainMapData } from "../../src/core/game/TerrainMapLoader";
-import { Player, PlayerCosmetics } from "../../src/core/Schemas";
-import { WorkerClient } from "../../src/core/worker/WorkerClient";
+} from "@openfront/engine-api/game/GameUpdates";
+import { Player } from "@openfront/engine-api/Schemas";
+import { Config } from "@openfront/engine-lib/configuration/Config";
+import { GameMapImpl } from "@openfront/engine-lib/game/GameMapImpl";
+import { TerrainMapData } from "@openfront/engine-lib/game/TerrainMapLoader";
+import { PlayerCosmetics } from "@openfront/shared/WireSchemas";
+import { colord } from "colord";
+import { Theme } from "../../src/client/theme/ThemeProvider";
+import { GameView } from "../../src/client/view/GameView";
+import { PlayerView } from "../../src/client/view/PlayerView";
+import { WorkerClient } from "../../src/client/WorkerClient";
 
 /** Theme stub — returns deterministic colors so PlayerView's color math works. */
 export function stubTheme(): Theme {
@@ -118,6 +119,8 @@ export function makePlayerUpdate(
     clientID: "client-a",
     name: "Alice",
     displayName: "Alice",
+    clanTag: null,
+    nationFlag: null,
     id: "player-a",
     smallID: 1,
     playerType: PlayerType.Human,
@@ -125,10 +128,20 @@ export function makePlayerUpdate(
     isDisconnected: false,
     tilesOwned: 0,
     gold: 0n,
+    tradeGold: 0n,
+    trainGold: 0n,
+    piracyGold: 0n,
+    goldEarned: 0n,
     troops: 100,
     allies: [],
     embargoes: new Set(),
     isTraitor: false,
+    // Doomsday-clock state. Present here so the diffPlayerUpdate field-coverage
+    // walk in GameUpdateUtils.test.ts reaches these: a field missing from this
+    // stub is a field that walk cannot check.
+    inDoomsdayClock: false,
+    markedDoomsdayClockTick: -1,
+    isDecaying: false,
     targets: [],
     outgoingEmojis: [],
     outgoingAttacks: [],

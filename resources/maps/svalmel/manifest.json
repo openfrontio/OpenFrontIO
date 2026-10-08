@@ -45,5 +45,6 @@
       "name": "Nordaustlandet"
     }
   ],
+  "themes": ["europe", "north_america"],
   "translation_key": "map.svalmel"
 }

@@ -1,6 +1,7 @@
+import { GameMapType } from "@openfront/engine-api/game/GameTypes";
+import { assetUrl } from "@openfront/shared/AssetUrls";
 import { html, LitElement, nothing, type TemplateResult } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
-import { GameMapType } from "../../../core/game/Game";
 import {
   type ClanGame,
   type ClanGameFilter,
@@ -8,7 +9,14 @@ import {
 } from "../../ClanApi";
 import { ClientEnv } from "../../ClientEnv";
 import { terrainMapFileLoader } from "../../TerrainMapFileLoader";
-import { getMapName, renderDuration, translateText } from "../../Utils";
+import {
+  copyToClipboard,
+  currentPagePath,
+  getMapName,
+  renderDuration,
+  showToast,
+  translateText,
+} from "../../Utils";
 import "../CopyButton";
 import {
   formatAbsoluteTime,
@@ -16,8 +24,13 @@ import {
   groupByDay,
 } from "../baseComponents/stats/GameHistoryDates";
 import { formatGameType, isFfa } from "../baseComponents/stats/GameTypeLabels";
+import { dispatchViewProfile } from "../ui/PlayerNameLink";
 import { verifiedBadge } from "../ui/VerifiedBadge";
-import { renderLoadingSpinner, showToast } from "./ClanShared";
+import { renderLoadingSpinner } from "./ClanShared";
+
+const statsIcon = assetUrl("images/LeaderboardIconRegularWhite.svg");
+const replayIcon = assetUrl("images/ReplayRegularIconWhite.svg");
+const linkIcon = assetUrl("images/LinkIconWhite.svg");
 
 type FilterKey = ClanGameFilter | "all";
 
@@ -28,8 +41,8 @@ const FILTER_TABS: { key: FilterKey; labelKey: string }[] = [
   { key: "all", labelKey: "clan_modal.history_filter_all" },
   { key: "ffa", labelKey: "clan_modal.history_type_ffa" },
   { key: "team", labelKey: "clan_modal.history_type_team" },
-  { key: "hvn", labelKey: "clan_modal.history_filter_hvn" },
-  { key: "ranked", labelKey: "clan_modal.history_filter_ranked" },
+  { key: "hvn", labelKey: "clan_modal.stats_hvn" },
+  { key: "ranked", labelKey: "clan_modal.stats_ranked" },
 ];
 
 // Cache survives a tab switch within the modal: keep the full
@@ -185,7 +198,7 @@ export class ClanGameHistoryView extends LitElement {
   private async watchReplay(gameId: string) {
     try {
       const encoded = encodeURIComponent(gameId);
-      const url = `/${ClientEnv.workerPath(gameId)}/game/${encoded}`;
+      const url = currentPagePath(ClientEnv.gamePath(gameId));
       history.pushState({ join: gameId }, "", url);
       window.dispatchEvent(
         new CustomEvent("join-changed", { detail: { gameId: encoded } }),
@@ -208,14 +221,18 @@ export class ClanGameHistoryView extends LitElement {
     );
   }
 
-  private viewProfile(publicId: string) {
-    this.dispatchEvent(
-      new CustomEvent<{ publicId: string }>("view-profile", {
-        detail: { publicId },
-        bubbles: true,
-        composed: true,
-      }),
-    );
+  private async copyGameLink(gameId: string) {
+    // shareOrigin(), not window.location.origin: this is copied to be sent to
+    // someone else, and the desktop shell's own origin (`app://openfront`)
+    // resolves nowhere outside that Electron app. See deriveShareOrigin.
+    const url = `${ClientEnv.shareOrigin()}${ClientEnv.gamePath(gameId)}`;
+
+    try {
+      await void copyToClipboard(url);
+      showToast(translateText("common.copied"), "green");
+    } catch {
+      showToast(translateText("common.failed_copy"), "red");
+    }
   }
 
   render() {
@@ -396,10 +413,12 @@ export class ClanGameHistoryView extends LitElement {
     }
 
     return html`
-      <div class="bg-white/5 border border-white/10 rounded-xl overflow-hidden">
+      <div
+        class="relative bg-white/5 border border-white/10 rounded-xl overflow-hidden"
+      >
         ${mapWebpPath
           ? html`<div
-              class="relative w-full aspect-[3/1] overflow-hidden bg-surface"
+              class="relative w-full aspect-[30/11] overflow-hidden bg-surface"
             >
               <img
                 src=${mapWebpPath}
@@ -419,7 +438,7 @@ export class ClanGameHistoryView extends LitElement {
                     ${mapDisplayName}
                   </div>`
                 : ""}
-              <div class="absolute top-2 right-2">
+              <div class="absolute top-2 left-2">
                 ${this.renderResultBadge(game, winners)}
               </div>
               <div
@@ -430,34 +449,62 @@ export class ClanGameHistoryView extends LitElement {
             </div>`
           : ""}
         <div
-          class="flex items-center justify-between gap-3 px-4 py-3 border-b border-white/5"
+          class=${mapWebpPath
+            ? "absolute top-2 right-2 z-[1]"
+            : "flex items-center justify-end px-4 py-3 border-b border-white/5"}
         >
-          <div class="flex items-center gap-2 min-w-0">
-            <span
-              class="text-[10px] font-bold uppercase tracking-wider text-white/40"
-              >${translateText("clan_modal.history_game_id")}:</span
-            >
-            <copy-button
-              compact
-              .copyText=${game.gameId}
-              .displayText=${game.gameId}
-              .showVisibilityToggle=${false}
-            ></copy-button>
-          </div>
           <div class="flex items-center gap-2 shrink-0">
             <button
               type="button"
+              title=${translateText("game_list.stats")}
+              aria-label=${translateText("game_list.stats")}
               @click=${() => this.showStats(game.gameId)}
-              class="px-3 py-1.5 text-xs font-bold text-white/80 uppercase tracking-wider bg-white/10 hover:bg-white/20 border border-white/10 rounded-lg transition-colors"
+              class="inline-flex w-8 h-8 items-center justify-center text-white bg-malibu-blue hover:bg-aquarius active:bg-malibu-blue/80 rounded-lg transition-all"
             >
-              ${translateText("game_list.stats")}
+              <img
+                src=${statsIcon}
+                alt=""
+                aria-hidden="true"
+                width="18"
+                height="18"
+              />
+              <span class="sr-only">${translateText("game_list.stats")}</span>
             </button>
             <button
               type="button"
-              @click=${() => this.watchReplay(game.gameId)}
-              class="px-3 py-1.5 text-xs font-bold text-white uppercase tracking-wider bg-malibu-blue hover:bg-aquarius active:bg-malibu-blue/80 rounded-lg transition-all"
+              title=${translateText("common.click_to_copy")}
+              aria-label=${translateText("common.click_to_copy")}
+              @click=${() => this.copyGameLink(game.gameId)}
+              class="inline-flex w-8 h-8 items-center justify-center text-white bg-malibu-blue hover:bg-aquarius active:bg-malibu-blue/80 rounded-lg transition-all"
             >
-              ${translateText("clan_modal.history_watch_replay")}
+              <img
+                src=${linkIcon}
+                alt=""
+                aria-hidden="true"
+                width="18"
+                height="18"
+              />
+              <span class="sr-only"
+                >${translateText("common.click_to_copy")}</span
+              >
+            </button>
+            <button
+              type="button"
+              title=${translateText("clan_modal.history_watch_replay")}
+              aria-label=${translateText("clan_modal.history_watch_replay")}
+              @click=${() => this.watchReplay(game.gameId)}
+              class="inline-flex w-8 h-8 items-center justify-center text-white bg-malibu-blue hover:bg-aquarius active:bg-malibu-blue/80 rounded-lg transition-all"
+            >
+              <img
+                src=${replayIcon}
+                alt=""
+                aria-hidden="true"
+                width="18"
+                height="18"
+              />
+              <span class="sr-only"
+                >${translateText("clan_modal.history_watch_replay")}</span
+              >
             </button>
           </div>
         </div>
@@ -617,7 +664,7 @@ export class ClanGameHistoryView extends LitElement {
           type="button"
           class="font-bold text-blue-300 truncate hover:underline"
           title=${translateText("player_profile.view")}
-          @click=${() => this.viewProfile(p.publicId)}
+          @click=${() => dispatchViewProfile(this, p.publicId)}
         >
           ${p.username}
         </button>

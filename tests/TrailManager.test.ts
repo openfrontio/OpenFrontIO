@@ -31,6 +31,7 @@ function makeUnit(
     reachedTarget: false,
     retreating: false,
     targetable: true,
+    waitTicks: 0,
     markedForDeletion: false,
     health: null,
     underConstruction: false,
@@ -44,6 +45,10 @@ function makeUnit(
     trainType: null,
     loaded: null,
     constructionStartTick: null,
+    samUpgradeStartTick: null,
+    samUpgradeStartRange: null,
+    samUpgradeTargetLevel: null,
+    samUpgradeDuration: null,
   };
 }
 

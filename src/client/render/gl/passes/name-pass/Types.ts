@@ -81,6 +81,7 @@ export interface PlayerSlot {
   nukeTargetsMe: boolean;
   inDoomsdayClock: boolean;
   doomsdayClockDraining: boolean;
+  doomsdayClockDecaying: boolean;
   doomsdayClockWarnProgress: number;
   traitorRemainingTicks: number;
   allianceFraction: number;

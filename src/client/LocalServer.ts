@@ -1,30 +1,35 @@
-import { ClientEnv } from "src/client/ClientEnv";
-import { z } from "zod";
-import { EventBus } from "../core/EventBus";
 import {
   AllPlayersStats,
   ClientID,
-  ClientMessage,
-  ClientSendWinnerMessage,
-  PartialGameRecordSchema,
-  PlayerRecord,
-  ServerMessage,
-  ServerStartGameMessage,
   StampedIntent,
   Turn,
-} from "../core/Schemas";
+} from "@openfront/engine-api/Schemas";
+import { EventBus } from "@openfront/shared/EventBus";
 import {
   createPartialGameRecord,
   decompressGameRecord,
   replacer,
-} from "../core/Util";
-import { getPersistentID } from "./Auth";
+} from "@openfront/shared/SharedUtil";
+import {
+  ClientMessage,
+  ClientSendWinnerMessage,
+  PartialGameRecord,
+  PartialGameRecordSchema,
+  PlayerRecord,
+  ServerMessage,
+  ServerStartGameMessage,
+} from "@openfront/shared/WireSchemas";
+import { ClientEnv } from "src/client/ClientEnv";
+import { z } from "zod";
+import { getApiBase } from "./Api";
+import { getAuthHeader, getPersistentID } from "./Auth";
 import { LobbyConfig } from "./ClientGameRunner";
 import {
   GameSpeedDownIntentEvent,
   GameSpeedUpIntentEvent,
   ReplaySpeedChangeEvent,
 } from "./InputHandler";
+import { startSingleplayerHeartbeat } from "./SingleplayerHeartbeat";
 import {
   defaultReplaySpeedMultiplier,
   ReplaySpeedMultiplier,
@@ -56,11 +61,16 @@ export class LocalServer {
   private clientID: ClientID | undefined;
   private winner: ClientSendWinnerMessage | null = null;
   private allPlayersStats: AllPlayersStats = {};
+  // Set only once an upload got a 2xx, so endGame() retries failed or
+  // skipped win-time uploads during teardown.
+  private archived = false;
+  private archiveInFlight = false;
 
   private turnsExecuted = 0;
   private turnStartTime = 0;
 
   private turnCheckInterval: NodeJS.Timeout;
+  private stopHeartbeat: (() => void) | null = null;
   private clientConnect: () => void;
   private clientMessage: (message: ServerMessage) => void;
 
@@ -96,7 +106,7 @@ export class LocalServer {
         Date.now() > this.turnStartTime + turnIntervalMs
       ) {
         this.turnStartTime = Date.now();
-        // End turn on the server means the client will start processing the turn.
+        // "Ending" the turn hands it to the client, which starts processing it.
         this.endTurn();
       }
     }, 5);
@@ -147,6 +157,12 @@ export class LocalServer {
       // Don't send myClientID for replays — viewer has no player identity.
       myClientID: this.lobbyConfig.gameRecord ? undefined : this.clientID,
     } satisfies ServerStartGameMessage);
+    // Last, so a start() that throws above leaves no interval behind.
+    if (!this.isReplay) {
+      this.stopHeartbeat = startSingleplayerHeartbeat(
+        this.lobbyConfig.gameStartInfo.gameID,
+      );
+    }
   }
 
   onMessage(clientMsg: ClientMessage) {
@@ -229,6 +245,12 @@ export class LocalServer {
     if (clientMsg.type === "winner") {
       this.winner = clientMsg;
       this.allPlayersStats = clientMsg.allPlayersStats;
+      if (!this.isReplay) {
+        // Archive as soon as the game is decided: endGame() only runs during
+        // page teardown, where the auth refresh and upload race document
+        // destruction and can silently lose the record (#4931).
+        this.archiveGameRecord(false);
+      }
     }
   }
 
@@ -265,7 +287,18 @@ export class LocalServer {
   public endGame() {
     console.log("local server ending game");
     clearInterval(this.turnCheckInterval);
+    this.stopHeartbeat?.();
+    this.stopHeartbeat = null;
     if (this.isReplay) {
+      return;
+    }
+    // Fallback for games that end without a winner (e.g. quitting early);
+    // decided games were already archived at win time.
+    this.archiveGameRecord(true);
+  }
+
+  private archiveGameRecord(unloading: boolean) {
+    if (this.archived || this.archiveInFlight) {
       return;
     }
     const players: PlayerRecord[] = [
@@ -297,27 +330,56 @@ export class LocalServer {
       console.error("Error parsing game record", error);
       return;
     }
-    const workerPath = ClientEnv.workerPath(
-      this.lobbyConfig.gameStartInfo.gameID,
-    );
 
-    const jsonString = JSON.stringify(result.data, replacer);
+    this.archiveGame(result.data, unloading);
+  }
 
-    compress(jsonString)
-      .then((compressedData) => {
-        return fetch(`/${workerPath}/api/archive_singleplayer_game`, {
+  private async archiveGame(
+    record: PartialGameRecord,
+    unloading: boolean,
+  ): Promise<void> {
+    this.archiveInFlight = true;
+    try {
+      const authHeader = await getAuthHeader();
+      if (authHeader === "") {
+        // The archive API requires a session. Guests have one too, so this
+        // only trips when none could be established (e.g. API unreachable).
+        return;
+      }
+      // Replays refuse to load unless the archived commit matches the client
+      // build, and the API worker can't stamp it (it has a different build).
+      const jsonString = JSON.stringify(
+        { ...record, gitCommit: ClientEnv.gitCommit() },
+        replacer,
+      );
+      const compressedData = await compress(jsonString);
+      const response = await fetch(
+        `${getApiBase()}/archive_singleplayer_game`,
+        {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
             "Content-Encoding": "gzip",
+            Authorization: authHeader,
           },
           body: compressedData,
-          keepalive: true, // Ensures request completes even if page unloads
-        });
-      })
-      .catch((error) => {
-        console.error("Failed to archive singleplayer game:", error);
-      });
+          // keepalive lets the request outlive page teardown but caps the body
+          // at 64 KiB, so only set it when the page is actually unloading.
+          keepalive: unloading,
+        },
+      );
+      if (response.ok) {
+        this.archived = true;
+      } else {
+        console.error(
+          `Failed to archive singleplayer game: ${response.status}`,
+        );
+      }
+    } catch (error) {
+      console.warn("Failed to archive singleplayer game:", error);
+    } finally {
+      this.archiveInFlight = false;
+    }
   }
 }
 

@@ -322,5 +322,6 @@
       "name": "Inuvik"
     }
   ],
+  "themes": ["north_america"],
   "translation_key": "map.northwestpassage"
 }

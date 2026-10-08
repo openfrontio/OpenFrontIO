@@ -201,7 +201,7 @@
       "name": "Foulenzem"
     }
   ],
-  "categories": ["africa", "new"],
+  "categories": ["africa"],
   "id": "GulfOfGuinea",
   "map": {
     "height": 2200,
@@ -332,5 +332,6 @@
       "name": "Omboue"
     }
   ],
+  "themes": ["africa"],
   "translation_key": "map.gulfofguinea"
 }

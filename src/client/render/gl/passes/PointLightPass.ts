@@ -5,7 +5,7 @@
  * draw() is pure GPU: uniforms + one drawArraysInstanced call.
  */
 
-import type { Config } from "src/core/configuration/Config";
+import type { Config } from "@openfront/engine-lib/configuration/Config";
 import type { RendererConfig, UnitState } from "../../types";
 import {
   SMOOTHED_NUKE_TYPES,
@@ -44,11 +44,11 @@ interface LightConfig {
 
 const LIGHT_CONFIGS: Record<string, LightConfig> = {
   [UT_CITY]: { r: 1.0, g: 0.85, b: 0.5, radius: 18, intensity: 1.2 },
-  [UT_PORT]: { r: 1.0, g: 0.75, b: 0.4, radius: 12, intensity: 1.0 },
-  [UT_FACTORY]: { r: 1.0, g: 0.6, b: 0.3, radius: 12, intensity: 1.0 },
-  [UT_DEFENSE_POST]: { r: 0.8, g: 0.85, b: 1.0, radius: 10, intensity: 0.9 },
-  [UT_SAM_LAUNCHER]: { r: 0.8, g: 0.85, b: 1.0, radius: 10, intensity: 0.9 },
-  [UT_MISSILE_SILO]: { r: 1.0, g: 0.4, b: 0.2, radius: 10, intensity: 0.9 },
+  [UT_PORT]: { r: 1.0, g: 0.75, b: 0.4, radius: 18, intensity: 1.2 },
+  [UT_FACTORY]: { r: 1.0, g: 0.6, b: 0.3, radius: 18, intensity: 1.2 },
+  [UT_DEFENSE_POST]: { r: 0.8, g: 0.85, b: 1.0, radius: 18, intensity: 1.2 },
+  [UT_SAM_LAUNCHER]: { r: 0.8, g: 0.85, b: 1.0, radius: 18, intensity: 1.2 },
+  [UT_MISSILE_SILO]: { r: 1.0, g: 0.4, b: 0.2, radius: 18, intensity: 1.2 },
   [UT_TRANSPORT]: { r: 0.9, g: 0.8, b: 0.6, radius: 6, intensity: 2.7 },
   [UT_TRADE_SHIP]: { r: 0.9, g: 0.8, b: 0.6, radius: 6, intensity: 2.7 },
   [UT_WARSHIP]: { r: 0.9, g: 0.85, b: 0.7, radius: 10, intensity: 2.8 },
@@ -133,6 +133,7 @@ export class PointLightPass {
       gl,
       shaderSrc(lightVertSrc, { MAX_LIGHT_TYPES }),
       lightFragSrc,
+      "PointLightPass",
     );
     this.uLightCam = gl.getUniformLocation(this.lightProg, "uCamera")!;
     this.uRadiusMultiplier = gl.getUniformLocation(
@@ -187,7 +188,7 @@ export class PointLightPass {
     this.lastUnitsUpdateMs = performance.now();
 
     for (const unit of units.values()) {
-      if (!unit.isActive) continue;
+      if (!unit.isActive || unit.waitTicks > 0) continue;
       const typeIdx = this.typeToIdx.get(unit.unitType);
       if (typeIdx === undefined) continue;
       const cfg = this.typeConfigs[typeIdx];

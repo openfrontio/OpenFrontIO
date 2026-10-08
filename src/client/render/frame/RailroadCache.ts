@@ -9,7 +9,7 @@
  * Uint8Array ready for GPU upload.
  *
  * Ported verbatim from openfront-workspace/packages/shim/src/railroad-cache.ts;
- * only imports changed (types come from src/core/game/GameUpdates instead of
+ * only imports changed (types come from engine-api game/GameUpdates instead of
  * the shim's local types module).
  */
 
@@ -19,7 +19,7 @@ import {
   RailroadConstructionUpdate,
   RailroadDestructionUpdate,
   RailroadSnapUpdate,
-} from "../../../core/game/GameUpdates";
+} from "@openfront/engine-api/game/GameUpdates";
 
 // Regular enum (not const enum) for cross-package use.
 export enum RailType {
@@ -31,7 +31,7 @@ export enum RailType {
   BOTTOM_RIGHT,
 }
 
-interface RailTile {
+export interface RailTile {
   ref: number;
   type: RailType;
 }
@@ -89,7 +89,7 @@ function railDirection(
   return RailType.VERTICAL;
 }
 
-function computeRailTiles(tileRefs: number[], w: number): RailTile[] {
+export function computeRailTiles(tileRefs: number[], w: number): RailTile[] {
   if (tileRefs.length === 0) return [];
   if (tileRefs.length === 1)
     return [{ ref: tileRefs[0]!, type: RailType.VERTICAL }];
@@ -159,6 +159,15 @@ export class RailroadCache {
     for (const evt of destructs) this.removeRailroad(evt.id);
 
     this.tickAnimations();
+  }
+
+  /**
+   * Whether a railroad is still being drawn in. While none is, a tick
+   * without railroad events changes nothing.
+   */
+  get animating(): boolean {
+    for (const anim of this.anims.values()) if (!anim.complete) return true;
+    return false;
   }
 
   /** Clear the dirty flag after the consumer has uploaded the state. */

@@ -6,15 +6,15 @@
  * what the FrameBuilder relies on when populating PlayerState.
  */
 
-import { beforeEach, describe, expect, it } from "vitest";
-import { PlayerView } from "../../../src/client/view/PlayerView";
 import {
   AllPlayers,
   EmojiMessage,
   PlayerType,
-} from "../../../src/core/game/Game";
-import { GameUpdateType } from "../../../src/core/game/GameUpdates";
-import { UserSettings } from "../../../src/core/game/UserSettings";
+} from "@openfront/engine-api/game/GameTypes";
+import { GameUpdateType } from "@openfront/engine-api/game/GameUpdates";
+import { beforeEach, describe, expect, it } from "vitest";
+import { UserSettings } from "../../../src/client/UserSettings";
+import { PlayerView } from "../../../src/client/view/PlayerView";
 import {
   makeEmptyGu,
   makeGameView,
@@ -336,5 +336,53 @@ describe("PlayerView emoji display setting (#4430)", () => {
     const p = makePlayerView();
     p.applyUpdate(makePlayerUpdate({ outgoingEmojis: [broadcastEmoji] }));
     expect(p.state.outgoingEmojis).toEqual([]);
+  });
+});
+
+describe("PlayerView clan tag", () => {
+  function resetSettings() {
+    localStorage.clear();
+    (
+      UserSettings as unknown as { cache: Map<string, string | null> }
+    ).cache.clear();
+  }
+
+  function setAnonymousNames(enabled: boolean) {
+    localStorage.setItem("settings.anonymousNames", String(enabled));
+    (
+      UserSettings as unknown as { cache: Map<string, string | null> }
+    ).cache.clear();
+  }
+
+  beforeEach(resetSettings);
+
+  it("forwards the tag without brackets, alongside the merged displayName", () => {
+    const p = makePlayerView({
+      data: { name: "Alice", displayName: "[ABCDE] Alice", clanTag: "ABCDE" },
+    });
+    expect(p.clanTag()).toBe("ABCDE");
+    expect(p.name()).toBe("Alice");
+    expect(p.displayName()).toBe("[ABCDE] Alice");
+  });
+
+  it("is null when the update carries no tag", () => {
+    expect(makePlayerView().clanTag()).toBeNull();
+    expect(
+      makePlayerView({ data: { clanTag: undefined } }).clanTag(),
+    ).toBeNull();
+  });
+
+  it("is hidden under anonymous names, like displayName", () => {
+    const p = makePlayerView({
+      data: {
+        clientID: "someone-else",
+        name: "Alice",
+        displayName: "[ABCDE] Alice",
+        clanTag: "ABCDE",
+      },
+    });
+    setAnonymousNames(true);
+    expect(p.clanTag()).toBeNull();
+    expect(p.displayName()).not.toContain("ABCDE");
   });
 });

@@ -1,31 +1,34 @@
-import fs from "fs";
-import path from "path";
 import {
   Difficulty,
-  Game,
   GameMapSize,
   GameMapType,
   GameMode,
   GameType,
+  Nation,
   PlayerInfo,
   PlayerType,
-} from "../../src/core/game/Game";
-import { createGame } from "../../src/core/game/GameImpl";
-import {
-  genTerrainFromBin,
-  MapManifest,
-} from "../../src/core/game/TerrainMapLoader";
-import { UserSettings } from "../../src/core/game/UserSettings";
-import { GameConfig } from "../../src/core/Schemas";
+} from "@openfront/engine-api/game/GameTypes";
+import { MapManifest } from "@openfront/engine-api/game/MapFiles";
+import { GameConfig } from "@openfront/engine-api/Schemas";
+import { genTerrainFromBin } from "@openfront/engine-lib/game/TerrainMapLoader";
+import { EngineConfig } from "@openfront/engine/configuration/EngineConfig";
+import { Game } from "@openfront/engine/game/Game";
+import { createGame } from "@openfront/engine/game/GameImpl";
+import fs from "fs";
+import path from "path";
+import { fileURLToPath } from "url";
 import { TestConfig } from "./TestConfig";
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 export async function setup(
   mapName: string,
   _gameConfig: Partial<GameConfig> = {},
   humans: PlayerInfo[] = [],
   currentDir: string = __dirname,
-  ConfigClass: typeof TestConfig = TestConfig,
+  ConfigClass: typeof EngineConfig = TestConfig,
   autoEndSpawnPhase: boolean = true,
+  nations: Nation[] = [],
 ): Promise<Game> {
   // Suppress console.debug for tests.
   console.debug = () => {};
@@ -69,9 +72,9 @@ export async function setup(
     randomSpawn: false,
     ..._gameConfig,
   };
-  const config = new ConfigClass(gameConfig, new UserSettings(), false);
+  const config = new ConfigClass(gameConfig, false);
 
-  const game = createGame(humans, [], gameMap, miniGameMap, config);
+  const game = createGame(humans, nations, gameMap, miniGameMap, config);
   if (autoEndSpawnPhase) game.endSpawnPhase();
   return game;
 }

@@ -210,5 +210,6 @@
       "name": "Numidia"
     }
   ],
+  "themes": ["europe", "asia", "africa"],
   "translation_key": "map.marenostrum"
 }

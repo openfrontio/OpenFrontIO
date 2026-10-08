@@ -26,6 +26,9 @@ export function applyGraphicsOverrides(
   if (overrides.name?.hoverGlowAlpha !== undefined) {
     settings.name.hoverGlowAlpha = overrides.name.hoverGlowAlpha;
   }
+  if (overrides.cosmetics?.flagOpacity !== undefined) {
+    settings.name.flagAlpha = overrides.cosmetics.flagOpacity;
+  }
   if (overrides.structure?.iconSize !== undefined) {
     settings.structure.iconSize = overrides.structure.iconSize;
   }
@@ -104,6 +107,9 @@ export function applyGraphicsOverrides(
     settings.mapOverlay.embargoTintRatio =
       overrides.mapOverlay.embargoTintRatio;
   }
+  if (overrides.altView?.fillAlpha !== undefined) {
+    settings.altView.fillAlpha = overrides.altView.fillAlpha;
+  }
   if (overrides.affiliation?.selfColor !== undefined) {
     applyHexColor(overrides.affiliation.selfColor, (r, g, b) => {
       settings.affiliation.selfR = r;
@@ -142,6 +148,9 @@ export function applyGraphicsOverrides(
     // and its additive light contribution in the day/night composite.
     settings.passEnabled.falloutBloom = overrides.passEnabled.fallout;
     settings.passEnabled.falloutLight = overrides.passEnabled.fallout;
+  }
+  if (overrides.terrain?.backgroundColor !== undefined) {
+    settings.terrain.backgroundColor = overrides.terrain.backgroundColor;
   }
   if (overrides.terrain?.oceanColor !== undefined) {
     settings.terrain.oceanColor = overrides.terrain.oceanColor;

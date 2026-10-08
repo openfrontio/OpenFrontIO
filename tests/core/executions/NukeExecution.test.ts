@@ -1,12 +1,15 @@
-import { NukeExecution } from "../../../src/core/execution/NukeExecution";
 import {
-  Game,
+  GameMode,
   MessageType,
-  Player,
   PlayerInfo,
   PlayerType,
   UnitType,
-} from "../../../src/core/game/Game";
+} from "@openfront/engine-api/game/GameTypes";
+import { OTHER_INDEX_DESTROY } from "@openfront/engine-api/StatsSchemas";
+import { ConstructionExecution } from "@openfront/engine/execution/ConstructionExecution";
+import { MissileSiloExecution } from "@openfront/engine/execution/MissileSiloExecution";
+import { NukeExecution } from "@openfront/engine/execution/NukeExecution";
+import { Game, Player } from "@openfront/engine/game/Game";
 import { setup } from "../../util/Setup";
 import { TestConfig } from "../../util/TestConfig";
 import { executeTicks } from "../../util/utils";
@@ -243,5 +246,386 @@ describe("NukeExecution", () => {
     // Alliance should be broken because we're destroying ally's building
     expect(player.isTraitor()).toBe(true);
     expect(player.isAlliedWith(otherPlayer)).toBe(false);
+  });
+
+  test("drainNukeImpacts returns all queued tiles after detonation and empty on subsequent drain", () => {
+    player.buildUnit(UnitType.MissileSilo, game.ref(1, 1), {});
+
+    // No nukes yet — drain should be empty.
+    expect(game.drainNukeImpacts()).toHaveLength(0);
+
+    game.addExecution(
+      new NukeExecution(
+        UnitType.AtomBomb,
+        player,
+        game.ref(50, 50),
+        game.ref(1, 1),
+      ),
+    );
+    executeTicks(game, 200);
+
+    // After detonation, drainNukeImpacts should return all blast-radius tiles.
+    const impacts = game.drainNukeImpacts();
+    expect(impacts.length).toBeGreaterThan(0);
+
+    // The target tile (50,50) must be among the impacted tiles.
+    const targetRef = game.ref(50, 50);
+    expect(impacts).toContain(targetRef);
+
+    // With inner=outer=10 the blast is a filled circle of radius 10.
+    // pi*10^2 ~= 314 tiles; require at least 200 (conservative lower bound
+    // accounting for impassable terrain and map edges).
+    expect(impacts.length).toBeGreaterThanOrEqual(200);
+
+    // Every returned tile ref should be a valid number.
+    for (const ref of impacts) {
+      expect(typeof ref).toBe("number");
+      expect(ref).toBeGreaterThanOrEqual(0);
+    }
+
+    // A second drain should be empty (queue was consumed).
+    expect(game.drainNukeImpacts()).toHaveLength(0);
+  });
+
+  test("drainNukeImpacts returns queued tiles for HydrogenBomb detonation", () => {
+    player.buildUnit(UnitType.MissileSilo, game.ref(1, 1), {});
+
+    expect(game.drainNukeImpacts()).toHaveLength(0);
+
+    game.addExecution(
+      new NukeExecution(
+        UnitType.HydrogenBomb,
+        player,
+        game.ref(50, 50),
+        game.ref(1, 1),
+      ),
+    );
+    executeTicks(game, 300);
+
+    const impacts = game.drainNukeImpacts();
+    expect(impacts.length).toBeGreaterThan(0);
+
+    // Target tile must be present.
+    expect(impacts).toContain(game.ref(50, 50));
+
+    // HydrogenBomb has a larger blast radius than AtomBomb.
+    expect(impacts.length).toBeGreaterThanOrEqual(200);
+
+    for (const ref of impacts) {
+      expect(typeof ref).toBe("number");
+      expect(ref).toBeGreaterThanOrEqual(0);
+    }
+
+    expect(game.drainNukeImpacts()).toHaveLength(0);
+  });
+
+  test("drainNukeImpacts returns queued tiles for water nukes", async () => {
+    const waterGame = await setup(
+      "big_plains",
+      { infiniteGold: true, instantBuild: true, waterNukes: true },
+      [new PlayerInfo("player", PlayerType.Human, "client_id1", "player_id")],
+    );
+    (waterGame.config() as TestConfig).nukeMagnitudes = vi.fn(() => ({
+      inner: 10,
+      outer: 10,
+    }));
+
+    const waterPlayer = waterGame.player("player_id");
+    waterPlayer.conquer(waterGame.ref(1, 1));
+    waterPlayer.buildUnit(UnitType.MissileSilo, waterGame.ref(1, 1), {});
+
+    expect(waterGame.drainNukeImpacts()).toHaveLength(0);
+
+    waterGame.addExecution(
+      new NukeExecution(
+        UnitType.AtomBomb,
+        waterPlayer,
+        waterGame.ref(50, 50),
+        waterGame.ref(1, 1),
+      ),
+    );
+    executeTicks(waterGame, 200);
+
+    const impacts = waterGame.drainNukeImpacts();
+    expect(impacts.length).toBeGreaterThan(0);
+
+    // Target tile must be present.
+    expect(impacts).toContain(waterGame.ref(50, 50));
+
+    // A tile on the blast boundary (distance exactly 10 from center).
+    expect(impacts).toContain(waterGame.ref(40, 50));
+
+    // With inner=outer=10 the blast is a filled circle of radius 10.
+    // pi*10^2 ~= 314 tiles; require at least 200 (conservative lower bound
+    // accounting for impassable terrain and map edges).
+    expect(impacts.length).toBeGreaterThanOrEqual(200);
+
+    for (const ref of impacts) {
+      expect(typeof ref).toBe("number");
+      expect(ref).toBeGreaterThanOrEqual(0);
+    }
+
+    expect(waterGame.drainNukeImpacts()).toHaveLength(0);
+  });
+
+  test("stacked atom bombs launch staggered and fly on distinct tiles", () => {
+    const silo = player.buildUnit(UnitType.MissileSilo, game.ref(1, 1), {});
+    // A silo holds `level` concurrent missiles; raise to 3 so the whole stack launches.
+    silo.increaseLevel();
+    silo.increaseLevel();
+    // Each added level starts on reload cooldown — clear both so all tubes are ready.
+    silo.reloadMissile();
+    silo.reloadMissile();
+
+    game.addExecution(
+      new ConstructionExecution(
+        player,
+        UnitType.AtomBomb,
+        game.ref(150, 150),
+        undefined,
+        3,
+      ),
+    );
+
+    // Construction completes and all three NukeExecutions build their nukes.
+    executeTicks(game, 3);
+    expect(player.units(UnitType.AtomBomb)).toHaveLength(3);
+
+    // Each bomb waits one tick longer than the previous, so once all are
+    // moving they trail each other along the same path on distinct tiles.
+    executeTicks(game, 4);
+    const tiles = player.units(UnitType.AtomBomb).map((n) => n.tile());
+    expect(tiles).toHaveLength(3);
+    expect(new Set(tiles).size).toBe(3);
+  });
+
+  test("stacked atom bombs across silos fire simultaneously, staggered within each silo", () => {
+    // At default speed the parabola's early points cluster on the launch
+    // tile, so a departed bomb is indistinguishable from a waiting one for
+    // several ticks. A high speed makes the first move leave the silo tile.
+    (game.config() as TestConfig).setDefaultNukeSpeed(20);
+
+    // Away from the map corner — a parabola launched from the corner has a
+    // degenerate first segment that stays on the launch tile.
+    const siloA = player.buildUnit(UnitType.MissileSilo, game.ref(50, 50), {});
+    const siloB = player.buildUnit(UnitType.MissileSilo, game.ref(50, 54), {});
+    for (const silo of [siloA, siloB]) {
+      silo.increaseLevel();
+      silo.reloadMissile();
+    }
+
+    game.addExecution(
+      new ConstructionExecution(
+        player,
+        UnitType.AtomBomb,
+        game.ref(150, 150),
+        undefined,
+        4,
+      ),
+    );
+
+    // Construction completes and each silo claims two of the four nukes.
+    executeTicks(game, 3);
+    const atSilo = () =>
+      player
+        .units(UnitType.AtomBomb)
+        .map((n) => n.tile())
+        .filter((t) => t === siloA.tile() || t === siloB.tile());
+    expect(player.units(UnitType.AtomBomb)).toHaveLength(4);
+    expect(atSilo()).toEqual(
+      expect.arrayContaining([siloA.tile(), siloB.tile()]),
+    );
+    expect(atSilo()).toHaveLength(4);
+
+    // One tick later the lead bomb of EACH silo has departed — silos fire
+    // simultaneously rather than the second silo waiting on the first.
+    executeTicks(game, 1);
+    const waiting = atSilo();
+    expect(waiting).toHaveLength(2);
+    expect(waiting).toContain(siloA.tile());
+    expect(waiting).toContain(siloB.tile());
+
+    // Next tick the followers depart too.
+    executeTicks(game, 1);
+    expect(atSilo()).toHaveLength(0);
+  });
+
+  test("stacked bombs beyond loaded silo tubes are dropped, not queued", () => {
+    const silo = player.buildUnit(UnitType.MissileSilo, game.ref(50, 50), {});
+    // Reloading is driven by the silo's execution (normally added when the
+    // silo is built through ConstructionExecution).
+    game.addExecution(new MissileSiloExecution(silo));
+
+    game.addExecution(
+      new ConstructionExecution(
+        player,
+        UnitType.AtomBomb,
+        game.ref(150, 150),
+        undefined,
+        3,
+      ),
+    );
+
+    // Track every distinct bomb ever launched (bombs disappear on detonation).
+    const seen = new Set<number>();
+    const collect = () => {
+      for (const n of player.units(UnitType.AtomBomb)) seen.add(n.id());
+    };
+
+    // One loaded tube: exactly one bomb launches, the excess is dropped.
+    executeTicks(game, 3);
+    collect();
+    expect(seen.size).toBe(1);
+
+    // Even after the tube reloads, no further bombs appear.
+    executeTicks(game, game.config().SiloCooldown() + 5);
+    collect();
+    expect(seen.size).toBe(1);
+  });
+
+  test("stacked atom bombs launched across successive ticks stagger continuously without overlapping", () => {
+    (game.config() as TestConfig).setDefaultNukeSpeed(20);
+
+    const silo = player.buildUnit(UnitType.MissileSilo, game.ref(50, 50), {});
+    for (let i = 0; i < 9; i++) {
+      silo.increaseLevel();
+      silo.reloadMissile();
+    }
+
+    // Click 1: launch 3 nukes at current tick
+    game.addExecution(
+      new ConstructionExecution(
+        player,
+        UnitType.AtomBomb,
+        game.ref(150, 150),
+        undefined,
+        3,
+      ),
+    );
+
+    // Advance 1 tick, then Click 2: launch 3 more nukes at next tick
+    executeTicks(game, 1);
+    game.addExecution(
+      new ConstructionExecution(
+        player,
+        UnitType.AtomBomb,
+        game.ref(150, 150),
+        undefined,
+        3,
+      ),
+    );
+
+    // Give all 6 nukes time to depart the silo
+    executeTicks(game, 7);
+
+    // Every launched nuke should occupy a distinct tile (no 2 nukes overlapping on same tile)
+    const nukes = player.units(UnitType.AtomBomb);
+    expect(nukes).toHaveLength(6);
+    const tiles = nukes.map((n) => n.tile());
+    expect(new Set(tiles).size).toBe(6);
+  });
+});
+
+describe("NukeExecution kill credit", () => {
+  const warshipsDestroyed = (g: Game, p: Player) =>
+    g.stats().getPlayerStats(p)?.units?.wshp?.[OTHER_INDEX_DESTROY] ?? 0n;
+
+  async function nukeGame(gameMode: GameMode, infos: PlayerInfo[]) {
+    const g = await setup(
+      "big_plains",
+      { infiniteGold: true, instantBuild: true, gameMode, playerTeams: 2 },
+      infos,
+    );
+    (g.config() as TestConfig).nukeMagnitudes = vi.fn(() => ({
+      inner: 10,
+      outer: 10,
+    }));
+    const launcher = g.player("launcher_id");
+    launcher.conquer(g.ref(1, 1));
+    launcher.buildUnit(UnitType.MissileSilo, g.ref(1, 1), {});
+    return { g, launcher };
+  }
+
+  test("credits only the enemy's units, not the launcher's own or an ally's", async () => {
+    const { g, launcher } = await nukeGame(GameMode.FFA, [
+      new PlayerInfo("launcher", PlayerType.Human, "c1", "launcher_id"),
+      new PlayerInfo("ally", PlayerType.Human, "c2", "ally_id"),
+      new PlayerInfo("enemy", PlayerType.Human, "c3", "enemy_id"),
+    ]);
+    const ally = g.player("ally_id");
+    const enemy = g.player("enemy_id");
+    launcher.createAllianceRequest(ally)!.accept();
+
+    launcher.buildUnit(UnitType.Warship, g.ref(50, 52), {
+      patrolTile: g.ref(50, 52),
+    });
+    ally.buildUnit(UnitType.Warship, g.ref(52, 50), {
+      patrolTile: g.ref(52, 50),
+    });
+    enemy.buildUnit(UnitType.Warship, g.ref(48, 50), {
+      patrolTile: g.ref(48, 50),
+    });
+
+    g.addExecution(
+      new NukeExecution(UnitType.AtomBomb, launcher, g.ref(50, 50), null),
+    );
+    executeTicks(g, 200);
+
+    expect(launcher.units(UnitType.Warship)).toHaveLength(0);
+    expect(ally.units(UnitType.Warship)).toHaveLength(0);
+    expect(enemy.units(UnitType.Warship)).toHaveLength(0);
+    expect(launcher.isAlliedWith(ally)).toBe(true);
+    expect(warshipsDestroyed(g, launcher)).toBe(1n);
+  });
+
+  test("does not credit teammates' units, even a disconnected teammate's", async () => {
+    const { g, launcher } = await nukeGame(GameMode.Team, [
+      new PlayerInfo(
+        "launcher",
+        PlayerType.Human,
+        "c1",
+        "launcher_id",
+        false,
+        "ALPHA",
+      ),
+      new PlayerInfo("mate", PlayerType.Human, "c2", "mate_id", false, "ALPHA"),
+      new PlayerInfo("afk", PlayerType.Human, "c3", "afk_id", false, "ALPHA"),
+      new PlayerInfo(
+        "enemy",
+        PlayerType.Human,
+        "c4",
+        "enemy_id",
+        false,
+        "BETA",
+      ),
+      new PlayerInfo("e2", PlayerType.Human, "c5", "e2_id", false, "BETA"),
+      new PlayerInfo("e3", PlayerType.Human, "c6", "e3_id", false, "BETA"),
+    ]);
+    const mate = g.player("mate_id");
+    const afk = g.player("afk_id");
+    const enemy = g.player("enemy_id");
+    expect(launcher.isOnSameTeam(afk)).toBe(true);
+    expect(launcher.isOnSameTeam(enemy)).toBe(false);
+    afk.markDisconnected(true);
+
+    mate.buildUnit(UnitType.Warship, g.ref(52, 50), {
+      patrolTile: g.ref(52, 50),
+    });
+    afk.buildUnit(UnitType.Warship, g.ref(50, 52), {
+      patrolTile: g.ref(50, 52),
+    });
+    enemy.buildUnit(UnitType.Warship, g.ref(48, 50), {
+      patrolTile: g.ref(48, 50),
+    });
+
+    g.addExecution(
+      new NukeExecution(UnitType.AtomBomb, launcher, g.ref(50, 50), null),
+    );
+    executeTicks(g, 200);
+
+    expect(mate.units(UnitType.Warship)).toHaveLength(0);
+    expect(afk.units(UnitType.Warship)).toHaveLength(0);
+    expect(enemy.units(UnitType.Warship)).toHaveLength(0);
+    expect(warshipsDestroyed(g, launcher)).toBe(1n);
   });
 });

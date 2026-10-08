@@ -10,6 +10,7 @@
  */
 
 let sheet: CSSStyleSheet | null = null;
+let queue: Promise<void> = Promise.resolve();
 
 async function populate(target: CSSStyleSheet): Promise<void> {
   const parts: string[] = [];
@@ -35,19 +36,32 @@ async function populate(target: CSSStyleSheet): Promise<void> {
   await target.replace(parts.join("\n"));
 }
 
+// Firefox rejects replace() with NotAllowedError while an earlier replace() on
+// the same sheet is still pending, so populates run one after another (each
+// re-reads the DOM, so the latest one wins). A failed populate leaves the
+// previous styles in place rather than surfacing as an unhandled rejection.
+function repopulate(target: CSSStyleSheet): void {
+  queue = queue.then(() => populate(target)).catch(() => {});
+}
+
 export function documentStylesSheet(): CSSStyleSheet {
   if (sheet === null) {
     sheet = new CSSStyleSheet();
-    void populate(sheet);
+    repopulate(sheet);
     // In dev this module evaluates before Vite injects the page's <style>
-    // tags, so the read above sees almost nothing — re-read once the page
-    // has fully loaded (constructed sheets are live, so components pick up
-    // the styles without re-rendering).
+    // tags (Main.ts imports the components ahead of styles.css), so the read
+    // above sees almost nothing — re-read once the module graph has finished
+    // executing (constructed sheets are live, so components pick up the
+    // styles without re-rendering). DOMContentLoaded fires right after the
+    // deferred module scripts; `load` is not usable here — the header ad's
+    // iframes can keep it from ever firing, which left modals unstyled.
     if (document.readyState !== "complete") {
       const populated = sheet;
-      window.addEventListener("load", () => void populate(populated), {
-        once: true,
-      });
+      document.addEventListener(
+        "DOMContentLoaded",
+        () => repopulate(populated),
+        { once: true },
+      );
     }
   }
   return sheet;
@@ -57,7 +71,7 @@ export function documentStylesSheet(): CSSStyleSheet {
 if (import.meta.hot) {
   import.meta.hot.on("vite:afterUpdate", () => {
     if (sheet !== null) {
-      void populate(sheet);
+      repopulate(sheet);
     }
   });
 }

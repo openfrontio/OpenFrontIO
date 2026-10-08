@@ -1,17 +1,23 @@
-import { assetUrl } from "../../../core/AssetUrls";
-import { Config } from "../../../core/configuration/Config";
+import { TileRef } from "@openfront/engine-api/game/GameMap";
 import {
   AllPlayers,
   BuildableAttacks,
+  bulkCost,
+  maxBulkAmount,
+  NUKE_BULK_STEPS,
   PlayerActions,
   PlayerBuildableUnitType,
+  STRUCTURE_BULK_STEPS,
   Structures,
   UnitType,
-} from "../../../core/game/Game";
-import { TileRef } from "../../../core/game/GameMap";
-import { Emoji, findClosestBy, flattenedEmojiTable } from "../../../core/Util";
+} from "@openfront/engine-api/game/GameTypes";
+import { Emoji, flattenedEmojiTable } from "@openfront/engine-api/Schemas";
+import { Config } from "@openfront/engine-lib/configuration/Config";
+import { renderNumber } from "@openfront/engine-lib/Format";
+import { findClosestBy } from "@openfront/engine-lib/Util";
+import { assetUrl } from "@openfront/shared/AssetUrls";
 import { UIState } from "../../UIState";
-import { renderNumber, translateText } from "../../Utils";
+import { translateText } from "../../Utils";
 import { GameView, PlayerView } from "../../view";
 import { BuildItemDisplay, BuildMenu, flattenedBuildTable } from "./BuildMenu";
 import { ChatIntegration } from "./ChatIntegration";
@@ -20,7 +26,11 @@ import { PlayerActionHandler } from "./PlayerActionHandler";
 import { PlayerPanel } from "./PlayerPanel";
 import { TooltipItem } from "./RadialMenu";
 
-import { EventBus } from "../../../core/EventBus";
+import { EventBus } from "@openfront/shared/EventBus";
+import {
+  BuildUnitIntentEvent,
+  SendUpgradeStructureIntentEvent,
+} from "../../Transport";
 const allianceIcon = assetUrl("images/AllianceIconWhite.svg");
 const boatIcon = assetUrl("images/BoatIconWhite.svg");
 const buildIcon = assetUrl("images/BuildIconWhite.svg");
@@ -86,6 +96,7 @@ export const COLORS = {
   build: "#e6c74a",
   building: "#1e3a5f",
   boat: "#2a82c9",
+  disabled: "#94a3b8",
   ally: "#4ade80",
   breakAlly: "#dc2626",
   breakAllyNoDebuff: "#d97706",
@@ -450,6 +461,100 @@ function createMenuElements(
         ].filter(
           (tooltipItem): tooltipItem is TooltipItem => tooltipItem !== null,
         ),
+        subMenu: (params: MenuElementParams) => {
+          const buildableUnit = params.playerActions.buildableUnits.find(
+            (bu) => bu.type === item.unitType,
+          );
+          if (!buildableUnit) {
+            return [];
+          }
+          const isStackableNuke =
+            item.unitType === UnitType.AtomBomb &&
+            buildableUnit.canBuild !== false;
+          if (
+            (buildableUnit.canUpgrade === false && !isStackableNuke) ||
+            !params.buildMenu.canBuildOrUpgrade(item)
+          ) {
+            return [];
+          }
+          // Always four slots in fixed positions for muscle memory — laid
+          // out clockwise from the top: x1, the two fixed steps, then the
+          // largest amount the player can execute right now (bombs: top x1,
+          // right x2, bottom x5, left xMax). max is capped by gold, and for
+          // nukes by loaded silo tubes; slots beyond it render disabled.
+          // With no executable amount past x1 there is nothing to choose —
+          // return no submenu so the click falls through to an immediate x1
+          // (see action below).
+          const myPlayer = params.game.myPlayer();
+          let maxAmount = maxBulkAmount(buildableUnit, myPlayer?.gold() ?? 0n);
+          if (isStackableNuke) {
+            maxAmount = Math.min(maxAmount, myPlayer?.readyMissileCount() ?? 0);
+          }
+          if (maxAmount <= 1) {
+            return [];
+          }
+          const steps = isStackableNuke
+            ? NUKE_BULK_STEPS
+            : STRUCTURE_BULK_STEPS;
+          const slots = [1, ...steps, maxAmount];
+          return slots.map((amount, i) => {
+            const isMaxSlot = i === slots.length - 1;
+            const executable = amount <= maxAmount;
+            const cost = bulkCost(buildableUnit, amount);
+            return {
+              id: isMaxSlot
+                ? `upgrade_${item.unitType}_max`
+                : `upgrade_${item.unitType}_${amount}`,
+              name: translateText("build_menu.upgrade_amount", {
+                amount: amount.toString(),
+              }),
+              text: translateText("build_menu.upgrade_amount", {
+                amount: amount.toString(),
+              }),
+              fontSize: "20px",
+              color: (p: MenuElementParams) =>
+                executable && (p.game.myPlayer()?.gold() ?? 0n) >= cost
+                  ? COLORS.building
+                  : COLORS.disabled,
+              icon: "",
+              tooltipItems: [
+                {
+                  text: translateText("radial_menu.upgrade_x", {
+                    amount: amount.toString(),
+                  }),
+                  className: "title",
+                },
+                {
+                  text: `${renderNumber(cost)} ${translateText("player_panel.gold")}`,
+                  className: "cost",
+                },
+              ],
+              disabled: (p: MenuElementParams) =>
+                !executable || (p.game.myPlayer()?.gold() ?? 0n) < cost,
+              action: (p: MenuElementParams) => {
+                if (isStackableNuke) {
+                  p.eventBus.emit(
+                    new BuildUnitIntentEvent(
+                      buildableUnit.type,
+                      p.tile,
+                      p.uiState?.rocketDirectionUp,
+                      amount,
+                    ),
+                  );
+                } else {
+                  p.eventBus.emit(
+                    new SendUpgradeStructureIntentEvent(
+                      buildableUnit.canUpgrade as number,
+                      buildableUnit.type,
+                      amount,
+                    ),
+                  );
+                }
+                p.closeMenu();
+              },
+            };
+          });
+        },
         action: (params: MenuElementParams) => {
           const buildableUnit = params.playerActions.buildableUnits.find(
             (bu) => bu.type === item.unitType,
@@ -458,7 +563,27 @@ function createMenuElements(
             return;
           }
           if (params.buildMenu.canBuildOrUpgrade(item)) {
-            params.buildMenu.sendBuildOrUpgrade(buildableUnit, params.tile);
+            if (buildableUnit.canUpgrade !== false) {
+              params.eventBus.emit(
+                new SendUpgradeStructureIntentEvent(
+                  buildableUnit.canUpgrade,
+                  buildableUnit.type,
+                ),
+              );
+            } else if (buildableUnit.canBuild !== false) {
+              const rocketDirectionUp =
+                item.unitType === UnitType.AtomBomb ||
+                item.unitType === UnitType.HydrogenBomb
+                  ? params.uiState?.rocketDirectionUp
+                  : undefined;
+              params.eventBus.emit(
+                new BuildUnitIntentEvent(
+                  buildableUnit.type,
+                  params.tile,
+                  rocketDirectionUp,
+                ),
+              );
+            }
           }
           params.closeMenu();
         },
@@ -667,8 +792,9 @@ export const rootMenuElement: MenuElement = {
     const inExtensionWindow =
       params.playerActions.interaction?.allianceInfo?.inExtensionWindow;
 
-    // After game-over, nukes can target teammates (nukeSpawn allows it).
-    // Show the attack submenu so mobile users can access nukes in the aftergame.
+    // After game-over, nukes can target teammates in multiplayer (nukeSpawn allows it,
+    // but not in singleplayer). Show the attack submenu so mobile users can access
+    // nukes in the aftergame.
     const hasBuildableAttacks =
       params.playerActions.buildableUnits?.some(
         (bu) => BuildableAttacks.has(bu.type) && bu.canBuild !== false,

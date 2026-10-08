@@ -216,7 +216,7 @@
       "name": "Caernarfon"
     }
   ],
-  "categories": ["europe", "new"],
+  "categories": ["europe"],
   "id": "IrishSea",
   "map": {
     "height": 1500,
@@ -333,5 +333,6 @@
     }
   ],
   "special_team_count": 3,
+  "themes": ["europe"],
   "translation_key": "map.irishsea"
 }

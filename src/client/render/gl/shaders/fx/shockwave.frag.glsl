@@ -6,7 +6,7 @@ uniform float uTime;      // seconds — animates procedural styles
 
 in vec2  vLocalPos;
 flat in float vAlpha;   // 1 - lifetime progress (fades out over the effect)
-flat in float vStyle;   // 0 = classic ring, 1 = EMP pulse, 2 = sparkles
+flat in float vStyle;   // 0 = classic ring, 1 = EMP pulse, 2 = sparkles, 3 = embers
 flat in vec3  vColor0;  // cosmetic: palette color 0
 flat in vec3  vColor1;  // cosmetic: palette color 1
 flat in vec3  vColor2;  // cosmetic: palette color 2 (pads repeat the last color)
@@ -15,7 +15,7 @@ flat in float vColorCount; // active palette size (1..4)
 flat in float vSpeed;   // cosmetic: animation-speed multiplier
 flat in float vTransSpeed; // cosmetic: palette step rate (colors/s)
 flat in float vThickness; // ring band thickness / avg sparkle size (world tiles)
-flat in float vCell;    // sparkles: grid pitch (front-normalized units)
+flat in float vCell;    // sparkles: grid pitch (front-normalized); embers: keep-fraction
 flat in float vRadius;  // current front radius (world tiles)
 
 // Palette lookup by (already-wrapped) index.
@@ -171,9 +171,51 @@ void sparkles() {
   fragColor = vec4(col, clamp(glow, 0.0, 1.0));
 }
 
+// Pixel ember splash (style 3). Top-down: chunky embers scattered on a stable
+// world-space grid, thrown outward as the blast expands and cooling through the
+// palette over the effect. A 2D grid (not angular sectors) — reads as a field
+// of pixels, never radial rays. vThickness = ember block size (world tiles);
+// vCell = keep-fraction (density-derived: the share of grid cells that light up).
+void emberScatter() {
+  float R = max(vRadius, 0.001);
+  vec2 worldPos = vLocalPos * R; // tiles from the blast centre (grid is stable)
+  float block = max(vThickness, 0.5); // chunky pixel size, world tiles
+  // Rotate the grid off the world axes so it never reads as a lattice.
+  const mat2 ROT = mat2(0.8253, -0.5646, 0.5646, 0.8253);
+  vec2 cid = floor((ROT * worldPos) / block);
+  float h1 = hash11(dot(cid, vec2(157.0, 113.0)) + 41.7);
+  float h2 = hash11(h1 * 251.0 + 7.3);
+  // Sparse: keep only a fraction of cells as embers (vCell = keep-fraction).
+  if (h1 > clamp(vCell, 0.02, 1.0)) discard;
+
+  // This cell's distance from the centre, front-normalised (0 = centre, 1 = rim).
+  vec2 blockCentre = (cid + 0.5) * block;
+  float distN = length(blockCentre) / R;
+  if (distN > 1.0) discard;
+
+  // Thrown outward as the blast expands: a cell only appears once the eased
+  // front has reached its hashed range, so embers spread over the effect.
+  float lifeT = 1.0 - vAlpha;
+  float ease = 1.0 - (1.0 - lifeT) * (1.0 - lifeT);
+  float reach = (0.15 + 0.85 * h2) * ease;
+  if (distN > reach) discard;
+
+  float a = smoothstep(0.0, 0.22, vAlpha); // fade over the last fifth of life
+  if (a < 0.01) discard;
+
+  // Cooling: hot (color 0) at birth -> cool (last color) as the blast ages,
+  // posterised (one palette entry, no blend), with transitionSpeed cycling.
+  float coolStep = lifeT * (vColorCount - 1.0);
+  float idx = floor(coolStep + uTime * vTransSpeed);
+  vec3 col = colorAt(mod(idx, vColorCount));
+  fragColor = vec4(col, a);
+}
+
 void main() {
   float dist = length(vLocalPos);
-  if (vStyle > 1.5) {
+  if (vStyle > 2.5) {
+    emberScatter();
+  } else if (vStyle > 1.5) {
     sparkles();
   } else if (vStyle > 0.5) {
     empPulse(dist);

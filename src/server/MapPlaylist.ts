@@ -1,4 +1,3 @@
-import { SAM_CONSTRUCTION_TICKS } from "../core/configuration/Config";
 import {
   maps as allMaps,
   Difficulty,
@@ -13,32 +12,31 @@ import {
   RankedType,
   Trios,
   UnitType,
-} from "../core/game/Game";
-import { PseudoRandom } from "../core/PseudoRandom";
-import {
-  GameConfig,
-  ScheduledPublicGameType,
-  TeamCountConfig,
-} from "../core/Schemas";
+} from "@openfront/engine-api/game/GameTypes";
+import { GameConfig, TeamCountConfig } from "@openfront/engine-api/Schemas";
+import { SAM_CONSTRUCTION_TICKS } from "@openfront/engine-lib/configuration/Config";
+import { PseudoRandom } from "@openfront/engine-lib/PseudoRandom";
+import { ScheduledPublicGameType } from "@openfront/shared/WireSchemas";
 import { logger } from "./Logger";
 import { getMapLandTiles } from "./MapLandTiles";
 
 const log = logger.child({});
 
-// Arcade-style maps only appear in the "special" playlist.
-const ARCADE_MAPS = new Set<GameMapType>([
-  GameMapType.TheBox,
-  GameMapType.ChoppingBlock,
-  GameMapType.Didier,
-  GameMapType.DidierFrance,
-  GameMapType.Labyrinth,
-  GameMapType.Sierpinski,
-  GameMapType.Onion,
-]);
-const SPECIAL_ONLY_MAPS = new Set<GameMapType>([GameMapType.ArchipelagoSea]);
+// Lobby size the Crowded modifier forces on small maps (compact / normal).
+const CROWDED_COMPACT_PLAYER_COUNT = 60;
+const CROWDED_PLAYER_COUNT = 125;
 
-// Hard cap on player count for performance. Applied after compact-map reduction.
-const MAX_PLAYER_COUNT = 125;
+// Every Nth scheduled public game (FFA, team and special alike, counted in
+// creation order) is trusted-only (GameConfig.trusted): only accounts the API
+// reports as trusted may join. A fixed rotation rather than a roll so the
+// lobbies on offer at any moment are never all locked. Must stay coprime with
+// the 3-type ffa/team/special scheduling cycle (MasterLobbyService), or the
+// trusted slot aliases onto a single game type.
+const TRUSTED_PUBLIC_EVERY = 7;
+
+// Trusted-only lobbies draw from a much smaller pool of eligible accounts, so
+// cap them well below the open-lobby sizes to keep them filling and starting.
+const TRUSTED_MAX_PLAYER_COUNT = 25;
 
 const TEAM_WEIGHTS: { config: TeamCountConfig; weight: number }[] = [
   { config: 2, weight: 10 },
@@ -55,10 +53,9 @@ const TEAM_WEIGHTS: { config: TeamCountConfig; weight: number }[] = [
 
 // Maps with a preferred team count in team / special games, declared via
 // "special_team_count" in each map's info.json.
-// For these maps: team-playlist frequency is doubled, and the preferred
-// team count overrides the random TEAM_WEIGHTS roll with SPECIAL_TEAM_FORCE_CHANCE.
+// For these maps the preferred team count overrides the random TEAM_WEIGHTS
+// roll with SPECIAL_TEAM_FORCE_CHANCE.
 const SPECIAL_TEAM_FORCE_CHANCE = 0.75;
-const SPECIAL_TEAM_FREQ_MULTIPLIER = 2;
 const SPECIAL_TEAM_MAPS: ReadonlyMap<GameMapType, TeamCountConfig> = new Map(
   allMaps
     .filter((m) => m.specialTeamCount !== undefined)
@@ -110,24 +107,6 @@ const DOOMSDAY_ROTATION_SPEEDS = [
   "veryfast",
 ] as const;
 
-// Maps where water nukes have a higher chance on top of the normal pool
-// Water nukes are especially fun here
-const WATER_NUKES_BOOSTED_MAPS: ReadonlySet<GameMapType> = new Set([
-  GameMapType.FourIslands,
-  GameMapType.Baikal,
-  GameMapType.Luna,
-  GameMapType.ArchipelagoSea,
-  GameMapType.ChoppingBlock,
-  GameMapType.Sol,
-]);
-
-// Maps that are entirely land.
-// - Water nukes forced on 75% of the time (overrides WATER_NUKES_BOOSTED_MAPS)
-const FULL_LAND_MAPS: ReadonlySet<GameMapType> = new Set([
-  GameMapType.TheBox,
-  GameMapType.Alps,
-]);
-
 // Modifiers that cannot be active at the same time.
 const MUTUALLY_EXCLUSIVE_MODIFIERS: [ModifierKey, ModifierKey][] = [
   ["startingGold5M", "startingGold25M"],
@@ -138,22 +117,44 @@ const MUTUALLY_EXCLUSIVE_MODIFIERS: [ModifierKey, ModifierKey][] = [
   ["isNukesDisabled", "isWaterNukes"],
 ];
 
+// Special games roll ffa/team per-game (see getSpecialConfig), so their
+// playlist is split in two rather than sharing one "special" queue -
+// each half can then fall back to the matching ffaFrequency/teamFrequency.
+type PlaylistKey = "ffa" | "team" | "specialFfa" | "specialTeam";
+
 export class MapPlaylist {
-  private playlists: Record<ScheduledPublicGameType, GameMapType[]> = {
+  private playlists: Record<PlaylistKey, GameMapType[]> = {
     ffa: [],
-    special: [],
     team: [],
+    specialFfa: [],
+    specialTeam: [],
   };
 
+  // Scheduled public games handed out so far, across all types.
+  private scheduled = 0;
+
   public async gameConfig(type: ScheduledPublicGameType): Promise<GameConfig> {
+    this.scheduled++;
+    const trusted = this.scheduled % TRUSTED_PUBLIC_EVERY === 0;
+    const config = await this.rollConfig(type, trusted);
+    if (trusted) {
+      config.trusted = true;
+    }
+    return config;
+  }
+
+  private async rollConfig(
+    type: ScheduledPublicGameType,
+    trusted: boolean,
+  ): Promise<GameConfig> {
     if (type === "special") {
-      return this.getSpecialConfig();
+      return this.getSpecialConfig(trusted);
     }
 
     const mode = type === "ffa" ? GameMode.FFA : GameMode.Team;
     const map = this.getNextMap(type);
 
-    const playerTeams =
+    let playerTeams =
       mode === GameMode.Team ? this.getTeamCount(map) : undefined;
 
     let isCompact: boolean | undefined =
@@ -166,11 +167,23 @@ export class MapPlaylist {
       isCompact = undefined;
     }
 
+    let unadjustedMaxPlayers = await this.lobbyMaxPlayers(map, mode, isCompact);
+    if (trusted) {
+      unadjustedMaxPlayers = Math.min(
+        unadjustedMaxPlayers,
+        TRUSTED_MAX_PLAYER_COUNT,
+      );
+    }
+    playerTeams = this.adjustTeamCountForPlayerCapacity(
+      playerTeams,
+      unadjustedMaxPlayers,
+    );
+
     return {
       donateGold: mode === GameMode.Team,
       donateTroops: mode === GameMode.Team,
       gameMap: map,
-      maxPlayers: await this.lobbyMaxPlayers(map, mode, playerTeams, isCompact),
+      maxPlayers: this.adjustForTeams(unadjustedMaxPlayers, playerTeams),
       gameType: GameType.Public,
       gameMapSize: isCompact ? GameMapSize.Compact : GameMapSize.Normal,
       publicGameModifiers: {
@@ -193,16 +206,25 @@ export class MapPlaylist {
       spawnImmunityDuration: this.getSpawnImmunityDuration(playerTeams),
       disabledUnits: [],
       disableClanTags: mode === GameMode.FFA ? true : undefined,
+      // Overtime (the win threshold sinking after 30 minutes) is the default
+      // for every public FFA game, so it carries no lobby modifier badge.
+      overtime: mode === GameMode.FFA ? { enabled: true } : undefined,
     } satisfies GameConfig;
   }
 
-  private async getSpecialConfig(): Promise<GameConfig> {
+  private async getSpecialConfig(trusted: boolean): Promise<GameConfig> {
     const mode = Math.random() < 0.5 ? GameMode.FFA : GameMode.Team;
-    const map = this.getNextMap("special");
-    const playerTeams =
+    const map = this.getNextMap("special", mode);
+    let playerTeams =
       mode === GameMode.Team ? this.getTeamCount(map) : undefined;
 
     const excludedModifiers: ModifierKey[] = [];
+
+    // Crowded raises the count to 60/125, which the trusted cap would undo
+    // anyway; keep its modifier slot for one that still has an effect.
+    if (trusted) {
+      excludedModifiers.push("isCrowded");
+    }
 
     // Check if compact map would leave every team with at least 2 players
     const supportsCompact =
@@ -242,22 +264,51 @@ export class MapPlaylist {
       excludedModifiers.push("isPeaceTime"); // Nations don't have PVP immunity
     }
 
-    // Boost water nukes chance
-    // When boosted, water nukes is forced on and takes one modifier slot.
-    const waterNukesBoostChance = FULL_LAND_MAPS.has(map)
-      ? 0.75
-      : WATER_NUKES_BOOSTED_MAPS.has(map)
-        ? 0.5
-        : 0;
-    const boostWaterNukes = Math.random() < waterNukesBoostChance;
-    if (boostWaterNukes) {
-      excludedModifiers.push("isWaterNukes", "isNukesDisabled");
+    // Per-map disabled modifiers from info.json (e.g. island maps disable isRandomSpawn).
+    const mapInfo = allMaps.find((m) => m.type === map);
+    if (mapInfo?.disabledModifiers) {
+      for (const mod of mapInfo.disabledModifiers) {
+        excludedModifiers.push(mod as ModifierKey);
+      }
     }
 
+    // Per-map forced modifiers from info.json. Format: "modifier" (always on)
+    // or "modifier:percentage" (e.g. "goldMultiplier:75" = 75% chance).
+    // Forced modifiers are excluded from the random pool so they don't
+    // get rolled twice, but they respect excludedModifiers.
+    // Roll percentage chances now so we can count them toward the 3-modifier cap.
+    const appliedForced = new Set<ModifierKey>();
+    if (mapInfo?.forcedModifiers) {
+      for (const entry of mapInfo.forcedModifiers) {
+        const [mod, pctStr] = entry.split(":");
+        const key = mod as ModifierKey;
+        const chance = pctStr !== undefined ? parseInt(pctStr, 10) / 100 : 1;
+        if (!excludedModifiers.includes(key) && Math.random() < chance) {
+          appliedForced.add(key);
+          excludedModifiers.push(key);
+          // Also exclude mutually-exclusive counterpart(s) so the random pool
+          // can't roll a conflicting modifier (e.g. isNukesDisabled vs isWaterNukes).
+          for (const [a, b] of MUTUALLY_EXCLUSIVE_MODIFIERS) {
+            if (key === a && !excludedModifiers.includes(b))
+              excludedModifiers.push(b);
+            if (key === b && !excludedModifiers.includes(a))
+              excludedModifiers.push(a);
+          }
+        }
+      }
+      // Cap after all rolls: if more than 3 forced modifiers passed, trim to 3.
+      if (appliedForced.size > 3) {
+        const trimmed = [...appliedForced].slice(0, 3);
+        appliedForced.clear();
+        for (const key of trimmed) appliedForced.add(key);
+      }
+    }
+
+    // Forced modifiers count toward the 3-modifier cap.
     const poolResult = this.getRandomSpecialGameModifiers(
       excludedModifiers,
       undefined,
-      boostWaterNukes ? 1 : 0,
+      appliedForced.size,
     );
     let {
       isCrowded,
@@ -273,18 +324,29 @@ export class MapPlaylist {
       isWaterNukes,
       isDoomsdayClock,
     } = poolResult;
-    if (boostWaterNukes) {
-      isWaterNukes = true;
-    }
+
+    // Apply per-map forced modifiers (already rolled and respecting excludedModifiers).
+    if (appliedForced.has("isRandomSpawn")) isRandomSpawn = true;
+    if (appliedForced.has("isCompact")) isCompact = true;
+    if (appliedForced.has("isCrowded")) isCrowded = true;
+    if (appliedForced.has("isHardNations")) isHardNations = true;
+    if (appliedForced.has("startingGold1M")) startingGold = 1_000_000;
+    if (appliedForced.has("startingGold5M")) startingGold = 5_000_000;
+    if (appliedForced.has("startingGold25M")) startingGold = 25_000_000;
+    if (appliedForced.has("goldMultiplier")) goldMultiplier = 2;
+    if (appliedForced.has("isAlliancesDisabled")) isAlliancesDisabled = true;
+    if (appliedForced.has("isNukesDisabled")) isNukesDisabled = true;
+    if (appliedForced.has("isSAMsDisabled")) isSAMsDisabled = true;
+    if (appliedForced.has("isPeaceTime")) isPeaceTime = true;
+    if (appliedForced.has("isWaterNukes")) isWaterNukes = true;
+    if (appliedForced.has("isDoomsdayClock")) isDoomsdayClock = true;
 
     // Crowded modifier: if the map's biggest player count (first number of calculateMapPlayerCounts) is 60 or lower (small maps),
-    // set player count to MAX_PLAYER_COUNT (or 60 if compact map is also enabled)
+    // set player count to CROWDED_PLAYER_COUNT (or CROWDED_COMPACT_PLAYER_COUNT if compact map is also enabled)
     let crowdedMaxPlayers: number | undefined;
     if (isCrowded) {
       crowdedMaxPlayers = await this.getCrowdedMaxPlayers(map, !!isCompact);
-      if (crowdedMaxPlayers !== undefined) {
-        crowdedMaxPlayers = this.adjustForTeams(crowdedMaxPlayers, playerTeams);
-      } else {
+      if (crowdedMaxPlayers === undefined) {
         // Map doesn't support crowded. Drop it and pick one replacement only
         // if it was the sole modifier, so the lobby always has at least one.
         isCrowded = undefined;
@@ -323,10 +385,21 @@ export class MapPlaylist {
       }
     }
 
+    let unadjustedMaxPlayers =
+      crowdedMaxPlayers ?? (await this.lobbyMaxPlayers(map, mode, isCompact));
+    if (trusted) {
+      unadjustedMaxPlayers = Math.min(
+        unadjustedMaxPlayers,
+        TRUSTED_MAX_PLAYER_COUNT,
+      );
+    }
+    playerTeams = this.adjustTeamCountForPlayerCapacity(
+      playerTeams,
+      unadjustedMaxPlayers,
+    );
     const maxPlayers = Math.max(
       2,
-      crowdedMaxPlayers ??
-        (await this.lobbyMaxPlayers(map, mode, playerTeams, isCompact)),
+      this.adjustForTeams(unadjustedMaxPlayers, playerTeams),
     );
 
     const nations: GameConfig["nations"] =
@@ -450,39 +523,57 @@ export class MapPlaylist {
       GameMapType.Asia, // 20%
       GameMapType.EuropeClassic, // 20%
     ];
+    const isCompact = Math.random() < 0.5;
     return {
       donateGold: true,
       donateTroops: true,
       gameMap: maps[Math.floor(Math.random() * maps.length)],
       maxPlayers: 4,
       gameType: GameType.Public,
-      gameMapSize: GameMapSize.Compact,
+      gameMapSize: isCompact ? GameMapSize.Compact : GameMapSize.Normal,
       difficulty: Difficulty.Medium, // Doesn't matter, nations are disabled
       rankedType: RankedType.TwoVTwo,
       infiniteGold: false,
       infiniteTroops: false,
-      maxTimerValue: 10,
+      maxTimerValue: isCompact ? 10 : 15,
       instantBuild: false,
       randomSpawn: false,
       nations: "disabled",
       gameMode: GameMode.Team,
       playerTeams: 2,
-      bots: 100,
-      spawnImmunityDuration: 30 * 10,
+      bots: isCompact ? 100 : 400,
+      spawnImmunityDuration: 60 * 10,
       disabledUnits: [],
     } satisfies GameConfig;
   }
 
-  private getNextMap(type: ScheduledPublicGameType): GameMapType {
-    const playlist = this.playlists[type];
+  private getNextMap(
+    type: ScheduledPublicGameType,
+    mode?: GameMode,
+  ): GameMapType {
+    const key = this.playlistKey(type, mode);
+    const playlist = this.playlists[key];
     if (playlist.length === 0) {
-      playlist.push(...this.generateNewPlaylist(type));
+      playlist.push(...this.generateNewPlaylist(type, mode));
     }
     return playlist.shift()!;
   }
 
-  private generateNewPlaylist(type: ScheduledPublicGameType): GameMapType[] {
-    const maps = this.buildMapsList(type);
+  private playlistKey(
+    type: ScheduledPublicGameType,
+    mode?: GameMode,
+  ): PlaylistKey {
+    if (type === "special") {
+      return mode === GameMode.Team ? "specialTeam" : "specialFfa";
+    }
+    return type;
+  }
+
+  private generateNewPlaylist(
+    type: ScheduledPublicGameType,
+    mode?: GameMode,
+  ): GameMapType[] {
+    const maps = this.buildMapsList(type, mode);
     const rand = new PseudoRandom(Date.now());
     const playlist: GameMapType[] = [];
 
@@ -530,20 +621,48 @@ export class MapPlaylist {
     return false;
   }
 
-  private buildMapsList(type: ScheduledPublicGameType): GameMapType[] {
+  private buildMapsList(
+    type: ScheduledPublicGameType,
+    mode?: GameMode,
+  ): GameMapType[] {
     const maps: GameMapType[] = [];
     allMaps.forEach((mapInfo) => {
       const map = mapInfo.type;
-      if (
-        type !== "special" &&
-        (ARCADE_MAPS.has(map) || SPECIAL_ONLY_MAPS.has(map))
-      ) {
-        return;
-      }
-      let freq = mapInfo.multiplayerFrequency;
-      // Boost frequency for special team maps in the team playlist
-      if (type === "team" && SPECIAL_TEAM_MAPS.has(map)) {
-        freq *= SPECIAL_TEAM_FREQ_MULTIPLIER;
+      // Use per-mode frequency if set (>= 0), otherwise fall back to multiplayerFrequency.
+      let freq: number;
+      switch (type) {
+        case "ffa":
+          freq =
+            mapInfo.ffaFrequency >= 0
+              ? mapInfo.ffaFrequency
+              : mapInfo.multiplayerFrequency;
+          break;
+        case "team":
+          freq =
+            mapInfo.teamFrequency >= 0
+              ? mapInfo.teamFrequency
+              : mapInfo.multiplayerFrequency;
+          break;
+        case "special":
+          // Special games are rolled as ffa or team (see getSpecialConfig), so
+          // fall back to the matching per-mode frequency before multiplayerFrequency.
+          // The per-mode frequency only counts here when it's a deliberate positive
+          // weight - a map opted out of ffa/team entirely (frequency 0, e.g. Sol,
+          // ArchipelagoSea) should still reach special via multiplayerFrequency.
+          if (mapInfo.specialFrequency >= 0) {
+            freq = mapInfo.specialFrequency;
+          } else if (mode === GameMode.Team) {
+            freq =
+              mapInfo.teamFrequency > 0
+                ? mapInfo.teamFrequency
+                : mapInfo.multiplayerFrequency;
+          } else {
+            freq =
+              mapInfo.ffaFrequency > 0
+                ? mapInfo.ffaFrequency
+                : mapInfo.multiplayerFrequency;
+          }
+          break;
       }
       for (let i = 0; i < freq; i++) {
         maps.push(map);
@@ -634,14 +753,20 @@ export class MapPlaylist {
     const [l, , s] = this.calculateMapPlayerCounts(landTiles);
     // Worst case: smallest tier with team mode 1.5x multiplier, capped at l
     let p = Math.min(Math.ceil(s * 1.5), l);
-    // Apply compact 75% player reduction, then cap for performance
-    p = Math.min(Math.max(3, Math.floor(p * 0.25)), MAX_PLAYER_COUNT);
+    // Apply compact 75% player reduction
+    p = Math.max(3, Math.floor(p * 0.25));
     // Apply team adjustment
     p = this.adjustForTeams(p, playerTeams);
-    // Check at least 2 players per team AND at least 2 teams
+    return this.supportsTeamPlayerCount(p, playerTeams);
+  }
+
+  private supportsTeamPlayerCount(
+    adjustedPlayerCount: number,
+    playerTeams: TeamCountConfig,
+  ): boolean {
     return (
-      this.playersPerTeam(p, playerTeams) >= 2 &&
-      this.numberOfTeams(p, playerTeams) >= 2
+      this.playersPerTeam(adjustedPlayerCount, playerTeams) >= 2 &&
+      this.numberOfTeams(adjustedPlayerCount, playerTeams) >= 2
     );
   }
 
@@ -705,10 +830,9 @@ export class MapPlaylist {
     isCompact: boolean,
   ): Promise<number | undefined> {
     const landTiles = await getMapLandTiles(map);
-    const [rawFirstPlayerCount] = this.calculateMapPlayerCounts(landTiles);
-    const firstPlayerCount = Math.min(rawFirstPlayerCount, MAX_PLAYER_COUNT);
+    const [firstPlayerCount] = this.calculateMapPlayerCounts(landTiles);
     if (firstPlayerCount <= 60) {
-      return isCompact ? 60 : MAX_PLAYER_COUNT;
+      return isCompact ? CROWDED_COMPACT_PLAYER_COUNT : CROWDED_PLAYER_COUNT;
     }
     return undefined;
   }
@@ -716,7 +840,6 @@ export class MapPlaylist {
   private async lobbyMaxPlayers(
     map: GameMapType,
     mode: GameMode,
-    numPlayerTeams: TeamCountConfig | undefined,
     isCompactMap?: boolean,
   ): Promise<number> {
     const landTiles = await getMapLandTiles(map);
@@ -728,9 +851,26 @@ export class MapPlaylist {
     if (isCompactMap) {
       p = Math.max(3, Math.floor(p * 0.25));
     }
-    // Cap for performance
-    p = Math.min(p, MAX_PLAYER_COUNT);
-    return this.adjustForTeams(p, numPlayerTeams);
+    return p;
+  }
+
+  // Numeric team modes specify a number of teams, so ensure every team can
+  // receive at least two players before rounding the lobby capacity.
+  private adjustTeamCountForPlayerCapacity(
+    playerTeams: TeamCountConfig | undefined,
+    unadjustedMaxPlayers: number,
+  ): TeamCountConfig | undefined {
+    if (
+      typeof playerTeams !== "number" ||
+      this.supportsTeamPlayerCount(
+        this.adjustForTeams(unadjustedMaxPlayers, playerTeams),
+        playerTeams,
+      )
+    ) {
+      return playerTeams;
+    }
+
+    return Math.max(2, Math.floor(unadjustedMaxPlayers / 2));
   }
 
   private adjustForTeams(

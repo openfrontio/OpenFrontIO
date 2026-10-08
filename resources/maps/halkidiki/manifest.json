@@ -60,5 +60,6 @@
       "name": "Thrace"
     }
   ],
+  "themes": ["europe"],
   "translation_key": "map.halkidiki"
 }

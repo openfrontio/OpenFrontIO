@@ -5,14 +5,14 @@ import {
   GameMode,
   GameType,
   Nation,
-} from "../src/core/game/Game";
-import { createNationsForGame } from "../src/core/game/NationCreation";
+} from "@openfront/engine-api/game/GameTypes";
 import {
   AdditionalNation,
   Nation as ManifestNation,
-} from "../src/core/game/TerrainMapLoader";
-import { PseudoRandom } from "../src/core/PseudoRandom";
-import { GameConfig, GameStartInfo } from "../src/core/Schemas";
+} from "@openfront/engine-api/game/MapFiles";
+import { GameConfig, GameStartInfo } from "@openfront/engine-api/Schemas";
+import { PseudoRandom } from "@openfront/engine-lib/PseudoRandom";
+import { createNationsForGame } from "@openfront/engine/game/NationCreation";
 
 function makeManifestNations(count: number): ManifestNation[] {
   const result: ManifestNation[] = [];
@@ -269,6 +269,55 @@ describe("createNationsForGame: additionalNations pool", () => {
     expect(withCoords!.spawnCell?.x).toBe(10);
     expect(withCoords!.spawnCell?.y).toBe(20);
     expect(withoutCoords!.spawnCell).toBeUndefined();
+  });
+
+  test("carries each manifest nation's own flag through, even when names collide", () => {
+    // Regression test: maps can define multiple nations with the same display
+    // name (e.g. India's and Pakistan's "Punjab", split by the 1947
+    // partition). Each Nation instance must keep its own flag rather than
+    // depending on a name-keyed lookup that only the last-defined one wins.
+    const manifest: ManifestNation[] = [
+      { coordinates: [840, 305], name: "Punjab", flag: "in" },
+      { coordinates: [637, 464], name: "Punjab", flag: "pk" },
+    ];
+    const random = new PseudoRandom(5);
+
+    const nations = createNationsForGame(
+      makeGameStart(2),
+      manifest,
+      [],
+      0,
+      random,
+    );
+
+    expect(nations).toHaveLength(2);
+    const flags = nations.map((n) => n.playerInfo.nationFlag).sort();
+    expect(flags).toEqual(["in", "pk"]);
+  });
+
+  test("carries flags from additionalNations through too", () => {
+    const manifest = makeManifestNations(1);
+    const extras: AdditionalNation[] = [
+      { name: "WithFlag", flag: "fr" },
+      { name: "WithoutFlag" },
+    ];
+    const random = new PseudoRandom(5);
+
+    const nations = createNationsForGame(
+      makeGameStart(3),
+      manifest,
+      extras,
+      0,
+      random,
+    );
+
+    const withFlag = nations.find((n) => n.playerInfo.name === "WithFlag");
+    const withoutFlag = nations.find(
+      (n) => n.playerInfo.name === "WithoutFlag",
+    );
+
+    expect(withFlag!.playerInfo.nationFlag).toBe("fr");
+    expect(withoutFlag!.playerInfo.nationFlag).toBeNull();
   });
 
   test("produces unique nation names overall", () => {

@@ -1,9 +1,5 @@
-import { Colord, colord } from "colord";
-import { base64url } from "jose";
-import { ColorPalette } from "../../core/CosmeticSchemas";
-import { PatternDecoder } from "../../core/PatternDecoder";
-import { ClientID, PlayerCosmetics } from "../../core/Schemas";
-import { createRandomName } from "../../core/Util";
+import { ClientID } from "@openfront/engine-api/Schemas";
+import { TileRef } from "@openfront/engine-api/game/GameMap";
 import {
   BuildableUnit,
   Cell,
@@ -19,18 +15,26 @@ import {
   Team,
   Tick,
   UnitType,
-} from "../../core/game/Game";
-import { TileRef } from "../../core/game/GameMap";
-import { applyStateUpdate } from "../../core/game/GameUpdateUtils";
+} from "@openfront/engine-api/game/GameTypes";
 import {
   AllianceView,
   AttackUpdate,
   PlayerUpdate,
-} from "../../core/game/GameUpdates";
-import { UserSettings } from "../../core/game/UserSettings";
+} from "@openfront/engine-api/game/GameUpdates";
+import { PlayerLike } from "@openfront/engine-api/game/ReadViews";
+import { PatternDecoder } from "@openfront/shared/PatternDecoder";
+import { createRandomName } from "@openfront/shared/SharedUtil";
+import { PlayerCosmetics } from "@openfront/shared/WireSchemas";
+import { Colord, colord } from "colord";
+import { base64url } from "jose";
+import { UserSettings } from "../UserSettings";
 import { PlayerState, PlayerStatic, PlayerTypeEnum } from "../render/types";
 import { themeProvider } from "../theme/ThemeProvider";
+import { type CosmeticOwner, visibleCosmetics } from "./CosmeticVisibility";
+import { playerStateFromUpdate, playerStaticFromUpdate } from "./EntityState";
 import { GameView } from "./GameView";
+import { resolvePlayerColors } from "./PlayerColors";
+import { applyStateUpdate } from "./PlayerStateUpdate";
 import { UnitView } from "./UnitView";
 
 const userSettings: UserSettings = new UserSettings();
@@ -39,70 +43,7 @@ const FRIENDLY_TINT_TARGET = { r: 0, g: 255, b: 0, a: 1 };
 const EMBARGO_TINT_TARGET = { r: 255, g: 0, b: 0, a: 1 };
 const BORDER_TINT_RATIO = 0.35;
 
-function gamePlayerTypeToEnum(t: PlayerType): PlayerTypeEnum {
-  switch (t) {
-    case PlayerType.Human:
-      return PlayerTypeEnum.Human;
-    case PlayerType.Bot:
-      return PlayerTypeEnum.Bot;
-    case PlayerType.Nation:
-      return PlayerTypeEnum.Nation;
-    default:
-      return PlayerTypeEnum.Bot;
-  }
-}
-
-// First-emission updates from the engine always include every field; these
-// builders assert non-null for that contract. Subsequent diffs are partial
-// and flow through applyStateUpdate() below.
-function staticFromUpdate(pu: PlayerUpdate): PlayerStatic {
-  return {
-    smallID: pu.smallID!,
-    id: pu.id,
-    name: pu.name!,
-    displayName: pu.displayName!,
-    clientID: pu.clientID ?? null,
-    playerType: gamePlayerTypeToEnum(pu.playerType!),
-    team: pu.team ?? null,
-    isLobbyCreator: pu.isLobbyCreator!,
-  };
-}
-
-function stateFromUpdate(pu: PlayerUpdate): PlayerState {
-  // embargoes: Set<PlayerID strings> on the wire, but the renderer stores
-  // smallIDs (numbers). GameView fills these in via setEmbargoes() because
-  // it has the PlayerID → smallID lookup table.
-  return {
-    smallID: pu.smallID!,
-    isAlive: pu.isAlive!,
-    isDisconnected: pu.isDisconnected!,
-    killedBy: pu.killedBy ?? null,
-    deathPosition: pu.deathPosition ?? null,
-    tilesOwned: pu.tilesOwned!,
-    gold: Number(pu.gold!),
-    troops: pu.troops!,
-    isTraitor: pu.isTraitor!,
-    traitorRemainingTicks: Math.max(0, pu.traitorRemainingTicks ?? 0),
-    inDoomsdayClock: pu.inDoomsdayClock ?? false,
-    markedDoomsdayClockTick: pu.markedDoomsdayClockTick ?? -1,
-    betrayals: pu.betrayals!,
-    hasSpawned: pu.hasSpawned!,
-    spawnTile: pu.spawnTile,
-    lastDeleteUnitTick: pu.lastDeleteUnitTick!,
-    allies: pu.allies!.slice(),
-    embargoes: [],
-    targets: pu.targets!.slice(),
-    outgoingAttacks: pu.outgoingAttacks!,
-    incomingAttacks: pu.incomingAttacks!,
-    outgoingAllianceRequests: pu.outgoingAllianceRequests!.slice(),
-    alliances: pu.alliances!,
-    // Respect the client-side "Disable emojis" setting: when off, never surface
-    // emoji data to any renderer/overlay that reads this shared state (#4430).
-    outgoingEmojis: userSettings.emojis() ? pu.outgoingEmojis! : [],
-  };
-}
-
-export class PlayerView {
+export class PlayerView implements PlayerLike {
   public anonymousName: string | null = null;
   private decoder?: PatternDecoder;
 
@@ -110,6 +51,8 @@ export class PlayerView {
   public state: PlayerState;
   /** Static header data — set once at construction, never mutated. */
   public static: PlayerStatic;
+  /** The equipped cosmetics this client draws. */
+  public cosmetics!: PlayerCosmetics;
 
   // Assigned via computeColors() in the constructor; re-assignable on theme change.
   private _territoryColor!: Colord;
@@ -131,27 +74,56 @@ export class PlayerView {
     data: PlayerUpdate,
     // Undefined until the worker's first name placement for this player.
     public nameData: NameViewData | undefined,
-    public cosmetics: PlayerCosmetics,
+    /** Everything the player has equipped, before visibility settings. */
+    public readonly equippedCosmetics: PlayerCosmetics,
   ) {
-    this.state = stateFromUpdate(data);
-    this.static = staticFromUpdate(data);
+    this.state = playerStateFromUpdate(data);
+    // Respect the client-side "Disable emojis" setting: when off, never surface
+    // emoji data to any renderer/overlay that reads this shared state (#4430).
+    if (!userSettings.emojis()) {
+      this.state.outgoingEmojis = [];
+    }
+    this.static = playerStaticFromUpdate(data);
 
-    // First emission always carries name + playerType (see staticFromUpdate).
+    // First emission always carries name + playerType (see playerStaticFromUpdate).
     if (data.clientID === game.myClientID()) {
       this.anonymousName = data.name!;
     } else {
       this.anonymousName = createRandomName(data.name!, data.playerType!);
     }
 
+    this.refreshCosmetics();
+  }
+
+  /**
+   * Re-resolve which equipped cosmetics are drawn (see visibleCosmetics) and
+   * everything derived from them. Call when the cosmetics visibility settings
+   * or the local player's team change; the renderer must be refreshed after.
+   */
+  refreshCosmetics(): void {
+    this.cosmetics = visibleCosmetics(
+      this.equippedCosmetics,
+      this.game.cosmeticVisibility(),
+      this.cosmeticOwner(),
+    );
     this.computeColors();
 
-    const pattern = userSettings.territoryPatterns()
-      ? this.cosmetics.pattern
-      : undefined;
+    const pattern = this.cosmetics.pattern;
     this.decoder =
       pattern === undefined
         ? undefined
         : new PatternDecoder(pattern, base64url.decode);
+  }
+
+  private cosmeticOwner(): CosmeticOwner {
+    if (
+      this.static.clientID !== null &&
+      this.static.clientID === this.game.myClientID()
+    ) {
+      return "self";
+    }
+    const myTeam = this.game.myPlayer()?.team() ?? null;
+    return myTeam !== null && this.team() === myTeam ? "teammate" : "other";
   }
 
   /**
@@ -162,42 +134,17 @@ export class PlayerView {
   private computeColors(): void {
     const theme = themeProvider.current();
 
-    const defaultTerritoryColor = theme.territoryColor(this);
-    const defaultBorderColor = theme.borderColor(defaultTerritoryColor);
-
-    const pattern = userSettings.territoryPatterns()
-      ? this.cosmetics.pattern
-      : undefined;
-    if (pattern) {
-      pattern.colorPalette ??= {
-        name: "",
-        primaryColor: defaultTerritoryColor.toHex(),
-        secondaryColor: defaultBorderColor.toHex(),
-      } satisfies ColorPalette;
-    }
-
-    if (this.team() === null) {
-      this._territoryColor = colord(
-        this.cosmetics.color?.color ??
-          pattern?.colorPalette?.primaryColor ??
-          defaultTerritoryColor.toHex(),
-      );
-    } else {
-      this._territoryColor = defaultTerritoryColor;
-    }
-
-    this._structureColors = theme.structureColors(this._territoryColor);
-
-    const maybeFocusedBorderColor =
-      this.game.myClientID() === this.static.clientID
-        ? theme.focusedBorderColor()
-        : defaultBorderColor;
-
-    this._borderColor = new Colord(
-      pattern?.colorPalette?.secondaryColor ??
-        this.cosmetics.color?.color ??
-        maybeFocusedBorderColor.toHex(),
+    const pattern = this.cosmetics.pattern;
+    const colors = resolvePlayerColors(
+      theme,
+      theme.territoryColor(this),
+      this.cosmetics,
+      this.team(),
+      this.game.myClientID() === this.static.clientID,
     );
+    this._territoryColor = colors.territory;
+    this._borderColor = colors.border;
+    this._structureColors = theme.structureColors(this._territoryColor);
 
     // Rail color (only used for the local player's rails): white for
     // visibility, flipped to black when the territory is too light for white
@@ -419,6 +366,18 @@ export class PlayerView {
     return owned.filter((u) => types.includes(u.type()));
   }
 
+  /** Missiles launchable right now: each silo holds `level` tubes, minus
+   *  those still reloading. Caps how many nukes a bulk purchase can fire. */
+  readyMissileCount(): number {
+    return this.units(UnitType.MissileSilo).reduce(
+      (acc, silo) =>
+        silo.isUnderConstruction()
+          ? acc
+          : acc + Math.max(0, silo.level() - silo.missileTimerQueue().length),
+      0,
+    );
+  }
+
   nameLocation(): NameViewData | undefined {
     return this.nameData;
   }
@@ -437,7 +396,11 @@ export class PlayerView {
       ? this.anonymousName
       : this.static.displayName;
   }
-
+  clanTag(): string | null {
+    return this.anonymousName !== null && userSettings.anonymousNames()
+      ? null
+      : this.static.clanTag;
+  }
   clientID(): ClientID | null {
     return this.static.clientID;
   }
@@ -489,6 +452,26 @@ export class PlayerView {
     // Engine Gold is bigint; renderer state stores number. Convert back at the
     // accessor for game-code that still expects bigint semantics.
     return BigInt(this.state.gold);
+  }
+
+  /** Cumulative ship-trade revenue (for gold-rate columns). */
+  tradeGold(): number {
+    return this.state.tradeGold;
+  }
+
+  /** Cumulative train revenue: own trains + external stops at own stations. */
+  trainGold(): number {
+    return this.state.trainGold;
+  }
+
+  /** Cumulative piracy revenue: captured-ship payouts. */
+  piracyGold(): number {
+    return this.state.piracyGold;
+  }
+
+  /** Cumulative gold received from all sources. */
+  goldEarned(): number {
+    return this.state.goldEarned;
   }
 
   troops(): number {
@@ -611,6 +594,9 @@ export class PlayerView {
   }
   inDoomsdayClock(): boolean {
     return this.state.inDoomsdayClock;
+  }
+  isDecaying(): boolean {
+    return this.state.isDecaying;
   }
   doomsdayClockTicks(): number {
     return this.inDoomsdayClock()

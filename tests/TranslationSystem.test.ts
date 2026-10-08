@@ -29,7 +29,7 @@ const DYNAMIC_KEY_PATTERNS: RegExp[] = [
   /^news_box\.(tournament|tutorial|news|warning|firefox_warning)$/,
   // Built-in graphics preset names/descriptions are referenced from
   // src/client/render/gl/graphics-presets.json, not translateText literals.
-  /^graphics_setting\.preset_(default|night|colorblind)(_desc)?$/,
+  /^graphics_setting\.preset_(default|night|evans_pick|colorblind)(_desc)?$/,
 ];
 
 /**
@@ -37,6 +37,20 @@ const DYNAMIC_KEY_PATTERNS: RegExp[] = [
  */
 const IGNORED_UNUSED_KEY_PATTERNS: RegExp[] = [
   /^lang\./, // language metadata, not a UI translation key
+  // Steam rich presence status frames. Never rendered by the client, so there
+  // is no translateText() call to find: the Electron shell reads them out of
+  // resources/lang/*.json at build time and writes them into the localization
+  // file Steam resolves against, in the *viewing* friend's language rather
+  // than the player's. They live here so Crowdin picks them up like any other
+  // string.
+  /^desktop_presence\./,
+  // The Electron shell's account-linking gate. Same situation as the rich
+  // presence frames above, and for the same reason: the gate is a page the
+  // shell serves from its OWN assets before the client boots, so there is no
+  // translateText() call in this repo to find. The shell's build reads these
+  // out of resources/lang/*.json and emits per-language files next to that
+  // page. They live here so Crowdin picks them up like any other string.
+  /^desktop_gate\./,
 ];
 
 type NestedTranslations = Record<string, unknown>;
@@ -363,7 +377,9 @@ function scanTsFile(
     filePath,
     content,
     ts.ScriptTarget.Latest,
-    true,
+    // setParentNodes: nothing in this file reads node.parent, and building the
+    // parent pointers is about 15% of the parse cost across 566 files.
+    false,
     filePath.endsWith(".tsx") ? ts.ScriptKind.TSX : ts.ScriptKind.TS,
   );
 
@@ -521,8 +537,10 @@ describe("Translation System", () => {
     const enKeySet = new Set(allKeys);
     const rootKeys = new Set(Object.keys(enJson as Record<string, unknown>));
 
-    const srcDir = path.join(PROJECT_ROOT, "src");
-    const sourceFiles = getAllFiles(srcDir, [".ts", ".tsx", ".js", ".jsx"]);
+    // The engine packages emit message keys too.
+    const sourceFiles = ["src", "packages"].flatMap((dir) =>
+      getAllFiles(path.join(PROJECT_ROOT, dir), [".ts", ".tsx", ".js", ".jsx"]),
+    );
 
     const usedKeys = new Set<string>();
     const referencedStaticKeys = new Set<string>();
@@ -623,5 +641,17 @@ describe("Translation System", () => {
 
     expect(missingKeys).toEqual([]);
     expect(unusedKeys).toEqual([]);
-  }, 30000);
+    // 60s, raised from the 30s added in #3861 (May 2026). This is starvation
+    // headroom, not a budget. Measured over 566 source files (5.0MB): ~1.7s
+    // locally, split read 0.28s / TS parse 0.68s / AST walk 0.70s, and ~4.0s
+    // under the v8 coverage CI actually runs (`npm run test:coverage`,
+    // ci.yml:47) -- down from ~5.0s before the setParentNodes change above.
+    // That 20% is the whole of what optimisation can buy: parse and walk are
+    // 82% of the cost and are inherent to reading every source file with the
+    // TypeScript compiler. What exhausted the old 30s on 1 Sept 2026 was
+    // >12x starvation from concurrent suites on one machine, which no
+    // speedup of this size survives. A timeout here reads exactly like the
+    // i18n regression this test exists to catch, and costs an investigation
+    // every time, so the margin is deliberately generous.
+  }, 60000);
 });

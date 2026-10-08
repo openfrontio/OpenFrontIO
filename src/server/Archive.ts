@@ -1,27 +1,19 @@
-import z from "zod";
-import { GameType } from "../core/game/Game";
+import { GameID, ID } from "@openfront/engine-api/Schemas";
+import { replacer } from "@openfront/shared/SharedUtil";
 import {
-  GameID,
   GameRecord,
   GameRecordSchema,
-  ID,
   PartialGameRecord,
-} from "../core/Schemas";
-import { replacer } from "../core/Util";
+} from "@openfront/shared/WireSchemas";
+import z from "zod";
+import { registeredSite } from "./ClusterCheckin";
 import { logger } from "./Logger";
 import { ServerEnv } from "./ServerEnv";
 
 const log = logger.child({ component: "Archive" });
 
-export async function archive(
-  gameRecord: GameRecord,
-  trustedCosmeticFlagUrls: Set<string> = new Set(),
-) {
+export async function archive(gameRecord: GameRecord) {
   try {
-    if (gameRecord.info.config.gameType === GameType.Singleplayer) {
-      stripUntrustedFlagUrls(gameRecord, trustedCosmeticFlagUrls);
-    }
-
     const parsed = GameRecordSchema.safeParse(gameRecord);
     if (!parsed.success) {
       log.error(`invalid game record: ${z.prettifyError(parsed.error)}`, {
@@ -92,26 +84,6 @@ export function finalizeGameRecord(
     gitCommit: ServerEnv.gitCommit(),
     subdomain: ServerEnv.subdomain(),
     domain: ServerEnv.domain(),
+    site: registeredSite(),
   };
-}
-
-function stripUntrustedFlagUrls(
-  gameRecord: GameRecord,
-  trustedCosmeticFlagUrls: Set<string>,
-): void {
-  for (const player of gameRecord.info.players) {
-    const flag = player.cosmetics?.flag;
-    if (
-      flag === undefined ||
-      !/^https?:\/\//i.test(flag) ||
-      trustedCosmeticFlagUrls.has(flag)
-    ) {
-      continue;
-    }
-    log.warn("dropping untrusted singleplayer replay flag", {
-      gameID: gameRecord.info.gameID,
-      clientID: player.clientID,
-    });
-    player.cosmetics!.flag = undefined;
-  }
 }

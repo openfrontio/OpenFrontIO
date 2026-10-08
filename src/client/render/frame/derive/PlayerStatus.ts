@@ -112,6 +112,8 @@ export function computePlayerStatus(
     const doomsdayClockWarnTicks = opts.doomsdayClockWarnTicks ?? 0;
     const doomsdayClockDraining =
       inDoomsdayClock && doomsdayClockUnderTicks >= doomsdayClockWarnTicks;
+    // Red, static skull. From the sim — see PlayerImpl.isDecaying.
+    const doomsdayClockDecaying = inDoomsdayClock && ps.isDecaying;
     // How far through the warn countdown (0->1); the danger skull blinks faster
     // as this nears 1, i.e. as the side approaches draining.
     const doomsdayClockWarnProgress =
@@ -189,6 +191,7 @@ export function computePlayerStatus(
         disconnected,
         inDoomsdayClock,
         doomsdayClockDraining,
+        doomsdayClockDecaying,
         doomsdayClockWarnProgress,
         alliance,
         allianceReq,

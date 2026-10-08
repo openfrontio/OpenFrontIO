@@ -16,7 +16,7 @@
  *   - types          — shared interfaces + constants
  */
 
-import type { Config } from "../../../../../core/configuration/Config";
+import type { Config } from "@openfront/engine-lib/configuration/Config";
 import type {
   NameEntry,
   PlayerState,
@@ -28,7 +28,7 @@ import { PlayerTypeEnum } from "../../../types";
 import type { RenderSettings } from "../../RenderSettings";
 import { createFullscreenQuad } from "../../utils/GlUtils";
 
-import { renderTroops } from "../../../../Utils";
+import { renderTroops } from "@openfront/engine-lib/Format";
 import type { GlyphTables } from "./AtlasData";
 import {
   buildEmojiLookup,
@@ -291,6 +291,33 @@ export class NamePass {
   }
 
   /**
+   * Swap known players' flag and crown images (e.g. after the cosmetics
+   * visibility settings change). slot.static is the playerByID entry, so a
+   * slot created later picks the new URLs up too.
+   */
+  updatePlayerCosmetics(players: PlayerStatic[]): void {
+    for (const p of players) {
+      const known = this.playerByID.get(p.id);
+      if (known === undefined) continue;
+      known.flag = p.flag;
+      known.crown = p.crown;
+      const slot = this.slots.get(p.id);
+      if (slot === undefined) continue;
+      if (slot.flagUrl !== p.flag) {
+        slot.flagUrl = p.flag;
+        slot.flagLayerIdx = -1;
+        this.resolveSlotFlag(slot);
+      }
+      if (slot.crownUrl !== p.crown) {
+        slot.crownUrl = p.crown;
+        slot.crownLayerIdx = -1;
+        this.resolveSlotCrown(slot);
+      }
+      this.writePlayerDataRow(slot);
+    }
+  }
+
+  /**
    * Request the texture layer for a slot's flag (called once at slot creation).
    * If the image is already loaded the layer index is set immediately; otherwise
    * the slot joins a wait list and is updated when the image arrives.
@@ -382,6 +409,7 @@ export class NamePass {
             nukeTargetsMe: false,
             inDoomsdayClock: false,
             doomsdayClockDraining: false,
+            doomsdayClockDecaying: false,
             doomsdayClockWarnProgress: 0,
             traitorRemainingTicks: 0,
             allianceFraction: 0,
@@ -516,6 +544,7 @@ export class NamePass {
       const disconnected = sd?.disconnected ?? false;
       const inDoomsdayClock = sd?.inDoomsdayClock ?? false;
       const doomsdayClockDraining = sd?.doomsdayClockDraining ?? false;
+      const doomsdayClockDecaying = sd?.doomsdayClockDecaying ?? false;
       const doomsdayClockWarnProgress = sd?.doomsdayClockWarnProgress ?? 0;
       const alliance = sd?.alliance ?? false;
       const allianceReq = sd?.allianceReq ?? false;
@@ -533,6 +562,7 @@ export class NamePass {
         disconnected !== slot.disconnected ||
         inDoomsdayClock !== slot.inDoomsdayClock ||
         doomsdayClockDraining !== slot.doomsdayClockDraining ||
+        doomsdayClockDecaying !== slot.doomsdayClockDecaying ||
         doomsdayClockWarnProgress !== slot.doomsdayClockWarnProgress ||
         alliance !== slot.alliance ||
         allianceReq !== slot.allianceReq ||
@@ -549,6 +579,7 @@ export class NamePass {
         slot.disconnected = disconnected;
         slot.inDoomsdayClock = inDoomsdayClock;
         slot.doomsdayClockDraining = doomsdayClockDraining;
+        slot.doomsdayClockDecaying = doomsdayClockDecaying;
         slot.doomsdayClockWarnProgress = doomsdayClockWarnProgress;
         slot.alliance = alliance;
         slot.allianceReq = allianceReq;
@@ -636,18 +667,21 @@ export class NamePass {
     d[off + 15] = slot.nameHalfWidth;
 
     // Column 4: flagLayerIdx, emojiAtlasIdx, smallID, doomsdayClock state
-    // (0 none, 1.0-1.49 danger -> blinking skull, 2 draining -> steady skull).
+    // (0 none, 1.0-1.49 danger -> blinking skull, 2 draining -> steady skull,
+    // 3 decaying -> steady RED skull, i.e. territory is rotting away).
     // The warn-countdown progress (0->1) is packed into the danger value's
     // fraction so the shader can blink faster as drain nears; it stays < 1.5 so
     // the draining threshold is untouched.
     d[off + 16] = slot.flagLayerIdx;
     d[off + 17] = slot.emojiAtlasIdx;
     d[off + 18] = slot.static.smallID;
-    d[off + 19] = slot.doomsdayClockDraining
-      ? 2.0
-      : slot.inDoomsdayClock
-        ? 1.0 + slot.doomsdayClockWarnProgress * 0.49
-        : 0.0;
+    d[off + 19] = slot.doomsdayClockDecaying
+      ? 3.0
+      : slot.doomsdayClockDraining
+        ? 2.0
+        : slot.inDoomsdayClock
+          ? 1.0 + slot.doomsdayClockWarnProgress * 0.49
+          : 0.0;
 
     // Column 5: crown, traitor, disconnected, alliance
     d[off + 20] = slot.crown ? 1.0 : 0.0;
@@ -667,10 +701,21 @@ export class NamePass {
     d[off + 30] = slot.allianceFraction;
     d[off + 31] = slot.allianceRemainingTicks;
 
-    // Column 8: crownLayerIdx (crown cosmetic), verified badge, rest free
+    // Column 8: crownLayerIdx (crown cosmetic), verified badge, statusIconCount, free
     d[off + 32] = slot.crownLayerIdx;
     d[off + 33] = slot.static.verified === true ? 1.0 : 0.0;
-    d[off + 34] = 0.0;
+    // Count of active status-row icons so shaders don't recompute it independently.
+    d[off + 34] = [
+      slot.crown,
+      slot.traitor,
+      slot.disconnected,
+      slot.alliance,
+      slot.allianceReq,
+      slot.target,
+      slot.embargo,
+      slot.nukeActive,
+      slot.inDoomsdayClock || slot.doomsdayClockDraining,
+    ].filter(Boolean).length;
     d[off + 35] = 0.0;
 
     this.playerDataDirty = true;

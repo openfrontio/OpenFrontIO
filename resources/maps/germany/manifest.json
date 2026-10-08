@@ -1,5 +1,5 @@
 {
-  "categories": ["europe", "new"],
+  "categories": ["europe", "countries"],
   "custom_tribes": [
     "Aachen, Städteregion",
     "Ahrweiler",
@@ -526,5 +526,6 @@
       "strength": 2
     }
   ],
+  "themes": ["europe"],
   "translation_key": "map.germany"
 }

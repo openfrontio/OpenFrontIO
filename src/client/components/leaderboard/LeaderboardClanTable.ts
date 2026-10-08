@@ -1,9 +1,9 @@
-import { html, LitElement } from "lit";
-import { customElement, state } from "lit/decorators.js";
 import {
   ClanLeaderboardEntry,
   ClanLeaderboardResponse,
-} from "../../../core/ClanApiSchemas";
+} from "@openfront/shared/ClanApiSchemas";
+import { html, LitElement } from "lit";
+import { customElement, state } from "lit/decorators.js";
 import { fetchClanLeaderboard } from "../../ClanApi";
 import { translateText } from "../../Utils";
 
@@ -52,7 +52,7 @@ export class LeaderboardClanTable extends LitElement {
         }),
       );
     } catch (error) {
-      console.error("loadClanLeaderboard: request failed", error);
+      console.warn("loadClanLeaderboard: request failed", error);
       this.error = translateText("leaderboard_modal.error");
     } finally {
       this.isLoading = false;
@@ -111,7 +111,7 @@ export class LeaderboardClanTable extends LitElement {
           class="w-12 h-12 border-4 border-blue-500/30 border-t-blue-500 rounded-full animate-spin mb-6"
         ></div>
         <p class="text-blue-200/80 text-sm font-bold tracking-widest uppercase">
-          ${translateText("leaderboard_modal.loading")}
+          ${translateText("common.loading")}
         </p>
       </div>
     `;

@@ -30,5 +30,6 @@
       "name": "Nordaustlandet",
       "flag": "no"
     }
-  ]
+  ],
+  "themes": ["europe", "north_america"]
 }

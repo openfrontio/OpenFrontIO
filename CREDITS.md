@@ -104,6 +104,11 @@ Polar Geospatial Center, 2018, "PGC Map Catalog", https://doi.org/10.7910/DVN/6R
 © [OpenStreetMap contributors](https://www.openstreetmap.org/copyright)  
 Licensed under ODbL
 
+### Pulicat Lake Map
+
+© [OpenStreetMap contributors](https://www.openstreetmap.org/copyright)  
+Licensed under ODbL
+
 ## Icons
 
 ### [The Noun Project](https://thenounproject.com/)
@@ -111,6 +116,7 @@ Licensed under ODbL
 Stats icon by [Meko](https://thenounproject.com/mekoda/) – https://thenounproject.com/icon/stats-4942475/
 Pay Per Click icon by [Fauzan Adiima](https://thenounproject.com/creator/fauzan94/) – https://thenounproject.com/icon/pay-per-click-2586454/
 Medal icon by [Snow](https://thenounproject.com/snowdoll/) – https://thenounproject.com/icon/medal-4567887/
+Guild icon by Trimanggolo Mulyo – https://thenounproject.com/icon/guild-8266144/
 
 ### Flags
 

@@ -1,7 +1,7 @@
+import { GameMapImpl } from "@openfront/engine-lib/game/GameMapImpl";
+import { UniversalPathFinding } from "@openfront/engine/pathfinding/PathFinder";
+import { PathStatus } from "@openfront/engine/pathfinding/types";
 import { describe, expect, it } from "vitest";
-import { GameMapImpl } from "../../../src/core/game/GameMap";
-import { UniversalPathFinding } from "../../../src/core/pathfinding/PathFinder";
-import { PathStatus } from "../../../src/core/pathfinding/types";
 
 describe("UniversalPathFinding.Parabola", () => {
   function createLargeMap() {
@@ -22,7 +22,7 @@ describe("UniversalPathFinding.Parabola", () => {
       const path = finder.findPath(from, to);
 
       expect(path).not.toBeNull();
-      expect(path!.length).toBe(39);
+      expect(path!.length).toBe(40);
       expect(path![0]).toBe(from);
       expect(path![path!.length - 1]).toBe(to);
     });
@@ -61,7 +61,7 @@ describe("UniversalPathFinding.Parabola", () => {
       const path = finder.findPath(from, to);
 
       expect(path).not.toBeNull();
-      expect(path!.length).toBe(43);
+      expect(path!.length).toBe(45);
       expect(path![0]).toBe(from);
       expect(path![path!.length - 1]).toBe(to);
     });
@@ -240,7 +240,7 @@ describe("UniversalPathFinding.Parabola", () => {
       const path = finder.findPath(from, to);
 
       expect(path).not.toBeNull();
-      expect(path!.length).toBe(28);
+      expect(path!.length).toBe(29);
       expect(path![0]).toBe(from);
       expect(path![path!.length - 1]).toBe(to);
     });

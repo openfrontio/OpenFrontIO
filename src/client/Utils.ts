@@ -1,5 +1,3 @@
-import IntlMessageFormat from "intl-messageformat";
-import { DoomsdayClockSpeed } from "../core/game/DoomsdayClock";
 import {
   Duos,
   GameMode,
@@ -10,15 +8,48 @@ import {
   Quads,
   Team,
   Trios,
-} from "../core/game/Game";
-import { GameConfig } from "../core/Schemas";
+} from "@openfront/engine-api/game/GameTypes";
+import { GameConfig } from "@openfront/engine-api/Schemas";
+import { DoomsdayClockSpeed } from "@openfront/engine-lib/game/DoomsdayClock";
+import { stripVersionPrefix } from "@openfront/shared/ServerList";
+import IntlMessageFormat from "intl-messageformat";
+import { ClientEnv } from "./ClientEnv";
 import type { LangSelector } from "./LangSelector";
+import { pagePin } from "./PagePin";
 import { Platform } from "./Platform";
 
 export const TUTORIAL_VIDEO_URL = "https://www.youtube.com/embed/7J5zwb_s_Cg";
 
+// The desktop shell cannot embed YouTube inside Electron, so it bundles the
+// same tutorial and serves it under a reserved prefix of its app:// scheme
+// (see openfront-desktop's protocol.ts, which pins this path with a test).
+// Only meaningful when Platform.isElectron; on the web this path does not
+// exist.
+export const DESKTOP_TUTORIAL_VIDEO_URL = "/__tutorial/tutorial.webm";
+
 export function normaliseMapKey(mapName: string): string {
-  return mapName.toLowerCase().replace(/[\s.]+/g, "");
+  // Asset dirs / translation keys are the map id lowercased. For most maps
+  // stripping spaces from the display name gives the same string, but not for
+  // the tourney maps (e.g. "Tourney 2 Teams" lives in maps/tourney1/).
+  const id = maps.find((m) => m.type === mapName)?.id;
+  return (id ?? mapName).toLowerCase().replace(/[\s.]+/g, "");
+}
+
+/**
+ * The map key desktop rich presence carries.
+ *
+ * Steam's localization file composes `#Map_<key>` and resolves it in the
+ * *viewing* user's language, so presence has to send the normalised id -- the
+ * same key `map.<id>` uses in our own translations, which keeps the two from
+ * drifting apart -- rather than the display name, which would compose a token
+ * that does not exist. Steam hides the entire status line when a token fails
+ * to resolve, so getting this wrong is a total failure rather than a partial
+ * one. Absent stays absent.
+ */
+export function presenceMapKey(
+  gameMap: string | undefined,
+): string | undefined {
+  return gameMap === undefined ? undefined : normaliseMapKey(gameMap);
 }
 
 export function getMapName(mapName: string | undefined): string | null {
@@ -115,7 +146,7 @@ function getTeamSize(
 }
 
 export interface ModifierInfo {
-  /** Translation key for detailed label (e.g. "host_modal.random_spawn") */
+  /** Translation key for detailed label (e.g. "game_settings.random_spawn") */
   labelKey: string;
   /** Translation key for badge/short label (e.g. "public_game_modifier.random_spawn") */
   badgeKey: string;
@@ -138,13 +169,13 @@ export function getActiveModifiers(
   const result: ModifierInfo[] = [];
   if (modifiers.isRandomSpawn) {
     result.push({
-      labelKey: "host_modal.random_spawn",
+      labelKey: "game_settings.random_spawn",
       badgeKey: "public_game_modifier.random_spawn",
     });
   }
   if (modifiers.isCompact) {
     result.push({
-      labelKey: "host_modal.compact_map",
+      labelKey: "game_settings.compact_map",
       badgeKey: "public_game_modifier.compact_map",
     });
   }
@@ -176,7 +207,7 @@ export function getActiveModifiers(
   }
   if (modifiers.goldMultiplier) {
     result.push({
-      labelKey: "host_modal.gold_multiplier",
+      labelKey: "game_settings.gold_multiplier",
       badgeKey: "public_game_modifier.gold_multiplier",
       badgeParams: {
         amount: modifiers.goldMultiplier,
@@ -218,13 +249,13 @@ export function getActiveModifiers(
   }
   if (modifiers.isWaterNukes) {
     result.push({
-      labelKey: "public_game_modifier.water_nukes_label",
+      labelKey: "game_settings.water_nukes",
       badgeKey: "public_game_modifier.water_nukes",
     });
   }
   if (modifiers.isDoomsdayClock) {
     const info: ModifierInfo = {
-      labelKey: "public_game_modifier.doomsday_clock_label",
+      labelKey: "game_settings.doomsday_clock",
       badgeKey: "public_game_modifier.doomsday_clock",
     };
     // Name the preset when we know it; older payloads / non-rotation lobbies
@@ -273,10 +304,6 @@ export function renderDuration(totalSeconds: number): string {
   return parts.join(" ");
 }
 
-export function renderTroops(troops: number): string {
-  return renderNumber(troops / 10);
-}
-
 export async function copyToClipboard(
   text: string,
   onSuccess?: () => void,
@@ -293,38 +320,7 @@ export async function copyToClipboard(
     }
   } catch (err) {
     console.warn("Failed to copy to clipboard", err);
-  }
-}
-
-export function renderNumber(
-  num: number | bigint,
-  fixedPoints?: number,
-): string {
-  num = Number(num);
-  num = Math.max(num, 0);
-
-  if (num >= 10_000_000_000) {
-    const value = Math.floor(num / 100000000) / 10;
-    return value.toFixed(fixedPoints ?? 1) + "B";
-  } else if (num >= 1_000_000_000) {
-    const value = Math.floor(num / 10000000) / 100;
-    return value.toFixed(fixedPoints ?? 2) + "B";
-  } else if (num >= 10_000_000) {
-    const value = Math.floor(num / 100000) / 10;
-    return value.toFixed(fixedPoints ?? 1) + "M";
-  } else if (num >= 1_000_000) {
-    const value = Math.floor(num / 10000) / 100;
-    return value.toFixed(fixedPoints ?? 2) + "M";
-  } else if (num >= 100000) {
-    return Math.floor(num / 1000) + "K";
-  } else if (num >= 10000) {
-    const value = Math.floor(num / 100) / 10;
-    return value.toFixed(fixedPoints ?? 1) + "K";
-  } else if (num >= 1000) {
-    const value = Math.floor(num / 10) / 100;
-    return value.toFixed(fixedPoints ?? 2) + "K";
-  } else {
-    return Math.floor(num).toString();
+    throw err;
   }
 }
 
@@ -394,12 +390,12 @@ export function createCanvas(): HTMLCanvasElement {
  */
 export function generateCryptoRandomUUID(): string {
   // Type guard to check if randomUUID is available
-  if (crypto !== undefined && "randomUUID" in crypto) {
+  if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
     return crypto.randomUUID();
   }
 
   // Fallback using crypto.getRandomValues
-  if (crypto !== undefined && "getRandomValues" in crypto) {
+  if (typeof crypto !== "undefined" && "getRandomValues" in crypto) {
     return (([1e7] as any) + -1e3 + -4e3 + -8e3 + -1e11).replace(
       /[018]/g,
       (c: number): string =>
@@ -441,10 +437,41 @@ function getCachedLangSelector(): LangSelector | null {
   const cached = self.langSelector as LangSelector | null | undefined;
   if (cached && cached.isConnected) return cached;
 
+  // A lit update is scheduled on a microtask, so a component can render once
+  // more after its environment has gone -- which in tests means `document` is
+  // no longer defined by the time this runs. Returning null makes
+  // translateText fall back to the key instead of throwing an unhandled
+  // rejection that fails the whole run.
+  if (typeof document === "undefined") {
+    self.langSelector = null;
+    return null;
+  }
+
   const found = document.querySelector("lang-selector") as LangSelector | null;
   self.langSelector = found ?? null;
   return found;
 }
+
+/** Language codes whose script reads right-to-left (resources/lang/metadata.json). */
+const RTL_LANGUAGES = new Set(["ar", "fa", "he"]);
+
+/**
+ * True when the given language renders right-to-left. Defaults to the
+ * currently selected UI language, so callers can simply write `isRTL()`.
+ */
+export const isRTL = (lang?: string): boolean => {
+  const code = (lang ?? getCachedLangSelector()?.currentLang ?? "en").split(
+    "-",
+  )[0];
+  return RTL_LANGUAGES.has(code);
+};
+
+/**
+ * Value for the HTML `dir` attribute matching the current UI language.
+ * Apply it to containers whose text comes from translateText() so Persian,
+ * Arabic and Hebrew render right-to-left with correct mixed-content ordering.
+ */
+export const textDirection = (): "rtl" | "ltr" => (isRTL() ? "rtl" : "ltr");
 
 export const translateText = (
   key: string,
@@ -509,16 +536,95 @@ export const translateText = (
   }
 };
 
-export function getTranslatedPlayerTeamLabel(team: Team | null): string {
+/**
+ * Whether `key` is translated in the player's own language, rather than only
+ * in the English that translateText falls back to.
+ */
+export const hasOwnTranslation = (key: string): boolean =>
+  getCachedLangSelector()?.translations?.[key] !== undefined;
+
+export interface HasClanTag {
+  clanTag?: string | null | (() => string | null);
+}
+
+type TopClans = {
+  topTag: string | null;
+  topCount: number;
+  secondTag: string | null;
+  secondCount: number;
+  thirdCount: number;
+};
+
+function getTopClans(players: readonly HasClanTag[]): TopClans {
+  const counts = new Map<string, number>();
+  for (const p of players) {
+    const tag = typeof p.clanTag === "function" ? p.clanTag() : p.clanTag;
+    if (tag && tag.trim().length > 0) {
+      counts.set(tag, (counts.get(tag) ?? 0) + 1);
+    }
+  }
+  let topTag: string | null = null,
+    topCount = 0;
+  let secondTag: string | null = null,
+    secondCount = 0;
+  let thirdCount = 0;
+
+  for (const [tag, count] of counts) {
+    if (count > topCount) {
+      thirdCount = secondCount;
+      secondTag = topTag;
+      secondCount = topCount;
+      topTag = tag;
+      topCount = count;
+    } else if (count > secondCount) {
+      thirdCount = secondCount;
+      secondTag = tag;
+      secondCount = count;
+    } else if (count > thirdCount) {
+      thirdCount = count;
+    }
+  }
+  return { topTag, topCount, secondTag, secondCount, thirdCount };
+}
+
+export function resolveTeamClanTag(
+  players: Iterable<HasClanTag>,
+): string | null {
+  const list = Array.isArray(players) ? players : Array.from(players);
+  const n = list.length;
+  if (n === 0) return null;
+
+  const { topTag, topCount, secondTag, secondCount, thirdCount } =
+    getTopClans(list);
+
+  if (topTag && topCount > n / 2) {
+    return topTag;
+  }
+  if (
+    topTag &&
+    secondTag &&
+    secondCount > thirdCount &&
+    (topCount + secondCount) / n >= 0.7 &&
+    secondCount / n >= 0.3
+  ) {
+    return [topTag, secondTag].sort().join(" / ");
+  }
+  return null;
+}
+
+export function getTranslatedPlayerTeamLabel(
+  team: Team | null,
+  clanTag?: string | null,
+): string {
   if (!team) return "";
+  if (clanTag) {
+    return `[${clanTag}]`;
+  }
   const translationKey = `team_colors.${team.toLowerCase()}`;
   const translated = translateText(translationKey);
   return translated === translationKey ? team : translated;
 }
 
-/**
- * Severity colors mapping for message types
- */
 export const severityColors: Record<string, string> = {
   fail: "text-red-400",
   warn: "text-yellow-400",
@@ -529,9 +635,7 @@ export const severityColors: Record<string, string> = {
 };
 
 /**
- * Gets the CSS classes for styling message types based on their severity
- * @param type The message type to get styling for
- * @returns CSS class string for the message type
+ * Maps a message type to the Tailwind text-color class of its severity.
  */
 export function getMessageTypeClasses(type: MessageType): string {
   switch (type) {
@@ -725,6 +829,29 @@ export function showToast(
   );
 }
 
+const RELOAD_TOAST_KEY = "reloadToast";
+
+// Holds the translated text, not the key: on the far side of the reload the
+// language files may not have landed yet and translateText would echo the key.
+export function showToastAfterReload(message: string): void {
+  try {
+    sessionStorage.setItem(RELOAD_TOAST_KEY, message);
+  } catch {
+    // sessionStorage unavailable: the reload still happens, just silently.
+  }
+}
+
+export function flushReloadToast(): void {
+  let message: string | null;
+  try {
+    message = sessionStorage.getItem(RELOAD_TOAST_KEY);
+    sessionStorage.removeItem(RELOAD_TOAST_KEY);
+  } catch {
+    return;
+  }
+  if (message) showToast(message, "green");
+}
+
 export function getSecondsUntilServerTimestamp(
   targetServerTimestampMs: number,
   serverTimeOffsetMs: number,
@@ -737,4 +864,91 @@ export function getSecondsUntilServerTimestamp(
         1000,
     ),
   );
+}
+
+/**
+ * Reload to pick up a newly deployed version. The app shell is served with a
+ * shared-cache TTL (RenderHtml.ts), so a plain reload can hand back the same
+ * stale HTML — with the old gitCommit baked in — for minutes after a deploy,
+ * and a version check that reloads on mismatch would loop. A unique query
+ * string misses the shared cache, so the origin renders the current shell.
+ *
+ * On a deployment host (the document landed there for a cross-host game, or
+ * via a stale bookmark) a same-origin reload re-fetches that SAME
+ * deployment's shell — for a drained or outdated deployment that can never
+ * help, and the drain prompt would loop forever. The apex serves the active
+ * deployment's shell, so go there instead, keeping the path (letter routing
+ * re-resolves a /game/<id>) minus the origin-specific worker prefix.
+ */
+export function reloadForUpdate(): void {
+  const url = new URL(window.location.href);
+  const siteHost = ClientEnv.siteHost();
+  if (siteHost !== undefined && url.host !== siteHost) {
+    url.protocol = "https:";
+    url.host = siteHost;
+  }
+  // Both prefixes encode what this reload exists to leave behind, whichever
+  // host answers it. `/v/<commit>/` is immutable by design (multi-server
+  // v2): it pins the bundle, so reloading it as-is re-serves the very
+  // version being updated away from, forever, cache-buster or not. And
+  // `/w<n>/` was resolved against the old worker count, which a new version
+  // may have changed — letter routing picks the worker again on the way
+  // back in. apexPathFor drops exactly these two, in either order.
+  url.pathname = apexPathFor(url.pathname);
+  url.searchParams.set("v", Date.now().toString(36));
+  window.location.replace(url.toString());
+}
+
+/**
+ * The path to ask the apex for when re-entering through it. Both prefixes a
+ * path can carry are specific to where the page came from, and the apex
+ * re-resolves what they encoded: `/w<n>/` is one deployment's worker (letter
+ * routing picks the worker again), and `/v/<commit>/` pins the version whose
+ * staleness is the reason for going to the apex in the first place. Pure so
+ * the rule is testable without booting Main.
+ */
+export function apexPathFor(pathname: string): string {
+  const { path } = stripVersionPrefix(pathname);
+  return path.replace(/^\/w\d+\//, "/");
+}
+
+/**
+ * A same-origin path as THIS document should write it into its own history:
+ * re-prefixed with the page's `/v/<commit>/` when it has one, unchanged
+ * otherwise.
+ *
+ * History entries are not share links, and the two want opposite things. A
+ * share link is version-free on purpose — the recipient should be routed by
+ * whatever version the game's server runs when they open it. A history entry
+ * is this tab's own URL: pressing F5 on it must reload THE BUNDLE THIS PAGE
+ * IS RUNNING, and on a pinned page a version-free path would silently hand
+ * the player `latest` instead, mid-game.
+ *
+ * Reads the pin captured at boot rather than the live pathname: the join
+ * flow rewrites the address bar to the version-free share URL before this
+ * ever runs in a game, and a version-free history entry is precisely what
+ * this exists to avoid writing (PagePin.ts).
+ */
+export function currentPagePath(path: string): string {
+  const commit = pagePin();
+  return commit === null ? path : `/v/${commit}${path}`;
+}
+
+/**
+ * Where "leave to the menu" navigations should land. On a deployment host
+ * the local homepage may belong to a drained deployment whose public lobby
+ * list is empty; the apex always fronts the active one. Same-host,
+ * standalone deployments (no siteHost injected), dev, and desktop keep the
+ * plain root.
+ *
+ * The plain root is also the right answer on a `/v/<commit>/` page, and for
+ * the same reason: "/" is version-free, so a player leaving to the menu
+ * lands on `latest` rather than back on the build they were leaving.
+ */
+export function homeHref(): string {
+  const siteHost = ClientEnv.siteHost();
+  if (siteHost !== undefined && window.location.host !== siteHost) {
+    return `https://${siteHost}/`;
+  }
+  return "/";
 }

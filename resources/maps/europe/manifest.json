@@ -281,5 +281,6 @@
       "name": "Monaco"
     }
   ],
+  "themes": ["europe"],
   "translation_key": "map.europe"
 }

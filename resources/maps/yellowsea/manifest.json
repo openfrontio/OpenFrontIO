@@ -60,5 +60,6 @@
       "name": "Jilin"
     }
   ],
+  "themes": ["asia"],
   "translation_key": "map.yellowsea"
 }

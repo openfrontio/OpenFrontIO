@@ -1,28 +1,28 @@
-import { encodeTerrainTile } from "../src/client/render/gl/utils/ColorUtils";
-import { AttackExecution } from "../src/core/execution/AttackExecution";
-import { NationAllianceBehavior } from "../src/core/execution/nation/NationAllianceBehavior";
-import { NationEmojiBehavior } from "../src/core/execution/nation/NationEmojiBehavior";
-import { NationNukeBehavior } from "../src/core/execution/nation/NationNukeBehavior";
-import { NukeExecution } from "../src/core/execution/NukeExecution";
-import { AiAttackBehavior } from "../src/core/execution/utils/AiAttackBehavior";
+import { TileRef } from "@openfront/engine-api/game/GameMap";
 import {
   Difficulty,
-  Game,
   GameMapSize,
   GameMapType,
   GameMode,
   GameType,
-  Player,
   PlayerInfo,
   PlayerType,
   TerrainType,
   UnitType,
-} from "../src/core/game/Game";
-import { createGame } from "../src/core/game/GameImpl";
-import { genTerrainFromBin } from "../src/core/game/TerrainMapLoader";
-import { UserSettings } from "../src/core/game/UserSettings";
-import { PseudoRandom } from "../src/core/PseudoRandom";
-import { GameConfig } from "../src/core/Schemas";
+} from "@openfront/engine-api/game/GameTypes";
+import { GameConfig } from "@openfront/engine-api/Schemas";
+import { genTerrainFromBin } from "@openfront/engine-lib/game/TerrainMapLoader";
+import { PseudoRandom } from "@openfront/engine-lib/PseudoRandom";
+import { AttackExecution } from "@openfront/engine/execution/AttackExecution";
+import { NationAllianceBehavior } from "@openfront/engine/execution/nation/NationAllianceBehavior";
+import { NationEmojiBehavior } from "@openfront/engine/execution/nation/NationEmojiBehavior";
+import { NukeExecution } from "@openfront/engine/execution/NukeExecution";
+import { PlayerExecution } from "@openfront/engine/execution/PlayerExecution";
+import { AiAttackBehavior } from "@openfront/engine/execution/utils/AiAttackBehavior";
+import { Game, Player } from "@openfront/engine/game/Game";
+import { createGame } from "@openfront/engine/game/GameImpl";
+import { PathFinding } from "@openfront/engine/pathfinding/PathFinder";
+import { encodeTerrainTile } from "../src/client/render/gl/utils/ColorUtils";
 import { TestConfig } from "./util/TestConfig";
 import { executeTicks } from "./util/utils";
 
@@ -44,13 +44,19 @@ function buildTerrain(
   height: number,
   wallX: number,
   wallWidth: number,
+  wallY: [number, number] = [0, height],
 ): { data: Uint8Array; numLandTiles: number } {
   const data = new Uint8Array(width * height);
   let numLandTiles = 0;
   for (let y = 0; y < height; y++) {
     for (let x = 0; x < width; x++) {
       const idx = y * width + x;
-      if (x >= wallX && x < wallX + wallWidth) {
+      if (
+        x >= wallX &&
+        x < wallX + wallWidth &&
+        y >= wallY[0] &&
+        y < wallY[1]
+      ) {
         data[idx] = IMPASSABLE;
         // Impassable tiles are NOT counted as land tiles.
       } else {
@@ -62,11 +68,17 @@ function buildTerrain(
   return { data, numLandTiles };
 }
 
-async function setupImpassableGame(humans: PlayerInfo[] = []): Promise<Game> {
+async function setupImpassableGame(
+  humans: PlayerInfo[] = [],
+  wallY: [number, number] = [0, MAP_H],
+): Promise<Game> {
   vi.spyOn(console, "debug").mockImplementation(() => {});
 
-  const full = buildTerrain(MAP_W, MAP_H, WALL_X, WALL_WIDTH);
-  const mini = buildTerrain(MINI_W, MINI_H, Math.floor(WALL_X / 2), 1);
+  const full = buildTerrain(MAP_W, MAP_H, WALL_X, WALL_WIDTH, wallY);
+  const mini = buildTerrain(MINI_W, MINI_H, Math.floor(WALL_X / 2), 1, [
+    Math.floor(wallY[0] / 2),
+    Math.ceil(wallY[1] / 2),
+  ]);
 
   const gameMap = await genTerrainFromBin(
     { width: MAP_W, height: MAP_H, num_land_tiles: full.numLandTiles },
@@ -92,7 +104,7 @@ async function setupImpassableGame(humans: PlayerInfo[] = []): Promise<Game> {
     instantBuild: true,
     randomSpawn: false,
   };
-  const config = new TestConfig(gameConfig, new UserSettings(), false);
+  const config = new TestConfig(gameConfig, false);
 
   const game = createGame(humans, [], gameMap, miniGameMap, config);
   game.endSpawnPhase();
@@ -154,6 +166,76 @@ describe("Impassable Terrain", () => {
   test("conquer succeeds on normal land", () => {
     expect(() => player.conquer(game.ref(50, 50))).not.toThrow();
     expect(game.hasOwner(game.ref(50, 50))).toBe(true);
+  });
+
+  // ── Map edge / enclosure ─────────────────────────────────────────────
+
+  test("isOnEdgeOfMap is true next to impassable terrain, false elsewhere", () => {
+    expect(game.isOnEdgeOfMap(game.ref(WALL_X - 1, 50))).toBe(true);
+    expect(game.isOnEdgeOfMap(game.ref(WALL_X + WALL_WIDTH, 50))).toBe(true);
+    expect(game.isOnEdgeOfMap(game.ref(WALL_X - 2, 50))).toBe(false);
+    expect(game.isOnEdgeOfMap(game.ref(50, 50))).toBe(false);
+    expect(game.isOnEdgeOfMap(game.ref(0, 50))).toBe(true);
+    expect(game.isOnEdgeOfMap(game.ref(50, MAP_H - 1))).toBe(true);
+  });
+
+  test("cluster hugging the impassable wall is not annexed", async () => {
+    // Short wall segment so the enclosure flood fill cannot walk along
+    // unowned impassable tiles to the real map edge; every escape route
+    // from the pocket must be through enemy-owned land or the wall.
+    const g = await setupImpassableGame(
+      [
+        new PlayerInfo("p", PlayerType.Human, "c1", "p_id"),
+        new PlayerInfo("o", PlayerType.Human, "c2", "o_id"),
+      ],
+      [45, 58],
+    );
+    const p = g.player("p_id");
+    const o = g.player("o_id");
+    g.addExecution(new PlayerExecution(p));
+    g.addExecution(new PlayerExecution(o));
+
+    // Player's main (largest) cluster, far from the wall.
+    for (let x = 10; x < 20; x++) {
+      for (let y = 10; y < 20; y++) {
+        p.conquer(g.ref(x, y));
+      }
+    }
+    // Small pocket against the wall; the wall is its fourth side.
+    const pocket: TileRef[] = [];
+    for (let x = WALL_X - 3; x < WALL_X; x++) {
+      for (let y = 50; y < 53; y++) {
+        pocket.push(g.ref(x, y));
+        p.conquer(g.ref(x, y));
+      }
+    }
+    // Other player owns everything around the pocket and the wall.
+    for (let x = WALL_X - 10; x < WALL_X + 10; x++) {
+      for (let y = 40; y < 63; y++) {
+        const t = g.ref(x, y);
+        if (g.ownerID(t) === 0 && !g.isImpassable(t)) o.conquer(t);
+      }
+    }
+
+    // Mirror NoInverseAnnexation: let cluster calc run, then change tiles.
+    executeTicks(g, 20);
+    o.conquer(g.ref(WALL_X - 10, 39));
+    p.conquer(g.ref(20, 10));
+    executeTicks(g, 50);
+
+    for (const t of pocket) {
+      expect(g.ownerID(t)).toBe(p.smallID());
+    }
+  });
+
+  // ── Rail pathfinding ─────────────────────────────────────────────────
+
+  test("rail pathfinding does not route through impassable terrain", () => {
+    const path = PathFinding.Rail(game).findPath(
+      game.ref(WALL_X - 10, 50),
+      game.ref(WALL_X + 10, 50),
+    );
+    expect(path).toBeNull();
   });
 
   // ── Attacks ──────────────────────────────────────────────────────────
@@ -238,18 +320,18 @@ describe("Impassable Terrain", () => {
 
   // ── Nukes: trajectory ─────────────────────────────────────────────────
 
-  test("nuke trajectory blocked by impassable terrain", () => {
+  test("nuke flies over impassable terrain and detonates", () => {
     player.conquer(game.ref(20, 100));
     player.buildUnit(UnitType.MissileSilo, game.ref(20, 100), {});
-    // Target is on the right side of the wall — trajectory must cross it.
+    // Target is on the right side of the wall — trajectory crosses it.
     const target = game.ref(150, 100);
     expect(game.isImpassable(target)).toBe(false);
 
     const nuke = new NukeExecution(UnitType.AtomBomb, player, target);
     game.addExecution(nuke);
-    executeTicks(game, 10);
-    // Should have been blocked.
-    expect(nuke.isActive()).toBe(false);
+    executeTicks(game, 30);
+    expect(nuke.getNuke()).not.toBeNull();
+    expect(nuke.getNuke()!.reachedTarget()).toBe(true);
   });
 
   test("nuke can launch when trajectory does not cross impassable terrain", () => {
@@ -266,6 +348,18 @@ describe("Impassable Terrain", () => {
     expect(nuke.isActive()).toBe(false);
   });
 
+  test("MIRV warhead flies over impassable terrain", () => {
+    player.conquer(game.ref(20, 100));
+    player.buildUnit(UnitType.MissileSilo, game.ref(20, 100), {});
+    // Target is on the right side of the wall — trajectory must cross it.
+    const target = game.ref(150, 100);
+    expect(game.isImpassable(target)).toBe(false);
+
+    const nuke = new NukeExecution(UnitType.MIRVWarhead, player, target);
+    game.addExecution(nuke);
+    executeTicks(game, 2);
+    expect(nuke.isActive()).toBe(true);
+  });
   // ── Water conversion guard ────────────────────────────────────────────
 
   test("setWater does not convert impassable tiles", () => {
@@ -286,6 +380,15 @@ describe("Impassable Terrain", () => {
     expect(out[0]).toBe(60);
     expect(out[1]).toBe(60);
     expect(out[2]).toBe(60);
+    expect(out[3]).toBe(255);
+  });
+
+  test("encodeTerrainTile uses the backgroundColor override for impassable tiles", () => {
+    const out = new Uint8Array(4);
+    encodeTerrainTile(IMPASSABLE, out, 0, { backgroundColor: [10, 20, 30] });
+    expect(out[0]).toBe(10);
+    expect(out[1]).toBe(20);
+    expect(out[2]).toBe(30);
     expect(out[3]).toBe(255);
   });
 
@@ -381,75 +484,39 @@ describe("Impassable Terrain", () => {
     });
   });
 
-  // ── Nation AI: nuke trajectory over impassable terrain ───────────────
+  // ── Nukes: silo selection ─────────────────────────────────────────────
 
-  describe("NationNukeBehavior trajectory over impassable terrain", () => {
-    let nukePlayer: Player;
+  describe("silo selection with impassable terrain", () => {
+    function buildSilo(g: Game, p: Player, x: number, y: number) {
+      p.conquer(g.ref(x, y));
+      p.buildUnit(UnitType.MissileSilo, g.ref(x, y), {});
+    }
 
-    beforeEach(() => {
-      nukePlayer = game.player("player_id");
-      (game.config() as TestConfig).infiniteGold = () => true;
-      (game.config() as TestConfig).instantBuild = () => true;
-      (game.config() as TestConfig).nukeMagnitudes = vi.fn(() => ({
-        inner: 5,
-        outer: 5,
-      }));
-      (game.config() as TestConfig).nukeAllianceBreakThreshold = vi.fn(
-        () => 999,
+    test("closest silo is chosen even when the trajectory crosses impassable terrain", () => {
+      // 60 tiles from the target but on the other side of the wall.
+      buildSilo(game, player, 90, 100);
+      // 70 tiles from the target, same side.
+      buildSilo(game, player, 150, 30);
+
+      const target = game.ref(150, 100);
+      expect(player.canBuild(UnitType.AtomBomb, target)).toBe(
+        game.ref(90, 100),
       );
-      (game.config() as TestConfig).setDefaultNukeSpeed(50);
+
+      const nuke = new NukeExecution(UnitType.AtomBomb, player, target);
+      game.addExecution(nuke);
+      executeTicks(game, 30);
+      expect(nuke.getNuke()).not.toBeNull();
+      expect(nuke.getNuke()!.reachedTarget()).toBe(true);
     });
 
-    test("NationNukeBehavior skips nuke targets whose trajectory crosses impassable terrain", () => {
-      // Build a silo on the left side of the wall.
-      nukePlayer.conquer(game.ref(20, 100));
-      nukePlayer.buildUnit(UnitType.MissileSilo, game.ref(20, 100), {});
-
-      // Enemy owns tiles on the RIGHT side of the wall — trajectory must
-      // cross the impassable wall.
-      const enemy = game.player("other_id");
-      enemy.conquer(game.ref(150, 100));
-
-      // Build a NationNukeBehavior and call maybeSendNuke.
-      const emojiBehavior = new NationEmojiBehavior(
-        new PseudoRandom(42),
-        game,
-        nukePlayer,
+    test("MIRV silo selection ignores impassable terrain", () => {
+      buildSilo(game, player, 20, 100);
+      // MIRV targets must be owned.
+      other.conquer(game.ref(150, 100));
+      expect(player.canBuild(UnitType.MIRV, game.ref(150, 100))).toBe(
+        game.ref(20, 100),
       );
-      const allianceBehavior = new NationAllianceBehavior(
-        new PseudoRandom(42),
-        game,
-        nukePlayer,
-        emojiBehavior,
-      );
-      const attackBehavior = new AiAttackBehavior(
-        new PseudoRandom(42),
-        game,
-        nukePlayer,
-        0.0,
-        0.0,
-        0.0,
-        allianceBehavior,
-        emojiBehavior,
-      );
-      const nukeBehavior = new NationNukeBehavior(
-        new PseudoRandom(42),
-        game,
-        nukePlayer,
-        attackBehavior,
-        emojiBehavior,
-      );
-
-      // Set the enemy as a hostile target so the nuke behavior considers them.
-      nukePlayer.updateRelation(enemy, -100);
-
-      // Run maybeSendNuke — it should NOT launch a nuke because the
-      // trajectory crosses impassable terrain.
-      nukeBehavior.maybeSendNuke();
-
-      // No nukes should have been launched.
-      const nukes = nukePlayer.units(UnitType.AtomBomb, UnitType.HydrogenBomb);
-      expect(nukes.length).toBe(0);
     });
   });
 });

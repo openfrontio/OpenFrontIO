@@ -101,6 +101,11 @@ export class SpiralTrails {
     });
   }
 
+  /** Drop an owner's spiral params; their later nukes get the stamped trail. */
+  clearParams(ownerID: number): void {
+    this.params.delete(ownerID);
+  }
+
   /** Live ref to the current ribbons (mutated in place each update). */
   getRibbons(): readonly SpiralRibbon[] {
     return this.ribbonList;

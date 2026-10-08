@@ -1,20 +1,27 @@
-import { html, LitElement, TemplateResult } from "lit";
-import { customElement, property, query, state } from "lit/decorators.js";
 import {
   GetMyTribeNamesResponse,
   TribeName,
   TribeNameStatus,
   UserMeResponse,
-} from "../../core/ApiSchemas";
+} from "@openfront/shared/ApiSchemas";
+import { Cosmetics } from "@openfront/shared/CosmeticSchemas";
+import { html, LitElement, nothing, TemplateResult } from "lit";
+import { customElement, property, query, state } from "lit/decorators.js";
 import {
+  boostTribeName,
   getMyTribeNames,
   getUserMe,
   invalidateUserMe,
   purchaseTribeName,
+  type PurchaseTribeNameResult,
 } from "../Api";
+import { fetchCosmetics, InsufficientCurrency } from "../Cosmetics";
+import { showInGameConfirm } from "../InGameModal";
 import { translateText } from "../Utils";
 import { renderLoadingSpinner } from "./BaseModal";
+import "./InsufficientCurrencyDialog";
 import "./PlutoniumIcon";
+import "./TribeStatsView";
 
 const MAX_TRIBE_NAME_LENGTH = 100;
 
@@ -53,12 +60,26 @@ export class TribesPanel extends LitElement {
   @property({ attribute: false }) userMeResponse: UserMeResponse | false =
     false;
 
-  // null = not loaded yet; false = load failed; otherwise the fetched data
-  // (which also carries the current purchase price).
+  // null = not loaded yet; false = load failed; otherwise the fetched data.
   @state() private data: GetMyTribeNamesResponse | false | null = null;
   @state() private purchasing = false;
   @state() private notice: { kind: "success" | "error"; text: string } | null =
     null;
+  // Boost pricing from cosmetics.json; null hides boost purchasing entirely
+  // (an older cosmetics.json without the tribeNames block).
+  @state() private tribeNamesConfig: NonNullable<
+    Cosmetics["tribeNames"]
+  > | null = null;
+  // id of the name whose boost purchase is in flight (all boost buttons
+  // disable while set, preventing the double-submit the API doc warns about).
+  @state() private boostingId: string | null = null;
+  @state() private boostNotice: {
+    kind: "success" | "error";
+    text: string;
+  } | null = null;
+  @state() private insufficientInfo: InsufficientCurrency | null = null;
+  // Name whose stats page is open in place of the list; null shows the list.
+  @state() private statsName: string | null = null;
 
   @query("#tribe-name-input") private input?: HTMLInputElement;
 
@@ -77,11 +98,23 @@ export class TribesPanel extends LitElement {
   }
 
   private async load() {
-    this.data = await getMyTribeNames();
+    const [data, cosmetics] = await Promise.all([
+      getMyTribeNames(),
+      fetchCosmetics(), // cached after the first call
+    ]);
+    this.data = data;
+    this.tribeNamesConfig = cosmetics?.tribeNames ?? null;
   }
 
+  // Name purchase price from cosmetics.json — the only source; the button
+  // stays disabled when the tribeNames block is absent.
   private get price(): number | null {
-    return this.data ? this.data.priceHard : null;
+    return this.tribeNamesConfig?.priceHard ?? null;
+  }
+
+  private get hardBalance(): number {
+    if (this.userMeResponse === false) return 0;
+    return this.userMeResponse.player.currency?.hard ?? 0;
   }
 
   private submit = async (e: Event) => {
@@ -92,6 +125,19 @@ export class TribesPanel extends LitElement {
       this.notice = {
         kind: "error",
         text: translateText("store.tribe_name_required"),
+      };
+      return;
+    }
+
+    // A charged-back wallet is served as a NEGATIVE balance (the API derives
+    // its own `debt` field as exactly `-hard`), so this is how a player in
+    // debt normally gets here — the 400 branch below only fires when the
+    // chargeback lands mid-session against a stale balance. Catch it before
+    // spending a request on a guaranteed refusal.
+    if (this.hardBalance < 0) {
+      this.notice = {
+        kind: "error",
+        text: this.debtText(-this.hardBalance),
       };
       return;
     }
@@ -112,6 +158,48 @@ export class TribesPanel extends LitElement {
       await this.refreshAfterPurchase();
       return;
     }
+    if (result.code === "debt") {
+      // A refund or chargeback left the wallet negative. Topping up is not
+      // the remedy and the top-up dialog would say the wrong thing, so state
+      // the debt instead — it settles automatically out of the next credit.
+      this.notice = {
+        kind: "error",
+        text: translateText("store.pack_debt", { debt: result.debt }),
+      };
+      await this.refreshAfterPurchase();
+      return;
+    }
+    if (result.code === "insufficient_balance") {
+      // The balance moved under us (another tab, another purchase) — refresh
+      // it and offer the top-up path, as the boost handler does.
+      const fresh = await this.refreshAfterPurchase();
+      const price = this.price;
+      // Two ways to have no honest shortfall to quote: no price (cosmetics.json
+      // has no tribeNames block) and no refreshed balance (the refetch failed,
+      // so the real balance is unknown — quoting the full price as the
+      // shortfall would be a guess wearing a number).
+      if (price === null || fresh === false) {
+        this.notice = {
+          kind: "error",
+          text: translateText("store.purchase_failed"),
+        };
+        return;
+      }
+      const balance = TribesPanel.hardBalanceOf(fresh);
+      const outcome = TribesPanel.balanceOutcome(balance, price);
+      if (outcome !== "shortfall") {
+        this.notice = {
+          kind: "error",
+          text:
+            outcome === "debt"
+              ? this.debtText(-balance)
+              : translateText("store.purchase_failed"),
+        };
+        return;
+      }
+      this.showInsufficient(name, price, balance);
+      return;
+    }
     if (result.code === "duplicate") {
       this.notice = {
         kind: "error",
@@ -128,29 +216,27 @@ export class TribesPanel extends LitElement {
         text:
           secs && secs > 0
             ? translateText("store.tribe_rate_limited", { seconds: secs })
-            : translateText("store.tribe_purchase_failed"),
+            : translateText("store.purchase_failed"),
       };
       return;
     }
-    // "invalid" carries the server's player-facing reason (bad name,
-    // disallowed, or insufficient balance); fall back to a generic message.
-    let text = translateText("store.tribe_purchase_failed");
-    if (result.code === "invalid" && result.message) {
-      text = result.message;
-    }
-    this.notice = { kind: "error", text };
+    this.notice = { kind: "error", text: TribesPanel.refusalText(result) };
   };
 
   // A purchase spends plutonium and adds a pending name, so refresh both the
   // list and the store header's balance (re-broadcast /users/@me like Main.ts).
-  private async refreshAfterPurchase() {
+  // Returns the fresh profile so callers can read the new balance directly:
+  // the broadcast only reaches `this.userMeResponse` once the Store re-renders
+  // and re-binds it, which is not guaranteed to have happened by the time this
+  // resolves.
+  private async refreshAfterPurchase(): Promise<UserMeResponse | false> {
     await this.load();
     invalidateUserMe();
     const fresh = await getUserMe();
     // getUserMe returns false on any error, not just auth — broadcasting
     // that would flip the whole app to its logged-out UI right after a
     // successful purchase. A stale header balance is the better failure.
-    if (fresh === false) return;
+    if (fresh === false) return false;
     document.dispatchEvent(
       new CustomEvent("userMeResponse", {
         detail: fresh,
@@ -158,7 +244,175 @@ export class TribesPanel extends LitElement {
         cancelable: true,
       }),
     );
+    return fresh;
   }
+
+  private static hardBalanceOf(res: UserMeResponse | false): number {
+    return res === false ? 0 : (res.player.currency?.hard ?? 0);
+  }
+
+  // "Insufficient balance" covers three different situations once the real
+  // balance is known, and they need three different messages. Shared by the
+  // purchase and boost handlers so they cannot drift apart.
+  private static balanceOutcome(
+    balance: number,
+    price: number,
+  ): "debt" | "shortfall" | "unexplained" {
+    // A chargeback landed since the pre-check: topping up cannot clear it.
+    if (balance < 0) return "debt";
+    // The re-read says they can afford it, so there is no shortfall to quote
+    // and inventing one would send them to buy currency they already have.
+    if (price - balance <= 0) return "unexplained";
+    return "shortfall";
+  }
+
+  // Why the name itself was refused. Api.ts recognises each of the endpoint's
+  // reasons and returns a code, so nothing here renders the server's English;
+  // anything it did not recognise lands on the generic failure.
+  private static refusalText(
+    result: Exclude<PurchaseTribeNameResult, { ok: true }>,
+  ): string {
+    switch (result.code) {
+      case "length":
+        return translateText("store.tribe_name_length", {
+          min: result.min,
+          max: result.max,
+        });
+      case "invalid_charset":
+        return translateText("store.tribe_name_charset");
+      case "invalid_no_letter":
+        return translateText("store.tribe_name_no_letter");
+      case "not_allowed":
+        return translateText("store.tribe_name_not_allowed");
+      default:
+        return translateText("store.purchase_failed");
+    }
+  }
+
+  private debtText(debt: number): string {
+    return translateText("store.pack_debt", { debt: String(debt) });
+  }
+
+  // `item` is what the player was trying to buy — a name they typed, or the
+  // name they were boosting. `balance` is passed rather than read off
+  // `this.userMeResponse` so a caller that has just refetched quotes the
+  // shortfall against the balance the server actually refused on.
+  private showInsufficient(item: string, price: number, balance: number) {
+    this.insufficientInfo = {
+      currency: translateText("cosmetics.hard"),
+      shortfall: Math.max(1, price - balance),
+      item,
+      canTopUp: true,
+    };
+  }
+
+  private boost = async (tribe: TribeName) => {
+    const cfg = this.tribeNamesConfig;
+    if (cfg === null || this.boostingId !== null) return;
+    const price = cfg.boostPriceHard;
+
+    // Debt first: a negative balance also fails the shortfall check below,
+    // but topping up cannot clear it, so the top-up dialog would be the wrong
+    // remedy dressed up as the right one.
+    if (this.hardBalance < 0) {
+      this.boostNotice = {
+        kind: "error",
+        text: this.debtText(-this.hardBalance),
+      };
+      return;
+    }
+    // Don't let the player submit into a guaranteed 400 — offer top-up.
+    // Nothing has been refetched yet, so the bound balance is the right one.
+    if (this.hardBalance < price) {
+      this.showInsufficient(tribe.displayName, price, this.hardBalance);
+      return;
+    }
+
+    const confirmed = await showInGameConfirm(
+      translateText("store.tribe_boost_confirm", {
+        name: tribe.displayName,
+        price,
+        days: cfg.boostDurationDays,
+      }),
+      {
+        heading: translateText("store.tribe_boost_heading"),
+        variant: "warning",
+      },
+    );
+    if (!confirmed) return;
+
+    this.boostingId = tribe.id;
+    this.boostNotice = null;
+    // Fresh key per user-initiated purchase. We never auto-retry (a retry of
+    // this click would reuse it), so the key's job is to make an accidental
+    // duplicate submit return the original boost instead of charging twice.
+    const result = await boostTribeName(tribe.id, crypto.randomUUID());
+    this.boostingId = null;
+
+    if (result.ok) {
+      this.boostNotice = {
+        kind: "success",
+        text: translateText("store.tribe_boost_success", {
+          name: tribe.displayName,
+        }),
+      };
+      await this.refreshAfterPurchase();
+      return;
+    }
+    if (result.code === "debt") {
+      // Negative wallet after a refund/chargeback. Not the same as being
+      // short: buying more plutonium does not unblock this, so don't offer
+      // the top-up dialog — the debt clears out of the next credit.
+      this.boostNotice = {
+        kind: "error",
+        text: translateText("store.pack_debt", { debt: result.debt }),
+      };
+      await this.refreshAfterPurchase();
+      return;
+    }
+    if (result.code === "insufficient_balance") {
+      // The balance moved under us (another tab, another purchase) —
+      // refresh it and show the top-up path.
+      const fresh = await this.refreshAfterPurchase();
+      // A failed refetch leaves the real balance unknown; a shortfall of the
+      // full price would be a guess presented as a fact.
+      if (fresh === false) {
+        this.boostNotice = {
+          kind: "error",
+          text: translateText("store.tribe_boost_failed"),
+        };
+        return;
+      }
+      const balance = TribesPanel.hardBalanceOf(fresh);
+      const outcome = TribesPanel.balanceOutcome(balance, price);
+      if (outcome !== "shortfall") {
+        this.boostNotice = {
+          kind: "error",
+          text:
+            outcome === "debt"
+              ? this.debtText(-balance)
+              : translateText("store.tribe_boost_failed"),
+        };
+        return;
+      }
+      this.showInsufficient(tribe.displayName, price, balance);
+      return;
+    }
+    if (result.code === "not_found") {
+      // Taken down while the page was open; the refreshed list will come
+      // back rejected/revoked with the review reason.
+      this.boostNotice = {
+        kind: "error",
+        text: translateText("store.tribe_boost_gone"),
+      };
+      await this.load();
+      return;
+    }
+    this.boostNotice = {
+      kind: "error",
+      text: translateText("store.tribe_boost_failed"),
+    };
+  };
 
   private renderLoginPrompt(): TemplateResult {
     return html`<div
@@ -224,6 +478,65 @@ export class TribesPanel extends LitElement {
     </section>`;
   }
 
+  // "2 boosts · next boost expires Aug 5" under an actively boosted name.
+  // The date is when the NEXT boost lapses (the API serves min(expiresAt)),
+  // i.e. when the count drops — not when boosting ends entirely.
+  private renderBoostStatus(tribe: TribeName): TemplateResult | typeof nothing {
+    const boosts = tribe.activeBoosts ?? 0;
+    if (boosts === 0) return nothing;
+    const countText =
+      boosts === 1
+        ? translateText("store.tribe_boost_count")
+        : translateText("store.tribe_boost_count_plural", { count: boosts });
+    // The wire format has wobbled (ISO vs raw pg text); if this browser
+    // can't parse it, show the count alone rather than "Invalid Date".
+    const parsed = tribe.boostExpiresAt ? new Date(tribe.boostExpiresAt) : null;
+    const until =
+      parsed !== null && !Number.isNaN(parsed.getTime())
+        ? parsed.toLocaleDateString(undefined, {
+            month: "short",
+            day: "numeric",
+          })
+        : null;
+    return html`<span class="text-xs text-amber-300 mt-0.5">
+      ${countText}${until
+        ? html` ·
+          ${translateText("store.tribe_boost_next_expiry", { date: until })}`
+        : ""}
+    </span>`;
+  }
+
+  private renderBoostButton(tribe: TribeName): TemplateResult | typeof nothing {
+    const cfg = this.tribeNamesConfig;
+    // Only active (pending/live) names can be boosted, and only when
+    // cosmetics.json serves the price — never hardcode it.
+    if (cfg === null || DISPLAY_STATE[tribe.status] !== "active") {
+      return nothing;
+    }
+    return html`<button
+      class="shrink-0 flex items-center gap-1.5 bg-amber-600 hover:bg-amber-500 disabled:opacity-50 disabled:cursor-not-allowed text-white text-xs font-bold uppercase tracking-wider rounded px-2.5 py-1.5 transition-colors cursor-pointer"
+      ?disabled=${this.boostingId !== null}
+      @click=${() => this.boost(tribe)}
+    >
+      ${translateText("store.tribe_boost_button")}
+      <span class="flex items-center gap-0.5 normal-case">
+        <plutonium-icon .size=${14}></plutonium-icon>${cfg.boostPriceHard}
+      </span>
+    </button>`;
+  }
+
+  // Rejected/revoked names deliberately 404 on the public stats endpoint,
+  // so only active names get the button.
+  private renderStatsButton(tribe: TribeName): TemplateResult | typeof nothing {
+    if (DISPLAY_STATE[tribe.status] !== "active") return nothing;
+    return html`<button
+      class="shrink-0 bg-white/10 hover:bg-white/20 text-white/80 hover:text-white text-xs font-bold uppercase tracking-wider rounded px-2.5 py-1.5 transition-colors cursor-pointer"
+      @click=${() => (this.statsName = tribe.displayName)}
+    >
+      ${translateText("store.tribe_stats_button")}
+    </button>`;
+  }
+
   private renderTribeRow(tribe: TribeName): TemplateResult {
     const meta = STATE_META[DISPLAY_STATE[tribe.status]];
     return html`<div
@@ -231,17 +544,21 @@ export class TribesPanel extends LitElement {
     >
       <div class="flex flex-col min-w-0">
         <span class="font-bold text-white truncate">${tribe.displayName}</span>
+        ${this.renderBoostStatus(tribe)}
         ${tribe.reviewReason
           ? html`<span class="text-xs text-white/50 mt-0.5"
               >${tribe.reviewReason}</span
             >`
           : ""}
       </div>
-      <span
-        class="shrink-0 text-xs font-bold uppercase tracking-wider px-2.5 py-1 rounded border ${meta.classes}"
-      >
-        ${translateText(meta.labelKey)}
-      </span>
+      <div class="shrink-0 flex items-center gap-2">
+        ${this.renderStatsButton(tribe)} ${this.renderBoostButton(tribe)}
+        <span
+          class="text-xs font-bold uppercase tracking-wider px-2.5 py-1 rounded border ${meta.classes}"
+        >
+          ${translateText(meta.labelKey)}
+        </span>
+      </div>
     </div>`;
   }
 
@@ -256,7 +573,12 @@ export class TribesPanel extends LitElement {
         ${translateText("store.tribes_load_failed")}
       </p>`;
     }
-    const names = this.data.names;
+    // Most-boosted names first. The sort is stable, so within equal boost
+    // counts the API's newest-first order is preserved (unboosted and
+    // rejected names all tie at 0 and keep their relative order).
+    const names = [...this.data.names].sort(
+      (a, b) => (b.activeBoosts ?? 0) - (a.activeBoosts ?? 0),
+    );
     if (names.length === 0) {
       return html`<p
         class="text-white/40 text-sm font-bold uppercase tracking-wider text-center py-8"
@@ -273,6 +595,18 @@ export class TribesPanel extends LitElement {
     if (this.userMeResponse === false) {
       return this.renderLoginPrompt();
     }
+    // The stats page takes over the whole tab, profile-modal style; its back
+    // button returns to the list.
+    if (this.statsName !== null) {
+      return html`<div
+        class="p-6 lg:p-8 flex flex-col gap-6 max-w-2xl mx-auto w-full"
+      >
+        <tribe-stats-view
+          .tribeName=${this.statsName}
+          @back=${() => (this.statsName = null)}
+        ></tribe-stats-view>
+      </div>`;
+    }
     return html`<div
       class="p-6 lg:p-8 flex flex-col gap-6 max-w-2xl mx-auto w-full"
     >
@@ -283,8 +617,22 @@ export class TribesPanel extends LitElement {
         >
           ${translateText("store.your_tribes_heading")}
         </h3>
+        ${this.boostNotice
+          ? html`<p
+              class="text-sm font-medium px-1 ${this.boostNotice.kind ===
+              "success"
+                ? "text-green-400"
+                : "text-red-400"}"
+            >
+              ${this.boostNotice.text}
+            </p>`
+          : ""}
         ${this.renderList()}
       </section>
+      <insufficient-currency-dialog
+        .info=${this.insufficientInfo}
+        @close=${() => (this.insufficientInfo = null)}
+      ></insufficient-currency-dialog>
     </div>`;
   }
 }

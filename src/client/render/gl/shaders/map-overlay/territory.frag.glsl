@@ -27,6 +27,8 @@ uniform float uDefenseDarken;      // multiplier applied to fill on defended til
 uniform sampler2D uBorderTex;      // RGBA8 — border flags; R > 0.25 = border tile
 uniform float uSaturation;         // 1 = full color, 0 = grayscale
 uniform float uTerritoryAlpha;     // absolute fill opacity; 1 = fully opaque
+uniform sampler2D uAffiliation;    // RGBA8 — alt-view relation colors (row 0)
+uniform float uAltFillAlpha;       // alt-view translucent fill opacity
 
 in vec2 vWorldPos;
 out vec4 fragColor;
@@ -52,8 +54,13 @@ void main() {
     return;
   }
 
-  // Alt-view: hide owned non-fallout tiles
-  if (uAltView != 0) discard;
+  // Alt-view: translucent fill in the owner's relation color (matches the
+  // border color BorderStampPass draws in alt-view).
+  if (uAltView != 0) {
+    vec3 rel = texelFetch(uAffiliation, ivec2(int(owner), 0), 0).rgb;
+    fragColor = vec4(rel, uAltFillAlpha);
+    return;
+  }
 
   // --- Territory fill (owned, not fallout) ---
   float u = (float(owner) + 0.5) / float(PALETTE_SIZE);

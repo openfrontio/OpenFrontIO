@@ -1,7 +1,8 @@
+import { UserMeResponse } from "@openfront/shared/ApiSchemas";
 import { html } from "lit";
 import { customElement, state } from "lit/decorators.js";
-import { UserMeResponse } from "../../core/ApiSchemas";
-import { getUserMe, hasLinkedAccount } from "../Api";
+import { responseHasLinkedIdentity } from "../AccountIdentity";
+import { getUserMe } from "../Api";
 import { userAuth } from "../Auth";
 import { crazyGamesSDK } from "../CrazyGamesSDK";
 import { translateText } from "../Utils";
@@ -22,7 +23,9 @@ export class RankedModal extends BaseModal {
 
   // Eligible to see/play ranked: a linked account or a signed-in CrazyGames one.
   private isRankedEligible(): boolean {
-    return hasLinkedAccount(this.userMeResponse) || this.crazyGamesSignedIn;
+    return (
+      responseHasLinkedIdentity(this.userMeResponse) || this.crazyGamesSignedIn
+    );
   }
 
   constructor() {
@@ -83,7 +86,7 @@ export class RankedModal extends BaseModal {
         crazyGamesSDK.isOnCrazyGames() &&
         (await crazyGamesSDK.getUserProfile()) !== null;
     } catch (error) {
-      console.error("Failed to fetch user profile for ranked modal", error);
+      console.warn("Failed to fetch user profile for ranked modal", error);
       this.userMeResponse = false;
       this.errorMessage = translateText("map_component.error");
       this.elo = translateText("map_component.error");
@@ -134,6 +137,9 @@ export class RankedModal extends BaseModal {
             "",
           )}
         </div>
+        <p class="mt-6 text-xs text-white/60 leading-relaxed text-center">
+          ${translateText("mode_selector.ranked_pairing_note")}
+        </p>
       </div>
     `;
   }

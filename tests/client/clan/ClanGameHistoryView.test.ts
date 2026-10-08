@@ -11,6 +11,9 @@ vi.mock("../../../src/client/Utils", () => ({
   // Cheap stub so we don't pull in the real i18n module.
   renderDuration: vi.fn((s: number) => `${s}s`),
   getMapName: vi.fn((m: string | undefined) => m ?? null),
+  // History entries keep the page's own /v/<commit>/ prefix; this jsdom page
+  // has none, so the real helper is the identity here.
+  currentPagePath: vi.fn((path: string) => path),
 }));
 
 vi.mock("../../../src/client/Auth", () => ({
@@ -30,7 +33,7 @@ vi.mock("../../../src/client/TerrainMapFileLoader", () => ({
 
 vi.mock("../../../src/client/ClientEnv", () => ({
   ClientEnv: {
-    workerPath: vi.fn(() => "w0"),
+    gamePath: vi.fn((id: string) => `/w0/game/${encodeURIComponent(id)}`),
   },
 }));
 

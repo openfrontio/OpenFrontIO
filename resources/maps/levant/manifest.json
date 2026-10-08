@@ -236,7 +236,7 @@
       "name": "Baritun"
     }
   ],
-  "categories": ["asia", "new"],
+  "categories": ["asia"],
   "id": "Levant",
   "map": {
     "height": 2000,
@@ -332,5 +332,6 @@
       "name": "Knights Hospitaller"
     }
   ],
+  "themes": ["asia"],
   "translation_key": "map.levant"
 }

@@ -1,23 +1,38 @@
 # Use an official Node runtime as the base image
 FROM node:24-slim AS base
 WORKDIR /usr/src/app
+RUN npm install --global --ignore-scripts npm@12.1.0
 
 # Build stage - install ALL dependencies and build
 FROM base AS build
 ENV HUSKY=0
-# Copy package files first for better caching
-COPY package*.json ./
+# Copy package files first for better caching. The workspace manifests come
+# along so npm ci can link node_modules/@openfront/* to packages/*.
+COPY package*.json .npmrc ./
+COPY packages/engine/package.json ./packages/engine/
+COPY packages/engine-api/package.json ./packages/engine-api/
+COPY packages/engine-lib/package.json ./packages/engine-lib/
+COPY packages/shared/package.json ./packages/shared/
+COPY packages/zbin/package.json ./packages/zbin/
 RUN --mount=type=cache,target=/root/.npm \
-    npm ci
+    npm ci --ignore-scripts
 
 # Copy only what's needed for build
-COPY tsconfig.json ./
+COPY tsconfig.json tsconfig.base.json ./
 COPY vite.config.ts ./
 COPY eslint.config.js ./
 COPY index.html ./
+COPY client-api.json ./
 COPY resources ./resources
 COPY proprietary ./proprietary
 COPY src ./src
+COPY packages ./packages
+# build-prod runs scripts/buildAssetHashes.ts after vite, to emit
+# static/asset-hashes.json and static/core-version.txt for the desktop
+# release descriptor. Without this the image build fails at that step with
+# ERR_MODULE_NOT_FOUND -- the unit suite cannot catch it, because only the
+# container build runs build-prod from a copied tree.
+COPY scripts ./scripts
 
 ARG GIT_COMMIT=unknown
 ENV GIT_COMMIT="$GIT_COMMIT"
@@ -27,9 +42,14 @@ RUN npm run build-prod
 FROM base AS prod-deps
 ENV HUSKY=0
 ENV NPM_CONFIG_IGNORE_SCRIPTS=1
-COPY package*.json ./
+COPY package*.json .npmrc ./
+COPY packages/engine/package.json ./packages/engine/
+COPY packages/engine-api/package.json ./packages/engine-api/
+COPY packages/engine-lib/package.json ./packages/engine-lib/
+COPY packages/shared/package.json ./packages/shared/
+COPY packages/zbin/package.json ./packages/zbin/
 RUN --mount=type=cache,target=/root/.npm \
-    npm ci --omit=dev
+    npm ci --omit=dev --ignore-scripts
 
 # Final production image
 FROM base
@@ -69,8 +89,12 @@ COPY resources ./resources
 
 # Remove maps because they are not used by the server.
 RUN rm -rf ./resources/maps
-COPY tsconfig.json ./
+COPY tsconfig.json tsconfig.base.json ./
+COPY client-api.json ./
 COPY src ./src
+# node_modules/@openfront/* are symlinks into packages/; without this copy
+# they dangle and the server dies at boot.
+COPY packages ./packages
 
 
 ARG GIT_COMMIT=unknown

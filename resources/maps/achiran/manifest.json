@@ -40,5 +40,6 @@
       "name": "Achill"
     }
   ],
+  "themes": ["europe", "scary"],
   "translation_key": "map.achiran"
 }

@@ -1,12 +1,12 @@
-import Benchmark from "benchmark";
-import { PlayerType } from "../../src/core/game/Game";
-import { diffPlayerUpdate } from "../../src/core/game/GameUpdateUtils";
+import { PlayerType } from "@openfront/engine-api/game/GameTypes";
 import {
   AllianceView,
   AttackUpdate,
   GameUpdateType,
   PlayerUpdate,
-} from "../../src/core/game/GameUpdates";
+} from "@openfront/engine-api/game/GameUpdates";
+import { diffPlayerUpdate } from "@openfront/engine/game/GameUpdateUtils";
+import Benchmark from "benchmark";
 
 /**
  * Benchmark for diffPlayerUpdate, which runs once per player per tick on the
@@ -53,6 +53,10 @@ function makeRealisticUpdate(
     isDisconnected: false,
     tilesOwned: 5000,
     gold: 123456n,
+    tradeGold: 4200n,
+    trainGold: 1800n,
+    piracyGold: 900n,
+    goldEarned: 987000n,
     troops: 50000,
     allies: [2, 3, 4, 5, 6],
     embargoes: new Set(["7", "8", "9"]),

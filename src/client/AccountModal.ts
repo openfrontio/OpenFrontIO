@@ -1,42 +1,59 @@
+import { PlayerStatsTree, UserMeResponse } from "@openfront/shared/ApiSchemas";
+import { assetUrl } from "@openfront/shared/AssetUrls";
 import { html, nothing, TemplateResult } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import { ClientEnv } from "src/client/ClientEnv";
-import { PlayerStatsTree, UserMeResponse } from "../core/ApiSchemas";
-import { assetUrl } from "../core/AssetUrls";
-import { Cosmetics } from "../core/CosmeticSchemas";
-import {
-  fetchPlayerById,
-  getUserMe,
-  invalidateUserMe,
-  setMarketingConsent,
-} from "./Api";
+import { hasLinkedIdentity } from "./AccountIdentity";
+import { fetchPlayerById, getUserMe, invalidateUserMe } from "./Api";
 import {
   discordLogin,
   googleLogin,
   linkGoogle,
+  linkSteam,
   logOut,
   reauthAfterCrazyGamesChange,
   sendMagicLink,
+  steamLogin,
 } from "./Auth";
 import "./components/baseComponents/stats/DiscordUserHeader";
 import "./components/baseComponents/stats/PlayerGameHistoryView";
 import type { PlayerGameHistoryCache } from "./components/baseComponents/stats/PlayerGameHistoryView";
 import "./components/baseComponents/stats/PlayerStatsTable";
 import "./components/baseComponents/stats/PlayerStatsTree";
+import "./components/baseComponents/stats/SteamUserHeader";
 import { BaseModal } from "./components/BaseModal";
 import "./components/CopyButton";
+import "./components/CreatorCodePanel";
+import type { CreatorChangedDetail } from "./components/CreatorCodePanel";
 import "./components/CurrencyDisplay";
 import "./components/Difficulties";
 import "./components/FriendsList";
 import "./components/RewardsPanel";
 import type { RewardsChangedDetail } from "./components/RewardsPanel";
-import "./components/SubscriptionPanel";
+import { googleLinkButton } from "./components/ui/GoogleLinkButton";
 import { modalHeader } from "./components/ui/ModalHeader";
-import "./components/UsernamePanel";
-import { fetchCosmetics } from "./Cosmetics";
+import { steamGlyph, steamLinkButton } from "./components/ui/SteamLinkButton";
 import { crazyGamesSDK, type CrazyGamesUser } from "./CrazyGamesSDK";
-import { playerProfileUrl } from "./PlayerProfileModal";
-import { translateText } from "./Utils";
+import { desktopLinkGate, isDesktopShell } from "./DesktopShell";
+import "./GameStatsModal";
+import { showInGameAlert } from "./InGameModal";
+import { consumeLinkResult } from "./LinkResult";
+import { consumeLoginResult, LoginResult } from "./LoginResult";
+import "./PlayerProfileModal";
+import { steamSDK } from "./SteamSDK";
+import { playerProfileUrl } from "./utilities/PlayerProfileUrl";
+import { currentPagePath, translateText } from "./Utils";
+
+// Each login refusal says its own thing. Sharing one string was fine while
+// email_exists was the only recognised result; a player refused because their
+// account is pending deletion, or because a Steam OpenID response did not
+// verify, must not be told their email is already in use.
+const LOGIN_ERROR_KEYS: Record<LoginResult, string> = {
+  email_exists: "account_modal.login_email_exists",
+  deleted: "account_modal.login_deleted",
+  error: "account_modal.login_error",
+  no_account: "account_modal.login_no_account",
+};
 
 @customElement("account-modal")
 export class AccountModal extends BaseModal {
@@ -47,7 +64,13 @@ export class AccountModal extends BaseModal {
   // Set on CrazyGames when a CrazyGames user is signed in. Their identity comes
   // from the SDK, not our backend user object.
   @state() private crazyGamesUser: CrazyGamesUser | null = null;
-  @state() private consentBusy: boolean = false;
+  // One-shot outcome of a rejected sign-in, read from the `login=` router
+  // arg on open. Reassigned on every open, so reopening clears it.
+  @state() private loginError: LoginResult | undefined;
+  // One-shot prefill for the creator-code panel's unbound-state input, read
+  // from the `creatorCode=` router arg (a `/c/CODE` share-link visit).
+  // Reassigned on every open, same as loginError above.
+  @state() private prefillCreatorCode: string | undefined;
 
   private userMeResponse: UserMeResponse | null = null;
   private statsTree: PlayerStatsTree | null = null;
@@ -55,7 +78,6 @@ export class AccountModal extends BaseModal {
   private gameHistoryCache: PlayerGameHistoryCache | null = null;
   private gamesScrollTop = 0;
   private restoreGamesScrollAfterOpen = false;
-  private cosmetics: Cosmetics | null = null;
 
   constructor() {
     super();
@@ -126,12 +148,11 @@ export class AccountModal extends BaseModal {
   }
 
   private isLinkedAccount(): boolean {
-    const me = this.userMeResponse?.user;
     // The CrazyGames identity only counts once the backend token exchange
     // produced a session — otherwise a failed exchange would show a dead
     // "connected as" view with no way to retry.
     return (
-      !!(me?.discord ?? me?.google ?? me?.email) ||
+      hasLinkedIdentity(this.userMeResponse?.user) ||
       (!!this.crazyGamesUser && this.userMeResponse !== null)
     );
   }
@@ -146,7 +167,6 @@ export class AccountModal extends BaseModal {
         { key: "stats", label: translateText("account_modal.tab_stats") },
         { key: "games", label: translateText("account_modal.tab_games") },
         { key: "friends", label: translateText("account_modal.tab_friends") },
-        { key: "settings", label: translateText("account_modal.tab_settings") },
       ],
     };
   }
@@ -179,86 +199,12 @@ export class AccountModal extends BaseModal {
         return this.renderGamesTab();
       case "friends":
         return this.renderFriendsTab();
-      case "settings":
-        return this.renderSettingsTab();
       default:
         return this.renderAccountTab();
     }
   }
 
-  // Persistent marketing-consent control (client-driven consent). Mirrors the
-  // post-login toast: a player can turn email updates on/off any time here, or
-  // — when there's no verified email on the account — is told to link one.
-  private renderSettingsTab(): TemplateResult {
-    const consent = this.userMeResponse?.player?.marketingConsent;
-    // The API didn't return consent state (older backend). The tab is always
-    // shown, but with nothing to configure it stays empty rather than showing
-    // a misleading "link an email" prompt.
-    if (!consent) return html``;
-    const hasEmail = consent.hasEmail;
-    const on = consent.consented === "approved";
-    return html`
-      <div class="bg-white/5 rounded-xl border border-white/10 p-6">
-        <div class="flex items-start justify-between gap-4">
-          <div class="flex-1">
-            <div class="text-white font-medium">
-              ${translateText("account_modal.marketing_title")}
-            </div>
-            <div class="text-white/50 text-sm mt-1">
-              ${hasEmail
-                ? translateText("account_modal.marketing_desc")
-                : translateText("account_modal.marketing_no_email")}
-            </div>
-          </div>
-          ${hasEmail
-            ? html`<button
-                role="switch"
-                aria-checked=${on ? "true" : "false"}
-                aria-label=${translateText("account_modal.marketing_title")}
-                ?disabled=${this.consentBusy}
-                @click=${() => this.setConsent(!on)}
-                class="relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-malibu-blue/50 disabled:opacity-60 ${on
-                  ? "bg-malibu-blue shadow-[var(--shadow-malibu-blue-pill)]"
-                  : "bg-white/15"}"
-              >
-                <span
-                  class="inline-block h-4 w-4 transform rounded-full bg-white transition-transform duration-200 ${on
-                    ? "translate-x-6"
-                    : "translate-x-1"}"
-                ></span>
-              </button>`
-            : nothing}
-        </div>
-        ${hasEmail ? nothing : this.renderEmailBinding()}
-      </div>
-    `;
-  }
-
-  // No verified email on the account yet. Offer both ways to attach one:
-  // a magic link to a plain email (the backend associates a not-yet-registered
-  // email with the current session — the "new-association" path), or linking a
-  // Google account. Reuses the login form's email field/handlers.
-  private renderEmailBinding(): TemplateResult {
-    return html`
-      <div class="mt-4 space-y-3">
-        ${this.renderEmailField()}
-        <div class="flex items-center gap-4 py-1">
-          <div class="h-px bg-white/10 flex-1"></div>
-          <span
-            class="text-[10px] uppercase tracking-widest text-white/30 font-bold"
-          >
-            ${translateText("account_modal.or")}
-          </span>
-          <div class="h-px bg-white/10 flex-1"></div>
-        </div>
-        ${this.renderLinkGoogleButton()}
-      </div>
-    `;
-  }
-
-  // Shared email input + "get magic link" button, used by both the sign-in form
-  // and the Account Settings bind-an-email state so their styling and handlers
-  // stay in sync.
+  // Email input + "get magic link" button used by the sign-in form.
   private renderEmailField(): TemplateResult {
     return html`
       <input
@@ -276,26 +222,6 @@ export class AccountModal extends BaseModal {
         @click=${this.handleSubmit}
       ></o-button>
     `;
-  }
-
-  private async setConsent(consented: boolean): Promise<void> {
-    const consent = this.userMeResponse?.player?.marketingConsent;
-    if (!consent || this.consentBusy) return;
-    const previous = consent.consented;
-    const next = consented ? "approved" : "denied";
-    if (previous === next) return;
-
-    // Optimistic: reflect the new state immediately, revert if the request fails.
-    this.consentBusy = true;
-    consent.consented = next;
-    this.requestUpdate();
-
-    const ok = await setMarketingConsent(consented);
-    if (!ok) {
-      consent.consented = previous;
-    }
-    this.consentBusy = false;
-    this.requestUpdate();
   }
 
   private renderFriendsTab(): TemplateResult {
@@ -335,14 +261,52 @@ export class AccountModal extends BaseModal {
               <discord-user-header
                 .data=${this.userMeResponse?.user?.discord ?? null}
               ></discord-user-header>
+              ${this.userMeResponse?.user?.steam
+                ? html`<steam-user-header
+                    .data=${this.userMeResponse.user.steam}
+                  ></steam-user-header>`
+                : null}
               ${this.renderLoggedInAs()}
             </div>
           </div>
         </div>
-        ${this.renderUsernamePanel()} ${this.renderRewardsPanel()}
-        ${this.renderSubscriptionPanel()}
+        ${this.renderRewardsPanel()} ${this.renderCreatorCodePanel()}
+        ${this.renderDesktopLinkGateAction()}
       </div>
     `;
+  }
+
+  // Re-entry to the desktop shell's account-linking gate shown at first
+  // launch. Absent entirely on plain web (no window.openfrontDesktop there),
+  // present whenever the desktop bridge exposes a callable showLinkGate —
+  // see desktopLinkGate() in DesktopShell.ts for why the guard is scoped
+  // that way. Needed because the desktop app's menu bar will eventually be
+  // hidden and the game runs fullscreen borderless, so a dismissed or
+  // since-linked player needs another way back to that gate.
+  private renderDesktopLinkGateAction(): TemplateResult | typeof nothing {
+    if (desktopLinkGate() === null) return nothing;
+    return html`
+      <o-button
+        variant="secondary"
+        width="block"
+        size="md"
+        translationKey="account_modal.link_existing_account"
+        @click=${this.handleShowLinkGate}
+      ></o-button>
+    `;
+  }
+
+  private handleShowLinkGate(): void {
+    // The bare `void` form swallowed a rejection into an unhandled promise.
+    // This is an IPC round trip to the Electron main process, so it can
+    // genuinely reject (no window, a main-process throw); catching keeps the
+    // failure visible in the console instead of surfacing as a button that
+    // silently does nothing.
+    desktopLinkGate()
+      ?.showLinkGate()
+      .catch((err) => {
+        console.error("AccountModal: showLinkGate failed", err);
+      });
   }
 
   // CrazyGames "connected as" view: avatar + username from the SDK, plus
@@ -370,8 +334,7 @@ export class AccountModal extends BaseModal {
             </div>
           </div>
         </div>
-        ${this.renderUsernamePanel()} ${this.renderRewardsPanel()}
-        ${this.renderSubscriptionPanel()}
+        ${this.renderRewardsPanel()}
       </div>
     `;
   }
@@ -449,14 +412,6 @@ export class AccountModal extends BaseModal {
     `;
   }
 
-  // Account-username management (custom-usernames). Hidden when the API
-  // doesn't return the username fields yet (older backend).
-  private renderUsernamePanel(): TemplateResult | "" {
-    const player = this.userMeResponse?.player;
-    if (!player || player.usernameStatus === undefined) return "";
-    return html`<username-panel .player=${player}></username-panel>`;
-  }
-
   private renderRewardsPanel(): TemplateResult | "" {
     const rewards = this.userMeResponse?.player?.rewards ?? [];
     if (rewards.length === 0) return "";
@@ -464,6 +419,17 @@ export class AccountModal extends BaseModal {
       .rewards=${rewards}
       @rewards-changed=${this.handleRewardsChanged}
     ></rewards-panel>`;
+  }
+
+  // Not rendered on the CrazyGames account branch (renderCrazyGamesAccount) —
+  // CrazyGames identity comes from the SDK, not the /users/@me `player`
+  // record this panel reads its state from.
+  private renderCreatorCodePanel(): TemplateResult {
+    return html`<creator-code-panel
+      .creator=${this.userMeResponse?.player?.creator}
+      .prefillCode=${this.prefillCreatorCode}
+      @creator-changed=${this.handleCreatorChanged}
+    ></creator-code-panel>`;
   }
 
   // A claim moved unclaimed rewards into the balances; both were returned by
@@ -479,15 +445,20 @@ export class AccountModal extends BaseModal {
     this.requestUpdate();
   };
 
-  private renderSubscriptionPanel(): TemplateResult | "" {
-    const sub = this.userMeResponse?.player?.subscription;
-    if (!sub) return "";
-    const cosmetic = this.cosmetics?.subscriptions?.[sub.tier] ?? null;
-    return html`<subscription-panel
-      .sub=${sub}
-      .cosmetic=${cosmetic}
-    ></subscription-panel>`;
-  }
+  // The panel already re-fetched /users/@me itself (its mutating calls
+  // invalidate the cache) after a successful set/switch/unsupport — patch the
+  // fresh creator field into our own cached copy in place, same idiom as
+  // handleRewardsChanged above, rather than reloading the page.
+  private handleCreatorChanged = (
+    event: CustomEvent<CreatorChangedDetail>,
+  ): void => {
+    if (!this.userMeResponse) return;
+    this.userMeResponse.player.creator = event.detail.creator;
+    // One-shot: a share-link prefill must not reappear in the input after the
+    // player has bound or unbound a creator in this session.
+    this.prefillCreatorCode = undefined;
+    this.requestUpdate();
+  };
 
   private renderCurrency(): TemplateResult {
     const currency = this.userMeResponse?.player?.currency;
@@ -507,7 +478,7 @@ export class AccountModal extends BaseModal {
       return html`
         <div class="flex flex-col items-center gap-3 w-full">
           ${this.renderCurrency()} ${this.renderGoogleLink()}
-          ${this.renderLogoutButton()}
+          ${this.renderSteamLink()}
         </div>
       `;
     } else if (me?.google) {
@@ -518,7 +489,7 @@ export class AccountModal extends BaseModal {
               account_name: me.google.email,
             })}
           </div>
-          ${this.renderCurrency()} ${this.renderLogoutButton()}
+          ${this.renderCurrency()} ${this.renderSteamLink()}
         </div>
       `;
     } else if (me?.email) {
@@ -530,7 +501,16 @@ export class AccountModal extends BaseModal {
             })}
           </div>
           ${this.renderCurrency()} ${this.renderGoogleLink()}
-          ${this.renderLogoutButton()}
+          ${this.renderSteamLink()}
+        </div>
+      `;
+    } else if (me?.steam) {
+      // Steam is the primary login and v1 does not support linking a second
+      // identity or unlinking Steam itself, so no Discord/Google CTA here —
+      // just the currency balance and (session) logout.
+      return html`
+        <div class="flex flex-col items-center gap-3 w-full">
+          ${this.renderCurrency()}
         </div>
       `;
     }
@@ -565,27 +545,78 @@ export class AccountModal extends BaseModal {
   // Google to their existing account (we never auto-merge by email).
   private renderLinkGoogleButton(): TemplateResult {
     if (this.userMeResponse?.user?.google) return html``;
+    return googleLinkButton(
+      this.handleLinkGoogle,
+      // The shell sends the player to the website for this (see linkGoogle
+      // in Auth.ts); the caption has to say so.
+      isDesktopShell()
+        ? "account_modal.link_google_on_web"
+        : "account_modal.link_google",
+    );
+  }
+
+  // Steam link state (OPE-115): the linked account when there is one,
+  // otherwise the button to link one.
+  //
+  // NOTE THE ASYMMETRY WITH GOOGLE, WHICH IS DELIBERATE: there is no unlink
+  // control here, and there is a permanence warning on the button. Steam
+  // recommends that users cannot self-unlink Steam from an external account,
+  // so this is a one-way change that only support can reverse — the warning
+  // has to be readable BEFORE the click, because afterwards the link exists.
+  //
+  // Not shown inside the desktop shell: a shell player already holds this
+  // identity through the native Steam ticket.
+  private renderSteamLink(): TemplateResult {
+    if (isDesktopShell()) return html``;
+    const steam = this.userMeResponse?.user?.steam;
+    if (steam) {
+      // The attached account is NAMED, not merely reported as linked: a wrong
+      // link — the player's browser was signed into someone else's Steam when
+      // they clicked — cannot be undone by them, so noticing it immediately is
+      // the difference between a quick support fix and a permanent one.
+      // Steam's own consent page is the first defence; this is the second.
+      //
+      // The persona and avatar come from the <steam-user-header> that
+      // renderAccountTab already renders whenever user.steam is set, for every
+      // branch including Steam-primary. Rendering a second one here showed it
+      // TWICE to exactly the players this row is for — anyone Discord-,
+      // Google- or email-primary with Steam linked.
+      return html`
+        <div class="flex flex-col items-center gap-1">
+          <div class="flex items-center gap-2 text-white/70 text-sm">
+            ${steamGlyph("w-4 h-4 shrink-0")}
+            <span>${translateText("account_modal.linked_to_steam")}</span>
+          </div>
+          <span class="text-white/40 text-xs text-center">
+            ${translateText("account_modal.link_steam_permanent")}
+          </span>
+        </div>
+      `;
+    }
     return html`
-      <button
-        @click=${this.handleLinkGoogle}
-        class="w-full px-6 py-3 text-[#1f1f1f] bg-white hover:bg-[#f7f8f8] border border-[#dadce0] rounded-xl focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#4285F4] transition-colors duration-200 flex items-center justify-center gap-3 shadow-lg"
-      >
-        <img
-          src=${assetUrl("images/GoogleLogo.svg")}
-          alt=${translateText("account_modal.google_alt")}
-          class="w-5 h-5"
-        />
-        <span class="font-bold tracking-wide"
-          >${translateText("account_modal.link_google")}</span
-        >
-      </button>
+      <div class="w-full flex flex-col gap-1">
+        ${steamLinkButton(this.handleLinkSteam)}
+        <span class="text-white/40 text-xs text-center">
+          ${translateText("account_modal.link_steam_permanent")}
+        </span>
+      </div>
     `;
   }
+
+  private handleLinkSteam = async (): Promise<void> => {
+    // On success linkSteam navigates to Steam; the result comes back as a
+    // `link=...` router arg handled by consumeLinkResult. A false return means
+    // we couldn't start it.
+    const started = await linkSteam();
+    if (!started) {
+      await showInGameAlert(translateText("account_modal.link_steam_failed"));
+    }
+  };
 
   private async viewGame(gameId: string): Promise<void> {
     this.close();
     const encodedGameId = encodeURIComponent(gameId);
-    const newUrl = `/${ClientEnv.workerPath(gameId)}/game/${encodedGameId}`;
+    const newUrl = currentPagePath(ClientEnv.gamePath(gameId));
 
     history.pushState({ join: gameId }, "", newUrl);
     window.dispatchEvent(
@@ -632,18 +663,41 @@ export class AccountModal extends BaseModal {
     this.restoreGamesScrollAfterOpen = false;
   }
 
-  private renderLogoutButton(): TemplateResult {
+  // Shown when a sign-in was rejected because the provider's verified email
+  // already belongs to an account. We deliberately don't name which provider
+  // that account uses — the visitor has only proven control of the email.
+  private renderLoginError(): TemplateResult {
+    if (this.loginError === undefined) return html``;
     return html`
-      <o-button
-        variant="danger"
-        size="md"
-        translationKey="account_modal.log_out"
-        @click=${this.handleLogout}
-      ></o-button>
+      <div
+        class="mb-6 flex items-start gap-3 rounded-xl border border-red-500/30 bg-red-500/10 p-4"
+      >
+        <span class="text-red-400 text-lg leading-none" aria-hidden="true">
+          &#9888;
+        </span>
+        <p class="flex-1 text-sm text-red-200">
+          ${translateText(LOGIN_ERROR_KEYS[this.loginError])}
+        </p>
+        <button
+          class="text-red-200/60 hover:text-red-200 text-lg leading-none"
+          aria-label=${translateText("common.close")}
+          @click=${() => (this.loginError = undefined)}
+        >
+          &times;
+        </button>
+      </div>
     `;
   }
 
   private renderLoginOptions() {
+    // On the desktop shell both provider buttons open the shell's browser
+    // link flow rather than an in-place OAuth redirect (see discordLogin /
+    // googleLogin in Auth.ts), and the captions say so. Keyed on the shell
+    // itself, not on the link-flow bridge: Auth.ts never builds the redirect
+    // on ANY desktop shell (a shell too old to expose showLinkGate gets an
+    // update prompt instead), so the web caption would be wrong on every one
+    // of them.
+    const viaBrowser = isDesktopShell();
     return html`
       <div class="flex items-center justify-center p-6 min-h-full">
         <div
@@ -671,8 +725,15 @@ export class AccountModal extends BaseModal {
             <p class="text-white/50 text-sm font-medium">
               ${translateText("account_modal.sign_in_desc")}
             </p>
+            ${viaBrowser
+              ? html`<p class="text-white/40 text-xs">
+                  ${translateText("account_modal.desktop_sign_in_desc")}
+                </p>`
+              : nothing}
             ${this.renderCurrency()}
           </div>
+
+          ${this.renderLoginError()}
 
           <div class="space-y-6">
             <!-- Discord Login Button -->
@@ -686,8 +747,10 @@ export class AccountModal extends BaseModal {
                 class="w-6 h-6 relative z-10"
               />
               <span class="font-bold relative z-10 tracking-wide"
-                >${translateText("main.login_discord") ||
-                translateText("account_modal.link_discord")}</span
+                >${viaBrowser
+                  ? translateText("account_modal.desktop_login_discord")
+                  : translateText("main.login_discord") ||
+                    translateText("account_modal.link_discord")}</span
               >
             </button>
 
@@ -703,9 +766,27 @@ export class AccountModal extends BaseModal {
                 class="w-6 h-6 relative z-10"
               />
               <span class="font-bold relative z-10 tracking-wide"
-                >${translateText("main.login_google")}</span
+                >${viaBrowser
+                  ? translateText("account_modal.desktop_login_google")
+                  : translateText("main.login_google")}</span
               >
             </button>
+
+            <!-- Sign in through Steam. Hidden inside the desktop shell: the
+                 player is already signed in there through the native Steam
+                 ticket, so the button would be a no-op that looks like an
+                 option. -->
+            ${viaBrowser
+              ? nothing
+              : html`<button
+                  @click="${this.handleSteamLogin}"
+                  class="w-full px-6 py-4 text-white bg-[#1b2838] hover:bg-[#2a475e] border border-[#66c0f4]/30 rounded-xl focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#66c0f4] transition-colors duration-200 flex items-center justify-center gap-3 shadow-lg"
+                >
+                  ${steamGlyph("w-6 h-6 shrink-0")}
+                  <span class="font-bold tracking-wide"
+                    >${translateText("main.login_steam")}</span
+                  >
+                </button>`}
 
             <!-- Divider -->
             <div class="flex items-center gap-4 py-2">
@@ -722,14 +803,17 @@ export class AccountModal extends BaseModal {
             <div class="space-y-3">${this.renderEmailField()}</div>
           </div>
 
-          <div class="mt-8 text-center border-t border-white/10 pt-6">
-            <button
-              @click="${this.handleLogout}"
-              class="text-[10px] font-bold text-white/20 hover:text-red-400 transition-colors uppercase tracking-widest pb-0.5"
-            >
-              ${translateText("account_modal.clear_session")}
-            </button>
-          </div>
+          <!-- Not on Steam: the Steam ticket re-creates the session on reload. -->
+          ${steamSDK.isOnSteam()
+            ? nothing
+            : html`<div class="mt-8 text-center border-t border-white/10 pt-6">
+                <button
+                  @click="${this.handleLogout}"
+                  class="text-[10px] font-bold text-white/20 hover:text-red-400 transition-colors uppercase tracking-widest pb-0.5"
+                >
+                  ${translateText("account_modal.clear_session")}
+                </button>
+              </div>`}
         </div>
       </div>
     `;
@@ -742,20 +826,18 @@ export class AccountModal extends BaseModal {
 
   private async handleSubmit() {
     if (!this.email) {
-      alert(translateText("account_modal.enter_email_address"));
+      await showInGameAlert(translateText("account_modal.enter_email_address"));
       return;
     }
 
     const success = await sendMagicLink(this.email);
-    if (success) {
-      alert(
-        translateText("account_modal.recovery_email_sent", {
-          email: this.email,
-        }),
-      );
-    } else {
-      alert(translateText("account_modal.failed_to_send_recovery_email"));
-    }
+    await showInGameAlert(
+      success
+        ? translateText("account_modal.recovery_email_sent", {
+            email: this.email,
+          })
+        : translateText("account_modal.failed_to_send_recovery_email"),
+    );
   }
 
   // CrazyGames sign-in: after their prompt completes, exchange the new token
@@ -780,26 +862,37 @@ export class AccountModal extends BaseModal {
     googleLogin();
   }
 
-  private async handleLinkGoogle(): Promise<void> {
-    // On success linkGoogle navigates to Google; the result comes back as a
-    // `link=...` router arg handled in handleLinkResult. A false return means we
-    // couldn't start it.
-    const started = await linkGoogle();
-    if (!started) {
-      alert(translateText("account_modal.link_google_failed"));
-    }
+  private handleSteamLogin() {
+    steamLogin();
   }
 
-  // The Google link callback returns us to #modal=account&link=<result>, so the
-  // router reopens this modal with a `link` arg. Surface the outcome, then strip
-  // the one-shot param from the URL so a refresh/re-open doesn't replay it.
-  private handleLinkResult(args?: Record<string, unknown>): void {
-    const link = typeof args?.link === "string" ? args.link : undefined;
-    if (link === undefined) return;
+  private handleLinkGoogle = async (): Promise<void> => {
+    // On success linkGoogle navigates to Google; the result comes back as a
+    // `link=...` router arg handled by consumeLinkResult. A false return
+    // means we couldn't start it.
+    const started = await linkGoogle();
+    if (!started) {
+      await showInGameAlert(translateText("account_modal.link_google_failed"));
+    }
+  };
 
-    // replaceState doesn't fire hashchange, so removing the param won't re-route.
+  // Reads the one-shot `creatorCode=` router arg and strips it from the URL,
+  // same idiom as consumeLoginResult above — a refresh or re-open must not
+  // replay a stale prefill into the (by-then possibly bound) panel.
+  private consumeCreatorCodeArg(
+    args?: Record<string, unknown>,
+  ): string | undefined {
+    const code =
+      typeof args?.creatorCode === "string" ? args.creatorCode : undefined;
+    // Empty string counts as absent, same as undefined: a bare
+    // `creatorCode=` in the hash (or an upstream edge case that resolves to
+    // "") must never reach the panel as a prefill -- normalizeCreatorCodeInput
+    // would reject it as too short and the panel would show a spurious
+    // "invalid code" error for a player who never actually had one.
+    if (!code) return undefined;
+
     const params = new URLSearchParams(window.location.hash.slice(1));
-    params.delete("link");
+    params.delete("creatorCode");
     const rest = params.toString();
     history.replaceState(
       null,
@@ -807,36 +900,16 @@ export class AccountModal extends BaseModal {
       rest ? `#${rest}` : window.location.pathname + window.location.search,
     );
 
-    // Defer so the modal paints before the (blocking) alert. "cancel" needs no
-    // feedback — the user chose to back out.
-    if (link === "google") {
-      setTimeout(
-        () => alert(translateText("account_modal.link_google_success")),
-        0,
-      );
-    } else if (link === "already_linked") {
-      setTimeout(
-        () => alert(translateText("account_modal.link_google_already_linked")),
-        0,
-      );
-    } else if (link === "error") {
-      setTimeout(
-        () => alert(translateText("account_modal.link_google_error")),
-        0,
-      );
-    }
+    return code;
   }
 
   protected onOpen(args?: Record<string, unknown>): void {
     this.isLoadingUser = true;
-    this.handleLinkResult(args);
+    consumeLinkResult(args);
+    this.loginError = consumeLoginResult(args);
+    this.prefillCreatorCode = this.consumeCreatorCodeArg(args);
 
     this.refreshCrazyGamesUser();
-
-    void fetchCosmetics().then((cosmetics) => {
-      this.cosmetics = cosmetics;
-      this.requestUpdate();
-    });
 
     void getUserMe()
       .then((userMe) => {

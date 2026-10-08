@@ -191,5 +191,6 @@
       "name": "Denmark",
       "flag": "dk"
     }
-  ]
+  ],
+  "themes": ["europe"]
 }

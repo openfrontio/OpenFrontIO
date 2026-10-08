@@ -1,5 +1,4 @@
 import fs from "fs";
-import { globSync } from "glob";
 import path from "path";
 
 type Nation = {
@@ -12,7 +11,7 @@ type Manifest = {
 
 describe("Map manifests: nation flags exist", () => {
   test("All nations' flags reference existing SVG files", () => {
-    const manifestPaths = globSync("resources/maps/**/manifest.json");
+    const manifestPaths = fs.globSync("resources/maps/**/manifest.json");
 
     expect(manifestPaths.length).toBeGreaterThan(0);
 

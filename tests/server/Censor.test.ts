@@ -243,5 +243,34 @@ describe("Censor (local fallback)", () => {
       const result = censorPlayer("fuck", null);
       expect(shadowNames).toContain(result.username);
     });
+
+    // The free-form username charset widened to Latin-1 Supplement and Latin
+    // Extended-A so accented Steam personas stop falling back to a guest name.
+    // That must not hand anyone a new way past the filter: resolveConfusables
+    // folds these back to their ASCII letters before matching.
+    //
+    // Scope is accent substitution only. Inserting a letter ("Haitler") still
+    // evades, but it evades identically in plain ASCII — that is a property of
+    // the word list, not something the wider charset introduced.
+    test("accented spellings do not bypass the filter", () => {
+      for (const name of [
+        "hïtler",
+        "nâzi",
+        "fàggot",
+        "retàrd",
+        "níggér",
+        "FÜCK",
+      ]) {
+        expect(profanityMatcher.hasMatch(name), name).toBe(true);
+        expect(shadowNames, name).toContain(censorPlayer(name, null).username);
+      }
+    });
+
+    test("still leaves ordinary accented names alone", () => {
+      for (const name of ["José", "Müller", "Łukasz", "Bjørn", "Renée"]) {
+        expect(profanityMatcher.hasMatch(name), name).toBe(false);
+        expect(censorPlayer(name, null).username, name).toBe(name);
+      }
+    });
   });
 });

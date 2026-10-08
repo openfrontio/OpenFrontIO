@@ -37,7 +37,7 @@
       "name": "Turkestan Autonomy"
     }
   ],
-  "categories": ["new", "asia"],
+  "categories": ["asia"],
   "id": "Balkhash",
   "map": {
     "height": 1500,
@@ -188,5 +188,6 @@
       "name": "Aqoy"
     }
   ],
+  "themes": ["asia"],
   "translation_key": "map.balkhash"
 }

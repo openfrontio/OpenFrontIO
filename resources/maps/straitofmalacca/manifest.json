@@ -85,5 +85,6 @@
       "name": "Riau Islands"
     }
   ],
+  "themes": ["asia"],
   "translation_key": "map.straitofmalacca"
 }

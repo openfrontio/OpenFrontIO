@@ -1,23 +1,35 @@
+import type { Team } from "@openfront/engine-api/game/GameTypes";
 import { customElement } from "lit/decorators.js";
-import type { Team } from "../../../core/game/Game";
 import { type StatsRow, StatsTable } from "../../components/StatsTable";
 import type { ColumnId } from "../../StatsConstants";
 import { translateText } from "../../Utils";
 import type { GameView, PlayerView } from "../../view";
-import type { ColumnDef } from "./lib/StatsColumns";
+import {
+  type ColumnDef,
+  type ValueGetter,
+  recordGoldRates,
+} from "./lib/StatsColumns";
 
 export function aggregateTeamValues(
   players: readonly PlayerView[],
   columns: readonly ColumnDef[],
   game: GameView,
 ): ReadonlyMap<ColumnId, number> {
+  // Only columns with a number behind them have anything to add up.
+  const totalled = columns.filter(
+    (column): column is ColumnDef & { value: ValueGetter } =>
+      column.value !== undefined,
+  );
   const values = new Map<ColumnId, number>(
-    columns.map((column) => [column.id, 0]),
+    totalled.map((column) => [column.id, 0]),
   );
 
   for (const player of players) {
     if (!player.isAlive()) continue;
-    for (const column of columns) {
+    // Keep the gold-rate tracker fed even when only the team table renders,
+    // otherwise its rate columns read back 0.
+    recordGoldRates(player, game);
+    for (const column of totalled) {
       values.set(
         column.id,
         (values.get(column.id) ?? 0) + column.value(player, game),
@@ -31,7 +43,6 @@ export function aggregateTeamValues(
 @customElement("team-stats")
 export class TeamStats extends StatsTable {
   protected readonly tableKind = "team";
-  protected readonly nameLabelKey = "leaderboard.team";
 
   protected buildRows(
     game: GameView,

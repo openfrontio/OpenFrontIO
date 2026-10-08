@@ -175,5 +175,6 @@
       "name": "Rouyn-Noranda",
       "flag": "ca"
     }
-  ]
+  ],
+  "themes": ["north_america"]
 }

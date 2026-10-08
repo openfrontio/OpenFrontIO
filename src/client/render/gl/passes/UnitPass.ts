@@ -32,8 +32,8 @@
  *   Shells emit 2 instances (pos + lastPos) to match live game's 2-pixel trail.
  */
 
-import { assetUrl } from "src/core/AssetUrls";
-import type { Config } from "src/core/configuration/Config";
+import type { Config } from "@openfront/engine-lib/configuration/Config";
+import { assetUrl } from "@openfront/shared/AssetUrls";
 import type { RendererConfig, UnitState } from "../../types";
 import {
   SMOOTHED_NUKE_TYPES,
@@ -56,6 +56,7 @@ import unitVertSrc from "../shaders/unit/unit.vert.glsl?raw";
 import {
   getPaletteSize,
   MAX_TRAIL_COLORS,
+  TRAIN_EFFECT_BLOCK,
   WARSHIP_EFFECT_BLOCK,
 } from "../utils/ColorUtils";
 import { createProgram, shaderSrc } from "../utils/GlUtils";
@@ -94,6 +95,10 @@ const HYDROGEN_BOMB_COL = UNIT_ORDER.indexOf(UT_HYDROGEN_BOMB);
 /** Atlas column of the warship — gates the warship cosmetic effect. */
 const WARSHIP_COL = UNIT_ORDER.indexOf(UT_WARSHIP);
 
+/** First atlas column of the train sprites (engine, carriage, loaded
+ *  carriage are contiguous) — gates the train cosmetic effect. */
+const TRAIN_FIRST_COL = UNIT_ORDER.indexOf("TrainEngine");
+
 // ---------------------------------------------------------------------------
 // Instance data layout
 // ---------------------------------------------------------------------------
@@ -116,6 +121,7 @@ const FLAG_ANGRY = 2;
 const FLAG_TRADE_FRIENDLY = 3;
 const FLAG_RETREATING = 4;
 const FLAG_FLICKER_UNTARGETABLE = 5;
+const FLAG_TRADE_SELF = 6;
 
 /** Atlas column indices for train sub-types (resolved from trainType + loaded) */
 const TRAIN_ENGINE_COL = UNIT_ORDER.indexOf("TrainEngine");
@@ -205,6 +211,8 @@ export class UnitPass {
   private uFlickerSpeed: WebGLUniformLocation;
   private uAngryColor: WebGLUniformLocation;
   private uAltView: WebGLUniformLocation;
+  private uSelfColor: WebGLUniformLocation;
+  private uAllyColor: WebGLUniformLocation;
   private uHBombGlowScale: WebGLUniformLocation;
   private uHBombGlowColor: WebGLUniformLocation;
   private uHBombGlowStrength: WebGLUniformLocation;
@@ -237,10 +245,12 @@ export class UnitPass {
   private effectTex: WebGLTexture;
   private atlasTex: WebGLTexture;
 
-  /** Frame tick received from renderer — drives tick-based effects */
+  /** Render frame counter received from renderer — drives uTick shader uniform and flicker effects */
   private frameTick = 0;
+  /** Last game engine tick received for smoothing calculation resets */
+  private lastGameTick = -1;
   /** Wall-clock start, for uTime (seconds) — matches StructurePass so the
-   *  warship effect animates at the same pace as the structures effect. */
+   *  warship/train effects animate at the same pace as the structures effect. */
   private startTime = performance.now();
 
   /** unitType string → atlas column (0-11) */
@@ -286,7 +296,10 @@ export class UnitPass {
         ATLAS_COLS,
         WARSHIP_COL,
         WARSHIP_EFFECT_ROW_BASE: WARSHIP_EFFECT_BLOCK * MAX_TRAIL_COLORS,
+        TRAIN_FIRST_COL,
+        TRAIN_EFFECT_ROW_BASE: TRAIN_EFFECT_BLOCK * MAX_TRAIL_COLORS,
       }),
+      "UnitPass",
     );
     this.uCamera = gl.getUniformLocation(this.program, "uCamera")!;
     this.uTick = gl.getUniformLocation(this.program, "uTick")!;
@@ -296,6 +309,8 @@ export class UnitPass {
     this.uAngryColor = gl.getUniformLocation(this.program, "uAngryColor")!;
 
     this.uAltView = gl.getUniformLocation(this.program, "uAltView")!;
+    this.uSelfColor = gl.getUniformLocation(this.program, "uSelfColor")!;
+    this.uAllyColor = gl.getUniformLocation(this.program, "uAllyColor")!;
     this.uHBombGlowScale = gl.getUniformLocation(
       this.program,
       "uHBombGlowScale",
@@ -427,15 +442,21 @@ export class UnitPass {
     this.missileCount++;
   }
 
-  updateUnits(units: Map<number, UnitState>, tick: number): void {
-    this.frameTick = tick;
+  setFrameTick(frameTick: number): void {
+    this.frameTick = frameTick;
+  }
+
+  updateUnits(units: Map<number, UnitState>, gameTick: number): void {
+    if (gameTick !== this.lastGameTick) {
+      this.lastGameTick = gameTick;
+      this.lastUnitsUpdateMs = performance.now();
+    }
     this.groundCount = 0;
     this.missileCount = 0;
     this.smoothSegs.length = 0;
-    this.lastUnitsUpdateMs = performance.now();
 
     for (const unit of units.values()) {
-      if (!unit.isActive) continue;
+      if (!unit.isActive || unit.waitTicks > 0) continue;
 
       let atlasIdx = this.typeToAtlasCol.get(unit.unitType);
 
@@ -460,9 +481,11 @@ export class UnitPass {
         unit.unitType === UT_WARSHIP && unit.targetUnitId !== null;
       const isFlicker = FLICKER_TYPES.has(unit.unitType);
 
-      // Enemy trade ships heading to a self/allied port get FLAG_TRADE_FRIENDLY
-      // so alt-view renders them yellow instead of red.
-      let isTradeFriendly = false;
+      // Alt-view trade ship color from owner + destination port owner:
+      //   self involved on either end        -> green  (FLAG_TRADE_SELF)
+      //   ally/teammate involved on either end -> yellow (FLAG_TRADE_FRIENDLY)
+      //   otherwise                          -> red    (owner affiliation)
+      let tradeFlag = FLAG_NORMAL;
       if (
         unit.unitType === UT_TRADE_SHIP &&
         unit.targetUnitId !== null &&
@@ -471,20 +494,23 @@ export class UnitPass {
         const targetPort = this.structures.get(unit.targetUnitId);
         if (targetPort) {
           const portOwner = targetPort.ownerID;
-          // Only recolor enemy-owned ships: a self/allied ship already renders
-          // green/yellow via its affiliation color (e.g. a captured trade ship
-          // heading to our port is ours and must stay green, not yellow).
-          isTradeFriendly =
-            unit.ownerID !== this.localPlayerID &&
-            !this.friendlyOwners.has(unit.ownerID) &&
-            (portOwner === this.localPlayerID ||
-              this.friendlyOwners.has(portOwner));
+          if (
+            unit.ownerID === this.localPlayerID ||
+            portOwner === this.localPlayerID
+          ) {
+            tradeFlag = FLAG_TRADE_SELF;
+          } else if (
+            this.friendlyOwners.has(unit.ownerID) ||
+            this.friendlyOwners.has(portOwner)
+          ) {
+            tradeFlag = FLAG_TRADE_FRIENDLY;
+          }
         }
       }
 
       let flags = FLAG_NORMAL;
-      if (isTradeFriendly) {
-        flags = FLAG_TRADE_FRIENDLY;
+      if (tradeFlag !== FLAG_NORMAL) {
+        flags = tradeFlag;
       } else if (isRetreatingWarship) {
         flags = FLAG_RETREATING;
       } else if (isAngryWarship) {
@@ -572,6 +598,9 @@ export class UnitPass {
     gl.uniform1f(this.uFlickerSpeed, us.flickerSpeed);
     gl.uniform3f(this.uAngryColor, us.angryR, us.angryG, us.angryB);
     gl.uniform1i(this.uAltView, this.altView ? 1 : 0);
+    const af = this.settings.affiliation;
+    gl.uniform3f(this.uSelfColor, af.selfR, af.selfG, af.selfB);
+    gl.uniform3f(this.uAllyColor, af.allyR, af.allyG, af.allyB);
     gl.uniform1f(this.uHBombGlowScale, us.hBombGlowScale);
     gl.uniform3f(
       this.uHBombGlowColor,

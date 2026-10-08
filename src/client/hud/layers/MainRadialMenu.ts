@@ -1,9 +1,7 @@
-import { LitElement } from "lit";
-import { customElement } from "lit/decorators.js";
-import { assetUrl } from "../../../core/AssetUrls";
-import { EventBus } from "../../../core/EventBus";
-import { PlayerActions } from "../../../core/game/Game";
-import { TileRef } from "../../../core/game/GameMap";
+import { TileRef } from "@openfront/engine-api/game/GameMap";
+import { PlayerActions } from "@openfront/engine-api/game/GameTypes";
+import { assetUrl } from "@openfront/shared/AssetUrls";
+import { EventBus } from "@openfront/shared/EventBus";
 import { Controller } from "../../Controller";
 import { TransformHandler } from "../../TransformHandler";
 import { UIState } from "../../UIState";
@@ -25,8 +23,15 @@ const swordIcon = assetUrl("images/SwordIconWhite.svg");
 
 import { ContextMenuEvent } from "../../InputHandler";
 
-@customElement("main-radial-menu")
-export class MainRadialMenu extends LitElement implements Controller {
+function emptyPlayerActions(): PlayerActions {
+  return {
+    canAttack: false,
+    buildableUnits: [],
+    canSendEmojiAllPlayers: false,
+  };
+}
+
+export class MainRadialMenu implements Controller {
   private radialMenu: RadialMenu;
 
   private playerActionHandler: PlayerActionHandler;
@@ -47,8 +52,6 @@ export class MainRadialMenu extends LitElement implements Controller {
     private uiState: UIState,
     private playerPanel: PlayerPanel,
   ) {
-    super();
-
     const menuConfig: RadialMenuConfig = {
       centerButtonIcon: swordIcon,
       tooltipStyle: `
@@ -87,21 +90,33 @@ export class MainRadialMenu extends LitElement implements Controller {
       if (!this.game.isValidCoord(worldCoords.x, worldCoords.y)) {
         return;
       }
-      if (this.game.myPlayer() === null) {
+      const clickedTile = this.game.ref(worldCoords.x, worldCoords.y);
+      this.clickedTile = clickedTile;
+
+      // Spectators (replay, dead, pre-spawn): skip the action radial and open
+      // the read-only PlayerPanel directly when right-clicking on a player.
+      if (this.game.isSpectator()) {
+        if (this.game.owner(clickedTile).isPlayer()) {
+          this.playerPanel.show(emptyPlayerActions(), clickedTile);
+        }
         return;
       }
-      this.clickedTile = this.game.ref(worldCoords.x, worldCoords.y);
-      this.game
-        .myPlayer()!
-        .actions(this.clickedTile)
+
+      const myPlayer = this.game.myPlayer();
+      if (myPlayer === null) return;
+      myPlayer
+        .actions(clickedTile)
         .then((actions) => {
           this.updatePlayerActions(
-            this.game.myPlayer()!,
+            myPlayer,
             actions,
-            this.clickedTile!,
+            clickedTile,
             event.x,
             event.y,
           );
+        })
+        .catch((error) => {
+          console.warn("Failed to load radial menu actions:", error);
         });
     });
   }
@@ -118,7 +133,7 @@ export class MainRadialMenu extends LitElement implements Controller {
     const tileOwner = this.game.owner(tile);
     const recipient = tileOwner.isPlayer() ? (tileOwner as PlayerView) : null;
 
-    if (myPlayer && recipient) {
+    if (recipient) {
       this.chatIntegration.setupChatModal(myPlayer, recipient);
     }
 
@@ -161,15 +176,16 @@ export class MainRadialMenu extends LitElement implements Controller {
 
   async tick() {
     if (!this.radialMenu.isMenuVisible() || this.clickedTile === null) return;
-    this.game
-      .myPlayer()!
-      .actions(this.clickedTile)
+    const myPlayer = this.game.myPlayer();
+    if (myPlayer === null) return;
+    const tile = this.clickedTile;
+    myPlayer
+      .actions(tile)
       .then((actions) => {
-        this.updatePlayerActions(
-          this.game.myPlayer()!,
-          actions,
-          this.clickedTile!,
-        );
+        this.updatePlayerActions(myPlayer, actions, tile);
+      })
+      .catch((error) => {
+        console.warn("Failed to refresh radial menu actions:", error);
       });
   }
 

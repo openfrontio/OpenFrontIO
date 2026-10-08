@@ -3,8 +3,9 @@ precision highp float;
 
 in vec2 vLocal;
 flat in float vRadius;
-flat in vec3 vColor;
+flat in vec4 vColor;
 flat in vec2 vArcBounds;
+flat in float vSpin;
 
 uniform float uTime;
 uniform float uOutline;        // 1.0 = owner mode (outline edges), 0.0 = perspective
@@ -41,10 +42,10 @@ void main() {
   // Dash pattern along circumference
   float arcPos = angle * vRadius;
   float period = uDashLen + uGapLen;
-  float dashPhase = mod(arcPos + uTime * uRotationSpeed, period);
+  float dashPhase = mod(arcPos + uTime * uRotationSpeed * vSpin, period);
   float dashAlpha = 1.0 - smoothstep(uDashLen - 0.5, uDashLen + 0.5, dashPhase);
 
-  float alpha = ringAlpha * dashAlpha * uAlpha;
+  float alpha = ringAlpha * dashAlpha * uAlpha * vColor.a;
   if (alpha < 0.01) discard;
 
   // Outline: darken fragments near any edge of each dash segment
@@ -69,6 +70,6 @@ void main() {
     }
   }
 
-  vec3 finalColor = vColor * edgeFade;
+  vec3 finalColor = vColor.rgb * edgeFade;
   fragColor = vec4(finalColor, alpha);
 }
