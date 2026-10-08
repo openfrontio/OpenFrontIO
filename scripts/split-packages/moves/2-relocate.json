@@ -1,0 +1,8 @@
+{
+  "files": {
+    "src/client/hud/NameBoxCalculator.ts": "src/core/game/NameBoxCalculator.ts",
+    "src/core/game/UserSettings.ts": "src/client/UserSettings.ts",
+    "src/core/worker/WorkerClient.ts": "src/client/WorkerClient.ts",
+    "src/core/validations/username.ts": "src/client/validations/username.ts"
+  }
+}

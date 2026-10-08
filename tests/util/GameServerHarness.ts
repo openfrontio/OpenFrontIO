@@ -6,17 +6,17 @@
 // "p1" / "creator-cid" placeholders older tests used — those tests could only
 // pass by mocking the Schemas module. Use cid() to spell a readable id.
 
-import { vi } from "vitest";
+import { GameConfig } from "@openfront/engine-api/Schemas";
 import {
   ClientMessage,
-  GameConfig,
   PublicGameType,
   ServerMessage,
-} from "../../src/core/Schemas";
+} from "@openfront/shared/WireSchemas";
+import { ZbContext } from "@openfront/zbin";
+import { vi } from "vitest";
 import { Client } from "../../src/server/Client";
 import { GameServer, GameServerDeps } from "../../src/server/GameServer";
 import { type MatchTelemetryEmitter } from "../../src/server/telemetry/MatchTelemetry";
-import { ZbContext } from "../../zbin";
 import { clientFrame, decodeSentServerMessage, testGameConfig } from "./Wire";
 
 // A schema-valid 8-char id from a readable tag: cid("p1") === "p1000000".
@@ -169,6 +169,8 @@ export interface GameOpts {
 export function makeGame(opts: GameOpts = {}): GameServer {
   const deps: Partial<GameServerDeps> = {
     archive: vi.fn(async () => {}),
+    // A failed replay: a disputed vote archives its own result.
+    replayWinner: vi.fn(async () => null),
     fetchTribes: vi.fn(async () => []),
   };
   if (opts.telemetry !== undefined) deps.telemetry = opts.telemetry;

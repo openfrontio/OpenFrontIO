@@ -1,8 +1,8 @@
 import { LitElement, html, type TemplateResult } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
 import { ClientEnv } from "src/client/ClientEnv";
-import { UserSettings } from "../../core/game/UserSettings";
 import { crazyGamesSDK } from "../CrazyGamesSDK";
+import { UserSettings } from "../UserSettings";
 import { copyToClipboard, showToast, translateText } from "../Utils";
 
 @customElement("copy-button")

@@ -1,6 +1,6 @@
+import { GameType } from "@openfront/engine-api/game/GameTypes";
+import { PartialGameRecord } from "@openfront/shared/WireSchemas";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { GameType } from "../../src/core/game/Game";
-import { PartialGameRecord } from "../../src/core/Schemas";
 import {
   cid,
   makeClient,

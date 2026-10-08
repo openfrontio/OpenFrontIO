@@ -1,4 +1,4 @@
-import type { TileRef } from "../../../core/game/GameMap";
+import type { TileRef } from "@openfront/engine-api/game/GameMap";
 
 /** TrainType enum — numeric values matching UnitState.trainType. */
 export enum TrainType {
@@ -224,6 +224,7 @@ export interface PlayerStatusData {
 
 /** Ghost structure preview data for build-mode visualization. */
 export interface GhostPreviewData {
+  snapToPlacement?: boolean; // Keep displaced structure previews at the resolved build tile.
   ghostType: string; // UnitType string ("City", "Port", etc.)
   tileX: number; // Hover tile X
   tileY: number; // Hover tile Y

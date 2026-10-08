@@ -169,6 +169,7 @@ export class RailroadPass {
         RAILROAD_EFFECT_ROW_BASE: RAILROAD_EFFECT_BLOCK * MAX_TRAIL_COLORS,
         ...TILE_DEFINES,
       }),
+      "RailroadPass",
     );
 
     this.uCamera = gl.getUniformLocation(this.program, "uCamera")!;

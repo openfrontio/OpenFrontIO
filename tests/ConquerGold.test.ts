@@ -1,6 +1,7 @@
-import { SpawnExecution } from "../src/core/execution/SpawnExecution";
-import { Game, Player, PlayerInfo, PlayerType } from "../src/core/game/Game";
-import { GameID } from "../src/core/Schemas";
+import { PlayerInfo, PlayerType } from "@openfront/engine-api/game/GameTypes";
+import { GameID } from "@openfront/engine-api/Schemas";
+import { SpawnExecution } from "@openfront/engine/execution/SpawnExecution";
+import { Game, Player } from "@openfront/engine/game/Game";
 import { setup } from "./util/Setup";
 
 const gameID: GameID = "test_game";

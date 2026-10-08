@@ -37,14 +37,14 @@ vi.mock("howler", () => ({
   },
 }));
 
-import { JoinLobbyModal } from "../../src/client/JoinLobbyModal";
 import {
   Difficulty,
   GameMapType,
   GameMode,
   GameType,
-} from "../../src/core/game/Game";
-import { UserSettings } from "../../src/core/game/UserSettings";
+} from "@openfront/engine-api/game/GameTypes";
+import { JoinLobbyModal } from "../../src/client/JoinLobbyModal";
+import { UserSettings } from "../../src/client/UserSettings";
 
 function resetUserSettingsState() {
   localStorage.clear();

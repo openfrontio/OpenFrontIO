@@ -1,12 +1,12 @@
-import { LitElement, css, html } from "lit";
-import { customElement, state } from "lit/decorators.js";
-import { PlayerType } from "../../../core/game/Game";
+import { PlayerType } from "@openfront/engine-api/game/GameTypes";
 import {
   BrokeAllianceUpdate,
   GameUpdateType,
-} from "../../../core/game/GameUpdates";
-import { UserSettings } from "../../../core/game/UserSettings";
+} from "@openfront/engine-api/game/GameUpdates";
+import { LitElement, css, html } from "lit";
+import { customElement, state } from "lit/decorators.js";
 import { Controller } from "../../Controller";
+import { UserSettings } from "../../UserSettings";
 import { GameView, PlayerView } from "../../view";
 
 // Parameters for the alert animation

@@ -1,7 +1,10 @@
+import {
+  isGrantedSubscription,
+  UserSubscription,
+} from "@openfront/shared/ApiSchemas";
+import { Subscription } from "@openfront/shared/CosmeticSchemas";
 import { html, LitElement, nothing, TemplateResult } from "lit";
 import { customElement, property } from "lit/decorators.js";
-import { isGrantedSubscription, UserSubscription } from "../../core/ApiSchemas";
-import { Subscription } from "../../core/CosmeticSchemas";
 import {
   cancelSubscription,
   invalidateUserMe,

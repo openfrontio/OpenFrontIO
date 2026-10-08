@@ -1,7 +1,7 @@
+import { GameUpdateType } from "@openfront/engine-api/game/GameUpdates";
+import { EventBus } from "@openfront/shared/EventBus";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { capturePagePin, resetPagePinForTests } from "../../src/client/PagePin";
-import { EventBus } from "../../src/core/EventBus";
-import { GameUpdateType } from "../../src/core/game/GameUpdates";
 
 // ClientGameRunner's server-message handling, driven through captured
 // callbacks: the lobby-phase onmessage joinLobby installs on the transport,
@@ -46,11 +46,9 @@ vi.mock("../../src/client/Utils", () => ({
   createCanvas: () => document.createElement("canvas"),
   homeHref: () => "/",
 }));
-vi.mock("../../src/core/game/TerrainMapLoader", () => ({
-  loadTerrainMap: vi.fn(async () => ({}) as never),
-}));
 vi.mock("../../src/client/TerrainMapFileLoader", () => ({
   terrainMapFileLoader: {},
+  loadCachedTerrainMap: vi.fn(async () => ({}) as never),
 }));
 vi.mock("../../src/client/hud/GameRenderer", () => ({
   createRenderer: vi.fn(),
@@ -85,7 +83,7 @@ vi.mock("../../src/client/view", () => ({
   GameView: class {},
   PlayerView: class {},
 }));
-vi.mock("../../src/core/worker/WorkerClient", () => ({
+vi.mock("../../src/client/WorkerClient", () => ({
   WorkerClient: class {},
 }));
 vi.mock("../../src/client/Transport", async (importOriginal) => {
@@ -108,9 +106,9 @@ import {
   joinLobby,
   LobbyConfig,
 } from "../../src/client/ClientGameRunner";
+import { loadCachedTerrainMap } from "../../src/client/TerrainMapFileLoader";
 import { SendHashEvent } from "../../src/client/Transport";
 import { reloadForUpdate } from "../../src/client/Utils";
-import { loadTerrainMap } from "../../src/core/game/TerrainMapLoader";
 
 function makeLobbyConfig(withStartInfo: boolean): LobbyConfig {
   return {
@@ -217,12 +215,7 @@ describe("joinLobby lobby-phase messages", () => {
     });
 
     await expect(result.prestart).resolves.toBeUndefined();
-    expect(loadTerrainMap).toHaveBeenCalledWith(
-      "world",
-      "medium",
-      expect.anything(),
-      false,
-    );
+    expect(loadCachedTerrainMap).toHaveBeenCalledWith("world", "medium");
   });
 
   it("shows the connection-error modal when start carries no gameStartInfo", async () => {

@@ -1,10 +1,10 @@
+import { GameMode } from "@openfront/engine-api/game/GameTypes";
+import { EventBus } from "@openfront/shared/EventBus";
 import { GameLeftSidebar } from "../src/client/hud/layers/GameLeftSidebar";
 import type { PlayerStats } from "../src/client/hud/layers/PlayerStats";
 import type { TeamStats } from "../src/client/hud/layers/TeamStats";
+import { UserSettings } from "../src/client/UserSettings";
 import type { GameView, PlayerView } from "../src/client/view";
-import { EventBus } from "../src/core/EventBus";
-import { GameMode } from "../src/core/game/Game";
-import { UserSettings } from "../src/core/game/UserSettings";
 
 describe("GameLeftSidebar", () => {
   beforeEach(() => {

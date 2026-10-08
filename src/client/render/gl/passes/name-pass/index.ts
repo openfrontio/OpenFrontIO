@@ -16,7 +16,7 @@
  *   - types          — shared interfaces + constants
  */
 
-import type { Config } from "../../../../../core/configuration/Config";
+import type { Config } from "@openfront/engine-lib/configuration/Config";
 import type {
   NameEntry,
   PlayerState,
@@ -28,7 +28,7 @@ import { PlayerTypeEnum } from "../../../types";
 import type { RenderSettings } from "../../RenderSettings";
 import { createFullscreenQuad } from "../../utils/GlUtils";
 
-import { renderTroops } from "../../../../Utils";
+import { renderTroops } from "@openfront/engine-lib/Format";
 import type { GlyphTables } from "./AtlasData";
 import {
   buildEmojiLookup,
