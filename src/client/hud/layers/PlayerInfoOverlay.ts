@@ -35,6 +35,7 @@ import {
   getPlayerIcons,
   IMAGE_ICON_KIND,
 } from "../PlayerIcons";
+import { ShowPlayerChatEvent } from "./ChatModal";
 import { ShowPlayerEmojiMenuEvent } from "./EmojiTable";
 import { ImmunityBarVisibleEvent } from "./ImmunityTimer";
 import { CloseRadialMenuEvent } from "./RadialMenu";
@@ -45,6 +46,7 @@ const allianceIcon = assetUrl("images/AllianceIcon.svg");
 const traitorIcon = assetUrl("images/TraitorIcon.svg");
 const warshipIcon = assetUrl("images/BattleshipIconWhite.svg");
 const emojiIcon = assetUrl("images/EmojiIconWhite.svg");
+const chatIcon = assetUrl("images/ChatIconWhite.svg");
 const cityIcon = assetUrl("images/CityIconWhite.svg");
 const factoryIcon = assetUrl("images/FactoryIconWhite.svg");
 const goldCoinIcon = assetUrl("images/GoldCoinIcon.svg");
@@ -105,10 +107,11 @@ export class PlayerInfoOverlay extends LitElement implements Controller {
 
   private userSettings = new UserSettings();
 
-  // The emoji button (and the 48px of panel width it needs) only shows on
-  // wide screens with a mouse: narrower, the wider panel covers other HUD like
-  // the leaderboard, and touch devices have no keyboard shortcut to show.
-  private showEmojiButton(): boolean {
+  // The chat and emoji buttons (and the 48px of panel width they need) only
+  // show on wide screens with a mouse: narrower, the wider panel covers other
+  // HUD like the leaderboard, and touch devices have no keyboard shortcut to
+  // show.
+  private showShortcutButtons(): boolean {
     return window.innerWidth >= 1200 && !Platform.isTouch;
   }
 
@@ -377,6 +380,31 @@ export class PlayerInfoOverlay extends LitElement implements Controller {
     return { fontSize, isAllianceWrapped };
   }
 
+  private renderShortcutButton(
+    icon: string,
+    title: string,
+    keybind: string | undefined,
+    onClick: () => void,
+  ) {
+    const key = keybind ? formatKeyForDisplay(keybind) : "";
+    return html`<button
+      class="flex items-center gap-0.5 px-1 py-0.5 border rounded-md border-gray-500 hover:bg-white/10 cursor-pointer"
+      title=${title}
+      @click=${(e: MouseEvent) => {
+        e.stopPropagation();
+        onClick();
+        this.hide();
+      }}
+    >
+      <img src=${icon} alt="" class="w-4 h-4 lg:w-5 lg:h-5" />
+      ${key
+        ? html`<span class="text-xs font-mono text-gray-300" translate="no"
+            >${key}</span
+          >`
+        : ""}
+    </button>`;
+  }
+
   private renderPlayerInfo(player: PlayerView) {
     const myPlayer = this.game.myPlayer();
     const isFriendly = myPlayer?.isFriendly(player);
@@ -474,31 +502,27 @@ export class PlayerInfoOverlay extends LitElement implements Controller {
       ></span>`;
     }
 
-    const emojiKey = formatKeyForDisplay(
-      this.userSettings.keybinds(Platform.isMac).emojiMenu,
-    );
+    const keybinds = this.userSettings.keybinds(Platform.isMac);
 
     return html`
       <div class="flex items-start gap-1 lg:gap-2 p-1 lg:p-1.5">
-        ${myPlayer && this.showEmojiButton()
-          ? html`<button
-              class="flex items-center gap-0.5 self-center shrink-0 px-1 py-0.5 border rounded-md border-gray-500 hover:bg-white/10 cursor-pointer"
-              title=${translateText("player_panel.emotes")}
-              @click=${(e: MouseEvent) => {
-                e.stopPropagation();
-                this.eventBus.emit(new ShowPlayerEmojiMenuEvent(player));
-                this.hide();
-              }}
-            >
-              <img src=${emojiIcon} alt="" class="w-4 h-4 lg:w-5 lg:h-5" />
-              ${emojiKey
-                ? html`<span
-                    class="text-xs font-mono text-gray-300"
-                    translate="no"
-                    >${emojiKey}</span
-                  >`
+        ${myPlayer && this.showShortcutButtons()
+          ? html`<div class="flex flex-col gap-1 self-center shrink-0">
+              ${player !== myPlayer
+                ? this.renderShortcutButton(
+                    chatIcon,
+                    translateText("player_panel.chat"),
+                    keybinds.quickChat,
+                    () => this.eventBus.emit(new ShowPlayerChatEvent(player)),
+                  )
                 : ""}
-            </button>`
+              ${this.renderShortcutButton(
+                emojiIcon,
+                translateText("player_panel.emotes"),
+                keybinds.emojiMenu,
+                () => this.eventBus.emit(new ShowPlayerEmojiMenuEvent(player)),
+              )}
+            </div>`
           : ""}
         <!-- Left: Gold & Troop bar -->
         <div class="flex flex-col gap-1 shrink-0 w-28 md:w-36">
@@ -704,7 +728,7 @@ export class PlayerInfoOverlay extends LitElement implements Controller {
         @contextmenu=${(e: MouseEvent) => e.preventDefault()}
       >
         <div
-          class="bg-gray-800/92 backdrop-blur-sm shadow-xs min-[1200px]:rounded-lg sm:rounded-b-lg shadow-lg text-white text-lg lg:text-base w-full ${this.showEmojiButton()
+          class="bg-gray-800/92 backdrop-blur-sm shadow-xs min-[1200px]:rounded-lg sm:rounded-b-lg shadow-lg text-white text-lg lg:text-base w-full ${this.showShortcutButtons()
             ? "sm:w-[548px]"
             : "sm:w-[500px]"} overflow-hidden ${containerClasses}"
           @mouseenter=${this.onPanelEnter}

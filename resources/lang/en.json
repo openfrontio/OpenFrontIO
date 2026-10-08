@@ -188,16 +188,17 @@
     "unavailable": "Username management isn't available on this account yet."
   },
   "chat": {
+    "all_phrases": "All phrases",
     "attack": {
       "attack": "Attack [P1]!",
       "betray": "Betray [P1]!",
       "build_sams": "Build SAMs!",
       "build_warships": "Build Warships!",
+      "crown": "Attack the crown!",
       "finish": "Let's finish off [P1]!",
       "focus": "Focus fire on [P1]!",
       "mirv": "Launch a MIRV at [P1]!"
     },
-    "build": "Build your message...",
     "cat": {
       "attack": "Attack",
       "defend": "Defend",
@@ -206,7 +207,6 @@
       "misc": "Miscellaneous",
       "warnings": "Warnings"
     },
-    "category": "Category",
     "defend": {
       "ally": "[P1] is my ally!",
       "build_posts": "Build Defense Posts!",
@@ -256,11 +256,29 @@
       "strategy": "Nice strategy!",
       "team_up": "Let’s team up against [P1]!"
     },
-    "phrase": "Phrase",
-    "player": "Player",
     "search": "Search player...",
-    "send": "Send",
-    "sort_by_territory": "Sort by territory",
+    "short": {
+      "greet": {
+        "ruining_games": "Ruining our games"
+      },
+      "help": {
+        "sorry_attack": "Sorry for attacking!",
+        "troops_frontlines": "Troops to the front!"
+      },
+      "misc": {
+        "coastline": "Let me have a coast",
+        "join_discord": "Join the Discord!",
+        "pr": "Is my PR merged yet?"
+      },
+      "warnings": {
+        "mirv_ready": "[P1] can MIRV now!",
+        "pirating": "[P1] is pirating",
+        "saving_for_mirv": "[P1] saving for MIRV",
+        "snowballing": "[P1] is snowballing",
+        "stalemate": "Peace? Stalemate.",
+        "stop_trading_all": "Stop all trading!"
+      }
+    },
     "title": "Quick Chat",
     "to": "Sent {user}: {msg}",
     "warnings": {
@@ -274,7 +292,6 @@
       "mirv_ready": "[P1] has enough gold to launch a MIRV!",
       "mirv_soon": "[P1] can launch a MIRV soon!",
       "no_allies": "[P1] has no allies.",
-      "number1_warning": "The #1 player will win soon unless we team up!",
       "pirating": "[P1] is pirating all of our trade!",
       "saving_for_mirv": "[P1] is saving up to launch a MIRV.",
       "snowballing": "[P1] is snowballing too fast!",
@@ -1079,6 +1096,7 @@
     "action_game_speed": "Game speed down / up (single player)",
     "action_move_camera": "Move camera",
     "action_pause_game": "Pause / Resume game",
+    "action_quick_chat": "Open quick chat",
     "action_ratio_change": "Decrease/Increase attack ratio",
     "action_reset_gfx": "Reset graphics",
     "action_warship_multiselect": "Select multiple warships (drag to draw selection box)",
@@ -2373,6 +2391,8 @@
     "performance_overlay_desc": "Toggle the performance overlay. When enabled, the performance overlay will be displayed. Press shift-D during game to toggle.",
     "performance_overlay_label": "Performance Overlay",
     "press_a_key": "Press a key",
+    "quick_chat": "Quick Chat",
+    "quick_chat_desc": "Open quick chat for the player whose tile is under your cursor.",
     "render_debug_gui": "Render Debug GUI",
     "render_debug_gui_desc": "Toggle the renderer tuning panel",
     "replay_viewer_desc": "Open replays with rewind controls. Off opens the classic replay",
