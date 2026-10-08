@@ -367,8 +367,11 @@ function customInfoIcon(
 /** Bottom-right lock: red and closed when the viewer can't join, green and open when they can. */
 export function trustLockIcon(
   viewerTrusted: boolean,
-  tooltipTitle: string = translateText("public_lobby.trusted_tooltip_title"),
-  position: string = "bottom-2 right-2",
+  {
+    tooltipTitle = translateText("public_lobby.trusted_tooltip_title"),
+    position = "bottom-2 right-2",
+    small = false,
+  }: { tooltipTitle?: string; position?: string; small?: boolean } = {},
 ): TemplateResult {
   const label = translateText(
     viewerTrusted
@@ -376,9 +379,9 @@ export function trustLockIcon(
       : "public_lobby.trusted_locked",
   );
   return html`<span
-    class="${BADGE} group/trust absolute ${position} flex items-center px-1.5 py-1 ${viewerTrusted
-      ? "text-green-400"
-      : "text-red-400"}"
+    class="${BADGE} group/trust absolute ${position} flex items-center ${small
+      ? "px-1 py-0.5"
+      : "px-1.5 py-1"} ${viewerTrusted ? "text-green-400" : "text-red-400"}"
     aria-label=${label}
     data-trust=${viewerTrusted ? "unlocked" : "locked"}
   >
@@ -390,7 +393,7 @@ export function trustLockIcon(
       <span class="text-white/80">${label}</span>
     </span>
     <svg
-      class="size-4"
+      class=${small ? "size-[11px]" : "size-4"}
       viewBox="0 0 20 20"
       fill="currentColor"
       aria-hidden="true"

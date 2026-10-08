@@ -714,14 +714,16 @@ export class GameModeSelector extends LitElement {
             true,
             // Ranked admits trusted accounts only. A trusted viewer gets the
             // green open lock; anyone else meets the red locks and the trust
-            // popup inside the ranked modal. On narrow (mobile) buttons the
-            // card pads its right side so the label clears the lock.
+            // popup inside the ranked modal. Small, so it clears the label on
+            // narrow (mobile) buttons.
             this.viewerTrusted
-              ? trustLockIcon(
-                  true,
-                  translateText("mode_selector.ranked_trust_tooltip_title"),
-                  "bottom-1 right-1",
-                )
+              ? trustLockIcon(true, {
+                  tooltipTitle: translateText(
+                    "mode_selector.ranked_trust_tooltip_title",
+                  ),
+                  position: "top-1 right-1",
+                  small: true,
+                })
               : nothing,
           )}
           ${this.renderSmallActionCard(
@@ -953,10 +955,7 @@ export class GameModeSelector extends LitElement {
         @click=${onClick}
         ?disabled=${!this.inputValid}
         aria-disabled=${blocked}
-        class="relative flex items-center justify-center w-full h-full rounded-lg ${bgClass} ${adornment ===
-        nothing
-          ? ""
-          : "pr-7 sm:pr-0"} transition-all duration-200 text-sm lg:text-base font-medium text-white uppercase tracking-wider text-center ${!this
+        class="relative flex items-center justify-center w-full h-full rounded-lg ${bgClass} transition-all duration-200 text-sm lg:text-base font-medium text-white uppercase tracking-wider text-center ${!this
           .inputValid
           ? DISABLED
           : blocked

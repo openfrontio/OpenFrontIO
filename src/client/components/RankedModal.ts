@@ -167,10 +167,11 @@ export class RankedModal extends BaseModal {
     // Ranked admits trusted accounts only: a green open lock when the
     // player's account is trusted, a red closed one otherwise.
     const lock = this.trustKnown()
-      ? trustLockIcon(
-          viewerIsTrusted(this.userMeResponse),
-          translateText("mode_selector.ranked_trust_tooltip_title"),
-        )
+      ? trustLockIcon(viewerIsTrusted(this.userMeResponse), {
+          tooltipTitle: translateText(
+            "mode_selector.ranked_trust_tooltip_title",
+          ),
+        })
       : "";
     return html`
       <button
