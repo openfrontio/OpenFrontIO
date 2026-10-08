@@ -231,9 +231,7 @@ export class ProfileProgression extends LitElement {
     }, TRACK_WAIT_MS);
     const [config, me, trackModule] = await Promise.all([
       this.loadConfig().catch(() => false as const),
-      publicId === null
-        ? Promise.resolve(false as const)
-        : this.loadUserMe().catch(() => false as const),
+      this.loadOwnAccount(publicId),
       this.loadTrackModule().catch((err: unknown) => {
         console.warn("ProfileProgression: reward track failed to load", err);
         return null;
@@ -252,6 +250,20 @@ export class ProfileProgression extends LitElement {
         ? { config, rewards, model: trackModule.rewardTrackModel }
         : null;
     this.ready = true;
+  }
+
+  // /users/@me when the viewer is this player, else false or another
+  // player's account. The page's copy is cached from load and misses the
+  // games played since, and a passed level with no reward row reads as
+  // claimed, so on the player's own profile it is read afresh.
+  private async loadOwnAccount(
+    publicId: string | null,
+  ): Promise<Awaited<ReturnType<typeof getUserMe>>> {
+    if (publicId === null) return false;
+    const cached = await this.loadUserMe().catch(() => false as const);
+    if (cached === false || cached.player.publicId !== publicId) return cached;
+    invalidateUserMe();
+    return this.loadUserMe().catch(() => false as const);
   }
 
   // Claims this run's level rewards one by one — never another kind of

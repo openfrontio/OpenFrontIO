@@ -684,6 +684,36 @@ describe("<profile-progression> with the track", () => {
     expect(el.querySelectorAll("[data-ready]")).toHaveLength(3);
   });
 
+  it("reads the owner's rewards afresh, not the page's cached account", async () => {
+    // The page's copy is from before levels 45-47 were reached: it has no
+    // rows for them, which would read as claimed.
+    const stale = userMe([]);
+    const fresh = userMe(ownerRewards());
+    let reads = 0;
+    const el = document.createElement(
+      "profile-progression",
+    ) as ProfileProgression;
+    el.loadConfig = async () => config();
+    el.loadUserMe = async () => (++reads === 1 ? stale : fresh);
+    el.describeCosmetic = describeCosmetic;
+    el.publicId = "wonder01";
+    el.popKey = `test-${popKey++}`;
+    el.progress = P3;
+    document.body.appendChild(el);
+    await vi.waitFor(async () => {
+      await el.updateComplete;
+      expect(el.querySelector("[data-track-claim]")).not.toBeNull();
+    });
+    expect(invalidateUserMeMock).toHaveBeenCalledTimes(1);
+    expect(reads).toBe(2);
+    expect(el.querySelectorAll("[data-ready]")).toHaveLength(3);
+  });
+
+  it("doesn't re-read the account for someone else's profile", async () => {
+    await mount({ me: userMe(ownerRewards(), "someone-else") });
+    expect(invalidateUserMeMock).not.toHaveBeenCalled();
+  });
+
   it("leaves the track out on a config without rewards", async () => {
     const el = document.createElement(
       "profile-progression",
