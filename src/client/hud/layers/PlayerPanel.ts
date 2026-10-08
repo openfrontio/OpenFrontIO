@@ -9,13 +9,17 @@ import {
 } from "@openfront/engine-api/game/GameTypes";
 import { Emoji, flattenedEmojiTable } from "@openfront/engine-api/Schemas";
 import { renderNumber, renderTroops } from "@openfront/engine-lib/Format";
+import type { UserMeResponse } from "@openfront/shared/ApiSchemas";
 import { assetUrl } from "@openfront/shared/AssetUrls";
 import { EventBus } from "@openfront/shared/EventBus";
-import type { LevelBadge } from "@openfront/shared/LevelBadgeWire";
+import {
+  type LevelBadge,
+  packLevelBadge,
+} from "@openfront/shared/LevelBadgeWire";
 import { html, LitElement } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import Countries from "resources/countries.json" with { type: "json" };
-import { fetchLobbyListed } from "../../Api";
+import { fetchLobbyListed, getUserMe } from "../../Api";
 import "../../components/LevelBadge";
 import { actionButton } from "../../components/ui/ActionButton";
 import "../../components/ui/Divider";
@@ -57,6 +61,18 @@ const startTradingIcon = assetUrl("images/TradingIconWhite.svg");
 const traitorIcon = assetUrl("images/TraitorIconLightRed.svg");
 const breakAllianceIcon = assetUrl("images/TraitorIconWhite.svg");
 
+// The viewer's own badge from their /users/@me progress. Shown even when they
+// hide their level from others, as their profile does.
+export function ownLevelBadgeFrom(
+  me: UserMeResponse | false,
+): LevelBadge | undefined {
+  const progress = me === false ? undefined : me.player.progress;
+  if (progress === undefined) return undefined;
+  const { level, prestige, legend } = progress;
+  const badge = { level, prestige, legend };
+  return packLevelBadge(badge) === undefined ? undefined : badge;
+}
+
 @customElement("player-panel")
 export class PlayerPanel extends LitElement implements Controller {
   public g: GameView;
@@ -86,6 +102,9 @@ export class PlayerPanel extends LitElement implements Controller {
   // Whether this game is a publicly listed lobby. Kept out of
   // GameStartInfo (never touches records), so it's fetched from the worker.
   @state() private gameListed = false;
+  // Fallback for the viewer's own badge when this tab never saw the lobby
+  // roster (a refresh or late join goes straight into the game).
+  private ownLevelBadge: LevelBadge | undefined;
 
   setRole(role: string | null): void {
     this.playerRole = role;
@@ -138,6 +157,11 @@ export class PlayerPanel extends LitElement implements Controller {
         this.gameListed = listed;
       });
     }
+
+    // Memoised: normally answered from the profile loaded at sign-in.
+    void getUserMe().then((me) => {
+      this.ownLevelBadge = ownLevelBadgeFrom(me);
+    });
   }
 
   async tick() {
@@ -571,16 +595,20 @@ export class PlayerPanel extends LitElement implements Controller {
     `;
   }
 
-  // The level badge from the lobby roster, for human players only. Hidden for
-  // anyone but the viewer's own player while anonymous names are on: their
-  // name is anonymized then (PlayerView.displayName), and the badge belongs
-  // to the real one.
+  // The level badge from the lobby roster, for human players only; the
+  // viewer's own falls back to their /users/@me. Hidden for anyone but the
+  // viewer's own player while anonymous names are on: their name is
+  // anonymized then (PlayerView.displayName), and the badge belongs to the
+  // real one.
   private levelBadgeFor(other: PlayerView): LevelBadge | undefined {
     if (other.type() !== PlayerType.Human) return undefined;
     const clientID = other.clientID();
     const isSelf = clientID !== null && clientID === this.g.myClientID();
     if (!isSelf && this.userSettings.anonymousNames()) return undefined;
-    return lobbyLevelBadge(this.g.gameID(), clientID);
+    return (
+      lobbyLevelBadge(this.g.gameID(), clientID) ??
+      (isSelf ? this.ownLevelBadge : undefined)
+    );
   }
 
   private renderIdentityRow(other: PlayerView, my: PlayerView) {

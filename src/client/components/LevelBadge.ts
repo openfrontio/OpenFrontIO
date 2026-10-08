@@ -178,7 +178,9 @@ export class LevelBadge extends LitElement implements StaggeredBadge {
 
   // With the `stagger` attribute (long lists): when many badges appear at
   // once, this one first holds its square empty and is drawn on a later
-  // frame (see LevelBadgeFill). Decided once, at its first render.
+  // frame (see LevelBadgeFill). Decided once, at its first render. The host
+  // is aria-hidden meanwhile, so a screen reader meets no run of unnamed
+  // elements.
   private waiting = false;
 
   createRenderRoot() {
@@ -199,14 +201,15 @@ export class LevelBadge extends LitElement implements StaggeredBadge {
   protected willUpdate(): void {
     if (!this.hasUpdated && this.hasAttribute("stagger") && shouldStagger()) {
       this.waiting = true;
+      this.setAttribute("aria-hidden", "true");
       queueBadge(this);
     }
   }
 
-  /** Draws a badge that is waiting its turn in a long list. */
   draw(): void {
     if (!this.waiting) return;
     this.waiting = false;
+    this.removeAttribute("aria-hidden");
     this.requestUpdate();
   }
 

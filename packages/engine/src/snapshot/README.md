@@ -8,13 +8,13 @@ scenarios, and replay seeking.
 ## API
 
 - `GameRunner.snapshot()` / `snapshotGame(game)`: uncompressed bytes, taken
-  between ticks.
+  between ticks. Callers gzip them if they want (the fixture test uses
+  `node:zlib`).
 - `createGameRunnerFromSnapshot(gameStart, bytes, ...)` /
   `restoreGame(bytes, deps)`: resume. Don't call `GameRunner.init()`; the
   first turn added afterwards is the turn for the snapshot's tick.
 - Worker: `WorkerClient.snapshot()`, and `new WorkerClient(start, clientID,
 snapshot)` to start from one.
-- `compressSnapshot` / `decompressSnapshot`: gzip via CompressionStream.
 - `readSnapshotHeader(bytes)`: tick, game id, writer's commit, and config,
   without restoring.
 
