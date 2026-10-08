@@ -99,6 +99,7 @@ export class WinModal extends LitElement implements Controller {
           <game-xp-panel
             .view=${this.xpView}
             .onScreen=${this.isVisible}
+            .gameType=${this.game?.config().gameConfig().gameType ?? null}
           ></game-xp-panel>
           ${this.innerHtml()}
         </div>

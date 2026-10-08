@@ -5,7 +5,11 @@ vi.mock("../../src/client/Utils", () => ({
     params ? `${key}:${JSON.stringify(params)}` : key,
 }));
 
-import type { GameXpEligible } from "@openfront/shared/ApiSchemas";
+import { GameType } from "@openfront/engine-api/game/GameTypes";
+import {
+  type GameXpEligible,
+  GameXpResponseSchema,
+} from "@openfront/shared/ApiSchemas";
 import {
   PastGameXpCard,
   type PastGameXpView,
@@ -70,9 +74,13 @@ const noLevelUp: GameXpEligible = {
 
 let card: PastGameXpCard | null = null;
 
-async function mount(view: PastGameXpView): Promise<PastGameXpCard> {
+async function mount(
+  view: PastGameXpView,
+  gameType: GameType | null = null,
+): Promise<PastGameXpCard> {
   card = document.createElement("past-game-xp-card") as PastGameXpCard;
   card.view = view;
+  card.gameType = gameType;
   document.body.appendChild(card);
   await card.updateComplete;
   return card;
@@ -253,6 +261,48 @@ describe("<past-game-xp-card>", () => {
     );
   });
 
+  it("tells a singleplayer game it doesn't earn XP, not that it couldn't be verified", async () => {
+    const unverified = {
+      gameId: "g1",
+      eligible: false as const,
+      reason: "unverified",
+    };
+    await mount({ kind: "result", data: unverified }, GameType.Singleplayer);
+    expect(q("[data-past-xp-note]")!.textContent).toBe(
+      "progression.ineligible_singleplayer",
+    );
+    card!.remove();
+    await mount({ kind: "result", data: unverified }, GameType.Private);
+    expect(q("[data-past-xp-note]")!.textContent).toBe(
+      "progression.ineligible_unverified",
+    );
+  });
+
+  it("shows XP no known source accounts for as its own line, so the lines add up", async () => {
+    // Scored when the first-game bonus was stored as `firstWinOfDay`.
+    const legacy = GameXpResponseSchema.parse({
+      ...noLevelUp,
+      breakdown: {
+        played: 50,
+        time: 100,
+        firstWinOfDay: 200,
+        subtotal: 350,
+        gamePermille: 1000,
+        subscriberPermille: 1000,
+        total: 350,
+      },
+    });
+    await mount({ kind: "result", data: legacy });
+    const lines = [...card!.querySelectorAll("[data-past-xp-line]")].map(
+      (l) => [l.getAttribute("data-past-xp-line"), l.textContent!.trim()],
+    );
+    expect(lines).toEqual([
+      ["played", expect.stringContaining('progression.xp_plus:{"xp":"50"}')],
+      ["time", expect.stringContaining('progression.xp_plus:{"xp":"100"}')],
+      ["other", expect.stringContaining('progression.xp_plus:{"xp":"200"}')],
+    ]);
+    expect(lines[2][1]).toContain("progression.line_other");
+  });
   it("notes a game the player left early", async () => {
     await mount({
       kind: "result",
