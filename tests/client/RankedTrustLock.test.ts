@@ -87,18 +87,17 @@ describe("Ranked button trust lock", () => {
     );
   });
 
-  it("shows a red closed lock for an untrusted viewer", async () => {
+  // The red locks and the trust popup live inside the ranked modal.
+  it("shows no lock for an untrusted viewer", async () => {
     const selector = await mount();
     await broadcast(selector, me("untrusted"));
-    const lock = rankedLock(selector);
-    expect(lock?.dataset.trust).toBe("locked");
-    expect(lock?.classList.contains("text-red-400")).toBe(true);
+    expect(rankedLock(selector)).toBeNull();
   });
 
-  it("shows a red closed lock when signed out", async () => {
+  it("shows no lock when signed out", async () => {
     const selector = await mount();
     await broadcast(selector, false);
-    expect(rankedLock(selector)?.dataset.trust).toBe("locked");
+    expect(rankedLock(selector)).toBeNull();
   });
 
   it("reads a broadcast that went out before it mounted", async () => {
@@ -108,7 +107,7 @@ describe("Ranked button trust lock", () => {
   });
 });
 
-describe("Ranked button trust popup", () => {
+describe("Ranked button opens the ranked modal regardless of trust", () => {
   let showPage: ReturnType<typeof vi.fn>;
 
   beforeEach(() => {
@@ -120,67 +119,24 @@ describe("Ranked button trust popup", () => {
     delete (window as unknown as { showPage?: unknown }).showPage;
   });
 
-  function rankedButton(selector: Selector): HTMLButtonElement {
+  async function clickRanked(selector: Selector): Promise<void> {
     const button = [
       ...selector.querySelectorAll<HTMLButtonElement>("button"),
     ].find((b) => b.textContent?.includes("mode_selector.ranked_title"));
     expect(button).toBeDefined();
-    return button!;
-  }
-
-  async function clickRanked(selector: Selector): Promise<void> {
-    rankedButton(selector).click();
+    button!.click();
     await selector.updateComplete;
   }
 
-  const dialog = (selector: Selector) =>
-    selector.querySelector("confirm-dialog") as
-      | (HTMLElement & { heading: string; message: string })
-      | null;
-
-  it("shows the ranked trust popup instead of opening ranked when untrusted", async () => {
+  it.each([
+    ["untrusted", me("untrusted")],
+    ["trusted", me("trusted")],
+    ["signed out", false],
+  ] as const)("opens it for a %s viewer", async (_, response) => {
     const selector = await mount();
-    await broadcast(selector, me("untrusted"));
-    await clickRanked(selector);
-    expect(showPage).not.toHaveBeenCalled();
-    expect(dialog(selector)?.heading).toBe(
-      "mode_selector.ranked_trust_required_title",
-    );
-    expect(dialog(selector)?.message).toBe(
-      "mode_selector.ranked_trust_required_body",
-    );
-  });
-
-  it("tells a signed-out viewer to sign in first", async () => {
-    const selector = await mount();
-    await broadcast(selector, false);
-    await clickRanked(selector);
-    expect(showPage).not.toHaveBeenCalled();
-    expect(dialog(selector)?.message).toBe(
-      "mode_selector.ranked_trust_required_body_signed_out",
-    );
-  });
-
-  it("closes the popup on dismiss", async () => {
-    const selector = await mount();
-    await broadcast(selector, me("untrusted"));
-    await clickRanked(selector);
-    dialog(selector)!.dispatchEvent(new CustomEvent("cancel"));
-    await selector.updateComplete;
-    expect(dialog(selector)).toBeNull();
-  });
-
-  it("opens ranked for a trusted viewer", async () => {
-    const selector = await mount();
-    await broadcast(selector, me("trusted"));
+    await broadcast(selector, response);
     await clickRanked(selector);
     expect(showPage).toHaveBeenCalledWith("page-ranked");
-    expect(dialog(selector)).toBeNull();
-  });
-
-  it("opens ranked before /users/@me has answered", async () => {
-    const selector = await mount();
-    await clickRanked(selector);
-    expect(showPage).toHaveBeenCalledWith("page-ranked");
+    expect(selector.querySelector("confirm-dialog")).toBeNull();
   });
 });

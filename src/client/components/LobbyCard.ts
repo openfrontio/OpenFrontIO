@@ -40,9 +40,32 @@ export function canJoinTrustedLobby(
 /** Where the trust popup is shown: a trusted-only lobby, or ranked. */
 export type TrustRequiredContext = "lobby" | "ranked";
 
-const TRUST_REQUIRED_KEYS: Record<TrustRequiredContext, string> = {
-  lobby: "public_lobby.trust_required",
-  ranked: "mode_selector.ranked_trust_required",
+const TRUST_REQUIRED_KEYS: Record<
+  TrustRequiredContext,
+  {
+    title: string;
+    body: string;
+    bodyCrazyGames: string;
+    bodySignedOut: string;
+    bodySignedOutCrazyGames: string;
+  }
+> = {
+  lobby: {
+    title: "public_lobby.trust_required_title",
+    body: "public_lobby.trust_required_body",
+    bodyCrazyGames: "public_lobby.trust_required_body_crazygames",
+    bodySignedOut: "public_lobby.trust_required_body_signed_out",
+    bodySignedOutCrazyGames:
+      "public_lobby.trust_required_body_signed_out_crazygames",
+  },
+  ranked: {
+    title: "mode_selector.ranked_trust_required_title",
+    body: "mode_selector.ranked_trust_required_body",
+    bodyCrazyGames: "mode_selector.ranked_trust_required_body_crazygames",
+    bodySignedOut: "mode_selector.ranked_trust_required_body_signed_out",
+    bodySignedOutCrazyGames:
+      "mode_selector.ranked_trust_required_body_signed_out_crazygames",
+  },
 };
 
 /**
@@ -57,16 +80,16 @@ export function trustRequiredDialog(
   onClose: () => void,
   context: TrustRequiredContext = "lobby",
 ): TemplateResult {
-  const prefix = TRUST_REQUIRED_KEYS[context];
+  const keys = TRUST_REQUIRED_KEYS[context];
   const body = crazyGamesSDK.isOnCrazyGames()
     ? signedIn
-      ? `${prefix}_body_crazygames`
-      : `${prefix}_body_signed_out_crazygames`
+      ? keys.bodyCrazyGames
+      : keys.bodySignedOutCrazyGames
     : signedIn
-      ? `${prefix}_body`
-      : `${prefix}_body_signed_out`;
+      ? keys.body
+      : keys.bodySignedOut;
   return html`<confirm-dialog
-    .heading=${translateText(`${prefix}_title`)}
+    .heading=${translateText(keys.title)}
     .message=${translateText(body)}
     variant="warning"
     .showClose=${true}
