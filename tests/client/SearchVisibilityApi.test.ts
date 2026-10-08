@@ -8,7 +8,7 @@ vi.mock("../../src/client/ClientEnv", async (importOriginal) => ({
   ...(await importOriginal<typeof import("../../src/client/ClientEnv")>()),
 }));
 
-import { setSearchVisibility } from "../../src/client/Api";
+import { setLevelVisibility, setSearchVisibility } from "../../src/client/Api";
 import { logOut } from "../../src/client/Auth";
 import { ClientEnv } from "../../src/client/ClientEnv";
 
@@ -108,5 +108,20 @@ describe("setSearchVisibility", () => {
       ok: false,
       code: "failed",
     });
+  });
+
+  it("shares a write path with setLevelVisibility but never its endpoint", async () => {
+    fetchSpy.mockImplementation(async () => response(200, { hidden: true }));
+
+    await setSearchVisibility(true);
+    await setLevelVisibility(false);
+
+    expect(fetchSpy).toHaveBeenCalledTimes(2);
+    const [[searchUrl, searchInit], [levelUrl, levelInit]] =
+      fetchSpy.mock.calls;
+    expect(String(searchUrl)).toMatch(/\/users\/@me\/search_visibility$/);
+    expect(JSON.parse(searchInit.body)).toEqual({ hidden: true });
+    expect(String(levelUrl)).toMatch(/\/users\/@me\/level_visibility$/);
+    expect(JSON.parse(levelInit.body)).toEqual({ hidden: false });
   });
 });

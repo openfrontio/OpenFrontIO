@@ -472,13 +472,9 @@ export const UserMeResponseSchema = z.object({
 });
 export type UserMeResponse = z.infer<typeof UserMeResponseSchema>;
 
-// PUT /users/@me/level_visibility { hidden } — the stored setting, echoed.
-export const LevelVisibilityResponseSchema = z.object({
-  hidden: z.boolean(),
-});
-
-// PUT /users/@me/search_visibility { hidden } — the stored setting, echoed.
-export const SearchVisibilityResponseSchema = z.object({
+// PUT /users/@me/level_visibility and /users/@me/search_visibility { hidden }
+// — the stored setting, echoed.
+export const VisibilityResponseSchema = z.object({
   hidden: z.boolean(),
 });
 export type UserSubscription = NonNullable<

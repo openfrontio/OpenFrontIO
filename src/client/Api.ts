@@ -9,7 +9,6 @@ import {
   IdentityTokenAudiencesResponseSchema,
   IdentityTokenResponse,
   IdentityTokenResponseSchema,
-  LevelVisibilityResponseSchema,
   NewsItemSchema,
   PaymentsCheckoutResponse,
   PaymentsCheckoutResponseSchema,
@@ -35,7 +34,6 @@ import {
   PutUsernameResponseSchema,
   RankedLeaderboardResponse,
   RankedLeaderboardResponseSchema,
-  SearchVisibilityResponseSchema,
   SteamFinalizeResponseSchema,
   SteamOrderResolution,
   StreamsFeedSchema,
@@ -45,6 +43,7 @@ import {
   TribeStatsResponseSchema,
   UserMeResponse,
   UserMeResponseSchema,
+  VisibilityResponseSchema,
 } from "@openfront/shared/ApiSchemas";
 import {
   AnalyticsRecord,
@@ -411,7 +410,7 @@ export async function setMarketingConsent(
   }
 }
 
-export type SetLevelVisibilityResult =
+export type SetVisibilityResult =
   // 200: the stored setting, as the server echoes it.
   | { ok: true; hidden: boolean }
   // 401: the session is gone; logOut() has already run.
@@ -420,14 +419,16 @@ export type SetLevelVisibilityResult =
   // beyond "try again".
   | { ok: false; code: "failed" };
 
-// PUT /users/@me/level_visibility { hidden } — "hide my level". Idempotent:
-// the body is the desired state. Invalidates the cached /users/@me on success
-// so the next read reflects it.
-export async function setLevelVisibility(
+// PUT /users/@me/<setting> { hidden }: the one write path behind every privacy
+// toggle, so each setter differs only in its endpoint. Idempotent: the body is
+// the desired state. Invalidates the cached /users/@me on success so the next
+// read reflects it.
+async function putVisibility(
+  setting: "level_visibility" | "search_visibility",
   hidden: boolean,
-): Promise<SetLevelVisibilityResult> {
+): Promise<SetVisibilityResult> {
   try {
-    const response = await fetch(`${getApiBase()}/users/@me/level_visibility`, {
+    const response = await fetch(`${getApiBase()}/users/@me/${setting}`, {
       method: "PUT",
       headers: {
         "Content-Type": "application/json",
@@ -441,73 +442,38 @@ export async function setLevelVisibility(
     }
     if (!response.ok) {
       console.error(
-        "setLevelVisibility: request failed",
+        `PUT ${setting}: request failed`,
         response.status,
         response.statusText,
       );
       return { ok: false, code: "failed" };
     }
-    const parsed = LevelVisibilityResponseSchema.safeParse(
-      await response.json(),
-    );
+    const parsed = VisibilityResponseSchema.safeParse(await response.json());
     if (!parsed.success) {
-      console.error("setLevelVisibility: Zod validation failed", parsed.error);
+      console.error(`PUT ${setting}: Zod validation failed`, parsed.error);
       return { ok: false, code: "failed" };
     }
     invalidateUserMe();
     return { ok: true, hidden: parsed.data.hidden };
   } catch (e) {
-    console.error("setLevelVisibility: request failed", e);
+    console.error(`PUT ${setting}: request failed`, e);
     return { ok: false, code: "failed" };
   }
 }
 
-export type SetSearchVisibilityResult = SetLevelVisibilityResult;
-
-// PUT /users/@me/search_visibility { hidden } — "keep my profile out of search
-// engines" (the public profile page is served noindex). Idempotent: the body is
-// the desired state. Invalidates the cached /users/@me on success so the next
-// read reflects it.
-export async function setSearchVisibility(
+// "Hide my level".
+export function setLevelVisibility(
   hidden: boolean,
-): Promise<SetSearchVisibilityResult> {
-  try {
-    const response = await fetch(
-      `${getApiBase()}/users/@me/search_visibility`,
-      {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: await getAuthHeader(),
-        },
-        body: JSON.stringify({ hidden }),
-      },
-    );
-    if (response.status === 401) {
-      await logOut();
-      return { ok: false, code: "logged_out" };
-    }
-    if (!response.ok) {
-      console.error(
-        "setSearchVisibility: request failed",
-        response.status,
-        response.statusText,
-      );
-      return { ok: false, code: "failed" };
-    }
-    const parsed = SearchVisibilityResponseSchema.safeParse(
-      await response.json(),
-    );
-    if (!parsed.success) {
-      console.error("setSearchVisibility: Zod validation failed", parsed.error);
-      return { ok: false, code: "failed" };
-    }
-    invalidateUserMe();
-    return { ok: true, hidden: parsed.data.hidden };
-  } catch (e) {
-    console.error("setSearchVisibility: request failed", e);
-    return { ok: false, code: "failed" };
-  }
+): Promise<SetVisibilityResult> {
+  return putVisibility("level_visibility", hidden);
+}
+
+// "Keep my profile out of search engines" (the public profile page is served
+// noindex).
+export function setSearchVisibility(
+  hidden: boolean,
+): Promise<SetVisibilityResult> {
+  return putVisibility("search_visibility", hidden);
 }
 
 // The sites a player can generate an identity token for. Fails closed: any

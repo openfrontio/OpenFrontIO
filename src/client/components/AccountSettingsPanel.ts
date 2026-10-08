@@ -7,6 +7,7 @@ import {
   setLevelVisibility,
   setMarketingConsent,
   setSearchVisibility,
+  type SetVisibilityResult,
 } from "../Api";
 import { clearLocalSession, linkGoogle, sendMagicLink } from "../Auth";
 import { crazyGamesSDK } from "../CrazyGamesSDK";
@@ -22,6 +23,23 @@ import { googleLinkButton } from "./ui/GoogleLinkButton";
 
 type UserMePlayer = UserMeResponse["player"];
 type UserMeUser = UserMeResponse["user"];
+
+// The /users/@me privacy flags the Privacy card toggles, each with the request
+// that stores it and the alert shown when that request fails.
+type PrivacyField = "levelHidden" | "searchHidden";
+const PRIVACY_SETTINGS: Record<
+  PrivacyField,
+  { save: (hidden: boolean) => Promise<SetVisibilityResult>; failedKey: string }
+> = {
+  levelHidden: {
+    save: (hidden) => setLevelVisibility(hidden),
+    failedKey: "account_modal.level_visibility_failed",
+  },
+  searchHidden: {
+    save: (hidden) => setSearchVisibility(hidden),
+    failedKey: "account_modal.search_visibility_failed",
+  },
+};
 
 /**
  * Account settings: marketing-consent control (with the bind-an-email flow when
@@ -40,8 +58,11 @@ export class AccountSettingsPanel extends LitElement {
 
   @state() private email: string = "";
   @state() private consentBusy: boolean = false;
-  @state() private levelVisibilityBusy: boolean = false;
-  @state() private searchVisibilityBusy: boolean = false;
+  // Per setting, so one switch's request in flight never locks the other.
+  @state() private privacyBusy: Record<PrivacyField, boolean> = {
+    levelHidden: false,
+    searchHidden: false,
+  };
   @state() private deleteDialogOpen: boolean = false;
   @state() private deleteBusy: boolean = false;
 
@@ -160,8 +181,8 @@ export class AccountSettingsPanel extends LitElement {
               translateText("account_modal.level_visibility_title"),
               translateText("account_modal.level_visibility_desc"),
               !levelHidden,
-              this.levelVisibilityBusy,
-              (shown) => this.setLevelShown(shown),
+              this.privacyBusy.levelHidden,
+              (shown) => this.setPrivacyShown("levelHidden", shown),
             )}
             ${this.renderLevelPreview(!levelHidden)}`}
         ${searchHidden === undefined
@@ -175,8 +196,8 @@ export class AccountSettingsPanel extends LitElement {
                 translateText("account_modal.search_visibility_title"),
                 translateText("account_modal.search_visibility_desc"),
                 !searchHidden,
-                this.searchVisibilityBusy,
-                (shown) => this.setSearchShown(shown),
+                this.privacyBusy.searchHidden,
+                (shown) => this.setPrivacyShown("searchHidden", shown),
               )}
             </div>`}
       </div>
@@ -417,61 +438,35 @@ export class AccountSettingsPanel extends LitElement {
     this.requestUpdate();
   }
 
-  private async setLevelShown(shown: boolean): Promise<void> {
+  // One handler for every Privacy switch: the field, its busy flag, its
+  // request and its error text all come from PRIVACY_SETTINGS[field], so a
+  // toggle can only ever read and write its own setting.
+  private async setPrivacyShown(
+    field: PrivacyField,
+    shown: boolean,
+  ): Promise<void> {
     const player = this.player;
-    if (!player || player.levelHidden === undefined) return;
-    if (this.levelVisibilityBusy) return;
-    const previous = player.levelHidden;
+    if (!player || player[field] === undefined) return;
+    if (this.privacyBusy[field]) return;
+    const previous = player[field];
     const hidden = !shown;
     if (previous === hidden) return;
 
     // Optimistic, like the consent toggle: `player` is the cached /users/@me
     // profile, so this also keeps every other reader of it consistent. The
     // switch is disabled until the server answers; a failure puts it back.
-    this.levelVisibilityBusy = true;
-    player.levelHidden = hidden;
-    this.requestUpdate();
+    const setting = PRIVACY_SETTINGS[field];
+    this.privacyBusy = { ...this.privacyBusy, [field]: true };
+    player[field] = hidden;
 
-    const result = await setLevelVisibility(hidden);
-    player.levelHidden = result.ok ? result.hidden : previous;
-    this.levelVisibilityBusy = false;
-    this.requestUpdate();
-
-    // 401: logOut() has already run and the signed-out state takes over —
-    // nothing to tell the player here.
-    if (!result.ok && result.code === "failed") {
-      await showInGameAlert(
-        translateText("account_modal.level_visibility_failed"),
-      );
-    }
-  }
-
-  private async setSearchShown(shown: boolean): Promise<void> {
-    const player = this.player;
-    if (!player || player.searchHidden === undefined) return;
-    if (this.searchVisibilityBusy) return;
-    const previous = player.searchHidden;
-    const hidden = !shown;
-    if (previous === hidden) return;
-
-    // Optimistic, like the level toggle: `player` is the cached /users/@me
-    // profile. The switch is disabled until the server answers; a failure
-    // puts it back.
-    this.searchVisibilityBusy = true;
-    player.searchHidden = hidden;
-    this.requestUpdate();
-
-    const result = await setSearchVisibility(hidden);
-    player.searchHidden = result.ok ? result.hidden : previous;
-    this.searchVisibilityBusy = false;
-    this.requestUpdate();
+    const result = await setting.save(hidden);
+    player[field] = result.ok ? result.hidden : previous;
+    this.privacyBusy = { ...this.privacyBusy, [field]: false };
 
     // 401: logOut() has already run and the signed-out state takes over —
     // nothing to tell the player here.
     if (!result.ok && result.code === "failed") {
-      await showInGameAlert(
-        translateText("account_modal.search_visibility_failed"),
-      );
+      await showInGameAlert(translateText(setting.failedKey));
     }
   }
 

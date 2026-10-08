@@ -496,6 +496,31 @@ describe("AccountSettingsPanel — privacy card (search engines)", () => {
     expect(player.levelHidden).toBe(false);
   });
 
+  it("flipping the level switch writes only the level setting", async () => {
+    const { setSearchVisibility, setLevelVisibility } =
+      await import("../../../src/client/Api");
+    let answer!: (r: { ok: true; hidden: boolean }) => void;
+    vi.mocked(setLevelVisibility).mockImplementationOnce(
+      () => new Promise((r) => (answer = r)),
+    );
+    const player = makePlayer({ levelHidden: false, searchHidden: false });
+    await show(player);
+
+    levelSwitch()!.click();
+    await panel.updateComplete;
+
+    expect(setLevelVisibility).toHaveBeenCalledWith(true);
+    expect(setSearchVisibility).not.toHaveBeenCalled();
+    expect(levelSwitch()!.disabled).toBe(true);
+    expect(searchSwitch()!.disabled).toBe(false);
+    expect(searchSwitch()!.getAttribute("aria-checked")).toBe("true");
+
+    answer({ ok: true, hidden: true });
+    await settle();
+    expect(player.levelHidden).toBe(true);
+    expect(player.searchHidden).toBe(false);
+  });
+
   it("turning it back on PUTs hidden=false", async () => {
     const { setSearchVisibility } = await import("../../../src/client/Api");
     const player = makePlayer({ searchHidden: true });
