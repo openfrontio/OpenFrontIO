@@ -23,7 +23,7 @@ describe("MotionPlans", () => {
     const legacy = new Uint32Array([
       1,
       2,
-      12,
+      13,
       1,
       10,
       1,
