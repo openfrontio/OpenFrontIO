@@ -281,4 +281,38 @@ describe("ClientGameRunner death detection and save clearing", () => {
       expect(clearSoloSaveMock).toHaveBeenCalledWith("game123");
     });
   });
+
+  it("retains saved snapshot if runner is stopped while saveSoloSnapshot is in flight", async () => {
+    let resolveSave!: () => void;
+    saveSoloSnapshotMock.mockImplementation(
+      () =>
+        new Promise<void>((resolve) => {
+          resolveSave = resolve;
+        }),
+    );
+
+    const runner = createRunner(true);
+    runner.start();
+
+    // Trigger auto-snapshot at tick 50
+    workerCallback({
+      tick: 50,
+      updates: { [GameUpdateType.Hash]: [] },
+    });
+
+    await vi.waitFor(() => {
+      expect(saveSoloSnapshotMock).toHaveBeenCalledTimes(1);
+    });
+
+    clearSoloSaveMock.mockClear();
+
+    // Runner is stopped (e.g. player quits/navigates away)
+    (runner as any).isActive = false;
+
+    // saveSoloSnapshot completes
+    resolveSave();
+
+    await new Promise((r) => setTimeout(r, 20));
+    expect(clearSoloSaveMock).not.toHaveBeenCalled();
+  });
 });

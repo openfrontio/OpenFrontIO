@@ -21,7 +21,7 @@ import {
 import {
   readSnapshotHeader,
   restoreMapsFromSnapshot,
-} from "@openfront/engine/snapshot/GameSnapshot";
+} from "@openfront/engine-lib/snapshot/MapSnapshot";
 import { EventBus } from "@openfront/shared/EventBus";
 import { GameMapLoader, loadMapFiles } from "@openfront/shared/GameMapLoader";
 import { replacer } from "@openfront/shared/SharedUtil";
@@ -1146,7 +1146,7 @@ export class ClientGameRunner {
                 compressed,
                 snapshotTick,
               );
-              if (this.hasWinner || this.playerDied || !this.isActive) {
+              if (this.hasWinner || this.playerDied) {
                 clearSoloSave(gameID);
               }
             }

@@ -4,7 +4,7 @@ import {
   StampedIntent,
   Turn,
 } from "@openfront/engine-api/Schemas";
-import { readSnapshotHeader } from "@openfront/engine/snapshot/GameSnapshot";
+import { readSnapshotHeader } from "@openfront/engine-lib/snapshot/MapSnapshot";
 import { EventBus } from "@openfront/shared/EventBus";
 import {
   createPartialGameRecord,
