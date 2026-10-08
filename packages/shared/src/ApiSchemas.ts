@@ -362,15 +362,16 @@ export const UserMeResponseSchema = z.object({
     // then leaves the badge off their lobby roster entry. Optional so an older
     // API without the setting still parses — absent reads as shown, and the
     // account settings hide the Privacy card. A malformed value reads as
-    // absent too, like `progress`: the server parses this response at join,
-    // so a bad value must never fail the parse and reject the join.
-    levelHidden: z.boolean().optional().catch(undefined),
+    // hidden: the server parses this response at join, so a bad value must
+    // never fail the parse and reject the join, and when the setting can't be
+    // read the private answer is the safe one.
+    levelHidden: z.boolean().optional().catch(true),
     // "Show my profile in search engines" turned off: the public profile page
     // (openfront.io/player/<publicId>) is served noindex. It still opens for
     // anyone with the link, and link previews are unchanged. Optional so an
     // older API without the setting still parses — absent hides the row in
-    // account settings. A malformed value reads as absent, like levelHidden.
-    searchHidden: z.boolean().optional().catch(undefined),
+    // account settings. A malformed value reads as hidden, like levelHidden.
+    searchHidden: z.boolean().optional().catch(true),
     clans: z
       .array(
         z.object({

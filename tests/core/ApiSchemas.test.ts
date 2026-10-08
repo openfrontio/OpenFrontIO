@@ -124,7 +124,8 @@ describe("UserMeResponseSchema subscription.provider", () => {
 
 // "Show my profile in search engines" turned off. Optional so an older API
 // still parses (account settings then show no search row); a malformed value
-// reads as absent rather than failing the /users/@me parse, like levelHidden.
+// reads as hidden rather than failing the /users/@me parse, like levelHidden:
+// when the setting can't be read, the private answer is the safe one.
 describe("UserMeResponseSchema searchHidden", () => {
   const parseWith = (player: Record<string, unknown>) =>
     UserMeResponseSchema.parse({ user: {}, player });
@@ -142,15 +143,15 @@ describe("UserMeResponseSchema searchHidden", () => {
     expect(parseWith(samplePlayer()).player.searchHidden).toBeUndefined();
   });
 
-  it("reads a malformed value as absent instead of failing the parse", () => {
-    for (const bad of [null, "yes", 1, {}]) {
+  it("reads a malformed value as hidden instead of failing the parse", () => {
+    for (const bad of [null, "yes", "true", 1, 0, {}]) {
       const parsed = parseWith({
         ...samplePlayer(),
-        levelHidden: true,
+        levelHidden: false,
         searchHidden: bad,
       });
-      expect(parsed.player.searchHidden).toBeUndefined();
-      expect(parsed.player.levelHidden).toBe(true);
+      expect(parsed.player.searchHidden).toBe(true);
+      expect(parsed.player.levelHidden).toBe(false);
     }
   });
 });
