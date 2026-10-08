@@ -37,6 +37,9 @@ const atomBombIcon = assetUrl("images/NukeIconWhite.svg");
 const portIcon = assetUrl("images/PortIcon.svg");
 const samlauncherIcon = assetUrl("images/SamLauncherIconWhite.svg");
 const shieldIcon = assetUrl("images/ShieldIconWhite.svg");
+const oilMineIcon = assetUrl("images/OilMineIcon.svg");
+const goldMineIcon = assetUrl("images/GoldMineIcon.svg");
+const diamondMineIcon = assetUrl("images/DiamondMineIcon.svg");
 
 export interface BuildItemDisplay {
   unitType: PlayerBuildableUnitType;
@@ -116,6 +119,27 @@ export const buildTable: BuildItemDisplay[][] = [
       icon: factoryIcon,
       description: "build_menu.desc.factory",
       key: "unit_type.factory",
+      countable: true,
+    },
+    {
+      unitType: UnitType.OilMine,
+      icon: oilMineIcon,
+      description: "build_menu.desc.oil_mine",
+      key: "unit_type.oil_mine",
+      countable: true,
+    },
+    {
+      unitType: UnitType.GoldMine,
+      icon: goldMineIcon,
+      description: "build_menu.desc.gold_mine",
+      key: "unit_type.gold_mine",
+      countable: true,
+    },
+    {
+      unitType: UnitType.DiamondMine,
+      icon: diamondMineIcon,
+      description: "build_menu.desc.diamond_mine",
+      key: "unit_type.diamond_mine",
       countable: true,
     },
   ],
