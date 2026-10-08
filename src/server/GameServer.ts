@@ -11,6 +11,7 @@ import {
   AllPlayersStats,
   ClientID,
   GameConfig,
+  GameConfigPatch,
   GameID,
   Intent,
   StampedIntent,
@@ -358,8 +359,23 @@ export class GameServer {
       : undefined;
   }
 
-  public updateGameConfig(gameConfig: Partial<GameConfig>): void {
+  public updateGameConfig(gameConfig: GameConfigPatch): void {
     applyGameConfigPatch(this.gameConfig, gameConfig);
+    // A lowered cap (the admin bot can set one) may already be met; without
+    // this the lobby would wait for the next join to notice it is full.
+    this.markFullIfAutoStarting();
+  }
+
+  // Filling up starts host-less games (public, matchmade, admin bot) and
+  // listed lobbies. An unlisted lobby's player limit only turns players
+  // away: its host still starts it.
+  private markFullIfAutoStarting(): void {
+    if (
+      (this.creatorPersistentID === undefined || this.isListed()) &&
+      this.playerCount() >= (this.gameConfig.maxPlayers ?? Infinity)
+    ) {
+      this.hasReachedMaxPlayerCount = true;
+    }
   }
 
   // Dispatch a control/gameplay intent from either a websocket client or the
@@ -692,9 +708,7 @@ export class GameServer {
     this.ingress.attach(client);
     this.startLobbyInfoBroadcast();
 
-    if (this.playerCount() >= (this.gameConfig.maxPlayers ?? Infinity)) {
-      this.hasReachedMaxPlayerCount = true;
-    }
+    this.markFullIfAutoStarting();
 
     // A spectator arriving mid-game missed the start message.
     if (this.stage === "started") {

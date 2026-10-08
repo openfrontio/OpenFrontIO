@@ -1,7 +1,6 @@
 import { assetUrl } from "@openfront/shared/AssetUrls";
 import { Howl } from "howler";
-import { Platform } from "../Platform";
-import { AudioMixer } from "./AudioMixer";
+import { AudioMixer, streamsMusic } from "./AudioMixer";
 
 // Long enough not to sound like a cut, short enough that the lobby is not
 // still playing menu music when the map appears.
@@ -72,6 +71,11 @@ function rampGain(target: number, t: number): number {
  */
 export function startMenuMusic(mixer: AudioMixer): void {
   let theme: Howl | null = null;
+  // Whether the home page is the thing on screen, so the theme may start.
+  let armed = false;
+  // Whether the player has interacted, so a play() can survive the autoplay
+  // policy. Never cleared: activation is sticky for the life of the document.
+  let gestured = false;
   let teardownFadeIn: (() => void) | null = null;
 
   /**
@@ -182,45 +186,94 @@ export function startMenuMusic(mixer: AudioMixer): void {
 
   const start = () => {
     if (theme !== null) return;
+    // Nothing to hear on a channel the player has turned off, and on the Web
+    // Audio path starting means holding the whole theme decoded. The mixer
+    // subscription below starts it if music is turned on later, so declining
+    // here costs nothing.
+    if (!mixer.isAudible("music")) return;
     try {
       theme = new Howl({
-        src: [assetUrl("sounds/music/menu-theme.m4a")],
+        src: [assetUrl("sounds/music/menu-theme.mp3")],
         loop: true,
         volume: 0,
-        // Stream rather than decode 1.89 MB up front outside iOS -- see the
-        // gameplay track in SoundManager. This one starts on the player's first
-        // click, so the wait would land right when they are trying to use the
-        // page. On iOS, use Web Audio so volume and mute controls work.
-        html5: !Platform.isIOS,
+        // Stream rather than decode 2.2 MB up front -- see the gameplay track
+        // in SoundManager. This one starts on the player's first click, so the
+        // wait would land right when they are trying to use the page.
+        html5: streamsMusic(),
+        // Off with streaming, so nothing is fetched until the load() below.
+        preload: streamsMusic(),
       });
       // Armed before play(), so the "play" handler is on the Howl no matter
       // how quickly playback starts. Every start, including the re-arm after
       // "menu-restored" -- music slamming in on the way back from a lobby is
       // just as abrupt as it is on load.
       fadeIn(theme);
+      // play() queues behind a load but never starts one, so the theme would
+      // never be heard on the Web Audio path without this.
+      if (theme.state() === "unloaded") theme.load();
       theme.play();
     } catch (error) {
       console.warn("Failed to play menu theme", error);
     }
   };
 
+  // Records the interaction before starting, so a start declined for a silent
+  // channel still leaves the document activated for a later one.
+  const onGesture = () => {
+    gestured = true;
+    start();
+  };
+
   // Removing first keeps arm() idempotent, so a second "menu-restored" -- or
   // one arriving while the listeners are still up -- cannot stack a duplicate.
   const arm = () => {
     disarm();
-    document.addEventListener("pointerdown", start, { once: true });
-    document.addEventListener("keydown", start, { once: true });
+    document.addEventListener("pointerdown", onGesture, { once: true });
+    document.addEventListener("keydown", onGesture, { once: true });
+    armed = true;
   };
 
   // Both come off together. `once` only removes the listener that fired, so
   // after a pointerdown the keydown one is still live and would otherwise
   // start the menu theme over the top of a game.
   const disarm = () => {
-    document.removeEventListener("pointerdown", start);
-    document.removeEventListener("keydown", start);
+    armed = false;
+    document.removeEventListener("pointerdown", onGesture);
+    document.removeEventListener("keydown", onGesture);
   };
 
   arm();
+
+  /**
+   * Picks the theme up when the player turns music on, since start() declines
+   * on a silent channel and the gesture listeners are `once` -- so the click
+   * that opened the settings menu has already been spent.
+   *
+   * Three conditions, and all of them are load-bearing:
+   *
+   * `turnedOn` -- the channel went from silent to audible, rather than merely
+   * being notified. The mixer notifies this listener on every focus change
+   * too (followFocus -> applyAll -> applyTo), whatever muteOnBlur is set to,
+   * and alt-tabbing is not a request to start the music.
+   *
+   * `armed` -- between "game-starting" and "menu-restored" there is no menu to
+   * play over, and a slider move during a game would otherwise start the menu
+   * theme on top of the gameplay track.
+   *
+   * `gestured` -- a play() with nothing behind it is rejected by the autoplay
+   * policy, and Howler does not retry it on unlock. onPlayError still settles
+   * the Howl, so `theme` would be left non-null and the player's real first
+   * click would return early: the menu would stay silent until a lobby was
+   * joined and left.
+   */
+  let wasAudible = mixer.isAudible("music");
+  mixer.onChange((category) => {
+    if (category !== "music") return;
+    const audible = mixer.isAudible("music");
+    const turnedOn = audible && !wasAudible;
+    wasAudible = audible;
+    if (turnedOn && armed && gestured) start();
+  });
 
   document.addEventListener("game-starting", () => {
     disarm();
