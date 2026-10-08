@@ -358,6 +358,21 @@ export class EngineConfig extends Config {
           UnitType.Factory,
           UnitType.Port,
         );
+      case UnitType.OilMine:
+        return this.costWrapper(
+          (numUnits: number) => Math.min(1_000_000, pow2(numUnits) * 150_000),
+          UnitType.OilMine,
+        );
+      case UnitType.GoldMine:
+        return this.costWrapper(
+          (numUnits: number) => Math.min(1_000_000, pow2(numUnits) * 250_000),
+          UnitType.GoldMine,
+        );
+      case UnitType.DiamondMine:
+        return this.costWrapper(
+          (numUnits: number) => Math.min(1_000_000, pow2(numUnits) * 400_000),
+          UnitType.DiamondMine,
+        );
       case UnitType.TransportShip:
       case UnitType.Shell:
       case UnitType.SAMMissile:
@@ -646,6 +661,36 @@ export class EngineConfig extends Config {
       baseRate = 100n;
     }
     return BigInt(Math.floor(Number(baseRate) * multiplier));
+  }
+
+  mineIncomeInterval(): Tick {
+    return 50;
+  }
+
+  mineIncome(
+    type: UnitType,
+    level: number,
+    player: PlayerLike,
+  ): Gold {
+    const base = (() => {
+      switch (type) {
+        case UnitType.OilMine:
+          return 10_000;
+        case UnitType.GoldMine:
+          return 15_000;
+        case UnitType.DiamondMine:
+          return 25_000;
+        default:
+          throw new Error(`Unknown mine type: ${type}`);
+      }
+    })();
+    return BigInt(
+      Math.floor(
+        base *
+          Math.max(1, level) *
+          this.goldMultiplierFor(player),
+      ),
+    );
   }
 
   nukeSpeed(unitType: UnitType): number {
