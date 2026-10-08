@@ -1,4 +1,3 @@
-import { MapManifest } from "@openfront/engine-api/game/GameMapLoader";
 import {
   Difficulty,
   GameMapSize,
@@ -9,6 +8,7 @@ import {
   PlayerInfo,
   PlayerType,
 } from "@openfront/engine-api/game/GameTypes";
+import { MapManifest } from "@openfront/engine-api/game/MapFiles";
 import { GameConfig } from "@openfront/engine-api/Schemas";
 import { genTerrainFromBin } from "@openfront/engine-lib/game/TerrainMapLoader";
 import { EngineConfig } from "@openfront/engine/configuration/EngineConfig";

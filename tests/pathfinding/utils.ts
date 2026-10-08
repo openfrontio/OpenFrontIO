@@ -1,5 +1,4 @@
 import { TileRef } from "@openfront/engine-api/game/GameMap";
-import { MapManifest } from "@openfront/engine-api/game/GameMapLoader";
 import {
   Difficulty,
   GameMapSize,
@@ -8,6 +7,7 @@ import {
   GameType,
   PlayerInfo,
 } from "@openfront/engine-api/game/GameTypes";
+import { MapManifest } from "@openfront/engine-api/game/MapFiles";
 import { GameConfig } from "@openfront/engine-api/Schemas";
 import { genTerrainFromBin } from "@openfront/engine-lib/game/TerrainMapLoader";
 import { Game } from "@openfront/engine/game/Game";

@@ -48,12 +48,12 @@ vi.mock("../../src/client/Utils", () => ({
 }));
 
 import type { LobbyConfig } from "../../src/client/ClientGameRunner";
+import { SendKickPlayerIntentEvent } from "../../src/client/LobbyEvents";
 import {
   CancelAttackIntentEvent,
   SendAttackIntentEvent,
   SendDonateGoldIntentEvent,
   SendHashEvent,
-  SendKickPlayerIntentEvent,
   SendSpawnIntentEvent,
   SendWinnerEvent,
   Transport,

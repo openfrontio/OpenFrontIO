@@ -947,7 +947,7 @@ export class GameView implements GameLike {
     return this._map.waterVersion();
   }
   /** Map layers defined in the map's info.json, if any. */
-  layers(): import("@openfront/engine-api/game/GameMapLoader").MapLayer[] {
+  layers(): import("@openfront/engine-api/game/MapFiles").MapLayer[] {
     return this._mapData.layers ?? [];
   }
   isValidCoord(x: number, y: number): boolean {

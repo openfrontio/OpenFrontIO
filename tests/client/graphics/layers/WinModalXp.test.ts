@@ -53,6 +53,7 @@ vi.mock("../../../../src/client/CrazyGamesSDK", () => ({
   },
 }));
 
+import { GameType } from "@openfront/engine-api/game/GameTypes";
 import { GameUpdateType } from "@openfront/engine-api/game/GameUpdates";
 import { EventBus } from "@openfront/shared/EventBus";
 import type { GameXpPanel } from "../../../../src/client/components/GameXpPanel";
@@ -135,7 +136,12 @@ function stubXpEndpoint(answers: (() => Response)[]) {
 
 const notFound = () => new Response("", { status: 404 });
 
-function makeGame(opts: { ended: boolean; alive?: boolean; replay?: boolean }) {
+function makeGame(opts: {
+  ended: boolean;
+  alive?: boolean;
+  replay?: boolean;
+  gameType?: GameType;
+}) {
   const winUpdate = { winner: ["team", "Red"], allPlayersStats: {} };
   let delivered = false;
   return {
@@ -154,7 +160,10 @@ function makeGame(opts: { ended: boolean; alive?: boolean; replay?: boolean }) {
     },
     playerByClientID: () => undefined,
     config: () => ({
-      gameConfig: () => ({ rankedType: undefined }),
+      gameConfig: () => ({
+        rankedType: undefined,
+        gameType: opts.gameType ?? GameType.Public,
+      }),
       isReplay: () => opts.replay ?? false,
     }),
   } as unknown as GameView;
@@ -296,6 +305,27 @@ describe("WinModal XP section", () => {
     expect(panel()!.textContent!.trim()).toBe("progression.ineligible_generic");
   });
 
+  it("tells a singleplayer game it doesn't earn XP, not that it couldn't be verified", async () => {
+    stubXpEndpoint([
+      () => json({ gameId: GAME_ID, eligible: false, reason: "unverified" }),
+    ]);
+    await mount(makeGame({ ended: true, gameType: GameType.Singleplayer }));
+    await finishReveal();
+    expect(panel()!.textContent!.trim()).toBe(
+      "progression.ineligible_singleplayer",
+    );
+  });
+
+  it("still says a multiplayer game's results couldn't be verified", async () => {
+    stubXpEndpoint([
+      () => json({ gameId: GAME_ID, eligible: false, reason: "unverified" }),
+    ]);
+    await mount(makeGame({ ended: true, gameType: GameType.Public }));
+    await finishReveal();
+    expect(panel()!.textContent!.trim()).toBe(
+      "progression.ineligible_unverified",
+    );
+  });
   it("explains a left-early forfeit", async () => {
     stubXpEndpoint([
       () =>
@@ -752,6 +782,85 @@ describe("WinModal XP section", () => {
     expect(moments).toEqual(["5", "6", "7"]);
   });
 
+  it("celebrates a level-up from a level the player started full", async () => {
+    // A curve change left the player a full bar on level 9.
+    stubXpEndpoint([
+      () =>
+        json(
+          eligible({
+            before: { prestige: 0, level: 9, xpInLevel: 330, xpForNext: 330 },
+            after: {
+              ...eligible().after,
+              level: 10,
+              xpInLevel: 182,
+              xpForNext: 370,
+            },
+            levelsReached: [{ prestige: 0, level: 10 }],
+          }),
+        ),
+    ]);
+    await mount(makeGame({ ended: true }));
+    const badgeLevel = (sel: string) =>
+      (
+        panel()!.querySelector(`${sel} level-badge`) as HTMLElement & {
+          level: number;
+        }
+      ).level;
+    const milestoneSpace = () =>
+      panel()!
+        .querySelector("[data-xp-levelup]")!
+        .closest("[data-xp-collapsible]")!
+        .getAttribute("data-xp-collapsible");
+    // It starts on level 9, the milestone still to come.
+    expect(badgeLevel("[data-xp-current-badge]")).toBe(9);
+    expect(badgeLevel("[data-xp-next-badge]")).toBe(10);
+    expect(milestoneSpace()).toBe("closed");
+    const moments: string[] = [];
+    for (let i = 0; i < 400; i++) {
+      await settle(50);
+      const moment = panel()
+        ?.querySelector("[data-xp-caption-levelup]")
+        ?.getAttribute("data-xp-caption-levelup");
+      if (moment && moment !== moments[moments.length - 1]) {
+        moments.push(moment);
+      }
+      if (panel()?.getAttribute("data-xp-revealing") !== "true") break;
+    }
+    expect(moments).toEqual(["10"]);
+    expect(milestoneSpace()).toBe("open");
+    expect(badgeLevel("[data-xp-current-badge]")).toBe(10);
+  });
+
+  it("shows XP from a source it doesn't know as its own card, not spread over the others", async () => {
+    // Scored when the first-game bonus was stored as `firstWinOfDay`.
+    stubXpEndpoint([
+      () =>
+        json(
+          eligible({
+            breakdown: {
+              played: 50,
+              time: 100,
+              firstWinOfDay: 200,
+              subtotal: 350,
+              gamePermille: 1000,
+              subscriberPermille: 1000,
+              total: 350,
+            },
+          }),
+        ),
+    ]);
+    await mount(makeGame({ ended: true }));
+    await finishReveal();
+    const cards = [...panel()!.querySelectorAll("[data-xp-card]")].map((c) => [
+      c.querySelector("[data-xp-line]")!.getAttribute("data-xp-line"),
+      c.querySelector("[data-xp-card-value]")!.textContent!.trim(),
+    ]);
+    expect(cards).toEqual([
+      ["played", 'progression.xp_total:{"xp":"50"}'],
+      ["time", 'progression.xp_total:{"xp":"100"}'],
+      ["other", 'progression.xp_total:{"xp":"200"}'],
+    ]);
+  });
   it("skips to the end when the panel is tapped", async () => {
     stubXpEndpoint([() => json(eligible())]);
     await mount(makeGame({ ended: true }));

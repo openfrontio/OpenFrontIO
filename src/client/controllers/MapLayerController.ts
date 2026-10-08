@@ -6,12 +6,10 @@
  * so the game starts without blocking on layer PNGs.
  */
 
-import { GameMapLoader } from "@openfront/engine-api/game/GameMapLoader";
 import { GameMapSize, GameMapType } from "@openfront/engine-api/game/GameTypes";
-import {
-  loadLayerImages,
-  TerrainMapData,
-} from "@openfront/engine-lib/game/TerrainMapLoader";
+import { MapLayer } from "@openfront/engine-api/game/MapFiles";
+import { TerrainMapData } from "@openfront/engine-lib/game/TerrainMapLoader";
+import { GameMapLoader } from "@openfront/shared/GameMapLoader";
 import { Controller } from "../Controller";
 import { MapRenderer } from "../render/gl";
 import { UserSettings } from "../UserSettings";
@@ -30,32 +28,25 @@ export class MapLayerController implements Controller {
   init() {
     if (!this.gameMap.layers?.length) return;
 
-    if (this.gameMap.layerImages) {
-      // Images already loaded (e.g. from cache) — set up immediately.
-      this.view.setMapLayers(this.gameMap.layers, this.gameMap.layerImages);
-      this.applyVisibility();
-      this.applyAlpha();
-    } else {
-      // Layer images loaded off the critical path. Start fetching now;
-      // the renderer tolerates missing layers (warn + skip) until they
-      // arrive.
-      loadLayerImages(
-        this.gameMapType,
-        this.gameMapSize,
-        this.mapLoader,
-        this.gameMap.layers,
-      )
-        .then((images) => {
-          if (!this.abortSignal.aborted) {
-            this.view.setMapLayers(this.gameMap.layers!, images);
-            this.applyVisibility();
-            this.applyAlpha();
-          }
-        })
-        .catch((e) =>
-          console.warn("[MapLayerController] Failed to load layer images:", e),
-        );
-    }
+    // Layer images loaded off the critical path. Start fetching now;
+    // the renderer tolerates missing layers (warn + skip) until they
+    // arrive.
+    loadLayerImages(
+      this.gameMapType,
+      this.gameMapSize,
+      this.mapLoader,
+      this.gameMap.layers,
+    )
+      .then((images) => {
+        if (!this.abortSignal.aborted) {
+          this.view.setMapLayers(this.gameMap.layers!, images);
+          this.applyVisibility();
+          this.applyAlpha();
+        }
+      })
+      .catch((e) =>
+        console.warn("[MapLayerController] Failed to load layer images:", e),
+      );
   }
 
   private applyVisibility() {
@@ -82,4 +73,43 @@ export class MapLayerController implements Controller {
       }
     }
   }
+}
+
+/**
+ * Load layer PNG images for a map that already has layer definitions.
+ * For Compact maps, downsample to map4x dimensions to match the game map.
+ */
+async function loadLayerImages(
+  map: GameMapType,
+  mapSize: GameMapSize,
+  terrainMapFileLoader: GameMapLoader,
+  layers: MapLayer[],
+): Promise<Map<string, ImageBitmap>> {
+  const mapFiles = terrainMapFileLoader.getMapData(map);
+  const manifest = await mapFiles.manifest();
+  const images = new Map<string, ImageBitmap>();
+  const compactW =
+    mapSize === GameMapSize.Compact ? manifest.map4x.width : undefined;
+  const compactH =
+    mapSize === GameMapSize.Compact ? manifest.map4x.height : undefined;
+  await Promise.all(
+    layers.map(async (layer) => {
+      try {
+        let img = await mapFiles.layerPng(layer.id);
+        if (compactW !== undefined && compactH !== undefined) {
+          img = await createImageBitmap(img, {
+            resizeWidth: compactW,
+            resizeHeight: compactH,
+            resizeQuality: "high",
+          });
+        }
+        images.set(layer.id, img);
+      } catch (e) {
+        console.warn(
+          `[MapLoader] Failed to load layer "${layer.id}" for map ${map}: ${e}`,
+        );
+      }
+    }),
+  );
+  return images;
 }
