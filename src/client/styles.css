@@ -755,4 +755,4 @@ unit-display .tutorial-highlight::after {
   background: #ef4444;
 }
 
-@import "./styles/halloween.css";
+@import "./halloween.css";

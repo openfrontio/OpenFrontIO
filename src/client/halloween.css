@@ -105,14 +105,14 @@ body.halloween-theme:not(.in-game) #sidebar-menu {
 body.halloween-theme:not(.in-game) desktop-nav-bar img,
 body.halloween-theme:not(.in-game) mobile-nav-bar img,
 body.halloween-theme:not(.in-game) img[src*="OpenFrontLogo"] {
-  filter: hue-rotate(150deg) saturate(1.7) brightness(1.3) drop-shadow(0 0 10px rgba(255, 122, 0, 0.8)) !important;
+  filter: hue-rotate(150deg) saturate(1.7) brightness(1.3) drop-shadow(0 0 10px rgba(255, 122, 0, 0.8));
   animation: hw-candle-flicker 3.2s infinite ease-in-out !important;
 }
 
 /* Nav Bar Version Text */
 body.halloween-theme:not(.in-game) .l-header__highlightText {
   color: var(--hw-orange) !important;
-  text-shadow: var(--hw-orange-glow) !important;
+  text-shadow: var(--hw-orange-glow);
   animation: hw-candle-text-flicker 3.2s infinite ease-in-out !important;
 }
 
@@ -133,7 +133,7 @@ body.halloween-theme:not(.in-game) button.bg-blue-600,
 body.halloween-theme:not(.in-game) .btn-primary,
 body.halloween-theme:not(.in-game) #play-btn {
   background-color: #e65c00 !important;
-  color: #ffffff !important;
+  color: #000000 !important;
   font-weight: 700 !important;
   text-shadow: none !important;
   border: 1px solid #ff7a00 !important;
@@ -261,14 +261,14 @@ body.halloween-theme:not(.in-game) .bg-blue-600:not(button),
 body.halloween-theme:not(.in-game) .bg-blue-500\/20:not(button),
 body.halloween-theme:not(.in-game) .bg-malibu-blue\/20:not(button) {
   background-color: var(--hw-orange) !important;
-  color: #fff !important;
+  color: #000000 !important;
 }
 
 /* --- Blood Crimson Moon Lobby Map Cards --- */
 /* Optimized with high contrast (1.35) so coastlines and terrain remain distinct for colorblind players */
 body.halloween-theme:not(.in-game) game-mode-selector button.rounded-2xl img,
 body.halloween-theme:not(.in-game) game-mode-selector button[class*="rounded-2xl"] img {
-  filter: var(--filter-blood-moon) !important;
+  filter: var(--filter-haunted-moonlight) !important;
   transition: filter 0.3s ease-in-out, transform 0.25s ease-in-out !important;
 }
 
@@ -332,37 +332,37 @@ body.halloween-theme:not(.in-game) game-mode-selector button[class*="rounded-2xl
 /* Organic Jack-o'-Lantern Candlelight Flame Flicker */
 @keyframes hw-candle-flicker {
   0%, 100% {
-    filter: hue-rotate(150deg) saturate(1.7) brightness(1.3) drop-shadow(0 0 8px rgba(255, 122, 0, 0.75)) !important;
+    filter: hue-rotate(150deg) saturate(1.7) brightness(1.3) drop-shadow(0 0 8px rgba(255, 122, 0, 0.75));
   }
   20% {
-    filter: hue-rotate(152deg) saturate(1.8) brightness(1.38) drop-shadow(0 0 13px rgba(255, 140, 0, 0.85)) drop-shadow(0 0 3px rgba(255, 200, 50, 0.45)) !important;
+    filter: hue-rotate(152deg) saturate(1.8) brightness(1.38) drop-shadow(0 0 13px rgba(255, 140, 0, 0.85)) drop-shadow(0 0 3px rgba(255, 200, 50, 0.45));
   }
   45% {
-    filter: hue-rotate(148deg) saturate(1.55) brightness(1.22) drop-shadow(0 0 6px rgba(255, 100, 0, 0.65)) !important;
+    filter: hue-rotate(148deg) saturate(1.55) brightness(1.22) drop-shadow(0 0 6px rgba(255, 100, 0, 0.65));
   }
   65% {
-    filter: hue-rotate(151deg) saturate(1.75) brightness(1.34) drop-shadow(0 0 11px rgba(255, 130, 0, 0.8)) drop-shadow(0 0 2px rgba(255, 180, 50, 0.4)) !important;
+    filter: hue-rotate(151deg) saturate(1.75) brightness(1.34) drop-shadow(0 0 11px rgba(255, 130, 0, 0.8)) drop-shadow(0 0 2px rgba(255, 180, 50, 0.4));
   }
   85% {
-    filter: hue-rotate(149deg) saturate(1.6) brightness(1.25) drop-shadow(0 0 7px rgba(255, 110, 0, 0.7)) !important;
+    filter: hue-rotate(149deg) saturate(1.6) brightness(1.25) drop-shadow(0 0 7px rgba(255, 110, 0, 0.7));
   }
 }
 
 @keyframes hw-candle-text-flicker {
   0%, 100% {
-    text-shadow: 0 0 8px rgba(255, 122, 0, 0.75) !important;
+    text-shadow: 0 0 8px rgba(255, 122, 0, 0.75);
   }
   20% {
-    text-shadow: 0 0 12px rgba(255, 140, 0, 0.85), 0 0 3px rgba(255, 200, 50, 0.45) !important;
+    text-shadow: 0 0 12px rgba(255, 140, 0, 0.85), 0 0 3px rgba(255, 200, 50, 0.45);
   }
   45% {
-    text-shadow: 0 0 6px rgba(255, 100, 0, 0.65) !important;
+    text-shadow: 0 0 6px rgba(255, 100, 0, 0.65);
   }
   65% {
-    text-shadow: 0 0 10px rgba(255, 130, 0, 0.8) !important;
+    text-shadow: 0 0 10px rgba(255, 130, 0, 0.8);
   }
   85% {
-    text-shadow: 0 0 7px rgba(255, 110, 0, 0.7) !important;
+    text-shadow: 0 0 7px rgba(255, 110, 0, 0.7);
   }
 }
 
@@ -376,7 +376,13 @@ body.halloween-theme:not(.in-game) h2::after {
 body.halloween-theme:not(.in-game) h1::before {
   content: "👻\00a0 ";
   position: relative;
-  animation: hw-float-ghost 3s infinite ease-in-out reverse;
+  animation: hw-float-ghost 3s ease-in-out reverse;
   text-shadow: none !important;
   font-size: 1.2em;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body.halloween-theme:not(.in-game) h1::before {
+    animation: none;
+  }
 }
