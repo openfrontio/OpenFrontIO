@@ -674,13 +674,27 @@ export async function startWorker() {
                 });
                 ws.close(CloseCode.Unauthorized, CloseReason.TurnstileFailed);
                 return;
-              case "error":
-                // Fail open: the locally screened name stands.
-                log.error("join_verify error", {
+              case "error": {
+                // Fail open: the API's screened identity when its name check
+                // finished, otherwise the locally screened name stands.
+                if (verdict.identity) {
+                  username = verdict.identity.username;
+                  clanTag = verdict.identity.clanTag;
+                }
+                // A degraded verdict is the API answering within its budget
+                // with a leg missing; only an unreachable or broken API is
+                // an error.
+                const fields = {
                   persistentID: persistentId,
                   gameID: clientMsg.gameID,
                   reason: verdict.reason,
-                });
+                };
+                if (verdict.degraded) {
+                  log.warn("join_verify degraded", fields);
+                } else {
+                  log.error("join_verify error", fields);
+                }
+              }
             }
           } else {
             verifySkipped = true;
