@@ -438,6 +438,12 @@ export const UserMeResponseSchema = z.object({
     // never fail the parse and reject the join, and when the setting can't be
     // read the private answer is the safe one.
     levelHidden: z.boolean().optional().catch(true),
+    // "Show my profile in search engines" turned off: the public profile page
+    // (openfront.io/player/<publicId>) is served noindex. It still opens for
+    // anyone with the link, and link previews are unchanged. Optional so an
+    // older API without the setting still parses — absent hides the row in
+    // account settings. A malformed value reads as hidden, like levelHidden.
+    searchHidden: z.boolean().optional().catch(true),
     clans: z
       .array(
         z.object({
@@ -543,8 +549,9 @@ export const UserMeResponseSchema = z.object({
 });
 export type UserMeResponse = z.infer<typeof UserMeResponseSchema>;
 
-// PUT /users/@me/level_visibility { hidden } — the stored setting, echoed.
-export const LevelVisibilityResponseSchema = z.object({
+// PUT /users/@me/level_visibility and /users/@me/search_visibility { hidden }
+// — the stored setting, echoed.
+export const VisibilityResponseSchema = z.object({
   hidden: z.boolean(),
 });
 export type UserSubscription = NonNullable<

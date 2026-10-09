@@ -17,6 +17,7 @@ vi.mock("../../../src/client/Api", () => ({
   deleteAccount: vi.fn(async () => ({ ok: true })),
   getIdentityTokenAudiences: vi.fn(async () => []),
   setLevelVisibility: vi.fn(async (hidden: boolean) => ({ ok: true, hidden })),
+  setSearchVisibility: vi.fn(async (hidden: boolean) => ({ ok: true, hidden })),
   getUserMe: vi.fn(async () => false),
 }));
 
@@ -416,5 +417,201 @@ describe("AccountSettingsPanel — privacy card (hide my level)", () => {
     levelSwitch()!.click();
     await settle();
     expect(getUserMe).not.toHaveBeenCalled();
+  });
+});
+
+describe("AccountSettingsPanel — privacy card (search engines)", () => {
+  let panel: AccountSettingsPanel;
+
+  beforeEach(async () => {
+    if (!customElements.get("account-settings-panel")) {
+      customElements.define("account-settings-panel", AccountSettingsPanel);
+    }
+    panel = document.createElement(
+      "account-settings-panel",
+    ) as AccountSettingsPanel;
+    document.body.appendChild(panel);
+    await panel.updateComplete;
+  });
+
+  afterEach(() => {
+    document.body.removeChild(panel);
+    vi.clearAllMocks();
+  });
+
+  async function show(player: UserMePlayer): Promise<void> {
+    panel.player = player;
+    panel.user = { email: "player@example.com" };
+    await panel.updateComplete;
+  }
+
+  // Lets the mocked request settle, then the re-render.
+  async function settle(): Promise<void> {
+    await new Promise((r) => setTimeout(r, 0));
+    await panel.updateComplete;
+  }
+
+  const searchSwitch = () =>
+    panel.querySelector(
+      'button[role="switch"][aria-label="account_modal.search_visibility_title"]',
+    ) as HTMLButtonElement | null;
+  const levelSwitch = () =>
+    panel.querySelector(
+      'button[role="switch"][aria-label="account_modal.level_visibility_title"]',
+    ) as HTMLButtonElement | null;
+
+  it("renders no search row when /users/@me has no searchHidden (older API)", async () => {
+    await show(makePlayer({ levelHidden: false }));
+
+    expect(levelSwitch()).toBeTruthy();
+    expect(searchSwitch()).toBeNull();
+    expect(panel.textContent).not.toContain(
+      "account_modal.search_visibility_title",
+    );
+  });
+
+  it("sits below the level row, under a divider", async () => {
+    await show(makePlayer({ levelHidden: false, searchHidden: false }));
+
+    const text = panel.textContent ?? "";
+    const level = text.indexOf("account_modal.level_visibility_title");
+    const search = text.indexOf("account_modal.search_visibility_title");
+    expect(level).toBeGreaterThanOrEqual(0);
+    expect(search).toBeGreaterThan(level);
+    expect(text).toContain("account_modal.search_visibility_desc");
+    const row = searchSwitch()!.closest("div.border-t");
+    expect(row).toBeTruthy();
+    expect(row!.contains(levelSwitch())).toBe(false);
+  });
+
+  it("shows the card with only the search row when levelHidden is absent", async () => {
+    await show(makePlayer({ searchHidden: false }));
+
+    expect(panel.textContent).toContain("account_modal.privacy_title");
+    expect(searchSwitch()).toBeTruthy();
+    expect(levelSwitch()).toBeNull();
+    // Nothing above it to divide from.
+    expect(searchSwitch()!.closest("div.border-t")).toBeNull();
+  });
+
+  it("is on when shown in search (the default) and off when hidden", async () => {
+    await show(makePlayer({ searchHidden: false }));
+    expect(searchSwitch()!.getAttribute("aria-checked")).toBe("true");
+    expect(searchSwitch()!.disabled).toBe(false);
+
+    await show(makePlayer({ searchHidden: true }));
+    expect(searchSwitch()!.getAttribute("aria-checked")).toBe("false");
+  });
+
+  it("turning it off: optimistic, disabled in flight, PUTs hidden=true", async () => {
+    const { setSearchVisibility, setLevelVisibility } =
+      await import("../../../src/client/Api");
+    let answer!: (r: { ok: true; hidden: boolean }) => void;
+    vi.mocked(setSearchVisibility).mockImplementationOnce(
+      () => new Promise((r) => (answer = r)),
+    );
+    const player = makePlayer({ levelHidden: false, searchHidden: false });
+    await show(player);
+
+    searchSwitch()!.click();
+    await panel.updateComplete;
+
+    expect(setSearchVisibility).toHaveBeenCalledWith(true);
+    expect(setLevelVisibility).not.toHaveBeenCalled();
+    // Optimistic: already off, on the cached profile object too.
+    expect(searchSwitch()!.getAttribute("aria-checked")).toBe("false");
+    expect(player.searchHidden).toBe(true);
+    // Disabled while in flight; another click sends nothing. The level
+    // switch is independent and stays usable.
+    expect(searchSwitch()!.disabled).toBe(true);
+    expect(levelSwitch()!.disabled).toBe(false);
+    searchSwitch()!.click();
+    expect(setSearchVisibility).toHaveBeenCalledTimes(1);
+
+    answer({ ok: true, hidden: true });
+    await settle();
+    expect(searchSwitch()!.disabled).toBe(false);
+    expect(searchSwitch()!.getAttribute("aria-checked")).toBe("false");
+    expect(player.searchHidden).toBe(true);
+    expect(player.levelHidden).toBe(false);
+  });
+
+  it("flipping the level switch writes only the level setting", async () => {
+    const { setSearchVisibility, setLevelVisibility } =
+      await import("../../../src/client/Api");
+    let answer!: (r: { ok: true; hidden: boolean }) => void;
+    vi.mocked(setLevelVisibility).mockImplementationOnce(
+      () => new Promise((r) => (answer = r)),
+    );
+    const player = makePlayer({ levelHidden: false, searchHidden: false });
+    await show(player);
+
+    levelSwitch()!.click();
+    await panel.updateComplete;
+
+    expect(setLevelVisibility).toHaveBeenCalledWith(true);
+    expect(setSearchVisibility).not.toHaveBeenCalled();
+    expect(levelSwitch()!.disabled).toBe(true);
+    expect(searchSwitch()!.disabled).toBe(false);
+    expect(searchSwitch()!.getAttribute("aria-checked")).toBe("true");
+
+    answer({ ok: true, hidden: true });
+    await settle();
+    expect(player.levelHidden).toBe(true);
+    expect(player.searchHidden).toBe(false);
+  });
+
+  it("turning it back on PUTs hidden=false", async () => {
+    const { setSearchVisibility } = await import("../../../src/client/Api");
+    const player = makePlayer({ searchHidden: true });
+    await show(player);
+
+    searchSwitch()!.click();
+    await settle();
+
+    expect(setSearchVisibility).toHaveBeenCalledWith(false);
+    expect(searchSwitch()!.getAttribute("aria-checked")).toBe("true");
+    expect(player.searchHidden).toBe(false);
+  });
+
+  it("reverts and shows the error alert when the request fails", async () => {
+    const { setSearchVisibility } = await import("../../../src/client/Api");
+    const { showInGameAlert } = await import("../../../src/client/InGameModal");
+    vi.mocked(setSearchVisibility).mockResolvedValueOnce({
+      ok: false,
+      code: "failed",
+    });
+    const player = makePlayer({ searchHidden: false });
+    await show(player);
+
+    searchSwitch()!.click();
+    await settle();
+
+    expect(searchSwitch()!.getAttribute("aria-checked")).toBe("true");
+    expect(searchSwitch()!.disabled).toBe(false);
+    expect(player.searchHidden).toBe(false);
+    expect(showInGameAlert).toHaveBeenCalledWith(
+      "account_modal.search_visibility_failed",
+    );
+  });
+
+  it("reverts without an alert when signed out (401)", async () => {
+    const { setSearchVisibility } = await import("../../../src/client/Api");
+    const { showInGameAlert } = await import("../../../src/client/InGameModal");
+    vi.mocked(setSearchVisibility).mockResolvedValueOnce({
+      ok: false,
+      code: "logged_out",
+    });
+    const player = makePlayer({ searchHidden: true });
+    await show(player);
+
+    searchSwitch()!.click();
+    await settle();
+
+    expect(player.searchHidden).toBe(true);
+    expect(searchSwitch()!.getAttribute("aria-checked")).toBe("false");
+    // logOut() already ran inside setSearchVisibility; the signed-out state
+    // takes over from there.
+    expect(showInGameAlert).not.toHaveBeenCalled();
   });
 });
