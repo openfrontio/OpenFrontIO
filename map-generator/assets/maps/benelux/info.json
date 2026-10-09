@@ -12,31 +12,26 @@
     {
       "coordinates": [718, 492],
       "name": "Netherlands",
-      "strength": 1,
       "flag": "nl"
     },
     {
       "coordinates": [1046, 265],
       "name": "Friesland",
-      "strength": 1,
       "flag": "Frisian_flag"
     },
     {
       "coordinates": [1052, 1173],
       "name": "Luxembourg",
-      "strength": 1,
       "flag": "lu"
     },
     {
       "coordinates": [762, 1038],
       "name": "Wallonia",
-      "strength": 1,
       "flag": "Wallonia"
     },
     {
       "coordinates": [615, 930],
       "name": "Flanders",
-      "strength": 1,
       "flag": "Flanders"
     }
   ]
