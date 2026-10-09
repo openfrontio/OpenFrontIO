@@ -1,4 +1,4 @@
-import { Reward } from "@openfront/shared/ApiSchemas";
+import { isRewardClaimable, Reward } from "@openfront/shared/ApiSchemas";
 import { html, TemplateResult } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import { BaseModal } from "./components/BaseModal";
@@ -23,8 +23,14 @@ export class RewardsModal extends BaseModal {
     this.open();
   }
 
+  // Held rewards stay listed (with why), but on their own they leave the popup
+  // nothing to do: it opens, and stays open, only while one can be claimed.
+  private hasClaimable(): boolean {
+    return this.rewards.some(isRewardClaimable);
+  }
+
   public open(args?: Record<string, unknown>): void {
-    if (this.rewards.length === 0) return;
+    if (!this.hasClaimable()) return;
     super.open(args);
   }
 
@@ -40,7 +46,7 @@ export class RewardsModal extends BaseModal {
     event: CustomEvent<RewardsChangedDetail>,
   ): void => {
     this.rewards = event.detail.rewards;
-    if (this.rewards.length === 0) this.close();
+    if (!this.hasClaimable()) this.close();
   };
 
   protected renderBody(): TemplateResult {

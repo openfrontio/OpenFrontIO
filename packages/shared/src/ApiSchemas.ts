@@ -106,12 +106,19 @@ export const RewardSchema = z.object({
   reason: z.string(),
   note: z.string().nullable(),
   // Why the reward can't be claimed yet; absent when it can. "trust": level
-  // Plutonium, kept until the account is trusted. Optional for older APIs, and
-  // an unknown or malformed value reads as absent: the reward then offers a
-  // claim, and the server's 403 marks it held (see claimReward).
-  held: z.enum(["trust"]).optional().catch(undefined),
+  // Plutonium, kept until the account is trusted. Any other non-empty value is
+  // a hold this client doesn't know yet, and still reads as held: an unknown
+  // restriction must never read as claimable. Optional for older APIs.
+  held: z.string().min(1).optional().catch(undefined),
 });
 export type Reward = z.infer<typeof RewardSchema>;
+
+// The one claimability rule: a reward is claimable unless it carries a hold,
+// whatever kind. Everything that offers a claim, or counts rewards to claim,
+// asks this.
+export function isRewardClaimable(reward: Pick<Reward, "held">): boolean {
+  return reward.held === undefined;
+}
 
 // Player levels / XP ("progression"). Purely cosmetic: levels never affect
 // gameplay, and XP is computed server-side only — the client just displays it.
@@ -301,7 +308,17 @@ export const ClaimAllRewardsResponseSchema = z.object({
   // The rewards still pending after the claim because they are held (each
   // with `held`), in /users/@me's reward shape. Empty from older APIs, and
   // when the list can't be read: the next /users/@me read brings them back.
-  held: z.array(RewardSchema).default([]).catch([]),
+  // Read per element, so one malformed row drops only itself.
+  held: z
+    .array(z.unknown())
+    .default([])
+    .catch([])
+    .transform((rows) =>
+      rows.flatMap((row) => {
+        const parsed = RewardSchema.safeParse(row);
+        return parsed.success ? [parsed.data] : [];
+      }),
+    ),
   currency: CurrencyBalancesSchema,
 });
 export type ClaimAllRewardsResponse = z.infer<
@@ -311,7 +328,7 @@ export type ClaimAllRewardsResponse = z.infer<
 // POST /rewards/:rewardId/claim's 403 for a held reward (RewardSchema.held):
 // it stays pending, and claims once the hold lifts.
 export const ClaimRewardHeldResponseSchema = z.object({
-  held: z.string(),
+  held: z.string().min(1),
 });
 
 // Account-username lifecycle. `unclaimed`: no bare-name reservation (default).

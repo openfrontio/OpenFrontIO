@@ -1393,12 +1393,13 @@ export async function purchaseCosmeticPack(
 // credits the balance atomically. "not_found" covers unknown, already-claimed
 // and other players' rewards (indistinguishable by design); the usual cause is
 // a double-click or a second device claiming first, so callers should re-fetch
-// /users/@me and re-render rather than surface an error. "held" is a reward
-// that can't be claimed yet (level Plutonium on an account that isn't
-// trusted): a 403 naming the hold. It stays pending, so nothing is lost.
+// /users/@me and re-render rather than surface an error. `{ held }` is a reward
+// that can't be claimed yet (e.g. "trust": level Plutonium on an account that
+// isn't trusted): a 403 naming the hold, whose kind is passed on as named. It
+// stays pending, so nothing is lost.
 export async function claimReward(
   rewardId: string,
-): Promise<ClaimRewardResponse | "not_found" | "held" | false> {
+): Promise<ClaimRewardResponse | "not_found" | { held: string } | false> {
   try {
     const response = await fetch(
       `${getApiBase()}/rewards/${encodeURIComponent(rewardId)}/claim`,
@@ -1414,13 +1415,11 @@ export async function claimReward(
       return false;
     }
     if (response.status === 404) return "not_found";
-    if (
-      response.status === 403 &&
-      ClaimRewardHeldResponseSchema.safeParse(
+    if (response.status === 403) {
+      const hold = ClaimRewardHeldResponseSchema.safeParse(
         await response.json().catch(() => null),
-      ).success
-    ) {
-      return "held";
+      );
+      if (hold.success) return { held: hold.data.held };
     }
     if (!response.ok) {
       console.error(

@@ -6,6 +6,7 @@ import {
   GetMyTribeNamesResponseSchema,
   GoogleUser,
   GoogleUserSchema,
+  isRewardClaimable,
   isTemporaryUsername,
   isVerifiedUsername,
   PlayerGameModeFilterSchema,
@@ -608,7 +609,7 @@ describe("RewardSchema", () => {
     if (result.success) expect(result.data.held).toBeUndefined();
   });
 
-  it.each([["future_hold"], [42], [null], [{ reason: "trust" }]])(
+  it.each([[42], [null], [{ reason: "trust" }], [""]])(
     "reads a malformed held (%j) as absent rather than failing",
     (held) => {
       const result = RewardSchema.safeParse({ ...validReward, held });
@@ -616,6 +617,27 @@ describe("RewardSchema", () => {
       if (result.success) expect(result.data.held).toBeUndefined();
     },
   );
+
+  it("keeps a hold kind it doesn't know, which is not claimable", () => {
+    const result = RewardSchema.safeParse({
+      ...validReward,
+      held: "future_hold",
+    });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.held).toBe("future_hold");
+      expect(isRewardClaimable(result.data)).toBe(false);
+    }
+  });
+});
+
+describe("isRewardClaimable", () => {
+  it("is claimable only without a hold", () => {
+    expect(isRewardClaimable({})).toBe(true);
+    expect(isRewardClaimable({ held: undefined })).toBe(true);
+    expect(isRewardClaimable({ held: "trust" })).toBe(false);
+    expect(isRewardClaimable({ held: "other" })).toBe(false);
+  });
 });
 
 describe("UserMeResponseSchema rewards", () => {
@@ -815,6 +837,34 @@ describe("claim response schemas", () => {
     if (result.success) expect(result.data.held).toEqual([]);
   });
 
+  it("drops only the malformed rows of a claim-all's held list", () => {
+    const row = (id: string, held: string) => ({
+      id,
+      currencyType: "hard",
+      amount: "50",
+      reason: "level_milestone",
+      note: null,
+      held,
+    });
+    const result = ClaimAllRewardsResponseSchema.safeParse({
+      claimed: [],
+      held: [
+        row("7", "trust"),
+        { id: "8", currencyType: "gems" },
+        "nope",
+        row("9", "future_hold"),
+      ],
+      currency: { soft: "0", hard: "0" },
+    });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.held).toEqual([
+        row("7", "trust"),
+        row("9", "future_hold"),
+      ]);
+    }
+  });
+
   it("recognises the 403 body for a held reward", () => {
     expect(
       ClaimRewardHeldResponseSchema.safeParse({
@@ -830,6 +880,9 @@ describe("claim response schemas", () => {
         message: "nope",
       }).success,
     ).toBe(false);
+    expect(ClaimRewardHeldResponseSchema.safeParse({ held: "" }).success).toBe(
+      false,
+    );
   });
 });
 

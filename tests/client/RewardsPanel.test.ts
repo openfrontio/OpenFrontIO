@@ -19,8 +19,13 @@ vi.mock("../../src/client/CrazyGamesSDK", () => ({
   crazyGamesSDK: { isOnCrazyGames: vi.fn(() => false) },
 }));
 
-import type { Reward } from "@openfront/shared/ApiSchemas";
-import { claimAllRewards, claimReward } from "../../src/client/Api";
+import type { Reward, UserMeResponse } from "@openfront/shared/ApiSchemas";
+import {
+  claimAllRewards,
+  claimReward,
+  getUserMe,
+  invalidateUserMe,
+} from "../../src/client/Api";
 import {
   RewardsPanel,
   type RewardsChangedDetail,
@@ -205,16 +210,21 @@ describe("<rewards-panel> held rewards", () => {
     expect(showInGameAlert).not.toHaveBeenCalled();
   });
 
-  it("marks a reward held when its claim is refused as held", async () => {
-    vi.mocked(claimReward).mockResolvedValue("held");
-    const level = reward("level_up");
-    const panel = await mount([plutonium("1"), level]);
-    const seen = changes(panel);
+  function clickFirstClaim(panel: RewardsPanel): void {
     (
       panel.querySelector(
         'o-button[translationKey="account_modal.claim"]',
       ) as HTMLElement
     ).click();
+  }
+
+  it("marks a reward held when its claim is refused as held", async () => {
+    vi.mocked(claimReward).mockResolvedValue({ held: "trust" });
+    vi.mocked(getUserMe).mockResolvedValue(false);
+    const level = reward("level_up");
+    const panel = await mount([plutonium("1"), level]);
+    const seen = changes(panel);
+    clickFirstClaim(panel);
     await vi.waitFor(() => expect(seen).toHaveLength(1));
     expect(claimReward).toHaveBeenCalledWith("1");
     expect(showInGameAlert).not.toHaveBeenCalled();
@@ -229,6 +239,63 @@ describe("<rewards-panel> held rewards", () => {
     await panel.updateComplete;
     expect(rows(panel)).toEqual(["held", "claim"]);
     expect(panel.querySelector("[data-reward-held-note]")).not.toBeNull();
+  });
+
+  it("keeps the hold the 403 named, not an assumed one", async () => {
+    vi.mocked(claimReward).mockResolvedValue({ held: "other" });
+    vi.mocked(getUserMe).mockResolvedValue(false);
+    const panel = await mount([plutonium("1")]);
+    const seen = changes(panel);
+    clickFirstClaim(panel);
+    await vi.waitFor(() => expect(seen).toHaveLength(1));
+    expect(seen[0].rewards).toEqual([{ ...plutonium("1"), held: "other" }]);
+  });
+
+  it("re-reads the whole list after a held refusal: the hold is per account", async () => {
+    vi.mocked(claimReward).mockResolvedValue({ held: "trust" });
+    // The fresh list holds both milestones, not just the one clicked.
+    vi.mocked(getUserMe).mockResolvedValue({
+      player: {
+        currency: { soft: 10, hard: 0 },
+        rewards: [plutonium("1", "trust"), plutonium("2", "trust")],
+      },
+    } as unknown as UserMeResponse);
+    const panel = await mount([plutonium("1"), plutonium("2")]);
+    const seen = changes(panel);
+    clickFirstClaim(panel);
+    await vi.waitFor(() => expect(seen).toHaveLength(1));
+    expect(invalidateUserMe).toHaveBeenCalled();
+    expect(seen[0]).toEqual({
+      currency: { soft: 10, hard: 0 },
+      rewards: [plutonium("1", "trust"), plutonium("2", "trust")],
+    });
+  });
+
+  it("marks the refused reward held even if the fresh list lags", async () => {
+    vi.mocked(claimReward).mockResolvedValue({ held: "trust" });
+    vi.mocked(getUserMe).mockResolvedValue({
+      player: { rewards: [plutonium("1"), plutonium("2")] },
+    } as unknown as UserMeResponse);
+    const panel = await mount([plutonium("1"), plutonium("2")]);
+    const seen = changes(panel);
+    clickFirstClaim(panel);
+    await vi.waitFor(() => expect(seen).toHaveLength(1));
+    expect(seen[0]).toEqual({
+      currency: null,
+      rewards: [plutonium("1", "trust"), plutonium("2")],
+    });
+  });
+
+  it("treats a hold it has no copy for as held", async () => {
+    const panel = await mount([
+      { ...plutonium("1"), held: "future_hold" },
+      reward("level_up"),
+      reward("prestige"),
+    ]);
+    expect(rows(panel)).toEqual(["held", "claim", "claim"]);
+    expect(
+      panel.querySelectorAll("[data-reward-held-note]").length,
+    ).toBeGreaterThan(0);
   });
 
   it("still alerts when a claim fails for another reason", async () => {

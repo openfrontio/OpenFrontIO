@@ -1,4 +1,4 @@
-import { Reward } from "@openfront/shared/ApiSchemas";
+import { isRewardClaimable, Reward } from "@openfront/shared/ApiSchemas";
 import { html, LitElement, TemplateResult } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
 import {
@@ -54,13 +54,21 @@ export class RewardsPanel extends LitElement {
         return;
       }
       invalidateUserMe();
-      if (result === "held") {
+      if (result !== "not_found" && "held" in result) {
         // Held since this list was read (or read by an older API): nothing
-        // was claimed, so the wallet stays as it is.
+        // was claimed. A hold is on the account, not the reward, so others in
+        // this list may be held too: re-read the whole list rather than let
+        // each offer a claim that 403s in turn. The refused reward keeps the
+        // 403's hold either way.
+        const userMe = await getUserMe();
+        const rewards =
+          userMe === false ? this.rewards : (userMe.player.rewards ?? []);
         this.emitChanged({
-          currency: null,
-          rewards: this.rewards.map((r) =>
-            r.id === reward.id ? { ...r, held: "trust" } : r,
+          currency: userMe === false ? null : (userMe.player.currency ?? null),
+          rewards: rewards.map((r) =>
+            r.id === reward.id && isRewardClaimable(r)
+              ? { ...r, held: result.held }
+              : r,
           ),
         });
         return;
@@ -150,7 +158,7 @@ export class RewardsPanel extends LitElement {
             >
           </div>
         </div>
-        ${reward.held !== undefined
+        ${!isRewardClaimable(reward)
           ? html`<span
               data-reward-held
               class="shrink-0 text-xs font-bold text-white/60 text-right"
@@ -167,21 +175,37 @@ export class RewardsPanel extends LitElement {
     `;
   }
 
-  // Why held rewards can't be claimed yet: once under the list, however many
-  // there are. CrazyGames has no purchases, so its copy only suggests playing.
-  private renderHeldNote(): TemplateResult | "" {
-    if (!this.rewards.some((r) => r.held !== undefined)) return "";
-    const key = crazyGamesSDK.isOnCrazyGames()
+  // The trust note. CrazyGames has no purchases, so its copy only suggests
+  // playing.
+  private trustNoteKey(): string {
+    return crazyGamesSDK.isOnCrazyGames()
       ? "account_modal.reward_held_trust_info_crazygames"
       : "account_modal.reward_held_trust_info";
-    return html`<p data-reward-held-note class="mt-3 text-xs text-white/60">
-      ${translateText(key)}
-    </p>`;
+  }
+
+  // A hold this client has no copy for.
+  private otherHoldNoteKey(): string {
+    return this.trustNoteKey();
+  }
+
+  // Why held rewards can't be claimed yet: once under the list per kind of
+  // hold, however many rewards it holds.
+  private renderHeldNotes(): TemplateResult[] {
+    const held = this.rewards.filter((r) => !isRewardClaimable(r));
+    const keys = new Set<string>();
+    if (held.some((r) => r.held === "trust")) keys.add(this.trustNoteKey());
+    if (held.some((r) => r.held !== "trust")) keys.add(this.otherHoldNoteKey());
+    return [...keys].map(
+      (key) =>
+        html`<p data-reward-held-note class="mt-3 text-xs text-white/60">
+          ${translateText(key)}
+        </p>`,
+    );
   }
 
   render() {
     if (this.rewards.length === 0) return html``;
-    const claimable = this.rewards.filter((r) => r.held === undefined);
+    const claimable = this.rewards.filter(isRewardClaimable);
     return html`
       <div class="bg-white/5 rounded-xl border border-white/10 p-6">
         <div class="flex items-center justify-between gap-4 mb-4">
@@ -202,7 +226,7 @@ export class RewardsPanel extends LitElement {
         <div class="flex flex-col gap-2">
           ${this.rewards.map((r) => this.renderReward(r))}
         </div>
-        ${this.renderHeldNote()}
+        ${this.renderHeldNotes()}
       </div>
     `;
   }

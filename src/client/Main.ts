@@ -1,5 +1,8 @@
 import { GAME_ID_REGEX } from "@openfront/engine-api/Schemas";
-import { UserMeResponse } from "@openfront/shared/ApiSchemas";
+import {
+  isRewardClaimable,
+  UserMeResponse,
+} from "@openfront/shared/ApiSchemas";
 import { assetUrl } from "@openfront/shared/AssetUrls";
 import { EventBus } from "@openfront/shared/EventBus";
 import { toWireGameStartInfo } from "@openfront/shared/SharedUtil";
@@ -865,7 +868,7 @@ class Client {
             grantStringsReady: steamGrantStringsReady(translateText),
             // Held rewards can't be claimed yet: on their own they'd open the
             // popup every boot with nothing to do.
-            rewardCount: rewards.filter((r) => r.held === undefined).length,
+            rewardCount: rewards.filter(isRewardClaimable).length,
             claimPromptDue: claimPromptDue(claimStore, Date.now(), publicId),
             claimStringsReady: claimPromptStringsReady(translateText),
           }),
