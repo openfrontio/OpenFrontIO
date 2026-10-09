@@ -240,6 +240,27 @@ describe("Player profile Progression tab", () => {
     });
   });
 
+  it("doesn't pick the tab for a profile closed before its progress came", async () => {
+    let resolve!: (value: unknown) => void;
+    fetchPublicPlayerProgressMock.mockReturnValueOnce(
+      new Promise((r) => (resolve = r)),
+    );
+    modal.open({ publicID: "abcd1234", tab: "progression" });
+    await modal.updateComplete;
+    modal.close();
+    resolve(withProgress);
+    await new Promise((r) => setTimeout(r, 0));
+
+    // The next opening asks for no tab: it starts on Stats.
+    fetchPublicPlayerProgressMock.mockResolvedValue(withProgress);
+    modal.open({ publicID: "efgh5678" });
+    await settle(() => {
+      expect(tabText()).toContain("account_modal.tab_progression");
+      expect(modal.querySelector("player-stats-tree-view")).not.toBeNull();
+    });
+    expect(modal.querySelector("profile-progression")).toBeNull();
+  });
+
   it("stays on Stats when the asked-for tab has nothing to show", async () => {
     fetchPublicPlayerProgressMock.mockResolvedValue(false);
     modal.open({ publicID: "abcd1234", tab: "progression" });
