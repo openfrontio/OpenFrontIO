@@ -308,6 +308,11 @@ export function decodeSnapshotValue(bytes: Uint8Array): unknown {
         return readString(tag);
       case Tag.Array: {
         const n = r.uint();
+        if (n > r.remaining) {
+          throw new SnapshotCodecError(
+            `array length ${n} exceeds remaining input (${r.remaining})`,
+          );
+        }
         const out = new Array(n);
         for (let i = 0; i < n; i++) out[i] = read();
         return out;

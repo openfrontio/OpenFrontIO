@@ -1,6 +1,7 @@
 import {
   decodeSnapshotValue,
   encodeSnapshotValue,
+  SnapshotCodecError,
 } from "@openfront/engine/snapshot/SnapshotCodec";
 
 describe("snapshot codec", () => {
@@ -81,5 +82,16 @@ describe("snapshot codec", () => {
     const bytes = encodeSnapshotValue(1);
     expect(() => decodeSnapshotValue(new Uint8Array([...bytes, 0]))).toThrow();
     expect(() => decodeSnapshotValue(new Uint8Array([99]))).toThrow();
+  });
+
+  test("rejects arrays whose length exceeds remaining input", () => {
+    // Tag.Array (10) with length 5, but 0 remaining bytes
+    expect(() => decodeSnapshotValue(new Uint8Array([10, 5]))).toThrow(
+      SnapshotCodecError,
+    );
+    // Tag.Array (10) with oversized length that would cause RangeError in new Array()
+    expect(() =>
+      decodeSnapshotValue(new Uint8Array([10, 0xff, 0xff, 0xff, 0xff, 0x0f])),
+    ).toThrow(SnapshotCodecError);
   });
 });
