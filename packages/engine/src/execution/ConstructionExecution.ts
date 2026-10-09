@@ -168,6 +168,7 @@ export class ConstructionExecution implements Execution {
       case UnitType.OilMine:
       case UnitType.GoldMine:
       case UnitType.DiamondMine:
+      case UnitType.LivestockFarm:
         if (
           this.mg.hasUnitNearby(
             this.structure!.tile(),
@@ -198,6 +199,7 @@ export class ConstructionExecution implements Execution {
       case UnitType.OilMine:
       case UnitType.GoldMine:
       case UnitType.DiamondMine:
+      case UnitType.LivestockFarm:
         return true;
       default:
         return false;

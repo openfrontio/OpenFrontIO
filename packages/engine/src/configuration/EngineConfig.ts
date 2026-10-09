@@ -382,6 +382,11 @@ export class EngineConfig extends Config {
           (numUnits: number) => Math.min(1_000_000, pow2(numUnits) * 400_000),
           UnitType.DiamondMine,
         );
+      case UnitType.LivestockFarm:
+        return this.costWrapper(
+          (numUnits: number) => Math.min(1_000_000, pow2(numUnits) * 100_000),
+          UnitType.LivestockFarm,
+        );
       case UnitType.TransportShip:
       case UnitType.Shell:
       case UnitType.SAMMissile:
@@ -689,6 +694,8 @@ export class EngineConfig extends Config {
           return 15_000;
         case UnitType.DiamondMine:
           return 25_000;
+        case UnitType.LivestockFarm:
+          return 8_000;
         default:
           throw new Error(`Unknown mine type: ${type}`);
       }

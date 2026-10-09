@@ -56,6 +56,7 @@ const STRUCTURE_ORDER = [
   "Oil Mine",
   "Gold Mine",
   "Diamond Mine",
+  "Livestock Farm",
 ] as const;
 
 const ATLAS_COLS = STRUCTURE_ORDER.length;

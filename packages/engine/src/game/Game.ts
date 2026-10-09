@@ -106,6 +106,7 @@ export interface UnitParamsMap {
   [UnitType.OilMine]: Record<string, never>;
   [UnitType.GoldMine]: Record<string, never>;
   [UnitType.DiamondMine]: Record<string, never>;
+  [UnitType.LivestockFarm]: Record<string, never>;
 
   [UnitType.MissileSilo]: Record<string, never>;
 

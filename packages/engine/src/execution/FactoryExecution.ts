@@ -51,6 +51,7 @@ export class FactoryExecution implements Execution {
         UnitType.OilMine,
         UnitType.GoldMine,
         UnitType.DiamondMine,
+        UnitType.LivestockFarm,
       ],
     );
 

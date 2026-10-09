@@ -1621,6 +1621,7 @@ export class PlayerImpl implements Player {
       case UnitType.OilMine:
       case UnitType.GoldMine:
       case UnitType.DiamondMine:
+      case UnitType.LivestockFarm:
         return this.landBasedStructureSpawn(targetTile, validTiles);
       default:
         assertNever(unitType);

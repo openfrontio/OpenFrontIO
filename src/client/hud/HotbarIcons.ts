@@ -6,6 +6,7 @@ export const factoryIcon = assetUrl("images/FactoryIconWhite.svg");
 export const oilMineIcon = assetUrl("images/OilMineStructureIcon.svg");
 export const goldMineIcon = assetUrl("images/GoldMineStructureIcon.svg");
 export const diamondMineIcon = assetUrl("images/DiamondMineStructureIcon.svg");
+export const livestockFarmIcon = assetUrl("images/LivestockFarmStructureIcon.svg");
 export const goldCoinIcon = assetUrl("images/GoldCoinIcon.svg");
 export const mirvIcon = assetUrl("images/MIRVIcon.svg");
 export const missileSiloIcon = assetUrl("images/MissileSiloIconWhite.svg");

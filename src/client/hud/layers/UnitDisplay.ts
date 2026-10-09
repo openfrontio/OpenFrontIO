@@ -30,6 +30,7 @@ import {
   oilMineIcon,
   goldMineIcon,
   diamondMineIcon,
+  livestockFarmIcon,
 } from "../HotbarIcons";
 import { TutorialHighlight, TutorialHighlightEvent } from "../Tutorial";
 
@@ -46,6 +47,7 @@ export class UnitDisplay extends LitElement implements Controller {
   private _oilMines = 0;
   private _goldMines = 0;
   private _diamondMines = 0;
+  private _livestockFarms = 0;
   private _missileSilo = 0;
   private _port = 0;
   private _defensePost = 0;
@@ -133,6 +135,7 @@ export class UnitDisplay extends LitElement implements Controller {
     this._oilMines = player.totalUnitLevels(UnitType.OilMine);
     this._goldMines = player.totalUnitLevels(UnitType.GoldMine);
     this._diamondMines = player.totalUnitLevels(UnitType.DiamondMine);
+    this._livestockFarms = player.totalUnitLevels(UnitType.LivestockFarm);
     this.requestUpdate();
   }
 
@@ -245,6 +248,13 @@ export class UnitDisplay extends LitElement implements Controller {
             UnitType.DiamondMine,
             "diamond_mine",
             this.keybinds["buildDiamondMine"]?.key ?? "Shift+Digit3",
+          )}
+          ${this.renderUnitItem(
+            livestockFarmIcon,
+            this._livestockFarms,
+            UnitType.LivestockFarm,
+            "livestock_farm",
+            this.keybinds["buildLivestockFarm"]?.key ?? "Shift+Digit4",
           )}
         </div>
       </div>

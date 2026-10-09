@@ -151,6 +151,10 @@
       "Missile Silo": {
         "scale": 1.55,
         "iconFill": 0.85
+      },
+      "Livestock Farm": {
+        "scale": 1.1,
+        "iconFill": 0.85
       }
     },
     "highlightOutlineWidth": 0.04,

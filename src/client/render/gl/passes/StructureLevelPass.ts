@@ -51,6 +51,10 @@ const STRUCTURE_ORDER = [
   UT_DEFENSE_POST,
   UT_SAM_LAUNCHER,
   UT_MISSILE_SILO,
+  "Oil Mine",
+  "Gold Mine",
+  "Diamond Mine",
+  "Livestock Farm",
 ] as const;
 
 /** Max characters per level label (handles up to "99"). */

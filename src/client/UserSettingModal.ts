@@ -1365,6 +1365,16 @@ export class UserSettingModal extends BaseModal {
         @change=${this.handleKeybindChange}
       ></setting-keybind>
 
+      <setting-keybind
+        action="buildLivestockFarm"
+        label=${translateText("user_setting.build_livestock_farm")}
+        description=${translateText("user_setting.build_livestock_farm_desc")}
+        defaultKey=${this.defaultKeybinds.buildLivestockFarm}
+        .value=${this.getKeyValue("buildLivestockFarm")}
+        .display=${this.getKeyChar("buildLivestockFarm")}
+        @change=${this.handleKeybindChange}
+      ></setting-keybind>
+
       <h2
         class="text-blue-200 text-xl font-bold mt-8 mb-3 border-b border-white/10 pb-2"
       >

@@ -202,6 +202,7 @@ export enum UnitType {
   OilMine = "Oil Mine",
   GoldMine = "Gold Mine",
   DiamondMine = "Diamond Mine",
+  LivestockFarm = "Livestock Farm",
 }
 
 export enum TrainType {
@@ -234,6 +235,7 @@ export const Structures = unitTypeGroup([
   UnitType.OilMine,
   UnitType.GoldMine,
   UnitType.DiamondMine,
+  UnitType.LivestockFarm,
 ] as const);
 
 export const BuildMenus = unitTypeGroup([

@@ -262,6 +262,7 @@ export class RailNetworkImpl implements RailNetwork {
         UnitType.OilMine,
         UnitType.GoldMine,
         UnitType.DiamondMine,
+        UnitType.LivestockFarm,
       ].includes(unitType)
     ) {
       return [];
@@ -288,6 +289,7 @@ export class RailNetworkImpl implements RailNetwork {
         UnitType.OilMine,
         UnitType.GoldMine,
         UnitType.DiamondMine,
+        UnitType.LivestockFarm,
       ].includes(unitType)
     ) {
       return [];
@@ -320,6 +322,7 @@ export class RailNetworkImpl implements RailNetwork {
       UnitType.OilMine,
       UnitType.GoldMine,
       UnitType.DiamondMine,
+      UnitType.LivestockFarm,
     ]);
     neighbors.sort((a, b) => a.distSquared - b.distSquared);
 
@@ -382,6 +385,7 @@ export class RailNetworkImpl implements RailNetwork {
         UnitType.OilMine,
         UnitType.GoldMine,
         UnitType.DiamondMine,
+        UnitType.LivestockFarm,
       ],
     );
 

@@ -64,6 +64,7 @@ export function createTrainStopHandlers(
   return {
     [UnitType.City]: new TradeStationStopHandler(),
     [UnitType.Port]: new TradeStationStopHandler(),
+    [UnitType.LivestockFarm]: new TradeStationStopHandler(),
     [UnitType.Factory]: new FactoryStopHandler(),
   };
 }
@@ -215,7 +216,11 @@ export class Cluster {
 
   private isTradeStation(station: TrainStation): boolean {
     const type = station.unit.type();
-    return type === UnitType.City || type === UnitType.Port;
+    return (
+      type === UnitType.City ||
+      type === UnitType.Port ||
+      type === UnitType.LivestockFarm
+    );
   }
 
   has(station: TrainStation) {

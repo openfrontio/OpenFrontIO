@@ -320,7 +320,11 @@ export class TrainExecution implements Execution {
     }
     this.stations[1].onTrainStop(this);
     const stationType = this.stations[1].unit.type();
-    if (stationType === UnitType.City || stationType === UnitType.Port) {
+    if (
+      stationType === UnitType.City ||
+      stationType === UnitType.Port ||
+      stationType === UnitType.LivestockFarm
+    ) {
       this._tradeStopsVisited++;
     }
     return;

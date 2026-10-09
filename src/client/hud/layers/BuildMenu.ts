@@ -40,6 +40,7 @@ const shieldIcon = assetUrl("images/ShieldIconWhite.svg");
 const oilMineIcon = assetUrl("images/OilMineIcon.svg");
 const goldMineIcon = assetUrl("images/GoldMineIcon.svg");
 const diamondMineIcon = assetUrl("images/DiamondMineIcon.svg");
+const livestockFarmIcon = assetUrl("images/LivestockFarmIcon.svg");
 
 export interface BuildItemDisplay {
   unitType: PlayerBuildableUnitType;
@@ -140,6 +141,13 @@ export const buildTable: BuildItemDisplay[][] = [
       icon: diamondMineIcon,
       description: "build_menu.desc.diamond_mine",
       key: "unit_type.diamond_mine",
+      countable: true,
+    },
+    {
+      unitType: UnitType.LivestockFarm,
+      icon: livestockFarmIcon,
+      description: "build_menu.desc.livestock_farm",
+      key: "unit_type.livestock_farm",
       countable: true,
     },
   ],

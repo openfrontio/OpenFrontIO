@@ -4,6 +4,7 @@ import {
   UnitType,
 } from "@openfront/engine-api/game/GameTypes";
 import { ConstructionExecution } from "@openfront/engine/execution/ConstructionExecution";
+import { PlayerExecution } from "@openfront/engine/execution/PlayerExecution";
 import { Game, Player } from "@openfront/engine/game/Game";
 import { setup } from "../util/Setup";
 
@@ -31,6 +32,7 @@ describe("Mine economy", () => {
     player = game.player(playerInfo.id);
     player.conquer(game.ref(0, 10));
     player.addGold(5_000_000n);
+    game.addExecution(new PlayerExecution(player));
   });
 
   test("mines have distinct level-1 income rates", () => {

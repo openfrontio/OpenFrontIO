@@ -104,7 +104,8 @@ export class PlayerExecution implements Execution {
         !unit.isActive() ||
         (unit.type() !== UnitType.OilMine &&
           unit.type() !== UnitType.GoldMine &&
-          unit.type() !== UnitType.DiamondMine)
+          unit.type() !== UnitType.DiamondMine &&
+          unit.type() !== UnitType.LivestockFarm)
       ) {
         continue;
       }

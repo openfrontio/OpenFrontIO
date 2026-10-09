@@ -142,7 +142,7 @@ float mineGlyphAlpha(vec2 p, float atlasIdx) {
     alpha = max(alpha, lineAlpha(p, vec2(-0.22, 0.22), vec2(0.20, -0.22), 0.035));
     alpha = max(alpha, lineAlpha(p, vec2(-0.27, 0.23), vec2(0.02, 0.30), 0.04));
     alpha = max(alpha, lineAlpha(p, vec2(0.02, 0.30), vec2(0.27, 0.22), 0.04));
-  } else {
+  } else if (atlasIdx < 8.5) {
     // Diamond gem with internal facets.
     alpha = max(alpha, lineAlpha(p, vec2(-0.28, 0.12), vec2(-0.12, 0.28), 0.03));
     alpha = max(alpha, lineAlpha(p, vec2(-0.12, 0.28), vec2(0.12, 0.28), 0.03));
@@ -153,6 +153,20 @@ float mineGlyphAlpha(vec2 p, float atlasIdx) {
     alpha = max(alpha, lineAlpha(p, vec2(-0.12, 0.28), vec2(0.0, 0.12), 0.025));
     alpha = max(alpha, lineAlpha(p, vec2(0.12, 0.28), vec2(0.0, 0.12), 0.025));
     alpha = max(alpha, lineAlpha(p, vec2(0.0, 0.12), vec2(0.0, -0.28), 0.025));
+  } else {
+    // Livestock Farm / Barn with gambrel roof and door cross.
+    alpha = max(alpha, lineAlpha(p, vec2(0.0, 0.24), vec2(-0.16, 0.14), 0.035));
+    alpha = max(alpha, lineAlpha(p, vec2(0.0, 0.24), vec2(0.16, 0.14), 0.035));
+    alpha = max(alpha, lineAlpha(p, vec2(-0.16, 0.14), vec2(-0.22, 0.02), 0.035));
+    alpha = max(alpha, lineAlpha(p, vec2(0.16, 0.14), vec2(0.22, 0.02), 0.035));
+    alpha = max(alpha, lineAlpha(p, vec2(-0.19, 0.02), vec2(-0.19, -0.22), 0.035));
+    alpha = max(alpha, lineAlpha(p, vec2(0.19, 0.02), vec2(0.19, -0.22), 0.035));
+    alpha = max(alpha, lineAlpha(p, vec2(-0.22, -0.22), vec2(0.22, -0.22), 0.035));
+    alpha = max(alpha, lineAlpha(p, vec2(-0.08, -0.22), vec2(-0.08, -0.06), 0.03));
+    alpha = max(alpha, lineAlpha(p, vec2(0.08, -0.22), vec2(0.08, -0.06), 0.03));
+    alpha = max(alpha, lineAlpha(p, vec2(-0.08, -0.06), vec2(0.08, -0.06), 0.03));
+    alpha = max(alpha, lineAlpha(p, vec2(-0.07, -0.07), vec2(0.07, -0.21), 0.025));
+    alpha = max(alpha, lineAlpha(p, vec2(-0.07, -0.21), vec2(0.07, -0.07), 0.025));
   }
 
   return clamp(alpha, 0.0, 1.0);
@@ -160,7 +174,7 @@ float mineGlyphAlpha(vec2 p, float atlasIdx) {
 
 // Per-structure-type shape SDF.
 // Atlas indices: 0=City, 1=Port, 2=Factory, 3=DefensePost, 4=SAM,
-// 5=Silo, 6=Oil Mine, 7=Gold Mine, 8=Diamond Mine
+// 5=Silo, 6=Oil Mine, 7=Gold Mine, 8=Diamond Mine, 9=Livestock Farm
 float shapeSDF(vec2 p, float R) {
   if (vAtlasIdx < 0.5)
     return length(p) - R;                     // City → circle
@@ -178,7 +192,9 @@ float shapeSDF(vec2 p, float R) {
     return sdPolygon(p, R, 6.0, PI / 6.0);    // Oil Mine → hexagon
   if (vAtlasIdx < 7.5)
     return length(p) - R;                     // Gold Mine → circle
-  return sdPolygon(p, R, 4.0, PI * 0.25);    // Diamond Mine → diamond
+  if (vAtlasIdx < 8.5)
+    return sdPolygon(p, R, 4.0, PI * 0.25);   // Diamond Mine → diamond
+  return length(p) - R;                       // Livestock Farm → circle
 }
 
 void main() {

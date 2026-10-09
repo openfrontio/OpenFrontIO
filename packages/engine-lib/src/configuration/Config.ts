@@ -162,6 +162,9 @@ export class Config {
   cityTroopIncrease(): number {
     return 250_000;
   }
+  livestockFarmTroopIncrease(): number {
+    return 100_000;
+  }
   msPerTick(): number {
     return 100;
   }
@@ -245,6 +248,7 @@ export class Config {
       case UnitType.OilMine:
       case UnitType.GoldMine:
       case UnitType.DiamondMine:
+      case UnitType.LivestockFarm:
         info = {
           constructionDuration: this.instantBuild() ? 0 : 2 * 10,
           upgradable: true,
@@ -336,7 +340,13 @@ export class Config {
             .filter((u) => !u.isUnderConstruction())
             .map((city) => city.level())
             .reduce((a, b) => a + b, 0) *
-            this.cityTroopIncrease();
+            this.cityTroopIncrease() +
+          player
+            .units(UnitType.LivestockFarm)
+            .filter((u) => !u.isUnderConstruction())
+            .map((farm) => farm.level())
+            .reduce((a, b) => a + b, 0) *
+            this.livestockFarmTroopIncrease();
 
     if (player.type() === PlayerType.Bot) {
       return maxTroops / 3;
@@ -367,6 +377,16 @@ export class Config {
 
     const ratio = 1 - player.troops() / max;
     toAdd *= ratio;
+
+    const farmLevels = player
+      .units(UnitType.LivestockFarm)
+      .filter((u) => !u.isUnderConstruction())
+      .map((farm) => farm.level())
+      .reduce((a, b) => a + b, 0);
+
+    if (farmLevels > 0) {
+      toAdd *= 1 + 0.15 * farmLevels;
+    }
 
     if (player.type() === PlayerType.Bot) {
       toAdd *= 0.5;
