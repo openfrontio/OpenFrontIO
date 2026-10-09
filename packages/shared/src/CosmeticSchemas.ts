@@ -497,7 +497,8 @@ export const SubscriptionSchema = CosmeticSchema.extend({
   priceMonthly: z.number(),
   dailySoftCurrency: z.number(),
   dailyHardCurrency: z.number(),
-  // One-time plutonium grant on subscribing (advertised on the store tile).
+  // Plutonium paid at the start of every paid month. Named for when it was
+  // paid once, on subscribing.
   hardCurrencySignupBonus: z.number(),
   // Ranked play limits are gone; still sent by the API until a later release.
   unlimitedRanked: z.boolean().optional(),
