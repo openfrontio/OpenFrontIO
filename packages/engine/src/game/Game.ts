@@ -300,6 +300,7 @@ export interface Unit extends UnitLike {
   level(): number;
   increaseLevel(): void;
   decreaseLevel(destroyer?: Player): void;
+}
 
 export interface Embargo {
   createdAt: Tick;
