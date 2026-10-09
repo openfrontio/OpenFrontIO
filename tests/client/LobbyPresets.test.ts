@@ -253,15 +253,37 @@ describe("LobbyPresets logic and schema", () => {
       expect(settings.getLobbyPresets()).toHaveLength(2);
 
       const afterDelete = deleteLobbyPreset("preset 1", settings);
-      expect(afterDelete).toHaveLength(1);
-      expect(afterDelete[0].name).toBe("Preset 2");
+      expect(afterDelete).not.toBeNull();
+      expect(afterDelete!).toHaveLength(1);
+      expect(afterDelete![0].name).toBe("Preset 2");
       expect(settings.getLobbyPresets()).toHaveLength(1);
     });
 
     it("leaves presets unchanged when deleting non-existent name", () => {
       saveLobbyPreset("Preset 1", sampleConfig, settings);
       const res = deleteLobbyPreset("Does Not Exist", settings);
-      expect(res).toHaveLength(1);
+      expect(res).not.toBeNull();
+      expect(res!).toHaveLength(1);
+    });
+
+    it("returns null when deleteLobbyPreset fails to save", () => {
+      saveLobbyPreset("Preset 1", sampleConfig, settings);
+      (settings as any).setLobbyPresets = () => false;
+      const res = deleteLobbyPreset("Preset 1", settings);
+      expect(res).toBeNull();
+    });
+
+    it("returns null when deleteLobbyPreset is called with empty name", () => {
+      const res = deleteLobbyPreset("   ", settings);
+      expect(res).toBeNull();
+    });
+
+    it("handles storage read failure in UserSettings.getLobbyPresets", () => {
+      const realSettings = new UserSettings();
+      vi.spyOn(realSettings as any, "getCached").mockImplementation(() => {
+        throw new Error("Storage access failed");
+      });
+      expect(realSettings.getLobbyPresets()).toEqual([]);
     });
   });
 });
@@ -583,6 +605,35 @@ describe("HostLobbyModal preset integration", () => {
     );
     expect(modal.lobbyPresets).toHaveLength(0);
   });
+
+  it("marks player limit settled on preset import so uncapped preset clears prior cap", async () => {
+    modal.lobbyId = "test-lobby";
+    modal.playerLimit = true;
+    modal.playerLimitValue = 10;
+
+    await modal.importPresetConfig({
+      ...modal.exportPresetConfig(),
+      playerLimit: false,
+    });
+
+    expect(modal.playerLimit).toBe(false);
+    expect(modal.playerLimitLoadedFor).toBe("test-lobby");
+  });
+
+  it("shows error toast and preserves presets when deleting preset fails", () => {
+    modal.lobbyPresets = [
+      { name: "Preset 1", createdAt: 1, config: modal.exportPresetConfig() },
+    ];
+    modal.selectedPresetName = "Preset 1";
+    (modal.userSettings as any).setLobbyPresets = () => false;
+
+    modal.handlePresetDelete(
+      new CustomEvent("preset-delete", { detail: "Preset 1" }),
+    );
+
+    expect(modal.lobbyPresets).toHaveLength(1);
+    expect(modal.selectedPresetName).toBe("Preset 1");
+  });
 });
 
 describe("SinglePlayerModal preset integration", () => {
@@ -654,5 +705,20 @@ describe("SinglePlayerModal preset integration", () => {
       new CustomEvent("preset-save", { detail: "Fail Save" }),
     );
     expect(modal.lobbyPresets).toHaveLength(0);
+  });
+
+  it("shows error toast and preserves presets when deleting preset fails", () => {
+    modal.lobbyPresets = [
+      { name: "Preset 1", createdAt: 1, config: modal.exportPresetConfig() },
+    ];
+    modal.selectedPresetName = "Preset 1";
+    (modal.userSettings as any).setLobbyPresets = () => false;
+
+    modal.handlePresetDelete(
+      new CustomEvent("preset-delete", { detail: "Preset 1" }),
+    );
+
+    expect(modal.lobbyPresets).toHaveLength(1);
+    expect(modal.selectedPresetName).toBe("Preset 1");
   });
 });

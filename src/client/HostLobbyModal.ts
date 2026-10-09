@@ -1734,6 +1734,7 @@ export class HostLobbyModal extends BaseModal {
     }
     if (config.playerLimit !== undefined) {
       this.playerLimit = config.playerLimit;
+      this.markPlayerLimitSettled();
     }
     if (config.playerLimitValue !== undefined) {
       this.playerLimitValue = config.playerLimitValue;
@@ -1813,7 +1814,12 @@ export class HostLobbyModal extends BaseModal {
 
   private handlePresetDelete = (e: CustomEvent<string>) => {
     const name = e.detail;
-    this.lobbyPresets = deleteLobbyPreset(name, this.userSettings);
+    const updated = deleteLobbyPreset(name, this.userSettings);
+    if (!updated) {
+      showToast(translateText("lobby_config.preset.delete_failed"), "red");
+      return;
+    }
+    this.lobbyPresets = updated;
     if (this.selectedPresetName.toLowerCase() === name.toLowerCase()) {
       this.selectedPresetName = "";
     }

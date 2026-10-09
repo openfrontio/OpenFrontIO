@@ -1148,7 +1148,11 @@ export class UserSettings {
   }
 
   getLobbyPresets(): LobbyPreset[] {
-    return parseLobbyPresetsJson(this.getCached(LOBBY_PRESETS_KEY));
+    try {
+      return parseLobbyPresetsJson(this.getCached(LOBBY_PRESETS_KEY));
+    } catch {
+      return [];
+    }
   }
 
   setLobbyPresets(presets: readonly LobbyPreset[]): boolean {
