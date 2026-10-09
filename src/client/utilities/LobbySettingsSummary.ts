@@ -43,6 +43,11 @@ export function notableLobbySettings(
       label: translateText("game_settings.infinite_gold"),
       value: enabled,
     });
+  if (c.aiResourceStructures)
+    items.push({
+      label: translateText("game_settings.ai_resource_structures"),
+      value: enabled,
+    });
   if (c.instantBuild)
     items.push({
       label: translateText("game_settings.instant_build"),

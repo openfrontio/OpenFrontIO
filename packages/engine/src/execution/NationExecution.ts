@@ -40,6 +40,7 @@ import { NationStructureBehavior } from "./nation/NationStructureBehavior";
 import { NationWarshipBehavior } from "./nation/NationWarshipBehavior";
 import { SpawnExecution } from "./SpawnExecution";
 import { AiAttackBehavior } from "./utils/AiAttackBehavior";
+import { AiResourceStructureBehavior } from "./utils/AiResourceStructureBehavior";
 
 export class NationExecution implements Execution {
   private active = true;
@@ -53,6 +54,7 @@ export class NationExecution implements Execution {
   private warshipBehavior!: NationWarshipBehavior;
   private nukeBehavior!: NationNukeBehavior;
   private structureBehavior!: NationStructureBehavior;
+  private resourceStructureBehavior!: AiResourceStructureBehavior;
   private mg: Game;
   private player: Player | null = null;
 
@@ -209,7 +211,10 @@ export class NationExecution implements Execution {
           (this.attackTick + Math.floor((this.attackRate * 2) / 3)) %
           this.attackRate;
         if (offset === oneThird || offset === twoThirds) {
-          this.structureBehavior.handleStructures();
+          const built = this.structureBehavior.handleStructures();
+          if (!built) {
+            this.resourceStructureBehavior.handleStructures();
+          }
         }
       }
       return;
@@ -220,7 +225,10 @@ export class NationExecution implements Execution {
     this.allianceBehavior.handleAllianceRequests();
     this.allianceBehavior.handleAllianceExtensionRequests();
     this.mirvBehavior.considerMIRV();
-    this.structureBehavior.handleStructures();
+    const builtStructure = this.structureBehavior.handleStructures();
+    if (!builtStructure) {
+      this.resourceStructureBehavior.handleStructures();
+    }
     this.warshipBehavior.maybeSpawnWarship();
     this.handleEmbargoesToHostileNations();
     this.attackBehavior.maybeAttack();
@@ -273,6 +281,11 @@ export class NationExecution implements Execution {
       this.emojiBehavior,
     );
     this.structureBehavior = new NationStructureBehavior(
+      this.random,
+      this.mg,
+      this.player,
+    );
+    this.resourceStructureBehavior = new AiResourceStructureBehavior(
       this.random,
       this.mg,
       this.player,
@@ -475,6 +488,11 @@ export class NationExecution implements Execution {
     );
     nuke.restoreSnapshot(b.nuke, r, random, player, attack, emoji);
     structure.restoreSnapshot(b.structure, r, random, player);
+    this.resourceStructureBehavior = new AiResourceStructureBehavior(
+      random,
+      r.game,
+      player,
+    );
     this.emojiBehavior = emoji;
     this.mirvBehavior = mirv;
     this.allianceBehavior = alliance;

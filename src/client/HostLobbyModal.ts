@@ -77,6 +77,7 @@ export class HostLobbyModal extends BaseModal {
   @state() private spawnImmunity: boolean = false;
   @state() private spawnImmunityDurationMinutes: number | undefined = undefined;
   @state() private infiniteGold: boolean = false;
+  @state() private aiResourceStructures: boolean = false;
   @state() private donateGold: boolean = false;
   @state() private infiniteTroops: boolean = false;
   @state() private donateTroops: boolean = false;
@@ -172,6 +173,8 @@ export class HostLobbyModal extends BaseModal {
         this.playerLimit = true;
         this.playerLimitValue = maxPlayers;
       }
+      this.aiResourceStructures =
+        lobby.gameConfig?.aiResourceStructures ?? false;
     }
     if ("serverTime" in lobby && typeof lobby.serverTime === "number") {
       this.serverTimeOffset = calculateServerTimeOffset(lobby.serverTime);
@@ -691,6 +694,10 @@ export class HostLobbyModal extends BaseModal {
                     checked: this.infiniteGold,
                   },
                   {
+                    labelKey: "game_settings.ai_resource_structures",
+                    checked: this.aiResourceStructures,
+                  },
+                  {
                     labelKey: "game_settings.infinite_troops",
                     checked: this.infiniteTroops,
                   },
@@ -1012,6 +1019,7 @@ export class HostLobbyModal extends BaseModal {
     this.spawnImmunity = false;
     this.spawnImmunityDurationMinutes = undefined;
     this.infiniteGold = false;
+    this.aiResourceStructures = false;
     this.donateGold = false;
     this.infiniteTroops = false;
     this.donateTroops = false;
@@ -1132,6 +1140,10 @@ export class HostLobbyModal extends BaseModal {
         break;
       case "game_settings.infinite_gold":
         this.handleInfiniteGoldChange(checked);
+        break;
+      case "game_settings.ai_resource_structures":
+        this.aiResourceStructures = checked;
+        this.putGameConfig();
         break;
       case "game_settings.infinite_troops":
         this.handleInfiniteTroopsChange(checked);
@@ -1641,6 +1653,7 @@ export class HostLobbyModal extends BaseModal {
             difficulty: this.selectedDifficulty,
             bots: this.bots,
             infiniteGold: this.infiniteGold,
+            aiResourceStructures: this.aiResourceStructures,
             donateGold: this.donateGold,
             infiniteTroops: this.infiniteTroops,
             donateTroops: this.donateTroops,
