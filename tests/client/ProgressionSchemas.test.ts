@@ -190,6 +190,108 @@ describe("public progression schemas", () => {
         { level: 2, xpToNext: 150, cumulativeXp: 100 },
       ],
     };
-    expect(ProgressionConfigSchema.parse(data)).toEqual(data);
+    // An API from before the rewards: still parses, with no flares.
+    expect(ProgressionConfigSchema.parse(data)).toEqual({
+      ...data,
+      flares: [],
+    });
+  });
+
+  it("parses the config's rewards: Caps, Plutonium, prestige and flares", () => {
+    const data = {
+      version: 3,
+      formula: 2,
+      maxLevel: 100,
+      maxPrestige: 10,
+      levels: [
+        { level: 1, xpToNext: 150, cumulativeXp: 0, caps: 0, plutonium: 0 },
+        {
+          level: 20,
+          xpToNext: 910,
+          cumulativeXp: 9000,
+          caps: 50,
+          plutonium: 25,
+        },
+      ],
+      levelRewards: {
+        capsBands: [{ fromLevel: 2, toLevel: 25, caps: 50 }],
+        plutonium: { fromLevel: 20, everyLevels: 10, amount: 25 },
+      },
+      prestige: { caps: 2500 },
+      flares: [
+        {
+          kind: "level",
+          level: 50,
+          prestige: null,
+          flareName: "effect:firebird_trail",
+          cosmetic: { type: "effect", name: "firebird_trail", url: null },
+        },
+        {
+          kind: "prestige",
+          level: null,
+          prestige: 5,
+          flareName: "effect:solar_corona",
+          cosmetic: { type: "effect", name: "solar_corona", url: null },
+        },
+        {
+          kind: "legend",
+          level: null,
+          prestige: null,
+          flareName: "title:legend",
+          cosmetic: null,
+        },
+      ],
+    };
+    const parsed = ProgressionConfigSchema.parse(data);
+    expect(parsed.prestige).toEqual({ caps: 2500 });
+    expect(parsed.levels[1]).toMatchObject({ caps: 50, plutonium: 25 });
+    expect(parsed.levelRewards?.plutonium.everyLevels).toBe(10);
+    expect(parsed.flares).toEqual(data.flares);
+  });
+
+  it("drops a malformed flare or reward block, not the config", () => {
+    const parsed = ProgressionConfigSchema.parse({
+      version: 3,
+      maxLevel: 100,
+      maxPrestige: 10,
+      levels: [{ level: 1, xpToNext: 150, cumulativeXp: 0, caps: "lots" }],
+      levelRewards: { capsBands: "none" },
+      prestige: { caps: "2500" },
+      flares: [
+        { kind: "prestige", prestige: 5 },
+        {
+          kind: "a-kind-from-the-future",
+          level: null,
+          prestige: null,
+          flareName: "flag:x",
+          cosmetic: { type: "flag" },
+        },
+      ],
+    });
+    expect(parsed.levels[0].caps).toBeUndefined();
+    expect(parsed.levelRewards).toBeUndefined();
+    expect(parsed.prestige).toBeUndefined();
+    // The unknown kind is kept (nothing matches it); its malformed cosmetic
+    // reads as none.
+    expect(parsed.flares).toEqual([
+      {
+        kind: "a-kind-from-the-future",
+        level: null,
+        prestige: null,
+        flareName: "flag:x",
+        cosmetic: null,
+      },
+    ]);
+  });
+
+  it("reads flares that aren't a list as none", () => {
+    const parsed = ProgressionConfigSchema.parse({
+      version: 3,
+      maxLevel: 100,
+      maxPrestige: 10,
+      levels: [],
+      flares: { nope: true },
+    });
+    expect(parsed.flares).toEqual([]);
   });
 });
