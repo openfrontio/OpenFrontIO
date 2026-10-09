@@ -9,7 +9,6 @@ import { WebSocket, WebSocketServer } from "ws";
 import { z } from "zod";
 import { CloseCode, CloseReason } from "../core/CloseCodes";
 import { GameEnv } from "../core/configuration/Config";
-import { GameType } from "../core/game/Game";
 import {
   ClientMessage,
   ClientPlatformSchema,
@@ -23,7 +22,10 @@ import {
   ServerErrorMessage,
 } from "../core/Schemas";
 import { generateID, replacer } from "../core/Util";
-import { CreateGameInputSchema } from "../core/WorkerSchemas";
+import {
+  CreateGameInputSchema,
+  isPrivateGameInput,
+} from "../core/WorkerSchemas";
 import { decodeClientMessage, encodeServerMessage } from "../core/ZbinWire";
 import { registerAdminBotRoutes } from "./AdminBotRoutes";
 import { censorPlayer } from "./Censor";
@@ -186,11 +188,14 @@ export async function startWorker() {
       return res.status(400).json({ error: z.prettifyError(parsed.error) });
     }
     const gc = parsed.data;
-    // Public games are scheduled by the master over IPC, never created here.
-    if (gc?.gameType === GameType.Public) {
+    // Only private games are created here. Public games are scheduled by the
+    // master over IPC, and singleplayer games run in the browser, never on a
+    // game server. An empty body ({}) parses to undefined and gets
+    // createGame's private default.
+    if (!isPrivateGameInput(gc)) {
       return res
         .status(400)
-        .json({ error: "Cannot create public games via this endpoint" });
+        .json({ error: "Only private games can be created via this endpoint" });
     }
 
     // Reuse-lobby flow: ?previous=<gameID> marks this creation as the successor
