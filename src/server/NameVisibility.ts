@@ -211,6 +211,10 @@ export class NameVisibility {
         verified: c.cosmetics?.verified,
         spectator: c.spectator || undefined,
         teamIndex: this.view.teamIndex(c),
+        // Only beside a real name — the anonymized branch above omits it, as a
+        // level beside an anonymous name would point out the veterans. Kept on
+        // a teammate reveal: it describes the teammate alone, like `verified`.
+        levelBadge: c.wireLevelBadge,
       };
     });
   }
