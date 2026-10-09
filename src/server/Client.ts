@@ -13,7 +13,8 @@ export class Client {
 
   public hashes: Map<Tick, number> = new Map();
 
-  public reportedWinner: Winner | null = null;
+  // This client's winner vote, keyed on winner and stats (Consensus.voteKey).
+  public reportedVote: { winner: Winner; key: string } | null = null;
 
   // levelBadge as the lobby roster carries it (ClientInfo.levelBadge), packed
   // once here rather than for every entry of every per-recipient broadcast.

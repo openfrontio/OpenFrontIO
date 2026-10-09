@@ -20,6 +20,7 @@ import { html, LitElement } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import Countries from "resources/countries.json" with { type: "json" };
 import { fetchLobbyListed, getUserMe } from "../../Api";
+import "../../components/EquippedCosmeticsRow";
 import "../../components/LevelBadge";
 import { actionButton } from "../../components/ui/ActionButton";
 import "../../components/ui/Divider";
@@ -1108,6 +1109,11 @@ export class PlayerPanel extends LitElement implements Controller {
                     <div class="mb-1">
                       ${this.renderIdentityRow(other, viewer)}
                     </div>
+
+                    <!-- Cosmetics the player has equipped -->
+                    <equipped-cosmetics-row
+                      .cosmetics=${other.cosmetics}
+                    ></equipped-cosmetics-row>
 
                     ${this.sendTarget && !isSpectator
                       ? html`
