@@ -128,6 +128,27 @@ describe("subscription tier listing per rail", () => {
     ]);
   });
 
+  it("sells a listed tier that has no Stripe product", async () => {
+    const steamOnly = {
+      ...steamListing,
+      subscriptions: {
+        steam_plus: { ...steamListing.subscriptions.steam_plus, product: null },
+      },
+    };
+    expect(subscriptionTiles(userMe(null), steamOnly)).toEqual([
+      ["subscription:steam_plus", "purchasable"],
+    ]);
+  });
+
+  it("never sells an unlisted tier, even one with a Stripe product", async () => {
+    const cosmetics = await fetchCosmetics();
+    expect(cosmetics?.unlistedSubscriptions?.sovereign.product).not.toBeNull();
+    expect(subscriptionTiles(userMe("sovereign"), cosmetics)).toEqual([
+      ["subscription:steam_plus", "purchasable"],
+      ["subscription:sovereign", "owned"],
+    ]);
+  });
+
   it("looks a tier up whether or not the rail lists it", async () => {
     const cosmetics = await fetchCosmetics();
     expect(subscriptionTier(cosmetics, "steam_plus")?.name).toBe("steam_plus");

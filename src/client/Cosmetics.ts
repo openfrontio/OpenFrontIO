@@ -1358,26 +1358,16 @@ export function resolveCosmetics(
   const grantIsCurrent = isGrantedSubscription(currentSub);
   for (const [subKey, sub] of Object.entries(cosmetics.subscriptions ?? {})) {
     const key = `subscription:${subKey}`;
-    // A listing with no Stripe `product` block cannot render a price, so it
-    // falls to "blocked" — and the subscriptions tab lists only purchasable
-    // and owned, so a blocked tier is not shown at all. (Currency packs hit
-    // this and were fixed by never gating on `product`; subscriptions still
-    // do. OPE-441 is the real fix.)
-    const canBeSold = Boolean(sub.product);
-    // ...which is why the grant demotion below is conditional on it. Taking
-    // "owned" away from a tier we then cannot sell would make the card
-    // VANISH from the store, and a card that disappears is a worse failure
-    // than the dead "Subscribed" box this change exists to remove. Not
-    // reachable today — every live tier carries a product — and this is not
-    // the PR to introduce it.
+    // `subscriptions` is this rail's storefront, so every tier in it is for
+    // sale. NEVER gate on `sub.product`: that is the Stripe listing, null for
+    // a tier only Steam sells, and gating on it hid such tiers from the store
+    // (see currency packs above). If a rail cannot sell it, checkout says so.
     const isCurrentTier = subKey === currentSubTier;
-    const demoteGrant = grantIsCurrent && isCurrentTier && canBeSold;
+    const demoteGrant = grantIsCurrent && isCurrentTier;
     const isCurrent = flares.includes(key) || (isCurrentTier && !demoteGrant);
     const rel: ResolvedCosmetic["relationship"] = isCurrent
       ? "owned"
-      : canBeSold
-        ? "purchasable"
-        : "blocked";
+      : "purchasable";
     result.push({
       type: "subscription",
       cosmetic: sub,
