@@ -105,6 +105,11 @@ export const RewardSchema = z.object({
   amount: z.string(),
   reason: z.string(),
   note: z.string().nullable(),
+  // Why the reward can't be claimed yet; absent when it can. "trust": level
+  // Plutonium, kept until the account is trusted. Optional for older APIs, and
+  // an unknown or malformed value reads as absent: the reward then offers a
+  // claim, and the server's 403 marks it held (see claimReward).
+  held: z.enum(["trust"]).optional().catch(undefined),
 });
 export type Reward = z.infer<typeof RewardSchema>;
 
@@ -221,11 +226,21 @@ export type ClaimRewardResponse = z.infer<typeof ClaimRewardResponseSchema>;
 
 export const ClaimAllRewardsResponseSchema = z.object({
   claimed: z.array(z.object({ id: z.string() })),
+  // The rewards still pending after the claim because they are held (each
+  // with `held`), in /users/@me's reward shape. Empty from older APIs, and
+  // when the list can't be read: the next /users/@me read brings them back.
+  held: z.array(RewardSchema).default([]).catch([]),
   currency: CurrencyBalancesSchema,
 });
 export type ClaimAllRewardsResponse = z.infer<
   typeof ClaimAllRewardsResponseSchema
 >;
+
+// POST /rewards/:rewardId/claim's 403 for a held reward (RewardSchema.held):
+// it stays pending, and claims once the hold lifts.
+export const ClaimRewardHeldResponseSchema = z.object({
+  held: z.string(),
+});
 
 // Account-username lifecycle. `unclaimed`: no bare-name reservation (default).
 // `claimed`: reservation held but subscription lapsed — the suffix shows again

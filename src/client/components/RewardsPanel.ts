@@ -7,6 +7,7 @@ import {
   getUserMe,
   invalidateUserMe,
 } from "../Api";
+import { crazyGamesSDK } from "../CrazyGamesSDK";
 import { showInGameAlert } from "../InGameModal";
 import { levelRewardReasonKey } from "../Progression";
 import { translateText } from "../Utils";
@@ -53,6 +54,17 @@ export class RewardsPanel extends LitElement {
         return;
       }
       invalidateUserMe();
+      if (result === "held") {
+        // Held since this list was read (or read by an older API): nothing
+        // was claimed, so the wallet stays as it is.
+        this.emitChanged({
+          currency: null,
+          rewards: this.rewards.map((r) =>
+            r.id === reward.id ? { ...r, held: "trust" } : r,
+          ),
+        });
+        return;
+      }
       if (result === "not_found") {
         // Already claimed elsewhere (double-click or second device) — the
         // currency was still credited exactly once. Re-sync from the server.
@@ -85,7 +97,8 @@ export class RewardsPanel extends LitElement {
         return;
       }
       invalidateUserMe();
-      this.emitChanged({ currency: result.currency, rewards: [] });
+      // Held rewards stay pending: keep showing them, with why.
+      this.emitChanged({ currency: result.currency, rewards: result.held });
     } finally {
       this.claiming = false;
     }
@@ -137,19 +150,38 @@ export class RewardsPanel extends LitElement {
             >
           </div>
         </div>
-        <o-button
-          variant="primary"
-          size="xs"
-          translationKey="account_modal.claim"
-          .disable=${this.claiming}
-          @click=${() => this.handleClaim(reward)}
-        ></o-button>
+        ${reward.held !== undefined
+          ? html`<span
+              data-reward-held
+              class="shrink-0 text-xs font-bold text-white/60 text-right"
+              >${translateText("account_modal.reward_held_trust")}</span
+            >`
+          : html`<o-button
+              variant="primary"
+              size="xs"
+              translationKey="account_modal.claim"
+              .disable=${this.claiming}
+              @click=${() => this.handleClaim(reward)}
+            ></o-button>`}
       </div>
     `;
   }
 
+  // Why held rewards can't be claimed yet: once under the list, however many
+  // there are. CrazyGames has no purchases, so its copy only suggests playing.
+  private renderHeldNote(): TemplateResult | "" {
+    if (!this.rewards.some((r) => r.held !== undefined)) return "";
+    const key = crazyGamesSDK.isOnCrazyGames()
+      ? "account_modal.reward_held_trust_info_crazygames"
+      : "account_modal.reward_held_trust_info";
+    return html`<p data-reward-held-note class="mt-3 text-xs text-white/60">
+      ${translateText(key)}
+    </p>`;
+  }
+
   render() {
     if (this.rewards.length === 0) return html``;
+    const claimable = this.rewards.filter((r) => r.held === undefined);
     return html`
       <div class="bg-white/5 rounded-xl border border-white/10 p-6">
         <div class="flex items-center justify-between gap-4 mb-4">
@@ -157,7 +189,7 @@ export class RewardsPanel extends LitElement {
             <span>🎁</span>
             ${translateText("account_modal.unclaimed_rewards")}
           </h3>
-          ${this.rewards.length > 1
+          ${claimable.length > 1
             ? html`<o-button
                 variant="primary"
                 size="xs"
@@ -170,6 +202,7 @@ export class RewardsPanel extends LitElement {
         <div class="flex flex-col gap-2">
           ${this.rewards.map((r) => this.renderReward(r))}
         </div>
+        ${this.renderHeldNote()}
       </div>
     `;
   }

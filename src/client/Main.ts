@@ -829,7 +829,9 @@ class Client {
               Date.now(),
             ),
             grantStringsReady: steamGrantStringsReady(translateText),
-            rewardCount: rewards.length,
+            // Held rewards can't be claimed yet: on their own they'd open the
+            // popup every boot with nothing to do.
+            rewardCount: rewards.filter((r) => r.held === undefined).length,
             claimPromptDue: claimPromptDue(claimStore, Date.now(), publicId),
             claimStringsReady: claimPromptStringsReady(translateText),
           }),

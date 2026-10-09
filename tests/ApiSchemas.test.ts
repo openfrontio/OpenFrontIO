@@ -1,5 +1,6 @@
 import {
   ClaimAllRewardsResponseSchema,
+  ClaimRewardHeldResponseSchema,
   ClaimRewardResponseSchema,
   FriendEntrySchema,
   GetMyTribeNamesResponseSchema,
@@ -594,6 +595,27 @@ describe("RewardSchema", () => {
       RewardSchema.safeParse({ ...validReward, currencyType: "gems" }).success,
     ).toBe(false);
   });
+
+  it("reads held: trust", () => {
+    const result = RewardSchema.safeParse({ ...validReward, held: "trust" });
+    expect(result.success).toBe(true);
+    if (result.success) expect(result.data.held).toBe("trust");
+  });
+
+  it("reads an absent held as claimable", () => {
+    const result = RewardSchema.safeParse(validReward);
+    expect(result.success).toBe(true);
+    if (result.success) expect(result.data.held).toBeUndefined();
+  });
+
+  it.each([["future_hold"], [42], [null], [{ reason: "trust" }]])(
+    "reads a malformed held (%j) as absent rather than failing",
+    (held) => {
+      const result = RewardSchema.safeParse({ ...validReward, held });
+      expect(result.success).toBe(true);
+      if (result.success) expect(result.data.held).toBeUndefined();
+    },
+  );
 });
 
 describe("UserMeResponseSchema rewards", () => {
@@ -626,6 +648,39 @@ describe("UserMeResponseSchema rewards", () => {
     expect(result.success).toBe(true);
     if (result.success) {
       expect(result.data.player.rewards).toHaveLength(1);
+    }
+  });
+
+  it("keeps a held reward's hold", () => {
+    const result = UserMeResponseSchema.safeParse({
+      user: {},
+      player: {
+        ...basePlayer,
+        rewards: [
+          {
+            id: "7",
+            currencyType: "hard",
+            amount: "50",
+            reason: "level_milestone",
+            note: null,
+            held: "trust",
+          },
+          {
+            id: "8",
+            currencyType: "soft",
+            amount: "150",
+            reason: "level_up",
+            note: null,
+          },
+        ],
+      },
+    });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.player.rewards?.map((r) => r.held)).toEqual([
+        "trust",
+        undefined,
+      ]);
     }
   });
 
@@ -708,6 +763,73 @@ describe("claim response schemas", () => {
     if (result.success) {
       expect(result.data.claimed).toEqual([{ id: "42" }]);
     }
+  });
+
+  it("reads a claim-all without held (older APIs) as nothing held", () => {
+    const result = ClaimAllRewardsResponseSchema.safeParse({
+      claimed: [],
+      currency: { soft: "0", hard: "0" },
+    });
+    expect(result.success).toBe(true);
+    if (result.success) expect(result.data.held).toEqual([]);
+  });
+
+  it("keeps the rewards a claim-all left held", () => {
+    const result = ClaimAllRewardsResponseSchema.safeParse({
+      claimed: [],
+      held: [
+        {
+          id: "7",
+          currencyType: "hard",
+          amount: "50",
+          reason: "level_milestone",
+          note: null,
+          createdAt: "2026-10-01T12:00:00.000Z",
+          held: "trust",
+        },
+      ],
+      currency: { soft: "0", hard: "0" },
+    });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.held).toEqual([
+        {
+          id: "7",
+          currencyType: "hard",
+          amount: "50",
+          reason: "level_milestone",
+          note: null,
+          held: "trust",
+        },
+      ]);
+    }
+  });
+
+  it("reads a malformed held list as empty rather than failing the claim", () => {
+    const result = ClaimAllRewardsResponseSchema.safeParse({
+      claimed: [{ id: "1" }],
+      held: "nope",
+      currency: { soft: "10", hard: "0" },
+    });
+    expect(result.success).toBe(true);
+    if (result.success) expect(result.data.held).toEqual([]);
+  });
+
+  it("recognises the 403 body for a held reward", () => {
+    expect(
+      ClaimRewardHeldResponseSchema.safeParse({
+        error: "Forbidden",
+        resource: "reward",
+        held: "trust",
+        message: "This reward is paid to trusted accounts",
+      }).success,
+    ).toBe(true);
+    expect(
+      ClaimRewardHeldResponseSchema.safeParse({
+        error: "Forbidden",
+        message: "nope",
+      }).success,
+    ).toBe(false);
   });
 });
 
