@@ -84,7 +84,8 @@ describe("core snapshot", () => {
     const game = await builtGame();
     const bytes = snapshotGame(game);
     const { gameMap, miniGameMap } = await loadTestMaps(MAP);
-    restoreMapsFromSnapshot(bytes, gameMap, miniGameMap);
+    const restored = restoreMapsFromSnapshot(bytes, gameMap, miniGameMap);
+    expect(restored.startTick).toBe(game.startTick());
 
     const a = game.player("alice");
     expect(gameMap.ownerID(game.ref(10, 10))).toBe(a.smallID());

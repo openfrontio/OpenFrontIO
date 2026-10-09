@@ -18,10 +18,7 @@ import {
   loadTerrainMap,
   TerrainMapData,
 } from "@openfront/engine-lib/game/TerrainMapLoader";
-import {
-  readSnapshotHeader,
-  restoreMapsFromSnapshot,
-} from "@openfront/engine-lib/snapshot/MapSnapshot";
+import { restoreMapsFromSnapshot } from "@openfront/engine-lib/snapshot/MapSnapshot";
 import { EventBus } from "@openfront/shared/EventBus";
 import { GameMapLoader, loadMapFiles } from "@openfront/shared/GameMapLoader";
 import { replacer } from "@openfront/shared/SharedUtil";
@@ -732,22 +729,15 @@ export async function createClientGame(
   let initialStartTick: number | null = null;
   if (lobbyConfig.resumeSnapshot) {
     try {
-      restoreMapsFromSnapshot(
+      const restored = restoreMapsFromSnapshot(
         lobbyConfig.resumeSnapshot,
         gameMap.gameMap,
         gameMap.miniGameMap,
       );
+      initialStartTick = restored.startTick;
     } catch (e) {
       worker.cleanup();
       console.warn("Failed to restore maps from snapshot", e);
-      throw e;
-    }
-    try {
-      const header = readSnapshotHeader(lobbyConfig.resumeSnapshot);
-      initialStartTick = header.startTick ?? null;
-    } catch (e) {
-      worker.cleanup();
-      console.warn("Failed to read snapshot header for initial startTick", e);
       throw e;
     }
   }
@@ -763,10 +753,6 @@ export async function createClientGame(
     lobbyConfig.gameStartInfo.players,
     initialStartTick,
   );
-  const initialUpdate = worker.consumeInitialUpdate?.();
-  if (initialUpdate) {
-    gameView.update(initialUpdate);
-  }
 
   // Transparent fullscreen overlay used purely as the pointer-event /
   // bounding-rect target for InputHandler + TransformHandler. The actual
@@ -1081,6 +1067,7 @@ export class ClientGameRunner {
 
     this.renderer.initialize();
     this.input.initialize();
+    let isInitialUpdate = Boolean(this.worker.initialUpdate);
     this.worker.start((gu: GameUpdateViewData | ErrorUpdate) => {
       if (this.lobby.gameStartInfo === undefined) {
         throw new Error("missing gameStartInfo");
@@ -1096,7 +1083,11 @@ export class ClientGameRunner {
         this.stop();
         return;
       }
-      this.transport.turnComplete();
+      if (isInitialUpdate) {
+        isInitialUpdate = false;
+      } else {
+        this.transport.turnComplete();
+      }
       gu.updates[GameUpdateType.Hash].forEach((hu: HashUpdate) => {
         this.eventBus.emit(new SendHashEvent(hu.tick, hu.hash));
       });
