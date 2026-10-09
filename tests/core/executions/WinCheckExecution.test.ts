@@ -556,6 +556,56 @@ describe("WinCheckExecution - 1v1 Ranked Mode", () => {
   });
 });
 
+describe("WinCheckExecution - FFA Ranked Mode", () => {
+  async function rankedFfaGame() {
+    const names = ["Player1", "Player2", "Player3", "Player4"];
+    const game = await setup(
+      "big_plains",
+      {
+        infiniteGold: true,
+        gameMode: GameMode.FFA,
+        instantBuild: true,
+        rankedType: RankedType.FreeForAll,
+      },
+      names.map((name) => playerInfo(name, PlayerType.Human)),
+    );
+    const players = names.map((name) => game.player(name));
+    const counts = players.map(() => 0);
+    game.map().forEachTile((tile) => {
+      if (!game.map().isLand(tile)) return;
+      const i = counts.findIndex((c) => c < 10);
+      if (i === -1) return;
+      players[i].conquer(tile);
+      counts[i]++;
+    });
+    const setWinnerSpy = vi.fn();
+    game.setWinner = setWinnerSpy;
+    const winCheck = new WinCheckExecution();
+    winCheck.init(game, 0);
+    return { players, setWinnerSpy, winCheck };
+  }
+
+  test("sets the winner when only one human remains connected", async () => {
+    const { players, setWinnerSpy, winCheck } = await rankedFfaGame();
+    players.slice(1).forEach((p) => p.markDisconnected(true));
+
+    winCheck.checkWinnerFFA();
+
+    expect(setWinnerSpy).toHaveBeenCalledWith(players[0], expect.anything());
+    expect(winCheck.isActive()).toBe(false);
+  });
+
+  test("keeps going while two humans are still connected", async () => {
+    const { players, setWinnerSpy, winCheck } = await rankedFfaGame();
+    players.slice(2).forEach((p) => p.markDisconnected(true));
+
+    winCheck.checkWinnerFFA();
+
+    expect(setWinnerSpy).not.toHaveBeenCalled();
+    expect(winCheck.isActive()).toBe(true);
+  });
+});
+
 describe("WinCheckExecution - Overtime", () => {
   test("win threshold decays after the start minute", async () => {
     const game = await setup("big_plains", {

@@ -86,7 +86,13 @@ export class WinCheckExecution implements Execution {
       return;
     }
 
-    if (this.mg.config().gameConfig().rankedType === RankedType.OneVOne) {
+    // Ranked 1v1 and FFA end when one connected human is left: everyone else
+    // is dead or gone, and the bots can't win a ranked game.
+    const rankedType = this.mg.config().gameConfig().rankedType;
+    if (
+      rankedType === RankedType.OneVOne ||
+      rankedType === RankedType.FreeForAll
+    ) {
       const humans = sorted.filter(
         (p) => p.type() === PlayerType.Human && !p.isDisconnected(),
       );
