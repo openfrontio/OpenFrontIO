@@ -65,7 +65,7 @@ import { z } from "zod";
 import { archive, finalizeGameRecord } from "./Archive";
 import { Client } from "./Client";
 import { applyGameConfigPatch, hostCheatsEnabled } from "./ConfigPatch";
-import { LiveStatsVote, WinnerVote } from "./Consensus";
+import { LiveStatsVote, voteKey, WinnerVote } from "./Consensus";
 import { fetchCustomTribes } from "./CustomTribes";
 import { DesyncDetector } from "./DesyncDetector";
 import {
@@ -1934,10 +1934,10 @@ export class GameServer {
 
   // Archives the game once its winner is settled. Normally the vote settles
   // it, but a vote is only as good as its voters: when they disagree -- some
-  // client named a different winner, or the game ended with no majority --
-  // the server replays the game itself and archives what the simulation
-  // says. The record waits for the replay; if the replay fails, the vote's
-  // result (if any) goes out instead.
+  // client named a different winner or sent different stats, or the game
+  // ended with no majority -- the server replays the game itself and
+  // archives what the simulation says. The record waits for the replay; if
+  // the replay fails, the vote's result (if any) goes out instead.
   private settleWinner() {
     const voted = this.winnerVote.winner();
     const candidates = this.winnerVote.candidates();
@@ -1962,8 +1962,11 @@ export class GameServer {
           this.archiveGame(voted, turns, endTime);
           return;
         }
-        const replayedKey = JSON.stringify(replayed.winner ?? null);
-        const agrees = replayedKey === JSON.stringify(voted?.winner ?? null);
+        const replayedKey = voteKey(replayed);
+        const agrees =
+          voted === null
+            ? replayed.winner === undefined
+            : voteKey(voted) === replayedKey;
         const outcome = agrees ? "agreed" : "overturned";
         winnerReplayMetrics.outcomes[outcome]++;
         this.log[agrees ? "info" : "warn"]("winner replay result", {
@@ -1974,22 +1977,25 @@ export class GameServer {
           agrees,
         });
         // A vote is the client's own simulation's result, so an honest,
-        // in-sync client votes what the replay found (desynced clients'
-        // votes were dropped). One line per voter who didn't, departed ones
-        // included, so they can be counted per player: likely cheaters.
+        // in-sync client votes what the replay found, winner and stats
+        // (desynced clients' votes were dropped). One line per voter who
+        // didn't, departed ones included, so they can be counted per player:
+        // likely cheaters.
         for (const client of this.clients.all().values()) {
-          if (
-            client.reportedWinner === null ||
-            JSON.stringify(client.reportedWinner ?? null) === replayedKey
-          ) {
+          const vote = client.reportedVote;
+          if (vote === null || vote.key === replayedKey) {
             continue;
           }
           this.log.warn("wrong winner vote", {
             gameID: this.id,
             publicID: client.publicId,
             clientID: client.clientID,
-            voted: client.reportedWinner,
+            voted: vote.winner,
             replayed: replayed.winner,
+            // The winner was right, only the stats differed.
+            wrongStats:
+              JSON.stringify(vote.winner ?? null) ===
+              JSON.stringify(replayed.winner ?? null),
             outcome,
           });
         }
@@ -2011,19 +2017,6 @@ export class GameServer {
       gameID: this.id,
       winner: winner?.winner,
     });
-
-    // The record carries the first winning voter's stats, unchecked. Before
-    // the vote can also be made to agree on stats, measure how often honest
-    // voters actually differ: a "split" here means they did.
-    const agreement = this.winnerVote.statsAgreement();
-    if (agreement !== null) {
-      const split = agreement.versions > 1;
-      this.log[split ? "warn" : "info"]("winner stats agreement", {
-        gameID: this.id,
-        statsAgreement: split ? "split" : "agreed",
-        ...agreement,
-      });
-    }
 
     // Players must stay in the same order as the game start info.
     const playerRecords: PlayerRecord[] = this.gameStartInfo.players.map(
@@ -2149,17 +2142,17 @@ export class GameServer {
       this.desync.isDesynced(client.clientID) ||
       this.isKicked(client.clientID) ||
       this.winnerVote.winner() !== null ||
-      client.reportedWinner !== null
+      client.reportedVote !== null
     ) {
       return;
     }
-    client.reportedWinner = clientMsg.winner;
 
     const activeUniqueIPs = this.clients.votingUniqueIPs();
     const { key: winnerKey, votes } = this.winnerVote.cast(
       clientMsg,
       client.ip,
     );
+    client.reportedVote = { winner: clientMsg.winner, key: winnerKey };
 
     this.log.info(
       `received winner vote ${clientMsg.winner}, ${votes}/${activeUniqueIPs} votes for this winner`,

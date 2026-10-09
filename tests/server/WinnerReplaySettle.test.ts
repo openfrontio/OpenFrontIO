@@ -19,8 +19,8 @@ import {
   startGame,
 } from "../util/GameServerHarness";
 
-// When the winner vote is disputed -- a vote named a different winner, or the
-// game ended with no majority -- the server replays the game and archives the
+// When the winner vote is disputed -- a vote named a different winner or sent
+// different stats, or the game ended with no majority -- the server replays the game and archives the
 // simulation's result instead of the vote's. Driven through the real game:
 // votes arrive as winner messages, the replay is a stub the test resolves,
 // and the outcome is whatever record the game hands to the archive.
@@ -87,6 +87,7 @@ describe("settling a disputed winner vote by replay", () => {
       .map(([, meta]: [string, Record<string, unknown>]) => ({
         publicID: meta.publicID,
         voted: meta.voted,
+        wrongStats: meta.wrongStats,
         outcome: meta.outcome,
       }));
   // Runs `fn` and returns how the outcome counters moved.
@@ -111,8 +112,9 @@ describe("settling a disputed winner vote by replay", () => {
   });
 
   it("replays a split vote and archives the simulation's winner and stats", async () => {
+    const stats = { [C]: { conquests: [3n] } } as AllPlayersStats;
     const { game, clients } = play([A, B, C]);
-    await vote(clients[2], ["player", C]);
+    await vote(clients[2], ["player", C], stats);
     await vote(clients[0], ["player", A]);
     await vote(clients[1], ["player", A]);
 
@@ -124,7 +126,6 @@ describe("settling a disputed winner vote by replay", () => {
     expect(Array.isArray(turns)).toBe(true);
     expect(archive).not.toHaveBeenCalled();
 
-    const stats = { [C]: { conquests: [3n] } } as AllPlayersStats;
     const counted = await outcomesDuring(async () => {
       resolveReplay({
         winner: ["player", C],
@@ -136,8 +137,18 @@ describe("settling a disputed winner vote by replay", () => {
     expect(counted).toEqual({ agreed: 0, overturned: 1, failed: 0 });
     // The majority was wrong; C, the lone dissenter, was right.
     expect(wrongVotes()).toEqual([
-      { publicID: `pub-${A}`, voted: ["player", A], outcome: "overturned" },
-      { publicID: `pub-${B}`, voted: ["player", A], outcome: "overturned" },
+      {
+        publicID: `pub-${A}`,
+        voted: ["player", A],
+        wrongStats: false,
+        outcome: "overturned",
+      },
+      {
+        publicID: `pub-${B}`,
+        voted: ["player", A],
+        wrongStats: false,
+        outcome: "overturned",
+      },
     ]);
 
     const [record] = archived();
@@ -179,8 +190,47 @@ describe("settling a disputed winner vote by replay", () => {
     expect(counted).toEqual({ agreed: 1, overturned: 0, failed: 0 });
     // The vote stood, but C claimed the win and was wrong.
     expect(wrongVotes()).toEqual([
-      { publicID: `pub-${C}`, voted: ["player", C], outcome: "agreed" },
+      {
+        publicID: `pub-${C}`,
+        voted: ["player", C],
+        wrongStats: false,
+        outcome: "agreed",
+      },
     ]);
+  });
+
+  it("replays when a voter names the right winner with forged stats", async () => {
+    const honest = { [A]: { finalTiles: 100n } } as AllPlayersStats;
+    const forged = { [A]: { finalTiles: 999n } } as AllPlayersStats;
+    const { clients } = play([A, B, C]);
+    // The forger votes first: the record must not carry their stats.
+    await vote(clients[0], ["player", A], forged);
+    await vote(clients[1], ["player", A], honest);
+    await vote(clients[2], ["player", A], honest);
+
+    expect(replayWinner).toHaveBeenCalledTimes(1);
+    const counted = await outcomesDuring(async () => {
+      resolveReplay({
+        winner: ["player", A],
+        allPlayersStats: honest,
+        tick: 90,
+      });
+      await archivedOnce();
+    });
+
+    expect(counted).toEqual({ agreed: 1, overturned: 0, failed: 0 });
+    expect(wrongVotes()).toEqual([
+      {
+        publicID: `pub-${A}`,
+        voted: ["player", A],
+        wrongStats: true,
+        outcome: "agreed",
+      },
+    ]);
+    const [record] = archived();
+    expect(record.info.players.find((p) => p.clientID === A)?.stats).toEqual(
+      honest[A],
+    );
   });
 
   it("replays a game that ends with no majority", async () => {
