@@ -9,11 +9,27 @@ export const RESOURCE_PRODUCTION_UNIT_TYPES = [
 ] as const;
 
 /**
- * A successful trade shipment refreshes the production reserves of every
- * resource structure owned by the two ports involved in that shipment.
+ * A successful normal trade shipment adds a bounded amount of production
+ * capacity to every resource structure owned by the port owner. It never
+ * resets a structure to a full reserve.
  */
-export function resetResourceProduction(player: Player): void {
+export function refillResourceProduction(
+  player: Player,
+  game: Parameters<Player["buildUnit"]>[0],
+): void {
   for (const unit of player.units(RESOURCE_PRODUCTION_UNIT_TYPES)) {
-    unit.resetResourceGoldProduced();
+    if (
+      !unit.isActive() ||
+      unit.isUnderConstruction() ||
+      unit.isMarkedForDeletion()
+    ) {
+      continue;
+    }
+    const refill = game.config().resourceProductionTradeRefill(
+      unit.type(),
+      unit.level(),
+      player,
+    );
+    unit.refillResourceGoldProduced(refill);
   }
 }
