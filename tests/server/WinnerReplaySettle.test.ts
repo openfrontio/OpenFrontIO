@@ -9,7 +9,10 @@ import type { ReplayedWinner } from "@openfront/engine/WinnerReplay";
 import { PartialGameRecord } from "@openfront/shared/WireSchemas";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { Client } from "../../src/server/Client";
-import { winnerReplayMetrics } from "../../src/server/WinnerReplay";
+import {
+  LONE_VOTER_REPLAY_CAP,
+  winnerReplayMetrics,
+} from "../../src/server/WinnerReplay";
 import {
   cid,
   makeClient,
@@ -23,7 +26,8 @@ import {
 // different stats, or the game ended with no majority -- or a single IP
 // decided it, the server replays the game and archives the simulation's
 // result instead of the vote's. The record's statsAgreed says whether its
-// winner and stats were checked, by two or more IPs or by the replay. Driven
+// winner and stats were checked, by two or more IPs or by the replay. A
+// one-IP vote skips the replay, unconfirmed, when the queue is full. Driven
 // through the real game: votes arrive as winner messages, the replay is a
 // stub the test resolves, and the outcome is whatever record the game hands
 // to the archive.
@@ -41,12 +45,15 @@ describe("settling a disputed winner vote by replay", () => {
       (g: GameStartInfo, t: Turn[]) => Promise<ReplayedWinner | null>
     >
   >;
+  // Replays already waiting or running on the worker, as the game sees it.
+  let pending: number;
 
   beforeEach(() => {
     vi.useFakeTimers();
     vi.setSystemTime(1_700_000_000_000);
     archive = vi.fn(async () => {});
     log = mockLogger();
+    pending = 0;
     replayWinner = vi.fn(
       () =>
         new Promise<ReplayedWinner | null>((resolve) => {
@@ -64,7 +71,7 @@ describe("settling a disputed winner vote by replay", () => {
   function play(ids: string[], ips?: string[]) {
     const game = makeGame({
       config: { gameType: GameType.Public },
-      deps: { archive, replayWinner },
+      deps: { archive, replayWinner, replayPending: () => pending },
       log,
     });
     const clients = ids.map((clientID, i) =>
@@ -103,6 +110,7 @@ describe("settling a disputed winner vote by replay", () => {
       agreed: after.agreed - before.agreed,
       overturned: after.overturned - before.overturned,
       failed: after.failed - before.failed,
+      skipped: after.skipped - before.skipped,
     };
   };
 
@@ -139,7 +147,12 @@ describe("settling a disputed winner vote by replay", () => {
       });
       await archivedOnce();
     });
-    expect(counted).toEqual({ agreed: 0, overturned: 1, failed: 0 });
+    expect(counted).toEqual({
+      agreed: 0,
+      overturned: 1,
+      failed: 0,
+      skipped: 0,
+    });
     // The majority was wrong; C, the lone dissenter, was right.
     expect(wrongVotes()).toEqual([
       {
@@ -177,7 +190,12 @@ describe("settling a disputed winner vote by replay", () => {
     });
 
     expect(archived()[0].info.winner).toEqual(["player", A]);
-    expect(counted).toEqual({ agreed: 0, overturned: 0, failed: 1 });
+    expect(counted).toEqual({
+      agreed: 0,
+      overturned: 0,
+      failed: 1,
+      skipped: 0,
+    });
     // Without a replay result nobody is proven wrong.
     expect(wrongVotes()).toEqual([]);
     // A and B, two IPs, sent the archived winner and stats.
@@ -196,7 +214,12 @@ describe("settling a disputed winner vote by replay", () => {
     });
 
     expect(archived()[0].info.winner).toEqual(["player", A]);
-    expect(counted).toEqual({ agreed: 1, overturned: 0, failed: 0 });
+    expect(counted).toEqual({
+      agreed: 1,
+      overturned: 0,
+      failed: 0,
+      skipped: 0,
+    });
     // The vote stood, but C claimed the win and was wrong.
     expect(wrongVotes()).toEqual([
       {
@@ -228,7 +251,12 @@ describe("settling a disputed winner vote by replay", () => {
       await archivedOnce();
     });
 
-    expect(counted).toEqual({ agreed: 1, overturned: 0, failed: 0 });
+    expect(counted).toEqual({
+      agreed: 1,
+      overturned: 0,
+      failed: 0,
+      skipped: 0,
+    });
     expect(wrongVotes()).toEqual([
       {
         publicID: `pub-${A}`,
@@ -298,7 +326,12 @@ describe("settling a disputed winner vote by replay", () => {
       });
       await archivedOnce();
     });
-    expect(counted).toEqual({ agreed: 0, overturned: 1, failed: 0 });
+    expect(counted).toEqual({
+      agreed: 0,
+      overturned: 1,
+      failed: 0,
+      skipped: 0,
+    });
     expect(log.warn).toHaveBeenCalledWith(
       "winner replay result",
       expect.objectContaining({ reason: "lone voter", agrees: false }),
@@ -330,7 +363,12 @@ describe("settling a disputed winner vote by replay", () => {
       resolveReplay(null);
       await archivedOnce();
     });
-    expect(counted).toEqual({ agreed: 0, overturned: 0, failed: 1 });
+    expect(counted).toEqual({
+      agreed: 0,
+      overturned: 0,
+      failed: 1,
+      skipped: 0,
+    });
     expect(warned("winner replay failed, archiving the vote")).toEqual([
       expect.objectContaining({
         reason: "lone voter",
@@ -356,6 +394,74 @@ describe("settling a disputed winner vote by replay", () => {
     resolveReplay(null);
     await archivedOnce();
     expect(archived()[0].info.statsAgreed).toBe(false);
+  });
+
+  it("archives a lone voter's result unconfirmed, without replaying, when the replay queue is full", async () => {
+    pending = LONE_VOTER_REPLAY_CAP;
+    const claimed = { [A]: { finalTiles: 100n } } as AllPlayersStats;
+    const { clients } = play([A, B]);
+
+    const counted = await outcomesDuring(async () => {
+      await vote(clients[0], ["player", A], claimed);
+      await disconnect(clients[1]);
+    });
+
+    expect(replayWinner).not.toHaveBeenCalled();
+    expect(counted).toEqual({
+      agreed: 0,
+      overturned: 0,
+      failed: 0,
+      skipped: 1,
+    });
+    expect(
+      warned("winner replay queue full, archiving the lone vote unconfirmed"),
+    ).toEqual([
+      expect.objectContaining({
+        pending: LONE_VOTER_REPLAY_CAP,
+        cap: LONE_VOTER_REPLAY_CAP,
+      }),
+    ]);
+    const [record] = archived();
+    expect(archived()).toHaveLength(1);
+    expect(record.info.winner).toEqual(["player", A]);
+    expect(record.info.players.find((p) => p.clientID === A)?.stats).toEqual(
+      claimed[A],
+    );
+    expect(record.info.statsAgreed).toBe(false);
+  });
+
+  it("still replays a lone voter while the replay queue is below the cap", async () => {
+    pending = LONE_VOTER_REPLAY_CAP - 1;
+    const { clients } = play([A, B]);
+    await vote(clients[0], ["player", A]);
+    await disconnect(clients[1]);
+
+    expect(replayWinner).toHaveBeenCalledTimes(1);
+    expect(archive).not.toHaveBeenCalled();
+    resolveReplay({ winner: ["player", A], allPlayersStats: {}, tick: 90 });
+    await archivedOnce();
+    expect(archived()[0].info.statsAgreed).toBe(true);
+  });
+
+  it("still replays a disputed vote when the replay queue is full", async () => {
+    pending = LONE_VOTER_REPLAY_CAP;
+    const { clients } = play([A, B, C]);
+    await vote(clients[2], ["player", C]);
+    await vote(clients[0], ["player", A]);
+    await vote(clients[1], ["player", A]);
+
+    expect(replayWinner).toHaveBeenCalledTimes(1);
+    expect(archive).not.toHaveBeenCalled();
+    const counted = await outcomesDuring(async () => {
+      resolveReplay({ winner: ["player", A], allPlayersStats: {}, tick: 90 });
+      await archivedOnce();
+    });
+    expect(counted).toEqual({
+      agreed: 1,
+      overturned: 0,
+      failed: 0,
+      skipped: 0,
+    });
   });
 
   it("counts an IP that sent the decided vote and then left", async () => {
@@ -419,7 +525,12 @@ describe("settling a disputed winner vote by replay", () => {
 
     expect(archived()[0].info.winner).toEqual(["player", A]);
     expect(archived()[0].info.statsAgreed).toBe(true);
-    expect(counted).toEqual({ agreed: 0, overturned: 0, failed: 1 });
+    expect(counted).toEqual({
+      agreed: 0,
+      overturned: 0,
+      failed: 1,
+      skipped: 0,
+    });
   });
 
   it("ignores winner votes sent before the game has started", async () => {
