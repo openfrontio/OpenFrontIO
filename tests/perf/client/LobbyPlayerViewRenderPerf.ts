@@ -53,7 +53,7 @@ Object.defineProperty(globalThis, "window", { value: globalThis });
 const RUNS = Number(process.env.RUNS ?? 100);
 const WARMUP = 20;
 // Point at another checkout's src/ to compare branches, e.g.
-// LOBBY_PERF_SRC=C:/dev/OpenFrontIO/.worktrees/roster-levels/src
+// LOBBY_PERF_SRC=../other-checkout/src
 const SRC = process.env.LOBBY_PERF_SRC
   ? pathToFileURL(process.env.LOBBY_PERF_SRC.replace(/\/?$/, "/")).href
   : new URL("../../../src/", import.meta.url).href;

@@ -10,7 +10,10 @@ import {
   encodeServerMessage,
 } from "@openfront/shared/ZbinWire";
 import Benchmark from "benchmark";
-import * as LevelBadgeModule from "../../src/server/LevelBadge";
+import {
+  levelBadgeForPlayer,
+  levelBadgeFromProgress,
+} from "../../src/server/LevelBadge";
 import { testGameConfig } from "../util/Wire";
 
 /**
@@ -27,7 +30,7 @@ import { testGameConfig } from "../util/Wire";
  *   - the time a client takes to decode one frame.
  *
  * Plus a microbenchmark of the join-time badge stamping (levelBadgeFromProgress,
- * and levelBadgeForPlayer with the "hide my level" check when present).
+ * and levelBadgeForPlayer with the "hide my level" check).
  *
  * The lobby is not yet started, so the server encodes with no zbin context
  * (zbinCtx is undefined until start): clientIDs go out as plain strings.
@@ -156,26 +159,18 @@ const progress: Progress = {
 };
 let sink: unknown;
 const fromProgress = bench("levelBadgeFromProgress", () => {
-  sink = LevelBadgeModule.levelBadgeFromProgress(progress);
+  sink = levelBadgeFromProgress(progress);
 });
 console.log(
   `levelBadgeFromProgress(progress)                  ${fmtUs(fromProgress.stats.mean)} ±${fromProgress.stats.rme.toFixed(1)}%`,
 );
-// Looked up loosely so the harness still runs on a checkout from before
-// levelBadgeForPlayer (the "hide my level" check) existed.
-const forPlayer = (LevelBadgeModule as Record<string, unknown>)
-  .levelBadgeForPlayer as
-  | ((p: { progress?: Progress; levelHidden?: boolean }) => unknown)
-  | undefined;
-if (forPlayer !== undefined) {
-  for (const levelHidden of [undefined, false, true]) {
-    const player = { progress, levelHidden };
-    const b = bench(`levelBadgeForPlayer ${levelHidden}`, () => {
-      sink = forPlayer(player);
-    });
-    console.log(
-      `levelBadgeForPlayer({ levelHidden: ${String(levelHidden).padEnd(9)} })  ${fmtUs(b.stats.mean)} ±${b.stats.rme.toFixed(1)}%`,
-    );
-  }
+for (const levelHidden of [undefined, false, true]) {
+  const player = { progress, levelHidden };
+  const b = bench(`levelBadgeForPlayer ${levelHidden}`, () => {
+    sink = levelBadgeForPlayer(player);
+  });
+  console.log(
+    `levelBadgeForPlayer({ levelHidden: ${String(levelHidden).padEnd(9)} })  ${fmtUs(b.stats.mean)} ±${b.stats.rme.toFixed(1)}%`,
+  );
 }
 void sink;
