@@ -41,8 +41,8 @@ export function xpProgressText(xpInLevel: number, xpForNext: number): string {
 /**
  * A thin XP bar. `percent` is clamped to 0..100. `valueText` is what a
  * screen reader announces for the value (typically xpProgressText); without
- * it, the percentage. `transitionMs` animates the fill to a new width (0 or absent:
- * it jumps); `onFillTransitionEnd` hears when that ends.
+ * it, the percentage. `transitionMs` animates the fill to a new width (0 or
+ * absent: it jumps); `onFillTransitionEnd` hears when that ends.
  */
 export function xpBar(
   percent: number,
