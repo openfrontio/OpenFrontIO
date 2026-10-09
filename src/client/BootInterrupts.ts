@@ -58,7 +58,11 @@ export interface BootInterruptInputs {
    * the two grant notices. Failing it lets the next interrupt take the boot.
    */
   grantStringsReady: boolean;
-  /** How many unclaimed rewards the account is holding. */
+  /**
+   * How many of the account's unclaimed rewards can be claimed now
+   * (isRewardClaimable): held ones don't count, since on their own they'd
+   * open the popup every boot with nothing to do.
+   */
   rewardCount: number;
   /** claimPromptDue(...) — the decay rule below. */
   claimPromptDue: boolean;

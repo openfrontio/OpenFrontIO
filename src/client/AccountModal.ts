@@ -7,7 +7,10 @@ import { assetUrl } from "@openfront/shared/AssetUrls";
 import { html, nothing, TemplateResult } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import { ClientEnv } from "src/client/ClientEnv";
-import { hasLinkedIdentity } from "./AccountIdentity";
+import {
+  hasLinkedIdentity,
+  responseHasLinkedIdentity,
+} from "./AccountIdentity";
 import { fetchPlayerById, getUserMe, invalidateUserMe } from "./Api";
 import {
   discordLogin,
@@ -446,6 +449,8 @@ export class AccountModal extends BaseModal {
     if (rewards.length === 0) return "";
     return html`<rewards-panel
       .rewards=${rewards}
+      .signedIn=${responseHasLinkedIdentity(this.userMeResponse ?? false) ||
+      this.crazyGamesUser !== null}
       @rewards-changed=${this.handleRewardsChanged}
     ></rewards-panel>`;
   }

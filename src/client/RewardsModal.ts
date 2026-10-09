@@ -1,4 +1,4 @@
-import { Reward } from "@openfront/shared/ApiSchemas";
+import { isRewardClaimable, Reward } from "@openfront/shared/ApiSchemas";
 import { html, TemplateResult } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import { BaseModal } from "./components/BaseModal";
@@ -13,18 +13,27 @@ import { translateText } from "./Utils";
 @customElement("rewards-modal")
 export class RewardsModal extends BaseModal {
   @state() private rewards: Reward[] = [];
+  // RewardsPanel.signedIn: picks the held-reward note.
+  @state() private signedIn = false;
 
   protected modalConfig() {
     return { maxWidth: "620px" };
   }
 
-  public openWithRewards(rewards: Reward[]): void {
+  public openWithRewards(rewards: Reward[], signedIn: boolean): void {
     this.rewards = rewards;
+    this.signedIn = signedIn;
     this.open();
   }
 
+  // Held rewards stay listed (with why), but on their own they leave the popup
+  // nothing to do: it opens, and stays open, only while one can be claimed.
+  private hasClaimable(): boolean {
+    return this.rewards.some(isRewardClaimable);
+  }
+
   public open(args?: Record<string, unknown>): void {
-    if (this.rewards.length === 0) return;
+    if (!this.hasClaimable()) return;
     super.open(args);
   }
 
@@ -40,7 +49,7 @@ export class RewardsModal extends BaseModal {
     event: CustomEvent<RewardsChangedDetail>,
   ): void => {
     this.rewards = event.detail.rewards;
-    if (this.rewards.length === 0) this.close();
+    if (!this.hasClaimable()) this.close();
   };
 
   protected renderBody(): TemplateResult {
@@ -48,6 +57,7 @@ export class RewardsModal extends BaseModal {
       <div class="p-6">
         <rewards-panel
           .rewards=${this.rewards}
+          .signedIn=${this.signedIn}
           @rewards-changed=${this.handleRewardsChanged}
         ></rewards-panel>
       </div>
