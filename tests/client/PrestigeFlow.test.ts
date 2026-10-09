@@ -8,9 +8,14 @@ import {
   vi,
 } from "vitest";
 
+const { copyToClipboard } = vi.hoisted(() => ({
+  copyToClipboard: vi.fn(async () => undefined),
+}));
 vi.mock("../../src/client/Utils", () => ({
   translateText: (key: string, params?: Record<string, string | number>) =>
     params ? `${key}:${JSON.stringify(params)}` : key,
+  copyToClipboard,
+  showToast: vi.fn(),
 }));
 vi.mock("../../src/client/ProgressionApi", () => ({
   prestigeMe: vi.fn(),
@@ -35,6 +40,7 @@ import {
   PrestigeFlow,
 } from "../../src/client/components/PrestigeFlow";
 import { ProfileCard } from "../../src/client/components/ProfileCard";
+import { playerProfileUrl } from "../../src/client/utilities/PlayerProfileUrl";
 
 if (!customElements.get("prestige-flow")) {
   customElements.define("prestige-flow", PrestigeFlow);
@@ -851,6 +857,93 @@ describe("<prestige-flow>", () => {
     await settle();
     expect(q("[data-prestige-confirm]")).not.toBeNull();
     expect(q("[data-prestige-ceremony]")).toBeNull();
+  });
+  // --- Sharing the new rank ------------------------------------------------
+
+  const shareRow = () => q("[data-prestige-share]");
+
+  async function ceremonyDone(): Promise<void> {
+    flow.celebrate(AT_100, PRESTIGED);
+    await settle(300);
+    q("[data-prestige-ceremony]")!.click();
+    await settle();
+    await (
+      shareRow()?.querySelector("profile-share") as unknown as
+        | { updateComplete: Promise<unknown> }
+        | undefined
+    )?.updateComplete;
+  }
+
+  it("offers to share the new rank between the title and Continue", async () => {
+    flow.publicId = "wonder01";
+    flow.celebrate(AT_100, PRESTIGED);
+    await settle(300);
+    // Not while the ceremony is still playing.
+    expect(shareRow()).toBeNull();
+    q("[data-prestige-ceremony]")!.click();
+    await settle();
+    const row = shareRow()!;
+    expect(row).not.toBeNull();
+    expect(row.previousElementSibling).toBe(q("[data-prestige-title]"));
+    expect(row.nextElementSibling).toBe(q("[data-prestige-continue]"));
+    // Simply there: no rise-in (Continue keeps its own).
+    expect(row.classList.contains("prestige-fade")).toBe(false);
+    const share = row.querySelector("profile-share") as HTMLElement & {
+      url: string;
+      text: string;
+      solid: boolean;
+      updateComplete: Promise<unknown>;
+    };
+    expect(share.url).toBe(`${playerProfileUrl("wonder01")}?moment=prestige4`);
+    expect(share.text).toBe('prestige.share_text:{"rank":4}');
+    // Backed, to read over the honeycomb.
+    expect(share.solid).toBe(true);
+    await share.updateComplete;
+    expect(
+      [...row.querySelectorAll("[data-share]")].map((b) =>
+        b.getAttribute("data-share"),
+      ),
+    ).toEqual(["copy", "x", "discord"]);
+  });
+
+  it("keeps clicks on the share row from the ceremony", async () => {
+    flow.publicId = "wonder01";
+    await ceremonyDone();
+    const ceremony = q("[data-prestige-ceremony]")!;
+    const reached = vi.fn();
+    ceremony.addEventListener("click", reached);
+    const openSpy = vi.spyOn(window, "open").mockImplementation(() => null);
+    q('[data-prestige-share] [data-share="x"]')!.click();
+    q('[data-prestige-share] [data-share="copy"]')!.click();
+    shareRow()!.click();
+    await settle();
+    openSpy.mockRestore();
+    expect(reached).not.toHaveBeenCalled();
+    expect(flow.isOpen).toBe(true);
+    expect(q("[data-prestige-continue]")).not.toBeNull();
+    expect(copyToClipboard).toHaveBeenCalledWith(
+      `${playerProfileUrl("wonder01")}?moment=prestige4`,
+    );
+  });
+
+  it("has no share row without a public ID", async () => {
+    await ceremonyDone();
+    expect(q("[data-prestige-continue]")).not.toBeNull();
+    expect(shareRow()).toBeNull();
+  });
+
+  it("drops the share row for a rank the card route wouldn't draw", async () => {
+    flow.publicId = "wonder01";
+    // A surprising server rank: shared, its link would unfurl with no card.
+    flow.celebrate(AT_100, {
+      ...PRESTIGED,
+      progress: { ...PRESTIGED.progress, prestige: 11 },
+    });
+    await settle(300);
+    q("[data-prestige-ceremony]")!.click();
+    await settle();
+    expect(q("[data-prestige-continue]")).not.toBeNull();
+    expect(shareRow()).toBeNull();
   });
 });
 

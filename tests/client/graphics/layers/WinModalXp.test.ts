@@ -64,6 +64,7 @@ import type { GameXpPanel } from "../../../../src/client/components/GameXpPanel"
 import "../../../../src/client/components/LegendCeremony";
 import "../../../../src/client/hud/layers/WinModal";
 import type { WinModal } from "../../../../src/client/hud/layers/WinModal";
+import { playerProfileUrl } from "../../../../src/client/utilities/PlayerProfileUrl";
 import type { GameView } from "../../../../src/client/view";
 
 const GAME_ID = "gXPTEST01";
@@ -529,6 +530,12 @@ describe("WinModal XP section", () => {
       expect(
         ceremony()!.querySelector("[data-legend-line] b")!.textContent,
       ).toBe((2106720).toLocaleString());
+      // The player's own Legend moment to share.
+      expect(
+        ceremony()!.querySelector<HTMLElement & { url: string }>(
+          "[data-legend-share] profile-share",
+        )!.url,
+      ).toBe(`${playerProfileUrl("me")}?moment=legend`);
       ceremony()!
         .querySelector<HTMLButtonElement>("[data-legend-continue]")!
         .click();
@@ -1208,5 +1215,155 @@ describe("WinModal XP section", () => {
     await mount(makeGame({ ended: true, replay: true }));
     expect(xpState()).toBe("hidden");
     expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  // --- Sharing a milestone ---------------------------------------------------
+
+  // A game that reaches the given levels at prestige 0.
+  function reaching(levels: number[]) {
+    return eligible({
+      before: {
+        prestige: 0,
+        level: levels[0] - 1,
+        xpInLevel: 300,
+        xpForNext: 400,
+      },
+      after: {
+        ...eligible().after,
+        level: levels[levels.length - 1],
+        xpInLevel: 12,
+        xpForNext: 2410,
+      },
+      levelsReached: levels.map((level) => ({ prestige: 0, level })),
+    });
+  }
+
+  const shareEl = () =>
+    modal.querySelector<
+      HTMLElement & { url: string; text: string; label: string }
+    >("[data-win-share]");
+
+  it("offers to share a milestone in the footer once the reveal has shown it", async () => {
+    stubXpEndpoint([() => json(reaching([50]))]);
+    await mount(makeGame({ ended: true }));
+    expect(panel()!.getAttribute("data-xp-revealing")).toBe("true");
+    // Not while the reveal is still getting there.
+    expect(shareEl()).toBeNull();
+    await finishReveal();
+    const share = shareEl()!;
+    expect(share).not.toBeNull();
+    // In the footer, with the modal's own buttons.
+    expect(share.parentElement).toBe(
+      modal.querySelector('[data-win-action="exit"]')!.parentElement,
+    );
+    expect(share.label).toBe('progression.share_moment_level:{"level":50}');
+    expect(share.url).toBe(`${playerProfileUrl("me")}?moment=level50`);
+    expect(share.text).toBe('progression.share_text_level:{"level":50}');
+    await (share as unknown as { updateComplete: Promise<unknown> })
+      .updateComplete;
+    expect(
+      share.querySelector('[data-share="menu"]')?.textContent?.trim(),
+    ).toBe('progression.share_moment_level:{"level":50}');
+  });
+
+  it("also appears when the reveal plays out on its own", async () => {
+    stubXpEndpoint([() => json(reaching([25]))]);
+    await mount(makeGame({ ended: true }));
+    expect(shareEl()).toBeNull();
+    await settle(60_000);
+    expect(panel()!.getAttribute("data-xp-revealing")).toBeNull();
+    expect(shareEl()?.url).toBe(`${playerProfileUrl("me")}?moment=level25`);
+  });
+
+  it("shares the highest milestone when a game reaches several", async () => {
+    stubXpEndpoint([() => json(reaching([10, 11, 12, 25, 26]))]);
+    await mount(makeGame({ ended: true }));
+    await finishReveal();
+    expect(shareEl()?.label).toBe(
+      'progression.share_moment_level:{"level":25}',
+    );
+    expect(shareEl()?.url).toBe(`${playerProfileUrl("me")}?moment=level25`);
+  });
+
+  it("shares becoming a Legend rather than the level", async () => {
+    stubXpEndpoint([
+      () =>
+        json(
+          eligible({
+            before: {
+              prestige: 10,
+              level: 99,
+              xpInLevel: 4400,
+              xpForNext: 4510,
+            },
+            after: {
+              ...eligible().after,
+              prestige: 10,
+              level: 100,
+              xpInLevel: 0,
+              xpForNext: 0,
+              legend: true,
+            },
+            levelsReached: [{ prestige: 10, level: 100 }],
+          }),
+        ),
+    ]);
+    await mount(makeGame({ ended: true }));
+    await finishReveal();
+    expect(shareEl()?.label).toBe("progression.share_moment_legend");
+    expect(shareEl()?.url).toBe(`${playerProfileUrl("me")}?moment=legend`);
+    expect(shareEl()?.text).toBe("progression.share_text_legend");
+  });
+
+  it("offers nothing for an ordinary level-up", async () => {
+    stubXpEndpoint([() => json(reaching([47]))]);
+    await mount(makeGame({ ended: true }));
+    await finishReveal();
+    expect(xpState()).toBe("result");
+    expect(shareEl()).toBeNull();
+  });
+
+  it("offers nothing to a signed-out player", async () => {
+    isLoggedIn.mockResolvedValue(false);
+    stubXpEndpoint([() => json(reaching([50]))]);
+    await mount(makeGame({ ended: true }));
+    await finishReveal();
+    expect(xpState()).toBe("signed_out");
+    expect(shareEl()).toBeNull();
+  });
+
+  it("offers nothing without a public ID to link to", async () => {
+    getUserMe.mockResolvedValue({
+      ...signedIn,
+      player: { ...signedIn.player, publicId: "" },
+    });
+    stubXpEndpoint([() => json(reaching([50]))]);
+    await mount(makeGame({ ended: true }));
+    await finishReveal();
+    expect(xpState()).toBe("result");
+    expect(shareEl()).toBeNull();
+  });
+
+  it("never offers it for a provisional figure", async () => {
+    stubXpEndpoint([() => json(reaching([50]))]);
+    await mount(makeGame({ ended: true }));
+    await finishReveal();
+    expect(shareEl()).not.toBeNull();
+    // The same milestone, but not yet confirmed by the server.
+    const provisional = { kind: "provisional", data: reaching([50]) };
+    Object.assign(modal as unknown as { xpView: unknown }, {
+      xpView: provisional,
+    });
+    await settle();
+    expect(shareEl()).toBeNull();
+    // Even if the panel reported it settled.
+    modal.querySelector("game-xp-panel")!.dispatchEvent(
+      new CustomEvent("xp-reveal-settled", {
+        detail: provisional,
+        bubbles: true,
+      }),
+    );
+    await settle();
+    expect(shareEl()).toBeNull();
   });
 });

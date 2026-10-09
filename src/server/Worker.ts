@@ -40,6 +40,7 @@ import { getUserMe, userMeFailureClose, verifyClientToken } from "./jwt";
 import { levelBadgeForPlayer } from "./LevelBadge";
 import { payForLobbyQueue, queueListedLobby } from "./LobbyQueuePayment";
 import { logger } from "./Logger";
+import { registerPlayerProfileRoute } from "./PlayerProfileRoute";
 import { resolveVerifiedJoin } from "./Privilege";
 
 import { MapPlaylist } from "./MapPlaylist";
@@ -473,6 +474,8 @@ export async function startWorker() {
     log,
     baseDir: __dirname,
   });
+
+  registerPlayerProfileRoute({ app, log, baseDir: __dirname });
 
   registerAdminBotRoutes({ app, gm, workerId, log });
 

@@ -27,9 +27,15 @@ vi.mock("../../src/client/InGameModal", () => ({
   showInGameAlert: vi.fn(async () => {}),
 }));
 
+// The visitor banner asks who is viewing; these tests don't sign anyone in.
+vi.mock("../../src/client/ProgressionAccount", () => ({
+  resolveXpAccount: vi.fn(async () => ({ kind: "unknown" })),
+}));
+
 vi.mock("src/client/ClientEnv", () => ({
   ClientEnv: {
     workerPath: vi.fn(() => "w0"),
+    shareOrigin: vi.fn(() => window.location.origin),
     shareBase: vi.fn(
       () => `${window.location.origin}${window.location.pathname}`,
     ),

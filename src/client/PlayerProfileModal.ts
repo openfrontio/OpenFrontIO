@@ -9,6 +9,7 @@ import { customElement, state } from "lit/decorators.js";
 import { ClientEnv } from "src/client/ClientEnv";
 import { fetchPublicPlayerProfile } from "./Api";
 import "./ClanModal";
+import "./components/baseComponents/Button";
 import "./components/baseComponents/stats/PlayerGameHistoryView";
 import type { PlayerGameHistoryCache } from "./components/baseComponents/stats/PlayerGameHistoryView";
 import "./components/baseComponents/stats/PlayerStatsTree";
@@ -17,13 +18,18 @@ import "./components/clan/ClanCard";
 import "./components/PlayerName";
 import "./components/ProfileCard";
 import "./components/ProfileProgression";
+import "./components/ProfileShare";
 import { modalHeader } from "./components/ui/ModalHeader";
 import { usernameText } from "./components/ui/UsernameText";
 import { verifiedBadge } from "./components/ui/VerifiedBadge";
 import "./GameStatsModal";
 import "./LeaderboardModal";
+import { modalRouter } from "./ModalRouter";
 import { fetchPublicPlayerProgress } from "./ProgressionApi";
-import { playerProfileUrl } from "./utilities/PlayerProfileUrl";
+import {
+  parsePlayerProfilePath,
+  playerProfileUrl,
+} from "./utilities/PlayerProfileUrl";
 import { currentPagePath, translateText } from "./Utils";
 
 export { playerProfileUrl };
@@ -45,6 +51,9 @@ export class PlayerProfileModal extends BaseModal {
   // Level / XP, when progression is on and the player has any.
   @state() private progress: PublicProgress | null = null;
   @state() private loading = false;
+  // The link this profile was opened from (`openfront.io/player/<id>`), when
+  // it was opened from one: the not-found state shows it.
+  @state() private openedLink: string | null = null;
   private openedFrom: ProfileOrigin | null = null;
   // Mirrors the account modal's Games tab: keep the accumulated history list +
   // cursor across tab switches (and the game-stats detour) so re-entering Games
@@ -238,10 +247,16 @@ export class PlayerProfileModal extends BaseModal {
     if (this.loading) {
       return this.renderLoadingSpinner(translateText("player_profile.loading"));
     }
-    if (!this.profileLoaded()) {
+    const publicId = this.publicId;
+    if (!this.profileLoaded() || publicId === null) {
       return this.renderNotFound();
     }
-    // The card heads the stats; games and wins stay in the stats below it.
+    // The card heads the stats; games and wins stay in the stats below it,
+    // and the ways to share the profile follow it.
+    //
+    // A "Show my profile in search engines" setting will join the account
+    // settings' Privacy card once the API carries the flag and the site
+    // Worker honours it with noindex; profile links are indexable until then.
     return html`
       ${this.progress === null
         ? nothing
@@ -252,6 +267,11 @@ export class PlayerProfileModal extends BaseModal {
             .progress=${this.progress}
             .openKey=${`profile-${this.openCount}`}
           ></profile-card>`}
+      <profile-share
+        class="mb-[18px] block"
+        .url=${playerProfileUrl(publicId)}
+        .name=${this.username ?? publicId}
+      ></profile-share>
       <player-stats-tree-view
         .statsTree=${this.statsTree}
       ></player-stats-tree-view>
@@ -290,13 +310,93 @@ export class PlayerProfileModal extends BaseModal {
 
   private renderNotFound() {
     return html`
-      <div class="flex flex-col items-center justify-center p-12 text-center">
-        <span class="text-4xl mb-4">📊</span>
-        <p class="text-white/40 text-sm">
-          ${translateText("player_profile.not_found")}
+      <div
+        class="mx-auto flex max-w-2xl flex-col items-center px-6 py-12 text-center"
+        data-not-found
+      >
+        <div
+          class="mb-5 flex h-20 w-20 items-center justify-center rounded-full border border-white/10 bg-white/5 text-white/50"
+        >
+          <svg
+            width="40"
+            height="40"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.8"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            aria-hidden="true"
+          >
+            <circle cx="9" cy="8" r="4" />
+            <path d="M2 21v-1a6 6 0 0 1 6-6h2a6 6 0 0 1 3 .8" />
+            <path d="M17 14.5a2.5 2.5 0 1 1 3.2 2.4c-.7.2-1.2.8-1.2 1.6" />
+            <path d="M19 21h.01" />
+          </svg>
+        </div>
+        <h2 class="text-xl font-bold text-white">
+          ${translateText("player_profile.not_found_title")}
+        </h2>
+        <p class="mt-2 max-w-md text-sm text-white/60">
+          ${translateText("player_profile.not_found_body")}
         </p>
+        ${this.openedLink === null
+          ? nothing
+          : html`<p
+              class="mt-3 break-all font-mono text-xs text-white/35"
+              data-opened-link
+            >
+              ${this.openedLink}
+            </p>`}
+        <!-- Side by side where there's room, stacked on a phone. -->
+        <div
+          class="mt-6 flex flex-col items-stretch justify-center gap-3 sm:flex-row sm:items-center"
+          data-not-found-actions
+        >
+          <o-button
+            variant="primary"
+            size="md"
+            translationKey="player_profile.play"
+            data-action="play"
+            @click=${() => this.goHome()}
+          ></o-button>
+          <o-button
+            variant="secondary"
+            size="md"
+            translationKey="player_profile.view_leaderboard"
+            data-action="leaderboard"
+            @click=${() => this.openLeaderboard()}
+          ></o-button>
+        </div>
       </div>
     `;
+  }
+
+  // Close the profile onto the home page (the URL follows: see ModalRouter).
+  private goHome(): void {
+    this.close();
+  }
+
+  private openLeaderboard(): void {
+    this.close();
+    document
+      .querySelector<HTMLElement & { open(): void }>("leaderboard-modal")
+      ?.open();
+  }
+
+  // Opening another player's profile over this one: BaseModal syncs the URL
+  // only when a modal first opens, which would leave it naming the last
+  // player (its `/player/<id>` path, or its `#modal=` hash), with tab changes
+  // written onto that and a reload opening the wrong profile. Hand the URL to
+  // the new player as an in-app open does. The router ignores this while it
+  // is the one opening the modal (from a path or the hash).
+  public override open(args?: Record<string, unknown>): void {
+    const wasOpen = this.isOpen();
+    const before = this.publicId;
+    super.open(args);
+    if (wasOpen && this.isOpen() && this.publicId !== before) {
+      modalRouter.syncOpened(this.routerName, args);
+    }
   }
 
   protected onOpen(args?: Record<string, unknown>): void {
@@ -348,6 +448,14 @@ export class PlayerProfileModal extends BaseModal {
     this.gameHistoryCache = null;
     this.gamesScrollTop = 0;
     this.restoreGamesScrollAfterOpen = false;
+    // Only while the path is this player's: the URL can still name the last
+    // one for the moment (see open()).
+    this.openedLink =
+      publicId !== null &&
+      modalRouter.isPathRouted("profile") &&
+      parsePlayerProfilePath(window.location.pathname) === publicId
+        ? `${window.location.host}${window.location.pathname}`
+        : null;
     this.loading = publicId !== null;
     if (publicId !== null) {
       void this.loadProfile(publicId);

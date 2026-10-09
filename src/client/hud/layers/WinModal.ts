@@ -18,6 +18,7 @@ import "../../components/CosmeticCard";
 import { cosmeticSelectionLabel } from "../../components/CosmeticPresentation";
 import type { GameXpPanelState } from "../../components/GameXpPanel";
 import type { LegendCeremony } from "../../components/LegendCeremony";
+import "../../components/ProfileShare";
 import "../../components/PurchaseButton";
 import "../../components/SteamWishlist";
 import { Controller } from "../../Controller";
@@ -28,6 +29,12 @@ import {
 } from "../../Cosmetics";
 import { crazyGamesSDK } from "../../CrazyGamesSDK";
 import { isDesktopShell } from "../../DesktopShell";
+import {
+  gameShareMoment,
+  momentShareLabel,
+  momentShareText,
+  momentShareUrl,
+} from "../../MomentShare";
 import { Platform } from "../../Platform";
 import { MAX_PRESTIGE, reachedLegendThisGame } from "../../Progression";
 import { resolveXpAccount } from "../../ProgressionAccount";
@@ -79,6 +86,14 @@ export class WinModal extends LitElement implements Controller {
   // Polling starts once, at the end of the game.
   private xpPolling = false;
   private xpAbort: AbortController | null = null;
+  // The XP result the panel has finished revealing (or skipped to the end
+  // of): the share button waits for it.
+  @state()
+  private xpSettled: GameXpPanelState | null = null;
+  // The signed-in player's public ID, for the share link. Empty when signed
+  // out (or unknown): no share button.
+  @state()
+  private sharePublicId = "";
   // Whose XP the section shows: the Legend ceremony plays once per account.
   private xpPublicId: string | null = null;
   // The Legend ceremony, fetched only for a player who could become a Legend
@@ -116,20 +131,24 @@ export class WinModal extends LitElement implements Controller {
           <game-xp-panel
             .view=${this.xpView}
             .onScreen=${this.isVisible}
+            @xp-reveal-settled=${(e: CustomEvent<GameXpPanelState>) =>
+              (this.xpSettled = e.detail)}
             .gameType=${this.game?.config().gameConfig().gameType ?? null}
             @xp-legend=${this.onXpLegend}
           ></game-xp-panel>
           ${this.innerHtml()}
         </div>
         <!-- Leaving is the quieter action, on the left; staying in the game
-             is the main one, on the right. -->
-        <div class="mt-4 flex justify-between gap-2.5 shrink-0">
+             is the main one, on the right. Sharing a milestone sits between
+             them, or on its own row above where three don't fit. -->
+        <div class="mt-4 flex flex-wrap justify-between gap-2.5 shrink-0">
           ${this.actionButton(
             "quiet",
             translateText("win_modal.exit"),
             () => this._handleExit(),
             "exit",
           )}
+          ${this.renderShare()}
           ${this.isRankedGame
             ? this.actionButton(
                 "main",
@@ -169,7 +188,11 @@ export class WinModal extends LitElement implements Controller {
     if (ceremony === null) return;
     e.preventDefault();
     legend.markLegendCeremonySeen(publicId);
-    ceremony.show({ lifetimeXp: e.detail.after.lifetimeXp, at: new Date() });
+    ceremony.show({
+      lifetimeXp: e.detail.after.lifetimeXp,
+      at: new Date(),
+      publicId,
+    });
   };
 
   // Fetches the Legend ceremony ahead of its moment: once the account is
@@ -222,6 +245,33 @@ export class WinModal extends LitElement implements Controller {
     >
       <span class="relative">${label}</span>
     </button>`;
+  }
+
+  // Sharing a milestone or becoming a Legend, once the reveal has shown it.
+  // Only for the server's result (gameShareMoment), and only for a signed-in
+  // player with a profile to link to.
+  private renderShare(): TemplateResult | null {
+    if (this.sharePublicId === "" || this.xpSettled !== this.xpView) {
+      return null;
+    }
+    const moment = gameShareMoment(this.xpView);
+    if (moment === null || moment.kind === "prestige") return null;
+    const url = momentShareUrl(this.sharePublicId, moment);
+    if (url === null) return null;
+    // Three labelled buttons fit side by side from md up; below that (and
+    // beside a ranked game's requeue button) it takes a row of its own.
+    const placement = this.isRankedGame
+      ? "order-first basis-full"
+      : "order-first basis-full md:order-none md:basis-0 md:flex-1";
+    return html`<profile-share
+      data-win-share
+      class="flex ${placement}"
+      layout="menu"
+      .label=${momentShareLabel(moment)}
+      .url=${url}
+      .text=${momentShareText(moment)}
+      triggerClass="win-action win-action-quiet w-full"
+    ></profile-share>`;
   }
 
   private renderActionStyles(): TemplateResult {
@@ -540,6 +590,7 @@ export class WinModal extends LitElement implements Controller {
       // before a first scored game); absent means off: no section at all.
       const progress = account.me.player.progress;
       if (progress === undefined) return;
+      this.sharePublicId = account.me.player.publicId;
       this.xpPublicId = account.me.player.publicId ?? null;
       if (!progress.legend) void this.preloadIfLastRun(progress.prestige);
       // The game may have ended while this was resolving; the end-of-game

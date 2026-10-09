@@ -10,14 +10,16 @@ import {
   sendFriendRequest,
 } from "../FriendsApi";
 import { showInGameConfirm } from "../InGameModal";
+import { parsePlayerProfilePath } from "../utilities/PlayerProfileUrl";
 import { showToast, translateText } from "../Utils";
 import { playerNameLink } from "./ui/PlayerNameLink";
 
 const PAGE_LIMIT = 20;
 
 /**
- * Accept a pasted profile share link (`…#modal=profile&publicID=abc12345`) and
- * keep only the id, mirroring the private-lobby join box. Only strings that are
+ * Accept a pasted profile share link (`…/player/abc12345`, or the older
+ * `…#modal=profile&publicID=abc12345`) and keep only the id, mirroring the
+ * private-lobby join box. Only strings that are
  * actually URLs are touched: usernames render as `wonder #5005`, so a bare `#`
  * must be left alone.
  */
@@ -32,6 +34,9 @@ export function extractPublicIdFromUrl(input: string): string {
     // so don't log; just hand the raw text back for the server to reject.
     return input;
   }
+  // The canonical link names the player in its path.
+  const fromPath = parsePlayerProfilePath(url.pathname);
+  if (fromPath !== null) return fromPath;
   // Modals are hash-routed (`…/#modal=profile&publicID=abc12345`), so the id is
   // in the fragment, not the query string — `url.searchParams` is always empty
   // here. Parse the fragment's own `key=value&…` pairs instead.

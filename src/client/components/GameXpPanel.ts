@@ -149,6 +149,8 @@ export class GameXpPanel extends LitElement {
   // The Legend result already announced (see announceLegend).
   private announcedLegend: GameXpEligible | null = null;
   private timers: ReturnType<typeof setTimeout>[] = [];
+  // The result last announced as settled (see updated()).
+  private settledView: GameXpPanelState | null = null;
 
   createRenderRoot() {
     return this;
@@ -487,6 +489,7 @@ export class GameXpPanel extends LitElement {
 
   protected updated(changed: PropertyValues<this>): void {
     super.updated(changed);
+    this.announceSettled();
     // A Legend result shown without its reveal reaching level 100 (reduced
     // motion, a skip, or it arrived while the popup was hidden) still gets
     // its moment, once it's on screen.
@@ -500,6 +503,21 @@ export class GameXpPanel extends LitElement {
     ) {
       this.announceLegend(s.data);
     }
+  }
+
+  // Tells the host once a result is showing in full: its reveal has ended or
+  // been skipped, or there was none. Once per result (`detail` is the view).
+  private announceSettled(): void {
+    const view = this.view;
+    if (view.kind !== "result" || this.reveal !== null) return;
+    if (this.settledView === view) return;
+    this.settledView = view;
+    this.dispatchEvent(
+      new CustomEvent<GameXpPanelState>("xp-reveal-settled", {
+        detail: view,
+        bubbles: true,
+      }),
+    );
   }
 
   // Ends any reveal on its final state (a no-op when none is playing).
