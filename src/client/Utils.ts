@@ -536,6 +536,13 @@ export const translateText = (
   }
 };
 
+/**
+ * Whether `key` is translated in the player's own language, rather than only
+ * in the English that translateText falls back to.
+ */
+export const hasOwnTranslation = (key: string): boolean =>
+  getCachedLangSelector()?.translations?.[key] !== undefined;
+
 export interface HasClanTag {
   clanTag?: string | null | (() => string | null);
 }
