@@ -210,6 +210,8 @@ export class GameXpPanel extends LitElement {
   // screen (or went off screen mid-reveal) was never seen.
   private revealedProvisional: ProvisionalXp | null = null;
   private animationToken = 0;
+  // The Legend result already announced (see announceLegend).
+  private announcedLegend: GameXpEligible | null = null;
   private timers: ReturnType<typeof setTimeout>[] = [];
 
   createRenderRoot() {
@@ -447,6 +449,13 @@ export class GameXpPanel extends LitElement {
         const legend = reached >= MAX_LEVEL && data.after.legend;
         at(t, () => {
           this.barAnimate = false;
+          // Becoming a Legend: when the page takes the moment full screen
+          // (the Legend ceremony), the panel rests on its final state behind
+          // it instead of playing its own, smaller one.
+          if (legend && this.announceLegend(data)) {
+            this.skipReveal();
+            return;
+          }
           patch({
             level: Math.min(MAX_LEVEL, reached),
             levelUp: reached,
@@ -600,6 +609,39 @@ export class GameXpPanel extends LitElement {
       this.barAnimate = false;
       this.reveal = null;
     });
+  }
+
+  // Tells the page this result made the player a Legend, once per result:
+  // `xp-legend` (detail: the result), cancelable. A listener that takes the
+  // moment (plays the Legend ceremony) cancels it. Only ever for a result the
+  // server sent (a `result` view), never anything provisional.
+  private announceLegend(data: GameXpEligible): boolean {
+    if (this.announcedLegend === data) return false;
+    this.announcedLegend = data;
+    const event = new CustomEvent<GameXpEligible>("xp-legend", {
+      detail: data,
+      bubbles: true,
+      composed: true,
+      cancelable: true,
+    });
+    return !this.dispatchEvent(event);
+  }
+
+  protected updated(changed: PropertyValues<this>): void {
+    super.updated(changed);
+    // A Legend result shown without its reveal reaching level 100 (reduced
+    // motion, a skip, or it arrived while the popup was hidden) still gets
+    // its moment, once it's on screen.
+    const s = this.view;
+    if (
+      s.kind === "result" &&
+      s.data.eligible &&
+      this.reveal === null &&
+      this.onScreen &&
+      reachedLegendThisGame(s.data)
+    ) {
+      this.announceLegend(s.data);
+    }
   }
 
   // Ends any reveal on its final state (a no-op when none is playing).

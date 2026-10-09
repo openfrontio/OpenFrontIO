@@ -61,6 +61,7 @@ function progression(
     })),
     formula: 1,
     xp: RULES,
+    flares: [],
     ...overrides,
   };
 }

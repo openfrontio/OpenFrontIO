@@ -6,7 +6,8 @@ import type { XpBreakdown } from "@openfront/shared/ApiSchemas";
 
 // The badge art is cut for a 100-level track with 10 prestige ranks (see
 // levelBand, prestigeTier), so the caps stay client constants: raising either
-// on the server needs new art, not only a new number.
+// on the server needs new art, not only a new number. A rank past
+// MAX_PRESTIGE still shows its own number, drawn with the last rank's art.
 export const MAX_LEVEL = 100;
 export const MAX_PRESTIGE = 10;
 
@@ -22,9 +23,13 @@ export function levelBand(level: number): number {
   return Math.floor(clamped / 10);
 }
 
+/**
+ * The prestige rank to show: whole and never negative, but not capped at
+ * MAX_PRESTIGE, so a badge agrees with a server that has more ranks.
+ */
 export function clampPrestige(prestige: number): number {
   if (!Number.isFinite(prestige)) return 0;
-  return Math.min(MAX_PRESTIGE, Math.max(0, Math.floor(prestige)));
+  return Math.max(0, Math.floor(prestige));
 }
 
 /**

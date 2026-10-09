@@ -1,6 +1,6 @@
 import { RankedType } from "@openfront/engine-api/game/GameTypes";
 import { GameUpdateType } from "@openfront/engine-api/game/GameUpdates";
-import type { Progress } from "@openfront/shared/ApiSchemas";
+import type { GameXpEligible, Progress } from "@openfront/shared/ApiSchemas";
 import { Pattern } from "@openfront/shared/CosmeticSchemas";
 import { EventBus } from "@openfront/shared/EventBus";
 import { html, LitElement, TemplateResult } from "lit";
@@ -16,8 +16,8 @@ import {
 import { fetchUserMeUncached, getUserMe } from "../../Api";
 import "../../components/CosmeticCard";
 import { cosmeticSelectionLabel } from "../../components/CosmeticPresentation";
-import "../../components/GameXpPanel";
 import type { GameXpPanelState } from "../../components/GameXpPanel";
+import type { LegendCeremony } from "../../components/LegendCeremony";
 import "../../components/PurchaseButton";
 import "../../components/SteamWishlist";
 import { Controller } from "../../Controller";
@@ -29,6 +29,7 @@ import {
 import { crazyGamesSDK } from "../../CrazyGamesSDK";
 import { isDesktopShell } from "../../DesktopShell";
 import { Platform } from "../../Platform";
+import { MAX_PRESTIGE, reachedLegendThisGame } from "../../Progression";
 import { resolveXpAccount } from "../../ProgressionAccount";
 import { fetchProgressionConfig, pollGameXp } from "../../ProgressionApi";
 import {
@@ -41,6 +42,22 @@ import { PlaySoundEffectEvent } from "../../sound/Sounds";
 import { steamSDK } from "../../SteamSDK";
 import { SendWinnerEvent } from "../../Transport";
 import { GameView } from "../../view";
+
+type LegendCeremonyModule = typeof import("../../components/LegendCeremony");
+
+// The XP section stays out of the startup bundle: it's fetched when a game
+// starts (see init), long before the game ends, so the reveal never waits on
+// it. Should it still be on its way, the section shows the moment it lands.
+let xpPanelModule: Promise<unknown> | null = null;
+function loadGameXpPanel(): void {
+  xpPanelModule ??= import("../../components/GameXpPanel").catch(
+    (err: unknown) => {
+      // Tried again at the end of the game, or the next one.
+      xpPanelModule = null;
+      console.warn("WinModal: XP section failed to load", err);
+    },
+  );
+}
 
 @customElement("win-modal")
 export class WinModal extends LitElement implements Controller {
@@ -71,6 +88,15 @@ export class WinModal extends LitElement implements Controller {
   // The provisional figure shown at death, if any: the server's figure is
   // compared with it when the game ends.
   private provisionalXp: ProvisionalXp | null = null;
+  // Whose XP the section shows: the Legend ceremony plays once per account.
+  private xpPublicId: string | null = null;
+  // The Legend ceremony, fetched only for a player who could become a Legend
+  // (see preloadLegendCeremony); null until it has arrived.
+  private legendCeremony: LegendCeremonyModule | null = null;
+  private legendCeremonyLoad: Promise<void> | null = null;
+  // Replaceable for tests.
+  loadLegendCeremony: () => Promise<LegendCeremonyModule> = () =>
+    import("../../components/LegendCeremony");
 
   private _title: string;
 
@@ -100,6 +126,7 @@ export class WinModal extends LitElement implements Controller {
             .view=${this.xpView}
             .onScreen=${this.isVisible}
             .gameType=${this.game?.config().gameConfig().gameType ?? null}
+            @xp-legend=${this.onXpLegend}
           ></game-xp-panel>
           ${this.innerHtml()}
         </div>
@@ -131,8 +158,60 @@ export class WinModal extends LitElement implements Controller {
         </div>
         ${this.renderActionStyles()}
       </div>
+      <legend-ceremony
+        @legend-ceremony-closed=${this.onLegendCeremonyClosed}
+      ></legend-ceremony>
     `;
   }
+
+  // The server's result for this game made the player a Legend: the moment
+  // gets the whole screen, the first time on this account. The XP section
+  // rests on its final state behind it, so Continue comes back to the
+  // settled popup. Should the ceremony not have arrived (a slow or failed
+  // fetch), the XP section plays its own Legend moment instead.
+  private onXpLegend = (e: CustomEvent<GameXpEligible>): void => {
+    const publicId = this.xpPublicId;
+    const legend = this.legendCeremony;
+    if (publicId === null || legend === null) return;
+    if (legend.legendCeremonySeen(publicId)) return;
+    const ceremony = this.querySelector<LegendCeremony>("legend-ceremony");
+    if (ceremony === null) return;
+    e.preventDefault();
+    legend.markLegendCeremonySeen(publicId);
+    ceremony.show({ lifetimeXp: e.detail.after.lifetimeXp, at: new Date() });
+  };
+
+  // Fetches the Legend ceremony ahead of its moment: once the account is
+  // known to be on its last prestige run, and again (should that have missed
+  // it) as soon as the server's result says this game made a Legend, while
+  // the reveal is still climbing to level 100.
+  private preloadLegendCeremony(): void {
+    if (this.legendCeremonyLoad !== null) return;
+    this.legendCeremonyLoad = this.loadLegendCeremony().then(
+      (module) => {
+        this.legendCeremony = module;
+      },
+      (err: unknown) => {
+        this.legendCeremonyLoad = null;
+        console.warn("WinModal: Legend ceremony failed to load", err);
+      },
+    );
+  }
+
+  // The first of those: where the last run is comes from the config, as the
+  // server may move it, and from the client's own constant only without one.
+  private async preloadIfLastRun(prestige: number): Promise<void> {
+    const config = await fetchProgressionConfig();
+    const last =
+      config !== false && config.maxPrestige > 0
+        ? config.maxPrestige
+        : MAX_PRESTIGE;
+    if (prestige >= last) this.preloadLegendCeremony();
+  }
+
+  private onLegendCeremonyClosed = (): void => {
+    this.querySelector<HTMLElement>('[data-win-action="keep"]')?.focus();
+  };
 
   // The modal's own buttons, textured like the store's tiles and buy buttons:
   // a tinted gradient with a coloured border, and on hover they lift, glow
@@ -448,6 +527,9 @@ export class WinModal extends LitElement implements Controller {
    */
   private async updateXp(gameOver: boolean): Promise<void> {
     if (this.xpPolling) return;
+    // Normally here since the game started; tried again should that fetch
+    // have failed.
+    loadGameXpPanel();
     try {
       const game = this.game;
       // Spectators and replay viewers have no XP of their own.
@@ -469,6 +551,8 @@ export class WinModal extends LitElement implements Controller {
       // before a first scored game); absent means off: no section at all.
       const progress = account.me.player.progress;
       if (progress === undefined) return;
+      this.xpPublicId = account.me.player.publicId ?? null;
+      if (!progress.legend) void this.preloadIfLastRun(progress.prestige);
       // The game may have ended while this was resolving; the end-of-game
       // call owns the section from then on.
       if (this.xpPolling) return;
@@ -494,6 +578,9 @@ export class WinModal extends LitElement implements Controller {
       const result = await pollGameXp(game.gameID(), {
         signal: this.xpAbort.signal,
       });
+      if (result?.eligible && reachedLegendThisGame(result)) {
+        this.preloadLegendCeremony();
+      }
       if (result === null) {
         // Timed out, signed out or unreadable: hide rather than show an error
         // (or, worse, a zero). A provisional figure stays, still provisional.
@@ -588,7 +675,9 @@ export class WinModal extends LitElement implements Controller {
     );
   }
 
-  init() {}
+  init() {
+    if (!this.game.config().isReplay()) loadGameXpPanel();
+  }
 
   tick() {
     const myPlayer = this.game.myPlayer();

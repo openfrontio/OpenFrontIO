@@ -201,7 +201,9 @@ export const LobbyAccentSchema = z.enum(["gold", "blue", "green", "red"]);
 
 export type LobbyAccent = z.infer<typeof LobbyAccentSchema>;
 
-const ClientInfoSchema = z.object({
+export type { LevelBadge } from "./LevelBadgeWire";
+
+export const ClientInfoSchema = z.object({
   clientID: z.string(),
   username: UsernameSchema,
   clanTag: ClanTagSchema,
@@ -217,6 +219,21 @@ const ClientInfoSchema = z.object({
   // preview can honour the pins instead of re-deriving teams that the server
   // will overrule at start. Absent when the game isn't matchmade.
   teamIndex: zb.uint().optional(),
+  // Signed-in players' level, for the badge next to their name: level,
+  // prestige and legend packed into one varint by packLevelBadge
+  // (LevelBadgeWire.ts); read it with unpackLevelBadge. Stamped by the game
+  // server from its own /users/@me lookup, never taken from the client.
+  // Display-only. Absent for guests, for players who hide their level (on
+  // every copy of the roster, their own included), when the API has
+  // progression off or the lookup failed, and on anonymized entries (a badge
+  // beside an anonymous name would point out the veterans). Must stay the
+  // LAST field: its one presence bit is the eighth and last bit of this
+  // object's one-byte header, so an entry without it encodes byte-identically
+  // to one from before it existed, and a pre-badge frame still decodes.
+  // Another field here would need a second header byte. No range check here
+  // on purpose: one bad value must not fail the whole roster's parse, so
+  // unpackLevelBadge drops it instead.
+  levelBadge: zb.uint().optional(),
 });
 
 export const GameInfoSchema = z.object({
@@ -340,6 +357,9 @@ export interface ClientInfo {
   spectator?: boolean;
   // Server-pinned team slot for matchmade team games; absent when not matchmade.
   teamIndex?: number;
+  // Server-stamped level for the name badge, packed (packLevelBadge); read it
+  // with unpackLevelBadge. Display-only; never set on anonymized entries.
+  levelBadge?: number;
 }
 
 export enum LogSeverity {
