@@ -7,6 +7,7 @@ import {
   ConfirmGhostStructureEvent,
   ContextMenuEvent,
   DoBoatAttackEvent,
+  DoTargetPlayerEvent,
   DragEvent,
   EmojiKeyEvent,
   EmojiTableVisibleEvent,
@@ -14,6 +15,8 @@ import {
   MouseDownEvent,
   MouseOverEvent,
   MouseUpEvent,
+  RefreshGraphicsEvent,
+  ShowChatMenuEvent,
   ShowEmojiMenuEvent,
   TouchLongPressStartEvent,
   UnitSelectionEvent,
@@ -1348,6 +1351,98 @@ describe("InputHandler AutoUpgrade", () => {
       );
 
       expect(uiState.ghostStructure).toBe(UnitType.City);
+    });
+  });
+
+  describe("Target player keybind", () => {
+    beforeEach(() => {
+      inputHandler.destroy();
+      inputHandler = new InputHandler(
+        mockGameView,
+        {
+          attackRatio: 20,
+          ghostStructure: null,
+          rocketDirectionUp: true,
+          upgradeMultiplier: 1,
+        },
+        mockCanvas,
+        eventBus,
+      );
+      inputHandler.initialize();
+    });
+
+    test("N targets the player under the cursor", () => {
+      const targets: DoTargetPlayerEvent[] = [];
+      eventBus.on(DoTargetPlayerEvent, (e) => targets.push(e));
+
+      window.dispatchEvent(new KeyboardEvent("keyup", { code: "KeyN" }));
+
+      expect(targets).toHaveLength(1);
+      // No tile: the runner uses the one under the cursor.
+      expect(targets[0].tile).toBeUndefined();
+    });
+  });
+
+  describe("Quick chat keybind", () => {
+    beforeEach(() => {
+      inputHandler.destroy();
+      inputHandler = new InputHandler(
+        mockGameView,
+        {
+          attackRatio: 20,
+          ghostStructure: null,
+          rocketDirectionUp: true,
+          upgradeMultiplier: 1,
+        },
+        mockCanvas,
+        eventBus,
+      );
+      inputHandler.initialize();
+    });
+
+    test("R opens quick chat at the last mouse position", () => {
+      const chats: ShowChatMenuEvent[] = [];
+      const refreshes: RefreshGraphicsEvent[] = [];
+      eventBus.on(ShowChatMenuEvent, (e) => chats.push(e));
+      eventBus.on(RefreshGraphicsEvent, (e) => refreshes.push(e));
+
+      window.dispatchEvent(
+        new MouseEvent("mousemove", { clientX: 50, clientY: 60 }),
+      );
+      window.dispatchEvent(new KeyboardEvent("keyup", { code: "KeyR" }));
+
+      expect(chats).toHaveLength(1);
+      expect(chats[0].x).toBe(50);
+      expect(chats[0].y).toBe(60);
+      expect(refreshes).toHaveLength(0);
+    });
+
+    test("Alt+R resets graphics without opening quick chat", () => {
+      const chats: ShowChatMenuEvent[] = [];
+      const refreshes: RefreshGraphicsEvent[] = [];
+      eventBus.on(ShowChatMenuEvent, (e) => chats.push(e));
+      eventBus.on(RefreshGraphicsEvent, (e) => refreshes.push(e));
+
+      window.dispatchEvent(
+        new KeyboardEvent("keyup", { code: "KeyR", altKey: true }),
+      );
+
+      expect(chats).toHaveLength(0);
+      expect(refreshes).toHaveLength(1);
+    });
+
+    test("Ctrl+R and Cmd+R don't open quick chat", () => {
+      const chats: ShowChatMenuEvent[] = [];
+      eventBus.on(ShowChatMenuEvent, (e) => chats.push(e));
+
+      window.dispatchEvent(
+        new KeyboardEvent("keyup", { code: "KeyR", ctrlKey: true }),
+      );
+      window.dispatchEvent(
+        new KeyboardEvent("keyup", { code: "KeyR", metaKey: true }),
+      );
+
+      expect(chats).toHaveLength(0);
     });
   });
 
