@@ -48,4 +48,20 @@ describe("SinglePlayerModal start", () => {
     expect(config.playerTeams).toBe(4);
     expect(config.disabledUnits).toEqual([UnitType.Warship]);
   });
+
+  it("carries the AI resource structures option into the solo game config", async () => {
+    const modal = createModal();
+    const events: any[] = [];
+    modal.addEventListener("join-lobby", (e: Event) =>
+      events.push((e as CustomEvent).detail),
+    );
+
+    modal.aiResourceStructures = true;
+
+    await modal.startGame();
+
+    expect(events).toHaveLength(1);
+    expect(events[0].gameStartInfo.config.aiResourceStructures).toBe(true);
+  });
+
 });
