@@ -153,4 +153,23 @@ describe("WorkerClient humanStats", () => {
     await expect(promise).resolves.toEqual(result);
     expect(internalClient.messageHandlers.has(request.id)).toBe(false);
   });
+
+  it("rejects and removes the handler when the worker does not respond", async () => {
+    vi.useFakeTimers();
+    try {
+      const { client, internalClient } = createClient();
+      const promise = client.humanStats();
+      const rejection = expect(promise).rejects.toThrow(
+        "human_stats request timed out",
+      );
+      expect(internalClient.messageHandlers.size).toBe(1);
+
+      await vi.advanceTimersByTimeAsync(5000);
+
+      await rejection;
+      expect(internalClient.messageHandlers.size).toBe(0);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
 });

@@ -264,6 +264,14 @@ export function buildProvisionalXp(input: {
   if (rules === null || !apiScoresGame(input.progression, input.config)) {
     return null;
   }
+  // The API sends both with progress; without them the response is older or
+  // malformed, and reading them as a fresh day at 1x could overstate.
+  if (
+    input.progress.daily === undefined ||
+    input.progress.subscriberPermille === undefined
+  ) {
+    return null;
+  }
   const derived = provisionalXpContext(input);
   if (derived === "retry") return "retry";
   const { ctx, disconnectedOpponents } = derived;

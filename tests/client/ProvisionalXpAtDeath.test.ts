@@ -75,6 +75,19 @@ const PROGRESS: Progress = {
   canPrestige: false,
 };
 
+// Progress as /users/@me sends it: with today's allowances (none used yet)
+// and the subscriber boost (none).
+const FULL_PROGRESS: Progress = {
+  ...PROGRESS,
+  daily: {
+    day: new Date().toISOString().slice(0, 10),
+    privateGames: 0,
+    singleplayerGames: 0,
+    firstGameClaimed: false,
+  },
+  subscriberPermille: 1000,
+};
+
 const FFA: XpGameConfig = {
   gameType: GameType.Public,
   gameMode: GameMode.FFA,
@@ -254,7 +267,7 @@ describe("buildProvisionalXp", () => {
       snapshot: ffaSnapshot(),
       myClientID: "me",
       config: FFA,
-      progress: PROGRESS,
+      progress: FULL_PROGRESS,
       progression: progression(),
       ...overrides,
     });
@@ -307,7 +320,7 @@ describe("buildProvisionalXp", () => {
   it("counts the first game of the day only while it is open, in a public game", () => {
     const claimed = build({
       progress: {
-        ...PROGRESS,
+        ...FULL_PROGRESS,
         daily: {
           privateGames: 0,
           singleplayerGames: 0,
@@ -394,6 +407,20 @@ describe("buildProvisionalXp", () => {
       build({ progression: progression({ formula: undefined }) }),
     ).toBeNull();
     expect(build({ progression: progression({ xp: undefined }) })).toBeNull();
+  });
+
+  it("has nothing to show without the day's allowances or the subscriber boost", () => {
+    // Read as a fresh day at 1x, either could overstate the figure.
+    expect(
+      build({ progress: { ...FULL_PROGRESS, daily: undefined } }),
+    ).toBeNull();
+    expect(
+      build({ progress: { ...FULL_PROGRESS, subscriberPermille: undefined } }),
+    ).toBeNull();
+
+    const complete = build({ progress: FULL_PROGRESS });
+    if (complete === null || complete === "retry") throw new Error();
+    expect(complete.response.eligible).toBe(true);
   });
 
   it("has nothing to show for a singleplayer game while the API requires the stats vote", () => {
@@ -668,7 +695,7 @@ describe("loadProvisionalXp", () => {
       gameId: "game1",
       myClientID: "me",
       config: FFA,
-      progress: PROGRESS,
+      progress: FULL_PROGRESS,
       progression: progression(),
       humanStats,
     });
@@ -684,7 +711,7 @@ describe("loadProvisionalXp", () => {
       gameId: "game1",
       myClientID: "me",
       config: FFA,
-      progress: PROGRESS,
+      progress: FULL_PROGRESS,
       progression: progression(),
       humanStats: () => new Promise(() => {}),
       timeoutMs: 1_000,
@@ -699,7 +726,7 @@ describe("loadProvisionalXp", () => {
       gameId: "game1",
       myClientID: "me",
       config: { ...FFA, gameType: GameType.Singleplayer },
-      progress: PROGRESS,
+      progress: FULL_PROGRESS,
       progression: progression({ requireStatsAgreed: true }),
       humanStats,
     });
