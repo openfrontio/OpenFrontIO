@@ -92,9 +92,9 @@ export function saveLobbyPreset(
   name: string,
   config: LobbyPresetConfig,
   userSettings: UserSettings,
-): LobbyPreset[] {
+): LobbyPreset[] | null {
   const trimmed = name.trim().slice(0, MAX_PRESET_NAME_LENGTH);
-  if (!trimmed) return userSettings.getLobbyPresets();
+  if (!trimmed) return null;
 
   const presets = userSettings.getLobbyPresets();
   const existingIndex = presets.findIndex(
@@ -118,8 +118,8 @@ export function saveLobbyPreset(
     newPresets = [...presets, updatedPreset];
   }
 
-  userSettings.setLobbyPresets(newPresets);
-  return newPresets;
+  const success = userSettings.setLobbyPresets(newPresets);
+  return success ? newPresets : null;
 }
 
 export function deleteLobbyPreset(

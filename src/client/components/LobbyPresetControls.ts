@@ -69,10 +69,7 @@ export class LobbyPresetControls extends LitElement {
   }
 
   private handleSave() {
-    const name = (this.nameInput.trim() || this.selectedName.trim()).slice(
-      0,
-      MAX_PRESET_NAME_LENGTH,
-    );
+    const name = this.nameInput.trim().slice(0, MAX_PRESET_NAME_LENGTH);
     if (!name || this.disabled) return;
     this.dispatchEvent(
       new CustomEvent<string>("preset-save", {
@@ -87,9 +84,7 @@ export class LobbyPresetControls extends LitElement {
   render() {
     const hasPresets = this.presets.length > 0;
     const canLoadOrDelete = !this.disabled && Boolean(this.selectedName);
-    const canSave =
-      !this.disabled &&
-      Boolean(this.nameInput.trim() || this.selectedName.trim());
+    const canSave = !this.disabled && Boolean(this.nameInput.trim());
 
     return html`
       <div

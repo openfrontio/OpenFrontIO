@@ -1784,6 +1784,7 @@ export class HostLobbyModal extends BaseModal {
   };
 
   private handlePresetLoad = async (e: CustomEvent<string>) => {
+    if (this.publiclyListed) return;
     const name = e.detail;
     const preset = this.lobbyPresets.find(
       (p) => p.name.toLowerCase() === name.toLowerCase(),
@@ -1797,8 +1798,16 @@ export class HostLobbyModal extends BaseModal {
   private handlePresetSave = (e: CustomEvent<string>) => {
     const name = e.detail;
     const config = this.exportPresetConfig();
-    this.lobbyPresets = saveLobbyPreset(name, config, this.userSettings);
-    this.selectedPresetName = name;
+    const updated = saveLobbyPreset(name, config, this.userSettings);
+    if (!updated) {
+      showToast(translateText("lobby_config.preset.save_failed"), "red");
+      return;
+    }
+    this.lobbyPresets = updated;
+    const saved = updated.find(
+      (p) => p.name.toLowerCase() === name.trim().toLowerCase(),
+    );
+    this.selectedPresetName = saved ? saved.name : name.trim();
     showToast(translateText("lobby_config.preset.saved"), "green");
   };
 
