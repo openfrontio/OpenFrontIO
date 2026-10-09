@@ -81,8 +81,9 @@ export function markLegendCeremonySeen(publicId: string): void {
 }
 
 // A translation with one placeholder rendered as markup: "{xp} lifetime XP"
-// with the number in bold.
-const MARK = "";
+// with the number in bold. MARK is a private-use character no translation
+// contains.
+const MARK = "\uE000";
 function withMarkup(
   key: string,
   param: string,
