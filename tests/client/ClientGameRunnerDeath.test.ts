@@ -315,4 +315,43 @@ describe("ClientGameRunner death detection and save clearing", () => {
     await new Promise((r) => setTimeout(r, 20));
     expect(clearSoloSaveMock).not.toHaveBeenCalled();
   });
+
+  it("skips transport.turnComplete() on initial worker update and calls it on subsequent updates", () => {
+    const initialUpdate = {
+      tick: 50,
+      updates: { [GameUpdateType.Hash]: [] },
+    };
+    mockWorker.initialUpdate = initialUpdate;
+    mockWorker.start = vi.fn((cb) => {
+      workerCallback = cb;
+      cb(initialUpdate);
+    });
+
+    const runner = createRunner(true);
+    runner.start();
+
+    // The initial update delivered by worker.start should not signal turn completion
+    expect(mockTransport.turnComplete).not.toHaveBeenCalled();
+
+    // A subsequent normal turn update should signal turn completion
+    workerCallback({
+      tick: 51,
+      updates: { [GameUpdateType.Hash]: [] },
+    });
+    expect(mockTransport.turnComplete).toHaveBeenCalledTimes(1);
+  });
+
+  it("calls transport.turnComplete() on the first update when there is no initial worker update", () => {
+    mockWorker.initialUpdate = null;
+    const runner = createRunner(true);
+    runner.start();
+
+    expect(mockTransport.turnComplete).not.toHaveBeenCalled();
+
+    workerCallback({
+      tick: 1,
+      updates: { [GameUpdateType.Hash]: [] },
+    });
+    expect(mockTransport.turnComplete).toHaveBeenCalledTimes(1);
+  });
 });

@@ -113,6 +113,10 @@ const PlayerTilesSchema = z
   })
   .passthrough();
 
+export interface RestoredMapsResult {
+  startTick: number | null;
+}
+
 /**
  * Restores map edits (water nukes, fallout, defense) and tile ownership from a
  * snapshot onto freshly loaded map instances. Used on the client so GameView's
@@ -122,7 +126,7 @@ export function restoreMapsFromSnapshot(
   bytes: Uint8Array,
   gameMap: GameMap,
   miniGameMap?: GameMap,
-): void {
+): RestoredMapsResult {
   const root = decodeRoot(bytes);
   (gameMap as GameMapImpl).restoreSnapshot(
     readVersioned(GameMapSnapshot, root.map),
@@ -154,4 +158,7 @@ export function restoreMapsFromSnapshot(
       gameMap.setOwnerID(tile, id);
     }
   }
+  return {
+    startTick: readStartTick(root.game?.d),
+  };
 }

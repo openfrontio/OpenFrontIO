@@ -55,6 +55,7 @@ export {
   restoreMapsFromSnapshot,
   SNAPSHOT_FORMAT_VERSION,
   SNAPSHOT_MAGIC,
+  type RestoredMapsResult,
   type SnapshotHeader,
 } from "@openfront/engine-lib/snapshot/MapSnapshot";
 
