@@ -1,5 +1,5 @@
 import { UnitType } from "@openfront/engine-api/game/GameTypes";
-import { Player } from "../../game/Game";
+import { Game, Player } from "../../game/Game";
 
 export const RESOURCE_PRODUCTION_UNIT_TYPES = [
   UnitType.OilMine,
@@ -15,7 +15,7 @@ export const RESOURCE_PRODUCTION_UNIT_TYPES = [
  */
 export function refillResourceProduction(
   player: Player,
-  game: Parameters<Player["buildUnit"]>[0],
+  game: Game,
 ): void {
   for (const unit of player.units(RESOURCE_PRODUCTION_UNIT_TYPES)) {
     if (
