@@ -682,21 +682,25 @@ export class EngineConfig extends Config {
   }
 
   /**
-   * Resource structures have a finite production reserve until a successful
-   * trade shipment refreshes them. The reserve scales with building level so
-   * upgrading still increases total output, while every level has the same
-   * number of production cycles before requiring trade again.
+   * Resource structures carry at most 30 seconds of production. A completed
+   * normal Trade Ship replenishes only 15 seconds of production, never the
+   * entire reserve, so briefly enabling trade cannot create a long passive
+   * payout window.
    */
-  resourceProductionCap(type: UnitType, level: number): Gold {
-    switch (type) {
-      case UnitType.OilMine:
-      case UnitType.GoldMine:
-      case UnitType.DiamondMine:
-      case UnitType.LivestockFarm:
-        return BigInt(250_000 * Math.max(1, Math.floor(level)));
-      default:
-        throw new Error(`Unknown resource production type: ${type}`);
-    }
+  resourceProductionCap(
+    type: UnitType,
+    level: number,
+    player: PlayerLike,
+  ): Gold {
+    return this.mineIncome(type, level, player) * 6n;
+  }
+
+  resourceProductionTradeRefill(
+    type: UnitType,
+    level: number,
+    player: PlayerLike,
+  ): Gold {
+    return this.mineIncome(type, level, player) * 3n;
   }
 
   mineIncome(
