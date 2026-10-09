@@ -499,9 +499,8 @@ export const SubscriptionSchema = CosmeticSchema.extend({
   dailyHardCurrency: z.number(),
   // One-time plutonium grant on subscribing (advertised on the store tile).
   hardCurrencySignupBonus: z.number(),
-  // Whether this tier exempts subscribers from the free-ranked-play limits
-  // (advertised on the store tile).
-  unlimitedRanked: z.boolean(),
+  // Ranked play limits are gone; still sent by the API until a later release.
+  unlimitedRanked: z.boolean().optional(),
   // Whether this tier lets subscribers list custom lobbies publicly
   // (advertised on the store tile).
   canCreatePublicLobbies: z.boolean(),

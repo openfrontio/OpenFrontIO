@@ -25,6 +25,8 @@ function makeUserMe(flares: string[] = []): UserMeResponse {
       adfree: false,
       unlimitedRanked: false,
       canCreatePublicLobbies: false,
+      steamLicence: false,
+      noticesSeen: [],
       flares,
       achievements: { singleplayerMap: [], player: [] },
       friends: [],

@@ -31,6 +31,9 @@ export class SubscriptionPanel extends LitElement {
   @property({ type: Object })
   cosmetic: Subscription | null = null;
 
+  @property({ type: Boolean })
+  steamLicence = false;
+
   createRenderRoot() {
     return this;
   }
@@ -314,7 +317,10 @@ export class SubscriptionPanel extends LitElement {
             tier: tierName,
           })}
         </p>
-        ${renderFreePlayPerks("free_play.after_grant_heading")}
+        ${renderFreePlayPerks(
+          "free_play.after_grant_heading",
+          this.steamLicence,
+        )}
       </div>
     `;
   }

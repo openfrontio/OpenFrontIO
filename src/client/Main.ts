@@ -20,7 +20,7 @@ import { renderNavVersion } from "src/client/GameVersion";
 import { responseHasLinkedIdentity } from "./AccountIdentity";
 import { adGatekeeper } from "./AdGatekeeper";
 import { loadAdmiral, onAdmiralMeasured } from "./Admiral";
-import { getUserMe, invalidateUserMe } from "./Api";
+import { getUserMe, invalidateUserMe, markNoticeSeen } from "./Api";
 import {
   getDesktopSessionState,
   reauthAfterCrazyGamesChange,
@@ -122,6 +122,7 @@ import {
   type PendingLinkModal,
 } from "./SteamLink";
 import type { SteamLinkModal } from "./SteamLinkModal";
+import { steamNoticeDue, steamNoticeStringsReady } from "./SteamNotices";
 import { steamSDK } from "./SteamSDK";
 import type { StoreModal } from "./Store";
 import { initTelemetry } from "./Telemetry";
@@ -852,6 +853,11 @@ class Client {
         const claimStore = parseClaimPromptStore(
           localStorage.getItem(CLAIM_PROMPT_KEY),
         );
+        const steamNotice = steamNoticeDue(
+          userMeResponse,
+          isDesktopShell(),
+          Date.now(),
+        );
         await runBootInterrupt(
           nextBootInterrupt({
             cleanHomepage,
@@ -870,13 +876,20 @@ class Client {
               Date.now(),
             ),
             grantStringsReady: steamGrantStringsReady(translateText),
+            steamNotice,
+            steamNoticeStringsReady: steamNoticeStringsReady(translateText),
             // Held rewards can't be claimed yet: on their own they'd open the
             // popup every boot with nothing to do.
             rewardCount: rewards.filter(isRewardClaimable).length,
             claimPromptDue: claimPromptDue(claimStore, Date.now(), publicId),
             claimStringsReady: claimPromptStringsReady(translateText),
           }),
-          { claimStore, grantStore: grantStoreAfterDispatch, publicId },
+          {
+            claimStore,
+            grantStore: grantStoreAfterDispatch,
+            publicId,
+            steamNotice,
+          },
           {
             translate: translateText,
             confirm: (body, heading, confirmText) =>
@@ -914,6 +927,7 @@ class Client {
                 STEAM_GRANT_NOTICE_KEY,
                 JSON.stringify(store),
               ),
+            markNoticeSeen: (notice) => void markNoticeSeen(notice),
             now: () => Date.now(),
           },
         );

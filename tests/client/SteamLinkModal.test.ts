@@ -65,6 +65,8 @@ function makeUserMe(
       adfree: false,
       unlimitedRanked: false,
       canCreatePublicLobbies: false,
+      steamLicence: false,
+      noticesSeen: [],
       achievements: { singleplayerMap: [], player: [] },
       friends: [],
       subscription: null,
