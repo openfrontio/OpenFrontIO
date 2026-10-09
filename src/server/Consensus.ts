@@ -64,6 +64,14 @@ export class WinnerVote {
     return this.round.size();
   }
 
+  // How many unique IPs sent the decided message, departed ones included;
+  // 0 before a decision. Every one of them sent the same winner and stats.
+  backers(): number {
+    return this.decided === null
+      ? 0
+      : this.round.backers(voteKey(this.decided));
+  }
+
   // Records a vote from `ip`. Returns the candidate's key and how many unique
   // IPs back it after this vote.
   cast(

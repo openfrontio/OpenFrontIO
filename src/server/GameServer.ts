@@ -85,6 +85,7 @@ import {
   type MatchTelemetryEmitter,
 } from "./telemetry/MatchTelemetry";
 import {
+  LONE_VOTER_REPLAY_CAP,
   replayWinnerInChild,
   winnerReplayMetrics,
   type WinnerReplayer,
@@ -159,6 +160,8 @@ export interface GameServerDeps {
   archive: (record: PartialGameRecord) => Promise<void>;
   // Replays the game to settle a disputed winner vote (see settleWinner).
   replayWinner: WinnerReplayer;
+  // Replays waiting or running on this worker, against LONE_VOTER_REPLAY_CAP.
+  replayPending: () => number;
   fetchTribes: typeof fetchCustomTribes;
   env: () => GameEnv;
   turnIntervalMs: () => number;
@@ -183,6 +186,7 @@ export function defaultGameServerDeps(): GameServerDeps {
   return {
     archive: (record) => archive(finalizeGameRecord(record)),
     replayWinner: replayWinnerInChild,
+    replayPending: () => winnerReplayMetrics.pending,
     fetchTribes: fetchCustomTribes,
     env: () => ServerEnv.env(),
     turnIntervalMs: () => ServerEnv.turnIntervalMs(),
@@ -1534,7 +1538,7 @@ export class GameServer {
           gameID: this.id,
         });
       } else if (this.winnerVote.winner() !== null) {
-        this.log.info("game already archived", {
+        this.log.info("winner already settled, record sent or pending replay", {
           gameID: this.id,
         });
       } else {
@@ -1936,30 +1940,79 @@ export class GameServer {
   // it, but a vote is only as good as its voters: when they disagree -- some
   // client named a different winner or sent different stats, or the game
   // ended with no majority -- the server replays the game itself and
-  // archives what the simulation says. The record waits for the replay; if
-  // the replay fails, the vote's result (if any) goes out instead.
+  // archives what the simulation says. A vote decided by a single IP is
+  // replayed too: nobody else confirmed its stats. It is common, though, so
+  // when the worker already has LONE_VOTER_REPLAY_CAP replays waiting or
+  // running it is archived unconfirmed instead of queued. The record waits for
+  // the replay; if the replay fails, the vote's result (if any) goes out
+  // instead.
+  //
+  // The record's statsAgreed says whether its winner and stats were checked:
+  // by at least two IPs sending the same ones, or by the replay.
   private settleWinner() {
     const voted = this.winnerVote.winner();
     const candidates = this.winnerVote.candidates();
-    if (candidates === 0 || (candidates === 1 && voted !== null)) {
-      this.archiveGame(voted);
+    const backers = this.winnerVote.backers();
+    const votedAgreed = voted !== null && backers >= 2;
+    if (candidates === 0 || (candidates === 1 && votedAgreed)) {
+      this.archiveGame(voted, votedAgreed);
+      return;
+    }
+    const reason =
+      candidates > 1
+        ? "disputed"
+        : voted !== null
+          ? "lone voter"
+          : "no majority";
+    const pending = this.deps.replayPending();
+    if (reason === "lone voter" && pending >= LONE_VOTER_REPLAY_CAP) {
+      winnerReplayMetrics.outcomes.skipped++;
+      this.log.warn(
+        "winner replay queue full, archiving the lone vote unconfirmed",
+        {
+          gameID: this.id,
+          voted: voted?.winner,
+          pending,
+          cap: LONE_VOTER_REPLAY_CAP,
+        },
+      );
+      this.archiveGame(voted, false);
       return;
     }
     // The record as of now; the game may run on while the replay does.
     const turns = this.turns.slice();
     const endTime = Date.now();
-    this.log.warn("winner vote disputed, replaying game", {
-      gameID: this.id,
-      voted: voted?.winner,
-      candidates,
-      turns: turns.length,
-    });
+    this.log.warn(
+      {
+        disputed: "winner vote disputed, replaying game",
+        "lone voter": "winner vote decided by one IP, replaying game",
+        "no majority": "winner vote has no majority, replaying game",
+      }[reason],
+      {
+        gameID: this.id,
+        voted: voted?.winner,
+        candidates,
+        backers,
+        turns: turns.length,
+      },
+    );
+    // Set once a record is handed over, so the .catch below falls back to the
+    // vote only when nothing was archived.
+    let archived = false;
     this.deps
       .replayWinner(this.wireGameStartInfo, turns)
       .then((replayed) => {
         if (replayed === null) {
           winnerReplayMetrics.outcomes.failed++;
-          this.archiveGame(voted, turns, endTime);
+          this.log.warn("winner replay failed, archiving the vote", {
+            gameID: this.id,
+            reason,
+            voted: voted?.winner,
+            backers,
+            statsAgreed: votedAgreed,
+          });
+          archived = true;
+          this.archiveGame(voted, votedAgreed, turns, endTime);
           return;
         }
         const replayedKey = voteKey(replayed);
@@ -1971,6 +2024,7 @@ export class GameServer {
         winnerReplayMetrics.outcomes[outcome]++;
         this.log[agrees ? "info" : "warn"]("winner replay result", {
           gameID: this.id,
+          reason,
           voted: voted?.winner,
           replayed: replayed.winner,
           winTick: replayed.tick,
@@ -1999,23 +2053,33 @@ export class GameServer {
             outcome,
           });
         }
-        this.archiveGame(replayed, turns, endTime);
+        archived = true;
+        this.archiveGame(replayed, true, turns, endTime);
       })
       .catch((error) => {
         this.log.error(`error archiving replayed game: ${error}`, {
           gameID: this.id,
+          reason,
         });
+        // A replay that threw is a failed replay: the vote's result goes out,
+        // as when the replay answers null.
+        if (archived) return;
+        winnerReplayMetrics.outcomes.failed++;
+        this.archiveGame(voted, votedAgreed, turns, endTime);
       });
   }
 
   private archiveGame(
     winner: { winner?: Winner; allPlayersStats: AllPlayersStats } | null,
+    // See GameEndInfoSchema.statsAgreed and settleWinner.
+    statsAgreed: boolean,
     turns: Turn[] = this.turns,
     endTime: number = Date.now(),
   ) {
     this.log.info("archiving game", {
       gameID: this.id,
       winner: winner?.winner,
+      statsAgreed,
     });
 
     // Players must stay in the same order as the game start info.
@@ -2059,6 +2123,7 @@ export class GameServer {
         this.gameStartInfo.tribes,
         [...this.reports.values()],
         this.publicGameType,
+        statsAgreed,
       ),
     );
   }
@@ -2138,7 +2203,11 @@ export class GameServer {
   }
 
   private handleWinner(client: Client, clientMsg: ClientSendWinnerMessage) {
+    // Only a running game has a winner to vote on, and the replay that
+    // settles a vote needs the start info start() builds.
     if (
+      this.stage !== "started" ||
+      this.ended ||
       this.desync.isDesynced(client.clientID) ||
       this.isKicked(client.clientID) ||
       this.winnerVote.winner() !== null ||

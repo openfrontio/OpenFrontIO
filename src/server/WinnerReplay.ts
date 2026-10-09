@@ -52,10 +52,17 @@ export const winnerReplayMetrics = {
   // wait excluded.
   runs: 0,
   seconds: 0,
-  // How disputed votes settled (GameServer.settleWinner): the replay agreed
-  // with the vote, overturned it, or failed and the vote stood.
-  outcomes: { agreed: 0, overturned: 0, failed: 0 },
+  // How replayed votes settled (disputed or decided by one IP, see
+  // GameServer.settleWinner): the replay agreed with the vote, overturned
+  // it, or failed and the vote stood; or a one-IP vote skipped the replay
+  // because the queue was full (LONE_VOTER_REPLAY_CAP) and stood unconfirmed.
+  outcomes: { agreed: 0, overturned: 0, failed: 0, skipped: 0 },
 };
+
+// A vote decided by one IP is common (the loser leaves without voting), so it
+// queues a replay only while fewer than this many wait or run on the worker;
+// past that it is archived unconfirmed. Disputed votes always queue.
+export const LONE_VOTER_REPLAY_CAP = 3;
 
 // One replay at a time per worker; the rest wait their turn.
 let queue: Promise<unknown> = Promise.resolve();
