@@ -329,6 +329,15 @@ class Client {
   private presenceDetail: Omit<PresencePayload, "state"> = {};
   private presenceSpectating = false;
   private presenceInGame = false;
+  /**
+   * Whether "game-starting" has been dispatched yet.
+   *
+   * For listeners that may not exist when it fires: the event carries no
+   * history, so anything registered later cannot tell "no game yet" from "a
+   * game started while I was loading". The menu audio chunk is exactly that
+   * case. Never cleared — it only gates work done once, on load.
+   */
+  private gameStartingFired = false;
   // Held apart from presenceDetail because that object is REPLACED wholesale
   // on every lobby_info, and the token rides every one of those (once a
   // second) as well as the start message. Merged back in at emit time; see
@@ -373,12 +382,18 @@ class Client {
     // It and howler are their own chunk, so the page doesn't wait on them. A
     // game that got there first has made the mixer already, and the menu
     // theme has no business starting under it.
+    //
+    // gameStartingFired covers the other order, where this chunk lands after
+    // prestart but before the game client has built a mixer. startMenuMusic
+    // only disarms on the "game-starting" it can hear, so arming it here
+    // would leave it live under a running game, free to start the theme over
+    // the gameplay track on the next click or music-volume change.
     Promise.all([
       import("./sound/AudioMixer"),
       import("./sound/MenuMusic"),
     ]).then(
       ([{ audioMixer, initAudioMixer }, { startMenuMusic }]) => {
-        if (audioMixer() === null) {
+        if (audioMixer() === null && !this.gameStartingFired) {
           startMenuMusic(initAudioMixer(this.userSettings));
         }
       },
@@ -1669,6 +1684,7 @@ class Client {
     this.lobbyHandle.prestart.then(() => {
       // The game is actually starting now (lobby wait is over). Let listeners that stay up
       // through the wait (e.g. the featured-stream panel) hide at this point instead of on join.
+      this.gameStartingFired = true;
       document.dispatchEvent(new CustomEvent("game-starting"));
       // Earliest point the lobby is provably closed: the server has stopped
       // broadcasting lobby_info and refuses new seats, so the shell must stop
