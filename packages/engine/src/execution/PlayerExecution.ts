@@ -358,9 +358,11 @@ export class PlayerExecution implements Execution {
    * join only side by side, so land a nuke cuts off across a diagonal keeps
    * its border in the main body's cluster. Splits that cluster into parts
    * whose tiles are side by side or meet at a corner beside one of our
-   * tiles; each part then lies in a single territory. The largest part is
-   * the main body. Each other part that touches no coast, map edge or open
-   * land is returned as a candidate with its bounding box.
+   * tiles; each part then lies in a single territory. The main body is a
+   * part that touches coast, map edge or open land if any does, else the
+   * part with the largest territory. Each other part that touches none of
+   * those, outside the main body's territory, is returned as a candidate
+   * with its bounding box.
    *
    * Returns null when the whole cluster is one territory.
    */
@@ -396,11 +398,9 @@ export class PlayerExecution implements Execution {
 
     const state = this.traversalState();
     const visited = state.visited;
-    const memberGen = this.bumpGeneration();
+    const memberGen = this.bumpGenerations(2);
+    const doneGen = memberGen + 1;
     for (const t of cluster) visited[t] = memberGen;
-    const doneGen = this.bumpGeneration();
-    // The generation counter wrapped and cleared the stamps.
-    if (doneGen < memberGen) return null;
 
     const stack = state.stack;
     const parts: TileRef[][] = [];
@@ -455,13 +455,26 @@ export class PlayerExecution implements Execution {
     }
     if (parts.length < 2) return null;
 
-    let mainIndex = 0;
-    for (let i = 1; i < parts.length; i++) {
-      if (parts[i].length > parts[mainIndex].length) mainIndex = i;
+    // Border length is no measure of size: a long thin arm has more border
+    // than a compact body. A part with a way out is never a candidate, so
+    // take one as the main body; which one only decides where floods stop.
+    let mainIndex = -1;
+    for (let i = 0; i < parts.length; i++) {
+      if (!open[i]) continue;
+      if (mainIndex === -1 || parts[i].length > parts[mainIndex].length) {
+        mainIndex = i;
+      }
+    }
+    // Parts in the main body's territory are attached, not candidates.
+    let partRoots: Int32Array | null = null;
+    if (mainIndex === -1) {
+      partRoots = new Int32Array(parts.length);
+      mainIndex = this.largestTerritoryPart(parts, partRoots);
     }
     const candidates: SeveredCandidates = { clusters: [], boxes: [] };
     for (let i = 0; i < parts.length; i++) {
       if (i === mainIndex || open[i]) continue;
+      if (partRoots !== null && rootOf(partRoots, i) === mainIndex) continue;
       candidates.clusters.push(parts[i]);
       candidates.boxes.push(
         partBoxes[i * 4],
@@ -471,6 +484,83 @@ export class PlayerExecution implements Execution {
       );
     }
     return { main: parts[mainIndex], candidates };
+  }
+
+  /**
+   * Returns the index of the part whose territory is largest; ties go to the
+   * lowest index. Each part floods its territory, all in step, one tile each
+   * per round. Floods that meet share a territory and merge; `roots` maps
+   * each part to the flood it merged into. The race stops once a single
+   * flood is still growing and already outsizes every finished one, so it
+   * need not walk the whole of the largest territory, which here is often
+   * the whole empire: it walks about the number of parts times the
+   * second-largest, plus whatever the largest territory's own parts walk
+   * before they meet.
+   */
+  private largestTerritoryPart(
+    parts: readonly TileRef[][],
+    roots: Int32Array,
+  ): number {
+    const map = this.map;
+    const mySmallID = this.player.smallID();
+    const visited = this.traversalState().visited;
+    const count = parts.length;
+    // Part i's flood stamps `base + i`.
+    const base = this.bumpGenerations(count);
+    const stacks: TileRef[][] = [];
+    const sizes: number[] = [];
+    for (let i = 0; i < count; i++) {
+      roots[i] = i;
+      for (const t of parts[i]) visited[t] = base + i;
+      stacks.push(parts[i].slice());
+      sizes.push(parts[i].length);
+    }
+
+    let growing = count;
+    let best = -1;
+    for (;;) {
+      for (let i = 0; i < count; i++) {
+        const stack = stacks[i];
+        if (roots[i] !== i || stack.length === 0) continue;
+        const t = stack.pop()!;
+        const numNeighbors = map.neighbors4(t, this.nbuf);
+        for (let k = 0; k < numNeighbors; k++) {
+          const n = this.nbuf[k];
+          if (map.ownerID(n) !== mySmallID) continue;
+          const part = visited[n] - base;
+          if (part < 0 || part >= count) {
+            visited[n] = base + i;
+            sizes[i]++;
+            stack.push(n);
+            continue;
+          }
+          const other = rootOf(roots, part);
+          if (other === i) continue;
+          // A flood that finished never meets another, so `other` is growing.
+          roots[other] = i;
+          sizes[i] += sizes[other];
+          for (const s of stacks[other]) stack.push(s);
+          stacks[other].length = 0;
+          growing--;
+        }
+        if (stack.length === 0) {
+          growing--;
+          if (
+            best === -1 ||
+            sizes[i] > sizes[best] ||
+            (sizes[i] === sizes[best] && i < best)
+          ) {
+            best = i;
+          }
+        }
+      }
+      if (growing === 0) return best;
+      if (growing === 1) {
+        let last = 0;
+        while (roots[last] !== last || stacks[last].length === 0) last++;
+        if (best === -1 || sizes[last] > sizes[best]) return last;
+      }
+    }
   }
 
   /**
@@ -491,36 +581,22 @@ export class PlayerExecution implements Execution {
     const mySmallID = this.player.smallID();
     const visited = this.traversalState().visited;
 
-    // Stamp the main body's border so a flood that reaches it can stop:
-    // that land is still attached.
-    let mainGen = this.bumpGeneration();
-    for (const t of mainTiles) visited[t] = mainGen;
-
     for (let c = 0; c < candidates.clusters.length; c++) {
       // Clusters join land that touches diagonally but territories only
-      // join side by side, so one cluster can span several territories.
-      // Judge each one separately: `seenGen` floods each only once, and
-      // `failGen` marks one given up on part-way.
-      let seenGen = this.bumpGeneration();
-      let failGen = this.bumpGeneration();
-      if (failGen < mainGen) {
-        // The generation counter wrapped and cleared every stamp.
-        mainGen = this.bumpGeneration();
-        for (const t of mainTiles) visited[t] = mainGen;
-        seenGen = this.bumpGeneration();
-        failGen = this.bumpGeneration();
-      }
+      // join side by side, so one cluster can span several territories:
+      // judge each one separately.
+      let mainGen = this.stampMainBody(mainTiles);
       for (const start of candidates.clusters[c]) {
         // An earlier annex in this pass may already have taken it.
         if (map.ownerID(start) !== mySmallID) continue;
         const mark = visited[start];
-        if (mark === seenGen || mark === failGen || mark === mainGen) continue;
+        if (mark >= mainGen && mark <= mainGen + 2) continue;
 
         const territory = this.severedTerritory(
           start,
           mainGen,
-          seenGen,
-          failGen,
+          mainGen + 1,
+          mainGen + 2,
           candidates.boxes,
           c * 4,
         );
@@ -533,8 +609,23 @@ export class PlayerExecution implements Execution {
           this.mg.conquerPlayer(capturing, this.player);
         }
         for (const t of territory) capturing.conquer(t);
+        // Conquering runs other code, which may start passes of its own on
+        // the shared scratch and overwrite the stamps.
+        mainGen = this.stampMainBody(mainTiles);
       }
     }
+  }
+
+  /**
+   * Starts three passes for judging severed land: the main body's border is
+   * stamped with the returned generation, so a flood that reaches it stops
+   * (that land is still attached); the next two are for the floods.
+   */
+  private stampMainBody(mainTiles: readonly TileRef[]): number {
+    const mainGen = this.bumpGenerations(3);
+    const visited = this.traversalState().visited;
+    for (const t of mainTiles) visited[t] = mainGen;
+    return mainGen;
   }
 
   /**
@@ -556,10 +647,6 @@ export class PlayerExecution implements Execution {
    * candidate, so it stops there. Without that bound a ring that stays a
    * candidate, such as one round an ally's enclave, would flood the whole
    * empire around it on every pass.
-   *
-   * A flood that fails stops at once and stamps what it walked, `mainGen` if
-   * it reached the main body and `failGen` otherwise, so later floods from
-   * the same candidate stop as soon as they reach it.
    */
   private severedTerritory(
     start: TileRef,
@@ -957,11 +1044,11 @@ export class PlayerExecution implements Execution {
     // becomes a single typed-array read instead of a hash probe for each of
     // the 8 neighbours of every border tile (this fill was ~15 % of a
     // headless game's CPU).
-    const borderGen = this.bumpGeneration();
+    const borderGen = this.bumpGenerations(2);
+    const currentGen = borderGen + 1;
     borderTiles.forEach((tile) => {
       visited[tile] = borderGen;
     });
-    const currentGen = this.bumpGeneration();
 
     const clusters: TileRef[][] = [];
     let boxes = new Int32Array(64);
@@ -1011,6 +1098,19 @@ export class PlayerExecution implements Execution {
 
   private bumpGeneration(): number {
     return bumpTraversalGeneration(this.traversalState());
+  }
+
+  /**
+   * Starts `count` passes at once and returns the first generation; the
+   * others follow it in order. Use it for stamps that must stay live
+   * together: if the counter wraps, which clears every stamp, it takes a
+   * fresh run after the wrap.
+   */
+  private bumpGenerations(count: number): number {
+    const first = this.bumpGeneration();
+    let last = first;
+    for (let i = 1; i < count; i++) last = this.bumpGeneration();
+    return last - first === count - 1 ? first : this.bumpGenerations(count);
   }
 
   // Perf: Replaced `neighborFn` closure parameter with a native 1D loop via `GameMap.neighbors8/4`.
@@ -1137,6 +1237,12 @@ export class PlayerExecution implements Execution {
     this.nbuf8 = [0, 0, 0, 0, 0, 0, 0, 0];
     this.player = r.player(s.player);
   }
+}
+
+// The flood that `part` has merged into, following `roots` to the end.
+function rootOf(roots: Int32Array, part: number): number {
+  while (roots[part] !== part) part = roots[part];
+  return part;
 }
 
 const PlayerExecStateSchema = z.object({

@@ -6,6 +6,7 @@ import {
 import { NukeExecution } from "@openfront/engine/execution/NukeExecution";
 import { PlayerExecution } from "@openfront/engine/execution/PlayerExecution";
 import { Game, Player } from "@openfront/engine/game/Game";
+import { tileTraversalScratch } from "@openfront/engine/game/TileTraversalScratch";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { setup } from "../../util/Setup";
 import { TestConfig } from "../../util/TestConfig";
@@ -22,6 +23,17 @@ let attacker: Player;
 // Some tests give it land; it runs no PlayerExecution, so its own land is
 // never annexed.
 let third: Player;
+
+async function newGame() {
+  game = await setup("big_plains", { infiniteGold: true, instantBuild: true }, [
+    new PlayerInfo("defender", PlayerType.Human, "c1", "defender_id"),
+    new PlayerInfo("attacker", PlayerType.Human, "c2", "attacker_id"),
+    new PlayerInfo("third", PlayerType.Human, "c3", "third_id"),
+  ]);
+  defender = game.player("defender_id");
+  attacker = game.player("attacker_id");
+  third = game.player("third_id");
+}
 
 type Shape = (x: number, y: number) => boolean;
 const rect =
@@ -83,25 +95,32 @@ const mainBody = rect(0, 60, 70, 140);
 const arm = rect(70, 94, 170, 106);
 const armTip = rect(130, 0, 199, 199);
 
+// A compact main body and a long arm three tiles wide, cut across a diagonal
+// by two craters that touch at a corner.
+const longArmCases = [
+  {
+    name: "main body on the map edge",
+    body: rect(0, 80, 39, 119),
+    arm: rect(40, 99, 190, 101),
+    craters: union(rect(55, 90, 60, 100), rect(61, 101, 66, 110)),
+    cutX: 61,
+  },
+  {
+    // Walled in by the attacker, so only its size tells it apart.
+    name: "main body inland",
+    body: rect(60, 85, 94, 114),
+    arm: rect(95, 99, 198, 101),
+    craters: union(rect(110, 90, 115, 100), rect(116, 101, 121, 110)),
+    cutX: 116,
+  },
+];
+
 describe("land a nuke severs from the main body is annexed", () => {
   afterEach(() => {
     vi.restoreAllMocks();
   });
 
-  beforeEach(async () => {
-    game = await setup(
-      "big_plains",
-      { infiniteGold: true, instantBuild: true },
-      [
-        new PlayerInfo("defender", PlayerType.Human, "c1", "defender_id"),
-        new PlayerInfo("attacker", PlayerType.Human, "c2", "attacker_id"),
-        new PlayerInfo("third", PlayerType.Human, "c3", "third_id"),
-      ],
-    );
-    defender = game.player("defender_id");
-    attacker = game.player("attacker_id");
-    third = game.player("third_id");
-  });
+  beforeEach(newGame);
 
   test("an arm cut off a main body that reaches the map edge is annexed", () => {
     paint(union(mainBody, arm));
@@ -298,6 +317,145 @@ describe("land a nuke severs from the main body is annexed", () => {
       expect(defenderTilesIn(mainBody)).toBe(mainBefore);
     },
   );
+
+  // A compact main body and a long arm three tiles wide, cut across a
+  // diagonal: the cut-off arm has more border tiles than the main body.
+  test.each(longArmCases)(
+    "a cut-off arm with a longer border than the main body is annexed ($name)",
+    ({ body, arm: longArm, craters, cutX }) => {
+      paint(union(body, longArm));
+      startClusterChecks();
+      fallout(craters);
+      const cutOff = rect(cutX, 0, 199, 199);
+      const kept = rect(0, 0, cutX - 1, 199);
+      const borderIn = (shape: Shape) =>
+        [...defender.borderTiles()].filter((t) => shape(game.x(t), game.y(t)))
+          .length;
+      expect(borderIn(cutOff)).toBeGreaterThan(borderIn(kept));
+      const keptBefore = defenderTilesIn(kept);
+
+      runClusterChecks();
+
+      expect(defenderTilesIn(cutOff)).toBe(0);
+      expect(defenderTilesIn(kept)).toBe(keptBefore);
+    },
+  );
+
+  // The generation counter wraps after 2^32 passes and clears every stamp.
+  // Wrap it at each pass of the defender's check in turn, on the inland case
+  // so the territory race runs too.
+  test("a wrap of the generation counter mid-check changes nothing", async () => {
+    const { body, arm: longArm, craters, cutX } = longArmCases[1];
+    const cutOff = rect(cutX, 0, 199, 199);
+    const kept = rect(0, 0, cutX - 1, 199);
+    const proto = PlayerExecution.prototype as unknown as Record<
+      string,
+      (...args: unknown[]) => unknown
+    >;
+    const wrappedIn = new Set<string>();
+    // Runs whose generations were not consecutive and still current.
+    let brokenRuns = 0;
+
+    for (let passesBeforeWrap = 0; passesBeforeWrap < 12; passesBeforeWrap++) {
+      vi.restoreAllMocks();
+      await newGame();
+      const scratch = tileTraversalScratch(game);
+      const phases: string[] = [];
+      for (const [method, phase] of [
+        ["calculateClusters", "clusters"],
+        ["splitMainCluster", "split"],
+        ["largestTerritoryPart", "race"],
+        ["annexSeveredClusters", "annex"],
+      ]) {
+        const original = proto[method];
+        vi.spyOn(proto, method).mockImplementation(function (
+          this: unknown,
+          ...args: unknown[]
+        ) {
+          phases.push(phase);
+          try {
+            return original.apply(this, args);
+          } finally {
+            phases.pop();
+          }
+        });
+      }
+      const bump = proto.bumpGenerations;
+      vi.spyOn(proto, "bumpGenerations").mockImplementation(function (
+        this: unknown,
+        ...args: unknown[]
+      ) {
+        const before = scratch.gen;
+        const first = bump.apply(this, args) as number;
+        if (scratch.gen !== first + (args[0] as number) - 1) brokenRuns++;
+        if (first <= before && phases.length > 0) {
+          wrappedIn.add(phases[phases.length - 1]);
+        }
+        return first;
+      });
+      let armed = false;
+      const removeClusters = proto.removeClusters;
+      vi.spyOn(proto, "removeClusters").mockImplementation(function (
+        this: unknown,
+        ...args: unknown[]
+      ) {
+        if (armed && (this as { player: Player }).player === defender) {
+          armed = false;
+          // The counter wraps on the next bump past 0xfffffffe.
+          scratch.gen = 0xfffffffe - passesBeforeWrap;
+        }
+        return removeClusters.apply(this, args);
+      });
+
+      paint(union(body, longArm));
+      startClusterChecks();
+      fallout(craters);
+      const keptBefore = defenderTilesIn(kept);
+      armed = true;
+
+      runClusterChecks();
+
+      const label = `wrap after ${passesBeforeWrap} passes`;
+      expect(armed, label).toBe(false);
+      expect(scratch.gen, label).toBeLessThan(0xfffffff0);
+      expect(defenderTilesIn(cutOff), label).toBe(0);
+      expect(defenderTilesIn(kept), label).toBe(keptBefore);
+    }
+    expect(brokenRuns).toBe(0);
+    expect([...wrappedIn].sort()).toEqual([
+      "annex",
+      "clusters",
+      "race",
+      "split",
+    ]);
+  }, 60_000);
+
+  test("the territory race adds up parts that share a territory", () => {
+    // A is larger than B, but each half of A is smaller.
+    const a = rect(20, 20, 49, 29);
+    const b = rect(100, 100, 119, 109);
+    paint(union(a, b));
+    const exec = new PlayerExecution(defender);
+    exec.init(game, game.ticks());
+    const parts = [
+      [game.ref(20, 20)],
+      [game.ref(100, 100)],
+      [game.ref(49, 29)],
+    ];
+    const roots = new Int32Array(parts.length);
+
+    const main = (
+      exec as unknown as {
+        largestTerritoryPart(p: number[][], r: Int32Array): number;
+      }
+    ).largestTerritoryPart(parts, roots);
+
+    expect([0, 2]).toContain(main);
+    expect(roots[1]).toBe(1);
+    const rootOf = (i: number) => (roots[i] === i ? i : roots[roots[i]]);
+    expect(rootOf(0)).toBe(main);
+    expect(rootOf(2)).toBe(main);
+  });
 
   test("a cut-off piece with a hole of its own is still annexed", () => {
     paint(union(mainBody, arm));
