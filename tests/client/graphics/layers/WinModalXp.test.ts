@@ -915,6 +915,29 @@ describe("WinModal XP section", () => {
     expect(panel()!.getAttribute("aria-busy")).toBe("false");
   });
 
+  it("polls again when the modal is detached mid-poll and re-attached", async () => {
+    stubXpEndpoint([notFound]);
+    await mount(makeGame({ ended: true }));
+    expect(xpState()).toBe("calculating");
+    const view = () =>
+      (modal as unknown as { xpView: { kind: string } }).xpView.kind;
+
+    // Detaching aborts the poll; that is not a verdict on the XP.
+    modal.remove();
+    await settle(3_000);
+    expect(view()).toBe("calculating");
+
+    // Shown again, the next end-of-game update polls afresh.
+    const fetchMock = stubXpEndpoint([() => json(eligible())]);
+    document.body.appendChild(modal);
+    await (
+      modal as unknown as { updateXp(gameOver: boolean): Promise<void> }
+    ).updateXp(true);
+    await settle();
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(xpState()).toBe("result");
+  });
+
   it("skips from the keyboard with a real button", async () => {
     stubXpEndpoint([() => json(eligible())]);
     await mount(makeGame({ ended: true }));

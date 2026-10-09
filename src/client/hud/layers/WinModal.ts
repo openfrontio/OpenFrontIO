@@ -465,10 +465,14 @@ export class WinModal extends LitElement implements Controller {
       }
       this.xpPolling = true;
       this.xpView = { kind: "calculating" };
-      this.xpAbort = new AbortController();
-      const result = await pollGameXp(game.gameID(), {
-        signal: this.xpAbort.signal,
-      });
+      const abort = new AbortController();
+      this.xpAbort = abort;
+      const result = await pollGameXp(game.gameID(), { signal: abort.signal });
+      // Detached mid-poll: leave the section be, so a re-attach polls again.
+      if (abort.signal.aborted) {
+        this.xpPolling = false;
+        return;
+      }
       // Timed out, signed out or unreadable: hide rather than show an error
       // (or, worse, a zero).
       this.xpView =
