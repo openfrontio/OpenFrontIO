@@ -828,6 +828,7 @@ describe("running the Steam grant notices", () => {
   const record = {
     periodEnd: "2026-10-15T00:00:00.000Z",
     tier: "warlord",
+    steam: true,
     welcomed: false,
     endedShown: false,
     seenAt: now,

@@ -7,6 +7,7 @@ import { type GameEndInfo } from "@openfront/shared/WireSchemas";
 import {
   html,
   LitElement,
+  nothing,
   type PropertyValues,
   type TemplateResult,
 } from "lit";
@@ -25,12 +26,22 @@ import "../ranking/PlayerRow";
 import "../ranking/RankingControls";
 import { formatAbsoluteTime } from "./GameHistoryDates";
 
+export interface GameInfoLoadedDetail {
+  gameId: string;
+  info: GameEndInfo | null;
+}
+
 /**
  * Game-stats content for the Account > Games > Stats drill-down.
  */
 @customElement("game-info-view")
 export class GameInfoView extends LitElement {
   @property({ type: String }) gameId: string | null = null;
+  // Shown right under the game summary card, once the game has loaded (the
+  // stats modal puts the player's XP there).
+  @property({ attribute: false }) afterSummary:
+    | TemplateResult
+    | typeof nothing = nothing;
 
   @state() private rankType = RankType.Lifetime;
   @state() private mapImage: string | null = null;
@@ -249,6 +260,7 @@ export class GameInfoView extends LitElement {
           </div>
         </div>
       </div>
+      ${this.afterSummary}
     `;
   }
 
@@ -410,6 +422,17 @@ export class GameInfoView extends LitElement {
     return this.ranking.score(player, this.rankType);
   }
 
+  // Tells the host which game loaded (null: it failed to), e.g. so the stats
+  // modal can tell how long ago it ended.
+  private announceLoaded(gameId: string, info: GameEndInfo | null): void {
+    this.dispatchEvent(
+      new CustomEvent<GameInfoLoadedDetail>("game-info-loaded", {
+        detail: { gameId, info },
+        bubbles: true,
+      }),
+    );
+  }
+
   private async fetchGame(gameId: string): Promise<void> {
     const generation = ++this.loadGeneration;
     this.isLoadingGame = true;
@@ -425,10 +448,12 @@ export class GameInfoView extends LitElement {
       if (generation !== this.loadGeneration) return;
       if (!session) {
         this.loadFailed = true;
+        this.announceLoaded(gameId, null);
         return;
       }
 
       this.gameInfo = session.info;
+      this.announceLoaded(gameId, session.info);
       this.ranking = new Ranking(session);
       this.updateRanking();
       try {
@@ -441,6 +466,7 @@ export class GameInfoView extends LitElement {
       if (generation === this.loadGeneration) {
         console.warn("Failed to load game:", err);
         this.loadFailed = true;
+        this.announceLoaded(gameId, null);
       }
     } finally {
       if (generation === this.loadGeneration) {
