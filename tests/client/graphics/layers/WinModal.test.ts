@@ -331,12 +331,13 @@ describe("WinModal share button", () => {
     expect(shareButton?.iconPosition).toBe("only");
     expect(shareButton?.title).toBe("Share");
     expect(shareButton?.classList.contains("shrink-0")).toBe(true);
+    expect(shareButton?.classList.contains("aspect-square")).toBe(true);
 
     const innerButton = shareButton?.querySelector("button");
     expect(innerButton).not.toBeNull();
     expect(innerButton?.getAttribute("aria-label")).toBe("Share");
-    expect(innerButton?.className).toContain("w-10");
-    expect(innerButton?.className).toContain("h-10");
+    expect(innerButton?.className).toContain("aspect-square");
+    expect(innerButton?.className).toContain("h-full");
   });
 
   it("appears on both the win and the death/loss modal", async () => {

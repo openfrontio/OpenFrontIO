@@ -53,9 +53,9 @@ export class OButton extends LitElement {
         case "sm":
           return "w-8 h-8 text-sm";
         case "md":
-          return "w-10 h-10 text-base";
+          return "aspect-square h-full py-3 px-3 text-base lg:text-lg";
         case "lg":
-          return "w-12 h-12 text-lg";
+          return "aspect-square h-full py-4 px-4 text-lg lg:text-xl";
       }
     }
     switch (this.size) {
