@@ -38,6 +38,12 @@ vi.mock("../src/client/LobbySocket", () => ({
   },
 }));
 
+// The lobby modals load on demand; the stubs below stand in for loaded ones.
+vi.mock("../src/client/LazyModals", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../src/client/LazyModals")>()),
+  whenModalLoaded: (_tag: string, open: () => void) => open(),
+}));
+
 // Each registers its custom element as a side effect. The status bar is
 // imported FIRST on purpose: that is the order Main.ts uses, and it is the
 // whole reason the bug exists.

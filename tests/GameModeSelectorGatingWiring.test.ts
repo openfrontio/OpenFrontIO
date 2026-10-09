@@ -29,6 +29,12 @@ vi.mock("../src/client/LobbySocket", () => ({
   },
 }));
 
+// The lobby modals load on demand; the stubs below stand in for loaded ones.
+vi.mock("../src/client/LazyModals", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../src/client/LazyModals")>()),
+  whenModalLoaded: (_tag: string, open: () => void) => open(),
+}));
+
 // Registers <game-mode-selector> as a side effect.
 import "../src/client/GameModeSelector";
 
