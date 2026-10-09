@@ -23,10 +23,16 @@ import {
   steamGrantWelcomed,
   type SteamGrantStore,
 } from "./SteamGrantNotices";
+import {
+  steamNoticeCopy,
+  steamNoticeShown,
+  type SteamNotice,
+} from "./SteamNotices";
 
 /** Every boot-time interrupt, in the order they win. */
 export type BootInterrupt =
   | "username-temporary"
+  | "steam-notice"
   | "grant-welcome"
   | "username-claim"
   | "lapse-notice"
@@ -58,6 +64,10 @@ export interface BootInterruptInputs {
    * the two grant notices. Failing it lets the next interrupt take the boot.
    */
   grantStringsReady: boolean;
+  /** steamNoticeDue(...) — the Steam Plus conversion or licence intro. */
+  steamNotice: SteamNotice | null;
+  /** steamNoticeStringsReady(...), as grantStringsReady. */
+  steamNoticeStringsReady: boolean;
   /** How many unclaimed rewards the account is holding. */
   rewardCount: number;
   /** claimPromptDue(...) — the decay rule below. */
@@ -197,29 +207,33 @@ function entitled(status: string | undefined): boolean {
  * 1. `username-temporary` — the server has already renamed them. They are
  *    playing under a name that is not theirs right now, and the rename back is
  *    free only until they spend it. Most urgent, and it was already first.
- * 2. `grant-welcome` — a Steam month is running and nobody has said what it
+ * 2. `steam-notice` — what owning the game on Steam now includes, or that
+ *    we moved their subscription to Steam Plus. Ahead of the grant welcome
+ *    because the licence intro covers the granted month too, and showing it
+ *    marks the welcome given.
+ * 3. `grant-welcome` — a Steam month is running and nobody has said what it
  *    is. Ahead of the claim prompt because the claim prompt asks the buyer to
  *    use a perk of a thing they have not yet been told they own; a player who
  *    does not know the month is a one-off reads every later prompt as a
  *    subscription they never agreed to. It fires once per grant.
- * 3. `username-claim` — entitled, no name at all. The perk is running down
+ * 4. `username-claim` — entitled, no name at all. The perk is running down
  *    unused and nothing else in the client will ever mention it, which is the
  *    whole reason this prompt exists.
- * 4. `lapse-notice` — a name they already hold is running out. Below the
+ * 5. `lapse-notice` — a name they already hold is running out. Below the
  *    above only because it repeats: it re-arms on the phase change and speaks
  *    again next launch, whereas the claim prompt decays and stops. It has
  *    already spoken by the time this is asked (see lapseShownAfterDispatch),
  *    which is why the grant sign-off cannot rank above it and instead the
  *    notice itself carries the after-grant wording for a former grant holder.
- * 5. `grant-ended` — the Steam month ran out and nothing said so. Nothing is
+ * 6. `grant-ended` — the Steam month ran out and nothing said so. Nothing is
  *    at risk, but every day it goes unsaid is a day the player believes they
  *    are about to be charged. Marks itself shown when the lapse notice covers
  *    it, so a former grant holder with a reserved name hears it once.
- * 6. `rewards` — money already in the account. Nothing is at risk and it
+ * 7. `rewards` — money already in the account. Nothing is at risk and it
  *    survives to the next load unchanged, so it always yields.
  *
- * 1 and 3 are mutually exclusive by state (a TEMPORARY#### rename IS a name),
- * as are 3 and 4 (`premium` versus `claimed`). The order is stated anyway
+ * 1 and 4 are mutually exclusive by state (a TEMPORARY#### rename IS a name),
+ * as are 4 and 5 (`premium` versus `claimed`). The order is stated anyway
  * rather than resting on that staying true — those exclusions are properties of
  * today's server, not of this rule.
  */
@@ -233,6 +247,9 @@ export function nextBootInterrupt(
     isTemporaryUsername(inputs.usernameBase)
   )
     return "username-temporary";
+
+  if (inputs.steamNotice !== null && inputs.steamNoticeStringsReady)
+    return "steam-notice";
 
   if (inputs.grantWelcomeDue && inputs.grantStringsReady)
     return "grant-welcome";
@@ -487,6 +504,8 @@ export interface BootInterruptPorts {
   storeClaimPrompt(store: ClaimPromptStore): void;
   /** Persists the whole Steam grant notice map. */
   storeSteamGrant(store: SteamGrantStore): void;
+  /** POST /users/@me/notices. Fire and forget. */
+  markNoticeSeen(notice: string): void;
   now(): number;
 }
 
@@ -494,11 +513,12 @@ export interface BootInterruptContext {
   claimStore: ClaimPromptStore;
   grantStore: SteamGrantStore;
   publicId: string;
+  steamNotice: SteamNotice | null;
 }
 
 // The panel's own date format, so the dialog and the account panel agree on
 // what day the month ends.
-function formatGrantDate(iso: string): string {
+function formatGrantDate(iso: string | Date): string {
   return new Date(iso).toLocaleDateString(undefined, {
     year: "numeric",
     month: "short",
@@ -579,6 +599,24 @@ export async function runBootInterrupt(
         ports.translate(BOOT_INTERRUPT_KEYS.grantEndedBody, { tier }),
         ports.translate(BOOT_INTERRUPT_KEYS.grantEndedHeading),
       );
+      return;
+    }
+    case "steam-notice": {
+      const notice = context.steamNotice;
+      if (notice === null) return;
+      steamNoticeShown();
+      ports.markNoticeSeen(notice.notice);
+      if (
+        notice.kind === "steam-licence-intro" &&
+        notice.grantEnd !== null &&
+        context.grantStore[context.publicId] !== undefined
+      ) {
+        ports.storeSteamGrant(
+          steamGrantWelcomed(context.grantStore, context.publicId),
+        );
+      }
+      const copy = steamNoticeCopy(notice, ports.translate, formatGrantDate);
+      await ports.alert(copy.paragraphs.join(" "), copy.heading);
       return;
     }
     case "lapse-notice":

@@ -145,6 +145,8 @@ function userMe(
       adfree: false,
       unlimitedRanked: false,
       canCreatePublicLobbies: false,
+      steamLicence: false,
+      noticesSeen: [],
       achievements: { singleplayerMap: [], player: [] },
       clans: clanTags.map((tag) => ({
         tag,

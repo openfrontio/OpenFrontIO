@@ -28,6 +28,8 @@ const profile = {
     adfree: false,
     unlimitedRanked: false,
     canCreatePublicLobbies: false,
+    steamLicence: false,
+    noticesSeen: [],
     flares: [],
     achievements: { player: [], singleplayerMap: [] },
     friends: [],

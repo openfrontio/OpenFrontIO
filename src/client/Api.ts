@@ -1878,6 +1878,31 @@ export async function cancelSubscription(): Promise<boolean> {
   }
 }
 
+export async function markNoticeSeen(notice: string): Promise<boolean> {
+  try {
+    const response = await fetch(`${getApiBase()}/users/@me/notices`, {
+      method: "POST",
+      headers: {
+        Authorization: await getAuthHeader(),
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ notice }),
+    });
+    if (!response.ok) {
+      console.error(
+        "markNoticeSeen: request failed",
+        response.status,
+        response.statusText,
+      );
+      return false;
+    }
+    return true;
+  } catch (e) {
+    console.error("markNoticeSeen: request failed", e);
+    return false;
+  }
+}
+
 export async function changeSubscriptionTier(
   tierName: string,
 ): Promise<boolean | "rate_limited"> {

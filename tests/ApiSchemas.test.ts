@@ -657,10 +657,68 @@ describe("UserMeResponseSchema unlimitedRanked", () => {
     }
   });
 
-  it("rejects a response without unlimitedRanked", () => {
+  it("accepts a response without unlimitedRanked", () => {
     expect(
       UserMeResponseSchema.safeParse({ user: {}, player: basePlayer }).success,
-    ).toBe(false);
+    ).toBe(true);
+  });
+});
+
+describe("UserMeResponseSchema Steam licence and notices", () => {
+  const basePlayer = {
+    publicId: "p1",
+    adfree: false,
+    canCreatePublicLobbies: false,
+    achievements: { singleplayerMap: [] },
+    friends: [],
+    subscription: null,
+  };
+
+  it("defaults the fields an older API does not send", () => {
+    const result = UserMeResponseSchema.safeParse({
+      user: {},
+      player: basePlayer,
+    });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.player.steamLicence).toBe(false);
+      expect(result.data.player.noticesSeen).toEqual([]);
+      expect(result.data.player.tierConversion).toBeUndefined();
+    }
+  });
+
+  it("accepts a licence holder with a conversion and seen notices", () => {
+    const tierConversion = {
+      id: "17",
+      fromTierName: "warlord",
+      toTierName: "steam_plus",
+      convertedAt: "2026-10-01T12:00:00.000Z",
+    };
+    const result = UserMeResponseSchema.safeParse({
+      user: {},
+      player: {
+        ...basePlayer,
+        canCreatePublicLobbies: true,
+        steamLicence: true,
+        noticesSeen: ["steam_licence_intro"],
+        tierConversion,
+      },
+    });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.player.steamLicence).toBe(true);
+      expect(result.data.player.noticesSeen).toEqual(["steam_licence_intro"]);
+      expect(result.data.player.tierConversion).toEqual(tierConversion);
+    }
+  });
+
+  it("accepts a null tierConversion", () => {
+    expect(
+      UserMeResponseSchema.safeParse({
+        user: {},
+        player: { ...basePlayer, tierConversion: null },
+      }).success,
+    ).toBe(true);
   });
 });
 

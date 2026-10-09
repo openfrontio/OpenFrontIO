@@ -47,7 +47,9 @@ export class SubscriptionModal extends ProfileMenuModal {
               ${translateText("subscription_modal.none")}
             </p>
             <div class="w-full text-left rounded-lg bg-white/5 px-4 py-3">
-              ${renderFreePlayPerks("free_play.free_heading")}
+              ${userMe.player.steamLicence
+                ? renderFreePlayPerks("free_play.licence_heading", true)
+                : renderFreePlayPerks("free_play.free_heading")}
             </div>
             <o-button
               variant="primary"
@@ -68,6 +70,7 @@ export class SubscriptionModal extends ProfileMenuModal {
           <subscription-panel
             .sub=${sub}
             .cosmetic=${this.cosmetics?.subscriptions?.[sub.tier] ?? null}
+            .steamLicence=${userMe.player.steamLicence}
             @request-close=${() => this.close()}
           ></subscription-panel>
         </div>

@@ -228,14 +228,6 @@ export class CosmeticPreview extends LitElement {
               "cosmetics.verified_name",
             )}</span
           >
-          ${subscription.unlimitedRanked
-            ? html`<span
-                class="self-start text-left text-[10px] font-bold text-purple-300 uppercase tracking-wide"
-                ><span class="text-green-400">✓</span> ${translateText(
-                  "cosmetics.unlimited_ranked",
-                )}</span
-              >`
-            : nothing}
           ${subscription.canCreatePublicLobbies
             ? html`<span
                 class="self-start text-left text-[10px] font-bold text-purple-300 uppercase tracking-wide"

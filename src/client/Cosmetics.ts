@@ -62,6 +62,7 @@ export const COSMETICS_FETCH_TIMEOUT_MS = 10_000;
 let __cosmetics: Promise<Cosmetics | null> | null = null;
 let __cosmeticsHash: string | null = null;
 let __cosmeticsCache: Cosmetics | null = null;
+let __otherRailCosmetics: Promise<Cosmetics | null> | null = null;
 
 /**
  * Synchronous accessor for the most recently resolved cosmetics. Returns null
@@ -850,36 +851,56 @@ function simpleHash(str: string): string {
  */
 export function invalidateCosmetics(): void {
   __cosmetics = null;
+  __otherRailCosmetics = null;
+}
+
+export type TierListingRail = "steam" | "web";
+
+// Subscription tiers are listed per rail: the one this device checks out on.
+// The only place the listing hint is decided.
+export function tierListingRail(): TierListingRail {
+  return paymentsProvider() === "steam" ? "steam" : "web";
+}
+
+export function cosmeticsJsonUrl(rail: TierListingRail): string {
+  return `${getApiBase()}/cosmetics.json?rail=${rail}`;
+}
+
+async function requestCosmetics(
+  rail: TierListingRail,
+): Promise<Cosmetics | null> {
+  try {
+    const response = await fetch(cosmeticsJsonUrl(rail), {
+      signal: AbortSignal.timeout(COSMETICS_FETCH_TIMEOUT_MS),
+    });
+    if (!response.ok) {
+      console.warn(`HTTP error! status: ${response.status}`);
+      return null;
+    }
+    const result = CosmeticsSchema.safeParse(await response.json());
+    if (!result.success) {
+      console.error(`Invalid cosmetics: ${result.error.message}`);
+      return null;
+    }
+    return result.data;
+  } catch (error) {
+    console.warn("Error getting cosmetics:", error);
+    return null;
+  }
 }
 
 export async function fetchCosmetics(): Promise<Cosmetics | null> {
   if (__cosmetics !== null) {
     return __cosmetics;
   }
-  const request = (async () => {
-    try {
-      const response = await fetch(`${getApiBase()}/cosmetics.json`, {
-        signal: AbortSignal.timeout(COSMETICS_FETCH_TIMEOUT_MS),
-      });
-      if (!response.ok) {
-        console.warn(`HTTP error! status: ${response.status}`);
-        return null;
-      }
-      const result = CosmeticsSchema.safeParse(await response.json());
-      if (!result.success) {
-        console.error(`Invalid cosmetics: ${result.error.message}`);
-        return null;
-      }
-      const patternKeys = Object.keys(result.data.patterns).sort();
-      const hashInput = patternKeys.join(",");
-      __cosmeticsHash = simpleHash(hashInput);
-      __cosmeticsCache = result.data;
-      return result.data;
-    } catch (error) {
-      console.warn("Error getting cosmetics:", error);
-      return null;
+  const request = requestCosmetics(tierListingRail()).then((cosmetics) => {
+    if (cosmetics !== null) {
+      const patternKeys = Object.keys(cosmetics.patterns).sort();
+      __cosmeticsHash = simpleHash(patternKeys.join(","));
+      __cosmeticsCache = cosmetics;
     }
-  })();
+    return cosmetics;
+  });
   __cosmetics = request;
   void request.then((result) => {
     if (result === null && __cosmetics === request) {
@@ -887,6 +908,37 @@ export async function fetchCosmetics(): Promise<Cosmetics | null> {
     }
   });
   return request;
+}
+
+/**
+ * The catalog with the player's own tier in it. A rail lists only the tiers it
+ * sells, but a tier the player holds must still render, so one missing from
+ * this rail's listing is taken from the other rail's, display-only: without a
+ * product it resolves as owned and never offers a buy button.
+ */
+export async function withHeldTier(
+  cosmetics: Cosmetics | null,
+  userMe: UserMeResponse | false,
+): Promise<Cosmetics | null> {
+  if (cosmetics === null || userMe === false) return cosmetics;
+  const held = userMe.player.subscription?.tier;
+  if (!held || cosmetics.subscriptions?.[held]) return cosmetics;
+  const other: TierListingRail =
+    tierListingRail() === "steam" ? "web" : "steam";
+  const request = (__otherRailCosmetics ??= requestCosmetics(other));
+  const catalog = await request;
+  if (catalog === null && __otherRailCosmetics === request) {
+    __otherRailCosmetics = null;
+  }
+  const tier = catalog?.subscriptions?.[held];
+  if (!tier) return cosmetics;
+  return {
+    ...cosmetics,
+    subscriptions: {
+      ...cosmetics.subscriptions,
+      [held]: { ...tier, product: null },
+    },
+  };
 }
 
 /**
