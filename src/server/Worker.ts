@@ -62,6 +62,12 @@ const workerId = ServerEnv.workerId() ?? 0;
 const log = logger.child({ comp: `w_${workerId}` });
 const playlist = new MapPlaylist();
 
+export function clampApprovedUsername(username: string): string {
+  return username.length > MAX_USERNAME_LENGTH
+    ? username.slice(0, MAX_USERNAME_LENGTH).trim()
+    : username;
+}
+
 // Worker setup
 export async function startWorker() {
   log.info(`Worker starting...`);
@@ -665,10 +671,7 @@ export async function startWorker() {
             );
             switch (verdict.status) {
               case "approved":
-                username =
-                  verdict.username.length > MAX_USERNAME_LENGTH
-                    ? verdict.username.slice(0, MAX_USERNAME_LENGTH).trim()
-                    : verdict.username;
+                username = clampApprovedUsername(verdict.username);
                 clanTag = verdict.clanTag;
                 break;
               case "rejected":
