@@ -1,4 +1,4 @@
-import type { MapLayer } from "../core/game/TerrainMapLoader";
+import type { MapLayer } from "@openfront/engine-api/game/MapFiles";
 import type { GraphicsOverrides } from "./render/gl";
 
 /**

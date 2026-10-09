@@ -1,20 +1,14 @@
-import { Colord, colord } from "colord";
-import { base64url } from "jose";
-import { assetUrl } from "../core/AssetUrls";
+import { PlayerType } from "@openfront/engine-api/game/GameTypes";
+import { assetUrl } from "@openfront/shared/AssetUrls";
 import {
-  type Cosmetics,
   type EffectAttributesFor,
   type EffectType,
-  findEffect,
   findEffectForSlot,
   isNukeExplosionEffect,
-  isTrailEffect,
   type NukeExplosionAttributes,
   type NukeExplosionType,
-  TRAIL_EFFECT_TYPES,
-} from "../core/CosmeticSchemas";
-import { PlayerType } from "../core/game/Game";
-import { decodePatternData } from "../core/PatternDecoder";
+} from "@openfront/shared/CosmeticSchemas";
+import { colord } from "colord";
 import { getCachedCosmetics } from "./Cosmetics";
 import { buildTerrainRowSpans } from "./render/frame/derive/TerrainRowSpans";
 import { uploadFrameData } from "./render/frame/Upload";
@@ -31,25 +25,22 @@ import {
 import {
   EFFECT_PALETTE_BLOCKS,
   MAX_TRAIL_COLORS,
-  RAILROAD_EFFECT_BLOCK,
-  STRUCTURES_EFFECT_BLOCK,
-  TRAIN_EFFECT_BLOCK,
-  WARSHIP_EFFECT_BLOCK,
 } from "./render/gl/utils/ColorUtils";
+import type { PaletteEffectAttributes } from "./render/gl/utils/EffectPalette";
 import {
-  EFFECT_ENTRY_FLOATS,
-  packEffectEntry,
-  type PaletteEffectAttributes,
-  parseEffectColors,
-} from "./render/gl/utils/EffectPalette";
+  catalogEffectAttributes,
+  PALETTE_SIZE,
+  type PaletteEffectType,
+  writePaletteEntry,
+  writePatternEntry,
+  writePlayerEffects,
+} from "./render/gl/utils/PlayerPalette";
 import {
   UT_ATOM_BOMB,
   UT_HYDROGEN_BOMB,
   UT_MIRV_WARHEAD,
 } from "./render/types/UnitType";
 import type { GameView, PlayerView } from "./view";
-
-const PALETTE_SIZE = 4096;
 
 // A human player counts as "small" (and glows) at or below this fraction of the
 // map; the glow is suppressed for a grace window after the game starts.
@@ -58,28 +49,6 @@ const SMALL_PLAYER_GLOW_GRACE_SECONDS = 60;
 // The set is a visual aid, not tick-critical, so rescan ~once a second
 // (10 ticks) instead of every tick.
 const SMALL_PLAYER_GLOW_RESCAN_TICKS = 10;
-
-// The effect-palette block order: index = block (rows block·MAX_TRAIL_COLORS …).
-// trail.frag.glsl picks its block from the trail tile's nuke bit — block 0 =
-// transportShipTrail (nuke bit 0), block 1 = nukeTrail (nuke bit 1, set by
-// NUKE_TRAIL_BIT in TrailManager) — structure.frag.glsl reads block
-// STRUCTURES_EFFECT_BLOCK (2), unit.frag.glsl reads blocks
-// WARSHIP_EFFECT_BLOCK (3) and TRAIN_EFFECT_BLOCK (4), and railroad.frag.glsl
-// reads block RAILROAD_EFFECT_BLOCK (5). Reordering TRAIL_EFFECT_TYPES in
-// CosmeticSchemas (or moving the structures/warship/train/railroad blocks)
-// would silently swap effect colors, so these guards fail the build if the
-// shader-coupled order ever drifts.
-const _EFFECT_BLOCK_ORDER: readonly ["transportShipTrail", "nukeTrail"] =
-  TRAIL_EFFECT_TYPES;
-void _EFFECT_BLOCK_ORDER;
-const _STRUCTURES_BLOCK_IS_2: 2 = STRUCTURES_EFFECT_BLOCK;
-void _STRUCTURES_BLOCK_IS_2;
-const _WARSHIP_BLOCK_IS_3: 3 = WARSHIP_EFFECT_BLOCK;
-void _WARSHIP_BLOCK_IS_3;
-const _TRAIN_BLOCK_IS_4: 4 = TRAIN_EFFECT_BLOCK;
-void _TRAIN_BLOCK_IS_4;
-const _RAILROAD_BLOCK_IS_5: 5 = RAILROAD_EFFECT_BLOCK;
-void _RAILROAD_BLOCK_IS_5;
 
 // Attribute → render-param mappings:
 //   size      = the ring's final WIDTH (diameter) in world tiles when it fades
@@ -129,40 +98,6 @@ export function attributesToExplosionParams(
 }
 
 /**
- * A player's equipped catalog effect for a palette-rendered effect type
- * (trails / structures / warship / train / railroad), or undefined when none is equipped or the
- * catalog entry isn't of that shape.
- */
-function catalogEffectAttributes(
-  catalog: Cosmetics,
-  p: PlayerView,
-  effectType:
-    | "transportShipTrail"
-    | "nukeTrail"
-    | "structures"
-    | "warship"
-    | "train"
-    | "railroad",
-): PaletteEffectAttributes | undefined {
-  const selected = p.cosmetics.effects?.[effectType];
-  if (!selected) return undefined;
-  const effect = findEffect(catalog, effectType, selected.name);
-  if (!effect || effect.effectType !== effectType) return undefined;
-  // Narrows attributes to trail attrs (structures/warship/train/railroad
-  // share the shape).
-  if (
-    !isTrailEffect(effect) &&
-    effect.effectType !== "structures" &&
-    effect.effectType !== "warship" &&
-    effect.effectType !== "train" &&
-    effect.effectType !== "railroad"
-  ) {
-    return undefined;
-  }
-  return effect.attributes;
-}
-
-/**
  * The renderer-side glue between GameView (which already builds the full
  * FrameData each tick) and the WebGL view. Two responsibilities:
  *
@@ -183,8 +118,6 @@ export class WebGLFrameBuilder {
   // the trail tile's nuke bit), StructurePass (block 2), UnitPass (blocks 3
   // and 4), and RailroadPass (block 5).
   private readonly effectPalette: Float32Array;
-  /** One packed effect entry, reused by writeEffectEntry. */
-  private readonly effectEntryScratch = new Float32Array(EFFECT_ENTRY_FLOATS);
   private readonly patternMeta: Float32Array;
   private readonly patternData: Uint8Array;
 
@@ -256,7 +189,12 @@ export class WebGLFrameBuilder {
    */
   refreshPalette(gameView: GameView): void {
     for (const p of gameView.players()) {
-      this.writePaletteEntry(p.smallID(), p.territoryColor(), p.borderColor());
+      writePaletteEntry(
+        this.palette,
+        p.smallID(),
+        p.territoryColor(),
+        p.borderColor(),
+      );
     }
     this.view.updatePalette(this.palette);
   }
@@ -428,6 +366,10 @@ export class WebGLFrameBuilder {
     if (sid !== 0 && this.effectOverridesUsed) {
       this.effectResolved.delete(sid);
     }
+    // Players resolved before the local player couldn't tell who's a teammate.
+    if (gameView.cosmeticVisibility().showFrom === "teammates") {
+      this.refreshCosmetics(gameView);
+    }
     if (me) {
       const rail = me.railColor().toRgb();
       this.view.setLocalRailColor(rail.r / 255, rail.g / 255, rail.b / 255);
@@ -526,9 +468,11 @@ export class WebGLFrameBuilder {
   private syncPlayers(gameView: GameView): void {
     if (!this.skinsInitialized) {
       this.skinsInitialized = true;
+      // Hidden skins are registered too, so the cosmetics visibility settings
+      // can reveal them mid-game.
       const urls = new Set<string>();
       for (const p of gameView.players()) {
-        const url = p.cosmetics.skin?.url;
+        const url = p.equippedCosmetics.skin?.url;
         if (url) urls.add(assetUrl(url));
       }
       this.view.initSkinAtlas([...urls]);
@@ -538,53 +482,7 @@ export class WebGLFrameBuilder {
       const smallID = p.smallID();
       if (this.knownSmallIDs.has(smallID)) continue;
       this.knownSmallIDs.add(smallID);
-
-      this.writePaletteEntry(smallID, p.territoryColor(), p.borderColor());
-
-      // p.cosmetics.flag has already been server-resolved to either a full URL
-      // or a relative asset path (e.g. "/flags/US.svg" or a CDN URL for a
-      // custom flag). assetUrl() passes URLs through and rewrites paths.
-      const flagRef = p.cosmetics.flag;
-      const flagUrl = flagRef ? assetUrl(flagRef) : undefined;
-
-      // Crown cosmetic: already server-resolved to the catalog image URL.
-      const crownRef = p.cosmetics.crown?.url;
-      const crownUrl = crownRef ? assetUrl(crownRef) : undefined;
-
-      const skin = p.cosmetics.skin;
-      if (skin?.url) {
-        this.view.setPlayerSkin(smallID, assetUrl(skin.url));
-      }
-
-      const pattern = p.cosmetics.pattern;
-      if (pattern && pattern.patternData) {
-        try {
-          const decoded = decodePatternData(
-            pattern.patternData,
-            base64url.decode,
-          );
-          const metaOff = smallID * 4;
-          this.patternMeta[metaOff] = 1.0; // hasPattern = true
-          this.patternMeta[metaOff + 1] = decoded.width;
-          this.patternMeta[metaOff + 2] = decoded.height;
-          this.patternMeta[metaOff + 3] = decoded.scale;
-
-          this.patternData.set(decoded.bytes.slice(3), smallID * 1024);
-        } catch (e) {
-          console.warn("Failed to decode territory pattern", e);
-        }
-      }
-
-      newPlayers.push({
-        ...p.static,
-        // displayName() honors the anonymous-names setting; static.displayName
-        // is always the real name.
-        displayName: p.displayName(),
-        flag: flagUrl,
-        crown: crownUrl,
-        verified: p.cosmetics.verified === true,
-        color: p.territoryColor().toHex(),
-      });
+      newPlayers.push(this.writePlayerCosmetics(p));
     }
     if (newPlayers.length > 0) {
       this.view.addPlayers(
@@ -594,6 +492,76 @@ export class WebGLFrameBuilder {
         this.patternData,
       );
     }
+  }
+
+  /**
+   * Re-apply the cosmetics visibility settings mid-game: re-resolve which
+   * cosmetics every player shows, rewrite their colors, skin, pattern, flag
+   * and crown, and re-resolve their effects on the next update().
+   */
+  refreshCosmetics(gameView: GameView): void {
+    gameView.refreshPlayerCosmetics();
+    const players: PlayerStatic[] = [];
+    for (const p of gameView.players()) {
+      if (!this.knownSmallIDs.has(p.smallID())) continue;
+      players.push(this.writePlayerCosmetics(p));
+    }
+    this.view.updatePlayerCosmetics(
+      players,
+      this.palette,
+      this.patternMeta,
+      this.patternData,
+    );
+    this.effectResolved.clear();
+    // Ticks (and so update()) stop while the game is paused.
+    this.syncPlayerEffects(gameView);
+  }
+
+  /**
+   * Write a player's palette entry, skin and pattern for upload, and return
+   * their renderer header. Also clears whatever a now-hidden cosmetic wrote.
+   */
+  private writePlayerCosmetics(p: PlayerView): PlayerStatic {
+    const smallID = p.smallID();
+    writePaletteEntry(
+      this.palette,
+      smallID,
+      p.territoryColor(),
+      p.borderColor(),
+    );
+
+    // p.cosmetics.flag has already been server-resolved to either a full URL
+    // or a relative asset path (e.g. "/flags/US.svg" or a CDN URL for a
+    // custom flag). assetUrl() passes URLs through and rewrites paths.
+    const flagRef = p.cosmetics.flag;
+    const flagUrl = flagRef ? assetUrl(flagRef) : undefined;
+
+    // Crown cosmetic: already server-resolved to the catalog image URL.
+    const crownRef = p.cosmetics.crown?.url;
+    const crownUrl = crownRef ? assetUrl(crownRef) : undefined;
+
+    if (p.equippedCosmetics.skin?.url) {
+      const skinUrl = p.cosmetics.skin?.url;
+      this.view.setPlayerSkin(smallID, skinUrl ? assetUrl(skinUrl) : null);
+    }
+
+    writePatternEntry(
+      this.patternMeta,
+      this.patternData,
+      smallID,
+      p.cosmetics.pattern,
+    );
+
+    return {
+      ...p.static,
+      // displayName() honors the anonymous-names setting; static.displayName
+      // is always the real name.
+      displayName: p.displayName(),
+      flag: flagUrl,
+      crown: crownUrl,
+      verified: p.cosmetics.verified === true,
+      color: p.territoryColor().toHex(),
+    };
   }
 
   /**
@@ -622,132 +590,15 @@ export class WebGLFrameBuilder {
       // tick so their real cosmetics resolve once the catalog arrives.
       if (catalog) this.effectResolved.add(smallID);
 
-      // Resolve each trail-styled effectType into its own block of the effect
-      // palette. rowBase block*MAX_TRAIL_COLORS must match the consumer
-      // shaders' block layout (ship=0, nuke=1 in trail.frag.glsl; structures=2
-      // in structure.frag.glsl; warship=3, train=4 in unit.frag.glsl;
-      // railroad=5 in railroad.frag.glsl) — see _EFFECT_BLOCK_ORDER above.
-      // nukeExplosion is not trail-styled and renders through the FX pass
-      // instead.
-      const blockOrder = [
-        ...TRAIL_EFFECT_TYPES,
-        "structures",
-        "warship",
-        "train",
-        "railroad",
-      ] as const;
-      blockOrder.forEach((effectType, block) => {
-        const rowBase = block * MAX_TRAIL_COLORS;
-        const attrs =
-          (overrides?.get(effectType) as PaletteEffectAttributes | undefined) ??
-          (catalog
-            ? catalogEffectAttributes(catalog, p, effectType)
-            : undefined);
-        if (!attrs) {
-          // No effect for this block (or an override was just removed): a
-          // zero count tells the shaders to fall back to the player color.
-          if (this.clearEffectEntry(smallID, rowBase)) dirty = true;
-          if (effectType === "nukeTrail")
-            gameView.clearNukeTrailSpiral(smallID);
-          return;
-        }
-        if (effectType === "nukeTrail") {
-          // Spiral vortexes render as ribbon geometry (SpiralRibbonPass) —
-          // hand the geometry + palette to the view's SpiralTrails. Colors are
-          // parsed here so a fully unparseable list degrades to the plain
-          // stamped trail instead of an uncolored vortex.
-          const colors =
-            attrs.type === "spiral" ? parseEffectColors(attrs.colors) : [];
-          if (attrs.type === "spiral" && colors.length > 0) {
-            gameView.setNukeTrailSpiral(smallID, {
-              radius: attrs.radius,
-              strands: attrs.strands,
-              rotationSpeed: attrs.rotationSpeed,
-              colors,
-            });
-          } else {
-            gameView.clearNukeTrailSpiral(smallID);
-          }
-        }
-        if (this.writeEffectEntry(smallID, attrs, rowBase)) {
-          dirty = true;
-        }
-      });
+      const attrsFor = (effectType: PaletteEffectType) =>
+        (overrides?.get(effectType) as PaletteEffectAttributes | undefined) ??
+        (catalog
+          ? catalogEffectAttributes(catalog, p.cosmetics.effects, effectType)
+          : undefined);
+      if (writePlayerEffects(this.effectPalette, smallID, attrsFor, gameView)) {
+        dirty = true;
+      }
     }
     if (dirty) this.view.updateEffectPalette(this.effectPalette);
-  }
-
-  /**
-   * Zero an effect-palette entry (count 0 = no effect for that block).
-   * Returns whether anything changed, so a removed override re-uploads.
-   */
-  private clearEffectEntry(smallID: number, rowBase: number): boolean {
-    let changed = false;
-    for (let r = 0; r < MAX_TRAIL_COLORS; r++) {
-      const off = ((rowBase + r) * PALETTE_SIZE + smallID) * 4;
-      for (let i = 0; i < 4; i++) {
-        if (this.setEffectFloat(off + i, 0)) changed = true;
-      }
-    }
-    return changed;
-  }
-
-  /** Write one effect-palette float; returns whether the value changed. */
-  private setEffectFloat(index: number, value: number): boolean {
-    if (this.effectPalette[index] === value) return false;
-    this.effectPalette[index] = value;
-    return true;
-  }
-
-  /**
-   * Encode a player's trail-styled effect into one block of the effect palette.
-   * The block starts at row `rowBase` (block · MAX_TRAIL_COLORS; see
-   * _EFFECT_BLOCK_ORDER). Within the block, row r holds color r's rgb, and the spare alpha
-   * channels (rows rowBase+0..3 always exist) carry the scalar params —
-   *   row 0.a = color count (0 → the shader falls back to the territory color),
-   *   row 1.a = styleId (0 = gradient, 1 = transition, 2 = spiral),
-   *   row 2.a = scalar0 (gradient: colorSize; transition: frequency;
-   *     spiral: rotationSpeed),
-   *   row 3.a = scalar1 (gradient: movementSpeed; others: unused).
-   * colord doesn't throw on a bad color string (it returns black), so unparseable
-   * colors are dropped — leaving an empty list, which falls back to the territory
-   * color rather than rendering black. Returns whether the entry changed (so
-   * the caller re-uploads only when something is actually different).
-   */
-  private writeEffectEntry(
-    smallID: number,
-    attrs: PaletteEffectAttributes,
-    rowBase: number,
-  ): boolean {
-    const entry = this.effectEntryScratch;
-    packEffectEntry(attrs, entry);
-    let changed = false;
-    for (let r = 0; r < MAX_TRAIL_COLORS; r++) {
-      const off = ((rowBase + r) * PALETTE_SIZE + smallID) * 4;
-      for (let i = 0; i < 4; i++) {
-        if (this.setEffectFloat(off + i, entry[r * 4 + i])) changed = true;
-      }
-    }
-    return changed;
-  }
-
-  private writePaletteEntry(
-    smallID: number,
-    fill: Colord,
-    border: Colord,
-  ): void {
-    const fillRgba = fill.toRgb();
-    const fillOff = smallID * 4;
-    this.palette[fillOff] = fillRgba.r / 255;
-    this.palette[fillOff + 1] = fillRgba.g / 255;
-    this.palette[fillOff + 2] = fillRgba.b / 255;
-    this.palette[fillOff + 3] = 150 / 255;
-
-    const borderRgba = border.toRgb();
-    const borderOff = PALETTE_SIZE * 4 + smallID * 4;
-    this.palette[borderOff] = borderRgba.r / 255;
-    this.palette[borderOff + 1] = borderRgba.g / 255;
-    this.palette[borderOff + 2] = borderRgba.b / 255;
-    this.palette[borderOff + 3] = 1.0;
   }
 }

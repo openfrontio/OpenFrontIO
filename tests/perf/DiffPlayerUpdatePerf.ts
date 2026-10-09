@@ -1,12 +1,12 @@
-import Benchmark from "benchmark";
-import { PlayerType } from "../../src/core/game/Game";
-import { diffPlayerUpdate } from "../../src/core/game/GameUpdateUtils";
+import { PlayerType } from "@openfront/engine-api/game/GameTypes";
 import {
   AllianceView,
   AttackUpdate,
   GameUpdateType,
   PlayerUpdate,
-} from "../../src/core/game/GameUpdates";
+} from "@openfront/engine-api/game/GameUpdates";
+import { diffPlayerUpdate } from "@openfront/engine/game/GameUpdateUtils";
+import Benchmark from "benchmark";
 
 /**
  * Benchmark for diffPlayerUpdate, which runs once per player per tick on the

@@ -1,4 +1,3 @@
-import { describe, expect, it } from "vitest";
 import {
   Difficulty,
   GameMapSize,
@@ -6,21 +5,23 @@ import {
   GameMode,
   GameType,
   UnitType,
-} from "../../src/core/game/Game";
+} from "@openfront/engine-api/game/GameTypes";
 import {
   ADMIN_BOT_CLIENT_ID,
+  GameConfig,
+  StampedIntent,
+  Turn,
+} from "@openfront/engine-api/Schemas";
+import { replacer } from "@openfront/shared/SharedUtil";
+import {
   ClientMessage,
   ClientMessageSchema,
-  GameConfig,
   LogSeverity,
   PublicLobbyMessage,
   PublicLobbyMessageSchema,
   ServerMessage,
   ServerMessageSchema,
-  StampedIntent,
-  Turn,
-} from "../../src/core/Schemas";
-import { replacer } from "../../src/core/Util";
+} from "@openfront/shared/WireSchemas";
 import {
   createGameWireContext,
   decodeClientMessage,
@@ -29,8 +30,9 @@ import {
   encodeClientMessage,
   encodeLobbyMessage,
   encodeServerMessage,
-} from "../../src/core/ZbinWire";
-import { ZbDecodeError } from "../../zbin";
+} from "@openfront/shared/ZbinWire";
+import { ZbDecodeError } from "@openfront/zbin";
+import { describe, expect, it } from "vitest";
 
 const PLAYERS = [
   { clientID: "aB3dEf7h" },
@@ -178,12 +180,13 @@ const SERVER_MESSAGES: ServerMessage[] = [
     },
   },
   { type: "new_lobby", gameID: "nEwL0bby" },
+  { type: "pong", sentAt: 12345 },
 ];
 
 const TOKEN = "3f1b8c8e-4a2f-4a0e-9d5e-6f2a1b3c4d5e";
 
 const CLIENT_MESSAGES: ClientMessage[] = [
-  { type: "ping" },
+  { type: "ping", sentAt: 12345 },
   { type: "hash", hash: 3735928559.5, turnNumber: 120 },
   {
     type: "intent",

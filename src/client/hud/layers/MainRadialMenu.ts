@@ -1,7 +1,7 @@
-import { assetUrl } from "../../../core/AssetUrls";
-import { EventBus } from "../../../core/EventBus";
-import { PlayerActions } from "../../../core/game/Game";
-import { TileRef } from "../../../core/game/GameMap";
+import { TileRef } from "@openfront/engine-api/game/GameMap";
+import { PlayerActions } from "@openfront/engine-api/game/GameTypes";
+import { assetUrl } from "@openfront/shared/AssetUrls";
+import { EventBus } from "@openfront/shared/EventBus";
 import { Controller } from "../../Controller";
 import { TransformHandler } from "../../TransformHandler";
 import { UIState } from "../../UIState";
@@ -104,15 +104,20 @@ export class MainRadialMenu implements Controller {
 
       const myPlayer = this.game.myPlayer();
       if (myPlayer === null) return;
-      myPlayer.actions(clickedTile).then((actions) => {
-        this.updatePlayerActions(
-          myPlayer,
-          actions,
-          clickedTile,
-          event.x,
-          event.y,
-        );
-      });
+      myPlayer
+        .actions(clickedTile)
+        .then((actions) => {
+          this.updatePlayerActions(
+            myPlayer,
+            actions,
+            clickedTile,
+            event.x,
+            event.y,
+          );
+        })
+        .catch((error) => {
+          console.warn("Failed to load radial menu actions:", error);
+        });
     });
   }
 
@@ -174,9 +179,14 @@ export class MainRadialMenu implements Controller {
     const myPlayer = this.game.myPlayer();
     if (myPlayer === null) return;
     const tile = this.clickedTile;
-    myPlayer.actions(tile).then((actions) => {
-      this.updatePlayerActions(myPlayer, actions, tile);
-    });
+    myPlayer
+      .actions(tile)
+      .then((actions) => {
+        this.updatePlayerActions(myPlayer, actions, tile);
+      })
+      .catch((error) => {
+        console.warn("Failed to refresh radial menu actions:", error);
+      });
   }
 
   closeMenu() {

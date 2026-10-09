@@ -1,4 +1,7 @@
+import IntlMessageFormat from "intl-messageformat";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+
+import en from "../../resources/lang/en.json";
 
 import {
   DISPLAY_SETTLE_TIMEOUT_MS,
@@ -133,6 +136,10 @@ function modeSelect(el: TestModal): HTMLSelectElement | null {
 
 function monitorSelect(el: TestModal): HTMLSelectElement | null {
   return el.querySelector("#display-monitor-select select");
+}
+
+function scaleSelect(el: TestModal): HTMLSelectElement | null {
+  return el.querySelector("#display-ui-scale-select select");
 }
 
 function choose(select: HTMLSelectElement, value: string): void {
@@ -666,6 +673,115 @@ describe("Display tab writes", () => {
     vi.advanceTimersByTime(DISPLAY_SETTLE_TIMEOUT_MS);
     await flush(el);
     expect(fake.bridge.getPrefs).toHaveBeenCalledTimes(readsSoFar);
+  });
+});
+
+describe("Display tab UI scale", () => {
+  beforeEach(resetDom);
+
+  afterEach(() => {
+    window.openfrontDesktop = undefined;
+  });
+
+  const scaled = (uiScale: number) =>
+    snapshot({ prefs: { mode: "borderless", displayId: null, uiScale } });
+
+  it("is hidden on a shell whose prefs carry no uiScale", async () => {
+    fakeBridge().install();
+    const el = await mount();
+    el.open({ tab: "display" });
+    await flush(el);
+    expect(modeSelect(el)).not.toBeNull();
+    expect(scaleSelect(el)).toBeNull();
+  });
+
+  it("shows the stored scale", async () => {
+    fakeBridge(scaled(1.25)).install();
+    const el = await mount();
+    el.open({ tab: "display" });
+    await flush(el);
+    expect(scaleSelect(el)?.value).toBe("1.25");
+  });
+
+  it("keeps a stored scale that is not one of the presets selectable", async () => {
+    fakeBridge(scaled(1.05)).install();
+    const el = await mount();
+    el.open({ tab: "display" });
+    await flush(el);
+    const values = [...(scaleSelect(el)?.options ?? [])].map((o) => o.value);
+    expect(values).toContain("1.05");
+    expect(scaleSelect(el)?.value).toBe("1.05");
+  });
+
+  it("sends a uiScale patch and re-renders from what the shell reports", async () => {
+    const fake = fakeBridge(scaled(1));
+    fake.install();
+    const el = await mount();
+    el.open({ tab: "display" });
+    await flush(el);
+
+    choose(scaleSelect(el)!, "1.5");
+    await flush(el);
+    expect(fake.bridge.setPrefs).toHaveBeenCalledWith({ uiScale: 1.5 });
+    expect(scaleSelect(el)?.disabled).toBe(true);
+
+    fake.settle(scaled(1.5));
+    await flush(el);
+    expect(scaleSelect(el)?.value).toBe("1.5");
+    expect(scaleSelect(el)?.disabled).toBe(false);
+  });
+
+  it("snaps back to the shell's value when the change is refused", async () => {
+    const fake = fakeBridge(scaled(1));
+    fake.install();
+    const el = await mount();
+    el.open({ tab: "display" });
+    await flush(el);
+
+    choose(scaleSelect(el)!, "1.25");
+    await flush(el);
+    fake.settle(scaled(1));
+    await flush(el);
+    expect(scaleSelect(el)?.value).toBe("1");
+  });
+
+  it("formats the en.json option label as a percentage", () => {
+    const format = new IntlMessageFormat(
+      en.user_setting.display_ui_scale_option,
+      "en",
+    );
+    expect(format.format({ scale: 1.25 })).toBe("125%");
+  });
+
+  it.each([Number.NaN, Number.POSITIVE_INFINITY])(
+    "ignores a snapshot whose uiScale is %s",
+    async (uiScale) => {
+      const fake = fakeBridge(scaled(1.25));
+      fake.install();
+      const el = await mount();
+      el.open({ tab: "display" });
+      await flush(el);
+
+      fake.push(scaled(uiScale));
+      await flush(el);
+      expect(scaleSelect(el)?.value).toBe("1.25");
+    },
+  );
+
+  it("ignores a snapshot whose uiScale is not a number", async () => {
+    const fake = fakeBridge(scaled(1.25));
+    fake.install();
+    const el = await mount();
+    el.open({ tab: "display" });
+    await flush(el);
+
+    fake.push({
+      ...scaled(1),
+      prefs: { mode: "windowed", displayId: null, uiScale: "big" },
+    } as unknown as DesktopDisplaySnapshot);
+    await flush(el);
+    expect(modeSelect(el)?.value).toBe("borderless");
+    expect(scaleSelect(el)?.value).toBe("1.25");
   });
 });
 

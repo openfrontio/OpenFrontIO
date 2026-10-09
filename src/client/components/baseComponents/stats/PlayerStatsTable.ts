@@ -1,12 +1,13 @@
-import { LitElement, html, nothing, type TemplateResult } from "lit";
-import { customElement, property } from "lit/decorators.js";
 import {
   PlayerStats,
   boatUnits,
   bombUnits,
   otherUnits,
-} from "../../../../core/StatsSchemas";
-import { renderNumber, translateText } from "../../../Utils";
+} from "@openfront/engine-api/StatsSchemas";
+import { renderNumber } from "@openfront/engine-lib/Format";
+import { LitElement, html, nothing, type TemplateResult } from "lit";
+import { customElement, property } from "lit/decorators.js";
+import { translateText } from "../../../Utils";
 
 // Display order for the buildings table. Declared as a Record rather than a
 // bare array so `satisfies` fails compilation when a structure is added to

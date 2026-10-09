@@ -1,13 +1,13 @@
+import { ClusterConfig } from "@openfront/shared/ClusterConfig";
 import { describe, expect, it } from "vitest";
 import { resolveGameHost } from "../../src/client/ClientEnv";
-import { ClusterConfig } from "../../src/core/ClusterConfig";
 
 // The per-game routing decision (docs/MultiServer.md, PR 5): a 10-char id's
 // leading letter names its deployment in the cluster map; everything older
 // or unmapped stays on the server the page already talks to.
 const CLUSTER: ClusterConfig = {
-  c: { host: "blue.openfront.io", color: "blue", numWorkers: 20 },
-  d: { host: "green.openfront.io", color: "green", numWorkers: 20 },
+  c: { host: "blue.openfront.io", numWorkers: 20 },
+  d: { host: "green.openfront.io", numWorkers: 20 },
 };
 
 describe("resolveGameHost", () => {

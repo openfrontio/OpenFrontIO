@@ -1,8 +1,16 @@
 {
   "name": "openfront-client",
+  "engines": {
+    "node": ">=24.15.0 <25",
+    "npm": ">=12.1.0 <13"
+  },
+  "workspaces": [
+    "packages/*"
+  ],
   "scripts": {
     "build-dev": "concurrently \"tsc --noEmit\" \"vite build --mode development\"",
     "build-prod": "concurrently --kill-others-on-fail \"tsc --noEmit\" \"vite build\" && tsx scripts/buildAssetHashes.ts",
+    "typecheck": "tsc --noEmit && tsc --noEmit -p packages/engine-api && tsc --noEmit -p packages/engine-lib && tsc --noEmit -p packages/engine && tsc --noEmit -p packages/engine/src/worker && tsc --noEmit -p packages/shared && tsc --noEmit -p packages/zbin",
     "start:client": "vite",
     "start:server": "tsx src/server/Server.ts",
     "start:server-dev": "cross-env GAME_ENV=dev TURNSTILE_SITE_KEY=1x00000000000000000000AA API_KEY=WARNING_DEV_API_KEY_DO_NOT_USE_IN_PRODUCTION ADMIN_BOT_API_KEY=WARNING_DEV_ADMIN_BOT_KEY_DO_NOT_USE_IN_PRODUCTION DOMAIN=localhost GIT_COMMIT=DEV tsx src/server/Server.ts",
@@ -60,8 +68,8 @@
     "@types/node": "^24.12.0",
     "@types/pg": "^8.20.0",
     "@types/ws": "^8.18.1",
-    "@vitest/coverage-v8": "^4.1.5",
-    "@vitest/ui": "^4.1.5",
+    "@vitest/coverage-v8": "^4.1.11",
+    "@vitest/ui": "^4.1.11",
     "benchmark": "^2.1.4",
     "canvas": "^3.2.3",
     "concurrently": "^9.2.4",
@@ -87,10 +95,11 @@
     "typescript-eslint": "^8.59.1",
     "vite": "^8.0.16",
     "vite-plugin-html": "^3.2.2",
-    "vitest": "^4.1.5",
+    "vitest": "^4.1.11",
     "vitest-canvas-mock": "^1.1.4"
   },
   "dependencies": {
+    "@grafana/faro-web-sdk": "^2.12.0",
     "@opentelemetry/api": "^1.9.1",
     "@opentelemetry/api-logs": "^0.216.0",
     "@opentelemetry/exporter-logs-otlp-http": "^0.219.0",

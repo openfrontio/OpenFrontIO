@@ -1,6 +1,6 @@
-import { EventBus } from "../../core/EventBus";
-import { UserSettings } from "../../core/game/UserSettings";
+import { EventBus } from "@openfront/shared/EventBus";
 import { Controller } from "../Controller";
+import { AmbienceController } from "../controllers/AmbienceController";
 import { AttackingTroopsController } from "../controllers/AttackingTroopsController";
 import { BuildPreviewController } from "../controllers/BuildPreviewController";
 import { HoverHighlightController } from "../controllers/HoverHighlightController";
@@ -15,7 +15,11 @@ import { migrateLegacyGraphicsSettings } from "../GraphicsPresets";
 import { MapRenderer } from "../render/gl";
 import { TransformHandler } from "../TransformHandler";
 import { UIState } from "../UIState";
+// The homepage loads it on demand, but the in-game instance (#game-settings)
+// is set up below, so it has to be defined by the time a game renders.
+import "../UserSettingModal";
 import type { UserSettingModal } from "../UserSettingModal";
+import { UserSettings } from "../UserSettings";
 import { GameView } from "../view";
 import { FrameProfiler } from "./FrameProfiler";
 import { ActionableEvents } from "./layers/ActionableEvents";
@@ -205,7 +209,6 @@ export function createRenderer(
   if (gameSettingsModal === null) {
     console.warn("In-game settings modal (#game-settings) not found");
   } else {
-    gameSettingsModal.eventBus = eventBus;
     gameSettingsModal.uiState = uiState;
     gameSettingsModal.mapLayers = game.layers();
     gameSettingsModal.onLayerVisibilityChange = (layerId, visible) => {
@@ -246,6 +249,7 @@ export function createRenderer(
     console.error("chat modal not found");
   }
   chatModal.g = game;
+  chatModal.transformHandler = transformHandler;
   chatModal.initEventBus(eventBus);
 
   const multiTabModal = document.querySelector(
@@ -329,6 +333,7 @@ export function createRenderer(
     new ViewModeController(eventBus, view),
     new AttackingTroopsController(game, eventBus, userSettings, view),
     new SoundEffectController(game, eventBus),
+    new AmbienceController(game, eventBus, transformHandler),
     ...(mapLayerController ? [mapLayerController] : []),
     eventsDisplay,
     actionableEvents,
@@ -384,7 +389,7 @@ export class GameRenderer {
 
   initialize() {
     loadAllSprites().catch((err) =>
-      console.error("Failed to preload sprites:", err),
+      console.warn("Failed to preload sprites:", err),
     );
 
     this.layers.forEach((l) => l.init?.());

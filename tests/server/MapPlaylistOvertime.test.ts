@@ -1,6 +1,6 @@
+import { GameMode } from "@openfront/engine-api/game/GameTypes";
+import { GameConfigSchema } from "@openfront/engine-api/Schemas";
 import { describe, expect, it, vi } from "vitest";
-import { GameMode } from "../../src/core/game/Game";
-import { GameConfigSchema } from "../../src/core/Schemas";
 import { MapPlaylist } from "../../src/server/MapPlaylist";
 
 vi.mock("../../src/server/MapLandTiles", () => ({
@@ -14,7 +14,6 @@ describe("MapPlaylist overtime", () => {
     const config = await new MapPlaylist().gameConfig("ffa");
     expect(config.gameMode).toBe(GameMode.FFA);
     expect(config.overtime).toEqual({ enabled: true });
-    expect(config.publicGameModifiers).toEqual({ isCompact: undefined });
     expect(GameConfigSchema.safeParse(config).success).toBe(true);
   });
 

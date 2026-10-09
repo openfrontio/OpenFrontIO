@@ -7,19 +7,19 @@
  * is valid, and pushes preview data straight to the WebGL view.
  */
 
-import { EventBus } from "../../core/EventBus";
-import {
-  listNukeBreakAlliance,
-  wouldNukeBreakAlliance,
-} from "../../core/execution/Util";
+import { TileRef } from "@openfront/engine-api/game/GameMap";
 import {
   BuildableUnit,
   bulkCost,
   PlayerBuildableUnitType,
+  Structures,
   UnitType,
-} from "../../core/game/Game";
-import { TileRef } from "../../core/game/GameMap";
-import { UserSettings } from "../../core/game/UserSettings";
+} from "@openfront/engine-api/game/GameTypes";
+import {
+  listNukeBreakAlliance,
+  wouldNukeBreakAlliance,
+} from "@openfront/engine-lib/execution/NukeAlliance";
+import { EventBus } from "@openfront/shared/EventBus";
 import { Controller } from "../Controller";
 import {
   ConfirmGhostStructureEvent,
@@ -35,6 +35,7 @@ import {
   SendUpgradeStructureIntentEvent,
 } from "../Transport";
 import { UIState } from "../UIState";
+import { UserSettings } from "../UserSettings";
 import { GameView } from "../view";
 
 /** True for nuke types (AtomBomb, HydrogenBomb): ghost is preserved after placement so user can place multiple or keep selection (Enter/key confirm). */
@@ -133,13 +134,13 @@ export class BuildPreviewController implements Controller {
           // follows the cursor, so smooth it the same way as the icon. When
           // upgrading, the circle is anchored to the existing structure's tile
           // (stationary, correctly snapped) — leave it alone in that case.
-          const radiusFollowsCursor = !(
-            ghost.canUpgrade && ghost.upgradeTargetTile !== null
-          );
+          const radiusFollowsCursor =
+            !ghost.snapToPlacement &&
+            !(ghost.canUpgrade && ghost.upgradeTargetTile !== null);
           this.view.updateGhostPreview({
             ...ghost,
-            tileX: w.x - 0.5,
-            tileY: w.y - 0.5,
+            tileX: ghost.snapToPlacement ? ghost.tileX : w.x - 0.5,
+            tileY: ghost.snapToPlacement ? ghost.tileY : w.y - 0.5,
             ...(radiusFollowsCursor
               ? { radiusTileX: w.x - 0.5, radiusTileY: w.y - 0.5 }
               : {}),
@@ -436,6 +437,10 @@ export class BuildPreviewController implements Controller {
     if (!myPlayer) return null;
 
     const u = this.ghostUnit.buildableUnit;
+    const placementTile =
+      u.canUpgrade === false && Structures.has(u.type) && u.canBuild !== false
+        ? u.canBuild
+        : tileRef;
 
     // Upgrade-target tile — only when upgrading an existing unit.
     let upgradeTargetTile: number | null = null;
@@ -463,8 +468,8 @@ export class BuildPreviewController implements Controller {
         rangeRadius = this.game.config().defensePostRange();
         break;
     }
-    let radiusTileX = this.game.x(tileRef);
-    let radiusTileY = this.game.y(tileRef);
+    let radiusTileX = this.game.x(placementTile);
+    let radiusTileY = this.game.y(placementTile);
     if (
       rangeRadius > 0 &&
       u.canUpgrade !== false &&
@@ -488,8 +493,9 @@ export class BuildPreviewController implements Controller {
     }
     return {
       ghostType: u.type,
-      tileX: this.game.x(tileRef),
-      tileY: this.game.y(tileRef),
+      tileX: this.game.x(placementTile),
+      tileY: this.game.y(placementTile),
+      snapToPlacement: placementTile !== tileRef,
       radiusTileX,
       radiusTileY,
       canBuild: u.canBuild !== false,
@@ -542,6 +548,10 @@ export class BuildPreviewController implements Controller {
       );
       this.removeGhostStructure();
     } else if (this.ghostUnit.buildableUnit.canBuild) {
+      // The pointer can be released just off the map edge before the
+      // throttled hover refresh marks the ghost unbuildable; there is no
+      // tile to build on, so keep the ghost and wait for a click on the map.
+      if (!this.game.isValidCoord(tile.x, tile.y)) return;
       const unitType = this.ghostUnit.buildableUnit.type;
       const targetTile = this.game.ref(tile.x, tile.y);
 
@@ -669,7 +679,7 @@ export class BuildPreviewController implements Controller {
       if (existing) {
         return existing.level() + 1;
       } else {
-        console.error("Failed to find existing SAMLauncher for upgrade");
+        console.warn("Failed to find existing SAMLauncher for upgrade");
       }
     }
     return 1;

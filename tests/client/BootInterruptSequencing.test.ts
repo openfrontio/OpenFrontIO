@@ -40,6 +40,7 @@ vi.mock("../../src/client/SteamSDK", () => ({
   steamSDK: { isOnSteam: () => false, getUser: vi.fn(async () => null) },
 }));
 
+import type { UserMeResponse } from "@openfront/shared/ApiSchemas";
 import {
   lapseShownAfterDispatch,
   nextBootInterrupt,
@@ -48,7 +49,6 @@ import {
 } from "../../src/client/BootInterrupts";
 import { LAPSE_NOTICE_KEY } from "../../src/client/PlayerName";
 import { UsernameInput } from "../../src/client/UsernameInput";
-import type { UserMeResponse } from "../../src/core/ApiSchemas";
 
 // Lapsed, still inside the grace window, and holding unclaimed rewards — the
 // pair that collides.
@@ -94,9 +94,12 @@ describe("boot sequencing against a real <username-input>", () => {
     const ports: BootInterruptPorts = {
       translate: (key) => `t(${key})`,
       confirm: async () => false,
+      alert: async () => {},
+      tierName: (tier) => tier,
       navigate: (hash) => calls.navigated.push(hash),
       openRewards: () => calls.rewardsOpened++,
       storeClaimPrompt: () => {},
+      storeSteamGrant: () => {},
       now: () => Date.now(),
     };
     const player = userMe.player;
@@ -106,11 +109,18 @@ describe("boot sequencing against a real <username-input>", () => {
       username: player.username,
       usernameBase: player.usernameBase,
       lapseNoticeDue: shown,
+      grantWelcomeDue: false,
+      grantEndedDue: false,
+      grantStringsReady: true,
       rewardCount: (player.rewards ?? []).length,
       claimPromptDue: true,
       claimStringsReady: true,
     });
-    await runBootInterrupt(interrupt, { claimStore: {}, publicId: "p" }, ports);
+    await runBootInterrupt(
+      interrupt,
+      { claimStore: {}, grantStore: {}, publicId: "p" },
+      ports,
+    );
     return { interrupt, ...calls };
   }
 

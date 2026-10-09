@@ -8,11 +8,17 @@ export class SettingToggle extends LitElement {
   @property() id = "";
   @property({ type: Boolean, reflect: true }) checked = false;
   @property({ type: Boolean }) easter = false;
+  /** Dependent settings use this while their parent setting is off. */
+  @property({ type: Boolean, reflect: true }) disabled = false;
 
   createRenderRoot() {
     return this;
   }
 
+  // `.checked` is a property binding, not `?checked`: once the player has
+  // clicked the box, its dirty checkedness flag makes the attribute inert, so
+  // an attribute binding could never un-check it again — "Reset to defaults"
+  // would leave the box showing the old state.
   private handleChange(e: Event) {
     const input = e.target as HTMLInputElement;
     this.checked = input.checked;
@@ -25,7 +31,10 @@ export class SettingToggle extends LitElement {
 
     return html`
       <label
-        class="flex flex-row items-center justify-between w-full p-4 bg-white/5 border border-white/10 rounded-xl hover:bg-white/10 transition-all gap-4 cursor-pointer ${rainbowClass}"
+        class="flex flex-row items-center justify-between w-full p-4 bg-white/5 border border-white/10 rounded-xl transition-all gap-4 ${this
+          .disabled
+          ? "opacity-50 cursor-not-allowed"
+          : "hover:bg-white/10 cursor-pointer"} ${rainbowClass}"
       >
         <div class="flex flex-col flex-1 min-w-0 mr-4">
           <div class="text-white font-bold text-base block mb-1">
@@ -41,7 +50,8 @@ export class SettingToggle extends LitElement {
             type="checkbox"
             class="opacity-0 w-0 h-0 peer"
             id=${this.id}
-            ?checked=${this.checked}
+            .checked=${this.checked}
+            ?disabled=${this.disabled}
             @change=${this.handleChange}
           />
           <span

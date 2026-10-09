@@ -15,29 +15,33 @@ print_header "BUILD AND DEPLOY WRAPPER"
 echo "This script will run build.sh and deploy.sh in sequence."
 echo "You can also run them separately:"
 echo "  ./build.sh [prod|staging] [version_tag]"
-echo "  ./deploy.sh [prod|staging] [falk2|nbg1|staging|masters] [version_tag] [subdomain]"
+echo "  ./deploy.sh [prod|staging] [machine_name] [version_tag] [subdomain]"
 echo ""
 
 # Check command line arguments
 if [ $# -lt 3 ] || [ $# -gt 5 ]; then
     echo "Error: Please specify environment, host, and subdomain"
-    echo "Usage: $0 [prod|staging] [falk2|nbg1|staging|masters] [subdomain]"
+    echo "Usage: $0 [prod|staging] [machine_name] [subdomain]"
     exit 1
 fi
 
 # Validate first argument (environment)
 if [ "$1" != "prod" ] && [ "$1" != "staging" ]; then
     echo "Error: First argument must be either 'prod' or 'staging'"
-    echo "Usage: $0 [prod|staging] [falk2|nbg1|staging|masters] [subdomain]"
+    echo "Usage: $0 [prod|staging] [machine_name] [subdomain]"
     exit 1
 fi
 
-# Validate second argument (host)
-if [ "$2" != "falk2" ] && [ "$2" != "nbg1" ] && [ "$2" != "staging" ] && [ "$2" != "masters" ]; then
-    echo "Error: Second argument must be either 'falk2', 'nbg1', 'staging', or 'masters'"
-    echo "Usage: $0 [prod|staging] [falk2|nbg1|staging|masters] [subdomain]"
-    exit 1
-fi
+# Validate second argument (machine). deploy.sh resolves any label-shaped
+# name through SERVER_HOSTS_JSON, so adding a machine must not mean editing
+# a list here.
+case "$2" in
+    "" | *[!a-zA-Z0-9-]*)
+        echo "Error: machine name must be letters, digits and hyphens, got: '$2'"
+        echo "Usage: $0 [prod|staging] [machine_name] [subdomain]"
+        exit 1
+        ;;
+esac
 
 # Validate third argument (subdomain). It becomes a DNS label and a Docker
 # container name downstream, so hold it to the RFC 1123 label rules here rather
@@ -45,18 +49,18 @@ fi
 case "$3" in
     "")
         echo "Error: Subdomain is required"
-        echo "Usage: $0 [prod|staging] [falk2|nbg1|staging|masters] [subdomain]"
+        echo "Usage: $0 [prod|staging] [machine_name] [subdomain]"
         exit 1
         ;;
     *[!a-zA-Z0-9-]* | -* | *-)
         echo "Error: Subdomain must be a valid hostname label - letters, digits and interior hyphens only - got: '$3'"
-        echo "Usage: $0 [prod|staging] [falk2|nbg1|staging|masters] [subdomain]"
+        echo "Usage: $0 [prod|staging] [machine_name] [subdomain]"
         exit 1
         ;;
 esac
 if [ "${#3}" -gt 63 ]; then
     echo "Error: Subdomain must be at most 63 characters, got ${#3}: '$3'"
-    echo "Usage: $0 [prod|staging] [falk2|nbg1|staging|masters] [subdomain]"
+    echo "Usage: $0 [prod|staging] [machine_name] [subdomain]"
     exit 1
 fi
 

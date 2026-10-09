@@ -1,30 +1,28 @@
-import { encodeTerrainTile } from "../src/client/render/gl/utils/ColorUtils";
-import { AttackExecution } from "../src/core/execution/AttackExecution";
-import { NationAllianceBehavior } from "../src/core/execution/nation/NationAllianceBehavior";
-import { NationEmojiBehavior } from "../src/core/execution/nation/NationEmojiBehavior";
-import { NukeExecution } from "../src/core/execution/NukeExecution";
-import { PlayerExecution } from "../src/core/execution/PlayerExecution";
-import { AiAttackBehavior } from "../src/core/execution/utils/AiAttackBehavior";
+import { TileRef } from "@openfront/engine-api/game/GameMap";
 import {
   Difficulty,
-  Game,
   GameMapSize,
   GameMapType,
   GameMode,
   GameType,
-  Player,
   PlayerInfo,
   PlayerType,
   TerrainType,
   UnitType,
-} from "../src/core/game/Game";
-import { createGame } from "../src/core/game/GameImpl";
-import { TileRef } from "../src/core/game/GameMap";
-import { genTerrainFromBin } from "../src/core/game/TerrainMapLoader";
-import { UserSettings } from "../src/core/game/UserSettings";
-import { PathFinding } from "../src/core/pathfinding/PathFinder";
-import { PseudoRandom } from "../src/core/PseudoRandom";
-import { GameConfig } from "../src/core/Schemas";
+} from "@openfront/engine-api/game/GameTypes";
+import { GameConfig } from "@openfront/engine-api/Schemas";
+import { genTerrainFromBin } from "@openfront/engine-lib/game/TerrainMapLoader";
+import { PseudoRandom } from "@openfront/engine-lib/PseudoRandom";
+import { AttackExecution } from "@openfront/engine/execution/AttackExecution";
+import { NationAllianceBehavior } from "@openfront/engine/execution/nation/NationAllianceBehavior";
+import { NationEmojiBehavior } from "@openfront/engine/execution/nation/NationEmojiBehavior";
+import { NukeExecution } from "@openfront/engine/execution/NukeExecution";
+import { PlayerExecution } from "@openfront/engine/execution/PlayerExecution";
+import { AiAttackBehavior } from "@openfront/engine/execution/utils/AiAttackBehavior";
+import { Game, Player } from "@openfront/engine/game/Game";
+import { createGame } from "@openfront/engine/game/GameImpl";
+import { PathFinding } from "@openfront/engine/pathfinding/PathFinder";
+import { encodeTerrainTile } from "../src/client/render/gl/utils/ColorUtils";
 import { TestConfig } from "./util/TestConfig";
 import { executeTicks } from "./util/utils";
 
@@ -106,7 +104,7 @@ async function setupImpassableGame(
     instantBuild: true,
     randomSpawn: false,
   };
-  const config = new TestConfig(gameConfig, new UserSettings(), false);
+  const config = new TestConfig(gameConfig, false);
 
   const game = createGame(humans, [], gameMap, miniGameMap, config);
   game.endSpawnPhase();

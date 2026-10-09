@@ -1,6 +1,6 @@
+import { assetUrl } from "@openfront/shared/AssetUrls";
 import { html, LitElement } from "lit";
 import { customElement, property } from "lit/decorators.js";
-import { assetUrl } from "../../core/AssetUrls";
 
 const STYLE_ID = "plutonium-icon-styles";
 if (!document.getElementById(STYLE_ID)) {

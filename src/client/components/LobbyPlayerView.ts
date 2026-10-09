@@ -1,6 +1,3 @@
-import { LitElement, html } from "lit";
-import { customElement, property, state } from "lit/decorators.js";
-import { repeat } from "lit/directives/repeat.js";
 import {
   ColoredTeams,
   Duos,
@@ -11,12 +8,17 @@ import {
   Quads,
   Team,
   Trios,
-} from "../../core/game/Game";
-import { assignTeamsLobbyPreview } from "../../core/game/TeamAssignment";
-import { UserSettings } from "../../core/game/UserSettings";
-import { ClientID, ClientInfo, TeamCountConfig } from "../../core/Schemas";
-import { createRandomName, formatPlayerDisplayName } from "../../core/Util";
+  formatPlayerDisplayName,
+} from "@openfront/engine-api/game/GameTypes";
+import { ClientID, TeamCountConfig } from "@openfront/engine-api/Schemas";
+import { assignTeamsLobbyPreview } from "@openfront/engine-lib/game/TeamAssignment";
+import { createRandomName } from "@openfront/shared/SharedUtil";
+import { ClientInfo } from "@openfront/shared/WireSchemas";
+import { LitElement, html } from "lit";
+import { customElement, property, state } from "lit/decorators.js";
+import { repeat } from "lit/directives/repeat.js";
 import { Theme, themeProvider } from "../theme/ThemeProvider";
+import { UserSettings } from "../UserSettings";
 import {
   getTranslatedPlayerTeamLabel,
   resolveTeamClanTag,
@@ -291,7 +293,17 @@ export class LobbyTeamView extends LitElement {
                     username: displayName,
                   })}
                 >
-                  ×
+                  <svg
+                    class="h-2.5 w-2.5 stroke-white"
+                    viewBox="0 0 16 16"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2.5"
+                    stroke-linecap="round"
+                  >
+                    <line x1="4" y1="4" x2="12" y2="12" />
+                    <line x1="12" y1="4" x2="4" y2="12" />
+                  </svg>
                 </button>`
               : html``}
         </span>`;
@@ -373,7 +385,17 @@ export class LobbyTeamView extends LitElement {
                               },
                             )}
                           >
-                            ×
+                            <svg
+                              class="h-2.5 w-2.5 stroke-white"
+                              viewBox="0 0 16 16"
+                              fill="none"
+                              stroke="currentColor"
+                              stroke-width="2.5"
+                              stroke-linecap="round"
+                            >
+                              <line x1="4" y1="4" x2="12" y2="12" />
+                              <line x1="12" y1="4" x2="4" y2="12" />
+                            </svg>
                           </button>`
                         : html``}
                   </div>`;

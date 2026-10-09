@@ -1,16 +1,16 @@
 import {
+  GameMode,
+  GameType,
+  type GameMapType,
+} from "@openfront/engine-api/game/GameTypes";
+import { type GameEndInfo } from "@openfront/shared/WireSchemas";
+import {
   html,
   LitElement,
   type PropertyValues,
   type TemplateResult,
 } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
-import { type GameEndInfo } from "../../../../core/Schemas";
-import {
-  GameMode,
-  GameType,
-  type GameMapType,
-} from "../../../../core/game/Game";
 import { fetchGameById } from "../../../Api";
 import { terrainMapFileLoader } from "../../../TerrainMapFileLoader";
 import { getMapName, renderDuration, translateText } from "../../../Utils";
@@ -435,11 +435,11 @@ export class GameInfoView extends LitElement {
         const mapType = session.info.config.gameMap as GameMapType;
         this.mapImage = terrainMapFileLoader.getMapData(mapType).webpPath;
       } catch (error) {
-        console.error("Failed to load map image:", error);
+        console.warn("Failed to load map image:", error);
       }
     } catch (err) {
       if (generation === this.loadGeneration) {
-        console.error("Failed to load game:", err);
+        console.warn("Failed to load game:", err);
         this.loadFailed = true;
       }
     } finally {

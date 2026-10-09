@@ -26,6 +26,9 @@ export function applyGraphicsOverrides(
   if (overrides.name?.hoverGlowAlpha !== undefined) {
     settings.name.hoverGlowAlpha = overrides.name.hoverGlowAlpha;
   }
+  if (overrides.cosmetics?.flagOpacity !== undefined) {
+    settings.name.flagAlpha = overrides.cosmetics.flagOpacity;
+  }
   if (overrides.structure?.iconSize !== undefined) {
     settings.structure.iconSize = overrides.structure.iconSize;
   }

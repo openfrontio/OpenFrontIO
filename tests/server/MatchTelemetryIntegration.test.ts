@@ -6,9 +6,9 @@ import {
   GameMapType,
   GameMode,
   GameType,
-} from "../../src/core/game/Game";
-import { ADMIN_BOT_CLIENT_ID } from "../../src/core/Schemas";
-import { createGameWireContext } from "../../src/core/ZbinWire";
+} from "@openfront/engine-api/game/GameTypes";
+import { ADMIN_BOT_CLIENT_ID } from "@openfront/engine-api/Schemas";
+import { createGameWireContext } from "@openfront/shared/ZbinWire";
 import { GameManager } from "../../src/server/GameManager";
 import { GameServer } from "../../src/server/GameServer";
 import type {
@@ -313,6 +313,26 @@ describe("GameServer match telemetry", () => {
         dropped: 0,
       },
     });
+  });
+
+  it("keeps pool sibling ids out of match_opened", () => {
+    // Telemetry leaves the box, and sibling ids are join secrets.
+    const manager = new GameManager(log, telemetry, "build-hash");
+    manager.createGame(
+      "poolMatch",
+      testGameConfig({
+        gameType: GameType.Private,
+        bots: 7,
+        pool: { id: "pool-1", siblings: ["poolMatch", "bbbb2222"] },
+      }),
+    );
+    const opened = telemetry.events.find(
+      (event) => event.type === "match_opened",
+    );
+    const config = (opened?.payload as { config: Record<string, unknown> })
+      .config;
+    expect(config).not.toHaveProperty("pool");
+    expect(config.bots).toBe(7);
   });
 
   it("GameManager forwards the worker emitter and build hash to each game", () => {

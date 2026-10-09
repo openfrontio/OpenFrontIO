@@ -1,13 +1,17 @@
-import { Logger } from "winston";
-import WebSocket from "ws";
 import {
   Difficulty,
   GameMapSize,
   GameMapType,
   GameMode,
   GameType,
-} from "../core/game/Game";
-import { GameConfig, GameID, PublicGameType } from "../core/Schemas";
+} from "@openfront/engine-api/game/GameTypes";
+import { GameConfig, GameID } from "@openfront/engine-api/Schemas";
+import {
+  ClientPlatformSchema,
+  PublicGameType,
+} from "@openfront/shared/WireSchemas";
+import { Logger } from "winston";
+import WebSocket from "ws";
 import { Client } from "./Client";
 import { GamePhase, GameServer, JoinResult } from "./GameServer";
 import {
@@ -124,6 +128,20 @@ export class GameManager {
     return totalClients;
   }
 
+  // Every platform is present, zeros included, so a platform whose last
+  // player leaves reports 0 instead of its series going stale.
+  activeClientsByPlatform(): Map<Client["platform"], number> {
+    const counts = new Map<Client["platform"], number>(
+      [...ClientPlatformSchema.options, "unknown" as const].map((p) => [p, 0]),
+    );
+    for (const game of this.games.values()) {
+      for (const client of game.activeClients()) {
+        counts.set(client.platform, counts.get(client.platform)! + 1);
+      }
+    }
+    return counts;
+  }
+
   desyncCount(): number {
     return [...this.games.values()].reduce(
       (acc, game) => acc + game.numDesyncedClients(),
@@ -150,7 +168,9 @@ export class GameManager {
           // start with an empty roster, emitting a playerless match_started
           // and running turns for nobody until the reaper caught up.
           if (game.numClients() === 0) {
-            this.log.info("not starting game, no clients connected", {
+            // Debug, not info: this fires on every tick until the reaper
+            // runs, which on idle staging previews was ~700k lines a day.
+            this.log.debug("not starting game, no clients connected", {
               gameID: id,
             });
           } else {
@@ -181,6 +201,10 @@ export class GameManager {
       }
 
       if (phase === GamePhase.Finished) {
+        // The expected end of a game that hit the cap, not a fault.
+        if (game.pastMaxDuration()) {
+          this.log.info("game past max duration", { gameID: id });
+        }
         try {
           game.end();
         } catch (error) {

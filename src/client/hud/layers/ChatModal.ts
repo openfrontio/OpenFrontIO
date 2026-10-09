@@ -1,14 +1,15 @@
 import { LitElement, html } from "lit";
-import { customElement, query } from "lit/decorators.js";
+import { customElement, state } from "lit/decorators.js";
 
-import { PlayerType } from "../../../core/game/Game";
+import { PlayerType } from "@openfront/engine-api/game/GameTypes";
 import { GameView, PlayerView } from "../../view";
 
+import { EventBus, GameEvent } from "@openfront/shared/EventBus";
 import quickChatData from "resources/QuickChat.json";
-import { EventBus } from "../../../core/EventBus";
-import { CloseViewEvent } from "../../InputHandler";
+import { CloseViewEvent, ShowChatMenuEvent } from "../../InputHandler";
+import { TransformHandler } from "../../TransformHandler";
 import { SendQuickChatEvent } from "../../Transport";
-import { translateText } from "../../Utils";
+import { hasOwnTranslation, translateText } from "../../Utils";
 
 export type QuickChatPhrase = {
   key: string;
@@ -19,45 +20,75 @@ export type QuickChatPhrases = Record<string, QuickChatPhrase[]>;
 
 export const quickChatPhrases: QuickChatPhrases = quickChatData;
 
+/** Opens quick chat aimed at a specific player. */
+export class ShowPlayerChatEvent implements GameEvent {
+  constructor(public readonly player: PlayerView) {}
+}
+
+// Where a phrase names a player; shown as a blank until one is picked.
+const PLAYER_PLACEHOLDER = "[P1]";
+
+// The phrases the chat panel shows unless "All phrases" is on.
+const CORE_PHRASES = new Set([
+  "help.troops",
+  "help.gold",
+  "help.alliance",
+  "help.no_attack",
+  "help.sorry_attack",
+  "help.help_defend",
+  "attack.attack",
+  "attack.mirv",
+  "attack.crown",
+  "defend.defend",
+  "defend.dont_attack",
+  "greet.hello",
+  "greet.good_luck",
+  "greet.gg",
+  "greet.thanks",
+  "greet.oops",
+  "misc.go",
+  "misc.team_up",
+  "warnings.betrayed",
+  "warnings.mirv_ready",
+]);
+
+// Phrases the panel shows under another category than their key's. Display
+// only: a phrase's key (its category included) goes over the wire and names
+// its translations, so moving it for real would change both.
+const SHOWN_UNDER: Record<string, string> = {
+  "greet.oops": "misc",
+  "misc.team_up": "attack",
+};
+
+const allPhrases = Object.entries(quickChatPhrases).flatMap(
+  ([category, phrases]) => phrases.map((phrase) => ({ category, phrase })),
+);
+
+const fullKey = (category: string, phrase: QuickChatPhrase) =>
+  `${category}.${phrase.key}`;
+
 @customElement("chat-modal")
 export class ChatModal extends LitElement {
-  @query("o-modal") private modalEl!: HTMLElement & {
-    open: () => void;
-    close: () => void;
-  };
+  @state() public isOpen = false;
+  /** A picked phrase that names a player, waiting for that player. */
+  @state() private pending: {
+    category: string;
+    phrase: QuickChatPhrase;
+  } | null = null;
+  @state() private search = "";
+  /** Kept across opens: a player who wants every phrase keeps seeing them. */
+  @state() private showAll = false;
 
   createRenderRoot() {
     return this;
   }
-
-  private players: PlayerView[] = [];
-
-  private playerSearchQuery: string = "";
-  private sortByTerritory = false;
-  private previewText: string | null = null;
-  private requiresPlayerSelection: boolean = false;
-  private selectedCategory: string | null = null;
-  private selectedPhraseText: string | null = null;
-  private selectedPhraseTemplate: string | null = null;
-  private selectedQuickChatKey: string | null = null;
-  private selectedPlayer: PlayerView | null = null;
 
   private recipient: PlayerView;
   private sender: PlayerView;
   public eventBus: EventBus;
 
   public g: GameView;
-
-  quickChatPhrases: Record<
-    string,
-    Array<{ text: string; requiresPlayer: boolean }>
-  > = {
-    help: [{ text: "Please give me troops!", requiresPlayer: false }],
-    attack: [{ text: "Attack [P1]!", requiresPlayer: true }],
-    defend: [{ text: "Defend [P1]!", requiresPlayer: true }],
-    greet: [{ text: "Hello!", requiresPlayer: false }],
-    misc: [{ text: "Let's go!", requiresPlayer: false }],
-  };
+  public transformHandler: TransformHandler;
 
   public categories = [
     { id: "help" },
@@ -68,247 +99,294 @@ export class ChatModal extends LitElement {
     { id: "warnings" },
   ];
 
-  private getPhrasesForCategory(categoryId: string) {
-    return quickChatPhrases[categoryId] ?? [];
+  render() {
+    if (!this.isOpen) {
+      return null;
+    }
+    return html`
+      <div
+        class="fixed inset-0 bg-black/15 flex items-start sm:items-center justify-center z-10002 pt-4 sm:pt-0"
+        @click=${(e: MouseEvent) =>
+          e.target === e.currentTarget && this.close()}
+      >
+        <div class="relative">
+          <button
+            class="absolute -top-3 -right-3 w-7 h-7 flex items-center justify-center
+                    bg-zinc-700 hover:bg-red-500 text-white rounded-full shadow-sm transition-colors z-10004"
+            aria-label=${translateText("common.close")}
+            @click=${() => this.close()}
+          >
+            ✕
+          </button>
+          <div
+            class="bg-zinc-900/95 p-3 rounded-xl shadow-2xl shadow-black/50 ring-1 ring-white/10 text-white
+                   w-[min(44rem,calc(100vw-32px))] max-h-[calc(100vh-60px)] overflow-y-auto
+                   flex flex-col gap-3"
+            @contextmenu=${(e: MouseEvent) => e.preventDefault()}
+            @wheel=${(e: WheelEvent) => e.stopPropagation()}
+          >
+            <div class="flex items-baseline gap-2 pe-4">
+              <h2 class="font-semibold">${translateText("chat.title")}</h2>
+              <span class="truncate text-sm text-zinc-400"
+                >${this.recipient?.displayName()}</span
+              >
+              ${this.pending ? null : this.renderAllPhrasesSwitch()}
+            </div>
+            ${this.pending ? this.renderPlayerPicker() : this.renderSections()}
+          </div>
+        </div>
+      </div>
+    `;
   }
 
-  render() {
+  private renderAllPhrasesSwitch() {
     return html`
-      <o-modal title="${translateText("chat.title")}">
-        <div class="chat-columns">
-          <div class="chat-column">
-            <div class="column-title">${translateText("chat.category")}</div>
-            ${this.categories.map(
-              (category) => html`
-                <button
-                  class="chat-option-button ${this.selectedCategory ===
-                  category.id
-                    ? "selected"
-                    : ""}"
-                  @click=${() => this.selectCategory(category.id)}
-                >
-                  ${translateText(`chat.cat.${category.id}`)}
-                </button>
-              `,
-            )}
-          </div>
-
-          ${this.selectedCategory
-            ? html`
-                <div class="chat-column">
-                  <div class="column-title">
-                    ${translateText("chat.phrase")}
-                  </div>
-                  <div class="phrase-scroll-area">
-                    ${this.getPhrasesForCategory(this.selectedCategory).map(
-                      (phrase) => html`
-                        <button
-                          class="chat-option-button ${this
-                            .selectedPhraseText ===
-                          translateText(
-                            `chat.${this.selectedCategory}.${phrase.key}`,
-                          )
-                            ? "selected"
-                            : ""}"
-                          @click=${() => this.selectPhrase(phrase)}
-                        >
-                          ${this.renderPhrasePreview(phrase)}
-                        </button>
-                      `,
-                    )}
-                  </div>
-                </div>
-              `
-            : null}
-          ${this.requiresPlayerSelection || this.selectedPlayer
-            ? html`
-                <div class="chat-column">
-                  <div class="column-title">
-                    ${translateText("chat.player")}
-                  </div>
-
-                  <label class="flex items-center gap-2 text-sm cursor-pointer">
-                    <input
-                      type="checkbox"
-                      .checked=${this.sortByTerritory}
-                      @change=${this.onPlayerSortChange}
-                    />
-                    ${translateText("chat.sort_by_territory")}
-                  </label>
-
-                  <input
-                    class="player-search-input"
-                    type="text"
-                    placeholder="${translateText("chat.search")}"
-                    .value=${this.playerSearchQuery}
-                    @input=${this.onPlayerSearchInput}
-                  />
-
-                  <div class="player-scroll-area">
-                    ${this.getSortedFilteredPlayers().map(
-                      (player) => html`
-                        <button
-                          class="chat-option-button ${this.selectedPlayer ===
-                          player
-                            ? "selected"
-                            : ""}"
-                          style="border: 2px solid ${player
-                            .territoryColor()
-                            .toHex()};"
-                          @click=${() => this.selectPlayer(player)}
-                        >
-                          ${player.displayName()}
-                        </button>
-                      `,
-                    )}
-                  </div>
-                </div>
-              `
-            : null}
-        </div>
-
-        <div class="chat-preview">
-          ${this.previewText
-            ? translateText(this.previewText)
-            : translateText("chat.build")}
-        </div>
-        <div class="chat-send">
-          <button
-            class="chat-send-button"
-            @click=${this.sendChatMessage}
-            ?disabled=${!this.previewText ||
-            (this.requiresPlayerSelection && !this.selectedPlayer)}
-          >
-            ${translateText("chat.send")}
-          </button>
-        </div>
-      </o-modal>
+      <button
+        class="ms-auto shrink-0 flex items-center gap-2 text-sm text-zinc-300 hover:text-white cursor-pointer"
+        role="switch"
+        aria-checked=${this.showAll}
+        @click=${() => (this.showAll = !this.showAll)}
+      >
+        ${translateText("chat.all_phrases")}
+        <span
+          class="relative inline-block w-8 h-4.5 rounded-full transition-colors ${this
+            .showAll
+            ? "bg-blue-500"
+            : "bg-zinc-600"}"
+        >
+          <span
+            class="absolute top-0.5 left-0.5 size-3.5 rounded-full bg-white transition-transform ${this
+              .showAll
+              ? "translate-x-3.5"
+              : ""}"
+          ></span>
+        </span>
+      </button>
     `;
+  }
+
+  /** One section per category: its core phrases, or all of them. */
+  private renderSections() {
+    return this.categories.map(({ id }) => {
+      const phrases = allPhrases
+        .filter(({ category, phrase }) => {
+          const key = fullKey(category, phrase);
+          return (
+            (SHOWN_UNDER[key] ?? category) === id &&
+            (this.showAll || CORE_PHRASES.has(key))
+          );
+        })
+        // Core phrases first, so they keep their place when "All phrases"
+        // is on; within each, phrases moved in from another category last.
+        .sort(
+          (a, b) =>
+            Number(!CORE_PHRASES.has(fullKey(a.category, a.phrase))) -
+              Number(!CORE_PHRASES.has(fullKey(b.category, b.phrase))) ||
+            Number(a.category !== id) - Number(b.category !== id),
+        );
+      if (phrases.length === 0) return null;
+      return html`
+        <section>
+          <h3
+            class="mb-1 text-[11px] font-semibold uppercase tracking-wider text-zinc-400"
+          >
+            ${translateText(`chat.cat.${id}`)}
+          </h3>
+          <div class="flex flex-wrap gap-1">
+            ${phrases.map(({ category, phrase }) => {
+              const full = translateText(`chat.${category}.${phrase.key}`);
+              return html`
+                <button
+                  class="max-w-[15rem] truncate px-2.5 py-1 rounded-md text-sm text-left
+                         bg-white/5 hover:bg-white/15 active:bg-white/25 transition-colors cursor-pointer"
+                  title=${full.replace(PLAYER_PLACEHOLDER, "___")}
+                  @click=${() => this.pickPhrase(category, phrase)}
+                >
+                  ${this.renderWithBlank(
+                    this.chipLabel(category, phrase.key, full),
+                  )}
+                </button>
+              `;
+            })}
+          </div>
+        </section>
+      `;
+    });
+  }
+
+  // Long phrases have a short label for their chip; the rest show in full.
+  // A language without its own short label shows the full phrase, which is
+  // translated, rather than the English short label.
+  private chipLabel(category: string, key: string, full: string): string {
+    const shortKey = `chat.short.${category}.${key}`;
+    return hasOwnTranslation(shortKey) ? translateText(shortKey) : full;
+  }
+
+  private renderWithBlank(text: string) {
+    const [before, ...after] = text.split(PLAYER_PLACEHOLDER);
+    if (after.length === 0) {
+      return text;
+    }
+    return html`${before}<span
+        class="inline-block w-6 mx-0.5 border-b border-zinc-400 align-baseline"
+      ></span
+      >${after.join(PLAYER_PLACEHOLDER)}`;
+  }
+
+  private renderPlayerPicker() {
+    const { category, phrase } = this.pending!;
+    const players = this.targetChoices();
+    return html`
+      <div class="flex items-center gap-2">
+        <button
+          class="px-2 py-1 rounded-md bg-white/5 hover:bg-white/15 cursor-pointer"
+          aria-label=${translateText("common.back")}
+          @click=${() => (this.pending = null)}
+        >
+          ←
+        </button>
+        <span class="font-medium">
+          ${this.renderWithBlank(
+            translateText(`chat.${category}.${phrase.key}`),
+          )}
+        </span>
+      </div>
+      <input
+        class="px-2 py-1.5 rounded-md bg-zinc-800 ring-1 ring-white/10 text-sm outline-none focus:ring-white/30"
+        type="text"
+        placeholder=${translateText("chat.search")}
+        .value=${this.search}
+        @input=${(e: Event) =>
+          (this.search = (e.target as HTMLInputElement).value)}
+        @keydown=${(e: KeyboardEvent) => {
+          // Enter that confirms an IME composition isn't a pick.
+          if (e.key === "Enter" && !e.isComposing && players.length > 0) {
+            this.sendPending(players[0]);
+          }
+        }}
+      />
+      <div class="grid grid-cols-2 sm:grid-cols-3 gap-1">
+        ${players.map(
+          (player) => html`
+            <button
+              class="truncate px-2.5 py-1.5 rounded-md text-sm text-left border-l-4
+                     bg-white/5 hover:bg-white/15 active:bg-white/25 transition-colors cursor-pointer"
+              style="border-left-color: ${player.territoryColor().toHex()}"
+              @click=${() => this.sendPending(player)}
+            >
+              ${player.displayName()}
+            </button>
+          `,
+        )}
+      </div>
+    `;
+  }
+
+  // Players already fighting me or the recipient are the likely subject of
+  // the message, so they come first; then the biggest.
+  private targetChoices(): PlayerView[] {
+    const fighting = new Set<number>();
+    for (const p of [this.sender, this.recipient]) {
+      for (const a of [...p.incomingAttacks(), ...p.outgoingAttacks()]) {
+        fighting.add(a.attackerID);
+        fighting.add(a.targetID);
+      }
+    }
+    fighting.delete(this.sender.smallID());
+    fighting.delete(this.recipient.smallID());
+
+    const query = this.search.trim().toLowerCase();
+    return this.g
+      .players()
+      .filter(
+        (p) =>
+          p.isAlive() &&
+          p.type() !== PlayerType.Bot &&
+          p.displayName().toLowerCase().includes(query),
+      )
+      .sort(
+        (a, b) =>
+          Number(fighting.has(b.smallID())) -
+            Number(fighting.has(a.smallID())) ||
+          b.numTilesOwned() - a.numTilesOwned(),
+      );
+  }
+
+  protected updated() {
+    // Ready to type a name as soon as the picker shows.
+    if (this.pending) {
+      const input = this.querySelector("input");
+      if (input && document.activeElement !== input) input.focus();
+    }
   }
 
   initEventBus(eventBus: EventBus) {
     this.eventBus = eventBus;
-    eventBus.on(CloseViewEvent, (e) => {
-      if (!this.hidden) {
+    eventBus.on(CloseViewEvent, () => {
+      if (this.isOpen) {
         this.close();
       }
     });
+    // The quick chat key: closes the modal if it's open, otherwise opens it
+    // for the player under the cursor.
+    eventBus.on(ShowChatMenuEvent, (e) => {
+      if (this.isOpen) {
+        this.close();
+        return;
+      }
+      const myPlayer = this.g.myPlayer();
+      if (!myPlayer?.isAlive()) return;
+      const cell = this.transformHandler.screenToWorldCoordinates(e.x, e.y);
+      if (!this.g.isValidCoord(cell.x, cell.y)) return;
+      const owner = this.g.owner(this.g.ref(cell.x, cell.y));
+      if (!owner.isPlayer() || owner === myPlayer) return;
+      this.open(myPlayer, owner as PlayerView);
+    });
+    eventBus.on(ShowPlayerChatEvent, (e) => {
+      const myPlayer = this.g.myPlayer();
+      if (myPlayer?.isAlive()) this.open(myPlayer, e.player);
+    });
   }
 
-  private selectCategory(categoryId: string) {
-    this.selectedCategory = categoryId;
-    this.selectedPhraseText = null;
-    this.previewText = null;
-    this.requiresPlayerSelection = false;
-    this.requestUpdate();
-  }
-
-  private selectPhrase(phrase: QuickChatPhrase) {
-    this.selectedQuickChatKey = this.getFullQuickChatKey(
-      this.selectedCategory!,
-      phrase.key,
-    );
-    this.selectedPhraseTemplate = translateText(
-      `chat.${this.selectedCategory}.${phrase.key}`,
-    );
-    this.selectedPhraseText = translateText(
-      `chat.${this.selectedCategory}.${phrase.key}`,
-    );
-    this.previewText = `chat.${this.selectedCategory}.${phrase.key}`;
-    this.requiresPlayerSelection = phrase.requiresPlayer;
-    this.requestUpdate();
-  }
-
-  private renderPhrasePreview(phrase: { key: string }) {
-    return translateText(`chat.${this.selectedCategory}.${phrase.key}`);
-  }
-
-  private selectPlayer(player: PlayerView) {
-    if (this.previewText) {
-      this.previewText =
-        this.selectedPhraseTemplate?.replace("[P1]", player.displayName()) ??
-        null;
-      this.selectedPlayer = player;
-      this.requiresPlayerSelection = false;
-      this.requestUpdate();
+  // A phrase without a player sends right away; one that names a player
+  // asks for the player first.
+  private pickPhrase(category: string, phrase: QuickChatPhrase) {
+    if (phrase.requiresPlayer) {
+      this.search = "";
+      this.pending = { category, phrase };
+      return;
     }
+    this.send(`${category}.${phrase.key}`);
   }
 
-  private sendChatMessage() {
-    console.log("Sent message:", this.previewText);
-    console.log("Sender:", this.sender);
-    console.log("Recipient:", this.recipient);
-    console.log("Key:", this.selectedQuickChatKey);
+  private sendPending(target: PlayerView) {
+    const { category, phrase } = this.pending!;
+    this.send(`${category}.${phrase.key}`, target);
+  }
 
-    if (this.sender && this.recipient && this.selectedQuickChatKey) {
+  private send(quickChatKey: string, target?: PlayerView) {
+    if (this.sender && this.recipient) {
       this.eventBus.emit(
-        new SendQuickChatEvent(
-          this.recipient,
-          this.selectedQuickChatKey,
-          this.selectedPlayer?.id(),
-        ),
+        new SendQuickChatEvent(this.recipient, quickChatKey, target?.id()),
       );
     }
-
-    this.previewText = null;
-    this.selectedCategory = null;
-    this.requiresPlayerSelection = false;
     this.close();
-
-    this.requestUpdate();
-  }
-
-  private onPlayerSearchInput(e: Event) {
-    const target = e.target as HTMLInputElement;
-    this.playerSearchQuery = target.value.toLowerCase();
-    this.requestUpdate();
-  }
-
-  private onPlayerSortChange(e: Event) {
-    this.sortByTerritory = (e.target as HTMLInputElement).checked;
-    this.requestUpdate();
-  }
-
-  private getSortedFilteredPlayers(): PlayerView[] {
-    const sorted = [...this.players].sort((a, b) =>
-      this.sortByTerritory
-        ? b.numTilesOwned() - a.numTilesOwned()
-        : a.displayName().localeCompare(b.displayName()),
-    );
-    const filtered = sorted.filter((p) =>
-      p.displayName().toLowerCase().includes(this.playerSearchQuery),
-    );
-    const others = sorted.filter(
-      (p) => !p.displayName().toLowerCase().includes(this.playerSearchQuery),
-    );
-    return [...filtered, ...others];
-  }
-
-  private getFullQuickChatKey(category: string, phraseKey: string): string {
-    return `${category}.${phraseKey}`;
   }
 
   public open(sender?: PlayerView, recipient?: PlayerView) {
     if (sender && recipient) {
-      console.log("Sent message:", recipient);
-      console.log("Sent message:", sender);
-      this.players = this.g
-        .players()
-        .filter((p) => p.isAlive() && p.type() !== PlayerType.Bot);
-
       this.recipient = recipient;
       this.sender = sender;
     }
-    this.requestUpdate();
-    this.modalEl?.open();
+    this.pending = null;
+    this.search = "";
+    this.isOpen = true;
   }
 
   public close() {
-    this.selectedCategory = null;
-    this.selectedPhraseText = null;
-    this.previewText = null;
-    this.requiresPlayerSelection = false;
-    this.modalEl?.close();
+    this.isOpen = false;
+    this.pending = null;
+    this.search = "";
   }
 
   public setRecipient(value: PlayerView) {
@@ -319,32 +397,19 @@ export class ChatModal extends LitElement {
     this.sender = value;
   }
 
+  /** Opens straight to the player picker for a phrase (radial menu). */
   public openWithSelection(
     categoryId: string,
     phraseKey: string,
     sender?: PlayerView,
     recipient?: PlayerView,
   ) {
-    if (sender && recipient) {
-      this.players = this.g
-        .players()
-        .filter((p) => p.isAlive() && p.type() !== PlayerType.Bot);
-
-      this.recipient = recipient;
-      this.sender = sender;
-    }
-
-    this.selectCategory(categoryId);
-
-    const phrase = this.getPhrasesForCategory(categoryId).find(
+    this.open(sender, recipient);
+    const phrase = quickChatPhrases[categoryId]?.find(
       (p) => p.key === phraseKey,
     );
-
     if (phrase) {
-      this.selectPhrase(phrase);
+      this.pickPhrase(categoryId, phrase);
     }
-
-    this.requestUpdate();
-    this.modalEl?.open();
   }
 }

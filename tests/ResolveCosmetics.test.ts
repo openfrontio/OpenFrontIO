@@ -1,3 +1,5 @@
+import { UserMeResponse } from "@openfront/shared/ApiSchemas";
+import { CosmeticPack, Cosmetics } from "@openfront/shared/CosmeticSchemas";
 import {
   groupCosmeticVariants,
   ownedPackItems,
@@ -5,8 +7,6 @@ import {
   resolveCosmetics,
   ResolvedCosmetic,
 } from "../src/client/Cosmetics";
-import { UserMeResponse } from "../src/core/ApiSchemas";
-import { CosmeticPack, Cosmetics } from "../src/core/CosmeticSchemas";
 
 function makeCosmetics(overrides: Partial<Cosmetics> = {}): Cosmetics {
   return {
@@ -26,7 +26,7 @@ function makeUserMe(flares: string[] = []): UserMeResponse {
       unlimitedRanked: false,
       canCreatePublicLobbies: false,
       flares,
-      achievements: { singleplayerMap: [] },
+      achievements: { singleplayerMap: [], player: [] },
       friends: [],
       subscription: null,
     },

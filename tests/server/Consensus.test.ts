@@ -1,6 +1,20 @@
+import { AllPlayersStats } from "@openfront/engine-api/Schemas";
+import {
+  ClientSendWinnerMessage,
+  LiveStats,
+} from "@openfront/shared/WireSchemas";
+import {
+  createGameWireContext,
+  decodeClientMessage,
+  encodeClientMessage,
+} from "@openfront/shared/ZbinWire";
 import { describe, expect, it } from "vitest";
-import { ClientSendWinnerMessage, LiveStats } from "../../src/core/Schemas";
-import { LiveStatsVote, WinnerVote } from "../../src/server/Consensus";
+import {
+  LiveStatsVote,
+  statsDigest,
+  voteKey,
+  WinnerVote,
+} from "../../src/server/Consensus";
 import { cid } from "../util/GameServerHarness";
 
 // The two vote objects on their own. Who may vote and what a settled vote
@@ -39,7 +53,9 @@ describe("WinnerVote", () => {
 
   it("keys a cancelled match (no winner) as null so those votes can agree", () => {
     const vote = new WinnerVote();
-    expect(vote.cast(winnerMsg(undefined), "1.1.1.1").key).toBe("null");
+    expect(vote.cast(winnerMsg(undefined), "1.1.1.1").key).toBe(
+      voteKey({ winner: undefined, allPlayersStats: {} }),
+    );
     vote.cast(winnerMsg(undefined), "2.2.2.2");
     expect(vote.tally(2)?.value.winner).toBeUndefined();
   });
@@ -63,6 +79,108 @@ describe("WinnerVote", () => {
     vote.cast(winnerMsg(["player", P2]), "2.2.2.2");
     expect(vote.tallyAmong(new Set(["1.1.1.1"]))).toBeNull();
     expect(vote.winner()).toBeNull();
+  });
+});
+
+describe("statsDigest", () => {
+  it("ignores key order at every level", () => {
+    const a: AllPlayersStats = {
+      [P1]: { gold: [1n, 2n], units: { city: [1n], port: [2n] } },
+      [P2]: { killedAt: 10n },
+    };
+    const b: AllPlayersStats = {
+      [P2]: { killedAt: 10n },
+      [P1]: { units: { port: [2n], city: [1n] }, gold: [1n, 2n] },
+    };
+    expect(statsDigest(a)).toBe(statsDigest(b));
+  });
+
+  it("treats a bigint and its decimal string as the same value", () => {
+    // The wire decodes stats to bigints; the archive writes them as strings.
+    expect(statsDigest({ [P1]: { killedAt: 10n } })).toBe(
+      statsDigest({ [P1]: { killedAt: "10" as unknown as bigint } }),
+    );
+  });
+
+  it("changes when any value changes", () => {
+    const base: AllPlayersStats = {
+      [P1]: { deathPosition: 3, finalTiles: 100n },
+    };
+    expect(statsDigest(base)).not.toBe(
+      statsDigest({ [P1]: { deathPosition: 2, finalTiles: 100n } }),
+    );
+    expect(statsDigest(base)).not.toBe(
+      statsDigest({ [P1]: { deathPosition: 3, finalTiles: 101n } }),
+    );
+  });
+
+  it("survives the binary wire the server receives votes over", () => {
+    const stats: AllPlayersStats = {
+      [P2]: {
+        killedAt: 1200n,
+        killedBy: P1,
+        deathPosition: 2,
+        units: { port: [1n, 0n, 1n], city: [3n] },
+      },
+      [P1]: {
+        finalTiles: 5000n,
+        kills: [{ victim: P2, tick: 1200n }],
+        gold: [10n, 20n, 0n, 0n, 0n, 0n, 5n],
+        killedBy: null,
+      },
+    };
+    const msg: ClientSendWinnerMessage = {
+      type: "winner",
+      winner: ["player", P1],
+      allPlayersStats: stats,
+    };
+    const players = [{ clientID: P1 }, { clientID: P2 }];
+    const decoded = decodeClientMessage(
+      encodeClientMessage(msg, createGameWireContext(players)),
+      createGameWireContext(players),
+    ) as ClientSendWinnerMessage;
+    expect(statsDigest(decoded.allPlayersStats)).toBe(statsDigest(stats));
+  });
+
+  it("keeps array order significant", () => {
+    expect(statsDigest({ [P1]: { gold: [1n, 2n] } })).not.toBe(
+      statsDigest({ [P1]: { gold: [2n, 1n] } }),
+    );
+  });
+});
+
+describe("WinnerVote on stats", () => {
+  const honest: AllPlayersStats = { [P1]: { finalTiles: 100n } };
+  const forged: AllPlayersStats = { [P1]: { finalTiles: 999n } };
+  const voteWith = (
+    winner: ClientSendWinnerMessage["winner"],
+    allPlayersStats: AllPlayersStats,
+  ): ClientSendWinnerMessage => ({ type: "winner", winner, allPlayersStats });
+
+  it("does not let a first voter with forged stats ride the majority's winner", () => {
+    const vote = new WinnerVote();
+    vote.cast(voteWith(["player", P1], forged), "1.1.1.1");
+    vote.cast(voteWith(["player", P1], honest), "2.2.2.2");
+    vote.cast(voteWith(["player", P1], honest), "3.3.3.3");
+    expect(vote.candidates()).toBe(2);
+    expect(vote.tally(3)?.votes).toBe(2);
+    expect(vote.winner()?.allPlayersStats).toEqual(honest);
+  });
+
+  it("does not decide when the winner's voters split on stats", () => {
+    const vote = new WinnerVote();
+    vote.cast(voteWith(["player", P1], forged), "1.1.1.1");
+    vote.cast(voteWith(["player", P1], honest), "2.2.2.2");
+    expect(vote.tally(2)).toBeNull();
+  });
+
+  it("keys a vote and a replayed result with the same stats alike", () => {
+    expect(voteKey(voteWith(["player", P1], honest))).toBe(
+      voteKey({ winner: ["player", P1], allPlayersStats: honest }),
+    );
+    expect(voteKey(voteWith(["player", P1], honest))).not.toBe(
+      voteKey({ winner: ["player", P1], allPlayersStats: forged }),
+    );
   });
 });
 

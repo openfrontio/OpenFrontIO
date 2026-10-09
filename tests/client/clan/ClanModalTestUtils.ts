@@ -1,6 +1,7 @@
 import { vi } from "vitest";
 import type { ClanInfo } from "../../../src/client/ClanApi";
 import type { ClanModal } from "../../../src/client/ClanModal";
+import { ClientEnv } from "../../../src/client/ClientEnv";
 
 // ─── Mock factories ─────────────────────────────────────────────────────────
 // Each factory returns a fresh object of vi.fn()s. Test files pass these to
@@ -134,6 +135,23 @@ export async function virtualizerMockFactory() {
   return {
     virtualize: vi.fn(() => html``),
   };
+}
+
+/**
+ * ClanModal gates the Map tab on ClientEnv.env() (prod = Coming Soon), which
+ * reads the config the server normally injects into index.html. Call before
+ * rendering the map tab.
+ */
+export function stubGameEnv(gameEnv: "dev" | "prod") {
+  window.BOOTSTRAP_CONFIG = {
+    gameEnv,
+    numWorkers: 1,
+    turnstileSiteKey: "",
+    jwtAudience: "test",
+    instanceId: "test",
+    gitCommit: "test",
+  };
+  ClientEnv.reset();
 }
 
 export function stubLocalStorage() {

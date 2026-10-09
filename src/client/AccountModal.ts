@@ -1,8 +1,8 @@
+import { PlayerStatsTree, UserMeResponse } from "@openfront/shared/ApiSchemas";
+import { assetUrl } from "@openfront/shared/AssetUrls";
 import { html, nothing, TemplateResult } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import { ClientEnv } from "src/client/ClientEnv";
-import { PlayerStatsTree, UserMeResponse } from "../core/ApiSchemas";
-import { assetUrl } from "../core/AssetUrls";
 import { hasLinkedIdentity } from "./AccountIdentity";
 import { fetchPlayerById, getUserMe, invalidateUserMe } from "./Api";
 import {
@@ -35,11 +35,14 @@ import { modalHeader } from "./components/ui/ModalHeader";
 import { steamGlyph, steamLinkButton } from "./components/ui/SteamLinkButton";
 import { crazyGamesSDK, type CrazyGamesUser } from "./CrazyGamesSDK";
 import { desktopLinkGate, isDesktopShell } from "./DesktopShell";
+import "./GameStatsModal";
 import { showInGameAlert } from "./InGameModal";
 import { consumeLinkResult } from "./LinkResult";
 import { consumeLoginResult, LoginResult } from "./LoginResult";
+import "./PlayerProfileModal";
+import { steamSDK } from "./SteamSDK";
 import { playerProfileUrl } from "./utilities/PlayerProfileUrl";
-import { translateText } from "./Utils";
+import { currentPagePath, translateText } from "./Utils";
 
 // Each login refusal says its own thing. Sharing one string was fine while
 // email_exists was the only recognised result; a player refused because their
@@ -613,7 +616,7 @@ export class AccountModal extends BaseModal {
   private async viewGame(gameId: string): Promise<void> {
     this.close();
     const encodedGameId = encodeURIComponent(gameId);
-    const newUrl = `/${ClientEnv.workerPath(gameId)}/game/${encodedGameId}`;
+    const newUrl = currentPagePath(ClientEnv.gamePath(gameId));
 
     history.pushState({ join: gameId }, "", newUrl);
     window.dispatchEvent(
@@ -800,14 +803,17 @@ export class AccountModal extends BaseModal {
             <div class="space-y-3">${this.renderEmailField()}</div>
           </div>
 
-          <div class="mt-8 text-center border-t border-white/10 pt-6">
-            <button
-              @click="${this.handleLogout}"
-              class="text-[10px] font-bold text-white/20 hover:text-red-400 transition-colors uppercase tracking-widest pb-0.5"
-            >
-              ${translateText("account_modal.clear_session")}
-            </button>
-          </div>
+          <!-- Not on Steam: the Steam ticket re-creates the session on reload. -->
+          ${steamSDK.isOnSteam()
+            ? nothing
+            : html`<div class="mt-8 text-center border-t border-white/10 pt-6">
+                <button
+                  @click="${this.handleLogout}"
+                  class="text-[10px] font-bold text-white/20 hover:text-red-400 transition-colors uppercase tracking-widest pb-0.5"
+                >
+                  ${translateText("account_modal.clear_session")}
+                </button>
+              </div>`}
         </div>
       </div>
     `;

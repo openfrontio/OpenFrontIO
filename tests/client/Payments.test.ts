@@ -794,6 +794,17 @@ describe("startPurchase — error mapping", () => {
     });
   });
 
+  it("points a past_due subscriber at the billing portal", async () => {
+    expect(
+      await failWith({ ok: false, code: "subscription_past_due" }),
+    ).toEqual({
+      outcome: "error",
+      message: "store.subscription_past_due",
+      refetchCatalog: false,
+      manageBilling: true,
+    });
+  });
+
   it("shows the server's text when the rail refuses a tier change, and names the rail without one", async () => {
     expect(
       await failWith({

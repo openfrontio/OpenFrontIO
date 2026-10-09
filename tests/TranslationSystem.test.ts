@@ -44,6 +44,13 @@ const IGNORED_UNUSED_KEY_PATTERNS: RegExp[] = [
   // than the player's. They live here so Crowdin picks them up like any other
   // string.
   /^desktop_presence\./,
+  // The Electron shell's account-linking gate. Same situation as the rich
+  // presence frames above, and for the same reason: the gate is a page the
+  // shell serves from its OWN assets before the client boots, so there is no
+  // translateText() call in this repo to find. The shell's build reads these
+  // out of resources/lang/*.json and emits per-language files next to that
+  // page. They live here so Crowdin picks them up like any other string.
+  /^desktop_gate\./,
 ];
 
 type NestedTranslations = Record<string, unknown>;
@@ -530,8 +537,10 @@ describe("Translation System", () => {
     const enKeySet = new Set(allKeys);
     const rootKeys = new Set(Object.keys(enJson as Record<string, unknown>));
 
-    const srcDir = path.join(PROJECT_ROOT, "src");
-    const sourceFiles = getAllFiles(srcDir, [".ts", ".tsx", ".js", ".jsx"]);
+    // The engine packages emit message keys too.
+    const sourceFiles = ["src", "packages"].flatMap((dir) =>
+      getAllFiles(path.join(PROJECT_ROOT, dir), [".ts", ".tsx", ".js", ".jsx"]),
+    );
 
     const usedKeys = new Set<string>();
     const referencedStaticKeys = new Set<string>();

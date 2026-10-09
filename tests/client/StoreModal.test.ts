@@ -1,3 +1,4 @@
+import type { Cosmetics, Effect } from "@openfront/shared/CosmeticSchemas";
 import { nothing, type LitElement } from "lit";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
@@ -8,15 +9,14 @@ import {
 } from "../../src/client/Cosmetics";
 import "../../src/client/Store";
 import type { StoreModal } from "../../src/client/Store";
-import type { CosmeticCard } from "../../src/client/components/CosmeticCard";
-import type { EffectsGrid } from "../../src/client/components/EffectsGrid";
-import type { PurchaseButton } from "../../src/client/components/PurchaseButton";
-import type { Cosmetics, Effect } from "../../src/core/CosmeticSchemas";
 import {
   EFFECTS_KEY,
   PATTERN_KEY,
   UserSettings,
-} from "../../src/core/game/UserSettings";
+} from "../../src/client/UserSettings";
+import type { CosmeticCard } from "../../src/client/components/CosmeticCard";
+import type { EffectsGrid } from "../../src/client/components/EffectsGrid";
+import type { PurchaseButton } from "../../src/client/components/PurchaseButton";
 
 vi.mock("../../src/client/Cosmetics", async (importOriginal) => ({
   ...(await importOriginal<typeof import("../../src/client/Cosmetics")>()),
@@ -760,6 +760,50 @@ describe("StoreModal cosmetic browser", () => {
     await switchButton.onPurchaseDollar!();
     expect(purchaseCosmetic).toHaveBeenCalledWith(
       platinumSubscription,
+      "dollar",
+    );
+  });
+
+  // OPE-440. A grant (`provider: null`) is free access nobody is billing, so
+  // the player is not switching anything — every tier, the one their grant
+  // confers included, is a first purchase. resolveCosmetics is what stops
+  // calling the granted tier "owned" (covered in
+  // GrantedSubscriptionPurchase.test.ts); what this asserts is the store's
+  // half: a purchasable tier renders its buy button and no dead status box,
+  // and the "Switch" label is not applied to a granted player.
+  it("offers a plain buy button on every tier to a granted subscriber", async () => {
+    resolvedCatalog = [
+      { ...goldSubscription, relationship: "purchasable" },
+      platinumSubscription,
+    ];
+    const modal = await openStoreOnTab("subscriptions");
+    await modal.onUserMe({
+      player: {
+        subscription: { tier: "gold", provider: null },
+      },
+    } as never);
+    await modal.updateComplete;
+
+    // The "Subscribed" box was the whole bug: it replaced the buy button.
+    expect(
+      product(modal, goldSubscription.key)?.querySelector(
+        "[data-store-status]",
+      ),
+    ).toBeFalsy();
+
+    const gold = purchaseButton(modal, goldSubscription.key);
+    expect(gold.onPurchaseDollar).toBeTypeOf("function");
+    expect(gold.dollarLabelKey).toBe("");
+
+    await focusCard(modal, platinumSubscription.key);
+    // Not "Switch": there is no paid plan to switch away from.
+    expect(purchaseButton(modal, platinumSubscription.key).dollarLabelKey).toBe(
+      "",
+    );
+
+    await gold.onPurchaseDollar!();
+    expect(purchaseCosmetic).toHaveBeenCalledWith(
+      { ...goldSubscription, relationship: "purchasable" },
       "dollar",
     );
   });

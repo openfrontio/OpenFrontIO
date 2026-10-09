@@ -7,6 +7,18 @@ vi.mock("../../src/client/Auth", async (importOriginal) => ({
   isSessionActive: vi.fn(() => false),
 }));
 
+const mocks = vi.hoisted(() => ({
+  ensureServerList: vi.fn(async (): Promise<string> => "fallback"),
+}));
+
+// These callers all await the server list first; here it answers "no list,
+// use the page's values" so the URLs under test come from BOOTSTRAP_CONFIG,
+// and the one case that must refuse ("outdated") can be asked for directly.
+vi.mock("../../src/client/ServerList", async (importOriginal) => {
+  const actual = await importOriginal<Record<string, unknown>>();
+  return { ...actual, ensureServerList: mocks.ensureServerList };
+});
+
 import { createLobby } from "../../src/client/Api";
 import { ClientEnv } from "../../src/client/ClientEnv";
 import { JoinLobbyModal } from "../../src/client/JoinLobbyModal";
@@ -40,6 +52,7 @@ beforeEach(() => {
     serverHost: SERVER_HOST,
   };
   ClientEnv.reset();
+  mocks.ensureServerList.mockResolvedValue("fallback");
   fetchMock = vi.fn(
     async () =>
       new Response(JSON.stringify({ exists: true, gameID: "game-1" }), {
@@ -62,6 +75,32 @@ describe("createLobby", () => {
     await createLobby();
     // No worker prefix: the edge (nginx in prod, the vite proxy in dev) picks
     // a worker, which mints a self-owned id.
+    expect(lastUrl()).toBe(`https://${SERVER_HOST}/api/create_game`);
+  });
+
+  // No server runs this build any more (the rollover moved on without this
+  // tab): creating against the page's own stale host would mint a lobby on
+  // a server that is going away. The lobby socket's "update available"
+  // prompt is what moves the player forward. Only a Worker-served page is
+  // ever told "outdated" (OPE-430), and there the page names no server at
+  // all, so there is nothing to create against either.
+  it("refuses to create when no server runs this build any more", async () => {
+    mocks.ensureServerList.mockResolvedValue("outdated");
+    await expect(createLobby()).rejects.toThrow(/newer version is available/);
+    expect(
+      fetchMock.mock.calls.some((c) => String(c[0]).includes("create_game")),
+    ).toBe(false);
+  });
+
+  // A page a game server rendered answers "fallback" whatever the list says
+  // about its own host — a registry that missed its deploy (OPE-430), an
+  // entry on another build, an entry fenced. That host is running this
+  // build, because it served this page, and this tab's lobby list and
+  // session already live on it, so Create goes ahead there exactly as it
+  // did before the list existed.
+  it("creates on the page's own server when the list has no server for this build", async () => {
+    mocks.ensureServerList.mockResolvedValue("fallback");
+    await createLobby();
     expect(lastUrl()).toBe(`https://${SERVER_HOST}/api/create_game`);
   });
 

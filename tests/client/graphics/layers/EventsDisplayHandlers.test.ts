@@ -27,19 +27,26 @@ vi.mock("lit/directives/unsafe-html.js", () => ({
 
 vi.mock("../../../../src/client/Utils", () => ({
   // Include params in the output so descriptions are assertable.
-  translateText: vi.fn((key: string, params?: Record<string, unknown>) =>
-    params ? `${key} ${JSON.stringify(params)}` : key,
-  ),
-  renderNumber: vi.fn(),
-  renderTroops: vi.fn(),
+  translateText: vi.fn((key: string, params?: Record<string, unknown>) => {
+    const translations: Record<string, string> = {
+      "unit_type.atom_bomb": "Atom Bomb",
+      "unit_type.boat": "Boat",
+    };
+    const text = translations[key] ?? key;
+    return params ? `${text} ${JSON.stringify(params)}` : text;
+  }),
   getMessageTypeClasses: vi.fn(() => ""),
 }));
+vi.mock("@openfront/engine-lib/Format", () => ({
+  renderNumber: vi.fn(),
+  renderTroops: vi.fn(),
+}));
 
+import { MessageType } from "@openfront/engine-api/game/GameTypes";
+import { GameUpdateType } from "@openfront/engine-api/game/GameUpdates";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { EventsDisplay } from "../../../../src/client/hud/layers/EventsDisplay";
 import { PlaySoundEffectEvent } from "../../../../src/client/sound/Sounds";
-import { MessageType } from "../../../../src/core/game/Game";
-import { GameUpdateType } from "../../../../src/core/game/GameUpdates";
 
 interface Ed {
   events: { description: string; type: MessageType; focusID?: number }[];
@@ -300,6 +307,30 @@ describe("EventsDisplay handlers", () => {
     it("ignores warnings addressed to other players", () => {
       ed.onUnitIncomingEvent(incoming(2) as never);
       expect(events()).toHaveLength(0);
+    });
+  });
+
+  describe("onDisplayMessageEvent", () => {
+    it("translates unit names in event parameters", () => {
+      ed.onDisplayMessageEvent({
+        type: GameUpdateType.DisplayEvent,
+        message: "events_display.unit_destroyed",
+        messageType: MessageType.UNIT_DESTROYED,
+        playerID: 1,
+        params: { unit: "unit_type.boat" },
+      });
+      ed.onDisplayMessageEvent({
+        type: GameUpdateType.DisplayEvent,
+        message: "events_display.missile_intercepted",
+        messageType: MessageType.SAM_HIT,
+        playerID: 1,
+        params: { unit: "unit_type.atom_bomb" },
+      });
+
+      expect(events().map((event) => event.description)).toEqual([
+        'events_display.unit_destroyed {"unit":"Boat"}',
+        'events_display.missile_intercepted {"unit":"Atom Bomb"}',
+      ]);
     });
   });
 });

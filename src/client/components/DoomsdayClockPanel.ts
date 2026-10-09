@@ -1,16 +1,21 @@
-import { html, LitElement } from "lit";
-import { customElement, property } from "lit/decorators.js";
-import { assetUrl } from "../../core/AssetUrls";
+import {
+  GameMode,
+  PlayerType,
+  Team,
+} from "@openfront/engine-api/game/GameTypes";
+import { renderTroops } from "@openfront/engine-lib/Format";
 import {
   doomsdayClockDrain,
   doomsdayClockRequiredTiles,
   doomsdayClockRotQuota,
   doomsdayClockTroopFloor,
   doomsdayClockWaveState,
-} from "../../core/game/DoomsdayClock";
-import { GameMode, PlayerType, Team } from "../../core/game/Game";
+} from "@openfront/engine-lib/game/DoomsdayClock";
+import { assetUrl } from "@openfront/shared/AssetUrls";
+import { html, LitElement } from "lit";
+import { customElement, property } from "lit/decorators.js";
 import { themeProvider } from "../theme/ThemeProvider";
-import { renderTroops, translateText } from "../Utils";
+import { translateText } from "../Utils";
 import { GameView } from "../view";
 
 const doomsdayClockIcon = assetUrl("images/DoomsdayClockSkull.svg");
@@ -183,7 +188,7 @@ export class DoomsdayClockPanel extends LitElement {
         ? "sd-pulse-orange"
         : "";
     const panel =
-      "w-fit flex flex-col gap-1.5 py-2 px-4 bg-gray-800/92 backdrop-blur-sm shadow-xs min-[1200px]:rounded-lg rounded-bl-lg text-white text-sm";
+      "w-fit flex flex-col gap-1.5 py-2 px-4 bg-gray-800/92 backdrop-blur-sm shadow-xs rounded-bl-lg text-white text-sm";
 
     return html`
       <style>

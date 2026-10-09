@@ -1,11 +1,10 @@
-import { PortExecution } from "../src/core/execution/PortExecution";
 import {
-  Game,
-  Player,
   PlayerInfo,
   PlayerType,
   UnitType,
-} from "../src/core/game/Game";
+} from "@openfront/engine-api/game/GameTypes";
+import { PortExecution } from "@openfront/engine/execution/PortExecution";
+import { Game, Player } from "@openfront/engine/game/Game";
 import { setup } from "./util/Setup";
 
 let game: Game;

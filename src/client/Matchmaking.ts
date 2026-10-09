@@ -1,16 +1,24 @@
+import { UserMeResponse } from "@openfront/shared/ApiSchemas";
+import { CloseCode, isTerminalClose } from "@openfront/shared/CloseCodes";
+import { isCommitLike } from "@openfront/shared/ServerList";
 import { html } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import { ClientEnv } from "src/client/ClientEnv";
-import { UserMeResponse } from "../core/ApiSchemas";
-import { CloseCode, isTerminalClose } from "../core/CloseCodes";
 import { responseHasLinkedIdentity } from "./AccountIdentity";
 import { getUserMe, invalidateUserMe } from "./Api";
 import { getPlayToken } from "./Auth";
 import { BaseModal } from "./components/BaseModal";
 import "./components/Difficulties";
-import { modalHeader } from "./components/ui/ModalHeader";
+import { GameStartAlertController } from "./components/GameStartAlertController";
+import { DEFAULT_TITLE_CLASS, modalHeader } from "./components/ui/ModalHeader";
 import { crazyGamesSDK } from "./CrazyGamesSDK";
 import type { JoinLobbyEvent } from "./Main";
+import {
+  ensureServerList,
+  matchmakingSite,
+  redirectToGameVersion,
+} from "./ServerList";
+import { describeSocketClose } from "./SocketClose";
 import type { UsernameInput } from "./UsernameInput";
 import { translateText } from "./Utils";
 
@@ -35,9 +43,17 @@ export class MatchmakingModal extends BaseModal {
   @state() private socket: WebSocket | null = null;
   @state() private gameID: string | null = null;
   @state() private limitReached = false;
+  // The matchmaking service refused this account as untrusted (4103). Only
+  // the service decides: it gates ranked on trust behind a flag, so the
+  // client never pre-checks trustTier.
+  @state() private notTrusted = false;
   @state() private queueSize: number | null = null;
   private selectedClanTag: string | null = null;
   private elo: number | string = "...";
+  private readonly gameStartAlert = new GameStartAlertController(
+    this,
+    () => this.isModalOpen && this.gameID !== null,
+  );
 
   constructor() {
     super();
@@ -49,12 +65,14 @@ export class MatchmakingModal extends BaseModal {
   }
 
   protected renderHeaderSlot() {
+    const title = translateText(
+      this.mode === "2v2"
+        ? "matchmaking_modal.title_2v2"
+        : "matchmaking_modal.title",
+    );
     return modalHeader({
-      title: translateText(
-        this.mode === "2v2"
-          ? "matchmaking_modal.title_2v2"
-          : "matchmaking_modal.title",
-      ),
+      titleContent: html`<span class="${DEFAULT_TITLE_CLASS}">${title}</span>
+        ${this.gameStartAlert.renderBell()}`,
       onBack: () => this.close(),
       ariaLabel: translateText("common.back"),
     });
@@ -74,6 +92,20 @@ export class MatchmakingModal extends BaseModal {
   }
 
   private renderInner() {
+    if (this.notTrusted) {
+      // CrazyGames has no purchases, so its variant only suggests playing.
+      const info = crazyGamesSDK.isOnCrazyGames()
+        ? "matchmaking_modal.not_trusted_info_crazygames"
+        : "matchmaking_modal.not_trusted_info";
+      return html`
+        <div class="flex flex-col items-center gap-4 text-center">
+          <p class="text-white font-bold">
+            ${translateText("matchmaking_modal.not_trusted")}
+          </p>
+          <p class="text-sm text-white/60">${translateText(info)}</p>
+        </div>
+      `;
+    }
     if (this.limitReached) {
       return html`
         <div class="flex flex-col items-center gap-4 text-center">
@@ -139,6 +171,7 @@ export class MatchmakingModal extends BaseModal {
     this.gameID = null;
     this.intentionalClose = false;
     this.limitReached = false;
+    this.notTrusted = false;
     this.queueSize = null;
     this.reconnectAttempts = 0;
     this.connect();
@@ -258,10 +291,37 @@ export class MatchmakingModal extends BaseModal {
         this.socket.close();
       }
     }
-    this.socket = new WebSocket(
-      `${ClientEnv.jwtIssuer()}/matchmaking/join?instance_id=${encodeURIComponent(ClientEnv.instanceId())}&mode=${this.mode}`,
+    // instance_id is the rendering server's own id, which the API ignores
+    // (docs/MultiServer.md) and a static page does not have. Sent only when
+    // the page carries one, rather than as an empty parameter.
+    const instanceId = ClientEnv.instanceId();
+    const instanceParam =
+      instanceId === "" ? "" : `instance_id=${encodeURIComponent(instanceId)}&`;
+    // The queue is partitioned by build (OPE-470), so a match is only ever
+    // assigned on a server this page can play on. Sent only when the build
+    // names a commit: the API rejects anything else, and a label like "DEV"
+    // names no build to partition by.
+    const ownCommit = ClientEnv.gitCommit();
+    const versionParam = isCommitLike(ownCommit)
+      ? `&version=${encodeURIComponent(ownCommit)}`
+      : "";
+    // The queue is also partitioned by SITE: a matched game id is resolved
+    // through this page's server list, so the API pools this page only with
+    // servers registered under the site that list is read for. Without it,
+    // any server on the API that shared blue's letter and build could win
+    // the match — a branch preview did, on 15 Sept 2026 — and the id would
+    // point at a host this page cannot reach. Sent only when the site is a
+    // name the API accepts; a page with none joins the legacy shared pool.
+    const site = matchmakingSite();
+    const siteParam =
+      site === undefined ? "" : `&site=${encodeURIComponent(site)}`;
+    const socket = new WebSocket(
+      `${ClientEnv.jwtIssuer()}/matchmaking/join?${instanceParam}mode=${this.mode}${versionParam}${siteParam}`,
     );
+    this.socket = socket;
+    let openedAt: number | null = null;
     this.socket.onopen = async () => {
+      openedAt = Date.now();
       console.log("Connected to matchmaking server");
       this.connectTimeout = setTimeout(async () => {
         if (this.socket?.readyState !== WebSocket.OPEN) {
@@ -304,13 +364,13 @@ export class MatchmakingModal extends BaseModal {
         this.gameCheckInterval = setInterval(() => this.checkGame(), 1000);
       }
     };
-    this.socket.onerror = (event: Event) => {
-      console.error("WebSocket error occurred:", event);
-    };
     this.socket.onclose = (event: CloseEvent) => {
-      console.log(
-        `Matchmaking server closed connection: code=${event.code} reason=${event.reason}`,
-      );
+      const detail = `Matchmaking socket ${describeSocketClose(socket.url, event, openedAt)}`;
+      if (this.intentionalClose || this.gameID !== null) {
+        console.log(detail);
+      } else {
+        console.warn(detail);
+      }
       this.clearWatchdog();
       this.queueSize = null;
       if (this.intentionalClose || this.gameID !== null) {
@@ -330,6 +390,13 @@ export class MatchmakingModal extends BaseModal {
       ) {
         this.connected = false;
         this.limitReached = true;
+        return;
+      }
+      // Not a trusted account — the server will keep refusing until it is,
+      // so don't reconnect.
+      if (event.code === CloseCode.NotTrusted) {
+        this.connected = false;
+        this.notTrusted = true;
         return;
       }
       if (
@@ -380,6 +447,9 @@ export class MatchmakingModal extends BaseModal {
   }
 
   protected async onOpen(): Promise<void> {
+    // Like a lobby bell, a new matchmaking session starts from the saved
+    // default; a cancellation requeue keeps any per-session override.
+    this.gameStartAlert.reset();
     const userMe = await getUserMe();
     // Early return if modal was closed during async operation
     if (!this.isModalOpen) {
@@ -431,10 +501,12 @@ export class MatchmakingModal extends BaseModal {
     this.limitReached = false;
     this.queueSize = null;
     this.reconnectAttempts = 0;
+    this.notTrusted = false;
     this.connect();
   }
 
   protected onClose(): void {
+    this.gameStartAlert.reset();
     this.connected = false;
     this.intentionalClose = true;
     this.socket?.close();
@@ -457,6 +529,11 @@ export class MatchmakingModal extends BaseModal {
     if (this.gameID === null) {
       return;
     }
+    // The matched game may carry any server's letter: resolve it through
+    // the API's list (multi-server v2) rather than this page's own map. The
+    // version check waits until the game exists, below: this poll fires
+    // every second and must never navigate.
+    await ensureServerList();
     const url = `${ClientEnv.gameHttpBase(this.gameID)}/${ClientEnv.gameWorkerPath(this.gameID)}/api/game/${this.gameID}/exists`;
 
     const response = await fetch(url, {
@@ -467,7 +544,7 @@ export class MatchmakingModal extends BaseModal {
     const gameInfo = await response.json();
 
     if (response.status !== 200) {
-      console.error(`Error checking game ${this.gameID}: ${response.status}`);
+      console.warn(`Error checking game ${this.gameID}: ${response.status}`);
       return;
     }
 
@@ -479,6 +556,15 @@ export class MatchmakingModal extends BaseModal {
     if (this.gameCheckInterval) {
       clearInterval(this.gameCheckInterval);
       this.gameCheckInterval = null;
+    }
+
+    // A match is made by rating, not by build, so it can land on a server
+    // running another version. Open the game at that version now: being
+    // bounced at join time costs a page load, which a ranked game's start
+    // deadline does not allow. See docs/MultiServer.md, "Opening a game at
+    // its server's version" (OPE-471).
+    if (redirectToGameVersion(this.gameID)) {
+      return;
     }
 
     this.dispatchEvent(

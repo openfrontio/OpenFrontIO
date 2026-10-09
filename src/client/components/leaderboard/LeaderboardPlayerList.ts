@@ -1,11 +1,12 @@
-import { html, LitElement, nothing, PropertyValues } from "lit";
-import { customElement, property, query, state } from "lit/decorators.js";
+import { RankedType } from "@openfront/engine-api/game/GameTypes";
 import {
   PlayerLeaderboardEntry,
   RankedLeaderboardEntry,
-} from "../../../core/ApiSchemas";
-import { RankedType } from "../../../core/game/Game";
+} from "@openfront/shared/ApiSchemas";
+import { html, LitElement, nothing, PropertyValues } from "lit";
+import { customElement, property, query, state } from "lit/decorators.js";
 import { fetchPlayerLeaderboard, getUserMe } from "../../Api";
+import { loadModal } from "../../LazyModals";
 import { translateText } from "../../Utils";
 import "../PlayerName";
 
@@ -187,7 +188,7 @@ export class LeaderboardPlayerList extends LitElement {
       this.scheduleStickyVisibilityCheck();
       this.schedulePlayerFillCheck();
     } catch (err) {
-      console.error("loadPlayerLeaderboard: request failed", err);
+      console.warn("loadPlayerLeaderboard: request failed", err);
       if (reset) {
         this.error = translateText("leaderboard_modal.error");
       } else {
@@ -210,11 +211,15 @@ export class LeaderboardPlayerList extends LitElement {
   // Same handoff as the clan views: the profile modal's back button reopens
   // the leaderboard (its loaded pages survive the close).
   private openProfile(publicId: string) {
-    document
-      .querySelector<
-        HTMLElement & { openFromLeaderboard(publicId: string): void }
-      >("player-profile-modal")
-      ?.openFromLeaderboard(publicId);
+    loadModal("player-profile-modal").then(
+      () =>
+        document
+          .querySelector<
+            HTMLElement & { openFromLeaderboard(publicId: string): void }
+          >("player-profile-modal")
+          ?.openFromLeaderboard(publicId),
+      (err) => console.error("player-profile-modal failed to load:", err),
+    );
   }
 
   // TODO: consider IntersectionObserver for better visibility detection?

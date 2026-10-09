@@ -1,12 +1,12 @@
-import z from "zod";
+import { GameID, ID } from "@openfront/engine-api/Schemas";
+import { replacer } from "@openfront/shared/SharedUtil";
 import {
-  GameID,
   GameRecord,
   GameRecordSchema,
-  ID,
   PartialGameRecord,
-} from "../core/Schemas";
-import { replacer } from "../core/Util";
+} from "@openfront/shared/WireSchemas";
+import z from "zod";
+import { registeredSite } from "./ClusterCheckin";
 import { logger } from "./Logger";
 import { ServerEnv } from "./ServerEnv";
 
@@ -84,5 +84,6 @@ export function finalizeGameRecord(
     gitCommit: ServerEnv.gitCommit(),
     subdomain: ServerEnv.subdomain(),
     domain: ServerEnv.domain(),
+    site: registeredSite(),
   };
 }

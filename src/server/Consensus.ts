@@ -1,4 +1,13 @@
-import { ClientID, ClientSendWinnerMessage, LiveStats } from "../core/Schemas";
+import {
+  AllPlayersStats,
+  ClientID,
+  Winner,
+} from "@openfront/engine-api/Schemas";
+import {
+  ClientSendWinnerMessage,
+  LiveStats,
+} from "@openfront/shared/WireSchemas";
+import { createHash } from "crypto";
 import { VoteRound } from "./VoteTally";
 
 // The simulation runs on the clients, so the outcomes the server has to
@@ -13,8 +22,34 @@ export interface VoteOutcome<T> {
   votes: number;
 }
 
-// The end-of-game winner vote. Decided once; the game guards against votes
-// arriving after that.
+// A fingerprint of a winner vote's per-player stats, so votes can be compared
+// on their stats and not just their winner. The stats come from the
+// deterministic simulation, so in-sync clients hold the same values -- but not
+// necessarily in the same key order: record keys follow insertion order, which
+// differs between a client that played the whole game and one restored from a
+// snapshot. So keys are sorted at every level before hashing. Bigints hash as
+// decimal strings, the form the archive writes them in (Util.replacer).
+export function statsDigest(stats: AllPlayersStats): string {
+  const canonical = JSON.stringify(stats, (_key, value: unknown) => {
+    if (typeof value === "bigint") return value.toString();
+    if (value !== null && typeof value === "object" && !Array.isArray(value)) {
+      const obj = value as Record<string, unknown>;
+      return Object.fromEntries(
+        Object.keys(obj)
+          .sort()
+          .map((k) => [k, obj[k]]),
+      );
+    }
+    return value;
+  });
+  return createHash("sha256").update(canonical).digest("hex");
+}
+
+// The end-of-game winner vote. A vote is the whole message: the winner and
+// every player's stats. Voters who name the same winner but send different
+// stats back different candidates, so one voter can't put forged stats in the
+// record by agreeing with the majority on the winner. Decided once; the game
+// guards against votes arriving after that.
 export class WinnerVote {
   private readonly round = new VoteRound<ClientSendWinnerMessage>();
   private decided: ClientSendWinnerMessage | null = null;
@@ -24,15 +59,18 @@ export class WinnerVote {
     return this.decided;
   }
 
+  // How many different messages the votes so far have sent.
+  candidates(): number {
+    return this.round.size();
+  }
+
   // Records a vote from `ip`. Returns the candidate's key and how many unique
   // IPs back it after this vote.
   cast(
     msg: ClientSendWinnerMessage,
     ip: string,
   ): { key: string; votes: number } {
-    // A cancelled match ends with winner omitted; JSON.stringify(undefined)
-    // is not a string, so key those votes as "null".
-    const key = JSON.stringify(msg.winner ?? null);
+    const key = voteKey(msg);
     return { key, votes: this.round.add(key, msg, ip) };
   }
 
@@ -57,6 +95,19 @@ export class WinnerVote {
     }
     return result;
   }
+}
+
+// Identifies a winner vote by its winner and its stats, so a replayed result
+// can be compared with the votes the same way. A cancelled match ends with
+// winner omitted; JSON.stringify(undefined) is not a string, so key it as null.
+export function voteKey(result: {
+  winner?: Winner;
+  allPlayersStats: AllPlayersStats;
+}): string {
+  return JSON.stringify([
+    result.winner ?? null,
+    statsDigest(result.allPlayersStats),
+  ]);
 }
 
 // The running live-stats vote. Clients each send a snapshot every ~10s

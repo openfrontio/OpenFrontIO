@@ -1,6 +1,6 @@
+import type { UserMeResponse } from "@openfront/shared/ApiSchemas";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { AccountSettingsPanel } from "../../../src/client/components/AccountSettingsPanel";
-import type { UserMeResponse } from "../../../src/core/ApiSchemas";
 
 type UserMePlayer = UserMeResponse["player"];
 type UserMeUser = UserMeResponse["user"];
@@ -14,6 +14,7 @@ vi.mock("../../../src/client/Utils", () => ({
 vi.mock("../../../src/client/Api", () => ({
   setMarketingConsent: vi.fn(async () => true),
   deleteAccount: vi.fn(async () => ({ ok: true })),
+  getIdentityTokenAudiences: vi.fn(async () => []),
 }));
 
 vi.mock("../../../src/client/Auth", () => ({

@@ -1,7 +1,8 @@
+import { Subscription } from "@openfront/shared/CosmeticSchemas";
 import { html, LitElement, nothing, TemplateResult } from "lit";
 import { customElement, property } from "lit/decorators.js";
-import { Subscription } from "../../core/CosmeticSchemas";
 import { ResolvedCosmetic, translateCosmetic } from "../Cosmetics";
+import { isDesktopShell } from "../DesktopShell";
 import { translateText } from "../Utils";
 import "./CosmeticInfo";
 import {
@@ -304,7 +305,9 @@ export class CosmeticCard extends LitElement {
 
   private renderSwatches() {
     const variants = this.variants.filter(
-      (variant) => variant.colorPalette !== null,
+      (variant) =>
+        variant.colorPalette !== null ||
+        (variant.type === "pattern" && variant.cosmetic !== null),
     );
     if (!this.interactive || !this.showSwatches || variants.length === 0) {
       return nothing;
@@ -322,7 +325,7 @@ export class CosmeticCard extends LitElement {
         const isActive = variant.key === activeKey;
         const label = palette
           ? translateCosmetic("territory_patterns.color_palette", palette.name)
-          : cosmeticDisplayName(variant);
+          : translateText("territory_patterns.pattern.default");
         return html`<button
           type="button"
           data-variant-key=${variant.key}
@@ -385,6 +388,7 @@ export class CosmeticCard extends LitElement {
     } ${this.rarityHoverClass(rarity)}`;
     const priced = active.cosmetic as {
       artist?: string;
+      aiDisclosed?: boolean;
       priceHard?: number;
     } | null;
     const usdValue =
@@ -415,7 +419,7 @@ export class CosmeticCard extends LitElement {
     `;
     const name = html`<span
       data-cosmetic-name
-      class="w-full whitespace-normal break-words px-3 pt-3 text-center text-sm font-bold leading-tight text-white ${this
+      class="w-full capitalize  whitespace-normal break-words px-3 pt-3 text-center text-sm font-bold leading-tight text-white ${this
         .interactive
         ? "cursor-pointer"
         : ""}"
@@ -488,9 +492,11 @@ export class CosmeticCard extends LitElement {
         ${this.interactive && active.cosmetic !== null
           ? html`<cosmetic-info
                 .artist=${priced?.artist}
+                .aiDisclosed=${priced?.aiDisclosed}
                 .rarity=${rarity}
                 .colorPalette=${active.colorPalette?.name}
-                .showAdFree=${active.relationship === "purchasable"}
+                .showAdFree=${active.relationship === "purchasable" &&
+                !isDesktopShell()}
                 .usdValue=${usdValue}
                 .perks=${this.subscriptionPerks()}
                 .items=${(active.packItems ?? []).map(cosmeticSelectionLabel)}

@@ -1,7 +1,7 @@
+import { ColorPalette, Pattern } from "@openfront/shared/CosmeticSchemas";
 import { colord } from "colord";
 import { html, LitElement, nothing, PropertyValues, TemplateResult } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
-import { ColorPalette, Pattern } from "../../core/CosmeticSchemas";
 import {
   getCachedCosmetics,
   ResolvedCosmetic,
@@ -13,16 +13,15 @@ import {
   cosmeticRarityBadgeClass,
   cosmeticRarityLabel,
 } from "./CosmeticPresentation";
-import "./cosmetics/CosmeticRenderCanvas";
 import type { CosmeticRenderCanvas } from "./cosmetics/CosmeticRenderCanvas";
 
 export const TEAM_COLORS = [
   { name: "Red", hex: "#eb3333" },
   { name: "Blue", hex: "#2962ff" },
-  { name: "Teal", hex: "#2bd4bd" },
+  { name: "Teal", hex: "#06b6d4" },
   { name: "Purple", hex: "#9234ea" },
   { name: "Yellow", hex: "#e7b008" },
-  { name: "Orange", hex: "#f97415" },
+  { name: "Orange", hex: "#ff7f0e" },
   { name: "Green", hex: "#41be52" },
 ];
 
@@ -71,6 +70,11 @@ export class CosmeticPreviewModal extends LitElement {
 
   connectedCallback() {
     super.connectedCallback();
+    // The WebGL preview is its own chunk, loaded when a preview first opens
+    // rather than with the homepage. Lit upgrades the element once it's here.
+    import("./cosmetics/CosmeticRenderCanvas").catch((err) =>
+      console.warn("Failed to load the cosmetic preview:", err),
+    );
     // Capture phase so this runs before the parent Store/Inventory modal's
     // own window-level Escape handler (BaseModal), which would otherwise
     // close the parent along with the preview.
@@ -267,8 +271,11 @@ export class CosmeticPreviewModal extends LitElement {
     const rarityLabel = cosmeticRarityLabel(this.resolved);
     const skinPalettes = this.skinPalettes();
     const teamPalettes = this.teamPalettes();
-    const artist = (this.resolved.cosmetic as { artist?: string } | null)
-      ?.artist;
+    const credits = this.resolved.cosmetic as {
+      artist?: string;
+      aiDisclosed?: boolean;
+    } | null;
+    const artist = credits?.artist;
 
     return html`<div
       data-cosmetic-preview-modal
@@ -295,12 +302,38 @@ export class CosmeticPreviewModal extends LitElement {
             >
               ${rarityLabel}
             </span>
-            ${artist
-              ? html`<span class="text-xs text-white/60 whitespace-nowrap">
-                  ${translateText("cosmetics.artist_label")}
-                  <span class="text-white/90 font-medium">${artist}</span>
-                </span>`
-              : nothing}
+            ${
+              // Both credits stack in one column rather than sitting as two more items in this
+              // row. The header is a single flex line inside an overflow-hidden panel, and every
+              // item in it refuses to wrap: at phone width a third and fourth nowrap item push
+              // the line past the panel and the last one is clipped away. Stacked, they take the
+              // height they need and the row keeps its one long truncating item (the name).
+              //
+              // Same rule as <cosmetic-info> for the AI line itself: only a declaration that was
+              // actually made shows, so a cosmetic can't say it used AI on the card and stay
+              // silent here.
+              artist || credits?.aiDisclosed === true
+                ? html`<div class="flex min-w-0 flex-col items-start gap-y-0.5">
+                    ${artist
+                      ? html`<span
+                          class="truncate text-xs text-white/60 max-w-full"
+                        >
+                          ${translateText("cosmetics.artist_label")}
+                          <span class="text-white/90 font-medium"
+                            >${artist}</span
+                          >
+                        </span>`
+                      : nothing}
+                    ${credits?.aiDisclosed === true
+                      ? html`<span
+                          class="truncate text-xs text-white/60 max-w-full"
+                        >
+                          ${translateText("cosmetics.ai_label")}
+                        </span>`
+                      : nothing}
+                  </div>`
+                : nothing
+            }
           </div>
           <div class="flex items-center gap-2 shrink-0">
             <div

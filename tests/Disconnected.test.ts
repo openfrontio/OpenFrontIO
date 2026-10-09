@@ -1,19 +1,18 @@
-import { AttackExecution } from "../src/core/execution/AttackExecution";
-import { MarkDisconnectedExecution } from "../src/core/execution/MarkDisconnectedExecution";
-import { PlayerExecution } from "../src/core/execution/PlayerExecution";
-import { TransportShipExecution } from "../src/core/execution/TransportShipExecution";
-import { getSpawnTiles } from "../src/core/execution/Util";
-import { WarshipExecution } from "../src/core/execution/WarshipExecution";
 import {
-  Game,
   GameMode,
   HumansVsNations,
-  Player,
   PlayerInfo,
   PlayerType,
   UnitType,
-} from "../src/core/game/Game";
-import { toInt } from "../src/core/Util";
+} from "@openfront/engine-api/game/GameTypes";
+import { toInt } from "@openfront/engine-lib/Util";
+import { AttackExecution } from "@openfront/engine/execution/AttackExecution";
+import { MarkDisconnectedExecution } from "@openfront/engine/execution/MarkDisconnectedExecution";
+import { PlayerExecution } from "@openfront/engine/execution/PlayerExecution";
+import { TransportShipExecution } from "@openfront/engine/execution/TransportShipExecution";
+import { getSpawnTiles } from "@openfront/engine/execution/Util";
+import { WarshipExecution } from "@openfront/engine/execution/WarshipExecution";
+import { Game, Player } from "@openfront/engine/game/Game";
 import { setup } from "./util/Setup";
 import { UseRealAttackLogic } from "./util/TestConfig";
 import { executeTicks } from "./util/utils";

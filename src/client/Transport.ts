@@ -1,12 +1,4 @@
-import { ClientEnv } from "src/client/ClientEnv";
-import { ZbContext } from "../../zbin";
-import {
-  CloseCode,
-  CloseReason,
-  isCloseReason,
-  isTerminalClose,
-} from "../core/CloseCodes";
-import { EventBus, GameEvent } from "../core/EventBus";
+import { TileRef } from "@openfront/engine-api/game/GameMap";
 import {
   AllPlayers,
   GameType,
@@ -14,12 +6,26 @@ import {
   PlayerID,
   Tick,
   UnitType,
-} from "../core/game/Game";
-import { TileRef } from "../core/game/GameMap";
+} from "@openfront/engine-api/game/GameTypes";
 import {
   AllPlayersStats,
-  ClientHashMessage,
   ClientID,
+  Intent,
+  Winner,
+} from "@openfront/engine-api/Schemas";
+import {
+  CloseCode,
+  CloseReason,
+  isCloseReason,
+  isTerminalClose,
+} from "@openfront/shared/CloseCodes";
+import {
+  EventBus,
+  EventConstructor,
+  GameEvent,
+} from "@openfront/shared/EventBus";
+import {
+  ClientHashMessage,
   ClientIntentMessage,
   ClientJoinMessage,
   ClientMessage,
@@ -29,23 +35,30 @@ import {
   ClientSendLiveStatsMessage,
   ClientSendWinnerMessage,
   ClientSpectateMessage,
-  GameConfig,
-  Intent,
   LiveStats,
   ReportReason,
   ServerMessage,
-  Winner,
-} from "../core/Schemas";
+} from "@openfront/shared/WireSchemas";
 import {
   createGameWireContext,
   decodeServerMessage,
   encodeClientMessage,
-} from "../core/ZbinWire";
+} from "@openfront/shared/ZbinWire";
+import { ZbContext } from "@openfront/zbin";
+import { ClientEnv, NoServerError } from "src/client/ClientEnv";
 import { getPlayToken } from "./Auth";
 import { LobbyConfig } from "./ClientGameRunner";
+import { clientPlatform } from "./ClientPlatform";
 import { isDesktopShell } from "./DesktopShell";
 import { showInGameConfirm } from "./InGameModal";
+import {
+  SendKickPlayerIntentEvent,
+  SendSpectateEvent,
+  SendToggleGameStartTimer,
+  SendUpdateGameConfigIntentEvent,
+} from "./LobbyEvents";
 import { LocalServer } from "./LocalServer";
+import { describeSocketClose } from "./SocketClose";
 import { homeHref, translateText } from "./Utils";
 import { PlayerView } from "./view";
 
@@ -206,22 +219,13 @@ export class MoveWarshipIntentEvent implements GameEvent {
   ) {}
 }
 
-export class SendKickPlayerIntentEvent implements GameEvent {
-  constructor(public readonly target: string) {}
-}
+// One-shot marker that this lobby has already sent us to a sibling, so a
+// redirect can never become a bounce.
+const poolRedirectLatch = (gameID: string) => `pool-redirect:${gameID}`;
 
-export class SendUpdateGameConfigIntentEvent implements GameEvent {
-  constructor(public readonly config: Partial<GameConfig>) {}
-}
-
-export class SendToggleGameStartTimer implements GameEvent {
-  constructor() {}
-}
-
-// Switch between playing and watching from the lobby screen.
-export class SendSpectateEvent implements GameEvent {
-  constructor(public readonly spectator: boolean) {}
-}
+// The lobby a redirect came FROM, carried across the navigation: the latch is
+// keyed by the source, but only the target can see that the redirect worked.
+const POOL_REDIRECT_FROM = "pool-redirect-from";
 
 export class Transport {
   // Retry budget for a dropped game socket. The first retry is immediate (a
@@ -263,6 +267,11 @@ export class Transport {
   // also the last moment a peer can send a dictionary-encoded field.
   private zbinCtx: ZbContext | null = null;
 
+  // The bus outlives the transport (one per page, one transport per join),
+  // so every subscription must be undone in leaveGame or a superseded
+  // transport keeps answering the live game's events.
+  private readonly unsubscribers: Array<() => void> = [];
+
   constructor(
     private lobbyConfig: LobbyConfig,
     private eventBus: EventBus,
@@ -273,81 +282,77 @@ export class Transport {
       this.lobbyConfig.gameRecord !== undefined ||
       this.lobbyConfig.gameStartInfo?.config.gameType === GameType.Singleplayer;
 
-    this.eventBus.on(SendAllianceRequestIntentEvent, (e) =>
+    this.subscribe(SendAllianceRequestIntentEvent, (e) =>
       this.onSendAllianceRequest(e),
     );
-    this.eventBus.on(SendAllianceRejectIntentEvent, (e) =>
+    this.subscribe(SendAllianceRejectIntentEvent, (e) =>
       this.onAllianceRejectUIEvent(e),
     );
-    this.eventBus.on(SendAllianceExtensionIntentEvent, (e) =>
+    this.subscribe(SendAllianceExtensionIntentEvent, (e) =>
       this.onSendAllianceExtensionIntent(e),
     );
-    this.eventBus.on(SendBreakAllianceIntentEvent, (e) =>
+    this.subscribe(SendBreakAllianceIntentEvent, (e) =>
       this.onBreakAllianceRequestUIEvent(e),
     );
-    this.eventBus.on(SendSpawnIntentEvent, (e) =>
-      this.onSendSpawnIntentEvent(e),
-    );
-    this.eventBus.on(SendAttackIntentEvent, (e) => this.onSendAttackIntent(e));
-    this.eventBus.on(SendUpgradeStructureIntentEvent, (e) =>
+    this.subscribe(SendSpawnIntentEvent, (e) => this.onSendSpawnIntentEvent(e));
+    this.subscribe(SendAttackIntentEvent, (e) => this.onSendAttackIntent(e));
+    this.subscribe(SendUpgradeStructureIntentEvent, (e) =>
       this.onSendUpgradeStructureIntent(e),
     );
-    this.eventBus.on(SendBoatAttackIntentEvent, (e) =>
+    this.subscribe(SendBoatAttackIntentEvent, (e) =>
       this.onSendBoatAttackIntent(e),
     );
-    this.eventBus.on(SendTargetPlayerIntentEvent, (e) =>
+    this.subscribe(SendTargetPlayerIntentEvent, (e) =>
       this.onSendTargetPlayerIntent(e),
     );
-    this.eventBus.on(SendEmojiIntentEvent, (e) => this.onSendEmojiIntent(e));
-    this.eventBus.on(SendDonateGoldIntentEvent, (e) =>
+    this.subscribe(SendEmojiIntentEvent, (e) => this.onSendEmojiIntent(e));
+    this.subscribe(SendDonateGoldIntentEvent, (e) =>
       this.onSendDonateGoldIntent(e),
     );
-    this.eventBus.on(SendDonateTroopsIntentEvent, (e) =>
+    this.subscribe(SendDonateTroopsIntentEvent, (e) =>
       this.onSendDonateTroopIntent(e),
     );
-    this.eventBus.on(SendQuickChatEvent, (e) => this.onSendQuickChatIntent(e));
-    this.eventBus.on(SendEmbargoIntentEvent, (e) =>
-      this.onSendEmbargoIntent(e),
-    );
-    this.eventBus.on(SendEmbargoAllIntentEvent, (e) =>
+    this.subscribe(SendQuickChatEvent, (e) => this.onSendQuickChatIntent(e));
+    this.subscribe(SendEmbargoIntentEvent, (e) => this.onSendEmbargoIntent(e));
+    this.subscribe(SendEmbargoAllIntentEvent, (e) =>
       this.onSendEmbargoAllIntent(e),
     );
-    this.eventBus.on(BuildUnitIntentEvent, (e) => this.onBuildUnitIntent(e));
+    this.subscribe(BuildUnitIntentEvent, (e) => this.onBuildUnitIntent(e));
 
-    this.eventBus.on(PauseGameIntentEvent, (e) => this.onPauseGameIntent(e));
-    this.eventBus.on(SendWinnerEvent, (e) => this.onSendWinnerEvent(e));
-    this.eventBus.on(SendLiveStatsEvent, (e) => this.onSendLiveStatsEvent(e));
-    this.eventBus.on(SendPlayerReportEvent, (e) =>
+    this.subscribe(PauseGameIntentEvent, (e) => this.onPauseGameIntent(e));
+    this.subscribe(SendWinnerEvent, (e) => this.onSendWinnerEvent(e));
+    this.subscribe(SendLiveStatsEvent, (e) => this.onSendLiveStatsEvent(e));
+    this.subscribe(SendPlayerReportEvent, (e) =>
       this.onSendPlayerReportEvent(e),
     );
-    this.eventBus.on(SendHashEvent, (e) => this.onSendHashEvent(e));
-    this.eventBus.on(CancelAttackIntentEvent, (e) =>
+    this.subscribe(SendHashEvent, (e) => this.onSendHashEvent(e));
+    this.subscribe(CancelAttackIntentEvent, (e) =>
       this.onCancelAttackIntentEvent(e),
     );
-    this.eventBus.on(CancelBoatIntentEvent, (e) =>
+    this.subscribe(CancelBoatIntentEvent, (e) =>
       this.onCancelBoatIntentEvent(e),
     );
 
-    this.eventBus.on(MoveWarshipIntentEvent, (e) => {
+    this.subscribe(MoveWarshipIntentEvent, (e) => {
       this.onMoveWarshipEvent(e);
     });
 
-    this.eventBus.on(SendDeleteUnitIntentEvent, (e) =>
+    this.subscribe(SendDeleteUnitIntentEvent, (e) =>
       this.onSendDeleteUnitIntent(e),
     );
 
-    this.eventBus.on(SendKickPlayerIntentEvent, (e) =>
+    this.subscribe(SendKickPlayerIntentEvent, (e) =>
       this.onSendKickPlayerIntent(e),
     );
 
-    this.eventBus.on(SendUpdateGameConfigIntentEvent, (e) =>
+    this.subscribe(SendUpdateGameConfigIntentEvent, (e) =>
       this.onSendUpdateGameConfigIntent(e),
     );
 
-    this.eventBus.on(SendToggleGameStartTimer, (e) =>
+    this.subscribe(SendToggleGameStartTimer, (e) =>
       this.onSendToggleGameStartTimer(e),
     );
-    this.eventBus.on(SendSpectateEvent, (e) => {
+    this.subscribe(SendSpectateEvent, (e) => {
       this.lobbyConfig.spectator = e.spectator;
       this.sendMsg({
         type: "spectate",
@@ -356,12 +361,21 @@ export class Transport {
     });
   }
 
+  private subscribe<T extends GameEvent>(
+    eventType: EventConstructor<T>,
+    handler: (event: T) => void,
+  ) {
+    this.eventBus.on(eventType, handler);
+    this.unsubscribers.push(() => this.eventBus.off(eventType, handler));
+  }
+
   private startPing() {
     if (this.isLocal) return;
     this.pingInterval ??= window.setInterval(() => {
       if (this.socket !== null && this.socket.readyState === WebSocket.OPEN) {
         this.sendMsg({
           type: "ping",
+          sentAt: Math.floor(performance.now()),
         } satisfies ClientPingMessage);
       }
     }, 5 * 1000);
@@ -424,15 +438,31 @@ export class Transport {
     // names the hosting deployment, so a shared lobby link or rejoin works
     // from any shell in the fleet. Own/legacy ids keep the historical
     // behavior (same-origin on web, serverHost on the desktop app).
-    const workerPath = ClientEnv.gameWorkerPath(this.lobbyConfig.gameID);
-    this.socket = new WebSocket(
+    // No server known at all (a static page whose list never loaded, and an
+    // id whose letter nothing in it carries) means there is no worker to
+    // dial. That is a connection that cannot be made, not a bug: route it
+    // into the same terminal dialog a refused socket produces rather than
+    // letting it escape as an unhandled exception from the join.
+    let workerPath: string;
+    try {
+      workerPath = ClientEnv.gameWorkerPath(this.lobbyConfig.gameID);
+    } catch (e) {
+      if (!(e instanceof NoServerError)) throw e;
+      console.warn("No server for game", this.lobbyConfig.gameID, e);
+      this.handleConnectionRefused(CloseReason.Unknown);
+      return;
+    }
+    const socket = new WebSocket(
       `${ClientEnv.gameWsBase(this.lobbyConfig.gameID)}/${workerPath}`,
     );
+    this.socket = socket;
+    let openedAt: number | null = null;
     // Every frame is a zbin payload; without this they would arrive as Blobs.
     this.socket.binaryType = "arraybuffer";
     this.onconnect = onconnect;
     this.onmessage = onmessage;
     this.socket.onopen = () => {
+      openedAt = Date.now();
       console.log("Connected to game server!");
       if (this.socket === null) {
         console.error("socket is null");
@@ -453,10 +483,24 @@ export class Transport {
           new Uint8Array(event.data as ArrayBuffer),
           this.zbinCtx ?? undefined,
         );
+        if (msg.type === "redirect") {
+          this.handlePoolRedirect(msg.gameID);
+          return;
+        }
         if (msg.type === "start") {
           // Seed the dictionary from the same players array, in the same
           // order, that the server seeded its own from.
           this.zbinCtx = createGameWireContext(msg.gameStartInfo.players);
+        }
+        if (msg.type === "lobby_info" || msg.type === "start") {
+          // Admitted, so the redirect that sent us here is spent: drop the
+          // source's latch so it can route this player again later. Any other
+          // frame proves nothing — a full sibling sends an error frame first.
+          const from = sessionStorage.getItem(POOL_REDIRECT_FROM);
+          if (from !== null) {
+            sessionStorage.removeItem(poolRedirectLatch(from));
+            sessionStorage.removeItem(POOL_REDIRECT_FROM);
+          }
         }
         this.isSessionReady = true;
         this.flushBuffer();
@@ -482,8 +526,7 @@ export class Transport {
         return;
       }
     };
-    this.socket.onerror = (err) => {
-      console.error("Socket encountered error: ", err, "Closing socket");
+    this.socket.onerror = () => {
       if (this.socket === null) {
         return;
       }
@@ -491,9 +534,15 @@ export class Transport {
     };
     this.socket.onclose = (event: CloseEvent) => {
       this.isSessionReady = false;
-      console.log(
-        `WebSocket closed. Code: ${event.code}, Reason: ${event.reason}`,
-      );
+      const detail = describeSocketClose(socket.url, event, openedAt);
+      if (event.code === CloseCode.Normal) {
+        console.log(`Game socket ${detail}`);
+      } else {
+        const next = isTerminalClose(event.code)
+          ? "not retrying"
+          : "reconnecting";
+        console.warn(`Game socket ${detail}; ${next}`);
+      }
       if (isTerminalClose(event.code)) {
         if (event.code === CloseCode.Normal) {
           // The server ended the session (game over, kick): nothing to say
@@ -506,9 +555,27 @@ export class Transport {
         }
         return;
       }
-      console.log(`received error code ${event.code}, reconnecting`);
       this.scheduleReconnect();
     };
+  }
+
+  // The lobby we asked for assigned us to a sibling. Getting here twice is
+  // ordinary — sent to a sibling, found it full, came back — so the latched
+  // branch falls through to the refusal dialog rather than leaving a dead
+  // loading screen, the way the WrongWorker recovery below does.
+  //
+  // The search string is dropped: it belongs to the lobby we asked for, not
+  // the one we land on.
+  private handlePoolRedirect(gameID: string) {
+    const from = this.lobbyConfig.gameID;
+    const latch = poolRedirectLatch(from);
+    if (sessionStorage.getItem(latch) !== null) {
+      this.handleConnectionRefused(CloseReason.PoolRedirect);
+      return;
+    }
+    sessionStorage.setItem(latch, "1");
+    sessionStorage.setItem(POOL_REDIRECT_FROM, from);
+    window.location.href = ClientEnv.gamePath(gameID);
   }
 
   private handleConnectionRefused(reason: string) {
@@ -528,7 +595,11 @@ export class Transport {
       const latch = `wrong-worker-redirect:${gameID}`;
       if (sessionStorage.getItem(latch) === null) {
         sessionStorage.setItem(latch, "1");
-        window.location.href = `${ClientEnv.gameHttpBase(gameID)}/game/${gameID}${window.location.search}`;
+        // gameNavigateBase, not gameHttpBase: this is a page load, and the
+        // HTTP base throws when no game server is known. A tab that got here
+        // has one (the worker answered), but a navigation must not depend on
+        // that — every page host serves `/game/<id>`.
+        window.location.href = `${ClientEnv.gameNavigateBase(gameID)}/game/${gameID}${window.location.search}`;
         return;
       }
     }
@@ -577,7 +648,7 @@ export class Transport {
       return;
     }
     if (this.reconnectAttempts >= Transport.RECONNECT_MAX_ATTEMPTS) {
-      console.error(
+      console.warn(
         `giving up after ${this.reconnectAttempts} reconnect attempts`,
       );
       this.connectionRefused = true;
@@ -624,6 +695,10 @@ export class Transport {
   }
 
   async joinGame() {
+    // Only the first join: the token is short-lived, and a later reconnect
+    // must not present one that has since expired.
+    const token = this.lobbyConfig.creatorToken ?? (await getPlayToken());
+    delete this.lobbyConfig.creatorToken;
     this.sendMsg({
       type: "join",
       gameID: this.lobbyConfig.gameID,
@@ -632,9 +707,10 @@ export class Transport {
       clanTag: this.lobbyConfig.playerClanTag ?? null,
       cosmetics: this.lobbyConfig.cosmetics,
       turnstileToken: this.lobbyConfig.turnstileToken,
-      token: await getPlayToken(),
+      token,
       spectator: this.lobbyConfig.spectator,
       gitCommit: ClientEnv.gitCommit(),
+      platform: clientPlatform(),
     } satisfies ClientJoinMessage);
   }
 
@@ -650,6 +726,9 @@ export class Transport {
   }
 
   leaveGame() {
+    for (const unsubscribe of this.unsubscribers.splice(0)) {
+      unsubscribe();
+    }
     if (this.isLocal) {
       this.localServer.endGame();
       return;
@@ -820,7 +899,6 @@ export class Transport {
         "WebSocket is not open. Current state:",
         this.socket?.readyState,
       );
-      console.log("attempting reconnect");
     }
   }
 
@@ -864,7 +942,6 @@ export class Transport {
         "WebSocket is not open. Current state:",
         this.socket?.readyState,
       );
-      console.log("attempting reconnect");
     }
   }
 

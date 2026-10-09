@@ -1,16 +1,16 @@
-import { NukeExecution } from "../../../src/core/execution/NukeExecution";
-import { SAMLauncherExecution } from "../../../src/core/execution/SAMLauncherExecution";
-import { SpawnExecution } from "../../../src/core/execution/SpawnExecution";
-import { UpgradeStructureExecution } from "../../../src/core/execution/UpgradeStructureExecution";
 import {
-  Game,
-  Player,
+  MessageType,
   PlayerInfo,
   PlayerType,
-  Unit,
   UnitType,
-} from "../../../src/core/game/Game";
-import { GameID } from "../../../src/core/Schemas";
+} from "@openfront/engine-api/game/GameTypes";
+import { GameID } from "@openfront/engine-api/Schemas";
+import { NukeType } from "@openfront/engine-api/StatsSchemas";
+import { NukeExecution } from "@openfront/engine/execution/NukeExecution";
+import { SAMLauncherExecution } from "@openfront/engine/execution/SAMLauncherExecution";
+import { SpawnExecution } from "@openfront/engine/execution/SpawnExecution";
+import { UpgradeStructureExecution } from "@openfront/engine/execution/UpgradeStructureExecution";
+import { Game, Player, Unit } from "@openfront/engine/game/Game";
 import { setup } from "../../util/Setup";
 import { TestConfig } from "../../util/TestConfig";
 import { constructionExecution, executeTicks } from "../../util/utils";
@@ -181,6 +181,34 @@ describe("SAM", () => {
     expect(attacker.units(UnitType.MIRVWarhead)).toHaveLength(0);
     expect(sam.isInCooldown()).toBeTruthy();
   });
+
+  const interceptedNukes: ReadonlyArray<readonly [NukeType, string]> = [
+    [UnitType.AtomBomb, "unit_type.atom_bomb"],
+    [UnitType.HydrogenBomb, "unit_type.hydrogen_bomb"],
+    [UnitType.MIRVWarhead, "unit_type.mirv"],
+  ];
+
+  test.each(interceptedNukes)(
+    "sends the translation key when intercepting a %s",
+    async (type, unit) => {
+      game.displayMessage = vi.fn();
+      const sam = defender.buildUnit(UnitType.SAMLauncher, game.ref(1, 1), {});
+      game.addExecution(new SAMLauncherExecution(defender, null, sam));
+      game.addExecution(
+        new NukeExecution(type, attacker, game.ref(3, 3), game.ref(60, 60)),
+      );
+
+      executeTicks(game, 40);
+
+      expect(game.displayMessage).toHaveBeenCalledWith(
+        "events_display.missile_intercepted",
+        MessageType.SAM_HIT,
+        defender.id(),
+        undefined,
+        { unit },
+      );
+    },
+  );
 
   test("sam should cooldown as long as configured", async () => {
     const sam = defender.buildUnit(UnitType.SAMLauncher, game.ref(1, 1), {});

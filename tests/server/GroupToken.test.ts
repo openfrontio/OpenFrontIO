@@ -1,6 +1,6 @@
+import type { ServerMessage } from "@openfront/shared/WireSchemas";
+import { createGameWireContext } from "@openfront/shared/ZbinWire";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { ServerMessage } from "../../src/core/Schemas";
-import { createGameWireContext } from "../../src/core/ZbinWire";
 import {
   cid,
   makeClient,
@@ -124,7 +124,7 @@ describe("GameServer group token", () => {
     startGame(game);
     const expected = tokensSentTo(mockWsOf(player))[0].groupToken;
 
-    const latecomer = makeClient({ clientID: cid("p2") });
+    const latecomer = makeClient({ clientID: cid("p2"), spectator: true });
     game.joinClient(latecomer);
 
     const ctx = createGameWireContext([{ clientID: cid("p1") }]);

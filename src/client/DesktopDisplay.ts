@@ -36,6 +36,9 @@ export interface DesktopDisplayPrefs {
   // null means "whichever display the OS calls primary", not "unset" -- the
   // shell treats never-chosen and explicitly-chose-primary as the same want.
   displayId: number | null;
+  // Page zoom factor. Absent on shells older than shell.api 5, which is what
+  // hides the UI scale control.
+  uiScale?: number;
 }
 
 export type DesktopDisplayPrefsPatch = Partial<DesktopDisplayPrefs>;
@@ -149,7 +152,26 @@ export function isDisplaySnapshot(
   if (typeof s.prefs !== "object" || s.prefs === null) return false;
   const prefs = s.prefs as Record<string, unknown>;
   if (prefs.mode !== "windowed" && prefs.mode !== "borderless") return false;
+  if (
+    prefs.uiScale !== undefined &&
+    (typeof prefs.uiScale !== "number" || !Number.isFinite(prefs.uiScale))
+  ) {
+    return false;
+  }
   return prefs.displayId === null || typeof prefs.displayId === "number";
+}
+
+// Mirrors UI_SCALE_STEPS in openfront-desktop's uiScaleKeys.ts, which the
+// zoom keys step through. Values outside UI_SCALE_MIN/MAX are refused.
+export const UI_SCALE_OPTIONS: readonly number[] = [
+  0.75, 0.9, 1, 1.1, 1.25, 1.5,
+];
+
+/** The picker's options, plus the stored value if it is not one of them. */
+export function uiScaleOptions(current: number): number[] {
+  return UI_SCALE_OPTIONS.includes(current)
+    ? [...UI_SCALE_OPTIONS]
+    : [...UI_SCALE_OPTIONS, current].sort((a, b) => a - b);
 }
 
 /**

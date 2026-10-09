@@ -1,11 +1,12 @@
 #!/bin/sh
 # generate-nginx-upstream.sh
 #
-# Generates the per-worker nginx config from CLUSTER_JSON at container start
-# (the cluster map arrives via the runtime env file and is not known when the
-# image is built, so it can't be baked into nginx.conf). The worker count is
-# this deployment's own cluster entry, found by host — SUBDOMAIN.DOMAIN, bare
-# DOMAIN when SUBDOMAIN is empty — the same self-match ServerEnv performs.
+# Generates the per-worker nginx config from NUM_WORKERS at container start
+# (the worker count arrives via the runtime env file, from the API registry,
+# and is not known when the image is built, so it can't be baked into
+# nginx.conf). The same value ServerEnv.numWorkers reads; a disagreement here
+# is not a fallback: too few upstreams and the workers nginx never lists get
+# no traffic, too many and it proxies to ports nothing listens on.
 # Emits two things, both in the http context, into a single conf.d file:
 #
 #   1. upstream openfront_workers  - random-balanced across the live workers, so
@@ -19,25 +20,15 @@ set -eu
 
 OUT="${1:-/etc/nginx/conf.d/00-workers.conf}"
 
-if [ -n "${CLUSTER_JSON:-}" ]; then
-    # Fail loudly on a malformed map or a host with no entry: the node server
-    # will refuse to boot on the same config, so a silent nginx fallback would
-    # only mask the real fault.
-    n=$(node -e '
-        const map = JSON.parse(process.env.CLUSTER_JSON);
-        const self = process.argv[1];
-        const entry = Object.values(map).find((e) => e.host === self);
-        if (!entry) {
-            console.error(`host ${self} has no entry in CLUSTER_JSON`);
-            process.exit(1);
-        }
-        console.log(entry.numWorkers);
-    ' "${SUBDOMAIN:+${SUBDOMAIN}.}${DOMAIN:-}")
-else
-    # No map at all (dev, manual runs): single worker, like the old
-    # NUM_WORKERS default.
-    n=1
-fi
+n="${NUM_WORKERS:-1}"
+# Fail loudly on a malformed count: the node server refuses to boot on the
+# same value, so a silent nginx fallback would only mask the real fault.
+case "$n" in
+    "" | *[!0-9]* | 0*)
+        echo "NUM_WORKERS must be a positive integer, got '${n}'" >&2
+        exit 1
+        ;;
+esac
 
 {
     echo 'upstream openfront_workers {'

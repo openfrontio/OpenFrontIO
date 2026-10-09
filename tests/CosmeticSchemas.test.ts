@@ -14,12 +14,12 @@ import {
   NukeExplosionAttributesSchema,
   SubscriptionSchema,
   TrailEffectAttributesSchema,
-} from "../src/core/CosmeticSchemas";
+} from "@openfront/shared/CosmeticSchemas";
 import {
   PlayerCosmeticRefsSchema,
   PlayerCosmeticsSchema,
   PlayerEffectSchema,
-} from "../src/core/Schemas";
+} from "@openfront/shared/WireSchemas";
 
 describe("Effect cosmetic schemas", () => {
   const base = {
@@ -1360,6 +1360,33 @@ describe("CosmeticsSchema tribeNames pricing", () => {
         flags: {},
         tribeNames: { priceHard: 200, boostDurationDays: 30 },
       }).success,
+    ).toBe(false);
+  });
+});
+
+describe("CosmeticsSchema lobbyQueue pricing", () => {
+  it("parses the lobbyQueue config block", () => {
+    const result = CosmeticsSchema.safeParse({
+      patterns: {},
+      flags: {},
+      lobbyQueue: { priceHard: 5 },
+    });
+    expect(result.success).toBe(true);
+    if (!result.success) return;
+    expect(result.data.lobbyQueue?.priceHard).toBe(5);
+  });
+
+  it("parses a cosmetics.json without lobbyQueue (older API)", () => {
+    const result = CosmeticsSchema.safeParse({ patterns: {}, flags: {} });
+    expect(result.success).toBe(true);
+    if (!result.success) return;
+    expect(result.data.lobbyQueue).toBeUndefined();
+  });
+
+  it("rejects a lobbyQueue block missing the price", () => {
+    expect(
+      CosmeticsSchema.safeParse({ patterns: {}, flags: {}, lobbyQueue: {} })
+        .success,
     ).toBe(false);
   });
 });

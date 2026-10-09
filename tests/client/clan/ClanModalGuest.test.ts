@@ -7,6 +7,7 @@ import {
   crazyGamesSdkMockFactory,
   flushAsync,
   getElState,
+  stubGameEnv,
   stubLocalStorage,
   utilsMockFactory,
   virtualizerMockFactory,
@@ -79,6 +80,7 @@ describe("ClanModal — signed out", () => {
   });
 
   it("lets a signed-out viewer deep-link to the map", async () => {
+    stubGameEnv("dev");
     // The router's sequence for `#modal=clan&tab=map`: showPage() opens the
     // inline modal without args, then the URL's args arrive.
     modal.open();
@@ -88,6 +90,19 @@ describe("ClanModal — signed out", () => {
     expect(modal.isOpen()).toBe(true);
     expect(getElState(modal, "activeTab")).toBe("map");
     expect(modal.querySelector("clan-map-view")).not.toBeNull();
+  });
+
+  it("shows Coming Soon instead of the map in prod", async () => {
+    stubGameEnv("prod");
+    modal.open({ tab: "map" });
+    await flushAsync(modal);
+
+    expect(getElState(modal, "activeTab")).toBe("map");
+    // The map hasn't shipped to prod: the iframe never mounts, and neither
+    // does the fullscreen button that targets it.
+    expect(modal.querySelector("clan-map-view")).toBeNull();
+    expect(modal.textContent).toContain("clan_modal.map_coming_soon");
+    expect(modal.querySelector('[data-testid="map-fullscreen"]')).toBeNull();
   });
 
   it("lets a signed-out viewer browse clans", async () => {
@@ -122,6 +137,7 @@ describe("ClanModal — map fullscreen button", () => {
     if (!customElements.get("clan-modal")) {
       customElements.define("clan-modal", ClanModal);
     }
+    stubGameEnv("dev");
     modal = document.createElement("clan-modal") as ClanModal;
     modal.setAttribute("inline", "");
     document.body.appendChild(modal);

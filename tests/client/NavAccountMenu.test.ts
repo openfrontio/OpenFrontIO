@@ -31,9 +31,9 @@ vi.mock("../../src/client/Utils", () => ({
   showToast,
 }));
 
+import type { UserMeResponse } from "@openfront/shared/ApiSchemas";
 import { NavAccountMenu } from "../../src/client/components/NavAccountMenu";
 import { updateAccountNavButton } from "../../src/client/NavAccountButton";
-import type { UserMeResponse } from "../../src/core/ApiSchemas";
 
 function userMe(subscribed = false, publicId = "p"): UserMeResponse {
   return {
@@ -67,6 +67,7 @@ describe("nav-account-menu", () => {
     el.remove();
     vi.clearAllMocks();
     isOnCrazyGames.mockReturnValue(false);
+    delete (window as { openfrontDesktop?: unknown }).openfrontDesktop;
     getUserProfile.mockResolvedValue(null);
     window.showPage = undefined;
   });
@@ -140,6 +141,16 @@ describe("nav-account-menu", () => {
     expect(itemKeys()).toContain("subscription");
   });
 
+  it("offers the subscription item to a past_due subscriber, to fix billing", async () => {
+    fireUserMe({
+      user: { email: "player@example.com" },
+      player: { publicId: "p", pastDueSubscription: { tier: "plutonium" } },
+    } as unknown as UserMeResponse);
+    await el.updateComplete;
+    await click(trigger());
+    expect(itemKeys()).toContain("subscription");
+  });
+
   it("copies the profile URL and toasts, and hides without a publicId", async () => {
     fireUserMe(userMe());
     await el.updateComplete;
@@ -172,6 +183,18 @@ describe("nav-account-menu", () => {
     // Their username/subscription management still needs reaching…
     expect(itemKeys()).toContain("change-username");
     // …but signing out happens on CrazyGames, not through /auth/logout.
+    expect(itemKeys()).not.toContain("log-out");
+  });
+
+  it("drops log-out on Steam, where the ticket signs the player back in", async () => {
+    (window as { openfrontDesktop?: unknown }).openfrontDesktop = {
+      steam: {},
+    };
+    fireUserMe(userMe());
+    await el.updateComplete;
+    await click(trigger());
+
+    expect(itemKeys()).toContain("account-settings");
     expect(itemKeys()).not.toContain("log-out");
   });
 

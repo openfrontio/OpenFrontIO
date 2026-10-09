@@ -7,10 +7,17 @@ import * as dotenv from "dotenv";
 import { GameManager } from "./GameManager";
 import { getOtelResource, getPromLabels } from "./OtelResource";
 import { ServerEnv } from "./ServerEnv";
+import { SingleplayerPresence } from "./SingleplayerPresence";
+import { winnerReplayMetrics } from "./WinnerReplay";
+import { WorkerLobbyService } from "./WorkerLobbyService";
 
 dotenv.config();
 
-export function initWorkerMetrics(gameManager: GameManager): void {
+export function initWorkerMetrics(
+  gameManager: GameManager,
+  lobbyService: WorkerLobbyService,
+  singleplayerPresence: SingleplayerPresence,
+): void {
   // Create resource with worker information
   const resource = getOtelResource();
 
@@ -56,6 +63,22 @@ export function initWorkerMetrics(gameManager: GameManager): void {
     },
   );
 
+  const lobbyClientsGauge = meter.createObservableGauge(
+    "openfront.lobby_clients.gauge",
+    {
+      description:
+        "Number of clients connected to the /lobbies WebSocket on this worker",
+    },
+  );
+
+  const singleplayerGamesGauge = meter.createObservableGauge(
+    "openfront.singleplayer_games.gauge",
+    {
+      description:
+        "Number of in-browser singleplayer games heartbeating to this worker",
+    },
+  );
+
   const desyncsGauge = meter.createObservableGauge("openfront.desyncs.gauge", {
     description: "Number of detected desyncs on active games on this worker",
   });
@@ -67,19 +90,89 @@ export function initWorkerMetrics(gameManager: GameManager): void {
     },
   );
 
+  const winnerReplayPendingGauge = meter.createObservableGauge(
+    "openfront.winner_replay.pending.gauge",
+    {
+      description:
+        "Winner replays waiting or running on this worker (disputed votes)",
+    },
+  );
+
+  const winnerReplayOutcomes = meter.createObservableCounter(
+    "openfront.winner_replay.outcomes",
+    {
+      description:
+        "Disputed winner votes settled by replay: agreed with the vote, overturned it, or failed (vote stood)",
+    },
+  );
+
+  const winnerReplayRuns = meter.createObservableCounter(
+    "openfront.winner_replay.runs",
+    { description: "Winner replay runs finished on this worker" },
+  );
+
+  const winnerReplaySeconds = meter.createObservableCounter(
+    "openfront.winner_replay.seconds",
+    {
+      description:
+        "Total run time of finished winner replays; divide by runs for the mean",
+      unit: "s",
+    },
+  );
+
   activeGamesGauge.addCallback((result) => {
     const count = gameManager.activeGames();
     result.observe(count, getPromLabels());
   });
 
   connectedClientsGauge.addCallback((result) => {
-    const count = gameManager.activeClients();
-    result.observe(count, getPromLabels());
+    const labels = getPromLabels();
+    for (const [platform, count] of gameManager.activeClientsByPlatform()) {
+      result.observe(count, { ...labels, "openfront.platform": platform });
+    }
+  });
+
+  lobbyClientsGauge.addCallback((result) => {
+    const labels = getPromLabels();
+    for (const [platform, count] of lobbyService.connectedClientsByPlatform()) {
+      result.observe(count, { ...labels, "openfront.platform": platform });
+    }
+  });
+
+  singleplayerGamesGauge.addCallback((result) => {
+    const labels = getPromLabels();
+    for (const [
+      platform,
+      count,
+    ] of singleplayerPresence.activeGamesByPlatform()) {
+      result.observe(count, { ...labels, "openfront.platform": platform });
+    }
   });
 
   desyncsGauge.addCallback((result) => {
     const count = gameManager.desyncCount();
     result.observe(count, getPromLabels());
+  });
+
+  winnerReplayPendingGauge.addCallback((result) => {
+    result.observe(winnerReplayMetrics.pending, getPromLabels());
+  });
+
+  winnerReplayOutcomes.addCallback((result) => {
+    const labels = getPromLabels();
+    for (const [outcome, count] of Object.entries(
+      winnerReplayMetrics.outcomes,
+    )) {
+      result.observe(count, { ...labels, "openfront.outcome": outcome });
+    }
+  });
+
+  winnerReplayRuns.addCallback((result) => {
+    result.observe(winnerReplayMetrics.runs, getPromLabels());
+  });
+
+  winnerReplaySeconds.addCallback((result) => {
+    result.observe(winnerReplayMetrics.seconds, getPromLabels());
   });
 
   memoryUsageGauge.addCallback((result) => {

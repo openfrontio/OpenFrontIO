@@ -1,40 +1,35 @@
-import { Config } from "src/core/configuration/Config";
-import { ClientEnv } from "../client/ClientEnv";
-import { reloadForUpdate, translateText } from "../client/Utils";
-import { EventBus } from "../core/EventBus";
-import {
-  ClientID,
-  GameID,
-  GameRecord,
-  GameStartInfo,
-  GroupTokenEvent,
-  LobbyInfoEvent,
-  PlayerCosmeticRefs,
-  ServerMessage,
-} from "../core/Schemas";
-import { findClosestBy, replacer } from "../core/Util";
+import { ClientID, GameID } from "@openfront/engine-api/Schemas";
+import { TileRef } from "@openfront/engine-api/game/GameMap";
 import {
   BuildableUnit,
   PlayerType,
   Structures,
   UnitType,
-} from "../core/game/Game";
-import { TileRef } from "../core/game/GameMap";
-import { GameMapLoader } from "../core/game/GameMapLoader";
+} from "@openfront/engine-api/game/GameTypes";
 import {
   ErrorUpdate,
   GameUpdateType,
   GameUpdateViewData,
   HashUpdate,
-} from "../core/game/GameUpdates";
-import { loadTerrainMap, TerrainMapData } from "../core/game/TerrainMapLoader";
+} from "@openfront/engine-api/game/GameUpdates";
+import { findClosestBy } from "@openfront/engine-lib/Util";
+import { Config } from "@openfront/engine-lib/configuration/Config";
+import { TerrainMapData } from "@openfront/engine-lib/game/TerrainMapLoader";
+import { EventBus } from "@openfront/shared/EventBus";
+import { GameMapLoader } from "@openfront/shared/GameMapLoader";
+import { replacer } from "@openfront/shared/SharedUtil";
 import {
-  GRAPHICS_KEY,
-  USER_SETTINGS_CHANGED_EVENT,
-  UserSettings,
-} from "../core/game/UserSettings";
-import { WorkerClient } from "../core/worker/WorkerClient";
+  GameRecord,
+  GroupTokenEvent,
+  LobbyInfoEvent,
+  PlayerCosmeticRefs,
+  ServerMessage,
+  WireGameStartInfo,
+} from "@openfront/shared/WireSchemas";
+import { ClientEnv } from "../client/ClientEnv";
+import { reloadForUpdate, translateText } from "../client/Utils";
 import { isDesktopShell } from "./DesktopShell";
+import { GameMetrics } from "./GameMetrics";
 import { showInGameAlert } from "./InGameModal";
 import {
   AutoUpgradeEvent,
@@ -43,14 +38,21 @@ import {
   DoGroundAttackEvent,
   DoRequestAllianceEvent,
   DoRetaliateAttackEvent,
+  DoTargetPlayerEvent,
   InputHandler,
   MouseMoveEvent,
   MouseUpEvent,
   TickMetricsEvent,
   ToggleRenderDebugGuiEvent,
 } from "./InputHandler";
+import { pagePin } from "./PagePin";
 import { groupTokenOf, loggableStartMessage } from "./PresenceGroup";
-import { terrainMapFileLoader } from "./TerrainMapFileLoader";
+import { versionedPathForMismatchedGame } from "./ServerList";
+import { reportGameError } from "./Telemetry";
+import {
+  loadCachedTerrainMap,
+  terrainMapFileLoader,
+} from "./TerrainMapFileLoader";
 import { GoToPlayerEvent } from "./TransformHandler";
 import {
   MoveWarshipIntentEvent,
@@ -62,11 +64,18 @@ import {
   SendBreakAllianceIntentEvent,
   SendHashEvent,
   SendSpawnIntentEvent,
+  SendTargetPlayerIntentEvent,
   SendUpgradeStructureIntentEvent,
   Transport,
 } from "./Transport";
+import {
+  GRAPHICS_KEY,
+  USER_SETTINGS_CHANGED_EVENT,
+  UserSettings,
+} from "./UserSettings";
 import { createCanvas } from "./Utils";
 import { WebGLFrameBuilder } from "./WebGLFrameBuilder";
+import { WorkerClient } from "./WorkerClient";
 import { MapLayerController } from "./controllers/MapLayerController";
 import { createRenderer, GameRenderer } from "./hud/GameRenderer";
 import { goldRateTracker } from "./hud/layers/lib/GoldRateTracker";
@@ -83,6 +92,7 @@ import {
   trackGLInit,
 } from "./render/gl";
 import { ALL_UNIT_TYPES, UnitState } from "./render/types";
+import { audioMixer, initAudioMixer } from "./sound/AudioMixer";
 import { SoundManager } from "./sound/SoundManager";
 import { themeProvider } from "./theme/ThemeProvider";
 import { GameView, PlayerView } from "./view";
@@ -98,11 +108,14 @@ export interface LobbyConfig {
   gameID: GameID;
   turnstileToken: string | null;
   // GameStartInfo only exists when playing a singleplayer game.
-  gameStartInfo?: GameStartInfo;
+  gameStartInfo?: WireGameStartInfo;
   // GameRecord exists when replaying an archived game.
   gameRecord?: GameRecord;
   // Watch without playing.
   spectator?: boolean;
+  // Host only: the play token the lobby was created under, used for the
+  // first join so the host joins as the creator (see createLobby).
+  creatorToken?: string;
 }
 
 export interface JoinLobbyResult {
@@ -162,8 +175,8 @@ export function joinLobby(
   let pendingPreloadKey: string | null = null;
   let pendingPreloadStreak = 0;
   const requestTerrainLoad = (
-    map: Parameters<typeof loadTerrainMap>[0],
-    mapSize: Parameters<typeof loadTerrainMap>[1],
+    map: Parameters<typeof loadCachedTerrainMap>[0],
+    mapSize: Parameters<typeof loadCachedTerrainMap>[1],
   ): Promise<TerrainMapData> => {
     const key = `${map}:${mapSize}`;
     const existing = terrainLoads.get(key);
@@ -171,12 +184,7 @@ export function joinLobby(
       terrainLoad = existing;
       return existing;
     }
-    const load = loadTerrainMap(
-      map,
-      mapSize,
-      terrainMapFileLoader,
-      false, // Layer images loaded off the critical path after game start.
-    );
+    const load = loadCachedTerrainMap(map, mapSize);
     terrainLoads.set(key, load);
     terrainLoad = load;
     void load.catch((e) => {
@@ -308,10 +316,10 @@ export function joinLobby(
         });
     }
     if (message.type === "error") {
-      if (message.error === "full-lobby") {
+      if (message.error === "full-lobby" || message.error === "game-started") {
         document.dispatchEvent(
           new CustomEvent("leave-lobby", {
-            detail: { lobby: lobbyConfig.gameID, cause: "full-lobby" },
+            detail: { lobby: lobbyConfig.gameID, cause: message.error },
             bubbles: true,
             composed: true,
           }),
@@ -357,18 +365,39 @@ export function joinLobby(
         );
         // The game's server runs a different build than this bundle. On the
         // desktop the shell updates its local overlay itself, so just say
-        // what's happening and let its update bar take it from there. On the
-        // web, fork on where the game lives: a cross-host game means OUR
-        // shell is simply a different deployment's — reloading would fetch
-        // the same wrong build, so navigate to the game's own host, whose
-        // shell serves the matching bundle (and map). An own-host game means
-        // this tab is stale (left open across a deploy): reload.
+        // what's happening and let its update bar take it from there.
+        //
+        // On the web, in order: this host's own `/v/<commit>/` page, which
+        // keeps the loaded document and the Turnstile token; else the
+        // game's host, whose shell serves the matching bundle (and map);
+        // else this tab is simply stale (left open across a deploy), so
+        // reload. See docs/MultiServer.md (OPE-471).
         if (isDesktopShell()) {
           void showInGameAlert(translateText("update_available.desktop"));
         } else {
+          const versioned = versionedPathForMismatchedGame(
+            lobbyConfig.gameID,
+            message.gitCommit,
+          );
           const r = ClientEnv.resolveGame(lobbyConfig.gameID);
-          if (r.kind === "cross") {
+          if (versioned !== null) {
+            window.location.href = versioned;
+          } else if (r.kind === "cross") {
             window.location.href = `https://${r.host}/game/${lobbyConfig.gameID}${window.location.search}`;
+          } else if (pagePin() !== null) {
+            // A pinned `/v/<commit>/` page must not reload. The pin comes
+            // from PagePin (captured at boot), not from the live pathname:
+            // updateJoinUrlForShare has already rewritten the address bar to
+            // the version-free share URL by the time any mismatch can
+            // arrive, and reading it here would take the branch below.
+            // reloadForUpdate
+            // strips the pin — right for an ordinary stale tab, fatal here:
+            // it lands on `latest`, whose handleUrl sees this same game on
+            // this same older server and pins the page straight back, one
+            // lap per click. Nothing this page can fetch is the build it
+            // needs (that is what a mismatch on a pinned page MEANS: the
+            // version's page is not being served), so say so and stop.
+            void showInGameAlert(translateText("update_available.message"));
           } else {
             showInGameAlert(translateText("update_available.message")).then(
               () => {
@@ -525,6 +554,7 @@ function mountWebGLFrameLoop(
   transformHandler: import("./TransformHandler").TransformHandler,
   gameView: GameView,
   eventBus: EventBus,
+  onFrame: (nowMs: number) => void,
 ): { builder: WebGLFrameBuilder; stopFrameLoop: () => void } {
   const gameMap = terrainMap.gameMap;
   const mapWidth = gameMap.width();
@@ -585,7 +615,8 @@ function mountWebGLFrameLoop(
   // renderer's captured frame callback (which draws). One RAF = one
   // synchronized camera-update + WebGL render.
   let rafId: number | null = null;
-  const driveFrame = (): void => {
+  const driveFrame = (nowMs: number): void => {
+    onFrame(nowMs);
     syncCamera();
     rafId = requestAnimationFrame(driveFrame);
   };
@@ -650,7 +681,6 @@ async function createClientGame(
   }
   const config = new Config(
     lobbyConfig.gameStartInfo.config,
-    userSettings,
     lobbyConfig.gameRecord !== undefined,
     lobbyConfig.gameStartInfo.listed,
     lobbyConfig.spectator === true,
@@ -660,11 +690,9 @@ async function createClientGame(
   if (terrainLoad) {
     gameMap = await terrainLoad;
   } else {
-    gameMap = await loadTerrainMap(
+    gameMap = await loadCachedTerrainMap(
       lobbyConfig.gameStartInfo.config.gameMap,
       lobbyConfig.gameStartInfo.config.gameMapSize,
-      mapLoader,
-      false, // Layer images loaded off the critical path after game start.
     );
   }
   // Kick off the font-atlas fetch so it overlaps with worker init; the
@@ -697,7 +725,12 @@ async function createClientGame(
   inputOverlay.style.touchAction = "none";
   document.body.appendChild(inputOverlay);
 
-  const soundManager = new SoundManager(eventBus, userSettings);
+  // Main.ts creates the mixer on page load; fall back for entry points that
+  // start a game without it (tests, embedded shells).
+  const soundManager = new SoundManager(
+    eventBus,
+    audioMixer() ?? initAudioMixer(userSettings),
+  );
   try {
     // Resolve render settings (defaults + user overrides) up front so the
     // renderer is built with the final values — no construct-with-defaults,
@@ -717,8 +750,6 @@ async function createClientGame(
 
     const graphicsListenerAbort = new AbortController();
 
-    view.setShowPatterns(userSettings.territoryPatterns());
-
     const mapLayerController = new MapLayerController(
       view,
       gameMap,
@@ -727,12 +758,6 @@ async function createClientGame(
       lobbyConfig.gameStartInfo.config.gameMapSize,
       mapLoader,
       graphicsListenerAbort.signal,
-    );
-
-    globalThis.addEventListener(
-      `${USER_SETTINGS_CHANGED_EVENT}:settings.territoryPatterns`,
-      (e) => view.setShowPatterns((e as CustomEvent<string>).detail === "true"),
-      { signal: graphicsListenerAbort.signal },
     );
 
     // Re-resolve names drawn on the map when the anonymous-names setting toggles
@@ -765,9 +790,23 @@ async function createClientGame(
     };
     // Re-apply render settings, then re-theme and recolor players, on a
     // graphics-override change (covers a theme switch such as colorblind mode).
+    // Flag opacity is a render setting, not visibility, so it's left out.
+    const cosmeticVisibilityKey = (): string =>
+      JSON.stringify({
+        ...userSettings.graphicsOverrides().cosmetics,
+        flagOpacity: undefined,
+      });
+    let cosmeticVisibility = cosmeticVisibilityKey();
     const onGraphicsChanged = (): void => {
       regenerateRenderSettings();
       refreshDerivedGraphics();
+      // Re-resolving every player's cosmetics is heavier than the rest, so
+      // only do it when the cosmetics visibility itself changed.
+      const nextCosmeticVisibility = cosmeticVisibilityKey();
+      if (nextCosmeticVisibility !== cosmeticVisibility) {
+        cosmeticVisibility = nextCosmeticVisibility;
+        webglBuilder.refreshCosmetics(gameView);
+      }
     };
     // No initial regenerate or terrain rebuild needed — the renderer was
     // constructed with the resolved settings above, so the terrain texture
@@ -817,6 +856,7 @@ async function createClientGame(
       mapLayerController,
     );
 
+    const metrics = new GameMetrics(lobbyConfig.gameID, clientID);
     const { builder: webglBuilder, stopFrameLoop } = mountWebGLFrameLoop(
       gameMap,
       view,
@@ -825,6 +865,7 @@ async function createClientGame(
       gameRenderer.transformHandler,
       gameView,
       eventBus,
+      (nowMs) => metrics.recordFrame(nowMs),
     );
 
     // Releases all WebGL/DOM resources this game created. Without it, stopping
@@ -859,6 +900,7 @@ async function createClientGame(
       webglBuilder,
       graphicsListenerAbort,
       disposeRenderer,
+      metrics,
     );
   } catch (err) {
     soundManager.dispose();
@@ -871,6 +913,10 @@ export class ClientGameRunner {
   private isActive = false;
 
   private turnsSeen = 0;
+  // True from a (re)join request until the server's start message answers it.
+  // Live turns that land in that window arrive ahead of turnsSeen and are
+  // dropped; the start message replays them, so dropping them is expected.
+  private awaitingStart = true;
   private lastMousePosition: { x: number; y: number } | null = null;
 
   private lastMessageTime: number = 0;
@@ -894,6 +940,7 @@ export class ClientGameRunner {
     private webglBuilder: WebGLFrameBuilder | null = null,
     private graphicsListenerAbort: AbortController | null = null,
     private disposeRenderer: (() => void) | null = null,
+    private metrics: GameMetrics | null = null,
   ) {
     this.lastMessageTime = Date.now();
   }
@@ -919,6 +966,7 @@ export class ClientGameRunner {
 
     this.isActive = true;
     this.lastMessageTime = Date.now();
+    this.metrics?.start();
     setTimeout(() => {
       this.connectionCheckInterval = setInterval(
         () => this.onConnectionCheck(),
@@ -949,6 +997,10 @@ export class ClientGameRunner {
       DoBreakAllianceEvent,
       this.doBreakAllianceUnderCursor.bind(this),
     );
+    this.eventBus.on(
+      DoTargetPlayerEvent,
+      this.doTargetPlayerUnderCursor.bind(this),
+    );
 
     this.renderer.initialize();
     this.input.initialize();
@@ -974,6 +1026,9 @@ export class ClientGameRunner {
       this.gameView.update(gu);
       this.webglBuilder?.update(this.gameView);
       this.renderer.tick();
+      if (gu.tickExecutionDuration !== undefined) {
+        this.metrics?.recordTickExecution(gu.tickExecutionDuration);
+      }
 
       // Emit tick metrics event for performance overlay
       this.eventBus.emit(
@@ -986,6 +1041,7 @@ export class ClientGameRunner {
 
     const onconnect = () => {
       console.log("Connected to game server!");
+      this.awaitingStart = true;
       this.transport.rejoinGame(this.turnsSeen);
     };
 
@@ -994,6 +1050,7 @@ export class ClientGameRunner {
       this.lastMessageTime = Date.now();
       if (message.type === "start") {
         console.log("starting game! in client game runner");
+        this.awaitingStart = false;
 
         if (this.gameView.config().isRandomSpawn()) {
           const goToPlayer = () => {
@@ -1016,7 +1073,7 @@ export class ClientGameRunner {
                 this.clientID,
                 true,
                 false,
-                translateText("error_modal.spawn_failed.title"),
+                "error_modal.spawn_failed.title",
               );
               return;
             }
@@ -1067,6 +1124,11 @@ export class ClientGameRunner {
           "error_modal.connection_error",
         );
       }
+      if (message.type === "pong") {
+        this.metrics?.recordRoundTrip(
+          Math.floor(performance.now()) - message.sentAt,
+        );
+      }
       if (message.type === "new_lobby") {
         // The host reused this private lobby: surface the successor id so the
         // group can hop over. NewLobbyPrompt navigates the host and prompts
@@ -1089,11 +1151,17 @@ export class ClientGameRunner {
         if (this.lastTickReceiveTime > 0) {
           // Calculate delay between receiving turn messages
           this.currentTickDelay = now - this.lastTickReceiveTime;
+          // Only the wire is worth measuring; a local game paces itself.
+          if (!this.transport.isLocal) {
+            this.metrics?.recordTickInterval(this.currentTickDelay);
+          }
         }
         this.lastTickReceiveTime = now;
 
         if (this.turnsSeen !== message.turn.turnNumber) {
-          console.error(
+          // Expected while the start message is still on its way (every
+          // multiplayer game start hits this); an error once it has arrived.
+          (this.awaitingStart ? console.debug : console.error)(
             `got wrong turn have turns ${this.turnsSeen}, received turn ${message.turn.turnNumber}`,
           );
         } else {
@@ -1121,10 +1189,18 @@ export class ClientGameRunner {
   public stop() {
     this.soundManager.dispose();
     this.graphicsListenerAbort?.abort();
+    // Detach the input handler's window/canvas listeners and its EventBus
+    // subscription. Nothing else ever did, and the bus is created once per
+    // page, so a handler from a finished game kept translating keys into
+    // events that the next game receives, and joining another game without a
+    // page reload stacked a second live handler on top. Idempotent, like the
+    // disposals around it.
+    this.input.destroy();
     this.disposeRenderer?.();
     if (!this.isActive) return;
 
     this.isActive = false;
+    this.metrics?.stop();
     this.worker.cleanup();
     this.transport.leaveGame();
     if (this.connectionCheckInterval) {
@@ -1168,18 +1244,23 @@ export class ClientGameRunner {
       if (myPlayer === null) return;
       this.myPlayer = myPlayer;
     }
-    this.myPlayer.actions(tile, [UnitType.TransportShip]).then((actions) => {
-      if (actions.canAttack) {
-        this.eventBus.emit(
-          new SendAttackIntentEvent(
-            this.gameView.owner(tile).id(),
-            this.myPlayer!.troops() * this.renderer.uiState.attackRatio,
-          ),
-        );
-      } else if (this.canAutoBoat(actions.buildableUnits, tile)) {
-        this.sendBoatAttackIntent(tile);
-      }
-    });
+    this.myPlayer
+      .actions(tile, [UnitType.TransportShip])
+      .then((actions) => {
+        if (actions.canAttack) {
+          this.eventBus.emit(
+            new SendAttackIntentEvent(
+              this.gameView.owner(tile).id(),
+              this.myPlayer!.troops() * this.renderer.uiState.attackRatio,
+            ),
+          );
+        } else if (this.canAutoBoat(actions.buildableUnits, tile)) {
+          this.sendBoatAttackIntent(tile);
+        }
+      })
+      .catch((error) => {
+        console.warn("Failed to check boat attack actions:", error);
+      });
   }
 
   private autoUpgradeEvent(event: AutoUpgradeEvent) {
@@ -1212,84 +1293,88 @@ export class ClientGameRunner {
   }
 
   private findAndUpgradeNearestBuilding(clickedTile: TileRef) {
-    this.myPlayer!.actions(clickedTile, Structures.types).then((actions) => {
-      const upgradeUnits: {
-        unitId: number;
-        unitType: UnitType;
-        distance: number;
-      }[] = [];
+    this.myPlayer!.actions(clickedTile, Structures.types)
+      .then((actions) => {
+        const upgradeUnits: {
+          unitId: number;
+          unitType: UnitType;
+          distance: number;
+        }[] = [];
 
-      for (const bu of actions.buildableUnits) {
-        if (bu.canUpgrade !== false) {
-          const existingUnit = this.gameView
-            .units()
-            .find((unit) => unit.id() === bu.canUpgrade);
-          if (existingUnit) {
-            const distance = this.gameView.manhattanDist(
-              clickedTile,
-              existingUnit.tile(),
-            );
+        for (const bu of actions.buildableUnits) {
+          if (bu.canUpgrade !== false) {
+            const existingUnit = this.gameView
+              .units()
+              .find((unit) => unit.id() === bu.canUpgrade);
+            if (existingUnit) {
+              const distance = this.gameView.manhattanDist(
+                clickedTile,
+                existingUnit.tile(),
+              );
 
-            upgradeUnits.push({
-              unitId: bu.canUpgrade,
-              unitType: bu.type,
-              distance: distance,
-            });
-          }
-        }
-      }
-
-      if (upgradeUnits.length === 0) {
-        return;
-      }
-
-      // Upgrade the closest affordable building. But if there's an unaffordable
-      // building (any type) that's closer to clickedTile than the best candidate,
-      // do nothing — the player clicked on that unaffordable building intending
-      // to upgrade it, and we must not spend their gold on a different building.
-      const bestUpgrade = findClosestBy(upgradeUnits, (u) => u.distance);
-      if (!bestUpgrade) {
-        return;
-      }
-
-      // Check if any unaffordable building is closer than bestUpgrade
-      for (const bu of actions.buildableUnits) {
-        if (bu.canUpgrade === false && bu.type !== bestUpgrade.unitType) {
-          const myPlayerID = this.myPlayer!.id();
-          const closestOfType = this.gameView
-            .nearbyUnits(
-              clickedTile,
-              this.gameView.config().structureMinDist(),
-              bu.type,
-            )
-            .filter(({ unit }) => unit.owner().id() === myPlayerID)
-            .sort((a, b) => a.distSquared - b.distSquared)[0];
-
-          if (closestOfType) {
-            const dist = this.gameView.manhattanDist(
-              clickedTile,
-              closestOfType.unit.tile(),
-            );
-            if (dist <= bestUpgrade.distance) {
-              // An unaffordable building of type bu.type is at least as close
-              // as bestUpgrade — player clicked on it, not on bestUpgrade.
-              return;
+              upgradeUnits.push({
+                unitId: bu.canUpgrade,
+                unitType: bu.type,
+                distance: distance,
+              });
             }
           }
         }
-      }
 
-      this.eventBus.emit(
-        new SendUpgradeStructureIntentEvent(
-          bestUpgrade.unitId,
-          bestUpgrade.unitType,
-        ),
-      );
-    });
+        if (upgradeUnits.length === 0) {
+          return;
+        }
+
+        // Upgrade the closest affordable building. But if there's an unaffordable
+        // building (any type) that's closer to clickedTile than the best candidate,
+        // do nothing — the player clicked on that unaffordable building intending
+        // to upgrade it, and we must not spend their gold on a different building.
+        const bestUpgrade = findClosestBy(upgradeUnits, (u) => u.distance);
+        if (!bestUpgrade) {
+          return;
+        }
+
+        // Check if any unaffordable building is closer than bestUpgrade
+        for (const bu of actions.buildableUnits) {
+          if (bu.canUpgrade === false && bu.type !== bestUpgrade.unitType) {
+            const myPlayerID = this.myPlayer!.id();
+            const closestOfType = this.gameView
+              .nearbyUnits(
+                clickedTile,
+                this.gameView.config().structureMinDist(),
+                bu.type,
+              )
+              .filter(({ unit }) => unit.owner().id() === myPlayerID)
+              .sort((a, b) => a.distSquared - b.distSquared)[0];
+
+            if (closestOfType) {
+              const dist = this.gameView.manhattanDist(
+                clickedTile,
+                closestOfType.unit.tile(),
+              );
+              if (dist <= bestUpgrade.distance) {
+                // An unaffordable building of type bu.type is at least as close
+                // as bestUpgrade — player clicked on it, not on bestUpgrade.
+                return;
+              }
+            }
+          }
+        }
+
+        this.eventBus.emit(
+          new SendUpgradeStructureIntentEvent(
+            bestUpgrade.unitId,
+            bestUpgrade.unitType,
+          ),
+        );
+      })
+      .catch((error) => {
+        console.warn("Failed to check structure upgrade actions:", error);
+      });
   }
 
-  private doBoatAttackUnderCursor(): void {
-    const tile = this.getTileUnderCursor();
+  private doBoatAttackUnderCursor(e: DoBoatAttackEvent): void {
+    const tile = this.actionTile(e.tile);
     if (tile === null) {
       return;
     }
@@ -1311,6 +1396,9 @@ export class ClientGameRunner {
             "Boat attack triggered but can't send Transport Ship to tile",
           );
         }
+      })
+      .catch((error) => {
+        console.warn("Failed to check boat attack actions:", error);
       });
   }
 
@@ -1327,16 +1415,21 @@ export class ClientGameRunner {
       this.myPlayer = myPlayer;
     }
 
-    this.myPlayer.actions(tile, null).then((actions) => {
-      if (actions.canAttack) {
-        this.eventBus.emit(
-          new SendAttackIntentEvent(
-            this.gameView.owner(tile).id(),
-            this.myPlayer!.troops() * this.renderer.uiState.attackRatio,
-          ),
-        );
-      }
-    });
+    this.myPlayer
+      .actions(tile, null)
+      .then((actions) => {
+        if (actions.canAttack) {
+          this.eventBus.emit(
+            new SendAttackIntentEvent(
+              this.gameView.owner(tile).id(),
+              this.myPlayer!.troops() * this.renderer.uiState.attackRatio,
+            ),
+          );
+        }
+      })
+      .catch((error) => {
+        console.warn("Failed to check ground attack actions:", error);
+      });
   }
 
   private doRetaliateAttackMostRecent(): void {
@@ -1374,8 +1467,8 @@ export class ClientGameRunner {
     this.eventBus.emit(new SendAttackIntentEvent(attacker.id(), counterTroops));
   }
 
-  private doRequestAllianceUnderCursor(): void {
-    const tile = this.getTileUnderCursor();
+  private doRequestAllianceUnderCursor(e: DoRequestAllianceEvent): void {
+    const tile = this.actionTile(e.tile);
     if (tile === null) return;
 
     if (this.myPlayer === null) {
@@ -1389,21 +1482,27 @@ export class ClientGameRunner {
 
     const tileOwner = this.gameView.owner(tile);
     if (!tileOwner.isPlayer()) return;
+    if (e.playerID !== undefined && tileOwner.id() !== e.playerID) return;
     const recipient = tileOwner as PlayerView;
 
-    myPlayer.actions(tile).then((actions) => {
-      if (actions.interaction?.canSendAllianceRequest) {
-        this.eventBus.emit(
-          new SendAllianceRequestIntentEvent(myPlayer, recipient),
-        );
-      } else if (actions.interaction?.allianceInfo?.canExtend) {
-        this.eventBus.emit(new SendAllianceExtensionIntentEvent(recipient));
-      }
-    });
+    myPlayer
+      .actions(tile)
+      .then((actions) => {
+        if (actions.interaction?.canSendAllianceRequest) {
+          this.eventBus.emit(
+            new SendAllianceRequestIntentEvent(myPlayer, recipient),
+          );
+        } else if (actions.interaction?.allianceInfo?.canExtend) {
+          this.eventBus.emit(new SendAllianceExtensionIntentEvent(recipient));
+        }
+      })
+      .catch((error) => {
+        console.warn("Failed to check alliance actions:", error);
+      });
   }
 
-  private doBreakAllianceUnderCursor(): void {
-    const tile = this.getTileUnderCursor();
+  private doBreakAllianceUnderCursor(e: DoBreakAllianceEvent): void {
+    const tile = this.actionTile(e.tile);
     if (tile === null) return;
 
     if (this.myPlayer === null) {
@@ -1417,15 +1516,57 @@ export class ClientGameRunner {
 
     const tileOwner = this.gameView.owner(tile);
     if (!tileOwner.isPlayer()) return;
+    if (e.playerID !== undefined && tileOwner.id() !== e.playerID) return;
     const recipient = tileOwner as PlayerView;
 
-    myPlayer.actions(tile).then((actions) => {
-      if (actions.interaction?.canBreakAlliance) {
-        this.eventBus.emit(
-          new SendBreakAllianceIntentEvent(myPlayer, recipient),
-        );
-      }
-    });
+    myPlayer
+      .actions(tile)
+      .then((actions) => {
+        if (actions.interaction?.canBreakAlliance) {
+          this.eventBus.emit(
+            new SendBreakAllianceIntentEvent(myPlayer, recipient),
+          );
+        }
+      })
+      .catch((error) => {
+        console.warn("Failed to check alliance actions:", error);
+      });
+  }
+
+  private doTargetPlayerUnderCursor(e: DoTargetPlayerEvent): void {
+    const tile = this.actionTile(e.tile);
+    if (tile === null) return;
+
+    if (this.myPlayer === null) {
+      if (!this.clientID) return;
+      const myPlayer = this.gameView.playerByClientID(this.clientID);
+      if (myPlayer === null) return;
+      this.myPlayer = myPlayer;
+    }
+
+    const tileOwner = this.gameView.owner(tile);
+    if (!tileOwner.isPlayer()) return;
+    if (e.playerID !== undefined && tileOwner.id() !== e.playerID) return;
+    const target = tileOwner as PlayerView;
+
+    this.myPlayer
+      .actions(tile)
+      .then((actions) => {
+        if (actions.interaction?.canTarget) {
+          this.eventBus.emit(new SendTargetPlayerIntentEvent(target.id()));
+        }
+      })
+      .catch((error) => {
+        console.warn("Failed to check target actions:", error);
+      });
+  }
+
+  // The tile a player action event names (a panel button), or else the one
+  // under the cursor (a keybind).
+  private actionTile(tile: TileRef | undefined): TileRef | null {
+    if (tile === undefined) return this.getTileUnderCursor();
+    if (!this.isActive || this.gameView.inSpawnPhase()) return null;
+    return tile;
   }
 
   private getTileUnderCursor(): TileRef | null {
@@ -1509,6 +1650,8 @@ function showErrorModal(
   if (document.querySelector("#error-modal")) {
     return;
   }
+
+  reportGameError(error, message, gameID, clientID, heading);
 
   const translatedError = translateText(error);
   const displayError = translatedError === error ? error : translatedError;

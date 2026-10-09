@@ -1,14 +1,14 @@
-import { base64url } from "jose";
-import { html, LitElement, nothing, PropertyValues } from "lit";
-import { customElement, property, state } from "lit/decorators.js";
 import {
   Effect,
   isNukeExplosionEffect,
   NukeExplosionAttributes,
   Pattern,
   Skin,
-} from "../../../core/CosmeticSchemas";
-import { decodePatternData } from "../../../core/PatternDecoder";
+} from "@openfront/shared/CosmeticSchemas";
+import { decodePatternData } from "@openfront/shared/PatternDecoder";
+import { base64url } from "jose";
+import { html, LitElement, nothing, PropertyValues } from "lit";
+import { customElement, property, state } from "lit/decorators.js";
 import { ResolvedCosmetic } from "../../Cosmetics";
 import {
   CosmeticPreviewConfig,
@@ -76,7 +76,7 @@ export class CosmeticRenderCanvas extends LitElement {
       this.applyCosmetic();
       this.startLoop();
     } catch (e) {
-      console.error("Failed to init cosmetic preview renderer:", e);
+      console.warn("Failed to init cosmetic preview renderer:", e);
       this.hasError = true;
     }
   }

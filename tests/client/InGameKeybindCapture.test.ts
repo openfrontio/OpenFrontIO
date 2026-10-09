@@ -1,12 +1,13 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { EventBus } from "@openfront/shared/EventBus";
+import "../../src/client/components/baseComponents/setting/SettingKeybind";
 import {
   AlternateViewEvent,
   InputHandler,
 } from "../../src/client/InputHandler";
+import { KEYBINDS_KEY, UserSettings } from "../../src/client/UserSettings";
 import type { GameView } from "../../src/client/view";
-import { EventBus } from "../../src/core/EventBus";
-import { KEYBINDS_KEY, UserSettings } from "../../src/core/game/UserSettings";
 
 // The settings modal is reachable in-game now, so the keybind editor captures
 // key presses over a live game. SettingKeybind calls preventDefault() but not
@@ -112,5 +113,28 @@ describe("keybind capture over a live game", () => {
 
     press(other, "KeyV");
     expect(alternateViewEvents()).toEqual([]);
+  });
+
+  it("cancels keybind listening on Escape without bubbling to window", async () => {
+    const keybind = document.createElement("setting-keybind") as HTMLElement & {
+      updateComplete: Promise<unknown>;
+    };
+    document.body.appendChild(keybind);
+    await keybind.updateComplete;
+    const button = keybind.querySelector<HTMLElement>('[role="button"]')!;
+    button.click();
+    await keybind.updateComplete;
+
+    let escaped = false;
+    const onEscape = () => (escaped = true);
+    window.addEventListener("keydown", onEscape);
+    button.dispatchEvent(
+      new KeyboardEvent("keydown", { key: "Escape", bubbles: true }),
+    );
+    await keybind.updateComplete;
+    window.removeEventListener("keydown", onEscape);
+
+    expect(escaped).toBe(false);
+    expect(button.textContent?.trim()).not.toBe("...");
   });
 });

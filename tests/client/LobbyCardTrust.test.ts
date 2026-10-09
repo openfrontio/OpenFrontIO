@@ -1,8 +1,9 @@
+import { GameMapType, GameMode } from "@openfront/engine-api/game/GameTypes";
+import type { GameConfig } from "@openfront/engine-api/Schemas";
+import type { UserMeResponse } from "@openfront/shared/ApiSchemas";
+import type { PublicGameInfo } from "@openfront/shared/WireSchemas";
 import { render } from "lit";
 import { describe, expect, it, vi } from "vitest";
-import type { UserMeResponse } from "../../src/core/ApiSchemas";
-import { GameMapType, GameMode } from "../../src/core/game/Game";
-import type { GameConfig, PublicGameInfo } from "../../src/core/Schemas";
 
 vi.mock("../../src/client/TerrainMapFileLoader", () => ({
   terrainMapFileLoader: {
@@ -16,6 +17,11 @@ vi.mock("../../src/client/Utils", () => ({
   translateText: vi.fn((key: string) => key),
   getMapName: vi.fn((m: string | undefined) => m ?? null),
   getModifierLabels: vi.fn(() => []),
+}));
+
+const isOnCrazyGames = vi.fn(() => false);
+vi.mock("../../src/client/CrazyGamesSDK", () => ({
+  crazyGamesSDK: { isOnCrazyGames: () => isOnCrazyGames() },
 }));
 
 import {
@@ -69,14 +75,25 @@ describe("lobbyCard trust lock", () => {
     const icon = trustIcon(renderCard(lobby(true), false));
     expect(icon?.dataset.trust).toBe("locked");
     expect(icon?.classList.contains("text-red-400")).toBe(true);
-    expect(icon?.getAttribute("title")).toBe("public_lobby.trusted_locked");
+    expect(icon?.getAttribute("aria-label")).toBe(
+      "public_lobby.trusted_locked",
+    );
+    const tooltip = icon?.querySelector("[role=tooltip]");
+    expect(tooltip?.textContent).toContain(
+      "public_lobby.trusted_tooltip_title",
+    );
+    expect(tooltip?.textContent).toContain("public_lobby.trusted_locked");
   });
 
   it("shows an open lock when the viewer is trusted", () => {
     const icon = trustIcon(renderCard(lobby(true), true));
     expect(icon?.dataset.trust).toBe("unlocked");
     expect(icon?.classList.contains("text-green-400")).toBe(true);
-    expect(icon?.getAttribute("title")).toBe("public_lobby.trusted_unlocked");
+    const tooltip = icon?.querySelector("[role=tooltip]");
+    expect(tooltip?.textContent).toContain(
+      "public_lobby.trusted_tooltip_title",
+    );
+    expect(tooltip?.textContent).toContain("public_lobby.trusted_unlocked");
   });
 });
 
@@ -112,6 +129,18 @@ describe("trustRequiredDialog", () => {
 
   it("tells a signed-out viewer to sign in first", () => {
     expect(message(false)).toBe("public_lobby.trust_required_body_signed_out");
+  });
+
+  it("never suggests a purchase on CrazyGames, where there is no IAP", () => {
+    isOnCrazyGames.mockReturnValue(true);
+    try {
+      expect(message(true)).toBe("public_lobby.trust_required_body_crazygames");
+      expect(message(false)).toBe(
+        "public_lobby.trust_required_body_signed_out_crazygames",
+      );
+    } finally {
+      isOnCrazyGames.mockReturnValue(false);
+    }
   });
 });
 

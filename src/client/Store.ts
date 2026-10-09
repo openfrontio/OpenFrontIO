@@ -1,8 +1,15 @@
+import {
+  isGrantedSubscription,
+  UserMeResponse,
+} from "@openfront/shared/ApiSchemas";
+import {
+  CosmeticPack,
+  Cosmetics,
+  Product,
+} from "@openfront/shared/CosmeticSchemas";
 import type { PropertyValues, TemplateResult } from "lit";
 import { html } from "lit";
 import { customElement, state } from "lit/decorators.js";
-import { UserMeResponse } from "../core/ApiSchemas";
-import { CosmeticPack, Cosmetics, Product } from "../core/CosmeticSchemas";
 import { BaseModal } from "./components/BaseModal";
 import "./components/CosmeticCard";
 import { cosmeticSelectionLabel } from "./components/CosmeticPresentation";
@@ -14,6 +21,7 @@ import "./components/EffectsGrid";
 import type { InlineCheckout } from "./components/InlineCheckout";
 import "./components/NotLoggedInWarning";
 import "./components/PackContentsDialog";
+import { ProgressiveList } from "./components/ProgressiveList";
 import "./components/PurchaseButton";
 import { alignPurchaseRows } from "./components/PurchaseButton";
 import "./components/TribesPanel";
@@ -27,10 +35,12 @@ import {
   resolveCosmetics,
   ResolvedCosmetic,
 } from "./Cosmetics";
+import { matchesStoreItem } from "./EquippedCosmetics";
 import {
   priceStringToCents,
   reportPendingSteamAuthorizations,
 } from "./Payments";
+import { lastUserMeResponse } from "./UserMeBroadcast";
 import { translateText } from "./Utils";
 
 type StoreTab =
@@ -43,6 +53,13 @@ type StoreTab =
 
 const COSMETICS_SUB_TABS = ["patterns", "flags", "crowns"] as const;
 type CosmeticsSubTab = (typeof COSMETICS_SUB_TABS)[number];
+
+/** Sub-tab holding the catalog item a store deep link points at. */
+export function subTabForItem(itemKey: string): CosmeticsSubTab {
+  if (itemKey.startsWith("crown:")) return "crowns";
+  if (itemKey.startsWith("flag:")) return "flags";
+  return "patterns";
+}
 
 interface StoreBrowserOptions {
   emptyTranslationKey: string;
@@ -69,11 +86,15 @@ export class StoreModal extends BaseModal {
   // not wait on a slow catalog before it may say so.
   @state() private authSettled = false;
   private cosmeticsSubTab: CosmeticsSubTab = "patterns";
+  // Item the URL asked for (`#modal=store&item=<key>`). Held until its group
+  // is visible, then inspected so the store opens on that item.
+  private requestedItem: string | null = null;
   private inspected: ResolvedCosmetic | null = null;
   private previewingCosmetic: ResolvedCosmetic | null = null;
   private visibleGroups: readonly (readonly ResolvedCosmetic[])[] = [];
   /** The bundle whose contents dialog is open, if any. */
   private openedPack: ResolvedCosmetic | null = null;
+  private readonly pages = new ProgressiveList(this);
 
   protected modalConfig() {
     if (this.affiliateCode) {
@@ -95,6 +116,9 @@ export class StoreModal extends BaseModal {
   connectedCallback() {
     super.connectedCallback();
     document.addEventListener("userMeResponse", this.onUserMeEvent);
+    // The store loads on demand, usually after Main's broadcast went out.
+    const last = lastUserMeResponse();
+    if (last !== null) void this.onUserMe(last.response);
     this.addEventListener("open-cosmetic-preview", this.onOpenCosmeticPreview);
     // Rows re-wrap on resize, so which currencies share a row changes with it.
     if (typeof ResizeObserver !== "undefined") {
@@ -280,6 +304,16 @@ export class StoreModal extends BaseModal {
     groups: readonly (readonly ResolvedCosmetic[])[],
   ): void {
     const visible = groups.flat();
+    const wanted = this.requestedItem;
+    if (wanted !== null) {
+      const match = visible.find((item) => matchesStoreItem(item.key, wanted));
+      // The catalog loads after open, so keep the request until its item shows.
+      if (match !== undefined) {
+        this.requestedItem = null;
+        this.inspected = match;
+        return;
+      }
+    }
     const current = visible.find((item) => item.key === this.inspected?.key);
     this.inspected = current ?? groups[0]?.[0] ?? null;
   }
@@ -459,6 +493,11 @@ export class StoreModal extends BaseModal {
     groups: readonly (readonly ResolvedCosmetic[])[],
     options: StoreBrowserOptions,
   ): TemplateResult {
+    const page = this.pages.page(
+      "store-grid",
+      `${this.affiliateCode ?? ""}:${this.activeTab}:${this.cosmeticsSubTab}`,
+      groups,
+    );
     const cards =
       groups.length === 0
         ? options.trailingContent
@@ -469,12 +508,12 @@ export class StoreModal extends BaseModal {
               ${translateText(options.emptyTranslationKey)}
             </div>`
         : this.renderCosmeticCards(
-            groups,
+            page.items,
             options.userHasSubscription,
             options.cardClass,
           );
     return this.renderBrowserLayout(
-      html`${cards}${options.trailingContent ?? ""}`,
+      html`${cards}${page.more}${options.trailingContent ?? ""}`,
       options.gridClass,
     );
   }
@@ -564,9 +603,15 @@ export class StoreModal extends BaseModal {
   }
 
   private renderSubscriptionGrid(): TemplateResult {
-    const userHasSubscription =
-      this.userMeResponse !== false &&
-      this.userMeResponse.player.subscription !== null;
+    // Drives the "Switch" label on the other tiers' buy buttons. A granted
+    // player is deliberately NOT counted (OPE-440): they have nothing to
+    // switch from — nobody is billing them — so every tier, theirs included,
+    // is a first purchase and reads as a plain price.
+    const sub =
+      this.userMeResponse === false
+        ? null
+        : this.userMeResponse.player.subscription;
+    const userHasSubscription = sub !== null && !isGrantedSubscription(sub);
     return this.renderBrowser(this.visibleGroups, {
       emptyTranslationKey: "store.no_subscriptions",
       userHasSubscription,
@@ -637,6 +682,10 @@ export class StoreModal extends BaseModal {
     const affiliate =
       typeof args?.affiliateCode === "string" ? args.affiliateCode : null;
     this.affiliateCode = affiliate;
+    this.requestedItem = typeof args?.item === "string" ? args.item : null;
+    if (this.requestedItem !== null) {
+      this.cosmeticsSubTab = subTabForItem(this.requestedItem);
+    }
     this.cosmetics ??= await fetchCosmetics();
     this.selectVisible(this.groupsForTab(this.activeTab));
     await this.refresh();
@@ -654,6 +703,8 @@ export class StoreModal extends BaseModal {
     this.affiliateCode = null;
     this.openedPack = null;
     this.previewingCosmetic = null;
+    this.pages.reset();
+    this.requestedItem = null;
     this.selectVisible(this.groupsForTab(this.activeTab));
   }
 

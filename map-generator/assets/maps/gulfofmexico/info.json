@@ -1,0 +1,447 @@
+{
+  "id": "GulfOfMexico",
+  "name": "Gulf Of Mexico",
+  "translation_key": "map.gulfofmexico",
+  "categories": ["north_america"],
+  "multiplayer_frequency": 5,
+  "nations": [
+    {
+      "coordinates": [2639, 1752],
+      "name": "Jamaica",
+      "flag": "jm"
+    },
+    {
+      "coordinates": [2052, 1134],
+      "name": "Havana",
+      "flag": "cu"
+    },
+    {
+      "coordinates": [2727, 1501],
+      "name": "Santiago de Cuba",
+      "flag": "cu"
+    },
+    {
+      "coordinates": [2518, 1340],
+      "name": "Camagüey",
+      "flag": "cu"
+    },
+    {
+      "coordinates": [2525, 918],
+      "name": "The Bahamas",
+      "flag": "bs"
+    },
+    {
+      "coordinates": [2242, 738],
+      "name": "Miami",
+      "flag": "Miami"
+    },
+    {
+      "coordinates": [2004, 500],
+      "name": "Tampa",
+      "flag": "Tampa"
+    },
+    {
+      "coordinates": [2103, 159],
+      "name": "Jacksonville",
+      "flag": "Jacksonville"
+    },
+    {
+      "coordinates": [1794, 161],
+      "name": "Tallahassee",
+      "flag": "Florida"
+    },
+    {
+      "coordinates": [2128, 469],
+      "name": "Orlando",
+      "flag": "Orlando"
+    },
+    {
+      "coordinates": [1848, 47],
+      "name": "Valdosta",
+      "flag": "Georgia_US"
+    },
+    {
+      "coordinates": [1332, 125],
+      "name": "Mobile",
+      "flag": "Mobile"
+    },
+    {
+      "coordinates": [1426, 139],
+      "name": "Pensacola",
+      "flag": "Florida"
+    },
+    {
+      "coordinates": [1223, 169],
+      "name": "Gulfport",
+      "flag": "Mississippi"
+    },
+    {
+      "coordinates": [1089, 226],
+      "name": "New Orleans",
+      "flag": "New Orleans"
+    },
+    {
+      "coordinates": [211, 170],
+      "name": "Austin",
+      "flag": "Austin"
+    },
+    {
+      "coordinates": [968, 128],
+      "name": "Baton Rouge",
+      "flag": "Baton Rouge"
+    },
+    {
+      "coordinates": [1464, 1363],
+      "name": "Cancun",
+      "flag": "mx"
+    },
+    {
+      "coordinates": [1179, 1412],
+      "name": "Merida",
+      "flag": "mx"
+    },
+    {
+      "coordinates": [1073, 1555],
+      "name": "Campeche",
+      "flag": "mx"
+    },
+    {
+      "coordinates": [1290, 1870],
+      "name": "Belize",
+      "flag": "bz"
+    },
+    {
+      "coordinates": [479, 218],
+      "name": "Houston",
+      "flag": "Houston"
+    },
+    {
+      "coordinates": [597, 292],
+      "name": "Galveston",
+      "flag": "Texas"
+    },
+    {
+      "coordinates": [478, 380],
+      "name": "Freeport",
+      "flag": "Texas"
+    },
+    {
+      "coordinates": [122, 235],
+      "name": "San Antonio",
+      "flag": "San Antonio"
+    },
+    {
+      "coordinates": [256, 538],
+      "name": "Corpus Christi",
+      "flag": "Corpus Christi"
+    },
+    {
+      "coordinates": [227, 733],
+      "name": "Brownsville",
+      "flag": "Texas"
+    },
+    {
+      "coordinates": [232, 787],
+      "name": "Matamoros",
+      "flag": "mx"
+    },
+    {
+      "coordinates": [191, 1234],
+      "name": "Tampico",
+      "flag": "mx"
+    },
+    {
+      "coordinates": [410, 1668],
+      "name": "Veracruz",
+      "flag": "mx"
+    },
+    {
+      "coordinates": [626, 1765],
+      "name": "Coatzacoalcos",
+      "flag": "mx"
+    },
+    {
+      "coordinates": [23, 1037],
+      "name": "Ciudad Victoria",
+      "flag": "mx"
+    },
+    {
+      "coordinates": [819, 1814],
+      "name": "Villahermosa",
+      "flag": "mx"
+    },
+    {
+      "coordinates": [2152, 1607],
+      "name": "Cayman Islands",
+      "flag": "ky"
+    },
+    {
+      "coordinates": [286, 1557],
+      "name": "Xalapa",
+      "flag": "mx"
+    },
+    {
+      "coordinates": [145, 1642],
+      "name": "Puebla",
+      "flag": "mx"
+    },
+    {
+      "coordinates": [1345, 1646],
+      "name": "Chetumal",
+      "flag": "mx"
+    }
+  ],
+  "additionalNations": [
+    {
+      "coordinates": [923, 1685],
+      "name": "Ciudad del Carmen",
+      "flag": "mx"
+    },
+    {
+      "coordinates": [1165, 1369],
+      "name": "Progreso",
+      "flag": "mx"
+    },
+    {
+      "coordinates": [1291, 1348],
+      "name": "Rio Lagartos",
+      "flag": "mx"
+    },
+    {
+      "coordinates": [761, 1770],
+      "name": "Cardenas",
+      "flag": "mx"
+    },
+    {
+      "coordinates": [513, 1736],
+      "name": "San Andres Tuxtla",
+      "flag": "mx"
+    },
+    {
+      "coordinates": [273, 1683],
+      "name": "Orizaba",
+      "flag": "mx"
+    },
+    {
+      "coordinates": [235, 1465],
+      "name": "Poza Rica",
+      "flag": "mx"
+    },
+    {
+      "coordinates": [43, 1239],
+      "name": "Ciudad Mante",
+      "flag": "mx"
+    },
+    {
+      "coordinates": [36, 1341],
+      "name": "Ciudad Valles",
+      "flag": "mx"
+    },
+    {
+      "coordinates": [116, 764],
+      "name": "Reynosa",
+      "flag": "mx"
+    },
+    {
+      "coordinates": [125, 703],
+      "name": "McAllen",
+      "flag": "Texas"
+    },
+    {
+      "coordinates": [185, 598],
+      "name": "Kingsville",
+      "flag": "Texas"
+    },
+    {
+      "coordinates": [249, 376],
+      "name": "Victoria",
+      "flag": "Texas"
+    },
+    {
+      "coordinates": [15, 536],
+      "name": "Laredo",
+      "flag": "Laredo"
+    },
+    {
+      "coordinates": [647, 211],
+      "name": "Beaumont",
+      "flag": "Texas"
+    },
+    {
+      "coordinates": [340, 350],
+      "name": "Port Lavaca",
+      "flag": "Texas"
+    },
+    {
+      "coordinates": [372, 99],
+      "name": "Bryan-College Station",
+      "flag": "Texas"
+    },
+    {
+      "coordinates": [583, 32],
+      "name": "Nacogdoches",
+      "flag": "Texas"
+    },
+    {
+      "coordinates": [861, 169],
+      "name": "Lafayette",
+      "flag": "Louisiana"
+    },
+    {
+      "coordinates": [1590, 169],
+      "name": "Panama City",
+      "flag": "Florida"
+    },
+    {
+      "coordinates": [1550, 12],
+      "name": "Dothan",
+      "flag": "Alabama"
+    },
+    {
+      "coordinates": [944, 245],
+      "name": "Morgan City",
+      "flag": "Louisiana"
+    },
+    {
+      "coordinates": [962, 32],
+      "name": "Natchez",
+      "flag": "Mississippi"
+    },
+    {
+      "coordinates": [782, 34],
+      "name": "Alexandria",
+      "flag": "Louisiana"
+    },
+    {
+      "coordinates": [1254, 62],
+      "name": "Hattiesburg",
+      "flag": "Mississippi"
+    },
+    {
+      "coordinates": [2095, 52],
+      "name": "Brunswick",
+      "flag": "Georgia_US"
+    },
+    {
+      "coordinates": [1985, 153],
+      "name": "Lake City",
+      "flag": "Florida"
+    },
+    {
+      "coordinates": [1865, 8],
+      "name": "Trifton",
+      "flag": "Georgia_US"
+    },
+    {
+      "coordinates": [2178, 382],
+      "name": "Daytona Beach",
+      "flag": "Florida"
+    },
+    {
+      "coordinates": [1973, 524],
+      "name": "St. Petersburg",
+      "flag": "St Petersburg (US)"
+    },
+    {
+      "coordinates": [2013, 604],
+      "name": "Sarasota",
+      "flag": "Florida"
+    },
+    {
+      "coordinates": [2065, 671],
+      "name": "Fort Myers",
+      "flag": "Florida"
+    },
+    {
+      "coordinates": [2116, 751],
+      "name": "Naples",
+      "flag": "Florida"
+    },
+    {
+      "coordinates": [2116, 933],
+      "name": "Key West",
+      "flag": "Key West"
+    },
+    {
+      "coordinates": [2264, 681],
+      "name": "Fort Lauderdale",
+      "flag": "Florida"
+    },
+    {
+      "coordinates": [2254, 587],
+      "name": "Fort Pierce",
+      "flag": "Florida"
+    },
+    {
+      "coordinates": [2054, 379],
+      "name": "Ocala",
+      "flag": "Florida"
+    },
+    {
+      "coordinates": [1981, 280],
+      "name": "Gainesville",
+      "flag": "Florida"
+    },
+    {
+      "coordinates": [1486, 1462],
+      "name": "Cozumel",
+      "flag": "mx"
+    },
+    {
+      "coordinates": [1150, 1864],
+      "name": "Tikal",
+      "flag": "gt"
+    },
+    {
+      "coordinates": [147, 1069],
+      "name": "Soto La Marina",
+      "flag": "mx"
+    },
+    {
+      "coordinates": [106, 902],
+      "name": "San Fernando",
+      "flag": "mx"
+    },
+    {
+      "coordinates": [2874, 1509],
+      "name": "Guantanamo Bay",
+      "flag": "us"
+    },
+    {
+      "coordinates": [2735, 1397],
+      "name": "Holguin",
+      "flag": "cu"
+    },
+    {
+      "coordinates": [1961, 1296],
+      "name": "Nueva Gerona",
+      "flag": "cu"
+    },
+    {
+      "coordinates": [2292, 1275],
+      "name": "Trinidad",
+      "flag": "cu"
+    },
+    {
+      "coordinates": [2598, 882],
+      "name": "Nassau",
+      "flag": "bs"
+    },
+    {
+      "coordinates": [2464, 682],
+      "name": "Freeport",
+      "flag": "bs"
+    },
+    {
+      "coordinates": [2578, 642],
+      "name": "Cooper's Town",
+      "flag": "bs"
+    },
+    {
+      "coordinates": [2835, 978],
+      "name": "New Bight",
+      "flag": "bs"
+    }
+  ],
+  "themes": ["north_america"]
+}

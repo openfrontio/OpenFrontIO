@@ -1,3 +1,4 @@
+import { ColoredTeams, PlayerType } from "@openfront/engine-api/game/GameTypes";
 import { colord, Colord, extend } from "colord";
 import labPlugin from "colord/plugins/lab";
 import lchPlugin from "colord/plugins/lch";
@@ -9,7 +10,6 @@ import {
 } from "../src/client/theme/ColorAllocator";
 import { SettingsTheme } from "../src/client/theme/ThemeProvider";
 import type { PlayerView } from "../src/client/view/PlayerView";
-import { ColoredTeams, PlayerType } from "../src/core/game/Game";
 
 extend([labPlugin, lchPlugin]);
 
@@ -178,6 +178,19 @@ describe.each(["default", "colorblind"] as const)(
       const theme = new SettingsTheme(createThemeSettings(themeName));
       const teamless = theme.territoryColor(player(PlayerType.Bot, "bot-1"));
       expect(teamless.isEqual(theme.teamColor(ColoredTeams.Bot))).toBe(true);
+    });
+
+    test("classic bot colors override draws from the classic (pre-v34) pool", () => {
+      const settings = createThemeSettings(themeName);
+      const theme = new SettingsTheme(settings);
+      theme.useClassicBotColors = true;
+      const pool = settings.classicBotColors.map((hex) => colord(hex));
+      const outsidePool = Array.from({ length: 64 }, (_, i) =>
+        theme.territoryColor(player(PlayerType.Bot, `bot-${i}`)),
+      )
+        .filter((c) => !pool.some((p) => p.isEqual(c)))
+        .map((c) => c.toHex());
+      expect(outsidePool).toEqual([]);
     });
 
     test("every nation color is perceptually far from every bot color", () => {

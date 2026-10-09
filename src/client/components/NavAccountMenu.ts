@@ -1,7 +1,7 @@
+import { UserMeResponse } from "@openfront/shared/ApiSchemas";
 import { html, LitElement, nothing, render, TemplateResult } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
 import { ifDefined } from "lit/directives/if-defined.js";
-import { UserMeResponse } from "../../core/ApiSchemas";
 import { hasLinkedIdentity } from "../AccountIdentity";
 import { logOut } from "../Auth";
 import { crazyGamesSDK, type CrazyGamesUser } from "../CrazyGamesSDK";
@@ -11,6 +11,7 @@ import {
   updateAccountNavButton,
 } from "../NavAccountButton";
 import { closeMobileSidebar } from "../Navigation";
+import { steamSDK } from "../SteamSDK";
 import { playerProfileUrl } from "../utilities/PlayerProfileUrl";
 import { copyToClipboard, showToast, translateText } from "../Utils";
 
@@ -195,8 +196,12 @@ export class NavAccountMenu extends LitElement {
 
     const player =
       this.userMeResponse === false ? null : this.userMeResponse.player;
+    // A past_due subscriber still needs the panel: it is where they reach
+    // the billing portal to fix the failed payment.
     const subscribed =
-      player?.subscription !== undefined && player?.subscription !== null;
+      (player?.subscription !== undefined && player?.subscription !== null) ||
+      (player?.pastDueSubscription !== undefined &&
+        player?.pastDueSubscription !== null);
     const publicId = player?.publicId ?? "";
 
     const items: MenuItem[] = [];
@@ -245,8 +250,9 @@ export class NavAccountMenu extends LitElement {
     }
 
     // CrazyGames owns its own sessions: signing out happens on their site, and
-    // our /auth/logout wouldn't end theirs.
-    if (!crazyGamesSDK.isOnCrazyGames()) {
+    // our /auth/logout wouldn't end theirs. On Steam the session comes from the
+    // Steam ticket, which signs the player straight back in after the reload.
+    if (!crazyGamesSDK.isOnCrazyGames() && !steamSDK.isOnSteam()) {
       items.push({
         key: "log-out",
         labelKey: "nav_account_menu.log_out",

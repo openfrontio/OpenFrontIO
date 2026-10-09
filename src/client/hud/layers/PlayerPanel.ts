@@ -1,8 +1,4 @@
-import { html, LitElement } from "lit";
-import { customElement, state } from "lit/decorators.js";
-import Countries from "resources/countries.json" with { type: "json" };
-import { assetUrl } from "../../../core/AssetUrls";
-import { EventBus } from "../../../core/EventBus";
+import { TileRef } from "@openfront/engine-api/game/GameMap";
 import {
   AllPlayers,
   GameType,
@@ -10,10 +6,16 @@ import {
   PlayerProfile,
   PlayerType,
   Relation,
-} from "../../../core/game/Game";
-import { TileRef } from "../../../core/game/GameMap";
-import { Emoji, flattenedEmojiTable } from "../../../core/Util";
+} from "@openfront/engine-api/game/GameTypes";
+import { Emoji, flattenedEmojiTable } from "@openfront/engine-api/Schemas";
+import { renderNumber, renderTroops } from "@openfront/engine-lib/Format";
+import { assetUrl } from "@openfront/shared/AssetUrls";
+import { EventBus } from "@openfront/shared/EventBus";
+import { html, LitElement } from "lit";
+import { customElement, state } from "lit/decorators.js";
+import Countries from "resources/countries.json" with { type: "json" };
 import { fetchLobbyListed } from "../../Api";
+import "../../components/EquippedCosmeticsRow";
 import { actionButton } from "../../components/ui/ActionButton";
 import "../../components/ui/Divider";
 import { Controller } from "../../Controller";
@@ -32,13 +34,7 @@ import {
   SendTargetPlayerIntentEvent,
 } from "../../Transport";
 import { UIState } from "../../UIState";
-import {
-  renderDuration,
-  renderNumber,
-  renderTroops,
-  showToast,
-  translateText,
-} from "../../Utils";
+import { renderDuration, showToast, translateText } from "../../Utils";
 import { GameView, PlayerView } from "../../view";
 import { ChatModal } from "./ChatModal";
 import { EmojiTable } from "./EmojiTable";
@@ -156,7 +152,11 @@ export class PlayerPanel extends LitElement implements Controller {
       // Refresh actions & alliance expiry
       const myPlayer = this.g.myPlayer();
       if (myPlayer !== null && myPlayer.isAlive()) {
-        this.actions = await myPlayer.actions(this.tile, null);
+        try {
+          this.actions = await myPlayer.actions(this.tile, null);
+        } catch (error) {
+          console.warn("Failed to refresh player panel actions:", error);
+        }
         if (this.actions?.interaction?.allianceInfo?.expiresAt !== undefined) {
           const expiresAt = this.actions.interaction.allianceInfo.expiresAt;
           const remainingTicks = expiresAt - this.g.ticks();
@@ -1054,6 +1054,11 @@ export class PlayerPanel extends LitElement implements Controller {
                     <div class="mb-1">
                       ${this.renderIdentityRow(other, viewer)}
                     </div>
+
+                    <!-- Cosmetics the player has equipped -->
+                    <equipped-cosmetics-row
+                      .cosmetics=${other.cosmetics}
+                    ></equipped-cosmetics-row>
 
                     ${this.sendTarget && !isSpectator
                       ? html`

@@ -1,14 +1,16 @@
+import { Tick } from "@openfront/engine-api/game/GameTypes";
+import { ClientID, Winner } from "@openfront/engine-api/Schemas";
+import { TokenPayload } from "@openfront/shared/ApiSchemas";
+import { ClientPlatform, PlayerCosmetics } from "@openfront/shared/WireSchemas";
 import WebSocket from "ws";
-import { TokenPayload } from "../core/ApiSchemas";
-import { Tick } from "../core/game/Game";
-import { ClientID, PlayerCosmetics, Winner } from "../core/Schemas";
 
 export class Client {
   public lastPing: number = Date.now();
 
   public hashes: Map<Tick, number> = new Map();
 
-  public reportedWinner: Winner | null = null;
+  // This client's winner vote, keyed on winner and stats (Consensus.voteKey).
+  public reportedVote: { winner: Winner; key: string } | null = null;
 
   constructor(
     public readonly clientID: ClientID,
@@ -29,5 +31,7 @@ export class Client {
     // Whether the API reported this account as trusted when it joined (the
     // gate for GameConfig.trusted). Anonymous joins are never trusted.
     public readonly trusted: boolean = false,
+    // Client-reported and unverified; metric dimension only.
+    public readonly platform: ClientPlatform | "unknown" = "unknown",
   ) {}
 }

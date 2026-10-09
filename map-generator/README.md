@@ -47,7 +47,7 @@ Maps are discovered automatically from the `assets/maps/` folders — `info.json
 - `../resources/maps/<map_name>/map4x.bin` - 1/4 scale (half dimensions) binary map data used for mini-maps.
 - `../resources/maps/<map_name>/map16x.bin` - 1/16 scale (quarter dimensions) binary map data used for mini-maps.
 - `../resources/maps/<map_name>/thumbnail.webp` - WebP image thumbnail of the map.
-- `../src/core/game/Maps.gen.ts` - Generated TypeScript (the `GameMapType` enum and the `maps` list of `MapInfo` objects) built from every map's info.json. Regenerated on every run, even with `--maps`.
+- `../packages/engine-api/src/game/Maps.gen.ts` - Generated TypeScript (the `GameMapType` enum and the `maps` list of `MapInfo` objects) built from every map's info.json. Regenerated on every run, even with `--maps`.
 - `../resources/lang/en.json` - The `map` section is rewritten with each map's display name. Regenerated on every run, even with `--maps`.
 
 ## Command Line Flags
@@ -177,7 +177,7 @@ Each nation object has:
 
 ### Layers
 
-Layers are PNG overlays rendered between terrain and territory, useful for decorations. Each layer is a separate PNG file in `assets/maps/<map_name>/` named `<id>.png`.
+Layers are PNG overlays rendered between terrain and territory, useful for decorations. Each layer is a separate PNG file in `assets/maps/<map_name>/` named `<id>.png`, with the same dimensions as `image.png` (the generator crops it to a multiple of 4 along with the map).
 
 | Field       | Required | Description                                                                                                                                           |
 | ----------- | -------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -204,7 +204,7 @@ Everything is generated from the info.json files when the map-generator runs —
 there are no manual steps:
 
 - The `GameMapType` enum and the `maps` list (one `MapInfo` per map) are
-  written to `../src/core/game/Maps.gen.ts`. Do not edit that file by hand.
+  written to `../packages/engine-api/src/game/Maps.gen.ts`. Do not edit that file by hand.
 - The `map` section of `../resources/lang/en.json` is rewritten with each
   map's `display_name` (or `name`). Translations to other languages are
   managed via Crowdin.
