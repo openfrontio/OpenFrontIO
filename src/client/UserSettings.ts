@@ -1114,7 +1114,10 @@ export class UserSettings {
 
   getLobbyPresets(): LobbyPreset[] {
     try {
-      return parseLobbyPresetsJson(this.getCached(LOBBY_PRESETS_KEY));
+      const storageKey = this.storageKey(LOBBY_PRESETS_KEY);
+      const raw = localStorage.getItem(storageKey);
+      UserSettings.cache.set(storageKey, raw);
+      return parseLobbyPresetsJson(raw);
     } catch {
       return [];
     }

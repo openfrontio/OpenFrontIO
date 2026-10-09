@@ -280,10 +280,31 @@ describe("LobbyPresets logic and schema", () => {
 
     it("handles storage read failure in UserSettings.getLobbyPresets", () => {
       const realSettings = new UserSettings();
-      vi.spyOn(realSettings as any, "getCached").mockImplementation(() => {
+      vi.spyOn(Storage.prototype, "getItem").mockImplementationOnce(() => {
         throw new Error("Storage access failed");
       });
       expect(realSettings.getLobbyPresets()).toEqual([]);
+    });
+
+    it("reads latest presets directly from storage even if cache was populated", () => {
+      const realSettings = new UserSettings();
+      const initialPresets: LobbyPreset[] = [
+        { name: "Preset A", createdAt: 100, config: sampleConfig },
+      ];
+      realSettings.setLobbyPresets(initialPresets);
+      expect(realSettings.getLobbyPresets()).toHaveLength(1);
+
+      // Modify localStorage directly behind the scenes (simulating another tab or external mutation)
+      const updatedPresets: LobbyPreset[] = [
+        ...initialPresets,
+        { name: "Preset B", createdAt: 200, config: sampleConfig },
+      ];
+      localStorage.setItem(LOBBY_PRESETS_KEY, JSON.stringify(updatedPresets));
+
+      // getLobbyPresets reads directly from storage and returns the updated list
+      const reloaded = realSettings.getLobbyPresets();
+      expect(reloaded).toHaveLength(2);
+      expect(reloaded[1].name).toBe("Preset B");
     });
   });
 });
