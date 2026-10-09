@@ -196,10 +196,16 @@ async function getSnapshotDatabase(
 }
 
 const memorySnapshots = new Map<string, Uint8Array>();
+const clearedGameIDs = new Set<string>();
+
+export function clearTrackedClearedGameIDs(): void {
+  clearedGameIDs.clear();
+}
 
 export function clearMemorySnapshots(): void {
   closeSnapshotDatabase();
   memorySnapshots.clear();
+  clearedGameIDs.clear();
 }
 
 export async function saveSnapshotBytes(
@@ -406,6 +412,10 @@ export async function saveSoloSnapshot(
   idb?: IDBFactory,
 ): Promise<void> {
   try {
+    if (clearedGameIDs.has(gameStartInfo.gameID)) {
+      return;
+    }
+
     const identity = getActiveIdentity();
     const scopedKey = getScopedSoloSaveKey();
     if (!identity || !scopedKey) return;
@@ -421,6 +431,11 @@ export async function saveSoloSnapshot(
       idb,
     );
     if (!persisted) {
+      return;
+    }
+
+    if (clearedGameIDs.has(gameStartInfo.gameID)) {
+      await deleteSnapshotBytes(gameStartInfo.gameID, idb);
       return;
     }
 
@@ -455,6 +470,10 @@ export function saveSoloGame(
   turns: Turn[],
 ): void {
   try {
+    if (clearedGameIDs.has(gameStartInfo.gameID)) {
+      return;
+    }
+
     const existing = getSoloSave();
     const identity = getActiveIdentity();
     const scopedKey = getScopedSoloSaveKey();
@@ -681,6 +700,9 @@ export function clearSoloSave(gameID?: GameID): void {
       return;
     }
     const targetGameID = gameID ?? current?.gameID;
+    if (targetGameID) {
+      clearedGameIDs.add(targetGameID);
+    }
     const scopedKey = getScopedSoloSaveKey();
     if (scopedKey) {
       localStorage.removeItem(scopedKey);

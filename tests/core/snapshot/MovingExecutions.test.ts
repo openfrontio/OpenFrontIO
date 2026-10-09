@@ -1,3 +1,4 @@
+import { TileRef } from "@openfront/engine-api/game/GameMap";
 import {
   PlayerInfo,
   PlayerType,
@@ -7,6 +8,7 @@ import {
   createGameUpdatesMap,
   GameUpdateType,
   GameUpdateViewData,
+  UnitUpdate,
 } from "@openfront/engine-api/game/GameUpdates";
 import {
   MotionPlanRecord,
@@ -309,31 +311,33 @@ describe("snapshot: transport ships", () => {
       spacing: 1,
       path: new Uint32Array(trainTrack),
     };
-    const trainUnits = [
-      {
+    function createTrainUnitUpdate(
+      id: number,
+      pos: TileRef,
+      lastPos: TileRef,
+    ): UnitUpdate {
+      return {
         type: GameUpdateType.Unit,
-        id: engineId,
-        unitType: UnitType.TransportShip,
-        ownerID: defender.id(),
-        pos: trainTrack[0],
-        lastPos: [trainTrack[0]],
+        unitType: UnitType.Train,
+        id,
+        ownerID: defender.smallID(),
+        pos,
+        lastPos,
         health: 100,
         troops: 10,
         level: 1,
         isActive: true,
-      } as any,
-      {
-        type: GameUpdateType.Unit,
-        id: carId,
-        unitType: UnitType.TransportShip,
-        ownerID: defender.id(),
-        pos: trainTrack[0],
-        lastPos: [trainTrack[0]],
-        health: 100,
-        troops: 10,
-        level: 1,
-        isActive: true,
-      } as any,
+        reachedTarget: false,
+        targetable: false,
+        markedForDeletion: false,
+        missileTimerQueue: [],
+        hasTrainStation: false,
+      };
+    }
+
+    const trainUnits: UnitUpdate[] = [
+      createTrainUnitUpdate(engineId, trainTrack[0], trainTrack[0]),
+      createTrainUnitUpdate(carId, trainTrack[0], trainTrack[0]),
     ];
     trainClient.update({
       tick: snapshotView.tick - 1,
@@ -370,18 +374,7 @@ describe("snapshot: transport ships", () => {
       updates: {
         ...createGameUpdatesMap(),
         [GameUpdateType.Unit]: [
-          {
-            type: GameUpdateType.Unit,
-            id: engineId,
-            unitType: UnitType.TransportShip,
-            ownerID: defender.id(),
-            pos: trainTrack[1],
-            lastPos: [trainTrack[0]],
-            health: 100,
-            troops: 10,
-            level: 1,
-            isActive: true,
-          } as any,
+          createTrainUnitUpdate(engineId, trainTrack[1], trainTrack[0]),
         ],
       },
       packedTileUpdates: new Uint32Array(0),

@@ -804,4 +804,41 @@ describe("SinglePlayerSaveManager", () => {
     >;
     expect(rawStored.snapshot).toBe(base64);
   });
+
+  it("does not resurrect save if clearSoloSave is called during in-flight saveSoloSnapshot", async () => {
+    const gameID = "gameRACE01";
+    const startInfo = dummyStartInfo(gameID);
+    saveSoloGame(startInfo, []);
+    expect(getSoloSave()?.gameID).toBe(gameID);
+
+    // Start saveSoloSnapshot; it will await saveSnapshotBytes
+    const savePromise = saveSoloSnapshot(
+      startInfo,
+      new Uint8Array([1, 2, 3]),
+      1,
+      mockIdb.idb,
+    );
+
+    // While save is in-flight, clear the save
+    clearSoloSave(gameID as GameID);
+    expect(getSoloSave()).toBeNull();
+
+    // Await saveSoloSnapshot to complete
+    await savePromise;
+
+    // The cleared save should NOT be resurrected in localStorage
+    expect(getSoloSave()).toBeNull();
+
+    // Further saves for the cleared gameID should also be rejected
+    saveSoloGame(startInfo, []);
+    expect(getSoloSave()).toBeNull();
+
+    await saveSoloSnapshot(
+      startInfo,
+      new Uint8Array([1, 2, 3]),
+      2,
+      mockIdb.idb,
+    );
+    expect(getSoloSave()).toBeNull();
+  });
 });
