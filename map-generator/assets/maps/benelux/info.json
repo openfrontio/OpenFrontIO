@@ -18,7 +18,8 @@
     {
       "coordinates": [1046, 265],
       "name": "Friesland",
-      "strength": 1
+      "strength": 1,
+      "flag": "Frisian_flag"
     },
     {
       "coordinates": [1052, 1173],
