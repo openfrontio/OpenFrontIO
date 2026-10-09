@@ -1,6 +1,7 @@
 import type { UserMeResponse } from "@openfront/shared/ApiSchemas";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { AccountSettingsPanel } from "../../../src/client/components/AccountSettingsPanel";
+import { ownHiddenLevelBadge } from "../../../src/client/OwnLevelBadge";
 
 type UserMePlayer = UserMeResponse["player"];
 type UserMeUser = UserMeResponse["user"];
@@ -16,6 +17,7 @@ vi.mock("../../../src/client/Api", () => ({
   deleteAccount: vi.fn(async () => ({ ok: true })),
   getIdentityTokenAudiences: vi.fn(async () => []),
   setLevelVisibility: vi.fn(async (hidden: boolean) => ({ ok: true, hidden })),
+  getUserMe: vi.fn(async () => false),
 }));
 
 vi.mock("../../../src/client/InGameModal", () => ({
@@ -376,5 +378,43 @@ describe("AccountSettingsPanel — privacy card (hide my level)", () => {
     // logOut() already ran inside setLevelVisibility; the signed-out state
     // takes over from there.
     expect(showInGameAlert).not.toHaveBeenCalled();
+  });
+
+  it("refreshes the viewer's own-badge fallback once the change is saved", async () => {
+    const { getUserMe } = await import("../../../src/client/Api");
+    const player = makePlayer({ progress, levelHidden: false });
+    // getUserMe() memoises the same profile object the panel shows.
+    vi.mocked(getUserMe).mockResolvedValue({
+      user: {},
+      player,
+    } as unknown as UserMeResponse);
+    await show(player);
+    expect(ownHiddenLevelBadge()).toBeUndefined();
+
+    levelSwitch()!.click();
+    await settle();
+    expect(ownHiddenLevelBadge()).toEqual({
+      level: 96,
+      prestige: 3,
+      legend: false,
+    });
+
+    levelSwitch()!.click();
+    await settle();
+    expect(ownHiddenLevelBadge()).toBeUndefined();
+  });
+
+  it("leaves the fallback alone when the change fails", async () => {
+    const { getUserMe, setLevelVisibility } =
+      await import("../../../src/client/Api");
+    vi.mocked(setLevelVisibility).mockResolvedValueOnce({
+      ok: false,
+      code: "failed",
+    });
+    await show(makePlayer({ progress, levelHidden: false }));
+
+    levelSwitch()!.click();
+    await settle();
+    expect(getUserMe).not.toHaveBeenCalled();
   });
 });

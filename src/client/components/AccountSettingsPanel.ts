@@ -7,6 +7,7 @@ import { clearLocalSession, linkGoogle, sendMagicLink } from "../Auth";
 import { crazyGamesSDK } from "../CrazyGamesSDK";
 import { isDesktopShell } from "../DesktopShell";
 import { showInGameAlert } from "../InGameModal";
+import { refreshOwnHiddenLevelBadge } from "../OwnLevelBadge";
 import { steamSDK } from "../SteamSDK";
 import { translateText } from "../Utils";
 import "./baseComponents/Button";
@@ -391,6 +392,10 @@ export class AccountSettingsPanel extends LitElement {
     player.levelHidden = result.ok ? result.hidden : previous;
     this.levelVisibilityBusy = false;
     this.requestUpdate();
+    // The viewer's own-badge fallback (lobby roster, in-game panel) reads the
+    // same cached profile: re-read it now so the change shows without
+    // waiting for the next lobby.
+    if (result.ok) void refreshOwnHiddenLevelBadge();
 
     // 401: logOut() has already run and the signed-out state takes over —
     // nothing to tell the player here.

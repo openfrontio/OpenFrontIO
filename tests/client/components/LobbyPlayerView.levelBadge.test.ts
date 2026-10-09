@@ -18,6 +18,8 @@ const getUserMe = vi.hoisted(() =>
 );
 vi.mock("../../../src/client/Api", () => ({ getUserMe }));
 
+type LevelBadgeEl = HTMLElement & { level: number };
+
 const BADGE: LevelBadge = { level: 42, prestige: 2, legend: false };
 // As the roster carries it.
 const BADGE_WIRE = packLevelBadge(BADGE)!;
@@ -340,18 +342,38 @@ describe("lobby level badges", () => {
       expect(pills(view)[0]).toEqual(["badge:24", "me"]);
     });
 
-    it("reads /users/@me once per lobby, not on every roster update", async () => {
-      signedIn(true);
+    it("follows a visibility change on the next roster update", async () => {
+      // One cached profile, as getUserMe() memoises it: the account settings
+      // toggle flips levelHidden on that same object.
+      const me = {
+        user: {},
+        player: { publicId: "me-pub", progress, levelHidden: false },
+      };
+      getUserMe.mockResolvedValue(me as unknown as UserMeResponse);
       const view = await mount({
         currentClientID: "me",
-        clients: [client("me")],
+        clients: [client("me", { levelBadge: BADGE_WIRE })],
       });
       await settle(view);
-      for (let i = 0; i < 3; i++) {
-        view.clients = [client("me"), client(`p${i}`)];
-        await settle(view);
-      }
-      expect(getUserMe).toHaveBeenCalledTimes(1);
+      expect((view.querySelector("level-badge") as LevelBadgeEl).level).toBe(
+        42,
+      );
+
+      // Hidden: the server now sends no badge for them; their own shows.
+      me.player.levelHidden = true;
+      view.clients = [client("me"), client("guest")];
+      await settle(view);
+      expect(pills(view)).toEqual([["badge:24", "me"], ["guest"]]);
+      expect((view.querySelector("level-badge") as LevelBadgeEl).level).toBe(
+        88,
+      );
+
+      // Shown again, before the server's roster carries it back: no
+      // fallback badge lingers.
+      me.player.levelHidden = false;
+      view.clients = [client("me"), client("guest2")];
+      await settle(view);
+      expect(view.querySelector("level-badge")).toBeNull();
     });
   });
 });

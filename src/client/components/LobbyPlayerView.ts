@@ -115,9 +115,14 @@ export class LobbyTeamView extends LitElement {
         : undefined;
       this._viewerFriends = new Set(self?.friends ?? []);
     }
-    // Once per lobby joined, not per lobby_info: from the memoised
+    // On joining and on every roster update, so a visibility change made in
+    // the account settings shows by the next lobby_info. From the memoised
     // /users/@me, so normally no request at all.
-    if (changedProperties.has("currentClientID") && this.currentClientID) {
+    if (
+      (changedProperties.has("currentClientID") ||
+        changedProperties.has("clients")) &&
+      this.currentClientID
+    ) {
       const forClient = this.currentClientID;
       void refreshOwnHiddenLevelBadge().then((badge) => {
         if (this.currentClientID !== forClient) return;
