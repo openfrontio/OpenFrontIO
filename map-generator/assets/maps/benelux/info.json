@@ -10,29 +10,33 @@
   "multiplayer_frequency": 5,
   "nations": [
     {
-      "coordinates": [426, 386],
+      "coordinates": [718, 492],
       "name": "Netherlands",
+      "strength": 1,
       "flag": "nl"
     },
     {
-      "coordinates": [447, 752],
-      "name": "Wallonia",
-      "flag": "Wallonia"
+      "coordinates": [1046, 265],
+      "name": "Friesland",
+      "strength": 1
     },
     {
-      "coordinates": [745, 929],
+      "coordinates": [1052, 1173],
       "name": "Luxembourg",
+      "strength": 1,
       "flag": "lu"
     },
     {
-      "coordinates": [339, 684],
-      "name": "Flanders",
-      "flag": "Flanders"
+      "coordinates": [762, 1038],
+      "name": "Wallonia",
+      "strength": 1,
+      "flag": "Wallonia"
     },
     {
-      "coordinates": [662, 195],
-      "name": "Friesland",
-      "flag": "Frisian_flag"
+      "coordinates": [615, 930],
+      "name": "Flanders",
+      "strength": 1,
+      "flag": "Flanders"
     }
   ]
 }
