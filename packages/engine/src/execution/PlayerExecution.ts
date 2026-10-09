@@ -112,10 +112,22 @@ export class PlayerExecution implements Execution {
       if ((ticks + unit.id()) % mineIncomeInterval !== 0) {
         continue;
       }
-      this.player.addGold(
-        this.config.mineIncome(unit.type(), unit.level(), this.player),
-        unit.tile(),
+      const income = this.config.mineIncome(
+        unit.type(),
+        unit.level(),
+        this.player,
       );
+      const cap = this.config.resourceProductionCap(
+        unit.type(),
+        unit.level(),
+      );
+      const remaining = cap - unit.resourceGoldProduced();
+      if (remaining <= 0n) {
+        continue;
+      }
+      const credited = income <= remaining ? income : remaining;
+      this.player.addGold(credited, unit.tile());
+      unit.addResourceGoldProduced(credited);
     }
 
     // Record stats
