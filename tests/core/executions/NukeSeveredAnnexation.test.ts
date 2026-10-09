@@ -341,6 +341,86 @@ describe("land a nuke severs from the main body is annexed", () => {
     },
   );
 
+  // A crater cuts a long arm two tiles wide off a compact body cleanly, so
+  // the two are separate border clusters and the arm, all border, has more
+  // border tiles than the body. Only the body's size and way out tell it
+  // apart.
+  const borderIn = (shape: Shape) =>
+    [...defender.borderTiles()].filter((t) => shape(game.x(t), game.y(t)))
+      .length;
+
+  function cleanCut(x0: number, armEnd: number) {
+    // A 20×20 body whose east four columns the crater takes.
+    paint(union(rect(x0, 90, x0 + 19, 109), rect(x0 + 20, 99, armEnd, 100)));
+    startClusterChecks();
+    // The crater also runs along the body's north and south edges near the
+    // cut, so the attacker's land beside the body stops short of its east
+    // end: an inland body is then a severed-land candidate, not surrounded.
+    fallout(
+      union(
+        rect(x0 + 16, 85, x0 + 40, 114),
+        rect(x0 + 10, 85, x0 + 15, 89),
+        rect(x0 + 10, 110, x0 + 15, 114),
+      ),
+    );
+    const body = rect(x0, 90, x0 + 15, 109);
+    const cutArm = rect(x0 + 41, 99, armEnd, 100);
+    expect(defenderTilesIn(body)).toBe(16 * 20);
+    expect(borderIn(cutArm)).toBeGreaterThan(borderIn(body));
+    return { body, cutArm };
+  }
+
+  test("a cut-off arm with a longer border than a landlocked body is annexed, not the body", () => {
+    // The body borders only the attacker and the crater.
+    const { body, cutArm } = cleanCut(60, 150);
+    expect(defenderTilesIn(cutArm)).toBe(100);
+
+    runClusterChecks();
+
+    expect(defenderTilesIn(body)).toBe(16 * 20);
+    expect(defenderTilesIn(cutArm)).toBe(0);
+  });
+
+  test("a cut-off arm with a longer border than a body on the map edge is annexed", () => {
+    const { body, cutArm } = cleanCut(0, 90);
+    expect(defenderTilesIn(cutArm)).toBe(100);
+
+    runClusterChecks();
+
+    expect(defenderTilesIn(body)).toBe(16 * 20);
+    expect(defenderTilesIn(cutArm)).toBe(0);
+  });
+
+  // A way out keeps a piece from being annexed; it does not make the piece
+  // the main body. Taking the arm as the main body because it reaches the
+  // map edge would hand over the larger, landlocked body.
+  test("a cut-off arm that reaches the map edge leaves a larger landlocked body alone", () => {
+    const { body, cutArm } = cleanCut(60, 199);
+    const armBefore = defenderTilesIn(cutArm);
+
+    runClusterChecks();
+
+    expect(defenderTilesIn(body)).toBe(16 * 20);
+    expect(defenderTilesIn(cutArm)).toBe(armBefore);
+  });
+
+  test("an arm cut off across a diagonal that reaches the map edge leaves a larger landlocked body alone", () => {
+    const { body, craters, cutX } = longArmCases[1];
+    paint(union(body, rect(95, 99, 199, 101)));
+    startClusterChecks();
+    fallout(craters);
+    const cutOff = rect(cutX, 0, 199, 199);
+    const kept = rect(0, 0, cutX - 1, 199);
+    expect(borderIn(cutOff)).toBeGreaterThan(borderIn(kept));
+    const keptBefore = defenderTilesIn(kept);
+    const cutBefore = defenderTilesIn(cutOff);
+
+    runClusterChecks();
+
+    expect(defenderTilesIn(kept)).toBe(keptBefore);
+    expect(defenderTilesIn(cutOff)).toBe(cutBefore);
+  });
+
   // The generation counter wraps after 2^32 passes and clears every stamp.
   // Wrap it at each pass of the defender's check in turn, on the inland case
   // so the territory race runs too.
@@ -457,6 +537,79 @@ describe("land a nuke severs from the main body is annexed", () => {
     expect(rootOf(2)).toBe(main);
   });
 
+  test("the territory race drops a ring round a hole without walking the land round it", () => {
+    // The defender holds the whole map but a hole in the middle and a small
+    // territory in the top-left corner.
+    const hole = rect(98, 98, 102, 102);
+    const ring = rect(97, 97, 103, 103);
+    const small = rect(0, 0, 9, 9);
+    // The attacker holds the hole and a strip round the small territory.
+    paint((x, y) => (!hole(x, y) && !rect(0, 0, 10, 10)(x, y)) || small(x, y));
+    const exec = new PlayerExecution(defender);
+    exec.init(game, game.ticks());
+    const race = (
+      exec as unknown as {
+        largestTerritoryPart(
+          p: number[][],
+          r: Int32Array,
+          b?: readonly number[],
+        ): number;
+      }
+    ).largestTerritoryPart.bind(exec);
+    const ringTiles: number[] = [];
+    game.map().forEachTile((t) => {
+      if (ring(game.x(t), game.y(t)) && !hole(game.x(t), game.y(t))) {
+        ringTiles.push(t);
+      }
+    });
+    const map = game.map();
+    const neighbors4 = map.neighbors4.bind(map);
+    let walked = 0;
+    vi.spyOn(map, "neighbors4").mockImplementation((ref, out) => {
+      walked++;
+      return neighbors4(ref, out);
+    });
+
+    // The ring's flood leaves its box at once and drops out, so the small
+    // territory, which fits its box, wins although the land round the ring
+    // is far larger, and the race never walks that land.
+    const smallTiles = [game.ref(0, 9), game.ref(9, 9), game.ref(9, 0)];
+    expect(
+      race(
+        [ringTiles, smallTiles],
+        new Int32Array(2),
+        [97, 97, 103, 103, 0, 0, 9, 9],
+      ),
+    ).toBe(1);
+    expect(walked).toBeLessThan(400);
+  });
+
+  test("a piece cut off a main body whose land outruns its border along the map edge is annexed", () => {
+    // A band right across the map: the map edge has no border tiles, so the
+    // band's border is two strips, each far smaller than the band, and its
+    // land outruns the box of both. An arm runs north from it.
+    const band = rect(0, 100, 199, 140);
+    paint(union(band, rect(98, 40, 102, 99)));
+    startClusterChecks();
+    // The crater wraps the piece's south end, so the attacker's land beside
+    // the piece stops short of it and the piece is not surrounded.
+    fallout(
+      union(
+        rect(90, 66, 110, 80),
+        rect(92, 60, 97, 65),
+        rect(103, 60, 108, 65),
+      ),
+    );
+    const piece = rect(98, 40, 102, 65);
+    const bandBefore = defenderTilesIn(band);
+    expect(defenderTilesIn(piece)).toBe(5 * 26);
+
+    runClusterChecks();
+
+    expect(defenderTilesIn(piece)).toBe(0);
+    expect(defenderTilesIn(band)).toBe(bandBefore);
+  });
+
   test("a cut-off piece with a hole of its own is still annexed", () => {
     paint(union(mainBody, arm));
     startClusterChecks();
@@ -496,9 +649,12 @@ describe("land a nuke severs from the main body is annexed", () => {
     const defenderLand = (x: number, y: number) => !corner(x, y);
     const mainBefore = defenderTilesIn(defenderLand);
 
-    // Count the tiles the severed-land floods walk.
+    // Count the tiles the severed-land floods, and the race for the main
+    // body, walk.
     let inFlood = false;
+    let inRace = false;
     let walked = 0;
+    let raced = 0;
     const proto = PlayerExecution.prototype as unknown as Record<
       string,
       (...args: unknown[]) => unknown
@@ -514,15 +670,33 @@ describe("land a nuke severs from the main body is annexed", () => {
           inFlood = false;
         }
       });
+    const originalRace = proto.largestTerritoryPart;
+    const race = vi
+      .spyOn(proto, "largestTerritoryPart")
+      .mockImplementation(function (this: unknown, ...args: unknown[]) {
+        inRace = true;
+        try {
+          return originalRace.apply(this, args);
+        } finally {
+          inRace = false;
+        }
+      });
     const map = game.map();
     const neighbors4 = map.neighbors4.bind(map);
     vi.spyOn(map, "neighbors4").mockImplementation((ref, out) => {
       if (inFlood) walked++;
+      if (inRace) raced++;
       return neighbors4(ref, out);
     });
 
     runClusterChecks();
 
+    // The race for the main body walks a few hundred tiles: the ring's
+    // flood drops out once it leaves the ring's box, and the main body only
+    // has to outgrow the piece. Unbounded, it walks the whole main body
+    // (~37,000 tiles).
+    expect(race).toHaveBeenCalled();
+    expect(raced).toBeLessThan(1000);
     expect(flood).toHaveBeenCalled();
     expect(defenderTilesIn(piece)).toBe(0);
     expect(defenderTilesIn(defenderLand)).toBe(mainBefore);
