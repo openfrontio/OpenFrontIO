@@ -12,6 +12,7 @@ import { describe, expect, it } from "vitest";
 import {
   LiveStatsVote,
   statsDigest,
+  voteKey,
   WinnerVote,
 } from "../../src/server/Consensus";
 import { cid } from "../util/GameServerHarness";
@@ -52,7 +53,9 @@ describe("WinnerVote", () => {
 
   it("keys a cancelled match (no winner) as null so those votes can agree", () => {
     const vote = new WinnerVote();
-    expect(vote.cast(winnerMsg(undefined), "1.1.1.1").key).toBe("null");
+    expect(vote.cast(winnerMsg(undefined), "1.1.1.1").key).toBe(
+      voteKey({ winner: undefined, allPlayersStats: {} }),
+    );
     vote.cast(winnerMsg(undefined), "2.2.2.2");
     expect(vote.tally(2)?.value.winner).toBeUndefined();
   });
@@ -146,7 +149,7 @@ describe("statsDigest", () => {
   });
 });
 
-describe("WinnerVote stats agreement", () => {
+describe("WinnerVote on stats", () => {
   const honest: AllPlayersStats = { [P1]: { finalTiles: 100n } };
   const forged: AllPlayersStats = { [P1]: { finalTiles: 999n } };
   const voteWith = (
@@ -154,339 +157,30 @@ describe("WinnerVote stats agreement", () => {
     allPlayersStats: AllPlayersStats,
   ): ClientSendWinnerMessage => ({ type: "winner", winner, allPlayersStats });
 
-  it("is null until the vote is decided", () => {
-    const vote = new WinnerVote();
-    vote.cast(voteWith(["player", P1], honest), "1.1.1.1");
-    expect(vote.statsAgreement()).toBeNull();
-  });
-
-  it("reports one version when every voter sent the same stats", () => {
-    const vote = new WinnerVote();
-    vote.cast(voteWith(["player", P1], honest), "1.1.1.1");
-    vote.cast(voteWith(["player", P1], honest), "2.2.2.2");
-    vote.tally(2);
-    expect(vote.statsAgreement()).toEqual({
-      voters: 2,
-      versions: 1,
-      archivedBackers: 2,
-      topBackers: 2,
-      agreed: true,
-    });
-  });
-
-  it("reports a split where the majority's stats are archived", () => {
+  it("does not let a first voter with forged stats ride the majority's winner", () => {
     const vote = new WinnerVote();
     vote.cast(voteWith(["player", P1], forged), "1.1.1.1");
     vote.cast(voteWith(["player", P1], honest), "2.2.2.2");
     vote.cast(voteWith(["player", P1], honest), "3.3.3.3");
-    vote.tally(3);
-    expect(vote.statsAgreement()).toEqual({
-      voters: 3,
-      versions: 2,
-      archivedBackers: 2,
-      topBackers: 2,
-      agreed: true,
-    });
-  });
-
-  it("reports a split no version won", () => {
-    const vote = new WinnerVote();
-    vote.cast(voteWith(["player", P1], forged), "1.1.1.1");
-    vote.cast(voteWith(["player", P1], honest), "2.2.2.2");
-    vote.tally(3);
-    // Still open: nothing to report until the stats are settled.
-    expect(vote.statsAgreement()).toBeNull();
-    vote.settleStatsAmong(new Set(["1.1.1.1", "2.2.2.2", "3.3.3.3"]), true);
-    expect(vote.statsAgreement()).toEqual({
-      voters: 2,
-      versions: 2,
-      archivedBackers: 1,
-      topBackers: 1,
-      agreed: false,
-    });
-  });
-
-  it("counts only votes for the decided winner", () => {
-    const vote = new WinnerVote();
-    vote.cast(voteWith(["player", P2], forged), "9.9.9.9");
-    vote.cast(voteWith(["player", P1], honest), "1.1.1.1");
-    vote.cast(voteWith(["player", P1], honest), "2.2.2.2");
-    vote.tally(3);
-    expect(vote.statsAgreement()).toEqual({
-      voters: 2,
-      versions: 1,
-      archivedBackers: 2,
-      topBackers: 2,
-      agreed: true,
-    });
-  });
-});
-
-// Which stats the record carries. The winner is decided exactly as before;
-// the stats are a second vote among that winner's voters, held to the same
-// majority of the same electorate. Settled with the winner when a version
-// already has that majority; otherwise left open for late votes until
-// settleStatsAmong settles them.
-describe("WinnerVote archived stats", () => {
-  const honest: AllPlayersStats = { [P1]: { finalTiles: 100n } };
-  const forged: AllPlayersStats = { [P1]: { finalTiles: 999n } };
-  const other: AllPlayersStats = { [P1]: { finalTiles: 5n } };
-  const voteWith = (
-    winner: ClientSendWinnerMessage["winner"],
-    allPlayersStats: AllPlayersStats,
-  ): ClientSendWinnerMessage => ({ type: "winner", winner, allPlayersStats });
-
-  it("is null until the winner is decided", () => {
-    const vote = new WinnerVote();
-    vote.cast(voteWith(["player", P1], honest), "1.1.1.1");
-    expect(vote.tally(2)).toBeNull();
-    expect(vote.archivedStats()).toBeNull();
-  });
-
-  it("agrees when every voter sent the same stats", () => {
-    const vote = new WinnerVote();
-    vote.cast(voteWith(["player", P1], honest), "1.1.1.1");
-    vote.cast(voteWith(["player", P1], honest), "2.2.2.2");
-    vote.cast(voteWith(["player", P1], honest), "3.3.3.3");
-    vote.tally(3);
-    expect(vote.archivedStats()).toEqual({ stats: honest, agreed: true });
-  });
-
-  it("agrees across key order, which differs between in-sync clients", () => {
-    const vote = new WinnerVote();
-    vote.cast(
-      voteWith(["player", P1], { [P1]: { finalTiles: 1n }, [P2]: {} }),
-      "1.1.1.1",
-    );
-    vote.cast(
-      voteWith(["player", P1], { [P2]: {}, [P1]: { finalTiles: 1n } }),
-      "2.2.2.2",
-    );
-    vote.tally(2);
-    expect(vote.archivedStats()?.agreed).toBe(true);
-  });
-
-  it("archives the majority's stats, not the first voter's", () => {
-    const vote = new WinnerVote();
-    vote.cast(voteWith(["player", P1], forged), "1.1.1.1");
-    vote.cast(voteWith(["player", P1], honest), "2.2.2.2");
-    vote.cast(voteWith(["player", P1], honest), "3.3.3.3");
-    // The winner message is still the first vote, as before.
-    expect(vote.tally(3)?.value.allPlayersStats).toEqual(forged);
-    expect(vote.archivedStats()).toEqual({ stats: honest, agreed: true });
-  });
-
-  it("does not agree when no version holds a majority of the electorate", () => {
-    const vote = new WinnerVote();
-    vote.cast(voteWith(["player", P1], forged), "1.1.1.1");
-    vote.cast(voteWith(["player", P1], honest), "2.2.2.2");
-    vote.cast(voteWith(["player", P1], honest), "3.3.3.3");
-    vote.cast(voteWith(["player", P1], other), "4.4.4.4");
-    vote.cast(voteWith(["player", P1], other), "5.5.5.5");
-    // The winner has 5 of 6; no stats version has more than 2 of 6.
-    const decided = vote.tally(6);
-    expect(decided?.value.winner).toEqual(["player", P1]);
-    expect(decided?.votes).toBe(5);
-    expect(vote.statsOpen()).toBe(true);
-    expect(vote.archivedStats()).toBeNull();
-    // Still no majority among the six: stays open unless forced.
-    expect(
-      vote.settleStatsAmong(
-        new Set([
-          "1.1.1.1",
-          "2.2.2.2",
-          "3.3.3.3",
-          "4.4.4.4",
-          "5.5.5.5",
-          "6.6.6.6",
-        ]),
-        false,
-      ),
-    ).toBe(false);
-    // Forced (the window ran out), it falls back to the most-backed version,
-    // the earliest of those on a tie, unagreed.
-    expect(
-      vote.settleStatsAmong(
-        new Set([
-          "1.1.1.1",
-          "2.2.2.2",
-          "3.3.3.3",
-          "4.4.4.4",
-          "5.5.5.5",
-          "6.6.6.6",
-        ]),
-        true,
-      ),
-    ).toBe(true);
-    expect(vote.archivedStats()).toEqual({ stats: honest, agreed: false });
-  });
-
-  it("falls back to the first vote's stats on an even split", () => {
-    const vote = new WinnerVote();
-    vote.cast(voteWith(["player", P1], forged), "1.1.1.1");
-    vote.cast(voteWith(["player", P1], honest), "2.2.2.2");
-    vote.tally(3);
-    vote.settleStatsAmong(new Set(["1.1.1.1", "2.2.2.2", "3.3.3.3"]), true);
-    expect(vote.archivedStats()).toEqual({ stats: forged, agreed: false });
-  });
-
-  it("agrees with a lone voter, as the winner vote does", () => {
-    const vote = new WinnerVote();
-    vote.cast(voteWith(["player", P1], honest), "1.1.1.1");
-    vote.tally(1);
-    expect(vote.archivedStats()).toEqual({ stats: honest, agreed: true });
-  });
-
-  it("ignores stats sent with other winners", () => {
-    const vote = new WinnerVote();
-    vote.cast(voteWith(["player", P2], honest), "1.1.1.1");
-    vote.cast(voteWith(["player", P1], forged), "2.2.2.2");
-    vote.cast(voteWith(["player", P1], honest), "3.3.3.3");
-    vote.cast(voteWith(["player", P1], honest), "4.4.4.4");
-    vote.cast(voteWith(["player", P1], forged), "5.5.5.5");
-    // P1 wins 4 of 5. `honest` was sent by 3 of 5 IPs, but only 2 of them
-    // voted for P1, so neither version of P1's voters holds a majority.
-    expect(vote.tally(5)?.value.winner).toEqual(["player", P1]);
-    expect(vote.statsOpen()).toBe(true);
-    vote.settleStatsAmong(
-      new Set(["1.1.1.1", "2.2.2.2", "3.3.3.3", "4.4.4.4", "5.5.5.5"]),
-      true,
-    );
-    expect(vote.archivedStats()).toEqual({ stats: forged, agreed: false });
-  });
-
-  it("does not agree when shared IPs give two versions a majority", () => {
-    const vote = new WinnerVote();
-    // Two clients behind each IP, sending different stats.
-    vote.cast(voteWith(["player", P1], forged), "1.1.1.1");
-    vote.cast(voteWith(["player", P1], honest), "1.1.1.1");
-    vote.cast(voteWith(["player", P1], forged), "2.2.2.2");
-    vote.cast(voteWith(["player", P1], honest), "2.2.2.2");
-    vote.tally(2);
-    expect(vote.statsOpen()).toBe(true);
-    // Both still hold a majority among the two IPs, so it never agrees.
-    expect(vote.settleStatsAmong(new Set(["1.1.1.1", "2.2.2.2"]), false)).toBe(
-      false,
-    );
-    vote.settleStatsAmong(new Set(["1.1.1.1", "2.2.2.2"]), true);
-    expect(vote.archivedStats()?.agreed).toBe(false);
-  });
-
-  it("counts a departed voter's stats only as far as their winner vote counts", () => {
-    const vote = new WinnerVote();
-    vote.cast(voteWith(["player", P1], forged), "1.1.1.1");
-    vote.cast(voteWith(["player", P1], honest), "2.2.2.2");
-    vote.cast(voteWith(["player", P1], honest), "3.3.3.3");
-    // 1.1.1.1 left: among the two still present, the winner and the honest
-    // stats both have 2 of 2.
-    vote.tallyAmong(new Set(["2.2.2.2", "3.3.3.3"]));
-    expect(vote.archivedStats()).toEqual({ stats: honest, agreed: true });
-
-    const lone = new WinnerVote();
-    lone.cast(voteWith(["player", P1], honest), "1.1.1.1");
-    lone.cast(voteWith(["player", P1], forged), "2.2.2.2");
-    // Only 2.2.2.2 remains: they alone decide the stats, as they do the
-    // winner.
-    lone.tallyAmong(new Set(["2.2.2.2"]));
-    expect(lone.archivedStats()).toEqual({ stats: forged, agreed: true });
-  });
-
-  it("settles a cancelled match's stats the same way", () => {
-    const vote = new WinnerVote();
-    vote.cast(voteWith(undefined, honest), "1.1.1.1");
-    vote.cast(voteWith(undefined, honest), "2.2.2.2");
-    vote.tally(2);
-    expect(vote.archivedStats()).toEqual({ stats: honest, agreed: true });
-  });
-});
-
-// The stats window: after the decision, late votes for the decided winner may
-// still give one version its majority.
-describe("WinnerVote open stats", () => {
-  const honest: AllPlayersStats = { [P1]: { finalTiles: 100n } };
-  const forged: AllPlayersStats = { [P1]: { finalTiles: 999n } };
-  const voteWith = (
-    winner: ClientSendWinnerMessage["winner"],
-    allPlayersStats: AllPlayersStats,
-  ): ClientSendWinnerMessage => ({ type: "winner", winner, allPlayersStats });
-  const THREE = new Set(["1.1.1.1", "2.2.2.2", "3.3.3.3"]);
-
-  // A forger inside the deciding majority of three: decided at 2 of 3 with
-  // the stats split 1-1.
-  function forgerDecides(): WinnerVote {
-    const vote = new WinnerVote();
-    vote.cast(voteWith(["player", P1], forged), "1.1.1.1");
-    vote.cast(voteWith(["player", P1], honest), "2.2.2.2");
+    expect(vote.candidates()).toBe(2);
     expect(vote.tally(3)?.votes).toBe(2);
-    return vote;
-  }
+    expect(vote.winner()?.allPlayersStats).toEqual(honest);
+  });
 
-  it("is closed while undecided and once settled", () => {
+  it("does not decide when the winner's voters split on stats", () => {
     const vote = new WinnerVote();
-    expect(vote.statsOpen()).toBe(false);
-    expect(vote.castStats(voteWith(["player", P1], honest), "1.1.1.1")).toBe(
-      false,
-    );
-    expect(vote.settleStatsAmong(THREE, true)).toBe(false);
-
-    const agreed = new WinnerVote();
-    agreed.cast(voteWith(["player", P1], honest), "1.1.1.1");
-    agreed.tally(1);
-    expect(agreed.statsOpen()).toBe(false);
-    expect(agreed.castStats(voteWith(["player", P1], forged), "2.2.2.2")).toBe(
-      false,
-    );
+    vote.cast(voteWith(["player", P1], forged), "1.1.1.1");
+    vote.cast(voteWith(["player", P1], honest), "2.2.2.2");
+    expect(vote.tally(2)).toBeNull();
   });
 
-  it("lets a late honest vote give the honest stats their majority", () => {
-    const vote = forgerDecides();
-    expect(vote.statsOpen()).toBe(true);
-    expect(vote.settleStatsAmong(THREE, false)).toBe(false);
-
-    expect(vote.castStats(voteWith(["player", P1], honest), "3.3.3.3")).toBe(
-      true,
+  it("keys a vote and a replayed result with the same stats alike", () => {
+    expect(voteKey(voteWith(["player", P1], honest))).toBe(
+      voteKey({ winner: ["player", P1], allPlayersStats: honest }),
     );
-    expect(vote.settleStatsAmong(THREE, false)).toBe(true);
-    expect(vote.archivedStats()).toEqual({ stats: honest, agreed: true });
-    // The winner and its message are untouched.
-    expect(vote.winner()?.allPlayersStats).toEqual(forged);
-  });
-
-  it("ignores late votes for another winner", () => {
-    const vote = forgerDecides();
-    expect(vote.castStats(voteWith(["player", P2], honest), "3.3.3.3")).toBe(
-      false,
+    expect(voteKey(voteWith(["player", P1], honest))).not.toBe(
+      voteKey({ winner: ["player", P1], allPlayersStats: forged }),
     );
-    expect(vote.settleStatsAmong(THREE, false)).toBe(false);
-    expect(vote.winner()?.winner).toEqual(["player", P1]);
-  });
-
-  it("counts only the votes of the electorate it is given", () => {
-    const vote = forgerDecides();
-    // An electorate without the forger: the honest stats hold 1 of its 2 IPs
-    // -- not a majority -- until the third player votes.
-    const remaining = new Set(["2.2.2.2", "3.3.3.3"]);
-    expect(vote.settleStatsAmong(remaining, false)).toBe(false);
-    vote.castStats(voteWith(["player", P1], honest), "3.3.3.3");
-    expect(vote.settleStatsAmong(remaining, false)).toBe(true);
-    expect(vote.archivedStats()).toEqual({ stats: honest, agreed: true });
-
-    // An honest voter leaving does not help the forger.
-    const other = forgerDecides();
-    expect(other.settleStatsAmong(new Set(["1.1.1.1", "3.3.3.3"]), false)).toBe(
-      false,
-    );
-  });
-
-  it("settles once and keeps the result", () => {
-    const vote = forgerDecides();
-    expect(vote.settleStatsAmong(THREE, true)).toBe(true);
-    expect(vote.archivedStats()).toEqual({ stats: forged, agreed: false });
-    expect(vote.castStats(voteWith(["player", P1], honest), "3.3.3.3")).toBe(
-      false,
-    );
-    expect(vote.settleStatsAmong(THREE, false)).toBe(true);
-    expect(vote.archivedStats()).toEqual({ stats: forged, agreed: false });
   });
 });
 

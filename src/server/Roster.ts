@@ -154,17 +154,12 @@ export class Roster {
     this.disconnected.set(clientID, isDisconnected);
   }
 
-  // The electorate for the winner, stats and live-stats votes: the connected
-  // players' IPs. Spectators run the simulation but may not vote, so counting
-  // them would raise the bar for a majority without anyone able to meet it:
-  // five spectators watching four players make a strict majority of nine
-  // unreachable, and the game would never reach consensus, never archive,
-  // and never be scored.
-  votingIPs(): Set<string> {
-    return new Set(this.players().map((c) => c.ip));
-  }
-
+  // The electorate for the winner and live-stats votes. Spectators run the
+  // simulation but may not vote, so counting them would raise the bar for a
+  // majority without anyone able to meet it: five spectators watching four
+  // players make a strict majority of nine unreachable, and the game would
+  // never reach consensus, never archive, and never be scored.
   votingUniqueIPs(): number {
-    return this.votingIPs().size;
+    return new Set(this.players().map((c) => c.ip)).size;
   }
 }

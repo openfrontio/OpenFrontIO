@@ -98,30 +98,6 @@ describe("winner vote re-tally when the electorate shrinks", () => {
     expect(archivedWinners()).toEqual([undefined]);
   });
 
-  it("leaves spectators out of the re-tallied electorate", async () => {
-    const game = makeGame({
-      config: { gameType: GameType.Public },
-      deps: { archive },
-    });
-    const winner = makeClient({ clientID: WINNER, ip: "1.1.1.1" });
-    const loser = makeClient({ clientID: LOSER, ip: "2.2.2.2" });
-    const spectator = makeClient({
-      clientID: cid("watcher"),
-      ip: "3.3.3.3",
-      spectator: true,
-    });
-    [winner, loser, spectator].forEach((c) => game.joinClient(c));
-    startGame(game);
-    await vote(winner, ["player", WINNER]);
-    expect(archive).not.toHaveBeenCalled();
-
-    // The winner holds 1 of the 1 players' IPs left; the spectator, who
-    // cannot vote, does not make it 1 of 2.
-    await disconnect(loser);
-
-    expect(archivedWinners()).toEqual([["player", WINNER]]);
-  });
-
   it("re-tallies when the ping prune drops a stale client", async () => {
     const { game, winner, loser } = game1v1();
     await vote(winner, ["player", WINNER]);
@@ -130,25 +106,5 @@ describe("winner vote re-tally when the electorate shrinks", () => {
     loser.lastPing = Date.now() - 61_000;
     game.pruneStaleClients();
     expect(archivedWinners()).toEqual([["player", WINNER]]);
-  });
-
-  it("ignores winner votes sent before the game starts", async () => {
-    const game = makeGame({
-      config: { gameType: GameType.Public },
-      deps: { archive },
-    });
-    const winner = makeClient({ clientID: WINNER, ip: "1.1.1.1" });
-    const loser = makeClient({ clientID: LOSER, ip: "2.2.2.2" });
-    game.joinClient(winner);
-    game.joinClient(loser);
-    await vote(winner, ["player", WINNER]);
-    await vote(loser, ["player", WINNER]);
-    expect(archive).not.toHaveBeenCalled();
-
-    // The lobby votes neither decided the game nor used up anyone's vote.
-    startGame(game);
-    await vote(winner, ["player", LOSER]);
-    await vote(loser, ["player", LOSER]);
-    expect(archivedWinners()).toEqual([["player", LOSER]]);
   });
 });

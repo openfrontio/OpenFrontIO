@@ -20,9 +20,9 @@ import { Controller } from "../../Controller";
 import { SendAllianceRequestIntentEvent } from "../../Transport";
 import { UserSettings } from "../../UserSettings";
 
-import { onlyImages } from "@openfront/shared/SharedUtil";
 import { GoToPlayerEvent, GoToUnitEvent } from "../../TransformHandler";
 import { GameView, PlayerView, UnitView } from "../../view";
+import { onlyImages } from "./OnlyImages";
 
 import { renderNumber, renderTroops } from "@openfront/engine-lib/Format";
 import { PlaySoundEffectEvent } from "../../sound/Sounds";
@@ -34,6 +34,8 @@ interface GameEvent {
   unsafeDescription?: boolean;
   type: MessageType;
   highlight?: boolean;
+  /** Show in the small feed even if the type is normally tier 1. */
+  minor?: boolean;
   createdAt: number;
   onDelete?: () => void;
   focusID?: number;
@@ -340,18 +342,24 @@ export class EventsDisplay extends LitElement implements Controller {
       otherPlayerSmallID = player?.smallID();
     }
 
+    // A message I sent is only a confirmation, like a sent emoji: it goes to
+    // the small feed, quietly.
+    const sent = !event.isFrom;
     this.addEvent({
-      description: translateText(event.isFrom ? "chat.from" : "chat.to", {
+      description: translateText(sent ? "chat.to" : "chat.from", {
         user: otherPlayerDiplayName,
         msg: translatedMessage,
       }),
       createdAt: this.game.ticks(),
-      highlight: true,
+      highlight: !sent,
+      minor: sent,
       type: MessageType.CHAT,
       unsafeDescription: false,
       focusID: otherPlayerSmallID,
     });
-    this.eventBus.emit(new PlaySoundEffectEvent("message"));
+    if (!sent) {
+      this.eventBus.emit(new PlaySoundEffectEvent("message"));
+    }
   }
 
   onAllianceRequestReplyEvent(update: AllianceRequestReplyUpdate) {
@@ -527,9 +535,6 @@ export class EventsDisplay extends LitElement implements Controller {
   }
 
   onEmojiMessageEvent(update: EmojiUpdate) {
-    // Honor the "Disable emojis" setting: don't surface received emojis in the
-    // events feed either (#4430).
-    if (!this.userSettings.emojis()) return;
     const myPlayer = this.game.myPlayer();
     if (!myPlayer) return;
 
@@ -542,6 +547,10 @@ export class EventsDisplay extends LitElement implements Controller {
     ) as PlayerView;
 
     if (recipient === myPlayer) {
+      // Honor the "Disable emojis" setting: don't surface received emojis in
+      // the events feed either (#4430). Confirmations of emojis you sent
+      // still show, since the setting doesn't stop you sending them.
+      if (!this.userSettings.emojis()) return;
       this.addEvent({
         description: `${sender.displayName()}: ${update.emoji.message}`,
         unsafeDescription: true,
@@ -558,9 +567,19 @@ export class EventsDisplay extends LitElement implements Controller {
         }),
         unsafeDescription: true,
         type: MessageType.CHAT,
-        highlight: true,
+        minor: true,
         createdAt: this.game.ticks(),
         focusID: recipient.smallID(),
+      });
+    } else if (sender === myPlayer) {
+      this.addEvent({
+        description: translateText("events_display.sent_emoji_all", {
+          emoji: update.emoji.message,
+        }),
+        unsafeDescription: true,
+        type: MessageType.CHAT,
+        minor: true,
+        createdAt: this.game.ticks(),
       });
     }
   }
@@ -661,7 +680,9 @@ export class EventsDisplay extends LitElement implements Controller {
     const tier1Events: GameEvent[] = [];
     let tier2Events: GameEvent[] = [];
     for (const event of this.events) {
-      (isTier1(event.type) ? tier1Events : tier2Events).push(event);
+      (isTier1(event.type) && !event.minor ? tier1Events : tier2Events).push(
+        event,
+      );
     }
     tier1Events.sort((a, b) => a.createdAt - b.createdAt);
     tier2Events.sort((a, b) => a.createdAt - b.createdAt);
