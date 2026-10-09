@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { GameType, RankedType } from "../../src/core/game/Game";
+import { GameType, RankedType } from "@openfront/engine-api/game/GameTypes";
 import { Client } from "../../src/server/Client";
 import { GamePhase } from "../../src/server/GameServer";
 import {

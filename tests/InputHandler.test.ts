@@ -1,14 +1,23 @@
+import { UnitType } from "@openfront/engine-api/game/GameTypes";
+import { EventBus } from "@openfront/shared/EventBus";
 import {
   AlternateViewEvent,
   AutoUpgradeEvent,
   CloseViewEvent,
   ConfirmGhostStructureEvent,
   ContextMenuEvent,
+  DoBoatAttackEvent,
+  DoTargetPlayerEvent,
   DragEvent,
+  EmojiKeyEvent,
+  EmojiTableVisibleEvent,
   InputHandler,
   MouseDownEvent,
   MouseOverEvent,
   MouseUpEvent,
+  RefreshGraphicsEvent,
+  ShowChatMenuEvent,
+  ShowEmojiMenuEvent,
   TouchLongPressStartEvent,
   UnitSelectionEvent,
   WarshipSelectionBoxCancelEvent,
@@ -17,10 +26,8 @@ import {
 } from "../src/client/InputHandler";
 import { Platform } from "../src/client/Platform";
 import { UIState } from "../src/client/UIState";
+import { KEYBINDS_KEY, UserSettings } from "../src/client/UserSettings";
 import { GameView, PlayerView, UnitView } from "../src/client/view";
-import { EventBus } from "../src/core/EventBus";
-import { UnitType } from "../src/core/game/Game";
-import { KEYBINDS_KEY, UserSettings } from "../src/core/game/UserSettings";
 
 class MockPointerEvent {
   button: number;
@@ -1344,6 +1351,223 @@ describe("InputHandler AutoUpgrade", () => {
       );
 
       expect(uiState.ghostStructure).toBe(UnitType.City);
+    });
+  });
+
+  describe("Target player keybind", () => {
+    beforeEach(() => {
+      inputHandler.destroy();
+      inputHandler = new InputHandler(
+        mockGameView,
+        {
+          attackRatio: 20,
+          ghostStructure: null,
+          rocketDirectionUp: true,
+          upgradeMultiplier: 1,
+        },
+        mockCanvas,
+        eventBus,
+      );
+      inputHandler.initialize();
+    });
+
+    test("N targets the player under the cursor", () => {
+      const targets: DoTargetPlayerEvent[] = [];
+      eventBus.on(DoTargetPlayerEvent, (e) => targets.push(e));
+
+      window.dispatchEvent(new KeyboardEvent("keyup", { code: "KeyN" }));
+
+      expect(targets).toHaveLength(1);
+      // No tile: the runner uses the one under the cursor.
+      expect(targets[0].tile).toBeUndefined();
+    });
+  });
+
+  describe("Quick chat keybind", () => {
+    beforeEach(() => {
+      inputHandler.destroy();
+      inputHandler = new InputHandler(
+        mockGameView,
+        {
+          attackRatio: 20,
+          ghostStructure: null,
+          rocketDirectionUp: true,
+          upgradeMultiplier: 1,
+        },
+        mockCanvas,
+        eventBus,
+      );
+      inputHandler.initialize();
+    });
+
+    test("R opens quick chat at the last mouse position", () => {
+      const chats: ShowChatMenuEvent[] = [];
+      const refreshes: RefreshGraphicsEvent[] = [];
+      eventBus.on(ShowChatMenuEvent, (e) => chats.push(e));
+      eventBus.on(RefreshGraphicsEvent, (e) => refreshes.push(e));
+
+      window.dispatchEvent(
+        new MouseEvent("mousemove", { clientX: 50, clientY: 60 }),
+      );
+      window.dispatchEvent(new KeyboardEvent("keyup", { code: "KeyR" }));
+
+      expect(chats).toHaveLength(1);
+      expect(chats[0].x).toBe(50);
+      expect(chats[0].y).toBe(60);
+      expect(refreshes).toHaveLength(0);
+    });
+
+    test("Alt+R resets graphics without opening quick chat", () => {
+      const chats: ShowChatMenuEvent[] = [];
+      const refreshes: RefreshGraphicsEvent[] = [];
+      eventBus.on(ShowChatMenuEvent, (e) => chats.push(e));
+      eventBus.on(RefreshGraphicsEvent, (e) => refreshes.push(e));
+
+      window.dispatchEvent(
+        new KeyboardEvent("keyup", { code: "KeyR", altKey: true }),
+      );
+
+      expect(chats).toHaveLength(0);
+      expect(refreshes).toHaveLength(1);
+    });
+
+    test("Ctrl+R and Cmd+R don't open quick chat", () => {
+      const chats: ShowChatMenuEvent[] = [];
+      eventBus.on(ShowChatMenuEvent, (e) => chats.push(e));
+
+      window.dispatchEvent(
+        new KeyboardEvent("keyup", { code: "KeyR", ctrlKey: true }),
+      );
+      window.dispatchEvent(
+        new KeyboardEvent("keyup", { code: "KeyR", metaKey: true }),
+      );
+
+      expect(chats).toHaveLength(0);
+    });
+  });
+
+  describe("Emoji menu keybind", () => {
+    beforeEach(() => {
+      inputHandler.destroy();
+      inputHandler = new InputHandler(
+        mockGameView,
+        {
+          attackRatio: 20,
+          ghostStructure: null,
+          rocketDirectionUp: true,
+          upgradeMultiplier: 1,
+        },
+        mockCanvas,
+        eventBus,
+      );
+      inputHandler.initialize();
+    });
+
+    test("F opens the emoji menu at the last mouse position", () => {
+      const emitted: ShowEmojiMenuEvent[] = [];
+      eventBus.on(ShowEmojiMenuEvent, (e) => emitted.push(e));
+
+      window.dispatchEvent(
+        new MouseEvent("mousemove", { clientX: 120, clientY: 340 }),
+      );
+      // Opens on keydown, not keyup like most keybinds.
+      window.dispatchEvent(new KeyboardEvent("keydown", { code: "KeyF" }));
+      expect(emitted).toHaveLength(1);
+      window.dispatchEvent(new KeyboardEvent("keyup", { code: "KeyF" }));
+
+      expect(emitted).toHaveLength(1);
+      expect(emitted[0].x).toBe(120);
+      expect(emitted[0].y).toBe(340);
+    });
+
+    test("F closes the emoji table when it is already open", () => {
+      const opened: ShowEmojiMenuEvent[] = [];
+      const closed: CloseViewEvent[] = [];
+      eventBus.on(ShowEmojiMenuEvent, (e) => opened.push(e));
+      eventBus.on(CloseViewEvent, (e) => closed.push(e));
+      eventBus.emit(new EmojiTableVisibleEvent(true));
+
+      window.dispatchEvent(new KeyboardEvent("keydown", { code: "KeyF" }));
+      window.dispatchEvent(new KeyboardEvent("keyup", { code: "KeyF" }));
+
+      expect(opened).toHaveLength(0);
+      expect(closed).toHaveLength(1);
+    });
+
+    test("favorite keys pick a favorites slot instead of zooming while the table is open", () => {
+      const emojiKeys: EmojiKeyEvent[] = [];
+      eventBus.on(EmojiKeyEvent, (e) => emojiKeys.push(e));
+      eventBus.emit(new EmojiTableVisibleEvent(true));
+
+      window.dispatchEvent(new KeyboardEvent("keydown", { code: "KeyQ" }));
+      expect(inputHandler["activeKeys"].has("KeyQ")).toBe(false);
+      window.dispatchEvent(new KeyboardEvent("keyup", { code: "KeyQ" }));
+      window.dispatchEvent(new KeyboardEvent("keydown", { code: "KeyD" }));
+      window.dispatchEvent(new KeyboardEvent("keyup", { code: "KeyD" }));
+
+      expect(emojiKeys.map((e) => e.slot)).toEqual([0, 5]);
+    });
+
+    test("keys without an emoji keep their keybind while the table is open", () => {
+      const emojiKeys: EmojiKeyEvent[] = [];
+      const boatAttacks: DoBoatAttackEvent[] = [];
+      eventBus.on(EmojiKeyEvent, (e) => emojiKeys.push(e));
+      eventBus.on(DoBoatAttackEvent, (e) => boatAttacks.push(e));
+      eventBus.emit(new EmojiTableVisibleEvent(true));
+
+      window.dispatchEvent(new KeyboardEvent("keydown", { code: "KeyB" }));
+      window.dispatchEvent(new KeyboardEvent("keyup", { code: "KeyB" }));
+
+      expect(emojiKeys).toHaveLength(0);
+      expect(boatAttacks).toHaveLength(1);
+    });
+
+    test("camera keys are not held while the table is open", () => {
+      eventBus.emit(new EmojiTableVisibleEvent(true));
+      window.dispatchEvent(new KeyboardEvent("keydown", { code: "KeyW" }));
+      expect(inputHandler["activeKeys"].has("KeyW")).toBe(false);
+    });
+
+    test("typing F then W quickly sends the W favorite without panning", () => {
+      const emojiKeys: EmojiKeyEvent[] = [];
+      eventBus.on(EmojiKeyEvent, (e) => emojiKeys.push(e));
+      // Stand in for the emoji table opening.
+      eventBus.on(ShowEmojiMenuEvent, () =>
+        eventBus.emit(new EmojiTableVisibleEvent(true)),
+      );
+
+      // W goes down before F comes up.
+      window.dispatchEvent(new KeyboardEvent("keydown", { code: "KeyF" }));
+      window.dispatchEvent(new KeyboardEvent("keydown", { code: "KeyW" }));
+      expect(inputHandler["activeKeys"].has("KeyW")).toBe(false);
+      window.dispatchEvent(new KeyboardEvent("keyup", { code: "KeyF" }));
+      window.dispatchEvent(new KeyboardEvent("keyup", { code: "KeyW" }));
+
+      expect(emojiKeys.map((e) => e.slot)).toEqual([1]);
+    });
+
+    test("opening the table stops a held camera key, and releasing it sends nothing", () => {
+      const emojiKeys: EmojiKeyEvent[] = [];
+      eventBus.on(EmojiKeyEvent, (e) => emojiKeys.push(e));
+      window.dispatchEvent(new KeyboardEvent("keydown", { code: "KeyW" }));
+      expect(inputHandler["activeKeys"].has("KeyW")).toBe(true);
+
+      eventBus.emit(new EmojiTableVisibleEvent(true));
+      expect(inputHandler["activeKeys"].has("KeyW")).toBe(false);
+      window.dispatchEvent(new KeyboardEvent("keyup", { code: "KeyW" }));
+
+      expect(emojiKeys).toHaveLength(0);
+    });
+
+    test("keybinds fire normally once the table closes", () => {
+      const boatAttacks: DoBoatAttackEvent[] = [];
+      eventBus.on(DoBoatAttackEvent, (e) => boatAttacks.push(e));
+      eventBus.emit(new EmojiTableVisibleEvent(true));
+      eventBus.emit(new EmojiTableVisibleEvent(false));
+
+      window.dispatchEvent(new KeyboardEvent("keyup", { code: "KeyB" }));
+
+      expect(boatAttacks).toHaveLength(1);
     });
   });
 });

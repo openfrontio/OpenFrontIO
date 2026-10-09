@@ -2,6 +2,7 @@ import {
   ACTIVE_LOADOUT_KEY,
   CROWN_KEY,
   EFFECTS_KEY,
+  FAVORITE_EMOJIS_KEY,
   FLAG_KEY,
   LOADOUTS_KEY,
   MAX_LOADOUTS,
@@ -11,7 +12,8 @@ import {
   USER_SETTINGS_CHANGED_EVENT,
   UserSettings,
   getDefaultKeybinds,
-} from "../src/core/game/UserSettings";
+  keysMayBeShared,
+} from "../src/client/UserSettings";
 
 // UserSettings keeps a static in-memory cache and the active player id; reset
 // both so each test reads fresh from the (cleared) localStorage as logged out.
@@ -591,8 +593,24 @@ describe("getDefaultKeybinds", () => {
     const keybinds = getDefaultKeybinds(false);
     expect(keybinds.boxSelectWarships).toBe("ShiftLeft");
     expect(keybinds.resetGfx).toBe("KeyR");
-    expect(keybinds.selectAllWarships).toBe("KeyF");
+    expect(keybinds.selectAllWarships).toBe("KeyX");
+    expect(keybinds.emojiMenu).toBe("KeyF");
+    expect(keybinds.quickChat).toBe("KeyR");
+    expect(keybinds.targetPlayer).toBe("KeyN");
     expect(keybinds.buildMenuModifier).toBe("ControlLeft");
+  });
+
+  it("never gives two actions the same letter key, except shared pairs", () => {
+    const binds = Object.entries(getDefaultKeybinds(false)).filter(([, k]) =>
+      /^Key[A-Z]$/.test(k),
+    );
+    for (const [a, keyA] of binds) {
+      for (const [b, keyB] of binds) {
+        if (a !== b && keyA === keyB) {
+          expect(keysMayBeShared(a, b), `${a} and ${b}`).toBe(true);
+        }
+      }
+    }
   });
 
   it("handles Mac-specific modifier keys correctly", () => {
@@ -626,5 +644,81 @@ describe("UserSettings replay viewer", () => {
     expect(new UserSettings().replayViewer()).toBe(true);
     new UserSettings().setReplayViewer(false);
     expect(new UserSettings().replayViewer()).toBe(false);
+  });
+});
+
+describe("UserSettings favorite emojis", () => {
+  beforeEach(resetUserSettingsState);
+
+  it("has no favorites by default", () => {
+    expect(new UserSettings().favoriteEmojis()).toEqual([]);
+  });
+
+  it("round-trips slots, keeping empty ones in place", () => {
+    new UserSettings().setFavoriteEmojis(["👍", null, "💀"]);
+    expect(new UserSettings().favoriteEmojis()).toEqual(["👍", null, "💀"]);
+  });
+
+  it("reads unknown emojis as empty slots and corrupt storage as none", () => {
+    localStorage.setItem(FAVORITE_EMOJIS_KEY, JSON.stringify(["🍕", "👍"]));
+    expect(new UserSettings().favoriteEmojis()).toEqual([null, "👍"]);
+
+    resetUserSettingsState();
+    localStorage.setItem(FAVORITE_EMOJIS_KEY, "not json");
+    expect(new UserSettings().favoriteEmojis()).toEqual([]);
+  });
+});
+
+describe("UserSettings keybinds with new defaults", () => {
+  beforeEach(resetUserSettingsState);
+
+  const store = (binds: Record<string, unknown>) =>
+    localStorage.setItem("settings.keybinds", JSON.stringify(binds));
+
+  it("unbinds a default that lands on a key the player already uses", () => {
+    store({ boatAttack: { value: "KeyX", key: "x" } });
+    const keybinds = new UserSettings().keybinds(false);
+
+    expect(keybinds.boatAttack).toBe("KeyX");
+    expect(keybinds.selectAllWarships).toBeUndefined();
+    // Saved as unbound, so the settings modal shows it that way too.
+    expect(new UserSettings().parsedUserKeybinds().selectAllWarships).toEqual({
+      value: "Null",
+      key: "",
+    });
+  });
+
+  it("keeps a player's own F for select-all-warships over the emoji menu", () => {
+    store({ selectAllWarships: { value: "KeyF", key: "f" } });
+    const keybinds = new UserSettings().keybinds(false);
+
+    expect(keybinds.selectAllWarships).toBe("KeyF");
+    expect(keybinds.emojiMenu).toBeUndefined();
+  });
+
+  it("leaves defaults alone when nothing clashes", () => {
+    store({ boatAttack: { value: "KeyH", key: "h" } });
+    const keybinds = new UserSettings().keybinds(false);
+
+    expect(keybinds.emojiMenu).toBe("KeyF");
+    expect(keybinds.selectAllWarships).toBe("KeyX");
+    expect(
+      new UserSettings().parsedUserKeybinds().selectAllWarships,
+    ).toBeUndefined();
+  });
+
+  it("keeps quick chat on R when the player saved reset graphics there", () => {
+    store({ resetGfx: { value: "KeyR", key: "r" } });
+    const keybinds = new UserSettings().keybinds(false);
+
+    expect(keybinds.resetGfx).toBe("KeyR");
+    expect(keybinds.quickChat).toBe("KeyR");
+  });
+
+  it("lets modifier keys stay shared", () => {
+    store({ altKey: { value: "AltLeft", key: "Alt" } });
+    expect(new UserSettings().keybinds(false).emojiMenuModifier).toBe(
+      "AltLeft",
+    );
   });
 });

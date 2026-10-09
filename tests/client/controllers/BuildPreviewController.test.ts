@@ -1,3 +1,5 @@
+import { UnitType } from "@openfront/engine-api/game/GameTypes";
+import { EventBus } from "@openfront/shared/EventBus";
 import { describe, expect, test, vi } from "vitest";
 import {
   BuildPreviewController,
@@ -6,8 +8,6 @@ import {
 } from "../../../src/client/controllers/BuildPreviewController";
 import { MouseUpEvent } from "../../../src/client/InputHandler";
 import { BuildUnitIntentEvent } from "../../../src/client/Transport";
-import { EventBus } from "../../../src/core/EventBus";
-import { UnitType } from "../../../src/core/game/Game";
 
 describe("BuildPreviewController ghost preservation (locked nuke / Enter confirm)", () => {
   describe("shouldPreserveGhostAfterBuild", () => {

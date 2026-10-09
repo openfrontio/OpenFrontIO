@@ -1,7 +1,7 @@
+import type { UserMeResponse } from "@openfront/shared/ApiSchemas";
+import { CloseCode, CloseReason } from "@openfront/shared/CloseCodes";
 import type { Mock } from "vitest";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { UserMeResponse } from "../../src/core/ApiSchemas";
-import { CloseCode, CloseReason } from "../../src/core/CloseCodes";
 
 const apiMocks = vi.hoisted(() => ({
   getUserMe: vi.fn(),
@@ -80,7 +80,7 @@ vi.mock("../../src/client/Utils", () => ({
 }));
 
 import { MatchmakingModal } from "../../src/client/Matchmaking";
-import { UserSettings } from "../../src/core/game/UserSettings";
+import { UserSettings } from "../../src/client/UserSettings";
 
 class FakeWebSocket {
   static readonly CONNECTING = 0;
@@ -405,6 +405,57 @@ describe("MatchmakingModal identity gate", () => {
     );
     expect(sockets).toHaveLength(0);
     expect(modal.isOpen()).toBe(false);
+  });
+});
+
+describe("MatchmakingModal trust gate", () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+    sockets.length = 0;
+    apiMocks.getUserMe.mockReset();
+    vi.stubGlobal("WebSocket", FakeWebSocket);
+    installClanSelection(null);
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+    vi.unstubAllGlobals();
+    vi.useRealTimers();
+  });
+
+  function withTrust(
+    trustTier: UserMeResponse["player"]["trustTier"],
+  ): UserMeResponse {
+    const response = userMe();
+    return { ...response, player: { ...response.player, trustTier } };
+  }
+
+  function notTrusted(modal: MatchmakingModal): boolean {
+    return (modal as unknown as { notTrusted: boolean }).notTrusted;
+  }
+
+  // The service gates ranked on trust behind a flag, so the client must
+  // queue whatever the tier says and leave the decision to the 4103 close.
+  it.each(["untrusted", "trusted", null, undefined] as const)(
+    "queues an account whose tier is %s",
+    async (tier) => {
+      apiMocks.getUserMe.mockResolvedValue(withTrust(tier));
+      const modal = new MatchmakingModal();
+      modal.open();
+      await vi.waitFor(() => expect(sockets).toHaveLength(1));
+      expect(notTrusted(modal)).toBe(false);
+    },
+  );
+
+  it("stops without reconnecting when the service refuses as untrusted", async () => {
+    apiMocks.getUserMe.mockResolvedValue(withTrust("trusted"));
+    const { modal, socket } = await openAndJoin("1v1");
+    socket.serverClose(CloseCode.NotTrusted, CloseReason.NotTrusted);
+    await vi.runAllTimersAsync();
+
+    expect(modal.isOpen()).toBe(true);
+    expect(notTrusted(modal)).toBe(true);
+    expect(sockets).toHaveLength(1);
   });
 });
 

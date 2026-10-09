@@ -1,9 +1,13 @@
+import { TileRef } from "@openfront/engine-api/game/GameMap";
+import {
+  PlayerInfo,
+  PlayerType,
+  UnitType,
+} from "@openfront/engine-api/game/GameTypes";
+import { TrainExecution } from "@openfront/engine/execution/TrainExecution";
+import { Railroad } from "@openfront/engine/game/Railroad";
+import { TrainStation } from "@openfront/engine/game/TrainStation";
 import { describe, expect, it } from "vitest";
-import { TrainExecution } from "../../../src/core/execution/TrainExecution";
-import { PlayerInfo, PlayerType, UnitType } from "../../../src/core/game/Game";
-import { TileRef } from "../../../src/core/game/GameMap";
-import { Railroad } from "../../../src/core/game/Railroad";
-import { TrainStation } from "../../../src/core/game/TrainStation";
 import { setup } from "../../util/Setup";
 
 describe("TrainExecution", () => {

@@ -1,9 +1,9 @@
-import { assetUrl } from "src/core/AssetUrls";
 import {
   isGrantedSubscription,
   UserMeResponse,
   UserSubscription,
-} from "../core/ApiSchemas";
+} from "@openfront/shared/ApiSchemas";
+import { assetUrl } from "@openfront/shared/AssetUrls";
 import {
   ColorPalette,
   CosmeticPack,
@@ -18,14 +18,13 @@ import {
   Pattern,
   Skin,
   Subscription,
-} from "../core/CosmeticSchemas";
-import { UserSettings } from "../core/game/UserSettings";
+} from "@openfront/shared/CosmeticSchemas";
 import {
   PlayerCosmeticRefs,
   PlayerCosmetics,
   PlayerEffect,
   PlayerPattern,
-} from "../core/Schemas";
+} from "@openfront/shared/WireSchemas";
 import {
   changeSubscriptionTier,
   getApiBase,
@@ -44,6 +43,7 @@ import {
   startPurchase,
 } from "./Payments";
 import { STEAM_TIER_CHANGE_IN_APP } from "./SubscriptionPolicy";
+import { UserSettings } from "./UserSettings";
 import { translateText } from "./Utils";
 
 export const TEMP_FLARE_OFFSET = 1 * 60 * 1000; // 1 minute
@@ -271,9 +271,9 @@ function debtMessage(debt: number): string {
  * Whole days left on a granted subscription, or null when there is no end date
  * to count to.
  *
- * A Steam ownership grant is a fixed free month, so `currentPeriodEnd` is set
- * and the number is real. An admin comp is open-ended (`currentPeriodEnd`
- * null) and there is nothing to count — the caller uses the no-days copy
+ * A Steam ownership grant is a fixed free month, and an admin comp can be
+ * given an end date, so `currentPeriodEnd` is set and the number is real. An
+ * open-ended admin comp has nothing to count — the caller uses the no-days copy
  * rather than inventing a figure. A date already in the past returns null for
  * the same reason: "0 days" reads as a bug, and a row the sweeper has not got
  * to yet is not worth quoting.

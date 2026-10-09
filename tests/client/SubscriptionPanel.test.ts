@@ -19,6 +19,7 @@ vi.mock("../../src/client/Utils", () => ({
     params ? `${key} ${Object.values(params).join(" ")}` : key,
 }));
 
+import type { UserSubscription } from "@openfront/shared/ApiSchemas";
 import {
   cancelSubscription,
   invalidateUserMe,
@@ -29,7 +30,6 @@ import {
   showInGameAlert,
   showInGameConfirm,
 } from "../../src/client/InGameModal";
-import type { UserSubscription } from "../../src/core/ApiSchemas";
 
 const PERIOD_END = new Date("2026-09-01T00:00:00Z");
 // The panel's own format (toLocaleDateString, short month), evaluated here so
@@ -316,6 +316,49 @@ describe("subscription-panel", () => {
       expect(text()).not.toContain("account_modal.sub_granted_perks_end_on");
       expect(text()).not.toContain("free_play.after_grant_heading");
       expect(text()).not.toContain("account_modal.cancel_subscription");
+    });
+
+    // An admin can give a grant an end date, so the date no longer means
+    // Steam. The server says who gave it; the copy never does. The date line
+    // names the end, and the note below stays undated so it is said once.
+    it("tells a player with a dated admin grant when it ends, once", async () => {
+      el.sub = sub({ provider: null, grantSource: "admin" });
+      await el.updateComplete;
+      expect(text()).toContain(
+        `account_modal.sub_granted_perks_end_on plutonium ${PERIOD_END_TEXT}`,
+      );
+      expect(text()).toContain("account_modal.sub_granted_indefinite");
+      expect(text().split(PERIOD_END_TEXT)).toHaveLength(2);
+      expect(text()).not.toContain("account_modal.sub_granted_from_purchase");
+      expect(text()).not.toContain("free_play.after_grant_heading");
+      expect(text()).not.toContain("account_modal.cancel_subscription");
+      expect(buttonKeys()).toEqual([]);
+    });
+
+    it("uses the same neutral copy for a Discord-role grant", async () => {
+      el.sub = sub({ provider: null, grantSource: "discord_role" });
+      await el.updateComplete;
+      expect(text()).toContain("account_modal.sub_granted_indefinite");
+      expect(text().split(PERIOD_END_TEXT)).toHaveLength(2);
+      expect(text()).not.toContain("account_modal.sub_granted_from_purchase");
+    });
+
+    it("keeps the Steam copy for a grant the server says came from Steam", async () => {
+      el.sub = sub({ provider: null, grantSource: "steam" });
+      await el.updateComplete;
+      expect(text()).toContain("account_modal.sub_granted_from_purchase");
+      expect(text()).not.toContain("account_modal.sub_granted_indefinite");
+    });
+
+    it("uses the open-ended copy for an admin grant with no end date", async () => {
+      el.sub = sub({
+        provider: null,
+        grantSource: "admin",
+        currentPeriodEnd: null,
+      });
+      await el.updateComplete;
+      expect(text()).toContain("account_modal.sub_granted_indefinite");
+      expect(text()).not.toContain("account_modal.sub_granted_perks_end_on");
     });
   });
 

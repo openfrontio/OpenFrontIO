@@ -1,5 +1,5 @@
+import type { TokenPayload } from "@openfront/shared/ApiSchemas";
 import { z } from "zod";
-import type { TokenPayload } from "../core/ApiSchemas";
 import { ServerEnv } from "./ServerEnv";
 
 const JoinVerifyVerdictSchema = z.discriminatedUnion("status", [

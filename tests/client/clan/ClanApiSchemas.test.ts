@@ -1,4 +1,3 @@
-import { describe, expect, it } from "vitest";
 import {
   ClanBanSchema,
   ClanDonationSchema,
@@ -11,7 +10,8 @@ import {
   ClanInfoSchema,
   ClanJoinRequestSchema,
   ClanMemberSchema,
-} from "../../../src/core/ClanApiSchemas";
+} from "@openfront/shared/ClanApiSchemas";
+import { describe, expect, it } from "vitest";
 
 describe("ClanInfoSchema", () => {
   const base = {

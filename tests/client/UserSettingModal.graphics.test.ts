@@ -1,13 +1,13 @@
 import { beforeEach, describe, expect, it } from "vitest";
 
+import type { MapLayer } from "@openfront/engine-api/game/MapFiles";
 import "../../src/client/UserSettingModal";
 import type { UserSettingModal } from "../../src/client/UserSettingModal";
-import type { MapLayer } from "../../src/core/game/TerrainMapLoader";
 import {
   GRAPHICS_KEY,
   USER_SETTINGS_CHANGED_EVENT,
   UserSettings,
-} from "../../src/core/game/UserSettings";
+} from "../../src/client/UserSettings";
 
 type TestModal = UserSettingModal & {
   updateComplete: Promise<unknown>;

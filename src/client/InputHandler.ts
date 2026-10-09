@@ -1,12 +1,18 @@
-import { EventBus, GameEvent } from "../core/EventBus";
-import { PlayerBuildableUnitType, UnitType } from "../core/game/Game";
+import { TileRef } from "@openfront/engine-api/game/GameMap";
+import {
+  PlayerBuildableUnitType,
+  PlayerID,
+  UnitType,
+} from "@openfront/engine-api/game/GameTypes";
+import { EventBus, GameEvent } from "@openfront/shared/EventBus";
+import { favoriteSlotForKey } from "./EmojiKeys";
+import { Platform } from "./Platform";
+import { UIState } from "./UIState";
 import {
   KEYBINDS_KEY,
   USER_SETTINGS_CHANGED_EVENT,
   UserSettings,
-} from "../core/game/UserSettings";
-import { Platform } from "./Platform";
-import { UIState } from "./UIState";
+} from "./UserSettings";
 import { ReplaySpeedMultiplier } from "./utilities/ReplaySpeedMultiplier";
 import { GameView, UnitView } from "./view";
 
@@ -154,15 +160,57 @@ export class ShowEmojiMenuEvent implements GameEvent {
   ) {}
 }
 
-export class DoBoatAttackEvent implements GameEvent {}
+/** Toggles quick chat for the player at screen position (x, y). */
+export class ShowChatMenuEvent implements GameEvent {
+  constructor(
+    public readonly x: number,
+    public readonly y: number,
+  ) {}
+}
+
+/** Emitted by the emoji table whenever it opens or closes. */
+export class EmojiTableVisibleEvent implements GameEvent {
+  constructor(public readonly visible: boolean) {}
+}
+
+/** A favorites slot's key was pressed while the emoji table is open. */
+export class EmojiKeyEvent implements GameEvent {
+  constructor(public readonly slot: number) {}
+}
+
+// The player actions below act on the tile under the cursor (their
+// keybinds), or on `tile` when given (the player info panel's buttons).
+// `playerID` is the player the panel showed: if the tile has changed hands
+// since, the action is dropped rather than hitting its new owner.
+
+export class DoBoatAttackEvent implements GameEvent {
+  constructor(public readonly tile?: TileRef) {}
+}
 
 export class DoGroundAttackEvent implements GameEvent {}
 
 export class DoRetaliateAttackEvent implements GameEvent {}
 
-export class DoRequestAllianceEvent implements GameEvent {}
+export class DoRequestAllianceEvent implements GameEvent {
+  constructor(
+    public readonly tile?: TileRef,
+    public readonly playerID?: PlayerID,
+  ) {}
+}
 
-export class DoBreakAllianceEvent implements GameEvent {}
+export class DoBreakAllianceEvent implements GameEvent {
+  constructor(
+    public readonly tile?: TileRef,
+    public readonly playerID?: PlayerID,
+  ) {}
+}
+
+export class DoTargetPlayerEvent implements GameEvent {
+  constructor(
+    public readonly tile?: TileRef,
+    public readonly playerID?: PlayerID,
+  ) {}
+}
 
 export class AttackRatioEvent implements GameEvent {
   constructor(public readonly attackRatio: number) {}
@@ -222,6 +270,13 @@ interface WebKitGestureEvent extends Event {
 export class InputHandler {
   private lastPointerX: number = 0;
   private lastPointerY: number = 0;
+
+  private lastMouseX: number = 0;
+  private lastMouseY: number = 0;
+
+  private emojiTableOpen = false;
+  /** Favorite keys pressed while the emoji table was open. */
+  private emojiKeysDown = new Set<string>();
 
   private lastPointerDownX: number = 0;
   private lastPointerDownY: number = 0;
@@ -293,8 +348,34 @@ export class InputHandler {
     // game's events. off() first so a second initialize() cannot double it.
     this.eventBus.off(UnitSelectionEvent, this.onUnitSelection);
     this.eventBus.on(UnitSelectionEvent, this.onUnitSelection);
+    this.eventBus.off(EmojiTableVisibleEvent, this.onEmojiTableVisible);
+    this.eventBus.on(EmojiTableVisibleEvent, this.onEmojiTableVisible);
 
     this.initializePointerAndKeyboardEvents();
+  }
+
+  private onEmojiTableVisible = (e: EmojiTableVisibleEvent) => {
+    this.emojiTableOpen = e.visible;
+    this.emojiKeysDown.clear();
+    if (e.visible) {
+      // Stop panning/zooming with a favorite key held from before the table
+      // opened; the table owns those keys now.
+      for (const code of this.activeKeys) {
+        if (favoriteSlotForKey(this.unmodifiedKey(code)) !== null) {
+          this.activeKeys.delete(code);
+        }
+      }
+    }
+  };
+
+  private unmodifiedKey(code: string) {
+    return {
+      code,
+      shiftKey: false,
+      ctrlKey: false,
+      metaKey: false,
+      altKey: false,
+    };
   }
 
   private onUnitSelection = (e: UnitSelectionEvent) => {
@@ -370,6 +451,21 @@ export class InputHandler {
     this.addKeybindAndEvent(this.keybinds.breakAlliance, () => {
       this.eventBus.emit(new DoBreakAllianceEvent());
     });
+    this.addKeybindAndEvent(this.keybinds.targetPlayer, () => {
+      this.eventBus.emit(new DoTargetPlayerEvent());
+    });
+    // Shares R with reset graphics, which needs its modifier held, so quick
+    // chat only takes the key on its own.
+    this.addKeybindAndEvent(
+      this.keybinds.quickChat,
+      () => {
+        this.eventBus.emit(
+          new ShowChatMenuEvent(this.lastMouseX, this.lastMouseY),
+        );
+      },
+      (e: KeyboardEvent) =>
+        !e.altKey && !e.ctrlKey && !e.metaKey && !this.resetGfxModifierHeld(e),
+    );
     this.addKeybindAndEvent(
       this.keybinds.pauseGame,
       () => {
@@ -416,33 +512,7 @@ export class InputHandler {
       () => {
         this.eventBus.emit(new RefreshGraphicsEvent());
       },
-      (e: KeyboardEvent) => {
-        if (
-          this.keybinds.altKey === "AltLeft" ||
-          this.keybinds.altKey === "AltRight"
-        ) {
-          return e.altKey && !e.ctrlKey;
-        }
-        if (
-          this.keybinds.altKey === "ControlLeft" ||
-          this.keybinds.altKey === "ControlRight"
-        ) {
-          return e.ctrlKey;
-        }
-        if (
-          this.keybinds.altKey === "ShiftLeft" ||
-          this.keybinds.altKey === "ShiftRight"
-        ) {
-          return e.shiftKey;
-        }
-        if (
-          this.keybinds.altKey === "MetaLeft" ||
-          this.keybinds.altKey === "MetaRight"
-        ) {
-          return e.metaKey;
-        }
-        return this.activeKeys.has(this.keybinds.altKey);
-      },
+      (e: KeyboardEvent) => this.resetGfxModifierHeld(e),
     );
 
     let buildKeybinds: string[] = [
@@ -577,6 +647,8 @@ export class InputHandler {
     window.addEventListener(
       "mousemove",
       (e) => {
+        this.lastMouseX = e.clientX;
+        this.lastMouseY = e.clientY;
         if (e.movementX || e.movementY) {
           this.eventBus.emit(new MouseMoveEvent(e.clientX, e.clientY));
         }
@@ -665,6 +737,30 @@ export class InputHandler {
       (e) => {
         const isTextInput = this.isTextInputTarget(e.target);
         if (isTextInput && e.code !== "Escape") {
+          return;
+        }
+
+        // The emoji menu key works on keydown, unlike most keybinds, so a
+        // favorite key typed right after it (before it is released) already
+        // goes to the table instead of panning the map. Pressed again, it
+        // closes the table, like Escape.
+        if (this.keybindMatchesEvent(e, this.keybinds.emojiMenu) && !e.repeat) {
+          e.preventDefault();
+          if (this.emojiTableOpen) {
+            this.eventBus.emit(new CloseViewEvent());
+          } else {
+            this.eventBus.emit(
+              new ShowEmojiMenuEvent(this.lastMouseX, this.lastMouseY),
+            );
+          }
+          return;
+        }
+
+        // Favorite keys are handled on keyup; keep them away from the game's
+        // keybinds (and from activeKeys) while the table is open.
+        if (this.emojiTableOpen && favoriteSlotForKey(e) !== null) {
+          e.preventDefault();
+          this.emojiKeysDown.add(e.code);
           return;
         }
 
@@ -805,6 +901,20 @@ export class InputHandler {
           this.activeKeys.delete("NumpadSubtract");
           this.activeKeys.delete(this.keybinds.zoomIn);
           this.activeKeys.delete(this.keybinds.zoomOut);
+        }
+
+        if (this.emojiTableOpen) {
+          const slot = favoriteSlotForKey(e);
+          if (slot !== null) {
+            e.preventDefault();
+            this.activeKeys.delete(e.code);
+            // Only a press made while the table was open sends; releasing a
+            // key held from before (say, to pan) doesn't.
+            if (this.emojiKeysDown.delete(e.code)) {
+              this.eventBus.emit(new EmojiKeyEvent(slot));
+            }
+            return;
+          }
         }
 
         outerLoop: for (const item of this.keybindAndEvent) {
@@ -1301,6 +1411,35 @@ export class InputHandler {
     return digit !== null && bindDigit !== null && digit === bindDigit;
   }
 
+  /** Whether the reset-graphics modifier (keybinds.altKey) is held. */
+  private resetGfxModifierHeld(e: KeyboardEvent): boolean {
+    if (
+      this.keybinds.altKey === "AltLeft" ||
+      this.keybinds.altKey === "AltRight"
+    ) {
+      return e.altKey && !e.ctrlKey;
+    }
+    if (
+      this.keybinds.altKey === "ControlLeft" ||
+      this.keybinds.altKey === "ControlRight"
+    ) {
+      return e.ctrlKey;
+    }
+    if (
+      this.keybinds.altKey === "ShiftLeft" ||
+      this.keybinds.altKey === "ShiftRight"
+    ) {
+      return e.shiftKey;
+    }
+    if (
+      this.keybinds.altKey === "MetaLeft" ||
+      this.keybinds.altKey === "MetaRight"
+    ) {
+      return e.metaKey;
+    }
+    return this.activeKeys.has(this.keybinds.altKey);
+  }
+
   /**
    * Add a keybind that activates on one press
    * @param keybind The keybind that is being activated
@@ -1409,6 +1548,7 @@ export class InputHandler {
     );
     this.listenerAbort?.abort();
     this.listenerAbort = null;
+    this.eventBus.off(EmojiTableVisibleEvent, this.onEmojiTableVisible);
     this.eventBus.off(UnitSelectionEvent, this.onUnitSelection);
     // Includes the 800ms long-press timer a touch pointerdown arms: aborting
     // the listeners does not cancel it, so without this it can still fire
@@ -1417,6 +1557,8 @@ export class InputHandler {
     // renderer has already removed.
     this.resetPointerState();
     this.activeKeys.clear();
+    this.emojiTableOpen = false;
+    this.emojiKeysDown.clear();
     this.keybindAndEvent = [];
     this.keybinds = {};
   }

@@ -5,6 +5,7 @@
  * with the client-side replay offered - never an endless "Preparing".
  */
 
+import type { GameRecord } from "@openfront/shared/WireSchemas";
 import type { SettingsModal } from "../../../src/client/hud/layers/SettingsModal";
 import { MapRenderer } from "../../../src/client/render/gl";
 import type {
@@ -20,8 +21,7 @@ import { ReplayPlayback } from "../../../src/client/replay/ReplayPlayback";
 import { fetchReplayRecord } from "../../../src/client/replay/ReplayRecord";
 import { replayStore } from "../../../src/client/replay/ReplayStore";
 import { ReplayViewer } from "../../../src/client/replay/ReplayViewer";
-import { loadTerrainMap } from "../../../src/core/game/TerrainMapLoader";
-import type { GameRecord } from "../../../src/core/Schemas";
+import { loadCachedTerrainMap } from "../../../src/client/TerrainMapFileLoader";
 
 vi.mock("../../../src/client/replay/ReplayRecord", () => ({
   fetchReplayRecord: vi.fn(),
@@ -32,9 +32,9 @@ vi.mock("../../../src/client/replay/ReplayStore", () => ({
 vi.mock("../../../src/client/replay/LocalProcessing", () => ({
   processInBrowser: vi.fn(),
 }));
-vi.mock("../../../src/core/game/TerrainMapLoader", async (importOriginal) => ({
+vi.mock("../../../src/client/TerrainMapFileLoader", async (importOriginal) => ({
   ...(await importOriginal<object>()),
-  loadTerrainMap: vi.fn(),
+  loadCachedTerrainMap: vi.fn(),
 }));
 vi.mock("../../../src/client/render/gl", async (importOriginal) => ({
   ...(await importOriginal<object>()),
@@ -185,12 +185,12 @@ test("closing the viewer while it starts creates no renderer", async () => {
     },
   } as unknown as ReplayPlayback);
   let terrainLoaded!: () => void;
-  vi.mocked(loadTerrainMap).mockReturnValue(
+  vi.mocked(loadCachedTerrainMap).mockReturnValue(
     new Promise((resolve) => {
       terrainLoaded = () =>
         resolve({
           gameMap: { width: () => 4, height: () => 4 },
-        } as unknown as Awaited<ReturnType<typeof loadTerrainMap>>);
+        } as unknown as Awaited<ReturnType<typeof loadCachedTerrainMap>>);
     }),
   );
   const element = new ReplayViewer();
@@ -201,7 +201,7 @@ test("closing the viewer while it starts creates no renderer", async () => {
     open(): Promise<void>;
   };
   const opened = v.open();
-  await vi.waitFor(() => expect(loadTerrainMap).toHaveBeenCalled());
+  await vi.waitFor(() => expect(loadCachedTerrainMap).toHaveBeenCalled());
   element.disconnectedCallback();
   terrainLoaded();
   await opened;

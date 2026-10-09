@@ -1,6 +1,6 @@
+import type { ServerMessage } from "@openfront/shared/WireSchemas";
+import { createGameWireContext } from "@openfront/shared/ZbinWire";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { ServerMessage } from "../../src/core/Schemas";
-import { createGameWireContext } from "../../src/core/ZbinWire";
 import {
   cid,
   makeClient,

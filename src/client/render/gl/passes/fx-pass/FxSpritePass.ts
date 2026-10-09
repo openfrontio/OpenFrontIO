@@ -6,7 +6,7 @@
  * Pre-built by generate-sprite-atlases.mjs.
  */
 
-import type { Config } from "../../../../../core/configuration/Config";
+import type { Config } from "@openfront/engine-lib/configuration/Config";
 import type { ConquestFx, DeadUnitFx, RendererConfig } from "../../../types";
 import {
   STRUCTURE_TYPES,
@@ -19,8 +19,8 @@ import type { RenderSettings } from "../../RenderSettings";
 import { createProgram, shaderSrc } from "../../utils/GlUtils";
 import { nukeExplosionRadius } from "./FxSettings";
 
+import { assetUrl } from "@openfront/shared/AssetUrls";
 import fxAtlasMeta from "resources/atlases/fx-atlas-meta.json";
-import { assetUrl } from "src/core/AssetUrls";
 
 import spriteFragSrc from "../../shaders/fx/sprite.frag.glsl?raw";
 import spriteVertSrc from "../../shaders/fx/sprite.vert.glsl?raw";

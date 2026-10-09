@@ -1,21 +1,27 @@
-import { html, nothing } from "lit";
-import { customElement, state } from "lit/decorators.js";
-import { ClientEnv } from "src/client/ClientEnv";
 import {
   isVerifiedUsername,
   type PlayerProfile,
   type PlayerStatsTree,
-} from "../core/ApiSchemas";
+  type PublicProgress,
+} from "@openfront/shared/ApiSchemas";
+import { html, nothing } from "lit";
+import { customElement, state } from "lit/decorators.js";
+import { ClientEnv } from "src/client/ClientEnv";
 import { fetchPublicPlayerProfile } from "./Api";
+import "./ClanModal";
 import "./components/baseComponents/stats/PlayerGameHistoryView";
 import type { PlayerGameHistoryCache } from "./components/baseComponents/stats/PlayerGameHistoryView";
 import "./components/baseComponents/stats/PlayerStatsTree";
 import { BaseModal } from "./components/BaseModal";
 import "./components/clan/ClanCard";
 import "./components/PlayerName";
+import "./components/ProfileCard";
 import { modalHeader } from "./components/ui/ModalHeader";
 import { usernameText } from "./components/ui/UsernameText";
 import { verifiedBadge } from "./components/ui/VerifiedBadge";
+import "./GameStatsModal";
+import "./LeaderboardModal";
+import { fetchPublicPlayerProgress } from "./ProgressionApi";
 import { playerProfileUrl } from "./utilities/PlayerProfileUrl";
 import { currentPagePath, translateText } from "./Utils";
 
@@ -32,6 +38,8 @@ export class PlayerProfileModal extends BaseModal {
   @state() private username: string | null = null;
   @state() private statsTree: PlayerStatsTree | null = null;
   @state() private clans: NonNullable<PlayerProfile["clans"]> = [];
+  // Level / XP, when progression is on and the player has any.
+  @state() private progress: PublicProgress | null = null;
   @state() private loading = false;
   private openedFrom: ProfileOrigin | null = null;
   // Mirrors the account modal's Games tab: keep the accumulated history list +
@@ -42,6 +50,8 @@ export class PlayerProfileModal extends BaseModal {
   private restoreGamesScrollAfterOpen = false;
   // Bumped on every profile load so a superseded in-flight response is dropped.
   private loadGeneration = 0;
+  // Counts fresh openings, to key the profile card's once-per-open flourish.
+  private openCount = 0;
 
   protected modalConfig() {
     return {
@@ -212,11 +222,33 @@ export class PlayerProfileModal extends BaseModal {
     if (!this.profileLoaded()) {
       return this.renderNotFound();
     }
+    // The card heads the stats; games and wins stay in the stats below it.
     return html`
+      ${this.progress === null
+        ? nothing
+        : html`<profile-card
+            class="mb-4 block"
+            .username=${this.username ?? this.publicId ?? ""}
+            .clanTag=${this.clans[0]?.tag ?? null}
+            .progress=${this.progress}
+            .openKey=${`profile-${this.openCount}`}
+          ></profile-card>`}
       <player-stats-tree-view
         .statsTree=${this.statsTree}
       ></player-stats-tree-view>
     `;
+  }
+
+  // Everyone's level, your own included, comes from the public endpoint: the
+  // /users/@me copy is cached from page load and would miss the games played
+  // since. Missing progress hides the summary.
+  private async loadProgress(publicId: string): Promise<PublicProgress | null> {
+    try {
+      const progress = await fetchPublicPlayerProgress(publicId);
+      return progress === false ? null : progress;
+    } catch {
+      return null;
+    }
   }
 
   // False when the fetch failed (missing player, network, bad schema).
@@ -261,10 +293,13 @@ export class PlayerProfileModal extends BaseModal {
     // helpers re-set it right after open() so back() routes home; the
     // return-from-stats path above skips this and keeps the origin intact.
     this.openedFrom = null;
+    // A new opening: the profile card plays its flourish again.
+    this.openCount++;
     this.publicId = publicId;
     this.username = null;
     this.statsTree = null;
     this.clans = [];
+    this.progress = null;
     this.gameHistoryCache = null;
     this.gamesScrollTop = 0;
     this.restoreGamesScrollAfterOpen = false;
@@ -276,11 +311,19 @@ export class PlayerProfileModal extends BaseModal {
 
   private async loadProfile(publicId: string): Promise<void> {
     const gen = ++this.loadGeneration;
-    const profile = await fetchPublicPlayerProfile(publicId);
     // Drop a superseded response: a newer load started, or the modal moved to a
     // different player. onClose no longer clears publicId, so the id check alone
     // can't reject a stale same-player load started before an earlier close.
-    if (gen !== this.loadGeneration || this.publicId !== publicId) return;
+    const current = () =>
+      gen === this.loadGeneration && this.publicId === publicId;
+    // The level is a nice-to-have: it lands whenever it arrives and never
+    // holds up the profile (its request can take up to its own timeout).
+    // Only shown alongside a loaded profile (see renderProfile).
+    void this.loadProgress(publicId).then((progress) => {
+      if (current()) this.progress = progress;
+    });
+    const profile = await fetchPublicPlayerProfile(publicId);
+    if (!current()) return;
     this.loading = false;
     this.statsTree = profile === false ? null : profile.stats;
     this.username = profile === false ? null : (profile.username ?? null);
@@ -298,9 +341,11 @@ export class PlayerProfileModal extends BaseModal {
   private openGameStats(gameId: string): void {
     this.gamesScrollTop = this.modalEl?.getScrollTop() ?? 0;
     const statsModal = document.querySelector<
-      HTMLElement & { openFromProfile(gameId: string): void }
+      HTMLElement & {
+        openFromProfile(gameId: string, profilePublicId?: string): void;
+      }
     >("game-stats-modal");
-    statsModal?.openFromProfile(gameId);
+    statsModal?.openFromProfile(gameId, this.publicId ?? undefined);
   }
 
   private viewGame(gameId: string): void {

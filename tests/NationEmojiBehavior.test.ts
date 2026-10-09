@@ -1,9 +1,9 @@
+import { PlayerInfo, PlayerType } from "@openfront/engine-api/game/GameTypes";
+import { PseudoRandom } from "@openfront/engine-lib/PseudoRandom";
 import {
   EMOJI_CLOWN,
   NationEmojiBehavior,
-} from "../src/core/execution/nation/NationEmojiBehavior";
-import { PlayerInfo, PlayerType } from "../src/core/game/Game";
-import { PseudoRandom } from "../src/core/PseudoRandom";
+} from "@openfront/engine/execution/nation/NationEmojiBehavior";
 import { setup } from "./util/Setup";
 
 describe("Nation emojis", () => {
