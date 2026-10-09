@@ -1,15 +1,15 @@
-import { vi } from "vitest";
-import { AttackExecution } from "../src/core/execution/AttackExecution";
-import { ConstructionExecution } from "../src/core/execution/ConstructionExecution";
-import { NationStructureBehavior } from "../src/core/execution/nation/NationStructureBehavior";
 import {
   Difficulty,
   PlayerInfo,
   PlayerType,
   UnitType,
-} from "../src/core/game/Game";
-import { Cluster } from "../src/core/game/TrainStation";
-import { PseudoRandom } from "../src/core/PseudoRandom";
+} from "@openfront/engine-api/game/GameTypes";
+import { PseudoRandom } from "@openfront/engine-lib/PseudoRandom";
+import { AttackExecution } from "@openfront/engine/execution/AttackExecution";
+import { ConstructionExecution } from "@openfront/engine/execution/ConstructionExecution";
+import { NationStructureBehavior } from "@openfront/engine/execution/nation/NationStructureBehavior";
+import { Cluster } from "@openfront/engine/game/TrainStation";
+import { vi } from "vitest";
 import { createGame, L, W } from "./core/pathfinding/_fixtures";
 
 // ── Fixed trade-gold values matching DefaultConfig ──────────────────────────

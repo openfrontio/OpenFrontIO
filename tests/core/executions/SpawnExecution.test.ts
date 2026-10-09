@@ -1,13 +1,13 @@
-import { describe, expect, it } from "vitest";
-import { SpawnExecution } from "../../../src/core/execution/SpawnExecution";
-import { getSpawnTiles } from "../../../src/core/execution/Util";
+import { TileRef } from "@openfront/engine-api/game/GameMap";
 import {
-  Game,
   GameType,
   PlayerInfo,
   PlayerType,
-} from "../../../src/core/game/Game";
-import { TileRef } from "../../../src/core/game/GameMap";
+} from "@openfront/engine-api/game/GameTypes";
+import { SpawnExecution } from "@openfront/engine/execution/SpawnExecution";
+import { getSpawnTiles } from "@openfront/engine/execution/Util";
+import { Game } from "@openfront/engine/game/Game";
+import { describe, expect, it } from "vitest";
 import { playerInfo, setup } from "../../util/Setup";
 
 function findTestTiles(game: Game) {

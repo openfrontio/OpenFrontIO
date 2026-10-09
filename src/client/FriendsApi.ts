@@ -5,7 +5,7 @@ import {
   FriendsListResponseSchema,
   type SendFriendRequestResponse,
   SendFriendRequestResponseSchema,
-} from "../core/ApiSchemas";
+} from "@openfront/shared/ApiSchemas";
 import { getApiBase } from "./Api";
 import { getAuthHeader } from "./Auth";
 

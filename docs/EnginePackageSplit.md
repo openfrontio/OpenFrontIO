@@ -1,6 +1,6 @@
 # Implementation: single-PR package split for #1701
 
-Status: planned (2026-10-05). Tracks [#1701](https://github.com/openfrontio/OpenFrontIO/issues/1701).
+Status: implemented (2026-10-05); see [As built](#as-built) for where it differs from the plan. Tracks [#1701](https://github.com/openfrontio/OpenFrontIO/issues/1701).
 
 One PR turns `src/core` into three npm workspace packages, `@openfront/engine-api`, `@openfront/engine` and `@openfront/shared`, with no behaviour change. It's built as ordered commits: the code changes first, each small enough to read, then one generated commit that only moves files. Analysis is against `main` at `89fe8a704`.
 
@@ -242,3 +242,17 @@ None of these block starting commits 1–6; question 1 matters on merge day.
 2. **Landing window:** which release cut should this land just before, and is a short heads-up to authors of open `src/core` PRs wanted?
 3. **Replay-processor exception:** fine to leave `src/client/replay/processor/` importing `@openfront/engine` until the engine-host PR, or should this PR move its sim loop into an engine worker entry too? That adds a real behaviour change to a refactor PR, so I'd leave it.
 4. **Commit 8 (no-DOM tsconfigs):** keep it in this PR, or split it out if the `console`/`performance`/WebWorker typing gets fiddly?
+
+## As built
+
+The plan's eight commits landed, plus two. Where the implementation differs:
+
+- **A fifth package, `engine-lib`.** The closure of what client and server reach turned out to be two different things: the contract with the engine, and engine code that also runs outside it (the tile grid the client keeps a copy of, the terrain loader, the rules `Config`, `UnitGrid`, PRNG, `DetMath`). An extra commit before the move splits them: `@openfront/engine-api` is the contract (schemas, game types, `GameUpdates`, the worker protocol, the `GameMap` and read-view interfaces) and `@openfront/engine-lib` holds the shared implementations. `engine-api` imports nothing from `engine-lib`; to get there, `GameMapImpl` moves out of `GameMap.ts` into its own file, and a few types and pure helpers move into the API (`ReadonlyTileSet`, `UnitPredicate`, the map manifest types, the emoji table, `formatPlayerDisplayName`).
+- **Package sizes** follow the closure: `engine-api` 9 files, `engine-lib` 21, `engine` 112, `shared` 15, `zbin` 5. `Stats.ts` and `pathfinding/types.ts` stay in `engine`, since nothing outside the engine reaches them once `Game.ts` is split. `execution/utils/TribeNames.ts` (pure data, needed by `createRandomName` in `shared`) and `FetchGameMapLoader.ts` (the client loads maps with it too) join `engine-lib`.
+- **Cosmetics stay out of the engine contract.** The engine never reads them, but the lobby's player schema carried them, so the plan put the cosmetic refs in `engine-api` (`CosmeticRefs.ts`, and `jose` for the pattern check). Instead a second extra commit gives each side its own view: `engine-api`'s `PlayerSchema`/`GameStartInfoSchema` hold what the engine reads, and `shared`'s `WirePlayerSchema`/`WireGameStartInfoSchema` add cosmetics, keeping `cosmetics` after `clanTag` so the wire bytes don't change. The start message, the records and the two parsers that must keep cosmetics use the wire schemas. `CosmeticRefs.ts` is gone, `PatternDecoder` lives in `shared`, and `engine-api` has no `jose`.
+- **Read interfaces.** A few rules only the engine evaluates read state the views don't carry (`unitsOwned`/`unitsConstructed` for build costs, `mirvsLaunched`, `samLauncherState`, `borderTiles`). Those take `EnginePlayerLike`/`EngineUnitLike`/`EngineGameLike`, which extend the shared interfaces, instead of fake adapters on the views. `UnitGrid` became `UnitGrid<U extends UnitLike>`.
+- **`CLIENT_ID_MAPPING` stays in `Schemas.ts`**: intents encode client ids through `MappedID`, which `WireSchemas.ts` now imports.
+- **`BinaryLoaderGameMapLoader.ts` is deleted.** Nothing imported it, and it was the last engine file reading the asset globals.
+- **The final commit uses `lib: ["ES2022", "WebWorker"]`** with no `@types/node` for `engine`, `engine-api` and `engine-lib`, instead of `ES2022` plus a `globals.d.ts`. The map loaders and snapshot gzip need `fetch`, `ImageBitmap` and web streams, which would have meant hand-typing most of the WebWorker lib. `window`, `document` and `process` still fail to type-check.
+- **Tooling the plan missed:** `.npmrc` needs `allow-directory=root` (with `none`, `npm install` refuses the root's own workspace links); the Docker images also need `tsconfig.base.json`, and `.dockerignore` drops `scripts/split-packages/` like `scripts/replay/`; `shared/AssetUrls.ts` marks its type import `type`, because Vite's config loader hands `@openfront/*` imports to Node's type stripping; the translation-key and close-code tests scan `packages/` as well as `src/`.
+- **Tick traces.** The 1v1 record replays in sync with the hashes prod recorded. The team and FFA records diverge from prod around turn 460 (prod runs the v34 nation AI), so they serve as fixed, deterministic intent streams rather than proof against prod.

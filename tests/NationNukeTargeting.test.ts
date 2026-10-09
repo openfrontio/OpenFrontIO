@@ -1,19 +1,20 @@
-import { Config, NukeMagnitude } from "../src/core/configuration/Config";
-import { NationAllianceBehavior } from "../src/core/execution/nation/NationAllianceBehavior";
-import { NationEmojiBehavior } from "../src/core/execution/nation/NationEmojiBehavior";
-import { NationNukeBehavior } from "../src/core/execution/nation/NationNukeBehavior";
-import { AiAttackBehavior } from "../src/core/execution/utils/AiAttackBehavior";
+import { TileRef } from "@openfront/engine-api/game/GameMap";
 import {
   Difficulty,
-  Game,
-  Player,
   PlayerInfo,
   PlayerType,
-  Unit,
   UnitType,
-} from "../src/core/game/Game";
-import { TileRef } from "../src/core/game/GameMap";
-import { PseudoRandom } from "../src/core/PseudoRandom";
+} from "@openfront/engine-api/game/GameTypes";
+import {
+  Config,
+  NukeMagnitude,
+} from "@openfront/engine-lib/configuration/Config";
+import { PseudoRandom } from "@openfront/engine-lib/PseudoRandom";
+import { NationAllianceBehavior } from "@openfront/engine/execution/nation/NationAllianceBehavior";
+import { NationEmojiBehavior } from "@openfront/engine/execution/nation/NationEmojiBehavior";
+import { NationNukeBehavior } from "@openfront/engine/execution/nation/NationNukeBehavior";
+import { AiAttackBehavior } from "@openfront/engine/execution/utils/AiAttackBehavior";
+import { Game, Player, Unit } from "@openfront/engine/game/Game";
 import { setup } from "./util/Setup";
 import { TestConfig } from "./util/TestConfig";
 

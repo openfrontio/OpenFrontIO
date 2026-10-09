@@ -1,6 +1,6 @@
+import { Reward } from "@openfront/shared/ApiSchemas";
 import { html, LitElement, TemplateResult } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
-import { Reward } from "../../core/ApiSchemas";
 import {
   claimAllRewards,
   claimReward,
@@ -8,6 +8,7 @@ import {
   invalidateUserMe,
 } from "../Api";
 import { showInGameAlert } from "../InGameModal";
+import { levelRewardReasonKey } from "../Progression";
 import { translateText } from "../Utils";
 import "./baseComponents/Button";
 import "./CapIcon";
@@ -100,6 +101,10 @@ export class RewardsPanel extends LitElement {
   }
 
   private rewardLabel(reward: Reward): string {
+    // Level rewards get localized copy ahead of the note: their note is
+    // server-side English, and the reason alone says what the reward is for.
+    const levelKey = levelRewardReasonKey(reward.reason);
+    if (levelKey !== undefined) return translateText(levelKey);
     if (reward.note) return reward.note;
     if (reward.reason === "subscription_signup_bonus") {
       return translateText("account_modal.reward_signup_bonus");

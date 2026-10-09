@@ -1,9 +1,10 @@
+import { PlayerType } from "@openfront/engine-api/game/GameTypes";
+import { GameUpdateType } from "@openfront/engine-api/game/GameUpdates";
+import { QuickChatKeySchema } from "@openfront/engine-api/Schemas";
+import { QuickChatExecution } from "@openfront/engine/execution/QuickChatExecution";
+import { Game, Player } from "@openfront/engine/game/Game";
 import en from "../resources/lang/en.json";
 import quickChatData from "../resources/QuickChat.json";
-import { QuickChatExecution } from "../src/core/execution/QuickChatExecution";
-import { Game, Player, PlayerType } from "../src/core/game/Game";
-import { GameUpdateType } from "../src/core/game/GameUpdates";
-import { QuickChatKeySchema } from "../src/core/Schemas";
 import { playerInfo, setup } from "./util/Setup";
 
 let game: Game;
@@ -102,6 +103,7 @@ describe("QuickChat phrases", () => {
   const newPhrases: Array<[string, string, string]> = [
     ["attack", "betray", "Betray [P1]!"],
     ["attack", "build_sams", "Build SAMs!"],
+    ["attack", "crown", "Attack the crown!"],
     ["defend", "make_ally", "Ally with [P1]!"],
     ["help", "send_troops_to", "Send troops to [P1]!"],
     ["help", "send_gold_to", "Send gold to [P1]!"],

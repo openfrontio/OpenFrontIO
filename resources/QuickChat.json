@@ -69,6 +69,10 @@
     {
       "key": "build_sams",
       "requiresPlayer": false
+    },
+    {
+      "key": "crown",
+      "requiresPlayer": false
     }
   ],
   "defend": [
@@ -209,10 +213,6 @@
     {
       "key": "mirv_soon",
       "requiresPlayer": true
-    },
-    {
-      "key": "number1_warning",
-      "requiresPlayer": false
     },
     {
       "key": "stalemate",

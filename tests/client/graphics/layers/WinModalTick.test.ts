@@ -1,11 +1,11 @@
+import { GameUpdateType } from "@openfront/engine-api/game/GameUpdates";
+import { EventBus } from "@openfront/shared/EventBus";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { fetchCosmetics } from "../../../../src/client/Cosmetics";
 import "../../../../src/client/hud/layers/WinModal";
 import type { WinModal } from "../../../../src/client/hud/layers/WinModal";
 import { SendWinnerEvent } from "../../../../src/client/Transport";
 import type { GameView } from "../../../../src/client/view";
-import { EventBus } from "../../../../src/core/EventBus";
-import { GameUpdateType } from "../../../../src/core/game/GameUpdates";
 
 vi.mock("../../../../src/client/Utils", () => ({
   translateText: vi.fn((key: string) => key),
@@ -172,11 +172,40 @@ describe("WinModal tick win handling", () => {
     await modal!.updateComplete;
 
     expect(modal!.isVisible).toBe(true);
-    const exit = modal!.querySelector(
-      "o-button[translationKey='win_modal.exit']",
-    );
+    const exit = modal!.querySelector("[data-win-action='exit']");
     expect(exit).not.toBeNull();
     expect(exit!.parentElement!.classList.contains("hidden")).toBe(false);
+  });
+
+  it("puts leaving on the left and staying on the right, and staying closes the modal", async () => {
+    vi.stubGlobal(
+      "ResizeObserver",
+      class {
+        observe() {}
+        unobserve() {}
+        disconnect() {}
+      },
+    );
+    vi.mocked(fetchCosmetics).mockReturnValueOnce(new Promise(() => {}));
+    setup(makeGame({ winner: ["team", "Blue"], myTeam: "Blue" }));
+    document.body.appendChild(modal!);
+    void modal!.show();
+    await modal!.updateComplete;
+
+    const actions = [
+      ...modal!.querySelectorAll<HTMLButtonElement>("[data-win-action]"),
+    ];
+    expect(actions.map((b) => b.getAttribute("data-win-action"))).toEqual([
+      "exit",
+      "keep",
+    ]);
+    // Leaving is the quiet button, staying the main one.
+    expect(actions[0].classList.contains("win-action-quiet")).toBe(true);
+    expect(actions[1].classList.contains("win-action-main")).toBe(true);
+
+    actions[1].click();
+    await modal!.updateComplete;
+    expect(modal!.isVisible).toBe(false);
   });
 
   it("ignores a player win whose winner is not a known player", () => {

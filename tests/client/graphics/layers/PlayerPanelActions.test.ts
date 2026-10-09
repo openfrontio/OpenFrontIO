@@ -18,20 +18,31 @@ vi.mock("lit/decorators.js", () => ({
 vi.mock("../../../../src/client/Utils", () => ({
   translateText: vi.fn((key: string) => key),
   renderDuration: vi.fn(),
+  showToast: vi.fn(),
+}));
+vi.mock("@openfront/engine-lib/Format", () => ({
   renderNumber: vi.fn(),
   renderTroops: vi.fn(),
-  showToast: vi.fn(),
 }));
 
 vi.mock("../../../../src/client/components/ui/ActionButton", () => ({
   actionButton: vi.fn((props: unknown) => props),
 }));
 
+vi.mock("../../../../src/client/components/LevelBadge", () => ({}));
+
 vi.mock("../../../../src/client/InGameModal", () => ({
   showInGameConfirm: vi.fn(),
   showInGameAlert: vi.fn(),
 }));
 
+import {
+  AllPlayers,
+  GameType,
+  PlayerType,
+} from "@openfront/engine-api/game/GameTypes";
+import { flattenedEmojiTable } from "@openfront/engine-api/Schemas";
+import { EventBus } from "@openfront/shared/EventBus";
 import { actionButton } from "../../../../src/client/components/ui/ActionButton";
 import { PlayerPanel } from "../../../../src/client/hud/layers/PlayerPanel";
 import {
@@ -39,13 +50,6 @@ import {
   SendEmojiIntentEvent,
 } from "../../../../src/client/Transport";
 import { PlayerView } from "../../../../src/client/view";
-import { EventBus } from "../../../../src/core/EventBus";
-import {
-  AllPlayers,
-  GameType,
-  PlayerType,
-} from "../../../../src/core/game/Game";
-import { flattenedEmojiTable } from "../../../../src/core/Util";
 
 const mockActionButton = actionButton as unknown as ReturnType<typeof vi.fn>;
 

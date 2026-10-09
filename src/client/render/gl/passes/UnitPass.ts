@@ -32,8 +32,8 @@
  *   Shells emit 2 instances (pos + lastPos) to match live game's 2-pixel trail.
  */
 
-import { assetUrl } from "src/core/AssetUrls";
-import type { Config } from "src/core/configuration/Config";
+import type { Config } from "@openfront/engine-lib/configuration/Config";
+import { assetUrl } from "@openfront/shared/AssetUrls";
 import type { RendererConfig, UnitState } from "../../types";
 import {
   SMOOTHED_NUKE_TYPES,
