@@ -51,6 +51,17 @@ describe("VoteRound", () => {
     // the sole remaining vote is a strict majority on its own.
     expect(round.result(1)).toEqual({ value: "a", votes: 1 });
   });
+
+  it("counts a candidate's unique backing IPs", () => {
+    const round = new VoteRound<string>();
+    expect(round.backers("a")).toBe(0);
+    round.add("a", "a", "1.1.1.1");
+    round.add("a", "a", "1.1.1.1");
+    round.add("b", "b", "2.2.2.2");
+    round.add("a", "a", "3.3.3.3");
+    expect(round.backers("a")).toBe(2);
+    expect(round.backers("b")).toBe(1);
+  });
 });
 
 describe("VoteRound.resultAmong", () => {

@@ -52,8 +52,9 @@ export const winnerReplayMetrics = {
   // wait excluded.
   runs: 0,
   seconds: 0,
-  // How disputed votes settled (GameServer.settleWinner): the replay agreed
-  // with the vote, overturned it, or failed and the vote stood.
+  // How replayed votes settled (disputed or decided by one IP, see
+  // GameServer.settleWinner): the replay agreed with the vote, overturned
+  // it, or failed and the vote stood.
   outcomes: { agreed: 0, overturned: 0, failed: 0 },
 };
 

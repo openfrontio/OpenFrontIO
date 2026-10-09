@@ -13,10 +13,11 @@ import {
 import { describe, expect, it } from "vitest";
 import { testGameConfig } from "./util/Wire";
 
-// info.statsAgreed tells the API whether the record's per-player stats are the
-// version a majority voted for (GameServer.archiveGame). Records only travel
-// as JSON over HTTP, so the round trip that matters is the archive's:
-// JSON.stringify with the bigint replacer, then a schema parse.
+// info.statsAgreed tells the API whether the record's winner and per-player
+// stats were checked, by two or more IPs voting alike or by a server replay
+// (GameServer.settleWinner; covered in WinnerReplaySettle.test.ts). Records
+// only travel as JSON over HTTP, so the round trip that matters is the
+// archive's: JSON.stringify with the bigint replacer, then a schema parse.
 describe("GameEndInfo.statsAgreed", () => {
   const players: PlayerRecord[] = [
     {

@@ -759,12 +759,13 @@ export const GameEndInfoSchema = GameStartInfoSchema.extend({
   // Absent on singleplayer records and on records read back from the API,
   // which scrubs them like persistentID.
   reports: PlayerReportSchema.array().optional(),
-  // Set by game servers only: true when the players' stats in this record are
-  // the version a majority of the electorate sent with the winning vote (the
-  // same rule that decides the winner), false when no version reached one or
-  // no winner was decided. Absent on singleplayer records, which no vote
-  // backs, and on records from servers that predate the check. Only true
-  // counts as agreed.
+  // Set by game servers only: true when this record's winner and stats were
+  // checked, either by the winner vote deciding with at least two IPs behind
+  // the same winner and stats, or by the server replaying the game. False
+  // when neither happened: nobody voted, or the replay failed and the record
+  // holds no decided vote or one sent by a single IP. Absent on singleplayer
+  // records, which no vote backs, and on records from servers that predate
+  // the check. Only true counts as agreed.
   statsAgreed: z.boolean().optional(),
 });
 
