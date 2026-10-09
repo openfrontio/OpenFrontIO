@@ -16,6 +16,7 @@ import { BaseModal } from "./components/BaseModal";
 import "./components/clan/ClanCard";
 import "./components/PlayerName";
 import "./components/ProfileCard";
+import "./components/ProfileProgression";
 import { modalHeader } from "./components/ui/ModalHeader";
 import { usernameText } from "./components/ui/UsernameText";
 import { verifiedBadge } from "./components/ui/VerifiedBadge";
@@ -26,6 +27,9 @@ import { playerProfileUrl } from "./utilities/PlayerProfileUrl";
 import { currentPagePath, translateText } from "./Utils";
 
 export { playerProfileUrl };
+
+// Every opening of a profile, numbered: keys the once-per-opening flourishes.
+let profileOpenings = 0;
 
 /** Where a profile was opened from, i.e. where its Back button leads. */
 export type ProfileOrigin = "clan" | "leaderboard" | "account";
@@ -50,6 +54,10 @@ export class PlayerProfileModal extends BaseModal {
   private restoreGamesScrollAfterOpen = false;
   // Bumped on every profile load so a superseded in-flight response is dropped.
   private loadGeneration = 0;
+  // The Progression tab was asked for (a link, or the tab the profile was
+  // last left on) before this player's progress arrived. The tab only exists
+  // for a player with progress, so it's selected once that lands.
+  private wantsProgressionTab = false;
   // Counts fresh openings, to key the profile card's once-per-open flourish.
   private openCount = 0;
 
@@ -60,6 +68,15 @@ export class PlayerProfileModal extends BaseModal {
         { key: "stats", label: translateText("account_modal.tab_stats") },
         { key: "games", label: translateText("account_modal.tab_games") },
         { key: "clans", label: translateText("account_modal.tab_clans") },
+        // Only for a player with a level: there is nothing to show otherwise.
+        ...(this.progress === null
+          ? []
+          : [
+              {
+                key: "progression",
+                label: translateText("account_modal.tab_progression"),
+              },
+            ]),
       ],
     };
   }
@@ -108,6 +125,8 @@ export class PlayerProfileModal extends BaseModal {
         return this.renderGames();
       case "clans":
         return this.renderClans();
+      case "progression":
+        return this.renderProgression();
       default:
         return this.renderProfile();
     }
@@ -239,6 +258,19 @@ export class PlayerProfileModal extends BaseModal {
     `;
   }
 
+  private renderProgression() {
+    // The tab is hidden without progress; should it still be selected (a new
+    // player opened on top), show the Stats content rather than nothing.
+    if (this.progress === null) return this.renderProfile();
+    // Keyed like the card's flourish: the tab pops in once per opening, not
+    // again on a tab switch.
+    return html`<profile-progression
+      .progress=${this.progress}
+      .publicId=${this.publicId}
+      .popKey=${`profile-${this.openCount}`}
+    ></profile-progression>`;
+  }
+
   // Everyone's level, your own included, comes from the public endpoint: the
   // /users/@me copy is cached from page load and would miss the games played
   // since. Missing progress hides the summary.
@@ -289,12 +321,25 @@ export class PlayerProfileModal extends BaseModal {
       return;
     }
 
+    // The Progression tab can't be selected until this player's progress is
+    // known (BaseModal drops a tab it doesn't list): hold the profile on
+    // Stats, and switch once the progress shows up. An explicit tab request
+    // decides on its own: when already open, BaseModal calls onOpen before it
+    // applies the requested tab, so activeTab may still be the remembered one.
+    // Only without a request does the remembered Progression tab carry over.
+    this.wantsProgressionTab =
+      typeof args?.tab === "string"
+        ? args.tab === "progression"
+        : this.activeTab === "progression";
+    if (this.activeTab === "progression") this.activeTab = "stats";
+
     // Fresh open (router/share link): clear any stale origin. The openFrom*
     // helpers re-set it right after open() so back() routes home; the
     // return-from-stats path above skips this and keeps the origin intact.
     this.openedFrom = null;
     // A new opening: the profile card plays its flourish again.
-    this.openCount++;
+    // Counted across every profile modal, so no two openings share a key.
+    this.openCount = ++profileOpenings;
     this.publicId = publicId;
     this.username = null;
     this.statsTree = null;
@@ -320,7 +365,20 @@ export class PlayerProfileModal extends BaseModal {
     // holds up the profile (its request can take up to its own timeout).
     // Only shown alongside a loaded profile (see renderProfile).
     void this.loadProgress(publicId).then((progress) => {
-      if (current()) this.progress = progress;
+      if (!current()) return;
+      this.progress = progress;
+      const wanted = this.wantsProgressionTab;
+      this.wantsProgressionTab = false;
+      // Unless the viewer has moved to another tab, or closed the profile
+      // (the tab would then be remembered for the next opening), meanwhile.
+      if (
+        wanted &&
+        progress !== null &&
+        this.activeTab === "stats" &&
+        this.isOpen()
+      ) {
+        this.setActiveTab("progression");
+      }
     });
     const profile = await fetchPublicPlayerProfile(publicId);
     if (!current()) return;

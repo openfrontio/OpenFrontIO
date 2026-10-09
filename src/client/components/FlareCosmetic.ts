@@ -73,6 +73,23 @@ function fallbackPreview(url: string | null | undefined): TemplateResult {
 }
 
 /**
+ * What the flare itself says about its cosmetic, before (or without) the
+ * catalog: the name from the flare, no type, and its own image or a sparkle.
+ * Null when the flare isn't a cosmetic.
+ */
+export function plainFlareCosmetic(
+  flare: TrackFlare,
+): FlareCosmeticView | null {
+  const cosmetic = flare.cosmetic ?? null;
+  if (cosmetic === null) return null;
+  return {
+    name: plainName(cosmetic.name),
+    typeLabel: "",
+    preview: fallbackPreview(cosmetic.url),
+  };
+}
+
+/**
  * Describes the cosmetic a flare unlocks, from the cosmetics catalog when it
  * has the item, else from what the flare itself says. Null when the flare
  * isn't a cosmetic.
@@ -93,11 +110,7 @@ export async function describeFlareCosmetic(
     console.warn("describeFlareCosmetic: catalog unavailable", err);
   }
   if (resolved === null) {
-    return {
-      name: plainName(cosmetic.name),
-      typeLabel: "",
-      preview: fallbackPreview(cosmetic.url),
-    };
+    return plainFlareCosmetic(flare);
   }
   return {
     name: cosmeticSelectionLabel(resolved),
