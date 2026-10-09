@@ -13,7 +13,12 @@ import { isDesktopShell } from "../../DesktopShell";
 import { showInGameAlert, showInGameConfirm } from "../../InGameModal";
 import { TogglePauseIntentEvent } from "../../InputHandler";
 import { PauseGameIntentEvent, SendWinnerEvent } from "../../Transport";
-import { homeHref, showToast, translateText } from "../../Utils";
+import {
+  copyToClipboard,
+  homeHref,
+  showToast,
+  translateText,
+} from "../../Utils";
 import { GameView } from "../../view";
 import { ImmunityBarVisibleEvent } from "./ImmunityTimer";
 import { ShowReplayPanelEvent } from "./ReplayPanel";
@@ -25,6 +30,7 @@ const pauseIcon = assetUrl("images/PauseIconWhite.svg");
 const playIcon = assetUrl("images/PlayIconWhite.svg");
 const newLobbyIcon = assetUrl("images/ReplayRegularIconWhite.svg");
 const settingsIcon = assetUrl("images/SettingIconWhite.svg");
+const shareIcon = assetUrl("images/ShareIconWhite.svg");
 const fullscreenIcon = assetUrl("images/FullscreenIconWhite.svg");
 const exitFullscreenIcon = assetUrl("images/ExitFullscreenIconWhite.svg");
 
@@ -287,6 +293,39 @@ export class GameRightSidebar extends LitElement implements Controller {
     );
   }
 
+  private isShareable(): boolean {
+    if (this._isSinglePlayer) return false;
+    const config = this.game?.config?.();
+    if (!config) return false;
+    if (config.isReplay?.()) return false;
+    if (config.gameConfig?.()?.gameType === GameType.Singleplayer) return false;
+    return Boolean(this.game?.gameID?.());
+  }
+
+  private async onShareButtonClick() {
+    const gameId = this.game?.gameID?.();
+    if (!gameId) {
+      showToast(translateText("common.failed_copy"), "red");
+      return;
+    }
+
+    const text = crazyGamesSDK.isOnCrazyGames()
+      ? crazyGamesSDK.createInviteLink(gameId)
+      : `${ClientEnv.shareOrigin()}${ClientEnv.gamePath(gameId)}`;
+
+    if (!text) {
+      showToast(translateText("common.failed_copy"), "red");
+      return;
+    }
+
+    try {
+      await copyToClipboard(text);
+      showToast(translateText("common.copied"), "green");
+    } catch {
+      showToast(translateText("common.failed_copy"), "red");
+    }
+  }
+
   private onFullscreenButtonClick() {
     if (!document.fullscreenElement) {
       document.documentElement.requestFullscreen().catch((err) => {
@@ -379,6 +418,20 @@ export class GameRightSidebar extends LitElement implements Controller {
           <img src=${settingsIcon} alt="settings" width="20" height="20" />
         </div>
 
+        ${this.isShareable()
+          ? html`<div
+              class="cursor-pointer"
+              @click=${this.onShareButtonClick}
+              title=${translateText("game_right_sidebar.share_link")}
+            >
+              <img
+                src=${shareIcon}
+                alt=${translateText("game_right_sidebar.share_link")}
+                width="20"
+                height="20"
+              />
+            </div>`
+          : ""}
         ${document.fullscreenEnabled && !this.hideFullscreenButton
           ? html`<div
               class="cursor-pointer"

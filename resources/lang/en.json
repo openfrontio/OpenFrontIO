@@ -945,6 +945,9 @@
     "credits": "Credits",
     "title": "Game is Starting..."
   },
+  "game_right_sidebar": {
+    "share_link": "Share Link"
+  },
   "game_timer": {
     "one_minute_remaining": "One minute remaining!"
   },

@@ -56,7 +56,7 @@ async function flush(el: TestSidebar): Promise<void> {
 function fullscreenButton(el: TestSidebar): HTMLImageElement | undefined {
   const images = [
     ...el.renderRoot.querySelectorAll<HTMLImageElement>("img"),
-  ].filter((img) => img.alt !== "settings" && img.alt !== "exit");
+  ].filter((img) => img.src.includes("Fullscreen"));
   return images[0];
 }
 
