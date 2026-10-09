@@ -223,16 +223,16 @@ export const ClientInfoSchema = z.object({
   // prestige and legend packed into one varint by packLevelBadge
   // (LevelBadgeWire.ts); read it with unpackLevelBadge. Stamped by the game
   // server from its own /users/@me lookup, never taken from the client.
-  // Display-only. Absent for guests, for players who hide their level (on
-  // every copy of the roster, their own included), when the API has
-  // progression off or the lookup failed, and on anonymized entries (a badge
-  // beside an anonymous name would point out the veterans). Must stay the
-  // LAST field: its one presence bit is the eighth and last bit of this
-  // object's one-byte header, so an entry without it encodes byte-identically
-  // to one from before it existed, and a pre-badge frame still decodes.
-  // Another field here would need a second header byte. No range check here
-  // on purpose: one bad value must not fail the whole roster's parse, so
-  // unpackLevelBadge drops it instead.
+  // Display-only. Absent for guests, for players who hide their level (even
+  // from themselves: their own client draws its own badge from its local
+  // /users/@me instead), when the API has progression off or the lookup
+  // failed, and on anonymized entries (a badge beside an anonymous name would
+  // point out the veterans). Must stay the LAST field: its one presence
+  // bit is the eighth and last bit of this object's one-byte header, so an
+  // entry without it encodes byte-identically to one from before it existed,
+  // and a pre-badge frame still decodes. Another field here would need a
+  // second header byte. No range check here on purpose: one bad value must
+  // not fail the whole roster's parse, so unpackLevelBadge drops it instead.
   levelBadge: zb.uint().optional(),
 });
 

@@ -1,6 +1,7 @@
 import type { UserMeResponse } from "@openfront/shared/ApiSchemas";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { AccountSettingsPanel } from "../../../src/client/components/AccountSettingsPanel";
+import { ownHiddenLevelBadge } from "../../../src/client/OwnLevelBadge";
 
 type UserMePlayer = UserMeResponse["player"];
 type UserMeUser = UserMeResponse["user"];
@@ -15,6 +16,12 @@ vi.mock("../../../src/client/Api", () => ({
   setMarketingConsent: vi.fn(async () => true),
   deleteAccount: vi.fn(async () => ({ ok: true })),
   getIdentityTokenAudiences: vi.fn(async () => []),
+  setLevelVisibility: vi.fn(async (hidden: boolean) => ({ ok: true, hidden })),
+  getUserMe: vi.fn(async () => false),
+}));
+
+vi.mock("../../../src/client/InGameModal", () => ({
+  showInGameAlert: vi.fn(async () => {}),
 }));
 
 vi.mock("../../../src/client/Auth", () => ({
@@ -165,5 +172,249 @@ describe("AccountSettingsPanel — marketing-consent card", () => {
     // No toggle at all in this branch — unchanged from before OPE-397.
     expect(findSwitch()).toBeNull();
     expect(panel.querySelector("input[type=email]")).toBeTruthy();
+  });
+});
+
+describe("AccountSettingsPanel — privacy card (hide my level)", () => {
+  let panel: AccountSettingsPanel;
+  const progress = {
+    prestige: 3,
+    level: 96,
+    xpInLevel: 10,
+    xpForNext: 900,
+    lifetimeXp: 1234567,
+    legend: false,
+    canPrestige: false,
+  };
+
+  beforeEach(async () => {
+    if (!customElements.get("account-settings-panel")) {
+      customElements.define("account-settings-panel", AccountSettingsPanel);
+    }
+    panel = document.createElement(
+      "account-settings-panel",
+    ) as AccountSettingsPanel;
+    document.body.appendChild(panel);
+    await panel.updateComplete;
+  });
+
+  afterEach(() => {
+    document.body.removeChild(panel);
+    vi.clearAllMocks();
+  });
+
+  async function show(player: UserMePlayer): Promise<void> {
+    panel.player = player;
+    panel.user = { email: "player@example.com" };
+    await panel.updateComplete;
+  }
+
+  // Lets the mocked request settle, then the re-render.
+  async function settle(): Promise<void> {
+    await new Promise((r) => setTimeout(r, 0));
+    await panel.updateComplete;
+  }
+
+  const levelSwitch = () =>
+    panel.querySelector(
+      'button[role="switch"][aria-label="account_modal.level_visibility_title"]',
+    ) as HTMLButtonElement | null;
+  const preview = () => panel.querySelector(".level-visibility-preview");
+
+  it("renders no card when /users/@me has no levelHidden (older API)", async () => {
+    await show(makePlayer({ progress, username: "Kestrel" }));
+
+    expect(panel.textContent).not.toContain("account_modal.privacy_title");
+    expect(levelSwitch()).toBeNull();
+  });
+
+  it("sits between the email-updates card and the delete card", async () => {
+    await show(
+      makePlayer({
+        progress,
+        levelHidden: false,
+        marketingConsent: { consented: "approved", hasEmail: true },
+      }),
+    );
+
+    const text = panel.textContent ?? "";
+    const marketing = text.indexOf("account_modal.marketing_title");
+    const privacy = text.indexOf("account_modal.privacy_title");
+    const del = text.indexOf("account_modal.delete_account_title");
+    expect(marketing).toBeGreaterThanOrEqual(0);
+    expect(privacy).toBeGreaterThan(marketing);
+    expect(del).toBeGreaterThan(privacy);
+    expect(text).toContain("account_modal.level_visibility_desc");
+  });
+
+  it("while shown: switch on, and the badge in front of the name in the preview", async () => {
+    await show(
+      makePlayer({ progress, username: "Kestrel", levelHidden: false }),
+    );
+
+    const toggle = levelSwitch()!;
+    expect(toggle.getAttribute("aria-checked")).toBe("true");
+    expect(toggle.disabled).toBe(false);
+
+    const strip = preview()!;
+    expect(strip.getAttribute("aria-hidden")).toBe("true");
+    expect(strip.textContent).toContain(
+      "account_modal.level_visibility_others_see",
+    );
+    expect(strip.textContent).toContain("Kestrel");
+    expect(strip.textContent).not.toContain(
+      "account_modal.level_visibility_hidden",
+    );
+    const badge = strip.querySelector("level-badge") as HTMLElement & {
+      level: number;
+      prestige: number;
+    };
+    expect(badge.level).toBe(96);
+    expect(badge.prestige).toBe(3);
+    expect(badge.getAttribute("size")).toBe("24");
+  });
+
+  it("while hidden: switch off, the name alone and 'Level hidden'", async () => {
+    await show(
+      makePlayer({ progress, username: "Kestrel", levelHidden: true }),
+    );
+
+    expect(levelSwitch()!.getAttribute("aria-checked")).toBe("false");
+    const strip = preview()!;
+    expect(strip.querySelector("level-badge")).toBeNull();
+    expect(strip.textContent).toContain("Kestrel");
+    expect(strip.textContent).toContain(
+      "account_modal.level_visibility_hidden",
+    );
+  });
+
+  it("shows the switch without the preview when progression is off", async () => {
+    await show(makePlayer({ username: "Kestrel", levelHidden: false }));
+
+    expect(levelSwitch()).toBeTruthy();
+    expect(preview()).toBeNull();
+    expect(panel.querySelector("level-badge")).toBeNull();
+  });
+
+  it("turning it off: optimistic, disabled in flight, PUTs hidden=true", async () => {
+    const { setLevelVisibility } = await import("../../../src/client/Api");
+    let answer!: (r: { ok: true; hidden: boolean }) => void;
+    vi.mocked(setLevelVisibility).mockImplementationOnce(
+      () => new Promise((r) => (answer = r)),
+    );
+    const player = makePlayer({ progress, levelHidden: false });
+    await show(player);
+
+    levelSwitch()!.click();
+    await panel.updateComplete;
+
+    expect(setLevelVisibility).toHaveBeenCalledWith(true);
+    // Optimistic: already off, on the cached profile object too.
+    expect(levelSwitch()!.getAttribute("aria-checked")).toBe("false");
+    expect(player.levelHidden).toBe(true);
+    expect(preview()!.querySelector("level-badge")).toBeNull();
+    // Disabled while in flight; another click sends nothing.
+    expect(levelSwitch()!.disabled).toBe(true);
+    levelSwitch()!.click();
+    expect(setLevelVisibility).toHaveBeenCalledTimes(1);
+
+    answer({ ok: true, hidden: true });
+    await settle();
+    expect(levelSwitch()!.disabled).toBe(false);
+    expect(levelSwitch()!.getAttribute("aria-checked")).toBe("false");
+    expect(player.levelHidden).toBe(true);
+  });
+
+  it("turning it back on PUTs hidden=false", async () => {
+    const { setLevelVisibility } = await import("../../../src/client/Api");
+    const player = makePlayer({ progress, levelHidden: true });
+    await show(player);
+
+    levelSwitch()!.click();
+    await settle();
+
+    expect(setLevelVisibility).toHaveBeenCalledWith(false);
+    expect(levelSwitch()!.getAttribute("aria-checked")).toBe("true");
+    expect(player.levelHidden).toBe(false);
+    expect(preview()!.querySelector("level-badge")).toBeTruthy();
+  });
+
+  it("reverts and shows the error alert when the request fails", async () => {
+    const { setLevelVisibility } = await import("../../../src/client/Api");
+    const { showInGameAlert } = await import("../../../src/client/InGameModal");
+    vi.mocked(setLevelVisibility).mockResolvedValueOnce({
+      ok: false,
+      code: "failed",
+    });
+    const player = makePlayer({ progress, levelHidden: false });
+    await show(player);
+
+    levelSwitch()!.click();
+    await settle();
+
+    expect(levelSwitch()!.getAttribute("aria-checked")).toBe("true");
+    expect(levelSwitch()!.disabled).toBe(false);
+    expect(player.levelHidden).toBe(false);
+    expect(showInGameAlert).toHaveBeenCalledWith(
+      "account_modal.level_visibility_failed",
+    );
+  });
+
+  it("reverts without an alert when signed out (401)", async () => {
+    const { setLevelVisibility } = await import("../../../src/client/Api");
+    const { showInGameAlert } = await import("../../../src/client/InGameModal");
+    vi.mocked(setLevelVisibility).mockResolvedValueOnce({
+      ok: false,
+      code: "logged_out",
+    });
+    const player = makePlayer({ progress, levelHidden: true });
+    await show(player);
+
+    levelSwitch()!.click();
+    await settle();
+
+    expect(player.levelHidden).toBe(true);
+    expect(levelSwitch()!.getAttribute("aria-checked")).toBe("false");
+    // logOut() already ran inside setLevelVisibility; the signed-out state
+    // takes over from there.
+    expect(showInGameAlert).not.toHaveBeenCalled();
+  });
+
+  it("refreshes the viewer's own-badge fallback once the change is saved", async () => {
+    const { getUserMe } = await import("../../../src/client/Api");
+    const player = makePlayer({ progress, levelHidden: false });
+    // getUserMe() memoises the same profile object the panel shows.
+    vi.mocked(getUserMe).mockResolvedValue({
+      user: {},
+      player,
+    } as unknown as UserMeResponse);
+    await show(player);
+    expect(ownHiddenLevelBadge()).toBeUndefined();
+
+    levelSwitch()!.click();
+    await settle();
+    expect(ownHiddenLevelBadge()).toEqual({
+      level: 96,
+      prestige: 3,
+      legend: false,
+    });
+
+    levelSwitch()!.click();
+    await settle();
+    expect(ownHiddenLevelBadge()).toBeUndefined();
+  });
+
+  it("leaves the fallback alone when the change fails", async () => {
+    const { getUserMe, setLevelVisibility } =
+      await import("../../../src/client/Api");
+    vi.mocked(setLevelVisibility).mockResolvedValueOnce({
+      ok: false,
+      code: "failed",
+    });
+    await show(makePlayer({ progress, levelHidden: false }));
+
+    levelSwitch()!.click();
+    await settle();
+    expect(getUserMe).not.toHaveBeenCalled();
   });
 });

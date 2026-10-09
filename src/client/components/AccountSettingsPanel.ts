@@ -2,16 +2,18 @@ import { UserMeResponse } from "@openfront/shared/ApiSchemas";
 import { html, LitElement, nothing, TemplateResult } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
 import { isSteamPrimaryUser } from "../AccountIdentity";
-import { deleteAccount, setMarketingConsent } from "../Api";
+import { deleteAccount, setLevelVisibility, setMarketingConsent } from "../Api";
 import { clearLocalSession, linkGoogle, sendMagicLink } from "../Auth";
 import { crazyGamesSDK } from "../CrazyGamesSDK";
 import { isDesktopShell } from "../DesktopShell";
 import { showInGameAlert } from "../InGameModal";
+import { refreshOwnHiddenLevelBadge } from "../OwnLevelBadge";
 import { steamSDK } from "../SteamSDK";
 import { translateText } from "../Utils";
 import "./baseComponents/Button";
 import "./DeleteAccountDialog";
 import "./IdentityTokenCard";
+import "./LevelBadge";
 import { googleLinkButton } from "./ui/GoogleLinkButton";
 
 type UserMePlayer = UserMeResponse["player"];
@@ -19,8 +21,8 @@ type UserMeUser = UserMeResponse["user"];
 
 /**
  * Account settings: marketing-consent control (with the bind-an-email flow when
- * the account has no verified email), third-party identity tokens and
- * self-service account deletion.
+ * the account has no verified email), privacy ("hide my level"), third-party
+ * identity tokens and self-service account deletion.
  *
  * Extracted from AccountModal so the standalone account-settings modal opened
  * from the nav profile menu and the account modal's settings tab render the
@@ -33,6 +35,7 @@ export class AccountSettingsPanel extends LitElement {
 
   @state() private email: string = "";
   @state() private consentBusy: boolean = false;
+  @state() private levelVisibilityBusy: boolean = false;
   @state() private deleteDialogOpen: boolean = false;
   @state() private deleteBusy: boolean = false;
 
@@ -63,7 +66,7 @@ export class AccountSettingsPanel extends LitElement {
   render(): TemplateResult {
     return html`
       <div class="flex flex-col gap-6">
-        ${this.renderMarketingCard()}
+        ${this.renderMarketingCard()} ${this.renderPrivacyCard()}
         <identity-token-card></identity-token-card>
         ${this.renderDeleteAccountCard()}
       </div>
@@ -124,6 +127,86 @@ export class AccountSettingsPanel extends LitElement {
         ${hasEmail || this.isSteamPrimary()
           ? nothing
           : this.renderEmailBinding()}
+      </div>
+    `;
+  }
+
+  // Privacy: "Show my level to other players". Only when /users/@me carries the
+  // setting at all — an older API without it gets no card.
+  private renderPrivacyCard(): TemplateResult | typeof nothing {
+    const levelHidden = this.player?.levelHidden;
+    if (levelHidden === undefined) return nothing;
+    const shown = !levelHidden;
+    const title = translateText("account_modal.level_visibility_title");
+    return html`
+      <div class="bg-white/5 rounded-xl border border-white/10 p-6">
+        <div
+          class="text-xs text-white/40 uppercase tracking-widest font-bold mb-4"
+        >
+          ${translateText("account_modal.privacy_title")}
+        </div>
+        <div class="flex items-center justify-between gap-4">
+          <div class="flex-1">
+            <div class="text-white font-medium">${title}</div>
+            <div class="text-white/50 text-sm mt-1">
+              ${translateText("account_modal.level_visibility_desc")}
+            </div>
+          </div>
+          <button
+            role="switch"
+            aria-checked=${shown ? "true" : "false"}
+            aria-label=${title}
+            ?disabled=${this.levelVisibilityBusy}
+            @click=${() => this.setLevelShown(!shown)}
+            class="relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-malibu-blue/50 disabled:opacity-60 ${shown
+              ? "bg-malibu-blue shadow-[var(--shadow-malibu-blue-pill)]"
+              : "bg-white/15"}"
+          >
+            <span
+              class="inline-block h-4 w-4 transform rounded-full bg-white transition-transform duration-200 ${shown
+                ? "translate-x-6"
+                : "translate-x-1"}"
+            ></span>
+          </button>
+        </div>
+        ${this.renderLevelPreview(shown)}
+      </div>
+    `;
+  }
+
+  // "Others see": the player's name as other players get it — with their
+  // level badge, or without it and marked hidden. Decorative (the switch
+  // carries the state), so hidden from assistive tech. Needs the player's
+  // level, so it is left out when progression is off.
+  private renderLevelPreview(shown: boolean): TemplateResult | typeof nothing {
+    const progress = this.player?.progress;
+    if (progress === undefined) return nothing;
+    return html`
+      <div
+        class="level-visibility-preview mt-4 flex items-center gap-3 rounded-lg bg-black/20 border border-white/5 px-4 py-3"
+        aria-hidden="true"
+      >
+        <span
+          class="text-[10px] uppercase tracking-widest font-bold text-white/40"
+          >${translateText("account_modal.level_visibility_others_see")}</span
+        >
+        <span class="flex items-center gap-1.5 text-white font-semibold">
+          ${shown
+            ? html`<level-badge
+                class="shrink-0"
+                .level=${progress.level}
+                .prestige=${progress.prestige}
+                ?legend=${progress.legend}
+                size="24"
+              ></level-badge>`
+            : nothing}
+          ${this.player?.username ?? ""}
+        </span>
+        ${shown
+          ? nothing
+          : html`<span class="ml-auto text-xs text-white/40"
+              >${translateText("account_modal.level_visibility_hidden")}</span
+            >`}
       </div>
     `;
   }
@@ -288,6 +371,39 @@ export class AccountSettingsPanel extends LitElement {
     }
     this.consentBusy = false;
     this.requestUpdate();
+  }
+
+  private async setLevelShown(shown: boolean): Promise<void> {
+    const player = this.player;
+    if (!player || player.levelHidden === undefined) return;
+    if (this.levelVisibilityBusy) return;
+    const previous = player.levelHidden;
+    const hidden = !shown;
+    if (previous === hidden) return;
+
+    // Optimistic, like the consent toggle: `player` is the cached /users/@me
+    // profile, so this also keeps every other reader of it consistent. The
+    // switch is disabled until the server answers; a failure puts it back.
+    this.levelVisibilityBusy = true;
+    player.levelHidden = hidden;
+    this.requestUpdate();
+
+    const result = await setLevelVisibility(hidden);
+    player.levelHidden = result.ok ? result.hidden : previous;
+    this.levelVisibilityBusy = false;
+    this.requestUpdate();
+    // The viewer's own-badge fallback (lobby roster, in-game panel) reads the
+    // same cached profile: re-read it now so the change shows without
+    // waiting for the next lobby.
+    if (result.ok) void refreshOwnHiddenLevelBadge();
+
+    // 401: logOut() has already run and the signed-out state takes over —
+    // nothing to tell the player here.
+    if (!result.ok && result.code === "failed") {
+      await showInGameAlert(
+        translateText("account_modal.level_visibility_failed"),
+      );
+    }
   }
 
   private handleEmailInput = (e: Event): void => {

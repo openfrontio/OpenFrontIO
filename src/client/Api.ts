@@ -9,6 +9,7 @@ import {
   IdentityTokenAudiencesResponseSchema,
   IdentityTokenResponse,
   IdentityTokenResponseSchema,
+  LevelVisibilityResponseSchema,
   NewsItemSchema,
   PaymentsCheckoutResponse,
   PaymentsCheckoutResponseSchema,
@@ -406,6 +407,57 @@ export async function setMarketingConsent(
   } catch (e) {
     console.error("setMarketingConsent: request failed", e);
     return false;
+  }
+}
+
+export type SetLevelVisibilityResult =
+  // 200: the stored setting, as the server echoes it.
+  | { ok: true; hidden: boolean }
+  // 401: the session is gone; logOut() has already run.
+  | { ok: false; code: "logged_out" }
+  // Anything else (400, 429, 5xx, network, unreadable body): nothing to act on
+  // beyond "try again".
+  | { ok: false; code: "failed" };
+
+// PUT /users/@me/level_visibility { hidden } — "hide my level". Idempotent:
+// the body is the desired state. Invalidates the cached /users/@me on success
+// so the next read reflects it.
+export async function setLevelVisibility(
+  hidden: boolean,
+): Promise<SetLevelVisibilityResult> {
+  try {
+    const response = await fetch(`${getApiBase()}/users/@me/level_visibility`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: await getAuthHeader(),
+      },
+      body: JSON.stringify({ hidden }),
+    });
+    if (response.status === 401) {
+      await logOut();
+      return { ok: false, code: "logged_out" };
+    }
+    if (!response.ok) {
+      console.error(
+        "setLevelVisibility: request failed",
+        response.status,
+        response.statusText,
+      );
+      return { ok: false, code: "failed" };
+    }
+    const parsed = LevelVisibilityResponseSchema.safeParse(
+      await response.json(),
+    );
+    if (!parsed.success) {
+      console.error("setLevelVisibility: Zod validation failed", parsed.error);
+      return { ok: false, code: "failed" };
+    }
+    invalidateUserMe();
+    return { ok: true, hidden: parsed.data.hidden };
+  } catch (e) {
+    console.error("setLevelVisibility: request failed", e);
+    return { ok: false, code: "failed" };
   }
 }
 

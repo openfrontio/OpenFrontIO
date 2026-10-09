@@ -282,6 +282,52 @@ describe("player profile level", () => {
     expect(fetchPublicPlayerProgress).toHaveBeenCalledWith("me");
   });
 
+  // The public endpoint 404s for a player who hides their level, them
+  // included — but they still see their own level on their own profile.
+  it("shows your own hidden level from /users/@me when the public endpoint has none", async () => {
+    getUserMe.mockResolvedValue({
+      ...me,
+      player: { ...me.player, levelHidden: true },
+    });
+    fetchPublicPlayerProgress.mockResolvedValue(false);
+    await open("me");
+    await vi.waitFor(async () => {
+      await settled(modal);
+      expect(levelLine()?.textContent).toContain(
+        'progression.level:{"level":64}',
+      );
+      expect(levelLine()?.textContent).toContain(
+        'progression.prestige:{"prestige":2}',
+      );
+    });
+    expect(fetchPublicPlayerProgress).toHaveBeenCalledWith("me");
+  });
+
+  it("never shows a hidden player's level on their profile to anyone else", async () => {
+    getUserMe.mockClear();
+    getUserMe.mockResolvedValue({
+      ...me,
+      player: { ...me.player, levelHidden: true },
+    });
+    fetchPublicPlayerProgress.mockResolvedValue(false);
+    await open("hidden-player");
+    await vi.waitFor(() => expect(getUserMe).toHaveBeenCalled());
+    await new Promise((r) => setTimeout(r, 0));
+    await settled(modal);
+    expect(modal.querySelector("profile-card")).toBeNull();
+  });
+
+  it("has nothing to fall back on for a signed-out viewer", async () => {
+    getUserMe.mockClear();
+    getUserMe.mockResolvedValue(false);
+    fetchPublicPlayerProgress.mockResolvedValue(false);
+    await open("me");
+    await vi.waitFor(() => expect(getUserMe).toHaveBeenCalled());
+    await new Promise((r) => setTimeout(r, 0));
+    await settled(modal);
+    expect(modal.querySelector("profile-card")).toBeNull();
+  });
+
   it("shows no card when there is no progress", async () => {
     fetchPublicPlayerProgress.mockResolvedValue(false);
     await open("no-progress");
