@@ -47,15 +47,18 @@ export class OButton extends LitElement {
 
   private sizeClasses(): string {
     if (this.iconPosition === "only") {
+      if (this.width === "fill") {
+        return "aspect-square h-full";
+      }
       switch (this.size) {
         case "xs":
           return "w-6 h-6 text-xs";
         case "sm":
           return "w-8 h-8 text-sm";
         case "md":
-          return "aspect-square h-full py-3 px-3 text-base lg:text-lg";
+          return "w-10 h-10 text-base";
         case "lg":
-          return "aspect-square h-full py-4 px-4 text-lg lg:text-xl";
+          return "w-12 h-12 text-lg";
       }
     }
     switch (this.size) {

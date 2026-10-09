@@ -329,6 +329,7 @@ describe("WinModal share button", () => {
     );
     expect(shareButton).not.toBeNull();
     expect(shareButton?.iconPosition).toBe("only");
+    expect(shareButton?.width).toBe("fill");
     expect(shareButton?.title).toBe("Share");
     expect(shareButton?.classList.contains("shrink-0")).toBe(true);
     expect(shareButton?.classList.contains("aspect-square")).toBe(true);
@@ -338,6 +339,18 @@ describe("WinModal share button", () => {
     expect(innerButton?.getAttribute("aria-label")).toBe("Share");
     expect(innerButton?.className).toContain("aspect-square");
     expect(innerButton?.className).toContain("h-full");
+  });
+
+  it("preserves fixed w-10 h-10 sizing for default icon-only buttons", async () => {
+    const defaultBtn = document.createElement("o-button") as OButton;
+    defaultBtn.iconPosition = "only";
+    document.body.appendChild(defaultBtn);
+    await defaultBtn.updateComplete;
+
+    const inner = defaultBtn.querySelector("button");
+    expect(inner?.className).toContain("w-10");
+    expect(inner?.className).toContain("h-10");
+    defaultBtn.remove();
   });
 
   it("appears on both the win and the death/loss modal", async () => {
