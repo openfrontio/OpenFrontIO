@@ -1121,7 +1121,7 @@ describe("WinModal XP section", () => {
   });
 
   it("polls again when the modal is detached mid-poll and re-attached", async () => {
-    stubXpEndpoint([notFound]);
+    const firstFetch = stubXpEndpoint([notFound]);
     await mount(makeGame({ ended: true }));
     expect(xpState()).toBe("calculating");
     const view = () =>
@@ -1130,14 +1130,26 @@ describe("WinModal XP section", () => {
     // Detaching aborts the poll; that is not a verdict on the XP.
     modal.remove();
     await settle(3_000);
+    expect(firstFetch).toHaveBeenCalledTimes(1);
     expect(view()).toBe("calculating");
 
-    // Shown again, the next end-of-game update polls afresh.
+    // The Win update came once and is spent: re-attaching alone polls afresh.
     const fetchMock = stubXpEndpoint([() => json(eligible())]);
     document.body.appendChild(modal);
-    await (
-      modal as unknown as { updateXp(gameOver: boolean): Promise<void> }
-    ).updateXp(true);
+    await settle();
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(xpState()).toBe("result");
+  });
+
+  it("polls again when re-attached before the aborted poll has wound down", async () => {
+    stubXpEndpoint([notFound]);
+    await mount(makeGame({ ended: true }));
+    expect(xpState()).toBe("calculating");
+
+    // Moved in the DOM: detached and re-attached in the same task.
+    const fetchMock = stubXpEndpoint([() => json(eligible())]);
+    modal.remove();
+    document.body.appendChild(modal);
     await settle();
     expect(fetchMock).toHaveBeenCalledTimes(1);
     expect(xpState()).toBe("result");

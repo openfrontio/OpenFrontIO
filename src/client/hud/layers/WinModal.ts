@@ -79,6 +79,9 @@ export class WinModal extends LitElement implements Controller {
   // Polling starts once, at the end of the game.
   private xpPolling = false;
   private xpAbort: AbortController | null = null;
+  // A detach cut the end-of-game poll short; re-attaching restarts it (the
+  // Win update that started it is delivered only once).
+  private xpPollAborted = false;
   // Whose XP the section shows: the Legend ceremony plays once per account.
   private xpPublicId: string | null = null;
   // The Legend ceremony, fetched only for a player who could become a Legend
@@ -504,6 +507,14 @@ export class WinModal extends LitElement implements Controller {
     this.requestUpdate();
   }
 
+  connectedCallback(): void {
+    super.connectedCallback();
+    if (this.xpPollAborted) {
+      this.xpPollAborted = false;
+      void this.updateXp(true);
+    }
+  }
+
   disconnectedCallback(): void {
     this.xpAbort?.abort();
     super.disconnectedCallback();
@@ -554,9 +565,12 @@ export class WinModal extends LitElement implements Controller {
       const abort = new AbortController();
       this.xpAbort = abort;
       const result = await pollGameXp(game.gameID(), { signal: abort.signal });
-      // Detached mid-poll: leave the section be, so a re-attach polls again.
+      // Detached mid-poll: leave the section be and poll again on re-attach
+      // (right away if that happened while this poll was winding down).
       if (abort.signal.aborted) {
         this.xpPolling = false;
+        if (this.isConnected) void this.updateXp(true);
+        else this.xpPollAborted = true;
         return;
       }
       if (result?.eligible && reachedLegendThisGame(result)) {
