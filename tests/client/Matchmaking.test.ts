@@ -140,13 +140,13 @@ function userMe(
 ): UserMeResponse {
   return {
     user,
+    steamLicence: false,
+    noticesSeen: [],
     player: {
       publicId: "player-id",
       adfree: false,
       unlimitedRanked: false,
       canCreatePublicLobbies: false,
-      steamLicence: false,
-      noticesSeen: [],
       achievements: { singleplayerMap: [], player: [] },
       clans: clanTags.map((tag) => ({
         tag,

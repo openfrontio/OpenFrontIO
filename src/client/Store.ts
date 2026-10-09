@@ -34,7 +34,6 @@ import {
   purchaseCosmetic,
   resolveCosmetics,
   ResolvedCosmetic,
-  withHeldTier,
 } from "./Cosmetics";
 import { matchesStoreItem } from "./EquippedCosmetics";
 import {
@@ -169,7 +168,7 @@ export class StoreModal extends BaseModal {
   async onUserMe(userMeResponse: UserMeResponse | false) {
     this.userMeResponse = userMeResponse;
     this.authSettled = true;
-    this.cosmetics = await withHeldTier(await fetchCosmetics(), userMeResponse);
+    this.cosmetics = await fetchCosmetics();
     this.selectVisible(this.groupsForTab(this.activeTab));
     await this.refresh();
   }
@@ -687,10 +686,7 @@ export class StoreModal extends BaseModal {
     if (this.requestedItem !== null) {
       this.cosmeticsSubTab = subTabForItem(this.requestedItem);
     }
-    this.cosmetics ??= await withHeldTier(
-      await fetchCosmetics(),
-      this.userMeResponse,
-    );
+    this.cosmetics ??= await fetchCosmetics();
     this.selectVisible(this.groupsForTab(this.activeTab));
     await this.refresh();
   }

@@ -665,7 +665,7 @@ describe("UserMeResponseSchema unlimitedRanked", () => {
 });
 
 describe("UserMeResponseSchema Steam licence and notices", () => {
-  const basePlayer = {
+  const player = {
     publicId: "p1",
     adfree: false,
     canCreatePublicLobbies: false,
@@ -675,15 +675,12 @@ describe("UserMeResponseSchema Steam licence and notices", () => {
   };
 
   it("defaults the fields an older API does not send", () => {
-    const result = UserMeResponseSchema.safeParse({
-      user: {},
-      player: basePlayer,
-    });
+    const result = UserMeResponseSchema.safeParse({ user: {}, player });
     expect(result.success).toBe(true);
     if (result.success) {
-      expect(result.data.player.steamLicence).toBe(false);
-      expect(result.data.player.noticesSeen).toEqual([]);
-      expect(result.data.player.tierConversion).toBeUndefined();
+      expect(result.data.steamLicence).toBe(false);
+      expect(result.data.noticesSeen).toEqual([]);
+      expect(result.data.tierConversion).toBeUndefined();
     }
   });
 
@@ -696,28 +693,23 @@ describe("UserMeResponseSchema Steam licence and notices", () => {
     };
     const result = UserMeResponseSchema.safeParse({
       user: {},
-      player: {
-        ...basePlayer,
-        canCreatePublicLobbies: true,
-        steamLicence: true,
-        noticesSeen: ["steam_licence_intro"],
-        tierConversion,
-      },
+      player: { ...player, canCreatePublicLobbies: true },
+      steamLicence: true,
+      noticesSeen: ["steam_licence_intro"],
+      tierConversion,
     });
     expect(result.success).toBe(true);
     if (result.success) {
-      expect(result.data.player.steamLicence).toBe(true);
-      expect(result.data.player.noticesSeen).toEqual(["steam_licence_intro"]);
-      expect(result.data.player.tierConversion).toEqual(tierConversion);
+      expect(result.data.steamLicence).toBe(true);
+      expect(result.data.noticesSeen).toEqual(["steam_licence_intro"]);
+      expect(result.data.tierConversion).toEqual(tierConversion);
     }
   });
 
   it("accepts a null tierConversion", () => {
     expect(
-      UserMeResponseSchema.safeParse({
-        user: {},
-        player: { ...basePlayer, tierConversion: null },
-      }).success,
+      UserMeResponseSchema.safeParse({ user: {}, player, tierConversion: null })
+        .success,
     ).toBe(true);
   });
 });

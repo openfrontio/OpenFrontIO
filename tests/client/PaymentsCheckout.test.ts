@@ -463,6 +463,14 @@ describe("createPaymentsCheckout errors", () => {
     });
   });
 
+  it("maps 403 steam_licence_required", async () => {
+    respond(403, { reason: "steam_licence_required" });
+    expect(await checkout()).toEqual({
+      ok: false,
+      code: "steam_licence_required",
+    });
+  });
+
   it("maps 501 provider_unavailable with its provider", async () => {
     respond(501, { reason: "provider_unavailable", provider: "steam" });
     expect(await checkout()).toEqual({

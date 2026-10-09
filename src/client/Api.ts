@@ -1526,6 +1526,8 @@ export type PaymentsCheckoutResult =
   // "Invalid hostname", soft_pack_not_purchasable) or a 200 body we could not
   // read. Not actionable by the player; log it and show a generic failure.
   | { ok: false; code: "client_bug" }
+  // 403: the tier is sold only to players who own OpenFront on Steam.
+  | { ok: false; code: "steam_licence_required" }
   // 400 "Pack not available" / "Tier not available": the catalog this client
   // rendered from is stale. Refetch cosmetics.json before showing the store
   // again.
@@ -1746,6 +1748,10 @@ export async function createPaymentsCheckout(
         }
       }
 
+      if (response.status === 403 && reason === "steam_licence_required") {
+        return { ok: false, code: "steam_licence_required" };
+      }
+
       if (response.status === 501 && provider !== null) {
         return { ok: false, code: "provider_unavailable", provider };
       }
@@ -1905,7 +1911,7 @@ export async function markNoticeSeen(notice: string): Promise<boolean> {
 
 export async function changeSubscriptionTier(
   tierName: string,
-): Promise<boolean | "rate_limited"> {
+): Promise<boolean | "rate_limited" | "steam_licence_required"> {
   try {
     const response = await fetch(
       `${getApiBase()}/subscriptions/@me/change-tier`,
@@ -1925,6 +1931,12 @@ export async function changeSubscriptionTier(
     // The API allows one tier change per minute per player.
     if (response.status === 429) {
       return "rate_limited";
+    }
+    if (response.status === 403) {
+      const body = await response.json().catch(() => null);
+      if (body?.reason === "steam_licence_required") {
+        return "steam_licence_required";
+      }
     }
     if (!response.ok) {
       console.error(
