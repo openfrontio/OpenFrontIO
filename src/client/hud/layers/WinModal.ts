@@ -128,9 +128,9 @@ export class WinModal extends LitElement implements Controller {
           ></o-button>
           <o-button
             variant="primary"
+            size="lg"
             iconPosition="only"
-            width="fill"
-            class="shrink-0 aspect-square"
+            class="shrink-0"
             translationKey="win_modal.share"
             title=${translateText("win_modal.share")}
             .title=${translateText("win_modal.share")}

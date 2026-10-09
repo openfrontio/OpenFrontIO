@@ -47,9 +47,6 @@ export class OButton extends LitElement {
 
   private sizeClasses(): string {
     if (this.iconPosition === "only") {
-      if (this.width === "fill") {
-        return "aspect-square h-full";
-      }
       switch (this.size) {
         case "xs":
           return "w-6 h-6 text-xs";

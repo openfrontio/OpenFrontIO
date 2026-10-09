@@ -322,23 +322,22 @@ describe("WinModal share button", () => {
     return modal;
   }
 
-  it("renders a square share button with tooltip and aria-label", async () => {
+  it("renders a square share button with tooltip and aria-label matching row height", async () => {
     const el = await createModal();
     const shareButton = el.querySelector<OButton>(
       'o-button[translationKey="win_modal.share"]',
     );
     expect(shareButton).not.toBeNull();
     expect(shareButton?.iconPosition).toBe("only");
-    expect(shareButton?.width).toBe("fill");
+    expect(shareButton?.size).toBe("lg");
     expect(shareButton?.title).toBe("Share");
     expect(shareButton?.classList.contains("shrink-0")).toBe(true);
-    expect(shareButton?.classList.contains("aspect-square")).toBe(true);
 
     const innerButton = shareButton?.querySelector("button");
     expect(innerButton).not.toBeNull();
     expect(innerButton?.getAttribute("aria-label")).toBe("Share");
-    expect(innerButton?.className).toContain("aspect-square");
-    expect(innerButton?.className).toContain("h-full");
+    expect(innerButton?.className).toContain("w-12");
+    expect(innerButton?.className).toContain("h-12");
   });
 
   it("preserves fixed w-10 h-10 sizing for default icon-only buttons", async () => {
