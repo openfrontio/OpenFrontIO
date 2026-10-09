@@ -512,7 +512,7 @@ export class SubscriptionPanel extends LitElement {
             ? html`<div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
                 ${this.renderPerk(
                   cosmetic.hardCurrencySignupBonus,
-                  "cosmetics.signup_bonus",
+                  "cosmetics.per_month",
                 )}
                 ${this.renderPerk(
                   cosmetic.dailyHardCurrency,

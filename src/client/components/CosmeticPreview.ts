@@ -210,7 +210,7 @@ export class CosmeticPreview extends LitElement {
               >${subscription.hardCurrencySignupBonus.toLocaleString()}</span
             >
             <span class="text-[10px] text-white/50 uppercase"
-              >${translateText("cosmetics.signup_bonus")}</span
+              >${translateText("cosmetics.per_month")}</span
             >
           </div>
           <div class="self-start flex items-center gap-1.5">
