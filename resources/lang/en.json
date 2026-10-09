@@ -1334,6 +1334,7 @@
     "player": "Player",
     "rank": "Rank",
     "ranked_2v2_tab": "2v2 Ranked",
+    "ranked_ffa_tab": "FFA Ranked",
     "ranked_no_stats": "No ranked games have been played on this ladder yet",
     "ranked_tab": "1v1 Ranked",
     "ratio": "Ratio",
@@ -1592,6 +1593,7 @@
     "searching": "Searching for game...",
     "title": "1v1 Ranked Matchmaking (ALPHA)",
     "title_2v2": "2v2 Ranked Matchmaking (ALPHA)",
+    "title_ffa": "FFA Ranked Matchmaking (ALPHA)",
     "waiting_for_game": "Waiting for game to start..."
   },
   "mode_selector": {
@@ -1600,7 +1602,8 @@
     "offline_lobbies": "Public lobbies aren't available while you're offline",
     "ranked_1v1_title": "1v1",
     "ranked_2v2_title": "2v2",
-    "ranked_pairing_note": "In team modes, clanmates and friends in the queue are placed on the same team where possible. Friends are paired first, then clanmates. If your ratings are too far apart you'll be matched separately to keep games fair.",
+    "ranked_ffa_title": "FFA",
+    "ranked_pairing_note": "In team modes, clanmates and friends in the queue are placed on the same team where possible. Friends are paired first, then clanmates. If your ratings are too far apart you'll be matched separately to keep games fair. In FFA, 4 to 10 players are matched by rating, and friends and clanmates are never placed in the same game.",
     "ranked_title": "Ranked",
     "ranked_trust_required_body": "Ranked only accepts trusted accounts. To become trusted, play more games or make any purchase.",
     "ranked_trust_required_body_crazygames": "Ranked only accepts trusted accounts. To become trusted, play more games.",
@@ -1770,6 +1773,7 @@
     "ranked": "Ranked",
     "ranked_1v1": "1v1",
     "ranked_2v2": "2v2",
+    "ranked_ffa": "FFA",
     "solo": "Solo",
     "stats_cities_per_game": "Cities Built",
     "stats_defense_posts_per_game": "Defense Posts Built",
