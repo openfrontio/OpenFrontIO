@@ -1,5 +1,6 @@
 import { ClanTagSchema } from "@openfront/engine-api/Schemas";
 import { z } from "zod";
+import { RowLevelFields } from "./ApiSchemas";
 
 const RequiredClanTagSchema = ClanTagSchema.unwrap();
 
@@ -141,6 +142,7 @@ export const ClanMemberSchema = z.object({
   // responses from an API without the field still parse.
   username: z.string().nullable().optional(),
   stats: ClanMemberStatsSchema.optional(),
+  ...RowLevelFields,
 });
 export type ClanMember = z.infer<typeof ClanMemberSchema>;
 

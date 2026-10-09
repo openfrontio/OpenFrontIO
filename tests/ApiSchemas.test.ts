@@ -19,6 +19,7 @@ import {
   PutCreatorResponseSchema,
   PutUsernameResponseSchema,
   RankedLeaderboardEntrySchema,
+  RankedLeaderboardResponseSchema,
   RewardSchema,
   TribeLeaderboardResponseSchema,
   TribeNameSchema,
@@ -401,6 +402,101 @@ describe("RankedLeaderboardEntrySchema accountUsername", () => {
 
   it("rejects an entry without accountUsername", () => {
     expect(RankedLeaderboardEntrySchema.safeParse(base).success).toBe(false);
+  });
+});
+
+describe("leaderboard entry level fields", () => {
+  const ranked = {
+    rank: 1,
+    elo: 1500,
+    peakElo: 1600,
+    wins: 10,
+    losses: 5,
+    total: 15,
+    public_id: "abc123",
+    accountUsername: "bob.4821",
+  };
+  const mapped = {
+    rank: 1,
+    playerId: "abc123",
+    accountUsername: "bob.4821",
+    elo: 1500,
+    games: 15,
+    wins: 10,
+    losses: 5,
+    winRate: 2 / 3,
+  };
+  const level = { level: 42, prestige: 3, legend: false };
+
+  it("parses a ranked entry from an API without level fields", () => {
+    const result = RankedLeaderboardEntrySchema.parse(ranked);
+    expect(result.level).toBeUndefined();
+    expect(result.prestige).toBeUndefined();
+    expect(result.legend).toBeUndefined();
+  });
+
+  it("keeps a ranked entry's level fields", () => {
+    expect(
+      RankedLeaderboardEntrySchema.parse({ ...ranked, ...level }),
+    ).toMatchObject(level);
+  });
+
+  it.each([
+    ["a string level", { level: "42" }],
+    ["a null prestige", { prestige: null }],
+    ["a numeric legend", { legend: 1 }],
+    ["level 0", { level: 0 }],
+    ["level 101", { level: 101 }],
+    ["a fractional level", { level: 4.5 }],
+    ["a negative prestige", { prestige: -1 }],
+    ["prestige 11", { prestige: 11 }],
+  ])("drops %s instead of rejecting the entry", (_, bad) => {
+    const result = RankedLeaderboardEntrySchema.parse({
+      ...ranked,
+      ...level,
+      ...bad,
+    });
+    const [key] = Object.keys(bad) as (keyof typeof level)[];
+    expect(result[key]).toBeUndefined();
+    expect(result.public_id).toBe("abc123");
+  });
+
+  it("keeps the edges of the level range", () => {
+    expect(
+      RankedLeaderboardEntrySchema.parse({
+        ...ranked,
+        level: 1,
+        prestige: 0,
+        legend: false,
+      }),
+    ).toMatchObject({ level: 1, prestige: 0 });
+    expect(
+      RankedLeaderboardEntrySchema.parse({
+        ...ranked,
+        level: 100,
+        prestige: 10,
+        legend: true,
+      }),
+    ).toMatchObject({ level: 100, prestige: 10 });
+  });
+
+  it("still parses a ladder with one malformed row", () => {
+    const result = RankedLeaderboardResponseSchema.parse({
+      "1v1": [
+        { ...ranked, ...level },
+        { ...ranked, public_id: "bad", ...level, legend: 1 },
+      ],
+    });
+    expect(result["1v1"]).toHaveLength(2);
+    expect(result["1v1"][0]).toMatchObject(level);
+    expect(result["1v1"][1].legend).toBeUndefined();
+  });
+
+  it("parses a mapped entry with and without level fields", () => {
+    expect(PlayerLeaderboardEntrySchema.parse(mapped).level).toBeUndefined();
+    expect(
+      PlayerLeaderboardEntrySchema.parse({ ...mapped, ...level }),
+    ).toMatchObject(level);
   });
 });
 

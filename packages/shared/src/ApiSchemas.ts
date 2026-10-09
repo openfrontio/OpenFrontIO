@@ -12,6 +12,10 @@ import {
 } from "@openfront/engine-api/game/GameTypes";
 import { z } from "zod";
 import { base64urlToUuid } from "./Base64";
+import {
+  LEVEL_BADGE_MAX_LEVEL,
+  LEVEL_BADGE_MAX_PRESTIGE,
+} from "./LevelBadgeWire";
 
 const RequiredClanTagSchema = ClanTagSchema.unwrap();
 
@@ -204,6 +208,30 @@ export const PublicProgressSchema = z.object({
   xpForNext: z.number().optional(),
 });
 export type PublicProgress = z.infer<typeof PublicProgressSchema>;
+
+// A player's level as stamped onto rows in other players' lists (the ranked
+// leaderboard, clan member lists), for drawing a level badge. Sent together
+// for a player with progress; absent for one without, while progression is
+// off, and from an API that predates them. Display-only, so a malformed or
+// out-of-range value reads as absent (that row shows no badge) rather than
+// failing the whole list's parse or drawing a level the player doesn't have.
+export const RowLevelFields = {
+  level: z
+    .number()
+    .int()
+    .min(1)
+    .max(LEVEL_BADGE_MAX_LEVEL)
+    .optional()
+    .catch(undefined),
+  prestige: z
+    .number()
+    .int()
+    .min(0)
+    .max(LEVEL_BADGE_MAX_PRESTIGE)
+    .optional()
+    .catch(undefined),
+  legend: z.boolean().optional().catch(undefined),
+};
 
 // A flare staff put on the level track: what reaching a point on it grants.
 // `kind` says what the point is:
@@ -1025,6 +1053,7 @@ export const PlayerLeaderboardEntrySchema = z.object({
   wins: z.number(),
   losses: z.number(),
   winRate: z.number(),
+  ...RowLevelFields,
 });
 export type PlayerLeaderboardEntry = z.infer<
   typeof PlayerLeaderboardEntrySchema
@@ -1048,6 +1077,7 @@ export const RankedLeaderboardEntrySchema = z.object({
   // Account username (null = never set). The client displays
   // `accountUsername ?? public_id`.
   accountUsername: z.string().nullable(),
+  ...RowLevelFields,
 });
 export type RankedLeaderboardEntry = z.infer<
   typeof RankedLeaderboardEntrySchema

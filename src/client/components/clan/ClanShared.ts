@@ -7,6 +7,7 @@ import type {
   ClanMemberStats,
 } from "../../ClanApi";
 import { showToast, translateText } from "../../Utils";
+import { hasLevel, levelBadgeSlot } from "../LevelBadgeSlot";
 import { playerNameLink } from "../ui/PlayerNameLink";
 import "./ClanStatsBreakdown";
 export { renderLoadingSpinner } from "../BaseModal";
@@ -378,11 +379,22 @@ export function renderMemberStats(
   `;
 }
 
+/**
+ * Whether member rows in a list should keep a level-badge slot: true when any
+ * member in it has a level, so the names of members without one line up.
+ */
+export function membersHaveLevels(members: readonly ClanMember[]): boolean {
+  return members.some(hasLevel);
+}
+
 // `host` raises the `view-profile` event that opens the profile modal.
+// `levelSlot` (see membersHaveLevels) keeps an empty badge-width slot in
+// front of the name of a member without a level.
 export function renderMemberRow(
   member: ClanMember,
   myPublicId: string | null,
   host: HTMLElement,
+  levelSlot = false,
 ): TemplateResult {
   const isMe = member.publicId === myPublicId;
   return html`
@@ -403,8 +415,14 @@ export function renderMemberRow(
         </div>
         <div class="flex-1 min-w-0 flex flex-col">
           <div class="flex items-center justify-between gap-2">
-            <div class="min-w-0">
-              ${playerNameLink(host, member.username, member.publicId)}
+            <div class="min-w-0 flex items-center gap-2">
+              ${levelBadgeSlot(member, hasLevel(member), levelSlot)}
+              ${playerNameLink(
+                host,
+                member.username,
+                member.publicId,
+                "min-w-0",
+              )}
             </div>
             <div class="flex items-center gap-2 shrink-0">
               <span
