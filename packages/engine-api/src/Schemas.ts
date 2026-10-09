@@ -278,6 +278,8 @@ export const GameConfigSchema = z.object({
     },
   ),
   bots: zb.uint({ max: 400 }),
+  // Allow nations and tribes to autonomously build oil, gold, diamond mines, and livestock farms.
+  aiResourceStructures: z.boolean().optional(),
   infiniteGold: z.boolean(),
   infiniteTroops: z.boolean(),
   instantBuild: z.boolean(),
