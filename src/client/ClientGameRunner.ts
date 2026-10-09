@@ -18,7 +18,10 @@ import {
   loadTerrainMap,
   TerrainMapData,
 } from "@openfront/engine-lib/game/TerrainMapLoader";
-import { restoreMapsFromSnapshot } from "@openfront/engine-lib/snapshot/MapSnapshot";
+import {
+  readSnapshotHeader,
+  restoreMapsFromSnapshot,
+} from "@openfront/engine-lib/snapshot/MapSnapshot";
 import { EventBus } from "@openfront/shared/EventBus";
 import { GameMapLoader, loadMapFiles } from "@openfront/shared/GameMapLoader";
 import { replacer } from "@openfront/shared/SharedUtil";
@@ -909,9 +912,6 @@ export async function createClientGame(
       eventBus,
       (nowMs) => metrics.recordFrame(nowMs),
     );
-    if (initialUpdate) {
-      webglBuilder.update(gameView);
-    }
 
     // Releases all WebGL/DOM resources this game created. Without it, stopping
     // a game (e.g. joining another without a page reload) leaks the WebGL
