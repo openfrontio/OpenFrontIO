@@ -173,7 +173,8 @@ export class HostLobbyModal extends BaseModal {
         this.playerLimit = true;
         this.playerLimitValue = maxPlayers;
       }
-      this.aiResourceStructures = lobby.gameConfig?.aiResourceStructures ?? false;
+      this.aiResourceStructures =
+        lobby.gameConfig?.aiResourceStructures ?? false;
     }
     if ("serverTime" in lobby && typeof lobby.serverTime === "number") {
       this.serverTimeOffset = calculateServerTimeOffset(lobby.serverTime);
