@@ -1,3 +1,4 @@
+import { GameType } from "@openfront/engine-api/game/GameTypes";
 import { GameConfigSchema } from "@openfront/engine-api/Schemas";
 import { z } from "zod";
 
@@ -9,5 +10,13 @@ export const CreateGameInputSchema = GameConfigSchema.omit({ pool: true }).or(
     .strict()
     .transform((val) => undefined),
 );
+
+export type CreateGameInput = z.infer<typeof CreateGameInputSchema>;
+
+// create_game only makes private lobbies. An empty body parses to undefined,
+// which createGame fills in with its defaults (a private game).
+export function isPrivateGameInput(input: CreateGameInput): boolean {
+  return input === undefined || input.gameType === GameType.Private;
+}
 
 export const GameInputSchema = GameConfigSchema.partial();
