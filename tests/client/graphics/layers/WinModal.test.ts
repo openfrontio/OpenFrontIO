@@ -1,11 +1,12 @@
 import { RankedType } from "@openfront/engine-api/game/GameTypes";
+import { GAME_ID_REGEX } from "@openfront/engine-api/Schemas";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import type { PurchaseButton } from "../../../../src/client/components/PurchaseButton";
 import {
   fetchCosmetics,
   resolveCosmetics,
   type ResolvedCosmetic,
 } from "../../../../src/client/Cosmetics";
-import type { PurchaseButton } from "../../../../src/client/components/PurchaseButton";
 import "../../../../src/client/hud/layers/WinModal";
 import type { WinModal } from "../../../../src/client/hud/layers/WinModal";
 
@@ -307,7 +308,7 @@ describe("WinModal share button", () => {
   async function createModal(opts?: { isWin?: boolean; gameId?: string }) {
     modal = document.createElement("win-modal") as WinModal;
     modal.game = {
-      gameID: () => opts?.gameId ?? "game-xyz-789",
+      gameID: () => opts?.gameId ?? "gamexyz123",
       myPlayer: () => null,
       config: () => ({
         gameConfig: () => ({ rankedType: undefined }),
@@ -366,7 +367,10 @@ describe("WinModal share button", () => {
   });
 
   it("copies working game link using ClientEnv.shareOrigin and shows green toast", async () => {
-    const el = await createModal({ gameId: "game-123" });
+    const gameId = "game123456";
+    expect(GAME_ID_REGEX.test(gameId)).toBe(true);
+
+    const el = await createModal({ gameId });
     const shareButton = el.querySelector<OButton>(
       'o-button[translationKey="win_modal.share"]',
     )!;
@@ -374,16 +378,27 @@ describe("WinModal share button", () => {
     shareButton.click();
     await new Promise((resolve) => setTimeout(resolve, 0));
 
-    const expectedUrl = `${ClientEnv.shareOrigin()}${ClientEnv.gamePath("game-123")}`;
+    const expectedUrl = `${ClientEnv.shareOrigin()}${ClientEnv.gamePath(gameId)}`;
     expect(copyToClipboardMock).toHaveBeenCalledWith(expectedUrl);
     expect(showToastMock).toHaveBeenCalledWith("Copied!", "green");
+
+    const url = new URL(expectedUrl);
+    const pathMatch = url.pathname.match(
+      /^(?:\/v\/[^/]+)?\/(?:w\d+\/)?game\/([^/]+)/,
+    );
+    expect(pathMatch).not.toBeNull();
+    expect(pathMatch![1]).toBe(gameId);
+    expect(GAME_ID_REGEX.test(pathMatch![1])).toBe(true);
   });
 
   it("uses share origin from desktop shell instead of app://", async () => {
     stubLocation("app://openfront/index.html");
     setBootstrapConfig({ serverHost: "openfront.io" });
 
-    const el = await createModal({ gameId: "desktop-match-456" });
+    const gameId = "desk456789";
+    expect(GAME_ID_REGEX.test(gameId)).toBe(true);
+
+    const el = await createModal({ gameId });
     const shareButton = el.querySelector<OButton>(
       'o-button[translationKey="win_modal.share"]',
     )!;
@@ -393,20 +408,29 @@ describe("WinModal share button", () => {
 
     expect(copyToClipboardMock).toHaveBeenCalledTimes(1);
     const copiedUrl = copyToClipboardMock.mock.calls[0][0];
-    expect(copiedUrl).toBe(
-      `https://openfront.io${ClientEnv.gamePath("desktop-match-456")}`,
-    );
+    expect(copiedUrl).toBe(`https://openfront.io${ClientEnv.gamePath(gameId)}`);
     expect(copiedUrl).not.toContain("app:");
     expect(showToastMock).toHaveBeenCalledWith("Copied!", "green");
+
+    const url = new URL(copiedUrl);
+    const pathMatch = url.pathname.match(
+      /^(?:\/v\/[^/]+)?\/(?:w\d+\/)?game\/([^/]+)/,
+    );
+    expect(pathMatch).not.toBeNull();
+    expect(pathMatch![1]).toBe(gameId);
+    expect(GAME_ID_REGEX.test(pathMatch![1])).toBe(true);
   });
 
   it("uses crazyGamesSDK.createInviteLink on CrazyGames", async () => {
+    const gameId = "cg99912345";
+    expect(GAME_ID_REGEX.test(gameId)).toBe(true);
+
     crazyGamesSDKMock.isOnCrazyGames.mockReturnValue(true);
     crazyGamesSDKMock.createInviteLink.mockReturnValue(
-      "https://crazygames.com/game?invite=cg-999",
+      `https://crazygames.com/game?invite=${gameId}`,
     );
 
-    const el = await createModal({ gameId: "cg-999" });
+    const el = await createModal({ gameId });
     const shareButton = el.querySelector<OButton>(
       'o-button[translationKey="win_modal.share"]',
     )!;
@@ -414,18 +438,19 @@ describe("WinModal share button", () => {
     shareButton.click();
     await new Promise((resolve) => setTimeout(resolve, 0));
 
-    expect(crazyGamesSDKMock.createInviteLink).toHaveBeenCalledWith("cg-999");
+    expect(crazyGamesSDKMock.createInviteLink).toHaveBeenCalledWith(gameId);
     expect(copyToClipboardMock).toHaveBeenCalledWith(
-      "https://crazygames.com/game?invite=cg-999",
+      `https://crazygames.com/game?invite=${gameId}`,
     );
     expect(showToastMock).toHaveBeenCalledWith("Copied!", "green");
   });
 
   it("shows failure toast when CrazyGames invite link fails", async () => {
+    const gameId = "cgfail1234";
     crazyGamesSDKMock.isOnCrazyGames.mockReturnValue(true);
     crazyGamesSDKMock.createInviteLink.mockReturnValue(null);
 
-    const el = await createModal({ gameId: "cg-fail" });
+    const el = await createModal({ gameId });
     const shareButton = el.querySelector<OButton>(
       'o-button[translationKey="win_modal.share"]',
     )!;
@@ -453,7 +478,8 @@ describe("WinModal share button", () => {
   it("shows failure toast when copyToClipboard throws", async () => {
     copyToClipboardMock.mockRejectedValueOnce(new Error("clipboard denied"));
 
-    const el = await createModal({ gameId: "game-fail" });
+    const gameId = "gamefail12";
+    const el = await createModal({ gameId });
     const shareButton = el.querySelector<OButton>(
       'o-button[translationKey="win_modal.share"]',
     )!;
