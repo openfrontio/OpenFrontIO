@@ -255,15 +255,18 @@ export class GameXpPanel extends LitElement {
           if (s.data.breakdown.total > shown.breakdown.total) {
             // More than was shown (a team win): the cards are in place, the
             // bar climbs on, and only the levels beyond those already
-            // celebrated get their moment.
+            // celebrated get their moment. A provisional reveal still playing
+            // has celebrated only as far as its bar got: carry on from there.
             const samePrestige =
               shown.before.prestige === s.data.before.prestige;
+            const live = this.reveal;
             this.startReveal(s.data, {
               kind: "celebrate",
-              from: samePrestige ? endPosition(shown) : 0,
-              countFrom: shown.breakdown.total,
-              celebrated: samePrestige ? shown.after.level : 0,
-              celebratedLegend: samePrestige && shown.after.legend,
+              from: samePrestige ? (live?.position ?? endPosition(shown)) : 0,
+              countFrom: live?.counted ?? shown.breakdown.total,
+              celebrated: samePrestige ? (live?.level ?? shown.after.level) : 0,
+              celebratedLegend:
+                samePrestige && (live?.legend ?? shown.after.legend),
             });
           } else {
             // Less: the server's numbers as they are, nothing replayed.

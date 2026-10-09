@@ -500,6 +500,25 @@ describe("WinModal provisional XP at death", () => {
     );
   });
 
+  it("carries a provisional reveal still playing on into the team win's levels", async () => {
+    stubXpEndpoint(() => json(teamWinXp()));
+    const { game, end } = makeGame({ gameMode: GameMode.Team });
+    await mount(game);
+
+    // The game ends while the provisional reveal is at its first level-up.
+    for (let i = 0; i < 400 && currentLevel() !== 10; i++) await settle(50);
+    expect(currentLevel()).toBe(10);
+    expect(revealing()).toBe(true);
+
+    await endGame(end);
+    expect(xpState()).toBe("result");
+    // Nothing the bar hadn't reached is skipped: 11 and 12 still get their
+    // moment, then the win's 13. Level 10 isn't celebrated twice.
+    expect((await playOut()).moments).toEqual(["11", "12", "13"]);
+    expect(total()).toContain('"xp":"413"');
+    expect(currentLevel()).toBe(13);
+  });
+
   it("adjusts the level, without celebrating, when the server's figure is lower", async () => {
     const warn = vi.spyOn(console, "warn");
     // Another public game took today's first-game bonus first: 174, and
