@@ -128,6 +128,14 @@ export const ProgressSchema = z.object({
 });
 export type Progress = z.infer<typeof ProgressSchema>;
 
+// POST /users/@me/prestige — the player's progress after prestiging, and the
+// rewards it granted (unclaimed, like every reward; a Caps bonus at least).
+export const PrestigeResponseSchema = z.object({
+  progress: ProgressSchema,
+  rewards: RewardSchema.array().optional().default([]),
+});
+export type PrestigeResponse = z.infer<typeof PrestigeResponseSchema>;
+
 export const ProgressPositionSchema = z.object({
   prestige: z.number(),
   level: z.number(),
@@ -193,6 +201,11 @@ export const PublicProgressSchema = z.object({
   level: z.number(),
   lifetimeXp: z.number(),
   legend: z.boolean(),
+  // Progress through the current level (both 0 at level 100), for the profile
+  // card's XP bar. Optional: an API without them still parses, and the bar
+  // is left out.
+  xpInLevel: z.number().optional(),
+  xpForNext: z.number().optional(),
 });
 export type PublicProgress = z.infer<typeof PublicProgressSchema>;
 
@@ -220,7 +233,35 @@ export const RowLevelFields = {
   legend: z.boolean().optional().catch(undefined),
 };
 
-// GET /public/progression/config — the level curve. No auth, cacheable.
+// A flare staff put on the level track: what reaching a point on it grants.
+// `kind` says what the point is:
+//   level    — reaching `level` in run `prestige` (0 = the first run), or in
+//              any run when `prestige` is null;
+//   prestige — prestiging into rank `prestige`; `level` is null;
+//   legend   — becoming a Legend; both null.
+// `cosmetic` is the cosmetic the flare unlocks, when it is one (its flare
+// name is "<type>:<name>", the way the cosmetics catalog names it).
+export const TrackFlareSchema = z.object({
+  kind: z.string(),
+  level: z.number().nullable(),
+  prestige: z.number().nullable(),
+  flareName: z.string(),
+  cosmetic: z
+    .object({
+      type: z.string(),
+      name: z.string(),
+      url: z.string().nullable().optional(),
+    })
+    .nullable()
+    .optional()
+    .catch(null),
+});
+export type TrackFlare = z.infer<typeof TrackFlareSchema>;
+
+// GET /public/progression/config — the level curve, and the rewards along it.
+// No auth, cacheable. Everything past the curve came later, so it is optional
+// and tolerant: an older API (or one malformed entry) still parses, and the
+// confirmation falls back to what it showed before.
 export const ProgressionConfigSchema = z.object({
   version: z.number(),
   maxLevel: z.number(),
@@ -230,8 +271,39 @@ export const ProgressionConfigSchema = z.object({
       level: z.number(),
       xpToNext: z.number(),
       cumulativeXp: z.number(),
+      // Paid on reaching this level, every prestige run.
+      caps: z.number().optional().catch(undefined),
+      plutonium: z.number().optional().catch(undefined),
     }),
   ),
+  // The rules behind each level's amounts.
+  levelRewards: z
+    .object({
+      capsBands: z.array(
+        z.object({
+          fromLevel: z.number(),
+          toLevel: z.number(),
+          caps: z.number(),
+        }),
+      ),
+      plutonium: z.object({
+        fromLevel: z.number(),
+        everyLevels: z.number(),
+        amount: z.number(),
+      }),
+    })
+    .optional()
+    .catch(undefined),
+  // The Caps every prestige grants.
+  prestige: z.object({ caps: z.number() }).optional().catch(undefined),
+  // In track order. An entry that doesn't parse is dropped, not the list.
+  flares: z
+    .array(TrackFlareSchema.nullable().catch(null))
+    .optional()
+    .catch(undefined)
+    .transform((flares) =>
+      (flares ?? []).filter((f): f is TrackFlare => f !== null),
+    ),
 });
 export type ProgressionConfig = z.infer<typeof ProgressionConfigSchema>;
 
