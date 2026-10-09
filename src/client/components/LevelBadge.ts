@@ -9,6 +9,13 @@ import {
   PrestigeStyle,
 } from "../Progression";
 import { translateText } from "../Utils";
+import {
+  badgeArrived,
+  dequeueBadge,
+  queueBadge,
+  shouldStagger,
+  type StaggeredBadge,
+} from "./LevelBadgeFill";
 
 // A player's level as a small emblem: the number inside a frame whose SHAPE
 // (not just colour, for colour-blind players) changes every ten levels, a
@@ -591,12 +598,19 @@ function emblemTemplate(
 }
 
 @customElement("level-badge")
-export class LevelBadge extends LitElement {
+export class LevelBadge extends LitElement implements StaggeredBadge {
   @property({ type: Number }) level = 1;
   @property({ type: Number }) prestige = 0;
   @property({ type: Boolean }) legend = false;
   // Rendered size in CSS pixels (square). 16 is the smallest supported.
   @property({ type: Number }) size = 24;
+
+  // With the `stagger` attribute (long lists): when many badges appear at
+  // once, this one first holds its square empty and is drawn on a later
+  // frame (see LevelBadgeFill). Decided once, at its first render. The host
+  // is aria-hidden meanwhile, so a screen reader meets no run of unnamed
+  // elements.
+  private waiting = false;
 
   createRenderRoot() {
     return this;
@@ -605,6 +619,28 @@ export class LevelBadge extends LitElement {
   connectedCallback(): void {
     super.connectedCallback();
     this.ensureDefs();
+    if (!this.hasUpdated && this.hasAttribute("stagger")) badgeArrived();
+    else if (this.waiting) queueBadge(this);
+  }
+
+  disconnectedCallback(): void {
+    super.disconnectedCallback();
+    if (this.waiting) dequeueBadge(this);
+  }
+
+  protected willUpdate(): void {
+    if (!this.hasUpdated && this.hasAttribute("stagger") && shouldStagger()) {
+      this.waiting = true;
+      this.setAttribute("aria-hidden", "true");
+      queueBadge(this);
+    }
+  }
+
+  draw(): void {
+    if (!this.waiting) return;
+    this.waiting = false;
+    this.removeAttribute("aria-hidden");
+    this.requestUpdate();
   }
 
   protected updated(): void {
@@ -624,11 +660,24 @@ export class LevelBadge extends LitElement {
   }
 
   render() {
-    const label = this.label();
     const px = Math.max(16, this.size);
     const style = this.legend ? null : prestigeStyle(this.prestige);
-    const glow = this.legend ? LEGEND_GLOW : (style?.glow ?? null);
     const margin = style?.winged ? Math.round(px * WINGED_MARGIN) : 0;
+    if (this.waiting) {
+      // The drawn badge's exact box (wings' margin included), so nothing
+      // moves when it is drawn.
+      const box = `width:${px}px;height:${px}px`;
+      return html`<span
+        class="block shrink-0"
+        style=${margin > 0
+          ? `${box};margin-left:${margin}px;margin-right:${margin}px`
+          : box}
+        aria-hidden="true"
+        data-badge-waiting
+      ></span>`;
+    }
+    const label = this.label();
+    const glow = this.legend ? LEGEND_GLOW : (style?.glow ?? null);
     const inline = [
       glow !== null ? `filter: drop-shadow(0 0 3px ${glow})` : "",
       margin > 0 ? `margin-left: ${margin}px; margin-right: ${margin}px` : "",

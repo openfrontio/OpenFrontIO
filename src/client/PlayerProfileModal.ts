@@ -423,9 +423,14 @@ export class PlayerProfileModal extends BaseModal {
 
     // The Progression tab can't be selected until this player's progress is
     // known (BaseModal drops a tab it doesn't list): hold the profile on
-    // Stats, and switch once the progress shows up.
+    // Stats, and switch once the progress shows up. An explicit tab request
+    // decides on its own: when already open, BaseModal calls onOpen before it
+    // applies the requested tab, so activeTab may still be the remembered one.
+    // Only without a request does the remembered Progression tab carry over.
     this.wantsProgressionTab =
-      args?.tab === "progression" || this.activeTab === "progression";
+      typeof args?.tab === "string"
+        ? args.tab === "progression"
+        : this.activeTab === "progression";
     if (this.activeTab === "progression") this.activeTab = "stats";
 
     // Fresh open (router/share link): clear any stale origin. The openFrom*

@@ -7,6 +7,7 @@ import {
   ClientMessage,
   ClientPlatformSchema,
   HOSTED_LOBBY_AUTO_START_MS,
+  LevelBadge,
   MAX_HOSTED_LOBBIES,
   MAX_HOSTED_LOBBY_PLAYERS,
   MIN_HOSTED_LOBBY_AUTO_START_MS,
@@ -36,6 +37,7 @@ import { registerGamePreviewRoute } from "./GamePreviewRoute";
 import { GamePhase, type GameServer } from "./GameServer";
 import { isSteamAuthenticated, planJoinVerify, verifyJoin } from "./JoinVerify";
 import { getUserMe, userMeFailureClose, verifyClientToken } from "./jwt";
+import { levelBadgeForPlayer } from "./LevelBadge";
 import { payForLobbyQueue, queueListedLobby } from "./LobbyQueuePayment";
 import { logger } from "./Logger";
 import { registerPlayerProfileRoute } from "./PlayerProfileRoute";
@@ -714,6 +716,7 @@ export async function startWorker() {
         let friends: string[] = [];
         let ownedClanTags: string[] = [];
         let trusted = false;
+        let levelBadge: LevelBadge | undefined;
         let accountUsername:
           | {
               username?: string | null;
@@ -747,6 +750,9 @@ export async function startWorker() {
           ownedClanTags = result.response.player.clans?.map((c) => c.tag) ?? [];
           accountUsername = result.response.player;
           trusted = result.response.player.trustTier === "trusted";
+          // Display-only: the roster badge comes from this lookup alone, never
+          // from the join message. None when the player hides their level.
+          levelBadge = levelBadgeForPlayer(result.response.player);
 
           if (allowedFlares !== undefined) {
             const allowed =
@@ -831,6 +837,7 @@ export async function startWorker() {
           clientMsg.spectator === true,
           trusted,
           clientMsg.platform,
+          levelBadge,
         );
 
         const joinResult = gm.joinClient(client, clientMsg.gameID);
