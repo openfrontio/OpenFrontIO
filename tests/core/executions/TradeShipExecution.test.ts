@@ -52,12 +52,12 @@ describe("TradeShipExecution", () => {
 
     originResource = {
       type: vi.fn(() => UnitType.OilMine),
-      resetResourceGoldProduced: vi.fn(),
+      refillResourceGoldProduced: vi.fn(),
     } as any;
 
     destinationResource = {
       type: vi.fn(() => UnitType.LivestockFarm),
-      resetResourceGoldProduced: vi.fn(),
+      refillResourceGoldProduced: vi.fn(),
     } as any;
 
     dstOwner = {
@@ -209,8 +209,8 @@ describe("TradeShipExecution", () => {
     // A normal arrival is trade, not piracy.
     expect(origOwner.addPiracyGold).not.toHaveBeenCalled();
     expect(dstOwner.addPiracyGold).not.toHaveBeenCalled();
-    expect(originResource.resetResourceGoldProduced).toHaveBeenCalledOnce();
-    expect(destinationResource.resetResourceGoldProduced).toHaveBeenCalledOnce();
+    expect(originResource.refillResourceGoldProduced).toHaveBeenCalledOnce();
+    expect(destinationResource.refillResourceGoldProduced).toHaveBeenCalledOnce();
   });
 
   it("should count captured-ship payout as piracy revenue only", () => {
