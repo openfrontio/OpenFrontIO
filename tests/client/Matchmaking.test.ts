@@ -140,6 +140,8 @@ function userMe(
 ): UserMeResponse {
   return {
     user,
+    steamLicence: false,
+    noticesSeen: [],
     player: {
       publicId: "player-id",
       adfree: false,

@@ -447,8 +447,10 @@ export async function purchaseCosmetic(
 
       // Direction-aware confirm based on priceMonthly. We don't have the
       // server's sortOrder client-side — priceMonthly is a good proxy.
-      const currentCosmetic =
-        (await fetchCosmetics())?.subscriptions?.[currentSub.tier] ?? null;
+      const currentCosmetic = subscriptionTier(
+        await fetchCosmetics(),
+        currentSub.tier,
+      );
       const isUpgrade =
         currentCosmetic !== null
           ? sub.priceMonthly > currentCosmetic.priceMonthly
@@ -503,6 +505,10 @@ export async function purchaseCosmetic(
       const result = await changeSubscriptionTier(sub.name);
       if (result === "rate_limited") {
         await showInGameAlert(translateText("store.change_tier_rate_limited"));
+        return;
+      }
+      if (result === "steam_licence_required") {
+        await showInGameAlert(translateText("store.steam_licence_required"));
         return;
       }
       if (!result) {
@@ -852,13 +858,25 @@ export function invalidateCosmetics(): void {
   __cosmetics = null;
 }
 
+export type TierListingRail = "steam" | "web";
+
+// cosmetics.json lists subscription tiers per rail: the one this device checks
+// out on. The only place the listing hint is decided.
+export function tierListingRail(): TierListingRail {
+  return paymentsProvider() === "steam" ? "steam" : "web";
+}
+
+export function cosmeticsJsonUrl(): string {
+  return `${getApiBase()}/cosmetics.json?rail=${tierListingRail()}`;
+}
+
 export async function fetchCosmetics(): Promise<Cosmetics | null> {
   if (__cosmetics !== null) {
     return __cosmetics;
   }
   const request = (async () => {
     try {
-      const response = await fetch(`${getApiBase()}/cosmetics.json`, {
+      const response = await fetch(cosmeticsJsonUrl(), {
         signal: AbortSignal.timeout(COSMETICS_FETCH_TIMEOUT_MS),
       });
       if (!response.ok) {
@@ -887,6 +905,18 @@ export async function fetchCosmetics(): Promise<Cosmetics | null> {
     }
   });
   return request;
+}
+
+/** A tier by name, listed on this rail or not. */
+export function subscriptionTier(
+  cosmetics: Cosmetics | null | undefined,
+  name: string,
+): Subscription | null {
+  return (
+    cosmetics?.subscriptions?.[name] ??
+    cosmetics?.unlistedSubscriptions?.[name] ??
+    null
+  );
 }
 
 /**
@@ -1328,32 +1358,35 @@ export function resolveCosmetics(
   const grantIsCurrent = isGrantedSubscription(currentSub);
   for (const [subKey, sub] of Object.entries(cosmetics.subscriptions ?? {})) {
     const key = `subscription:${subKey}`;
-    // A listing with no Stripe `product` block cannot render a price, so it
-    // falls to "blocked" — and the subscriptions tab lists only purchasable
-    // and owned, so a blocked tier is not shown at all. (Currency packs hit
-    // this and were fixed by never gating on `product`; subscriptions still
-    // do. OPE-441 is the real fix.)
-    const canBeSold = Boolean(sub.product);
-    // ...which is why the grant demotion below is conditional on it. Taking
-    // "owned" away from a tier we then cannot sell would make the card
-    // VANISH from the store, and a card that disappears is a worse failure
-    // than the dead "Subscribed" box this change exists to remove. Not
-    // reachable today — every live tier carries a product — and this is not
-    // the PR to introduce it.
+    // `subscriptions` is this rail's storefront, so every tier in it is for
+    // sale. NEVER gate on `sub.product`: that is the Stripe listing, null for
+    // a tier only Steam sells, and gating on it hid such tiers from the store
+    // (see currency packs above). If a rail cannot sell it, checkout says so.
     const isCurrentTier = subKey === currentSubTier;
-    const demoteGrant = grantIsCurrent && isCurrentTier && canBeSold;
+    const demoteGrant = grantIsCurrent && isCurrentTier;
     const isCurrent = flares.includes(key) || (isCurrentTier && !demoteGrant);
     const rel: ResolvedCosmetic["relationship"] = isCurrent
       ? "owned"
-      : canBeSold
-        ? "purchasable"
-        : "blocked";
+      : "purchasable";
     result.push({
       type: "subscription",
       cosmetic: sub,
       colorPalette: null,
       relationship: rel,
       key,
+    });
+  }
+  const heldUnlisted =
+    currentSubTier !== null && !cosmetics.subscriptions?.[currentSubTier]
+      ? cosmetics.unlistedSubscriptions?.[currentSubTier]
+      : undefined;
+  if (heldUnlisted) {
+    result.push({
+      type: "subscription",
+      cosmetic: heldUnlisted,
+      colorPalette: null,
+      relationship: "owned",
+      key: `subscription:${currentSubTier}`,
     });
   }
 

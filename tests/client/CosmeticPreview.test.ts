@@ -17,6 +17,7 @@ const translations = {
   "crowns.golden": "Golden Crown",
   "effects.blue_wake": "Blue Wake",
   "subscriptions.gold": "Gold Membership",
+  "cosmetics.per_month": "/month",
 };
 
 const resolved = {
@@ -153,6 +154,7 @@ const resolved = {
       hardCurrencySignupBonus: 100,
       unlimitedRanked: true,
       canCreatePublicLobbies: true,
+      requiresSteamLicence: false,
       product: null,
       rarity: "legendary",
     },
@@ -342,5 +344,16 @@ describe("CosmeticPreview", () => {
     )!;
     expect(box.className).toContain("w-full");
     expect(box.className).not.toContain("aspect-square");
+  });
+
+  it("advertises the tier's plutonium bonus as monthly", async () => {
+    installTranslations();
+    await render(resolved.subscription);
+
+    const box = preview!.querySelector(
+      '[data-cosmetic-preview="subscription"]',
+    )!;
+    expect(box.textContent).toContain("/month");
+    expect(box.textContent).not.toMatch(/signup/i);
   });
 });

@@ -87,6 +87,7 @@
     "reward_daily": "Daily subscription reward",
     "reward_level_milestone": "Level milestone reward",
     "reward_level_up": "Level-up reward",
+    "reward_monthly_bonus": "Monthly subscription bonus",
     "reward_prestige": "Prestige reward",
     "reward_signup_bonus": "Subscription signup bonus",
     "sign_in_desc": "Sign in to save your stats and progress",
@@ -575,19 +576,17 @@
     "pack_more_items": "+{count} more",
     "pattern_preview": "Pattern preview",
     "per_day": "/day",
+    "per_month": "/month",
     "public_lobbies": "Create public lobbies",
     "public_lobbies_info": "Host your own custom lobbies in the public lobby list. Joining public lobbies is always free.",
     "rare": "Rare",
     "search": "Search...",
-    "signup_bonus": "Signup bonus",
     "soft": "Caps",
     "type_crown": "Crown",
     "type_effect": "{type} Effect",
     "type_flag": "Flag",
     "type_skin": "Skin",
     "uncommon": "Uncommon",
-    "unlimited_ranked": "Unlimited ranked",
-    "unlimited_ranked_info": "No limit on how many ranked games you can play.",
     "usd_value": "Value: {usd}",
     "verified_name": "Verified username",
     "verified_name_info": "Your username is reserved for your account and shows a verified badge in-game."
@@ -852,7 +851,10 @@
     "custom_lobbies": "Private custom lobbies with friends",
     "free_heading": "Playing for free includes",
     "full_game": "The full game: every map and mode, online and single-player",
-    "ranked": "Ranked play, with the free daily match limit"
+    "licence_heading": "Owning OpenFront on Steam includes",
+    "licence_public_lobbies": "Custom lobbies in the public lobby list",
+    "licence_verified_name": "Your verified username",
+    "ranked": "Ranked play"
   },
   "friends": {
     "accept": "Accept",
@@ -2004,7 +2006,7 @@
     "team_percent_tooltip": "{team}: {percent}"
   },
   "steam_grant": {
-    "ended_body": "The month of {tier} that came with your Steam purchase has ended. Nothing has been charged and nothing will be. You keep the full game: every map and mode, online play, ranked with the free daily limit, and custom lobbies with friends. The Steam app stays ad-free. If you want the {tier} perks back, you can subscribe from the store at any time.",
+    "ended_body": "The month of {tier} that came with your Steam purchase has ended. Nothing has been charged and nothing will be. You keep the full game: every map and mode, online play, ranked, and custom lobbies with friends. The Steam app stays ad-free. If you want the {tier} perks back, you can subscribe from the store at any time.",
     "ended_heading": "Your included Steam month has ended",
     "welcome_body": "Your Steam purchase includes {tier} until {date}. You paid once, on Steam: nothing is billed and nothing renews. When it ends you keep the full game, every map and mode, and the Steam app stays ad-free.",
     "welcome_heading": "Included with your Steam purchase"
@@ -2050,6 +2052,17 @@
     "reason_steam_linked_elsewhere": "This Steam account is already linked to a different OpenFront account.",
     "success": "Your Steam account is now linked.",
     "title": "Link Steam Account"
+  },
+  "steam_notices": {
+    "conversion_body": "You own OpenFront on Steam, so we've moved you to Steam Plus.",
+    "conversion_from_vanguard": "You now get 550 plutonium a month instead of 220, still $4.99.",
+    "conversion_from_warlord": "You get the same 550 plutonium a month, and your price drops from $9.99 to $4.99.",
+    "conversion_heading": "You're on Steam Plus",
+    "conversion_unchanged": "Nothing else changes.",
+    "licence_intro_body": "Custom lobbies and your verified name are now part of the game you bought. No subscription needed, for as long as you own OpenFront on Steam.",
+    "licence_intro_grant": "Your plutonium bonus runs until {date}. After that you keep everything you can do, and only the daily plutonium stops.",
+    "licence_intro_heading": "Included with your copy of OpenFront",
+    "licence_intro_plus": "Steam Plus keeps the plutonium coming: 10 a day and 250 a month for $4.99."
   },
   "steam_user_header": {
     "avatar_alt": "Steam avatar",
@@ -2128,6 +2141,7 @@
     "purchase_pending": "Your purchase is still being processed. It will appear in your account shortly — check your order history if it doesn't.",
     "purchase_success": "Purchase succeeded: {name}",
     "purchase_tribe_button": "Purchase",
+    "steam_licence_required": "This subscription is only for players who own OpenFront on Steam.",
     "steam_overlay_cancelled": "Purchase cancelled. You haven't been charged.",
     "steam_overlay_waiting": "Approve the purchase in the Steam overlay to continue.",
     "subscribe_heading": "Start Subscription",

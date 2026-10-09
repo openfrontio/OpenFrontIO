@@ -109,6 +109,9 @@ export class RewardsPanel extends LitElement {
     if (reward.reason === "subscription_signup_bonus") {
       return translateText("account_modal.reward_signup_bonus");
     }
+    if (reward.reason === "subscription_monthly_bonus") {
+      return translateText("account_modal.reward_monthly_bonus");
+    }
     if (reward.reason === "subscription_daily") {
       return translateText("account_modal.reward_daily");
     }

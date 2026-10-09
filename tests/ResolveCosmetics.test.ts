@@ -20,6 +20,8 @@ function makeCosmetics(overrides: Partial<Cosmetics> = {}): Cosmetics {
 function makeUserMe(flares: string[] = []): UserMeResponse {
   return {
     user: {},
+    steamLicence: false,
+    noticesSeen: [],
     player: {
       publicId: "test",
       adfree: false,

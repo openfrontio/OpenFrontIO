@@ -500,18 +500,15 @@ describe("resolveCosmetics: the granted tier is for sale, not owned", () => {
     expect(relationshipOf(user, "subscription:platinum")).toBe("owned");
   });
 
-  it("keeps a granted tier we cannot price owned, so its card does not vanish", () => {
-    // Demoting a grant to "purchasable" is only safe while the tier HAS a
-    // Stripe product to price the button from. Without one it would fall to
-    // "blocked", and the subscriptions tab lists purchasable and owned only —
-    // so the card would disappear entirely, which is worse than the dead
-    // "Subscribed" box. OPE-441 is the real fix for the product gate.
+  it("offers a listed granted tier for sale even without a Stripe product", () => {
+    // A tier sold only on Steam has no Stripe listing. It is still on this
+    // rail's storefront, so the grant is demoted like any other.
     const unpriced = {
       patterns: {},
       flags: {},
       colorPalettes: {},
       subscriptions: {
-        gold: { name: "gold", priceMonthly: 5, product: null },
+        gold: { name: "gold", priceMonthly: 499, product: null },
       },
     } as unknown as Cosmetics;
     const user = userMe({ tier: "gold", status: "active", provider: null });
@@ -520,7 +517,7 @@ describe("resolveCosmetics: the granted tier is for sale, not owned", () => {
       (item) => item.key === "subscription:gold",
     );
 
-    expect(gold?.relationship).toBe("owned");
+    expect(gold?.relationship).toBe("purchasable");
   });
 });
 

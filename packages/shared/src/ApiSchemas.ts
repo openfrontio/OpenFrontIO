@@ -296,14 +296,30 @@ export const UserMeResponseSchema = z.object({
     })
     .nullable()
     .optional(),
+  // Owns OpenFront on Steam. A licence is not a subscription: it confers
+  // custom lobbies and the verified name with `subscription` null, so a
+  // licence holder with no subscription has not lapsed.
+  steamLicence: z.boolean().optional().default(false),
+  // Notice keys this player has dismissed (POST /users/@me/notices).
+  noticesSeen: z.array(z.string()).optional().default([]),
+  // The player's most recent automatic tier conversion, if any.
+  tierConversion: z
+    .object({
+      id: z.string(),
+      fromTierName: z.string(),
+      toTierName: z.string(),
+      convertedAt: z.string(),
+    })
+    .nullable()
+    .optional(),
   player: z.object({
     publicId: z.string(),
     adfree: z.boolean(),
-    // True when the player's active subscription tier exempts them from the
-    // free-ranked-play limits.
-    unlimitedRanked: z.boolean(),
+    // Ranked play limits are gone; the API still sends this and a later
+    // release drops it. Nothing reads it.
+    unlimitedRanked: z.boolean().optional(),
     // True when the player may list a custom lobby publicly. The API decides
-    // which subscriptions/grants confer this.
+    // which subscriptions, grants and Steam licences confer this.
     canCreatePublicLobbies: z.boolean(),
     // Account trust as computed by the API. "untrusted" means new, unlinked or
     // banned, never an accusation. null when the API's computation failed;
