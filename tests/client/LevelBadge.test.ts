@@ -11,12 +11,14 @@ import {
   GameXpResponseSchema,
   type XpBreakdown,
 } from "@openfront/shared/ApiSchemas";
+import { render as renderTemplate } from "lit";
 import {
   LevelBadge,
   levelBadgeAccent,
   PRISM_GRADIENT_ID,
   WINGED_MARGIN,
 } from "../../src/client/components/LevelBadge";
+import { xpBar } from "../../src/client/components/XpBar";
 import {
   apportionXp,
   ineligibleReasonKey,
@@ -256,6 +258,20 @@ describe("<level-badge>", () => {
     expect(levelBadgeAccent(42, false, 3)).toBe("#34d399");
     expect(levelBadgeAccent(42, false, 10)).toBe("#f472b6");
     expect(levelBadgeAccent(100, true, 10)).toBe("#facc15");
+  });
+
+  it("shows a rank past the art's last one by its own number", async () => {
+    const badge = await render({ level: 12, prestige: 12, size: 40 });
+    const svg = badge.querySelector("svg")!;
+    // Drawn as the last rank, labelled as its own.
+    expect(prestigeStyle(12)).toBe(prestigeStyle(10));
+    expect(svg.getAttribute("data-prestige-tier")).toBe("prismatic");
+    expect([...svg.querySelectorAll("text")].map((t) => t.textContent)).toEqual(
+      ["12", 'progression.prestige_short:{"prestige":12}'],
+    );
+    expect(svg.getAttribute("aria-label")).toBe(
+      'progression.level:{"level":12}, progression.prestige:{"prestige":12}',
+    );
   });
 
   it("labels the rank where there is room, and always in the name", async () => {
@@ -623,5 +639,28 @@ describe("progression helpers", () => {
     );
     expect(levelRewardReasonKey("subscription_daily")).toBeUndefined();
     expect(levelRewardReasonKey("toString")).toBeUndefined();
+  });
+});
+
+describe("xpBar", () => {
+  function bar(percent: number): { now: string | null; width: string } {
+    const host = document.createElement("div");
+    renderTemplate(xpBar(percent), host);
+    const fill = host.querySelector<HTMLElement>("[data-xp-bar-fill]")!;
+    return {
+      now: host.querySelector("[data-xp-bar]")!.getAttribute("aria-valuenow"),
+      width: fill.style.width,
+    };
+  }
+
+  it("keeps the fill and value within 0..100", () => {
+    expect(bar(42)).toEqual({ now: "42", width: "42%" });
+    expect(bar(150)).toEqual({ now: "100", width: "100%" });
+    expect(bar(-20)).toEqual({ now: "0", width: "0%" });
+  });
+
+  it("draws an empty bar for a non-number", () => {
+    expect(bar(Number.NaN)).toEqual({ now: "0", width: "0%" });
+    expect(bar(Number.POSITIVE_INFINITY)).toEqual({ now: "0", width: "0%" });
   });
 });

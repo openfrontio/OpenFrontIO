@@ -563,9 +563,11 @@ function legendTemplate(): SVGTemplateResult {
   return svg(stringsFor("legend", () => [legendMarkup()]));
 }
 
+// `prestige` is the rank the tab shows, which can pass the last styled rank.
 function emblemTemplate(
   level: number,
   style: PrestigeStyle | null,
+  prestige: number,
   small: boolean,
 ): SVGTemplateResult {
   const bandIndex = levelBand(level);
@@ -584,7 +586,7 @@ function emblemTemplate(
   return svg(
     strings,
     text,
-    translateText("progression.prestige_short", { prestige: style.rank }),
+    translateText("progression.prestige_short", { prestige }),
   );
 }
 
@@ -648,7 +650,12 @@ export class LevelBadge extends LitElement {
       <title>${label}</title>
       ${this.legend
         ? legendTemplate()
-        : emblemTemplate(this.level, style, this.size < 24)}
+        : emblemTemplate(
+            this.level,
+            style,
+            clampPrestige(this.prestige),
+            this.size < 24,
+          )}
     </svg>`;
   }
 }
