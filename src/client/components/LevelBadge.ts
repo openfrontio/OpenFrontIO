@@ -8,6 +8,13 @@ import {
   prestigeTier,
 } from "../Progression";
 import { translateText } from "../Utils";
+import {
+  badgeArrived,
+  dequeueBadge,
+  queueBadge,
+  shouldStagger,
+  type StaggeredBadge,
+} from "./LevelBadgeFill";
 
 // A player's level as a small emblem: the number inside a frame whose SHAPE
 // (not just colour, for colour-blind players) changes every ten levels, a
@@ -141,6 +148,27 @@ const BANDS: readonly BandStyle[] = [
   },
 ];
 
+// The light colour of each band's frame (its Tailwind stroke, written out),
+// by levelBand: the profile card's glow behind the badge.
+const BAND_ACCENTS = [
+  "#cbd5e1",
+  "#6ee7b7",
+  "#5eead4",
+  "#7dd3fc",
+  "#93c5fd",
+  "#a5b4fc",
+  "#c4b5fd",
+  "#f0abfc",
+  "#fda4af",
+  "#fdba74",
+  "#fef08a",
+] as const;
+
+/** The badge's accent colour, for a glow or a highlight around it. */
+export function levelBadgeAccent(level: number, legend: boolean): string {
+  return legend ? "#facc15" : BAND_ACCENTS[levelBand(level)];
+}
+
 function displayLevel(level: number): number {
   if (!Number.isFinite(level)) return 1;
   return Math.min(MAX_LEVEL, Math.max(1, Math.floor(level)));
@@ -162,15 +190,48 @@ export function levelBadgeLabel(
 }
 
 @customElement("level-badge")
-export class LevelBadge extends LitElement {
+export class LevelBadge extends LitElement implements StaggeredBadge {
   @property({ type: Number }) level = 1;
   @property({ type: Number }) prestige = 0;
   @property({ type: Boolean }) legend = false;
   // Rendered size in CSS pixels (square). 16 is the smallest supported.
   @property({ type: Number }) size = 24;
 
+  // With the `stagger` attribute (long lists): when many badges appear at
+  // once, this one first holds its square empty and is drawn on a later
+  // frame (see LevelBadgeFill). Decided once, at its first render. The host
+  // is aria-hidden meanwhile, so a screen reader meets no run of unnamed
+  // elements.
+  private waiting = false;
+
   createRenderRoot() {
     return this;
+  }
+
+  connectedCallback(): void {
+    super.connectedCallback();
+    if (!this.hasUpdated && this.hasAttribute("stagger")) badgeArrived();
+    else if (this.waiting) queueBadge(this);
+  }
+
+  disconnectedCallback(): void {
+    super.disconnectedCallback();
+    if (this.waiting) dequeueBadge(this);
+  }
+
+  protected willUpdate(): void {
+    if (!this.hasUpdated && this.hasAttribute("stagger") && shouldStagger()) {
+      this.waiting = true;
+      this.setAttribute("aria-hidden", "true");
+      queueBadge(this);
+    }
+  }
+
+  draw(): void {
+    if (!this.waiting) return;
+    this.waiting = false;
+    this.removeAttribute("aria-hidden");
+    this.requestUpdate();
   }
 
   /** Accessible name, e.g. "Level 42, Prestige 3". */
@@ -344,9 +405,18 @@ export class LevelBadge extends LitElement {
   }
 
   render() {
+    const px = Math.max(16, this.size);
+    if (this.waiting) {
+      // The drawn badge's exact box, so nothing moves when it is drawn.
+      return html`<span
+        class="block shrink-0"
+        style="width:${px}px;height:${px}px"
+        aria-hidden="true"
+        data-badge-waiting
+      ></span>`;
+    }
     const band = BANDS[levelBand(this.level)];
     const label = this.label();
-    const px = Math.max(16, this.size);
     const prestige = clampPrestige(this.prestige);
     const tier = this.legend ? "none" : prestigeTier(prestige);
     const glow = this.legend

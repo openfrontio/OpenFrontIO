@@ -49,6 +49,7 @@ import {
   TickMetricsEvent,
   ToggleRenderDebugGuiEvent,
 } from "./InputHandler";
+import { rememberLobbyRoster } from "./LobbyRosterLevels";
 import { pagePin } from "./PagePin";
 import { groupTokenOf, loggableStartMessage } from "./PresenceGroup";
 import { versionedPathForMismatchedGame } from "./ServerList";
@@ -234,6 +235,8 @@ export function joinLobby(
       // Server tells us our assigned clientID
       clientID = message.myClientID;
       eventBus.emit(new LobbyInfoEvent(message.lobby, message.myClientID));
+      // Kept past game start for the in-game level badges.
+      rememberLobbyRoster(message.lobby.gameID, message.lobby.clients);
       // Preload the map while still in the lobby so game start can reuse the
       // cached result instead of blocking on the download in the short
       // prestart->start window. The preload is debounced: it only fires once
