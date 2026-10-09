@@ -919,6 +919,9 @@
     "hvn": "Humans vs Nations",
     "teams": "Teams"
   },
+  "game_right_sidebar": {
+    "share_link": "Share Link"
+  },
   "game_settings": {
     "bots": "Tribes: ",
     "compact_map": "Compact Map",
@@ -944,9 +947,6 @@
     "code_license": "Code licensed under AGPL-3.0 (no warranty)",
     "credits": "Credits",
     "title": "Game is Starting..."
-  },
-  "game_right_sidebar": {
-    "share_link": "Share Link"
   },
   "game_timer": {
     "one_minute_remaining": "One minute remaining!"

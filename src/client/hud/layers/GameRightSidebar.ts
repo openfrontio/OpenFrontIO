@@ -414,18 +414,21 @@ export class GameRightSidebar extends LitElement implements Controller {
         </div>
 
         ${this.isShareable()
-          ? html`<div
-              class="cursor-pointer"
+          ? html`<button
+              type="button"
+              class="cursor-pointer bg-transparent border-0 p-0 flex items-center justify-center text-white"
               @click=${this.onShareButtonClick}
               title=${translateText("game_right_sidebar.share_link")}
+              aria-label=${translateText("game_right_sidebar.share_link")}
             >
               <img
                 src=${shareIcon}
-                alt=${translateText("game_right_sidebar.share_link")}
+                alt=""
+                aria-hidden="true"
                 width="20"
                 height="20"
               />
-            </div>`
+            </button>`
           : ""}
         ${document.fullscreenEnabled && !this.hideFullscreenButton
           ? html`<div

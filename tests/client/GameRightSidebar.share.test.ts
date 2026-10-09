@@ -151,17 +151,20 @@ describe("GameRightSidebar share button", () => {
     return img ? (img.parentElement as HTMLElement) : null;
   }
 
-  it("renders a 20x20 share icon between settings and exit in multiplayer games", async () => {
+  it("renders a 20x20 share button between settings and exit in multiplayer games", async () => {
     const el = await mount({ gameType: GameType.Public });
     const shareBtn = getShareButton(el);
 
     expect(shareBtn).not.toBeNull();
+    expect(shareBtn?.tagName.toLowerCase()).toBe("button");
     expect(shareBtn?.classList.contains("cursor-pointer")).toBe(true);
     expect(shareBtn?.getAttribute("title")).toBe("Share Link");
+    expect(shareBtn?.getAttribute("aria-label")).toBe("Share Link");
 
     const img = shareBtn?.querySelector("img");
     expect(img).not.toBeNull();
-    expect(img?.getAttribute("alt")).toBe("Share Link");
+    expect(img?.getAttribute("alt")).toBe("");
+    expect(img?.getAttribute("aria-hidden")).toBe("true");
     expect(img?.getAttribute("width")).toBe("20");
     expect(img?.getAttribute("height")).toBe("20");
 
@@ -169,13 +172,15 @@ describe("GameRightSidebar share button", () => {
     const container = el.renderRoot.querySelector("aside");
     expect(container).not.toBeNull();
     const buttons = Array.from(
-      container!.querySelectorAll<HTMLElement>("div.cursor-pointer"),
+      container!.querySelectorAll<HTMLElement>(".cursor-pointer"),
     );
     const settingsIdx = buttons.findIndex((b) =>
       b.querySelector('img[alt="settings"]'),
     );
-    const shareIdx = buttons.findIndex((b) =>
-      b.querySelector('img[src*="ShareIconWhite"]'),
+    const shareIdx = buttons.findIndex(
+      (b) =>
+        b.tagName.toLowerCase() === "button" &&
+        b.querySelector('img[src*="ShareIconWhite"]'),
     );
     const exitIdx = buttons.findIndex((b) =>
       b.querySelector('img[alt="exit"]'),
