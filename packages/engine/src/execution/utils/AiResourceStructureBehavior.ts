@@ -47,9 +47,7 @@ export class AiResourceStructureBehavior {
       // Farm income also improves troop capacity/growth, so give it a small
       // preference while still letting the more profitable mines compete.
       const income = Number(
-        this.game
-          .config()
-          .mineIncome(type, 1, this.player),
+        this.game.config().mineIncome(type, 1, this.player),
       );
       const countPenalty = 1 / (1 + this.player.unitsOwned(type));
       const farmBonus = type === UnitType.LivestockFarm ? 1.1 : 1;
