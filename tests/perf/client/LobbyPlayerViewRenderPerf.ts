@@ -15,7 +15,10 @@
  *
  * Runs under jsdom, so absolute numbers are jsdom's (no layout or paint) and
  * only the relative cost is meaningful. Reports median / p95 over many runs
- * after a warm-up.
+ * after a warm-up, two ways: "list" stops at the list's own updateComplete;
+ * "drawn" stops once the level badges it staggers onto later animation frames
+ * (LevelBadgeFill) are all drawn too, so it includes waiting for those frames
+ * (jsdom runs them at 60 fps) and reads as latency rather than work.
  *
  * Usage: npx tsx tests/perf/client/LobbyPlayerViewRenderPerf.ts
  *   (RUNS=n to change the sample count, LOBBY_PERF_SRC=<other checkout>/src
@@ -93,6 +96,15 @@ function stats(samples: number[]): string {
   return `median ${at(0.5).toFixed(3)} ms   p95 ${at(0.95).toFixed(3)} ms`;
 }
 
+// The two end points of each sample: the list's update, then its badges.
+class Timings {
+  list: number[] = [];
+  drawn: number[] = [];
+  report(): string {
+    return `list ${stats(this.list)}   |   drawn ${stats(this.drawn)}`;
+  }
+}
+
 // translateText() looks the <lang-selector> up once and caches it; without one
 // in the page it re-runs document.querySelector on EVERY call, which scans the
 // whole lobby list and swamps the timings. The real page always has one, so
@@ -129,6 +141,14 @@ async function main() {
   installLangSelector();
   const { GameMode } = await import("@openfront/engine-api/game/GameTypes");
   await import(SRC + "client/components/LobbyPlayerView.ts");
+  // Resolves once every staggered badge is drawn. A checkout from before the
+  // stagger draws them all in the list's own update, so there it is immediate.
+  const badgesDrawn: () => Promise<void> = await import(
+    SRC + "client/components/LevelBadgeFill.ts"
+  ).then(
+    (m: { badgesDrawn: () => Promise<void> }) => m.badgesDrawn,
+    () => () => Promise.resolve(),
+  );
 
   type View = HTMLElement & {
     gameMode: unknown;
@@ -150,30 +170,47 @@ async function main() {
   }
 
   async function firstPaint(mode: unknown, clients: Client[]) {
-    const samples: number[] = [];
+    const t = new Timings();
     for (let i = 0; i < WARMUP + RUNS; i++) {
       const t0 = performance.now();
       const view = await mount(mode, fresh(clients));
       const t1 = performance.now();
+      await badgesDrawn();
+      const t2 = performance.now();
       view.remove();
-      if (i >= WARMUP) samples.push(t1 - t0);
+      if (i >= WARMUP) {
+        t.list.push(t1 - t0);
+        t.drawn.push(t2 - t0);
+      }
     }
-    return stats(samples);
+    return t.report();
   }
 
+  // Times the change from roster `a` to roster `b` (the same roster as new
+  // objects when `b` is `a`). The view goes back to `a` between samples,
+  // untimed, so every sample is that one change and never its reverse.
   async function update(mode: unknown, a: Client[], b: Client[] = a) {
     const view = await mount(mode, fresh(a));
-    const samples: number[] = [];
+    await badgesDrawn();
+    const t = new Timings();
     for (let i = 0; i < WARMUP + RUNS; i++) {
-      const next = fresh(i % 2 === 0 ? b : a);
+      view.clients = fresh(a);
+      await view.updateComplete;
+      await badgesDrawn();
+      const next = fresh(b);
       const t0 = performance.now();
       view.clients = next;
       await view.updateComplete;
       const t1 = performance.now();
-      if (i >= WARMUP) samples.push(t1 - t0);
+      await badgesDrawn();
+      const t2 = performance.now();
+      if (i >= WARMUP) {
+        t.list.push(t1 - t0);
+        t.drawn.push(t2 - t0);
+      }
     }
     view.remove();
-    return stats(samples);
+    return t.report();
   }
 
   const N = 150;
