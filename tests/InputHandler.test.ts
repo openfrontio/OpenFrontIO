@@ -2452,6 +2452,8 @@ describe("InputHandler teardown (OPE-411)", () => {
       settings.setKeybinds({
         zoomOut: "Shift+KeyQ",
         zoomIn: "Shift+KeyE",
+        zoomOutNumpad: "Shift+NumpadSubtract",
+        zoomInNumpad: "Shift+NumpadAdd",
       });
       handler.initialize();
 
@@ -2476,6 +2478,29 @@ describe("InputHandler teardown (OPE-411)", () => {
       );
       emitSpy.mockClear();
 
+      // zoomOutNumpad
+      window.dispatchEvent(
+        new KeyboardEvent("keydown", {
+          code: "NumpadSubtract",
+          shiftKey: true,
+        }),
+      );
+      vi.advanceTimersByTime(5);
+      const zoomOutNumpadCalls = emitSpy.mock.calls.filter(
+        (c: unknown[]) =>
+          c[0] instanceof ZoomEvent &&
+          (c[0] as ZoomEvent).delta === handler["ZOOM_SPEED"],
+      );
+      expect(zoomOutNumpadCalls.length).toBeGreaterThan(0);
+
+      window.dispatchEvent(
+        new KeyboardEvent("keyup", {
+          code: "NumpadSubtract",
+          shiftKey: true,
+        }),
+      );
+      emitSpy.mockClear();
+
       // Zoom in
       window.dispatchEvent(
         new KeyboardEvent("keydown", { code: "KeyE", shiftKey: true }),
@@ -2487,9 +2512,26 @@ describe("InputHandler teardown (OPE-411)", () => {
           (c[0] as ZoomEvent).delta === -handler["ZOOM_SPEED"],
       );
       expect(zoomInCalls.length).toBeGreaterThan(0);
+
+      window.dispatchEvent(
+        new KeyboardEvent("keyup", { code: "KeyE", shiftKey: true }),
+      );
+      emitSpy.mockClear();
+
+      // zoomInNumpad
+      window.dispatchEvent(
+        new KeyboardEvent("keydown", { code: "NumpadAdd", shiftKey: true }),
+      );
+      vi.advanceTimersByTime(5);
+      const zoomInNumpadCalls = emitSpy.mock.calls.filter(
+        (c: unknown[]) =>
+          c[0] instanceof ZoomEvent &&
+          (c[0] as ZoomEvent).delta === -handler["ZOOM_SPEED"],
+      );
+      expect(zoomInNumpadCalls.length).toBeGreaterThan(0);
     });
 
-    test("zooms with Shift-modified alternate zoom bindings (Equal, Minus, Numpad)", () => {
+    test("zooms with Shift-modified alternate zoom bindings (Equal, Minus)", () => {
       settings.setKeybinds({
         zoomOutMinus: "Shift+Minus",
         zoomInEqual: "Shift+Equal",
