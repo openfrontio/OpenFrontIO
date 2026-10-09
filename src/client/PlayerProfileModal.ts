@@ -477,8 +477,14 @@ export class PlayerProfileModal extends BaseModal {
       this.progress = progress;
       const wanted = this.wantsProgressionTab;
       this.wantsProgressionTab = false;
-      // Unless the viewer has moved to another tab meanwhile.
-      if (wanted && progress !== null && this.activeTab === "stats") {
+      // Unless the viewer has moved to another tab, or closed the profile
+      // (the tab would then be remembered for the next opening), meanwhile.
+      if (
+        wanted &&
+        progress !== null &&
+        this.activeTab === "stats" &&
+        this.isOpen()
+      ) {
         this.setActiveTab("progression");
       }
     });
