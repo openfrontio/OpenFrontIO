@@ -609,14 +609,23 @@ describe("RewardSchema", () => {
     if (result.success) expect(result.data.held).toBeUndefined();
   });
 
-  it.each([[42], [null], [{ reason: "trust" }], [""]])(
-    "reads a malformed held (%j) as absent rather than failing",
+  it.each([[42], [{ reason: "trust" }], [""], [true]])(
+    "reads a malformed held (%j) as held, never claimable",
     (held) => {
       const result = RewardSchema.safeParse({ ...validReward, held });
       expect(result.success).toBe(true);
-      if (result.success) expect(result.data.held).toBeUndefined();
+      if (result.success) {
+        expect(result.data.held).toBe("unknown");
+        expect(isRewardClaimable(result.data)).toBe(false);
+      }
     },
   );
+
+  it("reads a null held as claimable", () => {
+    const result = RewardSchema.safeParse({ ...validReward, held: null });
+    expect(result.success).toBe(true);
+    if (result.success) expect(result.data.held).toBeUndefined();
+  });
 
   it("keeps a hold kind it doesn't know, which is not claimable", () => {
     const result = RewardSchema.safeParse({

@@ -108,8 +108,19 @@ export const RewardSchema = z.object({
   // Why the reward can't be claimed yet; absent when it can. "trust": level
   // Plutonium, kept until the account is trusted. Any other non-empty value is
   // a hold this client doesn't know yet, and still reads as held: an unknown
-  // restriction must never read as claimable. Optional for older APIs.
-  held: z.string().min(1).optional().catch(undefined),
+  // restriction must never read as claimable, so a malformed value (a number,
+  // an object, "") reads as held too. Absent or null: claimable, as from
+  // older APIs.
+  held: z
+    .unknown()
+    .transform((v): string | undefined =>
+      v === undefined || v === null
+        ? undefined
+        : typeof v === "string" && v.length > 0
+          ? v
+          : "unknown",
+    )
+    .optional(),
 });
 export type Reward = z.infer<typeof RewardSchema>;
 
