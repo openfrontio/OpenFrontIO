@@ -214,6 +214,7 @@ export class GameRunner {
     }
 
     if (!this.game.inSpawnPhase()) {
+      this.pendingSpawnPhaseEnd = false;
       updates[GameUpdateType.SpawnPhaseEnd].push({
         type: GameUpdateType.SpawnPhaseEnd,
         startTick: this.game.startTick() ?? 0,

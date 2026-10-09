@@ -3,10 +3,13 @@ import {
   PlayerType,
   UnitType,
 } from "@openfront/engine-api/game/GameTypes";
+import { GameUpdateType } from "@openfront/engine-api/game/GameUpdates";
 import { SnapshotError } from "@openfront/engine-lib/snapshot/SnapshotType";
+import { Executor } from "@openfront/engine/execution/ExecutionManager";
 import { WinCheckExecution } from "@openfront/engine/execution/WinCheckExecution";
 import { Game } from "@openfront/engine/game/Game";
 import { GameImpl } from "@openfront/engine/game/GameImpl";
+import { GameRunner } from "@openfront/engine/GameRunner";
 import {
   readSnapshotHeader,
   restoreMapsFromSnapshot,
@@ -135,5 +138,30 @@ describe("core snapshot", () => {
         `invalid tile ref ${invalidTile} for player ${playerID}`,
       ),
     );
+  });
+
+  test("snapshotViewData clears pendingSpawnPhaseEnd so tick 1 does not duplicate SpawnPhaseEnd", async () => {
+    const game = await builtGame();
+    expect(game.inSpawnPhase()).toBe(false);
+
+    let tickSpawnPhaseEndCount = 0;
+    const runner = new GameRunner(
+      game,
+      new Executor(game, "game123456", undefined, []),
+      (gu) => {
+        if ("updates" in gu) {
+          tickSpawnPhaseEndCount +=
+            gu.updates[GameUpdateType.SpawnPhaseEnd].length;
+        }
+      },
+    );
+    runner.setPendingSpawnPhaseEnd();
+
+    const viewData = runner.snapshotViewData();
+    expect(viewData.updates[GameUpdateType.SpawnPhaseEnd].length).toBe(1);
+
+    runner.addTurn({ turnNumber: 0, intents: [] });
+    expect(runner.executeNextTick()).toBe(true);
+    expect(tickSpawnPhaseEndCount).toBe(0);
   });
 });
