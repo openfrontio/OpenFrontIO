@@ -22,31 +22,27 @@
     {
       "coordinates": [718, 492],
       "flag": "nl",
-      "name": "Netherlands",
-      "strength": 1
+      "name": "Netherlands"
     },
     {
       "coordinates": [1046, 265],
-      "name": "Friesland",
-      "strength": 1
+      "flag": "Frisian_flag",
+      "name": "Friesland"
     },
     {
       "coordinates": [1052, 1173],
       "flag": "lu",
-      "name": "Luxembourg",
-      "strength": 1
+      "name": "Luxembourg"
     },
     {
       "coordinates": [762, 1038],
       "flag": "Wallonia",
-      "name": "Wallonia",
-      "strength": 1
+      "name": "Wallonia"
     },
     {
       "coordinates": [615, 930],
       "flag": "Flanders",
-      "name": "Flanders",
-      "strength": 1
+      "name": "Flanders"
     }
   ],
   "translation_key": "map.benelux"
