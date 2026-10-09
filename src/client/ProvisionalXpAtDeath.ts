@@ -70,18 +70,20 @@ export function provisionalXpRules(config: ProgressionConfig): XpRules | null {
 }
 
 /**
- * Whether the API can score this game at all. While it requires the
- * end-of-game stats vote (requireStatsAgreed, production), a singleplayer
- * game, which never carries that vote, scores nothing, so there is no figure
- * to show for it. An API that doesn't say is taken to require it.
+ * Whether the API can score this game at all. A singleplayer game never
+ * carries the end-of-game stats vote, so it is only scored by an API that
+ * says it scores singleplayer (scoresSingleplayer) or doesn't require the
+ * vote (requireStatsAgreed false, staging). An API that says neither predates
+ * singleplayer scoring, so there is no figure to show for it.
  */
 export function apiScoresGame(
   progression: ProgressionConfig,
   config: XpGameConfig,
 ): boolean {
   return (
-    progression.requireStatsAgreed === false ||
-    config.gameType !== GameType.Singleplayer
+    config.gameType !== GameType.Singleplayer ||
+    progression.scoresSingleplayer === true ||
+    progression.requireStatsAgreed === false
   );
 }
 

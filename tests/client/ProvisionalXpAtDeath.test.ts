@@ -421,6 +421,21 @@ describe("buildProvisionalXp", () => {
       build({ progression: progression({ requireStatsAgreed: true }) }),
     ).not.toBeNull();
   });
+
+  it("shows a singleplayer figure when the API scores singleplayer", () => {
+    const provisional = build({
+      config: { ...FFA, gameType: GameType.Singleplayer },
+      progression: progression({
+        requireStatsAgreed: true,
+        scoresSingleplayer: true,
+      }),
+    });
+    if (provisional === null || provisional === "retry") throw new Error();
+    expect(provisional.response).toMatchObject({
+      eligible: true,
+      breakdown: { firstGame: 0, gamePermille: 250 },
+    });
+  });
 });
 
 describe("projectProgress", () => {

@@ -251,11 +251,13 @@ export const ProgressionConfigSchema = z.object({
   // copy of one revision, for the provisional figure shown at death, and
   // shows none when this is absent or names another revision.
   formula: z.number().optional().catch(undefined),
-  // Whether the API scores only games whose end-of-game vote agreed on the
-  // stats (true in production). A singleplayer game never carries that vote,
-  // so while this is true it scores nothing, and no provisional figure is
-  // shown for it.
+  // Whether the API scores only multiplayer games whose end-of-game vote
+  // agreed on the stats (true in production).
   requireStatsAgreed: z.boolean().optional().catch(undefined),
+  // Whether the API scores singleplayer games, which never carry that vote
+  // (at the singleplayer rate and daily cap). An older API that predates the
+  // field required the vote of every game, so absent reads as no.
+  scoresSingleplayer: z.boolean().optional().catch(undefined),
   // The rules that formula runs on. Absent from older APIs; a malformed block
   // only loses the provisional figure, never the level curve.
   xp: XpRulesSchema.optional().catch(undefined),
