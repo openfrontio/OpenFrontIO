@@ -6,6 +6,8 @@
  * against the hashes the "live" clients recorded.
  */
 
+import { GameMapType, GameMode } from "@openfront/engine-api/game/GameTypes";
+import { WirePlayer } from "@openfront/shared/WireSchemas";
 import { PlayerTypeEnum } from "../../../../src/client/render/types";
 import { ReplayReader } from "../../../../src/client/replay/codec/decode/ReplayReader";
 import type {
@@ -16,8 +18,6 @@ import {
   processGameRecord,
   ReplayDesyncError,
 } from "../../../../src/client/replay/processor/ReplayProcessor";
-import { Game, GameMapType, GameMode } from "../../../../src/core/game/Game";
-import { Player } from "../../../../src/core/Schemas";
 import {
   config,
   human,
@@ -25,6 +25,7 @@ import {
   playAndArchive,
   spawnOnLand,
 } from "../util/ArchiveGame";
+import { directEngine } from "../util/DirectEngine";
 import { expectReplayMatches } from "../util/Expect";
 import {
   captureTruth,
@@ -45,13 +46,14 @@ async function processWithTruth(
   let base!: ReplayBase;
   const appends: ReplayAppend[] = [];
   const result = await processGameRecord(record, {
+    engine: directEngine((game, gu) =>
+      truth.push(captureTruth(game, gu.tick, truth.length % 37 === 0)),
+    ),
     mapLoader,
     gzip,
     keyframeInterval: 50,
     onStart: (b) => (base = b),
     onAppend: (a) => void appends.push(a),
-    onTick: (game: Game, gu) =>
-      truth.push(captureTruth(game, gu.tick, truth.length % 37 === 0)),
   });
   return { result, truth, replay: { base, append: mergeAppends(appends) } };
 }
@@ -79,7 +81,7 @@ describe("replay processor", () => {
       ticks,
       intents: (game, t) => {
         const size = game.width() * game.height();
-        const id = (p: Player) => game.playerByClientID(p.clientID)!.id();
+        const id = (p: WirePlayer) => game.playerByClientID(p.clientID)!.id();
         switch (t) {
           case 5:
             return [
@@ -234,9 +236,11 @@ describe("replay processor", () => {
       const turn = record.turns.find((t) => t.turnNumber === 30)!;
       const recorded = turn.hash! + 1;
       turn.hash = recorded;
-      const err = await processGameRecord(record, { mapLoader, gzip }).catch(
-        (e: unknown) => e,
-      );
+      const err = await processGameRecord(record, {
+        engine: directEngine(),
+        mapLoader,
+        gzip,
+      }).catch((e: unknown) => e);
       expect(err).toBeInstanceOf(ReplayDesyncError);
       expect((err as ReplayDesyncError).mismatch).toEqual({
         turn: 30,
@@ -250,9 +254,11 @@ describe("replay processor", () => {
       const turn = record.turns.find((t) => t.turnNumber === 3)!;
       expect(turn.hash ?? null).toBeNull();
       turn.hash = 12345;
-      const err = await processGameRecord(record, { mapLoader, gzip }).catch(
-        (e: unknown) => e,
-      );
+      const err = await processGameRecord(record, {
+        engine: directEngine(),
+        mapLoader,
+        gzip,
+      }).catch((e: unknown) => e);
       expect((err as ReplayDesyncError).mismatch).toEqual({
         turn: 3,
         recorded: 12345,
@@ -265,6 +271,7 @@ describe("replay processor", () => {
       let base: ReplayBase | null = null;
       const appends: [ReplayAppend, number][] = [];
       const result = await processGameRecord(record, {
+        engine: directEngine(),
         mapLoader,
         gzip,
         keyframeInterval: 20,
@@ -299,6 +306,7 @@ describe("replay processor", () => {
       turn.hash = turn.hash! + 1;
       const handedOut: number[] = [];
       const err = await processGameRecord(record, {
+        engine: directEngine(),
         mapLoader,
         gzip,
         keyframeInterval: 5,
@@ -316,6 +324,7 @@ describe("replay processor", () => {
       turn.hash = turn.hash! + 1;
       const handedOut: number[] = [];
       const err = await processGameRecord(record, {
+        engine: directEngine(),
         mapLoader,
         gzip,
         keyframeInterval: 5,
@@ -332,7 +341,11 @@ describe("replay processor", () => {
       const before = JSON.stringify(record, (_k, v: unknown) =>
         typeof v === "bigint" ? v.toString() : v,
       );
-      await processGameRecord(record, { mapLoader, gzip });
+      await processGameRecord(record, {
+        engine: directEngine(),
+        mapLoader,
+        gzip,
+      });
       expect(
         JSON.stringify(record, (_k, v: unknown) =>
           typeof v === "bigint" ? v.toString() : v,

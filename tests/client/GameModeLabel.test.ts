@@ -1,6 +1,3 @@
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import en from "../../resources/lang/en.json";
-import { getGameModeLabel } from "../../src/client/Utils";
 import {
   Duos,
   GameMode,
@@ -8,8 +5,11 @@ import {
   HumansVsNations,
   Quads,
   Trios,
-} from "../../src/core/game/Game";
-import { GameConfig } from "../../src/core/Schemas";
+} from "@openfront/engine-api/game/GameTypes";
+import { GameConfig } from "@openfront/engine-api/Schemas";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import en from "../../resources/lang/en.json";
+import { getGameModeLabel } from "../../src/client/Utils";
 
 function flatten(
   value: Record<string, unknown>,

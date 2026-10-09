@@ -1,13 +1,13 @@
-import { afterEach, describe, expect, it } from "vitest";
-import type { PlayerStatsSummary } from "../../src/client/components/baseComponents/stats/PlayerStatsSummary";
-import { PlayerStatsTreeView } from "../../src/client/components/baseComponents/stats/PlayerStatsTree";
-import type { PlayerStatsLeaf } from "../../src/core/ApiSchemas";
 import {
   ATTACK_INDEX_CANCEL,
   ATTACK_INDEX_MAX_RECV,
   ATTACK_INDEX_RECV,
   ATTACK_INDEX_SENT,
-} from "../../src/core/StatsSchemas";
+} from "@openfront/engine-api/StatsSchemas";
+import type { PlayerStatsLeaf } from "@openfront/shared/ApiSchemas";
+import { afterEach, describe, expect, it } from "vitest";
+import type { PlayerStatsSummary } from "../../src/client/components/baseComponents/stats/PlayerStatsSummary";
+import { PlayerStatsTreeView } from "../../src/client/components/baseComponents/stats/PlayerStatsTree";
 
 function leafWithAttacks(attacks: bigint[]): PlayerStatsLeaf {
   return { wins: 1n, losses: 0n, total: 1n, stats: { attacks } };

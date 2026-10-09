@@ -21,6 +21,11 @@ export class VoteRound<T> {
     return candidate.ips.size;
   }
 
+  // How many distinct values have been voted for.
+  size(): number {
+    return this.candidates.size;
+  }
+
   // Returns the winning value once some candidate holds a strict majority of
   // `totalUniqueIPs` (votes * 2 > total), else null. A tie (e.g. 1 of 2 IPs)
   // does not count as a majority: with exactly 2 electors, both must agree,

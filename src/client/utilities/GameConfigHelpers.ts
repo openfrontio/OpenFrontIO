@@ -1,5 +1,5 @@
-import { GameMapType, UnitType } from "../../core/game/Game";
-import { GameConfig } from "../../core/Schemas";
+import { GameMapType, UnitType } from "@openfront/engine-api/game/GameTypes";
+import { GameConfig } from "@openfront/engine-api/Schemas";
 
 /**
  * Maps a slider value (0-400) to the nations config value.

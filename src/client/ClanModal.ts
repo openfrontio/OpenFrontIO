@@ -1,6 +1,6 @@
+import { GameEnv } from "@openfront/shared/configuration/Env";
 import { html } from "lit";
 import { customElement, state } from "lit/decorators.js";
-import { GameEnv } from "../core/configuration/Config";
 import { getUserMe, invalidateUserMe } from "./Api";
 import { type ClanInfo, type ClanMember } from "./ClanApi";
 import { ClientEnv } from "./ClientEnv";
@@ -25,7 +25,9 @@ import "./components/CopyButton";
 import "./components/CurrencyDisplay";
 import { modalHeader } from "./components/ui/ModalHeader";
 import { signedOutNotice } from "./components/ui/SignedOutNotice";
+import "./GameStatsModal";
 import { modalRouter } from "./ModalRouter";
+import "./PlayerProfileModal";
 import type { ProfileOrigin } from "./PlayerProfileModal";
 import { translateText } from "./Utils";
 

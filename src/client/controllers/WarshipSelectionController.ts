@@ -1,7 +1,6 @@
-import { Cell } from "src/core/game/Game";
-import { EventBus } from "../../core/EventBus";
-import { UnitType } from "../../core/game/Game";
-import { TileRef } from "../../core/game/GameMap";
+import { TileRef } from "@openfront/engine-api/game/GameMap";
+import { Cell, UnitType } from "@openfront/engine-api/game/GameTypes";
+import { EventBus } from "@openfront/shared/EventBus";
 import { Controller } from "../Controller";
 import {
   CloseViewEvent,

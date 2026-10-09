@@ -1,3 +1,8 @@
+import {
+  type AssetManifest,
+  buildAssetUrl,
+} from "@openfront/shared/AssetPaths";
+import { rewriteAssetsForCdn } from "@openfront/shared/AssetUrls";
 import tailwindcss from "@tailwindcss/vite";
 import fs from "fs";
 import http from "http";
@@ -7,11 +12,6 @@ import { fileURLToPath } from "url";
 import { defineConfig, loadEnv, type Plugin } from "vite";
 import { createHtmlPlugin } from "vite-plugin-html";
 import { configDefaults } from "vitest/config";
-import {
-  type AssetManifest,
-  buildAssetUrl,
-  rewriteAssetsForCdn,
-} from "./src/core/AssetUrls";
 import {
   buildPublicAssetManifest,
   copyRootPublicFiles,
@@ -414,11 +414,22 @@ export default defineConfig(({ mode }) => {
       assetsDir: "assets", // Sub-directory for assets
       rollupOptions: {
         output: {
-          manualChunks: (id) => {
-            const vendorModules = ["howler", "zod"];
-            if (vendorModules.some((module) => id.includes(module))) {
-              return "vendor";
-            }
+          codeSplitting: {
+            groups: [
+              {
+                name: "vendor",
+                test: (id) =>
+                  ["howler", "zod"].some((module) => id.includes(module)),
+                priority: 2,
+              },
+              // Everything the page needs at startup stays in the entry
+              // chunk. Without this, a module shared by the entry and the
+              // lazily loaded screens (Lit, translateText, the cosmetics
+              // catalog, ...) can be split into chunks of its own, each one
+              // more request before the page can start, for no saving: the
+              // entry needs them all anyway.
+              { name: "index", tags: ["$initial"], priority: 1 },
+            ],
           },
         },
       },

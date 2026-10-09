@@ -1,6 +1,6 @@
+import { Subscription } from "@openfront/shared/CosmeticSchemas";
 import { html, LitElement, nothing, TemplateResult } from "lit";
 import { customElement, property } from "lit/decorators.js";
-import { Subscription } from "../../core/CosmeticSchemas";
 import { ResolvedCosmetic, translateCosmetic } from "../Cosmetics";
 import { isDesktopShell } from "../DesktopShell";
 import { translateText } from "../Utils";
