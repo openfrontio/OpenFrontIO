@@ -56,7 +56,12 @@ vi.mock("../../../../src/client/CrazyGamesSDK", () => ({
 import { GameType } from "@openfront/engine-api/game/GameTypes";
 import { GameUpdateType } from "@openfront/engine-api/game/GameUpdates";
 import { EventBus } from "@openfront/shared/EventBus";
+// The game fetches the XP section when it starts and the Legend ceremony
+// ahead of its moment; here both are loaded up front, as they are by the
+// time a game ends.
+import "../../../../src/client/components/GameXpPanel";
 import type { GameXpPanel } from "../../../../src/client/components/GameXpPanel";
+import "../../../../src/client/components/LegendCeremony";
 import "../../../../src/client/hud/layers/WinModal";
 import type { WinModal } from "../../../../src/client/hud/layers/WinModal";
 import type { GameView } from "../../../../src/client/view";
@@ -192,10 +197,14 @@ describe("WinModal XP section", () => {
     vi.restoreAllMocks();
   });
 
-  async function mount(game: GameView): Promise<void> {
+  async function mount(
+    game: GameView,
+    prepare?: (modal: WinModal) => void,
+  ): Promise<void> {
     modal = document.createElement("win-modal") as WinModal;
     modal.game = game;
     modal.eventBus = new EventBus();
+    prepare?.(modal);
     // Pin the promo slot to the pattern promo (the Steam wishlist one needs
     // ResizeObserver, which jsdom lacks).
     Object.assign(modal as unknown as { rand: number }, { rand: 0.75 });
@@ -474,6 +483,202 @@ describe("WinModal XP section", () => {
     expect(current.level).toBe(100);
     expect(current.legend).toBe(true);
     expect(panel()!.querySelector("[data-xp-next-badge]")).toBeNull();
+  });
+
+  describe("the Legend ceremony", () => {
+    // P10 L99 -> 100: this game makes the player a Legend.
+    const legendResult = () =>
+      eligible({
+        before: { prestige: 10, level: 99, xpInLevel: 4400, xpForNext: 4510 },
+        after: {
+          ...eligible().after,
+          prestige: 10,
+          level: 100,
+          xpInLevel: 0,
+          xpForNext: 0,
+          legend: true,
+          lifetimeXp: 2106720,
+        },
+        levelsReached: [{ prestige: 10, level: 100 }],
+      });
+    const ceremony = () =>
+      document.body.querySelector<HTMLElement>("[data-legend-ceremony]");
+    const revealing = () => panel()?.dataset.xpRevealing === "true";
+
+    beforeEach(() => localStorage.clear());
+
+    it("takes the level-100 moment full screen, then returns to the settled popup", async () => {
+      stubXpEndpoint([() => json(legendResult())]);
+      await mount(makeGame({ ended: true }));
+      expect(xpState()).toBe("result");
+      // The reveal plays up to level 100 first.
+      let steps = 0;
+      while (ceremony() === null && steps++ < 200) {
+        expect(revealing()).toBe(true);
+        await settle(50);
+      }
+      expect(ceremony()).not.toBeNull();
+      // The popup rests on its final state behind it.
+      expect(revealing()).toBe(false);
+      expect(panel()!.querySelector("[data-xp-legend]")).not.toBeNull();
+      expect(localStorage.getItem("legendCeremonySeen:me")).not.toBeNull();
+      expect(ceremony()!.textContent).not.toContain("2,106,720");
+
+      await settle(7000);
+      expect(ceremony()!.dataset.beat).toBe("done");
+      expect(
+        ceremony()!.querySelector("[data-legend-line] b")!.textContent,
+      ).toBe((2106720).toLocaleString());
+      ceremony()!
+        .querySelector<HTMLButtonElement>("[data-legend-continue]")!
+        .click();
+      await settle();
+      expect(ceremony()).toBeNull();
+      expect(xpState()).toBe("result");
+      expect(revealing()).toBe(false);
+      expect(document.activeElement).toBe(
+        modal.querySelector('[data-win-action="keep"]'),
+      );
+    });
+
+    it("plays it when the reveal is skipped before level 100", async () => {
+      stubXpEndpoint([() => json(legendResult())]);
+      await mount(makeGame({ ended: true }));
+      await finishReveal();
+      expect(ceremony()).not.toBeNull();
+    });
+
+    it("plays it once per account", async () => {
+      localStorage.setItem("legendCeremonySeen:me", "1");
+      stubXpEndpoint([() => json(legendResult())]);
+      await mount(makeGame({ ended: true }));
+      // The panel's own Legend moment plays instead.
+      let sawCaption = false;
+      for (let i = 0; i < 200 && revealing(); i++) {
+        if (panel()!.querySelector("[data-xp-caption-legend]")) {
+          sawCaption = true;
+        }
+        await settle(50);
+      }
+      expect(sawCaption).toBe(true);
+      expect(ceremony()).toBeNull();
+    });
+
+    it("never for anything but the server's Legend result", async () => {
+      // Waiting on the server: nothing yet.
+      stubXpEndpoint([notFound, notFound, () => json(eligible())]);
+      await mount(makeGame({ ended: true }));
+      expect(xpState()).toBe("calculating");
+      expect(ceremony()).toBeNull();
+      // An ordinary result.
+      await settle(6_000);
+      await finishReveal();
+      expect(xpState()).toBe("result");
+      expect(ceremony()).toBeNull();
+    });
+
+    it("falls back to the panel's own Legend moment when the ceremony can't load", async () => {
+      vi.spyOn(console, "warn").mockImplementation(() => {});
+      stubXpEndpoint([() => json(legendResult())]);
+      await mount(makeGame({ ended: true }), (m) => {
+        m.loadLegendCeremony = () => Promise.reject(new Error("offline"));
+      });
+      let sawCaption = false;
+      for (let i = 0; i < 200 && revealing(); i++) {
+        if (panel()!.querySelector("[data-xp-caption-legend]")) {
+          sawCaption = true;
+        }
+        await settle(50);
+      }
+      expect(sawCaption).toBe(true);
+      expect(ceremony()).toBeNull();
+      // Not marked seen: it never played.
+      expect(localStorage.getItem("legendCeremonySeen:me")).toBeNull();
+    });
+
+    it("is fetched only for a player who could become a Legend", async () => {
+      const load = vi.fn(
+        () => import("../../../../src/client/components/LegendCeremony"),
+      );
+      stubXpEndpoint([() => json(eligible())]);
+      await mount(makeGame({ ended: true }), (m) => {
+        m.loadLegendCeremony = load;
+      });
+      await finishReveal();
+      expect(load).not.toHaveBeenCalled();
+      modal.remove();
+
+      // On the last prestige run: fetched before the result is in.
+      getUserMe.mockResolvedValue({
+        ...signedIn,
+        player: {
+          ...signedIn.player,
+          progress: { ...signedIn.player.progress, prestige: 10, level: 99 },
+        },
+      });
+      stubXpEndpoint([notFound]);
+      await mount(makeGame({ ended: true }), (m) => {
+        m.loadLegendCeremony = load;
+      });
+      expect(xpState()).toBe("calculating");
+      expect(load).toHaveBeenCalledTimes(1);
+    });
+
+    it("goes by the config's last prestige rank, the client's only without one", async () => {
+      const load = vi.fn(
+        () => import("../../../../src/client/components/LegendCeremony"),
+      );
+      const atPrestige = (prestige: number) =>
+        getUserMe.mockResolvedValue({
+          ...signedIn,
+          player: {
+            ...signedIn.player,
+            progress: { ...signedIn.player.progress, prestige, level: 99 },
+          },
+        });
+      const mountAt = async (prestige: number) => {
+        atPrestige(prestige);
+        stubXpEndpoint([notFound]);
+        await mount(makeGame({ ended: true }), (m) => {
+          m.loadLegendCeremony = load;
+        });
+      };
+      fetchProgressionConfig.mockResolvedValue({
+        version: 1,
+        maxLevel: 100,
+        maxPrestige: 12,
+        levels: [],
+      });
+
+      // Ranks left to earn on the server's ladder: not the last run.
+      await mountAt(10);
+      expect(load).not.toHaveBeenCalled();
+      modal.remove();
+
+      await mountAt(12);
+      expect(load).toHaveBeenCalledTimes(1);
+      modal.remove();
+
+      // No config: the client's own ladder.
+      fetchProgressionConfig.mockResolvedValue(false);
+      await mountAt(10);
+      expect(load).toHaveBeenCalledTimes(2);
+    });
+
+    it("never for a player who was a Legend already", async () => {
+      const already = legendResult();
+      stubXpEndpoint([
+        () =>
+          json({
+            ...already,
+            before: { prestige: 10, level: 100, xpInLevel: 0, xpForNext: 0 },
+            levelsReached: [],
+          }),
+      ]);
+      await mount(makeGame({ ended: true }));
+      await finishReveal();
+      expect(ceremony()).toBeNull();
+    });
   });
 
   it("shows a player who was already a Legend as one throughout the reveal", async () => {

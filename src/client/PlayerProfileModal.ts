@@ -14,12 +14,11 @@ import type { PlayerGameHistoryCache } from "./components/baseComponents/stats/P
 import "./components/baseComponents/stats/PlayerStatsTree";
 import { BaseModal } from "./components/BaseModal";
 import "./components/clan/ClanCard";
-import "./components/LevelBadge";
 import "./components/PlayerName";
+import "./components/ProfileCard";
 import { modalHeader } from "./components/ui/ModalHeader";
 import { usernameText } from "./components/ui/UsernameText";
 import { verifiedBadge } from "./components/ui/VerifiedBadge";
-import { formatXp } from "./components/XpBar";
 import "./GameStatsModal";
 import "./LeaderboardModal";
 import { fetchPublicPlayerProgress } from "./ProgressionApi";
@@ -51,6 +50,8 @@ export class PlayerProfileModal extends BaseModal {
   private restoreGamesScrollAfterOpen = false;
   // Bumped on every profile load so a superseded in-flight response is dropped.
   private loadGeneration = 0;
+  // Counts fresh openings, to key the profile card's once-per-open flourish.
+  private openCount = 0;
 
   protected modalConfig() {
     return {
@@ -221,48 +222,20 @@ export class PlayerProfileModal extends BaseModal {
     if (!this.profileLoaded()) {
       return this.renderNotFound();
     }
+    // The card heads the stats; games and wins stay in the stats below it.
     return html`
-      ${this.renderLevel()}
+      ${this.progress === null
+        ? nothing
+        : html`<profile-card
+            class="mb-4 block"
+            .username=${this.username ?? this.publicId ?? ""}
+            .clanTag=${this.clans[0]?.tag ?? null}
+            .progress=${this.progress}
+            .openKey=${`profile-${this.openCount}`}
+          ></profile-card>`}
       <player-stats-tree-view
         .statsTree=${this.statsTree}
       ></player-stats-tree-view>
-    `;
-  }
-
-  // Compact level summary above the stats. Hidden without progress data.
-  private renderLevel() {
-    const progress = this.progress;
-    if (progress === null) return nothing;
-    const details = [
-      progress.legend || progress.prestige === 0
-        ? null
-        : translateText("progression.prestige", {
-            prestige: progress.prestige,
-          }),
-      translateText("progression.lifetime_xp", {
-        xp: formatXp(progress.lifetimeXp),
-      }),
-    ].filter((d): d is string => d !== null);
-    return html`
-      <div
-        data-profile-level
-        class="mb-4 flex items-center gap-3 rounded-xl border border-white/10 bg-white/5 p-3"
-      >
-        <level-badge
-          .level=${progress.level}
-          .prestige=${progress.prestige}
-          .legend=${progress.legend}
-          .size=${40}
-        ></level-badge>
-        <div class="min-w-0">
-          <div class="text-base font-bold text-white">
-            ${progress.legend
-              ? translateText("progression.legend")
-              : translateText("progression.level", { level: progress.level })}
-          </div>
-          <div class="text-xs text-white/60">${details.join(" · ")}</div>
-        </div>
-      </div>
     `;
   }
 
@@ -320,6 +293,8 @@ export class PlayerProfileModal extends BaseModal {
     // helpers re-set it right after open() so back() routes home; the
     // return-from-stats path above skips this and keeps the origin intact.
     this.openedFrom = null;
+    // A new opening: the profile card plays its flourish again.
+    this.openCount++;
     this.publicId = publicId;
     this.username = null;
     this.statsTree = null;
