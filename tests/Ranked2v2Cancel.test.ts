@@ -104,3 +104,23 @@ describe("Ranked 2v2 cancellation", () => {
     expect(collectWinUpdates(game)).toHaveLength(0);
   });
 });
+
+describe("Ranked clan wars cancellation", () => {
+  it("ends the game with no winner when a matched player didn't spawn", async () => {
+    const game = await setupTeamGame({ rankedType: RankedType.ClanWars });
+    spawnPlayers(game, 3);
+
+    const wins = collectWinUpdates(game);
+
+    expect(wins).toHaveLength(1);
+    expect(wins[0].winner).toBeUndefined();
+    expect(game.getWinner()).toBeNull();
+  });
+
+  it("does not cancel when every matched player spawned", async () => {
+    const game = await setupTeamGame({ rankedType: RankedType.ClanWars });
+    spawnPlayers(game, 4);
+
+    expect(collectWinUpdates(game)).toHaveLength(0);
+  });
+});

@@ -17,9 +17,17 @@ interface LadderState {
   hasMore: boolean;
 }
 
-const RANKED_TYPES = Object.values(RankedType);
+// The ranked types with a player ladder. Clan wars rates the clan, not its
+// players, so it has none.
+export type PlayerLadder = Exclude<RankedType, RankedType.ClanWars>;
 
-const emptyLadders = (): Record<RankedType, LadderState> => ({
+const RANKED_TYPES: PlayerLadder[] = [
+  RankedType.OneVOne,
+  RankedType.TwoVTwo,
+  RankedType.FreeForAll,
+];
+
+const emptyLadders = (): Record<PlayerLadder, LadderState> => ({
   [RankedType.OneVOne]: { entries: [], userEntry: null, hasMore: true },
   [RankedType.TwoVTwo]: { entries: [], userEntry: null, hasMore: true },
   [RankedType.FreeForAll]: { entries: [], userEntry: null, hasMore: true },
@@ -46,9 +54,9 @@ export class LeaderboardPlayerList extends LitElement {
    * returns all of them, so the other ladders ride along and are kept for
    * their own tabs.
    */
-  @property({ attribute: false }) rankedType: RankedType = RankedType.OneVOne;
+  @property({ attribute: false }) rankedType: PlayerLadder = RankedType.OneVOne;
 
-  @state() private ladders: Record<RankedType, LadderState> = emptyLadders();
+  @state() private ladders: Record<PlayerLadder, LadderState> = emptyLadders();
   @state() private showStickyUser = false;
   @state() private isLoading = false;
   @state() private error: string | null = null;
@@ -77,7 +85,7 @@ export class LeaderboardPlayerList extends LitElement {
 
   private mapLadders(
     fn: (ladder: LadderState) => LadderState,
-  ): Record<RankedType, LadderState> {
+  ): Record<PlayerLadder, LadderState> {
     const next = { ...this.ladders };
     for (const rankedType of RANKED_TYPES) {
       next[rankedType] = fn(this.ladders[rankedType]);

@@ -5,7 +5,10 @@ import { BaseModal } from "./components/BaseModal";
 import "./components/leaderboard/LeaderboardClanTable";
 import type { LeaderboardClanTable } from "./components/leaderboard/LeaderboardClanTable";
 import "./components/leaderboard/LeaderboardPlayerList";
-import type { LeaderboardPlayerList } from "./components/leaderboard/LeaderboardPlayerList";
+import type {
+  LeaderboardPlayerList,
+  PlayerLadder,
+} from "./components/leaderboard/LeaderboardPlayerList";
 import "./components/leaderboard/LeaderboardTribeTable";
 import type { LeaderboardTribeTable } from "./components/leaderboard/LeaderboardTribeTable";
 import { modalHeader } from "./components/ui/ModalHeader";
@@ -22,7 +25,7 @@ const TAB_KEYS = [
 // Tab key -> ladder. "players" predates the 2v2 ladder and stays the 1v1 tab
 // so existing `#modal=leaderboard&tab=players` links keep working. The ladder
 // tabs share one <leaderboard-player-list>: a page fetch returns every ladder.
-const PLAYER_TABS: Record<string, RankedType> = {
+const PLAYER_TABS: Record<string, PlayerLadder> = {
   players: RankedType.OneVOne,
   players2v2: RankedType.TwoVTwo,
   playersFfa: RankedType.FreeForAll,
@@ -43,7 +46,7 @@ export class LeaderboardModal extends BaseModal {
   private tribeTable?: LeaderboardTribeTable;
 
   private loadToken = 0;
-  private lastRankedType: RankedType = RankedType.OneVOne;
+  private lastRankedType: PlayerLadder = RankedType.OneVOne;
 
   protected modalConfig() {
     return {
@@ -66,7 +69,7 @@ export class LeaderboardModal extends BaseModal {
     };
   }
 
-  private rankedTypeFor(tab: string): RankedType | null {
+  private rankedTypeFor(tab: string): PlayerLadder | null {
     return PLAYER_TABS[tab] ?? null;
   }
 

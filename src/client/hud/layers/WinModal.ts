@@ -587,7 +587,9 @@ export class WinModal extends LitElement implements Controller {
               ? ("2v2" as const)
               : rankedType === RankedType.FreeForAll
                 ? ("ffa" as const)
-                : ("1v1" as const),
+                : rankedType === RankedType.ClanWars
+                  ? ("clanwars" as const)
+                  : ("1v1" as const),
         },
       }),
     );
