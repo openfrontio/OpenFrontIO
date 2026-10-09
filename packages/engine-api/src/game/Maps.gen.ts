@@ -56,7 +56,6 @@ export enum GameMapType {
   France = "France", // map-generator/assets/maps/france/info.json
   GatewayToTheAtlantic = "Gateway to the Atlantic", // map-generator/assets/maps/gatewaytotheatlantic/info.json
   Germany = "Germany", // map-generator/assets/maps/germany/info.json
-  GiantWorldMap = "Giant World Map", // map-generator/assets/maps/giantworldmap/info.json
   GreatLakes = "Great Lakes", // map-generator/assets/maps/greatlakes/info.json
   GulfOfGuinea = "Gulf Of Guinea", // map-generator/assets/maps/gulfofguinea/info.json
   GulfOfMexico = "Gulf Of Mexico", // map-generator/assets/maps/gulfofmexico/info.json
@@ -130,7 +129,9 @@ export enum GameMapType {
   Venice = "Venice", // map-generator/assets/maps/venice/info.json
   Vietnam = "Vietnam", // map-generator/assets/maps/vietnam/info.json
   WarshipWarship = "Warship Warship", // map-generator/assets/maps/warshipwarship/info.json
-  World = "World", // map-generator/assets/maps/world/info.json
+  world = "World", // map-generator/assets/maps/world/info.json
+  world10k = "World 10000", // map-generator/assets/maps/world10k/info.json
+  world4k = "World 4000", // map-generator/assets/maps/world4k/info.json
   WorldInverted = "World Inverted", // map-generator/assets/maps/worldinverted/info.json
   YangtzeRiver = "Yangtze River", // map-generator/assets/maps/yangtzeriver/info.json
   YellowSea = "Yellow Sea", // map-generator/assets/maps/yellowsea/info.json
@@ -1408,17 +1409,6 @@ export const maps: readonly MapInfo[] = [
     ],
   },
   {
-    id: "GiantWorldMap",
-    type: GameMapType.GiantWorldMap,
-    translationKey: "map.giantworldmap",
-    categories: ["world"],
-    multiplayerFrequency: 15,
-    ffaFrequency: -1,
-    teamFrequency: -1,
-    specialFrequency: -1,
-    defaultNationCount: 107,
-  },
-  {
     id: "GreatLakes",
     type: GameMapType.GreatLakes,
     translationKey: "map.greatlakes",
@@ -2486,17 +2476,51 @@ export const maps: readonly MapInfo[] = [
     defaultNationCount: 10,
   },
   {
-    id: "World",
-    type: GameMapType.World,
+    id: "world",
+    type: GameMapType.world,
     translationKey: "map.world",
     categories: ["featured", "world"],
     multiplayerFrequency: 30,
     ffaFrequency: -1,
     teamFrequency: -1,
     specialFrequency: -1,
-    defaultNationCount: 72,
+    defaultNationCount: 70,
     featuredRank: 1,
     forcedModifiers: ["isCrowded:50"],
+    layers: [
+      { id: "w2kland", placement: "land", nukeable: true },
+      { id: "w2kwater", placement: "water" },
+    ],
+  },
+  {
+    id: "world10k",
+    type: GameMapType.world10k,
+    translationKey: "map.world10k",
+    categories: ["new", "world"],
+    multiplayerFrequency: 0,
+    ffaFrequency: -1,
+    teamFrequency: -1,
+    specialFrequency: -1,
+    defaultNationCount: 378,
+    layers: [
+      { id: "w10kland", placement: "land", nukeable: true },
+      { id: "w10kwater", placement: "water" },
+    ],
+  },
+  {
+    id: "world4k",
+    type: GameMapType.world4k,
+    translationKey: "map.world4k",
+    categories: ["new", "world"],
+    multiplayerFrequency: 10,
+    ffaFrequency: -1,
+    teamFrequency: -1,
+    specialFrequency: -1,
+    defaultNationCount: 111,
+    layers: [
+      { id: "w4kland", placement: "land", nukeable: true },
+      { id: "w4kwater", placement: "water" },
+    ],
   },
   {
     id: "WorldInverted",
