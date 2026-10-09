@@ -583,6 +583,49 @@ export class MapPlaylist {
     } satisfies GameConfig;
   }
 
+  // A clan wars match is teamCount clans of playerCount / teamCount players
+  // each (2v2 up to four teams of 5). Small matches play the ranked 2v2 maps;
+  // bigger ones the continent maps ranked FFA uses.
+  public getClanWarsConfig(teamCount: number, playerCount: number): GameConfig {
+    const small = playerCount <= 6;
+    const maps = small
+      ? [
+          GameMapType.Australia,
+          GameMapType.Iceland,
+          GameMapType.Asia,
+          GameMapType.EuropeClassic,
+        ]
+      : [
+          GameMapType.Europe,
+          GameMapType.Asia,
+          GameMapType.Africa,
+          GameMapType.NorthAmerica,
+          GameMapType.SouthAmerica,
+          GameMapType.Australia,
+        ];
+    return {
+      donateGold: true,
+      donateTroops: true,
+      gameMap: maps[Math.floor(Math.random() * maps.length)],
+      maxPlayers: playerCount,
+      gameType: GameType.Public,
+      gameMapSize: GameMapSize.Normal,
+      difficulty: Difficulty.Medium, // Doesn't matter, nations are disabled
+      rankedType: RankedType.ClanWars,
+      infiniteGold: false,
+      infiniteTroops: false,
+      maxTimerValue: small ? 15 : 20,
+      instantBuild: false,
+      randomSpawn: false,
+      nations: "disabled",
+      gameMode: GameMode.Team,
+      playerTeams: teamCount,
+      bots: 400,
+      spawnImmunityDuration: 60 * 10,
+      disabledUnits: [],
+    } satisfies GameConfig;
+  }
+
   private getNextMap(
     type: ScheduledPublicGameType,
     mode?: GameMode,

@@ -146,6 +146,8 @@ export interface GameServerOptions {
   // Matchmade team split from the matchmaking assignment: publicIds per
   // team. At start each client is stamped with its team's index.
   matchmakingTeams?: string[][];
+  // Clan wars: the clan each matchmade team plays for, in team order.
+  matchmakingClanTags?: string[];
 }
 
 // Everything a GameServer reaches outside itself for. Production takes the
@@ -300,6 +302,7 @@ export class GameServer {
   // Matchmade team split from the matchmaking assignment: publicIds per
   // team. At start each client is stamped with its team's index.
   private matchmakingTeams?: string[][];
+  private matchmakingClanTags?: string[];
   private readonly deps: GameServerDeps;
   // Who may see whose real identity (anonymizeNames / pinned teams / admin
   // clan-tag reveal); shapes the per-viewer lobby roster and start message.
@@ -313,6 +316,7 @@ export class GameServer {
     this.startsAt = opts.startsAt;
     this.publicGameType = opts.publicGameType;
     this.matchmakingTeams = opts.matchmakingTeams;
+    this.matchmakingClanTags = opts.matchmakingClanTags;
     this.deps = { ...defaultGameServerDeps(), ...deps };
     this.groupToken = this.deps.mintGroupToken();
     this.telemetry = new MatchTelemetryRecorder(
@@ -899,21 +903,22 @@ export class GameServer {
     return this.desync.count();
   }
 
-  // Matchmade ranked games (1v1/2v2) must start with full attendance: the
-  // roster freezes at start(), so a game missing a player would run
-  // short-handed only to be voided by the sim (2v2) or hand out a walkover
-  // the absent player never contested (1v1). Ranked FFA starts without the
-  // missing players as long as RANKED_FFA_MIN_PLAYERS showed up, the fewest
-  // the API rates. Called at the start deadline; cancels the game and returns
-  // true when too few matched players connected.
+  // Matchmade ranked games (1v1/2v2/clan wars) must start with full
+  // attendance: the roster freezes at start(), so a game missing a player
+  // would run short-handed only to be voided by the sim (2v2, clan wars) or
+  // hand out a walkover the absent player never contested (1v1). Ranked FFA
+  // starts without the missing players as long as RANKED_FFA_MIN_PLAYERS
+  // showed up, the fewest the API rates. Called at the start deadline;
+  // cancels the game and returns true when too few matched players connected.
   public cancelShortHandedMatch(): boolean {
-    // Explicitly 1v1/2v2/FFA only — a future ranked type must opt in rather
-    // than inherit pre-start cancellation.
+    // Explicitly 1v1/2v2/FFA/clan wars only — a future ranked type must opt
+    // in rather than inherit pre-start cancellation.
     const rankedType = this.gameConfig.rankedType;
     let expected: number | undefined;
     if (
       rankedType === RankedType.OneVOne ||
-      rankedType === RankedType.TwoVTwo
+      rankedType === RankedType.TwoVTwo ||
+      rankedType === RankedType.ClanWars
     ) {
       expected = this.gameConfig.maxPlayers;
     } else if (rankedType === RankedType.FreeForAll) {
@@ -1140,7 +1145,7 @@ export class GameServer {
       config,
       players: this.clients.players().map((c) => ({
         username: c.username,
-        clanTag: c.clanTag ?? null,
+        clanTag: this.startClanTag(c),
         clientID: c.clientID,
         cosmetics: c.cosmetics,
         isLobbyCreator: this.lobbyCreatorID === c.clientID,
@@ -1420,6 +1425,16 @@ export class GameServer {
       team.includes(publicId),
     );
     return idx === -1 ? undefined : idx;
+  }
+
+  // The clan tag a player starts with. In clan wars it is their team's clan
+  // from the assignment, whatever tag they joined with: the API rates the
+  // clans by the tags in the game record.
+  private startClanTag(c: Client): string | null {
+    const team = this.matchmakingTeamIndex(c);
+    const matchmade =
+      team === undefined ? undefined : this.matchmakingClanTags?.[team];
+    return matchmade ?? c.clanTag ?? null;
   }
 
   private addIntent(intent: StampedIntent) {

@@ -73,6 +73,7 @@ export class GameManager {
     startsAt?: number,
     publicGameType?: PublicGameType,
     matchmakingTeams?: string[][],
+    matchmakingClanTags?: string[],
   ): GameServer | null {
     if (this.games.has(id)) {
       this.log.warn("cannot create game, id already exists", { gameID: id });
@@ -106,6 +107,7 @@ export class GameManager {
         startsAt,
         publicGameType,
         matchmakingTeams,
+        matchmakingClanTags,
       },
       {
         telemetry: this.telemetry,

@@ -24,7 +24,7 @@ import { translateText } from "./Utils";
 
 // The ranked queues. Same strings as RankedType, the API's `mode` param and
 // the `/?requeue=` value.
-export type MatchmakingMode = "1v1" | "2v2" | "ffa";
+export type MatchmakingMode = "1v1" | "2v2" | "ffa" | "clanwars";
 
 type MatchmakingJoin = {
   type: "join";
@@ -74,7 +74,9 @@ export class MatchmakingModal extends BaseModal {
         ? "matchmaking_modal.title_2v2"
         : this.mode === "ffa"
           ? "matchmaking_modal.title_ffa"
-          : "matchmaking_modal.title",
+          : this.mode === "clanwars"
+            ? "matchmaking_modal.title_clanwars"
+            : "matchmaking_modal.title",
     );
     return modalHeader({
       titleContent: html`<span class="${DEFAULT_TITLE_CLASS}">${title}</span>
@@ -85,9 +87,14 @@ export class MatchmakingModal extends BaseModal {
   }
 
   protected renderBody() {
+    // Clan wars rates the clan, so show who the player is playing for instead.
     const eloDisplay = html`
       <p class="text-center mt-2 mb-4 text-white/60">
-        ${translateText("matchmaking_modal.elo", { elo: this.elo })}
+        ${this.mode === "clanwars"
+          ? translateText("matchmaking_modal.clanwars_clan", {
+              clan: this.selectedClanTag ?? "",
+            })
+          : translateText("matchmaking_modal.elo", { elo: this.elo })}
       </p>
     `;
     return html`
@@ -222,7 +229,7 @@ export class MatchmakingModal extends BaseModal {
   }
 
   private selectedClanFrom(userMe: UserMeResponse): string | null {
-    if (this.mode !== "2v2") {
+    if (this.mode !== "2v2" && this.mode !== "clanwars") {
       return null;
     }
     const selectedTag = document
@@ -502,6 +509,13 @@ export class MatchmakingModal extends BaseModal {
           : userMe.player.leaderboard?.oneVone;
     this.elo = row?.elo ?? translateText("matchmaking_modal.no_elo");
     this.selectedClanTag = this.selectedClanFrom(userMe);
+    // Clan wars is played for a clan: without one of the player's own clans
+    // selected the service would only refuse the join.
+    if (this.mode === "clanwars" && this.selectedClanTag === null) {
+      this.close();
+      this.showMatchmakingError("matchmaking_modal.clan_required");
+      return;
+    }
 
     this.connected = false;
     this.gameID = null;

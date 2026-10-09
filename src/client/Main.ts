@@ -1448,14 +1448,18 @@ class Client {
   }
 
   // Returns the requeue mode ("/?requeue" = 1v1, "/?requeue=2v2" = 2v2,
-  // "/?requeue=ffa" = FFA), or null when the URL has no requeue param.
+  // "/?requeue=ffa" = FFA, "/?requeue=clanwars" = clan wars), or null when
+  // the URL has no requeue param.
   private consumeRequeueUrl(): MatchmakingMode | null {
     const searchParams = new URLSearchParams(window.location.search);
     if (!searchParams.has("requeue")) {
       return null;
     }
     const param = searchParams.get("requeue");
-    const mode = param === "2v2" || param === "ffa" ? param : "1v1";
+    const mode =
+      param === "2v2" || param === "ffa" || param === "clanwars"
+        ? param
+        : "1v1";
 
     searchParams.delete("requeue");
     const newUrl =

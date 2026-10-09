@@ -158,6 +158,7 @@ export interface GameOpts {
   startsAt?: number;
   publicGameType?: PublicGameType;
   matchmakingTeams?: string[][];
+  matchmakingClanTags?: string[];
   telemetry?: MatchTelemetryEmitter;
   buildHash?: string;
   // Overrides for what the game reaches outside itself for. By default the
@@ -188,6 +189,7 @@ export function makeGame(opts: GameOpts = {}): GameServer {
       startsAt: opts.startsAt,
       publicGameType: opts.publicGameType,
       matchmakingTeams: opts.matchmakingTeams,
+      matchmakingClanTags: opts.matchmakingClanTags,
     },
     deps,
   );

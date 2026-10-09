@@ -154,9 +154,11 @@ export class RankedModal extends BaseModal {
                 : translateText("mode_selector.ranked_title")),
             () => this.handleRanked("ffa"),
           )}
-          ${this.renderDisabledCard(
-            translateText("mode_selector.coming_soon"),
-            "",
+          ${this.renderCard(
+            translateText("mode_selector.ranked_clanwars_title"),
+            this.errorMessage ??
+              translateText("mode_selector.ranked_clanwars_subtitle"),
+            () => this.handleRanked("clanwars"),
           )}
         </div>
         <p class="mt-6 text-xs text-white/60 leading-relaxed text-center">
@@ -202,27 +204,6 @@ export class RankedModal extends BaseModal {
         </div>
         ${lock}
       </button>
-    `;
-  }
-
-  private renderDisabledCard(title: string, subtitle: string) {
-    return html`
-      <div
-        class="group relative isolate flex flex-col w-full h-28 sm:h-32 overflow-hidden rounded-2xl bg-slate-900/40 backdrop-blur-md border-0 shadow-none p-6 items-center justify-center gap-3 opacity-50 cursor-not-allowed"
-      >
-        <div class="flex flex-col items-center gap-1 text-center">
-          <h3
-            class="text-lg sm:text-xl font-bold text-white/60 uppercase tracking-widest leading-tight"
-          >
-            ${title}
-          </h3>
-          <p
-            class="text-xs text-white/40 uppercase tracking-wider whitespace-pre-line leading-tight"
-          >
-            ${subtitle}
-          </p>
-        </div>
-      </div>
     `;
   }
 
