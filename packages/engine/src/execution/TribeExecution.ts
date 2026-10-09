@@ -112,7 +112,13 @@ export class TribeExecution implements Execution {
     if (!this.tribe.canDeleteUnit()) return;
     for (const unit of this.tribe.units()) {
       if (!Structures.has(unit.type())) continue;
-      if (AI_RESOURCE_STRUCTURE_TYPES.includes(unit.type() as (typeof AI_RESOURCE_STRUCTURE_TYPES)[number])) continue;
+      if (
+        AI_RESOURCE_STRUCTURE_TYPES.includes(
+          unit.type() as (typeof AI_RESOURCE_STRUCTURE_TYPES)[number],
+        )
+      ) {
+        continue;
+      }
       if (unit.isMarkedForDeletion()) continue;
       this.mg.addExecution(new DeleteUnitExecution(this.tribe, unit.id()));
       return;
