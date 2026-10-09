@@ -7,6 +7,7 @@ import { ConstructionExecution } from "@openfront/engine/execution/ConstructionE
 import { PlayerExecution } from "@openfront/engine/execution/PlayerExecution";
 import { Game, Player } from "@openfront/engine/game/Game";
 import { setup } from "../util/Setup";
+import { executeTicks } from "../util/utils";
 
 describe("Mine economy", () => {
   let game: Game;
