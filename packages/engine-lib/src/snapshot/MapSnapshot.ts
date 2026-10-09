@@ -63,7 +63,10 @@ export function decodeRoot(bytes: Uint8Array): Root {
     throw new SnapshotError("not a game snapshot");
   }
   const format = (raw as { format?: unknown }).format;
-  if (typeof format !== "number" || format > SNAPSHOT_FORMAT_VERSION) {
+  if (typeof format !== "number" || !Number.isInteger(format) || format < 1) {
+    throw new SnapshotError(`invalid snapshot format: ${String(format)}`);
+  }
+  if (format > SNAPSHOT_FORMAT_VERSION) {
     throw new SnapshotError(
       `snapshot format ${String(format)} is newer than this build supports (${SNAPSHOT_FORMAT_VERSION})`,
     );

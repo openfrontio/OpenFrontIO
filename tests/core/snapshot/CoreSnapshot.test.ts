@@ -13,6 +13,7 @@ import { GameRunner } from "@openfront/engine/GameRunner";
 import {
   readSnapshotHeader,
   restoreMapsFromSnapshot,
+  SNAPSHOT_FORMAT_VERSION,
   snapshotGame,
 } from "@openfront/engine/snapshot/GameSnapshot";
 import {
@@ -163,5 +164,30 @@ describe("core snapshot", () => {
     runner.addTurn({ turnNumber: 0, intents: [] });
     expect(runner.executeNextTick()).toBe(true);
     expect(tickSpawnPhaseEndCount).toBe(0);
+  });
+
+  test("readSnapshotHeader rejects non-integer formats or formats below 1, and reports newer formats", async () => {
+    const game = await builtGame();
+    const bytes = snapshotGame(game);
+
+    // Formats that are not integers or < 1
+    for (const invalid of ["not-a-number", 1.5, 0, -1, NaN, {}, [], true]) {
+      const raw = decodeSnapshotValue(bytes) as any;
+      raw.format = invalid;
+      const corruptedBytes = encodeSnapshotValue(raw);
+      expect(() => readSnapshotHeader(corruptedBytes)).toThrowError(
+        new SnapshotError(`invalid snapshot format: ${String(invalid)}`),
+      );
+    }
+
+    // Format newer than build supports
+    const raw = decodeSnapshotValue(bytes) as any;
+    raw.format = 999;
+    const newerBytes = encodeSnapshotValue(raw);
+    expect(() => readSnapshotHeader(newerBytes)).toThrowError(
+      new SnapshotError(
+        `snapshot format 999 is newer than this build supports (${SNAPSHOT_FORMAT_VERSION})`,
+      ),
+    );
   });
 });
