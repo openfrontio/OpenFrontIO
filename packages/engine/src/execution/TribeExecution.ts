@@ -18,6 +18,10 @@ import type {
 import { AllianceExtensionExecution } from "./alliance/AllianceExtensionExecution";
 import { DeleteUnitExecution } from "./DeleteUnitExecution";
 import { AiAttackBehavior } from "./utils/AiAttackBehavior";
+import {
+  AI_RESOURCE_STRUCTURE_TYPES,
+  AiResourceStructureBehavior,
+} from "./utils/AiResourceStructureBehavior";
 
 export class TribeExecution implements Execution {
   private active = true;
@@ -26,6 +30,7 @@ export class TribeExecution implements Execution {
   private neighborsTerraNullius = true;
 
   private attackBehavior: AiAttackBehavior | null = null;
+  private resourceStructureBehavior: AiResourceStructureBehavior | null = null;
   private attackRate: number;
   private attackTick: number;
   private triggerRatio: number;
@@ -47,6 +52,11 @@ export class TribeExecution implements Execution {
 
   init(mg: Game) {
     this.mg = mg;
+    this.resourceStructureBehavior = new AiResourceStructureBehavior(
+      this.random,
+      this.mg,
+      this.tribe,
+    );
   }
 
   tick(ticks: number) {
@@ -74,6 +84,7 @@ export class TribeExecution implements Execution {
     }
 
     this.acceptAllAllianceRequests();
+    this.resourceStructureBehavior?.handleStructures();
     this.deleteNextStructure();
     this.maybeAttack();
   }
@@ -101,6 +112,7 @@ export class TribeExecution implements Execution {
     if (!this.tribe.canDeleteUnit()) return;
     for (const unit of this.tribe.units()) {
       if (!Structures.has(unit.type())) continue;
+      if (AI_RESOURCE_STRUCTURE_TYPES.includes(unit.type() as (typeof AI_RESOURCE_STRUCTURE_TYPES)[number])) continue;
       if (unit.isMarkedForDeletion()) continue;
       this.mg.addExecution(new DeleteUnitExecution(this.tribe, unit.id()));
       return;
@@ -164,6 +176,10 @@ export class TribeExecution implements Execution {
     this.random = r.random(s.random);
     if (s.initialized) this.mg = r.game;
     this.neighborsTerraNullius = s.neighborsTerraNullius;
+    this.resourceStructureBehavior =
+      s.initialized
+        ? new AiResourceStructureBehavior(this.random, this.mg, this.tribe)
+        : null;
     if (s.attackBehavior === null) {
       this.attackBehavior = null;
     } else {
