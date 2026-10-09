@@ -423,6 +423,11 @@ export const UserMeResponseSchema = z.object({
         // client. An unrecognised value is simply not `null`, which lands on
         // the paid behaviour — the safe side.
         provider: z.string().nullable().optional(),
+        // Who gave a GRANTED subscription: "steam", "admin" or
+        // "discord_role", and null on a paid one. Absent on a server that
+        // predates the field; see `isSteamGrant` for what that falls back to.
+        // Loose `z.string()` for the same reason as `provider`.
+        grantSource: z.string().nullable().optional(),
       })
       .nullable(),
     // A Stripe subscription whose renewal failed and is still being retried,
@@ -501,6 +506,36 @@ export function isGrantedSubscription(
 ): boolean {
   if (sub === null || sub === undefined) return false;
   return sub.provider === null;
+}
+
+/**
+ * Is a Steam month currently funding this grant?
+ *
+ * Not the same as "the subscription was bought on Steam". The server answers
+ * "steam" for a row Steam created AND for an admin comp or Discord-role grant
+ * that a Steam month is extending in place; once that month is spent the row
+ * goes back to its own grantor and stays entitled. So this says where the
+ * current period came from, and nothing about what happens when it ends.
+ *
+ * The one definition, shared by the account panel and the Steam grant notices,
+ * both of which tell the player their current access came with a purchase. An
+ * admin can give a grant an end date too, so the date alone does not say that.
+ *
+ *   "steam"   — yes.
+ *   any other value — no: an admin comp or a Discord-role grant.
+ *   undefined — the server predates the field, and the old rule still holds
+ *               there: a dated grant is a Steam month. Such a server cannot
+ *               write a dated admin grant (both arrived in one deploy). Nor
+ *               a dated Discord-role grant without Steam: the role sync
+ *               inserts those open-ended, and only a Steam month extending
+ *               one gives it a date — which the current server reports as
+ *               "steam" too, so the fallback and the field agree.
+ */
+export function isSteamGrant(
+  sub: UserSubscription | null | undefined,
+): boolean {
+  if (!isGrantedSubscription(sub) || !sub?.currentPeriodEnd) return false;
+  return sub.grantSource === "steam" || sub.grantSource === undefined;
 }
 
 // PUT /users/@me/username success payload. `username` is the resolved display
@@ -817,7 +852,11 @@ export const PlayerStatsTreeSchema = z.object({
   Singleplayer: GameModeStatsSchema.optional(),
   Public: GameModeStatsSchema.optional(),
   Private: GameModeStatsSchema.optional(),
-  Ranked: z.partialRecord(z.enum(RankedType), PlayerStatsLeafSchema).optional(),
+  // Keyed by any string, not RankedType: the API reports every ranked type a
+  // player has played, including ones added after this build shipped, and an
+  // unknown key must not fail the whole profile. The UI shows only the types
+  // it knows (PlayerStatsTree.availableRankedTypes).
+  Ranked: z.record(z.string(), PlayerStatsLeafSchema).optional(),
   recent: PlayerRecentStatsTreeSchema.optional(),
 });
 export type PlayerStatsTree = z.infer<typeof PlayerStatsTreeSchema>;
