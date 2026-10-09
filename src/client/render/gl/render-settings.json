@@ -152,6 +152,18 @@
         "scale": 1.55,
         "iconFill": 0.85
       },
+      "Oil Mine": {
+        "scale": 1.1,
+        "iconFill": 0.85
+      },
+      "Gold Mine": {
+        "scale": 1.1,
+        "iconFill": 0.85
+      },
+      "Diamond Mine": {
+        "scale": 1.1,
+        "iconFill": 0.85
+      },
       "Livestock Farm": {
         "scale": 1.1,
         "iconFill": 0.85

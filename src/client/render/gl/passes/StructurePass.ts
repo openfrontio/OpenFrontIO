@@ -22,6 +22,10 @@ import {
   UT_MISSILE_SILO,
   UT_PORT,
   UT_SAM_LAUNCHER,
+  UT_OIL_MINE,
+  UT_GOLD_MINE,
+  UT_DIAMOND_MINE,
+  UT_LIVESTOCK_FARM,
 } from "../../types";
 import { DynamicInstanceBuffer } from "../DynamicBuffer";
 import type { RenderSettings } from "../RenderSettings";
@@ -53,10 +57,10 @@ const STRUCTURE_ORDER = [
   UT_DEFENSE_POST,
   UT_SAM_LAUNCHER,
   UT_MISSILE_SILO,
-  "Oil Mine",
-  "Gold Mine",
-  "Diamond Mine",
-  "Livestock Farm",
+  UT_OIL_MINE,
+  UT_GOLD_MINE,
+  UT_DIAMOND_MINE,
+  UT_LIVESTOCK_FARM,
 ] as const;
 
 const ATLAS_COLS = STRUCTURE_ORDER.length;
@@ -146,14 +150,8 @@ export class StructurePass {
     this.effectTex = effectTex;
 
     // Build unitType string → atlas column mapping
-    for (let i = 0; i < header.unitTypes.length; i++) {
-      const unitType = header.unitTypes[i];
-      const col = STRUCTURE_ORDER.indexOf(
-        unitType as (typeof STRUCTURE_ORDER)[number],
-      );
-      if (col >= 0) {
-        this.typeToAtlasCol.set(unitType, col);
-      }
+    for (let i = 0; i < STRUCTURE_ORDER.length; i++) {
+      this.typeToAtlasCol.set(STRUCTURE_ORDER[i], i);
     }
 
     // Compile shaders

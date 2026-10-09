@@ -15,6 +15,7 @@ uniform float uDotsThreshold;
 uniform float uDotScale;
 uniform float uScaleFactor;
 uniform float uIconGrowZoom;
+uniform float uGhostAlpha;
 uniform float uShapeScales[ATLAS_COLS];
 uniform float uIconFills[ATLAS_COLS];
 
@@ -37,7 +38,7 @@ void main() {
   vAtlasIdx = aInst1.x;
 
   float iconScale;
-  if (uZoom <= uDotsThreshold) {
+  if (uZoom <= uDotsThreshold && uGhostAlpha > 0.99) {
     iconScale = uDotScale;
   } else if (uZoom >= uIconGrowZoom) {
     // World-anchored: grow proportionally to zoom so the structure covers a

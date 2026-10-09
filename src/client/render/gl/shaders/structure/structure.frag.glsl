@@ -135,38 +135,38 @@ float mineGlyphAlpha(vec2 p, float atlasIdx) {
     alpha = max(alpha, lineAlpha(p, vec2(0.22, 0.24), vec2(0.0, -0.20), 0.035));
     alpha = max(alpha, lineAlpha(p, vec2(-0.24, 0.24), vec2(0.24, 0.24), 0.035));
     alpha = max(alpha, lineAlpha(p, vec2(-0.17, 0.04), vec2(0.17, 0.04), 0.03));
-    alpha = max(alpha, lineAlpha(p, vec2(-0.22, -0.20), vec2(0.22, -0.20), 0.035));
-    alpha = max(alpha, lineAlpha(p, vec2(0.0, -0.20), vec2(0.0, 0.32), 0.03));
+    alpha = max(alpha, lineAlpha(p, vec2(-0.10, -0.20), vec2(0.10, -0.20), 0.035));
+    alpha = max(alpha, lineAlpha(p, vec2(0.0, -0.20), vec2(0.0, 0.24), 0.03));
   } else if (atlasIdx < 7.5) {
     // Gold pickaxe.
-    alpha = max(alpha, lineAlpha(p, vec2(-0.22, 0.22), vec2(0.20, -0.22), 0.035));
-    alpha = max(alpha, lineAlpha(p, vec2(-0.27, 0.23), vec2(0.02, 0.30), 0.04));
-    alpha = max(alpha, lineAlpha(p, vec2(0.02, 0.30), vec2(0.27, 0.22), 0.04));
+    alpha = max(alpha, lineAlpha(p, vec2(-0.20, 0.20), vec2(0.16, -0.16), 0.035));
+    alpha = max(alpha, lineAlpha(p, vec2(-0.02, -0.27), vec2(0.16, -0.16), 0.04));
+    alpha = max(alpha, lineAlpha(p, vec2(0.16, -0.16), vec2(0.27, -0.02), 0.04));
   } else if (atlasIdx < 8.5) {
     // Diamond gem with internal facets.
-    alpha = max(alpha, lineAlpha(p, vec2(-0.28, 0.12), vec2(-0.12, 0.28), 0.03));
-    alpha = max(alpha, lineAlpha(p, vec2(-0.12, 0.28), vec2(0.12, 0.28), 0.03));
-    alpha = max(alpha, lineAlpha(p, vec2(0.12, 0.28), vec2(0.28, 0.12), 0.03));
-    alpha = max(alpha, lineAlpha(p, vec2(0.28, 0.12), vec2(0.0, -0.28), 0.03));
-    alpha = max(alpha, lineAlpha(p, vec2(0.0, -0.28), vec2(-0.28, 0.12), 0.03));
-    alpha = max(alpha, lineAlpha(p, vec2(-0.28, 0.12), vec2(0.28, 0.12), 0.025));
-    alpha = max(alpha, lineAlpha(p, vec2(-0.12, 0.28), vec2(0.0, 0.12), 0.025));
-    alpha = max(alpha, lineAlpha(p, vec2(0.12, 0.28), vec2(0.0, 0.12), 0.025));
-    alpha = max(alpha, lineAlpha(p, vec2(0.0, 0.12), vec2(0.0, -0.28), 0.025));
+    alpha = max(alpha, lineAlpha(p, vec2(-0.14, -0.26), vec2(0.14, -0.26), 0.035));
+    alpha = max(alpha, lineAlpha(p, vec2(-0.28, -0.10), vec2(-0.14, -0.26), 0.03));
+    alpha = max(alpha, lineAlpha(p, vec2(0.14, -0.26), vec2(0.28, -0.10), 0.03));
+    alpha = max(alpha, lineAlpha(p, vec2(-0.28, -0.10), vec2(0.28, -0.10), 0.03));
+    alpha = max(alpha, lineAlpha(p, vec2(-0.28, -0.10), vec2(0.0, 0.28), 0.03));
+    alpha = max(alpha, lineAlpha(p, vec2(0.28, -0.10), vec2(0.0, 0.28), 0.03));
+    alpha = max(alpha, lineAlpha(p, vec2(-0.14, -0.26), vec2(0.0, -0.10), 0.025));
+    alpha = max(alpha, lineAlpha(p, vec2(0.14, -0.26), vec2(0.0, -0.10), 0.025));
+    alpha = max(alpha, lineAlpha(p, vec2(0.0, -0.10), vec2(0.0, 0.28), 0.025));
   } else {
     // Livestock Farm / Barn with gambrel roof and door cross.
-    alpha = max(alpha, lineAlpha(p, vec2(0.0, 0.24), vec2(-0.16, 0.14), 0.035));
-    alpha = max(alpha, lineAlpha(p, vec2(0.0, 0.24), vec2(0.16, 0.14), 0.035));
-    alpha = max(alpha, lineAlpha(p, vec2(-0.16, 0.14), vec2(-0.22, 0.02), 0.035));
-    alpha = max(alpha, lineAlpha(p, vec2(0.16, 0.14), vec2(0.22, 0.02), 0.035));
-    alpha = max(alpha, lineAlpha(p, vec2(-0.19, 0.02), vec2(-0.19, -0.22), 0.035));
-    alpha = max(alpha, lineAlpha(p, vec2(0.19, 0.02), vec2(0.19, -0.22), 0.035));
-    alpha = max(alpha, lineAlpha(p, vec2(-0.22, -0.22), vec2(0.22, -0.22), 0.035));
-    alpha = max(alpha, lineAlpha(p, vec2(-0.08, -0.22), vec2(-0.08, -0.06), 0.03));
-    alpha = max(alpha, lineAlpha(p, vec2(0.08, -0.22), vec2(0.08, -0.06), 0.03));
-    alpha = max(alpha, lineAlpha(p, vec2(-0.08, -0.06), vec2(0.08, -0.06), 0.03));
-    alpha = max(alpha, lineAlpha(p, vec2(-0.07, -0.07), vec2(0.07, -0.21), 0.025));
-    alpha = max(alpha, lineAlpha(p, vec2(-0.07, -0.21), vec2(0.07, -0.07), 0.025));
+    alpha = max(alpha, lineAlpha(p, vec2(0.0, -0.24), vec2(-0.16, -0.14), 0.035));
+    alpha = max(alpha, lineAlpha(p, vec2(0.0, -0.24), vec2(0.16, -0.14), 0.035));
+    alpha = max(alpha, lineAlpha(p, vec2(-0.16, -0.14), vec2(-0.22, -0.02), 0.035));
+    alpha = max(alpha, lineAlpha(p, vec2(0.16, -0.14), vec2(0.22, -0.02), 0.035));
+    alpha = max(alpha, lineAlpha(p, vec2(-0.19, -0.02), vec2(-0.19, 0.22), 0.035));
+    alpha = max(alpha, lineAlpha(p, vec2(0.19, -0.02), vec2(0.19, 0.22), 0.035));
+    alpha = max(alpha, lineAlpha(p, vec2(-0.22, 0.22), vec2(0.22, 0.22), 0.035));
+    alpha = max(alpha, lineAlpha(p, vec2(-0.08, 0.22), vec2(-0.08, 0.06), 0.03));
+    alpha = max(alpha, lineAlpha(p, vec2(0.08, 0.22), vec2(0.08, 0.06), 0.03));
+    alpha = max(alpha, lineAlpha(p, vec2(-0.08, 0.06), vec2(0.08, 0.06), 0.03));
+    alpha = max(alpha, lineAlpha(p, vec2(-0.07, 0.07), vec2(0.07, 0.21), 0.025));
+    alpha = max(alpha, lineAlpha(p, vec2(-0.07, 0.21), vec2(0.07, 0.07), 0.025));
   }
 
   return clamp(alpha, 0.0, 1.0);
@@ -260,9 +260,9 @@ void main() {
   vec4 bgColor = mix(borderColor, fillColor, borderMask);
 
   // Sample icon from atlas (white on transparent)
-  // Only show icon detail when zoomed in enough
+  // Only show icon detail when zoomed in enough (or for ghost previews)
   float iconAlpha = 0.0;
-  if (vZoom > uDotsThreshold) {
+  if (vZoom > uDotsThreshold || uGhostAlpha < 0.99) {
     if (vAtlasIdx >= 5.5) {
       iconAlpha = mineGlyphAlpha(vLocalPos, vAtlasIdx) * borderMask;
     } else {
