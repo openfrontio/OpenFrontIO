@@ -81,9 +81,40 @@ describe("EventsDisplay emoji setting (#4430)", () => {
     expect((ed as unknown as { events: unknown[] }).events).toHaveLength(1);
   });
 
+  it("confirms an emoji I sent to everyone", () => {
+    ed.onEmojiMessageEvent({
+      type: GameUpdateType.Emoji,
+      emoji: {
+        message: "👍",
+        senderID: 1,
+        recipientID: "AllPlayers",
+        createdAt: 0,
+      },
+    } as never);
+    const events = (ed as unknown as { events: { description: string }[] })
+      .events;
+    expect(events).toHaveLength(1);
+    expect(events[0].description).toBe("events_display.sent_emoji_all");
+    // A confirmation, so it goes to the small feed, not the important one.
+    expect((events[0] as { minor?: boolean }).minor).toBe(true);
+  });
+
   it("adds nothing when the setting is off", () => {
     setEmojisEnabled(false);
     ed.onEmojiMessageEvent(emojiUpdate as never);
     expect((ed as unknown as { events: unknown[] }).events).toHaveLength(0);
+  });
+
+  it("still confirms emojis I sent when the setting is off", () => {
+    setEmojisEnabled(false);
+    ed.onEmojiMessageEvent({
+      type: GameUpdateType.Emoji,
+      emoji: { message: "👍", senderID: 1, recipientID: 2, createdAt: 0 },
+    } as never);
+    const events = (ed as unknown as { events: { description: string }[] })
+      .events;
+    expect(events).toHaveLength(1);
+    expect(events[0].description).toBe("events_display.sent_emoji");
+    expect((events[0] as { minor?: boolean }).minor).toBe(true);
   });
 });

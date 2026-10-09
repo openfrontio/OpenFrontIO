@@ -90,7 +90,7 @@
     "reward_prestige": "Prestige reward",
     "reward_signup_bonus": "Subscription signup bonus",
     "sign_in_desc": "Sign in to save your stats and progress",
-    "sub_granted_from_purchase": "Included with your Steam purchase, paid for once on Steam. It isn't billed and doesn't renew, so there's nothing to manage or cancel. When it ends you keep the full game at no charge; only the {tier} perks stop.",
+    "sub_granted_from_purchase": "Included with your Steam purchase, paid for once on Steam. It isn't billed and doesn't renew, so there's nothing to manage or cancel. When it ends you keep the full game at no charge.",
     "sub_granted_indefinite": "Free access granted to your account. It isn't billed, so there's nothing to manage or cancel.",
     "sub_granted_perks_end_on": "{tier} perks end {date}",
     "sub_past_due_note": "Your last payment didn't go through, so your {tier} perks are paused. Update your payment method to restore them.",
@@ -192,16 +192,17 @@
     "unavailable": "Username management isn't available on this account yet."
   },
   "chat": {
+    "all_phrases": "All phrases",
     "attack": {
       "attack": "Attack [P1]!",
       "betray": "Betray [P1]!",
       "build_sams": "Build SAMs!",
       "build_warships": "Build Warships!",
+      "crown": "Attack the crown!",
       "finish": "Let's finish off [P1]!",
       "focus": "Focus fire on [P1]!",
       "mirv": "Launch a MIRV at [P1]!"
     },
-    "build": "Build your message...",
     "cat": {
       "attack": "Attack",
       "defend": "Defend",
@@ -210,7 +211,6 @@
       "misc": "Miscellaneous",
       "warnings": "Warnings"
     },
-    "category": "Category",
     "defend": {
       "ally": "[P1] is my ally!",
       "build_posts": "Build Defense Posts!",
@@ -260,11 +260,29 @@
       "strategy": "Nice strategy!",
       "team_up": "Let’s team up against [P1]!"
     },
-    "phrase": "Phrase",
-    "player": "Player",
     "search": "Search player...",
-    "send": "Send",
-    "sort_by_territory": "Sort by territory",
+    "short": {
+      "greet": {
+        "ruining_games": "Ruining our games"
+      },
+      "help": {
+        "sorry_attack": "Sorry for attacking!",
+        "troops_frontlines": "Troops to the front!"
+      },
+      "misc": {
+        "coastline": "Let me have a coast",
+        "join_discord": "Join the Discord!",
+        "pr": "Is my PR merged yet?"
+      },
+      "warnings": {
+        "mirv_ready": "[P1] can MIRV now!",
+        "pirating": "[P1] is pirating",
+        "saving_for_mirv": "[P1] saving for MIRV",
+        "snowballing": "[P1] is snowballing",
+        "stalemate": "Peace? Stalemate.",
+        "stop_trading_all": "Stop all trading!"
+      }
+    },
     "title": "Quick Chat",
     "to": "Sent {user}: {msg}",
     "warnings": {
@@ -278,7 +296,6 @@
       "mirv_ready": "[P1] has enough gold to launch a MIRV!",
       "mirv_soon": "[P1] can launch a MIRV soon!",
       "no_allies": "[P1] has no allies.",
-      "number1_warning": "The #1 player will win soon unless we team up!",
       "pirating": "[P1] is pirating all of our trade!",
       "saving_for_mirv": "[P1] is saving up to launch a MIRV.",
       "snowballing": "[P1] is snowballing too fast!",
@@ -750,6 +767,18 @@
       "warship": "Warship"
     }
   },
+  "emoji_table": {
+    "diplomacy": "Diplomacy",
+    "directions": "Directions",
+    "faces": "Faces",
+    "favorite_remove_hint": "Drag out to remove",
+    "favorites": "Favorites",
+    "favorites_hint": "Drag emojis here to give them a shortcut key",
+    "favorites_hint_touch": "Drag emojis here to keep them handy",
+    "gestures": "Gestures",
+    "ranks": "Ranks",
+    "things": "Things"
+  },
   "error_modal": {
     "connection_error": "Connection error!",
     "connection_lost": "Lost connection to the game server and could not reconnect. Refresh the page to try rejoining.",
@@ -802,6 +831,7 @@
     "request_alliance": "{name} requests an alliance!",
     "retreating": "retreating",
     "sent_emoji": "Sent {name}: {emoji}",
+    "sent_emoji_all": "Sent everyone: {emoji}",
     "sent_gold_to_player": "Sent {gold} gold to {name}",
     "sent_troops_to_player": "Sent {troops} troops to {name}",
     "trade_ship_captured": "Your trade ship was captured by {name}",
@@ -1070,6 +1100,7 @@
     "action_game_speed": "Game speed down / up (single player)",
     "action_move_camera": "Move camera",
     "action_pause_game": "Pause / Resume game",
+    "action_quick_chat": "Open quick chat",
     "action_ratio_change": "Decrease/Increase attack ratio",
     "action_reset_gfx": "Reset graphics",
     "action_warship_multiselect": "Select multiple warships (drag to draw selection box)",
@@ -1179,6 +1210,8 @@
     "nation_players": "Nations",
     "player": "Player",
     "player_immunity_duration": "PVP immunity duration (minutes)",
+    "player_limit": "Player limit",
+    "player_limit_placeholder": "Players",
     "player_whitelist": "Player Whitelist (public IDs)",
     "player_whitelist_placeholder": "comma separated",
     "players": "Players",
@@ -1551,6 +1584,9 @@
     "limit_upsell": "Get unlimited ranked",
     "must_login": "You must be logged in to play ranked matchmaking.",
     "no_elo": "No ELO yet",
+    "not_trusted": "Ranked is limited to trusted accounts.",
+    "not_trusted_info": "Your account becomes trusted after you play more public games, or right away with any purchase.",
+    "not_trusted_info_crazygames": "Your account becomes trusted after you play more public games.",
     "queue_size": "Players in queue: {count}",
     "rejected": "Matchmaking is unavailable right now. Please try again later.",
     "replaced": "You joined matchmaking from another tab or window.",
@@ -1567,6 +1603,12 @@
     "ranked_2v2_title": "2v2",
     "ranked_pairing_note": "In team modes, clanmates and friends in the queue are placed on the same team where possible. Friends are paired first, then clanmates. If your ratings are too far apart you'll be matched separately to keep games fair.",
     "ranked_title": "Ranked",
+    "ranked_trust_required_body": "Ranked only accepts trusted accounts. To become trusted, play more games or make any purchase.",
+    "ranked_trust_required_body_crazygames": "Ranked only accepts trusted accounts. To become trusted, play more games.",
+    "ranked_trust_required_body_signed_out": "Ranked only accepts trusted accounts. To become trusted, sign in to your account, then play more games or make any purchase.",
+    "ranked_trust_required_body_signed_out_crazygames": "Ranked only accepts trusted accounts. To become trusted, sign in to your account, then play more games.",
+    "ranked_trust_required_title": "Trusted accounts only",
+    "ranked_trust_tooltip_title": "Trusted ranked",
     "retry_lobbies": "Retry",
     "servers_unreachable": "Can't connect to the OpenFront servers",
     "teams_count": "{teamCount} teams",
@@ -1646,6 +1688,8 @@
     "betrayals": "Betrayals",
     "break_alliance": "Break Alliance",
     "chat": "Chat",
+    "cosmetic_get_label": "{name} (Get it in the store)",
+    "cosmetics": "Equipped",
     "emotes": "Emojis",
     "flip_rocket_trajectory": "Flip rocket trajectory",
     "gold": "Gold",
@@ -2029,7 +2073,7 @@
   "steam_grant": {
     "ended_body": "The month of {tier} that came with your Steam purchase has ended. Nothing has been charged and nothing will be. You keep the full game: every map and mode, online play, ranked with the free daily limit, and custom lobbies with friends. The Steam app stays ad-free. If you want the {tier} perks back, you can subscribe from the store at any time.",
     "ended_heading": "Your included Steam month has ended",
-    "welcome_body": "Your Steam purchase includes {tier} until {date}. You paid once, on Steam: nothing is billed and nothing renews. When it ends you keep the full game, every map and mode, and the Steam app stays ad-free. Only the {tier} perks stop.",
+    "welcome_body": "Your Steam purchase includes {tier} until {date}. You paid once, on Steam: nothing is billed and nothing renews. When it ends you keep the full game, every map and mode, and the Steam app stays ad-free.",
     "welcome_heading": "Included with your Steam purchase"
   },
   "steam_handoff": {
@@ -2423,6 +2467,8 @@
     "easter_bug_count_label": "Bug Count",
     "easter_writing_speed_desc": "Adjust how fast you pretend to code (x1–x100)",
     "easter_writing_speed_label": "Writing Speed Multiplier",
+    "emoji_menu": "Emoji Menu",
+    "emoji_menu_desc": "Open the emoji menu for the player whose tile is under your cursor.",
     "emoji_menu_modifier": "Emoji Menu Modifier",
     "emoji_menu_modifier_desc": "Hold this key while clicking to open the emoji menu.",
     "emojis_desc": "Toggle whether emojis are shown in game",
@@ -2475,6 +2521,8 @@
     "performance_overlay_desc": "Toggle the performance overlay. When enabled, the performance overlay will be displayed. Press shift-D during game to toggle.",
     "performance_overlay_label": "Performance Overlay",
     "press_a_key": "Press a key",
+    "quick_chat": "Quick Chat",
+    "quick_chat_desc": "Open quick chat for the player whose tile is under your cursor.",
     "render_debug_gui": "Render Debug GUI",
     "render_debug_gui_desc": "Toggle the renderer tuning panel",
     "replay_viewer_desc": "Open replays with rewind controls. Off opens the classic replay",
@@ -2498,6 +2546,8 @@
     "tab_gameplay": "Gameplay",
     "tab_graphics": "Graphics",
     "tab_keybinds": "Keybinds",
+    "target_player": "Target Player",
+    "target_player_desc": "Mark the player whose tile is under your cursor as a target for you and your allies.",
     "title": "Settings",
     "toggle_terrain": "Toggle Terrain",
     "toggle_view": "Toggle View",
@@ -2524,6 +2574,8 @@
     "enter_username": "Enter your username",
     "invalid_chars": "Username can only contain letters, numbers, spaces, underscores, hyphens, and periods.",
     "lapse_notice": "Your subscription ended, so you are no longer playing as \"{name}\". It stays reserved for you until {date} — resubscribe before then to keep it. After that anyone can take it.",
+    "lapse_notice_after_free_access": "Your free premium access has ended, so you are no longer playing as \"{name}\". You keep the full game at no charge; only the premium perks stop. The name stays reserved for you until {date} — subscribe before then to keep it. After that anyone can take it.",
+    "lapse_notice_after_free_access_at_risk": "Your free premium access has ended, so you are no longer playing as \"{name}\", and the name is no longer reserved. You keep the full game at no charge. Another player can take the name at any moment — subscribe now to keep it.",
     "lapse_notice_after_grant": "The month of premium access that came with your Steam purchase has ended, so you are no longer playing as \"{name}\". You keep the full game at no charge; only the premium perks stop. The name stays reserved for you until {date} — subscribe before then to keep it. After that anyone can take it.",
     "lapse_notice_after_grant_at_risk": "The month of premium access that came with your Steam purchase has ended, so you are no longer playing as \"{name}\", and the name is no longer reserved. You keep the full game at no charge. Another player can take the name at any moment — subscribe now to keep it.",
     "lapse_notice_at_risk": "You are no longer playing as \"{name}\", and it is no longer reserved. Another player can take it at any moment — resubscribe now to keep it.",
