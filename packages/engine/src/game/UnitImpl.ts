@@ -240,8 +240,12 @@ export class UnitImpl implements Unit {
     this._resourceGoldProduced += amount;
   }
 
-  resetResourceGoldProduced(): void {
-    this._resourceGoldProduced = 0n;
+  refillResourceGoldProduced(amount: bigint): void {
+    if (amount <= 0n) return;
+    this._resourceGoldProduced = Math.max(
+      0n,
+      this._resourceGoldProduced - amount,
+    );
   }
   health(): number {
     return Number(this._health);
