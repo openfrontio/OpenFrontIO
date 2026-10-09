@@ -159,6 +159,10 @@ export class Config {
     return this._gameConfig;
   }
 
+  aiResourceStructures(): boolean {
+    return this._gameConfig.aiResourceStructures ?? false;
+  }
+
   cityTroopIncrease(): number {
     return 250_000;
   }
