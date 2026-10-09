@@ -18,7 +18,7 @@ import {
   WaterPathFinderSchema,
   waterPathFinderState,
 } from "../snapshot/PathfinderSnapshots";
-import { resetResourceProduction } from "./utils/ResourceProduction";
+import { refillResourceProduction } from "./utils/ResourceProduction";
 import type {
   ExecRecord,
   SnapshotReader,
@@ -214,8 +214,8 @@ export class TradeShipExecution implements Execution {
       // A completed normal trade shipment refreshes the production reserves
       // for resource structures at both ports. Captured ships do not count as
       // trade and therefore do not refresh reserves.
-      resetResourceProduction(this.srcPort.owner());
-      resetResourceProduction(this._dstPort.owner());
+      refillResourceProduction(this.srcPort.owner(), this.mg);
+      refillResourceProduction(this._dstPort.owner(), this.mg);
 
       this.srcPort.owner().addGold(gold, this.srcPort.tile());
       this._dstPort.owner().addGold(gold, this._dstPort.tile());
