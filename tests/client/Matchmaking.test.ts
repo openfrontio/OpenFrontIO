@@ -408,6 +408,57 @@ describe("MatchmakingModal identity gate", () => {
   });
 });
 
+describe("MatchmakingModal trust gate", () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+    sockets.length = 0;
+    apiMocks.getUserMe.mockReset();
+    vi.stubGlobal("WebSocket", FakeWebSocket);
+    installClanSelection(null);
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+    vi.unstubAllGlobals();
+    vi.useRealTimers();
+  });
+
+  function withTrust(
+    trustTier: UserMeResponse["player"]["trustTier"],
+  ): UserMeResponse {
+    const response = userMe();
+    return { ...response, player: { ...response.player, trustTier } };
+  }
+
+  function notTrusted(modal: MatchmakingModal): boolean {
+    return (modal as unknown as { notTrusted: boolean }).notTrusted;
+  }
+
+  // The service gates ranked on trust behind a flag, so the client must
+  // queue whatever the tier says and leave the decision to the 4103 close.
+  it.each(["untrusted", "trusted", null, undefined] as const)(
+    "queues an account whose tier is %s",
+    async (tier) => {
+      apiMocks.getUserMe.mockResolvedValue(withTrust(tier));
+      const modal = new MatchmakingModal();
+      modal.open();
+      await vi.waitFor(() => expect(sockets).toHaveLength(1));
+      expect(notTrusted(modal)).toBe(false);
+    },
+  );
+
+  it("stops without reconnecting when the service refuses as untrusted", async () => {
+    apiMocks.getUserMe.mockResolvedValue(withTrust("trusted"));
+    const { modal, socket } = await openAndJoin("1v1");
+    socket.serverClose(CloseCode.NotTrusted, CloseReason.NotTrusted);
+    await vi.runAllTimersAsync();
+
+    expect(modal.isOpen()).toBe(true);
+    expect(notTrusted(modal)).toBe(true);
+    expect(sockets).toHaveLength(1);
+  });
+});
+
 /**
  * What close() actually does, as opposed to who calls it.
  *

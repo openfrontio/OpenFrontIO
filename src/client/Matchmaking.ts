@@ -43,6 +43,10 @@ export class MatchmakingModal extends BaseModal {
   @state() private socket: WebSocket | null = null;
   @state() private gameID: string | null = null;
   @state() private limitReached = false;
+  // The matchmaking service refused this account as untrusted (4103). Only
+  // the service decides: it gates ranked on trust behind a flag, so the
+  // client never pre-checks trustTier.
+  @state() private notTrusted = false;
   @state() private queueSize: number | null = null;
   private selectedClanTag: string | null = null;
   private elo: number | string = "...";
@@ -88,6 +92,20 @@ export class MatchmakingModal extends BaseModal {
   }
 
   private renderInner() {
+    if (this.notTrusted) {
+      // CrazyGames has no purchases, so its variant only suggests playing.
+      const info = crazyGamesSDK.isOnCrazyGames()
+        ? "matchmaking_modal.not_trusted_info_crazygames"
+        : "matchmaking_modal.not_trusted_info";
+      return html`
+        <div class="flex flex-col items-center gap-4 text-center">
+          <p class="text-white font-bold">
+            ${translateText("matchmaking_modal.not_trusted")}
+          </p>
+          <p class="text-sm text-white/60">${translateText(info)}</p>
+        </div>
+      `;
+    }
     if (this.limitReached) {
       return html`
         <div class="flex flex-col items-center gap-4 text-center">
@@ -153,6 +171,7 @@ export class MatchmakingModal extends BaseModal {
     this.gameID = null;
     this.intentionalClose = false;
     this.limitReached = false;
+    this.notTrusted = false;
     this.queueSize = null;
     this.reconnectAttempts = 0;
     this.connect();
@@ -373,6 +392,13 @@ export class MatchmakingModal extends BaseModal {
         this.limitReached = true;
         return;
       }
+      // Not a trusted account — the server will keep refusing until it is,
+      // so don't reconnect.
+      if (event.code === CloseCode.NotTrusted) {
+        this.connected = false;
+        this.notTrusted = true;
+        return;
+      }
       if (
         event.code === CloseCode.InvalidClan ||
         legacyReason === "invalid_clan"
@@ -475,6 +501,7 @@ export class MatchmakingModal extends BaseModal {
     this.limitReached = false;
     this.queueSize = null;
     this.reconnectAttempts = 0;
+    this.notTrusted = false;
     this.connect();
   }
 
