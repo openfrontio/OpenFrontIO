@@ -120,6 +120,7 @@ export class PlayerExecution implements Execution {
       const cap = this.config.resourceProductionCap(
         unit.type(),
         unit.level(),
+        this.player,
       );
       const remaining = cap - unit.resourceGoldProduced();
       if (remaining <= 0n) {
