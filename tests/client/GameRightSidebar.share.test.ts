@@ -300,15 +300,9 @@ describe("GameRightSidebar share button", () => {
     expect(showToastMock).toHaveBeenCalledWith("Failed to copy", "red");
   });
 
-  it("does not render the share button in singleplayer games", async () => {
+  it("renders the share button in singleplayer games", async () => {
     const el = await mount({ gameType: GameType.Singleplayer });
     const shareBtn = getShareButton(el);
-    expect(shareBtn).toBeNull();
-  });
-
-  it("does not render the share button during replays", async () => {
-    const el = await mount({ isReplay: true });
-    const shareBtn = getShareButton(el);
-    expect(shareBtn).toBeNull();
+    expect(shareBtn).not.toBeNull();
   });
 });

@@ -294,11 +294,6 @@ export class GameRightSidebar extends LitElement implements Controller {
   }
 
   private isShareable(): boolean {
-    if (this._isSinglePlayer) return false;
-    const config = this.game?.config?.();
-    if (!config) return false;
-    if (config.isReplay?.()) return false;
-    if (config.gameConfig?.()?.gameType === GameType.Singleplayer) return false;
     return Boolean(this.game?.gameID?.());
   }
 
