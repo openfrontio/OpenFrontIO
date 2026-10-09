@@ -82,4 +82,17 @@ describe("refreshOwnHiddenLevelBadge", () => {
     expect(await pending).toBeUndefined();
     expect(ownHiddenLevelBadge()).toBeUndefined();
   });
+
+  it("keeps the latest refresh when an older one answers last", async () => {
+    // Hidden, then shown again: the refresh for the change answers first, the
+    // one from before it last, with the old setting.
+    let older!: (me: UserMeResponse | false) => void;
+    getUserMe.mockReturnValueOnce(new Promise((r) => (older = r)));
+    getUserMe.mockResolvedValueOnce(me({ progress, levelHidden: false }));
+    const first = refreshOwnHiddenLevelBadge();
+    await refreshOwnHiddenLevelBadge();
+    older(me({ progress, levelHidden: true }));
+    await first;
+    expect(ownHiddenLevelBadge()).toBeUndefined();
+  });
 });

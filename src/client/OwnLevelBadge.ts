@@ -24,9 +24,10 @@ export function ownHiddenLevelBadgeFrom(
 }
 
 let cached: LevelBadge | undefined;
-// Bumped when the session is cleared, so a refresh still waiting on the old
-// account's /users/@me can't write its badge back after the clear.
-let session = 0;
+// Bumped by every refresh and when the session is cleared: only the latest
+// refresh writes the cache. One still waiting on an older /users/@me (from
+// before a visibility change, or the old account's after a clear) leaves it.
+let generation = 0;
 
 // The last value refreshOwnHiddenLevelBadge() found, for synchronous readers
 // (the in-game player panel).
@@ -39,14 +40,13 @@ export function ownHiddenLevelBadge(): LevelBadge | undefined {
 export async function refreshOwnHiddenLevelBadge(): Promise<
   LevelBadge | undefined
 > {
-  const forSession = session;
+  const forGeneration = ++generation;
   const badge = ownHiddenLevelBadgeFrom(await getUserMe());
-  // A stale answer (the session was cleared meanwhile) leaves the cache be.
-  if (forSession === session) cached = badge;
+  if (forGeneration === generation) cached = badge;
   return cached;
 }
 
 document.addEventListener("session-cleared", () => {
-  session++;
+  generation++;
   cached = undefined;
 });
