@@ -176,4 +176,43 @@ describe("AI resource structures", () => {
     );
     expect(built).toBeGreaterThanOrEqual(1);
   });
+  test("resource AI upgrades an existing mine before repeating it forever", async () => {
+    const game = await setup("big_plains", {
+      aiResourceStructures: true,
+      infiniteGold: true,
+      instantBuild: true,
+      disabledUnits: [
+        UnitType.LivestockFarm,
+        UnitType.GoldMine,
+        UnitType.DiamondMine,
+      ],
+    });
+
+    const botInfo = new PlayerInfo(
+      "resource_upgrade_bot",
+      PlayerType.Bot,
+      null,
+      "resource_upgrade_bot",
+    );
+    game.addPlayer(botInfo);
+    const bot = game.player(botInfo.id);
+    giveAllPassableLand(game, bot);
+
+    const behavior = new AiResourceStructureBehavior(
+      new PseudoRandom(42),
+      game,
+      bot,
+    );
+
+    expect(behavior.handleStructures()).toBe(true);
+    executeTicks(game, 3);
+
+    const mine = bot.units(UnitType.OilMine)[0];
+    expect(mine).toBeDefined();
+    expect(mine.level()).toBe(1);
+
+    expect(behavior.handleStructures()).toBe(true);
+    expect(mine.level()).toBe(2);
+  });
+
 });
