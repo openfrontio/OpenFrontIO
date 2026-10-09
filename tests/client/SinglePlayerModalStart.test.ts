@@ -49,7 +49,6 @@ describe("SinglePlayerModal start", () => {
     expect(config.disabledUnits).toEqual([UnitType.Warship]);
   });
 
-
   it("carries the AI resource structures option into the solo game config", async () => {
     const modal = createModal();
     const events: any[] = [];
