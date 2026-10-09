@@ -1367,6 +1367,7 @@
   "lobby_config": {
     "preset": {
       "delete": "Delete",
+      "delete_failed": "Failed to delete preset",
       "deleted": "Preset deleted",
       "load": "Load",
       "loaded": "Preset loaded",

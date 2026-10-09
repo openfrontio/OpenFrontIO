@@ -125,14 +125,14 @@ export function saveLobbyPreset(
 export function deleteLobbyPreset(
   name: string,
   userSettings: UserSettings,
-): LobbyPreset[] {
+): LobbyPreset[] | null {
   const trimmed = name.trim();
-  if (!trimmed) return userSettings.getLobbyPresets();
+  if (!trimmed) return null;
 
   const presets = userSettings.getLobbyPresets();
   const newPresets = presets.filter(
     (p) => p.name.toLowerCase() !== trimmed.toLowerCase(),
   );
-  userSettings.setLobbyPresets(newPresets);
-  return newPresets;
+  const success = userSettings.setLobbyPresets(newPresets);
+  return success ? newPresets : null;
 }
