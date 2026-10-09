@@ -928,6 +928,7 @@
   },
   "game_settings": {
     "bots": "Tribes: ",
+    "ai_resource_structures": "AI resource structures",
     "compact_map": "Compact Map",
     "custom_alliances": "Alliance Duration",
     "disable_units": "Disable Units",
