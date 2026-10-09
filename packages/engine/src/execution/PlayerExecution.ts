@@ -24,9 +24,15 @@ import type {
 
 const TICKS_PER_CLUSTER_CALC = 20;
 
-// Results of the per-cluster border scan (classifyCluster).
 const CLUSTER_SURROUNDED = 1;
 const CLUSTER_SEVERED_CANDIDATE = 2;
+
+// Border tiles that may belong to land cut off from the main body, with
+// their bounding boxes packed four numbers apiece (minX, minY, maxX, maxY).
+interface SeveredCandidates {
+  clusters: TileRef[][];
+  boxes: number[];
+}
 
 export class PlayerExecution implements Execution {
   private ticksPerClusterCalc = TICKS_PER_CLUSTER_CALC;
@@ -161,6 +167,7 @@ export class PlayerExecution implements Execution {
       if (surroundedBy && !surroundedBy.isFriendly(this.player)) {
         this.removeCluster(clusters[0]);
       }
+      this.annexSeveredLand(clusters[0], null);
       return;
     }
 
@@ -293,7 +300,7 @@ export class PlayerExecution implements Execution {
     }
 
     // Process remaining clusters
-    let severedCandidates: number[] | null = null;
+    let severed: SeveredCandidates | null = null;
     for (let i = 0; i < clusters.length; i++) {
       if (i === largestIndex) continue;
       const cluster = clusters[i];
@@ -309,13 +316,161 @@ export class PlayerExecution implements Execution {
         this.removeCluster(cluster);
       }
       if (result & CLUSTER_SEVERED_CANDIDATE) {
-        (severedCandidates ??= []).push(i);
+        severed ??= { clusters: [], boxes: [] };
+        severed.clusters.push(cluster);
+        severed.boxes.push(
+          boxes[idx],
+          boxes[idx + 1],
+          boxes[idx + 2],
+          boxes[idx + 3],
+        );
       }
     }
 
-    if (severedCandidates !== null) {
-      this.annexSeveredClusters(clusters, largestIndex, severedCandidates);
+    this.annexSeveredLand(largestCluster, severed);
+  }
+
+  private annexSeveredLand(
+    largestCluster: TileRef[],
+    severed: SeveredCandidates | null,
+  ) {
+    // Only fallout can cut land off, so skip the split in games without it.
+    let mainTiles: readonly TileRef[] = largestCluster;
+    if (this.map.numTilesWithFallout() > 0) {
+      const split = this.splitMainCluster(largestCluster);
+      if (split !== null) {
+        mainTiles = split.main;
+        if (split.candidates.clusters.length > 0) {
+          severed ??= { clusters: [], boxes: [] };
+          severed.clusters.push(...split.candidates.clusters);
+          severed.boxes.push(...split.candidates.boxes);
+        }
+      }
     }
+
+    if (severed !== null) {
+      this.annexSeveredClusters(severed, mainTiles);
+    }
+  }
+
+  /**
+   * Border clusters join tiles that touch only at a corner, but territories
+   * join only side by side, so land a nuke cuts off across a diagonal keeps
+   * its border in the main body's cluster. Splits that cluster into parts
+   * whose tiles are side by side or meet at a corner beside one of our
+   * tiles; each part then lies in a single territory. The largest part is
+   * the main body. Each other part that touches no coast, map edge or open
+   * land is returned as a candidate with its bounding box.
+   *
+   * Returns null when the whole cluster is one territory.
+   */
+  private splitMainCluster(
+    cluster: readonly TileRef[],
+  ): { main: TileRef[]; candidates: SeveredCandidates } | null {
+    const map = this.map;
+    const mySmallID = this.player.smallID();
+    const w = map.width();
+    const h = map.height();
+    if (cluster.length === 0 || map.ownerID(cluster[0]) !== mySmallID) {
+      return null;
+    }
+
+    // Only two of our tiles meeting at a corner with neither tile between
+    // them ours can split it. Look for one before doing the full split.
+    let pinched = false;
+    for (let j = 0; j < cluster.length && !pinched; j++) {
+      const t = cluster[j];
+      if (t >= (h - 1) * w) continue;
+      const below = t + w;
+      if (map.ownerID(below) === mySmallID) continue;
+      const x = t % w;
+      pinched =
+        (x < w - 1 &&
+          map.ownerID(below + 1) === mySmallID &&
+          map.ownerID(t + 1) !== mySmallID) ||
+        (x > 0 &&
+          map.ownerID(below - 1) === mySmallID &&
+          map.ownerID(t - 1) !== mySmallID);
+    }
+    if (!pinched) return null;
+
+    const state = this.traversalState();
+    const visited = state.visited;
+    const memberGen = this.bumpGeneration();
+    for (const t of cluster) visited[t] = memberGen;
+    const doneGen = this.bumpGeneration();
+    // The generation counter wrapped and cleared the stamps.
+    if (doneGen < memberGen) return null;
+
+    const stack = state.stack;
+    const parts: TileRef[][] = [];
+    const partBoxes: number[] = [];
+    const open: boolean[] = [];
+    for (const start of cluster) {
+      if (visited[start] !== memberGen) continue;
+      if (map.ownerID(start) !== mySmallID) continue;
+      visited[start] = doneGen;
+      stack.length = 0;
+      stack.push(start);
+      const part: TileRef[] = [];
+      let touchesOpen = false;
+      let minX = w,
+        minY = h,
+        maxX = -1,
+        maxY = -1;
+      while (stack.length > 0) {
+        const t = stack.pop()!;
+        part.push(t);
+        const x = t % w;
+        const y = (t - x) / w;
+        if (x < minX) minX = x;
+        if (y < minY) minY = y;
+        if (x > maxX) maxX = x;
+        if (y > maxY) maxY = y;
+        if (map.isShore(t) || map.isOnEdgeOfMap(t)) touchesOpen = true;
+        const numNeighbors = map.neighbors8(t, this.nbuf8);
+        for (let i = 0; i < numNeighbors; i++) {
+          const n = this.nbuf8[i];
+          const ownerId = map.ownerID(n);
+          const dx = (n % w) - x;
+          const diagonal = dx !== 0 && n - dx !== t;
+          if (!diagonal && ownerId === 0 && !map.hasFallout(n)) {
+            touchesOpen = true;
+          }
+          if (visited[n] !== memberGen || ownerId !== mySmallID) continue;
+          if (
+            diagonal &&
+            map.ownerID(t + dx) !== mySmallID &&
+            map.ownerID(n - dx) !== mySmallID
+          ) {
+            continue;
+          }
+          visited[n] = doneGen;
+          stack.push(n);
+        }
+      }
+      parts.push(part);
+      partBoxes.push(minX, minY, maxX, maxY);
+      open.push(touchesOpen);
+    }
+    if (parts.length < 2) return null;
+
+    let mainIndex = 0;
+    for (let i = 1; i < parts.length; i++) {
+      if (parts[i].length > parts[mainIndex].length) mainIndex = i;
+    }
+    const candidates: SeveredCandidates = { clusters: [], boxes: [] };
+    for (let i = 0; i < parts.length; i++) {
+      if (i === mainIndex || open[i]) continue;
+      candidates.clusters.push(parts[i]);
+      candidates.boxes.push(
+        partBoxes[i * 4],
+        partBoxes[i * 4 + 1],
+        partBoxes[i * 4 + 2],
+        partBoxes[i * 4 + 3],
+      );
+    }
+    return { main: parts[mainIndex], candidates };
   }
 
   /**
@@ -329,41 +484,46 @@ export class PlayerExecution implements Execution {
    * and fallout, has no way out and goes to the surrounding enemy.
    */
   private annexSeveredClusters(
-    clusters: TileRef[][],
-    largestIndex: number,
-    candidates: readonly number[],
+    candidates: SeveredCandidates,
+    mainTiles: readonly TileRef[],
   ) {
     const map = this.map;
     const mySmallID = this.player.smallID();
+    const visited = this.traversalState().visited;
 
-    let mainGen = 0;
-    for (const i of candidates) {
-      const cluster = clusters[i];
-      const state = this.traversalState();
-      if (mainGen === 0) {
-        // Stamp the main body's outer border so a flood that reaches it can
-        // stop: that cluster is still attached.
-        mainGen = this.bumpGeneration();
-        for (const t of clusters[largestIndex]) state.visited[t] = mainGen;
-      }
+    // Stamp the main body's border so a flood that reaches it can stop:
+    // that land is still attached.
+    let mainGen = this.bumpGeneration();
+    for (const t of mainTiles) visited[t] = mainGen;
 
+    for (let c = 0; c < candidates.clusters.length; c++) {
       // Clusters join land that touches diagonally but territories only
       // join side by side, so one cluster can span several territories.
-      // Judge each one separately; `seenGen` floods each only once.
+      // Judge each one separately: `seenGen` floods each only once, and
+      // `failGen` marks one given up on part-way.
       let seenGen = this.bumpGeneration();
-      if (seenGen < mainGen) {
+      let failGen = this.bumpGeneration();
+      if (failGen < mainGen) {
         // The generation counter wrapped and cleared every stamp.
-        mainGen = seenGen;
-        for (const t of clusters[largestIndex]) state.visited[t] = mainGen;
+        mainGen = this.bumpGeneration();
+        for (const t of mainTiles) visited[t] = mainGen;
         seenGen = this.bumpGeneration();
+        failGen = this.bumpGeneration();
       }
-      for (const start of cluster) {
+      for (const start of candidates.clusters[c]) {
         // An earlier annex in this pass may already have taken it.
         if (map.ownerID(start) !== mySmallID) continue;
-        const mark = state.visited[start];
-        if (mark === seenGen || mark === mainGen) continue;
+        const mark = visited[start];
+        if (mark === seenGen || mark === failGen || mark === mainGen) continue;
 
-        const territory = this.severedTerritory(start, mainGen, seenGen);
+        const territory = this.severedTerritory(
+          start,
+          mainGen,
+          seenGen,
+          failGen,
+          candidates.boxes,
+          c * 4,
+        );
         if (territory === null) continue;
 
         const capturing = this.getCapturingPlayer(territory);
@@ -386,43 +546,68 @@ export class PlayerExecution implements Execution {
    *
    * The cluster-level check that made it a candidate may have drawn on a
    * diagonally touching territory, so every condition is checked again here
-   * on this territory alone. A territory that fails is still filled to the
-   * end so the caller can skip the rest of its tiles; one that reaches the
-   * main body stops at once and is stamped as part of it.
+   * on this territory alone.
+   *
+   * Every row and column of a severed territory starts and ends on its
+   * outer border, and that border lies within one candidate, so the
+   * territory fits in the candidate's bounding box (`box` at `boxOffset`).
+   * A flood that leaves the box started on the ring round a hole in a larger
+   * territory, which is attached or has its outer border judged as another
+   * candidate, so it stops there. Without that bound a ring that stays a
+   * candidate, such as one round an ally's enclave, would flood the whole
+   * empire around it on every pass.
+   *
+   * A flood that fails stops at once and stamps what it walked, `mainGen` if
+   * it reached the main body and `failGen` otherwise, so later floods from
+   * the same candidate stop as soon as they reach it.
    */
   private severedTerritory(
     start: TileRef,
     mainGen: number,
     seenGen: number,
+    failGen: number,
+    box: readonly number[],
+    boxOffset: number,
   ): TileRef[] | null {
     const map = this.map;
     const mySmallID = this.player.smallID();
     const state = this.traversalState();
     const visited = state.visited;
     const stack = state.stack;
+    const minX = box[boxOffset];
+    const minY = box[boxOffset + 1];
+    const maxX = box[boxOffset + 2];
+    const maxY = box[boxOffset + 3];
     stack.length = 0;
     const tiles: TileRef[] = [start];
     visited[start] = seenGen;
     stack.push(start);
-    let severed = true;
     let hasEnemy = false;
     let hasFallout = false;
 
     while (stack.length > 0) {
       const tile = stack.pop()!;
-      if (map.isShore(tile) || map.isOnEdgeOfMap(tile)) severed = false;
+      const x = map.x(tile);
+      const y = map.y(tile);
+      if (
+        x < minX ||
+        x > maxX ||
+        y < minY ||
+        y > maxY ||
+        map.isShore(tile) ||
+        map.isOnEdgeOfMap(tile)
+      ) {
+        return this.stampAll(tiles, failGen);
+      }
       const numNeighbors = map.neighbors4(tile, this.nbuf);
       for (let i = 0; i < numNeighbors; i++) {
         const n = this.nbuf[i];
         const ownerId = map.ownerID(n);
         if (ownerId === mySmallID) {
-          if (visited[n] === mainGen) {
-            // Still attached to the main body: mark what we walked so later
-            // floods from this cluster stop as soon as they reach it.
-            for (const t of tiles) visited[t] = mainGen;
-            return null;
-          }
-          if (visited[n] === seenGen) continue;
+          const mark = visited[n];
+          if (mark === mainGen) return this.stampAll(tiles, mainGen);
+          if (mark === failGen) return this.stampAll(tiles, failGen);
+          if (mark === seenGen) continue;
           visited[n] = seenGen;
           tiles.push(n);
           stack.push(n);
@@ -431,11 +616,17 @@ export class PlayerExecution implements Execution {
         } else if (map.hasFallout(n)) {
           hasFallout = true;
         } else {
-          severed = false;
+          return this.stampAll(tiles, failGen);
         }
       }
     }
-    return severed && hasEnemy && hasFallout ? tiles : null;
+    return hasEnemy && hasFallout ? tiles : null;
+  }
+
+  private stampAll(tiles: readonly TileRef[], gen: number): null {
+    const visited = this.traversalState().visited;
+    for (const t of tiles) visited[t] = gen;
+    return null;
   }
 
   private checkAndAssignTerritory(
@@ -552,13 +743,9 @@ export class PlayerExecution implements Execution {
   }
 
   /**
-   * One scan of a non-main border cluster's neighbours, answering both
-   * annexation questions:
-   * - CLUSTER_SURROUNDED: enemy neighbours box the cluster in (fallout and
-   *   other unclaimed land are ignored).
-   * - CLUSTER_SEVERED_CANDIDATE: it borders only enemies and fallout, with at
-   *   least one of each (see annexSeveredClusters).
-   * Coast or map edge rules out both.
+   * The enemy box test ignores unclaimed land, but only fallout leaves the
+   * cluster a severed-land candidate: open land rules that out. Coast or map
+   * edge rules out both.
    */
   // Perf: Accepts raw bounds to skip allocating {min, max} Box objects.
   private classifyCluster(

@@ -6,7 +6,7 @@ import {
 import { NukeExecution } from "@openfront/engine/execution/NukeExecution";
 import { PlayerExecution } from "@openfront/engine/execution/PlayerExecution";
 import { Game, Player } from "@openfront/engine/game/Game";
-import { beforeEach, describe, expect, test, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { setup } from "../../util/Setup";
 import { TestConfig } from "../../util/TestConfig";
 import { executeTicks } from "../../util/utils";
@@ -19,6 +19,9 @@ import { executeTicks } from "../../util/utils";
 let game: Game;
 let defender: Player;
 let attacker: Player;
+// Some tests give it land; it runs no PlayerExecution, so its own land is
+// never annexed.
+let third: Player;
 
 type Shape = (x: number, y: number) => boolean;
 const rect =
@@ -36,24 +39,30 @@ function paint(defenderShape: Shape) {
   });
 }
 
-function crater(cx: number, cy: number, r: number) {
+function fallout(shape: Shape) {
   game.map().forEachTile((t) => {
-    const dx = game.x(t) - cx;
-    const dy = game.y(t) - cy;
-    if (dx * dx + dy * dy > r * r) return;
+    if (!shape(game.x(t), game.y(t))) return;
     const owner = game.owner(t);
     if (owner.isPlayer()) owner.relinquish(t);
     game.setFallout(t, true);
   });
 }
 
-function defenderTilesIn(shape: Shape): number {
+function crater(cx: number, cy: number, r: number) {
+  fallout((x, y) => (x - cx) * (x - cx) + (y - cy) * (y - cy) <= r * r);
+}
+
+function tilesOwnedBy(player: Player, shape: Shape): number {
   let n = 0;
   game.map().forEachTile((t) => {
-    if (game.ownerID(t) === defender.smallID() && shape(game.x(t), game.y(t)))
+    if (game.ownerID(t) === player.smallID() && shape(game.x(t), game.y(t)))
       n++;
   });
   return n;
+}
+
+function defenderTilesIn(shape: Shape): number {
+  return tilesOwnedBy(defender, shape);
 }
 
 // Cluster checks only rerun once tiles change after the previous check, so
@@ -75,6 +84,10 @@ const arm = rect(70, 94, 170, 106);
 const armTip = rect(130, 0, 199, 199);
 
 describe("land a nuke severs from the main body is annexed", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
   beforeEach(async () => {
     game = await setup(
       "big_plains",
@@ -82,10 +95,12 @@ describe("land a nuke severs from the main body is annexed", () => {
       [
         new PlayerInfo("defender", PlayerType.Human, "c1", "defender_id"),
         new PlayerInfo("attacker", PlayerType.Human, "c2", "attacker_id"),
+        new PlayerInfo("third", PlayerType.Human, "c3", "third_id"),
       ],
     );
     defender = game.player("defender_id");
     attacker = game.player("attacker_id");
+    third = game.player("third_id");
   });
 
   test("an arm cut off a main body that reaches the map edge is annexed", () => {
@@ -153,7 +168,7 @@ describe("land a nuke severs from the main body is annexed", () => {
 
     runClusterChecks();
 
-    // isSurrounded already annexes a fully surrounded inland pocket.
+    // classifyCluster already annexes a fully surrounded inland pocket.
     expect(defenderTilesIn(armTip)).toBe(0);
     expect(defenderTilesIn(mainBody)).toBe(mainBefore);
   });
@@ -247,6 +262,220 @@ describe("land a nuke severs from the main body is annexed", () => {
       // A touches no enemy, so it stays; B is cut off and goes to the attacker.
       expect(defenderTilesIn(a)).toBe(aBefore);
       expect(defenderTilesIn(b)).toBe(0);
+    },
+  );
+
+  // Two square craters across the arm, touching at one corner. The defender
+  // keeps both tiles beside that corner, so the two halves of the arm still
+  // touch diagonally and their borders join the main body's cluster, but no
+  // side-by-side path is left between them.
+  test.each([
+    {
+      name: "upper crater on the left",
+      craters: union(rect(95, 88, 100, 100), rect(101, 101, 106, 112)),
+    },
+    {
+      name: "lower crater on the left",
+      craters: union(rect(95, 101, 100, 112), rect(101, 88, 106, 100)),
+    },
+  ])(
+    "an arm cut off only across a diagonal is annexed ($name)",
+    ({ craters }) => {
+      paint(union(mainBody, arm));
+      startClusterChecks();
+      fallout(craters);
+      const cutOff = rect(101, 0, 199, 199);
+      const armBase = rect(71, 94, 100, 106);
+      const mainBefore = defenderTilesIn(mainBody);
+      const baseBefore = defenderTilesIn(armBase);
+      expect(defenderTilesIn(cutOff)).toBeGreaterThan(0);
+      expect(baseBefore).toBeGreaterThan(0);
+
+      runClusterChecks();
+
+      expect(defenderTilesIn(cutOff)).toBe(0);
+      expect(defenderTilesIn(armBase)).toBe(baseBefore);
+      expect(defenderTilesIn(mainBody)).toBe(mainBefore);
+    },
+  );
+
+  test("a cut-off piece with a hole of its own is still annexed", () => {
+    paint(union(mainBody, arm));
+    startClusterChecks();
+    crater(100, 100, 12);
+    // A hole in the arm's tip, half someone else's land, half fallout: its
+    // ring is a candidate of its own, and the tip reaches well past it.
+    for (let x = 140; x <= 142; x++) {
+      for (let y = 98; y <= 102; y++) third.conquer(game.ref(x, y));
+    }
+    fallout(rect(143, 98, 146, 102));
+    const mainBefore = defenderTilesIn(mainBody);
+    expect(defenderTilesIn(armTip)).toBeGreaterThan(0);
+
+    runClusterChecks();
+
+    expect(defenderTilesIn(armTip)).toBe(0);
+    expect(defenderTilesIn(mainBody)).toBe(mainBefore);
+  });
+
+  test("a hole bordering only an ally and fallout stays cheap and attached", () => {
+    // The defender holds the whole map but the attacker's top-left corner,
+    // so the main body's only outer border is far from the hole below.
+    const corner = rect(0, 0, 49, 49);
+    const piece = rect(10, 20, 25, 30);
+    paint((x, y) => !corner(x, y) || piece(x, y));
+    startClusterChecks();
+    // An ally's enclave in a hole near the bottom-right, with fallout beside
+    // it: the ring around the hole borders only the ally and fallout, so it
+    // is a candidate on every pass although it belongs to the main body.
+    defender.createAllianceRequest(third)!.accept();
+    for (let x = 165; x <= 175; x++) {
+      for (let y = 150; y <= 160; y++) third.conquer(game.ref(x, y));
+    }
+    fallout(rect(176, 150, 180, 160));
+    // A piece out in the attacker's land, cut off by a strike at its end.
+    fallout(rect(26, 20, 30, 30));
+    const defenderLand = (x: number, y: number) => !corner(x, y);
+    const mainBefore = defenderTilesIn(defenderLand);
+
+    // Count the tiles the severed-land floods walk.
+    let inFlood = false;
+    let walked = 0;
+    const proto = PlayerExecution.prototype as unknown as Record<
+      string,
+      (...args: unknown[]) => unknown
+    >;
+    const original = proto.severedTerritory;
+    const flood = vi
+      .spyOn(proto, "severedTerritory")
+      .mockImplementation(function (this: unknown, ...args: unknown[]) {
+        inFlood = true;
+        try {
+          return original.apply(this, args);
+        } finally {
+          inFlood = false;
+        }
+      });
+    const map = game.map();
+    const neighbors4 = map.neighbors4.bind(map);
+    vi.spyOn(map, "neighbors4").mockImplementation((ref, out) => {
+      if (inFlood) walked++;
+      return neighbors4(ref, out);
+    });
+
+    runClusterChecks();
+
+    expect(flood).toHaveBeenCalled();
+    expect(defenderTilesIn(piece)).toBe(0);
+    expect(defenderTilesIn(defenderLand)).toBe(mainBefore);
+    // The main body is ~37,000 tiles, and without a bound these passes walk
+    // nearly all of it; a flood from the ring stops once it leaves the
+    // ring's bounding box.
+    expect(walked).toBeLessThan(1000);
+  });
+
+  test("two severed pieces as the last land conquer the player once, by the last captor", () => {
+    // The main body falls first through the existing rules, as in the
+    // single-piece test above, then two cut-off pieces, each walled in by a
+    // different enemy.
+    const main = rect(40, 80, 80, 120);
+    const pocket = rect(81, 98, 83, 102);
+    const pieceA = rect(150, 30, 175, 42);
+    const pieceB = rect(150, 160, 175, 172);
+    const thirdLand = rect(100, 140, 199, 199);
+    const strips = union(rect(176, 30, 199, 42), rect(176, 160, 199, 172));
+    game.map().forEachTile((t) => {
+      const x = game.x(t);
+      const y = game.y(t);
+      if (main(x, y) || pieceA(x, y) || pieceB(x, y)) defender.conquer(t);
+      else if (thirdLand(x, y)) third.conquer(t);
+      else attacker.conquer(t);
+    });
+    // Until the strike the main body touches an unclaimed pocket and each
+    // piece opens onto unclaimed land running to the map edge.
+    game.map().forEachTile((t) => {
+      const owner = game.owner(t);
+      if (owner.isPlayer() && union(pocket, strips)(game.x(t), game.y(t))) {
+        owner.relinquish(t);
+      }
+    });
+    startClusterChecks();
+    expect(defenderTilesIn(pieceA)).toBeGreaterThan(0);
+    expect(defenderTilesIn(pieceB)).toBeGreaterThan(0);
+
+    const conquerPlayer = vi.spyOn(game, "conquerPlayer");
+    const captors: Player[] = [];
+    const ticks = new Set<number>();
+    for (const p of [attacker, third]) {
+      const conquer = p.conquer.bind(p);
+      vi.spyOn(p, "conquer").mockImplementation((t) => {
+        if (game.ownerID(t) === defender.smallID()) {
+          captors.push(p);
+          ticks.add(game.ticks());
+        }
+        conquer(t);
+      });
+    }
+    // In one tick the attacker seals the main body and strikes turn both
+    // strips, plus each piece's last column, into fallout.
+    game.map().forEachTile((t) => {
+      if (pocket(game.x(t), game.y(t))) attacker.conquer(t);
+    });
+    fallout(union(rect(175, 30, 199, 42), rect(175, 160, 199, 172)));
+
+    runClusterChecks();
+
+    expect(defender.numTilesOwned()).toBe(0);
+    // The main body and both pieces changed hands in one pass, the pieces
+    // to different captors.
+    expect(ticks.size).toBe(1);
+    expect(captors).toContain(attacker);
+    expect(captors).toContain(third);
+    expect(conquerPlayer).toHaveBeenCalledTimes(1);
+    expect(conquerPlayer).toHaveBeenCalledWith(
+      captors[captors.length - 1],
+      defender,
+    );
+  });
+
+  test("a cut-off piece next to only fallout and an ally is kept", () => {
+    paint(union(mainBody, arm));
+    defender.createAllianceRequest(attacker)!.accept();
+    startClusterChecks();
+    crater(100, 100, 12);
+    const tipBefore = defenderTilesIn(armTip);
+    expect(tipBefore).toBeGreaterThan(0);
+
+    runClusterChecks();
+
+    expect(defenderTilesIn(armTip)).toBe(tipBefore);
+  });
+
+  // The piece borders the attacker west of `split` and the third player from
+  // `split` east, including the tip's far end.
+  test.each([
+    { split: 125, winner: "third" },
+    { split: 160, winner: "attacker" },
+  ])(
+    "a cut-off piece between two enemies goes to the longer border (split at x=$split)",
+    ({ split, winner }) => {
+      paint(union(mainBody, arm));
+      game.map().forEachTile((t) => {
+        if (game.x(t) >= split && game.ownerID(t) === attacker.smallID()) {
+          third.conquer(t);
+        }
+      });
+      startClusterChecks();
+      crater(100, 100, 12);
+      // Everything of the arm east of the crater is cut off.
+      const cutOff = rect(101, 94, 170, 106);
+      const cutBefore = defenderTilesIn(cutOff);
+      expect(cutBefore).toBeGreaterThan(0);
+
+      runClusterChecks();
+
+      const expected = winner === "third" ? third : attacker;
+      expect(tilesOwnedBy(expected, cutOff)).toBe(cutBefore);
     },
   );
 

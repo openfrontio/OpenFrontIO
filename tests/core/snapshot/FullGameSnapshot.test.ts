@@ -44,7 +44,6 @@ interface Reference {
   execTypes: Set<string>;
 }
 
-// Snapshot type name by execution class prototype.
 const EXEC_TYPE_BY_PROTO = new Map<object, string>(
   EXECUTION_SNAPSHOT_TYPES.map((t) => [t.cls().prototype, t.name]),
 );
