@@ -219,6 +219,10 @@ describe("player profile level", () => {
     });
   }
 
+  // The profile card's level parts.
+  const levelLine = () =>
+    modal.querySelector("profile-card [data-profile-level-line]");
+
   it("shows another player's level from the public endpoint", async () => {
     fetchPublicPlayerProgress.mockResolvedValue({
       prestige: 0,
@@ -227,12 +231,33 @@ describe("player profile level", () => {
       legend: false,
     });
     await open("someone-else");
-    const level = modal.querySelector("[data-profile-level]");
-    expect(level).not.toBeNull();
-    expect(level!.textContent).toContain('progression.level:{"level":12}');
-    expect(level!.textContent).toContain("progression.lifetime_xp");
-    expect(level!.textContent).not.toContain("progression.prestige");
+    expect(levelLine()!.textContent).toContain(
+      'progression.level:{"level":12}',
+    );
+    expect(levelLine()!.textContent).not.toContain("progression.prestige");
+    expect(
+      modal.querySelector("[data-profile-lifetime]")!.textContent,
+    ).toContain("4,200");
+    // No XP-in-level from this API: no bar.
+    expect(modal.querySelector("profile-card [data-xp-bar]")).toBeNull();
     expect(fetchPublicPlayerProgress).toHaveBeenCalledWith("someone-else");
+  });
+
+  it("draws the XP bar when the public endpoint says how far through the level", async () => {
+    fetchPublicPlayerProgress.mockResolvedValue({
+      prestige: 0,
+      level: 12,
+      lifetimeXp: 4200,
+      legend: false,
+      xpInLevel: 150,
+      xpForNext: 600,
+    });
+    await open("someone-else");
+    expect(
+      modal
+        .querySelector("profile-card [data-xp-bar]")!
+        .getAttribute("aria-valuenow"),
+    ).toBe("25");
   });
 
   it("reads your own level fresh, not from the page-load /users/@me", async () => {
@@ -247,9 +272,10 @@ describe("player profile level", () => {
     await open("me");
     await vi.waitFor(async () => {
       await settled(modal);
-      const level = modal.querySelector("[data-profile-level]");
-      expect(level!.textContent).toContain('progression.level:{"level":65}');
-      expect(level!.textContent).toContain(
+      expect(levelLine()!.textContent).toContain(
+        'progression.level:{"level":65}',
+      );
+      expect(levelLine()!.textContent).toContain(
         'progression.prestige:{"prestige":2}',
       );
     });
@@ -267,10 +293,10 @@ describe("player profile level", () => {
     await open("me");
     await vi.waitFor(async () => {
       await settled(modal);
-      const level = modal.querySelector("[data-profile-level]");
-      expect(level).not.toBeNull();
-      expect(level!.textContent).toContain('progression.level:{"level":64}');
-      expect(level!.textContent).toContain(
+      expect(levelLine()?.textContent).toContain(
+        'progression.level:{"level":64}',
+      );
+      expect(levelLine()?.textContent).toContain(
         'progression.prestige:{"prestige":2}',
       );
     });
@@ -288,7 +314,7 @@ describe("player profile level", () => {
     await vi.waitFor(() => expect(getUserMe).toHaveBeenCalled());
     await new Promise((r) => setTimeout(r, 0));
     await settled(modal);
-    expect(modal.querySelector("[data-profile-level]")).toBeNull();
+    expect(modal.querySelector("profile-card")).toBeNull();
   });
 
   it("has nothing to fall back on for a signed-out viewer", async () => {
@@ -299,13 +325,15 @@ describe("player profile level", () => {
     await vi.waitFor(() => expect(getUserMe).toHaveBeenCalled());
     await new Promise((r) => setTimeout(r, 0));
     await settled(modal);
-    expect(modal.querySelector("[data-profile-level]")).toBeNull();
+    expect(modal.querySelector("profile-card")).toBeNull();
   });
 
-  it("hides the level when there is no progress", async () => {
+  it("shows no card when there is no progress", async () => {
     fetchPublicPlayerProgress.mockResolvedValue(false);
     await open("no-progress");
-    expect(modal.querySelector("[data-profile-level]")).toBeNull();
+    // No card at all: the stats below still show.
+    expect(modal.querySelector("profile-card")).toBeNull();
+    expect(modal.querySelector("player-stats-tree-view")).not.toBeNull();
   });
 
   it("shows the profile without waiting for the level, which lands later", async () => {
@@ -315,7 +343,8 @@ describe("player profile level", () => {
     );
     await open("slow-progress");
     // The stats are up while the level is still on its way.
-    expect(modal.querySelector("[data-profile-level]")).toBeNull();
+    expect(modal.querySelector("player-stats-tree-view")).not.toBeNull();
+    expect(modal.querySelector("profile-card")).toBeNull();
     resolveProgress({
       prestige: 0,
       level: 33,
@@ -324,9 +353,9 @@ describe("player profile level", () => {
     });
     await vi.waitFor(async () => {
       await settled(modal);
-      expect(
-        modal.querySelector("[data-profile-level]")?.textContent,
-      ).toContain('progression.level:{"level":33}');
+      expect(levelLine()?.textContent).toContain(
+        'progression.level:{"level":33}',
+      );
     });
   });
 
@@ -342,7 +371,7 @@ describe("player profile level", () => {
     resolveFirst({ prestige: 0, level: 77, lifetimeXp: 1, legend: false });
     await new Promise((r) => setTimeout(r, 0));
     await settled(modal);
-    expect(modal.querySelector("[data-profile-level]")).toBeNull();
+    expect(modal.querySelector("profile-card")).toBeNull();
   });
 });
 
