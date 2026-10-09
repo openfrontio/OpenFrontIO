@@ -1243,6 +1243,22 @@
     "visibility_public": "Public",
     "waiting": "Waiting for players..."
   },
+  "lobby_config": {
+    "preset": {
+      "title": "Presets",
+      "select": "Select a preset...",
+      "select_label": "Saved Presets",
+      "no_presets": "No saved presets",
+      "load": "Load",
+      "delete": "Delete",
+      "placeholder": "Preset name...",
+      "save_label": "Save Preset",
+      "save": "Save Current",
+      "saved": "Preset saved",
+      "deleted": "Preset deleted",
+      "loaded": "Preset loaded"
+    }
+  },
   "inventory": {
     "equipped": "Equipped",
     "load_failed": "Couldn't load your inventory. Please reload and try again.",

@@ -39,12 +39,19 @@ import "./components/InsufficientCurrencyDialog";
 import "./components/ListLobbyDialog";
 import { ListLobbyOptions } from "./components/ListLobbyDialog";
 import "./components/LobbyPlayerView";
+import "./components/LobbyPresetControls";
 import "./components/PlutoniumIcon";
 import "./components/ToggleInputCard";
 import { inviteFriendsButton } from "./components/ui/InviteFriendsButton";
 import { modalHeader } from "./components/ui/ModalHeader";
 import { fetchCosmetics, InsufficientCurrency } from "./Cosmetics";
 import { crazyGamesSDK } from "./CrazyGamesSDK";
+import {
+  deleteLobbyPreset,
+  LobbyPreset,
+  LobbyPresetConfig,
+  saveLobbyPreset,
+} from "./LobbyPresets";
 import { JoinLobbyEvent } from "./Main";
 import { terrainMapFileLoader } from "./TerrainMapFileLoader";
 import { UserSettings } from "./UserSettings";
@@ -72,6 +79,14 @@ export class HostLobbyModal extends BaseModal {
   constructor() {
     super();
     this.id = "page-host-lobby";
+  }
+
+  @state() private lobbyPresets: LobbyPreset[] = [];
+  @state() private selectedPresetName: string = "";
+
+  connectedCallback(): void {
+    super.connectedCallback();
+    this.lobbyPresets = this.userSettings.getLobbyPresets();
   }
   @state() private bots: number = 400;
   @state() private spawnImmunity: boolean = false;
@@ -634,6 +649,15 @@ export class HostLobbyModal extends BaseModal {
                 ${translateText("host_modal.settings_locked_listed")}
               </div>`
             : nothing}
+          <lobby-preset-controls
+            .presets=${this.lobbyPresets}
+            .selectedName=${this.selectedPresetName}
+            ?disabled=${this.publiclyListed}
+            @preset-select=${this.handlePresetSelect}
+            @preset-load=${this.handlePresetLoad}
+            @preset-save=${this.handlePresetSave}
+            @preset-delete=${this.handlePresetDelete}
+          ></lobby-preset-controls>
           <!-- Players joined a listed lobby for its advertised settings, so
                they are frozen (the server rejects changes too). -->
           <game-config-settings
@@ -847,6 +871,7 @@ export class HostLobbyModal extends BaseModal {
   }
 
   protected onOpen(args?: Record<string, unknown>): void {
+    this.lobbyPresets = this.userSettings.getLobbyPresets();
     // Re-armed here (not in onClose's reset) so that once
     // closeWithoutLeaving() disarms it, no close cascade — e.g. another
     // modal's close() navigating via showPage, which force-closes this one —
@@ -1623,6 +1648,168 @@ export class HostLobbyModal extends BaseModal {
       .slice(0, 200);
     return ids.length > 0 ? ids : undefined;
   }
+
+  private exportPresetConfig(): LobbyPresetConfig {
+    return {
+      gameMap: this.selectedMap,
+      useRandomMap: this.useRandomMap,
+      compactMap: this.compactMap,
+      difficulty: this.selectedDifficulty,
+      gameMode: this.gameMode,
+      teamCount: this.teamCount,
+      bots: this.bots,
+      nations: this.nations,
+      infiniteGold: this.infiniteGold,
+      donateGold: this.donateGold,
+      infiniteTroops: this.infiniteTroops,
+      donateTroops: this.donateTroops,
+      instantBuild: this.instantBuild,
+      randomSpawn: this.randomSpawn,
+      maxTimer: this.maxTimer,
+      maxTimerValue: this.maxTimerValue,
+      disabledUnits: [...this.disabledUnits],
+      goldMultiplier: this.goldMultiplier,
+      goldMultiplierValue: this.goldMultiplierValue,
+      startingGold: this.startingGold,
+      startingGoldValue: this.startingGoldValue,
+      customAlliances: this.customAlliances,
+      customAllianceMinutes: this.customAllianceMinutes,
+      waterNukes: this.waterNukes,
+      doomsdayClock: this.doomsdayClock,
+      doomsdayClockSpeed: this.doomsdayClockSpeed,
+      overtime: this.overtime,
+      overtimeStartMinutes: this.overtimeStartMinutes,
+      spawnImmunity: this.spawnImmunity,
+      spawnImmunityDurationMinutes: this.spawnImmunityDurationMinutes,
+      playerLimit: this.playerLimit,
+      playerLimitValue: this.playerLimitValue,
+      startDelayValue: this.startDelayValue,
+      anonymizeNames: this.anonymizeNames,
+      whitelistEnabled: this.whitelistEnabled,
+      allowedPublicIds: this.allowedPublicIds,
+      hostCheatsEnabled: this.hostCheatsEnabled,
+      hostCheatInfiniteGold: this.hostCheatInfiniteGold,
+      hostCheatInfiniteTroops: this.hostCheatInfiniteTroops,
+      hostCheatGoldMultiplier: this.hostCheatGoldMultiplier,
+      hostCheatGoldMultiplierValue: this.hostCheatGoldMultiplierValue,
+      hostCheatStartingGold: this.hostCheatStartingGold,
+      hostCheatStartingGoldValue: this.hostCheatStartingGoldValue,
+    };
+  }
+
+  private async importPresetConfig(config: LobbyPresetConfig) {
+    this.useRandomMap = config.useRandomMap ?? false;
+    this.selectedMap = this.useRandomMap ? getRandomMapType() : config.gameMap;
+    this.compactMap = config.compactMap ?? false;
+    this.selectedDifficulty = config.difficulty;
+    this.gameMode = config.gameMode;
+    this.teamCount = config.teamCount;
+    this.bots = config.bots;
+    this.infiniteGold = config.infiniteGold ?? false;
+    this.donateGold = config.donateGold ?? false;
+    this.infiniteTroops = config.infiniteTroops ?? false;
+    this.donateTroops = config.donateTroops ?? false;
+    this.instantBuild = config.instantBuild ?? false;
+    this.randomSpawn = config.randomSpawn ?? false;
+    this.maxTimer = config.maxTimer ?? false;
+    this.maxTimerValue = config.maxTimerValue;
+    this.disabledUnits = config.disabledUnits ? [...config.disabledUnits] : [];
+    this.goldMultiplier = config.goldMultiplier ?? false;
+    this.goldMultiplierValue = config.goldMultiplierValue;
+    this.startingGold = config.startingGold ?? false;
+    this.startingGoldValue = config.startingGoldValue;
+    this.customAlliances = config.customAlliances ?? false;
+    this.customAllianceMinutes = config.customAllianceMinutes;
+    this.waterNukes = config.waterNukes ?? false;
+    this.doomsdayClock = config.doomsdayClock ?? false;
+    this.doomsdayClockSpeed = config.doomsdayClockSpeed ?? "normal";
+    this.overtime = config.overtime ?? false;
+    this.overtimeStartMinutes = config.overtimeStartMinutes;
+
+    if (config.spawnImmunity !== undefined) {
+      this.spawnImmunity = config.spawnImmunity;
+    }
+    if (config.spawnImmunityDurationMinutes !== undefined) {
+      this.spawnImmunityDurationMinutes = config.spawnImmunityDurationMinutes;
+    }
+    if (config.playerLimit !== undefined) {
+      this.playerLimit = config.playerLimit;
+    }
+    if (config.playerLimitValue !== undefined) {
+      this.playerLimitValue = config.playerLimitValue;
+    }
+    if (config.startDelayValue !== undefined) {
+      this.startDelayValue = config.startDelayValue;
+    }
+    if (config.anonymizeNames !== undefined) {
+      this.anonymizeNames = config.anonymizeNames;
+    }
+    if (config.whitelistEnabled !== undefined) {
+      this.whitelistEnabled = config.whitelistEnabled;
+    }
+    if (config.allowedPublicIds !== undefined) {
+      this.allowedPublicIds = config.allowedPublicIds;
+    }
+    if (config.hostCheatsEnabled !== undefined) {
+      this.hostCheatsEnabled = config.hostCheatsEnabled;
+    }
+    if (config.hostCheatInfiniteGold !== undefined) {
+      this.hostCheatInfiniteGold = config.hostCheatInfiniteGold;
+    }
+    if (config.hostCheatInfiniteTroops !== undefined) {
+      this.hostCheatInfiniteTroops = config.hostCheatInfiniteTroops;
+    }
+    if (config.hostCheatGoldMultiplier !== undefined) {
+      this.hostCheatGoldMultiplier = config.hostCheatGoldMultiplier;
+    }
+    if (config.hostCheatGoldMultiplierValue !== undefined) {
+      this.hostCheatGoldMultiplierValue = config.hostCheatGoldMultiplierValue;
+    }
+    if (config.hostCheatStartingGold !== undefined) {
+      this.hostCheatStartingGold = config.hostCheatStartingGold;
+    }
+    if (config.hostCheatStartingGoldValue !== undefined) {
+      this.hostCheatStartingGoldValue = config.hostCheatStartingGoldValue;
+    }
+
+    await this.loadNationCount();
+    if (config.nations !== undefined) {
+      this.nations = Math.min(config.nations, this.defaultNationCount);
+    }
+    this.putGameConfig();
+  }
+
+  private handlePresetSelect = (e: CustomEvent<string>) => {
+    this.selectedPresetName = e.detail;
+  };
+
+  private handlePresetLoad = async (e: CustomEvent<string>) => {
+    const name = e.detail;
+    const preset = this.lobbyPresets.find(
+      (p) => p.name.toLowerCase() === name.toLowerCase(),
+    );
+    if (!preset) return;
+    await this.importPresetConfig(preset.config);
+    this.selectedPresetName = preset.name;
+    showToast(translateText("lobby_config.preset.loaded"), "green");
+  };
+
+  private handlePresetSave = (e: CustomEvent<string>) => {
+    const name = e.detail;
+    const config = this.exportPresetConfig();
+    this.lobbyPresets = saveLobbyPreset(name, config, this.userSettings);
+    this.selectedPresetName = name;
+    showToast(translateText("lobby_config.preset.saved"), "green");
+  };
+
+  private handlePresetDelete = (e: CustomEvent<string>) => {
+    const name = e.detail;
+    this.lobbyPresets = deleteLobbyPreset(name, this.userSettings);
+    if (this.selectedPresetName.toLowerCase() === name.toLowerCase()) {
+      this.selectedPresetName = "";
+    }
+    showToast(translateText("lobby_config.preset.deleted"), "green");
+  };
 
   private async putGameConfig() {
     const spawnImmunityTicks = this.spawnImmunityDurationMinutes

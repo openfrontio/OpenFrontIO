@@ -2,6 +2,11 @@ import { Emoji, flattenedEmojiTable } from "@openfront/engine-api/Schemas";
 import { Cosmetics } from "@openfront/shared/CosmeticSchemas";
 import { PlayerPattern } from "@openfront/shared/WireSchemas";
 import {
+  LOBBY_PRESETS_KEY,
+  LobbyPreset,
+  parseLobbyPresetsJson,
+} from "./LobbyPresets";
+import {
   GraphicsOverrides,
   GraphicsOverridesSchema,
   GraphicsPresets,
@@ -1105,6 +1110,18 @@ export class UserSettings {
   // preset UI — used to run the legacy-overrides migration exactly once.
   hasGraphicsPresets(): boolean {
     return this.getString(GRAPHICS_PRESETS_KEY, "") !== "";
+  }
+
+  getLobbyPresets(): LobbyPreset[] {
+    return parseLobbyPresetsJson(this.getCached(LOBBY_PRESETS_KEY));
+  }
+
+  setLobbyPresets(presets: readonly LobbyPreset[]): void {
+    if (presets.length === 0) {
+      this.removeCached(LOBBY_PRESETS_KEY);
+    } else {
+      this.setString(LOBBY_PRESETS_KEY, JSON.stringify(presets));
+    }
   }
 
   // In case localStorage was manually edited to be invalid, return an empty object
