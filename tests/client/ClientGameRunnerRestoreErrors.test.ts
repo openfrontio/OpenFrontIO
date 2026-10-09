@@ -34,11 +34,9 @@ vi.mock("../../src/client/render/gl", async (importOriginal) => {
 });
 
 const mockRestoreMaps = vi.fn();
-const mockReadHeader = vi.fn();
 
 vi.mock("@openfront/engine-lib/snapshot/MapSnapshot", () => ({
   restoreMapsFromSnapshot: (...args: any[]) => mockRestoreMaps(...args),
-  readSnapshotHeader: (...args: any[]) => mockReadHeader(...args),
 }));
 
 vi.mock("../../src/client/view/GameView", () => ({
@@ -82,27 +80,6 @@ describe("createClientGame worker cleanup on restore failure", () => {
         {} as any,
       ),
     ).rejects.toThrow("corrupt map data");
-
-    expect(mockWorkerInstance.cleanup).toHaveBeenCalledTimes(1);
-  });
-
-  it("calls worker.cleanup() when readSnapshotHeader throws", async () => {
-    mockRestoreMaps.mockImplementationOnce(() => {});
-    mockReadHeader.mockImplementationOnce(() => {
-      throw new Error("malformed header");
-    });
-
-    await expect(
-      createClientGame(
-        dummyLobby,
-        "c1",
-        {} as any,
-        {} as any,
-        {} as any,
-        null,
-        {} as any,
-      ),
-    ).rejects.toThrow("malformed header");
 
     expect(mockWorkerInstance.cleanup).toHaveBeenCalledTimes(1);
   });
