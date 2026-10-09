@@ -14,12 +14,7 @@ import {
 } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
 import { momentShareText, momentShareUrl } from "../MomentShare";
-import {
-  MAX_LEVEL,
-  MAX_PRESTIGE,
-  PrestigeTier,
-  prestigeTier,
-} from "../Progression";
+import { MAX_LEVEL, MAX_PRESTIGE, prestigeAccent } from "../Progression";
 import { fetchProgressionConfig, prestigeMe } from "../ProgressionApi";
 import { translateText } from "../Utils";
 import "./CapIcon";
@@ -77,14 +72,6 @@ const HOT_AT = 0.75;
 const CEREMONY_EMBLEM_LIFT = 112;
 // The emblem's move to there.
 const HANDOFF_MOVE_MS = 650;
-
-const TIER_COLORS: Record<PrestigeTier, string> = {
-  none: "#facc15",
-  ring: "#f59e0b",
-  double: "#e2e8f0",
-  sunburst: "#facc15",
-  radiant: "#d946ef",
-};
 
 /**
  * The last prestige rank, Legend coming after it: the config's, so the ladder
@@ -419,7 +406,7 @@ export class PrestigeFlow extends LitElement {
     return html`<div
       data-prestige-overlay
       class="prestige-ceremony fixed inset-0 z-[10020] text-white"
-      style="--tier: ${TIER_COLORS[prestigeTier(rank)]}"
+      style="--tier: ${prestigeAccent(rank)}"
     >
       ${this.renderStyles()}
       <div aria-hidden="true" class="ceremony-backdrop absolute inset-0"></div>
@@ -484,7 +471,7 @@ export class PrestigeFlow extends LitElement {
              the one that shatters at the flash. -->
         <div
           class="prestige-float relative mt-10"
-          style="--hero: ${TIER_COLORS[prestigeTier(this.rankOf(before))]}"
+          style="--hero: ${prestigeAccent(this.rankOf(before))}"
         >
           <div
             aria-hidden="true"
@@ -900,6 +887,7 @@ export class PrestigeFlow extends LitElement {
   private renderCeremony(before: Progress): TemplateResult {
     const after = this.outcome?.progress;
     const rank = after?.prestige ?? this.nextRank(before);
+
     const shattered = this.reached("shatter");
     const revealed = this.reached("reveal");
     const done = this.beat === "done";

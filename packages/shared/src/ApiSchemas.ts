@@ -168,6 +168,34 @@ export const XpBreakdownSchema = z.object({
 });
 export type XpBreakdown = z.infer<typeof XpBreakdownSchema>;
 
+// A level reward one game earned (GET /users/@me/xp/:gameId `rewards`).
+export const GameXpRewardSchema = RewardSchema.extend({
+  prestige: z.number(),
+  level: z.number(),
+  claimed: z.boolean(),
+});
+export type GameXpReward = z.infer<typeof GameXpRewardSchema>;
+
+// A flare one game unlocked from the level track: a level's (`prestige` and
+// `level` are the run and level crossed) or Legend's (both null). `kind`
+// stays a string so a new kind never fails the parse.
+export const GameXpFlareSchema = z.object({
+  kind: z.string(),
+  prestige: z.number().nullable(),
+  level: z.number().nullable(),
+  flareId: z.string(),
+  flareName: z.string(),
+  // The cosmetic behind the flare, when it is one.
+  cosmetic: z
+    .object({
+      type: z.string(),
+      name: z.string(),
+      url: z.string().nullable(),
+    })
+    .nullable(),
+});
+export type GameXpFlare = z.infer<typeof GameXpFlareSchema>;
+
 // GET /users/@me/xp/:gameId — the XP a finished game awarded the caller. 404
 // until the game has been processed. `reason` is open-ended server-side, so it
 // stays a string: an unknown reason shows a generic line, never a parse error.
@@ -182,6 +210,14 @@ export const GameXpEligibleSchema = z.object({
     .array(z.object({ prestige: z.number(), level: z.number() }))
     .optional()
     .default([]),
+  // What the levels this game crossed paid: one entry per grant, in level
+  // order, Caps before Plutonium. `id` is the reward to claim while
+  // `claimed` is false. Optional (an API without it still parses), and a
+  // malformed list reads as absent rather than failing the result.
+  rewards: z.array(GameXpRewardSchema).optional().catch(undefined),
+  // The cosmetics this game unlocked from the level track (already granted:
+  // nothing to claim). Same leniency as `rewards`.
+  flares: z.array(GameXpFlareSchema).optional().catch(undefined),
 });
 export const GameXpIneligibleSchema = z.object({
   gameId: z.string(),

@@ -90,6 +90,66 @@ describe("GameXpResponseSchema", () => {
     expect(parsed.levelsReached).toEqual([{ prestige: 0, level: 5 }]);
   });
 
+  it("parses the level rewards and flares a game earned", () => {
+    const parsed = GameXpResponseSchema.parse({
+      ...eligible,
+      rewards: [
+        {
+          prestige: 0,
+          level: 5,
+          id: "41",
+          currencyType: "soft",
+          amount: "100",
+          reason: "level_up",
+          note: null,
+          claimed: false,
+        },
+      ],
+      flares: [
+        {
+          kind: "level",
+          prestige: 0,
+          level: 5,
+          flareId: "7",
+          flareName: "effect:firebird_trail",
+          cosmetic: { type: "effect", name: "firebird_trail", url: null },
+        },
+        {
+          kind: "legend",
+          prestige: null,
+          level: null,
+          flareId: "8",
+          flareName: "flag:obey_flag",
+          cosmetic: null,
+        },
+      ],
+    });
+    if (!parsed.eligible) throw new Error("expected eligible");
+    expect(parsed.rewards!.map((r) => [r.id, r.amount, r.claimed])).toEqual([
+      ["41", "100", false],
+    ]);
+    expect(parsed.flares!.map((f) => f.flareName)).toEqual([
+      "effect:firebird_trail",
+      "flag:obey_flag",
+    ]);
+  });
+
+  it("reads missing or malformed rewards and flares as absent", () => {
+    let parsed = GameXpResponseSchema.parse(eligible);
+    if (!parsed.eligible) throw new Error("expected eligible");
+    expect(parsed.rewards).toBeUndefined();
+    expect(parsed.flares).toBeUndefined();
+    parsed = GameXpResponseSchema.parse({
+      ...eligible,
+      rewards: [{ id: 5 }],
+      flares: "nope",
+    });
+    if (!parsed.eligible) throw new Error("expected eligible");
+    expect(parsed.rewards).toBeUndefined();
+    expect(parsed.flares).toBeUndefined();
+    expect(parsed.breakdown.total).toBe(275);
+  });
+
   it("defaults a missing levelsReached to none", () => {
     const rest: Record<string, unknown> = { ...eligible };
     delete rest.levelsReached;

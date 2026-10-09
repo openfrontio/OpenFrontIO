@@ -41,12 +41,20 @@ export function xpProgressText(xpInLevel: number, xpForNext: number): string {
 /**
  * A thin XP bar. `percent` is clamped to 0..100. `valueText` is what a
  * screen reader announces for the value (typically xpProgressText); without
- * it, the percentage.
+ * it, the percentage. `transitionMs` animates the fill to a new width (0 or
+ * absent: it jumps); `onFillTransitionEnd` hears when that ends.
  */
 export function xpBar(
   percent: number,
-  opts: { heightClass?: string; valueText?: string } = {},
+  opts: {
+    heightClass?: string;
+    valueText?: string;
+    transitionMs?: number;
+    fillClass?: string;
+    onFillTransitionEnd?: (e: TransitionEvent) => void;
+  } = {},
 ): TemplateResult {
+  const ms = opts.transitionMs ?? 0;
   const fill = Number.isFinite(percent)
     ? Math.min(100, Math.max(0, percent))
     : 0;
@@ -63,8 +71,11 @@ export function xpBar(
   >
     <div
       data-xp-bar-fill
-      class="h-full rounded-full bg-malibu-blue"
-      style="width: ${fill}%"
+      class="h-full rounded-full bg-malibu-blue ${opts.fillClass ?? ""}"
+      style="width: ${fill}%${ms > 0
+        ? `; transition: width ${ms}ms cubic-bezier(0.3, 0.7, 0.2, 1)`
+        : ""}"
+      @transitionend=${opts.onFillTransitionEnd ?? nothing}
     ></div>
   </div>`;
 }
