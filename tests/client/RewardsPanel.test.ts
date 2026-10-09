@@ -116,12 +116,22 @@ describe("<rewards-panel> held rewards", () => {
     };
   }
 
-  async function mount(rewards: Reward[]): Promise<RewardsPanel> {
+  async function mount(
+    rewards: Reward[],
+    signedIn = true,
+  ): Promise<RewardsPanel> {
     el = document.createElement("rewards-panel") as RewardsPanel;
     el.rewards = rewards;
+    el.signedIn = signedIn;
     document.body.appendChild(el);
     await el.updateComplete;
     return el;
+  }
+
+  function notes(panel: RewardsPanel): string[] {
+    return [...panel.querySelectorAll("[data-reward-held-note]")].map(
+      (n) => n.textContent?.trim() ?? "",
+    );
   }
 
   // Each reward's row, keyed by the claim affordance it offers.
@@ -159,12 +169,50 @@ describe("<rewards-panel> held rewards", () => {
     ).toBe("account_modal.reward_held_trust_info");
   });
 
-  it("uses the CrazyGames note there (no purchases)", async () => {
-    vi.mocked(crazyGamesSDK.isOnCrazyGames).mockReturnValue(true);
-    const panel = await mount([plutonium("1", "trust")]);
-    expect(
-      panel.querySelector("[data-reward-held-note]")?.textContent?.trim(),
-    ).toBe("account_modal.reward_held_trust_info_crazygames");
+  // Trust needs an account to attach to, and CrazyGames has no purchases.
+  it.each([
+    [true, false, "account_modal.reward_held_trust_info"],
+    [true, true, "account_modal.reward_held_trust_info_crazygames"],
+    [false, false, "account_modal.reward_held_trust_info_signed_out"],
+    [false, true, "account_modal.reward_held_trust_info_signed_out_crazygames"],
+  ])(
+    "picks the trust note by sign-in (%s) and CrazyGames (%s): %s",
+    async (signedIn, onCrazyGames, key) => {
+      vi.mocked(crazyGamesSDK.isOnCrazyGames).mockReturnValue(onCrazyGames);
+      const panel = await mount([plutonium("1", "trust")], signedIn);
+      expect(notes(panel)).toEqual([key]);
+    },
+  );
+
+  it("treats a missing sign-in flag as signed out", async () => {
+    el = document.createElement("rewards-panel") as RewardsPanel;
+    el.rewards = [plutonium("1", "trust")];
+    document.body.appendChild(el);
+    await el.updateComplete;
+    expect(notes(el)).toEqual([
+      "account_modal.reward_held_trust_info_signed_out",
+    ]);
+  });
+
+  it("gives a hold it has no copy for the neutral note, and no trust label", async () => {
+    const panel = await mount([{ ...plutonium("1"), held: "future_hold" }]);
+    expect(rows(panel)).toEqual(["held"]);
+    expect(panel.querySelector("[data-reward-held]")?.textContent?.trim()).toBe(
+      "",
+    );
+    expect(notes(panel)).toEqual(["account_modal.reward_held_other_info"]);
+  });
+
+  it("explains each kind of hold once", async () => {
+    const panel = await mount([
+      plutonium("1", "trust"),
+      plutonium("2", "trust"),
+      { ...plutonium("3"), held: "future_hold" },
+    ]);
+    expect(notes(panel)).toEqual([
+      "account_modal.reward_held_trust_info",
+      "account_modal.reward_held_other_info",
+    ]);
   });
 
   it("shows no note when nothing is held", async () => {

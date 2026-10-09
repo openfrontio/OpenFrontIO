@@ -46,14 +46,28 @@ describe("<rewards-modal> dismissal", () => {
     el = undefined;
   });
 
-  async function mount(rewards: Reward[]): Promise<RewardsModal> {
+  async function mount(
+    rewards: Reward[],
+    signedIn = true,
+  ): Promise<RewardsModal> {
     el = document.createElement("rewards-modal") as RewardsModal;
     document.body.appendChild(el);
     await el.updateComplete;
-    el.openWithRewards(rewards);
+    el.openWithRewards(rewards, signedIn);
     await el.updateComplete;
     return el;
   }
+
+  it.each([true, false])(
+    "passes the viewer's sign-in (%s) to the panel",
+    async (signedIn) => {
+      const modal = await mount([reward("1"), reward("2", "trust")], signedIn);
+      const panel = modal.querySelector("rewards-panel") as unknown as {
+        signedIn: boolean;
+      };
+      expect(panel.signedIn).toBe(signedIn);
+    },
+  );
 
   // What the panel emits after a claim; the modal listens on the panel.
   async function panelChanged(

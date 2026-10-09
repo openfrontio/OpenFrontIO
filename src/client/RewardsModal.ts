@@ -13,13 +13,16 @@ import { translateText } from "./Utils";
 @customElement("rewards-modal")
 export class RewardsModal extends BaseModal {
   @state() private rewards: Reward[] = [];
+  // RewardsPanel.signedIn: picks the held-reward note.
+  @state() private signedIn = false;
 
   protected modalConfig() {
     return { maxWidth: "620px" };
   }
 
-  public openWithRewards(rewards: Reward[]): void {
+  public openWithRewards(rewards: Reward[], signedIn: boolean): void {
     this.rewards = rewards;
+    this.signedIn = signedIn;
     this.open();
   }
 
@@ -54,6 +57,7 @@ export class RewardsModal extends BaseModal {
       <div class="p-6">
         <rewards-panel
           .rewards=${this.rewards}
+          .signedIn=${this.signedIn}
           @rewards-changed=${this.handleRewardsChanged}
         ></rewards-panel>
       </div>

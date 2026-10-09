@@ -17,6 +17,7 @@ import {
 import { GameEnv } from "@openfront/shared/configuration/Env";
 import { ClientEnv } from "src/client/ClientEnv";
 import { renderNavVersion } from "src/client/GameVersion";
+import { responseHasLinkedIdentity } from "./AccountIdentity";
 import { adGatekeeper } from "./AdGatekeeper";
 import { loadAdmiral, onAdmiralMeasured } from "./Admiral";
 import { getUserMe, invalidateUserMe } from "./Api";
@@ -890,10 +891,19 @@ class Client {
             navigate: (hash) => {
               window.location.hash = hash;
             },
-            openRewards: () =>
-              whenModalLoaded("rewards-modal", () =>
-                this.rewardsModal?.openWithRewards(rewards),
-              ),
+            openRewards: () => {
+              // Signed in as for trustRequiredDialog: a linked identity, or a
+              // CrazyGames sign-in (only the SDK knows that one).
+              void (async () => {
+                const signedIn =
+                  responseHasLinkedIdentity(userMeResponse) ||
+                  (crazyGamesSDK.isOnCrazyGames() &&
+                    (await crazyGamesSDK.getUserProfile()) !== null);
+                whenModalLoaded("rewards-modal", () =>
+                  this.rewardsModal?.openWithRewards(rewards, signedIn),
+                );
+              })();
+            },
             storeClaimPrompt: (store) =>
               localStorage.setItem(CLAIM_PROMPT_KEY, JSON.stringify(store)),
             storeSteamGrant: (store) =>

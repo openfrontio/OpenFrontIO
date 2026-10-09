@@ -142,6 +142,14 @@ describe("AccountModal — after a prestige", () => {
     await modal.updateComplete;
   };
 
+  it("tells the rewards panel a linked account is signed in", () => {
+    const panel = modal.querySelector("rewards-panel") as unknown as {
+      signedIn: boolean;
+    } | null;
+    expect(panel).not.toBeNull();
+    expect(panel!.signedIn).toBe(true);
+  });
+
   it("opens the prestige flow on the press", async () => {
     // Already on its way: the card offers Prestige.
     await modal.loadPrestigeFlow();

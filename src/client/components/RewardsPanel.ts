@@ -28,6 +28,13 @@ export class RewardsPanel extends LitElement {
   @property({ type: Array })
   rewards: Reward[] = [];
 
+  // Whether the viewer has an account trust can attach to: a linked identity
+  // (responseHasLinkedIdentity) or a CrazyGames sign-in, as for
+  // trustRequiredDialog. Without one an account is never trusted, whatever it
+  // plays or buys, so the trust note tells them to sign in first.
+  @property({ type: Boolean })
+  signedIn = false;
+
   @state() private claiming = false;
 
   createRenderRoot() {
@@ -159,10 +166,13 @@ export class RewardsPanel extends LitElement {
           </div>
         </div>
         ${!isRewardClaimable(reward)
-          ? html`<span
+          ? // A hold with no copy of its own is left to the note below.
+            html`<span
               data-reward-held
               class="shrink-0 text-xs font-bold text-white/60 text-right"
-              >${translateText("account_modal.reward_held_trust")}</span
+              >${reward.held === "trust"
+                ? translateText("account_modal.reward_held_trust")
+                : ""}</span
             >`
           : html`<o-button
               variant="primary"
@@ -175,17 +185,23 @@ export class RewardsPanel extends LitElement {
     `;
   }
 
-  // The trust note. CrazyGames has no purchases, so its copy only suggests
-  // playing.
+  // The trust note, by whether the viewer is signed in (see signedIn) and on
+  // CrazyGames, which has no purchases, so its copy only suggests playing.
   private trustNoteKey(): string {
-    return crazyGamesSDK.isOnCrazyGames()
-      ? "account_modal.reward_held_trust_info_crazygames"
-      : "account_modal.reward_held_trust_info";
+    const onCrazyGames = crazyGamesSDK.isOnCrazyGames();
+    if (this.signedIn) {
+      return onCrazyGames
+        ? "account_modal.reward_held_trust_info_crazygames"
+        : "account_modal.reward_held_trust_info";
+    }
+    return onCrazyGames
+      ? "account_modal.reward_held_trust_info_signed_out_crazygames"
+      : "account_modal.reward_held_trust_info_signed_out";
   }
 
-  // A hold this client has no copy for.
+  // A hold this client has no copy for: say only that it can't be claimed.
   private otherHoldNoteKey(): string {
-    return this.trustNoteKey();
+    return "account_modal.reward_held_other_info";
   }
 
   // Why held rewards can't be claimed yet: once under the list per kind of
