@@ -100,6 +100,7 @@ const DEFAULT_OPTIONS = {
   selectedDifficulty: Difficulty.Easy,
   bots: 400,
   infiniteGold: false,
+  aiResourceStructures: false,
   infiniteTroops: false,
   compactMap: false,
   maxTimer: false,
@@ -176,6 +177,8 @@ export class SinglePlayerModal extends BaseModal {
   @state() private defaultNationCount: number = 0;
   @state() private bots: number = DEFAULT_OPTIONS.bots;
   @state() private infiniteGold: boolean = DEFAULT_OPTIONS.infiniteGold;
+  @state() private aiResourceStructures: boolean =
+    DEFAULT_OPTIONS.aiResourceStructures;
   @state() private infiniteTroops: boolean = DEFAULT_OPTIONS.infiniteTroops;
   @state() private compactMap: boolean = DEFAULT_OPTIONS.compactMap;
   @state() private maxTimer: boolean = DEFAULT_OPTIONS.maxTimer;
@@ -539,6 +542,10 @@ export class SinglePlayerModal extends BaseModal {
                     checked: this.infiniteGold,
                   },
                   {
+                    labelKey: "game_settings.ai_resource_structures",
+                    checked: this.aiResourceStructures,
+                  },
+                  {
                     labelKey: "game_settings.infinite_troops",
                     checked: this.infiniteTroops,
                   },
@@ -608,6 +615,7 @@ export class SinglePlayerModal extends BaseModal {
       this.nations !== this.defaultNationCount ||
       this.bots !== DEFAULT_OPTIONS.bots ||
       this.infiniteGold !== DEFAULT_OPTIONS.infiniteGold ||
+      this.aiResourceStructures !== DEFAULT_OPTIONS.aiResourceStructures ||
       this.infiniteTroops !== DEFAULT_OPTIONS.infiniteTroops ||
       this.compactMap !== DEFAULT_OPTIONS.compactMap ||
       this.maxTimer !== DEFAULT_OPTIONS.maxTimer ||
@@ -680,6 +688,7 @@ export class SinglePlayerModal extends BaseModal {
     this.nations = 0;
     this.defaultNationCount = 0;
     this.infiniteGold = DEFAULT_OPTIONS.infiniteGold;
+    this.aiResourceStructures = DEFAULT_OPTIONS.aiResourceStructures;
     this.infiniteTroops = DEFAULT_OPTIONS.infiniteTroops;
     this.compactMap = DEFAULT_OPTIONS.compactMap;
     this.maxTimer = DEFAULT_OPTIONS.maxTimer;
@@ -783,6 +792,9 @@ export class SinglePlayerModal extends BaseModal {
         break;
       case "game_settings.infinite_gold":
         this.infiniteGold = checked;
+        break;
+      case "game_settings.ai_resource_structures":
+        this.aiResourceStructures = checked;
         break;
       case "game_settings.infinite_troops":
         this.infiniteTroops = checked;
@@ -1151,6 +1163,7 @@ export class SinglePlayerModal extends BaseModal {
                 maxTimerValue: finalMaxTimerValue,
                 bots: this.bots,
                 infiniteGold: this.infiniteGold,
+                aiResourceStructures: this.aiResourceStructures,
                 donateGold: this.gameMode === GameMode.Team,
                 donateTroops: this.gameMode === GameMode.Team,
                 infiniteTroops: this.infiniteTroops,
