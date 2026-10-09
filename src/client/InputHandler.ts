@@ -313,6 +313,7 @@ export class InputHandler {
    * `initializePointerAndKeyboardEvents()`. */
   private listenerAbort: AbortController | null = null;
   private activeKeys = new Set<string>();
+  private shiftHeld = false;
   private keybinds: Record<string, string> = {};
   private keybindAndEvent: Array<[string, KeybindEntry]> = [];
   private coordinateGridEnabled = false;
@@ -663,6 +664,7 @@ export class InputHandler {
       "blur",
       () => {
         this.activeKeys.clear();
+        this.shiftHeld = false;
         if (this.alternateView) {
           this.alternateView = false;
           this.eventBus.emit(new AlternateViewEvent(false));
@@ -683,29 +685,34 @@ export class InputHandler {
       let deltaX = 0;
       let deltaY = 0;
 
-      // Skip if select warship modifier is held down
-      if (this.activeKeys.has(this.keybinds.boxSelectWarships)) {
+      // Skip movement if selection box drag is active or a non-Shift warship selector is held
+      if (
+        this.selectionBoxActive ||
+        (this.keybinds.boxSelectWarships !== "ShiftLeft" &&
+          this.keybinds.boxSelectWarships !== "ShiftRight" &&
+          this.activeKeys.has(this.keybinds.boxSelectWarships))
+      ) {
         return;
       }
 
       if (
-        this.activeKeys.has(this.keybinds.moveUp) ||
-        this.activeKeys.has(this.keybinds.moveUpArrow)
+        this.isContinuousActionActive(this.keybinds.moveUp) ||
+        this.isContinuousActionActive(this.keybinds.moveUpArrow)
       )
         deltaY += this.PAN_SPEED;
       if (
-        this.activeKeys.has(this.keybinds.moveDown) ||
-        this.activeKeys.has(this.keybinds.moveDownArrow)
+        this.isContinuousActionActive(this.keybinds.moveDown) ||
+        this.isContinuousActionActive(this.keybinds.moveDownArrow)
       )
         deltaY -= this.PAN_SPEED;
       if (
-        this.activeKeys.has(this.keybinds.moveLeft) ||
-        this.activeKeys.has(this.keybinds.moveLeftArrow)
+        this.isContinuousActionActive(this.keybinds.moveLeft) ||
+        this.isContinuousActionActive(this.keybinds.moveLeftArrow)
       )
         deltaX += this.PAN_SPEED;
       if (
-        this.activeKeys.has(this.keybinds.moveRight) ||
-        this.activeKeys.has(this.keybinds.moveRightArrow)
+        this.isContinuousActionActive(this.keybinds.moveRight) ||
+        this.isContinuousActionActive(this.keybinds.moveRightArrow)
       )
         deltaX -= this.PAN_SPEED;
 
@@ -717,16 +724,16 @@ export class InputHandler {
       const cy = window.innerHeight / 2;
 
       if (
-        this.activeKeys.has(this.keybinds.zoomOut) ||
-        this.activeKeys.has(this.keybinds.zoomOutMinus) ||
-        this.activeKeys.has(this.keybinds.zoomOutNumpad)
+        this.isContinuousActionActive(this.keybinds.zoomOut) ||
+        this.isContinuousActionActive(this.keybinds.zoomOutMinus) ||
+        this.isContinuousActionActive(this.keybinds.zoomOutNumpad)
       ) {
         this.eventBus.emit(new ZoomEvent(cx, cy, this.ZOOM_SPEED));
       }
       if (
-        this.activeKeys.has(this.keybinds.zoomIn) ||
-        this.activeKeys.has(this.keybinds.zoomInEqual) ||
-        this.activeKeys.has(this.keybinds.zoomInNumpad)
+        this.isContinuousActionActive(this.keybinds.zoomIn) ||
+        this.isContinuousActionActive(this.keybinds.zoomInEqual) ||
+        this.isContinuousActionActive(this.keybinds.zoomInNumpad)
       ) {
         this.eventBus.emit(new ZoomEvent(cx, cy, -this.ZOOM_SPEED));
       }
@@ -827,41 +834,42 @@ export class InputHandler {
             e.code === "NumpadAdd" ||
             e.code === "NumpadSubtract");
 
+        const continuousBindings = this.getContinuousBindings();
+
         const isConfiguredKeybind =
-          Object.values(this.keybinds).includes(e.code) ||
-          this.keybindAndEvent.some(([k]) => this.keybindMatchesEvent(e, k));
+          Object.values(this.keybinds).some((k) =>
+            this.keybindMatchesEvent(e, k),
+          ) ||
+          this.keybindAndEvent.some(([k]) => this.keybindMatchesEvent(e, k)) ||
+          continuousBindings.some((k) => this.keybindMatchesEvent(e, k));
 
         if (isConfiguredKeybind && !isBrowserZoomCombo) {
           e.preventDefault();
         }
 
+        this.shiftHeld = e.shiftKey;
+
+        const continuousPhysicalCodes = continuousBindings.map(
+          (k) => this.parseKeybind(k).code,
+        );
+
         if (
           !isBrowserZoomCombo &&
-          [
-            this.keybinds.moveUp,
-            this.keybinds.moveDown,
-            this.keybinds.moveLeft,
-            this.keybinds.moveRight,
-            this.keybinds.moveUpArrow,
-            this.keybinds.moveDownArrow,
-            this.keybinds.moveLeftArrow,
-            this.keybinds.moveRightArrow,
-            this.keybinds.zoomOut,
-            this.keybinds.zoomIn,
-            this.keybinds.zoomOutMinus,
-            this.keybinds.zoomOutNumpad,
-            this.keybinds.zoomInEqual,
-            this.keybinds.zoomInNumpad,
-            this.keybinds.attackRatioDown,
-            this.keybinds.attackRatioUp,
-            this.keybinds.centerCamera,
-            "ControlLeft",
-            "ControlRight",
-            this.keybinds.boxSelectWarships,
-            this.keybinds.emojiMenuModifier,
-            this.keybinds.buildMenuModifier,
-            this.keybinds.altKey,
-          ].includes(e.code)
+          (continuousPhysicalCodes.includes(e.code) ||
+            [
+              "ShiftLeft",
+              "ShiftRight",
+              "ControlLeft",
+              "ControlRight",
+              "AltLeft",
+              "AltRight",
+              "MetaLeft",
+              "MetaRight",
+              this.keybinds.boxSelectWarships,
+              this.keybinds.emojiMenuModifier,
+              this.keybinds.buildMenuModifier,
+              this.keybinds.altKey,
+            ].includes(e.code))
         ) {
           this.activeKeys.add(e.code);
         }
@@ -885,6 +893,8 @@ export class InputHandler {
           return;
         }
 
+        this.shiftHeld = e.shiftKey;
+
         // When the meta (cmd) or ctrl key is released, any keys that were held
         // simultaneously will have had their keyup swallowed by the browser
         // (e.g. cmd+Plus for browser zoom). Clear zoom-related keys to
@@ -899,8 +909,6 @@ export class InputHandler {
           this.activeKeys.delete("Equal");
           this.activeKeys.delete("NumpadAdd");
           this.activeKeys.delete("NumpadSubtract");
-          this.activeKeys.delete(this.keybinds.zoomIn);
-          this.activeKeys.delete(this.keybinds.zoomOut);
         }
 
         if (this.emojiTableOpen) {
@@ -1377,6 +1385,60 @@ export class InputHandler {
     return e.code === parsed.code && e.shiftKey === parsed.shift;
   }
 
+  private isShiftHeld(): boolean {
+    return this.shiftHeld;
+  }
+
+  /**
+   * Evaluates whether a continuous movement or zoom action is currently active.
+   *
+   * A binding is active when its physical key is held in `activeKeys` and its
+   * Shift-modifier condition is satisfied:
+   * - Shift-modified bindings (e.g. "Shift+ArrowUp") require Shift to be held.
+   *   Releasing Shift while the physical key remains held stops the action.
+   *   Pressing Shift while the physical key is already held activates the action.
+   * - Unmodified bindings (e.g. "ArrowUp") require Shift NOT to be held.
+   *   This ensures unmodified controls do not activate when Shift is held for
+   *   other actions (such as warship box selection).
+   * - Unbound ("Null" or undefined) bindings never activate.
+   */
+  private isContinuousActionActive(keybindValue: string | undefined): boolean {
+    if (!keybindValue || keybindValue === "Null") {
+      return false;
+    }
+    const { shift, code } = this.parseKeybind(keybindValue);
+    if (!this.activeKeys.has(code)) {
+      return false;
+    }
+    const shiftHeld = this.isShiftHeld();
+    return shift ? shiftHeld : !shiftHeld;
+  }
+
+  private getContinuousBindings(): string[] {
+    const bindings = [
+      this.keybinds.moveUp,
+      this.keybinds.moveUpArrow,
+      this.keybinds.moveDown,
+      this.keybinds.moveDownArrow,
+      this.keybinds.moveLeft,
+      this.keybinds.moveLeftArrow,
+      this.keybinds.moveRight,
+      this.keybinds.moveRightArrow,
+      this.keybinds.zoomOut,
+      this.keybinds.zoomOutMinus,
+      this.keybinds.zoomOutNumpad,
+      this.keybinds.zoomIn,
+      this.keybinds.zoomInEqual,
+      this.keybinds.zoomInNumpad,
+      this.keybinds.attackRatioDown,
+      this.keybinds.attackRatioUp,
+      this.keybinds.centerCamera,
+    ];
+    return bindings.filter(
+      (k): k is string => typeof k === "string" && k !== "" && k !== "Null",
+    );
+  }
+
   /**
    * Extracts the digit character from KeyboardEvent.code.
    * Codes look like "Digit0".."Digit9" (6 chars, digit at index 5) and
@@ -1557,6 +1619,7 @@ export class InputHandler {
     // renderer has already removed.
     this.resetPointerState();
     this.activeKeys.clear();
+    this.shiftHeld = false;
     this.emojiTableOpen = false;
     this.emojiKeysDown.clear();
     this.keybindAndEvent = [];
