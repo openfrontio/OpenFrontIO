@@ -305,6 +305,23 @@ describe("GameRightSidebar share button", () => {
     expect(showToastMock).toHaveBeenCalledWith("Failed to copy", "red");
   });
 
+  it("shows failure toast when link generation throws", async () => {
+    vi.spyOn(ClientEnv, "gamePath").mockImplementationOnce(() => {
+      throw new Error("missing config");
+    });
+
+    const gameId = "gameerr123";
+    const el = await mount({ gameId });
+    const shareBtn = getShareButton(el);
+    expect(shareBtn).not.toBeNull();
+
+    shareBtn!.click();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(copyToClipboardMock).not.toHaveBeenCalled();
+    expect(showToastMock).toHaveBeenCalledWith("Failed to copy", "red");
+  });
+
   it("renders the share button in singleplayer games", async () => {
     const el = await mount({ gameType: GameType.Singleplayer });
     const shareBtn = getShareButton(el);

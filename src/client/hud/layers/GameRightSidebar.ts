@@ -304,16 +304,16 @@ export class GameRightSidebar extends LitElement implements Controller {
       return;
     }
 
-    const text = crazyGamesSDK.isOnCrazyGames()
-      ? crazyGamesSDK.createInviteLink(gameId)
-      : `${ClientEnv.shareOrigin()}${ClientEnv.gamePath(gameId)}`;
-
-    if (!text) {
-      showToast(translateText("common.failed_copy"), "red");
-      return;
-    }
-
     try {
+      const text = crazyGamesSDK.isOnCrazyGames()
+        ? crazyGamesSDK.createInviteLink(gameId)
+        : `${ClientEnv.shareOrigin()}${ClientEnv.gamePath(gameId)}`;
+
+      if (!text) {
+        showToast(translateText("common.failed_copy"), "red");
+        return;
+      }
+
       await copyToClipboard(text);
       showToast(translateText("common.copied"), "green");
     } catch {
