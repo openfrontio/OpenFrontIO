@@ -1,12 +1,18 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-const { getUserMe, invalidateUserMe, fetchProgressionConfig, isLoggedIn } =
-  vi.hoisted(() => ({
-    getUserMe: vi.fn(),
-    invalidateUserMe: vi.fn(),
-    fetchProgressionConfig: vi.fn(),
-    isLoggedIn: vi.fn(),
-  }));
+const {
+  getUserMe,
+  fetchUserMeUncached,
+  invalidateUserMe,
+  fetchProgressionConfig,
+  isLoggedIn,
+} = vi.hoisted(() => ({
+  getUserMe: vi.fn(),
+  fetchUserMeUncached: vi.fn(),
+  invalidateUserMe: vi.fn(),
+  fetchProgressionConfig: vi.fn(),
+  isLoggedIn: vi.fn(),
+}));
 
 vi.mock("../../../../src/client/Utils", () => ({
   translateText: (key: string, params?: Record<string, string | number>) =>
@@ -17,7 +23,11 @@ vi.mock("../../../../src/client/Utils", () => ({
   TUTORIAL_VIDEO_URL: "https://example.com/tutorial",
 }));
 
-vi.mock("../../../../src/client/Api", () => ({ getUserMe, invalidateUserMe }));
+vi.mock("../../../../src/client/Api", () => ({
+  getUserMe,
+  fetchUserMeUncached,
+  invalidateUserMe,
+}));
 
 vi.mock("../../../../src/client/Auth", () => ({
   getAuthHeader: vi.fn(async () => "Bearer test-token"),
@@ -186,6 +196,23 @@ function serverXp(overrides: Record<string, unknown> = {}) {
   };
 }
 
+// The server's figure for a team game the player's team won: 50 + 113 (no
+// placement in a team game) + 100 first game + 150 team win = 413, and 50 +
+// 413 reaches level 13, one past the provisional 12.
+function teamWinXp() {
+  return serverXp({
+    breakdown: {
+      ...BREAKDOWN,
+      placement: 0,
+      win: 150,
+      subtotal: 413,
+      total: 413,
+    },
+    after: { ...serverXp().after, level: 13, xpInLevel: 63 },
+    levelsReached: levels(10, 11, 12, 13),
+  });
+}
+
 function json(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), {
     status,
@@ -253,6 +280,7 @@ describe("WinModal provisional XP at death", () => {
   beforeEach(() => {
     vi.useFakeTimers();
     getUserMe.mockResolvedValue(signedIn);
+    fetchUserMeUncached.mockResolvedValue(signedIn);
     isLoggedIn.mockResolvedValue(true);
     fetchProgressionConfig.mockResolvedValue(CONFIG);
     vi.spyOn(history, "replaceState").mockImplementation(() => {});
@@ -264,15 +292,19 @@ describe("WinModal provisional XP at death", () => {
     vi.unstubAllGlobals();
     vi.restoreAllMocks();
     invalidateUserMe.mockClear();
+    fetchUserMeUncached.mockReset();
   });
 
-  async function mount(game: GameView): Promise<void> {
+  // `hidden`: the player closes the death modal straight away, before the
+  // provisional figure arrives.
+  async function mount(game: GameView, hidden = false): Promise<void> {
     modal = document.createElement("win-modal") as WinModal;
     modal.game = game;
     modal.eventBus = new EventBus();
     Object.assign(modal as unknown as { rand: number }, { rand: 0.75 });
     document.body.appendChild(modal);
     modal.tick();
+    if (hidden) modal.hide();
     await settle();
   }
 
@@ -358,8 +390,9 @@ describe("WinModal provisional XP at death", () => {
     await mount(game);
 
     expect(xpState()).toBe("provisional");
-    // Fresh account state for today's allowances.
-    expect(invalidateUserMe).toHaveBeenCalled();
+    // Fresh account state for today's allowances, past the page's cache.
+    expect(fetchUserMeUncached).toHaveBeenCalled();
+    expect(invalidateUserMe).not.toHaveBeenCalled();
     expect(
       panel()!.querySelector("[data-xp-provisional]")!.textContent,
     ).toContain("progression.provisional_label");
@@ -435,23 +468,7 @@ describe("WinModal provisional XP at death", () => {
 
   it("celebrates only the new levels when the team's win adds more", async () => {
     const warn = vi.spyOn(console, "warn");
-    // 50 + 113 (no placement in a team game) + 100 first game + 150 team win
-    // = 413: 50 + 413 reaches level 13, one past the provisional 12.
-    stubXpEndpoint(() =>
-      json(
-        serverXp({
-          breakdown: {
-            ...BREAKDOWN,
-            placement: 0,
-            win: 150,
-            subtotal: 413,
-            total: 413,
-          },
-          after: { ...serverXp().after, level: 13, xpInLevel: 63 },
-          levelsReached: levels(10, 11, 12, 13),
-        }),
-      ),
-    );
+    stubXpEndpoint(() => json(teamWinXp()));
     const { game, end } = makeGame({ gameMode: GameMode.Team });
     await mount(game);
 
@@ -649,6 +666,102 @@ describe("WinModal provisional XP at death", () => {
     expect(total()).toContain('"xp":"274"');
   });
 
+  describe("a fresh /users/@me at death", () => {
+    it("counts today's allowances from it", async () => {
+      // Another public game has been scored since this one started.
+      fetchUserMeUncached.mockResolvedValue({
+        ...signedIn,
+        player: {
+          ...signedIn.player,
+          progress: {
+            ...PROGRESS,
+            daily: { ...PROGRESS.daily, firstGameClaimed: true },
+          },
+        },
+      });
+      stubXpEndpoint(() => json(serverXp()));
+      await mount(makeGame().game);
+      await finishReveal();
+      expect(total()).toContain('"xp":"174"');
+      expect(panel()!.querySelector('[data-xp-line="firstGame"]')).toBeNull();
+    });
+
+    it("falls back to the page's copy when it fails, and the game end still confirms", async () => {
+      fetchUserMeUncached.mockResolvedValue(false);
+      stubXpEndpoint(() => json(serverXp()));
+      const { game, end } = makeGame();
+      await mount(game);
+
+      expect(xpState()).toBe("provisional");
+      expect(await playOut()).toEqual({
+        moments: ["10", "11", "12"],
+        cards: ["10"],
+      });
+      expect(total()).toContain('"xp":"274"');
+
+      await endGame(end);
+      expect(xpState()).toBe("result");
+      expect(panel()!.querySelector("[data-xp-confirmed]")).not.toBeNull();
+      expect(total()).toContain('"xp":"274"');
+      // The page's copy was never dropped.
+      expect(invalidateUserMe).not.toHaveBeenCalled();
+    });
+  });
+
+  // The provisional reveal never played if the death modal was closed before
+  // the figure arrived, or mid-reveal: the server's figure gets it in full.
+  describe("a provisional figure the player never saw", () => {
+    it("plays the matching server figure in full", async () => {
+      stubXpEndpoint(() => json(serverXp()));
+      const { game, end } = makeGame();
+      await mount(game, true);
+      expect(xpState()).toBe("provisional");
+      expect(revealing()).toBe(false);
+
+      await endGame(end);
+      expect(xpState()).toBe("result");
+      expect(panel()!.querySelector("[data-xp-confirmed]")).not.toBeNull();
+      expect(await playOut()).toEqual({
+        moments: ["10", "11", "12"],
+        cards: ["10"],
+      });
+      expect(currentLevel()).toBe(12);
+    });
+
+    it("plays a higher server figure in full, not just the extra levels", async () => {
+      stubXpEndpoint(() => json(teamWinXp()));
+      const { game, end } = makeGame({ gameMode: GameMode.Team });
+      await mount(game, true);
+      expect(xpState()).toBe("provisional");
+
+      await endGame(end);
+      expect(xpState()).toBe("result");
+      expect(await playOut()).toEqual({
+        moments: ["10", "11", "12", "13"],
+        cards: ["10"],
+      });
+      expect(total()).toContain('"xp":"413"');
+      expect(currentLevel()).toBe(13);
+    });
+
+    it("plays the server figure in full when the provisional reveal was cut short", async () => {
+      stubXpEndpoint(() => json(serverXp()));
+      const { game, end } = makeGame();
+      await mount(game);
+      await settle(100);
+      expect(revealing()).toBe(true);
+      modal.hide();
+      await settle();
+      expect(revealing()).toBe(false);
+
+      await endGame(end);
+      expect(await playOut()).toEqual({
+        moments: ["10", "11", "12"],
+        cards: ["10"],
+      });
+    });
+  });
+
   describe("falls back to 'XP is awarded when the game ends'", () => {
     it("for another formula revision", async () => {
       fetchProgressionConfig.mockResolvedValue({ ...CONFIG, formula: 2 });
@@ -656,7 +769,7 @@ describe("WinModal provisional XP at death", () => {
       await mount(game);
       expect(xpState()).toBe("awaiting_end");
       expect(humanStats).not.toHaveBeenCalled();
-      expect(invalidateUserMe).not.toHaveBeenCalled();
+      expect(fetchUserMeUncached).not.toHaveBeenCalled();
     });
 
     it("for an API without the formula or its rules", async () => {

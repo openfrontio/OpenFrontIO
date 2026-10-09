@@ -205,6 +205,10 @@ export class GameXpPanel extends LitElement {
   @state() private reveal: RevealFrame | null = null;
   @state() private barAnimate = false;
   @state() private barDurationMs = CLIMB_MS;
+  // The provisional figure whose reveal played on screen, if any. Only then
+  // does the server's figure skip what it celebrated; one that arrived off
+  // screen (or went off screen mid-reveal) was never seen.
+  private revealedProvisional: ProvisionalXp | null = null;
   private animationToken = 0;
   private timers: ReturnType<typeof setTimeout>[] = [];
 
@@ -237,7 +241,11 @@ export class GameXpPanel extends LitElement {
       } else if (s.kind === "result" && s.data.eligible) {
         const reconciled = s.reconciled;
         const shown = reconciled?.provisional.response;
-        if (reconciled !== undefined && shown?.eligible) {
+        if (
+          reconciled !== undefined &&
+          shown?.eligible &&
+          this.revealedProvisional === reconciled.provisional
+        ) {
           // The provisional figure had its full reveal at death, levels and
           // milestones included: never a second one.
           if (reconciled.outcome.matched) {
@@ -262,14 +270,22 @@ export class GameXpPanel extends LitElement {
             this.skipReveal();
           }
         } else {
+          // No provisional figure, or one that never played on screen: the
+          // server's figure gets the reveal the player hasn't seen.
           this.startReveal(s.data, { kind: "full" });
         }
       } else if (s.kind === "provisional" && s.provisional.response.eligible) {
+        this.revealedProvisional = s.provisional;
         this.startReveal(s.provisional.response, { kind: "full" });
       } else {
         this.skipReveal();
       }
     } else if (changed.has("onScreen") && !this.onScreen) {
+      // A provisional reveal cut short never showed its levels: the server's
+      // figure plays in full instead.
+      if (this.reveal !== null && this.view.kind === "provisional") {
+        this.revealedProvisional = null;
+      }
       this.skipReveal();
     }
   }
@@ -593,7 +609,14 @@ export class GameXpPanel extends LitElement {
   private payoffCaption(data: GameXpEligible): Caption | null {
     // Confirmed below a level the provisional figure celebrated: the
     // adjustment note says so, and nothing is celebrated again.
-    if (this.adjustedLevel() !== null) return null;
+    const s = this.view;
+    if (
+      s.kind === "result" &&
+      s.reconciled?.provisional === this.revealedProvisional &&
+      this.adjustedLevel() !== null
+    ) {
+      return null;
+    }
     if (reachedLegendThisGame(data)) return { kind: "legend" };
     const reached = levelsReachedInGame(data);
     if (reached.length === 0) return null;

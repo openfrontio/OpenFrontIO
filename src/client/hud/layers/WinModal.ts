@@ -13,7 +13,7 @@ import {
   translateText,
   TUTORIAL_VIDEO_URL,
 } from "../../../client/Utils";
-import { getUserMe, invalidateUserMe } from "../../Api";
+import { fetchUserMeUncached, getUserMe } from "../../Api";
 import "../../components/CosmeticCard";
 import { cosmeticSelectionLabel } from "../../components/CosmeticPresentation";
 import "../../components/GameXpPanel";
@@ -452,16 +452,6 @@ export class WinModal extends LitElement implements Controller {
       const game = this.game;
       // Spectators and replay viewers have no XP of their own.
       if (game.config().isReplay() || !game.myPlayer()) return;
-      if (!gameOver) {
-        // A provisional figure starts from where the player is now, and
-        // counts today's allowances as they are now: ask /users/@me afresh
-        // (the page's copy is from when the game started, and a game left
-        // earlier may have been scored since).
-        const config = await fetchProgressionConfig();
-        if (config !== false && provisionalXpRules(config) !== null) {
-          invalidateUserMe();
-        }
-      }
       const account = await resolveXpAccount();
       // /users/@me failed while there is a session: a signed-in player must
       // not be told to sign in over a network blip, so say nothing.
@@ -557,11 +547,20 @@ export class WinModal extends LitElement implements Controller {
     const game = this.game;
     const myClientID = game.myClientID();
     if (myClientID === undefined) return null;
+    // A provisional figure starts from where the player is now, and counts
+    // today's allowances as they are now: ask /users/@me afresh (the page's
+    // copy is from when the game started, and a game left earlier may have
+    // been scored since). Past the page's cache, so a failed ask can't cost
+    // the game-end figure its copy; the page's progress stands in for it.
+    const fresh = await fetchUserMeUncached();
     return loadProvisionalXp({
       gameId: game.gameID(),
       myClientID,
       config: game.config().gameConfig(),
-      progress,
+      progress:
+        fresh !== false && fresh.player.progress !== undefined
+          ? fresh.player.progress
+          : progress,
       progression,
       humanStats: () => game.worker.humanStats(),
     });
