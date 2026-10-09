@@ -203,6 +203,43 @@ describe("Player profile Progression tab", () => {
     });
   });
 
+  async function openOnProgression(): Promise<void> {
+    modal.open({ publicID: "abcd1234", tab: "progression" });
+    await settle(() => {
+      expect(modal.querySelector("profile-progression")).not.toBeNull();
+    });
+  }
+
+  it("honours an explicit Stats request while open on Progression", async () => {
+    fetchPublicPlayerProgressMock.mockResolvedValue(withProgress);
+    await openOnProgression();
+    fetchPublicPlayerProgressMock.mockClear();
+
+    modal.open({ publicID: "abcd1234", tab: "stats" });
+    await settle(() => {
+      expect(fetchPublicPlayerProgressMock).toHaveBeenCalled();
+      expect(tabText()).toContain("account_modal.tab_progression");
+      expect(modal.querySelector("player-stats-tree-view")).not.toBeNull();
+    });
+    // Let the progress response land: it must not pull the tab back.
+    await new Promise((r) => setTimeout(r, 0));
+    await modal.updateComplete;
+    expect(modal.querySelector("profile-progression")).toBeNull();
+    expect(modal.querySelector("player-stats-tree-view")).not.toBeNull();
+  });
+
+  it("keeps Progression when reopened without a tab", async () => {
+    fetchPublicPlayerProgressMock.mockResolvedValue(withProgress);
+    await openOnProgression();
+    fetchPublicPlayerProgressMock.mockClear();
+
+    modal.open({ publicID: "abcd1234" });
+    await settle(() => {
+      expect(fetchPublicPlayerProgressMock).toHaveBeenCalled();
+      expect(modal.querySelector("profile-progression")).not.toBeNull();
+    });
+  });
+
   it("stays on Stats when the asked-for tab has nothing to show", async () => {
     fetchPublicPlayerProgressMock.mockResolvedValue(false);
     modal.open({ publicID: "abcd1234", tab: "progression" });
