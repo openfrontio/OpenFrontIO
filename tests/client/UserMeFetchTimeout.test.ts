@@ -27,13 +27,13 @@ const AUTH_FETCH_TIMEOUT_MS = 10_000;
 
 const profile = {
   user: {},
+  steamLicence: false,
+  noticesSeen: [],
   player: {
     publicId: "player-1",
     adfree: false,
     unlimitedRanked: false,
     canCreatePublicLobbies: false,
-    steamLicence: false,
-    noticesSeen: [],
     flares: [],
     achievements: { player: [], singleplayerMap: [] },
     friends: [],

@@ -21,20 +21,22 @@ const ME = "player-public-id";
 const NOW = Date.parse("2026-10-09T12:00:00.000Z");
 const GRANT_END = "2026-10-20T00:00:00.000Z";
 
-type Player = UserMeResponse["player"];
-type Sub = NonNullable<Player["subscription"]>;
+type Sub = NonNullable<UserMeResponse["player"]["subscription"]>;
 
-function me(overrides: Partial<Player> = {}): UserMeResponse {
+interface Fixture {
+  steamLicence?: boolean;
+  noticesSeen?: string[];
+  tierConversion?: UserMeResponse["tierConversion"];
+  subscription?: Sub | null;
+}
+
+function me(overrides: Fixture = {}): UserMeResponse {
   return {
     user: {},
-    player: {
-      publicId: ME,
-      steamLicence: true,
-      noticesSeen: [],
-      tierConversion: null,
-      subscription: null,
-      ...overrides,
-    },
+    steamLicence: overrides.steamLicence ?? true,
+    noticesSeen: overrides.noticesSeen ?? [],
+    tierConversion: overrides.tierConversion ?? null,
+    player: { publicId: ME, subscription: overrides.subscription ?? null },
   } as unknown as UserMeResponse;
 }
 

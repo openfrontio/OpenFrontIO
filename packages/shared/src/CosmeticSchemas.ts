@@ -504,6 +504,8 @@ export const SubscriptionSchema = CosmeticSchema.extend({
   // Whether this tier lets subscribers list custom lobbies publicly
   // (advertised on the store tile).
   canCreatePublicLobbies: z.boolean(),
+  // Only Steam licence holders may buy this tier; the server enforces it.
+  requiresSteamLicence: z.boolean().optional().default(false),
 });
 
 // Schema for resources/cosmetics/cosmetics.json
@@ -537,6 +539,9 @@ export const CosmeticsSchema = z.object({
   // this client doesn't know is dropped alone, not the whole catalog.
   packs: lenientRecord(CosmeticPackSchema).optional(),
   subscriptions: z.record(z.string(), SubscriptionSchema).optional(),
+  // Tiers this rail does not list but a player may hold. Display only: a
+  // player's own tier renders from here, and nothing here is ever for sale.
+  unlistedSubscriptions: z.record(z.string(), SubscriptionSchema).optional(),
   // Custom tribe name pricing (store Tribes tab) — served here so the client
   // never hardcodes it. Optional: an older cosmetics.json parses, and the UI
   // hides boost purchasing when absent.

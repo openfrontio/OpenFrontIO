@@ -34,7 +34,7 @@ export function resetSteamNoticesForTest(): void {
 }
 
 function seen(userMe: UserMeResponse, notice: string): boolean {
-  return userMe.player.noticesSeen.includes(notice);
+  return userMe.noticesSeen.includes(notice);
 }
 
 /**
@@ -47,7 +47,7 @@ export function steamNoticeDue(
   now: number,
 ): SteamNotice | null {
   if (shownThisLaunch || userMe === null || userMe === false) return null;
-  const conversion = userMe.player.tierConversion;
+  const conversion = userMe.tierConversion;
   if (conversion) {
     const notice = steamPlusConversionNotice(conversion.id);
     if (!seen(userMe, notice)) {
@@ -60,7 +60,7 @@ export function steamNoticeDue(
   }
   if (
     desktopShell &&
-    userMe.player.steamLicence &&
+    userMe.steamLicence &&
     !seen(userMe, STEAM_LICENCE_INTRO_NOTICE)
   ) {
     const grant = steamGrantOf(userMe);

@@ -62,7 +62,6 @@ export const COSMETICS_FETCH_TIMEOUT_MS = 10_000;
 let __cosmetics: Promise<Cosmetics | null> | null = null;
 let __cosmeticsHash: string | null = null;
 let __cosmeticsCache: Cosmetics | null = null;
-let __otherRailCosmetics: Promise<Cosmetics | null> | null = null;
 
 /**
  * Synchronous accessor for the most recently resolved cosmetics. Returns null
@@ -448,8 +447,10 @@ export async function purchaseCosmetic(
 
       // Direction-aware confirm based on priceMonthly. We don't have the
       // server's sortOrder client-side — priceMonthly is a good proxy.
-      const currentCosmetic =
-        (await fetchCosmetics())?.subscriptions?.[currentSub.tier] ?? null;
+      const currentCosmetic = subscriptionTier(
+        await fetchCosmetics(),
+        currentSub.tier,
+      );
       const isUpgrade =
         currentCosmetic !== null
           ? sub.priceMonthly > currentCosmetic.priceMonthly
@@ -504,6 +505,10 @@ export async function purchaseCosmetic(
       const result = await changeSubscriptionTier(sub.name);
       if (result === "rate_limited") {
         await showInGameAlert(translateText("store.change_tier_rate_limited"));
+        return;
+      }
+      if (result === "steam_licence_required") {
+        await showInGameAlert(translateText("store.steam_licence_required"));
         return;
       }
       if (!result) {
@@ -851,56 +856,48 @@ function simpleHash(str: string): string {
  */
 export function invalidateCosmetics(): void {
   __cosmetics = null;
-  __otherRailCosmetics = null;
 }
 
 export type TierListingRail = "steam" | "web";
 
-// Subscription tiers are listed per rail: the one this device checks out on.
-// The only place the listing hint is decided.
+// cosmetics.json lists subscription tiers per rail: the one this device checks
+// out on. The only place the listing hint is decided.
 export function tierListingRail(): TierListingRail {
   return paymentsProvider() === "steam" ? "steam" : "web";
 }
 
-export function cosmeticsJsonUrl(rail: TierListingRail): string {
-  return `${getApiBase()}/cosmetics.json?rail=${rail}`;
-}
-
-async function requestCosmetics(
-  rail: TierListingRail,
-): Promise<Cosmetics | null> {
-  try {
-    const response = await fetch(cosmeticsJsonUrl(rail), {
-      signal: AbortSignal.timeout(COSMETICS_FETCH_TIMEOUT_MS),
-    });
-    if (!response.ok) {
-      console.warn(`HTTP error! status: ${response.status}`);
-      return null;
-    }
-    const result = CosmeticsSchema.safeParse(await response.json());
-    if (!result.success) {
-      console.error(`Invalid cosmetics: ${result.error.message}`);
-      return null;
-    }
-    return result.data;
-  } catch (error) {
-    console.warn("Error getting cosmetics:", error);
-    return null;
-  }
+export function cosmeticsJsonUrl(): string {
+  return `${getApiBase()}/cosmetics.json?rail=${tierListingRail()}`;
 }
 
 export async function fetchCosmetics(): Promise<Cosmetics | null> {
   if (__cosmetics !== null) {
     return __cosmetics;
   }
-  const request = requestCosmetics(tierListingRail()).then((cosmetics) => {
-    if (cosmetics !== null) {
-      const patternKeys = Object.keys(cosmetics.patterns).sort();
-      __cosmeticsHash = simpleHash(patternKeys.join(","));
-      __cosmeticsCache = cosmetics;
+  const request = (async () => {
+    try {
+      const response = await fetch(cosmeticsJsonUrl(), {
+        signal: AbortSignal.timeout(COSMETICS_FETCH_TIMEOUT_MS),
+      });
+      if (!response.ok) {
+        console.warn(`HTTP error! status: ${response.status}`);
+        return null;
+      }
+      const result = CosmeticsSchema.safeParse(await response.json());
+      if (!result.success) {
+        console.error(`Invalid cosmetics: ${result.error.message}`);
+        return null;
+      }
+      const patternKeys = Object.keys(result.data.patterns).sort();
+      const hashInput = patternKeys.join(",");
+      __cosmeticsHash = simpleHash(hashInput);
+      __cosmeticsCache = result.data;
+      return result.data;
+    } catch (error) {
+      console.warn("Error getting cosmetics:", error);
+      return null;
     }
-    return cosmetics;
-  });
+  })();
   __cosmetics = request;
   void request.then((result) => {
     if (result === null && __cosmetics === request) {
@@ -910,35 +907,16 @@ export async function fetchCosmetics(): Promise<Cosmetics | null> {
   return request;
 }
 
-/**
- * The catalog with the player's own tier in it. A rail lists only the tiers it
- * sells, but a tier the player holds must still render, so one missing from
- * this rail's listing is taken from the other rail's, display-only: without a
- * product it resolves as owned and never offers a buy button.
- */
-export async function withHeldTier(
-  cosmetics: Cosmetics | null,
-  userMe: UserMeResponse | false,
-): Promise<Cosmetics | null> {
-  if (cosmetics === null || userMe === false) return cosmetics;
-  const held = userMe.player.subscription?.tier;
-  if (!held || cosmetics.subscriptions?.[held]) return cosmetics;
-  const other: TierListingRail =
-    tierListingRail() === "steam" ? "web" : "steam";
-  const request = (__otherRailCosmetics ??= requestCosmetics(other));
-  const catalog = await request;
-  if (catalog === null && __otherRailCosmetics === request) {
-    __otherRailCosmetics = null;
-  }
-  const tier = catalog?.subscriptions?.[held];
-  if (!tier) return cosmetics;
-  return {
-    ...cosmetics,
-    subscriptions: {
-      ...cosmetics.subscriptions,
-      [held]: { ...tier, product: null },
-    },
-  };
+/** A tier by name, listed on this rail or not. */
+export function subscriptionTier(
+  cosmetics: Cosmetics | null | undefined,
+  name: string,
+): Subscription | null {
+  return (
+    cosmetics?.subscriptions?.[name] ??
+    cosmetics?.unlistedSubscriptions?.[name] ??
+    null
+  );
 }
 
 /**
@@ -1406,6 +1384,19 @@ export function resolveCosmetics(
       colorPalette: null,
       relationship: rel,
       key,
+    });
+  }
+  const heldUnlisted =
+    currentSubTier !== null && !cosmetics.subscriptions?.[currentSubTier]
+      ? cosmetics.unlistedSubscriptions?.[currentSubTier]
+      : undefined;
+  if (heldUnlisted) {
+    result.push({
+      type: "subscription",
+      cosmetic: heldUnlisted,
+      colorPalette: null,
+      relationship: "owned",
+      key: `subscription:${currentSubTier}`,
     });
   }
 

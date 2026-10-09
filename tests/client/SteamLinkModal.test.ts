@@ -60,13 +60,13 @@ function makeUserMe(
 ): UserMeResponse {
   return {
     user,
+    steamLicence: false,
+    noticesSeen: [],
     player: {
       publicId: "p1",
       adfree: false,
       unlimitedRanked: false,
       canCreatePublicLobbies: false,
-      steamLicence: false,
-      noticesSeen: [],
       achievements: { singleplayerMap: [], player: [] },
       friends: [],
       subscription: null,

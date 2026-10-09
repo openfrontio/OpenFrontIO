@@ -153,6 +153,7 @@ const resolved = {
       hardCurrencySignupBonus: 100,
       unlimitedRanked: true,
       canCreatePublicLobbies: true,
+      requiresSteamLicence: false,
       product: null,
       rarity: "legendary",
     },

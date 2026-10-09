@@ -4,8 +4,8 @@ import {
   fetchCosmetics,
   invalidateCosmetics,
   resolveCosmetics,
+  subscriptionTier,
   tierListingRail,
-  withHeldTier,
 } from "../../src/client/Cosmetics";
 
 vi.mock("../../src/client/Api", async (importOriginal) => ({
@@ -36,25 +36,23 @@ function tier(name: string, priceMonthly: number) {
 const steamListing = {
   patterns: {},
   flags: {},
-  subscriptions: { steam_plus: tier("steam_plus", 4.99) },
-};
-const webListing = {
-  patterns: {},
-  flags: {},
   subscriptions: {
-    vanguard: tier("vanguard", 4.99),
+    steam_plus: { ...tier("steam_plus", 4.99), requiresSteamLicence: true },
+  },
+  unlistedSubscriptions: {
     warlord: tier("warlord", 9.99),
+    sovereign: tier("sovereign", 19.99),
   },
 };
 
-function userMe(subTier: string | null, provider: string | null = "steam") {
+function userMe(subTier: string | null) {
   return {
     user: {},
+    steamLicence: true,
+    noticesSeen: [],
     player: {
       publicId: "p",
       flares: [],
-      steamLicence: true,
-      noticesSeen: [],
       subscription:
         subTier === null
           ? null
@@ -63,10 +61,16 @@ function userMe(subTier: string | null, provider: string | null = "steam") {
               status: "active",
               currentPeriodEnd: null,
               cancelAtPeriodEnd: false,
-              provider,
+              provider: "steam",
             },
     },
   } as unknown as UserMeResponse;
+}
+
+function subscriptionTiles(me: UserMeResponse, cosmetics: unknown) {
+  return resolveCosmetics(cosmetics as never, me, null)
+    .filter((r) => r.type === "subscription")
+    .map((r) => [r.key, r.relationship]);
 }
 
 describe("subscription tier listing per rail", () => {
@@ -74,11 +78,10 @@ describe("subscription tier listing per rail", () => {
 
   beforeEach(() => {
     invalidateCosmetics();
-    fetchMock = vi.fn(async (url: string) => ({
+    fetchMock = vi.fn(async () => ({
       ok: true,
       status: 200,
-      json: async () =>
-        url.includes("rail=steam") ? steamListing : webListing,
+      json: async () => steamListing,
     }));
     vi.stubGlobal("fetch", fetchMock);
   });
@@ -89,12 +92,6 @@ describe("subscription tier listing per rail", () => {
     delete (window as { openfrontDesktop?: unknown }).openfrontDesktop;
   });
 
-  function onSteamBuild() {
-    (window as { openfrontDesktop?: unknown }).openfrontDesktop = {
-      steam: {},
-    };
-  }
-
   it("asks for the rail this device checks out on", async () => {
     expect(tierListingRail()).toBe("web");
     await fetchCosmetics();
@@ -103,7 +100,9 @@ describe("subscription tier listing per rail", () => {
     );
 
     invalidateCosmetics();
-    onSteamBuild();
+    (window as { openfrontDesktop?: unknown }).openfrontDesktop = {
+      steam: {},
+    };
     expect(tierListingRail()).toBe("steam");
     await fetchCosmetics();
     expect(fetchMock.mock.calls[1][0]).toBe(
@@ -111,39 +110,43 @@ describe("subscription tier listing per rail", () => {
     );
   });
 
-  it("renders Steam Plus alone when it is all the Steam rail lists", async () => {
-    onSteamBuild();
-    const me = userMe(null);
-    const cosmetics = await withHeldTier(await fetchCosmetics(), me);
-    const tiers = resolveCosmetics(cosmetics, me, null).filter(
-      (r) => r.type === "subscription",
+  it("renders Steam Plus alone when it is all the rail lists", async () => {
+    const cosmetics = await fetchCosmetics();
+    expect(cosmetics?.subscriptions?.steam_plus.requiresSteamLicence).toBe(
+      true,
     );
-    expect(tiers.map((r) => [r.key, r.relationship])).toEqual([
+    expect(subscriptionTiles(userMe(null), cosmetics)).toEqual([
       ["subscription:steam_plus", "purchasable"],
     ]);
-    expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 
-  it("renders a held tier the rail does not list, as owned only", async () => {
-    onSteamBuild();
-    const me = userMe("warlord");
-    const cosmetics = await withHeldTier(await fetchCosmetics(), me);
-    const tiers = resolveCosmetics(cosmetics, me, null).filter(
-      (r) => r.type === "subscription",
-    );
-    expect(tiers.map((r) => [r.key, r.relationship])).toEqual([
+  it("renders the player's own unlisted tier as owned, and no other unlisted tier", async () => {
+    const cosmetics = await fetchCosmetics();
+    expect(subscriptionTiles(userMe("warlord"), cosmetics)).toEqual([
       ["subscription:steam_plus", "purchasable"],
       ["subscription:warlord", "owned"],
     ]);
-    expect(fetchMock.mock.calls[1][0]).toBe(
-      "https://api.test/cosmetics.json?rail=web",
-    );
   });
 
-  it("does not fetch again when the held tier is listed", async () => {
-    const me = userMe("vanguard", "stripe");
+  it("looks a tier up whether or not the rail lists it", async () => {
     const cosmetics = await fetchCosmetics();
-    expect(await withHeldTier(cosmetics, me)).toBe(cosmetics);
-    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(subscriptionTier(cosmetics, "steam_plus")?.name).toBe("steam_plus");
+    expect(subscriptionTier(cosmetics, "warlord")?.name).toBe("warlord");
+    expect(subscriptionTier(cosmetics, "missing")).toBeNull();
+  });
+
+  it("defaults requiresSteamLicence for an older API", async () => {
+    fetchMock.mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      json: async () => ({
+        patterns: {},
+        flags: {},
+        subscriptions: { vanguard: tier("vanguard", 4.99) },
+      }),
+    });
+    const cosmetics = await fetchCosmetics();
+    expect(cosmetics?.subscriptions?.vanguard.requiresSteamLicence).toBe(false);
+    expect(cosmetics?.unlistedSubscriptions).toBeUndefined();
   });
 });
