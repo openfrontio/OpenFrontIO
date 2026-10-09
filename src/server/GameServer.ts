@@ -1534,7 +1534,7 @@ export class GameServer {
           gameID: this.id,
         });
       } else if (this.winnerVote.winner() !== null) {
-        this.log.info("game already archived", {
+        this.log.info("winner already settled, record sent or pending replay", {
           gameID: this.id,
         });
       } else {
@@ -1952,14 +1952,20 @@ export class GameServer {
       return;
     }
     const reason =
-      candidates === 1 && voted !== null ? "lone voter" : "disputed";
+      candidates > 1
+        ? "disputed"
+        : voted !== null
+          ? "lone voter"
+          : "no majority";
     // The record as of now; the game may run on while the replay does.
     const turns = this.turns.slice();
     const endTime = Date.now();
     this.log.warn(
-      reason === "disputed"
-        ? "winner vote disputed, replaying game"
-        : "winner vote decided by one IP, replaying game",
+      {
+        disputed: "winner vote disputed, replaying game",
+        "lone voter": "winner vote decided by one IP, replaying game",
+        "no majority": "winner vote has no majority, replaying game",
+      }[reason],
       {
         gameID: this.id,
         voted: voted?.winner,
@@ -1968,6 +1974,9 @@ export class GameServer {
         turns: turns.length,
       },
     );
+    // Set once a record is handed over, so the .catch below falls back to the
+    // vote only when nothing was archived.
+    let archived = false;
     this.deps
       .replayWinner(this.wireGameStartInfo, turns)
       .then((replayed) => {
@@ -1980,6 +1989,7 @@ export class GameServer {
             backers,
             statsAgreed: votedAgreed,
           });
+          archived = true;
           this.archiveGame(voted, votedAgreed, turns, endTime);
           return;
         }
@@ -2021,12 +2031,19 @@ export class GameServer {
             outcome,
           });
         }
+        archived = true;
         this.archiveGame(replayed, true, turns, endTime);
       })
       .catch((error) => {
         this.log.error(`error archiving replayed game: ${error}`, {
           gameID: this.id,
+          reason,
         });
+        // A replay that threw is a failed replay: the vote's result goes out,
+        // as when the replay answers null.
+        if (archived) return;
+        winnerReplayMetrics.outcomes.failed++;
+        this.archiveGame(voted, votedAgreed, turns, endTime);
       });
   }
 
@@ -2164,7 +2181,11 @@ export class GameServer {
   }
 
   private handleWinner(client: Client, clientMsg: ClientSendWinnerMessage) {
+    // Only a running game has a winner to vote on, and the replay that
+    // settles a vote needs the start info start() builds.
     if (
+      this.stage !== "started" ||
+      this.ended ||
       this.desync.isDesynced(client.clientID) ||
       this.isKicked(client.clientID) ||
       this.winnerVote.winner() !== null ||

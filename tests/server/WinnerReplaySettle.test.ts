@@ -389,4 +389,74 @@ describe("settling a disputed winner vote by replay", () => {
       expect.objectContaining({ reason: "disputed", statsAgreed: false }),
     ]);
   });
+
+  it("tags a single candidate short of a majority as no majority", async () => {
+    const { game, clients } = play([A, B, C]);
+    await vote(clients[0], ["player", A]);
+    await game.end();
+
+    expect(warned("winner vote has no majority, replaying game")).toHaveLength(
+      1,
+    );
+    resolveReplay(null);
+    await archivedOnce();
+    expect(warned("winner replay failed, archiving the vote")).toEqual([
+      expect.objectContaining({ reason: "no majority", statsAgreed: false }),
+    ]);
+  });
+
+  it("archives the vote's result when the replay throws", async () => {
+    replayWinner.mockImplementation(() =>
+      Promise.reject(new Error("replay crashed")),
+    );
+    const { clients } = play([A, B, C]);
+    await vote(clients[2], ["player", C]);
+    await vote(clients[0], ["player", A]);
+    const counted = await outcomesDuring(async () => {
+      await vote(clients[1], ["player", A]);
+      await archivedOnce();
+    });
+
+    expect(archived()[0].info.winner).toEqual(["player", A]);
+    expect(archived()[0].info.statsAgreed).toBe(true);
+    expect(counted).toEqual({ agreed: 0, overturned: 0, failed: 1 });
+  });
+
+  it("ignores winner votes sent before the game has started", async () => {
+    const game = makeGame({
+      config: { gameType: GameType.Public },
+      deps: { archive, replayWinner },
+      log,
+    });
+    const clients = [A, B].map((clientID, i) =>
+      makeClient({
+        clientID,
+        ip: `1.1.1.${i + 1}`,
+        publicId: `pub-${clientID}`,
+      }),
+    );
+    clients.forEach((c) => game.joinClient(c));
+    // A vote from the lobby names another winner; it must not count later.
+    // Called directly: in this harness a lobby frame doesn't decode before
+    // start, so the handler's own guard is what is under test.
+    (
+      game as unknown as {
+        handleWinner(c: Client, m: unknown): void;
+      }
+    ).handleWinner(clients[0], {
+      type: "winner",
+      winner: ["player", B],
+      allPlayersStats: {},
+    });
+    expect(clients[0].reportedVote).toBeNull();
+    expect(archive).not.toHaveBeenCalled();
+
+    startGame(game);
+    await vote(clients[0], ["player", A]);
+    await vote(clients[1], ["player", A]);
+    // Unanimous once started: no dispute, so no replay.
+    expect(replayWinner).not.toHaveBeenCalled();
+    expect(archived().map((r) => r.info.winner)).toEqual([["player", A]]);
+    expect(archived()[0].info.statsAgreed).toBe(true);
+  });
 });

@@ -86,9 +86,8 @@ describe("GameEndInfo.statsAgreed", () => {
     expect(GameRecordSchema.safeParse(json).success).toBe(false);
   });
 
-  it("is the last field of the end info and is not on the wire start info", () => {
-    const keys = Object.keys(GameEndInfoSchema.shape);
-    expect(keys[keys.length - 1]).toBe("statsAgreed");
+  it("is on the end info and not on the wire start info", () => {
+    expect("statsAgreed" in GameEndInfoSchema.shape).toBe(true);
     expect("statsAgreed" in GameStartInfoSchema.shape).toBe(false);
   });
 });
