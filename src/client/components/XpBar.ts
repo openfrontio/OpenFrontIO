@@ -39,9 +39,9 @@ export function xpProgressText(xpInLevel: number, xpForNext: number): string {
 }
 
 /**
- * A thin XP bar. `percent` is clamped to 0..100. `valueText` is what a screen reader
- * announces for the value (typically xpProgressText); without it, the
- * percentage.
+ * A thin XP bar. `percent` is clamped to 0..100. `valueText` is what a
+ * screen reader announces for the value (typically xpProgressText); without
+ * it, the percentage.
  */
 export function xpBar(
   percent: number,
