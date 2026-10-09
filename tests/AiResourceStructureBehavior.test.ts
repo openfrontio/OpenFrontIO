@@ -6,7 +6,8 @@ import {
   UnitType,
 } from "@openfront/engine-api/game/GameTypes";
 import { PseudoRandom } from "@openfront/engine-lib/PseudoRandom";
-import { AiResourceStructureBehavior } from "@openfront/engine/execution/utils/AiResourceStructureBehavior";
+import { AiResourceStructureBehavior } from
+  "@openfront/engine/execution/utils/AiResourceStructureBehavior";
 import { NationExecution } from "@openfront/engine/execution/NationExecution";
 import { TribeExecution } from "@openfront/engine/execution/TribeExecution";
 import { Game, Player } from "@openfront/engine/game/Game";
