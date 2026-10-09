@@ -13,7 +13,7 @@ import { UserMeResponse } from "@openfront/shared/ApiSchemas";
 import { assetUrl } from "@openfront/shared/AssetUrls";
 import { generateID } from "@openfront/shared/SharedUtil";
 import { PlayerCosmetics } from "@openfront/shared/WireSchemas";
-import { html, nothing, TemplateResult } from "lit";
+import { html, TemplateResult } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import { showToast, translateText } from "../client/Utils";
 import { responseHasLinkedIdentity } from "./AccountIdentity";
@@ -504,9 +504,6 @@ export class SinglePlayerModal extends BaseModal {
         <div
           class="flex-1 min-h-0 overflow-y-auto custom-scrollbar px-6 pt-4 pb-6 mr-1 mx-auto w-full max-w-5xl"
         >
-          ${(this as any).renderResumeBanner
-            ? (this as any).renderResumeBanner()
-            : nothing}
           <lobby-preset-controls
             .presets=${this.lobbyPresets}
             .selectedName=${this.selectedPresetName}
@@ -818,8 +815,16 @@ export class SinglePlayerModal extends BaseModal {
   private handlePresetSave = (e: CustomEvent<string>) => {
     const name = e.detail;
     const config = this.exportPresetConfig();
-    this.lobbyPresets = saveLobbyPreset(name, config, this.userSettings);
-    this.selectedPresetName = name;
+    const updated = saveLobbyPreset(name, config, this.userSettings);
+    if (!updated) {
+      showToast(translateText("lobby_config.preset.save_failed"), "red");
+      return;
+    }
+    this.lobbyPresets = updated;
+    const saved = updated.find(
+      (p) => p.name.toLowerCase() === name.trim().toLowerCase(),
+    );
+    this.selectedPresetName = saved ? saved.name : name.trim();
     showToast(translateText("lobby_config.preset.saved"), "green");
   };
 

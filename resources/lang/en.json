@@ -1243,22 +1243,6 @@
     "visibility_public": "Public",
     "waiting": "Waiting for players..."
   },
-  "lobby_config": {
-    "preset": {
-      "title": "Presets",
-      "select": "Select a preset...",
-      "select_label": "Saved Presets",
-      "no_presets": "No saved presets",
-      "load": "Load",
-      "delete": "Delete",
-      "placeholder": "Preset name...",
-      "save_label": "Save Preset",
-      "save": "Save Current",
-      "saved": "Preset saved",
-      "deleted": "Preset deleted",
-      "loaded": "Preset loaded"
-    }
-  },
   "inventory": {
     "equipped": "Equipped",
     "load_failed": "Couldn't load your inventory. Please reload and try again.",
@@ -1379,6 +1363,23 @@
     "label": "You became a Legend",
     "lifetime_xp": "{xp} lifetime XP",
     "top_of_track": "The top of the track"
+  },
+  "lobby_config": {
+    "preset": {
+      "delete": "Delete",
+      "deleted": "Preset deleted",
+      "load": "Load",
+      "loaded": "Preset loaded",
+      "no_presets": "No saved presets",
+      "placeholder": "Preset name...",
+      "save": "Save Current",
+      "save_failed": "Failed to save preset",
+      "save_label": "Save Preset",
+      "saved": "Preset saved",
+      "select": "Select a preset...",
+      "select_label": "Saved Presets",
+      "title": "Presets"
+    }
   },
   "main": {
     "account": "Account",

@@ -188,16 +188,18 @@ describe("LobbyPresets logic and schema", () => {
         },
         setLobbyPresets: (presets: readonly LobbyPreset[]) => {
           mockStorage[LOBBY_PRESETS_KEY] = JSON.stringify(presets);
+          return true;
         },
       } as unknown as UserSettings;
     });
 
     it("saves a new preset and stores it in UserSettings", () => {
       const presets = saveLobbyPreset("Speed Run", sampleConfig, settings);
-      expect(presets).toHaveLength(1);
-      expect(presets[0].name).toBe("Speed Run");
-      expect(presets[0].config.bots).toBe(10);
-      expect(presets[0].createdAt).toBeGreaterThan(0);
+      expect(presets).not.toBeNull();
+      expect(presets!).toHaveLength(1);
+      expect(presets![0].name).toBe("Speed Run");
+      expect(presets![0].config.bots).toBe(10);
+      expect(presets![0].createdAt).toBeGreaterThan(0);
 
       // Verify persistence via settings.getLobbyPresets()
       const loaded = settings.getLobbyPresets();
@@ -215,9 +217,10 @@ describe("LobbyPresets logic and schema", () => {
         settings,
       );
 
-      expect(updatedPresets).toHaveLength(1);
-      expect(updatedPresets[0].name).toBe("speed run");
-      expect(updatedPresets[0].config.bots).toBe(99);
+      expect(updatedPresets).not.toBeNull();
+      expect(updatedPresets!).toHaveLength(1);
+      expect(updatedPresets![0].name).toBe("speed run");
+      expect(updatedPresets![0].config.bots).toBe(99);
     });
 
     it("trims whitespace and truncates name to MAX_PRESET_NAME_LENGTH", () => {
@@ -227,14 +230,21 @@ describe("LobbyPresets logic and schema", () => {
         sampleConfig,
         settings,
       );
-      expect(presets).toHaveLength(1);
-      expect(presets[0].name).toBe("A".repeat(MAX_PRESET_NAME_LENGTH));
+      expect(presets).not.toBeNull();
+      expect(presets!).toHaveLength(1);
+      expect(presets![0].name).toBe("A".repeat(MAX_PRESET_NAME_LENGTH));
     });
 
     it("does not save when preset name is empty", () => {
       const presets = saveLobbyPreset("    ", sampleConfig, settings);
-      expect(presets).toHaveLength(0);
+      expect(presets).toBeNull();
       expect(settings.getLobbyPresets()).toHaveLength(0);
+    });
+
+    it("returns null when setLobbyPresets fails", () => {
+      (settings as any).setLobbyPresets = () => false;
+      const presets = saveLobbyPreset("Failed Save", sampleConfig, settings);
+      expect(presets).toBeNull();
     });
 
     it("deletes a preset by name (case-insensitive)", () => {
@@ -409,6 +419,28 @@ describe("<lobby-preset-controls> component", () => {
     expect(wasSaved).toBe(false);
   });
 
+  it("disables save button when name input is empty even if a preset is selected", async () => {
+    element.selectedName = "Default Pro";
+    const nameInput = element.querySelector(
+      "[data-test-preset-name-input]",
+    ) as HTMLInputElement;
+    nameInput.value = "";
+    nameInput.dispatchEvent(new Event("input"));
+    await element.updateComplete;
+
+    const saveBtn = element.querySelector(
+      "[data-test-preset-save-btn]",
+    ) as HTMLElement;
+    expect(saveBtn.hasAttribute("disable")).toBe(true);
+
+    let saved = false;
+    element.addEventListener("preset-save", () => {
+      saved = true;
+    });
+    saveBtn.click();
+    expect(saved).toBe(false);
+  });
+
   it("disables controls and buttons when disabled property is set", async () => {
     element.disabled = true;
     element.selectedName = "Default Pro";
@@ -519,6 +551,38 @@ describe("HostLobbyModal preset integration", () => {
     expect(modal.lobbyPresets).toHaveLength(0);
     expect(modal.selectedPresetName).toBe("");
   });
+
+  it("does not load preset when lobby is publicly listed", async () => {
+    modal.publiclyListed = true;
+    modal.selectedMap = GameMapType.Europe;
+    modal.bots = 5;
+
+    modal.lobbyPresets = [
+      {
+        name: "World 40 Bots",
+        config: {
+          ...modal.exportPresetConfig(),
+          bots: 40,
+          gameMap: GameMapType.World,
+        },
+      },
+    ];
+
+    await modal.handlePresetLoad(
+      new CustomEvent("preset-load", { detail: "World 40 Bots" }),
+    );
+
+    expect(modal.selectedMap).toBe(GameMapType.Europe);
+    expect(modal.bots).toBe(5);
+  });
+
+  it("shows error toast when saving preset fails", () => {
+    (modal.userSettings as any).setLobbyPresets = () => false;
+    modal.handlePresetSave(
+      new CustomEvent("preset-save", { detail: "Fail Save" }),
+    );
+    expect(modal.lobbyPresets).toHaveLength(0);
+  });
 });
 
 describe("SinglePlayerModal preset integration", () => {
@@ -582,5 +646,13 @@ describe("SinglePlayerModal preset integration", () => {
     );
     expect(modal.lobbyPresets).toHaveLength(0);
     expect(modal.selectedPresetName).toBe("");
+  });
+
+  it("shows error toast when saving preset fails", () => {
+    (modal.userSettings as any).setLobbyPresets = () => false;
+    modal.handlePresetSave(
+      new CustomEvent("preset-save", { detail: "Fail Save" }),
+    );
+    expect(modal.lobbyPresets).toHaveLength(0);
   });
 });

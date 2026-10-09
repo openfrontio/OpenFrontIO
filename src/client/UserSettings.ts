@@ -1116,11 +1116,16 @@ export class UserSettings {
     return parseLobbyPresetsJson(this.getCached(LOBBY_PRESETS_KEY));
   }
 
-  setLobbyPresets(presets: readonly LobbyPreset[]): void {
-    if (presets.length === 0) {
-      this.removeCached(LOBBY_PRESETS_KEY);
-    } else {
-      this.setString(LOBBY_PRESETS_KEY, JSON.stringify(presets));
+  setLobbyPresets(presets: readonly LobbyPreset[]): boolean {
+    try {
+      if (presets.length === 0) {
+        this.removeCached(LOBBY_PRESETS_KEY);
+      } else {
+        this.setString(LOBBY_PRESETS_KEY, JSON.stringify(presets));
+      }
+      return true;
+    } catch {
+      return false;
     }
   }
 
