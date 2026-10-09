@@ -64,6 +64,9 @@ export class UnitImpl implements Unit {
   // Nuke only
   private _deletionAt: number | null = null;
   private _samLauncherState: SamLauncherState | undefined;
+  // Resource structures keep a finite production reserve until a successful
+  // trade shipment refreshes it. Kept on the unit so snapshots preserve it.
+  private _resourceGoldProduced: bigint = 0n;
 
   constructor(
     private _type: UnitType,
@@ -226,6 +229,19 @@ export class UnitImpl implements Unit {
   }
   troops(): number {
     return this._troops;
+  }
+
+  resourceGoldProduced(): bigint {
+    return this._resourceGoldProduced;
+  }
+
+  addResourceGoldProduced(amount: bigint): void {
+    if (amount <= 0n) return;
+    this._resourceGoldProduced += amount;
+  }
+
+  resetResourceGoldProduced(): void {
+    this._resourceGoldProduced = 0n;
   }
   health(): number {
     return Number(this._health);
@@ -906,6 +922,9 @@ export class UnitImpl implements Unit {
     this._samLauncherState = s.samLauncherState
       ? { ...s.samLauncherState }
       : undefined;
+    // Optional for backwards compatibility with snapshots created before
+    // resource production reserves were introduced.
+    this._resourceGoldProduced = s.resourceGoldProduced ?? 0n;
   }
 }
 
@@ -968,6 +987,7 @@ export const UnitSnapshot = snapshotType({
         duration: zInt(),
       })
       .nullable(),
+    resourceGoldProduced: z.bigint().optional(),
   }),
 });
 export type UnitState = z.infer<typeof UnitSnapshot.schema>;
