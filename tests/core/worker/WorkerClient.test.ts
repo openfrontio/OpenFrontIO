@@ -130,3 +130,46 @@ describe("WorkerClient playerInteraction", () => {
     expect(internalClient.messageHandlers.size).toBe(0);
   });
 });
+
+describe("WorkerClient humanStats", () => {
+  it("asks the worker for the humans' stats and resolves with its answer", async () => {
+    const { client, worker, internalClient } = createClient();
+    const promise = client.humanStats();
+    const request = vi.mocked(worker.postMessage).mock.calls[0][0] as {
+      id: string;
+      type: string;
+    };
+    expect(request.type).toBe("human_stats");
+
+    const result = {
+      tick: 50,
+      stats: { client_a: { killedAt: 40n } },
+      disconnectedAt: {},
+    };
+    internalClient.handleWorkerMessage({
+      data: { type: "human_stats_result", id: request.id, result },
+    } as unknown as MessageEvent<WorkerMessage>);
+
+    await expect(promise).resolves.toEqual(result);
+    expect(internalClient.messageHandlers.has(request.id)).toBe(false);
+  });
+
+  it("rejects and removes the handler when the worker does not respond", async () => {
+    vi.useFakeTimers();
+    try {
+      const { client, internalClient } = createClient();
+      const promise = client.humanStats();
+      const rejection = expect(promise).rejects.toThrow(
+        "human_stats request timed out",
+      );
+      expect(internalClient.messageHandlers.size).toBe(1);
+
+      await vi.advanceTimersByTimeAsync(5000);
+
+      await rejection;
+      expect(internalClient.messageHandlers.size).toBe(0);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+});

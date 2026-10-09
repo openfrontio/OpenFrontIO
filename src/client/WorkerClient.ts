@@ -2,6 +2,7 @@ import { TileRef } from "@openfront/engine-api/game/GameMap";
 import {
   BuildableUnit,
   Cell,
+  HumanStatsSnapshot,
   PlayerActions,
   PlayerBorderTiles,
   PlayerBuildableUnitType,
@@ -206,6 +207,41 @@ export class WorkerClient {
         type: "player_profile",
         id: messageId,
         playerID: playerID,
+      });
+    });
+  }
+
+  /** Every human's stats as they stand now (see HumanStats.ts). */
+  humanStats(): Promise<HumanStatsSnapshot> {
+    return new Promise((resolve, reject) => {
+      if (!this.isInitialized) {
+        reject(new Error("Worker not initialized"));
+        return;
+      }
+
+      const messageId = generateID();
+      // The worker has no error reply for this request: a failure there
+      // surfaces here as the timeout.
+      const cleanup = (timer: ReturnType<typeof setTimeout>) => {
+        clearTimeout(timer);
+        this.messageHandlers.delete(messageId);
+      };
+      const timeout = setTimeout(() => {
+        cleanup(timeout);
+        console.warn(`human_stats request timed out (request ${messageId})`);
+        reject(new Error("human_stats request timed out"));
+      }, 5000);
+
+      this.messageHandlers.set(messageId, (message) => {
+        if (message.type === "human_stats_result") {
+          cleanup(timeout);
+          resolve(message.result);
+        }
+      });
+
+      this.worker!.postMessage({
+        type: "human_stats",
+        id: messageId,
       });
     });
   }

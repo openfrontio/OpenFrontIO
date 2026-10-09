@@ -316,6 +316,15 @@ export function invalidateUserMe() {
   __userMe = null;
 }
 
+/**
+ * The profile as it is now, for a caller that needs it fresh but must not
+ * disturb everyone else's copy: getUserMe's cache is left as it was whatever
+ * this answers, so a failed request can never stand in for a good profile.
+ */
+export async function fetchUserMeUncached(): Promise<UserMeResponse | false> {
+  return (await requestUserMe()).profile;
+}
+
 export type DeleteAccountResult =
   // 204: deletion queued — the server deletes the account 24 hours later.
   | { ok: true }

@@ -121,6 +121,23 @@ export const ProgressSchema = z.object({
   lifetimeXp: z.number(),
   legend: z.boolean(),
   canPrestige: z.boolean(),
+  // /users/@me only, for the provisional XP figure shown at death
+  // (src/client/ProvisionalXp.ts). What the player has used today (UTC) of
+  // the per-day XP allowances. Optional, and a malformed block reads as
+  // absent: it must never fail the progress object around it.
+  daily: z
+    .object({
+      // The UTC day ("YYYY-MM-DD", the server's clock) the counts are for.
+      // A game ending on a later day starts from none used.
+      day: z.string().optional().catch(undefined),
+      privateGames: z.number(),
+      singleplayerGames: z.number(),
+      firstGameClaimed: z.boolean(),
+    })
+    .optional()
+    .catch(undefined),
+  // The player's subscription XP multiplier; 1000 = none.
+  subscriberPermille: z.number().optional().catch(undefined),
 });
 export type Progress = z.infer<typeof ProgressSchema>;
 
@@ -205,6 +222,32 @@ export const PublicProgressSchema = z.object({
 });
 export type PublicProgress = z.infer<typeof PublicProgressSchema>;
 
+// The rules a game's XP is scored under (XpRules in the API's
+// ProgressionConfig.ts): integers, with multipliers in permille.
+export const XpRulesSchema = z.object({
+  minAliveTicks: z.number().int(),
+  gameXp: z.number().int(),
+  xpPerMinute: z.number().int(),
+  timeCapMinutes: z.number().int(),
+  ffaPlacementMax: z.number().int(),
+  ffaWin: z.number().int(),
+  fullLobbyHumans: z.number().int(),
+  teamWin: z.number().int(),
+  teamWinMinAlivePermille: z.number().int(),
+  hvnWin: z.number().int(),
+  firstGameOfDay: z.number().int(),
+  featXp: z.number().int(),
+  maxFeatsPerGame: z.number().int(),
+  publicPermille: z.number().int(),
+  rankedPermille: z.number().int(),
+  privatePermille: z.number().int(),
+  singleplayerPermille: z.number().int(),
+  privateMinHumans: z.number().int(),
+  privateGamesPerDay: z.number().int(),
+  singleplayerGamesPerDay: z.number().int(),
+});
+export type XpRules = z.infer<typeof XpRulesSchema>;
+
 // A flare staff put on the level track: what reaching a point on it grants.
 // `kind` says what the point is:
 //   level    — reaching `level` in run `prestige` (0 = the first run), or in
@@ -248,6 +291,20 @@ export const ProgressionConfigSchema = z.object({
       plutonium: z.number().optional().catch(undefined),
     }),
   ),
+  // The revision of the API's XP formula (computeXp). The client carries a
+  // copy of one revision, for the provisional figure shown at death, and
+  // shows none when this is absent or names another revision.
+  formula: z.number().optional().catch(undefined),
+  // Whether the API scores only multiplayer games whose end-of-game vote
+  // agreed on the stats (true in production).
+  requireStatsAgreed: z.boolean().optional().catch(undefined),
+  // Whether the API scores singleplayer games, which never carry that vote
+  // (at the singleplayer rate and daily cap). An older API that predates the
+  // field required the vote of every game, so absent reads as no.
+  scoresSingleplayer: z.boolean().optional().catch(undefined),
+  // The rules that formula runs on. Absent from older APIs; a malformed block
+  // only loses the provisional figure, never the level curve.
+  xp: XpRulesSchema.optional().catch(undefined),
   // The rules behind each level's amounts.
   levelRewards: z
     .object({

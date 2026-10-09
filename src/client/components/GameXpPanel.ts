@@ -20,6 +20,11 @@ import {
   XP_LINE_LABEL_KEYS,
   type XpLineKey,
 } from "../Progression";
+import type {
+  ProvisionalXp,
+  XpDifference,
+  XpReconciliation,
+} from "../ProvisionalXpAtDeath";
 import { translateText } from "../Utils";
 import "./LevelBadge";
 import { formatXp, xpBonusText, xpProgressText } from "./XpBar";
@@ -32,10 +37,52 @@ export type GameXpPanelState =
   // Not signed in: XP needs an account.
   | { kind: "signed_out" }
   // The player died but the game is still running; XP comes at the end.
+  // Shown when there is no provisional figure.
   | { kind: "awaiting_end" }
+  // The player died while the game carries on: the figure worked out in the
+  // browser (ProvisionalXpAtDeath.ts), marked as provisional. It gets the
+  // full reveal, level-ups, milestones and the Legend moment included: most
+  // players die before the end and would otherwise miss them. `confirming`
+  // once the game has ended and the server is being asked.
+  | { kind: "provisional"; provisional: ProvisionalXp; confirming: boolean }
   // Waiting for the server to process the game. Never shows a number.
   | { kind: "calculating" }
-  | { kind: "result"; data: GameXpResponse };
+  // The server's figure. `reconciled` when a provisional one was shown
+  // first: how the two compare.
+  | {
+      kind: "result";
+      data: GameXpResponse;
+      reconciled?: { provisional: ProvisionalXp; outcome: XpReconciliation };
+    };
+
+// How the server's figure came to differ from the provisional one. Spelled
+// out in full so the translation checks can see the keys. An unverified game
+// has no line of its own: the server's figure is then ineligible, and its
+// note says so.
+const DIFFERENCE_KEYS: Partial<Record<XpDifference, string>> = {
+  team_win: "progression.reconcile_team_win",
+  feats: "progression.reconcile_feats",
+  daily_cap: "progression.reconcile_daily_cap",
+  multiplier: "progression.reconcile_multiplier",
+  reconnect: "progression.reconcile_reconnect",
+  other: "progression.reconcile_other",
+};
+
+// How a reveal runs: in full (a provisional figure too); or as the
+// celebration once the server has answered with more than a provisional
+// figure that was revealed: the cards are already there and the bar climbs
+// on from `from` (with the counter from `countFrom`), playing only the levels
+// beyond `celebrated`, the last one the provisional reveal reached
+// (`celebratedLegend` when that made the player a Legend).
+type RevealMode =
+  | { kind: "full" }
+  | {
+      kind: "celebrate";
+      from: number;
+      countFrom: number;
+      celebrated: number;
+      celebratedLegend: boolean;
+    };
 
 // Segments the big bar is drawn in. The gaps are decoration: the fill is one
 // continuous sweep underneath them.
@@ -108,6 +155,10 @@ interface RevealFrame {
   lineValues: number[];
   // A multiplier being applied to the cards (its wipe): a boost or a cut.
   applying: "boost" | "cut" | null;
+  // The last level, and whether the Legend moment, a provisional reveal
+  // already celebrated: their cards stay put rather than landing again.
+  celebrated: number;
+  celebratedLegend: boolean;
 }
 
 // Bar position of a level/progress pair, in level units. Level 100 has no
@@ -116,6 +167,15 @@ interface RevealFrame {
 function positionOf(level: number, xpInLevel: number, xpForNext: number) {
   if (level >= MAX_LEVEL) return MAX_LEVEL;
   return level + Math.min(1 - 1e-6, levelFraction(xpInLevel, xpForNext));
+}
+
+// Where a figure's bar rests.
+function endPosition(data: GameXpEligible): number {
+  return positionOf(
+    data.after.level,
+    data.after.xpInLevel,
+    data.after.xpForNext,
+  );
 }
 
 // The source cards' final values: the award split across them, so a
@@ -145,6 +205,10 @@ export class GameXpPanel extends LitElement {
   @state() private reveal: RevealFrame | null = null;
   @state() private barAnimate = false;
   @state() private barDurationMs = CLIMB_MS;
+  // The provisional figure whose reveal played on screen, if any. Only then
+  // does the server's figure skip what it celebrated; one that arrived off
+  // screen (or went off screen mid-reveal) was never seen.
+  private revealedProvisional: ProvisionalXp | null = null;
   private animationToken = 0;
   // The Legend result already announced (see announceLegend).
   private announcedLegend: GameXpEligible | null = null;
@@ -164,12 +228,69 @@ export class GameXpPanel extends LitElement {
   protected willUpdate(changed: PropertyValues<this>): void {
     if (changed.has("view")) {
       const s = this.view;
-      if (s.kind === "result" && s.data.eligible && this.onScreen) {
-        this.startReveal(s.data);
+      const prev = changed.get("view");
+      // The same provisional figure, now being confirmed: a reveal still
+      // playing carries on.
+      if (
+        s.kind === "provisional" &&
+        prev?.kind === "provisional" &&
+        prev.provisional === s.provisional
+      ) {
+        return;
+      }
+      if (!this.onScreen) {
+        this.skipReveal();
+      } else if (s.kind === "result" && s.data.eligible) {
+        const reconciled = s.reconciled;
+        const shown = reconciled?.provisional.response;
+        if (
+          reconciled !== undefined &&
+          shown?.eligible &&
+          this.revealedProvisional === reconciled.provisional
+        ) {
+          // The provisional figure had its full reveal at death, levels and
+          // milestones included: never a second one.
+          if (reconciled.outcome.matched) {
+            // Confirmed as shown. A reveal still playing carries on.
+            return;
+          }
+          if (s.data.breakdown.total > shown.breakdown.total) {
+            // More than was shown (a team win): the cards are in place, the
+            // bar climbs on, and only the levels beyond those already
+            // celebrated get their moment. A provisional reveal still playing
+            // has celebrated only as far as its bar got: carry on from there.
+            const samePrestige =
+              shown.before.prestige === s.data.before.prestige;
+            const live = this.reveal;
+            this.startReveal(s.data, {
+              kind: "celebrate",
+              from: samePrestige ? (live?.position ?? endPosition(shown)) : 0,
+              countFrom: live?.counted ?? shown.breakdown.total,
+              celebrated: samePrestige ? (live?.level ?? shown.after.level) : 0,
+              celebratedLegend:
+                samePrestige && (live?.legend ?? shown.after.legend),
+            });
+          } else {
+            // Less: the server's numbers as they are, nothing replayed.
+            this.skipReveal();
+          }
+        } else {
+          // No provisional figure, or one that never played on screen: the
+          // server's figure gets the reveal the player hasn't seen.
+          this.startReveal(s.data, { kind: "full" });
+        }
+      } else if (s.kind === "provisional" && s.provisional.response.eligible) {
+        this.revealedProvisional = s.provisional;
+        this.startReveal(s.provisional.response, { kind: "full" });
       } else {
         this.skipReveal();
       }
     } else if (changed.has("onScreen") && !this.onScreen) {
+      // A provisional reveal cut short never showed its levels: the server's
+      // figure plays in full instead.
+      if (this.reveal !== null && this.view.kind === "provisional") {
+        this.revealedProvisional = null;
+      }
       this.skipReveal();
     }
   }
@@ -188,7 +309,7 @@ export class GameXpPanel extends LitElement {
   // source cards already on screen, turning each over to its share of the
   // multiplied award, rather than to the subtotal, so the cards always add
   // up to the counter.
-  private startReveal(data: GameXpEligible): void {
+  private startReveal(data: GameXpEligible, mode: RevealMode): void {
     this.clearTimers();
     if (prefersReducedMotion()) {
       this.reveal = null;
@@ -217,11 +338,15 @@ export class GameXpPanel extends LitElement {
       data.before.xpInLevel,
       data.before.xpForNext,
     );
-    const end = positionOf(
-      data.after.level,
-      data.after.xpInLevel,
-      data.after.xpForNext,
-    );
+    const end = endPosition(data);
+    const celebrate = mode.kind === "celebrate";
+    // The celebration picks up where the provisional bar was left.
+    const from = celebrate ? Math.min(end, Math.max(start, mode.from)) : start;
+    if (celebrate && from >= end && mode.countFrom === data.breakdown.total) {
+      // Confirmed as shown, and no level to celebrate: nothing moves.
+      this.reveal = null;
+      return;
+    }
     // The bar climbs in proportion to XP. When the multipliers cut the award
     // (private and singleplayer games), each source moves the bar its scaled
     // share, so the bar never goes backwards; when they boost it, the sources
@@ -235,20 +360,24 @@ export class GameXpPanel extends LitElement {
     this.barAnimate = false;
     this.reveal = {
       step: 0,
-      caption: null,
-      position: start,
-      level: Math.min(MAX_LEVEL, Math.floor(start)),
+      caption: celebrate ? { kind: "heading" } : null,
+      position: from,
+      level: Math.min(MAX_LEVEL, Math.floor(from)),
       levelUp: null,
       // A player who was already a Legend before this game shows the Legend
       // frame throughout; one who becomes one this game gets it at the
-      // level-100 moment.
-      legend: data.after.legend && !reachedLegendThisGame(data),
-      counted: 0,
-      xpText: "before",
-      linesShown: 0,
-      multipliersShown: 0,
-      lineValues: [...faces],
+      // level-100 moment (or already had it in the provisional reveal).
+      legend:
+        data.after.legend &&
+        (!reachedLegendThisGame(data) || (celebrate && mode.celebratedLegend)),
+      counted: celebrate ? mode.countFrom : 0,
+      xpText: celebrate ? "none" : "before",
+      linesShown: celebrate ? lines.length : 0,
+      multipliersShown: celebrate ? multipliers.length : 0,
+      lineValues: celebrate ? finalLineValues(data) : [...faces],
       applying: null,
+      celebrated: celebrate ? mode.celebrated : 0,
+      celebratedLegend: celebrate && mode.celebratedLegend,
     };
 
     // Schedules the bar's climb from where it is to `to` starting at `t`,
@@ -258,13 +387,17 @@ export class GameXpPanel extends LitElement {
     // climb that doesn't move the bar still runs its progress when `hold`.
     // `totalMs` is how long the climbing takes, pauses aside. Returns when it
     // ends.
-    let position = start;
+    let position = from;
     // The levels to stop on, in order, as the server reports them: flooring
     // the bar's interpolated position skips the first one when the player
-    // starts the game on a full bar.
+    // starts the game on a full bar. A celebration stops only on the levels
+    // beyond those the provisional reveal already celebrated.
+    const passed = celebrate
+      ? Math.max(data.before.level, mode.celebrated)
+      : data.before.level;
     const pendingLevels = levelsReachedInGame(data)
       .map((l) => l.level)
-      .filter((l) => l > data.before.level && l <= MAX_LEVEL)
+      .filter((l) => l > passed && l <= MAX_LEVEL)
       .sort((a, b) => a - b);
     const climb = (
       t: number,
@@ -360,8 +493,9 @@ export class GameXpPanel extends LitElement {
 
     let t = START_MS;
     let barXp = 0;
-    let counted = 0;
-    lines.forEach((line, i) => {
+    let counted = celebrate ? mode.countFrom : 0;
+    // The celebration starts with every card in place.
+    (celebrate ? [] : lines).forEach((line, i) => {
       const caption: Caption = {
         kind: "line",
         key: line.key,
@@ -385,7 +519,7 @@ export class GameXpPanel extends LitElement {
     // after the last one is the award, exactly.
     let values = [...faces];
     let product = 1;
-    multipliers.forEach((m, k) => {
+    (celebrate ? [] : multipliers).forEach((m, k) => {
       const caption: Caption = {
         kind: "multiplier",
         key: m.key,
@@ -438,7 +572,7 @@ export class GameXpPanel extends LitElement {
 
     // Land exactly on the award, whatever rounding happened on the way.
     const last: Caption | null =
-      multipliers.length > 0
+      multipliers.length > 0 && !celebrate
         ? {
             kind: "multiplier",
             key: multipliers[multipliers.length - 1].key,
@@ -446,9 +580,17 @@ export class GameXpPanel extends LitElement {
           }
         : null;
     const settleFrom = counted;
-    t = climb(t, end, last ?? { kind: "heading" }, (f) => ({
-      counted: Math.round(settleFrom + (total - settleFrom) * f),
-    }));
+    t = climb(
+      t,
+      end,
+      last ?? { kind: "heading" },
+      (f) => ({
+        counted: Math.round(settleFrom + (total - settleFrom) * f),
+      }),
+      // The celebration counts from the provisional total to the server's
+      // even when the bar has nowhere to go.
+      celebrate && settleFrom !== total,
+    );
     const finalValues = finalLineValues(data);
     at(t, () =>
       patch({ counted: total, lineValues: finalValues, xpText: "after" }),
@@ -510,6 +652,16 @@ export class GameXpPanel extends LitElement {
   }
 
   private payoffCaption(data: GameXpEligible): Caption | null {
+    // Confirmed below a level the provisional figure celebrated: the
+    // adjustment note says so, and nothing is celebrated again.
+    const s = this.view;
+    if (
+      s.kind === "result" &&
+      s.reconciled?.provisional === this.revealedProvisional &&
+      this.adjustedLevel() !== null
+    ) {
+      return null;
+    }
     if (reachedLegendThisGame(data)) return { kind: "legend" };
     const reached = levelsReachedInGame(data);
     if (reached.length === 0) return null;
@@ -583,6 +735,19 @@ export class GameXpPanel extends LitElement {
   private renderNote(key: string, stateName: string): TemplateResult {
     return this.frame(
       html`<p class="m-0 text-sm text-white/80">${translateText(key)}</p>`,
+      stateName,
+    );
+  }
+
+  // Why a game earned no XP, with the provisional label, or the comparison
+  // with a provisional figure shown before, when there is one.
+  private renderIneligible(reason: string, stateName: string): TemplateResult {
+    return this.frame(
+      html`${this.renderStatus()}
+        <p class="m-0 text-sm text-white/80">
+          ${translateText(ineligibleReasonKey(reason, this.gameType))}
+        </p>
+        ${this.renderReconcileNotes()}`,
       stateName,
     );
   }
@@ -733,8 +898,8 @@ export class GameXpPanel extends LitElement {
   private renderFull(data: GameXpEligible): TemplateResult {
     const { after } = data;
     const r = this.reveal;
-    const position =
-      r?.position ?? positionOf(after.level, after.xpInLevel, after.xpForNext);
+    const provisional = this.view.kind === "provisional";
+    const position = r?.position ?? endPosition(data);
     const level = r?.level ?? Math.min(MAX_LEVEL, Math.floor(position));
     const legend = r === null ? after.legend : r.legend;
     const barLevel = Math.floor(position);
@@ -770,7 +935,8 @@ export class GameXpPanel extends LitElement {
 
     return this.frame(
       html`
-        ${this.renderStyles()} ${this.renderCaption(data)}
+        ${this.renderStyles()} ${this.renderStatus()}
+        ${this.renderCaption(data)}
         <!-- Every box here is a fixed size, so nothing moves while the
              numbers and the level change. -->
         <div class="mt-1 flex items-start gap-3">
@@ -856,10 +1022,123 @@ export class GameXpPanel extends LitElement {
         </div>
         ${this.renderBonuses(data)}
         <div data-xp-recap>${this.renderRecap(data)}</div>
+        ${this.renderReconcileNotes()}
       `,
-      "result",
+      provisional ? "provisional" : "result",
       this.panelAccent(data),
     );
+  }
+
+  // Over a provisional figure: what it is, and once the game has ended, that
+  // the server is being asked. Over the server's figure after a provisional
+  // one that matched: a quiet "confirmed".
+  private renderStatus(): TemplateResult | typeof nothing {
+    const s = this.view;
+    if (s.kind === "provisional") {
+      return html`<div
+        data-xp-provisional
+        class="mb-1 flex items-center justify-center gap-2 text-[11px] font-bold uppercase tracking-wider text-amber-300"
+      >
+        ${s.confirming
+          ? html`<span
+              data-xp-confirming
+              class="h-3 w-3 shrink-0 animate-spin rounded-full border-2 border-amber-300/30 border-t-amber-300 motion-reduce:animate-none"
+              aria-hidden="true"
+            ></span>`
+          : nothing}
+        <span
+          >${translateText(
+            s.confirming
+              ? "progression.provisional_confirming"
+              : "progression.provisional_label",
+          )}</span
+        >
+      </div>`;
+    }
+    if (s.kind === "result" && s.reconciled?.outcome.matched) {
+      return html`<div
+        data-xp-confirmed
+        class="mb-1 text-center text-[11px] font-bold uppercase tracking-wider text-green-400"
+      >
+        ${translateText("progression.xp_confirmed")}
+      </div>`;
+    }
+    return nothing;
+  }
+
+  // The level the server's figure leaves the player on, when that is below
+  // one the provisional reveal celebrated; otherwise null.
+  private adjustedLevel(): number | null {
+    const s = this.view;
+    if (s.kind !== "result" || s.reconciled === undefined) return null;
+    const shown = s.reconciled.provisional.response;
+    if (!shown.eligible || levelsReachedInGame(shown).length === 0) {
+      return null;
+    }
+    if (!s.data.eligible) return shown.before.level;
+    if (s.data.after.prestige !== shown.after.prestige) return null;
+    return s.data.after.level < shown.after.level ? s.data.after.level : null;
+  }
+
+  // Under a provisional figure: what the end of the game may still add.
+  // Under the server's figure after a provisional one that differed: what it
+  // was, why it changed where that's known, and the level it settled on if
+  // that is below one already celebrated. Lines the ineligibility note
+  // already says (an unverified game, the daily limit) are left out.
+  private renderReconcileNotes(): TemplateResult | typeof nothing {
+    const s = this.view;
+    const lines: { key: string; params?: Record<string, string> }[] = [];
+    if (s.kind === "provisional") {
+      if (!s.provisional.response.eligible) return nothing;
+      if (s.provisional.teamWinPending) {
+        lines.push({ key: "progression.provisional_team_win_pending" });
+      }
+      // Only while feats pay XP: otherwise there is nothing to add.
+      if (s.provisional.featsPending) {
+        lines.push({ key: "progression.provisional_feats_pending" });
+      }
+    } else if (s.kind === "result" && s.reconciled !== undefined) {
+      const { outcome } = s.reconciled;
+      if (outcome.matched) return nothing;
+      if (outcome.provisionalTotal !== null) {
+        lines.push({
+          key: "progression.provisional_was",
+          params: { xp: formatXp(outcome.provisionalTotal) },
+        });
+      }
+      for (const difference of outcome.differences) {
+        const key = DIFFERENCE_KEYS[difference];
+        // The ineligibility note already says it.
+        if (
+          key === undefined ||
+          (!s.data.eligible && difference === s.data.reason)
+        ) {
+          continue;
+        }
+        lines.push({ key });
+      }
+      const adjusted = this.adjustedLevel();
+      if (adjusted !== null) {
+        lines.push({
+          key: "progression.reconcile_level_adjusted",
+          params: { level: String(adjusted) },
+        });
+      }
+    } else {
+      return nothing;
+    }
+    if (lines.length === 0) return nothing;
+    return html`<div data-xp-reconcile class="mt-3 space-y-0.5">
+      ${lines.map(
+        (line) =>
+          html`<p
+            data-xp-note=${line.key}
+            class="m-0 text-center text-xs text-white/60"
+          >
+            ${translateText(line.key, line.params)}
+          </p>`,
+      )}
+    </div>`;
   }
 
   private renderStyles(): TemplateResult {
@@ -1234,15 +1513,18 @@ export class GameXpPanel extends LitElement {
   // The one game that makes a player a Legend gets its own moment instead of
   // the ordinary level-up card: it is the end of the whole track.
   private renderLegendMoment(data: GameXpEligible): TemplateResult {
-    const shown = this.reveal === null || this.reveal.legend;
+    const r = this.reveal;
+    const shown = r === null || r.legend;
+    // Already celebrated by the provisional reveal: it stays put.
+    const settled = r?.celebratedLegend ?? false;
     return this.collapsible(
       shown,
       html`<div
         data-xp-legend
         data-xp-slot-hidden=${shown ? nothing : "true"}
-        class="xp-shine mt-3 flex items-center justify-center gap-3 rounded-xl border border-yellow-300/50 bg-gradient-to-r from-transparent via-fuchsia-500/15 to-transparent px-3 py-2.5 ${this.slideSlotClass(
-          shown,
-        )}"
+        class="xp-shine mt-3 flex items-center justify-center gap-3 rounded-xl border border-yellow-300/50 bg-gradient-to-r from-transparent via-fuchsia-500/15 to-transparent px-3 py-2.5 ${settled
+          ? ""
+          : this.slideSlotClass(shown)}"
       >
         <level-badge
           .level=${100}
@@ -1269,29 +1551,42 @@ export class GameXpPanel extends LitElement {
   // A card for a milestone reached this game (10, 25, 50, 75), or the Legend
   // card. An ordinary level-up gets no card: the caption and the badge at the
   // end of the bar say it. During the reveal its space slides open when the
-  // bar reaches the milestone, and the card pops in.
+  // bar reaches the milestone, and the card pops in; one the provisional
+  // reveal already celebrated stays put.
   private renderLevelUp(data: GameXpEligible): TemplateResult | typeof nothing {
     if (reachedLegendThisGame(data)) return this.renderLegendMoment(data);
-    const milestone = [...levelsReachedInGame(data)]
-      .reverse()
-      .find((lvl) => isMilestoneLevel(lvl.level));
-    if (milestone === undefined) return nothing;
+    const milestones = levelsReachedInGame(data).filter((lvl) =>
+      isMilestoneLevel(lvl.level),
+    );
+    if (milestones.length === 0) return nothing;
     const r = this.reveal;
-    const shown = r === null || r.level >= milestone.level;
+    // The latest milestone the bar has reached, or (closed until then) the
+    // one it is heading for.
+    const reached = milestones.filter(
+      (lvl) => r === null || r.level >= lvl.level,
+    );
+    const milestone =
+      reached.length > 0
+        ? reached[reached.length - 1]
+        : milestones[milestones.length - 1];
+    const shown = reached.length > 0;
+    const settled = r !== null && milestone.level <= r.celebrated;
     return this.collapsible(
       shown,
       html`<div
         data-xp-levelup
         data-xp-milestone=${milestone.level}
         data-xp-slot-hidden=${shown ? nothing : "true"}
-        class="xp-shine mt-3 flex items-center justify-center gap-3 rounded-xl border border-yellow-400/30 bg-gradient-to-r from-transparent via-yellow-400/15 to-transparent px-3 py-2 ${this.slideSlotClass(
-          shown,
-        )}"
+        class="xp-shine mt-3 flex items-center justify-center gap-3 rounded-xl border border-yellow-400/30 bg-gradient-to-r from-transparent via-yellow-400/15 to-transparent px-3 py-2 ${settled
+          ? ""
+          : this.slideSlotClass(shown)}"
       >
         <span
           data-xp-level-reached=${milestone.level}
           class="grid h-11 w-11 shrink-0 place-items-center rounded-full shadow-[0_0_16px_rgba(250,204,21,0.55)] ${r !==
-            null && shown
+            null &&
+          shown &&
+          !settled
             ? "xp-badge-pop"
             : ""}"
         >
@@ -1437,14 +1732,19 @@ export class GameXpPanel extends LitElement {
         return this.renderNote("progression.sign_in_to_earn", "signed_out");
       case "awaiting_end":
         return this.renderNote("progression.awaiting_end", "awaiting_end");
+      case "provisional":
+        if (!s.provisional.response.eligible) {
+          return this.renderIneligible(
+            s.provisional.response.reason,
+            "provisional_ineligible",
+          );
+        }
+        return this.renderFull(s.provisional.response);
       case "calculating":
         return this.renderCalculating();
       case "result":
         if (!s.data.eligible) {
-          return this.renderNote(
-            ineligibleReasonKey(s.data.reason, this.gameType),
-            "ineligible",
-          );
+          return this.renderIneligible(s.data.reason, "ineligible");
         }
         return this.renderFull(s.data);
     }
