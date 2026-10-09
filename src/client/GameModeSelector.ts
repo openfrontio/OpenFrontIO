@@ -18,6 +18,7 @@ import {
   canJoinTrustedLobby,
   lobbyCard,
   mapAspectRatios,
+  trustLockIcon,
   trustRequiredDialog,
   viewerIsSignedIn,
   viewerIsTrusted,
@@ -31,9 +32,10 @@ import {
   type DesktopSessionState,
   type DesktopUpdateState,
 } from "./DesktopShell";
-import { HostLobbyModal } from "./HostLobbyModal";
+import type { HostLobbyModal } from "./HostLobbyModal";
 import { showInGameAlert } from "./InGameModal";
-import { JoinLobbyModal } from "./JoinLobbyModal";
+import type { JoinLobbyModal } from "./JoinLobbyModal";
+import { whenModalLoaded } from "./LazyModals";
 import { PublicLobbySocket } from "./LobbySocket";
 import { JoinLobbyEvent } from "./Main";
 import {
@@ -45,7 +47,8 @@ import {
   retryServerList,
   type BackendReachabilityDetail,
 } from "./ServerList";
-import { SinglePlayerModal } from "./SinglePlayerModal";
+import type { SinglePlayerModal } from "./SinglePlayerModal";
+import { lastUserMeResponse } from "./UserMeBroadcast";
 import { UsernameInput } from "./UsernameInput";
 import {
   calculateServerTimeOffset,
@@ -408,6 +411,9 @@ export class GameModeSelector extends LitElement {
       this.onDesktopUpdateState,
     );
     document.addEventListener("userMeResponse", this.onUserMe);
+    // play-page renders this after Main may already have broadcast.
+    const last = lastUserMeResponse();
+    if (last !== null) this.applyUserMe(last.response);
     if (isDesktopShell()) {
       // Seed BOTH from their current values. This element is rendered by
       // <play-page> on a Lit microtask, so it cannot exist yet when the status
@@ -491,7 +497,10 @@ export class GameModeSelector extends LitElement {
   };
 
   private onUserMe = (e: Event) => {
-    const me = (e as CustomEvent<UserMeResponse | false>).detail;
+    this.applyUserMe((e as CustomEvent<UserMeResponse | false>).detail);
+  };
+
+  private applyUserMe(me: UserMeResponse | false): void {
     this.viewerSignedIn = viewerIsSignedIn(me);
     this.viewerTrusted = viewerIsTrusted(me);
     // A CrazyGames sign-in surfaces as a userMeResponse without a linked
@@ -501,7 +510,7 @@ export class GameModeSelector extends LitElement {
         if (user !== null) this.viewerSignedIn = true;
       });
     }
-  };
+  }
 
   private onDesktopSessionState = (e: Event) => {
     const next = (e as CustomEvent<DesktopSessionState>).detail;
@@ -703,6 +712,19 @@ export class GameModeSelector extends LitElement {
             SECONDARY_ACTION,
             undefined,
             true,
+            // Ranked admits trusted accounts only. A trusted viewer gets the
+            // green open lock; anyone else meets the red locks and the trust
+            // popup inside the ranked modal. Small, so it clears the label on
+            // narrow (mobile) buttons.
+            this.viewerTrusted
+              ? trustLockIcon(true, {
+                  tooltipTitle: translateText(
+                    "mode_selector.ranked_trust_tooltip_title",
+                  ),
+                  position: "top-1 right-1",
+                  small: true,
+                })
+              : nothing,
           )}
           ${this.renderSmallActionCard(
             translateText("main.join"),
@@ -818,9 +840,11 @@ export class GameModeSelector extends LitElement {
 
   private openSinglePlayerModal = () => {
     if (!this.validateUsername()) return;
-    (
-      document.querySelector("single-player-modal") as SinglePlayerModal
-    )?.open();
+    whenModalLoaded("single-player-modal", () =>
+      (
+        document.querySelector("single-player-modal") as SinglePlayerModal
+      )?.open(),
+    );
   };
 
   // Handled in Main, which also serves the help page's tutorial button.
@@ -832,13 +856,17 @@ export class GameModeSelector extends LitElement {
   private openHostLobby = () => {
     if (this.blockedFromApiAction()) return;
     if (!this.validateUsername()) return;
-    (document.querySelector("host-lobby-modal") as HostLobbyModal)?.open();
+    whenModalLoaded("host-lobby-modal", () =>
+      (document.querySelector("host-lobby-modal") as HostLobbyModal)?.open(),
+    );
   };
 
   private openJoinLobby = () => {
     if (this.blockedFromApiAction()) return;
     if (!this.validateUsername()) return;
-    (document.querySelector("join-lobby-modal") as JoinLobbyModal)?.open();
+    whenModalLoaded("join-lobby-modal", () =>
+      (document.querySelector("join-lobby-modal") as JoinLobbyModal)?.open(),
+    );
   };
 
   // Number of open hosted lobbies waiting in the browser; shown as a chip
@@ -913,6 +941,7 @@ export class GameModeSelector extends LitElement {
     // the solo card is never gated (see openSinglePlayerModal) and must never
     // show as disabled here.
     gated: boolean = false,
+    adornment: TemplateResult | typeof nothing = nothing,
   ) {
     const blocked =
       gated &&
@@ -940,6 +969,7 @@ export class GameModeSelector extends LitElement {
               >${badge}</span
             >`
           : nothing}
+        ${adornment}
       </button>
     `;
   }
