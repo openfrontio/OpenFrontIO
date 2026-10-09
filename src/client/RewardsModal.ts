@@ -1,6 +1,6 @@
+import { Reward } from "@openfront/shared/ApiSchemas";
 import { html, TemplateResult } from "lit";
 import { customElement, state } from "lit/decorators.js";
-import { Reward } from "../core/ApiSchemas";
 import { BaseModal } from "./components/BaseModal";
 import "./components/RewardsPanel";
 import type { RewardsChangedDetail } from "./components/RewardsPanel";

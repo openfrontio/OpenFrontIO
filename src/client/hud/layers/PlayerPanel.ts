@@ -1,8 +1,4 @@
-import { html, LitElement } from "lit";
-import { customElement, state } from "lit/decorators.js";
-import Countries from "resources/countries.json" with { type: "json" };
-import { assetUrl } from "../../../core/AssetUrls";
-import { EventBus } from "../../../core/EventBus";
+import { TileRef } from "@openfront/engine-api/game/GameMap";
 import {
   AllPlayers,
   GameType,
@@ -10,10 +6,22 @@ import {
   PlayerProfile,
   PlayerType,
   Relation,
-} from "../../../core/game/Game";
-import { TileRef } from "../../../core/game/GameMap";
-import { Emoji, flattenedEmojiTable } from "../../../core/Util";
-import { fetchLobbyListed } from "../../Api";
+} from "@openfront/engine-api/game/GameTypes";
+import { Emoji, flattenedEmojiTable } from "@openfront/engine-api/Schemas";
+import { renderNumber, renderTroops } from "@openfront/engine-lib/Format";
+import type { UserMeResponse } from "@openfront/shared/ApiSchemas";
+import { assetUrl } from "@openfront/shared/AssetUrls";
+import { EventBus } from "@openfront/shared/EventBus";
+import {
+  type LevelBadge,
+  packLevelBadge,
+} from "@openfront/shared/LevelBadgeWire";
+import { html, LitElement } from "lit";
+import { customElement, state } from "lit/decorators.js";
+import Countries from "resources/countries.json" with { type: "json" };
+import { fetchLobbyListed, getUserMe } from "../../Api";
+import "../../components/EquippedCosmeticsRow";
+import "../../components/LevelBadge";
 import { actionButton } from "../../components/ui/ActionButton";
 import "../../components/ui/Divider";
 import { Controller } from "../../Controller";
@@ -22,6 +30,7 @@ import {
   MouseUpEvent,
   SwapRocketDirectionEvent,
 } from "../../InputHandler";
+import { lobbyLevelBadge } from "../../LobbyRosterLevels";
 import {
   PlayerReportedEvent,
   SendAllianceRequestIntentEvent,
@@ -32,13 +41,8 @@ import {
   SendTargetPlayerIntentEvent,
 } from "../../Transport";
 import { UIState } from "../../UIState";
-import {
-  renderDuration,
-  renderNumber,
-  renderTroops,
-  showToast,
-  translateText,
-} from "../../Utils";
+import { UserSettings } from "../../UserSettings";
+import { renderDuration, showToast, translateText } from "../../Utils";
 import { GameView, PlayerView } from "../../view";
 import { ChatModal } from "./ChatModal";
 import { EmojiTable } from "./EmojiTable";
@@ -58,6 +62,18 @@ const startTradingIcon = assetUrl("images/TradingIconWhite.svg");
 const traitorIcon = assetUrl("images/TraitorIconLightRed.svg");
 const breakAllianceIcon = assetUrl("images/TraitorIconWhite.svg");
 
+// The viewer's own badge from their /users/@me progress. Shown even when they
+// hide their level from others, as their profile does.
+export function ownLevelBadgeFrom(
+  me: UserMeResponse | false,
+): LevelBadge | undefined {
+  const progress = me === false ? undefined : me.player.progress;
+  if (progress === undefined) return undefined;
+  const { level, prestige, legend } = progress;
+  const badge = { level, prestige, legend };
+  return packLevelBadge(badge) === undefined ? undefined : badge;
+}
+
 @customElement("player-panel")
 export class PlayerPanel extends LitElement implements Controller {
   public g: GameView;
@@ -69,6 +85,7 @@ export class PlayerPanel extends LitElement implements Controller {
   private tile: TileRef | null = null;
   private _profileForPlayerId: number | null = null;
   private kickedPlayerIDs = new Set<string>();
+  private userSettings = new UserSettings();
 
   @state() private sendTarget: PlayerView | null = null;
   @state() private sendMode: "troops" | "gold" | "none" = "none";
@@ -86,6 +103,9 @@ export class PlayerPanel extends LitElement implements Controller {
   // Whether this game is a publicly listed lobby. Kept out of
   // GameStartInfo (never touches records), so it's fetched from the worker.
   @state() private gameListed = false;
+  // Fallback for the viewer's own badge when this tab never saw the lobby
+  // roster (a refresh or late join goes straight into the game).
+  private ownLevelBadge: LevelBadge | undefined;
 
   setRole(role: string | null): void {
     this.playerRole = role;
@@ -138,6 +158,11 @@ export class PlayerPanel extends LitElement implements Controller {
         this.gameListed = listed;
       });
     }
+
+    // Memoised: normally answered from the profile loaded at sign-in.
+    void getUserMe().then((me) => {
+      this.ownLevelBadge = ownLevelBadgeFrom(me);
+    });
   }
 
   async tick() {
@@ -571,6 +596,22 @@ export class PlayerPanel extends LitElement implements Controller {
     `;
   }
 
+  // The level badge from the lobby roster, for human players only; the
+  // viewer's own falls back to their /users/@me. Hidden for anyone but the
+  // viewer's own player while anonymous names are on: their name is
+  // anonymized then (PlayerView.displayName), and the badge belongs to the
+  // real one.
+  private levelBadgeFor(other: PlayerView): LevelBadge | undefined {
+    if (other.type() !== PlayerType.Human) return undefined;
+    const clientID = other.clientID();
+    const isSelf = clientID !== null && clientID === this.g.myClientID();
+    if (!isSelf && this.userSettings.anonymousNames()) return undefined;
+    return (
+      lobbyLevelBadge(this.g.gameID(), clientID) ??
+      (isSelf ? this.ownLevelBadge : undefined)
+    );
+  }
+
   private renderIdentityRow(other: PlayerView, my: PlayerView) {
     const flagPath = other.cosmetics.flag;
     const flagCode = flagPath?.match(/\/flags\/(.+)\.svg$/)?.[1];
@@ -583,6 +624,7 @@ export class PlayerPanel extends LitElement implements Controller {
       other.type() === PlayerType.Human
         ? null
         : this.identityChipProps(other.type());
+    const levelBadge = this.levelBadgeFor(other);
 
     return html`
       <div class="flex items-center gap-2.5 flex-wrap">
@@ -598,9 +640,18 @@ export class PlayerPanel extends LitElement implements Controller {
             />`
           : ""}
 
-        <div class="flex-1 min-w-0">
+        <div class="flex-1 min-w-0 flex items-center gap-2">
+          ${levelBadge
+            ? html`<level-badge
+                class="shrink-0"
+                .level=${levelBadge.level}
+                .prestige=${levelBadge.prestige}
+                ?legend=${levelBadge.legend}
+                size="28"
+              ></level-badge>`
+            : ""}
           <h2
-            class="text-xl font-bold tracking-[-0.01em] text-zinc-50 truncate"
+            class="min-w-0 text-xl font-bold tracking-[-0.01em] text-zinc-50 truncate"
             title=${other.displayName()}
           >
             ${other.displayName()}
@@ -1058,6 +1109,11 @@ export class PlayerPanel extends LitElement implements Controller {
                     <div class="mb-1">
                       ${this.renderIdentityRow(other, viewer)}
                     </div>
+
+                    <!-- Cosmetics the player has equipped -->
+                    <equipped-cosmetics-row
+                      .cosmetics=${other.cosmetics}
+                    ></equipped-cosmetics-row>
 
                     ${this.sendTarget && !isSpectator
                       ? html`

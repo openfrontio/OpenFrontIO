@@ -7,8 +7,8 @@
  * (Main.ts, LocalServer, Worker). The server's wire blanking is applied to
  * the record's GameStartInfo again (toWireGameStartInfo). Clan tags and
  * friends feed into team assignment, so skipping that desyncs team games.
- * The game is built by createGameRunner with no local clientID, and the
- * turns are executed in order.
+ * The engine (in the browser, its worker: WorkerReplayEngine) starts the
+ * game with no local clientID and runs the turns in order.
  *
  * Every hash the server recorded (agreed on by the live clients) is checked
  * as the game runs. The core is only deterministic within one build, so a
@@ -19,20 +19,25 @@
  * turns up is the game that was played.
  */
 
-import { Game } from "../../../core/game/Game";
-import { GameMapLoader } from "../../../core/game/GameMapLoader";
 import {
+  ErrorUpdate,
   GameUpdateType,
   GameUpdateViewData,
   HashUpdate,
-} from "../../../core/game/GameUpdates";
-import { createGameRunner } from "../../../core/GameRunner";
+} from "@openfront/engine-api/game/GameUpdates";
+import { MapFiles } from "@openfront/engine-api/game/MapFiles";
+import { GameStartInfo, Turn } from "@openfront/engine-api/Schemas";
+import { loadTerrainMap } from "@openfront/engine-lib/game/TerrainMapLoader";
+import { GameMapLoader, loadMapFiles } from "@openfront/shared/GameMapLoader";
+import {
+  decompressGameRecord,
+  toWireGameStartInfo,
+} from "@openfront/shared/SharedUtil";
 import {
   GameRecord,
-  GameStartInfo,
-  GameStartInfoSchema,
-} from "../../../core/Schemas";
-import { decompressGameRecord, toWireGameStartInfo } from "../../../core/Util";
+  WireGameStartInfo,
+  WireGameStartInfoSchema,
+} from "@openfront/shared/WireSchemas";
 import { StreamingEncoder } from "../codec/encode/StreamingEncoder";
 import type { GzipFn, ReplayAppend, ReplayBase } from "../codec/ReplayTypes";
 import { terrainOf } from "../codec/Terrain";
@@ -43,7 +48,26 @@ export interface ProcessProgress {
   percent: number;
 }
 
+/** The simulation, running one game. */
+export interface ReplayEngine {
+  /**
+   * Runs the turns in order. One update per tick that ran; a tick error
+   * stops the run there, with `error` saying why.
+   */
+  run(
+    turns: Turn[],
+  ): Promise<{ gameUpdates: GameUpdateViewData[]; error?: ErrorUpdate }>;
+  /** Stops the engine. Called once processing ends, however it ends. */
+  close(): void;
+}
+
 export interface ProcessOptions {
+  /**
+   * Starts an engine on the game. It may take the map files over (move
+   * them to a worker): processing is done with them by then.
+   */
+  engine: (gameStart: GameStartInfo, map: MapFiles) => Promise<ReplayEngine>;
+  /** Loads the map, for the engine and the replay header's terrain. */
   mapLoader: GameMapLoader;
   gzip: GzipFn;
   keyframeInterval?: number;
@@ -69,8 +93,6 @@ export interface ProcessOptions {
    * about a second.
    */
   appendEveryMs?: number;
-  /** Called after each tick with the live game. Used by tests. */
-  onTick?: (game: Game, frame: GameUpdateViewData) => void;
 }
 
 export interface HashMismatch {
@@ -84,6 +106,8 @@ export interface ProcessResult {
 }
 
 const PROGRESS_EVERY = 100;
+/** Turns per engine run: few enough round trips that they don't add up. */
+const TURNS_PER_RUN = 100;
 
 export class ReplayDesyncError extends Error {
   constructor(readonly mismatch: HashMismatch) {
@@ -103,8 +127,8 @@ export class ReplayDesyncError extends Error {
  * this goes into the replay header), then the server's wire blanking is
  * applied.
  */
-export function wireGameStartInfo(record: GameRecord): GameStartInfo {
-  return toWireGameStartInfo(GameStartInfoSchema.parse(record.info));
+export function wireGameStartInfo(record: GameRecord): WireGameStartInfo {
+  return toWireGameStartInfo(WireGameStartInfoSchema.parse(record.info));
 }
 
 export async function processGameRecord(
@@ -129,93 +153,103 @@ export async function processGameRecord(
   // none computed is a mismatch too (checked after the tick).
   let mismatch: HashMismatch | null = null;
   let hashedTurn = -1;
-  let tickError: string | undefined;
 
-  // The callback only runs from executeNextTick, by which point `encoder`
-  // and `game` below are set.
-  const runner = await createGameRunner(
-    gameStart,
-    undefined,
+  const map = await loadMapFiles(
     opts.mapLoader,
-    (gu) => {
-      if ("errMsg" in gu) {
-        tickError = `${gu.errMsg}\n${gu.stack ?? ""}`;
-        return;
-      }
-      for (const hu of gu.updates[GameUpdateType.Hash] as HashUpdate[]) {
-        hashedTurn = hu.tick;
-        const recorded = recordedHashes.get(hu.tick);
-        if (recorded !== undefined && recorded !== hu.hash) {
-          mismatch ??= { turn: hu.tick, recorded, computed: hu.hash };
-        }
-      }
-      encoder.pushFrame(gu);
-      opts.onTick?.(game, gu);
-    },
+    gameStart.config.gameMap,
+    gameStart.config.gameMapSize,
   );
-  const game = runner.game;
+  // The map as the game starts, built from copies of the files, so the
+  // engine can take the files over.
+  const { gameMap } = await loadTerrainMap(structuredClone(map));
   const encoder = new StreamingEncoder({
-    mapWidth: game.width(),
-    mapHeight: game.height(),
-    terrain: terrainOf(game.map()),
+    mapWidth: gameMap.width(),
+    mapHeight: gameMap.height(),
+    terrain: terrainOf(gameMap),
     gzip: opts.gzip,
     keyframeInterval: opts.keyframeInterval,
     gameStartInfo: gameStart,
     // Water nukes shrink the land count during the game. The header stores
     // the map's original count.
-    numLandTiles: game.numLandTiles(),
+    numLandTiles: gameMap.numLandTiles(),
   });
-  opts.onStart?.(encoder.base);
 
-  const appendEvery = opts.appendEveryMs ?? 5000;
-  let lastAppend = performance.now();
-  let appendedFrames = 0;
-  /** Frames up to here (one per turn) are checked. */
-  let checkedFrames = 0;
-  /** Hand out the closed chunks that are checked and not sent yet. */
-  const appendChecked = async () => {
-    const frames = encoder.completeFrames(checkedFrames);
-    if (opts.onAppend === undefined || frames <= appendedFrames) return;
-    appendedFrames = frames;
-    await opts.onAppend(await encoder.takeAppend(frames), frames);
-    lastAppend = performance.now();
-  };
-  for (let i = 0; i < turns.length; i++) {
-    const turn = turns[i];
-    runner.addTurn(turn);
-    if (!runner.executeNextTick() || tickError !== undefined) {
-      throw new Error(
-        `simulation failed at turn ${turn.turnNumber}: ` +
-          (tickError ?? "tick did not execute"),
-      );
-    }
+  const engine = await opts.engine(gameStart, map);
+  try {
+    opts.onStart?.(encoder.base);
 
-    const recorded = recordedHashes.get(turn.turnNumber);
-    if (recorded !== undefined && hashedTurn !== turn.turnNumber) {
-      mismatch ??= { turn: turn.turnNumber, recorded, computed: null };
-    }
-    if (mismatch !== null) {
-      // What was checked before this turn is the game that was played, so
-      // it's handed out even if the next append wasn't due yet.
-      await appendChecked();
-      throw new ReplayDesyncError(mismatch);
-    }
-    if (recorded !== undefined || i >= lastHashedIndex) checkedFrames = i + 1;
+    const appendEvery = opts.appendEveryMs ?? 5000;
+    let lastAppend = performance.now();
+    let appendedFrames = 0;
+    /** Frames up to here (one per turn) are checked. */
+    let checkedFrames = 0;
+    /** Hand out the closed chunks that are checked and not sent yet. */
+    const appendChecked = async () => {
+      const frames = encoder.completeFrames(checkedFrames);
+      if (opts.onAppend === undefined || frames <= appendedFrames) return;
+      appendedFrames = frames;
+      await opts.onAppend(await encoder.takeAppend(frames), frames);
+      lastAppend = performance.now();
+    };
+    for (let start = 0; start < turns.length; start += TURNS_PER_RUN) {
+      const run = turns.slice(start, start + TURNS_PER_RUN);
+      const { gameUpdates, error } = await engine.run(run);
+      for (let j = 0; j < run.length; j++) {
+        const i = start + j;
+        const turn = run[j];
+        const gu = gameUpdates[j];
+        if (gu === undefined) {
+          throw new Error(
+            `simulation failed at turn ${turn.turnNumber}: ` +
+              (error !== undefined
+                ? `${error.errMsg}\n${error.stack ?? ""}`
+                : "tick did not execute"),
+          );
+        }
+        for (const hu of gu.updates[GameUpdateType.Hash] as HashUpdate[]) {
+          hashedTurn = hu.tick;
+          const recorded = recordedHashes.get(hu.tick);
+          if (recorded !== undefined && recorded !== hu.hash) {
+            mismatch ??= { turn: hu.tick, recorded, computed: hu.hash };
+          }
+        }
+        encoder.pushFrame(gu);
 
-    if (
-      opts.onProgress &&
-      ((i + 1) % PROGRESS_EVERY === 0 || i === turns.length - 1)
-    ) {
-      opts.onProgress({
-        tick: i + 1,
-        totalTicks: turns.length,
-        percent: Math.floor(((i + 1) / turns.length) * 100),
-      });
-    }
+        const recorded = recordedHashes.get(turn.turnNumber);
+        if (recorded !== undefined && hashedTurn !== turn.turnNumber) {
+          mismatch ??= { turn: turn.turnNumber, recorded, computed: null };
+        }
+        if (mismatch !== null) {
+          // What was checked before this turn is the game that was played,
+          // so it's handed out even if the next append wasn't due yet.
+          await appendChecked();
+          throw new ReplayDesyncError(mismatch);
+        }
+        if (recorded !== undefined || i >= lastHashedIndex) {
+          checkedFrames = i + 1;
+        }
 
-    if (appendedFrames === 0 || performance.now() - lastAppend >= appendEvery) {
-      await appendChecked();
+        if (
+          opts.onProgress &&
+          ((i + 1) % PROGRESS_EVERY === 0 || i === turns.length - 1)
+        ) {
+          opts.onProgress({
+            tick: i + 1,
+            totalTicks: turns.length,
+            percent: Math.floor(((i + 1) / turns.length) * 100),
+          });
+        }
+
+        if (
+          appendedFrames === 0 ||
+          performance.now() - lastAppend >= appendEvery
+        ) {
+          await appendChecked();
+        }
+      }
     }
+  } finally {
+    engine.close();
   }
 
   encoder.end();

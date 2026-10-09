@@ -1,3 +1,4 @@
+import { EventBus } from "@openfront/shared/EventBus";
 import {
   InputHandler,
   ZOOM_DELTA_DIVISOR,
@@ -5,7 +6,6 @@ import {
 } from "../../src/client/InputHandler";
 import type { UIState } from "../../src/client/UIState";
 import type { GameView } from "../../src/client/view";
-import { EventBus } from "../../src/core/EventBus";
 
 /** jsdom has no GestureEvent, so fake one with a plain cancelable Event. */
 function dispatchGesture(

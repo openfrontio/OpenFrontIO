@@ -1,8 +1,8 @@
+import { TileRef } from "@openfront/engine-api/game/GameMap";
+import { Game } from "@openfront/engine/game/Game";
+import { PathFinding } from "@openfront/engine/pathfinding/PathFinder";
+import { SteppingPathFinder } from "@openfront/engine/pathfinding/types";
 import { beforeAll, describe, expect, it } from "vitest";
-import { Game } from "../../../src/core/game/Game";
-import { TileRef } from "../../../src/core/game/GameMap";
-import { PathFinding } from "../../../src/core/pathfinding/PathFinder";
-import { SteppingPathFinder } from "../../../src/core/pathfinding/types";
 import { setup } from "../../util/Setup";
 
 describe("PathFinding.Rail", () => {

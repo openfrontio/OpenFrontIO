@@ -6,7 +6,7 @@
  * layer's mask from every impact up to the frame, so the layer comes back.
  */
 
-import type { MapLayer } from "../../core/game/TerrainMapLoader";
+import type { MapLayer } from "@openfront/engine-api/game/MapFiles";
 import type { NukeImpactEvent } from "./codec/ReplayTypes";
 
 /** The MapRenderer calls this needs. */

@@ -1,11 +1,11 @@
-import { renderDuration, translateText } from "../../client/Utils";
 import {
   Difficulty,
   GameMapSize,
   GameMode,
   GameType,
-} from "../../core/game/Game";
-import { GameConfig } from "../../core/Schemas";
+} from "@openfront/engine-api/game/GameTypes";
+import { GameConfig } from "@openfront/engine-api/Schemas";
+import { renderDuration, translateText } from "../../client/Utils";
 
 // Non-default settings worth surfacing, shared by the join modal (post-join
 // config view and open-lobby rows) and the custom-lobby info tooltip on
@@ -155,4 +155,19 @@ export function notableLobbySettings(
       value: disabled,
     });
   return items;
+}
+
+/**
+ * One setting as a single tag: a switched-on setting is just its name, any
+ * other value follows it ("Bots: 100").
+ */
+export function lobbySettingTagText(setting: {
+  label: string;
+  value: string;
+}): string {
+  // Some labels (e.g. game_settings.bots) already end with ": " or "：".
+  const label = setting.label.replace(/[:\uFF1A\s]+$/u, "");
+  return setting.value === translateText("common.enabled")
+    ? label
+    : `${label}: ${setting.value}`;
 }

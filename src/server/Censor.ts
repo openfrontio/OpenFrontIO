@@ -1,3 +1,4 @@
+import { simpleHash } from "@openfront/engine-lib/Util";
 import {
   DataSet,
   RegExpMatcher,
@@ -9,7 +10,6 @@ import {
   skipNonAlphabeticTransformer,
   toAsciiLowerCaseTransformer,
 } from "obscenity";
-import { simpleHash } from "../core/Util";
 
 export const shadowNames = [
   "UnhuggedToday",

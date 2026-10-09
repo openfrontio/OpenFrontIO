@@ -1,8 +1,4 @@
-import {
-  PlayerStatsLeafSchema,
-  PlayerStatsTreeSchema,
-} from "../src/core/ApiSchemas";
-import { AllPlayersStats, ClientSendWinnerMessage } from "../src/core/Schemas";
+import { AllPlayersStats } from "@openfront/engine-api/Schemas";
 import {
   ALLIANCE_INDEX_LONGEST_HELD,
   ATTACK_INDEX_MAX_RECV,
@@ -12,12 +8,17 @@ import {
   GOLD_INDEX_DONATE_RECV,
   PlayerStatsSchema,
   TILE_INDEX_DRAWDOWN_TROUGH,
-} from "../src/core/StatsSchemas";
+} from "@openfront/engine-api/StatsSchemas";
+import {
+  PlayerStatsLeafSchema,
+  PlayerStatsTreeSchema,
+} from "@openfront/shared/ApiSchemas";
+import { ClientSendWinnerMessage } from "@openfront/shared/WireSchemas";
 import {
   createGameWireContext,
   decodeClientMessage,
   encodeClientMessage,
-} from "../src/core/ZbinWire";
+} from "@openfront/shared/ZbinWire";
 
 const CLIENT = "AbCdEfGh";
 
@@ -163,6 +164,16 @@ describe("PlayerStatsTreeSchema", () => {
         recent: { all: { games: 100, wins: 64 }, Public: { Medium: {} } },
       }),
     ).toThrow();
+  });
+
+  test("accepts a ranked type this build does not know", () => {
+    const leaf = { wins: "1", losses: "2", total: "3", stats: {} };
+    const result = PlayerStatsTreeSchema.parse({
+      Ranked: { "1v1": leaf, ffa: leaf },
+    });
+
+    expect(result.Ranked?.["1v1"]?.total).toBe(3n);
+    expect(result.Ranked?.ffa?.total).toBe(3n);
   });
 
   test("accepts Humans Vs Nations as a separate profile stats mode", () => {

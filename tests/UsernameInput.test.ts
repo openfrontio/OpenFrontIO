@@ -1,6 +1,6 @@
+import type { UserMeResponse } from "@openfront/shared/ApiSchemas";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { UserMeResponse } from "../src/core/ApiSchemas";
-import { MAX_USERNAME_LENGTH } from "../src/core/validations/username";
+import { MAX_USERNAME_LENGTH } from "../src/client/validations/username";
 
 // The identity bar pulls in the whole client bootstrap (auth, Steam,
 // CrazyGames, the clan API). Stub the boundaries so the test exercises the
@@ -847,6 +847,32 @@ describe("UsernameInput lapse notice", () => {
       JSON.parse(localStorage.getItem(STEAM_GRANT_NOTICE_KEY) ?? "{}").p
         .endedShown,
     ).toBe(true);
+  });
+
+  // A dated admin comp or Discord-role grant ran out. Its holder never
+  // subscribed either, so no "resubscribe" — but no Steam purchase to name.
+  it("uses the neutral after-grant wording for a former non-Steam grant", async () => {
+    localStorage.setItem(
+      STEAM_GRANT_NOTICE_KEY,
+      JSON.stringify({
+        p: {
+          periodEnd: "2026-08-30T00:00:00.000Z",
+          tier: "warlord",
+          steam: false,
+          welcomed: false,
+          endedShown: false,
+          seenAt: 0,
+        },
+      }),
+    );
+    const el = await mount();
+    await signIn(el, lapsedUser({ publicId: "p" }));
+
+    expect(showInGameAlert).toHaveBeenCalledTimes(1);
+    const message = showInGameAlert.mock.calls[0][0];
+    expect(message).toContain("username.lapse_notice_after_free_access");
+    expect(message).not.toContain("after_grant");
+    expect(message).toContain("RyanTheGreat");
   });
 
   it("keeps the ordinary wording when the grant is someone else's", async () => {

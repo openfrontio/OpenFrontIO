@@ -101,6 +101,7 @@ export class HeatManager {
       gl,
       fullscreenNoUvVertSrc,
       shaderSrc(heatDecayFragSrc, TILE_DEFINES),
+      "HeatManager",
     );
     this.uDecayMapSize = gl.getUniformLocation(this.decayProg, "uMapSize")!;
     this.uDecayAmount = gl.getUniformLocation(this.decayProg, "uDecay")!;
