@@ -443,7 +443,7 @@ describe("land a nuke severs from the main body is annexed", () => {
       const phases: string[] = [];
       for (const [method, phase] of [
         ["calculateClusters", "clusters"],
-        ["splitMainCluster", "split"],
+        ["splitCluster", "split"],
         ["largestTerritoryPart", "race"],
         ["annexSeveredClusters", "annex"],
       ]) {
@@ -835,5 +835,118 @@ describe("land a nuke severs from the main body is annexed", () => {
     expect(game.numTilesWithFallout()).toBeGreaterThan(0);
     expect(defenderTilesIn(armTip)).toBe(0);
     expect(defenderTilesIn(mainBody)).toBeGreaterThan(0);
+  });
+
+  // Every piece raced for the main body must be one territory. A border
+  // cluster joins land that touches only at a corner, so a cluster other
+  // than the one with the most border tiles can span two territories whose
+  // combined area outweighs the real main body: a landlocked strip with
+  // the longest border.
+  const strip = rect(20, 20, 129, 24); // 550 tiles, 226 of them border
+  const stripCrater = rect(130, 17, 136, 27);
+  function cornerPair(x0: number, y0: number) {
+    return {
+      big: rect(x0, y0, x0 + 19, y0 + 24), // 500 tiles
+      small: rect(x0 + 20, y0 + 25, x0 + 29, y0 + 34), // 100 tiles
+    };
+  }
+
+  test("a cluster spanning two corner-touching pieces does not outweigh a larger main body", () => {
+    const { big, small } = cornerPair(40, 60);
+    paint(union(rect(20, 20, 130, 24), big, small));
+    startClusterChecks();
+    fallout(
+      union(
+        stripCrater,
+        // A notch beside the big piece's east side.
+        rect(60, 70, 62, 72),
+        // Wraps the small piece's east end, so the attacker's land round the
+        // pair stops short of it and the pair is not surrounded.
+        rect(65, 84, 75, 84),
+        rect(70, 84, 75, 95),
+        rect(65, 95, 75, 95),
+      ),
+    );
+    expect(defenderTilesIn(strip)).toBe(550);
+    expect(defenderTilesIn(big)).toBe(500);
+    expect(defenderTilesIn(small)).toBe(100);
+    expect(borderIn(strip)).toBeGreaterThan(borderIn(union(big, small)));
+
+    runClusterChecks();
+
+    expect(defenderTilesIn(strip)).toBe(550);
+    expect(defenderTilesIn(big)).toBe(0);
+    expect(defenderTilesIn(small)).toBe(0);
+  });
+
+  test("an open cluster spanning two corner-touching pieces does not outweigh a larger main body", () => {
+    // The small piece reaches the map edge: it has a way out and stays, and
+    // the big one, landlocked, is cut off.
+    const { big, small } = cornerPair(170, 60);
+    paint(union(rect(20, 20, 130, 24), big, small));
+    startClusterChecks();
+    fallout(union(stripCrater, rect(165, 70, 169, 72)));
+    expect(defenderTilesIn(strip)).toBe(550);
+    expect(borderIn(strip)).toBeGreaterThan(borderIn(union(big, small)));
+
+    runClusterChecks();
+
+    expect(defenderTilesIn(strip)).toBe(550);
+    expect(defenderTilesIn(big)).toBe(0);
+    expect(defenderTilesIn(small)).toBe(100);
+  });
+
+  test("land touching the main body only at a corner is not stamped as the main body", () => {
+    // A landlocked body; an arm cut cleanly off it that reaches the map
+    // edge, so it has the longest border and is never annexed; and a small
+    // piece touching the body at a corner, outside it: the body's border and
+    // the piece's share a cluster.
+    const body = rect(60, 90, 75, 109);
+    const piece = rect(55, 85, 59, 89);
+    paint(union(rect(60, 90, 79, 109), rect(80, 99, 199, 100), piece));
+    startClusterChecks();
+    fallout(
+      union(
+        rect(76, 85, 100, 114),
+        rect(70, 85, 75, 89),
+        rect(70, 110, 75, 114),
+        // A notch beside the piece's west side.
+        rect(53, 86, 54, 88),
+      ),
+    );
+    const cutArm = rect(101, 99, 199, 100);
+    expect(defenderTilesIn(body)).toBe(320);
+    expect(defenderTilesIn(cutArm)).toBe(198);
+    expect(defenderTilesIn(piece)).toBe(25);
+    expect(borderIn(cutArm)).toBeGreaterThan(borderIn(union(body, piece)));
+
+    runClusterChecks();
+
+    expect(defenderTilesIn(body)).toBe(320);
+    expect(defenderTilesIn(cutArm)).toBe(198);
+    expect(defenderTilesIn(piece)).toBe(0);
+  });
+
+  // The main body on the map edge.
+  const edgeBody = rect(0, 40, 120, 160);
+
+  test("land with no way out is a candidate though it touches land with one at a corner", () => {
+    // The cut-off piece touches, at a corner, a strip that reaches the map
+    // edge: they share a cluster that has a way out. On its own the piece
+    // would be a candidate, and the corner must not change that.
+    const piece = rect(150, 100, 159, 109);
+    const edgeStrip = rect(160, 110, 199, 115);
+    paint(union(edgeBody, piece, edgeStrip));
+    startClusterChecks();
+    fallout(rect(148, 96, 161, 100));
+    const bodyBefore = defenderTilesIn(edgeBody);
+    const stripBefore = defenderTilesIn(edgeStrip);
+    expect(defenderTilesIn(piece)).toBe(90);
+
+    runClusterChecks();
+
+    expect(defenderTilesIn(piece)).toBe(0);
+    expect(defenderTilesIn(edgeBody)).toBe(bodyBefore);
+    expect(defenderTilesIn(edgeStrip)).toBe(stripBefore);
   });
 });

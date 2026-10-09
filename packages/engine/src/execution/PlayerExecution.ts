@@ -42,6 +42,13 @@ interface MainBodyPieces extends SeveredCandidates {
   open: boolean[];
 }
 
+// A border cluster's parts that each lie in a single territory, as above,
+// with each part's class judged on its own tiles: CLUSTER_OPEN,
+// CLUSTER_SEVERED_CANDIDATE or 0.
+interface TerritoryParts extends SeveredCandidates {
+  classes: number[];
+}
+
 // The main body's border tiles, in pieces, and the land that may be cut
 // off from it.
 interface SeveredLand {
@@ -324,10 +331,10 @@ export class PlayerExecution implements Execution {
 
     // Classify the remaining clusters, and pick the main body, before the
     // surrounded checks hand any land over: severed land is judged against
-    // the main body as this pass found it, even if that body is taken. A
-    // cluster's class reads only its own side-by-side neighbours, which lie
-    // outside the territory of any other cluster that is taken, so it is
-    // the same before as after.
+    // the main body as this pass found it, even if that body is taken. The
+    // class of each single-territory part (see splitCluster) reads only its
+    // own side-by-side neighbours, none of them ours, so taking other land
+    // leaves it the same before as after.
     const classes = new Uint8Array(clusters.length);
     let severed: SeveredCandidates | null = null;
     let open: SeveredCandidates | null = null;
@@ -395,12 +402,23 @@ export class PlayerExecution implements Execution {
    * never annexed, but an arm reaching the coast must not hand over a
    * larger landlocked body.
    *
-   * The pieces are the largest cluster's parts (see splitMainCluster) and
-   * the candidate clusters, and, when the largest cluster has no way out and
-   * could itself be cut off, the clusters that have one: the largest cluster
-   * may then be the cut-off piece, and the body it was cut from the one
-   * with a way out. Pieces the main body beats are candidates unless they
-   * have a way out. Nothing is raced unless some piece could be annexed.
+   * Every piece is the border of exactly one territory. Border clusters
+   * join tiles that touch only at a corner, so one cluster can span several
+   * territories; each cluster that has a piece here is split into its
+   * single-territory parts first (see splitCluster), and every part is
+   * classed on its own tiles. So a flood measures one territory, never two
+   * that touch at a corner; the main body's stamp covers its own territory
+   * only; a candidate's box bounds the territory it borders; and land with
+   * no way out is a candidate even where it touches land with one at a
+   * corner.
+   *
+   * The pieces are all of the largest cluster's parts; the parts of other
+   * clusters that are candidates on their own; and, when no part of the
+   * largest cluster has a way out but one could be cut off, the parts that
+   * have a way out: the largest cluster may then be the cut-off piece, and
+   * the body it was cut from the one with a way out. Pieces the main body
+   * beats are candidates unless they have a way out. Nothing is raced
+   * unless some piece could be annexed.
    */
   private severedLand(
     largestCluster: TileRef[],
@@ -412,50 +430,72 @@ export class PlayerExecution implements Execution {
     // Only fallout can cut land off, so skip all of this in games without it.
     if (this.map.numTilesWithFallout() === 0) return null;
 
-    let pieces = this.splitMainCluster(largestCluster);
-    let addOpen = pieces !== null && !pieces.open.includes(true);
-    if (pieces === null) {
+    let largest = this.splitCluster(largestCluster);
+    if (largest === null) {
       // On its own, the largest cluster is the main body.
       if (severed === null && openClusters === null) return null;
-      const box = [
-        boxes[boxOffset],
-        boxes[boxOffset + 1],
-        boxes[boxOffset + 2],
-        boxes[boxOffset + 3],
-      ];
-      const result = this.classifyCluster(
+      largest = wholeCluster(
         largestCluster,
-        box[0],
-        box[1],
-        box[2],
-        box[3],
+        boxes,
+        boxOffset,
+        this.classifyCluster(
+          largestCluster,
+          boxes[boxOffset],
+          boxes[boxOffset + 1],
+          boxes[boxOffset + 2],
+          boxes[boxOffset + 3],
+        ),
       );
-      // Without fallout round it, it is no land cut off by a nuke, and
-      // judging it would walk its whole territory on every pass.
-      addOpen = (result & CLUSTER_SEVERED_CANDIDATE) !== 0;
-      if (severed === null && !addOpen) return null;
-      pieces = {
-        clusters: [largestCluster],
-        boxes: box,
-        open: [(result & CLUSTER_OPEN) !== 0],
-      };
     }
+    // Land with a way out races only when the largest cluster could itself
+    // be the cut-off piece: none of its parts has a way out, and one is a
+    // candidate. Without fallout round it, it is no land cut off by a nuke,
+    // and racing the open land would walk its whole territory on every pass.
+    const addOpen =
+      !largest.classes.some((c) => (c & CLUSTER_OPEN) !== 0) &&
+      largest.classes.some((c) => (c & CLUSTER_SEVERED_CANDIDATE) !== 0);
+
+    const pieces: MainBodyPieces = { clusters: [], boxes: [], open: [] };
+    addRacePieces(pieces, largest, true, true);
     const largestParts = pieces.clusters.length;
     if (severed !== null) {
-      for (const c of severed.clusters) {
-        pieces.clusters.push(c);
-        pieces.open.push(false);
+      for (let c = 0; c < severed.clusters.length; c++) {
+        const cluster = severed.clusters[c];
+        const parts =
+          this.splitCluster(cluster) ??
+          wholeCluster(
+            cluster,
+            severed.boxes,
+            c * 4,
+            CLUSTER_SEVERED_CANDIDATE,
+          );
+        addRacePieces(pieces, parts, false, false);
       }
-      pieces.boxes.push(...severed.boxes);
     }
-    if (addOpen && openClusters !== null) {
-      for (const c of openClusters.clusters) {
-        pieces.clusters.push(c);
-        pieces.open.push(true);
+    if (openClusters !== null) {
+      for (let c = 0; c < openClusters.clusters.length; c++) {
+        const cluster = openClusters.clusters[c];
+        // A cluster with a way out can still hold land with none, touching
+        // the rest only at a corner: that part is a candidate like any
+        // other, and races even when land with a way out does not. Unsplit,
+        // the cluster is a single territory with a way out.
+        const split = this.splitCluster(cluster, !addOpen);
+        if (split !== null) {
+          addRacePieces(pieces, split, false, addOpen);
+        } else if (addOpen) {
+          const whole = wholeCluster(
+            cluster,
+            openClusters.boxes,
+            c * 4,
+            CLUSTER_OPEN,
+          );
+          addRacePieces(pieces, whole, false, true);
+        }
       }
-      pieces.boxes.push(...openClusters.boxes);
     }
-    if (!pieces.open.includes(false)) return null;
+    if (pieces.clusters.length < 2 || !pieces.open.includes(false)) {
+      return null;
+    }
 
     const count = pieces.clusters.length;
     const roots = new Int32Array(count);
@@ -469,7 +509,7 @@ export class PlayerExecution implements Execution {
     // Pieces in the main body's territory are attached, not candidates.
     const mainTiles: TileRef[][] = [];
     const candidates: SeveredCandidates = { clusters: [], boxes: [] };
-    // The candidate clusters first, then the largest cluster's parts.
+    // The other clusters' parts first, then the largest cluster's.
     for (let k = 0; k < count; k++) {
       const i = (k + largestParts) % count;
       if (rootOf(roots, i) === main) {
@@ -490,16 +530,29 @@ export class PlayerExecution implements Execution {
 
   /**
    * Border clusters join tiles that touch only at a corner, but territories
-   * join only side by side, so land a nuke cuts off across a diagonal keeps
-   * its border in the main body's cluster. Splits that cluster into parts
-   * whose tiles are side by side or meet at a corner beside one of our
-   * tiles; each part then lies in a single territory. Returns the parts
-   * with their bounding boxes and whether each touches coast, map edge or
-   * open land, for severedLand to pick the main body from.
+   * join only side by side, so one cluster can span several territories,
+   * such as land a nuke cuts off across a diagonal and the body it was cut
+   * from. Splits a cluster into parts whose tiles are side by side or meet
+   * at a corner beside one of our tiles; each part then lies in a single
+   * territory. Returns the parts with their bounding boxes and their
+   * classes, judged on each part's own tiles as classifyCluster judges a
+   * cluster (without CLUSTER_SURROUNDED).
    *
-   * Returns null when the cluster does not split.
+   * A territory's outer border always lies within one part, unless the
+   * territory reaches the map edge: walking round it, each step is side by
+   * side or across a corner beside one of the territory's own tiles. So a
+   * territory that fits in no box of its parts is the land round a hole.
+   *
+   * Returns null when the cluster does not split: it then lies in a single
+   * territory and classifyCluster judges it as it is. With `candidatesOnly`
+   * the caller wants only the candidate parts, so it also returns null,
+   * without splitting, when the cluster borders no fallout: then none of its
+   * parts is a candidate.
    */
-  private splitMainCluster(cluster: readonly TileRef[]): MainBodyPieces | null {
+  private splitCluster(
+    cluster: readonly TileRef[],
+    candidatesOnly = false,
+  ): TerritoryParts | null {
     const map = this.map;
     const mySmallID = this.player.smallID();
     const w = map.width();
@@ -510,6 +563,7 @@ export class PlayerExecution implements Execution {
 
     // Only two of our tiles meeting at a corner with neither tile between
     // them ours can split it. Look for one before doing the full split.
+    // Both such tiles are border tiles, so they share a cluster.
     let pinched = false;
     for (let j = 0; j < cluster.length && !pinched; j++) {
       const t = cluster[j];
@@ -526,6 +580,17 @@ export class PlayerExecution implements Execution {
           map.ownerID(t - 1) !== mySmallID);
     }
     if (!pinched) return null;
+    if (candidatesOnly) {
+      let fallout = false;
+      for (let j = 0; j < cluster.length && !fallout; j++) {
+        const numNeighbors = map.neighbors4(cluster[j], this.nbuf);
+        for (let i = 0; i < numNeighbors; i++) {
+          const n = this.nbuf[i];
+          if (map.ownerID(n) === 0 && map.hasFallout(n)) fallout = true;
+        }
+      }
+      if (!fallout) return null;
+    }
 
     const state = this.traversalState();
     const visited = state.visited;
@@ -536,7 +601,7 @@ export class PlayerExecution implements Execution {
     const stack = state.stack;
     const parts: TileRef[][] = [];
     const partBoxes: number[] = [];
-    const open: boolean[] = [];
+    const classes: number[] = [];
     for (const start of cluster) {
       if (visited[start] !== memberGen) continue;
       if (map.ownerID(start) !== mySmallID) continue;
@@ -545,6 +610,8 @@ export class PlayerExecution implements Execution {
       stack.push(start);
       const part: TileRef[] = [];
       let touchesOpen = false;
+      let hasEnemy = false;
+      let hasFallout = false;
       let minX = w,
         minY = h,
         maxX = -1,
@@ -565,8 +632,10 @@ export class PlayerExecution implements Execution {
           const ownerId = map.ownerID(n);
           const dx = (n % w) - x;
           const diagonal = dx !== 0 && n - dx !== t;
-          if (!diagonal && ownerId === 0 && !map.hasFallout(n)) {
-            touchesOpen = true;
+          if (!diagonal && ownerId !== mySmallID) {
+            if (ownerId !== 0) hasEnemy = true;
+            else if (map.hasFallout(n)) hasFallout = true;
+            else touchesOpen = true;
           }
           if (visited[n] !== memberGen || ownerId !== mySmallID) continue;
           if (
@@ -582,10 +651,16 @@ export class PlayerExecution implements Execution {
       }
       parts.push(part);
       partBoxes.push(minX, minY, maxX, maxY);
-      open.push(touchesOpen);
+      classes.push(
+        touchesOpen
+          ? CLUSTER_OPEN
+          : hasEnemy && hasFallout
+            ? CLUSTER_SEVERED_CANDIDATE
+            : 0,
+      );
     }
     if (parts.length < 2) return null;
-    return { clusters: parts, boxes: partBoxes, open };
+    return { clusters: parts, boxes: partBoxes, classes };
   }
 
   /**
@@ -750,9 +825,9 @@ export class PlayerExecution implements Execution {
     const visited = this.traversalState().visited;
 
     for (let c = 0; c < candidates.clusters.length; c++) {
-      // Clusters join land that touches diagonally but territories only
-      // join side by side, so one cluster can span several territories:
-      // judge each one separately.
+      // Each candidate lies in a single territory (see splitCluster): the
+      // first of its tiles still ours floods it, and the stamps or the
+      // annex then rule out the rest.
       let mainGen = this.stampMainBody(mainTiles);
       for (const start of candidates.clusters[c]) {
         // An earlier annex in this pass may already have taken it.
@@ -805,13 +880,15 @@ export class PlayerExecution implements Execution {
    * only other players and fallout, with at least one of each. Returns null
    * otherwise.
    *
-   * The cluster-level check that made it a candidate may have drawn on a
-   * diagonally touching territory, so every condition is checked again here
-   * on this territory alone.
+   * The check that made it a candidate read only one part of the
+   * territory's border (a hole in the territory has a border of its own,
+   * and the largest cluster's parts are candidates whatever their class),
+   * so every condition is checked again here on the whole territory.
    *
    * Every row and column of a severed territory starts and ends on its
-   * outer border, and that border lies within one candidate, so the
-   * territory fits in the candidate's bounding box (`box` at `boxOffset`).
+   * outer border, and that border lies within one part (see splitCluster),
+   * so the territory fits in that candidate's bounding box (`box` at
+   * `boxOffset`).
    * A flood that leaves the box started on the ring round a hole in a larger
    * territory, which is attached or has its outer border judged as another
    * candidate, so it stops there. Without that bound a ring that stays a
@@ -1406,6 +1483,55 @@ export class PlayerExecution implements Execution {
     this.nbuf = [0, 0, 0, 0];
     this.nbuf8 = [0, 0, 0, 0, 0, 0, 0, 0];
     this.player = r.player(s.player);
+  }
+}
+
+// A cluster that splitCluster leaves whole, as its one part: it lies in a
+// single territory, so its class as a cluster is that part's class.
+function wholeCluster(
+  cluster: TileRef[],
+  boxes: ArrayLike<number>,
+  boxOffset: number,
+  cls: number,
+): TerritoryParts {
+  return {
+    clusters: [cluster],
+    boxes: [
+      boxes[boxOffset],
+      boxes[boxOffset + 1],
+      boxes[boxOffset + 2],
+      boxes[boxOffset + 3],
+    ],
+    classes: [cls],
+  };
+}
+
+// Adds the parts that race for the main body: every part with `all`, else
+// the candidates and, with `withOpen`, the parts with a way out.
+function addRacePieces(
+  pieces: MainBodyPieces,
+  parts: TerritoryParts,
+  all: boolean,
+  withOpen: boolean,
+): void {
+  for (let k = 0; k < parts.clusters.length; k++) {
+    const cls = parts.classes[k];
+    const open = (cls & CLUSTER_OPEN) !== 0;
+    if (
+      !all &&
+      (cls & CLUSTER_SEVERED_CANDIDATE) === 0 &&
+      !(withOpen && open)
+    ) {
+      continue;
+    }
+    pieces.clusters.push(parts.clusters[k]);
+    pieces.open.push(open);
+    pieces.boxes.push(
+      parts.boxes[k * 4],
+      parts.boxes[k * 4 + 1],
+      parts.boxes[k * 4 + 2],
+      parts.boxes[k * 4 + 3],
+    );
   }
 }
 
