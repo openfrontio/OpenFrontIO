@@ -9,7 +9,8 @@ export class Client {
 
   public hashes: Map<Tick, number> = new Map();
 
-  public reportedWinner: Winner | null = null;
+  // This client's winner vote, keyed on winner and stats (Consensus.voteKey).
+  public reportedVote: { winner: Winner; key: string } | null = null;
 
   constructor(
     public readonly clientID: ClientID,
