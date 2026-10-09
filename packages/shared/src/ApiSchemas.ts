@@ -1050,6 +1050,7 @@ const RecentRankedStatsSchema = z.object({
   [RankedType.OneVOne]: PlayerRecentStatsSchema.optional(),
   [RankedType.TwoVTwo]: PlayerRecentStatsSchema.optional(),
   [RankedType.FreeForAll]: PlayerRecentStatsSchema.optional(),
+  [RankedType.ClanWars]: PlayerRecentStatsSchema.optional(),
 });
 
 export const PlayerRecentStatsTreeSchema = z.object({
