@@ -1364,6 +1364,24 @@
     "lifetime_xp": "{xp} lifetime XP",
     "top_of_track": "The top of the track"
   },
+  "lobby_config": {
+    "preset": {
+      "delete": "Delete",
+      "delete_failed": "Failed to delete preset",
+      "deleted": "Preset deleted",
+      "load": "Load",
+      "loaded": "Preset loaded",
+      "no_presets": "No saved presets",
+      "placeholder": "Preset name...",
+      "save": "Save Current",
+      "save_failed": "Failed to save preset",
+      "save_label": "Save Preset",
+      "saved": "Preset saved",
+      "select": "Select a preset...",
+      "select_label": "Saved Presets",
+      "title": "Presets"
+    }
+  },
   "main": {
     "account": "Account",
     "clans": "Clans",
