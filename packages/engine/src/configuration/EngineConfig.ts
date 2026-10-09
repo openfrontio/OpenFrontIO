@@ -681,6 +681,24 @@ export class EngineConfig extends Config {
     return 50;
   }
 
+  /**
+   * Resource structures have a finite production reserve until a successful
+   * trade shipment refreshes them. The reserve scales with building level so
+   * upgrading still increases total output, while every level has the same
+   * number of production cycles before requiring trade again.
+   */
+  resourceProductionCap(type: UnitType, level: number): Gold {
+    switch (type) {
+      case UnitType.OilMine:
+      case UnitType.GoldMine:
+      case UnitType.DiamondMine:
+      case UnitType.LivestockFarm:
+        return BigInt(250_000 * Math.max(1, Math.floor(level)));
+      default:
+        throw new Error(`Unknown resource production type: ${type}`);
+    }
+  }
+
   mineIncome(
     type: UnitType,
     level: number,
