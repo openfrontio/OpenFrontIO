@@ -1366,6 +1366,12 @@
     "win_score_tooltip": "Weighted wins based on clan participation and match difficulty",
     "your_ranking": "Your Ranking"
   },
+  "legend_ceremony": {
+    "continue": "Continue",
+    "label": "You became a Legend",
+    "lifetime_xp": "{xp} lifetime XP",
+    "top_of_track": "The top of the track"
+  },
   "main": {
     "account": "Account",
     "clans": "Clans",
@@ -1812,6 +1818,29 @@
     "nation": "Nation",
     "player": "Player"
   },
+  "prestige": {
+    "button": "Prestige",
+    "caps": "Caps",
+    "ceremony_title": "Prestige {rank}",
+    "confirm": "Hold to prestige",
+    "continue": "Continue",
+    "error": "Couldn't confirm your prestige. Check your connection and hold again.",
+    "error_signed_out": "You're signed out. Sign in again to prestige.",
+    "exclusive": "{type} · P{rank} only",
+    "exclusive_untyped": "P{rank} only",
+    "gain_caps": "Caps bonus",
+    "gain_emblem": "Prestige {rank} emblem",
+    "irreversible": "This can't be undone",
+    "keep_holding": "Keep holding…",
+    "load_failed": "Couldn't open Prestige. Check your connection and try again.",
+    "ready": "Level 100! Until you prestige, XP only adds to your lifetime total.",
+    "stale": "Your level changed since this page loaded, so your account has been refreshed.",
+    "stale_failed": "Your level changed since this page loaded. Reload the page to see where you are.",
+    "submitting": "Prestiging…",
+    "summary": "You go back to level 1. You keep your lifetime stats, XP and cosmetics.",
+    "title": "Enter Prestige {rank}",
+    "unlocks": "Unlocks"
+  },
   "private_lobby": {
     "disabled_units": "Disabled Units",
     "enter_id": "Enter Lobby ID",
@@ -1838,6 +1867,9 @@
     "title": "Join Lobby",
     "version_mismatch": "This game was created with a different version. Cannot join."
   },
+  "profile_card": {
+    "lifetime_xp": "Lifetime XP"
+  },
   "progression": {
     "awaiting_end": "XP is awarded when the game ends.",
     "bonus_line": "+{percent}% XP ({source})",
@@ -1858,7 +1890,6 @@
     "level": "Level {level}",
     "level_change": "Level {from} → {to}",
     "level_reached": "Level {level}!",
-    "lifetime_xp": "{xp} lifetime XP",
     "line_feats": "Feats",
     "line_first_game": "First game of the day",
     "line_other": "Other",

@@ -71,4 +71,15 @@ describe("refreshOwnHiddenLevelBadge", () => {
     document.dispatchEvent(new Event("session-cleared"));
     expect(ownHiddenLevelBadge()).toBeUndefined();
   });
+
+  it("drops a refresh still pending when the session is cleared", async () => {
+    let answer!: (me: UserMeResponse | false) => void;
+    getUserMe.mockReturnValue(new Promise((r) => (answer = r)));
+    const pending = refreshOwnHiddenLevelBadge();
+    document.dispatchEvent(new Event("session-cleared"));
+    // The old account's profile arrives after the clear.
+    answer(me({ progress, levelHidden: true }));
+    expect(await pending).toBeUndefined();
+    expect(ownHiddenLevelBadge()).toBeUndefined();
+  });
 });

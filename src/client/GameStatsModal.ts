@@ -5,7 +5,6 @@ import "./components/baseComponents/stats/GameInfoView";
 import type { GameInfoLoadedDetail } from "./components/baseComponents/stats/GameInfoView";
 import { BaseModal } from "./components/BaseModal";
 import "./components/CopyButton";
-import "./components/PastGameXpCard";
 import type { PastGameXpView } from "./components/PastGameXpCard";
 import { modalHeader } from "./components/ui/ModalHeader";
 import { resolveXpAccount } from "./ProgressionAccount";
@@ -16,6 +15,20 @@ import { translateText } from "./Utils";
 // scored" rather than "not yours": the server scores a game within moments,
 // and retries a failed one well inside this.
 export const RECENT_GAME_MS = 10 * 60_000;
+
+// The XP card only ever shows a signed-in player's own record, so it stays
+// out of the startup bundle: fetched alongside that record. A failed fetch is
+// tried again with the next game opened.
+let pastGameXpCardModule: Promise<unknown> | null = null;
+function loadPastGameXpCard(): Promise<unknown> {
+  pastGameXpCardModule ??= import("./components/PastGameXpCard").catch(
+    (err: unknown) => {
+      pastGameXpCardModule = null;
+      throw err;
+    },
+  );
+  return pastGameXpCardModule;
+}
 
 @customElement("game-stats-modal")
 export class GameStatsModal extends BaseModal {
@@ -132,9 +145,14 @@ export class GameStatsModal extends BaseModal {
       if (signal.aborted || account.kind !== "signed_in") return;
       // No progress on /users/@me means progression is off.
       if (account.me.player.progress === undefined) return;
+      // The card arrives alongside the record; nothing shows without it.
+      const card = loadPastGameXpCard();
+      card.catch(() => {});
       const result = await fetchMyGameXp(gameId, signal);
       if (signal.aborted) return;
       if (result.status === "ok") {
+        await card;
+        if (signal.aborted) return;
         // This reason reads differently for a singleplayer game, and the
         // game's type comes with its record.
         if (!result.data.eligible && result.data.reason === "unverified") {
@@ -154,6 +172,8 @@ export class GameStatsModal extends BaseModal {
       const end = await this.gameEndedAt(gameId, signal);
       if (signal.aborted || end === null) return;
       if (Date.now() - end > RECENT_GAME_MS) return;
+      await card;
+      if (signal.aborted) return;
       this.xpView = { kind: "calculating" };
       const polled = await pollGameXp(gameId, { signal });
       if (signal.aborted) return;
