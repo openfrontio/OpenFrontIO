@@ -76,14 +76,14 @@ describe("Mine economy", () => {
 
     executeTicks(game, 1300);
 
-    expect(mine.resourceGoldProduced()).toBe(250_000n);
+    expect(mine.resourceGoldProduced()).toBe(60_000n);
 
     const producedAtCap = mine.resourceGoldProduced();
     executeTicks(game, game.config().mineIncomeInterval() * 2);
     expect(mine.resourceGoldProduced()).toBe(producedAtCap);
   });
 
-  test("resource production reset clears the reserve", async () => {
+  test("a trade refill adds only 15 seconds of production", async () => {
     const target = game.ref(0, 10);
     const oilCost = game.unitInfo(UnitType.OilMine).cost(game, player);
     player.addGold(oilCost);
@@ -97,11 +97,17 @@ describe("Mine economy", () => {
     const mine = player.units(UnitType.OilMine)[0];
     expect(mine).toBeDefined();
 
-    mine.addResourceGoldProduced(123_456n);
-    expect(mine.resourceGoldProduced()).toBe(123_456n);
+    mine.addResourceGoldProduced(60_000n);
+    expect(mine.resourceGoldProduced()).toBe(60_000n);
 
-    mine.resetResourceGoldProduced();
-    expect(mine.resourceGoldProduced()).toBe(0n);
+    mine.refillResourceGoldProduced(
+      game.config().resourceProductionTradeRefill(
+        UnitType.OilMine,
+        mine.level(),
+        player,
+      ),
+    );
+    expect(mine.resourceGoldProduced()).toBe(30_000n);
   });
 
   test("constructed mines generate income and are upgraded normally", () => {
