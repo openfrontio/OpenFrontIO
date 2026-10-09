@@ -22,6 +22,7 @@ import {
   GameStartInfoSchema,
   ID,
   IntentSchema,
+  JoinUsernameSchema,
   MappedID,
   PlayerSchema,
   TurnSchema,
@@ -683,7 +684,7 @@ export const ClientJoinMessageSchema = z.object({
   type: z.literal("join"),
   token: TokenSchema, // WARNING: PII - server extracts persistentID from this
   gameID: ID,
-  username: UsernameSchema,
+  username: JoinUsernameSchema,
   clanTag: ClanTagSchema,
   // Server replaces the refs with the actual cosmetic data.
   cosmetics: PlayerCosmeticRefsSchema.optional(),

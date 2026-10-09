@@ -156,12 +156,24 @@ export const RENDERABLE_NAME_HAS_ALNUM_RE = new RegExp(
   "u",
 );
 
+export const MIN_USERNAME_LENGTH = 3;
+export const MAX_USERNAME_LENGTH = 20;
+export const MAX_STORED_USERNAME_LENGTH = 27;
+
 // Requires at least one non-space so a name is never all padding.
+// Wide enough to read names already written into archived game records (replays).
 export const UsernameSchema = z
   .string()
   .regex(new RegExp(`^(?=.*\\S)[${RENDERABLE_NAME_CHARS}]+$`, "u"))
-  .min(3)
-  .max(27);
+  .min(MIN_USERNAME_LENGTH)
+  .max(MAX_STORED_USERNAME_LENGTH);
+
+// Active username schema enforced on live player joins: prevents bypassing the 20-character cap.
+export const JoinUsernameSchema = z
+  .string()
+  .regex(new RegExp(`^(?=.*\\S)[${RENDERABLE_NAME_CHARS}]+$`, "u"))
+  .min(MIN_USERNAME_LENGTH)
+  .max(MAX_USERNAME_LENGTH);
 
 export const ClanTagSchema = z
   .string()

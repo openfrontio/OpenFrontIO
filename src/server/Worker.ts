@@ -1,5 +1,9 @@
 import { GameType } from "@openfront/engine-api/game/GameTypes";
-import { ID, isValidGameID } from "@openfront/engine-api/Schemas";
+import {
+  ID,
+  isValidGameID,
+  MAX_USERNAME_LENGTH,
+} from "@openfront/engine-api/Schemas";
 import { CloseCode, CloseReason } from "@openfront/shared/CloseCodes";
 import { GameEnv } from "@openfront/shared/configuration/Env";
 import { generateID, replacer } from "@openfront/shared/SharedUtil";
@@ -661,7 +665,10 @@ export async function startWorker() {
             );
             switch (verdict.status) {
               case "approved":
-                username = verdict.username;
+                username =
+                  verdict.username.length > MAX_USERNAME_LENGTH
+                    ? verdict.username.slice(0, MAX_USERNAME_LENGTH).trim()
+                    : verdict.username;
                 clanTag = verdict.clanTag;
                 break;
               case "rejected":
