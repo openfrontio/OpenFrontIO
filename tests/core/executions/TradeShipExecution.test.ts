@@ -24,6 +24,8 @@ describe("TradeShipExecution", () => {
   let piratePort2: Unit;
   let tradeShip: Unit;
   let dstPort: Unit;
+  let originResource: Unit;
+  let destinationResource: Unit;
   let tradeShipExecution: TradeShipExecution;
 
   beforeEach(async () => {
@@ -41,11 +43,21 @@ describe("TradeShipExecution", () => {
       addGold: vi.fn(),
       addTradeGold: vi.fn(),
       addPiracyGold: vi.fn(),
-      units: vi.fn(() => [dstPort]),
+      units: vi.fn(() => [originResource]),
       unitCount: vi.fn(() => 1),
       id: vi.fn(() => 1),
       clientID: vi.fn(() => 1),
       canTrade: vi.fn(() => true),
+    } as any;
+
+    originResource = {
+      type: vi.fn(() => UnitType.OilMine),
+      resetResourceGoldProduced: vi.fn(),
+    } as any;
+
+    destinationResource = {
+      type: vi.fn(() => UnitType.LivestockFarm),
+      resetResourceGoldProduced: vi.fn(),
     } as any;
 
     dstOwner = {
@@ -59,6 +71,8 @@ describe("TradeShipExecution", () => {
       clientID: vi.fn(() => 2),
       canTrade: vi.fn(() => true),
     } as any;
+
+    dstOwner.units = vi.fn(() => [destinationResource]);
 
     pirate = {
       id: vi.fn(() => 3),
@@ -195,6 +209,8 @@ describe("TradeShipExecution", () => {
     // A normal arrival is trade, not piracy.
     expect(origOwner.addPiracyGold).not.toHaveBeenCalled();
     expect(dstOwner.addPiracyGold).not.toHaveBeenCalled();
+    expect(originResource.resetResourceGoldProduced).toHaveBeenCalledOnce();
+    expect(destinationResource.resetResourceGoldProduced).toHaveBeenCalledOnce();
   });
 
   it("should count captured-ship payout as piracy revenue only", () => {
