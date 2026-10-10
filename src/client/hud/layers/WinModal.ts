@@ -6,14 +6,18 @@ import { EventBus } from "@openfront/shared/EventBus";
 import { html, LitElement, TemplateResult } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import {
+  copyToClipboard,
   DESKTOP_TUTORIAL_VIDEO_URL,
   getGamesPlayed,
   homeHref,
   isInIframe,
+  showToast,
   translateText,
   TUTORIAL_VIDEO_URL,
 } from "../../../client/Utils";
 import { getUserMe } from "../../Api";
+import { ClientEnv } from "../../ClientEnv";
+import "../../components/baseComponents/Button";
 import "../../components/CosmeticCard";
 import { cosmeticSelectionLabel } from "../../components/CosmeticPresentation";
 import type { GameXpPanelState } from "../../components/GameXpPanel";
@@ -52,6 +56,24 @@ function loadGameXpPanel(): void {
     },
   );
 }
+
+const iconShare = html`<svg
+  xmlns="http://www.w3.org/2000/svg"
+  viewBox="0 0 24 24"
+  fill="none"
+  stroke="currentColor"
+  stroke-width="2"
+  stroke-linecap="round"
+  stroke-linejoin="round"
+  class="w-5 h-5"
+  aria-hidden="true"
+>
+  <circle cx="18" cy="5" r="3" />
+  <circle cx="6" cy="12" r="3" />
+  <circle cx="18" cy="19" r="3" />
+  <line x1="8.6" y1="10.5" x2="15.4" y2="6.5" />
+  <line x1="8.6" y1="13.5" x2="15.4" y2="17.5" />
+</svg>`;
 
 @customElement("win-modal")
 export class WinModal extends LitElement implements Controller {
@@ -146,6 +168,17 @@ export class WinModal extends LitElement implements Controller {
             () => this.hide(),
             "keep",
           )}
+          <o-button
+            variant="primary"
+            size="lg"
+            iconPosition="only"
+            class="shrink-0"
+            translationKey="win_modal.share"
+            title=${translateText("win_modal.share")}
+            .title=${translateText("win_modal.share")}
+            .icon=${iconShare}
+            @click=${this._handleShare}
+          ></o-button>
         </div>
         ${this.renderActionStyles()}
       </div>
@@ -591,6 +624,30 @@ export class WinModal extends LitElement implements Controller {
         },
       }),
     );
+  }
+
+  private async _handleShare() {
+    const gameId = this.game?.gameID();
+    if (!gameId) {
+      showToast(translateText("common.failed_copy"), "red");
+      return;
+    }
+
+    const text = crazyGamesSDK.isOnCrazyGames()
+      ? crazyGamesSDK.createInviteLink(gameId)
+      : `${ClientEnv.shareOrigin()}${ClientEnv.gamePath(gameId)}`;
+
+    if (!text) {
+      showToast(translateText("common.failed_copy"), "red");
+      return;
+    }
+
+    try {
+      await copyToClipboard(text);
+      showToast(translateText("common.copied"), "green");
+    } catch {
+      showToast(translateText("common.failed_copy"), "red");
+    }
   }
 
   init() {
