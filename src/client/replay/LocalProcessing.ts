@@ -154,14 +154,6 @@ export async function extractSnapshotInWorker(
       new DOMException("The operation was aborted.", "AbortError")
     );
   }
-  const worker = await createWorker();
-  if (signal?.aborted) {
-    worker.terminate();
-    throw (
-      signal.reason ??
-      new DOMException("The operation was aborted.", "AbortError")
-    );
-  }
 
   let turns: Turn[] = [];
   let gameStart: WireGameStartInfo;
@@ -180,6 +172,14 @@ export async function extractSnapshotInWorker(
     gameStart = record as unknown as WireGameStartInfo;
   }
 
+  if (signal?.aborted) {
+    throw (
+      signal.reason ??
+      new DOMException("The operation was aborted.", "AbortError")
+    );
+  }
+
+  const worker = await createWorker();
   if (signal?.aborted) {
     worker.terminate();
     throw (

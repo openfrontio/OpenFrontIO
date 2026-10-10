@@ -215,6 +215,39 @@ describe("extractSnapshotInWorker", () => {
     ).rejects.toThrow();
     expect(createWorker).not.toHaveBeenCalled();
   });
+
+  test("does not create worker if map loading fails", async () => {
+    const createWorker = vi.fn();
+    const recordWithConfig = {
+      info: {
+        gameID: "abcd1234",
+        lobbyCreatedAt: 12345,
+        config: config(),
+        players: [],
+      },
+      turns: [],
+    } as unknown as GameRecord;
+    const failingLoader = {
+      getMapData: () => ({
+        manifest: () => Promise.reject(new Error("map fetch failed")),
+        mapBin: () => Promise.reject(new Error("map fetch failed")),
+        map4xBin: () => Promise.reject(new Error("map fetch failed")),
+      }),
+    } as any;
+    await expect(
+      extractSnapshotInWorker(
+        recordWithConfig,
+        10,
+        "p1",
+        "c1",
+        undefined,
+        createWorker,
+        undefined,
+        failingLoader,
+      ),
+    ).rejects.toThrow("map fetch failed");
+    expect(createWorker).not.toHaveBeenCalled();
+  });
 });
 
 test("the browser's compression makes a replay the viewer plays as it grows", async () => {

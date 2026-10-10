@@ -1041,7 +1041,11 @@ class Client {
         }
         this.joinModal?.close();
         if (window.location.hash !== replayHash) {
-          window.location.hash = replayHash;
+          history.replaceState(
+            null,
+            "",
+            window.location.pathname + window.location.search + replayHash,
+          );
         }
         void this.openReplayViewer(replayViewerID);
         return;
@@ -1261,7 +1265,11 @@ class Client {
       }
       this.joinModal?.close();
       if (window.location.hash !== hash) {
-        window.location.hash = hash;
+        history.replaceState(
+          null,
+          "",
+          window.location.pathname + window.location.search + hash,
+        );
       }
       await this.openReplayViewer(replayViewerID);
       return;

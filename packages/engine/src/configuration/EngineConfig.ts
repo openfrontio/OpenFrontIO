@@ -132,11 +132,11 @@ export class EngineConfig extends Config {
   }
 
   setDifficulty(difficulty: Difficulty): void {
-    this._gameConfig.difficulty = difficulty;
+    this._gameConfig = { ...this._gameConfig, difficulty };
   }
 
   setGameType(gameType: GameType): void {
-    this._gameConfig.gameType = gameType;
+    this._gameConfig = { ...this._gameConfig, gameType };
   }
 
   falloutDefenseModifier(falloutRatio: number): number {
