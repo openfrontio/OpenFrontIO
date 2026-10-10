@@ -4,6 +4,7 @@ import {
   GameMode,
   Gold,
   PlayerType,
+  Relation,
   Structures,
   UnitType,
 } from "@openfront/engine-api/game/GameTypes";
@@ -132,6 +133,11 @@ const FIRST_MISSILE_SILO_RATIO = 0.4;
 /** If we have more than this many structures per tiles, prefer upgrading over building */
 const UPGRADE_DENSITY_THRESHOLD = 1 / 1500;
 
+/** Structures counted for that density; cheap defense posts would push nations into upgrading early */
+const DENSITY_STRUCTURE_TYPES: readonly UnitType[] = Structures.types.filter(
+  (t) => t !== UnitType.DefensePost,
+);
+
 /**
  * Minimum number of full-map water tiles a water body must have for the AI to
  * consider placing a port on it.  Prevents the AI from wasting ports on tiny
@@ -182,6 +188,31 @@ const UNDER_ATTACK_THREAT_RATIO = 0.35;
  * 40–80%, 3 at 80–120%, …).
  */
 const DEFENSE_POST_RATIO_PER_POST = 0.4;
+
+/** Closest a reactive defense post goes to the attack front, in post ranges; Hard/Impossible go further back per unit of incoming-to-own troop ratio */
+const DEFENSE_POST_FRONT_MIN_DIST = 2 / 3;
+const DEFENSE_POST_FRONT_DIST_PER_RATIO = 1 / 3;
+const DEFENSE_POST_FRONT_RATIO_CAP = 2;
+/** Depth of the band a reactive defense post may go in, in post ranges */
+const DEFENSE_POST_FRONT_BAND = 1 / 2;
+
+/** Distance band from a threatening neighbor's border for a defense post built before it attacks, in post ranges */
+const PROACTIVE_DEFENSE_POST_MIN_DIST = 1 / 2;
+const PROACTIVE_DEFENSE_POST_MAX_DIST = 1;
+/** Cities owned before Hard/Impossible nations fortify borders that aren't under attack yet */
+const PROACTIVE_DEFENSE_POST_MIN_CITIES = 2;
+/** Defense posts owned per city above which nations stop fortifying borders that aren't under attack */
+const PROACTIVE_DEFENSE_POSTS_PER_CITY = 0.5;
+/** Share of our troops a hostile neighbor needs before we fortify against it, keyed by difficulty */
+const PROACTIVE_DEFENSE_POST_HOSTILE_TROOP_RATIO: Partial<
+  Record<Difficulty, number>
+> = {
+  [Difficulty.Hard]: 1,
+  [Difficulty.Impossible]: 0.5,
+};
+
+/** Random tiles tried when looking for a defense post spot */
+const DEFENSE_POST_SAMPLE_ATTEMPTS = 150;
 
 // Reusable neighbor buffer for hot loops; the simulation is single-threaded.
 const NEIGHBOR_SCRATCH: TileRef[] = [0, 0, 0, 0];
@@ -272,10 +303,10 @@ export class NationStructureBehavior {
   }
 
   /**
-   * Tries to place one defense post near an active attack front, including
-   * landed boat attacks.
-   * Not called on Easy. Medium: 50% chance per call, 1 post total. Hard/Impossible:
-   * ceil(ratio / 0.4) posts total.
+   * Tries to place one defense post behind an active attack front, including
+   * landed boat attacks, far enough back to be finished before the attack arrives.
+   * Not called on Easy. Medium: 50% chance per call, 1 post total, fixed distance.
+   * Hard/Impossible: ceil(ratio / 0.4) posts total, further back against stronger attacks.
    * Does not touch placementsCount or lastStructureTick.
    */
   private tryBuildDefensePost(): boolean {
@@ -302,26 +333,92 @@ export class NationStructureBehavior {
       allowed = Math.ceil(ratio / DEFENSE_POST_RATIO_PER_POST);
     }
 
+    const range = this.game.config().defensePostRange();
+    const scaledRatio =
+      difficulty === Difficulty.Medium
+        ? 0
+        : Math.min(ratio, DEFENSE_POST_FRONT_RATIO_CAP);
+    const minDist =
+      range *
+      (DEFENSE_POST_FRONT_MIN_DIST +
+        DEFENSE_POST_FRONT_DIST_PER_RATIO * scaledRatio);
+    const maxDist = minDist + range * DEFENSE_POST_FRONT_BAND;
+
     const frontTiles = this.getAttackFrontTiles(attacks);
-    if (this.countDefensePostsNearFront(frontTiles, allowed) >= allowed)
+    if (
+      this.countDefensePostsNearFront(frontTiles, maxDist, allowed) >= allowed
+    )
       return false;
 
-    const cost = this.cost(UnitType.DefensePost);
-    if (player.gold() < cost) return false;
+    return this.buildDefensePostBehind(frontTiles, minDist, maxDist);
+  }
 
-    const tiles = this.sampleTilesNearFront(
-      frontTiles,
-      25,
-      UnitType.DefensePost,
-    );
-    for (const tile of tiles) {
-      if (!player.canBuild(UnitType.DefensePost, tile)) continue;
-      this.game.addExecution(
-        new ConstructionExecution(player, UnitType.DefensePost, tile),
-      );
-      return true;
+  /**
+   * Hard/Impossible: covers the border with a hostile (recently attacking)
+   * neighbor before it attacks again, as humans do. Hard only fears ones at
+   * least as strong as itself, Impossible also weaker ones. One post per
+   * threatening neighbor.
+   */
+  private maybeBuildProactiveDefensePost(): boolean {
+    const config = this.game.config();
+    const { difficulty } = config.gameConfig();
+    const hostileTroopRatio =
+      PROACTIVE_DEFENSE_POST_HOSTILE_TROOP_RATIO[difficulty];
+    if (hostileTroopRatio === undefined) return false;
+    if (config.isUnitDisabled(UnitType.DefensePost)) return false;
+    const cityCount = this.cityCount();
+    if (cityCount < PROACTIVE_DEFENSE_POST_MIN_CITIES) return false;
+
+    const player = this.player;
+    if (
+      player.units(UnitType.DefensePost).length >=
+      cityCount * PROACTIVE_DEFENSE_POSTS_PER_CITY
+    )
+      return false;
+    if (player.gold() < this.cost(UnitType.DefensePost)) return false;
+
+    const minTroops = player.troops() * hostileTroopRatio;
+    const threats = new Set<Player>();
+    for (const neighbor of player.nearby()) {
+      if (!neighbor.isPlayer() || neighbor.type() === PlayerType.Bot) continue;
+      if (player.isFriendly(neighbor)) continue;
+      if (
+        player.relation(neighbor) === Relation.Hostile &&
+        neighbor.troops() >= minTroops
+      ) {
+        threats.add(neighbor);
+      }
     }
-    return false;
+    if (threats.size === 0) return false;
+
+    const range = config.defensePostRange();
+    const frontTiles = this.borderTilesFacing(threats);
+    if (
+      this.countDefensePostsNearFront(frontTiles, range * 1.5, threats.size) >=
+      threats.size
+    )
+      return false;
+
+    return this.buildDefensePostBehind(
+      frontTiles,
+      range * PROACTIVE_DEFENSE_POST_MIN_DIST,
+      range * PROACTIVE_DEFENSE_POST_MAX_DIST,
+    );
+  }
+
+  private buildDefensePostBehind(
+    frontTiles: TileRef[],
+    minDist: number,
+    maxDist: number,
+  ): boolean {
+    const player = this.player;
+    if (player.gold() < this.cost(UnitType.DefensePost)) return false;
+    const tile = this.findDefensePostTile(frontTiles, minDist, maxDist);
+    if (tile === null) return false;
+    this.game.addExecution(
+      new ConstructionExecution(player, UnitType.DefensePost, tile),
+    );
+    return true;
   }
 
   private defensePostNeeded(): boolean {
@@ -347,23 +444,7 @@ export class NationStructureBehavior {
       if (a.sourceTile() === null) landAttackers.add(a.attacker());
     }
 
-    // Set.forEach + a reused neighbor buffer: border sets are huge, and
-    // for..of over a Set allocates an iterator-result object per element.
-    // "Any neighbor is an attacker" is order-insensitive.
-    const frontTiles: TileRef[] = [];
-    if (landAttackers.size > 0) {
-      const nbuf = NEIGHBOR_SCRATCH;
-      player.borderTiles().forEach((borderTile) => {
-        const n = game.neighbors4(borderTile, nbuf);
-        for (let i = 0; i < n; i++) {
-          const owner = game.owner(nbuf[i]);
-          if (landAttackers.has(owner as Player)) {
-            frontTiles.push(borderTile);
-            return;
-          }
-        }
-      });
-    }
+    const frontTiles = this.borderTilesFacing(landAttackers);
 
     // A land attacker's beachheads are already in its adjacency front above.
     for (const a of attacks) {
@@ -375,19 +456,41 @@ export class NationStructureBehavior {
     return frontTiles;
   }
 
+  /** Our border tiles adjacent to land owned by any of `players`. */
+  private borderTilesFacing(players: ReadonlySet<Player>): TileRef[] {
+    const game = this.game;
+    const frontTiles: TileRef[] = [];
+    if (players.size === 0) return frontTiles;
+    // Set.forEach + a reused neighbor buffer: border sets are huge, and
+    // for..of over a Set allocates an iterator-result object per element.
+    // "Any neighbor is one of them" is order-insensitive.
+    const nbuf = NEIGHBOR_SCRATCH;
+    this.player.borderTiles().forEach((borderTile) => {
+      const n = game.neighbors4(borderTile, nbuf);
+      for (let i = 0; i < n; i++) {
+        const owner = game.owner(nbuf[i]);
+        if (players.has(owner as Player)) {
+          frontTiles.push(borderTile);
+          return;
+        }
+      }
+    });
+    return frontTiles;
+  }
+
   /**
-   * Counts defense posts within 1.5 × borderSpacing of any front tile.
+   * Counts defense posts within `range` of any front tile.
    * `cap` short-circuits the scan once that many are found.
    */
   private countDefensePostsNearFront(
     frontTiles: TileRef[],
+    range: number,
     cap?: number,
   ): number {
     if (frontTiles.length === 0) return 0;
 
     const game = this.game;
-    const { borderSpacing } = this.spacingConstants();
-    const rangeSquared = (borderSpacing * 1.5) ** 2;
+    const rangeSquared = range ** 2;
 
     let count = 0;
     for (const dp of this.player.units(UnitType.DefensePost)) {
@@ -403,33 +506,21 @@ export class NationStructureBehavior {
   }
 
   /**
-   * Samples territory tiles for defense-post placement, using the full attack
-   * front as anchors. Only tiles where canBuild passes are collected.
+   * Finds an own tile where a defense post can be built at a distance in
+   * [minDist, maxDist] from the nearest front tile, sampled around the front.
    * Front tiles and candidates near existing defense posts are skipped, since
-   * overlapping posts don't stack; a fully covered front yields no tiles.
-   *
-   * Phase 1: tiles at depth [0.75×, 1.5×] borderSpacing from any border.
-   * Fallback: relax depth constraint (canBuild checked by caller).
+   * overlapping posts don't stack; a fully covered front yields null.
    */
-  private sampleTilesNearFront(
+  private findDefensePostTile(
     frontTiles: TileRef[],
-    count: number,
-    unitType: UnitType,
-  ): TileRef[] {
+    minDist: number,
+    maxDist: number,
+  ): TileRef | null {
+    if (frontTiles.length === 0) return null;
     const game = this.game;
     const player = this.player;
 
-    if (frontTiles.length === 0) {
-      return [];
-    }
-
-    const { borderSpacing } = this.spacingConstants();
-    const searchRadius = Math.ceil(borderSpacing * 1.5);
-    const minBorderDist = Math.ceil(borderSpacing * 0.75);
-    const maxBorderDist = Math.ceil(borderSpacing * 1.5);
-    const borderTiles = player.borderTiles();
-
-    const spreadRangeSquared = (borderSpacing * 1.5) ** 2;
+    const spreadRangeSquared = (game.config().defensePostRange() * 1.5) ** 2;
     const existingDPTiles = player
       .units(UnitType.DefensePost)
       .map((u) => u.tile());
@@ -439,14 +530,12 @@ export class NationStructureBehavior {
       );
 
     const anchors = frontTiles.filter((ft) => !nearExistingPost(ft));
-    if (anchors.length === 0) return [];
+    if (anchors.length === 0) return null;
 
-    const result: TileRef[] = [];
-    for (
-      let attempt = 0;
-      attempt < count * 6 && result.length < count;
-      attempt++
-    ) {
+    const minSquared = minDist ** 2;
+    const maxSquared = maxDist ** 2;
+    const searchRadius = Math.ceil(maxDist);
+    for (let attempt = 0; attempt < DEFENSE_POST_SAMPLE_ATTEMPTS; attempt++) {
       const anchor = this.random.randElement(anchors);
       const ax = game.x(anchor);
       const ay = game.y(anchor);
@@ -456,40 +545,19 @@ export class NationStructureBehavior {
       const t = game.ref(x, y);
       if (game.owner(t) !== player) continue;
       if (nearExistingPost(t)) continue;
-      // Only "inside [min, max]" matters, so the search is capped at max.
-      const borderDist = nearestTileDistCapped(
-        game,
-        borderTiles,
-        t,
-        maxBorderDist,
-      );
-      if (borderDist < minBorderDist || borderDist > maxBorderDist) continue;
-      if (!player.canBuild(unitType, t)) continue;
-      result.push(t);
+      let nearestSquared = Infinity;
+      for (const ft of frontTiles) {
+        nearestSquared = Math.min(
+          nearestSquared,
+          game.euclideanDistSquared(t, ft),
+        );
+        if (nearestSquared < minSquared) break;
+      }
+      if (nearestSquared < minSquared || nearestSquared > maxSquared) continue;
+      if (!player.canBuild(UnitType.DefensePost, t)) continue;
+      return t;
     }
-
-    if (result.length > 0) return result;
-
-    // Fallback: relax border-depth constraint (territory too small for depth ring)
-    const fallback: TileRef[] = [];
-    for (
-      let attempt = 0;
-      attempt < count * 4 && fallback.length < count;
-      attempt++
-    ) {
-      const anchor = this.random.randElement(anchors);
-      const ax = game.x(anchor);
-      const ay = game.y(anchor);
-      const x = this.random.nextInt(ax - searchRadius, ax + searchRadius + 1);
-      const y = this.random.nextInt(ay - searchRadius, ay + searchRadius + 1);
-      if (!game.isValidCoord(x, y)) continue;
-      const t = game.ref(x, y);
-      if (game.owner(t) !== player) continue;
-      if (nearExistingPost(t)) continue;
-      fallback.push(t);
-    }
-
-    return fallback;
+    return null;
   }
 
   private isOnStructureCooldown(): boolean {
@@ -573,6 +641,10 @@ export class NationStructureBehavior {
         this.builtCrowdedMapFirstStructure = true;
         return true;
       }
+    }
+
+    if (this.maybeBuildProactiveDefensePost()) {
+      return true;
     }
 
     // Build order for non-city structures (priority order)
@@ -910,7 +982,7 @@ export class NationStructureBehavior {
   private getTotalStructureDensity(): number {
     const tilesOwned = this.player.numTilesOwned();
     return tilesOwned > 0
-      ? this.player.units(Structures.types).length / tilesOwned
+      ? this.player.units(DENSITY_STRUCTURE_TYPES).length / tilesOwned
       : 0; //ignoring levels for structures
   }
 
