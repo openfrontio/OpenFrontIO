@@ -128,7 +128,7 @@ const HIGH_GOLD_STRUCTURE_COOLDOWN_TICKS: readonly number[] = [
 const TEAM_POST_SAVE_UP_PHASE_TICKS = 150; // 15s
 
 /**
- * Incoming land-attack troop count as a fraction of own troops below which
+ * Incoming attack troop count as a fraction of own troops below which
  * the nation does not build defensive structures.
  */
 const UNDER_ATTACK_THREAT_RATIO = 0.35;
@@ -229,9 +229,10 @@ export class NationStructureBehavior {
   }
 
   /**
-   * Tries to place one defense post near an active land-attack front.
+   * Tries to place one defense post near an active attack front, including
+   * landed boat attacks.
    * Not called on Easy. Medium: 50% chance per call, 1 post total. Hard/Impossible:
-   * ceil(ratio / 0.4) posts total. Boat attacks (sourceTile != null) are ignored.
+   * ceil(ratio / 0.4) posts total.
    * Does not touch placementsCount or lastStructureTick.
    */
   private tryBuildDefensePost(): boolean {
@@ -241,15 +242,13 @@ export class NationStructureBehavior {
       return false;
 
     const player = this.player;
-    const landAttacks = player
-      .incomingAttacks()
-      .filter((a) => a.sourceTile() === null);
-    if (landAttacks.length === 0) return false;
+    const attacks = player.incomingAttacks();
+    if (attacks.length === 0) return false;
 
     const ourTroops = player.troops();
     if (ourTroops <= 0) return false;
 
-    const incomingTroops = landAttacks.reduce((sum, a) => sum + a.troops(), 0);
+    const incomingTroops = attacks.reduce((sum, a) => sum + a.troops(), 0);
     const ratio = incomingTroops / ourTroops;
     if (ratio < UNDER_ATTACK_THREAT_RATIO) return false;
 
@@ -260,7 +259,7 @@ export class NationStructureBehavior {
       allowed = Math.ceil(ratio / DEFENSE_POST_RATIO_PER_POST);
     }
 
-    const frontTiles = this.getAttackFrontTiles(landAttacks);
+    const frontTiles = this.getAttackFrontTiles(attacks);
     if (this.countDefensePostsNearFront(frontTiles, allowed) >= allowed)
       return false;
 
@@ -285,41 +284,51 @@ export class NationStructureBehavior {
   private defensePostNeeded(): boolean {
     const { difficulty } = this.game.config().gameConfig();
     if (difficulty === Difficulty.Easy) return false;
-    const landAttacks = this.player
-      .incomingAttacks()
-      .filter((a) => a.sourceTile() === null);
-    if (landAttacks.length === 0) return false;
+    const attacks = this.player.incomingAttacks();
+    if (attacks.length === 0) return false;
     const ourTroops = this.player.troops();
     if (ourTroops <= 0) return false;
-    const incomingTroops = landAttacks.reduce((sum, a) => sum + a.troops(), 0);
+    const incomingTroops = attacks.reduce((sum, a) => sum + a.troops(), 0);
     return incomingTroops / ourTroops >= UNDER_ATTACK_THREAT_RATIO;
   }
 
   /**
-   * Returns our border tiles that are adjacent to a tile owned by any of the
-   * attacking players.
+   * Returns our border tiles adjacent to a land attacker's territory, plus the
+   * landing frontier of boat attacks from players not attacking by land.
    */
-  private getAttackFrontTiles(landAttacks: Attack[]): TileRef[] {
+  private getAttackFrontTiles(attacks: Attack[]): TileRef[] {
     const game = this.game;
     const player = this.player;
-    const attackerSet = new Set(landAttacks.map((a) => a.attacker()));
-    if (attackerSet.size === 0) return [];
+    const landAttackers = new Set<Player>();
+    for (const a of attacks) {
+      if (a.sourceTile() === null) landAttackers.add(a.attacker());
+    }
 
     // Set.forEach + a reused neighbor buffer: border sets are huge, and
     // for..of over a Set allocates an iterator-result object per element.
     // "Any neighbor is an attacker" is order-insensitive.
     const frontTiles: TileRef[] = [];
-    const nbuf = NEIGHBOR_SCRATCH;
-    player.borderTiles().forEach((borderTile) => {
-      const n = game.neighbors4(borderTile, nbuf);
-      for (let i = 0; i < n; i++) {
-        const owner = game.owner(nbuf[i]);
-        if (attackerSet.has(owner as Player)) {
-          frontTiles.push(borderTile);
-          return;
+    if (landAttackers.size > 0) {
+      const nbuf = NEIGHBOR_SCRATCH;
+      player.borderTiles().forEach((borderTile) => {
+        const n = game.neighbors4(borderTile, nbuf);
+        for (let i = 0; i < n; i++) {
+          const owner = game.owner(nbuf[i]);
+          if (landAttackers.has(owner as Player)) {
+            frontTiles.push(borderTile);
+            return;
+          }
         }
-      }
-    });
+      });
+    }
+
+    // A land attacker's beachheads are already in its adjacency front above.
+    for (const a of attacks) {
+      if (a.sourceTile() === null || landAttackers.has(a.attacker())) continue;
+      a.borderTiles().forEach((t) => {
+        if (game.owner(t) === player) frontTiles.push(t);
+      });
+    }
     return frontTiles;
   }
 
@@ -353,12 +362,11 @@ export class NationStructureBehavior {
   /**
    * Samples territory tiles for defense-post placement, using the full attack
    * front as anchors. Only tiles where canBuild passes are collected.
-   * Anchors near existing defense posts are filtered out first so successive
-   * posts spread along the front rather than clustering together.
+   * Front tiles and candidates near existing defense posts are skipped, since
+   * overlapping posts don't stack; a fully covered front yields no tiles.
    *
    * Phase 1: tiles at depth [0.75×, 1.5×] borderSpacing from any border.
-   * Fallback 1: relax depth constraint (territory smaller than borderSpacing).
-   * Fallback 2: pure random territory sampling (canBuild checked by caller).
+   * Fallback: relax depth constraint (canBuild checked by caller).
    */
   private sampleTilesNearFront(
     frontTiles: TileRef[],
@@ -378,25 +386,17 @@ export class NationStructureBehavior {
     const maxBorderDist = Math.ceil(borderSpacing * 1.5);
     const borderTiles = player.borderTiles();
 
-    // Spread: prefer front tiles far from existing defense posts so successive
-    // posts don't cluster at the same spot along the attack line.
     const spreadRangeSquared = (borderSpacing * 1.5) ** 2;
     const existingDPTiles = player
       .units(UnitType.DefensePost)
       .map((u) => u.tile());
-
-    let anchors: TileRef[];
-    if (existingDPTiles.length > 0) {
-      anchors = frontTiles.filter(
-        (ft) =>
-          !existingDPTiles.some(
-            (dp) => game.euclideanDistSquared(ft, dp) < spreadRangeSquared,
-          ),
+    const nearExistingPost = (t: TileRef) =>
+      existingDPTiles.some(
+        (dp) => game.euclideanDistSquared(t, dp) < spreadRangeSquared,
       );
-      if (anchors.length === 0) anchors = frontTiles;
-    } else {
-      anchors = frontTiles;
-    }
+
+    const anchors = frontTiles.filter((ft) => !nearExistingPost(ft));
+    if (anchors.length === 0) return [];
 
     const result: TileRef[] = [];
     for (
@@ -412,6 +412,7 @@ export class NationStructureBehavior {
       if (!game.isValidCoord(x, y)) continue;
       const t = game.ref(x, y);
       if (game.owner(t) !== player) continue;
+      if (nearExistingPost(t)) continue;
       // Only "inside [min, max]" matters, so the search is capped at max.
       const borderDist = nearestTileDistCapped(
         game,
@@ -441,6 +442,7 @@ export class NationStructureBehavior {
       if (!game.isValidCoord(x, y)) continue;
       const t = game.ref(x, y);
       if (game.owner(t) !== player) continue;
+      if (nearExistingPost(t)) continue;
       fallback.push(t);
     }
 

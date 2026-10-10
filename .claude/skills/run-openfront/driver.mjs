@@ -68,7 +68,7 @@ export async function gotoHome(page) {
   await page.waitForTimeout(3000);
 }
 
-// The single-player button is labeled "SOLO!". There are multiple SOLO
+// The single-player button is labeled "Solo". There are multiple Solo
 // buttons in the DOM (responsive layouts) — only one is visible.
 export async function openSoloModal(page) {
   await page.locator("button:visible", { hasText: /solo/i }).first().click();
