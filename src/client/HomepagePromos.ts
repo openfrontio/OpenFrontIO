@@ -20,14 +20,6 @@ export class HomepagePromos extends LitElement {
     }
   };
 
-  private onJoinLobby = () => {
-    this.loadBottomRail();
-  };
-
-  private onLeaveLobby = () => {
-    this.destroyBottomRail();
-  };
-
   private bottomRailActive: boolean = false;
 
   // The header ad ("flex" leaderboard, GumGum via Playwire) renders in a
@@ -51,8 +43,6 @@ export class HomepagePromos extends LitElement {
   connectedCallback() {
     super.connectedCallback();
     document.addEventListener("userMeResponse", this.onUserMeResponse);
-    document.addEventListener("join-lobby", this.onJoinLobby);
-    document.addEventListener("leave-lobby", this.onLeaveLobby);
     // Fires on every DOM change in the page, so it must not measure: it only
     // notices the banner element arriving or leaving, and the observers
     // syncTopAd attaches to the banner itself track its size and position.
@@ -71,8 +61,6 @@ export class HomepagePromos extends LitElement {
   disconnectedCallback() {
     super.disconnectedCallback();
     document.removeEventListener("userMeResponse", this.onUserMeResponse);
-    document.removeEventListener("join-lobby", this.onJoinLobby);
-    document.removeEventListener("leave-lobby", this.onLeaveLobby);
     this.topAdMutation?.disconnect();
     this.topAdStyle?.disconnect();
     this.topAdResize?.disconnect();
@@ -175,17 +163,21 @@ export class HomepagePromos extends LitElement {
 
   public show(): void {
     this.loadGutterAds();
+    this.loadBottomRail();
   }
 
   public close(): void {
     this.adLoaded = false;
+    // bottom_rail stays up through spawn phase; InGamePromo destroys it.
+    // Clear the flag so show() requests it again after the game.
+    this.bottomRailActive = false;
     // index.html stubs window.ramp; without ramp.js (an ad blocker) there is
     // no destroyUnits and no units to destroy.
     if (typeof window.ramp?.destroyUnits === "function") {
       try {
         // Destroy gutter rails and the header ad; bottom_rail persists into
         // spawn phase. These are no-selector units, registered under pw-oop-
-        // ids (see destroyBottomRail). The header ad must go too: nothing hides
+        // ids (see InGamePromo). The header ad must go too: nothing hides
         // #pw-oop-flex_container in-game and its docked state is fixed at the
         // viewport top, so it would sit over the map.
         window.ramp.destroyUnits("pw-oop-left_rail");
@@ -205,7 +197,7 @@ export class HomepagePromos extends LitElement {
     }
   }
 
-  public loadBottomRail(): void {
+  private loadBottomRail(): void {
     if (!window.adsEnabled) return;
     if (this.bottomRailActive) return;
     if (!window.ramp) {
@@ -225,20 +217,6 @@ export class HomepagePromos extends LitElement {
       });
     } catch (error) {
       console.warn("Failed to load bottom_rail ad:", error);
-    }
-  }
-
-  public destroyBottomRail(): void {
-    if (!this.bottomRailActive) return;
-    this.bottomRailActive = false;
-
-    if (!window.ramp) return;
-
-    try {
-      window.ramp.destroyUnits("pw-oop-bottom_rail");
-      console.log("Bottom rail ad destroyed");
-    } catch (e) {
-      console.warn("Error destroying bottom_rail ad:", e);
     }
   }
 
@@ -315,8 +293,8 @@ export class HomepagePromos extends LitElement {
       window.ramp
         .destroyUnits("corner_ad_video")
         // No-selector units can be registered under a pw-oop- id (see
-        // destroyBottomRail); retry with the prefixed name if the plain
-        // type isn't recognized.
+        // InGamePromo.destroyBottomRail); retry with the prefixed name if the
+        // plain type isn't recognized.
         .catch(() => window.ramp.destroyUnits("pw-oop-corner_ad_video"))
         .then(() => console.log("corner_ad_video destroyed"))
         .catch((e: unknown) => {
