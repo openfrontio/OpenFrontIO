@@ -323,4 +323,218 @@ describe("MIRVExecution", () => {
     expect(player.units(UnitType.MIRV)).toHaveLength(1);
     expect(player.isTraitor()).toBe(false);
   });
+
+  // Scenario 1: Spatial Hash Mathematical Correctness
+  test("Spatial Hash Mathematical Correctness (Overlap bounds)", async () => {
+    const targetTile = game.ref(110, 110);
+    if (game.map().isLand(targetTile)) {
+      otherPlayer.conquer(targetTile);
+    }
+    const mirvExec = new MirvExecution(player, targetTile);
+    game.addExecution(mirvExec);
+    executeTicks(game, 2);
+
+    // Make mirvExec accessible for internal method testing
+    const exec = mirvExec as any;
+    exec.spatialGrid = new Map();
+    const tCenter = game.ref(100, 100);
+    exec.addToGrid(exec.spatialGrid, tCenter);
+
+    // 54 distance = overlap (returns true)
+    // 55 distance = no overlap (returns false)
+    expect(exec.isOverlapping(100 + 54, 100)).toBe(true);
+    expect(exec.isOverlapping(100 + 55, 100)).toBe(false);
+    expect(exec.isOverlapping(100 - 54, 100)).toBe(true);
+    expect(exec.isOverlapping(100 - 55, 100)).toBe(false);
+    expect(exec.isOverlapping(100, 100 + 54)).toBe(true);
+    expect(exec.isOverlapping(100, 100 + 55)).toBe(false);
+    expect(exec.isOverlapping(100, 100 - 54)).toBe(true);
+    expect(exec.isOverlapping(100, 100 - 55)).toBe(false);
+    // Diagonal 54
+    expect(exec.isOverlapping(100 + 27, 100 + 27)).toBe(true);
+    // Diagonal 55
+    expect(exec.isOverlapping(100 + 28, 100 + 27)).toBe(false);
+  });
+
+  // Scenario 2: Crowded Territory Saturation Cutoff
+  test("Crowded Territory Saturation Cutoff", async () => {
+    // Give other player ALL land on the map, EXCEPT player's own tiles
+    for (let x = 0; x < game.map().width(); x++) {
+      for (let y = 0; y < game.map().height(); y++) {
+        const tile = game.ref(x, y);
+        if (game.map().isLand(tile) && game.owner(tile) !== player) {
+          otherPlayer.conquer(tile);
+        }
+      }
+    }
+
+    const targetTile = game.ref(100, 100);
+    const mirvExec = new MirvExecution(player, targetTile);
+    const exec = mirvExec as any;
+    exec.range = 100;
+    exec.rangeSquared = 10000;
+    game.addExecution(mirvExec);
+
+    executeTicks(game, 2);
+
+    // Fast forward to tick 20 where target generation starts
+    // exec is already defined above
+    while (exec.fullPath.length - exec.pathIndex > 20) {
+      game.executeNextTick();
+    }
+
+    // Measure time to ensure it does not spinlock
+    const start = performance.now();
+
+    // Execute through target generation phase
+    while (exec.fullPath.length - exec.pathIndex > 10) {
+      game.executeNextTick();
+    }
+
+    const duration = performance.now() - start;
+    expect(duration).toBeLessThan(10); // should be < 1ms, give generous 10ms for CI
+
+    // Wait until warheads spawn
+    while (!exec.warheadsSpawned) {
+      game.executeNextTick();
+    }
+
+    // Saturation threshold must have been hit
+    expect(exec.consecutiveOverlapFailures).toBeGreaterThanOrEqual(1500);
+  });
+
+  // Scenario 3: Small Island / Fragmented Territory Capacity
+  test("Small Island / Fragmented Territory Capacity", async () => {
+    // Clear other player territory
+    for (let x = 0; x < game.map().width(); x++) {
+      for (let y = 0; y < game.map().height(); y++) {
+        const tile = game.ref(x, y);
+        if (game.owner(tile) === otherPlayer) {
+          otherPlayer.relinquish(tile);
+        }
+      }
+    }
+
+    // Give other player a 100x100 island surrounded by ocean
+    let conquered = 0;
+    for (let x = 100; x < 199; x++) {
+      for (let y = 100; y < 199; y++) {
+        const tile = game.ref(x, y);
+        if (game.map().isLand(tile)) {
+          otherPlayer.conquer(tile);
+          conquered++;
+        }
+      }
+    }
+
+    const targetTile = game.ref(150, 150);
+    const mirvExec = new MirvExecution(player, targetTile);
+    game.addExecution(mirvExec);
+
+    executeTicks(game, 2);
+
+    const exec = mirvExec as any;
+    while (!exec.warheadsSpawned) {
+      game.executeNextTick();
+    }
+
+    // The island is huge, it should NOT have hit saturation early, or if it did, it should have packed many warheads.
+    // It shouldn't trigger saturation cutoff prematurely on water misses!
+    expect(exec.consecutiveOverlapFailures).toBeLessThan(1500);
+    expect(exec.stagedTargets.length).toBeGreaterThan(2);
+  });
+
+  // Scenario 4: Mid-Flight Snapshot Determinism
+  test("Mid-Flight Snapshot Determinism", async () => {
+    const targetTile = game.ref(150, 150);
+    if (game.map().isLand(targetTile)) {
+      otherPlayer.conquer(targetTile);
+    }
+    const mirvExec = new MirvExecution(player, targetTile);
+    game.addExecution(mirvExec);
+
+    executeTicks(game, 2);
+
+    const exec = mirvExec as any;
+    // Execute until remainingTicks = 15
+    while (exec.fullPath.length - exec.pathIndex > 15) {
+      game.executeNextTick();
+    }
+
+    // Save snapshot
+    const { roundTrip } = await import("../../util/Snapshot");
+    const { restored: game2 } = await roundTrip(game, "big_plains");
+
+    // Advance both to tick 0 (until MIRV explodes)
+    while (mirvExec.isActive()) {
+      game.executeNextTick();
+    }
+
+    const mirvExec2 = game2
+      .executions()
+      .find((e: any) => e.constructor.name === "MirvExecution");
+    while (mirvExec2 && mirvExec2.isActive()) {
+      game2.executeNextTick();
+    }
+
+    const exec2 = mirvExec2 as any;
+    // Verify staged targets match
+    expect(exec.stagedTargets).toEqual(exec2.stagedTargets);
+
+    // Verify warhead destinations match identically
+    const warheads1 = exec.warheadExecutions.map((e: any) => e.dst);
+    const warheads2 = exec2.warheadExecutions.map((e: any) => e.dst);
+    expect(warheads1).toEqual(warheads2);
+  });
+
+  // Scenario 5: Territory Capture Replenishment
+  test("Territory Capture Replenishment", async () => {
+    // Increase territory to allow for multiple warhead targets
+    for (let x = 75; x < 200; x++) {
+      for (let y = 75; y < 200; y++) {
+        const tile = game.ref(x, y);
+        if (game.map().isLand(tile)) {
+          otherPlayer.conquer(tile);
+        }
+      }
+    }
+
+    const targetTile = game.ref(110, 110);
+    const mirvExec = new MirvExecution(player, targetTile);
+    game.addExecution(mirvExec);
+
+    executeTicks(game, 2);
+    const exec = mirvExec as any;
+
+    while (exec.fullPath.length - exec.pathIndex > 10) {
+      game.executeNextTick();
+    }
+
+    // Artificially max out saturation to simulate reaching threshold
+    exec.consecutiveOverlapFailures = 1500;
+
+    // Now simulate frontline loss at tick 10: player conquers some of the targeted tiles!
+    const targetsToLose = exec.stagedTargets
+      .filter((t: any) => t !== exec.dst)
+      .slice(0, 5);
+    for (const tile of targetsToLose) {
+      otherPlayer.relinquish(tile);
+      player.conquer(tile);
+    }
+
+    // Execute tick 10 (finalizeDestinations)
+    game.executeNextTick();
+
+    // The lost targets should be purged, consecutive failures reset to 0, and top-up attempted.
+    expect(exec.consecutiveOverlapFailures).toBeLessThan(1500);
+
+    // Verify the lost targets are no longer in the spatialGrid
+    let foundInGrid = false;
+    for (const cell of exec.spatialGrid.values()) {
+      for (const t of targetsToLose) {
+        if (cell.includes(t)) foundInGrid = true;
+      }
+    }
+    expect(foundInGrid).toBe(false);
+  });
 });
