@@ -26,7 +26,8 @@ import type {
 import { ConstructionExecution } from "../ConstructionExecution";
 import { UpgradeStructureExecution } from "../UpgradeStructureExecution";
 import { nearestTileDist, nearestTileDistCapped } from "../Util";
-import { randTerritoryTileArray } from "./NationUtils";
+import { isMirvWorthSavingFor } from "./NationMIRVBehavior";
+import { hasHighStartingGold, randTerritoryTileArray } from "./NationUtils";
 
 /**
  * Configuration for how many structures of each type a nation should build
@@ -133,6 +134,14 @@ const FIRST_MISSILE_SILO_RATIO = 0.4;
 /** If we have more than this many structures per tiles, prefer upgrading over building */
 const UPGRADE_DENSITY_THRESHOLD = 1 / 1500;
 
+/** Most levels bought in one upgrade, as far as the gold beyond the save-up target pays for them, keyed by difficulty */
+const MAX_UPGRADES_AT_ONCE: Record<Difficulty, number> = {
+  [Difficulty.Easy]: 3,
+  [Difficulty.Medium]: 10,
+  [Difficulty.Hard]: Infinity,
+  [Difficulty.Impossible]: Infinity,
+};
+
 /** Structures counted for that density; cheap defense posts would push nations into upgrading early */
 const DENSITY_STRUCTURE_TYPES: readonly UnitType[] = Structures.types.filter(
   (t) => t !== UnitType.DefensePost,
@@ -155,14 +164,10 @@ const TILES_PER_CITY_EQUIVALENT = 2000;
 const HIGH_NATION_DENSITY_THRESHOLD = 1 / 7500;
 
 /**
- * Starting-gold threshold above which nations enter the
- * "high-gold" early game: they build a SAM first and wait between structure
- * placements. Without this, high-starting-gold games let a nation
- * drop many structures within a short timespan, which ballooned its maxTroops
- * before troop count caught up (delaying its attacks) and clustered the
- * new structures inside a single nuke blast radius.
+ * Starting gold below which high-starting-gold nations wait between their first structures, so they
+ * don't cluster inside a single nuke blast radius; with more, waiting would leave most gold idle.
  */
-const HIGH_STARTING_GOLD_THRESHOLD = 3_000_000n;
+const PACED_STARTING_GOLD_LIMIT = 10_000_000n;
 
 /** Tick gap a high-starting-gold nation must wait before placing its Nth structure */
 const HIGH_GOLD_STRUCTURE_COOLDOWN_TICKS: readonly number[] = [
@@ -229,6 +234,7 @@ export class NationStructureBehavior {
   private builtCrowdedMapFirstStructure = false;
   private _hasHighStartingGold: boolean | null = null;
   private _postSaveUpStartTick: number | null = null;
+  private mirvWorthSavingMemo: { tick: number; worth: boolean } | null = null;
 
   constructor(
     private random: PseudoRandom,
@@ -239,6 +245,7 @@ export class NationStructureBehavior {
   /**
    * reachableStationsCache and _sharedWaterComponents are not stored: both
    * are reset at the start of doHandleStructures and only read inside it.
+   * mirvWorthSavingMemo only holds for the tick it was computed in.
    */
   snapshot(w: SnapshotWriter): Versioned {
     return w.versioned(NationStructureBehaviorSnapshot, {
@@ -263,6 +270,7 @@ export class NationStructureBehavior {
     this.player = player;
     this.reachableStationsCache = null;
     this._sharedWaterComponents = null;
+    this.mirvWorthSavingMemo = null;
     this.lastStructureTick = s.lastStructureTick;
     this.placementsCount = s.placementsCount;
     this.builtCrowdedMapFirstStructure = s.builtCrowdedMapFirstStructure;
@@ -561,8 +569,12 @@ export class NationStructureBehavior {
   }
 
   private isOnStructureCooldown(): boolean {
-    // Only high-starting-gold nations pause
-    if (this.lastStructureTick === null || !this.hasHighStartingGold()) {
+    if (
+      this.lastStructureTick === null ||
+      !this.hasHighStartingGold() ||
+      this.game.config().startingGold(this.player.info()) >=
+        PACED_STARTING_GOLD_LIMIT
+    ) {
       return false;
     }
     const requiredGap =
@@ -575,6 +587,7 @@ export class NationStructureBehavior {
 
   // Spreads placements after the save-up target is first reached:
   // 15s ON / 15s OFF, alternating, to allow NationNukeBehavior to spend the gold.
+  // Not while the gold covers the target twice, as bulk upgrades leave the target for nukes.
   private isInPostSaveUpBlockedPhase(): boolean {
     if (this.game.config().isUnitDisabled(UnitType.MissileSilo)) {
       return false;
@@ -585,6 +598,9 @@ export class NationStructureBehavior {
         return false;
       }
       this._postSaveUpStartTick = this.game.ticks();
+    }
+    if (this.player.gold() >= saveUpTarget * 2n) {
+      return false;
     }
     const elapsed = this.game.ticks() - this._postSaveUpStartTick;
     return (
@@ -718,9 +734,7 @@ export class NationStructureBehavior {
   }
 
   private hasHighStartingGold(): boolean {
-    this._hasHighStartingGold ??=
-      this.game.config().startingGold(this.player.info()) >=
-      HIGH_STARTING_GOLD_THRESHOLD;
+    this._hasHighStartingGold ??= hasHighStartingGold(this.game, this.player);
     return this._hasHighStartingGold;
   }
 
@@ -732,21 +746,26 @@ export class NationStructureBehavior {
     );
   }
 
-  /**
-   * Determines if we should build more of this structure type based on
-   * the current city count and the configured ratio.
-   */
   private shouldBuildStructure(
     type: UnitType,
     cityCount: number,
     hasCoastalTiles: boolean,
   ): boolean {
+    return this.levelsDue(type, cityCount, hasCoastalTiles) > 0;
+  }
+
+  /** Levels of this structure type the configured ratio to the city count still asks for. */
+  private levelsDue(
+    type: UnitType,
+    cityCount: number,
+    hasCoastalTiles: boolean,
+  ): number {
     const gameConfig = this.game.config();
     const { difficulty, gameMode } = gameConfig.gameConfig();
     const ratios = getStructureRatios(difficulty, gameMode);
     const config = ratios[type];
     if (config === undefined) {
-      return false;
+      return 0;
     }
 
     let ratio = config.ratioPerCity;
@@ -761,24 +780,23 @@ export class NationStructureBehavior {
     }
 
     const owned = this.player.unitsOwned(type);
-
-    // Hard cap on missile silos
-    if (type === UnitType.MissileSilo && owned >= MAX_MISSILE_SILOS) {
-      return false;
+    let targetCount: number;
+    if (type === UnitType.MissileSilo) {
+      // First missile silo uses a higher ratio so nations can start nuking earlier
+      if (owned === 0) {
+        ratio = FIRST_MISSILE_SILO_RATIO;
+      }
+      // Hard cap on missile silos
+      targetCount = Math.min(Math.floor(cityCount * ratio), MAX_MISSILE_SILOS);
+    } else {
+      targetCount = Math.floor(cityCount * ratio);
     }
 
-    // First missile silo uses a higher ratio so nations can start nuking earlier
-    if (type === UnitType.MissileSilo && owned === 0) {
-      ratio = FIRST_MISSILE_SILO_RATIO;
-    }
-
-    const targetCount = Math.floor(cityCount * ratio);
-
-    return owned < targetCount;
+    return targetCount - owned;
   }
 
-  private cost(type: UnitType): Gold {
-    return this.game.unitInfo(type).cost(this.game, this.player);
+  private cost(type: UnitType, extraUnits: number = 0): Gold {
+    return this.game.unitInfo(type).cost(this.game, this.player, extraUnits);
   }
 
   private maybeSpawnStructure(type: UnitType): boolean {
@@ -895,7 +913,8 @@ export class NationStructureBehavior {
     const hydroEnabled = !config.isUnitDisabled(UnitType.HydrogenBomb);
     const atomEnabled = !config.isUnitDisabled(UnitType.AtomBomb);
 
-    if (mirvEnabled) {
+    // Not for a MIRV that SAMs would shoot down
+    if (mirvEnabled && this.isMirvWorthSavingFor()) {
       // Save up for MIRV + Hydrogen Bomb
       return this.cost(UnitType.MIRV) + this.cost(UnitType.HydrogenBomb);
     }
@@ -911,6 +930,17 @@ export class NationStructureBehavior {
     return this.cost(UnitType.SAMLauncher);
   }
 
+  private isMirvWorthSavingFor(): boolean {
+    const tick = this.game.ticks();
+    if (this.mirvWorthSavingMemo?.tick !== tick) {
+      this.mirvWorthSavingMemo = {
+        tick,
+        worth: isMirvWorthSavingFor(this.game, this.player),
+      };
+    }
+    return this.mirvWorthSavingMemo.worth;
+  }
+
   /** Upgrades the best of the given structures; false if none can be upgraded. */
   private maybeUpgradeStructure(structures: Unit[]): boolean {
     return this.upgradeStructure(this.findBestStructureToUpgrade(structures));
@@ -922,9 +952,37 @@ export class NationStructureBehavior {
     }
     // canUpgradeUnit was already checked by the caller and is checked again in UpgradeStructureExecution
     this.game.addExecution(
-      new UpgradeStructureExecution(this.player, structure.id()),
+      new UpgradeStructureExecution(
+        this.player,
+        structure.id(),
+        this.upgradeAmount(structure.type()),
+      ),
     );
     return true;
+  }
+
+  /** One level, or as many as the gold beyond the save-up target pays for and the structure ratios ask for. */
+  private upgradeAmount(type: UnitType): number {
+    const { difficulty } = this.game.config().gameConfig();
+    // Cities set the ratios, so only gold limits them
+    const due =
+      type === UnitType.City
+        ? Infinity
+        : this.levelsDue(
+            type,
+            this.cityCount(),
+            this._sharedWaterComponents !== null,
+          );
+    const max = Math.min(MAX_UPGRADES_AT_ONCE[difficulty], due);
+    let spare = this.player.gold() - this.getSaveUpTarget();
+    let amount = 0;
+    while (amount < max) {
+      const cost = this.cost(type, amount);
+      if (cost > spare) break;
+      spare -= cost;
+      amount++;
+    }
+    return Math.max(1, amount);
   }
 
   /** Whether to upgrade a SAM instead of building one, because SAMs already cover every structure. */

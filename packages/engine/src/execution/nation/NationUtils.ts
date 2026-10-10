@@ -11,6 +11,13 @@ import { PseudoRandom } from "@openfront/engine-lib/PseudoRandom";
 import { assertNever, calculateBoundingBox } from "@openfront/engine-lib/Util";
 import { Game, Player } from "../../game/Game";
 
+/** Starting gold from which nations place many structures at once, ballooning their max troops */
+const HIGH_STARTING_GOLD = 3_000_000n;
+
+export function hasHighStartingGold(game: Game, player: Player): boolean {
+  return game.config().startingGold(player.info()) >= HIGH_STARTING_GOLD;
+}
+
 export function randTerritoryTileArray(
   random: PseudoRandom,
   mg: Game,

@@ -31,6 +31,7 @@ import { UpgradeStructureExecution } from "../UpgradeStructureExecution";
 import { closestTwoTiles } from "../Util";
 import { AiAttackBehavior } from "../utils/AiAttackBehavior";
 import { EMOJI_NUKE, NationEmojiBehavior } from "./NationEmojiBehavior";
+import { isMirvWorthSavingFor } from "./NationMIRVBehavior";
 import { findRunawayLeader, randTerritoryTileArray } from "./NationUtils";
 
 /** Cap on silo levels reachable via maybeDestroyEnemySam's upgrade fallback. */
@@ -580,6 +581,11 @@ export class NationNukeBehavior {
         difficulty === Difficulty.Impossible) &&
       this.isUnderHeavyAttack()
     ) {
+      return this.cost(type);
+    }
+
+    // Don't save up for a MIRV that SAMs would shoot down
+    if (!isMirvWorthSavingFor(this.game, this.player)) {
       return this.cost(type);
     }
 

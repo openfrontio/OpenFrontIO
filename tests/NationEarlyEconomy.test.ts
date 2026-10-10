@@ -252,10 +252,11 @@ describe("Nation structure upgrades", () => {
     expect(upgraded()).toEqual([]);
   });
 
-  // Ports are due (cities disabled: one city per 2000 tiles), and nothing else is
+  // Ports are due (cities disabled: one city per 2000 tiles), and nothing else is. Without silos
+  // the nation saves up for a SAM (1.5M).
   function withPort(
     difficulty: Difficulty,
-    { shortCoast }: { shortCoast: boolean },
+    { shortCoast, gold = 5_000_000n }: { shortCoast: boolean; gold?: bigint },
   ) {
     const setup = setupCoast(
       {
@@ -279,7 +280,7 @@ describe("Nation structure upgrades", () => {
       });
     }
     const port = nation.buildUnit(UnitType.Port, game.ref(49, 5), {});
-    nation.addGold(5_000_000n);
+    nation.addGold(gold);
     return { ...setup, port };
   }
 
@@ -292,6 +293,56 @@ describe("Nation structure upgrades", () => {
       expect(behavior.handleStructures()).toBe(true);
       expect(upgraded()).toEqual([port.id()]);
       expect(built()).toEqual([]);
+    },
+  );
+
+  // The next port levels cost 250k, 500k, then 1M each. With four city equivalents the nation
+  // wants three ports, so two more levels.
+  it.each([
+    ["what the gold beyond the 1.5M savings pays for", 2_000_000n, 1],
+    ["what the port ratio asks for", 1_000_000_000n, 2],
+  ])("upgrades its port by %s", (_, gold, levels) => {
+    const { game, behavior, port } = withPort(Difficulty.Hard, {
+      shortCoast: true,
+      gold,
+    });
+    expect(behavior.handleStructures()).toBe(true);
+    game.endSpawnPhase();
+    game.executeNextTick();
+    expect(port.level()).toBe(1 + levels);
+  });
+
+  // Two cities and a port leave nothing else due, and are dense enough to upgrade a city.
+  // The nation saves up 30M for a MIRV and a hydrogen bomb.
+  function withCities(difficulty: Difficulty) {
+    const setup = setupCoast({ difficulty, gameMode: ffa });
+    const { game, nation, cities } = setup;
+    cities(2);
+    nation.buildUnit(UnitType.Port, game.ref(24, 50), {});
+    nation.addGold(1_000_000_000n);
+    expect(setup.behavior.handleStructures()).toBe(true);
+    game.endSpawnPhase();
+    game.executeNextTick();
+    const cityLevels = nation
+      .units(UnitType.City)
+      .reduce((sum, c) => sum + c.level(), 0);
+    return { ...setup, cityLevels };
+  }
+
+  it.each([
+    [Difficulty.Easy, 3],
+    [Difficulty.Medium, 10],
+  ])("%s buys at most %i city levels at once", (difficulty, levels) => {
+    expect(withCities(difficulty).cityLevels).toBe(2 + levels);
+  });
+
+  it.each([Difficulty.Hard, Difficulty.Impossible])(
+    "%s spends everything beyond its savings on city levels at once",
+    (difficulty) => {
+      const { nation, cityLevels } = withCities(difficulty);
+      expect(cityLevels).toBeGreaterThan(900);
+      expect(nation.gold()).toBeGreaterThanOrEqual(30_000_000n);
+      expect(nation.gold()).toBeLessThan(31_000_000n);
     },
   );
 
@@ -311,5 +362,22 @@ describe("Nation structure upgrades", () => {
     expect(behavior.handleStructures()).toBe(true);
     expect(built()).toEqual([UnitType.Port]);
     expect(upgraded()).toEqual([]);
+  });
+});
+
+// After first saving up a MIRV and a hydrogen bomb (30M), structures pause every other 15s
+describe("Nation structure pauses after saving up", () => {
+  it.each([
+    [40_000_000n, true],
+    [60_000_000n, false],
+  ])("with %i gold, pauses: %s", (gold, paused) => {
+    const { game, nation, behavior } = setupCoast({
+      difficulty: Difficulty.Hard,
+      gameMode: GameMode.FFA,
+    });
+    nation.addGold(gold);
+    expect(behavior["isInPostSaveUpBlockedPhase"]()).toBe(false);
+    behavior["_postSaveUpStartTick"] = game.ticks() - 150;
+    expect(behavior["isInPostSaveUpBlockedPhase"]()).toBe(paused);
   });
 });

@@ -1152,7 +1152,7 @@ describe("NationStructureBehavior.doHandleStructures — crowded-map exception",
     game.config = () => ({
       isUnitDisabled: () => false,
       gameConfig: () => ({ difficulty: Difficulty.Impossible }),
-      startingGold: () => 10_000_000n, // above HIGH_STARTING_GOLD_THRESHOLD
+      startingGold: () => 10_000_000n, // high starting gold
     });
     const behavior = makeBehavior(game, makeCrowdedPlayer());
     const spy = vi
@@ -1171,6 +1171,28 @@ describe("NationStructureBehavior.doHandleStructures — crowded-map exception",
     expect(spy).toHaveBeenLastCalledWith(UnitType.Factory);
     expect((behavior as any).builtCrowdedMapFirstStructure).toBe(true);
   });
+});
+
+// 25s pass between a high-starting-gold nation's second and third structure, unless it has so
+// much gold that waiting would leave most of it idle
+describe("NationStructureBehavior.isOnStructureCooldown", () => {
+  it.each([
+    [0n, false],
+    [5_000_000n, true],
+    [25_000_000n, false],
+  ])(
+    "with %i starting gold, waits 5s after its second structure: %s",
+    (gold, waits) => {
+      const game: any = {
+        config: () => ({ startingGold: () => gold }),
+        ticks: () => 100,
+      };
+      const behavior = makeBehavior(game, { info: () => ({}) });
+      (behavior as any).lastStructureTick = 50;
+      (behavior as any).placementsCount = 2;
+      expect((behavior as any).isOnStructureCooldown()).toBe(waits);
+    },
+  );
 });
 
 // ── getOrBuildReachableStations cache behaviour ──────────────────────────────

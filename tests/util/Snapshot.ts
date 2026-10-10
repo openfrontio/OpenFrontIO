@@ -164,6 +164,8 @@ export const DERIVED_FIELDS = new Set<string>([
   // and only read inside it. (AiAttackBehavior.nbuf is covered above.)
   "_sharedWaterComponents",
   "reachableStationsCache",
+  // NationStructureBehavior: only read in the tick it was computed in
+  "mirvWorthSavingMemo",
 ]);
 
 // Search engines whose fields are per-query scratch (stamps, scores, open

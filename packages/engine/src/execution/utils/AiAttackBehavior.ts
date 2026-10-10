@@ -46,7 +46,11 @@ import {
   EMOJI_ASSIST_TARGET_ME,
   NationEmojiBehavior,
 } from "../nation/NationEmojiBehavior";
-import { findJuiciestTarget, findRunawayLeader } from "../nation/NationUtils";
+import {
+  findJuiciestTarget,
+  findRunawayLeader,
+  hasHighStartingGold,
+} from "../nation/NationUtils";
 import type { NationWarshipBehavior } from "../nation/NationWarshipBehavior";
 import { TransportShipExecution } from "../TransportShipExecution";
 import { closestTwoTiles } from "../Util";
@@ -392,10 +396,12 @@ export class AiAttackBehavior {
       return;
     }
 
-    // In games with high starting gold, nations will quickly build a lot of cities
-    // This causes them to expand slowly (cities increase max troops), and bots will steal their structures
-    // In this case: Attack bots before ratio checks
-    if (this.hasNeighboringBotWithStructures()) {
+    // Attack bots before the ratio checks when they hold structures, which we need back,
+    // and with high starting gold, as those checks count the troops of cities built in a rush
+    if (
+      this.hasNeighboringBotWithStructures() ||
+      (this.expandsPastCityTroops() && this.hasTriggerRatioTroops(true))
+    ) {
       if (this.attackBots()) return;
     }
 
@@ -623,10 +629,22 @@ export class AiAttackBehavior {
     return ratio >= this.reserveRatio;
   }
 
-  private hasTriggerRatioTroops(): boolean {
-    const maxTroops = this.game.config().maxTroops(this.player);
-    const ratio = this.player.troops() / maxTroops;
+  private hasTriggerRatioTroops(expansion = false): boolean {
+    const ratio = this.player.troops() / this.reserveBasis(expansion);
     return ratio >= this.triggerRatio;
+  }
+
+  // The max troops troop ratios refer to. With high starting gold, cities don't hold back
+  // expanding into free land and bots: built all at once, they'd stall it until troops grow back.
+  private reserveBasis(expansion: boolean): number {
+    const config = this.game.config();
+    return expansion && this.expandsPastCityTroops()
+      ? config.maxTroopsWithoutCities(this.player)
+      : config.maxTroops(this.player);
+  }
+
+  private expandsPastCityTroops(): boolean {
+    return hasHighStartingGold(this.game, this.player);
   }
 
   findIncomingAttackPlayer(): Player | null {
@@ -1316,7 +1334,8 @@ export class AiAttackBehavior {
     nonBotTroops: (targetTroops: number) => number,
     opponent?: Player,
   ): number | null {
-    const maxTroops = this.game.config().maxTroops(this.player);
+    const expansion = !target.isPlayer() || target.type() === PlayerType.Bot;
+    const maxTroops = this.reserveBasis(expansion);
     const botWithStructures =
       target.isPlayer() &&
       target.type() === PlayerType.Bot &&
