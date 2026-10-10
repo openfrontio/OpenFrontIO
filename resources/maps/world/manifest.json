@@ -2,7 +2,7 @@
   "categories": ["featured", "world"],
   "featured_rank": 1,
   "forced_modifiers": ["isCrowded:50"],
-  "id": "world",
+  "id": "World",
   "layers": [
     {
       "alpha": 0.75,
