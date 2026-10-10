@@ -31,7 +31,6 @@ import {
   ReplaySpeedChangeEvent,
 } from "./InputHandler";
 import { startSingleplayerHeartbeat } from "./SingleplayerHeartbeat";
-import { clearSoloSave, saveSoloGame } from "./SinglePlayerSaveManager";
 import {
   defaultReplaySpeedMultiplier,
   ReplaySpeedMultiplier,
@@ -138,9 +137,6 @@ export class LocalServer {
       });
     }
 
-    if (!this.isReplay) {
-      window.addEventListener("beforeunload", this.handleBeforeUnload);
-    }
     this.startedAt = Date.now();
     this.clientConnect();
     if (this.lobbyConfig.gameRecord) {
@@ -264,10 +260,6 @@ export class LocalServer {
     }
     if (clientMsg.type === "winner") {
       this.winner = clientMsg;
-      this.disableSave();
-      if (!this.isReplay && this.lobbyConfig.gameStartInfo) {
-        clearSoloSave(this.lobbyConfig.gameStartInfo.gameID);
-      }
       this.allPlayersStats = clientMsg.allPlayersStats;
       if (!this.isReplay) {
         // Archive as soon as the game is decided: endGame() only runs during
@@ -277,25 +269,6 @@ export class LocalServer {
       }
     }
   }
-
-  private saveEnabled = true;
-
-  public disableSave(): void {
-    this.saveEnabled = false;
-  }
-
-  private handleBeforeUnload = () => {
-    if (
-      this.saveEnabled &&
-      !this.winner &&
-      !this.isReplay &&
-      this.lobbyConfig.gameStartInfo &&
-      this.lobbyConfig.resumeSnapshot === undefined &&
-      this.turns.length > 0
-    ) {
-      saveSoloGame(this.lobbyConfig.gameStartInfo, this.turns);
-    }
-  };
 
   // This is so the client can tell us when it finished processing the turn.
   public turnComplete() {
@@ -332,18 +305,6 @@ export class LocalServer {
     clearInterval(this.turnCheckInterval);
     this.stopHeartbeat?.();
     this.stopHeartbeat = null;
-    if (!this.isReplay) {
-      window.removeEventListener("beforeunload", this.handleBeforeUnload);
-      if (
-        this.saveEnabled &&
-        !this.winner &&
-        this.lobbyConfig.gameStartInfo &&
-        this.lobbyConfig.resumeSnapshot === undefined &&
-        this.turns.length > 0
-      ) {
-        saveSoloGame(this.lobbyConfig.gameStartInfo, this.turns);
-      }
-    }
     if (this.isReplay) {
       return;
     }

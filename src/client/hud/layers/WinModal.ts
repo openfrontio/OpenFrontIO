@@ -32,7 +32,6 @@ import { Platform } from "../../Platform";
 import { MAX_PRESTIGE, reachedLegendThisGame } from "../../Progression";
 import { resolveXpAccount } from "../../ProgressionAccount";
 import { fetchProgressionConfig, pollGameXp } from "../../ProgressionApi";
-import { clearSoloSave } from "../../SinglePlayerSaveManager";
 import { PlaySoundEffectEvent } from "../../sound/Sounds";
 import { steamSDK } from "../../SteamSDK";
 import { SendWinnerEvent } from "../../Transport";
@@ -454,7 +453,7 @@ export class WinModal extends LitElement implements Controller {
     return html`
       <div class="text-center mb-6 bg-black/30 p-2.5 rounded-sm">
         <h3 class="text-xl font-semibold text-white mb-3">
-          ${translateText("win_modal.buy_on_steam")}
+          ${translateText("steam_wishlist.buy_on_steam")}
         </h3>
         <steam-wishlist
           campaign="win_modal"
@@ -571,10 +570,6 @@ export class WinModal extends LitElement implements Controller {
 
   private _handleExit() {
     this.hide();
-    const myPlayer = this.game?.myPlayer();
-    if (myPlayer && !myPlayer.isAlive()) {
-      clearSoloSave(this.game?.gameID());
-    }
     window.location.href = homeHref();
   }
 
@@ -583,13 +578,16 @@ export class WinModal extends LitElement implements Controller {
     // Requeue for the same mode; Main owns the mechanism (currently a
     // reload with the requeue param, which reopens the queue after the
     // page teardown).
+    const rankedType = this.game.config().gameConfig().rankedType;
     document.dispatchEvent(
       new CustomEvent("matchmaking-requeue", {
         detail: {
           mode:
-            this.game.config().gameConfig().rankedType === RankedType.TwoVTwo
+            rankedType === RankedType.TwoVTwo
               ? ("2v2" as const)
-              : ("1v1" as const),
+              : rankedType === RankedType.FreeForAll
+                ? ("ffa" as const)
+                : ("1v1" as const),
         },
       }),
     );

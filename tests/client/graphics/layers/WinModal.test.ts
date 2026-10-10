@@ -1,14 +1,13 @@
 import { RankedType } from "@openfront/engine-api/game/GameTypes";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { PurchaseButton } from "../../../../src/client/components/PurchaseButton";
 import {
   fetchCosmetics,
   resolveCosmetics,
   type ResolvedCosmetic,
 } from "../../../../src/client/Cosmetics";
+import type { PurchaseButton } from "../../../../src/client/components/PurchaseButton";
 import "../../../../src/client/hud/layers/WinModal";
 import type { WinModal } from "../../../../src/client/hud/layers/WinModal";
-import * as saveManager from "../../../../src/client/SinglePlayerSaveManager";
 
 vi.mock("../../../../src/client/Utils", () => ({
   translateText: vi.fn((key: string) => {
@@ -22,8 +21,6 @@ vi.mock("../../../../src/client/Utils", () => ({
   }),
   getGamesPlayed: vi.fn(() => 10),
   isInIframe: vi.fn(() => false),
-  homeHref: vi.fn(() => "/"),
-  generateCryptoRandomUUID: vi.fn(() => "test-uuid"),
   TUTORIAL_VIDEO_URL: "https://example.com/tutorial",
 }));
 
@@ -44,7 +41,6 @@ vi.mock("../../../../src/client/CrazyGamesSDK", () => ({
     happytime: vi.fn(),
     requestAd: vi.fn(),
     gameplayStop: vi.fn(),
-    isOnCrazyGames: vi.fn(() => false),
   },
 }));
 
@@ -214,33 +210,5 @@ describe("WinModal pattern promotion", () => {
     } finally {
       delete window.openfrontDesktop;
     }
-  });
-});
-
-describe("WinModal exit save clearing", () => {
-  it("clears solo save with current game ID when myPlayer is dead on exit", () => {
-    const modal = document.createElement("win-modal") as WinModal;
-    const clearSpy = vi.spyOn(saveManager, "clearSoloSave");
-    const mockGame = {
-      myPlayer: () => ({ isAlive: () => false }),
-      gameID: () => "solo_game_123",
-    } as any;
-    (modal as any).game = mockGame;
-    (modal as any)._handleExit();
-    expect(clearSpy).toHaveBeenCalledWith("solo_game_123");
-    clearSpy.mockRestore();
-  });
-
-  it("does not clear solo save when myPlayer is alive on exit", () => {
-    const modal = document.createElement("win-modal") as WinModal;
-    const clearSpy = vi.spyOn(saveManager, "clearSoloSave");
-    const mockGame = {
-      myPlayer: () => ({ isAlive: () => true }),
-      gameID: () => "solo_game_123",
-    } as any;
-    (modal as any).game = mockGame;
-    (modal as any)._handleExit();
-    expect(clearSpy).not.toHaveBeenCalled();
-    clearSpy.mockRestore();
   });
 });

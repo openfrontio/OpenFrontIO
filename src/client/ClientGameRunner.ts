@@ -56,11 +56,6 @@ import { rememberLobbyRoster } from "./LobbyRosterLevels";
 import { pagePin } from "./PagePin";
 import { groupTokenOf, loggableStartMessage } from "./PresenceGroup";
 import { versionedPathForMismatchedGame } from "./ServerList";
-import {
-  clearSoloSave,
-  compressSnapshot,
-  saveSoloSnapshot,
-} from "./SinglePlayerSaveManager";
 import { reportGameError } from "./Telemetry";
 import {
   loadCachedTerrainMap,
@@ -79,7 +74,6 @@ import {
   SendSpawnIntentEvent,
   SendTargetPlayerIntentEvent,
   SendUpgradeStructureIntentEvent,
-  SendWinnerEvent,
   Transport,
 } from "./Transport";
 import {
@@ -959,7 +953,6 @@ export async function createClientGame(
 export class ClientGameRunner {
   private myPlayer: PlayerView | null = null;
   private isActive = false;
-  private playerDied = false;
 
   private turnsSeen = 0;
   // True from a (re)join request until the server's start message answers it.
@@ -974,8 +967,6 @@ export class ClientGameRunner {
 
   private lastTickReceiveTime: number = 0;
   private currentTickDelay: number | undefined = undefined;
-  private hasWinner: boolean = false;
-  private snapshotInFlight: boolean = false;
 
   constructor(
     private lobby: LobbyConfig,
@@ -1002,13 +993,6 @@ export class ClientGameRunner {
         console.warn("Failed to read snapshot header for turnsSeen", e);
       }
     }
-    this.eventBus.on(SendWinnerEvent, () => {
-      this.hasWinner = true;
-      if (this.transport.isLocal && !this.lobby.gameRecord) {
-        this.transport.disableLocalSave?.();
-        clearSoloSave(this.lobby.gameStartInfo?.gameID);
-      }
-    });
   }
 
   /**
@@ -1095,72 +1079,8 @@ export class ClientGameRunner {
         this.eventBus.emit(new SendHashEvent(hu.tick, hu.hash));
       });
       this.gameView.update(gu);
-      if (
-        !this.playerDied &&
-        this.transport.isLocal &&
-        !this.lobby.gameRecord &&
-        !this.gameView.inSpawnPhase()
-      ) {
-        const myPlayer = this.gameView.myPlayer();
-        if (myPlayer && myPlayer.hasSpawned() && !myPlayer.isAlive()) {
-          this.playerDied = true;
-          this.transport.disableLocalSave?.();
-          clearSoloSave(this.lobby.gameStartInfo?.gameID);
-        }
-      }
       this.webglBuilder?.update(this.gameView);
       this.renderer.tick();
-      if (
-        !this.snapshotInFlight &&
-        this.transport.isLocal &&
-        !this.lobby.gameRecord &&
-        !this.hasWinner &&
-        !this.playerDied &&
-        this.lobby.gameStartInfo &&
-        gu.tick > 0 &&
-        gu.tick % 50 === 0
-      ) {
-        this.snapshotInFlight = true;
-        let timer: ReturnType<typeof setTimeout> | undefined;
-        const timeoutPromise = new Promise<never>((_, reject) => {
-          timer = setTimeout(
-            () => reject(new Error("Worker snapshot timed out")),
-            5000,
-          );
-        });
-        Promise.race([this.worker.snapshot(), timeoutPromise])
-          .then(async ({ bytes, tick }) => {
-            const compressed = await compressSnapshot(bytes);
-            return { compressed, snapshotTick: tick };
-          })
-          .then(async ({ compressed, snapshotTick }) => {
-            if (
-              this.isActive &&
-              !this.hasWinner &&
-              !this.playerDied &&
-              this.lobby.gameStartInfo
-            ) {
-              const gameID = this.lobby.gameStartInfo.gameID;
-              await saveSoloSnapshot(
-                this.lobby.gameStartInfo,
-                compressed,
-                snapshotTick,
-              );
-              if (this.hasWinner || this.playerDied) {
-                clearSoloSave(gameID);
-              }
-            }
-          })
-          .catch((err) => {
-            console.warn("Auto-snapshot failed:", err);
-          })
-          .finally(() => {
-            if (timer !== undefined) {
-              clearTimeout(timer);
-            }
-            this.snapshotInFlight = false;
-          });
-      }
       if (gu.tickExecutionDuration !== undefined) {
         this.metrics?.recordTickExecution(gu.tickExecutionDuration);
       }

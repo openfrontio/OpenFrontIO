@@ -19,7 +19,6 @@ export type SteamTicketResult =
   | { ok: false; reason: SteamTicketFailure };
 
 interface SteamBridge {
-  steamId?: string;
   getAuthTicket(): Promise<SteamTicketResult>;
   getUser(): Promise<{ steamId: string; name: string } | null>;
 }
@@ -78,23 +77,6 @@ function normaliseTicketResult(value: unknown): SteamTicketResult {
 // Thin renderer wrapper over the desktop shell's Steam bridge. Mirrors
 // CrazyGamesSDK; the native work lives in the Electron main process.
 class SteamSDK {
-  private cachedUser: { steamId: string; name: string } | null = null;
-
-  constructor() {
-    if (typeof window !== "undefined" && this.isOnSteam()) {
-      void this.getUser();
-    }
-  }
-
-  getSteamIdSync(): string | null {
-    if (this.cachedUser?.steamId) return this.cachedUser.steamId;
-    const bridge = steamBridge();
-    if (typeof bridge?.steamId === "string") {
-      return bridge.steamId;
-    }
-    return null;
-  }
-
   isOnSteam(): boolean {
     return steamBridge() !== undefined;
   }
@@ -127,11 +109,7 @@ class SteamSDK {
     const bridge = steamBridge();
     if (!bridge) return null;
     try {
-      const user = await bridge.getUser();
-      if (user?.steamId) {
-        this.cachedUser = user;
-      }
-      return user;
+      return await bridge.getUser();
     } catch {
       return null;
     }

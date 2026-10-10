@@ -15,9 +15,8 @@ import { generateID } from "@openfront/shared/SharedUtil";
 import { PlayerCosmetics } from "@openfront/shared/WireSchemas";
 import { html, TemplateResult } from "lit";
 import { customElement, state } from "lit/decorators.js";
-import { getMapName, translateText } from "../client/Utils";
+import { translateText } from "../client/Utils";
 import { responseHasLinkedIdentity } from "./AccountIdentity";
-import { clientPlatform } from "./ClientPlatform";
 import "./components/baseComponents/Button";
 import "./components/baseComponents/Modal";
 import { BaseModal } from "./components/BaseModal";
@@ -28,17 +27,9 @@ import { modalHeader } from "./components/ui/ModalHeader";
 import { getPlayerCosmetics, prewarmCosmetics } from "./Cosmetics";
 import { crazyGamesSDK } from "./CrazyGamesSDK";
 import { GameStartingModal } from "./GameStartingModal";
-import { showInGameAlert, showInGameConfirm } from "./InGameModal";
+import { showInGameAlert } from "./InGameModal";
 import { JoinLobbyEvent } from "./Main";
 import { fallbackPlayerName, ResolvedPlayerName } from "./PlayerName";
-import {
-  clearSoloSave,
-  decompressSoloTurns,
-  getSoloSave,
-  getSoloSnapshot,
-  SoloSaveState,
-} from "./SinglePlayerSaveManager";
-import { steamSDK } from "./SteamSDK";
 import { lastUserMeResponse } from "./UserMeBroadcast";
 import { UsernameInput } from "./UsernameInput";
 import { UserSettings } from "./UserSettings";
@@ -196,10 +187,6 @@ export class SinglePlayerModal extends BaseModal {
   @state() private gameMode: GameMode = DEFAULT_OPTIONS.gameMode;
   @state() private teamCount: TeamCountConfig = DEFAULT_OPTIONS.teamCount;
   @state() private showAchievements: boolean = false;
-  @state() private resumeSave: SoloSaveState | null = null;
-  @state() private resumeInFlight: boolean = false;
-  private resumeAttempt: number = 0;
-  private clearSaveOnGameStart: string | null = null;
   @state() private mapWins: Map<GameMapType, Set<Difficulty>> = new Map();
   // Maps that support achievements (have nations). null until loaded — the
   // medal overview shows a placeholder total meanwhile.
@@ -244,10 +231,6 @@ export class SinglePlayerModal extends BaseModal {
       "userMeResponse",
       this.handleUserMeResponse as EventListener,
     );
-    document.addEventListener(
-      "game-starting",
-      this.handleGameStarting as EventListener,
-    );
     // It loads on demand (see LazyModals), usually after Main's broadcast
     // went out.
     const last = lastUserMeResponse();
@@ -256,15 +239,6 @@ export class SinglePlayerModal extends BaseModal {
       this.applyAchievements(last.response);
     }
     void this.loadNationCount();
-    this.resumeSave = getSoloSave();
-    if (clientPlatform() === "steam") {
-      void steamSDK.getUser().then((user) => {
-        if (user?.steamId) {
-          this.resumeSave = getSoloSave();
-          this.requestUpdate();
-        }
-      });
-    }
   }
 
   disconnectedCallback() {
@@ -272,156 +246,7 @@ export class SinglePlayerModal extends BaseModal {
       "userMeResponse",
       this.handleUserMeResponse as EventListener,
     );
-    document.removeEventListener(
-      "game-starting",
-      this.handleGameStarting as EventListener,
-    );
     super.disconnectedCallback();
-  }
-
-  private handleGameStarting = () => {
-    if (this.clearSaveOnGameStart !== null) {
-      const gameID = this.clearSaveOnGameStart;
-      this.clearSaveOnGameStart = null;
-      clearSoloSave(gameID);
-      this.resumeSave = null;
-      this.requestUpdate();
-    }
-  };
-
-  private async handleResumeGame() {
-    if (this.starting || this.resumeInFlight || !this.resumeSave) return;
-    this.resumeInFlight = true;
-    const attempt = ++this.resumeAttempt;
-    const save = this.resumeSave;
-
-    try {
-      let resumeSnapshot: Uint8Array | undefined;
-      let snapshotFailedReason:
-        | "missing"
-        | "corrupt"
-        | "unavailable"
-        | undefined;
-      if (save.hasSnapshot) {
-        const snapData = await getSoloSnapshot();
-        if (attempt !== this.resumeAttempt) return;
-        if (snapData.status === "success") {
-          resumeSnapshot = snapData.snapshot;
-        } else {
-          snapshotFailedReason = snapData.status;
-        }
-      }
-      const lastTurnNum =
-        save.turns && save.turns.length > 0
-          ? save.turns[save.turns.length - 1].turnNumber
-          : -1;
-      const turnCount = Math.max(save.numTurns, lastTurnNum + 1);
-      const turns =
-        !resumeSnapshot && save.turns
-          ? decompressSoloTurns(save.turns, turnCount)
-          : undefined;
-
-      if (!resumeSnapshot && !turns) {
-        if (attempt !== this.resumeAttempt) return;
-        showInGameAlert(
-          translateText("single_modal.resume_failed") ||
-            "Failed to resume saved game.",
-        );
-        if (snapshotFailedReason !== "unavailable") {
-          clearSoloSave(save.gameID);
-          this.resumeSave = null;
-          this.requestUpdate();
-        }
-        return;
-      }
-
-      if (attempt !== this.resumeAttempt) return;
-
-      this.clearSaveOnGameStart = null;
-      const joinEvent = new CustomEvent("join-lobby", {
-        detail: {
-          gameID: save.gameID,
-          gameStartInfo: save.gameStartInfo,
-          source: "singleplayer",
-          resumeSnapshot,
-          resumeTurns: turns,
-        } satisfies JoinLobbyEvent,
-        bubbles: true,
-        composed: true,
-        cancelable: true,
-      });
-      this.dispatchEvent(joinEvent);
-      if (joinEvent.defaultPrevented) return;
-      this.close();
-    } finally {
-      if (attempt === this.resumeAttempt) {
-        this.resumeInFlight = false;
-      }
-    }
-  }
-
-  private async handleDiscardGame() {
-    if (this.starting || this.resumeInFlight) return;
-    const save = this.resumeSave;
-    if (!save) return;
-    const confirmed = await showInGameConfirm(
-      translateText("single_modal.confirm_discard") ||
-        "Are you sure you want to discard your saved singleplayer game?",
-    );
-    if (!confirmed) return;
-    clearSoloSave(save.gameID);
-    if (this.resumeSave?.gameID === save.gameID) {
-      this.resumeSave = null;
-    }
-    this.requestUpdate();
-  }
-
-  private renderResumeBanner(): TemplateResult | null {
-    if (!this.resumeSave) return null;
-
-    const rawMap = this.resumeSave.gameStartInfo?.config?.gameMap ?? "World";
-    const map = getMapName(rawMap) ?? String(rawMap);
-    const totalSeconds = Math.floor(this.resumeSave.numTurns / 10);
-    const pad = (n: number) => (n < 10 ? `0${n}` : `${n}`);
-    const h = Math.floor(totalSeconds / 3600);
-    const m = Math.floor((totalSeconds % 3600) / 60);
-    const s = Math.floor(totalSeconds % 60);
-    const time =
-      h > 0 ? `${pad(h)}:${pad(m)}:${pad(s)}` : `${pad(m)}:${pad(s)}`;
-
-    return html`
-      <div
-        class="mb-6 p-4 rounded-2xl bg-blue-500/10 border border-blue-500/30 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4"
-      >
-        <div class="flex flex-col gap-1">
-          <div class="text-sm font-bold text-blue-400 uppercase tracking-wider">
-            ${translateText("single_modal.resume_game")}
-          </div>
-          <div class="text-xs text-white/70">
-            ${translateText("single_modal.resume_desc", {
-              map,
-              time,
-            })}
-          </div>
-        </div>
-        <div class="flex items-center gap-2 w-full sm:w-auto shrink-0">
-          <o-button
-            variant="secondary"
-            size="sm"
-            translationKey="single_modal.discard_game"
-            .disabled=${this.starting || this.resumeInFlight}
-            @click=${this.handleDiscardGame}
-          ></o-button>
-          <o-button
-            variant="primary"
-            size="sm"
-            translationKey="single_modal.resume"
-            .disabled=${this.starting || this.resumeInFlight}
-            @click=${this.handleResumeGame}
-          ></o-button>
-        </div>
-      </div>
-    `;
   }
 
   private toggleAchievements = () => {
@@ -667,7 +492,6 @@ export class SinglePlayerModal extends BaseModal {
         <div
           class="flex-1 min-h-0 overflow-y-auto custom-scrollbar px-6 pt-4 pb-6 mr-1 mx-auto w-full max-w-5xl"
         >
-          ${this.renderResumeBanner()}
           <game-config-settings
             class="block"
             .sectionGapClass=${"space-y-6"}
@@ -812,8 +636,6 @@ export class SinglePlayerModal extends BaseModal {
     // attempts dispatch join-lobby with different gameIDs and whichever
     // resolves last wins, which can be the one the player abandoned.
     this.startAttempt++;
-    this.resumeAttempt++;
-    this.resumeInFlight = false;
     // If the retired attempt still owned the starting overlay it never
     // dispatched join-lobby, so nothing downstream will hide it: without
     // this, dismissing the modal mid-preparation leaves a full-screen
@@ -881,23 +703,12 @@ export class SinglePlayerModal extends BaseModal {
 
   protected onOpen(): void {
     void this.loadNationCount();
-    this.clearSaveOnGameStart = null;
-    this.resumeInFlight = false;
     // Spend the cosmetics round trip while the player is picking a map, not
     // after they commit. startGame() still resolves cosmetics properly; this
     // only moves the network time off the click, for the slow-but-reachable
     // case. It does not help when the backend is unreachable: fetchCosmetics
     // deliberately does not cache a failure, so the click re-pays one bounded
     // attempt. Remembering an unreachable backend is OPE-403.
-    this.resumeSave = getSoloSave();
-    if (clientPlatform() === "steam") {
-      void steamSDK.getUser().then((user) => {
-        if (user?.steamId) {
-          this.resumeSave = getSoloSave();
-          this.requestUpdate();
-        }
-      });
-    }
     void prewarmCosmetics();
   }
 
@@ -1262,8 +1073,6 @@ export class SinglePlayerModal extends BaseModal {
     // Hold the button in its busy state until join-lobby is away so the wait
     // reads as loading rather than as a dead click.
     this.starting = true;
-    this.resumeAttempt++;
-    this.resumeInFlight = false;
     const attempt = ++this.startAttempt;
     // The full-screen starting overlay, up from the click rather than at
     // prestart: it also covers Main's own awaits after the dispatch. On
@@ -1316,90 +1125,84 @@ export class SinglePlayerModal extends BaseModal {
       // The ad is long enough that the modal can be closed while it runs.
       if (attempt !== this.startAttempt) return;
 
-      const joinEvent = new CustomEvent("join-lobby", {
-        detail: {
-          gameID: gameID,
-          gameStartInfo: {
+      this.dispatchEvent(
+        new CustomEvent("join-lobby", {
+          detail: {
             gameID: gameID,
-            players: [
-              {
-                clientID,
-                username: resolvedName.name,
-                clanTag: usernameInput?.getClanTag() ?? null,
-                cosmetics,
+            gameStartInfo: {
+              gameID: gameID,
+              players: [
+                {
+                  clientID,
+                  username: resolvedName.name,
+                  clanTag: usernameInput?.getClanTag() ?? null,
+                  cosmetics,
+                },
+              ],
+              config: {
+                gameMap: this.selectedMap,
+                gameMapSize: this.compactMap
+                  ? GameMapSize.Compact
+                  : GameMapSize.Normal,
+                gameType: GameType.Singleplayer,
+                gameMode: this.gameMode,
+                playerTeams: this.teamCount,
+                difficulty: this.selectedDifficulty,
+                maxTimerValue: finalMaxTimerValue,
+                bots: this.bots,
+                infiniteGold: this.infiniteGold,
+                donateGold: this.gameMode === GameMode.Team,
+                donateTroops: this.gameMode === GameMode.Team,
+                infiniteTroops: this.infiniteTroops,
+                instantBuild: this.instantBuild,
+                randomSpawn: this.randomSpawn,
+                disabledUnits: this.disabledUnits.filter(
+                  (unit): unit is UnitType =>
+                    Object.values(UnitType).includes(unit),
+                ),
+                nations: sliderToNationsConfig(
+                  this.nations,
+                  this.defaultNationCount,
+                ),
+                ...(this.goldMultiplier && this.goldMultiplierValue
+                  ? { goldMultiplier: this.goldMultiplierValue }
+                  : {}),
+                ...(this.startingGold && this.startingGoldValue !== undefined
+                  ? {
+                      startingGold: Math.round(
+                        this.startingGoldValue * 1_000_000,
+                      ),
+                    }
+                  : {}),
+                ...(this.customAlliances
+                  ? { customAllianceDuration: this.customAllianceMinutes ?? 0 }
+                  : {}),
+                ...(this.waterNukes ? { waterNukes: true } : {}),
+                ...(this.doomsdayClock
+                  ? {
+                      doomsdayClock: {
+                        enabled: true,
+                        speed: this.doomsdayClockSpeed,
+                      },
+                    }
+                  : {}),
+                ...(this.overtime
+                  ? {
+                      overtime: {
+                        enabled: true,
+                        startMinutes: this.overtimeStartMinutes ?? 30,
+                      },
+                    }
+                  : {}),
               },
-            ],
-            config: {
-              gameMap: this.selectedMap,
-              gameMapSize: this.compactMap
-                ? GameMapSize.Compact
-                : GameMapSize.Normal,
-              gameType: GameType.Singleplayer,
-              gameMode: this.gameMode,
-              playerTeams: this.teamCount,
-              difficulty: this.selectedDifficulty,
-              maxTimerValue: finalMaxTimerValue,
-              bots: this.bots,
-              infiniteGold: this.infiniteGold,
-              donateGold: this.gameMode === GameMode.Team,
-              donateTroops: this.gameMode === GameMode.Team,
-              infiniteTroops: this.infiniteTroops,
-              instantBuild: this.instantBuild,
-              randomSpawn: this.randomSpawn,
-              disabledUnits: this.disabledUnits.filter(
-                (unit): unit is UnitType =>
-                  Object.values(UnitType).includes(unit),
-              ),
-              nations: sliderToNationsConfig(
-                this.nations,
-                this.defaultNationCount,
-              ),
-              ...(this.goldMultiplier && this.goldMultiplierValue
-                ? { goldMultiplier: this.goldMultiplierValue }
-                : {}),
-              ...(this.startingGold && this.startingGoldValue !== undefined
-                ? {
-                    startingGold: Math.round(
-                      this.startingGoldValue * 1_000_000,
-                    ),
-                  }
-                : {}),
-              ...(this.customAlliances
-                ? { customAllianceDuration: this.customAllianceMinutes ?? 0 }
-                : {}),
-              ...(this.waterNukes ? { waterNukes: true } : {}),
-              ...(this.doomsdayClock
-                ? {
-                    doomsdayClock: {
-                      enabled: true,
-                      speed: this.doomsdayClockSpeed,
-                    },
-                  }
-                : {}),
-              ...(this.overtime
-                ? {
-                    overtime: {
-                      enabled: true,
-                      startMinutes: this.overtimeStartMinutes ?? 30,
-                    },
-                  }
-                : {}),
+              lobbyCreatedAt: Date.now(), // ms; server should be authoritative in MP
             },
-            lobbyCreatedAt: Date.now(), // ms; server should be authoritative in MP
-          },
-          source: "singleplayer",
-        } satisfies JoinLobbyEvent,
-        bubbles: true,
-        composed: true,
-        cancelable: true,
-      });
-      const displayedSaveID = this.resumeSave?.gameID ?? null;
-      this.dispatchEvent(joinEvent);
-      if (joinEvent.defaultPrevented) {
-        this.clearSaveOnGameStart = null;
-        return;
-      }
-      this.clearSaveOnGameStart = displayedSaveID;
+            source: "singleplayer",
+          } satisfies JoinLobbyEvent,
+          bubbles: true,
+          composed: true,
+        }),
+      );
       // The overlay is the join pipeline's now — GameRenderer or Main's
       // canPlay() refusal hides it. Disowning it keeps the close below (and
       // any later onClose) from taking it down mid game-load.
