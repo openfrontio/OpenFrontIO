@@ -1,13 +1,16 @@
 import {
   Difficulty,
+  PlayerInfo,
   PlayerType,
   UnitType,
 } from "@openfront/engine-api/game/GameTypes";
 import { PseudoRandom } from "@openfront/engine-lib/PseudoRandom";
+import { AttackExecution } from "@openfront/engine/execution/AttackExecution";
 import { ConstructionExecution } from "@openfront/engine/execution/ConstructionExecution";
 import { NationStructureBehavior } from "@openfront/engine/execution/nation/NationStructureBehavior";
 import { Cluster } from "@openfront/engine/game/TrainStation";
 import { vi } from "vitest";
+import { createGame, L, W } from "./core/pathfinding/_fixtures";
 
 // ── Fixed trade-gold values matching DefaultConfig ──────────────────────────
 
@@ -380,10 +383,19 @@ describe("NationStructureBehavior.tryBuildDefensePost", () => {
     expect(callTryBuild(Difficulty.Hard, 1000, [])).toBe(false);
   });
 
-  it("returns false when only boat attacks are incoming", () => {
-    expect(callTryBuild(Difficulty.Hard, 100, [makeBoatAttack(5000)])).toBe(
-      false,
-    );
+  it("builds against a landed boat attack", () => {
+    const addExecution = vi.fn();
+    const game = { ...makeMinimalGame(Difficulty.Hard), addExecution };
+    const player = {
+      ...makeMinimalPlayer(100, [makeBoatAttack(5000)]),
+      canBuild: () => true,
+    };
+    const behavior = makeBehavior(game, player);
+    (behavior as any).placementsCount = 1;
+    vi.spyOn(behavior as any, "getAttackFrontTiles").mockReturnValue([1]);
+    vi.spyOn(behavior as any, "sampleTilesNearFront").mockReturnValue([42]);
+    expect((behavior as any).tryBuildDefensePost()).toBe(true);
+    expect(addExecution).toHaveBeenCalledTimes(1);
   });
 
   it("returns false when land-attack ratio is below 0.35", () => {
@@ -523,6 +535,63 @@ describe("NationStructureBehavior.tryBuildDefensePost", () => {
   });
 });
 
+// ── tryBuildDefensePost — landed boat attack (real simulation) ──────────────
+// Land at x < 150, sea beyond. The invader holds y < 20 and borders the nation
+// along y = 20, but lands its boat on the nation's far coast.
+
+describe("NationStructureBehavior.tryBuildDefensePost — landed boat attack", () => {
+  it("builds the post at the beachhead, not on the quiet land border", () => {
+    const width = 200;
+    const height = 100;
+    const grid: string[] = [];
+    for (let y = 0; y < height; y++) {
+      for (let x = 0; x < width; x++) grid.push(x < 150 ? L : W);
+    }
+    const game = createGame(
+      { width, height, grid },
+      { difficulty: Difficulty.Hard },
+    );
+    game.addPlayer(
+      new PlayerInfo("nation", PlayerType.Nation, null, "nation_id"),
+    );
+    game.addPlayer(
+      new PlayerInfo("invader", PlayerType.Human, null, "invader_id"),
+    );
+    const nation = game.player("nation_id");
+    const invader = game.player("invader_id");
+    game.map().forEachTile((tile) => {
+      if (!game.map().isLand(tile)) return;
+      (game.y(tile) < 20 ? invader : nation).conquer(tile);
+    });
+    nation.setTroops(10_000);
+    nation.addGold(10_000_000n);
+    game.endSpawnPhase();
+
+    // What TransportShipExecution does on landing.
+    const landing = game.ref(149, 85);
+    invader.conquer(landing);
+    game.addExecution(
+      new AttackExecution(50_000, invader, nation.id(), landing, false),
+    );
+    for (let i = 0; i < 5; i++) game.executeNextTick();
+    expect(nation.incomingAttacks()).toHaveLength(1);
+
+    const behavior = makeBehavior(game, nation, new PseudoRandom(42));
+    const spy = vi.spyOn(game, "addExecution");
+    expect((behavior as any).tryBuildDefensePost()).toBe(true);
+    const [post] = spy.mock.calls
+      .map((c) => c[0])
+      .filter(
+        (e): e is ConstructionExecution =>
+          e instanceof ConstructionExecution &&
+          e["constructionType"] === UnitType.DefensePost,
+      );
+    const tile = post["tile"];
+    const distToLanding = Math.sqrt(game.euclideanDistSquared(tile, landing));
+    expect(distToLanding).toBeLessThan(game.y(tile) - 20);
+  });
+});
+
 // ── defensePostNeeded ────────────────────────────────────────────────────────
 
 describe("NationStructureBehavior.defensePostNeeded", () => {
@@ -583,8 +652,8 @@ describe("NationStructureBehavior.defensePostNeeded", () => {
     expect(call(Difficulty.Medium, 1000, [makeAttack(700)])).toBe(true);
   });
 
-  it("ignores boat attacks (sourceTile != null)", () => {
-    expect(call(Difficulty.Hard, 1000, [makeAttack(5000, 999)])).toBe(false);
+  it("counts boat attacks (sourceTile != null)", () => {
+    expect(call(Difficulty.Hard, 1000, [makeAttack(5000, 999)])).toBe(true);
   });
 
   it("sums troops across multiple land attacks for the ratio", () => {
@@ -695,6 +764,54 @@ describe("NationStructureBehavior.sampleTilesNearFront", () => {
       expect.anything(),
     );
   });
+
+  // 1D layout: tile ref = x. outer 30 → spread range 45, search radius 45.
+  function makeSpreadEnv(existingPostTiles: number[]) {
+    const player: any = {
+      borderTiles: () => [0],
+      units: () => existingPostTiles.map(makeUnit),
+      canBuild: () => true,
+    };
+    const game: any = {
+      config: () => ({ nukeMagnitudes: () => ({ outer: 30 }) }),
+      x: (t: number) => t,
+      y: () => 0,
+      isValidCoord: () => true,
+      ref: (x: number) => x,
+      owner: () => player,
+      manhattanDist: () => 30, // within the [23, 45] depth ring
+      euclideanDistSquared: (a: number, b: number) => (a - b) ** 2,
+    };
+    return { player, game };
+  }
+
+  it("returns [] when the whole front is already covered by a defense post", () => {
+    const { player, game } = makeSpreadEnv([1000]);
+    const behavior = makeBehavior(game, player);
+    expect(
+      (behavior as any).sampleTilesNearFront(
+        [990, 1010, 1040],
+        3,
+        UnitType.DefensePost,
+      ),
+    ).toEqual([]);
+  });
+
+  it("skips candidates near an existing defense post even from a free anchor", () => {
+    const { player, game } = makeSpreadEnv([1000]);
+    const random = new PseudoRandom(0);
+    vi.spyOn(random, "randElement").mockImplementation((arr: any[]) => arr[0]);
+    // Anchor 1050 is free; first candidate x=1020 is 20 from the post, second x=1095 is 95.
+    vi.spyOn(random, "nextInt")
+      .mockReturnValueOnce(1020)
+      .mockReturnValueOnce(0)
+      .mockReturnValueOnce(1095)
+      .mockReturnValueOnce(0);
+    const behavior = makeBehavior(game, player, random);
+    expect(
+      (behavior as any).sampleTilesNearFront([1050], 1, UnitType.DefensePost),
+    ).toEqual([1095]);
+  });
 });
 
 // ── getAttackFrontTiles ──────────────────────────────────────────────────────
@@ -726,7 +843,15 @@ describe("NationStructureBehavior.getAttackFrontTiles", () => {
   }
 
   function makeAttack(attacker: any): any {
-    return { attacker: () => attacker };
+    return { attacker: () => attacker, sourceTile: () => null };
+  }
+
+  function makeBoatAttack(attacker: any, border: number[]): any {
+    return {
+      attacker: () => attacker,
+      sourceTile: () => 999,
+      borderTiles: () => new Set(border),
+    };
   }
 
   it("returns empty array for empty attack list", () => {
@@ -797,6 +922,43 @@ describe("NationStructureBehavior.getAttackFrontTiles", () => {
       makeAttack(attacker),
     ]);
     expect(result).toEqual([10]);
+  });
+
+  // Our border: 10 touches the attacker's land (100), 20 touches its beachhead (200).
+  function makeBoatScenario(attacker: any) {
+    const player = makePlayer([10, 20]);
+    const game = makeGame(
+      (tile) => (tile === 10 ? [100] : tile === 20 ? [200] : []),
+      (tile) =>
+        tile === 100 || tile === 200
+          ? attacker
+          : tile === 10 || tile === 20
+            ? player
+            : null,
+    );
+    return makeBehavior(game, player);
+  }
+
+  it("uses only the landing frontier when the boat attacker isn't attacking by land", () => {
+    const attacker = { id: () => "atk" };
+    const behavior = makeBoatScenario(attacker);
+    // 30 is no longer ours, so it is dropped.
+    expect(
+      (behavior as any).getAttackFrontTiles([
+        makeBoatAttack(attacker, [20, 30]),
+      ]),
+    ).toEqual([20]);
+  });
+
+  it("does not add a landing twice when its attacker also attacks by land", () => {
+    const attacker = { id: () => "atk" };
+    const behavior = makeBoatScenario(attacker);
+    expect(
+      (behavior as any).getAttackFrontTiles([
+        makeAttack(attacker),
+        makeBoatAttack(attacker, [20]),
+      ]),
+    ).toEqual([10, 20]);
   });
 });
 
