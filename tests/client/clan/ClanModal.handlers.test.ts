@@ -630,7 +630,7 @@ describe("ClanModal — handlers", () => {
 
       await flushAsync(modal);
 
-      expect(joinClan).toHaveBeenCalledWith("TST");
+      expect(joinClan).toHaveBeenCalledWith("TST", undefined);
       expect(fetchClanMembers).toHaveBeenCalledWith(
         "TST",
         1,
@@ -901,6 +901,173 @@ describe("ClanModal — handlers", () => {
       };
       expect(m.selectedClan?.softBalance).toBe("1300");
       expect(m.myClans[0].softBalance).toBe("1300");
+    });
+  });
+
+  describe("boost", () => {
+    const findBoostButton = () =>
+      modal.querySelector<HTMLButtonElement>('button[data-action="boost"]');
+
+    const openDetailAs = async (
+      role: string | null,
+      clan: Partial<ClanInfo> = {},
+    ) => {
+      const { fetchClanDetail } = await import("../../../src/client/ClanApi");
+      (fetchClanDetail as ReturnType<typeof vi.fn>).mockResolvedValueOnce(
+        makeClan(clan),
+      );
+      setState(modal, "selectedClanTag" as keyof ClanModal, "TST" as never);
+      setState(
+        modal,
+        "myClanRoles" as keyof ClanModal,
+        (role ? new Map([["TST", role]]) : new Map()) as never,
+      );
+      setState(modal, "view" as keyof ClanModal, "detail" as never);
+      return waitForSubComponent(modal, "clan-detail-view");
+    };
+
+    it("shows Boost to officers and the leader only", async () => {
+      await openDetailAs("officer");
+      expect(findBoostButton()).toBeTruthy();
+    });
+
+    it("shows Boost to the leader", async () => {
+      await openDetailAs("leader");
+      expect(findBoostButton()).toBeTruthy();
+    });
+
+    it("hides Boost from plain members and non-members", async () => {
+      await openDetailAs("member");
+      expect(findBoostButton()).toBeNull();
+    });
+
+    it("hides Boost from non-members", async () => {
+      await openDetailAs(null);
+      expect(findBoostButton()).toBeNull();
+    });
+
+    it("opens the boost dialog and closes it on cancel", async () => {
+      const detailView = await openDetailAs("officer");
+      findBoostButton()!.click();
+      await flushAsync(detailView);
+      const dialog = modal.querySelector("clan-boost-dialog");
+      expect(dialog).toBeTruthy();
+      expect(getElState<string>(dialog!, "clanTag")).toBe("TST");
+      dialog!.dispatchEvent(new CustomEvent("cancel"));
+      await flushAsync(detailView);
+      expect(modal.querySelector("clan-boost-dialog")).toBeNull();
+    });
+
+    it("after a boost: closes the dialog, toasts and shows the time left", async () => {
+      const { fetchClanDetail } = await import("../../../src/client/ClanApi");
+      const { showToast } = await import("../../../src/client/Utils");
+      const detailView = await openDetailAs("officer");
+      expect(modal.querySelector("[data-boost-left]")).toBeNull();
+      findBoostButton()!.click();
+      await flushAsync(detailView);
+
+      const endsAt = new Date(Date.now() + 2 * 3_600_000).toISOString();
+      (fetchClanDetail as ReturnType<typeof vi.fn>).mockResolvedValueOnce(
+        makeClan({ boostEndsAt: endsAt, softBalance: "750" }),
+      );
+      setState(
+        modal,
+        "myClans" as keyof ClanModal,
+        [makeClan({ softBalance: "1000" })] as never,
+      );
+      modal
+        .querySelector("clan-boost-dialog")!
+        .dispatchEvent(new CustomEvent("boosted", { detail: { endsAt } }));
+      await flushAsync(detailView, modal);
+
+      expect(modal.querySelector("clan-boost-dialog")).toBeNull();
+      expect(showToast).toHaveBeenCalledWith(
+        "clan_modal.boost_success",
+        "green",
+      );
+      expect(fetchClanDetail).toHaveBeenLastCalledWith("TST");
+      expect(modal.querySelector("[data-boost-left]")).toBeTruthy();
+
+      // The modal's own copy is refreshed too, so leaving for Manage and
+      // coming back still shows the boost and the post-purchase balance.
+      const m = modal as unknown as {
+        selectedClan: ClanInfo | null;
+        myClans: ClanInfo[];
+      };
+      expect(m.selectedClan?.boostEndsAt).toBe(endsAt);
+      expect(m.myClans[0].softBalance).toBe("750");
+    });
+
+    it("shows a running boost's time left to everyone", async () => {
+      await openDetailAs(null, {
+        boostEndsAt: new Date(Date.now() + 3_600_000).toISOString(),
+      });
+      expect(modal.querySelector("[data-boost-left]")?.textContent).toContain(
+        "clan_modal.boost_time_left",
+      );
+    });
+
+    it("counts the time left down while the view is open", async () => {
+      vi.useFakeTimers({ shouldAdvanceTime: true });
+      try {
+        const detailView = await openDetailAs(null, {
+          boostEndsAt: new Date(Date.now() + 90_000).toISOString(),
+        });
+        expect(modal.querySelector("[data-boost-left]")).toBeTruthy();
+        await vi.advanceTimersByTimeAsync(120_000);
+        await flushAsync(detailView);
+        expect(modal.querySelector("[data-boost-left]")).toBeNull();
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
+    it("hides the time left once the boost has ended", async () => {
+      await openDetailAs(null, {
+        boostEndsAt: new Date(Date.now() - 1000).toISOString(),
+      });
+      expect(modal.querySelector("[data-boost-left]")).toBeNull();
+    });
+  });
+
+  describe("boosted block", () => {
+    it("labels boosted clans, and a join from the block is attributed to it", async () => {
+      const { fetchClanDetail, fetchClans, joinClan } =
+        await import("../../../src/client/ClanApi");
+      const boosted = makeClan({ tag: "BST", name: "Boosted", boosted: true });
+      (fetchClans as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+        results: [boosted, makeClan({ tag: "PLN", name: "Plain" })],
+        boostedBlock: [boosted],
+        total: 2,
+        page: 1,
+        limit: 20,
+      });
+      // The detail page loads the clan that was clicked, so the join below
+      // names it rather than the shared mock's default tag.
+      (fetchClanDetail as ReturnType<typeof vi.fn>).mockResolvedValueOnce(
+        boosted,
+      );
+      setState(modal, "myPublicId" as keyof ClanModal, "test-player" as never);
+      setState(modal, "activeTab" as keyof ClanModal, "browse" as never);
+      const browse = await waitForSubComponent(modal, "clan-browse-view");
+
+      const block = modal.querySelector("[data-boosted-block]");
+      expect(block).toBeTruthy();
+      expect(block!.querySelectorAll("clan-card")).toHaveLength(1);
+      // Labelled in the block and at its normal place in the list.
+      expect(modal.querySelectorAll("[data-boosted]")).toHaveLength(2);
+
+      (joinClan as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+        status: "requested",
+      });
+      block!.querySelector<HTMLButtonElement>("clan-card button")!.click();
+      const detail = await waitForSubComponent(modal, "clan-detail-view");
+      await flushAsync(browse, detail);
+      Array.from(modal.querySelectorAll("button"))
+        .find((b) => b.textContent?.trim() === "clan_modal.join_clan")!
+        .click();
+      await flushAsync(detail);
+      expect(joinClan).toHaveBeenLastCalledWith("BST", "boosted");
     });
   });
 });
