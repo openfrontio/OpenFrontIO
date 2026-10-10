@@ -9,6 +9,9 @@ import type { GameView } from "../../../../src/client/view";
 
 vi.mock("../../../../src/client/Utils", () => ({
   translateText: vi.fn((key: string) => key),
+  getTranslatedPlayerTeamLabel: vi.fn((team: string | null) =>
+    team === "Red" ? "Rood" : (team ?? ""), // "Rood" is Dutch for "Red"
+  ),
   getGamesPlayed: vi.fn(() => 10),
   isInIframe: vi.fn(() => false),
   homeHref: vi.fn(() => "/"),
@@ -36,6 +39,10 @@ vi.mock("../../../../src/client/CrazyGamesSDK", () => ({
 }));
 
 import { crazyGamesSDK } from "../../../../src/client/CrazyGamesSDK";
+import {
+  getTranslatedPlayerTeamLabel,
+  translateText,
+} from "../../../../src/client/Utils";
 
 type Winner = ["team", string] | ["player", string] | undefined;
 
@@ -96,13 +103,17 @@ describe("WinModal tick win handling", () => {
     await vi.waitFor(() => expect(modal!.isVisible).toBe(true));
   });
 
-  it("emits the winner without celebrating when another team wins", async () => {
+  it("emits the (translated) winner without celebrating when another team wins", async () => {
     const events = setup(makeGame({ winner: ["team", "Red"], myTeam: "Blue" }));
     modal!.tick();
 
     expect(events).toHaveLength(1);
     expect(events[0].winner).toEqual(["team", "Red"]);
     expect(crazyGamesSDK.happytime).not.toHaveBeenCalled();
+    expect(getTranslatedPlayerTeamLabel).toHaveBeenCalledWith("Red");
+    expect(translateText).toHaveBeenCalledWith("win_modal.other_team", {
+      team: "Rood",
+    });
     await vi.waitFor(() => expect(modal!.isVisible).toBe(true));
   });
 
