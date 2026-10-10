@@ -28,6 +28,8 @@ vi.mock("../../../../src/client/components/ui/ActionButton", () => ({
   actionButton: vi.fn((props: unknown) => props),
 }));
 
+vi.mock("../../../../src/client/components/LevelBadge", () => ({}));
+
 vi.mock("../../../../src/client/InGameModal", () => ({
   showInGameConfirm: vi.fn(),
   showInGameAlert: vi.fn(),

@@ -86,7 +86,13 @@ export class WinCheckExecution implements Execution {
       return;
     }
 
-    if (this.mg.config().gameConfig().rankedType === RankedType.OneVOne) {
+    // Ranked 1v1 and FFA end when one connected human is left: everyone else
+    // is dead or gone.
+    const rankedType = this.mg.config().gameConfig().rankedType;
+    if (
+      rankedType === RankedType.OneVOne ||
+      rankedType === RankedType.FreeForAll
+    ) {
       const humans = sorted.filter(
         (p) => p.type() === PlayerType.Human && !p.isDisconnected(),
       );
@@ -98,7 +104,17 @@ export class WinCheckExecution implements Execution {
       }
     }
 
-    const max = sorted[0];
+    // A bot can't win ranked FFA: the API only rates a winner who was in the
+    // match, so the largest human takes the threshold or the timer. Ranked 1v1
+    // keeps the old rule so archived 1v1 replays still resolve the same way.
+    const contenders =
+      rankedType === RankedType.FreeForAll
+        ? sorted.filter((p) => p.type() === PlayerType.Human)
+        : sorted;
+    const max = contenders[0];
+    if (max === undefined) {
+      return;
+    }
     if (this.hasWon(max.numTilesOwned())) {
       this.mg.setWinner(max, this.mg.stats().stats());
       console.log(`${max.name()} has won the game`);
