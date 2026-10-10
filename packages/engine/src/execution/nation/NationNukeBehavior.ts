@@ -956,6 +956,8 @@ export class NationNukeBehavior {
 
     for (const targetSam of sortedSams) {
       const targetTile = targetSam.tile();
+      // Hitting an ally's land would break the alliance
+      if (this.blastHitsFriendlyLand(targetTile, UnitType.AtomBomb)) continue;
 
       // Find all enemy SAMs whose range covers the target tile (they will all try to intercept)
       const coveringSams = this.findEnemySamsCoveringTile(targetTile);
