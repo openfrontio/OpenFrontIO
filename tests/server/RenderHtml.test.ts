@@ -389,4 +389,15 @@ describe("RenderHtml environment-only render", () => {
     expect(config.instanceLetter).toBe("a");
     expect(config.serverHost).toBe("blue.openfront.io");
   });
+
+  it("renders valid Schema.org VideoGame JSON-LD", async () => {
+    const html = await renderHtmlContent(REAL_TEMPLATE);
+    const match = html.match(
+      /<script type="application\/ld\+json">([\s\S]*?)<\/script>/,
+    );
+    expect(match).not.toBeNull();
+    const data = JSON.parse(match![1]);
+    expect(data["@type"]).toBe("VideoGame");
+    expect(data.name).toBe("OpenFront");
+  });
 });
