@@ -118,6 +118,7 @@ export async function restoreScriptedRunner(
   mapName: string,
   gameStart: GameStartInfo,
   snapshot: Uint8Array,
+  onUpdate?: (gu: GameUpdateViewData | ErrorUpdate) => void,
 ): Promise<GameRunner> {
   const { gameMap, gameMapSize } = readSnapshotHeader(snapshot).gameConfig;
   return createGameRunnerFromSnapshot(
@@ -125,7 +126,10 @@ export async function restoreScriptedRunner(
     snapshot,
     undefined,
     await loadMapFiles(new TestDataMapLoader(mapName), gameMap, gameMapSize),
-    recordErrors,
+    (gu) => {
+      recordErrors(gu);
+      onUpdate?.(gu);
+    },
   );
 }
 

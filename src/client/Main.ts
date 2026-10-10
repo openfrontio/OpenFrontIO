@@ -1,4 +1,4 @@
-import { GAME_ID_REGEX } from "@openfront/engine-api/Schemas";
+import { GAME_ID_REGEX, Turn } from "@openfront/engine-api/Schemas";
 import { UserMeResponse } from "@openfront/shared/ApiSchemas";
 import { assetUrl } from "@openfront/shared/AssetUrls";
 import { EventBus } from "@openfront/shared/EventBus";
@@ -246,6 +246,8 @@ export interface JoinLobbyEvent {
   publicLobbyInfo?: GameInfo | PublicGameInfo;
   // Watch without playing.
   spectator?: boolean;
+  resumeTurns?: Turn[];
+  resumeSnapshot?: Uint8Array;
   // Host only: the play token the lobby was created under (see createLobby).
   creatorToken?: string;
 }
@@ -283,6 +285,7 @@ class Client {
   private lobbyHandle: JoinLobbyResult | null = null;
   /** The game the replay viewer is showing, once it has replaced the menu. */
   private replayViewerID: string | null = null;
+  private replayViewerOpeningToken = 0;
   private eventBus: EventBus = new EventBus();
 
   private currentUrl: string | null = null;
@@ -1030,10 +1033,16 @@ class Client {
         this.leaveReplayViewer();
         return;
       }
-      // Checked before the join modal is closed below: closing it resets
-      // the URL, which would drop the hash before handleUrl reads it.
-      const replayViewerID = parseReplayViewerHash(window.location.hash);
+      const replayHash = window.location.hash;
+      const replayViewerID = parseReplayViewerHash(replayHash);
       if (replayViewerID !== null) {
+        if (this.lobbyHandle !== null || this.joinInFlight) {
+          void this.handleLeaveLobby();
+        }
+        this.joinModal?.close();
+        if (window.location.hash !== replayHash) {
+          window.location.hash = replayHash;
+        }
         void this.openReplayViewer(replayViewerID);
         return;
       }
@@ -1157,18 +1166,22 @@ class Client {
     // get here (CrazyGames awaits its SDK first). Only the first opens it.
     if (this.replayViewerID !== null) return;
     this.replayViewerID = gameID;
+    const token = ++this.replayViewerOpeningToken;
     let ReplayViewer: typeof import("./replay/ReplayViewer").ReplayViewer;
     try {
       ({ ReplayViewer } = await import("./replay/ReplayViewer"));
     } catch (err) {
+      if (this.replayViewerOpeningToken !== token) return;
       // The viewer's chunk didn't load (a network error, or a deploy that
       // replaced it). The menu is still up, so fall back to the client-side
       // replay. It's a full page load, which also picks up a new deploy.
       console.error("replay viewer failed to load:", err);
       this.replayViewerID = null;
+      this.replayViewerOpeningToken++;
       window.location.assign(classicReplayHref(gameID));
       return;
     }
+    if (this.replayViewerOpeningToken !== token) return;
     this.gameModeSelector.stop();
     hideMenuChrome();
     setInGameSignal(true);
@@ -1187,6 +1200,7 @@ class Client {
     // Opening the viewer fires both popstate and hashchange, and the first
     // one opens it. The second still points at the open replay.
     if (gameID === this.replayViewerID) return;
+    this.replayViewerOpeningToken++;
     if (gameID !== null) {
       window.location.reload();
     } else {
@@ -1242,6 +1256,13 @@ class Client {
     // The replay viewer takes over the page (loaded on demand).
     const replayViewerID = parseReplayViewerHash(hash);
     if (replayViewerID !== null) {
+      if (this.lobbyHandle !== null || this.joinInFlight) {
+        await this.handleLeaveLobby();
+      }
+      this.joinModal?.close();
+      if (window.location.hash !== hash) {
+        window.location.hash = hash;
+      }
       await this.openReplayViewer(replayViewerID);
       return;
     }
@@ -1557,9 +1578,11 @@ class Client {
       if (startingModal instanceof GameStartingModal) {
         startingModal.hide();
       }
+      event.preventDefault();
       return;
     }
     if (this.blockedJoin(lobby)) {
+      event.preventDefault();
       return;
     }
     // Only once the join is actually going ahead: a refused dispatch that
@@ -1570,6 +1593,12 @@ class Client {
     // handle being assigned) and by handleLeaveLobby, which runs its reset
     // above its own lobbyHandle guard precisely because this window exists.
     this.joinInFlight = true;
+
+    if (this.replayViewerID !== null) {
+      document.querySelector("replay-viewer")?.remove();
+      this.replayViewerID = null;
+      this.replayViewerOpeningToken++;
+    }
 
     console.log(`joining lobby ${lobby.gameID}`);
     // Entering a lobby. Singleplayer, public lobbies and replays know their
@@ -1682,6 +1711,8 @@ class Client {
           : undefined),
       gameRecord: lobby.gameRecord,
       spectator: lobby.spectator,
+      resumeTurns: lobby.resumeTurns,
+      resumeSnapshot: lobby.resumeSnapshot,
       creatorToken: lobby.creatorToken,
     });
 

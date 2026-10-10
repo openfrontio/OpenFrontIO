@@ -86,6 +86,17 @@ vi.mock("../../src/client/view", () => ({
 vi.mock("../../src/client/WorkerClient", () => ({
   WorkerClient: class {},
 }));
+vi.mock("@openfront/engine-lib/snapshot/MapSnapshot", () => ({
+  readSnapshotHeader: vi.fn((bytes: Uint8Array) => ({
+    format: 1,
+    gitCommit: "test-commit",
+    gameID: "game1234",
+    tick: 200,
+    gameConfig: {},
+  })),
+  compressSnapshot: vi.fn(async (raw) => raw),
+  restoreMapsFromSnapshot: vi.fn(),
+}));
 vi.mock("../../src/client/Transport", async (importOriginal) => {
   const actual =
     await importOriginal<typeof import("../../src/client/Transport")>();
@@ -110,7 +121,10 @@ import { loadCachedTerrainMap } from "../../src/client/TerrainMapFileLoader";
 import { SendHashEvent } from "../../src/client/Transport";
 import { reloadForUpdate } from "../../src/client/Utils";
 
-function makeLobbyConfig(withStartInfo: boolean): LobbyConfig {
+function makeLobbyConfig(
+  withStartInfo: boolean,
+  resumeSnapshot?: Uint8Array,
+): LobbyConfig {
   return {
     gameID: "game1234",
     playerName: "tester",
@@ -121,6 +135,7 @@ function makeLobbyConfig(withStartInfo: boolean): LobbyConfig {
     ...(withStartInfo
       ? { gameStartInfo: { gameID: "game1234", config: {} } }
       : {}),
+    ...(resumeSnapshot ? { resumeSnapshot } : {}),
   } as unknown as LobbyConfig;
 }
 
@@ -128,7 +143,11 @@ function makeLobbyConfig(withStartInfo: boolean): LobbyConfig {
 // the callbacks start() handed to the transport and the worker.
 function makeStartedRunner(
   withStartInfo: boolean,
-  opts: { isLocal?: boolean; metrics?: object } = {},
+  opts: {
+    isLocal?: boolean;
+    metrics?: object;
+    resumeSnapshot?: Uint8Array;
+  } = {},
 ) {
   const eventBus = new EventBus();
   const emitSpy = vi.spyOn(eventBus, "emit");
@@ -156,7 +175,7 @@ function makeStartedRunner(
   const userSettings = { goToPlayer: () => false };
 
   const runner = new ClientGameRunner(
-    makeLobbyConfig(withStartInfo),
+    makeLobbyConfig(withStartInfo, opts.resumeSnapshot),
     "c0000001",
     eventBus,
     renderer as never,
@@ -283,6 +302,23 @@ describe("ClientGameRunner in-game messages", () => {
     expect(worker.sendTurn).toHaveBeenCalledTimes(1);
     expect(console.error).toHaveBeenCalledWith(
       "got wrong turn have turns 1, received turn 5",
+    );
+  });
+
+  it("initializes turnsSeen from snapshot tick when resuming from snapshot so the first turn reaches worker.sendTurn", () => {
+    const { worker, onmessage } = makeStartedRunner(true, {
+      resumeSnapshot: new Uint8Array([1, 2, 3]),
+    });
+    const turn = { turnNumber: 200, intents: [] };
+
+    onmessage({ type: "start", turns: [] });
+    onmessage({ type: "turn", turn });
+    expect(worker.sendTurn).toHaveBeenCalledWith(turn);
+
+    onmessage({ type: "turn", turn: { turnNumber: 205, intents: [] } });
+    expect(worker.sendTurn).toHaveBeenCalledTimes(1);
+    expect(console.error).toHaveBeenCalledWith(
+      "got wrong turn have turns 201, received turn 205",
     );
   });
 

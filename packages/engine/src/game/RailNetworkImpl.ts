@@ -130,6 +130,16 @@ export class RailNetworkImpl implements RailNetwork {
     return this._stationManager;
   }
 
+  railroads(): Railroad[] {
+    const railroads = new Set<Railroad>();
+    for (const station of this._stationManager.getAll()) {
+      for (const railroad of station.getRailroads()) {
+        railroads.add(railroad);
+      }
+    }
+    return Array.from(railroads);
+  }
+
   connectStation(station: TrainStation) {
     this._stationManager.addStation(station);
     if (!this.connectToExistingRails(station)) {
@@ -416,11 +426,7 @@ export class RailNetworkImpl implements RailNetwork {
     const path = this.pathService.findTilePath(from.tile(), to.tile());
     if (path.length > 0 && path.length < this.game.config().railroadMaxSize()) {
       const railroad = new Railroad(from, to, path, this.nextId++);
-      this.game.addUpdate({
-        type: GameUpdateType.RailroadConstructionEvent,
-        id: railroad.id,
-        tiles: railroad.tiles,
-      });
+      this.game.addUpdate(railroad.toConstructionUpdate());
       from.addRailroad(railroad);
       to.addRailroad(railroad);
       this.railGrid.register(railroad);

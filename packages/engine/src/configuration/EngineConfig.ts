@@ -1,5 +1,6 @@
 import {
   Difficulty,
+  GameType,
   Gold,
   PlayerInfo,
   PlayerType,
@@ -128,6 +129,14 @@ export class EngineConfig extends Config {
 
   teamLandShareWinThresholdTenths(): number {
     return 7;
+  }
+
+  setDifficulty(difficulty: Difficulty): void {
+    this._gameConfig.difficulty = difficulty;
+  }
+
+  setGameType(gameType: GameType): void {
+    this._gameConfig.gameType = gameType;
   }
 
   falloutDefenseModifier(falloutRatio: number): number {

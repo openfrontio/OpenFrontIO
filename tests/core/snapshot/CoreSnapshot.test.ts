@@ -3,12 +3,30 @@ import {
   PlayerType,
   UnitType,
 } from "@openfront/engine-api/game/GameTypes";
+import { GameUpdateType } from "@openfront/engine-api/game/GameUpdates";
+import { SnapshotError } from "@openfront/engine-lib/snapshot/SnapshotType";
+import { Executor } from "@openfront/engine/execution/ExecutionManager";
 import { WinCheckExecution } from "@openfront/engine/execution/WinCheckExecution";
 import { Game } from "@openfront/engine/game/Game";
 import { GameImpl } from "@openfront/engine/game/GameImpl";
-import { snapshotGame } from "@openfront/engine/snapshot/GameSnapshot";
+import { GameRunner } from "@openfront/engine/GameRunner";
+import {
+  readSnapshotHeader,
+  restoreMapsFromSnapshot,
+  SNAPSHOT_FORMAT_VERSION,
+  snapshotGame,
+} from "@openfront/engine/snapshot/GameSnapshot";
+import {
+  decodeSnapshotValue,
+  encodeSnapshotValue,
+} from "@openfront/engine/snapshot/SnapshotCodec";
 import { setup } from "../../util/Setup";
-import { diffGraphs, diffSnapshots, roundTrip } from "../../util/Snapshot";
+import {
+  diffGraphs,
+  diffSnapshots,
+  loadTestMaps,
+  roundTrip,
+} from "../../util/Snapshot";
 
 const MAP = "plains";
 
@@ -63,6 +81,113 @@ describe("core snapshot", () => {
     }
     expect(diffSnapshots(snapshotGame(game), snapshotGame(restored))).toEqual(
       [],
+    );
+  });
+
+  test("restoreMapsFromSnapshot restores tile ownership and map state", async () => {
+    const game = await builtGame();
+    const bytes = snapshotGame(game);
+    const { gameMap, miniGameMap } = await loadTestMaps(MAP);
+    const restored = restoreMapsFromSnapshot(bytes, gameMap, miniGameMap);
+    expect(restored.startTick).toBe(game.startTick());
+
+    const a = game.player("alice");
+    expect(gameMap.ownerID(game.ref(10, 10))).toBe(a.smallID());
+    expect(gameMap.ownerID(game.ref(8, 8))).toBe(a.smallID());
+    const b = game.player("bob");
+    expect(gameMap.ownerID(game.ref(25, 10))).toBe(b.smallID());
+    expect(gameMap.hasFallout(game.ref(40, 40))).toBe(true);
+  });
+
+  test("readSnapshotHeader validates startTick and returns null for malformed values", async () => {
+    const game = await builtGame();
+    const bytes = snapshotGame(game);
+    const header = readSnapshotHeader(bytes);
+    expect(header.tick).toBe(game.ticks());
+
+    // Corrupt startTick in raw snapshot object to various malformed types
+    const raw = decodeSnapshotValue(bytes) as any;
+    for (const malformed of ["not-a-number", 12.34, NaN, {}, [], true]) {
+      raw.game.d.startTick = malformed;
+      const corruptedBytes = encodeSnapshotValue(raw);
+      const corruptedHeader = readSnapshotHeader(corruptedBytes);
+      expect(corruptedHeader.startTick).toBeNull();
+    }
+
+    // When startTick is a valid integer, it should be preserved
+    raw.game.d.startTick = 42;
+    const validBytes = encodeSnapshotValue(raw);
+    const validHeader = readSnapshotHeader(validBytes);
+    expect(validHeader.startTick).toBe(42);
+  });
+
+  test("restoreMapsFromSnapshot throws SnapshotError on invalid tile reference", async () => {
+    const game = await builtGame();
+    const bytes = snapshotGame(game);
+    const { gameMap, miniGameMap } = await loadTestMaps(MAP);
+
+    const raw = decodeSnapshotValue(bytes) as any;
+    const invalidTile = 99999999;
+    raw.players[0].d.tiles = new Uint32Array([invalidTile]);
+    const corruptedBytes = encodeSnapshotValue(raw);
+
+    const playerID = raw.players[0].d.info.id;
+    expect(() =>
+      restoreMapsFromSnapshot(corruptedBytes, gameMap, miniGameMap),
+    ).toThrowError(
+      new SnapshotError(
+        `invalid tile ref ${invalidTile} for player ${playerID}`,
+      ),
+    );
+  });
+
+  test("snapshotViewData clears pendingSpawnPhaseEnd so tick 1 does not duplicate SpawnPhaseEnd", async () => {
+    const game = await builtGame();
+    expect(game.inSpawnPhase()).toBe(false);
+
+    let tickSpawnPhaseEndCount = 0;
+    const runner = new GameRunner(
+      game,
+      new Executor(game, "game123456", undefined, []),
+      (gu) => {
+        if ("updates" in gu) {
+          tickSpawnPhaseEndCount +=
+            gu.updates[GameUpdateType.SpawnPhaseEnd].length;
+        }
+      },
+    );
+    runner.setPendingSpawnPhaseEnd();
+
+    const viewData = runner.snapshotViewData();
+    expect(viewData.updates[GameUpdateType.SpawnPhaseEnd].length).toBe(1);
+
+    runner.addTurn({ turnNumber: 0, intents: [] });
+    expect(runner.executeNextTick()).toBe(true);
+    expect(tickSpawnPhaseEndCount).toBe(0);
+  });
+
+  test("readSnapshotHeader rejects non-integer formats or formats below 1, and reports newer formats", async () => {
+    const game = await builtGame();
+    const bytes = snapshotGame(game);
+
+    // Formats that are not integers or < 1
+    for (const invalid of ["not-a-number", 1.5, 0, -1, NaN, {}, [], true]) {
+      const raw = decodeSnapshotValue(bytes) as any;
+      raw.format = invalid;
+      const corruptedBytes = encodeSnapshotValue(raw);
+      expect(() => readSnapshotHeader(corruptedBytes)).toThrowError(
+        new SnapshotError(`invalid snapshot format: ${String(invalid)}`),
+      );
+    }
+
+    // Format newer than build supports
+    const raw = decodeSnapshotValue(bytes) as any;
+    raw.format = 999;
+    const newerBytes = encodeSnapshotValue(raw);
+    expect(() => readSnapshotHeader(newerBytes)).toThrowError(
+      new SnapshotError(
+        `snapshot format 999 is newer than this build supports (${SNAPSHOT_FORMAT_VERSION})`,
+      ),
     );
   });
 });

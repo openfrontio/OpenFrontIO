@@ -29,6 +29,8 @@ export function handOverRecord(gameID: string, record: GameRecord): void {
   handedOver = { gameID, record };
 }
 
+const RECORD_FETCH_TIMEOUT_MS = 10_000;
+
 export async function fetchReplayRecord(
   gameID: string,
   opts: {
@@ -50,7 +52,10 @@ export async function fetchReplayRecord(
     res = await fetchFn.call(
       globalThis,
       `${apiBase}/game/${encodeURIComponent(gameID)}`,
-      { headers: { Accept: "application/json" } },
+      {
+        headers: { Accept: "application/json" },
+        signal: AbortSignal.timeout(RECORD_FETCH_TIMEOUT_MS),
+      },
     );
   } catch {
     return { kind: "unreachable" };

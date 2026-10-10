@@ -1,4 +1,4 @@
-﻿import { Structures } from "@openfront/engine-api/game/GameTypes";
+import { Structures } from "@openfront/engine-api/game/GameTypes";
 import { PseudoRandom } from "@openfront/engine-lib/PseudoRandom";
 import {
   VersionedSchema,
@@ -39,6 +39,10 @@ export class TribeExecution implements Execution {
     this.triggerRatio = this.random.nextInt(50, 60) / 100;
     this.reserveRatio = this.random.nextInt(30, 40) / 100;
     this.expandRatio = this.random.nextInt(10, 20) / 100;
+  }
+
+  playerID(): string {
+    return this.tribe.id();
   }
 
   activeDuringSpawnPhase(): boolean {

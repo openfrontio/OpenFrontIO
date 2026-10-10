@@ -4,6 +4,7 @@ import {
   StampedIntent,
   Turn,
 } from "@openfront/engine-api/Schemas";
+import { readSnapshotHeader } from "@openfront/engine-lib/snapshot/MapSnapshot";
 import { EventBus } from "@openfront/shared/EventBus";
 import {
   createPartialGameRecord,
@@ -19,10 +20,10 @@ import {
   ServerMessage,
   ServerStartGameMessage,
 } from "@openfront/shared/WireSchemas";
-import { ClientEnv } from "src/client/ClientEnv";
 import { z } from "zod";
 import { getApiBase } from "./Api";
 import { getAuthHeader, getPersistentID } from "./Auth";
+import { ClientEnv } from "./ClientEnv";
 import { LobbyConfig } from "./ClientGameRunner";
 import {
   GameSpeedDownIntentEvent,
@@ -51,6 +52,7 @@ export class LocalServer {
   private replayTurns: Turn[] = [];
 
   private turns: Turn[] = [];
+  private turnOffset = 0;
 
   private intents: StampedIntent[] = [];
   private startedAt: number;
@@ -149,10 +151,24 @@ export class LocalServer {
     if (!this.clientID) {
       throw new Error("missing clientID");
     }
+    if (
+      this.lobbyConfig.resumeTurns &&
+      this.lobbyConfig.resumeTurns.length > 0
+    ) {
+      this.turns = [...this.lobbyConfig.resumeTurns];
+    }
+    if (this.lobbyConfig.resumeSnapshot) {
+      try {
+        const header = readSnapshotHeader(this.lobbyConfig.resumeSnapshot);
+        this.turnOffset = header.tick;
+      } catch (e) {
+        console.warn("Failed to read snapshot header for turnOffset", e);
+      }
+    }
     this.clientMessage({
       type: "start",
       gameStartInfo: this.lobbyConfig.gameStartInfo,
-      turns: [],
+      turns: this.turns,
       lobbyCreatedAt: this.lobbyConfig.gameStartInfo.lobbyCreatedAt,
       // Don't send myClientID for replays — viewer has no player identity.
       myClientID: this.lobbyConfig.gameRecord ? undefined : this.clientID,
@@ -209,7 +225,7 @@ export class LocalServer {
       if (!this.lobbyConfig.gameRecord) {
         if (clientMsg.turnNumber % 100 === 0) {
           // In singleplayer, only store hash every 100 turns to reduce size of game record.
-          const turn = this.turns[clientMsg.turnNumber];
+          const turn = this.turns[clientMsg.turnNumber - this.turnOffset];
           if (turn) {
             turn.hash = clientMsg.hash;
           }
@@ -273,7 +289,7 @@ export class LocalServer {
       this.intents = this.replayTurns[this.turns.length].intents;
     }
     const pastTurn: Turn = {
-      turnNumber: this.turns.length,
+      turnNumber: this.turnOffset + this.turns.length,
       intents: this.intents,
     };
     this.turns.push(pastTurn);
@@ -298,7 +314,11 @@ export class LocalServer {
   }
 
   private archiveGameRecord(unloading: boolean) {
-    if (this.archived || this.archiveInFlight) {
+    if (
+      this.archived ||
+      this.archiveInFlight ||
+      this.lobbyConfig.resumeSnapshot !== undefined
+    ) {
       return;
     }
     const players: PlayerRecord[] = [

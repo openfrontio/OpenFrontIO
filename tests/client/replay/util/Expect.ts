@@ -27,7 +27,12 @@ export function expectFrameMatchesTruth(
 
   for (const [smallID, t] of truth.players) {
     const p = frame.players.get(smallID);
-    if (p === undefined) continue; // never emitted on the wire (e.g. not yet spawned)
+    if (p === undefined) {
+      expect(t.tilesOwned, `${at} unspawned player ${smallID} tilesOwned`).toBe(
+        0,
+      );
+      continue; // never emitted on the wire (e.g. not yet spawned)
+    }
     expectSame(
       {
         tilesOwned: p.tilesOwned,

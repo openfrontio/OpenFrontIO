@@ -8,6 +8,7 @@
   },
   "dependencies": {
     "@openfront/engine-api": "0.0.0",
+    "@openfront/zbin": "0.0.0",
     "zod": "^4.4.2"
   }
 }

@@ -15,7 +15,9 @@ import {
   UnitType,
 } from "@openfront/engine-api/game/GameTypes";
 import {
+  createGameUpdatesMap,
   ErrorUpdate,
+  GameUpdateType,
   GameUpdateViewData,
 } from "@openfront/engine-api/game/GameUpdates";
 import { MapFiles } from "@openfront/engine-api/game/MapFiles";
@@ -129,7 +131,7 @@ export async function createGameRunnerFromSnapshot(
     teamGameSpawnAreas: gameMap.teamGameSpawnAreas,
   });
   // No init(): the snapshot already holds every execution init() adds.
-  return new GameRunner(
+  const gr = new GameRunner(
     game,
     new Executor(
       game,
@@ -139,12 +141,17 @@ export async function createGameRunnerFromSnapshot(
     ),
     callBack,
   );
+  if (!game.inSpawnPhase()) {
+    gr.setPendingSpawnPhaseEnd();
+  }
+  return gr;
 }
 
 export class GameRunner {
   private turns: Turn[] = [];
   private currTurn = 0;
   private isExecuting = false;
+  private pendingSpawnPhaseEnd = false;
 
   private playerViewData: Record<PlayerID, NameViewData> = {};
   // Name placements are recomputed periodically; a runner that starts
@@ -156,6 +163,10 @@ export class GameRunner {
     private execManager: Executor,
     private callBack: (gu: GameUpdateViewData | ErrorUpdate) => void,
   ) {}
+
+  public setPendingSpawnPhaseEnd(): void {
+    this.pendingSpawnPhaseEnd = true;
+  }
 
   /**
    * Serializes the simulation at the current tick boundary. Turns that were
@@ -169,6 +180,78 @@ export class GameRunner {
       gameID: this.execManager.gameID(),
       gitCommit,
     });
+  }
+
+  /**
+   * Generates a full GameUpdateViewData representing the current simulation state
+   * (e.g. for snapshot resume before processing new turns). Calling this also
+   * initializes PlayerImpl.lastSentUpdate so subsequent tick emissions retain partial diffs.
+   */
+  public snapshotViewData(): GameUpdateViewData {
+    const updates = createGameUpdatesMap();
+
+    for (const player of this.game.allPlayers()) {
+      const update = player.toUpdate(undefined, undefined, true);
+      if (update !== null) {
+        updates[GameUpdateType.Player].push(update);
+      }
+    }
+
+    for (const unit of this.game.units()) {
+      if (unit.isActive()) {
+        updates[GameUpdateType.Unit].push(unit.toUpdate());
+      }
+    }
+
+    for (const railroad of this.game.railNetwork().railroads()) {
+      updates[GameUpdateType.RailroadConstructionEvent].push(
+        railroad.toConstructionUpdate(),
+      );
+    }
+
+    for (const req of this.game.allianceRequests()) {
+      updates[GameUpdateType.AllianceRequest].push(req.toUpdate());
+    }
+
+    if (!this.game.inSpawnPhase()) {
+      this.pendingSpawnPhaseEnd = false;
+      updates[GameUpdateType.SpawnPhaseEnd].push({
+        type: GameUpdateType.SpawnPhaseEnd,
+        startTick: this.game.startTick() ?? 0,
+      });
+    }
+
+    this.playerViewData = {};
+    if (this.game.inSpawnPhase()) {
+      for (const p of this.game.players()) {
+        if (p.type() !== PlayerType.Human && p.type() !== PlayerType.Nation) {
+          continue;
+        }
+        if (p.spawnTile() === undefined) continue;
+        this.playerViewData[p.id()] = placeSpawnName(this.game, p);
+      }
+    } else {
+      for (const p of this.game.players()) {
+        this.playerViewData[p.id()] = placeName(this.game, p);
+      }
+    }
+
+    const packedTileUpdates = new Uint32Array(0);
+    const packedPlayerUpdates =
+      this.game.drainPackedPlayerUpdates() ?? undefined;
+    const packedAttackUpdates =
+      this.game.drainPackedAttackUpdates() ?? undefined;
+
+    return {
+      tick: this.game.ticks(),
+      updates,
+      packedTileUpdates,
+      ...(packedPlayerUpdates ? { packedPlayerUpdates } : {}),
+      ...(packedAttackUpdates ? { packedAttackUpdates } : {}),
+      playerNameViewData: this.playerViewData,
+      tickExecutionDuration: 0,
+      pendingTurns: 0,
+    };
   }
 
   init() {
@@ -236,6 +319,16 @@ export class GameRunner {
       }
       this.isExecuting = false;
       return false;
+    }
+
+    if (this.pendingSpawnPhaseEnd) {
+      this.pendingSpawnPhaseEnd = false;
+      if (updates[GameUpdateType.SpawnPhaseEnd].length === 0) {
+        updates[GameUpdateType.SpawnPhaseEnd].push({
+          type: GameUpdateType.SpawnPhaseEnd,
+          startTick: this.game.startTick() ?? 0,
+        });
+      }
     }
 
     // Track whether placements were recomputed this tick — the record is

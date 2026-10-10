@@ -2,9 +2,11 @@ import { GameMap, TileRef } from "@openfront/engine-api/game/GameMap";
 import {
   Cell,
   ColoredTeams,
+  Difficulty,
   Duos,
   EmojiMessage,
   GameMode,
+  GameType,
   GameUpdates,
   HumansVsNations,
   MessageType,
@@ -23,6 +25,7 @@ import {
   UnitType,
 } from "@openfront/engine-api/game/GameTypes";
 import {
+  createGameUpdatesMap,
   GameUpdate,
   GameUpdateType,
 } from "@openfront/engine-api/game/GameUpdates";
@@ -30,6 +33,7 @@ import { UnitPredicate } from "@openfront/engine-api/game/ReadViews";
 import {
   AllPlayersStats,
   ClientID,
+  GameID,
   Winner,
 } from "@openfront/engine-api/Schemas";
 import { ATTACK_INDEX_SENT } from "@openfront/engine-api/StatsSchemas";
@@ -59,6 +63,8 @@ import {
   SharedWaterCache,
   SharedWaterCacheSnapshot,
 } from "../execution/nation/SharedWaterCache";
+import { NationExecution } from "../execution/NationExecution";
+import { TribeExecution } from "../execution/TribeExecution";
 import { AbstractGraph } from "../pathfinding/algorithms/AbstractGraph";
 import { WaterPathFinder } from "../pathfinding/PathFinder";
 import { PathFinder } from "../pathfinding/types";
@@ -120,7 +126,7 @@ export type CellString = string;
 
 export class GameImpl implements Game {
   private _ticks = 0;
-  private startTick: number | null = null;
+  private _startTick: number | null = null;
 
   private unInitExecs: Execution[] = [];
 
@@ -132,7 +138,7 @@ export class GameImpl implements Game {
   private _height: number;
   _terraNullius: TerraNulliusImpl;
 
-  allianceRequests: AllianceRequestImpl[] = [];
+  private _allianceRequests: AllianceRequestImpl[] = [];
 
   private nextPlayerID = 1;
   private _nextUnitID = 1;
@@ -446,13 +452,13 @@ export class GameImpl implements Game {
       return null;
     }
     const ar = new AllianceRequestImpl(requestor, recipient, this._ticks, this);
-    this.allianceRequests.push(ar);
+    this._allianceRequests.push(ar);
     this.addUpdate(ar.toUpdate());
     return ar;
   }
 
   acceptAllianceRequest(request: AllianceRequestImpl) {
-    this.allianceRequests = this.allianceRequests.filter(
+    this._allianceRequests = this._allianceRequests.filter(
       (ar) => ar !== request,
     );
 
@@ -490,7 +496,7 @@ export class GameImpl implements Game {
   }
 
   rejectAllianceRequest(request: AllianceRequestImpl) {
-    this.allianceRequests = this.allianceRequests.filter(
+    this._allianceRequests = this._allianceRequests.filter(
       (ar) => ar !== request,
     );
     (request.requestor() as PlayerImpl).pastOutgoingAllianceRequests.push(
@@ -519,18 +525,22 @@ export class GameImpl implements Game {
     this.addUpdate({ type: GameUpdateType.GamePaused, paused });
   }
 
+  startTick(): Tick | null {
+    return this._startTick;
+  }
+
   inSpawnPhase(): boolean {
-    return this.startTick === null;
+    return this._startTick === null;
   }
 
   endSpawnPhase(): void {
-    if (this.startTick !== null) {
+    if (this._startTick !== null) {
       return;
     }
-    this.startTick = this._ticks;
+    this._startTick = this._ticks;
     this.addUpdate({
       type: GameUpdateType.SpawnPhaseEnd,
-      startTick: this.startTick,
+      startTick: this._startTick,
     });
   }
 
@@ -724,6 +734,90 @@ export class GameImpl implements Game {
     this.unInitExecs = this.unInitExecs.filter(
       (execution) => execution !== exec,
     );
+  }
+
+  takeoverPlayer(player: Player | PlayerID, localClientID: ClientID): void {
+    const target = typeof player === "string" ? this.player(player) : player;
+
+    // Remove existing AI executions from chosenPlayer if it was previously an AI nation or tribe
+    for (const exec of this.executions()) {
+      if (
+        (exec instanceof NationExecution || exec instanceof TribeExecution) &&
+        exec.playerID() === target.id()
+      ) {
+        this.removeExecution(exec);
+      }
+    }
+
+    // Update chosen player to be the local human
+    const chosenInfo = target.info();
+    const updatedChosenInfo = new PlayerInfo(
+      chosenInfo.name,
+      PlayerType.Human,
+      localClientID,
+      chosenInfo.id,
+      chosenInfo.isLobbyCreator,
+      chosenInfo.clanTag,
+      chosenInfo.friends,
+      chosenInfo.teamIndex,
+      chosenInfo.nationFlag,
+    );
+    target.setPlayerInfo(updatedChosenInfo);
+    target.markDisconnected(false);
+
+    this._humans = this._humans.filter((h) => h.id !== target.id());
+    this._humans.push(updatedChosenInfo);
+    this._nations = this._nations.filter(
+      (n) => n.playerInfo.id !== target.id(),
+    );
+  }
+
+  convertHumanToNation(player: Player | PlayerID, gameID: GameID): Execution {
+    const target = typeof player === "string" ? this.player(player) : player;
+    const pInfo = target.info();
+    const updatedBotInfo = new PlayerInfo(
+      pInfo.name,
+      PlayerType.Nation,
+      null,
+      pInfo.id,
+      false,
+      pInfo.clanTag,
+      pInfo.friends,
+      pInfo.teamIndex,
+      pInfo.nationFlag,
+    );
+    target.setPlayerInfo(updatedBotInfo);
+    target.markDisconnected(false);
+
+    this._humans = this._humans.filter((h) => h.id !== target.id());
+    this._nations = this._nations.filter(
+      (n) => n.playerInfo.id !== target.id(),
+    );
+    const spawnTile = target.spawnTile();
+    const spawnCell =
+      spawnTile !== undefined ? this.cell(spawnTile) : undefined;
+    const nation = new Nation(spawnCell, updatedBotInfo);
+    this._nations.push(nation);
+
+    const nationExec = new NationExecution(gameID, nation);
+    this.addExecution(nationExec);
+    return nationExec;
+  }
+
+  applySingleplayerConfig(difficulty?: Difficulty): void {
+    this.config().setGameType(GameType.Singleplayer);
+    if (difficulty !== undefined) {
+      this.config().setDifficulty(difficulty);
+      for (const exec of this.executions()) {
+        if (
+          exec instanceof NationExecution &&
+          exec.isActive() &&
+          exec.isInitialized()
+        ) {
+          exec.refreshDifficulty();
+        }
+      }
+    }
   }
 
   playerView(id: PlayerID): Player {
@@ -945,6 +1039,10 @@ export class GameImpl implements Game {
     });
   }
 
+  public allianceRequests(): AllianceRequest[] {
+    return this._allianceRequests;
+  }
+
   public removeAlliancesByPlayerSilently(player: Player): void {
     // Snapshot — detachAlliance reassigns the player's _alliances as it goes.
     const removed = [...(player as PlayerImpl)._alliances];
@@ -994,7 +1092,7 @@ export class GameImpl implements Game {
       return 0;
     }
 
-    return Math.max(0, this.ticks() - this.startTick!);
+    return Math.max(0, this.ticks() - this._startTick!);
   }
 
   sendEmojiUpdate(msg: EmojiMessage): void {
@@ -1453,18 +1551,18 @@ export class GameImpl implements Game {
     const unInitExecs = this.unInitExecs.map((e) => w.exec(e));
     return {
       ticks: this._ticks,
-      startTick: this.startTick,
+      startTick: this._startTick,
       humans: this._humans.map(playerInfoData),
       nations: this._nations.map(nationData),
       players: [...this._players.values()].map((p) => w.player(p)),
       execs,
       unInitExecs,
-      allianceRequests: this.allianceRequests.map((r) => w.allianceRequest(r)),
+      allianceRequests: this._allianceRequests.map((r) => w.allianceRequest(r)),
       nextPlayerID: this.nextPlayerID,
       nextUnitID: this._nextUnitID,
       nextAllianceID: this.nextAllianceID,
       units: [...this._unitMap.values()].map((u) => w.unit(u)),
-      planDrivenUnitIds: [...this.planDrivenUnitIds],
+      planDrivenUnitIds: [],
       unitGrid: this.unitGrid.snapshot((u) => w.unit(u)),
       playerTeams: [...this.playerTeams],
       botTeam: this.botTeam,
@@ -1505,10 +1603,10 @@ export class GameImpl implements Game {
    */
   restoreState(s: GameState, r: SnapshotReader): void {
     this._ticks = s.ticks;
-    this.startTick = s.startTick;
+    this._startTick = s.startTick;
     this.execs = s.execs.map((i) => r.exec(i));
     this.unInitExecs = s.unInitExecs.map((i) => r.exec(i));
-    this.allianceRequests = s.allianceRequests.map((i) =>
+    this._allianceRequests = s.allianceRequests.map((i) =>
       r.allianceRequest<AllianceRequestImpl>(i),
     );
     this.nextPlayerID = s.nextPlayerID;
@@ -1520,7 +1618,7 @@ export class GameImpl implements Game {
         return [u.id(), u];
       }),
     );
-    this.planDrivenUnitIds = new Set(s.planDrivenUnitIds);
+    this.planDrivenUnitIds = new Set();
     this.unitGrid.restoreSnapshot(s.unitGrid, (i) => r.unit(i));
     this.playerTeams = [...s.playerTeams];
     this.botTeam = s.botTeam;
@@ -1675,14 +1773,3 @@ export const GameSnapshot = snapshotType({
   }),
 });
 export type GameState = z.infer<typeof GameSnapshot.schema>;
-
-// Or a more dynamic approach that will catch new enum values:
-const createGameUpdatesMap = (): GameUpdates => {
-  const map = {} as GameUpdates;
-  Object.values(GameUpdateType)
-    .filter((key) => !isNaN(Number(key))) // Filter out reverse mappings
-    .forEach((key) => {
-      map[key as GameUpdateType] = [];
-    });
-  return map;
-};
