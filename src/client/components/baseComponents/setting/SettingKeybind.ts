@@ -11,6 +11,7 @@ export class SettingKeybind extends LitElement {
   @property({ type: String }) value = "";
   @property({ type: String }) display = "";
   @property({ type: Boolean }) easter = false;
+  @property({ type: Boolean }) allowModifiers = false;
 
   createRenderRoot() {
     return this;
@@ -104,8 +105,7 @@ export class SettingKeybind extends LitElement {
       return;
     }
 
-    // Don't capture lone modifier keys — wait for the actual key
-    if (
+    const isModifier =
       e.code === "ShiftLeft" ||
       e.code === "ShiftRight" ||
       e.code === "ControlLeft" ||
@@ -113,16 +113,21 @@ export class SettingKeybind extends LitElement {
       e.code === "AltLeft" ||
       e.code === "AltRight" ||
       e.code === "MetaLeft" ||
-      e.code === "MetaRight"
-    ) {
+      e.code === "MetaRight";
+
+    if (isModifier && !this.allowModifiers) {
       return;
     }
 
     // Prevent default only for keys we're actually capturing
     e.preventDefault();
 
-    const code = e.shiftKey ? `Shift+${e.code}` : e.code;
-    const displayKey = e.shiftKey ? `Shift+${e.key.toUpperCase()}` : e.key;
+    const code = isModifier ? e.code : e.shiftKey ? `Shift+${e.code}` : e.code;
+    const displayKey = isModifier
+      ? e.code
+      : e.shiftKey
+        ? `Shift+${e.key.toUpperCase()}`
+        : e.key;
     const prevValue = this.value;
 
     // Temporarily set the value to the new code for validation in parent
