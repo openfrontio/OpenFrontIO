@@ -190,10 +190,10 @@
         "--background-image-url",
         `url("<%- backgroundImageUrl %>")`,
       );
-      // document.documentElement.style.setProperty(
-      //   "--desktop-logo-image-url",
-      //   `url("<%- desktopLogoImageUrl %>")`,
-      // );
+      document.documentElement.style.setProperty(
+        "--desktop-logo-image-url",
+        `url("<%- desktopLogoImageUrl %>")`,
+      );
       document.documentElement.style.setProperty(
         "--mobile-logo-image-url",
         `url("<%- mobileLogoImageUrl %>")`,
@@ -258,7 +258,7 @@
   </head>
 
   <body
-    class="select-none font-sans min-h-screen bg-neutral-800 transition-opacity duration-300 ease-in-out flex flex-row flex-wrap content-start"
+    class="select-none font-sans min-h-screen bg-neutral-800 transition-opacity duration-300 ease-in-out flex flex-row flex-wrap content-start halloween-theme"
   >
     <div id="hex-grid" class="fixed inset-0 -z-50 pointer-events-none">
       <div
