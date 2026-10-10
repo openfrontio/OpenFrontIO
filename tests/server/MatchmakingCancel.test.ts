@@ -74,6 +74,26 @@ describe("GameServer - short-handed matchmade game cancellation", () => {
     expect(game.phase()).not.toBe(GamePhase.Finished);
   });
 
+  it("cancels an FFA game with fewer than four players connected", () => {
+    const game = makeRankedGame(RankedType.FreeForAll, 6);
+    for (const id of ["1", "2", "3"]) {
+      expect(game.joinClient(makeClient(`c${id}`, `p${id}`))).toBe("joined");
+    }
+
+    expect(game.cancelShortHandedMatch()).toBe(true);
+    expect(game.phase()).toBe(GamePhase.Finished);
+  });
+
+  it("starts an FFA game without its no-shows once four are connected", () => {
+    const game = makeRankedGame(RankedType.FreeForAll, 6);
+    for (const id of ["1", "2", "3", "4"]) {
+      expect(game.joinClient(makeClient(`c${id}`, `p${id}`))).toBe("joined");
+    }
+
+    expect(game.cancelShortHandedMatch()).toBe(false);
+    expect(game.phase()).not.toBe(GamePhase.Finished);
+  });
+
   it("does not cancel unknown ranked types — new modes must opt in", () => {
     const game = makeGame({
       config: {

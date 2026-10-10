@@ -556,6 +556,83 @@ describe("WinCheckExecution - 1v1 Ranked Mode", () => {
   });
 });
 
+describe("WinCheckExecution - FFA Ranked Mode", () => {
+  // Four humans holding 10 tiles each; `extra` players are added after them
+  // and take `extraTiles` each.
+  async function rankedFfaGame(
+    extra: PlayerInfo[] = [],
+    extraTiles = 0,
+    maxTimerValue?: number,
+  ) {
+    const names = ["Player1", "Player2", "Player3", "Player4"];
+    const game = await setup(
+      "big_plains",
+      {
+        infiniteGold: true,
+        gameMode: GameMode.FFA,
+        instantBuild: true,
+        rankedType: RankedType.FreeForAll,
+        maxTimerValue,
+      },
+      [...names.map((name) => playerInfo(name, PlayerType.Human)), ...extra],
+    );
+    const players = [...names, ...extra.map((p) => p.name)].map((name) =>
+      game.player(name),
+    );
+    const quota = players.map((_, i) => (i < names.length ? 10 : extraTiles));
+    const counts = players.map(() => 0);
+    game.map().forEachTile((tile) => {
+      if (!game.map().isLand(tile)) return;
+      const i = counts.findIndex((c, j) => c < quota[j]);
+      if (i === -1) return;
+      players[i].conquer(tile);
+      counts[i]++;
+    });
+    const setWinnerSpy = vi.fn();
+    game.setWinner = setWinnerSpy;
+    const winCheck = new WinCheckExecution();
+    winCheck.init(game, 0);
+    return { game, players, setWinnerSpy, winCheck };
+  }
+
+  test("sets the winner when only one human remains connected", async () => {
+    const { players, setWinnerSpy, winCheck } = await rankedFfaGame();
+    players.slice(1).forEach((p) => p.markDisconnected(true));
+
+    winCheck.checkWinnerFFA();
+
+    expect(setWinnerSpy).toHaveBeenCalledWith(players[0], expect.anything());
+    expect(winCheck.isActive()).toBe(false);
+  });
+
+  test("keeps going while two humans are still connected", async () => {
+    const { players, setWinnerSpy, winCheck } = await rankedFfaGame();
+    players.slice(2).forEach((p) => p.markDisconnected(true));
+
+    winCheck.checkWinnerFFA();
+
+    expect(setWinnerSpy).not.toHaveBeenCalled();
+    expect(winCheck.isActive()).toBe(true);
+  });
+
+  test("gives the timer win to the largest human, not a larger bot", async () => {
+    const { game, players, setWinnerSpy, winCheck } = await rankedFfaGame(
+      [playerInfo("BotPlayer", PlayerType.Bot)],
+      50,
+      1,
+    );
+    vi.spyOn(game, "elapsedGameSeconds").mockReturnValue(60);
+
+    winCheck.checkWinnerFFA();
+
+    const bot = players[4];
+    expect(bot.numTilesOwned()).toBeGreaterThan(players[0].numTilesOwned());
+    expect(setWinnerSpy).toHaveBeenCalledTimes(1);
+    expect(setWinnerSpy.mock.calls[0][0]).not.toBe(bot);
+    expect(setWinnerSpy.mock.calls[0][0].type()).toBe(PlayerType.Human);
+  });
+});
+
 describe("WinCheckExecution - Overtime", () => {
   test("win threshold decays after the start minute", async () => {
     const game = await setup("big_plains", {
