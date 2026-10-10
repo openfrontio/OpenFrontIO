@@ -9,8 +9,8 @@ import type { GameView } from "../../../../src/client/view";
 
 vi.mock("../../../../src/client/Utils", () => ({
   translateText: vi.fn((key: string) => key),
-  getTranslatedPlayerTeamLabel: vi.fn((team: string | null) =>
-    team === "Red" ? "Rood" : (team ?? ""), // "Rood" is Dutch for "Red"
+  getTranslatedPlayerTeamLabel: vi.fn(
+    (team: string | null) => (team === "Red" ? "Rood" : (team ?? "")), // "Rood" is Dutch for "Red"
   ),
   getGamesPlayed: vi.fn(() => 10),
   isInIframe: vi.fn(() => false),
