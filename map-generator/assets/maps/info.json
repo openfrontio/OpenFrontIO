@@ -1,5 +1,5 @@
 {
-  "id": "world",
+  "id": "World",
   "name": "World",
   "translation_key": "map.world",
   "categories": ["featured", "world"],

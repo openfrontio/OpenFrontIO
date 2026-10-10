@@ -1528,6 +1528,8 @@
     "vietnam": "Vietnam",
     "warshipwarship": "Warship Warship",
     "world": "World",
+    "world10k": "World 10000",
+    "world4k": "World 4000",
     "worldinverted": "World Inverted",
     "yangtzeriver": "Yangtze River",
     "yellowsea": "Yellow Sea",
@@ -1563,7 +1565,13 @@
     "unfavorite": "Remove from favourites"
   },
   "map_layers": {
-    "label": "label"
+    "label": "label",
+    "w10kland": "w10kland",
+    "w10kwater": "w10kwater",
+    "w2kland": "w2kland",
+    "w2kwater": "w2kwater",
+    "w4kland": "w4kland",
+    "w4kwater": "w4kwater"
   },
   "marketing_consent": {
     "body": "News and updates by email. Change it anytime in your account.",
