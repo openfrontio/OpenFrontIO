@@ -319,13 +319,13 @@ export class NationExecution implements Execution {
     others.forEach((other: Player) => {
       const embargoMalus = -20;
       if (
-        other.hasEmbargoAgainst(player) &&
+        other.hasManualEmbargoAgainst(player) &&
         !this.embargoMalusApplied.has(other.id())
       ) {
         player.updateRelation(other, embargoMalus);
         this.embargoMalusApplied.add(other.id());
       } else if (
-        !other.hasEmbargoAgainst(player) &&
+        !other.hasManualEmbargoAgainst(player) &&
         this.embargoMalusApplied.has(other.id())
       ) {
         player.updateRelation(other, -embargoMalus);

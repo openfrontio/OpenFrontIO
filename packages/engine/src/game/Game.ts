@@ -468,6 +468,8 @@ export interface Player extends PlayerLike {
 
   // Embargo
   hasEmbargoAgainst(other: Player): boolean;
+  // Excludes the temporary embargo every attacked player places on its attacker
+  hasManualEmbargoAgainst(other: Player): boolean;
   tradingPartners(): Player[];
   addEmbargo(other: Player, isTemporary: boolean): void;
   getEmbargoes(): Embargo[];

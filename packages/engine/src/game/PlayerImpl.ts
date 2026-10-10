@@ -1227,6 +1227,10 @@ export class PlayerImpl implements Player {
     return this.embargoes.has(other.id());
   }
 
+  hasManualEmbargoAgainst(other: Player): boolean {
+    return this.embargoes.get(other.id())?.isTemporary === false;
+  }
+
   canTrade(other: Player): boolean {
     const embargo =
       other.hasEmbargoAgainst(this) || this.hasEmbargoAgainst(other);
