@@ -46,16 +46,25 @@ const SAM_RATIO_BY_DIFFICULTY: Record<Difficulty, number> = {
   [Difficulty.Impossible]: 0.3,
 };
 
+/** Port ratio per city in team games (not on Easy), where teammates are safe trade partners */
+const TEAM_PORT_RATIO = 1;
+
 /**
- * Returns structure ratios relative to city count, adjusted by difficulty.
+ * Returns structure ratios relative to city count, adjusted by difficulty and game mode.
  * Cities are always prioritized and built first.
  * When cities are disabled, we use TILES_PER_CITY_EQUIVALENT. That's not ideal, nations won't properly upgrade structures, but it's better than nothing. Probably 99.9% of players won't disable cities anyway.
  */
 function getStructureRatios(
   difficulty: Difficulty,
+  gameMode: GameMode,
 ): Partial<Record<UnitType, StructureRatioConfig>> {
+  const teamPorts =
+    gameMode === GameMode.Team && difficulty !== Difficulty.Easy;
   return {
-    [UnitType.Port]: { ratioPerCity: 0.75, perceivedCostIncreasePerOwned: 1 },
+    [UnitType.Port]: {
+      ratioPerCity: teamPorts ? TEAM_PORT_RATIO : 0.75,
+      perceivedCostIncreasePerOwned: 1,
+    },
     [UnitType.Factory]: {
       ratioPerCity: 0.75,
       perceivedCostIncreasePerOwned: 1,
@@ -74,11 +83,45 @@ function getStructureRatios(
 /** Perceived cost increase percentage per city owned */
 const CITY_PERCEIVED_COST_INCREASE_PER_OWNED = 1;
 
-/** Cities owned before saving up for nukes inflates structure costs (not on Easy) */
-const CITIES_BEFORE_SAVING = 3;
+/** Cities owned before saving up for nukes inflates structure costs, keyed by difficulty */
+const CITIES_BEFORE_SAVING: Record<Difficulty, number> = {
+  [Difficulty.Easy]: 0,
+  [Difficulty.Medium]: 3,
+  [Difficulty.Hard]: 4,
+  [Difficulty.Impossible]: 5,
+};
 
-/** Factory ratio multiplier when the nation has coastal tiles */
-const FACTORY_COASTAL_RATIO_MULTIPLIER = 0.33;
+/** Scales the perceived cost increase of cities, ports and factories while saving up, keyed by difficulty */
+const INCOME_STRUCTURE_SAVING_WEIGHT: Record<Difficulty, number> = {
+  [Difficulty.Easy]: 1,
+  [Difficulty.Medium]: 0.8,
+  [Difficulty.Hard]: 0.6,
+  [Difficulty.Impossible]: 0.4,
+};
+
+/** Factory ratio multiplier when the nation has coastal tiles, keyed by difficulty */
+const FACTORY_COASTAL_RATIO_MULTIPLIER: Record<Difficulty, number> = {
+  [Difficulty.Easy]: 0.33,
+  [Difficulty.Medium]: 0.45,
+  [Difficulty.Hard]: 0.55,
+  [Difficulty.Impossible]: 0.6,
+};
+
+/** Structures a nation wants under SAM cover */
+const SAM_PROTECTED_TYPES: readonly UnitType[] = [
+  UnitType.City,
+  UnitType.Factory,
+  UnitType.MissileSilo,
+  UnitType.Port,
+];
+
+/** Percent chance to upgrade a SAM instead of building one when SAMs already cover every structure */
+const SAM_UPGRADE_WHEN_COVERED_CHANCE: Record<Difficulty, number> = {
+  [Difficulty.Easy]: 0,
+  [Difficulty.Medium]: 50,
+  [Difficulty.Hard]: 100,
+  [Difficulty.Impossible]: 100,
+};
 
 /** Maximum number of missile silos a nation will build */
 const MAX_MISSILE_SILOS = 3;
@@ -627,8 +670,8 @@ export class NationStructureBehavior {
     hasCoastalTiles: boolean,
   ): boolean {
     const gameConfig = this.game.config();
-    const { difficulty } = gameConfig.gameConfig();
-    const ratios = getStructureRatios(difficulty);
+    const { difficulty, gameMode } = gameConfig.gameConfig();
+    const ratios = getStructureRatios(difficulty, gameMode);
     const config = ratios[type];
     if (config === undefined) {
       return false;
@@ -636,13 +679,13 @@ export class NationStructureBehavior {
 
     let ratio = config.ratioPerCity;
 
-    // Heavily reduce factory spawning if we have coastal tiles
+    // Reduce factory spawning if we have coastal tiles
     if (
       type === UnitType.Factory &&
       hasCoastalTiles &&
       !gameConfig.isUnitDisabled(UnitType.Port)
     ) {
-      ratio *= FACTORY_COASTAL_RATIO_MULTIPLIER;
+      ratio *= FACTORY_COASTAL_RATIO_MULTIPLIER[difficulty];
     }
 
     const owned = this.player.unitsOwned(type);
@@ -673,11 +716,17 @@ export class NationStructureBehavior {
       return false;
     }
 
+    // Another SAM would cover nothing new, but a higher level stops more of a salvo
+    if (type === UnitType.SAMLauncher && this.shouldUpgradeSamInstead()) {
+      return this.upgradeStructure(this.samProtectingMost());
+    }
+
     // Check if we should upgrade instead of building new
     const structures = this.player.units(type);
+    const upgradable = game.config().unitInfo(type).upgradable === true;
     if (
       this.getTotalStructureDensity() > UPGRADE_DENSITY_THRESHOLD &&
-      game.config().unitInfo(type).upgradable
+      upgradable
     ) {
       if (this.maybeUpgradeStructure(structures)) {
         return true;
@@ -692,7 +741,12 @@ export class NationStructureBehavior {
 
     const tile = this.structureSpawnTile(type);
     if (tile === null) {
-      return false;
+      // No room for a new one (e.g. a short coastline full of ports): upgrade one instead
+      return (
+        upgradable &&
+        game.config().gameConfig().difficulty !== Difficulty.Easy &&
+        this.maybeUpgradeStructure(structures)
+      );
     }
     const canBuild = this.player.canBuild(type, tile);
     if (canBuild === false) {
@@ -716,12 +770,9 @@ export class NationStructureBehavior {
       return realCost;
     }
 
-    // Like humans, nations don't save up before their first few cities stand. The build order
-    // still holds: until then, whatever is due before the next city is cheaper than that city.
-    if (
-      this.cityCount() < CITIES_BEFORE_SAVING &&
-      this.game.config().gameConfig().difficulty !== Difficulty.Easy
-    ) {
+    // Like humans, nations don't save up before their first few cities stand
+    const { difficulty, gameMode } = this.game.config().gameConfig();
+    if (this.cityCount() < CITIES_BEFORE_SAVING[difficulty]) {
       return realCost;
     }
 
@@ -731,10 +782,17 @@ export class NationStructureBehavior {
     if (type === UnitType.City) {
       increasePerOwned = CITY_PERCEIVED_COST_INCREASE_PER_OWNED;
     } else {
-      const { difficulty } = this.game.config().gameConfig();
-      const ratios = getStructureRatios(difficulty);
+      const ratios = getStructureRatios(difficulty, gameMode);
       const config = ratios[type];
       increasePerOwned = config?.perceivedCostIncreasePerOwned ?? 0.1;
+    }
+    // Income structures pay for themselves, so smarter nations keep building them while saving
+    if (
+      type === UnitType.City ||
+      type === UnitType.Port ||
+      type === UnitType.Factory
+    ) {
+      increasePerOwned *= INCOME_STRUCTURE_SAVING_WEIGHT[difficulty];
     }
 
     // Each owned structure makes the next one feel more expensive
@@ -781,27 +839,69 @@ export class NationStructureBehavior {
     return this.cost(UnitType.SAMLauncher);
   }
 
-  /**
-   * Tries to upgrade an existing structure if density threshold is exceeded.
-   * @param structures The pool of structures to consider for upgrading
-   * @returns true if an upgrade was initiated, false otherwise
-   */
+  /** Upgrades the best of the given structures; false if none can be upgraded. */
   private maybeUpgradeStructure(structures: Unit[]): boolean {
-    if (this.getTotalStructureDensity() <= UPGRADE_DENSITY_THRESHOLD) {
+    return this.upgradeStructure(this.findBestStructureToUpgrade(structures));
+  }
+
+  private upgradeStructure(structure: Unit | null): boolean {
+    if (structure === null) {
       return false;
     }
-    if (structures.length === 0) {
+    // canUpgradeUnit was already checked by the caller and is checked again in UpgradeStructureExecution
+    this.game.addExecution(
+      new UpgradeStructureExecution(this.player, structure.id()),
+    );
+    return true;
+  }
+
+  /** Whether to upgrade a SAM instead of building one, because SAMs already cover every structure. */
+  private shouldUpgradeSamInstead(): boolean {
+    const { difficulty } = this.game.config().gameConfig();
+    const chance = SAM_UPGRADE_WHEN_COVERED_CHANCE[difficulty];
+    const sams = this.player.units(UnitType.SAMLauncher);
+    if (chance === 0 || sams.length === 0) {
       return false;
     }
-    const structureToUpgrade = this.findBestStructureToUpgrade(structures);
-    if (structureToUpgrade !== null) {
-      //canUpgradeUnit already checked in findBestStructureToUpgrade and again in UpgradeStructureExecution
-      this.game.addExecution(
-        new UpgradeStructureExecution(this.player, structureToUpgrade.id()),
+    const game = this.game;
+    const config = game.config();
+    for (const unit of this.player.units(SAM_PROTECTED_TYPES)) {
+      const covered = sams.some(
+        (sam) =>
+          game.euclideanDistSquared(unit.tile(), sam.tile()) <=
+          config.samRange(sam.level()) ** 2,
       );
-      return true;
+      if (!covered) {
+        return false;
+      }
     }
-    return false;
+    return chance === 100 || this.random.nextInt(0, 100) < chance;
+  }
+
+  /** The upgradable SAM with the most structure levels in range, i.e. the likeliest nuke target. */
+  private samProtectingMost(): Unit | null {
+    const game = this.game;
+    const config = game.config();
+    const protectable = this.player.units(SAM_PROTECTED_TYPES);
+    let best: Unit | null = null;
+    let bestLevels = -1;
+    for (const sam of this.player.units(UnitType.SAMLauncher)) {
+      if (!this.player.canUpgradeUnit(sam)) continue;
+      const rangeSquared = config.samRange(sam.level()) ** 2;
+      let levels = 0;
+      for (const unit of protectable) {
+        if (
+          game.euclideanDistSquared(unit.tile(), sam.tile()) <= rangeSquared
+        ) {
+          levels += unit.level();
+        }
+      }
+      if (levels > bestLevels) {
+        best = sam;
+        bestLevels = levels;
+      }
+    }
+    return best;
   }
 
   /**
