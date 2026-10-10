@@ -70,6 +70,10 @@ export class MirvExecution implements Execution {
 
   private speed: number = -1;
 
+  private static readonly SATURATION_THRESHOLD = 1500;
+  private consecutiveOverlapFailures = 0;
+  private spatialGrid: Map<number, TileRef[]> = new Map();
+
   private stagedTargets: TileRef[] = [];
   private warheadsSpawned = false;
   private warheadExecutions: NukeExecution[] = [];
@@ -86,6 +90,7 @@ export class MirvExecution implements Execution {
     this.baseX = this.mg.x(this.dst);
     this.baseY = this.mg.y(this.dst);
     this.stagedTargets = [this.dst];
+    this.spatialGrid = this.buildOverlapGrid(this.stagedTargets);
   }
 
   tick(ticks: number): void {
@@ -175,11 +180,24 @@ export class MirvExecution implements Execution {
 
     // Stagger destination finding across ticks 20 down to 11 before separation
     if (remainingTicks <= 20 && remainingTicks > 10) {
-      for (let attempt = 0; attempt < 100; attempt++) {
-        if (this.stagedTargets.length >= this.warheadCount) break;
+      if (
+        this.consecutiveOverlapFailures < MirvExecution.SATURATION_THRESHOLD &&
+        this.stagedTargets.length < this.warheadCount
+      ) {
+        for (let attempt = 0; attempt < 100; attempt++) {
+          if (this.stagedTargets.length >= this.warheadCount) break;
 
-        const target = this.tryGenerateTarget(this.stagedTargets);
-        if (target) this.stagedTargets.push(target);
+          const target = this.tryGenerateTarget();
+          if (target) {
+            this.stagedTargets.push(target);
+            this.addToGrid(this.spatialGrid, target);
+          }
+          if (
+            this.consecutiveOverlapFailures >=
+            MirvExecution.SATURATION_THRESHOLD
+          )
+            break;
+        }
       }
     }
 
@@ -203,16 +221,28 @@ export class MirvExecution implements Execution {
   }
 
   private finalizeDestinations(additionalAttempts = 500): void {
+    const countBefore = this.stagedTargets.length;
     // Re-check target tile ownership at tick 10
     this.stagedTargets = this.stagedTargets.filter(
       (tile) => tile === this.dst || this.mg.owner(tile) === this.targetPlayer,
     );
 
-    // Top-up loop using specified attempt budget if targets were lost or not yet filled
-    for (let attempt = 0; attempt < additionalAttempts; attempt++) {
-      if (this.stagedTargets.length >= this.warheadCount) break;
-      const target = this.tryGenerateTarget(this.stagedTargets);
-      if (target) this.stagedTargets.push(target);
+    this.spatialGrid = this.buildOverlapGrid(this.stagedTargets);
+
+    if (this.stagedTargets.length < countBefore) {
+      this.consecutiveOverlapFailures = 0;
+    }
+
+    if (this.consecutiveOverlapFailures < MirvExecution.SATURATION_THRESHOLD) {
+      // Top-up loop using specified attempt budget if targets were lost or not yet filled
+      for (let attempt = 0; attempt < additionalAttempts; attempt++) {
+        if (this.stagedTargets.length >= this.warheadCount) break;
+        const target = this.tryGenerateTarget();
+        if (target) {
+          this.stagedTargets.push(target);
+          this.addToGrid(this.spatialGrid, target);
+        }
+      }
     }
 
     // Sort in place
@@ -220,6 +250,11 @@ export class MirvExecution implements Execution {
       (a, b) =>
         this.mg.manhattanDist(b, this.dst) - this.mg.manhattanDist(a, this.dst),
     );
+
+    // We no longer need the spatial grid after targets are finalized,
+    // and clearing it ensures the snapshot comparison tool doesn't complain about map insertion order
+    // while also freeing the memory.
+    this.spatialGrid.clear();
   }
 
   private spawnWarheadsWithWait(remainingTicks: number): void {
@@ -255,7 +290,34 @@ export class MirvExecution implements Execution {
     this.nuke.delete(false);
   }
 
-  private tryGenerateTarget(taken: TileRef[]): TileRef | undefined {
+  private cellKey(cx: number, cy: number): number {
+    return cy * (Math.floor(this.mg.width() / this.minimumSpread) + 2) + cx;
+  }
+
+  private addToGrid(grid: Map<number, TileRef[]>, tile: TileRef): void {
+    const cx = Math.floor(this.mg.x(tile) / this.minimumSpread);
+    const cy = Math.floor(this.mg.y(tile) / this.minimumSpread);
+    const key = this.cellKey(cx, cy);
+    let cell = grid.get(key);
+    if (!cell) {
+      cell = [];
+      grid.set(key, cell);
+    }
+    cell.push(tile);
+  }
+
+  private buildOverlapGrid(taken: TileRef[]): Map<number, TileRef[]> {
+    const grid = new Map<number, TileRef[]>();
+    for (const t of taken) {
+      this.addToGrid(grid, t);
+    }
+    return grid;
+  }
+
+  private tryGenerateTarget(): TileRef | undefined {
+    if (this.consecutiveOverlapFailures >= MirvExecution.SATURATION_THRESHOLD)
+      return undefined;
+
     for (let attempt = 0; attempt < 100; attempt++) {
       const r1 = this.random.next();
       const r2 = (r1 * 15485863) % 1;
@@ -267,13 +329,13 @@ export class MirvExecution implements Execution {
         continue;
       }
 
-      const tile = this.mg.ref(x, y);
-
-      if (!this.mg.isLand(tile)) {
+      if ((x - this.baseX) ** 2 + (y - this.baseY) ** 2 > this.rangeSquared) {
         continue;
       }
 
-      if ((x - this.baseX) ** 2 + (y - this.baseY) ** 2 > this.rangeSquared) {
+      const tile = this.mg.ref(x, y);
+
+      if (!this.mg.isLand(tile)) {
         continue;
       }
 
@@ -281,23 +343,35 @@ export class MirvExecution implements Execution {
         continue;
       }
 
-      if (this.isOverlapping(x, y, taken)) {
+      if (this.isOverlapping(x, y)) {
+        this.consecutiveOverlapFailures++;
         continue;
       }
 
+      this.consecutiveOverlapFailures = 0;
       return tile;
     }
   }
 
-  private isOverlapping(x: number, y: number, taken: TileRef[]): boolean {
-    for (const existingTile of taken) {
-      const existingTileX = this.mg.x(existingTile);
-      const existingTileY = this.mg.y(existingTile);
-      const manhattanDistance =
-        Math.abs(x - existingTileX) + Math.abs(y - existingTileY);
+  private isOverlapping(x: number, y: number): boolean {
+    const cx = Math.floor(x / this.minimumSpread);
+    const cy = Math.floor(y / this.minimumSpread);
 
-      if (manhattanDistance < this.minimumSpread) {
-        return true;
+    for (let gy = cy - 1; gy <= cy + 1; gy++) {
+      if (gy < 0) continue;
+      for (let gx = cx - 1; gx <= cx + 1; gx++) {
+        if (gx < 0) continue;
+
+        const cell = this.spatialGrid.get(this.cellKey(gx, gy));
+        if (!cell) continue;
+
+        for (const t of cell) {
+          const manhattanDistance =
+            Math.abs(x - this.mg.x(t)) + Math.abs(y - this.mg.y(t));
+          if (manhattanDistance < this.minimumSpread) {
+            return true;
+          }
+        }
       }
     }
 
@@ -425,11 +499,13 @@ export class MirvExecution implements Execution {
       stagedTargets: w.tiles(this.stagedTargets),
       warheadsSpawned: this.warheadsSpawned,
       warheadExecutions: this.warheadExecutions.map((e) => w.exec(e)),
+      consecutiveOverlapFailures: this.consecutiveOverlapFailures,
     });
   }
 
   restoreSnapshot(s: MirvState, r: SnapshotReader): void {
     this.active = s.active;
+    this.mg = r.game;
     this.player = r.player(s.player);
     this.dst = s.dst;
     this.range = s.range;
@@ -457,6 +533,12 @@ export class MirvExecution implements Execution {
     this.warheadExecutions = s.warheadExecutions.map((i) =>
       r.exec<NukeExecution>(i),
     );
+    this.consecutiveOverlapFailures = s.consecutiveOverlapFailures;
+    if (s.warheadsSpawned) {
+      this.spatialGrid = new Map();
+    } else {
+      this.spatialGrid = this.buildOverlapGrid(this.stagedTargets);
+    }
   }
 }
 
@@ -491,6 +573,7 @@ const MirvStateSchema = z.object({
   stagedTargets: zTiles(),
   warheadsSpawned: z.boolean(),
   warheadExecutions: z.array(zRef()),
+  consecutiveOverlapFailures: zInt(),
 });
 type MirvState = z.infer<typeof MirvStateSchema>;
 
