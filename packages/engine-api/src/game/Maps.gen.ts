@@ -129,7 +129,7 @@ export enum GameMapType {
   Venice = "Venice", // map-generator/assets/maps/venice/info.json
   Vietnam = "Vietnam", // map-generator/assets/maps/vietnam/info.json
   WarshipWarship = "Warship Warship", // map-generator/assets/maps/warshipwarship/info.json
-  world = "World", // map-generator/assets/maps/world/info.json
+  World = "World", // map-generator/assets/maps/world/info.json
   world4k = "World 4000", // map-generator/assets/maps/world4k/info.json
   WorldInverted = "World Inverted", // map-generator/assets/maps/worldinverted/info.json
   YangtzeRiver = "Yangtze River", // map-generator/assets/maps/yangtzeriver/info.json
@@ -2475,8 +2475,8 @@ export const maps: readonly MapInfo[] = [
     defaultNationCount: 10,
   },
   {
-    id: "world",
-    type: GameMapType.world,
+    id: "World",
+    type: GameMapType.World,
     translationKey: "map.world",
     categories: ["featured", "world"],
     multiplayerFrequency: 30,
