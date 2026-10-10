@@ -2,7 +2,7 @@ import type { Team } from "@openfront/engine-api/game/GameTypes";
 import { customElement } from "lit/decorators.js";
 import { type StatsRow, StatsTable } from "../../components/StatsTable";
 import type { ColumnId } from "../../StatsConstants";
-import { translateText } from "../../Utils";
+import { getTranslatedPlayerTeamLabel } from "../../Utils";
 import type { GameView, PlayerView } from "../../view";
 import {
   type ColumnDef,
@@ -60,12 +60,9 @@ export class TeamStats extends StatsTable {
     }
 
     return [...teams.entries()].map(([team, players]) => {
-      const labelKey = `team_colors.${team.toLowerCase()}`;
-      const translatedName = translateText(labelKey);
-
       return {
         key: team,
-        name: translatedName === labelKey ? team : translatedName,
+        name: getTranslatedPlayerTeamLabel(team),
         values: aggregateTeamValues(players, columns, game),
         emphasized: team === myTeam,
         pinned: team === myTeam,

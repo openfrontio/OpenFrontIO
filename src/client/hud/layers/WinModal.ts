@@ -8,6 +8,7 @@ import { customElement, state } from "lit/decorators.js";
 import {
   DESKTOP_TUTORIAL_VIDEO_URL,
   getGamesPlayed,
+  getTranslatedPlayerTeamLabel,
   homeHref,
   isInIframe,
   translateText,
@@ -633,7 +634,7 @@ export class WinModal extends LitElement implements Controller {
           crazyGamesSDK.happytime();
         } else {
           this._title = translateText("win_modal.other_team", {
-            team: wu.winner[1],
+            team: getTranslatedPlayerTeamLabel(wu.winner[1]),
           });
           this.isWin = false;
         }
