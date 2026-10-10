@@ -425,3 +425,53 @@ Results are ordered by game start time, newest first.
 ```bash
 curl "https://api.openfront.io/public/clan/UN/sessions?start=2025-11-15T00:00:00Z&end=2025-11-18T23:59:59Z&limit=10&page=1"
 ```
+
+### Clan Members
+
+List the members of a clan with their role and the wins/losses they recorded with the clan.
+
+**Endpoint**
+
+```
+GET https://api.openfront.io/public/clan/:clanTag/members
+```
+
+**Query Parameters:**
+
+- `page` (optional): Page number, starting at 1 (default: 1)
+- `limit` (optional): Results per page, 1-50 (default: 10)
+
+**Response:**
+
+```json
+{
+  "results": [
+    {
+      "role": "leader",
+      "joinedAt": "2026-05-03T11:33:05.268Z",
+      "publicId": "HabCsQYR",
+      "username": "alice",
+      "stats": {
+        "total": { "wins": 12, "losses": 7 },
+        "team": { "wins": 9, "losses": 3 },
+        "2": { "wins": 2, "losses": 1 }
+      }
+    }
+  ],
+  "total": 150,
+  "page": 1,
+  "limit": 10
+}
+```
+
+- `role` is one of `[leader, officer, member]`.
+- `total` is the number of members in the clan.
+- `stats` has `{ wins, losses }` for `total`, `ffa`, `team`, `hvn`, `duos`, `trios`, `quads`, `ranked`, `1v1`, and `"2"` to `"7"` (number of teams in the game).
+- Results are ordered by role (leader, then officers, then members), then by join date, oldest first.
+- A page past the last one returns an empty `results` array; an unknown clan tag returns 404.
+
+**Example**
+
+```bash
+curl "https://api.openfront.io/public/clan/UN/members?limit=50&page=1"
+```
