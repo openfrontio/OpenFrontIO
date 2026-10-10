@@ -922,6 +922,9 @@
     "hvn": "Humans vs Nations",
     "teams": "Teams"
   },
+  "game_right_sidebar": {
+    "share_link": "Share Link"
+  },
   "game_settings": {
     "bots": "Tribes: ",
     "compact_map": "Compact Map",
