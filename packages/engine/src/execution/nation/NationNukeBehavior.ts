@@ -289,6 +289,11 @@ export class NationNukeBehavior {
       return incomingAttackPlayer;
     }
 
+    const incomingNukePlayer = this.findIncomingNukePlayer();
+    if (incomingNukePlayer) {
+      return incomingNukePlayer;
+    }
+
     // On Impossible, the richest nation hunts very high structure density targets
     // Restricting to the richest nation prevents every impossible nation
     // from piling onto the same compact player.
@@ -363,6 +368,22 @@ export class NationNukeBehavior {
       return teamTarget;
     }
 
+    return null;
+  }
+
+  private findIncomingNukePlayer(): Player | null {
+    const nukes = this.game.units(UnitType.AtomBomb, UnitType.HydrogenBomb);
+    for (const nuke of nukes) {
+      const sender = nuke.owner();
+      if (this.player.isFriendly(sender)) continue;
+      const targetTile = nuke.targetTile();
+      if (
+        targetTile !== undefined &&
+        this.game.owner(targetTile) === this.player
+      ) {
+        return sender;
+      }
+    }
     return null;
   }
 

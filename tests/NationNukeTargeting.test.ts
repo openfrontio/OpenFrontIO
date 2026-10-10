@@ -154,6 +154,28 @@ describe("Nation nuke targeting", () => {
     expect(launchNukes(game, nation)).toHaveLength(0);
   });
 
+  it.each([false, true])(
+    "nukes back a player whose bomb is flying at it (bomb in flight: %s)",
+    async (bombInFlight) => {
+      const { game, nation, human } = await setupDuel(true);
+      const other = game.player("other_id");
+      conquerRect(game, other, 20, 150, 60, 190);
+      nation.updateRelation(other, -100);
+      if (bombInFlight) {
+        human.buildUnit(UnitType.HydrogenBomb, game.ref(150, 150), {
+          targetTile: game.ref(5, 5),
+          trajectory: [],
+        });
+      }
+
+      const nukes = launchNukes(game, nation);
+      expect(nukes).toHaveLength(1);
+      expect(game.owner(nukes[0].targetTile()!)).toBe(
+        bombInFlight ? human : other,
+      );
+    },
+  );
+
   it.each([
     [false, 1],
     [true, 0],
