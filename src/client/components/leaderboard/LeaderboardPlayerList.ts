@@ -22,6 +22,7 @@ const RANKED_TYPES = Object.values(RankedType);
 const emptyLadders = (): Record<RankedType, LadderState> => ({
   [RankedType.OneVOne]: { entries: [], userEntry: null, hasMore: true },
   [RankedType.TwoVTwo]: { entries: [], userEntry: null, hasMore: true },
+  [RankedType.FreeForAll]: { entries: [], userEntry: null, hasMore: true },
 });
 
 const toPlayerEntry = (
@@ -42,7 +43,8 @@ export class LeaderboardPlayerList extends LitElement {
   /**
    * Which ladder to display. Each ranked type is ranked independently — the
    * same player can hold a different elo and rank on each — but one request
-   * returns both, so the other ladder rides along and is kept for its own tab.
+   * returns all of them, so the other ladders ride along and are kept for
+   * their own tabs.
    */
   @property({ attribute: false }) rankedType: RankedType = RankedType.OneVOne;
 
