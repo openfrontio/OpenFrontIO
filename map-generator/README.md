@@ -36,7 +36,7 @@ Maps are discovered automatically from the `assets/maps/` folders — `info.json
 
 5. Find the output folder at `../resources/maps/<map_name>`
 
-`go run .` formats every file it writes with Prettier as its last step (shelling out to `npx prettier --write`), so the output already matches `npm run format` — no separate formatting step needed. If `npx prettier` isn't available (e.g. `npm ci` hasn't been run), generation still succeeds but prints a warning; run `npm run format` from the root directory to format manually in that case.
+`go run .` formats every file it writes with Oxfmt as its last step (shelling out to `npx oxfmt --write`), so the output already matches `npm run format` — no separate formatting step needed. If `npx oxfmt` isn't available (e.g. `npm ci` hasn't been run), generation still succeeds but prints a warning; run `npm run format` from the root directory to format manually in that case.
 
 `npm run gen-maps` (from the root directory) is equivalent to `go run .` for all maps.
 

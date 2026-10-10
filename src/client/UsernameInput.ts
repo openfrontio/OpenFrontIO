@@ -307,9 +307,9 @@ export class UsernameInput extends LitElement {
     window.showPage?.("page-clan");
     void customElements.whenDefined("clan-modal").then(() => {
       document
-        .querySelector<
-          HTMLElement & { open: (args: { tab: string }) => void }
-        >("clan-modal")
+        .querySelector<HTMLElement & { open: (args: { tab: string }) => void }>(
+          "clan-modal",
+        )
         ?.open({ tab: "browse" });
     });
   };
@@ -1154,9 +1154,9 @@ export class UsernameInput extends LitElement {
     window.showPage?.("page-clan");
     void customElements.whenDefined("clan-modal").then(() => {
       document
-        .querySelector<
-          HTMLElement & { open: (args: { tag: string }) => void }
-        >("clan-modal")
+        .querySelector<HTMLElement & { open: (args: { tag: string }) => void }>(
+          "clan-modal",
+        )
         ?.open({ tag });
     });
   }
