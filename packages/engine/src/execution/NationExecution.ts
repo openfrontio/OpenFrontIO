@@ -196,6 +196,7 @@ export class NationExecution implements Execution {
     }
 
     this.attackBehavior.followUpLandings();
+    this.nukeBehavior.followUpStrikes();
 
     if (ticks % this.attackRate !== this.attackTick) {
       // Call handleStructures twice between regular attack ticks (at 1/3 and 2/3 of the interval)

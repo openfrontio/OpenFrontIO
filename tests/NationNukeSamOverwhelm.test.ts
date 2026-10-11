@@ -66,7 +66,6 @@ function sendNukes(game: Game, nation: Player) {
     emojiBehavior,
   );
   new NationNukeBehavior(
-    // Seed 2 doesn't roll a hydro-only nation
     new PseudoRandom(2),
     game,
     nation,

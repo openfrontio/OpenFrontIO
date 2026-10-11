@@ -43,6 +43,9 @@ const MIN_MIRV_LEAK_SHARE: Record<Difficulty, number> = {
 const MIRV_MAX_WARHEADS = 350;
 const LAND_TILES_PER_MIRV_WARHEAD = 2000;
 
+/** Hard & Impossible MIRV a bordering rival with at least this share of their land, ahead of a land attack */
+const RIVAL_MIN_TILE_RATIO = 0.5;
+
 /** Target tiles sampled to estimate SAM coverage */
 const MIRV_COVERAGE_SAMPLES = 40;
 
@@ -280,6 +283,12 @@ export class NationMIRVBehavior {
       return true;
     }
 
+    const rivalTarget = this.selectRivalTarget();
+    if (rivalTarget && this.isWorthMirving(rivalTarget)) {
+      this.maybeSendMIRV(rivalTarget);
+      return true;
+    }
+
     return false;
   }
 
@@ -374,6 +383,25 @@ export class NationMIRVBehavior {
     }
 
     return null;
+  }
+
+  /** Hard & Impossible: the biggest bordering player about our size, wiped out by a MIRV and our attack when it lands. */
+  private selectRivalTarget(): Player | null {
+    const { difficulty } = this.game.config().gameConfig();
+    if (
+      difficulty !== Difficulty.Hard &&
+      difficulty !== Difficulty.Impossible
+    ) {
+      return null;
+    }
+    const minTiles = this.player.numTilesOwned() * RIVAL_MIN_TILE_RATIO;
+    let best: Player | null = null;
+    for (const p of this.getValidMirvTargetPlayers()) {
+      if (this.player.isFriendly(p) || p.numTilesOwned() < minTiles) continue;
+      if (best !== null && p.numTilesOwned() <= best.numTilesOwned()) continue;
+      if (this.player.sharesBorderWith(p)) best = p;
+    }
+    return best;
   }
 
   // MIRV Cooldown Methods

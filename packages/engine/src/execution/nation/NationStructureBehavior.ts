@@ -27,7 +27,11 @@ import { ConstructionExecution } from "../ConstructionExecution";
 import { UpgradeStructureExecution } from "../UpgradeStructureExecution";
 import { nearestTileDist, nearestTileDistCapped } from "../Util";
 import { isMirvWorthSavingFor } from "./NationMIRVBehavior";
-import { hasHighStartingGold, randTerritoryTileArray } from "./NationUtils";
+import {
+  hasHighStartingGold,
+  isSaveUpWithinReach,
+  randTerritoryTileArray,
+} from "./NationUtils";
 
 /**
  * Configuration for how many structures of each type a nation should build
@@ -856,7 +860,11 @@ export class NationStructureBehavior {
     const realCost = this.cost(type);
 
     const saveUpTarget = this.getSaveUpTarget();
-    if (saveUpTarget === 0n || this.player.gold() >= saveUpTarget) {
+    if (
+      saveUpTarget === 0n ||
+      this.player.gold() >= saveUpTarget ||
+      !isSaveUpWithinReach(this.game, this.player, saveUpTarget)
+    ) {
       return realCost;
     }
 

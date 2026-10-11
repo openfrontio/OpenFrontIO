@@ -75,7 +75,12 @@ function setupCoast(
       .map((c) => c[0])
       .filter((e) => e instanceof UpgradeStructureExecution)
       .map((e) => e["unitId"]);
-  return { game, nation, coast, behavior, cities, built, upgraded };
+  // Lifetime income, which tells Hard & Impossible whether a save-up target is within reach
+  const earned = (gold: bigint) => {
+    nation.addGold(gold);
+    nation.removeGold(gold);
+  };
+  return { game, nation, coast, behavior, cities, built, upgraded, earned };
 }
 
 describe("Nation economy at the start", () => {
@@ -184,8 +189,32 @@ describe("Nation economy at the start", () => {
   ])(
     "%s: with %i cities the next one feels like %i",
     (difficulty, owned, perceived) => {
-      const { behavior, cities } = setupCoast({ difficulty, gameMode: ffa });
+      const { behavior, cities, earned } = setupCoast({
+        difficulty,
+        gameMode: ffa,
+      });
       cities(owned);
+      earned(10_000_000n);
+      expect(behavior["getPerceivedCost"](UnitType.City)).toBe(perceived);
+    },
+  );
+
+  // A MIRV and a hydrogen bomb cost 30M: within 3 minutes of income from 10M a minute on,
+  // and income earned so far counts twice as the current rate
+  it.each([
+    [Difficulty.Medium, 0n, 4_200_000n],
+    [Difficulty.Hard, 0n, 1_000_000n],
+    [Difficulty.Hard, 4_900_000n, 1_000_000n],
+    [Difficulty.Hard, 5_000_000n, 3_400_000n],
+  ])(
+    "%s: with 4 cities and %i gold earned in the first minute, the next city feels like %i",
+    (difficulty, income, perceived) => {
+      const { behavior, cities, earned } = setupCoast({
+        difficulty,
+        gameMode: ffa,
+      });
+      cities(4);
+      earned(income);
       expect(behavior["getPerceivedCost"](UnitType.City)).toBe(perceived);
     },
   );
@@ -197,7 +226,7 @@ describe("Nation economy at the start", () => {
   ])(
     "without cities, on a %i-wide map (%i tiles) the second port feels like %i",
     (size, tiles, perceived) => {
-      const { game, nation, behavior } = setupCoast(
+      const { game, nation, behavior, earned } = setupCoast(
         {
           difficulty: Difficulty.Hard,
           gameMode: ffa,
@@ -205,6 +234,7 @@ describe("Nation economy at the start", () => {
         },
         { size },
       );
+      earned(10_000_000n);
       expect(nation.numTilesOwned()).toBe(tiles);
       nation.buildUnit(UnitType.Port, game.ref(size / 4 - 1, 10), {});
       expect(behavior["getPerceivedCost"](UnitType.Port)).toBe(perceived);

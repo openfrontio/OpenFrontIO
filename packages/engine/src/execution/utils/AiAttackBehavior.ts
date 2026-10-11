@@ -737,6 +737,26 @@ export class AiAttackBehavior {
     return this.sendLandAttack(attacker, () => send, attacker);
   }
 
+  /** Troops a strike on target could send now: above the reserve, and within troopSendCap without target. */
+  strikeTroops(target: Player): number {
+    const maxTroops = this.game.config().maxTroops(this.player);
+    return Math.min(
+      this.player.troops() - maxTroops * this.reserveRatio,
+      this.troopSendCap(target),
+    );
+  }
+
+  /** Attacks a player our nuke just hit, while its troops are down. Skips the trigger ratio. */
+  strike(target: Player): boolean {
+    if (
+      this.player.isFriendly(target) ||
+      !this.player.sharesBorderWith(target)
+    ) {
+      return false;
+    }
+    return this.sendLandAttack(target, undefined, target);
+  }
+
   // A bordering runaway leader. Hard & Impossible always consider it: the
   // too-weak check in calculateAttackTroops decides whether our stack, plus
   // the troops already attacking it, is worth it. Medium only joins attacks
