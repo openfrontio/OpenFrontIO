@@ -74,9 +74,9 @@ describe("RankedModal trust lock", () => {
     return [...modal.querySelectorAll<HTMLElement>("[data-trust]")];
   }
 
-  it("shows a green open lock on both ranked cards for a trusted account", async () => {
+  it("shows a green open lock on every ranked card for a trusted account", async () => {
     const locks = await openWith(userMe("trusted"));
-    expect(locks).toHaveLength(2);
+    expect(locks).toHaveLength(3);
     for (const lock of locks) {
       expect(lock.dataset.trust).toBe("unlocked");
       expect(lock.classList.contains("text-green-400")).toBe(true);
@@ -87,7 +87,7 @@ describe("RankedModal trust lock", () => {
     "shows a red closed lock when the tier is %s",
     async (tier) => {
       const locks = await openWith(userMe(tier));
-      expect(locks).toHaveLength(2);
+      expect(locks).toHaveLength(3);
       for (const lock of locks) {
         expect(lock.dataset.trust).toBe("locked");
         expect(lock.classList.contains("text-red-400")).toBe(true);
@@ -97,7 +97,11 @@ describe("RankedModal trust lock", () => {
 
   it("shows a red closed lock when signed out", async () => {
     const locks = await openWith(false);
-    expect(locks.map((l) => l.dataset.trust)).toEqual(["locked", "locked"]);
+    expect(locks.map((l) => l.dataset.trust)).toEqual([
+      "locked",
+      "locked",
+      "locked",
+    ]);
   });
 
   it("shows no lock until /users/@me answers", async () => {
@@ -109,7 +113,7 @@ describe("RankedModal trust lock", () => {
     resolve(userMe("trusted"));
     await vi.waitFor(async () => {
       await modal.updateComplete;
-      expect(modal.querySelectorAll("[data-trust]")).toHaveLength(2);
+      expect(modal.querySelectorAll("[data-trust]")).toHaveLength(3);
     });
   });
 
@@ -157,7 +161,7 @@ describe("RankedModal trust lock", () => {
       await modal.updateComplete;
     }
 
-    it.each([0, 1])(
+    it.each([0, 1, 2])(
       "shows the ranked trust popup for an untrusted account (card %i)",
       async (index) => {
         await openWith(userMe("untrusted"));
@@ -177,15 +181,22 @@ describe("RankedModal trust lock", () => {
       );
     });
 
-    it("opens matchmaking for a trusted account", async () => {
-      await openWith(userMe("trusted"));
-      await click(1);
-      await vi.waitFor(() =>
-        expect(openMatchmaking).toHaveBeenCalledWith(
-          expect.objectContaining({ detail: { mode: "2v2" } }),
-        ),
-      );
-      expect(dialog()).toBeNull();
-    });
+    it.each([
+      [0, "1v1"],
+      [1, "2v2"],
+      [2, "ffa"],
+    ] as const)(
+      "opens matchmaking for a trusted account (card %i, %s)",
+      async (index, mode) => {
+        await openWith(userMe("trusted"));
+        await click(index);
+        await vi.waitFor(() =>
+          expect(openMatchmaking).toHaveBeenCalledWith(
+            expect.objectContaining({ detail: { mode } }),
+          ),
+        );
+        expect(dialog()).toBeNull();
+      },
+    );
   });
 });
