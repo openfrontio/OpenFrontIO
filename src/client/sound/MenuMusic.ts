@@ -69,7 +69,21 @@ function rampGain(target: number, t: number): number {
  * rather than by arriving instantly, which is far less noticeable than the
  * same curve going the other way.
  */
-export function startMenuMusic(mixer: AudioMixer): void {
+export function startMenuMusic(
+  mixer: AudioMixer,
+  options?: {
+    /**
+     * A game is already underway, so there is no menu to play over.
+     *
+     * Everything is still wired up, just not armed: the "menu-restored"
+     * listener below is what arms it, so a player who leaves the lobby in
+     * place gets the theme back. Without this the caller would have to skip
+     * startMenuMusic altogether and that listener would never exist, leaving
+     * the restored home page silent for the rest of the session.
+     */
+    gameInProgress?: boolean;
+  },
+): void {
   let theme: Howl | null = null;
   // Whether the home page is the thing on screen, so the theme may start.
   let armed = false;
@@ -242,7 +256,7 @@ export function startMenuMusic(mixer: AudioMixer): void {
     document.removeEventListener("keydown", onGesture);
   };
 
-  arm();
+  if (options?.gameInProgress !== true) arm();
 
   /**
    * Picks the theme up when the player turns music on, since start() declines
