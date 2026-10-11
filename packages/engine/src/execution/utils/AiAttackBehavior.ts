@@ -9,6 +9,7 @@ import {
   PlayerType,
   Relation,
   Structures,
+  TerrainType,
   TerraNullius,
   UnitType,
 } from "@openfront/engine-api/game/GameTypes";
@@ -26,6 +27,7 @@ import {
   calculateBoundingBoxCenter,
 } from "@openfront/engine-lib/Util";
 import { z } from "zod";
+import { CHEAPEST_TROOP_RATIO } from "../../configuration/EngineConfig";
 import { Attack, Game, Player, Unit } from "../../game/Game";
 import {
   canBuildTransportShip,
@@ -38,6 +40,7 @@ import type {
 } from "../../snapshot/SnapshotContext";
 import { AttackExecution } from "../AttackExecution";
 import { DonateTroopsExecution } from "../DonateTroopExecution";
+import { planBotAttacks, walledInBots } from "../nation/BotAnnexation";
 import { NationAllianceBehavior } from "../nation/NationAllianceBehavior";
 import {
   EMOJI_ASSIST_ACCEPT,
@@ -395,6 +398,9 @@ export class AiAttackBehavior {
     ) {
       return;
     }
+
+    // A walled-in bot costs next to nothing to annex, so don't save up for it
+    this.annexWalledInBots();
 
     // Attack bots before the ratio checks when they hold structures, which we need back,
     // and with high starting gold, as those checks count the troops of cities built in a rush
@@ -763,33 +769,27 @@ export class AiAttackBehavior {
   // Sort neighboring bots by density (troops / tiles) and attempt to attack many of them (Parallel attacks)
   // sendAttack will do nothing if we don't have enough reserve troops left
   // Bots that own structures are prioritized as targets (they might have stolen our structures and they will delete them!)
+  // Hard & Impossible order them to wall in other bots instead (see planBotAttacks)
   private attackBots(): boolean {
-    const bots = this.player
-      .nearby()
-      .filter(
-        (n): n is Player =>
-          n.isPlayer() &&
-          this.player.isFriendly(n) === false &&
-          n.type() === PlayerType.Bot,
-      );
-
+    const bots = this.neighboringBots();
     if (bots.length === 0) {
       return false;
     }
 
     this.botAttackTroopsSent = 0;
 
-    const density = (p: Player) => p.troops() / p.numTilesOwned();
+    let ordered: Player[];
+    if (this.annexesBots()) {
+      ordered = planBotAttacks(this.game, this.player, bots);
+    } else {
+      const density = (p: Player) => p.troops() / p.numTilesOwned();
+      ordered = bots.slice().sort((a, b) => density(a) - density(b));
+    }
     const ownsStructures = (p: Player) =>
       p.units().some((u) => Structures.has(u.type()));
-    const sortedBots = bots.slice().sort((a, b) => {
-      const aHasStructures = ownsStructures(a);
-      const bHasStructures = ownsStructures(b);
-      if (aHasStructures !== bHasStructures) {
-        return aHasStructures ? -1 : 1;
-      }
-      return density(a) - density(b);
-    });
+    const sortedBots = ordered.sort(
+      (a, b) => Number(ownsStructures(b)) - Number(ownsStructures(a)),
+    );
     const reducedBots = sortedBots.slice(0, this.getBotAttackMaxParallelism());
 
     for (const bot of reducedBots) {
@@ -797,8 +797,50 @@ export class AiAttackBehavior {
     }
 
     // Only short-circuit the rest of the targeting pipeline if we actually
-    // allocated some troops to bot attacks.
-    return this.botAttackTroopsSent > 0;
+    // allocated some troops to bot attacks. Hard & Impossible only top up
+    // running attacks, so those count as well.
+    return (
+      this.botAttackTroopsSent > 0 ||
+      (this.annexesBots() &&
+        this.player
+          .outgoingAttacks()
+          .some((attack) => reducedBots.some((bot) => bot === attack.target())))
+    );
+  }
+
+  private neighboringBots(): Player[] {
+    return this.player
+      .nearby()
+      .filter(
+        (n): n is Player =>
+          n.isPlayer() &&
+          this.player.isFriendly(n) === false &&
+          n.type() === PlayerType.Bot,
+      );
+  }
+
+  // Hard & Impossible take bots in an order that walls others in, annexing them for free
+  private annexesBots(): boolean {
+    const { difficulty } = this.game.config().gameConfig();
+    return (
+      this.player.type() === PlayerType.Nation &&
+      (difficulty === Difficulty.Hard || difficulty === Difficulty.Impossible)
+    );
+  }
+
+  // The engine only checks a bot for annexation when its land changes,
+  // so a 1% attack makes it hand over a bot only we border
+  private annexWalledInBots(): void {
+    if (!this.annexesBots()) return;
+    const bots = this.neighboringBots();
+    if (bots.length === 0) return;
+    const troops = Math.floor(this.player.troops() / 100);
+    if (troops < 1) return;
+    for (const bot of walledInBots(this.game, this.player, bots)) {
+      this.game.addExecution(
+        new AttackExecution(troops, this.player, bot.id()),
+      );
+    }
   }
 
   private getBotAttackMaxParallelism(): number {
@@ -1755,19 +1797,100 @@ export class AiAttackBehavior {
 
   private calculateBotAttackTroops(target: Player, maxTroops: number): number {
     const { difficulty } = this.game.config().gameConfig();
-    if (difficulty === Difficulty.Easy) {
-      return maxTroops;
-    }
-    let troops = target.troops() * 4;
+    switch (difficulty) {
+      case Difficulty.Easy:
+        return maxTroops;
+      case Difficulty.Medium: {
+        let troops = target.troops() * 4;
 
-    // Don't send more troops than maxTroops (Keep reserve)
-    if (troops > maxTroops) {
-      // If we haven't enough troops left to do a big enough bot attack, skip it
-      if (maxTroops < target.troops() * 2) {
-        troops = 0;
-      } else {
-        troops = maxTroops;
+        // Don't send more troops than maxTroops (Keep reserve)
+        if (troops > maxTroops) {
+          // If we haven't enough troops left to do a big enough bot attack, skip it
+          if (maxTroops < target.troops() * 2) {
+            troops = 0;
+          } else {
+            troops = maxTroops;
+          }
+        }
+        return troops;
       }
+      case Difficulty.Hard:
+      case Difficulty.Impossible: {
+        // Top up what already attacks the bot, or wait until we can send it all
+        const troops =
+          this.botAttackTroopsNeeded(target) * 1.3 -
+          this.ourStackAgainst(target);
+        return troops <= maxTroops ? troops : 0;
+      }
+      default:
+        assertNever(difficulty);
+    }
+  }
+
+  // Keeps the attack at its cheapest loss rate until the bot collapses below 100 tiles
+  private botAttackTroopsNeeded(bot: Player): number {
+    const stack = bot.troops() / CHEAPEST_TROOP_RATIO;
+    const tiles = Math.max(0, bot.numTilesOwned() - 100);
+    return Math.max(stack, tiles * this.botTileLoss(bot, stack));
+  }
+
+  // Troops lost per tile at that stack: Impossible reads the terrain on a 6x6 grid
+  // over the bot's land, Hard assumes highland
+  private botTileLoss(bot: Player, stack: number): number {
+    const terrains: TerrainType[] = [];
+    const box = bot.largestClusterBoundingBox;
+    const { difficulty } = this.game.config().gameConfig();
+    if (difficulty === Difficulty.Impossible && box) {
+      const width = box.max.x - box.min.x + 1;
+      const height = box.max.y - box.min.y + 1;
+      for (let i = 0; i < 6; i++) {
+        for (let j = 0; j < 6; j++) {
+          const tile = this.game.ref(
+            box.min.x + Math.floor(((2 * i + 1) * width) / 12),
+            box.min.y + Math.floor(((2 * j + 1) * height) / 12),
+          );
+          if (this.game.ownerID(tile) === bot.smallID()) {
+            terrains.push(this.game.terrainType(tile));
+          }
+        }
+      }
+    }
+    if (terrains.length === 0) terrains.push(TerrainType.Highland);
+    let loss = 0;
+    for (const terrain of terrains) {
+      loss += this.game.config().attackLogic({
+        terrain,
+        attackTroops: stack,
+        attacker: {
+          type: this.player.type(),
+          numTiles: this.player.numTilesOwned(),
+        },
+        defender: {
+          type: bot.type(),
+          numTiles: bot.numTilesOwned(),
+          troops: bot.troops(),
+          isTraitor: bot.isTraitor(),
+          isDisconnectedTeammate: false,
+        },
+        defenderHasDefensePost: false,
+        falloutRatio: null,
+        borderSize: 1,
+      }).attackerTroopLoss;
+    }
+    return loss / terrains.length;
+  }
+
+  // Land attacks on the same target merge, so these troops join the next one we send,
+  // while the target's attacks on us cancel out against it
+  private ourStackAgainst(target: Player): number {
+    let troops = 0;
+    for (const attack of this.player.outgoingAttacks()) {
+      if (attack.target() === target && attack.sourceTile() === null) {
+        troops += attack.troops();
+      }
+    }
+    for (const attack of this.player.incomingAttacks()) {
+      if (attack.attacker() === target) troops -= attack.troops();
     }
     return troops;
   }

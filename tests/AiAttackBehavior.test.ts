@@ -454,7 +454,8 @@ describe("Hard/Impossible troop floor", () => {
       players[assigned % 3].conquer(tile);
       assigned++;
     });
-    bot.addTroops(100);
+    // Strong enough that taking it needs more than the FFA cap below
+    bot.addTroops(20_000);
 
     const mockEmoji = {
       maybeSendAttackEmoji: vi.fn(),
