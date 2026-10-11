@@ -578,13 +578,16 @@ export class WinModal extends LitElement implements Controller {
     // Requeue for the same mode; Main owns the mechanism (currently a
     // reload with the requeue param, which reopens the queue after the
     // page teardown).
+    const rankedType = this.game.config().gameConfig().rankedType;
     document.dispatchEvent(
       new CustomEvent("matchmaking-requeue", {
         detail: {
           mode:
-            this.game.config().gameConfig().rankedType === RankedType.TwoVTwo
+            rankedType === RankedType.TwoVTwo
               ? ("2v2" as const)
-              : ("1v1" as const),
+              : rankedType === RankedType.FreeForAll
+                ? ("ffa" as const)
+                : ("1v1" as const),
         },
       }),
     );

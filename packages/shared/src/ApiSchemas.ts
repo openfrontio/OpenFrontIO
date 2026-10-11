@@ -418,6 +418,11 @@ export const UserMeResponseSchema = z.object({
             elo: z.number().optional(),
           })
           .optional(),
+        ffa: z
+          .object({
+            elo: z.number().optional(),
+          })
+          .optional(),
       })
       .optional(),
     currency: CurrencyBalancesSchema.optional(),
@@ -904,6 +909,7 @@ const RecentRankedStatsSchema = z.object({
   all: PlayerRecentStatsSchema,
   [RankedType.OneVOne]: PlayerRecentStatsSchema.optional(),
   [RankedType.TwoVTwo]: PlayerRecentStatsSchema.optional(),
+  [RankedType.FreeForAll]: PlayerRecentStatsSchema.optional(),
 });
 
 export const PlayerRecentStatsTreeSchema = z.object({
@@ -1059,6 +1065,8 @@ export const RankedLeaderboardResponseSchema = z.object({
   // appear on both with a different elo and rank. Defaulted because an API
   // deployment that predates the 2v2 ladder omits the key entirely.
   [RankedType.TwoVTwo]: RankedLeaderboardEntrySchema.array().default([]),
+  // Defaulted for the same reason: older APIs have no FFA ladder.
+  [RankedType.FreeForAll]: RankedLeaderboardEntrySchema.array().default([]),
 });
 export type RankedLeaderboardResponse = z.infer<
   typeof RankedLeaderboardResponseSchema
