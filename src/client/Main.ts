@@ -78,7 +78,7 @@ import {
   SendToggleGameStartTimer,
   SendUpdateGameConfigIntentEvent,
 } from "./LobbyEvents";
-import type { MatchmakingModal } from "./Matchmaking";
+import type { MatchmakingModal, MatchmakingMode } from "./Matchmaking";
 import {
   hideMenuChrome,
   menuChromeIsTornDown,
@@ -224,8 +224,8 @@ declare global {
     "kick-player": CustomEvent;
     toggle_game_start_timer: CustomEvent;
     "join-changed": CustomEvent;
-    "open-matchmaking": CustomEvent<{ mode?: "1v1" | "2v2" } | undefined>;
-    "matchmaking-requeue": CustomEvent<{ mode?: "1v1" | "2v2" } | undefined>;
+    "open-matchmaking": CustomEvent<{ mode?: MatchmakingMode } | undefined>;
+    "matchmaking-requeue": CustomEvent<{ mode?: MatchmakingMode } | undefined>;
     userMeResponse: CustomEvent<UserMeResponse | false>;
     "session-cleared": CustomEvent;
     "leave-lobby": CustomEvent;
@@ -1447,14 +1447,15 @@ class Client {
     if (customElements.get("store-modal")) this.storeModal?.refresh();
   }
 
-  // Returns the requeue mode ("/?requeue" = 1v1, "/?requeue=2v2" = 2v2), or
-  // null when the URL has no requeue param.
-  private consumeRequeueUrl(): "1v1" | "2v2" | null {
+  // Returns the requeue mode ("/?requeue" = 1v1, "/?requeue=2v2" = 2v2,
+  // "/?requeue=ffa" = FFA), or null when the URL has no requeue param.
+  private consumeRequeueUrl(): MatchmakingMode | null {
     const searchParams = new URLSearchParams(window.location.search);
     if (!searchParams.has("requeue")) {
       return null;
     }
-    const mode = searchParams.get("requeue") === "2v2" ? "2v2" : "1v1";
+    const param = searchParams.get("requeue");
+    const mode = param === "2v2" || param === "ffa" ? param : "1v1";
 
     searchParams.delete("requeue");
     const newUrl =
@@ -2026,19 +2027,19 @@ class Client {
   // dispatch with no open modal (the player closed it mid-wait) stays a
   // no-op — don't force them back into a queue they left.
   private handleMatchmakingRequeue(
-    event: CustomEvent<{ mode?: "1v1" | "2v2" } | undefined>,
+    event: CustomEvent<{ mode?: MatchmakingMode } | undefined>,
   ) {
     if (this.loadedMatchmakingModal()?.requeue()) {
       return;
     }
-    if (event.detail?.mode !== undefined) {
-      window.location.href =
-        event.detail.mode === "2v2" ? "/?requeue=2v2" : "/?requeue";
+    const mode = event.detail?.mode;
+    if (mode !== undefined) {
+      window.location.href = mode === "1v1" ? "/?requeue" : `/?requeue=${mode}`;
     }
   }
 
   private handleOpenMatchmaking(
-    event: CustomEvent<{ mode?: "1v1" | "2v2" } | undefined>,
+    event: CustomEvent<{ mode?: MatchmakingMode } | undefined>,
   ) {
     if (!this.matchmakingModal) return;
     whenModalLoaded("matchmaking-modal", () => {
@@ -2046,8 +2047,8 @@ class Client {
       // game-start teardown couldn't close a modal that hadn't loaded.
       if (menuChromeIsTornDown()) return;
       // Always set the mode: dispatchers without a detail (homepage button,
-      // requeue URL) mean 1v1 and must reset a lingering 2v2 selection.
-      this.matchmakingModal.mode = event.detail?.mode === "2v2" ? "2v2" : "1v1";
+      // requeue URL) mean 1v1 and must reset a lingering selection.
+      this.matchmakingModal.mode = event.detail?.mode ?? "1v1";
       this.matchmakingModal.open();
     });
   }

@@ -4,6 +4,7 @@ import {
   HumansVsNations,
   PlayerInfo,
   PlayerType,
+  RANKED_FFA_MIN_PLAYERS,
   RankedType,
 } from "@openfront/engine-api/game/GameTypes";
 import { maps } from "@openfront/engine-api/game/Maps.gen";
@@ -901,19 +902,25 @@ export class GameServer {
   // Matchmade ranked games (1v1/2v2) must start with full attendance: the
   // roster freezes at start(), so a game missing a player would run
   // short-handed only to be voided by the sim (2v2) or hand out a walkover
-  // the absent player never contested (1v1). Called at the start deadline;
-  // cancels the game and returns true when a matched player never connected.
+  // the absent player never contested (1v1). Ranked FFA starts without the
+  // missing players as long as RANKED_FFA_MIN_PLAYERS showed up, the fewest
+  // the API rates. Called at the start deadline; cancels the game and returns
+  // true when too few matched players connected.
   public cancelShortHandedMatch(): boolean {
-    // Explicitly 1v1/2v2 only — a future ranked type must opt in rather
+    // Explicitly 1v1/2v2/FFA only — a future ranked type must opt in rather
     // than inherit pre-start cancellation.
     const rankedType = this.gameConfig.rankedType;
+    let expected: number | undefined;
     if (
-      rankedType !== RankedType.OneVOne &&
-      rankedType !== RankedType.TwoVTwo
+      rankedType === RankedType.OneVOne ||
+      rankedType === RankedType.TwoVTwo
     ) {
+      expected = this.gameConfig.maxPlayers;
+    } else if (rankedType === RankedType.FreeForAll) {
+      expected = RANKED_FFA_MIN_PLAYERS;
+    } else {
       return false;
     }
-    const expected = this.gameConfig.maxPlayers;
     if (expected === undefined || this.playerCount() >= expected) {
       return false;
     }
