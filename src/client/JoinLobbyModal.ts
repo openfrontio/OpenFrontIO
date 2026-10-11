@@ -1,9 +1,5 @@
 import { GAME_ID_REGEX, GameConfig } from "@openfront/engine-api/Schemas";
-import {
-  GameMode,
-  GameType,
-  HumansVsNations,
-} from "@openfront/engine-api/game/GameTypes";
+import { GameMode, GameType } from "@openfront/engine-api/game/GameTypes";
 import { assetUrl } from "@openfront/shared/AssetUrls";
 import { EventBus } from "@openfront/shared/EventBus";
 import {
@@ -18,6 +14,7 @@ import { customElement, property, query, state } from "lit/decorators.js";
 import { ClientEnv } from "src/client/ClientEnv";
 import {
   calculateServerTimeOffset,
+  getGameModeLabel,
   getMapName,
   getSecondsUntilServerTimestamp,
   getServerNow,
@@ -36,13 +33,20 @@ import { findVersionedShell } from "./VersionedReplay";
 import { BaseModal } from "./components/BaseModal";
 import "./components/CopyButton";
 import { GameStartAlertController } from "./components/GameStartAlertController";
-import "./components/LobbyConfigItem";
 import "./components/LobbyPlayerView";
 import { inviteFriendsButton } from "./components/ui/InviteFriendsButton";
 import { DEFAULT_TITLE_CLASS, modalHeader } from "./components/ui/ModalHeader";
 import { openReplayViewer } from "./replay/ReplayEntry";
 import { nationsConfigToSlider } from "./utilities/GameConfigHelpers";
-import { notableLobbySettings } from "./utilities/LobbySettingsSummary";
+import {
+  lobbySettingTagText,
+  notableLobbySettings,
+} from "./utilities/LobbySettingsSummary";
+
+// The homepage lobby card's modifier pill, one size down: a lobby can run a
+// dozen settings and they all have to fit beside the preview.
+const SETTING_TAG =
+  "rounded bg-malibu-blue px-1.5 py-0.5 text-[11px] font-bold tracking-widest text-white";
 
 @customElement("join-lobby-modal")
 export class JoinLobbyModal extends BaseModal {
@@ -406,7 +410,6 @@ export class JoinLobbyModal extends BaseModal {
     // default comparison is skipped in the row chips.
     const settings = c ? notableLobbySettings(c, null) : [];
     const disabledUnitCount = c?.disabledUnits?.length ?? 0;
-    const enabled = translateText("common.enabled");
     // A featured lobby names itself; the map drops to the subtitle so nothing
     // is lost. Interpolated by lit as TEXT, never markup — emoji render because
     // they are ordinary codepoints, and the accent comes from a closed set so a
@@ -421,7 +424,7 @@ export class JoinLobbyModal extends BaseModal {
             green: "text-emerald-300",
             red: "text-rose-300",
           }[lobby.accent ?? "gold"];
-    const subtitle = c ? this.modeSubtitle(c) : "";
+    const subtitle = c ? getGameModeLabel(c) : "";
     // The map name only moves down here when a label has taken the title line.
     const subtitleLine = featuredLabel
       ? [mapName, subtitle].filter(Boolean).join(" · ")
@@ -462,13 +465,9 @@ export class JoinLobbyModal extends BaseModal {
           ${settings.length > 0 || disabledUnitCount > 0
             ? html`<div class="flex flex-wrap gap-1 mt-1">
                 ${settings.map((s) => {
-                  // Some labels (e.g. game_settings.bots) already end with ": " or ": ".
-                  const label = s.label.replace(/[:\uFF1A\s]+$/u, "");
                   return html`<span
                     class="px-1.5 py-0.5 bg-white/10 text-white/70 text-[10px] rounded font-bold"
-                    >${s.value === enabled
-                      ? label
-                      : `${label}: ${s.value}`}</span
+                    >${lobbySettingTagText(s)}</span
                   >`;
                 })}
                 ${disabledUnitCount > 0
@@ -696,24 +695,6 @@ export class JoinLobbyModal extends BaseModal {
 
   // --- Game config rendering ---
 
-  private modeSubtitle(c: GameConfig): string {
-    if (c.gameMode !== GameMode.Team) {
-      return translateText("game_mode.ffa");
-    }
-    if (c.playerTeams === HumansVsNations) {
-      return translateText("host_modal.teams_Humans Vs Nations");
-    }
-    if (typeof c.playerTeams === "string") {
-      return translateText("host_modal.teams_" + c.playerTeams);
-    }
-    if (typeof c.playerTeams === "number") {
-      return translateText("public_lobby.teams", {
-        num: c.playerTeams,
-      });
-    }
-    return translateText("game_mode.ffa");
-  }
-
   private renderGameConfig(): TemplateResult {
     if (!this.gameConfig) return html``;
 
@@ -723,36 +704,50 @@ export class JoinLobbyModal extends BaseModal {
     const thumbnailUrl = assetUrl(
       `maps/${encodeURIComponent(normalizedMap)}/thumbnail.webp`,
     );
-    const modeSubtitle = this.modeSubtitle(c);
+    const modeSubtitle = getGameModeLabel(c);
 
-    const cards = notableLobbySettings(c, this.nationCount).map(
+    const tags = notableLobbySettings(c, this.nationCount).map(
       (s) =>
-        html`<lobby-config-item
-          .label=${s.label}
-          .value=${s.value}
-        ></lobby-config-item>`,
+        html`<span class="${SETTING_TAG}">${lobbySettingTagText(s)}</span>`,
     );
 
+    // object-contain, not object-cover: the preview is here to be studied
+    // while waiting, so a wide or tall map must show whole rather than cropped
+    // to the box. max-h keeps a tall map from pushing the player list away.
+    // The frame stretches to the height of the settings beside it and centres
+    // the map, so a long list of settings leaves no gap under the preview.
+    // With no settings to show, the preview takes the whole row.
     return html`
-      <div class="flex items-center gap-3 mb-6">
-        <img
-          src=${thumbnailUrl}
-          alt=${mapName ?? c.gameMap}
-          class="w-20 h-20 rounded-lg object-cover border border-white/10 shrink-0"
-          @error=${(e: Event) => {
-            (e.target as HTMLImageElement).style.display = "none";
-          }}
-        />
-        <div class="flex flex-col gap-1">
-          <span class="text-lg font-bold text-white">${mapName}</span>
-          <span class="text-sm text-white/60">${modeSubtitle}</span>
-        </div>
+      <div class="flex flex-wrap items-baseline gap-x-3 gap-y-1 mb-3">
+        <span class="text-lg font-bold text-white">${mapName}</span>
+        <span class="text-sm text-white/60">${modeSubtitle}</span>
       </div>
-      ${cards.length > 0
-        ? html`<div class="grid grid-cols-2 sm:grid-cols-3 gap-2 mb-6">
-            ${cards}
-          </div>`
-        : html``}
+      <div class="flex flex-col sm:flex-row gap-4 mb-6">
+        <div
+          data-test-map-preview
+          class="flex items-center justify-center w-full ${tags.length > 0
+            ? "sm:w-3/5"
+            : ""} shrink-0 rounded-lg border border-white/10 bg-black/20 overflow-hidden"
+        >
+          <img
+            src=${thumbnailUrl}
+            alt=${mapName ?? c.gameMap}
+            class="block w-full max-h-60 object-contain"
+            @error=${(e: Event) => {
+              const frame = (e.target as HTMLElement).parentElement;
+              if (frame) frame.style.display = "none";
+            }}
+          />
+        </div>
+        ${tags.length > 0
+          ? html`<div
+              data-test-lobby-settings
+              class="flex flex-wrap content-start gap-1 min-w-0 flex-1 uppercase"
+            >
+              ${tags}
+            </div>`
+          : html``}
+      </div>
       ${this.renderDisabledUnits()} ${this.renderHostCheats()}
     `;
   }
