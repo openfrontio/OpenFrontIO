@@ -3,7 +3,7 @@ name: run-openfront
 description: Build, run, and drive OpenFront locally — including full in-game WebGL testing. Use when asked to run the game, start the dev server, take a screenshot of the UI, verify a client change in the real app, or interact with the running game (lobby, modals, map picker, starting a singleplayer game, spawning, attacking, build menu, reading live sim state).
 ---
 
-OpenFront is a browser game (Lit + Pixi.js client, Node game server).
+OpenFront is a browser game (Lit + WebGL2 client, Node game server).
 Run the dev server with `npm run dev` (serves on **http://localhost:9000**,
 not Vite's default 5173), then drive it with headless Chromium via
 `.claude/skills/run-openfront/driver.mjs`. All paths are relative to the
@@ -11,8 +11,8 @@ repo root.
 
 ## Prerequisites (one-time per machine, no sudo)
 
-The host (Ubuntu 26.04, headless) has no browser, and Playwright doesn't
-support 26.04 yet. `setup.sh` works around both: it installs Playwright
+On a headless Ubuntu 26.04 host there is no browser, and Playwright doesn't
+support 26.04. `setup.sh` works around both: it installs Playwright
 (`--no-save`), downloads the ubuntu24.04 chromium-headless-shell via
 `PLAYWRIGHT_HOST_PLATFORM_OVERRIDE`, extracts the missing system libraries
 from `.deb` packages into `~/.cache/openfront-run/` (no root needed), and
@@ -22,6 +22,10 @@ without one).
 ```bash
 bash .claude/skills/run-openfront/setup.sh
 ```
+
+On other hosts (Windows, macOS) skip `setup.sh`: install Playwright as its
+step 1 does (`--no-save`), then run `npx playwright install chromium`.
+`launch()` only injects the extracted libraries when they exist.
 
 Deps were installed with `npm run inst` (`npm ci --ignore-scripts`) — do
 not use `npm install`.
@@ -183,7 +187,7 @@ npx vitest tests/MapConsistency.test.ts --run # single file
   `FONTCONFIG_FILE` pointing at `~/.cache/openfront-run/`; diagnose new
   missing libs with `DEBUG=pw:browser` and
   `ldd .../chrome-headless-shell | grep "not found"`.
-- **The single-player button is labeled "SOLO!"**, and the DOM has more
+- **The single-player button is labeled "Solo"** (`main.solo`), and the DOM has more
   than one (responsive layouts) — use `button:visible` with
   `hasText: /solo/i`.
 - **Lit + Vite HMR**: custom elements can't be re-registered, so an
