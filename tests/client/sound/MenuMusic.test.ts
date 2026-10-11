@@ -473,6 +473,29 @@ describe("menu music", () => {
     expect(themes()).toHaveLength(0);
   });
 
+  it("stays disarmed when a game is already in progress", () => {
+    // The audio chunk can load after "game-starting" has been dispatched, so
+    // this instance never hears it and would otherwise sit armed under a
+    // running game.
+    startMenuMusic(mixer, { gameInProgress: true });
+    document.dispatchEvent(new Event("pointerdown"));
+    expect(themes()).toHaveLength(0);
+
+    notifyChange("music");
+    expect(themes()).toHaveLength(0);
+  });
+
+  it("still arms on menu-restored after starting in a game", () => {
+    // Why it is called at all rather than skipped: leaving the lobby in place
+    // restores the home page, and only this listener can bring the theme back.
+    startMenuMusic(mixer, { gameInProgress: true });
+    document.dispatchEvent(new Event("menu-restored"));
+    document.dispatchEvent(new Event("pointerdown"));
+
+    expect(themes()).toHaveLength(1);
+    expect(themes()[0].play).toHaveBeenCalled();
+  });
+
   it("does not start over a running game when music is turned on", () => {
     startMenuMusic(mixer);
     document.dispatchEvent(new Event("pointerdown"));

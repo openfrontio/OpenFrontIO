@@ -2,7 +2,7 @@
 
 WebGL2 renderer for the game map. Everything that draws onto the map canvas
 lives here. HUD components (Lit elements, DOM overlays) live in
-`src/client/graphics/`, not here.
+`src/client/hud/`, not here.
 
 ## Pipeline
 
@@ -124,7 +124,7 @@ Live mode upload semantics (in `frame/Upload.ts`):
 Live tile changes are drip-applied per render frame inside `TerritoryPass`
 (see `applyLiveDelta` + `drainDripBucket` in `gl/passes/TerritoryPass.ts`).
 Each tick's `changedTiles` is hashed by `ref` into N round-robin buckets
-(`tileDrip.bucketCount`, default 12); the renderer drains one bucket per
+(`tileDrip.bucketCount` in `render-settings.json`); the renderer drains one bucket per
 60Hz frame in `uploadTextures()`. The stable per-ref hash guarantees that
 repeated updates to the same tile stay in arrival order, so the latest
 owner always wins. During spawn phase, `flushAllDripBuckets()` is called
