@@ -29,8 +29,8 @@ npx vitest NationAllianceBehavior --run # match by name pattern
 
 OpenFront.io is a real-time multiplayer territorial strategy game. There are four components:
 
-1. **The engine** — Deterministic game simulation, split into npm workspace packages under `packages/` (see below). Pure TypeScript with **no external dependencies** beyond zod. Must remain fully deterministic (seeded PRNG, no floating-point math). Runs in a Web Worker thread. All `packages/engine`, `packages/engine-api` and `packages/engine-lib` changes **must** include tests.
-2. **`src/client/`** — Rendering (Pixi.js/WebGL), UI (Lit web components + Tailwind CSS 4), WebSocket communication.
+1. **The engine** — Deterministic game simulation, split into npm workspace packages under `packages/` (see below). Pure TypeScript with **no external dependencies** beyond zod. Must stay bit-identical on every client: use the seeded PRNG, and use `packages/engine-lib/src/DetMath.ts` instead of `Math.exp`/`log`/`pow`/`sin`/… or `**` with an exponent other than 2 (ESLint enforces this). Runs in a Web Worker thread. All `packages/engine`, `packages/engine-api` and `packages/engine-lib` changes **must** include tests.
+2. **`src/client/`** — Rendering (custom WebGL2 renderer in `src/client/render/`), UI (Lit web components + Tailwind CSS 4), WebSocket communication.
 3. **`src/server/`** — Game coordination, intent relay, WebSocket management (Node.js/Express/ws).
 4. **API** — Closed-source Cloudflare Worker handling auth, stats, cosmetics, monetization. Not in this repo.
 
@@ -100,8 +100,8 @@ Tests use a `setup()` helper from `tests/util/Setup.ts` that creates a full game
 
 ## Tech Stack
 
-- **Bundler:** Vite + TypeScript 5.7
-- **Rendering:** Pixi.js (WebGL)
+- **Bundler:** Vite + TypeScript 6
+- **Rendering:** Custom WebGL2 renderer (`src/client/render/`)
 - **UI Components:** Lit (LitElement) + Tailwind CSS 4
 - **Audio:** Howler.js
 - **Schemas/Validation:** Zod
