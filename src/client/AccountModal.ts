@@ -1,4 +1,8 @@
-import { PlayerStatsTree, UserMeResponse } from "@openfront/shared/ApiSchemas";
+import {
+  PlayerStatsTree,
+  PrestigeResponse,
+  UserMeResponse,
+} from "@openfront/shared/ApiSchemas";
 import { assetUrl } from "@openfront/shared/AssetUrls";
 import { html, nothing, TemplateResult } from "lit";
 import { customElement, state } from "lit/decorators.js";
@@ -28,6 +32,8 @@ import type { CreatorChangedDetail } from "./components/CreatorCodePanel";
 import "./components/CurrencyDisplay";
 import "./components/Difficulties";
 import "./components/FriendsList";
+import type { PrestigeFlow } from "./components/PrestigeFlow";
+import "./components/ProfileCard";
 import "./components/RewardsPanel";
 import type { RewardsChangedDetail } from "./components/RewardsPanel";
 import { googleLinkButton } from "./components/ui/GoogleLinkButton";
@@ -55,12 +61,31 @@ const LOGIN_ERROR_KEYS: Record<LoginResult, string> = {
   no_account: "account_modal.login_no_account",
 };
 
+// The prestige confirmation and ceremony only ever open for a player at level
+// 100, so they stay out of the startup bundle: fetched as soon as the account
+// says the card will offer Prestige, well before the press. A failed fetch is
+// tried again on the next press.
+let prestigeFlowModule: Promise<unknown> | null = null;
+function loadPrestigeFlow(): Promise<unknown> {
+  prestigeFlowModule ??= import("./components/PrestigeFlow").catch(
+    (err: unknown) => {
+      prestigeFlowModule = null;
+      throw err;
+    },
+  );
+  return prestigeFlowModule;
+}
+
 @customElement("account-modal")
 export class AccountModal extends BaseModal {
   protected routerName = "account";
 
   @state() private email: string = "";
   @state() private isLoadingUser: boolean = false;
+  // Counts openings, to key the profile card's once-per-open flourish.
+  private openCount = 0;
+  // Replaceable for tests.
+  loadPrestigeFlow: () => Promise<unknown> = loadPrestigeFlow;
   // Set on CrazyGames when a CrazyGames user is signed in. Their identity comes
   // from the SDK, not our backend user object.
   @state() private crazyGamesUser: CrazyGamesUser | null = null;
@@ -90,6 +115,7 @@ export class AccountModal extends BaseModal {
       if (customEvent.detail) {
         const previousPublicId = this.userMeResponse?.player?.publicId;
         this.userMeResponse = customEvent.detail as UserMeResponse;
+        this.prefetchPrestigeFlow();
         // Reset whenever the player identity changes (login, or switching to a
         // different account) so stats/history from the previous player don't
         // linger.
@@ -188,6 +214,10 @@ export class AccountModal extends BaseModal {
       <div class="custom-scrollbar mr-1">
         <div class="p-6">${this.renderTab(tab)}</div>
       </div>
+      <prestige-flow
+        @prestiged=${this.handlePrestiged}
+        @prestige-stale=${this.handlePrestigeStale}
+      ></prestige-flow>
     `;
   }
 
@@ -250,6 +280,7 @@ export class AccountModal extends BaseModal {
     }
     return html`
       <div class="flex flex-col gap-6">
+        ${this.renderProfileCard("compact")}
         <div class="bg-white/5 rounded-xl border border-white/10 p-6">
           <div class="flex flex-col items-center gap-4">
             <div
@@ -315,6 +346,7 @@ export class AccountModal extends BaseModal {
   private renderCrazyGamesAccount(user: CrazyGamesUser): TemplateResult {
     return html`
       <div class="flex flex-col gap-6">
+        ${this.renderProfileCard("compact")}
         <div class="bg-white/5 rounded-xl border border-white/10 p-6">
           <div class="flex flex-col items-center gap-4">
             <div
@@ -363,16 +395,13 @@ export class AccountModal extends BaseModal {
   }
 
   private renderStatsTab(): TemplateResult {
-    if (!this.hasAnyStats()) {
-      return this.renderEmptyState(
-        "📊",
-        translateText("account_modal.no_stats"),
-      );
-    }
     return html`
-      <player-stats-tree-view
-        .statsTree=${this.statsTree}
-      ></player-stats-tree-view>
+      ${this.renderProfileCard("full")}
+      ${this.hasAnyStats()
+        ? html`<player-stats-tree-view
+            .statsTree=${this.statsTree}
+          ></player-stats-tree-view>`
+        : this.renderEmptyState("📊", translateText("account_modal.no_stats"))}
     `;
   }
 
@@ -459,6 +488,108 @@ export class AccountModal extends BaseModal {
     this.prefillCreatorCode = undefined;
     this.requestUpdate();
   };
+
+  // Your level at a glance, the way a shared profile link shows it: one row
+  // on the account page, the full card heading the Stats tab. Nothing while
+  // progression is off.
+  private renderProfileCard(
+    variant: "full" | "compact",
+  ): TemplateResult | typeof nothing {
+    const player = this.userMeResponse?.player;
+    if (!player?.publicId || !player.progress) return nothing;
+    return html`<profile-card
+      class=${variant === "full" ? "mb-4 block" : "block"}
+      .variant=${variant}
+      .username=${player.username ?? player.publicId}
+      .clanTag=${player.clans?.[0]?.tag ?? null}
+      .progress=${player.progress}
+      .openKey=${`account-${this.openCount}`}
+      prestigeable
+      @prestige-request=${this.handlePrestigeRequest}
+    ></profile-card>`;
+  }
+
+  // Fetches the prestige flow when /users/@me says the card will offer
+  // Prestige, so it's there by the press.
+  private prefetchPrestigeFlow(): void {
+    if (!this.userMeResponse?.player?.progress?.canPrestige) return;
+    this.loadPrestigeFlow().catch((err: unknown) =>
+      console.warn("AccountModal: prestige flow failed to load", err),
+    );
+  }
+
+  private handlePrestigeRequest = async (): Promise<void> => {
+    if (!this.userMeResponse?.player?.progress) return;
+    try {
+      // Normally loaded already (see prefetchPrestigeFlow).
+      await this.loadPrestigeFlow();
+    } catch (err) {
+      console.warn("AccountModal: prestige flow failed to load", err);
+      await showInGameAlert(translateText("prestige.load_failed"));
+      return;
+    }
+    // The account as it is now: it may have been re-read meanwhile.
+    const progress = this.userMeResponse?.player?.progress;
+    if (!progress) return;
+    this.querySelector<PrestigeFlow>("prestige-flow")?.open(progress);
+  };
+
+  // The server has prestiged the player: show the new rank behind the
+  // ceremony, list the rewards it granted, and drop the cached /users/@me.
+  private handlePrestiged = (event: CustomEvent<PrestigeResponse>): void => {
+    if (!this.userMeResponse) return;
+    const player = this.userMeResponse.player;
+    player.progress = event.detail.progress;
+    // A replayed answer can list a reward this page already holds.
+    const held = new Set((player.rewards ?? []).map((r) => r.id));
+    const added = event.detail.rewards.filter((r) => !held.has(r.id));
+    if (added.length > 0) {
+      player.rewards = [...(player.rewards ?? []), ...added];
+    }
+    this.requestUpdate();
+    // Then the real thing, for the header and everything else showing the
+    // account.
+    void this.refreshUserMe();
+  };
+
+  // The server says the player can't prestige from where this page thinks
+  // they are: most likely an earlier prestige whose answer never arrived.
+  // Reload the account so the card shows where they really are, and say so.
+  private handlePrestigeStale = async (): Promise<void> => {
+    const fresh = await this.refreshUserMe();
+    await showInGameAlert(
+      fresh === false
+        ? translateText("prestige.stale_failed")
+        : translateText("prestige.stale"),
+    );
+  };
+
+  // Re-reads /users/@me and tells the rest of the page (the header's account
+  // menu among them), as a purchase does. This modal listens too, so its own
+  // copy updates with it. A failed read leaves everything as it is rather
+  // than broadcasting a signed-out state.
+  private async refreshUserMe(): Promise<UserMeResponse | false> {
+    invalidateUserMe();
+    const fresh = await getUserMe();
+    if (fresh === false) return false;
+    document.dispatchEvent(
+      new CustomEvent("userMeResponse", {
+        detail: fresh,
+        bubbles: true,
+        cancelable: true,
+      }),
+    );
+    return fresh;
+  }
+
+  // Escape belongs to the prestige confirmation or ceremony while it's up,
+  // not to the page behind it.
+  public confirmBeforeClose(): boolean | Promise<boolean> {
+    if (this.querySelector<PrestigeFlow>("prestige-flow")?.isOpen) {
+      return false;
+    }
+    return super.confirmBeforeClose();
+  }
 
   private renderCurrency(): TemplateResult {
     const currency = this.userMeResponse?.player?.currency;
@@ -849,7 +980,10 @@ export class AccountModal extends BaseModal {
     invalidateUserMe();
     await reauthAfterCrazyGamesChange();
     const userMe = await getUserMe();
-    if (userMe) this.userMeResponse = userMe;
+    if (userMe) {
+      this.userMeResponse = userMe;
+      this.prefetchPrestigeFlow();
+    }
     this.crazyGamesUser = profile;
     this.requestUpdate();
   }
@@ -904,6 +1038,8 @@ export class AccountModal extends BaseModal {
   }
 
   protected onOpen(args?: Record<string, unknown>): void {
+    // A new opening: the full profile card plays its flourish again.
+    this.openCount++;
     this.isLoadingUser = true;
     consumeLinkResult(args);
     this.loginError = consumeLoginResult(args);
@@ -915,6 +1051,7 @@ export class AccountModal extends BaseModal {
       .then((userMe) => {
         if (userMe) {
           this.userMeResponse = userMe;
+          this.prefetchPrestigeFlow();
           if (this.userMeResponse?.player?.publicId) {
             this.loadPlayerProfile(this.userMeResponse.player.publicId);
           }

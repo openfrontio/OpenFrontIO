@@ -9,6 +9,7 @@ import {
   HumansVsNations,
   PublicGameModifiers,
   Quads,
+  RANKED_FFA_MAX_PLAYERS,
   RankedType,
   Trios,
   UnitType,
@@ -544,6 +545,41 @@ export class MapPlaylist {
       bots: isCompact ? 100 : 400,
       spawnImmunityDuration: 60 * 10,
       disabledUnits: [],
+    } satisfies GameConfig;
+  }
+
+  // maxPlayers is the most a match can have; the check-in lowers it to the
+  // size of the assigned match, so the game starts once everyone is in.
+  public getFfaConfig(): GameConfig {
+    const maps = [
+      GameMapType.Europe,
+      GameMapType.Asia,
+      GameMapType.Africa,
+      GameMapType.NorthAmerica,
+      GameMapType.SouthAmerica,
+      GameMapType.Australia,
+    ];
+    return {
+      donateGold: false,
+      donateTroops: false,
+      gameMap: maps[Math.floor(Math.random() * maps.length)],
+      maxPlayers: RANKED_FFA_MAX_PLAYERS,
+      gameType: GameType.Public,
+      gameMapSize: GameMapSize.Normal,
+      difficulty: Difficulty.Medium, // Doesn't matter, nations are disabled
+      rankedType: RankedType.FreeForAll,
+      infiniteGold: false,
+      infiniteTroops: false,
+      maxTimerValue: 20,
+      instantBuild: false,
+      randomSpawn: false,
+      nations: "disabled",
+      gameMode: GameMode.FFA,
+      bots: 400,
+      spawnImmunityDuration: 30 * 10,
+      disabledUnits: [],
+      // Same as public FFA: no tags to rally a clan around.
+      disableClanTags: true,
     } satisfies GameConfig;
   }
 
