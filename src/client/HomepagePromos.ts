@@ -222,8 +222,8 @@ export class HomepagePromos extends LitElement {
     try {
       window.ramp.que.push(() => {
         // The queue drains when ramp.js loads, which can be after the rail
-        // was destroyed (see InGamePromo).
-        if (!this.bottomRailActive) return;
+        // was destroyed (see InGamePromo) or the player turned out ad-free.
+        if (!this.bottomRailActive || !window.adsEnabled) return;
         try {
           window.ramp.spaAddAds([{ type: "bottom_rail" }]);
           console.log("Bottom rail ad loaded");
@@ -266,8 +266,9 @@ export class HomepagePromos extends LitElement {
     try {
       window.ramp.que.push(() => {
         // The queue drains when ramp.js loads, which can be after a game has
-        // started: close() found only the index.html stub and destroyed nothing.
-        if (menuChromeIsTornDown()) return;
+        // started (close() found only the index.html stub and destroyed
+        // nothing) or after the player turned out ad-free.
+        if (menuChromeIsTornDown() || !window.adsEnabled) return;
         try {
           window.ramp.spaAddAds([
             { type: "left_rail" },

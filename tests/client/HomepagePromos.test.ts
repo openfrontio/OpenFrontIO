@@ -91,6 +91,17 @@ describe("HomepagePromos in a running game", () => {
     expect(ramp.spaAddAds).not.toHaveBeenCalled();
   });
 
+  it("drops queued ads when the player turned out ad-free before ramp.js loaded", () => {
+    const { ramp, drain } = stubRamp();
+    userMe();
+    promos.loadBottomRail();
+    window.adsEnabled = false;
+
+    drain();
+
+    expect(ramp.spaAddAds).not.toHaveBeenCalled();
+  });
+
   it("drops a queued bottom rail that was destroyed before ramp.js loaded", () => {
     const { ramp, drain } = stubRamp();
     promos.loadBottomRail();
