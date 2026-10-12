@@ -27,6 +27,12 @@
 /* Base body styles (Homepage only) */
 body.halloween-theme:not(.in-game) {
   background-color: #1a0b26 !important;
+  --color-malibu-blue: #ff7a00;
+  --color-aquarius: #ff7a00;
+  --color-bright-blue: #ff7a00;
+  --shadow-malibu-blue-pill: 0 0 6px rgba(255, 122, 0, 0.35);
+  --shadow-malibu-blue-ring-sm: 0 0 0 4px rgba(255, 122, 0, 0.25);
+  --shadow-malibu-blue-ring-lg: 0 0 0 6px rgba(255, 122, 0, 0.35);
 }
 
 /* Background image filter overrides - Calmed, dark moody night tint */
@@ -532,10 +538,20 @@ body.halloween-theme:not(.in-game) single-player-modal,
 body.halloween-theme:not(.in-game) host-lobby-modal,
 body.halloween-theme:not(.in-game) #page-host-lobby,
 body.halloween-theme:not(.in-game) map-picker,
-body.halloween-theme:not(.in-game) game-config-settings {
+body.halloween-theme:not(.in-game) game-config-settings,
+body.halloween-theme:not(.in-game) user-setting,
+body.halloween-theme:not(.in-game) #page-settings,
+body.halloween-theme:not(.in-game) #game-settings,
+body.halloween-theme:not(.in-game) o-modal {
   --shadow-malibu-blue: 0 0 10px rgba(255, 122, 0, 0.22);
   --shadow-malibu-blue-soft: 0 0 8px rgba(255, 122, 0, 0.18);
   --shadow-malibu-blue-strong: 0 0 10px rgba(255, 122, 0, 0.22);
+  --color-malibu-blue: #ff7a00;
+  --color-aquarius: #ff7a00;
+  --color-bright-blue: #ff7a00;
+  --shadow-malibu-blue-pill: 0 0 6px rgba(255, 122, 0, 0.35);
+  --shadow-malibu-blue-ring-sm: 0 0 0 4px rgba(255, 122, 0, 0.25);
+  --shadow-malibu-blue-ring-lg: 0 0 0 6px rgba(255, 122, 0, 0.35);
 }
 
 /* 1. Map Buttons in MapPicker / MapDisplay */
@@ -665,6 +681,161 @@ body.halloween-theme:not(.in-game) single-player-modal h3,
 body.halloween-theme:not(.in-game) host-lobby-modal h2,
 body.halloween-theme:not(.in-game) host-lobby-modal h3 {
   text-shadow: 0 0 8px rgba(255, 122, 0, 0.35) !important;
+}
+
+/* --- Game Settings Modal & Controls (Toggles, Tabs, Sliders, Keybinds) --- */
+/* Theme Game Settings toggles to Halloween orange, matching Account Settings */
+body.halloween-theme:not(.in-game) setting-toggle input:checked ~ span,
+body.halloween-theme:not(.in-game) setting-toggle input.peer:checked ~ span,
+body.halloween-theme:not(.in-game) input[type="checkbox"].peer:checked ~ span {
+  background-color: #ff7a00 !important;
+  background-image: linear-gradient(
+    180deg,
+    #ff8c1a 0%,
+    #e65c00 100%
+  ) !important;
+  border-color: #ff9433 !important;
+  box-shadow: 0 4px 10px rgba(230, 92, 0, 0.25) !important;
+}
+
+body.halloween-theme:not(.in-game) setting-toggle input:checked ~ span::before,
+body.halloween-theme:not(.in-game)
+  setting-toggle
+  input.peer:checked
+  ~ span::before {
+  background-color: #ffffff !important;
+}
+
+/* General role="switch" checked state (Account Settings, Clan Manage, etc.) */
+body.halloween-theme:not(.in-game) [role="switch"][aria-checked="true"],
+body.halloween-theme:not(.in-game) button[role="switch"][aria-checked="true"] {
+  background-color: #ff7a00 !important;
+  background-image: linear-gradient(
+    180deg,
+    #ff8c1a 0%,
+    #e65c00 100%
+  ) !important;
+  border-color: #ff9433 !important;
+  box-shadow: 0 4px 10px rgba(230, 92, 0, 0.25) !important;
+}
+
+/* Modal Tabs (e.g. Gameplay, Graphics, Audio, Display, Keybinds in UserSettingModal) */
+body.halloween-theme:not(.in-game) button[role="tab"][aria-selected="true"],
+body.halloween-theme:not(.in-game)
+  [role="tablist"]
+  button[aria-selected="true"] {
+  color: var(--hw-orange, #ff7a00) !important;
+}
+
+body.halloween-theme:not(.in-game)
+  button[role="tab"][aria-selected="true"]
+  > div,
+body.halloween-theme:not(.in-game)
+  [role="tablist"]
+  button[aria-selected="true"]
+  > div {
+  background-color: var(--hw-orange, #ff7a00) !important;
+}
+
+:host-context(body.halloween-theme:not(.in-game))
+  button[role="tab"][aria-selected="true"] {
+  color: var(--hw-orange, #ff7a00) !important;
+}
+
+:host-context(body.halloween-theme:not(.in-game))
+  button[role="tab"][aria-selected="true"]
+  > div {
+  background-color: var(--hw-orange, #ff7a00) !important;
+}
+
+/* Setting Sliders (Attack Ratio, Audio sliders, Graphics sliders) */
+body.halloween-theme:not(.in-game)
+  setting-slider
+  input[type="range"]::-webkit-slider-thumb {
+  background-color: var(--hw-orange, #ff7a00) !important;
+  box-shadow: 0 0 0 4px rgba(255, 122, 0, 0.25) !important;
+}
+
+body.halloween-theme:not(.in-game)
+  setting-slider
+  input[type="range"]:active::-webkit-slider-thumb {
+  box-shadow: 0 0 0 6px rgba(255, 122, 0, 0.35) !important;
+}
+
+body.halloween-theme:not(.in-game)
+  setting-slider
+  input[type="range"]::-moz-range-thumb {
+  background-color: var(--hw-orange, #ff7a00) !important;
+  box-shadow: 0 0 0 4px rgba(255, 122, 0, 0.25) !important;
+}
+
+body.halloween-theme:not(.in-game)
+  setting-slider
+  input[type="range"]:active::-moz-range-thumb {
+  box-shadow: 0 0 0 6px rgba(255, 122, 0, 0.35) !important;
+}
+
+body.halloween-theme:not(.in-game)
+  setting-slider
+  input[type="range"]::-moz-range-progress {
+  background-color: var(--hw-orange, #ff7a00) !important;
+}
+
+/* Settings Headings & Info Banners */
+body.halloween-theme:not(.in-game) user-setting h2,
+body.halloween-theme:not(.in-game) #page-settings h2,
+body.halloween-theme:not(.in-game) #game-settings h2 {
+  color: var(--hw-orange, #ff7a00) !important;
+  text-shadow: 0 0 8px rgba(255, 122, 0, 0.35) !important;
+}
+
+body.halloween-theme:not(.in-game) user-setting div[class*="bg-blue-500/10"],
+body.halloween-theme:not(.in-game) #page-settings div[class*="bg-blue-500/10"],
+body.halloween-theme:not(.in-game) #game-settings div[class*="bg-blue-500/10"] {
+  background-color: rgba(255, 122, 0, 0.1) !important;
+  border-color: rgba(255, 122, 0, 0.25) !important;
+  color: #ffaa40 !important;
+}
+
+/* Keybind Buttons & Focus States */
+body.halloween-theme:not(.in-game) setting-keybind div[role="button"]:hover,
+body.halloween-theme:not(.in-game) setting-keybind div[role="button"]:focus {
+  border-color: var(--hw-orange, #ff7a00) !important;
+  box-shadow: 0 0 0 2px rgba(255, 122, 0, 0.35) !important;
+}
+
+body.halloween-theme:not(.in-game)
+  setting-keybind
+  div[role="button"][class*="border-blue-500"],
+body.halloween-theme:not(.in-game)
+  setting-keybind
+  div[role="button"][class*="text-blue-400"] {
+  border-color: var(--hw-orange, #ff7a00) !important;
+  color: #ffaa40 !important;
+  box-shadow: 0 0 0 2px rgba(255, 122, 0, 0.5) !important;
+}
+
+/* Setting Dropdowns & Inputs */
+body.halloween-theme:not(.in-game) setting-select select:focus,
+body.halloween-theme:not(.in-game) setting-number input:focus,
+body.halloween-theme:not(.in-game) user-setting input[type="text"]:focus,
+body.halloween-theme:not(.in-game) user-setting textarea:focus {
+  border-color: var(--hw-orange, #ff7a00) !important;
+  box-shadow: 0 0 0 1px var(--hw-orange, #ff7a00) !important;
+  outline: none !important;
+}
+
+/* Action Buttons in Settings Modal (Audio Reset / Test Buttons) */
+body.halloween-theme:not(.in-game) user-setting button#audio-reset:hover,
+body.halloween-theme:not(.in-game)
+  user-setting
+  button[id^="audio-"][id$="-test"]:not(:disabled):hover,
+body.halloween-theme:not(.in-game)
+  setting-keybind
+  button:not(:disabled):first-of-type:hover {
+  border-color: rgba(255, 122, 0, 0.5) !important;
+  background-color: rgba(255, 122, 0, 0.15) !important;
+  color: #ffaa40 !important;
 }
 
 /* Modular classes for future filter rotations */
