@@ -177,21 +177,19 @@ body.halloween-theme:not(.in-game) .bg-gray-800\/92 {
   box-shadow: 0 0 30px rgba(0, 0, 0, 0.8) !important;
 }
 
-/* Primary Action Button - Solo (Toned-down warm pumpkin orange with crisp white text) */
+/* Primary Action Button - Solo */
 body.halloween-theme:not(.in-game) button.bg-malibu-blue,
 body.halloween-theme:not(.in-game) button.bg-aquarius,
 body.halloween-theme:not(.in-game) button.bg-bright-blue,
 body.halloween-theme:not(.in-game) button.bg-blue-600,
 body.halloween-theme:not(.in-game) .btn-primary,
 body.halloween-theme:not(.in-game) #play-btn {
-  background-color: #c45500 !important;
-  color: #ffffff !important;
+  background-color: #e65c00 !important;
+  color: #000000 !important;
   font-weight: 700 !important;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.4) !important;
-  border: 1px solid rgba(255, 122, 0, 0.5) !important;
-  box-shadow:
-    0 4px 10px rgba(0, 0, 0, 0.4),
-    0 0 8px rgba(196, 85, 0, 0.25) !important;
+  text-shadow: none !important;
+  border: 1px solid rgba(255, 122, 0, 0.6) !important;
+  box-shadow: 0 4px 10px rgba(230, 92, 0, 0.25) !important;
   animation: none !important;
   transition: all 0.2s ease-in-out !important;
 }
@@ -202,19 +200,17 @@ body.halloween-theme:not(.in-game) button.bg-bright-blue:hover,
 body.halloween-theme:not(.in-game) button.bg-blue-600:hover,
 body.halloween-theme:not(.in-game) .btn-primary:hover,
 body.halloween-theme:not(.in-game) #play-btn:hover {
-  background-color: #d96206 !important;
-  border-color: rgba(255, 140, 0, 0.65) !important;
-  box-shadow:
-    0 4px 14px rgba(0, 0, 0, 0.4),
-    0 0 12px rgba(217, 98, 6, 0.35) !important;
+  background-color: #ff7a00 !important;
+  border-color: #ff9100 !important;
+  box-shadow: 0 4px 12px rgba(255, 122, 0, 0.35) !important;
 }
 
-/* Secondary Action Buttons - Create Lobby, Ranked, Join Lobby (Text ONLY to soft orange) */
+/* Secondary Action Buttons - Create Lobby, Ranked, Join Lobby (Text ONLY to orange) */
 body.halloween-theme:not(.in-game) button.bg-surface,
 body.halloween-theme:not(.in-game) button[class*="bg-surface"],
 body.halloween-theme:not(.in-game) game-mode-selector button.bg-surface {
-  color: #ff9933 !important;
-  text-shadow: 0 0 6px rgba(255, 122, 0, 0.25) !important;
+  color: #ff7a00 !important;
+  text-shadow: 0 0 10px rgba(255, 122, 0, 0.4) !important;
 }
 
 /* Tutorial Button - Clean Deep Purple with White Text */
