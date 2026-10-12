@@ -387,9 +387,10 @@ export class ClanBoostDialog extends LitElement {
           if (e.target === e.currentTarget) this.cancel();
         }}
       >
-        <!-- The panel is the dialog's only child div: site themes style
-             [role="dialog"] > div as the modal panel. -->
-        <div
+        <!-- A section, not a div: the Halloween theme restyles
+             [role="dialog"] > div (translucent purple, orange border), and
+             this panel keeps its own look like the donate dialog. -->
+        <section
           data-boost-panel
           class="relative mx-4 w-full max-w-md p-6 rounded-2xl border border-malibu-blue/50 bg-surface shadow-2xl"
         >
@@ -428,7 +429,7 @@ export class ClanBoostDialog extends LitElement {
               )}
             </button>
           </div>
-        </div>
+        </section>
       </div>
     `;
   }
