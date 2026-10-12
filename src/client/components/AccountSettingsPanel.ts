@@ -2,24 +2,50 @@ import { UserMeResponse } from "@openfront/shared/ApiSchemas";
 import { html, LitElement, nothing, TemplateResult } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
 import { isSteamPrimaryUser } from "../AccountIdentity";
-import { deleteAccount, setMarketingConsent } from "../Api";
+import {
+  deleteAccount,
+  setLevelVisibility,
+  setMarketingConsent,
+  setSearchVisibility,
+  type SetVisibilityResult,
+} from "../Api";
 import { clearLocalSession, linkGoogle, sendMagicLink } from "../Auth";
 import { crazyGamesSDK } from "../CrazyGamesSDK";
 import { isDesktopShell } from "../DesktopShell";
 import { showInGameAlert } from "../InGameModal";
+import { refreshOwnHiddenLevelBadge } from "../OwnLevelBadge";
 import { steamSDK } from "../SteamSDK";
 import { translateText } from "../Utils";
 import "./baseComponents/Button";
 import "./DeleteAccountDialog";
 import "./IdentityTokenCard";
+import "./LevelBadge";
 import { googleLinkButton } from "./ui/GoogleLinkButton";
 
 type UserMePlayer = UserMeResponse["player"];
 type UserMeUser = UserMeResponse["user"];
 
+// The /users/@me privacy flags the Privacy card toggles, each with the request
+// that stores it and the alert shown when that request fails.
+type PrivacyField = "levelHidden" | "searchHidden";
+const PRIVACY_SETTINGS: Record<
+  PrivacyField,
+  { save: (hidden: boolean) => Promise<SetVisibilityResult>; failedKey: string }
+> = {
+  levelHidden: {
+    save: (hidden) => setLevelVisibility(hidden),
+    failedKey: "account_modal.level_visibility_failed",
+  },
+  searchHidden: {
+    save: (hidden) => setSearchVisibility(hidden),
+    failedKey: "account_modal.search_visibility_failed",
+  },
+};
+
 /**
  * Account settings: marketing-consent control (with the bind-an-email flow when
- * the account has no verified email), third-party identity tokens and
+ * the account has no verified email), privacy ("hide my level", "keep my
+ * profile out of search engines"), third-party identity tokens and
  * self-service account deletion.
  *
  * Extracted from AccountModal so the standalone account-settings modal opened
@@ -33,6 +59,11 @@ export class AccountSettingsPanel extends LitElement {
 
   @state() private email: string = "";
   @state() private consentBusy: boolean = false;
+  // Per setting, so one switch's request in flight never locks the other.
+  @state() private privacyBusy: Record<PrivacyField, boolean> = {
+    levelHidden: false,
+    searchHidden: false,
+  };
   @state() private deleteDialogOpen: boolean = false;
   @state() private deleteBusy: boolean = false;
 
@@ -63,7 +94,7 @@ export class AccountSettingsPanel extends LitElement {
   render(): TemplateResult {
     return html`
       <div class="flex flex-col gap-6">
-        ${this.renderMarketingCard()}
+        ${this.renderMarketingCard()} ${this.renderPrivacyCard()}
         <identity-token-card></identity-token-card>
         ${this.renderDeleteAccountCard()}
       </div>
@@ -124,6 +155,124 @@ export class AccountSettingsPanel extends LitElement {
         ${hasEmail || this.isSteamPrimary()
           ? nothing
           : this.renderEmailBinding()}
+      </div>
+    `;
+  }
+
+  // Privacy: "Show my level to other players" and "Show my profile in search
+  // engines". Each row only when /users/@me carries its setting at all, and
+  // the card only when it carries either — an older API without them gets no
+  // card.
+  private renderPrivacyCard(): TemplateResult | typeof nothing {
+    const levelHidden = this.player?.levelHidden;
+    const searchHidden = this.player?.searchHidden;
+    if (levelHidden === undefined && searchHidden === undefined) {
+      return nothing;
+    }
+    return html`
+      <div class="bg-white/5 rounded-xl border border-white/10 p-6">
+        <div
+          class="text-xs text-white/40 uppercase tracking-widest font-bold mb-4"
+        >
+          ${translateText("account_modal.privacy_title")}
+        </div>
+        ${levelHidden === undefined
+          ? nothing
+          : html`${this.renderPrivacySwitchRow(
+              translateText("account_modal.level_visibility_title"),
+              translateText("account_modal.level_visibility_desc"),
+              !levelHidden,
+              this.privacyBusy.levelHidden,
+              (shown) => this.setPrivacyShown("levelHidden", shown),
+            )}
+            ${this.renderLevelPreview(!levelHidden)}`}
+        ${searchHidden === undefined
+          ? nothing
+          : html`<div
+              class=${levelHidden === undefined
+                ? ""
+                : "mt-4 pt-4 border-t border-white/10"}
+            >
+              ${this.renderPrivacySwitchRow(
+                translateText("account_modal.search_visibility_title"),
+                translateText("account_modal.search_visibility_desc"),
+                !searchHidden,
+                this.privacyBusy.searchHidden,
+                (shown) => this.setPrivacyShown("searchHidden", shown),
+              )}
+            </div>`}
+      </div>
+    `;
+  }
+
+  // One Privacy row: title, description and the same role="switch" toggle as
+  // the email-updates card. On = shown.
+  private renderPrivacySwitchRow(
+    title: string,
+    description: string,
+    shown: boolean,
+    busy: boolean,
+    setShown: (shown: boolean) => void,
+  ): TemplateResult {
+    return html`
+      <div class="flex items-center justify-between gap-4">
+        <div class="flex-1">
+          <div class="text-white font-medium">${title}</div>
+          <div class="text-white/50 text-sm mt-1">${description}</div>
+        </div>
+        <button
+          role="switch"
+          aria-checked=${shown ? "true" : "false"}
+          aria-label=${title}
+          ?disabled=${busy}
+          @click=${() => setShown(!shown)}
+          class="relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-malibu-blue/50 disabled:opacity-60 ${shown
+            ? "bg-malibu-blue shadow-[var(--shadow-malibu-blue-pill)]"
+            : "bg-white/15"}"
+        >
+          <span
+            class="inline-block h-4 w-4 transform rounded-full bg-white transition-transform duration-200 ${shown
+              ? "translate-x-6"
+              : "translate-x-1"}"
+          ></span>
+        </button>
+      </div>
+    `;
+  }
+
+  // "Others see": the player's name as other players get it — with their
+  // level badge, or without it and marked hidden. Decorative (the switch
+  // carries the state), so hidden from assistive tech. Needs the player's
+  // level, so it is left out when progression is off.
+  private renderLevelPreview(shown: boolean): TemplateResult | typeof nothing {
+    const progress = this.player?.progress;
+    if (progress === undefined) return nothing;
+    return html`
+      <div
+        class="level-visibility-preview mt-4 flex items-center gap-3 rounded-lg bg-black/20 border border-white/5 px-4 py-3"
+        aria-hidden="true"
+      >
+        <span
+          class="text-[10px] uppercase tracking-widest font-bold text-white/40"
+          >${translateText("account_modal.level_visibility_others_see")}</span
+        >
+        <span class="flex items-center gap-1.5 text-white font-semibold">
+          ${shown
+            ? html`<level-badge
+                class="shrink-0"
+                .level=${progress.level}
+                .prestige=${progress.prestige}
+                ?legend=${progress.legend}
+                size="24"
+              ></level-badge>`
+            : nothing}
+          ${this.player?.username ?? ""}
+        </span>
+        ${shown
+          ? nothing
+          : html`<span class="ml-auto text-xs text-white/40"
+              >${translateText("account_modal.level_visibility_hidden")}</span
+            >`}
       </div>
     `;
   }
@@ -288,6 +437,44 @@ export class AccountSettingsPanel extends LitElement {
     }
     this.consentBusy = false;
     this.requestUpdate();
+  }
+
+  // One handler for every Privacy switch: the field, its busy flag, its
+  // request and its error text all come from PRIVACY_SETTINGS[field], so a
+  // toggle can only ever read and write its own setting.
+  private async setPrivacyShown(
+    field: PrivacyField,
+    shown: boolean,
+  ): Promise<void> {
+    const player = this.player;
+    if (!player || player[field] === undefined) return;
+    if (this.privacyBusy[field]) return;
+    const previous = player[field];
+    const hidden = !shown;
+    if (previous === hidden) return;
+
+    // Optimistic, like the consent toggle: `player` is the cached /users/@me
+    // profile, so this also keeps every other reader of it consistent. The
+    // switch is disabled until the server answers; a failure puts it back.
+    const setting = PRIVACY_SETTINGS[field];
+    this.privacyBusy = { ...this.privacyBusy, [field]: true };
+    player[field] = hidden;
+
+    const result = await setting.save(hidden);
+    player[field] = result.ok ? result.hidden : previous;
+    this.privacyBusy = { ...this.privacyBusy, [field]: false };
+    // The viewer's own-badge fallback (lobby roster, in-game panel) reads the
+    // same cached profile: re-read it now so a level change shows without
+    // waiting for the next lobby.
+    if (result.ok && field === "levelHidden") {
+      void refreshOwnHiddenLevelBadge();
+    }
+
+    // 401: logOut() has already run and the signed-out state takes over —
+    // nothing to tell the player here.
+    if (!result.ok && result.code === "failed") {
+      await showInGameAlert(translateText(setting.failedKey));
+    }
   }
 
   private handleEmailInput = (e: Event): void => {
