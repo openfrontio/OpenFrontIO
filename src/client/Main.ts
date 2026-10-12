@@ -1263,6 +1263,9 @@ class Client {
     // The same teardown as starting a game: the featured stream, ads and
     // menu music stop, and the menu's modals close.
     const hash = window.location.hash;
+    // Set first, as at game prestart: a menu-audio import that finishes
+    // later must not start the menu theme under the viewer.
+    this.menuTornDown = true;
     document.dispatchEvent(new CustomEvent("game-starting"));
     this.closeMenu();
     // Closing a modal the router opened clears the hash. Put the viewer's
