@@ -255,7 +255,9 @@ describe("clan-boost-dialog", () => {
     await open(
       status({ boostEndsAt: new Date(Date.now() + 90 * 60_000).toISOString() }),
     );
-    expect(document.body.textContent).toContain("clan_modal.boost_running");
+    expect(q("[data-boost-running]")!.textContent).toContain(
+      "clan_modal.boost_time_left",
+    );
   });
 
   it("shows a failure when the status cannot load", async () => {
@@ -320,7 +322,7 @@ describe("clan-boost-dialog", () => {
     opener.remove();
   });
 
-  it("shows Plutonium tiers in days, with the real-money note", async () => {
+  it("shows Plutonium tiers in days, with the Plutonium balance", async () => {
     await open(
       status({
         tiers: [
@@ -338,8 +340,10 @@ describe("clan-boost-dialog", () => {
     expect(tierButton("headline").textContent).toContain(
       'clan_modal.boost_days:{"days":7}',
     );
-    expect(document.body.textContent).toContain("clan_modal.boost_final_hard");
-    expect(q("[data-clan-balance]")!.textContent).toContain("cosmetics.hard");
+    expect(q("[data-clan-balance]")!.getAttribute("aria-label")).toContain(
+      "cosmetics.hard",
+    );
+    expect(q("[data-clan-balance] plutonium-icon")).toBeTruthy();
     expect(buyButton().disabled).toBe(false);
   });
 
@@ -364,11 +368,22 @@ describe("clan-boost-dialog", () => {
     expect(buyButton().disabled).toBe(true);
   });
 
-  it("leaves the real-money note off caps tiers", async () => {
-    await open();
-    expect(document.body.textContent).not.toContain(
-      "clan_modal.boost_final_hard",
+  it("shows the caps limit as a labelled meter", async () => {
+    await open(
+      status({
+        softLimit: { usedMs: 3 * HOUR, capMs: 12 * HOUR, windowMs: 24 * HOUR },
+      }),
     );
+    const meter = q("[data-limit-meter]")!;
+    expect(meter.getAttribute("aria-label")).toContain(
+      "clan_modal.boost_limit_used",
+    );
+    expect(meter.textContent).toContain(
+      'clan_modal.boost_limit_short:{"used":3,"cap":12}',
+    );
+    expect(
+      meter.querySelector<HTMLElement>("[data-limit-fill]")!.style.width,
+    ).toBe("25%");
   });
 
   it("cancel emits cancel and removes the overlay on detach", async () => {

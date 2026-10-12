@@ -265,13 +265,54 @@ export class ClanBoostDialog extends LitElement {
         </span>
         <span class="text-[11px]">${formatDuration(tier.durationMs)}</span>
         <span class="flex items-center gap-1 text-sm font-bold">
-          ${tier.currency === "hard"
-            ? html`<plutonium-icon .size=${14}></plutonium-icon>`
-            : html`<cap-icon .size=${16}></cap-icon>`}
+          ${this.currencyIcon(tier.currency)}
           ${formatCurrencyAmount(tier.price)}
         </span>
       </button>
     `;
+  }
+
+  private currencyIcon(currency: "soft" | "hard") {
+    return currency === "hard"
+      ? html`<plutonium-icon .size=${14}></plutonium-icon>`
+      : html`<cap-icon .size=${16}></cap-icon>`;
+  }
+
+  private balanceLabel(currency: "soft" | "hard"): string {
+    return translateText("clan_modal.boost_clan_balance", {
+      balance: `${formatCurrencyAmount(
+        this.clanBalance(currency).toString(),
+      )} ${this.currencyLabel(currency)}`,
+    });
+  }
+
+  // Caps boost time bought in the rolling window, as a small meter.
+  private renderLimitMeter(status: ClanBoostStatus) {
+    const { usedMs, capMs } = status.softLimit;
+    const pct = capMs > 0 ? Math.min(100, (usedMs / capMs) * 100) : 0;
+    const label = translateText("clan_modal.boost_limit_used", {
+      used: formatHours(usedMs),
+      cap: formatHours(capMs),
+    });
+    return html`<span
+      data-limit-meter
+      title=${label}
+      aria-label=${label}
+      class="flex items-center gap-2 text-white/50"
+    >
+      <cap-icon .size=${14}></cap-icon>
+      <span class="w-20 h-1.5 rounded-full bg-white/10 overflow-hidden">
+        <span
+          data-limit-fill
+          class="block h-full rounded-full bg-aquarius"
+          style="width: ${pct}%"
+        ></span>
+      </span>
+      ${translateText("clan_modal.boost_limit_short", {
+        used: Math.round((usedMs / HOUR_MS) * 10) / 10,
+        cap: Math.round((capMs / HOUR_MS) * 10) / 10,
+      })}
+    </span>`;
   }
 
   private renderBody() {
@@ -297,45 +338,40 @@ export class ClanBoostDialog extends LitElement {
         ${status.tiers.map((t) => this.renderTier(t))}
       </div>
 
-      <div class="space-y-1 text-xs text-white/50">
+      <div class="flex items-center justify-between gap-3 text-xs">
         ${tier
-          ? html`<p data-clan-balance>
-              ${translateText("clan_modal.boost_clan_balance", {
-                balance: `${formatCurrencyAmount(
-                  this.clanBalance(tier.currency).toString(),
-                )} ${this.currencyLabel(tier.currency)}`,
-              })}
-            </p>`
-          : ""}
-        <p>
-          ${translateText("clan_modal.boost_limit_used", {
-            used: formatHours(status.softLimit.usedMs),
-            cap: formatHours(status.softLimit.capMs),
-          })}
-        </p>
-        ${running
-          ? html`<p class="text-aquarius">
-              ${translateText("clan_modal.boost_running", {
-                remaining: running,
-              })}
-            </p>`
-          : ""}
+          ? html`<span
+              data-clan-balance
+              title=${this.balanceLabel(tier.currency)}
+              aria-label=${this.balanceLabel(tier.currency)}
+              class="flex items-center gap-1.5 font-bold text-white/80"
+            >
+              ${this.currencyIcon(tier.currency)}
+              ${formatCurrencyAmount(
+                this.clanBalance(tier.currency).toString(),
+              )}
+            </span>`
+          : html`<span></span>`}
+        ${this.renderLimitMeter(status)}
       </div>
 
+      ${running
+        ? html`<p
+            data-boost-running
+            class="mt-3 inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-malibu-blue/15 text-aquarius border border-malibu-blue/40"
+          >
+            ${translateText("clan_modal.boost_time_left", {
+              remaining: running,
+            })}
+          </p>`
+        : ""}
       ${error
         ? html`<p class="text-red-400 text-xs mt-3" role="alert">${error}</p>`
         : ""}
 
-      <div
-        class="mt-4 rounded-xl border p-3 text-xs border-malibu-blue/30 bg-malibu-blue/10 text-dawn-blue"
-      >
-        <p class="font-bold">${translateText("clan_modal.boost_final")}</p>
-        ${tier?.currency === "hard"
-          ? html`<p class="mt-1">
-              ${translateText("clan_modal.boost_final_hard")}
-            </p>`
-          : ""}
-      </div>
+      <p class="mt-3 text-[11px] text-white/40">
+        ${translateText("clan_modal.boost_final")}
+      </p>
     `;
   }
 
