@@ -11,7 +11,7 @@
   --hw-dark-orange: #cc5500;
   --hw-purple: #2a0845;
   --hw-purple-translucent: rgba(20, 5, 30, 0.9);
-  --hw-orange-glow: 0 0 15px rgba(255, 122, 0, 0.7);
+  --hw-orange-glow: 0 0 10px rgba(255, 122, 0, 0.4);
   --hw-cobweb-svg: url("data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMDAgMTAwIiBmaWxsPSJub25lIiBzdHJva2U9IndoaXRlIiBzdHJva2Utd2lkdGg9IjQiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCI+CiAgPHBhdGggZD0iTTAsMCBMMTAwLDAgTTAsMCBMOTIsMzYgTTAsMCBMNjgsNjggTTAsMCBMMzYsOTIgTTAsMCBMMCwxMDAiIG9wYWNpdHk9IjAuOCIvPgogIDxwYXRoIGQ9Ik0zMCwwIFEyNSwzIDI3LDEwIFEyMiwxNCAyMCwyMCBRMTQsMjIgMTAsMjcgUTMsMjUgMCwzMCIgb3BhY2l0eT0iMC45Ii8+CiAgPHBhdGggZD0iTTYwLDAgUTUwLDYgNTQsMjAgUTQ0LDI4IDQwLDQwIFEyOCw0NCAyMCw1NCBRNiw1MCAwLDYwIiBvcGFjaXR5PSIwLjg1Ii8+CiAgPHBhdGggZD0iTTkwLDAgUTc1LDkgODEsMzAgUTY2LDQyIDYwLDYwIFE0Miw2NiAzMCw4MSBROSw3NSAwLDkwIiBvcGFjaXR5PSIwLjgiLz4KPC9zdmc+");
   --hw-cobweb-spider-svg: url("data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMDAgMTAwIiBmaWxsPSJub25lIiBzdHJva2U9IndoaXRlIiBzdHJva2Utd2lkdGg9IjQiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCI+CiAgPHBhdGggZD0iTTAsMCBMMTAwLDAgTTAsMCBMOTIsMzYgTTAsMCBMNjgsNjggTTAsMCBMMzYsOTIgTTAsMCBMMCwxMDAiIG9wYWNpdHk9IjAuOCIvPgogIDxwYXRoIGQ9Ik0zMCwwIFEyNSwzIDI3LDEwIFEyMiwxNCAyMCwyMCBRMTQsMjIgMTAsMjcgUTMsMjUgMCwzMCIgb3BhY2l0eT0iMC45Ii8+CiAgPHBhdGggZD0iTTYwLDAgUTUwLDYgNTQsMjAgUTQ0LDI4IDQwLDQwIFEyOCw0NCAyMCw1NCBRNiw1MCAwLDYwIiBvcGFjaXR5PSIwLjg1Ii8+CiAgPHBhdGggZD0iTTQwLDQwIEw0MCw3NSIgc3Ryb2tlPSJ3aGl0ZSIgc3Ryb2tlLXdpZHRoPSIyIiBvcGFjaXR5PSIwLjYiLz4KICA8ZWxsaXBzZSBjeD0iNDAiIGN5PSI4MCIgcng9IjUiIHJ5PSI2IiBmaWxsPSJ3aGl0ZSIgc3Ryb2tlPSJub25lIi8+CiAgPHBhdGggZD0iTTM1LDc3IFEzMCw3MyAyNyw3OCBNMzUsODEgUTI5LDgxIDI2LDg1IE00NSw3NyBRNTAsNzMgNTMsNzggTTQ1LDgxIFE1MSw4MSA1NCw4NSIgc3Ryb2tlPSJ3aGl0ZSIgc3Ryb2tlLXdpZHRoPSIyIi8+Cjwvc3ZnPg==");
 
@@ -188,8 +188,8 @@ body.halloween-theme:not(.in-game) #play-btn {
   color: #000000 !important;
   font-weight: 700 !important;
   text-shadow: none !important;
-  border: 1px solid #ff7a00 !important;
-  box-shadow: 0 4px 10px rgba(230, 92, 0, 0.4) !important;
+  border: 1px solid rgba(255, 122, 0, 0.6) !important;
+  box-shadow: 0 4px 10px rgba(230, 92, 0, 0.25) !important;
   animation: none !important;
   transition: all 0.2s ease-in-out !important;
 }
@@ -202,7 +202,7 @@ body.halloween-theme:not(.in-game) .btn-primary:hover,
 body.halloween-theme:not(.in-game) #play-btn:hover {
   background-color: #ff7a00 !important;
   border-color: #ff9100 !important;
-  box-shadow: 0 4px 15px rgba(255, 122, 0, 0.6) !important;
+  box-shadow: 0 4px 12px rgba(255, 122, 0, 0.35) !important;
 }
 
 /* Secondary Action Buttons - Create Lobby, Ranked, Join Lobby (Text ONLY to orange) */
@@ -314,15 +314,20 @@ body.halloween-theme:not(.in-game)
 }
 
 /* Modifier tags for lobby games (Changing blue backgrounds to orange) */
-body.halloween-theme:not(.in-game) .bg-malibu-blue:not(button),
+body.halloween-theme:not(.in-game)
+  .bg-malibu-blue:not(button):not([class*="bg-malibu-blue/"]),
 body.halloween-theme:not(.in-game) .bg-aquarius:not(button),
 body.halloween-theme:not(.in-game) .bg-bright-blue:not(button),
 body.halloween-theme:not(.in-game) .bg-blue-500:not(button),
-body.halloween-theme:not(.in-game) .bg-blue-600:not(button),
-body.halloween-theme:not(.in-game) .bg-blue-500\/20:not(button),
-body.halloween-theme:not(.in-game) .bg-malibu-blue\/20:not(button) {
+body.halloween-theme:not(.in-game) .bg-blue-600:not(button) {
   background-color: var(--hw-orange) !important;
   color: #000000 !important;
+}
+
+body.halloween-theme:not(.in-game) .bg-blue-500\/20:not(button),
+body.halloween-theme:not(.in-game) .bg-malibu-blue\/20:not(button) {
+  background-color: rgba(255, 122, 0, 0.15) !important;
+  color: #ffaa40 !important;
 }
 
 /* --- News Banner (Homepage) --- */
@@ -477,11 +482,11 @@ body.halloween-theme:not(.in-game) game-mode-selector button.rounded-2xl:hover,
 body.halloween-theme:not(.in-game)
   game-mode-selector
   button[class*="rounded-2xl"]:hover {
-  border-color: #ff3b30 !important;
+  border-color: rgba(255, 69, 0, 0.75) !important;
   box-shadow:
     0 6px 20px rgba(0, 0, 0, 0.8),
-    0 0 22px rgba(255, 59, 48, 0.6),
-    inset 0 0 12px rgba(255, 69, 0, 0.2) !important;
+    0 0 12px rgba(255, 69, 0, 0.35),
+    inset 0 0 10px rgba(255, 69, 0, 0.15) !important;
 }
 
 /* Map Title inside card bottom bar: Glowing Blood Orange */
@@ -509,6 +514,148 @@ body.halloween-theme:not(.in-game)
     button[class*="rounded-2xl"] {
     border: 2px solid #ffffff !important;
   }
+}
+
+/* --- Solo & Create Lobby Modals: Map Buttons & Settings Buttons --- */
+/* Duller, elegant, muted orange glow instead of harsh brightness */
+
+body.halloween-theme:not(.in-game) single-player-modal,
+body.halloween-theme:not(.in-game) host-lobby-modal,
+body.halloween-theme:not(.in-game) #page-host-lobby,
+body.halloween-theme:not(.in-game) map-picker,
+body.halloween-theme:not(.in-game) game-config-settings {
+  --shadow-malibu-blue: 0 0 10px rgba(255, 122, 0, 0.22);
+  --shadow-malibu-blue-soft: 0 0 8px rgba(255, 122, 0, 0.18);
+  --shadow-malibu-blue-strong: 0 0 10px rgba(255, 122, 0, 0.22);
+}
+
+/* 1. Map Buttons in MapPicker / MapDisplay */
+/* Selected Map Card: subtle translucent orange background, soft border, dull glow */
+body.halloween-theme:not(.in-game)
+  map-display
+  div[role="button"][aria-selected="true"],
+body.halloween-theme:not(.in-game)
+  map-display
+  div[role="button"][class*="bg-malibu-blue/20"] {
+  background-color: rgba(255, 122, 0, 0.14) !important;
+  border-color: rgba(255, 122, 0, 0.45) !important;
+  box-shadow: 0 0 10px rgba(255, 122, 0, 0.22) !important;
+  color: #ffffff !important;
+}
+
+body.halloween-theme:not(.in-game)
+  map-display
+  div[role="button"][aria-selected="true"]
+  p,
+body.halloween-theme:not(.in-game)
+  map-display
+  div[role="button"][aria-selected="true"]
+  span {
+  color: #ffffff !important;
+  text-shadow: 0 0 6px rgba(255, 122, 0, 0.3) !important;
+}
+
+/* Unselected Map Card Hover */
+body.halloween-theme:not(.in-game)
+  map-display
+  div[role="button"]:not([aria-selected="true"]):hover {
+  border-color: rgba(255, 122, 0, 0.3) !important;
+  box-shadow: 0 0 8px rgba(255, 122, 0, 0.15) !important;
+}
+
+/* Random Map button in Map Picker */
+body.halloween-theme:not(.in-game) map-picker div[class*="bg-malibu-blue/20"] {
+  background-color: rgba(255, 122, 0, 0.14) !important;
+  border-color: rgba(255, 122, 0, 0.45) !important;
+  box-shadow: 0 0 10px rgba(255, 122, 0, 0.22) !important;
+}
+
+/* Map Picker Tab Buttons (Featured, All, Favourites) */
+body.halloween-theme:not(.in-game)
+  map-picker
+  button[class*="bg-malibu-blue/20"] {
+  background-color: rgba(255, 122, 0, 0.16) !important;
+  border: 1px solid rgba(255, 122, 0, 0.4) !important;
+  box-shadow: 0 0 8px rgba(255, 122, 0, 0.2) !important;
+  color: #ffffff !important;
+}
+
+/* 2. Settings Buttons (Difficulty, Game Mode, Team Count, Units, Options, Cheats) */
+body.halloween-theme:not(.in-game)
+  game-config-settings
+  button[class*="bg-malibu-blue/20"],
+body.halloween-theme:not(.in-game)
+  game-config-settings
+  div[class*="bg-malibu-blue/20"],
+body.halloween-theme:not(.in-game)
+  single-player-modal
+  toggle-input-card
+  div[class*="bg-malibu-blue/20"],
+body.halloween-theme:not(.in-game)
+  host-lobby-modal
+  toggle-input-card
+  div[class*="bg-malibu-blue/20"],
+body.halloween-theme:not(.in-game)
+  single-player-modal
+  input-card
+  div[class*="bg-malibu-blue/20"],
+body.halloween-theme:not(.in-game)
+  host-lobby-modal
+  input-card
+  div[class*="bg-malibu-blue/20"] {
+  background-color: rgba(255, 122, 0, 0.14) !important;
+  border-color: rgba(255, 122, 0, 0.4) !important;
+  box-shadow: 0 0 10px rgba(255, 122, 0, 0.22) !important;
+  color: #ffffff !important;
+}
+
+body.halloween-theme:not(.in-game)
+  game-config-settings
+  button[class*="bg-malibu-blue/20"]:hover,
+body.halloween-theme:not(.in-game)
+  game-config-settings
+  div[class*="bg-malibu-blue/20"]:hover {
+  border-color: rgba(255, 122, 0, 0.5) !important;
+  box-shadow: 0 0 12px rgba(255, 122, 0, 0.28) !important;
+}
+
+body.halloween-theme:not(.in-game)
+  game-config-settings
+  button[class*="bg-malibu-blue/20"]
+  span,
+body.halloween-theme:not(.in-game)
+  game-config-settings
+  div[class*="bg-malibu-blue/20"]
+  span {
+  color: #ffffff !important;
+  text-shadow: 0 0 6px rgba(255, 122, 0, 0.3) !important;
+}
+
+/* Unselected Settings Card Hover */
+body.halloween-theme:not(.in-game)
+  game-config-settings
+  button:not([class*="bg-malibu-blue/20"]):not(:disabled):hover {
+  border-color: rgba(255, 122, 0, 0.25) !important;
+  box-shadow: 0 0 8px rgba(255, 122, 0, 0.12) !important;
+}
+
+/* Primary Action Buttons in Solo & Host Lobby (Start Game / Create Lobby) */
+body.halloween-theme:not(.in-game) single-player-modal o-button button,
+body.halloween-theme:not(.in-game) host-lobby-modal o-button button {
+  box-shadow: 0 4px 10px rgba(230, 92, 0, 0.25) !important;
+}
+
+body.halloween-theme:not(.in-game) single-player-modal o-button button:hover,
+body.halloween-theme:not(.in-game) host-lobby-modal o-button button:hover {
+  box-shadow: 0 4px 12px rgba(255, 122, 0, 0.35) !important;
+}
+
+/* Modal Headings - Softer, duller text glow */
+body.halloween-theme:not(.in-game) single-player-modal h2,
+body.halloween-theme:not(.in-game) single-player-modal h3,
+body.halloween-theme:not(.in-game) host-lobby-modal h2,
+body.halloween-theme:not(.in-game) host-lobby-modal h3 {
+  text-shadow: 0 0 8px rgba(255, 122, 0, 0.35) !important;
 }
 
 /* Modular classes for future filter rotations */
