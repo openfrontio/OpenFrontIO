@@ -998,6 +998,20 @@ describe("ClanModal — handlers", () => {
       expect(m.myClans[0].softBalance).toBe("750");
     });
 
+    it("lays an officer's actions out two per row, with Leave last", async () => {
+      await openDetailAs("officer");
+      const grid = modal.querySelector("[data-clan-actions]")!;
+      expect(grid.className).toContain("grid-cols-2");
+      expect(
+        Array.from(grid.children).map((b) => b.textContent?.trim()),
+      ).toEqual([
+        "clan_modal.donate",
+        "clan_modal.boost",
+        "clan_modal.manage_clan",
+        "clan_modal.leave_clan",
+      ]);
+    });
+
     it("shows a running boost's time left to everyone", async () => {
       await openDetailAs(null, {
         boostEndsAt: new Date(Date.now() + 3_600_000).toISOString(),

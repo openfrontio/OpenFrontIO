@@ -501,7 +501,10 @@ export class ClanDetailView extends LitElement {
             })}
           </div>`
         : ""}
-      <div class="flex flex-wrap gap-3">
+      <div
+        data-clan-actions
+        class="grid grid-cols-2 gap-3 [&>:last-child:nth-child(odd)]:col-span-2"
+      >
         ${this.renderActionButtons(
           isMember,
           isLeader,
@@ -845,7 +848,7 @@ export class ClanDetailView extends LitElement {
       buttons.push(html`
         <button
           @click=${() => window.showPage?.("page-account")}
-          class="flex-1 px-6 py-3 text-sm font-bold text-white uppercase tracking-wider bg-malibu-blue hover:bg-aquarius active:bg-malibu-blue/80 rounded-xl transition-all"
+          class="w-full px-4 py-3 text-sm font-bold text-white uppercase tracking-wider bg-malibu-blue hover:bg-aquarius active:bg-malibu-blue/80 rounded-xl transition-all"
         >
           ${translateText("clan_modal.sign_in_to_join")}
         </button>
@@ -854,7 +857,7 @@ export class ClanDetailView extends LitElement {
       buttons.push(html`
         <button
           disabled
-          class="flex-1 px-6 py-3 text-sm font-bold text-white/40 uppercase tracking-wider bg-white/5 rounded-xl border border-white/10 cursor-not-allowed"
+          class="w-full px-4 py-3 text-sm font-bold text-white/40 uppercase tracking-wider bg-white/5 rounded-xl border border-white/10 cursor-not-allowed"
         >
           ${translateText("clan_modal.request_pending")}
         </button>
@@ -864,7 +867,7 @@ export class ClanDetailView extends LitElement {
         <button
           @click=${() => this.handleJoin()}
           ?disabled=${this.actionPending}
-          class="flex-1 px-6 py-3 text-sm font-bold text-white uppercase tracking-wider bg-malibu-blue hover:bg-aquarius active:bg-malibu-blue/80 rounded-xl transition-all disabled:opacity-50 disabled:pointer-events-none"
+          class="w-full px-4 py-3 text-sm font-bold text-white uppercase tracking-wider bg-malibu-blue hover:bg-aquarius active:bg-malibu-blue/80 rounded-xl transition-all disabled:opacity-50 disabled:pointer-events-none"
         >
           ${translateText("clan_modal.join_clan")}
         </button>
@@ -874,7 +877,7 @@ export class ClanDetailView extends LitElement {
         <button
           @click=${() => this.handleJoin()}
           ?disabled=${this.actionPending}
-          class="flex-1 px-6 py-3 text-sm font-bold text-white uppercase tracking-wider bg-gradient-to-r from-amber-600 to-amber-700 hover:from-amber-500 hover:to-amber-600 rounded-xl transition-all shadow-lg hover:shadow-amber-900/40 border border-white/5 disabled:opacity-50 disabled:pointer-events-none"
+          class="w-full px-4 py-3 text-sm font-bold text-white uppercase tracking-wider bg-gradient-to-r from-amber-600 to-amber-700 hover:from-amber-500 hover:to-amber-600 rounded-xl transition-all shadow-lg hover:shadow-amber-900/40 border border-white/5 disabled:opacity-50 disabled:pointer-events-none"
         >
           ${translateText("clan_modal.request_invite")}
         </button>
@@ -884,20 +887,9 @@ export class ClanDetailView extends LitElement {
       buttons.push(html`
         <button
           @click=${() => (this.donateOpen = true)}
-          class="flex-1 px-6 py-3 text-sm font-bold text-white uppercase tracking-wider bg-gradient-to-r from-amber-600 to-amber-700 hover:from-amber-500 hover:to-amber-600 rounded-xl transition-all shadow-lg hover:shadow-amber-900/40 border border-white/5"
+          class="w-full px-4 py-3 text-sm font-bold text-white uppercase tracking-wider bg-gradient-to-r from-amber-600 to-amber-700 hover:from-amber-500 hover:to-amber-600 rounded-xl transition-all shadow-lg hover:shadow-amber-900/40 border border-white/5"
         >
           ${translateText("clan_modal.donate")}
-        </button>
-      `);
-    }
-    if (isMember && !isLeader) {
-      buttons.push(html`
-        <button
-          @click=${() => this.handleLeave()}
-          ?disabled=${this.actionPending}
-          class="flex-1 px-6 py-3 text-sm font-bold text-white/70 uppercase tracking-wider bg-red-600/30 hover:bg-red-600/50 rounded-xl transition-all border border-red-500/30 disabled:opacity-50 disabled:pointer-events-none"
-        >
-          ${translateText("clan_modal.leave_clan")}
         </button>
       `);
     }
@@ -906,7 +898,7 @@ export class ClanDetailView extends LitElement {
         <button
           data-action="boost"
           @click=${() => (this.boostOpen = true)}
-          class="flex-1 px-6 py-3 text-sm font-bold text-white uppercase tracking-wider bg-malibu-blue hover:bg-aquarius active:bg-malibu-blue/80 rounded-xl transition-all"
+          class="w-full px-4 py-3 text-sm font-bold text-white uppercase tracking-wider bg-malibu-blue hover:bg-aquarius active:bg-malibu-blue/80 rounded-xl transition-all"
         >
           ${translateText("clan_modal.boost")}
         </button>
@@ -920,9 +912,20 @@ export class ClanDetailView extends LitElement {
                 composed: true,
               }),
             )}
-          class="flex-1 px-6 py-3 text-sm font-bold text-white uppercase tracking-wider bg-white/10 hover:bg-white/15 rounded-xl transition-all border border-white/10"
+          class="w-full px-4 py-3 text-sm font-bold text-white uppercase tracking-wider bg-white/10 hover:bg-white/15 rounded-xl transition-all border border-white/10"
         >
           ${translateText("clan_modal.manage_clan")}
+        </button>
+      `);
+    }
+    if (isMember && !isLeader) {
+      buttons.push(html`
+        <button
+          @click=${() => this.handleLeave()}
+          ?disabled=${this.actionPending}
+          class="w-full px-4 py-3 text-sm font-bold text-white/70 uppercase tracking-wider bg-red-600/30 hover:bg-red-600/50 rounded-xl transition-all border border-red-500/30 disabled:opacity-50 disabled:pointer-events-none"
+        >
+          ${translateText("clan_modal.leave_clan")}
         </button>
       `);
     }
