@@ -545,6 +545,85 @@ describe("game-xp-panel level rewards", () => {
     expect(claimReward).not.toHaveBeenCalled();
   });
 
+  it("shows a reward the API refused as held as held, and doesn't count it", async () => {
+    claimReward.mockImplementation(async (id: string) =>
+      id === "rw50hard"
+        ? { held: "trust" }
+        : { currency: { soft: 900, hard: 3 } },
+    );
+    getUserMe.mockResolvedValue(me(900, 3));
+    await mount(milestone());
+    expect(panel.querySelector("[data-xp-reward-held-line]")).toBeNull();
+
+    claimButton()!.click();
+    await settle(1_000);
+    // Held after all: the claim moved on to the rest.
+    expect(claimReward.mock.calls.map((c) => c[0])).toEqual([
+      "rw50soft",
+      "rw50hard",
+    ]);
+    expect(panel.querySelector("[data-xp-claim-error]")).toBeNull();
+    expect(panel.querySelector("[data-xp-claimed]")).not.toBeNull();
+    // The refused one now reads as one that arrived held.
+    expect(amounts()).toEqual(["+100", "+25"]);
+    const heldLine = panel.querySelector("[data-xp-reward-held-line]")!;
+    expect(heldLine.getAttribute("data-xp-reward")).toBe("hard");
+    expect(text(heldLine.querySelector("[data-xp-reward-held]"))).toBe(
+      "account_modal.reward_held_trust",
+    );
+    // Only the Caps were claimed: a Caps-only balance.
+    expect(text(panel.querySelector("[data-xp-balance]"))).toBe(
+      `progression.rewards_balance_caps:${JSON.stringify({ caps: (900).toLocaleString() })}`,
+    );
+    // The account no longer matches: the next read marks it held.
+    expect(invalidateUserMe).toHaveBeenCalledTimes(1);
+  });
+
+  it("doesn't claim a reward refused as held again on a retry", async () => {
+    claimReward
+      .mockResolvedValueOnce({ held: "trust" })
+      .mockResolvedValueOnce(false);
+    await mount(
+      milestone({
+        rewards: [reward(50, "hard", 25), reward(50, "soft", 100)],
+      }),
+    );
+    claimButton()!.click();
+    await settle();
+    expect(panel.querySelector("[data-xp-claim-error]")).not.toBeNull();
+    expect(text(panel.querySelector("[data-xp-reward-held]"))).toBe(
+      "account_modal.reward_held_trust",
+    );
+
+    claimReward.mockResolvedValueOnce({ currency: { soft: 900, hard: 3 } });
+    getUserMe.mockResolvedValue(me(900, 3));
+    claimButton()!.click();
+    await settle(1_000);
+    expect(claimReward.mock.calls.map((c) => c[0])).toEqual([
+      "rw50hard",
+      "rw50soft",
+      "rw50soft",
+    ]);
+    expect(panel.querySelector("[data-xp-claimed]")).not.toBeNull();
+    expect(panel.querySelectorAll("[data-xp-reward-held]").length).toBe(1);
+  });
+
+  it("offers no claim once every reward was refused as held", async () => {
+    claimReward.mockResolvedValue({ held: "region" });
+    getUserMe.mockResolvedValue(me(700, 4));
+    await mount(game(49, 50, { rewards: [reward(50, "hard", 25)] }));
+    claimButton()!.click();
+    await settle(1_000);
+    expect(claimReward).toHaveBeenCalledTimes(1);
+    // As for one that arrived held: why, and neither Claim nor Claimed.
+    expect(text(panel.querySelector("[data-xp-reward-held]"))).toBe(
+      "account_modal.reward_held_other_info",
+    );
+    expect(claimButton()).toBeNull();
+    expect(panel.querySelector("[data-xp-claimed]")).toBeNull();
+    expect(panel.querySelector("[data-xp-claim-error]")).toBeNull();
+  });
+
   it("labels a hold it doesn't know with the generic note", () => {
     const summary = summarizeGameRewards([
       reward(50, "soft", 100, { claimed: true }),

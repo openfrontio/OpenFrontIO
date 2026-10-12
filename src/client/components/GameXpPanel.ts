@@ -2,6 +2,7 @@ import type { GameType } from "@openfront/engine-api/game/GameTypes";
 import type {
   GameXpEligible,
   GameXpResponse,
+  GameXpReward,
 } from "@openfront/shared/ApiSchemas";
 import { html, LitElement, nothing, PropertyValues, TemplateResult } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
@@ -20,6 +21,7 @@ import {
   type GameRewardsSummary,
   type RewardLine,
   summarizeGameRewards,
+  withRefusedHolds,
 } from "../GameRewards";
 import {
   apportionXp,
@@ -206,6 +208,9 @@ export class GameXpPanel extends LitElement {
   // How far the balance shown after a claim has counted up, 0 to 1.
   @state() private balanceCount = 1;
   private claimedIds = new Set<string>();
+  // The ones the API refused as held when claimed from this view, with the
+  // hold: shown as held from then on (see rewardsOf).
+  private refusedHolds = new Map<string, string>();
   private claimToken = 0;
   private claimTimers: ReturnType<typeof setTimeout>[] = [];
   // The store's catalog, for the previews of what a game unlocked.
@@ -1655,7 +1660,7 @@ export class GameXpPanel extends LitElement {
   // counting up. Only for the server's result (never a provisional figure),
   // and not in the past-game summary.
   private renderRewards(data: GameXpEligible): TemplateResult | typeof nothing {
-    const summary = summarizeGameRewards(data.rewards ?? []);
+    const summary = summarizeGameRewards(this.rewardsOf(data));
     if (summary === null) return nothing;
     const r = this.reveal;
     const shown = r === null || r.rewardsShown;
@@ -1857,6 +1862,13 @@ export class GameXpPanel extends LitElement {
     this.claimPressed = false;
     this.balanceCount = 1;
     this.claimedIds = new Set();
+    this.refusedHolds = new Map();
+  }
+
+  // The game's rewards, those refused as held since arriving marked held:
+  // the row then shows them with why, and neither claims nor counts them.
+  private rewardsOf(data: GameXpEligible): readonly GameXpReward[] {
+    return withRefusedHolds(data.rewards ?? [], this.refusedHolds);
   }
 
   private clearClaimTimers(): void {
@@ -1870,9 +1882,17 @@ export class GameXpPanel extends LitElement {
     if (this.claim.status !== "idle") return;
     const token = this.claimToken;
     this.claim = { status: "claiming" };
-    const outcome = await claimGameRewards(data.rewards ?? [], this.claimedIds);
+    const outcome = await claimGameRewards(
+      this.rewardsOf(data),
+      this.claimedIds,
+    );
     if (token !== this.claimToken) return;
     for (const id of outcome.claimedIds) this.claimedIds.add(id);
+    if (outcome.held.length > 0) {
+      const holds = new Map(this.refusedHolds);
+      for (const { id, held } of outcome.held) holds.set(id, held);
+      this.refusedHolds = holds;
+    }
     if (!outcome.ok) {
       this.claim = { status: "idle", failed: true };
       return;

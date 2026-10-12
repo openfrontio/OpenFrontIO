@@ -13,13 +13,14 @@ import {
   translateCosmetic,
 } from "./Cosmetics";
 import { rewardAmount } from "./Progression";
-import { claimRewards } from "./RewardClaims";
+import { claimRewards, type RefusedHold } from "./RewardClaims";
 import { translateText } from "./Utils";
 
 // The level rewards and unlocks one game earned, as the end-of-game reveal
 // shows them: summed per currency, and claimed together (only this game's).
 // A held reward (isRewardClaimable) is shown apart, with why it is held, and
-// is never claimed nor counted as claimed.
+// is never claimed nor counted as claimed. So is one the API refused as held
+// when it was claimed (withRefusedHolds): held after all.
 
 export type Currency = "soft" | "hard";
 
@@ -61,6 +62,22 @@ export interface GameRewardsSummary {
 // A held reward, unclaimed: it stays pending until the API lets it go.
 function isHeld(reward: GameXpReward): boolean {
   return !reward.claimed && !isRewardClaimable(reward);
+}
+
+/**
+ * The game's rewards as they are now known: each one the API refused as held
+ * (`holds`, by id, from claimGameRewards) carries its hold, as if it had
+ * arrived held. Unchanged when there are none.
+ */
+export function withRefusedHolds(
+  rewards: readonly GameXpReward[],
+  holds: ReadonlyMap<string, string>,
+): readonly GameXpReward[] {
+  if (holds.size === 0) return rewards;
+  return rewards.map((r) => {
+    const held = holds.get(r.id);
+    return held === undefined || r.claimed ? r : { ...r, held };
+  });
 }
 
 function linesOf(rewards: readonly GameXpReward[]): RewardLine[] {
@@ -141,16 +158,20 @@ type ClaimOutcome =
       // What this call's claims added to the balances.
       credited: Balances;
       claimedIds: string[];
+      // The ones the API refused as held (held after all): neither claimed
+      // nor credited. Shown as held from then on (withRefusedHolds).
+      held: RefusedHold[];
     }
-  // A claim failed. The ones before it went through (`claimedIds`), so a
-  // retry claims only the rest.
-  | { ok: false; claimedIds: string[] };
+  // A claim failed. The ones before it went through (`claimedIds`), or were
+  // refused as held (`held`), so a retry claims only the rest.
+  | { ok: false; claimedIds: string[]; held: RefusedHold[] };
 
 /**
  * Claims this game's unclaimed rewards, one by one, and only those: never
  * the player's other pending rewards, nor a held one. `skip` holds ids
  * already claimed from this view. A reward someone else claimed first (a
- * second device, the rewards panel) answers not_found and counts as claimed.
+ * second device, the rewards panel) answers not_found and counts as claimed;
+ * one the API refuses as held is passed over, and the rest still claimed.
  */
 export async function claimGameRewards(
   rewards: readonly GameXpReward[],
@@ -159,7 +180,9 @@ export async function claimGameRewards(
   const run = await claimRewards(
     rewards.filter((r) => !r.claimed && !skip.has(r.id) && !isHeld(r)),
   );
-  if (run.failed) return { ok: false, claimedIds: run.claimedIds };
+  if (run.failed) {
+    return { ok: false, claimedIds: run.claimedIds, held: run.held };
+  }
   const credited: Balances = { soft: 0, hard: 0 };
   for (const reward of rewards) {
     if (run.creditedIds.includes(reward.id)) {
@@ -171,6 +194,7 @@ export async function claimGameRewards(
     currency: run.currency,
     credited,
     claimedIds: run.claimedIds,
+    held: run.held,
   };
 }
 

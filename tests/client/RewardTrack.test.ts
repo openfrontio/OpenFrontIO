@@ -1086,6 +1086,73 @@ describe("<profile-progression> with the track", () => {
       expect(button.disable).toBe(false);
     });
 
+    it("claims the rest when one turns out held, and re-reads the account", async () => {
+      const claim = vi.fn(async (id: string) =>
+        id === "l46"
+          ? { held: "trust" }
+          : { currency: { soft: 1000, hard: 40 } },
+      );
+      const alert = vi.fn(async () => {});
+      const el = await mount({ me: userMe(ownerRewards()), claim, alert });
+      // The account read afresh knows the hold.
+      const fresh = ownerRewards()
+        .filter((r) => !["l45", "l47", "l25pu"].includes(r.id))
+        .map((r) => (r.id === "l46" ? { ...r, held: "trust" } : r));
+      let reads = 0;
+      el.loadUserMe = async () => {
+        reads++;
+        return userMe(fresh);
+      };
+      invalidateUserMeMock.mockClear();
+      const changed = vi.fn();
+      el.addEventListener("rewards-changed", (e) =>
+        changed((e as CustomEvent).detail),
+      );
+      el.querySelector<HTMLElement>("[data-claim-all]")!.click();
+      await vi.waitFor(() => expect(changed).toHaveBeenCalled());
+      expect(claim.mock.calls.map((c) => c[0])).toEqual([
+        "l45",
+        "l46",
+        "l47",
+        "l25pu",
+      ]);
+      expect(alert).not.toHaveBeenCalled();
+      expect(invalidateUserMeMock).toHaveBeenCalled();
+      expect(reads).toBe(1);
+      expect(changed.mock.calls[0][0].rewards).toEqual(fresh);
+      await vi.waitFor(async () => {
+        await el.querySelector<RewardTrack>("reward-track")!.updateComplete;
+        expect(el.querySelector("[data-track-claim]")).toBeNull();
+      });
+      // L46 is held: neither ready nor claimed. The rest were claimed.
+      expect(el.querySelector("[data-ready]")).toBeNull();
+      expect(el.querySelector(`[data-level="46"] [data-claimed]`)).toBeNull();
+      expect(
+        el.querySelector(`[data-level="45"] [data-claimed]`),
+      ).not.toBeNull();
+    });
+
+    it("doesn't offer one held after all again, even if the account can't be re-read", async () => {
+      const claim = vi.fn(async (id: string) =>
+        id === "l46" ? { held: "trust" } : { currency: { soft: 1, hard: 1 } },
+      );
+      const el = await mount({ me: userMe(ownerRewards()), claim });
+      el.loadUserMe = async () => false;
+      const changed = vi.fn();
+      el.addEventListener("rewards-changed", (e) =>
+        changed((e as CustomEvent).detail),
+      );
+      el.querySelector<HTMLElement>("[data-claim-all]")!.click();
+      await vi.waitFor(() => expect(changed).toHaveBeenCalled());
+      const rewards: Reward[] = changed.mock.calls[0][0].rewards;
+      expect(rewards.find((r) => r.id === "l46")?.held).toBe("trust");
+      await vi.waitFor(async () => {
+        await el.querySelector<RewardTrack>("reward-track")!.updateComplete;
+        expect(el.querySelector("[data-track-claim]")).toBeNull();
+      });
+      expect(claim).toHaveBeenCalledTimes(4);
+    });
+
     it("stops and says so when a claim fails", async () => {
       const claim = vi.fn(async (id: string) =>
         id === "l46" ? (false as const) : { currency: { soft: 1, hard: 1 } },

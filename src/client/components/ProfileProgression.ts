@@ -300,9 +300,15 @@ export class ProfileProgression extends LitElement {
       });
       let currency: RewardsChangedDetail["currency"] = run.currency;
       const claimed = new Set(run.claimedIds);
+      // Refused as held (held after all: this copy of the account was stale).
+      // Not claimed, so they stay; marked held here, they aren't offered
+      // again even if the account can't be re-read.
+      const holds = new Map(run.held.map((h) => [h.id, h.held]));
       // Some were claimed already (another tab or device): credited once all
-      // the same, so the account is re-read below.
-      const resync = run.creditedIds.length < run.claimedIds.length;
+      // the same. Or some were held after all. Either way the account is
+      // re-read below.
+      const resync =
+        run.creditedIds.length < run.claimedIds.length || holds.size > 0;
       if (token !== this.claimToken) {
         // Gone: nothing here to update. The page reads the account afresh
         // (the claims dropped its cached copy), and so does this tab if it
@@ -310,8 +316,13 @@ export class ProfileProgression extends LitElement {
         this.loadedFor = undefined;
         return;
       }
-      if (claimed.size > 0) {
-        let rewards = owned.filter((r) => !claimed.has(r.id));
+      if (claimed.size > 0 || holds.size > 0) {
+        let rewards = owned
+          .filter((r) => !claimed.has(r.id))
+          .map((r) => {
+            const held = holds.get(r.id);
+            return held === undefined ? r : { ...r, held };
+          });
         if (resync) {
           const me = await this.loadUserMe().catch(() => false as const);
           if (me !== false) {

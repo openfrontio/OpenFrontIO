@@ -31,6 +31,7 @@ describe("claimRewards", () => {
       claimedIds: ["a", "b"],
       creditedIds: ["a", "b"],
       currency: { soft: 200, hard: 25 },
+      held: [],
       failed: false,
     });
     expect(invalidateUserMe).toHaveBeenCalledTimes(1);
@@ -70,6 +71,7 @@ describe("claimRewards", () => {
       claimedIds: ["a", "b"],
       creditedIds: ["a", "b"],
       currency: { soft: 100, hard: 0 },
+      held: [],
       failed: false,
     });
   });
@@ -82,16 +84,38 @@ describe("claimRewards", () => {
     expect(invalidateUserMe).not.toHaveBeenCalled();
   });
 
-  it("treats a { held } answer (held after all) as not claimed", async () => {
-    claimReward.mockResolvedValueOnce({ held: "trust" });
+  it("treats a { held } answer (held after all) as not claimed, and moves on", async () => {
+    claimReward
+      .mockResolvedValueOnce({ held: "trust" })
+      .mockResolvedValueOnce(balances(300, 0));
     const run = await claimRewards(rewards("held", "b"));
-    expect(claimReward).toHaveBeenCalledTimes(1);
+    expect(claimReward.mock.calls.map((c) => c[0])).toEqual(["held", "b"]);
     expect(run).toEqual({
-      claimedIds: [],
-      creditedIds: [],
-      currency: null,
-      failed: true,
+      claimedIds: ["b"],
+      creditedIds: ["b"],
+      currency: { soft: 300, hard: 0 },
+      held: [{ id: "held", held: "trust" }],
+      failed: false,
     });
+    expect(invalidateUserMe).toHaveBeenCalledTimes(1);
+  });
+
+  it("drops the cached account when the only answer is { held }", async () => {
+    claimReward.mockResolvedValueOnce({ held: "region" });
+    const run = await claimRewards(rewards("held"));
+    expect(run.claimedIds).toEqual([]);
+    expect(run.held).toEqual([{ id: "held", held: "region" }]);
+    expect(run.failed).toBe(false);
+    // /users/@me doesn't know the hold yet: the next read must.
+    expect(invalidateUserMe).toHaveBeenCalledTimes(1);
+  });
+
+  it("still stops at a malformed { held } answer", async () => {
+    claimReward.mockResolvedValueOnce({ held: "" });
+    const run = await claimRewards(rewards("a", "b"));
+    expect(claimReward).toHaveBeenCalledTimes(1);
+    expect(run.failed).toBe(true);
+    expect(run.held).toEqual([]);
     expect(invalidateUserMe).not.toHaveBeenCalled();
   });
 
