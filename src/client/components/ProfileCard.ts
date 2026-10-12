@@ -442,11 +442,7 @@ export class ProfileCard extends LitElement {
   render() {
     const progress = this.progress;
     if (progress === null) return nothing;
-    const accent = levelBadgeAccent(
-      progress.level,
-      progress.legend,
-      progress.prestige,
-    );
+    const accent = levelBadgeAccent(progress.level, progress.legend);
     const clan =
       this.clanTag === null
         ? nothing
