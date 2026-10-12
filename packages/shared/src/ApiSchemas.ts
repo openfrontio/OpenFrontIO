@@ -436,18 +436,16 @@ export const UserMeResponseSchema = z.object({
     progress: ProgressSchema.optional().catch(undefined),
     // "Hide my level": true when the player opted out of showing their level
     // to others. They still earn XP and see their own level; the game server
-    // then leaves the badge off their lobby roster entry. Optional so an older
-    // API without the setting still parses — absent reads as shown, and the
-    // account settings hide the Privacy card. A malformed value reads as
-    // hidden: the server parses this response at join, so a bad value must
-    // never fail the parse and reject the join, and when the setting can't be
-    // read the private answer is the safe one.
+    // then leaves the badge off their lobby roster entry. The API always
+    // sends it. A malformed value reads as hidden: the server parses this
+    // response at join, so a bad value must never fail the parse and reject
+    // the join, and when the setting can't be read the private answer is the
+    // safe one.
     levelHidden: z.boolean().optional().catch(true),
     // "Show my profile in search engines" turned off: the public profile page
     // (openfront.io/player/<publicId>) is served noindex. It still opens for
-    // anyone with the link, and link previews are unchanged. Optional so an
-    // older API without the setting still parses — absent hides the row in
-    // account settings. A malformed value reads as hidden, like levelHidden.
+    // anyone with the link, and link previews are unchanged. The API always
+    // sends it. A malformed value reads as hidden, like levelHidden.
     searchHidden: z.boolean().optional().catch(true),
     clans: z
       .array(

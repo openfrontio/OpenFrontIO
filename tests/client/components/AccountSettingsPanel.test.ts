@@ -73,9 +73,10 @@ describe("AccountSettingsPanel — marketing-consent card", () => {
     await panel.updateComplete;
   }
 
+  // The email-updates switch (the Privacy card below has its own).
   function findSwitch(): HTMLButtonElement | null {
     return panel.querySelector(
-      'button[role="switch"]',
+      'button[role="switch"][aria-label="account_modal.marketing_title"]',
     ) as HTMLButtonElement | null;
   }
 
@@ -222,11 +223,11 @@ describe("AccountSettingsPanel — privacy card (hide my level)", () => {
     ) as HTMLButtonElement | null;
   const preview = () => panel.querySelector(".level-visibility-preview");
 
-  it("renders no card when /users/@me has no levelHidden (older API)", async () => {
+  it("shows the switch on, as the game server reads it, should levelHidden be absent", async () => {
     await show(makePlayer({ progress, username: "Kestrel" }));
 
-    expect(panel.textContent).not.toContain("account_modal.privacy_title");
-    expect(levelSwitch()).toBeNull();
+    expect(panel.textContent).toContain("account_modal.privacy_title");
+    expect(levelSwitch()!.getAttribute("aria-checked")).toBe("true");
   });
 
   it("sits between the email-updates card and the delete card", async () => {
@@ -460,16 +461,6 @@ describe("AccountSettingsPanel — privacy card (search engines)", () => {
       'button[role="switch"][aria-label="account_modal.level_visibility_title"]',
     ) as HTMLButtonElement | null;
 
-  it("renders no search row when /users/@me has no searchHidden (older API)", async () => {
-    await show(makePlayer({ levelHidden: false }));
-
-    expect(levelSwitch()).toBeTruthy();
-    expect(searchSwitch()).toBeNull();
-    expect(panel.textContent).not.toContain(
-      "account_modal.search_visibility_title",
-    );
-  });
-
   it("sits below the level row, under a divider", async () => {
     await show(makePlayer({ levelHidden: false, searchHidden: false }));
 
@@ -484,14 +475,25 @@ describe("AccountSettingsPanel — privacy card (search engines)", () => {
     expect(row!.contains(levelSwitch())).toBe(false);
   });
 
-  it("shows the card with only the search row when levelHidden is absent", async () => {
-    await show(makePlayer({ searchHidden: false }));
+  it("shows both rows, the absent one on, should either setting be absent", async () => {
+    await show(makePlayer({ searchHidden: true }));
+    expect(levelSwitch()!.getAttribute("aria-checked")).toBe("true");
+    expect(searchSwitch()!.getAttribute("aria-checked")).toBe("false");
 
-    expect(panel.textContent).toContain("account_modal.privacy_title");
-    expect(searchSwitch()).toBeTruthy();
-    expect(levelSwitch()).toBeNull();
-    // Nothing above it to divide from.
-    expect(searchSwitch()!.closest("div.border-t")).toBeNull();
+    await show(makePlayer({ levelHidden: true }));
+    expect(levelSwitch()!.getAttribute("aria-checked")).toBe("false");
+    expect(searchSwitch()!.getAttribute("aria-checked")).toBe("true");
+  });
+
+  it("turning off a setting that was absent PUTs hidden=true", async () => {
+    const { setSearchVisibility } = await import("../../../src/client/Api");
+    const player = makePlayer({ levelHidden: false });
+    await show(player);
+
+    searchSwitch()!.click();
+    await settle();
+    expect(setSearchVisibility).toHaveBeenCalledWith(true);
+    expect(player.searchHidden).toBe(true);
   });
 
   it("is on when shown in search (the default) and off when hidden", async () => {

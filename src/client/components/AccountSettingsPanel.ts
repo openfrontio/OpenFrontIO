@@ -160,15 +160,14 @@ export class AccountSettingsPanel extends LitElement {
   }
 
   // Privacy: "Show my level to other players" and "Show my profile in search
-  // engines". Each row only when /users/@me carries its setting at all, and
-  // the card only when it carries either — an older API without them gets no
-  // card.
+  // engines". /users/@me always carries both settings (a malformed one reads
+  // as hidden); one that is somehow absent shows as on, as the game server
+  // reads it.
   private renderPrivacyCard(): TemplateResult | typeof nothing {
-    const levelHidden = this.player?.levelHidden;
-    const searchHidden = this.player?.searchHidden;
-    if (levelHidden === undefined && searchHidden === undefined) {
-      return nothing;
-    }
+    const player = this.player;
+    if (!player) return nothing;
+    const levelShown = player.levelHidden !== true;
+    const searchShown = player.searchHidden !== true;
     return html`
       <div class="bg-white/5 rounded-xl border border-white/10 p-6">
         <div
@@ -176,31 +175,23 @@ export class AccountSettingsPanel extends LitElement {
         >
           ${translateText("account_modal.privacy_title")}
         </div>
-        ${levelHidden === undefined
-          ? nothing
-          : html`${this.renderPrivacySwitchRow(
-              translateText("account_modal.level_visibility_title"),
-              translateText("account_modal.level_visibility_desc"),
-              !levelHidden,
-              this.privacyBusy.levelHidden,
-              (shown) => this.setPrivacyShown("levelHidden", shown),
-            )}
-            ${this.renderLevelPreview(!levelHidden)}`}
-        ${searchHidden === undefined
-          ? nothing
-          : html`<div
-              class=${levelHidden === undefined
-                ? ""
-                : "mt-4 pt-4 border-t border-white/10"}
-            >
-              ${this.renderPrivacySwitchRow(
-                translateText("account_modal.search_visibility_title"),
-                translateText("account_modal.search_visibility_desc"),
-                !searchHidden,
-                this.privacyBusy.searchHidden,
-                (shown) => this.setPrivacyShown("searchHidden", shown),
-              )}
-            </div>`}
+        ${this.renderPrivacySwitchRow(
+          translateText("account_modal.level_visibility_title"),
+          translateText("account_modal.level_visibility_desc"),
+          levelShown,
+          this.privacyBusy.levelHidden,
+          (shown) => this.setPrivacyShown("levelHidden", shown),
+        )}
+        ${this.renderLevelPreview(levelShown)}
+        <div class="mt-4 pt-4 border-t border-white/10">
+          ${this.renderPrivacySwitchRow(
+            translateText("account_modal.search_visibility_title"),
+            translateText("account_modal.search_visibility_desc"),
+            searchShown,
+            this.privacyBusy.searchHidden,
+            (shown) => this.setPrivacyShown("searchHidden", shown),
+          )}
+        </div>
       </div>
     `;
   }
@@ -447,9 +438,9 @@ export class AccountSettingsPanel extends LitElement {
     shown: boolean,
   ): Promise<void> {
     const player = this.player;
-    if (!player || player[field] === undefined) return;
+    if (!player) return;
     if (this.privacyBusy[field]) return;
-    const previous = player[field];
+    const previous = player[field] === true;
     const hidden = !shown;
     if (previous === hidden) return;
 
