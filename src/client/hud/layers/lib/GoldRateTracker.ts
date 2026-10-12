@@ -51,7 +51,12 @@ export class GoldRateTracker {
    */
   record(smallID: number, sample: GoldSample, tick: number): void {
     let samples = this.history.get(smallID);
-    if (!samples) {
+    // The clock went back (the replay viewer seeked backward): samples from
+    // later in the game would hold the rate at 0 until it caught up again.
+    if (
+      !samples ||
+      (samples.length > 0 && samples[samples.length - 1].tick > tick)
+    ) {
       samples = [];
       this.history.set(smallID, samples);
     }

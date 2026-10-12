@@ -3,7 +3,11 @@
  * replay comes back as one.
  */
 
-import { fetchReplayRecord } from "../../../src/client/replay/ReplayRecord";
+import type { GameRecord } from "@openfront/shared/WireSchemas";
+import {
+  fetchReplayRecord,
+  hasRecordedHashes,
+} from "../../../src/client/replay/ReplayRecord";
 import { config, human, playAndArchive } from "./util/ArchiveGame";
 
 const API = "https://api.example";
@@ -73,4 +77,18 @@ test.each([
     fetchFn: answering(res()) as typeof fetch,
   });
   expect(got).toEqual({ kind });
+});
+
+test("a record can be verified only if it has hashes", () => {
+  const record = (hashes: (number | undefined)[]) =>
+    ({
+      turns: hashes.map((hash, turnNumber) => ({
+        turnNumber,
+        intents: [],
+        hash,
+      })),
+    }) as unknown as GameRecord;
+  expect(hasRecordedHashes(record([undefined, 123, undefined]))).toBe(true);
+  expect(hasRecordedHashes(record([undefined, undefined]))).toBe(false);
+  expect(hasRecordedHashes(record([]))).toBe(false);
 });
