@@ -115,6 +115,7 @@ export interface ClientOpts {
   spectator?: boolean;
   trusted?: boolean;
   platform?: Client["platform"];
+  levelBadge?: Client["levelBadge"];
 }
 
 let nextClient = 1;
@@ -142,6 +143,7 @@ export function makeClient(opts: ClientOpts = {}): Client {
     opts.spectator ?? false,
     opts.trusted ?? false,
     opts.platform,
+    opts.levelBadge,
   );
 }
 
@@ -156,6 +158,7 @@ export interface GameOpts {
   startsAt?: number;
   publicGameType?: PublicGameType;
   matchmakingTeams?: string[][];
+  matchmakingClanTags?: string[];
   telemetry?: MatchTelemetryEmitter;
   buildHash?: string;
   // Overrides for what the game reaches outside itself for. By default the
@@ -171,6 +174,8 @@ export function makeGame(opts: GameOpts = {}): GameServer {
     archive: vi.fn(async () => {}),
     // A failed replay: a disputed vote archives its own result.
     replayWinner: vi.fn(async () => null),
+    // An empty replay queue, whatever other tests left in the real one.
+    replayPending: () => 0,
     fetchTribes: vi.fn(async () => []),
   };
   if (opts.telemetry !== undefined) deps.telemetry = opts.telemetry;
@@ -186,6 +191,7 @@ export function makeGame(opts: GameOpts = {}): GameServer {
       startsAt: opts.startsAt,
       publicGameType: opts.publicGameType,
       matchmakingTeams: opts.matchmakingTeams,
+      matchmakingClanTags: opts.matchmakingClanTags,
     },
     deps,
   );

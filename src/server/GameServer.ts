@@ -4,6 +4,7 @@ import {
   HumansVsNations,
   PlayerInfo,
   PlayerType,
+  RANKED_FFA_MIN_PLAYERS,
   RankedType,
 } from "@openfront/engine-api/game/GameTypes";
 import { maps } from "@openfront/engine-api/game/Maps.gen";
@@ -11,6 +12,7 @@ import {
   AllPlayersStats,
   ClientID,
   GameConfig,
+  GameConfigPatch,
   GameID,
   Intent,
   StampedIntent,
@@ -64,7 +66,7 @@ import { z } from "zod";
 import { archive, finalizeGameRecord } from "./Archive";
 import { Client } from "./Client";
 import { applyGameConfigPatch, hostCheatsEnabled } from "./ConfigPatch";
-import { LiveStatsVote, WinnerVote } from "./Consensus";
+import { LiveStatsVote, voteKey, WinnerVote } from "./Consensus";
 import { fetchCustomTribes } from "./CustomTribes";
 import { DesyncDetector } from "./DesyncDetector";
 import {
@@ -84,6 +86,7 @@ import {
   type MatchTelemetryEmitter,
 } from "./telemetry/MatchTelemetry";
 import {
+  LONE_VOTER_REPLAY_CAP,
   replayWinnerInChild,
   winnerReplayMetrics,
   type WinnerReplayer,
@@ -144,6 +147,8 @@ export interface GameServerOptions {
   // Matchmade team split from the matchmaking assignment: publicIds per
   // team. At start each client is stamped with its team's index.
   matchmakingTeams?: string[][];
+  // Clan wars: the clan each matchmade team plays for, in team order.
+  matchmakingClanTags?: string[];
 }
 
 // Everything a GameServer reaches outside itself for. Production takes the
@@ -158,6 +163,8 @@ export interface GameServerDeps {
   archive: (record: PartialGameRecord) => Promise<void>;
   // Replays the game to settle a disputed winner vote (see settleWinner).
   replayWinner: WinnerReplayer;
+  // Replays waiting or running on this worker, against LONE_VOTER_REPLAY_CAP.
+  replayPending: () => number;
   fetchTribes: typeof fetchCustomTribes;
   env: () => GameEnv;
   turnIntervalMs: () => number;
@@ -182,6 +189,7 @@ export function defaultGameServerDeps(): GameServerDeps {
   return {
     archive: (record) => archive(finalizeGameRecord(record)),
     replayWinner: replayWinnerInChild,
+    replayPending: () => winnerReplayMetrics.pending,
     fetchTribes: fetchCustomTribes,
     env: () => ServerEnv.env(),
     turnIntervalMs: () => ServerEnv.turnIntervalMs(),
@@ -298,6 +306,7 @@ export class GameServer {
   // Matchmade team split from the matchmaking assignment: publicIds per
   // team. At start each client is stamped with its team's index.
   private matchmakingTeams?: string[][];
+  private matchmakingClanTags?: string[];
   private readonly deps: GameServerDeps;
   // Who may see whose real identity (anonymizeNames / pinned teams / admin
   // clan-tag reveal); shapes the per-viewer lobby roster and start message.
@@ -311,6 +320,7 @@ export class GameServer {
     this.startsAt = opts.startsAt;
     this.publicGameType = opts.publicGameType;
     this.matchmakingTeams = opts.matchmakingTeams;
+    this.matchmakingClanTags = opts.matchmakingClanTags;
     this.deps = { ...defaultGameServerDeps(), ...deps };
     this.groupToken = this.deps.mintGroupToken();
     this.telemetry = new MatchTelemetryRecorder(
@@ -358,8 +368,23 @@ export class GameServer {
       : undefined;
   }
 
-  public updateGameConfig(gameConfig: Partial<GameConfig>): void {
+  public updateGameConfig(gameConfig: GameConfigPatch): void {
     applyGameConfigPatch(this.gameConfig, gameConfig);
+    // A lowered cap (the admin bot can set one) may already be met; without
+    // this the lobby would wait for the next join to notice it is full.
+    this.markFullIfAutoStarting();
+  }
+
+  // Filling up starts host-less games (public, matchmade, admin bot) and
+  // listed lobbies. An unlisted lobby's player limit only turns players
+  // away: its host still starts it.
+  private markFullIfAutoStarting(): void {
+    if (
+      (this.creatorPersistentID === undefined || this.isListed()) &&
+      this.playerCount() >= (this.gameConfig.maxPlayers ?? Infinity)
+    ) {
+      this.hasReachedMaxPlayerCount = true;
+    }
   }
 
   // Dispatch a control/gameplay intent from either a websocket client or the
@@ -692,9 +717,7 @@ export class GameServer {
     this.ingress.attach(client);
     this.startLobbyInfoBroadcast();
 
-    if (this.playerCount() >= (this.gameConfig.maxPlayers ?? Infinity)) {
-      this.hasReachedMaxPlayerCount = true;
-    }
+    this.markFullIfAutoStarting();
 
     // A spectator arriving mid-game missed the start message.
     if (this.stage === "started") {
@@ -884,22 +907,29 @@ export class GameServer {
     return this.desync.count();
   }
 
-  // Matchmade ranked games (1v1/2v2) must start with full attendance: the
-  // roster freezes at start(), so a game missing a player would run
-  // short-handed only to be voided by the sim (2v2) or hand out a walkover
-  // the absent player never contested (1v1). Called at the start deadline;
-  // cancels the game and returns true when a matched player never connected.
+  // Matchmade ranked games (1v1/2v2/clan wars) must start with full
+  // attendance: the roster freezes at start(), so a game missing a player
+  // would run short-handed only to be voided by the sim (2v2, clan wars) or
+  // hand out a walkover the absent player never contested (1v1). Ranked FFA
+  // starts without the missing players as long as RANKED_FFA_MIN_PLAYERS
+  // showed up, the fewest the API rates. Called at the start deadline;
+  // cancels the game and returns true when too few matched players connected.
   public cancelShortHandedMatch(): boolean {
-    // Explicitly 1v1/2v2 only — a future ranked type must opt in rather
-    // than inherit pre-start cancellation.
+    // Explicitly 1v1/2v2/FFA/clan wars only — a future ranked type must opt
+    // in rather than inherit pre-start cancellation.
     const rankedType = this.gameConfig.rankedType;
+    let expected: number | undefined;
     if (
-      rankedType !== RankedType.OneVOne &&
-      rankedType !== RankedType.TwoVTwo
+      rankedType === RankedType.OneVOne ||
+      rankedType === RankedType.TwoVTwo ||
+      rankedType === RankedType.ClanWars
     ) {
+      expected = this.gameConfig.maxPlayers;
+    } else if (rankedType === RankedType.FreeForAll) {
+      expected = RANKED_FFA_MIN_PLAYERS;
+    } else {
       return false;
     }
-    const expected = this.gameConfig.maxPlayers;
     if (expected === undefined || this.playerCount() >= expected) {
       return false;
     }
@@ -1119,7 +1149,7 @@ export class GameServer {
       config,
       players: this.clients.players().map((c) => ({
         username: c.username,
-        clanTag: c.clanTag ?? null,
+        clanTag: this.startClanTag(c),
         clientID: c.clientID,
         cosmetics: c.cosmetics,
         isLobbyCreator: this.lobbyCreatorID === c.clientID,
@@ -1401,6 +1431,16 @@ export class GameServer {
     return idx === -1 ? undefined : idx;
   }
 
+  // The clan tag a player starts with. In clan wars it is their team's clan
+  // from the assignment, whatever tag they joined with: the API rates the
+  // clans by the tags in the game record.
+  private startClanTag(c: Client): string | null {
+    const team = this.matchmakingTeamIndex(c);
+    const matchmade =
+      team === undefined ? undefined : this.matchmakingClanTags?.[team];
+    return matchmade ?? c.clanTag ?? null;
+  }
+
   private addIntent(intent: StampedIntent) {
     this.intents.push(intent);
   }
@@ -1520,7 +1560,7 @@ export class GameServer {
           gameID: this.id,
         });
       } else if (this.winnerVote.winner() !== null) {
-        this.log.info("game already archived", {
+        this.log.info("winner already settled, record sent or pending replay", {
           gameID: this.id,
         });
       } else {
@@ -1920,96 +1960,149 @@ export class GameServer {
 
   // Archives the game once its winner is settled. Normally the vote settles
   // it, but a vote is only as good as its voters: when they disagree -- some
-  // client named a different winner, or the game ended with no majority --
-  // the server replays the game itself and archives what the simulation
-  // says. The record waits for the replay; if the replay fails, the vote's
-  // result (if any) goes out instead.
+  // client named a different winner or sent different stats, or the game
+  // ended with no majority -- the server replays the game itself and
+  // archives what the simulation says. A vote decided by a single IP is
+  // replayed too: nobody else confirmed its stats. It is common, though, so
+  // when the worker already has LONE_VOTER_REPLAY_CAP replays waiting or
+  // running it is archived unconfirmed instead of queued. The record waits for
+  // the replay; if the replay fails, the vote's result (if any) goes out
+  // instead.
+  //
+  // The record's statsAgreed says whether its winner and stats were checked:
+  // by at least two IPs sending the same ones, or by the replay.
   private settleWinner() {
     const voted = this.winnerVote.winner();
     const candidates = this.winnerVote.candidates();
-    if (candidates === 0 || (candidates === 1 && voted !== null)) {
-      this.archiveGame(voted);
+    const backers = this.winnerVote.backers();
+    const votedAgreed = voted !== null && backers >= 2;
+    if (candidates === 0 || (candidates === 1 && votedAgreed)) {
+      this.archiveGame(voted, votedAgreed);
+      return;
+    }
+    const reason =
+      candidates > 1
+        ? "disputed"
+        : voted !== null
+          ? "lone voter"
+          : "no majority";
+    const pending = this.deps.replayPending();
+    if (reason === "lone voter" && pending >= LONE_VOTER_REPLAY_CAP) {
+      winnerReplayMetrics.outcomes.skipped++;
+      this.log.warn(
+        "winner replay queue full, archiving the lone vote unconfirmed",
+        {
+          gameID: this.id,
+          voted: voted?.winner,
+          pending,
+          cap: LONE_VOTER_REPLAY_CAP,
+        },
+      );
+      this.archiveGame(voted, false);
       return;
     }
     // The record as of now; the game may run on while the replay does.
     const turns = this.turns.slice();
     const endTime = Date.now();
-    this.log.warn("winner vote disputed, replaying game", {
-      gameID: this.id,
-      voted: voted?.winner,
-      candidates,
-      turns: turns.length,
-    });
+    this.log.warn(
+      {
+        disputed: "winner vote disputed, replaying game",
+        "lone voter": "winner vote decided by one IP, replaying game",
+        "no majority": "winner vote has no majority, replaying game",
+      }[reason],
+      {
+        gameID: this.id,
+        voted: voted?.winner,
+        candidates,
+        backers,
+        turns: turns.length,
+      },
+    );
+    // Set once a record is handed over, so the .catch below falls back to the
+    // vote only when nothing was archived.
+    let archived = false;
     this.deps
       .replayWinner(this.wireGameStartInfo, turns)
       .then((replayed) => {
         if (replayed === null) {
           winnerReplayMetrics.outcomes.failed++;
-          this.archiveGame(voted, turns, endTime);
+          this.log.warn("winner replay failed, archiving the vote", {
+            gameID: this.id,
+            reason,
+            voted: voted?.winner,
+            backers,
+            statsAgreed: votedAgreed,
+          });
+          archived = true;
+          this.archiveGame(voted, votedAgreed, turns, endTime);
           return;
         }
-        const replayedKey = JSON.stringify(replayed.winner ?? null);
-        const agrees = replayedKey === JSON.stringify(voted?.winner ?? null);
+        const replayedKey = voteKey(replayed);
+        const agrees =
+          voted === null
+            ? replayed.winner === undefined
+            : voteKey(voted) === replayedKey;
         const outcome = agrees ? "agreed" : "overturned";
         winnerReplayMetrics.outcomes[outcome]++;
         this.log[agrees ? "info" : "warn"]("winner replay result", {
           gameID: this.id,
+          reason,
           voted: voted?.winner,
           replayed: replayed.winner,
           winTick: replayed.tick,
           agrees,
         });
         // A vote is the client's own simulation's result, so an honest,
-        // in-sync client votes what the replay found (desynced clients'
-        // votes were dropped). One line per voter who didn't, departed ones
-        // included, so they can be counted per player: likely cheaters.
+        // in-sync client votes what the replay found, winner and stats
+        // (desynced clients' votes were dropped). One line per voter who
+        // didn't, departed ones included, so they can be counted per player:
+        // likely cheaters.
         for (const client of this.clients.all().values()) {
-          if (
-            client.reportedWinner === null ||
-            JSON.stringify(client.reportedWinner ?? null) === replayedKey
-          ) {
+          const vote = client.reportedVote;
+          if (vote === null || vote.key === replayedKey) {
             continue;
           }
           this.log.warn("wrong winner vote", {
             gameID: this.id,
             publicID: client.publicId,
             clientID: client.clientID,
-            voted: client.reportedWinner,
+            voted: vote.winner,
             replayed: replayed.winner,
+            // The winner was right, only the stats differed.
+            wrongStats:
+              JSON.stringify(vote.winner ?? null) ===
+              JSON.stringify(replayed.winner ?? null),
             outcome,
           });
         }
-        this.archiveGame(replayed, turns, endTime);
+        archived = true;
+        this.archiveGame(replayed, true, turns, endTime);
       })
       .catch((error) => {
         this.log.error(`error archiving replayed game: ${error}`, {
           gameID: this.id,
+          reason,
         });
+        // A replay that threw is a failed replay: the vote's result goes out,
+        // as when the replay answers null.
+        if (archived) return;
+        winnerReplayMetrics.outcomes.failed++;
+        this.archiveGame(voted, votedAgreed, turns, endTime);
       });
   }
 
   private archiveGame(
     winner: { winner?: Winner; allPlayersStats: AllPlayersStats } | null,
+    // See GameEndInfoSchema.statsAgreed and settleWinner.
+    statsAgreed: boolean,
     turns: Turn[] = this.turns,
     endTime: number = Date.now(),
   ) {
     this.log.info("archiving game", {
       gameID: this.id,
       winner: winner?.winner,
+      statsAgreed,
     });
-
-    // The record carries the first winning voter's stats, unchecked. Before
-    // the vote can also be made to agree on stats, measure how often honest
-    // voters actually differ: a "split" here means they did.
-    const agreement = this.winnerVote.statsAgreement();
-    if (agreement !== null) {
-      const split = agreement.versions > 1;
-      this.log[split ? "warn" : "info"]("winner stats agreement", {
-        gameID: this.id,
-        statsAgreement: split ? "split" : "agreed",
-        ...agreement,
-      });
-    }
 
     // Players must stay in the same order as the game start info.
     const playerRecords: PlayerRecord[] = this.gameStartInfo.players.map(
@@ -2052,6 +2145,7 @@ export class GameServer {
         this.gameStartInfo.tribes,
         [...this.reports.values()],
         this.publicGameType,
+        statsAgreed,
       ),
     );
   }
@@ -2131,21 +2225,25 @@ export class GameServer {
   }
 
   private handleWinner(client: Client, clientMsg: ClientSendWinnerMessage) {
+    // Only a running game has a winner to vote on, and the replay that
+    // settles a vote needs the start info start() builds.
     if (
+      this.stage !== "started" ||
+      this.ended ||
       this.desync.isDesynced(client.clientID) ||
       this.isKicked(client.clientID) ||
       this.winnerVote.winner() !== null ||
-      client.reportedWinner !== null
+      client.reportedVote !== null
     ) {
       return;
     }
-    client.reportedWinner = clientMsg.winner;
 
     const activeUniqueIPs = this.clients.votingUniqueIPs();
     const { key: winnerKey, votes } = this.winnerVote.cast(
       clientMsg,
       client.ip,
     );
+    client.reportedVote = { winner: clientMsg.winner, key: winnerKey };
 
     this.log.info(
       `received winner vote ${clientMsg.winner}, ${votes}/${activeUniqueIPs} votes for this winner`,

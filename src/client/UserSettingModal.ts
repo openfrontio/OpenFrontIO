@@ -38,6 +38,7 @@ import {
   AudioCategory,
   getDefaultKeybinds,
   GRAPHICS_KEY,
+  keysMayBeShared,
   USER_SETTINGS_CHANGED_EVENT,
   UserSettings,
 } from "./UserSettings";
@@ -255,7 +256,7 @@ export class UserSettingModal extends BaseModal {
     }
 
     const values = Object.entries(activeKeybinds)
-      .filter(([k]) => k !== action)
+      .filter(([k]) => k !== action && !keysMayBeShared(action, k))
       .map(([, v]) => v);
 
     // Allow specific key pairs to share physical modifier keys without reporting conflict
@@ -1539,6 +1540,36 @@ export class UserSettingModal extends BaseModal {
         defaultKey=${this.defaultKeybinds.breakAlliance}
         .value=${this.getKeyValue("breakAlliance")}
         .display=${this.getKeyChar("breakAlliance")}
+        @change=${this.handleKeybindChange}
+      ></setting-keybind>
+
+      <setting-keybind
+        action="targetPlayer"
+        label=${translateText("user_setting.target_player")}
+        description=${translateText("user_setting.target_player_desc")}
+        defaultKey=${this.defaultKeybinds.targetPlayer}
+        .value=${this.getKeyValue("targetPlayer")}
+        .display=${this.getKeyChar("targetPlayer")}
+        @change=${this.handleKeybindChange}
+      ></setting-keybind>
+
+      <setting-keybind
+        action="emojiMenu"
+        label=${translateText("user_setting.emoji_menu")}
+        description=${translateText("user_setting.emoji_menu_desc")}
+        defaultKey=${this.defaultKeybinds.emojiMenu}
+        .value=${this.getKeyValue("emojiMenu")}
+        .display=${this.getKeyChar("emojiMenu")}
+        @change=${this.handleKeybindChange}
+      ></setting-keybind>
+
+      <setting-keybind
+        action="quickChat"
+        label=${translateText("user_setting.quick_chat")}
+        description=${translateText("user_setting.quick_chat_desc")}
+        defaultKey=${this.defaultKeybinds.quickChat}
+        .value=${this.getKeyValue("quickChat")}
+        .display=${this.getKeyChar("quickChat")}
         @change=${this.handleKeybindChange}
       ></setting-keybind>
 

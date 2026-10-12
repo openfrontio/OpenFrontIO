@@ -1,4 +1,4 @@
-import { GameConfig } from "@openfront/engine-api/Schemas";
+import { GameConfigPatch } from "@openfront/engine-api/Schemas";
 import { GameEvent } from "@openfront/shared/EventBus";
 
 // Sent from the lobby screens, which load before the game client: here, not
@@ -10,7 +10,7 @@ export class SendKickPlayerIntentEvent implements GameEvent {
 }
 
 export class SendUpdateGameConfigIntentEvent implements GameEvent {
-  constructor(public readonly config: Partial<GameConfig>) {}
+  constructor(public readonly config: GameConfigPatch) {}
 }
 
 export class SendToggleGameStartTimer implements GameEvent {

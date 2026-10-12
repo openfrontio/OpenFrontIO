@@ -37,26 +37,59 @@ export function canJoinTrustedLobby(
   return lobby.gameConfig?.trusted !== true || viewerTrusted;
 }
 
+/** Where the trust popup is shown: a trusted-only lobby, or ranked. */
+export type TrustRequiredContext = "lobby" | "ranked";
+
+const TRUST_REQUIRED_KEYS: Record<
+  TrustRequiredContext,
+  {
+    title: string;
+    body: string;
+    bodyCrazyGames: string;
+    bodySignedOut: string;
+    bodySignedOutCrazyGames: string;
+  }
+> = {
+  lobby: {
+    title: "public_lobby.trust_required_title",
+    body: "public_lobby.trust_required_body",
+    bodyCrazyGames: "public_lobby.trust_required_body_crazygames",
+    bodySignedOut: "public_lobby.trust_required_body_signed_out",
+    bodySignedOutCrazyGames:
+      "public_lobby.trust_required_body_signed_out_crazygames",
+  },
+  ranked: {
+    title: "mode_selector.ranked_trust_required_title",
+    body: "mode_selector.ranked_trust_required_body",
+    bodyCrazyGames: "mode_selector.ranked_trust_required_body_crazygames",
+    bodySignedOut: "mode_selector.ranked_trust_required_body_signed_out",
+    bodySignedOutCrazyGames:
+      "mode_selector.ranked_trust_required_body_signed_out_crazygames",
+  },
+};
+
 /**
- * Popup shown instead of attempting to join a trusted-only lobby the viewer
- * can't get into (the server would refuse them anyway). Tells them how to
- * become trusted rather than letting the join fail: a signed-out viewer is
- * told to sign in first, since trust only attaches to an account. CrazyGames
- * has no purchases, so its variants only suggest playing more games.
+ * Popup shown instead of attempting to join a trusted-only lobby, or ranked,
+ * when the viewer can't get in (the server would refuse them anyway). Tells
+ * them how to become trusted rather than letting the join fail: a signed-out
+ * viewer is told to sign in first, since trust only attaches to an account.
+ * CrazyGames has no purchases, so its variants only suggest playing more games.
  */
 export function trustRequiredDialog(
   signedIn: boolean,
   onClose: () => void,
+  context: TrustRequiredContext = "lobby",
 ): TemplateResult {
+  const keys = TRUST_REQUIRED_KEYS[context];
   const body = crazyGamesSDK.isOnCrazyGames()
     ? signedIn
-      ? "public_lobby.trust_required_body_crazygames"
-      : "public_lobby.trust_required_body_signed_out_crazygames"
+      ? keys.bodyCrazyGames
+      : keys.bodySignedOutCrazyGames
     : signedIn
-      ? "public_lobby.trust_required_body"
-      : "public_lobby.trust_required_body_signed_out";
+      ? keys.body
+      : keys.bodySignedOut;
   return html`<confirm-dialog
-    .heading=${translateText("public_lobby.trust_required_title")}
+    .heading=${translateText(keys.title)}
     .message=${translateText(body)}
     variant="warning"
     .showClose=${true}
@@ -332,16 +365,23 @@ function customInfoIcon(
 }
 
 /** Bottom-right lock: red and closed when the viewer can't join, green and open when they can. */
-function trustLockIcon(viewerTrusted: boolean): TemplateResult {
+export function trustLockIcon(
+  viewerTrusted: boolean,
+  {
+    tooltipTitle = translateText("public_lobby.trusted_tooltip_title"),
+    position = "bottom-2 right-2",
+    small = false,
+  }: { tooltipTitle?: string; position?: string; small?: boolean } = {},
+): TemplateResult {
   const label = translateText(
     viewerTrusted
       ? "public_lobby.trusted_unlocked"
       : "public_lobby.trusted_locked",
   );
   return html`<span
-    class="${BADGE} group/trust absolute bottom-2 right-2 flex items-center px-1.5 py-1 ${viewerTrusted
-      ? "text-green-400"
-      : "text-red-400"}"
+    class="${BADGE} group/trust absolute ${position} flex items-center ${small
+      ? "px-1 py-0.5"
+      : "px-1.5 py-1"} ${viewerTrusted ? "text-green-400" : "text-red-400"}"
     aria-label=${label}
     data-trust=${viewerTrusted ? "unlocked" : "locked"}
   >
@@ -349,13 +389,11 @@ function trustLockIcon(viewerTrusted: boolean): TemplateResult {
       role="tooltip"
       class="pointer-events-none absolute bottom-full right-0 mb-1.5 hidden w-max max-w-48 flex-col gap-0.5 whitespace-normal rounded-lg border border-white/10 bg-zinc-900 px-3 py-2 text-left text-xs normal-case tracking-normal text-white shadow-xl group-hover/trust:flex"
     >
-      <span class="font-bold"
-        >${translateText("public_lobby.trusted_tooltip_title")}</span
-      >
+      <span class="font-bold">${tooltipTitle}</span>
       <span class="text-white/80">${label}</span>
     </span>
     <svg
-      class="size-4"
+      class=${small ? "size-[11px]" : "size-4"}
       viewBox="0 0 20 20"
       fill="currentColor"
       aria-hidden="true"

@@ -9,6 +9,7 @@ import {
   HumansVsNations,
   PublicGameModifiers,
   Quads,
+  RANKED_FFA_MAX_PLAYERS,
   RankedType,
   Trios,
   UnitType,
@@ -542,6 +543,84 @@ export class MapPlaylist {
       gameMode: GameMode.Team,
       playerTeams: 2,
       bots: isCompact ? 100 : 400,
+      spawnImmunityDuration: 60 * 10,
+      disabledUnits: [],
+    } satisfies GameConfig;
+  }
+
+  // maxPlayers is the most a match can have; the check-in lowers it to the
+  // size of the assigned match, so the game starts once everyone is in.
+  public getFfaConfig(): GameConfig {
+    const maps = [
+      GameMapType.Europe,
+      GameMapType.Asia,
+      GameMapType.Africa,
+      GameMapType.NorthAmerica,
+      GameMapType.SouthAmerica,
+      GameMapType.Australia,
+    ];
+    return {
+      donateGold: false,
+      donateTroops: false,
+      gameMap: maps[Math.floor(Math.random() * maps.length)],
+      maxPlayers: RANKED_FFA_MAX_PLAYERS,
+      gameType: GameType.Public,
+      gameMapSize: GameMapSize.Normal,
+      difficulty: Difficulty.Medium, // Doesn't matter, nations are disabled
+      rankedType: RankedType.FreeForAll,
+      infiniteGold: false,
+      infiniteTroops: false,
+      maxTimerValue: 20,
+      instantBuild: false,
+      randomSpawn: false,
+      nations: "disabled",
+      gameMode: GameMode.FFA,
+      bots: 400,
+      spawnImmunityDuration: 30 * 10,
+      disabledUnits: [],
+      // Same as public FFA: no tags to rally a clan around.
+      disableClanTags: true,
+    } satisfies GameConfig;
+  }
+
+  // A clan wars match is teamCount clans of playerCount / teamCount players
+  // each (2v2 up to four teams of 5). Small matches play the ranked 2v2 maps;
+  // bigger ones the continent maps ranked FFA uses.
+  public getClanWarsConfig(teamCount: number, playerCount: number): GameConfig {
+    const small = playerCount <= 6;
+    const maps = small
+      ? [
+          GameMapType.Australia,
+          GameMapType.Iceland,
+          GameMapType.Asia,
+          GameMapType.EuropeClassic,
+        ]
+      : [
+          GameMapType.Europe,
+          GameMapType.Asia,
+          GameMapType.Africa,
+          GameMapType.NorthAmerica,
+          GameMapType.SouthAmerica,
+          GameMapType.Australia,
+        ];
+    return {
+      donateGold: true,
+      donateTroops: true,
+      gameMap: maps[Math.floor(Math.random() * maps.length)],
+      maxPlayers: playerCount,
+      gameType: GameType.Public,
+      gameMapSize: GameMapSize.Normal,
+      difficulty: Difficulty.Medium, // Doesn't matter, nations are disabled
+      rankedType: RankedType.ClanWars,
+      infiniteGold: false,
+      infiniteTroops: false,
+      maxTimerValue: small ? 15 : 20,
+      instantBuild: false,
+      randomSpawn: false,
+      nations: "disabled",
+      gameMode: GameMode.Team,
+      playerTeams: teamCount,
+      bots: 400,
       spawnImmunityDuration: 60 * 10,
       disabledUnits: [],
     } satisfies GameConfig;

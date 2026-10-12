@@ -8,7 +8,6 @@ import {
 } from "@openfront/engine-api/Schemas";
 import { resolveTribeNameData } from "@openfront/engine-lib/execution/utils/TribeNames";
 import { LOBBY_LABEL_MAX, simpleHash } from "@openfront/engine-lib/Util";
-import DOMPurify from "dompurify";
 import { customAlphabet } from "nanoid";
 import {
   GameRecord,
@@ -23,15 +22,6 @@ export function sanitize(name: string): string {
   return Array.from(name)
     .join("")
     .replace(/[^\p{L}\p{N}\s\p{Emoji}\p{Emoji_Component}[\]_]/gu, "");
-}
-
-export function onlyImages(html: string) {
-  return DOMPurify.sanitize(html, {
-    ALLOWED_TAGS: ["span", "img"],
-    ALLOWED_ATTR: ["src", "alt", "class", "style"],
-    ALLOWED_URI_REGEXP: /^https:\/\/cdn\.jsdelivr\.net\/gh\/twitter\/twemoji/,
-    ADD_ATTR: ["style"],
-  });
 }
 
 // Replays rebuild GameStartInfo from the archived record, which keeps
@@ -89,6 +79,8 @@ export function createPartialGameRecord(
   reports?: PlayerReport[],
   // Public lobbies only (see GameEndInfoSchema.publicGameType).
   publicGameType?: PublicGameType,
+  // Game servers only (see GameEndInfoSchema.statsAgreed).
+  statsAgreed?: boolean,
 ): PartialGameRecord {
   const duration = Math.floor((end - start) / 1000);
   const num_turns = allTurns.length;
@@ -119,6 +111,7 @@ export function createPartialGameRecord(
       tribes,
       reports,
       publicGameType,
+      statsAgreed,
     },
     version: "v0.0.2",
     turns,

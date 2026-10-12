@@ -1,5 +1,6 @@
 import { GameMapType, GameMode } from "@openfront/engine-api/game/GameTypes";
 import type { GameConfig } from "@openfront/engine-api/Schemas";
+import type { UserMeResponse } from "@openfront/shared/ApiSchemas";
 import type {
   PublicGameInfo,
   PublicGames,
@@ -34,6 +35,20 @@ vi.mock("../src/client/LobbySocket", () => ({
     start(): void {}
     stop(): void {}
   },
+}));
+
+// The broadcast the modal missed, under the test's control.
+const broadcast = vi.hoisted(() => ({
+  last: null as { response: UserMeResponse | false } | null,
+}));
+vi.mock("../src/client/UserMeBroadcast", () => ({
+  lastUserMeResponse: () => broadcast.last,
+}));
+
+// The lobby modals load on demand; the stubs below stand in for loaded ones.
+vi.mock("../src/client/LazyModals", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../src/client/LazyModals")>()),
+  whenModalLoaded: (_tag: string, open: () => void) => open(),
 }));
 
 // Registers <detailed-view-modal> as a side effect and gives us the class
@@ -129,6 +144,7 @@ beforeEach(async () => {
 });
 
 afterEach(() => {
+  broadcast.last = null;
   document.removeEventListener("join-lobby", joinLobby as EventListener);
   document.body.innerHTML = "";
   vi.restoreAllMocks();
@@ -247,6 +263,30 @@ describe("the multiplayer gate at DetailedGameViewModal's join()", () => {
  * proves it is unmoved by the signal the heartbeat actually produces, seeded
  * before it mounted or announced afterwards.
  */
+describe("DetailedGameViewModal and a userMeResponse that went out before it loaded", () => {
+  it("lets a trusted player into a trusted lobby", async () => {
+    broadcast.last = {
+      response: {
+        user: {},
+        player: { trustTier: "trusted" },
+      } as unknown as UserMeResponse,
+    };
+    modal.remove();
+    modal = new DetailedGameViewModal() as unknown as HTMLElement & {
+      updateComplete: Promise<unknown>;
+    };
+    document.body.appendChild(modal);
+    await modal.updateComplete;
+    const trusted = lobby("trusted-1", "ffa");
+    trusted.gameConfig = { ...trusted.gameConfig!, trusted: true };
+    await pushLobbies({ ffa: [trusted] });
+
+    cardButton("trusted-1")!.click();
+
+    expect(joinLobby).toHaveBeenCalled();
+  });
+});
+
 describe("DetailedGameViewModal and a confirmed backend outage", () => {
   let fetchMock: ReturnType<typeof vi.fn>;
 
