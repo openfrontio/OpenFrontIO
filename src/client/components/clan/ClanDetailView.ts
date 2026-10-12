@@ -877,7 +877,7 @@ export class ClanDetailView extends LitElement {
         <button
           @click=${() => this.handleJoin()}
           ?disabled=${this.actionPending}
-          class="w-full px-4 py-3 text-sm font-bold text-white uppercase tracking-wider bg-gradient-to-r from-amber-600 to-amber-700 hover:from-amber-500 hover:to-amber-600 rounded-xl transition-all shadow-lg hover:shadow-amber-900/40 border border-white/5 disabled:opacity-50 disabled:pointer-events-none"
+          class="w-full px-4 py-3 text-sm font-bold text-white uppercase tracking-wider bg-gradient-to-r bg-origin-border from-amber-600 to-amber-700 hover:from-amber-500 hover:to-amber-600 rounded-xl transition-all shadow-lg hover:shadow-amber-900/40 border border-white/5 disabled:opacity-50 disabled:pointer-events-none"
         >
           ${translateText("clan_modal.request_invite")}
         </button>
@@ -887,7 +887,7 @@ export class ClanDetailView extends LitElement {
       buttons.push(html`
         <button
           @click=${() => (this.donateOpen = true)}
-          class="w-full px-4 py-3 text-sm font-bold text-white uppercase tracking-wider bg-gradient-to-r from-amber-600 to-amber-700 hover:from-amber-500 hover:to-amber-600 rounded-xl transition-all shadow-lg hover:shadow-amber-900/40 border border-white/5"
+          class="w-full px-4 py-3 text-sm font-bold text-white uppercase tracking-wider bg-gradient-to-r bg-origin-border from-amber-600 to-amber-700 hover:from-amber-500 hover:to-amber-600 rounded-xl transition-all shadow-lg hover:shadow-amber-900/40 border border-white/5"
         >
           ${translateText("clan_modal.donate")}
         </button>
