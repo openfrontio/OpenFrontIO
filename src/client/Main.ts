@@ -1185,6 +1185,13 @@ class Client {
       return;
     }
     this.gameModeSelector.stop();
+    // The game-start modal sweep closes the promos for a game; nothing else
+    // does for the viewer, and their rails and docked header sit over it.
+    (
+      document.querySelector("homepage-promos") as
+        | (HTMLElement & { close?: () => void })
+        | null
+    )?.close?.();
     hideMenuChrome();
     setInGameSignal(true);
     const viewer = new ReplayViewer();
