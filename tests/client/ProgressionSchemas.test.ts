@@ -90,6 +90,31 @@ describe("GameXpResponseSchema", () => {
     expect(parsed.levelsReached).toEqual([{ prestige: 0, level: 5 }]);
   });
 
+  // The post-game screen has no reward list or claim button: what a game's
+  // levels paid (held or not) is claimed from the rewards panel, which reads
+  // /users/@me. A response carrying held rewards must still parse.
+  it("parses a result whose level rewards are held, offering no claim", () => {
+    const parsed = GameXpResponseSchema.parse({
+      ...eligible,
+      rewards: [
+        {
+          prestige: 0,
+          level: 5,
+          id: "9",
+          currencyType: "hard",
+          amount: "25",
+          reason: "level_milestone",
+          note: null,
+          claimed: false,
+          held: "trust",
+        },
+      ],
+      flares: [],
+    });
+    expect(parsed.eligible).toBe(true);
+    expect(parsed).not.toHaveProperty("rewards");
+  });
+
   it("defaults a missing levelsReached to none", () => {
     const rest: Record<string, unknown> = { ...eligible };
     delete rest.levelsReached;
