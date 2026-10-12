@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
+  claimReward,
   clearCreatorCode,
   getApiBase,
   getAudience,
@@ -353,5 +354,72 @@ describe("creator code client functions", () => {
       fetchMock.mockRejectedValueOnce(new Error("offline"));
       expect(await clearCreatorCode()).toEqual({ ok: false, code: "failed" });
     });
+  });
+});
+
+describe("claimReward", () => {
+  let fetchMock: ReturnType<typeof vi.fn>;
+
+  function respond(status: number, body: unknown) {
+    fetchMock.mockResolvedValueOnce(
+      new Response(JSON.stringify(body), {
+        status,
+        headers: { "content-type": "application/json" },
+      }),
+    );
+  }
+
+  beforeEach(() => {
+    setConfig("openfront.io");
+    fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    logOut.mockClear();
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.restoreAllMocks();
+  });
+
+  it("returns the post-claim balances", async () => {
+    respond(200, { currency: { soft: "150", hard: "0" } });
+    expect(await claimReward("7")).toEqual({
+      currency: { soft: 150, hard: 0 },
+    });
+    const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(url).toBe("https://api.openfront.io/rewards/7/claim");
+    expect(init.method).toBe("POST");
+  });
+
+  it("passes a held 403's hold on as named", async () => {
+    respond(403, { error: "Forbidden", resource: "reward", held: "trust" });
+    expect(await claimReward("7")).toEqual({ held: "trust" });
+  });
+
+  it("keeps a hold kind it doesn't know", async () => {
+    respond(403, { error: "Forbidden", resource: "reward", held: "other" });
+    expect(await claimReward("7")).toEqual({ held: "other" });
+  });
+
+  it.each([
+    ["without a held body", { error: "Forbidden", message: "nope" }],
+    ["with an empty held", { error: "Forbidden", held: "" }],
+    ["with no JSON body", null],
+  ])("fails generically on a 403 %s", async (_case, body) => {
+    if (body === null) {
+      fetchMock.mockResolvedValueOnce(
+        new Response("Forbidden", { status: 403 }),
+      );
+    } else {
+      respond(403, body);
+    }
+    expect(await claimReward("7")).toBe(false);
+    expect(logOut).not.toHaveBeenCalled();
+  });
+
+  it("maps a 404 to not_found", async () => {
+    respond(404, { error: "Not found" });
+    expect(await claimReward("7")).toBe("not_found");
   });
 });

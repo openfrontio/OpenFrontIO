@@ -1,5 +1,8 @@
 import { GAME_ID_REGEX } from "@openfront/engine-api/Schemas";
-import { UserMeResponse } from "@openfront/shared/ApiSchemas";
+import {
+  isRewardClaimable,
+  UserMeResponse,
+} from "@openfront/shared/ApiSchemas";
 import { assetUrl } from "@openfront/shared/AssetUrls";
 import { EventBus } from "@openfront/shared/EventBus";
 import { toWireGameStartInfo } from "@openfront/shared/SharedUtil";
@@ -14,6 +17,7 @@ import {
 import { GameEnv } from "@openfront/shared/configuration/Env";
 import { ClientEnv } from "src/client/ClientEnv";
 import { renderNavVersion } from "src/client/GameVersion";
+import { responseHasLinkedIdentity } from "./AccountIdentity";
 import { adGatekeeper } from "./AdGatekeeper";
 import { loadAdmiral, onAdmiralMeasured } from "./Admiral";
 import { getUserMe, invalidateUserMe } from "./Api";
@@ -78,7 +82,7 @@ import {
   SendToggleGameStartTimer,
   SendUpdateGameConfigIntentEvent,
 } from "./LobbyEvents";
-import type { MatchmakingModal } from "./Matchmaking";
+import type { MatchmakingModal, MatchmakingMode } from "./Matchmaking";
 import {
   hideMenuChrome,
   menuChromeIsTornDown,
@@ -224,8 +228,8 @@ declare global {
     "kick-player": CustomEvent;
     toggle_game_start_timer: CustomEvent;
     "join-changed": CustomEvent;
-    "open-matchmaking": CustomEvent<{ mode?: "1v1" | "2v2" } | undefined>;
-    "matchmaking-requeue": CustomEvent<{ mode?: "1v1" | "2v2" } | undefined>;
+    "open-matchmaking": CustomEvent<{ mode?: MatchmakingMode } | undefined>;
+    "matchmaking-requeue": CustomEvent<{ mode?: MatchmakingMode } | undefined>;
     userMeResponse: CustomEvent<UserMeResponse | false>;
     "session-cleared": CustomEvent;
     "leave-lobby": CustomEvent;
@@ -329,6 +333,26 @@ class Client {
   private presenceDetail: Omit<PresencePayload, "state"> = {};
   private presenceSpectating = false;
   private presenceInGame = false;
+  /**
+   * Whether the home page is currently torn down for a game.
+   *
+   * For listeners that may not exist when "game-starting" fires: the event
+   * carries no history, so anything registered later cannot tell "no game
+   * yet" from "a game started while I was loading". The menu audio chunk is
+   * exactly that case.
+   *
+   * Tracks the menu's state rather than just that prestart happened, because
+   * "menu-restored" is as easy to miss as "game-starting": a player who
+   * leaves the lobby in place before the chunk lands is back on a live home
+   * page, and a flag that only ever latched on would keep the theme off it.
+   *
+   * Its own flag rather than menuChromeIsTornDown(), which the replay viewer
+   * also sets without a "game-starting" to go with it. Set and cleared beside
+   * those two dispatches, so it says exactly what a listener needs to know:
+   * whether it would already have been disarmed had it been there to hear
+   * them.
+   */
+  private menuTornDown = false;
   // Held apart from presenceDetail because that object is REPLACED wholesale
   // on every lobby_info, and the token rides every one of those (once a
   // second) as well as the start message. Merged back in at emit time; see
@@ -373,13 +397,27 @@ class Client {
     // It and howler are their own chunk, so the page doesn't wait on them. A
     // game that got there first has made the mixer already, and the menu
     // theme has no business starting under it.
+    //
+    // gameInProgress covers the other order, where this chunk lands while a
+    // game is up but before the game client has built a mixer. startMenuMusic
+    // only disarms on the "game-starting" it can hear, so arming it in that
+    // window would leave it live under a running game, free to start the
+    // theme over the gameplay track on the next click or music-volume change.
+    // It is still called, so that its "menu-restored" listener exists and a
+    // player who leaves the lobby in place gets the theme back.
+    //
+    // The mixer check stays a skip rather than the same treatment:
+    // initAudioMixer disposes whatever is there, so calling it once a game
+    // has one would pull the mixer out from under that game.
     Promise.all([
       import("./sound/AudioMixer"),
       import("./sound/MenuMusic"),
     ]).then(
       ([{ audioMixer, initAudioMixer }, { startMenuMusic }]) => {
         if (audioMixer() === null) {
-          startMenuMusic(initAudioMixer(this.userSettings));
+          startMenuMusic(initAudioMixer(this.userSettings), {
+            gameInProgress: this.menuTornDown,
+          });
         }
       },
       (err) => console.error("Menu audio failed to load:", err),
@@ -829,7 +867,9 @@ class Client {
               Date.now(),
             ),
             grantStringsReady: steamGrantStringsReady(translateText),
-            rewardCount: rewards.length,
+            // Held rewards can't be claimed yet: on their own they'd open the
+            // popup every boot with nothing to do.
+            rewardCount: rewards.filter(isRewardClaimable).length,
             claimPromptDue: claimPromptDue(claimStore, Date.now(), publicId),
             claimStringsReady: claimPromptStringsReady(translateText),
           }),
@@ -851,10 +891,19 @@ class Client {
             navigate: (hash) => {
               window.location.hash = hash;
             },
-            openRewards: () =>
-              whenModalLoaded("rewards-modal", () =>
-                this.rewardsModal?.openWithRewards(rewards),
-              ),
+            openRewards: () => {
+              // Signed in as for trustRequiredDialog: a linked identity, or a
+              // CrazyGames sign-in (only the SDK knows that one).
+              void (async () => {
+                const signedIn =
+                  responseHasLinkedIdentity(userMeResponse) ||
+                  (crazyGamesSDK.isOnCrazyGames() &&
+                    (await crazyGamesSDK.getUserProfile()) !== null);
+                whenModalLoaded("rewards-modal", () =>
+                  this.rewardsModal?.openWithRewards(rewards, signedIn),
+                );
+              })();
+            },
             storeClaimPrompt: (store) =>
               localStorage.setItem(CLAIM_PROMPT_KEY, JSON.stringify(store)),
             storeSteamGrant: (store) =>
@@ -1413,14 +1462,15 @@ class Client {
     if (customElements.get("store-modal")) this.storeModal?.refresh();
   }
 
-  // Returns the requeue mode ("/?requeue" = 1v1, "/?requeue=2v2" = 2v2), or
-  // null when the URL has no requeue param.
-  private consumeRequeueUrl(): "1v1" | "2v2" | null {
+  // Returns the requeue mode ("/?requeue" = 1v1, "/?requeue=2v2" = 2v2,
+  // "/?requeue=ffa" = FFA), or null when the URL has no requeue param.
+  private consumeRequeueUrl(): MatchmakingMode | null {
     const searchParams = new URLSearchParams(window.location.search);
     if (!searchParams.has("requeue")) {
       return null;
     }
-    const mode = searchParams.get("requeue") === "2v2" ? "2v2" : "1v1";
+    const param = searchParams.get("requeue");
+    const mode = param === "2v2" || param === "ffa" ? param : "1v1";
 
     searchParams.delete("requeue");
     const newUrl =
@@ -1669,6 +1719,7 @@ class Client {
     this.lobbyHandle.prestart.then(() => {
       // The game is actually starting now (lobby wait is over). Let listeners that stay up
       // through the wait (e.g. the featured-stream panel) hide at this point instead of on join.
+      this.menuTornDown = true;
       document.dispatchEvent(new CustomEvent("game-starting"));
       // Earliest point the lobby is provably closed: the server has stopped
       // broadcasting lobby_info and refuses new seats, so the shell must stop
@@ -1958,6 +2009,7 @@ class Client {
       // page is live again without a navigation. MenuMusic tore its gesture
       // listeners down at prestart and needs them back, or the menu theme is
       // silent for the rest of the session.
+      this.menuTornDown = false;
       document.dispatchEvent(new CustomEvent("menu-restored"));
     }
 
@@ -1990,19 +2042,19 @@ class Client {
   // dispatch with no open modal (the player closed it mid-wait) stays a
   // no-op — don't force them back into a queue they left.
   private handleMatchmakingRequeue(
-    event: CustomEvent<{ mode?: "1v1" | "2v2" } | undefined>,
+    event: CustomEvent<{ mode?: MatchmakingMode } | undefined>,
   ) {
     if (this.loadedMatchmakingModal()?.requeue()) {
       return;
     }
-    if (event.detail?.mode !== undefined) {
-      window.location.href =
-        event.detail.mode === "2v2" ? "/?requeue=2v2" : "/?requeue";
+    const mode = event.detail?.mode;
+    if (mode !== undefined) {
+      window.location.href = mode === "1v1" ? "/?requeue" : `/?requeue=${mode}`;
     }
   }
 
   private handleOpenMatchmaking(
-    event: CustomEvent<{ mode?: "1v1" | "2v2" } | undefined>,
+    event: CustomEvent<{ mode?: MatchmakingMode } | undefined>,
   ) {
     if (!this.matchmakingModal) return;
     whenModalLoaded("matchmaking-modal", () => {
@@ -2010,8 +2062,8 @@ class Client {
       // game-start teardown couldn't close a modal that hadn't loaded.
       if (menuChromeIsTornDown()) return;
       // Always set the mode: dispatchers without a detail (homepage button,
-      // requeue URL) mean 1v1 and must reset a lingering 2v2 selection.
-      this.matchmakingModal.mode = event.detail?.mode === "2v2" ? "2v2" : "1v1";
+      // requeue URL) mean 1v1 and must reset a lingering selection.
+      this.matchmakingModal.mode = event.detail?.mode ?? "1v1";
       this.matchmakingModal.open();
     });
   }
