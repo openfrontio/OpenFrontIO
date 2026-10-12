@@ -252,8 +252,8 @@ body.halloween-theme:not(.in-game) button[class*="bg-cyber-yellow"]:hover {
     background-size: contain !important;
     background-repeat: no-repeat !important;
     pointer-events: none !important;
-    z-index: 50 !important;
-    opacity: 0.85 !important;
+    z-index: 70 !important; /* Above desktop navbar banner (z:60) so it is crisp & unblurred, below ads (z:150) */
+    opacity: 0.95 !important;
     filter: drop-shadow(0 0 3px rgba(0, 0, 0, 0.8)) !important;
   }
 }
