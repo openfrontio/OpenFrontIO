@@ -378,17 +378,20 @@ export class ClanBoostDialog extends LitElement {
   private renderOverlay() {
     return html`
       <div
-        class="fixed inset-0 z-[10020] flex items-center justify-center bg-black/80"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="clan-boost-dialog-title"
+        tabindex="-1"
+        class="fixed inset-0 z-[10020] flex items-center justify-center bg-black/80 focus:outline-none"
         @click=${(e: Event) => {
           if (e.target === e.currentTarget) this.cancel();
         }}
       >
+        <!-- The panel is the dialog's only child div: site themes style
+             [role="dialog"] > div as the modal panel. -->
         <div
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="clan-boost-dialog-title"
-          tabindex="-1"
-          class="relative mx-4 w-full max-w-md p-6 rounded-2xl border border-malibu-blue/50 bg-surface shadow-2xl focus:outline-none"
+          data-boost-panel
+          class="relative mx-4 w-full max-w-md p-6 rounded-2xl border border-malibu-blue/50 bg-surface shadow-2xl"
         >
           <h2
             id="clan-boost-dialog-title"
