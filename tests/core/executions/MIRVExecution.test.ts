@@ -268,6 +268,29 @@ describe("MIRVExecution", () => {
     expect(player.isTraitor()).toBe(false);
   });
 
+  test("MIRV should not notify terra nullius if its target is claimed before launch", async () => {
+    let unownedTile: ReturnType<Game["ref"]> | null = null;
+    for (let x = 15; x < 25 && unownedTile === null; x++) {
+      for (let y = 15; y < 25; y++) {
+        const tile = game.ref(x, y);
+        if (game.map().isLand(tile) && !game.map().hasOwner(tile)) {
+          unownedTile = tile;
+          break;
+        }
+      }
+    }
+
+    expect(unownedTile).not.toBeNull();
+
+    const displaySpy = vi.spyOn(game, "displayIncomingUnit");
+    const mirvExec = new MirvExecution(player, unownedTile!);
+    mirvExec.init(game, game.ticks());
+    otherPlayer.conquer(unownedTile!);
+
+    expect(() => mirvExec.tick(game.ticks())).not.toThrow();
+    expect(displaySpy).not.toHaveBeenCalled();
+  });
+
   test("MIRV should launch when targeting own territory without breaking alliances", async () => {
     const playerTile = Array.from(player.tiles())[0];
     const mirvExec = new MirvExecution(player, playerTile);
