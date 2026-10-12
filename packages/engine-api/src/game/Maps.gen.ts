@@ -131,6 +131,7 @@ export enum GameMapType {
   Vietnam = "Vietnam", // map-generator/assets/maps/vietnam/info.json
   WarshipWarship = "Warship Warship", // map-generator/assets/maps/warshipwarship/info.json
   World = "World", // map-generator/assets/maps/world/info.json
+  world4k = "World 4000", // map-generator/assets/maps/world4k/info.json
   WorldInverted = "World Inverted", // map-generator/assets/maps/worldinverted/info.json
   YangtzeRiver = "Yangtze River", // map-generator/assets/maps/yangtzeriver/info.json
   YellowSea = "Yellow Sea", // map-generator/assets/maps/yellowsea/info.json
@@ -1412,7 +1413,7 @@ export const maps: readonly MapInfo[] = [
     type: GameMapType.GiantWorldMap,
     translationKey: "map.giantworldmap",
     categories: ["world"],
-    multiplayerFrequency: 15,
+    multiplayerFrequency: 0,
     ffaFrequency: -1,
     teamFrequency: -1,
     specialFrequency: -1,
@@ -2494,9 +2495,28 @@ export const maps: readonly MapInfo[] = [
     ffaFrequency: -1,
     teamFrequency: -1,
     specialFrequency: -1,
-    defaultNationCount: 72,
+    defaultNationCount: 70,
     featuredRank: 1,
     forcedModifiers: ["isCrowded:50"],
+    layers: [
+      { id: "w2kland", placement: "land", nukeable: true },
+      { id: "w2kwater", placement: "water" },
+    ],
+  },
+  {
+    id: "world4k",
+    type: GameMapType.world4k,
+    translationKey: "map.world4k",
+    categories: ["new", "world"],
+    multiplayerFrequency: 10,
+    ffaFrequency: -1,
+    teamFrequency: -1,
+    specialFrequency: -1,
+    defaultNationCount: 111,
+    layers: [
+      { id: "w4kland", placement: "land", nukeable: true },
+      { id: "w4kwater", placement: "water" },
+    ],
   },
   {
     id: "WorldInverted",
