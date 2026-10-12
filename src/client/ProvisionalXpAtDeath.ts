@@ -71,10 +71,9 @@ export function provisionalXpRules(config: ProgressionConfig): XpRules | null {
 
 /**
  * Whether the API can score this game at all. A singleplayer game never
- * carries the end-of-game stats vote, so it is only scored by an API that
- * says it scores singleplayer (scoresSingleplayer) or doesn't require the
- * vote (requireStatsAgreed false, staging). An API that says neither predates
- * singleplayer scoring, so there is no figure to show for it.
+ * carries the end-of-game stats vote; the API scores it all the same and says
+ * so (scoresSingleplayer). A value that doesn't read as true (malformed)
+ * shows no figure for a singleplayer game rather than one it may not pay.
  */
 export function apiScoresGame(
   progression: ProgressionConfig,
@@ -82,8 +81,7 @@ export function apiScoresGame(
 ): boolean {
   return (
     config.gameType !== GameType.Singleplayer ||
-    progression.scoresSingleplayer === true ||
-    progression.requireStatsAgreed === false
+    progression.scoresSingleplayer === true
   );
 }
 
@@ -97,27 +95,28 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 // long only ever understates the figure, so the margin is generous.
 const DAY_ROLLOVER_MARGIN_MS = 12 * 60 * 60 * 1000;
 
+// When the UTC day the API stamped the daily allowances with began, or null
+// when the stamp doesn't read as one ("YYYY-MM-DD").
+function dayStartOf(day: string | undefined): number | null {
+  if (day === undefined || !/^\d{4}-\d{2}-\d{2}$/.test(day)) return null;
+  const start = Date.parse(`${day}T00:00:00Z`);
+  return Number.isFinite(start) ? start : null;
+}
+
 // The day's allowances as they stand when the player died. The API stamps
 // them with the UTC day they are for (its own clock); they reset once that
 // day is over, as they do for the API, which goes by the UTC day the game
-// ends.
-//
-// Counts with no day stamp (an older API, or a stamp that doesn't read) are
-// of unknown age, so they are read the way that can't overstate the figure:
-// the caps as given (counts only grow within a day, so stale ones are higher)
-// and the first-game bonus as taken. If it was open after all, the server's
-// figure adds it and says the day's allowances changed.
+// ends. buildProvisionalXp shows no figure without a stamp that reads.
 function dailyOn(daily: Progress["daily"], now: number): DailyXpState {
-  if (daily === undefined) return NO_DAILY_XP;
-  const { privateGames, singleplayerGames, firstGameClaimed } = daily;
-  const dayStart =
-    daily.day !== undefined && /^\d{4}-\d{2}-\d{2}$/.test(daily.day)
-      ? Date.parse(`${daily.day}T00:00:00Z`)
-      : NaN;
-  if (!Number.isFinite(dayStart)) {
-    return { privateGames, singleplayerGames, firstGameClaimed: true };
+  const dayStart = dayStartOf(daily?.day);
+  if (
+    daily === undefined ||
+    dayStart === null ||
+    now >= dayStart + DAY_MS + DAY_ROLLOVER_MARGIN_MS
+  ) {
+    return NO_DAILY_XP;
   }
-  if (now >= dayStart + DAY_MS + DAY_ROLLOVER_MARGIN_MS) return NO_DAILY_XP;
+  const { privateGames, singleplayerGames, firstGameClaimed } = daily;
   return { privateGames, singleplayerGames, firstGameClaimed };
 }
 
@@ -264,10 +263,12 @@ export function buildProvisionalXp(input: {
   if (rules === null || !apiScoresGame(input.progression, input.config)) {
     return null;
   }
-  // The API sends both with progress; without them the response is older or
+  // The API sends both with progress, the allowances stamped with their day;
+  // without them (or with a stamp that doesn't read) the response is
   // malformed, and reading them as a fresh day at 1x could overstate.
   if (
     input.progress.daily === undefined ||
+    dayStartOf(input.progress.daily.day) === null ||
     input.progress.subscriberPermille === undefined
   ) {
     return null;

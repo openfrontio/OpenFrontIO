@@ -299,8 +299,8 @@ export const ProgressionConfigSchema = z.object({
   // agreed on the stats (true in production).
   requireStatsAgreed: z.boolean().optional().catch(undefined),
   // Whether the API scores singleplayer games, which never carry that vote
-  // (at the singleplayer rate and daily cap). An older API that predates the
-  // field required the vote of every game, so absent reads as no.
+  // (at the singleplayer rate and daily cap). The API always sends true; a
+  // malformed value reads as absent, and the client takes that as no.
   scoresSingleplayer: z.boolean().optional().catch(undefined),
   // The rules that formula runs on. Absent from older APIs; a malformed block
   // only loses the provisional figure, never the level curve.

@@ -164,6 +164,7 @@ describe("provisionalXpContext", () => {
       progress: {
         ...PROGRESS,
         daily: {
+          ...FULL_PROGRESS.daily!,
           privateGames: 3,
           singleplayerGames: 1,
           firstGameClaimed: true,
@@ -217,43 +218,6 @@ describe("provisionalXpContext", () => {
     expect(dailyAt("2026-10-03T12:00:00Z")).toEqual({
       privateGames: 0,
       singleplayerGames: 0,
-      firstGameClaimed: false,
-    });
-  });
-
-  it("reads undated allowances the way that can't overstate the figure", () => {
-    const at = (day: string | undefined) => {
-      const derived = provisionalXpContext({
-        snapshot: ffaSnapshot(),
-        myClientID: "me",
-        config: FFA,
-        progress: {
-          ...PROGRESS,
-          daily: {
-            day,
-            privateGames: 3,
-            singleplayerGames: 1,
-            firstGameClaimed: false,
-          },
-        },
-        now: Date.parse("2026-10-09T09:00:00Z"),
-      });
-      if (derived === "retry") throw new Error("expected a context");
-      return derived.ctx.daily;
-    };
-    // No stamp, or one that doesn't read as a day: the caps as given, and the
-    // first-game bonus not claimed (nor the counts reset, however old).
-    for (const day of [undefined, "yesterday", "2026-13-45"]) {
-      expect(at(day)).toEqual({
-        privateGames: 3,
-        singleplayerGames: 1,
-        firstGameClaimed: true,
-      });
-    }
-    // Today's stamp: as given, the first game still open.
-    expect(at("2026-10-09")).toEqual({
-      privateGames: 3,
-      singleplayerGames: 1,
       firstGameClaimed: false,
     });
   });
@@ -322,11 +286,7 @@ describe("buildProvisionalXp", () => {
     const claimed = build({
       progress: {
         ...FULL_PROGRESS,
-        daily: {
-          privateGames: 0,
-          singleplayerGames: 0,
-          firstGameClaimed: true,
-        },
+        daily: { ...FULL_PROGRESS.daily!, firstGameClaimed: true },
       },
     });
     if (claimed === null || claimed === "retry") throw new Error();
@@ -418,36 +378,21 @@ describe("buildProvisionalXp", () => {
     expect(
       build({ progress: { ...FULL_PROGRESS, subscriberPermille: undefined } }),
     ).toBeNull();
+    // Allowances without a day stamp that reads are of unknown age.
+    for (const day of [undefined, "yesterday", "2026-13-45"]) {
+      expect(
+        build({
+          progress: {
+            ...FULL_PROGRESS,
+            daily: { ...FULL_PROGRESS.daily!, day },
+          },
+        }),
+      ).toBeNull();
+    }
 
     const complete = build({ progress: FULL_PROGRESS });
     if (complete === null || complete === "retry") throw new Error();
     expect(complete.response.eligible).toBe(true);
-  });
-
-  it("has nothing to show for a singleplayer game while the API requires the stats vote", () => {
-    const singleplayer = { ...FFA, gameType: GameType.Singleplayer };
-    expect(
-      build({
-        config: singleplayer,
-        progression: progression({ requireStatsAgreed: true }),
-      }),
-    ).toBeNull();
-    // An API that doesn't say is taken to require it.
-    expect(build({ config: singleplayer })).toBeNull();
-    // Staging scores unverified games: a figure, at the singleplayer rate.
-    const staging = build({
-      config: singleplayer,
-      progression: progression({ requireStatsAgreed: false }),
-    });
-    if (staging === null || staging === "retry") throw new Error();
-    expect(staging.response).toMatchObject({
-      eligible: true,
-      breakdown: { firstGame: 0, gamePermille: 250 },
-    });
-    // A multiplayer game carries the vote, so it still gets a figure.
-    expect(
-      build({ progression: progression({ requireStatsAgreed: true }) }),
-    ).not.toBeNull();
   });
 
   it("shows a singleplayer figure when the API scores singleplayer", () => {
@@ -463,6 +408,27 @@ describe("buildProvisionalXp", () => {
       eligible: true,
       breakdown: { firstGame: 0, gamePermille: 250 },
     });
+  });
+
+  it("has nothing to show for a singleplayer game unless the API says it scores one", () => {
+    const singleplayer = { ...FFA, gameType: GameType.Singleplayer };
+    // Absent (a malformed value reads as absent) or false: no figure, even
+    // where the stats vote isn't required.
+    for (const scoresSingleplayer of [undefined, false]) {
+      for (const requireStatsAgreed of [true, false]) {
+        expect(
+          build({
+            config: singleplayer,
+            progression: progression({
+              requireStatsAgreed,
+              scoresSingleplayer,
+            }),
+          }),
+        ).toBeNull();
+      }
+    }
+    // A multiplayer game is scored either way.
+    expect(build({ progression: progression() })).not.toBeNull();
   });
 });
 
@@ -728,7 +694,7 @@ describe("loadProvisionalXp", () => {
       myClientID: "me",
       config: { ...FFA, gameType: GameType.Singleplayer },
       progress: FULL_PROGRESS,
-      progression: progression({ requireStatsAgreed: true }),
+      progression: progression({ scoresSingleplayer: false }),
       humanStats,
     });
     expect(provisional).toBeNull();
