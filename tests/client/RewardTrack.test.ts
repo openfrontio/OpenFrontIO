@@ -38,6 +38,7 @@ import {
   stripPercent,
   TRACK_LEVEL_LIMIT,
   trackEnd,
+  trackHasRewards,
   trackMaxLevel,
 } from "../../src/client/components/RewardTrack";
 
@@ -177,6 +178,19 @@ const describeCosmetic = async (f: TrackFlare) => {
   return view(name, type);
 };
 
+describe("trackHasRewards", () => {
+  it("is false for a config without reward amounts or level flares", () => {
+    const old = ProgressionConfigSchema.parse({
+      version: 1,
+      maxLevel: 100,
+      maxPrestige: 10,
+      levels: [{ level: 1, xpToNext: 100, cumulativeXp: 0 }],
+    });
+    expect(trackHasRewards(old)).toBe(false);
+    expect(trackHasRewards(config())).toBe(true);
+  });
+});
+
 describe("rewardTrackModel", () => {
   it("reads each level's Caps and Plutonium from the config", () => {
     const m = rewardTrackModel(progress(3, 47), config(), null);
@@ -271,15 +285,24 @@ describe("rewardTrackModel", () => {
     expect(trackMaxLevel(config({ maxLevel: 1e9 }))).toBe(TRACK_LEVEL_LIMIT);
   });
 
-  it("leaves a level reward that doesn't say its level and run off the track", () => {
+  it("shows the owner no claim status when level rewards don't say their level", () => {
+    // An API that doesn't stamp level/prestige: the rows can't be placed, so
+    // a passed level without one can't be read as claimed.
     const m = rewardTrackModel(progress(3, 47), config(), [
       reward({ id: "unplaced" }),
       reward({ id: "daily", reason: "subscription_daily" }),
     ]);
     expect(m.owner).toBe(true);
-    expect(m.claim?.ids).toEqual([]);
-    expect(m.nodes[10].status).toBe("claimed");
+    expect(m.statuses).toBe(false);
+    expect(m.claim).toBeNull();
+    expect(m.nodes[10].status).toBe("passed");
     expect(m.nodes[60].status).toBe("locked");
+    // Other kinds of reward never carry a level: they don't count.
+    const ok = rewardTrackModel(progress(3, 47), config(), [
+      reward({ id: "daily", reason: "subscription_daily" }),
+    ]);
+    expect(ok.statuses).toBe(true);
+    expect(ok.nodes[10].status).toBe("claimed");
   });
 
   it("ends a run in the next rank, with its exclusive when there is one", () => {
@@ -647,6 +670,23 @@ describe("<reward-track>", () => {
       expect(el.querySelector("[data-track-legend]")).not.toBeNull();
     });
 
+    it("shows the owner no statuses, and warns, when rewards don't say their level", async () => {
+      const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+      try {
+        const el = await mount(progress(3, 47), [reward({ id: "unplaced" })]);
+        expect(el.querySelector("[data-track-claim]")).toBeNull();
+        expect(el.querySelector("[data-track-legend]")).toBeNull();
+        expect(
+          el.querySelector("[data-claimed], [data-ready], [data-locked]"),
+        ).toBeNull();
+        // Still their profile: "You" at their level.
+        expect(el.querySelector("[data-you]")).not.toBeNull();
+        expect(warn).toHaveBeenCalledTimes(1);
+      } finally {
+        warn.mockRestore();
+      }
+    });
+
     it("shows a visitor the track without claim status", async () => {
       const el = await mount(progress(3, 47), null);
       expect(el.querySelector("[data-track-claim]")).toBeNull();
@@ -810,7 +850,7 @@ describe("<profile-progression> with the track", () => {
     expect(invalidateUserMeMock).not.toHaveBeenCalled();
   });
 
-  it("draws the track even when the config leaves the amounts out", async () => {
+  it("leaves the track out on a config without rewards", async () => {
     const el = document.createElement(
       "profile-progression",
     ) as ProfileProgression;
@@ -828,7 +868,7 @@ describe("<profile-progression> with the track", () => {
       await el.updateComplete;
       expect(el.querySelector("[data-milestones]")).not.toBeNull();
     });
-    expect(el.querySelector("reward-track")).not.toBeNull();
+    expect(el.querySelector("reward-track")).toBeNull();
   });
 
   it("shows the rest without the track when the track can't be fetched", async () => {

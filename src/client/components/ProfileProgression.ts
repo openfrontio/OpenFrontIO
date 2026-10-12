@@ -253,7 +253,9 @@ export class ProfileProgression extends LitElement {
         ? (me.player.rewards ?? [])
         : null;
     this.track =
-      trackModule !== null && config !== false
+      trackModule !== null &&
+      config !== false &&
+      trackModule.trackHasRewards(config)
         ? { config, rewards, model: trackModule.rewardTrackModel }
         : null;
     this.ready = true;

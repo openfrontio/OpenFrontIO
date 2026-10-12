@@ -46,7 +46,8 @@ export function isLevelReward(reward: Reward): boolean {
  *           was claimed already: /users/@me lists only unclaimed ones);
  * ready   — passed, with a reward still to claim;
  * locked  — not reached yet;
- * passed  — reached, for a visitor, who doesn't see claim status.
+ * passed  — reached, for a visitor, who doesn't see claim status (nor does
+ *           the owner when their rewards don't say which level they're for).
  */
 type TrackNodeStatus = "claimed" | "ready" | "locked" | "passed";
 
@@ -84,8 +85,10 @@ interface RewardTrackModel {
   level: number;
   // The run's last level: the config's cap.
   maxLevel: number;
-  // The nodes carry claim status for the owner alone.
   owner: boolean;
+  // Whether the nodes carry claim status: the owner's, unless their rewards
+  // don't say which level and run each is for (see rewardTrackModel).
+  statuses: boolean;
   nodes: TrackNode[];
   end: TrackEnd;
   // The owner's unclaimed level rewards on this run; null for a visitor.
@@ -96,6 +99,18 @@ interface TrackProgress {
   prestige: number;
   level: number;
   legend: boolean;
+}
+
+/**
+ * True when the config says what levels pay. The client can ship before the
+ * API that adds the per-level amounts: until then there's no track to draw.
+ */
+export function trackHasRewards(config: ProgressionConfig): boolean {
+  return (
+    config.levels.some(
+      (l) => l.caps !== undefined || l.plutonium !== undefined,
+    ) || config.flares.some((f) => f.kind === "level" && f.cosmetic)
+  );
 }
 
 // More levels than this and the config is wrong, not the track short: the
@@ -171,9 +186,18 @@ export function rewardTrackModel(
     ),
   );
   const owner = rewards !== null;
-  // A passed level with no reward row reads as claimed: the API stamps each
-  // level reward with its level and run.
-  const mine = owner
+  // A passed level with no reward row reads as claimed, which holds only
+  // when every level reward says its level and run. The client can ship
+  // before the API that stamps them: until then every passed level would read
+  // as claimed while the rewards sit unclaimed, so the owner sees the track as
+  // a visitor does.
+  const statuses =
+    owner &&
+    !rewards.some(
+      (r) =>
+        isLevelReward(r) && (r.level === undefined || r.prestige === undefined),
+    );
+  const mine = statuses
     ? rewards.filter((r) => isLevelReward(r) && r.prestige === run)
     : [];
   const waiting = new Set(
@@ -187,7 +211,7 @@ export function rewardTrackModel(
     const passed = level <= current;
     let status: TrackNodeStatus;
     if (!passed) status = "locked";
-    else if (!owner) status = "passed";
+    else if (!statuses) status = "passed";
     else status = waiting.has(level) ? "ready" : "claimed";
     nodes.push({
       level,
@@ -199,7 +223,7 @@ export function rewardTrackModel(
       status,
     });
   }
-  const claim: TrackClaim | null = owner
+  const claim: TrackClaim | null = statuses
     ? {
         ids: mine.map((r) => r.id),
         caps: mine
@@ -215,6 +239,7 @@ export function rewardTrackModel(
     level: current,
     maxLevel,
     owner,
+    statuses,
     nodes,
     end: trackEnd(config, run),
     claim,
@@ -297,6 +322,7 @@ export class RewardTrack extends LitElement {
   @state() private atEnd = false;
 
   private model: RewardTrackModel | null = null;
+  private warnedUnplaced = false;
   private requested = new Set<string>();
   private scrolledToLevel = false;
   private frame = 0;
@@ -335,6 +361,12 @@ export class RewardTrack extends LitElement {
           ? null
           : rewardTrackModel(this.progress, this.config, this.rewards);
       if (changed.has("progress")) this.scrolledToLevel = false;
+      if (this.model?.owner && !this.model.statuses && !this.warnedUnplaced) {
+        this.warnedUnplaced = true;
+        console.warn(
+          "RewardTrack: level rewards without a level or prestige; claim status hidden",
+        );
+      }
       this.resolveCosmetics();
     }
   }
@@ -575,7 +607,7 @@ export class RewardTrack extends LitElement {
           ? this.renderClaimBar(claim)
           : nothing}
         ${this.renderStrip(model)} ${this.renderTrack(model)}
-        ${model.owner ? this.renderKey() : nothing}
+        ${model.statuses ? this.renderKey() : nothing}
       </section>
     `;
   }
@@ -894,6 +926,7 @@ export class RewardTrack extends LitElement {
         >${translateText("reward_track.you")}</span
       >`;
     }
+    if (!model.statuses) return nothing;
     switch (node.status) {
       case "claimed":
         return html`<span data-claimed>${CHECK}</span>`;
