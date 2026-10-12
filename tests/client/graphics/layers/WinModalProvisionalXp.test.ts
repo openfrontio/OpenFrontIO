@@ -686,6 +686,41 @@ describe("WinModal provisional XP at death", () => {
     expect(total()).toContain('"xp":"274"');
   });
 
+  it("confirms afresh when detached mid-confirm and re-attached", async () => {
+    // Not processed yet on the first ask.
+    const firstFetch = stubXpEndpoint(() => new Response("", { status: 404 }));
+    const { game, end } = makeGame();
+    await mount(game);
+    await playOut();
+    await endGame(end);
+    expect(panel()!.querySelector("[data-xp-confirming]")).not.toBeNull();
+    const view = () =>
+      (
+        modal as unknown as {
+          xpView: { kind: string; confirming?: boolean; reconciled?: unknown };
+        }
+      ).xpView;
+
+    // Detaching aborts the poll: the provisional figure stays, confirming.
+    modal.remove();
+    await settle(3_000);
+    expect(firstFetch).toHaveBeenCalledTimes(1);
+    expect(view()).toMatchObject({ kind: "provisional", confirming: true });
+
+    // The Win update is spent: re-attaching alone asks again, and the
+    // server's figure is reconciled with the provisional one.
+    const fetchMock = stubXpEndpoint(() => json(serverXp()));
+    document.body.appendChild(modal);
+    await settle();
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(xpState()).toBe("result");
+    expect(view().reconciled).toBeDefined();
+    expect(panel()!.querySelector("[data-xp-confirmed]")).not.toBeNull();
+    // Nothing replays: the levels were celebrated at death.
+    expect(await playOut()).toEqual({ moments: [], cards: [] });
+    expect(total()).toContain('"xp":"274"');
+  });
+
   describe("a fresh /users/@me at death", () => {
     it("counts today's allowances from it", async () => {
       // Another public game has been scored since this one started.

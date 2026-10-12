@@ -88,6 +88,9 @@ export class WinModal extends LitElement implements Controller {
   // The provisional figure shown at death, if any: the server's figure is
   // compared with it when the game ends.
   private provisionalXp: ProvisionalXp | null = null;
+  // A detach cut the end-of-game poll short; re-attaching restarts it (the
+  // Win update that started it is delivered only once).
+  private xpPollAborted = false;
   // Whose XP the section shows: the Legend ceremony plays once per account.
   private xpPublicId: string | null = null;
   // The Legend ceremony, fetched only for a player who could become a Legend
@@ -513,6 +516,14 @@ export class WinModal extends LitElement implements Controller {
     this.requestUpdate();
   }
 
+  connectedCallback(): void {
+    super.connectedCallback();
+    if (this.xpPollAborted) {
+      this.xpPollAborted = false;
+      void this.updateXp(true);
+    }
+  }
+
   disconnectedCallback(): void {
     this.xpAbort?.abort();
     super.disconnectedCallback();
@@ -574,10 +585,18 @@ export class WinModal extends LitElement implements Controller {
         provisional === null
           ? { kind: "calculating" }
           : { kind: "provisional", provisional, confirming: true };
-      this.xpAbort = new AbortController();
-      const result = await pollGameXp(game.gameID(), {
-        signal: this.xpAbort.signal,
-      });
+      const abort = new AbortController();
+      this.xpAbort = abort;
+      const result = await pollGameXp(game.gameID(), { signal: abort.signal });
+      // Detached mid-poll: leave the section be (a provisional figure stays
+      // up, still confirming) and poll again on re-attach (right away if that
+      // happened while this poll was winding down).
+      if (abort.signal.aborted) {
+        this.xpPolling = false;
+        if (this.isConnected) void this.updateXp(true);
+        else this.xpPollAborted = true;
+        return;
+      }
       if (result?.eligible && reachedLegendThisGame(result)) {
         this.preloadLegendCeremony();
       }
