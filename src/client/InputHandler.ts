@@ -1,5 +1,7 @@
+import { TileRef } from "@openfront/engine-api/game/GameMap";
 import {
   PlayerBuildableUnitType,
+  PlayerID,
   UnitType,
 } from "@openfront/engine-api/game/GameTypes";
 import { EventBus, GameEvent } from "@openfront/shared/EventBus";
@@ -158,6 +160,14 @@ export class ShowEmojiMenuEvent implements GameEvent {
   ) {}
 }
 
+/** Toggles quick chat for the player at screen position (x, y). */
+export class ShowChatMenuEvent implements GameEvent {
+  constructor(
+    public readonly x: number,
+    public readonly y: number,
+  ) {}
+}
+
 /** Emitted by the emoji table whenever it opens or closes. */
 export class EmojiTableVisibleEvent implements GameEvent {
   constructor(public readonly visible: boolean) {}
@@ -168,15 +178,39 @@ export class EmojiKeyEvent implements GameEvent {
   constructor(public readonly slot: number) {}
 }
 
-export class DoBoatAttackEvent implements GameEvent {}
+// The player actions below act on the tile under the cursor (their
+// keybinds), or on `tile` when given (the player info panel's buttons).
+// `playerID` is the player the panel showed: if the tile has changed hands
+// since, the action is dropped rather than hitting its new owner.
+
+export class DoBoatAttackEvent implements GameEvent {
+  constructor(public readonly tile?: TileRef) {}
+}
 
 export class DoGroundAttackEvent implements GameEvent {}
 
 export class DoRetaliateAttackEvent implements GameEvent {}
 
-export class DoRequestAllianceEvent implements GameEvent {}
+export class DoRequestAllianceEvent implements GameEvent {
+  constructor(
+    public readonly tile?: TileRef,
+    public readonly playerID?: PlayerID,
+  ) {}
+}
 
-export class DoBreakAllianceEvent implements GameEvent {}
+export class DoBreakAllianceEvent implements GameEvent {
+  constructor(
+    public readonly tile?: TileRef,
+    public readonly playerID?: PlayerID,
+  ) {}
+}
+
+export class DoTargetPlayerEvent implements GameEvent {
+  constructor(
+    public readonly tile?: TileRef,
+    public readonly playerID?: PlayerID,
+  ) {}
+}
 
 export class AttackRatioEvent implements GameEvent {
   constructor(public readonly attackRatio: number) {}
@@ -417,6 +451,21 @@ export class InputHandler {
     this.addKeybindAndEvent(this.keybinds.breakAlliance, () => {
       this.eventBus.emit(new DoBreakAllianceEvent());
     });
+    this.addKeybindAndEvent(this.keybinds.targetPlayer, () => {
+      this.eventBus.emit(new DoTargetPlayerEvent());
+    });
+    // Shares R with reset graphics, which needs its modifier held, so quick
+    // chat only takes the key on its own.
+    this.addKeybindAndEvent(
+      this.keybinds.quickChat,
+      () => {
+        this.eventBus.emit(
+          new ShowChatMenuEvent(this.lastMouseX, this.lastMouseY),
+        );
+      },
+      (e: KeyboardEvent) =>
+        !e.altKey && !e.ctrlKey && !e.metaKey && !this.resetGfxModifierHeld(e),
+    );
     this.addKeybindAndEvent(
       this.keybinds.pauseGame,
       () => {
@@ -463,33 +512,7 @@ export class InputHandler {
       () => {
         this.eventBus.emit(new RefreshGraphicsEvent());
       },
-      (e: KeyboardEvent) => {
-        if (
-          this.keybinds.altKey === "AltLeft" ||
-          this.keybinds.altKey === "AltRight"
-        ) {
-          return e.altKey && !e.ctrlKey;
-        }
-        if (
-          this.keybinds.altKey === "ControlLeft" ||
-          this.keybinds.altKey === "ControlRight"
-        ) {
-          return e.ctrlKey;
-        }
-        if (
-          this.keybinds.altKey === "ShiftLeft" ||
-          this.keybinds.altKey === "ShiftRight"
-        ) {
-          return e.shiftKey;
-        }
-        if (
-          this.keybinds.altKey === "MetaLeft" ||
-          this.keybinds.altKey === "MetaRight"
-        ) {
-          return e.metaKey;
-        }
-        return this.activeKeys.has(this.keybinds.altKey);
-      },
+      (e: KeyboardEvent) => this.resetGfxModifierHeld(e),
     );
 
     let buildKeybinds: string[] = [
@@ -1386,6 +1409,35 @@ export class InputHandler {
     const digit = this.digitFromKeyCode(code);
     const bindDigit = this.digitFromKeyCode(parsed.code);
     return digit !== null && bindDigit !== null && digit === bindDigit;
+  }
+
+  /** Whether the reset-graphics modifier (keybinds.altKey) is held. */
+  private resetGfxModifierHeld(e: KeyboardEvent): boolean {
+    if (
+      this.keybinds.altKey === "AltLeft" ||
+      this.keybinds.altKey === "AltRight"
+    ) {
+      return e.altKey && !e.ctrlKey;
+    }
+    if (
+      this.keybinds.altKey === "ControlLeft" ||
+      this.keybinds.altKey === "ControlRight"
+    ) {
+      return e.ctrlKey;
+    }
+    if (
+      this.keybinds.altKey === "ShiftLeft" ||
+      this.keybinds.altKey === "ShiftRight"
+    ) {
+      return e.shiftKey;
+    }
+    if (
+      this.keybinds.altKey === "MetaLeft" ||
+      this.keybinds.altKey === "MetaRight"
+    ) {
+      return e.metaKey;
+    }
+    return this.activeKeys.has(this.keybinds.altKey);
   }
 
   /**

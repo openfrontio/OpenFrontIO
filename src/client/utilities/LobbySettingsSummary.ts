@@ -156,3 +156,18 @@ export function notableLobbySettings(
     });
   return items;
 }
+
+/**
+ * One setting as a single tag: a switched-on setting is just its name, any
+ * other value follows it ("Bots: 100").
+ */
+export function lobbySettingTagText(setting: {
+  label: string;
+  value: string;
+}): string {
+  // Some labels (e.g. game_settings.bots) already end with ": " or "：".
+  const label = setting.label.replace(/[:\uFF1A\s]+$/u, "");
+  return setting.value === translateText("common.enabled")
+    ? label
+    : `${label}: ${setting.value}`;
+}

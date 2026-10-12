@@ -1,4 +1,3 @@
-import { GameType } from "@openfront/engine-api/game/GameTypes";
 import { ID, isValidGameID } from "@openfront/engine-api/Schemas";
 import { CloseCode, CloseReason } from "@openfront/shared/CloseCodes";
 import { GameEnv } from "@openfront/shared/configuration/Env";
@@ -7,13 +6,17 @@ import {
   ClientMessage,
   ClientPlatformSchema,
   HOSTED_LOBBY_AUTO_START_MS,
+  LevelBadge,
   MAX_HOSTED_LOBBIES,
   MAX_HOSTED_LOBBY_PLAYERS,
   MIN_HOSTED_LOBBY_AUTO_START_MS,
   MIN_HOSTED_LOBBY_PLAYERS,
   ServerErrorMessage,
 } from "@openfront/shared/WireSchemas";
-import { CreateGameInputSchema } from "@openfront/shared/WorkerSchemas";
+import {
+  CreateGameInputSchema,
+  isPrivateGameInput,
+} from "@openfront/shared/WorkerSchemas";
 import {
   decodeClientMessage,
   encodeServerMessage,
@@ -36,6 +39,7 @@ import { registerGamePreviewRoute } from "./GamePreviewRoute";
 import { GamePhase, type GameServer } from "./GameServer";
 import { isSteamAuthenticated, planJoinVerify, verifyJoin } from "./JoinVerify";
 import { getUserMe, userMeFailureClose, verifyClientToken } from "./jwt";
+import { levelBadgeForPlayer } from "./LevelBadge";
 import { payForLobbyQueue, queueListedLobby } from "./LobbyQueuePayment";
 import { logger } from "./Logger";
 import { resolveVerifiedJoin } from "./Privilege";
@@ -188,11 +192,14 @@ export async function startWorker() {
       return res.status(400).json({ error: z.prettifyError(parsed.error) });
     }
     const gc = parsed.data;
-    // Public games are scheduled by the master over IPC, never created here.
-    if (gc?.gameType === GameType.Public) {
+    // Only private games are created here. Public games are scheduled by the
+    // master over IPC, and singleplayer games run in the browser, never on a
+    // game server. An empty body ({}) parses to undefined and gets
+    // createGame's private default.
+    if (!isPrivateGameInput(gc)) {
       return res
         .status(400)
-        .json({ error: "Cannot create public games via this endpoint" });
+        .json({ error: "Only private games can be created via this endpoint" });
     }
 
     // Reuse-lobby flow: ?previous=<gameID> marks this creation as the successor
@@ -711,6 +718,7 @@ export async function startWorker() {
         let friends: string[] = [];
         let ownedClanTags: string[] = [];
         let trusted = false;
+        let levelBadge: LevelBadge | undefined;
         let accountUsername:
           | {
               username?: string | null;
@@ -744,6 +752,9 @@ export async function startWorker() {
           ownedClanTags = result.response.player.clans?.map((c) => c.tag) ?? [];
           accountUsername = result.response.player;
           trusted = result.response.player.trustTier === "trusted";
+          // Display-only: the roster badge comes from this lookup alone, never
+          // from the join message. None when the player hides their level.
+          levelBadge = levelBadgeForPlayer(result.response.player);
 
           if (allowedFlares !== undefined) {
             const allowed =
@@ -828,6 +839,7 @@ export async function startWorker() {
           clientMsg.spectator === true,
           trusted,
           clientMsg.platform,
+          levelBadge,
         );
 
         const joinResult = gm.joinClient(client, clientMsg.gameID);

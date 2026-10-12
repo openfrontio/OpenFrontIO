@@ -15,6 +15,7 @@ export const CloseCode = {
   RankedLimitReached: 4100,
   InvalidClan: 4101,
   ClanVerificationFailed: 4102,
+  NotTrusted: 4103,
 } as const;
 
 export type CloseCode = (typeof CloseCode)[keyof typeof CloseCode];
