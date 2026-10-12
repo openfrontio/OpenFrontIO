@@ -94,6 +94,26 @@ describe("GameServer - short-handed matchmade game cancellation", () => {
     expect(game.phase()).not.toBe(GamePhase.Finished);
   });
 
+  it("cancels a clan wars game missing a player", () => {
+    const game = makeRankedGame(RankedType.ClanWars, 6);
+    for (const id of ["1", "2", "3", "4", "5"]) {
+      expect(game.joinClient(makeClient(`c${id}`, `p${id}`))).toBe("joined");
+    }
+
+    expect(game.cancelShortHandedMatch()).toBe(true);
+    expect(game.phase()).toBe(GamePhase.Finished);
+  });
+
+  it("starts a clan wars game with full attendance", () => {
+    const game = makeRankedGame(RankedType.ClanWars, 6);
+    for (const id of ["1", "2", "3", "4", "5", "6"]) {
+      expect(game.joinClient(makeClient(`c${id}`, `p${id}`))).toBe("joined");
+    }
+
+    expect(game.cancelShortHandedMatch()).toBe(false);
+    expect(game.phase()).not.toBe(GamePhase.Finished);
+  });
+
   it("does not cancel unknown ranked types — new modes must opt in", () => {
     const game = makeGame({
       config: {
