@@ -70,6 +70,8 @@ const TERRA_NULLIUS_MAX_COST = 100;
 // the old 0.0052 density weight: at 0.0039 a stack of 3/4 the defender's
 // army matches the old cost, bigger stacks pay less, smaller pay more.
 const ATTACKER_LOSS_BASE = 0.463;
+/** Defender troops per attacking troop at or below which the attacker's losses stop shrinking */
+export const CHEAPEST_TROOP_RATIO = 0.6;
 const ATTACKER_LOSS_PER_DENSITY = 0.0039;
 // Speed divisor: 8.25 / 0.965, absorbing the same sigmoid tail. 8.25 is the
 // old 7.5 raised ~10%: v34 pace feedback said attacks felt a bit too slow, so
@@ -557,7 +559,7 @@ export class EngineConfig extends Config {
     const attackerTroopLoss =
       mag *
       traitorLossMod *
-      within(troopRatio, 0.6, 2) *
+      within(troopRatio, CHEAPEST_TROOP_RATIO, 2) *
       (ATTACKER_LOSS_BASE * largeAttackerBonus * largeDefenderBonus +
         ATTACKER_LOSS_PER_DENSITY * defenderTroopLoss);
 
