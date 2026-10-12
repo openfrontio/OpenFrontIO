@@ -10,10 +10,12 @@ import { claimReward, getUserMe, invalidateUserMe } from "../Api";
 import { showInGameAlert } from "../InGameModal";
 import { clampPrestige, MAX_LEVEL, MILESTONE_LEVELS } from "../Progression";
 import { fetchProgressionConfig } from "../ProgressionApi";
+import { claimRewards } from "../RewardClaims";
 import { translateText } from "../Utils";
 import { prefersReducedMotion } from "../utilities/ReducedMotion";
 import { describeFlareCosmetic, type FlareCosmeticView } from "./FlareCosmetic";
 import "./LevelBadge";
+import { SECTION, SECTION_TITLE } from "./ProgressionSection";
 import type { RewardsChangedDetail } from "./RewardsPanel";
 
 // The profile's Progression tab: the reward track of the current prestige
@@ -22,20 +24,20 @@ import type { RewardsChangedDetail } from "./RewardsPanel";
 // progress response, so they're the same for the player and their visitors;
 // the track adds claim status (and a Claim all) for the player themselves.
 
-export interface PrestigeTile {
+interface PrestigeTile {
   rank: number;
   // Null when the API doesn't say (an older response, or a rank entered
   // before the history was kept): the tile shows without a date.
   at: string | null;
 }
 
-export interface MilestoneSlot {
+interface MilestoneSlot {
   level: number;
   reached: boolean;
   at: string | null;
 }
 
-export interface MilestoneRun {
+interface MilestoneRun {
   prestige: number;
   current: boolean;
   slots: MilestoneSlot[];
@@ -130,11 +132,6 @@ export function milestoneRuns(progress: PublicProgress): MilestoneRun[] {
   }
   return runs;
 }
-
-const SECTION =
-  "rounded-xl border border-white/10 bg-white/5 px-5 py-[18px] mb-4 last:mb-0";
-const SECTION_TITLE =
-  "mb-3.5 text-xs font-bold uppercase tracking-[0.12em] text-white/45";
 
 // The pop-in: every item in one sequence, in document order, a step apart;
 // items past the cap share its delay.
@@ -256,9 +253,7 @@ export class ProfileProgression extends LitElement {
         ? (me.player.rewards ?? [])
         : null;
     this.track =
-      trackModule !== null &&
-      config !== false &&
-      trackModule.trackHasRewards(config)
+      trackModule !== null && config !== false
         ? { config, rewards, model: trackModule.rewardTrackModel }
         : null;
     this.ready = true;
@@ -292,32 +287,23 @@ export class ProfileProgression extends LitElement {
     const token = this.claimToken;
     this.claiming = true;
     try {
-      let currency: RewardsChangedDetail["currency"] = null;
-      const claimed = new Set<string>();
-      let failed = false;
-      let resync = false;
-      for (const id of ids) {
-        if (token !== this.claimToken) break;
-        const result = await this.claim(id);
-        if (result === false) {
-          failed = true;
-          break;
-        }
-        claimed.add(id);
-        // Claimed already (another tab or device): credited once all the
-        // same, so the account is re-read below.
-        if (result === "not_found") resync = true;
-        else currency = result.currency;
-      }
+      const run = await claimRewards(ids, {
+        claim: this.claim,
+        stopped: () => token !== this.claimToken,
+      });
+      let currency: RewardsChangedDetail["currency"] = run.currency;
+      const claimed = new Set(run.claimedIds);
+      // Some were claimed already (another tab or device): credited once all
+      // the same, so the account is re-read below.
+      const resync = run.creditedIds.length < run.claimedIds.length;
       if (token !== this.claimToken) {
-        // Gone: nothing here to update. The page reads the account afresh,
-        // and so does this tab if it comes back.
-        if (claimed.size > 0) invalidateUserMe();
+        // Gone: nothing here to update. The page reads the account afresh
+        // (the claims dropped its cached copy), and so does this tab if it
+        // comes back.
         this.loadedFor = undefined;
         return;
       }
       if (claimed.size > 0) {
-        invalidateUserMe();
         let rewards = owned.filter((r) => !claimed.has(r.id));
         if (resync) {
           const me = await this.loadUserMe().catch(() => false as const);
@@ -335,7 +321,7 @@ export class ProfileProgression extends LitElement {
           }),
         );
       }
-      if (failed) {
+      if (run.failed) {
         await this.alert(translateText("account_modal.claim_failed"));
       }
     } finally {
@@ -423,7 +409,7 @@ export class ProfileProgression extends LitElement {
     const tiles = prestigeTiles(progress);
     return html`
       <section class=${SECTION} data-prestige-history>
-        <h3 class=${SECTION_TITLE}>
+        <h3 class="mb-3.5 ${SECTION_TITLE}">
           ${translateText("player_profile.prestige_history")}
         </h3>
         ${tiles.length === 0
@@ -465,7 +451,7 @@ export class ProfileProgression extends LitElement {
   private renderMilestones(progress: PublicProgress): TemplateResult {
     return html`
       <section class=${SECTION} data-milestones>
-        <h3 class=${SECTION_TITLE}>
+        <h3 class="mb-3.5 ${SECTION_TITLE}">
           ${translateText("player_profile.milestones")}
         </h3>
         ${milestoneRuns(progress).map((run) =>

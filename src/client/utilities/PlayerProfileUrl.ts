@@ -1,7 +1,7 @@
 import { ClientEnv } from "../ClientEnv";
 
 // The profile's tabs, as `?tab=` on a profile link names them.
-export const PLAYER_PROFILE_TABS: readonly string[] = [
+const PLAYER_PROFILE_TABS: readonly string[] = [
   "stats",
   "games",
   "clans",

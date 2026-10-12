@@ -450,7 +450,8 @@ describe("game-xp-panel level rewards", () => {
     expect(panel.querySelector("[data-xp-claim-error]")).not.toBeNull();
     expect(claimButton()!.disabled).toBe(false);
     expect(text(claimButton())).toBe("account_modal.claim");
-    expect(invalidateUserMe).not.toHaveBeenCalled();
+    // The first claim went through, so the cached account is stale.
+    expect(invalidateUserMe).toHaveBeenCalledTimes(1);
 
     // The retry claims only what didn't go through.
     claimReward.mockResolvedValueOnce({

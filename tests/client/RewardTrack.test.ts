@@ -38,7 +38,6 @@ import {
   stripPercent,
   TRACK_LEVEL_LIMIT,
   trackEnd,
-  trackHasRewards,
   trackMaxLevel,
 } from "../../src/client/components/RewardTrack";
 
@@ -60,8 +59,8 @@ const capsAt = (level: number) =>
         : level <= 75
           ? 150
           : 200;
-const plutoniumAt = (level: number) =>
-  level >= 20 && (level - 20) % 10 === 0 ? 25 : 0;
+// Plutonium every 25 levels.
+const plutoniumAt = (level: number) => (level % 25 === 0 ? 25 : 0);
 
 const flare = (
   kind: string,
@@ -137,7 +136,7 @@ function reward(extra: Partial<Reward>): Reward {
   };
 }
 
-// Wonder at P3 L47: L45-47 Caps and L40 Plutonium unclaimed, plus rewards
+// Wonder at P3 L47: L45-47 Caps and L25 Plutonium unclaimed, plus rewards
 // the track must leave alone.
 function ownerRewards(): Reward[] {
   return [
@@ -145,8 +144,8 @@ function ownerRewards(): Reward[] {
     reward({ id: "l46", level: 46, prestige: 3 }),
     reward({ id: "l47", level: 47, prestige: 3, reason: "level_milestone" }),
     reward({
-      id: "l40pu",
-      level: 40,
+      id: "l25pu",
+      level: 25,
       prestige: 3,
       currencyType: "hard",
       amount: "25",
@@ -178,25 +177,13 @@ const describeCosmetic = async (f: TrackFlare) => {
   return view(name, type);
 };
 
-describe("trackHasRewards", () => {
-  it("is false for a config without reward amounts or level flares", () => {
-    const old = ProgressionConfigSchema.parse({
-      version: 1,
-      maxLevel: 100,
-      maxPrestige: 10,
-      levels: [{ level: 1, xpToNext: 100, cumulativeXp: 0 }],
-    });
-    expect(trackHasRewards(old)).toBe(false);
-    expect(trackHasRewards(config())).toBe(true);
-  });
-});
-
 describe("rewardTrackModel", () => {
   it("reads each level's Caps and Plutonium from the config", () => {
     const m = rewardTrackModel(progress(3, 47), config(), null);
     expect(m.nodes).toHaveLength(100);
     expect(m.nodes[0]).toMatchObject({ level: 1, caps: 0, plutonium: 0 });
-    expect(m.nodes[39]).toMatchObject({ level: 40, caps: 100, plutonium: 25 });
+    expect(m.nodes[24]).toMatchObject({ level: 25, caps: 50, plutonium: 25 });
+    expect(m.nodes[39]).toMatchObject({ level: 40, caps: 100, plutonium: 0 });
     expect(m.nodes[99]).toMatchObject({ level: 100, caps: 200, plutonium: 25 });
     expect(m.nodes.filter((n) => n.milestone).map((n) => n.level)).toEqual([
       10, 25, 50, 75, 100,
@@ -206,11 +193,12 @@ describe("rewardTrackModel", () => {
   it("gives the owner each level's status from their unclaimed rewards", () => {
     const m = rewardTrackModel(progress(3, 47), config(), ownerRewards());
     const status = (level: number) => m.nodes[level - 1].status;
-    expect(status(40)).toBe("ready");
+    expect(status(25)).toBe("ready");
     expect(status(45)).toBe("ready");
     expect(status(47)).toBe("ready");
     // Passed with no reward row: claimed already.
     expect(status(44)).toBe("claimed");
+    expect(status(40)).toBe("claimed");
     expect(status(1)).toBe("claimed");
     expect(status(48)).toBe("locked");
     expect(status(100)).toBe("locked");
@@ -228,7 +216,7 @@ describe("rewardTrackModel", () => {
 
   it("totals only this run's level rewards for Claim all", () => {
     const m = rewardTrackModel(progress(3, 47), config(), ownerRewards());
-    expect(m.claim?.ids).toEqual(["l45", "l46", "l47", "l40pu"]);
+    expect(m.claim?.ids).toEqual(["l45", "l46", "l47", "l25pu"]);
     expect(m.claim?.caps).toBe(300n);
     expect(m.claim?.plutonium).toBe(25n);
   });
@@ -283,24 +271,15 @@ describe("rewardTrackModel", () => {
     expect(trackMaxLevel(config({ maxLevel: 1e9 }))).toBe(TRACK_LEVEL_LIMIT);
   });
 
-  it("shows the owner no claim status when level rewards don't say their level", () => {
-    // An API that doesn't stamp level/prestige: the rows can't be placed, so
-    // a passed level without one can't be read as claimed.
+  it("leaves a level reward that doesn't say its level and run off the track", () => {
     const m = rewardTrackModel(progress(3, 47), config(), [
       reward({ id: "unplaced" }),
       reward({ id: "daily", reason: "subscription_daily" }),
     ]);
     expect(m.owner).toBe(true);
-    expect(m.statuses).toBe(false);
-    expect(m.claim).toBeNull();
-    expect(m.nodes[10].status).toBe("passed");
+    expect(m.claim?.ids).toEqual([]);
+    expect(m.nodes[10].status).toBe("claimed");
     expect(m.nodes[60].status).toBe("locked");
-    // Other kinds of reward never carry a level: they don't count.
-    const ok = rewardTrackModel(progress(3, 47), config(), [
-      reward({ id: "daily", reason: "subscription_daily" }),
-    ]);
-    expect(ok.statuses).toBe(true);
-    expect(ok.nodes[10].status).toBe("claimed");
   });
 
   it("ends a run in the next rank, with its exclusive when there is one", () => {
@@ -370,7 +349,7 @@ describe("<reward-track>", () => {
       ]);
       // 50 pays Plutonium too, but its cosmetic takes the marker.
       expect(levels("[data-strip-plutonium]", "data-strip-plutonium")).toEqual([
-        20, 30, 40, 70, 80, 90, 100,
+        25, 75, 100,
       ]);
       expect(levels("[data-strip-cosmetic]", "data-strip-cosmetic")).toEqual([
         50, 60,
@@ -443,13 +422,23 @@ describe("<reward-track>", () => {
       );
     });
 
-    it("rings a Plutonium level and gives it a +25 chip", async () => {
+    it("gives a Plutonium level a +25 chip", async () => {
       const el = await mount(progress(3, 47), []);
-      const node = el.querySelector(`[data-level="40"]`)!;
-      expect(node.querySelector(".rt-dot[data-pu]")).not.toBeNull();
+      const node = el.querySelector(`[data-level="25"]`)!;
       expect(
         node.querySelector("[data-plutonium-chip]")?.textContent,
       ).toContain('reward_track.plus:{"amount":25}');
+      expect(el.querySelector(`[data-plutonium-chip="40"]`)).toBeNull();
+    });
+
+    it("rings a Plutonium level that isn't a milestone", async () => {
+      const levels = config().levels.map((l) =>
+        l.level === 40 ? { ...l, plutonium: 25 } : l,
+      );
+      const el = await mount(progress(3, 47), [], config({ levels }));
+      expect(
+        el.querySelector(`[data-level="40"] .rt-dot[data-pu]`),
+      ).not.toBeNull();
       expect(el.querySelector(`[data-level="41"] .rt-dot[data-pu]`)).toBeNull();
     });
 
@@ -481,11 +470,10 @@ describe("<reward-track>", () => {
       expect(
         at50.querySelector("[data-callout-plutonium]")?.textContent,
       ).toContain('reward_track.plus:{"amount":25}');
-      // L50's Plutonium rides in the callout rather than its own chip.
+      // L50's Plutonium rides in the callout rather than its own chip; L60
+      // pays none.
       expect(el.querySelector(`[data-plutonium-chip="50"]`)).toBeNull();
-      expect(
-        callouts[1].querySelector("[data-callout-plutonium]"),
-      ).not.toBeNull();
+      expect(callouts[1].querySelector("[data-callout-plutonium]")).toBeNull();
 
       const firstRun = await mount(progress(0, 5), []);
       expect(
@@ -659,23 +647,6 @@ describe("<reward-track>", () => {
       expect(el.querySelector("[data-track-legend]")).not.toBeNull();
     });
 
-    it("shows the owner no statuses, and warns, when rewards don't say their level", async () => {
-      const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
-      try {
-        const el = await mount(progress(3, 47), [reward({ id: "unplaced" })]);
-        expect(el.querySelector("[data-track-claim]")).toBeNull();
-        expect(el.querySelector("[data-track-legend]")).toBeNull();
-        expect(
-          el.querySelector("[data-claimed], [data-ready], [data-locked]"),
-        ).toBeNull();
-        // Still their profile: "You" at their level.
-        expect(el.querySelector("[data-you]")).not.toBeNull();
-        expect(warn).toHaveBeenCalledTimes(1);
-      } finally {
-        warn.mockRestore();
-      }
-    });
-
     it("shows a visitor the track without claim status", async () => {
       const el = await mount(progress(3, 47), null);
       expect(el.querySelector("[data-track-claim]")).toBeNull();
@@ -839,7 +810,7 @@ describe("<profile-progression> with the track", () => {
     expect(invalidateUserMeMock).not.toHaveBeenCalled();
   });
 
-  it("leaves the track out on a config without rewards", async () => {
+  it("draws the track even when the config leaves the amounts out", async () => {
     const el = document.createElement(
       "profile-progression",
     ) as ProfileProgression;
@@ -857,7 +828,7 @@ describe("<profile-progression> with the track", () => {
       await el.updateComplete;
       expect(el.querySelector("[data-milestones]")).not.toBeNull();
     });
-    expect(el.querySelector("reward-track")).toBeNull();
+    expect(el.querySelector("reward-track")).not.toBeNull();
   });
 
   it("shows the rest without the track when the track can't be fetched", async () => {
@@ -917,7 +888,7 @@ describe("<profile-progression> with the track", () => {
         "l45",
         "l46",
         "l47",
-        "l40pu",
+        "l25pu",
       ]);
       expect(invalidateUserMeMock).toHaveBeenCalled();
       const detail = changed.mock.calls[0][0];

@@ -32,7 +32,7 @@ import { xpBar, xpProgressText } from "./XpBar";
 export const NAV_CATCH_UP_MS = 700;
 export const NAV_LEVEL_POP_MS = 560;
 
-export type NavCatchUp = "snap" | "grow" | "level_up";
+type NavCatchUp = "snap" | "grow" | "level_up";
 
 /**
  * How the trigger moves from the progress it shows to a refreshed one: it

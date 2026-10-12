@@ -1,5 +1,4 @@
 import type { GameXpFlare, GameXpReward } from "@openfront/shared/ApiSchemas";
-import { claimReward } from "./Api";
 import {
   cosmeticSelectionLabel,
   cosmeticTypeLabel,
@@ -9,6 +8,8 @@ import {
   type ResolvedCosmetic,
   translateCosmetic,
 } from "./Cosmetics";
+import { rewardAmount } from "./Progression";
+import { claimRewards } from "./RewardClaims";
 import { translateText } from "./Utils";
 
 // The level rewards and unlocks one game earned, as the end-of-game reveal
@@ -35,14 +36,6 @@ export interface GameRewardsSummary {
   lines: RewardLine[];
   // Every reward was already claimed (elsewhere, or on an earlier view).
   allClaimed: boolean;
-}
-
-function amountOf(reward: GameXpReward): bigint {
-  try {
-    return BigInt(reward.amount);
-  } catch {
-    return 0n;
-  }
 }
 
 /**
@@ -73,7 +66,7 @@ export function summarizeGameRewards(
   for (const currency of ["soft", "hard"] as const) {
     const these = rewards.filter((r) => r.currencyType === currency);
     if (these.length === 0) continue;
-    const amounts = these.map(amountOf);
+    const amounts = these.map((r) => rewardAmount(r.amount));
     const total = amounts.reduce((a, b) => a + b, 0n);
     const each =
       amounts.length > 1 && amounts.every((a) => a === amounts[0])
@@ -94,7 +87,7 @@ export interface Balances {
   hard: number;
 }
 
-export type ClaimOutcome =
+type ClaimOutcome =
   | {
       ok: true;
       // The balances after the last claim this call made, or null when it
@@ -118,19 +111,22 @@ export async function claimGameRewards(
   rewards: readonly GameXpReward[],
   skip: ReadonlySet<string> = new Set(),
 ): Promise<ClaimOutcome> {
-  const claimedIds: string[] = [];
+  const run = await claimRewards(
+    rewards.filter((r) => !r.claimed && !skip.has(r.id)).map((r) => r.id),
+  );
+  if (run.failed) return { ok: false, claimedIds: run.claimedIds };
   const credited: Balances = { soft: 0, hard: 0 };
-  let currency: Balances | null = null;
   for (const reward of rewards) {
-    if (reward.claimed || skip.has(reward.id)) continue;
-    const result = await claimReward(reward.id);
-    if (result === false) return { ok: false, claimedIds };
-    claimedIds.push(reward.id);
-    if (result === "not_found") continue;
-    currency = result.currency;
-    credited[reward.currencyType] += Number(amountOf(reward));
+    if (run.creditedIds.includes(reward.id)) {
+      credited[reward.currencyType] += Number(rewardAmount(reward.amount));
+    }
   }
-  return { ok: true, currency, credited, claimedIds };
+  return {
+    ok: true,
+    currency: run.currency,
+    credited,
+    claimedIds: run.claimedIds,
+  };
 }
 
 export interface FlareUnlock {

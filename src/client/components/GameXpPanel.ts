@@ -6,7 +6,7 @@ import type {
 import { html, LitElement, nothing, PropertyValues, TemplateResult } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
 import { keyed } from "lit/directives/keyed.js";
-import { getUserMe, invalidateUserMe } from "../Api";
+import { getUserMe } from "../Api";
 import {
   fetchCosmetics,
   resolveCosmetics,
@@ -1860,9 +1860,7 @@ export class GameXpPanel extends LitElement {
       this.claim = { status: "idle", failed: true };
       return;
     }
-    // The balances and the pending list changed: everything that reads
-    // /users/@me from here on gets the new ones.
-    invalidateUserMe();
+    // Read afresh: the claims dropped the cached copy.
     const me = await getUserMe();
     if (token !== this.claimToken) return;
     const to =

@@ -10,6 +10,7 @@ import {
   isMilestoneLevel,
   MAX_LEVEL,
   MAX_PRESTIGE,
+  rewardAmount,
 } from "../Progression";
 import { prefersReducedMotion } from "../utilities/ReducedMotion";
 import { translateText } from "../Utils";
@@ -22,6 +23,7 @@ import {
 } from "./FlareCosmetic";
 import "./LevelBadge";
 import "./PlutoniumIcon";
+import { SECTION, SECTION_TITLE } from "./ProgressionSection";
 
 // The profile's reward track: what each level of the current prestige run
 // pays (Caps, Plutonium, a cosmetic), where the player is on it, and what the
@@ -44,12 +46,11 @@ export function isLevelReward(reward: Reward): boolean {
  *           was claimed already: /users/@me lists only unclaimed ones);
  * ready   — passed, with a reward still to claim;
  * locked  — not reached yet;
- * passed  — reached, for a visitor, who doesn't see claim status (nor does
- *           the owner when their rewards don't say which level they're for).
+ * passed  — reached, for a visitor, who doesn't see claim status.
  */
-export type TrackNodeStatus = "claimed" | "ready" | "locked" | "passed";
+type TrackNodeStatus = "claimed" | "ready" | "locked" | "passed";
 
-export interface TrackNode {
+interface TrackNode {
   level: number;
   caps: number;
   plutonium: number;
@@ -60,7 +61,7 @@ export interface TrackNode {
   status: TrackNodeStatus;
 }
 
-export interface TrackEnd {
+interface TrackEnd {
   // A P10 run ends in Legend rather than another rank.
   legend: boolean;
   // The rank entered after the run's last level (unused for Legend).
@@ -72,21 +73,19 @@ export interface TrackEnd {
   flare: TrackFlare | null;
 }
 
-export interface TrackClaim {
+interface TrackClaim {
   ids: string[];
   caps: bigint;
   plutonium: bigint;
 }
 
-export interface RewardTrackModel {
+interface RewardTrackModel {
   run: number;
   level: number;
   // The run's last level: the config's cap.
   maxLevel: number;
+  // The nodes carry claim status for the owner alone.
   owner: boolean;
-  // Whether the nodes carry claim status: the owner's, unless their rewards
-  // don't say which level and run each is for (see rewardTrackModel).
-  statuses: boolean;
   nodes: TrackNode[];
   end: TrackEnd;
   // The owner's unclaimed level rewards on this run; null for a visitor.
@@ -99,15 +98,6 @@ interface TrackProgress {
   legend: boolean;
 }
 
-/** True when the config says what levels pay (an older API doesn't). */
-export function trackHasRewards(config: ProgressionConfig): boolean {
-  return (
-    config.levels.some(
-      (l) => l.caps !== undefined || l.plutonium !== undefined,
-    ) || config.flares.some((f) => f.kind === "level" && f.cosmetic)
-  );
-}
-
 // More levels than this and the config is wrong, not the track short: the
 // track draws a node per level.
 export const TRACK_LEVEL_LIMIT = 1000;
@@ -117,14 +107,6 @@ export function trackMaxLevel(config: ProgressionConfig): number {
   const max = config.maxLevel;
   if (!Number.isInteger(max) || max < 2) return MAX_LEVEL;
   return Math.min(max, TRACK_LEVEL_LIMIT);
-}
-
-function amount(value: string): bigint {
-  try {
-    return BigInt(value);
-  } catch {
-    return 0n;
-  }
 }
 
 /**
@@ -189,17 +171,9 @@ export function rewardTrackModel(
     ),
   );
   const owner = rewards !== null;
-  // A passed level with no reward row reads as claimed, which holds only
-  // when every level reward says its level and run: from an API that doesn't
-  // stamp them, every passed level would read as claimed while the rewards
-  // sit unclaimed. Then the owner sees the track as a visitor does.
-  const statuses =
-    owner &&
-    !rewards.some(
-      (r) =>
-        isLevelReward(r) && (r.level === undefined || r.prestige === undefined),
-    );
-  const mine = statuses
+  // A passed level with no reward row reads as claimed: the API stamps each
+  // level reward with its level and run.
+  const mine = owner
     ? rewards.filter((r) => isLevelReward(r) && r.prestige === run)
     : [];
   const waiting = new Set(
@@ -213,7 +187,7 @@ export function rewardTrackModel(
     const passed = level <= current;
     let status: TrackNodeStatus;
     if (!passed) status = "locked";
-    else if (!statuses) status = "passed";
+    else if (!owner) status = "passed";
     else status = waiting.has(level) ? "ready" : "claimed";
     nodes.push({
       level,
@@ -225,15 +199,15 @@ export function rewardTrackModel(
       status,
     });
   }
-  const claim: TrackClaim | null = statuses
+  const claim: TrackClaim | null = owner
     ? {
         ids: mine.map((r) => r.id),
         caps: mine
           .filter((r) => r.currencyType === "soft")
-          .reduce((sum, r) => sum + amount(r.amount), 0n),
+          .reduce((sum, r) => sum + rewardAmount(r.amount), 0n),
         plutonium: mine
           .filter((r) => r.currencyType === "hard")
-          .reduce((sum, r) => sum + amount(r.amount), 0n),
+          .reduce((sum, r) => sum + rewardAmount(r.amount), 0n),
       }
     : null;
   return {
@@ -241,7 +215,6 @@ export function rewardTrackModel(
     level: current,
     maxLevel,
     owner,
-    statuses,
     nodes,
     end: trackEnd(config, run),
     claim,
@@ -255,9 +228,9 @@ export function stripPercent(level: number, maxLevel: number): number {
 
 // Past this far along the strip (a percentage) the "You" label would run
 // into the end label: they merge.
-export const STRIP_MERGE_AFTER = 85;
+const STRIP_MERGE_AFTER = 85;
 
-export interface ClaimAllDetail {
+interface ClaimAllDetail {
   ids: string[];
 }
 
@@ -304,11 +277,6 @@ const arrow = (side: "prev" | "next") =>
     <path d=${side === "prev" ? "M15 5l-7 7 7 7" : "M9 5l7 7-7 7"} />
   </svg>`;
 
-const SECTION =
-  "rounded-xl border border-white/10 bg-white/5 px-5 py-[18px] mb-4 last:mb-0";
-const SECTION_TITLE =
-  "mb-3 text-xs font-bold uppercase tracking-[0.12em] text-white/45";
-
 @customElement("reward-track")
 export class RewardTrack extends LitElement {
   @property({ attribute: false }) progress: TrackProgress | null = null;
@@ -329,7 +297,6 @@ export class RewardTrack extends LitElement {
   @state() private atEnd = false;
 
   private model: RewardTrackModel | null = null;
-  private warnedUnplaced = false;
   private requested = new Set<string>();
   private scrolledToLevel = false;
   private frame = 0;
@@ -368,12 +335,6 @@ export class RewardTrack extends LitElement {
           ? null
           : rewardTrackModel(this.progress, this.config, this.rewards);
       if (changed.has("progress")) this.scrolledToLevel = false;
-      if (this.model?.owner && !this.model.statuses && !this.warnedUnplaced) {
-        this.warnedUnplaced = true;
-        console.warn(
-          "RewardTrack: level rewards without a level or prestige; claim status hidden",
-        );
-      }
       this.resolveCosmetics();
     }
   }
@@ -605,7 +566,7 @@ export class RewardTrack extends LitElement {
     const claim = model.claim;
     return html`
       <section class=${SECTION} data-reward-track>
-        <h3 class=${SECTION_TITLE}>
+        <h3 class="mb-3 ${SECTION_TITLE}">
           ${model.run === 0
             ? translateText("reward_track.title_first_run")
             : translateText("reward_track.title", { prestige: model.run })}
@@ -614,7 +575,7 @@ export class RewardTrack extends LitElement {
           ? this.renderClaimBar(claim)
           : nothing}
         ${this.renderStrip(model)} ${this.renderTrack(model)}
-        ${model.statuses ? this.renderKey() : nothing}
+        ${model.owner ? this.renderKey() : nothing}
       </section>
     `;
   }
@@ -933,7 +894,6 @@ export class RewardTrack extends LitElement {
         >${translateText("reward_track.you")}</span
       >`;
     }
-    if (!model.statuses) return nothing;
     switch (node.status) {
       case "claimed":
         return html`<span data-claimed>${CHECK}</span>`;

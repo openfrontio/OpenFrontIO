@@ -253,10 +253,6 @@ export class PlayerProfileModal extends BaseModal {
     }
     // The card heads the stats; games and wins stay in the stats below it,
     // and the ways to share the profile follow it.
-    //
-    // A "Show my profile in search engines" setting will join the account
-    // settings' Privacy card once the API carries the flag and the site
-    // Worker honours it with noindex; profile links are indexable until then.
     return html`
       ${this.progress === null
         ? nothing
