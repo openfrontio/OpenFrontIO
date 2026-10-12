@@ -103,6 +103,7 @@ describe("QuickChat phrases", () => {
   const newPhrases: Array<[string, string, string]> = [
     ["attack", "betray", "Betray [P1]!"],
     ["attack", "build_sams", "Build SAMs!"],
+    ["attack", "crown", "Attack the crown!"],
     ["defend", "make_ally", "Ally with [P1]!"],
     ["help", "send_troops_to", "Send troops to [P1]!"],
     ["help", "send_gold_to", "Send gold to [P1]!"],

@@ -342,18 +342,24 @@ export class EventsDisplay extends LitElement implements Controller {
       otherPlayerSmallID = player?.smallID();
     }
 
+    // A message I sent is only a confirmation, like a sent emoji: it goes to
+    // the small feed, quietly.
+    const sent = !event.isFrom;
     this.addEvent({
-      description: translateText(event.isFrom ? "chat.from" : "chat.to", {
+      description: translateText(sent ? "chat.to" : "chat.from", {
         user: otherPlayerDiplayName,
         msg: translatedMessage,
       }),
       createdAt: this.game.ticks(),
-      highlight: true,
+      highlight: !sent,
+      minor: sent,
       type: MessageType.CHAT,
       unsafeDescription: false,
       focusID: otherPlayerSmallID,
     });
-    this.eventBus.emit(new PlaySoundEffectEvent("message"));
+    if (!sent) {
+      this.eventBus.emit(new PlaySoundEffectEvent("message"));
+    }
   }
 
   onAllianceRequestReplyEvent(update: AllianceRequestReplyUpdate) {

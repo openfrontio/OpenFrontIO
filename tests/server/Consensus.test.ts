@@ -12,6 +12,7 @@ import { describe, expect, it } from "vitest";
 import {
   LiveStatsVote,
   statsDigest,
+  voteKey,
   WinnerVote,
 } from "../../src/server/Consensus";
 import { cid } from "../util/GameServerHarness";
@@ -52,7 +53,9 @@ describe("WinnerVote", () => {
 
   it("keys a cancelled match (no winner) as null so those votes can agree", () => {
     const vote = new WinnerVote();
-    expect(vote.cast(winnerMsg(undefined), "1.1.1.1").key).toBe("null");
+    expect(vote.cast(winnerMsg(undefined), "1.1.1.1").key).toBe(
+      voteKey({ winner: undefined, allPlayersStats: {} }),
+    );
     vote.cast(winnerMsg(undefined), "2.2.2.2");
     expect(vote.tally(2)?.value.winner).toBeUndefined();
   });
@@ -146,7 +149,7 @@ describe("statsDigest", () => {
   });
 });
 
-describe("WinnerVote stats agreement", () => {
+describe("WinnerVote on stats", () => {
   const honest: AllPlayersStats = { [P1]: { finalTiles: 100n } };
   const forged: AllPlayersStats = { [P1]: { finalTiles: 999n } };
   const voteWith = (
@@ -154,53 +157,30 @@ describe("WinnerVote stats agreement", () => {
     allPlayersStats: AllPlayersStats,
   ): ClientSendWinnerMessage => ({ type: "winner", winner, allPlayersStats });
 
-  it("is null until the vote is decided", () => {
+  it("does not let a first voter with forged stats ride the majority's winner", () => {
     const vote = new WinnerVote();
-    vote.cast(voteWith(["player", P1], honest), "1.1.1.1");
-    expect(vote.statsAgreement()).toBeNull();
-  });
-
-  it("reports one version when every voter sent the same stats", () => {
-    const vote = new WinnerVote();
-    vote.cast(voteWith(["player", P1], honest), "1.1.1.1");
-    vote.cast(voteWith(["player", P1], honest), "2.2.2.2");
-    vote.tally(2);
-    expect(vote.statsAgreement()).toEqual({
-      voters: 2,
-      versions: 1,
-      archivedBackers: 2,
-      topBackers: 2,
-    });
-  });
-
-  it("shows when the archived stats came from a minority of voters", () => {
-    const vote = new WinnerVote();
-    // The forger votes first, so today their stats are the ones archived.
     vote.cast(voteWith(["player", P1], forged), "1.1.1.1");
     vote.cast(voteWith(["player", P1], honest), "2.2.2.2");
     vote.cast(voteWith(["player", P1], honest), "3.3.3.3");
-    vote.tally(3);
-    expect(vote.winner()?.allPlayersStats).toEqual(forged);
-    expect(vote.statsAgreement()).toEqual({
-      voters: 3,
-      versions: 2,
-      archivedBackers: 1,
-      topBackers: 2,
-    });
+    expect(vote.candidates()).toBe(2);
+    expect(vote.tally(3)?.votes).toBe(2);
+    expect(vote.winner()?.allPlayersStats).toEqual(honest);
   });
 
-  it("counts only votes for the decided winner", () => {
+  it("does not decide when the winner's voters split on stats", () => {
     const vote = new WinnerVote();
-    vote.cast(voteWith(["player", P2], forged), "9.9.9.9");
-    vote.cast(voteWith(["player", P1], honest), "1.1.1.1");
+    vote.cast(voteWith(["player", P1], forged), "1.1.1.1");
     vote.cast(voteWith(["player", P1], honest), "2.2.2.2");
-    vote.tally(3);
-    expect(vote.statsAgreement()).toEqual({
-      voters: 2,
-      versions: 1,
-      archivedBackers: 2,
-      topBackers: 2,
-    });
+    expect(vote.tally(2)).toBeNull();
+  });
+
+  it("keys a vote and a replayed result with the same stats alike", () => {
+    expect(voteKey(voteWith(["player", P1], honest))).toBe(
+      voteKey({ winner: ["player", P1], allPlayersStats: honest }),
+    );
+    expect(voteKey(voteWith(["player", P1], honest))).not.toBe(
+      voteKey({ winner: ["player", P1], allPlayersStats: forged }),
+    );
   });
 });
 

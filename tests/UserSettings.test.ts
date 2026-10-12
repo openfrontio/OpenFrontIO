@@ -12,6 +12,7 @@ import {
   USER_SETTINGS_CHANGED_EVENT,
   UserSettings,
   getDefaultKeybinds,
+  keysMayBeShared,
 } from "../src/client/UserSettings";
 
 // UserSettings keeps a static in-memory cache and the active player id; reset
@@ -594,14 +595,22 @@ describe("getDefaultKeybinds", () => {
     expect(keybinds.resetGfx).toBe("KeyR");
     expect(keybinds.selectAllWarships).toBe("KeyX");
     expect(keybinds.emojiMenu).toBe("KeyF");
+    expect(keybinds.quickChat).toBe("KeyR");
+    expect(keybinds.targetPlayer).toBe("KeyN");
     expect(keybinds.buildMenuModifier).toBe("ControlLeft");
   });
 
-  it("never gives two actions the same letter key", () => {
-    const letters = Object.values(getDefaultKeybinds(false)).filter((k) =>
+  it("never gives two actions the same letter key, except shared pairs", () => {
+    const binds = Object.entries(getDefaultKeybinds(false)).filter(([, k]) =>
       /^Key[A-Z]$/.test(k),
     );
-    expect(new Set(letters).size).toBe(letters.length);
+    for (const [a, keyA] of binds) {
+      for (const [b, keyB] of binds) {
+        if (a !== b && keyA === keyB) {
+          expect(keysMayBeShared(a, b), `${a} and ${b}`).toBe(true);
+        }
+      }
+    }
   });
 
   it("handles Mac-specific modifier keys correctly", () => {
@@ -696,6 +705,14 @@ describe("UserSettings keybinds with new defaults", () => {
     expect(
       new UserSettings().parsedUserKeybinds().selectAllWarships,
     ).toBeUndefined();
+  });
+
+  it("keeps quick chat on R when the player saved reset graphics there", () => {
+    store({ resetGfx: { value: "KeyR", key: "r" } });
+    const keybinds = new UserSettings().keybinds(false);
+
+    expect(keybinds.resetGfx).toBe("KeyR");
+    expect(keybinds.quickChat).toBe("KeyR");
   });
 
   it("lets modifier keys stay shared", () => {

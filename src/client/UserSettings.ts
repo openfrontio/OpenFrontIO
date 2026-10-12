@@ -38,7 +38,9 @@ export function getDefaultKeybinds(isMac: boolean): Record<string, string> {
     retaliateAttack: "Shift+KeyR",
     requestAlliance: "KeyK",
     breakAlliance: "KeyL",
+    targetPlayer: "KeyN",
     emojiMenu: "KeyF",
+    quickChat: "KeyR",
     swapDirection: "KeyU",
     zoomOut: "KeyQ",
     zoomIn: "KeyE",
@@ -58,6 +60,19 @@ export function getDefaultKeybinds(isMac: boolean): Record<string, string> {
     gameSpeedDown: "Comma",
     altKey: "AltLeft",
   };
+}
+
+// Actions that may share a key. Reset graphics only fires with its modifier
+// (altKey) held, and quick chat only without one.
+const SHARED_KEY_ACTIONS: ReadonlyArray<readonly [string, string]> = [
+  ["quickChat", "resetGfx"],
+];
+
+/** Whether actions `a` and `b` may be bound to the same key. */
+export function keysMayBeShared(a: string, b: string): boolean {
+  return SHARED_KEY_ACTIONS.some(
+    ([x, y]) => (a === x && b === y) || (a === y && b === x),
+  );
 }
 
 export const USER_SETTINGS_CHANGED_EVENT = "event:user-settings-changed";
@@ -1155,15 +1170,18 @@ export class UserSettings {
     const user = this.normalizedUserKeybinds();
     // Modifier keys are shared on purpose (e.g. Alt for altKey and
     // emojiMenuModifier), so only ordinary keys count as clashes.
-    const taken = new Set(
-      Object.values(user).filter(
-        (v) =>
-          v !== "Null" && !/^(Alt|Shift|Control|Meta)(Left|Right)$/.test(v),
-      ),
+    const taken = Object.entries(user).filter(
+      ([, v]) =>
+        v !== "Null" && !/^(Alt|Shift|Control|Meta)(Left|Right)$/.test(v),
     );
     const defaults = getDefaultKeybinds(isMac);
     const clashing = Object.keys(defaults).filter(
-      (action) => !(action in user) && taken.has(defaults[action]),
+      (action) =>
+        !(action in user) &&
+        taken.some(
+          ([other, v]) =>
+            v === defaults[action] && !keysMayBeShared(action, other),
+        ),
     );
     if (clashing.length === 0) return;
     const stored = this.parsedUserKeybinds();
