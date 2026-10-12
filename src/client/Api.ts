@@ -44,6 +44,7 @@ import {
   TribeStatsResponseSchema,
   UserMeResponse,
   UserMeResponseSchema,
+  VisibilityResponseSchema,
 } from "@openfront/shared/ApiSchemas";
 import {
   AnalyticsRecord,
@@ -408,6 +409,72 @@ export async function setMarketingConsent(
     console.error("setMarketingConsent: request failed", e);
     return false;
   }
+}
+
+export type SetVisibilityResult =
+  // 200: the stored setting, as the server echoes it.
+  | { ok: true; hidden: boolean }
+  // 401: the session is gone; logOut() has already run.
+  | { ok: false; code: "logged_out" }
+  // Anything else (400, 429, 5xx, network, unreadable body): nothing to act on
+  // beyond "try again".
+  | { ok: false; code: "failed" };
+
+// PUT /users/@me/<setting> { hidden }: the one write path behind every privacy
+// toggle, so each setter differs only in its endpoint. Idempotent: the body is
+// the desired state. Invalidates the cached /users/@me on success so the next
+// read reflects it.
+async function putVisibility(
+  setting: "level_visibility" | "search_visibility",
+  hidden: boolean,
+): Promise<SetVisibilityResult> {
+  try {
+    const response = await fetch(`${getApiBase()}/users/@me/${setting}`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: await getAuthHeader(),
+      },
+      body: JSON.stringify({ hidden }),
+    });
+    if (response.status === 401) {
+      await logOut();
+      return { ok: false, code: "logged_out" };
+    }
+    if (!response.ok) {
+      console.error(
+        `PUT ${setting}: request failed`,
+        response.status,
+        response.statusText,
+      );
+      return { ok: false, code: "failed" };
+    }
+    const parsed = VisibilityResponseSchema.safeParse(await response.json());
+    if (!parsed.success) {
+      console.error(`PUT ${setting}: Zod validation failed`, parsed.error);
+      return { ok: false, code: "failed" };
+    }
+    invalidateUserMe();
+    return { ok: true, hidden: parsed.data.hidden };
+  } catch (e) {
+    console.error(`PUT ${setting}: request failed`, e);
+    return { ok: false, code: "failed" };
+  }
+}
+
+// "Hide my level".
+export function setLevelVisibility(
+  hidden: boolean,
+): Promise<SetVisibilityResult> {
+  return putVisibility("level_visibility", hidden);
+}
+
+// "Keep my profile out of search engines" (the public profile page is served
+// noindex).
+export function setSearchVisibility(
+  hidden: boolean,
+): Promise<SetVisibilityResult> {
+  return putVisibility("search_visibility", hidden);
 }
 
 // The sites a player can generate an identity token for. Fails closed: any

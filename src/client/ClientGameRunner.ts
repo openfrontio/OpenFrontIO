@@ -223,7 +223,11 @@ export function joinLobby(
       clientID = message.myClientID;
       eventBus.emit(new LobbyInfoEvent(message.lobby, message.myClientID));
       // Kept past game start for the in-game level badges.
-      rememberLobbyRoster(message.lobby.gameID, message.lobby.clients);
+      rememberLobbyRoster(
+        message.lobby.gameID,
+        message.lobby.clients,
+        message.myClientID,
+      );
       // Preload the map while still in the lobby so game start can reuse the
       // cached result instead of blocking on the download in the short
       // prestart->start window. The preload is debounced: it only fires once
