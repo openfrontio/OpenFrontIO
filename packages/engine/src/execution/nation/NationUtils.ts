@@ -23,8 +23,8 @@ export function hasHighStartingGold(game: Game, player: Player): boolean {
 const SAVE_UP_HORIZON_MINUTES: Record<Difficulty, number> = {
   [Difficulty.Easy]: Infinity,
   [Difficulty.Medium]: Infinity,
-  [Difficulty.Hard]: 3,
-  [Difficulty.Impossible]: 3,
+  [Difficulty.Hard]: 5,
+  [Difficulty.Impossible]: 6,
 };
 
 /** Whether `target` gold is close enough to save up for, given the nation's current income. */

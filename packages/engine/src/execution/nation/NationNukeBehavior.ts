@@ -78,6 +78,9 @@ const STRIKE_BORDER_MARGIN = 10;
 /** Ticks a strike waits for its bomb to spawn before it's dropped. */
 const STRIKE_SPAWN_TICKS = 10;
 
+/** Hard & Impossible: ticks after a launch until that nuke's perceived price is back down to its real price */
+const NUKE_PRICE_MEMORY_TICKS = 3000;
+
 interface Strike {
   target: Player;
   tile: TileRef;
@@ -93,8 +96,10 @@ export class NationNukeBehavior {
   ][] = [];
   private atomBombsLaunched = 0;
   private atomBombPerceivedCost = this.cost(UnitType.AtomBomb);
+  private atomBombLastLaunch: Tick | null = null;
   private hydrogenBombsLaunched = 0;
   private hydrogenBombPerceivedCost = this.cost(UnitType.HydrogenBomb);
+  private hydrogenBombLastLaunch: Tick | null = null;
   // Hard & Impossible: nukes in flight that we follow up with an attack when they land
   private strikes: Strike[] = [];
 
@@ -114,8 +119,10 @@ export class NationNukeBehavior {
       ),
       atomBombsLaunched: this.atomBombsLaunched,
       atomBombPerceivedCost: this.atomBombPerceivedCost,
+      atomBombLastLaunch: this.atomBombLastLaunch,
       hydrogenBombsLaunched: this.hydrogenBombsLaunched,
       hydrogenBombPerceivedCost: this.hydrogenBombPerceivedCost,
+      hydrogenBombLastLaunch: this.hydrogenBombLastLaunch,
       strikes: this.strikes.map((s) => ({
         target: w.player(s.target),
         tile: s.tile,
@@ -147,8 +154,10 @@ export class NationNukeBehavior {
     ]);
     this.atomBombsLaunched = s.atomBombsLaunched;
     this.atomBombPerceivedCost = s.atomBombPerceivedCost;
+    this.atomBombLastLaunch = s.atomBombLastLaunch;
     this.hydrogenBombsLaunched = s.hydrogenBombsLaunched;
     this.hydrogenBombPerceivedCost = s.hydrogenBombPerceivedCost;
+    this.hydrogenBombLastLaunch = s.hydrogenBombLastLaunch;
     this.strikes = s.strikes.map((strike) => ({
       target: r.player(strike.target),
       tile: strike.tile,
@@ -183,7 +192,13 @@ export class NationNukeBehavior {
       return;
     }
 
-    const nukeTypes = this.nukeTypesToTry();
+    // While saving up for a MIRV, Hard & Impossible only nuke back at players hitting them, with atom bombs
+    const saving = this.isSavingForMirv();
+    if (saving && !this.isHittingUs(nukeTarget)) {
+      return;
+    }
+
+    const nukeTypes = this.nukeTypesToTry(saving);
     if (nukeTypes.length === 0) {
       return;
     }
@@ -225,17 +240,18 @@ export class NationNukeBehavior {
         return;
       }
     }
-    if (difficulty === Difficulty.Impossible) {
+    if (difficulty === Difficulty.Impossible && !saving) {
       this.maybeDestroyEnemySam(nukeTarget);
     }
   }
 
   /** Hydrogen bomb first; on Hard & Impossible, an atom bomb if no spot is worth a hydrogen bomb. */
-  private nukeTypesToTry(): NukeType[] {
+  private nukeTypesToTry(atomOnly: boolean): NukeType[] {
     const config = this.game.config();
     const difficulty = config.gameConfig().difficulty;
     const types: NukeType[] = [];
     if (
+      !atomOnly &&
       !config.isUnitDisabled(UnitType.HydrogenBomb) &&
       this.player.gold() >= this.getPerceivedNukeCost(UnitType.HydrogenBomb)
     ) {
@@ -796,16 +812,30 @@ export class NationNukeBehavior {
     }
   }
 
-  // Simulate saving up for a MIRV
-  private getPerceivedNukeCost(type: UnitType): Gold {
+  // Each launch makes the next nuke of its type feel pricier, to save up for a MIRV and pace launches
+  private getPerceivedNukeCost(type: NukeType): Gold {
+    if (this.paysRealNukePrice()) {
+      return this.cost(type);
+    }
+    // Easy & Medium keep the price up for good, so only while a MIRV is worth saving for
+    if (
+      !this.forgetsNukePrices() &&
+      !isMirvWorthSavingFor(this.game, this.player)
+    ) {
+      return this.cost(type);
+    }
+    return this.inflatedNukeCost(type);
+  }
+
+  private paysRealNukePrice(): boolean {
     // If only 2 players left, use actual cost (no point saving for MIRV)
     if (this.game.players().length === 2) {
-      return this.cost(type);
+      return true;
     }
 
     // If MIRVs are disabled, return the actual cost
     if (this.game.config().isUnitDisabled(UnitType.MIRV)) {
-      return this.cost(type);
+      return true;
     }
 
     // Save up a limited amount in team games, synced with NationStructureBehavior
@@ -814,51 +844,83 @@ export class NationNukeBehavior {
       this.game.config().gameConfig().gameMode === GameMode.Team &&
       this.player.gold() > this.cost(UnitType.HydrogenBomb)
     ) {
-      return this.cost(type);
+      return true;
     }
 
     // Return the actual cost if we already have enough gold to buy both a MIRV and a hydro
-    if (
-      this.player.gold() >
-      this.cost(UnitType.MIRV) + this.cost(UnitType.HydrogenBomb)
-    ) {
-      return this.cost(type);
+    if (this.player.gold() > this.mirvSaveUpTarget()) {
+      return true;
     }
 
     // On Hard & Impossible, ignore perceived cost when under heavy attack
     // The nation is probably going to get destroyed soon, so go all-in on nukes
     const difficulty = this.game.config().gameConfig().difficulty;
-    if (
+    return (
       (difficulty === Difficulty.Hard ||
         difficulty === Difficulty.Impossible) &&
       this.isUnderHeavyAttack()
-    ) {
-      return this.cost(type);
-    }
-
-    // Don't save up for a MIRV that SAMs would shoot down
-    if (!isMirvWorthSavingFor(this.game, this.player)) {
-      return this.cost(type);
-    }
-
-    // Hard & Impossible don't hold back nukes for a MIRV their income won't reach soon
-    if (!this.isSaveUpWithinReach()) {
-      return this.cost(type);
-    }
-
-    if (type === UnitType.AtomBomb) {
-      return this.atomBombPerceivedCost;
-    } else {
-      return this.hydrogenBombPerceivedCost;
-    }
+    );
   }
 
-  private isSaveUpWithinReach(): boolean {
-    const target =
-      this.game.config().gameConfig().gameMode === GameMode.Team
-        ? this.cost(UnitType.HydrogenBomb)
-        : this.cost(UnitType.MIRV) + this.cost(UnitType.HydrogenBomb);
-    return isSaveUpWithinReach(this.game, this.player, target);
+  /** Hard & Impossible in FFA: the perceived price falls back to the real one within minutes of the last launch. */
+  private forgetsNukePrices(): boolean {
+    const { difficulty, gameMode } = this.game.config().gameConfig();
+    return (
+      (difficulty === Difficulty.Hard ||
+        difficulty === Difficulty.Impossible) &&
+      gameMode !== GameMode.Team
+    );
+  }
+
+  private inflatedNukeCost(type: NukeType): Gold {
+    const real = this.cost(type);
+    const [perceived, lastLaunch] =
+      type === UnitType.AtomBomb
+        ? [this.atomBombPerceivedCost, this.atomBombLastLaunch]
+        : [this.hydrogenBombPerceivedCost, this.hydrogenBombLastLaunch];
+    if (perceived <= real) return real;
+    if (!this.forgetsNukePrices()) return perceived;
+    const left =
+      lastLaunch === null
+        ? 0
+        : NUKE_PRICE_MEMORY_TICKS - (this.game.ticks() - lastLaunch);
+    if (left <= 0) return real;
+    return (
+      real +
+      ((perceived - real) * BigInt(left)) / BigInt(NUKE_PRICE_MEMORY_TICKS)
+    );
+  }
+
+  /** Hard & Impossible in FFA: whether they're holding gold back for a MIRV their income will soon reach. */
+  private isSavingForMirv(): boolean {
+    return (
+      this.forgetsNukePrices() &&
+      !this.paysRealNukePrice() &&
+      isMirvWorthSavingFor(this.game, this.player) &&
+      isSaveUpWithinReach(this.game, this.player, this.mirvSaveUpTarget())
+    );
+  }
+
+  private mirvSaveUpTarget(): Gold {
+    return this.cost(UnitType.MIRV) + this.cost(UnitType.HydrogenBomb);
+  }
+
+  /** Whether the player is attacking us or has a bomb flying at our land. */
+  private isHittingUs(other: Player): boolean {
+    if (this.player.incomingAttacks().some((a) => a.attacker() === other)) {
+      return true;
+    }
+    return other
+      .units([
+        UnitType.AtomBomb,
+        UnitType.HydrogenBomb,
+        UnitType.MIRV,
+        UnitType.MIRVWarhead,
+      ])
+      .some((nuke) => {
+        const tile = nuke.targetTile();
+        return tile !== undefined && this.game.owner(tile) === this.player;
+      });
   }
 
   private isUnderHeavyAttack(): boolean {
@@ -1172,21 +1234,17 @@ export class NationNukeBehavior {
   ) {
     const tick = this.game.ticks();
     this.recentlySentNukes.push([tick, tile, nukeType]);
-    // Nukes thrown while a MIRV is out of reach don't count against saving up for it
-    const saving = this.isSaveUpWithinReach();
+    const perceived = this.inflatedNukeCost(nukeType);
     if (nukeType === UnitType.AtomBomb) {
       this.atomBombsLaunched++;
       // Increase perceived cost by 50% each time to simulate saving up for a MIRV (higher than hydro to make atom bombs less attractive for the lategame)
-      if (saving) {
-        this.atomBombPerceivedCost = (this.atomBombPerceivedCost * 150n) / 100n;
-      }
+      this.atomBombPerceivedCost = (perceived * 150n) / 100n;
+      this.atomBombLastLaunch = tick;
     } else if (nukeType === UnitType.HydrogenBomb) {
       this.hydrogenBombsLaunched++;
       // Increase perceived cost by 25% each time to simulate saving up for a MIRV
-      if (saving) {
-        this.hydrogenBombPerceivedCost =
-          (this.hydrogenBombPerceivedCost * 125n) / 100n;
-      }
+      this.hydrogenBombPerceivedCost = (perceived * 125n) / 100n;
+      this.hydrogenBombLastLaunch = tick;
     }
     this.game.addExecution(
       new NukeExecution(nukeType, this.player, tile, null, -1, waitTicks),
@@ -1546,8 +1604,10 @@ export const NationNukeBehaviorSnapshot = snapshotType({
     ),
     atomBombsLaunched: zInt(),
     atomBombPerceivedCost: z.bigint(),
+    atomBombLastLaunch: zInt().nullable(),
     hydrogenBombsLaunched: zInt(),
     hydrogenBombPerceivedCost: z.bigint(),
+    hydrogenBombLastLaunch: zInt().nullable(),
     strikes: z.array(
       z.object({
         target: zPlayerRef(),
@@ -1558,7 +1618,12 @@ export const NationNukeBehaviorSnapshot = snapshotType({
     ),
   }),
   migrations: {
-    // v1 nations never followed up their nukes with attacks; the schema drops their isHydroNation
-    1: (d) => ({ ...d, strikes: [] }),
+    // v1 nations never followed up their nukes with attacks and never forgot nuke prices; the schema drops their isHydroNation
+    1: (d) => ({
+      ...d,
+      atomBombLastLaunch: null,
+      hydrogenBombLastLaunch: null,
+      strikes: [],
+    }),
   },
 });

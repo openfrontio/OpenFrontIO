@@ -52,11 +52,13 @@ function conquerRect(
  */
 async function setupFront(
   difficulty: Difficulty,
-  { split = 100, humanFrom = 100 } = {},
+  { split = 100, humanFrom = 100, gold = RICH, teams = false } = {},
 ) {
   const game = await setup(
     "big_plains",
-    { difficulty },
+    teams
+      ? { difficulty, gameMode: GameMode.Team, playerTeams: 3 }
+      : { difficulty },
     [
       new PlayerInfo("nation", PlayerType.Nation, null, "nation_id"),
       new PlayerInfo("human", PlayerType.Human, null, "human_id"),
@@ -70,17 +72,26 @@ async function setupFront(
   conquerRect(game, nation, 0, 0, split, 190);
   conquerRect(game, human, humanFrom, 0, 200, 190);
   conquerRect(game, game.player("other_id"), 0, 195, 10, 200);
-  return { game, nation, human, nukeBehavior: nukeBehavior(game, nation) };
+  return {
+    game,
+    nation,
+    human,
+    nukeBehavior: nukeBehavior(game, nation, gold),
+  };
 }
 
-/** A nuke behavior for a nation with a silo at (5, 5) and 10M gold. */
+/** More than a MIRV and a hydrogen bomb cost, so the nation isn't saving up for one */
+const RICH = 40_000_000n;
+
+/** A nuke behavior for a nation with a silo at (5, 5) and `gold`. */
 function nukeBehavior(
   game: Game,
   nation: Player,
+  gold: bigint,
   seed = 2,
 ): NationNukeBehavior {
   nation.buildUnit(UnitType.MissileSilo, game.ref(5, 5), {});
-  nation.addGold(10_000_000n);
+  nation.addGold(gold);
   const emojiBehavior = new NationEmojiBehavior(
     new PseudoRandom(1),
     game,
@@ -273,7 +284,7 @@ describe("Nation strike nukes", () => {
       // Any seed, so it isn't the strongest-team fallback rolling the raider
       for (let seed = 1; seed <= 8; seed++) {
         expect(
-          nukeBehavior(game, nation, seed).findBestNukeTarget()?.id(),
+          nukeBehavior(game, nation, RICH, seed).findBestNukeTarget()?.id(),
         ).toBe(raider.id());
       }
     },
@@ -292,22 +303,66 @@ describe("Nation strike nukes", () => {
 });
 
 describe("Nation nuke saving", () => {
-  // The 10M the nation got counts as income; a MIRV and a hydrogen bomb cost 30M
+  // Easy & Medium, and team games, never forget; Hard & Impossible take 3000 ticks to get back to the real 750k
   it.each([
-    [Difficulty.Hard, 0, 10_000_000n],
-    [Difficulty.Hard, 3, 750_000n],
-    [Difficulty.Medium, 3, 10_000_000n],
+    [Difficulty.Medium, false, 3000, 10_000_000n],
+    [Difficulty.Hard, false, 0, 10_000_000n],
+    [Difficulty.Hard, false, 1500, 5_375_000n],
+    [Difficulty.Impossible, false, 3000, 750_000n],
+    [Difficulty.Hard, true, 3000, 10_000_000n],
   ])(
-    "%s: %i minutes in, an atom bomb that feels like 10M after many launches feels like %i",
-    async (difficulty, minutes, perceived) => {
-      const { game, nation, nukeBehavior } = await setupFront(difficulty);
-      for (let i = 0; i < minutes * 600; i++) game.executeNextTick();
+    "%s, teams: %s, %i ticks after a launch, an atom bomb that felt like 10M feels like %i",
+    async (difficulty, teams, ago, perceived) => {
+      const { game, nation, nukeBehavior } = await setupFront(difficulty, {
+        teams,
+      });
       nation.removeGold(nation.gold() - 1_000_000n);
       nukeBehavior["atomBombPerceivedCost"] = 10_000_000n;
+      nukeBehavior["atomBombLastLaunch"] = game.ticks() - ago;
 
       expect(nukeBehavior["getPerceivedNukeCost"](UnitType.AtomBomb)).toBe(
         perceived,
       );
+    },
+  );
+
+  it("Hard: a launch raises the next atom bomb's price even with a MIRV out of reach", async () => {
+    // 2M earned is 4M a minute, which takes over 5 minutes to make 30M
+    const { game, human, nukeBehavior } = await setupFront(Difficulty.Hard, {
+      gold: 2_000_000n,
+    });
+    expect(nukeBehavior["isSavingForMirv"]()).toBe(false);
+
+    nukeBehavior["sendNuke"](game.ref(150, 100), UnitType.AtomBomb, human);
+
+    expect(nukeBehavior["getPerceivedNukeCost"](UnitType.AtomBomb)).toBe(
+      1_125_000n,
+    );
+  });
+
+  // 20M left of 40M earned in the first minute: the 30M of a MIRV and a hydrogen bomb is within reach
+  it.each([Difficulty.Hard, Difficulty.Impossible])(
+    "%s: saving up for a MIRV, holds back a strike but nukes back a neighbor attacking it with an atom bomb",
+    async (difficulty) => {
+      // A narrow nation, so a hydrogen bomb fits on the human's side
+      const { game, nation, human, nukeBehavior } = await setupFront(
+        difficulty,
+        { split: 20, humanFrom: 20 },
+      );
+      setTroops(game, nation, human, 1_000_000, 1_000_000);
+      nation.removeGold(nation.gold() - 20_000_000n);
+      const launch = () => {
+        nukeBehavior.maybeSendNuke();
+        game.executeNextTick();
+        game.executeNextTick();
+        return nation.units(UnitType.AtomBomb, UnitType.HydrogenBomb);
+      };
+
+      expect(launch()).toHaveLength(0);
+
+      game.addExecution(new AttackExecution(100_000, human, nation.id()));
+      game.executeNextTick();
+      expect(launch().map((u) => u.type())).toEqual([UnitType.AtomBomb]);
     },
   );
 });

@@ -199,21 +199,22 @@ describe("Nation economy at the start", () => {
     },
   );
 
-  // A MIRV and a hydrogen bomb cost 30M: within 3 minutes of income from 10M a minute on,
-  // and income earned so far counts twice as the current rate
+  // A MIRV and a hydrogen bomb cost 30M: Hard saves for it within 5 minutes of income, Impossible
+  // within 6, and income earned so far counts twice as the current rate
   it.each([
-    [Difficulty.Medium, 0n, 4_200_000n],
-    [Difficulty.Hard, 0n, 1_000_000n],
-    [Difficulty.Hard, 4_900_000n, 1_000_000n],
-    [Difficulty.Hard, 5_000_000n, 3_400_000n],
+    [Difficulty.Medium, 4, 0n, 4_200_000n],
+    [Difficulty.Hard, 4, 2_900_000n, 1_000_000n],
+    [Difficulty.Hard, 4, 3_000_000n, 3_400_000n],
+    [Difficulty.Impossible, 5, 2_400_000n, 1_000_000n],
+    [Difficulty.Impossible, 5, 2_500_000n, 3_000_000n],
   ])(
-    "%s: with 4 cities and %i gold earned in the first minute, the next city feels like %i",
-    (difficulty, income, perceived) => {
+    "%s: with %i cities and %i gold earned in the first minute, the next city feels like %i",
+    (difficulty, owned, income, perceived) => {
       const { behavior, cities, earned } = setupCoast({
         difficulty,
         gameMode: ffa,
       });
-      cities(4);
+      cities(owned);
       earned(income);
       expect(behavior["getPerceivedCost"](UnitType.City)).toBe(perceived);
     },

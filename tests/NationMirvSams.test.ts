@@ -104,13 +104,15 @@ describe("Nations and MIRVs against SAM-covered leaders", () => {
     },
   );
 
+  // Hard & Impossible keep pacing their nukes even when no MIRV is worth saving for
   it.each([
-    [false, 20_000_000n],
-    [true, 5_000_000n],
+    [Difficulty.Medium, false, 20_000_000n],
+    [Difficulty.Medium, true, 5_000_000n],
+    [Difficulty.Hard, true, 20_000_000n],
   ])(
-    "leader under SAMs: %s, a hydrogen bomb feels like it costs %i",
-    (sams, perceived) => {
-      const { game, nation } = setupLeader(Difficulty.Hard, { sams });
+    "%s, leader under SAMs: %s, a hydrogen bomb launched just now makes the next feel like %i",
+    (difficulty, sams, perceived) => {
+      const { game, nation } = setupLeader(difficulty, { sams });
       nation.addGold(10_000_000n);
       const random = new PseudoRandom(1);
       const behavior = new NationNukeBehavior(
@@ -121,11 +123,29 @@ describe("Nations and MIRVs against SAM-covered leaders", () => {
         new NationEmojiBehavior(random, game, nation),
       );
       behavior["hydrogenBombPerceivedCost"] = 20_000_000n;
+      behavior["hydrogenBombLastLaunch"] = game.ticks();
       expect(behavior["getPerceivedNukeCost"](UnitType.HydrogenBomb)).toBe(
         perceived,
       );
     },
   );
+
+  it.each([
+    [false, true],
+    [true, false],
+  ])("Hard, leader under SAMs: %s, saves up for a MIRV: %s", (sams, saving) => {
+    const { game, nation } = setupLeader(Difficulty.Hard, { sams });
+    nation.addGold(10_000_000n);
+    const random = new PseudoRandom(1);
+    const behavior = new NationNukeBehavior(
+      random,
+      game,
+      nation,
+      null as any,
+      new NationEmojiBehavior(random, game, nation),
+    );
+    expect(behavior["isSavingForMirv"]()).toBe(saving);
+  });
 
   it.each([
     [Difficulty.Hard, false, true],
