@@ -1267,6 +1267,12 @@ class Client {
     // later must not start the menu theme under the viewer.
     this.menuTornDown = true;
     document.dispatchEvent(new CustomEvent("game-starting"));
+    // A lobby modal may be open (a #join hash switched to a replay): close it
+    // the way a game start does, without leaving a lobby it never joined.
+    this.loadedHostModal()?.disarmLeaveOnClose();
+    this.loadedJoinModal()?.disarmLeaveOnClose();
+    this.loadedHostModal()?.closeWithoutLeaving();
+    this.loadedJoinModal()?.closeWithoutLeaving();
     this.closeMenu();
     // Closing a modal the router opened clears the hash. Put the viewer's
     // back, so a reload opens the replay again.

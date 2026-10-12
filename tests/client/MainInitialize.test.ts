@@ -706,7 +706,11 @@ describe("Client.initialize() booted from Main.ts module scope", () => {
     await loadModal("join-lobby-modal");
     const joinModal = document.querySelector("join-lobby-modal") as unknown as {
       close: () => void;
+      disarmLeaveOnClose: () => void;
+      closeWithoutLeaving: () => void;
     };
+    const disarmSpy = vi.spyOn(joinModal, "disarmLeaveOnClose");
+    const closeWithoutLeavingSpy = vi.spyOn(joinModal, "closeWithoutLeaving");
     // What JoinLobbyModal.onClose does when there's no lobby to keep.
     const closeSpy = vi
       .spyOn(joinModal, "close")
@@ -735,10 +739,16 @@ describe("Client.initialize() booted from Main.ts module scope", () => {
     );
     expect(gameStarting).toHaveBeenCalledOnce();
     expect(newsClose).toHaveBeenCalled();
+    // A lobby modal is closed like at a game start: disarmed, so closing it
+    // doesn't leave a lobby it never joined.
+    expect(disarmSpy).toHaveBeenCalled();
+    expect(closeWithoutLeavingSpy).toHaveBeenCalled();
     // Kept, so a reload opens the replay again.
     expect(window.location.hash).toBe("#replay-viewer=dqKzit4cWu");
     document.removeEventListener("game-starting", gameStarting);
     newsClose.mockRestore();
     closeSpy.mockRestore();
+    disarmSpy.mockRestore();
+    closeWithoutLeavingSpy.mockRestore();
   });
 });
