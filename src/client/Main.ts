@@ -70,6 +70,7 @@ import {
 import { GameStartingModal } from "./GameStartingModal";
 import type { HelpModal } from "./HelpModal";
 import "./HomepagePromos";
+import type { HomepagePromos } from "./HomepagePromos";
 import type { HostLobbyModal as HostPrivateLobbyModal } from "./HostLobbyModal";
 import { showInGameAlert, showInGameConfirm } from "./InGameModal";
 import type { JoinLobbyModal } from "./JoinLobbyModal";
@@ -1187,11 +1188,13 @@ class Client {
     this.gameModeSelector.stop();
     // The game-start modal sweep closes the promos for a game; nothing else
     // does for the viewer, and their rails and docked header sit over it.
-    (
-      document.querySelector("homepage-promos") as
-        | (HTMLElement & { close?: () => void })
-        | null
-    )?.close?.();
+    // close() keeps a lobby's bottom rail for the spawn phase, which a replay
+    // opened from a lobby never reaches, so drop that here too.
+    const promos = document.querySelector(
+      "homepage-promos",
+    ) as HomepagePromos | null;
+    promos?.close?.();
+    promos?.destroyBottomRail?.();
     hideMenuChrome();
     setInGameSignal(true);
     const viewer = new ReplayViewer();
