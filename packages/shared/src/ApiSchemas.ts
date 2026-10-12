@@ -12,6 +12,10 @@ import {
 } from "@openfront/engine-api/game/GameTypes";
 import { z } from "zod";
 import { base64urlToUuid } from "./Base64";
+import {
+  LEVEL_BADGE_MAX_LEVEL,
+  LEVEL_BADGE_MAX_PRESTIGE,
+} from "./LevelBadgeWire";
 
 const RequiredClanTagSchema = ClanTagSchema.unwrap();
 
@@ -105,8 +109,31 @@ export const RewardSchema = z.object({
   amount: z.string(),
   reason: z.string(),
   note: z.string().nullable(),
+  // Why the reward can't be claimed yet; absent when it can. "trust": level
+  // Plutonium, kept until the account is trusted. Any other non-empty value is
+  // a hold this client doesn't know yet, and still reads as held: an unknown
+  // restriction must never read as claimable, so a malformed value (a number,
+  // an object, "") reads as held too. Absent or null: claimable, as from
+  // older APIs.
+  held: z
+    .unknown()
+    .transform((v): string | undefined =>
+      v === undefined || v === null
+        ? undefined
+        : typeof v === "string" && v.length > 0
+          ? v
+          : "unknown",
+    )
+    .optional(),
 });
 export type Reward = z.infer<typeof RewardSchema>;
+
+// The one claimability rule: a reward is claimable unless it carries a hold,
+// whatever kind. Everything that offers a claim, or counts rewards to claim,
+// asks this.
+export function isRewardClaimable(reward: Pick<Reward, "held">): boolean {
+  return reward.held === undefined;
+}
 
 // Player levels / XP ("progression"). Purely cosmetic: levels never affect
 // gameplay, and XP is computed server-side only — the client just displays it.
@@ -205,6 +232,30 @@ export const PublicProgressSchema = z.object({
 });
 export type PublicProgress = z.infer<typeof PublicProgressSchema>;
 
+// A player's level as stamped onto rows in other players' lists (the ranked
+// leaderboard, clan member lists), for drawing a level badge. Sent together
+// for a player with progress; absent for one without, while progression is
+// off, and from an API that predates them. Display-only, so a malformed or
+// out-of-range value reads as absent (that row shows no badge) rather than
+// failing the whole list's parse or drawing a level the player doesn't have.
+export const RowLevelFields = {
+  level: z
+    .number()
+    .int()
+    .min(1)
+    .max(LEVEL_BADGE_MAX_LEVEL)
+    .optional()
+    .catch(undefined),
+  prestige: z
+    .number()
+    .int()
+    .min(0)
+    .max(LEVEL_BADGE_MAX_PRESTIGE)
+    .optional()
+    .catch(undefined),
+  legend: z.boolean().optional().catch(undefined),
+};
+
 // A flare staff put on the level track: what reaching a point on it grants.
 // `kind` says what the point is:
 //   level    — reaching `level` in run `prestige` (0 = the first run), or in
@@ -293,11 +344,31 @@ export type ClaimRewardResponse = z.infer<typeof ClaimRewardResponseSchema>;
 
 export const ClaimAllRewardsResponseSchema = z.object({
   claimed: z.array(z.object({ id: z.string() })),
+  // The rewards still pending after the claim because they are held (each
+  // with `held`), in /users/@me's reward shape. Empty from older APIs, and
+  // when the list can't be read: the next /users/@me read brings them back.
+  // Read per element, so one malformed row drops only itself.
+  held: z
+    .array(z.unknown())
+    .default([])
+    .catch([])
+    .transform((rows) =>
+      rows.flatMap((row) => {
+        const parsed = RewardSchema.safeParse(row);
+        return parsed.success ? [parsed.data] : [];
+      }),
+    ),
   currency: CurrencyBalancesSchema,
 });
 export type ClaimAllRewardsResponse = z.infer<
   typeof ClaimAllRewardsResponseSchema
 >;
+
+// POST /rewards/:rewardId/claim's 403 for a held reward (RewardSchema.held):
+// it stays pending, and claims once the hold lifts.
+export const ClaimRewardHeldResponseSchema = z.object({
+  held: z.string().min(1),
+});
 
 // Account-username lifecycle. `unclaimed`: no bare-name reservation (default).
 // `claimed`: reservation held but subscription lapsed — the suffix shows again
@@ -1031,6 +1102,7 @@ export const PlayerLeaderboardEntrySchema = z.object({
   wins: z.number(),
   losses: z.number(),
   winRate: z.number(),
+  ...RowLevelFields,
 });
 export type PlayerLeaderboardEntry = z.infer<
   typeof PlayerLeaderboardEntrySchema
@@ -1054,6 +1126,7 @@ export const RankedLeaderboardEntrySchema = z.object({
   // Account username (null = never set). The client displays
   // `accountUsername ?? public_id`.
   accountUsername: z.string().nullable(),
+  ...RowLevelFields,
 });
 export type RankedLeaderboardEntry = z.infer<
   typeof RankedLeaderboardEntrySchema
