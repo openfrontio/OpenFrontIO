@@ -288,7 +288,10 @@ export default defineConfig(({ mode }) => {
     },
   });
 
-  // In dev, redirect visits to /w*/game/* to "/" so Vite serves the index.html.
+  // In dev, redirect visits to /w*/game/* and /w*/player/* to "/" so Vite
+  // serves the index.html. Only the /w<n> proxies below call this: a bare
+  // /player/<id> isn't proxied, so Vite's SPA fallback serves it the
+  // index.html already, as the master's fallback does in production.
   const devGameHtmlBypass = (req?: {
     url?: string;
     method?: string;
@@ -301,7 +304,7 @@ export default defineConfig(({ mode }) => {
       : (accept ?? "");
     if (!acceptValue.includes("text/html")) return undefined;
     if (!req.url) return undefined;
-    if (/^\/w\d+\/game\/[^/]+/.test(req.url)) {
+    if (/^\/w\d+\/(?:game|player)\/[^/]+/.test(req.url)) {
       return "/";
     }
     return undefined;
@@ -414,11 +417,22 @@ export default defineConfig(({ mode }) => {
       assetsDir: "assets", // Sub-directory for assets
       rollupOptions: {
         output: {
-          manualChunks: (id) => {
-            const vendorModules = ["howler", "zod"];
-            if (vendorModules.some((module) => id.includes(module))) {
-              return "vendor";
-            }
+          codeSplitting: {
+            groups: [
+              {
+                name: "vendor",
+                test: (id) =>
+                  ["howler", "zod"].some((module) => id.includes(module)),
+                priority: 2,
+              },
+              // Everything the page needs at startup stays in the entry
+              // chunk. Without this, a module shared by the entry and the
+              // lazily loaded screens (Lit, translateText, the cosmetics
+              // catalog, ...) can be split into chunks of its own, each one
+              // more request before the page can start, for no saving: the
+              // entry needs them all anyway.
+              { name: "index", tags: ["$initial"], priority: 1 },
+            ],
           },
         },
       },

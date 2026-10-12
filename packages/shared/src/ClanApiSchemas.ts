@@ -1,5 +1,6 @@
 import { ClanTagSchema } from "@openfront/engine-api/Schemas";
 import { z } from "zod";
+import { RowLevelFields } from "./ApiSchemas";
 
 const RequiredClanTagSchema = ClanTagSchema.unwrap();
 
@@ -18,6 +19,9 @@ export const ClanLeaderboardEntrySchema = z.object({
   weightedWins: z.number(),
   weightedLosses: z.number(),
   weightedWLRatio: z.number(),
+  // Ranked clan wars rating; null before the clan's first rated game.
+  // Defaulted until every API environment serves it.
+  elo: z.number().nullable().default(null),
 });
 export type ClanLeaderboardEntry = z.infer<typeof ClanLeaderboardEntrySchema>;
 
@@ -141,6 +145,7 @@ export const ClanMemberSchema = z.object({
   // responses from an API without the field still parse.
   username: z.string().nullable().optional(),
   stats: ClanMemberStatsSchema.optional(),
+  ...RowLevelFields,
 });
 export type ClanMember = z.infer<typeof ClanMemberSchema>;
 

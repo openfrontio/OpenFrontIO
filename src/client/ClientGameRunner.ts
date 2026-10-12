@@ -45,6 +45,7 @@ import {
   TickMetricsEvent,
   ToggleRenderDebugGuiEvent,
 } from "./InputHandler";
+import { rememberLobbyRoster } from "./LobbyRosterLevels";
 import { pagePin } from "./PagePin";
 import { groupTokenOf, loggableStartMessage } from "./PresenceGroup";
 import { versionedPathForMismatchedGame } from "./ServerList";
@@ -55,6 +56,7 @@ import {
 } from "./TerrainMapFileLoader";
 import { GoToPlayerEvent } from "./TransformHandler";
 import {
+  counterAttackTroops,
   MoveWarshipIntentEvent,
   NewLobbyEvent,
   SendAllianceExtensionIntentEvent,
@@ -221,6 +223,12 @@ export function joinLobby(
       // Server tells us our assigned clientID
       clientID = message.myClientID;
       eventBus.emit(new LobbyInfoEvent(message.lobby, message.myClientID));
+      // Kept past game start for the in-game level badges.
+      rememberLobbyRoster(
+        message.lobby.gameID,
+        message.lobby.clients,
+        message.myClientID,
+      );
       // Preload the map while still in the lobby so game start can reuse the
       // cached result instead of blocking on the download in the short
       // prestart->start window. The preload is debounced: it only fires once
@@ -1460,7 +1468,7 @@ export class ClientGameRunner {
     ) as PlayerView;
     if (!attacker) return;
 
-    const counterTroops = Math.min(
+    const counterTroops = counterAttackTroops(
       mostRecentAttack.troops,
       this.renderer.uiState.attackRatio * this.myPlayer.troops(),
     );
