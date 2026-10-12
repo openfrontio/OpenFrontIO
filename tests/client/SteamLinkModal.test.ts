@@ -61,6 +61,7 @@ function makeUserMe(
   return {
     user,
     steamLicence: false,
+    steamLicenceSince: null,
     noticesSeen: [],
     player: {
       publicId: "p1",

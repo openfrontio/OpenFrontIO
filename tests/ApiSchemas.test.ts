@@ -878,6 +878,7 @@ describe("UserMeResponseSchema Steam licence and notices", () => {
     expect(result.success).toBe(true);
     if (result.success) {
       expect(result.data.steamLicence).toBe(false);
+      expect(result.data.steamLicenceSince).toBeNull();
       expect(result.data.noticesSeen).toEqual([]);
       expect(result.data.tierConversion).toBeUndefined();
     }
@@ -894,12 +895,14 @@ describe("UserMeResponseSchema Steam licence and notices", () => {
       user: {},
       player: { ...player, canCreatePublicLobbies: true },
       steamLicence: true,
+      steamLicenceSince: "2026-10-14T09:30:00.000Z",
       noticesSeen: ["steam_licence_intro"],
       tierConversion,
     });
     expect(result.success).toBe(true);
     if (result.success) {
       expect(result.data.steamLicence).toBe(true);
+      expect(result.data.steamLicenceSince).toBe("2026-10-14T09:30:00.000Z");
       expect(result.data.noticesSeen).toEqual(["steam_licence_intro"]);
       expect(result.data.tierConversion).toEqual(tierConversion);
     }

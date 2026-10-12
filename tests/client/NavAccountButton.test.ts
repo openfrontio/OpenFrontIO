@@ -52,6 +52,7 @@ function userMe(user: UserMeResponse["user"]): UserMeResponse {
   return {
     user,
     steamLicence: false,
+    steamLicenceSince: null,
     noticesSeen: [],
     player: {} as UserMeResponse["player"],
   };

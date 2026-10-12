@@ -70,6 +70,7 @@ function makeUserMe(
   return {
     user: { ...overrides },
     steamLicence: false,
+    steamLicenceSince: null,
     noticesSeen: [],
     player: {
       publicId: "test-player",

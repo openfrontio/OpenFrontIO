@@ -10,7 +10,9 @@ import type { SteamGrantStore } from "../../src/client/SteamGrantNotices";
 import {
   resetSteamNoticesForTest,
   STEAM_LICENCE_INTRO_NOTICE,
+  STEAM_LICENCE_LAUNCH,
   STEAM_NOTICE_KEYS,
+  STEAM_PLUS_WELCOME_NOTICE,
   steamNoticeCopy,
   steamNoticeDue,
   steamNoticeStringsReady,
@@ -25,6 +27,7 @@ type Sub = NonNullable<UserMeResponse["player"]["subscription"]>;
 
 interface Fixture {
   steamLicence?: boolean;
+  steamLicenceSince?: string | null;
   noticesSeen?: string[];
   tierConversion?: UserMeResponse["tierConversion"];
   subscription?: Sub | null;
@@ -34,6 +37,7 @@ function me(overrides: Fixture = {}): UserMeResponse {
   return {
     user: {},
     steamLicence: overrides.steamLicence ?? true,
+    steamLicenceSince: overrides.steamLicenceSince ?? null,
     noticesSeen: overrides.noticesSeen ?? [],
     tierConversion: overrides.tierConversion ?? null,
     player: { publicId: ME, subscription: overrides.subscription ?? null },
@@ -142,6 +146,118 @@ describe("steamNoticeDue", () => {
   });
 });
 
+describe("steamNoticeDue for owners since launch", () => {
+  const AFTER = STEAM_LICENCE_LAUNCH + 60 * 60 * 1000;
+  const MONTH_END = "2026-11-13T12:00:00.000Z";
+  const at = (ms: number) => new Date(ms).toISOString();
+
+  it("welcomes a new owner to their Steam Plus month", () => {
+    expect(
+      steamNoticeDue(
+        me({
+          steamLicenceSince: at(AFTER),
+          subscription: steamGrant(MONTH_END),
+        }),
+        true,
+        AFTER,
+      ),
+    ).toEqual({
+      kind: "steam-plus-welcome",
+      notice: STEAM_PLUS_WELCOME_NOTICE,
+      grantEnd: new Date(MONTH_END),
+    });
+  });
+
+  it("welcomes them once", () => {
+    expect(
+      steamNoticeDue(
+        me({
+          steamLicenceSince: at(AFTER),
+          subscription: steamGrant(MONTH_END),
+          noticesSeen: [STEAM_PLUS_WELCOME_NOTICE],
+        }),
+        true,
+        AFTER,
+      ),
+    ).toBeNull();
+  });
+
+  it("says nothing to a new owner without a granted month", () => {
+    expect(
+      steamNoticeDue(me({ steamLicenceSince: at(AFTER) }), true, AFTER),
+    ).toBeNull();
+    expect(
+      steamNoticeDue(
+        me({
+          steamLicenceSince: at(AFTER),
+          subscription: steamGrant(at(AFTER - 1)),
+        }),
+        true,
+        AFTER,
+      ),
+    ).toBeNull();
+  });
+
+  it("never welcomes on the web", () => {
+    expect(
+      steamNoticeDue(
+        me({
+          steamLicenceSince: at(AFTER),
+          subscription: steamGrant(MONTH_END),
+        }),
+        false,
+        AFTER,
+      ),
+    ).toBeNull();
+  });
+
+  it("treats a missing or unreadable date as an existing owner", () => {
+    for (const steamLicenceSince of [null, "not a date"]) {
+      expect(steamNoticeDue(me({ steamLicenceSince }), true, AFTER)?.kind).toBe(
+        "steam-licence-intro",
+      );
+    }
+  });
+
+  it("splits owners exactly at the launch", () => {
+    const grant = steamGrant(MONTH_END);
+    expect(
+      steamNoticeDue(
+        me({
+          steamLicenceSince: at(STEAM_LICENCE_LAUNCH - 1),
+          subscription: grant,
+        }),
+        true,
+        AFTER,
+      )?.kind,
+    ).toBe("steam-licence-intro");
+    expect(
+      steamNoticeDue(
+        me({
+          steamLicenceSince: at(STEAM_LICENCE_LAUNCH),
+          subscription: grant,
+        }),
+        true,
+        AFTER,
+      )?.kind,
+    ).toBe("steam-plus-welcome");
+  });
+
+  it("still puts a conversion first", () => {
+    expect(
+      steamNoticeDue(
+        me({
+          steamLicenceSince: at(AFTER),
+          subscription: steamGrant(MONTH_END),
+          tierConversion: conversion,
+        }),
+        true,
+        AFTER,
+      )?.kind,
+    ).toBe("steam-plus-conversion");
+  });
+});
+
 describe("steamNoticeCopy", () => {
   const translate = (key: string, params?: Record<string, string>) =>
     params?.date ? `${key}(${params.date})` : key;
@@ -179,6 +295,26 @@ describe("steamNoticeCopy", () => {
       STEAM_NOTICE_KEYS.conversionBody,
       STEAM_NOTICE_KEYS.conversionUnchanged,
     ]);
+  });
+
+  it("dates the new owner's Steam Plus month", () => {
+    expect(
+      steamNoticeCopy(
+        {
+          kind: "steam-plus-welcome",
+          notice: "n",
+          grantEnd: new Date(GRANT_END),
+        },
+        translate,
+        formatDate,
+      ),
+    ).toEqual({
+      heading: STEAM_NOTICE_KEYS.welcomeHeading,
+      paragraphs: [
+        STEAM_NOTICE_KEYS.welcomeBody,
+        `${STEAM_NOTICE_KEYS.welcomeUntil}(2026-10-20)`,
+      ],
+    });
   });
 
   it("dates the plutonium bonus only while a Steam month runs", () => {
@@ -330,6 +466,31 @@ describe("the steam-notice boot interrupt", () => {
     expect(
       steamNoticeDue(me({ tierConversion: conversion }), true, NOW),
     ).toBeNull();
+  });
+
+  it("marks the welcome seen and covers the grant welcome", async () => {
+    const { base, calls } = ports();
+    await runBootInterrupt(
+      "steam-notice",
+      {
+        claimStore: {},
+        grantStore,
+        publicId: ME,
+        steamNotice: {
+          kind: "steam-plus-welcome",
+          notice: STEAM_PLUS_WELCOME_NOTICE,
+          grantEnd: new Date(GRANT_END),
+        },
+      },
+      base,
+    );
+    expect(calls.seen).toEqual([STEAM_PLUS_WELCOME_NOTICE]);
+    expect(calls.grantStored).toEqual([
+      { [ME]: { ...grantStore[ME], welcomed: true } },
+    ]);
+    expect(calls.alerted[0].heading).toBe(
+      `t(${STEAM_NOTICE_KEYS.welcomeHeading})`,
+    );
   });
 
   it("leaves the grant store alone for a conversion", async () => {

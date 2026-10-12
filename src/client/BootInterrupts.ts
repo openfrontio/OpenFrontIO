@@ -64,7 +64,7 @@ export interface BootInterruptInputs {
    * the two grant notices. Failing it lets the next interrupt take the boot.
    */
   grantStringsReady: boolean;
-  /** steamNoticeDue(...) — the Steam Plus conversion or licence intro. */
+  /** steamNoticeDue(...) — the Steam Plus conversion, licence intro or welcome. */
   steamNotice: SteamNotice | null;
   /** steamNoticeStringsReady(...), as grantStringsReady. */
   steamNoticeStringsReady: boolean;
@@ -211,9 +211,10 @@ function entitled(status: string | undefined): boolean {
  * 1. `username-temporary` — the server has already renamed them. They are
  *    playing under a name that is not theirs right now, and the rename back is
  *    free only until they spend it. Most urgent, and it was already first.
- * 2. `steam-notice` — what owning the game on Steam now includes, or that
- *    we moved their subscription to Steam Plus. Ahead of the grant welcome
- *    because the licence intro covers the granted month too, and showing it
+ * 2. `steam-notice` — what owning the game on Steam now includes, a new
+ *    owner's Steam Plus month, or that we moved their subscription to Steam
+ *    Plus. Ahead of the grant welcome because the licence intro and the
+ *    Steam Plus welcome cover the granted month too, and showing either
  *    marks the welcome given.
  * 3. `grant-welcome` — a Steam month is running and nobody has said what it
  *    is. Ahead of the claim prompt because the claim prompt asks the buyer to
@@ -611,7 +612,7 @@ export async function runBootInterrupt(
       steamNoticeShown();
       ports.markNoticeSeen(notice.notice);
       if (
-        notice.kind === "steam-licence-intro" &&
+        notice.kind !== "steam-plus-conversion" &&
         notice.grantEnd !== null &&
         context.grantStore[context.publicId] !== undefined
       ) {

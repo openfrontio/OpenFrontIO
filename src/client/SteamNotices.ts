@@ -2,6 +2,11 @@ import type { UserMeResponse } from "@openfront/shared/ApiSchemas";
 import { steamGrantOf } from "./SteamGrantNotices";
 
 export const STEAM_LICENCE_INTRO_NOTICE = "steam_licence_intro";
+export const STEAM_PLUS_WELCOME_NOTICE = "steam_plus_welcome";
+
+// Owners from before this moment get the licence intro, which explains what
+// changed for them. Later buyers never knew the old model and get a welcome.
+export const STEAM_LICENCE_LAUNCH = Date.UTC(2026, 9, 13, 12);
 
 export function steamPlusConversionNotice(conversionId: string): string {
   return `steam_plus_conversion:${conversionId}`;
@@ -18,6 +23,11 @@ export type SteamNotice =
       notice: string;
       /** End of a running Steam-granted month, or null when there is none. */
       grantEnd: Date | null;
+    }
+  | {
+      kind: "steam-plus-welcome";
+      notice: string;
+      grantEnd: Date;
     };
 
 // /users/@me is re-read several times per launch, and the seen POST is fire
@@ -58,22 +68,33 @@ export function steamNoticeDue(
       };
     }
   }
-  if (
-    desktopShell &&
-    userMe.steamLicence &&
-    !seen(userMe, STEAM_LICENCE_INTRO_NOTICE)
-  ) {
-    const grant = steamGrantOf(userMe);
+  if (!desktopShell || !userMe.steamLicence) return null;
+  const grant = steamGrantOf(userMe);
+  const grantEnd =
+    grant !== null && grant.periodEnd.getTime() > now ? grant.periodEnd : null;
+  if (!ownedSinceLaunch(userMe.steamLicenceSince)) {
+    if (seen(userMe, STEAM_LICENCE_INTRO_NOTICE)) return null;
     return {
       kind: "steam-licence-intro",
       notice: STEAM_LICENCE_INTRO_NOTICE,
-      grantEnd:
-        grant !== null && grant.periodEnd.getTime() > now
-          ? grant.periodEnd
-          : null,
+      grantEnd,
     };
   }
-  return null;
+  // A new owner without a granted month (a family-share borrower) is told
+  // nothing.
+  if (grantEnd === null || seen(userMe, STEAM_PLUS_WELCOME_NOTICE)) return null;
+  return {
+    kind: "steam-plus-welcome",
+    notice: STEAM_PLUS_WELCOME_NOTICE,
+    grantEnd,
+  };
+}
+
+// A missing or unreadable date counts as an existing owner.
+function ownedSinceLaunch(since: string | null): boolean {
+  if (since === null) return false;
+  const at = Date.parse(since);
+  return !Number.isNaN(at) && at >= STEAM_LICENCE_LAUNCH;
 }
 
 export const STEAM_NOTICE_KEYS = {
@@ -86,6 +107,9 @@ export const STEAM_NOTICE_KEYS = {
   licenceBody: "steam_notices.licence_intro_body",
   licenceGrant: "steam_notices.licence_intro_grant",
   licencePlus: "steam_notices.licence_intro_plus",
+  welcomeHeading: "steam_notices.plus_welcome_heading",
+  welcomeBody: "steam_notices.plus_welcome_body",
+  welcomeUntil: "steam_notices.plus_welcome_until",
 } as const;
 
 // fromTierName is the tier's id ("vanguard"), but match loosely in case the
@@ -111,6 +135,17 @@ export function steamNoticeCopy(
         translate(STEAM_NOTICE_KEYS.conversionBody),
         ...(line !== null ? [translate(line)] : []),
         translate(STEAM_NOTICE_KEYS.conversionUnchanged),
+      ],
+    };
+  }
+  if (notice.kind === "steam-plus-welcome") {
+    return {
+      heading: translate(STEAM_NOTICE_KEYS.welcomeHeading),
+      paragraphs: [
+        translate(STEAM_NOTICE_KEYS.welcomeBody),
+        translate(STEAM_NOTICE_KEYS.welcomeUntil, {
+          date: formatDate(notice.grantEnd),
+        }),
       ],
     };
   }

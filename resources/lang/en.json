@@ -2190,7 +2190,10 @@
     "licence_intro_body": "Custom lobbies and your verified name are now part of the game you bought. No subscription needed, for as long as you own OpenFront on Steam.",
     "licence_intro_grant": "Your plutonium bonus runs until {date}. After that you keep everything you can do, and only the daily plutonium stops.",
     "licence_intro_heading": "Included with your copy of OpenFront",
-    "licence_intro_plus": "Steam Plus keeps the plutonium coming: 10 a day and 250 a month for $4.99."
+    "licence_intro_plus": "Steam Plus keeps the plutonium coming: 10 a day and 250 a month for $4.99.",
+    "plus_welcome_body": "Your copy of OpenFront includes a month of Steam Plus: 10 plutonium a day and 250 a month.",
+    "plus_welcome_heading": "A month of Steam Plus",
+    "plus_welcome_until": "Your Steam Plus month runs until {date}."
   },
   "steam_user_header": {
     "avatar_alt": "Steam avatar",

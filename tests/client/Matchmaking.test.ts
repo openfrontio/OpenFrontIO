@@ -141,6 +141,7 @@ function userMe(
   return {
     user,
     steamLicence: false,
+    steamLicenceSince: null,
     noticesSeen: [],
     player: {
       publicId: "player-id",

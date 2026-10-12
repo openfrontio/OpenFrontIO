@@ -556,6 +556,9 @@ export const UserMeResponseSchema = z.object({
   // custom lobbies and the verified name with `subscription` null, so a
   // licence holder with no subscription has not lapsed.
   steamLicence: z.boolean().optional().default(false),
+  // ISO date the player's Steam account first owned the base game, or null
+  // when unknown.
+  steamLicenceSince: z.string().nullable().optional().default(null),
   // Notice keys this player has dismissed (POST /users/@me/notices).
   noticesSeen: z.array(z.string()).optional().default([]),
   // The player's most recent automatic tier conversion, if any.

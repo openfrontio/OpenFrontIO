@@ -21,6 +21,7 @@ function makeUserMe(flares: string[] = []): UserMeResponse {
   return {
     user: {},
     steamLicence: false,
+    steamLicenceSince: null,
     noticesSeen: [],
     player: {
       publicId: "test",
