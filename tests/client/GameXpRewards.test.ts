@@ -44,6 +44,7 @@ import "../../src/client/components/GameXpPanel";
 import type { GameXpPanel } from "../../src/client/components/GameXpPanel";
 import "../../src/client/components/PastGameXpCard";
 import { summarizeGameRewards } from "../../src/client/GameRewards";
+import type { ProvisionalXp } from "../../src/client/ProvisionalXpAtDeath";
 
 function reward(
   level: number,
@@ -713,5 +714,120 @@ describe("game-xp-panel level rewards", () => {
     await settle();
     expect(panel.querySelector("[data-xp-claimed]")).toBeNull();
     expect(claimButton()).not.toBeNull();
+  });
+
+  // A provisional figure at death, then the server's higher one (a team
+  // win) that reaches a level further: the rewards row comes with the
+  // confirmed result only, once its reveal has settled.
+  function provisionalOf(response: GameXpEligible) {
+    return {
+      response,
+      result: { eligible: true, breakdown: response.breakdown },
+      teamWinPending: true,
+      featsPending: false,
+      inputs: {},
+    } as unknown as ProvisionalXp;
+  }
+  const higher = (provisionalTotal: number) => ({
+    matched: false,
+    differences: ["team_win" as const],
+    provisionalTotal,
+    drift: false,
+  });
+  const lowerTotal = (g: GameXpEligible): GameXpEligible => ({
+    ...g,
+    breakdown: { ...g.breakdown, win: 0, subtotal: 420, total: 420 },
+  });
+
+  it("shows the rewards row only once the confirmed result has settled", async () => {
+    // Even a provisional figure carrying rewards never shows them.
+    const provisional = provisionalOf(
+      lowerTotal(game(44, 46, { rewards: [reward(46, "soft", 100)] })),
+    );
+    panel?.remove();
+    panel = document.createElement("game-xp-panel") as GameXpPanel;
+    const settled: unknown[] = [];
+    panel.addEventListener("xp-reveal-settled", (e) =>
+      settled.push((e as CustomEvent).detail),
+    );
+    panel.view = { kind: "provisional", provisional, confirming: false };
+    document.body.appendChild(panel);
+    await settle();
+    expect(revealing()).toBe(true);
+    for (let i = 0; i < 600 && revealing(); i++) {
+      await settle(20);
+      expect(row()).toBeNull();
+    }
+    expect(revealing()).toBe(false);
+    expect(row()).toBeNull();
+    expect(settled).toEqual([]);
+
+    // The game ends: the server's figure is higher and reaches level 47.
+    const view = {
+      kind: "result" as const,
+      data: several(),
+      reconciled: { provisional, outcome: higher(420) },
+    };
+    panel.view = view;
+    await settle();
+    expect(revealing()).toBe(true);
+    let sawLevel47 = false;
+    for (let i = 0; i < 600 && revealing(); i++) {
+      await settle(20);
+      if (
+        panel
+          .querySelector("[data-xp-caption-levelup]")
+          ?.getAttribute("data-xp-caption-levelup") === "47"
+      ) {
+        sawLevel47 = true;
+      }
+      const open =
+        row()
+          ?.closest("[data-xp-collapsible]")
+          ?.getAttribute("data-xp-collapsible") === "open";
+      if (open && !sawLevel47) {
+        throw new Error("rewards row opened before level 47");
+      }
+    }
+    expect(sawLevel47).toBe(true);
+    expect(revealing()).toBe(false);
+    expect(row()).not.toBeNull();
+    expect(amounts()).toEqual(["+300"]);
+    expect(claimButton()).not.toBeNull();
+    expect(settled).toEqual([view]);
+  });
+
+  it("brings the rewards in when the confirmed result reaches no level beyond the provisional one", async () => {
+    const provisional = provisionalOf(lowerTotal(game(44, 47)));
+    panel?.remove();
+    panel = document.createElement("game-xp-panel") as GameXpPanel;
+    panel.view = { kind: "provisional", provisional, confirming: false };
+    document.body.appendChild(panel);
+    await settle();
+    for (let i = 0; i < 600 && revealing(); i++) await settle(20);
+    expect(row()).toBeNull();
+
+    panel.view = {
+      kind: "result",
+      data: several(),
+      reconciled: { provisional, outcome: higher(420) },
+    };
+    await settle();
+    let opened = false;
+    for (let i = 0; i < 600 && revealing(); i++) {
+      await settle(20);
+      if (
+        revealing() &&
+        row()
+          ?.closest("[data-xp-collapsible]")
+          ?.getAttribute("data-xp-collapsible") === "open"
+      ) {
+        opened = true;
+      }
+    }
+    // It rose in during the celebration, not only once it was over.
+    expect(opened).toBe(true);
+    expect(revealing()).toBe(false);
+    expect(amounts()).toEqual(["+300"]);
   });
 });

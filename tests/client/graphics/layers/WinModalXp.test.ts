@@ -1129,6 +1129,41 @@ describe("WinModal XP section", () => {
     expect(panel()!.getAttribute("aria-busy")).toBe("false");
   });
 
+  it("polls again when the modal is detached mid-poll and re-attached", async () => {
+    const firstFetch = stubXpEndpoint([notFound]);
+    await mount(makeGame({ ended: true }));
+    expect(xpState()).toBe("calculating");
+    const view = () =>
+      (modal as unknown as { xpView: { kind: string } }).xpView.kind;
+
+    // Detaching aborts the poll; that is not a verdict on the XP.
+    modal.remove();
+    await settle(3_000);
+    expect(firstFetch).toHaveBeenCalledTimes(1);
+    expect(view()).toBe("calculating");
+
+    // The Win update came once and is spent: re-attaching alone polls afresh.
+    const fetchMock = stubXpEndpoint([() => json(eligible())]);
+    document.body.appendChild(modal);
+    await settle();
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(xpState()).toBe("result");
+  });
+
+  it("polls again when re-attached before the aborted poll has wound down", async () => {
+    stubXpEndpoint([notFound]);
+    await mount(makeGame({ ended: true }));
+    expect(xpState()).toBe("calculating");
+
+    // Moved in the DOM: detached and re-attached in the same task.
+    const fetchMock = stubXpEndpoint([() => json(eligible())]);
+    modal.remove();
+    document.body.appendChild(modal);
+    await settle();
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(xpState()).toBe("result");
+  });
+
   it("skips from the keyboard with a real button", async () => {
     stubXpEndpoint([() => json(eligible())]);
     await mount(makeGame({ ended: true }));
@@ -1382,7 +1417,15 @@ describe("WinModal XP section", () => {
     await finishReveal();
     expect(shareEl()).not.toBeNull();
     // The same milestone, but not yet confirmed by the server.
-    const provisional = { kind: "provisional", data: reaching([50]) };
+    const provisional = {
+      kind: "provisional",
+      provisional: {
+        response: reaching([50]),
+        teamWinPending: false,
+        featsPending: false,
+      },
+      confirming: false,
+    };
     Object.assign(modal as unknown as { xpView: unknown }, {
       xpView: provisional,
     });
