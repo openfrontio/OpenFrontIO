@@ -97,17 +97,23 @@ body.halloween-theme:not(.in-game) [data-i18n] {
 }
 
 /* Navigation bars (desktop and mobile) */
+body.halloween-theme:not(.in-game) desktop-nav-bar nav,
 body.halloween-theme:not(.in-game) desktop-nav-bar > div,
 body.halloween-theme:not(.in-game) mobile-nav-bar,
-body.halloween-theme:not(.in-game) #sidebar-menu {
+body.halloween-theme:not(.in-game) #sidebar-menu,
+body.halloween-theme:not(.in-game) play-page > div > div.fixed.bg-surface {
   background-color: var(--hw-purple-translucent) !important;
-  border: none !important;
+  border-color: rgba(255, 122, 0, 0.3) !important;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.8) !important;
 }
 
 /* Nav Bar Logo Image (Blue -> Orange with Jack-o'-Lantern candlelight flicker) */
-body.halloween-theme:not(.in-game) desktop-nav-bar img,
-body.halloween-theme:not(.in-game) mobile-nav-bar img,
+body.halloween-theme:not(.in-game) desktop-nav-bar img[src*="OpenFrontLogo"],
+body.halloween-theme:not(.in-game) mobile-nav-bar img[src*="OpenFrontLogo"],
+body.halloween-theme:not(.in-game)
+  play-page
+  div.fixed
+  img[src*="OpenFrontLogo"],
 body.halloween-theme:not(.in-game) img[src*="OpenFrontLogo"] {
   filter: hue-rotate(150deg) saturate(1.7) brightness(1.3)
     drop-shadow(0 0 10px rgba(255, 122, 0, 0.8));
@@ -119,6 +125,47 @@ body.halloween-theme:not(.in-game) .l-header__highlightText {
   color: var(--hw-orange) !important;
   text-shadow: var(--hw-orange-glow);
   animation: hw-candle-text-flicker 3.2s infinite ease-in-out !important;
+}
+
+/* Account / Profile Button in Nav Bar - preserve avatar colors and add clean Halloween accents */
+body.halloween-theme:not(.in-game) #nav-account-avatar,
+body.halloween-theme:not(.in-game) [data-account-avatar] {
+  filter: none !important;
+  animation: none !important;
+}
+
+body.halloween-theme:not(.in-game) #nav-account-button {
+  border-color: rgba(255, 122, 0, 0.35) !important;
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease !important;
+}
+
+body.halloween-theme:not(.in-game) #nav-account-button:hover {
+  border-color: rgba(255, 122, 0, 0.7) !important;
+  box-shadow: 0 0 10px rgba(255, 122, 0, 0.25) !important;
+}
+
+body.halloween-theme:not(.in-game) #nav-account-button:hover svg,
+body.halloween-theme:not(.in-game) nav-utility-icons button:hover svg {
+  color: var(--hw-orange) !important;
+}
+
+/* Nav Account Dropdown Menu */
+body.halloween-theme:not(.in-game) [role="menu"] {
+  background-color: var(--hw-purple-translucent) !important;
+  border: 1px solid rgba(255, 122, 0, 0.3) !important;
+  box-shadow:
+    0 4px 20px rgba(0, 0, 0, 0.8),
+    0 0 15px rgba(255, 122, 0, 0.15) !important;
+  backdrop-filter: blur(12px) !important;
+}
+
+body.halloween-theme:not(.in-game)
+  [role="menu"]
+  button[role="menuitem"]:hover:not([class*="text-red"]) {
+  background-color: rgba(255, 122, 0, 0.15) !important;
+  color: #ffffff !important;
 }
 
 /* Modals & Panels */
@@ -278,6 +325,113 @@ body.halloween-theme:not(.in-game) .bg-malibu-blue\/20:not(button) {
   color: #000000 !important;
 }
 
+/* --- News Banner (Homepage) --- */
+body.halloween-theme:not(.in-game) news-box > div {
+  background-color: var(--hw-purple-translucent) !important;
+  border: 1px solid rgba(255, 122, 0, 0.3) !important;
+  box-shadow:
+    0 4px 15px rgba(0, 0, 0, 0.7),
+    0 0 10px rgba(255, 122, 0, 0.15) !important;
+  backdrop-filter: blur(8px) !important;
+}
+
+/* News Banner Type Badges */
+body.halloween-theme:not(.in-game) news-box span[class*="text-[10px]"] {
+  border: 1px solid rgba(255, 122, 0, 0.4) !important;
+  background-color: rgba(255, 122, 0, 0.15) !important;
+  color: #ff9d42 !important;
+  text-shadow: 0 0 6px rgba(255, 122, 0, 0.4) !important;
+}
+
+body.halloween-theme:not(.in-game) news-box span[class*="bg-red-500"] {
+  border-color: rgba(239, 68, 68, 0.45) !important;
+  background-color: rgba(239, 68, 68, 0.2) !important;
+  color: #f87171 !important;
+  text-shadow: 0 0 6px rgba(239, 68, 68, 0.4) !important;
+}
+
+/* News Banner Title & Links */
+body.halloween-theme:not(.in-game) news-box a,
+body.halloween-theme:not(.in-game) news-box .text-sm {
+  color: #ffffff !important;
+  transition:
+    color 0.2s ease,
+    text-shadow 0.2s ease !important;
+}
+
+body.halloween-theme:not(.in-game) news-box a:hover {
+  color: var(--hw-orange) !important;
+  text-shadow: 0 0 8px rgba(255, 122, 0, 0.7) !important;
+}
+
+body.halloween-theme:not(.in-game) news-box .text-xs,
+body.halloween-theme:not(.in-game) news-box .text-xs p {
+  color: rgba(255, 255, 255, 0.7) !important;
+}
+
+body.halloween-theme:not(.in-game) news-box .text-xs a {
+  color: var(--hw-orange) !important;
+  text-decoration: underline !important;
+}
+
+body.halloween-theme:not(.in-game) news-box .text-xs a:hover {
+  color: #ffaa40 !important;
+  text-shadow: 0 0 6px rgba(255, 122, 0, 0.6) !important;
+}
+
+/* News Banner Carousel Pagination Dots */
+body.halloween-theme:not(.in-game) news-box button.rounded-full {
+  background-color: rgba(255, 122, 0, 0.25) !important;
+  transition:
+    background-color 0.2s ease,
+    box-shadow 0.2s ease !important;
+}
+
+body.halloween-theme:not(.in-game)
+  news-box
+  button.rounded-full[class*="bg-white/60"],
+body.halloween-theme:not(.in-game) news-box button.rounded-full:hover {
+  background-color: var(--hw-orange) !important;
+  box-shadow: 0 0 6px rgba(255, 122, 0, 0.8) !important;
+}
+
+/* News Banner Dismiss Button */
+body.halloween-theme:not(.in-game) news-box button[aria-label] svg {
+  color: rgba(255, 122, 0, 0.4) !important;
+  transition:
+    color 0.2s ease,
+    transform 0.2s ease !important;
+}
+
+body.halloween-theme:not(.in-game) news-box button[aria-label]:hover svg {
+  color: var(--hw-orange) !important;
+}
+
+/* News Modal Content (when opened from banner or bell) */
+body.halloween-theme:not(.in-game) news-modal a {
+  color: var(--hw-orange) !important;
+}
+
+body.halloween-theme:not(.in-game) news-modal a:hover {
+  color: #ffaa40 !important;
+}
+
+body.halloween-theme:not(.in-game) news-modal h2,
+body.halloween-theme:not(.in-game) news-modal h3 {
+  color: var(--hw-orange) !important;
+  text-shadow: var(--hw-orange-glow) !important;
+}
+
+/* Streaming Now & Identity row panel styling */
+body.halloween-theme:not(.in-game) streaming-now > div {
+  background-color: var(--hw-purple-translucent) !important;
+  border: 1px solid rgba(255, 122, 0, 0.3) !important;
+  box-shadow:
+    0 4px 15px rgba(0, 0, 0, 0.7),
+    0 0 10px rgba(255, 122, 0, 0.15) !important;
+  backdrop-filter: blur(8px) !important;
+}
+
 /* --- Blood Crimson Moon Lobby Map Cards --- */
 /* Optimized with high contrast (1.35) so coastlines and terrain remain distinct for colorblind players */
 body.halloween-theme:not(.in-game) game-mode-selector button.rounded-2xl img,
@@ -285,7 +439,7 @@ body.halloween-theme:not(.in-game)
   game-mode-selector
   button[class*="rounded-2xl"]
   img {
-  filter: var(--filter-haunted-moonlight) !important;
+  filter: var(--filter-blood-moon) !important;
   transition:
     filter 0.3s ease-in-out,
     transform 0.25s ease-in-out !important;
@@ -459,8 +613,12 @@ body.halloween-theme:not(.in-game) h1::before {
 
 @media (prefers-reduced-motion: reduce) {
   body.halloween-theme:not(.in-game) h1::before,
-  body.halloween-theme:not(.in-game) desktop-nav-bar img,
-  body.halloween-theme:not(.in-game) mobile-nav-bar img,
+  body.halloween-theme:not(.in-game) desktop-nav-bar img[src*="OpenFrontLogo"],
+  body.halloween-theme:not(.in-game) mobile-nav-bar img[src*="OpenFrontLogo"],
+  body.halloween-theme:not(.in-game)
+    play-page
+    div.fixed
+    img[src*="OpenFrontLogo"],
   body.halloween-theme:not(.in-game) img[src*="OpenFrontLogo"],
   body.halloween-theme:not(.in-game) .l-header__highlightText {
     animation: none !important;
