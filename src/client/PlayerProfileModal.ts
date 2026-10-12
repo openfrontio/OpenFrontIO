@@ -430,11 +430,15 @@ export class PlayerProfileModal extends BaseModal {
     // decides on its own: when already open, BaseModal calls onOpen before it
     // applies the requested tab, so activeTab may still be the remembered one.
     // Only without a request does the remembered Progression tab carry over.
+    // Asked for while already open on another tab (Games, Clans), the profile
+    // holds on Stats too, so the switch below still happens.
     this.wantsProgressionTab =
       typeof args?.tab === "string"
         ? args.tab === "progression"
         : this.activeTab === "progression";
-    if (this.activeTab === "progression") this.activeTab = "stats";
+    if (this.wantsProgressionTab || this.activeTab === "progression") {
+      this.activeTab = "stats";
+    }
 
     // Fresh open (router/share link): clear any stale origin. The openFrom*
     // helpers re-set it right after open() so back() routes home; the

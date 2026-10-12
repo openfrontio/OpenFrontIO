@@ -266,6 +266,32 @@ describe("rewardTrackModel", () => {
     expect(status(24)).toBe("claimed");
   });
 
+  it("counts a level the progress hasn't caught up with as reached when it has a reward", () => {
+    // The progress is a game behind (level 47) while the rewards, read
+    // afresh, already hold level 48's.
+    const m = rewardTrackModel(progress(3, 47), config(), [
+      ...ownerRewards(),
+      reward({ id: "l48", level: 48, prestige: 3 }),
+    ]);
+    const status = (level: number) => m.nodes[level - 1].status;
+    expect(status(48)).toBe("ready");
+    expect(status(49)).toBe("locked");
+    expect(m.level).toBe(48);
+    expect(m.nodes[47].current).toBe(true);
+    expect(m.claim?.ids.filter((id) => id === "l48")).toEqual(["l48"]);
+    // Every level the claim bar counts shows as ready.
+    const ready = new Set(
+      m.nodes.filter((n) => n.status === "ready").map((n) => n.level),
+    );
+    expect(ready).toEqual(new Set([25, 45, 46, 47, 48]));
+    // Another run's reward moves nothing.
+    const other = rewardTrackModel(progress(3, 47), config(), [
+      reward({ id: "p2l99", level: 99, prestige: 2 }),
+    ]);
+    expect(other.level).toBe(47);
+    expect(other.nodes[98].status).toBe("locked");
+  });
+
   it("has no claim status for a visitor", () => {
     const m = rewardTrackModel(progress(3, 47), config(), null);
     expect(m.owner).toBe(false);
@@ -873,6 +899,32 @@ describe("<profile-progression> with the track", () => {
     const el = await mount({ me: userMe(ownerRewards(), "someone-else") });
     expect(el.querySelector("[data-track-claim]")).toBeNull();
     expect(el.querySelector("[data-ready]")).toBeNull();
+  });
+
+  it("shows a level the progress hasn't caught up with as ready, counted once", async () => {
+    // GET /users/@me is read afresh and already has level 48's reward; the
+    // public progress still says level 47.
+    const el = await mount({
+      me: userMe([reward({ id: "l48", level: 48, prestige: 3 })]),
+    });
+    // Level 48 is where the player is now (it carries "You"), ready to claim.
+    const node48 = el.querySelector(`[data-level="48"]`)!;
+    expect(node48.getAttribute("data-status")).toBe("ready");
+    expect(node48.hasAttribute("data-current")).toBe(true);
+    expect(node48.getAttribute("aria-label")).toContain(
+      "reward_track.key_ready",
+    );
+    expect(node48.querySelector("[data-locked]")).toBeNull();
+    expect(el.querySelectorAll('[data-status="ready"]')).toHaveLength(1);
+    expect(
+      el.querySelector('[data-level="47"]')!.getAttribute("data-status"),
+    ).toBe("claimed");
+    expect(el.querySelector("[data-claim-count]")?.textContent).toContain(
+      'reward_track.claim_count:{"count":1}',
+    );
+    expect(el.querySelector("[data-claim-caps]")?.textContent).toBe(
+      'reward_track.claim_caps:{"amount":"100"}',
+    );
   });
 
   it("is the owner's view on their own profile", async () => {

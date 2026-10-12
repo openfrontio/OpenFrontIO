@@ -63,6 +63,7 @@ import "../../src/client/components/RewardTrack";
 import { modalRouter } from "../../src/client/ModalRouter";
 import { initNavigation } from "../../src/client/Navigation";
 import { PlayerProfileModal } from "../../src/client/PlayerProfileModal";
+import { playerProfileRouteArgs } from "../../src/client/utilities/PlayerProfileUrl";
 
 type ModalShell = HTMLElement & { updateComplete: Promise<boolean> };
 
@@ -275,5 +276,47 @@ describe("Player profile Progression tab", () => {
       expect(modal.querySelector("player-stats-tree-view")).not.toBeNull();
     });
     expect(modal.querySelector("profile-progression")).toBeNull();
+  });
+
+  for (const tab of ["games", "clans"]) {
+    it(`switches an open profile on ${tab} to a linked Progression tab once its progress arrives`, async () => {
+      fetchPublicPlayerProgressMock.mockResolvedValue(withProgress);
+      modal.open({ publicID: "abcd1234", tab });
+      await settle(() => {
+        expect(tabText()).toContain("account_modal.tab_progression");
+      });
+      expect(modal.querySelector("profile-progression")).toBeNull();
+
+      // A link to another player's Progression tab, routed while open.
+      let resolve!: (value: unknown) => void;
+      fetchPublicPlayerProgressMock.mockReturnValueOnce(
+        new Promise((r) => (resolve = r)),
+      );
+      modalRouter.registerPath("profile", playerProfileRouteArgs);
+      history.replaceState(null, "", "/player/efgh5678?tab=progression");
+      expect(modalRouter.routeFromPath()).toBe(true);
+      await vi.waitFor(() => {
+        expect(fetchPublicPlayerProgressMock).toHaveBeenCalledWith("efgh5678");
+      });
+      resolve(withProgress);
+      await settle(() => {
+        expect(modal.querySelector("profile-progression")).not.toBeNull();
+      });
+    });
+  }
+
+  it("switches to an asked-for Progression tab from a profile without one", async () => {
+    fetchPublicPlayerProgressMock.mockResolvedValue(false);
+    modal.open({ publicID: "abcd1234", tab: "games" });
+    await settle(() => {
+      expect(fetchPublicPlayerProgressMock).toHaveBeenCalled();
+    });
+    expect(tabText()).not.toContain("account_modal.tab_progression");
+
+    fetchPublicPlayerProgressMock.mockResolvedValue(withProgress);
+    modal.open({ publicID: "efgh5678", tab: "progression" });
+    await settle(() => {
+      expect(modal.querySelector("profile-progression")).not.toBeNull();
+    });
   });
 });

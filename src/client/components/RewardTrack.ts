@@ -182,7 +182,7 @@ export function rewardTrackModel(
 ): RewardTrackModel {
   const run = clampPrestige(progress.prestige);
   const maxLevel = trackMaxLevel(config);
-  const current = Math.min(
+  const reportedLevel = Math.min(
     maxLevel,
     Math.max(
       1,
@@ -206,6 +206,13 @@ export function rewardTrackModel(
     : [];
   const levelsOf = (list: readonly Reward[]) =>
     new Set(list.flatMap((r) => (r.level === undefined ? [] : [r.level])));
+  // The owner's rewards are read afresh, while the progress can lag a game
+  // behind (the public endpoint is cached): a level this run has a reward
+  // for has been reached, so the track and the claim bar always agree.
+  const current = Math.min(
+    maxLevel,
+    Math.max(reportedLevel, ...levelsOf(unclaimed)),
+  );
   // Only what can be claimed now is waiting, and counts towards Claim all.
   const mine = unclaimed.filter(isRewardClaimable);
   const waiting = levelsOf(mine);
