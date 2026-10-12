@@ -11,6 +11,7 @@ import { PlayerExecution } from "@openfront/engine/execution/PlayerExecution";
 import { AiAttackBehavior } from "@openfront/engine/execution/utils/AiAttackBehavior";
 import { Game, Player } from "@openfront/engine/game/Game";
 import { setup } from "./util/Setup";
+import { UseRealAttackLogic } from "./util/TestConfig";
 import { executeTicks } from "./util/utils";
 
 // plains: 100x100, all land
@@ -18,11 +19,21 @@ describe("Bot annexation", () => {
   let game: Game;
   let nation: Player;
 
-  async function setupPlains(difficulty: Difficulty, bots: string[]) {
-    game = await setup("plains", { difficulty }, [
-      new PlayerInfo("nation", PlayerType.Nation, null, "nation"),
-      ...bots.map((id) => new PlayerInfo(id, PlayerType.Bot, null, id)),
-    ]);
+  async function setupPlains(
+    difficulty: Difficulty,
+    bots: string[],
+    realAttackLogic = false,
+  ) {
+    game = await setup(
+      "plains",
+      { difficulty },
+      [
+        new PlayerInfo("nation", PlayerType.Nation, null, "nation"),
+        ...bots.map((id) => new PlayerInfo(id, PlayerType.Bot, null, id)),
+      ],
+      undefined,
+      realAttackLogic ? UseRealAttackLogic : undefined,
+    );
     nation = game.player("nation");
     nation.setTroops(500_000);
   }
@@ -196,6 +207,14 @@ describe("Bot annexation", () => {
       const troops = troopsSent(sent);
       expect(troops).toBeGreaterThan(bot.troops() / CHEAPEST_TROOP_RATIO);
       expect(troops).toBeLessThan(bot.troops() * 3);
+    });
+
+    it("Hard attacks a bot with no troops", async () => {
+      await setupPlains(Difficulty.Hard, ["a"], true);
+      paint((x) => (x < 30 ? "nation" : "a"));
+      game.player("a").setTroops(0);
+      const sent = attacksSent(() => behavior()["attackBots"]());
+      expect(sent.map((e) => e.targetID())).toEqual(["a"]);
     });
 
     it("tops up a running attack instead of adding another full one", async () => {

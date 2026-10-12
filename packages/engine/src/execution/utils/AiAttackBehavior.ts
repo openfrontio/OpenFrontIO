@@ -1849,7 +1849,7 @@ export class AiAttackBehavior {
 
   // Keeps the attack at its cheapest loss rate until the bot collapses below 100 tiles
   private botAttackTroopsNeeded(bot: Player): number {
-    const stack = bot.troops() / CHEAPEST_TROOP_RATIO;
+    const stack = Math.max(1, bot.troops() / CHEAPEST_TROOP_RATIO);
     const tiles = Math.max(0, bot.numTilesOwned() - 100);
     return Math.max(stack, tiles * this.botTileLoss(bot, stack));
   }
