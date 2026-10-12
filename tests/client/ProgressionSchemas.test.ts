@@ -1,5 +1,6 @@
 import {
   GameXpResponseSchema,
+  isRewardClaimable,
   ProgressionConfigSchema,
   PublicProgressSchema,
   UserMeResponseSchema,
@@ -148,6 +149,33 @@ describe("GameXpResponseSchema", () => {
     expect(parsed.rewards).toBeUndefined();
     expect(parsed.flares).toBeUndefined();
     expect(parsed.breakdown.total).toBe(275);
+  });
+
+  // The end-of-game rewards row reads rewards[]: a held one must still parse,
+  // and keep its hold so the row never offers it for claiming.
+  it("parses a result whose level rewards are held, keeping the hold", () => {
+    const parsed = GameXpResponseSchema.parse({
+      ...eligible,
+      rewards: [
+        {
+          prestige: 0,
+          level: 5,
+          id: "9",
+          currencyType: "hard",
+          amount: "25",
+          reason: "level_milestone",
+          note: null,
+          claimed: false,
+          held: "trust",
+        },
+      ],
+      flares: [],
+    });
+    if (!parsed.eligible) throw new Error("expected eligible");
+    expect(parsed.rewards!.map((r) => [r.id, r.held])).toEqual([
+      ["9", "trust"],
+    ]);
+    expect(isRewardClaimable(parsed.rewards![0])).toBe(false);
   });
 
   it("defaults a missing levelsReached to none", () => {
