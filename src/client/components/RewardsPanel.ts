@@ -1,4 +1,4 @@
-import { Reward } from "@openfront/shared/ApiSchemas";
+import { isRewardClaimable, Reward } from "@openfront/shared/ApiSchemas";
 import { html, LitElement, TemplateResult } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
 import {
@@ -7,6 +7,7 @@ import {
   getUserMe,
   invalidateUserMe,
 } from "../Api";
+import { crazyGamesSDK } from "../CrazyGamesSDK";
 import { showInGameAlert } from "../InGameModal";
 import { levelRewardReasonKey } from "../Progression";
 import { translateText } from "../Utils";
@@ -26,6 +27,13 @@ export interface RewardsChangedDetail {
 export class RewardsPanel extends LitElement {
   @property({ type: Array })
   rewards: Reward[] = [];
+
+  // Whether the viewer has an account trust can attach to: a linked identity
+  // (responseHasLinkedIdentity) or a CrazyGames sign-in, as for
+  // trustRequiredDialog. Without one an account is never trusted, whatever it
+  // plays or buys, so the trust note tells them to sign in first.
+  @property({ type: Boolean })
+  signedIn = false;
 
   @state() private claiming = false;
 
@@ -53,6 +61,25 @@ export class RewardsPanel extends LitElement {
         return;
       }
       invalidateUserMe();
+      if (result !== "not_found" && "held" in result) {
+        // Held since this list was read (or read by an older API): nothing
+        // was claimed. A hold is on the account, not the reward, so others in
+        // this list may be held too: re-read the whole list rather than let
+        // each offer a claim that 403s in turn. The refused reward keeps the
+        // 403's hold either way.
+        const userMe = await getUserMe();
+        const rewards =
+          userMe === false ? this.rewards : (userMe.player.rewards ?? []);
+        this.emitChanged({
+          currency: userMe === false ? null : (userMe.player.currency ?? null),
+          rewards: rewards.map((r) =>
+            r.id === reward.id && isRewardClaimable(r)
+              ? { ...r, held: result.held }
+              : r,
+          ),
+        });
+        return;
+      }
       if (result === "not_found") {
         // Already claimed elsewhere (double-click or second device) — the
         // currency was still credited exactly once. Re-sync from the server.
@@ -85,7 +112,8 @@ export class RewardsPanel extends LitElement {
         return;
       }
       invalidateUserMe();
-      this.emitChanged({ currency: result.currency, rewards: [] });
+      // Held rewards stay pending: keep showing them, with why.
+      this.emitChanged({ currency: result.currency, rewards: result.held });
     } finally {
       this.claiming = false;
     }
@@ -137,19 +165,63 @@ export class RewardsPanel extends LitElement {
             >
           </div>
         </div>
-        <o-button
-          variant="primary"
-          size="xs"
-          translationKey="account_modal.claim"
-          .disable=${this.claiming}
-          @click=${() => this.handleClaim(reward)}
-        ></o-button>
+        ${!isRewardClaimable(reward)
+          ? // A hold with no copy of its own is left to the note below.
+            html`<span
+              data-reward-held
+              class="shrink-0 text-xs font-bold text-white/60 text-right"
+              >${reward.held === "trust"
+                ? translateText("account_modal.reward_held_trust")
+                : ""}</span
+            >`
+          : html`<o-button
+              variant="primary"
+              size="xs"
+              translationKey="account_modal.claim"
+              .disable=${this.claiming}
+              @click=${() => this.handleClaim(reward)}
+            ></o-button>`}
       </div>
     `;
   }
 
+  // The trust note, by whether the viewer is signed in (see signedIn) and on
+  // CrazyGames, which has no purchases, so its copy only suggests playing.
+  private trustNoteKey(): string {
+    const onCrazyGames = crazyGamesSDK.isOnCrazyGames();
+    if (this.signedIn) {
+      return onCrazyGames
+        ? "account_modal.reward_held_trust_info_crazygames"
+        : "account_modal.reward_held_trust_info";
+    }
+    return onCrazyGames
+      ? "account_modal.reward_held_trust_info_signed_out_crazygames"
+      : "account_modal.reward_held_trust_info_signed_out";
+  }
+
+  // A hold this client has no copy for: say only that it can't be claimed.
+  private otherHoldNoteKey(): string {
+    return "account_modal.reward_held_other_info";
+  }
+
+  // Why held rewards can't be claimed yet: once under the list per kind of
+  // hold, however many rewards it holds.
+  private renderHeldNotes(): TemplateResult[] {
+    const held = this.rewards.filter((r) => !isRewardClaimable(r));
+    const keys = new Set<string>();
+    if (held.some((r) => r.held === "trust")) keys.add(this.trustNoteKey());
+    if (held.some((r) => r.held !== "trust")) keys.add(this.otherHoldNoteKey());
+    return [...keys].map(
+      (key) =>
+        html`<p data-reward-held-note class="mt-3 text-xs text-white/60">
+          ${translateText(key)}
+        </p>`,
+    );
+  }
+
   render() {
     if (this.rewards.length === 0) return html``;
+    const claimable = this.rewards.filter(isRewardClaimable);
     return html`
       <div class="bg-white/5 rounded-xl border border-white/10 p-6">
         <div class="flex items-center justify-between gap-4 mb-4">
@@ -157,7 +229,7 @@ export class RewardsPanel extends LitElement {
             <span>🎁</span>
             ${translateText("account_modal.unclaimed_rewards")}
           </h3>
-          ${this.rewards.length > 1
+          ${claimable.length > 1
             ? html`<o-button
                 variant="primary"
                 size="xs"
@@ -170,6 +242,7 @@ export class RewardsPanel extends LitElement {
         <div class="flex flex-col gap-2">
           ${this.rewards.map((r) => this.renderReward(r))}
         </div>
+        ${this.renderHeldNotes()}
       </div>
     `;
   }

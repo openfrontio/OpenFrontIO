@@ -23,6 +23,7 @@ import {
   defaultOrderForSort,
   filterMembersBySearch,
   formatBoostRemaining,
+  membersHaveLevels,
   renderLoadingSpinner,
   renderMemberPagination,
   renderMemberRow,
@@ -641,6 +642,7 @@ export class ClanDetailView extends LitElement {
 
   private renderMembersList() {
     const filtered = filterMembersBySearch(this.members, this.memberSearch);
+    const levelSlot = membersHaveLevels(filtered);
     const toggleLabel = translateText(
       this.allStatsExpanded ? "common.collapse_all" : "common.expand_all",
     );
@@ -672,7 +674,9 @@ export class ClanDetailView extends LitElement {
           ),
         )}
         <div class="space-y-2">
-          ${filtered.map((m) => renderMemberRow(m, this.myPublicId, this))}
+          ${filtered.map((m) =>
+            renderMemberRow(m, this.myPublicId, this, levelSlot),
+          )}
         </div>
         ${renderMemberPagination(
           this.memberPage,

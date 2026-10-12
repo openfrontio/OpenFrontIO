@@ -12,6 +12,10 @@ import {
 } from "@openfront/engine-api/game/GameTypes";
 import { z } from "zod";
 import { base64urlToUuid } from "./Base64";
+import {
+  LEVEL_BADGE_MAX_LEVEL,
+  LEVEL_BADGE_MAX_PRESTIGE,
+} from "./LevelBadgeWire";
 
 const RequiredClanTagSchema = ClanTagSchema.unwrap();
 
@@ -105,8 +109,31 @@ export const RewardSchema = z.object({
   amount: z.string(),
   reason: z.string(),
   note: z.string().nullable(),
+  // Why the reward can't be claimed yet; absent when it can. "trust": level
+  // Plutonium, kept until the account is trusted. Any other non-empty value is
+  // a hold this client doesn't know yet, and still reads as held: an unknown
+  // restriction must never read as claimable, so a malformed value (a number,
+  // an object, "") reads as held too. Absent or null: claimable, as from
+  // older APIs.
+  held: z
+    .unknown()
+    .transform((v): string | undefined =>
+      v === undefined || v === null
+        ? undefined
+        : typeof v === "string" && v.length > 0
+          ? v
+          : "unknown",
+    )
+    .optional(),
 });
 export type Reward = z.infer<typeof RewardSchema>;
+
+// The one claimability rule: a reward is claimable unless it carries a hold,
+// whatever kind. Everything that offers a claim, or counts rewards to claim,
+// asks this.
+export function isRewardClaimable(reward: Pick<Reward, "held">): boolean {
+  return reward.held === undefined;
+}
 
 // Player levels / XP ("progression"). Purely cosmetic: levels never affect
 // gameplay, and XP is computed server-side only — the client just displays it.
@@ -121,6 +148,23 @@ export const ProgressSchema = z.object({
   lifetimeXp: z.number(),
   legend: z.boolean(),
   canPrestige: z.boolean(),
+  // /users/@me only, for the provisional XP figure shown at death
+  // (src/client/ProvisionalXp.ts). What the player has used today (UTC) of
+  // the per-day XP allowances. Optional, and a malformed block reads as
+  // absent: it must never fail the progress object around it.
+  daily: z
+    .object({
+      // The UTC day ("YYYY-MM-DD", the server's clock) the counts are for.
+      // A game ending on a later day starts from none used.
+      day: z.string().optional().catch(undefined),
+      privateGames: z.number(),
+      singleplayerGames: z.number(),
+      firstGameClaimed: z.boolean(),
+    })
+    .optional()
+    .catch(undefined),
+  // The player's subscription XP multiplier; 1000 = none.
+  subscriberPermille: z.number().optional().catch(undefined),
 });
 export type Progress = z.infer<typeof ProgressSchema>;
 
@@ -205,6 +249,56 @@ export const PublicProgressSchema = z.object({
 });
 export type PublicProgress = z.infer<typeof PublicProgressSchema>;
 
+// The rules a game's XP is scored under (XpRules in the API's
+// ProgressionConfig.ts): integers, with multipliers in permille.
+export const XpRulesSchema = z.object({
+  minAliveTicks: z.number().int(),
+  gameXp: z.number().int(),
+  xpPerMinute: z.number().int(),
+  timeCapMinutes: z.number().int(),
+  ffaPlacementMax: z.number().int(),
+  ffaWin: z.number().int(),
+  fullLobbyHumans: z.number().int(),
+  teamWin: z.number().int(),
+  teamWinMinAlivePermille: z.number().int(),
+  hvnWin: z.number().int(),
+  firstGameOfDay: z.number().int(),
+  featXp: z.number().int(),
+  maxFeatsPerGame: z.number().int(),
+  publicPermille: z.number().int(),
+  rankedPermille: z.number().int(),
+  privatePermille: z.number().int(),
+  singleplayerPermille: z.number().int(),
+  privateMinHumans: z.number().int(),
+  privateGamesPerDay: z.number().int(),
+  singleplayerGamesPerDay: z.number().int(),
+});
+export type XpRules = z.infer<typeof XpRulesSchema>;
+
+// A player's level as stamped onto rows in other players' lists (the ranked
+// leaderboard, clan member lists), for drawing a level badge. Sent together
+// for a player with progress; absent for one without, while progression is
+// off, and from an API that predates them. Display-only, so a malformed or
+// out-of-range value reads as absent (that row shows no badge) rather than
+// failing the whole list's parse or drawing a level the player doesn't have.
+export const RowLevelFields = {
+  level: z
+    .number()
+    .int()
+    .min(1)
+    .max(LEVEL_BADGE_MAX_LEVEL)
+    .optional()
+    .catch(undefined),
+  prestige: z
+    .number()
+    .int()
+    .min(0)
+    .max(LEVEL_BADGE_MAX_PRESTIGE)
+    .optional()
+    .catch(undefined),
+  legend: z.boolean().optional().catch(undefined),
+};
+
 // A flare staff put on the level track: what reaching a point on it grants.
 // `kind` says what the point is:
 //   level    — reaching `level` in run `prestige` (0 = the first run), or in
@@ -248,6 +342,20 @@ export const ProgressionConfigSchema = z.object({
       plutonium: z.number().optional().catch(undefined),
     }),
   ),
+  // The revision of the API's XP formula (computeXp). The client carries a
+  // copy of one revision, for the provisional figure shown at death, and
+  // shows none when this is absent or names another revision.
+  formula: z.number().optional().catch(undefined),
+  // Whether the API scores only multiplayer games whose end-of-game vote
+  // agreed on the stats (true in production).
+  requireStatsAgreed: z.boolean().optional().catch(undefined),
+  // Whether the API scores singleplayer games, which never carry that vote
+  // (at the singleplayer rate and daily cap). The API always sends true; a
+  // malformed value reads as absent, and the client takes that as no.
+  scoresSingleplayer: z.boolean().optional().catch(undefined),
+  // The rules that formula runs on. Absent from older APIs; a malformed block
+  // only loses the provisional figure, never the level curve.
+  xp: XpRulesSchema.optional().catch(undefined),
   // The rules behind each level's amounts.
   levelRewards: z
     .object({
@@ -293,11 +401,31 @@ export type ClaimRewardResponse = z.infer<typeof ClaimRewardResponseSchema>;
 
 export const ClaimAllRewardsResponseSchema = z.object({
   claimed: z.array(z.object({ id: z.string() })),
+  // The rewards still pending after the claim because they are held (each
+  // with `held`), in /users/@me's reward shape. Empty from older APIs, and
+  // when the list can't be read: the next /users/@me read brings them back.
+  // Read per element, so one malformed row drops only itself.
+  held: z
+    .array(z.unknown())
+    .default([])
+    .catch([])
+    .transform((rows) =>
+      rows.flatMap((row) => {
+        const parsed = RewardSchema.safeParse(row);
+        return parsed.success ? [parsed.data] : [];
+      }),
+    ),
   currency: CurrencyBalancesSchema,
 });
 export type ClaimAllRewardsResponse = z.infer<
   typeof ClaimAllRewardsResponseSchema
 >;
+
+// POST /rewards/:rewardId/claim's 403 for a held reward (RewardSchema.held):
+// it stays pending, and claims once the hold lifts.
+export const ClaimRewardHeldResponseSchema = z.object({
+  held: z.string().min(1),
+});
 
 // Account-username lifecycle. `unclaimed`: no bare-name reservation (default).
 // `claimed`: reservation held but subscription lapsed — the suffix shows again
@@ -443,6 +571,12 @@ export const UserMeResponseSchema = z.object({
     // never fail the parse and reject the join, and when the setting can't be
     // read the private answer is the safe one.
     levelHidden: z.boolean().optional().catch(true),
+    // "Show my profile in search engines" turned off: the public profile page
+    // (openfront.io/player/<publicId>) is served noindex. It still opens for
+    // anyone with the link, and link previews are unchanged. Optional so an
+    // older API without the setting still parses — absent hides the row in
+    // account settings. A malformed value reads as hidden, like levelHidden.
+    searchHidden: z.boolean().optional().catch(true),
     clans: z
       .array(
         z.object({
@@ -547,6 +681,12 @@ export const UserMeResponseSchema = z.object({
   }),
 });
 export type UserMeResponse = z.infer<typeof UserMeResponseSchema>;
+
+// PUT /users/@me/level_visibility and /users/@me/search_visibility { hidden }
+// — the stored setting, echoed.
+export const VisibilityResponseSchema = z.object({
+  hidden: z.boolean(),
+});
 export type UserSubscription = NonNullable<
   NonNullable<UserMeResponse["player"]["subscription"]>
 >;
@@ -1031,6 +1171,7 @@ export const PlayerLeaderboardEntrySchema = z.object({
   wins: z.number(),
   losses: z.number(),
   winRate: z.number(),
+  ...RowLevelFields,
 });
 export type PlayerLeaderboardEntry = z.infer<
   typeof PlayerLeaderboardEntrySchema
@@ -1054,6 +1195,7 @@ export const RankedLeaderboardEntrySchema = z.object({
   // Account username (null = never set). The client displays
   // `accountUsername ?? public_id`.
   accountUsername: z.string().nullable(),
+  ...RowLevelFields,
 });
 export type RankedLeaderboardEntry = z.infer<
   typeof RankedLeaderboardEntrySchema
