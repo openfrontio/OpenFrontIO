@@ -26,8 +26,23 @@
     },
     {
       "coordinates": [1046, 265],
-      "flag": "Frisian_flag",
+      "flag": "Friesland",
       "name": "Friesland"
+    },
+    {
+      "coordinates": [812, 772],
+      "flag": "North_Brabant",
+      "name": "North Brabant"
+    },
+    {
+      "coordinates": [1044, 555],
+      "flag": "Gelderland",
+      "name": "Gelderland"
+    },
+    {
+      "coordinates": [1308, 380],
+      "flag": "Drenthe",
+      "name": "Drenthe"
     },
     {
       "coordinates": [1052, 1173],
@@ -45,5 +60,6 @@
       "name": "Flanders"
     }
   ],
+  "themes": ["Europe"],
   "translation_key": "map.benelux"
 }

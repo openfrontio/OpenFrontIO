@@ -467,7 +467,8 @@ export const maps: readonly MapInfo[] = [
     ffaFrequency: -1,
     teamFrequency: -1,
     specialFrequency: -1,
-    defaultNationCount: 5,
+    defaultNationCount: 8,
+    themes: ["Europe"],
   },
   {
     id: "BeringSea",
