@@ -1011,7 +1011,9 @@ describe("<profile-progression> with the track", () => {
     });
 
     it("skips held rewards, which stay pending", async () => {
-      const claim = vi.fn(async () => ({ currency: { soft: 1, hard: 1 } }));
+      const claim = vi.fn(async (_id: string) => ({
+        currency: { soft: 1, hard: 1 },
+      }));
       const el = await mount({ me: userMe(heldOwnerRewards()), claim });
       const changed = vi.fn();
       el.addEventListener("rewards-changed", (e) =>
