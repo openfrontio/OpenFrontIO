@@ -379,6 +379,12 @@ export class NationNukeBehavior {
       return incomingNukePlayer;
     }
 
+    // In Teams, back up teammates in their fights before starting our own
+    const teammateFightTarget = this.findTeammateFightTarget();
+    if (teammateFightTarget) {
+      return teammateFightTarget;
+    }
+
     // On impossible difficulty, prioritize nuking the crown if they have more than 50% of the map
     const { difficulty, gameMode } = this.game.config().gameConfig();
     if (difficulty === Difficulty.Impossible && gameMode === GameMode.FFA) {
@@ -451,12 +457,6 @@ export class NationNukeBehavior {
     const crownTarget = this.findFFACrownTarget();
     if (crownTarget) {
       return crownTarget;
-    }
-
-    // In Teams, back up teammates in their fights
-    const teammateFightTarget = this.findTeammateFightTarget();
-    if (teammateFightTarget) {
-      return teammateFightTarget;
     }
 
     // In Teams, nuke the strongest team
@@ -629,9 +629,7 @@ export class NationNukeBehavior {
       if (this.player.isFriendly(other)) continue;
       const tilesOwned = other.numTilesOwned();
       if (tilesOwned === 0) continue;
-      const structures = other.units(Structures.types);
-      let levelSum = 0;
-      for (const s of structures) levelSum += s.level();
+      const levelSum = structureLevels(other);
       // Skip players with too few structures regardless of density
       if (levelSum < MIN_LEVEL_SUM_FOR_HIGH_DENSITY_NUKE) continue;
       const density = levelSum / tilesOwned;
@@ -796,6 +794,22 @@ export class NationNukeBehavior {
 
     if (validTargets.length === 0) {
       return null;
+    }
+
+    // Hard & Impossible: one of the three players with the most structure levels
+    const { difficulty } = this.game.config().gameConfig();
+    if (
+      difficulty === Difficulty.Hard ||
+      difficulty === Difficulty.Impossible
+    ) {
+      const mostStructures = validTargets
+        .map((p) => ({ p, levels: structureLevels(p) }))
+        .filter(({ levels }) => levels > 0)
+        .sort((a, b) => b.levels - a.levels)
+        .slice(0, 3);
+      if (mostStructures.length > 0) {
+        return this.random.randElement(mostStructures).p;
+      }
     }
 
     if (this.random.chance(2)) {
@@ -1587,6 +1601,12 @@ export class NationNukeBehavior {
 }
 
 type NukeType = UnitType.AtomBomb | UnitType.HydrogenBomb;
+
+function structureLevels(player: Player): number {
+  let levels = 0;
+  for (const s of player.units(Structures.types)) levels += s.level();
+  return levels;
+}
 
 export const NationNukeBehaviorSnapshot = snapshotType({
   name: "NationNukeBehavior",

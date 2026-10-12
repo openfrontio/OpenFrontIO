@@ -290,6 +290,100 @@ describe("Nation strike nukes", () => {
     },
   );
 
+  it.each([Difficulty.Hard, Difficulty.Impossible])(
+    "%s, Humans vs Nations: backs up a teammate's fight before striking its own neighbor",
+    async (difficulty) => {
+      const game = await setup(
+        "big_plains",
+        { difficulty, gameMode: GameMode.Team, playerTeams: HumansVsNations },
+        [
+          new PlayerInfo("raider", PlayerType.Human, null, "raider_id"),
+          new PlayerInfo("neighbor", PlayerType.Human, null, "neighbor_id"),
+        ],
+        undefined,
+        RealNukeRadiusConfig,
+        true,
+        [
+          new Nation(
+            undefined,
+            new PlayerInfo("nation", PlayerType.Nation, null, "nation_id"),
+          ),
+          new Nation(
+            undefined,
+            new PlayerInfo("mate", PlayerType.Nation, null, "mate_id"),
+          ),
+        ],
+      );
+      const [nation, mate, raider, neighbor] = [
+        "nation_id",
+        "mate_id",
+        "raider_id",
+        "neighbor_id",
+      ].map((id) => game.player(id));
+      conquerRect(game, nation, 0, 0, 100, 120);
+      conquerRect(game, neighbor, 100, 0, 200, 120);
+      conquerRect(game, mate, 0, 140, 60, 200);
+      conquerRect(game, raider, 60, 140, 80, 200);
+      const behavior = nukeBehavior(game, nation, RICH);
+      setTroops(game, nation, neighbor, 1_000_000, 1_000_000);
+      mate.addTroops(100_000);
+      raider.addTroops(100_000);
+      expect(behavior.findBestNukeTarget()?.id()).toBe(neighbor.id());
+
+      game.addExecution(new AttackExecution(50_000, raider, mate.id()));
+      game.executeNextTick();
+      expect(mate.incomingAttacks()).toHaveLength(1);
+
+      expect(behavior.findBestNukeTarget()?.id()).toBe(raider.id());
+    },
+  );
+
+  it.each([Difficulty.Hard, Difficulty.Impossible])(
+    "%s, Humans vs Nations: otherwise nukes one of the three humans with the most structure levels",
+    async (difficulty) => {
+      const humans = [0, 1, 2, 3, 4].map(
+        (i) => new PlayerInfo(`h${i}`, PlayerType.Human, null, `h${i}_id`),
+      );
+      const game = await setup(
+        "big_plains",
+        { difficulty, gameMode: GameMode.Team, playerTeams: HumansVsNations },
+        humans,
+        undefined,
+        TestConfig,
+        true,
+        [
+          new Nation(
+            undefined,
+            new PlayerInfo("nation", PlayerType.Nation, null, "nation_id"),
+          ),
+        ],
+      );
+      const nation = game.player("nation_id");
+      conquerRect(game, nation, 0, 0, 20, 20);
+      // h0 has no structures, h1 to h4 a city of their index's level
+      for (let i = 0; i < humans.length; i++) {
+        const human = game.player(`h${i}_id`);
+        conquerRect(game, human, 40 * i, 150, 40 * i + 30, 190);
+        if (i === 0) continue;
+        const city = human.buildUnit(
+          UnitType.City,
+          game.ref(40 * i + 15, 170),
+          {},
+        );
+        for (let level = 1; level < i; level++) city.increaseLevel();
+      }
+
+      const targets = new Set<string>();
+      for (let seed = 1; seed <= 12; seed++) {
+        const target = nukeBehavior(game, nation, RICH, seed)
+          .findBestNukeTarget()
+          ?.id();
+        if (target) targets.add(target);
+      }
+      expect([...targets].sort()).toEqual(["h2_id", "h3_id", "h4_id"]);
+    },
+  );
+
   it("Impossible: the leader leaves alone a runner-up it isn't fighting", async () => {
     // Nation 60% of the land, the human 30%, with no border between them
     const { game, nation, human, nukeBehavior } = await setupFront(
