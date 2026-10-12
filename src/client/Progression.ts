@@ -281,3 +281,12 @@ export function levelRewardReasonKey(reason: string): string | undefined {
     ? LEVEL_REWARD_REASON_KEYS[reason]
     : undefined;
 }
+
+/** A reward's amount (a stringified bigint); 0 when it isn't one. */
+export function rewardAmount(value: string): bigint {
+  try {
+    return BigInt(value);
+  } catch {
+    return 0n;
+  }
+}

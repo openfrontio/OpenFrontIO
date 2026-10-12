@@ -161,6 +161,7 @@ import {
   installDoubleTapZoomBlocker,
   installSafariPinchZoomBlocker,
 } from "./utilities/DisableSafariPinchZoom";
+import { playerProfileRouteArgs } from "./utilities/PlayerProfileUrl";
 
 import "./components/DesktopNavBar";
 import "./components/Footer";
@@ -479,6 +480,8 @@ class Client {
       tag: "player-profile-modal",
       pageId: "page-profile",
     });
+    // The canonical profile link, `/player/<id>` (see playerProfileUrl).
+    modalRouter.registerPath("profile", playerProfileRouteArgs);
     modalRouter.register("help", { tag: "help-modal", pageId: "page-help" });
     modalRouter.register("news", { tag: "news-modal", pageId: "page-news" });
     modalRouter.register("language", {
@@ -1411,6 +1414,10 @@ class Client {
         this.joinModal.open({ lobbyId, spectate });
       });
       console.log(`${spectate ? "spectating" : "joining"} lobby ${lobbyId}`);
+      return;
+    }
+    // A shared profile link (`/player/<id>`) opens that profile.
+    if (modalRouter.routeFromPath()) {
       return;
     }
     if (modalRouter.routeFromHash()) {

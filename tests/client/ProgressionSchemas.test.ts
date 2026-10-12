@@ -1,5 +1,6 @@
 import {
   GameXpResponseSchema,
+  isRewardClaimable,
   ProgressionConfigSchema,
   PublicProgressSchema,
   UserMeResponseSchema,
@@ -90,10 +91,69 @@ describe("GameXpResponseSchema", () => {
     expect(parsed.levelsReached).toEqual([{ prestige: 0, level: 5 }]);
   });
 
-  // The post-game screen has no reward list or claim button: what a game's
-  // levels paid (held or not) is claimed from the rewards panel, which reads
-  // /users/@me. A response carrying held rewards must still parse.
-  it("parses a result whose level rewards are held, offering no claim", () => {
+  it("parses the level rewards and flares a game earned", () => {
+    const parsed = GameXpResponseSchema.parse({
+      ...eligible,
+      rewards: [
+        {
+          prestige: 0,
+          level: 5,
+          id: "41",
+          currencyType: "soft",
+          amount: "100",
+          reason: "level_up",
+          note: null,
+          claimed: false,
+        },
+      ],
+      flares: [
+        {
+          kind: "level",
+          prestige: 0,
+          level: 5,
+          flareId: "7",
+          flareName: "effect:firebird_trail",
+          cosmetic: { type: "effect", name: "firebird_trail", url: null },
+        },
+        {
+          kind: "legend",
+          prestige: null,
+          level: null,
+          flareId: "8",
+          flareName: "flag:obey_flag",
+          cosmetic: null,
+        },
+      ],
+    });
+    if (!parsed.eligible) throw new Error("expected eligible");
+    expect(parsed.rewards!.map((r) => [r.id, r.amount, r.claimed])).toEqual([
+      ["41", "100", false],
+    ]);
+    expect(parsed.flares!.map((f) => f.flareName)).toEqual([
+      "effect:firebird_trail",
+      "flag:obey_flag",
+    ]);
+  });
+
+  it("reads missing or malformed rewards and flares as absent", () => {
+    let parsed = GameXpResponseSchema.parse(eligible);
+    if (!parsed.eligible) throw new Error("expected eligible");
+    expect(parsed.rewards).toBeUndefined();
+    expect(parsed.flares).toBeUndefined();
+    parsed = GameXpResponseSchema.parse({
+      ...eligible,
+      rewards: [{ id: 5 }],
+      flares: "nope",
+    });
+    if (!parsed.eligible) throw new Error("expected eligible");
+    expect(parsed.rewards).toBeUndefined();
+    expect(parsed.flares).toBeUndefined();
+    expect(parsed.breakdown.total).toBe(275);
+  });
+
+  // The end-of-game rewards row reads rewards[]: a held one must still parse,
+  // and keep its hold so the row never offers it for claiming.
+  it("parses a result whose level rewards are held, keeping the hold", () => {
     const parsed = GameXpResponseSchema.parse({
       ...eligible,
       rewards: [
@@ -111,8 +171,11 @@ describe("GameXpResponseSchema", () => {
       ],
       flares: [],
     });
-    expect(parsed.eligible).toBe(true);
-    expect(parsed).not.toHaveProperty("rewards");
+    if (!parsed.eligible) throw new Error("expected eligible");
+    expect(parsed.rewards!.map((r) => [r.id, r.held])).toEqual([
+      ["9", "trust"],
+    ]);
+    expect(isRewardClaimable(parsed.rewards![0])).toBe(false);
   });
 
   it("defaults a missing levelsReached to none", () => {
