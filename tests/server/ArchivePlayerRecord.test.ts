@@ -100,6 +100,50 @@ describe("archived game records", () => {
     expect(archived().info.winner).toEqual(["player", ALICE]);
   });
 
+  it("records clan wars players under their team's clan, not the tag they joined with", async () => {
+    // The API rates clan wars by the clan tags in the record, so they come
+    // from the assignment: alice joined with another clan's tag, bob with
+    // none.
+    const ALICE = cid("alice");
+    const BOB = cid("bob");
+    const game = makeGame({
+      config: { gameType: GameType.Public },
+      matchmakingTeams: [["alice-pub"], ["bob-pub"]],
+      matchmakingClanTags: ["ALLY", "BETA"],
+      deps: { archive },
+    });
+    const alice = makeClient({
+      clientID: ALICE,
+      persistentID: "alice-pid",
+      username: "alice",
+      clanTag: "OTHER",
+      publicId: "alice-pub",
+      ip: "1.1.1.1",
+    });
+    const bob = makeClient({
+      clientID: BOB,
+      persistentID: "bob-pid",
+      username: "bob",
+      publicId: "bob-pub",
+      ip: "2.2.2.2",
+    });
+    game.joinClient(alice);
+    game.joinClient(bob);
+    startGame(game);
+
+    for (const c of [alice, bob]) {
+      await mockWsOf(c).emit({
+        type: "winner",
+        winner: ["player", ALICE],
+        allPlayersStats: {},
+      });
+    }
+
+    const [a, b] = archived().info.players;
+    expect(a).toMatchObject({ clientID: ALICE, clanTag: "ALLY", teamIndex: 0 });
+    expect(b).toMatchObject({ clientID: BOB, clanTag: "BETA", teamIndex: 1 });
+  });
+
   it("records a player the winner vote has no stats for without a warn line", async () => {
     // A player who left or never spawned before the vote is absent from
     // allPlayersStats. That is routine in almost every archived game, and it

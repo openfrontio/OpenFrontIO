@@ -152,6 +152,8 @@ export class PlayerStatsTreeView extends LitElement {
         return translateText("player_stats_tree.ranked_2v2");
       case RankedType.FreeForAll:
         return translateText("player_stats_tree.ranked_ffa");
+      case RankedType.ClanWars:
+        return translateText("player_stats_tree.ranked_clanwars");
     }
   }
 

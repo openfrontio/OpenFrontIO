@@ -137,6 +137,7 @@ export enum RankedType {
   OneVOne = "1v1",
   TwoVTwo = "2v2",
   FreeForAll = "ffa",
+  ClanWars = "clanwars",
 }
 
 // Ranked FFA lobby size. The API's matcher assigns between these many players
