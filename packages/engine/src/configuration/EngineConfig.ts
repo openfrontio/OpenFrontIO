@@ -181,10 +181,9 @@ export class EngineConfig extends Config {
 
   /**
    * Global spawn throttle for the train economy, counted in Train *units*
-   * (~7 per train: engine, tail, 5 cars). Up to 1.5x spawns for the very
-   * first trains, ~1x around 35 units (~5 trains), then a capacity
-   * sigmoid damps spawning past the ~560-unit midpoint. The damping
-   * flattens onto a ~0.25 plateau past ~810 units (~115 trains), so a big
+   * (~7 per train: engine, tail, 5 cars). A capacity sigmoid damps
+   * spawning past the ~560-unit midpoint. The damping flattens onto a
+   * ~0.25 plateau past ~810 units (~115 trains), so a big
    * enough rail economy still scales at a quarter of the un-damped rate,
    * until a global hard cap far beyond any normal game collapses the
    * plateau past ~900 units (~130 trains).
@@ -199,19 +198,39 @@ export class EngineConfig extends Config {
    * 560 softens the remaining early/mid-game gap vs v33 (~-8% at 50
    * players, ~-18% at 80) without re-opening v33's big-lobby train
    * dominance, and leaves the plateau and hard cap untouched.
+   *
+   * Small economies are sped up by smallEconomySpawnBoost (per player),
+   * which replaced a fleet-size boost that kept small lobbies boosted all
+   * game.
    */
   trainSaturation(numTrainUnits: number): number {
-    const boost = 1 + 0.5 * exp(-numTrainUnits / 30);
     const damping = 1 - sigmoid(numTrainUnits, Math.LN2 / 100, 560);
     const plateau = 0.25 * (1 - sigmoid(numTrainUnits, Math.LN2 / 150, 900));
-    return boost * Math.max(damping, plateau);
+    return Math.max(damping, plateau);
   }
 
   trainSpawnRate(numPlayerFactories: number, numTrainUnits: number): number {
     // hyperbolic decay, midpoint at 10 factories
     // expected number of trains = numPlayerFactories  / trainSpawnRate(numPlayerFactories)
     const rate = (numPlayerFactories + 10) * 15;
-    return Math.max(1, Math.floor(rate / this.trainSaturation(numTrainUnits)));
+    const boost = this.smallEconomySpawnBoost(numPlayerFactories);
+    return Math.max(
+      1,
+      Math.floor(rate / (this.trainSaturation(numTrainUnits) * boost)),
+    );
+  }
+
+  /**
+   * Per-unit spawn multiplier for a player's first few ports or factories
+   * (counted in levels), so a new or knocked-back economy gets going
+   * faster: up to one extra unit's worth of spawns, 2x at 1 level, fading
+   * out by 6 levels. Additive, so total spawns still rise with every level
+   * built. Keyed on the player rather than game time or the world fleet, so
+   * it works the same in every lobby size and doubles as a comeback boost.
+   */
+  smallEconomySpawnBoost(levels: number): number {
+    if (levels <= 0) return 1;
+    return 1 + within((6 - levels) / 5, 0, 1) / levels;
   }
 
   trainGold(
@@ -254,42 +273,49 @@ export class EngineConfig extends Config {
   }
 
   /**
-   * Global spawn throttle for the trade-ship economy. A mild ~1.45x odds
-   * boost while the world fleet is small (the pity timer square-roots the
-   * realized effect, so ~1.2x actual spawns), held through the opening
-   * trading minutes and crossing the old un-boosted curve around 110
-   * ships, then a capacity sigmoid damps spawning past the ~330-ship
-   * midpoint. The damping flattens onto a 0.25 plateau past ~415 ships
-   * (~half cadence per port after the pity timer), so heavy port
+   * Global spawn throttle for the trade-ship economy. A capacity sigmoid
+   * damps spawning past the ~330-ship midpoint. The damping flattens onto
+   * a 0.25 plateau past ~415 ships (~half cadence per port after the pity
+   * timer), so heavy port
    * investment keeps scaling income linearly, until a global hard cap far
    * beyond any normal game collapses the plateau past ~800 at sea.
    *
    * The midpoint was 230 in v34.0. v33's was 400, so fleets of 150-350 —
    * reached within the opening minutes of a 40+ player lobby — ran 30-64%
    * below v33's spawn odds, which is where the "no early gold for nukes"
-   * deficit lived; the opening (<130 ships) was already above v33 via the
-   * boost. 330 restores that window to near-v33 while the plateau keeps
-   * everything past ~450 ships (the late game) numerically unchanged.
+   * deficit lived; the opening (<130 ships) was already above v33 via a
+   * fleet-size boost. 330 restores that window to near-v33 while the
+   * plateau keeps everything past ~450 ships (the late game) numerically
+   * unchanged.
+   *
+   * Small economies are sped up by smallEconomySpawnBoost (per player),
+   * which replaced that fleet-size boost: keyed on fleet size, it kept
+   * small lobbies boosted all game, and the pity timer cancelled most of
+   * it.
    */
   tradeShipSaturation(numTradeShips: number): number {
-    const boost = 1 + 0.45 * exp(-numTradeShips / 120);
     const damping = 1 - sigmoid(numTradeShips, Math.LN2 / 50, 330);
     const plateau = 0.25 * (1 - sigmoid(numTradeShips, Math.LN2 / 100, 800));
-    return boost * Math.max(damping, plateau);
+    return Math.max(damping, plateau);
   }
 
   // Probability of trade ship spawn = 1 / tradeShipSpawnRate
   tradeShipSpawnRate(
     tradeShipSpawnRejections: number,
     numTradeShips: number,
+    playerPortLevels: number,
   ): number {
     // Pity timer: increases spawn chance after consecutive rejections
     const rejectionModifier = 1 / (tradeShipSpawnRejections + 1);
+    // The pity timer square-roots odds changes, so squaring the boost makes
+    // it the realized ship multiplier (1 port level: one every ~6s, not ~12s).
+    const boost = this.smallEconomySpawnBoost(playerPortLevels);
+    const base = 100 / (boost * boost);
 
     return Math.max(
       1,
       Math.floor(
-        (100 * rejectionModifier) / this.tradeShipSaturation(numTradeShips),
+        (base * rejectionModifier) / this.tradeShipSaturation(numTradeShips),
       ),
     );
   }

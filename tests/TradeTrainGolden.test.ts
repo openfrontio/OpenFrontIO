@@ -24,6 +24,9 @@ function makeConfig(gameConfig: Partial<GameConfig> = {}): EngineConfig {
 
 const config = makeConfig();
 
+// Enough port levels to be past smallEconomySpawnBoost.
+const BIG_ECONOMY = 10;
+
 function player(isLobbyCreator = false): Player {
   return { isLobbyCreator: () => isLobbyCreator } as unknown as Player;
 }
@@ -67,10 +70,10 @@ describe("trade ship golden values", () => {
   });
 
   test("tradeShipSaturation: fleet-size sweep", () => {
-    // >1 boosts spawning while the world fleet is tiny, ~1 around 50
-    // ships, damping past the ~230-ship capacity midpoint onto the 0.25
-    // plateau (~310+ ships), which the ~800-ship hard cap collapses. The
-    // pity timer square-roots the realized spawn-frequency effect.
+    // 1 while the world fleet is small, damping past the ~330-ship
+    // capacity midpoint onto the 0.25 plateau (~415+ ships), which the
+    // ~800-ship hard cap collapses. The pity timer square-roots the
+    // realized spawn-frequency effect.
     const table: Record<string, number> = {};
     for (const ships of [
       0, 25, 50, 100, 150, 200, 250, 300, 400, 500, 700, 800, 1_000, 1_500,
@@ -90,6 +93,7 @@ describe("trade ship golden values", () => {
         table[`rejections=${rej} ships=${ships}`] = config.tradeShipSpawnRate(
           rej,
           ships,
+          BIG_ECONOMY,
         );
       }
     expect(table).toMatchSnapshot();
@@ -135,10 +139,9 @@ describe("train golden values", () => {
   });
 
   test("trainSaturation: global train sweep", () => {
-    // Counted in Train units (~7 per train). >1 boosts spawning only for
-    // the very first trains, ~1 around 35 units (~5 trains), damping past
-    // the ~500-unit capacity midpoint onto the ~0.25 plateau (~730+
-    // units), which the ~900-unit hard cap collapses.
+    // Counted in Train units (~7 per train). 1 while the world has few
+    // trains, damping past the ~560-unit capacity midpoint onto the ~0.25
+    // plateau (~810+ units), which the ~900-unit hard cap collapses.
     const table: Record<string, number> = {};
     for (const units of [
       0, 7, 35, 70, 140, 250, 400, 600, 800, 900, 1_200, 1_600,
@@ -159,5 +162,29 @@ describe("train golden values", () => {
       }
     }
     expect(table).toMatchSnapshot();
+  });
+
+  test("smallEconomySpawnBoost: trade and train rates by levels owned", () => {
+    // 2x per unit at 1 level, fading out by 6 levels.
+    const table: Record<string, number> = {};
+    for (const levels of [0, 1, 2, 3, 4, 5, 6, 10]) {
+      table[`levels=${levels} boost`] = config.smallEconomySpawnBoost(levels);
+      table[`levels=${levels} tradeShipSpawnRate(0 rejections, 0 ships)`] =
+        config.tradeShipSpawnRate(0, 0, levels);
+      table[`levels=${levels} trainSpawnRate(0 train units)`] =
+        config.trainSpawnRate(levels, 0);
+    }
+    expect(table).toMatchSnapshot();
+  });
+
+  test("smallEconomySpawnBoost: every level built still adds spawns", () => {
+    // levels × per-unit multiplier must rise strictly, or building another
+    // port/factory would lower a small player's total income.
+    let prev = 0;
+    for (let levels = 1; levels <= 12; levels++) {
+      const total = levels * config.smallEconomySpawnBoost(levels);
+      expect(total).toBeGreaterThan(prev);
+      prev = total;
+    }
   });
 });
