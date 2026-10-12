@@ -693,6 +693,23 @@ describe("RewardSchema", () => {
     ).toBe(false);
   });
 
+  it("keeps a level reward's level and prestige run", () => {
+    const parsed = RewardSchema.parse({
+      ...validReward,
+      currencyType: "soft",
+      reason: "level_up",
+      level: 47,
+      prestige: 3,
+    });
+    expect([parsed.level, parsed.prestige]).toEqual([47, 3]);
+  });
+
+  it("leaves level and prestige undefined on other rewards", () => {
+    const parsed = RewardSchema.parse(validReward);
+    expect(parsed.level).toBeUndefined();
+    expect(parsed.prestige).toBeUndefined();
+  });
+
   it("reads held: trust", () => {
     const result = RewardSchema.safeParse({ ...validReward, held: "trust" });
     expect(result.success).toBe(true);

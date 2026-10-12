@@ -12,7 +12,8 @@ import {
   PropertyValues,
   TemplateResult,
 } from "lit";
-import { customElement, state } from "lit/decorators.js";
+import { customElement, property, state } from "lit/decorators.js";
+import { momentShareText, momentShareUrl } from "../MomentShare";
 import {
   MAX_LEVEL,
   MAX_PRESTIGE,
@@ -29,6 +30,7 @@ import {
 } from "./Ceremony";
 import { describeFlareCosmetic, FlareCosmeticView } from "./FlareCosmetic";
 import "./LevelBadge";
+import "./ProfileShare";
 import { formatXp } from "./XpBar";
 
 // Prestiging, start to finish: the confirmation (the player's badge as it is
@@ -165,6 +167,8 @@ function newIdempotencyKey(): string {
 
 @customElement("prestige-flow")
 export class PrestigeFlow extends LitElement {
+  // The player's public ID, for the ceremony's share link. Empty: no share.
+  @property({ type: String }) publicId = "";
   @state() private stage: Stage = "closed";
   // Progress before prestiging.
   @state() private prior: Progress | null = null;
@@ -970,6 +974,7 @@ export class PrestigeFlow extends LitElement {
               ${translateText("prestige.ceremony_title", { rank })}
             </div>`
           : nothing}
+        ${done ? this.renderShare(rank) : nothing}
         ${done
           ? html`<button
               type="button"
@@ -987,6 +992,30 @@ export class PrestigeFlow extends LitElement {
       ${shattered && !this.reached("title")
         ? html`<div aria-hidden="true" class="ceremony-flash"></div>`
         : nothing}
+    </div>`;
+  }
+
+  // Sharing the new rank, between the title and Continue. The ceremony
+  // skips (or, done, does nothing) on any click; the row keeps its clicks.
+  // It is simply there, without the rise the Continue button has.
+  private renderShare(rank: number): TemplateResult | typeof nothing {
+    if (this.publicId === "") return nothing;
+    const moment = { kind: "prestige", rank } as const;
+    // The rank is the server's: one the card route wouldn't draw drops the
+    // row rather than sharing a link that unfurls without a card.
+    const url = momentShareUrl(this.publicId, moment);
+    if (url === null) return nothing;
+    return html`<div
+      data-prestige-share
+      class="mt-6"
+      @click=${(e: Event) => e.stopPropagation()}
+    >
+      <profile-share
+        solid
+        centered
+        .url=${url}
+        .text=${momentShareText(moment)}
+      ></profile-share>
     </div>`;
   }
 

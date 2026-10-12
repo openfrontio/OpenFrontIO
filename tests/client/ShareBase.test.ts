@@ -138,16 +138,28 @@ describe("deriveShareBase", () => {
 });
 
 describe("playerProfileUrl", () => {
-  it("hangs the profile hash off the share base, not off window.location", () => {
-    const shareBase = vi
-      .spyOn(ClientEnv, "shareBase")
-      .mockReturnValue("https://openfront.io/");
+  it("is the site's /player/<id> path off the share origin, not off window.location", () => {
+    const shareOrigin = vi
+      .spyOn(ClientEnv, "shareOrigin")
+      .mockReturnValue("https://openfront.io");
     try {
-      expect(playerProfileUrl("a+b")).toBe(
-        "https://openfront.io/#modal=profile&publicID=a%2Bb",
+      expect(playerProfileUrl("aB3dE5fX")).toBe(
+        "https://openfront.io/player/aB3dE5fX",
+      );
+      expect(playerProfileUrl("a+b")).toBe("https://openfront.io/player/a%2Bb");
+    } finally {
+      shareOrigin.mockRestore();
+    }
+  });
+
+  it("drops the page's own path (a link copied from /c/CODE is still the profile)", () => {
+    history.replaceState(null, "", "/c/abc");
+    try {
+      expect(playerProfileUrl("aB3dE5fX")).toBe(
+        `${window.location.origin}/player/aB3dE5fX`,
       );
     } finally {
-      shareBase.mockRestore();
+      history.replaceState(null, "", "/");
     }
   });
 });

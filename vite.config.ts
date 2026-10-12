@@ -288,7 +288,10 @@ export default defineConfig(({ mode }) => {
     },
   });
 
-  // In dev, redirect visits to /w*/game/* to "/" so Vite serves the index.html.
+  // In dev, redirect visits to /w*/game/* and /w*/player/* to "/" so Vite
+  // serves the index.html. Only the /w<n> proxies below call this: a bare
+  // /player/<id> isn't proxied, so Vite's SPA fallback serves it the
+  // index.html already, as the master's fallback does in production.
   const devGameHtmlBypass = (req?: {
     url?: string;
     method?: string;
@@ -301,7 +304,7 @@ export default defineConfig(({ mode }) => {
       : (accept ?? "");
     if (!acceptValue.includes("text/html")) return undefined;
     if (!req.url) return undefined;
-    if (/^\/w\d+\/game\/[^/]+/.test(req.url)) {
+    if (/^\/w\d+\/(?:game|player)\/[^/]+/.test(req.url)) {
       return "/";
     }
     return undefined;
