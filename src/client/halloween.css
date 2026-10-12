@@ -177,19 +177,21 @@ body.halloween-theme:not(.in-game) .bg-gray-800\/92 {
   box-shadow: 0 0 30px rgba(0, 0, 0, 0.8) !important;
 }
 
-/* Primary Action Button - Solo */
+/* Primary Action Button - Solo (Toned-down warm pumpkin orange with crisp white text) */
 body.halloween-theme:not(.in-game) button.bg-malibu-blue,
 body.halloween-theme:not(.in-game) button.bg-aquarius,
 body.halloween-theme:not(.in-game) button.bg-bright-blue,
 body.halloween-theme:not(.in-game) button.bg-blue-600,
 body.halloween-theme:not(.in-game) .btn-primary,
 body.halloween-theme:not(.in-game) #play-btn {
-  background-color: #e65c00 !important;
-  color: #000000 !important;
+  background-color: #c45500 !important;
+  color: #ffffff !important;
   font-weight: 700 !important;
-  text-shadow: none !important;
-  border: 1px solid rgba(255, 122, 0, 0.6) !important;
-  box-shadow: 0 4px 10px rgba(230, 92, 0, 0.25) !important;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.4) !important;
+  border: 1px solid rgba(255, 122, 0, 0.5) !important;
+  box-shadow:
+    0 4px 10px rgba(0, 0, 0, 0.4),
+    0 0 8px rgba(196, 85, 0, 0.25) !important;
   animation: none !important;
   transition: all 0.2s ease-in-out !important;
 }
@@ -200,17 +202,19 @@ body.halloween-theme:not(.in-game) button.bg-bright-blue:hover,
 body.halloween-theme:not(.in-game) button.bg-blue-600:hover,
 body.halloween-theme:not(.in-game) .btn-primary:hover,
 body.halloween-theme:not(.in-game) #play-btn:hover {
-  background-color: #ff7a00 !important;
-  border-color: #ff9100 !important;
-  box-shadow: 0 4px 12px rgba(255, 122, 0, 0.35) !important;
+  background-color: #d96206 !important;
+  border-color: rgba(255, 140, 0, 0.65) !important;
+  box-shadow:
+    0 4px 14px rgba(0, 0, 0, 0.4),
+    0 0 12px rgba(217, 98, 6, 0.35) !important;
 }
 
-/* Secondary Action Buttons - Create Lobby, Ranked, Join Lobby (Text ONLY to orange) */
+/* Secondary Action Buttons - Create Lobby, Ranked, Join Lobby (Text ONLY to soft orange) */
 body.halloween-theme:not(.in-game) button.bg-surface,
 body.halloween-theme:not(.in-game) button[class*="bg-surface"],
 body.halloween-theme:not(.in-game) game-mode-selector button.bg-surface {
-  color: #ff7a00 !important;
-  text-shadow: 0 0 10px rgba(255, 122, 0, 0.4) !important;
+  color: #ff9933 !important;
+  text-shadow: 0 0 6px rgba(255, 122, 0, 0.25) !important;
 }
 
 /* Tutorial Button - Clean Deep Purple with White Text */
@@ -238,22 +242,31 @@ body.halloween-theme:not(.in-game) button[class*="bg-cyber-yellow"]:hover {
   box-shadow: 0 4px 15px rgba(88, 28, 135, 0.6) !important;
 }
 
-/* Screen Corner Cobweb - Top-Left Viewport (Homepage only, suppressed in-game) */
-body.halloween-theme:not(.in-game)::before {
-  content: "" !important;
-  display: block !important;
-  position: fixed !important;
-  top: 0px !important;
-  left: 0px !important;
-  width: 100px !important;
-  height: 100px !important;
-  background-image: var(--hw-cobweb-svg) !important;
-  background-size: contain !important;
-  background-repeat: no-repeat !important;
-  pointer-events: none !important;
-  z-index: 70 !important; /* Above navbar (z:60) so it is crisp & unblurred, below ads (z:150) */
-  opacity: 0.95 !important;
-  filter: drop-shadow(0 0 3px rgba(0, 0, 0, 0.8)) !important;
+/* Screen Corner Cobweb - Top-Left Viewport (Desktop homepage only; hidden on mobile and in-game) */
+@media (min-width: 1024px) {
+  body.halloween-theme:not(.in-game)::before {
+    content: "" !important;
+    display: block !important;
+    position: fixed !important;
+    top: 0px !important;
+    left: 0px !important;
+    width: 100px !important;
+    height: 100px !important;
+    background-image: var(--hw-cobweb-svg) !important;
+    background-size: contain !important;
+    background-repeat: no-repeat !important;
+    pointer-events: none !important;
+    z-index: 50 !important;
+    opacity: 0.85 !important;
+    filter: drop-shadow(0 0 3px rgba(0, 0, 0, 0.8)) !important;
+  }
+}
+
+@media (max-width: 1023px) {
+  body.halloween-theme:not(.in-game)::before {
+    display: none !important;
+    content: none !important;
+  }
 }
 
 body.halloween-theme.in-game::before {
