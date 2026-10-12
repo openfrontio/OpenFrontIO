@@ -284,12 +284,17 @@ export class ProfileProgression extends LitElement {
     if (this.claiming || track === null || progress === null) return;
     const owned = track.rewards;
     if (owned === null) return;
-    const ids = track.model(progress, track.config, owned).claim?.ids ?? [];
-    if (ids.length === 0) return;
+    // The model's claim leaves held rewards out (claimRewards would skip
+    // them anyway).
+    const ids = new Set(
+      track.model(progress, track.config, owned).claim?.ids ?? [],
+    );
+    const toClaim = owned.filter((r) => ids.has(r.id));
+    if (toClaim.length === 0) return;
     const token = this.claimToken;
     this.claiming = true;
     try {
-      const run = await claimRewards(ids, {
+      const run = await claimRewards(toClaim, {
         claim: this.claim,
         stopped: () => token !== this.claimToken,
       });

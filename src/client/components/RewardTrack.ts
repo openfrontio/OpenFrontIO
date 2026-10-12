@@ -1,7 +1,8 @@
-import type {
-  ProgressionConfig,
-  Reward,
-  TrackFlare,
+import {
+  isRewardClaimable,
+  type ProgressionConfig,
+  type Reward,
+  type TrackFlare,
 } from "@openfront/shared/ApiSchemas";
 import { html, LitElement, nothing, PropertyValues, TemplateResult } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
@@ -47,7 +48,9 @@ export function isLevelReward(reward: Reward): boolean {
  * ready   — passed, with a reward still to claim;
  * locked  — not reached yet;
  * passed  — reached, for a visitor, who doesn't see claim status (nor does
- *           the owner when their rewards don't say which level they're for).
+ *           the owner when their rewards don't say which level they're for);
+ *           and the owner's level whose only unclaimed rewards are held
+ *           (isRewardClaimable): not claimed, but nothing to claim yet.
  */
 type TrackNodeStatus = "claimed" | "ready" | "locked" | "passed";
 
@@ -91,7 +94,8 @@ interface RewardTrackModel {
   statuses: boolean;
   nodes: TrackNode[];
   end: TrackEnd;
-  // The owner's unclaimed level rewards on this run; null for a visitor.
+  // The owner's claimable level rewards on this run (held ones left out);
+  // null for a visitor.
   claim: TrackClaim | null;
 }
 
@@ -197,12 +201,15 @@ export function rewardTrackModel(
       (r) =>
         isLevelReward(r) && (r.level === undefined || r.prestige === undefined),
     );
-  const mine = statuses
+  const unclaimed = statuses
     ? rewards.filter((r) => isLevelReward(r) && r.prestige === run)
     : [];
-  const waiting = new Set(
-    mine.flatMap((r) => (r.level === undefined ? [] : [r.level])),
-  );
+  const levelsOf = (list: readonly Reward[]) =>
+    new Set(list.flatMap((r) => (r.level === undefined ? [] : [r.level])));
+  // Only what can be claimed now is waiting, and counts towards Claim all.
+  const mine = unclaimed.filter(isRewardClaimable);
+  const waiting = levelsOf(mine);
+  const held = levelsOf(unclaimed.filter((r) => !isRewardClaimable(r)));
   const amounts = new Map(config.levels.map((l) => [l.level, l]));
   const flares = levelFlares(config, run);
   const nodes: TrackNode[] = [];
@@ -212,7 +219,8 @@ export function rewardTrackModel(
     let status: TrackNodeStatus;
     if (!passed) status = "locked";
     else if (!statuses) status = "passed";
-    else status = waiting.has(level) ? "ready" : "claimed";
+    else if (waiting.has(level)) status = "ready";
+    else status = held.has(level) ? "passed" : "claimed";
     nodes.push({
       level,
       caps: Math.max(0, row?.caps ?? 0),

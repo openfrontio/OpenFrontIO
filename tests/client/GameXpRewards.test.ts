@@ -498,6 +498,73 @@ describe("game-xp-panel level rewards", () => {
     expect(claimReward).not.toHaveBeenCalled();
   });
 
+  it("shows a held reward with why, and never claims or counts it", async () => {
+    claimReward.mockResolvedValue({ currency: { soft: 900, hard: 3 } });
+    getUserMe.mockResolvedValue(me(900, 3));
+    await mount(
+      milestone({
+        rewards: [
+          reward(50, "soft", 100),
+          reward(50, "hard", 25, { held: "trust" }),
+        ],
+      }),
+    );
+    // Both amounts show; the held one says why it can't be claimed yet.
+    expect(amounts()).toEqual(["+100", "+25"]);
+    const heldLine = panel.querySelector("[data-xp-reward-held-line]")!;
+    expect(heldLine.getAttribute("data-xp-reward")).toBe("hard");
+    expect(text(heldLine.querySelector("[data-xp-reward-held]"))).toBe(
+      "account_modal.reward_held_trust",
+    );
+    expect(panel.querySelectorAll("[data-xp-reward-held]").length).toBe(1);
+
+    claimButton()!.click();
+    await settle(1_000);
+    expect(claimReward.mock.calls.map((c) => c[0])).toEqual(["rw50soft"]);
+    expect(panel.querySelector("[data-xp-claimed]")).not.toBeNull();
+    // Only the Caps were claimed: a Caps-only balance, counted from what
+    // this claim credited (100), not the held Plutonium.
+    expect(text(panel.querySelector("[data-xp-balance]"))).toBe(
+      `progression.rewards_balance_caps:${JSON.stringify({ caps: (900).toLocaleString() })}`,
+    );
+  });
+
+  it("offers no claim when every reward is held", async () => {
+    await mount(
+      game(49, 50, {
+        rewards: [reward(50, "hard", 25, { held: "trust" })],
+      }),
+    );
+    expect(row()).not.toBeNull();
+    expect(text(panel.querySelector("[data-xp-reward-held]"))).toBe(
+      "account_modal.reward_held_trust",
+    );
+    expect(claimButton()).toBeNull();
+    // Nothing was claimed either.
+    expect(panel.querySelector("[data-xp-claimed]")).toBeNull();
+    expect(claimReward).not.toHaveBeenCalled();
+  });
+
+  it("labels a hold it doesn't know with the generic note", () => {
+    const summary = summarizeGameRewards([
+      reward(50, "soft", 100, { claimed: true }),
+      reward(50, "hard", 25, { held: "trust" }),
+      reward(51, "hard", 25, { held: "unknown", id: "odd" }),
+    ])!;
+    expect(summary.lines.map((l) => [l.currency, l.total])).toEqual([
+      ["soft", 100n],
+    ]);
+    expect(
+      summary.heldLines.map((l) => [l.currency, l.total, l.labelKey]),
+    ).toEqual([
+      ["hard", 25n, "account_modal.reward_held_trust"],
+      ["hard", 25n, "account_modal.reward_held_other_info"],
+    ]);
+    // The held ones don't stop the rest from reading as claimed.
+    expect(summary.allClaimed).toBe(true);
+    expect(summary.claimable).toBe(true);
+  });
+
   it("claims mid-reveal without skipping it; a click elsewhere still skips", async () => {
     claimReward.mockResolvedValue({ currency: { soft: 1_000, hard: 0 } });
     getUserMe.mockResolvedValue(me(1_000, 0));

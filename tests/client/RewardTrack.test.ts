@@ -159,6 +159,24 @@ function ownerRewards(): Reward[] {
   ];
 }
 
+// ownerRewards with level Plutonium held until the account is trusted: all
+// of L25's, and a second L45 reward beside its claimable Caps.
+function heldOwnerRewards(): Reward[] {
+  return [
+    ...ownerRewards().map((r) =>
+      r.id === "l25pu" ? { ...r, held: "trust" } : r,
+    ),
+    reward({
+      id: "l45pu",
+      level: 45,
+      prestige: 3,
+      currencyType: "hard",
+      amount: "25",
+      held: "trust",
+    }),
+  ];
+}
+
 const view = (name: string, typeLabel: string) => ({
   name,
   typeLabel,
@@ -233,6 +251,19 @@ describe("rewardTrackModel", () => {
     expect(m.claim?.ids).toEqual(["l45", "l46", "l47", "l25pu"]);
     expect(m.claim?.caps).toBe(300n);
     expect(m.claim?.plutonium).toBe(25n);
+  });
+
+  it("leaves held level rewards out of Claim all and of ready", () => {
+    const m = rewardTrackModel(progress(3, 47), config(), heldOwnerRewards());
+    expect(m.claim?.ids).toEqual(["l45", "l46", "l47"]);
+    expect(m.claim?.caps).toBe(300n);
+    expect(m.claim?.plutonium).toBe(0n);
+    const status = (level: number) => m.nodes[level - 1].status;
+    // Only held: not ready, and not claimed either.
+    expect(status(25)).toBe("passed");
+    // Its Caps can be claimed, so it's still ready.
+    expect(status(45)).toBe("ready");
+    expect(status(24)).toBe("claimed");
   });
 
   it("has no claim status for a visitor", () => {
@@ -664,6 +695,36 @@ describe("<reward-track>", () => {
       expect(el.querySelector("[data-track-claim] plutonium-icon")).toBeNull();
     });
 
+    it("doesn't show a held level as ready, nor count it in the claim bar", async () => {
+      const el = await mount(progress(3, 47), heldOwnerRewards());
+      expect(el.querySelector("[data-claim-count]")?.textContent).toContain(
+        '{"count":3}',
+      );
+      expect(el.querySelector("[data-claim-plutonium]")).toBeNull();
+      const node25 = el.querySelector(`[data-level="25"]`)!;
+      expect(node25.querySelector("[data-ready]")).toBeNull();
+      expect(node25.querySelector("[data-claimed]")).toBeNull();
+      expect(node25.getAttribute("aria-label")).not.toContain(
+        "reward_track.key_ready",
+      );
+      expect(el.querySelector(`[data-level="45"] [data-ready]`)).not.toBeNull();
+    });
+
+    it("has no claim bar when every waiting reward is held", async () => {
+      const el = await mount(progress(3, 47), [
+        reward({
+          id: "pu",
+          level: 25,
+          prestige: 3,
+          currencyType: "hard",
+          amount: "25",
+          held: "trust",
+        }),
+      ]);
+      expect(el.querySelector("[data-track-claim]")).toBeNull();
+      expect(el.querySelector("[data-ready]")).toBeNull();
+    });
+
     it("has no claim bar with nothing to claim", async () => {
       const el = await mount(progress(3, 47), []);
       expect(el.querySelector("[data-track-claim]")).toBeNull();
@@ -947,6 +1008,34 @@ describe("<profile-progression> with the track", () => {
       expect(
         el.querySelector(`[data-level="45"] [data-claimed]`),
       ).not.toBeNull();
+    });
+
+    it("skips held rewards, which stay pending", async () => {
+      const claim = vi.fn(async () => ({ currency: { soft: 1, hard: 1 } }));
+      const el = await mount({ me: userMe(heldOwnerRewards()), claim });
+      const changed = vi.fn();
+      el.addEventListener("rewards-changed", (e) =>
+        changed((e as CustomEvent).detail),
+      );
+      el.querySelector<HTMLElement>("[data-claim-all]")!.click();
+      await vi.waitFor(() => expect(changed).toHaveBeenCalled());
+      expect(claim.mock.calls.map((c) => c[0])).toEqual(["l45", "l46", "l47"]);
+      const detail = changed.mock.calls[0][0];
+      expect(detail.rewards.map((r: Reward) => r.id)).toEqual([
+        "l25pu",
+        "p2l99",
+        "daily",
+        "win",
+        "prestige",
+        "l45pu",
+      ]);
+      await vi.waitFor(async () => {
+        await el.querySelector<RewardTrack>("reward-track")!.updateComplete;
+        expect(el.querySelector("[data-track-claim]")).toBeNull();
+      });
+      // Nothing left to claim: not ready, though still not claimed.
+      expect(el.querySelector("[data-ready]")).toBeNull();
+      expect(el.querySelector(`[data-level="25"] [data-claimed]`)).toBeNull();
     });
 
     it("stops claiming once the tab is closed, and reloads if it's back", async () => {

@@ -1678,6 +1678,9 @@ export class GameXpPanel extends LitElement {
           </div>
           <div class="flex flex-wrap items-center gap-x-4 gap-y-1">
             ${summary.lines.map((line) => this.renderRewardLine(line, count))}
+            ${summary.heldLines.map((line) =>
+              this.renderRewardLine(line, count, line.labelKey),
+            )}
           </div>
         </div>
         <div data-xp-claim-area class="ml-auto flex items-center gap-2">
@@ -1687,7 +1690,13 @@ export class GameXpPanel extends LitElement {
     );
   }
 
-  private renderRewardLine(line: RewardLine, count: number): TemplateResult {
+  // A held line (`heldKey`) also says why it can't be claimed yet, as the
+  // rewards panel does; the Claim button leaves it out.
+  private renderRewardLine(
+    line: RewardLine,
+    count: number,
+    heldKey?: string,
+  ): TemplateResult {
     const soft = line.currency === "soft";
     const amount =
       count >= 1
@@ -1695,6 +1704,7 @@ export class GameXpPanel extends LitElement {
         : Math.round(Number(line.total) * count).toLocaleString();
     return html`<div
       data-xp-reward=${line.currency}
+      ?data-xp-reward-held-line=${heldKey !== undefined}
       class="flex items-center gap-1.5"
     >
       ${soft
@@ -1718,14 +1728,21 @@ export class GameXpPanel extends LitElement {
             })}</span
           >`
         : nothing}
+      ${heldKey !== undefined
+        ? html`<span data-xp-reward-held class="text-xs font-bold text-white/60"
+            >${translateText(heldKey)}</span
+          >`
+        : nothing}
     </div>`;
   }
 
   private renderClaim(
     data: GameXpEligible,
     summary: GameRewardsSummary,
-  ): TemplateResult {
+  ): TemplateResult | typeof nothing {
     const claim = this.claim;
+    // Every reward held: nothing to claim, and nothing was.
+    if (!summary.claimable) return nothing;
     if (
       claim.status === "claimed" ||
       (claim.status === "idle" && summary.allClaimed)

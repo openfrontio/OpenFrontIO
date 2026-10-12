@@ -1,4 +1,8 @@
-import type { GameXpFlare, GameXpReward } from "@openfront/shared/ApiSchemas";
+import {
+  type GameXpFlare,
+  type GameXpReward,
+  isRewardClaimable,
+} from "@openfront/shared/ApiSchemas";
 import {
   cosmeticSelectionLabel,
   cosmeticTypeLabel,
@@ -14,6 +18,8 @@ import { translateText } from "./Utils";
 
 // The level rewards and unlocks one game earned, as the end-of-game reveal
 // shows them: summed per currency, and claimed together (only this game's).
+// A held reward (isRewardClaimable) is shown apart, with why it is held, and
+// is never claimed nor counted as claimed.
 
 export type Currency = "soft" | "hard";
 
@@ -28,14 +34,49 @@ export interface RewardLine {
   each: bigint | null;
 }
 
+export interface HeldRewardLine extends RewardLine {
+  // The label shown in place of a claim, a translation key: the one the
+  // rewards panel shows for a trust hold, and the generic note for any other.
+  labelKey: string;
+}
+
 export interface GameRewardsSummary {
   // The row's heading, a translation key and its params.
   headingKey: string;
   headingParams: Record<string, number>;
-  // Caps first, then Plutonium; a currency the game didn't pay is left out.
+  // The rewards that can be claimed (or were): Caps first, then Plutonium; a
+  // currency the game didn't pay is left out.
   lines: RewardLine[];
-  // Every reward was already claimed (elsewhere, or on an earlier view).
+  // The unclaimed held ones, in the same order, one line per currency and
+  // kind of hold.
+  heldLines: HeldRewardLine[];
+  // Whether any reward isn't held (claimed already or not): false when every
+  // one is, and the row offers no claim.
+  claimable: boolean;
+  // Every claimable reward was already claimed (elsewhere, or on an earlier
+  // view). Held ones don't count.
   allClaimed: boolean;
+}
+
+// A held reward, unclaimed: it stays pending until the API lets it go.
+function isHeld(reward: GameXpReward): boolean {
+  return !reward.claimed && !isRewardClaimable(reward);
+}
+
+function linesOf(rewards: readonly GameXpReward[]): RewardLine[] {
+  const lines: RewardLine[] = [];
+  for (const currency of ["soft", "hard"] as const) {
+    const these = rewards.filter((r) => r.currencyType === currency);
+    if (these.length === 0) continue;
+    const amounts = these.map((r) => rewardAmount(r.amount));
+    const total = amounts.reduce((a, b) => a + b, 0n);
+    const each =
+      amounts.length > 1 && amounts.every((a) => a === amounts[0])
+        ? amounts[0]
+        : null;
+    lines.push({ currency, total, count: these.length, each });
+  }
+  return lines;
 }
 
 /**
@@ -62,23 +103,27 @@ export function summarizeGameRewards(
         : "progression.rewards_level_one";
     headingParams = { level: levels[0] };
   }
-  const lines: RewardLine[] = [];
-  for (const currency of ["soft", "hard"] as const) {
-    const these = rewards.filter((r) => r.currencyType === currency);
-    if (these.length === 0) continue;
-    const amounts = these.map((r) => rewardAmount(r.amount));
-    const total = amounts.reduce((a, b) => a + b, 0n);
-    const each =
-      amounts.length > 1 && amounts.every((a) => a === amounts[0])
-        ? amounts[0]
-        : null;
-    lines.push({ currency, total, count: these.length, each });
-  }
+  const open = rewards.filter((r) => !isHeld(r));
+  const held = rewards.filter(isHeld);
+  const trust = held.filter((r) => r.held === "trust");
+  const other = held.filter((r) => r.held !== "trust");
+  const heldLines: HeldRewardLine[] = [
+    ...linesOf(trust).map((l) => ({
+      ...l,
+      labelKey: "account_modal.reward_held_trust",
+    })),
+    ...linesOf(other).map((l) => ({
+      ...l,
+      labelKey: "account_modal.reward_held_other_info",
+    })),
+  ];
   return {
     headingKey,
     headingParams,
-    lines,
-    allClaimed: rewards.every((r) => r.claimed),
+    lines: linesOf(open),
+    heldLines,
+    claimable: open.length > 0,
+    allClaimed: open.every((r) => r.claimed),
   };
 }
 
@@ -103,16 +148,16 @@ type ClaimOutcome =
 
 /**
  * Claims this game's unclaimed rewards, one by one, and only those: never
- * the player's other pending rewards. `skip` holds ids already claimed from
- * this view. A reward someone else claimed first (a second device, the
- * rewards panel) answers not_found and counts as claimed.
+ * the player's other pending rewards, nor a held one. `skip` holds ids
+ * already claimed from this view. A reward someone else claimed first (a
+ * second device, the rewards panel) answers not_found and counts as claimed.
  */
 export async function claimGameRewards(
   rewards: readonly GameXpReward[],
   skip: ReadonlySet<string> = new Set(),
 ): Promise<ClaimOutcome> {
   const run = await claimRewards(
-    rewards.filter((r) => !r.claimed && !skip.has(r.id)).map((r) => r.id),
+    rewards.filter((r) => !r.claimed && !skip.has(r.id) && !isHeld(r)),
   );
   if (run.failed) return { ok: false, claimedIds: run.claimedIds };
   const credited: Balances = { soft: 0, hard: 0 };
