@@ -49,7 +49,13 @@ function mountNav() {
 
 // Build a /users/@me `user` object with only the identities under test.
 function userMe(user: UserMeResponse["user"]): UserMeResponse {
-  return { user, player: {} as UserMeResponse["player"] };
+  return {
+    user,
+    steamLicence: false,
+    steamLicenceSince: null,
+    noticesSeen: [],
+    player: {} as UserMeResponse["player"],
+  };
 }
 
 const discordUser: DiscordUser = {
