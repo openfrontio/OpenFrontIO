@@ -7,7 +7,7 @@ import {
 import { html, nothing } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import { ClientEnv } from "src/client/ClientEnv";
-import { fetchPublicPlayerProfile, getUserMe } from "./Api";
+import { fetchPublicPlayerProfile } from "./Api";
 import "./ClanModal";
 import "./components/baseComponents/Button";
 import "./components/baseComponents/stats/PlayerGameHistoryView";
@@ -25,7 +25,7 @@ import { verifiedBadge } from "./components/ui/VerifiedBadge";
 import "./GameStatsModal";
 import "./LeaderboardModal";
 import { modalRouter } from "./ModalRouter";
-import { fetchPublicPlayerProgress } from "./ProgressionApi";
+import { loadPlayerProgress } from "./PlayerProgress";
 import {
   parsePlayerProfilePath,
   playerProfileUrl,
@@ -287,25 +287,6 @@ export class PlayerProfileModal extends BaseModal {
     ></profile-progression>`;
   }
 
-  // Everyone's level, your own included, comes from the public endpoint first:
-  // the /users/@me copy is cached from page load and would miss the games
-  // played since. But that endpoint 404s for a player who hides their level —
-  // for everyone, them included — and they still see their own level. So on
-  // your OWN profile only, no public progress falls back to your /users/@me
-  // copy (memoised: normally no request). Nobody else's profile ever does, so a
-  // hidden level stays hidden from others. Missing progress hides the summary.
-  private async loadProgress(publicId: string): Promise<PublicProgress | null> {
-    try {
-      const progress = await fetchPublicPlayerProgress(publicId);
-      if (progress !== false) return progress;
-      const me = await getUserMe();
-      if (me === false || me.player.publicId !== publicId) return null;
-      return me.player.progress ?? null;
-    } catch {
-      return null;
-    }
-  }
-
   // False when the fetch failed (missing player, network, bad schema).
   private profileLoaded(): boolean {
     return !!this.publicId && !!this.statsTree;
@@ -478,8 +459,9 @@ export class PlayerProfileModal extends BaseModal {
       gen === this.loadGeneration && this.publicId === publicId;
     // The level is a nice-to-have: it lands whenever it arrives and never
     // holds up the profile (its request can take up to its own timeout).
-    // Only shown alongside a loaded profile (see renderProfile).
-    void this.loadProgress(publicId).then((progress) => {
+    // Only shown alongside a loaded profile (see renderProfile). Missing
+    // progress hides the summary.
+    void loadPlayerProgress(publicId).then((progress) => {
       if (!current()) return;
       this.progress = progress;
       const wanted = this.wantsProgressionTab;
