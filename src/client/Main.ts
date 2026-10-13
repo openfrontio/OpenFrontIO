@@ -70,6 +70,7 @@ import {
 import { GameStartingModal } from "./GameStartingModal";
 import type { HelpModal } from "./HelpModal";
 import "./HomepagePromos";
+import type { HomepagePromos } from "./HomepagePromos";
 import type { HostLobbyModal as HostPrivateLobbyModal } from "./HostLobbyModal";
 import { showInGameAlert, showInGameConfirm } from "./InGameModal";
 import type { JoinLobbyModal } from "./JoinLobbyModal";
@@ -1288,6 +1289,11 @@ class Client {
     this.loadedHostModal()?.closeWithoutLeaving();
     this.loadedJoinModal()?.closeWithoutLeaving();
     this.closeMenu();
+    // close() keeps a lobby's bottom rail for the spawn phase, which the
+    // viewer never reaches.
+    (
+      document.querySelector("homepage-promos") as HomepagePromos | null
+    )?.destroyBottomRail?.();
     // Closing a modal the router opened clears the hash. Put the viewer's
     // back, so a reload opens the replay again.
     if (window.location.hash !== hash) {
