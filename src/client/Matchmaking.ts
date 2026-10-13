@@ -51,7 +51,10 @@ export class MatchmakingModal extends BaseModal {
   // the service decides: it gates ranked on trust behind a flag, so the
   // client never pre-checks trustTier.
   @state() private notTrusted = false;
-  @state() private queueSize: number | null = null;
+  // The lobby's latest queue-size broadcast. In clan wars it also counts
+  // the players queued for this player's clan, themselves included.
+  @state() private queueSize: { count: number; clanCount?: number } | null =
+    null;
   private selectedClanTag: string | null = null;
   private elo: number | string = "...";
   private readonly gameStartAlert = new GameStartAlertController(
@@ -149,9 +152,19 @@ export class MatchmakingModal extends BaseModal {
           ? html`
               <p class="text-center text-white/60">
                 ${translateText("matchmaking_modal.queue_size", {
-                  count: this.queueSize,
+                  count: this.queueSize.count,
                 })}
               </p>
+              ${this.queueSize.clanCount !== undefined
+                ? html`
+                    <p class="text-center text-white/60">
+                      ${translateText("matchmaking_modal.clan_queue_size", {
+                        count: this.queueSize.clanCount,
+                        clan: this.selectedClanTag ?? "",
+                      })}
+                    </p>
+                  `
+                : ""}
             `
           : ""}
         ${this.renderLoadingSpinner(
@@ -365,7 +378,7 @@ export class MatchmakingModal extends BaseModal {
       this.resetWatchdog();
       const data = JSON.parse(event.data);
       if (data.type === "queue-size") {
-        this.queueSize = data.count;
+        this.queueSize = { count: data.count, clanCount: data.clanCount };
         return;
       }
       if (data.type === "match-assignment") {

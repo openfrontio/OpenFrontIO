@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 import { UserMeResponse } from "@openfront/shared/ApiSchemas";
 import { Crown } from "@openfront/shared/CosmeticSchemas";
 import {

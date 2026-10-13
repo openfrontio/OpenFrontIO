@@ -203,6 +203,7 @@ const sortOptions: { value: ClanMemberSort; labelKey: string }[] = [
   { value: "lossesRanked", labelKey: "clan_modal.sort_ranked_losses" },
   { value: "wins1v1", labelKey: "clan_modal.sort_1v1_wins" },
   { value: "losses1v1", labelKey: "clan_modal.sort_1v1_losses" },
+  { value: "eloContributed", labelKey: "clan_modal.sort_elo_contributed" },
 ];
 
 function renderOrderIcon(order: ClanMemberOrder): TemplateResult {
@@ -413,6 +414,24 @@ export function membersHaveLevels(members: readonly ClanMember[]): boolean {
   return members.some(hasLevel);
 }
 
+// The clan wars ELO a member has won or lost the clan, signed; nothing for a
+// member who hasn't played a rated game for it.
+function renderEloContributed(
+  elo: number | null | undefined,
+): TemplateResult | string {
+  if (elo === null || elo === undefined) return "";
+  const color =
+    elo > 0 ? "text-green-400" : elo < 0 ? "text-red-400" : "text-white/50";
+  return html`<span
+    data-elo-contributed
+    class="text-xs font-bold tabular-nums whitespace-nowrap ${color}"
+    title=${translateText("clan_modal.elo_contributed_tooltip")}
+    >${translateText("clan_modal.elo_contributed", {
+      elo: elo > 0 ? `+${elo}` : `${elo}`,
+    })}</span
+  >`;
+}
+
 // `host` raises the `view-profile` event that opens the profile modal.
 // `levelSlot` (see membersHaveLevels) keeps an empty badge-width slot in
 // front of the name of a member without a level.
@@ -451,6 +470,7 @@ export function renderMemberRow(
               )}
             </div>
             <div class="flex items-center gap-2 shrink-0">
+              ${renderEloContributed(member.eloContributed)}
               <span
                 class="text-white/30 text-[10px] text-right whitespace-nowrap"
                 >${translateText("clan_modal.joined_date", {
