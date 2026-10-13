@@ -35,7 +35,7 @@ import {
 // with a gold crown and a full gold gauge.
 //
 // Drawn 1:1 in CSS pixels (no viewBox scaling), so the chip and its digits
-// snap to whole pixels at every size, from the 16px nav badge to the 170px
+// snap to whole pixels at every size, from the 16px minimum to the 170px
 // ceremony hero. Gradients and icons live once per page in a hidden <svg>
 // (see badgeDefs) that every badge points into, so a lobby of 150 badges
 // stays a handful of elements each.
