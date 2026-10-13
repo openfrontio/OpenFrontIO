@@ -336,7 +336,8 @@ describe("MIRVExecution", () => {
 
     // Make mirvExec accessible for internal method testing
     const exec = mirvExec as any;
-    exec.spatialGrid = new Map();
+    exec.spatialGrid = new Int32Array(exec.gridWidth * exec.gridWidth * 2);
+    exec.spatialGrid.fill(-1);
     const tCenter = game.ref(100, 100);
     exec.addToGrid(exec.spatialGrid, tCenter);
 
@@ -426,6 +427,7 @@ describe("MIRVExecution", () => {
         }
       }
     }
+    expect(conquered).toBeGreaterThan(0);
 
     const targetTile = game.ref(150, 150);
     const mirvExec = new MirvExecution(player, targetTile);
@@ -438,10 +440,9 @@ describe("MIRVExecution", () => {
       game.executeNextTick();
     }
 
-    // The island is huge, it should NOT have hit saturation early, or if it did, it should have packed many warheads.
-    // It shouldn't trigger saturation cutoff prematurely on water misses!
-    expect(exec.consecutiveOverlapFailures).toBeLessThan(1500);
-    expect(exec.stagedTargets.length).toBeGreaterThan(2);
+    // A 100x100 territory is small (not huge, which would be 1000x1000) and packs at most ~7 targets with spread 55.
+    // Clamped candidate coordinate generation packs targets to capacity without premature cutoff on misses.
+    expect(exec.stagedTargets.length).toBeGreaterThanOrEqual(7);
   });
 
   // Scenario 4: Mid-Flight Snapshot Determinism
@@ -526,15 +527,61 @@ describe("MIRVExecution", () => {
     game.executeNextTick();
 
     // The lost targets should be purged, consecutive failures reset to 0, and top-up attempted.
-    expect(exec.consecutiveOverlapFailures).toBeLessThan(1500);
+    // With clamped coordinate generation, top-up replenishes targets back to capacity.
+    expect(exec.stagedTargets.length).toBeGreaterThanOrEqual(7);
+    for (const t of targetsToLose) {
+      expect(exec.stagedTargets.includes(t)).toBe(false);
+    }
 
     // Verify the lost targets are no longer in the spatialGrid
     let foundInGrid = false;
-    for (const cell of exec.spatialGrid.values()) {
-      for (const t of targetsToLose) {
-        if (cell.includes(t)) foundInGrid = true;
+    for (let i = 0; i < exec.spatialGrid.length; i++) {
+      const tile = exec.spatialGrid[i];
+      if (tile !== -1 && targetsToLose.includes(tile)) {
+        foundInGrid = true;
       }
     }
     expect(foundInGrid).toBe(false);
+  });
+
+  test("removeFromGrid maintains slot invariant", async () => {
+    const targetTile = game.ref(110, 110);
+    if (game.map().isLand(targetTile)) {
+      otherPlayer.conquer(targetTile);
+    }
+    const mirvExec = new MirvExecution(player, targetTile);
+    game.addExecution(mirvExec);
+    executeTicks(game, 2);
+
+    const exec = mirvExec as any;
+    const tile1 = game.ref(100, 100);
+    const tile2 = game.ref(100, 101);
+
+    exec.spatialGrid = new Int32Array(exec.gridWidth * exec.gridWidth * 2);
+    exec.spatialGrid.fill(-1);
+
+    exec.addToGrid(exec.spatialGrid, tile1);
+    exec.addToGrid(exec.spatialGrid, tile2);
+
+    const cx = Math.floor(
+      (game.x(tile1) - exec.baseX + exec.range) / exec.minimumSpread,
+    );
+    const cy = Math.floor(
+      (game.y(tile1) - exec.baseY + exec.range) / exec.minimumSpread,
+    );
+    const offset = (cy * exec.gridWidth + cx) * 2;
+
+    expect(exec.spatialGrid[offset]).toBe(tile1);
+    expect(exec.spatialGrid[offset + 1]).toBe(tile2);
+
+    // Removing slot 0 shifts slot 1 to slot 0
+    exec.removeFromGrid(tile1);
+    expect(exec.spatialGrid[offset]).toBe(tile2);
+    expect(exec.spatialGrid[offset + 1]).toBe(-1);
+
+    // Removing remaining slot 0 clears it
+    exec.removeFromGrid(tile2);
+    expect(exec.spatialGrid[offset]).toBe(-1);
+    expect(exec.spatialGrid[offset + 1]).toBe(-1);
   });
 });
