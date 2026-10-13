@@ -32,30 +32,68 @@ export const PENDING_XP_TTL_MS = 24 * 60 * 60 * 1000;
 // More than this many unscored games and the oldest go.
 export const MAX_PENDING_PER_ACCOUNT = 20;
 
+// What kind of game it was, for the per-day allowances: private and
+// singleplayer games count towards their own daily caps.
+export type PendingGameKind = "public" | "private" | "singleplayer";
+
 export interface PendingXp {
   gameId: string;
   // The provisional XP figure for the game.
   xp: number;
   // When it was stored (epoch ms).
   at: number;
+  // For the next game's provisional figure, so a second game in a row doesn't
+  // count the day's allowances twice. All three are missing from entries
+  // stored before they were kept (see stackPendingXp).
+  // The UTC day the API stamped the daily allowances with ("YYYY-MM-DD").
+  day?: string;
+  kind?: PendingGameKind;
+  // Its figure took the first-public-game-of-the-day bonus.
+  firstGame?: boolean;
+}
+
+export interface PendingXpInput {
+  gameId: string;
+  xp: number;
+  day?: string | null;
+  kind?: PendingGameKind | null;
+  firstGame?: boolean;
 }
 
 // By account (publicId), so another account on the same browser never sees
 // it.
 type PendingStore = Record<string, PendingXp[]>;
 
-function isPendingXp(value: unknown): value is PendingXp {
-  if (typeof value !== "object" || value === null) return false;
+const KINDS: ReadonlySet<string> = new Set([
+  "public",
+  "private",
+  "singleplayer",
+]);
+const DAY = /^\d{4}-\d{2}-\d{2}$/;
+
+// The entry as stored, or null when it doesn't read as one. An optional field
+// that doesn't read is dropped, not the entry.
+function readEntry(value: unknown): PendingXp | null {
+  if (typeof value !== "object" || value === null) return null;
   const v = value as Record<string, unknown>;
-  return (
-    typeof v.gameId === "string" &&
-    v.gameId.length > 0 &&
-    typeof v.xp === "number" &&
-    Number.isFinite(v.xp) &&
-    v.xp > 0 &&
-    typeof v.at === "number" &&
-    Number.isFinite(v.at)
-  );
+  if (
+    typeof v.gameId !== "string" ||
+    v.gameId.length === 0 ||
+    typeof v.xp !== "number" ||
+    !Number.isFinite(v.xp) ||
+    v.xp <= 0 ||
+    typeof v.at !== "number" ||
+    !Number.isFinite(v.at)
+  ) {
+    return null;
+  }
+  const entry: PendingXp = { gameId: v.gameId, xp: v.xp, at: v.at };
+  if (typeof v.day === "string" && DAY.test(v.day)) entry.day = v.day;
+  if (typeof v.kind === "string" && KINDS.has(v.kind)) {
+    entry.kind = v.kind as PendingGameKind;
+  }
+  if (typeof v.firstGame === "boolean") entry.firstGame = v.firstGame;
+  return entry;
 }
 
 function isLive(entry: PendingXp, now: number): boolean {
@@ -72,9 +110,9 @@ function readStore(now: number): PendingStore {
     if (typeof parsed !== "object" || parsed === null) return out;
     for (const [publicId, list] of Object.entries(parsed)) {
       if (!Array.isArray(list)) continue;
-      const live = list.filter(
-        (e): e is PendingXp => isPendingXp(e) && isLive(e, now),
-      );
+      const live = list
+        .map(readEntry)
+        .filter((e): e is PendingXp => e !== null && isLive(e, now));
       if (live.length > 0) out[publicId] = live;
     }
   } catch {
@@ -116,15 +154,18 @@ export function readPendingXp(
  */
 export function recordPendingXp(
   publicId: string,
-  entry: { gameId: string; xp: number },
+  entry: PendingXpInput,
   now: number = Date.now(),
 ): void {
-  const pending: PendingXp = {
+  const pending = readEntry({
     gameId: entry.gameId,
     xp: Math.floor(entry.xp),
     at: now,
-  };
-  if (!publicId || !isPendingXp(pending)) return;
+    day: entry.day ?? undefined,
+    kind: entry.kind ?? undefined,
+    firstGame: entry.firstGame,
+  });
+  if (!publicId || pending === null) return;
   // Written back pruned: expired entries, any account's, go.
   const store = readStore(now);
   const list = listFor(store, publicId).filter(
@@ -201,6 +242,107 @@ export function projectPendingXp(
   );
   if (projected === null) return null;
   return { ...projected.after, legend: false, canPrestige: false };
+}
+
+// ------------------------------------------------------------------ stacking
+
+// The UTC day an epoch time falls on ("YYYY-MM-DD").
+function utcDay(at: number): string {
+  return new Date(at).toISOString().slice(0, 10);
+}
+
+/**
+ * The confirmed progress with pending games stacked on top, for the next
+ * game's provisional figure at death: the place on the level track their XP
+ * takes it to (as projectPendingXp: never past the last level, never a
+ * prestige or a Legend), and the day's allowances they used.
+ *
+ * Allowances count only games stamped with the same UTC day as the
+ * confirmed progress's allowances (the API's own stamp), so a new day starts
+ * from what the API says. A pending public game that took the first-game
+ * bonus marks it taken; pending private and singleplayer games count towards
+ * their daily caps.
+ *
+ * An entry stored before these were kept has no day, kind or bonus: it is
+ * taken to have used the first-game bonus when it was stored on that UTC day
+ * by the local clock (the safe side: the next game's figure is never
+ * overstated), and to count towards neither cap (its kind is unknown).
+ */
+export function stackPendingXp(
+  progress: Progress,
+  pending: readonly PendingXp[],
+  config: ProgressionConfig,
+): Progress {
+  if (pending.length === 0) return progress;
+  const xp = pending.reduce((sum, e) => sum + e.xp, 0);
+  const projected = projectPendingXp(progress, xp, config);
+  const stacked: Progress =
+    projected === null
+      ? { ...progress }
+      : {
+          ...progress,
+          ...projected,
+        };
+  const daily = progress.daily;
+  if (daily?.day === undefined) return stacked;
+  let { privateGames, singleplayerGames, firstGameClaimed } = daily;
+  for (const entry of pending) {
+    if (entry.day === undefined) {
+      if (utcDay(entry.at) === daily.day) firstGameClaimed = true;
+      continue;
+    }
+    if (entry.day !== daily.day) continue;
+    if (entry.kind === "private") privateGames++;
+    if (entry.kind === "singleplayer") singleplayerGames++;
+    if (entry.firstGame === true) firstGameClaimed = true;
+  }
+  stacked.daily = {
+    ...daily,
+    privateGames,
+    singleplayerGames,
+    firstGameClaimed,
+  };
+  return stacked;
+}
+
+/**
+ * The confirmed progress with the account's other pending games stacked on
+ * top (stackPendingXp), for a provisional figure worked out now. Each one is
+ * asked about first, after `progress` was read: one the API has scored is
+ * in `progress` already, so it is cleared rather than counted twice, and
+ * only a 404 counts one. `excludeGameId` is the game being worked out.
+ */
+export async function progressWithPendingXp(opts: {
+  publicId: string;
+  progress: Progress;
+  config: ProgressionConfig;
+  excludeGameId: string;
+  fetchXp: (gameId: string) => Promise<GameXpFetchResult>;
+  now?: number;
+}): Promise<Progress> {
+  const now = opts.now ?? Date.now();
+  const entries = readPendingXp(opts.publicId, now).filter(
+    (e) => e.gameId !== opts.excludeGameId,
+  );
+  if (entries.length === 0) return opts.progress;
+  const answers = await Promise.all(
+    entries.map((e) =>
+      opts
+        .fetchXp(e.gameId)
+        .catch((): GameXpFetchResult => ({ status: "pending" })),
+    ),
+  );
+  const counted: PendingXp[] = [];
+  const answered: string[] = [];
+  entries.forEach((entry, i) => {
+    const answer = answers[i];
+    if (answer.status === "ok") answered.push(entry.gameId);
+    else if (answer.status === "pending" && answer.notFound === true) {
+      counted.push(entry);
+    }
+  });
+  clearPendingXp(opts.publicId, answered, now);
+  return stackPendingXp(opts.progress, counted, opts.config);
 }
 
 // ----------------------------------------------------------------- display

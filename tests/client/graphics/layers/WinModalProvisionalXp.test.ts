@@ -73,7 +73,10 @@ import "../../../../src/client/components/GameXpPanel";
 import type { GameXpPanel } from "../../../../src/client/components/GameXpPanel";
 import "../../../../src/client/hud/layers/WinModal";
 import type { WinModal } from "../../../../src/client/hud/layers/WinModal";
-import { readPendingXp } from "../../../../src/client/ProvisionalProgress";
+import {
+  readPendingXp,
+  recordPendingXp,
+} from "../../../../src/client/ProvisionalProgress";
 import type { GameView } from "../../../../src/client/view";
 
 const GAME_ID = "gPROVXP01";
@@ -703,6 +706,46 @@ describe("WinModal provisional XP at death", () => {
       await endGame(end);
       await settle(60_000);
       expect(readPendingXp("me")).toHaveLength(1);
+    });
+
+    it("starts the next game's figure from the pending game's level, without its first-game bonus", async () => {
+      // Game A, left earlier today and not scored yet: 250 provisional XP
+      // (with today's first-game bonus) takes level 9 at 50 to level 12 at 0.
+      recordPendingXp("me", {
+        gameId: "gA",
+        xp: 250,
+        day: PROGRESS.daily.day,
+        kind: "public",
+        firstGame: true,
+      });
+      const asked: string[] = [];
+      vi.stubGlobal(
+        "fetch",
+        vi.fn(async (input: RequestInfo | URL) => {
+          asked.push(String(input));
+          return new Response("", { status: 404 });
+        }),
+      );
+      const { game } = makeGame();
+      await mount(game);
+      expect(asked).toContain("https://api.test/users/@me/xp/gA");
+      expect(xpState()).toBe("provisional");
+      const { moments, cards } = await playOut();
+      // From level 12, 174 XP reaches level 13; A's levels (and its level-10
+      // milestone) aren't celebrated again.
+      expect(moments.join(" ")).not.toContain('"level":10');
+      expect(cards).toEqual([]);
+      await finishReveal();
+      expect(currentLevel()).toBe(13);
+      // Game B: 274 less the first-game bonus A took.
+      expect(total()).toContain('"xp":"174"');
+      // Both stay pending, stacked, for the account menu and profile.
+      expect(
+        readPendingXp("me").map((e) => [e.gameId, e.xp, e.firstGame]),
+      ).toEqual([
+        ["gA", 250, true],
+        [GAME_ID, 174, false],
+      ]);
     });
 
     it("keeps nothing for an ineligible death", async () => {

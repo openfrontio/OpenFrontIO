@@ -1,4 +1,4 @@
-import { RankedType } from "@openfront/engine-api/game/GameTypes";
+import { GameType, RankedType } from "@openfront/engine-api/game/GameTypes";
 import { GameUpdateType } from "@openfront/engine-api/game/GameUpdates";
 import type { GameXpEligible, Progress } from "@openfront/shared/ApiSchemas";
 import { Pattern } from "@openfront/shared/CosmeticSchemas";
@@ -39,9 +39,15 @@ import {
 import { Platform } from "../../Platform";
 import { MAX_PRESTIGE, reachedLegendThisGame } from "../../Progression";
 import { resolveXpAccount } from "../../ProgressionAccount";
-import { fetchProgressionConfig, pollGameXp } from "../../ProgressionApi";
+import {
+  fetchMyGameXp,
+  fetchProgressionConfig,
+  pollGameXp,
+} from "../../ProgressionApi";
 import {
   clearPendingXp,
+  type PendingGameKind,
+  progressWithPendingXp,
   recordPendingXp,
   requestProvisionalCheck,
 } from "../../ProvisionalProgress";
@@ -714,9 +720,17 @@ export class WinModal extends LitElement implements Controller {
   private keepPendingXp(provisional: ProvisionalXp): void {
     const response = provisional.response;
     if (this.xpPublicId === null || !response.eligible) return;
+    const kinds: Record<string, PendingGameKind> = {
+      [GameType.Public]: "public",
+      [GameType.Private]: "private",
+      [GameType.Singleplayer]: "singleplayer",
+    };
     recordPendingXp(this.xpPublicId, {
       gameId: response.gameId,
       xp: response.breakdown.total,
+      day: provisional.inputs.dailyDay,
+      kind: kinds[provisional.inputs.gameType] ?? null,
+      firstGame: response.breakdown.firstGame > 0,
     });
     requestProvisionalCheck();
   }
@@ -739,14 +753,28 @@ export class WinModal extends LitElement implements Controller {
     // been scored since). Past the page's cache, so a failed ask can't cost
     // the game-end figure its copy; the page's progress stands in for it.
     const fresh = await fetchUserMeUncached();
+    const confirmed =
+      fresh !== false && fresh.player.progress !== undefined
+        ? fresh.player.progress
+        : progress;
+    // Games left earlier and not scored yet stack underneath this one: it
+    // starts from where their provisional XP took the player, and from the
+    // day's allowances they used (ProvisionalProgress.ts).
+    const start =
+      this.xpPublicId === null
+        ? confirmed
+        : await progressWithPendingXp({
+            publicId: this.xpPublicId,
+            progress: confirmed,
+            config: progression,
+            excludeGameId: game.gameID(),
+            fetchXp: (gameId) => fetchMyGameXp(gameId),
+          });
     return loadProvisionalXp({
       gameId: game.gameID(),
       myClientID,
       config: game.config().gameConfig(),
-      progress:
-        fresh !== false && fresh.player.progress !== undefined
-          ? fresh.player.progress
-          : progress,
+      progress: start,
       progression,
       humanStats: () => game.worker.humanStats(),
     });

@@ -60,6 +60,9 @@ export interface ProvisionalXpInputs {
   // disconnected and may yet come back, which the API would not count.
   disconnectedOpponents: number;
   daily: XpContext["daily"];
+  // The UTC day the API stamped those allowances with: a pending figure is
+  // kept with it, so the next game the same day counts it (ProvisionalProgress).
+  dailyDay: string | null;
   subscriberPermille: number;
 }
 
@@ -264,6 +267,7 @@ export function buildProvisionalXp(input: {
       opponentsOutlasted: ctx.opponentsOutlasted,
       disconnectedOpponents,
       daily: ctx.daily,
+      dailyDay: input.progress.daily?.day ?? null,
       subscriberPermille: ctx.subscriberPermille,
     },
   };
