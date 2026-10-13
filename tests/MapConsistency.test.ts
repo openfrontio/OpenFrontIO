@@ -626,7 +626,7 @@ describe("Map consistency", () => {
     }
   });
 
-  test("Layer PNGs exist in map-generator and resources for every defined layer", () => {
+  test("Every defined layer has its source PNG and both generated WebP variants", () => {
     const errors: string[] = [];
 
     for (const key of allMapKeys) {
@@ -648,16 +648,22 @@ describe("Map consistency", () => {
             `${key}: layer PNG "${layer.id}.png" missing in map-generator/assets/maps/${folder}/`,
           );
         }
-        const resPng = path.join(resDir, `${layer.id}.png`);
-        if (!fs.existsSync(resPng)) {
+        for (const file of [`${layer.id}.webp`, `${layer.id}.4x.webp`]) {
+          if (!fs.existsSync(path.join(resDir, file))) {
+            errors.push(
+              `${key}: layer image "${file}" missing in resources/maps/${folder}/ (run the map generator)`,
+            );
+          }
+        }
+        if (fs.existsSync(path.join(resDir, `${layer.id}.png`))) {
           errors.push(
-            `${key}: layer PNG "${layer.id}.png" missing in resources/maps/${folder}/`,
+            `${key}: stale layer PNG "${layer.id}.png" in resources/maps/${folder}/ (layers ship as WebP)`,
           );
         }
       }
     }
     if (errors.length > 0) {
-      throw new Error("Missing layer PNGs:\n" + errors.join("\n"));
+      throw new Error("Layer image violations:\n" + errors.join("\n"));
     }
   });
 
