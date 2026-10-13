@@ -1138,6 +1138,25 @@ describe("an interrupt the player never answered", () => {
     });
   });
 
+  it("leaves a grant that replaced the one shown still unanswered", async () => {
+    for (const interrupt of ["grant-welcome", "grant-ended"] as const) {
+      const { base, settle } = ports();
+      const replacement = {
+        ...grantRecord,
+        periodEnd: "2026-11-15T00:00:00.000Z",
+      };
+      let stored: SteamGrantStore = { [ME]: grantRecord };
+      base.updateSteamGrant = (update) => {
+        stored = update(stored);
+      };
+      const running = runBootInterrupt(interrupt, context, base);
+      stored = { [ME]: replacement };
+      settle();
+      await running;
+      expect(stored, interrupt).toEqual({ [ME]: replacement });
+    }
+  });
+
   it("does not stack a second copy when onUserMe re-runs", async () => {
     const { base, calls, settle } = ports();
     const first = runBootInterrupt("username-claim", context, base);

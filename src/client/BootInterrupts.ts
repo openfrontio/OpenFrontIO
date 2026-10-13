@@ -22,6 +22,7 @@ import { lapseNoticeDue } from "./PlayerName";
 import {
   steamGrantEndedShown,
   steamGrantWelcomed,
+  type SteamGrantRecord,
   type SteamGrantStore,
 } from "./SteamGrantNotices";
 import {
@@ -578,6 +579,22 @@ export async function runBootInterrupt(
 
 let interruptOpen = false;
 
+// Marks only the grant the dialog spoke about. recordSteamGrant replaces the
+// record when the period or tier changes, and a grant that arrived while the
+// dialog was open is still owed its own notice.
+function forShownGrant(
+  shown: SteamGrantRecord,
+  publicId: string,
+  mark: (store: SteamGrantStore, publicId: string) => SteamGrantStore,
+): (store: SteamGrantStore) => SteamGrantStore {
+  return (store) => {
+    const current = store[publicId];
+    return current?.periodEnd === shown.periodEnd && current.tier === shown.tier
+      ? mark(store, publicId)
+      : store;
+  };
+}
+
 async function runInterrupt(
   interrupt: BootInterrupt | null,
   context: BootInterruptContext,
@@ -621,8 +638,8 @@ async function runInterrupt(
         }),
         ports.translate(BOOT_INTERRUPT_KEYS.grantWelcomeHeading),
       );
-      ports.updateSteamGrant((store) =>
-        steamGrantWelcomed(store, context.publicId),
+      ports.updateSteamGrant(
+        forShownGrant(record, context.publicId, steamGrantWelcomed),
       );
       return;
     }
@@ -634,8 +651,8 @@ async function runInterrupt(
         ports.translate(BOOT_INTERRUPT_KEYS.grantEndedBody, { tier }),
         ports.translate(BOOT_INTERRUPT_KEYS.grantEndedHeading),
       );
-      ports.updateSteamGrant((store) =>
-        steamGrantEndedShown(store, context.publicId),
+      ports.updateSteamGrant(
+        forShownGrant(record, context.publicId, steamGrantEndedShown),
       );
       return;
     }
@@ -643,16 +660,17 @@ async function runInterrupt(
       const notice = context.steamNotice;
       if (notice === null) return;
       steamNoticeShown();
+      const grant = context.grantStore[context.publicId];
       const copy = steamNoticeCopy(notice, ports.translate, formatGrantDate);
       await ports.alert(copy.paragraphs.join("\n\n"), copy.heading);
       ports.markNoticeSeen(notice.notice);
       if (
         notice.kind !== "steam-plus-conversion" &&
         notice.grantEnd !== null &&
-        context.grantStore[context.publicId] !== undefined
+        grant !== undefined
       ) {
-        ports.updateSteamGrant((store) =>
-          steamGrantWelcomed(store, context.publicId),
+        ports.updateSteamGrant(
+          forShownGrant(grant, context.publicId, steamGrantWelcomed),
         );
       }
       return;
