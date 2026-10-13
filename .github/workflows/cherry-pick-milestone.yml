@@ -153,7 +153,7 @@ jobs:
           set -euo pipefail
           npm install --global --ignore-scripts npm@12.1.0
           npm ci --ignore-scripts --no-audit --no-fund
-          sha256sum package-lock.json > "$RUNNER_TEMP/installed-lock.sha"
+          sha256sum package.json package-lock.json > "$RUNNER_TEMP/installed-deps.sha"
 
       # The checks CI runs, scoped to what a backport can break: the whole
       # project's types, and format and lint on the files changed since the
@@ -164,9 +164,12 @@ jobs:
           cat > "$RUNNER_TEMP/check.sh" <<'EOF'
           set -uo pipefail
           base=$1
-          if ! sha256sum --status -c "$RUNNER_TEMP/installed-lock.sha"; then
-            npm ci --ignore-scripts --no-audit --no-fund
-            sha256sum package-lock.json > "$RUNNER_TEMP/installed-lock.sha"
+          if ! sha256sum --status -c "$RUNNER_TEMP/installed-deps.sha"; then
+            if ! npm ci --ignore-scripts --no-audit --no-fund; then
+              echo install > "$RUNNER_TEMP/failed"
+              exit 1
+            fi
+            sha256sum package.json package-lock.json > "$RUNNER_TEMP/installed-deps.sha"
           fi
           mapfile -t files < <(git diff --name-only --diff-filter=d "$base")
           mapfile -t code < <(printf '%s\n' "${files[@]}" | grep -E '\.[cm]?[jt]sx?$')
@@ -278,6 +281,11 @@ jobs:
             if [ "$(git rev-parse HEAD)" = "$(git rev-parse "origin/$TARGET")" ]; then
               echo "PR #$PR landed on $TARGET from another run, nothing to push"
               exit 0
+            fi
+            # Two picks can each pass on the old tip and break together.
+            if ! bash "$RUNNER_TEMP/check.sh" HEAD~1; then
+              echo "::error::Pick fails $(cat "$RUNNER_TEMP/failed") once rebased onto the new $TARGET"
+              exit 1
             fi
           done
           echo "::error::Could not push to $TARGET after 5 attempts"
