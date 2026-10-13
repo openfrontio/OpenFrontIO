@@ -6,7 +6,7 @@ export const STEAM_PLUS_WELCOME_NOTICE = "steam_plus_welcome";
 
 // Owners from before this moment get the licence intro, which explains what
 // changed for them. Later buyers never knew the old model and get a welcome.
-export const STEAM_LICENCE_LAUNCH = Date.UTC(2026, 9, 13, 12, 30);
+export const STEAM_LICENCE_LAUNCH = Date.UTC(2026, 9, 13, 13);
 
 export function steamPlusConversionNotice(conversionId: string): string {
   return `steam_plus_conversion:${conversionId}`;
@@ -102,7 +102,7 @@ export const STEAM_NOTICE_KEYS = {
   conversionBody: "steam_notices.conversion_body",
   conversionFromVanguard: "steam_notices.conversion_from_vanguard",
   conversionFromWarlord: "steam_notices.conversion_from_warlord",
-  conversionUnchanged: "steam_notices.conversion_unchanged",
+  conversionLicence: "steam_notices.conversion_licence",
   licenceHeading: "steam_notices.licence_intro_heading",
   licenceBody: "steam_notices.licence_intro_body",
   licenceGrant: "steam_notices.licence_intro_grant",
@@ -134,7 +134,7 @@ export function steamNoticeCopy(
       paragraphs: [
         translate(STEAM_NOTICE_KEYS.conversionBody),
         ...(line !== null ? [translate(line)] : []),
-        translate(STEAM_NOTICE_KEYS.conversionUnchanged),
+        translate(STEAM_NOTICE_KEYS.conversionLicence),
       ],
     };
   }
