@@ -723,6 +723,29 @@ describe("StoreModal cosmetic browser", () => {
     expect(lines(hardPack.key)).toEqual(["reserved", "hard"]);
   });
 
+  it("sells a tier with no Stripe product at its own price", async () => {
+    const steamPlus: ResolvedCosmetic = {
+      ...platinumSubscription,
+      cosmetic: {
+        ...(platinumSubscription.cosmetic as object),
+        name: "steam_plus",
+        priceMonthly: 499,
+        product: null,
+      } as never,
+      key: "subscription:steam_plus",
+    };
+    resolvedCatalog = [steamPlus];
+    const modal = await openStoreOnTab("subscriptions");
+    await modal.onUserMe({ player: { subscription: null } } as never);
+    await modal.updateComplete;
+
+    const button = purchaseButton(modal, steamPlus.key);
+    expect(button.product).toBeNull();
+    expect(button.dollarPrice).toBe("$4.99");
+    await button.onPurchaseDollar!();
+    expect(purchaseCosmetic).toHaveBeenCalledWith(steamPlus, "dollar");
+  });
+
   it("shows subscription status and a switch action for another tier", async () => {
     resolvedCatalog = [goldSubscription, platinumSubscription];
     const modal = await openStoreOnTab("subscriptions");

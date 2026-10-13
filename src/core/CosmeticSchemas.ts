@@ -497,14 +497,16 @@ export const SubscriptionSchema = CosmeticSchema.extend({
   priceMonthly: z.number(),
   dailySoftCurrency: z.number(),
   dailyHardCurrency: z.number(),
-  // One-time plutonium grant on subscribing (advertised on the store tile).
+  // Plutonium paid at the start of every paid month. Named for when it was
+  // paid once, on subscribing.
   hardCurrencySignupBonus: z.number(),
-  // Whether this tier exempts subscribers from the free-ranked-play limits
-  // (advertised on the store tile).
-  unlimitedRanked: z.boolean(),
+  // Ranked play limits are gone; still sent by the API until a later release.
+  unlimitedRanked: z.boolean().optional(),
   // Whether this tier lets subscribers list custom lobbies publicly
   // (advertised on the store tile).
   canCreatePublicLobbies: z.boolean(),
+  // Only Steam licence holders may buy this tier; the server enforces it.
+  requiresSteamLicence: z.boolean().optional().default(false),
 });
 
 // Schema for resources/cosmetics/cosmetics.json
@@ -538,6 +540,9 @@ export const CosmeticsSchema = z.object({
   // this client doesn't know is dropped alone, not the whole catalog.
   packs: lenientRecord(CosmeticPackSchema).optional(),
   subscriptions: z.record(z.string(), SubscriptionSchema).optional(),
+  // Tiers this rail does not list but a player may hold. Display only: a
+  // player's own tier renders from here, and nothing here is ever for sale.
+  unlistedSubscriptions: z.record(z.string(), SubscriptionSchema).optional(),
   // Custom tribe name pricing (store Tribes tab) — served here so the client
   // never hardcodes it. Optional: an older cosmetics.json parses, and the UI
   // hides boost purchasing when absent.
