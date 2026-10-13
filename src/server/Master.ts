@@ -21,6 +21,7 @@ import {
 } from "./LobbyCoordinatorClient";
 import { logger } from "./Logger";
 import { MapPlaylist } from "./MapPlaylist";
+import { fetchMapWeights, MAP_WEIGHTS_POLL_MS } from "./MapWeights";
 import { MasterLobbyService } from "./MasterLobbyService";
 import { setNoStoreHeaders } from "./NoStoreHeaders";
 import { startPolling } from "./PollingLoop";
@@ -272,6 +273,13 @@ export async function startMaster() {
       }
       applyCheckinState(result, (active) => lobbyService.setActive(active));
     }, CHECKIN_INTERVAL_MS);
+
+    // Public-lobby rotation weight overrides set in the API. Until the first
+    // fetch lands, and while it keeps failing, the last known weights (or the
+    // build's info.json) stay in effect.
+    startPolling(async () => {
+      playlist.setWeightOverrides(await fetchMapWeights());
+    }, MAP_WEIGHTS_POLL_MS);
   }
 }
 
