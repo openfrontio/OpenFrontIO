@@ -408,6 +408,14 @@ export class UserSettings {
     return this.getBool("settings.emojis", true);
   }
 
+  hudOpacity() {
+    return Math.max(0, Math.min(1, this.getFloat("settings.hudOpacity", 1)));
+  }
+
+  setHudOpacity(value: number) {
+    this.setFloat("settings.hudOpacity", value);
+  }
+
   performanceOverlay() {
     return this.getBool(PERFORMANCE_OVERLAY_KEY, false);
   }
