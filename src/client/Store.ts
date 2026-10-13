@@ -2,7 +2,12 @@ import type { PropertyValues, TemplateResult } from "lit";
 import { html } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import { isGrantedSubscription, UserMeResponse } from "../core/ApiSchemas";
-import { CosmeticPack, Cosmetics, Product } from "../core/CosmeticSchemas";
+import {
+  CosmeticPack,
+  Cosmetics,
+  Product,
+  Subscription,
+} from "../core/CosmeticSchemas";
 import { BaseModal } from "./components/BaseModal";
 import "./components/CosmeticCard";
 import { cosmeticSelectionLabel } from "./components/CosmeticPresentation";
@@ -33,6 +38,17 @@ import {
   reportPendingSteamAuthorizations,
 } from "./Payments";
 import { translateText } from "./Utils";
+
+// Matches the API's formatting of `product.price`, so a tier priced from its
+// own cents reads the same as one priced from its Stripe listing.
+const usdFormatter = new Intl.NumberFormat("en-US", {
+  style: "currency",
+  currency: "USD",
+});
+
+function formatUsdCents(cents: number): string {
+  return usdFormatter.format(cents / 100);
+}
 
 type StoreTab =
   | "cosmetics"
@@ -400,6 +416,12 @@ export class StoreModal extends BaseModal {
       (resolved.type === "pack" || resolved.type === "subscription")
         ? (priced?.product ?? null)
         : null;
+    // A tier with no Stripe listing (sold only on Steam) has no `product`;
+    // its price is the tier's own, in cents.
+    const subscriptionDollarPrice =
+      isPurchasable && resolved.type === "subscription" && product === null
+        ? formatUsdCents((resolved.cosmetic as Subscription).priceMonthly)
+        : "";
     const priceHard = isPurchasable ? priced?.priceHard : undefined;
     const priceSoft = isPurchasable ? priced?.priceSoft : undefined;
     const purchase = (method: "dollar" | "hard" | "soft") =>
@@ -427,6 +449,7 @@ export class StoreModal extends BaseModal {
     // alignPurchaseRows() once the grid has laid out.
     return html`<purchase-button
       .product=${product}
+      .dollarPrice=${subscriptionDollarPrice}
       .inlineCheckout=${inlineCheckout}
       .priceHard=${priceHard ?? null}
       .priceSoft=${priceSoft ?? null}
@@ -438,7 +461,9 @@ export class StoreModal extends BaseModal {
       .priceSuffix=${resolved.type === "subscription"
         ? translateText("store.price_per_month")
         : ""}
-      .onPurchaseDollar=${product ? () => purchase("dollar") : undefined}
+      .onPurchaseDollar=${product || subscriptionDollarPrice
+        ? () => purchase("dollar")
+        : undefined}
       .onPurchaseHard=${priceHard !== undefined
         ? () => purchase("hard")
         : undefined}
