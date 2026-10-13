@@ -2,10 +2,27 @@ import type { GameType } from "@openfront/engine-api/game/GameTypes";
 import type {
   GameXpEligible,
   GameXpResponse,
+  GameXpReward,
 } from "@openfront/shared/ApiSchemas";
 import { html, LitElement, nothing, PropertyValues, TemplateResult } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
 import { keyed } from "lit/directives/keyed.js";
+import { getUserMe } from "../Api";
+import {
+  fetchCosmetics,
+  resolveCosmetics,
+  type ResolvedCosmetic,
+} from "../Cosmetics";
+import {
+  type Balances,
+  claimGameRewards,
+  type FlareUnlock,
+  flareUnlock,
+  type GameRewardsSummary,
+  type RewardLine,
+  summarizeGameRewards,
+  withRefusedHolds,
+} from "../GameRewards";
 import {
   apportionXp,
   ineligibleReasonKey,
@@ -26,7 +43,12 @@ import type {
   XpReconciliation,
 } from "../ProvisionalXpAtDeath";
 import { translateText } from "../Utils";
+import "./baseComponents/Button";
+import "./CapIcon";
+import "./CosmeticPreview";
 import "./LevelBadge";
+import "./PlutoniumIcon";
+import type { RewardsChangedDetail } from "./RewardsPanel";
 import { formatXp, xpBonusText, xpProgressText } from "./XpBar";
 
 // What the XP section of a finished game is showing. The caller owns the
@@ -106,6 +128,20 @@ function wipeStart(i: number, n: number): number {
 }
 const MULTIPLIER_HOLD_MS = 400;
 const PAYOFF_MS = 900;
+// The level rewards, after the last level-up of the game: a cosmetic it
+// unlocked wipes into the milestone card once that has landed, then the
+// rewards row rises in (later when it follows a card), and its amounts
+// count up.
+const UNLOCK_DELAY_MS = 700;
+const REWARDS_DELAY_MS = 300;
+const REWARDS_AFTER_CARD_MS = 900;
+const REWARDS_COUNT_LEAD_MS = 360;
+const REWARDS_COUNT_MS = 500;
+// The balance after a claim counts up from the old one.
+const BALANCE_LEAD_MS = 120;
+const BALANCE_COUNT_MS = 600;
+
+const easeOut = (f: number) => 1 - Math.pow(1 - f, 3);
 
 // The caption step the panel rests on once the reveal is over.
 const REST_STEP = -1;
@@ -155,11 +191,25 @@ interface RevealFrame {
   lineValues: number[];
   // A multiplier being applied to the cards (its wipe): a boost or a cut.
   applying: "boost" | "cut" | null;
+  // The level rewards row has risen in, and how far its amounts have
+  // counted up, 0 to 1.
+  rewardsShown: boolean;
+  rewardsCount: number;
+  // The cosmetics the game unlocked have wiped in.
+  unlockShown: boolean;
   // The last level, and whether the Legend moment, a provisional reveal
   // already celebrated: their cards stay put rather than landing again.
   celebrated: number;
   celebratedLegend: boolean;
 }
+
+// The rewards row's Claim button.
+type ClaimState =
+  | { status: "idle"; failed: boolean }
+  | { status: "claiming" }
+  // `to` is the balance after the claim (null if unknown), `from` the one
+  // before it, which the shown balance counts up from.
+  | { status: "claimed"; from: Balances | null; to: Balances | null };
 
 // Bar position of a level/progress pair, in level units. Level 100 has no
 // next level and reads as a full bar. A full level stays just short of the
@@ -213,6 +263,23 @@ export class GameXpPanel extends LitElement {
   // The Legend result already announced (see announceLegend).
   private announcedLegend: GameXpEligible | null = null;
   private timers: ReturnType<typeof setTimeout>[] = [];
+  // The result last announced as settled (see updated()).
+  private settledView: GameXpPanelState | null = null;
+
+  // Claiming this game's level rewards. Reset with every new view.
+  @state() private claim: ClaimState = { status: "idle", failed: false };
+  @state() private claimPressed = false;
+  // How far the balance shown after a claim has counted up, 0 to 1.
+  @state() private balanceCount = 1;
+  private claimedIds = new Set<string>();
+  // The ones the API refused as held when claimed from this view, with the
+  // hold: shown as held from then on (see rewardsOf).
+  private refusedHolds = new Map<string, string>();
+  private claimToken = 0;
+  private claimTimers: ReturnType<typeof setTimeout>[] = [];
+  // The store's catalog, for the previews of what a game unlocked.
+  @state() private catalog: readonly ResolvedCosmetic[] = [];
+  private catalogRequested = false;
 
   createRenderRoot() {
     return this;
@@ -222,12 +289,22 @@ export class GameXpPanel extends LitElement {
     // Jump to the end: with its timers gone, a reveal left in place would
     // stay half-done (and aria-busy) if the panel were added back.
     this.skipReveal();
+    this.clearClaimTimers();
+    this.balanceCount = 1;
     super.disconnectedCallback();
   }
 
   protected willUpdate(changed: PropertyValues<this>): void {
     if (changed.has("view")) {
+      this.resetClaim();
       const s = this.view;
+      if (
+        s.kind === "result" &&
+        s.data.eligible &&
+        (s.data.flares ?? []).length > 0
+      ) {
+        this.loadCatalog();
+      }
       const prev = changed.get("view");
       // The same provisional figure, now being confirmed: a reveal still
       // playing carries on.
@@ -357,6 +434,33 @@ export class GameXpPanel extends LitElement {
     const positionAfterXp = (xp: number) =>
       total <= 0 ? start : start + ((end - start) * xp) / total;
 
+    // The rewards and unlocks come after the game's last level-up.
+    const reachedLevels = levelsReachedInGame(data);
+    const lastLevel =
+      reachedLevels.length > 0
+        ? reachedLevels[reachedLevels.length - 1].level
+        : null;
+    // Only the server's confirmed result has rewards or unlocks.
+    const confirmed = this.view.kind === "result";
+    const rewards = confirmed ? summarizeGameRewards(data.rewards ?? []) : null;
+    const unlocks = confirmed && (data.flares ?? []).length > 0;
+    const card =
+      reachedLegendThisGame(data) || this.milestoneOf(data) !== undefined;
+    const scheduleRewards = (t0: number) => {
+      if (unlocks) at(t0 + UNLOCK_DELAY_MS, () => patch({ unlockShown: true }));
+      if (rewards === null) return;
+      const rowAt =
+        t0 + (unlocks || card ? REWARDS_AFTER_CARD_MS : REWARDS_DELAY_MS);
+      at(rowAt, () => patch({ rewardsShown: true }));
+      const countAt = rowAt + REWARDS_COUNT_LEAD_MS;
+      const steps = Math.max(2, Math.round(REWARDS_COUNT_MS / 40));
+      for (let i = 1; i <= steps; i++) {
+        at(countAt + (REWARDS_COUNT_MS * i) / steps, () =>
+          patch({ rewardsCount: easeOut(i / steps) }),
+        );
+      }
+    };
+
     this.barAnimate = false;
     this.reveal = {
       step: 0,
@@ -376,6 +480,9 @@ export class GameXpPanel extends LitElement {
       multipliersShown: celebrate ? multipliers.length : 0,
       lineValues: celebrate ? finalLineValues(data) : [...faces],
       applying: null,
+      rewardsShown: false,
+      rewardsCount: 0,
+      unlockShown: false,
       celebrated: celebrate ? mode.celebrated : 0,
       celebratedLegend: celebrate && mode.celebratedLegend,
     };
@@ -399,6 +506,11 @@ export class GameXpPanel extends LitElement {
       .map((l) => l.level)
       .filter((l) => l > passed && l <= MAX_LEVEL)
       .sort((a, b) => a - b);
+    // A celebration whose last level the provisional reveal already reached
+    // has no level-up to bring the rewards in after: they come in at once.
+    if (celebrate && lastLevel !== null && lastLevel <= passed) {
+      scheduleRewards(START_MS);
+    }
     const climb = (
       t: number,
       to: number,
@@ -462,6 +574,7 @@ export class GameXpPanel extends LitElement {
             legend,
           });
         });
+        if (reached === lastLevel) scheduleRewards(t);
         t += legend ? LEGEND_MS : LEVEL_UP_MS;
         // Empty the bar and carry on with the rest of this step.
         const resume = stepCount + 1;
@@ -611,6 +724,21 @@ export class GameXpPanel extends LitElement {
     });
   }
 
+  // Tells the host once a result is showing in full: its reveal has ended or
+  // been skipped, or there was none. Once per result (`detail` is the view).
+  private announceSettled(): void {
+    const view = this.view;
+    if (view.kind !== "result" || this.reveal !== null) return;
+    if (this.settledView === view) return;
+    this.settledView = view;
+    this.dispatchEvent(
+      new CustomEvent<GameXpPanelState>("xp-reveal-settled", {
+        detail: view,
+        bubbles: true,
+      }),
+    );
+  }
+
   // Tells the page this result made the player a Legend, once per result:
   // `xp-legend` (detail: the result), cancelable. A listener that takes the
   // moment (plays the Legend ceremony) cancels it. Only ever for a result the
@@ -629,6 +757,7 @@ export class GameXpPanel extends LitElement {
 
   protected updated(changed: PropertyValues<this>): void {
     super.updated(changed);
+    this.announceSettled();
     // A Legend result shown without its reveal reaching level 100 (reduced
     // motion, a skip, or it arrived while the popup was hidden) still gets
     // its moment, once it's on screen.
@@ -756,7 +885,7 @@ export class GameXpPanel extends LitElement {
     return this.frame(
       html`<div class="flex items-center gap-2 text-sm text-white/80">
         <span
-          class="w-4 h-4 shrink-0 border-2 border-white/30 border-t-white/80 rounded-full animate-spin"
+          class="w-4 h-4 shrink-0 border-2 border-white/30 border-t-white/80 rounded-full animate-spin motion-reduce:animate-none"
           aria-hidden="true"
         ></span>
         <span>${translateText("progression.calculating")}</span>
@@ -878,7 +1007,7 @@ export class GameXpPanel extends LitElement {
         data-xp-bar-fill
         class="h-full bg-yellow-400 shadow-[0_0_10px_rgba(250,204,21,0.7)] ${this
           .barAnimate
-          ? "transition-[width] ease-linear"
+          ? "xp-bar-filling transition-[width] ease-linear"
           : ""}"
         style="width: ${fillPercent}%; transition-duration: ${this
           .barDurationMs}ms"
@@ -1186,6 +1315,54 @@ export class GameXpPanel extends LitElement {
       .xp-bar-flash {
         animation: xp-bar-flash 450ms ease-in-out 2;
       }
+      /* While the bar fills, its leading edge glows white-hot and a sheen
+         runs along the fill. Both are pseudo-elements clipped to the fill;
+         the sheen moves by transform, one tile per loop. */
+      [data-xp-panel] [data-xp-bar-fill] {
+        position: relative;
+        overflow: hidden;
+      }
+      [data-xp-panel] [data-xp-bar-fill]::after {
+        content: "";
+        position: absolute;
+        top: 0;
+        bottom: 0;
+        right: 0;
+        width: 42px;
+        pointer-events: none;
+        background: linear-gradient(
+          90deg,
+          rgba(255, 255, 255, 0),
+          rgba(255, 250, 210, 0.95)
+        );
+        opacity: 0;
+        transition: opacity 160ms ease-out;
+      }
+      [data-xp-panel] .xp-bar-filling::after {
+        opacity: 1;
+      }
+      [data-xp-panel] .xp-bar-filling::before {
+        content: "";
+        position: absolute;
+        top: 0;
+        bottom: 0;
+        left: -48px;
+        right: 0;
+        pointer-events: none;
+        background-image: repeating-linear-gradient(
+          115deg,
+          rgba(255, 255, 255, 0) 0 10px,
+          rgba(255, 255, 255, 0.28) 10px 14px,
+          rgba(255, 255, 255, 0) 14px 24px
+        );
+        background-size: 48px 100%;
+        animation: xp-bar-sheen 420ms linear infinite;
+      }
+      @keyframes xp-bar-sheen {
+        to {
+          transform: translateX(48px);
+        }
+      }
       @keyframes xp-badge-pop {
         0% {
           transform: scale(1);
@@ -1434,6 +1611,55 @@ export class GameXpPanel extends LitElement {
       .xp-card-in.xp-after-slide.xp-shine::after {
         animation-delay: 410ms;
       }
+      /* A cosmetic unlocked: the divider draws, the half wipes in from it,
+         its preview pops. The rewards row's claimed state rises in. */
+      @keyframes xp-unlock-sep {
+        from {
+          transform: scaleY(0);
+        }
+      }
+      .xp-unlock-sep {
+        animation: xp-unlock-sep 220ms ease-out both;
+      }
+      @keyframes xp-unlock-in {
+        from {
+          clip-path: inset(0 100% 0 0);
+        }
+        to {
+          clip-path: inset(0 0 0 0);
+        }
+      }
+      .xp-unlock-in {
+        animation: xp-unlock-in 480ms cubic-bezier(0.2, 0.8, 0.2, 1) 120ms both;
+      }
+      @keyframes xp-unlock-pop {
+        from {
+          transform: scale(0.4);
+          opacity: 0;
+        }
+      }
+      .xp-unlock-pop {
+        animation: xp-unlock-pop 420ms cubic-bezier(0.2, 0.9, 0.3, 1.35) 300ms
+          both;
+      }
+      @keyframes xp-claimed-in {
+        from {
+          opacity: 0;
+          transform: translateY(6px);
+        }
+      }
+      .xp-claimed-in {
+        animation: xp-claimed-in 280ms ease-out both;
+      }
+      @keyframes xp-check-in {
+        from {
+          transform: scale(0.3);
+          opacity: 0;
+        }
+      }
+      .xp-check-in {
+        animation: xp-check-in 380ms cubic-bezier(0.2, 0.9, 0.3, 1.5) both;
+      }
       .xp-legend-text {
         background: linear-gradient(90deg, #fde047, #f0abfc, #fde047);
         background-size: 200% 100%;
@@ -1443,6 +1669,10 @@ export class GameXpPanel extends LitElement {
         filter: drop-shadow(0 0 10px rgba(250, 204, 21, 0.8));
       }
       @media (prefers-reduced-motion: reduce) {
+        [data-xp-panel] .xp-bar-filling::before,
+        [data-xp-panel] .xp-bar-filling::after {
+          display: none;
+        }
         .xp-caption-in,
         .xp-levelup-in,
         .xp-bar-flash,
@@ -1455,7 +1685,12 @@ export class GameXpPanel extends LitElement {
         .xp-card-wipe::before,
         .xp-card-in,
         .xp-card-in.xp-shine::after,
-        .xp-card-in .xp-shine::after {
+        .xp-card-in .xp-shine::after,
+        .xp-unlock-sep,
+        .xp-unlock-in,
+        .xp-unlock-pop,
+        .xp-claimed-in,
+        .xp-check-in {
           animation: none;
         }
       }
@@ -1470,7 +1705,8 @@ export class GameXpPanel extends LitElement {
   private renderRecap(data: GameXpEligible): TemplateResult {
     const r = this.reveal;
     return html`
-      ${this.renderLevelUp(data)} ${this.renderBreakdown(data)}
+      ${this.renderLevelUp(data)} ${this.renderRewards(data)}
+      ${this.renderBreakdown(data)}
       ${data.breakdown.leftEarly
         ? this.collapsible(
             r === null,
@@ -1522,7 +1758,7 @@ export class GameXpPanel extends LitElement {
       html`<div
         data-xp-legend
         data-xp-slot-hidden=${shown ? nothing : "true"}
-        class="xp-shine mt-3 flex items-center justify-center gap-3 rounded-xl border border-yellow-300/50 bg-gradient-to-r from-transparent via-fuchsia-500/15 to-transparent px-3 py-2.5 ${settled
+        class="xp-shine mt-3 flex flex-wrap items-center justify-center gap-x-3 gap-y-2 rounded-xl border border-yellow-300/50 bg-gradient-to-r from-transparent via-fuchsia-500/15 to-transparent px-3 py-2.5 ${settled
           ? ""
           : this.slideSlotClass(shown)}"
       >
@@ -1544,6 +1780,7 @@ export class GameXpPanel extends LitElement {
             })}
           </div>
         </div>
+        ${this.renderUnlocks(data, true)}
       </div>`,
     );
   }
@@ -1553,12 +1790,19 @@ export class GameXpPanel extends LitElement {
   // end of the bar say it. During the reveal its space slides open when the
   // bar reaches the milestone, and the card pops in; one the provisional
   // reveal already celebrated stays put.
+  // The highest milestone level reached this game, if any.
+  private milestoneOf(data: GameXpEligible) {
+    return [...levelsReachedInGame(data)]
+      .reverse()
+      .find((lvl) => isMilestoneLevel(lvl.level));
+  }
+
   private renderLevelUp(data: GameXpEligible): TemplateResult | typeof nothing {
     if (reachedLegendThisGame(data)) return this.renderLegendMoment(data);
     const milestones = levelsReachedInGame(data).filter((lvl) =>
       isMilestoneLevel(lvl.level),
     );
-    if (milestones.length === 0) return nothing;
+    if (milestones.length === 0) return this.renderUnlockCard(data);
     const r = this.reveal;
     // The latest milestone the bar has reached, or (closed until then) the
     // one it is heading for.
@@ -1577,7 +1821,7 @@ export class GameXpPanel extends LitElement {
         data-xp-levelup
         data-xp-milestone=${milestone.level}
         data-xp-slot-hidden=${shown ? nothing : "true"}
-        class="xp-shine mt-3 flex items-center justify-center gap-3 rounded-xl border border-yellow-400/30 bg-gradient-to-r from-transparent via-yellow-400/15 to-transparent px-3 py-2 ${settled
+        class="xp-shine mt-3 flex flex-wrap items-center justify-center gap-x-3 gap-y-2 rounded-xl border border-yellow-400/30 bg-gradient-to-r from-transparent via-yellow-400/15 to-transparent px-3 py-2 ${settled
           ? ""
           : this.slideSlotClass(shown)}"
       >
@@ -1606,8 +1850,408 @@ export class GameXpPanel extends LitElement {
             ${translateText("progression.level", { level: milestone.level })}
           </div>
         </div>
+        ${this.renderUnlocks(data, true)}
       </div>`,
     );
+  }
+
+  // What the game unlocked, resolved against the store's catalog.
+  // Only for the server's confirmed result, like the rewards.
+  private unlocks(data: GameXpEligible): FlareUnlock[] {
+    if (this.view.kind !== "result") return [];
+    return (data.flares ?? []).map((f) => flareUnlock(f, this.catalog));
+  }
+
+  private loadCatalog(): void {
+    if (this.catalogRequested) return;
+    this.catalogRequested = true;
+    void fetchCosmetics()
+      .then((cosmetics) => {
+        this.catalog = resolveCosmetics(cosmetics, false, null);
+      })
+      .catch(() => {
+        // Named from the flare alone, without a preview.
+      });
+  }
+
+  // The "Unlocked" half of a milestone (or Legend) card, one per cosmetic
+  // the game unlocked: after the card has landed, a divider draws and the
+  // half wipes in from it, its preview popping in. Its space is kept from
+  // the start, so the card never changes size. On a phone it wraps under
+  // the milestone.
+  private renderUnlocks(
+    data: GameXpEligible,
+    divider: boolean,
+  ): TemplateResult | typeof nothing {
+    const unlocks = this.unlocks(data);
+    if (unlocks.length === 0) return nothing;
+    const r = this.reveal;
+    const shown = r === null || r.unlockShown;
+    const animate = r !== null && shown;
+    const hidden = shown ? "" : "invisible";
+    return html`${unlocks.map(
+      (u) =>
+        html`${divider
+            ? html`<span
+                aria-hidden="true"
+                class="hidden w-px self-stretch bg-yellow-400/30 sm:block ${hidden} ${animate
+                  ? "xp-unlock-sep"
+                  : ""}"
+              ></span>`
+            : nothing}
+          <div
+            data-xp-unlock=${u.flare.flareName}
+            data-xp-slot-hidden=${shown ? nothing : "true"}
+            class="flex min-w-0 basis-full items-center justify-center gap-2.5 sm:basis-auto ${hidden} ${animate
+              ? "xp-unlock-in"
+              : ""}"
+          >
+            <span
+              class="grid h-11 w-11 shrink-0 place-items-center overflow-hidden rounded-lg border border-purple-400/60 bg-white/5 p-0.5 shadow-[0_0_14px_rgba(192,132,252,0.45)] ${animate
+                ? "xp-unlock-pop"
+                : ""}"
+            >
+              ${u.resolved !== null
+                ? html`<cosmetic-preview
+                    class="block h-full w-full"
+                    .resolved=${u.resolved}
+                    size="card"
+                  ></cosmetic-preview>`
+                : html`<span aria-hidden="true" class="text-xl text-purple-200"
+                    >★</span
+                  >`}
+            </span>
+            <div class="min-w-0 text-left">
+              <div
+                class="text-[10px] font-bold uppercase tracking-[0.18em] text-purple-300"
+              >
+                ${translateText("progression.unlocked")}
+              </div>
+              <div
+                data-xp-unlock-name
+                class="truncate text-base font-black leading-tight text-white"
+              >
+                ${u.name}
+              </div>
+              <div class="truncate text-[11px] text-white/55">
+                ${translateText("progression.unlock_in_locker", {
+                  type: u.typeLabel,
+                })}
+              </div>
+            </div>
+          </div>`,
+    )}`;
+  }
+
+  // A cosmetic unlocked at a level with no milestone card of its own: the
+  // "Unlocked" half on a card by itself, its space sliding open.
+  private renderUnlockCard(
+    data: GameXpEligible,
+  ): TemplateResult | typeof nothing {
+    if ((data.flares ?? []).length === 0) return nothing;
+    const r = this.reveal;
+    const shown = r === null || r.unlockShown;
+    return this.collapsible(
+      shown,
+      html`<div
+        data-xp-unlock-card
+        class="xp-shine mt-3 flex flex-wrap items-center justify-center gap-x-3 gap-y-2 rounded-xl border border-purple-400/30 bg-gradient-to-r from-transparent via-purple-500/10 to-transparent px-3 py-2"
+      >
+        ${this.renderUnlocks(data, false)}
+      </div>`,
+    );
+  }
+
+  // ---------------------------------------------------------------------------
+  // Level rewards: the row under the level-up, and claiming it.
+  // ---------------------------------------------------------------------------
+
+  // The rewards row, once the reveal has reached the game's last level-up:
+  // its space slides open and it rises in like a source card, its amounts
+  // counting up. Only for the server's result (never a provisional figure),
+  // and not in the past-game summary.
+  private renderRewards(data: GameXpEligible): TemplateResult | typeof nothing {
+    const summary = summarizeGameRewards(this.rewardsOf(data));
+    if (summary === null) return nothing;
+    const r = this.reveal;
+    const shown = r === null || r.rewardsShown;
+    const count = r === null ? 1 : r.rewardsCount;
+    return this.collapsible(
+      shown,
+      html`<div
+        data-xp-rewards
+        data-xp-slot-hidden=${shown ? nothing : "true"}
+        class="xp-shine mt-3 flex flex-wrap items-center gap-3 rounded-xl border border-white/10 bg-white/5 px-3.5 py-2.5 ${this.slideSlotClass(
+          shown,
+        )}"
+      >
+        <div class="min-w-0 flex-[1_1_220px]">
+          <div
+            data-xp-rewards-heading
+            class="mb-1 text-[10px] font-bold uppercase tracking-[0.18em] text-white/50"
+          >
+            ${translateText(summary.headingKey, summary.headingParams)}
+          </div>
+          <div class="flex flex-wrap items-center gap-x-4 gap-y-1">
+            ${summary.lines.map((line) => this.renderRewardLine(line, count))}
+            ${summary.heldLines.map((line) =>
+              this.renderRewardLine(line, count, line.labelKey),
+            )}
+          </div>
+        </div>
+        <div data-xp-claim-area class="ml-auto flex items-center gap-2">
+          ${this.renderClaim(data, summary)}
+        </div>
+      </div>`,
+    );
+  }
+
+  // A held line (`heldKey`) also says why it can't be claimed yet, as the
+  // rewards panel does; the Claim button leaves it out.
+  private renderRewardLine(
+    line: RewardLine,
+    count: number,
+    heldKey?: string,
+  ): TemplateResult {
+    const soft = line.currency === "soft";
+    const amount =
+      count >= 1
+        ? line.total.toLocaleString()
+        : Math.round(Number(line.total) * count).toLocaleString();
+    return html`<div
+      data-xp-reward=${line.currency}
+      ?data-xp-reward-held-line=${heldKey !== undefined}
+      class="flex items-center gap-1.5"
+    >
+      ${soft
+        ? html`<cap-icon .size=${24}></cap-icon>`
+        : html`<plutonium-icon .size=${20}></plutonium-icon>`}
+      <span
+        data-xp-reward-amount
+        class="text-xl font-black tabular-nums ${soft
+          ? "text-amber-700"
+          : "text-green-400"}"
+        >+${amount}</span
+      >
+      <span class="text-[13px] font-bold text-white/80"
+        >${translateText(soft ? "cosmetics.soft" : "cosmetics.hard")}</span
+      >
+      ${line.each !== null
+        ? html`<span data-xp-reward-each class="text-xs text-white/45"
+            >${translateText("progression.rewards_each", {
+              count: line.count,
+              amount: line.each.toLocaleString(),
+            })}</span
+          >`
+        : nothing}
+      ${heldKey !== undefined
+        ? html`<span data-xp-reward-held class="text-xs font-bold text-white/60"
+            >${translateText(heldKey)}</span
+          >`
+        : nothing}
+    </div>`;
+  }
+
+  private renderClaim(
+    data: GameXpEligible,
+    summary: GameRewardsSummary,
+  ): TemplateResult | typeof nothing {
+    const claim = this.claim;
+    // Every reward held: nothing to claim, and nothing was.
+    if (!summary.claimable) return nothing;
+    if (
+      claim.status === "claimed" ||
+      (claim.status === "idle" && summary.allClaimed)
+    ) {
+      const to = claim.status === "claimed" ? claim.to : null;
+      const from = claim.status === "claimed" ? claim.from : null;
+      return this.renderClaimed(summary, from, to);
+    }
+    const claiming = claim.status === "claiming";
+    return html`<div class="flex flex-col items-end gap-1">
+      <span
+        data-xp-claim
+        class="inline-flex transition-transform duration-75 ${this
+          .claimPressed && !claiming
+          ? "scale-95"
+          : ""}"
+        @pointerdown=${(e: PointerEvent) => {
+          e.stopPropagation();
+          this.claimPressed = true;
+        }}
+        @pointerup=${() => (this.claimPressed = false)}
+        @pointerleave=${() => (this.claimPressed = false)}
+        @pointercancel=${() => (this.claimPressed = false)}
+        @click=${(e: Event) => {
+          // The rest of the panel skips the reveal; this button doesn't.
+          e.stopPropagation();
+          void this.claimRewards(data);
+        }}
+      >
+        <o-button
+          variant="primary"
+          size="sm"
+          translationKey=${claiming
+            ? "progression.rewards_claiming"
+            : "account_modal.claim"}
+          .disable=${claiming}
+          .icon=${claiming
+            ? html`<span
+                data-xp-claim-spinner
+                aria-hidden="true"
+                class="h-3.5 w-3.5 shrink-0 animate-spin rounded-full border-2 border-white/35 border-t-white motion-reduce:animate-none"
+              ></span>`
+            : undefined}
+        ></o-button>
+      </span>
+      ${claim.status === "idle" && claim.failed
+        ? html`<span
+            data-xp-claim-error
+            role="alert"
+            class="text-xs text-red-300"
+            >${translateText("account_modal.claim_failed")}</span
+          >`
+        : nothing}
+    </div>`;
+  }
+
+  private renderClaimed(
+    summary: GameRewardsSummary,
+    from: Balances | null,
+    to: Balances | null,
+  ): TemplateResult {
+    const f = this.balanceCount;
+    const at = (key: keyof Balances) =>
+      to === null
+        ? ""
+        : Math.round(
+            (from?.[key] ?? to[key]) + (to[key] - (from?.[key] ?? to[key])) * f,
+          ).toLocaleString();
+    const plutonium = summary.lines.some((l) => l.currency === "hard");
+    return html`<div
+      data-xp-claimed
+      class="xp-claimed-in flex flex-col items-end gap-0.5"
+    >
+      <span
+        class="inline-flex items-center gap-1.5 text-sm font-extrabold text-emerald-400"
+      >
+        <svg
+          class="xp-check-in h-4 w-4"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="3.2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          aria-hidden="true"
+        >
+          <path d="M5 12.5l4.5 4.5L19 7.5"></path>
+        </svg>
+        ${translateText("progression.rewards_claimed")}
+      </span>
+      ${to !== null
+        ? html`<span
+            data-xp-balance
+            class="text-[11px] tabular-nums text-white/50"
+            >${plutonium
+              ? translateText("progression.rewards_balance", {
+                  caps: at("soft"),
+                  plutonium: at("hard"),
+                })
+              : translateText("progression.rewards_balance_caps", {
+                  caps: at("soft"),
+                })}</span
+          >`
+        : nothing}
+    </div>`;
+  }
+
+  private resetClaim(): void {
+    this.claimToken++;
+    this.clearClaimTimers();
+    this.claim = { status: "idle", failed: false };
+    this.claimPressed = false;
+    this.balanceCount = 1;
+    this.claimedIds = new Set();
+    this.refusedHolds = new Map();
+  }
+
+  // The game's rewards, those refused as held since arriving marked held:
+  // the row then shows them with why, and neither claims nor counts them.
+  // Only the server's confirmed result has rewards: a provisional figure
+  // never shows (or claims) any.
+  private rewardsOf(data: GameXpEligible): readonly GameXpReward[] {
+    if (this.view.kind !== "result") return [];
+    return withRefusedHolds(data.rewards ?? [], this.refusedHolds);
+  }
+
+  private clearClaimTimers(): void {
+    for (const t of this.claimTimers) clearTimeout(t);
+    this.claimTimers = [];
+  }
+
+  // Claims this game's rewards, and only these: never the player's other
+  // pending rewards. Works mid-reveal too.
+  private async claimRewards(data: GameXpEligible): Promise<void> {
+    if (this.claim.status !== "idle") return;
+    const token = this.claimToken;
+    this.claim = { status: "claiming" };
+    const outcome = await claimGameRewards(
+      this.rewardsOf(data),
+      this.claimedIds,
+    );
+    if (token !== this.claimToken) return;
+    for (const id of outcome.claimedIds) this.claimedIds.add(id);
+    if (outcome.held.length > 0) {
+      const holds = new Map(this.refusedHolds);
+      for (const { id, held } of outcome.held) holds.set(id, held);
+      this.refusedHolds = holds;
+    }
+    if (!outcome.ok) {
+      this.claim = { status: "idle", failed: true };
+      return;
+    }
+    // Read afresh: the claims dropped the cached copy.
+    const me = await getUserMe();
+    if (token !== this.claimToken) return;
+    const to =
+      outcome.currency ?? (me === false ? null : (me.player.currency ?? null));
+    const from =
+      to === null || outcome.currency === null
+        ? to
+        : {
+            soft: to.soft - outcome.credited.soft,
+            hard: to.hard - outcome.credited.hard,
+          };
+    this.claim = { status: "claimed", from, to };
+    this.countBalance();
+    if (me !== false) {
+      this.dispatchEvent(
+        new CustomEvent<RewardsChangedDetail>("rewards-changed", {
+          detail: { currency: to, rewards: me.player.rewards ?? [] },
+          bubbles: true,
+          composed: true,
+        }),
+      );
+    }
+  }
+
+  private countBalance(): void {
+    this.clearClaimTimers();
+    if (prefersReducedMotion()) {
+      this.balanceCount = 1;
+      return;
+    }
+    this.balanceCount = 0;
+    const steps = Math.max(2, Math.round(BALANCE_COUNT_MS / 30));
+    for (let i = 1; i <= steps; i++) {
+      this.claimTimers.push(
+        setTimeout(
+          () => (this.balanceCount = easeOut(i / steps)),
+          BALANCE_LEAD_MS + (BALANCE_COUNT_MS * i) / steps,
+        ),
+      );
+    }
   }
 
   // One small card per XP source and multiplier, like the stats page tiles:

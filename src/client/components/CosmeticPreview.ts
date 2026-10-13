@@ -210,7 +210,7 @@ export class CosmeticPreview extends LitElement {
               >${subscription.hardCurrencySignupBonus.toLocaleString()}</span
             >
             <span class="text-[10px] text-white/50 uppercase"
-              >${translateText("cosmetics.signup_bonus")}</span
+              >${translateText("cosmetics.per_month")}</span
             >
           </div>
           <div class="self-start flex items-center gap-1.5">
@@ -228,14 +228,6 @@ export class CosmeticPreview extends LitElement {
               "cosmetics.verified_name",
             )}</span
           >
-          ${subscription.unlimitedRanked
-            ? html`<span
-                class="self-start text-left text-[10px] font-bold text-purple-300 uppercase tracking-wide"
-                ><span class="text-green-400">✓</span> ${translateText(
-                  "cosmetics.unlimited_ranked",
-                )}</span
-              >`
-            : nothing}
           ${subscription.canCreatePublicLobbies
             ? html`<span
                 class="self-start text-left text-[10px] font-bold text-purple-300 uppercase tracking-wide"

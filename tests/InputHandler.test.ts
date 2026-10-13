@@ -922,6 +922,21 @@ describe("InputHandler AutoUpgrade", () => {
   });
 
   describe("Keybinds JSON parsing", () => {
+    test("loads arrow movement and zoom fallback keys as configurable defaults", () => {
+      inputHandler.initialize();
+
+      expect((inputHandler as any).keybinds.moveUpArrow).toBe("ArrowUp");
+      expect((inputHandler as any).keybinds.moveLeftArrow).toBe("ArrowLeft");
+      expect((inputHandler as any).keybinds.moveDownArrow).toBe("ArrowDown");
+      expect((inputHandler as any).keybinds.moveRightArrow).toBe("ArrowRight");
+      expect((inputHandler as any).keybinds.zoomOutMinus).toBe("Minus");
+      expect((inputHandler as any).keybinds.zoomOutNumpad).toBe(
+        "NumpadSubtract",
+      );
+      expect((inputHandler as any).keybinds.zoomInEqual).toBe("Equal");
+      expect((inputHandler as any).keybinds.zoomInNumpad).toBe("NumpadAdd");
+    });
+
     test("parses nested object values and flattens them to strings", () => {
       const nested = {
         moveUp: { key: "moveUp", value: "KeyZ" },

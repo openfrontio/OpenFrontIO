@@ -38,6 +38,8 @@ function boot(
     grantWelcomeDue: false,
     grantEndedDue: false,
     grantStringsReady: true,
+    steamNotice: null,
+    steamNoticeStringsReady: true,
     rewardCount: 0,
     claimPromptDue: true,
     claimStringsReady: true,
@@ -428,13 +430,19 @@ describe("runBootInterrupt", () => {
       openRewards: () => calls.rewardsOpened++,
       storeClaimPrompt: (store) => calls.stored.push(store),
       storeSteamGrant: (store) => calls.grantStored.push(store),
+      markNoticeSeen: () => {},
       now: () => now,
       ...overrides,
     };
     return { base, calls };
   }
 
-  const context = { claimStore: {}, grantStore: {}, publicId: ME };
+  const context = {
+    claimStore: {},
+    grantStore: {},
+    publicId: ME,
+    steamNotice: null,
+  };
 
   async function run(
     interrupt: BootInterrupt | null,
@@ -707,6 +715,8 @@ describe("an unready claim prompt yields the boot rather than eating it", () => 
     grantWelcomeDue: false,
     grantEndedDue: false,
     grantStringsReady: false,
+    steamNotice: null,
+    steamNoticeStringsReady: false,
     rewardCount: 2,
     claimPromptDue: true,
     claimStringsReady: claimPromptStringsReady(unready),
@@ -726,7 +736,7 @@ describe("an unready claim prompt yields the boot rather than eating it", () => 
     };
     await runBootInterrupt(
       nextBootInterrupt(inputs),
-      { claimStore: {}, grantStore: {}, publicId: ME },
+      { claimStore: {}, grantStore: {}, publicId: ME, steamNotice: null },
       {
         translate: unready,
         confirm: async (body) => {
@@ -739,6 +749,7 @@ describe("an unready claim prompt yields the boot rather than eating it", () => 
         openRewards: () => calls.rewardsOpened++,
         storeClaimPrompt: (store) => calls.stored.push(store),
         storeSteamGrant: () => {},
+        markNoticeSeen: () => {},
         now: () => 1_757_000_000_000,
       },
     );
@@ -856,6 +867,7 @@ describe("running the Steam grant notices", () => {
       openRewards: () => calls.rewardsOpened++,
       storeClaimPrompt: () => {},
       storeSteamGrant: (store) => calls.grantStored.push(store),
+      markNoticeSeen: () => {},
       now: () => now,
     };
     return { base, calls };
@@ -865,7 +877,7 @@ describe("running the Steam grant notices", () => {
     const { base, calls } = ports();
     await runBootInterrupt(
       "grant-welcome",
-      { claimStore: {}, grantStore, publicId: ME },
+      { claimStore: {}, grantStore, publicId: ME, steamNotice: null },
       base,
     );
     expect(calls.alerted).toEqual([
@@ -894,7 +906,7 @@ describe("running the Steam grant notices", () => {
     };
     await runBootInterrupt(
       "grant-welcome",
-      { claimStore: {}, grantStore, publicId: ME },
+      { claimStore: {}, grantStore, publicId: ME, steamNotice: null },
       base,
     );
     expect(storedBeforeAlert).toBe(true);
@@ -907,7 +919,7 @@ describe("running the Steam grant notices", () => {
     const { base, calls } = ports();
     await runBootInterrupt(
       "grant-ended",
-      { claimStore: {}, grantStore, publicId: ME },
+      { claimStore: {}, grantStore, publicId: ME, steamNotice: null },
       base,
     );
     expect(calls.alerted).toEqual([
@@ -927,7 +939,7 @@ describe("running the Steam grant notices", () => {
     for (const interrupt of ["grant-welcome", "grant-ended"] as const) {
       await runBootInterrupt(
         interrupt,
-        { claimStore: {}, grantStore: {}, publicId: ME },
+        { claimStore: {}, grantStore: {}, publicId: ME, steamNotice: null },
         base,
       );
     }
@@ -942,7 +954,7 @@ describe("running the Steam grant notices", () => {
     for (const interrupt of ["grant-welcome", "grant-ended"] as const) {
       await runBootInterrupt(
         interrupt,
-        { claimStore: {}, grantStore, publicId: ME },
+        { claimStore: {}, grantStore, publicId: ME, steamNotice: null },
         base,
       );
     }

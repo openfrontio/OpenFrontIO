@@ -109,6 +109,11 @@ export const RewardSchema = z.object({
   amount: z.string(),
   reason: z.string(),
   note: z.string().nullable(),
+  // On a level reward (`level_up` / `level_milestone`): the level it was
+  // paid for, and the prestige run it was reached in. Absent on every other
+  // reward, and on an API that predates them.
+  level: z.number().optional(),
+  prestige: z.number().optional(),
   // Why the reward can't be claimed yet; absent when it can. "trust": level
   // Plutonium, kept until the account is trusted. Any other non-empty value is
   // a hold this client doesn't know yet, and still reads as held: an unknown
@@ -207,6 +212,34 @@ export const XpBreakdownSchema = z.object({
 });
 export type XpBreakdown = z.infer<typeof XpBreakdownSchema>;
 
+// A level reward one game earned (GET /users/@me/xp/:gameId `rewards`).
+export const GameXpRewardSchema = RewardSchema.extend({
+  prestige: z.number(),
+  level: z.number(),
+  claimed: z.boolean(),
+});
+export type GameXpReward = z.infer<typeof GameXpRewardSchema>;
+
+// A flare one game unlocked from the level track: a level's (`prestige` and
+// `level` are the run and level crossed) or Legend's (both null). `kind`
+// stays a string so a new kind never fails the parse.
+export const GameXpFlareSchema = z.object({
+  kind: z.string(),
+  prestige: z.number().nullable(),
+  level: z.number().nullable(),
+  flareId: z.string(),
+  flareName: z.string(),
+  // The cosmetic behind the flare, when it is one.
+  cosmetic: z
+    .object({
+      type: z.string(),
+      name: z.string(),
+      url: z.string().nullable(),
+    })
+    .nullable(),
+});
+export type GameXpFlare = z.infer<typeof GameXpFlareSchema>;
+
 // GET /users/@me/xp/:gameId — the XP a finished game awarded the caller. 404
 // until the game has been processed. `reason` is open-ended server-side, so it
 // stays a string: an unknown reason shows a generic line, never a parse error.
@@ -221,6 +254,14 @@ export const GameXpEligibleSchema = z.object({
     .array(z.object({ prestige: z.number(), level: z.number() }))
     .optional()
     .default([]),
+  // What the levels this game crossed paid: one entry per grant, in level
+  // order, Caps before Plutonium. `id` is the reward to claim while
+  // `claimed` is false. Optional (an API without it still parses), and a
+  // malformed list reads as absent rather than failing the result.
+  rewards: z.array(GameXpRewardSchema).optional().catch(undefined),
+  // The cosmetics this game unlocked from the level track (already granted:
+  // nothing to claim). Same leniency as `rewards`.
+  flares: z.array(GameXpFlareSchema).optional().catch(undefined),
 });
 export const GameXpIneligibleSchema = z.object({
   gameId: z.string(),
@@ -246,6 +287,21 @@ export const PublicProgressSchema = z.object({
   // is left out.
   xpInLevel: z.number().optional(),
   xpForNext: z.number().optional(),
+  // For the profile's Progression tab. Optional, and a malformed list reads
+  // as absent rather than failing the whole response (the level still shows).
+  // When each prestige rank was entered (ISO dates), ordered by rank.
+  prestigeHistory: z
+    .array(z.object({ rank: z.number(), at: z.string() }))
+    .optional()
+    .catch(undefined),
+  // The first time each milestone level (10/25/50/75/100) was reached in each
+  // prestige run (ISO dates), ordered by run then level.
+  milestones: z
+    .array(
+      z.object({ prestige: z.number(), level: z.number(), at: z.string() }),
+    )
+    .optional()
+    .catch(undefined),
 });
 export type PublicProgress = z.infer<typeof PublicProgressSchema>;
 
@@ -496,14 +552,33 @@ export const UserMeResponseSchema = z.object({
     })
     .nullable()
     .optional(),
+  // Owns OpenFront on Steam. A licence is not a subscription: it confers
+  // custom lobbies and the verified name with `subscription` null, so a
+  // licence holder with no subscription has not lapsed.
+  steamLicence: z.boolean().optional().default(false),
+  // ISO date the player's Steam account first owned the base game, or null
+  // when unknown.
+  steamLicenceSince: z.string().nullable().optional().default(null),
+  // Notice keys this player has dismissed (POST /users/@me/notices).
+  noticesSeen: z.array(z.string()).optional().default([]),
+  // The player's most recent automatic tier conversion, if any.
+  tierConversion: z
+    .object({
+      id: z.string(),
+      fromTierName: z.string(),
+      toTierName: z.string(),
+      convertedAt: z.string(),
+    })
+    .nullable()
+    .optional(),
   player: z.object({
     publicId: z.string(),
     adfree: z.boolean(),
-    // True when the player's active subscription tier exempts them from the
-    // free-ranked-play limits.
-    unlimitedRanked: z.boolean(),
+    // Ranked play limits are gone; the API still sends this and a later
+    // release drops it. Nothing reads it.
+    unlimitedRanked: z.boolean().optional(),
     // True when the player may list a custom lobby publicly. The API decides
-    // which subscriptions/grants confer this.
+    // which subscriptions, grants and Steam licences confer this.
     canCreatePublicLobbies: z.boolean(),
     // Account trust as computed by the API. "untrusted" means new, unlinked or
     // banned, never an accusation. null when the API's computation failed;
@@ -1050,6 +1125,7 @@ const RecentRankedStatsSchema = z.object({
   [RankedType.OneVOne]: PlayerRecentStatsSchema.optional(),
   [RankedType.TwoVTwo]: PlayerRecentStatsSchema.optional(),
   [RankedType.FreeForAll]: PlayerRecentStatsSchema.optional(),
+  [RankedType.ClanWars]: PlayerRecentStatsSchema.optional(),
 });
 
 export const PlayerRecentStatsTreeSchema = z.object({

@@ -360,12 +360,6 @@ export class CosmeticCard extends LitElement {
         info: translateText("cosmetics.verified_name_info"),
       },
     ];
-    if (subscription.unlimitedRanked) {
-      perks.push({
-        label: translateText("cosmetics.unlimited_ranked"),
-        info: translateText("cosmetics.unlimited_ranked_info"),
-      });
-    }
     if (subscription.canCreatePublicLobbies) {
       perks.push({
         label: translateText("cosmetics.public_lobbies"),

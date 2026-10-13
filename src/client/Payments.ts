@@ -358,6 +358,8 @@ function checkoutError(
       );
     case "rate_limited":
       return error(translateText("store.checkout_rate_limited"));
+    case "steam_licence_required":
+      return error(translateText("store.steam_licence_required"));
     // Not a breakage: the rail is deliberately switched off (501, never 500).
     case "provider_unavailable":
       return error(translateText("store.checkout_rail_unavailable"));

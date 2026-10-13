@@ -4,7 +4,7 @@ import { html, TemplateResult } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import { renderFreePlayPerks } from "./components/FreePlayPerks";
 import "./components/SubscriptionPanel";
-import { fetchCosmetics } from "./Cosmetics";
+import { fetchCosmetics, subscriptionTier } from "./Cosmetics";
 import { ProfileMenuModal } from "./ProfileMenuModal";
 import { translateText } from "./Utils";
 
@@ -47,7 +47,9 @@ export class SubscriptionModal extends ProfileMenuModal {
               ${translateText("subscription_modal.none")}
             </p>
             <div class="w-full text-left rounded-lg bg-white/5 px-4 py-3">
-              ${renderFreePlayPerks("free_play.free_heading")}
+              ${userMe.steamLicence
+                ? renderFreePlayPerks("free_play.licence_heading", true)
+                : renderFreePlayPerks("free_play.free_heading")}
             </div>
             <o-button
               variant="primary"
@@ -67,7 +69,8 @@ export class SubscriptionModal extends ProfileMenuModal {
         <div class="p-6">
           <subscription-panel
             .sub=${sub}
-            .cosmetic=${this.cosmetics?.subscriptions?.[sub.tier] ?? null}
+            .cosmetic=${subscriptionTier(this.cosmetics, sub.tier)}
+            .steamLicence=${userMe.steamLicence}
             @request-close=${() => this.close()}
           ></subscription-panel>
         </div>

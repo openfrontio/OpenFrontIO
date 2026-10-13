@@ -978,5 +978,56 @@ describe("LeaderboardModal", () => {
       expect(modal.textContent).toContain("Something went wrong");
       expect(modal.textContent).toContain("Try Again");
     });
+
+    it("should show each clan's elo and sort unrated clans last", async () => {
+      const clan = (clanTag: string, elo: number | null) => ({
+        clanTag,
+        games: 10,
+        wins: 5,
+        losses: 5,
+        playerSessions: 20,
+        weightedWins: 5,
+        weightedLosses: 5,
+        weightedWLRatio: 1,
+        elo,
+      });
+      (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          start: "2025-01-01T00:00:00Z",
+          end: "2025-01-07T23:59:59Z",
+          clans: [clan("NONE", null), clan("LOW", 1490), clan("HIGH", 1530)],
+        }),
+      });
+
+      (modal as unknown as { activeTab: string }).activeTab = "clans";
+      const clanTable = getClanTable();
+      await clanTable!.loadClanLeaderboard();
+      await clanTable!.updateComplete;
+
+      const rows = () =>
+        [...modal.querySelectorAll("leaderboard-clan-table tbody tr")].map(
+          (tr) =>
+            [...tr.querySelectorAll("td")].map((td) => td.textContent!.trim()),
+        );
+      expect(rows().map((r) => [r[1], r[2]])).toEqual([
+        ["NONE", "—"],
+        ["LOW", "1490"],
+        ["HIGH", "1530"],
+      ]);
+
+      const eloButton = [
+        ...modal.querySelectorAll<HTMLButtonElement>(
+          "leaderboard-clan-table th button",
+        ),
+      ].find((b) => b.textContent!.includes("Elo"))!;
+      eloButton.click();
+      await clanTable!.updateComplete;
+      expect(rows().map((r) => r[1])).toEqual(["HIGH", "LOW", "NONE"]);
+
+      eloButton.click();
+      await clanTable!.updateComplete;
+      expect(rows().map((r) => r[1])).toEqual(["LOW", "HIGH", "NONE"]);
+    });
   });
 });
