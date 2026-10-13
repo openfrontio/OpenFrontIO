@@ -648,29 +648,17 @@ describe("Map consistency", () => {
             `${key}: layer PNG "${layer.id}.png" missing in map-generator/assets/maps/${folder}/`,
           );
         }
-        // Until every map is regenerated, a layer may still ship as the
-        // copied PNG; once the WebP outputs exist the PNG must be gone.
-        const webps = [`${layer.id}.webp`, `${layer.id}.4x.webp`];
-        const hasWebp = webps.some((f) => fs.existsSync(path.join(resDir, f)));
-        const hasPng = fs.existsSync(path.join(resDir, `${layer.id}.png`));
-        if (!hasWebp && !hasPng) {
-          errors.push(
-            `${key}: layer "${layer.id}" has no image in resources/maps/${folder}/ (run the map generator)`,
-          );
-        }
-        if (hasWebp) {
-          for (const file of webps) {
-            if (!fs.existsSync(path.join(resDir, file))) {
-              errors.push(
-                `${key}: layer image "${file}" missing in resources/maps/${folder}/ (run the map generator)`,
-              );
-            }
-          }
-          if (hasPng) {
+        for (const file of [`${layer.id}.webp`, `${layer.id}.4x.webp`]) {
+          if (!fs.existsSync(path.join(resDir, file))) {
             errors.push(
-              `${key}: stale layer PNG "${layer.id}.png" in resources/maps/${folder}/ (layers ship as WebP)`,
+              `${key}: layer image "${file}" missing in resources/maps/${folder}/ (run the map generator)`,
             );
           }
+        }
+        if (fs.existsSync(path.join(resDir, `${layer.id}.png`))) {
+          errors.push(
+            `${key}: stale layer PNG "${layer.id}.png" in resources/maps/${folder}/ (layers ship as WebP)`,
+          );
         }
       }
     }
