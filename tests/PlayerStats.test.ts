@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 import { UserSettings } from "../src/client/UserSettings";
 import {
   goldCoinIcon,

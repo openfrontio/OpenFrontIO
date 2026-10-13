@@ -313,7 +313,6 @@ export default defineConfig(({ mode }) => {
   return {
     test: {
       globals: true,
-      environment: "jsdom",
       setupFiles: "./tests/setup.ts",
       // Node 25 turned Web Storage on by default, where `localStorage` is a
       // built-in global that evaluates to undefined unless --localstorage-file
@@ -335,6 +334,27 @@ export default defineConfig(({ mode }) => {
         ...configDefaults.exclude,
         "**/.worktrees/**",
         "**/.claude/worktrees/**",
+      ],
+      // Starting jsdom costs every file ~0.5s, more than many of them spend
+      // running tests, so only the client tests get it. A test elsewhere that
+      // needs a DOM opts in with a `// @vitest-environment jsdom` first line.
+      projects: [
+        {
+          extends: true,
+          test: {
+            name: "client",
+            environment: "jsdom",
+            include: ["tests/client/**/*.test.ts"],
+          },
+        },
+        {
+          extends: true,
+          test: {
+            name: "node",
+            environment: "node",
+            exclude: ["tests/client/**"],
+          },
+        },
       ],
     },
     root: "./",

@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 import { GameMode } from "@openfront/engine-api/game/GameTypes";
 import { EventBus } from "@openfront/shared/EventBus";
 import { GameLeftSidebar } from "../src/client/hud/layers/GameLeftSidebar";

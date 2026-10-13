@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 import type { PlayerCosmetics } from "@openfront/shared/WireSchemas";
 import { colord } from "colord";
 import { describe, expect, it } from "vitest";
