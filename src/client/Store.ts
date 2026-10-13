@@ -2,7 +2,12 @@ import type { PropertyValues, TemplateResult } from "lit";
 import { html } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import { isGrantedSubscription, UserMeResponse } from "../core/ApiSchemas";
-import { CosmeticPack, Cosmetics, Product } from "../core/CosmeticSchemas";
+import {
+  CosmeticPack,
+  Cosmetics,
+  Product,
+  Subscription,
+} from "../core/CosmeticSchemas";
 import { BaseModal } from "./components/BaseModal";
 import "./components/CosmeticCard";
 import { cosmeticSelectionLabel } from "./components/CosmeticPresentation";
@@ -34,6 +39,17 @@ import {
 } from "./Payments";
 import { translateText } from "./Utils";
 
+// Matches the API's formatting of `product.price`, so a tier priced from its
+// own cents reads the same as one priced from its Stripe listing.
+const usdFormatter = new Intl.NumberFormat("en-US", {
+  style: "currency",
+  currency: "USD",
+});
+
+function formatUsdCents(cents: number): string {
+  return usdFormatter.format(cents / 100);
+}
+
 type StoreTab =
   | "cosmetics"
   | "bundles"
@@ -51,6 +67,7 @@ interface StoreBrowserOptions {
   trailingContent?: TemplateResult;
   gridClass?: string;
   cardClass?: string;
+  previewSize?: "card" | "detail";
   emptyClass?: string;
 }
 
@@ -355,6 +372,7 @@ export class StoreModal extends BaseModal {
     groups: readonly (readonly ResolvedCosmetic[])[] = this.visibleGroups,
     userHasSubscription = false,
     cardClass = "block h-full min-w-0",
+    previewSize: "card" | "detail" = "card",
   ): TemplateResult {
     return html`${groups.map((group) => {
       const focused = group.find((item) => item.key === this.inspected?.key);
@@ -364,6 +382,7 @@ export class StoreModal extends BaseModal {
         data-store-product
         data-cosmetic-key=${group[0].key}
         class=${cardClass}
+        previewSize=${previewSize}
         .resolved=${group[0]}
         .variants=${group.length > 1 ||
         group[0].type === "pattern" ||
@@ -400,6 +419,12 @@ export class StoreModal extends BaseModal {
       (resolved.type === "pack" || resolved.type === "subscription")
         ? (priced?.product ?? null)
         : null;
+    // A tier with no Stripe listing (sold only on Steam) has no `product`;
+    // its price is the tier's own, in cents.
+    const subscriptionDollarPrice =
+      isPurchasable && resolved.type === "subscription" && product === null
+        ? formatUsdCents((resolved.cosmetic as Subscription).priceMonthly)
+        : "";
     const priceHard = isPurchasable ? priced?.priceHard : undefined;
     const priceSoft = isPurchasable ? priced?.priceSoft : undefined;
     const purchase = (method: "dollar" | "hard" | "soft") =>
@@ -427,6 +452,7 @@ export class StoreModal extends BaseModal {
     // alignPurchaseRows() once the grid has laid out.
     return html`<purchase-button
       .product=${product}
+      .dollarPrice=${subscriptionDollarPrice}
       .inlineCheckout=${inlineCheckout}
       .priceHard=${priceHard ?? null}
       .priceSoft=${priceSoft ?? null}
@@ -438,7 +464,9 @@ export class StoreModal extends BaseModal {
       .priceSuffix=${resolved.type === "subscription"
         ? translateText("store.price_per_month")
         : ""}
-      .onPurchaseDollar=${product ? () => purchase("dollar") : undefined}
+      .onPurchaseDollar=${product || subscriptionDollarPrice
+        ? () => purchase("dollar")
+        : undefined}
       .onPurchaseHard=${priceHard !== undefined
         ? () => purchase("hard")
         : undefined}
@@ -479,6 +507,7 @@ export class StoreModal extends BaseModal {
             page.items,
             options.userHasSubscription,
             options.cardClass,
+            options.previewSize,
           );
     return this.renderBrowserLayout(
       html`${cards}${page.more}${options.trailingContent ?? ""}`,
@@ -580,12 +609,18 @@ export class StoreModal extends BaseModal {
         ? null
         : this.userMeResponse.player.subscription;
     const userHasSubscription = sub !== null && !isGrantedSubscription(sub);
+    // The Steam store lists one tier; a lone card in the narrow tile column
+    // reads as a cramped list, so it gets a wider card and a larger preview.
+    const lone = this.visibleGroups.length === 1;
     return this.renderBrowser(this.visibleGroups, {
       emptyTranslationKey: "store.no_subscriptions",
       userHasSubscription,
       gridClass:
         "flex flex-wrap items-stretch justify-center content-start gap-4 p-4 sm:p-8",
-      cardClass: "block w-[calc(50%-0.5rem)] max-w-48 shrink-0 sm:w-48",
+      cardClass: lone
+        ? "block w-full max-w-xs shrink-0"
+        : "block w-[calc(50%-0.5rem)] max-w-48 shrink-0 sm:w-48",
+      previewSize: lone ? "detail" : "card",
       emptyClass:
         "w-full py-8 text-center text-sm font-bold uppercase tracking-wider text-white/40",
     });

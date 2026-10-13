@@ -19,7 +19,7 @@ import "./AccountModal";
 import "./AccountSettingsModal";
 import { adGatekeeper } from "./AdGatekeeper";
 import { loadAdmiral, onAdmiralMeasured } from "./Admiral";
-import { getUserMe, invalidateUserMe } from "./Api";
+import { getUserMe, invalidateUserMe, markNoticeSeen } from "./Api";
 import {
   getDesktopSessionState,
   reauthAfterCrazyGamesChange,
@@ -56,6 +56,7 @@ import { desktopPresence, type PresencePayload } from "./DesktopPresence";
 import { subscribeDesktopSessionRecovery } from "./DesktopSessionRecovery";
 import {
   desktopUpdate,
+  getDesktopUpdateState,
   isDesktopShell,
   type DesktopUpdateState,
 } from "./DesktopShell";
@@ -124,6 +125,7 @@ import {
 } from "./SteamLink";
 import "./SteamLinkModal";
 import { SteamLinkModal } from "./SteamLinkModal";
+import { steamNoticeDue, steamNoticeStringsReady } from "./SteamNotices";
 import { steamSDK } from "./SteamSDK";
 import { StoreModal } from "./Store";
 import "./SubscriptionModal";
@@ -788,6 +790,7 @@ class Client {
           window.location,
           isDesktopShell(),
           { joinInFlight: this.joinInFlight, lobbyHandle: this.lobbyHandle },
+          getDesktopUpdateState(),
         );
 
         // One interrupt per boot, chosen by the ordering in BootInterrupts —
@@ -797,6 +800,11 @@ class Client {
         const rewards = userMeResponse.player.rewards ?? [];
         const claimStore = parseClaimPromptStore(
           localStorage.getItem(CLAIM_PROMPT_KEY),
+        );
+        const steamNotice = steamNoticeDue(
+          userMeResponse,
+          isDesktopShell(),
+          Date.now(),
         );
         await runBootInterrupt(
           nextBootInterrupt({
@@ -816,11 +824,18 @@ class Client {
               Date.now(),
             ),
             grantStringsReady: steamGrantStringsReady(translateText),
+            steamNotice,
+            steamNoticeStringsReady: steamNoticeStringsReady(translateText),
             rewardCount: rewards.length,
             claimPromptDue: claimPromptDue(claimStore, Date.now(), publicId),
             claimStringsReady: claimPromptStringsReady(translateText),
           }),
-          { claimStore, grantStore: grantStoreAfterDispatch, publicId },
+          {
+            claimStore,
+            grantStore: grantStoreAfterDispatch,
+            publicId,
+            steamNotice,
+          },
           {
             translate: translateText,
             confirm: (body, heading, confirmText) =>
@@ -841,11 +856,18 @@ class Client {
             openRewards: () => this.rewardsModal?.openWithRewards(rewards),
             storeClaimPrompt: (store) =>
               localStorage.setItem(CLAIM_PROMPT_KEY, JSON.stringify(store)),
-            storeSteamGrant: (store) =>
+            updateSteamGrant: (update) =>
               localStorage.setItem(
                 STEAM_GRANT_NOTICE_KEY,
-                JSON.stringify(store),
+                JSON.stringify(
+                  update(
+                    parseSteamGrantStore(
+                      localStorage.getItem(STEAM_GRANT_NOTICE_KEY),
+                    ),
+                  ),
+                ),
               ),
+            markNoticeSeen: (notice) => void markNoticeSeen(notice),
             now: () => Date.now(),
           },
         );
