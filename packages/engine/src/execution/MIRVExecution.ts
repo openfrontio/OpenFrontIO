@@ -106,15 +106,14 @@ export class MirvExecution implements Execution {
 
       // Betrayal on launch — only once the missile has actually spawned, so
       // a fizzled launch pays no diplomatic cost.
-      const target = this.targetPlayer.isPlayer() ? this.targetPlayer : null;
-      if (target !== null) {
-        const alliance = this.player.allianceWith(target);
+      if (this.targetPlayer.isPlayer()) {
+        const alliance = this.player.allianceWith(this.targetPlayer);
         if (alliance !== null) {
           this.player.breakAlliance(alliance);
         }
-        if (target !== this.player) {
-          target.updateRelation(this.player, -100);
-          this.player.updateRelation(target, -100);
+        if (this.targetPlayer !== this.player) {
+          this.targetPlayer.updateRelation(this.player, -100);
+          this.player.updateRelation(this.targetPlayer, -100);
         }
       }
       const x = Math.floor((this.baseX + this.mg.x(this.nuke.tile())) / 2);
