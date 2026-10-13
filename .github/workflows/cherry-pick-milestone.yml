@@ -316,7 +316,12 @@ jobs:
         id: install-claude
         if: env.FIX_MODE != ''
         run: |
-          npm install -g @anthropic-ai/claude-code@2.1.281
+          set -euo pipefail
+          # The npm 12 installed above blocks install scripts by default, and
+          # without its postinstall the package's `claude` is a stub that fails
+          # to spawn (ENOEXEC).
+          npm install -g --allow-scripts=@anthropic-ai/claude-code @anthropic-ai/claude-code@2.1.281
+          claude --version
           echo "path=$(command -v claude)" >> "$GITHUB_OUTPUT"
 
       - name: Fix the pick with Claude (primary account)
