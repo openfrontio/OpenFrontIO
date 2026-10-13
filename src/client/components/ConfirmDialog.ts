@@ -104,7 +104,12 @@ export class ConfirmDialog extends LitElement {
                 ${this.heading}
               </h2>`
             : ""}
-          <p class="text-sm font-medium ${textColor} mb-5">${this.message}</p>
+          <!-- A property binding, so the template's own line breaks around
+               it never reach pre-line. -->
+          <p
+            class="text-sm font-medium ${textColor} mb-5 whitespace-pre-line"
+            .textContent=${this.message}
+          ></p>
           ${this.textareaPlaceholder
             ? html`<textarea
                 .value=${this.text}
