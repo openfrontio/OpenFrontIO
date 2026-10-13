@@ -614,7 +614,7 @@ export async function runBootInterrupt(
         );
       }
       const copy = steamNoticeCopy(notice, ports.translate, formatGrantDate);
-      await ports.alert(copy.paragraphs.join(" "), copy.heading);
+      await ports.alert(copy.paragraphs.join("\n\n"), copy.heading);
       return;
     }
     case "lapse-notice":

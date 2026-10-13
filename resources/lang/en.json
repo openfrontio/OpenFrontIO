@@ -1924,7 +1924,7 @@
     "conversion_from_warlord": "You get the same 550 plutonium a month, and your price drops from $9.99 to $4.99.",
     "conversion_heading": "You're on Steam Plus",
     "conversion_unchanged": "Nothing else changes.",
-    "licence_intro_body": "Custom lobbies and your verified name are now part of the game you bought. No subscription needed, for as long as you own OpenFront on Steam.",
+    "licence_intro_body": "Custom lobbies and your verified name are now part of the game you bought. No subscription needed.",
     "licence_intro_grant": "Your plutonium bonus runs until {date}. After that you keep everything you can do, and only the daily plutonium stops.",
     "licence_intro_heading": "Included with your copy of OpenFront",
     "licence_intro_plus": "Steam Plus keeps the plutonium coming: 10 a day and 250 a month for $4.99.",

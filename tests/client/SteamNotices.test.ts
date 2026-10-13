@@ -459,6 +459,13 @@ describe("the steam-notice boot interrupt", () => {
     expect(calls.alerted[0].heading).toBe(
       `t(${STEAM_NOTICE_KEYS.licenceHeading})`,
     );
+    // One paragraph per line of copy, so the Steam Plus upsell sits apart
+    // from what the player already has.
+    const paragraphs = calls.alerted[0].body.split("\n\n");
+    expect(paragraphs[0]).toBe(`t(${STEAM_NOTICE_KEYS.licenceBody})`);
+    expect(paragraphs[paragraphs.length - 1]).toBe(
+      `t(${STEAM_NOTICE_KEYS.licencePlus})`,
+    );
 
     // A later /users/@me in the same launch, before the server has caught up.
     expect(
