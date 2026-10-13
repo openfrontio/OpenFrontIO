@@ -127,13 +127,11 @@ export class JoinLobbyModal extends BaseModal {
       });
     }
     // Both affordances answer "get my friends into this lobby", so they sit
-    // together. Copy stays private-only (the ID is how a private lobby is
-    // shared); the Steam invite works for either, because the shell keeps a
-    // shadow lobby for any joined game.
-    const copy =
-      this.currentLobbyId && this.isPrivateLobby()
-        ? html`<copy-button .lobbyId=${this.currentLobbyId}></copy-button>`
-        : undefined;
+    // together. The Steam invite works for public and private lobbies alike,
+    // because the shell keeps a shadow lobby for any joined game.
+    const copy = html`<copy-button
+      .lobbyId=${this.currentLobbyId}
+    ></copy-button>`;
     // Except public FFA: inviting Steam friends into an every-man-for-himself
     // public match encourages teaming, so the button stays off there. Public
     // team lobbies and private lobbies keep it. A config that has not arrived
@@ -156,13 +154,9 @@ export class JoinLobbyModal extends BaseModal {
         ${this.gameStartAlert.renderBell()}`,
       onBack: () => this.closeAndLeave(),
       ariaLabel: translateText("common.close"),
-      // Only pair them behind a wrapper when both are present, so a browser --
-      // which never gets the invite button -- renders exactly the markup it
-      // rendered before this change.
-      rightContent:
-        copy && invite
-          ? html`<div class="flex items-center gap-2">${copy}${invite}</div>`
-          : (copy ?? invite),
+      rightContent: invite
+        ? html`<div class="flex items-center gap-2">${copy}${invite}</div>`
+        : copy,
     });
   }
 

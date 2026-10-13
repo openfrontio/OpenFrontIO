@@ -363,18 +363,22 @@ describe("JoinLobbyModal Steam invite button", () => {
     expect(renderHeader(modal).querySelector(INVITE)).not.toBeNull();
   });
 
-  it("does not suppress the private-lobby copy button", () => {
+  it("does not suppress the copy button", () => {
     presenceMocks.isAvailable.mockReturnValue(true);
-    const modal = lobbyModal();
-    vi.spyOn(
-      modal as unknown as { isPrivateLobby(): boolean },
-      "isPrivateLobby",
-    ).mockReturnValue(true);
 
-    const header = renderHeader(modal);
+    const header = renderHeader(lobbyModal());
 
     expect(header.querySelector("copy-button")).not.toBeNull();
     expect(header.querySelector(INVITE)).not.toBeNull();
+  });
+
+  it("shows the copy button in a public lobby", () => {
+    const modal = lobbyModal({
+      gameType: GameType.Public,
+      gameMode: GameMode.FFA,
+    });
+
+    expect(renderHeader(modal).querySelector("copy-button")).not.toBeNull();
   });
 });
 
