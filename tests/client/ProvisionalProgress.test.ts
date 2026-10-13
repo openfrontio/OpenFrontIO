@@ -407,6 +407,43 @@ describe("provisionalProgress", () => {
     }
   });
 
+  it("keeps counting a scored game while the account can't be re-read", async () => {
+    recordPendingXp("me", { gameId: "g1", xp: 250 }, T0);
+    const response = me();
+    broadcast(response);
+    await settle();
+    answers.set("g1", SCORED("g1"));
+    const changed = vi.fn();
+    document.addEventListener(PROVISIONAL_PROGRESS_CHANGED, changed);
+    try {
+      for (const failure of [
+        async () => false,
+        async () => Promise.reject(new Error("offline")),
+      ]) {
+        refreshUserMe.mockImplementationOnce(failure);
+        await settle();
+        // Not cleared, still counted: the figure showing leaves it out.
+        expect(readPendingXp("me", clock)).toHaveLength(1);
+        expect(
+          provisionalProgress("me", response.player.progress!).progress,
+        ).toMatchObject({ level: 3, xpInLevel: 40 });
+        expect(
+          changed.mock.calls.every(
+            ([event]) => scoredGames(event as Event).length === 0,
+          ),
+        ).toBe(true);
+      }
+      // The next check gets a new figure, and clears it.
+      await settle();
+      expect(readPendingXp("me", clock)).toEqual([]);
+      expect(
+        changed.mock.calls.map(([event]) => scoredGames(event as Event)),
+      ).toContainEqual(["g1"]);
+    } finally {
+      document.removeEventListener(PROVISIONAL_PROGRESS_CHANGED, changed);
+    }
+  });
+
   it("holds a read-once view's provisional level until its re-read settles", async () => {
     recordPendingXp("me", { gameId: "g1", xp: 250 }, T0);
     recordPendingXp("me", { gameId: "g2", xp: 30 }, T0);

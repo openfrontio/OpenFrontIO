@@ -374,7 +374,8 @@ export interface ProvisionalDeps {
   fetchXp: (gameId: string) => Promise<GameXpFetchResult>;
   // GET /public/progression/config.
   loadConfig: () => Promise<ProgressionConfig | false>;
-  // Re-reads /users/@me and broadcasts it (userMeResponse).
+  // Re-reads /users/@me and broadcasts it (userMeResponse); false when it
+  // couldn't.
   refreshUserMe: () => Promise<unknown>;
   now?: () => number;
   // How often to ask again while games are pending, and how many times per
@@ -593,14 +594,22 @@ export function runCheck(): Promise<void> {
     });
     // The confirmed figure first, so the level never dips to the old one
     // between the entry going and the new figure arriving.
+    let scored: string[] = [];
     if (answered.length > 0) {
-      await d.refreshUserMe().catch(() => undefined);
+      const refreshed = await d.refreshUserMe().catch(() => false);
       if (deps !== d || account !== forAccount) return;
-      clearPendingXp(forAccount, answered, now());
+      if (refreshed === false) {
+        // No new figure: the one showing still leaves these games out, so
+        // they keep counting until a later check gets one.
+        for (const gameId of answered) pending.add(gameId);
+      } else {
+        clearPendingXp(forAccount, answered, now());
+        scored = answered;
+      }
     }
     config = loaded === false ? null : loaded;
     verified = { account: forAccount, seq: checkSeq, pending };
-    emitChanged(answered);
+    emitChanged(scored);
     syncPolling();
   })();
   inFlight = run.finally(() => {
