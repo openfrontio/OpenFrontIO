@@ -99,7 +99,7 @@ describe("boot sequencing against a real <username-input>", () => {
       navigate: (hash) => calls.navigated.push(hash),
       openRewards: () => calls.rewardsOpened++,
       storeClaimPrompt: () => {},
-      storeSteamGrant: () => {},
+      updateSteamGrant: () => {},
       markNoticeSeen: () => {},
       now: () => Date.now(),
     };
