@@ -55,8 +55,8 @@ import { loadPlayerProgress } from "./PlayerProgress";
 import {
   PROVISIONAL_PROGRESS_CHANGED,
   ProvisionalHold,
-  scoredGames,
   provisionalProgress,
+  scoredGames,
 } from "./ProvisionalProgress";
 import { steamSDK } from "./SteamSDK";
 import { playerProfileUrl } from "./utilities/PlayerProfileUrl";
