@@ -114,6 +114,24 @@ describe("<profile-card>", () => {
     expect(text("[data-profile-xp]")).toContain("progression.max_level");
   });
 
+  it("says when the level is provisional, on both cards", async () => {
+    for (const variant of ["full", "compact"] as const) {
+      await render({ variant, username: "Wonder", progress: PRESTIGE_3 });
+      expect(card.querySelector("[data-profile-provisional]")).toBeNull();
+      card.remove();
+      await render({
+        variant,
+        username: "Wonder",
+        progress: PRESTIGE_3,
+        provisional: true,
+      });
+      expect(text("[data-profile-provisional]")).toContain(
+        "progression.provisional_label",
+      );
+      card.remove();
+    }
+  });
+
   it("renders nothing while progression is off", async () => {
     await render({ username: "Player", progress: null });
     expect(card.querySelector("[data-profile-card]")).toBeNull();

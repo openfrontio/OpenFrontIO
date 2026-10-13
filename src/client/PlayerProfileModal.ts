@@ -27,6 +27,10 @@ import "./LeaderboardModal";
 import { modalRouter } from "./ModalRouter";
 import { loadPlayerProgress } from "./PlayerProgress";
 import {
+  PROVISIONAL_PROGRESS_CHANGED,
+  provisionalProgress,
+} from "./ProvisionalProgress";
+import {
   parsePlayerProfilePath,
   playerProfileUrl,
 } from "./utilities/PlayerProfileUrl";
@@ -69,6 +73,38 @@ export class PlayerProfileModal extends BaseModal {
   private wantsProgressionTab = false;
   // Counts fresh openings, to key the profile card's once-per-open flourish.
   private openCount = 0;
+
+  connectedCallback(): void {
+    super.connectedCallback();
+    document.addEventListener(
+      PROVISIONAL_PROGRESS_CHANGED,
+      this.handleProvisionalChanged,
+    );
+  }
+
+  disconnectedCallback(): void {
+    document.removeEventListener(
+      PROVISIONAL_PROGRESS_CHANGED,
+      this.handleProvisionalChanged,
+    );
+    super.disconnectedCallback();
+  }
+
+  // The player's own level counts XP from games still waiting to be scored,
+  // and that changed (ProvisionalProgress.ts).
+  private handleProvisionalChanged = (): void => {
+    this.requestUpdate();
+  };
+
+  /**
+   * The progress to show: on the viewer's own profile, with any XP still
+   * waiting to be scored, provisionally. Anyone else's is left as it is.
+   */
+  private progressView() {
+    return this.progress === null
+      ? null
+      : provisionalProgress(this.publicId, this.progress);
+  }
 
   protected modalConfig() {
     return {
@@ -253,14 +289,16 @@ export class PlayerProfileModal extends BaseModal {
     }
     // The card heads the stats; games and wins stay in the stats below it,
     // and the ways to share the profile follow it.
+    const view = this.progressView();
     return html`
-      ${this.progress === null
+      ${view === null
         ? nothing
         : html`<profile-card
             class="mb-4 block"
             .username=${this.username ?? this.publicId ?? ""}
             .clanTag=${this.clans[0]?.tag ?? null}
-            .progress=${this.progress}
+            .progress=${view.progress}
+            .provisional=${view.provisional}
             .openKey=${`profile-${this.openCount}`}
           ></profile-card>`}
       <profile-share
@@ -277,11 +315,13 @@ export class PlayerProfileModal extends BaseModal {
   private renderProgression() {
     // The tab is hidden without progress; should it still be selected (a new
     // player opened on top), show the Stats content rather than nothing.
-    if (this.progress === null) return this.renderProfile();
+    const view = this.progressView();
+    if (view === null) return this.renderProfile();
     // Keyed like the card's flourish: the tab pops in once per opening, not
     // again on a tab switch.
     return html`<profile-progression
-      .progress=${this.progress}
+      .progress=${view.progress}
+      .confirmedLevel=${view.provisional ? view.confirmedLevel : null}
       .publicId=${this.publicId}
       .popKey=${`profile-${this.openCount}`}
     ></profile-progression>`;

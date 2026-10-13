@@ -19,8 +19,10 @@ import { getAuthHeader } from "./Auth";
 export type GameXpFetchResult =
   | { status: "ok"; data: GameXpResponse }
   // 404 (not processed yet, or progression off) or a transient failure —
-  // worth asking again while the caller is still polling.
-  | { status: "pending" }
+  // worth asking again while the caller is still polling. `notFound` marks
+  // the 404: the one answer that says the game isn't scored yet, rather than
+  // that the question went unanswered.
+  | { status: "pending"; notFound?: true }
   // A conclusion: signed out, or a body we cannot read. Stop asking.
   | { status: "unavailable" };
 
@@ -50,7 +52,7 @@ export async function fetchMyGameXp(
         signal: requestSignal(signal),
       },
     );
-    if (res.status === 404) return { status: "pending" };
+    if (res.status === 404) return { status: "pending", notFound: true };
     if (res.status === 401 || res.status === 403) {
       return { status: "unavailable" };
     }

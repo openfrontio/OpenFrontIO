@@ -1,0 +1,496 @@
+import type {
+  Progress,
+  ProgressionConfig,
+  UserMeResponse,
+} from "@openfront/shared/ApiSchemas";
+import type { GameXpFetchResult } from "./ProgressionApi";
+import { projectProgress } from "./ProgressProjection";
+
+// The player's own level with the XP of games still waiting to be scored.
+//
+// A player who dies before the game ends sees a provisional XP figure
+// (ProvisionalXpAtDeath.ts), but the API only scores the game once the whole
+// match ends. Until then the account menu, the Account modal and the profile
+// would show the old level. So the figure is kept here, per account, and
+// projected onto the confirmed progress everywhere the player's own level
+// shows, marked as provisional, until the API has scored the game.
+//
+// Local and display only: it is never sent anywhere, other players never see
+// it, and it fails closed (no config, an API that predates any of this, a
+// failed check: the confirmed figures show).
+//
+// No double counting: a pending game's XP is only added onto a confirmed
+// figure that was read BEFORE the API last said (404) it hadn't scored that
+// game. A figure read since then may already include it, so it shows as it
+// is until the next check.
+
+// ------------------------------------------------------------------ storage
+
+export const PENDING_XP_KEY = "provisionalXp";
+// A game is long scored by then; past it an entry is dropped unasked.
+export const PENDING_XP_TTL_MS = 24 * 60 * 60 * 1000;
+// More than this many unscored games and the oldest go.
+export const MAX_PENDING_PER_ACCOUNT = 20;
+
+export interface PendingXp {
+  gameId: string;
+  // The provisional XP figure for the game.
+  xp: number;
+  // When it was stored (epoch ms).
+  at: number;
+}
+
+// By account (publicId), so another account on the same browser never sees
+// it.
+type PendingStore = Record<string, PendingXp[]>;
+
+function isPendingXp(value: unknown): value is PendingXp {
+  if (typeof value !== "object" || value === null) return false;
+  const v = value as Record<string, unknown>;
+  return (
+    typeof v.gameId === "string" &&
+    v.gameId.length > 0 &&
+    typeof v.xp === "number" &&
+    Number.isFinite(v.xp) &&
+    v.xp > 0 &&
+    typeof v.at === "number" &&
+    Number.isFinite(v.at)
+  );
+}
+
+function isLive(entry: PendingXp, now: number): boolean {
+  // Either way: a clock set back a day mustn't keep an entry forever.
+  return Math.abs(now - entry.at) < PENDING_XP_TTL_MS;
+}
+
+function readStore(now: number): PendingStore {
+  const out: PendingStore = {};
+  try {
+    const raw = localStorage.getItem(PENDING_XP_KEY);
+    if (raw === null) return out;
+    const parsed: unknown = JSON.parse(raw);
+    if (typeof parsed !== "object" || parsed === null) return out;
+    for (const [publicId, list] of Object.entries(parsed)) {
+      if (!Array.isArray(list)) continue;
+      const live = list.filter(
+        (e): e is PendingXp => isPendingXp(e) && isLive(e, now),
+      );
+      if (live.length > 0) out[publicId] = live;
+    }
+  } catch {
+    // Unreadable or blocked storage: nothing pending.
+  }
+  return out;
+}
+
+function writeStore(store: PendingStore): void {
+  try {
+    if (Object.keys(store).length === 0) {
+      localStorage.removeItem(PENDING_XP_KEY);
+    } else {
+      localStorage.setItem(PENDING_XP_KEY, JSON.stringify(store));
+    }
+  } catch {
+    // Full or blocked storage: the figure just isn't carried over.
+  }
+}
+
+function listFor(store: PendingStore, publicId: string): PendingXp[] {
+  return Object.prototype.hasOwnProperty.call(store, publicId)
+    ? store[publicId]
+    : [];
+}
+
+/** The account's games still waiting to be scored, expired ones left out. */
+export function readPendingXp(
+  publicId: string,
+  now: number = Date.now(),
+): PendingXp[] {
+  if (!publicId) return [];
+  return listFor(readStore(now), publicId);
+}
+
+/**
+ * Keeps a game's provisional XP for the account until the API scores it.
+ * A second figure for the same game replaces the first.
+ */
+export function recordPendingXp(
+  publicId: string,
+  entry: { gameId: string; xp: number },
+  now: number = Date.now(),
+): void {
+  const pending: PendingXp = {
+    gameId: entry.gameId,
+    xp: Math.floor(entry.xp),
+    at: now,
+  };
+  if (!publicId || !isPendingXp(pending)) return;
+  // Written back pruned: expired entries, any account's, go.
+  const store = readStore(now);
+  const list = listFor(store, publicId).filter(
+    (e) => e.gameId !== entry.gameId,
+  );
+  list.push(pending);
+  store[publicId] = list.slice(-MAX_PENDING_PER_ACCOUNT);
+  writeStore(store);
+}
+
+/** Drops the account's entries for these games. */
+export function clearPendingXp(
+  publicId: string,
+  gameIds: Iterable<string>,
+  now: number = Date.now(),
+): void {
+  const drop = new Set(gameIds);
+  if (!publicId || drop.size === 0) return;
+  const store = readStore(now);
+  const list = listFor(store, publicId).filter((e) => !drop.has(e.gameId));
+  if (list.length > 0) store[publicId] = list;
+  else delete store[publicId];
+  writeStore(store);
+}
+
+// --------------------------------------------------------------- projection
+
+/** The level fields every source of the player's progress has. */
+export interface ProgressLike {
+  prestige: number;
+  level: number;
+  lifetimeXp: number;
+  legend: boolean;
+  // Missing from an older public endpoint: then there's no projection.
+  xpInLevel?: number;
+  xpForNext?: number;
+  canPrestige?: boolean;
+}
+
+/**
+ * Where `xp` pending XP would take the confirmed progress: the level curve
+ * from the config, as the API would apply it. Null when there is nothing to
+ * project, or it can't be: no XP, a player at the end of the run (level 100,
+ * waiting to prestige, or a Legend: the API doesn't accrue there), a progress
+ * without its place in the level, or a config that doesn't cover the levels.
+ *
+ * It never prestiges and never makes a Legend: past the last level the
+ * projection stops at it, with no Prestige offered until the API confirms.
+ */
+export function projectPendingXp(
+  confirmed: ProgressLike,
+  xp: number,
+  config: ProgressionConfig,
+): Progress | null {
+  if (!(xp > 0) || !Number.isFinite(xp)) return null;
+  if (confirmed.legend || confirmed.canPrestige === true) return null;
+  const { xpInLevel, xpForNext } = confirmed;
+  if (xpInLevel === undefined || xpForNext === undefined) return null;
+  if (!(config.maxLevel > 1) || confirmed.level >= config.maxLevel) {
+    return null;
+  }
+  const projected = projectProgress(
+    {
+      prestige: confirmed.prestige,
+      level: confirmed.level,
+      xpInLevel,
+      xpForNext,
+      lifetimeXp: confirmed.lifetimeXp,
+      legend: false,
+      canPrestige: false,
+    },
+    xp,
+    config,
+  );
+  if (projected === null) return null;
+  return { ...projected.after, legend: false, canPrestige: false };
+}
+
+// ----------------------------------------------------------------- display
+
+/** Sent on document whenever what provisionalProgress() returns may change. */
+export const PROVISIONAL_PROGRESS_CHANGED = "provisional-progress-changed";
+
+export interface ProvisionalView<P> {
+  // The progress to show: the projected one when provisional, else the
+  // confirmed one itself.
+  progress: P;
+  provisional: boolean;
+  // The confirmed level: levels past it are only provisionally reached.
+  confirmedLevel: number;
+}
+
+export interface ProvisionalDeps {
+  // GET /users/@me/xp/:gameId.
+  fetchXp: (gameId: string) => Promise<GameXpFetchResult>;
+  // GET /public/progression/config.
+  loadConfig: () => Promise<ProgressionConfig | false>;
+  // Re-reads /users/@me and broadcasts it (userMeResponse).
+  refreshUserMe: () => Promise<unknown>;
+  now?: () => number;
+  // How often to ask again while games are pending, and how many times per
+  // page at most.
+  pollMs?: number;
+  maxPolls?: number;
+}
+
+export const PROVISIONAL_POLL_MS = 60_000;
+export const PROVISIONAL_MAX_POLLS = 120;
+
+interface Verified {
+  account: string;
+  // The check's sequence number: a confirmed figure first seen before it is
+  // older than its answers.
+  seq: number;
+  // The games it found still unscored (a 404).
+  pending: ReadonlySet<string>;
+}
+
+let deps: ProvisionalDeps | null = null;
+let account: string | null = null;
+let config: ProgressionConfig | null = null;
+let verified: Verified | null = null;
+// Orders confirmed figures against checks.
+let seq = 0;
+const seenAt = new WeakMap<object, number>();
+// The projected view per confirmed figure, so its identity holds while
+// nothing changes (the account menu animates on a new one).
+const views = new WeakMap<
+  object,
+  { xp: number; config: ProgressionConfig; view: ProvisionalView<unknown> }
+>();
+let inFlight: Promise<void> | null = null;
+let again = false;
+let timer: ReturnType<typeof setInterval> | null = null;
+let polls = 0;
+let lastCheckAt = 0;
+let removeListeners: (() => void) | null = null;
+
+function now(): number {
+  return deps?.now?.() ?? Date.now();
+}
+
+function seen(confirmed: object): number {
+  let at = seenAt.get(confirmed);
+  if (at === undefined) {
+    at = ++seq;
+    seenAt.set(confirmed, at);
+  }
+  return at;
+}
+
+/**
+ * The player's progress as it should show: projected with their pending
+ * provisional XP when `publicId` is the signed-in account and the pending
+ * games are known to be unscored, else `confirmed` as it is. Only ever for
+ * the player's own progress: anyone else's publicId gets it unchanged.
+ */
+export function provisionalProgress<P extends ProgressLike>(
+  publicId: string | null | undefined,
+  confirmed: P,
+): ProvisionalView<P> {
+  const plain: ProvisionalView<P> = {
+    progress: confirmed,
+    provisional: false,
+    confirmedLevel: confirmed.level,
+  };
+  if (deps === null || !publicId || publicId !== account) return plain;
+  const entries = readPendingXp(publicId, now());
+  if (entries.length === 0) return plain;
+  const seenSeq = seen(confirmed);
+  const check = verified;
+  if (check === null || check.account !== publicId || seenSeq >= check.seq) {
+    // Read since the last check: it may already count a pending game.
+    scheduleCheck();
+    return plain;
+  }
+  const xp = entries
+    .filter((e) => check.pending.has(e.gameId))
+    .reduce((sum, e) => sum + e.xp, 0);
+  if (config === null || xp <= 0) return plain;
+  const cached = views.get(confirmed);
+  if (cached !== undefined && cached.xp === xp && cached.config === config) {
+    return cached.view as ProvisionalView<P>;
+  }
+  const projected = projectPendingXp(confirmed, xp, config);
+  if (projected === null) return plain;
+  const view: ProvisionalView<P> = {
+    progress: { ...confirmed, ...projected },
+    provisional: true,
+    confirmedLevel: confirmed.level,
+  };
+  views.set(confirmed, { xp, config, view });
+  return view;
+}
+
+function emitChanged(): void {
+  document.dispatchEvent(new CustomEvent(PROVISIONAL_PROGRESS_CHANGED));
+}
+
+function scheduleCheck(): void {
+  // Out of the render that asked.
+  void Promise.resolve().then(() => runCheck());
+}
+
+/**
+ * Asks the API about every pending game: one it has scored (or found
+ * ineligible) is cleared, and /users/@me re-read so the confirmed figure
+ * shows; a 404 keeps it pending, and counted. Anything else (a failure, a
+ * refused session) keeps it, uncounted, until the next check or its expiry.
+ */
+export function runCheck(): Promise<void> {
+  if (deps === null) return Promise.resolve();
+  if (inFlight !== null) {
+    again = true;
+    return inFlight;
+  }
+  const d = deps;
+  const forAccount = account;
+  if (forAccount === null) return Promise.resolve();
+  const entries = readPendingXp(forAccount, now());
+  if (entries.length === 0) {
+    syncPolling();
+    return Promise.resolve();
+  }
+  const checkSeq = ++seq;
+  lastCheckAt = now();
+  const run = (async () => {
+    const [loaded, answers] = await Promise.all([
+      d.loadConfig().catch(() => false as const),
+      Promise.all(
+        entries.map((e) =>
+          d
+            .fetchXp(e.gameId)
+            .catch((): GameXpFetchResult => ({ status: "pending" })),
+        ),
+      ),
+    ]);
+    if (deps !== d || account !== forAccount) return;
+    const pending = new Set<string>();
+    const answered: string[] = [];
+    entries.forEach((entry, i) => {
+      const answer = answers[i];
+      if (answer.status === "ok") answered.push(entry.gameId);
+      else if (answer.status === "pending" && answer.notFound === true) {
+        pending.add(entry.gameId);
+      }
+    });
+    // The confirmed figure first, so the level never dips to the old one
+    // between the entry going and the new figure arriving.
+    if (answered.length > 0) {
+      await d.refreshUserMe().catch(() => undefined);
+      if (deps !== d || account !== forAccount) return;
+      clearPendingXp(forAccount, answered, now());
+    }
+    config = loaded === false ? null : loaded;
+    verified = { account: forAccount, seq: checkSeq, pending };
+    emitChanged();
+    syncPolling();
+  })();
+  inFlight = run.finally(() => {
+    inFlight = null;
+    if (again) {
+      again = false;
+      void runCheck();
+    }
+  });
+  return inFlight;
+}
+
+/** Checks now: a provisional figure was just stored. */
+export function requestProvisionalCheck(): void {
+  if (deps !== null) void runCheck();
+}
+
+function maxPolls(): number {
+  return deps?.maxPolls ?? PROVISIONAL_MAX_POLLS;
+}
+
+function pollMs(): number {
+  return deps?.pollMs ?? PROVISIONAL_POLL_MS;
+}
+
+// Polls while the account has games pending, up to the cap.
+function syncPolling(): void {
+  const want =
+    deps !== null &&
+    account !== null &&
+    polls < maxPolls() &&
+    readPendingXp(account, now()).length > 0;
+  if (want && timer === null) {
+    timer = setInterval(poll, pollMs());
+  } else if (!want && timer !== null) {
+    clearInterval(timer);
+    timer = null;
+  }
+}
+
+function poll(): void {
+  // Only while someone can see it.
+  if (document.visibilityState !== "visible") return;
+  polls++;
+  void runCheck();
+  if (polls >= maxPolls()) syncPolling();
+}
+
+function onVisibilityChange(): void {
+  // Back on the page after a while: ask now rather than at the next tick.
+  if (timer !== null && now() - lastCheckAt >= pollMs()) poll();
+}
+
+function setAccount(next: string | null): void {
+  if (next === account) return;
+  account = next;
+  verified = null;
+  polls = 0;
+  emitChanged();
+}
+
+function onUserMe(event: Event): void {
+  const me = (event as CustomEvent<UserMeResponse | false>).detail;
+  setAccount(me === false ? null : (me?.player?.publicId ?? null));
+  if (account === null) {
+    syncPolling();
+    return;
+  }
+  // Seen now, before the check below: that check's answers vouch for it.
+  const progress = me === false ? undefined : me?.player?.progress;
+  if (progress) seen(progress);
+  void runCheck();
+}
+
+function onSessionCleared(): void {
+  setAccount(null);
+  syncPolling();
+}
+
+/**
+ * Starts following the signed-in account (its userMeResponse broadcasts) and
+ * checking its pending games. Main calls this before the first broadcast.
+ * Returns a stop function (tests).
+ */
+export function startProvisionalProgress(d: ProvisionalDeps): () => void {
+  stopProvisionalProgress();
+  deps = d;
+  document.addEventListener("userMeResponse", onUserMe);
+  document.addEventListener("session-cleared", onSessionCleared);
+  document.addEventListener("visibilitychange", onVisibilityChange);
+  removeListeners = () => {
+    document.removeEventListener("userMeResponse", onUserMe);
+    document.removeEventListener("session-cleared", onSessionCleared);
+    document.removeEventListener("visibilitychange", onVisibilityChange);
+  };
+  return stopProvisionalProgress;
+}
+
+export function stopProvisionalProgress(): void {
+  removeListeners?.();
+  removeListeners = null;
+  if (timer !== null) clearInterval(timer);
+  timer = null;
+  deps = null;
+  account = null;
+  config = null;
+  verified = null;
+  inFlight = null;
+  again = false;
+  polls = 0;
+  lastCheckAt = 0;
+}

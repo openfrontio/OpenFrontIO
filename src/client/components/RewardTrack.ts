@@ -51,8 +51,11 @@ export function isLevelReward(reward: Reward): boolean {
  *           the owner when their rewards don't say which level they're for);
  *           and the owner's level whose only unclaimed rewards are held
  *           (isRewardClaimable): not claimed, but nothing to claim yet.
+ * pending — reached only provisionally: the player's level counts XP from
+ *           games still waiting to be scored (ProvisionalProgress.ts). The
+ *           API hasn't granted its rewards yet, so nothing to claim.
  */
-type TrackNodeStatus = "claimed" | "ready" | "locked" | "passed";
+type TrackNodeStatus = "claimed" | "ready" | "locked" | "passed" | "pending";
 
 interface TrackNode {
   level: number;
@@ -97,6 +100,8 @@ interface RewardTrackModel {
   // The owner's claimable level rewards on this run (held ones left out);
   // null for a visitor.
   claim: TrackClaim | null;
+  // The level counts XP still waiting to be scored.
+  provisional: boolean;
 }
 
 interface TrackProgress {
@@ -174,11 +179,17 @@ export function trackEnd(config: ProgressionConfig, run: number): TrackEnd {
  * Everything the track draws. `rewards` is the owner's unclaimed rewards
  * from /users/@me, or null for a visitor. Only this run's level rewards
  * count: earlier runs' are claimed from the account's rewards list.
+ *
+ * `confirmedLevel` is set when `progress` is provisional (it counts XP from
+ * games not scored yet): the levels past it are pending, never claimable.
+ * Claims come from the reward rows alone, which the API only grants for
+ * confirmed levels.
  */
 export function rewardTrackModel(
   progress: TrackProgress,
   config: ProgressionConfig,
   rewards: readonly Reward[] | null,
+  confirmedLevel: number | null = null,
 ): RewardTrackModel {
   const run = clampPrestige(progress.prestige);
   const maxLevel = trackMaxLevel(config);
@@ -225,7 +236,14 @@ export function rewardTrackModel(
     const passed = level <= current;
     let status: TrackNodeStatus;
     if (!passed) status = "locked";
-    else if (!statuses) status = "passed";
+    else if (
+      confirmedLevel !== null &&
+      level > confirmedLevel &&
+      !waiting.has(level) &&
+      !held.has(level)
+    ) {
+      status = "pending";
+    } else if (!statuses) status = "passed";
     else if (waiting.has(level)) status = "ready";
     else status = held.has(level) ? "passed" : "claimed";
     nodes.push({
@@ -258,6 +276,7 @@ export function rewardTrackModel(
     nodes,
     end: trackEnd(config, run),
     claim,
+    provisional: confirmedLevel !== null,
   };
 }
 
@@ -302,6 +321,21 @@ const LOCK = html`<svg
   <path d="M8 11V8a4 4 0 0 1 8 0v3" />
 </svg>`;
 
+// An hourglass: reached provisionally, waiting for the game to be scored.
+const HOURGLASS = html`<svg
+  viewBox="0 0 24 24"
+  width="11"
+  height="11"
+  fill="none"
+  stroke="#fcd34d"
+  stroke-width="2.4"
+  stroke-linecap="round"
+  stroke-linejoin="round"
+  aria-hidden="true"
+>
+  <path d="M7 3h10M7 21h10M8 3c0 5 8 6 8 9s-8 4-8 9M16 3c0 5-8 6-8 9s8 4 8 9" />
+</svg>`;
+
 const arrow = (side: "prev" | "next") =>
   html`<svg
     viewBox="0 0 24 24"
@@ -324,6 +358,9 @@ export class RewardTrack extends LitElement {
   // The owner's unclaimed rewards; null for a visitor.
   @property({ attribute: false }) rewards: Reward[] | null = null;
   @property({ type: Boolean }) claiming = false;
+  // Set when `progress` is provisional: the confirmed level, past which the
+  // levels are only pending (see rewardTrackModel).
+  @property({ attribute: false }) confirmedLevel: number | null = null;
 
   // Replaceable for tests and previews.
   describeCosmetic: (flare: TrackFlare) => Promise<FlareCosmeticView | null> =
@@ -369,12 +406,18 @@ export class RewardTrack extends LitElement {
     if (
       changed.has("progress") ||
       changed.has("config") ||
-      changed.has("rewards")
+      changed.has("rewards") ||
+      changed.has("confirmedLevel")
     ) {
       this.model =
         this.progress === null || this.config === null
           ? null
-          : rewardTrackModel(this.progress, this.config, this.rewards);
+          : rewardTrackModel(
+              this.progress,
+              this.config,
+              this.rewards,
+              this.confirmedLevel,
+            );
       if (changed.has("progress")) this.scrolledToLevel = false;
       if (this.model?.owner && !this.model.statuses && !this.warnedUnplaced) {
         this.warnedUnplaced = true;
@@ -618,11 +661,19 @@ export class RewardTrack extends LitElement {
             ? translateText("reward_track.title_first_run")
             : translateText("reward_track.title", { prestige: model.run })}
         </h3>
+        ${model.provisional
+          ? html`<p
+              class="-mt-2 mb-3 text-xs font-semibold text-amber-200/80"
+              data-track-provisional
+            >
+              ${translateText("progression.provisional_label")}
+            </p>`
+          : nothing}
         ${claim !== null && claim.ids.length > 0
           ? this.renderClaimBar(claim)
           : nothing}
         ${this.renderStrip(model)} ${this.renderTrack(model)}
-        ${model.statuses ? this.renderKey() : nothing}
+        ${model.statuses ? this.renderKey(model) : nothing}
       </section>
     `;
   }
@@ -835,6 +886,7 @@ export class RewardTrack extends LitElement {
       dot = html`<div
         class="rt-dot"
         ?data-passed=${node.status !== "locked"}
+        ?data-pending=${node.status === "pending"}
         ?data-pu=${node.plutonium > 0}
       >
         ${node.level}
@@ -890,6 +942,8 @@ export class RewardTrack extends LitElement {
       parts.push(translateText("reward_track.key_ready"));
     } else if (node.status === "locked") {
       parts.push(translateText("reward_track.key_locked"));
+    } else if (node.status === "pending") {
+      parts.push(translateText("reward_track.key_pending"));
     }
     return parts.join(", ");
   }
@@ -949,6 +1003,8 @@ export class RewardTrack extends LitElement {
         return html`<span class="rt-ready" data-ready></span>`;
       case "locked":
         return html`<span data-locked>${LOCK}</span>`;
+      case "pending":
+        return html`<span data-pending>${HOURGLASS}</span>`;
       default:
         return nothing;
     }
@@ -1021,7 +1077,8 @@ export class RewardTrack extends LitElement {
     </div>`;
   }
 
-  private renderKey(): TemplateResult {
+  private renderKey(model: RewardTrackModel): TemplateResult {
+    const pending = model.nodes.some((n) => n.status === "pending");
     return html`<div class="rt-key" data-track-legend data-pp>
       <span class="rt-key-item"
         >${CHECK}${translateText("reward_track.key_claimed")}</span
@@ -1031,7 +1088,11 @@ export class RewardTrack extends LitElement {
         )}</span
       ><span class="rt-key-item"
         >${LOCK}${translateText("reward_track.key_locked")}</span
-      >
+      >${pending
+        ? html`<span class="rt-key-item" data-key-pending
+            >${HOURGLASS}${translateText("reward_track.key_pending")}</span
+          >`
+        : nothing}
     </div>`;
   }
 }
@@ -1194,6 +1255,10 @@ reward-track .rt-dot {
   border: 2px solid rgba(255, 255, 255, 0.22);
 }
 reward-track .rt-dot[data-passed] { background: #facc15; color: #1a1300; border-color: #fde68a; }
+/* Reached provisionally: passed, but not confirmed yet. */
+reward-track .rt-dot[data-pending] {
+  background: rgba(250, 204, 21, 0.28); color: #fef3c7; border-style: dashed; border-color: #fcd34d;
+}
 reward-track .rt-dot[data-pu] { box-shadow: 0 0 0 2px #4ade80, 0 0 9px rgba(74, 222, 128, 0.65); }
 /* The ring pads the 34px badge by 3px, so the round 40px ring clears the
    level chip's corners and matches the 40px dot row. */
@@ -1205,7 +1270,8 @@ reward-track .rt-badge-locked { opacity: 0.6; }
 reward-track .rt-under {
   margin-top: 3px; display: flex; flex-direction: column; align-items: center; gap: 1px;
 }
-reward-track .rt-node[data-status="locked"] .rt-under { opacity: 0.65; }
+reward-track .rt-node[data-status="locked"] .rt-under,
+reward-track .rt-node[data-status="pending"] .rt-under { opacity: 0.65; }
 reward-track .rt-caps {
   display: flex; align-items: center; gap: 2px; height: 14px; white-space: nowrap;
   color: #fff; font-weight: 800; font-size: 11px;

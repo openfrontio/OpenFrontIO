@@ -1,12 +1,12 @@
 import type { HumanStatsSnapshot } from "@openfront/engine-api/game/GameTypes";
 import { GameMode, GameType } from "@openfront/engine-api/game/GameTypes";
 import type {
-  GameXpEligible,
   GameXpResponse,
   Progress,
   ProgressionConfig,
   XpRules,
 } from "@openfront/shared/ApiSchemas";
+import { projectProgress } from "./ProgressProjection";
 import {
   applyMultipliers,
   computeXp,
@@ -19,6 +19,10 @@ import {
   type XpGameConfig,
   type XpResult,
 } from "./ProvisionalXp";
+
+// Where an amount of XP takes the player on the level track: its own module,
+// so the homepage can project pending XP without loading the formula.
+export { projectProgress };
 
 // The provisional XP figure shown when the local player dies before the game
 // ends (~99% of players), worked out in the browser with the copy of the
@@ -189,63 +193,6 @@ export function provisionalXpContext(input: {
       subscriberPermille: progress.subscriberPermille ?? 1000,
     },
     disconnectedOpponents,
-  };
-}
-
-/**
- * Where `xp` would take the player on the level track: the API's applyXp,
- * with the level sizes from the config. Null when the config doesn't cover a
- * level it needs.
- */
-export function projectProgress(
-  progress: Progress,
-  xp: number,
-  config: ProgressionConfig,
-): Pick<GameXpEligible, "before" | "after" | "levelsReached"> | null {
-  const xpToNext = (level: number): number | undefined => {
-    if (level >= config.maxLevel) return 0;
-    const row = config.levels.find((l) => l.level === level);
-    if (row !== undefined) return row.xpToNext;
-    return level === progress.level ? progress.xpForNext : undefined;
-  };
-  const before = {
-    prestige: progress.prestige,
-    level: progress.level,
-    xpInLevel: progress.xpInLevel,
-    xpForNext: progress.xpForNext,
-  };
-  let { level, xpInLevel, legend } = progress;
-  const levelsReached: { prestige: number; level: number }[] = [];
-  if (xp > 0 && level < config.maxLevel) {
-    xpInLevel += xp;
-    while (level < config.maxLevel) {
-      const need = xpToNext(level);
-      if (need === undefined) return null;
-      if (xpInLevel < need) break;
-      xpInLevel -= need;
-      level += 1;
-      levelsReached.push({ prestige: progress.prestige, level });
-    }
-    if (level >= config.maxLevel) {
-      xpInLevel = 0;
-      legend = progress.prestige >= config.maxPrestige;
-    }
-  }
-  const xpForNext = xpToNext(level);
-  if (xpForNext === undefined) return null;
-  return {
-    before,
-    after: {
-      prestige: progress.prestige,
-      level,
-      xpInLevel,
-      xpForNext,
-      lifetimeXp: progress.lifetimeXp + Math.max(0, xp),
-      legend,
-      canPrestige:
-        level >= config.maxLevel && progress.prestige < config.maxPrestige,
-    },
-    levelsReached,
   };
 }
 

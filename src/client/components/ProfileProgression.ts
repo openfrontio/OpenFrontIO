@@ -174,6 +174,10 @@ export class ProfileProgression extends LitElement {
   @property({ attribute: false }) progress: PublicProgress | null = null;
   // Whose profile this is: the track shows claim status to them alone.
   @property({ attribute: false }) publicId: string | null = null;
+  // Set when `progress` is provisional (the player's own, counting XP from
+  // games still waiting to be scored): the confirmed level. The levels past
+  // it are pending on the track, and their milestones not reached yet.
+  @property({ attribute: false }) confirmedLevel: number | null = null;
   // Names one opening of the profile: the tab pops in once per key, however
   // often it's shown again (a tab switch builds a new element). Without a
   // key it pops in once per element.
@@ -287,7 +291,8 @@ export class ProfileProgression extends LitElement {
     // The model's claim leaves held rewards out (claimRewards would skip
     // them anyway).
     const ids = new Set(
-      track.model(progress, track.config, owned).claim?.ids ?? [],
+      track.model(progress, track.config, owned, this.confirmedLevel).claim
+        ?.ids ?? [],
     );
     const toClaim = owned.filter((r) => ids.has(r.id));
     if (toClaim.length === 0) return;
@@ -415,11 +420,17 @@ export class ProfileProgression extends LitElement {
             .progress=${progress}
             .config=${track.config}
             .rewards=${track.rewards}
+            .confirmedLevel=${this.confirmedLevel}
             .claiming=${this.claiming}
             .describeCosmetic=${this.describeCosmetic}
             @claim-all=${() => void this.claimAll()}
           ></reward-track>`}
-      ${this.renderHistory(progress)} ${this.renderMilestones(progress)}
+      ${this.renderHistory(progress)}
+      ${this.renderMilestones(
+        this.confirmedLevel === null
+          ? progress
+          : { ...progress, level: this.confirmedLevel },
+      )}
     `;
   }
 

@@ -41,6 +41,11 @@ import { MAX_PRESTIGE, reachedLegendThisGame } from "../../Progression";
 import { resolveXpAccount } from "../../ProgressionAccount";
 import { fetchProgressionConfig, pollGameXp } from "../../ProgressionApi";
 import {
+  clearPendingXp,
+  recordPendingXp,
+  requestProvisionalCheck,
+} from "../../ProvisionalProgress";
+import {
   loadProvisionalXp,
   type ProvisionalXp,
   provisionalXpRules,
@@ -628,6 +633,7 @@ export class WinModal extends LitElement implements Controller {
         }
         this.provisionalXp = provisional;
         this.xpView = { kind: "provisional", provisional, confirming: false };
+        this.keepPendingXp(provisional);
         return;
       }
       this.xpPolling = true;
@@ -648,6 +654,10 @@ export class WinModal extends LitElement implements Controller {
         if (this.isConnected) void this.updateXp(true);
         else this.xpPollAborted = true;
         return;
+      }
+      // Scored: the figure kept for the account menu and profile is done.
+      if (result !== null && this.xpPublicId !== null) {
+        clearPendingXp(this.xpPublicId, [result.gameId]);
       }
       if (result?.eligible && reachedLegendThisGame(result)) {
         this.preloadLegendCeremony();
@@ -696,6 +706,19 @@ export class WinModal extends LitElement implements Controller {
       console.warn("WinModal: XP section failed", err);
       this.xpView = { kind: "hidden" };
     }
+  }
+
+  // Keeps an eligible provisional figure for the account, so the account
+  // menu, the Account modal and the profile show it (provisionally) until the
+  // API scores the game (ProvisionalProgress.ts).
+  private keepPendingXp(provisional: ProvisionalXp): void {
+    const response = provisional.response;
+    if (this.xpPublicId === null || !response.eligible) return;
+    recordPendingXp(this.xpPublicId, {
+      gameId: response.gameId,
+      xp: response.breakdown.total,
+    });
+    requestProvisionalCheck();
   }
 
   // The provisional XP figure for a player who has just died, or null when

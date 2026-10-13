@@ -73,6 +73,7 @@ import "../../../../src/client/components/GameXpPanel";
 import type { GameXpPanel } from "../../../../src/client/components/GameXpPanel";
 import "../../../../src/client/hud/layers/WinModal";
 import type { WinModal } from "../../../../src/client/hud/layers/WinModal";
+import { readPendingXp } from "../../../../src/client/ProvisionalProgress";
 import type { GameView } from "../../../../src/client/view";
 
 const GAME_ID = "gPROVXP01";
@@ -670,6 +671,52 @@ describe("WinModal provisional XP at death", () => {
     await endGame(end);
     expect(xpState()).toBe("ineligible");
     expect(panel()!.querySelector("[data-xp-confirmed]")).not.toBeNull();
+  });
+
+  describe("kept for the account menu and profile", () => {
+    beforeEach(() => localStorage.clear());
+    afterEach(() => localStorage.clear());
+
+    it("keeps an eligible figure for the account until the game is scored", async () => {
+      let asked = 0;
+      stubXpEndpoint(() =>
+        asked++ === 0 ? new Response("", { status: 404 }) : json(serverXp()),
+      );
+      const { game, end } = makeGame();
+      await mount(game);
+      expect(readPendingXp("me")).toEqual([
+        expect.objectContaining({ gameId: GAME_ID, xp: 274 }),
+      ]);
+      // Another account on this browser has none.
+      expect(readPendingXp("someone-else")).toEqual([]);
+
+      await endGame(end);
+      await settle(3_000);
+      expect(xpState()).toBe("result");
+      expect(readPendingXp("me")).toEqual([]);
+    });
+
+    it("keeps it while the server hasn't scored the game", async () => {
+      stubXpEndpoint(() => new Response("", { status: 404 }));
+      const { game, end } = makeGame();
+      await mount(game);
+      await endGame(end);
+      await settle(60_000);
+      expect(readPendingXp("me")).toHaveLength(1);
+    });
+
+    it("keeps nothing for an ineligible death", async () => {
+      stubXpEndpoint(() => new Response("", { status: 404 }));
+      const { game } = makeGame({
+        stats: () => ({
+          ...snapshot(),
+          stats: { ...snapshot().stats, me: { killedAt: 4000n } },
+        }),
+      });
+      await mount(game);
+      expect(xpState()).toBe("provisional_ineligible");
+      expect(readPendingXp("me")).toEqual([]);
+    });
   });
 
   it("keeps the provisional figure, still provisional, if the server never answers", async () => {

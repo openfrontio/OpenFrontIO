@@ -63,6 +63,12 @@ import "../../src/client/components/RewardTrack";
 import { modalRouter } from "../../src/client/ModalRouter";
 import { initNavigation } from "../../src/client/Navigation";
 import { PlayerProfileModal } from "../../src/client/PlayerProfileModal";
+import {
+  recordPendingXp,
+  runCheck,
+  startProvisionalProgress,
+  stopProvisionalProgress,
+} from "../../src/client/ProvisionalProgress";
 import { playerProfileRouteArgs } from "../../src/client/utilities/PlayerProfileUrl";
 
 type ModalShell = HTMLElement & { updateComplete: Promise<boolean> };
@@ -317,6 +323,87 @@ describe("Player profile Progression tab", () => {
     modal.open({ publicID: "efgh5678", tab: "progression" });
     await settle(() => {
       expect(modal.querySelector("profile-progression")).not.toBeNull();
+    });
+  });
+
+  // The viewer's own profile, with a game they died in still waiting to be
+  // scored: 250 XP on top of L30 at 40 (100 a level here) is L32 at 90.
+  describe("with XP still waiting to be scored", () => {
+    const OWN = { ...withProgress, xpInLevel: 40, xpForNext: 100 };
+
+    type CardEl = HTMLElement & {
+      progress: { level: number; xpInLevel: number };
+      provisional: boolean;
+    };
+    const card = () => modal.querySelector<CardEl>("profile-card");
+
+    beforeEach(() => {
+      localStorage.clear();
+      fetchPublicPlayerProgressMock.mockImplementation(async () => ({
+        ...OWN,
+      }));
+      startProvisionalProgress({
+        fetchXp: async () => ({ status: "pending", notFound: true }),
+        loadConfig: async () => ({
+          version: 1,
+          maxLevel: 100,
+          maxPrestige: 10,
+          levels: Array.from({ length: 100 }, (_, i) => ({
+            level: i + 1,
+            xpToNext: i + 1 >= 100 ? 0 : 100,
+            cumulativeXp: 0,
+          })),
+          flares: [],
+        }),
+        refreshUserMe: async () => undefined,
+      });
+      recordPendingXp("abcd1234", { gameId: "g1", xp: 250 });
+      document.dispatchEvent(
+        new CustomEvent("userMeResponse", {
+          detail: {
+            user: { email: "wonder@example.com" },
+            player: {
+              publicId: "abcd1234",
+              progress: { ...OWN, canPrestige: false },
+            },
+          },
+        }),
+      );
+    });
+
+    afterEach(() => {
+      stopProvisionalProgress();
+      localStorage.clear();
+    });
+
+    it("shows the projected level on the player's own profile, marked provisional", async () => {
+      await runCheck();
+      modal.open({ publicID: "abcd1234" });
+      await settle(() => {
+        expect(card()?.provisional).toBe(true);
+        expect(card()?.progress.level).toBe(32);
+        expect(card()?.progress.xpInLevel).toBe(90);
+      });
+      modal.setActiveTab("progression");
+      await settle(() => {
+        const el = modal.querySelector<
+          HTMLElement & { confirmedLevel: number | null }
+        >("profile-progression");
+        expect(el?.confirmedLevel).toBe(30);
+      });
+    });
+
+    it("never shows it on anyone else's profile", async () => {
+      await runCheck();
+      modal.open({ publicID: "someone-else" });
+      await settle(() => {
+        expect(card()).not.toBeNull();
+      });
+      // Let any check the render asked for finish.
+      await runCheck();
+      await modal.updateComplete;
+      expect(card()!.provisional).toBe(false);
+      expect(card()!.progress.level).toBe(30);
     });
   });
 });

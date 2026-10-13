@@ -1313,3 +1313,112 @@ describe("<profile-progression> with the track", () => {
     });
   });
 });
+
+// The owner's level counts XP from games still waiting to be scored
+// (ProvisionalProgress.ts): Wonder is confirmed at P3 L47, and shows L50
+// provisionally.
+describe("provisional levels", () => {
+  it("marks the levels past the confirmed one pending, never ready", () => {
+    const m = rewardTrackModel(progress(3, 50), config(), ownerRewards(), 47);
+    const status = (level: number) => m.nodes[level - 1].status;
+    expect(m.provisional).toBe(true);
+    expect(m.level).toBe(50);
+    expect(m.nodes[49].current).toBe(true);
+    expect([48, 49, 50].map(status)).toEqual(["pending", "pending", "pending"]);
+    // The confirmed levels are as they were.
+    expect(status(47)).toBe("ready");
+    expect(status(44)).toBe("claimed");
+    expect(status(51)).toBe("locked");
+    // Claim all only ever has the API's rewards: the confirmed levels'.
+    expect(m.claim?.ids).toEqual(["l45", "l46", "l47", "l25pu"]);
+  });
+
+  it("is a confirmed track without a confirmed level", () => {
+    const m = rewardTrackModel(progress(3, 50), config(), ownerRewards());
+    expect(m.provisional).toBe(false);
+    expect(m.nodes.some((n) => n.status === "pending")).toBe(false);
+  });
+
+  it("draws pending levels with their own mark, and says it's provisional", async () => {
+    const el = document.createElement("reward-track") as RewardTrack;
+    el.describeCosmetic = describeCosmetic;
+    el.progress = progress(3, 50);
+    el.config = config();
+    el.rewards = ownerRewards();
+    el.confirmedLevel = 47;
+    document.body.appendChild(el);
+    await vi.waitFor(async () => {
+      await el.updateComplete;
+      expect(el.textContent).not.toContain("?");
+    });
+    try {
+      expect(
+        el.querySelector("[data-track-provisional]")?.textContent,
+      ).toContain("progression.provisional_label");
+      const node48 = el.querySelector(`[data-level="48"]`)!;
+      expect(node48.getAttribute("data-status")).toBe("pending");
+      expect(node48.querySelector("[data-pending]")).not.toBeNull();
+      expect(node48.querySelector("[data-ready]")).toBeNull();
+      expect(node48.getAttribute("aria-label")).toContain(
+        "reward_track.key_pending",
+      );
+      // "You" sits on the projected level.
+      expect(
+        el.querySelector(`[data-level="50"]`)!.hasAttribute("data-current"),
+      ).toBe(true);
+      expect(el.querySelector("[data-key-pending]")).not.toBeNull();
+      // Claim all counts only the confirmed levels' rewards.
+      expect(el.querySelector("[data-claim-count]")?.textContent).toContain(
+        'reward_track.claim_count:{"count":4}',
+      );
+    } finally {
+      el.remove();
+    }
+  });
+
+  it("never claims a pending level, and keeps its milestones unreached", async () => {
+    const claim = vi.fn(async () => ({ currency: { soft: 1, hard: 1 } }));
+    const el = document.createElement(
+      "profile-progression",
+    ) as ProfileProgression;
+    el.loadConfig = async () => config();
+    el.loadUserMe = async () =>
+      ({
+        user: {},
+        player: { publicId: "wonder01", rewards: ownerRewards() },
+      }) as unknown as UserMeResponse;
+    el.describeCosmetic = describeCosmetic;
+    el.claim = claim;
+    el.publicId = "wonder01";
+    el.popKey = "provisional-test";
+    el.progress = { ...progress(3, 50) };
+    el.confirmedLevel = 47;
+    document.body.appendChild(el);
+    try {
+      await vi.waitFor(async () => {
+        await el.updateComplete;
+        const track = el.querySelector<RewardTrack>("reward-track");
+        expect(track).not.toBeNull();
+        await track!.updateComplete;
+        expect(el.querySelector("[data-claim-all]")).not.toBeNull();
+      });
+      expect(
+        el.querySelector<RewardTrack>("reward-track")!.confirmedLevel,
+      ).toBe(47);
+      // Level 50 is a milestone the API hasn't confirmed.
+      expect(
+        el.querySelector(`[data-milestone="50"]`)!.hasAttribute("data-reached"),
+      ).toBe(false);
+      el.querySelector<HTMLElement>("[data-claim-all]")!.click();
+      await vi.waitFor(() => expect(claim).toHaveBeenCalledTimes(4));
+      expect(claim.mock.calls.map((c) => (c as unknown[])[0])).toEqual([
+        "l45",
+        "l46",
+        "l47",
+        "l25pu",
+      ]);
+    } finally {
+      el.remove();
+    }
+  });
+});
