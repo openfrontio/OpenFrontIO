@@ -6,7 +6,7 @@ export const STEAM_PLUS_WELCOME_NOTICE = "steam_plus_welcome";
 
 // Owners from before this moment get the licence intro, which explains what
 // changed for them. Later buyers never knew the old model and get a welcome.
-export const STEAM_LICENCE_LAUNCH = Date.UTC(2026, 9, 13, 12, 30);
+export const STEAM_LICENCE_LAUNCH = Date.UTC(2026, 9, 13, 13);
 
 export function steamPlusConversionNotice(conversionId: string): string {
   return `steam_plus_conversion:${conversionId}`;
