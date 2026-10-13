@@ -255,8 +255,8 @@ jobs:
           else
             failed=$(cat "$RUNNER_TEMP/failed")
             echo "::warning::Clean pick fails on $TARGET: $failed. Handing it to Claude."
-            echo "failed=$failed" >> "$GITHUB_OUTPUT"
             echo "passed=false" >> "$GITHUB_OUTPUT"
+            echo "CLEAN_FAILED=$failed" >> "$GITHUB_ENV"
             echo "FIX_MODE=checks" >> "$GITHUB_ENV"
           fi
 
@@ -282,10 +282,18 @@ jobs:
               echo "PR #$PR landed on $TARGET from another run, nothing to push"
               exit 0
             fi
-            # Two picks can each pass on the old tip and break together.
+            # Two picks can each pass on the old tip and break together. Hand
+            # the rebased pick to Claude as a failed clean pick on the new tip.
             if ! bash "$RUNNER_TEMP/check.sh" HEAD~1; then
-              echo "::error::Pick fails $(cat "$RUNNER_TEMP/failed") once rebased onto the new $TARGET"
-              exit 1
+              failed=$(cat "$RUNNER_TEMP/failed")
+              echo "::warning::Pick fails $failed once rebased onto the new $TARGET. Handing it to Claude."
+              git diff --name-only HEAD~1 HEAD > "$RUNNER_TEMP/picked-files"
+              {
+                echo "BASE=$(git rev-parse HEAD~1)"
+                echo "CLEAN_FAILED=$failed"
+                echo "FIX_MODE=checks"
+              } >> "$GITHUB_ENV"
+              exit 0
             fi
           done
           echo "::error::Could not push to $TARGET after 5 attempts"
@@ -346,7 +354,6 @@ jobs:
         if: env.FIX_MODE != ''
         env:
           FILES: ${{ steps.pick.outputs.files }}
-          CLEAN_FAILED: ${{ steps.check.outputs.failed }}
           APP_TOKEN: ${{ steps.app-token.outputs.token }}
         run: |
           set -euo pipefail
