@@ -1629,6 +1629,7 @@
     "yes": "Yes please"
   },
   "matchmaking_modal": {
+    "clan_queue_size": "From [{clan}] in queue: {count}",
     "clan_required": "Clan Wars is played for a clan. Select the tag of a clan you're a member of next to your username, then queue again.",
     "clan_verification_failed": "Clan membership could not be verified. Please try matchmaking again.",
     "clanwars_clan": "Playing for [{clan}]",
