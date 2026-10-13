@@ -102,7 +102,7 @@ export const STEAM_NOTICE_KEYS = {
   conversionBody: "steam_notices.conversion_body",
   conversionFromVanguard: "steam_notices.conversion_from_vanguard",
   conversionFromWarlord: "steam_notices.conversion_from_warlord",
-  conversionUnchanged: "steam_notices.conversion_unchanged",
+  conversionLicence: "steam_notices.conversion_licence",
   licenceHeading: "steam_notices.licence_intro_heading",
   licenceBody: "steam_notices.licence_intro_body",
   licenceGrant: "steam_notices.licence_intro_grant",
@@ -134,7 +134,7 @@ export function steamNoticeCopy(
       paragraphs: [
         translate(STEAM_NOTICE_KEYS.conversionBody),
         ...(line !== null ? [translate(line)] : []),
-        translate(STEAM_NOTICE_KEYS.conversionUnchanged),
+        translate(STEAM_NOTICE_KEYS.conversionLicence),
       ],
     };
   }

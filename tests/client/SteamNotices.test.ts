@@ -275,7 +275,7 @@ describe("steamNoticeCopy", () => {
       paragraphs: [
         STEAM_NOTICE_KEYS.conversionBody,
         STEAM_NOTICE_KEYS.conversionFromVanguard,
-        STEAM_NOTICE_KEYS.conversionUnchanged,
+        STEAM_NOTICE_KEYS.conversionLicence,
       ],
     });
   });
@@ -293,7 +293,7 @@ describe("steamNoticeCopy", () => {
         .paragraphs,
     ).toEqual([
       STEAM_NOTICE_KEYS.conversionBody,
-      STEAM_NOTICE_KEYS.conversionUnchanged,
+      STEAM_NOTICE_KEYS.conversionLicence,
     ]);
   });
 
@@ -534,7 +534,10 @@ describe("the steam-notice boot interrupt", () => {
       },
       base,
     );
-    expect(calls.seen).toEqual(["steam_plus_conversion:42"]);
+    expect(calls.seen).toEqual([
+      "steam_plus_conversion:42",
+      STEAM_LICENCE_INTRO_NOTICE,
+    ]);
     expect(calls.grantStored).toEqual([]);
     expect(calls.alerted[0].body).toContain(
       `t(${STEAM_NOTICE_KEYS.conversionFromVanguard})`,
