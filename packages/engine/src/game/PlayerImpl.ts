@@ -1214,6 +1214,7 @@ export class PlayerImpl implements Player {
       if (p.id() === this.id()) continue;
       if (p.type() === PlayerType.Bot) continue;
       if (this.isOnSameTeam(p)) continue;
+      if (this.isAlliedWith(p)) continue;
       return true;
     }
     return false;

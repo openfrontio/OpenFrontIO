@@ -296,7 +296,7 @@
         "saving_for_mirv": "[P1] saving for MIRV",
         "snowballing": "[P1] is snowballing",
         "stalemate": "Peace? Stalemate.",
-        "stop_trading_all": "Stop all trading!"
+        "stop_trading_enemies": "Stop trading with enemies!"
       }
     },
     "title": "Quick Chat",
@@ -317,7 +317,7 @@
       "snowballing": "[P1] is snowballing too fast!",
       "stalemate": "Let's make peace. This is a stalemate, we will both lose.",
       "stop_trading": "Stop trading with [P1]!",
-      "stop_trading_all": "Please stop trading with all!",
+      "stop_trading_enemies": "Please stop trading with enemies!",
       "strong": "[P1] is strong.",
       "weak": "[P1] is weak."
     }
@@ -1734,9 +1734,9 @@
     "send_gold": "Send Gold",
     "send_troops": "Send Troops",
     "start_trade": "Start Trading",
-    "start_trade_all": "Start Trading with All",
+    "start_trade_enemies": "Start Trading with Enemies",
     "stop_trade": "Stop Trading",
-    "stop_trade_all": "Stop Trading with All",
+    "stop_trade_enemies": "Stop Trading with Enemies",
     "stopped": "Stopped",
     "target": "Target",
     "trading": "Trading",

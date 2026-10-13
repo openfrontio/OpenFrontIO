@@ -330,12 +330,12 @@ export class PlayerPanel extends LitElement implements Controller {
     this.hide();
   }
 
-  private onStopTradingAllClick(e: Event) {
+  private onStopTradingEnemiesClick(e: Event) {
     e.stopPropagation();
     this.eventBus.emit(new SendEmbargoAllIntentEvent("start"));
   }
 
-  private onStartTradingAllClick(e: Event) {
+  private onStartTradingEnemiesClick(e: Event) {
     e.stopPropagation();
     this.eventBus.emit(new SendEmbargoAllIntentEvent("stop"));
   }
@@ -988,28 +988,28 @@ export class PlayerPanel extends LitElement implements Controller {
         ${other === my
           ? html`<div class="grid auto-cols-fr grid-flow-col gap-1">
               ${actionButton({
-                onClick: (e: MouseEvent) => this.onStopTradingAllClick(e),
+                onClick: (e: MouseEvent) => this.onStopTradingEnemiesClick(e),
                 icon: stopTradingIcon,
-                iconAlt: "Stop Trading With All",
+                iconAlt: "Stop Trading With Enemies",
                 title: !this.actions?.canEmbargoAll
-                  ? `${translateText("player_panel.stop_trade_all")} - ${translateText("cooldown")}`
-                  : translateText("player_panel.stop_trade_all"),
+                  ? `${translateText("player_panel.stop_trade_enemies")} - ${translateText("cooldown")}`
+                  : translateText("player_panel.stop_trade_enemies"),
                 label: !this.actions?.canEmbargoAll
-                  ? `${translateText("player_panel.stop_trade_all")} ⏳`
-                  : translateText("player_panel.stop_trade_all"),
+                  ? `${translateText("player_panel.stop_trade_enemies")} ⏳`
+                  : translateText("player_panel.stop_trade_enemies"),
                 type: "yellow",
                 disabled: !this.actions?.canEmbargoAll,
               })}
               ${actionButton({
-                onClick: (e: MouseEvent) => this.onStartTradingAllClick(e),
+                onClick: (e: MouseEvent) => this.onStartTradingEnemiesClick(e),
                 icon: startTradingIcon,
-                iconAlt: "Start Trading With All",
+                iconAlt: "Start Trading With Enemies",
                 title: !this.actions?.canEmbargoAll
-                  ? `${translateText("player_panel.start_trade_all")} - ${translateText("cooldown")}`
-                  : translateText("player_panel.start_trade_all"),
+                  ? `${translateText("player_panel.start_trade_enemies")} - ${translateText("cooldown")}`
+                  : translateText("player_panel.start_trade_enemies"),
                 label: !this.actions?.canEmbargoAll
-                  ? `${translateText("player_panel.start_trade_all")} ⏳`
-                  : translateText("player_panel.start_trade_all"),
+                  ? `${translateText("player_panel.start_trade_enemies")} ⏳`
+                  : translateText("player_panel.start_trade_enemies"),
                 type: "green",
                 disabled: !this.actions?.canEmbargoAll,
               })}
