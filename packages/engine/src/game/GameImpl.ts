@@ -1155,6 +1155,7 @@ export class GameImpl implements Game {
     type: MessageType,
     playerID: PlayerID,
   ): void {
+    if (playerID === null) return;
     const id = this.player(playerID).smallID();
 
     this.addUpdate({
