@@ -96,6 +96,7 @@ export class MirvExecution implements Execution {
         this.active = false;
         return;
       }
+      this.targetPlayer = this.mg.owner(this.dst);
       this.spawnTile = spawn;
       this.nuke = this.player.buildUnit(UnitType.MIRV, spawn, {
         targetTile: this.dst,
