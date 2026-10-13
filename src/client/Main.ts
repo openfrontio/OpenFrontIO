@@ -23,7 +23,7 @@ import { loadAdmiral, onAdmiralMeasured } from "./Admiral";
 import { getUserMe, invalidateUserMe, markNoticeSeen } from "./Api";
 import {
   getDesktopSessionState,
-  reauthAfterCrazyGamesChange,
+  reauthAfterPortalChange,
   retrySteamSignIn,
   userAuth,
 } from "./Auth";
@@ -45,8 +45,6 @@ import {
   handlePurchaseReturn,
   translateCosmetic,
 } from "./Cosmetics";
-import { updateCrazyGamesNavButton } from "./CrazyGamesAccountButton";
-import { crazyGamesSDK } from "./CrazyGamesSDK";
 import {
   consumeCreatorCodePath,
   resumePendingCreatorCode,
@@ -68,6 +66,7 @@ import {
   reportMultiplayerRefusal,
   shouldBlockJoin,
 } from "./GameModeSelector";
+import { gamePortal } from "./GamePortal";
 import { GameStartingModal } from "./GameStartingModal";
 import type { HelpModal } from "./HelpModal";
 import "./HomepagePromos";
@@ -95,6 +94,7 @@ import { updateAccountNavButton } from "./NavAccountButton";
 import { initNavigation } from "./Navigation";
 import { capturePagePin } from "./PagePin";
 import { fallbackPlayerName, LAPSE_NOTICE_KEY } from "./PlayerName";
+import { updatePortalNavButton } from "./PortalAccountButton";
 import {
   GroupTokenTracker,
   presenceLobbyId,
@@ -444,7 +444,7 @@ class Client {
       lapseMarker = localStorage.getItem(LAPSE_NOTICE_KEY);
     };
 
-    crazyGamesSDK.maybeInit();
+    gamePortal.maybeInit();
 
     // Every exit from a game (win screen, in-game quit, popstate) navigates to
     // "/" and re-runs this, so announcing the menu here also covers "returned
@@ -591,7 +591,7 @@ class Client {
         // forever -- no downloads, no polling -- for the rest of the session.
         setInGameSignal(false);
         this.lobbyHandle.stop(true);
-        await crazyGamesSDK.gameplayStop();
+        await gamePortal.gameplayStop();
       }
     });
 
@@ -733,15 +733,15 @@ class Client {
     this.steamHandoffModal = document.querySelector("steam-handoff-modal");
 
     const onUserMe = async (userMeResponse: UserMeResponse | false) => {
-      if (crazyGamesSDK.isOnCrazyGames()) {
-        void updateCrazyGamesNavButton();
+      if (gamePortal.isOnGamePortal()) {
+        void updatePortalNavButton();
       } else {
         updateAccountNavButton(userMeResponse);
       }
       const isAdFree =
         userMeResponse !== false && userMeResponse.player?.adfree === true;
       window.adsEnabled =
-        !isAdFree && !crazyGamesSDK.isOnCrazyGames() && !isDesktopShell();
+        !isAdFree && !gamePortal.isOnGamePortal() && !isDesktopShell();
       // Ad-eligible users only: paid/adfree users must never load Admiral (its
       // adblock popup fires autonomously once the payload runs). Start watching
       // adblock state; once a blocker is ever detected the in-game ad is
@@ -912,12 +912,12 @@ class Client {
             },
             openRewards: () => {
               // Signed in as for trustRequiredDialog: a linked identity, or a
-              // CrazyGames sign-in (only the SDK knows that one).
+              // portal sign-in (only the SDK knows that one).
               void (async () => {
                 const signedIn =
                   responseHasLinkedIdentity(userMeResponse) ||
-                  (crazyGamesSDK.isOnCrazyGames() &&
-                    (await crazyGamesSDK.getUserProfile()) !== null);
+                  (gamePortal.isOnGamePortal() &&
+                    (await gamePortal.getUserProfile()) !== null);
                 whenModalLoaded("rewards-modal", () =>
                   this.rewardsModal?.openWithRewards(rewards, signedIn),
                 );
@@ -986,13 +986,13 @@ class Client {
       getUserMe().then(applyUserMe(initialAuthGeneration));
     }
 
-    // Re-run auth when the player signs into CrazyGames mid-session. Logout
-    // reloads the page, so only login needs handling here.
-    crazyGamesSDK.addAuthListener(() => {
+    // Re-run auth when the player signs into their portal account mid-session.
+    // Logout reloads the page, so only login needs handling here.
+    gamePortal.addAuthListener(() => {
       invalidateUserMe();
       snapshotLapseMarker();
       const generation = authGeneration;
-      reauthAfterCrazyGamesChange().then((result) =>
+      reauthAfterPortalChange().then((result) =>
         result === false
           ? applyUserMe(generation)(false)
           : getUserMe().then(applyUserMe(generation)),
@@ -1106,7 +1106,7 @@ class Client {
     };
 
     const leaveGame = () => {
-      crazyGamesSDK.gameplayStop().then(() => {
+      gamePortal.gameplayStop().then(() => {
         // redirect to the home page
         window.location.href = homeHref();
       });
@@ -1335,9 +1335,9 @@ class Client {
   }
 
   private async handleUrl() {
-    // Check if CrazyGames SDK is enabled first (no hash needed in CrazyGames)
-    if (crazyGamesSDK.isOnCrazyGames()) {
-      const lobbyId = await crazyGamesSDK.getInviteGameId();
+    // Portals carry the invite in their own URL, not our hash.
+    if (gamePortal.isOnGamePortal()) {
+      const lobbyId = await gamePortal.getInviteGameId();
       console.log("got game id", lobbyId);
       if (lobbyId && GAME_ID_REGEX.test(lobbyId)) {
         console.log("game parsed successfully");
@@ -1348,15 +1348,13 @@ class Client {
           window.showPage?.("page-join-lobby");
           this.joinModal?.open({ lobbyId });
         });
-        console.log(`CrazyGames: joining lobby ${lobbyId} from invite param`);
+        console.log(`Portal: joining lobby ${lobbyId} from invite param`);
         return;
       }
     }
-    crazyGamesSDK.isInstantMultiplayer().then((isInstant) => {
+    gamePortal.isInstantMultiplayer().then((isInstant) => {
       if (isInstant) {
-        console.log(
-          `CrazyGames: joining instant multiplayer lobby from CrazyGames`,
-        );
+        console.log(`CrazyGames: joining instant multiplayer lobby`);
         whenModalLoaded("host-lobby-modal", () => this.hostModal.open());
       }
     });
@@ -1878,7 +1876,7 @@ class Client {
       this.loadedJoinModal()?.closeWithoutLeaving();
       this.closeMenu();
 
-      crazyGamesSDK.loadingStart();
+      gamePortal.loadingStart();
 
       // show when the game loads
       const startingModal = document.querySelector(
@@ -1899,8 +1897,8 @@ class Client {
       if (window.PageOS?.session?.newPageView) {
         window.PageOS.session.newPageView();
       }
-      crazyGamesSDK.loadingStop();
-      crazyGamesSDK.gameplayStart();
+      gamePortal.loadingStop();
+      gamePortal.gameplayStart();
       setInGameSignal(true);
 
       const lobbyIdHidden = !this.userSettings.lobbyIdVisibility();
@@ -2126,7 +2124,7 @@ class Client {
       }
     }
 
-    crazyGamesSDK.gameplayStop();
+    gamePortal.gameplayStop();
   }
 
   // Puts the player back into the ranked queue. From a pre-start match
@@ -2209,8 +2207,8 @@ class Client {
     return resolveTurnstileToken({
       prefetch,
       requestFresh: getTurnstileToken,
-      // Always request a new token on crazygames.
-      forceFresh: crazyGamesSDK.isOnCrazyGames(),
+      // Always request a new token on a portal.
+      forceFresh: gamePortal.isOnGamePortal(),
       onError: (code) =>
         void showInGameAlert(
           translateText("error_modal.turnstile_error", { code }),
@@ -2219,10 +2217,10 @@ class Client {
   }
 }
 
-// Hide elements with no-crazygames class if on CrazyGames
-const hideCrazyGamesElements = () => {
-  if (crazyGamesSDK.isOnCrazyGames()) {
-    document.querySelectorAll(".no-crazygames").forEach((el) => {
+// Hide elements with the no-game-portal class on CrazyGames and Poki
+const hidePortalElements = () => {
+  if (gamePortal.isOnGamePortal()) {
+    document.querySelectorAll(".no-game-portal").forEach((el) => {
       (el as HTMLElement).style.display = "none";
     });
   }
@@ -2254,15 +2252,15 @@ const bootstrap = () => {
   prefetchModals();
 
   // Hide elements immediately
-  hideCrazyGamesElements();
+  hidePortalElements();
 
   // Also hide elements after a short delay to catch late-rendered components
-  setTimeout(hideCrazyGamesElements, 100);
-  setTimeout(hideCrazyGamesElements, 500);
+  setTimeout(hidePortalElements, 100);
+  setTimeout(hidePortalElements, 500);
 
-  // Populate the CrazyGames account buttons once the nav/top-bar have rendered
+  // Populate the portal account buttons once the nav/top-bar have rendered
   // (onUserMe also refreshes them after auth and on mid-session sign-in).
-  setTimeout(() => void updateCrazyGamesNavButton(), 500);
+  setTimeout(() => void updatePortalNavButton(), 500);
 };
 
 if (document.readyState === "loading") {

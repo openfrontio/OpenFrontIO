@@ -516,7 +516,7 @@ export class DesktopStatusBar extends LitElement {
         this.sessionAtRetry = s;
         // Main.ts owns the retry, because a successful sign-in also has to
         // refresh userMe, the nav account button and the cached profile --
-        // all of which already live there. See its crazyGamesSDK listener.
+        // all of which already live there. See its gamePortal auth listener.
         document.dispatchEvent(new CustomEvent("desktop-session-retry"));
       }}
     >
