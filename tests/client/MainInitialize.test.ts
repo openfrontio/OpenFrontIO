@@ -245,6 +245,13 @@ describe("Client.initialize() booted from Main.ts module scope", () => {
     await new Promise((resolve) => setTimeout(resolve, 25));
   }, 20_000);
 
+  // Returning to page-play schedules Main's 50ms store refresh. Let it run
+  // before jsdom is torn down, or it throws "customElements is not defined"
+  // as an unhandled error that fails the whole run.
+  afterAll(async () => {
+    await new Promise((resolve) => setTimeout(resolve, 100));
+  });
+
   it("runs the signed-out boot: onUserMe(false) and the missing-version warn", () => {
     // renderNavVersion() === 0 branch (line 411).
     expect(warnSpy).toHaveBeenCalledWith("Game version element not found");

@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 import { describe, expect, it } from "vitest";
 
 // Guards the test environment itself. Node 25 turned Web Storage on by default,

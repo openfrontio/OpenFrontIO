@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 import type { UserMeResponse } from "@openfront/shared/ApiSchemas";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { MAX_USERNAME_LENGTH } from "../src/client/validations/username";

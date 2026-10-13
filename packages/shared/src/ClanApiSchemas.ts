@@ -200,6 +200,10 @@ export const ClanMemberSchema = z.object({
   // responses from an API without the field still parse.
   username: z.string().nullable().optional(),
   stats: ClanMemberStatsSchema.optional(),
+  // Net clan wars rating this member has won (or, negative, lost) the clan;
+  // null before their first rated game for it. Optional so responses from an
+  // API without the field still parse.
+  eloContributed: z.number().nullable().optional(),
   ...RowLevelFields,
 });
 export type ClanMember = z.infer<typeof ClanMemberSchema>;
