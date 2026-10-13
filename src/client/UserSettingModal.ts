@@ -163,10 +163,6 @@ export class UserSettingModal extends BaseModal {
       this.routerName = undefined;
     }
     this.loadKeybindsFromStorage();
-    document.documentElement.style.setProperty(
-      "--hud-opacity",
-      String(this.userSettings.hudOpacity()),
-    );
     globalThis.addEventListener(
       `${USER_SETTINGS_CHANGED_EVENT}:${GRAPHICS_KEY}`,
       this.onGraphicsChanged,
