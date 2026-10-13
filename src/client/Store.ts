@@ -67,6 +67,7 @@ interface StoreBrowserOptions {
   trailingContent?: TemplateResult;
   gridClass?: string;
   cardClass?: string;
+  previewSize?: "card" | "detail";
   emptyClass?: string;
 }
 
@@ -371,6 +372,7 @@ export class StoreModal extends BaseModal {
     groups: readonly (readonly ResolvedCosmetic[])[] = this.visibleGroups,
     userHasSubscription = false,
     cardClass = "block h-full min-w-0",
+    previewSize: "card" | "detail" = "card",
   ): TemplateResult {
     return html`${groups.map((group) => {
       const focused = group.find((item) => item.key === this.inspected?.key);
@@ -380,6 +382,7 @@ export class StoreModal extends BaseModal {
         data-store-product
         data-cosmetic-key=${group[0].key}
         class=${cardClass}
+        previewSize=${previewSize}
         .resolved=${group[0]}
         .variants=${group.length > 1 ||
         group[0].type === "pattern" ||
@@ -504,6 +507,7 @@ export class StoreModal extends BaseModal {
             page.items,
             options.userHasSubscription,
             options.cardClass,
+            options.previewSize,
           );
     return this.renderBrowserLayout(
       html`${cards}${page.more}${options.trailingContent ?? ""}`,
@@ -605,12 +609,18 @@ export class StoreModal extends BaseModal {
         ? null
         : this.userMeResponse.player.subscription;
     const userHasSubscription = sub !== null && !isGrantedSubscription(sub);
+    // The Steam store lists one tier; a lone card in the narrow tile column
+    // reads as a cramped list, so it gets a wider card and a larger preview.
+    const lone = this.visibleGroups.length === 1;
     return this.renderBrowser(this.visibleGroups, {
       emptyTranslationKey: "store.no_subscriptions",
       userHasSubscription,
       gridClass:
         "flex flex-wrap items-stretch justify-center content-start gap-4 p-4 sm:p-8",
-      cardClass: "block w-[calc(50%-0.5rem)] max-w-48 shrink-0 sm:w-48",
+      cardClass: lone
+        ? "block w-full max-w-xs shrink-0"
+        : "block w-[calc(50%-0.5rem)] max-w-48 shrink-0 sm:w-48",
+      previewSize: lone ? "detail" : "card",
       emptyClass:
         "w-full py-8 text-center text-sm font-bold uppercase tracking-wider text-white/40",
     });
