@@ -26,10 +26,12 @@ import {
   projectPendingXp,
   PROVISIONAL_PROGRESS_CHANGED,
   type ProvisionalDeps,
+  ProvisionalHold,
   provisionalProgress,
   readPendingXp,
   recordPendingXp,
   runCheck,
+  scoredGames,
   stackPendingXp,
   startProvisionalProgress,
   stopProvisionalProgress,
@@ -393,12 +395,95 @@ describe("provisionalProgress", () => {
       expect(pendingWhenRefreshed).toEqual(["g1", "g2"]);
       expect(readPendingXp("me", clock).map((e) => e.gameId)).toEqual(["g2"]);
       expect(changed).toHaveBeenCalled();
+      // The change names the scored game, for views holding older reads.
+      expect(
+        changed.mock.calls.map(([event]) => scoredGames(event as Event)),
+      ).toContainEqual(["g1"]);
       expect(
         provisionalProgress("me", response.player.progress!).progress,
       ).toMatchObject({ level: 1, xpInLevel: 30 });
     } finally {
       document.removeEventListener(PROVISIONAL_PROGRESS_CHANGED, changed);
     }
+  });
+
+  it("holds a read-once view's provisional level until its re-read settles", async () => {
+    recordPendingXp("me", { gameId: "g1", xp: 250 }, T0);
+    recordPendingXp("me", { gameId: "g2", xp: 30 }, T0);
+    broadcast(me());
+    // A modal's own read of the progress, from before either game.
+    const before: Progress = { ...LEVEL_1 };
+    const hold = new ProvisionalHold<Progress>();
+    hold.view("me", before);
+    await settle();
+    // 280 XP from level 1 at 0: level 3 with 70.
+    expect(hold.view("me", before).progress).toMatchObject({
+      level: 3,
+      xpInLevel: 70,
+    });
+
+    // g1 is scored: the check clears it, and the modal reads again.
+    answers.set("g1", SCORED("g1"));
+    await settle();
+    expect(hold.hold(before)).toBe(true);
+    // The old read alone would now be level 1 with g2's 30: the level is
+    // held instead.
+    expect(hold.view("me", before).progress).toMatchObject({
+      level: 3,
+      xpInLevel: 70,
+    });
+    // The new read counts g1 (level 3, 40). Read since the last check, it
+    // isn't projected until one runs, so the level stays held meanwhile.
+    const after: Progress = {
+      ...LEVEL_1,
+      level: 3,
+      xpInLevel: 40,
+      xpForNext: 110,
+      lifetimeXp: 250,
+    };
+    expect(hold.view("me", after).progress).toMatchObject({
+      level: 3,
+      xpInLevel: 70,
+    });
+    await settle();
+    // Settled: the new read with g2 on top, the same level, nothing counted
+    // twice.
+    const view = hold.view("me", after);
+    expect(view.provisional).toBe(true);
+    expect(view.confirmedLevel).toBe(3);
+    expect(view.progress).toMatchObject({ level: 3, xpInLevel: 70 });
+  });
+
+  it("holds nothing when what showed wasn't provisional", async () => {
+    const hold = new ProvisionalHold<Progress>();
+    const read: Progress = { ...LEVEL_1 };
+    hold.view("me", read);
+    expect(hold.hold(read)).toBe(false);
+    expect(hold.view("me", read).progress).toBe(read);
+  });
+
+  it("releases the hold once nothing is pending", async () => {
+    recordPendingXp("me", { gameId: "g1", xp: 250 }, T0);
+    broadcast(me());
+    const before: Progress = { ...LEVEL_1 };
+    const hold = new ProvisionalHold<Progress>();
+    hold.view("me", before);
+    await settle();
+    expect(hold.view("me", before).provisional).toBe(true);
+    answers.set("g1", SCORED("g1"));
+    await settle();
+    expect(hold.hold(before)).toBe(true);
+    const after: Progress = {
+      ...LEVEL_1,
+      level: 3,
+      xpInLevel: 40,
+      xpForNext: 110,
+      lifetimeXp: 250,
+    };
+    // g1 was the only game: the new read is final as it is.
+    const view = hold.view("me", after);
+    expect(view.provisional).toBe(false);
+    expect(view.progress).toBe(after);
   });
 
   it("keeps but doesn't count a game it couldn't ask about", async () => {

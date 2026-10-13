@@ -28,7 +28,8 @@ import { modalRouter } from "./ModalRouter";
 import { loadPlayerProgress } from "./PlayerProgress";
 import {
   PROVISIONAL_PROGRESS_CHANGED,
-  provisionalProgress,
+  ProvisionalHold,
+  scoredGames,
 } from "./ProvisionalProgress";
 import {
   parsePlayerProfilePath,
@@ -90,11 +91,35 @@ export class PlayerProfileModal extends BaseModal {
     super.disconnectedCallback();
   }
 
+  // Keeps the viewer's own provisional level up while a scored game's
+  // progress is read again.
+  private progressHold = new ProvisionalHold<PublicProgress>();
+
   // The player's own level counts XP from games still waiting to be scored,
   // and that changed (ProvisionalProgress.ts).
-  private handleProvisionalChanged = (): void => {
+  private handleProvisionalChanged = (event: Event): void => {
+    if (scoredGames(event).length > 0) this.rereadProgress();
     this.requestUpdate();
   };
+
+  // A pending game was scored. The profile's progress was read before that,
+  // so without it the level would drop back to where it was before the game:
+  // read it again, with the provisional level held up until that lands.
+  private rereadProgress(): void {
+    const publicId = this.publicId;
+    if (publicId === null || this.progress === null) return;
+    if (!this.progressHold.hold(this.progress)) return;
+    const gen = this.loadGeneration;
+    void loadPlayerProgress(publicId).then((progress) => {
+      if (gen !== this.loadGeneration || this.publicId !== publicId) return;
+      if (progress === null) {
+        this.progressHold.reset();
+        this.requestUpdate();
+        return;
+      }
+      this.progress = progress;
+    });
+  }
 
   /**
    * The progress to show: on the viewer's own profile, with any XP still
@@ -103,7 +128,7 @@ export class PlayerProfileModal extends BaseModal {
   private progressView() {
     return this.progress === null
       ? null
-      : provisionalProgress(this.publicId, this.progress);
+      : this.progressHold.view(this.publicId, this.progress);
   }
 
   protected modalConfig() {
@@ -473,6 +498,7 @@ export class PlayerProfileModal extends BaseModal {
     this.statsTree = null;
     this.clans = [];
     this.progress = null;
+    this.progressHold.reset();
     this.gameHistoryCache = null;
     this.gamesScrollTop = 0;
     this.restoreGamesScrollAfterOpen = false;

@@ -243,6 +243,8 @@ export function buildProvisionalXp(input: {
       eligible: true,
       breakdown: result.breakdown,
       ...projected,
+      // Provisional XP never earns a prestige: only the API's figure can.
+      after: { ...projected.after, canPrestige: false },
     };
   } else {
     response = {

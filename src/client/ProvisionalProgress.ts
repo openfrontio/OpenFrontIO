@@ -350,6 +350,16 @@ export async function progressWithPendingXp(opts: {
 /** Sent on document whenever what provisionalProgress() returns may change. */
 export const PROVISIONAL_PROGRESS_CHANGED = "provisional-progress-changed";
 
+export interface ProvisionalChange {
+  // Games the API has just scored: progress read before now leaves them out.
+  scored: readonly string[];
+}
+
+/** The games a PROVISIONAL_PROGRESS_CHANGED event says were just scored. */
+export function scoredGames(event: Event): readonly string[] {
+  return (event as CustomEvent<ProvisionalChange | null>).detail?.scored ?? [];
+}
+
 export interface ProvisionalView<P> {
   // The progress to show: the projected one when provisional, else the
   // confirmed one itself.
@@ -462,8 +472,75 @@ export function provisionalProgress<P extends ProgressLike>(
   return view;
 }
 
-function emitChanged(): void {
-  document.dispatchEvent(new CustomEvent(PROVISIONAL_PROGRESS_CHANGED));
+function emitChanged(scored: readonly string[] = []): void {
+  document.dispatchEvent(
+    new CustomEvent<ProvisionalChange>(PROVISIONAL_PROGRESS_CHANGED, {
+      detail: { scored },
+    }),
+  );
+}
+
+/**
+ * Whether provisionalProgress() has the final say on `confirmed`: there is
+ * nothing pending, or a check has run since it was read. Until then a figure
+ * read since the last check shows unprojected while that check runs.
+ */
+export function provisionalSettled(
+  publicId: string | null | undefined,
+  confirmed: object,
+): boolean {
+  if (deps === null || !publicId || publicId !== account) return true;
+  if (readPendingXp(publicId, now()).length === 0) return true;
+  const check = verified;
+  return (
+    check !== null && check.account === publicId && seen(confirmed) < check.seq
+  );
+}
+
+/**
+ * For a view of progress read once (a modal's own read, not /users/@me),
+ * which has to be read again when a pending game is scored: from then until
+ * the new read lands and settles, the last provisional view stays on screen,
+ * so the level never dips back to the figure from before the game.
+ */
+export class ProvisionalHold<P extends ProgressLike> {
+  private last: ProvisionalView<P> | null = null;
+  private held: ProvisionalView<P> | null = null;
+  // The progress the held view was projected from: still showing it means
+  // the new read hasn't landed.
+  private heldFrom: P | null = null;
+
+  view(publicId: string | null | undefined, confirmed: P): ProvisionalView<P> {
+    const view = provisionalProgress(publicId, confirmed);
+    if (this.held !== null) {
+      const waiting =
+        confirmed === this.heldFrom ||
+        (!view.provisional && !provisionalSettled(publicId, confirmed));
+      if (waiting) return this.held;
+      this.held = null;
+      this.heldFrom = null;
+    }
+    this.last = view;
+    return view;
+  }
+
+  /**
+   * A pending game was scored and `confirmed` is about to be read again.
+   * True when what shows was provisional, so it's held (and worth the read).
+   */
+  hold(confirmed: P): boolean {
+    if (this.last?.provisional !== true) return false;
+    this.held = this.last;
+    this.heldFrom = confirmed;
+    return true;
+  }
+
+  /** Shows whatever the progress now gives (a new opening, a failed read). */
+  reset(): void {
+    this.last = null;
+    this.held = null;
+    this.heldFrom = null;
+  }
 }
 
 function scheduleCheck(): void {
@@ -523,7 +600,7 @@ export function runCheck(): Promise<void> {
     }
     config = loaded === false ? null : loaded;
     verified = { account: forAccount, seq: checkSeq, pending };
-    emitChanged();
+    emitChanged(answered);
     syncPolling();
   })();
   inFlight = run.finally(() => {

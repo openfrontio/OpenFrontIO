@@ -54,6 +54,8 @@ import "./PlayerProfileModal";
 import { loadPlayerProgress } from "./PlayerProgress";
 import {
   PROVISIONAL_PROGRESS_CHANGED,
+  ProvisionalHold,
+  scoredGames,
   provisionalProgress,
 } from "./ProvisionalProgress";
 import { steamSDK } from "./SteamSDK";
@@ -109,6 +111,9 @@ export class AccountModal extends BaseModal {
   private progressionFor: string | null = null;
   // Bumped on every read and drop, so a superseded read is ignored.
   private progressionLoad = 0;
+  // Keeps the tab's provisional level up while a scored game's progress is
+  // read again.
+  private progressionHold = new ProvisionalHold<PublicProgress>();
   // The tab a link or caller asked for. BaseModal picks it when the tab is
   // listed at open, but the tabs wait for the account: a modal loaded after
   // the page's /users/@me broadcast doesn't know the player yet, and an
@@ -137,9 +142,10 @@ export class AccountModal extends BaseModal {
 
     // The level shown counts XP from games still waiting to be scored, and
     // that changed (ProvisionalProgress.ts).
-    document.addEventListener(PROVISIONAL_PROGRESS_CHANGED, () =>
-      this.requestUpdate(),
-    );
+    document.addEventListener(PROVISIONAL_PROGRESS_CHANGED, (event) => {
+      if (scoredGames(event).length > 0) this.rereadProgression();
+      this.requestUpdate();
+    });
 
     document.addEventListener("userMeResponse", (event: Event) => {
       // A CrazyGames sign-in fires userMeResponse (via Main's auth listener);
@@ -497,7 +503,7 @@ export class AccountModal extends BaseModal {
       return this.renderLoadingSpinner(translateText("common.loading"));
     }
     // With any XP still waiting to be scored, provisionally.
-    const view = provisionalProgress(publicId, this.progression);
+    const view = this.progressionHold.view(publicId, this.progression);
     return html`<profile-progression
       .progress=${view.progress}
       .confirmedLevel=${view.provisional ? view.confirmedLevel : null}
@@ -536,6 +542,28 @@ export class AccountModal extends BaseModal {
     this.progressionLoad++;
     this.progressionFor = null;
     this.progression = null;
+    this.progressionHold.reset();
+  }
+
+  // A pending game was scored. The tab's progress was read before that, so
+  // without it the level would drop back to where it was before the game:
+  // read it again, with the provisional level held up until that lands.
+  private rereadProgression(): void {
+    const publicId = this.progressionFor;
+    if (publicId === null || this.progression === null) return;
+    // Closed, it's read afresh at the next opening anyway.
+    if (!this.isConnected || !this.isOpen()) return;
+    if (!this.progressionHold.hold(this.progression)) return;
+    const load = ++this.progressionLoad;
+    void loadPlayerProgress(publicId).then((progress) => {
+      if (load !== this.progressionLoad) return;
+      if (progress === null) {
+        this.progressionHold.reset();
+        this.requestUpdate();
+        return;
+      }
+      this.progression = progress;
+    });
   }
 
   // The track's Claim all moved rewards into the balances. Update the

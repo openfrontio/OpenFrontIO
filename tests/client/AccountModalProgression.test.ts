@@ -522,6 +522,74 @@ describe("AccountModal — Progression tab", () => {
       expect(el.querySelector("[data-track-provisional]")).not.toBeNull();
     });
 
+    it("reads the track again when the game is scored, never dropping back meanwhile", async () => {
+      // Storage that clearing a scored game really changes.
+      let stored: string | null = JSON.stringify({
+        me: [{ gameId: "g1", xp: 250, at: Date.now() }],
+      });
+      vi.mocked(localStorage.getItem).mockImplementation((key: string) =>
+        key === PENDING_XP_KEY ? stored : null,
+      );
+      vi.mocked(localStorage.setItem).mockImplementation(
+        (key: string, value: string) => {
+          if (key === PENDING_XP_KEY) stored = value;
+        },
+      );
+      vi.mocked(localStorage.removeItem).mockImplementation((key: string) => {
+        if (key === PENDING_XP_KEY) stored = null;
+      });
+      let scored = false;
+      stopProvisionalProgress();
+      startProvisionalProgress({
+        fetchXp: async (gameId) =>
+          scored
+            ? {
+                status: "ok",
+                data: { gameId, eligible: false, reason: "too_short" },
+              }
+            : { status: "pending", notFound: true },
+        loadConfig: async () => config(),
+        refreshUserMe: async () => undefined,
+      });
+      document.dispatchEvent(new CustomEvent("userMeResponse", { detail: me }));
+      try {
+        await runCheck();
+        modal.open({ tab: "progression" });
+        await settle(() => {
+          expect(
+            progression()?.querySelector('[data-level="49"][data-current]'),
+          ).not.toBeNull();
+        });
+
+        // The game is scored at what it showed; the new read takes a while.
+        let land!: (progress: PublicProgress) => void;
+        fetchPublicPlayerProgressMock.mockClear();
+        fetchPublicPlayerProgressMock.mockReturnValueOnce(
+          new Promise<PublicProgress>((resolve) => (land = resolve)),
+        );
+        scored = true;
+        await runCheck();
+        await modal.updateComplete;
+        expect(fetchPublicPlayerProgressMock).toHaveBeenCalledTimes(1);
+        // Still on 49 while it reads, not back on the old 47.
+        expect(
+          progression()?.querySelector('[data-level="49"][data-current]'),
+        ).not.toBeNull();
+
+        land({ ...PUBLIC_WITH_XP, level: 49, xpInLevel: 90 });
+        await settle(() => {
+          const el = progression();
+          expect(el?.confirmedLevel).toBeNull();
+          expect(
+            el?.querySelector('[data-level="49"][data-current]'),
+          ).not.toBeNull();
+        });
+      } finally {
+        vi.mocked(localStorage.setItem).mockImplementation(() => undefined);
+        vi.mocked(localStorage.removeItem).mockImplementation(() => undefined);
+      }
+    });
+
     it("shows the confirmed level for an account with nothing pending", async () => {
       vi.mocked(localStorage.getItem).mockImplementation(() => null);
       await runCheck();
