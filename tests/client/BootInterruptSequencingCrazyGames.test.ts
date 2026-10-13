@@ -100,7 +100,7 @@ describe("boot sequencing on CrazyGames", () => {
       navigate: (hash) => calls.navigated.push(hash),
       openRewards: () => calls.rewardsOpened++,
       storeClaimPrompt: () => {},
-      storeSteamGrant: () => {},
+      updateSteamGrant: () => {},
       markNoticeSeen: () => {},
       now: () => Date.now(),
     };
