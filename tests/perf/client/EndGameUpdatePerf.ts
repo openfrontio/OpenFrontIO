@@ -5,21 +5,21 @@
  * - Each player has:
  *   - 100 Cities
  *   - 50 Factories connected to cities via rail networks
- *   - 2 Level-50 Ports spawning high-capacity trade ships
+ *   - 5 Level-50 Ports spawning high-capacity trade ships (20 ports total)
  *   - 15 Warships patrolling coastal water
  *   - 50 Level-1 SAM launchers + 1 Level-30 SAM launcher
  *   - 10 Missile Silos
- * - 120-tick pre-roll warm-up: ensures rail networks are fully populated with
- *   moving trains, ports have launched trade ships, and warships are patrolling.
- * - At tick 120: synchronized combat launch:
+ * - 240-tick pre-roll warm-up: ensures rail networks are fully populated with
+ *   moving trains, ports have launched extensive trade fleets, and warships are patrolling.
+ * - At tick 240: synchronized combat launch:
  *   - P1 and P2 launch MIRVs at each other's cities (separating mid-flight)
  *   - P3 and P4 launch Hydrogen Bombs at each other's cities
  *   - 204 SAM batteries detect the incoming swarm and fire interceptor missiles
  * - Measures worker sim tick time, structuredClone transfer, GameView.update,
- *   and WebGLFrameBuilder.update over the peak burst flight window.
+ *   and WebGLFrameBuilder.update over the 150-tick peak burst flight window.
  *
  * Usage:
- *   npx tsx tests/perf/client/EndGameUpdatePerf.ts [--ticks 270] [--preroll 120] [--map world]
+ *   npx tsx tests/perf/client/EndGameUpdatePerf.ts [--ticks 390] [--preroll 240] [--map world]
  */
 
 import "./Shims"; // must be first: browser-global shims for client code
@@ -76,8 +76,8 @@ interface Options {
 
 function parseArgs(args: string[]): Options {
   let map = GameMapType.World;
-  let totalTicks = 270;
-  let prerollTicks = 120;
+  let totalTicks = 390;
+  let prerollTicks = 240;
   let seed = "perf-endgame";
 
   for (let i = 0; i < args.length; i++) {
@@ -275,9 +275,13 @@ function setupPlayerEndGame(
 
   const occupiedTiles = new Set<TileRef>();
 
-  // 1. Ports (2 Level-50 ports)
-  for (let i = 0; i < Math.min(2, shoreTiles.length); i++) {
-    const tile = shoreTiles[i];
+  // 1. Ports (5 Level-50 ports: 2 base + 3 additional)
+  const portInterval = Math.max(1, Math.floor(shoreTiles.length / 10));
+  let shoreIdx = 0;
+  while (ports.length < 5 && shoreIdx < shoreTiles.length) {
+    const tile = shoreTiles[shoreIdx];
+    shoreIdx += portInterval;
+    if (occupiedTiles.has(tile)) continue;
     try {
       const port = (player as any).buildUnit(UnitType.Port, tile, {});
       occupiedTiles.add(tile);
@@ -558,7 +562,12 @@ async function main(): Promise<void> {
       if (gu.packedMotionPlans) transfers.push(gu.packedMotionPlans.buffer);
       if (gu.packedPlayerUpdates) transfers.push(gu.packedPlayerUpdates.buffer);
       if (gu.packedAttackUpdates) transfers.push(gu.packedAttackUpdates.buffer);
-      if (gu.packedUnitUpdates) transfers.push(gu.packedUnitUpdates.buffer);
+      const packedUnits = (gu as { packedUnitUpdates?: Float64Array })
+        .packedUnitUpdates;
+      if (packedUnits) transfers.push(packedUnits.buffer);
+      const packedTimers = (gu as { packedMissileTimers?: Uint32Array })
+        .packedMissileTimers;
+      if (packedTimers) transfers.push(packedTimers.buffer);
 
       const cloned = structuredClone(gu, { transfer: transfers });
       gameView.update(cloned);
@@ -566,15 +575,16 @@ async function main(): Promise<void> {
     }
   }
 
+  const prerollTradeShips = runner.game.unitCount(UnitType.TradeShip);
   console.log(
     `Pre-roll done in ${fmtMs(performance.now() - prerollStart)}ms. Active units on board: ` +
-      `${runner.game.units().length} units.`,
+      `${runner.game.units().length} units (${prerollTradeShips} trade ships).`,
   );
 
   // Phase 2: Combat Launch
   console.log(
     `\n=== Phase 2: Combat Launch & Peak Measurement ===\n` +
-      `Launching 20 MIRVs (P1 <-> P2) and 20 Hydrogen Bombs (P3 <-> P4)...`,
+      `Launching 2 MIRVs (P1 <-> P2) and 20 Hydrogen Bombs (P3 <-> P4)...`,
   );
 
   const p1 = setups[0];
@@ -648,7 +658,12 @@ async function main(): Promise<void> {
     if (gu.packedMotionPlans) transfers.push(gu.packedMotionPlans.buffer);
     if (gu.packedPlayerUpdates) transfers.push(gu.packedPlayerUpdates.buffer);
     if (gu.packedAttackUpdates) transfers.push(gu.packedAttackUpdates.buffer);
-    if (gu.packedUnitUpdates) transfers.push(gu.packedUnitUpdates.buffer);
+    const packedUnits = (gu as { packedUnitUpdates?: Float64Array })
+      .packedUnitUpdates;
+    if (packedUnits) transfers.push(packedUnits.buffer);
+    const packedTimers = (gu as { packedMissileTimers?: Uint32Array })
+      .packedMissileTimers;
+    if (packedTimers) transfers.push(packedTimers.buffer);
 
     start = performance.now();
     const cloned = structuredClone(gu, { transfer: transfers });
@@ -689,6 +704,9 @@ async function main(): Promise<void> {
 
   console.log(`\n--- Peak Load State ---`);
   console.log(`Peak concurrent units on board: ${maxUnits}`);
+  console.log(
+    `Concurrent trade ships on board: ${runner.game.unitCount(UnitType.TradeShip)}`,
+  );
   console.log(`Total tile updates: ${tileUpdatesTotal}`);
   console.log(`Total unit updates: ${unitUpdatesTotal}`);
   console.log(

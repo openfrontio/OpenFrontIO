@@ -471,9 +471,9 @@ describe("MIRVExecution", () => {
       game.executeNextTick();
     }
 
-    const mirvExec2 = game2
-      .executions()
-      .find((e: any) => e.constructor.name === "MirvExecution");
+    const mirvExec2 = (
+      (game2 as any).executions?.() ?? (game2 as any).execs
+    ).find((e: any) => e.constructor.name === "MirvExecution");
     while (mirvExec2 && mirvExec2.isActive()) {
       game2.executeNextTick();
     }
