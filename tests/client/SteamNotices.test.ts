@@ -428,7 +428,7 @@ describe("the steam-notice boot interrupt", () => {
       navigate: () => {},
       openRewards: () => {},
       storeClaimPrompt: () => {},
-      storeSteamGrant: (store) => calls.grantStored.push(store),
+      updateSteamGrant: (update) => calls.grantStored.push(update(grantStore)),
       markNoticeSeen: (notice) => calls.seen.push(notice),
       now: () => NOW,
     };
@@ -445,6 +445,24 @@ describe("the steam-notice boot interrupt", () => {
       seenAt: NOW,
     },
   };
+
+  it("marks nothing until the notice is dismissed", async () => {
+    const { base, calls } = ports();
+    let dismiss!: () => void;
+    base.alert = () => new Promise<void>((resolve) => (dismiss = resolve));
+    const running = runBootInterrupt(
+      "steam-notice",
+      { claimStore: {}, grantStore, publicId: ME, steamNotice: intro },
+      base,
+    );
+    await Promise.resolve();
+    expect(calls.seen).toEqual([]);
+    expect(calls.grantStored).toEqual([]);
+    dismiss();
+    await running;
+    expect(calls.seen).toEqual([STEAM_LICENCE_INTRO_NOTICE]);
+    expect(calls.grantStored).toHaveLength(1);
+  });
 
   it("marks the notice seen, covers the grant welcome, and shows once per launch", async () => {
     const { base, calls } = ports();

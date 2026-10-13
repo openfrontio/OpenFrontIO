@@ -55,6 +55,7 @@ import { desktopPresence, type PresencePayload } from "./DesktopPresence";
 import { subscribeDesktopSessionRecovery } from "./DesktopSessionRecovery";
 import {
   desktopUpdate,
+  getDesktopUpdateState,
   isDesktopShell,
   type DesktopUpdateState,
 } from "./DesktopShell";
@@ -844,6 +845,7 @@ class Client {
           window.location,
           isDesktopShell(),
           { joinInFlight: this.joinInFlight, lobbyHandle: this.lobbyHandle },
+          getDesktopUpdateState(),
         );
 
         // One interrupt per boot, chosen by the ordering in BootInterrupts —
@@ -923,10 +925,16 @@ class Client {
             },
             storeClaimPrompt: (store) =>
               localStorage.setItem(CLAIM_PROMPT_KEY, JSON.stringify(store)),
-            storeSteamGrant: (store) =>
+            updateSteamGrant: (update) =>
               localStorage.setItem(
                 STEAM_GRANT_NOTICE_KEY,
-                JSON.stringify(store),
+                JSON.stringify(
+                  update(
+                    parseSteamGrantStore(
+                      localStorage.getItem(STEAM_GRANT_NOTICE_KEY),
+                    ),
+                  ),
+                ),
               ),
             markNoticeSeen: (notice) => void markNoticeSeen(notice),
             now: () => Date.now(),

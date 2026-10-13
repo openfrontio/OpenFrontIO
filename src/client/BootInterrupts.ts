@@ -17,6 +17,7 @@ import {
   isTemporaryUsername,
   type UserMeResponse,
 } from "@openfront/shared/ApiSchemas";
+import type { DesktopUpdateState } from "./DesktopShell";
 import { lapseNoticeDue } from "./PlayerName";
 import {
   steamGrantEndedShown,
@@ -114,12 +115,13 @@ export function isCleanHomepage(
 /**
  * May anything interrupt this boot at all?
  *
- * The whole gate, in one place, because none of its three parts is sufficient
- * alone and Main had no way to be tested on the composition:
+ * The whole gate, in one place, because none of its parts is sufficient alone
+ * and Main had no way to be tested on the composition:
  *
  * - a clean homepage URL (isCleanHomepage above), and
  * - no join the player has already committed to, and
- * - no lobby handle.
+ * - no lobby handle, and
+ * - no desktop update downloading or staged.
  *
  * The middle one is not covered by the last. A public-lobby join awaits
  * userAuth(), whenSeeded(), cosmetics and a Turnstile token before
@@ -132,12 +134,22 @@ export function bootInterruptsAllowed(
   location: { pathname: string; hash: string },
   desktopShell: boolean,
   lobby: { joinInFlight: boolean; lobbyHandle: unknown },
+  update: DesktopUpdateState | null,
 ): boolean {
   return (
     isCleanHomepage(location, desktopShell) &&
     !lobby.joinInFlight &&
-    lobby.lobbyHandle === null
+    lobby.lobbyHandle === null &&
+    !updatePending(update)
   );
+}
+
+// The player's next step is the update bar's Reload, which tears down
+// whatever opened, so the interrupt waits for the boot after it. `checking`
+// is deliberately not held: every cold launch starts there, and interrupts
+// are not re-run once it settles.
+function updatePending(update: DesktopUpdateState | null): boolean {
+  return update?.status === "downloading" || update?.status === "staged";
 }
 
 /**
@@ -507,8 +519,12 @@ export interface BootInterruptPorts {
   openRewards(): void;
   /** Persists the whole claim-prompt map. */
   storeClaimPrompt(store: ClaimPromptStore): void;
-  /** Persists the whole Steam grant notice map. */
-  storeSteamGrant(store: SteamGrantStore): void;
+  /**
+   * Applies `update` to the Steam grant notice map as currently stored. Read at
+   * write time, not from the context: the write lands after the dialog, and
+   * onUserMe and the lapse notice can rewrite the map while it is open.
+   */
+  updateSteamGrant(update: (store: SteamGrantStore) => SteamGrantStore): void;
   /** POST /users/@me/notices. Fire and forget. */
   markNoticeSeen(notice: string): void;
   now(): number;
@@ -534,11 +550,35 @@ function formatGrantDate(iso: string | Date): string {
 /**
  * Do whatever the chosen interrupt requires. One per boot; `null` does nothing.
  *
+ * Every record is written only once the player has answered. An update
+ * Reload, a crash or a quit can tear the page down under an open dialog, and a
+ * record written on opening spends a showing nobody saw: one of three for the
+ * claim prompt, the only one for the grant notices.
+ *
  * `lapse-notice` is deliberately a no-op: <username-input> owns that alert and
  * has already shown it. It appears in the ordering so that naming it here is
  * what stops anything else opening on the same boot.
  */
 export async function runBootInterrupt(
+  interrupt: BootInterrupt | null,
+  context: BootInterruptContext,
+  ports: BootInterruptPorts,
+): Promise<void> {
+  // onUserMe re-runs within a launch (session recovery, a mid-session
+  // sign-in), and with nothing recorded until the open dialog settles, a re-run
+  // would pick the same interrupt again and stack a second copy over it.
+  if (interruptOpen) return;
+  interruptOpen = true;
+  try {
+    await runInterrupt(interrupt, context, ports);
+  } finally {
+    interruptOpen = false;
+  }
+}
+
+let interruptOpen = false;
+
+async function runInterrupt(
   interrupt: BootInterrupt | null,
   context: BootInterruptContext,
   ports: BootInterruptPorts,
@@ -561,28 +601,18 @@ export async function runBootInterrupt(
       const body = ports.translate(BOOT_INTERRUPT_KEYS.claimBody);
       const heading = ports.translate(BOOT_INTERRUPT_KEYS.claimHeading);
       const confirmText = ports.translate(BOOT_INTERRUPT_KEYS.claimConfirm);
-      // Recorded before the dialog opens, and whichever way they answer:
-      // declining is an answer, and re-asking someone who said no is the
-      // nagging the decay rule exists to prevent. Before rather than after
-      // because the promise only settles on dismissal, and a second boot in
-      // the meantime would otherwise ask again.
+      const accepted = await ports.confirm(body, heading, confirmText);
+      // Whichever way they answered: re-asking someone who said no is the
+      // nagging the decay rule exists to prevent.
       ports.storeClaimPrompt(
         claimPromptShown(context.claimStore, ports.now(), context.publicId),
       );
-      const accepted = await ports.confirm(body, heading, confirmText);
       if (accepted) ports.navigate(USERNAME_FORM_HASH);
       return;
     }
-    // Both grant notices record themselves before opening, for the reason the
-    // claim prompt does: the alert settles only on dismissal. Each is owed
-    // once per grant; an unread dialog is the player's choice, not a reason to
-    // ask again.
     case "grant-welcome": {
       const record = context.grantStore[context.publicId];
       if (record === undefined) return;
-      ports.storeSteamGrant(
-        steamGrantWelcomed(context.grantStore, context.publicId),
-      );
       const tier = ports.tierName(record.tier);
       await ports.alert(
         ports.translate(BOOT_INTERRUPT_KEYS.grantWelcomeBody, {
@@ -591,18 +621,21 @@ export async function runBootInterrupt(
         }),
         ports.translate(BOOT_INTERRUPT_KEYS.grantWelcomeHeading),
       );
+      ports.updateSteamGrant((store) =>
+        steamGrantWelcomed(store, context.publicId),
+      );
       return;
     }
     case "grant-ended": {
       const record = context.grantStore[context.publicId];
       if (record === undefined) return;
-      ports.storeSteamGrant(
-        steamGrantEndedShown(context.grantStore, context.publicId),
-      );
       const tier = ports.tierName(record.tier);
       await ports.alert(
         ports.translate(BOOT_INTERRUPT_KEYS.grantEndedBody, { tier }),
         ports.translate(BOOT_INTERRUPT_KEYS.grantEndedHeading),
+      );
+      ports.updateSteamGrant((store) =>
+        steamGrantEndedShown(store, context.publicId),
       );
       return;
     }
@@ -610,18 +643,18 @@ export async function runBootInterrupt(
       const notice = context.steamNotice;
       if (notice === null) return;
       steamNoticeShown();
+      const copy = steamNoticeCopy(notice, ports.translate, formatGrantDate);
+      await ports.alert(copy.paragraphs.join("\n\n"), copy.heading);
       ports.markNoticeSeen(notice.notice);
       if (
         notice.kind !== "steam-plus-conversion" &&
         notice.grantEnd !== null &&
         context.grantStore[context.publicId] !== undefined
       ) {
-        ports.storeSteamGrant(
-          steamGrantWelcomed(context.grantStore, context.publicId),
+        ports.updateSteamGrant((store) =>
+          steamGrantWelcomed(store, context.publicId),
         );
       }
-      const copy = steamNoticeCopy(notice, ports.translate, formatGrantDate);
-      await ports.alert(copy.paragraphs.join("\n\n"), copy.heading);
       return;
     }
     case "lapse-notice":
