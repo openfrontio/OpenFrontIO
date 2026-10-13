@@ -1,4 +1,3 @@
-import type { UserMeResponse } from "../../src/core/ApiSchemas";
 import { afterEach, describe, expect, it } from "vitest";
 import {
   nextBootInterrupt,
@@ -18,6 +17,7 @@ import {
   steamNoticeStringsReady,
   type SteamNotice,
 } from "../../src/client/SteamNotices";
+import type { UserMeResponse } from "../../src/core/ApiSchemas";
 
 const ME = "player-public-id";
 const NOW = Date.parse("2026-10-09T12:00:00.000Z");
@@ -51,7 +51,6 @@ function steamGrant(end = GRANT_END): Sub {
     cancelAtPeriodEnd: false,
     currentPeriodEnd: new Date(end),
     provider: null,
-    grantSource: "steam",
   };
 }
 
@@ -108,7 +107,7 @@ describe("steamNoticeDue", () => {
   it("drops the grant line for a paid subscription", () => {
     const due = steamNoticeDue(
       me({
-        subscription: { ...steamGrant(), provider: "steam", grantSource: null },
+        subscription: { ...steamGrant(), provider: "steam" },
       }),
       true,
       NOW,
@@ -439,7 +438,6 @@ describe("the steam-notice boot interrupt", () => {
     [ME]: {
       periodEnd: GRANT_END,
       tier: "steam_plus",
-      steam: true,
       welcomed: false,
       endedShown: false,
       seenAt: NOW,

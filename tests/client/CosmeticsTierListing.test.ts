@@ -1,4 +1,3 @@
-import type { UserMeResponse } from "../../src/core/ApiSchemas";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   fetchCosmetics,
@@ -7,6 +6,7 @@ import {
   subscriptionTier,
   tierListingRail,
 } from "../../src/client/Cosmetics";
+import type { UserMeResponse } from "../../src/core/ApiSchemas";
 
 vi.mock("../../src/client/Api", async (importOriginal) => ({
   ...(await importOriginal<typeof import("../../src/client/Api")>()),

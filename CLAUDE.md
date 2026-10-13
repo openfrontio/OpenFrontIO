@@ -29,8 +29,8 @@ npx vitest NationAllianceBehavior --run # match by name pattern
 
 OpenFront.io is a real-time multiplayer territorial strategy game. There are four components:
 
-1. **The engine** — Deterministic game simulation, split into npm workspace packages under `packages/` (see below). Pure TypeScript with **no external dependencies** beyond zod. Must stay bit-identical on every client: use the seeded PRNG, and use `packages/engine-lib/src/DetMath.ts` instead of `Math.exp`/`log`/`pow`/`sin`/… or `**` with an exponent other than 2 (ESLint enforces this). Runs in a Web Worker thread. All `packages/engine`, `packages/engine-api` and `packages/engine-lib` changes **must** include tests.
-2. **`src/client/`** — Rendering (custom WebGL2 renderer in `src/client/render/`), UI (Lit web components + Tailwind CSS 4), WebSocket communication.
+1. **The engine** — Deterministic game simulation, split into npm workspace packages under `packages/` (see below). Pure TypeScript with **no external dependencies** beyond zod. Must remain fully deterministic (seeded PRNG, no floating-point math). Runs in a Web Worker thread. All `packages/engine`, `packages/engine-api` and `packages/engine-lib` changes **must** include tests.
+2. **`src/client/`** — Rendering (Pixi.js/WebGL), UI (Lit web components + Tailwind CSS 4), WebSocket communication.
 3. **`src/server/`** — Game coordination, intent relay, WebSocket management (Node.js/Express/ws).
 4. **API** — Closed-source Cloudflare Worker handling auth, stats, cosmetics, monetization. Not in this repo.
 
@@ -49,7 +49,7 @@ Import them as `@openfront/<pkg>/<path>` (e.g. `@openfront/engine-api/game/GameM
 - `engine-api` imports only zod, `zbin` and `resources/*.json`; `engine-lib` adds `engine-api`; `engine` adds `engine-lib`. None of them may import `shared`, `src/client` or `src/server`, use `Math.random`/`Date.now`/`new Date` or the approximated `Math` functions (`sin`, `pow`, `exp`, `log`, `atan2`…; `engine-lib/DetMath` has exact ones), use host APIs beyond `console`, `performance` and `TextEncoder`/`TextDecoder` (their tsconfigs use `lib: ["ES2022"]` plus `packages/engine-api/globals.d.ts`; only the worker entry and protocol, `src/worker/`, get the WebWorker lib), or fetch anything: the engine's host passes it the map files in `init`.
 - `shared` may import `engine-api` and `engine-lib`, never `engine`.
 - `src/client` and `src/server` import `engine-api`, `engine-lib` and `shared`; the client loads `engine` only through `packages/engine/src/worker/Worker.worker.ts`, and the server only through `packages/engine/src/WinnerReplay.ts` (the winner-replay subprocess).
-- The homepage (`src/client/Main.ts` and its static imports) never statically imports the game client (`ClientGameRunner`, `Transport`, `hud/`, `render/`, `view/`, `controllers/`…): it's a separate chunk, loaded through `GameClientLoader` on join and prefetched once the page is idle. Load it with `import()`, or move what the homepage needs into a small module of its own (e.g. `LobbyEvents.ts`). The same goes for the modals in `LazyModals.ts`: `showPage` and the modal router load them, and code that calls one of them directly loads it first (`whenModalLoaded(tag, open)`, or await `loadModal(tag)`) and imports its class only with `import type`. They load after Main's `userMeResponse` broadcast, so one that listens for it also reads `lastUserMeResponse()` (`UserMeBroadcast.ts`) when it connects.
+- The homepage (`src/client/Main.ts` and its static imports) never statically imports the game client (`ClientGameRunner`, `Transport`, `hud/`, `render/`, `view/`, `controllers/`…): it's a separate chunk, loaded through `GameClientLoader` on join and prefetched once the page is idle. Load it with `import()`, or move what the homepage needs into a small module of its own (e.g. `LobbyEvents.ts`). The same goes for the modals in `LazyModals.ts`: `showPage` and the modal router load them, and code that calls one of them directly awaits `loadModal(tag)` first.
 - Rules that run on both sides (e.g. `Config.maxTroops`) take `PlayerLike`/`UnitLike`/`GameLike` from `engine-api/game/ReadViews.ts` and live in `engine-lib`; both the engine objects and the client views implement.
 
 ### Simulation Flow (Intent → Execution)
@@ -100,8 +100,8 @@ Tests use a `setup()` helper from `tests/util/Setup.ts` that creates a full game
 
 ## Tech Stack
 
-- **Bundler:** Vite + TypeScript 6
-- **Rendering:** Custom WebGL2 renderer (`src/client/render/`)
+- **Bundler:** Vite + TypeScript 5.7
+- **Rendering:** Pixi.js (WebGL)
 - **UI Components:** Lit (LitElement) + Tailwind CSS 4
 - **Audio:** Howler.js
 - **Schemas/Validation:** Zod
