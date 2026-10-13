@@ -109,14 +109,17 @@ export class OModal extends LitElement {
   }
 
   private renderTabs() {
-    // One row that scrolls sideways when the tabs don't fit (a phone with four
-    // or more tabs), instead of wrapping onto a second row. The auto margins
-    // on the first and last tab centre the row when it fits, and unlike
-    // justify-center they never push a tab off the left edge out of reach.
+    // One row that scrolls sideways when the tabs don't fit, instead of
+    // wrapping onto a second row. The auto margins on the first and last tab
+    // centre the row when it fits, and unlike justify-center they never push
+    // a tab off the left edge out of reach. Below sm the tabs are compact
+    // (smaller, less tracked, less padded labels, still 40px tall) so five
+    // fit across a 360px phone; the scroll is left for narrower screens and
+    // longer rows.
     return html`
       <div
         role="tablist"
-        class="flex flex-nowrap overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden [&>button:first-of-type]:ms-auto [&>button:last-of-type]:me-auto border-b border-white/10 px-4 lg:px-6 gap-1 shrink-0"
+        class="flex flex-nowrap overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden [&>button:first-of-type]:ms-auto [&>button:last-of-type]:me-auto border-b border-white/10 px-2 sm:px-4 lg:px-6 sm:gap-1 shrink-0"
       >
         ${this.tabs.map((tab) => {
           const active = this.activeTab === tab.key;
@@ -126,7 +129,7 @@ export class OModal extends LitElement {
               role="tab"
               data-key=${tab.key}
               aria-selected=${active}
-              class="shrink-0 whitespace-nowrap px-4 py-3 text-sm font-bold uppercase tracking-wider transition-all relative cursor-pointer ${active
+              class="shrink-0 whitespace-nowrap min-h-10 px-2 py-3 text-[11px] leading-4 tracking-wide sm:px-4 sm:text-sm sm:leading-5 sm:tracking-wider font-bold uppercase transition-all relative cursor-pointer ${active
                 ? "text-aquarius"
                 : "text-white/40 hover:text-white/70"}"
               @click=${() => this.handleTabClick(tab.key)}
