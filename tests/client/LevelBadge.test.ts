@@ -12,17 +12,24 @@ import {
   type XpBreakdown,
 } from "@openfront/shared/ApiSchemas";
 import { render as renderTemplate } from "lit";
-import { LevelBadge } from "../../src/client/components/LevelBadge";
+import {
+  LevelBadge,
+  levelBadgeAccent,
+  loadLargeBadgeIcons,
+} from "../../src/client/components/LevelBadge";
 import { xpBar } from "../../src/client/components/XpBar";
 import {
   apportionXp,
   ineligibleReasonKey,
-  levelBand,
+  LEGEND_COLOR,
   levelFraction,
   levelRewardReasonKey,
   multiplierAmounts,
   multiplierPercent,
+  prestigeAccent,
+  prestigeTier,
   subscriberTierOf,
+  TIER_COLORS,
   visibleMultipliers,
   visibleXpLines,
 } from "../../src/client/Progression";
@@ -31,24 +38,36 @@ if (!customElements.get("level-badge")) {
   customElements.define("level-badge", LevelBadge);
 }
 
-describe("levelBand", () => {
-  it("groups levels in tens, with level 100 on its own", () => {
-    expect(levelBand(1)).toBe(0);
-    expect(levelBand(9)).toBe(0);
-    expect(levelBand(10)).toBe(1);
-    expect(levelBand(19)).toBe(1);
-    expect(levelBand(20)).toBe(2);
-    expect(levelBand(55)).toBe(5);
-    expect(levelBand(90)).toBe(9);
-    expect(levelBand(99)).toBe(9);
-    expect(levelBand(100)).toBe(10);
+describe("prestige tiers", () => {
+  it("gives every rank its own tier, the last one past the art", () => {
+    expect(prestigeTier(0)).toBe("none");
+    expect([1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((p) => prestigeTier(p))).toEqual(
+      [
+        "iron",
+        "bronze",
+        "silver",
+        "gold",
+        "platinum",
+        "emerald",
+        "diamond",
+        "master",
+        "grandmaster",
+        "champion",
+      ],
+    );
+    expect(prestigeTier(12)).toBe("champion");
+    expect(prestigeTier(-1)).toBe("none");
+    expect(prestigeTier(Number.NaN)).toBe("none");
   });
 
-  it("clamps surprising input to a drawable band", () => {
-    expect(levelBand(0)).toBe(0);
-    expect(levelBand(-5)).toBe(0);
-    expect(levelBand(150)).toBe(10);
-    expect(levelBand(Number.NaN)).toBe(0);
+  it("accents a badge in its tier's colour, Legend in gold", () => {
+    expect(prestigeAccent(4, false)).toBe(TIER_COLORS.gold);
+    expect(prestigeAccent(6, false)).toBe("#2fd28f");
+    expect(prestigeAccent(12, false)).toBe(TIER_COLORS.champion);
+    expect(prestigeAccent(3, true)).toBe(LEGEND_COLOR);
+    // Before the first prestige: a light slate, like the plate.
+    expect(prestigeAccent(0, false)).toBe("#cbd5e1");
+    expect(levelBadgeAccent(5, false)).toBe(TIER_COLORS.platinum);
   });
 });
 
@@ -69,132 +88,238 @@ describe("<level-badge>", () => {
     return el;
   }
 
-  // An element's markup without Lit's comment markers, which differ between
-  // renders of the same template. Removed as nodes, not by pattern.
-  function markupWithoutComments(el: Element): string {
-    const clone = el.cloneNode(true) as Element;
-    const walker = document.createTreeWalker(clone, NodeFilter.SHOW_COMMENT);
-    const comments: Node[] = [];
-    while (walker.nextNode()) comments.push(walker.currentNode);
-    for (const comment of comments) comment.parentNode?.removeChild(comment);
-    return clone.innerHTML;
-  }
-
-  // The frame's outline, as markup — two bands with the same outline would
-  // differ only by colour, which colour-blind players can't rely on.
-  async function frameShape(level: number): Promise<string> {
-    const badge = await render({ level });
-    const frame = badge.querySelector("svg > g");
-    expect(frame).not.toBeNull();
-    return markupWithoutComments(frame!).replace(/\s+/g, " ").trim();
-  }
-
-  it("draws a differently shaped frame for every band", async () => {
-    const levels = [1, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100];
-    const shapes = new Set<string>();
-    for (const level of levels) shapes.add(await frameShape(level));
-    expect(shapes.size).toBe(levels.length);
-  });
-
-  it("keeps one frame within a band", async () => {
-    expect(await frameShape(40)).toBe(await frameShape(49));
-  });
-
-  it("shows the level number and an accessible name", async () => {
-    const badge = await render({ level: 42 });
-    const svg = badge.querySelector("svg")!;
-    expect(svg.querySelector("text")?.textContent).toBe("42");
-    expect(svg.getAttribute("aria-label")).toBe(
-      'progression.level:{"level":42}',
+  const svgOf = (badge: LevelBadge) => badge.querySelector("svg")!;
+  const segments = (badge: LevelBadge, which: "lit" | "unlit") =>
+    (
+      badge
+        .querySelector(`[data-gauge="${which}"]`)
+        ?.getAttribute("d")
+        ?.match(/M/g) ?? []
+    ).length;
+  const iconOf = (badge: LevelBadge) => badge.querySelector("use[data-icon]")!;
+  const chipOf = (badge: LevelBadge) => badge.querySelector("[data-chip]")!;
+  const chipFill = (badge: LevelBadge) =>
+    chipOf(badge).querySelector("rect")!.getAttribute("fill");
+  // The stops of the shared plate gradient a badge's plate points at.
+  const plateStops = (badge: LevelBadge) => {
+    const ref = badge.querySelector("[data-plate]")!.getAttribute("fill")!;
+    const gradient = document.getElementById(ref.slice("url(#".length, -1));
+    expect(gradient).not.toBeNull();
+    return [...gradient!.querySelectorAll("stop")].map((s) =>
+      s.getAttribute("stop-color"),
     );
-    expect(svg.getAttribute("data-level-band")).toBe("4");
+  };
+
+  const RANK_ICONS = [
+    "hex",
+    "city",
+    "factory",
+    "port",
+    "shield",
+    "sam",
+    "warship",
+    "silo",
+    "mushroom",
+    "mirv",
+    "crest",
+  ];
+
+  it("draws each rank's unit icon, tier colour and gauge", async () => {
+    for (let p = 1; p <= 10; p++) {
+      const badge = await render({ level: 42, prestige: p, size: 40 });
+      const tier = prestigeTier(p);
+      expect(svgOf(badge).getAttribute("data-prestige-tier")).toBe(tier);
+      expect(iconOf(badge).getAttribute("data-icon")).toBe(RANK_ICONS[p]);
+      // One gauge segment lit per rank, out of ten.
+      expect(segments(badge, "lit")).toBe(p);
+      expect(segments(badge, "unlit")).toBe(10 - p);
+      if (p < 10) {
+        expect(chipFill(badge)).toBe(TIER_COLORS[tier]);
+        expect(iconOf(badge).getAttribute("fill")).toBe(TIER_COLORS[tier]);
+      }
+    }
+  });
+
+  it("makes Champion's gauge and chip prismatic", async () => {
+    const badge = await render({ level: 81, prestige: 10, size: 64 });
+    const prism = chipFill(badge)!;
+    expect(prism).toMatch(/^url\(#level-badge-prism-/);
+    expect(
+      badge.querySelector('[data-gauge="lit"]')!.getAttribute("stroke"),
+    ).toBe(prism);
+    const gradient = document.getElementById(prism.slice(5, -1))!;
+    expect(gradient.querySelectorAll("stop").length).toBe(6);
+  });
+
+  it("raises the plate's finish with the rank", async () => {
+    const sparkles = async (prestige: number) =>
+      (await render({ level: 12, prestige, size: 64 })).querySelector(
+        "[data-sparkles]",
+      ) !== null;
+    expect(await sparkles(1)).toBe(false);
+    expect(await sparkles(7)).toBe(false);
+    expect(await sparkles(8)).toBe(true);
+    expect(await sparkles(10)).toBe(true);
+    // The top tiers' plates are lit brighter from the top.
+    const p7 = plateStops(await render({ level: 12, prestige: 7 }));
+    const p8 = plateStops(await render({ level: 12, prestige: 8 }));
+    expect(p7[0]).not.toBe(p8[0]);
+  });
+
+  it("draws an unprestiged badge on a neutral slate plate", async () => {
+    const badge = await render({ level: 18, prestige: 0, size: 64 });
+    expect(svgOf(badge).getAttribute("data-prestige-tier")).toBe("none");
+    expect(plateStops(badge)).toEqual(["#334155", "#1e293b"]);
+    expect(iconOf(badge).getAttribute("data-icon")).toBe("hex");
+    expect(iconOf(badge).getAttribute("fill")).toBe("#64748b");
+    expect(chipFill(badge)).toBe("#94a3b8");
+    expect(segments(badge, "lit")).toBe(0);
+    expect(segments(badge, "unlit")).toBe(10);
+    expect(svgOf(badge).getAttribute("style") ?? "").not.toContain("filter");
+  });
+
+  it("gives Legend a black plate, a gold crown and a full gold gauge", async () => {
+    const badge = await render({
+      level: 37,
+      prestige: 10,
+      legend: true,
+      size: 40,
+    });
+    const svg = svgOf(badge);
+    expect(svg.getAttribute("data-prestige-tier")).toBe("legend");
+    expect(svg.getAttribute("aria-label")).toBe("progression.legend");
+    expect(plateStops(badge)).toEqual(["#1c1917", "#0b0b0f"]);
+    expect(iconOf(badge).getAttribute("data-icon")).toBe("crown");
+    expect(iconOf(badge).getAttribute("fill")).toBe(LEGEND_COLOR);
+    expect(segments(badge, "lit")).toBe(10);
+    expect(
+      badge.querySelector('[data-gauge="lit"]')!.getAttribute("stroke"),
+    ).toBe(LEGEND_COLOR);
+    // Its chip always reads 100, in gold.
+    expect(chipOf(badge).getAttribute("data-chip")).toBe("100");
+    expect(chipFill(badge)).toBe(LEGEND_COLOR);
+  });
+
+  it("glows at P5, P10 and Legend only", async () => {
+    const glows = async (props: Partial<LevelBadge>) =>
+      (
+        svgOf(await render({ level: 30, size: 40, ...props })).getAttribute(
+          "style",
+        ) ?? ""
+      ).includes("drop-shadow");
+    const glowing: number[] = [];
+    for (let prestige = 0; prestige <= 10; prestige++) {
+      if (await glows({ prestige })) glowing.push(prestige);
+    }
+    expect(glowing).toEqual([5, 10]);
+    expect(await glows({ prestige: 10, legend: true })).toBe(true);
+  });
+
+  it("shows the level in the chip, clamped to 1..100", async () => {
+    const chipText = async (level: number) =>
+      chipOf(await render({ level })).getAttribute("data-chip");
+    expect(await chipText(42)).toBe("42");
+    expect(await chipText(7)).toBe("7");
+    expect(await chipText(150)).toBe("100");
+    expect(await chipText(0)).toBe("1");
+    expect(await chipText(Number.NaN)).toBe("1");
+  });
+
+  it("keeps the chip's digits on whole pixels, larger at larger sizes", async () => {
+    const digitPixel = async (size: number) => {
+      const d = chipOf(await render({ level: 8, prestige: 2, size }))
+        .querySelector("path")!
+        .getAttribute("d")!;
+      expect(d).not.toMatch(/\d\.\d/);
+      return Number(d.match(/v(\d+)/)![1]);
+    };
+    expect(await digitPixel(24)).toBe(1);
+    expect(await digitPixel(64)).toBe(2);
+    expect(await digitPixel(120)).toBe(3);
+  });
+
+  it("has an accessible name", async () => {
+    const svg = svgOf(await render({ level: 42, prestige: 3 }));
+    expect(svg.getAttribute("role")).toBe("img");
+    expect(svg.getAttribute("aria-label")).toBe(
+      'progression.level:{"level":42}, progression.prestige:{"prestige":3}',
+    );
+    expect(svg.querySelector("title")?.textContent).toBe(
+      svg.getAttribute("aria-label"),
+    );
+    expect(
+      svgOf(await render({ level: 42, prestige: 0 })).getAttribute(
+        "aria-label",
+      ),
+    ).toBe('progression.level:{"level":42}');
   });
 
   it("renders at the requested size, never below 16px", async () => {
-    let badge = await render({ level: 5, size: 48 });
-    expect(badge.querySelector("svg")?.getAttribute("width")).toBe("48");
-    badge = await render({ level: 5, size: 8 });
-    expect(badge.querySelector("svg")?.getAttribute("width")).toBe("16");
-  });
-
-  const tierOf = async (props: Partial<LevelBadge>) =>
-    (await render(props))
-      .querySelector("svg")
-      ?.getAttribute("data-prestige-tier");
-
-  it("draws a prestige emblem whose shape changes by rank group", async () => {
-    expect(await tierOf({ level: 12, prestige: 0 })).toBe("none");
-    expect(await tierOf({ level: 12, prestige: 1 })).toBe("ring");
-    expect(await tierOf({ level: 12, prestige: 3 })).toBe("ring");
-    expect(await tierOf({ level: 12, prestige: 4 })).toBe("double");
-    expect(await tierOf({ level: 12, prestige: 7 })).toBe("sunburst");
-    expect(await tierOf({ level: 12, prestige: 10 })).toBe("radiant");
-
-    // Shape, not just colour: every tier's markup differs.
-    const markup = new Set<string>();
-    for (const prestige of [1, 4, 7, 10]) {
-      const badge = await render({ level: 12, prestige, size: 16 });
-      markup.add(
-        markupWithoutComments(badge.querySelector("svg")!).replace(
-          /class="[^"]*"/g,
-          "",
-        ),
-      );
+    for (const size of [24, 28, 36, 40, 48, 64]) {
+      const svg = svgOf(await render({ level: 5, prestige: 4, size }));
+      expect(svg.getAttribute("width")).toBe(String(size));
+      expect(svg.getAttribute("height")).toBe(String(size));
     }
-    expect(markup.size).toBe(4);
+    const svg = svgOf(await render({ level: 5, size: 8 }));
+    expect(svg.getAttribute("width")).toBe("16");
   });
 
-  it("tells ranks within a group apart with one to three gems", async () => {
-    const gems = async (prestige: number, size = 16) =>
-      (await render({ level: 12, prestige, size })).querySelectorAll(
-        "[data-rank-gem]",
-      ).length;
-    expect(await gems(0)).toBe(0);
-    expect([await gems(1), await gems(2), await gems(3)]).toEqual([1, 2, 3]);
-    expect([await gems(4), await gems(5), await gems(6)]).toEqual([1, 2, 3]);
-    expect([await gems(7), await gems(8), await gems(9)]).toEqual([1, 2, 3]);
-    // The last rank is its own group, told apart by its silhouette.
-    expect(await gems(10)).toBe(0);
-  });
-
-  it("shows a rank past the art's last one by its own number", async () => {
+  it("names a rank past the art's last one by its own number", async () => {
     const badge = await render({ level: 12, prestige: 12, size: 40 });
-    const svg = badge.querySelector("svg")!;
-    expect(svg.getAttribute("data-prestige-tier")).toBe("radiant");
-    expect([...svg.querySelectorAll("text")].map((t) => t.textContent)).toEqual(
-      ["12", 'progression.prestige_short:{"prestige":12}'],
-    );
+    const svg = svgOf(badge);
+    // Drawn as Champion, its gauge full …
+    expect(svg.getAttribute("data-prestige-tier")).toBe("champion");
+    expect(iconOf(badge).getAttribute("data-icon")).toBe("crest");
+    expect(segments(badge, "lit")).toBe(10);
+    // … and named by its own rank.
+    expect(svg.getAttribute("data-prestige")).toBe("12");
     expect(svg.getAttribute("aria-label")).toBe(
       'progression.level:{"level":12}, progression.prestige:{"prestige":12}',
     );
   });
 
-  it("labels the rank where there is room, and always in the name", async () => {
-    let badge = await render({ level: 12, prestige: 3, size: 40 });
-    const texts = [...badge.querySelectorAll("text")].map((t) => t.textContent);
-    expect(texts).toEqual(["12", 'progression.prestige_short:{"prestige":3}']);
-    expect(badge.querySelector("svg")?.getAttribute("aria-label")).toContain(
-      "progression.prestige",
-    );
-
-    badge = await render({ level: 12, prestige: 3, size: 16 });
-    expect(
-      [...badge.querySelectorAll("text")].map((t) => t.textContent),
-    ).toEqual(["12"]);
+  it("draws bold silhouettes small and the full icon art large", async () => {
+    await loadLargeBadgeIcons();
+    const href = async (prestige: number, size: number) =>
+      iconOf(await render({ level: 50, prestige, size })).getAttribute("href");
+    expect(await href(9, 24)).toBe("#level-badge-s-mirv");
+    expect(await href(9, 64)).toBe("#level-badge-l-mirv");
+    expect(await href(6, 28)).toBe("#level-badge-s-warship");
+    expect(await href(6, 40)).toBe("#level-badge-l-warship");
+    // Icons without a silhouette use their art at every size; the shield,
+    // its filled outline.
+    expect(await href(1, 24)).toBe("#level-badge-i-city");
+    expect(await href(4, 64)).toBe("#level-badge-s-shield");
+    // Every icon it points at is defined on the page.
+    for (const id of [
+      "level-badge-s-mirv",
+      "level-badge-l-mirv",
+      "level-badge-i-city",
+    ]) {
+      expect(document.getElementById(id)?.tagName).toBe("symbol");
+    }
   });
 
-  it("gives Legend its own look", async () => {
-    const badge = await render({
-      level: 100,
-      prestige: 10,
-      legend: true,
-      size: 40,
+  it("shares one set of definitions between all the badges", async () => {
+    const host = document.createElement("div");
+    document.body.append(host);
+    const badges = Array.from({ length: 30 }, (_, i) => {
+      const b = document.createElement("level-badge") as LevelBadge;
+      b.level = 1 + i;
+      b.prestige = i % 11;
+      host.append(b);
+      return b;
     });
-    const svg = badge.querySelector("svg")!;
-    expect(svg.getAttribute("data-level-band")).toBe("legend");
-    expect(svg.getAttribute("data-prestige-tier")).toBe("none");
-    expect(svg.getAttribute("aria-label")).toBe("progression.legend");
-    expect(svg.querySelector("text")).toBeNull();
+    await Promise.all(badges.map((b) => b.updateComplete));
+    expect(document.querySelectorAll("[data-level-badge-defs]").length).toBe(1);
+    for (const key of ["0", "5", "10"]) {
+      expect(
+        document.querySelectorAll(`[id="level-badge-plate-${key}"]`).length,
+      ).toBe(1);
+    }
+    // No ids inside the badges themselves.
+    expect(host.querySelector("[id]")).toBeNull();
+    host.remove();
   });
 });
 

@@ -1,10 +1,11 @@
 import {
   PlayerStatsTree,
   PrestigeResponse,
+  PublicProgress,
   UserMeResponse,
 } from "@openfront/shared/ApiSchemas";
 import { assetUrl } from "@openfront/shared/AssetUrls";
-import { html, nothing, TemplateResult } from "lit";
+import { html, nothing, PropertyValues, TemplateResult } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import { ClientEnv } from "src/client/ClientEnv";
 import {
@@ -37,6 +38,7 @@ import "./components/Difficulties";
 import "./components/FriendsList";
 import type { PrestigeFlow } from "./components/PrestigeFlow";
 import "./components/ProfileCard";
+import "./components/ProfileProgression";
 import "./components/RewardsPanel";
 import type { RewardsChangedDetail } from "./components/RewardsPanel";
 import { googleLinkButton } from "./components/ui/GoogleLinkButton";
@@ -49,6 +51,7 @@ import { showInGameAlert } from "./InGameModal";
 import { consumeLinkResult } from "./LinkResult";
 import { consumeLoginResult, LoginResult } from "./LoginResult";
 import "./PlayerProfileModal";
+import { loadPlayerProgress } from "./PlayerProgress";
 import { steamSDK } from "./SteamSDK";
 import { playerProfileUrl } from "./utilities/PlayerProfileUrl";
 import { currentPagePath, translateText } from "./Utils";
@@ -79,16 +82,34 @@ function loadPrestigeFlow(): Promise<unknown> {
   return prestigeFlowModule;
 }
 
+// Every opening of the account, numbered: keys the once-per-opening
+// flourishes.
+let accountOpenings = 0;
+
 @customElement("account-modal")
 export class AccountModal extends BaseModal {
   protected routerName = "account";
 
   @state() private email: string = "";
   @state() private isLoadingUser: boolean = false;
-  // Counts openings, to key the profile card's once-per-open flourish.
+  // Counts openings, to key the profile card's and the Progression tab's
+  // once-per-open flourish.
   private openCount = 0;
   // Replaceable for tests.
   loadPrestigeFlow: () => Promise<unknown> = loadPrestigeFlow;
+  // The Progression tab's progress: the public one, which has the prestige
+  // history and milestones /users/@me lacks. Read the first time the tab
+  // shows in an opening, not on every opening of the account.
+  @state() private progression: PublicProgress | null = null;
+  // The player it was read (or is being read) for in this opening.
+  private progressionFor: string | null = null;
+  // Bumped on every read and drop, so a superseded read is ignored.
+  private progressionLoad = 0;
+  // The tab a link or caller asked for. BaseModal picks it when the tab is
+  // listed at open, but the tabs wait for the account: a modal loaded after
+  // the page's /users/@me broadcast doesn't know the player yet, and an
+  // opening lists none while it reads /users/@me. Picked once that lands.
+  private requestedTab: string | null = null;
   // Set on CrazyGames when a CrazyGames user is signed in. Their identity comes
   // from the SDK, not our backend user object.
   @state() private crazyGamesUser: CrazyGamesUser | null = null;
@@ -195,9 +216,25 @@ export class AccountModal extends BaseModal {
         { key: "account", label: translateText("account_modal.tab_account") },
         { key: "stats", label: translateText("account_modal.tab_stats") },
         { key: "games", label: translateText("account_modal.tab_games") },
+        // Where the player profile has it, after Games. Only for a player
+        // with a level (progression on), as on the profile: there is nothing
+        // to show otherwise.
+        ...(this.hasProgress()
+          ? [
+              {
+                key: "progression",
+                label: translateText("account_modal.tab_progression"),
+              },
+            ]
+          : []),
         { key: "friends", label: translateText("account_modal.tab_friends") },
       ],
     };
+  }
+
+  private hasProgress(): boolean {
+    const player = this.userMeResponse?.player;
+    return !!player?.publicId && !!player.progress;
   }
 
   protected renderBody(tab: string) {
@@ -231,6 +268,8 @@ export class AccountModal extends BaseModal {
         return this.renderStatsTab();
       case "games":
         return this.renderGamesTab();
+      case "progression":
+        return this.renderProgressionTab();
       case "friends":
         return this.renderFriendsTab();
       default:
@@ -434,6 +473,69 @@ export class AccountModal extends BaseModal {
     `;
   }
 
+  // The player profile's Progression tab, for the signed-in player: the same
+  // element, in its owner mode (it reads /users/@me afresh, so the track
+  // shows each level's claim status and offers Claim all), and the same
+  // once-per-opening pop-in.
+  private renderProgressionTab(): TemplateResult {
+    const publicId = this.userMeResponse?.player?.publicId;
+    // The tab is hidden without progress; should it still be selected (the
+    // account changed underneath), show the Account content rather than
+    // nothing.
+    if (!publicId || !this.hasProgress()) return this.renderAccountTab();
+    if (this.progression === null) {
+      return this.renderLoadingSpinner(translateText("common.loading"));
+    }
+    return html`<profile-progression
+      .progress=${this.progression}
+      .publicId=${publicId}
+      .popKey=${`account-${this.openCount}`}
+      @rewards-changed=${this.handleTrackRewardsChanged}
+    ></profile-progression>`;
+  }
+
+  protected updated(changed: PropertyValues<this>): void {
+    super.updated(changed);
+    this.ensureProgression();
+  }
+
+  // Reads the Progression tab's progress once it shows: once per opening
+  // (the level moves on between openings), and again after a prestige.
+  private ensureProgression(): void {
+    if (this.activeTab !== "progression" || this.isLoadingUser) return;
+    if (!this.isOpen() || !this.hasProgress()) return;
+    const publicId = this.userMeResponse!.player.publicId;
+    if (this.progressionFor === publicId) return;
+    this.progressionFor = publicId;
+    this.progression = null;
+    const load = ++this.progressionLoad;
+    void loadPlayerProgress(publicId).then((progress) => {
+      if (load !== this.progressionLoad) return;
+      // The public read failed: the account's own copy still has the level
+      // and run (without dates), so the tab never sits on its spinner.
+      this.progression =
+        progress ?? this.userMeResponse?.player?.progress ?? null;
+    });
+  }
+
+  // Read afresh the next time the tab shows.
+  private dropProgression(): void {
+    this.progressionLoad++;
+    this.progressionFor = null;
+    this.progression = null;
+  }
+
+  // The track's Claim all moved rewards into the balances. Update the
+  // account's own copy, as a rewards-panel claim does (the Account tab's
+  // rewards list), then re-read /users/@me and tell the page, as a prestige
+  // does: the header's account menu among them.
+  private handleTrackRewardsChanged = (
+    event: CustomEvent<RewardsChangedDetail>,
+  ): void => {
+    this.handleRewardsChanged(event);
+    void this.refreshUserMe().then(() => this.requestUpdate());
+  };
+
   private renderEmptyState(icon: string, message: string): TemplateResult {
     return html`
       <div
@@ -552,6 +654,8 @@ export class AccountModal extends BaseModal {
     if (added.length > 0) {
       player.rewards = [...(player.rewards ?? []), ...added];
     }
+    // A new run: the Progression tab's history and track moved on.
+    this.dropProgression();
     this.requestUpdate();
     // Then the real thing, for the header and everything else showing the
     // account.
@@ -784,9 +888,16 @@ export class AccountModal extends BaseModal {
     this.modalEl?.setScrollTop(this.gamesScrollTop);
   }
 
-  private finishLoadingUser(): void {
+  private finishLoadingUser(opening: number): void {
+    if (opening !== this.openCount) return;
     this.isLoadingUser = false;
     this.requestUpdate();
+    // The tabs are listed now: pick the one asked for, if this account has
+    // it (the Progression tab needs a level). The modal can have been closed
+    // meanwhile; the tab is then left for the next opening to decide.
+    const tab = this.requestedTab;
+    this.requestedTab = null;
+    if (tab !== null && this.isOpen()) this.setActiveTab(tab);
     if (this.restoreGamesScrollAfterOpen) {
       this.restoreGamesScrollAfterOpen = false;
       void this.restoreGamesScroll();
@@ -795,6 +906,7 @@ export class AccountModal extends BaseModal {
 
   private resetPlayerData(): void {
     this.statsTree = null;
+    this.dropProgression();
     this.gameHistoryCache = null;
     this.gamesScrollTop = 0;
     this.restoreGamesScrollAfterOpen = false;
@@ -1044,9 +1156,14 @@ export class AccountModal extends BaseModal {
   }
 
   protected onOpen(args?: Record<string, unknown>): void {
-    // A new opening: the full profile card plays its flourish again.
-    this.openCount++;
+    // A new opening: the full profile card and the Progression tab play
+    // their flourish again, and the tab reads the player's progress afresh.
+    // Counted across every account modal, as the profile counts its own, so
+    // no two openings share a key.
+    const opening = (this.openCount = ++accountOpenings);
+    this.dropProgression();
     this.isLoadingUser = true;
+    this.requestedTab = typeof args?.tab === "string" ? args.tab : null;
     consumeLinkResult(args);
     this.loginError = consumeLoginResult(args);
     this.prefillCreatorCode = this.consumeCreatorCodeArg(args);
@@ -1062,11 +1179,11 @@ export class AccountModal extends BaseModal {
             this.loadPlayerProfile(this.userMeResponse.player.publicId);
           }
         }
-        this.finishLoadingUser();
+        this.finishLoadingUser(opening);
       })
       .catch((err) => {
         console.warn("Failed to fetch user info in AccountModal.open():", err);
-        this.finishLoadingUser();
+        this.finishLoadingUser(opening);
       });
     this.requestUpdate();
   }

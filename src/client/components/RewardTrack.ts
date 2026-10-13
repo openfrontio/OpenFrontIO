@@ -820,7 +820,7 @@ export class RewardTrack extends LitElement {
           .level=${node.level}
           .prestige=${model.run}
           .legend=${legendBadge}
-          .size=${40}
+          .size=${34}
         ></level-badge>
       </div>`;
     } else if (node.milestone) {
@@ -1195,8 +1195,10 @@ reward-track .rt-dot {
 }
 reward-track .rt-dot[data-passed] { background: #facc15; color: #1a1300; border-color: #fde68a; }
 reward-track .rt-dot[data-pu] { box-shadow: 0 0 0 2px #4ade80, 0 0 9px rgba(74, 222, 128, 0.65); }
+/* The ring pads the 34px badge by 3px, so the round 40px ring clears the
+   level chip's corners and matches the 40px dot row. */
 reward-track .rt-you-ring {
-  display: grid; border-radius: 999px;
+  display: grid; padding: 3px; border-radius: 999px;
   box-shadow: 0 0 0 3px rgba(250, 204, 21, 0.95), 0 0 16px rgba(250, 204, 21, 0.75);
 }
 reward-track .rt-badge-locked { opacity: 0.6; }

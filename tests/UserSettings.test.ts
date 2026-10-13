@@ -598,6 +598,14 @@ describe("getDefaultKeybinds", () => {
     expect(keybinds.quickChat).toBe("KeyR");
     expect(keybinds.targetPlayer).toBe("KeyN");
     expect(keybinds.buildMenuModifier).toBe("ControlLeft");
+    expect(keybinds.moveUpArrow).toBe("ArrowUp");
+    expect(keybinds.moveLeftArrow).toBe("ArrowLeft");
+    expect(keybinds.moveDownArrow).toBe("ArrowDown");
+    expect(keybinds.moveRightArrow).toBe("ArrowRight");
+    expect(keybinds.zoomOutMinus).toBe("Minus");
+    expect(keybinds.zoomOutNumpad).toBe("NumpadSubtract");
+    expect(keybinds.zoomInEqual).toBe("Equal");
+    expect(keybinds.zoomInNumpad).toBe("NumpadAdd");
   });
 
   it("never gives two actions the same letter key, except shared pairs", () => {
@@ -705,6 +713,28 @@ describe("UserSettings keybinds with new defaults", () => {
     expect(
       new UserSettings().parsedUserKeybinds().selectAllWarships,
     ).toBeUndefined();
+  });
+
+  it("unbinds the new arrow and zoom defaults when saved bindings already use their keys", () => {
+    store({
+      boatAttack: { value: "ArrowUp", key: "ArrowUp" },
+      attackRatioUp: { value: "Equal", key: "=" },
+    });
+    const settings = new UserSettings();
+    const keybinds = settings.keybinds(false);
+
+    expect(keybinds.boatAttack).toBe("ArrowUp");
+    expect(keybinds.moveUpArrow).toBeUndefined();
+    expect(keybinds.attackRatioUp).toBe("Equal");
+    expect(keybinds.zoomInEqual).toBeUndefined();
+    expect(settings.parsedUserKeybinds().moveUpArrow).toEqual({
+      value: "Null",
+      key: "",
+    });
+    expect(settings.parsedUserKeybinds().zoomInEqual).toEqual({
+      value: "Null",
+      key: "",
+    });
   });
 
   it("keeps quick chat on R when the player saved reset graphics there", () => {

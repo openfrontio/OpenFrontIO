@@ -723,6 +723,55 @@ describe("StoreModal cosmetic browser", () => {
     expect(lines(hardPack.key)).toEqual(["reserved", "hard"]);
   });
 
+  it("sells a tier with no Stripe product at its own price", async () => {
+    const steamPlus: ResolvedCosmetic = {
+      ...platinumSubscription,
+      cosmetic: {
+        ...(platinumSubscription.cosmetic as object),
+        name: "steam_plus",
+        priceMonthly: 499,
+        product: null,
+      } as never,
+      key: "subscription:steam_plus",
+    };
+    resolvedCatalog = [steamPlus];
+    const modal = await openStoreOnTab("subscriptions");
+    await modal.onUserMe({ player: { subscription: null } } as never);
+    await modal.updateComplete;
+
+    const button = purchaseButton(modal, steamPlus.key);
+    expect(button.product).toBeNull();
+    expect(button.dollarPrice).toBe("$4.99");
+    await button.onPurchaseDollar!();
+    expect(purchaseCosmetic).toHaveBeenCalledWith(steamPlus, "dollar");
+  });
+
+  it("widens a lone subscription card and enlarges its preview", async () => {
+    resolvedCatalog = [platinumSubscription];
+    const modal = await openStoreOnTab("subscriptions");
+    await modal.onUserMe({ player: { subscription: null } } as never);
+    await modal.updateComplete;
+
+    const lone = card(modal, platinumSubscription.key)!;
+    expect(lone.className).toContain("max-w-xs");
+    expect(lone.className).not.toContain("max-w-48");
+    expect(lone.previewSize).toBe("detail");
+  });
+
+  it("keeps several subscription cards at tile size", async () => {
+    resolvedCatalog = [goldSubscription, platinumSubscription];
+    const modal = await openStoreOnTab("subscriptions");
+    await modal.onUserMe({ player: { subscription: null } } as never);
+    await modal.updateComplete;
+
+    for (const key of [goldSubscription.key, platinumSubscription.key]) {
+      const tile = card(modal, key)!;
+      expect(tile.className).toContain("max-w-48");
+      expect(tile.className).not.toContain("max-w-xs");
+      expect(tile.previewSize).toBe("card");
+    }
+  });
+
   it("shows subscription status and a switch action for another tier", async () => {
     resolvedCatalog = [goldSubscription, platinumSubscription];
     const modal = await openStoreOnTab("subscriptions");

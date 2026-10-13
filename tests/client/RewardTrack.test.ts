@@ -496,7 +496,12 @@ describe("<reward-track>", () => {
       // The player's level: the big badge, "YOU" under it.
       const current = node(47);
       expect(current.hasAttribute("data-current")).toBe(true);
-      expect(current.querySelector(".rt-you-ring level-badge")).not.toBeNull();
+      const youBadge = current.querySelector(".rt-you-ring level-badge") as
+        | (HTMLElement & { size: number })
+        | null;
+      expect(youBadge).not.toBeNull();
+      // 34px inside the ring's 3px padding, so the level chip sits inside it.
+      expect(youBadge!.size).toBe(34);
       expect(current.querySelector("[data-you]")?.textContent).toBe(
         "reward_track.you",
       );

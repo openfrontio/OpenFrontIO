@@ -3,6 +3,7 @@ import {
   Cell,
   Difficulty,
   GameMode,
+  Gold,
   PlayerType,
   Structures,
   UnitType,
@@ -10,6 +11,37 @@ import {
 import { PseudoRandom } from "@openfront/engine-lib/PseudoRandom";
 import { assertNever, calculateBoundingBox } from "@openfront/engine-lib/Util";
 import { Game, Player } from "../../game/Game";
+
+/** Starting gold from which nations place many structures at once, ballooning their max troops */
+const HIGH_STARTING_GOLD = 3_000_000n;
+
+export function hasHighStartingGold(game: Game, player: Player): boolean {
+  return game.config().startingGold(player.info()) >= HIGH_STARTING_GOLD;
+}
+
+/** Most minutes of income a nation saves up for; a target further off isn't worth holding back for, keyed by difficulty */
+const SAVE_UP_HORIZON_MINUTES: Record<Difficulty, number> = {
+  [Difficulty.Easy]: Infinity,
+  [Difficulty.Medium]: Infinity,
+  [Difficulty.Hard]: 5,
+  [Difficulty.Impossible]: 6,
+};
+
+/** Whether `target` gold is close enough to save up for, given the nation's current income. */
+export function isSaveUpWithinReach(
+  game: Game,
+  player: Player,
+  target: Gold,
+): boolean {
+  const horizon =
+    SAVE_UP_HORIZON_MINUTES[game.config().gameConfig().difficulty];
+  const missing = Number(target - player.gold());
+  if (horizon === Infinity || missing <= 0) return true;
+  // Income grows about linearly over a game, so the current rate is about twice the average
+  const minutes = Math.max(1, game.ticks() / 600);
+  const incomePerMinute = (2 * Number(player.goldEarned())) / minutes;
+  return missing <= incomePerMinute * horizon;
+}
 
 export function randTerritoryTileArray(
   random: PseudoRandom,

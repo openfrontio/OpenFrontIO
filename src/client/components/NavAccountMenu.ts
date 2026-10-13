@@ -569,6 +569,8 @@ export class NavAccountMenu extends LitElement {
       progress.legend,
     );
     const title = `${label} · ${xpProgressText(progress.xpInLevel, progress.xpForNext)}`;
+    // Phones: 20px (smaller, the unit icon can't be read) on the avatar's
+    // corner, anchored 6px out so it grows away from the avatar, not over it.
     const mobile = variant === "mobile";
     return html`
       ${this.levelPop
@@ -600,7 +602,7 @@ export class NavAccountMenu extends LitElement {
       <span
         data-account-level
         class="${mobile
-          ? "absolute -top-1 -left-1 z-10"
+          ? "absolute -top-1.5 -left-1.5 z-10"
           : "flex items-center"} ${this.levelPop ? "nav-level-pop" : ""}"
         title=${title}
       >
@@ -608,7 +610,7 @@ export class NavAccountMenu extends LitElement {
           .level=${progress.level}
           .prestige=${progress.prestige}
           .legend=${progress.legend}
-          .size=${mobile ? 16 : 22}
+          .size=${mobile ? 20 : 22}
         ></level-badge>
       </span>
     `;
