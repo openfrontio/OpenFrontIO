@@ -60,7 +60,7 @@ export class TestDataMapLoader implements GameMapLoader {
           fs.readFileSync(path.join(dir, "manifest.json"), "utf8"),
         ) as MapManifest,
       webpPath: path.join(dir, "thumbnail.webp"),
-      layerPng: async () => {
+      layerImage: async () => {
         throw new Error("no layers in test maps");
       },
     };
