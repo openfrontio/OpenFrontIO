@@ -49,6 +49,7 @@ describe("PokiSDK", () => {
   afterEach(() => {
     vi.restoreAllMocks();
     delete window.PokiSDK;
+    sessionStorage.clear();
   });
 
   describe("isOnPoki", () => {
@@ -76,6 +77,35 @@ describe("PokiSDK", () => {
     ])("is false framed by %s", (parent) => {
       framedBy(parent);
       expect(sdk.isOnPoki()).toBe(false);
+    });
+
+    // Firefox has no ancestorOrigins, and the referrer becomes our own URL
+    // once the frame navigates (leaving a game, a lobby redirect).
+    it("stays true after an in-frame navigation drops the Poki referrer", () => {
+      framedBy("https://games.poki.com/458768/openfront");
+      expect(sdk.isOnPoki()).toBe(true);
+      vi.spyOn(document, "referrer", "get").mockReturnValue(
+        "http://localhost/game/abcd1234",
+      );
+      expect(new PokiSDK().isOnPoki()).toBe(true);
+    });
+
+    it("ignores a remembered detection when not framed", () => {
+      framedBy("https://games.poki.com/458768/openfront");
+      expect(sdk.isOnPoki()).toBe(true);
+      vi.restoreAllMocks();
+      expect(sdk.isOnPoki()).toBe(false);
+    });
+
+    it("still detects Poki when sessionStorage throws", () => {
+      vi.spyOn(Storage.prototype, "getItem").mockImplementation(() => {
+        throw new Error("denied");
+      });
+      vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => {
+        throw new Error("denied");
+      });
+      framedBy("https://games.poki.com/458768/openfront");
+      expect(sdk.isOnPoki()).toBe(true);
     });
   });
 

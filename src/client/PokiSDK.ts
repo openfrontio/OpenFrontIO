@@ -33,6 +33,26 @@ function isPokiHost(url: string): boolean {
   }
 }
 
+const POKI_SESSION_KEY = "onPoki";
+
+// Storage can throw in a sandboxed or private frame; Poki requires the game
+// to keep working there, so detection just falls back to the live check.
+function readSession(key: string): string | null {
+  try {
+    return sessionStorage.getItem(key);
+  } catch {
+    return null;
+  }
+}
+
+function writeSession(key: string, value: string): void {
+  try {
+    sessionStorage.setItem(key, value);
+  } catch {
+    // See readSession.
+  }
+}
+
 // Mirrors CrazyGamesSDK's surface so GamePortal can route to either. Poki has
 // no loading events per join, no invite button, no instant multiplayer and no
 // happytime, so those are no-ops here.
@@ -50,15 +70,20 @@ export class PokiSDK {
   }
 
   // Poki frames us, so our parent is a Poki origin. ancestorOrigins survives
-  // in-frame navigations (the referrer becomes our own URL after one); Firefox
-  // lacks it, so fall back to the referrer there.
+  // in-frame navigations; Firefox lacks it, and the referrer it falls back to
+  // becomes our own URL after one (leaving a game, a lobby redirect). So a
+  // positive answer is kept for the frame's session: sessionStorage survives
+  // those navigations and is scoped to this frame, never a top-level tab.
   isOnPoki(): boolean {
     if (window.self === window.top) return false;
+    if (readSession(POKI_SESSION_KEY) === "true") return true;
     const ancestors = window.location.ancestorOrigins;
-    if (ancestors !== undefined && ancestors.length > 0) {
-      return Array.from(ancestors).some(isPokiHost);
-    }
-    return isPokiHost(document.referrer);
+    const onPoki =
+      ancestors !== undefined && ancestors.length > 0
+        ? Array.from(ancestors).some(isPokiHost)
+        : isPokiHost(document.referrer);
+    if (onPoki) writeSession(POKI_SESSION_KEY, "true");
+    return onPoki;
   }
 
   isReady(): boolean {
