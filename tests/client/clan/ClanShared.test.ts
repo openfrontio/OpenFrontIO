@@ -9,6 +9,7 @@ import {
   filterMembersBySearch,
   filterRequestsBySearch,
   formatBoostRemaining,
+  renderMemberRow,
   renderMemberSortControl,
   renderMemberStats,
 } from "../../../src/client/components/clan/ClanShared";
@@ -263,5 +264,78 @@ describe("renderMemberSortControl", () => {
     expect(
       select.parentElement!.querySelector("[data-chevron] svg"),
     ).toBeTruthy();
+  });
+});
+
+describe("renderMemberRow clan wars ELO", () => {
+  const row = (eloContributed: number | null | undefined) => {
+    const host = document.createElement("div");
+    render(
+      renderMemberRow(
+        {
+          publicId: "Alice123",
+          role: "member",
+          joinedAt: "2024-01-01T00:00:00Z",
+          eloContributed,
+        },
+        null,
+        host,
+      ),
+      host,
+    );
+    return host.querySelector<HTMLElement>("[data-elo-contributed]");
+  };
+
+  it("shows a gain signed and green", () => {
+    const el = row(40)!;
+    expect(el.textContent!.trim()).toBe(
+      translateText("clan_modal.elo_contributed", { elo: "+40" }),
+    );
+    expect(el.className).toContain("text-green-400");
+  });
+
+  it("shows a loss signed and red", () => {
+    const el = row(-12)!;
+    expect(el.textContent!.trim()).toBe(
+      translateText("clan_modal.elo_contributed", { elo: "-12" }),
+    );
+    expect(el.className).toContain("text-red-400");
+  });
+
+  it("shows a net zero unsigned", () => {
+    expect(row(0)!.textContent!.trim()).toBe(
+      translateText("clan_modal.elo_contributed", { elo: "0" }),
+    );
+  });
+
+  it("shows nothing for a member without a rated game, or an older API", () => {
+    expect(row(null)).toBeNull();
+    expect(row(undefined)).toBeNull();
+  });
+});
+
+describe("renderMemberSortControl clan wars ELO", () => {
+  it("offers sorting by clan wars ELO", () => {
+    const host = document.createElement("div");
+    let picked: string | null = null;
+    render(
+      renderMemberSortControl(
+        "default",
+        "asc",
+        (s) => (picked = s),
+        () => {},
+      ),
+      host,
+    );
+    const select = host.querySelector("select")!;
+    const option = select.querySelector<HTMLOptionElement>(
+      'option[value="eloContributed"]',
+    );
+    expect(option?.textContent?.trim()).toBe(
+      translateText("clan_modal.sort_elo_contributed"),
+    );
+    select.value = "eloContributed";
+    select.dispatchEvent(new Event("change"));
+    expect(picked).toBe("eloContributed");
   });
 });

@@ -248,7 +248,8 @@ export type ClanMemberSort =
   | "winsRanked"
   | "lossesRanked"
   | "wins1v1"
-  | "losses1v1";
+  | "losses1v1"
+  | "eloContributed";
 export type ClanMemberOrder = "asc" | "desc";
 
 export async function fetchClanMembers(
