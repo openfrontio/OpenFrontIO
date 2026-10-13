@@ -205,6 +205,9 @@ export class CosmeticCard extends LitElement {
   @property({ type: Boolean })
   interactive = true;
 
+  @property({ type: String })
+  previewSize: "card" | "detail" = "card";
+
   @property({ attribute: false })
   onActivate?: (resolved: ResolvedCosmetic) => void;
 
@@ -354,6 +357,8 @@ export class CosmeticCard extends LitElement {
   private subscriptionPerks(): Array<{ label: string; info: string }> {
     if (this.activeResolved.type !== "subscription") return [];
     const subscription = this.activeResolved.cosmetic as Subscription;
+    // The Steam licence a buyer of this tier must hold already confers these.
+    if (subscription.requiresSteamLicence) return [];
     const perks = [
       {
         label: translateText("cosmetics.verified_name"),
@@ -400,7 +405,10 @@ export class CosmeticCard extends LitElement {
         <div
           class="flex h-full w-full items-center justify-center overflow-hidden rounded-lg bg-white/5 p-2"
         >
-          <cosmetic-preview .resolved=${active} size="card"></cosmetic-preview>
+          <cosmetic-preview
+            .resolved=${active}
+            size=${this.previewSize}
+          ></cosmetic-preview>
         </div>
         ${isEquipped
           ? html`<span
