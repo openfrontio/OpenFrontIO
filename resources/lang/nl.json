@@ -44,6 +44,16 @@
     "games_type_singleplayer": "Alleen spelen",
     "get_magic_link": "Krijg Magische Link",
     "google_alt": "Google",
+    "identity_token_copied": "Gekopieerd",
+    "identity_token_copy": "Kopiëren",
+    "identity_token_desc": "Bewijs naar een stats site welk OpenFront account van jou is. Kies de site, genereer een token en plak het daar.",
+    "identity_token_failed": "Kon geen token genereren. Probeer het opnieuw.",
+    "identity_token_generate": "Token genereren",
+    "identity_token_logged_out": "Je sessie is verlopen. Log opnieuw in.",
+    "identity_token_note": "Werkt alleen op {site} en vervalt over 10 minuten. Plak het alleen in {site}.",
+    "identity_token_rate_limited": "Te veel verzoeken. Wacht even en probeer het opnieuw.",
+    "identity_token_site": "Site",
+    "identity_token_title": "Link naar een website van derden",
     "link_discord": "Discord-account koppelen",
     "link_existing_account": "Koppel een bestaand account",
     "link_google": "Google-Account koppelen",
@@ -83,8 +93,10 @@
     "reward_daily": "Dagelijkse abonnement beloningen",
     "reward_signup_bonus": "Abonnement aanmeldingsbonus",
     "sign_in_desc": "Meld je aan om statistieken en voortgang op te slaan",
-    "sub_granted_from_purchase": "Gratis meegeleverd bij je Steam aankoop. Het is niet gefactureerd en word niet vernieuwd, dus er is niets om te beheren of te annuleren.",
+    "sub_granted_from_purchase": "Inbegrepen bij je Steam aankoop, eenmaal betaald op Steam. Deze wordt niet gefactureerd en vernieuwd, dus er is niets om te beheren of te annuleren. Wanneer het eindigt houd je het volledige spel kosteloos; alleen de {tier} voordelen stoppen.",
     "sub_granted_indefinite": "Gratis toegang verleend aan uw account. Er is geen rekening mee gekoppelt, dus er is niets om te beheren of te annuleren.",
+    "sub_granted_perks_end_on": "{tier} voordelen eindigen op {date}",
+    "sub_past_due_note": "Je laatste betaling is niet gelukt, dus je {tier} voordelen zijn gepauzeerd. Werk je betaalmethode bij om deze te herstellen.",
     "sub_price_monthly": "{price}/maand",
     "sub_renews_on": "Hernieuwt op {date}",
     "sub_status_active": "Actief",
@@ -134,8 +146,7 @@
     "username_temporary_notice": "Je naam is in gebruik door een andere speler. Kies een nieuwe - deze hernoem is gratis.",
     "username_temporary_prompt": "Je gebruikersnaam is al in gebruik door een andere speler. Kies nu een nieuwe? De hernoem is gratis.",
     "username_temporary_prompt_confirm": "Kies een naam",
-    "username_title": "Gebruikersnaam",
-    "sub_granted_ends_on": "Gratis toegang eindigt {date}"
+    "username_title": "Gebruikersnaam"
   },
   "account_settings_modal": {
     "title": "Accountinstellingen"
@@ -190,7 +201,6 @@
       "focus": "Vuur op [P1]!",
       "mirv": "Vuur een MIRV af op [P1]!"
     },
-    "build": "Bouw je bericht op...",
     "cat": {
       "attack": "Val aan",
       "defend": "Verdedig",
@@ -199,7 +209,6 @@
       "misc": "Overig",
       "warnings": "Waarschuw"
     },
-    "category": "Categorie",
     "defend": {
       "ally": "[P1] is mijn bondgenoot!",
       "build_posts": "Bouw Verdedigingsposten!",
@@ -245,11 +254,7 @@
       "strategy": "Goeie strategie!",
       "team_up": "Laten we samenwerken tegen [P1]!"
     },
-    "phrase": "Zin",
-    "player": "Speler",
     "search": "Zoek speler...",
-    "send": "Verzenden",
-    "sort_by_territory": "Sorteren op gebied",
     "title": "Snelchat",
     "to": "> Aan {user}: {msg}",
     "warnings": {
@@ -262,15 +267,21 @@
       "mirv_ready": "[P1] heeft genoeg goud om een MIRV te lanceren!",
       "mirv_soon": "[P1] kan bijna een MIRV lanceren!",
       "no_allies": "[P1] heeft geen bondgenoten.",
-      "number1_warning": "De #1 speler wint bijna als we niet samenwerken!",
       "saving_for_mirv": "[P1] spaart voor een MIRV.",
       "snowballing": "[P1] groeit te snel!",
       "stalemate": "Vrede? Dit is een patstelling en anders verliezen we beide.",
       "stop_trading": "Stop de handel met [P1]!",
       "stop_trading_all": "Stop met handelen met iedereen!",
       "strong": "[P1] is sterk.",
-      "weak": "[P1] is zwak."
-    }
+      "weak": "[P1] is zwak.",
+      "number1_warning": "De #1 speler wint bijna als we niet samenwerken!"
+    },
+    "build": "Bouw je bericht op...",
+    "category": "Categorie",
+    "phrase": "Zin",
+    "player": "Speler",
+    "send": "Verzenden",
+    "sort_by_territory": "Sorteren op gebied"
   },
   "clan_modal": {
     "applied": "Toegang aangevraagd",
@@ -468,6 +479,7 @@
     "no_heartbeat": "De server heeft niet meer van je gehoord.",
     "not_allowlisted": "Je staat niet op de toegestane lijst voor deze lobby.",
     "not_trusted": "Deze lobby is beperkt tot vertrouwde accounts. Je kunt nog steeds deelnemen aan een andere lobby.",
+    "pool_redirect": "Deze lobby heeft je al naar een andere gestuurd. Probeer het opnieuw.",
     "protocol_error": "De verbinding was beschadigd.",
     "ranked_limit_reached": "Je hebt geen gratis ranked wedstrijden meer.",
     "turnstile_failed": "De robot verificatie is niet gelukt. Herlaad de pagina, en verifieer opnieuw.",
@@ -522,12 +534,14 @@
   "control_panel": {
     "allied_afk_neighbor_info": "Je kan spelers waar je een alliantie mee hebt aanvallen als ze het spel hebben verlaten.",
     "army_limit_warning": "Je bent dicht bij je leger limiet! Overweeg troepen naar teamgenoten te sturen.",
+    "attack_ratio": "{percent}%\n({troops})",
     "low_troops_warning": "Je hebt weinig troepen - Hou altijd wat troepen voor verdediging.",
     "teammate_afk_neighbor_info": "Je kan teamgenoten die het spel hebben verlaten aanvallen.",
     "traitor_neighbor_info": "Je kan verraders verraden zonder zelf een verrader te worden."
   },
   "cosmetics": {
     "adfree": "advertentievrij voor altijd!",
+    "ai_label": "Gemaakt met AI hulp",
     "artist_label": "Artiest:",
     "color_label": "Kleur:",
     "common": "Gewoon",
@@ -537,23 +551,24 @@
     "legendary": "Legendarisch",
     "pack_includes": "Bevat:",
     "pack_more_items": "+{count} meer",
+    "pattern_preview": "Patroon voorbeeld",
     "per_day": "/dag",
     "public_lobbies": "Creëer openbare lobbies",
-    "public_lobbies_info": "Host aangepaste lobby's die openbaar worden vermeld voor iedereen om toe te treden.",
+    "public_lobbies_info": "Host je eigen aangepaste lobby's in de openbare lobbylijst. Lid worden van publieke lobby's is altijd gratis.",
     "rare": "Zeldzaam",
     "search": "Zoeken...",
-    "signup_bonus": "Aanmeldbonus",
     "soft": "Limieten",
     "type_crown": "Kroon",
     "type_effect": "{type} Effect",
     "type_flag": "Vlag",
     "type_skin": "Skin",
     "uncommon": "Ongewoon",
-    "unlimited_ranked": "Onbeperkt competitief",
-    "unlimited_ranked_info": "Geen limiet op hoeveel competitieve spellen je kan spelen.",
     "usd_value": "Waarde: {usd}",
     "verified_name": "Geverifieerde gebruikersnaam",
-    "verified_name_info": "Je gebruikersnaam is gereserveerd voor je account en toont een geverifieerde badge in het spel."
+    "verified_name_info": "Je gebruikersnaam is gereserveerd voor je account en toont een geverifieerde badge in het spel.",
+    "signup_bonus": "Aanmeldbonus",
+    "unlimited_ranked": "Onbeperkt competitief",
+    "unlimited_ranked_info": "Geen limiet op hoeveel competitieve spellen je kan spelen."
   },
   "creator_code": {
     "change": "Wijzig",
@@ -678,6 +693,16 @@
     "easy": "Makkelijk",
     "hard": "Moeilijk",
     "impossible": "Onmogelijk",
+    "info": "{smarts}, {troops}",
+    "info_label": "Toon moeilijkheidsgraad details",
+    "info_note_hard": "(Deze moeilijkheid wordt gebruikt in openbare HvN spellen)",
+    "info_note_medium": "(Deze moeilijkheid wordt gebruikt in openbare FFA spellen)",
+    "info_smarts_easy": "Dom",
+    "info_smarts_hard": "Slim",
+    "info_smarts_impossible": "Heel slim",
+    "info_smarts_medium": "Gemiddeld",
+    "info_troops": "{percent}% van de max. troepen van een mens",
+    "info_troops_same": "dezelfde max. troepen als een mens",
     "medium": "Gemiddeld"
   },
   "discord_user_header": {
@@ -727,6 +752,9 @@
     "crashed": "Spel gecrasht!",
     "desync_notice": "Je bent niet meer gesynchroniseerd met andere spelers. Wat je ziet kan verschillen van andere spelers.",
     "login_failed": "Inloggen is mislukt. probeer het later opnieuw.",
+    "login_token_consumed": "Deze inloglink is al gebruikt. Je bent waarschijnlijk al ingelogd - bekijk een ander tabblad.",
+    "login_token_expired": "Deze login link is verlopen. Vraag een nieuwe login link aan.",
+    "login_token_invalid": "Deze login link is ongeldig of is verlopen. Vraag een nieuwe login link aan.",
     "paste_discord": "Plak het volgende in je bug report op Discord:",
     "spawn_failed": {
       "description": "Automatische plaatsing startpositie is mislukt. Je kunt dit spel niet meespelen.",
@@ -781,6 +809,15 @@
     "live": "LIVE",
     "minimize": "Minimaliseren",
     "open_on_twitch": "Open {channel} op Twitch"
+  },
+  "free_play": {
+    "account": "Jouw account, statistieken, vrienden en cosmetica",
+    "ad_free_steam": "Geen advertenties in de Steam app, nooit",
+    "after_grant_heading": "Na afloop krijg je nog steeds",
+    "custom_lobbies": "Privé aangepaste lobby's met vrienden",
+    "free_heading": "Gratis spelen inclusief",
+    "full_game": "Het volledige spel: elke kaart en modus, online en single-player",
+    "ranked": "Competitief spelen, met de gratis dagelijkse wedstrijd limiet"
   },
   "friends": {
     "accept": "Accepteren",
@@ -1126,6 +1163,11 @@
     "host_badge": "Host",
     "host_cheats": "Host Cheats",
     "leave_confirmation": "Weet je zeker dat je dit spel wilt verlaten?",
+    "list_lobby_body": "Je lobby zal op de openbare lobbylijst verschijnen. Het start automatisch wanneer de timer op is of de lobby opvult. Instellingen kunnen niet worden gewijzigd als het openbaar gemaakt is.",
+    "list_lobby_confirm": "Lobby weergeven",
+    "list_lobby_max_players": "Max spelers",
+    "list_lobby_start_minutes": "Begint in (minuten)",
+    "list_lobby_title": "Lobby openbaar weergeven",
     "mode": "Modus",
     "nation_player": "Natie",
     "nation_players": "Naties",
@@ -1134,7 +1176,17 @@
     "player_whitelist": "Speler whitelist (publieke IDs)",
     "player_whitelist_placeholder": "komma gescheiden",
     "players": "Spelers",
+    "queue": "Wachtrij",
+    "queue_confirm": "Betaal en zet in wachtrij",
+    "queue_confirm_body": "Betaal {price} Plutonium om deze lobby naar de openbare wachtrij te sturen? Het zal starten direct na de lobby die aftelt.",
+    "queue_confirm_title": "Naar de openbare wachtrij sturen?",
+    "queue_failed": "Kan de lobby niet in de wachtrij plaatsen. Probeer opnieuw; er worden geen dubbele kosten berekend.",
+    "queue_item": "een plek in de openbare wachtrij",
+    "queue_tooltip": "Plaats deze lobby in de openbare speciale wachtrij, vlak achter de lobby die binnenkort begint",
+    "queued": "In wachtrij",
+    "queued_waiting": "In de openbare wachtrij",
     "remove_player": "Verwijder {username}",
+    "settings_locked_listed": "Deze lobby wordt in het openbaar vermeld, dus de instellingen kunnen niet meer worden gewijzigd.",
     "spectator": "Toeschouwer",
     "spectators": "Toeschouwers",
     "start_delay": "Start-vertraging (Seconden)",
@@ -1143,7 +1195,6 @@
     "subscription_required_title": "Abonnement vereist",
     "team_count": "Aantal teams",
     "teams_Duos": "Duo's (teams van 2)",
-    "teams_Humans Vs Nations": "Mensen vs Naties",
     "teams_Quads": "Viertallen (teams van 4)",
     "teams_Trios": "Trio's (teams van 3)",
     "title": "Lobby Aanmaken",
@@ -1151,7 +1202,8 @@
     "view_subscriptions": "Bekijk abonnementen",
     "visibility_private": "Prive",
     "visibility_public": "Openbaar",
-    "waiting": "Wachten op spelers..."
+    "waiting": "Wachten op spelers...",
+    "teams_Humans Vs Nations": "Mensen vs Naties"
   },
   "inventory": {
     "equipped": "Uitgerust",
@@ -1174,6 +1226,7 @@
     "selected_cosmetic": "{name} geselecteerd",
     "selected_cosmetic_variant": "{name} ({variant})",
     "showing_effects": "Effecten uitgerust: {count}",
+    "sign_in_for_cosmetics": "Meld je aan of maak een account aan om toegang te krijgen tot je skins, kronen, en effecten.",
     "title": "Inventaris",
     "unequip": "Uitdoen",
     "unequip_all": "Alles Uitdoen",
@@ -1303,6 +1356,7 @@
     "arctic": "Noordpoolgebied",
     "asia": "Azië",
     "australia": "Australië",
+    "babelmandebstrait": "Bab el-Mandeb Strait",
     "baikal": "Baikalmeer",
     "baikalnukewars": "Baikal (Kernoorlog)",
     "bajacalifornia": "Baja Californië",
@@ -1317,7 +1371,9 @@
     "branchingpaths": "Vertakkende paden",
     "britannia": "Groot-Brittanië",
     "britanniaclassic": "Britannia (Klassiek)",
+    "canaryislands": "Canarische Eilanden",
     "capecod": "Cape Cod",
+    "capeofgoodhope": "Kaap de Goede Hoop",
     "caribbean": "Caribisch gebied",
     "caspiansea": "Caspische zee",
     "caucasus": "Caucasus",
@@ -1354,6 +1410,7 @@
     "hawaii": "Hawaï",
     "hecatestrait": "Hecate Straat",
     "hongkong": "Hong Kong",
+    "hornofafrica": "Hoorn van Afrika",
     "iceland": "IJsland",
     "indiansubcontinent": "Indische subcontinent",
     "irishsea": "Ierse zee",
@@ -1368,6 +1425,7 @@
     "lisbon": "Lissabon",
     "losangeles": "Los Angeles",
     "luna": "Luna",
+    "madagascar": "Madagaskar",
     "manicouagan": "Manicouagan",
     "map": "Kaart",
     "marenostrum": "Mare Nostrum",
@@ -1379,6 +1437,7 @@
     "montreal": "Montreal",
     "morethanluck": "Meer dan geluk",
     "newyorkcity": "New York City",
+    "newzealand": "Nieuw-Zeeland",
     "niledelta": "Nijl delta",
     "northamerica": "Noord-Amerika",
     "northwestpassage": "Noord-west Passage",
@@ -1387,8 +1446,10 @@
     "pangaea": "Pangea",
     "passage": "Passage",
     "pluto": "Pluto",
+    "pulicatlake": "Pulicat Meer",
     "qingchina": "Qing China",
     "random": "Willekeurig",
+    "riodejaneiro": "Rio de Janeiro",
     "russia": "Rusland",
     "sanfrancisco": "San Francisco",
     "scandinavia": "Scandinavië",
@@ -1412,6 +1473,7 @@
     "tradersdream": "Handelaars Droom",
     "twolakes": "Twee Meren",
     "unitedstates": "Verenigde Staten van Amerika",
+    "vancouverisland": "Vancouver Eiland",
     "venice": "Venetië",
     "vietnam": "Vietnam",
     "warshipwarship": "Oorlogsschip Oorlogsschip",
@@ -1480,7 +1542,6 @@
     "waiting_for_game": "Wachten tot het spel begint..."
   },
   "mode_selector": {
-    "coming_soon": "Binnenkort",
     "lobbies_unreachable": "Kan de publieke lobby's momenteel niet bereiken",
     "offline_lobbies": "Publieke lobby's zijn niet beschikbaar terwijl je offline bent",
     "ranked_1v1_title": "1v1",
@@ -1491,7 +1552,8 @@
     "servers_unreachable": "Kan geen verbinding maken met de OpenFront servers",
     "teams_count": "{teamCount} teams",
     "teams_of": "{teamCount} teams van {playersPerTeam}",
-    "teams_title": "Teams"
+    "teams_title": "Teams",
+    "coming_soon": "Binnenkort"
   },
   "multi_tab": {
     "detected": "Meerdere geopende speltabbladen gedetecteerd.",
@@ -1597,10 +1659,10 @@
   "player_profile": {
     "loading": "Profiel laden...",
     "no_clans": "Deze speler is niet in een clan.",
-    "not_found": "Speler profiel niet gevonden",
     "share": "Deel profiel",
     "title": "Speler profiel",
-    "view": "Bekijk profiel"
+    "view": "Bekijk profiel",
+    "not_found": "Speler profiel niet gevonden"
   },
   "player_stats_table": {
     "arrived": "Aangekomen",
@@ -1697,6 +1759,7 @@
     "listing_full": "De openbare lobbylijst is vol. Probeer het later opnieuw.",
     "listing_host_cheats_enabled": "Schakel host-cheats uit om je lobby publiekelijk te tonen.",
     "listing_limit_reached": "Je hebt al een openbare lobby op de lijst.",
+    "listing_max_players_too_low": "Max spelers moeten hoger zijn dan het aantal spelers dat al in de lobby is.",
     "listing_requires_subscription": "Een Warlord of Sovereign abonnement is verplicht om een lobby openbaar te tonen.",
     "listing_whitelist_enabled": "Schakel de join whitelist uit om uw lobby publiekelijk te tonen.",
     "no_open_lobbies": "Geen open lobbies op dit moment",
@@ -1734,13 +1797,15 @@
   },
   "public_lobby": {
     "connecting": "Verbinden met lobby...",
+    "custom": "Aangepast",
+    "custom_default_settings": "Standaard instellingen",
+    "custom_tooltip_title": "Dit is een door spelers gemaakte lobby",
     "invite_friends": "Vrienden uitnodigen",
     "join_timeout": "Je hebt niet op tijd deelgenomen aan het spel.",
     "notify_armed": "Waarschuwing aan: een geluid wordt afgespeeld als het spel begint",
     "notify_off": "Speel een geluid af wanneer het spel begint",
     "notify_on": "Game start waarschuwing staat aan",
     "notify_started": "Je spel begint!",
-    "players_per_team": "van {num}",
     "see_all": "Bekijk alle {count}",
     "started": "Begonnen",
     "starting_game": "Starten…",
@@ -1760,7 +1825,8 @@
     "trusted_tooltip_title": "Vertrouwde lobby",
     "trusted_unlocked": "Alleen vertrouwde accounts. Je account is vertrouwd.",
     "upcoming": "Aankomende",
-    "waiting_for_players": "Wachten op spelers"
+    "waiting_for_players": "Wachten op spelers",
+    "players_per_team": "van {num}"
   },
   "purchase_nudge": {
     "body": "Het lijkt erop dat je geniet van het spelen van OpenFront! Overweeg om ons te steunen door een aankoop te doen - elke aankoop maakt je advertentievrij voor het leven.",
@@ -1784,6 +1850,24 @@
     "fastest_game_speed": "Max",
     "game_speed": "Spel snelheid",
     "replay_speed": "Afspeelsnelheid"
+  },
+  "replay_viewer": {
+    "following": "{name} aan het volgen",
+    "load_failed": "Deze replay kon niet worden geladen.",
+    "loading": "Replay wordt geladen...",
+    "partial": "Alleen de eerste {time} van dit spel kan bekeken worden.",
+    "pause": "Pauzeren",
+    "play": "Afspelen",
+    "processing": "Replay voorbereiden…",
+    "processing_fetching": "Ophalen van het spel opname",
+    "processing_simulating": "Het spel herhalen: {percent}%",
+    "timeline": "Herhaling tijdlijn",
+    "unavailable_desync": "Dit spel wordt niet correct herhaald op deze versie van OpenFront.",
+    "unavailable_failed": "Het verwerken van dit spel is mislukt.",
+    "unavailable_not_found": "Dit spel kon niet worden gevonden.",
+    "unavailable_other_build": "Dit spel werd gespeeld op een andere versie van OpenFront.",
+    "unavailable_unreachable": "Het spel kon niet worden gedownload. Controleer je verbinding en probeer het opnieuw.",
+    "watch_classic": "In plaats daarvan de oude herhaling bekijken"
   },
   "rewards_modal": {
     "title": "Beloningen"
@@ -1812,6 +1896,12 @@
   },
   "spawn_timer": {
     "team_percent_tooltip": "{team}: {percent}"
+  },
+  "steam_grant": {
+    "ended_body": "De maand van {tier} die met je Steam aankoop geleverd werd, is afgelopen. Er is niets in rekening gebracht en er zal niets in rekening worden gebracht. Je houdt het volledige spel: elke kaart en modus, online spelen, gerangschikt met de gratis dagelijkse limiet en aangepaste lobby's met vrienden. De Steam-app blijft advertentievrij. Als je de {tier} weer wilt, kun je je op elk gewenst moment abonneren op de winkel.",
+    "ended_heading": "Je inbegrepen Steam maand is beëindigd",
+    "welcome_body": "Jouw Steam aankoop bevat {tier} tot {date}. Je hebt eenmaal betaald, op Steam: niets wordt gefactureerd en niets vernieuwt. Wanneer het eindigt houd je het volledige spel, elke kaart en modus, en de Steam-app blijft advertentievrij. Alleen de {tier} -perks stoppen.",
+    "welcome_heading": "Inbegrepen bij aankoop op Steam"
   },
   "steam_handoff": {
     "launched": "Openen van deze lobby in de Steam app. Als er niets gebeurt, zorg ervoor dat Steam actief is.",
@@ -1860,10 +1950,8 @@
     "default_name": "Steam speler"
   },
   "steam_wishlist": {
-    "cta": "Zet nu op je verlanglijst",
-    "on_steam": "OpenFront op steam",
-    "release": "Beschikbaar Q3 2026",
-    "title": "Zet OpenFront op je Steam verlanglijst!"
+    "buy_cta": "Koop op Steam",
+    "buy_on_steam": "Koop OpenFront op Steam"
   },
   "store": {
     "already_owned": "Je bezit dit item al. Er is niets in rekening gebracht.",
@@ -1900,6 +1988,7 @@
     "insufficient_currency_body": "Je hebt {amount, number} meer {currency} nodig om {item} te kopen.",
     "insufficient_currency_title": "Niet genoeg {currency}",
     "login_required": "Je moet ingelogd zijn om met valuta te betalen.",
+    "manage_billing": "Facturering beheren",
     "no_affiliate_items": "Geen partneritems beschikbaar. Controleer later voor nieuwe items.",
     "no_bundles": "Geen bundels beschikbaar. Controleer later voor nieuwe items.",
     "no_crowns": "Geen kronen beschikbaar. Controleer later voor nieuwe items.",
@@ -1937,6 +2026,8 @@
     "steam_overlay_waiting": "Bevestig de aankoop in de Steam overlay om door te gaan.",
     "subscribe_heading": "Abonnement starten",
     "subscribed": "Geabonneerd",
+    "subscription_past_due": "De laatste betaling van je abonnement is niet doorgegaan, dus uw abonnement is opgeschort. Werk je betalingsmethode bij om te herstellen. Meld je niet opnieuw aan, of je kunt twee keer in rekening worden gebracht.",
+    "subscription_past_due_desktop": "De laatste betaling van je abonnement is niet doorgegaan, dus uw abonnement is opgeschort. Werk je betalingsmethode bij op de OpenFront website om te herstellen. Meld je niet opnieuw aan, of je kunt twee keer in rekening worden gebracht.",
     "subscription_purchase_success": "Abonnement geactiveerd!",
     "subscriptions": "Abonnementen",
     "switch_button": "Wissel",
@@ -2068,7 +2159,7 @@
       "no_coast": "Je hebt nog geen kustlijn. Watertoegang is erg belangrijk — het laat je boten sturen, havens bouwen en over zee handelen. Breid je grondgebied uit totdat het de kust bereikt.",
       "port_info_ships": "Havens sturen handelsschepen uit, die je goud verdienen.",
       "port_info_warships": "Havens kunnen ook worden gebruikt om oorlogsschepen te bouwen.",
-      "propose_alliance": "Naties maken sterke bondgenoten. Klik met de rechtermuisknop op de natie gemarkeerd met een doel en stel een alliantie voor.",
+      "propose_alliance": "Bondgenoten beveiligen je grenzen. Klik met de rechtermuisknop op de natie die een doel heeft en stel een alliantie voor.",
       "sam_info": "SAM Launcher - Verdedigt tegen nucleaire aanvallen door inkomende raketten af te schieten.",
       "send_boat": "Boten vervoeren troepen over het water. Rechtsklik op een vijandelijke kustlijn over het water om het radiusmenu te openen en vervolgens de boot te selecteren.",
       "silo_loading": "Je Raket Silo is aan het laden - een bom kan worden gelanceerd zodra het volledig klaar is.",
@@ -2088,7 +2179,7 @@
       "buy_silo": "Maak ten slotte een Raket Silo: tik op je grondgebied, open het bouwmenu en kies Raket Silo. Silos lanceren atoombomen, waterstofbommen en MIRV's.",
       "buy_warship": "Bouw nu een oorlogsschip: tik op open water in de buurt van je haven, open het zwaard menu en kies Oorlogsschip. Oorlogsschepen nemen handelsschepen gevangen en beschermen je water.",
       "launch_atom": "Je silo is bewapend! Tik op het gebied van een buurman, open het zwaard menu en kies Atoombom.",
-      "propose_alliance": "Naties maken sterke bondgenoten. Tik op de natie met een doel en tik vervolgens op de handshake om een alliantie voor te stellen.",
+      "propose_alliance": "Bondgenoten beveiligen jouw grenzen. Klik op natie met een doel en klik vervolgens op de handdruk om een alliantie voor te stellen.",
       "send_boat": "Boten vervoeren troepen over het water. Tik op een vijandelijke kustlijn over het water om het radiusmenu te openen en vervolgens de boot te selecteren.",
       "spawn": "Tik ergens op de kaart om te kiezen waar je begint."
     },
@@ -2232,6 +2323,8 @@
     "left_click_label": "Linkermuisknop voor openen menu",
     "lobby_id_visibility_desc": "Verberg Lobby-ID tijdens het maken van een privélobby",
     "lobby_id_visibility_label": "Verborgen Lobby-ID's",
+    "lobby_start_alerts_desc": "Speel het startchime voor elke lobby en gerangschikt spel en toon een desktopmelding indien toegestaan. Je kunt het aanpassen met de lobby bell.",
+    "lobby_start_alerts_label": "Lobby Start Waarschuwingen",
     "menu_shortcuts": "Menu sneltoetsen",
     "move_down": "Camera omlaag",
     "move_down_desc": "Beweeg de camera naar beneden",
@@ -2255,6 +2348,8 @@
     "press_a_key": "Druk op een toets",
     "render_debug_gui": "Render Debug GUI",
     "render_debug_gui_desc": "Het renderer afstemmingspaneel van de speler in-/uitschakelen",
+    "replay_viewer_desc": "Open replay met terugspoelcontroles. Uit opent de klassieke replay",
+    "replay_viewer_label": "Nieuwe Replay Viewer",
     "request_alliance": "Verzoek alliantie",
     "request_alliance_desc": "Stuur een alliantie verzoek naar de speler wiens tegel onder uw aanwijzer staat.",
     "reset": "Resetten",
@@ -2300,6 +2395,8 @@
     "enter_username": "Voer je gebruikersnaam in",
     "invalid_chars": "Gebruikersnaam mag alleen letters, cijfers, spaties, onderstrepingstekens, koppeltekens en punten bevatten.",
     "lapse_notice": "Je abonnement is geëindigd, dus je speelt niet langer als \"{name}\". Het blijft gereserveerd voor je tot {date} - opnieuw abonneren voor die datum om het te bewaren. Daarna kan iedereen het gebruiken.",
+    "lapse_notice_after_grant": "De maand van premium toegang die je hebt gekregen met je Steam aankoop is geëindigd, dus je speelt niet langer als \"{name}\". Je houdt het volledige spel kosteloos; alleen de premiumvoordelen stoppen. De naam blijft gereserveerd voor je tot {date} — abonneer je voor die tijd aan om het te bewaren. Daarna kan iedereen het gebruiken.",
+    "lapse_notice_after_grant_at_risk": "De maand van premium toegang die met je Steam aankoop is geleverd, is geëindigd, dus je speelt niet meer zoals \"{name}\", en de naam is niet langer gereserveerd. Je houdt het volledige spel kosteloos. Een andere speler kan op elk moment de naam nemen - abonneer je nu aan om het te behouden.",
     "lapse_notice_at_risk": "Je speelt niet langer zoals \"{name}\", en het is niet langer gereserveerd. Een andere speler kan het op elk moment gebruiken — meld je nu opnieuw aan om het te behouden.",
     "not_string": "Gebruikersnaam moet een tekenreeks zijn.",
     "tag": "TAG",
@@ -2331,7 +2428,7 @@
     "match_cancelled": "Wedstrijd geannuleerd — niet alle spelers zijn geplaatst",
     "nation_won": "Natie {nation} heeft gewonnen!",
     "new_lobby": "Nieuwe Lobby",
-    "other_team": "{team} team heeft gewonnen!",
+    "other_team": "Team {team} heeft gewonnen!",
     "other_won": "{player} heeft gewonnen!",
     "requeue": "Opnieuw spelen",
     "spectate": "Toekijken",
