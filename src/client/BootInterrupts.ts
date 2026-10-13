@@ -567,17 +567,27 @@ export async function runBootInterrupt(
 ): Promise<void> {
   // onUserMe re-runs within a launch (session recovery, a mid-session
   // sign-in), and with nothing recorded until the open dialog settles, a re-run
-  // would pick the same interrupt again and stack a second copy over it.
-  if (interruptOpen) return;
-  interruptOpen = true;
-  try {
-    await runInterrupt(interrupt, context, ports);
-  } finally {
-    interruptOpen = false;
-  }
+  // would pick the same interrupt again and stack a second copy over it. Held
+  // only while a dialog is actually open: every case reaches its dialog
+  // synchronously, so there is no gap between this check and the flag.
+  if (dialogOpen) return;
+  await runInterrupt(interrupt, context, {
+    ...ports,
+    confirm: (...args) => whileDialogOpen(() => ports.confirm(...args)),
+    alert: (...args) => whileDialogOpen(() => ports.alert(...args)),
+  });
 }
 
-let interruptOpen = false;
+let dialogOpen = false;
+
+async function whileDialogOpen<T>(open: () => Promise<T>): Promise<T> {
+  dialogOpen = true;
+  try {
+    return await open();
+  } finally {
+    dialogOpen = false;
+  }
+}
 
 // Marks only the grant the dialog spoke about. recordSteamGrant replaces the
 // record when the period or tier changes, and a grant that arrived while the

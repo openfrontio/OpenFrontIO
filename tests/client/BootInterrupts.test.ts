@@ -1168,6 +1168,15 @@ describe("an interrupt the player never answered", () => {
     expect(calls.navigated).toEqual([USERNAME_FORM_HASH]);
   });
 
+  it("blocks nothing for an interrupt that opens no dialog", async () => {
+    const { base, calls, settle } = ports();
+    const nothing = runBootInterrupt(null, context, base);
+    const claim = runBootInterrupt("username-claim", context, base);
+    expect(calls.opened).toBe(1);
+    settle();
+    await Promise.all([nothing, claim]);
+  });
+
   it("runs again once the open dialog has settled", async () => {
     const { base, calls, settle } = ports();
     settle();
