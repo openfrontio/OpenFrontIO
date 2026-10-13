@@ -23,6 +23,7 @@ import {
   type SteamGrantStore,
 } from "./SteamGrantNotices";
 import {
+  STEAM_LICENCE_INTRO_NOTICE,
   steamNoticeCopy,
   steamNoticeShown,
   type SteamNotice,
@@ -667,6 +668,11 @@ async function runInterrupt(
       const copy = steamNoticeCopy(notice, ports.translate, formatGrantDate);
       await ports.alert(copy.paragraphs.join("\n\n"), copy.heading);
       ports.markNoticeSeen(notice.notice);
+      // The conversion notice already says lobbies and the name come with
+      // the game, so the licence intro would repeat it on the next launch.
+      if (notice.kind === "steam-plus-conversion") {
+        ports.markNoticeSeen(STEAM_LICENCE_INTRO_NOTICE);
+      }
       if (
         notice.kind !== "steam-plus-conversion" &&
         notice.grantEnd !== null &&
