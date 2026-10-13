@@ -493,6 +493,29 @@ describe("fetchClanMembers", () => {
     if (result) expect(result.pendingRequests).toBe(5);
   });
 
+  it("parses each member's clan wars eloContributed, null or absent", async () => {
+    const [first] = membersResponse.results;
+    mockFetch(() =>
+      okJson({
+        ...membersResponse,
+        results: [
+          { ...first, publicId: "a", eloContributed: 40 },
+          { ...first, publicId: "b", eloContributed: null },
+          { ...first, publicId: "c" },
+        ],
+      }),
+    );
+    const result = await fetchClanMembers("TEST", 1, 20, "eloContributed");
+    expect(result).not.toBe(false);
+    if (result) {
+      expect(result.results.map((m) => m.eloContributed)).toEqual([
+        40,
+        null,
+        undefined,
+      ]);
+    }
+  });
+
   it("returns false on non-ok response", async () => {
     mockFetch(() => failRes(500));
     const result = await fetchClanMembers("TEST");
