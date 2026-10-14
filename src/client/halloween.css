@@ -327,6 +327,10 @@ body.halloween-theme.in-game::before {
 }
 
 /* 2. Tutorial Button - Top-Right Cobweb with Dangling Spider (Strictly scoped to game-mode-selector) */
+body.halloween-theme:not(.in-game) game-mode-selector button.bg-cyber-yellow {
+  isolation: isolate !important;
+}
+
 body.halloween-theme:not(.in-game)
   game-mode-selector
   button.bg-cyber-yellow::after {
@@ -342,31 +346,50 @@ body.halloween-theme:not(.in-game)
   background-repeat: no-repeat !important;
   transform: scaleX(-1) !important;
   pointer-events: none !important;
-  z-index: 50 !important;
+  z-index: -1 !important;
   opacity: 0.95 !important;
   filter: drop-shadow(0 0 3px rgba(0, 0, 0, 0.7)) !important;
 }
 
-/* 3. Create Lobby Button - Jack-o'-Lantern Pumpkin Accent (Strictly scoped to game-mode-selector) */
+/* 3. Create Lobby Button - Jack-o'-Lantern Pumpkin Accent (Desktop/sm+ only; sits behind button text) */
 body.halloween-theme:not(.in-game)
   game-mode-selector
   .grid-cols-3
-  > button:first-child::before {
-  content: "" !important;
-  display: block !important;
-  position: absolute !important;
-  top: 50% !important;
-  left: 10px !important;
-  width: 40px !important;
-  height: 40px !important;
-  background-image: var(--hw-pumpkin-svg) !important;
-  background-size: contain !important;
-  background-repeat: no-repeat !important;
-  transform: translateY(-50%) rotate(-8deg) !important;
-  pointer-events: none !important;
-  z-index: 1 !important;
-  opacity: 0.95 !important;
-  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.7)) !important;
+  > button:first-child {
+  isolation: isolate !important;
+}
+
+@media (min-width: 640px) {
+  body.halloween-theme:not(.in-game)
+    game-mode-selector
+    .grid-cols-3
+    > button:first-child::before {
+    content: "" !important;
+    display: block !important;
+    position: absolute !important;
+    top: 50% !important;
+    left: 8px !important;
+    width: 30px !important;
+    height: 30px !important;
+    background-image: var(--hw-pumpkin-svg) !important;
+    background-size: contain !important;
+    background-repeat: no-repeat !important;
+    transform: translateY(-50%) rotate(-8deg) !important;
+    pointer-events: none !important;
+    z-index: -1 !important;
+    opacity: 0.9 !important;
+    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.7)) !important;
+  }
+}
+
+@media (max-width: 639px) {
+  body.halloween-theme:not(.in-game)
+    game-mode-selector
+    .grid-cols-3
+    > button:first-child::before {
+    display: none !important;
+    content: none !important;
+  }
 }
 
 /* --- News Banner & Streaming Now (Homepage) --- */
