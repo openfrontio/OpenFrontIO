@@ -14,6 +14,8 @@
   --hw-orange-glow: 0 0 6px rgba(234, 112, 8, 0.25);
   --hw-cobweb-svg: url("data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMDAgMTAwIiBmaWxsPSJub25lIiBzdHJva2U9IndoaXRlIiBzdHJva2Utd2lkdGg9IjQiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCI+CiAgPHBhdGggZD0iTTAsMCBMMTAwLDAgTTAsMCBMOTIsMzYgTTAsMCBMNjgsNjggTTAsMCBMMzYsOTIgTTAsMCBMMCwxMDAiIG9wYWNpdHk9IjAuOCIvPgogIDxwYXRoIGQ9Ik0zMCwwIFEyNSwzIDI3LDEwIFEyMiwxNCAyMCwyMCBRMTQsMjIgMTAsMjcgUTMsMjUgMCwzMCIgb3BhY2l0eT0iMC45Ii8+CiAgPHBhdGggZD0iTTYwLDAgUTUwLDYgNTQsMjAgUTQ0LDI4IDQwLDQwIFEyOCw0NCAyMCw1NCBRNiw1MCAwLDYwIiBvcGFjaXR5PSIwLjg1Ii8+CiAgPHBhdGggZD0iTTkwLDAgUTc1LDkgODEsMzAgUTY2LDQyIDYwLDYwIFE0Miw2NiAzMCw4MSBROSw3NSAwLDkwIiBvcGFjaXR5PSIwLjgiLz4KPC9zdmc+");
   --hw-cobweb-spider-svg: url("data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMDAgMTAwIiBmaWxsPSJub25lIiBzdHJva2U9IndoaXRlIiBzdHJva2Utd2lkdGg9IjQiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCI+CiAgPHBhdGggZD0iTTAsMCBMMTAwLDAgTTAsMCBMOTIsMzYgTTAsMCBMNjgsNjggTTAsMCBMMzYsOTIgTTAsMCBMMCwxMDAiIG9wYWNpdHk9IjAuOCIvPgogIDxwYXRoIGQ9Ik0zMCwwIFEyNSwzIDI3LDEwIFEyMiwxNCAyMCwyMCBRMTQsMjIgMTAsMjcgUTMsMjUgMCwzMCIgb3BhY2l0eT0iMC45Ii8+CiAgPHBhdGggZD0iTTYwLDAgUTUwLDYgNTQsMjAgUTQ0LDI4IDQwLDQwIFEyOCw0NCAyMCw1NCBRNiw1MCAwLDYwIiBvcGFjaXR5PSIwLjg1Ii8+CiAgPHBhdGggZD0iTTQwLDQwIEw0MCw3NSIgc3Ryb2tlPSJ3aGl0ZSIgc3Ryb2tlLXdpZHRoPSIyIiBvcGFjaXR5PSIwLjYiLz4KICA8ZWxsaXBzZSBjeD0iNDAiIGN5PSI4MCIgcng9IjUiIHJ5PSI2IiBmaWxsPSJ3aGl0ZSIgc3Ryb2tlPSJub25lIi8+CiAgPHBhdGggZD0iTTM1LDc3IFEzMCw3MyAyNyw3OCBNMzUsODEgUTI5LDgxIDI2LDg1IE00NSw3NyBRNTAsNzMgNTMsNzggTTQ1LDgxIFE1MSw4MSA1NCw4NSIgc3Ryb2tlPSJ3aGl0ZSIgc3Ryb2tlLXdpZHRoPSIyIi8+Cjwvc3ZnPg==");
+  /* Original hand-crafted SVG Jack-o'-lantern (CC0 / Public Domain, zero third-party copyright) */
+  --hw-pumpkin-svg: url("data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA2NCA2NCIgZmlsbD0ibm9uZSI+CiAgPHBhdGggZD0iTTI5IDEyQzI5IDYgMzQgMyAzOSA0IiBzdHJva2U9IiM5YTM0MTIiIHN0cm9rZS13aWR0aD0iNS41IiBzdHJva2UtbGluZWNhcD0icm91bmQiLz4KICA8ZWxsaXBzZSBjeD0iMTUiIGN5PSIzNiIgcng9IjE0IiByeT0iMjIiIGZpbGw9IiM5YTM0MTIiLz4KICA8ZWxsaXBzZSBjeD0iNDkiIGN5PSIzNiIgcng9IjE0IiByeT0iMjIiIGZpbGw9IiM5YTM0MTIiLz4KICA8ZWxsaXBzZSBjeD0iMjMiIGN5PSIzNyIgcng9IjE0IiByeT0iMjQiIGZpbGw9IiNlYTU4MGMiLz4KICA8ZWxsaXBzZSBjeD0iNDEiIGN5PSIzNyIgcng9IjE0IiByeT0iMjQiIGZpbGw9IiNlYTU4MGMiLz4KICA8ZWxsaXBzZSBjeD0iMzIiIGN5PSIzNyIgcng9IjEyIiByeT0iMjUiIGZpbGw9IiNmZjdhMTgiLz4KICA8cG9seWdvbiBwb2ludHM9IjIxLDIyIDEyLDM0IDI2LDMzIiBmaWxsPSIjMTgwOTI0Ii8+CiAgPHBvbHlnb24gcG9pbnRzPSI0MywyMiAzOCwzMyA1MiwzNCIgZmlsbD0iIzE4MDkyNCIvPgogIDxwb2x5Z29uIHBvaW50cz0iMzIsMzEgMjgsMzggMzYsMzgiIGZpbGw9IiMxODA5MjQiLz4KICA8cGF0aCBkPSJNMTIgNDEgTDE5IDQ2IEwyNSA0MiBMMzIgNDcgTDM5IDQyIEw0NSA0NiBMNTIgNDEgTDQ3IDUzIEwzOSA0OSBMMzIgNTUgTDI1IDQ5IEwxNyA1MyBaIiBmaWxsPSIjMTgwOTI0Ii8+Cjwvc3ZnPg==");
 }
 
 /* Base body styles & OpenFront @theme variable overrides (Homepage & Modals)
@@ -345,7 +347,7 @@ body.halloween-theme:not(.in-game)
   filter: drop-shadow(0 0 3px rgba(0, 0, 0, 0.7)) !important;
 }
 
-/* 3. Create Lobby Button - Top-Left Cobweb (Strictly scoped to game-mode-selector) */
+/* 3. Create Lobby Button - Jack-o'-Lantern Pumpkin Accent (Strictly scoped to game-mode-selector) */
 body.halloween-theme:not(.in-game)
   game-mode-selector
   .grid-cols-3
@@ -353,17 +355,18 @@ body.halloween-theme:not(.in-game)
   content: "" !important;
   display: block !important;
   position: absolute !important;
-  top: 0 !important;
-  left: 0 !important;
-  width: 34px !important;
-  height: 34px !important;
-  background-image: var(--hw-cobweb-svg) !important;
+  top: 50% !important;
+  left: 10px !important;
+  width: 40px !important;
+  height: 40px !important;
+  background-image: var(--hw-pumpkin-svg) !important;
   background-size: contain !important;
   background-repeat: no-repeat !important;
+  transform: translateY(-50%) rotate(-8deg) !important;
   pointer-events: none !important;
   z-index: 1 !important;
-  opacity: 0.85 !important;
-  filter: drop-shadow(0 0 2px rgba(0, 0, 0, 0.6)) !important;
+  opacity: 0.95 !important;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.7)) !important;
 }
 
 /* --- News Banner & Streaming Now (Homepage) --- */
