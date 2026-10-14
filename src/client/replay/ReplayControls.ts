@@ -9,8 +9,8 @@
 import { assetUrl } from "@openfront/shared/AssetUrls";
 import { html, LitElement, nothing } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
-import { crazyGamesSDK } from "../CrazyGamesSDK";
 import { isDesktopShell } from "../DesktopShell";
+import { gamePortal } from "../GamePortal";
 import { homeHref, translateText } from "../Utils";
 import { TICKS_PER_SECOND } from "./ReplayPlayback";
 
@@ -83,12 +83,12 @@ export class ReplayControls extends LitElement {
   @state() private speedMenuOpen = false;
   @state() private isFullscreen = document.fullscreenElement !== null;
   /**
-   * CrazyGames has its own fullscreen button and the desktop shell manages
+   * Portals have their own fullscreen button and the desktop shell manages
    * its own window, so we hide ours there (same as in game).
    */
   private readonly showFullscreen =
     document.fullscreenEnabled &&
-    !crazyGamesSDK.isOnCrazyGames() &&
+    !gamePortal.isOnGamePortal() &&
     !isDesktopShell();
   private readonly abort = new AbortController();
 

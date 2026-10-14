@@ -44,7 +44,7 @@ import "./components/ToggleInputCard";
 import { inviteFriendsButton } from "./components/ui/InviteFriendsButton";
 import { modalHeader } from "./components/ui/ModalHeader";
 import { fetchCosmetics, InsufficientCurrency } from "./Cosmetics";
-import { crazyGamesSDK } from "./CrazyGamesSDK";
+import { gamePortal } from "./GamePortal";
 import { JoinLobbyEvent } from "./Main";
 import { terrainMapFileLoader } from "./TerrainMapFileLoader";
 import { UserSettings } from "./UserSettings";
@@ -200,8 +200,8 @@ export class HostLobbyModal extends BaseModal {
   }
 
   private async buildLobbyUrl(): Promise<string> {
-    if (crazyGamesSDK.isOnCrazyGames()) {
-      const link = crazyGamesSDK.createInviteLink(this.lobbyId);
+    if (gamePortal.isOnGamePortal()) {
+      const link = await gamePortal.createInviteLink(this.lobbyId);
       if (link !== null) {
         return link;
       }
@@ -220,14 +220,14 @@ export class HostLobbyModal extends BaseModal {
   }
 
   private updateHistory(url: string): void {
-    if (crazyGamesSDK.isOnCrazyGames()) {
+    if (gamePortal.isOnGamePortal()) {
       return;
     }
     history.replaceState(null, "", url);
   }
 
   private updateLobbyHistory(lobbyUrl: string): void {
-    if (crazyGamesSDK.isOnCrazyGames()) {
+    if (gamePortal.isOnGamePortal()) {
       return;
     }
     const lobbyIdHidden = !this.userSettings.lobbyIdVisibility();
@@ -891,7 +891,7 @@ export class HostLobbyModal extends BaseModal {
         if (!isValidGameID(this.lobbyId)) {
           throw new Error(`Invalid lobby ID format: ${this.lobbyId}`);
         }
-        crazyGamesSDK.showInviteButton(this.lobbyId);
+        gamePortal.showInviteButton(this.lobbyId);
 
         // Now that we have the id, build and copy the share link. If lobby
         // creation fails, the catch below clears the clipboard.
@@ -931,7 +931,7 @@ export class HostLobbyModal extends BaseModal {
       throw new Error(`Invalid lobby ID format: ${lobbyId}`);
     }
     this.lobbyId = lobbyId;
-    crazyGamesSDK.showInviteButton(this.lobbyId);
+    gamePortal.showInviteButton(this.lobbyId);
 
     const url = await this.constructUrl();
     this.updateLobbyHistory(url);
@@ -989,7 +989,7 @@ export class HostLobbyModal extends BaseModal {
       this.leaveLobby();
       this.updateHistory("/"); // Reset URL to base
     }
-    crazyGamesSDK.hideInviteButton();
+    gamePortal.hideInviteButton();
 
     // Clean up timers and resources
     if (this.botsUpdateTimer !== null) {

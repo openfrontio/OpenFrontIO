@@ -166,8 +166,7 @@ export class TransportShipExecution implements Execution {
     if (this.target.id() !== mg.terraNullius().id()) {
       mg.displayIncomingUnit(
         this.boat.id(),
-        // TODO TranslateText
-        `Naval invasion incoming from ${this.attacker.displayName()} (${renderTroops(this.boat.troops())})`,
+        "events_display.naval_invasion_inbound",
         MessageType.NAVAL_INVASION_INBOUND,
         this.target.id(),
       );

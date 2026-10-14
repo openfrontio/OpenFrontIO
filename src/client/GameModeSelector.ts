@@ -1,12 +1,4 @@
-import {
-  Duos,
-  GameMapType,
-  GameMode,
-  GameType,
-  HumansVsNations,
-  Quads,
-  Trios,
-} from "@openfront/engine-api/game/GameTypes";
+import { GameMapType, GameType } from "@openfront/engine-api/game/GameTypes";
 import { UserMeResponse } from "@openfront/shared/ApiSchemas";
 import { PublicGameInfo, PublicGames } from "@openfront/shared/WireSchemas";
 import { html, LitElement, nothing, type TemplateResult } from "lit";
@@ -23,7 +15,6 @@ import {
   viewerIsSignedIn,
   viewerIsTrusted,
 } from "./components/LobbyCard";
-import { crazyGamesSDK } from "./CrazyGamesSDK";
 import {
   getDesktopUpdateState,
   isDesktopShell,
@@ -32,6 +23,7 @@ import {
   type DesktopSessionState,
   type DesktopUpdateState,
 } from "./DesktopShell";
+import { gamePortal } from "./GamePortal";
 import type { HostLobbyModal } from "./HostLobbyModal";
 import { showInGameAlert } from "./InGameModal";
 import type { JoinLobbyModal } from "./JoinLobbyModal";
@@ -52,6 +44,7 @@ import { lastUserMeResponse } from "./UserMeBroadcast";
 import { UsernameInput } from "./UsernameInput";
 import {
   calculateServerTimeOffset,
+  getGameModeLabel,
   getGamesPlayed,
   getSecondsUntilServerTimestamp,
   reloadForUpdate,
@@ -503,10 +496,10 @@ export class GameModeSelector extends LitElement {
   private applyUserMe(me: UserMeResponse | false): void {
     this.viewerSignedIn = viewerIsSignedIn(me);
     this.viewerTrusted = viewerIsTrusted(me);
-    // A CrazyGames sign-in surfaces as a userMeResponse without a linked
+    // A portal sign-in surfaces as a userMeResponse without a linked
     // identity, so re-read the SDK profile alongside it.
-    if (crazyGamesSDK.isOnCrazyGames()) {
-      void crazyGamesSDK.getUserProfile().then((user) => {
+    if (gamePortal.isOnGamePortal()) {
+      void gamePortal.getUserProfile().then((user) => {
         if (user !== null) this.viewerSignedIn = true;
       });
     }
@@ -677,7 +670,7 @@ export class GameModeSelector extends LitElement {
         class="flex flex-col gap-4 w-full px-4 pb-4 mx-auto sm:px-0 sm:pb-0 sm:grid sm:grid-cols-[2fr_1fr] sm:grid-rows-[auto_min(24rem,40vh)_auto_auto] desktop:sm:grid-rows-[auto_40vh_auto_auto] sm:[reading-flow:grid-rows]"
       >
         <ios-add-to-home-screen-banner
-          class="no-crazygames [&:empty]:hidden sm:col-span-2 sm:row-start-1"
+          class="no-game-portal [&:empty]:hidden sm:col-span-2 sm:row-start-1"
         ></ios-add-to-home-screen-banner>
 
         <div class="flex gap-4 h-14 sm:col-span-2 sm:row-start-3">
@@ -738,7 +731,7 @@ export class GameModeSelector extends LitElement {
         ${heroSlot
           ? html`<div class="min-w-0 sm:col-start-1 sm:row-start-2">
               ${ffa
-                ? this.renderLobbyCard(ffa, this.getLobbyTitle(ffa))
+                ? this.renderLobbyCard(ffa, getGameModeLabel(ffa.gameConfig!))
                 : this.offlineForLobbies()
                   ? this.renderLobbiesUnavailable()
                   : html`<div
@@ -759,12 +752,18 @@ export class GameModeSelector extends LitElement {
         >
           ${teams
             ? html`<div class="min-w-0 sm:min-h-0 ${cardRows.teams}">
-                ${this.renderLobbyCard(teams, this.getLobbyTitle(teams))}
+                ${this.renderLobbyCard(
+                  teams,
+                  getGameModeLabel(teams.gameConfig!),
+                )}
               </div>`
             : nothing}
           ${special
             ? html`<div class="min-w-0 sm:min-h-0 ${cardRows.special}">
-                ${this.renderLobbyCard(special, this.getLobbyTitle(special))}
+                ${this.renderLobbyCard(
+                  special,
+                  getGameModeLabel(special.gameConfig!),
+                )}
               </div>`
             : nothing}
           ${this.renderUpcomingHeading()}
@@ -1035,73 +1034,5 @@ export class GameModeSelector extends LitElement {
         composed: true,
       }),
     );
-  }
-
-  private getLobbyTitle(lobby: PublicGameInfo): string {
-    const config = lobby.gameConfig!;
-    if (config.gameMode === GameMode.FFA) {
-      return translateText("game_mode.ffa");
-    }
-
-    if (config?.gameMode === GameMode.Team) {
-      const totalPlayers = config.maxPlayers ?? lobby.numClients ?? undefined;
-      const formatTeamsOf = (
-        teamCount: number | undefined,
-        playersPerTeam: number | undefined,
-        label?: string,
-      ) => {
-        if (!teamCount)
-          return label ?? translateText("mode_selector.teams_title");
-        const baseTitle = playersPerTeam
-          ? translateText("mode_selector.teams_of", {
-              teamCount: String(teamCount),
-              playersPerTeam: String(playersPerTeam),
-            })
-          : translateText("mode_selector.teams_count", {
-              teamCount: String(teamCount),
-            });
-        return `${baseTitle}${label ? ` (${label})` : ""}`;
-      };
-
-      switch (config.playerTeams) {
-        case Duos: {
-          const teamCount = totalPlayers
-            ? Math.floor(totalPlayers / 2)
-            : undefined;
-          return formatTeamsOf(teamCount, 2);
-        }
-        case Trios: {
-          const teamCount = totalPlayers
-            ? Math.floor(totalPlayers / 3)
-            : undefined;
-          return formatTeamsOf(teamCount, 3);
-        }
-        case Quads: {
-          const teamCount = totalPlayers
-            ? Math.floor(totalPlayers / 4)
-            : undefined;
-          return formatTeamsOf(teamCount, 4);
-        }
-        case HumansVsNations: {
-          const humanSlots = config.maxPlayers ?? lobby.numClients;
-          return humanSlots
-            ? translateText("public_lobby.teams_hvn_detailed", {
-                num: String(humanSlots),
-              })
-            : translateText("public_lobby.teams_hvn");
-        }
-        default:
-          if (typeof config.playerTeams === "number") {
-            const teamCount = config.playerTeams;
-            const playersPerTeam =
-              totalPlayers && teamCount > 0
-                ? Math.floor(totalPlayers / teamCount)
-                : undefined;
-            return formatTeamsOf(teamCount, playersPerTeam);
-          }
-      }
-    }
-
-    return "";
   }
 }

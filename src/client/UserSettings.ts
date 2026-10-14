@@ -44,11 +44,19 @@ export function getDefaultKeybinds(isMac: boolean): Record<string, string> {
     swapDirection: "KeyU",
     zoomOut: "KeyQ",
     zoomIn: "KeyE",
+    zoomOutMinus: "Minus",
+    zoomOutNumpad: "NumpadSubtract",
+    zoomInEqual: "Equal",
+    zoomInNumpad: "NumpadAdd",
     centerCamera: "KeyC",
     moveUp: "KeyW",
     moveLeft: "KeyA",
     moveDown: "KeyS",
     moveRight: "KeyD",
+    moveUpArrow: "ArrowUp",
+    moveLeftArrow: "ArrowLeft",
+    moveDownArrow: "ArrowDown",
+    moveRightArrow: "ArrowRight",
     buildMenuModifier: isMac ? "MetaLeft" : "ControlLeft",
     emojiMenuModifier: "AltLeft",
     boxSelectWarships: "ShiftLeft",
@@ -398,6 +406,14 @@ export class UserSettings {
 
   emojis() {
     return this.getBool("settings.emojis", true);
+  }
+
+  hudOpacity() {
+    return Math.max(0, Math.min(1, this.getFloat("settings.hudOpacity", 1)));
+  }
+
+  setHudOpacity(value: number) {
+    this.setFloat("settings.hudOpacity", value);
   }
 
   performanceOverlay() {

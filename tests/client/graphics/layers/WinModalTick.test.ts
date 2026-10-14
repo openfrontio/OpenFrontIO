@@ -9,6 +9,9 @@ import type { GameView } from "../../../../src/client/view";
 
 vi.mock("../../../../src/client/Utils", () => ({
   translateText: vi.fn((key: string) => key),
+  getTranslatedPlayerTeamLabel: vi.fn(
+    (team: string | null) => (team === "Red" ? "Rood" : (team ?? "")), // "Rood" is Dutch for "Red"
+  ),
   getGamesPlayed: vi.fn(() => 10),
   isInIframe: vi.fn(() => false),
   homeHref: vi.fn(() => "/"),
@@ -27,15 +30,18 @@ vi.mock("../../../../src/client/Cosmetics", async (importOriginal) => ({
   resolveCosmetics: vi.fn(() => []),
 }));
 
-vi.mock("../../../../src/client/CrazyGamesSDK", () => ({
-  crazyGamesSDK: {
+vi.mock("../../../../src/client/GamePortal", () => ({
+  gamePortal: {
     happytime: vi.fn(),
-    requestAd: vi.fn(),
     gameplayStop: vi.fn(),
   },
 }));
 
-import { crazyGamesSDK } from "../../../../src/client/CrazyGamesSDK";
+import { gamePortal } from "../../../../src/client/GamePortal";
+import {
+  getTranslatedPlayerTeamLabel,
+  translateText,
+} from "../../../../src/client/Utils";
 
 type Winner = ["team", string] | ["player", string] | undefined;
 
@@ -92,17 +98,21 @@ describe("WinModal tick win handling", () => {
 
     expect(events).toHaveLength(1);
     expect(events[0].winner).toEqual(["team", "Blue"]);
-    expect(crazyGamesSDK.happytime).toHaveBeenCalled();
+    expect(gamePortal.happytime).toHaveBeenCalled();
     await vi.waitFor(() => expect(modal!.isVisible).toBe(true));
   });
 
-  it("emits the winner without celebrating when another team wins", async () => {
+  it("emits the (translated) winner without celebrating when another team wins", async () => {
     const events = setup(makeGame({ winner: ["team", "Red"], myTeam: "Blue" }));
     modal!.tick();
 
     expect(events).toHaveLength(1);
     expect(events[0].winner).toEqual(["team", "Red"]);
-    expect(crazyGamesSDK.happytime).not.toHaveBeenCalled();
+    expect(gamePortal.happytime).not.toHaveBeenCalled();
+    expect(getTranslatedPlayerTeamLabel).toHaveBeenCalledWith("Red");
+    expect(translateText).toHaveBeenCalledWith("win_modal.other_team", {
+      team: "Rood",
+    });
     await vi.waitFor(() => expect(modal!.isVisible).toBe(true));
   });
 
@@ -122,7 +132,7 @@ describe("WinModal tick win handling", () => {
 
     expect(events).toHaveLength(1);
     expect(events[0].winner).toEqual(["player", "winner-client"]);
-    expect(crazyGamesSDK.happytime).not.toHaveBeenCalled();
+    expect(gamePortal.happytime).not.toHaveBeenCalled();
     await vi.waitFor(() => expect(modal!.isVisible).toBe(true));
   });
 
@@ -140,7 +150,7 @@ describe("WinModal tick win handling", () => {
     );
     modal!.tick();
 
-    expect(crazyGamesSDK.happytime).toHaveBeenCalled();
+    expect(gamePortal.happytime).toHaveBeenCalled();
     await vi.waitFor(() => expect(modal!.isVisible).toBe(true));
   });
 
@@ -172,11 +182,40 @@ describe("WinModal tick win handling", () => {
     await modal!.updateComplete;
 
     expect(modal!.isVisible).toBe(true);
-    const exit = modal!.querySelector(
-      "o-button[translationKey='win_modal.exit']",
-    );
+    const exit = modal!.querySelector("[data-win-action='exit']");
     expect(exit).not.toBeNull();
     expect(exit!.parentElement!.classList.contains("hidden")).toBe(false);
+  });
+
+  it("puts leaving on the left and staying on the right, and staying closes the modal", async () => {
+    vi.stubGlobal(
+      "ResizeObserver",
+      class {
+        observe() {}
+        unobserve() {}
+        disconnect() {}
+      },
+    );
+    vi.mocked(fetchCosmetics).mockReturnValueOnce(new Promise(() => {}));
+    setup(makeGame({ winner: ["team", "Blue"], myTeam: "Blue" }));
+    document.body.appendChild(modal!);
+    void modal!.show();
+    await modal!.updateComplete;
+
+    const actions = [
+      ...modal!.querySelectorAll<HTMLButtonElement>("[data-win-action]"),
+    ];
+    expect(actions.map((b) => b.getAttribute("data-win-action"))).toEqual([
+      "exit",
+      "keep",
+    ]);
+    // Leaving is the quiet button, staying the main one.
+    expect(actions[0].classList.contains("win-action-quiet")).toBe(true);
+    expect(actions[1].classList.contains("win-action-main")).toBe(true);
+
+    actions[1].click();
+    await modal!.updateComplete;
+    expect(modal!.isVisible).toBe(false);
   });
 
   it("ignores a player win whose winner is not a known player", () => {

@@ -79,6 +79,8 @@ export function createPartialGameRecord(
   reports?: PlayerReport[],
   // Public lobbies only (see GameEndInfoSchema.publicGameType).
   publicGameType?: PublicGameType,
+  // Game servers only (see GameEndInfoSchema.statsAgreed).
+  statsAgreed?: boolean,
 ): PartialGameRecord {
   const duration = Math.floor((end - start) / 1000);
   const num_turns = allTurns.length;
@@ -109,6 +111,7 @@ export function createPartialGameRecord(
       tribes,
       reports,
       publicGameType,
+      statsAgreed,
     },
     version: "v0.0.2",
     turns,

@@ -14,6 +14,8 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
+
+	"github.com/gen2brain/webp"
 )
 
 // mapEntry identifies one map to process: its folder name and whether it
@@ -166,7 +168,7 @@ func processMap(ctx context.Context, name string, isTest bool) (string, error) {
 		return "", fmt.Errorf("failed to write thumbnail for %s: %w", name, err)
 	}
 
-	// Copy layer PNGs and validate them.
+	// Validate layer PNGs and write them out as WebP (full size and map4x).
 	if layersRaw, ok := manifest["layers"]; ok {
 		if layersArr, ok := layersRaw.([]interface{}); ok {
 			for _, layerRaw := range layersArr {
@@ -183,31 +185,36 @@ func processMap(ctx context.Context, name string, isTest bool) (string, error) {
 				if placement != "land" && placement != "water" {
 					return "", fmt.Errorf("map %s: layer %q has invalid placement %q (must be \"land\" or \"water\")", name, layerID, placement)
 				}
-				// Copy the layer PNG.
 				srcPng := filepath.Join(inputMapDir, name, layerID+".png")
-				dstPng := filepath.Join(mapDir, layerID+".png")
 				pngData, err := os.ReadFile(srcPng)
 				if err != nil {
 					return "", fmt.Errorf("map %s: layer %q PNG not found at %s: %w", name, layerID, srcPng, err)
 				}
-				img, _, err := image.DecodeConfig(bytes.NewReader(pngData))
+				img, err := png.Decode(bytes.NewReader(pngData))
 				if err != nil {
 					return "", fmt.Errorf("map %s: layer %q PNG failed to decode: %w", name, layerID, err)
 				}
-				matchesMap := img.Width == result.Map.Width && img.Height == result.Map.Height
-				matchesSource := img.Width == sourceImg.Width && img.Height == sourceImg.Height
+				size := img.Bounds().Size()
+				matchesMap := size.X == result.Map.Width && size.Y == result.Map.Height
+				matchesSource := size.X == sourceImg.Width && size.Y == sourceImg.Height
 				if !matchesMap && !matchesSource {
-					return "", fmt.Errorf("map %s: layer %q PNG dimensions (%dx%d) do not match image.png (%dx%d)", name, layerID, img.Width, img.Height, sourceImg.Width, sourceImg.Height)
+					return "", fmt.Errorf("map %s: layer %q PNG dimensions (%dx%d) do not match image.png (%dx%d)", name, layerID, size.X, size.Y, sourceImg.Width, sourceImg.Height)
 				}
 				// Crop like the terrain so layers can be exported at image.png's size.
-				if !matchesMap {
-					pngData, err = cropPNG(pngData, result.Map.Width, result.Map.Height)
-					if err != nil {
-						return "", fmt.Errorf("map %s: layer %q PNG failed to crop: %w", name, layerID, err)
-					}
+				full := cropToNRGBA(img, result.Map.Width, result.Map.Height)
+				fullWebP, err := encodeLayerWebP(full)
+				if err != nil {
+					return "", fmt.Errorf("map %s: layer %q failed to encode: %w", name, layerID, err)
 				}
-				if err := os.WriteFile(dstPng, pngData, 0644); err != nil {
-					return "", fmt.Errorf("failed to write layer PNG for %s/%s: %w", name, layerID, err)
+				if err := os.WriteFile(filepath.Join(mapDir, layerID+".webp"), fullWebP, 0644); err != nil {
+					return "", fmt.Errorf("failed to write layer for %s/%s: %w", name, layerID, err)
+				}
+				halfWebP, err := encodeLayerWebP(downscaleHalf(full, result.Map4x.Width, result.Map4x.Height))
+				if err != nil {
+					return "", fmt.Errorf("map %s: layer %q failed to encode at map4x size: %w", name, layerID, err)
+				}
+				if err := os.WriteFile(filepath.Join(mapDir, layerID+".4x.webp"), halfWebP, 0644); err != nil {
+					return "", fmt.Errorf("failed to write map4x layer for %s/%s: %w", name, layerID, err)
 				}
 			}
 		}
@@ -224,26 +231,6 @@ func processMap(ctx context.Context, name string, isTest bool) (string, error) {
 		return "", fmt.Errorf("failed to write manifest for %s: %w", name, err)
 	}
 	return manifestOutPath, nil
-}
-
-// cropPNG keeps the top-left width x height pixels of a PNG, preserving its color model (e.g. palette).
-func cropPNG(data []byte, width, height int) ([]byte, error) {
-	img, err := png.Decode(bytes.NewReader(data))
-	if err != nil {
-		return nil, err
-	}
-	sub, ok := img.(interface {
-		SubImage(image.Rectangle) image.Image
-	})
-	if !ok {
-		return nil, fmt.Errorf("unsupported PNG image type %T", img)
-	}
-	var buf bytes.Buffer
-	enc := png.Encoder{CompressionLevel: png.BestCompression}
-	if err := enc.Encode(&buf, sub.SubImage(image.Rect(0, 0, width, height))); err != nil {
-		return nil, err
-	}
-	return buf.Bytes(), nil
 }
 
 // parseMapsFlag validates and parses the --maps command-line argument.
@@ -345,6 +332,12 @@ func main() {
 	))
 
 	slog.SetDefault(logger)
+
+	// CI regenerates every map and fails on any diff. The embedded wasm libwebp
+	// is byte-identical everywhere; a system libwebp of another version is not.
+	if webp.Dynamic() == nil {
+		slog.Warn("Encoding WebP with the system libwebp; output may differ from CI. Use `go run -tags nodynamic .` for reproducible files")
+	}
 
 	discovered, err := discoverMaps()
 	if err != nil {

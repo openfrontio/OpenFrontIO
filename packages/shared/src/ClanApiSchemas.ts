@@ -1,5 +1,6 @@
 import { ClanTagSchema } from "@openfront/engine-api/Schemas";
 import { z } from "zod";
+import { RowLevelFields } from "./ApiSchemas";
 
 const RequiredClanTagSchema = ClanTagSchema.unwrap();
 
@@ -18,6 +19,9 @@ export const ClanLeaderboardEntrySchema = z.object({
   weightedWins: z.number(),
   weightedLosses: z.number(),
   weightedWLRatio: z.number(),
+  // Ranked clan wars rating; null before the clan's first rated game.
+  // Defaulted until every API environment serves it.
+  elo: z.number().nullable().default(null),
 });
 export type ClanLeaderboardEntry = z.infer<typeof ClanLeaderboardEntrySchema>;
 
@@ -50,6 +54,10 @@ export const ClanInfoSchema = z.object({
   // which the UI hides rather than rendering as zero.
   softBalance: z.string().optional(),
   hardBalance: z.string().optional(),
+  // A clan boost is running (browse results only).
+  boosted: z.boolean().optional(),
+  // When the clan's boost runs out; null when unboosted (clan detail only).
+  boostEndsAt: z.iso.datetime().nullable().optional(),
 });
 export type ClanInfo = z.infer<typeof ClanInfoSchema>;
 
@@ -83,13 +91,72 @@ export const DiscordInviteResponseSchema = z.object({
   approximate_presence_count: z.number().optional(),
 });
 
+export const ClanBrowseSortSchema = z.enum([
+  "random",
+  "memberCount",
+  "winScore",
+  "winScoreLow",
+  "createdAt",
+  "softBalance",
+  "name",
+]);
+export type ClanBrowseSort = z.infer<typeof ClanBrowseSortSchema>;
+
+// Which clans the browser lists: every clan, only open ones, or only ones
+// that need an invite.
+export const ClanBrowseFilterSchema = z.enum(["all", "open", "inviteOnly"]);
+export type ClanBrowseFilter = z.infer<typeof ClanBrowseFilterSchema>;
+
 export const ClanBrowseResponseSchema = z.object({
   results: ClanInfoSchema.array(),
   total: z.number(),
   page: z.number(),
   limit: z.number(),
+  // The hour bucket the default shuffle was seeded with; sent back on later
+  // pages so the order holds across the hour. Optional for API deploys that
+  // predate the shuffle.
+  bucket: z.number().optional(),
+  // Boosted clans for the block above the list: page 1 of an unsearched
+  // browse only, empty otherwise.
+  boostedBlock: ClanInfoSchema.array().optional(),
 });
 export type ClanBrowseResponse = z.infer<typeof ClanBrowseResponseSchema>;
+
+export const ClanBoostTierSchema = z.object({
+  tier: z.string(),
+  currency: z.enum(["soft", "hard"]),
+  // Decimal bigint string.
+  price: z.string(),
+  durationMs: z.number(),
+  weight: z.number(),
+});
+export type ClanBoostTier = z.infer<typeof ClanBoostTierSchema>;
+
+// GET /clans/:tag/boost — what the boost dialog shows (officers and leader).
+export const ClanBoostStatusSchema = z.object({
+  tiers: ClanBoostTierSchema.array(),
+  boostEndsAt: z.iso.datetime().nullable(),
+  eligibility: z.object({
+    eligible: z.boolean(),
+    memberCount: z.number(),
+    minMembers: z.number(),
+    recentlyActive: z.boolean(),
+  }),
+  softLimit: z.object({
+    usedMs: z.number(),
+    capMs: z.number(),
+    windowMs: z.number(),
+  }),
+  softBalance: z.string(),
+  hardBalance: z.string(),
+});
+export type ClanBoostStatus = z.infer<typeof ClanBoostStatusSchema>;
+
+export const ClanBoostPurchaseResponseSchema = z.object({
+  tier: z.string(),
+  startsAt: z.iso.datetime(),
+  endsAt: z.iso.datetime(),
+});
 
 export const ClanMemberWLSchema = z.object({
   wins: z.number(),
@@ -141,6 +208,11 @@ export const ClanMemberSchema = z.object({
   // responses from an API without the field still parse.
   username: z.string().nullable().optional(),
   stats: ClanMemberStatsSchema.optional(),
+  // Net clan wars rating this member has won (or, negative, lost) the clan;
+  // null before their first rated game for it. Optional so responses from an
+  // API without the field still parse.
+  eloContributed: z.number().nullable().optional(),
+  ...RowLevelFields,
 });
 export type ClanMember = z.infer<typeof ClanMemberSchema>;
 

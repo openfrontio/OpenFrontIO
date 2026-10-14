@@ -2,15 +2,19 @@
 # with milestone "v34" is cherry-picked onto branch v34. Fires on merge (for a
 # PR milestoned beforehand) and on milestoning (for a PR already merged).
 #
-#   - Clean pick: pushed straight to the release branch, same as a hand pick.
-#     It is the exact change already reviewed on main.
-#   - Conflict: Claude resolves it in the working tree, and the result goes up
-#     as a PR against the release branch for a human to check, never straight
-#     to the branch: that code has not been reviewed.
+#   - Clean pick that passes typecheck, Prettier and lint on the release
+#     branch: pushed straight to it, same as a hand pick. It is the exact
+#     change already reviewed on main.
+#   - Conflict, or a clean pick that fails those checks (it can lean on code
+#     the release branch lacks): Claude fixes it in the working tree, and the
+#     result goes up as a PR against the release branch for a human to check,
+#     never straight to the branch: that code has not been reviewed.
 #
 # pull_request_target, not pull_request, so fork PRs get secrets. That is safe
-# here because the only thing picked is the commit already merged into main.
-# Claude gets file tools and read-only git only: no npm, no push, no gh.
+# here because the only code checked out, installed or run is the release
+# branch plus the commit already merged into main. Claude gets file tools,
+# read-only git and the typecheck/format/lint commands: no npm install, no
+# push, no gh.
 #
 # Release branches are covered by rulesets that require a PR, so the push and
 # the backport PR use a token from a dedicated backport GitHub App that is on
@@ -33,7 +37,7 @@ jobs:
       github.event.pull_request.merged == true &&
       github.event.pull_request.milestone != null
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 45
     environment: backport
     # GITHUB_TOKEN only comments; pushes and the backport PR use the app token.
     permissions:
@@ -50,31 +54,52 @@ jobs:
       TARGET: ${{ github.event.pull_request.milestone.title }}
       # `secrets` is not available in a step-level `if`, so surface this here.
       HAS_SLACK: ${{ secrets.SLACK_WEBHOOK_URL != '' }}
-      # Built from trusted values only (PR number, merge SHA, and a milestone
-      # that the first step requires to match vNN). The PR title and file
-      # names stay out: they are author-controlled.
-      RESOLVE_PROMPT: |
+      # claude-code-action overwrites these with main's copies before Claude
+      # runs (it treats the checkout as an untrusted PR head), and
+      # `git add -A` would commit them onto the release branch. Snapshotted
+      # before the action and put back after it.
+      ACTION_RESTORED_PATHS: .claude .mcp.json .claude.json .gitmodules .ripgreprc CLAUDE.md CLAUDE.local.md .husky
+      # The prompts are built from trusted values only (PR number, merge SHA,
+      # and a milestone that the first step requires to match vNN). The PR
+      # title and file names stay out: they are author-controlled.
+      CONFLICT_INTRO: |
         You are resolving a cherry-pick conflict in a headless CI job. The
         working tree is release branch `${{ github.event.pull_request.milestone.title }}`
         with commit ${{ github.event.pull_request.merge_commit_sha }} (PR
         #${{ github.event.pull_request.number }}) from main part-way through
-        `git cherry-pick`. `git status` lists the conflicted files.
+        `git cherry-pick`. `git status` lists the conflicted files. Resolve
+        every conflict marker in them so the change from the PR applies to
+        this branch.
 
-        Resolve every conflict marker in those files so the change from the
-        PR applies to this branch:
-          - `git show ${{ github.event.pull_request.merge_commit_sha }}` is the
-            change being backported; that intent is what must survive.
-            `git log origin/main` and `git show` let you see how main got there.
-          - This branch is older than main. Keep its code where the PR did not
-            touch it. Do not pull in unrelated features from main to make the
-            pick compile; adapt the change to the code that exists here.
-          - Check that anything the resolved code references (functions,
-            imports, fields, translation keys) exists on this branch.
-          - Leave no conflict markers anywhere.
+      CHECKS_INTRO: |
+        You are fixing a backport in a headless CI job. Commit
+        ${{ github.event.pull_request.merge_commit_sha }} (PR
+        #${{ github.event.pull_request.number }}) from main cherry-picked
+        cleanly onto release branch `${{ github.event.pull_request.milestone.title }}`
+        and is HEAD, but the result fails typecheck, Prettier or lint on this
+        branch. Fix it so the change from the PR works on this branch.
+
+      FIX_RULES: |
+        - `git show ${{ github.event.pull_request.merge_commit_sha }}` is the
+          change being backported; that intent is what must survive.
+          `git log origin/main` and `git show` let you see how main got there.
+        - This branch is older than main. Keep its code where the PR did not
+          touch it. Do not pull in unrelated features from main to make the
+          pick compile; adapt the change to the code that exists here. That
+          includes files that applied without conflicts, tests especially:
+          they can use fields, types or helpers this branch does not have.
+        - Check that anything the changed code references (functions,
+          imports, fields, translation keys) exists on this branch.
+        - Leave no conflict markers anywhere.
+        - Before you stop, typecheck the whole project (`npm run typecheck`
+          if package.json defines it, otherwise `npx tsc --noEmit`) and fix
+          every error the backport causes. Then run `npx eslint` and
+          `npx prettier --check` on the files the backport changes.
 
         Only edit files. Do not run git commands that change state (add,
         commit, cherry-pick, checkout, reset, stash); the workflow commits
-        after you finish.
+        after you finish. Leave CLAUDE.md, .claude/ and .husky/ alone: the
+        workflow resets them.
 
         If the change cannot sensibly be applied to this branch (it depends
         on large pieces of main that are missing here), do not force it:
@@ -104,14 +129,65 @@ jobs:
           client-id: ${{ vars.BACKPORT_APP_CLIENT_ID }}
           private-key: ${{ secrets.BACKPORT_APP_PRIVATE_KEY }}
 
-      # The app token is what `git push` authenticates with below.
+      # No stored credentials: npm and Claude run in this tree, and the app
+      # token can bypass the release-branch rules. Pushes pass it explicitly.
       - uses: actions/checkout@v7
         if: steps.target.outputs.skip == 'false'
         with:
           ref: ${{ env.TARGET }}
-          token: ${{ steps.app-token.outputs.token }}
           fetch-depth: 0
           submodules: false
+          persist-credentials: false
+
+      - uses: actions/setup-node@v7
+        if: steps.target.outputs.skip == 'false'
+        with:
+          node-version: "24"
+          cache: "npm"
+
+      # Installed from the release branch before the pick, so a pick that
+      # conflicts in package-lock.json can still be checked.
+      - name: Install dependencies
+        if: steps.target.outputs.skip == 'false'
+        run: |
+          set -euo pipefail
+          npm install --global --ignore-scripts npm@12.1.0
+          npm ci --ignore-scripts --no-audit --no-fund
+          sha256sum package.json package-lock.json > "$RUNNER_TEMP/installed-deps.sha"
+
+      # The checks CI runs, scoped to what a backport can break: the whole
+      # project's types, and format and lint on the files changed since the
+      # base commit given as $1. Failed check names go to $RUNNER_TEMP/failed.
+      - name: Write check script
+        if: steps.target.outputs.skip == 'false'
+        run: |
+          cat > "$RUNNER_TEMP/check.sh" <<'EOF'
+          set -uo pipefail
+          base=$1
+          if ! sha256sum --status -c "$RUNNER_TEMP/installed-deps.sha"; then
+            if ! npm ci --ignore-scripts --no-audit --no-fund; then
+              echo install > "$RUNNER_TEMP/failed"
+              exit 1
+            fi
+            sha256sum package.json package-lock.json > "$RUNNER_TEMP/installed-deps.sha"
+          fi
+          mapfile -t files < <(git diff --name-only --diff-filter=d "$base")
+          mapfile -t code < <(printf '%s\n' "${files[@]}" | grep -E '\.[cm]?[jt]sx?$')
+          failed=()
+          if jq -e '.scripts.typecheck' package.json > /dev/null; then
+            npm run typecheck || failed+=(typecheck)
+          else
+            npx tsc --noEmit || failed+=(typecheck)
+          fi
+          if [ ${#files[@]} -gt 0 ]; then
+            npx prettier --check --ignore-unknown "${files[@]}" || failed+=(prettier)
+          fi
+          if [ ${#code[@]} -gt 0 ]; then
+            { npx oxlint "${code[@]}" && npx eslint --no-warn-ignored "${code[@]}"; } || failed+=(lint)
+          fi
+          echo "${failed[*]}" | sed 's/ /, /g' > "$RUNNER_TEMP/failed"
+          [ ${#failed[@]} -eq 0 ]
+          EOF
 
       - name: Cherry-pick
         id: pick
@@ -120,9 +196,11 @@ jobs:
           set -euo pipefail
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          echo "BASE=$(git rev-parse HEAD)" >> "$GITHUB_ENV"
 
-          # Already there: picked by hand, or by an earlier run of this job.
-          if [ -n "$(git log -1 --format=%h -F --grep="cherry picked from commit $SHA" --grep="(#$PR)" "origin/$TARGET")" ]; then
+          # Already there: picked by hand, or by an earlier run of this job. A
+          # squash-merged backport PR keeps only its body, hence the last grep.
+          if [ -n "$(git log -1 --format=%h -F --grep="cherry picked from commit $SHA" --grep="(#$PR)" --grep="Cherry-pick of #$PR onto" "origin/$TARGET")" ]; then
             echo "PR #$PR is already on $TARGET, skipping"
             echo "result=present" >> "$GITHUB_OUTPUT"
             exit 0
@@ -134,7 +212,10 @@ jobs:
             args+=(-m 1)
           fi
 
+          # The files the pick touches on this branch (after rename detection)
+          # are the scope Claude's fix is checked against.
           if git cherry-pick "${args[@]}" "$SHA"; then
+            git diff --name-only HEAD~1 HEAD > "$RUNNER_TEMP/picked-files"
             echo "result=clean" >> "$GITHUB_OUTPUT"
             exit 0
           fi
@@ -155,20 +236,40 @@ jobs:
           fi
           echo "Conflicted files:"
           echo "$conflicts"
+          { git diff --cached --name-only HEAD; echo "$conflicts"; } > "$RUNNER_TEMP/picked-files"
           {
             echo "files<<EOF"
             echo "$conflicts"
             echo "EOF"
           } >> "$GITHUB_OUTPUT"
           echo "result=conflict" >> "$GITHUB_OUTPUT"
+          echo "FIX_MODE=conflict" >> "$GITHUB_ENV"
 
-      - name: Push clean pick
+      - name: Check clean pick
+        id: check
         if: steps.pick.outputs.result == 'clean'
         run: |
+          set -uo pipefail
+          if bash "$RUNNER_TEMP/check.sh" "$BASE"; then
+            echo "passed=true" >> "$GITHUB_OUTPUT"
+          else
+            failed=$(cat "$RUNNER_TEMP/failed")
+            echo "::warning::Clean pick fails on $TARGET: $failed. Handing it to Claude."
+            echo "passed=false" >> "$GITHUB_OUTPUT"
+            echo "CLEAN_FAILED=$failed" >> "$GITHUB_ENV"
+            echo "FIX_MODE=checks" >> "$GITHUB_ENV"
+          fi
+
+      - name: Push clean pick
+        if: steps.check.outputs.passed == 'true'
+        env:
+          APP_TOKEN: ${{ steps.app-token.outputs.token }}
+        run: |
           set -euo pipefail
+          remote="https://x-access-token:${APP_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
           # Another pick may have pushed since checkout: rebase onto it and retry.
           for attempt in 1 2 3 4 5; do
-            if git push origin "HEAD:refs/heads/$TARGET"; then
+            if git push "$remote" "HEAD:refs/heads/$TARGET"; then
               gh pr comment "$PR" --body "🍒 Cherry-picked onto \`$TARGET\` as $(git rev-parse HEAD)."
               exit 0
             fi
@@ -181,53 +282,81 @@ jobs:
               echo "PR #$PR landed on $TARGET from another run, nothing to push"
               exit 0
             fi
+            # Two picks can each pass on the old tip and break together. Hand
+            # the rebased pick to Claude as a failed clean pick on the new tip.
+            if ! bash "$RUNNER_TEMP/check.sh" HEAD~1; then
+              failed=$(cat "$RUNNER_TEMP/failed")
+              echo "::warning::Pick fails $failed once rebased onto the new $TARGET. Handing it to Claude."
+              git diff --name-only HEAD~1 HEAD > "$RUNNER_TEMP/picked-files"
+              {
+                echo "BASE=$(git rev-parse HEAD~1)"
+                echo "CLEAN_FAILED=$failed"
+                echo "FIX_MODE=checks"
+              } >> "$GITHUB_ENV"
+              exit 0
+            fi
           done
           echo "::error::Could not push to $TARGET after 5 attempts"
           exit 1
+
+      - name: Snapshot paths claude-code-action overwrites
+        if: env.FIX_MODE != ''
+        run: |
+          set -euo pipefail
+          present=()
+          for p in $ACTION_RESTORED_PATHS; do
+            if [ -e "$p" ]; then present+=("$p"); fi
+          done
+          tar -cf "$RUNNER_TEMP/action-restored.tar" --files-from /dev/null "${present[@]}"
 
       # Same npm-install workaround as the shared review workflow
       # (openfrontio/.github claude-code-review.yml): the action's native
       # installer can exit 0 without leaving a working binary.
       - name: Install Claude Code from npm
         id: install-claude
-        if: steps.pick.outputs.result == 'conflict'
+        if: env.FIX_MODE != ''
         run: |
-          npm install -g @anthropic-ai/claude-code@2.1.281
+          set -euo pipefail
+          # The npm 12 installed above blocks install scripts by default, and
+          # without its postinstall the package's `claude` is a stub that fails
+          # to spawn (ENOEXEC).
+          npm install -g --allow-scripts=@anthropic-ai/claude-code @anthropic-ai/claude-code@2.1.281
+          claude --version
           echo "path=$(command -v claude)" >> "$GITHUB_OUTPUT"
 
-      - name: Resolve conflicts with Claude (primary account)
+      - name: Fix the pick with Claude (primary account)
         id: claude-primary
-        if: steps.pick.outputs.result == 'conflict'
+        if: env.FIX_MODE != ''
         continue-on-error: true
         uses: anthropics/claude-code-action@v1
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           github_token: ${{ secrets.GITHUB_TOKEN }}
           path_to_claude_code_executable: ${{ steps.install-claude.outputs.path }}
-          prompt: ${{ env.RESOLVE_PROMPT }}
+          prompt: ${{ format('{0}{1}', env.FIX_MODE == 'conflict' && env.CONFLICT_INTRO || env.CHECKS_INTRO, env.FIX_RULES) }}
           claude_args: |
             --model claude-opus-5-5
-            --allowedTools "Read,Edit,Write,Grep,Glob,LS,Bash(git status:*),Bash(git diff:*),Bash(git log:*),Bash(git show:*)"
-            --max-turns 80
+            --allowedTools "Read,Edit,Write,Grep,Glob,LS,Bash(git status:*),Bash(git diff:*),Bash(git log:*),Bash(git show:*),Bash(npm run typecheck:*),Bash(npx tsc:*),Bash(npx prettier:*),Bash(npx eslint:*),Bash(npx oxlint:*)"
+            --max-turns 120
 
       # Backup account for when the primary is out of usage; see the shared
       # review workflow for the same pattern.
-      - name: Resolve conflicts with Claude (backup account)
-        if: steps.pick.outputs.result == 'conflict' && steps.claude-primary.outcome == 'failure'
+      - name: Fix the pick with Claude (backup account)
+        if: env.FIX_MODE != '' && steps.claude-primary.outcome == 'failure'
         uses: anthropics/claude-code-action@v1
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN_BACKUP }}
           github_token: ${{ secrets.GITHUB_TOKEN }}
           path_to_claude_code_executable: ${{ steps.install-claude.outputs.path }}
-          prompt: ${{ env.RESOLVE_PROMPT }}
+          prompt: ${{ format('{0}{1}', env.FIX_MODE == 'conflict' && env.CONFLICT_INTRO || env.CHECKS_INTRO, env.FIX_RULES) }}
           claude_args: |
             --model claude-opus-5-5
-            --allowedTools "Read,Edit,Write,Grep,Glob,LS,Bash(git status:*),Bash(git diff:*),Bash(git log:*),Bash(git show:*)"
-            --max-turns 80
+            --allowedTools "Read,Edit,Write,Grep,Glob,LS,Bash(git status:*),Bash(git diff:*),Bash(git log:*),Bash(git show:*),Bash(npm run typecheck:*),Bash(npx tsc:*),Bash(npx prettier:*),Bash(npx eslint:*),Bash(npx oxlint:*)"
+            --max-turns 120
 
-      - name: Open PR with resolved pick
+      - name: Open PR with fixed pick
         id: open-pr
-        if: steps.pick.outputs.result == 'conflict'
+        if: env.FIX_MODE != ''
         env:
           FILES: ${{ steps.pick.outputs.files }}
           APP_TOKEN: ${{ steps.app-token.outputs.token }}
@@ -241,36 +370,96 @@ jobs:
             exit 1
           fi
 
+          # Before the marker check: a conflicted CLAUDE.md is restored with its
+          # markers, which Claude never saw.
+          read -ra restored <<< "$ACTION_RESTORED_PATHS"
+          rm -rf "${restored[@]}" .claude-pr
+          tar -xf "$RUNNER_TEMP/action-restored.tar"
+
           # Claude must have cleared every marker in the conflicted files.
-          leftover=$(echo "$FILES" | xargs grep -lE '^(<<<<<<<|>>>>>>>)( |$)' 2>/dev/null || true)
-          if [ -n "$leftover" ]; then
-            gh pr comment "$PR" --body "🍒 Cherry-pick onto \`$TARGET\` conflicted and was not fully resolved; this needs a manual backport. See ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}."
-            echo "commented=true" >> "$GITHUB_OUTPUT"
-            echo "::error::Conflict markers left in: $leftover"
-            exit 1
+          if [ -n "$FILES" ]; then
+            leftover=$(echo "$FILES" | xargs grep -lE '^(<<<<<<<|>>>>>>>)( |$)' 2>/dev/null || true)
+            if [ -n "$leftover" ]; then
+              gh pr comment "$PR" --body "🍒 Cherry-pick onto \`$TARGET\` conflicted and was not fully resolved; this needs a manual backport. See ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}."
+              echo "commented=true" >> "$GITHUB_OUTPUT"
+              echo "::error::Conflict markers left in: $leftover"
+              exit 1
+            fi
           fi
 
           git add -A
-          git -c core.editor=true cherry-pick --continue
+          mapfile -t changed < <(git diff --cached --name-only --diff-filter=d "$BASE")
+          if [ ${#changed[@]} -gt 0 ]; then
+            npx prettier --write --ignore-unknown "${changed[@]}"
+            git add -A
+          fi
+
+          extra=$(comm -13 <(sort -u "$RUNNER_TEMP/picked-files") <(git diff --cached --name-only "$BASE" | sort -u))
+          if [ -n "$extra" ]; then
+            echo "::warning::Fix touches files outside the pick: $extra"
+          fi
+
+          if [ "$FIX_MODE" = conflict ]; then
+            git -c core.editor=true cherry-pick --continue
+            note="Conflicts resolved for $TARGET by Claude."
+          else
+            git commit --amend --no-edit
+            note="Adjusted for $TARGET by Claude: the clean pick failed $CLEAN_FAILED."
+          fi
+          git commit --amend -m "$(git log -1 --format=%B)" -m "$note"
+
+          if bash "$RUNNER_TEMP/check.sh" "$BASE"; then
+            still_failing=""
+          else
+            still_failing=$(cat "$RUNNER_TEMP/failed")
+            echo "::warning::Fixed pick still fails: $still_failing"
+          fi
 
           branch="cherry-pick/$TARGET/pr-$PR"
-          file_list=$(echo "$FILES" | sed 's/^/- `/; s/$/`/')
-          git push --force origin "HEAD:refs/heads/$branch"
-          body=$(cat <<EOF
-          Cherry-pick of #$PR onto \`$TARGET\`. It conflicted, and Claude resolved it.
+          git push --force "https://x-access-token:${APP_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" "HEAD:refs/heads/$branch"
+
+          as_list() { sed 's/^/- `/; s/$/`/'; }
+          if [ "$FIX_MODE" = conflict ]; then
+            body="Cherry-pick of #$PR onto \`$TARGET\`. It conflicted, and Claude resolved it.
 
           Conflicted files:
-          $file_list
+          $(echo "$FILES" | as_list)"
+          else
+            body="Cherry-pick of #$PR onto \`$TARGET\`. It applied cleanly but failed $CLEAN_FAILED on \`$TARGET\`, and Claude fixed it."
+          fi
+          if [ -n "$extra" ]; then
+            body+="
 
-          Check the resolution before merging.
-          EOF
-          )
+          ⚠️ The fix also changes files the pick itself does not touch. Check each is needed:
+          $(echo "$extra" | as_list)"
+          fi
+          if [ -n "$still_failing" ]; then
+            body+="
+
+          ❌ Still failing after the fix: $still_failing. Opened as a draft."
+          else
+            body+="
+
+          Typecheck, Prettier and lint pass on the result."
+          fi
+          body+="
+
+          Check the fix before merging."
+
+          draft=()
+          if [ -n "$still_failing" ]; then draft=(--draft); fi
           # Opened with the app token so CI runs on it. The milestone satisfies
           # the Has Milestone check.
-          url=$(GH_TOKEN="$APP_TOKEN" gh pr create --base "$TARGET" --head "$branch" --milestone "$TARGET" --title "[$TARGET] $PR_TITLE" --body "$body")
-          gh pr comment "$PR" --body "🍒 Cherry-pick onto \`$TARGET\` conflicted; Claude resolved it in $url for review."
+          url=$(GH_TOKEN="$APP_TOKEN" gh pr create "${draft[@]}" --base "$TARGET" --head "$branch" --milestone "$TARGET" --title "[$TARGET] $PR_TITLE" --body "$body")
+          if [ "$FIX_MODE" = conflict ]; then
+            why="conflicted"
+          else
+            why="failed $CLEAN_FAILED"
+          fi
+          gh pr comment "$PR" --body "🍒 Cherry-pick onto \`$TARGET\` $why; Claude fixed it in $url for review."
           echo "commented=true" >> "$GITHUB_OUTPUT"
           echo "url=$url" >> "$GITHUB_OUTPUT"
+          echo "why=$why" >> "$GITHUB_OUTPUT"
 
       # A backport PR needs a human to review it, so say so in Slack. Skipped
       # when the webhook secret is unset; a Slack outage must not fail the pick.
@@ -280,13 +469,14 @@ jobs:
         env:
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
           URL: ${{ steps.open-pr.outputs.url }}
+          WHY: ${{ steps.open-pr.outputs.why }}
         run: |
           set -euo pipefail
           # The title is author-controlled: escape Slack's control characters
           # so it cannot form links or mentions like <!channel>.
-          jq -n --arg target "$TARGET" --arg pr "$PR" --arg title "$PR_TITLE" --arg url "$URL" \
+          jq -n --arg target "$TARGET" --arg pr "$PR" --arg title "$PR_TITLE" --arg url "$URL" --arg why "$WHY" \
             '($title | gsub("&"; "&amp;") | gsub("<"; "&lt;") | gsub(">"; "&gt;")) as $t
-            | {text: "🍒 Backport of #\($pr) onto `\($target)` conflicted; Claude resolved it and it needs review: <\($url)|\($t)>"}' \
+            | {text: "🍒 Backport of #\($pr) onto `\($target)` \($why); Claude fixed it and it needs review: <\($url)|\($t)>"}' \
             | curl -fsS -X POST -H 'Content-Type: application/json' --data @- "$SLACK_WEBHOOK_URL"
 
       # Any other failure (a rejected push, a missing app key) would otherwise
