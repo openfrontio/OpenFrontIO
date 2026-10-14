@@ -3,6 +3,10 @@ import type { PortalUser } from "./GamePortal";
 
 const POKI_SDK_URL = "https://game-cdn.poki.com/scripts/v2/poki-sdk.js";
 
+// Cap on loading and initializing the SDK. Token refresh waits for the SDK to
+// be ready, so one that never settles must not hold sign-in up forever.
+const SDK_DEADLINE_MS = 10_000;
+
 // Poki's game frame (games.poki.com), their build CDN (*.poki-gdn.com) and the
 // Poki Inspector (inspector.poki.dev).
 const POKI_HOST = /(^|\.)(poki\.com|poki-gdn\.com|poki\.dev)$/;
@@ -112,6 +116,7 @@ export class PokiSDK {
       script.src = POKI_SDK_URL;
       script.onload = () => resolve(true);
       script.onerror = () => resolve(false);
+      setTimeout(() => resolve(false), SDK_DEADLINE_MS);
       document.head.appendChild(script);
     });
     if (!loaded || window.PokiSDK === undefined) {
@@ -121,11 +126,20 @@ export class PokiSDK {
     }
 
     try {
-      await window.PokiSDK.init();
+      await Promise.race([
+        window.PokiSDK.init(),
+        new Promise((_, reject) =>
+          setTimeout(
+            () => reject(new Error("init timed out")),
+            SDK_DEADLINE_MS,
+          ),
+        ),
+      ]);
       console.log("Poki SDK initialized");
     } catch (error) {
-      // Typically an adblocker. Poki's guidance is to run the game anyway;
-      // the SDK calls stay safe and ad breaks resolve immediately.
+      // Typically an adblocker, which can also leave init() unsettled. Poki's
+      // guidance is to run the game anyway; the SDK calls stay safe and ad
+      // breaks resolve immediately.
       console.warn("Poki SDK initialized with an error:", error);
     }
     this.initialized = true;

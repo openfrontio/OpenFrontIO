@@ -597,10 +597,13 @@ async function doPortalLogin(
 ): Promise<void> {
   try {
     console.log(`Logging in with ${portal}`);
+    // Bounded like doSteamLogin: userAuth() awaits this exchange, so a
+    // response that never settles would stall every authenticated call.
     const response = await fetch(`${getApiBase()}/auth/${portal}`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ token }),
+      signal: AbortSignal.timeout(10_000),
     });
     if (response.status !== 200) {
       console.error(`${portal} login failed`, response);

@@ -58,6 +58,8 @@ describe("portal login", () => {
       const [url, init] = fetchMock.mock.calls[0];
       expect(url).toBe(`https://api.openfront.dev/auth/${name}`);
       expect(JSON.parse(init.body)).toEqual({ token: "portal-token" });
+      // Bounded, so an exchange that never answers can't stall userAuth().
+      expect(init.signal).toBeInstanceOf(AbortSignal);
     },
   );
 

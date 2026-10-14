@@ -253,6 +253,37 @@ describe("PokiSDK", () => {
     expect(poki.gameLoadingFinished).toHaveBeenCalledOnce();
   });
 
+  it("gives up on an SDK script that never loads", async () => {
+    vi.useFakeTimers();
+    try {
+      framedBy("https://games.poki.com/458768/openfront");
+      vi.spyOn(document.head, "appendChild").mockImplementation((n) => n);
+      const init = sdk.maybeInit();
+      const token = sdk.getUserToken();
+      await vi.advanceTimersByTimeAsync(10_000);
+      await init;
+      expect(sdk.isReady()).toBe(false);
+      expect(await token).toBeNull();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("runs the game anyway when init never settles", async () => {
+    vi.useFakeTimers();
+    try {
+      framedBy("https://games.poki.com/458768/openfront");
+      const poki = fakePoki({ init: vi.fn(() => new Promise<void>(() => {})) });
+      const init = initWith(sdk, poki);
+      await vi.advanceTimersByTimeAsync(10_000);
+      await init;
+      expect(sdk.isReady()).toBe(true);
+      expect(poki.gameLoadingFinished).toHaveBeenCalledOnce();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it("is a no-op off Poki", async () => {
     const appendChild = vi.spyOn(document.head, "appendChild");
     await sdk.maybeInit();
