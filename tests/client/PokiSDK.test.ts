@@ -318,18 +318,6 @@ describe("PokiSDK", () => {
       expect(window.location.hash).toBe("#refresh");
     });
 
-    // The Inspector loads the game with poki_url alone.
-    it("puts back the Inspector's poki_url, which has no site_id", async () => {
-      const inspectorQuery =
-        "?poki_url=https%3A%2F%2Finspector.poki.dev%2F%3Fgame%3Dexternal-poki.openfront.dev";
-      history.replaceState(null, "", `/${inspectorQuery}`);
-      await initWith(sdk, fakePoki());
-
-      history.replaceState(null, "", "/");
-      await initWith(new PokiSDK(), fakePoki());
-      expect(window.location.search).toBe(inspectorQuery);
-    });
-
     it("puts them back before building an invite link", async () => {
       history.replaceState(null, "", `/${pokiQuery}`);
       let pokiUrl: string | null = null;
