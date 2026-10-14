@@ -7,7 +7,7 @@ import {
   getUserMe,
   invalidateUserMe,
 } from "../Api";
-import { crazyGamesSDK } from "../CrazyGamesSDK";
+import { gamePortal } from "../GamePortal";
 import { showInGameAlert } from "../InGameModal";
 import { levelRewardReasonKey } from "../Progression";
 import { translateText } from "../Utils";
@@ -189,15 +189,15 @@ export class RewardsPanel extends LitElement {
   }
 
   // The trust note, by whether the viewer is signed in (see signedIn) and on
-  // CrazyGames, which has no purchases, so its copy only suggests playing.
+  // a portal, which has no purchases, so its copy only suggests playing.
   private trustNoteKey(): string {
-    const onCrazyGames = crazyGamesSDK.isOnCrazyGames();
+    const onGamePortal = gamePortal.isOnGamePortal();
     if (this.signedIn) {
-      return onCrazyGames
+      return onGamePortal
         ? "account_modal.reward_held_trust_info_crazygames"
         : "account_modal.reward_held_trust_info";
     }
-    return onCrazyGames
+    return onGamePortal
       ? "account_modal.reward_held_trust_info_signed_out_crazygames"
       : "account_modal.reward_held_trust_info_signed_out";
   }

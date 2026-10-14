@@ -384,18 +384,34 @@ describe("fetchClans", () => {
 
   it("maps the other sorts to field and direction, without a seed", async () => {
     const lastUrl = spyBrowse();
-    const expected = {
-      memberCount: "DESC",
-      winScore: "DESC",
-      name: "ASC",
-    } as const;
-    for (const [sort, order] of Object.entries(expected)) {
-      await fetchClans(undefined, 1, 20, sort as keyof typeof expected, 5);
-      expect(lastUrl().searchParams.get("sortField")).toBe(sort);
+    const expected = [
+      ["memberCount", "memberCount", "DESC"],
+      ["winScore", "winScore", "DESC"],
+      ["winScoreLow", "winScore", "ASC"],
+      ["createdAt", "createdAt", "ASC"],
+      ["softBalance", "softBalance", "DESC"],
+      ["name", "name", "ASC"],
+    ] as const;
+    for (const [sort, field, order] of expected) {
+      await fetchClans(undefined, 1, 20, sort, 5);
+      expect(lastUrl().searchParams.get("sortField")).toBe(field);
       expect(lastUrl().searchParams.get("sortOrder")).toBe(order);
       expect(lastUrl().searchParams.has("seed")).toBe(false);
       expect(lastUrl().searchParams.has("bucket")).toBe(false);
     }
+  });
+
+  it("sends the open filter only when one is picked", async () => {
+    const lastUrl = spyBrowse();
+    await fetchClans();
+    expect(lastUrl().searchParams.has("open")).toBe(false);
+    await fetchClans(undefined, 1, 20, "random", undefined, "all");
+    expect(lastUrl().searchParams.has("open")).toBe(false);
+    await fetchClans(undefined, 1, 20, "random", undefined, "open");
+    expect(lastUrl().searchParams.get("open")).toBe("true");
+    await fetchClans("abc", 1, 20, "name", undefined, "inviteOnly");
+    expect(lastUrl().searchParams.get("open")).toBe("false");
+    expect(lastUrl().searchParams.get("search")).toBe("abc");
   });
 
   it("search with the default sort leaves ordering to the server", async () => {

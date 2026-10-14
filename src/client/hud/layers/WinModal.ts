@@ -28,8 +28,8 @@ import {
   purchaseCosmetic,
   resolveCosmetics,
 } from "../../Cosmetics";
-import { crazyGamesSDK } from "../../CrazyGamesSDK";
 import { isDesktopShell } from "../../DesktopShell";
+import { gamePortal } from "../../GamePortal";
 import {
   gameShareMoment,
   momentShareLabel,
@@ -559,7 +559,7 @@ export class WinModal extends LitElement implements Controller {
   }
 
   async show() {
-    crazyGamesSDK.gameplayStop();
+    gamePortal.gameplayStop();
     this.isRankedGame =
       this.game.config().gameConfig().rankedType !== undefined;
     this.isVisible = true;
@@ -852,7 +852,7 @@ export class WinModal extends LitElement implements Controller {
         if (wu.winner[1] === this.game.myPlayer()?.team()) {
           this._title = translateText("win_modal.your_team");
           this.isWin = true;
-          crazyGamesSDK.happytime();
+          gamePortal.happytime();
         } else {
           this._title = translateText("win_modal.other_team", {
             team: getTranslatedPlayerTeamLabel(wu.winner[1]),
@@ -885,7 +885,7 @@ export class WinModal extends LitElement implements Controller {
         ) {
           this._title = translateText("win_modal.you_won");
           this.isWin = true;
-          crazyGamesSDK.happytime();
+          gamePortal.happytime();
         } else {
           this._title = translateText("win_modal.other_won", {
             player: winner.displayName(),

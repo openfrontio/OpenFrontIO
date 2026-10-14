@@ -19,7 +19,7 @@ import {
   linkGoogle,
   linkSteam,
   logOut,
-  reauthAfterCrazyGamesChange,
+  reauthAfterPortalChange,
   sendMagicLink,
   steamLogin,
 } from "./Auth";
@@ -44,8 +44,8 @@ import type { RewardsChangedDetail } from "./components/RewardsPanel";
 import { googleLinkButton } from "./components/ui/GoogleLinkButton";
 import { modalHeader } from "./components/ui/ModalHeader";
 import { steamGlyph, steamLinkButton } from "./components/ui/SteamLinkButton";
-import { crazyGamesSDK, type CrazyGamesUser } from "./CrazyGamesSDK";
 import { desktopLinkGate, isDesktopShell } from "./DesktopShell";
+import { gamePortal, type PortalUser } from "./GamePortal";
 import "./GameStatsModal";
 import { showInGameAlert } from "./InGameModal";
 import { consumeLinkResult } from "./LinkResult";
@@ -115,9 +115,9 @@ export class AccountModal extends BaseModal {
   // the page's /users/@me broadcast doesn't know the player yet, and an
   // opening lists none while it reads /users/@me. Picked once that lands.
   private requestedTab: string | null = null;
-  // Set on CrazyGames when a CrazyGames user is signed in. Their identity comes
-  // from the SDK, not our backend user object.
-  @state() private crazyGamesUser: CrazyGamesUser | null = null;
+  // Set on a portal (CrazyGames, Poki) when its user is signed in. Their
+  // identity comes from the SDK, not our backend user object.
+  @state() private portalUser: PortalUser | null = null;
   // One-shot outcome of a rejected sign-in, read from the `login=` router
   // arg on open. Reassigned on every open, so reopening clears it.
   @state() private loginError: LoginResult | undefined;
@@ -144,9 +144,9 @@ export class AccountModal extends BaseModal {
     });
 
     document.addEventListener("userMeResponse", (event: Event) => {
-      // A CrazyGames sign-in fires userMeResponse (via Main's auth listener);
+      // A portal sign-in fires userMeResponse (via Main's auth listener);
       // re-fetch the SDK profile so the modal leaves the sign-in screen.
-      this.refreshCrazyGamesUser();
+      this.refreshPortalUser();
       const customEvent = event as CustomEvent;
       if (customEvent.detail) {
         const previousPublicId = this.userMeResponse?.player?.publicId;
@@ -166,12 +166,12 @@ export class AccountModal extends BaseModal {
     });
   }
 
-  // Refresh the signed-in CrazyGames identity from the SDK. No-op off
-  // CrazyGames; drives isLinkedAccount() so the modal shows the profile.
-  private refreshCrazyGamesUser() {
-    if (!crazyGamesSDK.isOnCrazyGames()) return;
-    void crazyGamesSDK.getUserProfile().then((user) => {
-      this.crazyGamesUser = user;
+  // Refresh the signed-in portal identity from the SDK. No-op off a
+  // portal; drives isLinkedAccount() so the modal shows the profile.
+  private refreshPortalUser() {
+    if (!gamePortal.isOnGamePortal()) return;
+    void gamePortal.getUserProfile().then((user) => {
+      this.portalUser = user;
       this.requestUpdate();
     });
   }
@@ -210,12 +210,12 @@ export class AccountModal extends BaseModal {
   }
 
   private isLinkedAccount(): boolean {
-    // The CrazyGames identity only counts once the backend token exchange
+    // The portal identity only counts once the backend token exchange
     // produced a session — otherwise a failed exchange would show a dead
     // "connected as" view with no way to retry.
     return (
       hasLinkedIdentity(this.userMeResponse?.user) ||
-      (!!this.crazyGamesUser && this.userMeResponse !== null)
+      (!!this.portalUser && this.userMeResponse !== null)
     );
   }
 
@@ -257,8 +257,8 @@ export class AccountModal extends BaseModal {
     }
     if (!this.isLinkedAccount()) {
       return html`<div class="custom-scrollbar mr-1">
-        ${crazyGamesSDK.isOnCrazyGames()
-          ? this.renderCrazyGamesSignIn()
+        ${gamePortal.isOnGamePortal()
+          ? this.renderPortalSignIn()
           : this.renderLoginOptions()}
       </div>`;
     }
@@ -330,8 +330,8 @@ export class AccountModal extends BaseModal {
   }
 
   private renderAccountTab(): TemplateResult {
-    if (this.crazyGamesUser) {
-      return this.renderCrazyGamesAccount(this.crazyGamesUser);
+    if (this.portalUser) {
+      return this.renderPortalAccount(this.portalUser);
     }
     return html`
       <div class="flex flex-col gap-6">
@@ -395,10 +395,10 @@ export class AccountModal extends BaseModal {
       });
   }
 
-  // CrazyGames "connected as" view: avatar + username from the SDK, plus
-  // currency/subscription. No Discord/Google/email link or logout (CrazyGames
+  // Portal "connected as" view: avatar + username from the SDK, plus
+  // currency/subscription. No Discord/Google/email link or logout (the portal
   // owns the account and its logout).
-  private renderCrazyGamesAccount(user: CrazyGamesUser): TemplateResult {
+  private renderPortalAccount(user: PortalUser): TemplateResult {
     return html`
       <div class="flex flex-col gap-6">
         ${this.renderProfileCard("compact")}
@@ -426,9 +426,9 @@ export class AccountModal extends BaseModal {
     `;
   }
 
-  // Shown when a CrazyGames guest opens the modal: hand off to CrazyGames' own
-  // sign-in prompt (no Discord/Google/email on CrazyGames).
-  private renderCrazyGamesSignIn(): TemplateResult {
+  // Shown when a portal guest opens the modal: hand off to the portal's own
+  // sign-in prompt (no Discord/Google/email on a portal).
+  private renderPortalSignIn(): TemplateResult {
     return html`
       <div class="flex items-center justify-center p-6 min-h-full">
         <div
@@ -442,7 +442,7 @@ export class AccountModal extends BaseModal {
             width="block"
             size="md"
             translationKey="main.sign_in"
-            @click=${this.handleCrazyGamesSignIn}
+            @click=${this.handlePortalSignIn}
           ></o-button>
         </div>
       </div>
@@ -584,13 +584,13 @@ export class AccountModal extends BaseModal {
     return html`<rewards-panel
       .rewards=${rewards}
       .signedIn=${responseHasLinkedIdentity(this.userMeResponse ?? false) ||
-      this.crazyGamesUser !== null}
+      this.portalUser !== null}
       @rewards-changed=${this.handleRewardsChanged}
     ></rewards-panel>`;
   }
 
-  // Not rendered on the CrazyGames account branch (renderCrazyGamesAccount) —
-  // CrazyGames identity comes from the SDK, not the /users/@me `player`
+  // Not rendered on the portal account branch (renderPortalAccount) — the
+  // portal identity comes from the SDK, not the /users/@me `player`
   // record this panel reads its state from.
   private renderCreatorCodePanel(): TemplateResult {
     return html`<creator-code-panel
@@ -1124,20 +1124,20 @@ export class AccountModal extends BaseModal {
     );
   }
 
-  // CrazyGames sign-in: after their prompt completes, exchange the new token
+  // Portal sign-in: after their prompt completes, exchange the new token
   // for a session and refresh the modal so it shows the signed-in profile.
-  private async handleCrazyGamesSignIn() {
-    await crazyGamesSDK.showAuthPrompt();
-    const profile = await crazyGamesSDK.getUserProfile();
+  private async handlePortalSignIn() {
+    await gamePortal.showAuthPrompt();
+    const profile = await gamePortal.getUserProfile();
     if (!profile) return; // prompt cancelled / still not signed in
     invalidateUserMe();
-    await reauthAfterCrazyGamesChange();
+    await reauthAfterPortalChange();
     const userMe = await getUserMe();
     if (userMe) {
       this.userMeResponse = userMe;
       this.prefetchPrestigeFlow();
     }
-    this.crazyGamesUser = profile;
+    this.portalUser = profile;
     this.requestUpdate();
   }
 
@@ -1203,7 +1203,7 @@ export class AccountModal extends BaseModal {
     this.loginError = consumeLoginResult(args);
     this.prefillCreatorCode = this.consumeCreatorCodeArg(args);
 
-    this.refreshCrazyGamesUser();
+    this.refreshPortalUser();
 
     void getUserMe()
       .then((userMe) => {

@@ -75,7 +75,7 @@ export class DesktopNavBar extends LitElement {
           data-i18n="main.play"
         ></button>
         <!-- Desktop Navigation Menu Items -->
-        <div class="relative no-crazygames">
+        <div class="relative no-game-portal">
           <button
             class="nav-menu-item ${currentPage === "page-item-store"
               ? "active"
@@ -108,7 +108,7 @@ export class DesktopNavBar extends LitElement {
           data-i18n="main.leaderboard"
         ></button>
         <button
-          class="no-crazygames nav-menu-item text-white/70 hover:text-blue-500 font-medium tracking-wider uppercase cursor-pointer transition-colors [&.active]:text-blue-500"
+          class="no-game-portal nav-menu-item text-white/70 hover:text-blue-500 font-medium tracking-wider uppercase cursor-pointer transition-colors [&.active]:text-blue-500"
           data-page="page-clan"
           data-i18n="main.clans"
         ></button>

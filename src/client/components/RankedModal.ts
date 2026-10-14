@@ -4,7 +4,7 @@ import { customElement, state } from "lit/decorators.js";
 import { responseHasLinkedIdentity } from "../AccountIdentity";
 import { getUserMe } from "../Api";
 import { userAuth } from "../Auth";
-import { crazyGamesSDK } from "../CrazyGamesSDK";
+import { gamePortal } from "../GamePortal";
 import type { MatchmakingMode } from "../Matchmaking";
 import { translateText } from "../Utils";
 import { BaseModal } from "./BaseModal";
@@ -28,14 +28,14 @@ export class RankedModal extends BaseModal {
   // doesn't see it flash red first.
   @state() private loading = true;
   @state() private showTrustRequired = false;
-  // CrazyGames players authenticate through the SDK, not a linked
+  // Portal players authenticate through the SDK, not a linked
   // Discord/Google/email account, so track that separately for ranked.
-  @state() private crazyGamesSignedIn = false;
+  @state() private portalSignedIn = false;
 
-  // Eligible to see/play ranked: a linked account or a signed-in CrazyGames one.
+  // Eligible to see/play ranked: a linked account or a signed-in portal one.
   private isRankedEligible(): boolean {
     return (
-      responseHasLinkedIdentity(this.userMeResponse) || this.crazyGamesSignedIn
+      responseHasLinkedIdentity(this.userMeResponse) || this.portalSignedIn
     );
   }
 
@@ -98,9 +98,9 @@ export class RankedModal extends BaseModal {
     try {
       const userMe = await getUserMe();
       this.userMeResponse = userMe;
-      this.crazyGamesSignedIn =
-        crazyGamesSDK.isOnCrazyGames() &&
-        (await crazyGamesSDK.getUserProfile()) !== null;
+      this.portalSignedIn =
+        gamePortal.isOnGamePortal() &&
+        (await gamePortal.getUserProfile()) !== null;
     } catch (error) {
       console.warn("Failed to fetch user profile for ranked modal", error);
       this.userMeResponse = false;

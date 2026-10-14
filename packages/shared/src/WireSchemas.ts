@@ -693,7 +693,12 @@ export const ClientIntentMessageSchema = z.object({
 // Where the client was distributed, as the client reports it. Unverified, so
 // fit for metric dimensions only; the signed provider="steam" claim is the
 // trustworthy Steam signal. Append new members only (zbin ordinals).
-export const ClientPlatformSchema = z.enum(["web", "steam", "crazygames"]);
+export const ClientPlatformSchema = z.enum([
+  "web",
+  "steam",
+  "crazygames",
+  "poki",
+]);
 
 export type ClientPlatform = z.infer<typeof ClientPlatformSchema>;
 
