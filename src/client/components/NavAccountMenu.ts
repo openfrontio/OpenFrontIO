@@ -11,7 +11,7 @@ import { customElement, property, state } from "lit/decorators.js";
 import { ifDefined } from "lit/directives/if-defined.js";
 import { hasLinkedIdentity } from "../AccountIdentity";
 import { logOut } from "../Auth";
-import { crazyGamesSDK, type CrazyGamesUser } from "../CrazyGamesSDK";
+import { gamePortal, type PortalUser } from "../GamePortal";
 import { showInGameConfirm } from "../InGameModal";
 import {
   latestUserMeResponse,
@@ -83,7 +83,7 @@ type MenuItem = {
  * instead.
  *
  * `variant="desktop"` also carries the legacy element ids the imperative
- * updaters (NavAccountButton, CrazyGamesAccountButton) drive; every instance
+ * updaters (NavAccountButton, PortalAccountButton) drive; every instance
  * additionally exposes `data-account-*` hooks so both trigger layouts stay in
  * sync from one update call.
  */
@@ -93,8 +93,8 @@ export class NavAccountMenu extends LitElement {
 
   @state() private menuOpen = false;
   @state() private userMeResponse: UserMeResponse | false = false;
-  // CrazyGames identities come from the SDK, not our user object.
-  @state() private crazyGamesUser: CrazyGamesUser | null = null;
+  // Portal identities come from the SDK, not our user object.
+  @state() private portalUser: PortalUser | null = null;
 
   // The progress the trigger shows. It trails a refreshed /users/@me while
   // the bar catches up to it (see navCatchUp).
@@ -134,7 +134,7 @@ export class NavAccountMenu extends LitElement {
     // Auth resolves once, early. A menu created after that (a re-rendered play
     // page, a reconnected element) would otherwise sit on its initial
     // signed-out state forever, so seed from the cached response instead.
-    this.refreshCrazyGamesUser();
+    this.refreshPortalUser();
 
     const cached = latestUserMeResponse();
     if (cached !== null) {
@@ -160,7 +160,7 @@ export class NavAccountMenu extends LitElement {
   }
 
   protected willUpdate(changed: PropertyValues): void {
-    if (!changed.has("userMeResponse") && !changed.has("crazyGamesUser")) {
+    if (!changed.has("userMeResponse") && !changed.has("portalUser")) {
       return;
     }
     const next = this.progress();
@@ -287,28 +287,27 @@ export class NavAccountMenu extends LitElement {
     event: CustomEvent<UserMeResponse | false>,
   ) => {
     this.userMeResponse = event.detail;
-    // A CrazyGames sign-in surfaces as a userMeResponse, so re-read the SDK
+    // A portal sign-in surfaces as a userMeResponse, so re-read the SDK
     // profile alongside it.
-    this.refreshCrazyGamesUser();
+    this.refreshPortalUser();
   };
 
-  private refreshCrazyGamesUser(): void {
-    if (!crazyGamesSDK.isOnCrazyGames()) return;
-    void crazyGamesSDK.getUserProfile().then((user) => {
-      this.crazyGamesUser = user;
+  private refreshPortalUser(): void {
+    if (!gamePortal.isOnGamePortal()) return;
+    void gamePortal.getUserProfile().then((user) => {
+      this.portalUser = user;
     });
   }
 
   /**
    * Signed in for menu purposes. An anonymous session still resolves to a
-   * UserMeResponse, so a linked identity is what counts — plus, on CrazyGames,
+   * UserMeResponse, so a linked identity is what counts — plus, on a portal,
    * an SDK profile whose token exchange produced a session.
    */
   private isSignedIn(): boolean {
     if (this.userMeResponse === false) return false;
     return (
-      hasLinkedIdentity(this.userMeResponse.user) ||
-      this.crazyGamesUser !== null
+      hasLinkedIdentity(this.userMeResponse.user) || this.portalUser !== null
     );
   }
 
@@ -408,10 +407,10 @@ export class NavAccountMenu extends LitElement {
       });
     }
 
-    // CrazyGames owns its own sessions: signing out happens on their site, and
+    // Portals own their own sessions: signing out happens on their site, and
     // our /auth/logout wouldn't end theirs. On Steam the session comes from the
     // Steam ticket, which signs the player straight back in after the reload.
-    if (!crazyGamesSDK.isOnCrazyGames() && !steamSDK.isOnSteam()) {
+    if (!gamePortal.isOnGamePortal() && !steamSDK.isOnSteam()) {
       items.push({
         key: "log-out",
         labelKey: "nav_account_menu.log_out",
@@ -424,11 +423,11 @@ export class NavAccountMenu extends LitElement {
     return items;
   }
 
-  // CrazyGames players sign in through the SDK prompt; everyone else through
+  // Portal players sign in through the SDK prompt; everyone else through
   // the account modal's login options.
   private signIn(): void {
-    if (crazyGamesSDK.isOnCrazyGames()) {
-      void crazyGamesSDK.showAuthPrompt();
+    if (gamePortal.isOnGamePortal()) {
+      void gamePortal.showAuthPrompt();
       return;
     }
     window.showPage?.("page-account");
@@ -648,7 +647,7 @@ export class NavAccountMenu extends LitElement {
 
   // Avatar / spinner / person icon / email badge, shared by both triggers.
   // `ids` is populated for the desktop instance only — NavAccountButton and
-  // CrazyGamesAccountButton drive that one by id — while the data-account-*
+  // PortalAccountButton drive that one by id — while the data-account-*
   // hooks are what both instances are updated through.
   private renderIdentityIcons(opts: {
     ids: boolean;
@@ -711,7 +710,7 @@ export class NavAccountMenu extends LitElement {
   }
 
   // Desktop nav pill. Ids are load-bearing: NavAccountButton and
-  // CrazyGamesAccountButton drive this instance by id.
+  // PortalAccountButton drive this instance by id.
   private renderDesktopTrigger(): TemplateResult {
     return html`
       <button

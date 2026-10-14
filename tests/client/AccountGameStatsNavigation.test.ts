@@ -49,7 +49,7 @@ vi.mock("../../src/client/Auth", () => ({
   googleLogin: vi.fn(),
   linkGoogle: vi.fn(),
   logOut: vi.fn(),
-  reauthAfterCrazyGamesChange: vi.fn(),
+  reauthAfterPortalChange: vi.fn(),
   sendMagicLink: vi.fn(),
 }));
 

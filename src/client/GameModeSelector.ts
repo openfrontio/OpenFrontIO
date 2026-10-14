@@ -15,7 +15,6 @@ import {
   viewerIsSignedIn,
   viewerIsTrusted,
 } from "./components/LobbyCard";
-import { crazyGamesSDK } from "./CrazyGamesSDK";
 import {
   getDesktopUpdateState,
   isDesktopShell,
@@ -24,6 +23,7 @@ import {
   type DesktopSessionState,
   type DesktopUpdateState,
 } from "./DesktopShell";
+import { gamePortal } from "./GamePortal";
 import type { HostLobbyModal } from "./HostLobbyModal";
 import { showInGameAlert } from "./InGameModal";
 import type { JoinLobbyModal } from "./JoinLobbyModal";
@@ -496,10 +496,10 @@ export class GameModeSelector extends LitElement {
   private applyUserMe(me: UserMeResponse | false): void {
     this.viewerSignedIn = viewerIsSignedIn(me);
     this.viewerTrusted = viewerIsTrusted(me);
-    // A CrazyGames sign-in surfaces as a userMeResponse without a linked
+    // A portal sign-in surfaces as a userMeResponse without a linked
     // identity, so re-read the SDK profile alongside it.
-    if (crazyGamesSDK.isOnCrazyGames()) {
-      void crazyGamesSDK.getUserProfile().then((user) => {
+    if (gamePortal.isOnGamePortal()) {
+      void gamePortal.getUserProfile().then((user) => {
         if (user !== null) this.viewerSignedIn = true;
       });
     }
@@ -670,7 +670,7 @@ export class GameModeSelector extends LitElement {
         class="flex flex-col gap-4 w-full px-4 pb-4 mx-auto sm:px-0 sm:pb-0 sm:grid sm:grid-cols-[2fr_1fr] sm:grid-rows-[auto_min(24rem,40vh)_auto_auto] desktop:sm:grid-rows-[auto_40vh_auto_auto] sm:[reading-flow:grid-rows]"
       >
         <ios-add-to-home-screen-banner
-          class="no-crazygames [&:empty]:hidden sm:col-span-2 sm:row-start-1"
+          class="no-game-portal [&:empty]:hidden sm:col-span-2 sm:row-start-1"
         ></ios-add-to-home-screen-banner>
 
         <div class="flex gap-4 h-14 sm:col-span-2 sm:row-start-3">

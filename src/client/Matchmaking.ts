@@ -11,7 +11,7 @@ import { BaseModal } from "./components/BaseModal";
 import "./components/Difficulties";
 import { GameStartAlertController } from "./components/GameStartAlertController";
 import { DEFAULT_TITLE_CLASS, modalHeader } from "./components/ui/ModalHeader";
-import { crazyGamesSDK } from "./CrazyGamesSDK";
+import { gamePortal } from "./GamePortal";
 import type { JoinLobbyEvent } from "./Main";
 import {
   ensureServerList,
@@ -109,8 +109,8 @@ export class MatchmakingModal extends BaseModal {
 
   private renderInner() {
     if (this.notTrusted) {
-      // CrazyGames has no purchases, so its variant only suggests playing.
-      const info = crazyGamesSDK.isOnCrazyGames()
+      // Portals have no purchases, so their variant only suggests playing.
+      const info = gamePortal.isOnGamePortal()
         ? "matchmaking_modal.not_trusted_info_crazygames"
         : "matchmaking_modal.not_trusted_info";
       return html`
@@ -482,23 +482,23 @@ export class MatchmakingModal extends BaseModal {
       return;
     }
 
-    // CrazyGames players authenticate through the SDK rather than a linked
-    // account, so a signed-in CrazyGames user counts as logged in for ranked.
-    const crazyGamesSignedIn =
-      crazyGamesSDK.isOnCrazyGames() &&
-      (await crazyGamesSDK.getUserProfile()) !== null;
+    // Portal players authenticate through the SDK rather than a linked
+    // account, so a signed-in portal user counts as logged in for ranked.
+    const portalSignedIn =
+      gamePortal.isOnGamePortal() &&
+      (await gamePortal.getUserProfile()) !== null;
     if (!this.isModalOpen) {
       return;
     }
 
     // The `userMe === false` term is not redundant with the predicate below,
     // which also returns false for `false`: it is what stops a signed-in
-    // CrazyGames player with no /users/@me from falling through to the
+    // portal player with no /users/@me from falling through to the
     // leaderboard read, which would dereference `false`. It also narrows the
     // type for that read.
     if (
       userMe === false ||
-      (!responseHasLinkedIdentity(userMe) && !crazyGamesSignedIn)
+      (!responseHasLinkedIdentity(userMe) && !portalSignedIn)
     ) {
       window.dispatchEvent(
         new CustomEvent("show-message", {

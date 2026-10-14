@@ -18,7 +18,7 @@ import { translateText } from "../../src/client/Utils";
 const mocks = vi.hoisted(() => ({
   userAuth: vi.fn(async (): Promise<unknown> => false),
   retrySteamSignIn: vi.fn(async (): Promise<unknown> => false),
-  reauthAfterCrazyGamesChange: vi.fn(async (): Promise<unknown> => false),
+  reauthAfterPortalChange: vi.fn(async (): Promise<unknown> => false),
   getDesktopSessionState: vi.fn(() => ({ status: "unknown" })),
   getUserMe: vi.fn(async (): Promise<unknown> => false),
   invalidateUserMe: vi.fn(),
@@ -33,7 +33,7 @@ vi.mock("../../src/client/Auth", async (importOriginal) => {
     ...actual,
     userAuth: mocks.userAuth,
     retrySteamSignIn: mocks.retrySteamSignIn,
-    reauthAfterCrazyGamesChange: mocks.reauthAfterCrazyGamesChange,
+    reauthAfterPortalChange: mocks.reauthAfterPortalChange,
     getDesktopSessionState: mocks.getDesktopSessionState,
   };
 });

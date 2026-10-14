@@ -11,7 +11,7 @@ export function isSteamPrimaryUser(
 }
 
 // Does this user have any linked identity at all? (Callers that also accept a
-// CrazyGames session must OR that in themselves — it lives on component state,
+// portal session must OR that in themselves — it lives on component state,
 // not on the API response.)
 //
 // Deliberately explicit presence checks rather than a `??` chain: `email` is a

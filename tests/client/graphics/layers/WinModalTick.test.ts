@@ -30,15 +30,14 @@ vi.mock("../../../../src/client/Cosmetics", async (importOriginal) => ({
   resolveCosmetics: vi.fn(() => []),
 }));
 
-vi.mock("../../../../src/client/CrazyGamesSDK", () => ({
-  crazyGamesSDK: {
+vi.mock("../../../../src/client/GamePortal", () => ({
+  gamePortal: {
     happytime: vi.fn(),
-    requestAd: vi.fn(),
     gameplayStop: vi.fn(),
   },
 }));
 
-import { crazyGamesSDK } from "../../../../src/client/CrazyGamesSDK";
+import { gamePortal } from "../../../../src/client/GamePortal";
 import {
   getTranslatedPlayerTeamLabel,
   translateText,
@@ -99,7 +98,7 @@ describe("WinModal tick win handling", () => {
 
     expect(events).toHaveLength(1);
     expect(events[0].winner).toEqual(["team", "Blue"]);
-    expect(crazyGamesSDK.happytime).toHaveBeenCalled();
+    expect(gamePortal.happytime).toHaveBeenCalled();
     await vi.waitFor(() => expect(modal!.isVisible).toBe(true));
   });
 
@@ -109,7 +108,7 @@ describe("WinModal tick win handling", () => {
 
     expect(events).toHaveLength(1);
     expect(events[0].winner).toEqual(["team", "Red"]);
-    expect(crazyGamesSDK.happytime).not.toHaveBeenCalled();
+    expect(gamePortal.happytime).not.toHaveBeenCalled();
     expect(getTranslatedPlayerTeamLabel).toHaveBeenCalledWith("Red");
     expect(translateText).toHaveBeenCalledWith("win_modal.other_team", {
       team: "Rood",
@@ -133,7 +132,7 @@ describe("WinModal tick win handling", () => {
 
     expect(events).toHaveLength(1);
     expect(events[0].winner).toEqual(["player", "winner-client"]);
-    expect(crazyGamesSDK.happytime).not.toHaveBeenCalled();
+    expect(gamePortal.happytime).not.toHaveBeenCalled();
     await vi.waitFor(() => expect(modal!.isVisible).toBe(true));
   });
 
@@ -151,7 +150,7 @@ describe("WinModal tick win handling", () => {
     );
     modal!.tick();
 
-    expect(crazyGamesSDK.happytime).toHaveBeenCalled();
+    expect(gamePortal.happytime).toHaveBeenCalled();
     await vi.waitFor(() => expect(modal!.isVisible).toBe(true));
   });
 
