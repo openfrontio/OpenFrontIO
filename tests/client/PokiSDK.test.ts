@@ -50,6 +50,7 @@ describe("PokiSDK", () => {
     vi.restoreAllMocks();
     delete window.PokiSDK;
     sessionStorage.clear();
+    history.replaceState(null, "", "/");
   });
 
   describe("isOnPoki", () => {
@@ -282,6 +283,57 @@ describe("PokiSDK", () => {
     } finally {
       vi.useRealTimers();
     }
+  });
+
+  // The SDK reads site_id, poki_url etc. from our URL, which our routing
+  // rewrites; a reload without site_id disables Poki accounts.
+  describe("Poki's URL params", () => {
+    const pokiQuery =
+      "?site_id=3&game_id=g1&poki_url=https%3A%2F%2Fpoki.com%2Fen%2Fg%2Fopenfront";
+
+    beforeEach(() => {
+      framedBy("https://games.poki.com/458768/openfront");
+    });
+
+    it("puts them back before the SDK loads after a rewrite and reload", async () => {
+      history.replaceState(null, "", `/${pokiQuery}&gdgameId=abcd1234`);
+      await initWith(sdk, fakePoki());
+
+      history.replaceState(null, "", "/#refresh");
+      let searchAtLoad = "";
+      vi.spyOn(document.head, "appendChild").mockImplementation((node) => {
+        searchAtLoad = window.location.search;
+        window.PokiSDK = fakePoki();
+        queueMicrotask(() =>
+          (node as HTMLScriptElement).onload?.(new Event("load")),
+        );
+        return node;
+      });
+      await new PokiSDK().maybeInit();
+
+      const params = new URLSearchParams(searchAtLoad);
+      expect(params.get("site_id")).toBe("3");
+      expect(params.get("game_id")).toBe("g1");
+      expect(params.has("gdgameId")).toBe(false);
+      expect(window.location.hash).toBe("#refresh");
+    });
+
+    it("puts them back before building an invite link", async () => {
+      history.replaceState(null, "", `/${pokiQuery}`);
+      let pokiUrl: string | null = null;
+      const poki = fakePoki({
+        shareableURL: vi.fn(async () => {
+          pokiUrl = new URLSearchParams(window.location.search).get("poki_url");
+          return "https://poki.com/en/g/openfront?gdgameId=abcd1234";
+        }),
+      });
+      await initWith(sdk, poki);
+
+      history.pushState(null, "", "/game/abcd1234");
+      await sdk.createInviteLink("abcd1234");
+      expect(pokiUrl).toBe("https://poki.com/en/g/openfront");
+      expect(window.location.pathname).toBe("/game/abcd1234");
+    });
   });
 
   it("is a no-op off Poki", async () => {
