@@ -217,11 +217,11 @@ body.halloween-theme:not(.in-game) button.bg-bright-blue,
 body.halloween-theme:not(.in-game) button.bg-blue-600,
 body.halloween-theme:not(.in-game) .btn-primary,
 body.halloween-theme:not(.in-game) #play-btn {
-  background-color: #d85800 !important;
+  background-color: var(--hw-dark-orange) !important;
   color: #ffffff !important;
   box-shadow:
     0 4px 10px rgba(0, 0, 0, 0.3),
-    0 0 6px rgba(216, 88, 0, 0.2) !important;
+    0 0 6px rgba(184, 71, 0, 0.2) !important;
 }
 
 body.halloween-theme:not(.in-game) button.bg-malibu-blue:hover:not(:disabled),
@@ -230,11 +230,11 @@ body.halloween-theme:not(.in-game) button.bg-bright-blue:hover:not(:disabled),
 body.halloween-theme:not(.in-game) button.bg-blue-600:hover:not(:disabled),
 body.halloween-theme:not(.in-game) .btn-primary:hover:not(:disabled),
 body.halloween-theme:not(.in-game) #play-btn:hover:not(:disabled) {
-  background-color: #ea6c00 !important;
+  background-color: #c45100 !important;
   color: #ffffff !important;
   box-shadow:
     0 4px 12px rgba(0, 0, 0, 0.35),
-    0 0 8px rgba(234, 108, 0, 0.25) !important;
+    0 0 8px rgba(196, 81, 0, 0.25) !important;
 }
 
 /* Keep disabled primary buttons (e.g., Waiting for players in Host Lobby) muted gray */
