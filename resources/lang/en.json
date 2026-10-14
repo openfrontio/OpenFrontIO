@@ -225,6 +225,7 @@
       "greet": "Greetings",
       "help": "Help",
       "misc": "Miscellaneous",
+      "recent": "Recent",
       "warnings": "Warnings"
     },
     "defend": {
@@ -276,7 +277,9 @@
       "strategy": "Nice strategy!",
       "team_up": "Let’s team up against [P1]!"
     },
+    "no_phrases": "No matching phrases",
     "search": "Search player...",
+    "search_phrases": "Search phrases...",
     "short": {
       "greet": {
         "ruining_games": "Ruining our games"
