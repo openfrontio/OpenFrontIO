@@ -217,7 +217,9 @@
       "crown": "Attack the crown!",
       "finish": "Let's finish off [P1]!",
       "focus": "Focus fire on [P1]!",
-      "mirv": "Launch a MIRV at [P1]!"
+      "mirv": "Launch a MIRV at [P1]!",
+      "nuke": "Nuke [P1]!",
+      "spend_gold": "Stop hoarding gold, use it!"
     },
     "cat": {
       "attack": "Attack",
@@ -252,13 +254,17 @@
       "thanks": "Thanks!",
       "trust_broken": "I trusted you...",
       "trust_me": "You can trust me. Promise!",
-      "well_played": "Well played!"
+      "well_played": "Well played!",
+      "what_doing": "What are you doing?!",
+      "why_attack": "Why are you attacking me?!"
     },
     "help": {
       "alliance": "Alliance?",
+      "break_alliance": "Please break our alliance so I can get some land too!",
       "gold": "Please give me gold!",
       "help_defend": "Help me defend against [P1]!",
       "no_attack": "Please don't attack me!",
+      "renew_alliance": "Please renew our alliance before it expires!",
       "send_gold_to": "Send gold to [P1]!",
       "send_troops_to": "Send troops to [P1]!",
       "sorry_attack": "Sorry, I didn’t mean to attack.",
@@ -267,6 +273,7 @@
       "troops_frontlines": "Send troops to the frontlines!"
     },
     "misc": {
+      "alliances_end_together": "Our alliances with [P1] end around the same time!",
       "build_closer": "Build closer to get trains!",
       "coastline": "Please let me get a coastline.",
       "fun": "This game is fun!",
@@ -282,10 +289,13 @@
         "ruining_games": "Ruining our games"
       },
       "help": {
+        "break_alliance": "Break alliance, I need land!",
+        "renew_alliance": "Renew our alliance!",
         "sorry_attack": "Sorry for attacking!",
         "troops_frontlines": "Troops to the front!"
       },
       "misc": {
+        "alliances_end_together": "Our [P1] alliances end together",
         "coastline": "Let me have a coast",
         "join_discord": "Join the Discord!",
         "pr": "Is my PR merged yet?"
@@ -293,10 +303,12 @@
       "warnings": {
         "mirv_ready": "[P1] can MIRV now!",
         "pirating": "[P1] is pirating",
+        "renew_or_nuke": "Renew or get nuked!",
         "saving_for_mirv": "[P1] saving for MIRV",
         "snowballing": "[P1] is snowballing",
         "stalemate": "Peace? Stalemate.",
-        "stop_trading_all": "Stop all trading!"
+        "stop_trading_all": "Stop all trading!",
+        "stop_war": "Stop before others swoop in"
       }
     },
     "title": "Quick Chat",
@@ -312,12 +324,15 @@
       "mirv_ready": "[P1] has enough gold to launch a MIRV!",
       "mirv_soon": "[P1] can launch a MIRV soon!",
       "no_allies": "[P1] has no allies.",
+      "nuke_threat": "Stop now, or I'll nuke you!",
       "pirating": "[P1] is pirating all of our trade!",
+      "renew_or_nuke": "Renew our alliance, or I'll nuke you!",
       "saving_for_mirv": "[P1] is saving up to launch a MIRV.",
       "snowballing": "[P1] is snowballing too fast!",
       "stalemate": "Let's make peace. This is a stalemate, we will both lose.",
       "stop_trading": "Stop trading with [P1]!",
       "stop_trading_all": "Please stop trading with all!",
+      "stop_war": "Let's stop this war before someone else takes advantage!",
       "strong": "[P1] is strong.",
       "weak": "[P1] is weak."
     }
