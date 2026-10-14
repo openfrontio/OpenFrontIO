@@ -374,7 +374,7 @@ describe("ChatModal", () => {
     ]);
 
     // Matches the short label too.
-    await searchPhrases("the front");
+    await searchPhrases("front!");
     expect(sectionTitles("Help")).toEqual(["Send troops to the frontlines!"]);
 
     await searchPhrases("zzz");
