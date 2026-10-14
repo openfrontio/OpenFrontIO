@@ -299,10 +299,11 @@ function grantedDaysRemaining(sub: UserSubscription): number | null {
  * ("charged the prorated difference", "credit for the unused portion"), and
  * none of it is true here: infra expires every granted row in the same
  * transaction as the paid insert (`expireGrantsForPaidReplacement`,
- * SteamAgreements.ts, confirmed 12 Sept 2026), so the paid period starts at
- * settle and the unused free days are simply gone — no credit, no extension,
- * no stacking. The string says so, and names the days when we know them,
- * because "not carried over" badly understates 28 of them.
+ * SteamAgreements.ts), so the paid period starts at settle. What happens to
+ * the unused free days depends on the rail, and the copy must match infra:
+ * on Steam they are added to the end (`steam:extend_agreement` pushes the
+ * next charge back), on Stripe they are simply gone. An open-ended grant has
+ * no days to carry on either rail.
  *
  * The purchase itself is the ordinary first-purchase flow: same startPurchase,
  * same success string, same profile refresh. Only the confirm differs.
@@ -313,16 +314,21 @@ async function purchaseOverGrant(
 ): Promise<void> {
   const targetName = translateCosmetic("subscriptions", sub.name);
   const days = grantedDaysRemaining(currentSub);
-  // Both keys passed as literals so the en.json sync test can see them.
+  // Every key passed as a literal so the en.json sync test can see them.
   const confirmed = await showInGameConfirm(
     days === null
       ? translateText("store.confirm_subscribe_over_grant_no_days", {
           tier: targetName,
         })
-      : translateText("store.confirm_subscribe_over_grant", {
-          tier: targetName,
-          days,
-        }),
+      : paymentsProvider() === "steam"
+        ? translateText("store.confirm_subscribe_over_grant_carried", {
+            tier: targetName,
+            days,
+          })
+        : translateText("store.confirm_subscribe_over_grant", {
+            tier: targetName,
+            days,
+          }),
     {
       heading: translateText("store.subscribe_heading"),
       variant: "warning",

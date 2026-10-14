@@ -1964,6 +1964,7 @@
     "confirm_purchase_body": "Buy {item} for {amount, number} {currency}?",
     "confirm_purchase_title": "Confirm Purchase",
     "confirm_subscribe_over_grant": "Start a paid {tier} subscription now? Your free access ends immediately: the {days, plural, one {# day left on it is} other {# days left on it are}} not refunded and not added to your paid time.",
+    "confirm_subscribe_over_grant_carried": "Start a paid {tier} subscription now? You're charged today, and the {days, plural, one {# free day} other {# free days}} you have left {days, plural, one {is} other {are}} added to the end: your next payment moves back by the same amount.",
     "confirm_subscribe_over_grant_no_days": "Start a paid {tier} subscription now? Your free access ends immediately, and the time left on it is not refunded and not added to your paid time.",
     "confirm_tier_change_steam": "Subscribe to {tier} now? Your new tier starts immediately at full price, and the rest of your current month is not refunded.",
     "confirm_upgrade": "Upgrade to {tier}? You'll be charged the prorated difference now.",
