@@ -680,15 +680,16 @@ describe("WinModal provisional XP at death", () => {
     beforeEach(() => localStorage.clear());
     afterEach(() => localStorage.clear());
 
-    it("keeps an eligible figure for the account until the game is scored", async () => {
+    it("keeps an eligible figure for the account, marked scored once it is", async () => {
       let asked = 0;
       stubXpEndpoint(() =>
         asked++ === 0 ? new Response("", { status: 404 }) : json(serverXp()),
       );
       const { game, end } = makeGame();
       await mount(game);
+      // Counted on the account as read at death (lifetime 850), unasked.
       expect(readPendingXp("me")).toEqual([
-        expect.objectContaining({ gameId: GAME_ID, xp: 274 }),
+        expect.objectContaining({ gameId: GAME_ID, xp: 274, notIn: 850 }),
       ]);
       // Another account on this browser has none.
       expect(readPendingXp("someone-else")).toEqual([]);
@@ -696,7 +697,14 @@ describe("WinModal provisional XP at death", () => {
       await endGame(end);
       await settle(3_000);
       expect(xpState()).toBe("result");
-      expect(readPendingXp("me")).toEqual([]);
+      // Kept, with the API's figure: a stale read of the account still
+      // shows the game, and a fresh one doesn't count it again.
+      expect(readPendingXp("me")).toEqual([
+        expect.objectContaining({
+          gameId: GAME_ID,
+          scored: { xp: 274, lifetimeAfter: 1124 },
+        }),
+      ]);
     });
 
     it("keeps it while the server hasn't scored the game", async () => {

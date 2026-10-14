@@ -45,7 +45,7 @@ import {
   pollGameXp,
 } from "../../ProgressionApi";
 import {
-  clearPendingXp,
+  applyGameXp,
   type PendingGameKind,
   progressWithPendingXp,
   recordPendingXp,
@@ -663,7 +663,7 @@ export class WinModal extends LitElement implements Controller {
       }
       // Scored: the figure kept for the account menu and profile is done.
       if (result !== null && this.xpPublicId !== null) {
-        clearPendingXp(this.xpPublicId, [result.gameId]);
+        applyGameXp(this.xpPublicId, result);
       }
       if (result?.eligible && reachedLegendThisGame(result)) {
         this.preloadLegendCeremony();
@@ -714,6 +714,10 @@ export class WinModal extends LitElement implements Controller {
     }
   }
 
+  // The lifetime XP of the account the provisional figure was worked out
+  // from (ProvisionalProgress: a figure up to it doesn't include this game).
+  private provisionalReadLifetime: number | null = null;
+
   // Keeps an eligible provisional figure for the account, so the account
   // menu, the Account modal and the profile show it (provisionally) until the
   // API scores the game (ProvisionalProgress.ts).
@@ -731,6 +735,9 @@ export class WinModal extends LitElement implements Controller {
       day: provisional.inputs.dailyDay,
       kind: kinds[provisional.inputs.gameType] ?? null,
       firstGame: response.breakdown.firstGame > 0,
+      // The account as read at death: the game hadn't ended, so it can't
+      // be in it.
+      notIn: this.provisionalReadLifetime ?? undefined,
     });
     requestProvisionalCheck();
   }
@@ -757,6 +764,7 @@ export class WinModal extends LitElement implements Controller {
       fresh !== false && fresh.player.progress !== undefined
         ? fresh.player.progress
         : progress;
+    this.provisionalReadLifetime = confirmed.lifetimeXp;
     // Games left earlier and not scored yet stack underneath this one: it
     // starts from where their provisional XP took the player, and from the
     // day's allowances they used (ProvisionalProgress.ts).

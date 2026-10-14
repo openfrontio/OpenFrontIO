@@ -27,8 +27,9 @@ import "./LeaderboardModal";
 import { modalRouter } from "./ModalRouter";
 import { loadPlayerProgress } from "./PlayerProgress";
 import {
+  isOwnAccount,
   PROVISIONAL_PROGRESS_CHANGED,
-  ProvisionalHold,
+  provisionalProgress,
   scoredGames,
 } from "./ProvisionalProgress";
 import {
@@ -91,10 +92,6 @@ export class PlayerProfileModal extends BaseModal {
     super.disconnectedCallback();
   }
 
-  // Keeps the viewer's own provisional level up while a scored game's
-  // progress is read again.
-  private progressHold = new ProvisionalHold<PublicProgress>();
-
   // The player's own level counts XP from games still waiting to be scored,
   // and that changed (ProvisionalProgress.ts).
   private handleProvisionalChanged = (event: Event): void => {
@@ -102,22 +99,18 @@ export class PlayerProfileModal extends BaseModal {
     this.requestUpdate();
   };
 
-  // A pending game was scored. The profile's progress was read before that,
-  // so without it the level would drop back to where it was before the game:
-  // read it again, with the provisional level held up until that lands.
+  // A pending game was scored: on the viewer's own open profile, read the
+  // progress again, for its history and milestones. The level holds
+  // meanwhile (and on a stale read): the scored game's XP counts onto any
+  // figure that doesn't include it yet (ProvisionalProgress.ts).
   private rereadProgress(): void {
     const publicId = this.publicId;
     if (publicId === null || this.progress === null) return;
-    if (!this.progressHold.hold(this.progress)) return;
+    if (!this.isConnected || !this.isOpen() || !isOwnAccount(publicId)) return;
     const gen = this.loadGeneration;
     void loadPlayerProgress(publicId).then((progress) => {
       if (gen !== this.loadGeneration || this.publicId !== publicId) return;
-      if (progress === null) {
-        this.progressHold.reset();
-        this.requestUpdate();
-        return;
-      }
-      this.progress = progress;
+      if (progress !== null) this.progress = progress;
     });
   }
 
@@ -128,7 +121,7 @@ export class PlayerProfileModal extends BaseModal {
   private progressView() {
     return this.progress === null
       ? null
-      : this.progressHold.view(this.publicId, this.progress);
+      : provisionalProgress(this.publicId, this.progress);
   }
 
   protected modalConfig() {
@@ -498,7 +491,6 @@ export class PlayerProfileModal extends BaseModal {
     this.statsTree = null;
     this.clans = [];
     this.progress = null;
-    this.progressHold.reset();
     this.gameHistoryCache = null;
     this.gamesScrollTop = 0;
     this.restoreGamesScrollAfterOpen = false;

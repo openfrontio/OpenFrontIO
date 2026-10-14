@@ -21,8 +21,9 @@ export type GameXpFetchResult =
   // 404 (not processed yet, or progression off) or a transient failure —
   // worth asking again while the caller is still polling. `notFound` marks
   // the 404: the one answer that says the game isn't scored yet, rather than
-  // that the question went unanswered.
-  | { status: "pending"; notFound?: true }
+  // that the question went unanswered. `rateLimited` marks a 429: stop
+  // asking about other games for now.
+  | { status: "pending"; notFound?: true; rateLimited?: true }
   // A conclusion: signed out, or a body we cannot read. Stop asking.
   | { status: "unavailable" };
 
@@ -53,6 +54,7 @@ export async function fetchMyGameXp(
       },
     );
     if (res.status === 404) return { status: "pending", notFound: true };
+    if (res.status === 429) return { status: "pending", rateLimited: true };
     if (res.status === 401 || res.status === 403) {
       return { status: "unavailable" };
     }

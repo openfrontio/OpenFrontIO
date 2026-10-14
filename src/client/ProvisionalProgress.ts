@@ -1,4 +1,5 @@
 import type {
+  GameXpResponse,
   Progress,
   ProgressionConfig,
   UserMeResponse,
@@ -16,20 +17,30 @@ import { projectProgress } from "./ProgressProjection";
 // shows, marked as provisional, until the API has scored the game.
 //
 // Local and display only: it is never sent anywhere, other players never see
-// it, and it fails closed (no config, an API that predates any of this, a
-// failed check: the confirmed figures show).
+// it, and it fails closed (no config, an API that predates any of this: the
+// confirmed figures show).
 //
-// No double counting: a pending game's XP is only added onto a confirmed
-// figure that was read BEFORE the API last said (404) it hadn't scored that
-// game. A figure read since then may already include it, so it shows as it
-// is until the next check.
+// No double counting, and no dropping back, decided by lifetime XP alone.
+// Every figure of the player's progress (/users/@me, the public progress,
+// however stale its replica) carries lifetimeXp, which only grows as games
+// are scored:
+// - A scored game keeps its entry, marked with the XP the API gave it and
+//   the lifetime XP it took the player to (`scored`). A figure below that
+//   lifetime doesn't include it yet, so its XP is added; one at or above it
+//   does. The result is the API's own figure: confirmed, not provisional.
+// - An unscored game is added only onto a figure at or below `notIn`: the
+//   highest lifetime XP of a figure read before the API said (404) it hadn't
+//   scored the game. A figure above it may include the game, so it shows
+//   without it until the next check raises `notIn`.
 
 // ------------------------------------------------------------------ storage
 
 export const PENDING_XP_KEY = "provisionalXp";
+// When a tab last asked the API, per account: the others skip their poll.
+export const PENDING_XP_CHECKED_KEY = "provisionalXpCheckedAt";
 // A game is long scored by then; past it an entry is dropped unasked.
-export const PENDING_XP_TTL_MS = 24 * 60 * 60 * 1000;
-// More than this many unscored games and the oldest go.
+export const PENDING_XP_TTL_MS = 12 * 60 * 60 * 1000;
+// More than this many games and the oldest go, scored ones first.
 export const MAX_PENDING_PER_ACCOUNT = 20;
 
 // What kind of game it was, for the per-day allowances: private and
@@ -43,13 +54,17 @@ export interface PendingXp {
   // When it was stored (epoch ms).
   at: number;
   // For the next game's provisional figure, so a second game in a row doesn't
-  // count the day's allowances twice. All three are missing from entries
-  // stored before they were kept (see stackPendingXp).
+  // count the day's allowances twice.
   // The UTC day the API stamped the daily allowances with ("YYYY-MM-DD").
   day?: string;
   kind?: PendingGameKind;
   // Its figure took the first-public-game-of-the-day bonus.
   firstGame?: boolean;
+  // Unscored: the highest lifetime XP of a figure known not to include it.
+  notIn?: number;
+  // Scored: the XP the API gave it, and the lifetime XP that took the
+  // player to.
+  scored?: { xp: number; lifetimeAfter: number };
 }
 
 export interface PendingXpInput {
@@ -58,6 +73,9 @@ export interface PendingXpInput {
   day?: string | null;
   kind?: PendingGameKind | null;
   firstGame?: boolean;
+  // The lifetime XP of the figure the provisional XP was worked out from:
+  // read before the game ended, so the game can't be in it.
+  notIn?: number;
 }
 
 // By account (publicId), so another account on the same browser never sees
@@ -70,6 +88,9 @@ const KINDS: ReadonlySet<string> = new Set([
   "singleplayer",
 ]);
 const DAY = /^\d{4}-\d{2}-\d{2}$/;
+
+const isCount = (v: unknown): v is number =>
+  typeof v === "number" && Number.isFinite(v) && v >= 0;
 
 // The entry as stored, or null when it doesn't read as one. An optional field
 // that doesn't read is dropped, not the entry.
@@ -93,19 +114,28 @@ function readEntry(value: unknown): PendingXp | null {
     entry.kind = v.kind as PendingGameKind;
   }
   if (typeof v.firstGame === "boolean") entry.firstGame = v.firstGame;
+  if (isCount(v.notIn)) entry.notIn = v.notIn;
+  const scored = v.scored as Record<string, unknown> | null | undefined;
+  if (
+    typeof scored === "object" &&
+    scored !== null &&
+    isCount(scored.xp) &&
+    isCount(scored.lifetimeAfter)
+  ) {
+    entry.scored = { xp: scored.xp, lifetimeAfter: scored.lifetimeAfter };
+  }
   return entry;
 }
 
 function isLive(entry: PendingXp, now: number): boolean {
-  // Either way: a clock set back a day mustn't keep an entry forever.
+  // Either way: a clock set back mustn't keep an entry forever.
   return Math.abs(now - entry.at) < PENDING_XP_TTL_MS;
 }
 
-function readStore(now: number): PendingStore {
+function parseStore(raw: string | null, now: number): PendingStore {
   const out: PendingStore = {};
+  if (raw === null) return out;
   try {
-    const raw = localStorage.getItem(PENDING_XP_KEY);
-    if (raw === null) return out;
     const parsed: unknown = JSON.parse(raw);
     if (typeof parsed !== "object" || parsed === null) return out;
     for (const [publicId, list] of Object.entries(parsed)) {
@@ -116,9 +146,18 @@ function readStore(now: number): PendingStore {
       if (live.length > 0) out[publicId] = live;
     }
   } catch {
-    // Unreadable or blocked storage: nothing pending.
+    // Unreadable: nothing pending.
   }
   return out;
+}
+
+function readStore(now: number): PendingStore {
+  try {
+    return parseStore(localStorage.getItem(PENDING_XP_KEY), now);
+  } catch {
+    // Blocked storage: nothing pending.
+    return {};
+  }
 }
 
 function writeStore(store: PendingStore): void {
@@ -137,6 +176,21 @@ function listFor(store: PendingStore, publicId: string): PendingXp[] {
   return Object.prototype.hasOwnProperty.call(store, publicId)
     ? store[publicId]
     : [];
+}
+
+// Changes the account's entries, written back pruned (expired entries, any
+// account's, go).
+function updateList(
+  publicId: string,
+  now: number,
+  change: (list: PendingXp[]) => PendingXp[],
+): void {
+  if (!publicId) return;
+  const store = readStore(now);
+  const list = change(listFor(store, publicId));
+  if (list.length > 0) store[publicId] = list;
+  else delete store[publicId];
+  writeStore(store);
 }
 
 /** The account's games still waiting to be scored, expired ones left out. */
@@ -164,16 +218,36 @@ export function recordPendingXp(
     day: entry.day ?? undefined,
     kind: entry.kind ?? undefined,
     firstGame: entry.firstGame,
+    notIn: entry.notIn,
   });
-  if (!publicId || pending === null) return;
-  // Written back pruned: expired entries, any account's, go.
-  const store = readStore(now);
-  const list = listFor(store, publicId).filter(
-    (e) => e.gameId !== entry.gameId,
+  if (pending === null) return;
+  updateList(publicId, now, (current) => {
+    const list = current.filter((e) => e.gameId !== entry.gameId);
+    list.push(pending);
+    // Over the cap: scored games go first (the API has them), oldest first.
+    while (list.length > MAX_PENDING_PER_ACCOUNT) {
+      const scored = list.findIndex((e) => e.scored !== undefined);
+      list.splice(scored >= 0 ? scored : 0, 1);
+    }
+    return list;
+  });
+}
+
+/**
+ * The API's answer for a game: an eligible one is marked scored (kept, so a
+ * figure that doesn't include it yet still counts it), an ineligible one is
+ * dropped (there is nothing to add).
+ */
+export function applyGameXp(
+  publicId: string,
+  response: GameXpResponse,
+  now: number = Date.now(),
+): void {
+  applyVerdicts(
+    publicId,
+    new Map([[response.gameId, verdictOf(response)]]),
+    now,
   );
-  list.push(pending);
-  store[publicId] = list.slice(-MAX_PENDING_PER_ACCOUNT);
-  writeStore(store);
 }
 
 /** Drops the account's entries for these games. */
@@ -183,12 +257,82 @@ export function clearPendingXp(
   now: number = Date.now(),
 ): void {
   const drop = new Set(gameIds);
-  if (!publicId || drop.size === 0) return;
-  const store = readStore(now);
-  const list = listFor(store, publicId).filter((e) => !drop.has(e.gameId));
-  if (list.length > 0) store[publicId] = list;
-  else delete store[publicId];
-  writeStore(store);
+  if (drop.size === 0) return;
+  updateList(publicId, now, (list) => list.filter((e) => !drop.has(e.gameId)));
+}
+
+type Verdict =
+  | { kind: "scored"; xp: number; lifetimeAfter: number }
+  | { kind: "ineligible" }
+  // A 404: not scored, so not in any figure up to this lifetime XP.
+  | { kind: "not_scored"; notIn: number };
+
+function verdictOf(response: GameXpResponse): Verdict {
+  return response.eligible
+    ? {
+        kind: "scored",
+        xp: response.breakdown.total,
+        lifetimeAfter: response.after.lifetimeXp,
+      }
+    : { kind: "ineligible" };
+}
+
+function applyVerdicts(
+  publicId: string,
+  verdicts: ReadonlyMap<string, Verdict>,
+  now: number,
+): void {
+  if (verdicts.size === 0) return;
+  updateList(publicId, now, (list) =>
+    list.flatMap((e): PendingXp[] => {
+      const verdict = verdicts.get(e.gameId);
+      if (verdict === undefined) return [e];
+      switch (verdict.kind) {
+        case "ineligible":
+          return [];
+        case "scored":
+          return [
+            {
+              ...e,
+              scored: { xp: verdict.xp, lifetimeAfter: verdict.lifetimeAfter },
+            },
+          ];
+        case "not_scored":
+          // Read since: another tab may have scored it meanwhile.
+          if (e.scored !== undefined) return [e];
+          return [{ ...e, notIn: Math.max(e.notIn ?? 0, verdict.notIn) }];
+      }
+    }),
+  );
+}
+
+/**
+ * Asks the API about unscored games, one at a time (the endpoint is rate
+ * limited), stopping at a 429. `seenLifetime` is the highest lifetime XP of a
+ * figure read before the first question: a 404 says the game isn't in it.
+ * Anything but an answer or a 404 leaves the game's verdict as it was.
+ */
+async function askAbout(
+  entries: readonly PendingXp[],
+  seenLifetime: number | null,
+  fetchXp: (gameId: string) => Promise<GameXpFetchResult>,
+): Promise<{ verdicts: Map<string, Verdict>; rateLimited: boolean }> {
+  const verdicts = new Map<string, Verdict>();
+  for (const entry of entries) {
+    const answer = await fetchXp(entry.gameId).catch(
+      (): GameXpFetchResult => ({ status: "pending" }),
+    );
+    if (answer.status === "ok") {
+      verdicts.set(entry.gameId, verdictOf(answer.data));
+    } else if (answer.status === "pending" && answer.notFound === true) {
+      if (seenLifetime !== null) {
+        verdicts.set(entry.gameId, { kind: "not_scored", notIn: seenLifetime });
+      }
+    } else if (answer.status === "pending" && answer.rateLimited === true) {
+      return { verdicts, rateLimited: true };
+    }
+  }
+  return { verdicts, rateLimited: false };
 }
 
 // --------------------------------------------------------------- projection
@@ -244,29 +388,50 @@ export function projectPendingXp(
   return { ...projected.after, legend: false, canPrestige: false };
 }
 
-// ------------------------------------------------------------------ stacking
-
-// The UTC day an epoch time falls on ("YYYY-MM-DD").
-function utcDay(at: number): string {
-  return new Date(at).toISOString().slice(0, 10);
+/**
+ * Which of the account's entries count onto a figure with this lifetime XP:
+ * the scored games it doesn't include yet, and the unscored games known not
+ * to be in it. `unverified` is whether an unscored game is left out because
+ * the figure is newer than the last check: a check would settle it.
+ */
+export function pendingXpFor(
+  figure: { lifetimeXp: number },
+  entries: readonly PendingXp[],
+): { scored: PendingXp[]; unscored: PendingXp[]; unverified: boolean } {
+  const scored: PendingXp[] = [];
+  const unscored: PendingXp[] = [];
+  let unverified = false;
+  for (const e of entries) {
+    if (e.scored !== undefined) {
+      if (figure.lifetimeXp < e.scored.lifetimeAfter) scored.push(e);
+    } else if (e.notIn !== undefined && figure.lifetimeXp <= e.notIn) {
+      unscored.push(e);
+    } else {
+      unverified = true;
+    }
+  }
+  return { scored, unscored, unverified };
 }
+
+const xpOf = (e: PendingXp) => e.scored?.xp ?? e.xp;
+const sumXp = (list: readonly PendingXp[]) =>
+  list.reduce((sum, e) => sum + xpOf(e), 0);
+
+// ------------------------------------------------------------------ stacking
 
 /**
  * The confirmed progress with pending games stacked on top, for the next
  * game's provisional figure at death: the place on the level track their XP
  * takes it to (as projectPendingXp: never past the last level, never a
- * prestige or a Legend), and the day's allowances they used.
+ * prestige or a Legend; a scored game counts the API's XP), and the day's
+ * allowances they used. Pass only the games the figure doesn't include
+ * (pendingXpFor).
  *
  * Allowances count only games stamped with the same UTC day as the
  * confirmed progress's allowances (the API's own stamp), so a new day starts
  * from what the API says. A pending public game that took the first-game
  * bonus marks it taken; pending private and singleplayer games count towards
  * their daily caps.
- *
- * An entry stored before these were kept has no day, kind or bonus: it is
- * taken to have used the first-game bonus when it was stored on that UTC day
- * by the local clock (the safe side: the next game's figure is never
- * overstated), and to count towards neither cap (its kind is unknown).
  */
 export function stackPendingXp(
   progress: Progress,
@@ -274,23 +439,13 @@ export function stackPendingXp(
   config: ProgressionConfig,
 ): Progress {
   if (pending.length === 0) return progress;
-  const xp = pending.reduce((sum, e) => sum + e.xp, 0);
-  const projected = projectPendingXp(progress, xp, config);
+  const projected = projectPendingXp(progress, sumXp(pending), config);
   const stacked: Progress =
-    projected === null
-      ? { ...progress }
-      : {
-          ...progress,
-          ...projected,
-        };
+    projected === null ? { ...progress } : { ...progress, ...projected };
   const daily = progress.daily;
   if (daily?.day === undefined) return stacked;
   let { privateGames, singleplayerGames, firstGameClaimed } = daily;
   for (const entry of pending) {
-    if (entry.day === undefined) {
-      if (utcDay(entry.at) === daily.day) firstGameClaimed = true;
-      continue;
-    }
     if (entry.day !== daily.day) continue;
     if (entry.kind === "private") privateGames++;
     if (entry.kind === "singleplayer") singleplayerGames++;
@@ -307,10 +462,9 @@ export function stackPendingXp(
 
 /**
  * The confirmed progress with the account's other pending games stacked on
- * top (stackPendingXp), for a provisional figure worked out now. Each one is
- * asked about first, after `progress` was read: one the API has scored is
- * in `progress` already, so it is cleared rather than counted twice, and
- * only a 404 counts one. `excludeGameId` is the game being worked out.
+ * top (stackPendingXp), for a provisional figure worked out now. Unscored
+ * games are asked about first, after `progress` was read, so the answers say
+ * whether it includes them. `excludeGameId` is the game being worked out.
  */
 export async function progressWithPendingXp(opts: {
   publicId: string;
@@ -321,28 +475,21 @@ export async function progressWithPendingXp(opts: {
   now?: number;
 }): Promise<Progress> {
   const now = opts.now ?? Date.now();
-  const entries = readPendingXp(opts.publicId, now).filter(
-    (e) => e.gameId !== opts.excludeGameId,
-  );
-  if (entries.length === 0) return opts.progress;
-  const answers = await Promise.all(
-    entries.map((e) =>
-      opts
-        .fetchXp(e.gameId)
-        .catch((): GameXpFetchResult => ({ status: "pending" })),
-    ),
-  );
-  const counted: PendingXp[] = [];
-  const answered: string[] = [];
-  entries.forEach((entry, i) => {
-    const answer = answers[i];
-    if (answer.status === "ok") answered.push(entry.gameId);
-    else if (answer.status === "pending" && answer.notFound === true) {
-      counted.push(entry);
-    }
-  });
-  clearPendingXp(opts.publicId, answered, now);
-  return stackPendingXp(opts.progress, counted, opts.config);
+  const others = () =>
+    readPendingXp(opts.publicId, now).filter(
+      (e) => e.gameId !== opts.excludeGameId,
+    );
+  const unscored = others().filter((e) => e.scored === undefined);
+  if (unscored.length > 0) {
+    const { verdicts } = await askAbout(
+      unscored,
+      opts.progress.lifetimeXp,
+      opts.fetchXp,
+    );
+    applyVerdicts(opts.publicId, verdicts, now);
+  }
+  const { scored, unscored: counted } = pendingXpFor(opts.progress, others());
+  return stackPendingXp(opts.progress, [...scored, ...counted], opts.config);
 }
 
 // ----------------------------------------------------------------- display
@@ -351,7 +498,8 @@ export async function progressWithPendingXp(opts: {
 export const PROVISIONAL_PROGRESS_CHANGED = "provisional-progress-changed";
 
 export interface ProvisionalChange {
-  // Games the API has just scored: progress read before now leaves them out.
+  // Games the API has just scored: a view that read its own progress (a
+  // modal) reads it again, for the history and milestones.
   scored: readonly string[];
 }
 
@@ -361,11 +509,13 @@ export function scoredGames(event: Event): readonly string[] {
 }
 
 export interface ProvisionalView<P> {
-  // The progress to show: the projected one when provisional, else the
-  // confirmed one itself.
+  // The progress to show: with the pending games' XP when any count, else
+  // the confirmed one itself.
   progress: P;
+  // Counts XP from games the API hasn't scored yet.
   provisional: boolean;
-  // The confirmed level: levels past it are only provisionally reached.
+  // The confirmed level (with any scored games the figure doesn't include
+  // yet): levels past it are only provisionally reached.
   confirmedLevel: number;
 }
 
@@ -374,9 +524,8 @@ export interface ProvisionalDeps {
   fetchXp: (gameId: string) => Promise<GameXpFetchResult>;
   // GET /public/progression/config.
   loadConfig: () => Promise<ProgressionConfig | false>;
-  // Re-reads /users/@me and broadcasts it (userMeResponse); false when it
-  // couldn't.
-  refreshUserMe: () => Promise<unknown>;
+  // Reads /users/@me afresh (false when it can't); the store broadcasts it.
+  readUserMe: () => Promise<UserMeResponse | false>;
   now?: () => number;
   // How often to ask again while games are pending, and how many times per
   // page at most.
@@ -387,53 +536,51 @@ export interface ProvisionalDeps {
 export const PROVISIONAL_POLL_MS = 60_000;
 export const PROVISIONAL_MAX_POLLS = 120;
 
-interface Verified {
-  account: string;
-  // The check's sequence number: a confirmed figure first seen before it is
-  // older than its answers.
-  seq: number;
-  // The games it found still unscored (a 404).
-  pending: ReadonlySet<string>;
-}
-
 let deps: ProvisionalDeps | null = null;
 let account: string | null = null;
 let config: ProgressionConfig | null = null;
-let verified: Verified | null = null;
-// Orders confirmed figures against checks.
-let seq = 0;
-const seenAt = new WeakMap<object, number>();
+let configLoading = false;
+// The highest lifetime XP of the account's figures read so far.
+let seenLifetime: number | null = null;
+// The seenLifetime the last check asked with: a figure up to it has had its
+// check, so showing it again asks nothing more (and storage that won't keep
+// the answers can't start a loop of checks).
+let checkedLifetime: number | null = null;
+// The account's games known scored, to tell what a storage event changed.
+let knownScored = new Set<string>();
 // The projected view per confirmed figure, so its identity holds while
 // nothing changes (the account menu animates on a new one).
 const views = new WeakMap<
   object,
-  { xp: number; config: ProgressionConfig; view: ProvisionalView<unknown> }
+  { key: string; config: ProgressionConfig; view: ProvisionalView<unknown> }
 >();
 let inFlight: Promise<void> | null = null;
 let again = false;
 let timer: ReturnType<typeof setInterval> | null = null;
 let polls = 0;
-let lastCheckAt = 0;
 let removeListeners: (() => void) | null = null;
+
+/** Whether this publicId is the signed-in account the store follows. */
+export function isOwnAccount(publicId: string | null | undefined): boolean {
+  return deps !== null && !!publicId && publicId === account;
+}
 
 function now(): number {
   return deps?.now?.() ?? Date.now();
 }
 
-function seen(confirmed: object): number {
-  let at = seenAt.get(confirmed);
-  if (at === undefined) {
-    at = ++seq;
-    seenAt.set(confirmed, at);
-  }
-  return at;
+function noteSeen(lifetimeXp: number): void {
+  if (!Number.isFinite(lifetimeXp)) return;
+  seenLifetime =
+    seenLifetime === null ? lifetimeXp : Math.max(seenLifetime, lifetimeXp);
 }
 
 /**
- * The player's progress as it should show: projected with their pending
- * provisional XP when `publicId` is the signed-in account and the pending
- * games are known to be unscored, else `confirmed` as it is. Only ever for
- * the player's own progress: anyone else's publicId gets it unchanged.
+ * The player's progress as it should show: with the XP of their pending
+ * games when `publicId` is the signed-in account, else `confirmed` as it is.
+ * Scored games the figure doesn't include yet are confirmed XP; unscored ones
+ * make it provisional. Only ever for the player's own progress: anyone
+ * else's publicId gets it unchanged.
  */
 export function provisionalProgress<P extends ProgressLike>(
   publicId: string | null | undefined,
@@ -445,31 +592,36 @@ export function provisionalProgress<P extends ProgressLike>(
     confirmedLevel: confirmed.level,
   };
   if (deps === null || !publicId || publicId !== account) return plain;
+  noteSeen(confirmed.lifetimeXp);
   const entries = readPendingXp(publicId, now());
   if (entries.length === 0) return plain;
-  const seenSeq = seen(confirmed);
-  const check = verified;
-  if (check === null || check.account !== publicId || seenSeq >= check.seq) {
-    // Read since the last check: it may already count a pending game.
-    scheduleCheck();
+  const { scored, unscored, unverified } = pendingXpFor(confirmed, entries);
+  if (unverified && newerThanCheck(confirmed.lifetimeXp)) scheduleCheck();
+  if (config === null) {
+    ensureConfig();
     return plain;
   }
-  const xp = entries
-    .filter((e) => check.pending.has(e.gameId))
-    .reduce((sum, e) => sum + e.xp, 0);
-  if (config === null || xp <= 0) return plain;
+  const scoredXp = sumXp(scored);
+  const unscoredXp = sumXp(unscored);
+  if (scoredXp <= 0 && unscoredXp <= 0) return plain;
+  const key = `${scoredXp}:${unscoredXp}`;
   const cached = views.get(confirmed);
-  if (cached !== undefined && cached.xp === xp && cached.config === config) {
+  if (cached !== undefined && cached.key === key && cached.config === config) {
     return cached.view as ProvisionalView<P>;
   }
-  const projected = projectPendingXp(confirmed, xp, config);
-  if (projected === null) return plain;
+  // The scored games first: the API's own figure, confirmed.
+  const base: ProgressLike =
+    (scoredXp > 0 ? projectPendingXp(confirmed, scoredXp, config) : null) ??
+    confirmed;
+  const projected =
+    unscoredXp > 0 ? projectPendingXp(base, unscoredXp, config) : null;
+  if (base === confirmed && projected === null) return plain;
   const view: ProvisionalView<P> = {
-    progress: { ...confirmed, ...projected },
-    provisional: true,
-    confirmedLevel: confirmed.level,
+    progress: { ...confirmed, ...base, ...projected },
+    provisional: projected !== null,
+    confirmedLevel: base.level,
   };
-  views.set(confirmed, { xp, config, view });
+  views.set(confirmed, { key, config, view });
   return view;
 }
 
@@ -481,79 +633,83 @@ function emitChanged(scored: readonly string[] = []): void {
   );
 }
 
-/**
- * Whether provisionalProgress() has the final say on `confirmed`: there is
- * nothing pending, or a check has run since it was read. Until then a figure
- * read since the last check shows unprojected while that check runs.
- */
-export function provisionalSettled(
-  publicId: string | null | undefined,
-  confirmed: object,
-): boolean {
-  if (deps === null || !publicId || publicId !== account) return true;
-  if (readPendingXp(publicId, now()).length === 0) return true;
-  const check = verified;
-  return (
-    check !== null && check.account === publicId && seen(confirmed) < check.seq
+function broadcastUserMe(me: UserMeResponse): void {
+  document.dispatchEvent(
+    new CustomEvent("userMeResponse", {
+      detail: me,
+      bubbles: true,
+      cancelable: true,
+    }),
+  );
+}
+
+function ensureConfig(): void {
+  const d = deps;
+  if (d === null || config !== null || configLoading) return;
+  configLoading = true;
+  void d
+    .loadConfig()
+    .catch(() => false as const)
+    .then((loaded) => {
+      if (deps !== d) return;
+      configLoading = false;
+      // No config: no projection (an older API, or progression off).
+      if (loaded === false) return;
+      config = loaded;
+      emitChanged();
+    });
+}
+
+// Whether a figure with this lifetime XP is newer than the last check.
+function newerThanCheck(lifetimeXp: number): boolean {
+  return checkedLifetime === null || lifetimeXp > checkedLifetime;
+}
+
+function scheduleCheck(): void {
+  // Out of the render that asked. Not behind a check already running: the
+  // render after it asks again if the figure is still newer.
+  void Promise.resolve().then(() => {
+    if (inFlight === null) void runCheck();
+  });
+}
+
+function readCheckedAt(publicId: string): number | null {
+  try {
+    const parsed: unknown = JSON.parse(
+      localStorage.getItem(PENDING_XP_CHECKED_KEY) ?? "{}",
+    );
+    const at = (parsed as Record<string, unknown> | null)?.[publicId];
+    return typeof at === "number" && Number.isFinite(at) ? at : null;
+  } catch {
+    return null;
+  }
+}
+
+function writeCheckedAt(publicId: string, at: number): void {
+  try {
+    localStorage.setItem(
+      PENDING_XP_CHECKED_KEY,
+      JSON.stringify({ [publicId]: at }),
+    );
+  } catch {
+    // Blocked storage: other tabs just ask too.
+  }
+}
+
+function scoredIds(publicId: string): Set<string> {
+  return new Set(
+    readPendingXp(publicId, now())
+      .filter((e) => e.scored !== undefined)
+      .map((e) => e.gameId),
   );
 }
 
 /**
- * For a view of progress read once (a modal's own read, not /users/@me),
- * which has to be read again when a pending game is scored: from then until
- * the new read lands and settles, the last provisional view stays on screen,
- * so the level never dips back to the figure from before the game.
- */
-export class ProvisionalHold<P extends ProgressLike> {
-  private last: ProvisionalView<P> | null = null;
-  private held: ProvisionalView<P> | null = null;
-  // The progress the held view was projected from: still showing it means
-  // the new read hasn't landed.
-  private heldFrom: P | null = null;
-
-  view(publicId: string | null | undefined, confirmed: P): ProvisionalView<P> {
-    const view = provisionalProgress(publicId, confirmed);
-    if (this.held !== null) {
-      const waiting =
-        confirmed === this.heldFrom ||
-        (!view.provisional && !provisionalSettled(publicId, confirmed));
-      if (waiting) return this.held;
-      this.held = null;
-      this.heldFrom = null;
-    }
-    this.last = view;
-    return view;
-  }
-
-  /**
-   * A pending game was scored and `confirmed` is about to be read again.
-   * True when what shows was provisional, so it's held (and worth the read).
-   */
-  hold(confirmed: P): boolean {
-    if (this.last?.provisional !== true) return false;
-    this.held = this.last;
-    this.heldFrom = confirmed;
-    return true;
-  }
-
-  /** Shows whatever the progress now gives (a new opening, a failed read). */
-  reset(): void {
-    this.last = null;
-    this.held = null;
-    this.heldFrom = null;
-  }
-}
-
-function scheduleCheck(): void {
-  // Out of the render that asked.
-  void Promise.resolve().then(() => runCheck());
-}
-
-/**
- * Asks the API about every pending game: one it has scored (or found
- * ineligible) is cleared, and /users/@me re-read so the confirmed figure
- * shows; a 404 keeps it pending, and counted. Anything else (a failure, a
- * refused session) keeps it, uncounted, until the next check or its expiry.
+ * Asks the API about the account's unscored games. A game it has scored is
+ * marked scored, and /users/@me read afresh; before that is broadcast, the
+ * games still unscored are asked about again, so the new figure counts them
+ * from the start (no dip). Correctness never depends on that read: a scored
+ * game counts onto any figure that doesn't include it yet.
  */
 export function runCheck(): Promise<void> {
   if (deps === null) return Promise.resolve();
@@ -564,51 +720,47 @@ export function runCheck(): Promise<void> {
   const d = deps;
   const forAccount = account;
   if (forAccount === null) return Promise.resolve();
-  const entries = readPendingXp(forAccount, now());
-  if (entries.length === 0) {
+  const unscored = () =>
+    readPendingXp(forAccount, now()).filter((e) => e.scored === undefined);
+  const first = unscored();
+  if (first.length === 0) {
     syncPolling();
     return Promise.resolve();
   }
-  const checkSeq = ++seq;
-  lastCheckAt = now();
+  writeCheckedAt(forAccount, now());
   const run = (async () => {
-    const [loaded, answers] = await Promise.all([
-      d.loadConfig().catch(() => false as const),
-      Promise.all(
-        entries.map((e) =>
-          d
-            .fetchXp(e.gameId)
-            .catch((): GameXpFetchResult => ({ status: "pending" })),
-        ),
-      ),
-    ]);
+    ensureConfig();
+    checkedLifetime = seenLifetime;
+    const asked = await askAbout(first, seenLifetime, d.fetchXp);
     if (deps !== d || account !== forAccount) return;
-    const pending = new Set<string>();
-    const answered: string[] = [];
-    entries.forEach((entry, i) => {
-      const answer = answers[i];
-      if (answer.status === "ok") answered.push(entry.gameId);
-      else if (answer.status === "pending" && answer.notFound === true) {
-        pending.add(entry.gameId);
-      }
-    });
-    // The confirmed figure first, so the level never dips to the old one
-    // between the entry going and the new figure arriving.
-    let scored: string[] = [];
-    if (answered.length > 0) {
-      const refreshed = await d.refreshUserMe().catch(() => false);
+    applyVerdicts(forAccount, asked.verdicts, now());
+    const scoredIn = (verdicts: Map<string, Verdict>) =>
+      [...verdicts]
+        .filter(([, v]) => v.kind === "scored")
+        .map(([gameId]) => gameId);
+    const scored = scoredIn(asked.verdicts);
+    let fresh: UserMeResponse | false = false;
+    if (scored.length > 0) {
+      fresh = await d.readUserMe().catch(() => false as const);
       if (deps !== d || account !== forAccount) return;
-      if (refreshed === false) {
-        // No new figure: the one showing still leaves these games out, so
-        // they keep counting until a later check gets one.
-        for (const gameId of answered) pending.add(gameId);
-      } else {
-        clearPendingXp(forAccount, answered, now());
-        scored = answered;
+      if (fresh !== false && fresh.player.publicId !== forAccount) {
+        fresh = false;
+      }
+      const lifetime = fresh === false ? undefined : fresh.player.progress;
+      if (lifetime !== undefined && !asked.rateLimited) {
+        noteSeen(lifetime.lifetimeXp);
+        const rest = unscored();
+        if (rest.length > 0) {
+          checkedLifetime = seenLifetime;
+          const second = await askAbout(rest, seenLifetime, d.fetchXp);
+          if (deps !== d || account !== forAccount) return;
+          applyVerdicts(forAccount, second.verdicts, now());
+          scored.push(...scoredIn(second.verdicts));
+        }
       }
     }
-    config = loaded === false ? null : loaded;
-    verified = { account: forAccount, seq: checkSeq, pending };
+    knownScored = scoredIds(forAccount);
+    if (fresh !== false) broadcastUserMe(fresh);
     emitChanged(scored);
     syncPolling();
   })();
@@ -635,13 +787,13 @@ function pollMs(): number {
   return deps?.pollMs ?? PROVISIONAL_POLL_MS;
 }
 
-// Polls while the account has games pending, up to the cap.
+// Polls while the account has unscored games, up to the cap.
 function syncPolling(): void {
   const want =
     deps !== null &&
     account !== null &&
     polls < maxPolls() &&
-    readPendingXp(account, now()).length > 0;
+    readPendingXp(account, now()).some((e) => e.scored === undefined);
   if (want && timer === null) {
     timer = setInterval(poll, pollMs());
   } else if (!want && timer !== null) {
@@ -651,8 +803,11 @@ function syncPolling(): void {
 }
 
 function poll(): void {
-  // Only while someone can see it.
-  if (document.visibilityState !== "visible") return;
+  // Only while someone can see it, and not when another tab just asked (its
+  // answers arrive through storage).
+  if (account === null || document.visibilityState !== "visible") return;
+  const checkedAt = readCheckedAt(account);
+  if (checkedAt !== null && now() - checkedAt < pollMs()) return;
   polls++;
   void runCheck();
   if (polls >= maxPolls()) syncPolling();
@@ -660,13 +815,38 @@ function poll(): void {
 
 function onVisibilityChange(): void {
   // Back on the page after a while: ask now rather than at the next tick.
-  if (timer !== null && now() - lastCheckAt >= pollMs()) poll();
+  if (timer !== null) poll();
+}
+
+// Another tab changed the pending games: show it, and read the account
+// afresh when it marked one scored.
+function onStorage(event: StorageEvent): void {
+  if (event.key !== PENDING_XP_KEY && event.key !== null) return;
+  const d = deps;
+  const forAccount = account;
+  if (d === null || forAccount === null) return;
+  const scored = scoredIds(forAccount);
+  const newly = [...scored].filter((id) => !knownScored.has(id));
+  knownScored = scored;
+  emitChanged(newly);
+  syncPolling();
+  if (newly.length === 0) return;
+  void d
+    .readUserMe()
+    .catch(() => false as const)
+    .then((fresh) => {
+      if (deps !== d || account !== forAccount || fresh === false) return;
+      if (fresh.player.publicId !== forAccount) return;
+      broadcastUserMe(fresh);
+    });
 }
 
 function setAccount(next: string | null): void {
   if (next === account) return;
   account = next;
-  verified = null;
+  seenLifetime = null;
+  checkedLifetime = null;
+  knownScored = next === null ? new Set() : scoredIds(next);
   polls = 0;
   emitChanged();
 }
@@ -678,10 +858,21 @@ function onUserMe(event: Event): void {
     syncPolling();
     return;
   }
-  // Seen now, before the check below: that check's answers vouch for it.
   const progress = me === false ? undefined : me?.player?.progress;
-  if (progress) seen(progress);
-  void runCheck();
+  if (progress !== undefined) noteSeen(progress.lifetimeXp);
+  ensureConfig();
+  // Asked about only when this figure is newer than what the last check
+  // vouched for (or nothing has been asked yet).
+  const entries = readPendingXp(account, now());
+  if (
+    progress !== undefined &&
+    pendingXpFor(progress, entries).unverified &&
+    newerThanCheck(progress.lifetimeXp)
+  ) {
+    void runCheck();
+  } else {
+    syncPolling();
+  }
 }
 
 function onSessionCleared(): void {
@@ -700,10 +891,12 @@ export function startProvisionalProgress(d: ProvisionalDeps): () => void {
   document.addEventListener("userMeResponse", onUserMe);
   document.addEventListener("session-cleared", onSessionCleared);
   document.addEventListener("visibilitychange", onVisibilityChange);
+  window.addEventListener("storage", onStorage);
   removeListeners = () => {
     document.removeEventListener("userMeResponse", onUserMe);
     document.removeEventListener("session-cleared", onSessionCleared);
     document.removeEventListener("visibilitychange", onVisibilityChange);
+    window.removeEventListener("storage", onStorage);
   };
   return stopProvisionalProgress;
 }
@@ -716,9 +909,11 @@ export function stopProvisionalProgress(): void {
   deps = null;
   account = null;
   config = null;
-  verified = null;
+  configLoading = false;
+  seenLifetime = null;
+  checkedLifetime = null;
+  knownScored = new Set();
   inFlight = null;
   again = false;
   polls = 0;
-  lastCheckAt = 0;
 }

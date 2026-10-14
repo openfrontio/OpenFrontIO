@@ -54,7 +54,6 @@ import "./PlayerProfileModal";
 import { loadPlayerProgress } from "./PlayerProgress";
 import {
   PROVISIONAL_PROGRESS_CHANGED,
-  ProvisionalHold,
   provisionalProgress,
   scoredGames,
 } from "./ProvisionalProgress";
@@ -111,9 +110,6 @@ export class AccountModal extends BaseModal {
   private progressionFor: string | null = null;
   // Bumped on every read and drop, so a superseded read is ignored.
   private progressionLoad = 0;
-  // Keeps the tab's provisional level up while a scored game's progress is
-  // read again.
-  private progressionHold = new ProvisionalHold<PublicProgress>();
   // The tab a link or caller asked for. BaseModal picks it when the tab is
   // listed at open, but the tabs wait for the account: a modal loaded after
   // the page's /users/@me broadcast doesn't know the player yet, and an
@@ -503,7 +499,7 @@ export class AccountModal extends BaseModal {
       return this.renderLoadingSpinner(translateText("common.loading"));
     }
     // With any XP still waiting to be scored, provisionally.
-    const view = this.progressionHold.view(publicId, this.progression);
+    const view = provisionalProgress(publicId, this.progression);
     return html`<profile-progression
       .progress=${view.progress}
       .confirmedLevel=${view.provisional ? view.confirmedLevel : null}
@@ -542,26 +538,20 @@ export class AccountModal extends BaseModal {
     this.progressionLoad++;
     this.progressionFor = null;
     this.progression = null;
-    this.progressionHold.reset();
   }
 
-  // A pending game was scored. The tab's progress was read before that, so
-  // without it the level would drop back to where it was before the game:
-  // read it again, with the provisional level held up until that lands.
+  // A pending game was scored: read the tab's progress again, for its
+  // history and milestones. The level holds meanwhile (and on a stale read):
+  // the scored game's XP counts onto any figure that doesn't include it yet
+  // (ProvisionalProgress.ts).
   private rereadProgression(): void {
     const publicId = this.progressionFor;
     if (publicId === null || this.progression === null) return;
     // Closed, it's read afresh at the next opening anyway.
     if (!this.isConnected || !this.isOpen()) return;
-    if (!this.progressionHold.hold(this.progression)) return;
     const load = ++this.progressionLoad;
     void loadPlayerProgress(publicId).then((progress) => {
-      if (load !== this.progressionLoad) return;
-      if (progress === null) {
-        this.progressionHold.reset();
-        this.requestUpdate();
-        return;
-      }
+      if (load !== this.progressionLoad || progress === null) return;
       this.progression = progress;
     });
   }

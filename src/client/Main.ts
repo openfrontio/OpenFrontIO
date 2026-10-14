@@ -41,7 +41,6 @@ import {
 } from "./BootInterrupts";
 import type { JoinLobbyResult } from "./ClientGameRunner";
 import {
-  broadcastFreshUserMe,
   getPlayerCosmeticsRefs,
   handlePurchaseReturn,
   translateCosmetic,
@@ -741,7 +740,10 @@ class Client {
     startProvisionalProgress({
       fetchXp: (gameId) => fetchMyGameXp(gameId),
       loadConfig: fetchProgressionConfig,
-      refreshUserMe: broadcastFreshUserMe,
+      readUserMe: async () => {
+        invalidateUserMe();
+        return getUserMe();
+      },
     });
 
     const onUserMe = async (userMeResponse: UserMeResponse | false) => {

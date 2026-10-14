@@ -355,7 +355,7 @@ describe("Player profile Progression tab", () => {
           })),
           flares: [],
         }),
-        refreshUserMe: async () => undefined,
+        readUserMe: async () => false as const,
       });
       recordPendingXp("abcd1234", { gameId: "g1", xp: 250 });
       document.dispatchEvent(
