@@ -20,6 +20,7 @@ import { PseudoRandom } from "@openfront/engine-lib/PseudoRandom";
 import { ScheduledPublicGameType } from "@openfront/shared/WireSchemas";
 import { logger } from "./Logger";
 import { getMapLandTiles } from "./MapLandTiles";
+import { MapWeightOverrides } from "./MapWeights";
 
 const log = logger.child({});
 
@@ -133,6 +134,22 @@ export class MapPlaylist {
 
   // Scheduled public games handed out so far, across all types.
   private scheduled = 0;
+
+  // Rotation weight overrides from the API (see MapWeights.ts), spread over
+  // each map's info.json frequencies when a playlist is built.
+  private weightOverrides: MapWeightOverrides = {};
+
+  // Queued playlists were built from the old weights, so drop them: a map
+  // pulled to 0 must stop appearing now, not after a full rotation.
+  public setWeightOverrides(overrides: MapWeightOverrides) {
+    if (JSON.stringify(overrides) === JSON.stringify(this.weightOverrides)) {
+      return;
+    }
+    this.weightOverrides = overrides;
+    for (const key of Object.keys(this.playlists) as PlaylistKey[]) {
+      this.playlists[key] = [];
+    }
+  }
 
   public async gameConfig(type: ScheduledPublicGameType): Promise<GameConfig> {
     this.scheduled++;
@@ -635,6 +652,11 @@ export class MapPlaylist {
     if (playlist.length === 0) {
       playlist.push(...this.generateNewPlaylist(type, mode));
     }
+    if (playlist.length === 0) {
+      // The overrides zeroed every map in this queue; fall back to the build.
+      log.warn(`Map weight overrides empty the ${key} playlist, ignoring them`);
+      playlist.push(...this.generateNewPlaylist(type, mode, {}));
+    }
     return playlist.shift()!;
   }
 
@@ -651,8 +673,9 @@ export class MapPlaylist {
   private generateNewPlaylist(
     type: ScheduledPublicGameType,
     mode?: GameMode,
+    overrides: MapWeightOverrides = this.weightOverrides,
   ): GameMapType[] {
-    const maps = this.buildMapsList(type, mode);
+    const maps = this.buildMapsList(type, mode, overrides);
     const rand = new PseudoRandom(Date.now());
     const playlist: GameMapType[] = [];
 
@@ -702,10 +725,12 @@ export class MapPlaylist {
 
   private buildMapsList(
     type: ScheduledPublicGameType,
-    mode?: GameMode,
+    mode: GameMode | undefined,
+    overrides: MapWeightOverrides,
   ): GameMapType[] {
     const maps: GameMapType[] = [];
-    allMaps.forEach((mapInfo) => {
+    allMaps.forEach((buildInfo) => {
+      const mapInfo = { ...buildInfo, ...overrides[buildInfo.type] };
       const map = mapInfo.type;
       // Use per-mode frequency if set (>= 0), otherwise fall back to multiplayerFrequency.
       let freq: number;
