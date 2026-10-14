@@ -2017,6 +2017,7 @@
     "unlocked_cosmetic": "Cosmetic",
     "xp_bar_label": "Level progress",
     "xp_before_levels": "Played before levels existed, so there's no XP for this game.",
+    "xp_confirmed": "XP confirmed",
     "xp_heading": "XP earned",
     "xp_minus": "−{xp}",
     "xp_plus": "+{xp}",
