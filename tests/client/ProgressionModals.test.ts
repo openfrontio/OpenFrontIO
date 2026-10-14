@@ -89,6 +89,10 @@ vi.mock(
 
 import { GameType } from "@openfront/engine-api/game/GameTypes";
 import { GameStatsModal } from "../../src/client/GameStatsModal";
+// The stats modal fetches the XP card's code when it first shows a game;
+// loaded up front here so the waits below are about the card, not the
+// test's first-time transform of that module (over a second in a full run).
+import "../../src/client/components/PastGameXpCard";
 import { modalRouter } from "../../src/client/ModalRouter";
 import { initNavigation } from "../../src/client/Navigation";
 import { PlayerProfileModal } from "../../src/client/PlayerProfileModal";
