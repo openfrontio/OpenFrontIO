@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { getDesktopSessionState } from "../src/client/Auth";
 import { subscribeDesktopSessionRecovery } from "../src/client/DesktopSessionRecovery";

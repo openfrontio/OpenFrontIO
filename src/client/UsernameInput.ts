@@ -417,20 +417,26 @@ export class UsernameInput extends LitElement {
     // ended... resubscribe" is the sentence that convinces them the game hid
     // one. This notice is the first thing they see after the month ends, so
     // it carries the sign-off and marks it shown below, or the boot sequencer
-    // would say it all again next launch.
-    const afterGrant =
-      steamGrantEnded(
-        parseSteamGrantStore(localStorage.getItem(STEAM_GRANT_NOTICE_KEY)),
-        this.userMe,
-        Date.now(),
-      ) !== null;
-    const key = afterGrant
+    // would say it all again next launch. An admin comp or Discord-role grant
+    // with an end date never subscribed either: it gets the same shape
+    // without naming Steam or who granted it.
+    const endedGrant = steamGrantEnded(
+      parseSteamGrantStore(localStorage.getItem(STEAM_GRANT_NOTICE_KEY)),
+      this.userMe,
+      Date.now(),
+    );
+    const afterGrant = endedGrant !== null;
+    const key = !afterGrant
       ? grace.atRisk
-        ? "username.lapse_notice_after_grant_at_risk"
-        : "username.lapse_notice_after_grant"
-      : grace.atRisk
         ? "username.lapse_notice_at_risk"
-        : "username.lapse_notice";
+        : "username.lapse_notice"
+      : endedGrant.steam
+        ? grace.atRisk
+          ? "username.lapse_notice_after_grant_at_risk"
+          : "username.lapse_notice_after_grant"
+        : grace.atRisk
+          ? "username.lapse_notice_after_free_access_at_risk"
+          : "username.lapse_notice_after_free_access";
     const message = translateText(key, {
       name: grace.name,
       date: formatClaimDate(grace.expiresAt),

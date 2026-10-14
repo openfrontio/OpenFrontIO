@@ -140,6 +140,9 @@ function userMe(
 ): UserMeResponse {
   return {
     user,
+    steamLicence: false,
+    steamLicenceSince: null,
+    noticesSeen: [],
     player: {
       publicId: "player-id",
       adfree: false,
@@ -173,7 +176,7 @@ function installClanSelection(tag: string | null) {
   return input;
 }
 
-async function openAndJoin(mode: "1v1" | "2v2") {
+async function openAndJoin(mode: "1v1" | "2v2" | "clanwars") {
   const modal = new MatchmakingModal();
   modal.mode = mode;
   modal.open();
@@ -236,6 +239,67 @@ describe("MatchmakingModal clan-aware joins", () => {
     expect(message).toEqual({ type: "join", jwt: "play-token" });
     expect(message).not.toHaveProperty("clanTag");
   });
+
+  it("queues clan wars for the selected current membership", async () => {
+    apiMocks.getUserMe.mockResolvedValue(userMe(["ALLY", "BETA"]));
+    installClanSelection("beta");
+
+    const { socket, message } = await openAndJoin("clanwars");
+
+    expect(socket.url).toContain("mode=clanwars");
+    expect(message).toEqual({
+      type: "join",
+      jwt: "play-token",
+      clanTag: "BETA",
+    });
+  });
+
+  it.each([
+    ["clanwars", { count: 5, clanCount: 2 }, true],
+    ["2v2", { count: 5 }, false],
+  ] as const)(
+    "shows how many are queued for the player's clan in %s",
+    async (mode, broadcast, showsClan) => {
+      apiMocks.getUserMe.mockResolvedValue(userMe(["ALLY"]));
+      installClanSelection("ALLY");
+      const { modal, socket } = await openAndJoin(mode);
+      document.body.appendChild(modal);
+
+      socket.onmessage!({
+        data: JSON.stringify({ type: "queue-size", ...broadcast }),
+      });
+      await modal.updateComplete;
+
+      expect(modal.textContent).toContain("matchmaking_modal.queue_size");
+      expect(
+        modal.textContent?.includes("matchmaking_modal.clan_queue_size"),
+      ).toBe(showsClan);
+      modal.remove();
+    },
+  );
+
+  it.each([null, "STALE"])(
+    "does not queue clan wars without a selected current membership (%s)",
+    async (tag) => {
+      apiMocks.getUserMe.mockResolvedValue(userMe(["ALLY"]));
+      installClanSelection(tag);
+      const messages: string[] = [];
+      const onMessage = (e: Event) =>
+        messages.push((e as CustomEvent<{ message: string }>).detail.message);
+      window.addEventListener("show-message", onMessage);
+
+      const modal = new MatchmakingModal();
+      modal.mode = "clanwars";
+      modal.open();
+      await vi.waitFor(() =>
+        expect(messages).toEqual(["matchmaking_modal.clan_required"]),
+      );
+      window.removeEventListener("show-message", onMessage);
+
+      expect(sockets).toHaveLength(0);
+      expect(modal.isOpen()).toBe(false);
+    },
+  );
 
   it("refreshes memberships and clears a stale selection on invalid_clan", async () => {
     apiMocks.getUserMe

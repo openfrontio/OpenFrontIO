@@ -22,6 +22,10 @@ import { describeSocketClose } from "./SocketClose";
 import type { UsernameInput } from "./UsernameInput";
 import { translateText } from "./Utils";
 
+// The ranked queues. Same strings as RankedType, the API's `mode` param and
+// the `/?requeue=` value.
+export type MatchmakingMode = "1v1" | "2v2" | "ffa" | "clanwars";
+
 type MatchmakingJoin = {
   type: "join";
   jwt: string;
@@ -38,7 +42,7 @@ export class MatchmakingModal extends BaseModal {
   private intentionalClose = false;
   // Which queue to join; set by Main from the open-matchmaking event
   // before the modal opens.
-  public mode: "1v1" | "2v2" = "1v1";
+  public mode: MatchmakingMode = "1v1";
   @state() private connected = false;
   @state() private socket: WebSocket | null = null;
   @state() private gameID: string | null = null;
@@ -47,7 +51,10 @@ export class MatchmakingModal extends BaseModal {
   // the service decides: it gates ranked on trust behind a flag, so the
   // client never pre-checks trustTier.
   @state() private notTrusted = false;
-  @state() private queueSize: number | null = null;
+  // The lobby's latest queue-size broadcast. In clan wars it also counts
+  // the players queued for this player's clan, themselves included.
+  @state() private queueSize: { count: number; clanCount?: number } | null =
+    null;
   private selectedClanTag: string | null = null;
   private elo: number | string = "...";
   private readonly gameStartAlert = new GameStartAlertController(
@@ -68,7 +75,11 @@ export class MatchmakingModal extends BaseModal {
     const title = translateText(
       this.mode === "2v2"
         ? "matchmaking_modal.title_2v2"
-        : "matchmaking_modal.title",
+        : this.mode === "ffa"
+          ? "matchmaking_modal.title_ffa"
+          : this.mode === "clanwars"
+            ? "matchmaking_modal.title_clanwars"
+            : "matchmaking_modal.title",
     );
     return modalHeader({
       titleContent: html`<span class="${DEFAULT_TITLE_CLASS}">${title}</span>
@@ -79,9 +90,14 @@ export class MatchmakingModal extends BaseModal {
   }
 
   protected renderBody() {
+    // Clan wars rates the clan, so show who the player is playing for instead.
     const eloDisplay = html`
       <p class="text-center mt-2 mb-4 text-white/60">
-        ${translateText("matchmaking_modal.elo", { elo: this.elo })}
+        ${this.mode === "clanwars"
+          ? translateText("matchmaking_modal.clanwars_clan", {
+              clan: this.selectedClanTag ?? "",
+            })
+          : translateText("matchmaking_modal.elo", { elo: this.elo })}
       </p>
     `;
     return html`
@@ -136,9 +152,19 @@ export class MatchmakingModal extends BaseModal {
           ? html`
               <p class="text-center text-white/60">
                 ${translateText("matchmaking_modal.queue_size", {
-                  count: this.queueSize,
+                  count: this.queueSize.count,
                 })}
               </p>
+              ${this.queueSize.clanCount !== undefined
+                ? html`
+                    <p class="text-center text-white/60">
+                      ${translateText("matchmaking_modal.clan_queue_size", {
+                        count: this.queueSize.clanCount,
+                        clan: this.selectedClanTag ?? "",
+                      })}
+                    </p>
+                  `
+                : ""}
             `
           : ""}
         ${this.renderLoadingSpinner(
@@ -216,7 +242,7 @@ export class MatchmakingModal extends BaseModal {
   }
 
   private selectedClanFrom(userMe: UserMeResponse): string | null {
-    if (this.mode !== "2v2") {
+    if (this.mode !== "2v2" && this.mode !== "clanwars") {
       return null;
     }
     const selectedTag = document
@@ -352,7 +378,7 @@ export class MatchmakingModal extends BaseModal {
       this.resetWatchdog();
       const data = JSON.parse(event.data);
       if (data.type === "queue-size") {
-        this.queueSize = data.count;
+        this.queueSize = { count: data.count, clanCount: data.clanCount };
         return;
       }
       if (data.type === "match-assignment") {
@@ -491,9 +517,18 @@ export class MatchmakingModal extends BaseModal {
     const row =
       this.mode === "2v2"
         ? userMe.player.leaderboard?.twoVtwo
-        : userMe.player.leaderboard?.oneVone;
+        : this.mode === "ffa"
+          ? userMe.player.leaderboard?.ffa
+          : userMe.player.leaderboard?.oneVone;
     this.elo = row?.elo ?? translateText("matchmaking_modal.no_elo");
     this.selectedClanTag = this.selectedClanFrom(userMe);
+    // Clan wars is played for a clan: without one of the player's own clans
+    // selected the service would only refuse the join.
+    if (this.mode === "clanwars" && this.selectedClanTag === null) {
+      this.close();
+      this.showMatchmakingError("matchmaking_modal.clan_required");
+      return;
+    }
 
     this.connected = false;
     this.gameID = null;

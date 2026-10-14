@@ -1,6 +1,10 @@
 import { Tick } from "@openfront/engine-api/game/GameTypes";
 import { ClientID, Winner } from "@openfront/engine-api/Schemas";
 import { TokenPayload } from "@openfront/shared/ApiSchemas";
+import {
+  type LevelBadge,
+  packLevelBadge,
+} from "@openfront/shared/LevelBadgeWire";
 import { ClientPlatform, PlayerCosmetics } from "@openfront/shared/WireSchemas";
 import WebSocket from "ws";
 
@@ -11,6 +15,10 @@ export class Client {
 
   // This client's winner vote, keyed on winner and stats (Consensus.voteKey).
   public reportedVote: { winner: Winner; key: string } | null = null;
+
+  // levelBadge as the lobby roster carries it (ClientInfo.levelBadge), packed
+  // once here rather than for every entry of every per-recipient broadcast.
+  public readonly wireLevelBadge: number | undefined;
 
   constructor(
     public readonly clientID: ClientID,
@@ -33,5 +41,11 @@ export class Client {
     public readonly trusted: boolean = false,
     // Client-reported and unverified; metric dimension only.
     public readonly platform: ClientPlatform | "unknown" = "unknown",
-  ) {}
+    // From the server's /users/@me lookup at join (levelBadgeForPlayer);
+    // undefined for guests, players who hide their level, or when the API sent
+    // no progress. Display-only.
+    public readonly levelBadge: LevelBadge | undefined = undefined,
+  ) {
+    this.wireLevelBadge = packLevelBadge(levelBadge);
+  }
 }

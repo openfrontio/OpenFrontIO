@@ -29,38 +29,30 @@ export function versionedViewerUrl(gameID: string): Promise<string | null> {
 }
 
 /**
- * Games the viewer sent back to the client-side replay. Without this the
- * "watch the old replay" button would open the game page, and
- * JoinLobbyModal would send it straight back to the viewer. Kept per tab,
- * so the next visit tries the viewer again.
+ * Marks a game page the viewer sent back to the client-side replay.
+ * Without it the "watch the old replay" button would open the game page,
+ * and JoinLobbyModal would send it straight back to the viewer. It's in the
+ * URL rather than in storage, which a tab may not have, so the fallback
+ * can't loop. Opening the game from anywhere else tries the viewer again.
+ * The value is the game's ID, so another game opened from this page (typed
+ * into the join modal) still gets the viewer.
  */
-const CLASSIC = "openfront.replay.classic";
+const CLASSIC_PARAM = "classic-replay";
 
-function classicGames(): Set<string> {
-  try {
-    return new Set(
-      JSON.parse(sessionStorage.getItem(CLASSIC) ?? "[]") as string[],
-    );
-  } catch {
-    return new Set();
-  }
+function sentBackToClassic(gameID: string): boolean {
+  return (
+    new URLSearchParams(window.location.search).get(CLASSIC_PARAM) === gameID
+  );
 }
 
 /** Where the "watch the old replay" button goes (the game's page). */
 export function classicReplayHref(gameID: string): string {
-  const games = classicGames();
-  games.add(gameID);
-  try {
-    sessionStorage.setItem(CLASSIC, JSON.stringify([...games]));
-  } catch {
-    // A tab without storage just gets routed back to the viewer.
-  }
   // The /game/<id> shape only exists on the game-server origin. On a replay
   // shell the game's page is replay.<domain>/<gameId>.
-  if (isReplayShellHost(window.location.hostname)) {
-    return `/${encodeURIComponent(gameID)}`;
-  }
-  return currentPagePath(ClientEnv.gamePath(gameID));
+  const page = isReplayShellHost(window.location.hostname)
+    ? `/${encodeURIComponent(gameID)}`
+    : currentPagePath(ClientEnv.gamePath(gameID));
+  return `${page}?${CLASSIC_PARAM}=${encodeURIComponent(gameID)}`;
 }
 
 /** The page URL that opens the viewer for a game. */
@@ -76,7 +68,7 @@ export function replayViewerHref(gameID: string): string {
  */
 export function openReplayViewer(gameID: string, record: GameRecord): boolean {
   if (!new UserSettings().replayViewer()) return false;
-  if (classicGames().has(gameID)) return false;
+  if (sentBackToClassic(gameID)) return false;
   handOverRecord(gameID, record);
   const href = replayViewerHref(gameID);
   // Main opens the viewer on hashchange. Setting the same hash again

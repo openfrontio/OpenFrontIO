@@ -1,4 +1,4 @@
-import { ClientID } from "../Schemas";
+import { AllPlayersStats, ClientID } from "../Schemas";
 
 import { TileRef } from "./GameMap";
 import { GameUpdate, GameUpdateType } from "./GameUpdates";
@@ -136,7 +136,15 @@ export enum GameMode {
 export enum RankedType {
   OneVOne = "1v1",
   TwoVTwo = "2v2",
+  FreeForAll = "ffa",
+  ClanWars = "clanwars",
 }
+
+// Ranked FFA lobby size. The API's matcher assigns between these many players
+// and only rates a game whose roster is in this range, so a match that ends
+// up with fewer is cancelled before it starts.
+export const RANKED_FFA_MIN_PLAYERS = 4;
+export const RANKED_FFA_MAX_PLAYERS = 10;
 
 export const isGameMode = (value: unknown): value is GameMode =>
   isEnumValue(GameMode, value);
@@ -391,6 +399,23 @@ export interface PlayerProfile {
 
 export interface PlayerBorderTiles {
   borderTiles: ReadonlySet<TileRef>;
+}
+
+/**
+ * The humans' stats as they stand right now, for the client's provisional XP
+ * figure (src/client/ProvisionalXp.ts): the player's own XP is scored from
+ * the same per-player stats the end-of-game record carries, and in FFA from
+ * who went out before them. Built by the engine's humanStatsSnapshot().
+ */
+export interface HumanStatsSnapshot {
+  // The tick the snapshot was taken at.
+  tick: number;
+  // Every human's stats, keyed by clientID: the object the archived record
+  // carries per player (players who never spawned have none).
+  stats: AllPlayersStats;
+  // Humans whose connection is currently marked lost: clientID -> the tick
+  // it was. The API reads a player who never came back as having left then.
+  disconnectedAt: Record<ClientID, number>;
 }
 
 export interface AllianceInfo {

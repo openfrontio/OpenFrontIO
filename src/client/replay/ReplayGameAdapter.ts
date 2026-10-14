@@ -316,7 +316,7 @@ export class ReplayGameView {
   /**
    * Point the view at a decoded frame. The HUD updates about once a second
    * and frames come ten times faster, so events are kept until the HUD
-   * asks for them. A seek clears them, since events from before a jump
+   * asks for them (or until endHudTick). A seek clears them, since events from before a jump
    * aren't recent anymore. `inSpawnPhase` comes from the frame builder,
    * `landChange` from ReplayTerrain.
    */
@@ -403,6 +403,15 @@ export class ReplayGameView {
     for (const [type, list] of this.pending) out[type] = list;
     this.pending.clear();
     return out;
+  }
+  /**
+   * The HUD has had its turn to read this second's events. What nobody
+   * read is dropped: the event feed skips them while the followed player
+   * is dead, and kept, they'd pile up for the rest of the replay and flood
+   * the feed when a living player is followed.
+   */
+  endHudTick(): void {
+    this.pending.clear();
   }
   playerViews(): ReplayPlayerView[] {
     return this.order;

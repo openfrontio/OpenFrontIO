@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 import { GameMapType, GameMode } from "@openfront/engine-api/game/GameTypes";
 import type { GameConfig } from "@openfront/engine-api/Schemas";
 import type {

@@ -177,7 +177,9 @@ Each nation object has:
 
 ### Layers
 
-Layers are PNG overlays rendered between terrain and territory, useful for decorations. Each layer is a separate PNG file in `assets/maps/<map_name>/` named `<id>.png`, with the same dimensions as `image.png` (the generator crops it to a multiple of 4 along with the map).
+Layers are image overlays rendered between terrain and territory, useful for decorations. Each layer is authored as a separate PNG file in `assets/maps/<map_name>/` named `<id>.png`, with the same dimensions as `image.png` (the generator crops it to a multiple of 4 along with the map).
+
+The generator does not ship the PNG. It writes two lossy WebP files (quality 90) to `../resources/maps/<map_name>/`: `<id>.webp` at full map size and `<id>.4x.webp` at `map4x` size (half width and height, box-filtered), which Compact games load instead of downscaling the full image on the device. Lossy WebP is roughly 9x smaller than PNG on photographic layers and indistinguishable at the game's nearest-neighbour rendering, but it is lossy: don't rely on exact colour values surviving the encode. Which tiles a layer covers is decided by the terrain type and the `placement` field, not by the image, so that is unaffected. The encoder is the wasm libwebp embedded in the generator so that output is byte-identical on every machine; `npm run gen-maps` passes `-tags nodynamic` to force it, and `go run .` warns if it picked up a system libwebp instead.
 
 | Field       | Required | Description                                                                                                                                           |
 | ----------- | -------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
