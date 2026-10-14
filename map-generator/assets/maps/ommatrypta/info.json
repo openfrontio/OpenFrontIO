@@ -122,5 +122,6 @@
       "alpha": 0.7,
       "nukeable": false
     }
-  ]
+  ],
+  "themes": ["scary", "fantasy"]
 }
