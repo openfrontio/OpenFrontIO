@@ -1480,6 +1480,7 @@
     "betweentwoseas": "Between Two Seas",
     "blacksea": "Black Sea",
     "bosphorusstraits": "Bosphorus Straits",
+    "brainrot": "Brain Rot",
     "branchingpaths": "Branching Paths",
     "britannia": "Britannia",
     "britanniaclassic": "Britannia (Classic)",
@@ -1554,6 +1555,7 @@
     "northamerica": "North America",
     "northwestpassage": "Northwest Passage",
     "oceania": "Oceania",
+    "ommatrypta": "Ommatrypta",
     "onion": "Onion",
     "pangaea": "Pangaea",
     "passage": "Passage",
@@ -1625,6 +1627,9 @@
     "unfavorite": "Remove from favourites"
   },
   "map_layers": {
+    "brland": "brland",
+    "eyeland": "eyeland",
+    "eyewater": "eyewater",
     "label": "label"
   },
   "marketing_consent": {
