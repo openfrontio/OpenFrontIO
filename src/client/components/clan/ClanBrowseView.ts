@@ -1,6 +1,7 @@
 import { html, LitElement } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
 import {
+  type ClanBrowseFilter,
   type ClanBrowseResponse,
   type ClanBrowseSort,
   fetchClans,
@@ -18,14 +19,27 @@ export interface BrowseState {
   page: number;
   query: string;
   sort: ClanBrowseSort;
+  filter: ClanBrowseFilter;
 }
 
 const browseSortOptions: { value: ClanBrowseSort; labelKey: string }[] = [
   { value: "random", labelKey: "clan_modal.sort_browse_random" },
   { value: "memberCount", labelKey: "clan_modal.sort_browse_members" },
   { value: "winScore", labelKey: "clan_modal.sort_browse_win_score" },
+  { value: "winScoreLow", labelKey: "clan_modal.sort_browse_win_score_low" },
+  { value: "createdAt", labelKey: "clan_modal.sort_browse_oldest" },
+  { value: "softBalance", labelKey: "clan_modal.sort_browse_richest" },
   { value: "name", labelKey: "clan_modal.sort_browse_name" },
 ];
+
+const browseFilterOptions: { value: ClanBrowseFilter; labelKey: string }[] = [
+  { value: "all", labelKey: "clan_modal.filter_browse_all" },
+  { value: "open", labelKey: "clan_modal.filter_browse_open" },
+  { value: "inviteOnly", labelKey: "clan_modal.filter_browse_invite_only" },
+];
+
+const selectClass =
+  "w-full h-full min-h-10 appearance-none pl-3 pr-9 bg-white/5 border border-white/10 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-malibu-blue/50 focus:border-malibu-blue/50 transition-all font-medium hover:bg-white/10 text-sm";
 
 @customElement("clan-browse-view")
 export class ClanBrowseView extends LitElement {
@@ -41,6 +55,7 @@ export class ClanBrowseView extends LitElement {
   @state() private browseData: ClanBrowseResponse | null = null;
   @state() private browsePage = 1;
   @state() private browseSort: ClanBrowseSort = "random";
+  @state() private browseFilter: ClanBrowseFilter = "all";
   @state() private loading = false;
   @state() private errorMsg = "";
   private searchDebounce: ReturnType<typeof setTimeout> | null = null;
@@ -55,6 +70,7 @@ export class ClanBrowseView extends LitElement {
           page: this.browsePage,
           query: this.searchQuery,
           sort: this.browseSort,
+          filter: this.browseFilter,
         } satisfies BrowseState,
         bubbles: true,
         composed: true,
@@ -77,6 +93,7 @@ export class ClanBrowseView extends LitElement {
         undefined,
         this.browseSort,
         this.pinnedBucket,
+        this.browseFilter,
       );
       if (gen !== this.asyncGeneration) return;
       if (data === false) throw new Error("fetch failed");
@@ -108,6 +125,13 @@ export class ClanBrowseView extends LitElement {
     this.loadBrowse();
   }
 
+  private onFilterChange(filter: ClanBrowseFilter) {
+    this.browseFilter = filter;
+    this.browsePage = 1;
+    this.pinnedBucket = undefined;
+    this.loadBrowse();
+  }
+
   connectedCallback() {
     super.connectedCallback();
     if (this.cachedState?.data) {
@@ -115,6 +139,7 @@ export class ClanBrowseView extends LitElement {
       this.browsePage = this.cachedState.page;
       this.searchQuery = this.cachedState.query;
       this.browseSort = this.cachedState.sort;
+      this.browseFilter = this.cachedState.filter;
       this.pinnedBucket = this.cachedState.data.bucket;
     } else {
       this.loadBrowse();
@@ -179,18 +204,43 @@ export class ClanBrowseView extends LitElement {
             </label>
             <div class="relative flex-1 sm:flex-none h-full">
               <select
+                data-browse-sort
                 aria-label=${translateText("clan_modal.sort_by")}
                 @change=${(e: Event) =>
                   this.onSortChange(
                     (e.target as HTMLSelectElement).value as ClanBrowseSort,
                   )}
-                class="w-full h-full min-h-10 appearance-none pl-3 pr-9 bg-white/5 border border-white/10 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-malibu-blue/50 focus:border-malibu-blue/50 transition-all font-medium hover:bg-white/10 text-sm"
+                class=${selectClass}
               >
                 ${sortOptions.map(
                   (opt) => html`
                     <option
                       value=${opt.value}
                       .selected=${opt.value === shownSort}
+                      class="bg-neutral-900"
+                    >
+                      ${translateText(opt.labelKey)}
+                    </option>
+                  `,
+                )}
+              </select>
+              ${renderSelectChevron()}
+            </div>
+            <div class="relative flex-1 sm:flex-none h-full">
+              <select
+                data-browse-filter
+                aria-label=${translateText("clan_modal.filter_browse_label")}
+                @change=${(e: Event) =>
+                  this.onFilterChange(
+                    (e.target as HTMLSelectElement).value as ClanBrowseFilter,
+                  )}
+                class=${selectClass}
+              >
+                ${browseFilterOptions.map(
+                  (opt) => html`
+                    <option
+                      value=${opt.value}
+                      .selected=${opt.value === this.browseFilter}
                       class="bg-neutral-900"
                     >
                       ${translateText(opt.labelKey)}

@@ -95,9 +95,17 @@ export const ClanBrowseSortSchema = z.enum([
   "random",
   "memberCount",
   "winScore",
+  "winScoreLow",
+  "createdAt",
+  "softBalance",
   "name",
 ]);
 export type ClanBrowseSort = z.infer<typeof ClanBrowseSortSchema>;
+
+// Which clans the browser lists: every clan, only open ones, or only ones
+// that need an invite.
+export const ClanBrowseFilterSchema = z.enum(["all", "open", "inviteOnly"]);
+export type ClanBrowseFilter = z.infer<typeof ClanBrowseFilterSchema>;
 
 export const ClanBrowseResponseSchema = z.object({
   results: ClanInfoSchema.array(),
