@@ -189,16 +189,25 @@ describe("ClanModal — rendering", () => {
         undefined,
         "random",
         undefined,
+        "all",
       );
 
       const select = modal.querySelector(
-        "clan-browse-view select",
+        "clan-browse-view [data-browse-sort]",
       ) as HTMLSelectElement;
       expect(
         select.parentElement!.querySelector("[data-chevron] svg"),
       ).toBeTruthy();
       const values = Array.from(select.options).map((o) => o.value);
-      expect(values).toEqual(["random", "memberCount", "winScore", "name"]);
+      expect(values).toEqual([
+        "random",
+        "memberCount",
+        "winScore",
+        "winScoreLow",
+        "createdAt",
+        "softBalance",
+        "name",
+      ]);
 
       select.value = "winScore";
       select.dispatchEvent(new Event("change"));
@@ -209,8 +218,58 @@ describe("ClanModal — rendering", () => {
           undefined,
           "winScore",
           undefined,
+          "all",
         ),
       );
+    });
+
+    it("filters to open or invite-only clans, back on page 1 with a fresh bucket", async () => {
+      const { fetchClans } = await import("../../../src/client/ClanApi");
+      const fetchMock = fetchClans as ReturnType<typeof vi.fn>;
+      const page = {
+        results: [makeClan({ tag: "OTH", name: "Other Clan" })],
+        total: 1,
+        page: 1,
+        limit: 20,
+        bucket: 42,
+      };
+      fetchMock
+        .mockResolvedValueOnce(page)
+        .mockResolvedValueOnce(page)
+        .mockResolvedValueOnce(page);
+      setState(modal, "activeTab" as keyof ClanModal, "browse" as never);
+      await waitForSubComponent(modal, "clan-browse-view");
+
+      const filter = modal.querySelector(
+        "clan-browse-view [data-browse-filter]",
+      ) as HTMLSelectElement;
+      expect(filter.getAttribute("aria-label")).toBe(
+        "clan_modal.filter_browse_label",
+      );
+      expect(
+        filter.parentElement!.querySelector("[data-chevron] svg"),
+      ).toBeTruthy();
+      expect(Array.from(filter.options).map((o) => o.value)).toEqual([
+        "all",
+        "open",
+        "inviteOnly",
+      ]);
+      expect(filter.value).toBe("all");
+
+      for (const value of ["inviteOnly", "open"] as const) {
+        filter.value = value;
+        filter.dispatchEvent(new Event("change"));
+        await vi.waitFor(() =>
+          expect(fetchMock).toHaveBeenLastCalledWith(
+            undefined,
+            1,
+            undefined,
+            "random",
+            undefined,
+            value,
+          ),
+        );
+      }
     });
 
     it("pages with the bucket of the last response", async () => {
@@ -239,6 +298,7 @@ describe("ClanModal — rendering", () => {
           undefined,
           "random",
           42,
+          "all",
         ),
       );
     });
@@ -260,11 +320,14 @@ describe("ClanModal — rendering", () => {
         .updateComplete;
 
       const select = modal.querySelector(
-        "clan-browse-view select",
+        "clan-browse-view [data-browse-sort]",
       ) as HTMLSelectElement;
       expect(Array.from(select.options).map((o) => o.value)).toEqual([
         "memberCount",
         "winScore",
+        "winScoreLow",
+        "createdAt",
+        "softBalance",
         "name",
       ]);
       expect(select.value).toBe("name");
