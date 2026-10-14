@@ -238,29 +238,6 @@ body.halloween-theme:not(.in-game) button[class*="bg-cyber-yellow"]:hover {
   box-shadow: 0 4px 15px rgba(88, 28, 135, 0.6) !important;
 }
 
-/* Screen Corner Cobweb - Top-Left Viewport (Homepage only, suppressed in-game) */
-body.halloween-theme:not(.in-game)::before {
-  content: "" !important;
-  display: block !important;
-  position: fixed !important;
-  top: 0px !important;
-  left: 0px !important;
-  width: 100px !important;
-  height: 100px !important;
-  background-image: var(--hw-cobweb-svg) !important;
-  background-size: contain !important;
-  background-repeat: no-repeat !important;
-  pointer-events: none !important;
-  z-index: 70 !important; /* Above navbar (z:60) so it is crisp & unblurred, below ads (z:150) */
-  opacity: 0.95 !important;
-  filter: drop-shadow(0 0 3px rgba(0, 0, 0, 0.8)) !important;
-}
-
-body.halloween-theme.in-game::before {
-  display: none !important;
-  content: none !important;
-}
-
 /* 2. Tutorial Button - Top-Right Cobweb with Dangling Spider */
 body.halloween-theme:not(.in-game) button.bg-cyber-yellow::after,
 body.halloween-theme:not(.in-game) button[class*="bg-cyber-yellow"]::after,
