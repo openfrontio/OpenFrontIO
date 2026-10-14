@@ -61,14 +61,15 @@ const POKI_PARAMS_KEY = "pokiParams";
 
 // Poki's SDK reads its context (site_id, game_id, poki_url…) from our URL's
 // query string: without site_id it disables accounts, and shareableURL builds
-// on poki_url. Our routing rewrites the URL (to "/" after a game, /game/<id>
+// on poki_url. The Inspector passes only poki_url, which its fake TestUser
+// account depends on. Our routing rewrites the URL (to "/" after a game, /game/<id>
 // in a lobby), dropping that query, so a reload signed the player out. Keep
 // the query Poki loaded us with for the frame's session and put any missing
 // param back. The gd-prefixed invite params aren't kept: a reload must not
 // rejoin the game that brought the player in.
 function keepPokiParams(): void {
   const params = new URLSearchParams(window.location.search);
-  if (params.has("site_id")) {
+  if (params.has("site_id") || params.has("poki_url")) {
     const kept = new URLSearchParams(
       [...params].filter(([name]) => !name.startsWith("gd")),
     );
