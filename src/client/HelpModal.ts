@@ -55,6 +55,7 @@ export class HelpModal extends BaseModal {
     if ((code === "Period" || code === "Comma") && layoutMap?.has(code)) {
       return layoutMap.get(code)!.toUpperCase();
     }
+    if (specialLabels[code]) return specialLabels[code];
     if (
       layoutMap?.has(code) &&
       !code.startsWith("Digit") &&
@@ -62,8 +63,6 @@ export class HelpModal extends BaseModal {
     ) {
       return layoutMap.get(code)!.toUpperCase();
     }
-
-    if (specialLabels[code]) return specialLabels[code];
     if (code.startsWith("Key") && code.length === 4) return code.slice(3);
     if (code.startsWith("Digit")) return code.slice(5);
     if (code.startsWith("Numpad")) return `Num ${code.slice(6)}`;
