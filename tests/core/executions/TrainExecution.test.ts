@@ -142,9 +142,7 @@ describe("TrainExecution", () => {
     ]);
     const player = game.player("p1")!;
 
-    [0, 1, 2, 3, 4, 5, 6, 7, 8].forEach((tile) =>
-      player.conquer(tile),
-    );
+    [0, 1, 2, 3, 4, 5, 6, 7, 8].forEach((tile) => player.conquer(tile));
     const [stationA, stationB, stationC, stationD1, stationD2] = [
       0, 1, 8, 2, 3,
     ].map(
@@ -174,9 +172,10 @@ describe("TrainExecution", () => {
     exec.init(game, 0);
 
     const engineTile = () =>
-      game.units(UnitType.Train).find(
-        (unit) => unit.trainType() === TrainType.Engine,
-      )?.tile();
+      game
+        .units(UnitType.Train)
+        .find((unit) => unit.trainType() === TrainType.Engine)
+        ?.tile();
     const visited: (TileRef | undefined)[] = [];
 
     exec.tick(1);
