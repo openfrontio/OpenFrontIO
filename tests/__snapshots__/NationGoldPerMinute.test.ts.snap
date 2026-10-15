@@ -192,8 +192,8 @@ exports[`nation gold per minute > world map, impossible nations, 20 minutes 1`] 
       "shipsArrived": 206,
       "tradeGold": 51750000,
       "tradeShipsAtSea": 418,
-      "trainGold": 28330000,
-      "trainStops": 687,
+      "trainGold": 28340000,
+      "trainStops": 688,
       "trainsRunning": 252,
     },
     {
@@ -228,9 +228,9 @@ exports[`nation gold per minute > world map, impossible nations, 20 minutes 1`] 
       "shipsArrived": 262,
       "tradeGold": 62550000,
       "tradeShipsAtSea": 607,
-      "trainGold": 30020000,
-      "trainStops": 746,
-      "trainsRunning": 434,
+      "trainGold": 29970000,
+      "trainStops": 745,
+      "trainsRunning": 427,
     },
     {
       "cities": 150,
@@ -240,8 +240,8 @@ exports[`nation gold per minute > world map, impossible nations, 20 minutes 1`] 
       "shipsArrived": 321,
       "tradeGold": 80510000,
       "tradeShipsAtSea": 613,
-      "trainGold": 29860000,
-      "trainStops": 746,
+      "trainGold": 29810000,
+      "trainStops": 745,
       "trainsRunning": 378,
     },
   ],
@@ -249,7 +249,7 @@ exports[`nation gold per minute > world map, impossible nations, 20 minutes 1`] 
     "shipsArrived": 2447,
     "tradeGold": 586400000,
     "trainGold": 222500000,
-    "trainStops": 5549,
+    "trainStops": 5548,
   },
 }
 `;
