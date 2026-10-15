@@ -1,11 +1,10 @@
-import { describe, expect, test } from "vitest";
+import { GameMapSize, GameMapType } from "@openfront/engine-api/game/GameTypes";
+import type { MapFiles, MapLayer } from "@openfront/engine-api/game/MapFiles";
+import { loadTerrainMap } from "@openfront/engine-lib/game/TerrainMapLoader";
+import type { GameMapLoader, MapData } from "@openfront/shared/GameMapLoader";
+import { describe, expect, test, vi } from "vitest";
+import { loadLayerImages } from "../src/client/controllers/MapLayerController";
 import { GraphicsOverridesSchema } from "../src/client/render/gl/GraphicsOverrides";
-import { GameMapSize, GameMapType } from "../src/core/game/Game";
-import type { GameMapLoader, MapData } from "../src/core/game/GameMapLoader";
-import {
-  loadTerrainMap,
-  type MapLayer,
-} from "../src/core/game/TerrainMapLoader";
 import { validateLayer } from "./util/layerValidation";
 
 describe("Map layer feature", () => {
@@ -332,12 +331,78 @@ describe("Map layer feature", () => {
     });
   });
 
+  describe("loadLayerImages", () => {
+    const layers: MapLayer[] = [
+      { id: "forests", placement: "land" },
+      { id: "rivers", placement: "water" },
+    ];
+
+    function stubLoader(
+      layerImage: MapData["layerImage"],
+    ): GameMapLoader & { layerImage: typeof layerImage } {
+      return {
+        layerImage,
+        getMapData: () => ({ layerImage }) as unknown as MapData,
+      };
+    }
+
+    test("Normal games load the full-size variant", async () => {
+      const loader = stubLoader(
+        vi.fn(async (id: string) => ({ id }) as unknown as ImageBitmap),
+      );
+      const images = await loadLayerImages(
+        GameMapType.China,
+        GameMapSize.Normal,
+        loader,
+        layers,
+      );
+      expect(loader.layerImage).toHaveBeenCalledWith("forests", false);
+      expect(loader.layerImage).toHaveBeenCalledWith("rivers", false);
+      expect([...images.keys()]).toEqual(["forests", "rivers"]);
+    });
+
+    test("Compact games load the map4x variant instead of resizing", async () => {
+      const loader = stubLoader(
+        vi.fn(async (id: string) => ({ id }) as unknown as ImageBitmap),
+      );
+      const images = await loadLayerImages(
+        GameMapType.China,
+        GameMapSize.Compact,
+        loader,
+        layers,
+      );
+      expect(loader.layerImage).toHaveBeenCalledWith("forests", true);
+      expect(loader.layerImage).toHaveBeenCalledWith("rivers", true);
+      expect(images.size).toBe(2);
+    });
+
+    test("a layer that fails to load is skipped, the rest still load", async () => {
+      const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+      const loader = stubLoader(async (id: string) => {
+        if (id === "forests") throw new Error("404");
+        return { id } as unknown as ImageBitmap;
+      });
+      const images = await loadLayerImages(
+        GameMapType.China,
+        GameMapSize.Normal,
+        loader,
+        layers,
+      );
+      expect([...images.keys()]).toEqual(["rivers"]);
+      expect(warn).toHaveBeenCalledWith(
+        expect.stringContaining('Failed to load layer "forests"'),
+      );
+      warn.mockRestore();
+    });
+  });
+
   describe("loadTerrainMap alpha validation", () => {
-    function makeLoader(
+    function makeFiles(
       layers: MapLayer[],
+      map = GameMapType.World,
       width = 2,
       height = 2,
-    ): GameMapLoader {
+    ): MapFiles {
       const bin = new Uint8Array(width * height);
       // Set one tile as land (bit 7 = 1).
       bin[0] = 0x80;
@@ -349,66 +414,46 @@ describe("Map layer feature", () => {
         nations: [],
         layers,
       };
-      const mapData: MapData = {
-        mapBin: () => Promise.resolve(bin),
-        map4xBin: () => Promise.resolve(bin),
-        map16xBin: () => Promise.resolve(bin),
-        manifest: () => Promise.resolve(manifest as never),
-        webpPath: "",
-        layerPng: () =>
-          Promise.resolve(new ImageData(1, 1) as unknown as ImageBitmap),
-      };
       return {
-        getMapData: () => mapData,
+        map,
+        mapSize: GameMapSize.Normal,
+        manifest: manifest as never,
+        mapBin: bin,
+        map4xBin: bin.slice(),
       };
     }
 
     test("throws on alpha below 0", async () => {
-      const loader = makeLoader([
-        { id: "bad", placement: "land", alpha: -0.5 },
-      ]);
-      await expect(
-        loadTerrainMap(GameMapType.World, GameMapSize.Normal, loader, false),
-      ).rejects.toThrow("invalid alpha");
+      const files = makeFiles([{ id: "bad", placement: "land", alpha: -0.5 }]);
+      await expect(loadTerrainMap(files)).rejects.toThrow("invalid alpha");
     });
 
     test("throws on alpha above 1", async () => {
-      const loader = makeLoader([{ id: "bad", placement: "land", alpha: 1.5 }]);
-      await expect(
-        loadTerrainMap(GameMapType.World, GameMapSize.Normal, loader, false),
-      ).rejects.toThrow("invalid alpha");
+      const files = makeFiles([{ id: "bad", placement: "land", alpha: 1.5 }]);
+      await expect(loadTerrainMap(files)).rejects.toThrow("invalid alpha");
     });
 
     test("throws on NaN alpha", async () => {
-      const loader = makeLoader([{ id: "bad", placement: "land", alpha: NaN }]);
-      await expect(
-        loadTerrainMap(GameMapType.World, GameMapSize.Normal, loader, false),
-      ).rejects.toThrow("invalid alpha");
+      const files = makeFiles([{ id: "bad", placement: "land", alpha: NaN }]);
+      await expect(loadTerrainMap(files)).rejects.toThrow("invalid alpha");
     });
 
     test("accepts valid alpha values", async () => {
-      const loader = makeLoader([
+      const files = makeFiles([
         { id: "good", placement: "land", alpha: 0 },
         { id: "good2", placement: "water", alpha: 0.7 },
         { id: "good3", placement: "land", alpha: 1 },
       ]);
-      const data = await loadTerrainMap(
-        GameMapType.World,
-        GameMapSize.Normal,
-        loader,
-        false,
-      );
+      const data = await loadTerrainMap(files);
       expect(data.layers).toHaveLength(3);
     });
 
     test("accepts layers without alpha (undefined)", async () => {
-      const loader = makeLoader([{ id: "noalpha", placement: "land" }]);
-      const data = await loadTerrainMap(
+      const files = makeFiles(
+        [{ id: "noalpha", placement: "land" }],
         GameMapType.Europe,
-        GameMapSize.Normal,
-        loader,
-        false,
       );
+      const data = await loadTerrainMap(files);
       expect(data.layers).toHaveLength(1);
     });
   });

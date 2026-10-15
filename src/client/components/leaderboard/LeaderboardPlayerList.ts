@@ -1,12 +1,14 @@
-import { html, LitElement, nothing, PropertyValues } from "lit";
-import { customElement, property, query, state } from "lit/decorators.js";
+import { RankedType } from "@openfront/engine-api/game/GameTypes";
 import {
   PlayerLeaderboardEntry,
   RankedLeaderboardEntry,
-} from "../../../core/ApiSchemas";
-import { RankedType } from "../../../core/game/Game";
+} from "@openfront/shared/ApiSchemas";
+import { html, LitElement, nothing, PropertyValues } from "lit";
+import { customElement, property, query, state } from "lit/decorators.js";
 import { fetchPlayerLeaderboard, getUserMe } from "../../Api";
+import { loadModal } from "../../LazyModals";
 import { translateText } from "../../Utils";
+import { isPrestigedOrLegend, levelBadgeSlot } from "../LevelBadgeSlot";
 import "../PlayerName";
 
 /** One ranked ladder's loaded rows. */
@@ -16,11 +18,20 @@ interface LadderState {
   hasMore: boolean;
 }
 
-const RANKED_TYPES = Object.values(RankedType);
+// The ranked types with a player ladder. Clan wars rates the clan, not its
+// players, so it has none.
+export type PlayerLadder = Exclude<RankedType, RankedType.ClanWars>;
 
-const emptyLadders = (): Record<RankedType, LadderState> => ({
+const RANKED_TYPES: PlayerLadder[] = [
+  RankedType.OneVOne,
+  RankedType.TwoVTwo,
+  RankedType.FreeForAll,
+];
+
+const emptyLadders = (): Record<PlayerLadder, LadderState> => ({
   [RankedType.OneVOne]: { entries: [], userEntry: null, hasMore: true },
   [RankedType.TwoVTwo]: { entries: [], userEntry: null, hasMore: true },
+  [RankedType.FreeForAll]: { entries: [], userEntry: null, hasMore: true },
 });
 
 const toPlayerEntry = (
@@ -34,6 +45,9 @@ const toPlayerEntry = (
   wins: entry.wins,
   losses: entry.losses,
   winRate: entry.total > 0 ? entry.wins / entry.total : 0,
+  level: entry.level,
+  prestige: entry.prestige,
+  legend: entry.legend,
 });
 
 @customElement("leaderboard-player-list")
@@ -41,11 +55,12 @@ export class LeaderboardPlayerList extends LitElement {
   /**
    * Which ladder to display. Each ranked type is ranked independently — the
    * same player can hold a different elo and rank on each — but one request
-   * returns both, so the other ladder rides along and is kept for its own tab.
+   * returns all of them, so the other ladders ride along and are kept for
+   * their own tabs.
    */
-  @property({ attribute: false }) rankedType: RankedType = RankedType.OneVOne;
+  @property({ attribute: false }) rankedType: PlayerLadder = RankedType.OneVOne;
 
-  @state() private ladders: Record<RankedType, LadderState> = emptyLadders();
+  @state() private ladders: Record<PlayerLadder, LadderState> = emptyLadders();
   @state() private showStickyUser = false;
   @state() private isLoading = false;
   @state() private error: string | null = null;
@@ -74,7 +89,7 @@ export class LeaderboardPlayerList extends LitElement {
 
   private mapLadders(
     fn: (ladder: LadderState) => LadderState,
-  ): Record<RankedType, LadderState> {
+  ): Record<PlayerLadder, LadderState> {
     const next = { ...this.ladders };
     for (const rankedType of RANKED_TYPES) {
       next[rankedType] = fn(this.ladders[rankedType]);
@@ -210,11 +225,15 @@ export class LeaderboardPlayerList extends LitElement {
   // Same handoff as the clan views: the profile modal's back button reopens
   // the leaderboard (its loaded pages survive the close).
   private openProfile(publicId: string) {
-    document
-      .querySelector<
-        HTMLElement & { openFromLeaderboard(publicId: string): void }
-      >("player-profile-modal")
-      ?.openFromLeaderboard(publicId);
+    loadModal("player-profile-modal").then(
+      () =>
+        document
+          .querySelector<
+            HTMLElement & { openFromLeaderboard(publicId: string): void }
+          >("player-profile-modal")
+          ?.openFromLeaderboard(publicId),
+      (err) => console.error("player-profile-modal failed to load:", err),
+    );
   }
 
   // TODO: consider IntersectionObserver for better visibility detection?
@@ -289,7 +308,7 @@ export class LeaderboardPlayerList extends LitElement {
   // the container, so the resolved widths depend on the modal size and cannot
   // be reproduced by a separate element; and below 34rem the table scrolls
   // horizontally, which an overlay outside .scroll-container would not follow.
-  private renderStickyUserRow() {
+  private renderStickyUserRow(badgeSlot: boolean) {
     if (!this.currentUserEntry || !this.showStickyUser) return nothing;
     const entry = this.currentUserEntry;
 
@@ -309,12 +328,16 @@ export class LeaderboardPlayerList extends LitElement {
                 class="text-[10px] uppercase font-bold text-blue-200/80 leading-tight"
                 >${translateText("leaderboard_modal.your_ranking")}</span
               >
-              <player-name
-                .username=${entry.accountUsername}
-                .publicId=${entry.playerId}
-                .nameClass=${"font-bold text-white truncate text-base hover:underline"}
-                .onNameClick=${() => this.openProfile(entry.playerId)}
-              ></player-name>
+              <div class="flex items-center gap-2 min-w-0">
+                ${levelBadgeSlot(entry, isPrestigedOrLegend(entry), badgeSlot)}
+                <player-name
+                  class="min-w-0"
+                  .username=${entry.accountUsername}
+                  .publicId=${entry.playerId}
+                  .nameClass=${"font-bold text-white truncate text-base hover:underline"}
+                  .onNameClick=${() => this.openProfile(entry.playerId)}
+                ></player-name>
+              </div>
             </div>
           </td>
           <td class="py-3 px-4 text-right">
@@ -339,7 +362,7 @@ export class LeaderboardPlayerList extends LitElement {
     `;
   }
 
-  private renderPlayerRow(player: PlayerLeaderboardEntry) {
+  private renderPlayerRow(player: PlayerLeaderboardEntry, badgeSlot: boolean) {
     const isCurrentUser = this.currentUserEntry?.playerId === player.playerId;
     const displayRank = player.rank;
 
@@ -373,7 +396,9 @@ export class LeaderboardPlayerList extends LitElement {
         </td>
         <td class="py-3 px-4">
           <div class="flex items-center gap-2">
+            ${levelBadgeSlot(player, isPrestigedOrLegend(player), badgeSlot)}
             <player-name
+              class="min-w-0"
               .username=${player.accountUsername}
               .publicId=${player.playerId}
               .nameClass=${"font-bold text-blue-300 truncate text-base hover:underline"}
@@ -526,6 +551,12 @@ export class LeaderboardPlayerList extends LitElement {
     if (this.hasLoadedPlayers && this.playerData.length === 0)
       return this.renderNoData();
 
+    // Level badges mark prestiged players and Legends only (see
+    // isPrestigedOrLegend for why). Rows without one keep an empty slot so
+    // names line up — but only once some loaded row in this ladder has a
+    // badge, so the board is unchanged until then.
+    const badgeSlot = this.playerData.some(isPrestigedOrLegend);
+
     return html`
       <div class="h-full">
         <!--
@@ -570,9 +601,11 @@ export class LeaderboardPlayerList extends LitElement {
                 </tr>
               </thead>
               <tbody>
-                ${this.playerData.map((player) => this.renderPlayerRow(player))}
+                ${this.playerData.map((player) =>
+                  this.renderPlayerRow(player, badgeSlot),
+                )}
               </tbody>
-              ${this.renderStickyUserRow()}
+              ${this.renderStickyUserRow(badgeSlot)}
             </table>
             ${this.renderPlayerFooter()}
           </div>

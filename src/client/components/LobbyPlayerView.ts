@@ -1,6 +1,3 @@
-import { LitElement, html } from "lit";
-import { customElement, property, state } from "lit/decorators.js";
-import { repeat } from "lit/directives/repeat.js";
 import {
   ColoredTeams,
   Duos,
@@ -11,17 +8,45 @@ import {
   Quads,
   Team,
   Trios,
-} from "../../core/game/Game";
-import { assignTeamsLobbyPreview } from "../../core/game/TeamAssignment";
-import { UserSettings } from "../../core/game/UserSettings";
-import { ClientID, ClientInfo, TeamCountConfig } from "../../core/Schemas";
-import { createRandomName, formatPlayerDisplayName } from "../../core/Util";
+  formatPlayerDisplayName,
+} from "@openfront/engine-api/game/GameTypes";
+import { ClientID, TeamCountConfig } from "@openfront/engine-api/Schemas";
+import { assignTeamsLobbyPreview } from "@openfront/engine-lib/game/TeamAssignment";
+import {
+  type LevelBadge,
+  unpackLevelBadge,
+} from "@openfront/shared/LevelBadgeWire";
+import { createRandomName } from "@openfront/shared/SharedUtil";
+import { ClientInfo } from "@openfront/shared/WireSchemas";
+import { LitElement, html } from "lit";
+import { customElement, property, state } from "lit/decorators.js";
+import { repeat } from "lit/directives/repeat.js";
+import {
+  ownHiddenLevelBadge,
+  refreshOwnHiddenLevelBadge,
+} from "../OwnLevelBadge";
 import { Theme, themeProvider } from "../theme/ThemeProvider";
+import { UserSettings } from "../UserSettings";
 import {
   getTranslatedPlayerTeamLabel,
   resolveTeamClanTag,
   translateText,
 } from "../Utils";
+import "./LevelBadge";
+
+function sameBadge(
+  a: LevelBadge | undefined,
+  b: LevelBadge | undefined,
+): boolean {
+  return (
+    a === b ||
+    (a !== undefined &&
+      b !== undefined &&
+      a.level === b.level &&
+      a.prestige === b.prestige &&
+      a.legend === b.legend)
+  );
+}
 
 export interface TeamPreviewData {
   team: Team;
@@ -52,6 +77,10 @@ export class LobbyTeamView extends LitElement {
   private _clanUpdateTimeout: number | null = null;
   private _teamClanTags: Map<Team, string | null> = new Map();
   private _viewerFriends: ReadonlySet<ClientID> = new Set();
+  // The viewer's own badge while they hide their level: the server leaves it
+  // off their roster entry, but they still see their own level.
+  @state() private _ownHiddenBadge: LevelBadge | undefined =
+    ownHiddenLevelBadge();
 
   // Spectators are in the lobby roster (flagged) but hold no seat and never
   // reach the simulation — so the count header, the team preview and both
@@ -85,6 +114,22 @@ export class LobbyTeamView extends LitElement {
         ? this.clients.find((c) => c.clientID === this.currentClientID)
         : undefined;
       this._viewerFriends = new Set(self?.friends ?? []);
+    }
+    // On joining and on every roster update, so a visibility change made in
+    // the account settings shows by the next lobby_info. From the memoised
+    // /users/@me, so normally no request at all.
+    if (
+      (changedProperties.has("currentClientID") ||
+        changedProperties.has("clients")) &&
+      this.currentClientID
+    ) {
+      const forClient = this.currentClientID;
+      void refreshOwnHiddenLevelBadge().then((badge) => {
+        if (this.currentClientID !== forClient) return;
+        if (!sameBadge(badge, this._ownHiddenBadge)) {
+          this._ownHiddenBadge = badge;
+        }
+      });
     }
     // Recompute team preview when relevant properties change
     // clients is updated from WebSocket lobby_info events
@@ -170,7 +215,10 @@ export class LobbyTeamView extends LitElement {
                   : ""}"
               >
                 <span class="text-white"
-                  >${this.getClientDisplayName(client)}
+                  >${this.renderLevelBadge(
+                    client,
+                    false,
+                  )}${this.getClientDisplayName(client)}
                   ${this.renderVerifiedBadge(client)}</span
                 >
               </span>`,
@@ -191,6 +239,7 @@ export class LobbyTeamView extends LitElement {
     const empty = this.teamPreview.filter(
       (t) => t.players.length === 0 && t.team !== ColoredTeams.Nations,
     );
+    const listSlot = this.anyVisibleLevelBadge(this.activePlayers);
     return html` <div
       class="flex flex-col md:flex-row gap-3 md:gap-4 items-stretch"
     >
@@ -211,7 +260,8 @@ export class LobbyTeamView extends LitElement {
                 ? "bg-malibu-blue/20 border-sky-500/40"
                 : "bg-gray-700/70 border-transparent"}"
             >
-              ${displayName} ${this.renderVerifiedBadge(client)}
+              ${this.renderLevelBadge(client, listSlot)}${displayName}
+              ${this.renderVerifiedBadge(client)}
               ${this.renderFriendBadge(client)}
             </div>`;
           },
@@ -275,7 +325,8 @@ export class LobbyTeamView extends LitElement {
             : ""}"
         >
           <span class="text-white"
-            >${displayName} ${this.renderVerifiedBadge(client)}
+            >${this.renderLevelBadge(client, false)}${displayName}
+            ${this.renderVerifiedBadge(client)}
             ${this.renderFriendBadge(client)}</span
           >
           ${this.renderRevealToggle(client.clientID)}
@@ -322,6 +373,7 @@ export class LobbyTeamView extends LitElement {
 
     const clanTag = this._teamClanTags.get(preview.team) ?? null;
     const teamLabel = getTranslatedPlayerTeamLabel(preview.team, clanTag);
+    const badgeSlot = this.anyVisibleLevelBadge(preview.players);
 
     return html`
       <div
@@ -363,6 +415,7 @@ export class LobbyTeamView extends LitElement {
                       : "bg-gray-700/70 border-transparent"}"
                   >
                     <span class="flex items-center gap-1 min-w-0">
+                      ${this.renderLevelBadge(p, badgeSlot)}
                       <span class="truncate text-white">${displayName}</span>
                       ${this.renderVerifiedBadge(p)}
                       ${this.renderFriendBadge(p)}
@@ -591,6 +644,52 @@ export class LobbyTeamView extends LitElement {
         stroke-linejoin="round"
       ></path>
     </svg>`;
+  }
+
+  // The level badge this viewer may see for `client`: none for guests and
+  // server-anonymized entries (they arrive without one), and none for other
+  // players while the viewer has anonymous names on — the badge belongs to
+  // the real name, like the verified check above.
+  // The viewer's own entry has no badge while they hide their level, so it
+  // falls back to the one from their own /users/@me.
+  private visibleLevelBadge(client: ClientInfo): LevelBadge | undefined {
+    if (this.isCurrentPlayer(client)) {
+      return unpackLevelBadge(client.levelBadge) ?? this._ownHiddenBadge;
+    }
+    return this.userSettings.anonymousNames()
+      ? undefined
+      : unpackLevelBadge(client.levelBadge);
+  }
+
+  private anyVisibleLevelBadge(clients: readonly ClientInfo[]): boolean {
+    return clients.some((c) => this.visibleLevelBadge(c) !== undefined);
+  }
+
+  // The player's level badge, in front of their name. With `slot`, a player
+  // without one gets an empty space the same size instead, so the names in a
+  // column line up; column layouts pass it only when someone in the list has
+  // a visible badge, so a list with no badges renders exactly as before.
+  // `stagger`: a full lobby's badges arriving at once are drawn over the
+  // next few frames instead of all in one (see LevelBadgeFill); a few at a
+  // time, like a player joining, are drawn straight away.
+  private renderLevelBadge(client: ClientInfo, slot: boolean) {
+    const badge = this.visibleLevelBadge(client);
+    if (badge === undefined) {
+      return slot
+        ? html`<span
+            class="lobby-level-slot inline-block w-6 h-6 align-[-7px] shrink-0 mr-1.5"
+            aria-hidden="true"
+          ></span>`
+        : html``;
+    }
+    return html`<level-badge
+      stagger
+      class="inline-block align-[-7px] shrink-0 mr-1.5"
+      .level=${badge.level}
+      .prestige=${badge.prestige}
+      ?legend=${badge.legend}
+      size="24"
+    ></level-badge>`;
   }
 
   // A mark for players on the viewer's friends list

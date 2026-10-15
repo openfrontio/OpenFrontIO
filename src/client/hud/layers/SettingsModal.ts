@@ -1,9 +1,9 @@
+import { assetUrl } from "@openfront/shared/AssetUrls";
+import { EventBus } from "@openfront/shared/EventBus";
 import { html, LitElement } from "lit";
 import { customElement, property, query, state } from "lit/decorators.js";
-import { crazyGamesSDK } from "src/client/CrazyGamesSDK";
+import { gamePortal } from "src/client/GamePortal";
 import { PauseGameIntentEvent } from "src/client/Transport";
-import { assetUrl } from "../../../core/AssetUrls";
-import { EventBus } from "../../../core/EventBus";
 import { Controller } from "../../Controller";
 import {
   AlternateViewEvent,
@@ -93,6 +93,11 @@ export class SettingsModal extends LitElement implements Controller {
     }
   };
 
+  /** Whether the menu is showing. */
+  get open(): boolean {
+    return this.isVisible;
+  }
+
   public openModal() {
     this.isVisible = true;
     this.requestUpdate();
@@ -105,12 +110,12 @@ export class SettingsModal extends LitElement implements Controller {
   }
 
   private pauseGame(pause: boolean) {
-    // CrazyGames: report gameplay as stopped whenever the settings menu is open,
+    // Portals: report gameplay as stopped whenever the settings menu is open,
     // and resumed when it closes — unless the game was already paused when opened.
     if (pause) {
-      crazyGamesSDK.gameplayStop();
+      gamePortal.gameplayStop();
     } else if (!this.wasPausedWhenOpened) {
-      crazyGamesSDK.gameplayStart();
+      gamePortal.gameplayStart();
     }
 
     // Only pause the simulation itself when we own the pause (singleplayer or

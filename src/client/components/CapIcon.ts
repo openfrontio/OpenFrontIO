@@ -1,6 +1,6 @@
+import { assetUrl } from "@openfront/shared/AssetUrls";
 import { html, LitElement } from "lit";
 import { customElement, property } from "lit/decorators.js";
-import { assetUrl } from "../../core/AssetUrls";
 
 @customElement("cap-icon")
 export class CapIcon extends LitElement {

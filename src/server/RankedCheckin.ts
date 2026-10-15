@@ -1,6 +1,6 @@
+import { isCommitLike, isSiteLike } from "@openfront/shared/ServerList";
 import type winston from "winston";
 import { z } from "zod";
-import { isCommitLike, isSiteLike } from "../core/ServerList";
 import { registeredSite } from "./ClusterCheckin";
 import type { GameManager } from "./GameManager";
 import type { MapPlaylist } from "./MapPlaylist";
@@ -24,7 +24,7 @@ import { ServerEnv } from "./ServerEnv";
 // Games already assigned or running are untouched by this: the gate only
 // decides whether to make a NEW offer.
 
-export type RankedMode = "1v1" | "2v2";
+export type RankedMode = "1v1" | "2v2" | "ffa" | "clanwars";
 
 // How long a single check-in may hang before we abort and come round again.
 // The endpoint is a long poll, so a request pending for most of this is the
@@ -50,6 +50,8 @@ export const MatchmakingAssignmentSchema = z.object({
   // The matcher's team split ([[a],[b]] for 1v1). Optional for tolerance,
   // but the current API always sends it.
   teams: z.array(z.array(z.string())).optional(),
+  // Clan wars only: the clan each team plays for, in team order.
+  clanTags: z.array(z.string()).optional(),
 });
 
 export const RANKED_PAUSED_LOG =
@@ -201,7 +203,7 @@ export async function rankedCheckinPass(
     }
 
     const data = await response.json();
-    // Every worker polls both queues every few seconds; only a poll that
+    // Every worker polls every queue every few seconds; only a poll that
     // hands us a match is worth an info line.
     if (data.assignment) {
       log.info(`Lobby ${mode} poll successful:`, data);
@@ -218,12 +220,28 @@ export async function rankedCheckinPass(
           `Unexpected ${mode} assignment shape: ${z.prettifyError(parsed.error)}`,
         );
       }
+      if (mode === "clanwars") {
+        createClanWarsGame(gameId, parsed.success ? parsed.data : null, deps);
+        return;
+      }
       const baseConfig =
-        mode === "2v2" ? playlist.get2v2Config() : playlist.get1v1Config();
+        mode === "ffa"
+          ? playlist.getFfaConfig()
+          : mode === "2v2"
+            ? playlist.get2v2Config()
+            : playlist.get1v1Config();
       const game = gm.createGame(
         gameId,
         parsed.success
-          ? { ...baseConfig, allowedPublicIds: parsed.data.players }
+          ? {
+              ...baseConfig,
+              allowedPublicIds: parsed.data.players,
+              // An FFA match is 4 to 10 players: size the lobby to this one
+              // so it starts as soon as they are all in.
+              ...(mode === "ffa"
+                ? { maxPlayers: parsed.data.players.length }
+                : {}),
+            }
           : baseConfig,
         undefined,
         Date.now() + MATCH_START_DEADLINE_MS,
@@ -244,13 +262,47 @@ export async function rankedCheckinPass(
 }
 
 /**
+ * A clan wars game is sized and labelled by its assignment: the team count,
+ * the team size and each team's clan all come from it. Unlike the other modes
+ * there is no default to fall back on, so an assignment without them creates
+ * nothing.
+ */
+function createClanWarsGame(
+  gameId: string,
+  assignment: z.infer<typeof MatchmakingAssignmentSchema> | null,
+  { gm, playlist, log }: RankedCheckinDeps,
+): void {
+  const teams = assignment?.teams;
+  const clanTags = assignment?.clanTags;
+  if (assignment === null || teams === undefined || clanTags === undefined) {
+    log.warn(`Clan wars assignment without teams and clan tags: ${gameId}`);
+    return;
+  }
+  const game = gm.createGame(
+    gameId,
+    {
+      ...playlist.getClanWarsConfig(teams.length, assignment.players.length),
+      allowedPublicIds: assignment.players,
+    },
+    undefined,
+    Date.now() + MATCH_START_DEADLINE_MS,
+    undefined,
+    teams,
+    clanTags,
+  );
+  if (game === null) {
+    log.warn(`Failed to create matchmaking game ${gameId}`);
+  }
+}
+
+/**
  * Start the ranked check-in loops for this worker. One check-in serves
- * exactly one queue, so a host serving both modes runs one long-poll loop per
+ * exactly one queue, so a host serving every mode runs one long-poll loop per
  * mode — over a single shared gate, so a drain is announced once.
  */
 export function startRankedCheckinLoops(deps: RankedCheckinDeps): void {
   const gate = new RankedCheckinGate(deps.isActive, deps.log);
-  for (const mode of ["1v1", "2v2"] as const) {
+  for (const mode of ["1v1", "2v2", "ffa", "clanwars"] as const) {
     startPolling(
       async () => rankedCheckinPass(mode, gate, deps),
       CHECKIN_INTERVAL_MS + Math.random() * CHECKIN_JITTER_MS,

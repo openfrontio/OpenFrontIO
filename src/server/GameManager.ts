@@ -1,18 +1,17 @@
-import { Logger } from "winston";
-import WebSocket from "ws";
 import {
   Difficulty,
   GameMapSize,
   GameMapType,
   GameMode,
   GameType,
-} from "../core/game/Game";
+} from "@openfront/engine-api/game/GameTypes";
+import { GameConfig, GameID } from "@openfront/engine-api/Schemas";
 import {
   ClientPlatformSchema,
-  GameConfig,
-  GameID,
   PublicGameType,
-} from "../core/Schemas";
+} from "@openfront/shared/WireSchemas";
+import { Logger } from "winston";
+import WebSocket from "ws";
 import { Client } from "./Client";
 import { GamePhase, GameServer, JoinResult } from "./GameServer";
 import {
@@ -74,6 +73,7 @@ export class GameManager {
     startsAt?: number,
     publicGameType?: PublicGameType,
     matchmakingTeams?: string[][],
+    matchmakingClanTags?: string[],
   ): GameServer | null {
     if (this.games.has(id)) {
       this.log.warn("cannot create game, id already exists", { gameID: id });
@@ -107,6 +107,7 @@ export class GameManager {
         startsAt,
         publicGameType,
         matchmakingTeams,
+        matchmakingClanTags,
       },
       {
         telemetry: this.telemetry,
@@ -202,6 +203,10 @@ export class GameManager {
       }
 
       if (phase === GamePhase.Finished) {
+        // The expected end of a game that hit the cap, not a fault.
+        if (game.pastMaxDuration()) {
+          this.log.info("game past max duration", { gameID: id });
+        }
         try {
           game.end();
         } catch (error) {

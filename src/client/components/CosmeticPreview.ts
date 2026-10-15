@@ -1,5 +1,3 @@
-import { html, LitElement, nothing, TemplateResult } from "lit";
-import { customElement, property, state } from "lit/decorators.js";
 import {
   Crown,
   Effect,
@@ -9,8 +7,10 @@ import {
   Pattern,
   Skin,
   Subscription,
-} from "../../core/CosmeticSchemas";
-import { PlayerPattern } from "../../core/Schemas";
+} from "@openfront/shared/CosmeticSchemas";
+import { PlayerPattern } from "@openfront/shared/WireSchemas";
+import { html, LitElement, nothing, TemplateResult } from "lit";
+import { customElement, property, state } from "lit/decorators.js";
 import { ResolvedCosmetic } from "../Cosmetics";
 import { translateText } from "../Utils";
 import "./CapIcon";
@@ -200,45 +200,55 @@ export class CosmeticPreview extends LitElement {
 
     if (this.resolved.type === "subscription") {
       const subscription = this.resolved.cosmetic as Subscription;
+      const large = this.size === "detail";
+      const iconSize = large ? 36 : 24;
+      const figureClass = large
+        ? "text-2xl font-bold text-green-400"
+        : "text-sm font-bold text-green-400";
+      const unitClass = large
+        ? "text-xs text-white/50 uppercase"
+        : "text-[10px] text-white/50 uppercase";
+      const perkClass = `self-start text-left ${large ? "text-xs" : "text-[10px]"} font-bold text-purple-300 uppercase tracking-wide`;
+      // The Steam licence a buyer of this tier must hold already confers the
+      // verified name and public lobbies, so the tier does not claim them.
+      const licencePerks = !subscription.requiresSteamLicence;
       return html`<div
         class="flex flex-col items-center justify-center h-full w-full text-center gap-2 p-1"
       >
-        <div class="flex flex-col items-center gap-1 w-full">
+        <div
+          class="flex flex-col items-center ${large ? "gap-2" : "gap-1"} w-full"
+        >
           <div class="self-start flex items-center gap-1.5">
-            <plutonium-icon .size=${24}></plutonium-icon>
-            <span class="text-sm font-bold text-green-400"
+            <plutonium-icon .size=${iconSize}></plutonium-icon>
+            <span class=${figureClass}
               >${subscription.hardCurrencySignupBonus.toLocaleString()}</span
             >
-            <span class="text-[10px] text-white/50 uppercase"
-              >${translateText("cosmetics.signup_bonus")}</span
+            <span class=${unitClass}
+              >${translateText("cosmetics.per_month")}</span
             >
           </div>
           <div class="self-start flex items-center gap-1.5">
-            <plutonium-icon .size=${24}></plutonium-icon>
-            <span class="text-sm font-bold text-green-400"
+            <plutonium-icon .size=${iconSize}></plutonium-icon>
+            <span class=${figureClass}
               >${subscription.dailyHardCurrency.toLocaleString()}</span
             >
-            <span class="text-[10px] text-white/50 uppercase"
+            <span class=${unitClass}
               >${translateText("cosmetics.per_day")}</span
             >
           </div>
-          <span
-            class="self-start text-left text-[10px] font-bold text-purple-300 uppercase tracking-wide"
-            ><span class="text-green-400">✓</span> ${translateText(
-              "cosmetics.verified_name",
-            )}</span
-          >
-          ${subscription.unlimitedRanked
+          ${licencePerks
             ? html`<span
-                class="self-start text-left text-[10px] font-bold text-purple-300 uppercase tracking-wide"
+                data-subscription-perk="verified_name"
+                class=${perkClass}
                 ><span class="text-green-400">✓</span> ${translateText(
-                  "cosmetics.unlimited_ranked",
+                  "cosmetics.verified_name",
                 )}</span
               >`
             : nothing}
-          ${subscription.canCreatePublicLobbies
+          ${licencePerks && subscription.canCreatePublicLobbies
             ? html`<span
-                class="self-start text-left text-[10px] font-bold text-purple-300 uppercase tracking-wide"
+                data-subscription-perk="public_lobbies"
+                class=${perkClass}
                 ><span class="text-green-400">✓</span> ${translateText(
                   "cosmetics.public_lobbies",
                 )}</span

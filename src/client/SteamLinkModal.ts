@@ -1,6 +1,6 @@
+import type { UserMeResponse } from "@openfront/shared/ApiSchemas";
 import { html, TemplateResult } from "lit";
 import { customElement } from "lit/decorators.js";
-import type { UserMeResponse } from "../core/ApiSchemas";
 import { responseHasLinkedIdentity } from "./AccountIdentity";
 import { getUserMe, invalidateUserMe } from "./Api";
 import { isLoggedIn } from "./Auth";

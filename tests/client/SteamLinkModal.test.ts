@@ -1,5 +1,5 @@
+import type { UserMeResponse } from "@openfront/shared/ApiSchemas";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { UserMeResponse } from "../../src/core/ApiSchemas";
 
 // ─── Mocks ───────────────────────────────────────────────────────────────
 
@@ -60,6 +60,9 @@ function makeUserMe(
 ): UserMeResponse {
   return {
     user,
+    steamLicence: false,
+    steamLicenceSince: null,
+    noticesSeen: [],
     player: {
       publicId: "p1",
       adfree: false,

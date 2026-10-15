@@ -1,8 +1,8 @@
 import { LitElement, html, type TemplateResult } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
 import { ClientEnv } from "src/client/ClientEnv";
-import { UserSettings } from "../../core/game/UserSettings";
-import { crazyGamesSDK } from "../CrazyGamesSDK";
+import { gamePortal } from "../GamePortal";
+import { UserSettings } from "../UserSettings";
 import { copyToClipboard, showToast, translateText } from "../Utils";
 
 @customElement("copy-button")
@@ -76,8 +76,8 @@ export class CopyButton extends LitElement {
 
   private async resolveCopyText(): Promise<string | null> {
     if (this.copyText) return this.copyText;
-    if (crazyGamesSDK.isOnCrazyGames()) {
-      return crazyGamesSDK.createInviteLink(this.lobbyId);
+    if (gamePortal.isOnGamePortal()) {
+      return gamePortal.createInviteLink(this.lobbyId);
     }
     if (!this.lobbyId) return "";
     return await this.buildCopyUrl();

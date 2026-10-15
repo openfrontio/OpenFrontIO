@@ -77,6 +77,7 @@ export class TrailPass {
         MAX_TRAIL_COLORS,
         ...TILE_DEFINES,
       }),
+      "TrailPass",
     );
     this.uCamera = gl.getUniformLocation(this.program, "uCamera")!;
     this.uMapSize = gl.getUniformLocation(this.program, "uMapSize")!;

@@ -1,14 +1,15 @@
-import { html, LitElement } from "lit";
-import { customElement, state } from "lit/decorators.js";
 import {
   ClanLeaderboardEntry,
   ClanLeaderboardResponse,
-} from "../../../core/ClanApiSchemas";
+} from "@openfront/shared/ClanApiSchemas";
+import { html, LitElement } from "lit";
+import { customElement, state } from "lit/decorators.js";
 import { fetchClanLeaderboard } from "../../ClanApi";
 import { translateText } from "../../Utils";
 
 export type ClanSortColumn =
   | "rank"
+  | "elo"
   | "games"
   | "winScore"
   | "lossScore"
@@ -78,6 +79,14 @@ export class LeaderboardClanTable extends LitElement {
     sorted.sort((a, b) => {
       let aVal: number, bVal: number;
       switch (this.sortBy) {
+        case "elo":
+          // Unrated clans sort last either way.
+          if (a.elo === null || b.elo === null) {
+            return (a.elo === null ? 1 : 0) - (b.elo === null ? 1 : 0);
+          }
+          aVal = a.elo;
+          bVal = b.elo;
+          break;
         case "games":
           aVal = a.games;
           bVal = b.games;
@@ -204,6 +213,7 @@ export class LeaderboardClanTable extends LitElement {
               <colgroup>
                 <col style="width: 4rem" />
                 <col style="width: 5rem" />
+                <col style="width: 5rem" />
                 <col style="width: 8rem" />
                 <col style="width: 6rem" />
                 <col style="width: 6rem" />
@@ -218,6 +228,26 @@ export class LeaderboardClanTable extends LitElement {
                   </th>
                   <th class="py-4 px-4 text-left font-bold">
                     ${translateText("leaderboard_modal.clan")}
+                  </th>
+                  <th
+                    class="py-4 px-4 text-right font-bold cursor-pointer hover:text-white/60 transition-colors"
+                  >
+                    <button
+                      class="whitespace-nowrap uppercase"
+                      @click=${() => this.handleSort("elo")}
+                      aria-sort=${this.sortBy === "elo"
+                        ? this.sortOrder === "asc"
+                          ? "ascending"
+                          : "descending"
+                        : "none"}
+                    >
+                      ${translateText("leaderboard_modal.elo")}
+                      ${this.sortBy === "elo"
+                        ? this.sortOrder === "asc"
+                          ? "↑"
+                          : "↓"
+                        : "↕"}
+                    </button>
                   </th>
                   <th
                     class="py-4 px-4 text-right font-bold cursor-pointer hover:text-white/60 transition-colors"
@@ -344,6 +374,11 @@ export class LeaderboardClanTable extends LitElement {
                         >
                           ${clan.clanTag}
                         </div>
+                      </td>
+                      <td
+                        class="py-3 px-4 text-right font-mono font-bold text-white"
+                      >
+                        ${clan.elo ?? "—"}
                       </td>
                       <td class="py-3 px-4 text-right">
                         <div class="flex flex-col items-end gap-1">

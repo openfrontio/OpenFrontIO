@@ -1,5 +1,5 @@
+import { CloseCode, CloseReason } from "@openfront/shared/CloseCodes";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { CloseCode, CloseReason } from "../../src/core/CloseCodes";
 import { GameManager } from "../../src/server/GameManager";
 import { rejoinOrClose } from "../../src/server/Rejoin";
 import {

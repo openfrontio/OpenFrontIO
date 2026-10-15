@@ -1,6 +1,6 @@
+import type { UserMeResponse } from "@openfront/shared/ApiSchemas";
 import { html, LitElement, nothing } from "lit";
 import { customElement, state } from "lit/decorators.js";
-import type { UserMeResponse } from "../../core/ApiSchemas";
 import { setMarketingConsent } from "../Api";
 import { translateText } from "../Utils";
 

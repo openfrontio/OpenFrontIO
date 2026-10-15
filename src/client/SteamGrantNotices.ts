@@ -8,16 +8,27 @@
 // reads that as a hidden subscription they were not told about, which is the
 // Steam forum complaint this module exists to answer. Two one-shot notices:
 // a welcome while the month is running, and a sign-off once it has ended,
-// both saying the same thing — the game stays, free, and only the tier perks
-// stop.
+// both saying the same thing — the game stays, free. The welcome does not
+// promise the tier perks stop: a Steam month can be extending a comp or a
+// Discord-role grant that stays entitled after it (see `isSteamGrant`).
 //
 // The ended notice has to be remembered from the boot that saw the grant:
 // once the server's sweep has expired the row it drops out of /users/@me
 // entirely, so at the boot that matters there is nothing on the wire to
 // recognise a former grant holder by. Hence a per-account record in
 // localStorage, written while the grant is visible and consulted after.
+//
+// The record is kept for ANY dated grant, not only a Steam month, marked with
+// which it was. An admin comp or Discord-role grant can carry an end date too,
+// and its holder never subscribed either, so its lapse notice must not say
+// "resubscribe" any more than a Steam buyer's should. Only a Steam record gets
+// the welcome and the sign-off, both of which name the purchase.
 
-import { isGrantedSubscription, type UserMeResponse } from "../core/ApiSchemas";
+import {
+  isGrantedSubscription,
+  isSteamGrant,
+  type UserMeResponse,
+} from "@openfront/shared/ApiSchemas";
 
 /** localStorage key holding the SteamGrantStore below. */
 export const STEAM_GRANT_NOTICE_KEY = "steamGrantNotice";
@@ -34,6 +45,12 @@ export interface SteamGrantRecord {
   periodEnd: string;
   /** Tier id of the grant, kept so the sign-off can still name it. */
   tier: string;
+  /**
+   * Was a Steam month funding the grant when last seen (`isSteamGrant`)? A
+   * record written before this field reads as true: the rule then was that
+   * every dated grant is a Steam month.
+   */
+  steam: boolean;
   welcomed: boolean;
   endedShown: boolean;
   /** Last boot that observed this record's grant; used only for pruning. */
@@ -48,19 +65,38 @@ export interface SteamGrant {
   periodEnd: Date;
 }
 
+/** Any granted subscription with an end date, and whether Steam funds it. */
+export interface DatedGrant extends SteamGrant {
+  steam: boolean;
+}
+
+/** The dated grant on this account, Steam or not, or null. */
+export function datedGrantOf(
+  userMe: UserMeResponse | false | null,
+): DatedGrant | null {
+  if (userMe === null || userMe === false) return null;
+  const sub = userMe.player.subscription;
+  if (!isGrantedSubscription(sub) || !sub?.currentPeriodEnd) return null;
+  return {
+    tier: sub.tier,
+    periodEnd: sub.currentPeriodEnd,
+    steam: isSteamGrant(sub),
+  };
+}
+
 /**
  * The Steam-granted month on this account, or null.
  *
- * A grant with an end date. The other writer of a provider-null row is the
- * admin comp endpoint, which sets no end at all, so a dated grant is a Steam
- * month — the same rule the account panel uses to decide whose copy to show.
+ * Decided by `isSteamGrant`, the same rule the account panel uses to decide
+ * whose copy to show. An admin comp can carry an end date as well, and must
+ * never be welcomed or signed off as a Steam purchase.
  */
 export function steamGrantOf(
   userMe: UserMeResponse | false | null,
 ): SteamGrant | null {
   if (userMe === null || userMe === false) return null;
   const sub = userMe.player.subscription;
-  if (!isGrantedSubscription(sub) || !sub?.currentPeriodEnd) return null;
+  if (!isSteamGrant(sub) || !sub?.currentPeriodEnd) return null;
   return { tier: sub.tier, periodEnd: sub.currentPeriodEnd };
 }
 
@@ -85,17 +121,23 @@ export function parseSteamGrantStore(raw: string | null): SteamGrantStore {
   )) {
     if (publicId === "") continue;
     if (typeof value !== "object" || value === null) continue;
-    const { periodEnd, tier, welcomed, endedShown, seenAt } = value as Record<
-      string,
-      unknown
-    >;
+    const { periodEnd, tier, steam, welcomed, endedShown, seenAt } =
+      value as Record<string, unknown>;
     if (typeof periodEnd !== "string" || Number.isNaN(Date.parse(periodEnd)))
       continue;
     if (typeof tier !== "string") continue;
     if (typeof welcomed !== "boolean" || typeof endedShown !== "boolean")
       continue;
     if (typeof seenAt !== "number" || !Number.isFinite(seenAt)) continue;
-    store[publicId] = { periodEnd, tier, welcomed, endedShown, seenAt };
+    if (steam !== undefined && typeof steam !== "boolean") continue;
+    store[publicId] = {
+      periodEnd,
+      tier,
+      steam: steam ?? true,
+      welcomed,
+      endedShown,
+      seenAt,
+    };
   }
   return store;
 }
@@ -104,7 +146,8 @@ export function parseSteamGrantStore(raw: string | null): SteamGrantStore {
  * Bring the store up to date with what /users/@me just said. Returns the same
  * object when nothing changed, so the caller can skip the write.
  *
- * - A visible grant is recorded. A different end date is a different grant
+ * - A visible dated grant is recorded, Steam or not, saying which. A
+ *   different end date is a different grant
  *   (the Deluxe DLC extends the same row) and starts a fresh record, so the
  *   new span gets its own welcome.
  * - A PAID subscription drops the record outright. The sign-off would be a
@@ -132,11 +175,14 @@ export function recordSteamGrant(
     return rest;
   }
 
-  const grant = steamGrantOf(userMe);
+  const grant = datedGrantOf(userMe);
   if (grant === null) return store;
   const periodEnd = grant.periodEnd.toISOString();
   if (existing?.periodEnd === periodEnd && existing.tier === grant.tier) {
-    return { ...store, [publicId]: { ...existing, seenAt: now } };
+    return {
+      ...store,
+      [publicId]: { ...existing, steam: grant.steam, seenAt: now },
+    };
   }
   return prune(
     {
@@ -144,6 +190,7 @@ export function recordSteamGrant(
       [publicId]: {
         periodEnd,
         tier: grant.tier,
+        steam: grant.steam,
         welcomed: false,
         endedShown: false,
         seenAt: now,
@@ -179,12 +226,14 @@ export function steamGrantWelcomeDue(
   if (grant === null || grant.periodEnd.getTime() <= now) return false;
   if (userMe === null || userMe === false) return false;
   const record = store[userMe.player.publicId];
-  if (record === undefined) return false;
+  if (record === undefined || !record.steam) return false;
   return record.periodEnd === grant.periodEnd.toISOString() && !record.welcomed;
 }
 
 /**
- * Has this account's Steam month run out, with nothing else entitling them?
+ * Has this account's recorded dated grant run out, with nothing else
+ * entitling them? Steam or not: `record.steam` says which, and only a Steam
+ * record is owed the sign-off (`steamGrantEndedDue`).
  *
  * True between the recorded end and the first paid subscription, whether the
  * server has swept the row yet (subscription null) or not (a grant whose end
@@ -219,7 +268,7 @@ export function steamGrantEndedDue(
   now: number,
 ): boolean {
   const record = steamGrantEnded(store, userMe, now);
-  return record !== null && !record.endedShown;
+  return record !== null && record.steam && !record.endedShown;
 }
 
 export function steamGrantWelcomed(

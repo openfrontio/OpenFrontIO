@@ -8,8 +8,8 @@ import type {
 // script tag as a side effect of being imported, which would put js.stripe.com
 // on the critical path of every page load. /pure defers it to the first
 // loadStripe() call, i.e. to the first time a priced store tile renders.
+import { GameEnv } from "@openfront/shared/configuration/Env";
 import { loadStripe } from "@stripe/stripe-js/pure";
-import { GameEnv } from "../core/configuration/Config";
 import { ClientEnv } from "./ClientEnv";
 import {
   createInlinePaymentIntent,

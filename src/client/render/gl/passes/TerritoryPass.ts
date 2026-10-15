@@ -142,6 +142,7 @@ export class TerritoryPass {
         PALETTE_SIZE: getPaletteSize(),
         ...TILE_DEFINES,
       }),
+      "TerritoryPass",
     );
     this.uCamera = gl.getUniformLocation(this.program, "uCamera")!;
     this.uMapSize = gl.getUniformLocation(this.program, "uMapSize")!;

@@ -537,8 +537,10 @@ describe("Translation System", () => {
     const enKeySet = new Set(allKeys);
     const rootKeys = new Set(Object.keys(enJson as Record<string, unknown>));
 
-    const srcDir = path.join(PROJECT_ROOT, "src");
-    const sourceFiles = getAllFiles(srcDir, [".ts", ".tsx", ".js", ".jsx"]);
+    // The engine packages emit message keys too.
+    const sourceFiles = ["src", "packages"].flatMap((dir) =>
+      getAllFiles(path.join(PROJECT_ROOT, dir), [".ts", ".tsx", ".js", ".jsx"]),
+    );
 
     const usedKeys = new Set<string>();
     const referencedStaticKeys = new Set<string>();

@@ -1,3 +1,26 @@
+import { ID, isValidGameID } from "@openfront/engine-api/Schemas";
+import { CloseCode, CloseReason } from "@openfront/shared/CloseCodes";
+import { GameEnv } from "@openfront/shared/configuration/Env";
+import { generateID, replacer } from "@openfront/shared/SharedUtil";
+import {
+  ClientMessage,
+  ClientPlatformSchema,
+  HOSTED_LOBBY_AUTO_START_MS,
+  LevelBadge,
+  MAX_HOSTED_LOBBIES,
+  MAX_HOSTED_LOBBY_PLAYERS,
+  MIN_HOSTED_LOBBY_AUTO_START_MS,
+  MIN_HOSTED_LOBBY_PLAYERS,
+  ServerErrorMessage,
+} from "@openfront/shared/WireSchemas";
+import {
+  CreateGameInputSchema,
+  isPrivateGameInput,
+} from "@openfront/shared/WorkerSchemas";
+import {
+  decodeClientMessage,
+  encodeServerMessage,
+} from "@openfront/shared/ZbinWire";
 import compression from "compression";
 import express, { NextFunction, Request, Response } from "express";
 import rateLimit from "express-rate-limit";
@@ -7,24 +30,6 @@ import path from "path";
 import { fileURLToPath } from "url";
 import { WebSocket, WebSocketServer } from "ws";
 import { z } from "zod";
-import { CloseCode, CloseReason } from "../core/CloseCodes";
-import { GameEnv } from "../core/configuration/Config";
-import { GameType } from "../core/game/Game";
-import {
-  ClientMessage,
-  ClientPlatformSchema,
-  HOSTED_LOBBY_AUTO_START_MS,
-  ID,
-  isValidGameID,
-  MAX_HOSTED_LOBBIES,
-  MAX_HOSTED_LOBBY_PLAYERS,
-  MIN_HOSTED_LOBBY_AUTO_START_MS,
-  MIN_HOSTED_LOBBY_PLAYERS,
-  ServerErrorMessage,
-} from "../core/Schemas";
-import { generateID, replacer } from "../core/Util";
-import { CreateGameInputSchema } from "../core/WorkerSchemas";
-import { decodeClientMessage, encodeServerMessage } from "../core/ZbinWire";
 import { registerAdminBotRoutes } from "./AdminBotRoutes";
 import { censorPlayer } from "./Censor";
 import { Client } from "./Client";
@@ -34,8 +39,10 @@ import { registerGamePreviewRoute } from "./GamePreviewRoute";
 import { GamePhase, type GameServer } from "./GameServer";
 import { isSteamAuthenticated, planJoinVerify, verifyJoin } from "./JoinVerify";
 import { getUserMe, userMeFailureClose, verifyClientToken } from "./jwt";
+import { levelBadgeForPlayer } from "./LevelBadge";
 import { payForLobbyQueue, queueListedLobby } from "./LobbyQueuePayment";
 import { logger } from "./Logger";
+import { registerPlayerProfileRoute } from "./PlayerProfileRoute";
 import { resolveVerifiedJoin } from "./Privilege";
 
 import { MapPlaylist } from "./MapPlaylist";
@@ -186,11 +193,14 @@ export async function startWorker() {
       return res.status(400).json({ error: z.prettifyError(parsed.error) });
     }
     const gc = parsed.data;
-    // Public games are scheduled by the master over IPC, never created here.
-    if (gc?.gameType === GameType.Public) {
+    // Only private games are created here. Public games are scheduled by the
+    // master over IPC, and singleplayer games run in the browser, never on a
+    // game server. An empty body ({}) parses to undefined and gets
+    // createGame's private default.
+    if (!isPrivateGameInput(gc)) {
       return res
         .status(400)
-        .json({ error: "Cannot create public games via this endpoint" });
+        .json({ error: "Only private games can be created via this endpoint" });
     }
 
     // Reuse-lobby flow: ?previous=<gameID> marks this creation as the successor
@@ -470,6 +480,8 @@ export async function startWorker() {
     baseDir: __dirname,
   });
 
+  registerPlayerProfileRoute({ app, log, baseDir: __dirname });
+
   registerAdminBotRoutes({ app, gm, workerId, log });
 
   // WebSocket handling
@@ -672,13 +684,27 @@ export async function startWorker() {
                 });
                 ws.close(CloseCode.Unauthorized, CloseReason.TurnstileFailed);
                 return;
-              case "error":
-                // Fail open: the locally screened name stands.
-                log.error("join_verify error", {
+              case "error": {
+                // Fail open: the API's screened identity when its name check
+                // finished, otherwise the locally screened name stands.
+                if (verdict.identity) {
+                  username = verdict.identity.username;
+                  clanTag = verdict.identity.clanTag;
+                }
+                // A degraded verdict is the API answering within its budget
+                // with a leg missing; only an unreachable or broken API is
+                // an error.
+                const fields = {
                   persistentID: persistentId,
                   gameID: clientMsg.gameID,
                   reason: verdict.reason,
-                });
+                };
+                if (verdict.degraded) {
+                  log.warn("join_verify degraded", fields);
+                } else {
+                  log.error("join_verify error", fields);
+                }
+              }
             }
           } else {
             verifySkipped = true;
@@ -709,6 +735,7 @@ export async function startWorker() {
         let friends: string[] = [];
         let ownedClanTags: string[] = [];
         let trusted = false;
+        let levelBadge: LevelBadge | undefined;
         let accountUsername:
           | {
               username?: string | null;
@@ -742,6 +769,9 @@ export async function startWorker() {
           ownedClanTags = result.response.player.clans?.map((c) => c.tag) ?? [];
           accountUsername = result.response.player;
           trusted = result.response.player.trustTier === "trusted";
+          // Display-only: the roster badge comes from this lookup alone, never
+          // from the join message. None when the player hides their level.
+          levelBadge = levelBadgeForPlayer(result.response.player);
 
           if (allowedFlares !== undefined) {
             const allowed =
@@ -826,6 +856,7 @@ export async function startWorker() {
           clientMsg.spectator === true,
           trusted,
           clientMsg.platform,
+          levelBadge,
         );
 
         const joinResult = gm.joinClient(client, clientMsg.gameID);

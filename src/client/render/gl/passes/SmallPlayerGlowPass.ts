@@ -78,18 +78,29 @@ export class SmallPlayerGlowPass {
         ...TILE_DEFINES,
         TILE_SCALE: BLOOM_TILE_SCALE,
       }),
+      "SmallPlayerGlowPass.extractProg",
     );
     this.uExtractMapSize = gl.getUniformLocation(this.extractProg, "uMapSize")!;
     gl.useProgram(this.extractProg);
     gl.uniform1i(gl.getUniformLocation(this.extractProg, "uTileTex"), 0);
     gl.uniform1i(gl.getUniformLocation(this.extractProg, "uHighlightSet"), 1);
 
-    this.blurProg = createProgram(gl, fullscreenVertSrc, blurFragSrc);
+    this.blurProg = createProgram(
+      gl,
+      fullscreenVertSrc,
+      blurFragSrc,
+      "SmallPlayerGlowPass.blurProg",
+    );
     this.uBlurDir = gl.getUniformLocation(this.blurProg, "uDir")!;
     gl.useProgram(this.blurProg);
     gl.uniform1i(gl.getUniformLocation(this.blurProg, "uTex"), 0);
 
-    this.compositeProg = createProgram(gl, compositeVertSrc, compositeFragSrc);
+    this.compositeProg = createProgram(
+      gl,
+      compositeVertSrc,
+      compositeFragSrc,
+      "SmallPlayerGlowPass.compositeProg",
+    );
     this.uCompositeCam = gl.getUniformLocation(this.compositeProg, "uCamera")!;
     this.uCompositeMapSize = gl.getUniformLocation(
       this.compositeProg,

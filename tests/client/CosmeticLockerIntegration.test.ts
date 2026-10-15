@@ -1,3 +1,5 @@
+import type { UserMeResponse } from "@openfront/shared/ApiSchemas";
+import type { Cosmetics } from "@openfront/shared/CosmeticSchemas";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { getUserMe } from "../../src/client/Api";
 import { userAuth } from "../../src/client/Auth";
@@ -7,14 +9,12 @@ import type { InventoryModal } from "../../src/client/InventoryModal";
 import { modalRouter } from "../../src/client/ModalRouter";
 import "../../src/client/Store";
 import type { StoreModal } from "../../src/client/Store";
-import type { CosmeticCard } from "../../src/client/components/CosmeticCard";
-import type { UserMeResponse } from "../../src/core/ApiSchemas";
-import type { Cosmetics } from "../../src/core/CosmeticSchemas";
 import {
   PATTERN_KEY,
   USER_SETTINGS_CHANGED_EVENT,
   UserSettings,
-} from "../../src/core/game/UserSettings";
+} from "../../src/client/UserSettings";
+import type { CosmeticCard } from "../../src/client/components/CosmeticCard";
 
 vi.mock("../../src/client/Api", async (importOriginal) => ({
   ...(await importOriginal<typeof import("../../src/client/Api")>()),

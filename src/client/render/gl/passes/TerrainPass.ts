@@ -59,6 +59,7 @@ export class TerrainPass {
       gl,
       shaderSrc(terrainVertSrc, { MAP_W: mapW, MAP_H: mapH }),
       terrainFragSrc,
+      "TerrainPass",
     );
     this.uCamera = gl.getUniformLocation(this.program, "uCamera")!;
 

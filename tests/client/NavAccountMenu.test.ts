@@ -31,9 +31,9 @@ vi.mock("../../src/client/Utils", () => ({
   showToast,
 }));
 
+import type { UserMeResponse } from "@openfront/shared/ApiSchemas";
 import { NavAccountMenu } from "../../src/client/components/NavAccountMenu";
 import { updateAccountNavButton } from "../../src/client/NavAccountButton";
-import type { UserMeResponse } from "../../src/core/ApiSchemas";
 
 function userMe(subscribed = false, publicId = "p"): UserMeResponse {
   return {
@@ -141,6 +141,16 @@ describe("nav-account-menu", () => {
     expect(itemKeys()).toContain("subscription");
   });
 
+  it("offers the subscription item to a past_due subscriber, to fix billing", async () => {
+    fireUserMe({
+      user: { email: "player@example.com" },
+      player: { publicId: "p", pastDueSubscription: { tier: "plutonium" } },
+    } as unknown as UserMeResponse);
+    await el.updateComplete;
+    await click(trigger());
+    expect(itemKeys()).toContain("subscription");
+  });
+
   it("copies the profile URL and toasts, and hides without a publicId", async () => {
     fireUserMe(userMe());
     await el.updateComplete;
@@ -149,9 +159,7 @@ describe("nav-account-menu", () => {
     await new Promise((r) => setTimeout(r, 0));
 
     expect(copyToClipboard).toHaveBeenCalledTimes(1);
-    expect(vi.mocked(copyToClipboard).mock.calls[0][0]).toContain(
-      "modal=profile&publicID=p",
-    );
+    expect(vi.mocked(copyToClipboard).mock.calls[0][0]).toContain("/player/p");
     expect(showToast).toHaveBeenCalledWith("common.copied", "green");
 
     // No publicId (older backend / unresolved player) — nothing to share.

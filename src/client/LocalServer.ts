@@ -1,9 +1,16 @@
-import { ClientEnv } from "src/client/ClientEnv";
-import { z } from "zod";
-import { EventBus } from "../core/EventBus";
 import {
   AllPlayersStats,
   ClientID,
+  StampedIntent,
+  Turn,
+} from "@openfront/engine-api/Schemas";
+import { EventBus } from "@openfront/shared/EventBus";
+import {
+  createPartialGameRecord,
+  decompressGameRecord,
+  replacer,
+} from "@openfront/shared/SharedUtil";
+import {
   ClientMessage,
   ClientSendWinnerMessage,
   PartialGameRecord,
@@ -11,14 +18,9 @@ import {
   PlayerRecord,
   ServerMessage,
   ServerStartGameMessage,
-  StampedIntent,
-  Turn,
-} from "../core/Schemas";
-import {
-  createPartialGameRecord,
-  decompressGameRecord,
-  replacer,
-} from "../core/Util";
+} from "@openfront/shared/WireSchemas";
+import { ClientEnv } from "src/client/ClientEnv";
+import { z } from "zod";
 import { getApiBase } from "./Api";
 import { getAuthHeader, getPersistentID } from "./Auth";
 import { LobbyConfig } from "./ClientGameRunner";

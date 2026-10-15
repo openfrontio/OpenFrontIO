@@ -88,7 +88,12 @@ export class FxShockwavePass {
     private gl: WebGL2RenderingContext,
     private settings: RenderSettings,
   ) {
-    this.program = createProgram(gl, shockwaveVertSrc, shockwaveFragSrc);
+    this.program = createProgram(
+      gl,
+      shockwaveVertSrc,
+      shockwaveFragSrc,
+      "FxShockwavePass",
+    );
     this.uCamera = gl.getUniformLocation(this.program, "uCamera")!;
     this.uRingWidth = gl.getUniformLocation(this.program, "uRingWidth")!;
     this.uTime = gl.getUniformLocation(this.program, "uTime")!;

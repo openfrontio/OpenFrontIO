@@ -1,8 +1,5 @@
-import type {
-  GameConfig,
-  GameStartInfo,
-  PublicGameType,
-} from "../../core/Schemas";
+import type { GameConfig, GameStartInfo } from "@openfront/engine-api/Schemas";
+import type { PublicGameType } from "@openfront/shared/WireSchemas";
 
 export interface TelemetryPlayerIdentity {
   clientId: string;

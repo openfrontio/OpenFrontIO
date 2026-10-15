@@ -11,6 +11,7 @@
 
 import type { WebGLGateStatus } from "../../components/WebGLGate";
 import { getPaletteSize } from "./utils/ColorUtils";
+import { readRenderer } from "./utils/GlUtils";
 
 export type GLResult =
   | { gl: WebGL2RenderingContext; status: "ok" }
@@ -34,12 +35,6 @@ const REQUIRED_TEXTURE_SIZE = getPaletteSize();
 // Renderer strings reported by software WebGL backends. Mirrors the detection
 // in utilities/Diagnostic.ts.
 const SOFTWARE_RENDERER = /swiftshader|llvmpipe|software/i;
-
-/** Read the unmasked GPU renderer string, or "unknown" if unavailable. */
-function readRenderer(gl: WebGL2RenderingContext): string {
-  const dbg = gl.getExtension("WEBGL_debug_renderer_info");
-  return dbg ? String(gl.getParameter(dbg.UNMASKED_RENDERER_WEBGL)) : "unknown";
-}
 
 /**
  * Acquire a GPU-accelerated WebGL2 context on `canvas`.

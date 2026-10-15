@@ -1,11 +1,11 @@
+import type { UserMeResponse } from "@openfront/shared/ApiSchemas";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { getUserMe } from "../../src/client/Api";
 import {
   getPlayerCosmeticsRefs,
   invalidateCosmetics,
 } from "../../src/client/Cosmetics";
-import type { UserMeResponse } from "../../src/core/ApiSchemas";
-import { FLAG_KEY, UserSettings } from "../../src/core/game/UserSettings";
+import { FLAG_KEY, UserSettings } from "../../src/client/UserSettings";
 
 vi.mock("../../src/client/Api", async (importOriginal) => ({
   ...(await importOriginal<typeof import("../../src/client/Api")>()),

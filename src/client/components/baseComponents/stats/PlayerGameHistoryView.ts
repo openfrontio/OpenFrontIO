@@ -1,3 +1,10 @@
+import { GameMapType } from "@openfront/engine-api/game/GameTypes";
+import {
+  type PlayerGameModeFilter,
+  type PlayerGameTypeFilter,
+  type PublicPlayerGame,
+} from "@openfront/shared/ApiSchemas";
+import { assetUrl } from "@openfront/shared/AssetUrls";
 import {
   html,
   LitElement,
@@ -5,13 +12,6 @@ import {
   type TemplateResult,
 } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
-import {
-  type PlayerGameModeFilter,
-  type PlayerGameTypeFilter,
-  type PublicPlayerGame,
-} from "../../../../core/ApiSchemas";
-import { assetUrl } from "../../../../core/AssetUrls";
-import { GameMapType } from "../../../../core/game/Game";
 import { fetchPublicPlayerGames } from "../../../Api";
 import { ClientEnv } from "../../../ClientEnv";
 import { terrainMapFileLoader } from "../../../TerrainMapFileLoader";

@@ -1,6 +1,6 @@
+import { assetUrl } from "@openfront/shared/AssetUrls";
 import { LitElement, html } from "lit";
 import { customElement, state } from "lit/decorators.js";
-import { assetUrl } from "../core/AssetUrls";
 import { desktopSteamLocale } from "./DesktopShell";
 import "./LanguageModal";
 import { LanguageModal } from "./LanguageModal";
@@ -277,6 +277,10 @@ export class LangSelector extends LitElement {
       "purchase-button",
       "custom-currency-card",
       "fluent-slider",
+      "nav-account-menu",
+      "level-badge",
+      "game-xp-panel",
+      "past-game-xp-card",
       "news-modal",
       "account-modal",
       "game-stats-modal",

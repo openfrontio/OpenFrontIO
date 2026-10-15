@@ -1,6 +1,6 @@
+import type { LiveStream, StreamsFeed } from "@openfront/shared/ApiSchemas";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { streamsFeed } from "../../../src/client/StreamsFeed";
-import type { LiveStream, StreamsFeed } from "../../../src/core/ApiSchemas";
 
 // Mounting behaviour of the <featured-stream> panel. The point of these tests is the
 // request cost: liveness used to be detected in the browser by constructing a real

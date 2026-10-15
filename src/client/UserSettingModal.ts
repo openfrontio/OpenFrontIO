@@ -1,14 +1,7 @@
+import type { MapLayer } from "@openfront/engine-api/game/MapFiles";
 import { html, nothing } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import { formatKeyForDisplay, translateText } from "../client/Utils";
-import type { MapLayer } from "../core/game/TerrainMapLoader";
-import {
-  AudioCategory,
-  getDefaultKeybinds,
-  GRAPHICS_KEY,
-  USER_SETTINGS_CHANGED_EVENT,
-  UserSettings,
-} from "../core/game/UserSettings";
 import "./components/baseComponents/setting/SettingKeybind";
 import { SettingKeybind } from "./components/baseComponents/setting/SettingKeybind";
 import "./components/baseComponents/setting/SettingNumber";
@@ -41,6 +34,14 @@ import { audioControls, playCue } from "./sound/CuePlayer";
 import type { CueCategory } from "./sound/Sounds";
 import { canHandOffToSteam } from "./SteamHandoff";
 import type { UIState } from "./UIState";
+import {
+  AudioCategory,
+  getDefaultKeybinds,
+  GRAPHICS_KEY,
+  keysMayBeShared,
+  USER_SETTINGS_CHANGED_EVENT,
+  UserSettings,
+} from "./UserSettings";
 
 /**
  * Logged with no payload, ever.
@@ -255,7 +256,7 @@ export class UserSettingModal extends BaseModal {
     }
 
     const values = Object.entries(activeKeybinds)
-      .filter(([k]) => k !== action)
+      .filter(([k]) => k !== action && !keysMayBeShared(action, k))
       .map(([, v]) => v);
 
     // Allow specific key pairs to share physical modifier keys without reporting conflict
@@ -451,6 +452,10 @@ export class UserSettingModal extends BaseModal {
       }
     }
     this.requestUpdate();
+  }
+
+  private toggleReplayViewer(e: Event) {
+    this.userSettings.setReplayViewer((e.target as HTMLInputElement).checked);
   }
 
   private toggleSteamLobbyLinks() {
@@ -1538,6 +1543,36 @@ export class UserSettingModal extends BaseModal {
         @change=${this.handleKeybindChange}
       ></setting-keybind>
 
+      <setting-keybind
+        action="targetPlayer"
+        label=${translateText("user_setting.target_player")}
+        description=${translateText("user_setting.target_player_desc")}
+        defaultKey=${this.defaultKeybinds.targetPlayer}
+        .value=${this.getKeyValue("targetPlayer")}
+        .display=${this.getKeyChar("targetPlayer")}
+        @change=${this.handleKeybindChange}
+      ></setting-keybind>
+
+      <setting-keybind
+        action="emojiMenu"
+        label=${translateText("user_setting.emoji_menu")}
+        description=${translateText("user_setting.emoji_menu_desc")}
+        defaultKey=${this.defaultKeybinds.emojiMenu}
+        .value=${this.getKeyValue("emojiMenu")}
+        .display=${this.getKeyChar("emojiMenu")}
+        @change=${this.handleKeybindChange}
+      ></setting-keybind>
+
+      <setting-keybind
+        action="quickChat"
+        label=${translateText("user_setting.quick_chat")}
+        description=${translateText("user_setting.quick_chat_desc")}
+        defaultKey=${this.defaultKeybinds.quickChat}
+        .value=${this.getKeyValue("quickChat")}
+        .display=${this.getKeyChar("quickChat")}
+        @change=${this.handleKeybindChange}
+      ></setting-keybind>
+
       <h2
         class="text-blue-200 text-xl font-bold mt-8 mb-3 border-b border-white/10 pb-2"
       >
@@ -1555,12 +1590,52 @@ export class UserSettingModal extends BaseModal {
       ></setting-keybind>
 
       <setting-keybind
+        action="zoomOutMinus"
+        label=${translateText("user_setting.zoom_out")}
+        description=${translateText("user_setting.zoom_out_desc")}
+        defaultKey=${this.defaultKeybinds.zoomOutMinus}
+        .value=${this.getKeyValue("zoomOutMinus")}
+        .display=${this.getKeyChar("zoomOutMinus")}
+        @change=${this.handleKeybindChange}
+      ></setting-keybind>
+
+      <setting-keybind
+        action="zoomOutNumpad"
+        label=${translateText("user_setting.zoom_out")}
+        description=${translateText("user_setting.zoom_out_desc")}
+        defaultKey=${this.defaultKeybinds.zoomOutNumpad}
+        .value=${this.getKeyValue("zoomOutNumpad")}
+        .display=${this.getKeyChar("zoomOutNumpad")}
+        @change=${this.handleKeybindChange}
+      ></setting-keybind>
+
+      <setting-keybind
         action="zoomIn"
         label=${translateText("user_setting.zoom_in")}
         description=${translateText("user_setting.zoom_in_desc")}
         defaultKey=${this.defaultKeybinds.zoomIn}
         .value=${this.getKeyValue("zoomIn")}
         .display=${this.getKeyChar("zoomIn")}
+        @change=${this.handleKeybindChange}
+      ></setting-keybind>
+
+      <setting-keybind
+        action="zoomInEqual"
+        label=${translateText("user_setting.zoom_in")}
+        description=${translateText("user_setting.zoom_in_desc")}
+        defaultKey=${this.defaultKeybinds.zoomInEqual}
+        .value=${this.getKeyValue("zoomInEqual")}
+        .display=${this.getKeyChar("zoomInEqual")}
+        @change=${this.handleKeybindChange}
+      ></setting-keybind>
+
+      <setting-keybind
+        action="zoomInNumpad"
+        label=${translateText("user_setting.zoom_in")}
+        description=${translateText("user_setting.zoom_in_desc")}
+        defaultKey=${this.defaultKeybinds.zoomInNumpad}
+        .value=${this.getKeyValue("zoomInNumpad")}
+        .display=${this.getKeyChar("zoomInNumpad")}
         @change=${this.handleKeybindChange}
       ></setting-keybind>
 
@@ -1591,12 +1666,32 @@ export class UserSettingModal extends BaseModal {
       ></setting-keybind>
 
       <setting-keybind
+        action="moveUpArrow"
+        label=${translateText("user_setting.move_up")}
+        description=${translateText("user_setting.move_up_desc")}
+        .defaultKey=${this.defaultKeybinds.moveUpArrow}
+        .value=${this.getKeyValue("moveUpArrow")}
+        .display=${this.getKeyChar("moveUpArrow")}
+        @change=${this.handleKeybindChange}
+      ></setting-keybind>
+
+      <setting-keybind
         action="moveLeft"
         label=${translateText("user_setting.move_left")}
         description=${translateText("user_setting.move_left_desc")}
         defaultKey=${this.defaultKeybinds.moveLeft}
         .value=${this.getKeyValue("moveLeft")}
         .display=${this.getKeyChar("moveLeft")}
+        @change=${this.handleKeybindChange}
+      ></setting-keybind>
+
+      <setting-keybind
+        action="moveLeftArrow"
+        label=${translateText("user_setting.move_left")}
+        description=${translateText("user_setting.move_left_desc")}
+        .defaultKey=${this.defaultKeybinds.moveLeftArrow}
+        .value=${this.getKeyValue("moveLeftArrow")}
+        .display=${this.getKeyChar("moveLeftArrow")}
         @change=${this.handleKeybindChange}
       ></setting-keybind>
 
@@ -1611,12 +1706,32 @@ export class UserSettingModal extends BaseModal {
       ></setting-keybind>
 
       <setting-keybind
+        action="moveDownArrow"
+        label=${translateText("user_setting.move_down")}
+        description=${translateText("user_setting.move_down_desc")}
+        .defaultKey=${this.defaultKeybinds.moveDownArrow}
+        .value=${this.getKeyValue("moveDownArrow")}
+        .display=${this.getKeyChar("moveDownArrow")}
+        @change=${this.handleKeybindChange}
+      ></setting-keybind>
+
+      <setting-keybind
         action="moveRight"
         label=${translateText("user_setting.move_right")}
         description=${translateText("user_setting.move_right_desc")}
         defaultKey=${this.defaultKeybinds.moveRight}
         .value=${this.getKeyValue("moveRight")}
         .display=${this.getKeyChar("moveRight")}
+        @change=${this.handleKeybindChange}
+      ></setting-keybind>
+
+      <setting-keybind
+        action="moveRightArrow"
+        label=${translateText("user_setting.move_right")}
+        description=${translateText("user_setting.move_right_desc")}
+        .defaultKey=${this.defaultKeybinds.moveRightArrow}
+        .value=${this.getKeyValue("moveRightArrow")}
+        .display=${this.getKeyChar("moveRightArrow")}
         @change=${this.handleKeybindChange}
       ></setting-keybind>
     `;
@@ -1629,6 +1744,19 @@ export class UserSettingModal extends BaseModal {
    */
   private renderGraphicsSettings() {
     return html`
+      <setting-slider
+        label=${translateText("user_setting.hud_opacity_label")}
+        description=${translateText("user_setting.hud_opacity_desc")}
+        id="hud-opacity-slider"
+        .value=${this.userSettings.hudOpacity() * 100}
+        @change=${(e: CustomEvent<{ value: number }>) => {
+          this.userSettings.setHudOpacity(e.detail.value / 100);
+          document.documentElement.style.setProperty(
+            "--hud-opacity",
+            String(this.userSettings.hudOpacity()),
+          );
+        }}
+      ></setting-slider>
       <!-- 🎨 Graphics preset -->
       <div
         class="flex flex-col w-full p-4 bg-white/5 border border-white/10 rounded-xl hover:bg-white/10 transition-all gap-3"
@@ -1735,6 +1863,15 @@ export class UserSettingModal extends BaseModal {
         id="lobby-start-alerts-toggle"
         .checked=${this.userSettings.lobbyStartAlerts()}
         @change=${this.toggleLobbyStartAlerts}
+      ></setting-toggle>
+
+      <!-- 🎬 New replay viewer (opt-in while it's rolled out) -->
+      <setting-toggle
+        label="${translateText("user_setting.replay_viewer_label")}"
+        description="${translateText("user_setting.replay_viewer_desc")}"
+        id="replay-viewer-toggle"
+        .checked=${this.userSettings.replayViewer()}
+        @change=${this.toggleReplayViewer}
       ></setting-toggle>
 
       ${canHandOffToSteam()

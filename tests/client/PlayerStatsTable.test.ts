@@ -11,8 +11,8 @@ vi.mock("../../src/client/Utils", async (importOriginal) => {
   };
 });
 
+import type { PlayerStats } from "@openfront/engine-api/StatsSchemas";
 import { PlayerStatsTable } from "../../src/client/components/baseComponents/stats/PlayerStatsTable";
-import type { PlayerStats } from "../../src/core/StatsSchemas";
 
 /**
  * Distinct values per slot so a shifted column is always visible: no two

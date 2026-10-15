@@ -75,6 +75,7 @@ export class BorderComputePass {
       gl,
       fullscreenNoUvVertSrc,
       shaderSrc(borderComputeFragSrc, { ...TILE_DEFINES }),
+      "BorderComputePass",
     );
 
     this.uMapSize = gl.getUniformLocation(this.program, "uMapSize")!;

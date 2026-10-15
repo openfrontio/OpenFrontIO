@@ -1,12 +1,13 @@
-import { Game, PlayerInfo, PlayerType } from "../src/core/game/Game";
-import { StatsImpl } from "../src/core/game/StatsImpl";
+import { PlayerInfo, PlayerType } from "@openfront/engine-api/game/GameTypes";
 import {
   ALLIANCE_INDEX_PEAK_CONCURRENT,
   PlayerStats,
   TILE_INDEX_DRAWDOWN_PEAK,
   TILE_INDEX_DRAWDOWN_TROUGH,
   TILE_INDEX_PEAK,
-} from "../src/core/StatsSchemas";
+} from "@openfront/engine-api/StatsSchemas";
+import { Game } from "@openfront/engine/game/Game";
+import { StatsImpl } from "@openfront/engine/game/StatsImpl";
 import { setup } from "./util/Setup";
 
 /** Find the first land tile on the map. */

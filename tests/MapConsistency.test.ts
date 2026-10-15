@@ -1,12 +1,12 @@
-import fs from "fs";
-import path from "path";
 import {
   type CustomTribe,
   GameMapName,
   GameMapType,
   MapInfo,
   maps,
-} from "../src/core/game/Game";
+} from "@openfront/engine-api/game/GameTypes";
+import fs from "fs";
+import path from "path";
 import { validateLayer } from "./util/layerValidation";
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
@@ -36,6 +36,20 @@ const FREQUENCY_EXEMPTIONS: Set<GameMapName> = new Set([
   "BritanniaClassic",
   "ChoppingBlock",
   "Luna",
+]);
+
+// The API (openfrontio/infra `GameMapTypeSchema`, and the `maps.name`
+// varchar(29) column) rejects a game record whose map name breaks these.
+const API_MAP_NAME = /^[a-zA-Z0-9\s().-]+$/;
+const API_MAP_NAME_MAX_LENGTH = 29;
+
+// Maps whose folder isn't their name without spaces and punctuation; the
+// site Worker's link previews list them in infra `src/site/lib/GameMeta.ts`.
+const PREVIEW_FOLDER_EXCEPTIONS: Set<GameMapName> = new Set([
+  "Tourney1",
+  "Tourney2",
+  "Tourney3",
+  "Tourney4",
 ]);
 
 // Keys in the en.json "map" section that are UI strings, not map names.
@@ -154,6 +168,54 @@ describe("Map consistency", () => {
     }
     if (errors.length > 0) {
       throw new Error("Map generator asset violations:\n" + errors.join("\n"));
+    }
+  });
+
+  test("Map names are ones the API accepts", () => {
+    const errors: string[] = [];
+    for (const key of allMapKeys) {
+      const name = GameMapType[key];
+      if (!API_MAP_NAME.test(name)) {
+        errors.push(
+          `${key}: "${name}" has a character the API's GameMapTypeSchema rejects (allowed: letters, digits, spaces, . ( ) -)`,
+        );
+      }
+      if (name.length > API_MAP_NAME_MAX_LENGTH) {
+        errors.push(
+          `${key}: "${name}" is longer than the API's ${API_MAP_NAME_MAX_LENGTH}-character maps.name`,
+        );
+      }
+    }
+    if (errors.length > 0) {
+      throw new Error(
+        "Games on these maps would fail to archive (no stats, no replay):\n" +
+          errors.join("\n"),
+      );
+    }
+  });
+
+  test("Map folders follow from map names (link-preview thumbnails)", () => {
+    const errors: string[] = [];
+    for (const key of allMapKeys) {
+      const name = GameMapType[key];
+      const fromName = name.toLowerCase().replace(/[\s.()-]+/g, "");
+      const matches = fromName === toFolderName(key);
+      if (PREVIEW_FOLDER_EXCEPTIONS.has(key)) {
+        if (matches) {
+          errors.push(
+            `${key}: folder now follows from "${name}"; drop it from PREVIEW_FOLDER_EXCEPTIONS and infra's MAP_DIRS`,
+          );
+        }
+      } else if (!matches) {
+        errors.push(
+          `${key}: folder "${toFolderName(key)}" but "${name}" gives "${fromName}"; rename the map id to match, or add it to infra's MAP_DIRS (src/site/lib/GameMeta.ts) and PREVIEW_FOLDER_EXCEPTIONS`,
+        );
+      }
+    }
+    if (errors.length > 0) {
+      throw new Error(
+        "Shared game links would show no map thumbnail:\n" + errors.join("\n"),
+      );
     }
   });
 
@@ -626,7 +688,7 @@ describe("Map consistency", () => {
     }
   });
 
-  test("Layer PNGs exist in map-generator and resources for every defined layer", () => {
+  test("Every defined layer has its source PNG and both generated WebP variants", () => {
     const errors: string[] = [];
 
     for (const key of allMapKeys) {
@@ -648,16 +710,22 @@ describe("Map consistency", () => {
             `${key}: layer PNG "${layer.id}.png" missing in map-generator/assets/maps/${folder}/`,
           );
         }
-        const resPng = path.join(resDir, `${layer.id}.png`);
-        if (!fs.existsSync(resPng)) {
+        for (const file of [`${layer.id}.webp`, `${layer.id}.4x.webp`]) {
+          if (!fs.existsSync(path.join(resDir, file))) {
+            errors.push(
+              `${key}: layer image "${file}" missing in resources/maps/${folder}/ (run the map generator)`,
+            );
+          }
+        }
+        if (fs.existsSync(path.join(resDir, `${layer.id}.png`))) {
           errors.push(
-            `${key}: layer PNG "${layer.id}.png" missing in resources/maps/${folder}/`,
+            `${key}: stale layer PNG "${layer.id}.png" in resources/maps/${folder}/ (layers ship as WebP)`,
           );
         }
       }
     }
     if (errors.length > 0) {
-      throw new Error("Missing layer PNGs:\n" + errors.join("\n"));
+      throw new Error("Layer image violations:\n" + errors.join("\n"));
     }
   });
 

@@ -118,7 +118,7 @@ All new features and bug fixes should include relevant tests. We use **Vitest**.
 - **Run Tests**: `npm test`
 - **Run Coverage**: `npm run test:coverage`
 
-**Note**: All code changes in `src/core` **MUST** be tested to ensure game logic stability.
+**Note**: All code changes in `packages/engine`, `packages/engine-api` and `packages/engine-lib` **MUST** be tested to ensure game logic stability.
 
 ## Submitting a Pull Request
 

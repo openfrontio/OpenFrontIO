@@ -1,3 +1,4 @@
+import { assetUrl } from "@openfront/shared/AssetUrls";
 import { html } from "lit";
 import { customElement, query, state } from "lit/decorators.js";
 import {
@@ -6,13 +7,12 @@ import {
   translateText,
   TUTORIAL_VIDEO_URL,
 } from "../client/Utils";
-import { assetUrl } from "../core/AssetUrls";
-import { UserSettings } from "../core/game/UserSettings";
 import { BaseModal } from "./components/BaseModal";
 import "./components/Difficulties";
 import { modalHeader } from "./components/ui/ModalHeader";
 import { Platform } from "./Platform";
 import { TroubleshootingModal } from "./TroubleshootingModal";
+import { UserSettings } from "./UserSettings";
 
 @customElement("help-modal")
 export class HelpModal extends BaseModal {
@@ -368,6 +368,22 @@ export class HelpModal extends BaseModal {
                           ></div>
                         </div>
                       </div>
+                    </td>
+                    <td class="py-3 border-b border-white/5 text-white/70">
+                      ${translateText("help_modal.action_emote")}
+                    </td>
+                  </tr>
+                  <tr class="hover:bg-white/5 transition-colors">
+                    <td class="py-3 ps-4 border-b border-white/5">
+                      ${this.renderKey(keybinds.quickChat)}
+                    </td>
+                    <td class="py-3 border-b border-white/5 text-white/70">
+                      ${translateText("help_modal.action_quick_chat")}
+                    </td>
+                  </tr>
+                  <tr class="hover:bg-white/5 transition-colors">
+                    <td class="py-3 ps-4 border-b border-white/5">
+                      ${this.renderKey(keybinds.emojiMenu)}
                     </td>
                     <td class="py-3 border-b border-white/5 text-white/70">
                       ${translateText("help_modal.action_emote")}

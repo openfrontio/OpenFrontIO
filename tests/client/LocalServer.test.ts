@@ -1,7 +1,8 @@
+import type { GameStartInfo } from "@openfront/engine-api/Schemas";
+import { EventBus } from "@openfront/shared/EventBus";
+import type { ClientMessage } from "@openfront/shared/WireSchemas";
 import { gunzipSync } from "node:zlib";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { EventBus } from "../../src/core/EventBus";
-import type { ClientMessage, GameStartInfo } from "../../src/core/Schemas";
 
 vi.mock("../../src/client/Auth", () => ({
   getAuthHeader: vi.fn(async () => "Bearer test-jwt"),
@@ -115,6 +116,8 @@ describe("LocalServer archiving", () => {
     expect(record.gitCommit).toBe("DEV");
     expect(record.info.winner).toEqual(["player", CLIENT_ID]);
     expect(record.info.players[0].clientID).toBe(CLIENT_ID);
+    // No server vote backs a singleplayer record's stats.
+    expect(record.info.statsAgreed).toBeUndefined();
 
     // Exiting afterwards must not archive the same game twice.
     server.endGame();

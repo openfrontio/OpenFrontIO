@@ -1,6 +1,6 @@
+import type { LiveStream } from "@openfront/shared/ApiSchemas";
 import { LitElement, html, nothing } from "lit";
 import { customElement, state } from "lit/decorators.js";
-import type { LiveStream } from "../../core/ApiSchemas";
 import { streamsFeed, watchUrl } from "../StreamsFeed";
 import { translateText } from "../Utils";
 

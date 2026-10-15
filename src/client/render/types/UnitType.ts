@@ -59,6 +59,15 @@ export const SMOOTHED_NUKE_TYPES: ReadonlySet<string> = new Set([
   UT_MIRV_WARHEAD,
 ]);
 
+/** Units that leave a trail on the map (TrailManager). */
+export const TRAIL_TYPES: ReadonlySet<string> = new Set([
+  UT_TRANSPORT,
+  UT_ATOM_BOMB,
+  UT_HYDROGEN_BOMB,
+  UT_MIRV,
+  UT_MIRV_WARHEAD,
+]);
+
 /** Blast radii (in tiles) matching upstream DefaultConfig.nukeMagnitudes(). */
 export const NUKE_MAGNITUDES: Readonly<
   Record<string, { inner: number; outer: number }>

@@ -1,9 +1,3 @@
-import { html, TemplateResult } from "lit";
-import { customElement, state } from "lit/decorators.js";
-import { translateText } from "../client/Utils";
-import { UserMeResponse } from "../core/ApiSchemas";
-import { assetUrl } from "../core/AssetUrls";
-import { DoomsdayClockSpeed } from "../core/game/DoomsdayClock";
 import {
   Difficulty,
   GameMapSize,
@@ -12,10 +6,16 @@ import {
   GameType,
   maps,
   UnitType,
-} from "../core/game/Game";
-import { UserSettings } from "../core/game/UserSettings";
-import { PlayerCosmetics, TeamCountConfig } from "../core/Schemas";
-import { generateID } from "../core/Util";
+} from "@openfront/engine-api/game/GameTypes";
+import { TeamCountConfig } from "@openfront/engine-api/Schemas";
+import { DoomsdayClockSpeed } from "@openfront/engine-lib/game/DoomsdayClock";
+import { UserMeResponse } from "@openfront/shared/ApiSchemas";
+import { assetUrl } from "@openfront/shared/AssetUrls";
+import { generateID } from "@openfront/shared/SharedUtil";
+import { PlayerCosmetics } from "@openfront/shared/WireSchemas";
+import { html, TemplateResult } from "lit";
+import { customElement, state } from "lit/decorators.js";
+import { translateText } from "../client/Utils";
 import { responseHasLinkedIdentity } from "./AccountIdentity";
 import "./components/baseComponents/Button";
 import "./components/baseComponents/Modal";
@@ -25,12 +25,14 @@ import { MEDAL_ORDER, medalIcon } from "./components/map/Medals";
 import "./components/ToggleInputCard";
 import { modalHeader } from "./components/ui/ModalHeader";
 import { getPlayerCosmetics, prewarmCosmetics } from "./Cosmetics";
-import { crazyGamesSDK } from "./CrazyGamesSDK";
+import { gamePortal } from "./GamePortal";
 import { GameStartingModal } from "./GameStartingModal";
 import { showInGameAlert } from "./InGameModal";
 import { JoinLobbyEvent } from "./Main";
 import { fallbackPlayerName, ResolvedPlayerName } from "./PlayerName";
+import { lastUserMeResponse } from "./UserMeBroadcast";
 import { UsernameInput } from "./UsernameInput";
+import { UserSettings } from "./UserSettings";
 import {
   getBotsForCompactMap,
   getNationsForCompactMap,
@@ -62,11 +64,11 @@ import { terrainMapFileLoader } from "./TerrainMapFileLoader";
 export const START_PREPARE_DEADLINE_MS = 15_000;
 
 /**
- * Ceiling on the CrazyGames midgame ad, deliberately far above
+ * Ceiling on the portal midgame ad, deliberately far above
  * START_PREPARE_DEADLINE_MS: an ad creative routinely runs 15-30s and it has
  * to gate the start, because dispatching behind one puts gameplay — spawn
  * selection included — under a still-visible overlay. This exists only for an
- * SDK that never calls adFinished or adError at all. Off CrazyGames,
+ * SDK that never calls adFinished or adError at all. Off a portal,
  * requestMidgameAd() resolves immediately and none of this is reached.
  */
 export const MIDGAME_AD_DEADLINE_MS = 60_000;
@@ -229,6 +231,13 @@ export class SinglePlayerModal extends BaseModal {
       "userMeResponse",
       this.handleUserMeResponse as EventListener,
     );
+    // It loads on demand (see LazyModals), usually after Main's broadcast
+    // went out.
+    const last = lastUserMeResponse();
+    if (last !== null) {
+      this.userMeResponse = last.response;
+      this.applyAchievements(last.response);
+    }
     void this.loadNationCount();
   }
 
@@ -279,7 +288,7 @@ export class SinglePlayerModal extends BaseModal {
   };
 
   private renderNotLoggedInBanner(): TemplateResult {
-    if (crazyGamesSDK.isOnCrazyGames()) {
+    if (gamePortal.isOnGamePortal()) {
       return html``;
     }
     return html`<button
@@ -1010,7 +1019,7 @@ export class SinglePlayerModal extends BaseModal {
   }
 
   /**
-   * The CrazyGames midgame ad, on a bound of its own.
+   * The portal midgame ad, on a bound of its own.
    *
    * Separate from resolveNameAndCosmetics because an ad is not the same kind
    * of wait. It is the player watching something, legitimately for longer than
@@ -1022,12 +1031,12 @@ export class SinglePlayerModal extends BaseModal {
    * adFinished/adError callbacks).
    *
    * Only ever called for a start that is still live — an ad shown for a game
-   * that will not start is worse than no ad. Off CrazyGames this resolves
+   * that will not start is worse than no ad. Off a portal this resolves
    * immediately.
    */
   private awaitMidgameAd(): Promise<void> {
     return withDeadline(
-      crazyGamesSDK.requestMidgameAd(),
+      gamePortal.requestMidgameAd(),
       MIDGAME_AD_DEADLINE_MS,
       () => {
         console.warn("Midgame ad never signalled completion; starting anyway");
