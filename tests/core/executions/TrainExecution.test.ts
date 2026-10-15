@@ -146,7 +146,8 @@ describe("TrainExecution", () => {
     const [stationA, stationB, stationC, stationD1, stationD2] = [
       0, 1, 8, 2, 3,
     ].map(
-      (tile) => new TrainStation(game, player.buildUnit(UnitType.City, tile, {})),
+      (tile) =>
+        new TrainStation(game, player.buildUnit(UnitType.City, tile, {})),
     );
     const net = game.railNetwork();
     const stationManager = net.stationManager();
