@@ -2,8 +2,8 @@
   "id": "BrainRot",
   "name": "Brain Rot",
   "translation_key": "map.brainrot",
-  "categories": ["arcade"],
-  "multiplayer_frequency": 10,
+  "categories": ["arcade", "new"],
+  "multiplayer_frequency": 50,
   "nations": [
     {
       "coordinates": [760, 760],
@@ -198,5 +198,6 @@
       "alpha": 0.75,
       "nukeable": true
     }
-  ]
+  ],
+  "themes": ["space", "war"]
 }
