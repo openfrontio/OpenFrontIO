@@ -1,6 +1,6 @@
+import type { PlayerCosmetics } from "@openfront/shared/WireSchemas";
 import { render } from "lit";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { PlayerCosmetics } from "../../src/core/Schemas";
 
 const cosmeticsMocks = vi.hoisted(() => ({
   getPlayerCosmetics: vi.fn(),
@@ -13,7 +13,7 @@ vi.mock("../../src/client/Cosmetics", async (importOriginal) => ({
   prewarmCosmetics: cosmeticsMocks.prewarmCosmetics,
 }));
 
-import { crazyGamesSDK } from "../../src/client/CrazyGamesSDK";
+import { gamePortal } from "../../src/client/GamePortal";
 import {
   MIDGAME_AD_DEADLINE_MS,
   SinglePlayerModal,
@@ -298,7 +298,7 @@ describe("SinglePlayerModal start feedback", () => {
   it("does not cut a midgame ad short at the preparation deadline", async () => {
     vi.useFakeTimers();
     let finishAd: () => void = () => {};
-    vi.spyOn(crazyGamesSDK, "requestMidgameAd").mockReturnValue(
+    vi.spyOn(gamePortal, "requestMidgameAd").mockReturnValue(
       new Promise<void>((resolve) => {
         finishAd = resolve;
       }),
@@ -328,7 +328,7 @@ describe("SinglePlayerModal start feedback", () => {
       }),
     );
     const requestAd = vi
-      .spyOn(crazyGamesSDK, "requestMidgameAd")
+      .spyOn(gamePortal, "requestMidgameAd")
       .mockResolvedValue(undefined);
 
     const started = internals(modal).startGame();
@@ -345,7 +345,7 @@ describe("SinglePlayerModal start feedback", () => {
   // can be closed while it plays.
   it("does not start a game abandoned while the ad was playing", async () => {
     let finishAd: () => void = () => {};
-    vi.spyOn(crazyGamesSDK, "requestMidgameAd").mockReturnValue(
+    vi.spyOn(gamePortal, "requestMidgameAd").mockReturnValue(
       new Promise<void>((resolve) => {
         finishAd = resolve;
       }),
@@ -365,7 +365,7 @@ describe("SinglePlayerModal start feedback", () => {
   it("gives up on an ad that never signals completion", async () => {
     vi.useFakeTimers();
     vi.spyOn(console, "warn").mockImplementation(() => undefined);
-    vi.spyOn(crazyGamesSDK, "requestMidgameAd").mockReturnValue(
+    vi.spyOn(gamePortal, "requestMidgameAd").mockReturnValue(
       new Promise<void>(() => {}),
     );
 

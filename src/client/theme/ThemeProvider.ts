@@ -1,13 +1,17 @@
+import {
+  ColoredTeams,
+  PlayerType,
+  Team,
+} from "@openfront/engine-api/game/GameTypes";
+import { simpleHash } from "@openfront/engine-lib/Util";
 import { Colord, colord, LabaColor } from "colord";
-import { ColoredTeams, PlayerType, Team } from "../../core/game/Game";
-import { UserSettings } from "../../core/game/UserSettings";
-import { simpleHash } from "../../core/Util";
 import { PALETTE_NAMES } from "../render/gl/GraphicsOverrides";
 import {
   createThemeSettings,
   ThemeName,
   ThemeSettings,
 } from "../render/gl/RenderSettings";
+import { UserSettings } from "../UserSettings";
 import { PlayerView } from "../view";
 import { ColorAllocator } from "./ColorAllocator";
 
@@ -270,7 +274,7 @@ export class SettingsTheme implements Theme {
 
 /**
  * Client-side source of truth for the active theme. Themes were moved out of
- * `src/core` (the simulation never reads colors); this singleton replaces the
+ * the engine (the simulation never reads colors); this singleton replaces the
  * old `Config.theme()` accessor.
  */
 class ThemeProvider {

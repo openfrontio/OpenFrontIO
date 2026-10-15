@@ -1,7 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { EventBus } from "@openfront/shared/EventBus";
 import en from "../../resources/lang/en.json";
-import { crazyGamesSDK } from "../../src/client/CrazyGamesSDK";
+import { gamePortal } from "../../src/client/GamePortal";
 import {
   SettingsModal,
   ShowSettingsModalEvent,
@@ -9,7 +10,6 @@ import {
 import { PauseGameIntentEvent } from "../../src/client/Transport";
 import "../../src/client/UserSettingModal";
 import type { UserSettingModal } from "../../src/client/UserSettingModal";
-import { EventBus } from "../../src/core/EventBus";
 
 type TestMenu = SettingsModal & { updateComplete: Promise<unknown> };
 type TestSettings = UserSettingModal & {
@@ -36,10 +36,10 @@ describe("in-game menu opens the shared settings modal", () => {
     document.body.innerHTML = "";
     localStorage.clear();
     gameplayStop = vi
-      .spyOn(crazyGamesSDK, "gameplayStop")
+      .spyOn(gamePortal, "gameplayStop")
       .mockImplementation(async () => {});
     gameplayStart = vi
-      .spyOn(crazyGamesSDK, "gameplayStart")
+      .spyOn(gamePortal, "gameplayStart")
       .mockImplementation(async () => {});
 
     menu = document.createElement("settings-modal") as TestMenu;

@@ -1,9 +1,9 @@
 import { html } from "lit";
 import { customElement, state } from "lit/decorators.js";
-import { UserSettings } from "../core/game/UserSettings";
 import { BaseModal } from "./components/BaseModal";
 import { modalHeader } from "./components/ui/ModalHeader";
 import { launchSteamJoin, type SteamHandoffMode } from "./SteamHandoff";
+import { UserSettings } from "./UserSettings";
 import { translateText } from "./Utils";
 
 const BUTTON_BASE =

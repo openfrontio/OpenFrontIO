@@ -1,0 +1,189 @@
+import { TileRef } from "@openfront/engine-api/game/GameMap";
+import {
+  Cell,
+  Difficulty,
+  GameMode,
+  Gold,
+  PlayerType,
+  Structures,
+  UnitType,
+} from "@openfront/engine-api/game/GameTypes";
+import { PseudoRandom } from "@openfront/engine-lib/PseudoRandom";
+import { assertNever, calculateBoundingBox } from "@openfront/engine-lib/Util";
+import { Game, Player } from "../../game/Game";
+
+/** Starting gold from which nations place many structures at once, ballooning their max troops */
+const HIGH_STARTING_GOLD = 3_000_000n;
+
+export function hasHighStartingGold(game: Game, player: Player): boolean {
+  return game.config().startingGold(player.info()) >= HIGH_STARTING_GOLD;
+}
+
+/** Most minutes of income a nation saves up for; a target further off isn't worth holding back for, keyed by difficulty */
+const SAVE_UP_HORIZON_MINUTES: Record<Difficulty, number> = {
+  [Difficulty.Easy]: Infinity,
+  [Difficulty.Medium]: Infinity,
+  [Difficulty.Hard]: 5,
+  [Difficulty.Impossible]: 6,
+};
+
+/** Whether `target` gold is close enough to save up for, given the nation's current income. */
+export function isSaveUpWithinReach(
+  game: Game,
+  player: Player,
+  target: Gold,
+): boolean {
+  const horizon =
+    SAVE_UP_HORIZON_MINUTES[game.config().gameConfig().difficulty];
+  const missing = Number(target - player.gold());
+  if (horizon === Infinity || missing <= 0) return true;
+  // Income grows about linearly over a game, so the current rate is about twice the average
+  const minutes = Math.max(1, game.ticks() / 600);
+  const incomePerMinute = (2 * Number(player.goldEarned())) / minutes;
+  return missing <= incomePerMinute * horizon;
+}
+
+export function randTerritoryTileArray(
+  random: PseudoRandom,
+  mg: Game,
+  player: Player,
+  numTiles: number,
+): TileRef[] {
+  const boundingBox = calculateBoundingBox(mg, player.borderTiles());
+  const tiles: TileRef[] = [];
+  for (let i = 0; i < numTiles; i++) {
+    const tile = randTerritoryTile(random, mg, player, boundingBox);
+    if (tile !== null) {
+      tiles.push(tile);
+    }
+  }
+  return tiles;
+}
+
+function randTerritoryTile(
+  random: PseudoRandom,
+  mg: Game,
+  p: Player,
+  boundingBox: { min: Cell; max: Cell } | null = null,
+): TileRef | null {
+  // Prefer sampling inside the bounding box first (fast, usually good enough)
+  boundingBox ??= calculateBoundingBox(mg, p.borderTiles());
+  for (let i = 0; i < 100; i++) {
+    const randX = random.nextInt(boundingBox.min.x, boundingBox.max.x);
+    const randY = random.nextInt(boundingBox.min.y, boundingBox.max.y);
+    if (!mg.isOnMap(new Cell(randX, randY))) {
+      // Sanity check should never happen
+      continue;
+    }
+    const randTile = mg.ref(randX, randY);
+    if (mg.owner(randTile) === p) {
+      return randTile;
+    }
+  }
+
+  if (p.numTilesOwned() > 0 && p.numTilesOwned() <= 100) {
+    return random.randElement(Array.from(p.tiles()));
+  }
+
+  return null;
+}
+
+// Ranks candidates by structures, troop-cap headroom, and tiles (normalized), returning the juiciest
+export function findJuiciestTarget(
+  game: Game,
+  candidates: Player[],
+): Player | null {
+  if (candidates.length === 0) return null;
+
+  const stats = candidates.map((p) => {
+    // Defense posts and missile silos are defensive, not a prize worth
+    // capturing - only count the rest of the structures.
+    const structureCount = p
+      .units()
+      .reduce(
+        (sum, u) =>
+          Structures.has(u.type()) &&
+          u.type() !== UnitType.DefensePost &&
+          u.type() !== UnitType.MissileSilo
+            ? sum + u.level()
+            : sum,
+        0,
+      );
+    const maxTroops = game.config().maxTroops(p);
+    const troopGapRatio = maxTroops > 0 ? 1 - p.troops() / maxTroops : 0;
+    return {
+      player: p,
+      structureCount,
+      troopGapRatio,
+      tiles: p.numTilesOwned(),
+    };
+  });
+
+  const normalize = (value: number, values: number[]): number => {
+    const min = Math.min(...values);
+    const max = Math.max(...values);
+    return max > min ? (value - min) / (max - min) : 0;
+  };
+  const structureCounts = stats.map((s) => s.structureCount);
+  const troopGapRatios = stats.map((s) => s.troopGapRatio);
+  const tileCounts = stats.map((s) => s.tiles);
+
+  let best: Player | null = null;
+  let bestScore = -Infinity;
+  for (const s of stats) {
+    const juiciness =
+      normalize(s.structureCount, structureCounts) +
+      normalize(s.troopGapRatio, troopGapRatios) +
+      normalize(s.tiles, tileCounts);
+    if (juiciness > bestScore) {
+      bestScore = juiciness;
+      best = s.player;
+    }
+  }
+  return best;
+}
+
+// How many times the runner-up's land the leader must own to count as a
+// runaway leader. Easy nations never notice one.
+function runawayLeadFactor(difficulty: Difficulty): number | null {
+  switch (difficulty) {
+    case Difficulty.Easy:
+      return null;
+    case Difficulty.Medium:
+      return 3;
+    case Difficulty.Hard:
+      return 2;
+    case Difficulty.Impossible:
+      return 1.5;
+    default:
+      assertNever(difficulty);
+  }
+}
+
+// The FFA player (not a bot) owning the most land, if it is far enough ahead
+// of the runner-up that nations should stop helping it and start pressuring it
+export function findRunawayLeader(game: Game): Player | null {
+  const { difficulty, gameMode } = game.config().gameConfig();
+  if (gameMode !== GameMode.FFA) return null;
+  const factor = runawayLeadFactor(difficulty);
+  if (factor === null) return null;
+
+  let leader: Player | null = null;
+  let runnerUp: Player | null = null;
+  for (const p of game.players()) {
+    if (p.type() === PlayerType.Bot) continue;
+    if (leader === null || p.numTilesOwned() > leader.numTilesOwned()) {
+      runnerUp = leader;
+      leader = p;
+    } else if (
+      runnerUp === null ||
+      p.numTilesOwned() > runnerUp.numTilesOwned()
+    ) {
+      runnerUp = p;
+    }
+  }
+  if (leader === null || runnerUp === null) return null;
+  return leader.numTilesOwned() >= runnerUp.numTilesOwned() * factor
+    ? leader
+    : null;
+}

@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 import en from "../resources/lang/en.json";
 import { CosmeticInfo } from "../src/client/components/CosmeticInfo";
 

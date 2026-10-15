@@ -1,5 +1,5 @@
+import type { UserMeResponse } from "@openfront/shared/ApiSchemas";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { UserMeResponse } from "../../src/core/ApiSchemas";
 
 // ─── Mocks (mirrors tests/client/clan/ClanModalTestUtils.ts factories) ──────
 
@@ -18,7 +18,7 @@ vi.mock("../../src/client/Auth", () => ({
   linkSteam: vi.fn(async () => true),
   steamLogin: vi.fn(),
   logOut: vi.fn(async () => true),
-  reauthAfterCrazyGamesChange: vi.fn(async () => false),
+  reauthAfterPortalChange: vi.fn(async () => false),
   sendMagicLink: vi.fn(async () => true),
   getAuthHeader: vi.fn(async () => "Bearer test-token"),
 }));
@@ -28,9 +28,11 @@ vi.mock("../../src/client/Utils", () => ({
   showToast: vi.fn(),
   getDiscordAvatarUrl: vi.fn(() => null),
   copyToClipboard: vi.fn(),
-  renderNumber: vi.fn((n: number) => String(n)),
   getMapName: vi.fn((m: string) => m),
   renderDuration: vi.fn(() => ""),
+}));
+vi.mock("@openfront/engine-lib/Format", () => ({
+  renderNumber: vi.fn((n: number) => String(n)),
 }));
 
 vi.mock("../../src/client/CrazyGamesSDK", () => ({
@@ -67,6 +69,9 @@ function makeUserMe(
 ): UserMeResponse {
   return {
     user: { ...overrides },
+    steamLicence: false,
+    steamLicenceSince: null,
+    noticesSeen: [],
     player: {
       publicId: "test-player",
       adfree: false,

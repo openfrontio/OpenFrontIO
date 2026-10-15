@@ -1,38 +1,42 @@
-import fs from "fs";
-import path from "path";
-import { fileURLToPath } from "url";
+import { TileRef } from "@openfront/engine-api/game/GameMap";
 import {
   AllPlayers,
   Difficulty,
-  Game,
   GameMapSize,
   GameMapType,
   GameMode,
   GameType,
-  Player,
   UnitType,
-} from "../../src/core/game/Game";
-import { TileRef } from "../../src/core/game/GameMap";
-import { GameMapLoader, MapData } from "../../src/core/game/GameMapLoader";
+} from "@openfront/engine-api/game/GameTypes";
 import {
   ErrorUpdate,
   GameUpdateViewData,
-} from "../../src/core/game/GameUpdates";
-import { MapManifest } from "../../src/core/game/TerrainMapLoader";
+} from "@openfront/engine-api/game/GameUpdates";
+import { MapManifest } from "@openfront/engine-api/game/MapFiles";
 import {
-  createGameRunner,
-  createGameRunnerFromSnapshot,
-  GameRunner,
-} from "../../src/core/GameRunner";
-import { PseudoRandom } from "../../src/core/PseudoRandom";
-import {
+  flattenedEmojiTable,
   GameConfig,
   GameStartInfo,
   Intent,
   StampedIntent,
   Turn,
-} from "../../src/core/Schemas";
-import { flattenedEmojiTable } from "../../src/core/Util";
+} from "@openfront/engine-api/Schemas";
+import { PseudoRandom } from "@openfront/engine-lib/PseudoRandom";
+import { Game, Player } from "@openfront/engine/game/Game";
+import {
+  createGameRunner,
+  createGameRunnerFromSnapshot,
+  GameRunner,
+} from "@openfront/engine/GameRunner";
+import { readSnapshotHeader } from "@openfront/engine/snapshot/GameSnapshot";
+import {
+  GameMapLoader,
+  loadMapFiles,
+  MapData,
+} from "@openfront/shared/GameMapLoader";
+import fs from "fs";
+import path from "path";
+import { fileURLToPath } from "url";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -56,7 +60,7 @@ export class TestDataMapLoader implements GameMapLoader {
           fs.readFileSync(path.join(dir, "manifest.json"), "utf8"),
         ) as MapManifest,
       webpPath: path.join(dir, "thumbnail.webp"),
-      layerPng: async () => {
+      layerImage: async () => {
         throw new Error("no layers in test maps");
       },
     };
@@ -101,10 +105,11 @@ export async function createScriptedRunner(
   mapName: string,
   gameStart: GameStartInfo,
 ): Promise<GameRunner> {
+  const { gameMap, gameMapSize } = gameStart.config;
   return createGameRunner(
     gameStart,
     undefined,
-    new TestDataMapLoader(mapName),
+    await loadMapFiles(new TestDataMapLoader(mapName), gameMap, gameMapSize),
     recordErrors,
   );
 }
@@ -114,11 +119,12 @@ export async function restoreScriptedRunner(
   gameStart: GameStartInfo,
   snapshot: Uint8Array,
 ): Promise<GameRunner> {
+  const { gameMap, gameMapSize } = readSnapshotHeader(snapshot).gameConfig;
   return createGameRunnerFromSnapshot(
     gameStart,
     snapshot,
     undefined,
-    new TestDataMapLoader(mapName),
+    await loadMapFiles(new TestDataMapLoader(mapName), gameMap, gameMapSize),
     recordErrors,
   );
 }
@@ -274,6 +280,17 @@ function playIntent(game: Game, p: Player, rand: PseudoRandom): Intent | null {
   if (!p.isAlive()) return null;
   // Most ticks a human does nothing; keep the game moving.
   if (!rand.chance(3)) return null;
+  // Nations build no ports this early, so the scripted humans' ports are the ones that trade
+  const embargoedHuman = game
+    .players()
+    .find(
+      (o) =>
+        SCRIPTED_HUMANS.includes(o.clientID() as never) &&
+        p.hasEmbargoAgainst(o),
+    );
+  if (embargoedHuman !== undefined && rand.chance(2)) {
+    return { type: "embargo", targetID: embargoedHuman.id(), action: "stop" };
+  }
   const others = game.players().filter((o) => o !== p && o.isPlayer());
   const other = pick(rand, others);
   const own = (types: UnitType[]) => p.units(types);
@@ -331,7 +348,16 @@ function playIntent(game: Game, p: Player, rand: PseudoRandom): Intent | null {
         UnitType.HydrogenBomb,
         UnitType.MIRV,
       ])!;
-      const tile = randomOwnedTile(rand, other);
+      // Half the bombs fly at an enemy SAM, so SAMs get to shoot
+      const sam = rand.chance(2)
+        ? pick(
+            rand,
+            game
+              .units(UnitType.SAMLauncher)
+              .filter((s) => !p.isFriendly(s.owner(), true)),
+          )
+        : null;
+      const tile = sam?.tile() ?? randomOwnedTile(rand, other);
       if (tile === null || p.canBuild(unit, tile) === false) return null;
       return {
         type: "build_unit",

@@ -1,12 +1,12 @@
-import { html, LitElement, nothing, TemplateResult } from "lit";
-import { customElement, property, query, state } from "lit/decorators.js";
 import {
   GetMyTribeNamesResponse,
   TribeName,
   TribeNameStatus,
   UserMeResponse,
-} from "../../core/ApiSchemas";
-import { Cosmetics } from "../../core/CosmeticSchemas";
+} from "@openfront/shared/ApiSchemas";
+import { Cosmetics } from "@openfront/shared/CosmeticSchemas";
+import { html, LitElement, nothing, TemplateResult } from "lit";
+import { customElement, property, query, state } from "lit/decorators.js";
 import {
   boostTribeName,
   getMyTribeNames,

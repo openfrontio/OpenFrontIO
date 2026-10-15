@@ -2,16 +2,16 @@
 
 import {
   Difficulty,
-  Game,
   GameMapSize,
   GameMapType,
   GameMode,
   GameType,
-} from "../../../src/core/game/Game";
-import { createGame as createGameImpl } from "../../../src/core/game/GameImpl";
-import { GameMapImpl } from "../../../src/core/game/GameMap";
-import { UserSettings } from "../../../src/core/game/UserSettings";
-import { GameConfig } from "../../../src/core/Schemas";
+  TeamGameSpawnAreas,
+} from "@openfront/engine-api/game/GameTypes";
+import { GameConfig } from "@openfront/engine-api/Schemas";
+import { GameMapImpl } from "@openfront/engine-lib/game/GameMapImpl";
+import { Game } from "@openfront/engine/game/Game";
+import { createGame as createGameImpl } from "@openfront/engine/game/GameImpl";
 import { TestConfig } from "../../util/TestConfig";
 
 export const W = "W"; // Water
@@ -74,6 +74,7 @@ export function createIslandMap(): TestMapData {
 export function createGame(
   data: TestMapData,
   configOverrides: Partial<GameConfig> = {},
+  teamGameSpawnAreas?: TeamGameSpawnAreas,
 ): Game {
   const { width, height, grid } = data;
 
@@ -150,9 +151,16 @@ export function createGame(
     randomSpawn: false,
     ...configOverrides,
   };
-  const config = new TestConfig(gameConfig, new UserSettings(), false);
+  const config = new TestConfig(gameConfig, false);
 
-  return createGameImpl([], [], gameMap, miniGameMap, config);
+  return createGameImpl(
+    [],
+    [],
+    gameMap,
+    miniGameMap,
+    config,
+    teamGameSpawnAreas,
+  );
 }
 
 // Create GameMapImpl from test map data (for map-only tests)

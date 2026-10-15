@@ -1,7 +1,7 @@
+import { GameID } from "@openfront/engine-api/Schemas";
+import { CloseCode, CloseReason } from "@openfront/shared/CloseCodes";
 import { Logger } from "winston";
 import WebSocket from "ws";
-import { CloseCode, CloseReason } from "../core/CloseCodes";
-import { GameID } from "../core/Schemas";
 import { GameManager } from "./GameManager";
 
 // Hands a "rejoin" message's socket to the client's game, or closes it with

@@ -1,9 +1,9 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   CloseCode,
   CloseReason,
   isTerminalClose,
-} from "../../src/core/CloseCodes";
+} from "@openfront/shared/CloseCodes";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { getUserMe, userMeFailureClose } from "../../src/server/jwt";
 
 // getUserMe resolves its endpoint from ServerEnv.jwtIssuer(), which throws

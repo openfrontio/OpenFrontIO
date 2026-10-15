@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@import "./halloween.css";
 
 @custom-variant dark (&:where(.dark, .dark *));
 @custom-variant hover (&:hover);
@@ -101,6 +102,24 @@ body {
 body.in-game {
   height: 100%;
   overflow: hidden;
+}
+
+body.in-game .bg-gray-800\/92:not(.game-end-timer-sidebar-flash) {
+  background-color: rgb(
+    from var(--color-gray-800) r g b / calc(0.92 * var(--hud-opacity, 1))
+  );
+}
+
+body.in-game .stats-table .bg-gray-800\/85 {
+  background-color: rgb(
+    from var(--color-gray-800) r g b / calc(0.85 * var(--hud-opacity, 1))
+  );
+}
+
+body.in-game .stats-table .bg-gray-700\/95 {
+  background-color: rgb(
+    from var(--color-gray-700) r g b / calc(0.95 * var(--hud-opacity, 1))
+  );
 }
 
 /* An inline page (store, settings, leaderboard, ...) is a modal rendered in

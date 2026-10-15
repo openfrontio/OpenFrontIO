@@ -1,6 +1,7 @@
+// @vitest-environment jsdom
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-vi.mock("../src/core/game/UserSettings", () => ({
+vi.mock("../src/client/UserSettings", () => ({
   UserSettings: { setPlayerId: vi.fn() },
 }));
 vi.mock("../src/client/SteamSDK", () => ({

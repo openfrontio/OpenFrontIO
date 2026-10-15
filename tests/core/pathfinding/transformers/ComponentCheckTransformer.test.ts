@@ -1,6 +1,6 @@
+import { ComponentCheckTransformer } from "@openfront/engine/pathfinding/transformers/ComponentCheckTransformer";
+import { PathFinder } from "@openfront/engine/pathfinding/types";
 import { describe, expect, it } from "vitest";
-import { ComponentCheckTransformer } from "../../../../src/core/pathfinding/transformers/ComponentCheckTransformer";
-import { PathFinder } from "../../../../src/core/pathfinding/types";
 
 describe("ComponentCheckTransformer", () => {
   // Mock PathFinder that records calls and returns a simple path

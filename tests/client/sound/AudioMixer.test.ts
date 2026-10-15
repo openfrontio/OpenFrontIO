@@ -76,10 +76,7 @@ import {
   SoundEffect,
   soundEffectUrls,
 } from "../../../src/client/sound/Sounds";
-import {
-  AudioCategory,
-  UserSettings,
-} from "../../../src/core/game/UserSettings";
+import { AudioCategory, UserSettings } from "../../../src/client/UserSettings";
 
 function resetSettings() {
   localStorage.clear();
@@ -203,6 +200,30 @@ describe("channel volumes", () => {
   });
 });
 
+describe.each(["master", "channel"] as const)("muted %s", (muted) => {
+  it.each([...soundEffectUrls.keys()])("skips %s until unmuted", (name) => {
+    const category = categoryOf(name);
+    const mutedCategory = muted === "master" ? "master" : category;
+    build({ master: 1, [category]: 1, [mutedCategory]: 0 });
+    mixer.play(name);
+    expect(howlInstances).toHaveLength(0);
+
+    settings.setAudioVolume(mutedCategory, 1);
+    mixer.play(name);
+    const howl = howlInstances[0];
+    expect(howl.play).toHaveBeenCalledTimes(1);
+
+    settings.setAudioVolume(mutedCategory, 0);
+    mixer.play(name);
+    expect(howl.play).toHaveBeenCalledTimes(1);
+    settings.setAudioVolume(mutedCategory, 1);
+    expect(howl.play).toHaveBeenCalledTimes(1);
+    mixer.play(name);
+    expect(howl.play).toHaveBeenCalledTimes(2);
+    expect(howlInstances).toHaveLength(1);
+  });
+});
+
 describe("per-channel budgets", () => {
   it("steals the oldest effect rather than an alert", () => {
     build({ effects: 1, alerts: 1 });
@@ -230,7 +251,9 @@ describe("per-channel budgets", () => {
     // fade(0, 0, ...) never completes in Howler, so fading here would leave
     // the cue playing outside its budget with the interval and listener
     // leaked for the rest of the session.
-    build({ effects: 0 });
+    build({ effects: 1, muteOnBlur: true });
+    vi.spyOn(document, "hasFocus").mockReturnValue(false);
+    globalThis.dispatchEvent(new Event("blur"));
     for (let i = 0; i < 7; i++) mixer.play("build-city");
     const howl = howlInstances.find((h) => h.src.includes("build-city"));
     expect(howl.fade).not.toHaveBeenCalled();

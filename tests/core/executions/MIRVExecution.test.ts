@@ -1,12 +1,11 @@
-import { MirvExecution } from "../../../src/core/execution/MIRVExecution";
 import {
-  Game,
   MessageType,
-  Player,
   PlayerInfo,
   PlayerType,
   UnitType,
-} from "../../../src/core/game/Game";
+} from "@openfront/engine-api/game/GameTypes";
+import { MirvExecution } from "@openfront/engine/execution/MIRVExecution";
+import { Game, Player } from "@openfront/engine/game/Game";
 import { setup } from "../../util/Setup";
 import { executeTicks } from "../../util/utils";
 
@@ -214,7 +213,7 @@ describe("MIRVExecution", () => {
 
     expect(displaySpy).toHaveBeenCalled();
     const callArgs = displaySpy.mock.calls[0];
-    expect(callArgs[1]).toContain("MIRV INBOUND");
+    expect(callArgs[1]).toBe("events_display.mirv_inbound");
     expect(callArgs[2]).toBe(MessageType.MIRV_INBOUND);
     expect(callArgs[3]).toBe(otherPlayer.id());
   });

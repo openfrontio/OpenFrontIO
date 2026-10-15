@@ -1,20 +1,20 @@
-import { html, LitElement, nothing, TemplateResult } from "lit";
-import { customElement, property, state } from "lit/decorators.js";
 import {
   isTemporaryUsername,
   PutUsernameResponse,
   UserMeResponse,
-} from "../../core/ApiSchemas";
-import {
-  MAX_ACCOUNT_USERNAME_LENGTH,
-  MIN_ACCOUNT_USERNAME_LENGTH,
-  validateAccountUsername,
-} from "../../core/validations/username";
+} from "@openfront/shared/ApiSchemas";
+import { html, LitElement, nothing, TemplateResult } from "lit";
+import { customElement, property, state } from "lit/decorators.js";
 import { updateUsername, UpdateUsernameResult } from "../Api";
 import { showInGameAlert, showInGameConfirm } from "../InGameModal";
 import { sanitizeAccountPersona } from "../PlayerName";
 import { steamSDK } from "../SteamSDK";
 import { showToastAfterReload, translateText } from "../Utils";
+import {
+  MAX_ACCOUNT_USERNAME_LENGTH,
+  MIN_ACCOUNT_USERNAME_LENGTH,
+  validateAccountUsername,
+} from "../validations/username";
 import "./baseComponents/Button";
 import { usernameText } from "./ui/UsernameText";
 

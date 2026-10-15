@@ -1,13 +1,13 @@
 import { beforeEach, describe, expect, it } from "vitest";
 
+import type { MapLayer } from "@openfront/engine-api/game/MapFiles";
 import "../../src/client/UserSettingModal";
 import type { UserSettingModal } from "../../src/client/UserSettingModal";
-import type { MapLayer } from "../../src/core/game/TerrainMapLoader";
 import {
   GRAPHICS_KEY,
   USER_SETTINGS_CHANGED_EVENT,
   UserSettings,
-} from "../../src/core/game/UserSettings";
+} from "../../src/client/UserSettings";
 
 type TestModal = UserSettingModal & {
   updateComplete: Promise<unknown>;
@@ -144,6 +144,10 @@ describe("Graphics tab: advanced options folded in from the in-game modal", () =
 
   it("writes each option into the same settings.graphics shape the old modal used", async () => {
     const el = await mountGraphics();
+    slide(el, "hud-opacity-slider", 50);
+    expect(new UserSettings().hudOpacity()).toBe(0.5);
+    const style = document.documentElement.style;
+    expect(style.getPropertyValue("--hud-opacity")).toBe("0.5");
 
     // Lighting: both sliders are presented inverted/remapped, so the stored
     // value is not the slider value.

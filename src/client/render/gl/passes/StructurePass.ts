@@ -32,7 +32,7 @@ import {
 } from "../utils/ColorUtils";
 import { createProgram, shaderSrc } from "../utils/GlUtils";
 
-import { assetUrl } from "src/core/AssetUrls";
+import { assetUrl } from "@openfront/shared/AssetUrls";
 import structureFragSrc from "../shaders/structure/structure.frag.glsl?raw";
 import structureVertSrc from "../shaders/structure/structure.vert.glsl?raw";
 
@@ -160,6 +160,7 @@ export class StructurePass {
         // First row of the structures block in the shared effect palette.
         STRUCT_EFFECT_ROW_BASE: STRUCTURES_EFFECT_BLOCK * MAX_TRAIL_COLORS,
       }),
+      "StructurePass",
     );
     this.uLocalPlayerID = gl.getUniformLocation(
       this.program,

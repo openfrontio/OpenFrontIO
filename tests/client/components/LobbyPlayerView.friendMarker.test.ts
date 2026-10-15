@@ -1,9 +1,9 @@
+import { GameMode } from "@openfront/engine-api/game/GameTypes";
+import type { ClientInfo } from "@openfront/shared/WireSchemas";
 import { beforeEach, describe, expect, it } from "vitest";
 import "../../../src/client/components/LobbyPlayerView";
 import type { LobbyTeamView } from "../../../src/client/components/LobbyPlayerView";
-import { GameMode } from "../../../src/core/game/Game";
-import { UserSettings } from "../../../src/core/game/UserSettings";
-import type { ClientInfo } from "../../../src/core/Schemas";
+import { UserSettings } from "../../../src/client/UserSettings";
 
 function client(
   clientID: string,

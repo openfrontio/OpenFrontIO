@@ -1,8 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { GameType, RankedType } from "../../src/core/game/Game";
-import { ClientMessage } from "../../src/core/Schemas";
-import { createGameWireContext } from "../../src/core/ZbinWire";
+import { GameType, RankedType } from "@openfront/engine-api/game/GameTypes";
+import { ClientMessage } from "@openfront/shared/WireSchemas";
+import { createGameWireContext } from "@openfront/shared/ZbinWire";
 import { Client } from "../../src/server/Client";
 import { GameServer } from "../../src/server/GameServer";
 import {

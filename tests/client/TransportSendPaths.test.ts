@@ -1,11 +1,11 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { EventBus } from "../../src/core/EventBus";
-import { ServerMessage } from "../../src/core/Schemas";
+import { EventBus } from "@openfront/shared/EventBus";
+import { ServerMessage } from "@openfront/shared/WireSchemas";
 import {
   createGameWireContext,
   decodeClientMessage,
   encodeServerMessage,
-} from "../../src/core/ZbinWire";
+} from "@openfront/shared/ZbinWire";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { testGameConfig } from "../util/Wire";
 
 // Transport's send paths: intent events on the bus leave the socket as
@@ -48,12 +48,14 @@ vi.mock("../../src/client/Utils", () => ({
 }));
 
 import type { LobbyConfig } from "../../src/client/ClientGameRunner";
+import { SendKickPlayerIntentEvent } from "../../src/client/LobbyEvents";
 import {
   CancelAttackIntentEvent,
+  counterAttackTroops,
   SendAttackIntentEvent,
+  SendBoatAttackIntentEvent,
   SendDonateGoldIntentEvent,
   SendHashEvent,
-  SendKickPlayerIntentEvent,
   SendSpawnIntentEvent,
   SendWinnerEvent,
   Transport,
@@ -200,6 +202,26 @@ describe("Transport send paths", () => {
       ]);
     });
 
+    // The server kicks a client whose message fails to parse, and the intent
+    // schemas reject a NaN troop count: drop the one intent, not the player.
+    it("drops attack and boat intents whose troops are not a finite count", () => {
+      const { eventBus, ws } = connected();
+      const before = ws.sent.length;
+      eventBus.emit(new SendAttackIntentEvent("player01", NaN));
+      eventBus.emit(new SendAttackIntentEvent(null, Infinity));
+      eventBus.emit(new SendBoatAttackIntentEvent(7, NaN));
+      eventBus.emit(new SendBoatAttackIntentEvent(7, -1));
+
+      expect(ws.sent).toHaveLength(before);
+      expect(console.error).toHaveBeenCalledTimes(4);
+
+      eventBus.emit(new SendBoatAttackIntentEvent(7, 0));
+      expect(decodeFrames(ws)).toContainEqual({
+        type: "intent",
+        intent: { type: "boat", troops: 0, dst: 7 },
+      });
+    });
+
     it("turns a kick-player event into a kick_player intent frame", () => {
       const { eventBus, ws } = connected();
       eventBus.emit(new SendKickPlayerIntentEvent("player01"));
@@ -216,6 +238,49 @@ describe("Transport send paths", () => {
 
       expect(() => eventBus.emit(new SendSpawnIntentEvent(123))).not.toThrow();
       expect(FakeWebSocket.instances).toHaveLength(0);
+    });
+  });
+
+  describe("counterAttackTroops", () => {
+    it("caps the counter at what the player would send", () => {
+      expect(counterAttackTroops(500, 200)).toBe(200);
+      expect(counterAttackTroops(100, 200)).toBe(100);
+    });
+
+    it("ignores an incoming attack whose count is not finite", () => {
+      expect(counterAttackTroops(NaN, 200)).toBe(200);
+    });
+  });
+
+  describe("join", () => {
+    // The host's first join presents the token the lobby was created under,
+    // so an identity change between create and join (a cookieless guest's
+    // JWT refresh mints a new one) can't cost them the creator seat.
+    it("joins with the creator token once, then with a fresh play token", async () => {
+      const creatorToken = "0a1b2c3d-4e5f-4a6b-8c7d-9e0f1a2b3c4d";
+      const { transport } = makeTransport({
+        creatorToken,
+        turnstileToken: null,
+        cosmetics: {},
+      });
+      transports.push(transport);
+      transport.connect(
+        () => {},
+        () => {},
+      );
+      const ws = FakeWebSocket.instances[0];
+      ws.serverOpen();
+
+      await transport.joinGame();
+      await transport.joinGame();
+
+      const tokens = decodeFrames(ws).map((m) =>
+        m.type === "join" ? m.token : m.type,
+      );
+      expect(tokens).toEqual([
+        creatorToken,
+        "8f1d2c3e-4b5a-4c6d-8e7f-90a1b2c3d4e5",
+      ]);
     });
   });
 

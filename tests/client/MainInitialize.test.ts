@@ -6,18 +6,19 @@
  * cannot be re-defined in the file's single jsdom, so a second import of Main
  * (after vi.resetModules) would throw on the first `customElements.define`.
  */
+import { EventBus } from "@openfront/shared/EventBus";
 import fs from "node:fs";
 import path from "node:path";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
+import { loadModal } from "../../src/client/LazyModals";
+import { SendKickPlayerIntentEvent } from "../../src/client/LobbyEvents";
 import { capturePagePin } from "../../src/client/PagePin";
-import { SendKickPlayerIntentEvent } from "../../src/client/Transport";
 import { translateText } from "../../src/client/Utils";
-import { EventBus } from "../../src/core/EventBus";
 
 const mocks = vi.hoisted(() => ({
   userAuth: vi.fn(async (): Promise<unknown> => false),
   retrySteamSignIn: vi.fn(async (): Promise<unknown> => false),
-  reauthAfterCrazyGamesChange: vi.fn(async (): Promise<unknown> => false),
+  reauthAfterPortalChange: vi.fn(async (): Promise<unknown> => false),
   getDesktopSessionState: vi.fn(() => ({ status: "unknown" })),
   getUserMe: vi.fn(async (): Promise<unknown> => false),
   invalidateUserMe: vi.fn(),
@@ -32,7 +33,7 @@ vi.mock("../../src/client/Auth", async (importOriginal) => {
     ...actual,
     userAuth: mocks.userAuth,
     retrySteamSignIn: mocks.retrySteamSignIn,
-    reauthAfterCrazyGamesChange: mocks.reauthAfterCrazyGamesChange,
+    reauthAfterPortalChange: mocks.reauthAfterPortalChange,
     getDesktopSessionState: mocks.getDesktopSessionState,
   };
 });
@@ -101,6 +102,16 @@ vi.mock("../../src/client/AdGatekeeper", () => ({
 vi.mock("../../src/client/ClientGameRunner", () => ({
   joinLobby: mocks.joinLobby,
 }));
+
+// The viewer pulls in the WebGL renderer. A bare element is enough to see
+// that Main opened it, and for which game.
+vi.mock("../../src/client/replay/ReplayViewer", () => {
+  class ReplayViewer extends HTMLElement {
+    gameID = "";
+  }
+  customElements.define("replay-viewer", ReplayViewer);
+  return { ReplayViewer };
+});
 
 function userMeFixture(): unknown {
   return {
@@ -234,6 +245,13 @@ describe("Client.initialize() booted from Main.ts module scope", () => {
     await new Promise((resolve) => setTimeout(resolve, 25));
   }, 20_000);
 
+  // Returning to page-play schedules Main's 50ms store refresh. Let it run
+  // before jsdom is torn down, or it throws "customElements is not defined"
+  // as an unhandled error that fails the whole run.
+  afterAll(async () => {
+    await new Promise((resolve) => setTimeout(resolve, 100));
+  });
+
   it("runs the signed-out boot: onUserMe(false) and the missing-version warn", () => {
     // renderNavVersion() === 0 branch (line 411).
     expect(warnSpy).toHaveBeenCalledWith("Game version element not found");
@@ -246,7 +264,28 @@ describe("Client.initialize() booted from Main.ts module scope", () => {
     expect(localStorage.getItem("achievements.pushed")).toBeNull();
   });
 
+  it("starts the menu audio once its chunk loads", async () => {
+    // Its own chunk, so the page doesn't wait on howler.
+    const { audioMixer } = await import("../../src/client/sound/AudioMixer");
+    await vi.waitFor(() => expect(audioMixer()).not.toBeNull());
+  });
+
+  it("hands the lobby modals the event bus before a loader can open them", async () => {
+    const seen: unknown[] = [];
+    for (const tag of ["host-lobby-modal", "join-lobby-modal"]) {
+      await loadModal(tag);
+      // Read as soon as loadModal settles: what an opener would find.
+      seen.push(
+        (document.querySelector(tag) as unknown as { eventBus: unknown })
+          .eventBus,
+      );
+    }
+    expect(seen.every((bus) => bus instanceof EventBus)).toBe(true);
+  });
+
   it("routes a hashchange through onHashUpdate", async () => {
+    // It loads on demand; until it has, there's nothing to close.
+    await loadModal("join-lobby-modal");
     const joinModal = document.querySelector("join-lobby-modal") as unknown as {
       close: () => void;
     };
@@ -478,10 +517,12 @@ describe("Client.initialize() booted from Main.ts module scope", () => {
      * open a queue WebSocket, and the claim under test is only whether any
      * join reaches close().
      */
-    function spyOnMatchmakingModal(): {
+    async function spyOnMatchmakingModal(): Promise<{
       close: ReturnType<typeof vi.spyOn>;
       restore: () => void;
-    } {
+    }> {
+      // It loads on demand; spy on the loaded one.
+      await loadModal("matchmaking-modal");
       const modal = document.querySelector("matchmaking-modal") as unknown as {
         isOpen: () => boolean;
         close: () => void;
@@ -521,7 +562,7 @@ describe("Client.initialize() booted from Main.ts module scope", () => {
       messages.length = 0;
       mocks.joinLobby.mockClear();
       stubJoinLobbyReturn();
-      const matchmaking = spyOnMatchmakingModal();
+      const matchmaking = await spyOnMatchmakingModal();
 
       try {
         document.dispatchEvent(
@@ -562,7 +603,7 @@ describe("Client.initialize() booted from Main.ts module scope", () => {
       messages.length = 0;
       mocks.joinLobby.mockClear();
       stubJoinLobbyReturn();
-      const matchmaking = spyOnMatchmakingModal();
+      const matchmaking = await spyOnMatchmakingModal();
 
       try {
         document.dispatchEvent(
@@ -616,5 +657,105 @@ describe("Client.initialize() booted from Main.ts module scope", () => {
         translateText("common.backend_unreachable"),
       );
     });
+  });
+
+  it("ignores the replay viewer hash while a game is running", async () => {
+    mocks.joinLobby.mockClear();
+    let resolveJoin: () => void = () => {};
+    mocks.joinLobby.mockReturnValueOnce({
+      prestart: new Promise<void>(() => {}),
+      join: new Promise<void>((resolve) => {
+        resolveJoin = resolve;
+      }),
+      stop: () => true,
+    });
+    const input = document.querySelector("username-input") as unknown as {
+      canPlay: () => boolean;
+    };
+    input.canPlay = () => true;
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    try {
+      document.dispatchEvent(
+        new CustomEvent("join-lobby", {
+          detail: { gameID: "AbCd5678", source: "private" },
+          bubbles: true,
+        }),
+      );
+      await vi.waitFor(() => expect(mocks.joinLobby).toHaveBeenCalled());
+      resolveJoin();
+      // The in-game entry, which Main keeps as the game's URL.
+      await vi.waitFor(() =>
+        expect(window.location.href).toMatch(/game\/AbCd5678/),
+      );
+      const gameUrl = window.location.href;
+      const replaceSpy = vi.spyOn(history, "replaceState");
+
+      window.location.hash = "#replay-viewer=dqKzit4cWu";
+      window.dispatchEvent(new Event("hashchange"));
+      await new Promise((r) => setTimeout(r, 50));
+      expect(document.querySelector("replay-viewer")).toBeNull();
+      expect(warn).toHaveBeenCalledWith(
+        "replay viewer: ignored, a game is running",
+      );
+      // The game's URL is put back.
+      expect(replaceSpy).toHaveBeenCalledWith(null, "", gameUrl);
+      replaceSpy.mockRestore();
+    } finally {
+      // Leave, so the viewer can open in the next test.
+      document.dispatchEvent(new CustomEvent("leave-lobby"));
+      warn.mockRestore();
+    }
+  });
+
+  // Last: the viewer replaces the menu, and any later hash change would
+  // then leave the page.
+  it("opens the replay viewer when the hash changes to one, tearing the menu down like a game start", async () => {
+    await loadModal("join-lobby-modal");
+    const joinModal = document.querySelector("join-lobby-modal") as unknown as {
+      close: () => void;
+      disarmLeaveOnClose: () => void;
+      closeWithoutLeaving: () => void;
+    };
+    const disarmSpy = vi.spyOn(joinModal, "disarmLeaveOnClose");
+    const closeWithoutLeavingSpy = vi.spyOn(joinModal, "closeWithoutLeaving");
+    // What JoinLobbyModal.onClose does when there's no lobby to keep.
+    const closeSpy = vi
+      .spyOn(joinModal, "close")
+      .mockImplementation(() => history.replaceState(null, "", "/"));
+    // The viewer tears the menu down like a game start. A modal the router
+    // opened clears the hash when it closes (ModalRouter.syncClosed).
+    const gameStarting = vi.fn();
+    document.addEventListener("game-starting", gameStarting);
+    // Loaded on demand: the router loads a modal before opening it.
+    await loadModal("news-modal");
+    const news = document.querySelector("news-modal") as unknown as {
+      close: () => void;
+    };
+    const newsClose = vi
+      .spyOn(news, "close")
+      .mockImplementation(() =>
+        history.replaceState(null, "", window.location.pathname),
+      );
+    window.location.hash = "#replay-viewer=dqKzit4cWu";
+    window.dispatchEvent(new Event("hashchange"));
+    await vi.waitFor(() =>
+      expect(
+        (document.querySelector("replay-viewer") as { gameID?: string } | null)
+          ?.gameID,
+      ).toBe("dqKzit4cWu"),
+    );
+    expect(gameStarting).toHaveBeenCalledOnce();
+    expect(newsClose).toHaveBeenCalled();
+    // A lobby modal is closed like at a game start: disarmed, so closing it
+    // doesn't leave a lobby it never joined.
+    expect(disarmSpy).toHaveBeenCalled();
+    expect(closeWithoutLeavingSpy).toHaveBeenCalled();
+    // Kept, so a reload opens the replay again.
+    expect(window.location.hash).toBe("#replay-viewer=dqKzit4cWu");
+    document.removeEventListener("game-starting", gameStarting);
+    newsClose.mockRestore();
+    closeSpy.mockRestore();
+    disarmSpy.mockRestore();
+    closeWithoutLeavingSpy.mockRestore();
   });
 });

@@ -1,7 +1,11 @@
+import {
+  isGrantedSubscription,
+  isSteamGrant,
+  UserSubscription,
+} from "@openfront/shared/ApiSchemas";
+import { Subscription } from "@openfront/shared/CosmeticSchemas";
 import { html, LitElement, nothing, TemplateResult } from "lit";
 import { customElement, property } from "lit/decorators.js";
-import { isGrantedSubscription, UserSubscription } from "../../core/ApiSchemas";
-import { Subscription } from "../../core/CosmeticSchemas";
 import {
   cancelSubscription,
   invalidateUserMe,
@@ -26,6 +30,9 @@ export class SubscriptionPanel extends LitElement {
 
   @property({ type: Object })
   cosmetic: Subscription | null = null;
+
+  @property({ type: Boolean })
+  steamLicence = false;
 
   createRenderRoot() {
     return this;
@@ -277,22 +284,32 @@ export class SubscriptionPanel extends LitElement {
    * replaced by static copy — no anchor, no click handler, same shape as
    * `renderManageOnWeb`.
    *
-   * Two variants, on a fact the client already has rather than a guess. Grants
-   * come from two writers and only one of them sets an end date: a Steam
-   * ownership grant is a fixed free month (`currentPeriodEnd = now + 30d`), an
-   * admin comp is open-ended (`currentPeriodEnd` null, so no date line renders
-   * above either). Telling an admin-comped player their access came from a
-   * Steam purchase would be a fresh instance of exactly the dishonesty this
-   * change exists to remove.
+   * Two variants, on facts the server sends rather than a guess. A grant a
+   * Steam month is currently funding gets the purchase copy. Any other grant
+   * (an admin comp, a Discord role) gets neutral free-access copy that never
+   * says who granted it. Telling such a player their access came from a Steam
+   * purchase would be a fresh instance of exactly the dishonesty this panel
+   * exists to remove, and an end date no longer tells the two apart (see
+   * `isSteamGrant`).
+   *
+   * The neutral note is undated whether or not the grant has an end: the date
+   * line above (`renderPeriodLine`) already names it, and saying it twice in
+   * two framings reads as two different things ending. The key is called
+   * "indefinite" from when only open-ended grants reached it; its copy states
+   * no duration either way.
    */
   private renderGrantedNote(tierName: string): TemplateResult {
-    if (!this.sub.currentPeriodEnd) {
+    if (!isSteamGrant(this.sub)) {
       return html`
         <p class="text-[11px] text-center text-white/40 leading-snug">
           ${translateText("account_modal.sub_granted_indefinite")}
         </p>
       `;
     }
+    // The copy names where this month came from and nothing about what
+    // follows it: a Steam month can be extending a comp that outlives it (see
+    // `isSteamGrant`). English no longer uses {tier}; it is still passed for
+    // translations made before that.
     return html`
       <div class="flex flex-col gap-3">
         <p class="text-[11px] text-center text-white/40 leading-snug">
@@ -300,7 +317,10 @@ export class SubscriptionPanel extends LitElement {
             tier: tierName,
           })}
         </p>
-        ${renderFreePlayPerks("free_play.after_grant_heading")}
+        ${renderFreePlayPerks(
+          "free_play.after_grant_heading",
+          this.steamLicence,
+        )}
       </div>
     `;
   }
@@ -387,6 +407,30 @@ export class SubscriptionPanel extends LitElement {
     // packaged launch.
     const onDesktop = isDesktopShell();
 
+    // The renewal failed and Stripe is still retrying it. The portal is the
+    // fix, so it is the only action: there is nothing to change tier from,
+    // and the server refuses to cancel a subscription that is not entitled.
+    if (this.sub.status === "past_due") {
+      return html`
+        <div class="flex flex-col gap-2">
+          <p class="text-sm text-amber-200/80 leading-snug">
+            ${translateText("account_modal.sub_past_due_note", {
+              tier: tierName,
+            })}
+          </p>
+          ${onDesktop
+            ? this.renderManageOnWeb()
+            : html`<o-button
+                variant="primary"
+                width="block"
+                size="md"
+                translationKey="store.manage_billing"
+                @click=${this.handleManage}
+              ></o-button>`}
+        </div>
+      `;
+    }
+
     if (this.sub.cancelAtPeriodEnd) {
       if (onDesktop) return this.renderManageOnWeb();
       return html`
@@ -468,7 +512,7 @@ export class SubscriptionPanel extends LitElement {
             ? html`<div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
                 ${this.renderPerk(
                   cosmetic.hardCurrencySignupBonus,
-                  "cosmetics.signup_bonus",
+                  "cosmetics.per_month",
                 )}
                 ${this.renderPerk(
                   cosmetic.dailyHardCurrency,

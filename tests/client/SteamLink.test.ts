@@ -1,5 +1,5 @@
+import type { UserMeResponse } from "@openfront/shared/ApiSchemas";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { UserMeResponse } from "../../src/core/ApiSchemas";
 
 vi.mock("../../src/client/ClientEnv", () => ({
   ClientEnv: { jwtAudience: () => "localhost" },

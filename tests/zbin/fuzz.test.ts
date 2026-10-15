@@ -6,9 +6,9 @@
 // 2. Adversarial decode: random bytes and bit-mutated valid payloads must
 //    either decode cleanly or throw ZbDecodeError/ZodError — never anything
 //    else, never hang, never crash.
+import { zb, ZbDecodeError } from "@openfront/zbin";
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
-import { zb, ZbDecodeError } from "../../zbin";
 
 // Deterministic PRNG so failures reproduce. mulberry32: full 2^32 period, and
 // every step stays inside int32 via Math.imul. A plain LCG written in JS looks

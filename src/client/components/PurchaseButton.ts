@@ -1,6 +1,6 @@
+import { Product } from "@openfront/shared/CosmeticSchemas";
 import { html, LitElement, nothing } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
-import { Product } from "../../core/CosmeticSchemas";
 import type { InsufficientCurrency, PurchaseResult } from "../Cosmetics";
 import { showInGameAlert } from "../InGameModal";
 import { translateText } from "../Utils";
@@ -429,7 +429,7 @@ export class PurchaseButton extends LitElement {
 
     return html`
       <div
-        class="no-crazygames w-full mt-2 relative purchase-btn-wrap"
+        class="no-game-portal w-full mt-2 relative purchase-btn-wrap"
         style="--purchase-particle-top: ${leadingReserved * 3}rem"
         aria-busy=${this.busy ? "true" : nothing}
       >

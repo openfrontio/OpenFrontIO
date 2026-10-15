@@ -1,18 +1,17 @@
-import { AllianceRequestExecution } from "../src/core/execution/alliance/AllianceRequestExecution";
-import { AttackExecution } from "../src/core/execution/AttackExecution";
-import { NationAllianceBehavior } from "../src/core/execution/nation/NationAllianceBehavior";
-import { NationEmojiBehavior } from "../src/core/execution/nation/NationEmojiBehavior";
-import { AiAttackBehavior } from "../src/core/execution/utils/AiAttackBehavior";
 import {
   Difficulty,
-  Game,
   GameMode,
-  Player,
   PlayerInfo,
   PlayerType,
   UnitType,
-} from "../src/core/game/Game";
-import { PseudoRandom } from "../src/core/PseudoRandom";
+} from "@openfront/engine-api/game/GameTypes";
+import { PseudoRandom } from "@openfront/engine-lib/PseudoRandom";
+import { AllianceRequestExecution } from "@openfront/engine/execution/alliance/AllianceRequestExecution";
+import { AttackExecution } from "@openfront/engine/execution/AttackExecution";
+import { NationAllianceBehavior } from "@openfront/engine/execution/nation/NationAllianceBehavior";
+import { NationEmojiBehavior } from "@openfront/engine/execution/nation/NationEmojiBehavior";
+import { AiAttackBehavior } from "@openfront/engine/execution/utils/AiAttackBehavior";
+import { Game, Player } from "@openfront/engine/game/Game";
 import { setup } from "./util/Setup";
 import { executeTicks } from "./util/utils";
 
@@ -455,7 +454,8 @@ describe("Hard/Impossible troop floor", () => {
       players[assigned % 3].conquer(tile);
       assigned++;
     });
-    bot.addTroops(100);
+    // Strong enough that taking it needs more than the FFA cap below
+    bot.addTroops(20_000);
 
     const mockEmoji = {
       maybeSendAttackEmoji: vi.fn(),
@@ -1149,4 +1149,77 @@ describe("Juicy ally betrayal strategy - end-to-end via maybeAttack", () => {
       }
     },
   );
+});
+
+describe("City troops and expansion", () => {
+  // A Hard nation with 30 city levels but few troops, bordering free land, a bot and a human
+  async function setupCityRich(startingGold: number) {
+    const game = await setup("big_plains", {
+      difficulty: Difficulty.Hard,
+      startingGold,
+    });
+    const add = (id: string, type: PlayerType) =>
+      game.addPlayer(new PlayerInfo(id, type, null, `${id}_id`));
+    const nation = add("nation", PlayerType.Nation);
+    const bot = add("bot", PlayerType.Bot);
+    const human = add("human", PlayerType.Human);
+    let assigned = 0;
+    game.map().forEachTile((tile) => {
+      if (assigned >= 90 || !game.map().isLand(tile)) return;
+      [nation, bot, human][assigned++ % 3].conquer(tile);
+    });
+    const city = nation.buildUnit(
+      UnitType.City,
+      Array.from(nation.tiles())[0],
+      {},
+    );
+    for (let level = 1; level < 30; level++) city.increaseLevel();
+    nation.addTroops(100_000);
+    bot.addTroops(100);
+    human.addTroops(1_000);
+
+    const behavior = new AiAttackBehavior(
+      new PseudoRandom(42),
+      game,
+      nation,
+      0.5, // triggerRatio
+      0.3, // reserveRatio
+      0.2, // expandRatio
+      { maybeBetray: vi.fn() } as any,
+      { maybeSendAttackEmoji: vi.fn(), sendEmoji: vi.fn() } as any,
+    );
+    const attacks = vi.spyOn(game, "addExecution");
+    const sent = () =>
+      attacks.mock.calls
+        .map((c) => c[0])
+        .filter((e): e is AttackExecution => e instanceof AttackExecution);
+    return { game, nation, bot, human, behavior, sent };
+  }
+
+  it("with high starting gold, keeps the expand ratio of its max troops without cities when taking free land", async () => {
+    const { game, nation, behavior, sent } = await setupCityRich(25_000_000);
+    const config = game.config();
+    expect(
+      config.maxTroops(nation) - config.maxTroopsWithoutCities(nation),
+    ).toBe(30 * 250_000);
+    // 100k troops are a few percent of the 7.6M max troops
+    expect(behavior.sendAttack(game.terraNullius())).toBe(true);
+    expect(sent()[0]["startTroops"]).toBeCloseTo(
+      nation.troops() - 0.2 * config.maxTroopsWithoutCities(nation),
+    );
+  });
+
+  it("with high starting gold, attacks bots, but not players, below the reserve ratio its cities raise", async () => {
+    const { bot, human, behavior, sent } = await setupCityRich(25_000_000);
+    behavior["attackBestTarget"]([], [bot, human]);
+    expect(sent().map((e) => e.targetID())).toEqual([bot.id()]);
+    expect(behavior.sendAttack(human)).toBe(false);
+  });
+
+  it("without high starting gold, waits for the ratios of its max troops with cities", async () => {
+    const { game, bot, human, behavior, sent } = await setupCityRich(0);
+    expect(behavior.sendAttack(game.terraNullius())).toBe(false);
+    behavior["attackBestTarget"]([], [bot, human]);
+    expect(sent()).toEqual([]);
+  });
 });

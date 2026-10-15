@@ -17,6 +17,10 @@ vi.mock("../../src/client/SteamLink", () => ({
   fetchSteamLinkConflict: fetchSteamLinkConflictMock,
 }));
 
+// The modal loads on demand; the tests stand in for the load.
+const loadModalMock = vi.hoisted(() => vi.fn(async (_tag: string) => {}));
+vi.mock("../../src/client/LazyModals", () => ({ loadModal: loadModalMock }));
+
 const alertMock = vi.mocked(showInGameAlert);
 
 const account = {
@@ -45,6 +49,7 @@ function setHash(hash: string) {
 
 beforeEach(() => {
   alertMock.mockClear();
+  loadModalMock.mockClear();
   fetchSteamLinkConflictMock.mockReset();
   fetchSteamLinkConflictMock.mockResolvedValue({ ok: true, conflict: null });
 });
@@ -110,6 +115,28 @@ describe("consumeLinkResult", () => {
       await vi.waitFor(() =>
         expect(openForConflict).toHaveBeenCalledWith(account),
       );
+      expect(alertMock).not.toHaveBeenCalled();
+    });
+
+    it("loads the modal before handing it the offer", async () => {
+      // In the page but not yet upgraded: no openForConflict until it loads.
+      const el = document.createElement("steam-link-modal");
+      document.body.appendChild(el);
+      const openForConflict = vi.fn(async () => undefined);
+      loadModalMock.mockImplementationOnce(async () => {
+        Object.assign(el, { openForConflict });
+      });
+      fetchSteamLinkConflictMock.mockResolvedValue({
+        ok: true,
+        conflict: { discardable: true, account },
+      });
+
+      consumeLinkResult({ modal: "account", link: "steam_has_progress" });
+
+      await vi.waitFor(() =>
+        expect(openForConflict).toHaveBeenCalledWith(account),
+      );
+      expect(loadModalMock).toHaveBeenCalledWith("steam-link-modal");
       expect(alertMock).not.toHaveBeenCalled();
     });
 

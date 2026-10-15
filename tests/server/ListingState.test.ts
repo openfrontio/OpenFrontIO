@@ -1,9 +1,9 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   FEATURED_LOBBY_AUTO_START_MS,
   HOSTED_LOBBY_AUTO_START_MS,
   LobbyLabelSchema,
-} from "../../src/core/Schemas";
+} from "@openfront/shared/WireSchemas";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ListingState } from "../../src/server/ListingState";
 
 // The listing state on its own. How the game acts on it — rejecting a

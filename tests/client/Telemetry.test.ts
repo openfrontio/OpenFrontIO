@@ -193,7 +193,7 @@ describe("Telemetry", () => {
     expect(beforeSend(exception([]))).not.toBeNull();
   });
 
-  it("ignores cross-origin script errors, ResizeObserver notices and bare network failures", async () => {
+  it("ignores cross-origin script errors, ResizeObserver notices, bare network failures and stackless browser refusals", async () => {
     page({ faroCollectorUrl: "https://faro.example/collect/k" });
     await initTelemetry();
     const { ignoreErrors } = initializeFaro.mock.calls[0][0] as {
@@ -212,6 +212,24 @@ describe("Telemetry", () => {
     expect(ignored("Load failed", "TypeError")).toBe(true);
     expect(
       ignored("NetworkError when attempting to fetch resource.", "TypeError"),
+    ).toBe(true);
+    expect(
+      ignored(
+        "CSSStyleSheet.replace: This method can only be called on modifiable style sheets",
+        "NotAllowedError",
+      ),
+    ).toBe(true);
+    expect(
+      ignored(
+        "NotAllowedError: This method can only be called on modifiable style sheets",
+        "NotAllowedError",
+      ),
+    ).toBe(true);
+    expect(
+      ignored(
+        "InvalidStateError: Failed to start the audio device",
+        "InvalidStateError",
+      ),
     ).toBe(true);
     expect(ignored("Script error in player_actions")).toBe(false);
     // A chunk that failed to load is ours and worth knowing about.

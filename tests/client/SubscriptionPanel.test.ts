@@ -19,13 +19,17 @@ vi.mock("../../src/client/Utils", () => ({
     params ? `${key} ${Object.values(params).join(" ")}` : key,
 }));
 
-import { cancelSubscription, invalidateUserMe } from "../../src/client/Api";
+import type { UserSubscription } from "@openfront/shared/ApiSchemas";
+import {
+  cancelSubscription,
+  invalidateUserMe,
+  openSubscriptionPortal,
+} from "../../src/client/Api";
 import { SubscriptionPanel } from "../../src/client/components/SubscriptionPanel";
 import {
   showInGameAlert,
   showInGameConfirm,
 } from "../../src/client/InGameModal";
-import type { UserSubscription } from "../../src/core/ApiSchemas";
 
 const PERIOD_END = new Date("2026-09-01T00:00:00Z");
 // The panel's own format (toLocaleDateString, short month), evaluated here so
@@ -134,6 +138,61 @@ describe("subscription-panel", () => {
     // working, and it is the control a player most needs.
     it("keeps the Cancel control", async () => {
       expect(text()).toContain("account_modal.cancel_subscription");
+    });
+  });
+
+  // The renewal bounced. Stripe is still retrying, and the portal is where
+  // the card gets fixed, so it is the only thing on offer.
+  describe("past_due", () => {
+    beforeEach(async () => {
+      el.sub = sub({
+        status: "past_due",
+        currentPeriodEnd: null,
+        provider: "stripe",
+      });
+      await el.updateComplete;
+    });
+
+    afterEach(() => {
+      delete (window as unknown as { openfrontDesktop?: unknown })
+        .openfrontDesktop;
+    });
+
+    const keys = () =>
+      Array.from(el.querySelectorAll("o-button")).map((b) =>
+        b.getAttribute("translationKey"),
+      );
+
+    it("says the payment failed and offers only Manage billing", async () => {
+      expect(text()).toContain("account_modal.sub_past_due_note");
+      expect(keys()).toEqual(["store.manage_billing"]);
+      expect(text()).not.toContain("account_modal.cancel_subscription");
+    });
+
+    it("opens the billing portal", async () => {
+      const open = vi.spyOn(window, "open").mockImplementation(() => null);
+      el.querySelector("o-button")!.dispatchEvent(
+        new MouseEvent("click", { bubbles: true }),
+      );
+      await vi.waitFor(() =>
+        expect(open).toHaveBeenCalledWith(
+          "https://portal.example",
+          "_blank",
+          "noopener,noreferrer",
+        ),
+      );
+      expect(openSubscriptionPortal).toHaveBeenCalled();
+      open.mockRestore();
+    });
+
+    it("says where billing is managed inside the desktop shell", async () => {
+      (window as unknown as { openfrontDesktop?: unknown }).openfrontDesktop = {
+        steam: {},
+      };
+      el.requestUpdate();
+      await el.updateComplete;
+      expect(keys()).toEqual([]);
+      expect(text()).toContain("account_modal.manage_subscription_on_web");
     });
   });
 
@@ -257,6 +316,49 @@ describe("subscription-panel", () => {
       expect(text()).not.toContain("account_modal.sub_granted_perks_end_on");
       expect(text()).not.toContain("free_play.after_grant_heading");
       expect(text()).not.toContain("account_modal.cancel_subscription");
+    });
+
+    // An admin can give a grant an end date, so the date no longer means
+    // Steam. The server says who gave it; the copy never does. The date line
+    // names the end, and the note below stays undated so it is said once.
+    it("tells a player with a dated admin grant when it ends, once", async () => {
+      el.sub = sub({ provider: null, grantSource: "admin" });
+      await el.updateComplete;
+      expect(text()).toContain(
+        `account_modal.sub_granted_perks_end_on plutonium ${PERIOD_END_TEXT}`,
+      );
+      expect(text()).toContain("account_modal.sub_granted_indefinite");
+      expect(text().split(PERIOD_END_TEXT)).toHaveLength(2);
+      expect(text()).not.toContain("account_modal.sub_granted_from_purchase");
+      expect(text()).not.toContain("free_play.after_grant_heading");
+      expect(text()).not.toContain("account_modal.cancel_subscription");
+      expect(buttonKeys()).toEqual([]);
+    });
+
+    it("uses the same neutral copy for a Discord-role grant", async () => {
+      el.sub = sub({ provider: null, grantSource: "discord_role" });
+      await el.updateComplete;
+      expect(text()).toContain("account_modal.sub_granted_indefinite");
+      expect(text().split(PERIOD_END_TEXT)).toHaveLength(2);
+      expect(text()).not.toContain("account_modal.sub_granted_from_purchase");
+    });
+
+    it("keeps the Steam copy for a grant the server says came from Steam", async () => {
+      el.sub = sub({ provider: null, grantSource: "steam" });
+      await el.updateComplete;
+      expect(text()).toContain("account_modal.sub_granted_from_purchase");
+      expect(text()).not.toContain("account_modal.sub_granted_indefinite");
+    });
+
+    it("uses the open-ended copy for an admin grant with no end date", async () => {
+      el.sub = sub({
+        provider: null,
+        grantSource: "admin",
+        currentPeriodEnd: null,
+      });
+      await el.updateComplete;
+      expect(text()).toContain("account_modal.sub_granted_indefinite");
+      expect(text()).not.toContain("account_modal.sub_granted_perks_end_on");
     });
   });
 

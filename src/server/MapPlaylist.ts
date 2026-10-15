@@ -1,4 +1,3 @@
-import { SAM_CONSTRUCTION_TICKS } from "../core/configuration/Config";
 import {
   maps as allMaps,
   Difficulty,
@@ -10,18 +9,18 @@ import {
   HumansVsNations,
   PublicGameModifiers,
   Quads,
+  RANKED_FFA_MAX_PLAYERS,
   RankedType,
   Trios,
   UnitType,
-} from "../core/game/Game";
-import { PseudoRandom } from "../core/PseudoRandom";
-import {
-  GameConfig,
-  ScheduledPublicGameType,
-  TeamCountConfig,
-} from "../core/Schemas";
+} from "@openfront/engine-api/game/GameTypes";
+import { GameConfig, TeamCountConfig } from "@openfront/engine-api/Schemas";
+import { SAM_CONSTRUCTION_TICKS } from "@openfront/engine-lib/configuration/Config";
+import { PseudoRandom } from "@openfront/engine-lib/PseudoRandom";
+import { ScheduledPublicGameType } from "@openfront/shared/WireSchemas";
 import { logger } from "./Logger";
 import { getMapLandTiles } from "./MapLandTiles";
+import { MapWeightOverrides } from "./MapWeights";
 
 const log = logger.child({});
 
@@ -135,6 +134,22 @@ export class MapPlaylist {
 
   // Scheduled public games handed out so far, across all types.
   private scheduled = 0;
+
+  // Rotation weight overrides from the API (see MapWeights.ts), spread over
+  // each map's info.json frequencies when a playlist is built.
+  private weightOverrides: MapWeightOverrides = {};
+
+  // Queued playlists were built from the old weights, so drop them: a map
+  // pulled to 0 must stop appearing now, not after a full rotation.
+  public setWeightOverrides(overrides: MapWeightOverrides) {
+    if (JSON.stringify(overrides) === JSON.stringify(this.weightOverrides)) {
+      return;
+    }
+    this.weightOverrides = overrides;
+    for (const key of Object.keys(this.playlists) as PlaylistKey[]) {
+      this.playlists[key] = [];
+    }
+  }
 
   public async gameConfig(type: ScheduledPublicGameType): Promise<GameConfig> {
     this.scheduled++;
@@ -550,6 +565,84 @@ export class MapPlaylist {
     } satisfies GameConfig;
   }
 
+  // maxPlayers is the most a match can have; the check-in lowers it to the
+  // size of the assigned match, so the game starts once everyone is in.
+  public getFfaConfig(): GameConfig {
+    const maps = [
+      GameMapType.Europe,
+      GameMapType.Asia,
+      GameMapType.Africa,
+      GameMapType.NorthAmerica,
+      GameMapType.SouthAmerica,
+      GameMapType.Australia,
+    ];
+    return {
+      donateGold: false,
+      donateTroops: false,
+      gameMap: maps[Math.floor(Math.random() * maps.length)],
+      maxPlayers: RANKED_FFA_MAX_PLAYERS,
+      gameType: GameType.Public,
+      gameMapSize: GameMapSize.Normal,
+      difficulty: Difficulty.Medium, // Doesn't matter, nations are disabled
+      rankedType: RankedType.FreeForAll,
+      infiniteGold: false,
+      infiniteTroops: false,
+      maxTimerValue: 20,
+      instantBuild: false,
+      randomSpawn: false,
+      nations: "disabled",
+      gameMode: GameMode.FFA,
+      bots: 400,
+      spawnImmunityDuration: 30 * 10,
+      disabledUnits: [],
+      // Same as public FFA: no tags to rally a clan around.
+      disableClanTags: true,
+    } satisfies GameConfig;
+  }
+
+  // A clan wars match is teamCount clans of playerCount / teamCount players
+  // each (2v2 up to four teams of 5). Small matches play the ranked 2v2 maps;
+  // bigger ones the continent maps ranked FFA uses.
+  public getClanWarsConfig(teamCount: number, playerCount: number): GameConfig {
+    const small = playerCount <= 6;
+    const maps = small
+      ? [
+          GameMapType.Australia,
+          GameMapType.Iceland,
+          GameMapType.Asia,
+          GameMapType.EuropeClassic,
+        ]
+      : [
+          GameMapType.Europe,
+          GameMapType.Asia,
+          GameMapType.Africa,
+          GameMapType.NorthAmerica,
+          GameMapType.SouthAmerica,
+          GameMapType.Australia,
+        ];
+    return {
+      donateGold: true,
+      donateTroops: true,
+      gameMap: maps[Math.floor(Math.random() * maps.length)],
+      maxPlayers: playerCount,
+      gameType: GameType.Public,
+      gameMapSize: GameMapSize.Normal,
+      difficulty: Difficulty.Medium, // Doesn't matter, nations are disabled
+      rankedType: RankedType.ClanWars,
+      infiniteGold: false,
+      infiniteTroops: false,
+      maxTimerValue: small ? 15 : 20,
+      instantBuild: false,
+      randomSpawn: false,
+      nations: "disabled",
+      gameMode: GameMode.Team,
+      playerTeams: teamCount,
+      bots: 400,
+      spawnImmunityDuration: 60 * 10,
+      disabledUnits: [],
+    } satisfies GameConfig;
+  }
+
   private getNextMap(
     type: ScheduledPublicGameType,
     mode?: GameMode,
@@ -558,6 +651,11 @@ export class MapPlaylist {
     const playlist = this.playlists[key];
     if (playlist.length === 0) {
       playlist.push(...this.generateNewPlaylist(type, mode));
+    }
+    if (playlist.length === 0) {
+      // The overrides zeroed every map in this queue; fall back to the build.
+      log.warn(`Map weight overrides empty the ${key} playlist, ignoring them`);
+      playlist.push(...this.generateNewPlaylist(type, mode, {}));
     }
     return playlist.shift()!;
   }
@@ -575,8 +673,9 @@ export class MapPlaylist {
   private generateNewPlaylist(
     type: ScheduledPublicGameType,
     mode?: GameMode,
+    overrides: MapWeightOverrides = this.weightOverrides,
   ): GameMapType[] {
-    const maps = this.buildMapsList(type, mode);
+    const maps = this.buildMapsList(type, mode, overrides);
     const rand = new PseudoRandom(Date.now());
     const playlist: GameMapType[] = [];
 
@@ -626,10 +725,12 @@ export class MapPlaylist {
 
   private buildMapsList(
     type: ScheduledPublicGameType,
-    mode?: GameMode,
+    mode: GameMode | undefined,
+    overrides: MapWeightOverrides,
   ): GameMapType[] {
     const maps: GameMapType[] = [];
-    allMaps.forEach((mapInfo) => {
+    allMaps.forEach((buildInfo) => {
+      const mapInfo = { ...buildInfo, ...overrides[buildInfo.type] };
       const map = mapInfo.type;
       // Use per-mode frequency if set (>= 0), otherwise fall back to multiplayerFrequency.
       let freq: number;

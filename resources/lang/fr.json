@@ -44,6 +44,16 @@
     "games_type_singleplayer": "Solo",
     "get_magic_link": "Obtenir un Lien Magique",
     "google_alt": "Google",
+    "identity_token_copied": "Copié",
+    "identity_token_copy": "Copier",
+    "identity_token_desc": "Permet de prouver à un des sites de statistiques tiers qu'un compte OpenFront est bien le vôtre. Choisissez un site, générez un jeton, et collez-le ici.",
+    "identity_token_failed": "Impossible de générer un jeton. Merci de réessayer.",
+    "identity_token_generate": "Générer un jeton",
+    "identity_token_logged_out": "Votre session a expiré. Merci de vous reconnecter.",
+    "identity_token_note": "Ne fonctionne que sur {site} et expire dans 10 minutes. Collez-le uniquement sur {site}.",
+    "identity_token_rate_limited": "Trop de requêtes. Merci de patienter une minute avant de réessayer.",
+    "identity_token_site": "Site",
+    "identity_token_title": "Lier à un site tiers",
     "link_discord": "Lier un Compte Discord",
     "link_existing_account": "Associer un compte existant",
     "link_google": "Lier un compte Google",
@@ -83,9 +93,10 @@
     "reward_daily": "Récompense quotidienne de l'abonnement",
     "reward_signup_bonus": "Bonus de souscription à un abonnement",
     "sign_in_desc": "Connectez-vous pour enregistrer vos statistiques et progrès",
-    "sub_granted_ends_on": "L'accès gratuit prend fin le {date}",
-    "sub_granted_from_purchase": "Inclus gratuitement avec votre achat Steam. Il n'est pas facturé et ne se renouvelle pas, il n'y a donc rien à gérer ou à annuler.",
+    "sub_granted_from_purchase": "Fourni automatiquement avec votre achat Steam. Il n'est pas facturé et ne se renouvelle pas, il n'y a donc rien à gérer ni à annuler. Lorsqu'il arrive à échéance, vous gardez le jeu complet sans facturation, seuls les avantages du grade {tier} prennent fin.",
     "sub_granted_indefinite": "Accès gratuit accordé à votre compte. Ce n'est pas facturé, il n'y a donc rien à gérer ou à annuler.",
+    "sub_granted_perks_end_on": "Les avantages du grade {tier} prendront fin le {date}",
+    "sub_past_due_note": "Votre dernier paiement n'a pas été effectué, les avantages du grade {tier} sont donc suspendus. Mettez à jour votre méthode de paiement pour les restaurer.",
     "sub_price_monthly": "{price}/mois",
     "sub_renews_on": "Renouvellement le {date}",
     "sub_status_active": "Actif",
@@ -106,10 +117,10 @@
     "tab_stats": "Statistiques",
     "title": "Compte",
     "unclaimed_rewards": "Récompenses non récupérées",
-    "username_bare_taken_body": "«{requested}» est déjà détenu par un autre abonné. Vous pouvez l'utiliser en ajoutant un nombre, comme «{requested}».1234\", mais ça n'affichera pas le badge vérifié. Cette action utilise votre changement de nom. Voulez-vous utiliser un nombre ?",
+    "username_bare_taken_body": "\"{requested}\" est déjà détenu par un autre abonné. Vous pouvez l'utiliser en ajoutant un nombre, comme \"{requested}.1234\", mais ça n'affichera pas le badge vérifié. Cette action utilise votre changement de nom. Voulez-vous utiliser un nombre ?",
     "username_bare_taken_confirm": "Utiliser un nombre",
     "username_bare_taken_heading": "Ce nom est déjà utilisé",
-    "username_bare_unavailable": "\"{requested}\" est déjà pris, votre nom est donc maintenant \"{name}\". Cette action a utilisé votre changement de nom — vous pouvez le changer à nouveau le {date}.",
+    "username_bare_unavailable": "\"{requested}\" est déjà pris, votre nom est donc maintenant \"{name}\". Cette action a utilisé votre changement de nom — vous pourrez le changer à nouveau le {date}.",
     "username_bare_unavailable_no_date": "\"{requested}\" est déjà pris, votre nom est donc maintenant \"{name}\". Cette action a utilisé votre changement de nom.",
     "username_change_ready": "Changement disponible",
     "username_claim_heading": "Réclamez votre nom d'utilisateur",
@@ -121,7 +132,7 @@
     "username_confirm_case_only": "Votre nouveau nom ne change de l'ancien que par les majuscules — la limite de 30 jours sera quand même instaurée.",
     "username_confirm_heading": "Changer votre nom ?",
     "username_current_label": "Nom actuel",
-    "username_error_cooldown": "Vous pourrez changer à nouveau changer de nom dans {days} jour(s).",
+    "username_error_cooldown": "Vous pourrez changer à nouveau de nom dans {days} jour(s).",
     "username_error_failed": "Impossible de changer votre nom. Veuillez réessayer plus tard.",
     "username_error_profane": "Ce nom n'est pas autorisé.",
     "username_error_taken": "Ce nom est déjà pris — essayez-en un autre.",
@@ -190,7 +201,6 @@
       "focus": "Concentre l'attaque sur [P1] !",
       "mirv": "Lance une MIRV sur [P1] !"
     },
-    "build": "Construire votre message...",
     "cat": {
       "attack": "Attaque",
       "defend": "Défense",
@@ -199,7 +209,6 @@
       "misc": "Divers",
       "warnings": "Avertissements"
     },
-    "category": "Catégorie",
     "defend": {
       "ally": "[P1] est mon allié !",
       "build_posts": "Construis des Postes de Défense !",
@@ -245,11 +254,7 @@
       "strategy": "Bonne stratégie !",
       "team_up": "Faisons équipe contre [P1] !"
     },
-    "phrase": "Phrase",
-    "player": "Joueur",
     "search": "Rechercher un joueur...",
-    "send": "Envoyer",
-    "sort_by_territory": "Trier par territoire",
     "title": "Discussion",
     "to": "Envoyé à {user} : {msg}",
     "warnings": {
@@ -262,15 +267,21 @@
       "mirv_ready": "[P1] a assez d'or pour lancer une MIRV !",
       "mirv_soon": "[P1] peut bientôt lancer une MIRV !",
       "no_allies": "[P1] n'a pas d'alliés.",
-      "number1_warning": "Le joueur #1 gagnera bientôt si nous ne faisons pas équipe !",
       "saving_for_mirv": "[P1] économise pour lancer une MIRV.",
       "snowballing": "[P1] grandit beaucoup trop vite !",
       "stalemate": "Faisons la paix. C'est une impasse, nous perdrons tous les deux.",
       "stop_trading": "Arrête le commerce avec [P1] !",
       "stop_trading_all": "S'il te plaît, arrête de commercer avec tout le monde !",
       "strong": "[P1] est fort·e.",
-      "weak": "[P1] est faible."
-    }
+      "weak": "[P1] est faible.",
+      "number1_warning": "Le joueur #1 gagnera bientôt si nous ne faisons pas équipe !"
+    },
+    "build": "Construire votre message...",
+    "category": "Catégorie",
+    "phrase": "Phrase",
+    "player": "Joueur",
+    "send": "Envoyer",
+    "sort_by_territory": "Trier par territoire"
   },
   "clan_modal": {
     "applied": "Demande envoyée",
@@ -468,6 +479,7 @@
     "no_heartbeat": "Le serveur a cessé de recevoir de vos nouvelles.",
     "not_allowlisted": "Vous n'êtes pas sur la whitelist de ce salon.",
     "not_trusted": "Ce salon est limité aux comptes fiables. Vous pouvez néanmoins rejoindre les autres salons en attendant d'avoir le statut nécessaire.",
+    "pool_redirect": "Ce salon vous a déjà redirigé vers un autre. Merci de réessayer.",
     "protocol_error": "La connexion a été corrompue.",
     "ranked_limit_reached": "Vous êtes à court de matchs classés gratuits pour aujourd'hui.",
     "turnstile_failed": "La vérification du bot a échoué. Veuillez recharger la page et réessayer.",
@@ -522,12 +534,14 @@
   "control_panel": {
     "allied_afk_neighbor_info": "Vous pouvez attaquer les joueurs déconnectés même lorsque vous êtes en alliance avec eux.",
     "army_limit_warning": "Vous approchez votre limite de troupes ! Pensez à envoyer des troupes aux membres de votre équipe.",
+    "attack_ratio": "{percent}%\n({troops})",
     "low_troops_warning": "Vous avez très peu de troupes - Vous devriez toujours garder des troupes pour la défense.",
     "teammate_afk_neighbor_info": "Vous pouvez attaquer les joueurs de votre équipe déconnectés.",
     "traitor_neighbor_info": "Vous pouvez trahir quelqu'un en état de trahison sans risquer d'avoir le debuff de traître vous-même."
   },
   "cosmetics": {
     "adfree": "Sans publicités à vie !",
+    "ai_label": "Fait avec l'aide de l'IA",
     "artist_label": "Artiste :",
     "color_label": "Couleur :",
     "common": "Commun",
@@ -537,23 +551,24 @@
     "legendary": "Légendaire",
     "pack_includes": "Inclut :",
     "pack_more_items": "+ {count} autres",
+    "pattern_preview": "Aperçu du skin",
     "per_day": "/jour",
     "public_lobbies": "Créer des salons publics",
-    "public_lobbies_info": "Hébergez des salons personnalisés publics que tout le monde peut rejoindre.",
+    "public_lobbies_info": "Hébergez vos propres salons personnalisés dans la file d'attente. Rejoindre un salon est toujours gratuit.",
     "rare": "Rare",
     "search": "Rechercher...",
-    "signup_bonus": "Bonus d'inscription",
     "soft": "Capsule",
     "type_crown": "Couronne",
     "type_effect": "Effet de {type}",
     "type_flag": "Drapeau",
     "type_skin": "Skin",
     "uncommon": "Peu commun",
-    "unlimited_ranked": "Classés illimités",
-    "unlimited_ranked_info": "Jouez autant de parties classées que vous le souhaitez.",
     "usd_value": "Valeur : {usd}",
     "verified_name": "Nom d’utilisateur vérifié",
-    "verified_name_info": "Votre nom d’utilisateur est réservé à votre compte et affiche un badge de vérification en jeu."
+    "verified_name_info": "Votre nom d’utilisateur est réservé à votre compte et affiche un badge vérifié en jeu.",
+    "signup_bonus": "Bonus d'inscription",
+    "unlimited_ranked": "Classés illimités",
+    "unlimited_ranked_info": "Jouez autant de parties classées que vous le souhaitez."
   },
   "creator_code": {
     "change": "Changer",
@@ -678,6 +693,16 @@
     "easy": "Facile",
     "hard": "Difficile",
     "impossible": "Impossible",
+    "info": "{smarts}, {troops}",
+    "info_label": "Montrer les détails de la difficulté",
+    "info_note_hard": "(Ceci est la difficulté utilisée dans les parties publiques Humains vs Nations)",
+    "info_note_medium": "(Ceci est la difficulté utilisée dans les parties publiques Chacun pour Soi)",
+    "info_smarts_easy": "Stupides",
+    "info_smarts_hard": "Intelligentes",
+    "info_smarts_impossible": "Très intelligentes",
+    "info_smarts_medium": "Moyennement intelligentes",
+    "info_troops": "{percent}% du nombre max de troupes d'un joueur humain",
+    "info_troops_same": "le même nombre max de troupes qu'un joueur humain",
     "medium": "Moyen"
   },
   "discord_user_header": {
@@ -727,6 +752,9 @@
     "crashed": "Le jeu a planté !",
     "desync_notice": "Vous êtes désynchronisé des autres joueurs. Ce que vous voyez peut être différent des autres joueurs.",
     "login_failed": "Échec de la connexion. Merci de réessayer plus tard.",
+    "login_token_consumed": "Ce lien de connexion a déjà été utilisé. Vous êtes probablement déjà connecté — vérifiez un autre onglet.",
+    "login_token_expired": "Ce lien de connexion a expiré. Merci de demander un nouveau lien de connexion.",
+    "login_token_invalid": "Ce lien de connexion est invalide ou a expiré. Merci de demander un nouveau lien de connexion.",
     "paste_discord": "Veuillez coller ce qui suit dans votre rapport de bogue dans Discord :",
     "spawn_failed": {
       "description": "La sélection automatique du spawn a échoué. Vous ne pouvez pas jouer à cette partie.",
@@ -781,6 +809,15 @@
     "live": "EN DIRECT",
     "minimize": "Réduire",
     "open_on_twitch": "Ouvrir {channel} dans Twitch"
+  },
+  "free_play": {
+    "account": "Votre compte, vos statistiques, amis et cosmétiques",
+    "ad_free_steam": "Jamais la moindre publicité dans l'app Steam",
+    "after_grant_heading": "Une fois terminé, vous obtiendrez toujours",
+    "custom_lobbies": "Des salons personnalisés privés avec vos amis",
+    "free_heading": "Jouer gratuitement comprend",
+    "full_game": "Le jeu complet : chaque carte et mode de jeu, que ce soit en solo ou en ligne avec d'autres joueurs",
+    "ranked": "Accès aux parties classées, avec la limite de parties gratuites quotidienne"
   },
   "friends": {
     "accept": "Accepter",
@@ -1126,6 +1163,11 @@
     "host_badge": "Hôte",
     "host_cheats": "Privilèges de l'hôte",
     "leave_confirmation": "Es-tu sûr.e de vouloir quitter le salon ?",
+    "list_lobby_body": "Votre salon apparaîtra dans la liste des salons publics. Il se lancera automatiquement lorsque le timer arrivera à 0 ou lorsqu'il sera plein. Une fois le salon rendu public, vous ne pourrez plus en changer les paramètres.",
+    "list_lobby_confirm": "Rendre le salon public",
+    "list_lobby_max_players": "Nombre de joueurs max",
+    "list_lobby_start_minutes": "Lancement dans (minutes)",
+    "list_lobby_title": "Rendre le salon public",
     "mode": "Mode",
     "nation_player": "Nation",
     "nation_players": "Nations",
@@ -1134,7 +1176,17 @@
     "player_whitelist": "Liste blanche des joueurs (ID publics)",
     "player_whitelist_placeholder": "Séparez les ID avec une virgule",
     "players": "Joueurs",
+    "queue": "File d'attente",
+    "queue_confirm": "Payer et ajouter à la file d'attente",
+    "queue_confirm_body": "Payer {price} Plutonium pour envoyer ce salon dans la file d'attente publique ? Il commencera juste après la fin du décompte du salon actuel.",
+    "queue_confirm_title": "Envoyer dans la file d'attente publique ?",
+    "queue_failed": "Impossible de mettre le salon en file d'attente. Merci de réessayer, vous ne serez pas facturé une seconde fois.",
+    "queue_item": "une place dans la file d'attente publique",
+    "queue_tooltip": "Place ce salon dans la file d'attente spéciale, juste derrière celui sur le point de commencer",
+    "queued": "Ajouté à la file d'attente",
+    "queued_waiting": "Dans la file d'attente publique",
     "remove_player": "Retirer {username}",
+    "settings_locked_listed": "Ce salon est maintenant ouvert à tout le monde, et ses paramètres ne peuvent donc plus être modifiés.",
     "spectator": "Spectateur",
     "spectators": "Spectateurs",
     "start_delay": "Délai de démarrage (en secondes)",
@@ -1143,7 +1195,6 @@
     "subscription_required_title": "Abonnement requis",
     "team_count": "Nombre d'équipes",
     "teams_Duos": "Duos (équipes de 2)",
-    "teams_Humans Vs Nations": "Humains vs Nations",
     "teams_Quads": "Quatuors (équipes de 4)",
     "teams_Trios": "Trios (équipes de 3)",
     "title": "Créer un Salon Privé",
@@ -1151,7 +1202,8 @@
     "view_subscriptions": "Voir les abonnements",
     "visibility_private": "Privé",
     "visibility_public": "Public",
-    "waiting": "En attente de joueurs..."
+    "waiting": "En attente de joueurs...",
+    "teams_Humans Vs Nations": "Humains vs Nations"
   },
   "inventory": {
     "equipped": "Équipé",
@@ -1174,6 +1226,7 @@
     "selected_cosmetic": "{name} sélectionné",
     "selected_cosmetic_variant": "{name} ({variant})",
     "showing_effects": "Effets équipés : {count}",
+    "sign_in_for_cosmetics": "Connectez-vous ou créez un compte pour accéder à vos cosmétiques.",
     "title": "Inventaire",
     "unequip": "Déséquiper",
     "unequip_all": "Tout déséquiper",
@@ -1303,6 +1356,7 @@
     "arctic": "Arctique",
     "asia": "Asie",
     "australia": "Australie",
+    "babelmandebstrait": "Bab-el-Mandeb",
     "baikal": "Lac Baïkal",
     "baikalnukewars": "Baïkal (Guerres Nucléaires)",
     "bajacalifornia": "Basse-Californie",
@@ -1317,7 +1371,9 @@
     "branchingpaths": "Ramifications",
     "britannia": "Grande-Bretagne",
     "britanniaclassic": "Grande-Bretagne (Classique)",
+    "canaryislands": "Îles Canaries",
     "capecod": "Cap Cod",
+    "capeofgoodhope": "Cap de Bonne-Espérance",
     "caribbean": "Caraïbes",
     "caspiansea": "Mer Caspienne",
     "caucasus": "Caucase",
@@ -1354,6 +1410,7 @@
     "hawaii": "Hawaï",
     "hecatestrait": "Détroit d’Hecate",
     "hongkong": "Hong Kong",
+    "hornofafrica": "Corne de l'Afrique",
     "iceland": "Islande",
     "indiansubcontinent": "Sous-continent Indien",
     "irishsea": "Mer d'Irlande",
@@ -1368,6 +1425,7 @@
     "lisbon": "Lisbonne",
     "losangeles": "Los Angeles",
     "luna": "Luna",
+    "madagascar": "Madagascar",
     "manicouagan": "Manicouagan",
     "map": "Carte",
     "marenostrum": "Mare Nostrum",
@@ -1379,6 +1437,7 @@
     "montreal": "Montréal",
     "morethanluck": "Cinq Feuilles",
     "newyorkcity": "New York City",
+    "newzealand": "Nouvelle-Zélande",
     "niledelta": "Delta du Nil",
     "northamerica": "Amérique du Nord",
     "northwestpassage": "Passage du Nord-Ouest",
@@ -1387,8 +1446,10 @@
     "pangaea": "Pangée",
     "passage": "Passage",
     "pluto": "Pluton",
+    "pulicatlake": "Lac Pulicat",
     "qingchina": "Chine de Qing",
     "random": "Aléatoire",
+    "riodejaneiro": "Rio de Janeiro",
     "russia": "Russie",
     "sanfrancisco": "San Francisco",
     "scandinavia": "Scandinavie",
@@ -1412,6 +1473,7 @@
     "tradersdream": "Le rêve d'un commerçant",
     "twolakes": "Deux Lacs",
     "unitedstates": "États-Unis",
+    "vancouverisland": "Île de Vancouver",
     "venice": "Venise",
     "vietnam": "Viêt Nam",
     "warshipwarship": "Warship Warship",
@@ -1480,7 +1542,6 @@
     "waiting_for_game": "En attente du début de la partie..."
   },
   "mode_selector": {
-    "coming_soon": "À venir",
     "lobbies_unreachable": "Impossible d’accéder aux salons publics pour le moment",
     "offline_lobbies": "Les salons publics ne sont pas disponibles hors connexion",
     "ranked_1v1_title": "1v1",
@@ -1491,7 +1552,8 @@
     "servers_unreachable": "Impossible de se connecter aux serveurs OpenFront",
     "teams_count": "{teamCount} équipes",
     "teams_of": " {teamCount} équipes de {playersPerTeam}",
-    "teams_title": "Équipes"
+    "teams_title": "Équipes",
+    "coming_soon": "À venir"
   },
   "multi_tab": {
     "detected": "Plusieurs onglets de jeu ouverts détectés.",
@@ -1597,10 +1659,10 @@
   "player_profile": {
     "loading": "Chargement du profil...",
     "no_clans": "Ce joueur n'appartient à aucun clan.",
-    "not_found": "Profil de joueur introuvable",
     "share": "Partager le profil",
     "title": "Profil de joueur",
-    "view": "Voir le profil"
+    "view": "Voir le profil",
+    "not_found": "Profil de joueur introuvable"
   },
   "player_stats_table": {
     "arrived": "Arrivés",
@@ -1697,6 +1759,7 @@
     "listing_full": "La liste de salons publics est complète. Veuillez réessayer plus tard.",
     "listing_host_cheats_enabled": "Désactiver les privilèges de l'hôte pour rendre votre salon public.",
     "listing_limit_reached": "Vous avez déjà un salon public.",
+    "listing_max_players_too_low": "Le nombre maximum de joueurs doit être supérieur au nombre de joueurs déjà présents dans le salon.",
     "listing_requires_subscription": "Un abonnement actif de grade Warlord ou Sovereign est requis pour ouvrir un salon public.",
     "listing_whitelist_enabled": "Désactivez la liste blanche pour rendre votre salon public.",
     "no_open_lobbies": "Aucun salon ouvert à l'heure actuelle",
@@ -1734,13 +1797,15 @@
   },
   "public_lobby": {
     "connecting": "Connexion au lobby...",
+    "custom": "Personnalisé",
+    "custom_default_settings": "Paramètres standards",
+    "custom_tooltip_title": "Ceci est un salon créé par un joueur",
     "invite_friends": "Inviter des amis",
     "join_timeout": "Vous n'êtes pas entré dans la partie à temps.",
     "notify_armed": "Alerte activée : un son sera joué lorsque votre partie commencera",
     "notify_off": "Jouer un son lorsque la partie commence",
     "notify_on": "L’alerte de début de partie est activée",
     "notify_started": "Votre partie commence !",
-    "players_per_team": "de {num}",
     "see_all": "Voir tout {count}",
     "started": "Lancé",
     "starting_game": "Lancement…",
@@ -1760,7 +1825,8 @@
     "trusted_tooltip_title": "Salon de confiance",
     "trusted_unlocked": "Comptes fiables uniquement. Votre compte est considéré comme fiable.",
     "upcoming": "À venir",
-    "waiting_for_players": "En attente de joueurs"
+    "waiting_for_players": "En attente de joueurs",
+    "players_per_team": "de {num}"
   },
   "purchase_nudge": {
     "body": "On dirait que vous aimez jouer à OpenFront ! Pensez à nous soutenir en effectuant un achat dans la boutique : n’importe quel achat supprime les publicités à vie.",
@@ -1784,6 +1850,24 @@
     "fastest_game_speed": "Max",
     "game_speed": "Vitesse de jeu",
     "replay_speed": "Vitesse de relecture"
+  },
+  "replay_viewer": {
+    "following": "Suit {name}",
+    "load_failed": "Ce replay n'a pas pu être chargé.",
+    "loading": "Chargement du replay…",
+    "partial": "Seules les premières {time} de ce jeu peuvent être consultées.",
+    "pause": "Pause",
+    "play": "Play",
+    "processing": "Chargement du replay…",
+    "processing_fetching": "Récupération des fichiers de la partie",
+    "processing_simulating": "Relecture de la partie : {percent}%",
+    "timeline": "Chronologie du replay",
+    "unavailable_desync": "Cette partie a été jouée dans une version d'OpenFront qui empêche le replay de charger correctement.",
+    "unavailable_failed": "Le traitement de cette partie a échoué.",
+    "unavailable_not_found": "La partie n'a pas été trouvée.",
+    "unavailable_other_build": "Cette partie a été jouée sur une autre version d'OpenFront.",
+    "unavailable_unreachable": "La partie n'a pas pu être téléchargée. Vérifiez votre connexion avant de réessayer.",
+    "watch_classic": "Regardez le replay classique à la place"
   },
   "rewards_modal": {
     "title": "Récompenses"
@@ -1812,6 +1896,12 @@
   },
   "spawn_timer": {
     "team_percent_tooltip": "{team}: {percent}"
+  },
+  "steam_grant": {
+    "ended_body": "Le mois de grade {tier} fourni avec votre achat Steam touche à sa fin. Rien n'a été facturé et rien ne le sera. Vous gardez un accès complet au jeu : toutes les cartes et modes de jeu, les parties en ligne, les parties classées avec la limite quotidienne, et les salons personnalisés entre amis. L'application Steam reste sans publicités. Si vous désirez le retour des avantages de votre grade {tier} ou d'un grade supérieur, vous pouvez vous abonner depuis la boutique à tout moment.",
+    "ended_heading": "Votre mois d'abonnement fourni avec l'achat Steam a pris fin",
+    "welcome_body": "Votre achat Steam inclut un grade {tier} jusqu'au {date}. Vous avez payé une fois sur Steam : rien de plus n'est facturé et rien ne sera renouvelé. À la fin de cet abonnement, vous gardez le jeu complet, chaque carte et mode de jeu, et l'application Steam reste sans publicités. Seuls les avantages du grade {tier} cessent.",
+    "welcome_heading": "Inclus avec votre achat Steam"
   },
   "steam_handoff": {
     "launched": "Ouverture de ce salon dans l’application Steam. Si rien ne se passe, assurez-vous que Steam est lancé.",
@@ -1860,10 +1950,8 @@
     "default_name": "Joueur Steam"
   },
   "steam_wishlist": {
-    "cta": "Ajouter à la liste de souhaits",
-    "on_steam": "OpenFront sur Steam",
-    "release": "Disponible au 3ᵉ trimestre 2026",
-    "title": "Ajoutez OpenFront à votre liste de souhaits sur Steam !"
+    "buy_cta": "Acheter sur Steam",
+    "buy_on_steam": "Acheter OpenFront sur Steam"
   },
   "store": {
     "already_owned": "Vous possédez déjà cet article. Aucun montant n’a été débité.",
@@ -1900,6 +1988,7 @@
     "insufficient_currency_body": "Vous avez besoin de {amount, number} plus {currency} pour acheter {item}.",
     "insufficient_currency_title": "Pas assez de {currency}",
     "login_required": "Vous devez être connecté·e pour acheter avec de la monnaie.",
+    "manage_billing": "Gérer la facturation",
     "no_affiliate_items": "Pas d'objets disponibles. Revenez plus tard pour de nouveaux articles.",
     "no_bundles": "Aucun pack disponible. Revenez plus tard pour découvrir de nouveaux articles.",
     "no_crowns": "Pas de couronnes disponibles. Revenez plus tard pour de nouveaux articles.",
@@ -1937,6 +2026,8 @@
     "steam_overlay_waiting": "Confirmez l’achat dans l’interface Steam pour continuer.",
     "subscribe_heading": "S'abonner",
     "subscribed": "Abonné·e",
+    "subscription_past_due": "Votre dernier paiement pour votre abonnement n'a pas été effectué, ce dernier est donc mis en attente. Mettez à jour votre méthode de paiement pour le restaurer. Ne vous réabonnez pas, ou vous pourriez être facturé une seconde fois.",
+    "subscription_past_due_desktop": "Votre dernier paiement pour votre abonnement n'a pas été effectué, ce dernier est donc mis en attente. Mettez à jour votre méthode de paiement sur le site OpenFront.io pour le restaurer. Ne vous réabonnez pas, ou vous pourriez être facturé une seconde fois.",
     "subscription_purchase_success": "Abonnement activé !",
     "subscriptions": "Abonnements",
     "switch_button": "Changer",
@@ -2232,6 +2323,8 @@
     "left_click_label": "Clic gauche pour ouvrir le menu",
     "lobby_id_visibility_desc": "Cacher l'ID du salon lors de la création du salon privé",
     "lobby_id_visibility_label": "ID du salon masqué",
+    "lobby_start_alerts_desc": "Activer l'avertissement sonore pour chaque salon/partie classée par défaut, et afficher une notification de bureau si autorisé. Vous pouvez passer outre ce paramètre en cliquant sur la cloche du salon.",
+    "lobby_start_alerts_label": "Alerte de lancement de la partie",
     "menu_shortcuts": "Menu des raccourcis ",
     "move_down": "Caméra Bas",
     "move_down_desc": "Déplacer la caméra vers le bas",
@@ -2255,6 +2348,8 @@
     "press_a_key": "Appuyez sur une touche",
     "render_debug_gui": "Réglage du moteur de rendu",
     "render_debug_gui_desc": "Activer/désactiver l'encart de réglage du rendu",
+    "replay_viewer_desc": "Permet d'ouvrir les replays et de revenir en arrière, ouvre les replays classiques si désactivé",
+    "replay_viewer_label": "Nouveau visionneur de replays",
     "request_alliance": "Demander une alliance",
     "request_alliance_desc": "Envoie une demande d'alliance au joueur en dessous de votre curseur.",
     "reset": "Réinitialiser",
@@ -2300,6 +2395,8 @@
     "enter_username": "Entrez votre nom d'utilisateur",
     "invalid_chars": "Le pseudonyme peut seulement contenir des lettres, chiffres, espaces et des tirets.",
     "lapse_notice": "Votre abonnement a pris fin, vous ne jouez donc plus sous le nom « {name} ». Il vous reste réservé jusqu’au {date}. Réabonnez-vous avant cette date pour le conserver. Passé ce délai, n’importe quel joueur pourra l’utiliser.",
+    "lapse_notice_after_grant": "Le mois d'accès premium fourni avec votre achat Steam a pris fin, vous ne jouez donc plus en tant que \"{name}\". Vous gardez le jeu complet sans facturation, seuls les avantages de l'abonnement prennent fin. Votre nom vous reste réservé jusqu'au {date} — abonnez vous avant cette échéance pour le conserver. Une fois le temps écoulé, n'importe qui y aura accès.",
+    "lapse_notice_after_grant_at_risk": "Le mois d'accès premium fourni avec votre achat Steam a pris fin, vous ne jouez donc plus en tant que \"{name}\", et ce nom ne vous est dorénavant plus réservé. Vous gardez le jeu complet sans facturation, seuls les avantages de l'abonnement prennent fin. N'importe quel joueur peut maintenant prendre ce nom — Abonnez-vous maintenant depuis la boutique pour le conserver.",
     "lapse_notice_at_risk": "Vous ne jouez plus sous le nom « {name} » et celui-ci n’est plus réservé. Un autre joueur peut l’utiliser à tout moment. Réabonnez-vous maintenant pour le conserver.",
     "not_string": "Le nom d'utilisateur doit être une chaîne de caractères.",
     "tag": "TAG",

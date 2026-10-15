@@ -1,13 +1,18 @@
-import { html, LitElement } from "lit";
-import { customElement, state } from "lit/decorators.js";
-import { assetUrl } from "../../../core/AssetUrls";
-import { EventBus } from "../../../core/EventBus";
-import { MessageType, PlayerType, UnitType } from "../../../core/game/Game";
+import {
+  MessageType,
+  PlayerType,
+  UnitType,
+} from "@openfront/engine-api/game/GameTypes";
 import {
   AttackUpdate,
   GameUpdateType,
   UnitIncomingUpdate,
-} from "../../../core/game/GameUpdates";
+} from "@openfront/engine-api/game/GameUpdates";
+import { renderTroops } from "@openfront/engine-lib/Format";
+import { assetUrl } from "@openfront/shared/AssetUrls";
+import { EventBus } from "@openfront/shared/EventBus";
+import { html, LitElement } from "lit";
+import { customElement, state } from "lit/decorators.js";
 import { Controller } from "../../Controller";
 import { themeProvider } from "../../theme/ThemeProvider";
 import {
@@ -18,10 +23,11 @@ import {
 import {
   CancelAttackIntentEvent,
   CancelBoatIntentEvent,
+  counterAttackTroops,
   SendAttackIntentEvent,
 } from "../../Transport";
 import { UIState } from "../../UIState";
-import { renderTroops, translateText } from "../../Utils";
+import { translateText } from "../../Utils";
 import { GameView, PlayerView, UnitView } from "../../view";
 import { getColoredSprite } from "../SpriteLoader";
 const soldierIcon = assetUrl("images/SoldierIcon.svg");
@@ -201,7 +207,7 @@ export class AttacksDisplay extends LitElement implements Controller {
     const myPlayer = this.game.myPlayer();
     if (!myPlayer) return;
 
-    const counterTroops = Math.min(
+    const counterTroops = counterAttackTroops(
       attack.troops,
       this.uiState.attackRatio * myPlayer.troops(),
     );

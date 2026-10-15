@@ -1,10 +1,10 @@
+import { EventBus } from "@openfront/shared/EventBus";
 import { html, LitElement } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import { translateText } from "../../../client/Utils";
-import { EventBus } from "../../../core/EventBus";
 import { ClientEnv } from "../../ClientEnv";
 import { Controller } from "../../Controller";
-import { crazyGamesSDK } from "../../CrazyGamesSDK";
+import { gamePortal } from "../../GamePortal";
 import { NewLobbyEvent } from "../../Transport";
 import { GameView } from "../../view";
 
@@ -49,24 +49,24 @@ export class NewLobbyPrompt extends LitElement implements Controller {
     return asHost ? `${url}?host` : url;
   }
 
-  private _handleJoin() {
+  private async _handleJoin() {
     if (this.gameID === null) {
       return;
     }
-    // On CrazyGames the page URL still carries the invite param of the OLD
+    // On a portal the page URL still carries the invite param of the OLD
     // game, and it wins over the path on reload — navigating the iframe to our
     // own game URL would route the player straight back into the finished
-    // lobby. Send the top page to a fresh CrazyGames invite link instead: it
-    // updates that param and keeps the player on crazygames.com. (The host is
+    // lobby. Send the top page to a fresh portal invite link instead: it
+    // updates that param and keeps the player on the portal. (The host is
     // unaffected: games they created are ignored by the invite-param check.)
-    if (crazyGamesSDK.isOnCrazyGames()) {
-      const link = crazyGamesSDK.createInviteLink(this.gameID);
+    if (gamePortal.isOnGamePortal()) {
+      const link = await gamePortal.createInviteLink(this.gameID);
       if (link !== null) {
         try {
           window.top!.location.href = link;
           return;
         } catch (error) {
-          console.error("CrazyGames: top navigation failed", error);
+          console.error("Portal: top navigation failed", error);
         }
       }
     }

@@ -1,16 +1,21 @@
-import { html, LitElement } from "lit";
-import { customElement, property } from "lit/decorators.js";
-import { assetUrl } from "../../core/AssetUrls";
+import {
+  GameMode,
+  PlayerType,
+  Team,
+} from "@openfront/engine-api/game/GameTypes";
+import { renderTroops } from "@openfront/engine-lib/Format";
 import {
   doomsdayClockDrain,
   doomsdayClockRequiredTiles,
   doomsdayClockRotQuota,
   doomsdayClockTroopFloor,
   doomsdayClockWaveState,
-} from "../../core/game/DoomsdayClock";
-import { GameMode, PlayerType, Team } from "../../core/game/Game";
+} from "@openfront/engine-lib/game/DoomsdayClock";
+import { assetUrl } from "@openfront/shared/AssetUrls";
+import { html, LitElement } from "lit";
+import { customElement, property } from "lit/decorators.js";
 import { themeProvider } from "../theme/ThemeProvider";
-import { renderTroops, translateText } from "../Utils";
+import { translateText } from "../Utils";
 import { GameView } from "../view";
 
 const doomsdayClockIcon = assetUrl("images/DoomsdayClockSkull.svg");

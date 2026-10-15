@@ -1,4 +1,4 @@
-import { EventBus } from "../../../core/EventBus";
+import { EventBus } from "@openfront/shared/EventBus";
 import { SendQuickChatEvent } from "../../Transport";
 import { translateText } from "../../Utils";
 import { GameView, PlayerView } from "../../view";

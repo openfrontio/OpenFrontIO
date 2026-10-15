@@ -1,4 +1,4 @@
-import { ClientID } from "../core/Schemas";
+import { ClientID } from "@openfront/engine-api/Schemas";
 import { Client } from "./Client";
 
 // Desync detection. The simulation runs on every client; each reports a hash

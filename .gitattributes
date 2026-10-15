@@ -10,9 +10,11 @@
 #     into asset-manifest.json and the desktop release descriptor. 1192 files
 #     under resources/ are CRLF-converted on a Windows checkout, so a Windows
 #     build emits different hashed filenames for byte-identical content.
-#   - The same script hashes src/core to produce coreVersion, served from
-#     /desktop/version.json. All 138 files there are CRLF-converted, so a
-#     Windows build reports a core version no Linux build ever produces.
+#   - The same script hashes the engine sources (packages/engine,
+#     packages/engine-api, packages/engine-lib, packages/zbin) to produce
+#     coreVersion, served from /desktop/version.json. All 138 files there are
+#     CRLF-converted, so a Windows build reports a core version no Linux build
+#     ever produces.
 #
 # Measured on the same commit (bd7e83ad5): Linux and macOS CI both emit
 # core ab08220a8dc0, matching the deployed descriptor exactly, while Windows CI

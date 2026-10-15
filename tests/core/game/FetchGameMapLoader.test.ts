@@ -1,6 +1,6 @@
+import { GameMapType } from "@openfront/engine-api/game/GameTypes";
+import { FetchGameMapLoader } from "@openfront/shared/FetchGameMapLoader";
 import { describe, expect, test, vi } from "vitest";
-import { FetchGameMapLoader } from "../../../src/core/game/FetchGameMapLoader";
-import { GameMapType } from "../../../src/core/game/Game";
 
 describe("FetchGameMapLoader", () => {
   test("resolves each map file through the provided path resolver", async () => {
@@ -26,5 +26,28 @@ describe("FetchGameMapLoader", () => {
     expect(fetchMock).toHaveBeenCalledWith(
       "/_assets/maps/britanniaclassic/manifest.json.hashed",
     );
+  });
+
+  test("loads the WebP layer, and the 4x variant for compact games", async () => {
+    const fetchMock = vi.fn(async (_url: string) => ({
+      ok: true,
+      blob: async () => new Blob(),
+      statusText: "OK",
+    }));
+    vi.stubGlobal("fetch", fetchMock);
+    const bitmap = {} as ImageBitmap;
+    vi.stubGlobal(
+      "createImageBitmap",
+      vi.fn(async () => bitmap),
+    );
+
+    const loader = new FetchGameMapLoader("/maps");
+    const mapData = loader.getMapData(GameMapType.China);
+
+    await expect(mapData.layerImage("label", false)).resolves.toBe(bitmap);
+    expect(fetchMock).toHaveBeenLastCalledWith("/maps/china/label.webp");
+
+    await expect(mapData.layerImage("label", true)).resolves.toBe(bitmap);
+    expect(fetchMock).toHaveBeenLastCalledWith("/maps/china/label.4x.webp");
   });
 });

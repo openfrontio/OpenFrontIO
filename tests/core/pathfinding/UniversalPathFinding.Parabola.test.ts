@@ -1,7 +1,7 @@
+import { GameMapImpl } from "@openfront/engine-lib/game/GameMapImpl";
+import { UniversalPathFinding } from "@openfront/engine/pathfinding/PathFinder";
+import { PathStatus } from "@openfront/engine/pathfinding/types";
 import { describe, expect, it } from "vitest";
-import { GameMapImpl } from "../../../src/core/game/GameMap";
-import { UniversalPathFinding } from "../../../src/core/pathfinding/PathFinder";
-import { PathStatus } from "../../../src/core/pathfinding/types";
 
 describe("UniversalPathFinding.Parabola", () => {
   function createLargeMap() {

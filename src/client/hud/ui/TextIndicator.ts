@@ -1,4 +1,4 @@
-import { Cell } from "src/core/game/Game";
+import { Cell } from "@openfront/engine-api/game/GameTypes";
 import { TransformHandler } from "../../TransformHandler";
 import { UIElement } from "./UIElement";
 

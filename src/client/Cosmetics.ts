@@ -1,9 +1,9 @@
-import { assetUrl } from "src/core/AssetUrls";
 import {
   isGrantedSubscription,
   UserMeResponse,
   UserSubscription,
-} from "../core/ApiSchemas";
+} from "@openfront/shared/ApiSchemas";
+import { assetUrl } from "@openfront/shared/AssetUrls";
 import {
   ColorPalette,
   CosmeticPack,
@@ -18,22 +18,23 @@ import {
   Pattern,
   Skin,
   Subscription,
-} from "../core/CosmeticSchemas";
-import { UserSettings } from "../core/game/UserSettings";
+} from "@openfront/shared/CosmeticSchemas";
 import {
   PlayerCosmeticRefs,
   PlayerCosmetics,
   PlayerEffect,
   PlayerPattern,
-} from "../core/Schemas";
+} from "@openfront/shared/WireSchemas";
 import {
   changeSubscriptionTier,
   getApiBase,
   getUserMe,
   invalidateUserMe,
+  openSubscriptionPortal,
   purchaseCosmeticPack,
   purchaseWithCurrency,
 } from "./Api";
+import { isDesktopShell } from "./DesktopShell";
 import { showInGameAlert, showInGameConfirm } from "./InGameModal";
 import {
   classifyPurchaseReturn,
@@ -42,6 +43,7 @@ import {
   startPurchase,
 } from "./Payments";
 import { STEAM_TIER_CHANGE_IN_APP } from "./SubscriptionPolicy";
+import { UserSettings } from "./UserSettings";
 import { translateText } from "./Utils";
 
 export const TEMP_FLARE_OFFSET = 1 * 60 * 1000; // 1 minute
@@ -269,9 +271,9 @@ function debtMessage(debt: number): string {
  * Whole days left on a granted subscription, or null when there is no end date
  * to count to.
  *
- * A Steam ownership grant is a fixed free month, so `currentPeriodEnd` is set
- * and the number is real. An admin comp is open-ended (`currentPeriodEnd`
- * null) and there is nothing to count — the caller uses the no-days copy
+ * A Steam ownership grant is a fixed free month, and an admin comp can be
+ * given an end date, so `currentPeriodEnd` is set and the number is real. An
+ * open-ended admin comp has nothing to count — the caller uses the no-days copy
  * rather than inventing a figure. A date already in the past returns null for
  * the same reason: "0 days" reads as a bug, and a row the sweeper has not got
  * to yet is not worth quoting.
@@ -297,10 +299,11 @@ function grantedDaysRemaining(sub: UserSubscription): number | null {
  * ("charged the prorated difference", "credit for the unused portion"), and
  * none of it is true here: infra expires every granted row in the same
  * transaction as the paid insert (`expireGrantsForPaidReplacement`,
- * SteamAgreements.ts, confirmed 12 Sept 2026), so the paid period starts at
- * settle and the unused free days are simply gone — no credit, no extension,
- * no stacking. The string says so, and names the days when we know them,
- * because "not carried over" badly understates 28 of them.
+ * SteamAgreements.ts), so the paid period starts at settle. What happens to
+ * the unused free days depends on the rail, and the copy must match infra:
+ * on Steam they are added to the end (`steam:extend_agreement` pushes the
+ * next charge back), on Stripe they are simply gone. An open-ended grant has
+ * no days to carry on either rail.
  *
  * The purchase itself is the ordinary first-purchase flow: same startPurchase,
  * same success string, same profile refresh. Only the confirm differs.
@@ -311,16 +314,21 @@ async function purchaseOverGrant(
 ): Promise<void> {
   const targetName = translateCosmetic("subscriptions", sub.name);
   const days = grantedDaysRemaining(currentSub);
-  // Both keys passed as literals so the en.json sync test can see them.
+  // Every key passed as a literal so the en.json sync test can see them.
   const confirmed = await showInGameConfirm(
     days === null
       ? translateText("store.confirm_subscribe_over_grant_no_days", {
           tier: targetName,
         })
-      : translateText("store.confirm_subscribe_over_grant", {
-          tier: targetName,
-          days,
-        }),
+      : paymentsProvider() === "steam"
+        ? translateText("store.confirm_subscribe_over_grant_carried", {
+            tier: targetName,
+            days,
+          })
+        : translateText("store.confirm_subscribe_over_grant", {
+            tier: targetName,
+            days,
+          }),
     {
       heading: translateText("store.subscribe_heading"),
       variant: "warning",
@@ -336,11 +344,42 @@ async function purchaseOverGrant(
   if (outcome.outcome === "error" && outcome.refetchCatalog) {
     invalidateCosmetics();
   }
+  if (outcome.outcome === "error" && outcome.manageBilling) {
+    return promptManageBilling(outcome.message);
+  }
   const message = purchaseOutcomeMessage(
     outcome,
     "store.subscription_purchase_success",
   );
   if (message !== null) await showInGameAlert(message);
+}
+
+/**
+ * Checkout refused a new subscription because the player's Stripe one failed
+ * to renew. /users/@me does not return a past_due subscription, so the
+ * account panel's Manage button is gone and this is the only way left to the
+ * billing portal, which does admit past_due. The desktop build must not link
+ * out to a payment page (see SubscriptionPanel.renderManageOnWeb), so it only
+ * says where to go.
+ */
+async function promptManageBilling(message: string): Promise<void> {
+  if (isDesktopShell()) {
+    await showInGameAlert(translateText("store.subscription_past_due_desktop"));
+    return;
+  }
+  const confirmed = await showInGameConfirm(message, {
+    variant: "warning",
+    confirmText: translateText("store.manage_billing"),
+  });
+  if (!confirmed) return;
+  const url = await openSubscriptionPortal();
+  if (url === false) {
+    await showInGameAlert(
+      translateText("account_modal.subscription_portal_failed"),
+    );
+    return;
+  }
+  window.open(url, "_blank", "noopener,noreferrer");
 }
 
 export async function purchaseCosmetic(
@@ -414,8 +453,10 @@ export async function purchaseCosmetic(
 
       // Direction-aware confirm based on priceMonthly. We don't have the
       // server's sortOrder client-side — priceMonthly is a good proxy.
-      const currentCosmetic =
-        (await fetchCosmetics())?.subscriptions?.[currentSub.tier] ?? null;
+      const currentCosmetic = subscriptionTier(
+        await fetchCosmetics(),
+        currentSub.tier,
+      );
       const isUpgrade =
         currentCosmetic !== null
           ? sub.priceMonthly > currentCosmetic.priceMonthly
@@ -472,6 +513,10 @@ export async function purchaseCosmetic(
         await showInGameAlert(translateText("store.change_tier_rate_limited"));
         return;
       }
+      if (result === "steam_licence_required") {
+        await showInGameAlert(translateText("store.steam_licence_required"));
+        return;
+      }
       if (!result) {
         await showInGameAlert(translateText("store.change_tier_failed"));
         return;
@@ -513,6 +558,9 @@ export async function purchaseCosmetic(
       // longer sells; drop it so the next open refetches.
       if (outcome.outcome === "error" && outcome.refetchCatalog) {
         invalidateCosmetics();
+      }
+      if (outcome.outcome === "error" && outcome.manageBilling) {
+        return promptManageBilling(outcome.message);
       }
       const message = purchaseOutcomeMessage(
         outcome,
@@ -816,13 +864,25 @@ export function invalidateCosmetics(): void {
   __cosmetics = null;
 }
 
+export type TierListingRail = "steam" | "web";
+
+// cosmetics.json lists subscription tiers per rail: the one this device checks
+// out on. The only place the listing hint is decided.
+export function tierListingRail(): TierListingRail {
+  return paymentsProvider() === "steam" ? "steam" : "web";
+}
+
+export function cosmeticsJsonUrl(): string {
+  return `${getApiBase()}/cosmetics.json?rail=${tierListingRail()}`;
+}
+
 export async function fetchCosmetics(): Promise<Cosmetics | null> {
   if (__cosmetics !== null) {
     return __cosmetics;
   }
   const request = (async () => {
     try {
-      const response = await fetch(`${getApiBase()}/cosmetics.json`, {
+      const response = await fetch(cosmeticsJsonUrl(), {
         signal: AbortSignal.timeout(COSMETICS_FETCH_TIMEOUT_MS),
       });
       if (!response.ok) {
@@ -851,6 +911,18 @@ export async function fetchCosmetics(): Promise<Cosmetics | null> {
     }
   });
   return request;
+}
+
+/** A tier by name, listed on this rail or not. */
+export function subscriptionTier(
+  cosmetics: Cosmetics | null | undefined,
+  name: string,
+): Subscription | null {
+  return (
+    cosmetics?.subscriptions?.[name] ??
+    cosmetics?.unlistedSubscriptions?.[name] ??
+    null
+  );
 }
 
 /**
@@ -1292,32 +1364,35 @@ export function resolveCosmetics(
   const grantIsCurrent = isGrantedSubscription(currentSub);
   for (const [subKey, sub] of Object.entries(cosmetics.subscriptions ?? {})) {
     const key = `subscription:${subKey}`;
-    // A listing with no Stripe `product` block cannot render a price, so it
-    // falls to "blocked" — and the subscriptions tab lists only purchasable
-    // and owned, so a blocked tier is not shown at all. (Currency packs hit
-    // this and were fixed by never gating on `product`; subscriptions still
-    // do. OPE-441 is the real fix.)
-    const canBeSold = Boolean(sub.product);
-    // ...which is why the grant demotion below is conditional on it. Taking
-    // "owned" away from a tier we then cannot sell would make the card
-    // VANISH from the store, and a card that disappears is a worse failure
-    // than the dead "Subscribed" box this change exists to remove. Not
-    // reachable today — every live tier carries a product — and this is not
-    // the PR to introduce it.
+    // `subscriptions` is this rail's storefront, so every tier in it is for
+    // sale. NEVER gate on `sub.product`: that is the Stripe listing, null for
+    // a tier only Steam sells, and gating on it hid such tiers from the store
+    // (see currency packs above). If a rail cannot sell it, checkout says so.
     const isCurrentTier = subKey === currentSubTier;
-    const demoteGrant = grantIsCurrent && isCurrentTier && canBeSold;
+    const demoteGrant = grantIsCurrent && isCurrentTier;
     const isCurrent = flares.includes(key) || (isCurrentTier && !demoteGrant);
     const rel: ResolvedCosmetic["relationship"] = isCurrent
       ? "owned"
-      : canBeSold
-        ? "purchasable"
-        : "blocked";
+      : "purchasable";
     result.push({
       type: "subscription",
       cosmetic: sub,
       colorPalette: null,
       relationship: rel,
       key,
+    });
+  }
+  const heldUnlisted =
+    currentSubTier !== null && !cosmetics.subscriptions?.[currentSubTier]
+      ? cosmetics.unlistedSubscriptions?.[currentSubTier]
+      : undefined;
+  if (heldUnlisted) {
+    result.push({
+      type: "subscription",
+      cosmetic: heldUnlisted,
+      colorPalette: null,
+      relationship: "owned",
+      key: `subscription:${currentSubTier}`,
     });
   }
 

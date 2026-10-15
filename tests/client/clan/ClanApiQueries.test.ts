@@ -9,6 +9,7 @@ vi.mock("../../../src/client/Auth", () => ({
   getAuthHeader: vi.fn(async () => "Bearer test-token"),
 }));
 
+import type { UserMeResponse } from "@openfront/shared/ApiSchemas";
 import { getUserMe } from "../../../src/client/Api";
 import {
   checkClanTagOwnership,
@@ -21,7 +22,6 @@ import {
   fetchClanRequests,
   fetchClans,
 } from "../../../src/client/ClanApi";
-import type { UserMeResponse } from "../../../src/core/ApiSchemas";
 
 const userWithClans = (tags: string[]): UserMeResponse =>
   ({
@@ -324,6 +324,109 @@ describe("fetchClans", () => {
     expect(url.searchParams.has("search")).toBe(false);
   });
 
+  function spyBrowse() {
+    const fetchSpy = vi.fn(
+      (_input: string | URL | Request, _init?: RequestInit) =>
+        Promise.resolve(okJson({ ...browseResponse, bucket: 7 })),
+    );
+    vi.stubGlobal("fetch", fetchSpy);
+    return () =>
+      new URL(
+        fetchSpy.mock.calls[fetchSpy.mock.calls.length - 1]![0] as string,
+      );
+  }
+
+  it("defaults to the seeded random sort, seeded by the public id", async () => {
+    vi.mocked(getUserMe).mockResolvedValue(userWithClans([]));
+    const lastUrl = spyBrowse();
+
+    const result = await fetchClans();
+
+    expect(lastUrl().searchParams.get("sortField")).toBe("random");
+    expect(lastUrl().searchParams.get("seed")).toBe("p1");
+    expect(lastUrl().searchParams.has("bucket")).toBe(false);
+    expect(result && result.bucket).toBe(7);
+  });
+
+  it("signed out, seeds from a stored random value that persists", async () => {
+    vi.mocked(getUserMe).mockResolvedValue(false);
+    localStorage.removeItem("clanBrowseSeed");
+    const lastUrl = spyBrowse();
+
+    await fetchClans();
+    const first = lastUrl().searchParams.get("seed");
+    await fetchClans();
+
+    expect(first).toMatch(/^[0-9a-f]{32}$/);
+    expect(lastUrl().searchParams.get("seed")).toBe(first);
+  });
+
+  it("keeps page 1's seed for the pages after it, even across a sign-in", async () => {
+    vi.mocked(getUserMe).mockResolvedValue(false);
+    localStorage.setItem("clanBrowseSeed", "anonseed");
+    const lastUrl = spyBrowse();
+
+    await fetchClans(undefined, 1);
+    vi.mocked(getUserMe).mockResolvedValue(userWithClans([]));
+    await fetchClans(undefined, 2);
+    expect(lastUrl().searchParams.get("seed")).toBe("anonseed");
+
+    // A fresh page 1 picks up the signed-in seed.
+    await fetchClans(undefined, 1);
+    expect(lastUrl().searchParams.get("seed")).toBe("p1");
+  });
+
+  it("passes a pinned bucket back", async () => {
+    const lastUrl = spyBrowse();
+    await fetchClans(undefined, 2, 20, "random", 491234);
+    expect(lastUrl().searchParams.get("bucket")).toBe("491234");
+  });
+
+  it("maps the other sorts to field and direction, without a seed", async () => {
+    const lastUrl = spyBrowse();
+    const expected = [
+      ["memberCount", "memberCount", "DESC"],
+      ["winScore", "winScore", "DESC"],
+      ["winScoreLow", "winScore", "ASC"],
+      ["createdAt", "createdAt", "ASC"],
+      ["softBalance", "softBalance", "DESC"],
+      ["name", "name", "ASC"],
+    ] as const;
+    for (const [sort, field, order] of expected) {
+      await fetchClans(undefined, 1, 20, sort, 5);
+      expect(lastUrl().searchParams.get("sortField")).toBe(field);
+      expect(lastUrl().searchParams.get("sortOrder")).toBe(order);
+      expect(lastUrl().searchParams.has("seed")).toBe(false);
+      expect(lastUrl().searchParams.has("bucket")).toBe(false);
+    }
+  });
+
+  it("sends the open filter only when one is picked", async () => {
+    const lastUrl = spyBrowse();
+    await fetchClans();
+    expect(lastUrl().searchParams.has("open")).toBe(false);
+    await fetchClans(undefined, 1, 20, "random", undefined, "all");
+    expect(lastUrl().searchParams.has("open")).toBe(false);
+    await fetchClans(undefined, 1, 20, "random", undefined, "open");
+    expect(lastUrl().searchParams.get("open")).toBe("true");
+    await fetchClans("abc", 1, 20, "name", undefined, "inviteOnly");
+    expect(lastUrl().searchParams.get("open")).toBe("false");
+    expect(lastUrl().searchParams.get("search")).toBe("abc");
+  });
+
+  it("search with the default sort leaves ordering to the server", async () => {
+    const lastUrl = spyBrowse();
+    await fetchClans("abc");
+    expect(lastUrl().searchParams.has("sortField")).toBe(false);
+    expect(lastUrl().searchParams.has("seed")).toBe(false);
+  });
+
+  it("search with an explicit sort sends it", async () => {
+    const lastUrl = spyBrowse();
+    await fetchClans("abc", 1, 20, "memberCount");
+    expect(lastUrl().searchParams.get("sortField")).toBe("memberCount");
+  });
+
   it("returns false on failure", async () => {
     mockFetch(() => failRes(500));
     const result = await fetchClans();
@@ -404,6 +507,29 @@ describe("fetchClanMembers", () => {
     const result = await fetchClanMembers("TEST");
     expect(result).not.toBe(false);
     if (result) expect(result.pendingRequests).toBe(5);
+  });
+
+  it("parses each member's clan wars eloContributed, null or absent", async () => {
+    const [first] = membersResponse.results;
+    mockFetch(() =>
+      okJson({
+        ...membersResponse,
+        results: [
+          { ...first, publicId: "a", eloContributed: 40 },
+          { ...first, publicId: "b", eloContributed: null },
+          { ...first, publicId: "c" },
+        ],
+      }),
+    );
+    const result = await fetchClanMembers("TEST", 1, 20, "eloContributed");
+    expect(result).not.toBe(false);
+    if (result) {
+      expect(result.results.map((m) => m.eloContributed)).toEqual([
+        40,
+        null,
+        undefined,
+      ]);
+    }
   });
 
   it("returns false on non-ok response", async () => {

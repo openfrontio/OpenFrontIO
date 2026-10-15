@@ -138,6 +138,66 @@ describe("empty game reaping", () => {
     expect(game.phase()).toBe(GamePhase.Finished);
   });
 
+  // phase() is read by every lobby listing and HTTP handler, so a log inside
+  // it repeated per call (~5 lines per game, ~40% of prod warn volume).
+  describe("a game that hits the 3 hour cap", () => {
+    const threeHours = 3 * 60 * 60 * 1000;
+
+    it("reports Finished from phase() without logging", () => {
+      const game = makeGame({ log });
+      startGame(game);
+      vi.setSystemTime(Date.now() + threeHours + 1);
+
+      for (let i = 0; i < 5; i++) {
+        expect(game.phase()).toBe(GamePhase.Finished);
+      }
+      expect(game.pastMaxDuration()).toBe(true);
+      expect(log.warn).not.toHaveBeenCalledWith(
+        "game past max duration",
+        expect.anything(),
+      );
+      expect(log.info).not.toHaveBeenCalledWith(
+        "game past max duration",
+        expect.anything(),
+      );
+    });
+
+    it("is logged once, at info, when the manager prunes it", () => {
+      const manager = new GameManager(log, new RecordingEmitter());
+      const game = manager.createGame(cid("capped"), undefined)!;
+      game.joinClient(makeClient());
+      manager.publicLobbies();
+      vi.setSystemTime(Date.now() + threeHours + 1);
+      manager.publicLobbies();
+      manager.listedLobbies();
+
+      runManager(1_000);
+      runManager(5_000);
+
+      expect(manager.activeGames()).toBe(0);
+      const capped = (fn: any) =>
+        fn.mock.calls.filter((c: any[]) => c[0] === "game past max duration");
+      expect(capped(log.info)).toEqual([
+        ["game past max duration", { gameID: cid("capped") }],
+      ]);
+      expect(capped(log.warn)).toEqual([]);
+    });
+
+    it("is not logged when a game is pruned before the cap", () => {
+      const manager = new GameManager(log, new RecordingEmitter());
+      const game = manager.createGame(cid("short"), undefined)!;
+      (game as any).hasReachedMaxPlayerCount = true;
+
+      runManager(60_000);
+
+      expect(manager.activeGames()).toBe(0);
+      expect(log.info).not.toHaveBeenCalledWith(
+        "game past max duration",
+        expect.anything(),
+      );
+    });
+  });
+
   it("ends an empty game whose ping clock never goes quiet", () => {
     const telemetry = new RecordingEmitter();
     const manager = new GameManager(log, telemetry);

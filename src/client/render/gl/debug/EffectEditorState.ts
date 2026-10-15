@@ -13,7 +13,7 @@ import {
   StructuresEffectAttributesSchema,
   TRAIL_EFFECT_TYPES,
   TrailEffectAttributesSchema,
-} from "../../../../core/CosmeticSchemas";
+} from "@openfront/shared/CosmeticSchemas";
 import { MAX_NUKE_EXPLOSION_COLORS } from "../../types";
 
 /** Max colors a palette slot can carry — the effect palette holds 8 rows per block. */

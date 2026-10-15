@@ -1,8 +1,13 @@
 import {
   type ClanBansResponse,
   ClanBansResponseSchema,
+  ClanBoostPurchaseResponseSchema,
+  type ClanBoostStatus,
+  ClanBoostStatusSchema,
+  type ClanBrowseFilter,
   type ClanBrowseResponse,
   ClanBrowseResponseSchema,
+  type ClanBrowseSort,
   type ClanDiscord,
   type ClanDonationsResponse,
   ClanDonationsResponseSchema,
@@ -19,7 +24,7 @@ import {
   ClanRequestsResponseSchema,
   DiscordInviteResponseSchema,
   JoinClanResponseSchema,
-} from "../core/ClanApiSchemas";
+} from "@openfront/shared/ClanApiSchemas";
 import { getApiBase, getUserMe } from "./Api";
 import { getAuthHeader } from "./Auth";
 
@@ -27,7 +32,11 @@ const CLAN_EXISTS_FETCH_TIMEOUT_MS = 3000;
 export type {
   ClanBan,
   ClanBansResponse,
+  ClanBoostStatus,
+  ClanBoostTier,
+  ClanBrowseFilter,
   ClanBrowseResponse,
+  ClanBrowseSort,
   ClanDiscord,
   ClanDonation,
   ClanDonationsResponse,
@@ -43,7 +52,7 @@ export type {
   ClanMemberStats,
   ClanMemberWL,
   ClanRequestsResponse,
-} from "../core/ClanApiSchemas";
+} from "@openfront/shared/ClanApiSchemas";
 
 async function clanFetch(
   path: string,
@@ -94,16 +103,80 @@ export async function fetchClanLeaderboard(): Promise<
   }
 }
 
+const CLAN_BROWSE_SEED_KEY = "clanBrowseSeed";
+
+// Seeds the browse list's default shuffle. Signed in, the public id, so the
+// order follows the player across devices; signed out, a random value kept in
+// localStorage. Never the persistent id, which must not leave the client.
+async function clanBrowseSeed(): Promise<string> {
+  const me = await getUserMe();
+  if (me) return me.player.publicId;
+  try {
+    const stored = localStorage.getItem(CLAN_BROWSE_SEED_KEY);
+    if (stored) return stored;
+    const fresh = crypto.randomUUID().replace(/-/g, "");
+    localStorage.setItem(CLAN_BROWSE_SEED_KEY, fresh);
+    return fresh;
+  } catch {
+    // Storage blocked: every visitor shares the hour's order.
+    return "";
+  }
+}
+
+// The seed page 1 was fetched with, reused for the pages after it: signing in
+// mid-browse would otherwise switch seeds and repeat or skip clans.
+let pagedBrowseSeed: string | null = null;
+
+// Server sort field and direction for each browse option. Search ignores
+// "random" and keeps the server's alphabetical default.
+const BROWSE_SORT_PARAMS: Record<
+  ClanBrowseSort,
+  { sortField: string; sortOrder?: "ASC" | "DESC" }
+> = {
+  random: { sortField: "random" },
+  memberCount: { sortField: "memberCount", sortOrder: "DESC" },
+  winScore: { sortField: "winScore", sortOrder: "DESC" },
+  winScoreLow: { sortField: "winScore", sortOrder: "ASC" },
+  createdAt: { sortField: "createdAt", sortOrder: "ASC" },
+  softBalance: { sortField: "softBalance", sortOrder: "DESC" },
+  name: { sortField: "name", sortOrder: "ASC" },
+};
+
+const BROWSE_FILTER_OPEN: Record<ClanBrowseFilter, string | undefined> = {
+  all: undefined,
+  open: "true",
+  inviteOnly: "false",
+};
+
 export async function fetchClans(
   search?: string,
   page = 1,
   limit = 20,
+  sort: ClanBrowseSort = "random",
+  bucket?: number,
+  filter: ClanBrowseFilter = "all",
 ): Promise<ClanBrowseResponse | false> {
   try {
     const params = new URLSearchParams();
     params.set("page", String(page));
     params.set("limit", String(limit));
-    if (search && search.length >= 2) params.set("search", search);
+    const searching = !!search && search.length >= 2;
+    if (searching) params.set("search", search);
+    if (!(searching && sort === "random")) {
+      const { sortField, sortOrder } = BROWSE_SORT_PARAMS[sort];
+      params.set("sortField", sortField);
+      if (sortOrder) params.set("sortOrder", sortOrder);
+    }
+    const open = BROWSE_FILTER_OPEN[filter];
+    if (open) params.set("open", open);
+    if (sort === "random" && !searching) {
+      if (page === 1 || pagedBrowseSeed === null) {
+        pagedBrowseSeed = await clanBrowseSeed();
+      }
+      const seed = pagedBrowseSeed;
+      if (seed) params.set("seed", seed);
+      if (bucket !== undefined) params.set("bucket", String(bucket));
+    }
     const res = await clanFetch(`/clans?${params}`);
     if (!res.ok) return false;
     const json = await res.json();
@@ -189,7 +262,8 @@ export type ClanMemberSort =
   | "winsRanked"
   | "lossesRanked"
   | "wins1v1"
-  | "losses1v1";
+  | "losses1v1"
+  | "eloContributed";
 export type ClanMemberOrder = "asc" | "desc";
 
 export async function fetchClanMembers(
@@ -224,13 +298,17 @@ export async function fetchClanMembers(
   }
 }
 
+// `source: "boosted"` marks a join started from the browser's boosted block
+// (analytics only).
 export async function joinClan(
   tag: string,
+  source?: "boosted",
 ): Promise<
   { status: "joined" | "requested" } | { error: string; reason?: string }
 > {
   try {
-    const res = await clanFetch(`/clans/${encodeURIComponent(tag)}/join`, {
+    const qs = source ? `?source=${source}` : "";
+    const res = await clanFetch(`/clans/${encodeURIComponent(tag)}/join${qs}`, {
       method: "POST",
     });
     if (res.status === 409) {
@@ -715,5 +793,61 @@ export async function fetchClanBans(
     return parsed.data;
   } catch {
     return false;
+  }
+}
+
+export async function fetchClanBoostStatus(
+  tag: string,
+): Promise<ClanBoostStatus | false> {
+  try {
+    const res = await clanFetch(`/clans/${encodeURIComponent(tag)}/boost`);
+    if (!res.ok) return false;
+    const parsed = ClanBoostStatusSchema.safeParse(await res.json());
+    if (!parsed.success) {
+      console.warn("fetchClanBoostStatus: Zod validation failed", parsed.error);
+      return false;
+    }
+    return parsed.data;
+  } catch {
+    return false;
+  }
+}
+
+// Refusal codes from POST /clans/:tag/boost, each with a translation key.
+const BOOST_ERRORS: Record<string, string> = {
+  not_enough_members: "clan_modal.boost_error_not_enough_members",
+  not_recently_active: "clan_modal.boost_error_not_recently_active",
+  daily_limit: "clan_modal.boost_error_daily_limit",
+  insufficient_balance: "clan_modal.boost_error_insufficient_balance",
+  unknown_tier: "clan_modal.boost_error_unknown_tier",
+  idempotency_conflict: "clan_modal.boost_error_key_conflict",
+};
+
+export async function buyClanBoost(
+  tag: string,
+  tier: string,
+  idempotencyKey: string,
+): Promise<{ endsAt: string } | { error: string }> {
+  try {
+    const res = await clanFetch(`/clans/${encodeURIComponent(tag)}/boost`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ tier, idempotencyKey }),
+    });
+    if (res.status === 403)
+      return { error: "clan_modal.boost_error_forbidden" };
+    if (!res.ok) {
+      const body = (await res.json().catch(() => ({}))) as { code?: string };
+      return {
+        error:
+          (body.code && BOOST_ERRORS[body.code]) ??
+          "clan_modal.boost_error_failed",
+      };
+    }
+    const parsed = ClanBoostPurchaseResponseSchema.safeParse(await res.json());
+    if (!parsed.success) return { error: "clan_modal.boost_error_failed" };
+    return { endsAt: parsed.data.endsAt };
+  } catch {
+    return { error: "clan_modal.error_network" };
   }
 }

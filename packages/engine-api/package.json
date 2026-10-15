@@ -1,0 +1,13 @@
+{
+  "name": "@openfront/engine-api",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./*": "./src/*.ts"
+  },
+  "dependencies": {
+    "@openfront/zbin": "0.0.0",
+    "zod": "^4.4.2"
+  }
+}

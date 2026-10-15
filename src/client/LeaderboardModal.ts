@@ -1,24 +1,34 @@
+import { RankedType } from "@openfront/engine-api/game/GameTypes";
 import { html } from "lit";
 import { customElement, query, state } from "lit/decorators.js";
-import { RankedType } from "../core/game/Game";
 import { BaseModal } from "./components/BaseModal";
 import "./components/leaderboard/LeaderboardClanTable";
 import type { LeaderboardClanTable } from "./components/leaderboard/LeaderboardClanTable";
 import "./components/leaderboard/LeaderboardPlayerList";
-import type { LeaderboardPlayerList } from "./components/leaderboard/LeaderboardPlayerList";
+import type {
+  LeaderboardPlayerList,
+  PlayerLadder,
+} from "./components/leaderboard/LeaderboardPlayerList";
 import "./components/leaderboard/LeaderboardTribeTable";
 import type { LeaderboardTribeTable } from "./components/leaderboard/LeaderboardTribeTable";
 import { modalHeader } from "./components/ui/ModalHeader";
 import { translateText } from "./Utils";
 
-const TAB_KEYS = ["players", "players2v2", "clans", "tribes"] as const;
+const TAB_KEYS = [
+  "players",
+  "players2v2",
+  "playersFfa",
+  "clans",
+  "tribes",
+] as const;
 
 // Tab key -> ladder. "players" predates the 2v2 ladder and stays the 1v1 tab
-// so existing `#modal=leaderboard&tab=players` links keep working. Both tabs
-// share one <leaderboard-player-list>: a page fetch returns both ladders.
-const PLAYER_TABS: Record<string, RankedType> = {
+// so existing `#modal=leaderboard&tab=players` links keep working. The ladder
+// tabs share one <leaderboard-player-list>: a page fetch returns every ladder.
+const PLAYER_TABS: Record<string, PlayerLadder> = {
   players: RankedType.OneVOne,
   players2v2: RankedType.TwoVTwo,
+  playersFfa: RankedType.FreeForAll,
 };
 
 @customElement("leaderboard-modal")
@@ -36,7 +46,7 @@ export class LeaderboardModal extends BaseModal {
   private tribeTable?: LeaderboardTribeTable;
 
   private loadToken = 0;
-  private lastRankedType: RankedType = RankedType.OneVOne;
+  private lastRankedType: PlayerLadder = RankedType.OneVOne;
 
   protected modalConfig() {
     return {
@@ -49,13 +59,17 @@ export class LeaderboardModal extends BaseModal {
           key: "players2v2",
           label: translateText("leaderboard_modal.ranked_2v2_tab"),
         },
+        {
+          key: "playersFfa",
+          label: translateText("leaderboard_modal.ranked_ffa_tab"),
+        },
         { key: "clans", label: translateText("leaderboard_modal.clans_tab") },
         { key: "tribes", label: translateText("leaderboard_modal.tribes_tab") },
       ],
     };
   }
 
-  private rankedTypeFor(tab: string): RankedType | null {
+  private rankedTypeFor(tab: string): PlayerLadder | null {
     return PLAYER_TABS[tab] ?? null;
   }
 
@@ -70,7 +84,7 @@ export class LeaderboardModal extends BaseModal {
   }
 
   protected onTabEnter(): void {
-    // The player list is one element shared by both ladder tabs, so it needs a
+    // The player list is one element shared by the ladder tabs, so it needs a
     // ranked type even while another tab is up: keep showing the last one.
     this.lastRankedType =
       this.rankedTypeFor(this.activeTab) ?? this.lastRankedType;

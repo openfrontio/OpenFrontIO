@@ -1,9 +1,4 @@
-import { html, LitElement } from "lit";
-import { customElement, query, state } from "lit/decorators.js";
-import { DirectiveResult } from "lit/directive.js";
-import { unsafeHTML, UnsafeHTMLDirective } from "lit/directives/unsafe-html.js";
-import { EventBus } from "../../../core/EventBus";
-import { AllPlayers, MessageType } from "../../../core/game/Game";
+import { AllPlayers, MessageType } from "@openfront/engine-api/game/GameTypes";
 import {
   AllianceExpiredUpdate,
   AllianceRequestReplyUpdate,
@@ -15,29 +10,32 @@ import {
   GameUpdateType,
   TargetPlayerUpdate,
   UnitIncomingUpdate,
-} from "../../../core/game/GameUpdates";
-import { UserSettings } from "../../../core/game/UserSettings";
+} from "@openfront/engine-api/game/GameUpdates";
+import { EventBus } from "@openfront/shared/EventBus";
+import { html, LitElement } from "lit";
+import { customElement, query, state } from "lit/decorators.js";
+import { DirectiveResult } from "lit/directive.js";
+import { unsafeHTML, UnsafeHTMLDirective } from "lit/directives/unsafe-html.js";
 import { Controller } from "../../Controller";
 import { SendAllianceRequestIntentEvent } from "../../Transport";
+import { UserSettings } from "../../UserSettings";
 
-import { onlyImages } from "../../../core/Util";
 import { GoToPlayerEvent, GoToUnitEvent } from "../../TransformHandler";
 import { GameView, PlayerView, UnitView } from "../../view";
+import { onlyImages } from "./OnlyImages";
 
+import { renderNumber, renderTroops } from "@openfront/engine-lib/Format";
 import { PlaySoundEffectEvent } from "../../sound/Sounds";
 import { UIState } from "../../UIState";
-import {
-  getMessageTypeClasses,
-  renderNumber,
-  renderTroops,
-  translateText,
-} from "../../Utils";
+import { getMessageTypeClasses, translateText } from "../../Utils";
 
 interface GameEvent {
   description: string;
   unsafeDescription?: boolean;
   type: MessageType;
   highlight?: boolean;
+  /** Show in the small feed even if the type is normally tier 1. */
+  minor?: boolean;
   createdAt: number;
   onDelete?: () => void;
   focusID?: number;
@@ -212,7 +210,10 @@ export class EventsDisplay extends LitElement implements Controller {
     }
 
     let remainingEvents = this.events.filter((event) => {
-      const expired = this.game.ticks() - event.createdAt >= 80;
+      const age = this.game.ticks() - event.createdAt;
+      // A negative age is an event from later in the game: the replay
+      // viewer seeked back past it.
+      const expired = age >= 80 || age < 0;
       const isInboundWarning =
         event.type === MessageType.NUKE_INBOUND ||
         event.type === MessageType.HYDROGEN_BOMB_INBOUND ||
@@ -344,18 +345,24 @@ export class EventsDisplay extends LitElement implements Controller {
       otherPlayerSmallID = player?.smallID();
     }
 
+    // A message I sent is only a confirmation, like a sent emoji: it goes to
+    // the small feed, quietly.
+    const sent = !event.isFrom;
     this.addEvent({
-      description: translateText(event.isFrom ? "chat.from" : "chat.to", {
+      description: translateText(sent ? "chat.to" : "chat.from", {
         user: otherPlayerDiplayName,
         msg: translatedMessage,
       }),
       createdAt: this.game.ticks(),
-      highlight: true,
+      highlight: !sent,
+      minor: sent,
       type: MessageType.CHAT,
       unsafeDescription: false,
       focusID: otherPlayerSmallID,
     });
-    this.eventBus.emit(new PlaySoundEffectEvent("message"));
+    if (!sent) {
+      this.eventBus.emit(new PlaySoundEffectEvent("message"));
+    }
   }
 
   onAllianceRequestReplyEvent(update: AllianceRequestReplyUpdate) {
@@ -531,9 +538,6 @@ export class EventsDisplay extends LitElement implements Controller {
   }
 
   onEmojiMessageEvent(update: EmojiUpdate) {
-    // Honor the "Disable emojis" setting: don't surface received emojis in the
-    // events feed either (#4430).
-    if (!this.userSettings.emojis()) return;
     const myPlayer = this.game.myPlayer();
     if (!myPlayer) return;
 
@@ -546,6 +550,10 @@ export class EventsDisplay extends LitElement implements Controller {
     ) as PlayerView;
 
     if (recipient === myPlayer) {
+      // Honor the "Disable emojis" setting: don't surface received emojis in
+      // the events feed either (#4430). Confirmations of emojis you sent
+      // still show, since the setting doesn't stop you sending them.
+      if (!this.userSettings.emojis()) return;
       this.addEvent({
         description: `${sender.displayName()}: ${update.emoji.message}`,
         unsafeDescription: true,
@@ -562,9 +570,19 @@ export class EventsDisplay extends LitElement implements Controller {
         }),
         unsafeDescription: true,
         type: MessageType.CHAT,
-        highlight: true,
+        minor: true,
         createdAt: this.game.ticks(),
         focusID: recipient.smallID(),
+      });
+    } else if (sender === myPlayer) {
+      this.addEvent({
+        description: translateText("events_display.sent_emoji_all", {
+          emoji: update.emoji.message,
+        }),
+        unsafeDescription: true,
+        type: MessageType.CHAT,
+        minor: true,
+        createdAt: this.game.ticks(),
       });
     }
   }
@@ -577,9 +595,19 @@ export class EventsDisplay extends LitElement implements Controller {
     }
 
     const unitView = this.game.unit(event.unitID);
+    let description = event.message;
+    if (event.message.startsWith("events_display.") && unitView) {
+      const params: Record<string, string | number> = {
+        name: unitView.owner().displayName(),
+      };
+      if (event.messageType === MessageType.NAVAL_INVASION_INBOUND) {
+        params.troops = renderTroops(unitView.troops());
+      }
+      description = translateText(event.message, params);
+    }
 
     this.addEvent({
-      description: event.message,
+      description: description,
       type: event.messageType,
       unsafeDescription: false,
       highlight: true,
@@ -665,7 +693,9 @@ export class EventsDisplay extends LitElement implements Controller {
     const tier1Events: GameEvent[] = [];
     let tier2Events: GameEvent[] = [];
     for (const event of this.events) {
-      (isTier1(event.type) ? tier1Events : tier2Events).push(event);
+      (isTier1(event.type) && !event.minor ? tier1Events : tier2Events).push(
+        event,
+      );
     }
     tier1Events.sort((a, b) => a.createdAt - b.createdAt);
     tier2Events.sort((a, b) => a.createdAt - b.createdAt);

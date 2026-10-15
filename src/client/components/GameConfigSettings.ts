@@ -1,17 +1,4 @@
 import {
-  LitElement,
-  SVGTemplateResult,
-  TemplateResult,
-  html,
-  nothing,
-  svg,
-} from "lit";
-import { customElement, property, state } from "lit/decorators.js";
-import {
-  DOOMSDAY_CLOCK_SPEEDS,
-  DoomsdayClockSpeed,
-} from "../../core/game/DoomsdayClock";
-import {
   Difficulty,
   Duos,
   GameMapType,
@@ -20,8 +7,21 @@ import {
   Quads,
   Trios,
   UnitType,
-} from "../../core/game/Game";
-import { TeamCountConfig } from "../../core/Schemas";
+} from "@openfront/engine-api/game/GameTypes";
+import { TeamCountConfig } from "@openfront/engine-api/Schemas";
+import {
+  DOOMSDAY_CLOCK_SPEEDS,
+  DoomsdayClockSpeed,
+} from "@openfront/engine-lib/game/DoomsdayClock";
+import {
+  LitElement,
+  SVGTemplateResult,
+  TemplateResult,
+  html,
+  nothing,
+  svg,
+} from "lit";
+import { customElement, property, state } from "lit/decorators.js";
 import { translateText } from "../Utils";
 import "./Difficulties";
 import "./DifficultyInfo";

@@ -1,7 +1,4 @@
-import {
-  PlayerStatsLeafSchema,
-  PlayerStatsTreeSchema,
-} from "../src/core/ApiSchemas";
+import { AllPlayersStats } from "@openfront/engine-api/Schemas";
 import {
   ALLIANCE_INDEX_LONGEST_HELD,
   ATTACK_INDEX_MAX_RECV,
@@ -11,7 +8,19 @@ import {
   GOLD_INDEX_DONATE_RECV,
   PlayerStatsSchema,
   TILE_INDEX_DRAWDOWN_TROUGH,
-} from "../src/core/StatsSchemas";
+} from "@openfront/engine-api/StatsSchemas";
+import {
+  PlayerStatsLeafSchema,
+  PlayerStatsTreeSchema,
+} from "@openfront/shared/ApiSchemas";
+import { ClientSendWinnerMessage } from "@openfront/shared/WireSchemas";
+import {
+  createGameWireContext,
+  decodeClientMessage,
+  encodeClientMessage,
+} from "@openfront/shared/ZbinWire";
+
+const CLIENT = "AbCdEfGh";
 
 function testPlayerSchema(
   json: string,
@@ -157,6 +166,16 @@ describe("PlayerStatsTreeSchema", () => {
     ).toThrow();
   });
 
+  test("accepts a ranked type this build does not know", () => {
+    const leaf = { wins: "1", losses: "2", total: "3", stats: {} };
+    const result = PlayerStatsTreeSchema.parse({
+      Ranked: { "1v1": leaf, ffa: leaf },
+    });
+
+    expect(result.Ranked?.["1v1"]?.total).toBe(3n);
+    expect(result.Ranked?.ffa?.total).toBe(3n);
+  });
+
   test("accepts Humans Vs Nations as a separate profile stats mode", () => {
     const result = PlayerStatsTreeSchema.parse({
       Public: {
@@ -220,8 +239,29 @@ describe("PlayerStats new fields", () => {
     expect(parsed?.gold?.[GOLD_INDEX_DONATE_RECV]).toBeUndefined();
   });
 
+  it("parses a spawn tile", () => {
+    const parsed = PlayerStatsSchema.parse({ spawnTile: 123456 });
+    expect(parsed?.spawnTile).toBe(123456);
+  });
+
+  it("carries a spawn tile over the binary wire", () => {
+    const stats: AllPlayersStats = {
+      [CLIENT]: { attacks: [1n], donations: [2n], spawnTile: 98765 },
+    };
+    const players = [{ clientID: CLIENT }];
+    const decoded = decodeClientMessage(
+      encodeClientMessage(
+        { type: "winner", winner: ["player", CLIENT], allPlayersStats: stats },
+        createGameWireContext(players),
+      ),
+      createGameWireContext(players),
+    ) as ClientSendWinnerMessage;
+    expect(decoded.allPlayersStats[CLIENT]).toEqual(stats[CLIENT]);
+  });
+
   it("parses a record with none of the new fields", () => {
     const parsed = PlayerStatsSchema.parse({ attacks: ["1", "2", "3"] });
+    expect(parsed?.spawnTile).toBeUndefined();
     expect(parsed?.tiles).toBeUndefined();
     expect(parsed?.alliances).toBeUndefined();
     expect(parsed?.peakTroops).toBeUndefined();
