@@ -595,9 +595,19 @@ export class EventsDisplay extends LitElement implements Controller {
     }
 
     const unitView = this.game.unit(event.unitID);
+    let description = event.message;
+    if (event.message.startsWith("events_display.") && unitView) {
+      const params: Record<string, string | number> = {
+        name: unitView.owner().displayName(),
+      };
+      if (event.messageType === MessageType.NAVAL_INVASION_INBOUND) {
+        params.troops = renderTroops(unitView.troops());
+      }
+      description = translateText(event.message, params);
+    }
 
     this.addEvent({
-      description: event.message,
+      description: description,
       type: event.messageType,
       unsafeDescription: false,
       highlight: true,

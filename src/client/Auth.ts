@@ -5,9 +5,9 @@ import { UserSettings } from "src/client/UserSettings";
 import { z } from "zod";
 import { getApiBase, getAudience } from "./Api";
 import { ClientEnv } from "./ClientEnv";
-import { crazyGamesSDK } from "./CrazyGamesSDK";
 import type { DesktopSessionState, SessionFailureKind } from "./DesktopShell";
 import { desktopLinkGate, isDesktopShell } from "./DesktopShell";
+import { gamePortal, type GamePortalName } from "./GamePortal";
 import { showInGameAlert } from "./InGameModal";
 import type { SteamTicketResult } from "./SteamSDK";
 import { steamSDK } from "./SteamSDK";
@@ -328,7 +328,7 @@ export function clearLocalSession(): void {
   // logOut() (or any other clearLocalSession caller) leaves __sessionState at
   // "signed-in" with no JWT behind it, so the bar hides and multiplayer
   // unlocks with nothing backing it until the next join self-heals it.
-  // Guarded to Steam only -- web/CrazyGames have no bar and no session-gating
+  // Guarded to Steam only -- web/portals have no bar and no session-gating
   // to desync. Skipped while a retry is legitimately in flight (status
   // "retrying"): retrySteamSignIn already owns that transition end-to-end via
   // its own userAuth() call, and this must not race ahead of it with a stale
@@ -501,13 +501,14 @@ async function doRefreshJwt(): Promise<void> {
     setSessionState({ status: "signed-out", reason: ticketReason(result) });
     return;
   }
-  if (crazyGamesSDK.isOnCrazyGames()) {
-    const token = await crazyGamesSDK.getUserToken();
+  const portal = gamePortal.name();
+  if (portal !== null) {
+    const token = await gamePortal.getUserToken();
     if (token) {
-      // Signed-in CrazyGames account: exchange their token for our session.
-      // No CrazyGames account / not signed in falls through to the guest flow
+      // Signed-in portal account: exchange their token for our session.
+      // No portal account / not signed in falls through to the guest flow
       // below.
-      return doCrazyGamesLogin(token);
+      return doPortalLogin(portal, token);
     }
   }
   try {
@@ -587,34 +588,40 @@ function ticketReason(
   }
 }
 
-// Exchange a CrazyGames user token for our session. On CrazyGames the refresh
-// cookie isn't usable (SameSite=Lax, cross-site iframe), so we re-exchange on
-// expiry instead of hitting /auth/refresh.
-async function doCrazyGamesLogin(token: string): Promise<void> {
+// Exchange a CrazyGames or Poki user token for our session. On a portal the
+// refresh cookie isn't usable (SameSite=Lax, cross-site iframe), so we
+// re-exchange on expiry instead of hitting /auth/refresh.
+async function doPortalLogin(
+  portal: GamePortalName,
+  token: string,
+): Promise<void> {
   try {
-    console.log("Logging in with CrazyGames");
-    const response = await fetch(getApiBase() + "/auth/crazygames", {
+    console.log(`Logging in with ${portal}`);
+    // Bounded like doSteamLogin: userAuth() awaits this exchange, so a
+    // response that never settles would stall every authenticated call.
+    const response = await fetch(`${getApiBase()}/auth/${portal}`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ token }),
+      signal: AbortSignal.timeout(10_000),
     });
     if (response.status !== 200) {
-      console.error("CrazyGames login failed", response);
+      console.error(`${portal} login failed`, response);
       __jwt = null;
       return;
     }
     const json = await response.json();
     const { jwt, expiresIn } = json;
     __expiresAt = Date.now() + expiresIn * 1000;
-    console.log("CrazyGames login succeeded");
+    console.log(`${portal} login succeeded`);
     __jwt = jwt;
   } catch (e) {
-    console.warn("CrazyGames login failed", e);
+    console.warn(`${portal} login failed`, e);
     __jwt = null;
   }
 }
 
-// Exchange a Steam Web-API ticket for our session. Like CrazyGames, the
+// Exchange a Steam Web-API ticket for our session. Like the portals, the
 // refresh cookie isn't usable from app://openfront (cross-site), so we
 // re-exchange a fresh ticket on expiry rather than hitting /auth/refresh.
 async function doSteamLogin(ticket: string): Promise<void> {
@@ -666,14 +673,14 @@ async function doSteamLogin(ticket: string): Promise<void> {
   }
 }
 
-// Called when the CrazyGames auth state changes mid-session (e.g. the player
+// Called when the portal auth state changes mid-session (e.g. the player
 // signs in): drop the cached session so userAuth() re-exchanges the new token.
 // Single-flight: Main's auth listener and the account modal's sign-in handler
 // can both react to the same sign-in; sharing one exchange keeps them from
 // racing on __jwt. Any refresh already in flight is allowed to settle first so
 // its stale result can't satisfy the reauth.
 let __reauthPromise: Promise<UserAuth> | null = null;
-export async function reauthAfterCrazyGamesChange(): Promise<UserAuth> {
+export async function reauthAfterPortalChange(): Promise<UserAuth> {
   __reauthPromise ??= (async () => {
     try {
       if (__refreshPromise) {
@@ -690,7 +697,7 @@ export async function reauthAfterCrazyGamesChange(): Promise<UserAuth> {
 }
 
 // The Retry action on the desktop status bar. Single-flight for the same
-// reason reauthAfterCrazyGamesChange is: the bar and any other caller must
+// reason reauthAfterPortalChange is: the bar and any other caller must
 // share one exchange rather than race on __jwt. A refresh already in flight
 // is allowed to settle first so its stale result cannot satisfy the retry.
 //

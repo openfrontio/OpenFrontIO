@@ -25,6 +25,7 @@ export enum GameMapType {
   BetweenTwoSeas = "Between Two Seas", // map-generator/assets/maps/betweentwoseas/info.json
   BlackSea = "Black Sea", // map-generator/assets/maps/blacksea/info.json
   BosphorusStraits = "Bosphorus Straits", // map-generator/assets/maps/bosphorusstraits/info.json
+  BrainRot = "Brain Rot", // map-generator/assets/maps/brainrot/info.json
   BranchingPaths = "Branching Paths", // map-generator/assets/maps/branchingpaths/info.json
   Britannia = "Britannia", // map-generator/assets/maps/britannia/info.json
   BritanniaClassic = "Britannia Classic", // map-generator/assets/maps/britanniaclassic/info.json
@@ -96,6 +97,7 @@ export enum GameMapType {
   NorthAmerica = "North America", // map-generator/assets/maps/northamerica/info.json
   NorthwestPassage = "Northwest Passage", // map-generator/assets/maps/northwestpassage/info.json
   Oceania = "Oceania", // map-generator/assets/maps/oceania/info.json
+  Ommatrypta = "Ommatrypta", // map-generator/assets/maps/ommatrypta/info.json
   Onion = "Onion", // map-generator/assets/maps/onion/info.json
   Pangaea = "Pangaea", // map-generator/assets/maps/pangaea/info.json
   Passage = "Passage", // map-generator/assets/maps/passage/info.json
@@ -519,6 +521,18 @@ export const maps: readonly MapInfo[] = [
     defaultNationCount: 22,
     specialTeamCount: 2,
     themes: ["europe", "asia"],
+  },
+  {
+    id: "BrainRot",
+    type: GameMapType.BrainRot,
+    translationKey: "map.brainrot",
+    categories: ["arcade"],
+    multiplayerFrequency: 10,
+    ffaFrequency: -1,
+    teamFrequency: -1,
+    specialFrequency: -1,
+    defaultNationCount: 43,
+    layers: [{ id: "brland", placement: "land", nukeable: true }],
   },
   {
     id: "BranchingPaths",
@@ -2030,6 +2044,21 @@ export const maps: readonly MapInfo[] = [
     specialFrequency: -1,
     defaultNationCount: 22,
     themes: ["oceania"],
+  },
+  {
+    id: "Ommatrypta",
+    type: GameMapType.Ommatrypta,
+    translationKey: "map.ommatrypta",
+    categories: ["arcade"],
+    multiplayerFrequency: 10,
+    ffaFrequency: -1,
+    teamFrequency: -1,
+    specialFrequency: -1,
+    defaultNationCount: 34,
+    layers: [
+      { id: "eyeland", placement: "land", nukeable: true },
+      { id: "eyewater", placement: "water" },
+    ],
   },
   {
     id: "Onion",

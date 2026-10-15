@@ -4,6 +4,7 @@ import {
   ClanBoostPurchaseResponseSchema,
   type ClanBoostStatus,
   ClanBoostStatusSchema,
+  type ClanBrowseFilter,
   type ClanBrowseResponse,
   ClanBrowseResponseSchema,
   type ClanBrowseSort,
@@ -33,6 +34,7 @@ export type {
   ClanBansResponse,
   ClanBoostStatus,
   ClanBoostTier,
+  ClanBrowseFilter,
   ClanBrowseResponse,
   ClanBrowseSort,
   ClanDiscord,
@@ -134,7 +136,16 @@ const BROWSE_SORT_PARAMS: Record<
   random: { sortField: "random" },
   memberCount: { sortField: "memberCount", sortOrder: "DESC" },
   winScore: { sortField: "winScore", sortOrder: "DESC" },
+  winScoreLow: { sortField: "winScore", sortOrder: "ASC" },
+  createdAt: { sortField: "createdAt", sortOrder: "ASC" },
+  softBalance: { sortField: "softBalance", sortOrder: "DESC" },
   name: { sortField: "name", sortOrder: "ASC" },
+};
+
+const BROWSE_FILTER_OPEN: Record<ClanBrowseFilter, string | undefined> = {
+  all: undefined,
+  open: "true",
+  inviteOnly: "false",
 };
 
 export async function fetchClans(
@@ -143,6 +154,7 @@ export async function fetchClans(
   limit = 20,
   sort: ClanBrowseSort = "random",
   bucket?: number,
+  filter: ClanBrowseFilter = "all",
 ): Promise<ClanBrowseResponse | false> {
   try {
     const params = new URLSearchParams();
@@ -155,6 +167,8 @@ export async function fetchClans(
       params.set("sortField", sortField);
       if (sortOrder) params.set("sortOrder", sortOrder);
     }
+    const open = BROWSE_FILTER_OPEN[filter];
+    if (open) params.set("open", open);
     if (sort === "random" && !searching) {
       if (page === 1 || pagedBrowseSeed === null) {
         pagedBrowseSeed = await clanBrowseSeed();

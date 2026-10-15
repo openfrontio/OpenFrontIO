@@ -12,7 +12,6 @@
   --hw-purple: #2a0845;
   --hw-purple-translucent: rgba(20, 5, 30, 0.9);
   --hw-orange-glow: 0 0 6px rgba(234, 112, 8, 0.25);
-  --hw-cobweb-svg: url("data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMDAgMTAwIiBmaWxsPSJub25lIiBzdHJva2U9IndoaXRlIiBzdHJva2Utd2lkdGg9IjQiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCI+CiAgPHBhdGggZD0iTTAsMCBMMTAwLDAgTTAsMCBMOTIsMzYgTTAsMCBMNjgsNjggTTAsMCBMMzYsOTIgTTAsMCBMMCwxMDAiIG9wYWNpdHk9IjAuOCIvPgogIDxwYXRoIGQ9Ik0zMCwwIFEyNSwzIDI3LDEwIFEyMiwxNCAyMCwyMCBRMTQsMjIgMTAsMjcgUTMsMjUgMCwzMCIgb3BhY2l0eT0iMC45Ii8+CiAgPHBhdGggZD0iTTYwLDAgUTUwLDYgNTQsMjAgUTQ0LDI4IDQwLDQwIFEyOCw0NCAyMCw1NCBRNiw1MCAwLDYwIiBvcGFjaXR5PSIwLjg1Ii8+CiAgPHBhdGggZD0iTTkwLDAgUTc1LDkgODEsMzAgUTY2LDQyIDYwLDYwIFE0Miw2NiAzMCw4MSBROSw3NSAwLDkwIiBvcGFjaXR5PSIwLjgiLz4KPC9zdmc+");
   --hw-cobweb-spider-svg: url("data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMDAgMTAwIiBmaWxsPSJub25lIiBzdHJva2U9IndoaXRlIiBzdHJva2Utd2lkdGg9IjQiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCI+CiAgPHBhdGggZD0iTTAsMCBMMTAwLDAgTTAsMCBMOTIsMzYgTTAsMCBMNjgsNjggTTAsMCBMMzYsOTIgTTAsMCBMMCwxMDAiIG9wYWNpdHk9IjAuOCIvPgogIDxwYXRoIGQ9Ik0zMCwwIFEyNSwzIDI3LDEwIFEyMiwxNCAyMCwyMCBRMTQsMjIgMTAsMjcgUTMsMjUgMCwzMCIgb3BhY2l0eT0iMC45Ii8+CiAgPHBhdGggZD0iTTYwLDAgUTUwLDYgNTQsMjAgUTQ0LDI4IDQwLDQwIFEyOCw0NCAyMCw1NCBRNiw1MCAwLDYwIiBvcGFjaXR5PSIwLjg1Ii8+CiAgPHBhdGggZD0iTTQwLDQwIEw0MCw3NSIgc3Ryb2tlPSJ3aGl0ZSIgc3Ryb2tlLXdpZHRoPSIyIiBvcGFjaXR5PSIwLjYiLz4KICA8ZWxsaXBzZSBjeD0iNDAiIGN5PSI4MCIgcng9IjUiIHJ5PSI2IiBmaWxsPSJ3aGl0ZSIgc3Ryb2tlPSJub25lIi8+CiAgPHBhdGggZD0iTTM1LDc3IFEzMCw3MyAyNyw3OCBNMzUsODEgUTI5LDgxIDI2LDg1IE00NSw3NyBRNTAsNzMgNTMsNzggTTQ1LDgxIFE1MSw4MSA1NCw4NSIgc3Ryb2tlPSJ3aGl0ZSIgc3Ryb2tlLXdpZHRoPSIyIi8+Cjwvc3ZnPg==");
   /* Original hand-crafted SVG Jack-o'-lantern (CC0 / Public Domain, zero third-party copyright) */
   --hw-pumpkin-svg: url("data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA2NCA2NCIgZmlsbD0ibm9uZSI+CiAgPHBhdGggZD0iTTI5IDEyQzI5IDYgMzQgMyAzOSA0IiBzdHJva2U9IiM5YTM0MTIiIHN0cm9rZS13aWR0aD0iNS41IiBzdHJva2UtbGluZWNhcD0icm91bmQiLz4KICA8ZWxsaXBzZSBjeD0iMTUiIGN5PSIzNiIgcng9IjE0IiByeT0iMjIiIGZpbGw9IiM5YTM0MTIiLz4KICA8ZWxsaXBzZSBjeD0iNDkiIGN5PSIzNiIgcng9IjE0IiByeT0iMjIiIGZpbGw9IiM5YTM0MTIiLz4KICA8ZWxsaXBzZSBjeD0iMjMiIGN5PSIzNyIgcng9IjE0IiByeT0iMjQiIGZpbGw9IiNlYTU4MGMiLz4KICA8ZWxsaXBzZSBjeD0iNDEiIGN5PSIzNyIgcng9IjE0IiByeT0iMjQiIGZpbGw9IiNlYTU4MGMiLz4KICA8ZWxsaXBzZSBjeD0iMzIiIGN5PSIzNyIgcng9IjEyIiByeT0iMjUiIGZpbGw9IiNmZjdhMTgiLz4KICA8cG9seWdvbiBwb2ludHM9IjIxLDIyIDEyLDM0IDI2LDMzIiBmaWxsPSIjMTgwOTI0Ii8+CiAgPHBvbHlnb24gcG9pbnRzPSI0MywyMiAzOCwzMyA1MiwzNCIgZmlsbD0iIzE4MDkyNCIvPgogIDxwb2x5Z29uIHBvaW50cz0iMzIsMzEgMjgsMzggMzYsMzgiIGZpbGw9IiMxODA5MjQiLz4KICA8cGF0aCBkPSJNMTIgNDEgTDE5IDQ2IEwyNSA0MiBMMzIgNDcgTDM5IDQyIEw0NSA0NiBMNTIgNDEgTDQ3IDUzIEwzOSA0OSBMMzIgNTUgTDI1IDQ5IEwxNyA1MyBaIiBmaWxsPSIjMTgwOTI0Ii8+Cjwvc3ZnPg==");
@@ -293,40 +292,8 @@ body.halloween-theme:not(.in-game) button.bg-cyber-yellow:hover {
   box-shadow: 0 4px 15px rgba(88, 28, 135, 0.6) !important;
 }
 
-/* --- Decorative Cobwebs (Strictly Scoped to Homepage Elements) --- */
-/* 1. Screen Corner Cobweb - Top-Left Viewport (Desktop homepage only; hidden on mobile and in-game) */
-@media (min-width: 1024px) {
-  body.halloween-theme:not(.in-game)::before {
-    content: "" !important;
-    display: block !important;
-    position: fixed !important;
-    top: 0px !important;
-    left: 0px !important;
-    width: 100px !important;
-    height: 100px !important;
-    background-image: var(--hw-cobweb-svg) !important;
-    background-size: contain !important;
-    background-repeat: no-repeat !important;
-    pointer-events: none !important;
-    z-index: 70 !important; /* Above desktop navbar banner (z:60) so it is crisp & unblurred, below ads (z:150) */
-    opacity: 0.95 !important;
-    filter: drop-shadow(0 0 3px rgba(0, 0, 0, 0.8)) !important;
-  }
-}
-
-@media (max-width: 1023px) {
-  body.halloween-theme:not(.in-game)::before {
-    display: none !important;
-    content: none !important;
-  }
-}
-
-body.halloween-theme.in-game::before {
-  display: none !important;
-  content: none !important;
-}
-
-/* 2. Tutorial Button - Top-Right Cobweb with Dangling Spider (Strictly scoped to game-mode-selector) */
+/* --- Decorative Accents (Strictly Scoped to Homepage Elements) --- */
+/* 1. Tutorial Button - Top-Right Cobweb with Dangling Spider (Strictly scoped to game-mode-selector) */
 body.halloween-theme:not(.in-game) game-mode-selector button.bg-cyber-yellow {
   isolation: isolate !important;
 }
@@ -351,7 +318,7 @@ body.halloween-theme:not(.in-game)
   filter: drop-shadow(0 0 3px rgba(0, 0, 0, 0.7)) !important;
 }
 
-/* 3. Create Lobby Button - Jack-o'-Lantern Pumpkin Accent (Desktop/sm+ only; sits behind button text) */
+/* 2. Create Lobby Button - Jack-o'-Lantern Pumpkin Accent (Desktop/sm+ only; sits behind button text) */
 body.halloween-theme:not(.in-game)
   game-mode-selector
   .grid-cols-3
