@@ -1,4 +1,5 @@
 import { Difficulty } from "@openfront/engine-api/game/GameTypes";
+import { renderTroops } from "@openfront/engine-lib/Format";
 import { assetUrl } from "@openfront/shared/AssetUrls";
 import { html, LitElement, nothing } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
@@ -238,7 +239,7 @@ export class ContinueGameModal extends LitElement {
                       >
                         <span>
                           ${translateText("replay_viewer.player_stats_troops", {
-                            troops: p.troops.toLocaleString(),
+                            troops: renderTroops(p.troops),
                           })}
                         </span>
                         <span>

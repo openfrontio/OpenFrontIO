@@ -1,3 +1,4 @@
+import * as Utils from "../../../src/client/Utils";
 import { ContinueGameModal } from "../../../src/client/replay/ContinueGameModal";
 import {
   CameraGestures,
@@ -298,6 +299,29 @@ describe("ContinueGameModal willUpdate", () => {
     expect((modal as any).loading).toBe(false);
     expect((modal as any).error).toBe("");
     expect(closed).toBe(true);
+  });
+
+  test("renders formatted troop counts using renderTroops", async () => {
+    const spy = vi.spyOn(Utils, "translateText");
+    const modal = new ContinueGameModal();
+    modal.players = [
+      {
+        id: "p1",
+        name: "P1",
+        smallID: 1,
+        troops: 15000,
+        tiles: 10,
+        controlPercent: 25.5,
+      },
+    ];
+    modal.open = true;
+    document.body.appendChild(modal);
+    await modal.updateComplete;
+    expect(spy).toHaveBeenCalledWith("replay_viewer.player_stats_troops", {
+      troops: "1.50K",
+    });
+    modal.remove();
+    spy.mockRestore();
   });
 });
 
