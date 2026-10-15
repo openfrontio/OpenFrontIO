@@ -31,6 +31,13 @@ describe("resolveKeybindLabel", () => {
     ).toBe("2");
   });
 
+  it("preserves Shift+ when resolving layout-specific labels", () => {
+    const layoutMap = new Map([["KeyQ", "a"]]);
+    expect(
+      resolveKeybindLabel({ value: "Shift+KeyQ", key: "A" }, "KeyQ", layoutMap),
+    ).toBe("Shift+A");
+  });
+
   it("keeps the numeric label when a saved AZERTY key is a symbol", () => {
     const layoutMap = new Map([["Digit2", "é"]]);
     expect(

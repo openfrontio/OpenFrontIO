@@ -337,6 +337,13 @@ export type KeybindEntry =
     }
   | string;
 
+function getKeybindShiftPrefix(): string {
+  const shiftPrefix = translateText("user_setting.keybind_shift_prefix");
+  return shiftPrefix === "user_setting.keybind_shift_prefix"
+    ? "Shift+"
+    : shiftPrefix;
+}
+
 /**
  * Resolve a saved physical key code into the character shown for the user's
  * active keyboard layout. Number-row actions intentionally keep numeric labels:
@@ -378,7 +385,7 @@ export function resolveKeybindLabel(
     !codeToResolve.startsWith("Numpad")
   ) {
     const char = layoutMap.get(codeToResolve)!.toUpperCase();
-    return isShift ? `Shift+${char}` : char;
+    return isShift ? `${getKeybindShiftPrefix()}${char}` : char;
   }
 
   // Resolve number-row codes before the saved-key fallback: on AZERTY, the
@@ -400,7 +407,7 @@ export function formatKeyForDisplay(value: string): string {
 
   // Handle Shift+ prefix: format as "Shift+X"
   if (value.startsWith("Shift+")) {
-    return "Shift+" + formatKeyForDisplay(value.slice(6));
+    return getKeybindShiftPrefix() + formatKeyForDisplay(value.slice(6));
   }
 
   // Handle space character or "Space" key
