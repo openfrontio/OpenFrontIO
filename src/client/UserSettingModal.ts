@@ -1744,6 +1744,19 @@ export class UserSettingModal extends BaseModal {
    */
   private renderGraphicsSettings() {
     return html`
+      <setting-slider
+        label=${translateText("user_setting.hud_opacity_label")}
+        description=${translateText("user_setting.hud_opacity_desc")}
+        id="hud-opacity-slider"
+        .value=${this.userSettings.hudOpacity() * 100}
+        @change=${(e: CustomEvent<{ value: number }>) => {
+          this.userSettings.setHudOpacity(e.detail.value / 100);
+          document.documentElement.style.setProperty(
+            "--hud-opacity",
+            String(this.userSettings.hudOpacity()),
+          );
+        }}
+      ></setting-slider>
       <!-- 🎨 Graphics preset -->
       <div
         class="flex flex-col w-full p-4 bg-white/5 border border-white/10 rounded-xl hover:bg-white/10 transition-all gap-3"
