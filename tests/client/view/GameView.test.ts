@@ -11,6 +11,10 @@
 
 import { UnitType } from "@openfront/engine-api/game/GameTypes";
 import { GameUpdateType } from "@openfront/engine-api/game/GameUpdates";
+import {
+  MotionPlanRecord,
+  packMotionPlans,
+} from "@openfront/engine-lib/game/MotionPlans";
 import { describe, expect, it } from "vitest";
 import {
   makeEmptyGu,
@@ -894,5 +898,136 @@ describe("GameView.unitsOwnedBy — per-tick owner index", () => {
     // Returned arrays are copies — mutating them must not corrupt the index.
     alice.units().pop();
     expect(alice.units()).toHaveLength(3);
+  });
+});
+
+describe("GameView.update — motion plans and snapshot restore", () => {
+  it("fresh client without retained motion plan updates unit position from snapshot and advances on next update", () => {
+    const game = makeGameView();
+    const unitId = 42;
+    const initialTile = 10;
+    const advancedTile = 20;
+
+    const snapshotGu = makeEmptyGu(50);
+    snapshotGu.updates[GameUpdateType.Unit] = [
+      makeUnitUpdate({
+        id: unitId,
+        pos: initialTile,
+        unitType: UnitType.TransportShip,
+      }),
+    ];
+    game.update(snapshotGu);
+    expect(game.unit(unitId)?.tile()).toBe(initialTile);
+
+    const nextGu = makeEmptyGu(51);
+    nextGu.updates[GameUpdateType.Unit] = [
+      makeUnitUpdate({
+        id: unitId,
+        pos: advancedTile,
+        unitType: UnitType.TransportShip,
+      }),
+    ];
+    game.update(nextGu);
+    expect(game.unit(unitId)?.tile()).toBe(advancedTile);
+    expect(game.unit(unitId)?.tile()).not.toBe(initialTile);
+  });
+
+  it("client retaining a grid plan drives unit position across snapshot update", () => {
+    const game = makeGameView();
+    const unitId = 42;
+    const plannedTile1 = 10;
+    const plannedTile2 = 11;
+    const plannedTile3 = 12;
+    const gridPlan: MotionPlanRecord = {
+      kind: "grid",
+      unitId,
+      planId: 100,
+      startTick: 50,
+      ticksPerStep: 1,
+      path: new Uint32Array([plannedTile1, plannedTile2, plannedTile3]),
+    };
+
+    // Preload client with unit and grid plan from before snapshot
+    const preSnapshotGu = makeEmptyGu(49);
+    preSnapshotGu.updates[GameUpdateType.Unit] = [
+      makeUnitUpdate({ id: unitId, pos: plannedTile1 }),
+    ];
+    preSnapshotGu.packedMotionPlans = packMotionPlans([gridPlan]);
+    game.update(preSnapshotGu);
+    expect(game.motionPlannedUnitIds()).toContain(unitId);
+
+    // When snapshot update arrives, client's position is driven by its grid plan
+    const snapshotGu = makeEmptyGu(50);
+    snapshotGu.updates[GameUpdateType.Unit] = [
+      makeUnitUpdate({ id: unitId, pos: plannedTile1 }),
+    ];
+    game.update(snapshotGu);
+    expect(game.unit(unitId)?.tile()).toBe(plannedTile1);
+
+    // Next tick unit update arrives: grid plan advances client to plannedTile2
+    const nextGu = makeEmptyGu(51);
+    nextGu.updates[GameUpdateType.Unit] = [
+      makeUnitUpdate({ id: unitId, pos: plannedTile2 }),
+    ];
+    game.update(nextGu);
+    expect(game.unit(unitId)?.tile()).toBe(plannedTile2);
+  });
+
+  it("client retaining a train plan drives engine and car positions across snapshot update", () => {
+    const game = makeGameView();
+    const engineId = 9001;
+    const carId = 9002;
+    const trainTrack = [1, 2, 3, 4, 5, 6, 7, 8];
+    const trainPlan: MotionPlanRecord = {
+      kind: "train",
+      engineUnitId: engineId,
+      carUnitIds: [carId],
+      planId: 200,
+      startTick: 50,
+      speed: 1,
+      spacing: 1,
+      path: new Uint32Array(trainTrack),
+    };
+
+    const trainUnits = [
+      makeUnitUpdate({
+        id: engineId,
+        unitType: UnitType.Train,
+        pos: trainTrack[0],
+        lastPos: trainTrack[0],
+      }),
+      makeUnitUpdate({
+        id: carId,
+        unitType: UnitType.Train,
+        pos: trainTrack[0],
+        lastPos: trainTrack[0],
+      }),
+    ];
+
+    const preSnapshotGu = makeEmptyGu(49);
+    preSnapshotGu.updates[GameUpdateType.Unit] = trainUnits;
+    preSnapshotGu.packedMotionPlans = packMotionPlans([trainPlan]);
+    game.update(preSnapshotGu);
+    expect(game.motionPlannedUnitIds()).toContain(engineId);
+    expect(game.motionPlannedUnitIds()).toContain(carId);
+
+    // Snapshot update contains engine and car units
+    const snapshotGu = makeEmptyGu(50);
+    snapshotGu.updates[GameUpdateType.Unit] = trainUnits;
+    game.update(snapshotGu);
+    expect(game.unit(engineId)?.tile()).toBe(trainTrack[0]);
+
+    // Next unit update arrives: train plan advances
+    const nextGu = makeEmptyGu(51);
+    nextGu.updates[GameUpdateType.Unit] = [
+      makeUnitUpdate({
+        id: engineId,
+        unitType: UnitType.Train,
+        pos: trainTrack[1],
+        lastPos: trainTrack[0],
+      }),
+    ];
+    game.update(nextGu);
+    expect(game.unit(engineId)?.tile()).toBe(trainTrack[1]);
   });
 });

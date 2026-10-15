@@ -179,18 +179,43 @@ describe("processInBrowser", () => {
   });
 });
 
+const stubMapLoader = {
+  getMapData: () => ({
+    manifest: () => Promise.resolve(new ArrayBuffer(0)),
+    mapBin: () => Promise.resolve(new ArrayBuffer(0)),
+    map4xBin: () => Promise.resolve(new ArrayBuffer(0)),
+  }),
+} as any;
+
+const RECORD_WITH_CONFIG = {
+  info: {
+    gameID: "abcd1234",
+    lobbyCreatedAt: 12345,
+    config: config(),
+    players: [],
+  },
+  turns: [],
+} as unknown as GameRecord;
+
 describe("extractSnapshotInWorker", () => {
+  test("throws when record is missing config", async () => {
+    await expect(
+      extractSnapshotInWorker(RECORD, 10, "p1", "c1"),
+    ).rejects.toThrow("Game record is missing start configuration");
+  });
+
   test("terminates worker and rejects if signal is aborted while in flight", async () => {
     const worker = new FakeWorker();
     const abortController = new AbortController();
     const promise = extractSnapshotInWorker(
-      RECORD,
+      RECORD_WITH_CONFIG,
       10,
       "p1",
       "c1",
       undefined,
       async () => worker as unknown as Worker,
       abortController.signal,
+      stubMapLoader,
     );
     await vi.waitFor(() => expect(worker.posted).toHaveLength(1));
     abortController.abort();
@@ -204,13 +229,14 @@ describe("extractSnapshotInWorker", () => {
     abortController.abort();
     await expect(
       extractSnapshotInWorker(
-        RECORD,
+        RECORD_WITH_CONFIG,
         10,
         "p1",
         "c1",
         undefined,
         createWorker,
         abortController.signal,
+        stubMapLoader,
       ),
     ).rejects.toThrow();
     expect(createWorker).not.toHaveBeenCalled();
@@ -218,15 +244,6 @@ describe("extractSnapshotInWorker", () => {
 
   test("does not create worker if map loading fails", async () => {
     const createWorker = vi.fn();
-    const recordWithConfig = {
-      info: {
-        gameID: "abcd1234",
-        lobbyCreatedAt: 12345,
-        config: config(),
-        players: [],
-      },
-      turns: [],
-    } as unknown as GameRecord;
     const failingLoader = {
       getMapData: () => ({
         manifest: () => Promise.reject(new Error("map fetch failed")),
@@ -236,7 +253,7 @@ describe("extractSnapshotInWorker", () => {
     } as any;
     await expect(
       extractSnapshotInWorker(
-        recordWithConfig,
+        RECORD_WITH_CONFIG,
         10,
         "p1",
         "c1",

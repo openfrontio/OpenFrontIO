@@ -8,8 +8,6 @@
  */
 
 import type { Difficulty } from "@openfront/engine-api/game/GameTypes";
-import type { MapFiles } from "@openfront/engine-api/game/MapFiles";
-import type { Turn } from "@openfront/engine-api/Schemas";
 import type {
   ConnectMessage,
   ExtractSnapshotMessage,
@@ -155,22 +153,19 @@ export async function extractSnapshotInWorker(
     );
   }
 
-  let turns: Turn[] = [];
-  let gameStart: WireGameStartInfo;
-  let mapFiles: MapFiles | undefined;
-  if (record.info && "config" in record.info) {
-    turns = decompressGameRecord({ ...record }).turns;
-    gameStart = wireGameStartInfo(record);
-    const loader =
-      mapLoader ?? new FetchGameMapLoader((path) => assetUrl(`maps/${path}`));
-    mapFiles = await loadMapFiles(
-      loader,
-      gameStart.config.gameMap,
-      gameStart.config.gameMapSize,
-    );
-  } else {
-    gameStart = record as unknown as WireGameStartInfo;
+  if (!record.info || !("config" in record.info)) {
+    throw new Error("Game record is missing start configuration");
   }
+
+  const turns = decompressGameRecord({ ...record }).turns;
+  const gameStart = wireGameStartInfo(record);
+  const loader =
+    mapLoader ?? new FetchGameMapLoader((path) => assetUrl(`maps/${path}`));
+  const mapFiles = await loadMapFiles(
+    loader,
+    gameStart.config.gameMap,
+    gameStart.config.gameMapSize,
+  );
 
   if (signal?.aborted) {
     throw (
@@ -223,13 +218,13 @@ export async function extractSnapshotInWorker(
       type: "extract_snapshot",
       gameStartInfo: gameStart,
       turns,
-      map: mapFiles as MapFiles,
+      map: mapFiles,
       targetTick,
       chosenPlayerID,
       localClientID,
       difficulty,
       newGameID: generateID(),
     };
-    worker.postMessage(request, mapFiles ? mapFilesTransfer(mapFiles) : []);
+    worker.postMessage(request, mapFilesTransfer(mapFiles));
   });
 }
