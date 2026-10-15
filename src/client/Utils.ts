@@ -15,8 +15,8 @@ import { DoomsdayClockSpeed } from "@openfront/engine-lib/game/DoomsdayClock";
 import { stripVersionPrefix } from "@openfront/shared/ServerList";
 import IntlMessageFormat from "intl-messageformat";
 import { ClientEnv } from "./ClientEnv";
-import type { LangSelector } from "./LangSelector";
 import type { KeyboardLayoutMap } from "./KeyboardLayout";
+import type { LangSelector } from "./LangSelector";
 import { pagePin } from "./PagePin";
 import { Platform } from "./Platform";
 
