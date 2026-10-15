@@ -698,7 +698,7 @@ export async function startWorker() {
                 // Fail open: the API's screened identity when its name check
                 // finished, otherwise the locally screened name stands.
                 if (verdict.identity) {
-                  username = verdict.identity.username;
+                  username = clampApprovedUsername(verdict.identity.username);
                   clanTag = verdict.identity.clanTag;
                 }
                 // A degraded verdict is the API answering within its budget

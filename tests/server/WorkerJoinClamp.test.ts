@@ -38,4 +38,11 @@ describe("Worker join username clamping", () => {
     expect(clamped).toBe("a".repeat(MAX_USERNAME_LENGTH - 1));
     expect(clamped.length).toBeLessThanOrEqual(MAX_USERNAME_LENGTH);
   });
+
+  it("clamps an overlong identity username from error/fallback verdict", () => {
+    const errorIdentityUsername = "x".repeat(25);
+    const clamped = clampApprovedUsername(errorIdentityUsername);
+    expect(clamped).toHaveLength(MAX_USERNAME_LENGTH);
+    expect(clamped).toBe("x".repeat(MAX_USERNAME_LENGTH));
+  });
 });
