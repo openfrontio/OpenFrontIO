@@ -1,7 +1,7 @@
 import type { MapLayer } from "@openfront/engine-api/game/MapFiles";
 import { html, nothing } from "lit";
 import { customElement, state } from "lit/decorators.js";
-import { resolveKeybindLabel, translateText } from "../client/Utils";
+import { formatKeyForDisplay, resolveKeybindLabel, translateText } from "../client/Utils";
 import { KeyboardLayoutController } from "./KeyboardLayout";
 import "./components/baseComponents/setting/SettingKeybind";
 import { SettingKeybind } from "./components/baseComponents/setting/SettingKeybind";

@@ -1,5 +1,7 @@
 import { ReactiveController, ReactiveControllerHost } from "lit";
 
+export type KeyboardLayoutMap = Map<string, string>;
+
 type KeyboardApi = {
   getLayoutMap(): Promise<KeyboardLayoutMap>;
   addEventListener(event: string, callback: () => void): void;
