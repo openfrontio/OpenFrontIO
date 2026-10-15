@@ -29,11 +29,17 @@ vi.mock("../../src/client/Api", () => ({
   })),
 }));
 
+// The visitor banner asks who is viewing; these tests don't sign anyone in.
+vi.mock("../../src/client/ProgressionAccount", () => ({
+  resolveXpAccount: vi.fn(async () => ({ kind: "unknown" })),
+}));
+
 vi.mock("src/client/ClientEnv", () => ({
   ClientEnv: {
     workerPath: vi.fn(() => "w0"),
     // The profile header's copy-link button builds its URL from this; the web
     // answer is the document itself (see deriveShareBase).
+    shareOrigin: vi.fn(() => window.location.origin),
     shareBase: vi.fn(
       () => `${window.location.origin}${window.location.pathname}`,
     ),
@@ -383,7 +389,7 @@ describe("Player profile Clans tab", () => {
     await openClansTab();
 
     await waitForModal(modal, () => {
-      expect(modal.textContent).toContain("player_profile.not_found");
+      expect(modal.textContent).toContain("player_profile.not_found_title");
     });
     // Must not read as "in no clans".
     expect(modal.textContent).not.toContain("player_profile.no_clans");

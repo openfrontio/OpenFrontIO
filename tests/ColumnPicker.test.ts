@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 import { ColumnPicker } from "../src/client/hud/layers/ColumnPicker";
 import { columnsFor } from "../src/client/hud/layers/lib/StatsColumns";
 import type { ColumnId } from "../src/client/StatsConstants";

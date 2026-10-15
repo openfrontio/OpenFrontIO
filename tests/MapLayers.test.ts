@@ -1,7 +1,9 @@
 import { GameMapSize, GameMapType } from "@openfront/engine-api/game/GameTypes";
 import type { MapFiles, MapLayer } from "@openfront/engine-api/game/MapFiles";
 import { loadTerrainMap } from "@openfront/engine-lib/game/TerrainMapLoader";
-import { describe, expect, test } from "vitest";
+import type { GameMapLoader, MapData } from "@openfront/shared/GameMapLoader";
+import { describe, expect, test, vi } from "vitest";
+import { loadLayerImages } from "../src/client/controllers/MapLayerController";
 import { GraphicsOverridesSchema } from "../src/client/render/gl/GraphicsOverrides";
 import { validateLayer } from "./util/layerValidation";
 
@@ -326,6 +328,71 @@ describe("Map layer feature", () => {
       expect(
         validateLayer({ id: "a", placement: "land" }, 0, "test", seen),
       ).toHaveLength(0);
+    });
+  });
+
+  describe("loadLayerImages", () => {
+    const layers: MapLayer[] = [
+      { id: "forests", placement: "land" },
+      { id: "rivers", placement: "water" },
+    ];
+
+    function stubLoader(
+      layerImage: MapData["layerImage"],
+    ): GameMapLoader & { layerImage: typeof layerImage } {
+      return {
+        layerImage,
+        getMapData: () => ({ layerImage }) as unknown as MapData,
+      };
+    }
+
+    test("Normal games load the full-size variant", async () => {
+      const loader = stubLoader(
+        vi.fn(async (id: string) => ({ id }) as unknown as ImageBitmap),
+      );
+      const images = await loadLayerImages(
+        GameMapType.China,
+        GameMapSize.Normal,
+        loader,
+        layers,
+      );
+      expect(loader.layerImage).toHaveBeenCalledWith("forests", false);
+      expect(loader.layerImage).toHaveBeenCalledWith("rivers", false);
+      expect([...images.keys()]).toEqual(["forests", "rivers"]);
+    });
+
+    test("Compact games load the map4x variant instead of resizing", async () => {
+      const loader = stubLoader(
+        vi.fn(async (id: string) => ({ id }) as unknown as ImageBitmap),
+      );
+      const images = await loadLayerImages(
+        GameMapType.China,
+        GameMapSize.Compact,
+        loader,
+        layers,
+      );
+      expect(loader.layerImage).toHaveBeenCalledWith("forests", true);
+      expect(loader.layerImage).toHaveBeenCalledWith("rivers", true);
+      expect(images.size).toBe(2);
+    });
+
+    test("a layer that fails to load is skipped, the rest still load", async () => {
+      const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+      const loader = stubLoader(async (id: string) => {
+        if (id === "forests") throw new Error("404");
+        return { id } as unknown as ImageBitmap;
+      });
+      const images = await loadLayerImages(
+        GameMapType.China,
+        GameMapSize.Normal,
+        loader,
+        layers,
+      );
+      expect([...images.keys()]).toEqual(["rivers"]);
+      expect(warn).toHaveBeenCalledWith(
+        expect.stringContaining('Failed to load layer "forests"'),
+      );
+      warn.mockRestore();
     });
   });
 

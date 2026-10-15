@@ -1,6 +1,6 @@
 import { RankedType } from "@openfront/engine-api/game/GameTypes";
 import { GameUpdateType } from "@openfront/engine-api/game/GameUpdates";
-import type { GameXpEligible } from "@openfront/shared/ApiSchemas";
+import type { GameXpEligible, Progress } from "@openfront/shared/ApiSchemas";
 import { Pattern } from "@openfront/shared/CosmeticSchemas";
 import { EventBus } from "@openfront/shared/EventBus";
 import { html, LitElement, TemplateResult } from "lit";
@@ -8,16 +8,18 @@ import { customElement, state } from "lit/decorators.js";
 import {
   DESKTOP_TUTORIAL_VIDEO_URL,
   getGamesPlayed,
+  getTranslatedPlayerTeamLabel,
   homeHref,
   isInIframe,
   translateText,
   TUTORIAL_VIDEO_URL,
 } from "../../../client/Utils";
-import { getUserMe } from "../../Api";
+import { fetchUserMeUncached, getUserMe, invalidateUserMe } from "../../Api";
 import "../../components/CosmeticCard";
 import { cosmeticSelectionLabel } from "../../components/CosmeticPresentation";
 import type { GameXpPanelState } from "../../components/GameXpPanel";
 import type { LegendCeremony } from "../../components/LegendCeremony";
+import "../../components/ProfileShare";
 import "../../components/PurchaseButton";
 import "../../components/SteamWishlist";
 import { Controller } from "../../Controller";
@@ -26,12 +28,24 @@ import {
   purchaseCosmetic,
   resolveCosmetics,
 } from "../../Cosmetics";
-import { crazyGamesSDK } from "../../CrazyGamesSDK";
 import { isDesktopShell } from "../../DesktopShell";
+import { gamePortal } from "../../GamePortal";
+import {
+  gameShareMoment,
+  momentShareLabel,
+  momentShareText,
+  momentShareUrl,
+} from "../../MomentShare";
 import { Platform } from "../../Platform";
 import { MAX_PRESTIGE, reachedLegendThisGame } from "../../Progression";
 import { resolveXpAccount } from "../../ProgressionAccount";
 import { fetchProgressionConfig, pollGameXp } from "../../ProgressionApi";
+import {
+  loadProvisionalXp,
+  type ProvisionalXp,
+  provisionalXpRules,
+  reconcileXp,
+} from "../../ProvisionalXpAtDeath";
 import { PlaySoundEffectEvent } from "../../sound/Sounds";
 import { steamSDK } from "../../SteamSDK";
 import { SendWinnerEvent } from "../../Transport";
@@ -79,6 +93,20 @@ export class WinModal extends LitElement implements Controller {
   // Polling starts once, at the end of the game.
   private xpPolling = false;
   private xpAbort: AbortController | null = null;
+  // The XP result the panel has finished revealing (or skipped to the end
+  // of): the share button waits for it.
+  @state()
+  private xpSettled: GameXpPanelState | null = null;
+  // The signed-in player's public ID, for the share link. Empty when signed
+  // out (or unknown): no share button.
+  @state()
+  private sharePublicId = "";
+  // The provisional figure shown at death, if any: the server's figure is
+  // compared with it when the game ends.
+  private provisionalXp: ProvisionalXp | null = null;
+  // A detach cut the end-of-game poll short; re-attaching restarts it (the
+  // Win update that started it is delivered only once).
+  private xpPollAborted = false;
   // Whose XP the section shows: the Legend ceremony plays once per account.
   private xpPublicId: string | null = null;
   // The Legend ceremony, fetched only for a player who could become a Legend
@@ -116,20 +144,24 @@ export class WinModal extends LitElement implements Controller {
           <game-xp-panel
             .view=${this.xpView}
             .onScreen=${this.isVisible}
+            @xp-reveal-settled=${(e: CustomEvent<GameXpPanelState>) =>
+              (this.xpSettled = e.detail)}
             .gameType=${this.game?.config().gameConfig().gameType ?? null}
             @xp-legend=${this.onXpLegend}
           ></game-xp-panel>
           ${this.innerHtml()}
         </div>
         <!-- Leaving is the quieter action, on the left; staying in the game
-             is the main one, on the right. -->
-        <div class="mt-4 flex justify-between gap-2.5 shrink-0">
+             is the main one, on the right. Sharing a milestone sits between
+             them, or on its own row above where three don't fit. -->
+        <div class="mt-4 flex flex-wrap justify-between gap-2.5 shrink-0">
           ${this.actionButton(
             "quiet",
             translateText("win_modal.exit"),
             () => this._handleExit(),
             "exit",
           )}
+          ${this.renderShare()}
           ${this.isRankedGame
             ? this.actionButton(
                 "main",
@@ -169,7 +201,11 @@ export class WinModal extends LitElement implements Controller {
     if (ceremony === null) return;
     e.preventDefault();
     legend.markLegendCeremonySeen(publicId);
-    ceremony.show({ lifetimeXp: e.detail.after.lifetimeXp, at: new Date() });
+    ceremony.show({
+      lifetimeXp: e.detail.after.lifetimeXp,
+      at: new Date(),
+      publicId,
+    });
   };
 
   // Fetches the Legend ceremony ahead of its moment: once the account is
@@ -222,6 +258,33 @@ export class WinModal extends LitElement implements Controller {
     >
       <span class="relative">${label}</span>
     </button>`;
+  }
+
+  // Sharing a milestone or becoming a Legend, once the reveal has shown it.
+  // Only for the server's result (gameShareMoment), and only for a signed-in
+  // player with a profile to link to.
+  private renderShare(): TemplateResult | null {
+    if (this.sharePublicId === "" || this.xpSettled !== this.xpView) {
+      return null;
+    }
+    const moment = gameShareMoment(this.xpView);
+    if (moment === null || moment.kind === "prestige") return null;
+    const url = momentShareUrl(this.sharePublicId, moment);
+    if (url === null) return null;
+    // Three labelled buttons fit side by side from md up; below that (and
+    // beside a ranked game's requeue button) it takes a row of its own.
+    const placement = this.isRankedGame
+      ? "order-first basis-full"
+      : "order-first basis-full md:order-none md:basis-0 md:flex-1";
+    return html`<profile-share
+      data-win-share
+      class="flex ${placement}"
+      layout="menu"
+      .label=${momentShareLabel(moment)}
+      .url=${url}
+      .text=${momentShareText(moment)}
+      triggerClass="win-action win-action-quiet w-full"
+    ></profile-share>`;
   }
 
   private renderActionStyles(): TemplateResult {
@@ -485,7 +548,7 @@ export class WinModal extends LitElement implements Controller {
   }
 
   async show() {
-    crazyGamesSDK.gameplayStop();
+    gamePortal.gameplayStop();
     this.isRankedGame =
       this.game.config().gameConfig().rankedType !== undefined;
     this.isVisible = true;
@@ -504,6 +567,14 @@ export class WinModal extends LitElement implements Controller {
     this.requestUpdate();
   }
 
+  connectedCallback(): void {
+    super.connectedCallback();
+    if (this.xpPollAborted) {
+      this.xpPollAborted = false;
+      void this.updateXp(true);
+    }
+  }
+
   disconnectedCallback(): void {
     this.xpAbort?.abort();
     super.disconnectedCallback();
@@ -512,7 +583,9 @@ export class WinModal extends LitElement implements Controller {
   /**
    * Fills the XP section. `gameOver` is false when the player died while the
    * game carries on: the server only awards XP once the game is archived, so
-   * that just says so, and the poll starts when the game really ends.
+   * that shows a provisional figure worked out here (or, when there can't be
+   * one, says XP comes at the end), and the poll starts when the game really
+   * ends.
    */
   private async updateXp(gameOver: boolean): Promise<void> {
     if (this.xpPolling) return;
@@ -540,32 +613,120 @@ export class WinModal extends LitElement implements Controller {
       // before a first scored game); absent means off: no section at all.
       const progress = account.me.player.progress;
       if (progress === undefined) return;
+      this.sharePublicId = account.me.player.publicId;
       this.xpPublicId = account.me.player.publicId ?? null;
       if (!progress.legend) void this.preloadIfLastRun(progress.prestige);
       // The game may have ended while this was resolving; the end-of-game
       // call owns the section from then on.
       if (this.xpPolling) return;
       if (!gameOver) {
-        this.xpView = { kind: "awaiting_end" };
+        const provisional = await this.loadProvisionalXp(progress);
+        if (this.xpPolling) return;
+        if (provisional === null) {
+          this.xpView = { kind: "awaiting_end" };
+          return;
+        }
+        this.provisionalXp = provisional;
+        this.xpView = { kind: "provisional", provisional, confirming: false };
         return;
       }
       this.xpPolling = true;
-      this.xpView = { kind: "calculating" };
-      this.xpAbort = new AbortController();
-      const result = await pollGameXp(game.gameID(), {
-        signal: this.xpAbort.signal,
-      });
+      const provisional = this.provisionalXp;
+      // A provisional figure stays up while the server's is fetched.
+      this.xpView =
+        provisional === null
+          ? { kind: "calculating" }
+          : { kind: "provisional", provisional, confirming: true };
+      const abort = new AbortController();
+      this.xpAbort = abort;
+      const result = await pollGameXp(game.gameID(), { signal: abort.signal });
+      // Detached mid-poll: leave the section be (a provisional figure stays
+      // up, still confirming) and poll again on re-attach (right away if that
+      // happened while this poll was winding down).
+      if (abort.signal.aborted) {
+        this.xpPolling = false;
+        if (this.isConnected) void this.updateXp(true);
+        else this.xpPollAborted = true;
+        return;
+      }
       if (result?.eligible && reachedLegendThisGame(result)) {
         this.preloadLegendCeremony();
       }
-      // Timed out, signed out or unreadable: hide rather than show an error
-      // (or, worse, a zero).
-      this.xpView =
-        result === null ? { kind: "hidden" } : { kind: "result", data: result };
+      if (result === null) {
+        // Timed out, signed out or unreadable: hide rather than show an error
+        // (or, worse, a zero). A provisional figure stays, still provisional.
+        this.xpView =
+          provisional === null
+            ? { kind: "hidden" }
+            : { kind: "provisional", provisional, confirming: false };
+        return;
+      }
+      // A game that unlocked cosmetics changed what the player owns: the
+      // Locker (and everything else reading /users/@me) refetches.
+      if (result.eligible && (result.flares ?? []).length > 0) {
+        invalidateUserMe();
+      }
+      if (provisional === null) {
+        this.xpView = { kind: "result", data: result };
+        return;
+      }
+      const outcome = reconcileXp(provisional.result, result, {
+        disconnectedOpponents: provisional.inputs.disconnectedOpponents,
+      });
+      if (outcome.drift) {
+        // Not explained by what only the end of the game adds: the client's
+        // copy of the formula may have drifted from the server's.
+        console.warn("Provisional XP differed from the server's", {
+          gameId: result.gameId,
+          provisional: outcome.provisionalTotal,
+          server: result.eligible ? result.breakdown.total : null,
+          provisionalResult: provisional.result,
+          serverResult: result.eligible
+            ? result.breakdown
+            : { reason: result.reason },
+          inputs: provisional.inputs,
+        });
+      }
+      this.xpView = {
+        kind: "result",
+        data: result,
+        reconciled: { provisional, outcome },
+      };
     } catch (err) {
       console.warn("WinModal: XP section failed", err);
       this.xpView = { kind: "hidden" };
     }
+  }
+
+  // The provisional XP figure for a player who has just died, or null when
+  // there can't be one (see loadProvisionalXp).
+  private async loadProvisionalXp(
+    progress: Progress,
+  ): Promise<ProvisionalXp | null> {
+    const progression = await fetchProgressionConfig();
+    if (progression === false || provisionalXpRules(progression) === null) {
+      return null;
+    }
+    const game = this.game;
+    const myClientID = game.myClientID();
+    if (myClientID === undefined) return null;
+    // A provisional figure starts from where the player is now, and counts
+    // today's allowances as they are now: ask /users/@me afresh (the page's
+    // copy is from when the game started, and a game left earlier may have
+    // been scored since). Past the page's cache, so a failed ask can't cost
+    // the game-end figure its copy; the page's progress stands in for it.
+    const fresh = await fetchUserMeUncached();
+    return loadProvisionalXp({
+      gameId: game.gameID(),
+      myClientID,
+      config: game.config().gameConfig(),
+      progress:
+        fresh !== false && fresh.player.progress !== undefined
+          ? fresh.player.progress
+          : progress,
+      progression,
+      humanStats: () => game.worker.humanStats(),
+    });
   }
 
   private _handleExit() {
@@ -587,7 +748,9 @@ export class WinModal extends LitElement implements Controller {
               ? ("2v2" as const)
               : rankedType === RankedType.FreeForAll
                 ? ("ffa" as const)
-                : ("1v1" as const),
+                : rankedType === RankedType.ClanWars
+                  ? ("clanwars" as const)
+                  : ("1v1" as const),
         },
       }),
     );
@@ -630,10 +793,10 @@ export class WinModal extends LitElement implements Controller {
         if (wu.winner[1] === this.game.myPlayer()?.team()) {
           this._title = translateText("win_modal.your_team");
           this.isWin = true;
-          crazyGamesSDK.happytime();
+          gamePortal.happytime();
         } else {
           this._title = translateText("win_modal.other_team", {
-            team: wu.winner[1],
+            team: getTranslatedPlayerTeamLabel(wu.winner[1]),
           });
           this.isWin = false;
         }
@@ -663,7 +826,7 @@ export class WinModal extends LitElement implements Controller {
         ) {
           this._title = translateText("win_modal.you_won");
           this.isWin = true;
-          crazyGamesSDK.happytime();
+          gamePortal.happytime();
         } else {
           this._title = translateText("win_modal.other_won", {
             player: winner.displayName(),

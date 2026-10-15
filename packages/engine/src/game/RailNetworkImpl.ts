@@ -45,6 +45,13 @@ export class StationManagerImpl implements StationManager {
 
   removeStation(station: TrainStation) {
     this.stationsById[station.id] = undefined;
+    // Drop trailing empty slots so the array matches what restoreSnapshot rebuilds
+    while (
+      this.stationsById.length > 0 &&
+      this.stationsById[this.stationsById.length - 1] === undefined
+    ) {
+      this.stationsById.pop();
+    }
     this.stations.delete(station);
   }
 

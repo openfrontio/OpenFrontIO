@@ -44,6 +44,16 @@
     "games_type_singleplayer": "Singur Jucător",
     "get_magic_link": "Obține Link Magic",
     "google_alt": "Google",
+    "identity_token_copied": "Copiat",
+    "identity_token_copy": "Copiază",
+    "identity_token_desc": "Dovediți un site de statistici care vă este contul OpenFront. Alegeți site-ul, generați un token şi lipiți-l acolo.",
+    "identity_token_failed": "Nu s-a putut iniția conectarea contului Google. Încercați din nou.",
+    "identity_token_generate": "Generează token-ul",
+    "identity_token_logged_out": "Sesiunea ta a expirat. Te rugăm să te autentifici din nou.",
+    "identity_token_note": "Funcționează numai pe {site} și expiră în 10 minute. Lipiți-l doar în {site}.",
+    "identity_token_rate_limited": "Prea multe solicitări. Te rugăm să aștepți un moment și să încerci din nou.",
+    "identity_token_site": "Site",
+    "identity_token_title": "Link către un site terț",
     "link_discord": "Asociază contul de Discord",
     "link_existing_account": "Conectează la cont existent",
     "link_google": "Asociază contul Google",
@@ -83,8 +93,10 @@
     "reward_daily": "Recompensă pentru abonament zilnic",
     "reward_signup_bonus": "Bonus înscriere în abonament",
     "sign_in_desc": "Autentifică-te pentru a salva statisticile și progresul",
-    "sub_granted_from_purchase": "Inclus gratuit cu achiziția de Steam. Nu este facturat și nu se înnoiește așa că nu este nimic de gestionat sau anulat.",
+    "sub_granted_from_purchase": "Inclus de achiziția de Steam, plătit o dată pe Steam. Nu este facturat și nu se reînnoiește așa că nu este nimic de gestionat sau anulat. Când se termină, păstrezi jocul complet fără nici o taxă; doar ecranul {tier} se oprește.",
     "sub_granted_indefinite": "Acces gratuit acordat contului dvs. Nu este facturat, deci nu este nimic de administrat sau anulat.",
+    "sub_granted_perks_end_on": "{tier} Avantaje se sfârșesc pe {date}",
+    "sub_past_due_note": "Ultima ta plată nu a fost efectuată, așa că avantajele {tier} sunt întrerupte. Actualizează metoda de plată pentru a le restaura.",
     "sub_price_monthly": "{price}/mo",
     "sub_renews_on": "Se reînnoiește {date}",
     "sub_status_active": "Activ",
@@ -134,8 +146,7 @@
     "username_temporary_notice": "Numele tău a fost luat de un alt jucător. Alege unul nou — această redenumire este gratuită.",
     "username_temporary_prompt": "Numele tău de utilizator a fost preluat de un alt jucător. Alege unul nou acum? Redenumirea este gratuită.",
     "username_temporary_prompt_confirm": "Alegeți un nume",
-    "username_title": "Nume de utilizator:",
-    "sub_granted_ends_on": "Accesul gratuit încheie {date}"
+    "username_title": "Nume de utilizator:"
   },
   "account_settings_modal": {
     "title": "Setări cont"
@@ -190,7 +201,6 @@
       "focus": "Focalizează focul pe [P1]!",
       "mirv": "Lansează un MIRV la [P1]!"
     },
-    "build": "Construiește-ți mesajul...",
     "cat": {
       "attack": "Atacă",
       "defend": "Apară",
@@ -199,7 +209,6 @@
       "misc": "Diverse",
       "warnings": "Avertizări"
     },
-    "category": "Categorie",
     "defend": {
       "ally": "[P1] este aliatul meu!",
       "build_posts": "Construiește baze fortificate!",
@@ -245,11 +254,7 @@
       "strategy": "Bună strategie!",
       "team_up": "Hai să ne aliem împotriva lui [P1]!"
     },
-    "phrase": "Expresie",
-    "player": "Jucător",
     "search": "Caută jucător...",
-    "send": "Trimite",
-    "sort_by_territory": "Sortare după teritoriu",
     "title": "Chat Rapid",
     "to": "Trimis {user}: {msg}",
     "warnings": {
@@ -262,15 +267,21 @@
       "mirv_ready": "[P1] Are suficient aur să lanseze un MIRV!",
       "mirv_soon": "[P1] Poate lansa un MIRV în curând!",
       "no_allies": "[P1] Nu are aliați.",
-      "number1_warning": "Jucătorul #1 va câștiga curând dacă nu ne aliem!",
       "saving_for_mirv": "[P1] strânge aur pentru a lansa un MIRV.",
       "snowballing": "[P1] scapă de sub control!",
       "stalemate": "Hai să facem pace. E un impas, o să pierdem amândoi.",
       "stop_trading": "Oprește comerțul cu [P1]!",
       "stop_trading_all": "Te rugăm să încetezi toate schimburile comerciale!",
       "strong": "[P1] este puternic.",
-      "weak": "[P1] E slab."
-    }
+      "weak": "[P1] E slab.",
+      "number1_warning": "Jucătorul #1 va câștiga curând dacă nu ne aliem!"
+    },
+    "build": "Construiește-ți mesajul...",
+    "category": "Categorie",
+    "phrase": "Expresie",
+    "player": "Jucător",
+    "send": "Trimite",
+    "sort_by_territory": "Sortare după teritoriu"
   },
   "clan_modal": {
     "applied": "Aplicat",
@@ -468,6 +479,7 @@
     "no_heartbeat": "Serverul nu mai aude de la tine.",
     "not_allowlisted": "Nu ești în lista de permise a acestei camere.",
     "not_trusted": "Această cameră este limitată la conturi de încredere. Încă vă puteți alătura oricărei alte camere.",
+    "pool_redirect": "Această cameră v-a trimis deja la altul. Vă rugăm să încercați din nou.",
     "protocol_error": "Conexiunea a fost deteriorată.",
     "ranked_limit_reached": "Nu mai ai meciuri gratuite clasate pentru astăzi.",
     "turnstile_failed": "Verificarea bot-ului a eșuat. Vă rugăm să reîncărcați pagina și să încercați din nou.",
@@ -488,7 +500,7 @@
     "copied": "Copiat!",
     "copy": "Copiați",
     "disabled": "Dezactivat",
-    "duration_hour_short": "ore",
+    "duration_hour_short": "h",
     "duration_minute_short": "min",
     "duration_second_short": "sec",
     "enabled": "Activat",
@@ -522,12 +534,14 @@
   "control_panel": {
     "allied_afk_neighbor_info": "Poți ataca jucători deconectați chiar dacă ești aliat cu ei.",
     "army_limit_warning": "Ești aproape de limita de armata a ta! Ia în considerare trimiterea de trupe la colegii de echipe.",
+    "attack_ratio": "{percent}%\n({troops})",
     "low_troops_warning": "Ești foarte jos pe trupe - Ar trebui să păstrezi întotdeauna niște trupe pentru apărare.",
     "teammate_afk_neighbor_info": "Poți să ataci coechipierii deconectați.",
     "traitor_neighbor_info": "Poți trăda trădători fără să devii singur trădător."
   },
   "cosmetics": {
     "adfree": "Fără reclame pentru viață!",
+    "ai_label": "Făcut cu asistență IA",
     "artist_label": "Artistul:",
     "color_label": "Culoarea:",
     "common": "Comun",
@@ -537,23 +551,24 @@
     "legendary": "Legendar",
     "pack_includes": "Include:",
     "pack_more_items": "+{count} mai mult",
+    "pattern_preview": "Previzualizare model",
     "per_day": "/zi",
-    "public_lobbies": "Camere publice",
+    "public_lobbies": "Creează camere publice",
     "public_lobbies_info": "Găzduiește camere personalizate care sunt listate public pentru ca oricine să se alăture.",
     "rare": "Rar",
     "search": "Caută...",
-    "signup_bonus": "Bonus la Înregistrare",
     "soft": "Capse",
     "type_crown": "Coroana",
     "type_effect": "{type} Efectul",
     "type_flag": "Steagul",
     "type_skin": "Costumul",
     "uncommon": "Neobișnuit",
-    "unlimited_ranked": "Clasament nelimitat",
-    "unlimited_ranked_info": "Nicio limită pentru numărul de jocuri clasate pe care le poți juca.",
     "usd_value": "Valoarea: {usd}",
     "verified_name": "Utilizator verificat",
-    "verified_name_info": "Numele tău de utilizator este rezervat pentru contul tău și arată o insignă verificată în joc."
+    "verified_name_info": "Numele tău de utilizator este rezervat pentru contul tău și arată o insignă verificată în joc.",
+    "signup_bonus": "Bonus la Înregistrare",
+    "unlimited_ranked": "Clasament nelimitat",
+    "unlimited_ranked_info": "Nicio limită pentru numărul de jocuri clasate pe care le poți juca."
   },
   "creator_code": {
     "change": "Schimbați",
@@ -613,7 +628,7 @@
   },
   "desktop_status": {
     "go_online": "Mergeți online",
-    "offline": "Off line: nu pot ajunge la serverele OpenFront",
+    "offline": "Offline: nu pot ajunge la serverele OpenFront",
     "retry": "Reîncercați",
     "retrying": "Se reîncearcă..."
   },
@@ -678,6 +693,16 @@
     "easy": "Ușor",
     "hard": "Greu",
     "impossible": "Imposibil",
+    "info": "{smarts}, {troops}",
+    "info_label": "Arată detaliile dificultăților",
+    "info_note_hard": "(Această dificultate este utilizată în jocurile publice HvN)",
+    "info_note_medium": "(Această dificultate este utilizată în jocurile publice HvN)",
+    "info_smarts_easy": "Prost",
+    "info_smarts_hard": "Inteligent",
+    "info_smarts_impossible": "Foarte inteligent",
+    "info_smarts_medium": "În medie",
+    "info_troops": "{percent}% din trupele maxime ale unui om",
+    "info_troops_same": "aceleași trupe maxime ca și un om",
     "medium": "Mediu"
   },
   "discord_user_header": {
@@ -727,6 +752,9 @@
     "crashed": "Jocul a încetat să funcționeze!",
     "desync_notice": "Ești desincronizat de alți jucători. Ceea ce vezi poate diferi de alți jucători.",
     "login_failed": "Autentificare eșuată. Te rugăm să încerci mai târziu.",
+    "login_token_consumed": "Acest link de conectare a fost deja folosit. Probabil ești deja autentificat - verifică o altă filă.",
+    "login_token_expired": "Acest link de conectare a expirat. Vă rugăm să solicitați un nou link de autentificare.",
+    "login_token_invalid": "Acest link de conectare a expirat. Vă rugăm să solicitați un nou link de autentificare.",
     "paste_discord": "Te rugăm să pui următoarele în raportul de eroare pe Discord:",
     "spawn_failed": {
       "description": "Selecția automată a locului de apariție a eșuat. Nu puteți juca acest meci.",
@@ -781,6 +809,15 @@
     "live": "ÎN DIRECT",
     "minimize": "Micșorează",
     "open_on_twitch": "Deschide {channel} pe Twitch"
+  },
+  "free_play": {
+    "account": "Contul tău, statisticile, prietenii și cosmeticele",
+    "ad_free_steam": "Fără reclame în aplicația Steam, vreodată",
+    "after_grant_heading": "După ce se termină, încă mai primești",
+    "custom_lobbies": "Camere personalizate private cu prieteni",
+    "free_heading": "Se joacă gratuit include",
+    "full_game": "Jocul complet: fiecare hartă și mod online și un singur jucător",
+    "ranked": "Clasament joacă, cu limita zilnică gratuită a meciurilor"
   },
   "friends": {
     "accept": "Acceptă",
@@ -1126,6 +1163,11 @@
     "host_badge": "Gazdă",
     "host_cheats": "Trucuri pentru gazdă",
     "leave_confirmation": "Sigur vrei să ieși din cameră?",
+    "list_lobby_body": "Camera voastră va apărea în lista publică de lobby. Începe automat când cronometrul se termină sau lobby-ul se umple. Setările nu pot fi modificate odată ce este listat.",
+    "list_lobby_confirm": "Lista camerelor",
+    "list_lobby_max_players": "Număr maxim de jucători",
+    "list_lobby_start_minutes": "Începe în (minute)",
+    "list_lobby_title": "Listează camera public",
     "mode": "Mod",
     "nation_player": "Națiune",
     "nation_players": "Națiuni",
@@ -1134,7 +1176,17 @@
     "player_whitelist": "Lista albă a jucătorului (ID-uri publice)",
     "player_whitelist_placeholder": "Separate prin virgulă",
     "players": "Jucători",
+    "queue": "Coadă",
+    "queue_confirm": "Plătește și coadă",
+    "queue_confirm_body": "Plătește {price} Plutoniu pentru a trimite acest lobby în lista publică? Va începe imediat după lobby-ul care numără în jos.",
+    "queue_confirm_title": "Trimite în coada publică?",
+    "queue_failed": "Nu s-a putut coada camera. Încercați din nou; nu veți mai fi taxat de două ori.",
+    "queue_item": "un loc în lista publică de așteptare",
+    "queue_tooltip": "Puneți această cameră în coada de așteptare specială publică, chiar în spatele lobby-ului care este pe cale să înceapă",
+    "queued": "În așteptare",
+    "queued_waiting": "În coada publică",
     "remove_player": "Elimină {username}",
+    "settings_locked_listed": "Această cameră este listată public, astfel încât setările sale nu mai pot fi modificate.",
     "spectator": "Spectatori",
     "spectators": "Spectatori",
     "start_delay": "Întârziere la pornire (secunde)",
@@ -1143,7 +1195,6 @@
     "subscription_required_title": "Abonament Necesar",
     "team_count": "Numărul de echipe",
     "teams_Duos": "Duo (echipe de 2)",
-    "teams_Humans Vs Nations": "Oameni vs Națiuni",
     "teams_Quads": "Cvadruple (echipe de 4)",
     "teams_Trios": "Trio (echipe de 3)",
     "title": "Creează Cameră Privată",
@@ -1151,7 +1202,8 @@
     "view_subscriptions": "Vezi abonamentele",
     "visibility_private": "Privat",
     "visibility_public": "Public",
-    "waiting": "Se așteaptă jucătorii..."
+    "waiting": "Se așteaptă jucătorii...",
+    "teams_Humans Vs Nations": "Oameni vs Națiuni"
   },
   "inventory": {
     "equipped": "Echipat",
@@ -1174,6 +1226,7 @@
     "selected_cosmetic": "Selectat: {name}",
     "selected_cosmetic_variant": "{name} ({variant})",
     "showing_effects": "Efecte echipate: {count}",
+    "sign_in_for_cosmetics": "Conectează-te sau creează-ți un cont pentru a-ți accesa pielea, ciorna și efectele.",
     "title": "Inventar",
     "unequip": "Dezechipează",
     "unequip_all": "Dezechipează totul",
@@ -1303,6 +1356,7 @@
     "arctic": "Arctica",
     "asia": "Asia",
     "australia": "Australia",
+    "babelmandebstrait": "Strâmtoarea Bab el-Mandeb",
     "baikal": "Baikal",
     "baikalnukewars": "Baikal (Războaiele Nucleare)",
     "bajacalifornia": "Baja California",
@@ -1317,7 +1371,9 @@
     "branchingpaths": "Căi de ramificare",
     "britannia": "Britanie",
     "britanniaclassic": "Britania (Clasic)",
+    "canaryislands": "Insulele Canare",
     "capecod": "Cod Capului",
+    "capeofgoodhope": "Capul de Speranţă Bună",
     "caribbean": "Caraibe",
     "caspiansea": "Marea Caspică",
     "caucasus": "Caucazia",
@@ -1354,6 +1410,7 @@
     "hawaii": "Hawaii",
     "hecatestrait": "Strâmtoarea Hecate",
     "hongkong": "Hong Kong",
+    "hornofafrica": "Cornul Africii",
     "iceland": "Islanda",
     "indiansubcontinent": "Subcontinent indian",
     "irishsea": "Marea Irlandei",
@@ -1368,6 +1425,7 @@
     "lisbon": "Lisabona",
     "losangeles": "Los Angeles",
     "luna": "Luna",
+    "madagascar": "Madagascar",
     "manicouagan": "Manicouagan",
     "map": "Hartă",
     "marenostrum": "Mare Nostrum",
@@ -1379,6 +1437,7 @@
     "montreal": "Montreal",
     "morethanluck": "Mai mult decât Noroc",
     "newyorkcity": "Orașul New York",
+    "newzealand": "Noua Zeelandă",
     "niledelta": "Delta Nilului",
     "northamerica": "America de Nord",
     "northwestpassage": "Pasajul de nord-vest",
@@ -1387,8 +1446,10 @@
     "pangaea": "Pangeea",
     "passage": "Pasaj",
     "pluto": "Pluto",
+    "pulicatlake": "Lac Pulicat",
     "qingchina": "Qing China",
     "random": "Aleatoare",
+    "riodejaneiro": "Rio de Janeiro",
     "russia": "Rusia",
     "sanfrancisco": "San Francisco",
     "scandinavia": "Scandinavia",
@@ -1412,6 +1473,7 @@
     "tradersdream": "Val neguțătorilor",
     "twolakes": "Două Lacuri",
     "unitedstates": "Statele Unite ale Americii",
+    "vancouverisland": "Insula Vancouver",
     "venice": "Veneția",
     "vietnam": "Vietnam",
     "warshipwarship": "Navă de război Navă de război",
@@ -1480,9 +1542,8 @@
     "waiting_for_game": "Se așteaptă începerea meciului..."
   },
   "mode_selector": {
-    "coming_soon": "În curând",
     "lobbies_unreachable": "Nu se poate ajunge la camerele publice momentan",
-    "offline_lobbies": "Camerele publice nu sunt disponibile când ești off line",
+    "offline_lobbies": "Camerele publice nu sunt disponibile când ești offline",
     "ranked_1v1_title": "1v1",
     "ranked_2v2_title": "2v2",
     "ranked_pairing_note": "În moduri de echipă, clamații și prietenii din coadă Sunt plasați în aceeași echipă, acolo unde este posibil. Prietenii Sunt împerecheați mai întâi, apoi clanuri. Dacă evaluările voastre. Sunt prea îndepărtate veți fi potrivit separat pentru a păstra jocurile corecte.",
@@ -1491,7 +1552,8 @@
     "servers_unreachable": "Nu se poate conecta la serverele OpenFront",
     "teams_count": "{teamCount} Echipe",
     "teams_of": "{teamCount} Echipe de {playersPerTeam}",
-    "teams_title": "Echipe"
+    "teams_title": "Echipe",
+    "coming_soon": "În curând"
   },
   "multi_tab": {
     "detected": "Au fost detectate mai multe file cu joc deschis.",
@@ -1597,10 +1659,10 @@
   "player_profile": {
     "loading": "Profilul se încarcă...",
     "no_clans": "Acest jucător nu este în niciun clan.",
-    "not_found": "Profilul jucătorului nu a fost găsit",
     "share": "Distribuie profilul",
     "title": "Profilul Jucătorului",
-    "view": "Vezi Profilul"
+    "view": "Vezi Profilul",
+    "not_found": "Profilul jucătorului nu a fost găsit"
   },
   "player_stats_table": {
     "arrived": "Sosite",
@@ -1697,6 +1759,7 @@
     "listing_full": "Lista publică de cameră este plină. Te rugăm să încerci din nou mai târziu.",
     "listing_host_cheats_enabled": "Dezactivează trucurile gazdei pentru a-ți lista camera în mod public.",
     "listing_limit_reached": "Ai deja o cameră listată public.",
+    "listing_max_players_too_low": "Numărul maxim de jucători trebuie să fie mai mare decât numărul de jucători deja prezenți pe hol.",
     "listing_requires_subscription": "Un abonament de căpetenie militară sau de suveran este necesar pentru a lista o cameră publică.",
     "listing_whitelist_enabled": "Dezactivează alăturarea albă pentru a lista camera ta în mod public.",
     "no_open_lobbies": "Nu sunt camere deschise chiar acum",
@@ -1734,13 +1797,15 @@
   },
   "public_lobby": {
     "connecting": "Conectarea la cameră...",
+    "custom": "Personalizat",
+    "custom_default_settings": "Setări standard",
+    "custom_tooltip_title": "Acesta este un lobby creat de jucător",
     "invite_friends": "Invită prieteni",
     "join_timeout": "Nu ai intrat în joc la timp.",
     "notify_armed": "Alertă pe: un sunet se va reda când începe jocul",
     "notify_off": "Redă un sunet atunci când începe jocul",
     "notify_on": "Alerta de pornire a jocului este activată",
     "notify_started": "Jocul tău pornește!",
-    "players_per_team": "De {num}",
     "see_all": "Vezi toate {count}",
     "started": "Început",
     "starting_game": "Se pornește…",
@@ -1760,7 +1825,8 @@
     "trusted_tooltip_title": "Lobby-ul de încredere",
     "trusted_unlocked": "Doar conturi de încredere. Contul vostru este de încredere.",
     "upcoming": "Următoare",
-    "waiting_for_players": "Se așteaptă jucători"
+    "waiting_for_players": "Se așteaptă jucători",
+    "players_per_team": "De {num}"
   },
   "purchase_nudge": {
     "body": "Se pare că îți place să joci OpenFront! Te rugăm să iei în considerare să ne susții făcând o achiziție — orice achiziție te face fără publicitate pe viață.",
@@ -1784,6 +1850,24 @@
     "fastest_game_speed": "Maxim",
     "game_speed": "Viteza jocului",
     "replay_speed": "Viteză de redare"
+  },
+  "replay_viewer": {
+    "following": "Urmărind pe {name}",
+    "load_failed": "Această reluare nu a putut fi încărcată.",
+    "loading": "Se încarcă reluarea…",
+    "partial": "Numai primul {time} din acest joc poate fi vizionat.",
+    "pause": "Pauză",
+    "play": "Joacă",
+    "processing": "Se pregătește reluarea…",
+    "processing_fetching": "Preluarea înregistrării jocului",
+    "processing_simulating": "Reluarea jocului: {percent}%",
+    "timeline": "Redă cronologia",
+    "unavailable_desync": "Acest joc nu rejoacă corect pe această versiune de OpenFront.",
+    "unavailable_failed": "Procesarea acestui joc a eșuat.",
+    "unavailable_not_found": "Acest joc nu a putut fi găsit.",
+    "unavailable_other_build": "Acest joc a fost jucat pe o altă versiune a OpenFront.",
+    "unavailable_unreachable": "Jocul nu a putut fi descărcat. Verificați conexiunea și încercați din nou.",
+    "watch_classic": "Urmărește reluarea veche în schimb"
   },
   "rewards_modal": {
     "title": "Recompense"
@@ -1812,6 +1896,12 @@
   },
   "spawn_timer": {
     "team_percent_tooltip": "{team}: {percent}"
+  },
+  "steam_grant": {
+    "ended_body": "Luna lui {tier} care a venit cu achiziția ta de Steam s-a încheiat. Nimic nu a fost taxat și nimic nu va fi. Păstrezi jocul complet: fiecare hartă și mod online, joc online, clasat pe o limită zilnică gratuită și lobby-uri personalizate cu prietenii. Aplicația Steam rămâne fără publicitate. Dacă doriți ca {tier} să se întoarcă, vă puteți abona de la magazin în orice moment.",
+    "ended_heading": "Luna inclusă de Steam s-a încheiat",
+    "welcome_body": "Achiziția ta de Steam include {tier} până la {date}. Ai plătit o dată, pe Steam: nimic nu este facturat și nimic nu se reînnoiește. Când se termină păstrezi tot jocul, fiecare hartă și mod și aplicația Steam rămâne fără reclame. Doar ecranul {tier} se oprește.",
+    "welcome_heading": "Inclus în achiziția de pe Steam"
   },
   "steam_handoff": {
     "launched": "Deschideți acest lobby în aplicația Steam. Dacă nu se întâmplă nimic, asigurați-vă că Steam rulează.",
@@ -1860,10 +1950,8 @@
     "default_name": "Jucător Steam"
   },
   "steam_wishlist": {
-    "cta": "Adaugă acum în lista de dorințe",
-    "on_steam": "OpenFront pe Steam",
-    "release": "Disponibil Q3 2026",
-    "title": "Lista de dorințe OpenFront pe Steam!"
+    "buy_cta": "Cumpărați pe Steam",
+    "buy_on_steam": "Cumpărați OpenFront pe Steam"
   },
   "store": {
     "already_owned": "Deții deja acest obiect. Nimic nu a fost taxat.",
@@ -1900,6 +1988,7 @@
     "insufficient_currency_body": "Ai nevoie de {amount, number} {currency} pentru a cumpăra {item}.",
     "insufficient_currency_title": "{currency} Insuficient",
     "login_required": "Trebuie să fii autentificat pentru a cumpăra cu monedă.",
+    "manage_billing": "Gestionează facturarea",
     "no_affiliate_items": "Nu sunt elemente de afiliat disponibile. Verifică din nou mai târziu pentru elemente noi.",
     "no_bundles": "Nu sunt pachete disponibile. Verificați mai târziu pentru elemente noi.",
     "no_crowns": "Nu este disponibila nici o ciorna. Verifica mai târziu pentru elemente noi.",
@@ -1937,6 +2026,8 @@
     "steam_overlay_waiting": "Aprobă achiziția de la Steam suprapusă pentru a continua.",
     "subscribe_heading": "Abonamentul Tău",
     "subscribed": "Abonat",
+    "subscription_past_due": "Ultima ta plată de abonament nu a fost efectuată, așa că abonamentul tău este în așteptare. Actualizați metoda de plată pentru a o restabili. Nu vă abonați din nou sau ați putea fi taxat de două ori.",
+    "subscription_past_due_desktop": "Ultima ta plată de abonament nu a fost efectuată, așa că abonamentul tău este în așteptare. Actualizați metoda de plată pentru a o restabili. Nu vă abonați din nou sau ați putea fi taxat de două ori.",
     "subscription_purchase_success": "Abonament activat",
     "subscriptions": "Abonamente",
     "switch_button": "Întrerupător",
@@ -2078,7 +2169,7 @@
       "troop_rate": "Aceasta este rata de creștere a trupelor. Creștere încetinește și devine portocalie odată ce trupele tale se apropie de jumătate din maxim.",
       "troops": "Ține un ochi la numărul trupelor. Atacând cu prea puține trupe te lasă slabi - lasă-i să revină între atacuri."
     },
-    "step_counter": "Etapa %{current} din %{total}",
+    "step_counter": "Pasul {current} din {total}",
     "step_touch": {
       "attack_wilderness": "Inelul pulsant vă marchează teritoriul. Atingeți tărâmul nesolicitat lângă el, apoi atingeți sabia din mijlocul meniului pentru a ataca.",
       "buy_city": "Îți permiți un oraș! Apasă pe teritoriul tău, deschide meniul cu pictogramă de cheie fixă ​​(Construiește) și alege „Oraș”. Orașele cresc limita maximă de trupe.",
@@ -2232,6 +2323,8 @@
     "left_click_label": "Clic stânga pentru a deschide meniul",
     "lobby_id_visibility_desc": "Ascunde ID-ul in crearea jocului privat",
     "lobby_id_visibility_label": "ID-uri ascunse in jocul privat",
+    "lobby_start_alerts_desc": "Redă sunetul de început pentru fiecare lobby și meciul clasificat în mod implicit și afișează o notificare pe desktop atunci când este permis. Îl poți suprascrie cu clopoțelul lobby.",
+    "lobby_start_alerts_label": "Alerte de pornire a camerelor",
     "menu_shortcuts": "Scurtături meniu",
     "move_down": "Mută camera în jos",
     "move_down_desc": "Mută camera în jos",
@@ -2255,6 +2348,8 @@
     "press_a_key": "Apasă o tastă",
     "render_debug_gui": "Randare GUI de depanare",
     "render_debug_gui_desc": "Comută panoul de redare",
+    "replay_viewer_desc": "Deschide reluările cu controale de tip rewind",
+    "replay_viewer_label": "Noul vizualizator de Reluare",
     "request_alliance": "Solicită o alianță",
     "request_alliance_desc": "Trimite o cerere de alianță jucătorului a cărui dală este sub cursorul tău.",
     "reset": "Resetează",
@@ -2300,6 +2395,8 @@
     "enter_username": "Introdu numele tău de utilizator",
     "invalid_chars": "Numele de utilizator poate conține doar litere, numere, spații și caracterul subliniere.",
     "lapse_notice": "Abonamentul vostru s-a terminat, astfel încât nu mai jucați ca „{name}”. Rămâne rezervat pentru tine până când {date} - se reabonează înainte de a o păstra. După ce cineva o poate lua.",
+    "lapse_notice_after_grant": "Luna accesului premium care a venit cu achiziția ta de Steam s-a încheiat, așa că nu mai joci ca \"{name}\". Păstrați jocul complet fără nicio taxă; numai avantajele premium se oprește. Numele rămâne rezervat pentru tine până când {date} — abonează-te înainte de a-l păstra. După aceea cineva îl poate lua.",
+    "lapse_notice_after_grant_at_risk": "Luna accesului premium care a venit cu achiziția ta de Steam s-a încheiat, astfel încât să nu mai joci \"{name}\" și numele nu mai este rezervat. Păstrați jocul complet fără nicio taxă. Un alt jucător poate lua numele în orice moment - abonați-vă acum pentru a-l păstra.",
     "lapse_notice_at_risk": "Nu mai joci ca \"{name}\" și nu mai este rezervat. Un alt jucător îl poate lua în orice moment — te rugăm să te reînscrii acum pentru a-l păstra.",
     "not_string": "Numele de utilizator trebuie să fie un șir.",
     "tag": "ETICHETĂ",

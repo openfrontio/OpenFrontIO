@@ -20,19 +20,43 @@ import {
   type DeadUnitEvent,
   type NukeImpactEvent,
   type RailroadEvent,
+  type ReplayEvents,
   type ReplayMotionPlan,
   type SpawnPhaseEndEvent,
 } from "../ReplayTypes";
 
 export class EventCollector {
-  readonly nukeImpacts: NukeImpactEvent[] = [];
-  readonly railroadEvents: RailroadEvent[] = [];
-  readonly motionPlans: ReplayMotionPlan[] = [];
-  readonly constructionStarts: ConstructionStartEvent[] = [];
-  readonly deadUnitEvents: DeadUnitEvent[] = [];
+  // The events since the last take().
+  private nukeImpacts: NukeImpactEvent[] = [];
+  private railroadEvents: RailroadEvent[] = [];
+  private motionPlans: ReplayMotionPlan[] = [];
+  private constructionStarts: ConstructionStartEvent[] = [];
+  private deadUnitEvents: DeadUnitEvent[] = [];
   spawnPhaseEnd: SpawnPhaseEndEvent | null = null;
 
   private constructing = new Set<number>();
+
+  /**
+   * The events collected since the last call. They're handed over, not
+   * kept: the worker sends each append on and never needs them again, so
+   * holding them would grow its memory for the whole game.
+   */
+  take(): ReplayEvents {
+    const events: ReplayEvents = {
+      nukeImpacts: this.nukeImpacts,
+      railroadEvents: this.railroadEvents,
+      motionPlans: this.motionPlans,
+      constructionStarts: this.constructionStarts,
+      deadUnitEvents: this.deadUnitEvents,
+      spawnPhaseEnd: this.spawnPhaseEnd,
+    };
+    this.nukeImpacts = [];
+    this.railroadEvents = [];
+    this.motionPlans = [];
+    this.constructionStarts = [];
+    this.deadUnitEvents = [];
+    return events;
+  }
 
   /** `isLand`: whether a tile is land after this frame's tick. */
   push(frame: NormalizedFrame, isLand: (ref: number) => boolean): void {

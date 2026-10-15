@@ -80,9 +80,12 @@ describe("nav-account-menu level", () => {
       const badge = level!.querySelector("level-badge") as HTMLElement & {
         level: number;
         prestige: number;
+        size: number;
       };
       expect(badge.level).toBe(23);
       expect(badge.prestige).toBe(1);
+      // 20px on phones: at 16px the unit icon can't be read.
+      expect(badge.size).toBe(variant === "mobile" ? 20 : 22);
       const fill = el.querySelector<HTMLElement>(
         "[data-account-xp-bar] [data-xp-bar-fill]",
       );

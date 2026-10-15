@@ -35,10 +35,14 @@ jobs:
         with:
           path: out/index.html
           retention-days: 1
-  test:
-    name: 🔬 Test
+  test-shard:
+    name: 🔬 Test (${{ matrix.shard }}/3)
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3]
     steps:
       - name: Checkout repository
         uses: actions/checkout@v7
@@ -51,7 +55,19 @@ jobs:
       - name: Setup npm
         run: npm install --global --ignore-scripts npm@12.1.0
       - run: npm ci
-      - run: npm run test:coverage
+      - run: npm test -- --shard=${{ matrix.shard }}/3
+
+  # The main ruleset requires a check named "🔬 Test"; this rolls the shards
+  # up into it. always() so a failed shard fails it instead of skipping it
+  # (a skipped required check counts as passing).
+  test:
+    name: 🔬 Test
+    needs: test-shard
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - if: needs.test-shard.result != 'success'
+        run: exit 1
 
   lint:
     name: 🔍 Lint

@@ -60,6 +60,9 @@ function makeUserMe(
 ): UserMeResponse {
   return {
     user,
+    steamLicence: false,
+    steamLicenceSince: null,
+    noticesSeen: [],
     player: {
       publicId: "p1",
       adfree: false,

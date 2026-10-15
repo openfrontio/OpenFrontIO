@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 import { vi } from "vitest";
 
 // Mock BuildMenu to avoid importing lit and other ESM-heavy deps in this unit test

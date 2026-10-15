@@ -1,24 +1,24 @@
-import { crazyGamesSDK } from "./CrazyGamesSDK";
+import { gamePortal } from "./GamePortal";
 import { translateText } from "./Utils";
 
-// On CrazyGames the player's identity comes from the CrazyGames SDK, not our
-// backend user object. Show their avatar + username on every account trigger
-// (<nav-account-menu> renders one in the desktop nav and one in the mobile top
-// bar), or the "Sign in" affordance when they're a guest.
+// On a game portal (CrazyGames, Poki) the player's identity comes from the
+// portal SDK, not our backend user object. Show their avatar + username on
+// every account trigger (<nav-account-menu> renders one in the desktop nav and
+// one in the mobile top bar), or the "Sign in" affordance when they're a guest.
 //
 // Clicking a trigger opens the profile menu either way — signing in is the
-// menu's own "Sign in" item, which hands off to the SDK prompt — so this only
-// paints state.
-export async function updateCrazyGamesNavButton() {
-  if (!crazyGamesSDK.isOnCrazyGames()) return;
-  const profile = await crazyGamesSDK.getUserProfile();
+// menu's own "Sign in" item, which hands off to the portal's prompt — so this
+// only paints state.
+export async function updatePortalNavButton() {
+  if (!gamePortal.isOnGamePortal()) return;
+  const profile = await gamePortal.getUserProfile();
   const signInText = translateText("main.sign_in");
 
   // Auth state is resolved, so the triggers no longer show the loading spinner.
   document
     .querySelectorAll("[data-account-spinner]")
     .forEach((el) => el.classList.add("hidden"));
-  // CrazyGames accounts have no email, so the email badge is always hidden.
+  // Portal accounts have no email, so the email badge is always hidden.
   document
     .querySelectorAll("[data-account-email-badge]")
     .forEach((el) => el.classList.add("hidden"));

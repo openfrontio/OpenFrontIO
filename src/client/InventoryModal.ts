@@ -627,7 +627,7 @@ export class InventoryModal extends BaseModal {
           ariaLabel: translateText("common.back"),
           rightContent: html`<o-button
             data-inventory-header-action
-            class="no-crazygames"
+            class="no-game-portal"
             variant=${isLoggedIn ? "primary" : "danger"}
             size="sm"
             .translationKey=${isLoggedIn

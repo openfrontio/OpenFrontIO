@@ -2,6 +2,7 @@ import { TileRef } from "../game/GameMap";
 import {
   BuildableUnit,
   Difficulty,
+  HumanStatsSnapshot,
   PlayerActions,
   PlayerBorderTiles,
   PlayerBuildableUnitType,
@@ -40,7 +41,9 @@ export type WorkerMessageType =
   | "snapshot_result"
   | "extract_snapshot"
   | "extract_snapshot_result"
-  | "extract_snapshot_error";
+  | "extract_snapshot_error"
+  | "human_stats"
+  | "human_stats_result";
 
 // Base interface for all messages
 interface BaseWorkerMessage {
@@ -229,6 +232,15 @@ export interface ExtractSnapshotErrorMessage extends BaseWorkerMessage {
   error: string;
 }
 
+export interface HumanStatsMessage extends BaseWorkerMessage {
+  type: "human_stats";
+}
+
+export interface HumanStatsResultMessage extends BaseWorkerMessage {
+  type: "human_stats_result";
+  result: HumanStatsSnapshot;
+}
+
 // Union types for type safety
 export type MainThreadMessage =
   | InitMessage
@@ -242,7 +254,8 @@ export type MainThreadMessage =
   | AttackClusteredPositionsMessage
   | TransportShipSpawnMessage
   | SnapshotMessage
-  | ExtractSnapshotMessage;
+  | ExtractSnapshotMessage
+  | HumanStatsMessage;
 
 // Message send from worker
 export type WorkerMessage =
@@ -261,4 +274,5 @@ export type WorkerMessage =
   | TransportShipSpawnResultMessage
   | SnapshotResultMessage
   | ExtractSnapshotResultMessage
-  | ExtractSnapshotErrorMessage;
+  | ExtractSnapshotErrorMessage
+  | HumanStatsResultMessage;

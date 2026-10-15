@@ -29,6 +29,7 @@ describe("SingleplayerPresence", () => {
       web: 2,
       steam: 1,
       crazygames: 0,
+      poki: 0,
       unknown: 0,
     });
     expect(presence.activeGames()).toBe(3);

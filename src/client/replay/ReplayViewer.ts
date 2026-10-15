@@ -60,6 +60,7 @@ import {
 import type { TransformHandler } from "../TransformHandler";
 import { GoToPlayerEvent } from "../TransformHandler";
 import { PauseGameIntentEvent } from "../Transport";
+import type { UserSettingModal } from "../UserSettingModal";
 import {
   GRAPHICS_KEY,
   USER_SETTINGS_CHANGED_EVENT,
@@ -92,7 +93,7 @@ import { ReplayGameView } from "./ReplayGameAdapter";
 import { ReplayNukedLayers } from "./ReplayNukedLayers";
 import type { ReplayPalette } from "./ReplayPalette";
 import { ReplayPlayback, TICKS_PER_SECOND } from "./ReplayPlayback";
-import { fetchReplayRecord } from "./ReplayRecord";
+import { fetchReplayRecord, hasRecordedHashes } from "./ReplayRecord";
 import "./ReplayStatus";
 import type { Preparing } from "./ReplayStatus";
 import { replayStore } from "./ReplayStore";
@@ -159,6 +160,14 @@ export class ReplayViewer extends LitElement {
   @state() private continueInitialPlayerID = "";
   private continueRequestCount = 0;
   private continueAbortController: AbortController | null = null;
+
+  /**
+   * The record has no hashes, so the replay can't be checked against the
+   * game that was played.
+   */
+  private unverified = false;
+  /** Says so over the replay, until closed. */
+  @state() private unverifiedNotice = false;
 
   private record: GameRecord | null = null;
   /** The processing worker, while it runs. */
@@ -257,6 +266,8 @@ export class ReplayViewer extends LitElement {
     const record = result.record;
     this.record = record;
     this.gameLength = record.info.num_turns;
+    this.unverified = !hasRecordedHashes(record);
+    this.unverifiedNotice = this.unverified;
     this.progress = { phase: "simulating", percent: 0 };
     this.processing = processInBrowser(record, {
       onProgress: (percent) => {
@@ -310,7 +321,9 @@ export class ReplayViewer extends LitElement {
       this.growing = !complete;
       if (this.playback !== null) {
         this.playback.live = !complete;
-        if (complete) void this.store(this.playback);
+        // An unverified replay isn't kept: opened again, its record is
+        // processed again and the notice shown again.
+        if (complete && !this.unverified) void this.store(this.playback);
       }
       this.requestUpdate();
     });
@@ -687,6 +700,7 @@ export class ReplayViewer extends LitElement {
       this.querySelector<PlayerStats>("player-stats")?.refresh();
       overlay?.tick();
       events?.tick();
+      adapter.endHudTick();
     }, 1000);
   }
 
@@ -695,16 +709,21 @@ export class ReplayViewer extends LitElement {
   private onKey(e: KeyboardEvent): void {
     const p = this.playback;
     if (p === null || this.status !== "ready") return;
-    // The settings or continue modal paused playback, so keys wait until it closes.
-    if (
-      this.continueModalOpen ||
-      this.querySelector<SettingsModal>("settings-modal")?.open
-    ) {
+    // The settings or continue modal paused playback, so keys wait until it closes. So
+    // do the game settings it opens: their sliders take the arrow keys.
+    if (this.continueModalOpen || this.settingsOpen()) {
       return;
     }
     // The timeline keeps focus after a click, so it doesn't count as typing.
-    // Its own arrow-key steps are prevented below so a key seeks once.
-    if (e.target instanceof HTMLInputElement && e.target.type !== "range") {
+    // Its own arrow-key steps are prevented below so a key seeks once. Any
+    // other input keeps its keys.
+    const target = e.target;
+    if (
+      (target instanceof HTMLInputElement ||
+        target instanceof HTMLTextAreaElement ||
+        target instanceof HTMLSelectElement) &&
+      target.closest("replay-controls") === null
+    ) {
       return;
     }
     if (e.code === "Space") {
@@ -717,6 +736,15 @@ export class ReplayViewer extends LitElement {
       e.preventDefault();
       void p.seek(p.frame - (e.shiftKey ? 100 : 1));
     }
+  }
+
+  /** The settings menu, or the game settings opened from it. */
+  private settingsOpen(): boolean {
+    if (this.querySelector<SettingsModal>("settings-modal")?.open) return true;
+    const gameSettings = document.getElementById(
+      "game-settings",
+    ) as UserSettingModal | null;
+    return gameSettings?.isOpen?.() === true;
   }
 
   private onPointerDown(e: PointerEvent): void {
@@ -921,6 +949,11 @@ export class ReplayViewer extends LitElement {
         ${this.status === "ready" && this.stoppedEarly !== ""
           ? this.renderStoppedEarly(loaded)
           : nothing}
+        ${this.status === "ready" &&
+        this.stoppedEarly === "" &&
+        this.unverifiedNotice
+          ? this.renderUnverified()
+          : nothing}
         <player-info-overlay></player-info-overlay>
         <!-- Always in the DOM, like the overlay: attachHud wires it up while
           the replay is still loading. Its content is w-96 from 1200px up,
@@ -999,6 +1032,26 @@ export class ReplayViewer extends LitElement {
           class="px-1 text-lg leading-none text-white/60 hover:text-white cursor-pointer"
           aria-label=${translateText("common.close")}
           @click=${() => (this.stoppedEarly = "")}
+        >
+          ×
+        </button>
+      </div>
+    `;
+  }
+
+  /** Over a replay whose record had nothing to check it against. */
+  private renderUnverified() {
+    return html`
+      <div
+        class="absolute top-3 left-1/2 -translate-x-1/2 w-[min(28rem,calc(100vw-2rem))] flex items-start gap-3 p-3 rounded-xl border border-amber-400/40 bg-black/75 backdrop-blur-sm text-sm"
+      >
+        <p role="status" class="flex-1 text-amber-200">
+          ${translateText("replay_viewer.unverified")}
+        </p>
+        <button
+          class="px-1 text-lg leading-none text-white/60 hover:text-white cursor-pointer"
+          aria-label=${translateText("common.close")}
+          @click=${() => (this.unverifiedNotice = false)}
         >
           ×
         </button>

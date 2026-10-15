@@ -151,6 +151,30 @@
     <meta property="og:image" content="<%- gameplayScreenshotUrl %>" />
     <meta property="og:type" content="game" />
 
+    <!-- Structured Data -->
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "VideoGame",
+        "name": "OpenFront",
+        "alternateName": "OpenFront.io",
+        "url": "https://openfront.io/",
+        "description": "Conquer the world in this multiplayer battle royale! Expand your nation, eliminate opponents, and dominate the map in this fast-paced IO game.",
+        "applicationCategory": "Game",
+        "operatingSystem": "Any",
+        "gamePlatform": ["Web Browser", "PC", "Mobile"],
+        "genre": ["Strategy", "Multiplayer", "IO Game"],
+        "playMode": "MultiPlayer",
+        "inLanguage": "en",
+        "isAccessibleForFree": true,
+        "sameAs": [
+          "https://github.com/openfrontio/OpenFrontIO",
+          "https://discord.gg/openfront",
+          "https://www.reddit.com/r/OpenFront/"
+        ]
+      }
+    </script>
+
     <!--
       Injected from Server env.
 
@@ -190,10 +214,10 @@
         "--background-image-url",
         `url("<%- backgroundImageUrl %>")`,
       );
-      // document.documentElement.style.setProperty(
-      //   "--desktop-logo-image-url",
-      //   `url("<%- desktopLogoImageUrl %>")`,
-      // );
+      document.documentElement.style.setProperty(
+        "--desktop-logo-image-url",
+        `url("<%- desktopLogoImageUrl %>")`,
+      );
       document.documentElement.style.setProperty(
         "--mobile-logo-image-url",
         `url("<%- mobileLogoImageUrl %>")`,
@@ -258,7 +282,7 @@
   </head>
 
   <body
-    class="select-none font-sans min-h-screen bg-neutral-800 transition-opacity duration-300 ease-in-out flex flex-row flex-wrap content-start"
+    class="select-none font-sans min-h-screen bg-neutral-800 transition-opacity duration-300 ease-in-out flex flex-row flex-wrap content-start halloween-theme"
   >
     <div id="hex-grid" class="fixed inset-0 -z-50 pointer-events-none">
       <div

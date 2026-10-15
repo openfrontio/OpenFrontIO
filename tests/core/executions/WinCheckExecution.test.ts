@@ -857,3 +857,69 @@ describe("WinCheckExecution - 2v2 Ranked Team Elimination", () => {
     expect(winCheck.isActive()).toBe(true);
   });
 });
+
+describe("WinCheckExecution - Clan Wars Team Elimination", () => {
+  // Three teams of two: a clan wars match can have more than two sides, and
+  // it is not over until one is left.
+  async function setupClanWars() {
+    const ids = ["P1", "P2", "P3", "P4", "P5", "P6"];
+    const game = await setup(
+      "big_plains",
+      {
+        gameMode: GameMode.Team,
+        playerTeams: 3,
+        maxPlayers: 6,
+        rankedType: RankedType.ClanWars,
+      },
+      ids.map((id) => playerInfo(id, PlayerType.Human)),
+    );
+
+    const byTeam = new Map<Team, Player[]>();
+    for (const id of ids) {
+      const player = game.player(id);
+      const team = player.team()!;
+      byTeam.set(team, [...(byTeam.get(team) ?? []), player]);
+    }
+    const teams = Array.from(byTeam.values());
+    expect(teams.map((t) => t.length)).toEqual([2, 2, 2]);
+
+    const all = teams.flat();
+    let assigned = 0;
+    game.map().forEachTile((tile) => {
+      if (!game.map().isLand(tile)) return;
+      if (assigned >= all.length * 10) return;
+      all[Math.floor(assigned / 10)].conquer(tile);
+      assigned++;
+    });
+
+    const setWinnerSpy = vi.fn();
+    game.setWinner = setWinnerSpy;
+    const winCheck = new WinCheckExecution();
+    winCheck.init(game, 0);
+    return { teams, setWinnerSpy, winCheck };
+  }
+
+  test("keeps going while two teams have an active player", async () => {
+    const { teams, setWinnerSpy, winCheck } = await setupClanWars();
+
+    teams[0].forEach((p) => p.markDisconnected(true));
+    winCheck.checkWinnerTeam();
+
+    expect(setWinnerSpy).not.toHaveBeenCalled();
+    expect(winCheck.isActive()).toBe(true);
+  });
+
+  test("sets the last team with an active player as the winner", async () => {
+    const { teams, setWinnerSpy, winCheck } = await setupClanWars();
+
+    teams[0].forEach((p) => p.markDisconnected(true));
+    teams[2].forEach((p) => p.markDisconnected(true));
+    winCheck.checkWinnerTeam();
+
+    expect(setWinnerSpy).toHaveBeenCalledWith(
+      teams[1][0].team(),
+      expect.anything(),
+    );
+    expect(winCheck.isActive()).toBe(false);
+  });
+});

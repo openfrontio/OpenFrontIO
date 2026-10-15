@@ -6,6 +6,7 @@ import {
   AttackClusteredPositionsResultMessage,
   ExtractSnapshotErrorMessage,
   ExtractSnapshotResultMessage,
+  HumanStatsResultMessage,
   InitErrorMessage,
   InitializedMessage,
   MainThreadMessage,
@@ -323,6 +324,24 @@ async function onMessage(e: MessageEvent<MainThreadMessage>) {
         } as PlayerProfileResultMessage);
       } catch (error) {
         console.error("Failed to get profile:", error);
+        throw error;
+      }
+      break;
+    case "human_stats":
+      if (!gameRunner) {
+        throw new Error("Game runner not initialized");
+      }
+
+      try {
+        // Messages are handled between drain batches: a tick boundary.
+        const result = (await gameRunner).humanStats();
+        sendMessage({
+          type: "human_stats_result",
+          id: message.id,
+          result,
+        } as HumanStatsResultMessage);
+      } catch (error) {
+        console.error("Failed to get human stats:", error);
         throw error;
       }
       break;

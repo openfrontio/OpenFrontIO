@@ -22,7 +22,7 @@ import {
   translateText,
 } from "../client/Utils";
 import { getApiBase } from "./Api";
-import { crazyGamesSDK } from "./CrazyGamesSDK";
+import { gamePortal } from "./GamePortal";
 import { SendSpectateEvent } from "./LobbyEvents";
 import { PublicLobbySocket } from "./LobbySocket";
 import { JoinLobbyEvent } from "./Main";
@@ -688,7 +688,7 @@ export class JoinLobbyModal extends BaseModal {
   }
 
   private updateHistory(url: string): void {
-    if (!crazyGamesSDK.isOnCrazyGames()) {
+    if (!gamePortal.isOnGamePortal()) {
       history.replaceState(null, "", url);
     }
   }
