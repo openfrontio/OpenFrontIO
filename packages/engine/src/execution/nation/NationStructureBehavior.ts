@@ -4,6 +4,7 @@ import {
   GameMode,
   Gold,
   PlayerType,
+  Relation,
   Structures,
   UnitType,
 } from "@openfront/engine-api/game/GameTypes";
@@ -25,7 +26,12 @@ import type {
 import { ConstructionExecution } from "../ConstructionExecution";
 import { UpgradeStructureExecution } from "../UpgradeStructureExecution";
 import { nearestTileDist, nearestTileDistCapped } from "../Util";
-import { randTerritoryTileArray } from "./NationUtils";
+import { isMirvWorthSavingFor } from "./NationMIRVBehavior";
+import {
+  hasHighStartingGold,
+  isSaveUpWithinReach,
+  randTerritoryTileArray,
+} from "./NationUtils";
 
 /**
  * Configuration for how many structures of each type a nation should build
@@ -46,16 +52,25 @@ const SAM_RATIO_BY_DIFFICULTY: Record<Difficulty, number> = {
   [Difficulty.Impossible]: 0.3,
 };
 
+/** Port ratio per city in team games (not on Easy), where teammates are safe trade partners */
+const TEAM_PORT_RATIO = 1;
+
 /**
- * Returns structure ratios relative to city count, adjusted by difficulty.
+ * Returns structure ratios relative to city count, adjusted by difficulty and game mode.
  * Cities are always prioritized and built first.
  * When cities are disabled, we use TILES_PER_CITY_EQUIVALENT. That's not ideal, nations won't properly upgrade structures, but it's better than nothing. Probably 99.9% of players won't disable cities anyway.
  */
 function getStructureRatios(
   difficulty: Difficulty,
+  gameMode: GameMode,
 ): Partial<Record<UnitType, StructureRatioConfig>> {
+  const teamPorts =
+    gameMode === GameMode.Team && difficulty !== Difficulty.Easy;
   return {
-    [UnitType.Port]: { ratioPerCity: 0.75, perceivedCostIncreasePerOwned: 1 },
+    [UnitType.Port]: {
+      ratioPerCity: teamPorts ? TEAM_PORT_RATIO : 0.75,
+      perceivedCostIncreasePerOwned: 1,
+    },
     [UnitType.Factory]: {
       ratioPerCity: 0.75,
       perceivedCostIncreasePerOwned: 1,
@@ -74,11 +89,45 @@ function getStructureRatios(
 /** Perceived cost increase percentage per city owned */
 const CITY_PERCEIVED_COST_INCREASE_PER_OWNED = 1;
 
-/** Cities owned before saving up for nukes inflates structure costs (not on Easy) */
-const CITIES_BEFORE_SAVING = 3;
+/** Cities owned before saving up for nukes inflates structure costs, keyed by difficulty */
+const CITIES_BEFORE_SAVING: Record<Difficulty, number> = {
+  [Difficulty.Easy]: 0,
+  [Difficulty.Medium]: 3,
+  [Difficulty.Hard]: 4,
+  [Difficulty.Impossible]: 5,
+};
 
-/** Factory ratio multiplier when the nation has coastal tiles */
-const FACTORY_COASTAL_RATIO_MULTIPLIER = 0.33;
+/** Scales the perceived cost increase of cities, ports and factories while saving up, keyed by difficulty */
+const INCOME_STRUCTURE_SAVING_WEIGHT: Record<Difficulty, number> = {
+  [Difficulty.Easy]: 1,
+  [Difficulty.Medium]: 0.8,
+  [Difficulty.Hard]: 0.6,
+  [Difficulty.Impossible]: 0.4,
+};
+
+/** Factory ratio multiplier when the nation has coastal tiles, keyed by difficulty */
+const FACTORY_COASTAL_RATIO_MULTIPLIER: Record<Difficulty, number> = {
+  [Difficulty.Easy]: 0.33,
+  [Difficulty.Medium]: 0.45,
+  [Difficulty.Hard]: 0.55,
+  [Difficulty.Impossible]: 0.6,
+};
+
+/** Structures a nation wants under SAM cover */
+const SAM_PROTECTED_TYPES: readonly UnitType[] = [
+  UnitType.City,
+  UnitType.Factory,
+  UnitType.MissileSilo,
+  UnitType.Port,
+];
+
+/** Percent chance to upgrade a SAM instead of building one when SAMs already cover every structure */
+const SAM_UPGRADE_WHEN_COVERED_CHANCE: Record<Difficulty, number> = {
+  [Difficulty.Easy]: 0,
+  [Difficulty.Medium]: 50,
+  [Difficulty.Hard]: 100,
+  [Difficulty.Impossible]: 100,
+};
 
 /** Maximum number of missile silos a nation will build */
 const MAX_MISSILE_SILOS = 3;
@@ -88,6 +137,19 @@ const FIRST_MISSILE_SILO_RATIO = 0.4;
 
 /** If we have more than this many structures per tiles, prefer upgrading over building */
 const UPGRADE_DENSITY_THRESHOLD = 1 / 1500;
+
+/** Most levels bought in one upgrade, as far as the gold beyond the save-up target pays for them, keyed by difficulty */
+const MAX_UPGRADES_AT_ONCE: Record<Difficulty, number> = {
+  [Difficulty.Easy]: 3,
+  [Difficulty.Medium]: 10,
+  [Difficulty.Hard]: Infinity,
+  [Difficulty.Impossible]: Infinity,
+};
+
+/** Structures counted for that density; cheap defense posts would push nations into upgrading early */
+const DENSITY_STRUCTURE_TYPES: readonly UnitType[] = Structures.types.filter(
+  (t) => t !== UnitType.DefensePost,
+);
 
 /**
  * Minimum number of full-map water tiles a water body must have for the AI to
@@ -106,14 +168,10 @@ const TILES_PER_CITY_EQUIVALENT = 2000;
 const HIGH_NATION_DENSITY_THRESHOLD = 1 / 7500;
 
 /**
- * Starting-gold threshold above which nations enter the
- * "high-gold" early game: they build a SAM first and wait between structure
- * placements. Without this, high-starting-gold games let a nation
- * drop many structures within a short timespan, which ballooned its maxTroops
- * before troop count caught up (delaying its attacks) and clustered the
- * new structures inside a single nuke blast radius.
+ * Starting gold below which high-starting-gold nations wait between their first structures, so they
+ * don't cluster inside a single nuke blast radius; with more, waiting would leave most gold idle.
  */
-const HIGH_STARTING_GOLD_THRESHOLD = 3_000_000n;
+const PACED_STARTING_GOLD_LIMIT = 10_000_000n;
 
 /** Tick gap a high-starting-gold nation must wait before placing its Nth structure */
 const HIGH_GOLD_STRUCTURE_COOLDOWN_TICKS: readonly number[] = [
@@ -128,7 +186,7 @@ const HIGH_GOLD_STRUCTURE_COOLDOWN_TICKS: readonly number[] = [
 const TEAM_POST_SAVE_UP_PHASE_TICKS = 150; // 15s
 
 /**
- * Incoming land-attack troop count as a fraction of own troops below which
+ * Incoming attack troop count as a fraction of own troops below which
  * the nation does not build defensive structures.
  */
 const UNDER_ATTACK_THREAT_RATIO = 0.35;
@@ -139,6 +197,31 @@ const UNDER_ATTACK_THREAT_RATIO = 0.35;
  * 40–80%, 3 at 80–120%, …).
  */
 const DEFENSE_POST_RATIO_PER_POST = 0.4;
+
+/** Closest a reactive defense post goes to the attack front, in post ranges; Hard/Impossible go further back per unit of incoming-to-own troop ratio */
+const DEFENSE_POST_FRONT_MIN_DIST = 2 / 3;
+const DEFENSE_POST_FRONT_DIST_PER_RATIO = 1 / 3;
+const DEFENSE_POST_FRONT_RATIO_CAP = 2;
+/** Depth of the band a reactive defense post may go in, in post ranges */
+const DEFENSE_POST_FRONT_BAND = 1 / 2;
+
+/** Distance band from a threatening neighbor's border for a defense post built before it attacks, in post ranges */
+const PROACTIVE_DEFENSE_POST_MIN_DIST = 1 / 2;
+const PROACTIVE_DEFENSE_POST_MAX_DIST = 1;
+/** Cities owned before Hard/Impossible nations fortify borders that aren't under attack yet */
+const PROACTIVE_DEFENSE_POST_MIN_CITIES = 2;
+/** Defense posts owned per city above which nations stop fortifying borders that aren't under attack */
+const PROACTIVE_DEFENSE_POSTS_PER_CITY = 0.5;
+/** Share of our troops a hostile neighbor needs before we fortify against it, keyed by difficulty */
+const PROACTIVE_DEFENSE_POST_HOSTILE_TROOP_RATIO: Partial<
+  Record<Difficulty, number>
+> = {
+  [Difficulty.Hard]: 1,
+  [Difficulty.Impossible]: 0.5,
+};
+
+/** Random tiles tried when looking for a defense post spot */
+const DEFENSE_POST_SAMPLE_ATTEMPTS = 150;
 
 // Reusable neighbor buffer for hot loops; the simulation is single-threaded.
 const NEIGHBOR_SCRATCH: TileRef[] = [0, 0, 0, 0];
@@ -155,6 +238,7 @@ export class NationStructureBehavior {
   private builtCrowdedMapFirstStructure = false;
   private _hasHighStartingGold: boolean | null = null;
   private _postSaveUpStartTick: number | null = null;
+  private mirvWorthSavingMemo: { tick: number; worth: boolean } | null = null;
 
   constructor(
     private random: PseudoRandom,
@@ -165,6 +249,7 @@ export class NationStructureBehavior {
   /**
    * reachableStationsCache and _sharedWaterComponents are not stored: both
    * are reset at the start of doHandleStructures and only read inside it.
+   * mirvWorthSavingMemo only holds for the tick it was computed in.
    */
   snapshot(w: SnapshotWriter): Versioned {
     return w.versioned(NationStructureBehaviorSnapshot, {
@@ -189,6 +274,7 @@ export class NationStructureBehavior {
     this.player = player;
     this.reachableStationsCache = null;
     this._sharedWaterComponents = null;
+    this.mirvWorthSavingMemo = null;
     this.lastStructureTick = s.lastStructureTick;
     this.placementsCount = s.placementsCount;
     this.builtCrowdedMapFirstStructure = s.builtCrowdedMapFirstStructure;
@@ -229,9 +315,10 @@ export class NationStructureBehavior {
   }
 
   /**
-   * Tries to place one defense post near an active land-attack front.
-   * Not called on Easy. Medium: 50% chance per call, 1 post total. Hard/Impossible:
-   * ceil(ratio / 0.4) posts total. Boat attacks (sourceTile != null) are ignored.
+   * Tries to place one defense post behind an active attack front, including
+   * landed boat attacks, far enough back to be finished before the attack arrives.
+   * Not called on Easy. Medium: 50% chance per call, 1 post total, fixed distance.
+   * Hard/Impossible: ceil(ratio / 0.4) posts total, further back against stronger attacks.
    * Does not touch placementsCount or lastStructureTick.
    */
   private tryBuildDefensePost(): boolean {
@@ -241,15 +328,13 @@ export class NationStructureBehavior {
       return false;
 
     const player = this.player;
-    const landAttacks = player
-      .incomingAttacks()
-      .filter((a) => a.sourceTile() === null);
-    if (landAttacks.length === 0) return false;
+    const attacks = player.incomingAttacks();
+    if (attacks.length === 0) return false;
 
     const ourTroops = player.troops();
     if (ourTroops <= 0) return false;
 
-    const incomingTroops = landAttacks.reduce((sum, a) => sum + a.troops(), 0);
+    const incomingTroops = attacks.reduce((sum, a) => sum + a.troops(), 0);
     const ratio = incomingTroops / ourTroops;
     if (ratio < UNDER_ATTACK_THREAT_RATIO) return false;
 
@@ -260,61 +345,143 @@ export class NationStructureBehavior {
       allowed = Math.ceil(ratio / DEFENSE_POST_RATIO_PER_POST);
     }
 
-    const frontTiles = this.getAttackFrontTiles(landAttacks);
-    if (this.countDefensePostsNearFront(frontTiles, allowed) >= allowed)
+    const range = this.game.config().defensePostRange();
+    const scaledRatio =
+      difficulty === Difficulty.Medium
+        ? 0
+        : Math.min(ratio, DEFENSE_POST_FRONT_RATIO_CAP);
+    const minDist =
+      range *
+      (DEFENSE_POST_FRONT_MIN_DIST +
+        DEFENSE_POST_FRONT_DIST_PER_RATIO * scaledRatio);
+    const maxDist = minDist + range * DEFENSE_POST_FRONT_BAND;
+
+    const frontTiles = this.getAttackFrontTiles(attacks);
+    if (
+      this.countDefensePostsNearFront(frontTiles, maxDist, allowed) >= allowed
+    )
       return false;
 
-    const cost = this.cost(UnitType.DefensePost);
-    if (player.gold() < cost) return false;
+    return this.buildDefensePostBehind(frontTiles, minDist, maxDist);
+  }
 
-    const tiles = this.sampleTilesNearFront(
-      frontTiles,
-      25,
-      UnitType.DefensePost,
-    );
-    for (const tile of tiles) {
-      if (!player.canBuild(UnitType.DefensePost, tile)) continue;
-      this.game.addExecution(
-        new ConstructionExecution(player, UnitType.DefensePost, tile),
-      );
-      return true;
+  /**
+   * Hard/Impossible: covers the border with a hostile (recently attacking)
+   * neighbor before it attacks again, as humans do. Hard only fears ones at
+   * least as strong as itself, Impossible also weaker ones. One post per
+   * threatening neighbor.
+   */
+  private maybeBuildProactiveDefensePost(): boolean {
+    const config = this.game.config();
+    const { difficulty } = config.gameConfig();
+    const hostileTroopRatio =
+      PROACTIVE_DEFENSE_POST_HOSTILE_TROOP_RATIO[difficulty];
+    if (hostileTroopRatio === undefined) return false;
+    if (config.isUnitDisabled(UnitType.DefensePost)) return false;
+    const cityCount = this.cityCount();
+    if (cityCount < PROACTIVE_DEFENSE_POST_MIN_CITIES) return false;
+
+    const player = this.player;
+    if (
+      player.units(UnitType.DefensePost).length >=
+      cityCount * PROACTIVE_DEFENSE_POSTS_PER_CITY
+    )
+      return false;
+    if (player.gold() < this.cost(UnitType.DefensePost)) return false;
+
+    const minTroops = player.troops() * hostileTroopRatio;
+    const threats = new Set<Player>();
+    for (const neighbor of player.nearby()) {
+      if (!neighbor.isPlayer() || neighbor.type() === PlayerType.Bot) continue;
+      if (player.isFriendly(neighbor)) continue;
+      if (
+        player.relation(neighbor) === Relation.Hostile &&
+        neighbor.troops() >= minTroops
+      ) {
+        threats.add(neighbor);
+      }
     }
-    return false;
+    if (threats.size === 0) return false;
+
+    const range = config.defensePostRange();
+    const frontTiles = this.borderTilesFacing(threats);
+    if (
+      this.countDefensePostsNearFront(frontTiles, range * 1.5, threats.size) >=
+      threats.size
+    )
+      return false;
+
+    return this.buildDefensePostBehind(
+      frontTiles,
+      range * PROACTIVE_DEFENSE_POST_MIN_DIST,
+      range * PROACTIVE_DEFENSE_POST_MAX_DIST,
+    );
+  }
+
+  private buildDefensePostBehind(
+    frontTiles: TileRef[],
+    minDist: number,
+    maxDist: number,
+  ): boolean {
+    const player = this.player;
+    if (player.gold() < this.cost(UnitType.DefensePost)) return false;
+    const tile = this.findDefensePostTile(frontTiles, minDist, maxDist);
+    if (tile === null) return false;
+    this.game.addExecution(
+      new ConstructionExecution(player, UnitType.DefensePost, tile),
+    );
+    return true;
   }
 
   private defensePostNeeded(): boolean {
     const { difficulty } = this.game.config().gameConfig();
     if (difficulty === Difficulty.Easy) return false;
-    const landAttacks = this.player
-      .incomingAttacks()
-      .filter((a) => a.sourceTile() === null);
-    if (landAttacks.length === 0) return false;
+    const attacks = this.player.incomingAttacks();
+    if (attacks.length === 0) return false;
     const ourTroops = this.player.troops();
     if (ourTroops <= 0) return false;
-    const incomingTroops = landAttacks.reduce((sum, a) => sum + a.troops(), 0);
+    const incomingTroops = attacks.reduce((sum, a) => sum + a.troops(), 0);
     return incomingTroops / ourTroops >= UNDER_ATTACK_THREAT_RATIO;
   }
 
   /**
-   * Returns our border tiles that are adjacent to a tile owned by any of the
-   * attacking players.
+   * Returns our border tiles adjacent to a land attacker's territory, plus the
+   * landing frontier of boat attacks from players not attacking by land.
    */
-  private getAttackFrontTiles(landAttacks: Attack[]): TileRef[] {
+  private getAttackFrontTiles(attacks: Attack[]): TileRef[] {
     const game = this.game;
     const player = this.player;
-    const attackerSet = new Set(landAttacks.map((a) => a.attacker()));
-    if (attackerSet.size === 0) return [];
+    const landAttackers = new Set<Player>();
+    for (const a of attacks) {
+      if (a.sourceTile() === null) landAttackers.add(a.attacker());
+    }
 
+    const frontTiles = this.borderTilesFacing(landAttackers);
+
+    // A land attacker's beachheads are already in its adjacency front above.
+    for (const a of attacks) {
+      if (a.sourceTile() === null || landAttackers.has(a.attacker())) continue;
+      a.borderTiles().forEach((t) => {
+        if (game.owner(t) === player) frontTiles.push(t);
+      });
+    }
+    return frontTiles;
+  }
+
+  /** Our border tiles adjacent to land owned by any of `players`. */
+  private borderTilesFacing(players: ReadonlySet<Player>): TileRef[] {
+    const game = this.game;
+    const frontTiles: TileRef[] = [];
+    if (players.size === 0) return frontTiles;
     // Set.forEach + a reused neighbor buffer: border sets are huge, and
     // for..of over a Set allocates an iterator-result object per element.
-    // "Any neighbor is an attacker" is order-insensitive.
-    const frontTiles: TileRef[] = [];
+    // "Any neighbor is one of them" is order-insensitive.
     const nbuf = NEIGHBOR_SCRATCH;
-    player.borderTiles().forEach((borderTile) => {
+    this.player.borderTiles().forEach((borderTile) => {
       const n = game.neighbors4(borderTile, nbuf);
       for (let i = 0; i < n; i++) {
         const owner = game.owner(nbuf[i]);
-        if (attackerSet.has(owner as Player)) {
+        if (players.has(owner as Player)) {
           frontTiles.push(borderTile);
           return;
         }
@@ -324,18 +491,18 @@ export class NationStructureBehavior {
   }
 
   /**
-   * Counts defense posts within 1.5 × borderSpacing of any front tile.
+   * Counts defense posts within `range` of any front tile.
    * `cap` short-circuits the scan once that many are found.
    */
   private countDefensePostsNearFront(
     frontTiles: TileRef[],
+    range: number,
     cap?: number,
   ): number {
     if (frontTiles.length === 0) return 0;
 
     const game = this.game;
-    const { borderSpacing } = this.spacingConstants();
-    const rangeSquared = (borderSpacing * 1.5) ** 2;
+    const rangeSquared = range ** 2;
 
     let count = 0;
     for (const dp of this.player.units(UnitType.DefensePost)) {
@@ -351,59 +518,36 @@ export class NationStructureBehavior {
   }
 
   /**
-   * Samples territory tiles for defense-post placement, using the full attack
-   * front as anchors. Only tiles where canBuild passes are collected.
-   * Anchors near existing defense posts are filtered out first so successive
-   * posts spread along the front rather than clustering together.
-   *
-   * Phase 1: tiles at depth [0.75×, 1.5×] borderSpacing from any border.
-   * Fallback 1: relax depth constraint (territory smaller than borderSpacing).
-   * Fallback 2: pure random territory sampling (canBuild checked by caller).
+   * Finds an own tile where a defense post can be built at a distance in
+   * [minDist, maxDist] from the nearest front tile, sampled around the front.
+   * Front tiles and candidates near existing defense posts are skipped, since
+   * overlapping posts don't stack; a fully covered front yields null.
    */
-  private sampleTilesNearFront(
+  private findDefensePostTile(
     frontTiles: TileRef[],
-    count: number,
-    unitType: UnitType,
-  ): TileRef[] {
+    minDist: number,
+    maxDist: number,
+  ): TileRef | null {
+    if (frontTiles.length === 0) return null;
     const game = this.game;
     const player = this.player;
 
-    if (frontTiles.length === 0) {
-      return [];
-    }
-
-    const { borderSpacing } = this.spacingConstants();
-    const searchRadius = Math.ceil(borderSpacing * 1.5);
-    const minBorderDist = Math.ceil(borderSpacing * 0.75);
-    const maxBorderDist = Math.ceil(borderSpacing * 1.5);
-    const borderTiles = player.borderTiles();
-
-    // Spread: prefer front tiles far from existing defense posts so successive
-    // posts don't cluster at the same spot along the attack line.
-    const spreadRangeSquared = (borderSpacing * 1.5) ** 2;
+    const spreadRangeSquared = (game.config().defensePostRange() * 1.5) ** 2;
     const existingDPTiles = player
       .units(UnitType.DefensePost)
       .map((u) => u.tile());
-
-    let anchors: TileRef[];
-    if (existingDPTiles.length > 0) {
-      anchors = frontTiles.filter(
-        (ft) =>
-          !existingDPTiles.some(
-            (dp) => game.euclideanDistSquared(ft, dp) < spreadRangeSquared,
-          ),
+    const nearExistingPost = (t: TileRef) =>
+      existingDPTiles.some(
+        (dp) => game.euclideanDistSquared(t, dp) < spreadRangeSquared,
       );
-      if (anchors.length === 0) anchors = frontTiles;
-    } else {
-      anchors = frontTiles;
-    }
 
-    const result: TileRef[] = [];
-    for (
-      let attempt = 0;
-      attempt < count * 6 && result.length < count;
-      attempt++
-    ) {
+    const anchors = frontTiles.filter((ft) => !nearExistingPost(ft));
+    if (anchors.length === 0) return null;
+
+    const minSquared = minDist ** 2;
+    const maxSquared = maxDist ** 2;
+    const searchRadius = Math.ceil(maxDist);
+    for (let attempt = 0; attempt < DEFENSE_POST_SAMPLE_ATTEMPTS; attempt++) {
       const anchor = this.random.randElement(anchors);
       const ax = game.x(anchor);
       const ay = game.y(anchor);
@@ -412,44 +556,29 @@ export class NationStructureBehavior {
       if (!game.isValidCoord(x, y)) continue;
       const t = game.ref(x, y);
       if (game.owner(t) !== player) continue;
-      // Only "inside [min, max]" matters, so the search is capped at max.
-      const borderDist = nearestTileDistCapped(
-        game,
-        borderTiles,
-        t,
-        maxBorderDist,
-      );
-      if (borderDist < minBorderDist || borderDist > maxBorderDist) continue;
-      if (!player.canBuild(unitType, t)) continue;
-      result.push(t);
+      if (nearExistingPost(t)) continue;
+      let nearestSquared = Infinity;
+      for (const ft of frontTiles) {
+        nearestSquared = Math.min(
+          nearestSquared,
+          game.euclideanDistSquared(t, ft),
+        );
+        if (nearestSquared < minSquared) break;
+      }
+      if (nearestSquared < minSquared || nearestSquared > maxSquared) continue;
+      if (!player.canBuild(UnitType.DefensePost, t)) continue;
+      return t;
     }
-
-    if (result.length > 0) return result;
-
-    // Fallback: relax border-depth constraint (territory too small for depth ring)
-    const fallback: TileRef[] = [];
-    for (
-      let attempt = 0;
-      attempt < count * 4 && fallback.length < count;
-      attempt++
-    ) {
-      const anchor = this.random.randElement(anchors);
-      const ax = game.x(anchor);
-      const ay = game.y(anchor);
-      const x = this.random.nextInt(ax - searchRadius, ax + searchRadius + 1);
-      const y = this.random.nextInt(ay - searchRadius, ay + searchRadius + 1);
-      if (!game.isValidCoord(x, y)) continue;
-      const t = game.ref(x, y);
-      if (game.owner(t) !== player) continue;
-      fallback.push(t);
-    }
-
-    return fallback;
+    return null;
   }
 
   private isOnStructureCooldown(): boolean {
-    // Only high-starting-gold nations pause
-    if (this.lastStructureTick === null || !this.hasHighStartingGold()) {
+    if (
+      this.lastStructureTick === null ||
+      !this.hasHighStartingGold() ||
+      this.game.config().startingGold(this.player.info()) >=
+        PACED_STARTING_GOLD_LIMIT
+    ) {
       return false;
     }
     const requiredGap =
@@ -462,6 +591,7 @@ export class NationStructureBehavior {
 
   // Spreads placements after the save-up target is first reached:
   // 15s ON / 15s OFF, alternating, to allow NationNukeBehavior to spend the gold.
+  // Not while the gold covers the target twice, as bulk upgrades leave the target for nukes.
   private isInPostSaveUpBlockedPhase(): boolean {
     if (this.game.config().isUnitDisabled(UnitType.MissileSilo)) {
       return false;
@@ -472,6 +602,9 @@ export class NationStructureBehavior {
         return false;
       }
       this._postSaveUpStartTick = this.game.ticks();
+    }
+    if (this.player.gold() >= saveUpTarget * 2n) {
+      return false;
     }
     const elapsed = this.game.ticks() - this._postSaveUpStartTick;
     return (
@@ -528,6 +661,10 @@ export class NationStructureBehavior {
         this.builtCrowdedMapFirstStructure = true;
         return true;
       }
+    }
+
+    if (this.maybeBuildProactiveDefensePost()) {
+      return true;
     }
 
     // Build order for non-city structures (priority order)
@@ -601,9 +738,7 @@ export class NationStructureBehavior {
   }
 
   private hasHighStartingGold(): boolean {
-    this._hasHighStartingGold ??=
-      this.game.config().startingGold(this.player.info()) >=
-      HIGH_STARTING_GOLD_THRESHOLD;
+    this._hasHighStartingGold ??= hasHighStartingGold(this.game, this.player);
     return this._hasHighStartingGold;
   }
 
@@ -615,53 +750,57 @@ export class NationStructureBehavior {
     );
   }
 
-  /**
-   * Determines if we should build more of this structure type based on
-   * the current city count and the configured ratio.
-   */
   private shouldBuildStructure(
     type: UnitType,
     cityCount: number,
     hasCoastalTiles: boolean,
   ): boolean {
+    return this.levelsDue(type, cityCount, hasCoastalTiles) > 0;
+  }
+
+  /** Levels of this structure type the configured ratio to the city count still asks for. */
+  private levelsDue(
+    type: UnitType,
+    cityCount: number,
+    hasCoastalTiles: boolean,
+  ): number {
     const gameConfig = this.game.config();
-    const { difficulty } = gameConfig.gameConfig();
-    const ratios = getStructureRatios(difficulty);
+    const { difficulty, gameMode } = gameConfig.gameConfig();
+    const ratios = getStructureRatios(difficulty, gameMode);
     const config = ratios[type];
     if (config === undefined) {
-      return false;
+      return 0;
     }
 
     let ratio = config.ratioPerCity;
 
-    // Heavily reduce factory spawning if we have coastal tiles
+    // Reduce factory spawning if we have coastal tiles
     if (
       type === UnitType.Factory &&
       hasCoastalTiles &&
       !gameConfig.isUnitDisabled(UnitType.Port)
     ) {
-      ratio *= FACTORY_COASTAL_RATIO_MULTIPLIER;
+      ratio *= FACTORY_COASTAL_RATIO_MULTIPLIER[difficulty];
     }
 
     const owned = this.player.unitsOwned(type);
-
-    // Hard cap on missile silos
-    if (type === UnitType.MissileSilo && owned >= MAX_MISSILE_SILOS) {
-      return false;
+    let targetCount: number;
+    if (type === UnitType.MissileSilo) {
+      // First missile silo uses a higher ratio so nations can start nuking earlier
+      if (owned === 0) {
+        ratio = FIRST_MISSILE_SILO_RATIO;
+      }
+      // Hard cap on missile silos
+      targetCount = Math.min(Math.floor(cityCount * ratio), MAX_MISSILE_SILOS);
+    } else {
+      targetCount = Math.floor(cityCount * ratio);
     }
 
-    // First missile silo uses a higher ratio so nations can start nuking earlier
-    if (type === UnitType.MissileSilo && owned === 0) {
-      ratio = FIRST_MISSILE_SILO_RATIO;
-    }
-
-    const targetCount = Math.floor(cityCount * ratio);
-
-    return owned < targetCount;
+    return targetCount - owned;
   }
 
-  private cost(type: UnitType): Gold {
-    return this.game.unitInfo(type).cost(this.game, this.player);
+  private cost(type: UnitType, extraUnits: number = 0): Gold {
+    return this.game.unitInfo(type).cost(this.game, this.player, extraUnits);
   }
 
   private maybeSpawnStructure(type: UnitType): boolean {
@@ -671,11 +810,17 @@ export class NationStructureBehavior {
       return false;
     }
 
+    // Another SAM would cover nothing new, but a higher level stops more of a salvo
+    if (type === UnitType.SAMLauncher && this.shouldUpgradeSamInstead()) {
+      return this.upgradeStructure(this.samProtectingMost());
+    }
+
     // Check if we should upgrade instead of building new
     const structures = this.player.units(type);
+    const upgradable = game.config().unitInfo(type).upgradable === true;
     if (
       this.getTotalStructureDensity() > UPGRADE_DENSITY_THRESHOLD &&
-      game.config().unitInfo(type).upgradable
+      upgradable
     ) {
       if (this.maybeUpgradeStructure(structures)) {
         return true;
@@ -690,7 +835,12 @@ export class NationStructureBehavior {
 
     const tile = this.structureSpawnTile(type);
     if (tile === null) {
-      return false;
+      // No room for a new one (e.g. a short coastline full of ports): upgrade one instead
+      return (
+        upgradable &&
+        game.config().gameConfig().difficulty !== Difficulty.Easy &&
+        this.maybeUpgradeStructure(structures)
+      );
     }
     const canBuild = this.player.canBuild(type, tile);
     if (canBuild === false) {
@@ -710,16 +860,17 @@ export class NationStructureBehavior {
     const realCost = this.cost(type);
 
     const saveUpTarget = this.getSaveUpTarget();
-    if (saveUpTarget === 0n || this.player.gold() >= saveUpTarget) {
+    if (
+      saveUpTarget === 0n ||
+      this.player.gold() >= saveUpTarget ||
+      !isSaveUpWithinReach(this.game, this.player, saveUpTarget)
+    ) {
       return realCost;
     }
 
-    // Like humans, nations don't save up before their first few cities stand. The build order
-    // still holds: until then, whatever is due before the next city is cheaper than that city.
-    if (
-      this.cityCount() < CITIES_BEFORE_SAVING &&
-      this.game.config().gameConfig().difficulty !== Difficulty.Easy
-    ) {
+    // Like humans, nations don't save up before their first few cities stand
+    const { difficulty, gameMode } = this.game.config().gameConfig();
+    if (this.cityCount() < CITIES_BEFORE_SAVING[difficulty]) {
       return realCost;
     }
 
@@ -729,10 +880,17 @@ export class NationStructureBehavior {
     if (type === UnitType.City) {
       increasePerOwned = CITY_PERCEIVED_COST_INCREASE_PER_OWNED;
     } else {
-      const { difficulty } = this.game.config().gameConfig();
-      const ratios = getStructureRatios(difficulty);
+      const ratios = getStructureRatios(difficulty, gameMode);
       const config = ratios[type];
       increasePerOwned = config?.perceivedCostIncreasePerOwned ?? 0.1;
+    }
+    // Income structures pay for themselves, so smarter nations keep building them while saving
+    if (
+      type === UnitType.City ||
+      type === UnitType.Port ||
+      type === UnitType.Factory
+    ) {
+      increasePerOwned *= INCOME_STRUCTURE_SAVING_WEIGHT[difficulty];
     }
 
     // Each owned structure makes the next one feel more expensive
@@ -763,7 +921,8 @@ export class NationStructureBehavior {
     const hydroEnabled = !config.isUnitDisabled(UnitType.HydrogenBomb);
     const atomEnabled = !config.isUnitDisabled(UnitType.AtomBomb);
 
-    if (mirvEnabled) {
+    // Not for a MIRV that SAMs would shoot down
+    if (mirvEnabled && this.isMirvWorthSavingFor()) {
       // Save up for MIRV + Hydrogen Bomb
       return this.cost(UnitType.MIRV) + this.cost(UnitType.HydrogenBomb);
     }
@@ -779,27 +938,108 @@ export class NationStructureBehavior {
     return this.cost(UnitType.SAMLauncher);
   }
 
-  /**
-   * Tries to upgrade an existing structure if density threshold is exceeded.
-   * @param structures The pool of structures to consider for upgrading
-   * @returns true if an upgrade was initiated, false otherwise
-   */
+  private isMirvWorthSavingFor(): boolean {
+    const tick = this.game.ticks();
+    if (this.mirvWorthSavingMemo?.tick !== tick) {
+      this.mirvWorthSavingMemo = {
+        tick,
+        worth: isMirvWorthSavingFor(this.game, this.player),
+      };
+    }
+    return this.mirvWorthSavingMemo.worth;
+  }
+
+  /** Upgrades the best of the given structures; false if none can be upgraded. */
   private maybeUpgradeStructure(structures: Unit[]): boolean {
-    if (this.getTotalStructureDensity() <= UPGRADE_DENSITY_THRESHOLD) {
+    return this.upgradeStructure(this.findBestStructureToUpgrade(structures));
+  }
+
+  private upgradeStructure(structure: Unit | null): boolean {
+    if (structure === null) {
       return false;
     }
-    if (structures.length === 0) {
+    // canUpgradeUnit was already checked by the caller and is checked again in UpgradeStructureExecution
+    this.game.addExecution(
+      new UpgradeStructureExecution(
+        this.player,
+        structure.id(),
+        this.upgradeAmount(structure.type()),
+      ),
+    );
+    return true;
+  }
+
+  /** One level, or as many as the gold beyond the save-up target pays for and the structure ratios ask for. */
+  private upgradeAmount(type: UnitType): number {
+    const { difficulty } = this.game.config().gameConfig();
+    // Cities set the ratios, so only gold limits them
+    const due =
+      type === UnitType.City
+        ? Infinity
+        : this.levelsDue(
+            type,
+            this.cityCount(),
+            this._sharedWaterComponents !== null,
+          );
+    const max = Math.min(MAX_UPGRADES_AT_ONCE[difficulty], due);
+    let spare = this.player.gold() - this.getSaveUpTarget();
+    let amount = 0;
+    while (amount < max) {
+      const cost = this.cost(type, amount);
+      if (cost > spare) break;
+      spare -= cost;
+      amount++;
+    }
+    return Math.max(1, amount);
+  }
+
+  /** Whether to upgrade a SAM instead of building one, because SAMs already cover every structure. */
+  private shouldUpgradeSamInstead(): boolean {
+    const { difficulty } = this.game.config().gameConfig();
+    const chance = SAM_UPGRADE_WHEN_COVERED_CHANCE[difficulty];
+    const sams = this.player.units(UnitType.SAMLauncher);
+    if (chance === 0 || sams.length === 0) {
       return false;
     }
-    const structureToUpgrade = this.findBestStructureToUpgrade(structures);
-    if (structureToUpgrade !== null) {
-      //canUpgradeUnit already checked in findBestStructureToUpgrade and again in UpgradeStructureExecution
-      this.game.addExecution(
-        new UpgradeStructureExecution(this.player, structureToUpgrade.id()),
+    const game = this.game;
+    const config = game.config();
+    for (const unit of this.player.units(SAM_PROTECTED_TYPES)) {
+      const covered = sams.some(
+        (sam) =>
+          game.euclideanDistSquared(unit.tile(), sam.tile()) <=
+          config.samRange(sam.level()) ** 2,
       );
-      return true;
+      if (!covered) {
+        return false;
+      }
     }
-    return false;
+    return chance === 100 || this.random.nextInt(0, 100) < chance;
+  }
+
+  /** The upgradable SAM with the most structure levels in range, i.e. the likeliest nuke target. */
+  private samProtectingMost(): Unit | null {
+    const game = this.game;
+    const config = game.config();
+    const protectable = this.player.units(SAM_PROTECTED_TYPES);
+    let best: Unit | null = null;
+    let bestLevels = -1;
+    for (const sam of this.player.units(UnitType.SAMLauncher)) {
+      if (!this.player.canUpgradeUnit(sam)) continue;
+      const rangeSquared = config.samRange(sam.level()) ** 2;
+      let levels = 0;
+      for (const unit of protectable) {
+        if (
+          game.euclideanDistSquared(unit.tile(), sam.tile()) <= rangeSquared
+        ) {
+          levels += unit.level();
+        }
+      }
+      if (levels > bestLevels) {
+        best = sam;
+        bestLevels = levels;
+      }
+    }
+    return best;
   }
 
   /**
@@ -808,7 +1048,7 @@ export class NationStructureBehavior {
   private getTotalStructureDensity(): number {
     const tilesOwned = this.player.numTilesOwned();
     return tilesOwned > 0
-      ? this.player.units(Structures.types).length / tilesOwned
+      ? this.player.units(DENSITY_STRUCTURE_TYPES).length / tilesOwned
       : 0; //ignoring levels for structures
   }
 

@@ -144,6 +144,10 @@ describe("Graphics tab: advanced options folded in from the in-game modal", () =
 
   it("writes each option into the same settings.graphics shape the old modal used", async () => {
     const el = await mountGraphics();
+    slide(el, "hud-opacity-slider", 50);
+    expect(new UserSettings().hudOpacity()).toBe(0.5);
+    const style = document.documentElement.style;
+    expect(style.getPropertyValue("--hud-opacity")).toBe("0.5");
 
     // Lighting: both sliders are presented inverted/remapped, so the stored
     // value is not the slider value.

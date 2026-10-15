@@ -12,6 +12,10 @@ import {
 } from "@openfront/engine-api/game/GameTypes";
 import { z } from "zod";
 import { base64urlToUuid } from "./Base64";
+import {
+  LEVEL_BADGE_MAX_LEVEL,
+  LEVEL_BADGE_MAX_PRESTIGE,
+} from "./LevelBadgeWire";
 
 const RequiredClanTagSchema = ClanTagSchema.unwrap();
 
@@ -105,8 +109,339 @@ export const RewardSchema = z.object({
   amount: z.string(),
   reason: z.string(),
   note: z.string().nullable(),
+  // On a level reward (`level_up` / `level_milestone`): the level it was
+  // paid for, and the prestige run it was reached in. Absent on every other
+  // reward, and on an API that predates them.
+  level: z.number().optional(),
+  prestige: z.number().optional(),
+  // Why the reward can't be claimed yet; absent when it can. "trust": level
+  // Plutonium, kept until the account is trusted. Any other non-empty value is
+  // a hold this client doesn't know yet, and still reads as held: an unknown
+  // restriction must never read as claimable, so a malformed value (a number,
+  // an object, "") reads as held too. Absent or null: claimable, as from
+  // older APIs.
+  held: z
+    .unknown()
+    .transform((v): string | undefined =>
+      v === undefined || v === null
+        ? undefined
+        : typeof v === "string" && v.length > 0
+          ? v
+          : "unknown",
+    )
+    .optional(),
 });
 export type Reward = z.infer<typeof RewardSchema>;
+
+// The one claimability rule: a reward is claimable unless it carries a hold,
+// whatever kind. Everything that offers a claim, or counts rewards to claim,
+// asks this.
+export function isRewardClaimable(reward: Pick<Reward, "held">): boolean {
+  return reward.held === undefined;
+}
+
+// Player levels / XP ("progression"). Purely cosmetic: levels never affect
+// gameplay, and XP is computed server-side only — the client just displays it.
+// Level 1..100, prestige 0..10; `legend` is level 100 at the last prestige.
+export const ProgressSchema = z.object({
+  prestige: z.number(),
+  level: z.number(),
+  // XP into the current level; 0 at level 100.
+  xpInLevel: z.number(),
+  // XP needed for the next level; 0 at level 100.
+  xpForNext: z.number(),
+  lifetimeXp: z.number(),
+  legend: z.boolean(),
+  canPrestige: z.boolean(),
+  // /users/@me only, for the provisional XP figure shown at death
+  // (src/client/ProvisionalXp.ts). What the player has used today (UTC) of
+  // the per-day XP allowances. Optional, and a malformed block reads as
+  // absent: it must never fail the progress object around it.
+  daily: z
+    .object({
+      // The UTC day ("YYYY-MM-DD", the server's clock) the counts are for.
+      // A game ending on a later day starts from none used.
+      day: z.string().optional().catch(undefined),
+      privateGames: z.number(),
+      singleplayerGames: z.number(),
+      firstGameClaimed: z.boolean(),
+    })
+    .optional()
+    .catch(undefined),
+  // The player's subscription XP multiplier; 1000 = none.
+  subscriberPermille: z.number().optional().catch(undefined),
+});
+export type Progress = z.infer<typeof ProgressSchema>;
+
+// POST /users/@me/prestige — the player's progress after prestiging, and the
+// rewards it granted (unclaimed, like every reward; a Caps bonus at least).
+export const PrestigeResponseSchema = z.object({
+  progress: ProgressSchema,
+  rewards: RewardSchema.array().optional().default([]),
+});
+export type PrestigeResponse = z.infer<typeof PrestigeResponseSchema>;
+
+export const ProgressPositionSchema = z.object({
+  prestige: z.number(),
+  level: z.number(),
+  xpInLevel: z.number(),
+  xpForNext: z.number(),
+});
+export type ProgressPosition = z.infer<typeof ProgressPositionSchema>;
+
+// The breakdown is stored with each game's XP, so it keeps the shape of the
+// XP rules it was scored under. Fields added since the first rules (`played`,
+// `leftEarly`) are missing from older rows, so the per-source fields default
+// rather than failing the whole response.
+export const XpBreakdownSchema = z.object({
+  // Left while still alive: the per-game, placement and win XP are forfeited.
+  leftEarly: z.boolean().default(false),
+  played: z.number().default(0),
+  time: z.number().default(0),
+  placement: z.number().default(0),
+  win: z.number().default(0),
+  firstGame: z.number().default(0),
+  feats: z.number().default(0),
+  // Before multipliers.
+  subtotal: z.number(),
+  // Multipliers in permille: 1000 is 1x.
+  gamePermille: z.number(),
+  subscriberPermille: z.number(),
+  // XP actually awarded.
+  total: z.number(),
+});
+export type XpBreakdown = z.infer<typeof XpBreakdownSchema>;
+
+// A level reward one game earned (GET /users/@me/xp/:gameId `rewards`).
+export const GameXpRewardSchema = RewardSchema.extend({
+  prestige: z.number(),
+  level: z.number(),
+  claimed: z.boolean(),
+});
+export type GameXpReward = z.infer<typeof GameXpRewardSchema>;
+
+// A flare one game unlocked from the level track: a level's (`prestige` and
+// `level` are the run and level crossed) or Legend's (both null). `kind`
+// stays a string so a new kind never fails the parse.
+export const GameXpFlareSchema = z.object({
+  kind: z.string(),
+  prestige: z.number().nullable(),
+  level: z.number().nullable(),
+  flareId: z.string(),
+  flareName: z.string(),
+  // The cosmetic behind the flare, when it is one.
+  cosmetic: z
+    .object({
+      type: z.string(),
+      name: z.string(),
+      url: z.string().nullable(),
+    })
+    .nullable(),
+});
+export type GameXpFlare = z.infer<typeof GameXpFlareSchema>;
+
+// GET /users/@me/xp/:gameId — the XP a finished game awarded the caller. 404
+// until the game has been processed. `reason` is open-ended server-side, so it
+// stays a string: an unknown reason shows a generic line, never a parse error.
+export const GameXpEligibleSchema = z.object({
+  gameId: z.string(),
+  eligible: z.literal(true),
+  breakdown: XpBreakdownSchema,
+  before: ProgressPositionSchema,
+  after: ProgressSchema,
+  // Every level crossed this game, in order.
+  levelsReached: z
+    .array(z.object({ prestige: z.number(), level: z.number() }))
+    .optional()
+    .default([]),
+  // What the levels this game crossed paid: one entry per grant, in level
+  // order, Caps before Plutonium. `id` is the reward to claim while
+  // `claimed` is false. Optional (an API without it still parses), and a
+  // malformed list reads as absent rather than failing the result.
+  rewards: z.array(GameXpRewardSchema).optional().catch(undefined),
+  // The cosmetics this game unlocked from the level track (already granted:
+  // nothing to claim). Same leniency as `rewards`.
+  flares: z.array(GameXpFlareSchema).optional().catch(undefined),
+});
+export const GameXpIneligibleSchema = z.object({
+  gameId: z.string(),
+  eligible: z.literal(false),
+  reason: z.string(),
+});
+export const GameXpResponseSchema = z.discriminatedUnion("eligible", [
+  GameXpEligibleSchema,
+  GameXpIneligibleSchema,
+]);
+export type GameXpEligible = z.infer<typeof GameXpEligibleSchema>;
+export type GameXpIneligible = z.infer<typeof GameXpIneligibleSchema>;
+export type GameXpResponse = z.infer<typeof GameXpResponseSchema>;
+
+// GET /public/player/:publicId/progress — another player's level. No auth.
+export const PublicProgressSchema = z.object({
+  prestige: z.number(),
+  level: z.number(),
+  lifetimeXp: z.number(),
+  legend: z.boolean(),
+  // Progress through the current level (both 0 at level 100), for the profile
+  // card's XP bar. Optional: an API without them still parses, and the bar
+  // is left out.
+  xpInLevel: z.number().optional(),
+  xpForNext: z.number().optional(),
+  // For the profile's Progression tab. Optional, and a malformed list reads
+  // as absent rather than failing the whole response (the level still shows).
+  // When each prestige rank was entered (ISO dates), ordered by rank.
+  prestigeHistory: z
+    .array(z.object({ rank: z.number(), at: z.string() }))
+    .optional()
+    .catch(undefined),
+  // The first time each milestone level (10/25/50/75/100) was reached in each
+  // prestige run (ISO dates), ordered by run then level.
+  milestones: z
+    .array(
+      z.object({ prestige: z.number(), level: z.number(), at: z.string() }),
+    )
+    .optional()
+    .catch(undefined),
+});
+export type PublicProgress = z.infer<typeof PublicProgressSchema>;
+
+// The rules a game's XP is scored under (XpRules in the API's
+// ProgressionConfig.ts): integers, with multipliers in permille.
+export const XpRulesSchema = z.object({
+  minAliveTicks: z.number().int(),
+  gameXp: z.number().int(),
+  xpPerMinute: z.number().int(),
+  timeCapMinutes: z.number().int(),
+  ffaPlacementMax: z.number().int(),
+  ffaWin: z.number().int(),
+  fullLobbyHumans: z.number().int(),
+  teamWin: z.number().int(),
+  teamWinMinAlivePermille: z.number().int(),
+  hvnWin: z.number().int(),
+  firstGameOfDay: z.number().int(),
+  featXp: z.number().int(),
+  maxFeatsPerGame: z.number().int(),
+  publicPermille: z.number().int(),
+  rankedPermille: z.number().int(),
+  privatePermille: z.number().int(),
+  singleplayerPermille: z.number().int(),
+  privateMinHumans: z.number().int(),
+  privateGamesPerDay: z.number().int(),
+  singleplayerGamesPerDay: z.number().int(),
+});
+export type XpRules = z.infer<typeof XpRulesSchema>;
+
+// A player's level as stamped onto rows in other players' lists (the ranked
+// leaderboard, clan member lists), for drawing a level badge. Sent together
+// for a player with progress; absent for one without, while progression is
+// off, and from an API that predates them. Display-only, so a malformed or
+// out-of-range value reads as absent (that row shows no badge) rather than
+// failing the whole list's parse or drawing a level the player doesn't have.
+export const RowLevelFields = {
+  level: z
+    .number()
+    .int()
+    .min(1)
+    .max(LEVEL_BADGE_MAX_LEVEL)
+    .optional()
+    .catch(undefined),
+  prestige: z
+    .number()
+    .int()
+    .min(0)
+    .max(LEVEL_BADGE_MAX_PRESTIGE)
+    .optional()
+    .catch(undefined),
+  legend: z.boolean().optional().catch(undefined),
+};
+
+// A flare staff put on the level track: what reaching a point on it grants.
+// `kind` says what the point is:
+//   level    — reaching `level` in run `prestige` (0 = the first run), or in
+//              any run when `prestige` is null;
+//   prestige — prestiging into rank `prestige`; `level` is null;
+//   legend   — becoming a Legend; both null.
+// `cosmetic` is the cosmetic the flare unlocks, when it is one (its flare
+// name is "<type>:<name>", the way the cosmetics catalog names it).
+export const TrackFlareSchema = z.object({
+  kind: z.string(),
+  level: z.number().nullable(),
+  prestige: z.number().nullable(),
+  flareName: z.string(),
+  cosmetic: z
+    .object({
+      type: z.string(),
+      name: z.string(),
+      url: z.string().nullable().optional(),
+    })
+    .nullable()
+    .optional()
+    .catch(null),
+});
+export type TrackFlare = z.infer<typeof TrackFlareSchema>;
+
+// GET /public/progression/config — the level curve, and the rewards along it.
+// No auth, cacheable. Everything past the curve came later, so it is optional
+// and tolerant: an older API (or one malformed entry) still parses, and the
+// confirmation falls back to what it showed before.
+export const ProgressionConfigSchema = z.object({
+  version: z.number(),
+  maxLevel: z.number(),
+  maxPrestige: z.number(),
+  levels: z.array(
+    z.object({
+      level: z.number(),
+      xpToNext: z.number(),
+      cumulativeXp: z.number(),
+      // Paid on reaching this level, every prestige run.
+      caps: z.number().optional().catch(undefined),
+      plutonium: z.number().optional().catch(undefined),
+    }),
+  ),
+  // The revision of the API's XP formula (computeXp). The client carries a
+  // copy of one revision, for the provisional figure shown at death, and
+  // shows none when this is absent or names another revision.
+  formula: z.number().optional().catch(undefined),
+  // Whether the API scores only multiplayer games whose end-of-game vote
+  // agreed on the stats (true in production).
+  requireStatsAgreed: z.boolean().optional().catch(undefined),
+  // Whether the API scores singleplayer games, which never carry that vote
+  // (at the singleplayer rate and daily cap). The API always sends true; a
+  // malformed value reads as absent, and the client takes that as no.
+  scoresSingleplayer: z.boolean().optional().catch(undefined),
+  // The rules that formula runs on. Absent from older APIs; a malformed block
+  // only loses the provisional figure, never the level curve.
+  xp: XpRulesSchema.optional().catch(undefined),
+  // The rules behind each level's amounts.
+  levelRewards: z
+    .object({
+      capsBands: z.array(
+        z.object({
+          fromLevel: z.number(),
+          toLevel: z.number(),
+          caps: z.number(),
+        }),
+      ),
+      plutonium: z.object({
+        fromLevel: z.number(),
+        everyLevels: z.number(),
+        amount: z.number(),
+      }),
+    })
+    .optional()
+    .catch(undefined),
+  // The Caps every prestige grants.
+  prestige: z.object({ caps: z.number() }).optional().catch(undefined),
+  // In track order. An entry that doesn't parse is dropped, not the list.
+  flares: z
+    .array(TrackFlareSchema.nullable().catch(null))
+    .optional()
+    .catch(undefined)
+    .transform((flares) =>
+      (flares ?? []).filter((f): f is TrackFlare => f !== null),
+    ),
+});
+export type ProgressionConfig = z.infer<typeof ProgressionConfigSchema>;
 
 const CurrencyBalancesSchema = z.object({
   soft: z.coerce.number(),
@@ -122,11 +457,31 @@ export type ClaimRewardResponse = z.infer<typeof ClaimRewardResponseSchema>;
 
 export const ClaimAllRewardsResponseSchema = z.object({
   claimed: z.array(z.object({ id: z.string() })),
+  // The rewards still pending after the claim because they are held (each
+  // with `held`), in /users/@me's reward shape. Empty from older APIs, and
+  // when the list can't be read: the next /users/@me read brings them back.
+  // Read per element, so one malformed row drops only itself.
+  held: z
+    .array(z.unknown())
+    .default([])
+    .catch([])
+    .transform((rows) =>
+      rows.flatMap((row) => {
+        const parsed = RewardSchema.safeParse(row);
+        return parsed.success ? [parsed.data] : [];
+      }),
+    ),
   currency: CurrencyBalancesSchema,
 });
 export type ClaimAllRewardsResponse = z.infer<
   typeof ClaimAllRewardsResponseSchema
 >;
+
+// POST /rewards/:rewardId/claim's 403 for a held reward (RewardSchema.held):
+// it stays pending, and claims once the hold lifts.
+export const ClaimRewardHeldResponseSchema = z.object({
+  held: z.string().min(1),
+});
 
 // Account-username lifecycle. `unclaimed`: no bare-name reservation (default).
 // `claimed`: reservation held but subscription lapsed — the suffix shows again
@@ -197,14 +552,33 @@ export const UserMeResponseSchema = z.object({
     })
     .nullable()
     .optional(),
+  // Owns OpenFront on Steam. A licence is not a subscription: it confers
+  // custom lobbies and the verified name with `subscription` null, so a
+  // licence holder with no subscription has not lapsed.
+  steamLicence: z.boolean().optional().default(false),
+  // ISO date the player's Steam account first owned the base game, or null
+  // when unknown.
+  steamLicenceSince: z.string().nullable().optional().default(null),
+  // Notice keys this player has dismissed (POST /users/@me/notices).
+  noticesSeen: z.array(z.string()).optional().default([]),
+  // The player's most recent automatic tier conversion, if any.
+  tierConversion: z
+    .object({
+      id: z.string(),
+      fromTierName: z.string(),
+      toTierName: z.string(),
+      convertedAt: z.string(),
+    })
+    .nullable()
+    .optional(),
   player: z.object({
     publicId: z.string(),
     adfree: z.boolean(),
-    // True when the player's active subscription tier exempts them from the
-    // free-ranked-play limits.
-    unlimitedRanked: z.boolean(),
+    // Ranked play limits are gone; the API still sends this and a later
+    // release drops it. Nothing reads it.
+    unlimitedRanked: z.boolean().optional(),
     // True when the player may list a custom lobby publicly. The API decides
-    // which subscriptions/grants confer this.
+    // which subscriptions, grants and Steam licences confer this.
     canCreatePublicLobbies: z.boolean(),
     // Account trust as computed by the API. "untrusted" means new, unlinked or
     // banned, never an accusation. null when the API's computation failed;
@@ -247,11 +621,37 @@ export const UserMeResponseSchema = z.object({
             elo: z.number().optional(),
           })
           .optional(),
+        ffa: z
+          .object({
+            elo: z.number().optional(),
+          })
+          .optional(),
       })
       .optional(),
     currency: CurrencyBalancesSchema.optional(),
     // Unclaimed rewards — NOT included in `currency` balances until claimed.
     rewards: RewardSchema.array().optional(),
+    // Level / XP. Absent when progression is off (or on an API that predates
+    // it): every level UI hides itself then. Optional rather than defaulted,
+    // so "absent" never renders as "level 1, 0 XP". A malformed object also
+    // reads as absent: drift in this cosmetic field must never fail the whole
+    // /users/@me parse, which would make the player look signed out.
+    progress: ProgressSchema.optional().catch(undefined),
+    // "Hide my level": true when the player opted out of showing their level
+    // to others. They still earn XP and see their own level; the game server
+    // then leaves the badge off their lobby roster entry. Optional so an older
+    // API without the setting still parses — absent reads as shown, and the
+    // account settings hide the Privacy card. A malformed value reads as
+    // hidden: the server parses this response at join, so a bad value must
+    // never fail the parse and reject the join, and when the setting can't be
+    // read the private answer is the safe one.
+    levelHidden: z.boolean().optional().catch(true),
+    // "Show my profile in search engines" turned off: the public profile page
+    // (openfront.io/player/<publicId>) is served noindex. It still opens for
+    // anyone with the link, and link previews are unchanged. Optional so an
+    // older API without the setting still parses — absent hides the row in
+    // account settings. A malformed value reads as hidden, like levelHidden.
+    searchHidden: z.boolean().optional().catch(true),
     clans: z
       .array(
         z.object({
@@ -309,6 +709,11 @@ export const UserMeResponseSchema = z.object({
         // client. An unrecognised value is simply not `null`, which lands on
         // the paid behaviour — the safe side.
         provider: z.string().nullable().optional(),
+        // Who gave a GRANTED subscription: "steam", "admin" or
+        // "discord_role", and null on a paid one. Absent on a server that
+        // predates the field; see `isSteamGrant` for what that falls back to.
+        // Loose `z.string()` for the same reason as `provider`.
+        grantSource: z.string().nullable().optional(),
       })
       .nullable(),
     // A Stripe subscription whose renewal failed and is still being retried,
@@ -351,6 +756,12 @@ export const UserMeResponseSchema = z.object({
   }),
 });
 export type UserMeResponse = z.infer<typeof UserMeResponseSchema>;
+
+// PUT /users/@me/level_visibility and /users/@me/search_visibility { hidden }
+// — the stored setting, echoed.
+export const VisibilityResponseSchema = z.object({
+  hidden: z.boolean(),
+});
 export type UserSubscription = NonNullable<
   NonNullable<UserMeResponse["player"]["subscription"]>
 >;
@@ -387,6 +798,36 @@ export function isGrantedSubscription(
 ): boolean {
   if (sub === null || sub === undefined) return false;
   return sub.provider === null;
+}
+
+/**
+ * Is a Steam month currently funding this grant?
+ *
+ * Not the same as "the subscription was bought on Steam". The server answers
+ * "steam" for a row Steam created AND for an admin comp or Discord-role grant
+ * that a Steam month is extending in place; once that month is spent the row
+ * goes back to its own grantor and stays entitled. So this says where the
+ * current period came from, and nothing about what happens when it ends.
+ *
+ * The one definition, shared by the account panel and the Steam grant notices,
+ * both of which tell the player their current access came with a purchase. An
+ * admin can give a grant an end date too, so the date alone does not say that.
+ *
+ *   "steam"   — yes.
+ *   any other value — no: an admin comp or a Discord-role grant.
+ *   undefined — the server predates the field, and the old rule still holds
+ *               there: a dated grant is a Steam month. Such a server cannot
+ *               write a dated admin grant (both arrived in one deploy). Nor
+ *               a dated Discord-role grant without Steam: the role sync
+ *               inserts those open-ended, and only a Steam month extending
+ *               one gives it a date — which the current server reports as
+ *               "steam" too, so the fallback and the field agree.
+ */
+export function isSteamGrant(
+  sub: UserSubscription | null | undefined,
+): boolean {
+  if (!isGrantedSubscription(sub) || !sub?.currentPeriodEnd) return false;
+  return sub.grantSource === "steam" || sub.grantSource === undefined;
 }
 
 // PUT /users/@me/username success payload. `username` is the resolved display
@@ -683,6 +1124,8 @@ const RecentRankedStatsSchema = z.object({
   all: PlayerRecentStatsSchema,
   [RankedType.OneVOne]: PlayerRecentStatsSchema.optional(),
   [RankedType.TwoVTwo]: PlayerRecentStatsSchema.optional(),
+  [RankedType.FreeForAll]: PlayerRecentStatsSchema.optional(),
+  [RankedType.ClanWars]: PlayerRecentStatsSchema.optional(),
 });
 
 export const PlayerRecentStatsTreeSchema = z.object({
@@ -804,6 +1247,7 @@ export const PlayerLeaderboardEntrySchema = z.object({
   wins: z.number(),
   losses: z.number(),
   winRate: z.number(),
+  ...RowLevelFields,
 });
 export type PlayerLeaderboardEntry = z.infer<
   typeof PlayerLeaderboardEntrySchema
@@ -827,6 +1271,7 @@ export const RankedLeaderboardEntrySchema = z.object({
   // Account username (null = never set). The client displays
   // `accountUsername ?? public_id`.
   accountUsername: z.string().nullable(),
+  ...RowLevelFields,
 });
 export type RankedLeaderboardEntry = z.infer<
   typeof RankedLeaderboardEntrySchema
@@ -838,6 +1283,8 @@ export const RankedLeaderboardResponseSchema = z.object({
   // appear on both with a different elo and rank. Defaulted because an API
   // deployment that predates the 2v2 ladder omits the key entirely.
   [RankedType.TwoVTwo]: RankedLeaderboardEntrySchema.array().default([]),
+  // Defaulted for the same reason: older APIs have no FFA ladder.
+  [RankedType.FreeForAll]: RankedLeaderboardEntrySchema.array().default([]),
 });
 export type RankedLeaderboardResponse = z.infer<
   typeof RankedLeaderboardResponseSchema

@@ -20,7 +20,7 @@
     "dev:prod": "cross-env GAME_ENV=dev API_DOMAIN=api.openfront.io concurrently \"npm run start:client\" \"npm run start:server-dev\"",
     "docs:map-generator": "cd map-generator && go doc -cmd -u -all",
     "tunnel": "npm run build-prod && npm run start:server",
-    "test": "vitest run && vitest run tests/server",
+    "test": "vitest run",
     "test:matchmaking": "node tests/matchmaking/contained.mjs",
     "test:matchmaking:e2e": "node tests/matchmaking/e2e.mjs",
     "test:matchmaking:cancel": "node tests/matchmaking/e2e-cancel.mjs",
@@ -41,7 +41,7 @@
     "lint:eslint": "eslint",
     "lint:eslint:fix": "eslint --fix",
     "prepare": "husky",
-    "gen-maps": "cd map-generator && go run . && npm run format",
+    "gen-maps": "cd map-generator && go run -tags nodynamic . && npm run format",
     "inst": "npm ci --ignore-scripts"
   },
   "lint-staged": {

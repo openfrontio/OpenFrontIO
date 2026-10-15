@@ -2,6 +2,7 @@ import type { NewsItem, StreamsFeed } from "@openfront/shared/ApiSchemas";
 import {
   ClaimAllRewardsResponse,
   ClaimAllRewardsResponseSchema,
+  ClaimRewardHeldResponseSchema,
   ClaimRewardResponse,
   ClaimRewardResponseSchema,
   GetMyTribeNamesResponse,
@@ -43,6 +44,7 @@ import {
   TribeStatsResponseSchema,
   UserMeResponse,
   UserMeResponseSchema,
+  VisibilityResponseSchema,
 } from "@openfront/shared/ApiSchemas";
 import {
   AnalyticsRecord,
@@ -316,6 +318,15 @@ export function invalidateUserMe() {
   __userMe = null;
 }
 
+/**
+ * The profile as it is now, for a caller that needs it fresh but must not
+ * disturb everyone else's copy: getUserMe's cache is left as it was whatever
+ * this answers, so a failed request can never stand in for a good profile.
+ */
+export async function fetchUserMeUncached(): Promise<UserMeResponse | false> {
+  return (await requestUserMe()).profile;
+}
+
 export type DeleteAccountResult =
   // 204: deletion queued — the server deletes the account 24 hours later.
   | { ok: true }
@@ -407,6 +418,72 @@ export async function setMarketingConsent(
     console.error("setMarketingConsent: request failed", e);
     return false;
   }
+}
+
+export type SetVisibilityResult =
+  // 200: the stored setting, as the server echoes it.
+  | { ok: true; hidden: boolean }
+  // 401: the session is gone; logOut() has already run.
+  | { ok: false; code: "logged_out" }
+  // Anything else (400, 429, 5xx, network, unreadable body): nothing to act on
+  // beyond "try again".
+  | { ok: false; code: "failed" };
+
+// PUT /users/@me/<setting> { hidden }: the one write path behind every privacy
+// toggle, so each setter differs only in its endpoint. Idempotent: the body is
+// the desired state. Invalidates the cached /users/@me on success so the next
+// read reflects it.
+async function putVisibility(
+  setting: "level_visibility" | "search_visibility",
+  hidden: boolean,
+): Promise<SetVisibilityResult> {
+  try {
+    const response = await fetch(`${getApiBase()}/users/@me/${setting}`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: await getAuthHeader(),
+      },
+      body: JSON.stringify({ hidden }),
+    });
+    if (response.status === 401) {
+      await logOut();
+      return { ok: false, code: "logged_out" };
+    }
+    if (!response.ok) {
+      console.error(
+        `PUT ${setting}: request failed`,
+        response.status,
+        response.statusText,
+      );
+      return { ok: false, code: "failed" };
+    }
+    const parsed = VisibilityResponseSchema.safeParse(await response.json());
+    if (!parsed.success) {
+      console.error(`PUT ${setting}: Zod validation failed`, parsed.error);
+      return { ok: false, code: "failed" };
+    }
+    invalidateUserMe();
+    return { ok: true, hidden: parsed.data.hidden };
+  } catch (e) {
+    console.error(`PUT ${setting}: request failed`, e);
+    return { ok: false, code: "failed" };
+  }
+}
+
+// "Hide my level".
+export function setLevelVisibility(
+  hidden: boolean,
+): Promise<SetVisibilityResult> {
+  return putVisibility("level_visibility", hidden);
+}
+
+// "Keep my profile out of search engines" (the public profile page is served
+// noindex).
+export function setSearchVisibility(
+  hidden: boolean,
+): Promise<SetVisibilityResult> {
+  return putVisibility("search_visibility", hidden);
 }
 
 // The sites a player can generate an identity token for. Fails closed: any
@@ -1392,10 +1469,13 @@ export async function purchaseCosmeticPack(
 // credits the balance atomically. "not_found" covers unknown, already-claimed
 // and other players' rewards (indistinguishable by design); the usual cause is
 // a double-click or a second device claiming first, so callers should re-fetch
-// /users/@me and re-render rather than surface an error.
+// /users/@me and re-render rather than surface an error. `{ held }` is a reward
+// that can't be claimed yet (e.g. "trust": level Plutonium on an account that
+// isn't trusted): a 403 naming the hold, whose kind is passed on as named. It
+// stays pending, so nothing is lost.
 export async function claimReward(
   rewardId: string,
-): Promise<ClaimRewardResponse | "not_found" | false> {
+): Promise<ClaimRewardResponse | "not_found" | { held: string } | false> {
   try {
     const response = await fetch(
       `${getApiBase()}/rewards/${encodeURIComponent(rewardId)}/claim`,
@@ -1411,6 +1491,12 @@ export async function claimReward(
       return false;
     }
     if (response.status === 404) return "not_found";
+    if (response.status === 403) {
+      const hold = ClaimRewardHeldResponseSchema.safeParse(
+        await response.json().catch(() => null),
+      );
+      if (hold.success) return { held: hold.data.held };
+    }
     if (!response.ok) {
       console.error(
         "claimReward: request failed",
@@ -1526,6 +1612,8 @@ export type PaymentsCheckoutResult =
   // "Invalid hostname", soft_pack_not_purchasable) or a 200 body we could not
   // read. Not actionable by the player; log it and show a generic failure.
   | { ok: false; code: "client_bug" }
+  // 403: the tier is sold only to players who own OpenFront on Steam.
+  | { ok: false; code: "steam_licence_required" }
   // 400 "Pack not available" / "Tier not available": the catalog this client
   // rendered from is stale. Refetch cosmetics.json before showing the store
   // again.
@@ -1746,6 +1834,10 @@ export async function createPaymentsCheckout(
         }
       }
 
+      if (response.status === 403 && reason === "steam_licence_required") {
+        return { ok: false, code: "steam_licence_required" };
+      }
+
       if (response.status === 501 && provider !== null) {
         return { ok: false, code: "provider_unavailable", provider };
       }
@@ -1878,9 +1970,34 @@ export async function cancelSubscription(): Promise<boolean> {
   }
 }
 
+export async function markNoticeSeen(notice: string): Promise<boolean> {
+  try {
+    const response = await fetch(`${getApiBase()}/users/@me/notices`, {
+      method: "POST",
+      headers: {
+        Authorization: await getAuthHeader(),
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ notice }),
+    });
+    if (!response.ok) {
+      console.error(
+        "markNoticeSeen: request failed",
+        response.status,
+        response.statusText,
+      );
+      return false;
+    }
+    return true;
+  } catch (e) {
+    console.error("markNoticeSeen: request failed", e);
+    return false;
+  }
+}
+
 export async function changeSubscriptionTier(
   tierName: string,
-): Promise<boolean | "rate_limited"> {
+): Promise<boolean | "rate_limited" | "steam_licence_required"> {
   try {
     const response = await fetch(
       `${getApiBase()}/subscriptions/@me/change-tier`,
@@ -1900,6 +2017,12 @@ export async function changeSubscriptionTier(
     // The API allows one tier change per minute per player.
     if (response.status === 429) {
       return "rate_limited";
+    }
+    if (response.status === 403) {
+      const body = await response.json().catch(() => null);
+      if (body?.reason === "steam_licence_required") {
+        return "steam_licence_required";
+      }
     }
     if (!response.ok) {
       console.error(

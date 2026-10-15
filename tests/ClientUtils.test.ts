@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 // Mock the 'maps' array from '@openfront/engine-api/game/GameTypes' to ensure consistent test results

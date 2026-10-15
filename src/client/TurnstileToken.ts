@@ -193,7 +193,7 @@ export async function resolveTurnstileToken(deps: {
   /** The boot-time prefetch, or null when there is none to reuse. */
   prefetch: Promise<TurnstileToken> | null;
   requestFresh: () => Promise<TurnstileToken>;
-  /** CrazyGames always wants a token minted for this join. */
+  /** Portals always want a token minted for this join. */
   forceFresh?: boolean;
   /** Shows the error modal. Called at most once, for the final failure. */
   onError: (code: string) => void;
