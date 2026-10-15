@@ -11,9 +11,9 @@ import { html, LitElement, nothing } from "lit";
 import { customElement } from "lit/decorators.js";
 import { Controller } from "../../Controller";
 import { ToggleStructureEvent } from "../../InputHandler";
+import { KeyboardLayoutController } from "../../KeyboardLayout";
 import { UIState } from "../../UIState";
 import { UserSettings } from "../../UserSettings";
-import { KeyboardLayoutController } from "../../KeyboardLayout";
 import { resolveKeybindLabel, translateText } from "../../Utils";
 import { GameView } from "../../view";
 import {
@@ -264,7 +264,9 @@ export class UnitDisplay extends LitElement implements Controller {
                 class="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 text-gray-200 text-center w-max text-xs bg-gray-800/90 backdrop-blur-xs rounded-sm p-1 z-[100] shadow-lg pointer-events-none"
               >
                 <div class="font-bold text-sm mb-1">
-                  ${translateText("unit_type." + structureKey)}${hotkey ? ` [${displayHotkey}]` : ""}
+                  ${translateText("unit_type." + structureKey)}${hotkey
+                    ? ` [${displayHotkey}]`
+                    : ""}
                 </div>
                 <div class="p-2">
                   ${translateText("build_menu.desc." + structureKey)}
@@ -322,12 +324,12 @@ export class UnitDisplay extends LitElement implements Controller {
             this.eventBus?.emit(new ToggleStructureEvent(null))}
         >
           ${hotkey
-          ? html`<div
-              class="ml-0.5 text-[10px] relative -top-1 text-gray-400"
-            >
-              ${displayHotkey}
-            </div>`
-          : nothing}
+            ? html`<div
+                class="ml-0.5 text-[10px] relative -top-1 text-gray-400"
+              >
+                ${displayHotkey}
+              </div>`
+            : nothing}
           <div class="flex items-center gap-0.5 pt-0.5">
             <img src=${icon} alt=${structureKey} class="align-middle size-5" />
             ${number !== null

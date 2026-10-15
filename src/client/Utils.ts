@@ -330,10 +330,12 @@ export function formatPercentage(value: number): string {
  * formatKeyForDisplay("ArrowUp") // returns "Arrowup"
  * formatKeyForDisplay("") // returns ""
  */
-export type KeybindEntry = {
-  key?: string;
-  value?: string | string[];
-} | string;
+export type KeybindEntry =
+  | {
+      key?: string;
+      value?: string | string[];
+    }
+  | string;
 
 /**
  * Resolve a saved physical key code into the character shown for the user's

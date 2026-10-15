@@ -8,11 +8,11 @@ import { EventBus } from "@openfront/shared/EventBus";
 import { LitElement, html, nothing } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import { Controller } from "../../Controller";
+import { KeyboardLayoutController } from "../../KeyboardLayout";
 import { Platform } from "../../Platform";
 import { GoToPlayerEvent } from "../../TransformHandler";
 import { UIState } from "../../UIState";
 import { UserSettings } from "../../UserSettings";
-import { KeyboardLayoutController } from "../../KeyboardLayout";
 import { resolveKeybindLabel, textDirection, translateText } from "../../Utils";
 import { GameView } from "../../view";
 import { PlayerView } from "../../view/PlayerView";
@@ -104,7 +104,10 @@ export class TutorialPanel extends LitElement implements Controller {
   private progress = new TutorialProgress();
   private started = false;
   private costs = new Map<UnitType, bigint>();
-  private keybinds: Record<string, { key?: string; value?: string | string[] }> | null = null;
+  private keybinds: Record<
+    string,
+    { key?: string; value?: string | string[] }
+  > | null = null;
   private keyboardLayout = new KeyboardLayoutController(this);
   private mapMarksActive = false;
   /** Latched: an atom bomb of ours was seen in flight at least once. */

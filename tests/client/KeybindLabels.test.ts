@@ -54,7 +54,8 @@ describe("HelpModal keyboard layout refresh", () => {
         originalDescriptor,
       );
     } else {
-      delete (Navigator.prototype as unknown as { keyboard?: unknown }).keyboard;
+      delete (Navigator.prototype as unknown as { keyboard?: unknown })
+        .keyboard;
     }
     vi.restoreAllMocks();
   });

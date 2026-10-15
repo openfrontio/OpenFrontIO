@@ -52,10 +52,7 @@ export class HelpModal extends BaseModal {
       Comma: "<",
     };
 
-    if (
-      (code === "Period" || code === "Comma") &&
-      layoutMap?.has(code)
-    ) {
+    if ((code === "Period" || code === "Comma") && layoutMap?.has(code)) {
       return layoutMap.get(code)!.toUpperCase();
     }
     if (
