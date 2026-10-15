@@ -12,7 +12,8 @@ import { Platform } from "../../Platform";
 import { GoToPlayerEvent } from "../../TransformHandler";
 import { UIState } from "../../UIState";
 import { UserSettings } from "../../UserSettings";
-import { textDirection, translateText } from "../../Utils";
+import { KeyboardLayoutController } from "../../KeyboardLayout";
+import { resolveKeybindLabel, textDirection, translateText } from "../../Utils";
 import { GameView } from "../../view";
 import { PlayerView } from "../../view/PlayerView";
 import {
@@ -80,13 +81,13 @@ const TOUCH_TEXT_STEPS = new Set([
 
 /** Defaults shown when the player hasn't rebound the action (see UnitDisplay). */
 const HOTKEY_FALLBACKS = {
-  buildCity: "1",
-  buildFactory: "2",
-  buildPort: "3",
-  buildDefensePost: "4",
-  buildWarship: "7",
-  buildMissileSilo: "5",
-  buildAtomBomb: "8",
+  buildCity: "Digit1",
+  buildFactory: "Digit2",
+  buildPort: "Digit3",
+  buildDefensePost: "Digit4",
+  buildWarship: "Digit7",
+  buildMissileSilo: "Digit5",
+  buildAtomBomb: "Digit8",
 } as const;
 
 @customElement("tutorial-panel")
@@ -103,7 +104,8 @@ export class TutorialPanel extends LitElement implements Controller {
   private progress = new TutorialProgress();
   private started = false;
   private costs = new Map<UnitType, bigint>();
-  private keybinds: Record<string, { key?: string }> | null = null;
+  private keybinds: Record<string, { key?: string; value?: string | string[] }> | null = null;
+  private keyboardLayout = new KeyboardLayoutController(this);
   private mapMarksActive = false;
   /** Latched: an atom bomb of ours was seen in flight at least once. */
   private atomLaunchSeen = false;
@@ -387,7 +389,9 @@ export class TutorialPanel extends LitElement implements Controller {
   private hotkeyFor(step: TutorialStep): string {
     if (!step.hotkey) return "";
     this.keybinds ??= this.userSettings.parsedUserKeybinds();
-    return this.keybinds[step.hotkey]?.key ?? HOTKEY_FALLBACKS[step.hotkey];
+    const entry = this.keybinds[step.hotkey];
+    const defaultCode = HOTKEY_FALLBACKS[step.hotkey] || "";
+    return resolveKeybindLabel(entry, defaultCode, this.keyboardLayout.map);
   }
 
   private setHighlight(target: TutorialHighlight | null) {

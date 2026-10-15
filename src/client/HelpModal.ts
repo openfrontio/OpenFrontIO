@@ -10,6 +10,7 @@ import {
 import { BaseModal } from "./components/BaseModal";
 import "./components/Difficulties";
 import { modalHeader } from "./components/ui/ModalHeader";
+import { KeyboardLayoutController } from "./KeyboardLayout";
 import { Platform } from "./Platform";
 import { TroubleshootingModal } from "./TroubleshootingModal";
 import { UserSettings } from "./UserSettings";
@@ -21,6 +22,7 @@ export class HelpModal extends BaseModal {
   @state() private keybinds: Record<string, string> = this.getKeybinds();
   @query("#tutorial-video-iframe") private videoIframe?: HTMLIFrameElement;
   @query("#tutorial-video-player") private videoPlayer?: HTMLVideoElement;
+  private keyboardLayout = new KeyboardLayoutController(this);
 
   private getKeybinds(): Record<string, string> {
     return new UserSettings().keybinds(Platform.isMac);
@@ -28,6 +30,7 @@ export class HelpModal extends BaseModal {
 
   private getKeyLabel(code: string): string {
     if (!code) return "";
+    const layoutMap = this.keyboardLayout.map;
 
     const specialLabels: Record<string, string> = {
       ShiftLeft: "⇧ Shift",
@@ -48,6 +51,20 @@ export class HelpModal extends BaseModal {
       Period: ">",
       Comma: "<",
     };
+
+    if (
+      (code === "Period" || code === "Comma") &&
+      layoutMap?.has(code)
+    ) {
+      return layoutMap.get(code)!.toUpperCase();
+    }
+    if (
+      layoutMap?.has(code) &&
+      !code.startsWith("Digit") &&
+      !code.startsWith("Numpad")
+    ) {
+      return layoutMap.get(code)!.toUpperCase();
+    }
 
     if (specialLabels[code]) return specialLabels[code];
     if (code.startsWith("Key") && code.length === 4) return code.slice(3);
