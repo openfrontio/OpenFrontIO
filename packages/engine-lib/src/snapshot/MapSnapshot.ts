@@ -117,6 +117,7 @@ const PlayerTilesSchema = z
   .passthrough();
 
 export interface RestoredMapsResult {
+  tick: number;
   startTick: number | null;
 }
 
@@ -162,6 +163,7 @@ export function restoreMapsFromSnapshot(
     }
   }
   return {
+    tick: root.tick,
     startTick: readStartTick(root.game?.d),
   };
 }

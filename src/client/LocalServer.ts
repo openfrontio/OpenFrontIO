@@ -4,7 +4,6 @@ import {
   StampedIntent,
   Turn,
 } from "@openfront/engine-api/Schemas";
-import { readSnapshotHeader } from "@openfront/engine-lib/snapshot/MapSnapshot";
 import { EventBus } from "@openfront/shared/EventBus";
 import {
   createPartialGameRecord,
@@ -157,13 +156,8 @@ export class LocalServer {
     ) {
       this.turns = [...this.lobbyConfig.resumeTurns];
     }
-    if (this.lobbyConfig.resumeSnapshot) {
-      try {
-        const header = readSnapshotHeader(this.lobbyConfig.resumeSnapshot);
-        this.turnOffset = header.tick;
-      } catch (e) {
-        console.warn("Failed to read snapshot header for turnOffset", e);
-      }
+    if (this.lobbyConfig.resumeTick !== undefined) {
+      this.turnOffset = this.lobbyConfig.resumeTick;
     }
     this.clientMessage({
       type: "start",

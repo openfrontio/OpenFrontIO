@@ -18,10 +18,7 @@ import {
   loadTerrainMap,
   TerrainMapData,
 } from "@openfront/engine-lib/game/TerrainMapLoader";
-import {
-  readSnapshotHeader,
-  restoreMapsFromSnapshot,
-} from "@openfront/engine-lib/snapshot/MapSnapshot";
+import { restoreMapsFromSnapshot } from "@openfront/engine-lib/snapshot/MapSnapshot";
 import { EventBus } from "@openfront/shared/EventBus";
 import { GameMapLoader, loadMapFiles } from "@openfront/shared/GameMapLoader";
 import { replacer } from "@openfront/shared/SharedUtil";
@@ -125,6 +122,7 @@ export interface LobbyConfig {
   // Saved historical turns when resuming a solo match.
   resumeTurns?: Turn[];
   resumeSnapshot?: Uint8Array;
+  resumeTick?: number;
   // Host only: the play token the lobby was created under, used for the
   // first join so the host joins as the creator (see createLobby).
   creatorToken?: string;
@@ -740,6 +738,7 @@ export async function createClientGame(
         gameMap.miniGameMap,
       );
       initialStartTick = restored.startTick;
+      lobbyConfig.resumeTick = restored.tick;
     } catch (e) {
       worker.cleanup();
       console.warn("Failed to restore maps from snapshot", e);
@@ -990,13 +989,8 @@ export class ClientGameRunner {
     private metrics: GameMetrics | null = null,
   ) {
     this.lastMessageTime = Date.now();
-    if (this.lobby.resumeSnapshot) {
-      try {
-        const header = readSnapshotHeader(this.lobby.resumeSnapshot);
-        this.turnsSeen = header.tick;
-      } catch (e) {
-        console.warn("Failed to read snapshot header for turnsSeen", e);
-      }
+    if (this.lobby.resumeTick !== undefined) {
+      this.turnsSeen = this.lobby.resumeTick;
     }
   }
 

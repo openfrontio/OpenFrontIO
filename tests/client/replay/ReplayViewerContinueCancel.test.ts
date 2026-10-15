@@ -143,6 +143,9 @@ describe("ReplayViewer continue game cancellation", () => {
     );
 
     expect(joinLobbyListener).toHaveBeenCalledTimes(1);
+    expect(joinLobbyListener.mock.calls[0][0].detail.resumeTick).toBe(
+      viewer.tick,
+    );
     expect(viewer.continueModalOpen).toBe(false);
     document.removeEventListener("join-lobby", joinLobbyListener);
   });

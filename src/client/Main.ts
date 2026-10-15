@@ -256,6 +256,7 @@ export interface JoinLobbyEvent {
   spectator?: boolean;
   resumeTurns?: Turn[];
   resumeSnapshot?: Uint8Array;
+  resumeTick?: number;
   // Host only: the play token the lobby was created under (see createLobby).
   creatorToken?: string;
 }
@@ -1860,6 +1861,7 @@ class Client {
       spectator: lobby.spectator,
       resumeTurns: lobby.resumeTurns,
       resumeSnapshot: lobby.resumeSnapshot,
+      resumeTick: lobby.resumeTick,
       creatorToken: lobby.creatorToken,
     });
 

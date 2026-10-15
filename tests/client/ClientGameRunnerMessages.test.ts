@@ -87,13 +87,6 @@ vi.mock("../../src/client/WorkerClient", () => ({
   WorkerClient: class {},
 }));
 vi.mock("@openfront/engine-lib/snapshot/MapSnapshot", () => ({
-  readSnapshotHeader: vi.fn((bytes: Uint8Array) => ({
-    format: 1,
-    gitCommit: "test-commit",
-    gameID: "game1234",
-    tick: 200,
-    gameConfig: {},
-  })),
   compressSnapshot: vi.fn(async (raw) => raw),
   restoreMapsFromSnapshot: vi.fn(),
 }));
@@ -124,6 +117,7 @@ import { reloadForUpdate } from "../../src/client/Utils";
 function makeLobbyConfig(
   withStartInfo: boolean,
   resumeSnapshot?: Uint8Array,
+  resumeTick?: number,
 ): LobbyConfig {
   return {
     gameID: "game1234",
@@ -136,6 +130,7 @@ function makeLobbyConfig(
       ? { gameStartInfo: { gameID: "game1234", config: {} } }
       : {}),
     ...(resumeSnapshot ? { resumeSnapshot } : {}),
+    ...(resumeTick !== undefined ? { resumeTick } : {}),
   } as unknown as LobbyConfig;
 }
 
@@ -147,6 +142,7 @@ function makeStartedRunner(
     isLocal?: boolean;
     metrics?: object;
     resumeSnapshot?: Uint8Array;
+    resumeTick?: number;
   } = {},
 ) {
   const eventBus = new EventBus();
@@ -175,7 +171,7 @@ function makeStartedRunner(
   const userSettings = { goToPlayer: () => false };
 
   const runner = new ClientGameRunner(
-    makeLobbyConfig(withStartInfo, opts.resumeSnapshot),
+    makeLobbyConfig(withStartInfo, opts.resumeSnapshot, opts.resumeTick),
     "c0000001",
     eventBus,
     renderer as never,
@@ -308,6 +304,7 @@ describe("ClientGameRunner in-game messages", () => {
   it("initializes turnsSeen from snapshot tick when resuming from snapshot so the first turn reaches worker.sendTurn", () => {
     const { worker, onmessage } = makeStartedRunner(true, {
       resumeSnapshot: new Uint8Array([1, 2, 3]),
+      resumeTick: 200,
     });
     const turn = { turnNumber: 200, intents: [] };
 

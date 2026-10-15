@@ -19,16 +19,6 @@ vi.mock("src/client/ClientEnv", () => ({
   },
 }));
 
-vi.mock("@openfront/engine-lib/snapshot/MapSnapshot", () => ({
-  readSnapshotHeader: vi.fn(() => ({
-    format: 1,
-    gitCommit: "DEV",
-    gameID: "gameID12",
-    tick: 200,
-    gameConfig: {},
-  })),
-}));
-
 import { LocalServer } from "../../src/client/LocalServer";
 
 const CLIENT_ID = "abCD1234";
@@ -121,12 +111,13 @@ describe("LocalServer edge cases", () => {
     expect(messages.filter((m) => m.type === "desync")).toHaveLength(1);
   });
 
-  it("offsets turns and hash lookup by snapshot header tick when resuming from snapshot", () => {
+  it("offsets turns and hash lookup by resumeTick when resuming from snapshot", () => {
     const messages: ServerMessage[] = [];
     const server = new LocalServer(
       {
         gameStartInfo: makeGameStartInfo(),
         resumeSnapshot: new Uint8Array([1, 2, 3]),
+        resumeTick: 200,
         playerName: "TestUser",
         playerClanTag: null,
       } as any,

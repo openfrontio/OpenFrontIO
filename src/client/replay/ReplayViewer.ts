@@ -901,6 +901,7 @@ export class ReplayViewer extends LitElement {
           gameStartInfo,
           source: "singleplayer",
           resumeSnapshot: snapshot,
+          resumeTick: this.tick,
         } satisfies JoinLobbyEvent,
         bubbles: true,
         composed: true,
