@@ -2649,6 +2649,7 @@
     "lobby_start_alerts_desc": "Play the start chime for each lobby and ranked match by default and show a desktop notification when permitted. You can override it with the lobby bell.",
     "lobby_start_alerts_label": "Lobby Start Alerts",
     "menu_shortcuts": "Menu Shortcuts",
+    "modifiers": "Modifiers",
     "move_down": "Move Camera Down",
     "move_down_desc": "Move the camera downward",
     "move_left": "Move Camera Left",

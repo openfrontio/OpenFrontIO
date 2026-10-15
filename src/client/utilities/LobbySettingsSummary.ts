@@ -5,12 +5,37 @@ import {
   GameType,
 } from "@openfront/engine-api/game/GameTypes";
 import { GameConfig } from "@openfront/engine-api/Schemas";
+import { html, TemplateResult } from "lit";
 import { renderDuration, translateText } from "../../client/Utils";
 
+// The homepage lobby card's modifier pill, one size down: a lobby can run a
+// dozen settings and they all have to fit beside the preview.
+export const LOBBY_SETTING_TAG =
+  "rounded bg-malibu-blue px-1.5 py-0.5 text-[11px] font-bold tracking-widest text-white";
+
+const DISABLED_UNIT_KEYS: Record<string, string> = {
+  City: "unit_type.city",
+  Port: "unit_type.port",
+  "Defense Post": "unit_type.defense_post",
+  "SAM Launcher": "unit_type.sam_launcher",
+  "Missile Silo": "unit_type.missile_silo",
+  Warship: "unit_type.warship",
+  Factory: "unit_type.factory",
+  "Atom Bomb": "unit_type.atom_bomb",
+  "Hydrogen Bomb": "unit_type.hydrogen_bomb",
+  MIRV: "unit_type.mirv",
+  "Trade Ship": "player_stats_table.unit.trade",
+  Transport: "player_stats_table.unit.trans",
+  "MIRV Warhead": "player_stats_table.unit.mirvw",
+};
+
+const millions = (gold: number) =>
+  `${parseFloat((gold / 1_000_000).toPrecision(12))}M`;
+
 // Non-default settings worth surfacing, shared by the join modal (post-join
-// config view and open-lobby rows) and the custom-lobby info tooltip on
-// lobby cards. Pass null nationCount to skip the numeric-nations
-// default comparison (it needs the map manifest, loaded only post-join).
+// config view and open-lobby rows), the in-game menu and the custom-lobby
+// info tooltip on lobby cards. Pass null nationCount to skip the
+// numeric-nations default comparison (it needs the map's nation list).
 export function notableLobbySettings(
   c: GameConfig,
   nationCount: number | null,
@@ -70,7 +95,7 @@ export function notableLobbySettings(
   if (c.startingGold)
     items.push({
       label: translateText("private_lobby.starting_gold"),
-      value: `${parseFloat((c.startingGold / 1_000_000).toPrecision(12))}M`,
+      value: millions(c.startingGold),
     });
   if (c.goldMultiplier)
     items.push({
@@ -170,4 +195,77 @@ export function lobbySettingTagText(setting: {
   return setting.value === translateText("common.enabled")
     ? label
     : `${label}: ${setting.value}`;
+}
+
+/** The units the lobby turned off, as a red box; null when none are. */
+export function disabledUnitsBox(
+  c: GameConfig,
+  className: string,
+): TemplateResult | null {
+  if (!c.disabledUnits?.length) return null;
+  return html`
+    <div
+      data-disabled-units
+      class="${className} p-3 bg-red-500/10 border border-red-500/20 rounded-lg"
+    >
+      <div
+        class="text-xs font-bold text-red-400 uppercase tracking-widest mb-2"
+      >
+        ${translateText("private_lobby.disabled_units")}
+      </div>
+      <div class="flex flex-wrap gap-2">
+        ${c.disabledUnits.map((unit) => {
+          const key = DISABLED_UNIT_KEYS[unit];
+          return html`<span
+            class="px-2 py-1 bg-red-500/20 text-red-200 text-xs rounded font-bold border border-red-500/30"
+            >${key ? translateText(key) : unit}</span
+          >`;
+        })}
+      </div>
+    </div>
+  `;
+}
+
+/** The lobby host's cheats, as a yellow box; null when there are none. */
+export function hostCheatsBox(
+  c: GameConfig,
+  className: string,
+): TemplateResult | null {
+  const hc = c.hostCheats;
+  if (!hc) return null;
+  const cheats: string[] = [];
+  if (hc.infiniteGold)
+    cheats.push(translateText("game_settings.infinite_gold"));
+  if (hc.infiniteTroops)
+    cheats.push(translateText("game_settings.infinite_troops"));
+  if (hc.goldMultiplier)
+    cheats.push(
+      `${translateText("game_settings.gold_multiplier")}: x${hc.goldMultiplier}`,
+    );
+  if (hc.startingGold)
+    cheats.push(
+      `${translateText("private_lobby.starting_gold")}: ${millions(hc.startingGold)}`,
+    );
+  if (cheats.length === 0) return null;
+  return html`
+    <div
+      data-host-cheats
+      class="${className} p-3 bg-yellow-500/10 border border-yellow-500/20 rounded-lg"
+    >
+      <div
+        class="text-xs font-bold text-yellow-400 uppercase tracking-widest mb-2"
+      >
+        ${translateText("private_lobby.host_cheats")}
+      </div>
+      <div class="flex flex-wrap gap-2">
+        ${cheats.map(
+          (cheat) =>
+            html`<span
+              class="px-2 py-1 bg-yellow-500/20 text-yellow-200 text-xs rounded font-bold border border-yellow-500/30"
+              >${cheat}</span
+            >`,
+        )}
+      </div>
+    </div>
+  `;
 }

@@ -39,14 +39,12 @@ import { DEFAULT_TITLE_CLASS, modalHeader } from "./components/ui/ModalHeader";
 import { openReplayViewer } from "./replay/ReplayEntry";
 import { nationsConfigToSlider } from "./utilities/GameConfigHelpers";
 import {
+  disabledUnitsBox,
+  hostCheatsBox,
+  LOBBY_SETTING_TAG,
   lobbySettingTagText,
   notableLobbySettings,
 } from "./utilities/LobbySettingsSummary";
-
-// The homepage lobby card's modifier pill, one size down: a lobby can run a
-// dozen settings and they all have to fit beside the preview.
-const SETTING_TAG =
-  "rounded bg-malibu-blue px-1.5 py-0.5 text-[11px] font-bold tracking-widest text-white";
 
 @customElement("join-lobby-modal")
 export class JoinLobbyModal extends BaseModal {
@@ -708,7 +706,9 @@ export class JoinLobbyModal extends BaseModal {
 
     const tags = notableLobbySettings(c, this.nationCount).map(
       (s) =>
-        html`<span class="${SETTING_TAG}">${lobbySettingTagText(s)}</span>`,
+        html`<span class="${LOBBY_SETTING_TAG}"
+          >${lobbySettingTagText(s)}</span
+        >`,
     );
 
     // object-contain, not object-cover: the preview is here to be studied
@@ -748,117 +748,7 @@ export class JoinLobbyModal extends BaseModal {
             </div>`
           : html``}
       </div>
-      ${this.renderDisabledUnits()} ${this.renderHostCheats()}
-    `;
-  }
-
-  private renderDisabledUnits(): TemplateResult {
-    if (
-      !this.gameConfig ||
-      !this.gameConfig.disabledUnits ||
-      this.gameConfig.disabledUnits.length === 0
-    ) {
-      return html``;
-    }
-
-    const unitKeys: Record<string, string> = {
-      City: "unit_type.city",
-      Port: "unit_type.port",
-      "Defense Post": "unit_type.defense_post",
-      "SAM Launcher": "unit_type.sam_launcher",
-      "Missile Silo": "unit_type.missile_silo",
-      Warship: "unit_type.warship",
-      Factory: "unit_type.factory",
-      "Atom Bomb": "unit_type.atom_bomb",
-      "Hydrogen Bomb": "unit_type.hydrogen_bomb",
-      MIRV: "unit_type.mirv",
-      "Trade Ship": "player_stats_table.unit.trade",
-      Transport: "player_stats_table.unit.trans",
-      "MIRV Warhead": "player_stats_table.unit.mirvw",
-    };
-
-    return html`
-      <div
-        class="mt-4 mb-6 p-3 bg-red-500/10 border border-red-500/20 rounded-lg"
-      >
-        <div
-          class="text-xs font-bold text-red-400 uppercase tracking-widest mb-2"
-        >
-          ${translateText("private_lobby.disabled_units")}
-        </div>
-        <div class="flex flex-wrap gap-2">
-          ${this.gameConfig.disabledUnits.map((unit) => {
-            const key = unitKeys[unit];
-            const name = key ? translateText(key) : unit;
-            return html`
-              <span
-                class="px-2 py-1 bg-red-500/20 text-red-200 text-xs rounded font-bold border border-red-500/30"
-              >
-                ${name}
-              </span>
-            `;
-          })}
-        </div>
-      </div>
-    `;
-  }
-
-  private renderHostCheats(): TemplateResult {
-    if (!this.gameConfig?.hostCheats) {
-      return html``;
-    }
-
-    const hc = this.gameConfig.hostCheats;
-    const items: TemplateResult[] = [];
-
-    if (hc.infiniteGold)
-      items.push(
-        html`<span
-          class="px-2 py-1 bg-yellow-500/20 text-yellow-200 text-xs rounded font-bold border border-yellow-500/30"
-        >
-          ${translateText("game_settings.infinite_gold")}
-        </span>`,
-      );
-    if (hc.infiniteTroops)
-      items.push(
-        html`<span
-          class="px-2 py-1 bg-yellow-500/20 text-yellow-200 text-xs rounded font-bold border border-yellow-500/30"
-        >
-          ${translateText("game_settings.infinite_troops")}
-        </span>`,
-      );
-    if (hc.goldMultiplier)
-      items.push(
-        html`<span
-          class="px-2 py-1 bg-yellow-500/20 text-yellow-200 text-xs rounded font-bold border border-yellow-500/30"
-        >
-          ${translateText("game_settings.gold_multiplier")}:
-          x${hc.goldMultiplier}
-        </span>`,
-      );
-    if (hc.startingGold)
-      items.push(
-        html`<span
-          class="px-2 py-1 bg-yellow-500/20 text-yellow-200 text-xs rounded font-bold border border-yellow-500/30"
-        >
-          ${translateText("private_lobby.starting_gold")}:
-          ${parseFloat((hc.startingGold / 1_000_000).toPrecision(12))}M
-        </span>`,
-      );
-
-    if (items.length === 0) return html``;
-
-    return html`
-      <div
-        class="mt-4 mb-6 p-3 bg-yellow-500/10 border border-yellow-500/20 rounded-lg"
-      >
-        <div
-          class="text-xs font-bold text-yellow-400 uppercase tracking-widest mb-2"
-        >
-          ${translateText("private_lobby.host_cheats")}
-        </div>
-        <div class="flex flex-wrap gap-2">${items}</div>
-      </div>
+      ${disabledUnitsBox(c, "mt-4 mb-6")} ${hostCheatsBox(c, "mt-4 mb-6")}
     `;
   }
 

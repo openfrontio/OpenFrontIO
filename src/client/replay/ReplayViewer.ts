@@ -522,7 +522,7 @@ export class ReplayViewer extends LitElement {
     };
     this.rafId = requestAnimationFrame(loop);
 
-    this.attachHud(adapter, canvas, camera, view);
+    this.attachHud(adapter, canvas, camera, view, terrain.nations.length);
   }
 
   /** Send each frame to the renderer and the HUD, and follow playback. */
@@ -628,6 +628,7 @@ export class ReplayViewer extends LitElement {
     canvas: HTMLCanvasElement,
     camera: ReplayCamera,
     view: MapRenderer,
+    mapNationCount: number,
   ): void {
     // The game's settings menu. Its terrain toggle works like in game, and
     // playback pauses while it's open.
@@ -639,6 +640,8 @@ export class ReplayViewer extends LitElement {
     const menu = this.querySelector<SettingsModal>("settings-modal");
     if (menu !== null) {
       menu.eventBus = this.hudBus;
+      menu.gameConfig = adapter.config().gameConfig();
+      menu.mapNationCount = mapNationCount;
       menu.init();
     }
 
