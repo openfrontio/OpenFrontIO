@@ -223,14 +223,14 @@ export class EngineConfig extends Config {
   /**
    * Per-unit spawn multiplier for a player's first few ports or factories
    * (counted in levels), so a new or knocked-back economy gets going
-   * faster: up to one extra unit's worth of spawns, 2x at 1 level, fading
-   * out by 6 levels. Additive, so total spawns still rise with every level
+   * faster: up to half an extra unit's worth of spawns, 1.5x at 1 level,
+   * fading out by 6 levels. Additive, so total spawns still rise with every level
    * built. Keyed on the player rather than game time or the world fleet, so
    * it works the same in every lobby size and doubles as a comeback boost.
    */
   smallEconomySpawnBoost(levels: number): number {
     if (levels <= 0) return 1;
-    return 1 + within((6 - levels) / 5, 0, 1) / levels;
+    return 1 + (0.5 * within((6 - levels) / 5, 0, 1)) / levels;
   }
 
   trainGold(
@@ -308,7 +308,7 @@ export class EngineConfig extends Config {
     // Pity timer: increases spawn chance after consecutive rejections
     const rejectionModifier = 1 / (tradeShipSpawnRejections + 1);
     // The pity timer square-roots odds changes, so squaring the boost makes
-    // it the realized ship multiplier (1 port level: one every ~6s, not ~12s).
+    // it the realized ship multiplier (1 port level: one every ~8s, not ~12s).
     const boost = this.smallEconomySpawnBoost(playerPortLevels);
     const base = 100 / (boost * boost);
 

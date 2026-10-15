@@ -165,7 +165,7 @@ describe("train golden values", () => {
   });
 
   test("smallEconomySpawnBoost: trade and train rates by levels owned", () => {
-    // 2x per unit at 1 level, fading out by 6 levels.
+    // 1.5x per unit at 1 level, fading out by 6 levels.
     const table: Record<string, number> = {};
     for (const levels of [0, 1, 2, 3, 4, 5, 6, 10]) {
       table[`levels=${levels} boost`] = config.smallEconomySpawnBoost(levels);
