@@ -170,7 +170,7 @@ function updatePending(update: DesktopUpdateState | null): boolean {
  * 2. The comparison happens AFTER the dispatch, which is what gives
  *    <username-input> the chance to announce.
  * 3. Still due afterwards means nothing was written, so nothing was said.
- *    announceLapse bails without writing on CrazyGames and when the
+ *    announceLapse bails without writing on a portal and when the
  *    translation files have not landed, and a notice that never opened must
  *    not make the sequencer stand aside for it.
  */

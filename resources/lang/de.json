@@ -44,6 +44,16 @@
     "games_type_singleplayer": "Einzelspieler",
     "get_magic_link": "Magic Link erhalten",
     "google_alt": "Google",
+    "identity_token_copied": "Kopiert",
+    "identity_token_copy": "Kopieren",
+    "identity_token_desc": "Weise einer Stats‑Seite nach, welcher OpenFront‑Account deiner ist. Wähle eine Seite, generiere ein Token und füge es dort ein.",
+    "identity_token_failed": "Es konnte kein Token generiert werden. Bitte versuche es erneut.",
+    "identity_token_generate": "Token erzeugen",
+    "identity_token_logged_out": "Deine Sitzung ist abgelaufen. Bitte melde dich erneut an.",
+    "identity_token_note": "Funktioniert nur auf {site} und läuft in 10 Minuten ab. Füge es ausschließlich auf {site} ein.",
+    "identity_token_rate_limited": "Zu viele Versuche. Bitte warte einen Moment und versuche es erneut.",
+    "identity_token_site": "Seite",
+    "identity_token_title": "Link zu einer fremden Website",
     "link_discord": "Discord Account verknüpfen",
     "link_existing_account": "Ein bestehendes Konto verknüpfen",
     "link_google": "Google Konto Verbinden",
@@ -83,8 +93,10 @@
     "reward_daily": "Tägliche Abonnementbelohnung",
     "reward_signup_bonus": "Anmeldebonus für Abonnements",
     "sign_in_desc": "Melde dich an, um deine Statistiken und Fortschritt zu speichern",
-    "sub_granted_from_purchase": "Kostenlos in deinem Steam‑Kauf enthalten. Es wird nicht abgerechnet und erneuert sich nicht, daher gibt es nichts zu verwalten oder zu kündigen.",
+    "sub_granted_from_purchase": "Im Steam‑Kauf enthalten, einmal auf Steam bezahlt. Es wird nicht berechnet und nicht verlängert, daher gibt es nichts zu verwalten oder zu kündigen. Wenn es endet, behältst du das vollständige Spiel ohne Kosten; nur die {tier}-Vorteile enden.",
     "sub_granted_indefinite": "Kostenloser Zugriff wurde deinem Account gewährt. Es wird nicht abgerechnet, daher gibt es nichts zu verwalten oder zu kündigen.",
+    "sub_granted_perks_end_on": "{tier} Perks Ende {date}",
+    "sub_past_due_note": "Deine letzte Zahlung ist nicht durchgegangen, daher sind deine {tier}-Vorteile pausiert. Aktualisiere deine Zahlungsmethode, um sie wiederherzustellen.",
     "sub_price_monthly": "{price}/Monat",
     "sub_renews_on": "Verlängert sich am {date}",
     "sub_status_active": "Aktiv",
@@ -134,8 +146,7 @@
     "username_temporary_notice": "Dein Name wird von einem anderen Spieler bereits genommen. Wähle einen neuen — diese Umbenennung ist kostenlos.",
     "username_temporary_prompt": "Dein Benutzername wird von einem anderen Spieler bereits genommen. Wähle einen neuen — diese Umbenennung ist kostenlos.",
     "username_temporary_prompt_confirm": "Namen auswählen",
-    "username_title": "Benutzername",
-    "sub_granted_ends_on": "Freier Zugang endet {date}"
+    "username_title": "Benutzername"
   },
   "account_settings_modal": {
     "title": "Kontoeinstellung"
@@ -190,7 +201,6 @@
       "focus": "Fokussiere Feuer auf [P1]!",
       "mirv": "Starte einen MIRV auf [P1]!"
     },
-    "build": "Erstelle deine Nachricht...",
     "cat": {
       "attack": "Angriff",
       "defend": "Verteidigen",
@@ -199,7 +209,6 @@
       "misc": "Verschiedenes",
       "warnings": "Warnungen"
     },
-    "category": "Kategorie",
     "defend": {
       "ally": "[P1] ist mein Verbündeter!",
       "build_posts": "Baue Verteidigungsposten!",
@@ -245,11 +254,7 @@
       "strategy": "Schöne Strategie!",
       "team_up": "Lass uns gemeinsam gegen [P1] kämpfen!"
     },
-    "phrase": "Satz",
-    "player": "Spieler",
     "search": "Spieler suchen...",
-    "send": "Senden",
-    "sort_by_territory": "Nach Territorium sortieren",
     "title": "Chat",
     "to": "Gesendet an {user}: {msg}",
     "warnings": {
@@ -262,15 +267,21 @@
       "mirv_ready": "[P1] hat genug Gold, um eine MIRV-Rakete zu starten!",
       "mirv_soon": "[P1] kann bald ein MIRV starten!",
       "no_allies": "[P1] hat keine Verbündeten.",
-      "number1_warning": "Der #1 Spieler wird bald gewinnen, es sei denn, wir werden ein Team!",
       "saving_for_mirv": "[P1] spart, um eine MIRV-Rakete zu starten.",
       "snowballing": "[P1] wächst zu schnell!",
       "stalemate": "Lassen Sie uns Frieden schließen. Das ist eine Sackgasse, wir werden beide verlieren.",
       "stop_trading": "Stoppe den Handel mit [P1]!",
       "stop_trading_all": "Bitte hör auf mit allen zu Handeln!",
       "strong": "[P1] ist stark.",
-      "weak": "[P1] ist schwach."
-    }
+      "weak": "[P1] ist schwach.",
+      "number1_warning": "Der #1 Spieler wird bald gewinnen, es sei denn, wir werden ein Team!"
+    },
+    "build": "Erstelle deine Nachricht...",
+    "category": "Kategorie",
+    "phrase": "Satz",
+    "player": "Spieler",
+    "send": "Senden",
+    "sort_by_territory": "Nach Territorium sortieren"
   },
   "clan_modal": {
     "applied": "Angewendet",
@@ -468,6 +479,7 @@
     "no_heartbeat": "Der Server erhält keine Daten mehr von dir.",
     "not_allowlisted": "Du bist nicht auf der Zulassungsliste dieser Lobby.",
     "not_trusted": "Diese Lobby ist auf vertrauenswürdige Konten beschränkt.",
+    "pool_redirect": "Diese Lobby hat dich bereits in eine andere weitergeleitet. Bitte versuche es erneut.",
     "protocol_error": "Die Verbindung ist beschädigt.",
     "ranked_limit_reached": "Du hast keine freien Ranglisten-Spiele für heute.",
     "turnstile_failed": "Die Bot‑Prüfung ist fehlgeschlagen. Bitte lade die Seite neu und versuche es erneut.",
@@ -522,12 +534,14 @@
   "control_panel": {
     "allied_afk_neighbor_info": "Du kannst Spieler angreifen, die vom Spiel getrennt sind, selbst wenn du mit ihnen verbündet bist.",
     "army_limit_warning": "Du bist in der Nähe deines Armee-Limits! Überlege, deine Truppen an Teammitglieder zu schicken.",
+    "attack_ratio": "{percent}% ({troops})",
     "low_troops_warning": "Du hast sehr wenige Truppen - Du solltest immer Truppen zur Verteidigung behalten.",
     "teammate_afk_neighbor_info": "Du kannst getrennte Teammitglieder angreifen.",
     "traitor_neighbor_info": "Du kannst Verräter verraten, ohne selbst Verräter zu werden."
   },
   "cosmetics": {
     "adfree": "Lebenslang Werbefrei!",
+    "ai_label": "Mithilfe von AI erstellt",
     "artist_label": "Künstler:",
     "color_label": "Farben:",
     "common": "Allgemein",
@@ -537,23 +551,24 @@
     "legendary": "Legendär",
     "pack_includes": "Enthält:",
     "pack_more_items": "+{count} mehr",
+    "pattern_preview": "Mustervorschau",
     "per_day": "/Tag",
     "public_lobbies": "Erstelle öffentliche Lobbys",
     "public_lobbies_info": "Benutzerdefinierte Lobbys, die öffentlich aufgelistet sind, damit jeder beitreten kann.",
     "rare": "Selten",
     "search": "Suche...",
-    "signup_bonus": "Registrierungsbonus",
     "soft": "Flaschendeckel",
     "type_crown": "Krone",
     "type_effect": "{type} Effekt",
     "type_flag": "Flagge",
     "type_skin": "Skin",
     "uncommon": "Ungewöhnlich",
-    "unlimited_ranked": "Unbegrenztes Ranking",
-    "unlimited_ranked_info": "Es gibt kein Limit dafür, wieviel Ranglistenspiele du spielen kannst.",
     "usd_value": "Wert: {usd}",
     "verified_name": "Verifizierter Benutzername",
-    "verified_name_info": "Dein Benutzername ist für dein Konto reserviert und zeigt ein verifiziertes Abzeichen im Spiel."
+    "verified_name_info": "Dein Benutzername ist für dein Konto reserviert und zeigt ein verifiziertes Abzeichen im Spiel.",
+    "signup_bonus": "Registrierungsbonus",
+    "unlimited_ranked": "Unbegrenztes Ranking",
+    "unlimited_ranked_info": "Es gibt kein Limit dafür, wieviel Ranglistenspiele du spielen kannst."
   },
   "creator_code": {
     "change": "Ändern",
@@ -678,6 +693,16 @@
     "easy": "Einfach",
     "hard": "Schwer",
     "impossible": "Unmöglich",
+    "info": "{smarts}, {troops}",
+    "info_label": "Schwierigkeitsdetails anzeigen",
+    "info_note_hard": "(Diese Schwierigkeit wird in öffentlichen HvN Spielen verwendet)",
+    "info_note_medium": "(Diese Schwierigkeit wird in öffentlichen HvN Spielen verwendet)",
+    "info_smarts_easy": "Dumm",
+    "info_smarts_hard": "Clever",
+    "info_smarts_impossible": "Sehr clever",
+    "info_smarts_medium": "Durchschnitt",
+    "info_troops": "{percent}% der maximalen Truppen eines Menschen",
+    "info_troops_same": "Die gleichen max. Truppen wie ein Mensch",
     "medium": "Mittel"
   },
   "discord_user_header": {
@@ -727,6 +752,9 @@
     "crashed": "Spiel ist abgestürzt!",
     "desync_notice": "Du wurdest von anderen Spielern desynchronisiert. Was du siehst, könnte sich von anderen Spielern unterscheiden.",
     "login_failed": "Anmelden fehlgeschlagen. Bitte versuche es später erneut.",
+    "login_token_consumed": "Dieser Login‑Link wurde bereits verwendet. Du bist wahrscheinlich schon eingeloggt — prüfe einen anderen Tab.",
+    "login_token_expired": "Dieser Login-Link ist abgelaufen. Bitte einen neuen Login-Link anfordern.",
+    "login_token_invalid": "Dieser Login-Link ist ungültig oder ist abgelaufen. Bitte fordern Sie einen neuen Login-Link an.",
     "paste_discord": "Bitte füge folgendes in deinen Fehlerbericht auf Discord ein:",
     "spawn_failed": {
       "description": "Automatische Spawn-Auswahl fehlgeschlagen. Du kannst dieses Spiel nicht spielen.",
@@ -781,6 +809,15 @@
     "live": "LIVE",
     "minimize": "Minimieren",
     "open_on_twitch": "Öffne {channel} auf Twitch"
+  },
+  "free_play": {
+    "account": "Dein Konto, Statistiken, Freunde und Kosmetik",
+    "ad_free_steam": "Keine Werbung in der Steam‑App. Niemals",
+    "after_grant_heading": "Nachdem es endet, bekommst du trotzdem weiterhin",
+    "custom_lobbies": "Private benutzerdefinierte Lobbys mit Freunden",
+    "free_heading": "Kostenloses Spielen beinhaltet",
+    "full_game": "Das vollständige Spiel: alle Karten und Modi, online und im Einzelspieler",
+    "ranked": "Gewertetes Spielen, mit dem kostenlosen täglichen Match‑Limit"
   },
   "friends": {
     "accept": "Annehmen",
@@ -1126,6 +1163,11 @@
     "host_badge": "Host",
     "host_cheats": "Host Cheats",
     "leave_confirmation": "Bist du sicher, dass du die Lobby verlassen möchtest?",
+    "list_lobby_body": "Deine Lobby erscheint in der öffentlichen Lobby‑Liste. Sie startet automatisch, wenn der Timer abläuft oder die Lobby voll ist. Einstellungen können nicht mehr geändert werden, sobald sie gelistet ist.",
+    "list_lobby_confirm": "Listen-Lobby",
+    "list_lobby_max_players": "Max. Spieler",
+    "list_lobby_start_minutes": "Startet in (Minuten)",
+    "list_lobby_title": "Lobby öffentlich auflisten",
     "mode": "Modus",
     "nation_player": "Nation",
     "nation_players": "Nationen",
@@ -1134,7 +1176,17 @@
     "player_whitelist": "Spieler-Whitelist (öffentliche IDs)",
     "player_whitelist_placeholder": " Komma trennen",
     "players": "Spieler",
+    "queue": "Warteschlange",
+    "queue_confirm": "Bezahlung und Warteschlange",
+    "queue_confirm_body": "Möchtest du {price} Plutonium bezahlen, um diese Lobby in die öffentliche Warteschlange zu senden? Sie startet direkt nach der Lobby, deren Countdown gerade läuft.",
+    "queue_confirm_title": "An die öffentliche Warteschlange senden?",
+    "queue_failed": "Lobby konnte nicht in die Warteschlange eingereiht werden. Versuch es erneut; dir wird nicht doppelt berechnet.",
+    "queue_item": "An die öffentliche Warteschlange senden",
+    "queue_tooltip": "Diese Lobby in die öffentliche Spezial‑Warteschlange setzen, direkt hinter die Lobby, die gleich startet",
+    "queued": "In Warteschlange",
+    "queued_waiting": "In der öffentlichen Warteschlange",
     "remove_player": "{username} entfernen",
+    "settings_locked_listed": "Diese Lobby ist öffentlich gelistet, daher können ihre Einstellungen nicht mehr geändert werden.",
     "spectator": "Zuschauer",
     "spectators": "Zuschauer",
     "start_delay": "Startverzögerung (Sekunden)",
@@ -1143,7 +1195,6 @@
     "subscription_required_title": "Hierfür ist ein Abonnement erforderlich",
     "team_count": "Teamanzahl",
     "teams_Duos": "Duos (Teams von 2)",
-    "teams_Humans Vs Nations": "Menschen vs. Nationen",
     "teams_Quads": "Quads (Teams von 4)",
     "teams_Trios": "Trios (Teams von 3)",
     "title": "Private Lobby erstellen",
@@ -1151,7 +1202,8 @@
     "view_subscriptions": "Abonnements ansehen",
     "visibility_private": "Privat",
     "visibility_public": "Öffentlich",
-    "waiting": "Warte auf Spieler..."
+    "waiting": "Warte auf Spieler...",
+    "teams_Humans Vs Nations": "Menschen vs. Nationen"
   },
   "inventory": {
     "equipped": "Ausgerüstet",
@@ -1174,6 +1226,7 @@
     "selected_cosmetic": "{name} Ausgewählt",
     "selected_cosmetic_variant": "{name} ({variant})",
     "showing_effects": "Effekte ausgerüstet: {count}",
+    "sign_in_for_cosmetics": "Melde dich an oder erstelle ein Konto, um auf deine Skins, Kronen und Effekte zuzugreifen.",
     "title": "Inventar",
     "unequip": "Ablegen",
     "unequip_all": "Alle ausrüsten",
@@ -1303,6 +1356,7 @@
     "arctic": "Arktis",
     "asia": "Asien",
     "australia": "Australien",
+    "babelmandebstrait": "Bab el-Mandeb Straße",
     "baikal": "Baikalsee",
     "baikalnukewars": "Baikal (Nuklearkrieg)",
     "bajacalifornia": "Baja Kalifornien",
@@ -1317,7 +1371,9 @@
     "branchingpaths": "Verzweigte Pfade",
     "britannia": "Britannien",
     "britanniaclassic": "Britannien (klassisch)",
+    "canaryislands": "Kanarische Inseln",
     "capecod": "Cape Cod",
+    "capeofgoodhope": "Kap der Guten Hoffnung",
     "caribbean": "Karibik",
     "caspiansea": "Kaspisches Meer",
     "caucasus": "Kaukasus",
@@ -1354,6 +1410,7 @@
     "hawaii": "Hawaii",
     "hecatestrait": "Hecate Strait",
     "hongkong": "Hongkong",
+    "hornofafrica": "Horn von Afrika",
     "iceland": "Island",
     "indiansubcontinent": "Indischer Subkontinent",
     "irishsea": "Irische See",
@@ -1368,6 +1425,7 @@
     "lisbon": "Lissabon",
     "losangeles": "Los Angeles",
     "luna": "Luna",
+    "madagascar": "Madagaskar",
     "manicouagan": "Manicouagan",
     "map": "Karte",
     "marenostrum": "Mare Nostrum",
@@ -1379,6 +1437,7 @@
     "montreal": "Montreal",
     "morethanluck": "Mehr als Glück",
     "newyorkcity": "New York City",
+    "newzealand": "Neuseeland",
     "niledelta": "Nildelta",
     "northamerica": "Nordamerika",
     "northwestpassage": "Nordwestpassage",
@@ -1387,8 +1446,10 @@
     "pangaea": "Pangaea",
     "passage": "Passage",
     "pluto": "Pluto",
+    "pulicatlake": "Pulicat See",
     "qingchina": "Qing China",
     "random": "Zufällig",
+    "riodejaneiro": "Rio de Janeiro",
     "russia": "Russland",
     "sanfrancisco": "San Franzisco",
     "scandinavia": "Skandinavien",
@@ -1412,6 +1473,7 @@
     "tradersdream": "Händlertraum",
     "twolakes": "Zwei Seen",
     "unitedstates": "Vereinigte Staaten",
+    "vancouverisland": "Vancouver Insel",
     "venice": "Venedig",
     "vietnam": "Vietnam",
     "warshipwarship": "Kriegsschiff",
@@ -1480,7 +1542,6 @@
     "waiting_for_game": "Das Spiel startet in Kürze..."
   },
   "mode_selector": {
-    "coming_soon": "Bald Verfügbar",
     "lobbies_unreachable": "Du kannst die öffentlichen Lobbies momentan nicht erreichen",
     "offline_lobbies": "Öffentliche Lobbys sind nicht verfügbar, während du offline bist",
     "ranked_1v1_title": "1v1",
@@ -1491,7 +1552,8 @@
     "servers_unreachable": "Keine Verbindung zu den OpenFront-Servern möglich",
     "teams_count": "{teamCount} Teams",
     "teams_of": "{teamCount} Teams von {playersPerTeam}",
-    "teams_title": "Teams"
+    "teams_title": "Teams",
+    "coming_soon": "Bald Verfügbar"
   },
   "multi_tab": {
     "detected": "Mehrere offene Spielstabs erkannt.",
@@ -1597,10 +1659,10 @@
   "player_profile": {
     "loading": "Lade Profil...",
     "no_clans": "Dieser Spieler ist in keinen Clans.",
-    "not_found": "Spielerprofil nicht gefunden",
     "share": "Profil teilen",
     "title": "Spielerprofil",
-    "view": "Profil ansehen"
+    "view": "Profil ansehen",
+    "not_found": "Spielerprofil nicht gefunden"
   },
   "player_stats_table": {
     "arrived": "Angekommen",
@@ -1697,6 +1759,7 @@
     "listing_full": "Die öffentliche Lobby-Liste ist voll. Bitte versuche es später erneut.",
     "listing_host_cheats_enabled": "Deaktiviere Host-Cheats, um deine Lobby öffentlich aufzulisten.",
     "listing_limit_reached": "Du hast bereits eine öffentlich gelistete Lobby.",
+    "listing_max_players_too_low": "Die maximale Spielerzahl muss höher sein als die Anzahl der Spieler, die bereits in der Lobby sind.",
     "listing_requires_subscription": "Um eine Lobby öffentlich auflisten zu können, ist ein aktives Abonnement erforderlich.",
     "listing_whitelist_enabled": "Deaktiviere die \"join whitelist\", um deine Lobby öffentlich aufzulisten.",
     "no_open_lobbies": "Derzeit keine offenen Lobbies",
@@ -1734,13 +1797,15 @@
   },
   "public_lobby": {
     "connecting": "Mit Lobby verbinden...",
+    "custom": "Benutzerdefiniert",
+    "custom_default_settings": "Standardeinstellung",
+    "custom_tooltip_title": "Dies ist eine von Spielern erstellte Lobby",
     "invite_friends": "Freunde einladen",
     "join_timeout": "Du bist dem Spiel nicht rechtzeitig beigetreten.",
     "notify_armed": "Warnung an: Ein Ton wird abgespielt, wenn dein Spiel startet",
     "notify_off": "Beim Start des Spiels einen Ton abspielen",
     "notify_on": "Spielstart-Alarm ist an",
     "notify_started": "Dein Spiel beginnt!",
-    "players_per_team": "von {num}",
     "see_all": "Alle {count} ansehen",
     "started": "Gestartet",
     "starting_game": "Startet…",
@@ -1760,7 +1825,8 @@
     "trusted_tooltip_title": "Vertrauenswürdige Lobby",
     "trusted_unlocked": "Nur vertrauenswürdige Konten. Dein Konto ist Vertrauenswürdig.",
     "upcoming": "Demnächst",
-    "waiting_for_players": "Warte auf Spieler"
+    "waiting_for_players": "Warte auf Spieler",
+    "players_per_team": "von {num}"
   },
   "purchase_nudge": {
     "body": "Es scheint, als würde dir OpenFront Spaß machen! Bitte überlege, uns zu helfen, indem du einen Einkauf tätigst — jeder Einkauf entfernt alle Werbung für dich, für immer.",
@@ -1784,6 +1850,24 @@
     "fastest_game_speed": "Max",
     "game_speed": "Spielgeschwindigkeit",
     "replay_speed": "Wiedergabegeschwindigkeit"
+  },
+  "replay_viewer": {
+    "following": "{name} Folgen",
+    "load_failed": "Dieses Replay konnte nicht geladen werden.",
+    "loading": "Lade Replays…",
+    "partial": "Nur der erste {time} dieses Spiels kann angesehen werden.",
+    "pause": "Pausieren",
+    "play": "Wiedergabe",
+    "processing": "Wiedergabe wird vorbereitet…",
+    "processing_fetching": "Lade den Spieleintrag",
+    "processing_simulating": "Wiederholen des Spiels: {percent}%",
+    "timeline": "Zeitleiste wiederholen",
+    "unavailable_desync": "Dieses Spiel wiederholt sich nicht korrekt auf dieser Version von OpenFront.",
+    "unavailable_failed": "Verarbeitung dieses Spiels fehlgeschlagen.",
+    "unavailable_not_found": "Dieses Spiel konnte nicht gefunden werden.",
+    "unavailable_other_build": "Dieses Spiel wurde auf einer anderen Version von OpenFront gespielt.",
+    "unavailable_unreachable": "Das Spiel konnte nicht heruntergeladen werden. Überprüfe deine Verbindung und versuche es erneut.",
+    "watch_classic": "Beobachte stattdessen das alte Replay"
   },
   "rewards_modal": {
     "title": "Belohnungen"
@@ -1812,6 +1896,12 @@
   },
   "spawn_timer": {
     "team_percent_tooltip": "{team}: {percent}"
+  },
+  "steam_grant": {
+    "ended_body": "Der Monat {tier}, der bei deinem Steam‑Kauf enthalten war, ist beendet. Es wurde nichts berechnet und es wird auch nichts berechnet. Du behältst das vollständige Spiel: alle Karten und Modi, Online‑Spiel, Gewertete Matches mit dem kostenlosen täglichen Limit und benutzerdefinierte Lobbys mit Freunden. Die Steam‑App bleibt werbefrei. Wenn du die {tier}-Vorteile zurückhaben möchtest, kannst du jederzeit im Store ein Abo abschließen.",
+    "ended_heading": "Dein enthaltener Steam Monat ist vorbei",
+    "welcome_body": "„Dein Steam‑Kauf enthält {tier} bis zum {date}. Du hast einmal auf Steam bezahlt: Es wird nichts berechnet und nichts verlängert. Wenn es endet, behältst Du das vollständige Spiel, alle Karten und Modi, und die Steam‑App bleibt werbefrei. Nur die {tier}-Vorteile enden.",
+    "welcome_heading": "Im Steam-Kauf enthalten"
   },
   "steam_handoff": {
     "launched": "Öffne diese Lobby in der Steam App. Wenn nichts passiert, stelle sicher, dass Steam läuft.",
@@ -1860,10 +1950,8 @@
     "default_name": "Steam-Spieler"
   },
   "steam_wishlist": {
-    "cta": "Jetzt zur Wunschliste hinzufügen",
-    "on_steam": "OpenFront auf Steam",
-    "release": "Verfügbares 3. Quartal 2026",
-    "title": "Wunschliste OpenFront auf Steam!"
+    "buy_cta": "Auf Steam kaufen",
+    "buy_on_steam": "OpenFront auf Steam kaufen"
   },
   "store": {
     "already_owned": "Du besitzt diesen Gegenstand bereits. Es wurde nichts berechnet.",
@@ -1900,6 +1988,7 @@
     "insufficient_currency_body": "Du brauchst {amount, number} mehr {currency}, um {item} zu kaufen.",
     "insufficient_currency_title": "Unzureichender {currency}",
     "login_required": "Du musst eingeloggt sein, um mit Währung zu kaufen.",
+    "manage_billing": "Rechnungen verwalten",
     "no_affiliate_items": "Keine Effekte verfügbar. Schau später nach neuen Artikeln.",
     "no_bundles": "Keine Bündel verfügbar. Schaue dich später nach neuen Artikeln um.",
     "no_crowns": "Keine Kronen verfügbar. Schau dich später wieder nach neuen Artikel um.",
@@ -1937,6 +2026,8 @@
     "steam_overlay_waiting": "Genehmige den Kauf im Steam‑Overlay, um fortzufahren.",
     "subscribe_heading": "Abonnement starten",
     "subscribed": "Abonniert",
+    "subscription_past_due": "Deine letzte Abonnementzahlung ist fehlgeschlagen, daher ist dein Abo pausiert. Aktualisiere deine Zahlungsmethode, um es wiederherzustellen. Abonniere nicht erneut, sonst könnte dir doppelt berechnet werden.",
+    "subscription_past_due_desktop": "Deine letzte Abonnementzahlung ist fehlgeschlagen, daher ist dein Abo pausiert. Aktualisiere deine Zahlungsmethode auf der OpenFront‑Website, um es wiederherzustellen. Abonniere nicht erneut, sonst könnte dir doppelt berechnet werden.",
     "subscription_purchase_success": "Abonnement aktiviert!",
     "subscriptions": "Abonnements",
     "switch_button": "Wechseln",
@@ -2232,6 +2323,8 @@
     "left_click_label": "Linksklick zum Öffnen des Menüs",
     "lobby_id_visibility_desc": "Lobby-ID bei Erstellung privater Lobbys verbergen",
     "lobby_id_visibility_label": "Versteckte Lobby-IDs",
+    "lobby_start_alerts_desc": "Den Startton für jede Lobby und jedes gewertete Match standardmäßig abspielen und eine Desktop‑Benachrichtigung anzeigen, wenn dies erlaubt ist. Du kannst das mit der Lobby‑Glocke überschreiben.",
+    "lobby_start_alerts_label": "Lobby Start Warnungen",
     "menu_shortcuts": "Menü Tastenkombinationen",
     "move_down": "Kamera nach unten bewegen",
     "move_down_desc": "Bewegt die Kamera nach unten",
@@ -2255,6 +2348,8 @@
     "press_a_key": "Drücken eine Taste",
     "render_debug_gui": "Render Debug GUI",
     "render_debug_gui_desc": "Renderer Tuning Panel ein/aus",
+    "replay_viewer_desc": "Replays mit Rückspul‑Steuerung öffnen. Aus öffnet das klassische Replay",
+    "replay_viewer_label": "Neuer Replay-Betrachter",
     "request_alliance": "Allianz anfragen",
     "request_alliance_desc": "Schicke eine Allianzanfrage an den Spieler, dessen Kachel sich unter deinem Cursor befindet.",
     "reset": "Zurücksetzen",
@@ -2300,6 +2395,8 @@
     "enter_username": "Benutzernamen eingeben",
     "invalid_chars": "Benutzername darf nur Buchstaben, Zahlen, Leerzeichen, Bindestriche, Unterstriche und Punkte enthalten.",
     "lapse_notice": "Dein Abonnement ist beendet, daher spielst du nicht mehr als ‚{name}‘. Es bleibt bis {date} für dich reserviert - abonniere vorher erneut, um es zu behalten. Danach kann es jeder übernehmen.",
+    "lapse_notice_after_grant": "Der Monat Premium‑Zugang, der bei deinem Steam‑Kauf enthalten war, ist beendet, daher spielst du nicht mehr als „{name}“. Du behältst das vollständige Spiel ohne Kosten; nur die Premium‑Vorteile enden. Der Name bleibt bis zum {date} für dich reserviert — abonniere vorher, um ihn zu behalten. Danach kann ihn jeder übernehmen.",
+    "lapse_notice_after_grant_at_risk": "Der Monat Premium‑Zugang, der bei deinem Steam‑Kauf enthalten war, ist beendet, daher spielst du nicht mehr als „{name}“, und der Name ist nicht mehr reserviert. Du behältst das vollständige Spiel ohne Kosten. Ein anderer Spieler kann den Namen jederzeit übernehmen — abonniere jetzt, um ihn zu behalten.",
     "lapse_notice_at_risk": "Du spielst nicht mehr als ‚{name}‘, und es ist nicht mehr reserviert. Ein anderer Spieler kann es jederzeit übernehmen — abonniere jetzt erneut, um es zu behalten.",
     "not_string": "Benutzername muss ein Text sein.",
     "tag": "TAG",
