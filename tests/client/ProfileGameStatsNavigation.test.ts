@@ -21,8 +21,21 @@ vi.mock("../../src/client/Api", () => ({
   fetchPublicPlayerGames: vi.fn(),
 }));
 
+// The visitor banner asks who is viewing; these tests don't sign anyone in.
+vi.mock("../../src/client/ProgressionAccount", () => ({
+  resolveXpAccount: vi.fn(async () => ({ kind: "unknown" })),
+}));
+
 vi.mock("src/client/ClientEnv", () => ({
-  ClientEnv: { workerPath: vi.fn(() => "w0") },
+  ClientEnv: {
+    workerPath: vi.fn(() => "w0"),
+    // The profile header's copy-link button builds its URL from this; the web
+    // answer is the document itself (see deriveShareBase).
+    shareOrigin: vi.fn(() => window.location.origin),
+    shareBase: vi.fn(
+      () => `${window.location.origin}${window.location.pathname}`,
+    ),
+  },
 }));
 
 vi.mock("../../src/client/TerrainMapFileLoader", () => ({
@@ -71,18 +84,18 @@ class FakeIntersectionObserver {
 }
 vi.stubGlobal("IntersectionObserver", FakeIntersectionObserver);
 
-import { fetchPublicPlayerGames } from "../../src/client/Api";
-import { GameStatsModal } from "../../src/client/GameStatsModal";
-import { modalRouter } from "../../src/client/ModalRouter";
-import { initNavigation } from "../../src/client/Navigation";
-import { PlayerProfileModal } from "../../src/client/PlayerProfileModal";
 import {
   GameMapType,
   GameMode,
   GameType,
   PlayerInfo,
   PlayerType,
-} from "../../src/core/game/Game";
+} from "@openfront/engine-api/game/GameTypes";
+import { fetchPublicPlayerGames } from "../../src/client/Api";
+import { GameStatsModal } from "../../src/client/GameStatsModal";
+import { modalRouter } from "../../src/client/ModalRouter";
+import { initNavigation } from "../../src/client/Navigation";
+import { PlayerProfileModal } from "../../src/client/PlayerProfileModal";
 import { setup } from "../util/Setup";
 
 type ModalShell = HTMLElement & {

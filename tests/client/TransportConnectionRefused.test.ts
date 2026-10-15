@@ -1,6 +1,6 @@
+import { CloseCode, CloseReason } from "@openfront/shared/CloseCodes";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { LobbyConfig } from "../../src/client/ClientGameRunner";
-import { CloseCode, CloseReason } from "../../src/core/CloseCodes";
 
 const modalMocks = vi.hoisted(() => ({
   showInGameConfirm:
@@ -37,13 +37,17 @@ vi.mock("src/client/ClientEnv", async (importOriginal) => {
       gameWorkerPath: vi.fn(() => "w0"),
       gameWsBase: vi.fn(() => "ws://game.test"),
       gameHttpBase: vi.fn(() => "http://game.test"),
+      // Where the wrong-worker navigation goes. Separate from gameHttpBase
+      // because that one throws when no game server is known and a page load
+      // must not.
+      gameNavigateBase: vi.fn(() => "http://game.test"),
     },
   };
 });
 
+import { EventBus } from "@openfront/shared/EventBus";
 import { ClientEnv, NoServerError } from "../../src/client/ClientEnv";
 import { Transport } from "../../src/client/Transport";
-import { EventBus } from "../../src/core/EventBus";
 
 class FakeWebSocket {
   static readonly CONNECTING = 0;

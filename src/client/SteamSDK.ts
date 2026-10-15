@@ -1,7 +1,18 @@
 // Mirrors SteamTicketResult in openfront-desktop's src/main/steam.ts. The two
 // repositories cannot import from each other, so this is a hand-kept copy; if
 // you change one, change the other.
-export type SteamTicketFailure = "unavailable" | "timeout" | "error";
+export type SteamTicketFailure =
+  | "unavailable"
+  | "timeout"
+  | "error"
+  // The last three are not Steam failures: Steam is fine and a ticket is
+  // mintable. They are the shell declining to hand us one, because exchanging
+  // it would permanently bind this Steam id to a new account. Three values
+  // rather than one because they are three different situations, and only the
+  // first is "the player must set up an account".
+  | "needs-account"
+  | "ticket-rejected"
+  | "api-unreachable";
 
 export type SteamTicketResult =
   | { ok: true; ticket: string }

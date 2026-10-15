@@ -11,7 +11,7 @@ import {
   validateAccountUsername,
   validateClanTag,
   validateUsername,
-} from "../src/core/validations/username";
+} from "../src/client/validations/username";
 
 describe("username.ts functions", () => {
   describe("validateUsername", () => {

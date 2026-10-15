@@ -38,7 +38,7 @@ export class MoveIndicatorPass {
   constructor(gl: WebGL2RenderingContext, settings: RenderSettings) {
     this.gl = gl;
     this.settings = settings;
-    this.program = createProgram(gl, vertSrc, fragSrc);
+    this.program = createProgram(gl, vertSrc, fragSrc, "MoveIndicatorPass");
 
     this.uCamera = gl.getUniformLocation(this.program, "uCamera")!;
     this.uCenter = gl.getUniformLocation(this.program, "uCenter")!;

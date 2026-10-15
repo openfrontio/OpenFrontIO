@@ -1,7 +1,3 @@
-import { html, LitElement } from "lit";
-import { customElement, property, state } from "lit/decorators.js";
-import { repeat } from "lit/directives/repeat.js";
-import { assetUrl } from "../../../core/AssetUrls";
 import {
   Difficulty,
   GameMapType,
@@ -9,7 +5,11 @@ import {
   mapCategoryOrder,
   MapInfo,
   maps,
-} from "../../../core/game/Game";
+} from "@openfront/engine-api/game/GameTypes";
+import { assetUrl } from "@openfront/shared/AssetUrls";
+import { html, LitElement } from "lit";
+import { customElement, property, state } from "lit/decorators.js";
+import { repeat } from "lit/directives/repeat.js";
 import { translateText } from "../../Utils";
 import "./MapDisplay";
 import { getFavoriteMaps, starIcon, toggleFavoriteMap } from "./MapFavorites";

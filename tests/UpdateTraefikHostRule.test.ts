@@ -33,14 +33,18 @@ function extractRuleBlock(): string {
 
 // gameDomain undefined models the variable being absent from the env file
 // entirely; "" models GitHub delivering an unset repository variable, which
-// is what deploy.sh writes through on every prod deploy.
+// is what deploy.sh writes through on every prod deploy. gameHost is the
+// name deploy.sh resolved from the cluster map; undefined models an env file
+// written by hand, which the rule derives from the other three.
 function hostRuleFor(
   subdomain: string,
   domain: string,
   gameDomain?: string,
+  gameHost?: string,
 ): string {
   const assignment =
-    gameDomain === undefined ? "" : `GAME_DOMAIN='${gameDomain}'\n`;
+    (gameDomain === undefined ? "" : `GAME_DOMAIN='${gameDomain}'\n`) +
+    (gameHost === undefined ? "" : `GAME_HOST='${gameHost}'\n`);
   const script =
     `SUBDOMAIN='${subdomain}'\nDOMAIN='${domain}'\n${assignment}` +
     `${extractRuleBlock()}\nprintf '%s' "$TRAEFIK_HOST_RULE"\n`;
@@ -70,6 +74,33 @@ describe("update.sh traefik host rule", () => {
     expect(hostRuleFor("main", "openfront.dev", "server.openfront.dev")).toBe(
       "Host(`main.openfront.dev`) || Host(`main.server.openfront.dev`)",
     );
+  });
+
+  // deploy.sh writes the resolved host through; for a standalone deployment
+  // it is exactly what the rule would derive, so the rule must not change.
+  it("accepts the standalone game host deploy.sh resolved", () => {
+    expect(
+      hostRuleFor(
+        "main",
+        "openfront.dev",
+        "server.openfront.dev",
+        "main.server.openfront.dev",
+      ),
+    ).toBe("Host(`main.openfront.dev`) || Host(`main.server.openfront.dev`)");
+  });
+
+  // A machine-scoped host has no page host of its own -- its page is the
+  // apex -- and the bare page name would be claimed by every machine's blue
+  // at once, so it gets the one name.
+  it("matches only the game host when it is machine-scoped", () => {
+    expect(
+      hostRuleFor(
+        "blue",
+        "openfront.dev",
+        "server.openfront.dev",
+        "blue.staging2.server.openfront.dev",
+      ),
+    ).toBe("Host(`blue.staging2.server.openfront.dev`)");
   });
 
   // Traefik's matcher syntax: the names must be backticked, or the rule is a

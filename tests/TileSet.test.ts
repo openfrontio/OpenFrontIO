@@ -1,6 +1,6 @@
+import { PseudoRandom } from "@openfront/engine-lib/PseudoRandom";
+import { TileSet } from "@openfront/engine-lib/game/TileSet";
 import { describe, expect, it } from "vitest";
-import { PseudoRandom } from "../src/core/PseudoRandom";
-import { TileSet } from "../src/core/game/TileSet";
 
 describe("TileSet", () => {
   it("adds, reports membership and size", () => {

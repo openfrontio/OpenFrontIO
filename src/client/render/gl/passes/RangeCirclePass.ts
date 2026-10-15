@@ -30,7 +30,7 @@ export class RangeCirclePass {
 
   constructor(gl: WebGL2RenderingContext) {
     this.gl = gl;
-    this.program = createProgram(gl, vertSrc, fragSrc);
+    this.program = createProgram(gl, vertSrc, fragSrc, "RangeCirclePass");
 
     this.uCamera = gl.getUniformLocation(this.program, "uCamera")!;
     this.uCenter = gl.getUniformLocation(this.program, "uCenter")!;

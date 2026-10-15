@@ -1,5 +1,13 @@
+// @vitest-environment jsdom
+import { GameMapType, GameMode } from "@openfront/engine-api/game/GameTypes";
+import type { GameConfig } from "@openfront/engine-api/Schemas";
+import type {
+  PublicGameInfo,
+  PublicGames,
+} from "@openfront/shared/WireSchemas";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ClientEnv } from "../src/client/ClientEnv";
+import { shouldBlockMultiplayerAction } from "../src/client/GameModeSelector";
 import {
   attemptInFlight,
   backendUnreachableConfirmed,
@@ -8,12 +16,6 @@ import {
   resetServerList,
   retryServerList,
 } from "../src/client/ServerList";
-import { GameMapType, GameMode } from "../src/core/game/Game";
-import type {
-  GameConfig,
-  PublicGameInfo,
-  PublicGames,
-} from "../src/core/Schemas";
 
 // The component opens a public-lobby WebSocket the moment it connects. jsdom
 // has no WebSocket worth talking to and this file is about the gate, not the
@@ -32,6 +34,12 @@ vi.mock("../src/client/LobbySocket", () => ({
     start(): void {}
     stop(): void {}
   },
+}));
+
+// The lobby modals load on demand; the stubs below stand in for loaded ones.
+vi.mock("../src/client/LazyModals", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../src/client/LazyModals")>()),
+  whenModalLoaded: (_tag: string, open: () => void) => open(),
 }));
 
 // Registers <game-mode-selector> as a side effect.
@@ -481,5 +489,26 @@ describe("a refused multiplayer click on the web", () => {
 
     expect(joinLobby).toHaveBeenCalled();
     expect(fetchMock.mock.calls.length).toBe(before);
+  });
+});
+
+/**
+ * `multiplayerAllowedForSession` refuses every `signed-out` state regardless
+ * of `reason`, so "needs-account" gates multiplayer for free and needed no
+ * production change here. This pins that: if the rule is ever narrowed to an
+ * allowlist of reasons, this is what would catch a player with no account yet
+ * slipping through.
+ */
+describe("shouldBlockMultiplayerAction with a needs-account session", () => {
+  it("blocks multiplayer when no account exists yet, online or offline", () => {
+    for (const backendOutage of [false, true]) {
+      expect(
+        shouldBlockMultiplayerAction(
+          null,
+          { status: "signed-out", reason: "needs-account" },
+          backendOutage,
+        ),
+      ).toBe(true);
+    }
   });
 });

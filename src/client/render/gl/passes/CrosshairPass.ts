@@ -13,7 +13,7 @@ import { createProgram } from "../utils/GlUtils";
 import fragSrc from "../shaders/crosshair/crosshair.frag.glsl?raw";
 import vertSrc from "../shaders/crosshair/crosshair.vert.glsl?raw";
 
-import { assetUrl } from "src/core/AssetUrls";
+import { assetUrl } from "@openfront/shared/AssetUrls";
 
 const statusAtlasUrl = assetUrl("atlases/status-atlas.png");
 
@@ -53,7 +53,7 @@ export class CrosshairPass {
 
   constructor(gl: WebGL2RenderingContext) {
     this.gl = gl;
-    this.program = createProgram(gl, vertSrc, fragSrc);
+    this.program = createProgram(gl, vertSrc, fragSrc, "CrosshairPass");
 
     this.uCamera = gl.getUniformLocation(this.program, "uCamera")!;
     this.uCenter = gl.getUniformLocation(this.program, "uCenter")!;

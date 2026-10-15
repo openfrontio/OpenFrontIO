@@ -38,6 +38,10 @@ vi.mock("../../src/client/Payments", async (importOriginal) => ({
   startPurchase: vi.fn(async () => ({ outcome: "redirecting" })),
 }));
 
+import type {
+  Cosmetics,
+  Subscription,
+} from "@openfront/shared/CosmeticSchemas";
 import {
   changeSubscriptionTier,
   getUserMe,
@@ -55,7 +59,6 @@ import {
 } from "../../src/client/InGameModal";
 import { startPurchase } from "../../src/client/Payments";
 import { translateText } from "../../src/client/Utils";
-import type { Cosmetics, Subscription } from "../../src/core/CosmeticSchemas";
 
 const startPurchaseMock = startPurchase as unknown as ReturnType<typeof vi.fn>;
 const alertMock = showInGameAlert as unknown as ReturnType<typeof vi.fn>;
@@ -392,6 +395,42 @@ describe("purchaseCosmetic: the confirm a granted subscriber is shown", () => {
   });
 });
 
+describe("purchaseCosmetic: a granted subscriber in the Steam build", () => {
+  // infra carries the unused days onto a Steam agreement
+  // (`steam:extend_agreement`); the Stripe rail still forfeits them.
+  beforeEach(() => {
+    (window as unknown as { openfrontDesktop?: unknown }).openfrontDesktop = {
+      steam: {},
+    };
+  });
+  afterEach(() => {
+    delete (window as unknown as { openfrontDesktop?: unknown })
+      .openfrontDesktop;
+  });
+
+  it("promises the free days are added to the end, not forfeited", async () => {
+    signedInWith({
+      tier: "gold",
+      provider: null,
+      currentPeriodEnd: new Date(Date.now() + 12 * DAY_MS),
+    });
+
+    await purchaseCosmetic(tier("gold", 5), "dollar");
+
+    const [key, params] = confirmCall();
+    expect(key).toBe("store.confirm_subscribe_over_grant_carried");
+    expect(params).toMatchObject({ days: 12 });
+  });
+
+  it("still uses the no-days copy for an open-ended grant, which has nothing to carry", async () => {
+    signedInWith({ tier: "gold", provider: null, currentPeriodEnd: null });
+
+    await purchaseCosmetic(tier("gold", 5), "dollar");
+
+    expect(confirmCall()[0]).toBe("store.confirm_subscribe_over_grant_no_days");
+  });
+});
+
 describe("purchaseCosmetic: paid subscribers are untouched", () => {
   it("a Stripe subscriber still reprices in place", async () => {
     // The guard against a fix that routes EVERYONE to checkout.
@@ -497,18 +536,15 @@ describe("resolveCosmetics: the granted tier is for sale, not owned", () => {
     expect(relationshipOf(user, "subscription:platinum")).toBe("owned");
   });
 
-  it("keeps a granted tier we cannot price owned, so its card does not vanish", () => {
-    // Demoting a grant to "purchasable" is only safe while the tier HAS a
-    // Stripe product to price the button from. Without one it would fall to
-    // "blocked", and the subscriptions tab lists purchasable and owned only —
-    // so the card would disappear entirely, which is worse than the dead
-    // "Subscribed" box. OPE-441 is the real fix for the product gate.
+  it("offers a listed granted tier for sale even without a Stripe product", () => {
+    // A tier sold only on Steam has no Stripe listing. It is still on this
+    // rail's storefront, so the grant is demoted like any other.
     const unpriced = {
       patterns: {},
       flags: {},
       colorPalettes: {},
       subscriptions: {
-        gold: { name: "gold", priceMonthly: 5, product: null },
+        gold: { name: "gold", priceMonthly: 499, product: null },
       },
     } as unknown as Cosmetics;
     const user = userMe({ tier: "gold", status: "active", provider: null });
@@ -517,7 +553,7 @@ describe("resolveCosmetics: the granted tier is for sale, not owned", () => {
       (item) => item.key === "subscription:gold",
     );
 
-    expect(gold?.relationship).toBe("owned");
+    expect(gold?.relationship).toBe("purchasable");
   });
 });
 
@@ -545,6 +581,18 @@ describe("the granted-purchase confirm strings read correctly", () => {
     expect(
       render("confirm_subscribe_over_grant", { tier: "Gold", days: 28 }),
     ).toContain("the 28 days left on it are not refunded");
+  });
+
+  it("agrees in number in the Steam carry-over copy", () => {
+    expect(
+      render("confirm_subscribe_over_grant_carried", { tier: "Gold", days: 1 }),
+    ).toContain("the 1 free day you have left is added to the end");
+    expect(
+      render("confirm_subscribe_over_grant_carried", {
+        tier: "Gold",
+        days: 28,
+      }),
+    ).toContain("the 28 free days you have left are added to the end");
   });
 
   it("never calls a grant a month: an admin comp is open-ended", () => {

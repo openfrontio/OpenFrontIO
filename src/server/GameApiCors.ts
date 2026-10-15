@@ -12,21 +12,22 @@ function isAllowedOrigin(origin: string): boolean {
   if (origin === DESKTOP_APP_ORIGIN) return true;
   const siteHost = ServerEnv.siteHost();
   if (siteHost !== undefined && origin === `https://${siteHost}`) return true;
-  // Every deployment host in the fleet: a tab pinned to one deployment
-  // reaches a game on another cross-origin (per-game routing by id letter,
-  // docs/MultiServer.md), so each sibling's origin must be allowed. Own host
-  // included — harmless (same-origin requests skip CORS) and keeps the rule
-  // uniform.
-  // And each member's PAGE host when GAME_DOMAIN splits the two names
-  // (`blue.openfront.dev` for game host `blue.server.openfront.dev`): a
-  // player who loads a colour's page directly rather than through the apex
-  // arrives from that origin, and before the split it was the same name as
-  // the game host and so already on this list.
-  return Object.values(ServerEnv.cluster()).some((entry) => {
-    if (origin === `https://${entry.host}`) return true;
-    const pageHost = ServerEnv.pageHostFor(entry.host);
-    return pageHost !== undefined && origin === `https://${pageHost}`;
-  });
+  // This server's own game host — harmless (same-origin requests skip CORS)
+  // and what a page rendered by this server pins itself to — and its own
+  // PAGE host when GAME_DOMAIN splits the two names (`main.openfront.dev`
+  // for game host `main.server.openfront.dev`): a player who loads that
+  // page arrives from exactly that origin.
+  //
+  // Sibling game hosts are deliberately NOT here any more. Every page a
+  // player can reach a foreign game from is served by the site host (the
+  // apex behind the load balancer, the static Worker), which is granted
+  // above; only a page loaded on another server's own game host would be
+  // refused, and nothing serves pages there.
+  const own = ServerEnv.publicHost();
+  if (own === undefined) return false;
+  if (origin === `https://${own}`) return true;
+  const pageHost = ServerEnv.pageHostFor(own);
+  return pageHost !== undefined && origin === `https://${pageHost}`;
 }
 
 /**
@@ -39,7 +40,7 @@ function isAllowedOrigin(origin: string): boolean {
  * and the game host this server answers on (`blue.openfront.io`,
  * `main.server.openfront.dev`; see ServerEnv.publicHost). Those are different
  * origins, so every `/api` call the page makes is cross-origin — which is why
- * the page host is allowed here alongside every game host in the fleet. The
+ * the page host is allowed here alongside this server's own game host. The
  * desktop client's renderer is cross-origin for a different reason: it loads
  * from `app://openfront`. The POSTs send Authorization and Content-Type,
  * which makes them non-simple, so the browser preflights.

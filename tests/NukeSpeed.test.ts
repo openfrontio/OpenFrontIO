@@ -1,9 +1,9 @@
+import { UnitType } from "@openfront/engine-api/game/GameTypes";
+import { GameConfig } from "@openfront/engine-api/Schemas";
+import { EngineConfig } from "@openfront/engine/configuration/EngineConfig";
 import { describe, expect, it } from "vitest";
-import { Config } from "../src/core/configuration/Config";
-import { UnitType } from "../src/core/game/Game";
-import { GameConfig } from "../src/core/Schemas";
 
-const cfg = new Config({} as unknown as GameConfig, null, false);
+const cfg = new EngineConfig({} as unknown as GameConfig, false);
 
 describe("nukeSpeed", () => {
   it("maps each nuke type to its speed", () => {

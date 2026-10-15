@@ -10,8 +10,8 @@
  * The shared playerDataTex is passed in but not owned/deleted.
  */
 
+import { assetUrl } from "@openfront/shared/AssetUrls";
 import statusAtlasMeta from "resources/atlases/status-atlas-meta.json";
-import { assetUrl } from "src/core/AssetUrls";
 import type { RenderSettings } from "../../RenderSettings";
 import statusFragSrc from "../../shaders/name/status-icon.frag.glsl?raw";
 import statusVertSrc from "../../shaders/name/status-icon.vert.glsl?raw";
@@ -57,7 +57,12 @@ export class StatusIconProgram {
     this.playerDataTex = playerDataTex;
     this.maxPlayers = maxPlayers;
 
-    this.program = createProgram(gl, statusVertSrc, statusFragSrc);
+    this.program = createProgram(
+      gl,
+      statusVertSrc,
+      statusFragSrc,
+      "StatusIconProgram",
+    );
     gl.useProgram(this.program);
 
     // Texture unit bindings

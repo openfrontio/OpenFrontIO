@@ -4,15 +4,15 @@ import { desktopQuit, requestDesktopQuit } from "../DesktopShell";
 import { NavNotificationsController } from "./NavNotificationsController";
 
 /**
- * The news bell, help "?", settings cogwheel and (on the desktop shell) an
- * exit door as icon buttons, with the notification dots the first two carry.
+ * The news bell, help "?", settings cogwheel and (on the desktop shell) a
+ * power button as icon buttons, with the notification dots the first two carry.
  *
  * Shared by the desktop nav bar and the mobile top bar so both read as the same
  * cluster next to the profile control — they're utility affordances rather than
  * page links, which is why they've left the nav item lists. The cogwheel sits
  * last among the page links, immediately left of the profile control, and is a
  * plain page link with no auth dependency: it looks and behaves the same
- * signed in or out. The exit door, when it renders, sits right after it.
+ * signed in or out. The power button, when it renders, sits right after it.
  */
 @customElement("nav-utility-icons")
 export class NavUtilityIcons extends LitElement {
@@ -93,9 +93,8 @@ export class NavUtilityIcons extends LitElement {
           class="w-6 h-6 pointer-events-none"
           aria-hidden="true"
         >
-          <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
-          <polyline points="16 17 21 12 16 7" />
-          <line x1="21" y1="12" x2="9" y2="12" />
+          <path d="M18.36 6.64a9 9 0 1 1-12.73 0" />
+          <line x1="12" y1="2" x2="12" y2="12" />
         </svg>
       </button>
     `;

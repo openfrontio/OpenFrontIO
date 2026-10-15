@@ -1,7 +1,6 @@
 import { LitElement, html, nothing } from "lit";
 import { property, state } from "lit/decorators.js";
 import { repeat } from "lit/directives/repeat.js";
-import { UserSettings } from "../../core/game/UserSettings";
 import "../hud/layers/ColumnPicker";
 import {
   type ColumnAlignment,
@@ -9,6 +8,7 @@ import {
   columnsFor,
 } from "../hud/layers/lib/StatsColumns";
 import { type ColumnId, type StatsTableKind } from "../StatsConstants";
+import { UserSettings } from "../UserSettings";
 import { translateText } from "../Utils";
 import type { GameView } from "../view";
 

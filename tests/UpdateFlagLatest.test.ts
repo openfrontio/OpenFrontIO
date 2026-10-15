@@ -60,7 +60,7 @@ interface Result {
  */
 function runFlagLatest(
   codes: string[],
-  opts: { clusterStateSource?: string; timeout?: number } = {},
+  opts: { timeout?: number } = {},
 ): Result {
   tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "flag-latest-"));
   const binDir = path.join(tempDir, "bin");
@@ -114,7 +114,7 @@ printf '%s' "$CODE"
     `FLAG_LATEST_TIMEOUT=${opts.timeout ?? 5}`,
     "FLAG_LATEST_RETRY_DELAY=0",
     extractFlagLatestBlock(),
-    `flag_latest 'openfront.io' 'abc123' 'https://api.openfront.io' 'k3y' '${opts.clusterStateSource ?? ""}'`,
+    `flag_latest 'openfront.io' 'abc123' 'https://api.openfront.io' 'k3y'`,
     'echo "exit=$?"',
   ].join("\n");
 
@@ -190,13 +190,12 @@ describe("update.sh flag_latest", () => {
   it("stops retrying an unreachable API once the deadline passes", () => {
     const result = runFlagLatest(["000"], { timeout: 0 });
 
-    expect(result.status).toBe(0);
+    expect(result.status).toBe(1);
     expect(result.requests).toHaveLength(1);
     expect(result.output).toContain("HTTP 000");
   });
 
-  // Every deploy hits this until the registry ships, so it must be quiet and
-  // must not retry: there is no route to come back.
+  // Must not retry: there is no route to come back.
   it("accepts a 404 immediately — the API predates the registry", () => {
     const result = runFlagLatest(["404"]);
 
@@ -205,34 +204,15 @@ describe("update.sh flag_latest", () => {
     expect(result.output).toContain("not deployed yet");
   });
 
-  // While clients still boot from BOOTSTRAP_CONFIG, an unflagged version
-  // changes nothing a player can see. Failing here would fail every deploy for
-  // a warning.
-  it("warns but succeeds when 409 outlasts the retries and the site still boots from the page", () => {
+  // The site's clients ask the API for their server list, so an unflagged
+  // version means no server is open: nobody can start a game. A deploy that
+  // ends there has not succeeded.
+  it("fails the deploy when 409 outlasts the retries", () => {
     const result = runFlagLatest(["409"], { timeout: 0 });
 
-    expect(result.status).toBe(0);
-    expect(result.output).toContain("Failed to flag abc123 as latest");
-    expect(result.output).toContain("Continuing");
-  });
-
-  // ...but once the site's clients ask the API for their server list, an
-  // unflagged version means no server is open: nobody can start a game. A
-  // deploy that ends there has not succeeded.
-  it("fails the deploy when 409 outlasts the retries and CLUSTER_STATE_SOURCE=api", () => {
-    const result = runFlagLatest(["409"], {
-      timeout: 0,
-      clusterStateSource: "api",
-    });
-
     expect(result.status).toBe(1);
-    expect(result.output).toContain("CLUSTER_STATE_SOURCE=api");
-  });
-
-  it("still tolerates a 404 when CLUSTER_STATE_SOURCE=api", () => {
-    const result = runFlagLatest(["404"], { clusterStateSource: "api" });
-
-    expect(result.status).toBe(0);
+    expect(result.output).toContain("Failed to flag abc123 as latest");
+    expect(result.output).toContain("Failing the deploy");
   });
 
   // A bad key or a malformed body is not a race with a booting container, so
@@ -242,30 +222,9 @@ describe("update.sh flag_latest", () => {
     (code) => {
       const result = runFlagLatest([code]);
 
-      expect(result.status).toBe(0);
+      expect(result.status).toBe(1);
       expect(result.requests).toHaveLength(1);
       expect(result.output).toContain(`HTTP ${code}`);
-    },
-  );
-
-  it("fails the deploy on a client error when CLUSTER_STATE_SOURCE=api", () => {
-    const result = runFlagLatest(["401"], { clusterStateSource: "api" });
-
-    expect(result.status).toBe(1);
-  });
-
-  // Anything other than the literal "api" is not the switch. An env file
-  // carrying CLUSTER_STATE_SOURCE=page (or a typo) must keep the lenient
-  // behaviour rather than start failing deploys.
-  it.each([["page"], ["API"], ["api-preview"], [""]])(
-    "treats CLUSTER_STATE_SOURCE=%s as not-the-API",
-    (value) => {
-      const result = runFlagLatest(["409"], {
-        timeout: 0,
-        clusterStateSource: value,
-      });
-
-      expect(result.status).toBe(0);
     },
   );
 });

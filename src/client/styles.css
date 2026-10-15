@@ -1,7 +1,10 @@
 @import "tailwindcss";
+@import "./halloween.css";
 
 @custom-variant dark (&:where(.dark, .dark *));
 @custom-variant hover (&:hover);
+/* The Steam shell has no ad slots, so it can use the width they reserve. */
+@custom-variant desktop (&:where(.desktop-shell, .desktop-shell *));
 
 @theme {
   --default-ring-width: 3px;
@@ -99,6 +102,24 @@ body {
 body.in-game {
   height: 100%;
   overflow: hidden;
+}
+
+body.in-game .bg-gray-800\/92:not(.game-end-timer-sidebar-flash) {
+  background-color: rgb(
+    from var(--color-gray-800) r g b / calc(0.92 * var(--hud-opacity, 1))
+  );
+}
+
+body.in-game .stats-table .bg-gray-800\/85 {
+  background-color: rgb(
+    from var(--color-gray-800) r g b / calc(0.85 * var(--hud-opacity, 1))
+  );
+}
+
+body.in-game .stats-table .bg-gray-700\/95 {
+  background-color: rgb(
+    from var(--color-gray-700) r g b / calc(0.95 * var(--hud-opacity, 1))
+  );
 }
 
 /* An inline page (store, settings, leaderboard, ...) is a modal rendered in
@@ -734,11 +755,13 @@ unit-display .tutorial-highlight::after {
 }
 
 .remove-player-btn {
-  display: flex;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
   width: 16px;
   height: 16px;
+  padding: 0;
+  flex-shrink: 0;
   margin-left: 4px;
   border: none;
   border-radius: 50%;

@@ -104,6 +104,11 @@ Polar Geospatial Center, 2018, "PGC Map Catalog", https://doi.org/10.7910/DVN/6R
 © [OpenStreetMap contributors](https://www.openstreetmap.org/copyright)  
 Licensed under ODbL
 
+### Pulicat Lake Map
+
+© [OpenStreetMap contributors](https://www.openstreetmap.org/copyright)  
+Licensed under ODbL
+
 ## Icons
 
 ### [The Noun Project](https://thenounproject.com/)

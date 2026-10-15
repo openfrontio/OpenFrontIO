@@ -1,7 +1,7 @@
-import { describe, expect, it } from "vitest";
 import {
   commitsMatch,
   isCommitLike,
+  isSiteLike,
   ownLetterIn,
   pickServerForBuild,
   ServerList,
@@ -12,7 +12,8 @@ import {
   versionedPath,
   versionedPathForGame,
   versionMatches,
-} from "../../src/core/ServerList";
+} from "@openfront/shared/ServerList";
+import { describe, expect, it } from "vitest";
 
 const OWN = "bfd5563a11111111111111111111111111111111";
 const OLD = "5ccc50a722222222222222222222222222222222";
@@ -170,8 +171,8 @@ describe("pickServerForBuild", () => {
     expect(pickServerForBuild(LIST, "bfd5563a", () => 1)).toBe("e");
   });
 
-  // src/core takes no floating-point math, so the chooser hands back an
-  // integer. A caller that miscounts must still land on a server.
+  // The shared ServerList takes no floating-point math, so the chooser hands
+  // back an integer. A caller that miscounts must still land on a server.
   it("clamps an index outside the candidate range", () => {
     expect(pickServerForBuild(LIST, "bfd5563a", () => 99)).toBe("e");
     expect(pickServerForBuild(LIST, "bfd5563a", () => -1)).toBe("d");
@@ -469,5 +470,25 @@ describe("versionedPathForGame", () => {
     expect(
       versionedPathForGame(OWN, undefined, ID, GAME_PATH, `/game/${ID}`, ""),
     ).toBeNull();
+  });
+});
+
+describe("isSiteLike", () => {
+  // Mirrors the API's SiteSchema: what a join or check-in may name as its
+  // site. Anything else is a 400 there, so it must be left off instead.
+  it("accepts lowercase hostnames", () => {
+    expect(isSiteLike("openfront.io")).toBe(true);
+    expect(isSiteLike("fix-foo.openfront.dev")).toBe(true);
+    expect(isSiteLike("localhost")).toBe(true);
+  });
+
+  it("refuses ports, schemes, paths, uppercase and empty names", () => {
+    expect(isSiteLike("localhost:9000")).toBe(false);
+    expect(isSiteLike("https://openfront.io")).toBe(false);
+    expect(isSiteLike("openfront.io/game")).toBe(false);
+    expect(isSiteLike("OpenFront.io")).toBe(false);
+    expect(isSiteLike("")).toBe(false);
+    expect(isSiteLike("-openfront.io")).toBe(false);
+    expect(isSiteLike("open..front.io")).toBe(false);
   });
 });

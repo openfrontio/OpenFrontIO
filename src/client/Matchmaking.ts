@@ -1,19 +1,30 @@
+import { UserMeResponse } from "@openfront/shared/ApiSchemas";
+import { CloseCode, isTerminalClose } from "@openfront/shared/CloseCodes";
+import { isCommitLike } from "@openfront/shared/ServerList";
 import { html } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import { ClientEnv } from "src/client/ClientEnv";
-import { UserMeResponse } from "../core/ApiSchemas";
-import { CloseCode, isTerminalClose } from "../core/CloseCodes";
 import { responseHasLinkedIdentity } from "./AccountIdentity";
 import { getUserMe, invalidateUserMe } from "./Api";
 import { getPlayToken } from "./Auth";
 import { BaseModal } from "./components/BaseModal";
 import "./components/Difficulties";
-import { modalHeader } from "./components/ui/ModalHeader";
-import { crazyGamesSDK } from "./CrazyGamesSDK";
+import { GameStartAlertController } from "./components/GameStartAlertController";
+import { DEFAULT_TITLE_CLASS, modalHeader } from "./components/ui/ModalHeader";
+import { gamePortal } from "./GamePortal";
 import type { JoinLobbyEvent } from "./Main";
-import { ensureServerList } from "./ServerList";
+import {
+  ensureServerList,
+  matchmakingSite,
+  redirectToGameVersion,
+} from "./ServerList";
+import { describeSocketClose } from "./SocketClose";
 import type { UsernameInput } from "./UsernameInput";
 import { translateText } from "./Utils";
+
+// The ranked queues. Same strings as RankedType, the API's `mode` param and
+// the `/?requeue=` value.
+export type MatchmakingMode = "1v1" | "2v2" | "ffa" | "clanwars";
 
 type MatchmakingJoin = {
   type: "join";
@@ -31,14 +42,25 @@ export class MatchmakingModal extends BaseModal {
   private intentionalClose = false;
   // Which queue to join; set by Main from the open-matchmaking event
   // before the modal opens.
-  public mode: "1v1" | "2v2" = "1v1";
+  public mode: MatchmakingMode = "1v1";
   @state() private connected = false;
   @state() private socket: WebSocket | null = null;
   @state() private gameID: string | null = null;
   @state() private limitReached = false;
-  @state() private queueSize: number | null = null;
+  // The matchmaking service refused this account as untrusted (4103). Only
+  // the service decides: it gates ranked on trust behind a flag, so the
+  // client never pre-checks trustTier.
+  @state() private notTrusted = false;
+  // The lobby's latest queue-size broadcast. In clan wars it also counts
+  // the players queued for this player's clan, themselves included.
+  @state() private queueSize: { count: number; clanCount?: number } | null =
+    null;
   private selectedClanTag: string | null = null;
   private elo: number | string = "...";
+  private readonly gameStartAlert = new GameStartAlertController(
+    this,
+    () => this.isModalOpen && this.gameID !== null,
+  );
 
   constructor() {
     super();
@@ -50,21 +72,32 @@ export class MatchmakingModal extends BaseModal {
   }
 
   protected renderHeaderSlot() {
+    const title = translateText(
+      this.mode === "2v2"
+        ? "matchmaking_modal.title_2v2"
+        : this.mode === "ffa"
+          ? "matchmaking_modal.title_ffa"
+          : this.mode === "clanwars"
+            ? "matchmaking_modal.title_clanwars"
+            : "matchmaking_modal.title",
+    );
     return modalHeader({
-      title: translateText(
-        this.mode === "2v2"
-          ? "matchmaking_modal.title_2v2"
-          : "matchmaking_modal.title",
-      ),
+      titleContent: html`<span class="${DEFAULT_TITLE_CLASS}">${title}</span>
+        ${this.gameStartAlert.renderBell()}`,
       onBack: () => this.close(),
       ariaLabel: translateText("common.back"),
     });
   }
 
   protected renderBody() {
+    // Clan wars rates the clan, so show who the player is playing for instead.
     const eloDisplay = html`
       <p class="text-center mt-2 mb-4 text-white/60">
-        ${translateText("matchmaking_modal.elo", { elo: this.elo })}
+        ${this.mode === "clanwars"
+          ? translateText("matchmaking_modal.clanwars_clan", {
+              clan: this.selectedClanTag ?? "",
+            })
+          : translateText("matchmaking_modal.elo", { elo: this.elo })}
       </p>
     `;
     return html`
@@ -75,6 +108,20 @@ export class MatchmakingModal extends BaseModal {
   }
 
   private renderInner() {
+    if (this.notTrusted) {
+      // Portals have no purchases, so their variant only suggests playing.
+      const info = gamePortal.isOnGamePortal()
+        ? "matchmaking_modal.not_trusted_info_crazygames"
+        : "matchmaking_modal.not_trusted_info";
+      return html`
+        <div class="flex flex-col items-center gap-4 text-center">
+          <p class="text-white font-bold">
+            ${translateText("matchmaking_modal.not_trusted")}
+          </p>
+          <p class="text-sm text-white/60">${translateText(info)}</p>
+        </div>
+      `;
+    }
     if (this.limitReached) {
       return html`
         <div class="flex flex-col items-center gap-4 text-center">
@@ -105,9 +152,19 @@ export class MatchmakingModal extends BaseModal {
           ? html`
               <p class="text-center text-white/60">
                 ${translateText("matchmaking_modal.queue_size", {
-                  count: this.queueSize,
+                  count: this.queueSize.count,
                 })}
               </p>
+              ${this.queueSize.clanCount !== undefined
+                ? html`
+                    <p class="text-center text-white/60">
+                      ${translateText("matchmaking_modal.clan_queue_size", {
+                        count: this.queueSize.clanCount,
+                        clan: this.selectedClanTag ?? "",
+                      })}
+                    </p>
+                  `
+                : ""}
             `
           : ""}
         ${this.renderLoadingSpinner(
@@ -140,6 +197,7 @@ export class MatchmakingModal extends BaseModal {
     this.gameID = null;
     this.intentionalClose = false;
     this.limitReached = false;
+    this.notTrusted = false;
     this.queueSize = null;
     this.reconnectAttempts = 0;
     this.connect();
@@ -184,7 +242,7 @@ export class MatchmakingModal extends BaseModal {
   }
 
   private selectedClanFrom(userMe: UserMeResponse): string | null {
-    if (this.mode !== "2v2") {
+    if (this.mode !== "2v2" && this.mode !== "clanwars") {
       return null;
     }
     const selectedTag = document
@@ -265,10 +323,31 @@ export class MatchmakingModal extends BaseModal {
     const instanceId = ClientEnv.instanceId();
     const instanceParam =
       instanceId === "" ? "" : `instance_id=${encodeURIComponent(instanceId)}&`;
-    this.socket = new WebSocket(
-      `${ClientEnv.jwtIssuer()}/matchmaking/join?${instanceParam}mode=${this.mode}`,
+    // The queue is partitioned by build (OPE-470), so a match is only ever
+    // assigned on a server this page can play on. Sent only when the build
+    // names a commit: the API rejects anything else, and a label like "DEV"
+    // names no build to partition by.
+    const ownCommit = ClientEnv.gitCommit();
+    const versionParam = isCommitLike(ownCommit)
+      ? `&version=${encodeURIComponent(ownCommit)}`
+      : "";
+    // The queue is also partitioned by SITE: a matched game id is resolved
+    // through this page's server list, so the API pools this page only with
+    // servers registered under the site that list is read for. Without it,
+    // any server on the API that shared blue's letter and build could win
+    // the match — a branch preview did, on 15 Sept 2026 — and the id would
+    // point at a host this page cannot reach. Sent only when the site is a
+    // name the API accepts; a page with none joins the legacy shared pool.
+    const site = matchmakingSite();
+    const siteParam =
+      site === undefined ? "" : `&site=${encodeURIComponent(site)}`;
+    const socket = new WebSocket(
+      `${ClientEnv.jwtIssuer()}/matchmaking/join?${instanceParam}mode=${this.mode}${versionParam}${siteParam}`,
     );
+    this.socket = socket;
+    let openedAt: number | null = null;
     this.socket.onopen = async () => {
+      openedAt = Date.now();
       console.log("Connected to matchmaking server");
       this.connectTimeout = setTimeout(async () => {
         if (this.socket?.readyState !== WebSocket.OPEN) {
@@ -299,7 +378,7 @@ export class MatchmakingModal extends BaseModal {
       this.resetWatchdog();
       const data = JSON.parse(event.data);
       if (data.type === "queue-size") {
-        this.queueSize = data.count;
+        this.queueSize = { count: data.count, clanCount: data.clanCount };
         return;
       }
       if (data.type === "match-assignment") {
@@ -311,13 +390,13 @@ export class MatchmakingModal extends BaseModal {
         this.gameCheckInterval = setInterval(() => this.checkGame(), 1000);
       }
     };
-    this.socket.onerror = (event: Event) => {
-      console.error("WebSocket error occurred:", event);
-    };
     this.socket.onclose = (event: CloseEvent) => {
-      console.log(
-        `Matchmaking server closed connection: code=${event.code} reason=${event.reason}`,
-      );
+      const detail = `Matchmaking socket ${describeSocketClose(socket.url, event, openedAt)}`;
+      if (this.intentionalClose || this.gameID !== null) {
+        console.log(detail);
+      } else {
+        console.warn(detail);
+      }
       this.clearWatchdog();
       this.queueSize = null;
       if (this.intentionalClose || this.gameID !== null) {
@@ -337,6 +416,13 @@ export class MatchmakingModal extends BaseModal {
       ) {
         this.connected = false;
         this.limitReached = true;
+        return;
+      }
+      // Not a trusted account — the server will keep refusing until it is,
+      // so don't reconnect.
+      if (event.code === CloseCode.NotTrusted) {
+        this.connected = false;
+        this.notTrusted = true;
         return;
       }
       if (
@@ -387,29 +473,32 @@ export class MatchmakingModal extends BaseModal {
   }
 
   protected async onOpen(): Promise<void> {
+    // Like a lobby bell, a new matchmaking session starts from the saved
+    // default; a cancellation requeue keeps any per-session override.
+    this.gameStartAlert.reset();
     const userMe = await getUserMe();
     // Early return if modal was closed during async operation
     if (!this.isModalOpen) {
       return;
     }
 
-    // CrazyGames players authenticate through the SDK rather than a linked
-    // account, so a signed-in CrazyGames user counts as logged in for ranked.
-    const crazyGamesSignedIn =
-      crazyGamesSDK.isOnCrazyGames() &&
-      (await crazyGamesSDK.getUserProfile()) !== null;
+    // Portal players authenticate through the SDK rather than a linked
+    // account, so a signed-in portal user counts as logged in for ranked.
+    const portalSignedIn =
+      gamePortal.isOnGamePortal() &&
+      (await gamePortal.getUserProfile()) !== null;
     if (!this.isModalOpen) {
       return;
     }
 
     // The `userMe === false` term is not redundant with the predicate below,
     // which also returns false for `false`: it is what stops a signed-in
-    // CrazyGames player with no /users/@me from falling through to the
+    // portal player with no /users/@me from falling through to the
     // leaderboard read, which would dereference `false`. It also narrows the
     // type for that read.
     if (
       userMe === false ||
-      (!responseHasLinkedIdentity(userMe) && !crazyGamesSignedIn)
+      (!responseHasLinkedIdentity(userMe) && !portalSignedIn)
     ) {
       window.dispatchEvent(
         new CustomEvent("show-message", {
@@ -428,9 +517,18 @@ export class MatchmakingModal extends BaseModal {
     const row =
       this.mode === "2v2"
         ? userMe.player.leaderboard?.twoVtwo
-        : userMe.player.leaderboard?.oneVone;
+        : this.mode === "ffa"
+          ? userMe.player.leaderboard?.ffa
+          : userMe.player.leaderboard?.oneVone;
     this.elo = row?.elo ?? translateText("matchmaking_modal.no_elo");
     this.selectedClanTag = this.selectedClanFrom(userMe);
+    // Clan wars is played for a clan: without one of the player's own clans
+    // selected the service would only refuse the join.
+    if (this.mode === "clanwars" && this.selectedClanTag === null) {
+      this.close();
+      this.showMatchmakingError("matchmaking_modal.clan_required");
+      return;
+    }
 
     this.connected = false;
     this.gameID = null;
@@ -438,10 +536,12 @@ export class MatchmakingModal extends BaseModal {
     this.limitReached = false;
     this.queueSize = null;
     this.reconnectAttempts = 0;
+    this.notTrusted = false;
     this.connect();
   }
 
   protected onClose(): void {
+    this.gameStartAlert.reset();
     this.connected = false;
     this.intentionalClose = true;
     this.socket?.close();
@@ -465,8 +565,9 @@ export class MatchmakingModal extends BaseModal {
       return;
     }
     // The matched game may carry any server's letter: resolve it through
-    // the API's list (multi-server v2) rather than this page's own map. No
-    // version check: this runs on a timer and must never navigate the page.
+    // the API's list (multi-server v2) rather than this page's own map. The
+    // version check waits until the game exists, below: this poll fires
+    // every second and must never navigate.
     await ensureServerList();
     const url = `${ClientEnv.gameHttpBase(this.gameID)}/${ClientEnv.gameWorkerPath(this.gameID)}/api/game/${this.gameID}/exists`;
 
@@ -478,7 +579,7 @@ export class MatchmakingModal extends BaseModal {
     const gameInfo = await response.json();
 
     if (response.status !== 200) {
-      console.error(`Error checking game ${this.gameID}: ${response.status}`);
+      console.warn(`Error checking game ${this.gameID}: ${response.status}`);
       return;
     }
 
@@ -490,6 +591,15 @@ export class MatchmakingModal extends BaseModal {
     if (this.gameCheckInterval) {
       clearInterval(this.gameCheckInterval);
       this.gameCheckInterval = null;
+    }
+
+    // A match is made by rating, not by build, so it can land on a server
+    // running another version. Open the game at that version now: being
+    // bounced at join time costs a page load, which a ranked game's start
+    // deadline does not allow. See docs/MultiServer.md, "Opening a game at
+    // its server's version" (OPE-471).
+    if (redirectToGameVersion(this.gameID)) {
+      return;
     }
 
     this.dispatchEvent(

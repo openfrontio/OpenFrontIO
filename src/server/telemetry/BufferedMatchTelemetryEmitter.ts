@@ -13,7 +13,10 @@ import {
 } from "./MatchTelemetryConfig";
 
 interface QueueEntry {
-  event: MatchTelemetryEvent;
+  // The event is frozen at admission as its JSON form: it doubles as the
+  // immutable admission snapshot and as the raw fragment of the outgoing
+  // batch, so nothing is re-serialized at flush time.
+  serialized: string;
   bytes: number;
 }
 
@@ -79,13 +82,13 @@ export class BufferedMatchTelemetryEmitter implements MatchTelemetryEmitter {
       return "dropped";
     }
 
-    let serializedEvent: string;
-    let snapshot: MatchTelemetryEvent;
+    let serialized: string;
     let bytes: number;
     try {
-      serializedEvent = JSON.stringify(event);
-      snapshot = JSON.parse(serializedEvent) as MatchTelemetryEvent;
-      bytes = Buffer.byteLength(serializedEvent, "utf8");
+      // One pass: the JSON string is both the deep snapshot (later caller
+      // mutations can't reach it) and the exact payload sent on the wire.
+      serialized = JSON.stringify(event);
+      bytes = Buffer.byteLength(serialized, "utf8");
     } catch {
       this.counts.droppedSerialization++;
       return "dropped";
@@ -103,7 +106,7 @@ export class BufferedMatchTelemetryEmitter implements MatchTelemetryEmitter {
       return "dropped";
     }
 
-    this.queue.push({ event: snapshot, bytes });
+    this.queue.push({ serialized, bytes });
     this.queuedBytes += bytes;
     this.counts.enqueued++;
     return "enqueued";
@@ -168,13 +171,14 @@ export class BufferedMatchTelemetryEmitter implements MatchTelemetryEmitter {
       batchId = this.dependencies.randomUUID();
       let body: string;
       try {
-        body = JSON.stringify({
-          schemaVersion: 1,
-          batchId,
-          createdAt,
-          server: this.serverIdentity,
-          events: entries.map((entry) => entry.event),
-        });
+        // Events are already serialized at admission; splice the raw
+        // fragments into the envelope instead of re-stringifying them.
+        const events = entries.map((entry) => entry.serialized).join(",");
+        body =
+          `{"schemaVersion":1,"batchId":${JSON.stringify(batchId)},` +
+          `"createdAt":${JSON.stringify(createdAt)},` +
+          `"server":${JSON.stringify(this.serverIdentity)},` +
+          `"events":[${events}]}`;
       } catch {
         failureCategory = "serialization_failed";
         throw new Error("batch serialization failed");

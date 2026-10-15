@@ -1,18 +1,18 @@
 import { html, LitElement } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import {
-  GRAPHICS_KEY,
-  GRAPHICS_PRESETS_KEY,
-  USER_SETTINGS_CHANGED_EVENT,
-  UserSettings,
-} from "../../core/game/UserSettings";
-import {
   BUILTIN_PRESETS,
   migrateLegacyGraphicsSettings,
   stableStringify,
 } from "../GraphicsPresets";
 import { showInGameConfirm } from "../InGameModal";
 import { type GraphicsOverrides } from "../render/gl";
+import {
+  GRAPHICS_KEY,
+  GRAPHICS_PRESETS_KEY,
+  USER_SETTINGS_CHANGED_EVENT,
+  UserSettings,
+} from "../UserSettings";
 import { translateText } from "../Utils";
 
 const CUSTOM_VALUE = "custom";

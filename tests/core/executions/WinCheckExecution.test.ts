@@ -1,13 +1,13 @@
-import { WinCheckExecution } from "../../../src/core/execution/WinCheckExecution";
 import {
   ColoredTeams,
   GameMode,
-  Player,
   PlayerInfo,
   PlayerType,
   RankedType,
   Team,
-} from "../../../src/core/game/Game";
+} from "@openfront/engine-api/game/GameTypes";
+import { WinCheckExecution } from "@openfront/engine/execution/WinCheckExecution";
+import { Player } from "@openfront/engine/game/Game";
 import { playerInfo, setup } from "../../util/Setup";
 
 describe("WinCheckExecution", () => {
@@ -556,6 +556,83 @@ describe("WinCheckExecution - 1v1 Ranked Mode", () => {
   });
 });
 
+describe("WinCheckExecution - FFA Ranked Mode", () => {
+  // Four humans holding 10 tiles each; `extra` players are added after them
+  // and take `extraTiles` each.
+  async function rankedFfaGame(
+    extra: PlayerInfo[] = [],
+    extraTiles = 0,
+    maxTimerValue?: number,
+  ) {
+    const names = ["Player1", "Player2", "Player3", "Player4"];
+    const game = await setup(
+      "big_plains",
+      {
+        infiniteGold: true,
+        gameMode: GameMode.FFA,
+        instantBuild: true,
+        rankedType: RankedType.FreeForAll,
+        maxTimerValue,
+      },
+      [...names.map((name) => playerInfo(name, PlayerType.Human)), ...extra],
+    );
+    const players = [...names, ...extra.map((p) => p.name)].map((name) =>
+      game.player(name),
+    );
+    const quota = players.map((_, i) => (i < names.length ? 10 : extraTiles));
+    const counts = players.map(() => 0);
+    game.map().forEachTile((tile) => {
+      if (!game.map().isLand(tile)) return;
+      const i = counts.findIndex((c, j) => c < quota[j]);
+      if (i === -1) return;
+      players[i].conquer(tile);
+      counts[i]++;
+    });
+    const setWinnerSpy = vi.fn();
+    game.setWinner = setWinnerSpy;
+    const winCheck = new WinCheckExecution();
+    winCheck.init(game, 0);
+    return { game, players, setWinnerSpy, winCheck };
+  }
+
+  test("sets the winner when only one human remains connected", async () => {
+    const { players, setWinnerSpy, winCheck } = await rankedFfaGame();
+    players.slice(1).forEach((p) => p.markDisconnected(true));
+
+    winCheck.checkWinnerFFA();
+
+    expect(setWinnerSpy).toHaveBeenCalledWith(players[0], expect.anything());
+    expect(winCheck.isActive()).toBe(false);
+  });
+
+  test("keeps going while two humans are still connected", async () => {
+    const { players, setWinnerSpy, winCheck } = await rankedFfaGame();
+    players.slice(2).forEach((p) => p.markDisconnected(true));
+
+    winCheck.checkWinnerFFA();
+
+    expect(setWinnerSpy).not.toHaveBeenCalled();
+    expect(winCheck.isActive()).toBe(true);
+  });
+
+  test("gives the timer win to the largest human, not a larger bot", async () => {
+    const { game, players, setWinnerSpy, winCheck } = await rankedFfaGame(
+      [playerInfo("BotPlayer", PlayerType.Bot)],
+      50,
+      1,
+    );
+    vi.spyOn(game, "elapsedGameSeconds").mockReturnValue(60);
+
+    winCheck.checkWinnerFFA();
+
+    const bot = players[4];
+    expect(bot.numTilesOwned()).toBeGreaterThan(players[0].numTilesOwned());
+    expect(setWinnerSpy).toHaveBeenCalledTimes(1);
+    expect(setWinnerSpy.mock.calls[0][0]).not.toBe(bot);
+    expect(setWinnerSpy.mock.calls[0][0].type()).toBe(PlayerType.Human);
+  });
+});
+
 describe("WinCheckExecution - Overtime", () => {
   test("win threshold decays after the start minute", async () => {
     const game = await setup("big_plains", {
@@ -778,5 +855,71 @@ describe("WinCheckExecution - 2v2 Ranked Team Elimination", () => {
 
     expect(setWinnerSpy).not.toHaveBeenCalled();
     expect(winCheck.isActive()).toBe(true);
+  });
+});
+
+describe("WinCheckExecution - Clan Wars Team Elimination", () => {
+  // Three teams of two: a clan wars match can have more than two sides, and
+  // it is not over until one is left.
+  async function setupClanWars() {
+    const ids = ["P1", "P2", "P3", "P4", "P5", "P6"];
+    const game = await setup(
+      "big_plains",
+      {
+        gameMode: GameMode.Team,
+        playerTeams: 3,
+        maxPlayers: 6,
+        rankedType: RankedType.ClanWars,
+      },
+      ids.map((id) => playerInfo(id, PlayerType.Human)),
+    );
+
+    const byTeam = new Map<Team, Player[]>();
+    for (const id of ids) {
+      const player = game.player(id);
+      const team = player.team()!;
+      byTeam.set(team, [...(byTeam.get(team) ?? []), player]);
+    }
+    const teams = Array.from(byTeam.values());
+    expect(teams.map((t) => t.length)).toEqual([2, 2, 2]);
+
+    const all = teams.flat();
+    let assigned = 0;
+    game.map().forEachTile((tile) => {
+      if (!game.map().isLand(tile)) return;
+      if (assigned >= all.length * 10) return;
+      all[Math.floor(assigned / 10)].conquer(tile);
+      assigned++;
+    });
+
+    const setWinnerSpy = vi.fn();
+    game.setWinner = setWinnerSpy;
+    const winCheck = new WinCheckExecution();
+    winCheck.init(game, 0);
+    return { teams, setWinnerSpy, winCheck };
+  }
+
+  test("keeps going while two teams have an active player", async () => {
+    const { teams, setWinnerSpy, winCheck } = await setupClanWars();
+
+    teams[0].forEach((p) => p.markDisconnected(true));
+    winCheck.checkWinnerTeam();
+
+    expect(setWinnerSpy).not.toHaveBeenCalled();
+    expect(winCheck.isActive()).toBe(true);
+  });
+
+  test("sets the last team with an active player as the winner", async () => {
+    const { teams, setWinnerSpy, winCheck } = await setupClanWars();
+
+    teams[0].forEach((p) => p.markDisconnected(true));
+    teams[2].forEach((p) => p.markDisconnected(true));
+    winCheck.checkWinnerTeam();
+
+    expect(setWinnerSpy).toHaveBeenCalledWith(
+      teams[1][0].team(),
+      expect.anything(),
+    );
+    expect(winCheck.isActive()).toBe(false);
   });
 });

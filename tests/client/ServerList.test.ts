@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { ClientEnv } from "../../src/client/ClientEnv";
+import { ClientEnv, NoServerError } from "../../src/client/ClientEnv";
 import { resetPagePinForTests } from "../../src/client/PagePin";
 import {
   attemptInFlight,
@@ -9,14 +9,17 @@ import {
   MANUAL_RETRY_COOLDOWN_MS,
   manualRetryAvailable,
   redirectToGameVersion,
+  refreshServerList,
   reloadWouldRescue,
   resetServerList,
   retryDelayMs,
   retryServerList,
   serverListSite,
   serverListUrl,
+  setServerListInGame,
   startServerListPolling,
   stopServerListPolling,
+  versionedPathForMismatchedGame,
 } from "../../src/client/ServerList";
 
 // Priority 1 of the multi-server v2 handoff: the client fetches the server
@@ -60,8 +63,8 @@ function setBootstrap(overrides: Record<string, unknown> = {}) {
   (window as any).BOOTSTRAP_CONFIG = {
     gameEnv: "prod",
     cluster: {
-      a: { host: "blue.openfront.io", color: "blue", numWorkers: 2 },
-      b: { host: "green.openfront.io", color: "green", numWorkers: 2 },
+      a: { host: "blue.openfront.io", numWorkers: 2 },
+      b: { host: "green.openfront.io", numWorkers: 2 },
     },
     instanceLetter: "a",
     turnstileSiteKey: "x",
@@ -454,6 +457,68 @@ describe("startServerListPolling", () => {
     expect(fetchMock).toHaveBeenCalledTimes(7);
   });
 
+  it("skips beats while the tab is hidden and resumes when it is shown", async () => {
+    vi.useFakeTimers();
+    let hidden = false;
+    const hiddenSpy = vi
+      .spyOn(document, "hidden", "get")
+      .mockImplementation(() => hidden);
+    try {
+      startServerListPolling();
+      await vi.advanceTimersByTimeAsync(1);
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+
+      // Hidden: however long it sits there, no beat goes out.
+      hidden = true;
+      document.dispatchEvent(new Event("visibilitychange"));
+      await vi.advanceTimersByTimeAsync(REFRESH_MS * 10);
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+
+      // Shown again: the overdue beat runs at once, and the cadence resumes.
+      hidden = false;
+      document.dispatchEvent(new Event("visibilitychange"));
+      await vi.advanceTimersByTimeAsync(1);
+      expect(fetchMock).toHaveBeenCalledTimes(2);
+      await vi.advanceTimersByTimeAsync(REFRESH_MS);
+      expect(fetchMock).toHaveBeenCalledTimes(3);
+
+      // A quick hide-and-show before a beat is due adds no request.
+      hidden = true;
+      document.dispatchEvent(new Event("visibilitychange"));
+      hidden = false;
+      document.dispatchEvent(new Event("visibilitychange"));
+      await vi.advanceTimersByTimeAsync(1);
+      expect(fetchMock).toHaveBeenCalledTimes(3);
+    } finally {
+      hiddenSpy.mockRestore();
+    }
+  });
+
+  it("skips beats during a match and resumes on the way back to the menu", async () => {
+    vi.useFakeTimers();
+    startServerListPolling();
+    await vi.advanceTimersByTimeAsync(1);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+
+    // In a match: however long it runs, no beat goes out.
+    setServerListInGame(true);
+    await vi.advanceTimersByTimeAsync(REFRESH_MS * 10);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+
+    // Back at the menu: the overdue beat runs at once, and the cadence resumes.
+    setServerListInGame(false);
+    await vi.advanceTimersByTimeAsync(1);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    await vi.advanceTimersByTimeAsync(REFRESH_MS);
+    expect(fetchMock).toHaveBeenCalledTimes(3);
+
+    // A match shorter than the time to the next beat adds no request.
+    setServerListInGame(true);
+    setServerListInGame(false);
+    await vi.advanceTimersByTimeAsync(1);
+    expect(fetchMock).toHaveBeenCalledTimes(3);
+  });
+
   it("does not poll on a replay shell host", async () => {
     // Replay shells talk to the archive, not to a live server list.
     stubLocation("replay.openfront.io");
@@ -595,6 +660,30 @@ describe("backend reachability", () => {
     } finally {
       document.removeEventListener("backend-reachability", listener);
     }
+  });
+
+  // Unlike a 404, a 5xx says nothing behind the API can be trusted to work
+  // either, and a static page it leaves without a list has no server to dial.
+  it("counts a 5xx towards the outage, like an attempt nothing answered", async () => {
+    vi.useFakeTimers();
+    fetchMock.mockImplementation(async () =>
+      jsonResponse({ error: "bad gateway" }, 502),
+    );
+    expect(await ensureServerList()).toBe("fallback");
+    expect(backendReachable()).toBe(false);
+    expect(backendUnreachableConfirmed()).toBe(false);
+
+    await vi.advanceTimersByTimeAsync(RETRY_MS);
+    expect(await ensureServerList()).toBe("fallback");
+    expect(backendUnreachableConfirmed()).toBe(true);
+
+    fetchMock.mockImplementation(async () =>
+      jsonResponse({ error: "unknown site" }, 404),
+    );
+    await vi.advanceTimersByTimeAsync(RETRY_MS * 2);
+    expect(await ensureServerList()).toBe("fallback");
+    expect(backendReachable()).toBe(true);
+    expect(backendUnreachableConfirmed()).toBe(false);
   });
 });
 
@@ -774,6 +863,139 @@ describe("retryServerList", () => {
   });
 });
 
+// What the lobby slot's Retry dials from. ensureServerList answers from the
+// cached list at once, and after a failure that list may still name the
+// server that just died.
+describe("refreshServerList", () => {
+  const MOVED_LIST = {
+    latest: OWN,
+    servers: {
+      e: {
+        host: "falk2-c.openfront.io",
+        numWorkers: 16,
+        version: OWN,
+        state: "open",
+      },
+    },
+  };
+
+  it("fetches before it answers, where ensureServerList answers from the cache", async () => {
+    expect(await ensureServerList()).toBe("api");
+    expect(ClientEnv.serverWsBase()).toBe("wss://falk2-b.openfront.io");
+
+    fetchMock.mockImplementation(async () => jsonResponse(MOVED_LIST));
+    expect(await ensureServerList()).toBe("api");
+    expect(ClientEnv.serverWsBase()).toBe("wss://falk2-b.openfront.io");
+
+    expect(await refreshServerList()).toBe("api");
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(ClientEnv.serverWsBase()).toBe("wss://falk2-c.openfront.io");
+  });
+
+  // The attempt is the heartbeat's, so nothing here goes through
+  // retryServerList: it is fetchOnce joining that attempt that holds this.
+  it("waits for an attempt someone else has out rather than answering early", async () => {
+    vi.useFakeTimers();
+    expect(await retryServerList()).toBe("api");
+
+    let release: (r: Response) => void = () => {};
+    fetchMock.mockImplementation(
+      async () =>
+        await new Promise<Response>((resolve) => {
+          release = resolve;
+        }),
+    );
+    startServerListPolling();
+    expect(attemptInFlight()).toBe(true);
+
+    let settled = false;
+    const refreshed = refreshServerList().then((status) => {
+      settled = true;
+      return status;
+    });
+    await vi.advanceTimersByTimeAsync(100);
+    expect(settled).toBe(false);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+
+    release(jsonResponse(MOVED_LIST));
+    expect(await refreshed).toBe("api");
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(ClientEnv.serverWsBase()).toBe("wss://falk2-c.openfront.io");
+  });
+
+  // The manual-retry clock belongs to the other two affordances, and a press
+  // of one of them must not turn this into a dial from the cache: on the web
+  // a refused multiplayer click is such a press (reportMultiplayerRefusal),
+  // and the lobby slot's Retry can land inside its floor with nothing in
+  // flight, where retryServerList would hand back the settled result.
+  it("fetches inside another press's floor and cooldown when nothing is in flight", async () => {
+    vi.useFakeTimers();
+    expect(await retryServerList()).toBe("api");
+    expect(ClientEnv.serverWsBase()).toBe("wss://falk2-b.openfront.io");
+    await vi.advanceTimersByTimeAsync(500);
+
+    fetchMock.mockImplementation(async () => jsonResponse(MOVED_LIST));
+    expect(await refreshServerList()).toBe("api");
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(ClientEnv.serverWsBase()).toBe("wss://falk2-c.openfront.io");
+  });
+
+  // ...and the converse: it does not stamp that clock, so the refused-click
+  // probe is not held for a press it did not make.
+  it("leaves the manual-retry clock to the buttons that share it", async () => {
+    vi.useFakeTimers();
+    expect(await refreshServerList()).toBe("api");
+    expect(manualRetryAvailable()).toBe(true);
+  });
+
+  it("has a floor of its own, inside which a second call joins the first", async () => {
+    vi.useFakeTimers();
+    expect(await refreshServerList()).toBe("api");
+    expect(await refreshServerList()).toBe("api");
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+
+    await vi.advanceTimersByTimeAsync(1_000);
+    expect(await refreshServerList()).toBe("api");
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  it("counts a failure towards the outage, and hands it back inside the floor", async () => {
+    vi.useFakeTimers();
+    expect(await ensureServerList()).toBe("api");
+    fetchMock.mockRejectedValue(new TypeError("network down"));
+    expect(await refreshServerList()).toBe("api");
+    expect(backendReachable()).toBe(false);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+
+    // Inside the floor the failed attempt is what a second call gets.
+    fetchMock.mockImplementation(async () => jsonResponse(MOVED_LIST));
+    expect(await refreshServerList()).toBe("api");
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(ClientEnv.serverWsBase()).toBe("wss://falk2-b.openfront.io");
+
+    await vi.advanceTimersByTimeAsync(1_000);
+    expect(await refreshServerList()).toBe("api");
+    expect(backendReachable()).toBe(true);
+    expect(ClientEnv.serverWsBase()).toBe("wss://falk2-c.openfront.io");
+  });
+
+  // A person pressing a button is not a timer: the heartbeat's backoff after
+  // a failure must not turn the Retry into a dial from the cached list.
+  it("fetches inside the heartbeat's backoff after a failed attempt", async () => {
+    vi.useFakeTimers();
+    expect(await ensureServerList()).toBe("api");
+    fetchMock.mockRejectedValueOnce(new TypeError("network down"));
+    expect(await retryServerList()).toBe("api");
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    await vi.advanceTimersByTimeAsync(2_000);
+
+    fetchMock.mockImplementation(async () => jsonResponse(MOVED_LIST));
+    expect(await refreshServerList()).toBe("api");
+    expect(fetchMock).toHaveBeenCalledTimes(3);
+    expect(ClientEnv.serverWsBase()).toBe("wss://falk2-c.openfront.io");
+  });
+});
+
 // What the desktop status bar's Retry button disables itself on. The
 // reachability event is no use for it: that one fires only when reachability
 // CHANGES, so an attempt that fails exactly like the last one announces
@@ -918,9 +1140,11 @@ describe("picking between open, draining and fenced", () => {
     expect(await ensureServerList()).toBe("outdated");
     // The prompt navigates, not this: the page is left exactly where it is.
     expect(loc.href).toBe("https://openfront.io/w1/game/cAbCd12345?lobby");
-    // Own-server calls fall back to the page's own values — here the
-    // document's origin, the only thing a Worker-served page has...
-    expect(ClientEnv.serverWsBase()).toBe("wss://openfront.io");
+    // Own-server calls have nothing to fall back to: the document's origin
+    // is all a Worker-served page has, and it is the page host, not a game
+    // server. Dialing it is what produced 1.1M edge timeouts a day
+    // (ai-ops#21); an outdated page should be reloading, not connecting...
+    expect(() => ClientEnv.serverWsBase()).toThrow(NoServerError);
     // ...and existing games still resolve by letter from the list.
     expect(ClientEnv.resolveGame("cAbCd12345")).toEqual({
       kind: "cross",
@@ -1003,7 +1227,12 @@ describe("picking between open, draining and fenced", () => {
     );
     expect(await ensureServerList()).toBe("no-server");
     expect(loc.href).toBe("https://openfront.io/");
-    expect(ClientEnv.serverWsBase()).toBe("wss://openfront.io");
+    // And it does NOT fall back to the page host. This is one of the two
+    // states that used to dial the apex (the other is "outdated"): the list
+    // answered and named no server for this build, so there is nothing to
+    // connect to, and `wss://openfront.io` is a host whose edge can only time
+    // the connect out (ai-ops#21).
+    expect(() => ClientEnv.serverWsBase()).toThrow(NoServerError);
 
     setWorkerBootstrap({ gitCommit: OLD });
     fetchMock.mockImplementation(async () =>
@@ -1163,7 +1392,6 @@ describe("picking between open, draining and fenced", () => {
         cluster: {
           a: {
             host: "main.server.openfront.dev",
-            color: "blue",
             numWorkers: 2,
           },
         },
@@ -1227,8 +1455,8 @@ describe("picking between open, draining and fenced", () => {
   // A server-rendered page prefers its own server (OPE-430). Before v2 the
   // page always talked to the colour that rendered it; the list's random pick
   // can send it to a sibling, and the two do not have to agree about that
-  // sibling. On dev (openfront.dev, a blue/green pair behind the apex with
-  // CLUSTER_STATE_SOURCE=apex) the registry listed both colours `open` on the
+  // sibling. On dev (openfront.dev, a blue/green pair behind the apex, then
+  // still draining by an apex colour poll) the registry listed both colours `open` on the
   // same build while the apex poll had green considering itself draining: a
   // page rendered by blue that drew green got a lobby feed reporting
   // active:false, read it as "a new version is available", and reloaded — on
@@ -1242,8 +1470,8 @@ describe("picking between open, draining and fenced", () => {
     function servedByBlue(overrides: Record<string, unknown> = {}) {
       setBootstrap({
         cluster: {
-          a: { host: BLUE, color: "blue", numWorkers: 2 },
-          b: { host: GREEN, color: "green", numWorkers: 2 },
+          a: { host: BLUE, numWorkers: 2 },
+          b: { host: GREEN, numWorkers: 2 },
         },
         instanceLetter: "a",
         serverHost: BLUE,
@@ -1554,9 +1782,9 @@ describe("reloadWouldRescue", () => {
   it("never rescues a single-server deployment whose page and game hosts differ", async () => {
     // With GAME_DOMAIN set even a standalone deployment gets a siteHost
     // that differs from its game host, while Traefik routes both names to
-    // the one container. The map having no siblings is what tells this
-    // apart from prod's apex — the same rule the server's own apex poll
-    // uses (ActiveDeployment.shouldPollApex).
+    // the one container. The site's list having no siblings is what tells
+    // this apart from prod's apex: main.openfront.dev is its own site, and
+    // its list names its one server.
     setBootstrap({
       gitCommit: OLD,
       siteHost: "main.openfront.dev",
@@ -1564,8 +1792,34 @@ describe("reloadWouldRescue", () => {
       instanceLetter: "a",
       cluster: { a: { host: "main.server.openfront.dev", numWorkers: 2 } },
     });
+    fetchMock.mockImplementation(async () =>
+      jsonResponse({
+        latest: OWN,
+        servers: {
+          a: {
+            host: "main.server.openfront.dev",
+            numWorkers: 2,
+            version: OWN,
+            state: "open",
+          },
+        },
+      }),
+    );
     expect(await ensureServerList()).toBe("fallback");
     expect(reloadWouldRescue("fallback")).toBe(false);
+  });
+
+  it("rescues a server-rendered fleet page by the list's siblings, not its own map", async () => {
+    // A server injects a map naming only itself now, so the map alone would
+    // read every fleet page as standalone. Behind the apex the list names
+    // the siblings a reload can land on.
+    setBootstrap({
+      gitCommit: OLD,
+      instanceLetter: "a",
+      cluster: { a: { host: "blue.openfront.io", numWorkers: 2 } },
+    });
+    expect(await ensureServerList()).toBe("fallback");
+    expect(reloadWouldRescue("fallback")).toBe(true);
   });
 
   it("asks no network question: this is topology, not liveness", async () => {
@@ -1689,5 +1943,72 @@ describe("redirectToGameVersion", () => {
     await withList();
     expect(redirectToGameVersion("cAbCd12345")).toBe(false);
     expect(loc.href).toBe("https://replay.openfront.io/cAbCd12345");
+  });
+});
+
+// What the join-time version_mismatch handler asks (OPE-471). Letter c runs
+// OLD in API_LIST, letter d runs OWN — this page's build.
+describe("versionedPathForMismatchedGame", () => {
+  async function withList() {
+    expect(await ensureServerList()).toBe("api");
+  }
+
+  // The server just refused the join with this commit; the list is
+  // stale-while-revalidate and may still name the build we tried.
+  it("prefers the refusing server's commit over the list", async () => {
+    stubLocation("openfront.io", "/game/dAbCd12345");
+    await withList();
+    expect(versionedPathForMismatchedGame("dAbCd12345", OLD)).toBe(
+      `/v/${SHORT_OLD}/game/dAbCd12345`,
+    );
+  });
+
+  it("falls back to the list when the server names no commit", async () => {
+    stubLocation("openfront.io", "/game/cAbCd12345");
+    await withList();
+    expect(versionedPathForMismatchedGame("cAbCd12345", undefined)).toBe(
+      `/v/${SHORT_OLD}/game/cAbCd12345`,
+    );
+  });
+
+  // GIT_COMMIT is "DEV" on a dev server and "unknown" in the Dockerfile's
+  // default: no build to ask for, and never a /v/<x>/ URL.
+  it("ignores a server commit that names no build", async () => {
+    stubLocation("openfront.io", "/game/cAbCd12345");
+    await withList();
+    expect(versionedPathForMismatchedGame("cAbCd12345", "unknown")).toBe(
+      `/v/${SHORT_OLD}/game/cAbCd12345`,
+    );
+
+    stubLocation("openfront.io", "/game/dAbCd12345");
+    await withList();
+    expect(versionedPathForMismatchedGame("dAbCd12345", "DEV")).toBeNull();
+  });
+
+  it("stays put when the page is already pinned to that commit", async () => {
+    stubLocation("openfront.io", `/v/${SHORT_OLD}/game/cAbCd12345`);
+    await withList();
+    expect(versionedPathForMismatchedGame("cAbCd12345", OLD)).toBeNull();
+  });
+
+  // A pin the server contradicts is an ordinary mismatch: the pre-join
+  // redirect used a list that has since moved on.
+  it("leaves a pin the server names a different commit than", async () => {
+    stubLocation("openfront.io", "/v/1234567/game/cAbCd12345");
+    await withList();
+    expect(versionedPathForMismatchedGame("cAbCd12345", OLD)).toBe(
+      `/v/${SHORT_OLD}/game/cAbCd12345`,
+    );
+  });
+
+  it("answers nothing on the shells with no /v/<commit>/ routes", async () => {
+    stubLocation("replay.openfront.io", "/cAbCd12345");
+    await withList();
+    expect(versionedPathForMismatchedGame("cAbCd12345", OLD)).toBeNull();
+
+    stubLocation("openfront.io", "/game/cAbCd12345");
+    await withList();
+    (window as any).openfrontDesktop = {};
+    expect(versionedPathForMismatchedGame("cAbCd12345", OLD)).toBeNull();
   });
 });

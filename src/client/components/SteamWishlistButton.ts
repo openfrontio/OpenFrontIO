@@ -1,6 +1,6 @@
+import { assetUrl } from "@openfront/shared/AssetUrls";
 import { html, LitElement, nothing } from "lit";
 import { customElement, property } from "lit/decorators.js";
-import { assetUrl } from "../../core/AssetUrls";
 import { steamSDK } from "../SteamSDK";
 import { translateText } from "../Utils";
 import { steamStoreUrl } from "./SteamWishlist";
@@ -44,10 +44,7 @@ export class SteamWishlistButton extends LitElement {
         />
         <span class="hidden min-w-0 flex-col leading-tight xl:flex">
           <span class="truncate text-sm font-semibold text-white">
-            ${translateText("steam_wishlist.on_steam")}
-          </span>
-          <span class="truncate text-[11px] text-white/55">
-            ${translateText("steam_wishlist.release")}
+            ${translateText("steam_wishlist.buy_on_steam")}
           </span>
         </span>
         <span
@@ -69,7 +66,7 @@ export class SteamWishlistButton extends LitElement {
               d="M71.96,33.85c0-6.32-5.14-11.46-11.46-11.46s-11.46,5.14-11.46,11.46,5.14,11.46,11.46,11.46,11.46-5.14,11.46-11.46Zm-20.05-.02c0-4.75,3.86-8.61,8.61-8.61s8.61,3.85,8.61,8.61-3.85,8.61-8.61,8.61-8.61-3.85-8.61-8.61Z"
             />
           </svg>
-          ${translateText("steam_wishlist.cta")}
+          ${translateText("steam_wishlist.buy_cta")}
         </span>
       </a>
     `;

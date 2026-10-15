@@ -1,9 +1,9 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   FEATURED_LOBBY_AUTO_START_MS,
   HOSTED_LOBBY_AUTO_START_MS,
   LobbyLabelSchema,
-} from "../../src/core/Schemas";
+} from "@openfront/shared/WireSchemas";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ListingState } from "../../src/server/ListingState";
 
 // The listing state on its own. How the game acts on it — rejecting a
@@ -58,6 +58,16 @@ describe("ListingState", () => {
     expect(listing.autoStartAt()).toBe(
       T0 + 60_000 + HOSTED_LOBBY_AUTO_START_MS,
     );
+  });
+
+  it("uses the host's chosen start time, dropped on delist", () => {
+    const listing = new ListingState();
+    listing.setListed(true, 2 * 60_000);
+    expect(listing.autoStartAt()).toBe(T0 + 2 * 60_000);
+
+    listing.setListed(false);
+    listing.setListed(true);
+    expect(listing.autoStartAt()).toBe(T0 + HOSTED_LOBBY_AUTO_START_MS);
   });
 
   it("gives a featured lobby the longer deadline", () => {

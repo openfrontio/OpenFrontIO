@@ -1,4 +1,3 @@
-import { describe, expect, it } from "vitest";
 import {
   AttackIntentSchema,
   BoatAttackIntentSchema,
@@ -10,7 +9,8 @@ import {
   MoveWarshipIntentSchema,
   SpawnIntentSchema,
   UpgradeStructureIntentSchema,
-} from "../../src/core/Schemas";
+} from "@openfront/engine-api/Schemas";
+import { describe, expect, it } from "vitest";
 
 const RECIPIENT = "aaaaaaaa";
 

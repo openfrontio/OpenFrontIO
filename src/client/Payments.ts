@@ -1,4 +1,4 @@
-import type { PaymentsProvider } from "../core/ApiSchemas";
+import type { PaymentsProvider } from "@openfront/shared/ApiSchemas";
 import {
   createPaymentsCheckout,
   finalizeSteamOrder,
@@ -273,8 +273,14 @@ export type PurchaseOutcome =
   // "purchase failed".
   | { outcome: "pending" }
   // `message` is ready to display: already translated, or the server's own
-  // player-facing text where it had one.
-  | { outcome: "error"; message: string; refetchCatalog: boolean };
+  // player-facing text where it had one. `manageBilling` means the fix is in
+  // the billing portal, so callers should offer a way there.
+  | {
+      outcome: "error";
+      message: string;
+      refetchCatalog: boolean;
+      manageBilling?: true;
+    };
 
 export type PurchaseError = Extract<PurchaseOutcome, { outcome: "error" }>;
 
@@ -332,6 +338,11 @@ function checkoutError(
           provider: providerName(result.provider),
         }),
       );
+    case "subscription_past_due":
+      return {
+        ...error(translateText("store.subscription_past_due")),
+        manageBilling: true,
+      };
     // Nothing was charged; the store's own copy for "you have this already".
     case "already_subscribed":
       return error(translateText("store.already_subscribed"));
@@ -347,6 +358,8 @@ function checkoutError(
       );
     case "rate_limited":
       return error(translateText("store.checkout_rate_limited"));
+    case "steam_licence_required":
+      return error(translateText("store.steam_licence_required"));
     // Not a breakage: the rail is deliberately switched off (501, never 500).
     case "provider_unavailable":
       return error(translateText("store.checkout_rail_unavailable"));

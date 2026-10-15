@@ -1,4 +1,3 @@
-import { AnalyticsRecord, PlayerRecord } from "../../../../core/Schemas";
 import {
   GOLD_INDEX_STEAL,
   GOLD_INDEX_TRADE,
@@ -8,7 +7,8 @@ import {
   PLAYER_INDEX_BOT,
   PLAYER_INDEX_HUMAN,
   PLAYER_INDEX_NATION,
-} from "../../../../core/StatsSchemas";
+} from "@openfront/engine-api/StatsSchemas";
+import { AnalyticsRecord, PlayerRecord } from "@openfront/shared/WireSchemas";
 
 export enum RankType {
   ConquestHumans = "ConquestHumans",

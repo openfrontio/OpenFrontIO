@@ -1,6 +1,6 @@
+import { Difficulty, GameMapType } from "@openfront/engine-api/game/GameTypes";
 import { LitElement, html } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
-import { Difficulty, GameMapType } from "../../../core/game/Game";
 import { terrainMapFileLoader } from "../../TerrainMapFileLoader";
 import { translateText } from "../../Utils";
 import { starIcon } from "./MapFavorites";
@@ -74,7 +74,7 @@ export class MapDisplay extends LitElement {
       this.hasNations =
         Array.isArray(manifest.nations) && manifest.nations.length > 0;
     } catch (error) {
-      console.error("Failed to load map data:", error);
+      console.warn("Failed to load map data:", error);
     } finally {
       this.isLoading = false;
     }

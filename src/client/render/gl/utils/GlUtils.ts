@@ -28,48 +28,72 @@ export class GLContextLostError extends Error {
 }
 
 /**
+ * Read the unmasked GPU renderer string, or "unknown" if the driver hides it.
+ * A GPU model is not personal data, and it is the first thing needed to act on
+ * a driver-specific shader failure.
+ */
+export function readRenderer(gl: WebGL2RenderingContext): string {
+  const dbg = gl.getExtension("WEBGL_debug_renderer_info");
+  return dbg ? String(gl.getParameter(dbg.UNMASKED_RENDERER_WEBGL)) : "unknown";
+}
+
+/**
  * Format a compile/link failure. Distinguishes a real GLSL failure (info log,
  * plus the GL error code when the driver gives us no log) from a dead context.
+ *
+ * `name` identifies the program (the pass that built it) and the renderer
+ * string identifies the GPU. Without both, a driver that fails with an empty
+ * log leaves telemetry with nothing to say which of ~45 programs broke where.
  */
 function glFailure(
   gl: WebGL2RenderingContext,
   phase: "compile" | "link",
   log: string | null,
+  name: string,
 ): Error {
   if (gl.isContextLost()) return new GLContextLostError(phase);
   // Some drivers link-fail with no log at all. The error code is then the only
   // hint we get, so keep it in the message rather than reporting an empty one.
+  // Read it before anything else issues GL calls.
   const detail = log
     ? `\n${log}`
     : ` (no info log, glGetError=${gl.getError()})`;
   const label = phase === "compile" ? "Shader compile" : "Program link";
-  return new Error(`${label} error:${detail}`);
+  return new Error(
+    `${label} error [${name}, GPU: ${readRenderer(gl)}]:${detail}`,
+  );
 }
 
 export function compileShader(
   gl: WebGL2RenderingContext,
   type: number,
   source: string,
+  name: string,
 ): WebGLShader {
   const shader = gl.createShader(type)!;
   gl.shaderSource(shader, source);
   gl.compileShader(shader);
   if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
     const log = gl.getShaderInfoLog(shader);
-    const err = glFailure(gl, "compile", log);
+    const err = glFailure(gl, "compile", log, name);
     gl.deleteShader(shader);
     throw err;
   }
   return shader;
 }
 
+/**
+ * @param name Identifies the program in a compile/link error, e.g. the pass's
+ *   class name (`"UnitPass"`), or `"Pass.field"` when a pass builds several.
+ */
 export function createProgram(
   gl: WebGL2RenderingContext,
   vertSrc: string,
   fragSrc: string,
+  name: string,
 ): WebGLProgram {
-  const vs = compileShader(gl, gl.VERTEX_SHADER, vertSrc);
-  const fs = compileShader(gl, gl.FRAGMENT_SHADER, fragSrc);
+  const vs = compileShader(gl, gl.VERTEX_SHADER, vertSrc, `${name} vertex`);
+  const fs = compileShader(gl, gl.FRAGMENT_SHADER, fragSrc, `${name} fragment`);
   const program = gl.createProgram()!;
   gl.attachShader(program, vs);
   gl.attachShader(program, fs);
@@ -78,7 +102,7 @@ export function createProgram(
   gl.deleteShader(fs);
   if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
     const log = gl.getProgramInfoLog(program);
-    const err = glFailure(gl, "link", log);
+    const err = glFailure(gl, "link", log, name);
     gl.deleteProgram(program);
     throw err;
   }

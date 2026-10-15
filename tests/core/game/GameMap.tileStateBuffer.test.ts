@@ -1,5 +1,5 @@
+import { GameMapImpl } from "@openfront/engine-lib/game/GameMapImpl";
 import { describe, expect, it } from "vitest";
-import { GameMapImpl } from "../../../src/core/game/GameMap";
 
 describe("GameMap.tileStateBuffer", () => {
   it("returns a Uint16Array sized to width * height", () => {

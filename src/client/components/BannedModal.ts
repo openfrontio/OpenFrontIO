@@ -1,6 +1,6 @@
+import type { UserMeResponse } from "@openfront/shared/ApiSchemas";
 import { html, LitElement } from "lit";
 import { customElement, query, state } from "lit/decorators.js";
-import type { UserMeResponse } from "../../core/ApiSchemas";
 import { translateText } from "../Utils";
 import "./baseComponents/Modal";
 import type { OModal } from "./baseComponents/Modal";

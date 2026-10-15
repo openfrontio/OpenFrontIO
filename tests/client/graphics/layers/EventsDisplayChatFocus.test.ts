@@ -29,14 +29,16 @@ vi.mock("lit/directives/unsafe-html.js", () => ({
 
 vi.mock("../../../../src/client/Utils", () => ({
   translateText: vi.fn((key: string) => key),
-  renderNumber: vi.fn(),
-  renderTroops: vi.fn(),
   getMessageTypeClasses: vi.fn(() => ""),
 }));
+vi.mock("@openfront/engine-lib/Format", () => ({
+  renderNumber: vi.fn(),
+  renderTroops: vi.fn(),
+}));
 
+import { GameUpdateType } from "@openfront/engine-api/game/GameUpdates";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { EventsDisplay } from "../../../../src/client/hud/layers/EventsDisplay";
-import { GameUpdateType } from "../../../../src/core/game/GameUpdates";
 
 describe("EventsDisplay chat focus (#5101)", () => {
   let ed: EventsDisplay;
@@ -74,5 +76,26 @@ describe("EventsDisplay chat focus (#5101)", () => {
     ed.onDisplayChatEvent(chatUpdate(false) as never);
     const events = (ed as unknown as { events: { focusID?: number }[] }).events;
     expect(events[0].focusID).toBe(2);
+  });
+
+  type FeedEvent = { highlight?: boolean; minor?: boolean };
+  const emit = () =>
+    (ed as unknown as { eventBus: { emit: ReturnType<typeof vi.fn> } }).eventBus
+      .emit;
+
+  it("shows a sent message as a quiet confirmation, like a sent emoji", () => {
+    ed.onDisplayChatEvent(chatUpdate(false) as never);
+    const events = (ed as unknown as { events: FeedEvent[] }).events;
+    expect(events[0].minor).toBe(true);
+    expect(events[0].highlight).toBe(false);
+    expect(emit()).not.toHaveBeenCalled();
+  });
+
+  it("keeps a received message prominent, with its sound", () => {
+    ed.onDisplayChatEvent(chatUpdate(true) as never);
+    const events = (ed as unknown as { events: FeedEvent[] }).events;
+    expect(events[0].minor).toBe(false);
+    expect(events[0].highlight).toBe(true);
+    expect(emit()).toHaveBeenCalledTimes(1);
   });
 });

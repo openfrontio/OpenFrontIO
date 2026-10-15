@@ -1,7 +1,7 @@
+import type { DiscordUser, UserMeResponse } from "@openfront/shared/ApiSchemas";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { updateAccountNavButton } from "../../src/client/NavAccountButton";
 import { getDiscordAvatarUrl } from "../../src/client/Utils";
-import type { DiscordUser, UserMeResponse } from "../../src/core/ApiSchemas";
 
 vi.mock("../../src/client/Utils", () => ({
   translateText: vi.fn((key: string) => key),
@@ -49,7 +49,13 @@ function mountNav() {
 
 // Build a /users/@me `user` object with only the identities under test.
 function userMe(user: UserMeResponse["user"]): UserMeResponse {
-  return { user, player: {} as UserMeResponse["player"] };
+  return {
+    user,
+    steamLicence: false,
+    steamLicenceSince: null,
+    noticesSeen: [],
+    player: {} as UserMeResponse["player"],
+  };
 }
 
 const discordUser: DiscordUser = {

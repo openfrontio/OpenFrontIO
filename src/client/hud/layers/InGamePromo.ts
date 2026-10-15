@@ -2,6 +2,7 @@ import { LitElement, html } from "lit";
 import { customElement } from "lit/decorators.js";
 import { adGatekeeper } from "../../AdGatekeeper";
 import { Controller } from "../../Controller";
+import type { HomepagePromos } from "../../HomepagePromos";
 import { GameView } from "../../view";
 
 const AD_TYPES = [
@@ -42,14 +43,11 @@ export class InGamePromo extends LitElement implements Controller {
   }
 
   private destroyBottomRail(): void {
-    if (!window.ramp) return;
-
-    try {
-      window.ramp.destroyUnits("pw-oop-bottom_rail");
-      console.log("Bottom rail ad destroyed after spawn phase");
-    } catch (e) {
-      console.error("Error destroying bottom_rail ad:", e);
-    }
+    // Through <homepage-promos>, which loaded the rail: its queued add checks
+    // the same flag, so a late ramp.js cannot add the rail back in-game.
+    (
+      document.querySelector("homepage-promos") as HomepagePromos | null
+    )?.destroyBottomRail?.();
   }
 
   private showAd(): void {
@@ -109,11 +107,11 @@ export class InGamePromo extends LitElement implements Controller {
             AD_TYPES.map((a) => a.type),
           );
         } catch (e) {
-          console.error("Failed to add in-game ads:", e);
+          console.warn("Failed to add in-game ads:", e);
         }
       });
     } catch (error) {
-      console.error("Failed to load in-game ads:", error);
+      console.warn("Failed to load in-game ads:", error);
     }
   }
 
@@ -140,7 +138,7 @@ export class InGamePromo extends LitElement implements Controller {
       }
       console.log("successfully destroyed in-game bottom-left ads");
     } catch (e) {
-      console.error("error destroying in-game ads:", e);
+      console.warn("error destroying in-game ads:", e);
     }
     this.requestUpdate();
   }
