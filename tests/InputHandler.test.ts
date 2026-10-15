@@ -2725,6 +2725,69 @@ describe("InputHandler teardown (OPE-411)", () => {
       ).toBe(false);
     });
 
+    test("held browser zoom keys (Equal, Minus, NumpadAdd, NumpadSubtract) continue to emit zoom after Control or Meta is released", () => {
+      handler.initialize();
+
+      for (const code of ["Equal", "Minus", "NumpadAdd", "NumpadSubtract"]) {
+        const emitSpy = vi.spyOn(bus, "emit");
+        window.dispatchEvent(
+          new KeyboardEvent("keydown", { code, shiftKey: false }),
+        );
+        vi.advanceTimersByTime(5);
+        expect(
+          emitSpy.mock.calls.some((c: unknown[]) => c[0] instanceof ZoomEvent),
+        ).toBe(true);
+
+        // Press and release Control while zoom key is held
+        window.dispatchEvent(
+          new KeyboardEvent("keydown", { code: "ControlLeft", ctrlKey: true }),
+        );
+        window.dispatchEvent(
+          new KeyboardEvent("keyup", { code: "ControlLeft", ctrlKey: false }),
+        );
+        emitSpy.mockClear();
+
+        // Zoom key should remain held and emit zoom
+        vi.advanceTimersByTime(5);
+        expect(
+          emitSpy.mock.calls.some((c: unknown[]) => c[0] instanceof ZoomEvent),
+        ).toBe(true);
+        expect(handler["activeKeys"].has(code)).toBe(true);
+
+        // Release the zoom key
+        window.dispatchEvent(
+          new KeyboardEvent("keyup", { code, shiftKey: false }),
+        );
+        emitSpy.mockClear();
+        vi.advanceTimersByTime(5);
+        expect(
+          emitSpy.mock.calls.some((c: unknown[]) => c[0] instanceof ZoomEvent),
+        ).toBe(false);
+        expect(handler["activeKeys"].has(code)).toBe(false);
+      }
+    });
+
+    test("browser zoom keys pressed after modifier are cleaned up when modifier is released", () => {
+      handler.initialize();
+
+      // Press Control first
+      window.dispatchEvent(
+        new KeyboardEvent("keydown", { code: "ControlLeft", ctrlKey: true }),
+      );
+
+      // Simulate a browser zoom key getting into activeKeys (e.g. if swallowed)
+      handler["activeKeys"].add("Equal");
+      handler["activeKeys"].add("Minus");
+
+      // Release Control
+      window.dispatchEvent(
+        new KeyboardEvent("keyup", { code: "ControlLeft", ctrlKey: false }),
+      );
+
+      expect(handler["activeKeys"].has("Equal")).toBe(false);
+      expect(handler["activeKeys"].has("Minus")).toBe(false);
+    });
+
     test("holding ShiftRight and pressing another key does NOT add ShiftLeft to activeKeys", () => {
       settings.setKeybinds({ moveUp: "Shift+KeyW" });
       handler.initialize();
