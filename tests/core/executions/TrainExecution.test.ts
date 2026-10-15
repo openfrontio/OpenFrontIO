@@ -2,6 +2,7 @@ import { TileRef } from "@openfront/engine-api/game/GameMap";
 import {
   PlayerInfo,
   PlayerType,
+  TrainType,
   UnitType,
 } from "@openfront/engine-api/game/GameTypes";
 import { TrainExecution } from "@openfront/engine/execution/TrainExecution";
@@ -133,6 +134,75 @@ describe("TrainExecution", () => {
     expect(exec.isActive()).toBe(true);
     expect(onTrainStop).not.toHaveBeenCalled();
     expect(player.trainGold()).toBe(0n);
+  });
+
+  it("keeps the saved route position when split junctions are normalized", async () => {
+    const game = await setup("plains", { instantBuild: true }, [
+      new PlayerInfo("p1", PlayerType.Human, null, "p1"),
+    ]);
+    const player = game.player("p1")!;
+
+    [0, 1, 2, 3, 4, 5, 6, 7, 8].forEach((tile) =>
+      player.conquer(tile),
+    );
+    const [stationA, stationB, stationC, stationD1, stationD2] = [
+      0, 1, 8, 2, 3,
+    ].map(
+      (tile) => new TrainStation(game, player.buildUnit(UnitType.City, tile, {})),
+    );
+    const net = game.railNetwork();
+    const stationManager = net.stationManager();
+    [stationA, stationB, stationC].forEach((station) =>
+      stationManager.addStation(station),
+    );
+
+    const link = (
+      a: TrainStation,
+      b: TrainStation,
+      tiles: TileRef[],
+      id: number,
+    ) => {
+      const railroad = new Railroad(a, b, tiles, id);
+      a.addRailroad(railroad);
+      b.addRailroad(railroad);
+      return railroad;
+    };
+
+    link(stationA, stationB, [0, 1], 1);
+    const original = link(stationB, stationC, [1, 2, 3, 4, 5, 6, 7, 8], 2);
+    const exec = new TrainExecution(net, player, stationA, stationC, 1);
+    exec.init(game, 0);
+
+    const engineTile = () =>
+      game.units(UnitType.Train).find(
+        (unit) => unit.trainType() === TrainType.Engine,
+      )?.tile();
+    const visited: (TileRef | undefined)[] = [];
+
+    exec.tick(1);
+    visited.push(engineTile());
+    exec.tick(2);
+    visited.push(engineTile());
+    exec.tick(3);
+    visited.push(engineTile());
+
+    // Insert two stations behind the engine and share each junction tile
+    // between adjacent replacement segments.
+    stationB.removeRailroad(original);
+    stationC.removeRailroad(original);
+    stationManager.addStation(stationD1);
+    stationManager.addStation(stationD2);
+    link(stationB, stationD1, [1, 2], 3);
+    link(stationD1, stationD2, [2, 3], 4);
+    link(stationD2, stationC, [3, 4, 5, 6, 7, 8], 5);
+
+    exec.tick(4);
+    visited.push(engineTile());
+
+    expect(visited).toEqual([1, 3, 5, 7]);
+    expect(exec.isActive()).toBe(true);
+    // The passed junctions must not be counted as newly visited trade stops.
+    expect(exec.tradeStopsVisited()).toBe(1);
   });
 
   it("re-resolves intermediate stations when railroad is split in transit", async () => {
