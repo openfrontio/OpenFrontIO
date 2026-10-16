@@ -502,6 +502,7 @@ export class AccountModal extends BaseModal {
           // that first page: older games appended later never change the tag.
           if (
             this.awaitingTabGames &&
+            e.detail.publicId === this.userMeResponse?.player?.publicId &&
             e.detail.typeFilter === "all" &&
             e.detail.modeFilter === "all"
           ) {
@@ -1180,6 +1181,9 @@ export class AccountModal extends BaseModal {
     if (userMe) {
       this.userMeResponse = userMe;
       this.prefetchPrestigeFlow();
+      // Signed in with the modal still open: load what an opening would.
+      const publicId = userMe.player?.publicId;
+      if (publicId) void this.loadPlayerProfile(publicId);
     }
     this.portalUser = profile;
     this.requestUpdate();

@@ -6,6 +6,11 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const getUserMeMock = vi.hoisted(() => vi.fn());
 const fetchPublicPlayerGamesMock = vi.hoisted(() => vi.fn());
+const gamePortalMock = vi.hoisted(() => ({
+  isOnGamePortal: vi.fn(() => false),
+  getUserProfile: vi.fn(async () => null as unknown),
+  showAuthPrompt: vi.fn(async () => null),
+}));
 
 // Mocks as in AccountModalProgression.test.ts, plus the games read.
 vi.mock("../../src/client/Api", () => ({
@@ -52,6 +57,10 @@ vi.mock("../../src/client/CrazyGamesSDK", () => ({
     showAuthPrompt: vi.fn(async () => null),
     isAvailable: false,
   },
+}));
+
+vi.mock("../../src/client/GamePortal", () => ({
+  gamePortal: gamePortalMock,
 }));
 
 vi.mock("../../src/client/Cosmetics", () => ({
@@ -364,5 +373,42 @@ describe("account profile card clan tag", () => {
     modal.setActiveTab("account");
     await settle(() => expect(card()?.clanTag).toBe("LUX"));
     expect(fetchPublicPlayerGamesMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("ignores a Games tab update for another player while waiting for this one's", async () => {
+    modal.open({ tab: "games" });
+    await settle(() => expect(historyView()).not.toBeNull());
+    const update = (publicId: string, tag: string) =>
+      historyView()!.dispatchEvent(
+        new CustomEvent("history-updated", {
+          detail: {
+            publicId,
+            typeFilter: "all",
+            modeFilter: "all",
+            games: page(tag).results,
+            nextCursor: null,
+          },
+        }),
+      );
+    // A history view still mounted for a previous account answers late.
+    update("nova02", "AUS");
+    update("wonder01", "NU");
+    modal.setActiveTab("account");
+    await settle(() => expect(card()?.clanTag).toBe("NU"));
+  });
+
+  it("loads the games when the player signs in through a portal with the modal open", async () => {
+    getUserMeMock.mockResolvedValue(false);
+    fetchPublicPlayerGamesMock.mockResolvedValue(page("LUX"));
+    modal.open();
+    await settle(() => expect(getUserMeMock).toHaveBeenCalled());
+    expect(fetchPublicPlayerGamesMock).not.toHaveBeenCalled();
+    getUserMeMock.mockResolvedValue(userMe());
+    gamePortalMock.getUserProfile.mockResolvedValueOnce({ username: "wonder" });
+    await (
+      modal as unknown as { handlePortalSignIn(): Promise<void> }
+    ).handlePortalSignIn();
+    await settle(() => expect(card()?.clanTag).toBe("LUX"));
+    expect(fetchPublicPlayerGamesMock).toHaveBeenCalledWith("wonder01", {});
   });
 });
