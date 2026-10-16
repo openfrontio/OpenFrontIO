@@ -155,17 +155,17 @@
   "id": "Brahmaputra",
   "map": {
     "height": 1024,
-    "num_land_tiles": 1437385,
+    "num_land_tiles": 1437901,
     "width": 1460
   },
   "map16x": {
     "height": 256,
-    "num_land_tiles": 88802,
+    "num_land_tiles": 88786,
     "width": 365
   },
   "map4x": {
     "height": 512,
-    "num_land_tiles": 357856,
+    "num_land_tiles": 357746,
     "width": 730
   },
   "multiplayer_frequency": 4,
