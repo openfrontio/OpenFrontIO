@@ -155,11 +155,9 @@ export class PlayerProfileModal extends BaseModal {
             class="text-white text-xl lg:text-2xl font-bold tracking-wide break-words hyphens-auto min-w-0 inline-flex items-center gap-2"
           >
             ${usernameText(this.username)}
-            ${
-              isVerifiedUsername(this.username)
-                ? verifiedBadge("w-5 h-5")
-                : nothing
-            }
+            ${isVerifiedUsername(this.username)
+              ? verifiedBadge("w-5 h-5")
+              : nothing}
           </span>`
         : undefined,
       onBack: () => this.back(),
@@ -285,11 +283,9 @@ export class PlayerProfileModal extends BaseModal {
     return html`
       <player-game-history-view
         .publicId=${publicId}
-        .cachedState=${
-          this.gameHistoryCache?.publicId === publicId
-            ? this.gameHistoryCache
-            : null
-        }
+        .cachedState=${this.gameHistoryCache?.publicId === publicId
+          ? this.gameHistoryCache
+          : null}
         @history-updated=${(e: CustomEvent<PlayerGameHistoryCache>) => {
           this.gameHistoryCache = e.detail;
         }}
@@ -313,18 +309,16 @@ export class PlayerProfileModal extends BaseModal {
     // and the ways to share the profile follow it.
     const view = this.progressView();
     return html`
-      ${
-        view === null
-          ? nothing
-          : html`<profile-card
-              class="mb-4 block"
-              .username=${this.username ?? this.publicId ?? ""}
-              .clanTag=${this.clans[0]?.tag ?? null}
-              .progress=${view.progress}
-              .provisional=${view.provisional}
-              .openKey=${`profile-${this.openCount}`}
-            ></profile-card>`
-      }
+      ${view === null
+        ? nothing
+        : html`<profile-card
+            class="mb-4 block"
+            .username=${this.username ?? this.publicId ?? ""}
+            .clanTag=${this.clans[0]?.tag ?? null}
+            .progress=${view.progress}
+            .provisional=${view.provisional}
+            .openKey=${`profile-${this.openCount}`}
+          ></profile-card>`}
       <profile-share
         class="mb-[18px] block"
         .url=${playerProfileUrl(publicId)}
@@ -345,9 +339,9 @@ export class PlayerProfileModal extends BaseModal {
     // again on a tab switch.
     return html`<profile-progression
       .progress=${view.progress}
-      .confirmedLevel=${
-        view.progress === this.progress ? null : view.confirmedLevel
-      }
+      .confirmedLevel=${view.progress === this.progress
+        ? null
+        : view.confirmedLevel}
       .provisional=${view.provisional}
       .publicId=${this.publicId}
       .popKey=${`profile-${this.openCount}`}
@@ -391,16 +385,14 @@ export class PlayerProfileModal extends BaseModal {
         <p class="mt-2 max-w-md text-sm text-white/60">
           ${translateText("player_profile.not_found_body")}
         </p>
-        ${
-          this.openedLink === null
-            ? nothing
-            : html`<p
-                class="mt-3 break-all font-mono text-xs text-white/35"
-                data-opened-link
-              >
-                ${this.openedLink}
-              </p>`
-        }
+        ${this.openedLink === null
+          ? nothing
+          : html`<p
+              class="mt-3 break-all font-mono text-xs text-white/35"
+              data-opened-link
+            >
+              ${this.openedLink}
+            </p>`}
         <!-- Side by side where there's room, stacked on a phone. -->
         <div
           class="mt-6 flex flex-col items-stretch justify-center gap-3 sm:flex-row sm:items-center"
