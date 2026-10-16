@@ -92,6 +92,12 @@ import { ProfileProgression } from "../../src/client/components/ProfileProgressi
 import "../../src/client/components/RewardTrack";
 import { modalRouter } from "../../src/client/ModalRouter";
 import { initNavigation } from "../../src/client/Navigation";
+import {
+  PENDING_XP_KEY,
+  runCheck,
+  startProvisionalProgress,
+  stopProvisionalProgress,
+} from "../../src/client/ProvisionalProgress";
 
 // A track with Caps at every level.
 function config() {
@@ -442,5 +448,241 @@ describe("AccountModal — Progression tab", () => {
     });
     modal.setActiveTab("progression");
     expect(window.location.hash).toBe("#modal=account&tab=progression");
+  });
+
+  // A game the player died in, still waiting to be scored: 250 XP on top of
+  // L47 at 40 (100 a level here) is L49 at 90, shown provisionally.
+  describe("with XP still waiting to be scored", () => {
+    // The public read with the place in the level, as the API sends it.
+    const PUBLIC_WITH_XP: PublicProgress = {
+      ...PUBLIC,
+      xpInLevel: 40,
+      xpForNext: 150,
+    };
+
+    beforeEach(() => {
+      vi.mocked(localStorage.getItem).mockImplementation((key: string) =>
+        key === PENDING_XP_KEY
+          ? JSON.stringify({
+              me: [{ gameId: "g1", xp: 250, at: Date.now(), notIn: 300000 }],
+            })
+          : null,
+      );
+      fetchPublicPlayerProgressMock.mockResolvedValue(PUBLIC_WITH_XP);
+      startProvisionalProgress({
+        fetchXp: async () => ({ status: "pending", notFound: true }),
+        loadConfig: async () => config(),
+        refreshUserMe: async () => undefined,
+      });
+      document.dispatchEvent(new CustomEvent("userMeResponse", { detail: me }));
+    });
+
+    afterEach(() => {
+      stopProvisionalProgress();
+      vi.mocked(localStorage.getItem).mockImplementation(() => null);
+    });
+
+    type CardEl = HTMLElement & {
+      progress: { level: number; xpInLevel: number; canPrestige?: boolean };
+      provisional: boolean;
+    };
+
+    it("shows the projected level on the account card, marked provisional", async () => {
+      await runCheck();
+      modal.open();
+      await settle(() => {
+        const card = modal.querySelector<CardEl>("profile-card");
+        expect(card?.provisional).toBe(true);
+        expect(card?.progress.level).toBe(49);
+        expect(card?.progress.xpInLevel).toBe(90);
+      });
+      // Never offers Prestige on a provisional level.
+      expect(
+        modal.querySelector<CardEl>("profile-card")!.progress.canPrestige,
+      ).toBe(false);
+    });
+
+    it('puts "You" on the projected level, with the levels past the confirmed one pending', async () => {
+      await runCheck();
+      modal.open({ tab: "progression" });
+      await settle(() => {
+        const el = progression();
+        expect(el?.confirmedLevel).toBe(47);
+        expect(el?.querySelector('[data-level="49"][data-current]')).not.toBe(
+          null,
+        );
+      });
+      const el = progression()!;
+      expect(
+        el.querySelector('[data-level="48"]')!.getAttribute("data-status"),
+      ).toBe("pending");
+      expect(
+        el.querySelector('[data-level="49"]')!.getAttribute("data-status"),
+      ).toBe("pending");
+      // The confirmed levels' rewards are still the only ones to claim.
+      expect(el.querySelectorAll('[data-status="ready"]')).toHaveLength(3);
+      expect(el.querySelector("[data-track-provisional]")).not.toBeNull();
+    });
+
+    it("reads the track again when the game is scored, holding the level on a stale read", async () => {
+      // Storage that marking a game scored really changes.
+      let stored: string | null = JSON.stringify({
+        me: [{ gameId: "g1", xp: 250, at: Date.now() }],
+      });
+      vi.mocked(localStorage.getItem).mockImplementation((key: string) =>
+        key === PENDING_XP_KEY ? stored : null,
+      );
+      vi.mocked(localStorage.setItem).mockImplementation(
+        (key: string, value: string) => {
+          if (key === PENDING_XP_KEY) stored = value;
+        },
+      );
+      vi.mocked(localStorage.removeItem).mockImplementation((key: string) => {
+        if (key === PENDING_XP_KEY) stored = null;
+      });
+      let scored = false;
+      stopProvisionalProgress();
+      startProvisionalProgress({
+        fetchXp: async (gameId) =>
+          scored
+            ? {
+                status: "ok",
+                data: {
+                  gameId,
+                  eligible: true,
+                  breakdown: {
+                    leftEarly: false,
+                    played: 250,
+                    time: 0,
+                    placement: 0,
+                    win: 0,
+                    firstGame: 0,
+                    feats: 0,
+                    subtotal: 250,
+                    gamePermille: 1000,
+                    subscriberPermille: 1000,
+                    total: 250,
+                  },
+                  before: {
+                    prestige: 2,
+                    level: 47,
+                    xpInLevel: 40,
+                    xpForNext: 100,
+                  },
+                  after: {
+                    ...OWN_PROGRESS,
+                    level: 49,
+                    xpInLevel: 90,
+                    lifetimeXp: 300250,
+                  },
+                  levelsReached: [],
+                },
+              }
+            : { status: "pending", notFound: true },
+        loadConfig: async () => config(),
+        refreshUserMe: async () => undefined,
+      });
+      document.dispatchEvent(new CustomEvent("userMeResponse", { detail: me }));
+      try {
+        await runCheck();
+        modal.open({ tab: "progression" });
+        await settle(() => {
+          const el = progression();
+          expect(el?.confirmedLevel).toBe(47);
+          expect(
+            el?.querySelector('[data-level="49"][data-current]'),
+          ).not.toBeNull();
+        });
+
+        // The game is scored at what it showed; the new read takes a while.
+        let land!: (progress: PublicProgress) => void;
+        fetchPublicPlayerProgressMock.mockClear();
+        fetchPublicPlayerProgressMock.mockReturnValueOnce(
+          new Promise<PublicProgress>((resolve) => (land = resolve)),
+        );
+        scored = true;
+        await runCheck();
+        await modal.updateComplete;
+        expect(fetchPublicPlayerProgressMock).toHaveBeenCalledTimes(1);
+        // Still on 49 while it reads, now confirmed (no provisional label):
+        // not back on the old 47. Levels 48-49 are pending, never Claimed:
+        // the rewards list was read before they were reached.
+        const trackLevel = () =>
+          progression()?.querySelector<
+            HTMLElement & {
+              confirmedLevel: number | null;
+            }
+          >("reward-track")?.confirmedLevel;
+        await settle(() => {
+          const el = progression();
+          expect(el?.provisional).toBe(false);
+          // The track's rewards were read at 47.
+          expect(trackLevel()).toBe(47);
+          expect(el?.querySelector("[data-track-provisional]")).toBeNull();
+          expect(
+            el?.querySelector('[data-level="48"]')?.getAttribute("data-status"),
+          ).toBe("pending");
+          expect(
+            el?.querySelector('[data-level="49"][data-current]'),
+          ).not.toBeNull();
+        });
+
+        // The public read comes back stale (cached, a replica from before
+        // the game): the level still holds, confirmed.
+        land({ ...PUBLIC_WITH_XP });
+        await settle(() => {
+          const el = progression();
+          expect(el?.progress?.lifetimeXp).toBe(300250);
+          expect(el?.provisional).toBe(false);
+          expect(trackLevel()).toBe(47);
+          expect(
+            el?.querySelector('[data-level="49"][data-current]'),
+          ).not.toBeNull();
+          expect(
+            el?.querySelectorAll('[data-status="claimed"][data-level="48"]'),
+          ).toHaveLength(0);
+        });
+
+        // The account is broadcast with the game: its rewards (48 and 49
+        // unclaimed) replace the track's, and the levels are judged by them.
+        document.dispatchEvent(
+          new CustomEvent("userMeResponse", {
+            detail: userMe(
+              { ...OWN_PROGRESS, level: 49, xpInLevel: 90, lifetimeXp: 300250 },
+              [
+                ...ownRewards(),
+                reward("l48", { level: 48, prestige: 2 }),
+                reward("l49", { level: 49, prestige: 2 }),
+              ],
+            ),
+          }),
+        );
+        await settle(() => {
+          const el = progression();
+          expect(trackLevel()).toBe(49);
+          expect(
+            el?.querySelector('[data-level="48"]')?.getAttribute("data-status"),
+          ).toBe("ready");
+        });
+      } finally {
+        vi.mocked(localStorage.setItem).mockImplementation(() => undefined);
+        vi.mocked(localStorage.removeItem).mockImplementation(() => undefined);
+      }
+    });
+
+    it("shows the confirmed level for an account with nothing pending", async () => {
+      vi.mocked(localStorage.getItem).mockImplementation(() => null);
+      // As another tab clearing it would: the store reads storage afresh.
+      window.dispatchEvent(
+        new StorageEvent("storage", { key: PENDING_XP_KEY }),
+      );
+      modal.open();
+      await settle(() => {
+        expect(modal.querySelector<CardEl>("profile-card")).not.toBeNull();
+      });
+      const card = modal.querySelector<CardEl>("profile-card")!;
+      expect(card.provisional).toBe(false);
+      expect(card.progress.level).toBe(47);
+    });
   });
 });

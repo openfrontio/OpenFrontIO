@@ -1,12 +1,12 @@
 import type { HumanStatsSnapshot } from "@openfront/engine-api/game/GameTypes";
 import { GameMode, GameType } from "@openfront/engine-api/game/GameTypes";
 import type {
-  GameXpEligible,
   GameXpResponse,
   Progress,
   ProgressionConfig,
   XpRules,
 } from "@openfront/shared/ApiSchemas";
+import { projectProgress } from "./ProgressProjection";
 import {
   applyMultipliers,
   computeXp,
@@ -56,6 +56,9 @@ export interface ProvisionalXpInputs {
   // disconnected and may yet come back, which the API would not count.
   disconnectedOpponents: number;
   daily: XpContext["daily"];
+  // The UTC day the API stamped those allowances with: a pending figure is
+  // kept with it, so the next game the same day counts it (ProvisionalProgress).
+  dailyDay: string | null;
   subscriberPermille: number;
 }
 
@@ -192,63 +195,6 @@ export function provisionalXpContext(input: {
   };
 }
 
-/**
- * Where `xp` would take the player on the level track: the API's applyXp,
- * with the level sizes from the config. Null when the config doesn't cover a
- * level it needs.
- */
-export function projectProgress(
-  progress: Progress,
-  xp: number,
-  config: ProgressionConfig,
-): Pick<GameXpEligible, "before" | "after" | "levelsReached"> | null {
-  const xpToNext = (level: number): number | undefined => {
-    if (level >= config.maxLevel) return 0;
-    const row = config.levels.find((l) => l.level === level);
-    if (row !== undefined) return row.xpToNext;
-    return level === progress.level ? progress.xpForNext : undefined;
-  };
-  const before = {
-    prestige: progress.prestige,
-    level: progress.level,
-    xpInLevel: progress.xpInLevel,
-    xpForNext: progress.xpForNext,
-  };
-  let { level, xpInLevel, legend } = progress;
-  const levelsReached: { prestige: number; level: number }[] = [];
-  if (xp > 0 && level < config.maxLevel) {
-    xpInLevel += xp;
-    while (level < config.maxLevel) {
-      const need = xpToNext(level);
-      if (need === undefined) return null;
-      if (xpInLevel < need) break;
-      xpInLevel -= need;
-      level += 1;
-      levelsReached.push({ prestige: progress.prestige, level });
-    }
-    if (level >= config.maxLevel) {
-      xpInLevel = 0;
-      legend = progress.prestige >= config.maxPrestige;
-    }
-  }
-  const xpForNext = xpToNext(level);
-  if (xpForNext === undefined) return null;
-  return {
-    before,
-    after: {
-      prestige: progress.prestige,
-      level,
-      xpInLevel,
-      xpForNext,
-      lifetimeXp: progress.lifetimeXp + Math.max(0, xp),
-      legend,
-      canPrestige:
-        level >= config.maxLevel && progress.prestige < config.maxPrestige,
-    },
-    levelsReached,
-  };
-}
-
 /** The provisional figure, or null when there is none to show. */
 export function buildProvisionalXp(input: {
   gameId: string;
@@ -293,6 +239,8 @@ export function buildProvisionalXp(input: {
       eligible: true,
       breakdown: result.breakdown,
       ...projected,
+      // Provisional XP never earns a prestige: only the API's figure can.
+      after: { ...projected.after, canPrestige: false },
     };
   } else {
     response = {
@@ -317,6 +265,7 @@ export function buildProvisionalXp(input: {
       opponentsOutlasted: ctx.opponentsOutlasted,
       disconnectedOpponents,
       daily: ctx.daily,
+      dailyDay: input.progress.daily?.day ?? null,
       subscriberPermille: ctx.subscriberPermille,
     },
   };
