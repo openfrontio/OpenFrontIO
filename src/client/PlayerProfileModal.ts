@@ -515,11 +515,17 @@ export class PlayerProfileModal extends BaseModal {
     if (publicId !== null) {
       // Opening on the Games tab, that tab reads the newest games itself and
       // the card takes them from it (adoptRecentGames): no second request.
+      // Unless the tab is still mounted for this same player from an earlier
+      // opening: it won't load again, so the card reads them itself.
       const onGames =
         typeof args?.tab === "string"
           ? args.tab === "games"
           : this.activeTab === "games";
-      void this.loadProfile(publicId, { recentGames: !onGames });
+      const historyView = this.querySelector<
+        HTMLElement & { publicId?: string }
+      >("player-game-history-view");
+      const tabLoads = historyView?.publicId !== publicId;
+      void this.loadProfile(publicId, { recentGames: !(onGames && tabLoads) });
     }
   }
 

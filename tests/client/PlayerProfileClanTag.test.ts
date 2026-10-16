@@ -221,4 +221,20 @@ describe("player profile card clan tag", () => {
     await settle(() => expect(card()?.clanTag).toBe("LUX"));
     expect(fetchPublicPlayerGamesMock).toHaveBeenCalledTimes(1);
   });
+
+  it("reopening the same player left on the Games tab still finds the tag", async () => {
+    fetchPublicPlayerGamesMock.mockResolvedValue(page(null, "LUX"));
+    modal.open({ publicID: "wonder01", tab: "games" });
+    await settle(() =>
+      expect(
+        modal.querySelector("player-game-history-view")?.textContent,
+      ).toContain("World"),
+    );
+    modal.close();
+    // The Games tab stays mounted for the same player, so it won't load again:
+    // the card needs its own read this time.
+    modal.open({ publicID: "wonder01" });
+    modal.setActiveTab("stats");
+    await settle(() => expect(card()?.clanTag).toBe("LUX"));
+  });
 });
