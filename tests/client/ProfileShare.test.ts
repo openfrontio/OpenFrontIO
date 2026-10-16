@@ -81,13 +81,15 @@ describe("<profile-share>", () => {
     );
   });
 
-  it("renders nothing on Poki, which the link would lead players off", async () => {
-    const name = vi.spyOn(gamePortal, "name").mockReturnValue("poki");
+  it("renders nothing on a game portal, which the link would lead players off", async () => {
+    const onPortal = vi
+      .spyOn(gamePortal, "isOnGamePortal")
+      .mockReturnValue(true);
     try {
       await render();
       expect(el.querySelector("[data-share]")).toBeNull();
     } finally {
-      name.mockRestore();
+      onPortal.mockRestore();
     }
   });
 

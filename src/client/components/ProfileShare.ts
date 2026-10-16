@@ -486,8 +486,8 @@ export class ProfileShare extends LitElement {
   }
 
   render() {
-    // Not on Poki: the link leads players off Poki.
-    if (this.url === "" || gamePortal.name() === "poki") return nothing;
+    // Not on a game portal: the link leads players off it.
+    if (this.url === "" || gamePortal.isOnGamePortal()) return nothing;
     return html`
       ${this.layout === "menu" ? this.renderMenu() : this.renderRow()}
       <span class="sr-only" role="status" aria-live="polite"

@@ -87,7 +87,7 @@ export class SteamWishlist extends LitElement {
 
   protected updated() {
     if (this.frame === undefined) {
-      // Hidden on Steam and Poki — nothing rendered to measure.
+      // Hidden on Steam and game portals — nothing rendered to measure.
       this.resizeObserver?.disconnect();
       this.resizeObserver = undefined;
       return;
@@ -107,8 +107,10 @@ export class SteamWishlist extends LitElement {
   // (index.html), and an iframe whose color scheme differs from its
   // document's gets an opaque white backdrop, a white strip under the card.
   render() {
-    // Poki doesn't allow promoting other platforms.
-    if (steamSDK.isOnSteam() || gamePortal.name() === "poki") return nothing;
+    // Poki doesn't allow promoting other platforms, and CrazyGames allows a
+    // store link only on the desktop main menu: the footer's
+    // <steam-wishlist-button>, not this widget (mobile play page, win modal).
+    if (steamSDK.isOnSteam() || gamePortal.isOnGamePortal()) return nothing;
 
     const frameWidth = Math.min(
       WIDGET_WIDTH,

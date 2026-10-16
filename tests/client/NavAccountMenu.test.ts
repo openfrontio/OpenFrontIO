@@ -170,8 +170,8 @@ describe("nav-account-menu", () => {
     expect(itemKeys()).not.toContain("copy-profile-url");
   });
 
-  it("drops the profile link on Poki, which it would lead players off", async () => {
-    vi.spyOn(gamePortal, "name").mockReturnValue("poki");
+  it("drops the profile link on a game portal, which it would lead players off", async () => {
+    vi.spyOn(gamePortal, "isOnGamePortal").mockReturnValue(true);
     try {
       fireUserMe(userMe());
       await el.updateComplete;
@@ -179,7 +179,7 @@ describe("nav-account-menu", () => {
       expect(itemKeys()).toContain("view-account");
       expect(itemKeys()).not.toContain("copy-profile-url");
     } finally {
-      vi.mocked(gamePortal.name).mockRestore();
+      vi.mocked(gamePortal.isOnGamePortal).mockRestore();
     }
   });
 

@@ -16,7 +16,8 @@ import { steamStoreUrl } from "./SteamWishlist";
  *
  * Carries the same UTM campaign tagging as the widget, so footer clicks land in
  * the Steamworks dashboard alongside it. Self-hides inside the Steam desktop
- * build and on Poki, matching `<steam-wishlist>`.
+ * build and on Poki. Unlike `<steam-wishlist>` it stays on CrazyGames, which
+ * allows a store link on the desktop main menu.
  */
 @customElement("steam-wishlist-button")
 export class SteamWishlistButton extends LitElement {

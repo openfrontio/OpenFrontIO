@@ -392,9 +392,9 @@ export class NavAccountMenu extends LitElement {
     const items: MenuItem[] = [];
 
     // Nothing to share without a publicId (older backend, or a session whose
-    // player record hasn't resolved). Not on Poki: the link leads players off
-    // Poki.
-    if (publicId && gamePortal.name() !== "poki") {
+    // player record hasn't resolved). Not on a game portal: the link leads
+    // players off it.
+    if (publicId && !gamePortal.isOnGamePortal()) {
       items.push({
         key: "copy-profile-url",
         labelKey: "nav_account_menu.copy_profile_url",

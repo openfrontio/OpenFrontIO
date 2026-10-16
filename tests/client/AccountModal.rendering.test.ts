@@ -57,6 +57,7 @@ vi.stubGlobal("localStorage", {
 });
 
 import { AccountModal } from "../../src/client/AccountModal";
+import { gamePortal } from "../../src/client/GamePortal";
 import {
   discordLogin,
   googleLogin,
@@ -123,6 +124,25 @@ describe("AccountModal — rendering", () => {
     await new Promise((resolve) => setTimeout(resolve, 0));
     await modal.updateComplete;
   }
+
+  // The header's Share button copies the profile link, which leads players off
+  // the game portal.
+  it("drops the profile Share button on a game portal", async () => {
+    const userMe = makeUserMe({ discord: { id: "1", username: "u" } as never });
+    await setLoggedInUser(userMe);
+    expect(modal.querySelector("copy-button")).toBeTruthy();
+
+    const onPortal = vi
+      .spyOn(gamePortal, "isOnGamePortal")
+      .mockReturnValue(true);
+    try {
+      modal.requestUpdate();
+      await modal.updateComplete;
+      expect(modal.querySelector("copy-button")).toBeNull();
+    } finally {
+      onPortal.mockRestore();
+    }
+  });
 
   it("shows the Steam account (no link/login CTAs) for a Steam-primary user", async () => {
     const userMe = makeUserMe({
