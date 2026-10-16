@@ -43,6 +43,7 @@ function makeGame(stations: any[] = []): any {
     railNetwork: () => ({
       stationManager: () => ({ getAll: () => new Set(stations) }),
     }),
+    sharedWaterComponents: () => null,
   };
 }
 
@@ -93,6 +94,21 @@ function makePlacement(
 ): NationStructurePlacement {
   return new NationStructurePlacement(random, game, player);
 }
+
+// ── startRound ───────────────────────────────────────────────────────────────
+
+// Snapshots don't store the station cache, so it must not outlive a round
+describe("NationStructurePlacement.startRound", () => {
+  it("rebuilds the reachable stations once per round", () => {
+    const placement = makePlacement(makeGame(), makePlayer([], []));
+    placement.startRound();
+    const first = (placement as any).getOrBuildReachableStations();
+    expect((placement as any).getOrBuildReachableStations()).toBe(first);
+
+    placement.startRound();
+    expect((placement as any).getOrBuildReachableStations()).not.toBe(first);
+  });
+});
 
 // ── buildReachableStations ───────────────────────────────────────────────────
 
