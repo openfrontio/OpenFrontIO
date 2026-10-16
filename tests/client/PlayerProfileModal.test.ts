@@ -27,11 +27,6 @@ vi.mock("../../src/client/ProgressionAccount", () => ({
 
 vi.mock("../../src/client/Api", () => ({
   fetchPublicPlayerProfile: fetchPublicPlayerProfileMock,
-  // The profile card reads its clan tag from the newest games.
-  fetchPublicPlayerGames: vi.fn(async () => ({
-    results: [],
-    nextCursor: null,
-  })),
 }));
 
 vi.mock(

@@ -1,24 +1,19 @@
-import type {
-  PublicPlayerGamesResponse,
-  UserMeResponse,
-} from "@openfront/shared/ApiSchemas";
+import type { UserMeResponse } from "@openfront/shared/ApiSchemas";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const getUserMeMock = vi.hoisted(() => vi.fn());
-const fetchPublicPlayerGamesMock = vi.hoisted(() => vi.fn());
-const gamePortalMock = vi.hoisted(() => ({
-  isOnGamePortal: vi.fn(() => false),
-  getUserProfile: vi.fn(async () => null as unknown),
-  showAuthPrompt: vi.fn(async () => null),
-}));
+const fetchPlayerByIdMock = vi.hoisted(() => vi.fn());
 
 // Mocks as in AccountModalProgression.test.ts, plus the games read.
 vi.mock("../../src/client/Api", () => ({
   getUserMe: getUserMeMock,
   invalidateUserMe: vi.fn(),
   claimReward: vi.fn(),
-  fetchPlayerById: vi.fn(async () => null),
-  fetchPublicPlayerGames: fetchPublicPlayerGamesMock,
+  fetchPlayerById: fetchPlayerByIdMock,
+  fetchPublicPlayerGames: vi.fn(async () => ({
+    results: [],
+    nextCursor: null,
+  })),
   setMarketingConsent: vi.fn(async () => true),
   getApiBase: vi.fn(() => ""),
 }));
@@ -59,10 +54,6 @@ vi.mock("../../src/client/CrazyGamesSDK", () => ({
   },
 }));
 
-vi.mock("../../src/client/GamePortal", () => ({
-  gamePortal: gamePortalMock,
-}));
-
 vi.mock("../../src/client/Cosmetics", () => ({
   fetchCosmetics: vi.fn(async () => null),
   translateCosmetic: vi.fn((v: unknown) => v),
@@ -93,7 +84,7 @@ type ModalShell = HTMLElement & { updateComplete: Promise<boolean> };
 type CardEl = HTMLElement & { clanTag: string | null };
 
 // Sample data: "Wonder", in AUS, LUX and NU.
-function userMe(publicId = "wonder01"): UserMeResponse {
+function userMe(): UserMeResponse {
   const clan = (tag: string) => ({
     tag,
     name: `${tag} clan`,
@@ -104,7 +95,7 @@ function userMe(publicId = "wonder01"): UserMeResponse {
   return {
     user: { discord: { id: "1", username: "wonder" } },
     player: {
-      publicId,
+      publicId: "wonder01",
       username: "Wonder",
       adfree: false,
       unlimitedRanked: false,
@@ -127,24 +118,6 @@ function userMe(publicId = "wonder01"): UserMeResponse {
     },
   } as unknown as UserMeResponse;
 }
-
-const page = (...tags: (string | null)[]): PublicPlayerGamesResponse => ({
-  results: tags.map((clanTag, i) => ({
-    gameId: `g${i}`,
-    start: "2026-10-01T12:00:00.000Z",
-    durationSeconds: 600,
-    map: "World",
-    mode: "Free For All",
-    type: "public",
-    playerTeams: null,
-    rankedType: "unranked",
-    result: "victory",
-    totalPlayers: 20,
-    username: "Wonder",
-    clanTag,
-  })),
-  nextCursor: null,
-});
 
 describe("account profile card clan tag", () => {
   let modal: AccountModal;
@@ -192,223 +165,25 @@ describe("account profile card clan tag", () => {
     vi.useRealTimers();
   });
 
-  it("shows the tag of the latest game under a clan they're still in", async () => {
-    fetchPublicPlayerGamesMock.mockResolvedValue(
-      page(null, "OLD", "NU", "LUX"),
-    );
+  it("shows the tag the API picked", async () => {
+    fetchPlayerByIdMock.mockResolvedValue({ stats: {}, displayClanTag: "NU" });
     modal.open();
     await settle(() => expect(card()?.clanTag).toBe("NU"));
-    expect(fetchPublicPlayerGamesMock).toHaveBeenCalledWith("wonder01", {});
+    expect(fetchPlayerByIdMock).toHaveBeenCalledWith("wonder01");
   });
 
-  it("shows no tag when no recent game had one of their clans", async () => {
-    fetchPublicPlayerGamesMock.mockResolvedValue(page(null, null));
+  it("shows no tag when the API has none", async () => {
+    fetchPlayerByIdMock.mockResolvedValue({ stats: {}, displayClanTag: null });
     modal.open();
-    await settle(() => expect(card()).not.toBeNull());
     await settle(() =>
-      expect(fetchPublicPlayerGamesMock).toHaveBeenCalledTimes(1),
+      expect(fetchPlayerByIdMock).toHaveBeenCalledWith("wonder01"),
     );
-    expect(card()!.clanTag).toBeNull();
+    await settle(() => expect(card()?.clanTag).toBeNull());
   });
 
-  it("shows the card with no tag until the games arrive", async () => {
-    let answer: (res: PublicPlayerGamesResponse) => void = () => {};
-    fetchPublicPlayerGamesMock.mockReturnValue(
-      new Promise<PublicPlayerGamesResponse>((r) => (answer = r)),
-    );
-    modal.open();
-    await settle(() => expect(card()).not.toBeNull());
-    expect(card()!.clanTag).toBeNull();
-    answer(page("LUX"));
-    await settle(() => expect(card()?.clanTag).toBe("LUX"));
-  });
-
-  it("reuses the games for a reopening within a minute", async () => {
-    fetchPublicPlayerGamesMock.mockResolvedValue(page("AUS"));
+  it("an API without the field shows the first clan, as before", async () => {
+    fetchPlayerByIdMock.mockResolvedValue({ stats: {} });
     modal.open();
     await settle(() => expect(card()?.clanTag).toBe("AUS"));
-    modal.close();
-    modal.open();
-    await settle(() => expect(card()?.clanTag).toBe("AUS"));
-    expect(fetchPublicPlayerGamesMock).toHaveBeenCalledTimes(1);
-  });
-
-  it("reads them again on an opening after that, picking up a newer game", async () => {
-    vi.useFakeTimers({ toFake: ["Date"] });
-    vi.setSystemTime(new Date("2026-10-16T12:00:00.000Z"));
-    fetchPublicPlayerGamesMock.mockResolvedValue(page("AUS"));
-    modal.open();
-    await settle(() => expect(card()?.clanTag).toBe("AUS"));
-    modal.close();
-    vi.setSystemTime(new Date("2026-10-16T12:02:00.000Z"));
-    fetchPublicPlayerGamesMock.mockResolvedValue(page("LUX", "AUS"));
-    modal.open();
-    await settle(() => expect(card()?.clanTag).toBe("LUX"));
-    expect(fetchPublicPlayerGamesMock).toHaveBeenCalledTimes(2);
-  });
-
-  const historyView = () =>
-    modal.querySelector<HTMLElement>("player-game-history-view");
-
-  it("a read still pending for the previous account doesn't hold up the next one", async () => {
-    let answerA: (res: PublicPlayerGamesResponse) => void = () => {};
-    fetchPublicPlayerGamesMock.mockReturnValueOnce(
-      new Promise<PublicPlayerGamesResponse>((r) => (answerA = r)),
-    );
-    modal.open();
-    await settle(() =>
-      expect(fetchPublicPlayerGamesMock).toHaveBeenCalledWith("wonder01", {}),
-    );
-    // Another account signs in while the first account's read is in flight.
-    getUserMeMock.mockResolvedValue(userMe("nova02"));
-    document.dispatchEvent(
-      new CustomEvent("userMeResponse", { detail: userMe("nova02") }),
-    );
-    fetchPublicPlayerGamesMock.mockResolvedValue(page("LUX"));
-    modal.close();
-    modal.open();
-    await settle(() =>
-      expect(fetchPublicPlayerGamesMock).toHaveBeenCalledWith("nova02", {}),
-    );
-    answerA(page("AUS"));
-    await settle(() => expect(card()?.clanTag).toBe("LUX"));
-  });
-
-  it("older games loaded further down the Games tab don't change the tag", async () => {
-    fetchPublicPlayerGamesMock.mockResolvedValue(page(null));
-    modal.open();
-    await settle(() =>
-      expect(fetchPublicPlayerGamesMock).toHaveBeenCalledTimes(1),
-    );
-    await settle(() => expect(card()).not.toBeNull());
-    modal.setActiveTab("games");
-    await settle(() => expect(historyView()).not.toBeNull());
-    // The tab appends an older page with a LUX game.
-    historyView()!.dispatchEvent(
-      new CustomEvent("history-updated", {
-        detail: {
-          publicId: "wonder01",
-          typeFilter: "all",
-          modeFilter: "all",
-          games: [...page(null).results, ...page("LUX").results],
-          nextCursor: null,
-        },
-      }),
-    );
-    modal.setActiveTab("account");
-    await settle(() => expect(card()).not.toBeNull());
-    expect(card()!.clanTag).toBeNull();
-  });
-
-  const cachedGames = () =>
-    (
-      historyView() as unknown as {
-        cachedState?: { games: { gameId: string }[] } | null;
-      } | null
-    )?.cachedState?.games.map((g) => g.gameId);
-
-  const scrolledHistory = (n: number) => ({
-    publicId: "wonder01",
-    typeFilter: "all",
-    modeFilter: "all",
-    games: Array.from({ length: n }, (_, i) => ({
-      ...page("AUS").results[0],
-      gameId: `s${i}`,
-    })),
-    nextCursor: "more",
-  });
-
-  it("coming back to a scrolled Games tab after a minute keeps the whole list", async () => {
-    vi.useFakeTimers({ toFake: ["Date"] });
-    vi.setSystemTime(new Date("2026-10-16T12:00:00.000Z"));
-    fetchPublicPlayerGamesMock.mockResolvedValue(page("AUS"));
-    modal.open();
-    await settle(() => expect(card()?.clanTag).toBe("AUS"));
-    modal.setActiveTab("games");
-    await settle(() => expect(historyView()).not.toBeNull());
-    // The player scrolled down three pages.
-    historyView()!.dispatchEvent(
-      new CustomEvent("history-updated", { detail: scrolledHistory(5) }),
-    );
-    // Away on a game's stats for over a minute, then back.
-    vi.setSystemTime(new Date("2026-10-16T12:02:00.000Z"));
-    fetchPublicPlayerGamesMock.mockResolvedValue(page("LUX"));
-    modal.returnToGames();
-    await settle(() =>
-      expect(fetchPublicPlayerGamesMock).toHaveBeenCalledTimes(2),
-    );
-    await settle(() => expect(cachedGames()).toHaveLength(5));
-  });
-
-  it("opened on the Games tab, the card takes that tab's first page: no read of its own", async () => {
-    modal.open({ tab: "games" });
-    await settle(() => expect(historyView()).not.toBeNull());
-    expect(fetchPublicPlayerGamesMock).not.toHaveBeenCalled();
-    historyView()!.dispatchEvent(
-      new CustomEvent("history-updated", {
-        detail: {
-          publicId: "wonder01",
-          typeFilter: "all",
-          modeFilter: "all",
-          games: page(null, "NU").results,
-          nextCursor: null,
-        },
-      }),
-    );
-    modal.setActiveTab("account");
-    await settle(() => expect(card()?.clanTag).toBe("NU"));
-    expect(fetchPublicPlayerGamesMock).not.toHaveBeenCalled();
-  });
-
-  it("opened on the Games tab, reads the games itself when the tab didn't give them", async () => {
-    fetchPublicPlayerGamesMock.mockResolvedValue(page("LUX"));
-    modal.open({ tab: "games" });
-    await settle(() => expect(historyView()).not.toBeNull());
-    // A filter was picked before the tab's first load landed.
-    historyView()!.dispatchEvent(
-      new CustomEvent("history-updated", {
-        detail: { ...scrolledHistory(1), typeFilter: "public" },
-      }),
-    );
-    modal.setActiveTab("account");
-    await settle(() => expect(card()?.clanTag).toBe("LUX"));
-    expect(fetchPublicPlayerGamesMock).toHaveBeenCalledTimes(1);
-  });
-
-  it("ignores a Games tab update for another player while waiting for this one's", async () => {
-    modal.open({ tab: "games" });
-    await settle(() => expect(historyView()).not.toBeNull());
-    const update = (publicId: string, tag: string) =>
-      historyView()!.dispatchEvent(
-        new CustomEvent("history-updated", {
-          detail: {
-            publicId,
-            typeFilter: "all",
-            modeFilter: "all",
-            games: page(tag).results,
-            nextCursor: null,
-          },
-        }),
-      );
-    // A history view still mounted for a previous account answers late.
-    update("nova02", "AUS");
-    update("wonder01", "NU");
-    modal.setActiveTab("account");
-    await settle(() => expect(card()?.clanTag).toBe("NU"));
-  });
-
-  it("loads the games when the player signs in through a portal with the modal open", async () => {
-    getUserMeMock.mockResolvedValue(false);
-    fetchPublicPlayerGamesMock.mockResolvedValue(page("LUX"));
-    modal.open();
-    await settle(() => expect(getUserMeMock).toHaveBeenCalled());
-    expect(fetchPublicPlayerGamesMock).not.toHaveBeenCalled();
-    getUserMeMock.mockResolvedValue(userMe());
-    gamePortalMock.getUserProfile.mockResolvedValueOnce({ username: "wonder" });
-    await (
-      modal as unknown as { handlePortalSignIn(): Promise<void> }
-    ).handlePortalSignIn();
-    await settle(() => expect(card()?.clanTag).toBe("LUX"));
-    expect(fetchPublicPlayerGamesMock).toHaveBeenCalledWith("wonder01", {});
   });
 });

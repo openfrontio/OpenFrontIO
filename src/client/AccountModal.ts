@@ -1,7 +1,6 @@
 import {
   PlayerStatsTree,
   PrestigeResponse,
-  PublicPlayerGame,
   PublicProgress,
   UserMeResponse,
 } from "@openfront/shared/ApiSchemas";
@@ -13,12 +12,7 @@ import {
   hasLinkedIdentity,
   responseHasLinkedIdentity,
 } from "./AccountIdentity";
-import {
-  fetchPlayerById,
-  fetchPublicPlayerGames,
-  getUserMe,
-  invalidateUserMe,
-} from "./Api";
+import { fetchPlayerById, getUserMe, invalidateUserMe } from "./Api";
 import {
   discordLogin,
   googleLogin,
@@ -58,7 +52,6 @@ import { consumeLinkResult } from "./LinkResult";
 import { consumeLoginResult, LoginResult } from "./LoginResult";
 import "./PlayerProfileModal";
 import { loadPlayerProgress } from "./PlayerProgress";
-import { latestGameClanTag } from "./ProfileClanTag";
 import {
   PROVISIONAL_PROGRESS_CHANGED,
   provisionalProgress,
@@ -98,10 +91,6 @@ function loadPrestigeFlow(): Promise<unknown> {
 // flourishes.
 let accountOpenings = 0;
 
-// How long the player's newest games stay good for the card's clan tag
-// before an opening of the account reads them again.
-const RECENT_GAMES_MAX_AGE_MS = 60_000;
-
 @customElement("account-modal")
 export class AccountModal extends BaseModal {
   protected routerName = "account";
@@ -139,20 +128,13 @@ export class AccountModal extends BaseModal {
 
   private userMeResponse: UserMeResponse | null = null;
   private statsTree: PlayerStatsTree | null = null;
+  // The profile card's clan tag, from the API; undefined when it doesn't send
+  // one (→ the first clan).
+  private displayClanTag: string | null | undefined = undefined;
   // Preserves the Games tab's accumulated list + cursor across tab switches.
   private gameHistoryCache: PlayerGameHistoryCache | null = null;
   private gamesScrollTop = 0;
   private restoreGamesScrollAfterOpen = false;
-  // The first page of the player's own games, newest first: the profile
-  // card's clan tag comes from it (latestGameClanTag). null until it arrives,
-  // and the card shows no tag until then. Re-read on an opening once it is
-  // RECENT_GAMES_MAX_AGE_MS old, so a tag played under since shows up.
-  private recentGames: PublicPlayerGame[] | null = null;
-  private recentGamesAt = 0;
-  // The card is waiting for the Games tab's first load (see loadPlayerProfile).
-  private awaitingTabGames = false;
-  // The player whose games read is in flight, if any.
-  private recentGamesLoadingFor: string | null = null;
 
   constructor() {
     super();
@@ -216,8 +198,12 @@ export class AccountModal extends BaseModal {
       title: translateText("account_modal.title"),
       onBack: () => this.close(),
       ariaLabel: translateText("common.back"),
+      // Not on Poki: the profile link leads players off Poki.
       rightContent:
-        isLoggedIn && !this.isLoadingUser && publicId
+        isLoggedIn &&
+        !this.isLoadingUser &&
+        publicId &&
+        gamePortal.name() !== "poki"
           ? html`
               <copy-button
                 class="shrink-0"
@@ -497,19 +483,6 @@ export class AccountModal extends BaseModal {
           : null}
         @history-updated=${(e: CustomEvent<PlayerGameHistoryCache>) => {
           this.gameHistoryCache = e.detail;
-          // Opened on the Games tab, the card waits for the tab's first load
-          // (newest first, unfiltered) instead of reading the same page. Only
-          // that first page: older games appended later never change the tag.
-          if (
-            this.awaitingTabGames &&
-            e.detail.publicId === this.userMeResponse?.player?.publicId &&
-            e.detail.typeFilter === "all" &&
-            e.detail.modeFilter === "all"
-          ) {
-            this.awaitingTabGames = false;
-            this.recentGames = e.detail.games;
-            this.recentGamesAt = Date.now();
-          }
         }}
         @view-stats=${(e: CustomEvent<{ gameId: string }>) =>
           this.openGameStats(e.detail.gameId)}
@@ -547,13 +520,6 @@ export class AccountModal extends BaseModal {
   protected updated(changed: PropertyValues<this>): void {
     super.updated(changed);
     this.ensureProgression();
-    // The card is on show, but the Games tab it was waiting on didn't give it
-    // the games (its load failed, or a filter was picked first): read them.
-    const publicId = this.userMeResponse?.player?.publicId;
-    if (this.awaitingTabGames && this.activeTab !== "games" && publicId) {
-      this.awaitingTabGames = false;
-      this.loadRecentGames(publicId);
-    }
   }
 
   // Reads the Progression tab's progress once it shows: once per opening
@@ -685,7 +651,9 @@ export class AccountModal extends BaseModal {
       class=${variant === "full" ? "mb-4 block" : "block"}
       .variant=${variant}
       .username=${player.username ?? player.publicId}
-      .clanTag=${latestGameClanTag(this.recentGames ?? [], player.clans ?? [])}
+      .clanTag=${this.displayClanTag === undefined
+        ? (player.clans?.[0]?.tag ?? null)
+        : this.displayClanTag}
       .progress=${view.progress}
       .provisional=${view.provisional}
       .openKey=${`account-${this.openCount}`}
@@ -983,11 +951,9 @@ export class AccountModal extends BaseModal {
 
   private resetPlayerData(): void {
     this.statsTree = null;
+    this.displayClanTag = undefined;
     this.dropProgression();
     this.gameHistoryCache = null;
-    this.recentGames = null;
-    this.recentGamesAt = 0;
-    this.awaitingTabGames = false;
     this.gamesScrollTop = 0;
     this.restoreGamesScrollAfterOpen = false;
   }
@@ -1181,9 +1147,6 @@ export class AccountModal extends BaseModal {
     if (userMe) {
       this.userMeResponse = userMe;
       this.prefetchPrestigeFlow();
-      // Signed in with the modal still open: load what an opening would.
-      const publicId = userMe.player?.publicId;
-      if (publicId) void this.loadPlayerProfile(publicId);
     }
     this.portalUser = profile;
     this.requestUpdate();
@@ -1284,60 +1247,7 @@ export class AccountModal extends BaseModal {
     window.location.reload();
   }
 
-  // The newest games, for the card's clan tag. One request per opening at
-  // most, and none while the last read is fresh. The same unfiltered first
-  // page the Games tab opens on, so that tab is handed it too.
-  private hasFreshRecentGames(): boolean {
-    return (
-      this.recentGames !== null &&
-      Date.now() - this.recentGamesAt < RECENT_GAMES_MAX_AGE_MS
-    );
-  }
-
-  private loadRecentGames(publicId: string): void {
-    if (this.hasFreshRecentGames()) return;
-    if (this.recentGamesLoadingFor === publicId) return;
-    this.recentGamesLoadingFor = publicId;
-    void fetchPublicPlayerGames(publicId, {}).then((res) => {
-      if (this.recentGamesLoadingFor === publicId) {
-        this.recentGamesLoadingFor = null;
-      }
-      if ("error" in res) return;
-      if (this.userMeResponse?.player?.publicId !== publicId) return;
-      this.recentGames = res.results;
-      this.recentGamesAt = Date.now();
-      // Seeds the Games tab only when it has nothing for this player: a list
-      // the tab already holds (scrolled, filtered) is left as it is.
-      if (this.gameHistoryCache?.publicId !== publicId) {
-        this.gameHistoryCache = {
-          publicId,
-          typeFilter: "all",
-          modeFilter: "all",
-          games: res.results,
-          nextCursor: res.nextCursor,
-        };
-      }
-      this.requestUpdate();
-    });
-  }
-
   private async loadPlayerProfile(publicId: string): Promise<void> {
-    // Opening on the Games tab with nothing yet for this player, that tab
-    // reads the newest games itself and the card takes them from it: no
-    // second request for the same page.
-    const onGames = (this.requestedTab ?? this.activeTab) === "games";
-    const historyView = this.querySelector<HTMLElement & { publicId?: string }>(
-      "player-game-history-view",
-    );
-    const tabLoads =
-      onGames &&
-      this.gameHistoryCache?.publicId !== publicId &&
-      historyView?.publicId !== publicId;
-    if (tabLoads && !this.hasFreshRecentGames()) {
-      this.awaitingTabGames = true;
-    } else {
-      this.loadRecentGames(publicId);
-    }
     try {
       const data = await fetchPlayerById(publicId);
       if (!data) {
@@ -1346,6 +1256,7 @@ export class AccountModal extends BaseModal {
       }
 
       this.statsTree = data.stats;
+      this.displayClanTag = data.displayClanTag;
 
       this.requestUpdate();
     } catch (err) {

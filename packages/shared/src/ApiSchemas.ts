@@ -1181,6 +1181,10 @@ export const PlayerProfileSchema = z.object({
       }),
     )
     .optional(),
+  // The tag the profile shows: the player's latest game under a clan they
+  // still belong to, or null. Optional so responses from an API without it
+  // still parse (→ the first clan, as before).
+  displayClanTag: z.string().nullable().optional(),
 });
 export type PlayerProfile = z.infer<typeof PlayerProfileSchema>;
 
