@@ -607,10 +607,17 @@ describe("AccountModal — Progression tab", () => {
         // Still on 49 while it reads, now confirmed (no provisional label):
         // not back on the old 47. Levels 48-49 are pending, never Claimed:
         // the rewards list was read before they were reached.
+        const trackLevel = () =>
+          progression()?.querySelector<
+            HTMLElement & {
+              confirmedLevel: number | null;
+            }
+          >("reward-track")?.confirmedLevel;
         await settle(() => {
           const el = progression();
           expect(el?.provisional).toBe(false);
-          expect(el?.confirmedLevel).toBe(47);
+          // The track's rewards were read at 47.
+          expect(trackLevel()).toBe(47);
           expect(el?.querySelector("[data-track-provisional]")).toBeNull();
           expect(
             el?.querySelector('[data-level="48"]')?.getAttribute("data-status"),
@@ -627,13 +634,35 @@ describe("AccountModal — Progression tab", () => {
           const el = progression();
           expect(el?.progress?.lifetimeXp).toBe(300250);
           expect(el?.provisional).toBe(false);
-          expect(el?.confirmedLevel).toBe(47);
+          expect(trackLevel()).toBe(47);
           expect(
             el?.querySelector('[data-level="49"][data-current]'),
           ).not.toBeNull();
           expect(
             el?.querySelectorAll('[data-status="claimed"][data-level="48"]'),
           ).toHaveLength(0);
+        });
+
+        // The account is broadcast with the game: its rewards (48 and 49
+        // unclaimed) replace the track's, and the levels are judged by them.
+        document.dispatchEvent(
+          new CustomEvent("userMeResponse", {
+            detail: userMe(
+              { ...OWN_PROGRESS, level: 49, xpInLevel: 90, lifetimeXp: 300250 },
+              [
+                ...ownRewards(),
+                reward("l48", { level: 48, prestige: 2 }),
+                reward("l49", { level: 49, prestige: 2 }),
+              ],
+            ),
+          }),
+        );
+        await settle(() => {
+          const el = progression();
+          expect(trackLevel()).toBe(49);
+          expect(
+            el?.querySelector('[data-level="48"]')?.getAttribute("data-status"),
+          ).toBe("ready");
         });
       } finally {
         vi.mocked(localStorage.setItem).mockImplementation(() => undefined);

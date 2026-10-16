@@ -27,6 +27,7 @@ import type {
   UserMeResponse,
 } from "@openfront/shared/ApiSchemas";
 import { ProgressionConfigSchema } from "@openfront/shared/ApiSchemas";
+import { PROVISIONAL_PROGRESS_CHANGED } from "../../src/client/ProvisionalProgress";
 import {
   POP_CAP,
   ProfileProgression,
@@ -1447,5 +1448,125 @@ describe("provisional levels", () => {
     } finally {
       el.remove();
     }
+  });
+});
+
+// The track judges each passed level by the owner's rewards, which come from
+// a /users/@me copy: past the level that copy had reached, a passed level
+// with no reward row is pending, never Claimed.
+describe("<profile-progression> and its rewards copy", () => {
+  const meAt = (level: number, lifetimeXp: number, rewards: Reward[]) =>
+    ({
+      user: {},
+      player: {
+        publicId: "wonder01",
+        rewards,
+        progress: {
+          prestige: 3,
+          level,
+          xpInLevel: 0,
+          xpForNext: 100,
+          lifetimeXp,
+          legend: false,
+          canPrestige: false,
+        },
+      },
+    }) as unknown as UserMeResponse;
+  const status = (el: HTMLElement, level: number) =>
+    el.querySelector(`[data-level="${level}"]`)?.getAttribute("data-status");
+
+  async function mount(
+    loadUserMe: ProfileProgression["loadUserMe"],
+  ): Promise<ProfileProgression> {
+    const el = document.createElement(
+      "profile-progression",
+    ) as ProfileProgression;
+    el.loadConfig = async () => config();
+    el.loadUserMe = loadUserMe;
+    el.describeCosmetic = describeCosmetic;
+    el.publicId = "wonder01";
+    el.popKey = `copy-${Math.random()}`;
+    el.progress = { ...progress(3, 50) };
+    document.body.appendChild(el);
+    await vi.waitFor(async () => {
+      await el.updateComplete;
+      await el.querySelector<RewardTrack>("reward-track")?.updateComplete;
+      expect(el.querySelector('[data-level="48"]')).not.toBeNull();
+    });
+    return el;
+  }
+
+  afterEach(() => {
+    document.body.innerHTML = "";
+  });
+
+  it("shows levels past a stale copy as pending, then reads it again when a game is scored", async () => {
+    let fresh = false;
+    const l49 = reward({ id: "l49", level: 49, prestige: 3 });
+    const loadUserMe = vi.fn(async () =>
+      fresh ? meAt(50, 2000, [l49]) : meAt(47, 1000, []),
+    );
+    const el = await mount(loadUserMe);
+    // Read at 47: 48-50 can't be judged from it.
+    expect([48, 49, 50].map((l) => status(el, l))).toEqual([
+      "pending",
+      "pending",
+      "pending",
+    ]);
+    expect(status(el, 47)).toBe("claimed");
+
+    // A game is scored up to lifetime 2000, past the copy's 1000.
+    fresh = true;
+    document.dispatchEvent(
+      new CustomEvent(PROVISIONAL_PROGRESS_CHANGED, {
+        detail: { scored: ["g1"], scoredUpTo: 2000 },
+      }),
+    );
+    await vi.waitFor(async () => {
+      await el.querySelector<RewardTrack>("reward-track")!.updateComplete;
+      expect(status(el, 49)).toBe("ready");
+    });
+    expect(status(el, 48)).toBe("claimed");
+    expect(status(el, 50)).toBe("claimed");
+  });
+
+  it("judges levels normally when its rewards were read after the game", async () => {
+    const l49 = reward({ id: "l49", level: 49, prestige: 3 });
+    const el = await mount(async () => meAt(50, 2000, [l49]));
+    expect(status(el, 48)).toBe("claimed");
+    expect(status(el, 49)).toBe("ready");
+    // A score its copy already includes reads nothing again.
+    const track = el.querySelector("reward-track");
+    document.dispatchEvent(
+      new CustomEvent(PROVISIONAL_PROGRESS_CHANGED, {
+        detail: { scored: ["g1"], scoredUpTo: 2000 },
+      }),
+    );
+    await el.updateComplete;
+    expect(el.querySelector("reward-track")).toBe(track);
+    expect(status(el, 49)).toBe("ready");
+  });
+
+  it("takes the owner's broadcast account as its copy, asking nothing", async () => {
+    const loadUserMe = vi.fn(async () => meAt(47, 1000, []));
+    const el = await mount(loadUserMe);
+    const reads = loadUserMe.mock.calls.length;
+    const l49 = reward({ id: "l49", level: 49, prestige: 3 });
+    document.dispatchEvent(
+      new CustomEvent("userMeResponse", { detail: meAt(50, 2000, [l49]) }),
+    );
+    await vi.waitFor(async () => {
+      await el.querySelector<RewardTrack>("reward-track")!.updateComplete;
+      expect(status(el, 49)).toBe("ready");
+    });
+    expect(loadUserMe.mock.calls.length).toBe(reads);
+    // Someone else's account changes nothing.
+    document.dispatchEvent(
+      new CustomEvent("userMeResponse", {
+        detail: { ...meAt(10, 1, []), player: { publicId: "other" } },
+      }),
+    );
+    await el.updateComplete;
+    expect(status(el, 49)).toBe("ready");
   });
 });

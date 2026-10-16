@@ -19,6 +19,7 @@ import {
 import type { GameXpFetchResult } from "../../src/client/ProgressionApi";
 import {
   applyGameXp,
+  firstGameXp,
   MAX_PENDING_PER_ACCOUNT,
   noteFigure,
   PENDING_XP_CHECKED_KEY,
@@ -34,6 +35,7 @@ import {
   recordPendingXp,
   runCheck,
   scoredGames,
+  scoredUpTo,
   stackPendingXp,
   startProvisionalProgress,
   stopProvisionalProgress,
@@ -323,6 +325,27 @@ describe("pendingXpFor", () => {
     // Never asked about: uncertain.
     const neverAsked = { ...gA, notIn: undefined };
     expect(pendingXpFor({ lifetimeXp: 0 }, [neverAsked]).uncertain).toBe(true);
+  });
+});
+
+describe("firstGameXp", () => {
+  it("is exactly what the bonus added, rounded as the API rounds the total", () => {
+    expect(
+      firstGameXp({
+        firstGame: 50,
+        subtotal: 101,
+        gamePermille: 1250,
+        subscriberPermille: 1000,
+      }),
+    ).toBe(62);
+    expect(
+      firstGameXp({
+        firstGame: 0,
+        subtotal: 101,
+        gamePermille: 1250,
+        subscriberPermille: 1000,
+      }),
+    ).toBe(0);
   });
 });
 
@@ -625,8 +648,8 @@ describe("the store", () => {
       const shown = view({ ...LEVEL_1 });
       expect(shown.provisional).toBe(false);
       expect(shown.progress).toMatchObject({ level: 3, xpInLevel: 50 });
-      // The figure's own level: levels past it aren't in its rewards list.
-      expect(shown.confirmedLevel).toBe(1);
+      // Confirmed: nothing past the level the scored XP reached is pending.
+      expect(shown.confirmedLevel).toBe(3);
     });
 
     it("isn't counted onto a figure that includes it", async () => {
@@ -646,14 +669,13 @@ describe("the store", () => {
       expect(view({ ...LEVEL_1 }).progress.level).toBe(3);
     });
 
-    it("reads the account afresh once, its own broadcast asking nothing more", async () => {
+    it("reads the account afresh once; its broadcast, explained by the game, asks nothing more", async () => {
       recordPendingXp("me", { gameId: "g2", xp: 30, notIn: 0 });
-      // broadcastFreshUserMe: a figure with a rise nothing here explains,
-      // which would start a check from anyone else.
+      // broadcastFreshUserMe: the account with g1's 260.
       refreshUserMe.mockImplementation(async () =>
         document.dispatchEvent(
           new CustomEvent("userMeResponse", {
-            detail: me({ ...AT_250, lifetimeXp: 300 }),
+            detail: me({ ...AT_250, lifetimeXp: 260 }),
           }),
         ),
       );
@@ -663,10 +685,28 @@ describe("the store", () => {
       await settle();
       expect(refreshUserMe).toHaveBeenCalledTimes(1);
       expect(asked()).toEqual(["g1", "g2"]);
-      expect(
-        changed.mock.calls.map(([e]) => scoredGames(e as Event)),
-      ).toContainEqual(["g1"]);
+      const events = changed.mock.calls.map(([e]) => e as Event);
+      expect(events.map(scoredGames)).toContainEqual(["g1"]);
+      expect(events.map(scoredUpTo)).toContain(260);
       document.removeEventListener(PROVISIONAL_PROGRESS_CHANGED, changed);
+    });
+
+    it("still checks any other broadcast that arrives during its read", async () => {
+      recordPendingXp("me", { gameId: "g2", xp: 30, notIn: 0 });
+      let finish!: () => void;
+      refreshUserMe.mockImplementation(
+        () => new Promise<void>((r) => (finish = r)),
+      );
+      const done = runCheck();
+      await settle();
+      expect(asked()).toEqual(["g1", "g2"]);
+      // A purchase broadcasts the account meanwhile, with a rise nothing here
+      // explains: it's queued and asked about once the read is done.
+      broadcast({ ...AT_250, lifetimeXp: 400 });
+      finish();
+      await done;
+      await settle();
+      expect(asked()).toEqual(["g1", "g2", "g2"]);
     });
 
     it("lets a figure at the last level Prestige", async () => {
@@ -806,10 +846,9 @@ describe("the store", () => {
       });
     });
 
-    it("is the level after scored XP once the account's /users/@me includes it: none pending", async () => {
+    it("is the level after scored XP when only scored XP is added", async () => {
       applyGameXp("me", scored("g1", 250));
-      // /users/@me has the game; a stale public figure doesn't.
-      broadcast(AT_250);
+      broadcast(LEVEL_1);
       await settle();
       expect(view({ ...LEVEL_1 })).toMatchObject({
         provisional: false,
@@ -818,17 +857,18 @@ describe("the store", () => {
       });
     });
 
-    it("stays the figure's level while /users/@me doesn't include the scored game yet", async () => {
-      applyGameXp("me", scored("g1", 250));
+    it("keys its memo on what decides it", async () => {
+      recordPendingXp("me", { gameId: "g1", xp: 250, notIn: 0 });
       broadcast(LEVEL_1);
       await settle();
-      // Its rewards list was read before the game: levels 2-3 are pending,
-      // never Claimed from it.
-      expect(view({ ...LEVEL_1 })).toMatchObject({
-        provisional: false,
-        confirmedLevel: 1,
-        progress: { level: 3 },
-      });
+      const figure = { ...LEVEL_1 };
+      const first = view(figure);
+      expect(view(figure)).toBe(first);
+      // The same XP, now scored: confirmed, a new view.
+      applyGameXp("me", scored("g1", 250));
+      const second = view(figure);
+      expect(second).not.toBe(first);
+      expect(second).toMatchObject({ provisional: false, confirmedLevel: 3 });
     });
   });
 
@@ -906,13 +946,16 @@ describe("the store", () => {
       expect(fetchXp).toHaveBeenCalledTimes(2);
     });
 
-    it("skips a poll after another tab's check, never after its own", async () => {
-      start({ pollMs: 60_000 });
+    it("skips a tick within the interval after any check, without using a poll", async () => {
+      start({ pollMs: 60_000, maxPolls: 1 });
       broadcast(LEVEL_1);
-      // Its own check half way through the interval: the poll still runs.
+      // Its own check half way through the interval: the tick is skipped,
+      // and doesn't count against the cap.
       await vi.advanceTimersByTimeAsync(30_000);
       await runCheck();
       await vi.advanceTimersByTimeAsync(30_000);
+      expect(fetchXp).toHaveBeenCalledTimes(1);
+      await vi.advanceTimersByTimeAsync(60_000);
       expect(fetchXp).toHaveBeenCalledTimes(2);
       // Another tab's check: the next poll is skipped.
       await vi.advanceTimersByTimeAsync(30_000);
@@ -922,8 +965,34 @@ describe("the store", () => {
       );
       await vi.advanceTimersByTimeAsync(30_000);
       expect(fetchXp).toHaveBeenCalledTimes(2);
-      await vi.advanceTimersByTimeAsync(60_000);
-      expect(fetchXp).toHaveBeenCalledTimes(3);
+    });
+
+    it("throttles a figure's check like a poll", async () => {
+      const userMe = { ...LEVEL_1, lifetimeXp: 1000 };
+      localStorage.clear();
+      start({ pollMs: 60_000 });
+      recordPendingXp("me", { gameId: "gA", xp: 250, notIn: 1000 });
+      broadcast(userMe);
+      // The answers keep failing: notIn never rises.
+      answers.set("gA", { status: "pending" });
+      noteFigure("me", { lifetimeXp: 1150 });
+      await vi.advanceTimersByTimeAsync(0);
+      expect(fetchXp).toHaveBeenCalledTimes(1);
+      // Reopening the tab soon after sends nothing more...
+      noteFigure("me", { lifetimeXp: 1150 });
+      await vi.advanceTimersByTimeAsync(10_000);
+      noteFigure("me", { lifetimeXp: 1150 });
+      await vi.advanceTimersByTimeAsync(0);
+      expect(fetchXp).toHaveBeenCalledTimes(1);
+      // ...nor after another tab asked.
+      await vi.advanceTimersByTimeAsync(45_000);
+      localStorage.setItem(
+        PENDING_XP_CHECKED_KEY,
+        JSON.stringify({ me: { at: Date.now(), tab: "other-tab" } }),
+      );
+      noteFigure("me", { lifetimeXp: 1150 });
+      await vi.advanceTimersByTimeAsync(0);
+      expect(fetchXp).toHaveBeenCalledTimes(1);
     });
 
     it("checks on a return to the page only a poll interval after its own last check, outside the cap", async () => {

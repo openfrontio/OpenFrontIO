@@ -7,6 +7,7 @@ import type {
 import { z } from "zod";
 import type { GameXpFetchResult } from "./ProgressionApi";
 import { projectProgress } from "./ProgressProjection";
+import { applyMultipliers } from "./XpMultipliers";
 
 // The player's own level with the XP of games the API hasn't scored yet.
 //
@@ -64,15 +65,16 @@ export type PendingXp = z.infer<typeof PendingXpSchema>;
 export type PendingGameKind = NonNullable<PendingXp["kind"]>;
 type Store = z.infer<typeof StoreSchema>;
 
-/** The XP a game's first-game-of-the-day bonus added to its total. */
+// Exactly as the API rounds: the total less the total without it.
 export function firstGameXp(b: {
   firstGame: number;
+  subtotal: number;
   gamePermille: number;
   subscriberPermille: number;
 }): number {
-  return Math.round(
-    (b.firstGame * b.gamePermille * b.subscriberPermille) / 1_000_000,
-  );
+  const award = (subtotal: number) =>
+    applyMultipliers(subtotal, b.gamePermille, b.subscriberPermille);
+  return award(b.subtotal) - award(b.subtotal - b.firstGame);
 }
 
 // The parsed store, dropped on every write and on the storage event.
@@ -267,6 +269,8 @@ export function pendingXpFor(
   // The API gives the day's first-game bonus to whichever game it scores
   // first: once a scored game has it, a pending game's provisional bonus
   // that day won't be paid.
+  // Only games this browser kept are seen (not one scored on another
+  // device): accepted, as either way it clears once the game is scored.
   const bonusTaken = (e: PendingXp) =>
     entries.some((o) => o.scored && o.day === e.day && (o.firstGame ?? 0) > 0);
   const counted: PendingXp[] = [];
@@ -344,11 +348,20 @@ export function withPendingXp(
 /** Sent on document whenever what provisionalProgress() returns may change. */
 export const PROVISIONAL_PROGRESS_CHANGED = "provisional-progress-changed";
 
-/** The games a PROVISIONAL_PROGRESS_CHANGED event says were just scored. */
+interface ProvisionalChange {
+  // Games just scored, and the lifetime XP the highest took the player to.
+  scored: string[];
+  scoredUpTo: number;
+}
+const changeOf = (event: Event): Partial<ProvisionalChange> =>
+  (event as CustomEvent<ProvisionalChange | null>).detail ?? {};
+
 export function scoredGames(event: Event): readonly string[] {
-  return (
-    (event as CustomEvent<{ scored: string[] } | null>).detail?.scored ?? []
-  );
+  return changeOf(event).scored ?? [];
+}
+
+export function scoredUpTo(event: Event): number {
+  return changeOf(event).scoredUpTo ?? 0;
 }
 
 export interface ProvisionalView<P> {
@@ -357,9 +370,9 @@ export interface ProvisionalView<P> {
   progress: P;
   // Counts XP from games the API hasn't scored yet.
   provisional: boolean;
-  // Null when nothing is added. Else the level the rewards list can judge:
-  // past it, levels are pending (reached by unscored XP, or by scored XP the
-  // account's /users/@me copy doesn't include yet).
+  // Null when nothing is added. Else the level with the scored XP: past it,
+  // levels are reached only provisionally. (The reward track also caps it at
+  // the level of the /users/@me copy its rewards came from.)
   confirmedLevel: number | null;
 }
 
@@ -380,18 +393,14 @@ const TAB = Math.random().toString(36).slice(2);
 let deps: ProvisionalDeps | null = null;
 let account: string | null = null;
 let config: ProgressionConfig | null = null;
-// The highest lifetime XP of the account's figures shown so far, and of its
-// latest /users/@me copy (what its rewards list was read with).
+// The highest lifetime XP of the account's figures shown so far.
 let seenLifetime: number | null = null;
-let userMeLifetime = 0;
 let inFlight: Promise<void> | null = null;
 // A check asked for while one ran: the figure it was for (the newest), or
 // null for every unscored game.
 let again: { lifetimeXp: number } | null | undefined;
 // When this tab last started a check.
 let lastCheck = -Infinity;
-// While this store broadcasts the account it read: that asks nothing more.
-let broadcasting = false;
 // After a 429, no request before this.
 let backoffUntil = 0;
 let timer: ReturnType<typeof setInterval> | null = null;
@@ -433,26 +442,22 @@ export function provisionalProgress<P extends ProgressLike>(
   const base =
     projectPendingXp(confirmed, scoredXp, config, false) ?? confirmed;
   const top = projectPendingXp(base, unscoredXp, config);
-  // Levels the scored XP reached are judged from the rewards list only once
-  // the /users/@me copy it came with includes those games.
-  const known = counted.every(
-    (e) => !e.scored || e.scored.lifetimeAfter <= userMeLifetime,
-  );
   const view =
     base === confirmed && top === null
       ? plain
       : {
           progress: { ...confirmed, ...base, ...top },
           provisional: top !== null,
-          confirmedLevel: known ? base.level : confirmed.level,
+          confirmedLevel: base.level,
         };
   views.set(confirmed, { key, view });
   return view;
 }
 
-function emitChanged(scored: string[] = []): void {
+function emitChanged(scored: string[] = [], upTo = 0): void {
+  const detail: ProvisionalChange = { scored, scoredUpTo: upTo };
   document.dispatchEvent(
-    new CustomEvent(PROVISIONAL_PROGRESS_CHANGED, { detail: { scored } }),
+    new CustomEvent(PROVISIONAL_PROGRESS_CHANGED, { detail }),
   );
 }
 
@@ -490,6 +495,7 @@ export function runCheck(figure?: { lifetimeXp: number }): Promise<void> {
   const live = () => deps === d && account === forAccount;
   inFlight = (async () => {
     const scored: string[] = [];
+    let upTo = 0;
     for (const entry of asking) {
       const answer = await d
         .fetchXp(entry.gameId)
@@ -497,7 +503,10 @@ export function runCheck(figure?: { lifetimeXp: number }): Promise<void> {
       if (!live()) return;
       if (answer.status === "ok") {
         applyGameXp(forAccount, answer.data, {}, now());
-        if (answer.data.eligible) scored.push(entry.gameId);
+        if (answer.data.eligible) {
+          scored.push(entry.gameId);
+          upTo = Math.max(upTo, answer.data.after.lifetimeXp);
+        }
       } else if (answer.status === "pending" && answer.rateLimited) {
         backoffUntil = now() + pollMs();
         again = undefined;
@@ -506,13 +515,14 @@ export function runCheck(figure?: { lifetimeXp: number }): Promise<void> {
         if (seen !== null) raiseNotIn(forAccount, entry.gameId, seen, now());
       }
     }
+    // Its broadcast includes the games just scored, so it asks nothing more
+    // unless it shows a rise they don't explain (and never within a 429's
+    // back-off).
     if (scored.length > 0) {
-      broadcasting = true;
       await d.refreshUserMe().catch(() => undefined);
-      broadcasting = false;
       if (!live()) return;
     }
-    emitChanged(scored);
+    emitChanged(scored, upTo);
     syncPolling();
   })().finally(() => {
     inFlight = null;
@@ -536,15 +546,19 @@ function syncPolling(): void {
   }
 }
 
-// `timed`: the interval's tick, which counts towards the cap. A return to
-// the page asks only a poll interval after this tab's last check, and
-// outside the cap, so tab switches can't use the polls up.
+// Whether this tab, or another (whose answers come through storage), asked
+// within the poll interval.
+function checkedRecently(): boolean {
+  if (now() - lastCheck < pollMs()) return true;
+  const last = readJson(PENDING_XP_CHECKED_KEY, CheckedSchema, {})[account!];
+  return !!last && last.tab !== TAB && now() - last.at < pollMs();
+}
+
+// `timed`: the interval's tick, which counts towards the cap; a return to
+// the page doesn't, so tab switches can't use the polls up.
 function poll(timed: boolean): void {
   if (account === null || document.visibilityState !== "visible") return;
-  if (!timed && now() - lastCheck < pollMs()) return;
-  // Another tab asked within the interval: its answers come through storage.
-  const last = readJson(PENDING_XP_CHECKED_KEY, CheckedSchema, {})[account];
-  if (last && last.tab !== TAB && now() - last.at < pollMs()) return;
+  if (checkedRecently()) return;
   if (timed) polls++;
   void runCheck();
   syncPolling();
@@ -562,7 +576,8 @@ export function noteFigure(
 ): void {
   if (!isOwnAccount(publicId)) return;
   seenLifetime = Math.max(seenLifetime ?? 0, figure.lifetimeXp);
-  if (pendingXpFor(figure, readPendingXp(account!, now())).uncertain) {
+  const entries = readPendingXp(account!, now());
+  if (pendingXpFor(figure, entries).uncertain && !checkedRecently()) {
     void runCheck(figure);
   }
 }
@@ -573,14 +588,12 @@ function onUserMe(event: Event): void {
   if (next !== account) {
     account = next;
     seenLifetime = null;
-    userMeLifetime = 0;
     polls = 0;
     emitChanged();
   }
   const progress = me === false ? undefined : me?.player?.progress;
   if (account === null || progress === undefined) return syncPolling();
   seenLifetime = Math.max(seenLifetime ?? 0, progress.lifetimeXp);
-  userMeLifetime = Math.max(userMeLifetime, progress.lifetimeXp);
   if (config === null) {
     const d = deps;
     void d
@@ -594,7 +607,7 @@ function onUserMe(event: Event): void {
   }
   // A figure the stored answers can't settle is asked about now.
   const entries = readPendingXp(account, now());
-  if (!broadcasting && pendingXpFor(progress, entries).uncertain) {
+  if (pendingXpFor(progress, entries).uncertain) {
     void runCheck(progress);
   } else {
     syncPolling();
@@ -643,7 +656,6 @@ export function stopProvisionalProgress(): void {
   account = null;
   config = null;
   seenLifetime = null;
-  userMeLifetime = 0;
   inFlight = null;
   again = undefined;
   lastCheck = -Infinity;

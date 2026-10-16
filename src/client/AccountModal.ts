@@ -53,7 +53,6 @@ import { consumeLoginResult, LoginResult } from "./LoginResult";
 import "./PlayerProfileModal";
 import { loadPlayerProgress } from "./PlayerProgress";
 import {
-  noteFigure,
   PROVISIONAL_PROGRESS_CHANGED,
   provisionalProgress,
   scoredGames,
@@ -532,7 +531,6 @@ export class AccountModal extends BaseModal {
       // and run (without dates), so the tab never sits on its spinner.
       this.progression =
         progress ?? this.userMeResponse?.player?.progress ?? null;
-      if (progress !== null) noteFigure(publicId, progress);
     });
   }
 
@@ -556,7 +554,6 @@ export class AccountModal extends BaseModal {
     void loadPlayerProgress(publicId).then((progress) => {
       if (load !== this.progressionLoad || progress === null) return;
       this.progression = progress;
-      noteFigure(publicId, progress);
     });
   }
 

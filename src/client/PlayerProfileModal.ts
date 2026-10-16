@@ -28,7 +28,6 @@ import { modalRouter } from "./ModalRouter";
 import { loadPlayerProgress } from "./PlayerProgress";
 import {
   isOwnAccount,
-  noteFigure,
   PROVISIONAL_PROGRESS_CHANGED,
   provisionalProgress,
   scoredGames,
@@ -117,11 +116,9 @@ export class PlayerProfileModal extends BaseModal {
       if (gen !== this.loadGeneration || read !== this.progressRead) return;
       if (progress === null || this.publicId !== publicId) return;
       this.progress = progress;
-      noteFigure(publicId, progress);
     });
   }
 
-  // On the viewer's own profile, with the XP of games not scored yet.
   private progressView() {
     return this.progress === null
       ? null
@@ -528,7 +525,6 @@ export class PlayerProfileModal extends BaseModal {
     void loadPlayerProgress(publicId).then((progress) => {
       if (!current() || read !== this.progressRead) return;
       this.progress = progress;
-      if (progress !== null) noteFigure(publicId, progress);
       const wanted = this.wantsProgressionTab;
       this.wantsProgressionTab = false;
       // Unless the viewer has moved to another tab, or closed the profile

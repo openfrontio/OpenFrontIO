@@ -413,11 +413,11 @@ describe("Player profile Progression tab", () => {
       expect(answers).toHaveLength(2);
       answers[1]({ ...OWN, level: 35, xpInLevel: 0, lifetimeXp: 60000 });
       answers[0]({ ...OWN, level: 33, xpInLevel: 0, lifetimeXp: 55000 });
-      // The second read (35) with g1's pending 250 on top: 37. The first
-      // read would have given 35.
-      await settle(() => expect(card()?.progress.level).toBe(37));
+      // The second read wins (35, its rise past g1's notIn unexplained), not
+      // the first (33).
+      await settle(() => expect(card()?.progress.level).toBe(35));
       await new Promise((r) => setTimeout(r, 0));
-      expect(card()?.progress.level).toBe(37);
+      expect(card()?.progress.level).toBe(35);
     });
 
     it("never shows it on anyone else's profile", async () => {
