@@ -9,8 +9,10 @@ import { PseudoRandom } from "@openfront/engine-lib/PseudoRandom";
 import { AllianceRequestExecution } from "@openfront/engine/execution/alliance/AllianceRequestExecution";
 import { AttackExecution } from "@openfront/engine/execution/AttackExecution";
 import { NationAllianceBehavior } from "@openfront/engine/execution/nation/NationAllianceBehavior";
+import { NationAttackBehavior } from "@openfront/engine/execution/nation/NationAttackBehavior";
 import { NationEmojiBehavior } from "@openfront/engine/execution/nation/NationEmojiBehavior";
-import { AiAttackBehavior } from "@openfront/engine/execution/utils/AiAttackBehavior";
+import { NationWarshipBehavior } from "@openfront/engine/execution/nation/NationWarshipBehavior";
+import { TribeAttackBehavior } from "@openfront/engine/execution/TribeAttackBehavior";
 import { Game, Player } from "@openfront/engine/game/Game";
 import { setup } from "./util/Setup";
 import { executeTicks } from "./util/utils";
@@ -19,7 +21,7 @@ describe("Ai Attack Behavior", () => {
   let game: Game;
   let bot: Player;
   let human: Player;
-  let attackBehavior: AiAttackBehavior;
+  let attackBehavior: TribeAttackBehavior;
 
   // Helper function for basic test setup
   async function setupTestEnvironment() {
@@ -59,7 +61,7 @@ describe("Ai Attack Behavior", () => {
     testBot.addTroops(5000);
     testHuman.addTroops(5000);
 
-    const behavior = new AiAttackBehavior(
+    const behavior = new TribeAttackBehavior(
       new PseudoRandom(42),
       testGame,
       testBot,
@@ -139,15 +141,17 @@ describe("Ai Attack Behavior", () => {
     // path; the attack on an ally must be blocked by AttackExecution's
     // alliance check regardless of what the AI decides.
     const nationRandom = new PseudoRandom(42);
-    const nationBehavior = new AiAttackBehavior(
+    const nationEmoji = new NationEmojiBehavior(nationRandom, game, nation);
+    const nationBehavior = new NationAttackBehavior(
       nationRandom,
       game,
       nation,
       0.5,
       0.5,
       0.2,
-      undefined,
-      new NationEmojiBehavior(nationRandom, game, nation),
+      new NationAllianceBehavior(nationRandom, game, nation, nationEmoji),
+      nationEmoji,
+      new NationWarshipBehavior(nationRandom, game, nation, nationEmoji),
     );
 
     // Alliance between nation and human
@@ -229,7 +233,7 @@ describe("Hard/Impossible troop floor", () => {
     } as any;
     const mockAlliance = { maybeBetray: vi.fn() } as any;
 
-    const behavior = new AiAttackBehavior(
+    const behavior = new NationAttackBehavior(
       new PseudoRandom(42),
       testGame,
       attacker,
@@ -238,6 +242,7 @@ describe("Hard/Impossible troop floor", () => {
       0.2, // expandRatio
       mockAlliance,
       mockEmoji,
+      {} as any,
     );
 
     return { testGame, attacker, neighbor, bot, behavior };
@@ -389,7 +394,7 @@ describe("Hard/Impossible troop floor", () => {
     // No player neighbors — troopSendCap should return Infinity
     expect(bot.nearby().filter((n) => n.isPlayer()).length).toBe(0);
 
-    const behavior = new AiAttackBehavior(
+    const behavior = new TribeAttackBehavior(
       new PseudoRandom(42),
       testGame,
       bot,
@@ -463,7 +468,7 @@ describe("Hard/Impossible troop floor", () => {
     } as any;
     const mockAlliance = { maybeBetray: vi.fn() } as any;
 
-    const behavior = new AiAttackBehavior(
+    const behavior = new NationAttackBehavior(
       new PseudoRandom(42),
       testGame,
       attacker,
@@ -472,6 +477,7 @@ describe("Hard/Impossible troop floor", () => {
       0.2,
       mockAlliance,
       mockEmoji,
+      {} as any,
     );
 
     // In FFA Hard, attacker with 100k and neighbor with 90k would cap
@@ -544,7 +550,7 @@ describe("Hard/Impossible troop floor", () => {
     } as any;
     const mockAlliance = { maybeBetray: vi.fn() } as any;
 
-    const behavior = new AiAttackBehavior(
+    const behavior = new NationAttackBehavior(
       new PseudoRandom(42),
       testGame,
       attacker,
@@ -553,6 +559,7 @@ describe("Hard/Impossible troop floor", () => {
       0.2,
       mockAlliance,
       mockEmoji,
+      {} as any,
     );
 
     attacker.addTroops(100_000);
@@ -657,13 +664,16 @@ describe("Juicy target strategy", () => {
       city.increaseLevel();
     }
 
-    const behavior = new AiAttackBehavior(
+    const behavior = new NationAttackBehavior(
       new PseudoRandom(42),
       testGame,
       attacker,
       0.5,
       0.3,
       0.2,
+      {} as any,
+      {} as any,
+      {} as any,
     );
 
     return { testGame, attacker, weak, rich, behavior };
@@ -758,7 +768,7 @@ describe("Juicy target strategy - end-to-end via maybeAttack", () => {
       attacker,
       emojiBehavior,
     );
-    const behavior = new AiAttackBehavior(
+    const behavior = new NationAttackBehavior(
       new PseudoRandom(42),
       testGame,
       attacker,
@@ -767,6 +777,12 @@ describe("Juicy target strategy - end-to-end via maybeAttack", () => {
       0.2, // expandRatio
       allianceBehavior,
       emojiBehavior,
+      new NationWarshipBehavior(
+        new PseudoRandom(42),
+        testGame,
+        attacker,
+        emojiBehavior,
+      ),
     );
 
     return { testGame, attacker, weak, rich, behavior };
@@ -834,7 +850,7 @@ describe("Retaliation by difficulty - end-to-end via maybeAttack", () => {
       nation,
       emojiBehavior,
     );
-    const behavior = new AiAttackBehavior(
+    const behavior = new NationAttackBehavior(
       new PseudoRandom(42),
       testGame,
       nation,
@@ -843,6 +859,12 @@ describe("Retaliation by difficulty - end-to-end via maybeAttack", () => {
       0.2, // expandRatio
       allianceBehavior,
       emojiBehavior,
+      new NationWarshipBehavior(
+        new PseudoRandom(42),
+        testGame,
+        nation,
+        emojiBehavior,
+      ),
     );
 
     return { testGame, nation, enemy, other, behavior };
@@ -1118,7 +1140,7 @@ describe("Juicy ally betrayal strategy - end-to-end via maybeAttack", () => {
       attacker,
       emojiBehavior,
     );
-    const behavior = new AiAttackBehavior(
+    const behavior = new NationAttackBehavior(
       new PseudoRandom(42),
       testGame,
       attacker,
@@ -1127,6 +1149,12 @@ describe("Juicy ally betrayal strategy - end-to-end via maybeAttack", () => {
       0.2, // expandRatio
       allianceBehavior,
       emojiBehavior,
+      new NationWarshipBehavior(
+        new PseudoRandom(42),
+        testGame,
+        attacker,
+        emojiBehavior,
+      ),
     );
 
     return { testGame, attacker, ally, behavior };
@@ -1178,7 +1206,7 @@ describe("City troops and expansion", () => {
     bot.addTroops(100);
     human.addTroops(1_000);
 
-    const behavior = new AiAttackBehavior(
+    const behavior = new NationAttackBehavior(
       new PseudoRandom(42),
       game,
       nation,
@@ -1187,6 +1215,7 @@ describe("City troops and expansion", () => {
       0.2, // expandRatio
       { maybeBetray: vi.fn() } as any,
       { maybeSendAttackEmoji: vi.fn(), sendEmoji: vi.fn() } as any,
+      {} as any,
     );
     const attacks = vi.spyOn(game, "addExecution");
     const sent = () =>

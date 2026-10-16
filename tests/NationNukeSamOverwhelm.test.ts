@@ -17,7 +17,8 @@ import { NationEmojiBehavior } from "@openfront/engine/execution/nation/NationEm
 import { NationNukeBehavior } from "@openfront/engine/execution/nation/NationNukeBehavior";
 import { NationExecution } from "@openfront/engine/execution/NationExecution";
 import { SAMLauncherExecution } from "@openfront/engine/execution/SAMLauncherExecution";
-import { AiAttackBehavior } from "@openfront/engine/execution/utils/AiAttackBehavior";
+import { NationAttackBehavior } from "@openfront/engine/execution/nation/NationAttackBehavior";
+import { NationWarshipBehavior } from "@openfront/engine/execution/nation/NationWarshipBehavior";
 import { Game, Player } from "@openfront/engine/game/Game";
 import { setup } from "./util/Setup";
 import { TestConfig } from "./util/TestConfig";
@@ -50,7 +51,7 @@ function sendNukes(game: Game, nation: Player) {
     game,
     nation,
   );
-  const attackBehavior = new AiAttackBehavior(
+  const attackBehavior = new NationAttackBehavior(
     new PseudoRandom(1),
     game,
     nation,
@@ -64,6 +65,7 @@ function sendNukes(game: Game, nation: Player) {
       emojiBehavior,
     ),
     emojiBehavior,
+    new NationWarshipBehavior(new PseudoRandom(1), game, nation, emojiBehavior),
   );
   new NationNukeBehavior(
     new PseudoRandom(2),

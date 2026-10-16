@@ -13,7 +13,8 @@ import { PseudoRandom } from "@openfront/engine-lib/PseudoRandom";
 import { NationAllianceBehavior } from "@openfront/engine/execution/nation/NationAllianceBehavior";
 import { NationEmojiBehavior } from "@openfront/engine/execution/nation/NationEmojiBehavior";
 import { NationNukeBehavior } from "@openfront/engine/execution/nation/NationNukeBehavior";
-import { AiAttackBehavior } from "@openfront/engine/execution/utils/AiAttackBehavior";
+import { NationAttackBehavior } from "@openfront/engine/execution/nation/NationAttackBehavior";
+import { NationWarshipBehavior } from "@openfront/engine/execution/nation/NationWarshipBehavior";
 import { Game, Player, Unit } from "@openfront/engine/game/Game";
 import { setup } from "./util/Setup";
 import { TestConfig } from "./util/TestConfig";
@@ -84,7 +85,7 @@ function launchNukes(game: Game, nation: Player): Unit[] {
     nation,
     emojiBehavior,
   );
-  const attackBehavior = new AiAttackBehavior(
+  const attackBehavior = new NationAttackBehavior(
     new PseudoRandom(1),
     game,
     nation,
@@ -93,6 +94,7 @@ function launchNukes(game: Game, nation: Player): Unit[] {
     0.2,
     allianceBehavior,
     emojiBehavior,
+    new NationWarshipBehavior(new PseudoRandom(1), game, nation, emojiBehavior),
   );
   new NationNukeBehavior(
     new PseudoRandom(2),

@@ -11,7 +11,7 @@ import { NationAllianceBehavior } from "@openfront/engine/execution/nation/Natio
 import { NationEmojiBehavior } from "@openfront/engine/execution/nation/NationEmojiBehavior";
 import { NationWarshipBehavior } from "@openfront/engine/execution/nation/NationWarshipBehavior";
 import { TransportShipExecution } from "@openfront/engine/execution/TransportShipExecution";
-import { AiAttackBehavior } from "@openfront/engine/execution/utils/AiAttackBehavior";
+import { NationAttackBehavior } from "@openfront/engine/execution/nation/NationAttackBehavior";
 import { Player } from "@openfront/engine/game/Game";
 import { createGame, L, W } from "./core/pathfinding/_fixtures";
 
@@ -60,7 +60,7 @@ function setupSea(
   nation.setTroops(1_000_000);
   const random = new PseudoRandom(42);
   const emoji = new NationEmojiBehavior(random, game, nation);
-  const behavior = new AiAttackBehavior(
+  const behavior = new NationAttackBehavior(
     random,
     game,
     nation,

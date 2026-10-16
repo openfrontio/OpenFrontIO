@@ -18,7 +18,8 @@ import { NationAllianceBehavior } from "@openfront/engine/execution/nation/Natio
 import { NationEmojiBehavior } from "@openfront/engine/execution/nation/NationEmojiBehavior";
 import { NukeExecution } from "@openfront/engine/execution/NukeExecution";
 import { PlayerExecution } from "@openfront/engine/execution/PlayerExecution";
-import { AiAttackBehavior } from "@openfront/engine/execution/utils/AiAttackBehavior";
+import { NationAttackBehavior } from "@openfront/engine/execution/nation/NationAttackBehavior";
+import { NationWarshipBehavior } from "@openfront/engine/execution/nation/NationWarshipBehavior";
 import { Game, Player } from "@openfront/engine/game/Game";
 import { createGame } from "@openfront/engine/game/GameImpl";
 import { PathFinding } from "@openfront/engine/pathfinding/PathFinder";
@@ -457,7 +458,7 @@ describe("Impassable Terrain", () => {
         nation,
         emojiBehavior,
       );
-      const attackBehavior = new AiAttackBehavior(
+      const attackBehavior = new NationAttackBehavior(
         new PseudoRandom(42),
         game,
         nation,
@@ -466,6 +467,12 @@ describe("Impassable Terrain", () => {
         0.0, // expandRatio
         allianceBehavior,
         emojiBehavior,
+        new NationWarshipBehavior(
+          new PseudoRandom(42),
+          game,
+          nation,
+          emojiBehavior,
+        ),
       );
 
       // Directly send an attack on the enemy — this should succeed.

@@ -8,6 +8,7 @@ import { PseudoRandom } from "@openfront/engine-lib/PseudoRandom";
 import { AttackExecution } from "@openfront/engine/execution/AttackExecution";
 import { ConstructionExecution } from "@openfront/engine/execution/ConstructionExecution";
 import { NationStructureBehavior } from "@openfront/engine/execution/nation/NationStructureBehavior";
+import { NationStructurePlacement } from "@openfront/engine/execution/nation/NationStructurePlacement";
 import { Game, Player } from "@openfront/engine/game/Game";
 import { Cluster } from "@openfront/engine/game/TrainStation";
 import { vi } from "vitest";
@@ -85,20 +86,28 @@ function makeBehavior(
   return new NationStructureBehavior(random, game, player);
 }
 
+function makePlacement(
+  game: any,
+  player: any,
+  random: PseudoRandom = new PseudoRandom(0),
+): NationStructurePlacement {
+  return new NationStructurePlacement(random, game, player);
+}
+
 // ── shouldUseConnectivityScore ───────────────────────────────────────────────
 
-describe("NationStructureBehavior.shouldUseConnectivityScore", () => {
+describe("NationStructurePlacement.shouldUseConnectivityScore", () => {
   afterEach(() => {
     vi.restoreAllMocks();
   });
 
   function behaviorWithNextInt(returnValue: number): {
-    behavior: NationStructureBehavior;
+    behavior: NationStructurePlacement;
     random: PseudoRandom;
   } {
     const random = new PseudoRandom(0);
     vi.spyOn(random, "nextInt").mockReturnValue(returnValue);
-    const behavior = makeBehavior(makeGame(), makePlayer([], []), random);
+    const behavior = makePlacement(makeGame(), makePlayer([], []), random);
     return { behavior, random };
   }
 
@@ -153,7 +162,7 @@ describe("NationStructureBehavior.shouldUseConnectivityScore", () => {
 
 // ── buildReachableStations ───────────────────────────────────────────────────
 
-describe("NationStructureBehavior.buildReachableStations", () => {
+describe("NationStructurePlacement.buildReachableStations", () => {
   const selfWeight = Number(TRAIN_GOLD.self) / MAX_TRADE_GOLD;
   const allyWeight = Number(TRAIN_GOLD.ally) / MAX_TRADE_GOLD;
   const teamWeight = Number(TRAIN_GOLD.team) / MAX_TRADE_GOLD;
@@ -164,7 +173,7 @@ describe("NationStructureBehavior.buildReachableStations", () => {
     const unit = makeUnit(10);
     const station = makeStation(unit, cluster);
     const player = makePlayer([unit], []);
-    const behavior = makeBehavior(makeGame([station]), player);
+    const behavior = makePlacement(makeGame([station]), player);
 
     const result = (behavior as any).buildReachableStations();
 
@@ -178,7 +187,7 @@ describe("NationStructureBehavior.buildReachableStations", () => {
     const unit = makeUnit(11);
     const station = makeStation(unit, null);
     const player = makePlayer([unit], []);
-    const behavior = makeBehavior(makeGame([station]), player);
+    const behavior = makePlacement(makeGame([station]), player);
 
     const result = (behavior as any).buildReachableStations();
 
@@ -191,7 +200,7 @@ describe("NationStructureBehavior.buildReachableStations", () => {
     const unit = makeUnit(20);
     // No stations in station manager
     const player = makePlayer([unit], []);
-    const behavior = makeBehavior(makeGame([]), player);
+    const behavior = makePlacement(makeGame([]), player);
 
     const result = (behavior as any).buildReachableStations();
 
@@ -203,7 +212,7 @@ describe("NationStructureBehavior.buildReachableStations", () => {
     const station = makeStation(unit, null);
     const bot = makeNeighbor({ type: PlayerType.Bot, units: [unit] });
     const player = makePlayer([], [bot]);
-    const behavior = makeBehavior(makeGame([station]), player);
+    const behavior = makePlacement(makeGame([station]), player);
 
     const result = (behavior as any).buildReachableStations();
 
@@ -215,7 +224,7 @@ describe("NationStructureBehavior.buildReachableStations", () => {
     const station = makeStation(unit, null);
     const nonPlayer = makeNeighbor({ isPlayer: false, units: [unit] });
     const player = makePlayer([], [nonPlayer]);
-    const behavior = makeBehavior(makeGame([station]), player);
+    const behavior = makePlacement(makeGame([station]), player);
 
     const result = (behavior as any).buildReachableStations();
 
@@ -227,7 +236,7 @@ describe("NationStructureBehavior.buildReachableStations", () => {
     const station = makeStation(unit, null);
     const neighbor = makeNeighbor({ units: [unit] });
     const player = makePlayer([], [neighbor], { canTrade: () => false });
-    const behavior = makeBehavior(makeGame([station]), player);
+    const behavior = makePlacement(makeGame([station]), player);
 
     const result = (behavior as any).buildReachableStations();
 
@@ -244,7 +253,7 @@ describe("NationStructureBehavior.buildReachableStations", () => {
       isOnSameTeam: () => false,
       isAlliedWith: () => false,
     });
-    const behavior = makeBehavior(makeGame([station]), player);
+    const behavior = makePlacement(makeGame([station]), player);
 
     const result = (behavior as any).buildReachableStations();
 
@@ -263,7 +272,7 @@ describe("NationStructureBehavior.buildReachableStations", () => {
       isOnSameTeam: () => false,
       isAlliedWith: (n) => n === neighbor,
     });
-    const behavior = makeBehavior(makeGame([station]), player);
+    const behavior = makePlacement(makeGame([station]), player);
 
     const result = (behavior as any).buildReachableStations();
 
@@ -280,7 +289,7 @@ describe("NationStructureBehavior.buildReachableStations", () => {
       isOnSameTeam: (n) => n === neighbor,
       isAlliedWith: () => false,
     });
-    const behavior = makeBehavior(makeGame([station]), player);
+    const behavior = makePlacement(makeGame([station]), player);
 
     const result = (behavior as any).buildReachableStations();
 
@@ -293,7 +302,7 @@ describe("NationStructureBehavior.buildReachableStations", () => {
     // Station manager has no stations, so unit is unknown
     const neighbor = makeNeighbor({ units: [unit] });
     const player = makePlayer([], [neighbor]);
-    const behavior = makeBehavior(makeGame([]), player);
+    const behavior = makePlacement(makeGame([]), player);
 
     const result = (behavior as any).buildReachableStations();
 
@@ -307,7 +316,7 @@ describe("NationStructureBehavior.buildReachableStations", () => {
     const neighborStation = makeStation(neighborUnit, null);
     const neighbor = makeNeighbor({ units: [neighborUnit] });
     const player = makePlayer([ownUnit], [neighbor]);
-    const behavior = makeBehavior(
+    const behavior = makePlacement(
       makeGame([ownStation, neighborStation]),
       player,
     );
@@ -1197,13 +1206,13 @@ describe("NationStructureBehavior.isOnStructureCooldown", () => {
 
 // ── getOrBuildReachableStations cache behaviour ──────────────────────────────
 
-describe("NationStructureBehavior.getOrBuildReachableStations", () => {
-  let behavior: NationStructureBehavior;
+describe("NationStructurePlacement.getOrBuildReachableStations", () => {
+  let behavior: NationStructurePlacement;
   let buildSpy: ReturnType<typeof vi.spyOn>;
 
   beforeEach(() => {
     const player = makePlayer([], []);
-    behavior = makeBehavior(makeGame(), player);
+    behavior = makePlacement(makeGame(), player);
     buildSpy = vi.spyOn(behavior as any, "buildReachableStations");
   });
 
