@@ -195,8 +195,12 @@ export class AccountModal extends BaseModal {
       title: translateText("account_modal.title"),
       onBack: () => this.close(),
       ariaLabel: translateText("common.back"),
+      // Not on Poki: the profile link leads players off Poki.
       rightContent:
-        isLoggedIn && !this.isLoadingUser && publicId
+        isLoggedIn &&
+        !this.isLoadingUser &&
+        publicId &&
+        gamePortal.name() !== "poki"
           ? html`
               <copy-button
                 class="shrink-0"
