@@ -60,6 +60,7 @@ import {
   getPlayToken,
   isSessionActive,
   logOut,
+  rememberPublicId,
   userAuth,
 } from "./Auth";
 import { ClientEnv } from "./ClientEnv";
@@ -271,7 +272,9 @@ async function requestUserMe(): Promise<{
     // session changed (logout, account switch) while the request was in
     // flight: a stale response must not reactivate the old player's scope.
     if (isSessionActive(claims.sub)) {
-      UserSettings.setPlayerId(result.data.player.publicId);
+      const publicId = result.data.player.publicId;
+      rememberPublicId(claims.sub, publicId);
+      UserSettings.setPlayerId(publicId);
     }
     return { profile: result.data, aborted: false };
   } catch (e) {
