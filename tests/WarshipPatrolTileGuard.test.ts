@@ -1,12 +1,11 @@
-import { beforeEach, describe, expect, it } from "vitest";
-import { WarshipExecution } from "../src/core/execution/WarshipExecution";
 import {
-  Game,
   PlayerInfo,
   PlayerType,
-  Unit,
   UnitType,
-} from "../src/core/game/Game";
+} from "@openfront/engine-api/game/GameTypes";
+import { WarshipExecution } from "@openfront/engine/execution/WarshipExecution";
+import { Game, Unit } from "@openfront/engine/game/Game";
+import { beforeEach, describe, expect, it } from "vitest";
 import { setup } from "./util/Setup";
 
 // coastX matches the other warship tests: on "half_land_half_ocean" the water

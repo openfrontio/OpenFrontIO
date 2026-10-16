@@ -1,7 +1,10 @@
 @import "tailwindcss";
+@import "./halloween.css";
 
 @custom-variant dark (&:where(.dark, .dark *));
 @custom-variant hover (&:hover);
+/* The Steam shell has no ad slots, so it can use the width they reserve. */
+@custom-variant desktop (&:where(.desktop-shell, .desktop-shell *));
 
 @theme {
   --default-ring-width: 3px;
@@ -101,6 +104,24 @@ body.in-game {
   overflow: hidden;
 }
 
+body.in-game .bg-gray-800\/92:not(.game-end-timer-sidebar-flash) {
+  background-color: rgb(
+    from var(--color-gray-800) r g b / calc(0.92 * var(--hud-opacity, 1))
+  );
+}
+
+body.in-game .stats-table .bg-gray-800\/85 {
+  background-color: rgb(
+    from var(--color-gray-800) r g b / calc(0.85 * var(--hud-opacity, 1))
+  );
+}
+
+body.in-game .stats-table .bg-gray-700\/95 {
+  background-color: rgb(
+    from var(--color-gray-700) r g b / calc(0.95 * var(--hud-opacity, 1))
+  );
+}
+
 /* An inline page (store, settings, leaderboard, ...) is a modal rendered in
    the content area: lock the document so it scrolls inside the modal, and
    stack body children in a column so the content area gets the height left
@@ -164,6 +185,12 @@ body.page-open {
 }
 .hide-scrollbar::-webkit-scrollbar {
   display: none; /* Chrome, Safari */
+}
+
+/* Main adds .game-portal to <html> on CrazyGames and Poki. A rule rather than
+   a one-off sweep, so it also hides elements that render later (lazy modals). */
+.game-portal .no-game-portal {
+  display: none !important;
 }
 
 .start-game-button {
@@ -636,7 +663,7 @@ label.option-card:hover {
   justify-content: center;
 }
 
-/* News Button Notification */
+/* News button glows blue while there is unread news. */
 news-button .active button {
   position: relative;
   border-color: var(--color-malibu-blue) !important;
@@ -646,16 +673,17 @@ news-button .active button {
     0 0 8px rgba(37, 99, 235, 0.4);
 }
 
+/* Amber notification dot pinned to the news button's top-right corner. */
 news-button .active button::after {
   content: "";
   position: absolute;
-  top: -2px;
-  right: -2px;
+  top: -4px;
+  right: -4px;
   width: 12px;
   height: 12px;
-  background: #f59e0b;
-  border: 2px solid white;
   border-radius: 50%;
+  background: #f59e0b;
+  border: 2px solid #fff;
   animation: newsPulse 1.5s ease-in-out infinite;
 }
 
@@ -721,7 +749,6 @@ unit-display .tutorial-highlight::after {
   100% {
     transform: scale(1);
   }
-
   50% {
     transform: scale(1.4);
   }
@@ -729,25 +756,26 @@ unit-display .tutorial-highlight::after {
 
 .host-badge {
   font-size: 11px;
-  color: #4caf50;
   font-weight: bold;
+  color: #4caf50;
 }
 
 .remove-player-btn {
-  width: 16px;
-  height: 16px;
-  border: none;
-  background: #ff4444;
-  color: white;
-  border-radius: 50%;
-  font-size: 11px;
-  cursor: pointer;
-  display: flex;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
+  width: 16px;
+  height: 16px;
+  padding: 0;
+  flex-shrink: 0;
   margin-left: 4px;
+  border: none;
+  border-radius: 50%;
+  background: #dc2626;
+  color: #fff;
+  cursor: pointer;
 }
 
 .remove-player-btn:hover {
-  background: #ff6666;
+  background: #ef4444;
 }

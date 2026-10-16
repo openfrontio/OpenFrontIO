@@ -1,10 +1,11 @@
-import { html, LitElement, nothing, TemplateResult } from "lit";
-import { customElement, state } from "lit/decorators.js";
 import {
   TribeLeaderboardEntry,
   TribeLeaderboardResponse,
-} from "../../../core/ApiSchemas";
+} from "@openfront/shared/ApiSchemas";
+import { html, LitElement, nothing, TemplateResult } from "lit";
+import { customElement, state } from "lit/decorators.js";
 import { fetchTribeLeaderboard } from "../../Api";
+import { loadModal } from "../../LazyModals";
 import { translateText } from "../../Utils";
 import "../PlayerName";
 
@@ -80,7 +81,7 @@ export class LeaderboardTribeTable extends LitElement {
       this.tribeData = data;
       this.hasLoaded = true;
     } catch (error) {
-      console.error("loadTribeLeaderboard: request failed", error);
+      console.warn("loadTribeLeaderboard: request failed", error);
       this.error = translateText("leaderboard_modal.error");
     } finally {
       this.isLoading = false;
@@ -90,11 +91,15 @@ export class LeaderboardTribeTable extends LitElement {
   // Same handoff the ranked tab uses: the profile modal's back button reopens
   // the leaderboard.
   private openProfile(publicId: string) {
-    document
-      .querySelector<
-        HTMLElement & { openFromLeaderboard(publicId: string): void }
-      >("player-profile-modal")
-      ?.openFromLeaderboard(publicId);
+    loadModal("player-profile-modal").then(
+      () =>
+        document
+          .querySelector<
+            HTMLElement & { openFromLeaderboard(publicId: string): void }
+          >("player-profile-modal")
+          ?.openFromLeaderboard(publicId),
+      (err) => console.error("player-profile-modal failed to load:", err),
+    );
   }
 
   private renderLoading() {

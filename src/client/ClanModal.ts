@@ -1,7 +1,9 @@
+import { GameEnv } from "@openfront/shared/configuration/Env";
 import { html } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import { getUserMe, invalidateUserMe } from "./Api";
 import { type ClanInfo, type ClanMember } from "./ClanApi";
+import { ClientEnv } from "./ClientEnv";
 import { BaseModal } from "./components/BaseModal";
 import "./components/clan/ClanBansView";
 import "./components/clan/ClanBrowseView";
@@ -23,7 +25,9 @@ import "./components/CopyButton";
 import "./components/CurrencyDisplay";
 import { modalHeader } from "./components/ui/ModalHeader";
 import { signedOutNotice } from "./components/ui/SignedOutNotice";
+import "./GameStatsModal";
 import { modalRouter } from "./ModalRouter";
+import "./PlayerProfileModal";
 import type { ProfileOrigin } from "./PlayerProfileModal";
 import { translateText } from "./Utils";
 
@@ -114,6 +118,9 @@ export class ClanModal extends BaseModal {
   private openedFromProfile: string | null = null;
   private openedFromProfileOrigin: ProfileOrigin | null = null;
   private previousListTab: ListTab = "my-clans";
+  // Set when the open clan was picked from the browser's boosted block, so a
+  // join from its detail page is attributed to the block.
+  private joinSource: "boosted" | undefined = undefined;
 
   private get onListView(): boolean {
     return this.view === "list" && !this.selectedClanTag;
@@ -121,6 +128,12 @@ export class ClanModal extends BaseModal {
 
   private get onDetailView(): boolean {
     return this.view === "detail" && !!this.selectedClanTag;
+  }
+
+  // The clan territory map hasn't shipped to production yet: prod shows a
+  // Coming Soon placeholder and never frames the map page.
+  private get mapComingSoon(): boolean {
+    return ClientEnv.env() === GameEnv.Prod;
   }
 
   protected modalConfig() {
@@ -161,7 +174,9 @@ export class ClanModal extends BaseModal {
           onBack: () => this.close(),
           ariaLabel: translateText("common.back"),
           rightContent:
-            this.activeTab === "map" ? this.fullscreenButton() : undefined,
+            this.activeTab === "map" && !this.mapComingSoon
+              ? this.fullscreenButton()
+              : undefined,
         })
       : this.renderSubViewHeader();
   }
@@ -511,6 +526,7 @@ export class ClanModal extends BaseModal {
       }
       return html`<clan-detail-view
         .clanTag=${this.selectedClanTag}
+        .joinSource=${this.joinSource}
         .cachedClan=${this.selectedClan}
         .myPublicId=${this.myPublicId}
         .myClanRoles=${this.myClanRoles}
@@ -571,9 +587,10 @@ export class ClanModal extends BaseModal {
           this.openPlayerProfile(e.detail.publicId)}
         @navigate-manage=${() => (this.view = "manage")}
         @navigate-requests=${() => (this.view = "requests")}
-        @clan-donated=${(e: CustomEvent<{ clan: ClanInfo }>) => {
-          // Fresh detail after a donation: the header treasury and the My
-          // Clans card both show balances, so both pick up the new figures.
+        @clan-refreshed=${(e: CustomEvent<{ clan: ClanInfo }>) => {
+          // Fresh detail after a donation or a boost purchase: the header
+          // treasury and the My Clans card both show balances, so both pick
+          // up the new figures (and the boost's time left).
           this.selectedClan = e.detail.clan;
           this.myClans = this.myClans.map((c) =>
             c.tag === e.detail.clan.tag
@@ -620,6 +637,13 @@ export class ClanModal extends BaseModal {
 
     // List view (map / my clans / browse) — header + tabs are rendered by o-modal
     if (this.activeTab === "map") {
+      if (this.mapComingSoon) {
+        return html`<div class="flex h-full items-center justify-center">
+          <p class="text-white/40 text-sm">
+            ${translateText("clan_modal.map_coming_soon")}
+          </p>
+        </div>`;
+      }
       // Mounted only while open: the page polls its API while framed.
       return this.isModalOpen
         ? html`<clan-map-view class="block h-full"></clan-map-view>`
@@ -635,13 +659,15 @@ export class ClanModal extends BaseModal {
             @browse-updated=${(e: CustomEvent<BrowseState>) => {
               this.browseCache = e.detail;
             }}
-            @clan-select=${(e: CustomEvent<{ tag: string }>) =>
-              this.openDetail(e.detail.tag)}
+            @clan-select=${(
+              e: CustomEvent<{ tag: string; source?: "boosted" }>,
+            ) => this.openDetail(e.detail.tag, e.detail.source)}
           ></clan-browse-view>`}
     `;
   }
 
-  private openDetail(tag: string) {
+  private openDetail(tag: string, source?: "boosted") {
+    this.joinSource = source;
     if (this.selectedClanTag !== tag) {
       // History cache is per-clan (see `gameHistoryCache` declaration),
       // so it must be cleared on tag change. `detailCache` is left

@@ -113,6 +113,7 @@ function okRedirect(url: string): PaymentsCheckoutResult {
       kind: "currency_pack",
       handoff: "redirect",
       redirectUrl: url,
+      clientSecret: null,
       expiresAt: null,
     },
   };
@@ -137,6 +138,7 @@ function okOverlay(orderId: string | null = "1234"): PaymentsCheckoutResult {
       kind: "currency_pack",
       handoff: "client_overlay",
       redirectUrl: null,
+      clientSecret: null,
       expiresAt: null,
     },
   };
@@ -789,6 +791,27 @@ describe("startPurchase — error mapping", () => {
       outcome: "error",
       message: "store.already_subscribed",
       refetchCatalog: false,
+    });
+  });
+
+  it("says a tier needs the game on Steam", async () => {
+    expect(
+      await failWith({ ok: false, code: "steam_licence_required" }),
+    ).toEqual({
+      outcome: "error",
+      message: "store.steam_licence_required",
+      refetchCatalog: false,
+    });
+  });
+
+  it("points a past_due subscriber at the billing portal", async () => {
+    expect(
+      await failWith({ ok: false, code: "subscription_past_due" }),
+    ).toEqual({
+      outcome: "error",
+      message: "store.subscription_past_due",
+      refetchCatalog: false,
+      manageBilling: true,
     });
   });
 

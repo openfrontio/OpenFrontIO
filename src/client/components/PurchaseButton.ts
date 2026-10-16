@@ -1,11 +1,13 @@
+import { Product } from "@openfront/shared/CosmeticSchemas";
 import { html, LitElement, nothing } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
-import { Product } from "../../core/CosmeticSchemas";
 import type { InsufficientCurrency, PurchaseResult } from "../Cosmetics";
 import { showInGameAlert } from "../InGameModal";
 import { translateText } from "../Utils";
 import "./CapIcon";
 import "./ConfirmDialog";
+import "./InlineCheckout";
+import type { InlineCheckoutConfig } from "./InlineCheckout";
 import "./InsufficientCurrencyDialog";
 import "./PlutoniumIcon";
 
@@ -253,6 +255,15 @@ export class PurchaseButton extends LitElement {
   @property({ type: Boolean })
   reserveSoft = false;
 
+  /**
+   * When set, the dollar line checks out inline — wallet button plus in-page
+   * card form — instead of redirecting. `onPurchaseDollar` stays required:
+   * it is the fallback where the inline flow can't run (Steam rail, keyless
+   * build, Stripe.js blocked).
+   */
+  @property({ type: Object })
+  inlineCheckout: InlineCheckoutConfig | null = null;
+
   @property({ type: Function })
   onPurchaseDollar?: () => Promise<PurchaseResult>;
 
@@ -330,6 +341,20 @@ export class PurchaseButton extends LitElement {
     const price = this.dollarPrice || this.product?.price;
     if (!price) return nothing;
 
+    // The inline line renders its own price button (it routes the click to
+    // the card form rather than a redirect), so label/suffix extras don't
+    // apply — nothing that checks out inline uses them.
+    if (this.inlineCheckout) {
+      return html`<inline-checkout
+        class="block w-full"
+        .request=${this.inlineCheckout.request}
+        .amountCents=${this.inlineCheckout.amountCents}
+        .successMessageKey=${this.inlineCheckout.successMessageKey}
+        .priceLabel=${price}
+        .onFallback=${this.onPurchaseDollar}
+      ></inline-checkout>`;
+    }
+
     return html`
       <button
         class="purchase-sparkle-btn relative overflow-hidden w-full min-h-11 px-2 py-1.5 bg-blue-500/20 text-blue-300 border border-blue-500/40 rounded-lg text-base font-bold cursor-pointer transition-all duration-200 flex items-center justify-center
@@ -404,7 +429,7 @@ export class PurchaseButton extends LitElement {
 
     return html`
       <div
-        class="no-crazygames w-full mt-2 relative purchase-btn-wrap"
+        class="no-game-portal w-full mt-2 relative purchase-btn-wrap"
         style="--purchase-particle-top: ${leadingReserved * 3}rem"
         aria-busy=${this.busy ? "true" : nothing}
       >

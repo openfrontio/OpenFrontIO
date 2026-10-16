@@ -1,7 +1,7 @@
 /**
- * Full-game performance harness for src/core.
+ * Full-game performance harness for the engine.
  *
- * Runs the real simulation pipeline (GameRunner + Executor + real Config,
+ * Runs the real simulation pipeline (GameRunner + Executor + real EngineConfig,
  * nations from the map manifest, bots) headlessly on a production map for a
  * configurable number of ticks, then reports:
  *
@@ -32,27 +32,31 @@
  * (0 = right after the spawn phase) for offline attribution; summarize them
  * with tests/perf/fullgame/HeapSnapshotSummary.ts.
  */
-import fs from "fs";
-import v8 from "node:v8";
-import path from "path";
-import { fileURLToPath } from "url";
-import { Config } from "../../../src/core/configuration/Config";
-import { Executor } from "../../../src/core/execution/ExecutionManager";
 import {
   Difficulty,
   GameMapSize,
   GameMapType,
   GameMode,
   GameType,
-} from "../../../src/core/game/Game";
-import { createGame } from "../../../src/core/game/GameImpl";
-import { GameUpdateType, HashUpdate } from "../../../src/core/game/GameUpdates";
-import { createNationsForGame } from "../../../src/core/game/NationCreation";
-import { loadTerrainMap } from "../../../src/core/game/TerrainMapLoader";
-import { GameRunner } from "../../../src/core/GameRunner";
-import { PseudoRandom } from "../../../src/core/PseudoRandom";
-import { GameConfig, GameStartInfo } from "../../../src/core/Schemas";
-import { simpleHash } from "../../../src/core/Util";
+} from "@openfront/engine-api/game/GameTypes";
+import {
+  GameUpdateType,
+  HashUpdate,
+} from "@openfront/engine-api/game/GameUpdates";
+import { GameConfig, GameStartInfo } from "@openfront/engine-api/Schemas";
+import { loadTerrainMap } from "@openfront/engine-lib/game/TerrainMapLoader";
+import { PseudoRandom } from "@openfront/engine-lib/PseudoRandom";
+import { simpleHash } from "@openfront/engine-lib/Util";
+import { EngineConfig } from "@openfront/engine/configuration/EngineConfig";
+import { Executor } from "@openfront/engine/execution/ExecutionManager";
+import { createGame } from "@openfront/engine/game/GameImpl";
+import { createNationsForGame } from "@openfront/engine/game/NationCreation";
+import { GameRunner } from "@openfront/engine/GameRunner";
+import { loadMapFiles } from "@openfront/shared/GameMapLoader";
+import fs from "fs";
+import v8 from "node:v8";
+import path from "path";
+import { fileURLToPath } from "url";
 import {
   AllocationSampler,
   FootprintCheckpoint,
@@ -247,14 +251,12 @@ async function main(): Promise<void> {
   // Mirrors createGameRunner(), but assembled by hand so the execution
   // profiler can be attached before GameRunner.init() adds the initial
   // executions (nations, bots, spawn timer, win check).
-  const config = new Config(gameConfig, null, false);
+  const config = new EngineConfig(gameConfig, false);
   const mapLoader = new NodeGameMapLoader(
     path.join(PROJECT_ROOT, "resources/maps"),
   );
   const terrain = await loadTerrainMap(
-    gameConfig.gameMap,
-    gameConfig.gameMapSize,
-    mapLoader,
+    await loadMapFiles(mapLoader, gameConfig.gameMap, gameConfig.gameMapSize),
   );
   const random = new PseudoRandom(simpleHash(gameStart.gameID));
   const nations = createNationsForGame(

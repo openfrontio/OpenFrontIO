@@ -1,9 +1,9 @@
-import { z } from "zod";
+import { GameConfigSchema } from "@openfront/engine-api/Schemas";
 import {
-  GameConfigSchema,
   PublicGameInfoSchema,
   PublicGameTypeSchema,
-} from "../core/Schemas";
+} from "@openfront/shared/WireSchemas";
+import { z } from "zod";
 
 export type InternalGameInfo = z.infer<typeof InternalGameInfoSchema>;
 export type InternalPublicGames = z.infer<typeof InternalPublicGamesSchema>;
@@ -29,6 +29,9 @@ export const InternalGameInfoSchema = PublicGameInfoSchema.extend({
   // counting-down lobby by this, so lobbies advance one place as the front one
   // starts instead of shuffling when a new one spawns.
   createdAt: z.number().optional(),
+  // Paid-queued hosted lobbies only: when the host paid. The master puts
+  // these right behind the counting-down lobby, oldest payment first.
+  queuedAt: z.number().optional(),
 });
 
 export const InternalPublicGamesSchema = z.object({
@@ -46,6 +49,11 @@ export const InternalPublicGamesSchema = z.object({
 const WorkerLobbyListSchema = z.object({
   type: z.literal("lobbyList"),
   lobbies: z.array(z.unknown()),
+  // Games this worker is running, lobbies included. The master sums them
+  // for the cluster check-in (ClusterCheckin.ts), so an operator can tell
+  // when a draining server is empty. Optional for a worker build that
+  // predates it; absent counts as zero.
+  liveGames: z.number().int().min(0).optional(),
 });
 
 const WorkerReadySchema = z.object({

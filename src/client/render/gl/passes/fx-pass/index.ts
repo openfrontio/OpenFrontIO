@@ -8,7 +8,7 @@
  * interceptions) are coordinated here so each sub-pass stays self-contained.
  */
 
-import type { Config } from "../../../../../core/configuration/Config";
+import type { Config } from "@openfront/engine-lib/configuration/Config";
 import type {
   AttackRingInput,
   ConquestFx,

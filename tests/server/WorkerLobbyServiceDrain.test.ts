@@ -1,7 +1,7 @@
+import { PublicLobbyMessage } from "@openfront/shared/WireSchemas";
 import EventEmitter from "events";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { WebSocket } from "ws";
-import { PublicLobbyMessage } from "../../src/core/Schemas";
 import { WorkerLobbyService } from "../../src/server/WorkerLobbyService";
 import { mockLogger } from "../util/GameServerHarness";
 import { decodeSentLobbyMessage } from "../util/Wire";
@@ -18,6 +18,7 @@ describe("WorkerLobbyService deployment drain flag", () => {
       publicLobbies: vi.fn().mockReturnValue([]),
       listedLobbies: vi.fn().mockReturnValue([]),
       game: vi.fn().mockReturnValue(null),
+      activeGames: vi.fn().mockReturnValue(0),
     };
     const server = new EventEmitter();
     service = new WorkerLobbyService(
@@ -91,5 +92,17 @@ describe("WorkerLobbyService deployment drain flag", () => {
     const ws = connectClient();
     emitBroadcast(undefined);
     expect(lastFull(ws)?.active).toBe(true);
+  });
+
+  // The same flag is what the ranked check-in loop reads (RankedCheckin.ts,
+  // OPE-469), so it has to be legible to something other than the lobby feed.
+  it("exposes the flag to the ranked check-in loop, active until told otherwise", () => {
+    expect(service.isDeploymentActive()).toBe(true);
+
+    emitBroadcast(false);
+    expect(service.isDeploymentActive()).toBe(false);
+
+    emitBroadcast(true, 1001);
+    expect(service.isDeploymentActive()).toBe(true);
   });
 });

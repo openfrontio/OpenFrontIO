@@ -1,5 +1,5 @@
-import { EventBus, GameEvent } from "../core/EventBus";
-import { Cell } from "../core/game/Game";
+import { Cell } from "@openfront/engine-api/game/GameTypes";
+import { EventBus, GameEvent } from "@openfront/shared/EventBus";
 import {
   CenterCameraEvent,
   DragEvent,
@@ -241,8 +241,9 @@ export class TransformHandler {
   private goTo() {
     const { screenX, screenY } = this.screenCenter();
 
-    if (this.target === null) throw new Error("null target");
-
+    if (this.target === null) {
+      throw new Error("null target");
+    }
     const positionClose =
       Math.abs(this.target.x - screenX) + Math.abs(this.target.y - screenY) < 2;
     const scaleClose =

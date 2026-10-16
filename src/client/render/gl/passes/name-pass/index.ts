@@ -16,7 +16,7 @@
  *   - types          — shared interfaces + constants
  */
 
-import type { Config } from "../../../../../core/configuration/Config";
+import type { Config } from "@openfront/engine-lib/configuration/Config";
 import type {
   NameEntry,
   PlayerState,
@@ -28,7 +28,7 @@ import { PlayerTypeEnum } from "../../../types";
 import type { RenderSettings } from "../../RenderSettings";
 import { createFullscreenQuad } from "../../utils/GlUtils";
 
-import { renderTroops } from "../../../../Utils";
+import { renderTroops } from "@openfront/engine-lib/Format";
 import type { GlyphTables } from "./AtlasData";
 import {
   buildEmojiLookup,
@@ -287,6 +287,33 @@ export class NamePass {
       p.displayName = name;
       const slot = this.slots.get(id);
       if (slot !== undefined) slot.nameLen = 0;
+    }
+  }
+
+  /**
+   * Swap known players' flag and crown images (e.g. after the cosmetics
+   * visibility settings change). slot.static is the playerByID entry, so a
+   * slot created later picks the new URLs up too.
+   */
+  updatePlayerCosmetics(players: PlayerStatic[]): void {
+    for (const p of players) {
+      const known = this.playerByID.get(p.id);
+      if (known === undefined) continue;
+      known.flag = p.flag;
+      known.crown = p.crown;
+      const slot = this.slots.get(p.id);
+      if (slot === undefined) continue;
+      if (slot.flagUrl !== p.flag) {
+        slot.flagUrl = p.flag;
+        slot.flagLayerIdx = -1;
+        this.resolveSlotFlag(slot);
+      }
+      if (slot.crownUrl !== p.crown) {
+        slot.crownUrl = p.crown;
+        slot.crownLayerIdx = -1;
+        this.resolveSlotCrown(slot);
+      }
+      this.writePlayerDataRow(slot);
     }
   }
 

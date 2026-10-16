@@ -1,7 +1,7 @@
+import { GameMode, GameType, Team } from "@openfront/engine-api/game/GameTypes";
+import { EventBus, GameEvent } from "@openfront/shared/EventBus";
 import { LitElement, html, nothing } from "lit";
 import { customElement, state } from "lit/decorators.js";
-import { EventBus, GameEvent } from "../../../core/EventBus";
-import { GameMode, GameType, Team } from "../../../core/game/Game";
 import { Controller } from "../../Controller";
 import { themeProvider } from "../../theme/ThemeProvider";
 import { TransformHandler } from "../../TransformHandler";
@@ -18,7 +18,7 @@ export class SpawnTimer extends LitElement implements Controller {
   public eventBus: EventBus;
   public transformHandler: TransformHandler;
 
-  private ratios = [0];
+  private ratios: number[] = [0];
   private _barVisible = false;
   private teams: Team[] = [];
   private colors = [
@@ -180,7 +180,7 @@ export class SpawnTimer extends LitElement implements Controller {
   }
 }
 
-function sumIterator(values: MapIterator<number>) {
+function sumIterator(values: MapIterator<number>): number {
   let total = 0;
   for (const value of values) {
     total += value;

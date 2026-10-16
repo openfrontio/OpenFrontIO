@@ -1,6 +1,6 @@
+import { isVerifiedUsername } from "@openfront/shared/ApiSchemas";
 import { html, LitElement, nothing } from "lit";
 import { customElement, property } from "lit/decorators.js";
-import { isVerifiedUsername } from "../../core/ApiSchemas";
 import { translateText } from "../Utils";
 import "./CopyButton";
 import { usernameText } from "./ui/UsernameText";

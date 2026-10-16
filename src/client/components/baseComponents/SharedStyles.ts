@@ -10,6 +10,7 @@
  */
 
 let sheet: CSSStyleSheet | null = null;
+let queue: Promise<void> = Promise.resolve();
 
 async function populate(target: CSSStyleSheet): Promise<void> {
   const parts: string[] = [];
@@ -35,10 +36,18 @@ async function populate(target: CSSStyleSheet): Promise<void> {
   await target.replace(parts.join("\n"));
 }
 
+// Firefox rejects replace() with NotAllowedError while an earlier replace() on
+// the same sheet is still pending, so populates run one after another (each
+// re-reads the DOM, so the latest one wins). A failed populate leaves the
+// previous styles in place rather than surfacing as an unhandled rejection.
+function repopulate(target: CSSStyleSheet): void {
+  queue = queue.then(() => populate(target)).catch(() => {});
+}
+
 export function documentStylesSheet(): CSSStyleSheet {
   if (sheet === null) {
     sheet = new CSSStyleSheet();
-    void populate(sheet);
+    repopulate(sheet);
     // In dev this module evaluates before Vite injects the page's <style>
     // tags (Main.ts imports the components ahead of styles.css), so the read
     // above sees almost nothing — re-read once the module graph has finished
@@ -50,7 +59,7 @@ export function documentStylesSheet(): CSSStyleSheet {
       const populated = sheet;
       document.addEventListener(
         "DOMContentLoaded",
-        () => void populate(populated),
+        () => repopulate(populated),
         { once: true },
       );
     }
@@ -62,7 +71,7 @@ export function documentStylesSheet(): CSSStyleSheet {
 if (import.meta.hot) {
   import.meta.hot.on("vite:afterUpdate", () => {
     if (sheet !== null) {
-      void populate(sheet);
+      repopulate(sheet);
     }
   });
 }

@@ -162,6 +162,39 @@ describe("provider login on the desktop shell", () => {
     );
   });
 
+  // The API's server list (multi-server v2) picks a GAME server, and once
+  // it is applied serverHttpBase() answers with that deployment host --
+  // falk2-b.openfront.io, which serves no website. The account-settings
+  // link reads the site the shell was launched against, not the game
+  // server, so it must be unmoved by the list.
+  it("linkGoogle still targets the website after a server list is applied", async () => {
+    setBootstrapConfig({
+      serverHost: "openfront.io",
+      jwtAudience: "openfront.io",
+    });
+    ClientEnv.applyServerList(
+      {
+        latest: "bfd5563a",
+        servers: {
+          d: {
+            host: "falk2-b.openfront.io",
+            numWorkers: 16,
+            version: "bfd5563a",
+            state: "open" as const,
+          },
+        },
+      },
+      "d",
+    );
+    expect(ClientEnv.serverHttpBase()).toBe("https://falk2-b.openfront.io");
+
+    await expect(linkGoogle()).resolves.toBe(true);
+
+    expect(openMock.mock.calls[0][0]).toBe(
+      "https://openfront.io/#modal=account-settings",
+    );
+  });
+
   // A shell that injects no serverHost falls back to the audience-derived
   // origin, keeping the shell's own localhost:9000 dev case.
   it("linkGoogle falls back to the audience origin without a serverHost", async () => {

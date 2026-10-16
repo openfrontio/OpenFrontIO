@@ -1,6 +1,6 @@
+import type { UserMeResponse } from "@openfront/shared/ApiSchemas";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { NotLoggedInWarning } from "../../../src/client/components/NotLoggedInWarning";
-import type { UserMeResponse } from "../../../src/core/ApiSchemas";
 
 function fireUserMe(detail: UserMeResponse | false) {
   document.dispatchEvent(new CustomEvent("userMeResponse", { detail }));

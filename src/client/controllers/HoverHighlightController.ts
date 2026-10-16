@@ -8,8 +8,8 @@
  * through InputHandler → MouseMoveEvent on the EventBus, so we just listen.
  */
 
-import { EventBus } from "../../core/EventBus";
-import { UnitType } from "../../core/game/Game";
+import { UnitType } from "@openfront/engine-api/game/GameTypes";
+import { EventBus } from "@openfront/shared/EventBus";
 import { Controller } from "../Controller";
 import { MouseMoveEvent } from "../InputHandler";
 import { MapRenderer } from "../render/gl";
@@ -32,7 +32,9 @@ export class HoverHighlightController implements Controller {
   }
 
   private navalHighlightEnabled(): boolean {
-    return this.view.getSettings().mapOverlay.navalHighlight;
+    // getSettings() returns {} while the renderer is absent (before init, or
+    // after a lost WebGL context), so mapOverlay may be missing.
+    return this.view.getSettings().mapOverlay?.navalHighlight ?? false;
   }
 
   private onMouseMove(e: MouseMoveEvent): void {

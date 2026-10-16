@@ -1,4 +1,4 @@
-import type { PaymentsProvider } from "../core/ApiSchemas";
+import type { PaymentsProvider } from "@openfront/shared/ApiSchemas";
 import {
   createPaymentsCheckout,
   finalizeSteamOrder,
@@ -273,8 +273,16 @@ export type PurchaseOutcome =
   // "purchase failed".
   | { outcome: "pending" }
   // `message` is ready to display: already translated, or the server's own
-  // player-facing text where it had one.
-  | { outcome: "error"; message: string; refetchCatalog: boolean };
+  // player-facing text where it had one. `manageBilling` means the fix is in
+  // the billing portal, so callers should offer a way there.
+  | {
+      outcome: "error";
+      message: string;
+      refetchCatalog: boolean;
+      manageBilling?: true;
+    };
+
+export type PurchaseError = Extract<PurchaseOutcome, { outcome: "error" }>;
 
 export interface StartPurchaseOptions {
   /** Injected so tests don't navigate the jsdom window. */
@@ -290,13 +298,13 @@ function providerName(provider: PaymentsProvider): string {
   return provider === "steam" ? "Steam" : "Stripe";
 }
 
-function error(message: string, refetchCatalog = false): PurchaseOutcome {
+function error(message: string, refetchCatalog = false): PurchaseError {
   return { outcome: "error", message, refetchCatalog };
 }
 
 function checkoutError(
   result: Extract<PaymentsCheckoutResult, { ok: false }>,
-): PurchaseOutcome {
+): PurchaseError {
   switch (result.code) {
     case "listing_stale":
       return error(translateText("store.checkout_listing_stale"), true);
@@ -330,6 +338,11 @@ function checkoutError(
           provider: providerName(result.provider),
         }),
       );
+    case "subscription_past_due":
+      return {
+        ...error(translateText("store.subscription_past_due")),
+        manageBilling: true,
+      };
     // Nothing was charged; the store's own copy for "you have this already".
     case "already_subscribed":
       return error(translateText("store.already_subscribed"));
@@ -345,6 +358,8 @@ function checkoutError(
       );
     case "rate_limited":
       return error(translateText("store.checkout_rate_limited"));
+    case "steam_licence_required":
+      return error(translateText("store.steam_licence_required"));
     // Not a breakage: the rail is deliberately switched off (501, never 500).
     case "provider_unavailable":
       return error(translateText("store.checkout_rail_unavailable"));
@@ -481,6 +496,72 @@ async function runPurchase(
     case "unresolved":
       return { outcome: "pending" };
   }
+}
+
+// ---------------------------------------------------------------------------
+// The inline Stripe flow (wallet button / in-page card form; see
+// StripeInline.ts for the Stripe.js half).
+
+/**
+ * Parses a catalog display price ("$4.99") into cents, or null when it isn't
+ * a plain dollar amount. Null means "no inline checkout for this tile"; the
+ * tile falls back to the redirect flow, which needs no amount client-side.
+ *
+ * Deliberately strict. The parsed amount seeds Stripe's payment sheet, and
+ * while the server prices the PaymentIntent from its own catalog regardless,
+ * a sheet showing a different amount than gets charged is a support ticket —
+ * so a format this doesn't recognise gets no sheet at all.
+ */
+export function priceStringToCents(price: string): number | null {
+  const match = /^\$(\d{1,5})(?:\.(\d{2}))?$/.exec(price.trim());
+  if (match === null) return null;
+  return (
+    Number(match[1]) * 100 + (match[2] === undefined ? 0 : Number(match[2]))
+  );
+}
+
+export type InlineIntentResult =
+  | { kind: "client_secret"; clientSecret: string }
+  // The server answered with the pre-inline handoff — an API deployed before
+  // client_secret support, or a listing it only sells by redirect. Not an
+  // error: the caller performs the redirect, exactly like startPurchase.
+  | { kind: "redirect"; redirectUrl: string }
+  | { kind: "error"; error: PurchaseError };
+
+/**
+ * Mints a Stripe PaymentIntent for an inline purchase and returns its client
+ * secret. Stripe-rail only: the Steam rail's overlay flow is startPurchase's.
+ *
+ * Callers should mint this LAZILY (at confirm time, not tile render) and
+ * reuse the returned secret across retries of the same purchase: checkout is
+ * rate-limited per player, and a declined card leaves the PaymentIntent
+ * perfectly reusable.
+ */
+export async function createInlinePaymentIntent(
+  request: PurchaseRequest,
+): Promise<InlineIntentResult> {
+  const result = await createPaymentsCheckout({
+    provider: "stripe",
+    handoffs: ["redirect", "client_secret"],
+    ...request,
+  } as PaymentsCheckoutRequest);
+  if (!result.ok) return { kind: "error", error: checkoutError(result) };
+
+  const { handoff, redirectUrl, clientSecret } = result.data;
+  if (handoff === "client_secret") {
+    // The schema has already guaranteed clientSecret is non-null here.
+    return { kind: "client_secret", clientSecret: clientSecret! };
+  }
+  if (handoff === "redirect") {
+    return { kind: "redirect", redirectUrl: redirectUrl! };
+  }
+  // "client_overlay" cannot happen on the Stripe rail; treat it as a server
+  // bug rather than guessing at a handoff we can't perform.
+  console.error("createInlinePaymentIntent: unexpected handoff", handoff);
+  return {
+    kind: "error",
+    error: error(translateText("store.checkout_failed")),
+  };
 }
 
 /**

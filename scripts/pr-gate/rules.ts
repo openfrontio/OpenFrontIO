@@ -34,7 +34,7 @@ export type RuleResult =
   | { action: "next" };
 
 const LINKED_ISSUE_RE =
-  /\b(?:close[sd]?|fix(?:e[sd])?|resolve[sd]?)\s+#(\d+)\b/gi;
+  /\b(?:close[sd]?|fix(?:e[sd])?|resolve[sd]?)\s+\(?#(\d+)\)?\b/gi;
 
 export function parseLinkedIssues(body: string | null): number[] {
   if (!body) return [];

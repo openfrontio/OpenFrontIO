@@ -17,6 +17,7 @@ const translations = {
   "crowns.golden": "Golden Crown",
   "effects.blue_wake": "Blue Wake",
   "subscriptions.gold": "Gold Membership",
+  "cosmetics.per_month": "/month",
 };
 
 const resolved = {
@@ -153,6 +154,7 @@ const resolved = {
       hardCurrencySignupBonus: 100,
       unlimitedRanked: true,
       canCreatePublicLobbies: true,
+      requiresSteamLicence: false,
       product: null,
       rarity: "legendary",
     },
@@ -202,7 +204,7 @@ describe("CosmeticPreview", () => {
     await render(resolved.pattern);
 
     expect(
-      preview!.querySelector('[data-cosmetic-preview="pattern"] img'),
+      preview!.querySelector('[data-cosmetic-preview="pattern"] canvas'),
     ).toBeTruthy();
     expect(cosmeticDisplayName(preview!.resolved)).toBe("Ocean Stripes");
     expect(cosmeticRarity(preview!.resolved)).toBe("rare");
@@ -342,5 +344,61 @@ describe("CosmeticPreview", () => {
     )!;
     expect(box.className).toContain("w-full");
     expect(box.className).not.toContain("aspect-square");
+  });
+
+  it("advertises the tier's plutonium bonus as monthly", async () => {
+    installTranslations();
+    await render(resolved.subscription);
+
+    const box = preview!.querySelector(
+      '[data-cosmetic-preview="subscription"]',
+    )!;
+    expect(box.textContent).toContain("/month");
+    expect(box.textContent).not.toMatch(/signup/i);
+  });
+
+  describe("subscription perks", () => {
+    const licenceTier = {
+      ...resolved.subscription,
+      cosmetic: {
+        ...resolved.subscription.cosmetic,
+        name: "steam_plus",
+        requiresSteamLicence: true,
+      },
+    } as ResolvedCosmetic;
+
+    function perks(): (string | null)[] {
+      return [...preview!.querySelectorAll("[data-subscription-perk]")].map(
+        (perk) => perk.getAttribute("data-subscription-perk"),
+      );
+    }
+
+    it("lists the verified name and public lobbies for a web tier", async () => {
+      installTranslations();
+      await render(resolved.subscription);
+      expect(perks()).toEqual(["verified_name", "public_lobbies"]);
+    });
+
+    it("lists neither for a tier the Steam licence already covers", async () => {
+      installTranslations();
+      await render(licenceTier);
+      expect(perks()).toEqual([]);
+    });
+
+    it("draws the plutonium figures larger at detail size", async () => {
+      installTranslations();
+      await render(resolved.subscription);
+      const iconSizes = () =>
+        [
+          ...preview!.querySelectorAll<HTMLElement & { size: number }>(
+            "plutonium-icon",
+          ),
+        ].map((icon) => icon.size);
+      expect(iconSizes()).toEqual([24, 24]);
+
+      preview!.size = "detail";
+      await preview!.updateComplete;
+      expect(iconSizes()).toEqual([36, 36]);
+    });
   });
 });

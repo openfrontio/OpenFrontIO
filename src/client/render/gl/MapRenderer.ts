@@ -11,8 +11,8 @@
  * touch MapRenderer — they never import GPURenderer or Camera.
  */
 
-import type { Config } from "../../../core/configuration/Config";
-import type { MapLayer } from "../../../core/game/TerrainMapLoader";
+import type { MapLayer } from "@openfront/engine-api/game/MapFiles";
+import type { Config } from "@openfront/engine-lib/configuration/Config";
 import type { SpiralRibbon } from "../frame/SpiralTrails";
 import type {
   AttackRingInput,
@@ -104,15 +104,32 @@ export class MapRenderer {
   };
 
   private handleContextLost = (e: Event) => {
+    // preventDefault is what asks the browser to restore the context. Disposal
+    // must then leave the context alone: calling loseContext() re-loses it
+    // *manually*, which switches Chromium to manual recovery, so
+    // webglcontextrestored never arrives and the map stays blank for the rest
+    // of the session under a HUD that carries on updating.
     e.preventDefault();
+    console.warn("[Renderer] WebGL context lost — awaiting restore");
     if (this.renderer) {
-      this.renderer.dispose();
+      this.renderer.dispose({ releaseContext: false });
       this.renderer = null;
     }
   };
 
   private handleContextRestored = () => {
-    this.initRenderer();
+    console.warn("[Renderer] WebGL context restored");
+    try {
+      this.initRenderer();
+    } catch (err) {
+      // Chromium turns hardware acceleration off after repeated GPU-process
+      // crashes, so the re-acquired context can come back software-only and
+      // initGL rejects it. Nothing left to do but leave the map blank —
+      // without this the throw escapes the event handler unlogged.
+      this.renderer = null;
+      console.error("[Renderer] context restore failed", err);
+      return;
+    }
     // Re-apply stored layers to the new renderer.
     if (this.storedLayers.length > 0 && this.storedLayerImages.size > 0) {
       this.renderer?.setMapLayers(this.storedLayers, this.storedLayerImages);
@@ -186,7 +203,20 @@ export class MapRenderer {
   ): void {
     this.renderer?.addPlayers(players, paletteData, patternMeta, patternData);
   }
-  setPlayerSkin(smallID: number, url: string): void {
+  updatePlayerCosmetics(
+    players: PlayerStatic[],
+    paletteData: Float32Array,
+    patternMeta: Float32Array,
+    patternData: Uint8Array,
+  ): void {
+    this.renderer?.updatePlayerCosmetics(
+      players,
+      paletteData,
+      patternMeta,
+      patternData,
+    );
+  }
+  setPlayerSkin(smallID: number, url: string | null): void {
     this.renderer?.setPlayerSkin(smallID, url);
   }
   initSkinAtlas(urls: readonly string[]): void {
@@ -287,6 +317,11 @@ export class MapRenderer {
     this.storedLayers = layers;
     this.storedLayerImages = images;
     this.renderer?.setMapLayers(layers, images);
+    // The images can arrive after nukes have hit (a replay seeks ahead
+    // while they load), and the new layer passes start undamaged.
+    for (const [id, mask] of this.layerDestroyedMasks) {
+      this.renderer?.setLayerDestroyedMask(id, mask);
+    }
   }
 
   /** Toggle visibility of a single map layer. */
@@ -317,7 +352,11 @@ export class MapRenderer {
 
   /** Bulk-update the destroyed mask for a nukeable layer. */
   setLayerDestroyedMask(layerId: string, mask: Uint8Array): void {
-    this.layerDestroyedMasks.set(layerId, new Uint8Array(mask));
+    // Copied into the mask kept for context restore, which a replay's
+    // seeks reuse rather than allocating a map-sized array each time.
+    const kept = this.layerDestroyedMasks.get(layerId);
+    if (kept?.length === mask.length) kept.set(mask);
+    else this.layerDestroyedMasks.set(layerId, new Uint8Array(mask));
     this.renderer?.setLayerDestroyedMask(layerId, mask);
   }
 
@@ -353,9 +392,6 @@ export class MapRenderer {
   }
   setGridView(active: boolean): void {
     this.renderer?.setGridView(active);
-  }
-  setShowPatterns(active: boolean): void {
-    this.renderer?.setShowPatterns(active);
   }
   setHighlightOwner(ownerID: number): void {
     this.renderer?.setHighlightOwner(ownerID);

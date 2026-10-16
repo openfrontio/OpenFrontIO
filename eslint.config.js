@@ -50,8 +50,12 @@ export default [
   {
     // The simulation must be bit-identical on every client. Math.exp & co.
     // are only "implementation approximated" by the spec; use DetMath.
-    files: ["src/core/**/*.ts"],
-    ignores: ["src/core/DetMath.ts"],
+    files: [
+      "packages/engine/src/**/*.ts",
+      "packages/engine-api/src/**/*.ts",
+      "packages/engine-lib/src/**/*.ts",
+    ],
+    ignores: ["packages/engine-lib/src/DetMath.ts"],
     rules: {
       "no-restricted-properties": [
         "error",
@@ -78,7 +82,7 @@ export default [
         ].map((property) => ({
           object: "Math",
           property,
-          message: `Math.${property} differs between JS engines; use src/core/DetMath.ts to keep the simulation deterministic.`,
+          message: `Math.${property} differs between JS engines; use packages/engine-lib/src/DetMath.ts to keep the simulation deterministic.`,
         })),
       ],
       "no-restricted-syntax": [
@@ -87,7 +91,7 @@ export default [
           selector:
             "BinaryExpression[operator='**']:not([right.type='Literal'][right.value=2])",
           message:
-            "`**` with a non-2 exponent differs between JS engines; use src/core/DetMath.ts to keep the simulation deterministic.",
+            "`**` with a non-2 exponent differs between JS engines; use packages/engine-lib/src/DetMath.ts to keep the simulation deterministic.",
         },
       ],
     },

@@ -1,13 +1,16 @@
-import { WinCheckExecution } from "../src/core/execution/WinCheckExecution";
 import {
-  Game,
   GameMode,
   PlayerInfo,
   PlayerType,
   RankedType,
-} from "../src/core/game/Game";
-import { GameUpdateType, WinUpdate } from "../src/core/game/GameUpdates";
-import { GameConfig } from "../src/core/Schemas";
+} from "@openfront/engine-api/game/GameTypes";
+import {
+  GameUpdateType,
+  WinUpdate,
+} from "@openfront/engine-api/game/GameUpdates";
+import { GameConfig } from "@openfront/engine-api/Schemas";
+import { WinCheckExecution } from "@openfront/engine/execution/WinCheckExecution";
+import { Game } from "@openfront/engine/game/Game";
 import { setup } from "./util/Setup";
 
 async function setupTeamGame(config: Partial<GameConfig>): Promise<Game> {
@@ -97,6 +100,26 @@ describe("Ranked 2v2 cancellation", () => {
   it("does not cancel unranked team games that are short a player", async () => {
     const game = await setupTeamGame({});
     spawnPlayers(game, 3);
+
+    expect(collectWinUpdates(game)).toHaveLength(0);
+  });
+});
+
+describe("Ranked clan wars cancellation", () => {
+  it("ends the game with no winner when a matched player didn't spawn", async () => {
+    const game = await setupTeamGame({ rankedType: RankedType.ClanWars });
+    spawnPlayers(game, 3);
+
+    const wins = collectWinUpdates(game);
+
+    expect(wins).toHaveLength(1);
+    expect(wins[0].winner).toBeUndefined();
+    expect(game.getWinner()).toBeNull();
+  });
+
+  it("does not cancel when every matched player spawned", async () => {
+    const game = await setupTeamGame({ rankedType: RankedType.ClanWars });
+    spawnPlayers(game, 4);
 
     expect(collectWinUpdates(game)).toHaveLength(0);
   });

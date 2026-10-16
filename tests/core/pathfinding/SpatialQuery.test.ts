@@ -1,17 +1,13 @@
+import { TileRef } from "@openfront/engine-api/game/GameMap";
+import { PlayerInfo, PlayerType } from "@openfront/engine-api/game/GameTypes";
+import { SpawnExecution } from "@openfront/engine/execution/SpawnExecution";
+import { Game, Player } from "@openfront/engine/game/Game";
+import { SpatialQuery } from "@openfront/engine/pathfinding/spatial/SpatialQuery";
 import { describe, expect, it } from "vitest";
-import { SpawnExecution } from "../../../src/core/execution/SpawnExecution";
-import {
-  Game,
-  Player,
-  PlayerInfo,
-  PlayerType,
-} from "../../../src/core/game/Game";
-import { TileRef } from "../../../src/core/game/GameMap";
-import { SpatialQuery } from "../../../src/core/pathfinding/spatial/SpatialQuery";
 import { createGame, L, W } from "./_fixtures";
 
 // Spawns player and **expands territory** via getSpawnTiles (euclidean dist 4)
-// Ref: src/core/execution/Util.ts
+// Ref: packages/engine-lib/src/execution/Util.ts
 function addPlayer(game: Game, tile: TileRef, id: string = "test"): Player {
   const info = new PlayerInfo(id, PlayerType.Human, null, `${id}_id`);
   game.addPlayer(info);

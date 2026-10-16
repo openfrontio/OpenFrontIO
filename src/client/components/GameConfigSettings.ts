@@ -1,17 +1,4 @@
 import {
-  LitElement,
-  SVGTemplateResult,
-  TemplateResult,
-  html,
-  nothing,
-  svg,
-} from "lit";
-import { customElement, property, state } from "lit/decorators.js";
-import {
-  DOOMSDAY_CLOCK_SPEEDS,
-  DoomsdayClockSpeed,
-} from "../../core/game/DoomsdayClock";
-import {
   Difficulty,
   Duos,
   GameMapType,
@@ -20,10 +7,24 @@ import {
   Quads,
   Trios,
   UnitType,
-} from "../../core/game/Game";
-import { TeamCountConfig } from "../../core/Schemas";
+} from "@openfront/engine-api/game/GameTypes";
+import { TeamCountConfig } from "@openfront/engine-api/Schemas";
+import {
+  DOOMSDAY_CLOCK_SPEEDS,
+  DoomsdayClockSpeed,
+} from "@openfront/engine-lib/game/DoomsdayClock";
+import {
+  LitElement,
+  SVGTemplateResult,
+  TemplateResult,
+  html,
+  nothing,
+  svg,
+} from "lit";
+import { customElement, property, state } from "lit/decorators.js";
 import { translateText } from "../Utils";
 import "./Difficulties";
+import "./DifficultyInfo";
 import "./FluentSlider";
 import "./map/MapPicker";
 
@@ -462,30 +463,36 @@ export class GameConfigSettings extends LitElement {
                 const isSelected = settings.difficulty.selected === value;
                 const isDisabled = settings.difficulty.disabled;
                 return html`
-                  <button
-                    ?disabled=${isDisabled}
-                    @click=${() =>
-                      !isDisabled &&
-                      this.handleDifficultySelect(value as Difficulty)}
-                    class="${isDisabled
-                      ? `${DISABLED_CARD} flex flex-col items-center p-4 gap-3`
-                      : cardClass(
-                          isSelected,
-                          "flex flex-col items-center p-4 gap-3",
-                        )}"
-                  >
-                    <difficulty-display
-                      .difficultyKey=${key}
-                      class="transform scale-125 origin-center ${isDisabled
-                        ? "pointer-events-none"
-                        : ""}"
-                    ></difficulty-display>
-                    <span
-                      class="${CARD_LABEL_CLASS} text-center mt-1 text-white"
+                  <div class="group/difficulty-card relative">
+                    <button
+                      ?disabled=${isDisabled}
+                      @click=${() =>
+                        !isDisabled &&
+                        this.handleDifficultySelect(value as Difficulty)}
+                      class="${isDisabled
+                        ? `${DISABLED_CARD} flex flex-col items-center p-4 gap-3 h-full`
+                        : cardClass(
+                            isSelected,
+                            "flex flex-col items-center p-4 gap-3 h-full",
+                          )}"
                     >
-                      ${translateText(`difficulty.${key.toLowerCase()}`)}
-                    </span>
-                  </button>
+                      <difficulty-display
+                        .difficultyKey=${key}
+                        class="transform scale-125 origin-center ${isDisabled
+                          ? "pointer-events-none"
+                          : ""}"
+                      ></difficulty-display>
+                      <span
+                        class="${CARD_LABEL_CLASS} text-center mt-1 text-white"
+                      >
+                        ${translateText(`difficulty.${key.toLowerCase()}`)}
+                      </span>
+                    </button>
+                    <difficulty-info
+                      .difficultyKey=${key}
+                      .disabled=${isDisabled}
+                    ></difficulty-info>
+                  </div>
                 `;
               })}
             </div>

@@ -1,8 +1,7 @@
-import IntlMessageFormat from "intl-messageformat";
-import { DoomsdayClockSpeed } from "../core/game/DoomsdayClock";
 import {
   Duos,
   GameMode,
+  GameType,
   HumansVsNations,
   maps,
   MessageType,
@@ -10,13 +9,24 @@ import {
   Quads,
   Team,
   Trios,
-} from "../core/game/Game";
-import { GameConfig } from "../core/Schemas";
+} from "@openfront/engine-api/game/GameTypes";
+import { GameConfig } from "@openfront/engine-api/Schemas";
+import { DoomsdayClockSpeed } from "@openfront/engine-lib/game/DoomsdayClock";
+import { stripVersionPrefix } from "@openfront/shared/ServerList";
+import IntlMessageFormat from "intl-messageformat";
 import { ClientEnv } from "./ClientEnv";
 import type { LangSelector } from "./LangSelector";
+import { pagePin } from "./PagePin";
 import { Platform } from "./Platform";
 
 export const TUTORIAL_VIDEO_URL = "https://www.youtube.com/embed/7J5zwb_s_Cg";
+
+// The desktop shell cannot embed YouTube inside Electron, so it bundles the
+// same tutorial and serves it under a reserved prefix of its app:// scheme
+// (see openfront-desktop's protocol.ts, which pins this path with a test).
+// Only meaningful when Platform.isElectron; on the web this path does not
+// exist.
+export const DESKTOP_TUTORIAL_VIDEO_URL = "/__tutorial/tutorial.webm";
 
 export function normaliseMapKey(mapName: string): string {
   // Asset dirs / translation keys are the map id lowercased. For most maps
@@ -51,89 +61,72 @@ export function getMapName(mapName: string | undefined): string | null {
   return translateText(translationKey);
 }
 
+const TEAM_PRESET_SIZES = { [Duos]: 2, [Trios]: 3, [Quads]: 4 } as const;
+const TEAM_PRESET_BY_SIZE: Record<number, string> = {
+  2: Duos,
+  3: Trios,
+  4: Quads,
+};
+
+function presetTeamsLabel(
+  preset: string,
+  teamCount: number,
+  playersPerTeam: number,
+): string {
+  return translateText("mode_selector.teams_preset", {
+    teams: translateText("mode_selector.teams_of", {
+      teamCount,
+      playersPerTeam,
+    }),
+    preset: translateText(`detailed_view.layout_${preset.toLowerCase()}`),
+  });
+}
+
 /**
- * Returns a display label for the game mode (e.g. "FFA", "4 Teams", "Duos").
+ * Display label for a lobby's game mode, e.g. "Free for All",
+ * "Trios (10 teams of 3)" or "5 teams of 20". A team count that splits the
+ * lobby evenly into teams of 2-4 is named like the matching preset; an uneven
+ * split shows only the team count.
  */
 export function getGameModeLabel(gameConfig: GameConfig): string {
-  const { gameMode, playerTeams, maxPlayers } = gameConfig;
+  const { gameMode, gameType, nations, playerTeams, maxPlayers } = gameConfig;
 
   if (gameMode !== GameMode.Team) {
     return translateText("game_mode.ffa");
   }
 
-  // Humans vs Nations
   if (playerTeams === HumansVsNations) {
-    if (maxPlayers) {
-      return translateText("public_lobby.teams_hvn_detailed", {
-        num: maxPlayers,
+    // Only public HvN on default nations matches the nation count to the humans.
+    return maxPlayers && gameType === GameType.Public && nations === "default"
+      ? translateText("public_lobby.teams_hvn_detailed", { num: maxPlayers })
+      : translateText("public_lobby.teams_hvn");
+  }
+
+  if (playerTeams === Duos || playerTeams === Trios || playerTeams === Quads) {
+    const playersPerTeam = TEAM_PRESET_SIZES[playerTeams];
+    const teamCount = Math.floor((maxPlayers ?? 0) / playersPerTeam);
+    return teamCount > 0
+      ? presetTeamsLabel(playerTeams, teamCount, playersPerTeam)
+      : translateText(`host_modal.teams_${playerTeams}`);
+  }
+
+  if (playerTeams === undefined || playerTeams <= 0) {
+    return translateText("mode_selector.teams_title");
+  }
+  const players = maxPlayers ?? 0;
+  if (players <= 0 || players % playerTeams !== 0) {
+    return translateText("mode_selector.teams_count", {
+      teamCount: playerTeams,
+    });
+  }
+  const playersPerTeam = players / playerTeams;
+  const preset = TEAM_PRESET_BY_SIZE[playersPerTeam];
+  return preset !== undefined
+    ? presetTeamsLabel(preset, playerTeams, playersPerTeam)
+    : translateText("mode_selector.teams_of", {
+        teamCount: playerTeams,
+        playersPerTeam,
       });
-    }
-    return translateText("public_lobby.teams_hvn");
-  }
-
-  // Named team types (Duos, Trios, Quads)
-  if (typeof playerTeams === "string") {
-    const teamKey = `public_lobby.teams_${playerTeams}`;
-    const teamCount = getTeamCount(playerTeams, maxPlayers ?? 0);
-    const translated = translateText(teamKey, { team_count: teamCount });
-    if (translated !== teamKey) {
-      return translated;
-    }
-  }
-
-  // Numeric team count (e.g. "5 teams of 20")
-  const teamCount =
-    typeof playerTeams === "number"
-      ? playerTeams
-      : getTeamCount(playerTeams, maxPlayers ?? 0);
-  const teamSize =
-    teamCount > 0 ? Math.floor((maxPlayers ?? 0) / teamCount) : 0;
-
-  // If the computed team size matches a named format, use that label instead
-  const namedTeamType =
-    teamSize === 2
-      ? Duos
-      : teamSize === 3
-        ? Trios
-        : teamSize === 4
-          ? Quads
-          : null;
-  if (namedTeamType) {
-    const teamKey = `public_lobby.teams_${namedTeamType}`;
-    const translated = translateText(teamKey, { team_count: teamCount });
-    if (translated !== teamKey) {
-      return translated;
-    }
-  }
-
-  const teamsLabel = translateText("public_lobby.teams", { num: teamCount });
-  if (teamSize > 0) {
-    return `${teamsLabel} ${translateText("public_lobby.players_per_team", { num: teamSize })}`;
-  }
-  return teamsLabel;
-}
-
-function getTeamCount(
-  playerTeams: string | number | undefined,
-  maxPlayers: number,
-): number {
-  if (typeof playerTeams === "number") return playerTeams;
-  const teamSize = getTeamSize(playerTeams, maxPlayers);
-  return teamSize > 0 ? Math.floor(maxPlayers / teamSize) : 0;
-}
-
-function getTeamSize(
-  playerTeams: string | number | undefined,
-  maxPlayers: number,
-): number {
-  if (playerTeams === Duos) return 2;
-  if (playerTeams === Trios) return 3;
-  if (playerTeams === Quads) return 4;
-  if (playerTeams === HumansVsNations) return maxPlayers;
-  if (typeof playerTeams === "number" && playerTeams > 0) {
-    return Math.floor(maxPlayers / playerTeams);
-  }
-  return 0;
 }
 
 export interface ModifierInfo {
@@ -295,10 +288,6 @@ export function renderDuration(totalSeconds: number): string {
   return parts.join(" ");
 }
 
-export function renderTroops(troops: number): string {
-  return renderNumber(troops / 10);
-}
-
 export async function copyToClipboard(
   text: string,
   onSuccess?: () => void,
@@ -316,38 +305,6 @@ export async function copyToClipboard(
   } catch (err) {
     console.warn("Failed to copy to clipboard", err);
     throw err;
-  }
-}
-
-export function renderNumber(
-  num: number | bigint,
-  fixedPoints?: number,
-): string {
-  num = Number(num);
-  num = Math.max(num, 0);
-
-  if (num >= 10_000_000_000) {
-    const value = Math.floor(num / 100000000) / 10;
-    return value.toFixed(fixedPoints ?? 1) + "B";
-  } else if (num >= 1_000_000_000) {
-    const value = Math.floor(num / 10000000) / 100;
-    return value.toFixed(fixedPoints ?? 2) + "B";
-  } else if (num >= 10_000_000) {
-    const value = Math.floor(num / 100000) / 10;
-    return value.toFixed(fixedPoints ?? 1) + "M";
-  } else if (num >= 1_000_000) {
-    const value = Math.floor(num / 10000) / 100;
-    return value.toFixed(fixedPoints ?? 2) + "M";
-  } else if (num >= 100000) {
-    return Math.floor(num / 1000) + "K";
-  } else if (num >= 10000) {
-    const value = Math.floor(num / 100) / 10;
-    return value.toFixed(fixedPoints ?? 1) + "K";
-  } else if (num >= 1000) {
-    const value = Math.floor(num / 10) / 100;
-    return value.toFixed(fixedPoints ?? 2) + "K";
-  } else {
-    return Math.floor(num).toString();
   }
 }
 
@@ -417,12 +374,12 @@ export function createCanvas(): HTMLCanvasElement {
  */
 export function generateCryptoRandomUUID(): string {
   // Type guard to check if randomUUID is available
-  if (crypto !== undefined && "randomUUID" in crypto) {
+  if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
     return crypto.randomUUID();
   }
 
   // Fallback using crypto.getRandomValues
-  if (crypto !== undefined && "getRandomValues" in crypto) {
+  if (typeof crypto !== "undefined" && "getRandomValues" in crypto) {
     return (([1e7] as any) + -1e3 + -4e3 + -8e3 + -1e11).replace(
       /[018]/g,
       (c: number): string =>
@@ -563,6 +520,13 @@ export const translateText = (
   }
 };
 
+/**
+ * Whether `key` is translated in the player's own language, rather than only
+ * in the English that translateText falls back to.
+ */
+export const hasOwnTranslation = (key: string): boolean =>
+  getCachedLangSelector()?.translations?.[key] !== undefined;
+
 export interface HasClanTag {
   clanTag?: string | null | (() => string | null);
 }
@@ -645,9 +609,6 @@ export function getTranslatedPlayerTeamLabel(
   return translated === translationKey ? team : translated;
 }
 
-/**
- * Severity colors mapping for message types
- */
 export const severityColors: Record<string, string> = {
   fail: "text-red-400",
   warn: "text-yellow-400",
@@ -658,9 +619,7 @@ export const severityColors: Record<string, string> = {
 };
 
 /**
- * Gets the CSS classes for styling message types based on their severity
- * @param type The message type to get styling for
- * @returns CSS class string for the message type
+ * Maps a message type to the Tailwind text-color class of its severity.
  */
 export function getMessageTypeClasses(type: MessageType): string {
   switch (type) {
@@ -854,6 +813,29 @@ export function showToast(
   );
 }
 
+const RELOAD_TOAST_KEY = "reloadToast";
+
+// Holds the translated text, not the key: on the far side of the reload the
+// language files may not have landed yet and translateText would echo the key.
+export function showToastAfterReload(message: string): void {
+  try {
+    sessionStorage.setItem(RELOAD_TOAST_KEY, message);
+  } catch {
+    // sessionStorage unavailable: the reload still happens, just silently.
+  }
+}
+
+export function flushReloadToast(): void {
+  let message: string | null;
+  try {
+    message = sessionStorage.getItem(RELOAD_TOAST_KEY);
+    sessionStorage.removeItem(RELOAD_TOAST_KEY);
+  } catch {
+    return;
+  }
+  if (message) showToast(message, "green");
+}
+
 export function getSecondsUntilServerTimestamp(
   targetServerTimestampMs: number,
   serverTimeOffsetMs: number,
@@ -888,10 +870,52 @@ export function reloadForUpdate(): void {
   if (siteHost !== undefined && url.host !== siteHost) {
     url.protocol = "https:";
     url.host = siteHost;
-    url.pathname = url.pathname.replace(/^\/w\d+\//, "/");
   }
+  // Both prefixes encode what this reload exists to leave behind, whichever
+  // host answers it. `/v/<commit>/` is immutable by design (multi-server
+  // v2): it pins the bundle, so reloading it as-is re-serves the very
+  // version being updated away from, forever, cache-buster or not. And
+  // `/w<n>/` was resolved against the old worker count, which a new version
+  // may have changed — letter routing picks the worker again on the way
+  // back in. apexPathFor drops exactly these two, in either order.
+  url.pathname = apexPathFor(url.pathname);
   url.searchParams.set("v", Date.now().toString(36));
   window.location.replace(url.toString());
+}
+
+/**
+ * The path to ask the apex for when re-entering through it. Both prefixes a
+ * path can carry are specific to where the page came from, and the apex
+ * re-resolves what they encoded: `/w<n>/` is one deployment's worker (letter
+ * routing picks the worker again), and `/v/<commit>/` pins the version whose
+ * staleness is the reason for going to the apex in the first place. Pure so
+ * the rule is testable without booting Main.
+ */
+export function apexPathFor(pathname: string): string {
+  const { path } = stripVersionPrefix(pathname);
+  return path.replace(/^\/w\d+\//, "/");
+}
+
+/**
+ * A same-origin path as THIS document should write it into its own history:
+ * re-prefixed with the page's `/v/<commit>/` when it has one, unchanged
+ * otherwise.
+ *
+ * History entries are not share links, and the two want opposite things. A
+ * share link is version-free on purpose — the recipient should be routed by
+ * whatever version the game's server runs when they open it. A history entry
+ * is this tab's own URL: pressing F5 on it must reload THE BUNDLE THIS PAGE
+ * IS RUNNING, and on a pinned page a version-free path would silently hand
+ * the player `latest` instead, mid-game.
+ *
+ * Reads the pin captured at boot rather than the live pathname: the join
+ * flow rewrites the address bar to the version-free share URL before this
+ * ever runs in a game, and a version-free history entry is precisely what
+ * this exists to avoid writing (PagePin.ts).
+ */
+export function currentPagePath(path: string): string {
+  const commit = pagePin();
+  return commit === null ? path : `/v/${commit}${path}`;
 }
 
 /**
@@ -900,6 +924,10 @@ export function reloadForUpdate(): void {
  * list is empty; the apex always fronts the active one. Same-host,
  * standalone deployments (no siteHost injected), dev, and desktop keep the
  * plain root.
+ *
+ * The plain root is also the right answer on a `/v/<commit>/` page, and for
+ * the same reason: "/" is version-free, so a player leaving to the menu
+ * lands on `latest` rather than back on the build they were leaving.
  */
 export function homeHref(): string {
   const siteHost = ClientEnv.siteHost();

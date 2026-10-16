@@ -17,7 +17,7 @@
     "num_land_tiles": 918000,
     "width": 1000
   },
-  "multiplayer_frequency": 4,
+  "multiplayer_frequency": 8,
   "name": "Alps",
   "nations": [
     {

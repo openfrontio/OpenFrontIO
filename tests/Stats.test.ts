@@ -1,19 +1,31 @@
 import {
-  Game,
-  Player,
   PlayerInfo,
   PlayerType,
   UnitType,
-} from "../src/core/game/Game";
-import { Stats } from "../src/core/game/Stats";
-import { StatsImpl } from "../src/core/game/StatsImpl";
-import { replacer } from "../src/core/Util";
+} from "@openfront/engine-api/game/GameTypes";
+import {
+  ATTACK_INDEX_MAX_RECV,
+  ATTACK_INDEX_RECV,
+  PlayerStats,
+} from "@openfront/engine-api/StatsSchemas";
+import { Game, Player } from "@openfront/engine/game/Game";
+import { Stats } from "@openfront/engine/game/Stats";
+import { StatsImpl } from "@openfront/engine/game/StatsImpl";
+import { replacer } from "@openfront/shared/SharedUtil";
 import { setup } from "./util/Setup";
 
 let stats: Stats;
 let game: Game;
 let player1: Player;
 let player2: Player;
+
+/** stats.stats() indexes by clientID into a record whose values are
+ * themselves optional, so `.client2` alone is `PlayerStats | undefined`. */
+function client2Stats(): NonNullable<PlayerStats> {
+  const s = stats.stats().client2;
+  expect(s).toBeDefined();
+  return s!;
+}
 
 describe("Stats", () => {
   beforeEach(async () => {
@@ -49,6 +61,39 @@ describe("Stats", () => {
         attacks: [0n, -1n],
       },
     });
+  });
+
+  test("records the largest single incoming attack, not the sum", () => {
+    stats.attack(player1, player2, 10);
+    stats.attackMaxIncoming(player2, 10);
+    stats.attack(player1, player2, 50);
+    stats.attackMaxIncoming(player2, 50);
+    stats.attack(player1, player2, 20);
+    stats.attackMaxIncoming(player2, 20);
+    const recv = client2Stats().attacks!;
+    expect(recv[ATTACK_INDEX_RECV]).toBe(80n);
+    expect(recv[ATTACK_INDEX_MAX_RECV]).toBe(50n);
+  });
+
+  test("attackCancel does not lower the recorded maximum", () => {
+    stats.attack(player1, player2, 50);
+    stats.attackMaxIncoming(player2, 50);
+    stats.attackCancel(player1, player2, 50);
+    const recv = client2Stats().attacks!;
+    expect(recv[ATTACK_INDEX_RECV]).toBe(0n);
+    expect(recv[ATTACK_INDEX_MAX_RECV]).toBe(50n);
+  });
+
+  test("attack alone records no maximum -- that is attackMaxIncoming's job", () => {
+    stats.attack(player1, player2, 50);
+    const recv = client2Stats().attacks!;
+    expect(recv[ATTACK_INDEX_RECV]).toBe(50n);
+    expect(recv[ATTACK_INDEX_MAX_RECV]).toBeUndefined();
+  });
+
+  test("attackMaxIncoming ignores a non-player target", () => {
+    stats.attackMaxIncoming(game.terraNullius(), 50);
+    expect(stats.stats()).toStrictEqual({});
   });
 
   test("betray", () => {

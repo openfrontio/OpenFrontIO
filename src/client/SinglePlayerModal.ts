@@ -1,9 +1,3 @@
-import { html, TemplateResult } from "lit";
-import { customElement, state } from "lit/decorators.js";
-import { translateText } from "../client/Utils";
-import { UserMeResponse } from "../core/ApiSchemas";
-import { assetUrl } from "../core/AssetUrls";
-import { DoomsdayClockSpeed } from "../core/game/DoomsdayClock";
 import {
   Difficulty,
   GameMapSize,
@@ -12,10 +6,16 @@ import {
   GameType,
   maps,
   UnitType,
-} from "../core/game/Game";
-import { UserSettings } from "../core/game/UserSettings";
-import { PlayerCosmetics, TeamCountConfig } from "../core/Schemas";
-import { generateID } from "../core/Util";
+} from "@openfront/engine-api/game/GameTypes";
+import { TeamCountConfig } from "@openfront/engine-api/Schemas";
+import { DoomsdayClockSpeed } from "@openfront/engine-lib/game/DoomsdayClock";
+import { UserMeResponse } from "@openfront/shared/ApiSchemas";
+import { assetUrl } from "@openfront/shared/AssetUrls";
+import { generateID } from "@openfront/shared/SharedUtil";
+import { PlayerCosmetics } from "@openfront/shared/WireSchemas";
+import { html, TemplateResult } from "lit";
+import { customElement, state } from "lit/decorators.js";
+import { translateText } from "../client/Utils";
 import { responseHasLinkedIdentity } from "./AccountIdentity";
 import "./components/baseComponents/Button";
 import "./components/baseComponents/Modal";
@@ -25,11 +25,14 @@ import { MEDAL_ORDER, medalIcon } from "./components/map/Medals";
 import "./components/ToggleInputCard";
 import { modalHeader } from "./components/ui/ModalHeader";
 import { getPlayerCosmetics, prewarmCosmetics } from "./Cosmetics";
-import { crazyGamesSDK } from "./CrazyGamesSDK";
+import { gamePortal } from "./GamePortal";
+import { GameStartingModal } from "./GameStartingModal";
 import { showInGameAlert } from "./InGameModal";
 import { JoinLobbyEvent } from "./Main";
 import { fallbackPlayerName, ResolvedPlayerName } from "./PlayerName";
+import { lastUserMeResponse } from "./UserMeBroadcast";
 import { UsernameInput } from "./UsernameInput";
+import { UserSettings } from "./UserSettings";
 import {
   getBotsForCompactMap,
   getNationsForCompactMap,
@@ -61,11 +64,11 @@ import { terrainMapFileLoader } from "./TerrainMapFileLoader";
 export const START_PREPARE_DEADLINE_MS = 15_000;
 
 /**
- * Ceiling on the CrazyGames midgame ad, deliberately far above
+ * Ceiling on the portal midgame ad, deliberately far above
  * START_PREPARE_DEADLINE_MS: an ad creative routinely runs 15-30s and it has
  * to gate the start, because dispatching behind one puts gameplay — spawn
  * selection included — under a still-visible overlay. This exists only for an
- * SDK that never calls adFinished or adError at all. Off CrazyGames,
+ * SDK that never calls adFinished or adError at all. Off a portal,
  * requestMidgameAd() resolves immediately and none of this is reached.
  */
 export const MIDGAME_AD_DEADLINE_MS = 60_000;
@@ -216,6 +219,9 @@ export class SinglePlayerModal extends BaseModal {
   // Identifies the current start attempt. Bumped on every start and on every
   // close, so an attempt that outlives its modal can tell it has been retired.
   private startAttempt: number = 0;
+  // Which attempt the starting overlay is up for, so a retired attempt's
+  // cleanup cannot hide the overlay a newer attempt has shown.
+  private overlayAttempt: number = 0;
 
   private mapLoader = terrainMapFileLoader;
 
@@ -225,6 +231,13 @@ export class SinglePlayerModal extends BaseModal {
       "userMeResponse",
       this.handleUserMeResponse as EventListener,
     );
+    // It loads on demand (see LazyModals), usually after Main's broadcast
+    // went out.
+    const last = lastUserMeResponse();
+    if (last !== null) {
+      this.userMeResponse = last.response;
+      this.applyAchievements(last.response);
+    }
     void this.loadNationCount();
   }
 
@@ -275,7 +288,7 @@ export class SinglePlayerModal extends BaseModal {
   };
 
   private renderNotLoggedInBanner(): TemplateResult {
-    if (crazyGamesSDK.isOnCrazyGames()) {
+    if (gamePortal.isOnGamePortal()) {
       return html``;
     }
     return html`<button
@@ -623,6 +636,17 @@ export class SinglePlayerModal extends BaseModal {
     // attempts dispatch join-lobby with different gameIDs and whichever
     // resolves last wins, which can be the one the player abandoned.
     this.startAttempt++;
+    // If the retired attempt still owned the starting overlay it never
+    // dispatched join-lobby, so nothing downstream will hide it: without
+    // this, dismissing the modal mid-preparation leaves a full-screen
+    // overlay blocking the menu until the preparation deadline settles.
+    if (this.overlayAttempt !== 0) {
+      this.overlayAttempt = 0;
+      const startingModal = document.querySelector("game-starting-modal");
+      if (startingModal instanceof GameStartingModal) {
+        startingModal.hide();
+      }
+    }
     this.resetOptions();
   }
 
@@ -995,7 +1019,7 @@ export class SinglePlayerModal extends BaseModal {
   }
 
   /**
-   * The CrazyGames midgame ad, on a bound of its own.
+   * The portal midgame ad, on a bound of its own.
    *
    * Separate from resolveNameAndCosmetics because an ad is not the same kind
    * of wait. It is the player watching something, legitimately for longer than
@@ -1007,12 +1031,12 @@ export class SinglePlayerModal extends BaseModal {
    * adFinished/adError callbacks).
    *
    * Only ever called for a start that is still live — an ad shown for a game
-   * that will not start is worse than no ad. Off CrazyGames this resolves
+   * that will not start is worse than no ad. Off a portal this resolves
    * immediately.
    */
   private awaitMidgameAd(): Promise<void> {
     return withDeadline(
-      crazyGamesSDK.requestMidgameAd(),
+      gamePortal.requestMidgameAd(),
       MIDGAME_AD_DEADLINE_MS,
       () => {
         console.warn("Midgame ad never signalled completion; starting anyway");
@@ -1050,6 +1074,16 @@ export class SinglePlayerModal extends BaseModal {
     // reads as loading rather than as a dead click.
     this.starting = true;
     const attempt = ++this.startAttempt;
+    // The full-screen starting overlay, up from the click rather than at
+    // prestart: it also covers Main's own awaits after the dispatch. On
+    // success GameRenderer hides it (a canPlay() refusal hides it in
+    // handleJoinLobby); an attempt that never dispatches reaches neither, so
+    // onClose (or the finally below, for exits without a close) releases it.
+    const startingModal = document.querySelector("game-starting-modal");
+    const overlay =
+      startingModal instanceof GameStartingModal ? startingModal : null;
+    this.overlayAttempt = attempt;
+    overlay?.show();
     try {
       console.log(
         `Starting single player game with map: ${GameMapType[this.selectedMap as keyof typeof GameMapType]}${this.useRandomMap ? " (Randomly selected)" : ""}`,
@@ -1122,9 +1156,10 @@ export class SinglePlayerModal extends BaseModal {
                 infiniteTroops: this.infiniteTroops,
                 instantBuild: this.instantBuild,
                 randomSpawn: this.randomSpawn,
-                disabledUnits: this.disabledUnits
-                  .map((u) => Object.values(UnitType).find((ut) => ut === u))
-                  .filter((ut): ut is UnitType => ut !== undefined),
+                disabledUnits: this.disabledUnits.filter(
+                  (unit): unit is UnitType =>
+                    Object.values(UnitType).includes(unit),
+                ),
                 nations: sliderToNationsConfig(
                   this.nations,
                   this.defaultNationCount,
@@ -1168,12 +1203,24 @@ export class SinglePlayerModal extends BaseModal {
           composed: true,
         }),
       );
+      // The overlay is the join pipeline's now — GameRenderer or Main's
+      // canPlay() refusal hides it. Disowning it keeps the close below (and
+      // any later onClose) from taking it down mid game-load.
+      this.overlayAttempt = 0;
       this.close();
     } finally {
       // Only if this attempt is still the live one: a retired attempt
       // settling later must not clear the busy state of the one that
       // replaced it.
       if (attempt === this.startAttempt) this.starting = false;
+      // An attempt that still owns the overlay dispatched nothing, so no
+      // downstream hide point will ever fire for it. onClose normally
+      // releases it the moment the modal is dismissed; this catches exits
+      // without a close, like resolveNameAndCosmetics() throwing.
+      if (this.overlayAttempt === attempt) {
+        this.overlayAttempt = 0;
+        overlay?.hide();
+      }
     }
   }
 

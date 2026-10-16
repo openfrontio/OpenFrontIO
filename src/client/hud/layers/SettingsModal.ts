@@ -1,9 +1,10 @@
+import { GameConfig } from "@openfront/engine-api/Schemas";
+import { assetUrl } from "@openfront/shared/AssetUrls";
+import { EventBus } from "@openfront/shared/EventBus";
 import { html, LitElement } from "lit";
 import { customElement, property, query, state } from "lit/decorators.js";
-import { crazyGamesSDK } from "src/client/CrazyGamesSDK";
+import { gamePortal } from "src/client/GamePortal";
 import { PauseGameIntentEvent } from "src/client/Transport";
-import { assetUrl } from "../../../core/AssetUrls";
-import { EventBus } from "../../../core/EventBus";
 import { Controller } from "../../Controller";
 import {
   AlternateViewEvent,
@@ -11,6 +12,13 @@ import {
 } from "../../InputHandler";
 import type { UserSettingModal } from "../../UserSettingModal";
 import { homeHref, translateText } from "../../Utils";
+import {
+  disabledUnitsBox,
+  hostCheatsBox,
+  LOBBY_SETTING_TAG,
+  lobbySettingTagText,
+  notableLobbySettings,
+} from "../../utilities/LobbySettingsSummary";
 const exitIcon = assetUrl("images/ExitIconWhite.svg");
 const settingsIcon = assetUrl("images/SettingIconWhite.svg");
 const treeIcon = assetUrl("images/TreeIconWhite.svg");
@@ -27,8 +35,9 @@ export class ShowSettingsModalEvent {
  * The in-game menu.
  *
  * It holds what is session state or a game action — the alternate (terrain)
- * view, the debug GUI, exiting — plus a link into the settings modal. Every
- * `UserSettings`-backed row it used to duplicate, the advanced graphics
+ * view, the debug GUI, exiting — plus the game's modifiers (the non-default
+ * lobby settings the join modal shows) and a link into the settings modal.
+ * Every `UserSettings`-backed row it used to duplicate, the advanced graphics
  * options included, now lives in `UserSettingModal`, which this opens through
  * the non-inline `#game-settings` instance so both entry points render the
  * same UI.
@@ -51,6 +60,13 @@ export class SettingsModal extends LitElement implements Controller {
 
   @property({ type: Boolean })
   wasPausedWhenOpened = false;
+
+  @property({ attribute: false })
+  gameConfig: GameConfig | null = null;
+
+  /** Nations the map defines; null skips the nation-count comparison. */
+  @property({ attribute: false })
+  mapNationCount: number | null = null;
 
   init() {
     this.eventBus.on(ShowSettingsModalEvent, (event) => {
@@ -93,6 +109,11 @@ export class SettingsModal extends LitElement implements Controller {
     }
   };
 
+  /** Whether the menu is showing. */
+  get open(): boolean {
+    return this.isVisible;
+  }
+
   public openModal() {
     this.isVisible = true;
     this.requestUpdate();
@@ -105,12 +126,12 @@ export class SettingsModal extends LitElement implements Controller {
   }
 
   private pauseGame(pause: boolean) {
-    // CrazyGames: report gameplay as stopped whenever the settings menu is open,
+    // Portals: report gameplay as stopped whenever the settings menu is open,
     // and resumed when it closes — unless the game was already paused when opened.
     if (pause) {
-      crazyGamesSDK.gameplayStop();
+      gamePortal.gameplayStop();
     } else if (!this.wasPausedWhenOpened) {
-      crazyGamesSDK.gameplayStart();
+      gamePortal.gameplayStart();
     }
 
     // Only pause the simulation itself when we own the pause (singleplayer or
@@ -158,6 +179,39 @@ export class SettingsModal extends LitElement implements Controller {
   private onExitButtonClick() {
     // redirect to the home page
     window.location.href = homeHref();
+  }
+
+  private renderModifiers() {
+    const c = this.gameConfig;
+    if (c === null) return null;
+    const settings = notableLobbySettings(c, this.mapNationCount);
+    const disabledUnits = disabledUnitsBox(c, "mx-3 mt-2");
+    const hostCheats = hostCheatsBox(c, "mx-3 mt-2");
+    if (settings.length === 0 && disabledUnits === null && hostCheats === null)
+      return null;
+    return html`
+      <div class="border-t border-slate-600 pt-3 mt-4" data-game-modifiers>
+        <div
+          class="px-3 py-1 text-xs font-semibold text-slate-400 uppercase tracking-wider"
+        >
+          ${translateText("user_setting.modifiers")}
+        </div>
+        ${settings.length > 0
+          ? html`<div
+              class="flex flex-wrap gap-1 px-3 pt-1 uppercase"
+              data-modifier-tags
+            >
+              ${settings.map(
+                (s) =>
+                  html`<span class=${LOBBY_SETTING_TAG}
+                    >${lobbySettingTagText(s)}</span
+                  >`,
+              )}
+            </div>`
+          : null}
+        ${disabledUnits} ${hostCheats}
+      </div>
+    `;
   }
 
   render() {
@@ -232,6 +286,8 @@ export class SettingsModal extends LitElement implements Controller {
                   : translateText("user_setting.off")}
               </div>
             </button>
+
+            ${this.renderModifiers()}
 
             <div class="border-t border-slate-600 pt-3 mt-4">
               <div

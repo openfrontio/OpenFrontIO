@@ -1,10 +1,12 @@
 import {
   ClaimAllRewardsResponseSchema,
+  ClaimRewardHeldResponseSchema,
   ClaimRewardResponseSchema,
   FriendEntrySchema,
   GetMyTribeNamesResponseSchema,
   GoogleUser,
   GoogleUserSchema,
+  isRewardClaimable,
   isTemporaryUsername,
   isVerifiedUsername,
   PlayerGameModeFilterSchema,
@@ -19,12 +21,13 @@ import {
   PutCreatorResponseSchema,
   PutUsernameResponseSchema,
   RankedLeaderboardEntrySchema,
+  RankedLeaderboardResponseSchema,
   RewardSchema,
   TribeLeaderboardResponseSchema,
   TribeNameSchema,
   TribeStatsResponseSchema,
   UserMeResponseSchema,
-} from "../src/core/ApiSchemas";
+} from "@openfront/shared/ApiSchemas";
 
 describe("UserMeResponseSchema ban", () => {
   const ban = UserMeResponseSchema.shape.ban;
@@ -404,6 +407,101 @@ describe("RankedLeaderboardEntrySchema accountUsername", () => {
   });
 });
 
+describe("leaderboard entry level fields", () => {
+  const ranked = {
+    rank: 1,
+    elo: 1500,
+    peakElo: 1600,
+    wins: 10,
+    losses: 5,
+    total: 15,
+    public_id: "abc123",
+    accountUsername: "bob.4821",
+  };
+  const mapped = {
+    rank: 1,
+    playerId: "abc123",
+    accountUsername: "bob.4821",
+    elo: 1500,
+    games: 15,
+    wins: 10,
+    losses: 5,
+    winRate: 2 / 3,
+  };
+  const level = { level: 42, prestige: 3, legend: false };
+
+  it("parses a ranked entry from an API without level fields", () => {
+    const result = RankedLeaderboardEntrySchema.parse(ranked);
+    expect(result.level).toBeUndefined();
+    expect(result.prestige).toBeUndefined();
+    expect(result.legend).toBeUndefined();
+  });
+
+  it("keeps a ranked entry's level fields", () => {
+    expect(
+      RankedLeaderboardEntrySchema.parse({ ...ranked, ...level }),
+    ).toMatchObject(level);
+  });
+
+  it.each([
+    ["a string level", { level: "42" }],
+    ["a null prestige", { prestige: null }],
+    ["a numeric legend", { legend: 1 }],
+    ["level 0", { level: 0 }],
+    ["level 101", { level: 101 }],
+    ["a fractional level", { level: 4.5 }],
+    ["a negative prestige", { prestige: -1 }],
+    ["prestige 11", { prestige: 11 }],
+  ])("drops %s instead of rejecting the entry", (_, bad) => {
+    const result = RankedLeaderboardEntrySchema.parse({
+      ...ranked,
+      ...level,
+      ...bad,
+    });
+    const [key] = Object.keys(bad) as (keyof typeof level)[];
+    expect(result[key]).toBeUndefined();
+    expect(result.public_id).toBe("abc123");
+  });
+
+  it("keeps the edges of the level range", () => {
+    expect(
+      RankedLeaderboardEntrySchema.parse({
+        ...ranked,
+        level: 1,
+        prestige: 0,
+        legend: false,
+      }),
+    ).toMatchObject({ level: 1, prestige: 0 });
+    expect(
+      RankedLeaderboardEntrySchema.parse({
+        ...ranked,
+        level: 100,
+        prestige: 10,
+        legend: true,
+      }),
+    ).toMatchObject({ level: 100, prestige: 10 });
+  });
+
+  it("still parses a ladder with one malformed row", () => {
+    const result = RankedLeaderboardResponseSchema.parse({
+      "1v1": [
+        { ...ranked, ...level },
+        { ...ranked, public_id: "bad", ...level, legend: 1 },
+      ],
+    });
+    expect(result["1v1"]).toHaveLength(2);
+    expect(result["1v1"][0]).toMatchObject(level);
+    expect(result["1v1"][1].legend).toBeUndefined();
+  });
+
+  it("parses a mapped entry with and without level fields", () => {
+    expect(PlayerLeaderboardEntrySchema.parse(mapped).level).toBeUndefined();
+    expect(
+      PlayerLeaderboardEntrySchema.parse({ ...mapped, ...level }),
+    ).toMatchObject(level);
+  });
+});
+
 describe("PlayerGameModeFilterSchema", () => {
   it.each(["ffa", "team", "hvn", "ranked"])("accepts %s", (value) => {
     expect(PlayerGameModeFilterSchema.safeParse(value).success).toBe(true);
@@ -594,6 +692,74 @@ describe("RewardSchema", () => {
       RewardSchema.safeParse({ ...validReward, currencyType: "gems" }).success,
     ).toBe(false);
   });
+
+  it("keeps a level reward's level and prestige run", () => {
+    const parsed = RewardSchema.parse({
+      ...validReward,
+      currencyType: "soft",
+      reason: "level_up",
+      level: 47,
+      prestige: 3,
+    });
+    expect([parsed.level, parsed.prestige]).toEqual([47, 3]);
+  });
+
+  it("leaves level and prestige undefined on other rewards", () => {
+    const parsed = RewardSchema.parse(validReward);
+    expect(parsed.level).toBeUndefined();
+    expect(parsed.prestige).toBeUndefined();
+  });
+
+  it("reads held: trust", () => {
+    const result = RewardSchema.safeParse({ ...validReward, held: "trust" });
+    expect(result.success).toBe(true);
+    if (result.success) expect(result.data.held).toBe("trust");
+  });
+
+  it("reads an absent held as claimable", () => {
+    const result = RewardSchema.safeParse(validReward);
+    expect(result.success).toBe(true);
+    if (result.success) expect(result.data.held).toBeUndefined();
+  });
+
+  it.each([[42], [{ reason: "trust" }], [""], [true]])(
+    "reads a malformed held (%j) as held, never claimable",
+    (held) => {
+      const result = RewardSchema.safeParse({ ...validReward, held });
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.data.held).toBe("unknown");
+        expect(isRewardClaimable(result.data)).toBe(false);
+      }
+    },
+  );
+
+  it("reads a null held as claimable", () => {
+    const result = RewardSchema.safeParse({ ...validReward, held: null });
+    expect(result.success).toBe(true);
+    if (result.success) expect(result.data.held).toBeUndefined();
+  });
+
+  it("keeps a hold kind it doesn't know, which is not claimable", () => {
+    const result = RewardSchema.safeParse({
+      ...validReward,
+      held: "future_hold",
+    });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.held).toBe("future_hold");
+      expect(isRewardClaimable(result.data)).toBe(false);
+    }
+  });
+});
+
+describe("isRewardClaimable", () => {
+  it("is claimable only without a hold", () => {
+    expect(isRewardClaimable({})).toBe(true);
+    expect(isRewardClaimable({ held: undefined })).toBe(true);
+    expect(isRewardClaimable({ held: "trust" })).toBe(false);
+    expect(isRewardClaimable({ held: "other" })).toBe(false);
+  });
 });
 
 describe("UserMeResponseSchema rewards", () => {
@@ -629,6 +795,39 @@ describe("UserMeResponseSchema rewards", () => {
     }
   });
 
+  it("keeps a held reward's hold", () => {
+    const result = UserMeResponseSchema.safeParse({
+      user: {},
+      player: {
+        ...basePlayer,
+        rewards: [
+          {
+            id: "7",
+            currencyType: "hard",
+            amount: "50",
+            reason: "level_milestone",
+            note: null,
+            held: "trust",
+          },
+          {
+            id: "8",
+            currencyType: "soft",
+            amount: "150",
+            reason: "level_up",
+            note: null,
+          },
+        ],
+      },
+    });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.player.rewards?.map((r) => r.held)).toEqual([
+        "trust",
+        undefined,
+      ]);
+    }
+  });
+
   it("accepts a response without rewards (older API versions)", () => {
     expect(
       UserMeResponseSchema.safeParse({ user: {}, player: basePlayer }).success,
@@ -657,10 +856,63 @@ describe("UserMeResponseSchema unlimitedRanked", () => {
     }
   });
 
-  it("rejects a response without unlimitedRanked", () => {
+  it("accepts a response without unlimitedRanked", () => {
     expect(
       UserMeResponseSchema.safeParse({ user: {}, player: basePlayer }).success,
-    ).toBe(false);
+    ).toBe(true);
+  });
+});
+
+describe("UserMeResponseSchema Steam licence and notices", () => {
+  const player = {
+    publicId: "p1",
+    adfree: false,
+    canCreatePublicLobbies: false,
+    achievements: { singleplayerMap: [] },
+    friends: [],
+    subscription: null,
+  };
+
+  it("defaults the fields an older API does not send", () => {
+    const result = UserMeResponseSchema.safeParse({ user: {}, player });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.steamLicence).toBe(false);
+      expect(result.data.steamLicenceSince).toBeNull();
+      expect(result.data.noticesSeen).toEqual([]);
+      expect(result.data.tierConversion).toBeUndefined();
+    }
+  });
+
+  it("accepts a licence holder with a conversion and seen notices", () => {
+    const tierConversion = {
+      id: "17",
+      fromTierName: "warlord",
+      toTierName: "steam_plus",
+      convertedAt: "2026-10-01T12:00:00.000Z",
+    };
+    const result = UserMeResponseSchema.safeParse({
+      user: {},
+      player: { ...player, canCreatePublicLobbies: true },
+      steamLicence: true,
+      steamLicenceSince: "2026-10-14T09:30:00.000Z",
+      noticesSeen: ["steam_licence_intro"],
+      tierConversion,
+    });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.steamLicence).toBe(true);
+      expect(result.data.steamLicenceSince).toBe("2026-10-14T09:30:00.000Z");
+      expect(result.data.noticesSeen).toEqual(["steam_licence_intro"]);
+      expect(result.data.tierConversion).toEqual(tierConversion);
+    }
+  });
+
+  it("accepts a null tierConversion", () => {
+    expect(
+      UserMeResponseSchema.safeParse({ user: {}, player, tierConversion: null })
+        .success,
+    ).toBe(true);
   });
 });
 
@@ -708,6 +960,104 @@ describe("claim response schemas", () => {
     if (result.success) {
       expect(result.data.claimed).toEqual([{ id: "42" }]);
     }
+  });
+
+  it("reads a claim-all without held (older APIs) as nothing held", () => {
+    const result = ClaimAllRewardsResponseSchema.safeParse({
+      claimed: [],
+      currency: { soft: "0", hard: "0" },
+    });
+    expect(result.success).toBe(true);
+    if (result.success) expect(result.data.held).toEqual([]);
+  });
+
+  it("keeps the rewards a claim-all left held", () => {
+    const result = ClaimAllRewardsResponseSchema.safeParse({
+      claimed: [],
+      held: [
+        {
+          id: "7",
+          currencyType: "hard",
+          amount: "50",
+          reason: "level_milestone",
+          note: null,
+          createdAt: "2026-10-01T12:00:00.000Z",
+          held: "trust",
+        },
+      ],
+      currency: { soft: "0", hard: "0" },
+    });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.held).toEqual([
+        {
+          id: "7",
+          currencyType: "hard",
+          amount: "50",
+          reason: "level_milestone",
+          note: null,
+          held: "trust",
+        },
+      ]);
+    }
+  });
+
+  it("reads a malformed held list as empty rather than failing the claim", () => {
+    const result = ClaimAllRewardsResponseSchema.safeParse({
+      claimed: [{ id: "1" }],
+      held: "nope",
+      currency: { soft: "10", hard: "0" },
+    });
+    expect(result.success).toBe(true);
+    if (result.success) expect(result.data.held).toEqual([]);
+  });
+
+  it("drops only the malformed rows of a claim-all's held list", () => {
+    const row = (id: string, held: string) => ({
+      id,
+      currencyType: "hard",
+      amount: "50",
+      reason: "level_milestone",
+      note: null,
+      held,
+    });
+    const result = ClaimAllRewardsResponseSchema.safeParse({
+      claimed: [],
+      held: [
+        row("7", "trust"),
+        { id: "8", currencyType: "gems" },
+        "nope",
+        row("9", "future_hold"),
+      ],
+      currency: { soft: "0", hard: "0" },
+    });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.held).toEqual([
+        row("7", "trust"),
+        row("9", "future_hold"),
+      ]);
+    }
+  });
+
+  it("recognises the 403 body for a held reward", () => {
+    expect(
+      ClaimRewardHeldResponseSchema.safeParse({
+        error: "Forbidden",
+        resource: "reward",
+        held: "trust",
+        message: "This reward is paid to trusted accounts",
+      }).success,
+    ).toBe(true);
+    expect(
+      ClaimRewardHeldResponseSchema.safeParse({
+        error: "Forbidden",
+        message: "nope",
+      }).success,
+    ).toBe(false);
+    expect(ClaimRewardHeldResponseSchema.safeParse({ held: "" }).success).toBe(
+      false,
+    );
   });
 });
 
@@ -996,18 +1346,30 @@ describe("PublicCreatorSchema", () => {
 });
 
 describe("PutCreatorResponseSchema", () => {
-  it("parses the bind confirmation (code + displayName only)", () => {
+  it("parses the API's bind confirmation envelope", () => {
     const result = PutCreatorResponseSchema.safeParse({
-      code: "LEWIS",
-      displayName: "Lewis",
+      ok: true,
+      creator: { code: "LEWIS", displayName: "Lewis" },
     });
     expect(result.success).toBe(true);
   });
 
+  it("rejects the un-enveloped pair the API never sends", () => {
+    expect(
+      PutCreatorResponseSchema.safeParse({
+        code: "LEWIS",
+        displayName: "Lewis",
+      }).success,
+    ).toBe(false);
+  });
+
   it("rejects a missing displayName", () => {
-    expect(PutCreatorResponseSchema.safeParse({ code: "LEWIS" }).success).toBe(
-      false,
-    );
+    expect(
+      PutCreatorResponseSchema.safeParse({
+        ok: true,
+        creator: { code: "LEWIS" },
+      }).success,
+    ).toBe(false);
   });
 });
 
@@ -1359,5 +1721,22 @@ describe("PostTribeBoostResponseSchema", () => {
         pricePaid: "100",
       }).success,
     ).toBe(false);
+  });
+});
+
+describe("UserMeResponseSchema player achievements", () => {
+  const achievements = UserMeResponseSchema.shape.player.shape.achievements;
+
+  it("keeps the server-awarded player achievements array", () => {
+    const parsed = achievements.parse({
+      singleplayerMap: [],
+      player: [{ achievement: "win_ffa", game: "abc123", achievedAt: null }],
+    });
+    expect(parsed.player[0].achievement).toBe("win_ffa");
+  });
+
+  it("defaults player to an empty array when the server omits it", () => {
+    const parsed = achievements.parse({ singleplayerMap: [] });
+    expect(parsed.player).toEqual([]);
   });
 });

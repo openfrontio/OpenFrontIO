@@ -1,4 +1,4 @@
-import { LitElement, html } from "lit";
+import { LitElement, html, type PropertyValues } from "lit";
 import { customElement, property } from "lit/decorators.js";
 
 @customElement("setting-slider")
@@ -37,6 +37,21 @@ export class SettingSlider extends LitElement {
     const percent = ((this.value - this.min) / (this.max - this.min)) * 100;
     const clamped = Math.max(0, Math.min(100, percent));
     slider.style.setProperty("--fill", `${clamped}%`);
+  }
+
+  /**
+   * The filled part of the track is a CSS custom property, which `handleInput`
+   * sets during a drag. Setting `.value` from outside — "Reset to defaults",
+   * or reopening the tab — moves the thumb but left the fill where it was.
+   */
+  protected updated(changed: PropertyValues) {
+    if (!changed.has("value") && !changed.has("min") && !changed.has("max")) {
+      return;
+    }
+    const slider = this.renderRoot.querySelector(
+      "input[type=range]",
+    ) as HTMLInputElement | null;
+    if (slider) this.updateSliderStyle(slider);
   }
 
   firstUpdated() {

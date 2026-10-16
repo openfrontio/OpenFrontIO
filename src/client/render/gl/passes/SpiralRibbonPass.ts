@@ -85,7 +85,12 @@ export class SpiralRibbonPass {
     this.gl = gl;
     this.settings = settings;
 
-    this.program = createProgram(gl, spiralRibbonVertSrc, spiralRibbonFragSrc);
+    this.program = createProgram(
+      gl,
+      spiralRibbonVertSrc,
+      spiralRibbonFragSrc,
+      "SpiralRibbonPass.program",
+    );
     const u = (name: string) => gl.getUniformLocation(this.program, name)!;
     this.uCamera = u("uCamera");
     this.uHeadDist = u("uHeadDist");
@@ -106,6 +111,7 @@ export class SpiralRibbonPass {
       gl,
       fullscreenVertSrc,
       spiralCompositeFragSrc,
+      "SpiralRibbonPass.compositeProgram",
     );
     gl.useProgram(this.compositeProgram);
     gl.uniform1i(gl.getUniformLocation(this.compositeProgram, "uTex"), 0);

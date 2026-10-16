@@ -1,6 +1,6 @@
+import { TrainType, UnitType } from "@openfront/engine-api/game/GameTypes";
+import { assetUrl } from "@openfront/shared/AssetUrls";
 import { Colord } from "colord";
-import { assetUrl } from "../../core/AssetUrls";
-import { TrainType, UnitType } from "../../core/game/Game";
 import { Theme } from "../theme/ThemeProvider";
 import { UnitView } from "../view";
 const atomBombSprite = assetUrl("sprites/atombomb.png");
@@ -71,7 +71,7 @@ export const loadAllSprites = async (): Promise<void> => {
           console.log("All sprites loaded.");
         }
       } catch (err) {
-        console.error(`Failed to load sprite for ${typedUnitType}:`, err);
+        console.warn(`Failed to load sprite for ${typedUnitType}:`, err);
       }
     }),
   );

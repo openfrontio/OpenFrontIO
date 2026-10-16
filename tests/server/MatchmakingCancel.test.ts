@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { GameType, RankedType } from "../../src/core/game/Game";
+import { GameType, RankedType } from "@openfront/engine-api/game/GameTypes";
 import { Client } from "../../src/server/Client";
 import { GamePhase } from "../../src/server/GameServer";
 import {
@@ -69,6 +69,46 @@ describe("GameServer - short-handed matchmade game cancellation", () => {
     const game = makeRankedGame(RankedType.OneVOne, 2);
     expect(game.joinClient(makeClient("c1", "p1"))).toBe("joined");
     expect(game.joinClient(makeClient("c2", "p2"))).toBe("joined");
+
+    expect(game.cancelShortHandedMatch()).toBe(false);
+    expect(game.phase()).not.toBe(GamePhase.Finished);
+  });
+
+  it("cancels an FFA game with fewer than four players connected", () => {
+    const game = makeRankedGame(RankedType.FreeForAll, 6);
+    for (const id of ["1", "2", "3"]) {
+      expect(game.joinClient(makeClient(`c${id}`, `p${id}`))).toBe("joined");
+    }
+
+    expect(game.cancelShortHandedMatch()).toBe(true);
+    expect(game.phase()).toBe(GamePhase.Finished);
+  });
+
+  it("starts an FFA game without its no-shows once four are connected", () => {
+    const game = makeRankedGame(RankedType.FreeForAll, 6);
+    for (const id of ["1", "2", "3", "4"]) {
+      expect(game.joinClient(makeClient(`c${id}`, `p${id}`))).toBe("joined");
+    }
+
+    expect(game.cancelShortHandedMatch()).toBe(false);
+    expect(game.phase()).not.toBe(GamePhase.Finished);
+  });
+
+  it("cancels a clan wars game missing a player", () => {
+    const game = makeRankedGame(RankedType.ClanWars, 6);
+    for (const id of ["1", "2", "3", "4", "5"]) {
+      expect(game.joinClient(makeClient(`c${id}`, `p${id}`))).toBe("joined");
+    }
+
+    expect(game.cancelShortHandedMatch()).toBe(true);
+    expect(game.phase()).toBe(GamePhase.Finished);
+  });
+
+  it("starts a clan wars game with full attendance", () => {
+    const game = makeRankedGame(RankedType.ClanWars, 6);
+    for (const id of ["1", "2", "3", "4", "5", "6"]) {
+      expect(game.joinClient(makeClient(`c${id}`, `p${id}`))).toBe("joined");
+    }
 
     expect(game.cancelShortHandedMatch()).toBe(false);
     expect(game.phase()).not.toBe(GamePhase.Finished);

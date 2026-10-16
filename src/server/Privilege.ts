@@ -1,8 +1,11 @@
 import countries from "resources/countries.json";
 
-import { isTemporaryUsername } from "../core/ApiSchemas";
-import { Cosmetics, findEffectForSlot } from "../core/CosmeticSchemas";
-import { decodePatternData } from "../core/PatternDecoder";
+import { isTemporaryUsername } from "@openfront/shared/ApiSchemas";
+import {
+  Cosmetics,
+  findEffectForSlot,
+} from "@openfront/shared/CosmeticSchemas";
+import { decodePatternData } from "@openfront/shared/PatternDecoder";
 import {
   PlayerColor,
   PlayerCosmeticRefs,
@@ -11,7 +14,7 @@ import {
   PlayerEffect,
   PlayerPattern,
   PlayerSkin,
-} from "../core/Schemas";
+} from "@openfront/shared/WireSchemas";
 
 const countryCodes = countries.filter((c) => !c.restricted).map((c) => c.code);
 

@@ -1,12 +1,11 @@
-import { MirvExecution } from "../../../src/core/execution/MIRVExecution";
 import {
-  Game,
   MessageType,
-  Player,
   PlayerInfo,
   PlayerType,
   UnitType,
-} from "../../../src/core/game/Game";
+} from "@openfront/engine-api/game/GameTypes";
+import { MirvExecution } from "@openfront/engine/execution/MIRVExecution";
+import { Game, Player } from "@openfront/engine/game/Game";
 import { setup } from "../../util/Setup";
 import { executeTicks } from "../../util/utils";
 
@@ -214,9 +213,42 @@ describe("MIRVExecution", () => {
 
     expect(displaySpy).toHaveBeenCalled();
     const callArgs = displaySpy.mock.calls[0];
-    expect(callArgs[1]).toContain("MIRV INBOUND");
+    expect(callArgs[1]).toBe("events_display.mirv_inbound");
     expect(callArgs[2]).toBe(MessageType.MIRV_INBOUND);
     expect(callArgs[3]).toBe(otherPlayer.id());
+  });
+
+  test("MIRV should use the current destination owner at launch", () => {
+    const targetTile = game.ref(20, 20);
+    expect(game.owner(targetTile).isPlayer()).toBe(false);
+    const allianceRequest = player.createAllianceRequest(otherPlayer);
+    allianceRequest!.accept();
+    const playerRelationSpy = vi.spyOn(player, "updateRelation");
+    const otherPlayerRelationSpy = vi.spyOn(otherPlayer, "updateRelation");
+    const bombLaunchSpy = vi.spyOn(game.stats(), "bombLaunch");
+    vi.spyOn(player, "canBuild").mockReturnValue(game.ref(10, 10));
+    const displaySpy = vi.spyOn(game, "displayIncomingUnit");
+    const mirvExec = new MirvExecution(player, targetTile);
+    game.addExecution(mirvExec);
+
+    executeTicks(game, 1);
+    otherPlayer.conquer(targetTile);
+    executeTicks(game, 1);
+
+    const mirv = player.units(UnitType.MIRV);
+    expect(mirv).toHaveLength(1);
+    expect(mirv[0]?.targetPlayer()).toBe(otherPlayer);
+    expect(bombLaunchSpy).toHaveBeenCalledWith(
+      player,
+      otherPlayer,
+      UnitType.MIRV,
+    );
+    expect(player.isAlliedWith(otherPlayer)).toBe(false);
+    expect(player.isTraitor()).toBe(true);
+    expect(playerRelationSpy).toHaveBeenCalledWith(otherPlayer, -100);
+    expect(otherPlayerRelationSpy).toHaveBeenCalledWith(player, -100);
+    expect(displaySpy).toHaveBeenCalledTimes(1);
+    expect(displaySpy.mock.calls[0][3]).toBe(otherPlayer.id());
   });
 
   test("MIRV should not launch if player cannot build it", async () => {
@@ -264,9 +296,20 @@ describe("MIRVExecution", () => {
     // MIRV should NOT launch against terra nullius
     expect(player.units(UnitType.MIRV)).toHaveLength(0);
     expect(mirvExec.isActive()).toBe(false);
-
     // Should not break any alliance or mark as traitor (since no player owns it)
     expect(player.isTraitor()).toBe(false);
+  });
+
+  test("MIRV should not notify terra nullius after a successful build", () => {
+    const targetTile = game.ref(20, 20);
+    expect(game.owner(targetTile).isPlayer()).toBe(false);
+    vi.spyOn(player, "canBuild").mockReturnValue(game.ref(10, 10));
+    const displaySpy = vi.spyOn(game, "displayIncomingUnit");
+    const mirvExec = new MirvExecution(player, targetTile);
+    mirvExec.init(game, game.ticks());
+    mirvExec.tick(game.ticks());
+    expect(player.units(UnitType.MIRV)).toHaveLength(1);
+    expect(displaySpy).not.toHaveBeenCalled();
   });
 
   test("MIRV should launch when targeting own territory without breaking alliances", async () => {

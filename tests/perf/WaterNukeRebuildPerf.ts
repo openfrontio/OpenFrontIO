@@ -8,10 +8,10 @@
  *
  * Run with: npx tsx tests/perf/WaterNukeRebuildPerf.ts
  */
+import { Game } from "@openfront/engine/game/Game";
+import { DebugSpan } from "@openfront/engine/utilities/DebugSpan";
 import { dirname } from "path";
 import { fileURLToPath } from "url";
-import { Game } from "../../src/core/game/Game";
-import { DebugSpan } from "../../src/core/utilities/DebugSpan";
 import { setup } from "../util/Setup";
 
 type Span = {

@@ -2,7 +2,6 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("../../src/client/Api", () => ({
   changeSubscriptionTier: vi.fn(),
-  createCheckoutSession: vi.fn(),
   getApiBase: vi.fn(() => "https://api.test"),
   getUserMe: vi.fn(async () => false),
   invalidateUserMe: vi.fn(),
@@ -34,9 +33,13 @@ vi.mock("../../src/client/SubscriptionPolicy", () => ({
   },
 }));
 
+import type {
+  Cosmetics,
+  Pack,
+  Pattern,
+} from "@openfront/shared/CosmeticSchemas";
 import {
   changeSubscriptionTier,
-  createCheckoutSession,
   getUserMe,
   invalidateUserMe,
 } from "../../src/client/Api";
@@ -47,11 +50,8 @@ import {
   showInGameConfirm,
 } from "../../src/client/InGameModal";
 import { startPurchase } from "../../src/client/Payments";
-import type { Cosmetics, Pack, Pattern } from "../../src/core/CosmeticSchemas";
 
 const startPurchaseMock = startPurchase as unknown as ReturnType<typeof vi.fn>;
-const createCheckoutSessionMock =
-  createCheckoutSession as unknown as ReturnType<typeof vi.fn>;
 const alertMock = showInGameAlert as unknown as ReturnType<typeof vi.fn>;
 const getUserMeMock = getUserMe as unknown as ReturnType<typeof vi.fn>;
 const confirmMock = showInGameConfirm as unknown as ReturnType<typeof vi.fn>;
@@ -138,7 +138,6 @@ describe("purchaseCosmetic dollar path", () => {
       packName: "starter_pack",
     });
     expect(alertMock).not.toHaveBeenCalled();
-    expect(createCheckoutSessionMock).not.toHaveBeenCalled();
   });
 
   it("buys a subscription tier by name", async () => {
@@ -272,10 +271,11 @@ describe("purchaseCosmetic dollar path", () => {
     });
   });
 
-  // The cosmetic/flare branch of the legacy Stripe endpoint was deliberately
-  // never ported, and it genuinely still needs a priceId.
-  it("keeps the legacy Stripe path for dollar-priced cosmetics", async () => {
-    createCheckoutSessionMock.mockResolvedValue("https://stripe.test/session");
+  // Direct dollar purchases of cosmetics/flares are deleted: real money only
+  // buys plutonium (or a subscription), everything else is currency-priced.
+  // Only a stale cached cosmetics.json still carrying a product block can
+  // route "dollar" here — it must fail, never start a checkout.
+  it("refuses a dollar purchase for a cosmetic even when it carries a product", async () => {
     const pattern = {
       name: "camo",
       product: { productId: "prod_p", priceId: "price_p", price: "$1.99" },
@@ -292,11 +292,11 @@ describe("purchaseCosmetic dollar path", () => {
       "dollar",
     );
 
-    expect(createCheckoutSessionMock).toHaveBeenCalledWith("price_p", "blue");
+    expect(alertMock).toHaveBeenCalledWith("store.checkout_failed");
     expect(startPurchaseMock).not.toHaveBeenCalled();
   });
 
-  it("still reports a failure for a dollar-priced cosmetic with no Stripe price", async () => {
+  it("refuses a dollar purchase for a cosmetic with no Stripe price", async () => {
     await purchaseCosmetic(
       resolved({
         type: "pattern",

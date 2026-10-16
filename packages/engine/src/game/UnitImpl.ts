@@ -1,0 +1,973 @@
+import { TileRef } from "@openfront/engine-api/game/GameMap";
+import {
+  MessageType,
+  NukeState,
+  SamLauncherState,
+  TerraNullius,
+  Tick,
+  TrainType,
+  TrajectoryTile,
+  TransportShipState,
+  UnitType,
+  WarshipState,
+} from "@openfront/engine-api/game/GameTypes";
+import {
+  GameUpdateType,
+  UnitUpdate,
+} from "@openfront/engine-api/game/GameUpdates";
+import { maxHealthWithVeterancy } from "@openfront/engine-lib/game/Veterancy";
+import {
+  snapshotType,
+  zBytes,
+  zInt,
+  zNum,
+  zPlayerRef,
+  zRef,
+  zTile,
+  zTiles,
+} from "@openfront/engine-lib/snapshot/SnapshotType";
+import { simpleHash, toInt, withinInt } from "@openfront/engine-lib/Util";
+import { z } from "zod";
+import { UnitTypeSchema } from "../snapshot/CommonSchemas";
+import type {
+  SnapshotReader,
+  SnapshotWriter,
+} from "../snapshot/SnapshotContext";
+import { AllUnitParams, EngineUnitInfo, Player, Unit } from "./Game";
+import { GameImpl } from "./GameImpl";
+import { PlayerImpl } from "./PlayerImpl";
+
+export class UnitImpl implements Unit {
+  private _active = true;
+  private _targetTile: TileRef | undefined;
+  private _targetPlayer: Player | TerraNullius | undefined;
+  private _targetUnit: Unit | undefined;
+  private _health: bigint;
+  private _lastTile: TileRef;
+  private _transportShipState: TransportShipState | undefined = undefined;
+  private _warshipState: WarshipState | undefined = undefined;
+  private _nukeState: NukeState | undefined = undefined;
+  private _reachedTarget = false;
+  private _wasDestroyedByEnemy: boolean = false;
+  private _destroyer: Player | undefined = undefined;
+  private _lastSetSafeFromPirates: number; // Only for trade ships
+  private _underConstruction: boolean = false;
+  private _lastOwner: PlayerImpl | null = null;
+  private _troops: number;
+  // Number of missiles in cooldown, if empty all missiles are ready.
+  private _missileTimerQueue: number[] = [];
+  private _hasTrainStation: boolean = false;
+  private _level: number = 1;
+  private _targetable: boolean = true;
+  private _loaded: boolean | undefined;
+  private _trainType: TrainType | undefined;
+  // Nuke only
+  private _deletionAt: number | null = null;
+  private _samLauncherState: SamLauncherState | undefined;
+
+  constructor(
+    private _type: UnitType,
+    private mg: GameImpl,
+    private _tile: TileRef,
+    private _id: number,
+    public _owner: PlayerImpl,
+    params: AllUnitParams = {},
+  ) {
+    this._lastTile = _tile;
+    this._health = toInt(this.mg.unitInfo(_type).maxHealth ?? 1);
+    this._targetTile =
+      "targetTile" in params ? (params.targetTile ?? undefined) : undefined;
+    this._targetPlayer =
+      "targetPlayer" in params ? (params.targetPlayer ?? undefined) : undefined;
+    if ("trajectory" in params || "waitTicks" in params) {
+      this._nukeState = {
+        trajectory: params.trajectory ?? [],
+        waitTicks: 0,
+        trajectoryIndex: 0,
+        targetedBySam: false,
+      };
+    }
+    this._troops = "troops" in params ? (params.troops ?? 0) : 0;
+    this._lastSetSafeFromPirates =
+      "lastSetSafeFromPirates" in params
+        ? (params.lastSetSafeFromPirates ?? 0)
+        : 0;
+    if (this._type === UnitType.TransportShip) {
+      this._transportShipState = { isRetreating: false, troops: 0 };
+    }
+    if (this._type === UnitType.SAMLauncher) {
+      this._samLauncherState = {
+        startRange: this.mg.config().samRange(1),
+        targetLevel: 1,
+        duration: this.mg.config().samUpgradeDuration(),
+      };
+    }
+    if ("patrolTile" in params) {
+      this._warshipState = {
+        state: "patrolling",
+        patrolTile: params.patrolTile,
+        lastCombatTick: -100,
+        veterancy: 0,
+        veterancyProgress: 0,
+      };
+    }
+    this._targetUnit =
+      "targetUnit" in params ? (params.targetUnit ?? undefined) : undefined;
+    this._loaded =
+      "loaded" in params ? (params.loaded ?? undefined) : undefined;
+    this._trainType = "trainType" in params ? params.trainType : undefined;
+
+    switch (this._type) {
+      case UnitType.Warship:
+      case UnitType.Port:
+      case UnitType.MissileSilo:
+      case UnitType.DefensePost:
+      case UnitType.SAMLauncher:
+      case UnitType.City:
+      case UnitType.Factory:
+        this.mg.stats().unitBuild(_owner, this._type);
+    }
+  }
+
+  setTargetable(targetable: boolean): void {
+    if (this._targetable !== targetable) {
+      this._targetable = targetable;
+      this.mg.addUpdate(this.toUpdate());
+    }
+  }
+
+  isTargetable(): boolean {
+    return this._targetable;
+  }
+
+  isUnit(): this is Unit {
+    return true;
+  }
+
+  touch(): void {
+    this.mg.addUpdate(this.toUpdate());
+  }
+  setTileTarget(tile: TileRef | undefined): void {
+    this._targetTile = tile;
+  }
+  tileTarget(): TileRef | undefined {
+    return this._targetTile;
+  }
+
+  id() {
+    return this._id;
+  }
+
+  toUpdate(): UnitUpdate {
+    const update: UnitUpdate = {
+      type: GameUpdateType.Unit,
+      unitType: this._type,
+      id: this._id,
+      troops: this._troops,
+      ownerID: this._owner.smallID(),
+      lastOwnerID: this._lastOwner?.smallID(),
+      isActive: this._active,
+      reachedTarget: this._reachedTarget,
+      warshipState:
+        this._warshipState !== undefined
+          ? { ...this.warshipState() }
+          : undefined,
+      transportShipState:
+        this._transportShipState !== undefined
+          ? this.transportShipState()
+          : undefined,
+      nukeState:
+        this._nukeState !== undefined ? { ...this._nukeState } : undefined,
+      samUpgrade:
+        this._samLauncherState?.upgradeStartTick !== undefined
+          ? { ...this._samLauncherState }
+          : undefined,
+      pos: this._tile,
+      markedForDeletion: this._deletionAt ?? false,
+      targetable: this._targetable,
+      lastPos: this._lastTile,
+      health: this.hasHealth() ? Number(this._health) : undefined,
+      underConstruction: this._underConstruction,
+      targetUnitId: this._targetUnit?.id() ?? undefined,
+      targetTile: this.targetTile() ?? undefined,
+      missileTimerQueue: this._missileTimerQueue,
+      level: this.level(),
+      hasTrainStation: this._hasTrainStation,
+      trainType: this._trainType,
+      loaded: this._loaded,
+    };
+    return update;
+  }
+
+  type(): UnitType {
+    return this._type;
+  }
+
+  lastTile(): TileRef {
+    return this._lastTile;
+  }
+
+  move(tile: TileRef): void {
+    if (tile === null) {
+      throw new Error("tile cannot be null");
+    }
+    this._lastTile = this._tile;
+    this._tile = tile;
+    this.mg.onUnitMoved(this);
+  }
+
+  setTroops(troops: number): void {
+    const nextTroops = Math.max(0, troops);
+    if (this._troops === nextTroops) {
+      return;
+    }
+    this._troops = nextTroops;
+    this.mg.addUpdate(this.toUpdate());
+  }
+  troops(): number {
+    return this._troops;
+  }
+  health(): number {
+    return Number(this._health);
+  }
+  hasHealth(): boolean {
+    return this.info().maxHealth !== undefined;
+  }
+  tile(): TileRef {
+    return this._tile;
+  }
+  owner(): PlayerImpl {
+    return this._owner;
+  }
+
+  info(): EngineUnitInfo {
+    return this.mg.unitInfo(this._type);
+  }
+
+  setOwner(newOwner: PlayerImpl): void {
+    this.clearPendingDeletion();
+    switch (this._type) {
+      case UnitType.Warship:
+      case UnitType.Port:
+      case UnitType.MissileSilo:
+      case UnitType.DefensePost:
+      case UnitType.SAMLauncher:
+      case UnitType.City:
+      case UnitType.Factory:
+        this.mg.stats().unitCapture(newOwner, this._type);
+        this.mg.stats().unitLose(this._owner, this._type);
+        break;
+      // Only a disconnected teammate's fleet reaches this case (see
+      // GameImpl.conquerPlayer), so it is a transfer inside a team, not a
+      // loss: the previous owner is credited nothing, not BOAT_INDEX_LOST.
+      //
+      // Trade ships are deliberately absent: TradeShipExecution records the
+      // capture when the ship reaches the captor's port, so counting it here
+      // would double every act of piracy.
+      case UnitType.TransportShip:
+        this.mg.stats().boatCapturedTroops(newOwner, this._owner);
+        break;
+    }
+    this._lastOwner = this._owner;
+    this._lastOwner._units = this._lastOwner._units.filter((u) => u !== this);
+    this._lastOwner._myUnitsVersion++;
+    this._owner = newOwner;
+    this._owner._units.push(this);
+    this._owner._myUnitsVersion++;
+    this.mg.bumpUnitsVersion();
+    this.mg.addUpdate(this.toUpdate());
+  }
+
+  maxHealth(): number {
+    const base = this.info().maxHealth ?? 1;
+    // veterancy() is 0 for non-warships, so this returns base for them.
+    return maxHealthWithVeterancy(
+      base,
+      this.veterancy(),
+      this.mg.config().warshipVeterancyHealthBonus(),
+    );
+  }
+
+  modifyHealth(delta: number, attacker?: Player): void {
+    const previousHealth = this._health;
+    const nextHealth = withinInt(
+      this._health + toInt(delta),
+      0n,
+      toInt(this.maxHealth()),
+    );
+
+    if (nextHealth === previousHealth) {
+      return;
+    }
+
+    if (
+      attacker !== undefined &&
+      delta < 0 &&
+      this._warshipState !== undefined
+    ) {
+      this._warshipState.lastCombatTick = this.mg.ticks();
+    }
+    this._health = nextHealth;
+    this.mg.addUpdate(this.toUpdate());
+    if (this._health === 0n) {
+      this.delete(true, attacker);
+    }
+  }
+
+  clearPendingDeletion(): void {
+    this._deletionAt = null;
+  }
+
+  isMarkedForDeletion(): boolean {
+    return this._deletionAt !== null;
+  }
+
+  markForDeletion(): void {
+    if (!this.isActive()) {
+      return;
+    }
+    this._deletionAt =
+      this.mg.ticks() + this.mg.config().deletionMarkDuration();
+    this.mg.addUpdate(this.toUpdate());
+  }
+
+  isOverdueDeletion(): boolean {
+    if (!this.isActive()) {
+      return false;
+    }
+    return this._deletionAt !== null && this.mg.ticks() - this._deletionAt > 0;
+  }
+
+  delete(displayMessage?: boolean, destroyer?: Player): void {
+    if (!this.isActive()) {
+      throw new Error(`cannot delete ${this} not active`);
+    }
+
+    // Record whether this unit was destroyed by an enemy (vs. arrived / retreated)
+    this._wasDestroyedByEnemy = destroyer !== undefined;
+    this._destroyer = destroyer ?? undefined;
+
+    this._owner._units = this._owner._units.filter((b) => b !== this);
+    this._owner._myUnitsVersion++;
+    this._active = false;
+    this.mg.addUpdate(this.toUpdate());
+    this.mg.removeUnit(this);
+
+    // `displayMessage === false` is how a caller retires a unit that was not
+    // destroyed: a boat that reached port or retreated, a shell that landed, a
+    // voluntary delete. Every other deletion is a destruction, which costs its
+    // owner the unit even when nobody is credited with the kill -- their own
+    // nuke, their elimination, health reaching zero with no attacker.
+    const wasDestroyed = displayMessage !== false;
+
+    if (wasDestroyed) {
+      this.displayMessageOnDeleted();
+      switch (this._type) {
+        case UnitType.TransportShip:
+        case UnitType.TradeShip:
+          this.mg.stats().boatLose(this._owner, this._type);
+          break;
+      }
+    }
+
+    if (destroyer !== undefined) {
+      switch (this._type) {
+        case UnitType.TransportShip:
+          this.mg
+            .stats()
+            .boatDestroyTroops(destroyer, this._owner, this._troops);
+          break;
+        case UnitType.TradeShip:
+          this.mg.stats().boatDestroyTrade(destroyer, this._owner);
+          break;
+        case UnitType.City:
+        case UnitType.DefensePost:
+        case UnitType.MissileSilo:
+        case UnitType.Port:
+        case UnitType.SAMLauncher:
+        case UnitType.Warship:
+        case UnitType.Factory:
+          this.mg.stats().unitDestroy(destroyer, this._type);
+          this.mg.stats().unitLose(this.owner(), this._type);
+          break;
+      }
+    }
+  }
+
+  private displayMessageOnDeleted(): void {
+    // Only warships and transport ships are worth notifying about; everything
+    // else is either visible on the map or too low-stakes to surface.
+    if (
+      this._type !== UnitType.Warship &&
+      this._type !== UnitType.TransportShip
+    ) {
+      return;
+    }
+
+    this.mg.displayMessage(
+      "events_display.unit_destroyed",
+      MessageType.UNIT_DESTROYED,
+      this.owner().id(),
+      undefined,
+      {
+        unit:
+          this._type === UnitType.TransportShip
+            ? "unit_type.boat"
+            : "unit_type.warship",
+      },
+      this.id(),
+    );
+  }
+
+  isActive(): boolean {
+    return this._active;
+  }
+
+  wasDestroyedByEnemy(): boolean {
+    return this._wasDestroyedByEnemy;
+  }
+
+  destroyer(): Player | undefined {
+    return this._destroyer;
+  }
+
+  warshipState(): WarshipState {
+    if (this._warshipState === undefined) {
+      throw new Error("warshipState called on non-warship unit");
+    }
+    this._warshipState.isInCombat = this.isInCombat();
+    return this._warshipState;
+  }
+
+  updateWarshipState(update: Partial<WarshipState>): void {
+    if (this._warshipState === undefined) {
+      throw new Error("updateWarshipState called on non-warship unit");
+    }
+    if (update.isInCombat) {
+      this.markInCombat();
+    }
+    const merged = { ...this._warshipState, ...update };
+    if (
+      merged.state === this._warshipState.state &&
+      merged.patrolTile === this._warshipState.patrolTile &&
+      merged.retreatPort === this._warshipState.retreatPort
+    )
+      return;
+    this._warshipState = {
+      state: merged.state,
+      patrolTile: merged.patrolTile,
+      retreatPort: merged.retreatPort,
+      lastCombatTick: this._warshipState.lastCombatTick,
+      veterancy: this._warshipState.veterancy,
+      veterancyProgress: this._warshipState.veterancyProgress,
+    };
+    this.mg.addUpdate(this.toUpdate());
+  }
+
+  isInCombat(): boolean {
+    return this.mg.ticks() - this._warshipState!.lastCombatTick <= 3;
+  }
+
+  private markInCombat(): void {
+    const wasInCombat = this.isInCombat();
+    this._warshipState!.lastCombatTick = this.mg.ticks();
+    if (!wasInCombat) {
+      this.mg.addUpdate(this.toUpdate());
+    }
+  }
+
+  transportShipState(): TransportShipState {
+    if (this._transportShipState === undefined) {
+      throw new Error("transportShipState called on non-transport-ship unit");
+    }
+    return {
+      isRetreating: this._transportShipState.isRetreating,
+      troops: this._troops,
+    };
+  }
+
+  updateTransportShipState(update: Partial<TransportShipState>): void {
+    if (this._transportShipState === undefined) {
+      throw new Error(
+        "updateTransportShipState called on non-transport-ship unit",
+      );
+    }
+    let changed = false;
+    if (
+      update.isRetreating !== undefined &&
+      this._transportShipState.isRetreating !== update.isRetreating
+    ) {
+      this._transportShipState = {
+        ...this._transportShipState,
+        isRetreating: update.isRetreating,
+      };
+      changed = true;
+    }
+    if (changed) {
+      this.mg.addUpdate(this.toUpdate());
+    }
+  }
+
+  nukeState(): NukeState {
+    if (this._nukeState === undefined) {
+      throw new Error("nukeState called on non-nuke unit");
+    }
+    return this._nukeState;
+  }
+
+  updateNukeState(update: Partial<NukeState>): void {
+    if (this._nukeState === undefined) {
+      throw new Error("updateNukeState called on non-nuke unit");
+    }
+    const merged = { ...this._nukeState, ...update };
+    if (
+      merged.targetedBySam === this._nukeState.targetedBySam &&
+      merged.trajectoryIndex === this._nukeState.trajectoryIndex &&
+      merged.waitTicks === this._nukeState.waitTicks
+    )
+      return;
+    this._nukeState = {
+      targetedBySam: merged.targetedBySam,
+      trajectoryIndex: merged.trajectoryIndex,
+      waitTicks: merged.waitTicks,
+      trajectory: this._nukeState.trajectory,
+    };
+    this.mg.addUpdate(this.toUpdate());
+  }
+
+  isUnderConstruction(): boolean {
+    return this._underConstruction;
+  }
+
+  setUnderConstruction(underConstruction: boolean): void {
+    if (this._underConstruction !== underConstruction) {
+      this._underConstruction = underConstruction;
+      this._owner._myUnitsVersion++; // unitsOwned() weighs under-construction units differently
+      this.mg.addUpdate(this.toUpdate());
+    }
+  }
+
+  hash(): number {
+    return this.tile() + simpleHash(this.type()) * this._id;
+  }
+
+  toString(): string {
+    return `Unit:${this._type},owner:${this.owner().name()}`;
+  }
+
+  launch(): void {
+    this._missileTimerQueue.push(this.mg.ticks());
+    this.mg.addUpdate(this.toUpdate());
+  }
+
+  ticksLeftInCooldown(): Tick | undefined {
+    return this._missileTimerQueue[0];
+  }
+
+  isInCooldown(): boolean {
+    return this._missileTimerQueue.length === this._level;
+  }
+
+  missileTimerQueue(): number[] {
+    return this._missileTimerQueue;
+  }
+
+  samLauncherState(): SamLauncherState | undefined {
+    return this._samLauncherState;
+  }
+
+  reloadMissile(): void {
+    this._missileTimerQueue.shift();
+    this.mg.addUpdate(this.toUpdate());
+  }
+
+  setTargetTile(targetTile: TileRef | undefined) {
+    this._targetTile = targetTile;
+  }
+
+  targetTile(): TileRef | undefined {
+    return this._targetTile;
+  }
+
+  targetPlayer(): Player | TerraNullius | undefined {
+    return this._targetPlayer;
+  }
+
+  setTrajectoryIndex(i: number): void {
+    if (this._nukeState === undefined) {
+      throw new Error("setTrajectoryIndex called on non-nuke unit");
+    }
+    const max = this.trajectory().length - 1;
+    this._nukeState.trajectoryIndex = i < 0 ? 0 : i > max ? max : i;
+  }
+
+  trajectoryIndex(): number {
+    return this._nukeState?.trajectoryIndex ?? 0;
+  }
+
+  trajectory(): TrajectoryTile[] {
+    return this._nukeState?.trajectory ?? [];
+  }
+
+  setTargetUnit(target: Unit | undefined): void {
+    this._targetUnit = target;
+  }
+
+  targetUnit(): Unit | undefined {
+    return this._targetUnit;
+  }
+
+  setTargetedBySAM(targeted: boolean): void {
+    this._nukeState!.targetedBySam = targeted;
+  }
+
+  targetedBySAM(): boolean {
+    return this._nukeState!.targetedBySam;
+  }
+
+  setReachedTarget(): void {
+    this._reachedTarget = true;
+  }
+
+  reachedTarget(): boolean {
+    return this._reachedTarget;
+  }
+
+  setSafeFromPirates(): void {
+    this._lastSetSafeFromPirates = this.mg.ticks();
+  }
+
+  isSafeFromPirates(): boolean {
+    return (
+      this.mg.ticks() - this._lastSetSafeFromPirates <
+      this.mg.config().safeFromPiratesCooldownMax()
+    );
+  }
+
+  level(): number {
+    return this._level;
+  }
+
+  veterancy(): number {
+    return this._warshipState?.veterancy ?? 0;
+  }
+
+  /** Raise veterancy by one level (capped), which raises max health. The ship
+   *  is NOT instantly healed — it heals toward the higher cap normally.
+   *  No-op for non-warships or at the cap. */
+  private increaseVeterancy(): void {
+    if (this._warshipState === undefined) {
+      return;
+    }
+    if (
+      this._warshipState.veterancy >= this.mg.config().warshipMaxVeterancy()
+    ) {
+      return;
+    }
+    this._warshipState.veterancy++;
+    this.mg.addUpdate(this.toUpdate());
+  }
+
+  recordKill(targetType: UnitType): void {
+    if (this._warshipState === undefined) {
+      return;
+    }
+    if (targetType === UnitType.Warship) {
+      // Final blow on an enemy warship: instant level, and the partial
+      // transport/capture progress toward the next level is wiped.
+      this._warshipState.veterancyProgress = 0;
+      this.increaseVeterancy();
+    } else if (targetType === UnitType.TransportShip) {
+      this.addVeterancyProgress(UnitType.TransportShip);
+    }
+  }
+
+  recordTradeCapture(): void {
+    if (this._warshipState === undefined) {
+      return;
+    }
+    this.addVeterancyProgress(UnitType.TradeShip);
+  }
+
+  /**
+   * Add partial progress toward the next veterancy level from a non-kill source.
+   *
+   * Transports and captures share one integer progress meter. One level =
+   * transportThreshold * captureThreshold points; a transport is worth
+   * `captureThreshold` points and a capture is worth `transportThreshold`
+   * points. That makes `transportThreshold` transports OR `captureThreshold`
+   * captures (or any mix) fill exactly one level — all integer math, no floats.
+   * Overflow carries into the next level (only a warship kill resets it).
+   */
+  private addVeterancyProgress(source: UnitType): void {
+    if (this._warshipState === undefined) {
+      return;
+    }
+    const maxVeterancy = this.mg.config().warshipMaxVeterancy();
+    if (this._warshipState.veterancy >= maxVeterancy) {
+      return;
+    }
+    const transportThreshold = this.mg
+      .config()
+      .warshipVeterancyTransportKills();
+    const captureThreshold = this.mg.config().warshipVeterancyTradeCaptures();
+    const pointsPerLevel = transportThreshold * captureThreshold;
+    this._warshipState.veterancyProgress +=
+      source === UnitType.TransportShip ? captureThreshold : transportThreshold;
+    while (
+      this._warshipState.veterancyProgress >= pointsPerLevel &&
+      this._warshipState.veterancy < maxVeterancy
+    ) {
+      this._warshipState.veterancyProgress -= pointsPerLevel;
+      this.increaseVeterancy();
+    }
+    if (this._warshipState.veterancy >= maxVeterancy) {
+      this._warshipState.veterancyProgress = 0;
+    }
+  }
+
+  setTrainStation(trainStation: boolean): void {
+    this._hasTrainStation = trainStation;
+    this.mg.addUpdate(this.toUpdate());
+  }
+
+  hasTrainStation(): boolean {
+    return this._hasTrainStation;
+  }
+
+  increaseLevel(): void {
+    if (this._type === UnitType.SAMLauncher) {
+      const currentTick = this.mg.ticks();
+      const currentRange = this.mg.config().dynamicSamRange(this, currentTick);
+      this._samLauncherState = {
+        upgradeStartTick: currentTick,
+        startRange: currentRange,
+        targetLevel: this._level + 1,
+        duration: this.mg.config().samUpgradeDuration(),
+      };
+    }
+    this._level++;
+    // unitCount()/unitsOwned() are level-weighted and memoised on these versions
+    this.mg.bumpUnitsVersion();
+    this._owner._myUnitsVersion++;
+    if ([UnitType.MissileSilo, UnitType.SAMLauncher].includes(this.type())) {
+      this._missileTimerQueue.push(this.mg.ticks());
+    }
+    this.mg.addUpdate(this.toUpdate());
+  }
+
+  decreaseLevel(destroyer?: Player): void {
+    this._level--;
+    if ([UnitType.MissileSilo, UnitType.SAMLauncher].includes(this.type())) {
+      this._missileTimerQueue.pop();
+    }
+    if (this._type === UnitType.SAMLauncher) {
+      this._samLauncherState = undefined;
+    }
+    if (this._level <= 0) {
+      this.delete(true, destroyer);
+      return;
+    }
+    // unitCount()/unitsOwned() are level-weighted and memoised on these versions
+    this.mg.bumpUnitsVersion();
+    this._owner._myUnitsVersion++;
+    this.mg.addUpdate(this.toUpdate());
+  }
+
+  trainType(): TrainType | undefined {
+    return this._trainType;
+  }
+
+  isLoaded(): boolean | undefined {
+    return this._loaded;
+  }
+
+  setLoaded(loaded: boolean): void {
+    if (this._loaded !== loaded) {
+      this._loaded = loaded;
+      this.mg.addUpdate(this.toUpdate());
+    }
+  }
+
+  snapshot(w: SnapshotWriter): UnitState {
+    const nuke = this._nukeState;
+    return {
+      id: this._id,
+      type: this._type,
+      owner: w.player(this._owner),
+      tile: this._tile,
+      lastTile: this._lastTile,
+      active: this._active,
+      targetTile: this._targetTile ?? null,
+      targetPlayer:
+        this._targetPlayer !== undefined ? w.owner(this._targetPlayer) : null,
+      targetUnit: w.unitOrNull(this._targetUnit),
+      health: this._health,
+      // Nested states are written field by field, in schema order: the live
+      // objects' key order varies with how they were built, a restore's
+      // does not, and key order is part of the bytes.
+      transportShipState: this._transportShipState
+        ? {
+            isRetreating: this._transportShipState.isRetreating,
+            troops: this._transportShipState.troops,
+          }
+        : null,
+      warshipState: this._warshipState
+        ? {
+            state: this._warshipState.state,
+            patrolTile: this._warshipState.patrolTile,
+            retreatPort: this._warshipState.retreatPort,
+            isInCombat: this._warshipState.isInCombat,
+            lastCombatTick: this._warshipState.lastCombatTick,
+            veterancy: this._warshipState.veterancy,
+            veterancyProgress: this._warshipState.veterancyProgress,
+          }
+        : null,
+      nukeState: nuke
+        ? {
+            trajectoryTiles: Uint32Array.from(nuke.trajectory, (t) => t.tile),
+            trajectoryTargetable: Uint8Array.from(nuke.trajectory, (t) =>
+              t.targetable ? 1 : 0,
+            ),
+            trajectoryIndex: nuke.trajectoryIndex,
+            targetedBySam: nuke.targetedBySam,
+            waitTicks: nuke.waitTicks,
+          }
+        : null,
+      reachedTarget: this._reachedTarget,
+      wasDestroyedByEnemy: this._wasDestroyedByEnemy,
+      destroyer: w.playerOrNull(this._destroyer),
+      lastSetSafeFromPirates: this._lastSetSafeFromPirates,
+      underConstruction: this._underConstruction,
+      lastOwner: w.playerOrNull(this._lastOwner),
+      troops: this._troops,
+      missileTimerQueue: [...this._missileTimerQueue],
+      hasTrainStation: this._hasTrainStation,
+      level: this._level,
+      targetable: this._targetable,
+      loaded: this._loaded ?? null,
+      trainType: this._trainType ?? null,
+      deletionAt: this._deletionAt,
+      samLauncherState: this._samLauncherState
+        ? {
+            upgradeStartTick: this._samLauncherState.upgradeStartTick,
+            startRange: this._samLauncherState.startRange,
+            targetLevel: this._samLauncherState.targetLevel,
+            duration: this._samLauncherState.duration,
+          }
+        : null,
+    };
+  }
+
+  /** Fills a prototype-only shell; see RestorableExecution.restoreSnapshot. */
+  restoreSnapshot(s: UnitState, r: SnapshotReader): void {
+    this.mg = r.game;
+    this._id = s.id;
+    this._type = s.type;
+    this._owner = r.player(s.owner) as PlayerImpl;
+    this._tile = s.tile;
+    this._lastTile = s.lastTile;
+    this._active = s.active;
+    this._targetTile = s.targetTile ?? undefined;
+    this._targetPlayer =
+      s.targetPlayer !== null ? r.owner(s.targetPlayer) : undefined;
+    this._targetUnit = r.unitOrNull(s.targetUnit) ?? undefined;
+    this._health = s.health;
+    this._transportShipState = s.transportShipState
+      ? { ...s.transportShipState }
+      : undefined;
+    this._warshipState = s.warshipState ? { ...s.warshipState } : undefined;
+    const nuke = s.nukeState;
+    this._nukeState = nuke
+      ? {
+          trajectory: Array.from(nuke.trajectoryTiles, (tile, i) => ({
+            tile,
+            targetable: nuke.trajectoryTargetable[i] === 1,
+          })),
+          trajectoryIndex: nuke.trajectoryIndex,
+          targetedBySam: nuke.targetedBySam,
+          waitTicks: nuke.waitTicks,
+        }
+      : undefined;
+    this._reachedTarget = s.reachedTarget;
+    this._wasDestroyedByEnemy = s.wasDestroyedByEnemy;
+    this._destroyer = r.playerOrNull(s.destroyer) ?? undefined;
+    this._lastSetSafeFromPirates = s.lastSetSafeFromPirates;
+    this._underConstruction = s.underConstruction;
+    this._lastOwner = r.playerOrNull(s.lastOwner) as PlayerImpl | null;
+    this._troops = s.troops;
+    this._missileTimerQueue = [...s.missileTimerQueue];
+    this._hasTrainStation = s.hasTrainStation;
+    this._level = s.level;
+    this._targetable = s.targetable;
+    this._loaded = s.loaded ?? undefined;
+    this._trainType = s.trainType ?? undefined;
+    this._deletionAt = s.deletionAt;
+    this._samLauncherState = s.samLauncherState
+      ? { ...s.samLauncherState }
+      : undefined;
+  }
+}
+
+export const UnitSnapshot = snapshotType({
+  name: "Unit",
+  version: 1,
+  schema: z.object({
+    id: zInt(),
+    type: UnitTypeSchema,
+    owner: zPlayerRef(),
+    tile: zTile(),
+    lastTile: zTile(),
+    active: z.boolean(),
+    targetTile: zTile().nullable(),
+    targetPlayer: zPlayerRef().nullable(),
+    targetUnit: zRef().nullable(),
+    health: z.bigint(),
+    transportShipState: z
+      .object({ isRetreating: z.boolean(), troops: zNum() })
+      .nullable(),
+    warshipState: z
+      .object({
+        state: z.enum(["patrolling", "retreating", "docked"]),
+        patrolTile: zTile().optional(),
+        retreatPort: zTile().optional(),
+        isInCombat: z.boolean().optional(),
+        lastCombatTick: zInt(),
+        veterancy: zInt(),
+        veterancyProgress: zInt(),
+      })
+      .nullable(),
+    nukeState: z
+      .object({
+        trajectoryTiles: zTiles(),
+        trajectoryTargetable: zBytes(),
+        trajectoryIndex: zInt(),
+        targetedBySam: z.boolean(),
+        waitTicks: zInt(),
+      })
+      .nullable(),
+    reachedTarget: z.boolean(),
+    wasDestroyedByEnemy: z.boolean(),
+    destroyer: zPlayerRef().nullable(),
+    lastSetSafeFromPirates: zInt(),
+    underConstruction: z.boolean(),
+    lastOwner: zPlayerRef().nullable(),
+    troops: zNum(),
+    missileTimerQueue: z.array(zInt()),
+    hasTrainStation: z.boolean(),
+    level: zInt(),
+    targetable: z.boolean(),
+    loaded: z.boolean().nullable(),
+    trainType: z.enum(TrainType).nullable(),
+    deletionAt: zInt().nullable(),
+    samLauncherState: z
+      .object({
+        upgradeStartTick: zInt().optional(),
+        startRange: zNum(),
+        targetLevel: zInt(),
+        duration: zInt(),
+      })
+      .nullable(),
+  }),
+});
+export type UnitState = z.infer<typeof UnitSnapshot.schema>;
