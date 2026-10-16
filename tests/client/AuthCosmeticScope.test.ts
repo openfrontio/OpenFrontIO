@@ -8,8 +8,8 @@ import {
   userAuth,
 } from "../../src/client/Auth";
 import { ClientEnv } from "../../src/client/ClientEnv";
-import { uuidToBase64url } from "../../src/core/Base64";
-import { UserSettings } from "../../src/core/game/UserSettings";
+import { uuidToBase64url } from "@openfront/shared/Base64";
+import { UserSettings } from "../../src/client/UserSettings";
 
 // The real Auth module, for the same reason AuthSessionActive.test.ts uses it:
 // the cosmetic scope is derived from the JWT held in Auth's own state, so a
