@@ -488,6 +488,16 @@ describe("MIRVExecution", () => {
     expect(warheads1).toEqual(warheads2);
   });
 
+  test("Uninitialized MirvExecution Snapshot Round-Trip", async () => {
+    const targetTile = game.ref(50, 50);
+    const mirvExec = new MirvExecution(player, targetTile);
+    game.addExecution(mirvExec);
+
+    // Snapshot before executeNextTick() runs MirvExecution.init()
+    const { expectSnapshotRoundTrip } = await import("../../util/Snapshot");
+    await expectSnapshotRoundTrip(game, "big_plains", 5);
+  });
+
   // Scenario 5: Territory Capture Replenishment
   test("Territory Capture Replenishment", async () => {
     // Increase territory to allow for multiple warhead targets

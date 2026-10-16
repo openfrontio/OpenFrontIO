@@ -18,7 +18,11 @@ import {
   SpawnPhaseEndUpdate,
   UnitUpdate,
 } from "@openfront/engine-api/game/GameUpdates";
-import { GameLike, UnitPredicate } from "@openfront/engine-api/game/ReadViews";
+import {
+  GameLike,
+  ReadonlyTileSet,
+  UnitPredicate,
+} from "@openfront/engine-api/game/ReadViews";
 import { ClientID, GameID } from "@openfront/engine-api/Schemas";
 import { Config } from "@openfront/engine-lib/configuration/Config";
 import { unpackMotionPlans } from "@openfront/engine-lib/game/MotionPlans";
@@ -112,6 +116,7 @@ export class GameView implements GameLike {
   private _firstPopulate = true;
 
   private _myPlayer: PlayerView | null = null;
+  private _wasInSpawnPhase = true;
 
   // ── populateFrame dirty flags ──────────────────────────────────────────
   // The derived structures below only depend on rarely-changing player
@@ -185,6 +190,7 @@ export class GameView implements GameLike {
     this._frame = {
       tick: 0,
       inSpawnPhase: true,
+      namesSnap: false,
       tileState: this._map.tileStateBuffer(),
       trailState: this.trailManager.getTrailState(),
       spiralRibbons: this.spiralTrails.getRibbons(),
@@ -544,8 +550,11 @@ export class GameView implements GameLike {
     const f = this._frame as {
       -readonly [K in keyof FrameData]: FrameData[K];
     };
+    const inSpawnPhase = this.startTick === null;
+    f.namesSnap = this._wasInSpawnPhase && !inSpawnPhase;
+    this._wasInSpawnPhase = inSpawnPhase;
     f.tick = gu.tick;
-    f.inSpawnPhase = this.startTick === null;
+    f.inSpawnPhase = inSpawnPhase;
     f.railroadDirty = this.railroadCache.railroadDirty;
     f.trailDirtyRowMin = this.trailManager.dirtyRowMin;
     f.trailDirtyRowMax = this.trailManager.dirtyRowMax;
@@ -1119,10 +1128,17 @@ export class GameView implements GameLike {
   ): Set<TileRef> {
     return this._map.circleSearch(tile, radius, filter);
   }
+  bfsSearch(
+    tile: TileRef,
+    filter: (gm: GameMap, tile: TileRef) => boolean,
+    onVisit?: (tile: TileRef) => boolean | void,
+  ): boolean {
+    return this._map.bfsSearch(tile, filter, onVisit);
+  }
   bfs(
     tile: TileRef,
     filter: (gm: GameMap, tile: TileRef) => boolean,
-  ): Set<TileRef> {
+  ): ReadonlyTileSet {
     return this._map.bfs(tile, filter);
   }
   tileState(tile: TileRef): number {
