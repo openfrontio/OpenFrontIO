@@ -593,6 +593,9 @@ export class PlayerProfileModal extends BaseModal {
   private adoptRecentGames(history: PlayerGameHistoryCache): void {
     if (history.publicId !== this.publicId) return;
     if (history.typeFilter !== "all" || history.modeFilter !== "all") return;
+    // Its first page only, as when the card reads it itself: loading older
+    // games further down never changes the tag.
+    if (this.recentGames.length > 0) return;
     this.recentGames = history.games;
   }
 

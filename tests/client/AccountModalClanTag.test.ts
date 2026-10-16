@@ -84,7 +84,7 @@ type ModalShell = HTMLElement & { updateComplete: Promise<boolean> };
 type CardEl = HTMLElement & { clanTag: string | null };
 
 // Sample data: "Wonder", in AUS, LUX and NU.
-function userMe(): UserMeResponse {
+function userMe(publicId = "wonder01"): UserMeResponse {
   const clan = (tag: string) => ({
     tag,
     name: `${tag} clan`,
@@ -95,7 +95,7 @@ function userMe(): UserMeResponse {
   return {
     user: { discord: { id: "1", username: "wonder" } },
     player: {
-      publicId: "wonder01",
+      publicId,
       username: "Wonder",
       adfree: false,
       unlimitedRanked: false,
@@ -236,5 +236,83 @@ describe("account profile card clan tag", () => {
     modal.open();
     await settle(() => expect(card()?.clanTag).toBe("LUX"));
     expect(fetchPublicPlayerGamesMock).toHaveBeenCalledTimes(2);
+  });
+
+  const historyView = () =>
+    modal.querySelector<HTMLElement>("player-game-history-view");
+
+  it("a read still pending for the previous account doesn't hold up the next one", async () => {
+    let answerA: (res: PublicPlayerGamesResponse) => void = () => {};
+    fetchPublicPlayerGamesMock.mockReturnValueOnce(
+      new Promise<PublicPlayerGamesResponse>((r) => (answerA = r)),
+    );
+    modal.open();
+    await settle(() =>
+      expect(fetchPublicPlayerGamesMock).toHaveBeenCalledWith("wonder01", {}),
+    );
+    // Another account signs in while the first account's read is in flight.
+    getUserMeMock.mockResolvedValue(userMe("nova02"));
+    document.dispatchEvent(
+      new CustomEvent("userMeResponse", { detail: userMe("nova02") }),
+    );
+    fetchPublicPlayerGamesMock.mockResolvedValue(page("LUX"));
+    modal.close();
+    modal.open();
+    await settle(() =>
+      expect(fetchPublicPlayerGamesMock).toHaveBeenCalledWith("nova02", {}),
+    );
+    answerA(page("AUS"));
+    await settle(() => expect(card()?.clanTag).toBe("LUX"));
+  });
+
+  it("older games loaded further down the Games tab don't change the tag", async () => {
+    fetchPublicPlayerGamesMock.mockResolvedValue(page(null));
+    modal.open();
+    await settle(() =>
+      expect(fetchPublicPlayerGamesMock).toHaveBeenCalledTimes(1),
+    );
+    await settle(() => expect(card()).not.toBeNull());
+    modal.setActiveTab("games");
+    await settle(() => expect(historyView()).not.toBeNull());
+    // The tab appends an older page with a LUX game.
+    historyView()!.dispatchEvent(
+      new CustomEvent("history-updated", {
+        detail: {
+          publicId: "wonder01",
+          typeFilter: "all",
+          modeFilter: "all",
+          games: [...page(null).results, ...page("LUX").results],
+          nextCursor: null,
+        },
+      }),
+    );
+    modal.setActiveTab("account");
+    await settle(() => expect(card()).not.toBeNull());
+    expect(card()!.clanTag).toBeNull();
+  });
+
+  it("a newer first page read later also refreshes the Games tab", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date("2026-10-16T12:00:00.000Z"));
+    fetchPublicPlayerGamesMock.mockResolvedValue(page("AUS"));
+    modal.open();
+    await settle(() => expect(card()?.clanTag).toBe("AUS"));
+    modal.close();
+    vi.setSystemTime(new Date("2026-10-16T12:02:00.000Z"));
+    const newer = page("LUX");
+    newer.results[0] = { ...newer.results[0], gameId: "g-new", map: "Africa" };
+    fetchPublicPlayerGamesMock.mockResolvedValue(newer);
+    modal.open();
+    await settle(() => expect(card()?.clanTag).toBe("LUX"));
+    modal.setActiveTab("games");
+    // The tab (stubbed here) is handed the newer page, not the old one.
+    await settle(() => {
+      const cached = (
+        historyView() as unknown as {
+          cachedState?: { games: { map: string }[] } | null;
+        } | null
+      )?.cachedState;
+      expect(cached?.games.map((g) => g.map)).toEqual(["Africa"]);
+    });
   });
 });

@@ -237,4 +237,48 @@ describe("player profile card clan tag", () => {
     modal.setActiveTab("stats");
     await settle(() => expect(card()?.clanTag).toBe("LUX"));
   });
+
+  it("older games loaded further down the Games tab don't change the tag", async () => {
+    fetchPublicPlayerGamesMock.mockResolvedValue(page(null));
+    modal.open({ publicID: "wonder01" });
+    await settle(() =>
+      expect(fetchPublicPlayerGamesMock).toHaveBeenCalledTimes(1),
+    );
+    await settle(() => expect(card()).not.toBeNull());
+    modal.setActiveTab("games");
+    await settle(() =>
+      expect(modal.querySelector("player-game-history-view")).not.toBeNull(),
+    );
+    modal.querySelector("player-game-history-view")!.dispatchEvent(
+      new CustomEvent("history-updated", {
+        detail: {
+          publicId: "wonder01",
+          typeFilter: "all",
+          modeFilter: "all",
+          games: [...page(null).results, ...page("LUX").results],
+          nextCursor: null,
+        },
+      }),
+    );
+    modal.setActiveTab("stats");
+    await settle(() => expect(card()).not.toBeNull());
+    expect(card()!.clanTag).toBeNull();
+  });
+
+  it("the Games tab shows the newer first page read on a reopening", async () => {
+    fetchPublicPlayerGamesMock.mockResolvedValue(page(null, "LUX"));
+    modal.open({ publicID: "wonder01", tab: "games" });
+    const view = () => modal.querySelector("player-game-history-view");
+    await settle(() => expect(view()?.textContent).toContain("World"));
+    modal.close();
+    const newer = page("NU");
+    newer.results[0] = { ...newer.results[0], gameId: "g-new", map: "Africa" };
+    fetchPublicPlayerGamesMock.mockResolvedValue(newer);
+    // Still on the Games tab, mounted for the same player: the card reads the
+    // games itself, and the tab takes the newer page from it.
+    modal.open({ publicID: "wonder01" });
+    await settle(() => expect(view()?.textContent).toContain("Africa"));
+    modal.setActiveTab("stats");
+    await settle(() => expect(card()?.clanTag).toBe("NU"));
+  });
 });

@@ -149,7 +149,8 @@ export class AccountModal extends BaseModal {
   // RECENT_GAMES_MAX_AGE_MS old, so a tag played under since shows up.
   private recentGames: PublicPlayerGame[] | null = null;
   private recentGamesAt = 0;
-  private recentGamesLoading = false;
+  // The player whose games read is in flight, if any.
+  private recentGamesLoadingFor: string | null = null;
 
   constructor() {
     super();
@@ -494,8 +495,14 @@ export class AccountModal extends BaseModal {
           : null}
         @history-updated=${(e: CustomEvent<PlayerGameHistoryCache>) => {
           this.gameHistoryCache = e.detail;
-          // The unfiltered list is newest first, so the card can read it too.
-          if (e.detail.typeFilter === "all" && e.detail.modeFilter === "all") {
+          // The unfiltered list is newest first, so the card can read it too:
+          // its first page only, as when the card reads it itself, so loading
+          // older games further down never changes the tag.
+          if (
+            e.detail.typeFilter === "all" &&
+            e.detail.modeFilter === "all" &&
+            !this.hasFreshRecentGames()
+          ) {
             this.recentGames = e.detail.games;
             this.recentGamesAt = Date.now();
           }
@@ -1265,22 +1272,32 @@ export class AccountModal extends BaseModal {
   // The newest games, for the card's clan tag. One request per opening at
   // most, and none while the last read is fresh. The same unfiltered first
   // page the Games tab opens on, so that tab is handed it too.
-  private loadRecentGames(publicId: string): void {
-    if (
+  private hasFreshRecentGames(): boolean {
+    return (
       this.recentGames !== null &&
       Date.now() - this.recentGamesAt < RECENT_GAMES_MAX_AGE_MS
-    ) {
-      return;
-    }
-    if (this.recentGamesLoading) return;
-    this.recentGamesLoading = true;
+    );
+  }
+
+  private loadRecentGames(publicId: string): void {
+    if (this.hasFreshRecentGames()) return;
+    if (this.recentGamesLoadingFor === publicId) return;
+    this.recentGamesLoadingFor = publicId;
     void fetchPublicPlayerGames(publicId, {}).then((res) => {
-      this.recentGamesLoading = false;
+      if (this.recentGamesLoadingFor === publicId) {
+        this.recentGamesLoadingFor = null;
+      }
       if ("error" in res) return;
       if (this.userMeResponse?.player?.publicId !== publicId) return;
       this.recentGames = res.results;
       this.recentGamesAt = Date.now();
-      if (this.gameHistoryCache?.publicId !== publicId) {
+      // A newer first page replaces an unfiltered list the Games tab showed,
+      // so the tab and the card agree.
+      const cache = this.gameHistoryCache;
+      if (
+        cache?.publicId !== publicId ||
+        (cache.typeFilter === "all" && cache.modeFilter === "all")
+      ) {
         this.gameHistoryCache = {
           publicId,
           typeFilter: "all",
