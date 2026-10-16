@@ -378,7 +378,11 @@ describe("JoinLobbyModal Steam invite button", () => {
       gameMode: GameMode.Team,
     });
 
-    expect(renderHeader(modal).querySelector("copy-button")).not.toBeNull();
+    const copy = renderHeader(modal).querySelector("copy-button") as
+      | (HTMLElement & { lobbyId?: string })
+      | null;
+
+    expect(copy?.lobbyId).toBe("ABCD1234");
   });
 
   it("hides the copy button in a public FFA lobby", () => {
