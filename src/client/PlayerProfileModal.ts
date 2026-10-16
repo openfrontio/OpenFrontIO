@@ -65,9 +65,11 @@ export class PlayerProfileModal extends BaseModal {
             class="text-white text-xl lg:text-2xl font-bold tracking-wide break-words hyphens-auto min-w-0 inline-flex items-center gap-2"
           >
             ${usernameText(this.username)}
-            ${isVerifiedUsername(this.username)
-              ? verifiedBadge("w-5 h-5")
-              : nothing}
+            ${
+              isVerifiedUsername(this.username)
+                ? verifiedBadge("w-5 h-5")
+                : nothing
+            }
           </span>`
         : undefined,
       onBack: () => this.back(),
@@ -191,9 +193,11 @@ export class PlayerProfileModal extends BaseModal {
     return html`
       <player-game-history-view
         .publicId=${publicId}
-        .cachedState=${this.gameHistoryCache?.publicId === publicId
-          ? this.gameHistoryCache
-          : null}
+        .cachedState=${
+          this.gameHistoryCache?.publicId === publicId
+            ? this.gameHistoryCache
+            : null
+        }
         @history-updated=${(e: CustomEvent<PlayerGameHistoryCache>) => {
           this.gameHistoryCache = e.detail;
         }}
@@ -354,9 +358,9 @@ export class PlayerProfileModal extends BaseModal {
     this.close();
     if (openedFrom === "clan") {
       document
-        .querySelector<
-          HTMLElement & { returnFromPlayerProfile(): void }
-        >("clan-modal")
+        .querySelector<HTMLElement & { returnFromPlayerProfile(): void }>(
+          "clan-modal",
+        )
         ?.returnFromPlayerProfile();
     } else if (openedFrom === "leaderboard") {
       document
@@ -364,9 +368,9 @@ export class PlayerProfileModal extends BaseModal {
         ?.open();
     } else if (openedFrom === "account") {
       document
-        .querySelector<
-          HTMLElement & { returnToFriends(): void }
-        >("account-modal")
+        .querySelector<HTMLElement & { returnToFriends(): void }>(
+          "account-modal",
+        )
         ?.returnToFriends();
     }
   }

@@ -80,15 +80,15 @@ export class GameStatsModal extends BaseModal {
         ?.returnToGames();
     } else if (openedFrom === "profile") {
       document
-        .querySelector<
-          HTMLElement & { returnToGames(): void }
-        >("player-profile-modal")
+        .querySelector<HTMLElement & { returnToGames(): void }>(
+          "player-profile-modal",
+        )
         ?.returnToGames();
     } else if (openedFrom === "clan") {
       document
-        .querySelector<
-          HTMLElement & { returnToGameHistory(): void }
-        >("clan-modal")
+        .querySelector<HTMLElement & { returnToGameHistory(): void }>(
+          "clan-modal",
+        )
         ?.returnToGameHistory();
     }
   }
