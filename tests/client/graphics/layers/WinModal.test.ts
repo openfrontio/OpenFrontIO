@@ -36,10 +36,9 @@ vi.mock("../../../../src/client/Cosmetics", async (importOriginal) => ({
   resolveCosmetics: vi.fn(() => []),
 }));
 
-vi.mock("../../../../src/client/CrazyGamesSDK", () => ({
-  crazyGamesSDK: {
+vi.mock("../../../../src/client/GamePortal", () => ({
+  gamePortal: {
     happytime: vi.fn(),
-    requestAd: vi.fn(),
     gameplayStop: vi.fn(),
   },
 }));

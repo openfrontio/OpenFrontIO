@@ -49,7 +49,7 @@ vi.mock("../../src/client/Auth", () => ({
   googleLogin: vi.fn(),
   linkGoogle: vi.fn(),
   logOut: vi.fn(),
-  reauthAfterCrazyGamesChange: vi.fn(),
+  reauthAfterPortalChange: vi.fn(),
   sendMagicLink: vi.fn(),
 }));
 
@@ -69,6 +69,7 @@ vi.mock("src/client/ClientEnv", () => ({
     workerPath: vi.fn(() => "w0"),
     // The profile header's copy-link button builds its URL from this; the web
     // answer is the document itself (see deriveShareBase).
+    shareOrigin: vi.fn(() => window.location.origin),
     shareBase: vi.fn(
       () => `${window.location.origin}${window.location.pathname}`,
     ),

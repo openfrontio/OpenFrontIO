@@ -1,0 +1,127 @@
+{
+  "id": "Ommatrypta",
+  "name": "Ommatrypta",
+  "translation_key": "map.ommatrypta",
+  "categories": ["arcade", "new"],
+  "multiplayer_frequency": 10,
+  "nations": [
+    {
+      "name": "I Dont Know"
+    },
+    {
+      "name": "I See You"
+    },
+    {
+      "name": "Intensive Care Unit"
+    },
+    {
+      "name": "Iris Istable"
+    },
+    {
+      "name": "Pupil"
+    },
+    {
+      "name": "Eye Spy"
+    },
+    {
+      "name": "Eye Candy"
+    },
+    {
+      "name": "Iconic"
+    },
+    {
+      "name": "Blinky"
+    },
+    {
+      "name": "Stare"
+    },
+    {
+      "name": "Winky"
+    },
+    {
+      "name": "Lash Out"
+    },
+    {
+      "name": "Peeker"
+    },
+    {
+      "name": "Lens Armstrong"
+    },
+    {
+      "name": "Opti-Mystic"
+    },
+    {
+      "name": "Spectra Ray"
+    },
+    {
+      "name": "Focuz Finley"
+    },
+    {
+      "name": "Eye-van"
+    },
+    {
+      "name": "Eye See You"
+    },
+    {
+      "name": "Iris you were here"
+    },
+    {
+      "name": "Eye Sore"
+    },
+    {
+      "name": "Eye Conquered"
+    },
+    {
+      "name": "Cant Even"
+    },
+    {
+      "name": "Eye-roll"
+    },
+    {
+      "name": "Looking Good"
+    },
+    {
+      "name": "Spec-tacular"
+    },
+    {
+      "name": "Eye-Opening"
+    },
+    {
+      "name": "Focus"
+    },
+    {
+      "name": "Eye Scream"
+    },
+    {
+      "name": "The Nerve"
+    },
+    {
+      "name": "Sore Eyes"
+    },
+    {
+      "name": "Tigers Eye"
+    },
+    {
+      "name": "Private Eye"
+    },
+    {
+      "name": "Balling"
+    }
+  ],
+
+  "layers": [
+    {
+      "id": "eyeland",
+      "placement": "land",
+      "alpha": 0.7,
+      "nukeable": true
+    },
+    {
+      "id": "eyewater",
+      "placement": "water",
+      "alpha": 0.7,
+      "nukeable": false
+    }
+  ],
+  "themes": ["scary", "fantasy"]
+}

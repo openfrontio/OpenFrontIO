@@ -1,6 +1,7 @@
 import { LitElement } from "lit";
 import { customElement } from "lit/decorators.js";
 import { adGatekeeper } from "./AdGatekeeper";
+import { menuChromeIsTornDown } from "./MenuChrome";
 
 // ─── Gutter Ads ──────────────────────────────────────────────────────────────
 
@@ -11,6 +12,10 @@ export class HomepagePromos extends LitElement {
   private cornerAdDestroyed: boolean = false;
 
   private onUserMeResponse = () => {
+    // userMeResponse also fires mid-game (a session dropped by a 401, a
+    // purchase's balance recheck), after close() has reset adLoaded.
+    // restoreMenuChrome() calls show() once the player is back on the menu.
+    if (menuChromeIsTornDown()) return;
     if (window.adsEnabled) {
       console.log("showing homepage ads");
       this.show();
@@ -216,6 +221,9 @@ export class HomepagePromos extends LitElement {
     this.bottomRailActive = true;
     try {
       window.ramp.que.push(() => {
+        // The queue drains when ramp.js loads, which can be after the rail
+        // was destroyed (see InGamePromo) or the player turned out ad-free.
+        if (!this.bottomRailActive || !window.adsEnabled) return;
         try {
           window.ramp.spaAddAds([{ type: "bottom_rail" }]);
           console.log("Bottom rail ad loaded");
@@ -232,7 +240,7 @@ export class HomepagePromos extends LitElement {
     if (!this.bottomRailActive) return;
     this.bottomRailActive = false;
 
-    if (!window.ramp) return;
+    if (typeof window.ramp?.destroyUnits !== "function") return;
 
     try {
       window.ramp.destroyUnits("pw-oop-bottom_rail");
@@ -243,6 +251,7 @@ export class HomepagePromos extends LitElement {
   }
 
   private loadGutterAds(): void {
+    if (!window.adsEnabled) return;
     console.log("loading ramp gutter rails and header ad");
     if (!window.ramp) {
       console.warn("Playwire RAMP not available");
@@ -256,6 +265,10 @@ export class HomepagePromos extends LitElement {
 
     try {
       window.ramp.que.push(() => {
+        // The queue drains when ramp.js loads, which can be after a game has
+        // started (close() found only the index.html stub and destroyed
+        // nothing) or after the player turned out ad-free.
+        if (menuChromeIsTornDown() || !window.adsEnabled) return;
         try {
           window.ramp.spaAddAds([
             { type: "left_rail" },

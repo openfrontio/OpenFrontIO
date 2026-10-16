@@ -4,6 +4,7 @@ import {
   MessageType,
   PlayerID,
   PlayerType,
+  Relation,
   TerrainType,
   TerraNullius,
   UnitType,
@@ -194,27 +195,33 @@ export class AttackExecution implements Execution {
     // and never landed.
     this.mg.stats().attackMaxIncoming(this.target, this.attack.troops());
 
-    if (this.target.isPlayer()) {
-      const difficulty = this.mg.config().gameConfig().difficulty;
-      let relationChange: number;
-      switch (difficulty) {
-        case Difficulty.Easy:
-          relationChange = -60;
-          break;
-        case Difficulty.Medium:
-          relationChange = -70;
-          break;
-        case Difficulty.Hard:
-          relationChange = -80;
-          break;
-        case Difficulty.Impossible:
-          relationChange = -100;
-          break;
-        default:
-          assertNever(difficulty);
-      }
-      this.target.updateRelation(this._owner, relationChange);
+    if (!this.target.isPlayer()) return;
+    const difficulty = this.mg.config().gameConfig().difficulty;
+    // Hitting back at whoever just attacked us doesn't anger them, except on Easy
+    if (
+      difficulty !== Difficulty.Easy &&
+      this._owner.relation(this.target) === Relation.Hostile
+    ) {
+      return;
     }
+    let relationChange: number;
+    switch (difficulty) {
+      case Difficulty.Easy:
+        relationChange = -60;
+        break;
+      case Difficulty.Medium:
+        relationChange = -70;
+        break;
+      case Difficulty.Hard:
+        relationChange = -80;
+        break;
+      case Difficulty.Impossible:
+        relationChange = -100;
+        break;
+      default:
+        assertNever(difficulty);
+    }
+    this.target.updateRelation(this._owner, relationChange);
   }
 
   private refreshToConquer() {
