@@ -178,6 +178,8 @@ export class ProfileProgression extends LitElement {
   // games still waiting to be scored): the confirmed level. The levels past
   // it are pending on the track, and their milestones not reached yet.
   @property({ attribute: false }) confirmedLevel: number | null = null;
+  // The level counts XP from games the API hasn't scored yet.
+  @property({ type: Boolean }) provisional = false;
   // Names one opening of the profile: the tab pops in once per key, however
   // often it's shown again (a tab switch builds a new element). Without a
   // key it pops in once per element.
@@ -414,17 +416,20 @@ export class ProfileProgression extends LitElement {
     if (progress === null || !this.ready) return nothing;
     const track = this.track;
     return html`
-      ${track === null
-        ? nothing
-        : html`<reward-track
-            .progress=${progress}
-            .config=${track.config}
-            .rewards=${track.rewards}
-            .confirmedLevel=${this.confirmedLevel}
-            .claiming=${this.claiming}
-            .describeCosmetic=${this.describeCosmetic}
-            @claim-all=${() => void this.claimAll()}
-          ></reward-track>`}
+      ${
+        track === null
+          ? nothing
+          : html`<reward-track
+              .progress=${progress}
+              .config=${track.config}
+              .rewards=${track.rewards}
+              .confirmedLevel=${this.confirmedLevel}
+              .provisional=${this.provisional}
+              .claiming=${this.claiming}
+              .describeCosmetic=${this.describeCosmetic}
+              @claim-all=${() => void this.claimAll()}
+            ></reward-track>`
+      }
       ${this.renderHistory(progress)}
       ${this.renderMilestones(
         this.confirmedLevel === null
@@ -441,13 +446,15 @@ export class ProfileProgression extends LitElement {
         <h3 class="mb-3.5 ${SECTION_TITLE}">
           ${translateText("player_profile.prestige_history")}
         </h3>
-        ${tiles.length === 0
-          ? html`<p class="text-sm text-white/50" data-no-prestige data-pp>
-              ${translateText("player_profile.no_prestige")}
-            </p>`
-          : html`<div class="flex flex-wrap gap-3">
-              ${tiles.map((tile) => this.renderPrestigeTile(tile))}
-            </div>`}
+        ${
+          tiles.length === 0
+            ? html`<p class="text-sm text-white/50" data-no-prestige data-pp>
+                ${translateText("player_profile.no_prestige")}
+              </p>`
+            : html`<div class="flex flex-wrap gap-3">
+                ${tiles.map((tile) => this.renderPrestigeTile(tile))}
+              </div>`
+        }
       </section>
     `;
   }
@@ -469,9 +476,11 @@ export class ProfileProgression extends LitElement {
           <div class="font-bold text-white">
             ${translateText("progression.prestige", { prestige: tile.rank })}
           </div>
-          ${date === null
-            ? nothing
-            : html`<div class="text-xs text-white/50" data-date>${date}</div>`}
+          ${
+            date === null
+              ? nothing
+              : html`<div class="text-xs text-white/50" data-date>${date}</div>`
+          }
         </div>
       </div>
     `;
@@ -550,9 +559,9 @@ export class ProfileProgression extends LitElement {
       : translateText("player_profile.milestone_not_yet");
     return html`
       <div
-        class="flex w-[78px] flex-col items-center gap-1.5 ${slot.reached
-          ? ""
-          : "opacity-30"}"
+        class="flex w-[78px] flex-col items-center gap-1.5 ${
+          slot.reached ? "" : "opacity-30"
+        }"
         data-milestone=${slot.level}
         ?data-reached=${slot.reached}
         ?data-next-milestone=${next}
@@ -564,14 +573,16 @@ export class ProfileProgression extends LitElement {
           .legend=${legend}
           .size=${40}
         ></level-badge>
-        ${caption === null
-          ? nothing
-          : html`<div
-              class="text-center text-[11px] text-white/55"
-              data-caption
-            >
-              ${caption}
-            </div>`}
+        ${
+          caption === null
+            ? nothing
+            : html`<div
+                class="text-center text-[11px] text-white/55"
+                data-caption
+              >
+                ${caption}
+              </div>`
+        }
       </div>
     `;
   }

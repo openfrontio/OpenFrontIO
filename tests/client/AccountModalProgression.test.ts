@@ -604,10 +604,17 @@ describe("AccountModal — Progression tab", () => {
         await runCheck();
         await modal.updateComplete;
         expect(fetchPublicPlayerProgressMock).toHaveBeenCalledTimes(1);
-        // Still on 49 while it reads, now confirmed: not back on the old 47.
+        // Still on 49 while it reads, now confirmed (no provisional label):
+        // not back on the old 47. Levels 48-49 are pending, never Claimed:
+        // the rewards list was read before they were reached.
         await settle(() => {
           const el = progression();
-          expect(el?.confirmedLevel).toBeNull();
+          expect(el?.provisional).toBe(false);
+          expect(el?.confirmedLevel).toBe(47);
+          expect(el?.querySelector("[data-track-provisional]")).toBeNull();
+          expect(
+            el?.querySelector('[data-level="48"]')?.getAttribute("data-status"),
+          ).toBe("pending");
           expect(
             el?.querySelector('[data-level="49"][data-current]'),
           ).not.toBeNull();
@@ -619,11 +626,14 @@ describe("AccountModal — Progression tab", () => {
         await settle(() => {
           const el = progression();
           expect(el?.progress?.lifetimeXp).toBe(300250);
-          expect(el?.confirmedLevel).toBeNull();
+          expect(el?.provisional).toBe(false);
+          expect(el?.confirmedLevel).toBe(47);
           expect(
             el?.querySelector('[data-level="49"][data-current]'),
           ).not.toBeNull();
-          expect(el?.querySelector('[data-status="pending"]')).toBeNull();
+          expect(
+            el?.querySelectorAll('[data-status="claimed"][data-level="48"]'),
+          ).toHaveLength(0);
         });
       } finally {
         vi.mocked(localStorage.setItem).mockImplementation(() => undefined);
@@ -633,7 +643,10 @@ describe("AccountModal — Progression tab", () => {
 
     it("shows the confirmed level for an account with nothing pending", async () => {
       vi.mocked(localStorage.getItem).mockImplementation(() => null);
-      await runCheck();
+      // As another tab clearing it would: the store reads storage afresh.
+      window.dispatchEvent(
+        new StorageEvent("storage", { key: PENDING_XP_KEY }),
+      );
       modal.open();
       await settle(() => {
         expect(modal.querySelector<CardEl>("profile-card")).not.toBeNull();

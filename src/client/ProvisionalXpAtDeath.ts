@@ -20,10 +20,6 @@ import {
   type XpResult,
 } from "./ProvisionalXp";
 
-// Where an amount of XP takes the player on the level track: its own module,
-// so the homepage can project pending XP without loading the formula.
-export { projectProgress };
-
 // The provisional XP figure shown when the local player dies before the game
 // ends (~99% of players), worked out in the browser with the copy of the
 // API's formula in ProvisionalXp.ts. Display only: it is never sent anywhere,

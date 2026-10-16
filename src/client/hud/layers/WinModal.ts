@@ -39,17 +39,12 @@ import {
 import { Platform } from "../../Platform";
 import { MAX_PRESTIGE, reachedLegendThisGame } from "../../Progression";
 import { resolveXpAccount } from "../../ProgressionAccount";
-import {
-  fetchMyGameXp,
-  fetchProgressionConfig,
-  pollGameXp,
-} from "../../ProgressionApi";
+import { fetchProgressionConfig, pollGameXp } from "../../ProgressionApi";
 import {
   applyGameXp,
   type PendingGameKind,
-  progressWithPendingXp,
   recordPendingXp,
-  requestProvisionalCheck,
+  withPendingXp,
 } from "../../ProvisionalProgress";
 import {
   loadProvisionalXp,
@@ -144,9 +139,11 @@ export class WinModal extends LitElement implements Controller {
   render() {
     return html`
       <div
-        class="${this.isVisible
-          ? "fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-gray-800/70 p-4 md:p-6 shrink-0 rounded-lg z-[10010] shadow-2xl backdrop-blur-xs text-white w-[min(90vw,700px)] max-w-[90%] max-h-[90dvh] overflow-hidden flex flex-col"
-          : "hidden"}"
+        class="${
+          this.isVisible
+            ? "fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-gray-800/70 p-4 md:p-6 shrink-0 rounded-lg z-[10010] shadow-2xl backdrop-blur-xs text-white w-[min(90vw,700px)] max-w-[90%] max-h-[90dvh] overflow-hidden flex flex-col"
+            : "hidden"
+        }"
       >
         <h2 class="m-0 mb-4 text-[26px] text-center text-white shrink-0">
           ${this._title || ""}
@@ -173,14 +170,16 @@ export class WinModal extends LitElement implements Controller {
             "exit",
           )}
           ${this.renderShare()}
-          ${this.isRankedGame
-            ? this.actionButton(
-                "main",
-                translateText("win_modal.requeue"),
-                () => this._handleRequeue(),
-                "requeue",
-              )
-            : null}
+          ${
+            this.isRankedGame
+              ? this.actionButton(
+                  "main",
+                  translateText("win_modal.requeue"),
+                  () => this._handleRequeue(),
+                  "requeue",
+                )
+              : null
+          }
           ${this.actionButton(
             "main",
             this.game?.myPlayer()?.isAlive()
@@ -436,21 +435,23 @@ export class WinModal extends LitElement implements Controller {
         </h3>
         <!-- 56.25% = 9:16 -->
         <div class="relative w-full pb-[56.25%]">
-          ${Platform.isElectron
-            ? html`<video
-                class="absolute top-0 left-0 w-full h-full rounded-sm"
-                src="${this.isVisible ? DESKTOP_TUTORIAL_VIDEO_URL : ""}"
-                controls
-                preload="metadata"
-              ></video>`
-            : html`<iframe
-                class="absolute top-0 left-0 w-full h-full rounded-sm"
-                src="${this.isVisible ? TUTORIAL_VIDEO_URL : ""}"
-                title="YouTube video player"
-                frameborder="0"
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                allowfullscreen
-              ></iframe>`}
+          ${
+            Platform.isElectron
+              ? html`<video
+                  class="absolute top-0 left-0 w-full h-full rounded-sm"
+                  src="${this.isVisible ? DESKTOP_TUTORIAL_VIDEO_URL : ""}"
+                  controls
+                  preload="metadata"
+                ></video>`
+              : html`<iframe
+                  class="absolute top-0 left-0 w-full h-full rounded-sm"
+                  src="${this.isVisible ? TUTORIAL_VIDEO_URL : ""}"
+                  title="YouTube video player"
+                  frameborder="0"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                  allowfullscreen
+                ></iframe>`
+          }
         </div>
       </div>
     `;
@@ -462,11 +463,13 @@ export class WinModal extends LitElement implements Controller {
         <h3 class="text-xl font-semibold text-white mb-3">
           ${translateText("win_modal.support_openfront")}
         </h3>
-        ${isDesktopShell()
-          ? null
-          : html`<p class="text-white mb-3">
-              ${translateText("win_modal.territory_pattern")}
-            </p>`}
+        ${
+          isDesktopShell()
+            ? null
+            : html`<p class="text-white mb-3">
+                ${translateText("win_modal.territory_pattern")}
+              </p>`
+        }
         <div
           class="mx-auto w-full overflow-x-auto overflow-y-visible rounded-sm"
         >
@@ -663,7 +666,11 @@ export class WinModal extends LitElement implements Controller {
       }
       // Scored: the figure kept for the account menu and profile is done.
       if (result !== null && this.xpPublicId !== null) {
-        applyGameXp(this.xpPublicId, result);
+        applyGameXp(
+          this.xpPublicId,
+          result,
+          this.pendingAbout(progress.daily?.day),
+        );
       }
       if (result?.eligible && reachedLegendThisGame(result)) {
         this.preloadLegendCeremony();
@@ -721,25 +728,33 @@ export class WinModal extends LitElement implements Controller {
   // Keeps an eligible provisional figure for the account, so the account
   // menu, the Account modal and the profile show it (provisionally) until the
   // API scores the game (ProvisionalProgress.ts).
+  // Nothing is asked of the API here: the game is still running, and the
+  // account menu's poll picks it up.
   private keepPendingXp(provisional: ProvisionalXp): void {
     const response = provisional.response;
     if (this.xpPublicId === null || !response.eligible) return;
-    const kinds: Record<string, PendingGameKind> = {
-      [GameType.Public]: "public",
-      [GameType.Private]: "private",
-      [GameType.Singleplayer]: "singleplayer",
-    };
     recordPendingXp(this.xpPublicId, {
+      ...this.pendingAbout(provisional.inputs.dailyDay ?? undefined),
       gameId: response.gameId,
       xp: response.breakdown.total,
-      day: provisional.inputs.dailyDay,
-      kind: kinds[provisional.inputs.gameType] ?? null,
       firstGame: response.breakdown.firstGame > 0,
       // The account as read at death: the game hadn't ended, so it can't
       // be in it.
       notIn: this.provisionalReadLifetime ?? undefined,
     });
-    requestProvisionalCheck();
+  }
+
+  // This game's kind and the API's day stamp, for the day's allowances.
+  private pendingAbout(day: string | undefined): {
+    day?: string;
+    kind?: PendingGameKind;
+  } {
+    const kinds: Partial<Record<GameType, PendingGameKind>> = {
+      [GameType.Public]: "public",
+      [GameType.Private]: "private",
+      [GameType.Singleplayer]: "singleplayer",
+    };
+    return { day, kind: kinds[this.game.config().gameConfig().gameType] };
   }
 
   // The provisional XP figure for a player who has just died, or null when
@@ -767,17 +782,12 @@ export class WinModal extends LitElement implements Controller {
     this.provisionalReadLifetime = confirmed.lifetimeXp;
     // Games left earlier and not scored yet stack underneath this one: it
     // starts from where their provisional XP took the player, and from the
-    // day's allowances they used (ProvisionalProgress.ts).
+    // day's allowances they used (ProvisionalProgress.ts). Nothing is asked:
+    // the stored answers decide.
     const start =
       this.xpPublicId === null
         ? confirmed
-        : await progressWithPendingXp({
-            publicId: this.xpPublicId,
-            progress: confirmed,
-            config: progression,
-            excludeGameId: game.gameID(),
-            fetchXp: (gameId) => fetchMyGameXp(gameId),
-          });
+        : withPendingXp(this.xpPublicId, confirmed, progression, game.gameID());
     return loadProvisionalXp({
       gameId: game.gameID(),
       myClientID,

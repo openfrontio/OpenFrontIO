@@ -76,6 +76,7 @@ import type { WinModal } from "../../../../src/client/hud/layers/WinModal";
 import {
   readPendingXp,
   recordPendingXp,
+  stopProvisionalProgress,
 } from "../../../../src/client/ProvisionalProgress";
 import type { GameView } from "../../../../src/client/view";
 
@@ -677,7 +678,11 @@ describe("WinModal provisional XP at death", () => {
   });
 
   describe("kept for the account menu and profile", () => {
-    beforeEach(() => localStorage.clear());
+    beforeEach(() => {
+      localStorage.clear();
+      // Drops the store's parsed copy too.
+      stopProvisionalProgress();
+    });
     afterEach(() => localStorage.clear());
 
     it("keeps an eligible figure for the account, marked scored once it is", async () => {
@@ -725,6 +730,8 @@ describe("WinModal provisional XP at death", () => {
         day: PROGRESS.daily.day,
         kind: "public",
         firstGame: true,
+        // Recorded at A's death, from the account then.
+        notIn: PROGRESS.lifetimeXp,
       });
       const asked: string[] = [];
       vi.stubGlobal(
@@ -736,7 +743,8 @@ describe("WinModal provisional XP at death", () => {
       );
       const { game } = makeGame();
       await mount(game);
-      expect(asked).toContain("https://api.test/users/@me/xp/gA");
+      // Death asks nothing: the stored answers decide.
+      expect(asked).toEqual([]);
       expect(xpState()).toBe("provisional");
       const { moments, cards } = await playOut();
       // From level 12, 174 XP reaches level 13; A's levels (and its level-10

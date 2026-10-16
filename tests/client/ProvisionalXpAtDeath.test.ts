@@ -12,10 +12,10 @@ import type {
 } from "@openfront/shared/ApiSchemas";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { XpGameConfig, XpResult } from "../../src/client/ProvisionalXp";
+import { projectProgress } from "../../src/client/ProgressProjection";
 import {
   buildProvisionalXp,
   loadProvisionalXp,
-  projectProgress,
   provisionalXpContext,
   reconcileXp,
 } from "../../src/client/ProvisionalXpAtDeath";

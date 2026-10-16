@@ -1321,7 +1321,6 @@ describe("provisional levels", () => {
   it("marks the levels past the confirmed one pending, never ready", () => {
     const m = rewardTrackModel(progress(3, 50), config(), ownerRewards(), 47);
     const status = (level: number) => m.nodes[level - 1].status;
-    expect(m.provisional).toBe(true);
     expect(m.level).toBe(50);
     expect(m.nodes[49].current).toBe(true);
     expect([48, 49, 50].map(status)).toEqual(["pending", "pending", "pending"]);
@@ -1335,7 +1334,6 @@ describe("provisional levels", () => {
 
   it("is a confirmed track without a confirmed level", () => {
     const m = rewardTrackModel(progress(3, 50), config(), ownerRewards());
-    expect(m.provisional).toBe(false);
     expect(m.nodes.some((n) => n.status === "pending")).toBe(false);
   });
 
@@ -1346,6 +1344,7 @@ describe("provisional levels", () => {
     el.config = config();
     el.rewards = ownerRewards();
     el.confirmedLevel = 47;
+    el.provisional = true;
     document.body.appendChild(el);
     await vi.waitFor(async () => {
       await el.updateComplete;
@@ -1371,6 +1370,34 @@ describe("provisional levels", () => {
       expect(el.querySelector("[data-claim-count]")?.textContent).toContain(
         'reward_track.claim_count:{"count":4}',
       );
+    } finally {
+      el.remove();
+    }
+  });
+
+  it("keeps levels a scored game reached unclaimed, without the provisional label", async () => {
+    // Only scored XP took the stale figure (L47) to L50: the rewards list
+    // doesn't know those levels yet, so they're pending, never Claimed.
+    const el = document.createElement("reward-track") as RewardTrack;
+    el.describeCosmetic = describeCosmetic;
+    el.progress = progress(3, 50);
+    el.config = config();
+    el.rewards = ownerRewards();
+    el.confirmedLevel = 47;
+    document.body.appendChild(el);
+    try {
+      await vi.waitFor(async () => {
+        await el.updateComplete;
+        expect(el.querySelector('[data-level="48"]')).not.toBeNull();
+      });
+      expect(el.querySelector("[data-track-provisional]")).toBeNull();
+      for (const level of [48, 49, 50]) {
+        expect(
+          el
+            .querySelector(`[data-level="${level}"]`)!
+            .getAttribute("data-status"),
+        ).toBe("pending");
+      }
     } finally {
       el.remove();
     }
