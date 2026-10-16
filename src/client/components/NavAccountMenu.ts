@@ -499,9 +499,11 @@ export class NavAccountMenu extends LitElement {
   render(): TemplateResult {
     return html`
       <div class="relative" data-account-nav>
-        ${this.variant === "mobile"
-          ? this.renderMobileTrigger()
-          : this.renderDesktopTrigger()}
+        ${
+          this.variant === "mobile"
+            ? this.renderMobileTrigger()
+            : this.renderDesktopTrigger()
+        }
       </div>
     `;
   }
@@ -528,9 +530,11 @@ export class NavAccountMenu extends LitElement {
               role="menuitem"
               data-menu-item=${item.key}
               @click=${() => this.selectItem(item)}
-              class="w-full flex items-center gap-3 px-4 py-3 text-left text-sm font-medium normal-case tracking-normal cursor-pointer transition-colors ${item.danger
-                ? "text-red-400 hover:bg-red-500/10 border-t border-white/10"
-                : "text-white/80 hover:bg-white/10 hover:text-white"}"
+              class="w-full flex items-center gap-3 px-4 py-3 text-left text-sm font-medium normal-case tracking-normal cursor-pointer transition-colors ${
+                item.danger
+                  ? "text-red-400 hover:bg-red-500/10 border-t border-white/10"
+                  : "text-white/80 hover:bg-white/10 hover:text-white"
+              }"
             >
               <span class="w-4 h-4 shrink-0">${item.icon}</span>
               <span class="min-w-0 break-words"
@@ -579,9 +583,9 @@ export class NavAccountMenu extends LitElement {
   private renderChevron(): TemplateResult {
     return html`
       <svg
-        class="w-3 h-3 shrink-0 transition-transform ${this.menuOpen
-          ? "rotate-180"
-          : ""}"
+        class="w-3 h-3 shrink-0 transition-transform ${
+          this.menuOpen ? "rotate-180" : ""
+        }"
         xmlns="http://www.w3.org/2000/svg"
         viewBox="0 0 24 24"
         fill="none"
@@ -648,38 +652,40 @@ export class NavAccountMenu extends LitElement {
     // corner, anchored 6px out so it grows away from the avatar, not over it.
     const mobile = variant === "mobile";
     return html`
-      ${this.levelPop
-        ? html`<style>
-            @keyframes nav-level-pop {
-              0% {
-                transform: scale(1);
+      ${
+        this.levelPop
+          ? html`<style>
+              @keyframes nav-level-pop {
+                0% {
+                  transform: scale(1);
+                }
+                35% {
+                  transform: scale(1.55);
+                  filter: drop-shadow(0 0 6px rgba(250, 204, 21, 0.9));
+                }
+                100% {
+                  transform: scale(1);
+                }
               }
-              35% {
-                transform: scale(1.55);
-                filter: drop-shadow(0 0 6px rgba(250, 204, 21, 0.9));
-              }
-              100% {
-                transform: scale(1);
-              }
-            }
-            .nav-level-pop level-badge {
-              display: block;
-              animation: nav-level-pop ${NAV_LEVEL_POP_MS}ms
-                cubic-bezier(0.2, 0.9, 0.3, 1.3);
-            }
-            @media (prefers-reduced-motion: reduce) {
               .nav-level-pop level-badge {
-                animation: none;
+                display: block;
+                animation: nav-level-pop ${NAV_LEVEL_POP_MS}ms
+                  cubic-bezier(0.2, 0.9, 0.3, 1.3);
               }
-            }
-          </style>`
-        : nothing}
+              @media (prefers-reduced-motion: reduce) {
+                .nav-level-pop level-badge {
+                  animation: none;
+                }
+              }
+            </style>`
+          : nothing
+      }
       <span
         data-account-level
         ?data-provisional=${this.provisional}
-        class="${mobile
-          ? "absolute -top-1.5 -left-1.5 z-10"
-          : "flex items-center"} ${this.levelPop ? "nav-level-pop" : ""}"
+        class="${
+          mobile ? "absolute -top-1.5 -left-1.5 z-10" : "flex items-center"
+        } ${this.levelPop ? "nav-level-pop" : ""}"
         title=${title}
       >
         <level-badge
@@ -706,9 +712,11 @@ export class NavAccountMenu extends LitElement {
     return html`
       <span
         data-account-xp-bar
-        class="pointer-events-none absolute ${variant === "mobile"
-          ? "-bottom-1.5 left-0 right-0"
-          : "bottom-0 left-0 right-0"}"
+        class="pointer-events-none absolute ${
+          variant === "mobile"
+            ? "-bottom-1.5 left-0 right-0"
+            : "bottom-0 left-0 right-0"
+        }"
         aria-hidden="true"
       >
         ${xpBar(percent, {
@@ -809,9 +817,11 @@ export class NavAccountMenu extends LitElement {
              NavAccountButton and must not be re-created. -->
         <span
           data-account-identity
-          class="relative flex items-center gap-2 ${this.shownProgress !== null
-            ? "pb-1.5 [&_[data-account-avatar]]:h-7 [&_[data-account-avatar]]:w-7"
-            : ""}"
+          class="relative flex items-center gap-2 ${
+            this.shownProgress !== null
+              ? "pb-1.5 [&_[data-account-avatar]]:h-7 [&_[data-account-avatar]]:w-7"
+              : ""
+          }"
         >
           ${this.renderLevel("desktop")}
           ${this.renderIdentityIcons({
