@@ -2625,6 +2625,8 @@
     "graphics_refresh_modifier_desc": "Hold this key and {key} to refresh graphics",
     "ground_attack": "Ground Attack",
     "ground_attack_desc": "Send a ground attack to the tile under your cursor.",
+    "halloween_theme_desc": "Show the Halloween look on the home page.",
+    "halloween_theme_label": "Halloween Theme",
     "help_messages_desc": "Show contextual tips and warnings during gameplay, such as army limit warnings and general gameplay advice.",
     "help_messages_label": "Help Messages",
     "highlight_glow_strength_label": "Highlight strength",
