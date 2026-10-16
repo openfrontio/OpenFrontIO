@@ -215,10 +215,6 @@
         `url("<%- backgroundImageUrl %>")`,
       );
       document.documentElement.style.setProperty(
-        "--desktop-logo-image-url",
-        `url("<%- desktopLogoImageUrl %>")`,
-      );
-      document.documentElement.style.setProperty(
         "--mobile-logo-image-url",
         `url("<%- mobileLogoImageUrl %>")`,
       );
@@ -286,8 +282,24 @@
   </head>
 
   <body
-    class="select-none font-sans min-h-screen bg-neutral-800 transition-opacity duration-300 ease-in-out flex flex-row flex-wrap content-start halloween-theme"
+    class="select-none font-sans min-h-screen bg-neutral-800 transition-opacity duration-300 ease-in-out flex flex-row flex-wrap content-start"
   >
+    <script>
+      // Halloween theme (src/client/halloween.css), Oct 25 through Nov 1 local
+      // time. It recolors the desktop logo, which is otherwise left unset.
+      (() => {
+        const now = new Date();
+        const month = now.getMonth();
+        const day = now.getDate();
+        if ((month === 9 && day >= 25) || (month === 10 && day === 1)) {
+          document.body.classList.add("halloween-theme");
+          document.documentElement.style.setProperty(
+            "--desktop-logo-image-url",
+            `url("<%- desktopLogoImageUrl %>")`,
+          );
+        }
+      })();
+    </script>
     <div id="hex-grid" class="fixed inset-0 -z-50 pointer-events-none">
       <div
         id="background-layer"
