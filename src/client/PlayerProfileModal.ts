@@ -1,13 +1,14 @@
 import {
   isVerifiedUsername,
   type PlayerProfile,
+  type PublicPlayerGame,
   type PlayerStatsTree,
   type PublicProgress,
 } from "@openfront/shared/ApiSchemas";
 import { html, nothing } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import { ClientEnv } from "src/client/ClientEnv";
-import { fetchPublicPlayerProfile } from "./Api";
+import { fetchPublicPlayerGames, fetchPublicPlayerProfile } from "./Api";
 import "./ClanModal";
 import "./components/baseComponents/Button";
 import "./components/baseComponents/stats/PlayerGameHistoryView";
@@ -25,6 +26,7 @@ import { verifiedBadge } from "./components/ui/VerifiedBadge";
 import "./GameStatsModal";
 import "./LeaderboardModal";
 import { modalRouter } from "./ModalRouter";
+import { latestGameClanTag } from "./ProfileClanTag";
 import { loadPlayerProgress } from "./PlayerProgress";
 import {
   isOwnAccount,
@@ -54,6 +56,9 @@ export class PlayerProfileModal extends BaseModal {
   @state() private username: string | null = null;
   @state() private statsTree: PlayerStatsTree | null = null;
   @state() private clans: NonNullable<PlayerProfile["clans"]> = [];
+  // The first page of this player's games, newest first: the profile card's
+  // clan tag comes from it (latestGameClanTag). Empty until it arrives.
+  @state() private recentGames: PublicPlayerGame[] = [];
   // Level / XP, when progression is on and the player has any.
   @state() private progress: PublicProgress | null = null;
   @state() private loading = false;
@@ -289,6 +294,7 @@ export class PlayerProfileModal extends BaseModal {
           : null}
         @history-updated=${(e: CustomEvent<PlayerGameHistoryCache>) => {
           this.gameHistoryCache = e.detail;
+          this.adoptRecentGames(e.detail);
         }}
         @view-stats=${(e: CustomEvent<{ gameId: string }>) =>
           this.openGameStats(e.detail.gameId)}
@@ -315,7 +321,7 @@ export class PlayerProfileModal extends BaseModal {
         : html`<profile-card
             class="mb-4 block"
             .username=${this.username ?? this.publicId ?? ""}
-            .clanTag=${this.clans[0]?.tag ?? null}
+            .clanTag=${latestGameClanTag(this.recentGames, this.clans)}
             .progress=${view.progress}
             .provisional=${view.provisional}
             .openKey=${`profile-${this.openCount}`}
@@ -492,6 +498,7 @@ export class PlayerProfileModal extends BaseModal {
     this.username = null;
     this.statsTree = null;
     this.clans = [];
+    this.recentGames = [];
     this.progress = null;
     this.gameHistoryCache = null;
     this.gamesScrollTop = 0;
@@ -506,11 +513,20 @@ export class PlayerProfileModal extends BaseModal {
         : null;
     this.loading = publicId !== null;
     if (publicId !== null) {
-      void this.loadProfile(publicId);
+      // Opening on the Games tab, that tab reads the newest games itself and
+      // the card takes them from it (adoptRecentGames): no second request.
+      const onGames =
+        typeof args?.tab === "string"
+          ? args.tab === "games"
+          : this.activeTab === "games";
+      void this.loadProfile(publicId, { recentGames: !onGames });
     }
   }
 
-  private async loadProfile(publicId: string): Promise<void> {
+  private async loadProfile(
+    publicId: string,
+    opts: { recentGames: boolean },
+  ): Promise<void> {
     const gen = ++this.loadGeneration;
     // Drop a superseded response: a newer load started, or the modal moved to a
     // different player. onClose no longer clears publicId, so the id check alone
@@ -538,12 +554,40 @@ export class PlayerProfileModal extends BaseModal {
         this.setActiveTab("progression");
       }
     });
+    // The card's clan tag comes from the newest games. This is the same
+    // unfiltered first page the Games tab opens on, so it is handed to that
+    // tab too, which then shows it without fetching it again.
+    if (opts.recentGames) this.loadRecentGames(publicId, current);
     const profile = await fetchPublicPlayerProfile(publicId);
     if (!current()) return;
     this.loading = false;
     this.statsTree = profile === false ? null : profile.stats;
     this.username = profile === false ? null : (profile.username ?? null);
     this.clans = profile === false ? [] : (profile.clans ?? []);
+  }
+
+  private loadRecentGames(publicId: string, current: () => boolean): void {
+    void fetchPublicPlayerGames(publicId, {}).then((res) => {
+      if (!current() || "error" in res) return;
+      this.recentGames = res.results;
+      if (this.gameHistoryCache?.publicId !== publicId) {
+        this.gameHistoryCache = {
+          publicId,
+          typeFilter: "all",
+          modeFilter: "all",
+          games: res.results,
+          nextCursor: res.nextCursor,
+        };
+      }
+    });
+  }
+
+  // The Games tab loaded this player's unfiltered history (newest first): the
+  // card's tag reads from it as well.
+  private adoptRecentGames(history: PlayerGameHistoryCache): void {
+    if (history.publicId !== this.publicId) return;
+    if (history.typeFilter !== "all" || history.modeFilter !== "all") return;
+    this.recentGames = history.games;
   }
 
   // Intentionally preserves publicId/statsTree/history cache/scroll: the page

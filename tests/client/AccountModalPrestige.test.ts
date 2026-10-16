@@ -9,6 +9,11 @@ vi.mock("../../src/client/Api", () => ({
   getUserMe: vi.fn(async () => false as const),
   invalidateUserMe: vi.fn(),
   fetchPlayerById: vi.fn(async () => null),
+  // The profile card reads its clan tag from the newest games.
+  fetchPublicPlayerGames: vi.fn(async () => ({
+    results: [],
+    nextCursor: null,
+  })),
   setMarketingConsent: vi.fn(async () => true),
   getApiBase: vi.fn(() => ""),
 }));

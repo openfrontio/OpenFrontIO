@@ -40,6 +40,8 @@ vi.mock("../../src/client/Utils", () => ({
 vi.mock("../../src/client/Api", () => ({
   getUserMe,
   fetchPublicPlayerProfile,
+  // The profile card reads its clan tag from the newest games.
+  fetchPublicPlayerGames: async () => ({ results: [], nextCursor: null }),
 }));
 
 vi.mock("../../src/client/Auth", () => ({ isLoggedIn }));
