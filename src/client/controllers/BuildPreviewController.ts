@@ -243,7 +243,10 @@ export class BuildPreviewController implements Controller {
   private readonly teammateIds: Set<number> = new Set();
   private readonly allyIds: Set<number> = new Set();
   private readonly mousePos = { x: 0, y: 0 };
-  private lastGhostQueryAt: number = 0;
+  private lastQueriedTileRef: TileRef | undefined = undefined;
+  private isQueryInFlight: boolean = false;
+  private pendingTileRef: TileRef | undefined | null = null;
+  private querySeq: number = 0;
   private pendingConfirm: MouseUpEvent | null = null;
 
   // Buildable validation runs on the snapped tile under the cursor, but the
@@ -384,11 +387,29 @@ export class BuildPreviewController implements Controller {
     this.prevTrajRef = traj;
   }
 
+  private getTileForCoordinates(x: number, y: number): TileRef | undefined {
+    const tile = this.transformHandler.screenToWorldCoordinates(x, y);
+    if (!this.game.isValidCoord(tile.x, tile.y)) {
+      return undefined;
+    }
+    return this.game.ref(tile.x, tile.y);
+  }
+
+  private getHoveredTile(): TileRef | undefined {
+    return this.getTileForCoordinates(this.mousePos.x, this.mousePos.y);
+  }
+
+  private getTileForEvent(e: MouseUpEvent): TileRef | undefined {
+    return this.getTileForCoordinates(e.x, e.y);
+  }
+
   tick() {
     // Re-query buildables periodically (world state can change — tiles may
     // become buildable as troops/territory move).
     this.syncGhostState();
-    this.renderGhost();
+    if (!this.isQueryInFlight) {
+      this.renderGhost();
+    }
   }
 
   /**
@@ -409,95 +430,177 @@ export class BuildPreviewController implements Controller {
     }
   }
 
-  renderGhost() {
-    if (!this.ghostUnit) return;
+  private checkTargetingAlly(tileRef: TileRef | undefined): boolean {
+    if (!tileRef || !this.ghostUnit) return false;
+    const myPlayer = this.game.myPlayer();
+    const nukeType = this.ghostUnit.buildableUnit.type;
+    if (
+      !myPlayer ||
+      (nukeType !== UnitType.AtomBomb && nukeType !== UnitType.HydrogenBomb)
+    ) {
+      return false;
+    }
+    this.connectedAllySmallIds.clear();
+    for (const ally of myPlayer.allies()) {
+      if (!ally.isDisconnected()) {
+        this.connectedAllySmallIds.add(ally.smallID());
+      }
+    }
+    if (this.connectedAllySmallIds.size === 0) return false;
+    return wouldNukeBreakAlliance({
+      game: this.game,
+      targetTile: tileRef,
+      magnitude: this.game.config().nukeMagnitudes(nukeType),
+      allySmallIds: this.connectedAllySmallIds,
+      threshold: this.game.config().nukeAllianceBreakThreshold(),
+    });
+  }
 
-    const now = performance.now();
-    if (now - this.lastGhostQueryAt < 50) return;
-    this.lastGhostQueryAt = now;
+  private resolveGhostTarget(
+    targetX = this.mousePos.x,
+    targetY = this.mousePos.y,
+  ): {
+    tileRef: TileRef | undefined;
+    trajectoryTileRef: TileRef | undefined;
+    targetingAlly: boolean;
+  } {
     let tileRef: TileRef | undefined;
     let trajectoryTileRef: TileRef | undefined;
     const tile = this.transformHandler.screenToWorldCoordinates(
-      this.mousePos.x,
-      this.mousePos.y,
+      targetX,
+      targetY,
     );
     if (this.game.isValidCoord(tile.x, tile.y)) {
       tileRef = this.game.ref(tile.x, tile.y);
       trajectoryTileRef = tileRef;
-      // Impassable terrain is a void — treat hovering over it the same as
-      // hovering outside the map (no ghost, no blast circle). The nuke
-      // trajectory preview is the exception: nukes fly over impassable
-      // terrain, so the arc still renders (with a blocked X at the
-      // untargetable destination — see cursorLoop).
-      if (this.game.isImpassable(tileRef)) {
+      const impassable = this.game.isImpassable
+        ? this.game.isImpassable(tileRef)
+        : false;
+      if (impassable) {
         tileRef = undefined;
       }
     }
+    const targetingAlly = this.checkTargetingAlly(tileRef);
+    return { tileRef, trajectoryTileRef, targetingAlly };
+  }
 
-    // Check if targeting an ally (for nuke warning visual)
-    let targetingAlly = false;
-    const myPlayer = this.game.myPlayer();
-    const nukeType = this.ghostUnit.buildableUnit.type;
-    if (
-      tileRef &&
-      myPlayer &&
-      (nukeType === UnitType.AtomBomb || nukeType === UnitType.HydrogenBomb)
-    ) {
-      this.connectedAllySmallIds.clear();
-      const allies = myPlayer.allies();
-      for (let i = 0; i < allies.length; i++) {
-        const ally = allies[i];
-        if (!ally.isDisconnected()) {
-          this.connectedAllySmallIds.add(ally.smallID());
-        }
-      }
-
-      if (this.connectedAllySmallIds.size > 0) {
-        targetingAlly = wouldNukeBreakAlliance({
-          game: this.game,
-          targetTile: tileRef,
-          magnitude: this.game.config().nukeMagnitudes(nukeType),
-          allySmallIds: this.connectedAllySmallIds,
-          threshold: this.game.config().nukeAllianceBreakThreshold(),
-        });
+  private resolvePendingConfirm(trajectoryTileRef: TileRef | undefined): void {
+    if (this.pendingConfirm === null) return;
+    const confirmTile = this.getTileForEvent(this.pendingConfirm);
+    if (confirmTile !== undefined && confirmTile === trajectoryTileRef) {
+      const ev = this.pendingConfirm;
+      this.pendingConfirm = null;
+      if (this.isGhostReadyForConfirm()) {
+        this.createStructure(ev);
       }
     }
+  }
 
-    this.game
-      ?.myPlayer()
-      ?.buildables(tileRef, [this.ghostUnit?.buildableUnit.type])
-      .then((buildables) => {
-        if (!this.ghostUnit) {
-          this.pendingConfirm = null;
-          this.emitGhostPreview(tileRef, targetingAlly, trajectoryTileRef);
-          return;
-        }
+  private handleBuildablesResponse(
+    buildables: BuildableUnit[],
+    tileRef: TileRef | undefined,
+    targetingAlly: boolean,
+    trajectoryTileRef: TileRef | undefined,
+  ): void {
+    if (!this.ghostUnit) {
+      this.pendingConfirm = null;
+      this.emitGhostPreview(tileRef, targetingAlly, trajectoryTileRef);
+      return;
+    }
 
-        const unit = buildables.find(
-          (u) => u.type === this.ghostUnit!.buildableUnit.type,
-        );
-        if (!unit) {
-          Object.assign(this.ghostUnit.buildableUnit, {
-            canBuild: false,
-            canUpgrade: false,
-          });
-          this.pendingConfirm = null;
-          this.emitGhostPreview(tileRef, targetingAlly, trajectoryTileRef);
-          return;
-        }
-
-        this.ghostUnit.buildableUnit = unit;
-
-        if (this.pendingConfirm !== null) {
-          const ev = this.pendingConfirm;
-          this.pendingConfirm = null;
-          if (this.isGhostReadyForConfirm()) {
-            this.createStructure(ev);
-          }
-        }
-
-        this.emitGhostPreview(tileRef, targetingAlly, trajectoryTileRef);
+    const unit = buildables.find(
+      (u) => u.type === this.ghostUnit!.buildableUnit.type,
+    );
+    if (!unit) {
+      Object.assign(this.ghostUnit.buildableUnit, {
+        canBuild: false,
+        canUpgrade: false,
       });
+      this.pendingConfirm = null;
+      this.emitGhostPreview(tileRef, targetingAlly, trajectoryTileRef);
+      return;
+    }
+
+    this.ghostUnit.buildableUnit = unit;
+    this.resolvePendingConfirm(trajectoryTileRef);
+    this.emitGhostPreview(tileRef, targetingAlly, trajectoryTileRef);
+  }
+
+  private onQueryFinished(seq: number): void {
+    if (seq !== this.querySeq) return;
+    this.isQueryInFlight = false;
+    if (this.pendingTileRef !== null) {
+      const nextTile = this.pendingTileRef;
+      this.pendingTileRef = null;
+      if (nextTile !== this.lastQueriedTileRef) {
+        this.renderGhost();
+      }
+    }
+  }
+
+  private dispatchBuildablesQuery(
+    seq: number,
+    tileRef: TileRef | undefined,
+    targetingAlly: boolean,
+    trajectoryTileRef: TileRef | undefined,
+  ): void {
+    const promise = this.game
+      ?.myPlayer()
+      ?.buildables(tileRef, [this.ghostUnit!.buildableUnit.type]);
+
+    if (!promise) {
+      this.isQueryInFlight = false;
+      this.emitGhostPreview(tileRef, targetingAlly, trajectoryTileRef);
+      return;
+    }
+
+    promise
+      .then((b) => {
+        if (seq === this.querySeq) {
+          this.handleBuildablesResponse(
+            b,
+            tileRef,
+            targetingAlly,
+            trajectoryTileRef,
+          );
+        }
+      })
+      .catch((err) => console.error("Failed to query buildables:", err))
+      .finally(() => this.onQueryFinished(seq));
+  }
+
+  private getGhostQueryCoordinates(): { x: number; y: number } {
+    if (this.pendingConfirm !== null) {
+      const confirmTile = this.getTileForEvent(this.pendingConfirm);
+      if (
+        confirmTile !== undefined &&
+        confirmTile !== this.lastQueriedTileRef
+      ) {
+        return { x: this.pendingConfirm.x, y: this.pendingConfirm.y };
+      }
+    }
+    return this.mousePos;
+  }
+
+  renderGhost(): void {
+    if (!this.ghostUnit) {
+      this.isQueryInFlight = false;
+      return;
+    }
+
+    this.isQueryInFlight = true;
+    const coords = this.getGhostQueryCoordinates();
+    this.lastQueriedTileRef = this.getTileForCoordinates(coords.x, coords.y);
+    const { tileRef, trajectoryTileRef, targetingAlly } =
+      this.resolveGhostTarget(coords.x, coords.y);
+
+    const seq = ++this.querySeq;
+    this.dispatchBuildablesQuery(
+      seq,
+      tileRef,
+      targetingAlly,
+      trajectoryTileRef,
+    );
   }
 
   /**
@@ -750,12 +853,33 @@ export class BuildPreviewController implements Controller {
   }
 
   private requestConfirmStructure(e: MouseUpEvent): void {
+    this.syncGhostState();
     if (!this.ghostUnit && !this.uiState.ghostStructure) return;
-    if (this.isGhostReadyForConfirm()) {
-      this.createStructure(e);
-    } else {
-      this.pendingConfirm = e;
+    this.mousePos.x = e.x;
+    this.mousePos.y = e.y;
+    const clickTile = this.getTileForEvent(e);
+    if (clickTile === undefined) {
+      this.pendingConfirm = null;
+      return;
     }
+    if (this.isQueryInFlight) {
+      this.pendingConfirm = e;
+      if (clickTile !== this.lastQueriedTileRef)
+        this.pendingTileRef = clickTile;
+      return;
+    }
+    const matches =
+      clickTile === this.lastQueriedTileRef ||
+      (this.lastQueriedTileRef === undefined && this.isGhostReadyForConfirm());
+    if (matches) {
+      if (this.isGhostReadyForConfirm()) this.createStructure(e);
+      return;
+    }
+    this.pendingConfirm = e;
+    this.isQueryInFlight = true;
+    this.lastQueriedTileRef = clickTile;
+    this.pendingTileRef = null;
+    this.renderGhost();
   }
 
   private createStructure(e: MouseUpEvent) {
@@ -867,9 +991,35 @@ export class BuildPreviewController implements Controller {
     return blocked;
   }
 
-  private moveGhost(e: MouseMoveEvent) {
+  private moveGhost(e: MouseMoveEvent): void {
     this.mousePos.x = e.x;
     this.mousePos.y = e.y;
+    this.syncGhostState();
+    if (!this.ghostUnit) return;
+
+    if (this.pendingConfirm !== null) {
+      const confirmTile = this.getTileForEvent(this.pendingConfirm);
+      if (
+        confirmTile !== undefined &&
+        confirmTile !== this.lastQueriedTileRef
+      ) {
+        return;
+      }
+    }
+
+    const currentTile = this.getHoveredTile();
+    if (currentTile !== this.lastQueriedTileRef) {
+      if (!this.isQueryInFlight) {
+        this.isQueryInFlight = true;
+        this.lastQueriedTileRef = currentTile;
+        this.pendingTileRef = null;
+        this.renderGhost();
+      } else {
+        this.pendingTileRef = currentTile;
+      }
+    } else if (this.isQueryInFlight && this.pendingTileRef !== null) {
+      this.pendingTileRef = null;
+    }
   }
 
   private createGhostStructure(type: PlayerBuildableUnitType | null) {
@@ -888,7 +1038,11 @@ export class BuildPreviewController implements Controller {
     };
   }
 
-  private clearGhostStructure() {
+  private clearGhostStructure(): void {
+    this.querySeq++;
+    this.isQueryInFlight = false;
+    this.lastQueriedTileRef = undefined;
+    this.pendingTileRef = null;
     this.pendingConfirm = null;
     this.ghostUnit = null;
     this.lastGhostData = null;

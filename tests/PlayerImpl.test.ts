@@ -4,10 +4,11 @@ import {
   UnitType,
 } from "@openfront/engine-api/game/GameTypes";
 import { Game, Player } from "@openfront/engine/game/Game";
+import { PlayerImpl } from "@openfront/engine/game/PlayerImpl";
 import { setup } from "./util/Setup";
 
 let game: Game;
-let player: Player;
+let player: PlayerImpl;
 let other: Player;
 
 describe("PlayerImpl", () => {
@@ -17,7 +18,7 @@ describe("PlayerImpl", () => {
       new PlayerInfo("other", PlayerType.Human, null, "other_id"),
     ]);
 
-    player = game.player("player_id");
+    player = game.player("player_id") as PlayerImpl;
     other = game.player("other_id");
 
     player.conquer(game.ref(0, 0));
@@ -166,6 +167,57 @@ describe("PlayerImpl", () => {
       });
       expect(visited).toBe(owned);
       expect(player.numTilesOwned()).toBe(0);
+    });
+  });
+
+  describe("portSpawn", () => {
+    test("returns false when candidate has no valid shore tiles", () => {
+      // (0, 0) is owned, but not shore
+      expect(game.isShore(game.ref(0, 0))).toBe(false);
+      expect(player.portSpawn(game.ref(0, 0), null)).toBe(false);
+    });
+
+    test("returns shore tile when available within valid structure spawn tiles", () => {
+      const tile = game.ref(0, 0);
+      game.map().setShorelineBit(tile);
+      expect(game.isShore(tile)).toBe(true);
+      expect(player.portSpawn(tile, null)).toBe(tile);
+    });
+
+    test("scans validTiles array directly and picks first shore tile", () => {
+      const t1 = game.ref(0, 1);
+      const t2 = game.ref(1, 0);
+      game.map().setShorelineBit(t2);
+
+      expect(player.portSpawn(game.ref(0, 0), [t1, t2])).toBe(t2);
+    });
+
+    test("returns false when candidate shore tile is blocked by nearby structure", () => {
+      const tile = game.ref(0, 0);
+      game.map().setShorelineBit(tile);
+      player.buildUnit(UnitType.DefensePost, tile, {});
+      expect(player.portSpawn(tile, null)).toBe(false);
+    });
+  });
+
+  describe("canAttack", () => {
+    test("returns true for unowned land directly adjacent to player territory", () => {
+      // player owns (0, 0). (0, 1) is unowned land adjacent to (0, 0).
+      const adjacentNeutral = game.ref(0, 1);
+      expect(game.hasOwner(adjacentNeutral)).toBe(false);
+      expect(player.canAttack(adjacentNeutral)).toBe(true);
+    });
+
+    test("returns false for unowned tile unreachable from player border", () => {
+      const isolated = game.ref(5, 5);
+      expect(game.hasOwner(isolated)).toBe(false);
+      // Surround isolated tile with water so no neutral land path can reach player
+      game.forEachNeighbor(isolated, (n) => game.map().setWater(n));
+      expect(player.canAttack(isolated)).toBe(false);
+    });
+
+    test("returns false when targeting own tile", () => {
+      expect(player.canAttack(game.ref(0, 0))).toBe(false);
     });
   });
 });

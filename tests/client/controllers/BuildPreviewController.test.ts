@@ -6,7 +6,7 @@ import {
   samThreatensNukePreview,
   shouldPreserveGhostAfterBuild,
 } from "../../../src/client/controllers/BuildPreviewController";
-import { MouseUpEvent } from "../../../src/client/InputHandler";
+import { MouseMoveEvent, MouseUpEvent } from "../../../src/client/InputHandler";
 import { BuildUnitIntentEvent } from "../../../src/client/Transport";
 
 describe("BuildPreviewController ghost preservation (locked nuke / Enter confirm)", () => {
@@ -892,5 +892,399 @@ describe("BuildPreviewController 0-allocation mutable render buffer", () => {
     // Frame 3: mouse stationary at (8.8, 12.4) -> 0 dispatches
     stepFrame();
     expect(updateGhostPreview).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe("BuildPreviewController Single-Flight Coalescing Guard with Tile-Change Triggering", () => {
+  function createCoalescingFixture() {
+    const width = 10;
+    const height = 10;
+    let mouseWorldX = 0;
+    let mouseWorldY = 0;
+    const playerGold = 100n;
+    const buildablesCalls: Array<{ tile: number | undefined; types: any }> = [];
+    const pendingPromises: Array<{
+      resolve: (val: any) => void;
+      reject: (err: any) => void;
+      tile: number | undefined;
+    }> = [];
+
+    const mockMyPlayer = {
+      gold: () => playerGold,
+      smallID: () => 1,
+      allies: () => [],
+      buildables: vi.fn((tileRef: number | undefined, types: any) => {
+        buildablesCalls.push({ tile: tileRef, types });
+        return new Promise((resolve, reject) => {
+          pendingPromises.push({ resolve, reject, tile: tileRef });
+        });
+      }),
+    };
+
+    const game = {
+      isValidCoord: (x: number, y: number) =>
+        x >= 0 && y >= 0 && x < width && y < height,
+      ref: (x: number, y: number) => y * width + x,
+      x: (t: number) => t % width,
+      y: (t: number) => Math.floor(t / width),
+      isImpassable: (_tile: number) => false,
+      myPlayer: () => mockMyPlayer,
+      players: () => [mockMyPlayer],
+      units: () => [],
+      config: () => ({
+        samRange: () => 10,
+        nukeMagnitudes: () => ({ inner: 5, outer: 10 }),
+        nukeAllianceBreakThreshold: () => 100,
+        trainStationMaxRange: () => 10,
+        defensePostRange: () => 10,
+      }),
+    };
+
+    const transformHandler = {
+      screenToWorldCoordinates: (x: number, y: number) => {
+        if (Number.isFinite(x) && Number.isFinite(y)) {
+          if (x < 0 || y < 0) return { x: -1, y: -1 };
+          return { x: Math.floor(x / 10), y: Math.floor(y / 10) };
+        }
+        return { x: mouseWorldX, y: mouseWorldY };
+      },
+      screenToWorldCoordinatesFloat: (x: number, y: number) => {
+        if (Number.isFinite(x) && Number.isFinite(y)) {
+          if (x < 0 || y < 0) return { x: -1, y: -1 };
+          return { x: x / 10, y: y / 10 };
+        }
+        return { x: mouseWorldX, y: mouseWorldY };
+      },
+    };
+
+    const userSettings = {
+      nukeAllianceSafetyDuration: () => 0,
+      cursorCostLabel: () => false,
+    };
+
+    const eventBus = new EventBus();
+    const emitted: unknown[] = [];
+    eventBus.on(BuildUnitIntentEvent, (e) => {
+      emitted.push(e);
+    });
+
+    const uiState = {
+      ghostStructure: UnitType.City,
+      upgradeMultiplier: 1,
+      rocketDirectionUp: true,
+    };
+
+    const view = {
+      updateGhostPreview: vi.fn(),
+      updateNukeTrajectory: vi.fn(),
+      triggerBlockedFlash: vi.fn(),
+    };
+
+    const controller = new BuildPreviewController(
+      game as any,
+      eventBus,
+      uiState as any,
+      transformHandler as any,
+      view as any,
+      userSettings as any,
+    );
+
+    controller.init();
+
+    return {
+      controller,
+      eventBus,
+      game,
+      mockMyPlayer,
+      buildablesCalls,
+      pendingPromises,
+      emitted,
+      view,
+      setMousePos: (x: number, y: number) => {
+        mouseWorldX = x;
+        mouseWorldY = y;
+      },
+      resolveNextQuery: async (canBuild = true) => {
+        const p = pendingPromises.shift();
+        if (!p) throw new Error("No pending query to resolve");
+        p.resolve([
+          {
+            type: UnitType.City,
+            canBuild: canBuild ? p.tile : false,
+            canUpgrade: false,
+            cost: 10n,
+          },
+        ]);
+        await new Promise((r) => setTimeout(r, 0));
+      },
+    };
+  }
+
+  test("does not re-query when mouse moves within the same tile", async () => {
+    const fixture = createCoalescingFixture();
+    fixture.setMousePos(1, 1);
+    fixture.eventBus.emit(new MouseMoveEvent(10, 10));
+
+    expect(fixture.buildablesCalls.length).toBe(1);
+    expect(fixture.buildablesCalls[0].tile).toBe(11);
+
+    // Move slightly, still within tile (1, 1)
+    fixture.setMousePos(1, 1);
+    fixture.eventBus.emit(new MouseMoveEvent(15, 15));
+    expect(fixture.buildablesCalls.length).toBe(1);
+
+    await fixture.resolveNextQuery(true);
+    await Promise.resolve();
+  });
+
+  test("single-flight coalesces multiple intermediate tile moves into the latest tile", async () => {
+    const fixture = createCoalescingFixture();
+    fixture.setMousePos(1, 1);
+    fixture.eventBus.emit(new MouseMoveEvent(10, 10));
+    expect(fixture.buildablesCalls.length).toBe(1);
+    expect(fixture.buildablesCalls[0].tile).toBe(11);
+
+    // While query for tile 11 is in-flight, cursor traverses tiles 22, 33, 44
+    fixture.setMousePos(2, 2);
+    fixture.eventBus.emit(new MouseMoveEvent(20, 20));
+    fixture.setMousePos(3, 3);
+    fixture.eventBus.emit(new MouseMoveEvent(30, 30));
+    fixture.setMousePos(4, 4);
+    fixture.eventBus.emit(new MouseMoveEvent(40, 40));
+
+    // No extra queries dispatched yet
+    expect(fixture.buildablesCalls.length).toBe(1);
+
+    // Resolve first query (tile 11)
+    await fixture.resolveNextQuery(true);
+    await Promise.resolve();
+
+    // Now query for tile 44 should be dispatched, skipping 22 and 33
+    expect(fixture.buildablesCalls.length).toBe(2);
+    expect(fixture.buildablesCalls[1].tile).toBe(44);
+
+    await fixture.resolveNextQuery(true);
+    await Promise.resolve();
+    expect(fixture.buildablesCalls.length).toBe(2);
+  });
+
+  test("50ms guard is removed: consecutive queries can dispatch without artificial 50ms delay", async () => {
+    const fixture = createCoalescingFixture();
+    fixture.setMousePos(1, 1);
+    fixture.eventBus.emit(new MouseMoveEvent(10, 10));
+    expect(fixture.buildablesCalls.length).toBe(1);
+
+    await fixture.resolveNextQuery(true);
+    await Promise.resolve();
+
+    // Immediately move to a new tile (no 50ms wait)
+    fixture.setMousePos(2, 2);
+    fixture.eventBus.emit(new MouseMoveEvent(20, 20));
+    expect(fixture.buildablesCalls.length).toBe(2);
+    expect(fixture.buildablesCalls[1].tile).toBe(22);
+
+    await fixture.resolveNextQuery(true);
+    await Promise.resolve();
+  });
+
+  test("pendingConfirm during in-flight query does not build on wrong tile", async () => {
+    const fixture = createCoalescingFixture();
+    fixture.setMousePos(1, 1);
+    fixture.eventBus.emit(new MouseMoveEvent(10, 10));
+    await fixture.resolveNextQuery(true);
+    await Promise.resolve();
+
+    // Now move to tile 22
+    fixture.setMousePos(2, 2);
+    fixture.eventBus.emit(new MouseMoveEvent(20, 20));
+    expect(fixture.buildablesCalls.length).toBe(2);
+
+    // While tile 22 is in flight, user clicks on tile 22
+    fixture.eventBus.emit(new MouseUpEvent(20, 20));
+    // Should NOT have confirmed with tile 11's data
+    expect(fixture.emitted.length).toBe(0);
+
+    // Query for tile 22 completes as buildable
+    await fixture.resolveNextQuery(true);
+    await Promise.resolve();
+
+    // Now it should confirm on tile 22!
+    expect(fixture.emitted.length).toBe(1);
+    const intent = fixture.emitted[0] as BuildUnitIntentEvent;
+    expect(intent).toBeInstanceOf(BuildUnitIntentEvent);
+    expect(intent.tile).toBe(22);
+  });
+
+  test("pendingConfirm drops build if in-flight query resolves as unbuildable", async () => {
+    const fixture = createCoalescingFixture();
+    fixture.setMousePos(1, 1);
+    fixture.eventBus.emit(new MouseMoveEvent(10, 10));
+    await fixture.resolveNextQuery(true);
+    await Promise.resolve();
+
+    // Move to tile 22
+    fixture.setMousePos(2, 2);
+    fixture.eventBus.emit(new MouseMoveEvent(20, 20));
+
+    // Click on tile 22 while query is in-flight
+    fixture.eventBus.emit(new MouseUpEvent(20, 20));
+    expect(fixture.emitted.length).toBe(0);
+
+    // Query for tile 22 resolves with canBuild: false
+    await fixture.resolveNextQuery(false);
+    await Promise.resolve();
+
+    // Should NOT have emitted a build intent
+    expect(fixture.emitted.length).toBe(0);
+  });
+
+  test("stale response is dropped when querySeq increments (e.g. ghost cleared)", async () => {
+    const fixture = createCoalescingFixture();
+    fixture.setMousePos(1, 1);
+    fixture.eventBus.emit(new MouseMoveEvent(10, 10));
+    expect(fixture.buildablesCalls.length).toBe(1);
+
+    // User deselects ghost
+    (fixture.controller as any).clearGhostStructure();
+
+    // Stale response arrives
+    await fixture.resolveNextQuery(true);
+    await Promise.resolve();
+
+    // Ghost remains cleared
+    expect((fixture.controller as any).ghostUnit).toBeNull();
+  });
+
+  test("tick() updates passive state when stationary if no query is in flight", async () => {
+    const fixture = createCoalescingFixture();
+    fixture.setMousePos(1, 1);
+    fixture.eventBus.emit(new MouseMoveEvent(10, 10));
+    await fixture.resolveNextQuery(true);
+    await Promise.resolve();
+
+    expect(fixture.buildablesCalls.length).toBe(1);
+
+    // Next tick runs while hovering stationary at tile 11
+    fixture.controller.tick();
+    expect(fixture.buildablesCalls.length).toBe(2);
+    expect(fixture.buildablesCalls[1].tile).toBe(11);
+
+    await fixture.resolveNextQuery(true);
+    await Promise.resolve();
+  });
+
+  test("off-map movement during in-flight query dispatches follow-up query to clear ghost preview", async () => {
+    const fixture = createCoalescingFixture();
+    fixture.setMousePos(1, 1);
+    fixture.eventBus.emit(new MouseMoveEvent(10, 10));
+    expect(fixture.buildablesCalls.length).toBe(1);
+
+    // While query 11 is in flight, move off the map (-1, -1)
+    fixture.setMousePos(-1, -1);
+    fixture.eventBus.emit(new MouseMoveEvent(-10, -10));
+
+    // Resolve first query
+    await fixture.resolveNextQuery(true);
+    await Promise.resolve();
+
+    // Second query should have been dispatched for undefined (off-map)
+    expect(fixture.buildablesCalls.length).toBe(2);
+    expect(fixture.buildablesCalls[1].tile).toBeUndefined();
+
+    // Resolve off-map query
+    await fixture.resolveNextQuery(false);
+    await Promise.resolve();
+
+    // Ghost preview must be cleared
+    expect(fixture.view.updateGhostPreview).toHaveBeenLastCalledWith(null);
+  });
+
+  test("moving to new tile and back to original tile during in-flight query cancels pending tile", async () => {
+    const fixture = createCoalescingFixture();
+    fixture.setMousePos(1, 1);
+    fixture.eventBus.emit(new MouseMoveEvent(10, 10));
+    expect(fixture.buildablesCalls.length).toBe(1);
+
+    // Move to tile 22
+    fixture.setMousePos(2, 2);
+    fixture.eventBus.emit(new MouseMoveEvent(20, 20));
+
+    // Move back to tile 11 before query 11 resolves
+    fixture.setMousePos(1, 1);
+    fixture.eventBus.emit(new MouseMoveEvent(10, 10));
+
+    // Resolve query 11
+    await fixture.resolveNextQuery(true);
+    await Promise.resolve();
+
+    // No redundant query should be dispatched
+    expect(fixture.buildablesCalls.length).toBe(1);
+  });
+
+  test("click on unqueried tile initiates query and confirms when query completes", async () => {
+    const fixture = createCoalescingFixture();
+    // Do not emit mouse move, mouse is at (3, 3) = tile 33
+    fixture.setMousePos(3, 3);
+    fixture.eventBus.emit(new MouseUpEvent(30, 30));
+
+    // Query should have been dispatched for tile 33
+    expect(fixture.buildablesCalls.length).toBe(1);
+    expect(fixture.buildablesCalls[0].tile).toBe(33);
+    expect(fixture.emitted.length).toBe(0);
+
+    // Resolve query 33 as buildable
+    await fixture.resolveNextQuery(true);
+    await Promise.resolve();
+
+    expect(fixture.emitted.length).toBe(1);
+    const intent = fixture.emitted[0] as BuildUnitIntentEvent;
+    expect(intent.tile).toBe(33);
+  });
+
+  test("cursor movement after click during in-flight query does not drop pending confirm tile", async () => {
+    const fixture = createCoalescingFixture();
+    fixture.setMousePos(1, 1);
+    fixture.eventBus.emit(new MouseMoveEvent(10, 10));
+    expect(fixture.buildablesCalls.length).toBe(1);
+
+    // While tile 11 is in flight, user clicks at tile 22
+    fixture.setMousePos(2, 2);
+    fixture.eventBus.emit(new MouseUpEvent(20, 20));
+
+    // Cursor immediately drifts to tile 33 before tile 11 finishes
+    fixture.setMousePos(3, 3);
+    fixture.eventBus.emit(new MouseMoveEvent(30, 30));
+
+    // Tile 11 resolves
+    await fixture.resolveNextQuery(true);
+    await Promise.resolve();
+
+    // Next query must be for tile 22 (the pending confirm tile), not skipped
+    expect(fixture.buildablesCalls.length).toBe(2);
+    expect(fixture.buildablesCalls[1].tile).toBe(22);
+
+    // Tile 22 resolves as buildable
+    await fixture.resolveNextQuery(true);
+    await Promise.resolve();
+
+    // Build intent for tile 22 must be emitted!
+    expect(fixture.emitted.length).toBe(1);
+    const intent = fixture.emitted[0] as BuildUnitIntentEvent;
+    expect(intent.tile).toBe(22);
+  });
+
+  test("clicking on known unbuildable tile when not in flight does not confirm or leave pendingConfirm", async () => {
+    const fixture = createCoalescingFixture();
+    fixture.setMousePos(1, 1);
+    fixture.eventBus.emit(new MouseMoveEvent(10, 10));
+    await fixture.resolveNextQuery(false); // Unbuildable!
+    await Promise.resolve();
+
+    // Now click on tile 11
+    fixture.eventBus.emit(new MouseUpEvent(10, 10));
+    expect(fixture.emitted.length).toBe(0);
+    expect((fixture.controller as any).pendingConfirm).toBeNull();
+    // No new query dispatched
+    expect(fixture.buildablesCalls.length).toBe(1);
   });
 });

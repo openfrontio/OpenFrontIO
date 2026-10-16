@@ -440,8 +440,10 @@ export class NamePass {
       const slot = this.slots.get(playerID);
       if (!slot) continue;
 
+      const shouldSnap = snap || slot.tgtScale === 0;
+
       if (
-        !snap &&
+        !shouldSnap &&
         slot.nameLen !== 0 &&
         slot.index % NamePass.UPDATE_SLICES !== phase
       ) {
@@ -480,7 +482,11 @@ export class NamePass {
       // Write troop count string (refreshed per slot every 500ms, staggered by
       // slot index so updates spread across the window instead of bursting).
       const troopBucket = Math.floor((now + (slot.index % 5) * 0.1) / 0.5);
-      if (snap || slot.troopLen === 0 || troopBucket !== slot.lastTroopBucket) {
+      if (
+        shouldSnap ||
+        slot.troopLen === 0 ||
+        troopBucket !== slot.lastTroopBucket
+      ) {
         slot.lastTroopBucket = troopBucket;
         const troops = ps?.troops ?? 0;
         const troopStr = renderTroops(troops);
@@ -498,7 +504,7 @@ export class NamePass {
         entry.y !== slot.tgtY ||
         entry.size !== slot.tgtScale
       ) {
-        if (!snap) {
+        if (!shouldSnap) {
           const elapsed = now - slot.startTime;
           const t = Math.min(
             1 - Math.exp(-this.settings.name.lerpSpeed * elapsed),
@@ -515,6 +521,17 @@ export class NamePass {
         slot.tgtX = entry.x;
         slot.tgtY = entry.y;
         slot.tgtScale = entry.size;
+        slot.startTime = now;
+        dirty = true;
+      } else if (
+        snap &&
+        (slot.srcX !== slot.tgtX ||
+          slot.srcY !== slot.tgtY ||
+          slot.srcScale !== slot.tgtScale)
+      ) {
+        slot.srcX = slot.tgtX;
+        slot.srcY = slot.tgtY;
+        slot.srcScale = slot.tgtScale;
         slot.startTime = now;
         dirty = true;
       }

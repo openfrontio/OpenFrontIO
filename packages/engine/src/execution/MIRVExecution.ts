@@ -56,10 +56,10 @@ export class MirvExecution implements Execution {
 
   private baseX: number;
   private baseY: number;
-  private minX = 0;
-  private maxX = 0;
-  private minY = 0;
-  private maxY = 0;
+  private minX: number;
+  private maxX: number;
+  private minY: number;
+  private maxY: number;
 
   private random: PseudoRandom;
 
@@ -560,7 +560,6 @@ export class MirvExecution implements Execution {
 
   restoreSnapshot(s: MirvState, r: SnapshotReader): void {
     this.active = s.active;
-    this.mg = r.game;
     this.player = r.player(s.player);
     this.dst = s.dst;
     this.range = s.range;
@@ -594,7 +593,7 @@ export class MirvExecution implements Execution {
       r.exec<NukeExecution>(i),
     );
     this.consecutiveOverlapFailures = s.consecutiveOverlapFailures;
-    if (s.warheadsSpawned) {
+    if (s.init === null || s.warheadsSpawned) {
       this.spatialGrid = new Int32Array(0);
     } else {
       this.spatialGrid = this.buildOverlapGrid(this.stagedTargets);
