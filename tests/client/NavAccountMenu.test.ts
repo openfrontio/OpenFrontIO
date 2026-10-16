@@ -33,6 +33,7 @@ vi.mock("../../src/client/Utils", () => ({
 
 import type { UserMeResponse } from "@openfront/shared/ApiSchemas";
 import { NavAccountMenu } from "../../src/client/components/NavAccountMenu";
+import { gamePortal } from "../../src/client/GamePortal";
 import { updateAccountNavButton } from "../../src/client/NavAccountButton";
 
 function userMe(subscribed = false, publicId = "p"): UserMeResponse {
@@ -167,6 +168,19 @@ describe("nav-account-menu", () => {
     await el.updateComplete;
     await click(trigger());
     expect(itemKeys()).not.toContain("copy-profile-url");
+  });
+
+  it("drops the profile link on Poki, which it would lead players off", async () => {
+    vi.spyOn(gamePortal, "name").mockReturnValue("poki");
+    try {
+      fireUserMe(userMe());
+      await el.updateComplete;
+      await click(trigger());
+      expect(itemKeys()).toContain("view-account");
+      expect(itemKeys()).not.toContain("copy-profile-url");
+    } finally {
+      vi.mocked(gamePortal.name).mockRestore();
+    }
   });
 
   it("keeps the menu on CrazyGames, minus the log-out they own", async () => {

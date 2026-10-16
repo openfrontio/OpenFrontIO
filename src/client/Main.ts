@@ -2233,15 +2233,6 @@ class Client {
   }
 }
 
-// Hide elements with the no-game-portal class on CrazyGames and Poki
-const hidePortalElements = () => {
-  if (gamePortal.isOnGamePortal()) {
-    document.querySelectorAll(".no-game-portal").forEach((el) => {
-      (el as HTMLElement).style.display = "none";
-    });
-  }
-};
-
 // Initialize the client when the DOM is loaded
 const bootstrap = () => {
   // First, so the error hooks are in place for everything below. No-op
@@ -2267,12 +2258,10 @@ const bootstrap = () => {
   prefetchGameClient();
   prefetchModals();
 
-  // Hide elements immediately
-  hidePortalElements();
-
-  // Also hide elements after a short delay to catch late-rendered components
-  setTimeout(hidePortalElements, 100);
-  setTimeout(hidePortalElements, 500);
+  // Hides every .no-game-portal element on CrazyGames and Poki (styles.css).
+  if (gamePortal.isOnGamePortal()) {
+    document.documentElement.classList.add("game-portal");
+  }
 
   // Populate the portal account buttons once the nav/top-bar have rendered
   // (onUserMe also refreshes them after auth and on mid-session sign-in).
