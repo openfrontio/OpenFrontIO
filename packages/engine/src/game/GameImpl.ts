@@ -739,6 +739,11 @@ export class GameImpl implements Game {
   takeoverPlayer(player: Player | PlayerID, localClientID: ClientID): void {
     const target = typeof player === "string" ? this.player(player) : player;
 
+    const oldClientID = target.clientID();
+    if (oldClientID !== null) {
+      this._stats.migrateClientID(oldClientID, localClientID);
+    }
+
     // Remove existing AI executions from chosenPlayer if it was previously an AI nation or tribe
     for (const exec of this.executions()) {
       if (

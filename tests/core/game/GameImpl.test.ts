@@ -230,13 +230,33 @@ describe("GameImpl", () => {
     expect(info?.clientID).toBe("new_client_123");
   });
 
-  test("takeoverPlayer rebinds existing human player to new client ID", () => {
+  test("takeoverPlayer rebinds existing human player to new client ID and migrates stats", () => {
+    attacker.setPlayerInfo(
+      new PlayerInfo(
+        attacker.name(),
+        PlayerType.Human,
+        "old_client_id",
+        attacker.id(),
+      ),
+    );
     expect(attacker.type()).toBe(PlayerType.Human);
+    const oldClientID = attacker.clientID()!;
+    game.stats().attack(attacker, defender, 100);
+
+    const oldStats = game.stats().getPlayerStats(attacker);
+    expect(oldStats).toBeDefined();
+    expect(game.stats().stats()[oldClientID]).toBeDefined();
+
     game.takeoverPlayer(attacker.id(), "attacker_new_client");
 
     expect(attacker.clientID()).toBe("attacker_new_client");
     expect(attacker.info().clientID).toBe("attacker_new_client");
     expect(attacker.type()).toBe(PlayerType.Human);
+
+    // Verify stats migrated to the new client ID and remain available
+    expect(game.stats().stats()[oldClientID]).toBeUndefined();
+    expect(game.stats().stats()["attacker_new_client"]).toBe(oldStats);
+    expect(game.stats().getPlayerStats(attacker)).toBe(oldStats);
   });
 
   test("convertHumanToNation clears disconnected status on a previously disconnected player", () => {
