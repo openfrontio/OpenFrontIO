@@ -1,10 +1,11 @@
 import {
   PlayerStatsTree,
   PrestigeResponse,
+  PublicProgress,
   UserMeResponse,
 } from "@openfront/shared/ApiSchemas";
 import { assetUrl } from "@openfront/shared/AssetUrls";
-import { html, nothing, TemplateResult } from "lit";
+import { html, nothing, PropertyValues, TemplateResult } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import { ClientEnv } from "src/client/ClientEnv";
 import {
@@ -18,7 +19,7 @@ import {
   linkGoogle,
   linkSteam,
   logOut,
-  reauthAfterCrazyGamesChange,
+  reauthAfterPortalChange,
   sendMagicLink,
   steamLogin,
 } from "./Auth";
@@ -37,18 +38,25 @@ import "./components/Difficulties";
 import "./components/FriendsList";
 import type { PrestigeFlow } from "./components/PrestigeFlow";
 import "./components/ProfileCard";
+import "./components/ProfileProgression";
 import "./components/RewardsPanel";
 import type { RewardsChangedDetail } from "./components/RewardsPanel";
 import { googleLinkButton } from "./components/ui/GoogleLinkButton";
 import { modalHeader } from "./components/ui/ModalHeader";
 import { steamGlyph, steamLinkButton } from "./components/ui/SteamLinkButton";
-import { crazyGamesSDK, type CrazyGamesUser } from "./CrazyGamesSDK";
 import { desktopLinkGate, isDesktopShell } from "./DesktopShell";
+import { gamePortal, type PortalUser } from "./GamePortal";
 import "./GameStatsModal";
 import { showInGameAlert } from "./InGameModal";
 import { consumeLinkResult } from "./LinkResult";
 import { consumeLoginResult, LoginResult } from "./LoginResult";
 import "./PlayerProfileModal";
+import { loadPlayerProgress } from "./PlayerProgress";
+import {
+  PROVISIONAL_PROGRESS_CHANGED,
+  provisionalProgress,
+  scoredGames,
+} from "./ProvisionalProgress";
 import { steamSDK } from "./SteamSDK";
 import { playerProfileUrl } from "./utilities/PlayerProfileUrl";
 import { currentPagePath, translateText } from "./Utils";
@@ -79,19 +87,37 @@ function loadPrestigeFlow(): Promise<unknown> {
   return prestigeFlowModule;
 }
 
+// Every opening of the account, numbered: keys the once-per-opening
+// flourishes.
+let accountOpenings = 0;
+
 @customElement("account-modal")
 export class AccountModal extends BaseModal {
   protected routerName = "account";
 
   @state() private email: string = "";
   @state() private isLoadingUser: boolean = false;
-  // Counts openings, to key the profile card's once-per-open flourish.
+  // Counts openings, to key the profile card's and the Progression tab's
+  // once-per-open flourish.
   private openCount = 0;
   // Replaceable for tests.
   loadPrestigeFlow: () => Promise<unknown> = loadPrestigeFlow;
-  // Set on CrazyGames when a CrazyGames user is signed in. Their identity comes
-  // from the SDK, not our backend user object.
-  @state() private crazyGamesUser: CrazyGamesUser | null = null;
+  // The Progression tab's progress: the public one, which has the prestige
+  // history and milestones /users/@me lacks. Read the first time the tab
+  // shows in an opening, not on every opening of the account.
+  @state() private progression: PublicProgress | null = null;
+  // The player it was read (or is being read) for in this opening.
+  private progressionFor: string | null = null;
+  // Bumped on every read and drop, so a superseded read is ignored.
+  private progressionLoad = 0;
+  // The tab a link or caller asked for. BaseModal picks it when the tab is
+  // listed at open, but the tabs wait for the account: a modal loaded after
+  // the page's /users/@me broadcast doesn't know the player yet, and an
+  // opening lists none while it reads /users/@me. Picked once that lands.
+  private requestedTab: string | null = null;
+  // Set on a portal (CrazyGames, Poki) when its user is signed in. Their
+  // identity comes from the SDK, not our backend user object.
+  @state() private portalUser: PortalUser | null = null;
   // One-shot outcome of a rejected sign-in, read from the `login=` router
   // arg on open. Reassigned on every open, so reopening clears it.
   @state() private loginError: LoginResult | undefined;
@@ -110,10 +136,17 @@ export class AccountModal extends BaseModal {
   constructor() {
     super();
 
+    // The level shown counts XP from games still waiting to be scored, and
+    // that changed (ProvisionalProgress.ts).
+    document.addEventListener(PROVISIONAL_PROGRESS_CHANGED, (event) => {
+      if (scoredGames(event).length > 0) this.rereadProgression();
+      this.requestUpdate();
+    });
+
     document.addEventListener("userMeResponse", (event: Event) => {
-      // A CrazyGames sign-in fires userMeResponse (via Main's auth listener);
+      // A portal sign-in fires userMeResponse (via Main's auth listener);
       // re-fetch the SDK profile so the modal leaves the sign-in screen.
-      this.refreshCrazyGamesUser();
+      this.refreshPortalUser();
       const customEvent = event as CustomEvent;
       if (customEvent.detail) {
         const previousPublicId = this.userMeResponse?.player?.publicId;
@@ -133,12 +166,12 @@ export class AccountModal extends BaseModal {
     });
   }
 
-  // Refresh the signed-in CrazyGames identity from the SDK. No-op off
-  // CrazyGames; drives isLinkedAccount() so the modal shows the profile.
-  private refreshCrazyGamesUser() {
-    if (!crazyGamesSDK.isOnCrazyGames()) return;
-    void crazyGamesSDK.getUserProfile().then((user) => {
-      this.crazyGamesUser = user;
+  // Refresh the signed-in portal identity from the SDK. No-op off a
+  // portal; drives isLinkedAccount() so the modal shows the profile.
+  private refreshPortalUser() {
+    if (!gamePortal.isOnGamePortal()) return;
+    void gamePortal.getUserProfile().then((user) => {
+      this.portalUser = user;
       this.requestUpdate();
     });
   }
@@ -177,12 +210,12 @@ export class AccountModal extends BaseModal {
   }
 
   private isLinkedAccount(): boolean {
-    // The CrazyGames identity only counts once the backend token exchange
+    // The portal identity only counts once the backend token exchange
     // produced a session — otherwise a failed exchange would show a dead
     // "connected as" view with no way to retry.
     return (
       hasLinkedIdentity(this.userMeResponse?.user) ||
-      (!!this.crazyGamesUser && this.userMeResponse !== null)
+      (!!this.portalUser && this.userMeResponse !== null)
     );
   }
 
@@ -195,9 +228,25 @@ export class AccountModal extends BaseModal {
         { key: "account", label: translateText("account_modal.tab_account") },
         { key: "stats", label: translateText("account_modal.tab_stats") },
         { key: "games", label: translateText("account_modal.tab_games") },
+        // Where the player profile has it, after Games. Only for a player
+        // with a level (progression on), as on the profile: there is nothing
+        // to show otherwise.
+        ...(this.hasProgress()
+          ? [
+              {
+                key: "progression",
+                label: translateText("account_modal.tab_progression"),
+              },
+            ]
+          : []),
         { key: "friends", label: translateText("account_modal.tab_friends") },
       ],
     };
+  }
+
+  private hasProgress(): boolean {
+    const player = this.userMeResponse?.player;
+    return !!player?.publicId && !!player.progress;
   }
 
   protected renderBody(tab: string) {
@@ -208,8 +257,8 @@ export class AccountModal extends BaseModal {
     }
     if (!this.isLinkedAccount()) {
       return html`<div class="custom-scrollbar mr-1">
-        ${crazyGamesSDK.isOnCrazyGames()
-          ? this.renderCrazyGamesSignIn()
+        ${gamePortal.isOnGamePortal()
+          ? this.renderPortalSignIn()
           : this.renderLoginOptions()}
       </div>`;
     }
@@ -231,6 +280,8 @@ export class AccountModal extends BaseModal {
         return this.renderStatsTab();
       case "games":
         return this.renderGamesTab();
+      case "progression":
+        return this.renderProgressionTab();
       case "friends":
         return this.renderFriendsTab();
       default:
@@ -279,8 +330,8 @@ export class AccountModal extends BaseModal {
   }
 
   private renderAccountTab(): TemplateResult {
-    if (this.crazyGamesUser) {
-      return this.renderCrazyGamesAccount(this.crazyGamesUser);
+    if (this.portalUser) {
+      return this.renderPortalAccount(this.portalUser);
     }
     return html`
       <div class="flex flex-col gap-6">
@@ -344,10 +395,10 @@ export class AccountModal extends BaseModal {
       });
   }
 
-  // CrazyGames "connected as" view: avatar + username from the SDK, plus
-  // currency/subscription. No Discord/Google/email link or logout (CrazyGames
+  // Portal "connected as" view: avatar + username from the SDK, plus
+  // currency/subscription. No Discord/Google/email link or logout (the portal
   // owns the account and its logout).
-  private renderCrazyGamesAccount(user: CrazyGamesUser): TemplateResult {
+  private renderPortalAccount(user: PortalUser): TemplateResult {
     return html`
       <div class="flex flex-col gap-6">
         ${this.renderProfileCard("compact")}
@@ -375,9 +426,9 @@ export class AccountModal extends BaseModal {
     `;
   }
 
-  // Shown when a CrazyGames guest opens the modal: hand off to CrazyGames' own
-  // sign-in prompt (no Discord/Google/email on CrazyGames).
-  private renderCrazyGamesSignIn(): TemplateResult {
+  // Shown when a portal guest opens the modal: hand off to the portal's own
+  // sign-in prompt (no Discord/Google/email on a portal).
+  private renderPortalSignIn(): TemplateResult {
     return html`
       <div class="flex items-center justify-center p-6 min-h-full">
         <div
@@ -391,7 +442,7 @@ export class AccountModal extends BaseModal {
             width="block"
             size="md"
             translationKey="main.sign_in"
-            @click=${this.handleCrazyGamesSignIn}
+            @click=${this.handlePortalSignIn}
           ></o-button>
         </div>
       </div>
@@ -434,6 +485,89 @@ export class AccountModal extends BaseModal {
     `;
   }
 
+  // The player profile's Progression tab, for the signed-in player: the same
+  // element, in its owner mode (it reads /users/@me afresh, so the track
+  // shows each level's claim status and offers Claim all), and the same
+  // once-per-opening pop-in.
+  private renderProgressionTab(): TemplateResult {
+    const publicId = this.userMeResponse?.player?.publicId;
+    // The tab is hidden without progress; should it still be selected (the
+    // account changed underneath), show the Account content rather than
+    // nothing.
+    if (!publicId || !this.hasProgress()) return this.renderAccountTab();
+    if (this.progression === null) {
+      return this.renderLoadingSpinner(translateText("common.loading"));
+    }
+    // With any XP still waiting to be scored, provisionally.
+    const view = provisionalProgress(publicId, this.progression);
+    return html`<profile-progression
+      .progress=${view.progress}
+      .confirmedLevel=${view.confirmedLevel}
+      .provisional=${view.provisional}
+      .publicId=${publicId}
+      .popKey=${`account-${this.openCount}`}
+      @rewards-changed=${this.handleTrackRewardsChanged}
+    ></profile-progression>`;
+  }
+
+  protected updated(changed: PropertyValues<this>): void {
+    super.updated(changed);
+    this.ensureProgression();
+  }
+
+  // Reads the Progression tab's progress once it shows: once per opening
+  // (the level moves on between openings), and again after a prestige.
+  private ensureProgression(): void {
+    if (this.activeTab !== "progression" || this.isLoadingUser) return;
+    if (!this.isOpen() || !this.hasProgress()) return;
+    const publicId = this.userMeResponse!.player.publicId;
+    if (this.progressionFor === publicId) return;
+    this.progressionFor = publicId;
+    this.progression = null;
+    const load = ++this.progressionLoad;
+    void loadPlayerProgress(publicId).then((progress) => {
+      if (load !== this.progressionLoad) return;
+      // The public read failed: the account's own copy still has the level
+      // and run (without dates), so the tab never sits on its spinner.
+      this.progression =
+        progress ?? this.userMeResponse?.player?.progress ?? null;
+    });
+  }
+
+  // Read afresh the next time the tab shows.
+  private dropProgression(): void {
+    this.progressionLoad++;
+    this.progressionFor = null;
+    this.progression = null;
+  }
+
+  // A pending game was scored: read the tab's progress again, for its
+  // history and milestones. The level holds meanwhile (and on a stale read):
+  // the scored game's XP counts onto any figure that doesn't include it yet
+  // (ProvisionalProgress.ts).
+  private rereadProgression(): void {
+    const publicId = this.progressionFor;
+    if (publicId === null || this.progression === null) return;
+    // Closed, it's read afresh at the next opening anyway.
+    if (!this.isConnected || !this.isOpen()) return;
+    const load = ++this.progressionLoad;
+    void loadPlayerProgress(publicId).then((progress) => {
+      if (load !== this.progressionLoad || progress === null) return;
+      this.progression = progress;
+    });
+  }
+
+  // The track's Claim all moved rewards into the balances. Update the
+  // account's own copy, as a rewards-panel claim does (the Account tab's
+  // rewards list), then re-read /users/@me and tell the page, as a prestige
+  // does: the header's account menu among them.
+  private handleTrackRewardsChanged = (
+    event: CustomEvent<RewardsChangedDetail>,
+  ): void => {
+    this.handleRewardsChanged(event);
+    void this.refreshUserMe().then(() => this.requestUpdate());
+  };
+
   private renderEmptyState(icon: string, message: string): TemplateResult {
     return html`
       <div
@@ -451,13 +585,13 @@ export class AccountModal extends BaseModal {
     return html`<rewards-panel
       .rewards=${rewards}
       .signedIn=${responseHasLinkedIdentity(this.userMeResponse ?? false) ||
-      this.crazyGamesUser !== null}
+      this.portalUser !== null}
       @rewards-changed=${this.handleRewardsChanged}
     ></rewards-panel>`;
   }
 
-  // Not rendered on the CrazyGames account branch (renderCrazyGamesAccount) —
-  // CrazyGames identity comes from the SDK, not the /users/@me `player`
+  // Not rendered on the portal account branch (renderPortalAccount) — the
+  // portal identity comes from the SDK, not the /users/@me `player`
   // record this panel reads its state from.
   private renderCreatorCodePanel(): TemplateResult {
     return html`<creator-code-panel
@@ -503,12 +637,16 @@ export class AccountModal extends BaseModal {
   ): TemplateResult | typeof nothing {
     const player = this.userMeResponse?.player;
     if (!player?.publicId || !player.progress) return nothing;
+    // With any XP still waiting to be scored, provisionally: it never offers
+    // Prestige (only the confirmed level can).
+    const view = provisionalProgress(player.publicId, player.progress);
     return html`<profile-card
       class=${variant === "full" ? "mb-4 block" : "block"}
       .variant=${variant}
       .username=${player.username ?? player.publicId}
       .clanTag=${player.clans?.[0]?.tag ?? null}
-      .progress=${player.progress}
+      .progress=${view.progress}
+      .provisional=${view.provisional}
       .openKey=${`account-${this.openCount}`}
       prestigeable
       @prestige-request=${this.handlePrestigeRequest}
@@ -552,6 +690,8 @@ export class AccountModal extends BaseModal {
     if (added.length > 0) {
       player.rewards = [...(player.rewards ?? []), ...added];
     }
+    // A new run: the Progression tab's history and track moved on.
+    this.dropProgression();
     this.requestUpdate();
     // Then the real thing, for the header and everything else showing the
     // account.
@@ -784,9 +924,16 @@ export class AccountModal extends BaseModal {
     this.modalEl?.setScrollTop(this.gamesScrollTop);
   }
 
-  private finishLoadingUser(): void {
+  private finishLoadingUser(opening: number): void {
+    if (opening !== this.openCount) return;
     this.isLoadingUser = false;
     this.requestUpdate();
+    // The tabs are listed now: pick the one asked for, if this account has
+    // it (the Progression tab needs a level). The modal can have been closed
+    // meanwhile; the tab is then left for the next opening to decide.
+    const tab = this.requestedTab;
+    this.requestedTab = null;
+    if (tab !== null && this.isOpen()) this.setActiveTab(tab);
     if (this.restoreGamesScrollAfterOpen) {
       this.restoreGamesScrollAfterOpen = false;
       void this.restoreGamesScroll();
@@ -795,6 +942,7 @@ export class AccountModal extends BaseModal {
 
   private resetPlayerData(): void {
     this.statsTree = null;
+    this.dropProgression();
     this.gameHistoryCache = null;
     this.gamesScrollTop = 0;
     this.restoreGamesScrollAfterOpen = false;
@@ -977,20 +1125,20 @@ export class AccountModal extends BaseModal {
     );
   }
 
-  // CrazyGames sign-in: after their prompt completes, exchange the new token
+  // Portal sign-in: after their prompt completes, exchange the new token
   // for a session and refresh the modal so it shows the signed-in profile.
-  private async handleCrazyGamesSignIn() {
-    await crazyGamesSDK.showAuthPrompt();
-    const profile = await crazyGamesSDK.getUserProfile();
+  private async handlePortalSignIn() {
+    await gamePortal.showAuthPrompt();
+    const profile = await gamePortal.getUserProfile();
     if (!profile) return; // prompt cancelled / still not signed in
     invalidateUserMe();
-    await reauthAfterCrazyGamesChange();
+    await reauthAfterPortalChange();
     const userMe = await getUserMe();
     if (userMe) {
       this.userMeResponse = userMe;
       this.prefetchPrestigeFlow();
     }
-    this.crazyGamesUser = profile;
+    this.portalUser = profile;
     this.requestUpdate();
   }
 
@@ -1044,14 +1192,19 @@ export class AccountModal extends BaseModal {
   }
 
   protected onOpen(args?: Record<string, unknown>): void {
-    // A new opening: the full profile card plays its flourish again.
-    this.openCount++;
+    // A new opening: the full profile card and the Progression tab play
+    // their flourish again, and the tab reads the player's progress afresh.
+    // Counted across every account modal, as the profile counts its own, so
+    // no two openings share a key.
+    const opening = (this.openCount = ++accountOpenings);
+    this.dropProgression();
     this.isLoadingUser = true;
+    this.requestedTab = typeof args?.tab === "string" ? args.tab : null;
     consumeLinkResult(args);
     this.loginError = consumeLoginResult(args);
     this.prefillCreatorCode = this.consumeCreatorCodeArg(args);
 
-    this.refreshCrazyGamesUser();
+    this.refreshPortalUser();
 
     void getUserMe()
       .then((userMe) => {
@@ -1062,11 +1215,11 @@ export class AccountModal extends BaseModal {
             this.loadPlayerProfile(this.userMeResponse.player.publicId);
           }
         }
-        this.finishLoadingUser();
+        this.finishLoadingUser(opening);
       })
       .catch((err) => {
         console.warn("Failed to fetch user info in AccountModal.open():", err);
-        this.finishLoadingUser();
+        this.finishLoadingUser(opening);
       });
     this.requestUpdate();
   }

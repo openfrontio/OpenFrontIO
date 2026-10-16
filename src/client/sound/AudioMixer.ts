@@ -359,6 +359,7 @@ export class AudioMixer {
   /** Plays a cue on its own channel, within that channel's budget. */
   play(name: SoundEffect): void {
     const category = categoryOf(name);
+    if (!this.isAudible(category)) return;
     this.safely(`play sound ${name}`, () => {
       const inCategory = this.active.filter((s) => s.category === category);
       if (inCategory.length >= BUDGET[category]) {

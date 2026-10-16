@@ -100,6 +100,9 @@ export class ProfileCard extends LitElement {
   @property({ attribute: false }) progress: ProfileCardProgress | null = null;
   // Your own card: offers Prestige when you can. Emits `prestige-request`.
   @property({ type: Boolean }) prestigeable = false;
+  // The progress counts XP from games still waiting to be scored: the card
+  // says it's provisional.
+  @property({ type: Boolean }) provisional = false;
   // Names one opening of the page the card is on: the flourish plays once per
   // key, however often the card is rendered again (a tab switch builds a new
   // one). Without a key it plays once per card.
@@ -228,6 +231,17 @@ export class ProfileCard extends LitElement {
             <span class="text-white/30">·</span>`
         : nothing}
       ${translateText("progression.level", { level: progress.level })}
+    </div>`;
+  }
+
+  // "Provisional — confirmed when the game ends", under the level line.
+  private renderProvisional(): TemplateResult | typeof nothing {
+    if (!this.provisional) return nothing;
+    return html`<div
+      data-profile-provisional
+      class="mt-0.5 text-xs font-semibold text-amber-200/80"
+    >
+      ${translateText("progression.provisional_label")}
     </div>`;
   }
 
@@ -442,7 +456,7 @@ export class ProfileCard extends LitElement {
   render() {
     const progress = this.progress;
     if (progress === null) return nothing;
-    const accent = levelBadgeAccent(progress.level, progress.legend);
+    const accent = levelBadgeAccent(progress.prestige, progress.legend);
     const clan =
       this.clanTag === null
         ? nothing
@@ -480,6 +494,7 @@ export class ProfileCard extends LitElement {
                 ${clan} ${name}
               </div>
               <div class="mt-0.5">${this.renderLevelLine(progress)}</div>
+              ${this.renderProvisional()}
             </div>
           </div>
           ${this.canPrestige(progress)
@@ -507,7 +522,7 @@ export class ProfileCard extends LitElement {
         ${this.renderBadge(progress, accent)}
         <div class="w-full min-w-0 flex-1 text-center sm:text-left">
           ${clan} ${name} ${this.renderLevelLine(progress)}
-          ${this.renderXp(progress)}
+          ${this.renderProvisional()} ${this.renderXp(progress)}
           ${this.canPrestige(progress)
             ? html`<div
                 class="mt-4 flex flex-col items-center gap-3 sm:flex-row sm:justify-between"

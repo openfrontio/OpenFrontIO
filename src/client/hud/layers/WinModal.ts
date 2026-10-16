@@ -1,4 +1,4 @@
-import { RankedType } from "@openfront/engine-api/game/GameTypes";
+import { GameType, RankedType } from "@openfront/engine-api/game/GameTypes";
 import { GameUpdateType } from "@openfront/engine-api/game/GameUpdates";
 import type { GameXpEligible, Progress } from "@openfront/shared/ApiSchemas";
 import { Pattern } from "@openfront/shared/CosmeticSchemas";
@@ -28,8 +28,8 @@ import {
   purchaseCosmetic,
   resolveCosmetics,
 } from "../../Cosmetics";
-import { crazyGamesSDK } from "../../CrazyGamesSDK";
 import { isDesktopShell } from "../../DesktopShell";
+import { gamePortal } from "../../GamePortal";
 import {
   gameShareMoment,
   momentShareLabel,
@@ -40,6 +40,13 @@ import { Platform } from "../../Platform";
 import { MAX_PRESTIGE, reachedLegendThisGame } from "../../Progression";
 import { resolveXpAccount } from "../../ProgressionAccount";
 import { fetchProgressionConfig, pollGameXp } from "../../ProgressionApi";
+import {
+  applyGameXp,
+  firstGameXp,
+  type PendingGameKind,
+  recordPendingXp,
+  withPendingXp,
+} from "../../ProvisionalProgress";
 import {
   loadProvisionalXp,
   type ProvisionalXp,
@@ -548,7 +555,7 @@ export class WinModal extends LitElement implements Controller {
   }
 
   async show() {
-    crazyGamesSDK.gameplayStop();
+    gamePortal.gameplayStop();
     this.isRankedGame =
       this.game.config().gameConfig().rankedType !== undefined;
     this.isVisible = true;
@@ -628,6 +635,7 @@ export class WinModal extends LitElement implements Controller {
         }
         this.provisionalXp = provisional;
         this.xpView = { kind: "provisional", provisional, confirming: false };
+        this.keepPendingXp(provisional);
         return;
       }
       this.xpPolling = true;
@@ -648,6 +656,14 @@ export class WinModal extends LitElement implements Controller {
         if (this.isConnected) void this.updateXp(true);
         else this.xpPollAborted = true;
         return;
+      }
+      // Scored: the figure kept for the account menu and profile is done.
+      if (result !== null && this.xpPublicId !== null) {
+        applyGameXp(
+          this.xpPublicId,
+          result,
+          this.pendingAbout(progress.daily?.day),
+        );
       }
       if (result?.eligible && reachedLegendThisGame(result)) {
         this.preloadLegendCeremony();
@@ -698,6 +714,42 @@ export class WinModal extends LitElement implements Controller {
     }
   }
 
+  // The lifetime XP of the account the provisional figure was worked out
+  // from (ProvisionalProgress: a figure up to it doesn't include this game).
+  private provisionalReadLifetime: number | null = null;
+
+  // Keeps an eligible provisional figure for the account, so the account
+  // menu, the Account modal and the profile show it (provisionally) until the
+  // API scores the game (ProvisionalProgress.ts).
+  // Nothing is asked of the API here: the game is still running, and the
+  // account menu's poll picks it up.
+  private keepPendingXp(provisional: ProvisionalXp): void {
+    const response = provisional.response;
+    if (this.xpPublicId === null || !response.eligible) return;
+    recordPendingXp(this.xpPublicId, {
+      ...this.pendingAbout(provisional.inputs.dailyDay ?? undefined),
+      gameId: response.gameId,
+      xp: response.breakdown.total,
+      firstGame: firstGameXp(response.breakdown),
+      // The account as read at death: the game hadn't ended, so it can't
+      // be in it.
+      notIn: this.provisionalReadLifetime ?? undefined,
+    });
+  }
+
+  // This game's kind and the API's day stamp, for the day's allowances.
+  private pendingAbout(day: string | undefined): {
+    day?: string;
+    kind?: PendingGameKind;
+  } {
+    const kinds: Partial<Record<GameType, PendingGameKind>> = {
+      [GameType.Public]: "public",
+      [GameType.Private]: "private",
+      [GameType.Singleplayer]: "singleplayer",
+    };
+    return { day, kind: kinds[this.game.config().gameConfig().gameType] };
+  }
+
   // The provisional XP figure for a player who has just died, or null when
   // there can't be one (see loadProvisionalXp).
   private async loadProvisionalXp(
@@ -716,14 +768,24 @@ export class WinModal extends LitElement implements Controller {
     // been scored since). Past the page's cache, so a failed ask can't cost
     // the game-end figure its copy; the page's progress stands in for it.
     const fresh = await fetchUserMeUncached();
+    const confirmed =
+      fresh !== false && fresh.player.progress !== undefined
+        ? fresh.player.progress
+        : progress;
+    this.provisionalReadLifetime = confirmed.lifetimeXp;
+    // Games left earlier and not scored yet stack underneath this one: it
+    // starts from where their provisional XP took the player, and from the
+    // day's allowances they used (ProvisionalProgress.ts). Nothing is asked:
+    // the stored answers decide.
+    const start =
+      this.xpPublicId === null
+        ? confirmed
+        : withPendingXp(this.xpPublicId, confirmed, progression, game.gameID());
     return loadProvisionalXp({
       gameId: game.gameID(),
       myClientID,
       config: game.config().gameConfig(),
-      progress:
-        fresh !== false && fresh.player.progress !== undefined
-          ? fresh.player.progress
-          : progress,
+      progress: start,
       progression,
       humanStats: () => game.worker.humanStats(),
     });
@@ -793,7 +855,7 @@ export class WinModal extends LitElement implements Controller {
         if (wu.winner[1] === this.game.myPlayer()?.team()) {
           this._title = translateText("win_modal.your_team");
           this.isWin = true;
-          crazyGamesSDK.happytime();
+          gamePortal.happytime();
         } else {
           this._title = translateText("win_modal.other_team", {
             team: getTranslatedPlayerTeamLabel(wu.winner[1]),
@@ -826,7 +888,7 @@ export class WinModal extends LitElement implements Controller {
         ) {
           this._title = translateText("win_modal.you_won");
           this.isWin = true;
-          crazyGamesSDK.happytime();
+          gamePortal.happytime();
         } else {
           this._title = translateText("win_modal.other_won", {
             player: winner.displayName(),

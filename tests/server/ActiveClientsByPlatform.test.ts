@@ -31,6 +31,7 @@ describe("GameManager.activeClientsByPlatform", () => {
       web: 1,
       steam: 2,
       crazygames: 0,
+      poki: 0,
       unknown: 1,
     });
     expect(manager.activeClients()).toBe(4);

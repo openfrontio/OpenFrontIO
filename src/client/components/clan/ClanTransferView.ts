@@ -241,7 +241,7 @@ export class ClanTransferView extends LitElement {
           @click=${() => (this.confirmAction = "transfer")}
           class="w-full px-6 py-3 text-sm font-bold text-white uppercase tracking-wider rounded-xl transition-all border disabled:opacity-50 disabled:pointer-events-none
                 ${this.transferTarget && !this.actionPending
-            ? "bg-gradient-to-r from-amber-600 to-amber-700 hover:from-amber-500 hover:to-amber-600 shadow-lg hover:shadow-amber-900/40 border-white/5"
+            ? "bg-gradient-to-r bg-origin-border from-amber-600 to-amber-700 hover:from-amber-500 hover:to-amber-600 shadow-lg hover:shadow-amber-900/40 border-white/5"
             : "bg-white/5 border-white/10 text-white/30 cursor-not-allowed"}"
           ?disabled=${!this.transferTarget || this.actionPending}
         >

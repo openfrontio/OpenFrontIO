@@ -7,7 +7,7 @@ import {
 import { html, nothing } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import { ClientEnv } from "src/client/ClientEnv";
-import { fetchPublicPlayerProfile, getUserMe } from "./Api";
+import { fetchPublicPlayerProfile } from "./Api";
 import "./ClanModal";
 import "./components/baseComponents/Button";
 import "./components/baseComponents/stats/PlayerGameHistoryView";
@@ -25,7 +25,13 @@ import { verifiedBadge } from "./components/ui/VerifiedBadge";
 import "./GameStatsModal";
 import "./LeaderboardModal";
 import { modalRouter } from "./ModalRouter";
-import { fetchPublicPlayerProgress } from "./ProgressionApi";
+import { loadPlayerProgress } from "./PlayerProgress";
+import {
+  isOwnAccount,
+  PROVISIONAL_PROGRESS_CHANGED,
+  provisionalProgress,
+  scoredGames,
+} from "./ProvisionalProgress";
 import {
   parsePlayerProfilePath,
   playerProfileUrl,
@@ -69,6 +75,55 @@ export class PlayerProfileModal extends BaseModal {
   private wantsProgressionTab = false;
   // Counts fresh openings, to key the profile card's once-per-open flourish.
   private openCount = 0;
+
+  connectedCallback(): void {
+    super.connectedCallback();
+    document.addEventListener(
+      PROVISIONAL_PROGRESS_CHANGED,
+      this.handleProvisionalChanged,
+    );
+  }
+
+  disconnectedCallback(): void {
+    document.removeEventListener(
+      PROVISIONAL_PROGRESS_CHANGED,
+      this.handleProvisionalChanged,
+    );
+    super.disconnectedCallback();
+  }
+
+  // Bumped by every read of the progress, so the last one started wins.
+  private progressRead = 0;
+
+  // The player's own level counts XP from games still waiting to be scored,
+  // and that changed (ProvisionalProgress.ts).
+  private handleProvisionalChanged = (event: Event): void => {
+    if (scoredGames(event).length > 0) this.rereadProgress();
+    this.requestUpdate();
+  };
+
+  // A pending game was scored: on the viewer's own open profile, read the
+  // progress again, for its history and milestones. The level holds
+  // meanwhile (and on a stale read): the scored game's XP counts onto any
+  // figure that doesn't include it yet (ProvisionalProgress.ts).
+  private rereadProgress(): void {
+    const publicId = this.publicId;
+    if (publicId === null || this.progress === null) return;
+    if (!this.isConnected || !this.isOpen() || !isOwnAccount(publicId)) return;
+    const gen = this.loadGeneration;
+    const read = ++this.progressRead;
+    void loadPlayerProgress(publicId).then((progress) => {
+      if (gen !== this.loadGeneration || read !== this.progressRead) return;
+      if (progress === null || this.publicId !== publicId) return;
+      this.progress = progress;
+    });
+  }
+
+  private progressView() {
+    return this.progress === null
+      ? null
+      : provisionalProgress(this.publicId, this.progress);
+  }
 
   protected modalConfig() {
     return {
@@ -253,14 +308,16 @@ export class PlayerProfileModal extends BaseModal {
     }
     // The card heads the stats; games and wins stay in the stats below it,
     // and the ways to share the profile follow it.
+    const view = this.progressView();
     return html`
-      ${this.progress === null
+      ${view === null
         ? nothing
         : html`<profile-card
             class="mb-4 block"
             .username=${this.username ?? this.publicId ?? ""}
             .clanTag=${this.clans[0]?.tag ?? null}
-            .progress=${this.progress}
+            .progress=${view.progress}
+            .provisional=${view.provisional}
             .openKey=${`profile-${this.openCount}`}
           ></profile-card>`}
       <profile-share
@@ -277,33 +334,17 @@ export class PlayerProfileModal extends BaseModal {
   private renderProgression() {
     // The tab is hidden without progress; should it still be selected (a new
     // player opened on top), show the Stats content rather than nothing.
-    if (this.progress === null) return this.renderProfile();
+    const view = this.progressView();
+    if (view === null) return this.renderProfile();
     // Keyed like the card's flourish: the tab pops in once per opening, not
     // again on a tab switch.
     return html`<profile-progression
-      .progress=${this.progress}
+      .progress=${view.progress}
+      .confirmedLevel=${view.confirmedLevel}
+      .provisional=${view.provisional}
       .publicId=${this.publicId}
       .popKey=${`profile-${this.openCount}`}
     ></profile-progression>`;
-  }
-
-  // Everyone's level, your own included, comes from the public endpoint first:
-  // the /users/@me copy is cached from page load and would miss the games
-  // played since. But that endpoint 404s for a player who hides their level —
-  // for everyone, them included — and they still see their own level. So on
-  // your OWN profile only, no public progress falls back to your /users/@me
-  // copy (memoised: normally no request). Nobody else's profile ever does, so a
-  // hidden level stays hidden from others. Missing progress hides the summary.
-  private async loadProgress(publicId: string): Promise<PublicProgress | null> {
-    try {
-      const progress = await fetchPublicPlayerProgress(publicId);
-      if (progress !== false) return progress;
-      const me = await getUserMe();
-      if (me === false || me.player.publicId !== publicId) return null;
-      return me.player.progress ?? null;
-    } catch {
-      return null;
-    }
   }
 
   // False when the fetch failed (missing player, network, bad schema).
@@ -478,9 +519,11 @@ export class PlayerProfileModal extends BaseModal {
       gen === this.loadGeneration && this.publicId === publicId;
     // The level is a nice-to-have: it lands whenever it arrives and never
     // holds up the profile (its request can take up to its own timeout).
-    // Only shown alongside a loaded profile (see renderProfile).
-    void this.loadProgress(publicId).then((progress) => {
-      if (!current()) return;
+    // Only shown alongside a loaded profile (see renderProfile). Missing
+    // progress hides the summary.
+    const read = ++this.progressRead;
+    void loadPlayerProgress(publicId).then((progress) => {
+      if (!current() || read !== this.progressRead) return;
       this.progress = progress;
       const wanted = this.wantsProgressionTab;
       this.wantsProgressionTab = false;
@@ -572,9 +615,9 @@ export class PlayerProfileModal extends BaseModal {
     this.close();
     if (openedFrom === "clan") {
       document
-        .querySelector<
-          HTMLElement & { returnFromPlayerProfile(): void }
-        >("clan-modal")
+        .querySelector<HTMLElement & { returnFromPlayerProfile(): void }>(
+          "clan-modal",
+        )
         ?.returnFromPlayerProfile();
     } else if (openedFrom === "leaderboard") {
       document
@@ -582,9 +625,9 @@ export class PlayerProfileModal extends BaseModal {
         ?.open();
     } else if (openedFrom === "account") {
       document
-        .querySelector<
-          HTMLElement & { returnToFriends(): void }
-        >("account-modal")
+        .querySelector<HTMLElement & { returnToFriends(): void }>(
+          "account-modal",
+        )
         ?.returnToFriends();
     }
   }

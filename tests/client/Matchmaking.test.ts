@@ -140,6 +140,9 @@ function userMe(
 ): UserMeResponse {
   return {
     user,
+    steamLicence: false,
+    steamLicenceSince: null,
+    noticesSeen: [],
     player: {
       publicId: "player-id",
       adfree: false,
@@ -250,6 +253,30 @@ describe("MatchmakingModal clan-aware joins", () => {
       clanTag: "BETA",
     });
   });
+
+  it.each([
+    ["clanwars", { count: 5, clanCount: 2 }, true],
+    ["2v2", { count: 5 }, false],
+  ] as const)(
+    "shows how many are queued for the player's clan in %s",
+    async (mode, broadcast, showsClan) => {
+      apiMocks.getUserMe.mockResolvedValue(userMe(["ALLY"]));
+      installClanSelection("ALLY");
+      const { modal, socket } = await openAndJoin(mode);
+      document.body.appendChild(modal);
+
+      socket.onmessage!({
+        data: JSON.stringify({ type: "queue-size", ...broadcast }),
+      });
+      await modal.updateComplete;
+
+      expect(modal.textContent).toContain("matchmaking_modal.queue_size");
+      expect(
+        modal.textContent?.includes("matchmaking_modal.clan_queue_size"),
+      ).toBe(showsClan);
+      modal.remove();
+    },
+  );
 
   it.each([null, "STALE"])(
     "does not queue clan wars without a selected current membership (%s)",

@@ -38,6 +38,40 @@ describe("o-modal tab row", () => {
     }
   });
 
+  it("compacts the tabs below sm, keeping the tap target, and not above", async () => {
+    const row = tabRow(await render("stats"));
+    // Narrow row padding and no gaps on a phone; as before from sm up.
+    expect(row.className).toMatch(/(^| )px-2( |$)/);
+    expect(row.className).toContain("sm:px-4");
+    expect(row.className).toContain("lg:px-6");
+    expect(row.className).toContain("sm:gap-1");
+    for (const tab of row.querySelectorAll('[role="tab"]')) {
+      const cls = tab.className.split(/\s+/);
+      // Phone: smaller, less tracked, less padded labels, still 40px tall.
+      expect(cls).toEqual(
+        expect.arrayContaining([
+          "px-2",
+          "text-[11px]",
+          "tracking-wide",
+          "min-h-10",
+          "py-3",
+        ]),
+      );
+      // From sm up, the row as it was.
+      expect(cls).toEqual(
+        expect.arrayContaining([
+          "sm:px-4",
+          "sm:text-sm",
+          "sm:leading-5",
+          "sm:tracking-wider",
+        ]),
+      );
+    }
+    // The active tab keeps its underline.
+    const active = row.querySelector('[aria-selected="true"]')!;
+    expect(active.querySelector(".bg-malibu-blue")).not.toBeNull();
+  });
+
   // jsdom does no layout: give the row a width and each tab a box, 100px
   // apiece from the row's left edge, moved by the row's scroll.
   function layOut(modal: OModal, rowWidth: number): HTMLElement {

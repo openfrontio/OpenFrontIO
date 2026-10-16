@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 import {
   ACTIVE_LOADOUT_KEY,
   CROWN_KEY,

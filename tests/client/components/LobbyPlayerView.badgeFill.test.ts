@@ -209,7 +209,7 @@ describe("lobby badges arriving many at once", { timeout: 20_000 }, () => {
     await update(view, changed);
 
     expect(
-      badges(view)[3].querySelector("svg")?.getAttribute("data-level-band"),
+      badges(view)[3].querySelector("svg")?.getAttribute("data-prestige-tier"),
     ).toBe("legend");
     expect(pendingBadges()).toBe(0);
   });

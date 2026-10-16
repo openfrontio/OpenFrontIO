@@ -18,7 +18,7 @@ import { translateText } from "../../src/client/Utils";
 const mocks = vi.hoisted(() => ({
   userAuth: vi.fn(async (): Promise<unknown> => false),
   retrySteamSignIn: vi.fn(async (): Promise<unknown> => false),
-  reauthAfterCrazyGamesChange: vi.fn(async (): Promise<unknown> => false),
+  reauthAfterPortalChange: vi.fn(async (): Promise<unknown> => false),
   getDesktopSessionState: vi.fn(() => ({ status: "unknown" })),
   getUserMe: vi.fn(async (): Promise<unknown> => false),
   invalidateUserMe: vi.fn(),
@@ -33,7 +33,7 @@ vi.mock("../../src/client/Auth", async (importOriginal) => {
     ...actual,
     userAuth: mocks.userAuth,
     retrySteamSignIn: mocks.retrySteamSignIn,
-    reauthAfterCrazyGamesChange: mocks.reauthAfterCrazyGamesChange,
+    reauthAfterPortalChange: mocks.reauthAfterPortalChange,
     getDesktopSessionState: mocks.getDesktopSessionState,
   };
 });
@@ -244,6 +244,13 @@ describe("Client.initialize() booted from Main.ts module scope", () => {
     await vi.waitFor(() => expect(mocks.userAuth).toHaveBeenCalled());
     await new Promise((resolve) => setTimeout(resolve, 25));
   }, 20_000);
+
+  // Returning to page-play schedules Main's 50ms store refresh. Let it run
+  // before jsdom is torn down, or it throws "customElements is not defined"
+  // as an unhandled error that fails the whole run.
+  afterAll(async () => {
+    await new Promise((resolve) => setTimeout(resolve, 100));
+  });
 
   it("runs the signed-out boot: onUserMe(false) and the missing-version warn", () => {
     // renderNavVersion() === 0 branch (line 411).

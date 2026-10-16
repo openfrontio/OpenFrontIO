@@ -1,0 +1,141 @@
+{
+  "categories": ["arcade", "new"],
+  "id": "Ommatrypta",
+  "layers": [
+    {
+      "alpha": 0.7,
+      "id": "eyeland",
+      "nukeable": true,
+      "placement": "land"
+    },
+    {
+      "alpha": 0.7,
+      "id": "eyewater",
+      "nukeable": false,
+      "placement": "water"
+    }
+  ],
+  "map": {
+    "height": 1284,
+    "num_land_tiles": 678797,
+    "width": 2192
+  },
+  "map16x": {
+    "height": 321,
+    "num_land_tiles": 38430,
+    "width": 548
+  },
+  "map4x": {
+    "height": 642,
+    "num_land_tiles": 164340,
+    "width": 1096
+  },
+  "multiplayer_frequency": 10,
+  "name": "Ommatrypta",
+  "nations": [
+    {
+      "name": "I Dont Know"
+    },
+    {
+      "name": "I See You"
+    },
+    {
+      "name": "Intensive Care Unit"
+    },
+    {
+      "name": "Iris Istable"
+    },
+    {
+      "name": "Pupil"
+    },
+    {
+      "name": "Eye Spy"
+    },
+    {
+      "name": "Eye Candy"
+    },
+    {
+      "name": "Iconic"
+    },
+    {
+      "name": "Blinky"
+    },
+    {
+      "name": "Stare"
+    },
+    {
+      "name": "Winky"
+    },
+    {
+      "name": "Lash Out"
+    },
+    {
+      "name": "Peeker"
+    },
+    {
+      "name": "Lens Armstrong"
+    },
+    {
+      "name": "Opti-Mystic"
+    },
+    {
+      "name": "Spectra Ray"
+    },
+    {
+      "name": "Focuz Finley"
+    },
+    {
+      "name": "Eye-van"
+    },
+    {
+      "name": "Eye See You"
+    },
+    {
+      "name": "Iris you were here"
+    },
+    {
+      "name": "Eye Sore"
+    },
+    {
+      "name": "Eye Conquered"
+    },
+    {
+      "name": "Cant Even"
+    },
+    {
+      "name": "Eye-roll"
+    },
+    {
+      "name": "Looking Good"
+    },
+    {
+      "name": "Spec-tacular"
+    },
+    {
+      "name": "Eye-Opening"
+    },
+    {
+      "name": "Focus"
+    },
+    {
+      "name": "Eye Scream"
+    },
+    {
+      "name": "The Nerve"
+    },
+    {
+      "name": "Sore Eyes"
+    },
+    {
+      "name": "Tigers Eye"
+    },
+    {
+      "name": "Private Eye"
+    },
+    {
+      "name": "Balling"
+    }
+  ],
+  "themes": ["scary", "fantasy"],
+  "translation_key": "map.ommatrypta"
+}

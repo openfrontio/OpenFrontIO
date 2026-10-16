@@ -13,6 +13,7 @@ import { AttackExecution } from "@openfront/engine/execution/AttackExecution";
 import { SpawnExecution } from "@openfront/engine/execution/SpawnExecution";
 import { TransportShipExecution } from "@openfront/engine/execution/TransportShipExecution";
 import { Game, Player } from "@openfront/engine/game/Game";
+import { canBuildTransportShip } from "@openfront/engine/game/TransportShipUtils";
 import { setup } from "./util/Setup";
 import { TestConfig } from "./util/TestConfig";
 import { constructionExecution } from "./util/utils";
@@ -505,6 +506,23 @@ describe("Attack immunity", () => {
     game.addExecution(new TransportShipExecution(playerA, game.ref(7, 15), 10));
     game.executeNextTick();
     expect(playerA.units(UnitType.TransportShip)).toHaveLength(1);
+  });
+
+  test("Should not notify terra nullius when sending a boat", async () => {
+    waitForImmunityToEnd();
+    const tile = Array.from({ length: game.width() * game.height() }, (_, i) =>
+      game.ref(i % game.width(), Math.floor(i / game.width())),
+    ).find(
+      (t) =>
+        game.isLand(t) &&
+        game.isShore(t) &&
+        !game.hasOwner(t) &&
+        canBuildTransportShip(game, playerA, t) !== false,
+    )!;
+    const notify = vi.spyOn(game, "displayIncomingUnit");
+    game.addExecution(new TransportShipExecution(playerA, tile, 10));
+    game.executeNextTick();
+    expect(notify).not.toHaveBeenCalled();
   });
 
   test("Should not be able to attack nations during nation immunity phase", async () => {

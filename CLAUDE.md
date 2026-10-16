@@ -13,7 +13,7 @@ npm test                 # Run all tests (Vitest)
 npm run test:coverage    # Tests with coverage
 npm run lint             # Oxlint + ESLint
 npm run lint:fix         # Oxlint + ESLint with auto-fix
-npm run format           # Prettier
+npm run format           # Oxfmt
 npm run build-prod       # Production build
 npm run typecheck        # tsc for the root project and each package
 ```
@@ -97,6 +97,8 @@ All user-visible text must go through `translateText()` and have a corresponding
 ## Testing Patterns
 
 Tests use a `setup()` helper from `tests/util/Setup.ts` that creates a full game instance with map data from `tests/testdata/maps/`. Write tests that exercise the core simulation directly — not mocks.
+
+Only `tests/client/**` runs under jsdom; everything else runs in the `node` environment. A test outside `tests/client` that needs `document`/`window` starts with `// @vitest-environment jsdom`.
 
 ## Tech Stack
 

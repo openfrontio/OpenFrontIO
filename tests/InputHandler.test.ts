@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 import { UnitType } from "@openfront/engine-api/game/GameTypes";
 import { EventBus } from "@openfront/shared/EventBus";
 import {

@@ -10,8 +10,8 @@ import {
   type SetVisibilityResult,
 } from "../Api";
 import { clearLocalSession, linkGoogle, sendMagicLink } from "../Auth";
-import { crazyGamesSDK } from "../CrazyGamesSDK";
 import { isDesktopShell } from "../DesktopShell";
+import { gamePortal } from "../GamePortal";
 import { showInGameAlert } from "../InGameModal";
 import { refreshOwnHiddenLevelBadge } from "../OwnLevelBadge";
 import { steamSDK } from "../SteamSDK";
@@ -329,11 +329,11 @@ export class AccountSettingsPanel extends LitElement {
 
   // Self-service account deletion (DELETE /users/@me). A valid request queues
   // the deletion for 24 hours later and logs the player out everywhere, so the
-  // button opens a hard confirm (typed confirmation). Hidden on CrazyGames and
+  // button opens a hard confirm (typed confirmation). Hidden on portals and
   // Steam: the endpoint's credential is the refresh cookie, which isn't usable
   // there (cross-site — see Auth.ts), so the request could never succeed.
   private renderDeleteAccountCard(): TemplateResult | typeof nothing {
-    if (crazyGamesSDK.isOnCrazyGames() || steamSDK.isOnSteam()) return nothing;
+    if (gamePortal.isOnGamePortal() || steamSDK.isOnSteam()) return nothing;
     return html`
       <div class="bg-white/5 rounded-xl border border-red-500/30 p-6">
         <!-- The button is one line against a two-line block, so centre it

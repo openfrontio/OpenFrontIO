@@ -31,8 +31,10 @@ export class FetchGameMapLoader implements GameMapLoader {
       map16xBin: () => this.loadBinaryFromUrl(this.url(fileName, "map16x.bin")),
       manifest: () => this.loadJsonFromUrl(this.url(fileName, "manifest.json")),
       webpPath: this.url(fileName, "thumbnail.webp"),
-      layerPng: (layerId: string) =>
-        this.loadImageBitmap(this.url(fileName, `${layerId}.png`)),
+      layerImage: (layerId: string, compact: boolean) =>
+        this.loadImageBitmap(
+          this.url(fileName, `${layerId}${compact ? ".4x" : ""}.webp`),
+        ),
     } satisfies MapData;
 
     this.maps.set(map, mapData);
