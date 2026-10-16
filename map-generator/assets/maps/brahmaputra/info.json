@@ -25,7 +25,7 @@
   },
   "nations": [
     {
-      "coordinates": [256, 587],
+      "coordinates": [256, 579],
       "name": "Barpeta",
       "flag": "in"
     },
@@ -35,17 +35,17 @@
       "flag": "in"
     },
     {
-      "coordinates": [588, 547],
+      "coordinates": [586, 540],
       "name": "Mangaldoi",
       "flag": "in"
     },
     {
-      "coordinates": [837, 471],
+      "coordinates": [837, 467],
       "name": "Tezpur",
       "flag": "in"
     },
     {
-      "coordinates": [941, 443],
+      "coordinates": [941, 429],
       "name": "Biswanath",
       "flag": "in"
     },
@@ -105,7 +105,7 @@
       "flag": "in"
     },
     {
-      "coordinates": [132, 645],
+      "coordinates": [132, 652],
       "name": "Goalpara",
       "flag": "in"
     },
@@ -180,7 +180,7 @@
       "flag": "in"
     },
     {
-      "coordinates": [1092, 474],
+      "coordinates": [1092, 483],
       "name": "Bokakhat",
       "flag": "in"
     },
@@ -247,7 +247,7 @@
       "flag": "in"
     },
     {
-      "coordinates": [1011, 400],
+      "coordinates": [1011, 395],
       "name": "Behali",
       "flag": "in"
     },
@@ -287,7 +287,7 @@
       "flag": "in"
     },
     {
-      "coordinates": [10, 621],
+      "coordinates": [5, 613],
       "name": "Bilasipara",
       "flag": "in"
     },

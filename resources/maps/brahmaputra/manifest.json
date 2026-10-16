@@ -36,7 +36,7 @@
       "name": "Dhekiajuli"
     },
     {
-      "coordinates": [1011, 400],
+      "coordinates": [1011, 395],
       "flag": "in",
       "name": "Behali"
     },
@@ -76,7 +76,7 @@
       "name": "Kalaktang"
     },
     {
-      "coordinates": [10, 621],
+      "coordinates": [5, 613],
       "flag": "in",
       "name": "Bilasipara"
     },
@@ -155,24 +155,24 @@
   "id": "Brahmaputra",
   "map": {
     "height": 1024,
-    "num_land_tiles": 1424637,
+    "num_land_tiles": 1437385,
     "width": 1460
   },
   "map16x": {
     "height": 256,
-    "num_land_tiles": 88393,
+    "num_land_tiles": 88802,
     "width": 365
   },
   "map4x": {
     "height": 512,
-    "num_land_tiles": 355316,
+    "num_land_tiles": 357856,
     "width": 730
   },
   "multiplayer_frequency": 4,
   "name": "Brahmaputra",
   "nations": [
     {
-      "coordinates": [256, 587],
+      "coordinates": [256, 579],
       "flag": "in",
       "name": "Barpeta"
     },
@@ -182,17 +182,17 @@
       "name": "Nalbari"
     },
     {
-      "coordinates": [588, 547],
+      "coordinates": [586, 540],
       "flag": "in",
       "name": "Mangaldoi"
     },
     {
-      "coordinates": [837, 471],
+      "coordinates": [837, 467],
       "flag": "in",
       "name": "Tezpur"
     },
     {
-      "coordinates": [941, 443],
+      "coordinates": [941, 429],
       "flag": "in",
       "name": "Biswanath"
     },
@@ -252,7 +252,7 @@
       "name": "Kokrajhar"
     },
     {
-      "coordinates": [132, 645],
+      "coordinates": [132, 652],
       "flag": "in",
       "name": "Goalpara"
     },
@@ -327,7 +327,7 @@
       "name": "Hamren"
     },
     {
-      "coordinates": [1092, 474],
+      "coordinates": [1092, 483],
       "flag": "in",
       "name": "Bokakhat"
     },
