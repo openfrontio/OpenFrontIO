@@ -492,6 +492,17 @@ describe("reconcileXp", () => {
     levelsReached: [],
   });
 
+  it("puts a first-game bonus that moved to this game down to the day's allowances, not drift", () => {
+    // Game A, still pending, was stacked under this one with the day's
+    // bonus; the API scored this game first and gave it the bonus.
+    const outcome = reconcileXp(
+      provisional,
+      server({ firstGame: 100, subtotal: 263, total: 316 }),
+    );
+    expect(outcome.differences).toEqual(["daily_cap"]);
+    expect(outcome.drift).toBe(false);
+  });
+
   it("matches when the totals agree", () => {
     expect(reconcileXp(provisional, server({}))).toEqual({
       matched: true,

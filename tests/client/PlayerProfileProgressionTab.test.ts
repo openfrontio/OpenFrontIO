@@ -64,6 +64,7 @@ import { modalRouter } from "../../src/client/ModalRouter";
 import { initNavigation } from "../../src/client/Navigation";
 import { PlayerProfileModal } from "../../src/client/PlayerProfileModal";
 import {
+  PROVISIONAL_PROGRESS_CHANGED,
   recordPendingXp,
   runCheck,
   startProvisionalProgress,
@@ -355,7 +356,7 @@ describe("Player profile Progression tab", () => {
           })),
           flares: [],
         }),
-        readUserMe: async () => false as const,
+        refreshUserMe: async () => undefined,
       });
       recordPendingXp("abcd1234", { gameId: "g1", xp: 250 });
       document.dispatchEvent(
@@ -391,6 +392,32 @@ describe("Player profile Progression tab", () => {
         >("profile-progression");
         expect(el?.confirmedLevel).toBe(30);
       });
+    });
+
+    it("keeps the last reread when two overlap", async () => {
+      await runCheck();
+      modal.open({ publicID: "abcd1234" });
+      await settle(() => expect(card()?.progress.level).toBe(32));
+      // Two scored games, two rereads; the first one's answer lands last.
+      const answers: ((p: unknown) => void)[] = [];
+      fetchPublicPlayerProgressMock.mockImplementation(
+        () => new Promise((resolve) => answers.push(resolve)),
+      );
+      for (const gameId of ["g8", "g9"]) {
+        document.dispatchEvent(
+          new CustomEvent(PROVISIONAL_PROGRESS_CHANGED, {
+            detail: { scored: [gameId] },
+          }),
+        );
+      }
+      expect(answers).toHaveLength(2);
+      answers[1]({ ...OWN, level: 35, xpInLevel: 0, lifetimeXp: 60000 });
+      answers[0]({ ...OWN, level: 33, xpInLevel: 0, lifetimeXp: 55000 });
+      // The second read (35) with g1's pending 250 on top: 37. The first
+      // read would have given 35.
+      await settle(() => expect(card()?.progress.level).toBe(37));
+      await new Promise((r) => setTimeout(r, 0));
+      expect(card()?.progress.level).toBe(37);
     });
 
     it("never shows it on anyone else's profile", async () => {

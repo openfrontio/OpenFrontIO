@@ -20,6 +20,7 @@ import type { GameXpFetchResult } from "../../src/client/ProgressionApi";
 import {
   applyGameXp,
   MAX_PENDING_PER_ACCOUNT,
+  noteFigure,
   PENDING_XP_CHECKED_KEY,
   PENDING_XP_KEY,
   PENDING_XP_TTL_MS,
@@ -200,9 +201,17 @@ describe("pending XP storage", () => {
   });
 
   it("marks an eligible answer scored, keeping or adding the game, and drops an ineligible one", () => {
+    // Recorded at death with a guessed first-game bonus the API didn't pay.
     recordPendingXp(
       "me",
-      { gameId: "gA", xp: 250, day: TODAY, kind: "public", notIn: 0 },
+      {
+        gameId: "gA",
+        xp: 250,
+        day: TODAY,
+        kind: "public",
+        firstGame: 100,
+        notIn: 0,
+      },
       T0,
     );
     recordPendingXp("me", { gameId: "gB", xp: 50 }, T0);
@@ -216,17 +225,22 @@ describe("pending XP storage", () => {
       T0 + 2,
     );
     expect(readPendingXp("me", T0 + 2)).toEqual([
+      // The kept day and kind stay; the server's XP and bonus win, and the
+      // 12h runs from the score.
       expect.objectContaining({
         gameId: "gA",
-        xp: 250,
+        xp: 260,
+        at: T0 + 1,
         day: TODAY,
+        kind: "public",
+        firstGame: 0,
         scored: { xp: 260, lifetimeAfter: 260 },
       }),
       expect.objectContaining({
         gameId: "gC",
         xp: 40,
         kind: "private",
-        firstGame: false,
+        firstGame: 0,
         scored: { xp: 40, lifetimeAfter: 300 },
       }),
     ]);
@@ -312,6 +326,33 @@ describe("pendingXpFor", () => {
   });
 });
 
+describe("the first-game bonus, scored out of order", () => {
+  it("isn't counted again for a pending game once a scored game that day has it", () => {
+    // A died with the day's bonus (100 of its 250); B ended first and the API
+    // gave B the bonus.
+    const gA = entry({ gameId: "gA", day: TODAY, firstGame: 100 });
+    const gB = entry({
+      gameId: "gB",
+      xp: 200,
+      day: TODAY,
+      firstGame: 100,
+      scored: { xp: 200, lifetimeAfter: 200 },
+    });
+    // On a figure with B: A counts without its bonus.
+    const onB = pendingXpFor({ lifetimeXp: 200 }, [gA, gB]).counted;
+    expect(onB.map((e) => [e.gameId, e.xp])).toEqual([["gA", 150]]);
+    // B scored without the bonus, or on another day: A keeps it.
+    for (const other of [
+      { ...gB, firstGame: 0 },
+      { ...gB, day: "2026-10-12" },
+    ]) {
+      expect(pendingXpFor({ lifetimeXp: 200 }, [gA, other]).counted[0].xp).toBe(
+        250,
+      );
+    }
+  });
+});
+
 describe("stacking pending games at death", () => {
   const withDaily = (
     daily: Partial<NonNullable<Progress["daily"]>> = {},
@@ -348,10 +389,10 @@ describe("stacking pending games at death", () => {
       [
         entry({ gameId: "p1", day: TODAY, kind: "private" }),
         entry({ gameId: "s1", day: TODAY, kind: "singleplayer" }),
-        entry({ gameId: "a", day: TODAY, kind: "public", firstGame: true }),
+        entry({ gameId: "a", day: TODAY, kind: "public", firstGame: 100 }),
         // Another UTC day, or no day: the allowances are left alone.
         entry({ gameId: "p2", day: "2026-10-12", kind: "private" }),
-        entry({ gameId: "p3", kind: "private", firstGame: true }),
+        entry({ gameId: "p3", kind: "private", firstGame: 100 }),
       ],
       config(),
     );
@@ -426,7 +467,7 @@ describe("stacking pending games at death", () => {
       gameId: "gA",
       xp: 250,
       day: TODAY,
-      firstGame: true,
+      firstGame: 100,
       notIn: 0,
     });
     recordPendingXp("me", { gameId: "gB", xp: 999, notIn: 0 });
@@ -451,7 +492,7 @@ describe("stacking pending games at death", () => {
 describe("the store", () => {
   let answers: Map<string, GameXpFetchResult | (() => GameXpFetchResult)>;
   let fetchXp: Mock<ProvisionalDeps["fetchXp"]>;
-  let readUserMe: Mock<ProvisionalDeps["readUserMe"]>;
+  let refreshUserMe: Mock<ProvisionalDeps["refreshUserMe"]>;
   let loadConfig: Mock<ProvisionalDeps["loadConfig"]>;
 
   const me = (progress: Progress = LEVEL_1): UserMeResponse =>
@@ -474,7 +515,7 @@ describe("the store", () => {
   const asked = () => fetchXp.mock.calls.map((c) => c[0]);
 
   function start(over: Partial<ProvisionalDeps> = {}) {
-    startProvisionalProgress({ fetchXp, loadConfig, readUserMe, ...over });
+    startProvisionalProgress({ fetchXp, loadConfig, refreshUserMe, ...over });
   }
 
   beforeEach(() => {
@@ -483,7 +524,7 @@ describe("the store", () => {
       const answer = answers.get(gameId) ?? NOT_SCORED;
       return typeof answer === "function" ? answer() : answer;
     });
-    readUserMe = vi.fn(async () => false as const);
+    refreshUserMe = vi.fn(async () => false as const);
     loadConfig = vi.fn(async () => config());
     start();
   });
@@ -599,21 +640,29 @@ describe("the store", () => {
       // its rise is unexplained, so the unscored entry isn't counted on it.
       const readAfter = { ...AT_250, xpInLevel: 50, lifetimeXp: 260 };
       expect(view(readAfter).progress).toBe(readAfter);
-      readUserMe.mockRejectedValueOnce(new Error("offline"));
+      refreshUserMe.mockRejectedValueOnce(new Error("offline"));
       await check();
       expect(view(readAfter).progress).toBe(readAfter);
       expect(view({ ...LEVEL_1 }).progress.level).toBe(3);
     });
 
-    it("reads the account afresh once, without asking again", async () => {
-      readUserMe.mockResolvedValue(me({ ...AT_250, lifetimeXp: 260 }));
+    it("reads the account afresh once, its own broadcast asking nothing more", async () => {
+      recordPendingXp("me", { gameId: "g2", xp: 30, notIn: 0 });
+      // broadcastFreshUserMe: a figure with a rise nothing here explains,
+      // which would start a check from anyone else.
+      refreshUserMe.mockImplementation(async () =>
+        document.dispatchEvent(
+          new CustomEvent("userMeResponse", {
+            detail: me({ ...AT_250, lifetimeXp: 300 }),
+          }),
+        ),
+      );
       const changed = vi.fn();
       document.addEventListener(PROVISIONAL_PROGRESS_CHANGED, changed);
       await check();
       await settle();
-      expect(readUserMe).toHaveBeenCalledTimes(1);
-      // Its own broadcast started no second round.
-      expect(asked()).toEqual(["g1"]);
+      expect(refreshUserMe).toHaveBeenCalledTimes(1);
+      expect(asked()).toEqual(["g1", "g2"]);
       expect(
         changed.mock.calls.map(([e]) => scoredGames(e as Event)),
       ).toContainEqual(["g1"]);
@@ -642,7 +691,7 @@ describe("the store", () => {
     await check();
     expect(readPendingXp("me")).toEqual([]);
     expect(view({ ...LEVEL_1 }).progress.level).toBe(1);
-    expect(readUserMe).not.toHaveBeenCalled();
+    expect(refreshUserMe).not.toHaveBeenCalled();
   });
 
   it("asks one game at a time", async () => {
@@ -719,7 +768,7 @@ describe("the store", () => {
       progress: { level: 3, xpInLevel: 40 },
     });
     expect(fetchXp).not.toHaveBeenCalled();
-    expect(readUserMe).not.toHaveBeenCalled();
+    expect(refreshUserMe).not.toHaveBeenCalled();
     document.removeEventListener(PROVISIONAL_PROGRESS_CHANGED, changed);
   });
 
@@ -737,6 +786,96 @@ describe("the store", () => {
     broadcast(LEVEL_1);
     await settle();
     expect(view(LEVEL_1).provisional).toBe(false);
+  });
+
+  describe("the level the rewards list can judge (confirmedLevel)", () => {
+    it("is null when nothing is added", async () => {
+      broadcast(LEVEL_1);
+      await settle();
+      expect(view(LEVEL_1).confirmedLevel).toBeNull();
+    });
+
+    it("is the figure's level under unscored XP: those levels are pending", async () => {
+      recordPendingXp("me", { gameId: "g1", xp: 250, notIn: 0 });
+      broadcast(LEVEL_1);
+      await settle();
+      expect(view(LEVEL_1)).toMatchObject({
+        provisional: true,
+        confirmedLevel: 1,
+        progress: { level: 3 },
+      });
+    });
+
+    it("is the level after scored XP once the account's /users/@me includes it: none pending", async () => {
+      applyGameXp("me", scored("g1", 250));
+      // /users/@me has the game; a stale public figure doesn't.
+      broadcast(AT_250);
+      await settle();
+      expect(view({ ...LEVEL_1 })).toMatchObject({
+        provisional: false,
+        confirmedLevel: 3,
+        progress: { level: 3 },
+      });
+    });
+
+    it("stays the figure's level while /users/@me doesn't include the scored game yet", async () => {
+      applyGameXp("me", scored("g1", 250));
+      broadcast(LEVEL_1);
+      await settle();
+      // Its rewards list was read before the game: levels 2-3 are pending,
+      // never Claimed from it.
+      expect(view({ ...LEVEL_1 })).toMatchObject({
+        provisional: false,
+        confirmedLevel: 1,
+        progress: { level: 3 },
+      });
+    });
+  });
+
+  it("converges a public figure ahead of /users/@me after one check", async () => {
+    const userMe = { ...LEVEL_1, lifetimeXp: 1000 };
+    // A game on another device: the public figure has 150 /users/@me lacks.
+    const publicFigure = { ...LEVEL_1, lifetimeXp: 1150, xpInLevel: 50 };
+    recordPendingXp("me", { gameId: "gA", xp: 250, notIn: 1000 });
+    broadcast(userMe);
+    await settle();
+    expect(view(userMe).provisional).toBe(true);
+    expect(view(publicFigure).provisional).toBe(false);
+    // The Progression tab hands its figure in: one check, and both count A.
+    noteFigure("me", publicFigure);
+    await settle();
+    expect(asked()).toEqual(["gA"]);
+    expect(view(publicFigure)).toMatchObject({
+      provisional: true,
+      progress: { level: 3, xpInLevel: 90 },
+    });
+    expect(view(userMe).provisional).toBe(true);
+    // Someone else's figure starts nothing.
+    noteFigure("someone", { lifetimeXp: 99_999 });
+    await settle();
+    expect(asked()).toEqual(["gA"]);
+  });
+
+  it("re-runs a check asked for mid-check with its figure, asking only what it leaves uncertain", async () => {
+    recordPendingXp("me", { gameId: "g1", xp: 10, notIn: 0 });
+    recordPendingXp("me", { gameId: "g2", xp: 10, notIn: 500 });
+    broadcast(LEVEL_1);
+    await settle();
+    let release!: () => void;
+    const gate = new Promise<void>((r) => (release = r));
+    fetchXp.mockImplementationOnce(async () => {
+      await gate;
+      return NOT_SCORED;
+    });
+    const first = runCheck();
+    // Two figures arrive while it runs: the re-run keeps the newest.
+    void runCheck({ lifetimeXp: 100 });
+    void runCheck({ lifetimeXp: 300 });
+    release();
+    await first;
+    await settle();
+    // First round: both. Re-run on lifetime 300: g2 (notIn 500) is settled.
+    expect(asked()).toEqual(["g1", "g2", "g1"]);
   });
 
   describe("polling", () => {
@@ -787,6 +926,32 @@ describe("the store", () => {
       expect(fetchXp).toHaveBeenCalledTimes(3);
     });
 
+    it("checks on a return to the page only a poll interval after its own last check, outside the cap", async () => {
+      start({ pollMs: 60_000, maxPolls: 2 });
+      broadcast(LEVEL_1);
+      const back = () => document.dispatchEvent(new Event("visibilitychange"));
+      // The first return checks; the next ones, within the interval, don't.
+      back();
+      await vi.advanceTimersByTimeAsync(1_000);
+      for (let i = 0; i < 5; i++) {
+        back();
+        await vi.advanceTimersByTimeAsync(1_000);
+      }
+      expect(fetchXp).toHaveBeenCalledTimes(1);
+      // The timer's two polls still run: the returns didn't use them up.
+      await vi.advanceTimersByTimeAsync(55_000);
+      expect(fetchXp).toHaveBeenCalledTimes(2);
+      await vi.advanceTimersByTimeAsync(60_000);
+      expect(fetchXp).toHaveBeenCalledTimes(3);
+      // Capped: the timer stops...
+      await vi.advanceTimersByTimeAsync(5 * 60_000);
+      expect(fetchXp).toHaveBeenCalledTimes(3);
+      // ...but a return to the page after the interval still checks.
+      back();
+      await vi.advanceTimersByTimeAsync(0);
+      expect(fetchXp).toHaveBeenCalledTimes(4);
+    });
+
     it("stops once nothing is unscored", async () => {
       answers.set("g1", { status: "ok", data: scored("g1", 250) });
       start({ pollMs: 60_000 });
@@ -807,7 +972,7 @@ describe("back-to-back games", () => {
     startProvisionalProgress({
       fetchXp: async (gameId) => answers.get(gameId) ?? NOT_SCORED,
       loadConfig: async () => config(),
-      readUserMe: async () => false,
+      refreshUserMe: async () => undefined,
     });
   });
 

@@ -77,7 +77,7 @@ describe("nav-account-menu provisional level", () => {
     startProvisionalProgress({
       fetchXp: async () => answer,
       loadConfig: async () => CONFIG,
-      readUserMe: async () => false as const,
+      refreshUserMe: async () => undefined,
     });
   });
 

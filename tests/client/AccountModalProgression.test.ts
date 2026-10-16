@@ -472,7 +472,7 @@ describe("AccountModal — Progression tab", () => {
       startProvisionalProgress({
         fetchXp: async () => ({ status: "pending", notFound: true }),
         loadConfig: async () => config(),
-        readUserMe: async () => false as const,
+        refreshUserMe: async () => undefined,
       });
       document.dispatchEvent(new CustomEvent("userMeResponse", { detail: me }));
     });
@@ -580,7 +580,7 @@ describe("AccountModal — Progression tab", () => {
               }
             : { status: "pending", notFound: true },
         loadConfig: async () => config(),
-        readUserMe: async () => false as const,
+        refreshUserMe: async () => undefined,
       });
       document.dispatchEvent(new CustomEvent("userMeResponse", { detail: me }));
       try {

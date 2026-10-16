@@ -28,6 +28,7 @@ import { modalRouter } from "./ModalRouter";
 import { loadPlayerProgress } from "./PlayerProgress";
 import {
   isOwnAccount,
+  noteFigure,
   PROVISIONAL_PROGRESS_CHANGED,
   provisionalProgress,
   scoredGames,
@@ -92,6 +93,9 @@ export class PlayerProfileModal extends BaseModal {
     super.disconnectedCallback();
   }
 
+  // Bumped by every read of the progress, so the last one started wins.
+  private progressRead = 0;
+
   // The player's own level counts XP from games still waiting to be scored,
   // and that changed (ProvisionalProgress.ts).
   private handleProvisionalChanged = (event: Event): void => {
@@ -108,16 +112,16 @@ export class PlayerProfileModal extends BaseModal {
     if (publicId === null || this.progress === null) return;
     if (!this.isConnected || !this.isOpen() || !isOwnAccount(publicId)) return;
     const gen = this.loadGeneration;
+    const read = ++this.progressRead;
     void loadPlayerProgress(publicId).then((progress) => {
-      if (gen !== this.loadGeneration || this.publicId !== publicId) return;
-      if (progress !== null) this.progress = progress;
+      if (gen !== this.loadGeneration || read !== this.progressRead) return;
+      if (progress === null || this.publicId !== publicId) return;
+      this.progress = progress;
+      noteFigure(publicId, progress);
     });
   }
 
-  /**
-   * The progress to show: on the viewer's own profile, with any XP still
-   * waiting to be scored, provisionally. Anyone else's is left as it is.
-   */
+  // On the viewer's own profile, with the XP of games not scored yet.
   private progressView() {
     return this.progress === null
       ? null
@@ -339,9 +343,7 @@ export class PlayerProfileModal extends BaseModal {
     // again on a tab switch.
     return html`<profile-progression
       .progress=${view.progress}
-      .confirmedLevel=${view.progress === this.progress
-        ? null
-        : view.confirmedLevel}
+      .confirmedLevel=${view.confirmedLevel}
       .provisional=${view.provisional}
       .publicId=${this.publicId}
       .popKey=${`profile-${this.openCount}`}
@@ -522,9 +524,11 @@ export class PlayerProfileModal extends BaseModal {
     // holds up the profile (its request can take up to its own timeout).
     // Only shown alongside a loaded profile (see renderProfile). Missing
     // progress hides the summary.
+    const read = ++this.progressRead;
     void loadPlayerProgress(publicId).then((progress) => {
-      if (!current()) return;
+      if (!current() || read !== this.progressRead) return;
       this.progress = progress;
+      if (progress !== null) noteFigure(publicId, progress);
       const wanted = this.wantsProgressionTab;
       this.wantsProgressionTab = false;
       // Unless the viewer has moved to another tab, or closed the profile

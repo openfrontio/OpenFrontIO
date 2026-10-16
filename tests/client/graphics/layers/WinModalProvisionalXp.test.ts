@@ -729,7 +729,7 @@ describe("WinModal provisional XP at death", () => {
         xp: 250,
         day: PROGRESS.daily.day,
         kind: "public",
-        firstGame: true,
+        firstGame: 100,
         // Recorded at A's death, from the account then.
         notIn: PROGRESS.lifetimeXp,
       });
@@ -759,8 +759,8 @@ describe("WinModal provisional XP at death", () => {
       expect(
         readPendingXp("me").map((e) => [e.gameId, e.xp, e.firstGame]),
       ).toEqual([
-        ["gA", 250, true],
-        [GAME_ID, 174, false],
+        ["gA", 250, 100],
+        [GAME_ID, 174, 0],
       ]);
     });
 

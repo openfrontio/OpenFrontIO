@@ -42,6 +42,7 @@ import { resolveXpAccount } from "../../ProgressionAccount";
 import { fetchProgressionConfig, pollGameXp } from "../../ProgressionApi";
 import {
   applyGameXp,
+  firstGameXp,
   type PendingGameKind,
   recordPendingXp,
   withPendingXp,
@@ -729,7 +730,7 @@ export class WinModal extends LitElement implements Controller {
       ...this.pendingAbout(provisional.inputs.dailyDay ?? undefined),
       gameId: response.gameId,
       xp: response.breakdown.total,
-      firstGame: response.breakdown.firstGame > 0,
+      firstGame: firstGameXp(response.breakdown),
       // The account as read at death: the game hadn't ended, so it can't
       // be in it.
       notIn: this.provisionalReadLifetime ?? undefined,

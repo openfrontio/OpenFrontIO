@@ -596,10 +596,6 @@ export class NavAccountMenu extends LitElement {
     `;
   }
 
-  /**
-   * The signed-in player's level, with any XP still waiting to be scored
-   * projected onto it (provisional), or null when there is none to show.
-   */
   private progressView(): { progress: Progress; provisional: boolean } | null {
     if (!this.isSignedIn() || this.userMeResponse === false) return null;
     const { publicId, progress } = this.userMeResponse.player;
