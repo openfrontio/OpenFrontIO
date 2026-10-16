@@ -33,6 +33,7 @@ export interface ExtractSnapshotOptions {
 export interface ExtractedSnapshotResult {
   snapshot: Uint8Array;
   gameStartInfo: GameStartInfo;
+  tick: number;
 }
 
 /**
@@ -128,5 +129,6 @@ export async function extractSnapshot(
   return {
     snapshot,
     gameStartInfo: singlePlayerGameStart,
+    tick: game.ticks(),
   };
 }

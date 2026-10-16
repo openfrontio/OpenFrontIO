@@ -130,6 +130,7 @@ describe("ReplayViewer continue game cancellation", () => {
     vi.mocked(extractSnapshotInWorker).mockResolvedValue({
       snapshot: new Uint8Array([1, 2, 3]),
       gameStartInfo: { gameID: "test1234_c" } as any,
+      tick: 42,
     });
 
     const joinLobbyListener = vi.fn();
@@ -143,9 +144,7 @@ describe("ReplayViewer continue game cancellation", () => {
     );
 
     expect(joinLobbyListener).toHaveBeenCalledTimes(1);
-    expect(joinLobbyListener.mock.calls[0][0].detail.resumeTick).toBe(
-      viewer.tick,
-    );
+    expect(joinLobbyListener.mock.calls[0][0].detail.resumeTick).toBe(42);
     expect(viewer.continueModalOpen).toBe(false);
     document.removeEventListener("join-lobby", joinLobbyListener);
   });
@@ -158,6 +157,7 @@ describe("ReplayViewer continue game cancellation", () => {
     vi.mocked(extractSnapshotInWorker).mockResolvedValue({
       snapshot: new Uint8Array([1, 2, 3]),
       gameStartInfo: { gameID: "test1234_c" } as any,
+      tick: 42,
     });
 
     let dispatchedEvent: CustomEvent | null = null;

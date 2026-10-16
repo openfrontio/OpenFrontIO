@@ -145,6 +145,7 @@ export async function extractSnapshotInWorker(
 ): Promise<{
   snapshot: Uint8Array;
   gameStartInfo: WireGameStartInfo;
+  tick: number;
 }> {
   if (signal?.aborted) {
     throw (
@@ -202,7 +203,11 @@ export async function extractSnapshotInWorker(
       if (msg.type === "extract_snapshot_result") {
         cleanup();
         worker.terminate();
-        resolve({ snapshot: msg.snapshot, gameStartInfo: msg.gameStartInfo });
+        resolve({
+          snapshot: msg.snapshot,
+          gameStartInfo: msg.gameStartInfo,
+          tick: msg.tick,
+        });
       } else if (msg.type === "extract_snapshot_error") {
         cleanup();
         worker.terminate();

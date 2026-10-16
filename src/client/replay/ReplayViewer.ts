@@ -887,7 +887,7 @@ export class ReplayViewer extends LitElement {
         }
       }
       const localClientID = generateID();
-      const { snapshot, gameStartInfo } = await extractSnapshotInWorker(
+      const { snapshot, gameStartInfo, tick } = await extractSnapshotInWorker(
         record,
         this.tick,
         e.detail.playerID,
@@ -904,7 +904,7 @@ export class ReplayViewer extends LitElement {
           gameStartInfo,
           source: "singleplayer",
           resumeSnapshot: snapshot,
-          resumeTick: this.tick,
+          resumeTick: tick,
         } satisfies JoinLobbyEvent,
         bubbles: true,
         composed: true,

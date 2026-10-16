@@ -451,6 +451,7 @@ async function onMessage(e: MessageEvent<MainThreadMessage>) {
             id: message.id,
             snapshot: result.snapshot,
             gameStartInfo: result.gameStartInfo,
+            tick: result.tick,
           } as ExtractSnapshotResultMessage,
           [result.snapshot.buffer],
         );

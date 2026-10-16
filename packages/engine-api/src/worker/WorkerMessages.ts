@@ -225,6 +225,7 @@ export interface ExtractSnapshotResultMessage extends BaseWorkerMessage {
   type: "extract_snapshot_result";
   snapshot: Uint8Array;
   gameStartInfo: GameStartInfo;
+  tick: number;
 }
 
 export interface ExtractSnapshotErrorMessage extends BaseWorkerMessage {

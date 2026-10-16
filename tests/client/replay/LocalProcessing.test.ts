@@ -265,6 +265,42 @@ describe("extractSnapshotInWorker", () => {
     ).rejects.toThrow("map fetch failed");
     expect(createWorker).not.toHaveBeenCalled();
   });
+
+  test("resolves snapshot, gameStartInfo, and tick from worker result", async () => {
+    const worker = new FakeWorker();
+    const promise = extractSnapshotInWorker(
+      RECORD_WITH_CONFIG,
+      10,
+      "p1",
+      "c1",
+      undefined,
+      async () => worker as unknown as Worker,
+      undefined,
+      stubMapLoader,
+    );
+    await vi.waitFor(() => expect(worker.posted).toHaveLength(1));
+    const snapshot = new Uint8Array([9, 8, 7]);
+    const gameStartInfo = {
+      ...RECORD_WITH_CONFIG.info,
+      gameID: "newGame1",
+    };
+    worker.dispatchEvent(
+      new MessageEvent("message", {
+        data: {
+          type: "extract_snapshot_result",
+          snapshot,
+          gameStartInfo,
+          tick: 10,
+        },
+      }),
+    );
+    await expect(promise).resolves.toEqual({
+      snapshot,
+      gameStartInfo,
+      tick: 10,
+    });
+    expect(worker.terminated).toBe(true);
+  });
 });
 
 test("the browser's compression makes a replay the viewer plays as it grows", async () => {

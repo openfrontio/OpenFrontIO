@@ -86,6 +86,7 @@ describe("SnapshotExtractor", () => {
     });
 
     expect(result.snapshot).toBeInstanceOf(Uint8Array);
+    expect(result.tick).toBe(20);
     expect(result.gameStartInfo.config.gameType).toBe(GameType.Singleplayer);
     expect(result.gameStartInfo.config.difficulty).toBe(Difficulty.Hard);
     expect(result.gameStartInfo.players.length).toBe(1);
