@@ -1,6 +1,3 @@
 {
-  "recommendations": [
-    "socketsecurity.vscode-socket-security",
-    "esbenp.prettier-vscode"
-  ]
+  "recommendations": ["socketsecurity.vscode-socket-security", "oxc.oxc-vscode"]
 }
