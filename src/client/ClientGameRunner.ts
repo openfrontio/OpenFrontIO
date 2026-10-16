@@ -1,4 +1,4 @@
-import { ClientID, GameID, Turn } from "@openfront/engine-api/Schemas";
+import { ClientID, GameID } from "@openfront/engine-api/Schemas";
 import { TileRef } from "@openfront/engine-api/game/GameMap";
 import {
   BuildableUnit,
@@ -119,8 +119,7 @@ export interface LobbyConfig {
   gameRecord?: GameRecord;
   // Watch without playing.
   spectator?: boolean;
-  // Saved historical turns when resuming a solo match.
-  resumeTurns?: Turn[];
+  // Saved snapshot and tick when resuming a solo match.
   resumeSnapshot?: Uint8Array;
   resumeTick?: number;
   // Host only: the play token the lobby was created under, used for the

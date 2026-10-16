@@ -150,12 +150,6 @@ export class LocalServer {
     if (!this.clientID) {
       throw new Error("missing clientID");
     }
-    if (
-      this.lobbyConfig.resumeTurns &&
-      this.lobbyConfig.resumeTurns.length > 0
-    ) {
-      this.turns = [...this.lobbyConfig.resumeTurns];
-    }
     if (this.lobbyConfig.resumeTick !== undefined) {
       this.turnOffset = this.lobbyConfig.resumeTick;
     }

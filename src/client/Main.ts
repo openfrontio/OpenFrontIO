@@ -1,4 +1,4 @@
-import { GAME_ID_REGEX, Turn } from "@openfront/engine-api/Schemas";
+import { GAME_ID_REGEX } from "@openfront/engine-api/Schemas";
 import {
   isRewardClaimable,
   UserMeResponse,
@@ -254,7 +254,6 @@ export interface JoinLobbyEvent {
   publicLobbyInfo?: GameInfo | PublicGameInfo;
   // Watch without playing.
   spectator?: boolean;
-  resumeTurns?: Turn[];
   resumeSnapshot?: Uint8Array;
   resumeTick?: number;
   // Host only: the play token the lobby was created under (see createLobby).
@@ -1859,7 +1858,6 @@ class Client {
           : undefined),
       gameRecord: lobby.gameRecord,
       spectator: lobby.spectator,
-      resumeTurns: lobby.resumeTurns,
       resumeSnapshot: lobby.resumeSnapshot,
       resumeTick: lobby.resumeTick,
       creatorToken: lobby.creatorToken,
