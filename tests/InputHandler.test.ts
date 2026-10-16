@@ -1,5 +1,8 @@
 // @vitest-environment jsdom
-import { UnitType } from "@openfront/engine-api/game/GameTypes";
+import {
+  UnitType,
+  MAX_UPGRADE_AMOUNT,
+} from "@openfront/engine-api/game/GameTypes";
 import { EventBus } from "@openfront/shared/EventBus";
 import {
   AlternateViewEvent,
@@ -1041,6 +1044,10 @@ describe("InputHandler AutoUpgrade", () => {
   });
 
   describe("Alt key default prevention", () => {
+    beforeEach(() => {
+      inputHandler.initialize();
+    });
+
     test("prevents the browser's default action when leftAlt is pressed", () => {
       const event = new KeyboardEvent("keydown", {
         code: "AltLeft",

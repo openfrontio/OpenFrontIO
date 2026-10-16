@@ -1,5 +1,6 @@
 import { TileRef } from "@openfront/engine-api/game/GameMap";
 import {
+  MAX_UPGRADE_AMOUNT,
   PlayerBuildableUnitType,
   PlayerID,
   UnitType,
@@ -8,13 +9,6 @@ import { EventBus, GameEvent } from "@openfront/shared/EventBus";
 import { favoriteSlotForKey } from "./EmojiKeys";
 import { Platform } from "./Platform";
 import { UIState } from "./UIState";
-import { EventBus, GameEvent } from "../core/EventBus";
-
-import {
-  MAX_UPGRADE_AMOUNT,
-  PlayerBuildableUnitType,
-  UnitType,
-} from "../core/game/Game";
 import {
   KEYBINDS_KEY,
   USER_SETTINGS_CHANGED_EVENT,
@@ -770,12 +764,12 @@ export class InputHandler {
           this.emojiKeysDown.add(e.code);
           return;
         }
-      // for hotkey usage, mostly an issue on Firefox.
-      // we specifically prevent the Left Alt key to avoid browser menu triggers,
-      // but allow Right Alt (often AltGr) to preserve international character input.
-      if (e.code === "AltLeft") {
-        e.preventDefault();
-      }
+        // for hotkey usage, mostly an issue on Firefox.
+        // we specifically prevent the Left Alt key to avoid browser menu triggers,
+        // but allow Right Alt (often AltGr) to preserve international character input.
+        if (e.code === "AltLeft") {
+          e.preventDefault();
+        }
 
         if (this.keybindMatchesEvent(e, this.keybinds.toggleView)) {
           e.preventDefault();
@@ -874,7 +868,7 @@ export class InputHandler {
             this.keybinds.emojiMenuModifier,
             this.keybinds.buildMenuModifier,
             this.keybinds.buildScrollModifier,
-          this.keybinds.altKey,
+            this.keybinds.altKey,
           ].includes(e.code)
         ) {
           this.activeKeys.add(e.code);
@@ -898,12 +892,12 @@ export class InputHandler {
         if (isTextInput && !this.activeKeys.has(e.code)) {
           return;
         }
-      // for hotkey usage, mostly an issue on Firefox.
-      // we specifically prevent the Left Alt key to avoid browser menu triggers,
-      // but allow Right Alt (often AltGr) to preserve international character input.
-      if (e.code === "AltLeft") {
-        e.preventDefault();
-      }
+        // for hotkey usage, mostly an issue on Firefox.
+        // we specifically prevent the Left Alt key to avoid browser menu triggers,
+        // but allow Right Alt (often AltGr) to preserve international character input.
+        if (e.code === "AltLeft") {
+          e.preventDefault();
+        }
 
         // When the meta (cmd) or ctrl key is released, any keys that were held
         // simultaneously will have had their keyup swallowed by the browser
