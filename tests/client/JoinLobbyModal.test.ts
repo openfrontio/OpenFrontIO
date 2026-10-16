@@ -372,13 +372,22 @@ describe("JoinLobbyModal Steam invite button", () => {
     expect(header.querySelector(INVITE)).not.toBeNull();
   });
 
-  it("shows the copy button in a public lobby", () => {
+  it("shows the copy button in a public team lobby", () => {
+    const modal = lobbyModal({
+      gameType: GameType.Public,
+      gameMode: GameMode.Team,
+    });
+
+    expect(renderHeader(modal).querySelector("copy-button")).not.toBeNull();
+  });
+
+  it("hides the copy button in a public FFA lobby", () => {
     const modal = lobbyModal({
       gameType: GameType.Public,
       gameMode: GameMode.FFA,
     });
 
-    expect(renderHeader(modal).querySelector("copy-button")).not.toBeNull();
+    expect(renderHeader(modal).querySelector("copy-button")).toBeNull();
   });
 });
 

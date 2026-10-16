@@ -129,22 +129,20 @@ export class JoinLobbyModal extends BaseModal {
     // Both affordances answer "get my friends into this lobby", so they sit
     // together. The Steam invite works for public and private lobbies alike,
     // because the shell keeps a shadow lobby for any joined game.
-    const copy = html`<copy-button
-      .lobbyId=${this.currentLobbyId}
-    ></copy-button>`;
-    // Except public FFA: inviting Steam friends into an every-man-for-himself
-    // public match encourages teaming, so the button stays off there. Public
-    // team lobbies and private lobbies keep it. A config that has not arrived
+    // Except public FFA: bringing friends into an every-man-for-himself
+    // public match encourages teaming, so both stay off there. Public team
+    // lobbies and private lobbies keep them. A config that has not arrived
     // yet counts as "off" too — the URL-join and accepted-invite paths render
     // this header before the first lobby_info, and that window must not show
     // a button the config may be about to forbid.
     const isPublicFfa =
       this.gameConfig?.gameType === GameType.Public &&
       this.gameConfig.gameMode !== GameMode.Team;
-    const invite =
-      this.gameConfig === null || isPublicFfa
-        ? undefined
-        : inviteFriendsButton();
+    const canShare = this.gameConfig !== null && !isPublicFfa;
+    const copy = canShare
+      ? html`<copy-button .lobbyId=${this.currentLobbyId}></copy-button>`
+      : undefined;
+    const invite = canShare ? inviteFriendsButton() : undefined;
     return modalHeader({
       // titleContent (not title) so the bell can sit at the right edge of the
       // title row via ml-auto, next to the copy/invite cluster.
