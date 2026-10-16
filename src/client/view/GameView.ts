@@ -950,6 +950,10 @@ export class GameView implements GameLike {
   layers(): import("@openfront/engine-api/game/MapFiles").MapLayer[] {
     return this._mapData.layers ?? [];
   }
+  /** Nations the map's manifest defines, whether or not they spawned. */
+  mapNationCount(): number {
+    return this._mapData.nations.length;
+  }
   isValidCoord(x: number, y: number): boolean {
     return this._map.isValidCoord(x, y);
   }
