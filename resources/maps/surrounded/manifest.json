@@ -103,5 +103,6 @@
       }
     ]
   },
+  "team_frequency": 8,
   "translation_key": "map.surrounded"
 }

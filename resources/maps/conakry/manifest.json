@@ -137,6 +137,7 @@
       }
     ]
   },
+  "team_frequency": 6,
   "themes": ["africa"],
   "translation_key": "map.conakry"
 }

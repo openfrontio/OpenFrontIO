@@ -117,5 +117,6 @@
       }
     ]
   },
+  "team_frequency": 12,
   "translation_key": "map.pluto"
 }

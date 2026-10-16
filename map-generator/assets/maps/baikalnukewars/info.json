@@ -5,6 +5,9 @@
   "translation_key": "map.baikalnukewars",
   "categories": ["fictional"],
   "multiplayer_frequency": 0,
+  "team_frequency": 30,
+  "special_team_count": 2,
+  "forced_modifiers": ["isWaterNukes:50"],
   "nations": [],
   "teamGameSpawnAreas": {
     "2": [

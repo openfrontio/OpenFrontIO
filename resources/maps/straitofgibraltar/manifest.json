@@ -117,6 +117,7 @@
       }
     ]
   },
+  "team_frequency": 10,
   "themes": ["europe", "africa"],
   "translation_key": "map.straitofgibraltar"
 }

@@ -4,6 +4,7 @@
   "translation_key": "map.pluto",
   "categories": ["cosmic"],
   "multiplayer_frequency": 6,
+  "team_frequency": 12,
   "special_team_count": 2,
   "nations": [
     {

@@ -162,6 +162,7 @@
       }
     ]
   },
+  "team_frequency": 10,
   "themes": ["asia"],
   "translation_key": "map.taiwanstrait"
 }

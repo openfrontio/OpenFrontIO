@@ -6,7 +6,7 @@
   "multiplayer_frequency": 20,
   "ffa_frequency": 0,
   "team_frequency": 0,
-  "forced_modifiers": ["isWaterNukes:50"],
+  "forced_modifiers": ["isWaterNukes:50", "startingGold5M:100"],
   "themes": ["space"],
   "nations": [
     {
