@@ -1,0 +1,203 @@
+{
+  "id": "BrainRot",
+  "name": "Brain Rot",
+  "translation_key": "map.brainrot",
+  "categories": ["arcade", "new"],
+  "multiplayer_frequency": 50,
+  "nations": [
+    {
+      "coordinates": [760, 760],
+      "name": "Frontal Lobe"
+    },
+    {
+      "coordinates": [990, 580],
+      "name": "Middle Frontal Gyrus"
+    },
+    {
+      "coordinates": [870, 1060],
+      "name": "Orbital Gyrus"
+    },
+    {
+      "coordinates": [1100, 1070],
+      "name": "Brocas Motor Speech Area"
+    },
+
+    {
+      "coordinates": [800, 620],
+      "name": "Concentration"
+    },
+    {
+      "coordinates": [720, 600],
+      "name": "Planning"
+    },
+    {
+      "coordinates": [780, 800],
+      "name": "Judgment"
+    },
+    {
+      "coordinates": [960, 930],
+      "name": "Expression"
+    },
+    {
+      "coordinates": [1250, 680],
+      "name": "Creativity"
+    },
+    {
+      "coordinates": [1130, 530],
+      "name": "Inhibition"
+    },
+
+    {
+      "coordinates": [990, 490],
+      "name": "Superior Frontal Gyrus"
+    },
+    {
+      "coordinates": [370, 590],
+      "name": "Frontal Eye Field"
+    },
+
+    {
+      "coordinates": [1250, 470],
+      "name": "Eye Movement"
+    },
+    {
+      "coordinates": [1410, 430],
+      "name": "Orientation"
+    },
+
+    {
+      "coordinates": [1090, 820],
+      "name": "Inferior Frontal Gyrus"
+    },
+    {
+      "coordinates": [1280, 980],
+      "name": "Speech Muscles"
+    },
+
+    {
+      "coordinates": [1540, 550],
+      "name": "Precentral Gyrus"
+    },
+    {
+      "coordinates": [1440, 720],
+      "name": "Voluntary Muscle"
+    },
+
+    {
+      "coordinates": [1690, 660],
+      "name": "Postcentral Gyrus"
+    },
+    {
+      "coordinates": [1560, 870],
+      "name": "Muscle Sensation"
+    },
+    {
+      "coordinates": [1740, 540],
+      "name": "Skin Sensation"
+    },
+
+    {
+      "coordinates": [1920, 580],
+      "name": "Superior Parietal Lobule"
+    },
+    {
+      "coordinates": [1830, 500],
+      "name": "Weight & Texture"
+    },
+
+    {
+      "coordinates": [2140, 790],
+      "name": "Parietal Lobule"
+    },
+    {
+      "coordinates": [1720, 790],
+      "name": "Suparmarginal Gyrus"
+    },
+    {
+      "coordinates": [2250, 1220],
+      "name": "Occipital Lobe"
+    },
+    {
+      "coordinates": [2150, 990],
+      "name": "Recognition"
+    },
+    {
+      "coordinates": [2000, 1230],
+      "name": "Perception"
+    },
+
+    {
+      "coordinates": [1740, 960],
+      "name": "Wemickes Area"
+    },
+    {
+      "coordinates": [1770, 970],
+      "name": "Angular Gyrus"
+    },
+    {
+      "coordinates": [1130, 850],
+      "name": "Inferior Parietal Lobule"
+    },
+    {
+      "coordinates": [1960, 1070],
+      "name": "Language"
+    },
+
+    {
+      "coordinates": [1480, 1060],
+      "name": "Superior Temporal Gyrus"
+    },
+    {
+      "coordinates": [1690, 980],
+      "name": "Hearing"
+    },
+
+    {
+      "coordinates": [1450, 1220],
+      "name": "Middle Temporal Gyrus"
+    },
+    {
+      "coordinates": [1470, 1370],
+      "name": "Inferior Temporal Gyrus"
+    },
+    {
+      "coordinates": [1170, 1340],
+      "name": "Short-term Memory"
+    },
+    {
+      "coordinates": [1730, 1330],
+      "name": "Equilibrium"
+    },
+    {
+      "coordinates": [1380, 1380],
+      "name": "Emotion"
+    },
+
+    {
+      "coordinates": [1860, 1480],
+      "name": "Cerebellum"
+    },
+    {
+      "coordinates": [1520, 1470],
+      "name": "Pons Varolii"
+    },
+    {
+      "coordinates": [1500, 1760],
+      "name": "Medulla"
+    },
+    {
+      "coordinates": [1500, 2100],
+      "name": "Brain Stem"
+    }
+  ],
+
+  "layers": [
+    {
+      "id": "brland",
+      "placement": "land",
+      "alpha": 0.75,
+      "nukeable": true
+    }
+  ],
+  "themes": ["space", "war"]
+}

@@ -291,7 +291,7 @@
       "requiresPlayer": true
     },
     {
-      "key": "stop_trading_all",
+      "key": "stop_trading_enemies",
       "requiresPlayer": false
     },
     {

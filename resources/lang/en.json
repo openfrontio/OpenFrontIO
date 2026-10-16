@@ -227,6 +227,7 @@
       "greet": "Greetings",
       "help": "Help",
       "misc": "Miscellaneous",
+      "recent": "Recent",
       "warnings": "Warnings"
     },
     "defend": {
@@ -283,7 +284,9 @@
       "strategy": "Nice strategy!",
       "team_up": "Let’s team up against [P1]!"
     },
+    "no_phrases": "No matching phrases",
     "search": "Search player...",
+    "search_phrases": "Search phrases...",
     "short": {
       "greet": {
         "ruining_games": "Ruining our games"
@@ -307,7 +310,7 @@
         "saving_for_mirv": "[P1] saving for MIRV",
         "snowballing": "[P1] is snowballing",
         "stalemate": "Peace? Stalemate.",
-        "stop_trading_all": "Stop all trading!",
+        "stop_trading_enemies": "Stop trading with enemies!",
         "stop_war": "Stop before others swoop in"
       }
     },
@@ -331,7 +334,7 @@
       "snowballing": "[P1] is snowballing too fast!",
       "stalemate": "Let's make peace. This is a stalemate, we will both lose.",
       "stop_trading": "Stop trading with [P1]!",
-      "stop_trading_all": "Please stop trading with all!",
+      "stop_trading_enemies": "Please stop trading with enemies!",
       "stop_war": "Let's stop this war before someone else takes advantage!",
       "strong": "[P1] is strong.",
       "weak": "[P1] is weak."
@@ -882,6 +885,7 @@
     "alliance_request_sent": "Alliance request sent to {name}.",
     "alliance_request_status": "{name} {status} your alliance request",
     "atom_bomb_detonated": "{name} - atom bomb detonated",
+    "atom_bomb_inbound": "{name} - atom bomb inbound",
     "attack_cancelled_retreat": "Attack cancelled, {troops} soldiers killed during retreat",
     "attack_request": "{name} requests you attack {target}",
     "betrayal_debuff_ends": "{time} seconds left until betrayal debuff ends",
@@ -892,8 +896,11 @@
     "duration_seconds_plural": "{seconds} seconds",
     "focus": "Focus",
     "hydrogen_bomb_detonated": "{name} - hydrogen bomb detonated",
+    "hydrogen_bomb_inbound": "{name} - hydrogen bomb inbound",
     "ignore": "Ignore",
+    "mirv_inbound": "⚠️⚠️⚠️ {name} - MIRV INBOUND ⚠️⚠️⚠️",
     "missile_intercepted": "SAM intercepted {unit}",
+    "naval_invasion_inbound": "Naval invasion incoming from {name} ({troops})",
     "no_boats_available": "No boats available, max {max}",
     "received_gold_from_captured_ship": "Received {gold} gold from ship captured from {name}",
     "received_gold_from_conquest": "Conquered {name}, received {gold} gold",
@@ -1490,11 +1497,13 @@
     "balkans": "Balkans",
     "balkhash": "Balkhash",
     "baltics": "Baltics",
+    "benelux": "Benelux",
     "beringsea": "Bering Sea",
     "beringstrait": "Bering Strait",
     "betweentwoseas": "Between Two Seas",
     "blacksea": "Black Sea",
     "bosphorusstraits": "Bosphorus Straits",
+    "brainrot": "Brain Rot",
     "branchingpaths": "Branching Paths",
     "britannia": "Britannia",
     "britanniaclassic": "Britannia (Classic)",
@@ -1569,6 +1578,7 @@
     "northamerica": "North America",
     "northwestpassage": "Northwest Passage",
     "oceania": "Oceania",
+    "ommatrypta": "Ommatrypta",
     "onion": "Onion",
     "pangaea": "Pangaea",
     "passage": "Passage",
@@ -1640,6 +1650,9 @@
     "unfavorite": "Remove from favourites"
   },
   "map_layers": {
+    "brland": "brland",
+    "eyeland": "eyeland",
+    "eyewater": "eyewater",
     "label": "label"
   },
   "marketing_consent": {
@@ -1794,9 +1807,9 @@
     "send_gold": "Send Gold",
     "send_troops": "Send Troops",
     "start_trade": "Start Trading",
-    "start_trade_all": "Start Trading with All",
+    "start_trade_enemies": "Start Trading with Enemies",
     "stop_trade": "Stop Trading",
-    "stop_trade_all": "Stop Trading with All",
+    "stop_trade_enemies": "Stop Trading with Enemies",
     "stopped": "Stopped",
     "target": "Target",
     "trading": "Trading",
@@ -2146,6 +2159,7 @@
     "earlier": "Earlier levels",
     "key_claimed": "Claimed",
     "key_locked": "Locked",
+    "key_pending": "Pending",
     "key_ready": "Ready to claim",
     "later": "Later levels",
     "legend_reward": "Legend reward",
@@ -2284,6 +2298,7 @@
     "confirm_purchase_body": "Buy {item} for {amount, number} {currency}?",
     "confirm_purchase_title": "Confirm Purchase",
     "confirm_subscribe_over_grant": "Start a paid {tier} subscription now? Your free access ends immediately: the {days, plural, one {# day left on it is} other {# days left on it are}} not refunded and not added to your paid time.",
+    "confirm_subscribe_over_grant_carried": "Start a paid {tier} subscription now? You're charged today, and the {days, plural, one {# free day} other {# free days}} you have left {days, plural, one {is} other {are}} added to the end: your next payment moves back by the same amount.",
     "confirm_subscribe_over_grant_no_days": "Start a paid {tier} subscription now? Your free access ends immediately, and the time left on it is not refunded and not added to your paid time.",
     "confirm_tier_change_steam": "Subscribe to {tier} now? Your new tier starts immediately at full price, and the rest of your current month is not refunded.",
     "confirm_upgrade": "Upgrade to {tier}? You'll be charged the prorated difference now.",
@@ -2625,10 +2640,14 @@
     "graphics_refresh_modifier_desc": "Hold this key and {key} to refresh graphics",
     "ground_attack": "Ground Attack",
     "ground_attack_desc": "Send a ground attack to the tile under your cursor.",
+    "halloween_theme_desc": "Show the Halloween look on the home page.",
+    "halloween_theme_label": "Halloween Theme",
     "help_messages_desc": "Show contextual tips and warnings during gameplay, such as army limit warnings and general gameplay advice.",
     "help_messages_label": "Help Messages",
     "highlight_glow_strength_label": "Highlight strength",
     "highlight_small_players_desc": "Add a glow to small players so they're easy to find.",
+    "hud_opacity_desc": "Adjust panel backgrounds without fading text or icons. 100% keeps their original appearance.",
+    "hud_opacity_label": "HUD background opacity",
     "keybind_conflict_error": "The key {key} is already bound to another action.",
     "keybinds_hint": "Click a key to rebind it. You can assign a single key or Shift + key combination.",
     "left_click_desc": "When ON, left-click opens menu and sword button attacks. When OFF, left-click attacks directly.",
@@ -2638,6 +2657,7 @@
     "lobby_start_alerts_desc": "Play the start chime for each lobby and ranked match by default and show a desktop notification when permitted. You can override it with the lobby bell.",
     "lobby_start_alerts_label": "Lobby Start Alerts",
     "menu_shortcuts": "Menu Shortcuts",
+    "modifiers": "Modifiers",
     "move_down": "Move Camera Down",
     "move_down_desc": "Move the camera downward",
     "move_left": "Move Camera Left",

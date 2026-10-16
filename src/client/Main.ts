@@ -41,6 +41,7 @@ import {
 } from "./BootInterrupts";
 import type { JoinLobbyResult } from "./ClientGameRunner";
 import {
+  broadcastFreshUserMe,
   getPlayerCosmeticsRefs,
   handlePurchaseReturn,
   translateCosmetic,
@@ -100,6 +101,8 @@ import {
   presenceLobbyId,
   withGroupToken,
 } from "./PresenceGroup";
+import { fetchMyGameXp, fetchProgressionConfig } from "./ProgressionApi";
+import { startProvisionalProgress } from "./ProvisionalProgress";
 import type { RewardsModal } from "./RewardsModal";
 import {
   ensureServerList,
@@ -375,6 +378,10 @@ class Client {
     // URL, so take the value while it is still the URL we were served at.
     // See PagePin.ts.
     capturePagePin();
+    document.documentElement.style.setProperty(
+      "--hud-opacity",
+      String(this.userSettings.hudOpacity()),
+    );
 
     flushReloadToast();
 
@@ -731,6 +738,15 @@ class Client {
     }
 
     this.steamHandoffModal = document.querySelector("steam-handoff-modal");
+
+    // The XP of games the player died in, still waiting to be scored, shown
+    // provisionally on their level until they are. Listening before the
+    // first userMeResponse below.
+    startProvisionalProgress({
+      fetchXp: (gameId) => fetchMyGameXp(gameId),
+      loadConfig: fetchProgressionConfig,
+      refreshUserMe: broadcastFreshUserMe,
+    });
 
     const onUserMe = async (userMeResponse: UserMeResponse | false) => {
       if (gamePortal.isOnGamePortal()) {

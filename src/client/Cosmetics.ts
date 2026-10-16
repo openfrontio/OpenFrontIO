@@ -299,10 +299,11 @@ function grantedDaysRemaining(sub: UserSubscription): number | null {
  * ("charged the prorated difference", "credit for the unused portion"), and
  * none of it is true here: infra expires every granted row in the same
  * transaction as the paid insert (`expireGrantsForPaidReplacement`,
- * SteamAgreements.ts, confirmed 12 Sept 2026), so the paid period starts at
- * settle and the unused free days are simply gone — no credit, no extension,
- * no stacking. The string says so, and names the days when we know them,
- * because "not carried over" badly understates 28 of them.
+ * SteamAgreements.ts), so the paid period starts at settle. What happens to
+ * the unused free days depends on the rail, and the copy must match infra:
+ * on Steam they are added to the end (`steam:extend_agreement` pushes the
+ * next charge back), on Stripe they are simply gone. An open-ended grant has
+ * no days to carry on either rail.
  *
  * The purchase itself is the ordinary first-purchase flow: same startPurchase,
  * same success string, same profile refresh. Only the confirm differs.
@@ -313,16 +314,21 @@ async function purchaseOverGrant(
 ): Promise<void> {
   const targetName = translateCosmetic("subscriptions", sub.name);
   const days = grantedDaysRemaining(currentSub);
-  // Both keys passed as literals so the en.json sync test can see them.
+  // Every key passed as a literal so the en.json sync test can see them.
   const confirmed = await showInGameConfirm(
     days === null
       ? translateText("store.confirm_subscribe_over_grant_no_days", {
           tier: targetName,
         })
-      : translateText("store.confirm_subscribe_over_grant", {
-          tier: targetName,
-          days,
-        }),
+      : paymentsProvider() === "steam"
+        ? translateText("store.confirm_subscribe_over_grant_carried", {
+            tier: targetName,
+            days,
+          })
+        : translateText("store.confirm_subscribe_over_grant", {
+            tier: targetName,
+            days,
+          }),
     {
       heading: translateText("store.subscribe_heading"),
       variant: "warning",
@@ -1445,6 +1451,7 @@ export async function getPlayerCosmeticsRefs(
   const cosmetics = await fetchCosmetics();
   let pattern: PlayerPattern | null =
     userSettings.getSelectedPatternName(cosmetics);
+  let patternDenied = false;
 
   if (pattern) {
     const userMe = await getUserMe();
@@ -1457,9 +1464,13 @@ export async function getPlayerCosmeticsRefs(
       const hasWildcard = flares.includes("pattern:*");
       if (!hasWildcard && !flares.includes(flareName)) {
         pattern = null;
+        patternDenied = true;
       }
+    } else {
+      // Unknown profile: keep the selection in settings, but do not send it.
+      pattern = null;
     }
-    if (pattern === null) {
+    if (patternDenied) {
       userSettings.setSelectedPatternName(undefined);
     }
   }
@@ -1497,9 +1508,7 @@ export async function getPlayerCosmeticsRefs(
         // not strip an unowned cosmetic ref, it refuses the connection
         // (Privilege returns "forbidden", Worker.ts closes the socket with
         // CosmeticsForbidden), so sending it would trade a lost flag for an
-        // unjoinable multiplayer. The pattern, skin and crown branches nearby
-        // do send theirs on an unknown profile and carry that exposure; this
-        // one deliberately does not.
+        // unjoinable multiplayer.
         flag = null;
       }
     }
@@ -1509,43 +1518,59 @@ export async function getPlayerCosmeticsRefs(
   }
 
   let skinName = userSettings.getSelectedSkinName() ?? undefined;
+  let skinDenied = false;
   if (skinName) {
     const skin = cosmetics?.skins?.[skinName];
-    if (cosmetics && !skin) {
-      // Cosmetics loaded but the saved skin no longer exists.
+    if (!skin) {
       skinName = undefined;
-    } else if (skin) {
+      if (cosmetics) {
+        // Cosmetics loaded but the saved skin no longer exists.
+        skinDenied = true;
+      }
+    } else {
       const userMe = await getUserMe();
       if (userMe) {
         const flares = userMe.player.flares ?? [];
         const hasWildcard = flares.includes("skin:*");
         if (!hasWildcard && !flares.includes(`skin:${skin.name}`)) {
           skinName = undefined;
+          skinDenied = true;
         }
+      } else {
+        // Unknown profile: keep the selection, but do not send it.
+        skinName = undefined;
       }
     }
-    if (skinName === undefined) {
+    if (skinDenied) {
       userSettings.setSelectedPatternName(undefined);
     }
   }
 
   let crownName = userSettings.getSelectedCrownName() ?? undefined;
+  let crownDenied = false;
   if (crownName) {
     const crown = cosmetics?.crowns?.[crownName];
-    if (cosmetics && !crown) {
-      // Cosmetics loaded but the saved crown no longer exists.
+    if (!crown) {
       crownName = undefined;
-    } else if (crown) {
+      if (cosmetics) {
+        // Cosmetics loaded but the saved crown no longer exists.
+        crownDenied = true;
+      }
+    } else {
       const userMe = await getUserMe();
       if (userMe) {
         const flares = userMe.player.flares ?? [];
         const hasWildcard = flares.includes("crown:*");
         if (!hasWildcard && !flares.includes(`crown:${crown.name}`)) {
           crownName = undefined;
+          crownDenied = true;
         }
+      } else {
+        // Unknown profile: keep the selection, but do not send it.
+        crownName = undefined;
       }
     }
-    if (crownName === undefined) {
+    if (crownDenied) {
       userSettings.setSelectedCrownName(undefined);
     }
   }
@@ -1553,26 +1578,29 @@ export async function getPlayerCosmeticsRefs(
   // Effects: a per-slot map (slot -> effect name). A slot is the effectType for
   // trails and the nukeType for nuke explosions (see effectTypeForSlot). Drop any
   // entry whose effect no longer exists, doesn't fit the slot, or the user can't
-  // access. Like skins/flags/patterns above, a selection is kept (and left to the
-  // server to validate) when cosmetics or userMe fail to load.
+  // access. Like skins/flags/patterns above, a selection is kept in settings (and
+  // omitted from join refs) when cosmetics or userMe fail to load.
   const selectedEffects = userSettings.getSelectedEffects();
   const effects: Record<string, string> = {};
   for (const [slot, name] of Object.entries(selectedEffects)) {
     const effect = findEffectForSlot(cosmetics, slot, name);
-    if (cosmetics && !effect) {
-      userSettings.setSelectedEffectName(slot, undefined);
+    if (!effect) {
+      if (cosmetics) {
+        userSettings.setSelectedEffectName(slot, undefined);
+      }
       continue;
     }
-    if (effect) {
-      const userMe = await getUserMe();
-      if (userMe) {
-        const flares = userMe.player.flares ?? [];
-        const hasWildcard = flares.includes("effect:*");
-        if (!hasWildcard && !flares.includes(`effect:${effect.name}`)) {
-          userSettings.setSelectedEffectName(slot, undefined);
-          continue;
-        }
+    const userMe = await getUserMe();
+    if (userMe) {
+      const flares = userMe.player.flares ?? [];
+      const hasWildcard = flares.includes("effect:*");
+      if (!hasWildcard && !flares.includes(`effect:${effect.name}`)) {
+        userSettings.setSelectedEffectName(slot, undefined);
+        continue;
       }
+    } else {
+      // Unknown profile: keep the selection in settings, but do not send it.
+      continue;
     }
     effects[slot] = name;
   }

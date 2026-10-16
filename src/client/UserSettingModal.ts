@@ -80,6 +80,11 @@ const PREVIEWABLE: readonly CueCategory[] = ["effects", "alerts", "interface"];
  */
 const PREVIEW_CEILING_MS = 10_000;
 
+// Set by the inline script at the top of <body> in index.html.
+function isHalloweenSeason(): boolean {
+  return document.body.dataset.halloweenSeason !== undefined;
+}
+
 @customElement("user-setting")
 export class UserSettingModal extends BaseModal {
   private currentUiScale: number | undefined;
@@ -517,6 +522,14 @@ export class UserSettingModal extends BaseModal {
     console.log(
       "🔍 Go to player:",
       this.userSettings.goToPlayer() ? "ON" : "OFF",
+    );
+  }
+
+  private toggleHalloweenTheme() {
+    this.userSettings.toggleHalloweenTheme();
+    document.body.classList.toggle(
+      "halloween-theme",
+      isHalloweenSeason() && this.userSettings.halloweenTheme(),
     );
   }
 
@@ -1744,6 +1757,19 @@ export class UserSettingModal extends BaseModal {
    */
   private renderGraphicsSettings() {
     return html`
+      <setting-slider
+        label=${translateText("user_setting.hud_opacity_label")}
+        description=${translateText("user_setting.hud_opacity_desc")}
+        id="hud-opacity-slider"
+        .value=${this.userSettings.hudOpacity() * 100}
+        @change=${(e: CustomEvent<{ value: number }>) => {
+          this.userSettings.setHudOpacity(e.detail.value / 100);
+          document.documentElement.style.setProperty(
+            "--hud-opacity",
+            String(this.userSettings.hudOpacity()),
+          );
+        }}
+      ></setting-slider>
       <!-- 🎨 Graphics preset -->
       <div
         class="flex flex-col w-full p-4 bg-white/5 border border-white/10 rounded-xl hover:bg-white/10 transition-all gap-3"
@@ -1881,6 +1907,16 @@ export class UserSettingModal extends BaseModal {
         .checked=${this.userSettings.goToPlayer()}
         @change=${this.toggleGoToPlayer}
       ></setting-toggle>
+
+      ${isHalloweenSeason()
+        ? html`<setting-toggle
+            label="${translateText("user_setting.halloween_theme_label")}"
+            description="${translateText("user_setting.halloween_theme_desc")}"
+            id="halloween-theme-toggle"
+            .checked=${this.userSettings.halloweenTheme()}
+            @change=${this.toggleHalloweenTheme}
+          ></setting-toggle>`
+        : null}
 
       <!-- Help messages (moved here from the in-game menu) -->
       <setting-toggle
