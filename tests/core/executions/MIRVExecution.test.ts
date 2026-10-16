@@ -218,6 +218,39 @@ describe("MIRVExecution", () => {
     expect(callArgs[3]).toBe(otherPlayer.id());
   });
 
+  test("MIRV should use the current destination owner at launch", () => {
+    const targetTile = game.ref(20, 20);
+    expect(game.owner(targetTile).isPlayer()).toBe(false);
+    const allianceRequest = player.createAllianceRequest(otherPlayer);
+    allianceRequest!.accept();
+    const playerRelationSpy = vi.spyOn(player, "updateRelation");
+    const otherPlayerRelationSpy = vi.spyOn(otherPlayer, "updateRelation");
+    const bombLaunchSpy = vi.spyOn(game.stats(), "bombLaunch");
+    vi.spyOn(player, "canBuild").mockReturnValue(game.ref(10, 10));
+    const displaySpy = vi.spyOn(game, "displayIncomingUnit");
+    const mirvExec = new MirvExecution(player, targetTile);
+    game.addExecution(mirvExec);
+
+    executeTicks(game, 1);
+    otherPlayer.conquer(targetTile);
+    executeTicks(game, 1);
+
+    const mirv = player.units(UnitType.MIRV);
+    expect(mirv).toHaveLength(1);
+    expect(mirv[0]?.targetPlayer()).toBe(otherPlayer);
+    expect(bombLaunchSpy).toHaveBeenCalledWith(
+      player,
+      otherPlayer,
+      UnitType.MIRV,
+    );
+    expect(player.isAlliedWith(otherPlayer)).toBe(false);
+    expect(player.isTraitor()).toBe(true);
+    expect(playerRelationSpy).toHaveBeenCalledWith(otherPlayer, -100);
+    expect(otherPlayerRelationSpy).toHaveBeenCalledWith(player, -100);
+    expect(displaySpy).toHaveBeenCalledTimes(1);
+    expect(displaySpy.mock.calls[0][3]).toBe(otherPlayer.id());
+  });
+
   test("MIRV should not launch if player cannot build it", async () => {
     // Remove player's missile silo
     const silos = player.units(UnitType.MissileSilo);
