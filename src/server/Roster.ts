@@ -67,17 +67,18 @@ export class Roster {
   }
 
   // Bans the persistentID (no rejoin, no reconnect, no admission) whether or
-  // not the client is still connected, and drops it from the connected list.
-  // Returns whether it was connected.
-  kick(client: Client): boolean {
+  // not the client is still connected, and drops every connected client
+  // holding it — a duplicate session that replaced this record shares the
+  // persistentID. Returns the clients it dropped.
+  kick(client: Client): Client[] {
     this.kicked.add(client.persistentID);
-    const wasConnected = this.connected.some(
-      (c) => c.clientID === client.clientID,
+    const dropped = this.connected.filter(
+      (c) => c.persistentID === client.persistentID,
     );
     this.connected = this.connected.filter(
-      (c) => c.clientID !== client.clientID,
+      (c) => c.persistentID !== client.persistentID,
     );
-    return wasConnected;
+    return dropped;
   }
 
   // Removes and returns the connected clients that have not pinged for more
