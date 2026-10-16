@@ -126,16 +126,6 @@ export class PlayerGameHistoryView extends LitElement {
   }
 
   willUpdate(changed: PropertyValues) {
-    // The host handed in a newer copy of this player's history (it read a
-    // fresh first page): show it.
-    if (
-      changed.has("cachedState") &&
-      changed.get("cachedState") !== undefined &&
-      this.cachedState?.publicId === this.publicId &&
-      this.cachedState.games !== this.games
-    ) {
-      this.syncToPublicId();
-    }
     // Reload when the host swaps in a different player after mount (e.g. a
     // manual hash edit routes the profile modal to a new publicId). Lit reuses
     // this element, so connectedCallback won't fire again. The undefined check

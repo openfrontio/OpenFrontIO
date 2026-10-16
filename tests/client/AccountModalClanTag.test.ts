@@ -291,28 +291,78 @@ describe("account profile card clan tag", () => {
     expect(card()!.clanTag).toBeNull();
   });
 
-  it("a newer first page read later also refreshes the Games tab", async () => {
+  const cachedGames = () =>
+    (
+      historyView() as unknown as {
+        cachedState?: { games: { gameId: string }[] } | null;
+      } | null
+    )?.cachedState?.games.map((g) => g.gameId);
+
+  const scrolledHistory = (n: number) => ({
+    publicId: "wonder01",
+    typeFilter: "all",
+    modeFilter: "all",
+    games: Array.from({ length: n }, (_, i) => ({
+      ...page("AUS").results[0],
+      gameId: `s${i}`,
+    })),
+    nextCursor: "more",
+  });
+
+  it("coming back to a scrolled Games tab after a minute keeps the whole list", async () => {
     vi.useFakeTimers({ toFake: ["Date"] });
     vi.setSystemTime(new Date("2026-10-16T12:00:00.000Z"));
     fetchPublicPlayerGamesMock.mockResolvedValue(page("AUS"));
     modal.open();
     await settle(() => expect(card()?.clanTag).toBe("AUS"));
-    modal.close();
-    vi.setSystemTime(new Date("2026-10-16T12:02:00.000Z"));
-    const newer = page("LUX");
-    newer.results[0] = { ...newer.results[0], gameId: "g-new", map: "Africa" };
-    fetchPublicPlayerGamesMock.mockResolvedValue(newer);
-    modal.open();
-    await settle(() => expect(card()?.clanTag).toBe("LUX"));
     modal.setActiveTab("games");
-    // The tab (stubbed here) is handed the newer page, not the old one.
-    await settle(() => {
-      const cached = (
-        historyView() as unknown as {
-          cachedState?: { games: { map: string }[] } | null;
-        } | null
-      )?.cachedState;
-      expect(cached?.games.map((g) => g.map)).toEqual(["Africa"]);
-    });
+    await settle(() => expect(historyView()).not.toBeNull());
+    // The player scrolled down three pages.
+    historyView()!.dispatchEvent(
+      new CustomEvent("history-updated", { detail: scrolledHistory(5) }),
+    );
+    // Away on a game's stats for over a minute, then back.
+    vi.setSystemTime(new Date("2026-10-16T12:02:00.000Z"));
+    fetchPublicPlayerGamesMock.mockResolvedValue(page("LUX"));
+    modal.returnToGames();
+    await settle(() =>
+      expect(fetchPublicPlayerGamesMock).toHaveBeenCalledTimes(2),
+    );
+    await settle(() => expect(cachedGames()).toHaveLength(5));
+  });
+
+  it("opened on the Games tab, the card takes that tab's first page: no read of its own", async () => {
+    modal.open({ tab: "games" });
+    await settle(() => expect(historyView()).not.toBeNull());
+    expect(fetchPublicPlayerGamesMock).not.toHaveBeenCalled();
+    historyView()!.dispatchEvent(
+      new CustomEvent("history-updated", {
+        detail: {
+          publicId: "wonder01",
+          typeFilter: "all",
+          modeFilter: "all",
+          games: page(null, "NU").results,
+          nextCursor: null,
+        },
+      }),
+    );
+    modal.setActiveTab("account");
+    await settle(() => expect(card()?.clanTag).toBe("NU"));
+    expect(fetchPublicPlayerGamesMock).not.toHaveBeenCalled();
+  });
+
+  it("opened on the Games tab, reads the games itself when the tab didn't give them", async () => {
+    fetchPublicPlayerGamesMock.mockResolvedValue(page("LUX"));
+    modal.open({ tab: "games" });
+    await settle(() => expect(historyView()).not.toBeNull());
+    // A filter was picked before the tab's first load landed.
+    historyView()!.dispatchEvent(
+      new CustomEvent("history-updated", {
+        detail: { ...scrolledHistory(1), typeFilter: "public" },
+      }),
+    );
+    modal.setActiveTab("account");
+    await settle(() => expect(card()?.clanTag).toBe("LUX"));
+    expect(fetchPublicPlayerGamesMock).toHaveBeenCalledTimes(1);
   });
 });

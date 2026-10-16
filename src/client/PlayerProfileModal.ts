@@ -5,7 +5,7 @@ import {
   type PlayerStatsTree,
   type PublicProgress,
 } from "@openfront/shared/ApiSchemas";
-import { html, nothing } from "lit";
+import { html, nothing, type PropertyValues } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import { ClientEnv } from "src/client/ClientEnv";
 import { fetchPublicPlayerGames, fetchPublicPlayerProfile } from "./Api";
@@ -59,6 +59,8 @@ export class PlayerProfileModal extends BaseModal {
   // The first page of this player's games, newest first: the profile card's
   // clan tag comes from it (latestGameClanTag). Empty until it arrives.
   @state() private recentGames: PublicPlayerGame[] = [];
+  // The card is waiting for the Games tab's first load (see onOpen).
+  private awaitingTabGames = false;
   // Level / XP, when progression is on and the player has any.
   @state() private progress: PublicProgress | null = null;
   @state() private loading = false;
@@ -525,7 +527,8 @@ export class PlayerProfileModal extends BaseModal {
         HTMLElement & { publicId?: string }
       >("player-game-history-view");
       const tabLoads = historyView?.publicId !== publicId;
-      void this.loadProfile(publicId, { recentGames: !(onGames && tabLoads) });
+      this.awaitingTabGames = onGames && tabLoads;
+      void this.loadProfile(publicId, { recentGames: !this.awaitingTabGames });
     }
   }
 
@@ -588,6 +591,21 @@ export class PlayerProfileModal extends BaseModal {
     });
   }
 
+  protected updated(changed: PropertyValues<this>): void {
+    super.updated(changed);
+    // The card is on show, but the Games tab it was waiting on didn't give it
+    // the games (its load failed, or a filter was picked first): read them.
+    const publicId = this.publicId;
+    if (this.awaitingTabGames && this.activeTab !== "games" && publicId) {
+      this.awaitingTabGames = false;
+      const gen = this.loadGeneration;
+      this.loadRecentGames(
+        publicId,
+        () => gen === this.loadGeneration && this.publicId === publicId,
+      );
+    }
+  }
+
   // The Games tab loaded this player's unfiltered history (newest first): the
   // card's tag reads from it as well.
   private adoptRecentGames(history: PlayerGameHistoryCache): void {
@@ -595,7 +613,8 @@ export class PlayerProfileModal extends BaseModal {
     if (history.typeFilter !== "all" || history.modeFilter !== "all") return;
     // Its first page only, as when the card reads it itself: loading older
     // games further down never changes the tag.
-    if (this.recentGames.length > 0) return;
+    if (!this.awaitingTabGames) return;
+    this.awaitingTabGames = false;
     this.recentGames = history.games;
   }
 

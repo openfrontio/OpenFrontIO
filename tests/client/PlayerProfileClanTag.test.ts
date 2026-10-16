@@ -265,7 +265,7 @@ describe("player profile card clan tag", () => {
     expect(card()!.clanTag).toBeNull();
   });
 
-  it("the Games tab shows the newer first page read on a reopening", async () => {
+  it("a reopening still on the Games tab reads the games once, for the card and the tab", async () => {
     fetchPublicPlayerGamesMock.mockResolvedValue(page(null, "LUX"));
     modal.open({ publicID: "wonder01", tab: "games" });
     const view = () => modal.querySelector("player-game-history-view");
@@ -274,11 +274,24 @@ describe("player profile card clan tag", () => {
     const newer = page("NU");
     newer.results[0] = { ...newer.results[0], gameId: "g-new", map: "Africa" };
     fetchPublicPlayerGamesMock.mockResolvedValue(newer);
-    // Still on the Games tab, mounted for the same player: the card reads the
-    // games itself, and the tab takes the newer page from it.
+    // Still on the Games tab, mounted for the same player: it won't load
+    // again, so the card reads the games itself.
     modal.open({ publicID: "wonder01" });
-    await settle(() => expect(view()?.textContent).toContain("Africa"));
     modal.setActiveTab("stats");
     await settle(() => expect(card()?.clanTag).toBe("NU"));
+    expect(fetchPublicPlayerGamesMock).toHaveBeenCalledTimes(2);
+  });
+
+  it("opened on the Games tab, still finds the tag when that tab's load fails", async () => {
+    fetchPublicPlayerGamesMock
+      .mockResolvedValueOnce({ error: "network" })
+      .mockResolvedValue(page(null, "LUX"));
+    modal.open({ publicID: "wonder01", tab: "games" });
+    await settle(() =>
+      expect(fetchPublicPlayerGamesMock).toHaveBeenCalledTimes(1),
+    );
+    modal.setActiveTab("stats");
+    await settle(() => expect(card()?.clanTag).toBe("LUX"));
+    expect(fetchPublicPlayerGamesMock).toHaveBeenCalledTimes(2);
   });
 });

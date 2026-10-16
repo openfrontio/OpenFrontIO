@@ -149,6 +149,8 @@ export class AccountModal extends BaseModal {
   // RECENT_GAMES_MAX_AGE_MS old, so a tag played under since shows up.
   private recentGames: PublicPlayerGame[] | null = null;
   private recentGamesAt = 0;
+  // The card is waiting for the Games tab's first load (see loadPlayerProfile).
+  private awaitingTabGames = false;
   // The player whose games read is in flight, if any.
   private recentGamesLoadingFor: string | null = null;
 
@@ -495,14 +497,15 @@ export class AccountModal extends BaseModal {
           : null}
         @history-updated=${(e: CustomEvent<PlayerGameHistoryCache>) => {
           this.gameHistoryCache = e.detail;
-          // The unfiltered list is newest first, so the card can read it too:
-          // its first page only, as when the card reads it itself, so loading
-          // older games further down never changes the tag.
+          // Opened on the Games tab, the card waits for the tab's first load
+          // (newest first, unfiltered) instead of reading the same page. Only
+          // that first page: older games appended later never change the tag.
           if (
+            this.awaitingTabGames &&
             e.detail.typeFilter === "all" &&
-            e.detail.modeFilter === "all" &&
-            !this.hasFreshRecentGames()
+            e.detail.modeFilter === "all"
           ) {
+            this.awaitingTabGames = false;
             this.recentGames = e.detail.games;
             this.recentGamesAt = Date.now();
           }
@@ -543,6 +546,13 @@ export class AccountModal extends BaseModal {
   protected updated(changed: PropertyValues<this>): void {
     super.updated(changed);
     this.ensureProgression();
+    // The card is on show, but the Games tab it was waiting on didn't give it
+    // the games (its load failed, or a filter was picked first): read them.
+    const publicId = this.userMeResponse?.player?.publicId;
+    if (this.awaitingTabGames && this.activeTab !== "games" && publicId) {
+      this.awaitingTabGames = false;
+      this.loadRecentGames(publicId);
+    }
   }
 
   // Reads the Progression tab's progress once it shows: once per opening
@@ -976,6 +986,7 @@ export class AccountModal extends BaseModal {
     this.gameHistoryCache = null;
     this.recentGames = null;
     this.recentGamesAt = 0;
+    this.awaitingTabGames = false;
     this.gamesScrollTop = 0;
     this.restoreGamesScrollAfterOpen = false;
   }
@@ -1291,13 +1302,9 @@ export class AccountModal extends BaseModal {
       if (this.userMeResponse?.player?.publicId !== publicId) return;
       this.recentGames = res.results;
       this.recentGamesAt = Date.now();
-      // A newer first page replaces an unfiltered list the Games tab showed,
-      // so the tab and the card agree.
-      const cache = this.gameHistoryCache;
-      if (
-        cache?.publicId !== publicId ||
-        (cache.typeFilter === "all" && cache.modeFilter === "all")
-      ) {
+      // Seeds the Games tab only when it has nothing for this player: a list
+      // the tab already holds (scrolled, filtered) is left as it is.
+      if (this.gameHistoryCache?.publicId !== publicId) {
         this.gameHistoryCache = {
           publicId,
           typeFilter: "all",
@@ -1311,7 +1318,22 @@ export class AccountModal extends BaseModal {
   }
 
   private async loadPlayerProfile(publicId: string): Promise<void> {
-    this.loadRecentGames(publicId);
+    // Opening on the Games tab with nothing yet for this player, that tab
+    // reads the newest games itself and the card takes them from it: no
+    // second request for the same page.
+    const onGames = (this.requestedTab ?? this.activeTab) === "games";
+    const historyView = this.querySelector<HTMLElement & { publicId?: string }>(
+      "player-game-history-view",
+    );
+    const tabLoads =
+      onGames &&
+      this.gameHistoryCache?.publicId !== publicId &&
+      historyView?.publicId !== publicId;
+    if (tabLoads && !this.hasFreshRecentGames()) {
+      this.awaitingTabGames = true;
+    } else {
+      this.loadRecentGames(publicId);
+    }
     try {
       const data = await fetchPlayerById(publicId);
       if (!data) {
