@@ -263,9 +263,20 @@ describe("MIRVExecution", () => {
     // MIRV should NOT launch against terra nullius
     expect(player.units(UnitType.MIRV)).toHaveLength(0);
     expect(mirvExec.isActive()).toBe(false);
-
     // Should not break any alliance or mark as traitor (since no player owns it)
     expect(player.isTraitor()).toBe(false);
+  });
+
+  test("MIRV should not notify terra nullius after a successful build", () => {
+    const targetTile = game.ref(20, 20);
+    expect(game.owner(targetTile).isPlayer()).toBe(false);
+    vi.spyOn(player, "canBuild").mockReturnValue(game.ref(10, 10));
+    const displaySpy = vi.spyOn(game, "displayIncomingUnit");
+    const mirvExec = new MirvExecution(player, targetTile);
+    mirvExec.init(game, game.ticks());
+    mirvExec.tick(game.ticks());
+    expect(player.units(UnitType.MIRV)).toHaveLength(1);
+    expect(displaySpy).not.toHaveBeenCalled();
   });
 
   test("MIRV should launch when targeting own territory without breaking alliances", async () => {
