@@ -95,6 +95,13 @@ body.halloween-theme:not(.in-game) #hex-grid::after {
   z-index: 1;
 }
 
+/* index.html sets this layer's image during the season so the theme can mask it; with the theme toggled off, it stays hidden. */
+body:not(.halloween-theme)
+  #hex-grid
+  > div.hidden.lg\:block:not(#background-layer) {
+  display: none;
+}
+
 /* --- Gradient Halloween Logo --- */
 /* Desktop Logo */
 body.halloween-theme:not(.in-game)

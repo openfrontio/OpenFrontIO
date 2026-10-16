@@ -69,6 +69,7 @@ describe("ChatModal", () => {
 
   beforeEach(async () => {
     ownShortLabels = true;
+    localStorage.clear();
     me = player("Me", 1, 100);
     bob = player("Bob", 2, 300);
     players = [
@@ -102,11 +103,40 @@ describe("ChatModal", () => {
   const allPhrasesSwitch = () =>
     modal.querySelector('button[role="switch"]') as HTMLButtonElement;
 
-  it("shows the core phrases of every category at once", () => {
-    const headings = Array.from(modal.querySelectorAll("section h3"), (h) =>
+  const headings = () =>
+    Array.from(modal.querySelectorAll("section h3"), (h) =>
       h.textContent?.trim(),
     );
-    expect(headings).toEqual([
+
+  const sectionTitles = (heading: string) =>
+    Array.from(
+      Array.from(modal.querySelectorAll("section"))
+        .find((sec) => sec.querySelector("h3")?.textContent?.trim() === heading)
+        ?.querySelectorAll("button") ?? [],
+      (b) => b.title,
+    );
+
+  // A new modal, as in the next game: only localStorage carries over.
+  const reloadModal = async () => {
+    const next = new ChatModal();
+    next.g = modal.g;
+    next.initEventBus(new EventBus());
+    modal.remove();
+    document.body.append(next);
+    next.open(me, bob);
+    await next.updateComplete;
+    modal = next;
+  };
+
+  const searchPhrases = async (text: string) => {
+    const input = modal.querySelector("input")!;
+    input.value = text;
+    input.dispatchEvent(new Event("input"));
+    await modal.updateComplete;
+  };
+
+  it("shows the core phrases of every category at once", () => {
+    expect(headings()).toEqual([
       "Help",
       "Attack",
       "Defend",
@@ -266,5 +296,100 @@ describe("ChatModal", () => {
 
     expect(chip("GG!")).toBeDefined();
     expect(sent).toHaveLength(0);
+  });
+
+  it("lists the last ten phrases sent first, newest on top, across games", async () => {
+    const sendPhrase = async (title: string) => {
+      modal.open(me, bob);
+      await modal.updateComplete;
+      (
+        Array.from(modal.querySelectorAll("section button")).find(
+          (b) => b.getAttribute("title") === title,
+        ) as HTMLButtonElement
+      ).click();
+    };
+    allPhrasesSwitch().click();
+    for (const title of [
+      "Hello!",
+      "GG!",
+      "Thanks!",
+      "Bye!",
+      "Please give me gold!",
+      "Please give me troops!",
+      "Let’s go!",
+      "This game is fun!",
+      "Attack the crown!",
+      "Good luck!",
+      "Have fun!",
+      // Sending one again moves it back to the top.
+      "Thanks!",
+    ]) {
+      await sendPhrase(title);
+    }
+    modal.open(me, bob);
+    await modal.updateComplete;
+
+    const expected = [
+      "Thanks!",
+      "Have fun!",
+      "Good luck!",
+      "Attack the crown!",
+      "This game is fun!",
+      "Let’s go!",
+      "Please give me troops!",
+      "Please give me gold!",
+      "Bye!",
+      "GG!",
+    ];
+    expect(headings()[0]).toBe("Recent");
+    expect(sectionTitles("Recent")).toEqual(expected);
+
+    await reloadModal();
+    expect(sectionTitles("Recent")).toEqual(expected);
+  });
+
+  it("drops stored recent phrases that no longer exist", async () => {
+    localStorage.setItem(
+      "quick-chat-recent",
+      JSON.stringify(["greet.removed", "greet.gg", 7]),
+    );
+    await reloadModal();
+    expect(sectionTitles("Recent")).toEqual(["GG!"]);
+  });
+
+  it("searches all phrases by their text once all phrases are on", async () => {
+    expect(modal.querySelector("input")).toBeNull();
+    chip("GG!").click();
+    modal.open(me, bob);
+    allPhrasesSwitch().click();
+    await modal.updateComplete;
+    expect(headings()[0]).toBe("Recent");
+
+    await searchPhrases("  TROOPS ");
+    expect(headings()).toEqual(["Help"]);
+    expect(sectionTitles("Help")).toEqual([
+      "Please give me troops!",
+      "Send troops to the frontlines!",
+      "Send troops to ___!",
+    ]);
+
+    // Matches the short label too.
+    await searchPhrases("front!");
+    expect(sectionTitles("Help")).toEqual(["Send troops to the frontlines!"]);
+
+    await searchPhrases("zzz");
+    expect(modal.querySelectorAll("section")).toHaveLength(0);
+    expect(modal.textContent).toContain("No matching phrases");
+  });
+
+  it("picks the top phrase match on Enter", async () => {
+    allPhrasesSwitch().click();
+    await modal.updateComplete;
+    await searchPhrases("troops");
+    modal
+      .querySelector("input")!
+      .dispatchEvent(new KeyboardEvent("keydown", { key: "Enter" }));
+    expect(sent).toHaveLength(1);
+    expect(sent[0].quickChatKey).toBe("help.troops");
   });
 });

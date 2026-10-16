@@ -554,9 +554,9 @@ export class PlayerProfileModal extends BaseModal {
     this.close();
     if (openedFrom === "clan") {
       document
-        .querySelector<
-          HTMLElement & { returnFromPlayerProfile(): void }
-        >("clan-modal")
+        .querySelector<HTMLElement & { returnFromPlayerProfile(): void }>(
+          "clan-modal",
+        )
         ?.returnFromPlayerProfile();
     } else if (openedFrom === "leaderboard") {
       document
@@ -564,9 +564,9 @@ export class PlayerProfileModal extends BaseModal {
         ?.open();
     } else if (openedFrom === "account") {
       document
-        .querySelector<
-          HTMLElement & { returnToFriends(): void }
-        >("account-modal")
+        .querySelector<HTMLElement & { returnToFriends(): void }>(
+          "account-modal",
+        )
         ?.returnToFriends();
     }
   }
