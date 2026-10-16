@@ -287,16 +287,21 @@
     <script>
       // Halloween theme (src/client/halloween.css), Oct 25 through Nov 1 local
       // time. It recolors the desktop logo, which is otherwise left unset.
+      // The season marker lets the settings toggle (UserSettings.halloweenTheme,
+      // same key and default) restyle live without repeating the date check.
       (() => {
         const now = new Date();
         const month = now.getMonth();
         const day = now.getDate();
         if ((month === 9 && day >= 25) || (month === 10 && day === 1)) {
-          document.body.classList.add("halloween-theme");
+          document.body.dataset.halloweenSeason = "";
           document.documentElement.style.setProperty(
             "--desktop-logo-image-url",
             `url("<%- desktopLogoImageUrl %>")`,
           );
+          if (localStorage.getItem("settings.halloweenTheme") !== "false") {
+            document.body.classList.add("halloween-theme");
+          }
         }
       })();
     </script>
