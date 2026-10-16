@@ -9,6 +9,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 const getUserMeMock = vi.hoisted(() => vi.fn());
 const claimRewardMock = vi.hoisted(() => vi.fn());
 const fetchPublicPlayerProgressMock = vi.hoisted(() => vi.fn());
+const fetchPlayerByIdMock = vi.hoisted(() =>
+  vi.fn(async (): Promise<unknown> => null),
+);
 const reducedMotion = vi.hoisted(() => ({ value: false }));
 
 // Mocks as in AccountModalPrestige.test.ts, plus the progression reads.
@@ -16,7 +19,7 @@ vi.mock("../../src/client/Api", () => ({
   getUserMe: getUserMeMock,
   invalidateUserMe: vi.fn(),
   claimReward: claimRewardMock,
-  fetchPlayerById: vi.fn(async () => null),
+  fetchPlayerById: fetchPlayerByIdMock,
   setMarketingConsent: vi.fn(async () => true),
   getApiBase: vi.fn(() => ""),
 }));
@@ -428,6 +431,36 @@ describe("AccountModal — Progression tab", () => {
       progression()!.querySelectorAll("[data-prestige-tile]"),
     ).toHaveLength(2);
     expect(progression()!.querySelector("[data-date]")).toBeNull();
+  });
+
+  it("puts the profile's displayClanTag on the account card", async () => {
+    // AUS sorts first in the clans list, which the card used to show.
+    const clan = (tag: string) => ({
+      tag,
+      name: `${tag} clan`,
+      role: "member",
+      joinedAt: "2026-01-01T00:00:00.000Z",
+      memberCount: 3,
+    });
+    me = {
+      ...me,
+      player: { ...me.player!, clans: [clan("AUS"), clan("LUX")] },
+    } as UserMeResponse;
+    fetchPlayerByIdMock.mockResolvedValueOnce({
+      createdAt: "2026-01-01T00:00:00.000Z",
+      stats: {},
+      clans: [clan("AUS"), clan("LUX")],
+      displayClanTag: "LUX",
+    });
+    modal.open();
+    await settle(() => {
+      expect(
+        modal.querySelector<HTMLElement & { clanTag: string | null }>(
+          "profile-card",
+        )?.clanTag,
+      ).toBe("LUX");
+    });
+    expect(fetchPlayerByIdMock).toHaveBeenCalledWith("me");
   });
 
   it("opens on the tab from a link", async () => {
