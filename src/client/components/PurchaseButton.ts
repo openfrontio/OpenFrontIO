@@ -429,7 +429,7 @@ export class PurchaseButton extends LitElement {
 
     return html`
       <div
-        class="no-crazygames w-full mt-2 relative purchase-btn-wrap"
+        class="no-game-portal w-full mt-2 relative purchase-btn-wrap"
         style="--purchase-particle-top: ${leadingReserved * 3}rem"
         aria-busy=${this.busy ? "true" : nothing}
       >

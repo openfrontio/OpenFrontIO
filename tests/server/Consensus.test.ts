@@ -80,6 +80,29 @@ describe("WinnerVote", () => {
     expect(vote.tallyAmong(new Set(["1.1.1.1"]))).toBeNull();
     expect(vote.winner()).toBeNull();
   });
+
+  it("counts the decided message's backers, departed ones included", () => {
+    const vote = new WinnerVote();
+    expect(vote.backers()).toBe(0);
+    vote.cast(winnerMsg(["player", P1]), "1.1.1.1");
+    vote.cast(winnerMsg(["player", P1]), "2.2.2.2");
+    vote.cast(winnerMsg(["player", P2]), "3.3.3.3");
+    // Undecided: nobody backs a decision yet.
+    expect(vote.tally(4)).toBeNull();
+    expect(vote.backers()).toBe(0);
+
+    // 2.2.2.2 and 3.3.3.3 left; 1.1.1.1 decides alone among the active IPs,
+    // but 2.2.2.2 sent the same message before leaving.
+    expect(vote.tallyAmong(new Set(["1.1.1.1"]))?.votes).toBe(1);
+    expect(vote.backers()).toBe(2);
+  });
+
+  it("counts a lone deciding IP as one backer", () => {
+    const vote = new WinnerVote();
+    vote.cast(winnerMsg(["player", P1]), "1.1.1.1");
+    expect(vote.tally(1)?.votes).toBe(1);
+    expect(vote.backers()).toBe(1);
+  });
 });
 
 describe("statsDigest", () => {

@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 import { UserMeResponse } from "@openfront/shared/ApiSchemas";
 import { CosmeticPack, Cosmetics } from "@openfront/shared/CosmeticSchemas";
 import {
@@ -20,6 +21,9 @@ function makeCosmetics(overrides: Partial<Cosmetics> = {}): Cosmetics {
 function makeUserMe(flares: string[] = []): UserMeResponse {
   return {
     user: {},
+    steamLicence: false,
+    steamLicenceSince: null,
+    noticesSeen: [],
     player: {
       publicId: "test",
       adfree: false,

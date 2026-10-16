@@ -2,13 +2,23 @@ import {
   GameMode,
   HumansVsNations,
 } from "@openfront/engine-api/game/GameTypes";
+import type { UserMeResponse } from "@openfront/shared/ApiSchemas";
 import type { LevelBadge } from "@openfront/shared/LevelBadgeWire";
 import { packLevelBadge } from "@openfront/shared/LevelBadgeWire";
 import type { ClientInfo } from "@openfront/shared/WireSchemas";
-import { beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import "../../../src/client/components/LobbyPlayerView";
 import type { LobbyTeamView } from "../../../src/client/components/LobbyPlayerView";
 import { UserSettings } from "../../../src/client/UserSettings";
+
+// The viewer's own /users/@me, for the "hide my level" fallback. Signed out
+// unless a test says otherwise.
+const getUserMe = vi.hoisted(() =>
+  vi.fn<() => Promise<UserMeResponse | false>>(async () => false),
+);
+vi.mock("../../../src/client/Api", () => ({ getUserMe }));
+
+type LevelBadgeEl = HTMLElement & { level: number };
 
 const BADGE: LevelBadge = { level: 42, prestige: 2, legend: false };
 // As the roster carries it.
@@ -85,6 +95,9 @@ describe("lobby level badges", () => {
       UserSettings as unknown as { cache: Map<string, string | null> }
     ).cache.clear();
     document.body.replaceChildren();
+    document.dispatchEvent(new Event("session-cleared"));
+    getUserMe.mockReset();
+    getUserMe.mockResolvedValue(false);
   });
 
   it("puts a 24px badge in front of the name in FFA pills", async () => {
@@ -222,6 +235,145 @@ describe("lobby level badges", () => {
 
       expect(view.querySelector("level-badge")).toBeNull();
       expect(view.querySelector(".lobby-level-slot")).toBeNull();
+    });
+  });
+
+  describe("the viewer's own badge while they hide their level", () => {
+    const progress = {
+      prestige: 1,
+      level: 88,
+      xpInLevel: 5,
+      xpForNext: 900,
+      lifetimeXp: 777777,
+      legend: false,
+      canPrestige: false,
+    };
+    function signedIn(levelHidden: boolean | undefined) {
+      getUserMe.mockResolvedValue({
+        user: {},
+        player: { publicId: "me-pub", progress, levelHidden },
+      } as unknown as UserMeResponse);
+    }
+    // The refresh answers from a promise; let it land, then the re-render.
+    async function settle(view: LobbyTeamView) {
+      await new Promise((r) => setTimeout(r, 0));
+      await view.updateComplete;
+    }
+
+    it("shows the viewer their own badge from their /users/@me", async () => {
+      signedIn(true);
+      // The server sent no badge for them (hidden), and none for the guest.
+      const view = await mount({
+        currentClientID: "me",
+        clients: [client("me"), client("guest")],
+      });
+      await settle(view);
+
+      expect(pills(view)).toEqual([["badge:24", "me"], ["guest"]]);
+      const badge = view.querySelector("level-badge") as HTMLElement & {
+        level: number;
+        prestige: number;
+      };
+      expect(badge.level).toBe(88);
+      expect(badge.prestige).toBe(1);
+    });
+
+    it("never draws it beside anyone else", async () => {
+      signedIn(true);
+      const view = await mount({
+        currentClientID: "me",
+        clients: [client("other"), client("me")],
+      });
+      await settle(view);
+
+      expect(pills(view)).toEqual([["other"], ["badge:24", "me"]]);
+    });
+
+    it("adds nothing while the level is shown", async () => {
+      signedIn(false);
+      const view = await mount({
+        currentClientID: "me",
+        clients: [client("me")],
+      });
+      await settle(view);
+
+      expect(view.querySelector("level-badge")).toBeNull();
+    });
+
+    it("prefers the roster's badge when there is one", async () => {
+      signedIn(true);
+      const view = await mount({
+        currentClientID: "me",
+        clients: [client("me", { levelBadge: BADGE_WIRE })],
+      });
+      await settle(view);
+
+      const badges = view.querySelectorAll("level-badge");
+      expect(badges.length).toBe(1);
+      expect((badges[0] as HTMLElement & { level: number }).level).toBe(42);
+    });
+
+    it("counts for the alignment slots in team mode", async () => {
+      signedIn(true);
+      const view = await mount({
+        gameMode: GameMode.Team,
+        teamCount: HumansVsNations,
+        currentClientID: "me",
+        clients: [client("me"), client("guest")],
+      });
+      await settle(view);
+
+      expect(playerRows(view)).toEqual([
+        ["badge:24", "me"],
+        ["slot", "guest"],
+      ]);
+    });
+
+    it("still shows with anonymous names on", async () => {
+      new UserSettings().toggleRandomName();
+      signedIn(true);
+      const view = await mount({
+        currentClientID: "me",
+        clients: [client("me"), client("other", { levelBadge: BADGE_WIRE })],
+      });
+      await settle(view);
+
+      expect(view.querySelectorAll("level-badge").length).toBe(1);
+      expect(pills(view)[0]).toEqual(["badge:24", "me"]);
+    });
+
+    it("follows a visibility change on the next roster update", async () => {
+      // One cached profile, as getUserMe() memoises it: the account settings
+      // toggle flips levelHidden on that same object.
+      const me = {
+        user: {},
+        player: { publicId: "me-pub", progress, levelHidden: false },
+      };
+      getUserMe.mockResolvedValue(me as unknown as UserMeResponse);
+      const view = await mount({
+        currentClientID: "me",
+        clients: [client("me", { levelBadge: BADGE_WIRE })],
+      });
+      await settle(view);
+      expect((view.querySelector("level-badge") as LevelBadgeEl).level).toBe(
+        42,
+      );
+
+      // Hidden: the server now sends no badge for them; their own shows.
+      me.player.levelHidden = true;
+      view.clients = [client("me"), client("guest")];
+      await settle(view);
+      expect(pills(view)).toEqual([["badge:24", "me"], ["guest"]]);
+      expect((view.querySelector("level-badge") as LevelBadgeEl).level).toBe(
+        88,
+      );
+
+      // Shown again, before the server's roster carries it back: no
+      // fallback badge lingers.
+      me.player.levelHidden = false;
+      view.clients = [client("me"), client("guest2")];
+      await settle(view);
+      expect(view.querySelector("level-badge")).toBeNull();
     });
   });
 });

@@ -59,6 +59,13 @@ const FULL: ClientInfo = {
 };
 
 describe("ClientInfo.levelBadge on the wire", () => {
+  it("stays the last field of ClientInfo", () => {
+    // Its presence bit is the last of the one-byte header; a field after it
+    // would move it and break pre-badge frames.
+    const keys = Object.keys(ClientInfoSchema.shape);
+    expect(keys[keys.length - 1]).toBe("levelBadge");
+  });
+
   it.each<LevelBadge>([
     { level: 1, prestige: 0, legend: false },
     { level: 37, prestige: 2, legend: false },

@@ -3,7 +3,7 @@ import { UserMeResponse } from "@openfront/shared/ApiSchemas";
 import { PublicGameInfo } from "@openfront/shared/WireSchemas";
 import { html, nothing, svg, TemplateResult } from "lit";
 import { responseHasLinkedIdentity } from "../AccountIdentity";
-import { crazyGamesSDK } from "../CrazyGamesSDK";
+import { gamePortal } from "../GamePortal";
 import { terrainMapFileLoader } from "../TerrainMapFileLoader";
 import { notableLobbySettings } from "../utilities/LobbySettingsSummary";
 import { getMapName, getModifierLabels, translateText } from "../Utils";
@@ -22,7 +22,7 @@ export function viewerIsTrusted(userMe: UserMeResponse | false): boolean {
 /**
  * Whether the viewer has an account to become trusted on. A guest session
  * still resolves to a UserMeResponse, so a linked identity (Discord, Google,
- * Steam, email) is what counts. Callers on CrazyGames must OR in the SDK
+ * Steam, email) is what counts. Callers on a portal must OR in the SDK
  * profile themselves; it isn't on the API response.
  */
 export function viewerIsSignedIn(userMe: UserMeResponse | false): boolean {
@@ -73,7 +73,8 @@ const TRUST_REQUIRED_KEYS: Record<
  * when the viewer can't get in (the server would refuse them anyway). Tells
  * them how to become trusted rather than letting the join fail: a signed-out
  * viewer is told to sign in first, since trust only attaches to an account.
- * CrazyGames has no purchases, so its variants only suggest playing more games.
+ * Portals have no purchases, so their variants only suggest playing more
+ * games.
  */
 export function trustRequiredDialog(
   signedIn: boolean,
@@ -81,7 +82,7 @@ export function trustRequiredDialog(
   context: TrustRequiredContext = "lobby",
 ): TemplateResult {
   const keys = TRUST_REQUIRED_KEYS[context];
-  const body = crazyGamesSDK.isOnCrazyGames()
+  const body = gamePortal.isOnGamePortal()
     ? signedIn
       ? keys.bodyCrazyGames
       : keys.bodySignedOutCrazyGames

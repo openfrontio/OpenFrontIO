@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 import { profileIcon, teamIcon } from "../src/client/hud/HotbarIcons";
 import {
   COLUMN_DEFS,

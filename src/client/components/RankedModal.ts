@@ -4,7 +4,8 @@ import { customElement, state } from "lit/decorators.js";
 import { responseHasLinkedIdentity } from "../AccountIdentity";
 import { getUserMe } from "../Api";
 import { userAuth } from "../Auth";
-import { crazyGamesSDK } from "../CrazyGamesSDK";
+import { gamePortal } from "../GamePortal";
+import type { MatchmakingMode } from "../Matchmaking";
 import { translateText } from "../Utils";
 import { BaseModal } from "./BaseModal";
 import {
@@ -20,20 +21,21 @@ export class RankedModal extends BaseModal {
 
   @state() private elo: number | string = "...";
   @state() private elo2v2: number | string = "...";
+  @state() private eloFfa: number | string = "...";
   @state() private userMeResponse: UserMeResponse | false = false;
   @state() private errorMessage: string | null = null;
   // Hides the trust lock until /users/@me answers, so a trusted player
   // doesn't see it flash red first.
   @state() private loading = true;
   @state() private showTrustRequired = false;
-  // CrazyGames players authenticate through the SDK, not a linked
+  // Portal players authenticate through the SDK, not a linked
   // Discord/Google/email account, so track that separately for ranked.
-  @state() private crazyGamesSignedIn = false;
+  @state() private portalSignedIn = false;
 
-  // Eligible to see/play ranked: a linked account or a signed-in CrazyGames one.
+  // Eligible to see/play ranked: a linked account or a signed-in portal one.
   private isRankedEligible(): boolean {
     return (
-      responseHasLinkedIdentity(this.userMeResponse) || this.crazyGamesSignedIn
+      responseHasLinkedIdentity(this.userMeResponse) || this.portalSignedIn
     );
   }
 
@@ -70,6 +72,7 @@ export class RankedModal extends BaseModal {
     if (this.errorMessage) {
       this.elo = translateText("map_component.error");
       this.elo2v2 = translateText("map_component.error");
+      this.eloFfa = translateText("map_component.error");
       return;
     }
 
@@ -80,6 +83,7 @@ export class RankedModal extends BaseModal {
       const noElo = translateText("matchmaking_modal.no_elo");
       this.elo = leaderboard?.oneVone?.elo ?? noElo;
       this.elo2v2 = leaderboard?.twoVtwo?.elo ?? noElo;
+      this.eloFfa = leaderboard?.ffa?.elo ?? noElo;
     }
   }
 
@@ -88,20 +92,22 @@ export class RankedModal extends BaseModal {
     this.showTrustRequired = false;
     this.elo = "...";
     this.elo2v2 = "...";
+    this.eloFfa = "...";
     this.errorMessage = null;
 
     try {
       const userMe = await getUserMe();
       this.userMeResponse = userMe;
-      this.crazyGamesSignedIn =
-        crazyGamesSDK.isOnCrazyGames() &&
-        (await crazyGamesSDK.getUserProfile()) !== null;
+      this.portalSignedIn =
+        gamePortal.isOnGamePortal() &&
+        (await gamePortal.getUserProfile()) !== null;
     } catch (error) {
       console.warn("Failed to fetch user profile for ranked modal", error);
       this.userMeResponse = false;
       this.errorMessage = translateText("map_component.error");
       this.elo = translateText("map_component.error");
       this.elo2v2 = translateText("map_component.error");
+      this.eloFfa = translateText("map_component.error");
     } finally {
       this.loading = false;
       this.updateElo();
@@ -140,13 +146,19 @@ export class RankedModal extends BaseModal {
                 : translateText("mode_selector.ranked_title")),
             () => this.handleRanked("2v2"),
           )}
-          ${this.renderDisabledCard(
-            translateText("mode_selector.coming_soon"),
-            "",
+          ${this.renderCard(
+            translateText("mode_selector.ranked_ffa_title"),
+            this.errorMessage ??
+              (this.isRankedEligible()
+                ? translateText("matchmaking_modal.elo", { elo: this.eloFfa })
+                : translateText("mode_selector.ranked_title")),
+            () => this.handleRanked("ffa"),
           )}
-          ${this.renderDisabledCard(
-            translateText("mode_selector.coming_soon"),
-            "",
+          ${this.renderCard(
+            translateText("mode_selector.ranked_clanwars_title"),
+            this.errorMessage ??
+              translateText("mode_selector.ranked_clanwars_subtitle"),
+            () => this.handleRanked("clanwars"),
           )}
         </div>
         <p class="mt-6 text-xs text-white/60 leading-relaxed text-center">
@@ -195,33 +207,12 @@ export class RankedModal extends BaseModal {
     `;
   }
 
-  private renderDisabledCard(title: string, subtitle: string) {
-    return html`
-      <div
-        class="group relative isolate flex flex-col w-full h-28 sm:h-32 overflow-hidden rounded-2xl bg-slate-900/40 backdrop-blur-md border-0 shadow-none p-6 items-center justify-center gap-3 opacity-50 cursor-not-allowed"
-      >
-        <div class="flex flex-col items-center gap-1 text-center">
-          <h3
-            class="text-lg sm:text-xl font-bold text-white/60 uppercase tracking-widest leading-tight"
-          >
-            ${title}
-          </h3>
-          <p
-            class="text-xs text-white/40 uppercase tracking-wider whitespace-pre-line leading-tight"
-          >
-            ${subtitle}
-          </p>
-        </div>
-      </div>
-    `;
-  }
-
   // Whether /users/@me has answered, so the trust tier can be read.
   private trustKnown(): boolean {
     return !this.loading && this.errorMessage === null;
   }
 
-  private async handleRanked(mode: "1v1" | "2v2") {
+  private async handleRanked(mode: MatchmakingMode) {
     // Ranked admits trusted accounts only; the popup says how to get there
     // (sign in first when signed out). Unknown tier: the service decides.
     if (this.trustKnown() && !viewerIsTrusted(this.userMeResponse)) {

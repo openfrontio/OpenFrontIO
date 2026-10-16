@@ -336,6 +336,32 @@ describe("replay processor", () => {
       expect(handedOut).toEqual([10, 30]);
     });
 
+    test("a tick that throws still hands out the checked frames", async () => {
+      vi.spyOn(console, "error").mockImplementation(() => {});
+      const record = await shortRecord();
+      const handedOut: number[] = [];
+      const err = await processGameRecord(record, {
+        // Turn 40's hash has matched by then; the next tick throws.
+        engine: directEngine((game, gu) => {
+          if (gu.tick !== 44) return;
+          game.executeNextTick = () => {
+            throw new Error("boom");
+          };
+        }),
+        mapLoader,
+        gzip,
+        keyframeInterval: 5,
+        // After the first, no append is due before the failure.
+        appendEveryMs: 3_600_000,
+        onAppend: (_append, frames) => void handedOut.push(frames),
+      }).catch((e: unknown) => e);
+      expect(err).toBeInstanceOf(Error);
+      expect(err).not.toBeInstanceOf(ReplayDesyncError);
+      expect((err as Error).message).toContain("boom");
+      expect(handedOut).toEqual([10, 40]);
+      vi.restoreAllMocks();
+    });
+
     test("the caller's record is not mutated", async () => {
       const record = await shortRecord();
       const before = JSON.stringify(record, (_k, v: unknown) =>

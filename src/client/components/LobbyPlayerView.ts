@@ -21,6 +21,10 @@ import { ClientInfo } from "@openfront/shared/WireSchemas";
 import { LitElement, html } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
 import { repeat } from "lit/directives/repeat.js";
+import {
+  ownHiddenLevelBadge,
+  refreshOwnHiddenLevelBadge,
+} from "../OwnLevelBadge";
 import { Theme, themeProvider } from "../theme/ThemeProvider";
 import { UserSettings } from "../UserSettings";
 import {
@@ -29,6 +33,20 @@ import {
   translateText,
 } from "../Utils";
 import "./LevelBadge";
+
+function sameBadge(
+  a: LevelBadge | undefined,
+  b: LevelBadge | undefined,
+): boolean {
+  return (
+    a === b ||
+    (a !== undefined &&
+      b !== undefined &&
+      a.level === b.level &&
+      a.prestige === b.prestige &&
+      a.legend === b.legend)
+  );
+}
 
 export interface TeamPreviewData {
   team: Team;
@@ -59,6 +77,10 @@ export class LobbyTeamView extends LitElement {
   private _clanUpdateTimeout: number | null = null;
   private _teamClanTags: Map<Team, string | null> = new Map();
   private _viewerFriends: ReadonlySet<ClientID> = new Set();
+  // The viewer's own badge while they hide their level: the server leaves it
+  // off their roster entry, but they still see their own level.
+  @state() private _ownHiddenBadge: LevelBadge | undefined =
+    ownHiddenLevelBadge();
 
   // Spectators are in the lobby roster (flagged) but hold no seat and never
   // reach the simulation — so the count header, the team preview and both
@@ -92,6 +114,22 @@ export class LobbyTeamView extends LitElement {
         ? this.clients.find((c) => c.clientID === this.currentClientID)
         : undefined;
       this._viewerFriends = new Set(self?.friends ?? []);
+    }
+    // On joining and on every roster update, so a visibility change made in
+    // the account settings shows by the next lobby_info. From the memoised
+    // /users/@me, so normally no request at all.
+    if (
+      (changedProperties.has("currentClientID") ||
+        changedProperties.has("clients")) &&
+      this.currentClientID
+    ) {
+      const forClient = this.currentClientID;
+      void refreshOwnHiddenLevelBadge().then((badge) => {
+        if (this.currentClientID !== forClient) return;
+        if (!sameBadge(badge, this._ownHiddenBadge)) {
+          this._ownHiddenBadge = badge;
+        }
+      });
     }
     // Recompute team preview when relevant properties change
     // clients is updated from WebSocket lobby_info events
@@ -612,10 +650,15 @@ export class LobbyTeamView extends LitElement {
   // server-anonymized entries (they arrive without one), and none for other
   // players while the viewer has anonymous names on — the badge belongs to
   // the real name, like the verified check above.
+  // The viewer's own entry has no badge while they hide their level, so it
+  // falls back to the one from their own /users/@me.
   private visibleLevelBadge(client: ClientInfo): LevelBadge | undefined {
-    const anonymized =
-      this.userSettings.anonymousNames() && !this.isCurrentPlayer(client);
-    return anonymized ? undefined : unpackLevelBadge(client.levelBadge);
+    if (this.isCurrentPlayer(client)) {
+      return unpackLevelBadge(client.levelBadge) ?? this._ownHiddenBadge;
+    }
+    return this.userSettings.anonymousNames()
+      ? undefined
+      : unpackLevelBadge(client.levelBadge);
   }
 
   private anyVisibleLevelBadge(clients: readonly ClientInfo[]): boolean {

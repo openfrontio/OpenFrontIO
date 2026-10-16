@@ -223,16 +223,16 @@ export const ClientInfoSchema = z.object({
   // prestige and legend packed into one varint by packLevelBadge
   // (LevelBadgeWire.ts); read it with unpackLevelBadge. Stamped by the game
   // server from its own /users/@me lookup, never taken from the client.
-  // Display-only. Absent for guests, for players who hide their level (on
-  // every copy of the roster, their own included), when the API has
-  // progression off or the lookup failed, and on anonymized entries (a badge
-  // beside an anonymous name would point out the veterans). Must stay the
-  // LAST field: its one presence bit is the eighth and last bit of this
-  // object's one-byte header, so an entry without it encodes byte-identically
-  // to one from before it existed, and a pre-badge frame still decodes.
-  // Another field here would need a second header byte. No range check here
-  // on purpose: one bad value must not fail the whole roster's parse, so
-  // unpackLevelBadge drops it instead.
+  // Display-only. Absent for guests, for players who hide their level (even
+  // from themselves: their own client draws its own badge from its local
+  // /users/@me instead), when the API has progression off or the lookup
+  // failed, and on anonymized entries (a badge beside an anonymous name would
+  // point out the veterans). Must stay the LAST field: its one presence
+  // bit is the eighth and last bit of this object's one-byte header, so an
+  // entry without it encodes byte-identically to one from before it existed,
+  // and a pre-badge frame still decodes. Another field here would need a
+  // second header byte. No range check here on purpose: one bad value must
+  // not fail the whole roster's parse, so unpackLevelBadge drops it instead.
   levelBadge: zb.uint().optional(),
 });
 
@@ -693,7 +693,12 @@ export const ClientIntentMessageSchema = z.object({
 // Where the client was distributed, as the client reports it. Unverified, so
 // fit for metric dimensions only; the signed provider="steam" claim is the
 // trustworthy Steam signal. Append new members only (zbin ordinals).
-export const ClientPlatformSchema = z.enum(["web", "steam", "crazygames"]);
+export const ClientPlatformSchema = z.enum([
+  "web",
+  "steam",
+  "crazygames",
+  "poki",
+]);
 
 export type ClientPlatform = z.infer<typeof ClientPlatformSchema>;
 
@@ -779,6 +784,14 @@ export const GameEndInfoSchema = GameStartInfoSchema.extend({
   // Absent on singleplayer records and on records read back from the API,
   // which scrubs them like persistentID.
   reports: PlayerReportSchema.array().optional(),
+  // Set by game servers only: true when this record's winner and stats were
+  // checked, either by the winner vote deciding with at least two IPs behind
+  // the same winner and stats, or by the server replaying the game. False
+  // when neither happened: nobody voted, or the replay failed and the record
+  // holds no decided vote or one sent by a single IP. Absent on singleplayer
+  // records, which no vote backs, and on records from servers that predate
+  // the check. Only true counts as agreed.
+  statsAgreed: z.boolean().optional(),
 });
 
 export type GameEndInfo = z.infer<typeof GameEndInfoSchema>;

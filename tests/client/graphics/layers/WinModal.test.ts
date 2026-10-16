@@ -15,13 +15,12 @@ const copyToClipboardMock = vi.hoisted(() =>
 );
 const showToastMock = vi.hoisted(() => vi.fn());
 
-const crazyGamesSDKMock = vi.hoisted(() => ({
+const gamePortalMock = vi.hoisted(() => ({
   happytime: vi.fn(),
-  requestAd: vi.fn(),
   gameplayStop: vi.fn(),
-  isOnCrazyGames: vi.fn(() => false),
+  isOnGamePortal: vi.fn(() => false),
   createInviteLink: vi.fn(
-    (gameId: string): string | null =>
+    async (gameId: string): Promise<string | null> =>
       `https://crazygames.com/game?invite=${gameId}`,
   ),
 }));
@@ -58,12 +57,11 @@ vi.mock("../../../../src/client/Cosmetics", async (importOriginal) => ({
   resolveCosmetics: vi.fn(() => []),
 }));
 
-vi.mock("../../../../src/client/CrazyGamesSDK", () => ({
-  crazyGamesSDK: crazyGamesSDKMock,
+vi.mock("../../../../src/client/GamePortal", () => ({
+  gamePortal: gamePortalMock,
 }));
 
 import { ClientEnv } from "../../../../src/client/ClientEnv";
-import type { OButton } from "../../../../src/client/components/baseComponents/Button";
 import type { GameView } from "../../../../src/client/view";
 
 const realLocationDescriptor = Object.getOwnPropertyDescriptor(
@@ -291,8 +289,8 @@ describe("WinModal share button", () => {
     );
     copyToClipboardMock.mockClear();
     showToastMock.mockClear();
-    crazyGamesSDKMock.isOnCrazyGames.mockReturnValue(false);
-    crazyGamesSDKMock.createInviteLink.mockClear();
+    gamePortalMock.isOnGamePortal.mockReturnValue(false);
+    gamePortalMock.createInviteLink.mockClear();
   });
 
   afterEach(() => {
@@ -325,44 +323,27 @@ describe("WinModal share button", () => {
 
   it("renders a square share button with tooltip and aria-label matching row height", async () => {
     const el = await createModal();
-    const shareButton = el.querySelector<OButton>(
-      'o-button[translationKey="win_modal.share"]',
+    const shareButton = el.querySelector<HTMLButtonElement>(
+      'button[data-win-action="share"]',
     );
     expect(shareButton).not.toBeNull();
-    expect(shareButton?.iconPosition).toBe("only");
-    expect(shareButton?.size).toBe("lg");
     expect(shareButton?.title).toBe("Share");
-    expect(shareButton?.classList.contains("shrink-0")).toBe(true);
-
-    const innerButton = shareButton?.querySelector("button");
-    expect(innerButton).not.toBeNull();
-    expect(innerButton?.getAttribute("aria-label")).toBe("Share");
-    expect(innerButton?.className).toContain("w-12");
-    expect(innerButton?.className).toContain("h-12");
-  });
-
-  it("preserves fixed w-10 h-10 sizing for default icon-only buttons", async () => {
-    const defaultBtn = document.createElement("o-button") as OButton;
-    defaultBtn.iconPosition = "only";
-    document.body.appendChild(defaultBtn);
-    await defaultBtn.updateComplete;
-
-    const inner = defaultBtn.querySelector("button");
-    expect(inner?.className).toContain("w-10");
-    expect(inner?.className).toContain("h-10");
-    defaultBtn.remove();
+    expect(shareButton?.getAttribute("aria-label")).toBe("Share");
+    expect(shareButton?.classList.contains("win-action")).toBe(true);
+    expect(shareButton?.classList.contains("win-action-main")).toBe(true);
+    expect(shareButton?.classList.contains("win-action-icon")).toBe(true);
   });
 
   it("appears on both the win and the death/loss modal", async () => {
     const winEl = await createModal({ isWin: true });
     expect(
-      winEl.querySelector('o-button[translationKey="win_modal.share"]'),
+      winEl.querySelector('button[data-win-action="share"]'),
     ).not.toBeNull();
     winEl.remove();
 
     const lossEl = await createModal({ isWin: false });
     expect(
-      lossEl.querySelector('o-button[translationKey="win_modal.share"]'),
+      lossEl.querySelector('button[data-win-action="share"]'),
     ).not.toBeNull();
   });
 
@@ -371,8 +352,8 @@ describe("WinModal share button", () => {
     expect(GAME_ID_REGEX.test(gameId)).toBe(true);
 
     const el = await createModal({ gameId });
-    const shareButton = el.querySelector<OButton>(
-      'o-button[translationKey="win_modal.share"]',
+    const shareButton = el.querySelector<HTMLButtonElement>(
+      'button[data-win-action="share"]',
     )!;
 
     shareButton.click();
@@ -399,8 +380,8 @@ describe("WinModal share button", () => {
     expect(GAME_ID_REGEX.test(gameId)).toBe(true);
 
     const el = await createModal({ gameId });
-    const shareButton = el.querySelector<OButton>(
-      'o-button[translationKey="win_modal.share"]',
+    const shareButton = el.querySelector<HTMLButtonElement>(
+      'button[data-win-action="share"]',
     )!;
 
     shareButton.click();
@@ -421,38 +402,38 @@ describe("WinModal share button", () => {
     expect(GAME_ID_REGEX.test(pathMatch![1])).toBe(true);
   });
 
-  it("uses crazyGamesSDK.createInviteLink on CrazyGames", async () => {
+  it("uses gamePortal.createInviteLink on game portals", async () => {
     const gameId = "cg99912345";
     expect(GAME_ID_REGEX.test(gameId)).toBe(true);
 
-    crazyGamesSDKMock.isOnCrazyGames.mockReturnValue(true);
-    crazyGamesSDKMock.createInviteLink.mockReturnValue(
+    gamePortalMock.isOnGamePortal.mockReturnValue(true);
+    gamePortalMock.createInviteLink.mockResolvedValue(
       `https://crazygames.com/game?invite=${gameId}`,
     );
 
     const el = await createModal({ gameId });
-    const shareButton = el.querySelector<OButton>(
-      'o-button[translationKey="win_modal.share"]',
+    const shareButton = el.querySelector<HTMLButtonElement>(
+      'button[data-win-action="share"]',
     )!;
 
     shareButton.click();
     await new Promise((resolve) => setTimeout(resolve, 0));
 
-    expect(crazyGamesSDKMock.createInviteLink).toHaveBeenCalledWith(gameId);
+    expect(gamePortalMock.createInviteLink).toHaveBeenCalledWith(gameId);
     expect(copyToClipboardMock).toHaveBeenCalledWith(
       `https://crazygames.com/game?invite=${gameId}`,
     );
     expect(showToastMock).toHaveBeenCalledWith("Copied!", "green");
   });
 
-  it("shows failure toast when CrazyGames invite link fails", async () => {
+  it("shows failure toast when game portal invite link fails", async () => {
     const gameId = "cgfail1234";
-    crazyGamesSDKMock.isOnCrazyGames.mockReturnValue(true);
-    crazyGamesSDKMock.createInviteLink.mockReturnValue(null);
+    gamePortalMock.isOnGamePortal.mockReturnValue(true);
+    gamePortalMock.createInviteLink.mockResolvedValue(null);
 
     const el = await createModal({ gameId });
-    const shareButton = el.querySelector<OButton>(
-      'o-button[translationKey="win_modal.share"]',
+    const shareButton = el.querySelector<HTMLButtonElement>(
+      'button[data-win-action="share"]',
     )!;
 
     shareButton.click();
@@ -464,8 +445,8 @@ describe("WinModal share button", () => {
 
   it("shows failure toast when game ID is missing", async () => {
     const el = await createModal({ gameId: "" });
-    const shareButton = el.querySelector<OButton>(
-      'o-button[translationKey="win_modal.share"]',
+    const shareButton = el.querySelector<HTMLButtonElement>(
+      'button[data-win-action="share"]',
     )!;
 
     shareButton.click();
@@ -480,8 +461,8 @@ describe("WinModal share button", () => {
 
     const gameId = "gamefail12";
     const el = await createModal({ gameId });
-    const shareButton = el.querySelector<OButton>(
-      'o-button[translationKey="win_modal.share"]',
+    const shareButton = el.querySelector<HTMLButtonElement>(
+      'button[data-win-action="share"]',
     )!;
 
     shareButton.click();
