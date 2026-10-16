@@ -111,7 +111,7 @@ export class TribeExecution implements Execution {
     if (this.attackBehavior === null) {
       throw new Error("not initialized");
     }
-    const toAttack = this.attackBehavior.getNeighborTraitorToAttack();
+    const toAttack = this.attackBehavior.getNeighborTraitorToAttack(true);
     if (toAttack !== null) {
       const odds = this.tribe.isFriendly(toAttack) ? 6 : 3;
       if (this.random.chance(odds)) {

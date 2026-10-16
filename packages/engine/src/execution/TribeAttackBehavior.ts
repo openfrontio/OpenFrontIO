@@ -58,14 +58,17 @@ export class TribeAttackBehavior extends AiAttackBehavior {
     }
   }
 
-  getNeighborTraitorToAttack(): Player | null {
+  // Allies only for a caller that breaks the alliance before attacking
+  getNeighborTraitorToAttack(includeAllies = false): Player | null {
     if (this.game.config().disableAlliances()) return null;
 
     const traitors = this.player
       .nearby()
       .filter(
         (n): n is Player =>
-          n.isPlayer() && this.player.isFriendly(n) === false && n.isTraitor(),
+          n.isPlayer() &&
+          (includeAllies || !this.player.isFriendly(n)) &&
+          n.isTraitor(),
       );
     return traitors.length > 0 ? this.random.randElement(traitors) : null;
   }
