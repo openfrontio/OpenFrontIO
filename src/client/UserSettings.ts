@@ -20,6 +20,7 @@ import { isDesktopShell } from "./DesktopShell";
 export function getDefaultKeybinds(isMac: boolean): Record<string, string> {
   return {
     toggleView: "Space",
+    preventStacking: "KeyH",
     coordinateGrid: "KeyM",
     buildCity: "Digit1",
     buildFactory: "Digit2",

@@ -436,7 +436,8 @@ export class BuildPreviewController implements Controller {
     const myPlayer = this.game.myPlayer();
     if (!myPlayer) return null;
 
-    const u = this.ghostUnit.buildableUnit;
+    const u = { ...this.ghostUnit.buildableUnit };
+    if (this.uiState.preventStacking) u.canUpgrade = false;
     // With snapping on, a new structure's preview sits on the tile it will
     // actually be built on (the sim moves it off nearby buildings) instead of
     // under the cursor.
@@ -544,7 +545,10 @@ export class BuildPreviewController implements Controller {
       return;
     }
     const tile = this.transformHandler.screenToWorldCoordinates(e.x, e.y);
-    if (this.ghostUnit.buildableUnit.canUpgrade !== false) {
+    if (
+      this.ghostUnit.buildableUnit.canUpgrade !== false &&
+      !this.uiState.preventStacking
+    ) {
       this.eventBus.emit(
         new SendUpgradeStructureIntentEvent(
           this.ghostUnit.buildableUnit.canUpgrade,
