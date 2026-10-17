@@ -54,6 +54,7 @@ export class PlayerProfileModal extends BaseModal {
   @state() private username: string | null = null;
   @state() private statsTree: PlayerStatsTree | null = null;
   @state() private clans: NonNullable<PlayerProfile["clans"]> = [];
+  @state() private displayClanTag: string | null = null;
   // Level / XP, when progression is on and the player has any.
   @state() private progress: PublicProgress | null = null;
   @state() private loading = false;
@@ -315,7 +316,7 @@ export class PlayerProfileModal extends BaseModal {
         : html`<profile-card
             class="mb-4 block"
             .username=${this.username ?? this.publicId ?? ""}
-            .clanTag=${this.clans[0]?.tag ?? null}
+            .clanTag=${this.displayClanTag}
             .progress=${view.progress}
             .provisional=${view.provisional}
             .openKey=${`profile-${this.openCount}`}
@@ -492,6 +493,7 @@ export class PlayerProfileModal extends BaseModal {
     this.username = null;
     this.statsTree = null;
     this.clans = [];
+    this.displayClanTag = null;
     this.progress = null;
     this.gameHistoryCache = null;
     this.gamesScrollTop = 0;
@@ -544,6 +546,8 @@ export class PlayerProfileModal extends BaseModal {
     this.statsTree = profile === false ? null : profile.stats;
     this.username = profile === false ? null : (profile.username ?? null);
     this.clans = profile === false ? [] : (profile.clans ?? []);
+    this.displayClanTag =
+      profile === false ? null : (profile.displayClanTag ?? null);
   }
 
   // Intentionally preserves publicId/statsTree/history cache/scroll: the page

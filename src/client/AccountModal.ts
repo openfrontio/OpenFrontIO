@@ -128,6 +128,8 @@ export class AccountModal extends BaseModal {
 
   private userMeResponse: UserMeResponse | null = null;
   private statsTree: PlayerStatsTree | null = null;
+  // The card's clan tag, from the player's own profile (displayClanTag).
+  private displayClanTag: string | null = null;
   // Preserves the Games tab's accumulated list + cursor across tab switches.
   private gameHistoryCache: PlayerGameHistoryCache | null = null;
   private gamesScrollTop = 0;
@@ -195,8 +197,12 @@ export class AccountModal extends BaseModal {
       title: translateText("account_modal.title"),
       onBack: () => this.close(),
       ariaLabel: translateText("common.back"),
+      // Not on Poki: the profile link leads players off Poki.
       rightContent:
-        isLoggedIn && !this.isLoadingUser && publicId
+        isLoggedIn &&
+        !this.isLoadingUser &&
+        publicId &&
+        gamePortal.name() !== "poki"
           ? html`
               <copy-button
                 class="shrink-0"
@@ -644,7 +650,7 @@ export class AccountModal extends BaseModal {
       class=${variant === "full" ? "mb-4 block" : "block"}
       .variant=${variant}
       .username=${player.username ?? player.publicId}
-      .clanTag=${player.clans?.[0]?.tag ?? null}
+      .clanTag=${this.displayClanTag}
       .progress=${view.progress}
       .provisional=${view.provisional}
       .openKey=${`account-${this.openCount}`}
@@ -942,6 +948,7 @@ export class AccountModal extends BaseModal {
 
   private resetPlayerData(): void {
     this.statsTree = null;
+    this.displayClanTag = null;
     this.dropProgression();
     this.gameHistoryCache = null;
     this.gamesScrollTop = 0;
@@ -1246,6 +1253,7 @@ export class AccountModal extends BaseModal {
       }
 
       this.statsTree = data.stats;
+      this.displayClanTag = data.displayClanTag ?? null;
 
       this.requestUpdate();
     } catch (err) {
