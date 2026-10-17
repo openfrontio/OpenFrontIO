@@ -5,6 +5,48 @@ export const Platform = (() => {
   const isBrowser = () =>
     typeof window !== "undefined" && typeof navigator !== "undefined";
 
+  const NON_TEXT_INPUT_TYPES = new Set([
+    "button",
+    "checkbox",
+    "color",
+    "file",
+    "image",
+    "radio",
+    "range",
+    "reset",
+    "submit",
+  ]);
+
+  if (typeof window !== "undefined") {
+    window.addEventListener(
+      "keydown",
+      (e: KeyboardEvent) => {
+        const pathTarget =
+          typeof e.composedPath === "function" ? e.composedPath()[0] : null;
+        const target = pathTarget ?? e.target;
+        const t = (
+          target instanceof Element
+            ? target
+            : target instanceof Node
+              ? target.parentElement
+              : null
+        ) as HTMLElement | null;
+        const tag = t?.tagName;
+        const isTextInput =
+          tag === "TEXTAREA" ||
+          Boolean(t?.isContentEditable) ||
+          (tag === "INPUT" &&
+            !NON_TEXT_INPUT_TYPES.has(
+              (t as HTMLInputElement).type?.toLowerCase(),
+            ));
+        if (!isTextInput) {
+          (window as any).__hasKeyboard = true;
+        }
+      },
+      { passive: true },
+    );
+  }
+
   const normalizePlatform = (platform: string): string => {
     const normalized = platform.toLowerCase();
     if (normalized.includes("windows")) return "Windows";
@@ -119,6 +161,15 @@ export const Platform = (() => {
         typeof window.matchMedia === "function" &&
         window.matchMedia("(pointer: coarse)").matches
       );
+    },
+
+    /** Whether a physical keyboard is present, in use, or paired with a fine pointer. */
+    get hasKeyboard(): boolean {
+      return isBrowser()
+        ? !this.isTouch ||
+            !!(window as any).__hasKeyboard ||
+            window.matchMedia?.("(any-pointer: fine)").matches === true
+        : false;
     },
   };
 })();
