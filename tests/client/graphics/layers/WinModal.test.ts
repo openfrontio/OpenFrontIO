@@ -212,4 +212,16 @@ describe("WinModal pattern promotion", () => {
       delete window.openfrontDesktop;
     }
   });
+
+  it("includes action styles that align [data-share-ring] with .win-action on hover", async () => {
+    modal = document.createElement("win-modal") as WinModal;
+    document.body.appendChild(modal);
+    await modal.updateComplete;
+    const style = modal.querySelector("style");
+    expect(style).not.toBeNull();
+    const css = style?.textContent ?? "";
+    expect(css).toContain(".win-action:hover ~ [data-share-ring]");
+    expect(css).toContain("top: -7px");
+    expect(css).toContain("bottom: -3px");
+  });
 });

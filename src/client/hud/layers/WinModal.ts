@@ -389,15 +389,39 @@ export class WinModal extends LitElement implements Controller {
         border-color: rgba(255, 255, 255, 0.35);
         box-shadow: 0 0 14px rgba(255, 255, 255, 0.25);
       }
+      /* The share menu's flash ring sits in the trigger's wrapper so it isn't
+         clipped by .win-action's overflow:hidden. When the button translates up
+         on hover/focus, keep the ring centered around it. */
+      [data-share-ring] {
+        transition:
+          top 200ms ease-out,
+          bottom 200ms ease-out;
+      }
+      .win-action:hover ~ [data-share-ring],
+      .win-action:focus-visible ~ [data-share-ring] {
+        top: -7px;
+        bottom: -3px;
+      }
+      .win-action:active ~ [data-share-ring] {
+        top: -4px;
+        bottom: -4px;
+      }
       @media (prefers-reduced-motion: reduce) {
         .win-action,
-        .win-action::after {
+        .win-action::after,
+        [data-share-ring] {
           transition: none;
         }
         .win-action:hover,
         .win-action:focus-visible,
         .win-action:active {
           transform: none;
+        }
+        .win-action:hover ~ [data-share-ring],
+        .win-action:focus-visible ~ [data-share-ring],
+        .win-action:active ~ [data-share-ring] {
+          top: -4px;
+          bottom: -4px;
         }
       }
     </style>`;
