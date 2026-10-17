@@ -18,6 +18,7 @@ const showToastMock = vi.hoisted(() => vi.fn());
 const gamePortalMock = vi.hoisted(() => ({
   happytime: vi.fn(),
   gameplayStop: vi.fn(),
+  name: vi.fn(() => null),
   isOnGamePortal: vi.fn(() => false),
   createInviteLink: vi.fn(
     async (gameId: string): Promise<string | null> =>

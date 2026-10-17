@@ -129,7 +129,7 @@ describe("Roster", () => {
     roster.add(p1);
     roster.add(p2);
 
-    expect(roster.kick(p1)).toBe(true);
+    expect(roster.kick(p1)).toEqual([p1]);
     expect(roster.active()).toEqual([p2]);
     expect(roster.isKicked("p1-pid")).toBe(true);
     expect(roster.wasAdmitted("p1-pid")).toBe(false);
@@ -138,8 +138,23 @@ describe("Roster", () => {
     expect(roster.byPersistentId("p1-pid")).toBe(p1);
 
     roster.markLeft(p2);
-    expect(roster.kick(p2)).toBe(false);
+    expect(roster.kick(p2)).toEqual([]);
     expect(roster.isKicked("p2-pid")).toBe(true);
+  });
+
+  it("drops every connected session of a kicked account", () => {
+    const roster = new Roster();
+    const stale = makeClient({ clientID: cid("old"), persistentID: "p1-pid" });
+    const live = makeClient({ clientID: cid("new"), persistentID: "p1-pid" });
+    const other = makeClient({ clientID: cid("p2"), persistentID: "p2-pid" });
+    roster.add(stale);
+    roster.markLeft(stale);
+    roster.add(live);
+    roster.add(other);
+
+    // Kicking the left record still cuts off the session that replaced it.
+    expect(roster.kick(stale)).toEqual([live]);
+    expect(roster.active()).toEqual([other]);
   });
 
   it("prunes clients silent for longer than the limit and hands them back", () => {
