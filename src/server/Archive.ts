@@ -24,11 +24,12 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 const withJitter = (ms: number) => ms + Math.floor(Math.random() * ms * 0.25);
 
 export async function archive(gameRecord: GameRecord) {
-  const gameID = gameRecord.info.gameID;
+  let gameID: GameID | undefined;
   let request: RequestInit;
   let url: string;
   // The caller doesn't await archive(), so nothing here may throw.
   try {
+    gameID = gameRecord.info.gameID;
     const parsed = GameRecordSchema.safeParse(gameRecord);
     if (!parsed.success) {
       log.error(`invalid game record: ${z.prettifyError(parsed.error)}`, {
