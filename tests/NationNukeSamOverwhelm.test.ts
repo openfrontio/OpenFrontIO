@@ -17,7 +17,9 @@ import { NationEmojiBehavior } from "@openfront/engine/execution/nation/NationEm
 import { NationNukeBehavior } from "@openfront/engine/execution/nation/NationNukeBehavior";
 import { NationExecution } from "@openfront/engine/execution/NationExecution";
 import { SAMLauncherExecution } from "@openfront/engine/execution/SAMLauncherExecution";
-import { AiAttackBehavior } from "@openfront/engine/execution/utils/AiAttackBehavior";
+import { UpgradeStructureExecution } from "@openfront/engine/execution/UpgradeStructureExecution";
+import { NationAttackBehavior } from "@openfront/engine/execution/nation/NationAttackBehavior";
+import { NationWarshipBehavior } from "@openfront/engine/execution/nation/NationWarshipBehavior";
 import { Game, Player } from "@openfront/engine/game/Game";
 import { setup } from "./util/Setup";
 import { TestConfig } from "./util/TestConfig";
@@ -50,7 +52,7 @@ function sendNukes(game: Game, nation: Player) {
     game,
     nation,
   );
-  const attackBehavior = new AiAttackBehavior(
+  const attackBehavior = new NationAttackBehavior(
     new PseudoRandom(1),
     game,
     nation,
@@ -64,6 +66,7 @@ function sendNukes(game: Game, nation: Player) {
       emojiBehavior,
     ),
     emojiBehavior,
+    new NationWarshipBehavior(new PseudoRandom(1), game, nation, emojiBehavior),
   );
   new NationNukeBehavior(
     new PseudoRandom(2),
@@ -232,6 +235,56 @@ describe("NationNukeBehavior - maybeDestroyEnemySam", () => {
         expect(bomb.targetTile()).toBe(samTile);
       }
       expect(nation.isAlliedWith(other)).toBe(allied);
+    },
+  );
+
+  // Two level-1 silos fire 2 bombs at once; a level-N SAM needs N+1. Only the
+  // west silo is under the nation's own SAM.
+  it.each([
+    [2, true],
+    // Even five levels on both silos can't fire 11 bombs at once
+    [10, false],
+  ])(
+    "against a level %i SAM its silos can't overwhelm, upgrades its protected silo: %s",
+    async (samLevel, expectUpgrade) => {
+      const game = await setup(
+        "big_plains",
+        {
+          difficulty: Difficulty.Impossible,
+          disabledUnits: [UnitType.HydrogenBomb],
+        },
+        [
+          new PlayerInfo("nation", PlayerType.Nation, null, "nation_id"),
+          new PlayerInfo("human", PlayerType.Human, null, "human_id"),
+        ],
+        undefined,
+        RealNukeRadiusConfig,
+      );
+      const nation = game.player("nation_id");
+      const human = game.player("human_id");
+
+      conquerRect(game, nation, 0, 0, 40, 15);
+      nation.buildUnit(UnitType.MissileSilo, game.ref(35, 10), {});
+      const protectedSilo = nation.buildUnit(
+        UnitType.MissileSilo,
+        game.ref(5, 5),
+        {},
+      );
+      nation.buildUnit(UnitType.SAMLauncher, game.ref(5, 8), {});
+      nation.addGold(10_000_000n);
+      conquerRect(game, human, 130, 130, 170, 170);
+      const sam = human.buildUnit(UnitType.SAMLauncher, game.ref(150, 150), {});
+      for (let l = 1; l < samLevel; l++) sam.increaseLevel();
+      const spy = vi.spyOn(game, "addExecution");
+
+      sendNukes(game, nation);
+
+      expect(nation.units(UnitType.AtomBomb)).toHaveLength(0);
+      const upgraded = spy.mock.calls
+        .map((c) => c[0])
+        .filter((e) => e instanceof UpgradeStructureExecution)
+        .map((e) => e["unitId"]);
+      expect(upgraded).toEqual(expectUpgrade ? [protectedSilo.id()] : []);
     },
   );
 });

@@ -8,7 +8,7 @@ import { CHEAPEST_TROOP_RATIO } from "@openfront/engine/configuration/EngineConf
 import { AttackExecution } from "@openfront/engine/execution/AttackExecution";
 import { planBotAttacks } from "@openfront/engine/execution/nation/BotAnnexation";
 import { PlayerExecution } from "@openfront/engine/execution/PlayerExecution";
-import { AiAttackBehavior } from "@openfront/engine/execution/utils/AiAttackBehavior";
+import { NationAttackBehavior } from "@openfront/engine/execution/nation/NationAttackBehavior";
 import { Game, Player } from "@openfront/engine/game/Game";
 import { setup } from "./util/Setup";
 import { UseRealAttackLogic } from "./util/TestConfig";
@@ -45,8 +45,8 @@ describe("Bot annexation", () => {
     });
   }
 
-  function behavior(): AiAttackBehavior {
-    return new AiAttackBehavior(
+  function behavior(): NationAttackBehavior {
+    return new NationAttackBehavior(
       new PseudoRandom(42),
       game,
       nation,
@@ -55,6 +55,7 @@ describe("Bot annexation", () => {
       0, // expandRatio
       { maybeBetray: vi.fn() } as any,
       { maybeSendAttackEmoji: vi.fn(), sendEmoji: vi.fn() } as any,
+      {} as any,
     );
   }
 
