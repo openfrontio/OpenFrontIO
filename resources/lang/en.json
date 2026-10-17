@@ -2677,6 +2677,8 @@
     "retaliate_attack_desc": "Send a retaliation attack to blunt/negate the force of the most recent active attacker. Only available when you are being attacked.",
     "select_all_warships": "Select All Warships",
     "select_all_warships_desc": "Select all of your warships on the map.",
+    "snap_build_preview_desc": "Move the build preview to the tile the structure will actually be built on",
+    "snap_build_preview_label": "Snap Build Preview",
     "special_effects_desc": "Toggle special effects. Deactivate to improve performances",
     "special_effects_label": "Special effects",
     "steam_lobby_links_desc": "Open lobby links in the Steam app instead of joining in this browser",

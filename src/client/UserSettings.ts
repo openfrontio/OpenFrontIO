@@ -496,6 +496,14 @@ export class UserSettings {
     return this.getBool("settings.cursorCostLabel", legacy);
   }
 
+  snapBuildPreview() {
+    return this.getBool("settings.snapBuildPreview", false);
+  }
+
+  toggleSnapBuildPreview() {
+    this.setBool("settings.snapBuildPreview", !this.snapBuildPreview());
+  }
+
   toggleLeftClickOpenMenu() {
     this.setBool("settings.leftClickOpensMenu", !this.leftClickOpensMenu());
   }
