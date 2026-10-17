@@ -437,8 +437,14 @@ export class BuildPreviewController implements Controller {
     if (!myPlayer) return null;
 
     const u = this.ghostUnit.buildableUnit;
+    // With snapping on, a new structure's preview sits on the tile it will
+    // actually be built on (the sim moves it off nearby buildings) instead of
+    // under the cursor.
     const placementTile =
-      u.canUpgrade === false && Structures.has(u.type) && u.canBuild !== false
+      this.userSettings.snapBuildPreview() &&
+      u.canUpgrade === false &&
+      Structures.has(u.type) &&
+      u.canBuild !== false
         ? u.canBuild
         : tileRef;
 
