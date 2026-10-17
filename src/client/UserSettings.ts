@@ -93,12 +93,7 @@ const HALLOWEEN_THEME_KEY = "settings.halloweenTheme";
  * client/sound/Sounds.ts); nothing chooses a channel at the call site.
  */
 export type AudioCategory =
-  | "master"
-  | "music"
-  | "effects"
-  | "alerts"
-  | "ambience"
-  | "interface";
+  "master" | "music" | "effects" | "alerts" | "ambience" | "interface";
 
 const AUDIO_DEFAULTS: Record<AudioCategory, number> = {
   // Not 1.0, in answer to the "too loud on desktop" reports. perceptualGain
@@ -494,6 +489,14 @@ export class UserSettings {
   cursorCostLabel() {
     const legacy = this.getBool("settings.ghostPricePill", true);
     return this.getBool("settings.cursorCostLabel", legacy);
+  }
+
+  snapBuildPreview() {
+    return this.getBool("settings.snapBuildPreview", false);
+  }
+
+  toggleSnapBuildPreview() {
+    this.setBool("settings.snapBuildPreview", !this.snapBuildPreview());
   }
 
   toggleLeftClickOpenMenu() {
