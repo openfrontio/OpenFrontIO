@@ -290,6 +290,8 @@ function makeGame(
     alive?: boolean;
     winner?: Winner;
     winStats?: AllPlayersStats;
+    // The tick the Win update comes on.
+    winTick?: number;
   } = {},
 ) {
   let ended = false;
@@ -297,6 +299,7 @@ function makeGame(
   const humanStats = vi.fn(async () => (opts.stats ?? snapshot)());
   const game = {
     gameID: () => GAME_ID,
+    ticks: () => opts.winTick ?? 6000,
     myClientID: () => "me",
     myPlayer: () => ({
       isAlive: () => opts.alive ?? false,
@@ -1045,6 +1048,21 @@ describe("WinModal provisional XP at death", () => {
           };
         }
       ).xpView;
+
+    it("counts time played up to the Win update, not the later snapshot", async () => {
+      stubXpEndpoint(() => new Response("", { status: 404 }));
+      // The worker's snapshot is taken 3,000 ticks after the win (the game
+      // ran on): 255 time XP there, 170 at the win.
+      const { game, end } = aliveGame({
+        winTick: 6000,
+        stats: () => ({ ...endSnapshot(), tick: 9000 }),
+      });
+      await mount(game);
+      await endGame(end);
+      expect(xpState()).toBe("provisional");
+      await playOut();
+      expect(total()).toContain('"xp":"387"');
+    });
 
     it("sees a provisional figure at once, the win included, while the server is asked", async () => {
       const fetchMock = stubXpEndpoint(() => new Response("", { status: 404 }));

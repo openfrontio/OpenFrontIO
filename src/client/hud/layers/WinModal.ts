@@ -66,6 +66,9 @@ type LegendCeremonyModule = typeof import("../../components/LegendCeremony");
 interface GameEndUpdate {
   winner: Winner;
   allPlayersStats: AllPlayersStats;
+  // The tick the Win update came on: the figure counts time played up to it,
+  // not up to the later moment the worker's snapshot is taken.
+  tick: number;
 }
 
 // How long the end of the game waits on its provisional figure before the
@@ -850,6 +853,7 @@ export class WinModal extends LitElement implements Controller {
           : async () => ({
               ...(await game.worker.humanStats()),
               stats: end.allPlayersStats,
+              tick: end.tick,
             }),
       signal,
     });
@@ -908,7 +912,7 @@ export class WinModal extends LitElement implements Controller {
     const winUpdates = updates?.[GameUpdateType.Win] ?? [];
     if (winUpdates.length > 0) {
       const { winner, allPlayersStats } = winUpdates[0];
-      this.gameEnd ??= { winner, allPlayersStats };
+      this.gameEnd ??= { winner, allPlayersStats, tick: this.game.ticks() };
       void this.updateXp(true);
     }
     winUpdates.forEach((wu) => {
