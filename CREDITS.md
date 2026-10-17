@@ -28,6 +28,11 @@ Licensed under [CC-BY 4.0](https://creativecommons.org/licenses/by/4.0/)
 © DLR e.V. 2010-2014 and © Airbus Defence and Space GmbH 2014-2018 provided under COPERNICUS by the European Union and ESA; all rights reserved.
 License: (https://docs.sentinel-hub.com/api/latest/static/files/data/dem/resources/license/License-COPDEM-30.pdf)
 
+### AWS Terrain Tiles
+
+Elevation data from [Terrain Tiles](https://registry.opendata.aws/terrain-tiles/) (Mapzen/Tilezen), used for the Paris map.
+Source attribution: [tilezen/joerd attribution](https://github.com/tilezen/joerd/blob/master/docs/attribution.md)
+
 ### Topographic Map
 
 [New Jersey Topographic Map](https://en-gb.topographic-map.com/map-b8knh/New-Jersey/)
