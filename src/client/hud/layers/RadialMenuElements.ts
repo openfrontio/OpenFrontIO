@@ -472,6 +472,7 @@ function createMenuElements(
             item.unitType === UnitType.AtomBomb &&
             buildableUnit.canBuild !== false;
           if (
+            (params.uiState?.preventStacking && !isStackableNuke) ||
             (buildableUnit.canUpgrade === false && !isStackableNuke) ||
             !params.buildMenu.canBuildOrUpgrade(item)
           ) {
@@ -532,6 +533,7 @@ function createMenuElements(
               disabled: (p: MenuElementParams) =>
                 !executable || (p.game.myPlayer()?.gold() ?? 0n) < cost,
               action: (p: MenuElementParams) => {
+                if (p.uiState?.preventStacking && !isStackableNuke) return;
                 if (isStackableNuke) {
                   p.eventBus.emit(
                     new BuildUnitIntentEvent(
@@ -563,7 +565,10 @@ function createMenuElements(
             return;
           }
           if (params.buildMenu.canBuildOrUpgrade(item)) {
-            if (buildableUnit.canUpgrade !== false) {
+            if (
+              buildableUnit.canUpgrade !== false &&
+              !params.uiState?.preventStacking
+            ) {
               params.eventBus.emit(
                 new SendUpgradeStructureIntentEvent(
                   buildableUnit.canUpgrade,

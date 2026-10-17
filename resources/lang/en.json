@@ -2694,6 +2694,8 @@
     "target_player_desc": "Mark the player whose tile is under your cursor as a target for you and your allies.",
     "title": "Settings",
     "toggle_terrain": "Toggle Terrain",
+    "prevent_stacking": "Prevent Building Stacking",
+    "prevent_stacking_desc": "Hold to build a new structure instead of upgrading a nearby one. Normal placement restrictions still apply.",
     "toggle_view": "Toggle View",
     "toggle_view_desc": "Alternate view (terrain/countries)",
     "toggle_visibility": "Toggle Visibility",

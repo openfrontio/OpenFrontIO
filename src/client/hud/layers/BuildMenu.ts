@@ -383,7 +383,7 @@ export class BuildMenu extends LitElement implements Controller {
   }
 
   public sendBuildOrUpgrade(buildableUnit: BuildableUnit, tile: TileRef): void {
-    if (buildableUnit.canUpgrade !== false) {
+    if (buildableUnit.canUpgrade !== false && !this.uiState.preventStacking) {
       this.eventBus.emit(
         new SendUpgradeStructureIntentEvent(
           buildableUnit.canUpgrade,
