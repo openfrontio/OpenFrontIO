@@ -2634,6 +2634,7 @@
     "hud_opacity_desc": "Adjust panel backgrounds without fading text or icons. 100% keeps their original appearance.",
     "hud_opacity_label": "HUD background opacity",
     "keybind_conflict_error": "The key {key} is already bound to another action.",
+    "keybind_shift_prefix": "Shift+",
     "keybinds_hint": "Click a key to rebind it. You can assign a single key or Shift + key combination.",
     "left_click_desc": "When ON, left-click opens menu and sword button attacks. When OFF, left-click attacks directly.",
     "left_click_label": "Left Click to Open Menu",

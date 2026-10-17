@@ -1,7 +1,11 @@
 import type { MapLayer } from "@openfront/engine-api/game/MapFiles";
 import { html, nothing } from "lit";
 import { customElement, state } from "lit/decorators.js";
-import { formatKeyForDisplay, translateText } from "../client/Utils";
+import {
+  formatKeyForDisplay,
+  resolveKeybindLabel,
+  translateText,
+} from "../client/Utils";
 import "./components/baseComponents/setting/SettingKeybind";
 import { SettingKeybind } from "./components/baseComponents/setting/SettingKeybind";
 import "./components/baseComponents/setting/SettingNumber";
@@ -27,6 +31,7 @@ import {
   type DesktopDisplaySnapshot,
 } from "./DesktopDisplay";
 import { isDesktopShell } from "./DesktopShell";
+import { KeyboardLayoutController } from "./KeyboardLayout";
 import { pushMapLayerState } from "./MapLayerSettings";
 import { Platform } from "./Platform";
 import type { AudioControls } from "./sound/CuePlayer";
@@ -87,6 +92,7 @@ function isHalloweenSeason(): boolean {
 
 @customElement("user-setting")
 export class UserSettingModal extends BaseModal {
+  private keyboardLayout = new KeyboardLayoutController(this);
   private currentUiScale: number | undefined;
   protected routerName: string | undefined = "settings";
 
@@ -352,8 +358,8 @@ export class UserSettingModal extends BaseModal {
 
   private getKeyChar(action: string): string {
     const entry = this.userKeybinds[action];
-    if (!entry) return formatKeyForDisplay(this.defaultKeybinds[action] || "");
-    return entry.key || formatKeyForDisplay(entry.value || "");
+    const defaultCode = this.defaultKeybinds[action] || "";
+    return resolveKeybindLabel(entry, defaultCode, this.keyboardLayout.map);
   }
 
   private handleEasterEggKey = (e: KeyboardEvent) => {
