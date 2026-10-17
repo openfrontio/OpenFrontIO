@@ -1,0 +1,380 @@
+{
+  "additionalNations": [
+    {
+      "coordinates": [115, 528],
+      "flag": "in",
+      "name": "Bongaigaon"
+    },
+    {
+      "coordinates": [314, 524],
+      "flag": "in",
+      "name": "Pathsala"
+    },
+    {
+      "coordinates": [456, 543],
+      "flag": "in",
+      "name": "Rangia"
+    },
+    {
+      "coordinates": [443, 478],
+      "flag": "in",
+      "name": "Tamulpur"
+    },
+    {
+      "coordinates": [611, 436],
+      "flag": "in",
+      "name": "Udalguri"
+    },
+    {
+      "coordinates": [787, 411],
+      "flag": "in",
+      "name": "Rangapara"
+    },
+    {
+      "coordinates": [729, 454],
+      "flag": "in",
+      "name": "Dhekiajuli"
+    },
+    {
+      "coordinates": [1011, 395],
+      "flag": "in",
+      "name": "Behali"
+    },
+    {
+      "coordinates": [1193, 337],
+      "flag": "in",
+      "name": "Bihpuria"
+    },
+    {
+      "coordinates": [656, 218],
+      "flag": "in",
+      "name": "Dirang"
+    },
+    {
+      "coordinates": [535, 136],
+      "flag": "in",
+      "name": "Tawang"
+    },
+    {
+      "coordinates": [335, 417],
+      "flag": "bt",
+      "name": "Nganglam"
+    },
+    {
+      "coordinates": [248, 394],
+      "flag": "bt",
+      "name": "Panbang"
+    },
+    {
+      "coordinates": [160, 522],
+      "flag": "in",
+      "name": "Bijni"
+    },
+    {
+      "coordinates": [611, 311],
+      "flag": "in",
+      "name": "Kalaktang"
+    },
+    {
+      "coordinates": [5, 613],
+      "flag": "in",
+      "name": "Bilasipara"
+    },
+    {
+      "coordinates": [180, 708],
+      "flag": "in",
+      "name": "Dudhnoi"
+    },
+    {
+      "coordinates": [332, 713],
+      "flag": "in",
+      "name": "Boko"
+    },
+    {
+      "coordinates": [568, 661],
+      "flag": "in",
+      "name": "Sonapur"
+    },
+    {
+      "coordinates": [639, 665],
+      "flag": "in",
+      "name": "Jagiroad"
+    },
+    {
+      "coordinates": [539, 740],
+      "flag": "in",
+      "name": "Nongpoh"
+    },
+    {
+      "coordinates": [642, 901],
+      "flag": "in",
+      "name": "Jowai"
+    },
+    {
+      "coordinates": [956, 793],
+      "flag": "in",
+      "name": "Lumding"
+    },
+    {
+      "coordinates": [1028, 489],
+      "flag": "in",
+      "name": "Kaziranga"
+    },
+    {
+      "coordinates": [1285, 486],
+      "flag": "in",
+      "name": "Titabar"
+    },
+    {
+      "coordinates": [1323, 464],
+      "flag": "in",
+      "name": "Mariani"
+    },
+    {
+      "coordinates": [1307, 665],
+      "flag": "in",
+      "name": "Wokha"
+    },
+    {
+      "coordinates": [1391, 710],
+      "flag": "in",
+      "name": "Zunheboto"
+    },
+    {
+      "coordinates": [129, 879],
+      "flag": "in",
+      "name": "Williamnagar"
+    },
+    {
+      "coordinates": [176, 150],
+      "flag": "bt",
+      "name": "Jakar"
+    }
+  ],
+  "categories": ["asia", "new"],
+  "id": "Brahmaputra",
+  "map": {
+    "height": 1024,
+    "num_land_tiles": 1437901,
+    "width": 1460
+  },
+  "map16x": {
+    "height": 256,
+    "num_land_tiles": 88786,
+    "width": 365
+  },
+  "map4x": {
+    "height": 512,
+    "num_land_tiles": 357746,
+    "width": 730
+  },
+  "multiplayer_frequency": 4,
+  "name": "Brahmaputra",
+  "nations": [
+    {
+      "coordinates": [256, 579],
+      "flag": "in",
+      "name": "Barpeta"
+    },
+    {
+      "coordinates": [398, 546],
+      "flag": "in",
+      "name": "Nalbari"
+    },
+    {
+      "coordinates": [586, 540],
+      "flag": "in",
+      "name": "Mangaldoi"
+    },
+    {
+      "coordinates": [837, 467],
+      "flag": "in",
+      "name": "Tezpur"
+    },
+    {
+      "coordinates": [941, 429],
+      "flag": "in",
+      "name": "Biswanath"
+    },
+    {
+      "coordinates": [1101, 388],
+      "flag": "in",
+      "name": "Gohpur"
+    },
+    {
+      "coordinates": [1097, 317],
+      "flag": "in",
+      "name": "Itanagar"
+    },
+    {
+      "coordinates": [1250, 258],
+      "flag": "in",
+      "name": "North Lakhimpur"
+    },
+    {
+      "coordinates": [1396, 170],
+      "flag": "in",
+      "name": "Dhemaji"
+    },
+    {
+      "coordinates": [1446, 126],
+      "flag": "in",
+      "name": "Silapathar"
+    },
+    {
+      "coordinates": [713, 254],
+      "flag": "in",
+      "name": "Bomdila"
+    },
+    {
+      "coordinates": [1163, 148],
+      "flag": "in",
+      "name": "Ziro"
+    },
+    {
+      "coordinates": [98, 389],
+      "flag": "bt",
+      "name": "Gelephu"
+    },
+    {
+      "coordinates": [418, 417],
+      "flag": "bt",
+      "name": "Samdrup Jongkhar"
+    },
+    {
+      "coordinates": [436, 228],
+      "flag": "bt",
+      "name": "Trashigang"
+    },
+    {
+      "coordinates": [79, 556],
+      "flag": "in",
+      "name": "Kokrajhar"
+    },
+    {
+      "coordinates": [132, 652],
+      "flag": "in",
+      "name": "Goalpara"
+    },
+    {
+      "coordinates": [497, 654],
+      "flag": "in",
+      "name": "Guwahati"
+    },
+    {
+      "coordinates": [687, 615],
+      "flag": "in",
+      "name": "Morigaon"
+    },
+    {
+      "coordinates": [797, 579],
+      "flag": "in",
+      "name": "Nagaon"
+    },
+    {
+      "coordinates": [852, 704],
+      "flag": "in",
+      "name": "Hojai"
+    },
+    {
+      "coordinates": [1040, 761],
+      "flag": "in",
+      "name": "Diphu"
+    },
+    {
+      "coordinates": [1212, 516],
+      "flag": "in",
+      "name": "Golaghat"
+    },
+    {
+      "coordinates": [1288, 433],
+      "flag": "in",
+      "name": "Jorhat"
+    },
+    {
+      "coordinates": [1424, 348],
+      "flag": "in",
+      "name": "Sivasagar"
+    },
+    {
+      "coordinates": [1389, 581],
+      "flag": "in",
+      "name": "Mokokchung"
+    },
+    {
+      "coordinates": [1260, 819],
+      "flag": "in",
+      "name": "Kohima"
+    },
+    {
+      "coordinates": [538, 858],
+      "flag": "in",
+      "name": "Shillong"
+    },
+    {
+      "coordinates": [42, 870],
+      "flag": "in",
+      "name": "Tura"
+    },
+    {
+      "coordinates": [1137, 735],
+      "flag": "in",
+      "name": "Dimapur"
+    },
+    {
+      "coordinates": [749, 712],
+      "flag": "in",
+      "name": "Hamren"
+    },
+    {
+      "coordinates": [1092, 483],
+      "flag": "in",
+      "name": "Bokakhat"
+    },
+    {
+      "coordinates": [1240, 357],
+      "flag": "in",
+      "name": "Majuli"
+    },
+    {
+      "coordinates": [889, 218],
+      "flag": "in",
+      "name": "Seppa"
+    },
+    {
+      "coordinates": [908, 1001],
+      "flag": "in",
+      "name": "Haflong"
+    },
+    {
+      "coordinates": [340, 874],
+      "flag": "in",
+      "name": "Nongstoin"
+    },
+    {
+      "coordinates": [99, 168],
+      "flag": "bt",
+      "name": "Trongsa"
+    }
+  ],
+  "special_team_count": 2,
+  "teamGameSpawnAreas": {
+    "2": [
+      {
+        "height": 380,
+        "width": 1141,
+        "x": 0,
+        "y": 0
+      },
+      {
+        "height": 324,
+        "width": 1335,
+        "x": 125,
+        "y": 700
+      }
+    ]
+  },
+  "team_frequency": 10,
+  "themes": ["asia"],
+  "translation_key": "map.brahmaputra"
+}

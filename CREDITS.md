@@ -109,6 +109,15 @@ Licensed under ODbL
 © [OpenStreetMap contributors](https://www.openstreetmap.org/copyright)  
 Licensed under ODbL
 
+### Brahmaputra Map
+
+River outlines and islands: © [OpenStreetMap contributors](https://www.openstreetmap.org/copyright)  
+Licensed under ODbL
+
+Elevation: [Terrain Tiles](https://registry.opendata.aws/terrain-tiles/) by Mapzen on AWS Open Data.
+GMTED2010 and SRTM terrain data courtesy of the [U.S. Geological Survey](https://www.usgs.gov/)  
+[Public Domain](https://www.usgs.gov/information-policies-and-instructions/copyrights-and-credits)
+
 ## Icons
 
 ### [The Noun Project](https://thenounproject.com/)
