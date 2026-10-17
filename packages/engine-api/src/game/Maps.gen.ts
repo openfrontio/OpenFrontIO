@@ -138,7 +138,7 @@ export enum GameMapType {
   YangtzeRiver = "Yangtze River", // map-generator/assets/maps/yangtzeriver/info.json
   YellowSea = "Yellow Sea", // map-generator/assets/maps/yellowsea/info.json
   Yenisei = "Yenisei", // map-generator/assets/maps/yenisei/info.json
-  zealandia = "Zealandia", // map-generator/assets/maps/zealandia/info.json
+  Zealandia = "Zealandia", // map-generator/assets/maps/zealandia/info.json
 }
 
 export type GameMapName = keyof typeof GameMapType;
@@ -2592,8 +2592,8 @@ export const maps: readonly MapInfo[] = [
     themes: ["asia"],
   },
   {
-    id: "zealandia",
-    type: GameMapType.zealandia,
+    id: "Zealandia",
+    type: GameMapType.Zealandia,
     translationKey: "map.zealandia",
     categories: ["oceania"],
     multiplayerFrequency: 6,
