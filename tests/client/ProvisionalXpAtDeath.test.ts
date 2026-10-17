@@ -1,4 +1,5 @@
 import type { HumanStatsSnapshot } from "@openfront/engine-api/game/GameTypes";
+import type { Winner } from "@openfront/engine-api/Schemas";
 import {
   GameMode,
   GameType,
@@ -18,6 +19,7 @@ import {
   loadProvisionalXp,
   provisionalXpContext,
   reconcileXp,
+  winnerClientIds,
 } from "../../src/client/ProvisionalXpAtDeath";
 
 // Test inputs, not the API's live tuning: every expectation below is worked
@@ -432,6 +434,137 @@ describe("buildProvisionalXp", () => {
   });
 });
 
+describe("a figure from the finished game", () => {
+  // An FFA lobby at its end, tick 6000, as the Win update's stats have it
+  // (final tiles recorded): "me" is still standing.
+  function endSnapshot(): HumanStatsSnapshot {
+    return {
+      tick: 6000,
+      stats: {
+        me: { attacks: [100n], finalTiles: 900n },
+        early: { killedAt: 2000n, finalTiles: 0n },
+        late: { killedAt: 5500n, finalTiles: 0n },
+        // Left at 3000 and never came back.
+        quitter: { attacks: [5n], finalTiles: 0n },
+      },
+      disconnectedAt: { quitter: 3000 },
+    };
+  }
+
+  function buildAtEnd(
+    overrides: Partial<Parameters<typeof buildProvisionalXp>[0]> = {},
+  ) {
+    const built = buildProvisionalXp({
+      gameId: "game1",
+      snapshot: endSnapshot(),
+      myClientID: "me",
+      config: FFA,
+      progress: FULL_PROGRESS,
+      progression: progression(),
+      end: { winner: ["player", "me"] },
+      ...overrides,
+    });
+    if (built === null || built === "retry") throw new Error("no figure");
+    return built;
+  }
+
+  it("scores a player still standing at the end, the win included", () => {
+    const provisional = buildAtEnd();
+    // time: floor(6000 * 17 / 600) = 170; placement, all three opponents
+    // outlasted: floor(150 * 3 * 4 / (3 * 20)) = 30; win: floor(300 * 4 /
+    // 20) = 60; the day's first public game: 100.
+    expect(provisional.response).toMatchObject({
+      eligible: true,
+      breakdown: {
+        played: 50,
+        time: 170,
+        placement: 30,
+        win: 60,
+        firstGame: 100,
+        subtotal: 410,
+        total: 410,
+      },
+    });
+    expect(provisional.teamWinPending).toBe(false);
+    expect(provisional.inputs).toMatchObject({
+      atGameEnd: true,
+      isWinner: true,
+      aliveTicks: 6000,
+      opponentsOutlasted: 3,
+      disconnectedOpponents: 1,
+    });
+  });
+
+  it("pays no win when someone else won, or a nation, or nobody", () => {
+    const others: Winner[] = [
+      ["player", "late"],
+      ["nation", "Some Nation"],
+      undefined,
+    ];
+    for (const winner of others) {
+      const provisional = buildAtEnd({ end: { winner } });
+      expect(provisional.response).toMatchObject({
+        breakdown: { win: 0, total: 350 },
+      });
+      expect(provisional.inputs.isWinner).toBe(false);
+    }
+  });
+
+  it("knows a team's win rather than leaving it pending", () => {
+    const won = buildAtEnd({
+      config: TEAM,
+      end: { winner: ["team", "Red", "mate", "me"] },
+    });
+    expect(won.teamWinPending).toBe(false);
+    // No placement in a team game: 50 + 170 + 150 + 100.
+    expect(won.response).toMatchObject({
+      breakdown: { placement: 0, win: 150, total: 470 },
+    });
+    // The other team won.
+    const lost = buildAtEnd({
+      config: TEAM,
+      end: { winner: ["team", "Blue", "early"] },
+    });
+    expect(lost.response).toMatchObject({ breakdown: { win: 0, total: 320 } });
+  });
+
+  it("scores a player out before the end on the winning team", () => {
+    const snapshot = endSnapshot();
+    snapshot.stats.me = { attacks: [100n], killedAt: 4000n, finalTiles: 0n };
+    // Alive for 4000 of 6000 ticks, past the half the team win asks: 50 +
+    // floor(4000 * 17 / 600) = 113 + 150 + 100.
+    const provisional = buildAtEnd({
+      snapshot,
+      config: TEAM,
+      end: { winner: ["team", "Red", "me"] },
+    });
+    expect(provisional.response).toMatchObject({
+      breakdown: { time: 113, win: 150, total: 413 },
+    });
+  });
+
+  it("never waits for a death the stats don't show", () => {
+    expect(
+      provisionalXpContext({
+        snapshot: endSnapshot(),
+        myClientID: "me",
+        config: FFA,
+        progress: PROGRESS,
+        end: { winner: ["player", "me"] },
+      }),
+    ).not.toBe("retry");
+  });
+});
+
+describe("winnerClientIds", () => {
+  it("reads the winners as the API does", () => {
+    expect(winnerClientIds(["player", "a"])).toEqual(["a"]);
+    expect(winnerClientIds(["team", "Red", "a", "b"])).toEqual(["a", "b"]);
+    expect(winnerClientIds(["nation", "Some Nation"])).toEqual([]);
+    expect(winnerClientIds(undefined)).toEqual([]);
+  });
+});
+
 describe("projectProgress", () => {
   it("stops at the cap, where only lifetime XP grows", () => {
     const projected = projectProgress(
@@ -642,6 +775,45 @@ describe("reconcileXp", () => {
     ).toMatchObject({
       differences: ["daily_cap"],
       provisionalTotal: null,
+      drift: false,
+    });
+  });
+
+  it("puts more time on the server down to the game's length, for a figure from the end", () => {
+    // The server counted the game to the turn it archived it on: two more
+    // XP of time, 165 * 1.2 = 198.
+    const longer = server({ time: 115, subtotal: 165, total: 198 });
+    expect(reconcileXp(provisional, longer, { atGameEnd: true })).toEqual({
+      matched: false,
+      differences: ["game_length"],
+      provisionalTotal: 196,
+      drift: false,
+    });
+    // At death the time is the player's own: nothing explains it.
+    expect(reconcileXp(provisional, longer)).toMatchObject({
+      differences: ["other"],
+      drift: true,
+    });
+    // Less time is no longer game.
+    expect(
+      reconcileXp(
+        provisional,
+        server({ time: 110, subtotal: 160, total: 192 }),
+        { atGameEnd: true },
+      ),
+    ).toMatchObject({ differences: ["other"], drift: true });
+  });
+
+  it("explains a winner the server overturned, for a figure from the end", () => {
+    // Shown with an FFA win of 60 (223 * 1.2 = 267.6); the server's replay
+    // named someone else.
+    const won: XpResult = {
+      eligible: true,
+      breakdown: { ...breakdown, win: 60, subtotal: 223, total: 268 },
+      daily: { privateGames: 0, singleplayerGames: 0, firstGameClaimed: true },
+    };
+    expect(reconcileXp(won, server({}), { atGameEnd: true })).toMatchObject({
+      matched: false,
       drift: false,
     });
   });

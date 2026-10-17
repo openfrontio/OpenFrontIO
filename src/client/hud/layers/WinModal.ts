@@ -1,5 +1,6 @@
 import { GameType, RankedType } from "@openfront/engine-api/game/GameTypes";
 import { GameUpdateType } from "@openfront/engine-api/game/GameUpdates";
+import type { AllPlayersStats, Winner } from "@openfront/engine-api/Schemas";
 import type { GameXpEligible, Progress } from "@openfront/shared/ApiSchemas";
 import { Pattern } from "@openfront/shared/CosmeticSchemas";
 import { EventBus } from "@openfront/shared/EventBus";
@@ -60,6 +61,19 @@ import { GameView } from "../../view";
 
 type LegendCeremonyModule = typeof import("../../components/LegendCeremony");
 
+// What the end-of-game provisional figure is worked out from: the result and
+// the stats this client votes to the server, which the archived record holds.
+interface GameEndUpdate {
+  winner: Winner;
+  allPlayersStats: AllPlayersStats;
+}
+
+// How long the end of the game waits on its provisional figure before the
+// section says the XP is being calculated meanwhile. Normally it takes a
+// moment (one ask of the worker), and a flash of "calculating" before the
+// reveal would only be noise.
+const END_PROVISIONAL_GRACE_MS = 500;
+
 // The XP section stays out of the startup bundle: it's fetched when a game
 // starts (see init), long before the game ends, so the reveal never waits on
 // it. Should it still be on its way, the section shows the moment it lands.
@@ -108,9 +122,12 @@ export class WinModal extends LitElement implements Controller {
   // out (or unknown): no share button.
   @state()
   private sharePublicId = "";
-  // The provisional figure shown at death, if any: the server's figure is
-  // compared with it when the game ends.
+  // The provisional figure shown at death (or, for a player still in the
+  // game, at its end), if any: the server's figure is compared with it.
   private provisionalXp: ProvisionalXp | null = null;
+  // The game's result, from its Win update: a player still in the game at
+  // the end gets a provisional figure worked out from it.
+  private gameEnd: GameEndUpdate | null = null;
   // A detach cut the end-of-game poll short; re-attaching restarts it (the
   // Win update that started it is delivered only once).
   private xpPollAborted = false;
@@ -592,7 +609,8 @@ export class WinModal extends LitElement implements Controller {
    * game carries on: the server only awards XP once the game is archived, so
    * that shows a provisional figure worked out here (or, when there can't be
    * one, says XP comes at the end), and the poll starts when the game really
-   * ends.
+   * ends. A player without a figure by then (still in the game, mostly) gets
+   * one from the finished game while the poll runs.
    */
   private async updateXp(gameOver: boolean): Promise<void> {
     if (this.xpPolling) return;
@@ -627,27 +645,56 @@ export class WinModal extends LitElement implements Controller {
       // call owns the section from then on.
       if (this.xpPolling) return;
       if (!gameOver) {
-        const provisional = await this.loadProvisionalXp(progress);
+        const loaded = await this.loadProvisionalXp(progress, null);
         if (this.xpPolling) return;
-        if (provisional === null) {
+        if (loaded === null) {
           this.xpView = { kind: "awaiting_end" };
           return;
         }
+        const { provisional } = loaded;
         this.provisionalXp = provisional;
         this.xpView = { kind: "provisional", provisional, confirming: false };
-        this.keepPendingXp(provisional);
+        this.keepPendingXp(provisional, loaded.notIn);
         return;
       }
       this.xpPolling = true;
-      const provisional = this.provisionalXp;
+      const abort = new AbortController();
+      this.xpAbort = abort;
+      // Asked at once; scoring can take a while (the server may replay the
+      // game to settle its winner).
+      const poll = pollGameXp(game.gameID(), { signal: abort.signal });
+      let provisional = this.provisionalXp;
+      const end = this.gameEnd;
+      if (provisional === null && end !== null) {
+        // No figure from a death (the player is still in the game, or had
+        // none): one from the finished game, the win included, unless the
+        // server answers first. Should it be slow to work out, the section
+        // says the XP is being calculated meanwhile.
+        const slow = setTimeout(() => {
+          this.xpView = { kind: "calculating" };
+        }, END_PROVISIONAL_GRACE_MS);
+        const loaded = await Promise.race([
+          this.loadProvisionalXp(progress, end, abort.signal).catch(
+            (err: unknown) => {
+              console.warn("WinModal: no provisional XP at the end", err);
+              return null;
+            },
+          ),
+          poll.then(() => null),
+        ]);
+        clearTimeout(slow);
+        if (loaded !== null && !abort.signal.aborted) {
+          provisional = loaded.provisional;
+          this.provisionalXp = provisional;
+          this.keepPendingXp(provisional, loaded.notIn);
+        }
+      }
       // A provisional figure stays up while the server's is fetched.
       this.xpView =
         provisional === null
           ? { kind: "calculating" }
           : { kind: "provisional", provisional, confirming: true };
-      const abort = new AbortController();
-      this.xpAbort = abort;
-      const result = await pollGameXp(game.gameID(), { signal: abort.signal });
+      const result = await poll;
       // Detached mid-poll: leave the section be (a provisional figure stays
       // up, still confirming) and poll again on re-attach (right away if that
       // happened while this poll was winding down).
@@ -688,6 +735,7 @@ export class WinModal extends LitElement implements Controller {
       }
       const outcome = reconcileXp(provisional.result, result, {
         disconnectedOpponents: provisional.inputs.disconnectedOpponents,
+        atGameEnd: provisional.inputs.atGameEnd,
       });
       if (outcome.drift) {
         // Not explained by what only the end of the game adds: the client's
@@ -714,16 +762,15 @@ export class WinModal extends LitElement implements Controller {
     }
   }
 
-  // The lifetime XP of the account the provisional figure was worked out
-  // from (ProvisionalProgress: a figure up to it doesn't include this game).
-  private provisionalReadLifetime: number | null = null;
-
   // Keeps an eligible provisional figure for the account, so the account
   // menu, the Account modal and the profile show it (provisionally) until the
-  // API scores the game (ProvisionalProgress.ts).
-  // Nothing is asked of the API here: the game is still running, and the
-  // account menu's poll picks it up.
-  private keepPendingXp(provisional: ProvisionalXp): void {
+  // API scores the game (ProvisionalProgress.ts). `notIn` is the lifetime XP
+  // of the account it was worked out from, read before the game ended, so
+  // the game can't be in it.
+  // Nothing is asked of the API here: at death the game is still running,
+  // and at the end the poll already is; the account menu's poll picks it up
+  // should neither get an answer.
+  private keepPendingXp(provisional: ProvisionalXp, notIn: number): void {
     const response = provisional.response;
     if (this.xpPublicId === null || !response.eligible) return;
     recordPendingXp(this.xpPublicId, {
@@ -731,9 +778,7 @@ export class WinModal extends LitElement implements Controller {
       gameId: response.gameId,
       xp: response.breakdown.total,
       firstGame: firstGameXp(response.breakdown),
-      // The account as read at death: the game hadn't ended, so it can't
-      // be in it.
-      notIn: this.provisionalReadLifetime ?? undefined,
+      notIn,
     });
   }
 
@@ -750,11 +795,15 @@ export class WinModal extends LitElement implements Controller {
     return { day, kind: kinds[this.game.config().gameConfig().gameType] };
   }
 
-  // The provisional XP figure for a player who has just died, or null when
-  // there can't be one (see loadProvisionalXp).
+  // The provisional XP figure for a player who has just died, or with `end`
+  // for one at the end of the game, and the lifetime XP of the account it
+  // was worked out from; null when there can't be one (see
+  // loadProvisionalXp).
   private async loadProvisionalXp(
     progress: Progress,
-  ): Promise<ProvisionalXp | null> {
+    end: GameEndUpdate | null,
+    signal?: AbortSignal,
+  ): Promise<{ provisional: ProvisionalXp; notIn: number } | null> {
     const progression = await fetchProgressionConfig();
     if (progression === false || provisionalXpRules(progression) === null) {
       return null;
@@ -763,16 +812,20 @@ export class WinModal extends LitElement implements Controller {
     const myClientID = game.myClientID();
     if (myClientID === undefined) return null;
     // A provisional figure starts from where the player is now, and counts
-    // today's allowances as they are now: ask /users/@me afresh (the page's
-    // copy is from when the game started, and a game left earlier may have
-    // been scored since). Past the page's cache, so a failed ask can't cost
-    // the game-end figure its copy; the page's progress stands in for it.
-    const fresh = await fetchUserMeUncached();
-    const confirmed =
-      fresh !== false && fresh.player.progress !== undefined
-        ? fresh.player.progress
-        : progress;
-    this.provisionalReadLifetime = confirmed.lifetimeXp;
+    // today's allowances as they are now: at death, ask /users/@me afresh
+    // (the page's copy is from when the game started, and a game left
+    // earlier may have been scored since). Past the page's cache, so a failed
+    // ask can't cost the game-end figure its copy; the page's progress stands
+    // in for it. At the end, the page's copy: a fresh read could already
+    // have this game in it, should the server score it that quickly, and the
+    // figure is wanted at once. Games left earlier are counted below.
+    let confirmed = progress;
+    if (end === null) {
+      const fresh = await fetchUserMeUncached();
+      if (fresh !== false && fresh.player.progress !== undefined) {
+        confirmed = fresh.player.progress;
+      }
+    }
     // Games left earlier and not scored yet stack underneath this one: it
     // starts from where their provisional XP took the player, and from the
     // day's allowances they used (ProvisionalProgress.ts). Nothing is asked:
@@ -781,14 +834,28 @@ export class WinModal extends LitElement implements Controller {
       this.xpPublicId === null
         ? confirmed
         : withPendingXp(this.xpPublicId, confirmed, progression, game.gameID());
-    return loadProvisionalXp({
+    const provisional = await loadProvisionalXp({
       gameId: game.gameID(),
       myClientID,
       config: game.config().gameConfig(),
       progress: start,
       progression,
-      humanStats: () => game.worker.humanStats(),
+      end: end === null ? undefined : { winner: end.winner },
+      // At the end, the stats this client votes (the Win update's): the
+      // record the server scores. The worker's snapshot still says who is
+      // disconnected, and how far the game has got.
+      humanStats:
+        end === null
+          ? () => game.worker.humanStats()
+          : async () => ({
+              ...(await game.worker.humanStats()),
+              stats: end.allPlayersStats,
+            }),
+      signal,
     });
+    return provisional === null
+      ? null
+      : { provisional, notIn: confirmed.lifetimeXp };
   }
 
   private _handleExit() {
@@ -839,7 +906,11 @@ export class WinModal extends LitElement implements Controller {
     }
     const updates = this.game.updatesSinceLastTick();
     const winUpdates = updates?.[GameUpdateType.Win] ?? [];
-    if (winUpdates.length > 0) void this.updateXp(true);
+    if (winUpdates.length > 0) {
+      const { winner, allPlayersStats } = winUpdates[0];
+      this.gameEnd ??= { winner, allPlayersStats };
+      void this.updateXp(true);
+    }
     winUpdates.forEach((wu) => {
       if (wu.winner === undefined) {
         // Match cancelled (e.g. a ranked 2v2 that didn't fill or fully
