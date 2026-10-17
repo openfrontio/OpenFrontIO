@@ -864,16 +864,16 @@ export class WinModal extends LitElement implements Controller {
       return;
     }
 
-    const text = gamePortal.isOnGamePortal()
-      ? await gamePortal.createInviteLink(gameId)
-      : `${ClientEnv.shareOrigin()}${ClientEnv.gamePath(gameId)}`;
-
-    if (!text) {
-      showToast(translateText("common.failed_copy"), "red");
-      return;
-    }
-
     try {
+      const text = gamePortal.isOnGamePortal()
+        ? await gamePortal.createInviteLink(gameId)
+        : `${ClientEnv.shareOrigin()}${ClientEnv.gamePath(gameId)}`;
+
+      if (!text) {
+        showToast(translateText("common.failed_copy"), "red");
+        return;
+      }
+
       await copyToClipboard(text);
       showToast(translateText("common.copied"), "green");
     } catch {

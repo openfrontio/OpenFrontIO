@@ -444,6 +444,25 @@ describe("WinModal share button", () => {
     expect(showToastMock).toHaveBeenCalledWith("Failed to copy", "red");
   });
 
+  it("shows failure toast when game portal invite link throws", async () => {
+    const gameId = "cgerror1234";
+    gamePortalMock.isOnGamePortal.mockReturnValue(true);
+    gamePortalMock.createInviteLink.mockRejectedValue(
+      new Error("portal network failure"),
+    );
+
+    const el = await createModal({ gameId });
+    const shareButton = el.querySelector<HTMLButtonElement>(
+      'button[data-win-action="share"]',
+    )!;
+
+    shareButton.click();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(copyToClipboardMock).not.toHaveBeenCalled();
+    expect(showToastMock).toHaveBeenCalledWith("Failed to copy", "red");
+  });
+
   it("shows failure toast when game ID is missing", async () => {
     const el = await createModal({ gameId: "" });
     const shareButton = el.querySelector<HTMLButtonElement>(
