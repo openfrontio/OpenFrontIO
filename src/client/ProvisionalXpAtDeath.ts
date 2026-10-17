@@ -1,5 +1,6 @@
 import type { HumanStatsSnapshot } from "@openfront/engine-api/game/GameTypes";
 import { GameMode, GameType } from "@openfront/engine-api/game/GameTypes";
+import type { Winner } from "@openfront/engine-api/Schemas";
 import type {
   GameXpResponse,
   Progress,
@@ -25,6 +26,10 @@ import {
 // API's formula in ProvisionalXp.ts. Display only: it is never sent anywhere,
 // and once the game ends the server's figure replaces it (reconcileXp below
 // says how they compare).
+//
+// A player still in the game when it ends gets one too, worked out from the
+// finished game (see GameEnd) while the server scores it: that can take a
+// while when the server replays the game to settle the winner.
 
 export interface ProvisionalXp {
   // The figure shaped like the server's GET /users/@me/xp/:gameId answer, so
@@ -33,8 +38,9 @@ export interface ProvisionalXp {
   // most players die before the end and would otherwise miss them.
   response: GameXpResponse;
   result: XpResult;
-  // A team (or Humans vs Nations) game: the team may still win, and a win
-  // bonus is only known once it ends.
+  // A team (or Humans vs Nations) game still running: the team may still
+  // win, and a win bonus is only known once it ends. Never for a figure
+  // worked out at the end, which has the win in it.
   teamWinPending: boolean;
   // Feats pay XP under these rules (featXp > 0), and they are only judged on
   // the finished game. With feats paying nothing there is nothing to add.
@@ -60,6 +66,30 @@ export interface ProvisionalXpInputs {
   // kept with it, so the next game the same day counts it (ProvisionalProgress).
   dailyDay: string | null;
   subscriberPermille: number;
+  // Worked out from the finished game (GameEnd), win included, rather than
+  // at death.
+  atGameEnd: boolean;
+  isWinner: boolean;
+}
+
+/**
+ * The finished game, for a figure worked out when it ends: the result its
+ * Win update carries, which is what this client votes to the server and what
+ * the archived record holds unless the server's replay overturns it.
+ */
+export interface GameEnd {
+  winner: Winner;
+}
+
+/**
+ * The client IDs the result names as winning, as the API reads the archived
+ * record's winner (its GameInputs.ts): the player, or the members of the
+ * team who count for its win. A nation's win, or none, has no human winners.
+ */
+export function winnerClientIds(winner: Winner): string[] {
+  if (winner === undefined) return [];
+  if (winner[0] === "player") return winner.slice(1);
+  return winner.slice(2);
 }
 
 /**
@@ -128,6 +158,10 @@ function dailyOn(daily: Progress["daily"], now: number): DailyXpState {
  * worker's stats snapshot. "retry" when the snapshot doesn't show the death
  * yet (the simulation stamps it a tick after the last tile falls).
  *
+ * With `end`, the context once the game is over instead, alive or not: the
+ * snapshot's tick stands for the game's length, and the win is known. Only
+ * the feats are still left out: the API judges them.
+ *
  * Derived the way the API derives it from the archived record (its
  * GameInputs.ts), with what can only be known at the end left out: no win
  * (a dead player can't win FFA; a team's result is pending), no feats (they
@@ -141,16 +175,27 @@ export function provisionalXpContext(input: {
   myClientID: string;
   config: XpGameConfig;
   progress: Progress;
+  // The game is over: its result.
+  end?: GameEnd;
   // When the player died (epoch ms); now unless a test says otherwise.
   now?: number;
 }): { ctx: XpContext; disconnectedOpponents: number } | "retry" {
-  const { snapshot, myClientID, config, progress } = input;
+  const { snapshot, myClientID, config, progress, end } = input;
   const myStats = snapshot.stats[myClientID];
-  if (myStats !== undefined && myStats.killedAt === undefined) return "retry";
+  if (
+    end === undefined &&
+    myStats !== undefined &&
+    myStats.killedAt === undefined
+  ) {
+    return "retry";
+  }
+  // Still in it at the end: out of the game when it ended.
   const killedAt =
     myStats?.killedAt === undefined ? snapshot.tick : Number(myStats.killedAt);
-  // The game so far. The API passes the whole game's length, which only
-  // matters for a team win (pending here) and to cap the elimination tick.
+  // The game so far. The API passes the whole game's length, which matters
+  // for a team win, to cap the elimination tick, and for a player still in
+  // it at the end, their time. The server counts the game to the turn its
+  // record is archived on, a moment after the end: reconcileXp allows for it.
   const ticks = Math.max(snapshot.tick, killedAt);
 
   const players = Object.entries(snapshot.stats).map(([clientID, stats]) => ({
@@ -183,7 +228,8 @@ export function provisionalXpContext(input: {
       config,
       stats: myStats,
       leftAtTick: null,
-      isWinner: false,
+      isWinner:
+        end !== undefined && winnerClientIds(end.winner).includes(myClientID),
       ticks,
       spawnedHumans,
       opponentsOutlasted,
@@ -203,6 +249,7 @@ export function buildProvisionalXp(input: {
   config: XpGameConfig;
   progress: Progress;
   progression: ProgressionConfig;
+  end?: GameEnd;
   now?: number;
 }): ProvisionalXp | "retry" | null {
   const rules = provisionalXpRules(input.progression);
@@ -253,7 +300,8 @@ export function buildProvisionalXp(input: {
   return {
     response,
     result,
-    teamWinPending: ctx.config.gameMode === GameMode.Team,
+    teamWinPending:
+      input.end === undefined && ctx.config.gameMode === GameMode.Team,
     featsPending: rules.featXp > 0 && rules.maxFeatsPerGame > 0,
     inputs: {
       gameType: ctx.config.gameType,
@@ -267,6 +315,8 @@ export function buildProvisionalXp(input: {
       daily: ctx.daily,
       dailyDay: input.progress.daily?.day ?? null,
       subscriberPermille: ctx.subscriberPermille,
+      atGameEnd: input.end !== undefined,
+      isWinner: ctx.isWinner,
     },
   };
 }
@@ -277,6 +327,8 @@ export interface LoadProvisionalXpOptions {
   config: XpGameConfig;
   progress: Progress;
   progression: ProgressionConfig;
+  // The game is over: its result (see provisionalXpContext).
+  end?: GameEnd;
   // The worker's stats snapshot (WorkerClient.humanStats).
   humanStats: () => Promise<HumanStatsSnapshot>;
   // How often, and how far apart, to ask again while the snapshot doesn't
@@ -288,10 +340,10 @@ export interface LoadProvisionalXpOptions {
 }
 
 /**
- * Works out the provisional figure from the running game. Null when there is
- * none to show: another formula revision, no rules, a game the API won't
- * score, a snapshot that never shows the death, a worker that doesn't
- * answer, or the caller gave up.
+ * Works out the provisional figure from the running game (or, with `end`,
+ * the finished one). Null when there is none to show: another formula
+ * revision, no rules, a game the API won't score, a snapshot that never shows
+ * the death, a worker that doesn't answer, or the caller gave up.
  */
 export async function loadProvisionalXp(
   opts: LoadProvisionalXpOptions,
@@ -359,6 +411,11 @@ export type XpDifference =
   // An opponent counted as gone when the player died had only disconnected,
   // and came back: the server doesn't count them as outlasted.
   | "reconnect"
+  // A figure worked out at the end: the server counts the game's length to
+  // the turn its record was archived on, a moment (or, when the winner vote
+  // is only settled as the game closes, longer) after the end, so the time
+  // of a player who was still in it can come out higher.
+  | "game_length"
   // Anything else.
   | "other";
 
@@ -378,8 +435,12 @@ export function reconcileXp(
   provisional: XpResult,
   server: GameXpResponse,
   // ProvisionalXpInputs.disconnectedOpponents: opponents counted as gone at
-  // death who may have come back.
-  { disconnectedOpponents = 0 }: { disconnectedOpponents?: number } = {},
+  // death who may have come back; ProvisionalXpInputs.atGameEnd: the figure
+  // was worked out from the finished game.
+  {
+    disconnectedOpponents = 0,
+    atGameEnd = false,
+  }: { disconnectedOpponents?: number; atGameEnd?: boolean } = {},
 ): XpReconciliation {
   const provisionalTotal = provisional.eligible
     ? provisional.breakdown.total
@@ -436,12 +497,20 @@ export function reconcileXp(
   ) {
     differences.push("multiplier");
   }
+  // Only ever more time on the server: it counts the game for longer.
+  const lengthDiffers = atGameEnd && s.time > p.time;
+  if (lengthDiffers) differences.push("game_length");
   // The provisional figure with the server's end-of-game lines (and its
-  // first-game line) in their place, under the server's multipliers: if that
-  // lands on the server's total, nothing else changed.
+  // first-game line, and for a figure from the end its time) in their place,
+  // under the server's multipliers: if that lands on the server's total,
+  // nothing else changed.
   const atServer = (subtotal: number) =>
     applyMultipliers(subtotal, s.gamePermille, s.subscriberPermille);
-  const subtotal = p.subtotal - endOfGameXp(p) + endOfGameXp(s);
+  const subtotal =
+    p.subtotal -
+    endOfGameXp(p) +
+    endOfGameXp(s) +
+    (lengthDiffers ? s.time - p.time : 0);
   if (atServer(subtotal) === s.total) return differ(differences);
   // An opponent who had disconnected when the player died was counted as
   // outlasted; one who came back isn't, on the server. When the server's
