@@ -230,6 +230,17 @@ describe("Client.initialize() booted from Main.ts module scope", () => {
       JSON.stringify({ playerId: "p1", names: ["win_ffa"] }),
     );
 
+    // Boot's userAuth() is held open until the lobby click below has run:
+    // on Poki it waits seconds on the SDK, and the menu is up meanwhile.
+    let releaseBootAuth: () => void = () => {};
+    const bootAuth = new Promise<void>((resolve) => {
+      releaseBootAuth = resolve;
+    });
+    mocks.userAuth.mockImplementation(async () => {
+      await bootAuth;
+      return false;
+    });
+
     // The import runs bootstrap: component registration, element upgrades,
     // then `new Client().initialize()`.
     await import("../../src/client/Main");
@@ -238,12 +249,61 @@ describe("Client.initialize() booted from Main.ts module scope", () => {
       document.dispatchEvent(new Event("DOMContentLoaded", { bubbles: true }));
     }
 
+    await vi.waitFor(() => expect(mocks.userAuth).toHaveBeenCalled());
+    await joinPublicLobbyDuringBootAuth();
+    releaseBootAuth();
+    mocks.userAuth.mockImplementation(async () => false);
+
     // After `await userAuth()` resolves, the remainder of initialize() is
     // synchronous — one flush after the call is observed means the hashchange
     // listener, join-lobby listener and slider wiring are all in place.
-    await vi.waitFor(() => expect(mocks.userAuth).toHaveBeenCalled());
     await new Promise((resolve) => setTimeout(resolve, 25));
+    // Let that join land, then leave it so the tests below start in the menu.
+    await vi.waitFor(() => expect(mocks.joinLobby).toHaveBeenCalled());
+    document.dispatchEvent(new CustomEvent("leave-lobby", { bubbles: true }));
+    mocks.joinLobby.mockClear();
   }, 20_000);
+
+  let joinModalOpenedDuringBootAuth = false;
+
+  async function joinPublicLobbyDuringBootAuth(): Promise<void> {
+    const input = document.querySelector("username-input") as unknown as {
+      canPlay: () => boolean;
+    };
+    const canPlay = input.canPlay;
+    input.canPlay = () => true;
+    await loadModal("join-lobby-modal");
+    const joinModal = document.querySelector("join-lobby-modal") as unknown as {
+      open: (args?: Record<string, unknown>) => void;
+    };
+    const open = vi.spyOn(joinModal, "open").mockImplementation(() => {});
+    mocks.joinLobby.mockReturnValueOnce({
+      prestart: new Promise<void>(() => {}),
+      join: new Promise<void>(() => {}),
+      stop: () => true,
+    });
+    try {
+      document.dispatchEvent(
+        new CustomEvent("join-lobby", {
+          detail: { gameID: "AbCd1234", source: "public" },
+          bubbles: true,
+        }),
+      );
+      await vi.waitFor(() => expect(open).toHaveBeenCalled(), {
+        timeout: 2000,
+      });
+      joinModalOpenedDuringBootAuth = true;
+    } catch {
+      joinModalOpenedDuringBootAuth = false;
+    } finally {
+      open.mockRestore();
+      input.canPlay = canPlay;
+    }
+  }
+
+  it("opens the join modal for a lobby clicked while boot waits on auth", () => {
+    expect(joinModalOpenedDuringBootAuth).toBe(true);
+  });
 
   // Returning to page-play schedules Main's 50ms store refresh. Let it run
   // before jsdom is torn down, or it throws "customElements is not defined"
