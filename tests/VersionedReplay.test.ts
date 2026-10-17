@@ -53,17 +53,22 @@ describe("findVersionedShell", () => {
     ).toBe("https://replay.openfront.io/abcd1234");
     expect(fetchFn).toHaveBeenCalledWith(
       "https://replay.openfront.io/abcd1234",
-      { method: "HEAD" },
+      { method: "HEAD", signal: expect.any(AbortSignal) },
     );
   });
 
-  test("no shell: missing, not a page, or unreachable", async () => {
+  test("no shell: missing, not a page, unreachable, or timed out", async () => {
     for (const fetchFn of [
       async () => new Response("", { status: 404 }),
       async () =>
         new Response("", { headers: { "content-type": "application/json" } }),
       async (): Promise<Response> => {
         throw new TypeError("offline");
+      },
+      async (): Promise<Response> => {
+        const err = new Error("The operation was aborted");
+        err.name = "TimeoutError";
+        throw err;
       },
     ]) {
       expect(

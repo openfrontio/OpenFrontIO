@@ -1,5 +1,8 @@
 import { TileRef } from "@openfront/engine-api/game/GameMap";
-import { GameUpdateType } from "@openfront/engine-api/game/GameUpdates";
+import {
+  GameUpdateType,
+  RailroadConstructionUpdate,
+} from "@openfront/engine-api/game/GameUpdates";
 import {
   snapshotType,
   zInt,
@@ -21,6 +24,14 @@ export class Railroad {
     public tiles: TileRef[],
     public id: number,
   ) {}
+
+  toConstructionUpdate(): RailroadConstructionUpdate {
+    return {
+      type: GameUpdateType.RailroadConstructionEvent,
+      id: this.id,
+      tiles: this.tiles,
+    };
+  }
 
   delete(game: Game) {
     game.addUpdate({

@@ -142,6 +142,16 @@ export type GameUpdate =
   | GamePausedUpdate
   | DonateEventUpdate;
 
+export function createGameUpdatesMap(): GameUpdates {
+  const map = {} as GameUpdates;
+  Object.values(GameUpdateType)
+    .filter((key) => !isNaN(Number(key)))
+    .forEach((key) => {
+      map[key as GameUpdateType] = [];
+    });
+  return map;
+}
+
 export interface BonusEventUpdate {
   type: GameUpdateType.BonusEvent;
   player: PlayerID;

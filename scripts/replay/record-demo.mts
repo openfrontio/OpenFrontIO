@@ -18,8 +18,9 @@ import {
   spawnOnLand,
 } from "../../tests/client/replay/util/ArchiveGame";
 
-const [out, ticks = "1500", gameID = "demoGame1"] = process.argv.slice(2);
-if (out === undefined) {
+const [out, ticksArg = "1500", gameID = "demoGame1"] = process.argv.slice(2);
+const ticks = Number(ticksArg);
+if (out === undefined || !Number.isInteger(ticks) || ticks <= 0) {
   console.error("usage: record-demo.mts <out.json> [ticks] [gameID]");
   process.exit(1);
 }
@@ -32,7 +33,7 @@ const { record } = await playAndArchive({
   gameID,
   config: config({ bots: 30 }),
   players: [human(1)],
-  ticks: Number(ticks),
+  ticks,
   intents: (game, t) =>
     t === 3 ? [spawnOnLand(game, "client001", 250_000)] : [],
 });

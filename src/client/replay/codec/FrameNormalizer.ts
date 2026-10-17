@@ -115,9 +115,11 @@ export interface NormalizedFrame {
   /** `[tileRef, state]` pairs, as delivered by the worker. */
   tiles: Uint32Array;
   /**
-   * Every known player's state after this tick. Snapshots are never
-   * mutated, and a player that didn't change keeps last tick's object, so
-   * `prev === curr` means unchanged.
+   * Every known player's state after this tick. FrameNormalizer reuses and
+   * updates the map on the next push, so callers should not retain it as
+   * prior state. Snapshot objects themselves are immutable, and a player
+   * that didn't change keeps last tick's object, so `prev === curr` means
+   * unchanged.
    */
   players: ReadonlyMap<number, PlayerState>;
   /** Players seen for the first time this tick. */

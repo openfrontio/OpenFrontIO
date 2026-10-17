@@ -8,10 +8,16 @@
  * build is sent to that build's versioned shell.
  */
 
-import { Cell, PlayerType } from "@openfront/engine-api/game/GameTypes";
+import {
+  Cell,
+  Difficulty,
+  PlayerType,
+} from "@openfront/engine-api/game/GameTypes";
 import type { GameStartInfo } from "@openfront/engine-api/Schemas";
 import { Config } from "@openfront/engine-lib/configuration/Config";
 import { EventBus } from "@openfront/shared/EventBus";
+import { generateID } from "@openfront/shared/SharedUtil";
+import type { GameRecord } from "@openfront/shared/WireSchemas";
 import { html, LitElement, nothing } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
 import { MapLayerController } from "../controllers/MapLayerController";
@@ -28,6 +34,7 @@ import {
   type SettingsModal,
 } from "../hud/layers/SettingsModal";
 import { MouseMoveEvent } from "../InputHandler";
+import type { JoinLobbyEvent } from "../Main";
 import { buildTerrainRowSpans } from "../render/frame/derive/TerrainRowSpans";
 import { uploadFrameData } from "../render/frame/Upload";
 import {
@@ -68,7 +75,16 @@ import type {
   ReplayHeader,
 } from "./codec/ReplayTypes";
 import { terrainOf } from "./codec/Terrain";
-import { processInBrowser, type Processing } from "./LocalProcessing";
+import "./ContinueGameModal";
+import type {
+  ContinueGameModal,
+  ContinuePlayerOption,
+} from "./ContinueGameModal";
+import {
+  extractSnapshotInWorker,
+  processInBrowser,
+  type Processing,
+} from "./LocalProcessing";
 import { ReplayAppearance } from "./ReplayAppearance";
 import { CameraGestures, ReplayCamera } from "./ReplayCamera";
 import { formatGameTime, timelineFrames } from "./ReplayControls";
@@ -139,6 +155,12 @@ export class ReplayViewer extends LitElement {
    * processed stays watchable, with this shown over it.
    */
   @state() private stoppedEarly = "";
+  @state() private continueModalOpen = false;
+  @state() private continuePlayers: ContinuePlayerOption[] = [];
+  @state() private continueInitialPlayerID = "";
+  private continueRequestCount = 0;
+  private continueAbortController: AbortController | null = null;
+
   /**
    * The record has no hashes, so the replay can't be checked against the
    * game that was played.
@@ -147,6 +169,7 @@ export class ReplayViewer extends LitElement {
   /** Says so over the replay, until closed. */
   @state() private unverifiedNotice = false;
 
+  private record: GameRecord | null = null;
   /** The processing worker, while it runs. */
   private processing: Processing | null = null;
   /** The game being processed (the worker's first message). */
@@ -189,6 +212,8 @@ export class ReplayViewer extends LitElement {
 
   disconnectedCallback(): void {
     super.disconnectedCallback();
+    this.continueAbortController?.abort();
+    this.continueAbortController = null;
     this.abort.abort();
     this.processing?.cancel();
     if (this.rafId !== null) cancelAnimationFrame(this.rafId);
@@ -239,6 +264,7 @@ export class ReplayViewer extends LitElement {
     }
 
     const record = result.record;
+    this.record = record;
     this.gameLength = record.info.num_turns;
     this.unverified = !hasRecordedHashes(record);
     this.unverifiedNotice = this.unverified;
@@ -686,9 +712,11 @@ export class ReplayViewer extends LitElement {
   private onKey(e: KeyboardEvent): void {
     const p = this.playback;
     if (p === null || this.status !== "ready") return;
-    // The settings menu paused playback, so keys wait until it closes. So
+    // The settings or continue modal paused playback, so keys wait until it closes. So
     // do the game settings it opens: their sliders take the arrow keys.
-    if (this.settingsOpen()) return;
+    if (this.continueModalOpen || this.settingsOpen()) {
+      return;
+    }
     // The timeline keeps focus after a click, so it doesn't count as typing.
     // Its own arrow-key steps are prevented below so a key seeks once. Any
     // other input keeps its keys.
@@ -787,6 +815,122 @@ export class ReplayViewer extends LitElement {
     );
   }
 
+  private openContinueModal(): void {
+    const p = this.playback;
+    if (p !== null && p.playing) {
+      p.pause();
+    }
+    const adapter = this.adapter;
+    let players: ContinuePlayerOption[] = [];
+    if (adapter) {
+      adapter.sync();
+      const inSpawn = adapter.inSpawnPhase();
+      const landTiles = adapter.numLandTiles();
+      players = adapter
+        .playerViews()
+        .filter(
+          (pv) => (inSpawn || pv.isAlive()) && pv.type() !== PlayerType.Bot,
+        )
+        .map((pv) => {
+          const tiles = pv.numTilesOwned();
+          const controlPercent = landTiles > 0 ? (tiles / landTiles) * 100 : 0;
+          return {
+            id: pv.id(),
+            name: pv.displayName() || pv.name(),
+            smallID: pv.smallID(),
+            flag: pv.flag(),
+            troops: pv.troops(),
+            tiles,
+            controlPercent,
+          };
+        });
+    }
+    this.continuePlayers = players;
+    const focusID = adapter?.focus?.id();
+    this.continueInitialPlayerID =
+      players.find((p) => p.id === focusID)?.id ?? players[0]?.id ?? "";
+    this.continueAbortController?.abort();
+    this.continueAbortController = null;
+    this.continueRequestCount++;
+    this.continueModalOpen = true;
+  }
+
+  private closeContinueModal(): void {
+    this.continueAbortController?.abort();
+    this.continueAbortController = null;
+    this.continueRequestCount++;
+    this.continueModalOpen = false;
+  }
+
+  private async handleContinueGame(
+    e: CustomEvent<{ playerID: string; difficulty: Difficulty }>,
+  ): Promise<void> {
+    const abortController = new AbortController();
+    this.continueAbortController = abortController;
+    const requestId = this.continueRequestCount;
+    const modal = this.querySelector<ContinueGameModal>("continue-game-modal");
+    modal?.setLoading(true);
+    try {
+      let record = this.record;
+      if (!record) {
+        const res = await fetchReplayRecord(this.gameID);
+        if (this.continueRequestCount !== requestId) return;
+        if (res.kind === "record") {
+          this.record = res.record;
+          record = res.record;
+        } else {
+          modal?.setLoading(
+            false,
+            translateText("replay_viewer.unavailable_failed"),
+          );
+          return;
+        }
+      }
+      const localClientID = generateID();
+      const { snapshot, gameStartInfo, tick } = await extractSnapshotInWorker(
+        record,
+        this.tick,
+        e.detail.playerID,
+        localClientID,
+        e.detail.difficulty,
+        undefined,
+        abortController.signal,
+      );
+      if (this.continueRequestCount !== requestId) return;
+
+      const joinEvent = new CustomEvent("join-lobby", {
+        detail: {
+          gameID: gameStartInfo.gameID,
+          gameStartInfo,
+          source: "singleplayer",
+          resumeSnapshot: snapshot,
+          resumeTick: tick,
+        } satisfies JoinLobbyEvent,
+        bubbles: true,
+        composed: true,
+        cancelable: true,
+      });
+      document.dispatchEvent(joinEvent);
+      if (joinEvent.defaultPrevented) {
+        modal?.setLoading(false);
+        return;
+      }
+      this.closeContinueModal();
+      modal?.setLoading(false);
+    } catch (err) {
+      if (this.continueRequestCount !== requestId) return;
+      console.error("replay viewer: continue game failed:", err);
+      modal?.setLoading(
+        false,
+        err instanceof Error ? err.message : String(err),
+      );
+    } finally {
+      if (this.continueAbortController === abortController) {
+        this.continueAbortController = null;
+      }
+    }
+  }
+
   // ---- Render ----
 
   render() {
@@ -832,12 +976,14 @@ export class ReplayViewer extends LitElement {
               .total=${timelineFrames(loaded, this.gameLength, this.growing)}
               .playing=${this.playing}
               .speed=${this.speed}
+              .canContinue=${true}
               @replay-toggle-play=${() => this.togglePlay()}
               @replay-seek=${(e: CustomEvent<number>) =>
                 void this.playback?.seek(e.detail)}
               @replay-speed=${(e: CustomEvent<number>) =>
                 this.playback?.setSpeed(e.detail)}
               @replay-menu=${() => this.openMenu()}
+              @replay-continue=${() => this.openContinueModal()}
             ></replay-controls>`
           : html`<replay-status
               .gameID=${this.gameID}
@@ -847,6 +993,16 @@ export class ReplayViewer extends LitElement {
               .classicFallback=${this.classicFallback}
             ></replay-status>`}
         <settings-modal></settings-modal>
+        <continue-game-modal
+          .open=${this.continueModalOpen}
+          .tick=${this.tick}
+          .players=${this.continuePlayers}
+          .initialPlayerID=${this.continueInitialPlayerID}
+          @close=${() => this.closeContinueModal()}
+          @continue=${(
+            e: CustomEvent<{ playerID: string; difficulty: Difficulty }>,
+          ) => void this.handleContinueGame(e)}
+        ></continue-game-modal>
       </div>
     `;
   }

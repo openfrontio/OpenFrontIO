@@ -16,6 +16,7 @@ import type {
   ReplayBase,
 } from "../../../src/client/replay/codec/ReplayTypes";
 import {
+  extractSnapshotInWorker,
   processInBrowser,
   type ProcessingHandlers,
 } from "../../../src/client/replay/LocalProcessing";
@@ -76,7 +77,10 @@ describe("processInBrowser", () => {
     );
     await vi.waitFor(() => expect(worker.posted).toHaveLength(1));
     // The two workers get the ends of one channel.
-    const request = worker.posted[0] as ProcessorRequest;
+    const request = worker.posted[0] as Extract<
+      ProcessorRequest,
+      { engine: MessagePort }
+    >;
     expect(request.record).toBe(RECORD);
     expect(engine.posted).toEqual([
       { type: "connect", port: expect.any(MessagePort) },
@@ -172,6 +176,130 @@ describe("processInBrowser", () => {
     expect(worker.posted).toEqual([]);
     expect(engine.posted).toEqual([]);
     expect(calls).toEqual([]);
+  });
+});
+
+const stubMapLoader = {
+  getMapData: () => ({
+    manifest: () => Promise.resolve(new ArrayBuffer(0)),
+    mapBin: () => Promise.resolve(new ArrayBuffer(0)),
+    map4xBin: () => Promise.resolve(new ArrayBuffer(0)),
+  }),
+} as any;
+
+const RECORD_WITH_CONFIG = {
+  info: {
+    gameID: "abcd1234",
+    lobbyCreatedAt: 12345,
+    config: config(),
+    players: [],
+  },
+  turns: [],
+} as unknown as GameRecord;
+
+describe("extractSnapshotInWorker", () => {
+  test("throws when record is missing config", async () => {
+    await expect(
+      extractSnapshotInWorker(RECORD, 10, "p1", "c1"),
+    ).rejects.toThrow("Game record is missing start configuration");
+  });
+
+  test("terminates worker and rejects if signal is aborted while in flight", async () => {
+    const worker = new FakeWorker();
+    const abortController = new AbortController();
+    const promise = extractSnapshotInWorker(
+      RECORD_WITH_CONFIG,
+      10,
+      "p1",
+      "c1",
+      undefined,
+      async () => worker as unknown as Worker,
+      abortController.signal,
+      stubMapLoader,
+    );
+    await vi.waitFor(() => expect(worker.posted).toHaveLength(1));
+    abortController.abort();
+    await expect(promise).rejects.toThrow();
+    expect(worker.terminated).toBe(true);
+  });
+
+  test("terminates worker immediately if signal is already aborted", async () => {
+    const createWorker = vi.fn();
+    const abortController = new AbortController();
+    abortController.abort();
+    await expect(
+      extractSnapshotInWorker(
+        RECORD_WITH_CONFIG,
+        10,
+        "p1",
+        "c1",
+        undefined,
+        createWorker,
+        abortController.signal,
+        stubMapLoader,
+      ),
+    ).rejects.toThrow();
+    expect(createWorker).not.toHaveBeenCalled();
+  });
+
+  test("does not create worker if map loading fails", async () => {
+    const createWorker = vi.fn();
+    const failingLoader = {
+      getMapData: () => ({
+        manifest: () => Promise.reject(new Error("map fetch failed")),
+        mapBin: () => Promise.reject(new Error("map fetch failed")),
+        map4xBin: () => Promise.reject(new Error("map fetch failed")),
+      }),
+    } as any;
+    await expect(
+      extractSnapshotInWorker(
+        RECORD_WITH_CONFIG,
+        10,
+        "p1",
+        "c1",
+        undefined,
+        createWorker,
+        undefined,
+        failingLoader,
+      ),
+    ).rejects.toThrow("map fetch failed");
+    expect(createWorker).not.toHaveBeenCalled();
+  });
+
+  test("resolves snapshot, gameStartInfo, and tick from worker result", async () => {
+    const worker = new FakeWorker();
+    const promise = extractSnapshotInWorker(
+      RECORD_WITH_CONFIG,
+      10,
+      "p1",
+      "c1",
+      undefined,
+      async () => worker as unknown as Worker,
+      undefined,
+      stubMapLoader,
+    );
+    await vi.waitFor(() => expect(worker.posted).toHaveLength(1));
+    const snapshot = new Uint8Array([9, 8, 7]);
+    const gameStartInfo = {
+      ...RECORD_WITH_CONFIG.info,
+      gameID: "newGame1",
+    };
+    worker.dispatchEvent(
+      new MessageEvent("message", {
+        data: {
+          type: "extract_snapshot_result",
+          snapshot,
+          gameStartInfo,
+          tick: 10,
+        },
+      }),
+    );
+    await expect(promise).resolves.toEqual({
+      snapshot,
+      gameStartInfo,
+      tick: 10,
+    });
+    expect(worker.terminated).toBe(true);
   });
 });
 

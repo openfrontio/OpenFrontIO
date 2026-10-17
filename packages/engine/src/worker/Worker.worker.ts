@@ -4,6 +4,8 @@ import {
 } from "@openfront/engine-api/game/GameUpdates";
 import {
   AttackClusteredPositionsResultMessage,
+  ExtractSnapshotErrorMessage,
+  ExtractSnapshotResultMessage,
   HumanStatsResultMessage,
   InitErrorMessage,
   InitializedMessage,
@@ -23,6 +25,7 @@ import {
   createGameRunnerFromSnapshot,
   GameRunner,
 } from "../GameRunner";
+import { extractSnapshot } from "../snapshot/SnapshotExtractor";
 
 const ctx: Worker = self as any;
 // Where answers go: the page that started this worker, or the port it
@@ -162,7 +165,7 @@ async function onMessage(e: MessageEvent<MainThreadMessage>) {
       break;
     case "init":
       try {
-        gameRunner = (
+        const initPromise =
           message.snapshot !== undefined
             ? createGameRunnerFromSnapshot(
                 message.gameStartInfo,
@@ -170,30 +173,36 @@ async function onMessage(e: MessageEvent<MainThreadMessage>) {
                 message.clientID,
                 message.map,
                 gameUpdate,
-              )
+              ).then((gr) => {
+                const initialUpdate = gr.snapshotViewData();
+                sendMessage({
+                  type: "initialized",
+                  id: message.id,
+                  initialUpdate,
+                } as InitializedMessage);
+                return gr;
+              })
             : createGameRunner(
                 message.gameStartInfo,
                 message.clientID,
                 message.map,
                 gameUpdate,
-              )
-        ).then(
-          (gr) => {
-            sendMessage({
-              type: "initialized",
-              id: message.id,
-            } as InitializedMessage);
-            return gr;
-          },
-          (error: unknown) => {
-            sendMessage({
-              type: "init_error",
-              id: message.id,
-              error: error instanceof Error ? error.message : String(error),
-            } as InitErrorMessage);
-            throw error;
-          },
-        );
+              ).then((gr) => {
+                sendMessage({
+                  type: "initialized",
+                  id: message.id,
+                } as InitializedMessage);
+                return gr;
+              });
+
+        gameRunner = initPromise.catch((error: unknown) => {
+          sendMessage({
+            type: "init_error",
+            id: message.id,
+            error: error instanceof Error ? error.message : String(error),
+          } as InitErrorMessage);
+          throw error;
+        });
         // The failure is reported above; later messages still see it when
         // they await gameRunner.
         gameRunner.catch(() => {});
@@ -403,10 +412,13 @@ async function onMessage(e: MessageEvent<MainThreadMessage>) {
         throw new Error("Game runner not initialized");
       }
       let snapshot: Uint8Array | null = null;
+      let tick = 0;
       try {
         // Messages are handled between drain batches, so this is always a
         // tick boundary.
-        snapshot = (await gameRunner).snapshot(message.gitCommit);
+        const runner = await gameRunner;
+        snapshot = runner.snapshot(message.gitCommit);
+        tick = runner.game?.ticks() ?? 0;
       } catch (error) {
         console.error("Failed to snapshot game:", error);
       }
@@ -415,9 +427,42 @@ async function onMessage(e: MessageEvent<MainThreadMessage>) {
           type: "snapshot_result",
           id: message.id,
           snapshot,
+          tick,
         } as SnapshotResultMessage,
         snapshot ? [snapshot.buffer] : [],
       );
+      break;
+    }
+    case "extract_snapshot": {
+      try {
+        const result = await extractSnapshot({
+          gameStartInfo: message.gameStartInfo,
+          turns: message.turns,
+          mapFiles: message.map,
+          targetTick: message.targetTick,
+          chosenPlayerID: message.chosenPlayerID,
+          localClientID: message.localClientID,
+          difficulty: message.difficulty,
+          newGameID: message.newGameID,
+        });
+        out.postMessage(
+          {
+            type: "extract_snapshot_result",
+            id: message.id,
+            snapshot: result.snapshot,
+            gameStartInfo: result.gameStartInfo,
+            tick: result.tick,
+          } as ExtractSnapshotResultMessage,
+          [result.snapshot.buffer],
+        );
+      } catch (error) {
+        console.error("Failed to extract snapshot:", error);
+        out.postMessage({
+          type: "extract_snapshot_error",
+          id: message.id,
+          error: error instanceof Error ? error.message : String(error),
+        } as ExtractSnapshotErrorMessage);
+      }
       break;
     }
     default:

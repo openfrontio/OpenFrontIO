@@ -14,18 +14,17 @@ import fs from "fs";
 import http from "http";
 import path from "path";
 
-const dir: string | undefined = process.argv[2];
-const port = Number(process.argv[3] ?? 8788);
+const dir: string = process.argv[2] ?? "records";
+const port = Number(process.argv[3] ?? 8787);
 const host = process.argv[4] ?? "127.0.0.1";
-if (dir === undefined) {
-  console.error("usage: stub-game-api.mts <dir> [port] [host]");
-  process.exit(1);
+if (!fs.existsSync(dir)) {
+  fs.mkdirSync(dir, { recursive: true });
 }
 
 http
   .createServer((req, res) => {
     // The dev client fetches records from another origin (localhost:9000).
-    res.setHeader("Access-Control-Allow-Origin", "*");
+    res.setHeader("Access-Control-Allow-Origin", "http://localhost:9000");
     // The client-side replay's fetch (JoinLobbyModal) sends Content-Type,
     // so the browser asks first. Without this answer it blocks the fetch.
     if (req.method === "OPTIONS") {

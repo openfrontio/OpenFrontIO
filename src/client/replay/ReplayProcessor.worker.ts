@@ -24,12 +24,13 @@ function send(msg: ProcessorResponse, transfer: Transferable[] = []): void {
 }
 
 ctx.addEventListener("message", (e: MessageEvent<ProcessorRequest>) => {
-  const { record, cdnBase, engine } = e.data;
+  const req = e.data;
   // Workers have no `window`, so AssetUrls reads the CDN base from here
   // (same as Worker.worker.ts).
-  globalThis.__CDN_BASE__ = cdnBase;
-  processGameRecord(record, {
-    engine: (gameStart, map) => startWorkerEngine(engine, gameStart, map),
+  globalThis.__CDN_BASE__ = req.cdnBase;
+
+  processGameRecord(req.record, {
+    engine: (gameStart, map) => startWorkerEngine(req.engine, gameStart, map),
     mapLoader,
     gzip: gzipInBrowser,
     onProgress: (p) => send({ type: "progress", percent: p.percent }),
