@@ -361,6 +361,7 @@ export class BuildMenu extends LitElement implements Controller {
       return false;
     }
     const unit = this.playerBuildables.find((u) => u.type === item.unitType);
+    if (this.uiState.preventStacking) return !!unit && unit.canBuild !== false;
     return unit ? unit.canBuild !== false || unit.canUpgrade !== false : false;
   }
 

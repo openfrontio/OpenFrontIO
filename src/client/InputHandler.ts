@@ -885,7 +885,8 @@ export class InputHandler {
     window.addEventListener(
       "keyup",
       (e) => {
-        if (e.code === this.parseKeybind(this.keybinds.preventStacking).code) {
+        const hold = this.parseKeybind(this.keybinds.preventStacking);
+        if (e.code === hold.code || (hold.shift && !e.shiftKey)) {
           this.uiState.preventStacking = false;
         }
         const isTextInput = this.isTextInputTarget(e.target);
