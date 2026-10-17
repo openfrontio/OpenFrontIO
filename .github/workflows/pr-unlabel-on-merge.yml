@@ -1,0 +1,43 @@
+name: 🏷️ PR Unlabel on Merge
+
+on:
+  pull_request_target:
+    types: [closed]
+
+permissions:
+  pull-requests: write
+
+jobs:
+  unlabel:
+    name: Remove ready-for-review label
+    if: github.event.pull_request.merged == true
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Remove ready-for-review label if present
+        uses: actions/github-script@v9
+        with:
+          script: |
+            const pr = context.payload.pull_request;
+            const labelName = 'ready-for-review';
+            const hasLabel = pr.labels?.some((l) => l.name === labelName);
+            if (!hasLabel) {
+              core.info(`PR #${pr.number} does not have "${labelName}" label, skipping`);
+              return;
+            }
+
+            try {
+              await github.rest.issues.removeLabel({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: pr.number,
+                name: labelName,
+              });
+              core.info(`Removed "${labelName}" label from merged PR #${pr.number}`);
+            } catch (error) {
+              if (error.status === 404) {
+                core.info(`Label "${labelName}" was already removed from PR #${pr.number}`);
+                return;
+              }
+              throw error;
+            }
