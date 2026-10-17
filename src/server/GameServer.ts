@@ -2004,7 +2004,10 @@ export class GameServer {
     // The record as of now; the game may run on while the replay does.
     const turns = this.turns.slice();
     const endTime = Date.now();
-    this.log.warn(
+    // A lone voter is the common case (the loser leaves without voting) and
+    // its replay almost always agrees, so it logs at info; the replay result
+    // still warns when it overturns the vote.
+    this.log[reason === "lone voter" ? "info" : "warn"](
       {
         disputed: "winner vote disputed, replaying game",
         "lone voter": "winner vote decided by one IP, replaying game",
