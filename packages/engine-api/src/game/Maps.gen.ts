@@ -321,6 +321,7 @@ export const maps: readonly MapInfo[] = [
     teamFrequency: -1,
     specialFrequency: -1,
     defaultNationCount: 30,
+    themes: ["antarctica"],
   },
   {
     id: "ArchipelagoSea",
@@ -868,6 +869,7 @@ export const maps: readonly MapInfo[] = [
     teamFrequency: -1,
     specialFrequency: -1,
     defaultNationCount: 9,
+    themes: ["antarctica"],
   },
   {
     id: "Didier",

@@ -1876,14 +1876,6 @@ export class GameServer {
     clientID: ClientID,
     reasonKey: string = KICK_REASON_DUPLICATE_SESSION,
   ): void {
-    if (this.isKicked(clientID)) {
-      this.log.warn(`cannot kick client, already kicked`, {
-        clientID,
-        reasonKey,
-      });
-      return;
-    }
-
     const client = this.clients.get(clientID);
     if (!client) {
       this.log.warn(`cannot kick client, not found in game`, {
@@ -1894,15 +1886,28 @@ export class GameServer {
     }
 
     // The persistentID is banned whether or not the client is still
-    // connected; only a connected one is told and cut off.
-    if (this.clients.kick(client)) {
+    // connected; every connected session holding it is told and cut off.
+    // An already-banned persistentID is not proof that nothing holds it: a
+    // duplicate session admitted alongside this record must still go.
+    const alreadyKicked = this.isKicked(clientID);
+    const dropped = this.clients.kick(client);
+    if (dropped.length === 0) {
+      this.log.warn(
+        alreadyKicked
+          ? `cannot kick client, already kicked`
+          : `cannot kick client, not found in game`,
+        { clientID, reasonKey },
+      );
+      return;
+    }
+    for (const c of dropped) {
       this.log.info("Kicking client from game", {
-        clientID: client.clientID,
-        persistentID: client.persistentID,
+        clientID: c.clientID,
+        persistentID: c.persistentID,
         reasonKey,
       });
-      if (client.ws.readyState === WebSocket.OPEN) {
-        client.ws.send(
+      if (c.ws.readyState === WebSocket.OPEN) {
+        c.ws.send(
           encodeServerMessage(
             {
               type: "error",
@@ -1911,13 +1916,8 @@ export class GameServer {
             this.zbinCtx,
           ),
         );
-        client.ws.close(CloseCode.Normal, reasonKey);
+        c.ws.close(CloseCode.Normal, reasonKey);
       }
-    } else {
-      this.log.warn(`cannot kick client, not found in game`, {
-        clientID,
-        reasonKey,
-      });
     }
   }
 

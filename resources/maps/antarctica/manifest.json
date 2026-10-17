@@ -184,5 +184,6 @@
       "name": "Glaciar Union"
     }
   ],
+  "themes": ["antarctica"],
   "translation_key": "map.antarctica"
 }
