@@ -7,6 +7,7 @@ export { GLUnavailableError, showGLGate, trackGLInit } from "./initGL";
 export { MapRenderer } from "./MapRenderer";
 export { preloadAtlasData } from "./passes/name-pass/AtlasData";
 export type { SpawnCenter } from "./passes/SpawnOverlayPass";
+export type { TeamMarker } from "./passes/TeamMarkerPass";
 export { applyGraphicsOverrides } from "./RenderOverrides";
 export { createRenderSettings, dumpSettings } from "./RenderSettings";
 export type { RenderSettings } from "./RenderSettings";
