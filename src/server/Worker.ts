@@ -1,4 +1,8 @@
-import { ID, isValidGameID } from "@openfront/engine-api/Schemas";
+import {
+  ID,
+  isValidGameID,
+  MAX_USERNAME_LENGTH,
+} from "@openfront/engine-api/Schemas";
 import { CloseCode, CloseReason } from "@openfront/shared/CloseCodes";
 import { GameEnv } from "@openfront/shared/configuration/Env";
 import { generateID, replacer } from "@openfront/shared/SharedUtil";
@@ -37,7 +41,12 @@ import { gameApiCors } from "./GameApiCors";
 import { GameManager } from "./GameManager";
 import { registerGamePreviewRoute } from "./GamePreviewRoute";
 import { GamePhase, type GameServer } from "./GameServer";
-import { isSteamAuthenticated, planJoinVerify, verifyJoin } from "./JoinVerify";
+import {
+  isSteamAuthenticated,
+  type JoinVerifyResponse,
+  planJoinVerify,
+  verifyJoin,
+} from "./JoinVerify";
 import { getUserMe, userMeFailureClose, verifyClientToken } from "./jwt";
 import { levelBadgeForPlayer } from "./LevelBadge";
 import { payForLobbyQueue, queueListedLobby } from "./LobbyQueuePayment";
@@ -62,6 +71,42 @@ import { stripWorkerPrefix } from "./WorkerPathPrefix";
 const workerId = ServerEnv.workerId() ?? 0;
 const log = logger.child({ comp: `w_${workerId}` });
 const playlist = new MapPlaylist();
+
+export function clampApprovedUsername(username: string): string {
+  return username.length > MAX_USERNAME_LENGTH
+    ? username.slice(0, MAX_USERNAME_LENGTH).trim()
+    : username;
+}
+
+export function resolveJoinVerdict(
+  verdict: JoinVerifyResponse,
+  fallback: { username: string; clanTag: string | null },
+):
+  | { action: "admit"; username: string; clanTag: string | null }
+  | { action: "reject"; reason: string } {
+  switch (verdict.status) {
+    case "approved":
+      return {
+        action: "admit",
+        username: clampApprovedUsername(verdict.username),
+        clanTag: verdict.clanTag,
+      };
+    case "rejected":
+      return {
+        action: "reject",
+        reason: verdict.reason,
+      };
+    case "error": {
+      return {
+        action: "admit",
+        username: verdict.identity
+          ? clampApprovedUsername(verdict.identity.username)
+          : fallback.username,
+        clanTag: verdict.identity ? verdict.identity.clanTag : fallback.clanTag,
+      };
+    }
+  }
+}
 
 // Worker setup
 export async function startWorker() {
@@ -669,41 +714,32 @@ export async function startWorker() {
               clientMsg.username,
               clientMsg.clanTag ?? null,
             );
-            switch (verdict.status) {
-              case "approved":
-                username = verdict.username;
-                clanTag = verdict.clanTag;
-                break;
-              case "rejected":
-                // Only reachable on first joins: re-admits omit the token,
-                // which the API always approves.
-                log.warn("Unauthorized: Turnstile token rejected", {
-                  persistentID: persistentId,
-                  gameID: clientMsg.gameID,
-                  reason: verdict.reason,
-                });
-                ws.close(CloseCode.Unauthorized, CloseReason.TurnstileFailed);
-                return;
-              case "error": {
-                // Fail open: the API's screened identity when its name check
-                // finished, otherwise the locally screened name stands.
-                if (verdict.identity) {
-                  username = verdict.identity.username;
-                  clanTag = verdict.identity.clanTag;
-                }
-                // A degraded verdict is the API answering within its budget
-                // with a leg missing; only an unreachable or broken API is
-                // an error.
-                const fields = {
-                  persistentID: persistentId,
-                  gameID: clientMsg.gameID,
-                  reason: verdict.reason,
-                };
-                if (verdict.degraded) {
-                  log.warn("join_verify degraded", fields);
-                } else {
-                  log.error("join_verify error", fields);
-                }
+            const resolved = resolveJoinVerdict(verdict, {
+              username,
+              clanTag,
+            });
+            if (resolved.action === "reject") {
+              log.warn("Unauthorized: Turnstile token rejected", {
+                persistentID: persistentId,
+                gameID: clientMsg.gameID,
+                reason: resolved.reason,
+              });
+              ws.close(CloseCode.Unauthorized, CloseReason.TurnstileFailed);
+              return;
+            }
+            username = resolved.username;
+            clanTag = resolved.clanTag;
+
+            if (verdict.status === "error") {
+              const fields = {
+                persistentID: persistentId,
+                gameID: clientMsg.gameID,
+                reason: verdict.reason,
+              };
+              if (verdict.degraded) {
+                log.warn("join_verify degraded", fields);
+              } else {
+                log.error("join_verify error", fields);
               }
             }
           } else {
