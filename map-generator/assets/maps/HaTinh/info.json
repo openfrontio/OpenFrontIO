@@ -1,7 +1,7 @@
 {
-  "id": "HaTinh",
-  "name": "HaTinh",
-  "translation_key": "map.ha_tinh",
+  "id": "hatinh",
+  "name": "hatinh",
+  "translation_key": "map.hatinh",
   "categories": ["asia", "countries"],
   "multiplayer_frequency": 0,
   "nations": []
