@@ -84,7 +84,6 @@ export class LobbyPresetControls extends LitElement {
         composed: true,
       }),
     );
-    this.selectedName = name;
   }
 
   render() {

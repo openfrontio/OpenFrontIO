@@ -459,6 +459,7 @@ describe("<lobby-preset-controls> component", () => {
 
     saveBtn.click();
     expect(savedName).toBe("New Custom Preset");
+    expect(element.selectedName).toBe("");
   });
 
   it("does not dispatch preset-save if name input is empty or whitespace", async () => {
