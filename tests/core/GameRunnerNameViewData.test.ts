@@ -59,7 +59,7 @@ test("bot and tribe names are placed during the spawn phase", async () => {
     config: config({ gameMap: GameMapType.Onion, bots: 3 }),
     players: [human(1)],
   });
-  let spawnPhaseBotNameCount = 0;
+  const namedBotIDs = new Set<string>();
   const map = await loadMapFiles(
     mapLoader,
     start.config.gameMap,
@@ -77,7 +77,7 @@ test("bot and tribe names are placed during the spawn phase", async () => {
           .filter((p) => p.type() === PlayerType.Bot);
         for (const bot of bots) {
           if (gu.playerNameViewData[bot.id()] !== undefined) {
-            spawnPhaseBotNameCount++;
+            namedBotIDs.add(bot.id());
           }
         }
       }
@@ -90,7 +90,7 @@ test("bot and tribe names are placed during the spawn phase", async () => {
   expect(runner.executeNextTick()).toBe(true);
 
   expect(runner.game.inSpawnPhase()).toBe(true);
-  expect(spawnPhaseBotNameCount).toBe(3);
+  expect(namedBotIDs.size).toBe(3);
 
   runner.addTurn({ turnNumber: 2, intents: [] });
   expect(runner.executeNextTick()).toBe(true);

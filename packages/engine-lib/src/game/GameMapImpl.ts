@@ -474,12 +474,12 @@ export class GameMapImpl implements GameMap {
     filter: (gm: GameMap, tile: TileRef) => boolean,
     onVisit?: (tile: TileRef) => boolean | void,
   ): boolean {
-    if (!filter(this, tile)) return true;
     if (this.inBfs) {
       throw new Error("Re-entrant bfsSearch is not supported");
     }
     this.inBfs = true;
     try {
+      if (!filter(this, tile)) return true;
       const gen = this.bumpBfsGeneration();
       const q = this.bfsQueue;
       q.length = 0;
@@ -489,9 +489,7 @@ export class GameMapImpl implements GameMap {
       let head = 0;
       while (head < q.length) {
         const curr = q[head++];
-        if (onVisit && onVisit(curr) === false) {
-          return false;
-        }
+        if (onVisit && onVisit(curr) === false) return false;
         this.expandNeighbors(curr, gen, filter);
       }
       return true;
