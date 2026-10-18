@@ -146,14 +146,33 @@ describe("o-modal scroll-to-top", () => {
     expect(scrolledTo).toBe(true);
     expect(modal.shadowRoot!.querySelector("button[aria-label]")).toBeNull();
 
-    // Suppressed during scroll animation
+    // Suppressed during upward scroll animation (scrollTop moving from 300 to 250)
+    Object.defineProperty(scrollEl, "scrollTop", {
+      value: 250,
+      writable: true,
+    });
     scrollEl.dispatchEvent(new Event("scroll"));
     await modal.updateComplete;
     expect(modal.shadowRoot!.querySelector("button[aria-label]")).toBeNull();
 
-    // Reaches top
-    Object.defineProperty(scrollEl, "scrollTop", { value: 0, writable: true });
+    // User interrupts by reversing direction (scrolling down to 300): button reappears immediately
+    Object.defineProperty(scrollEl, "scrollTop", {
+      value: 300,
+      writable: true,
+    });
     scrollEl.dispatchEvent(new Event("scroll"));
+    await modal.updateComplete;
+    const interruptedBtn =
+      modal.shadowRoot!.querySelector<HTMLButtonElement>("button[aria-label]")!;
+    expect(interruptedBtn).not.toBeNull();
+
+    // Click again and test scrollend
+    interruptedBtn.click();
+    await modal.updateComplete;
+    expect(modal.shadowRoot!.querySelector("button[aria-label]")).toBeNull();
+
+    // scrollend clears scrollingToTop flag
+    scrollEl.dispatchEvent(new Event("scrollend"));
     await modal.updateComplete;
 
     // Scrolling down again spawns button

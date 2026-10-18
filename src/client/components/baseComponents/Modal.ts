@@ -45,12 +45,14 @@ export class OModal extends LitElement {
   @property({ type: Boolean }) public showScrollToTop = false;
   @state() private showScrollTopButton = false;
   private scrollingToTop = false;
+  private lastScrollTop = 0;
 
   public onClose?: () => void;
 
   public resetScrollToTop(): void {
     this.scrollingToTop = false;
     this.showScrollTopButton = false;
+    this.lastScrollTop = 0;
   }
 
   public open() {
@@ -109,18 +111,29 @@ export class OModal extends LitElement {
   private handleScroll(e: Event) {
     if (!this.showScrollToTop) return;
     const target = e.currentTarget as HTMLElement;
+    const { scrollTop } = target;
     if (this.scrollingToTop) {
-      if (target.scrollTop <= 200) {
+      if (scrollTop > this.lastScrollTop || scrollTop <= 200) {
         this.scrollingToTop = false;
+      } else {
+        this.lastScrollTop = scrollTop;
+        return;
       }
-      return;
     }
-    this.showScrollTopButton = target.scrollTop > 200;
+    this.lastScrollTop = scrollTop;
+    this.showScrollTopButton = scrollTop > 200;
+  }
+
+  private handleScrollEnd(e: Event) {
+    if (!this.showScrollToTop) return;
+    this.scrollingToTop = false;
+    this.showScrollTopButton = (e.currentTarget as HTMLElement).scrollTop > 200;
   }
 
   private scrollToTop() {
     this.scrollingToTop = true;
     this.showScrollTopButton = false;
+    this.lastScrollTop = this.scrollContainer?.scrollTop ?? 0;
     this.scrollContainer?.scrollTo({ top: 0, behavior: "smooth" });
   }
 
@@ -229,6 +242,7 @@ export class OModal extends LitElement {
             <div
               data-modal-scroll
               @scroll=${this.handleScroll}
+              @scrollend=${this.handleScrollEnd}
               class="flex-1 min-h-0 overflow-y-auto"
             >
               <slot></slot>
