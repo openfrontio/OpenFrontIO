@@ -989,12 +989,18 @@ export class JoinLobbyModal extends BaseModal {
     // replay shells, and the loop-guarded cases, fall through -- the whole
     // rule lives in redirectToGameVersion.
     if (redirectToGameVersion(lobbyId, spectator)) return true;
-    const url = `${ClientEnv.gameHttpBase(lobbyId)}/${ClientEnv.gameWorkerPath(lobbyId)}/api/game/${lobbyId}/exists`;
 
-    const response = await fetch(url, {
-      method: "GET",
-      headers: { "Content-Type": "application/json" },
-    });
+    let response: Response;
+    try {
+      const url = `${ClientEnv.gameHttpBase(lobbyId)}/${ClientEnv.gameWorkerPath(lobbyId)}/api/game/${lobbyId}/exists`;
+      response = await fetch(url, {
+        method: "GET",
+        headers: { "Content-Type": "application/json" },
+      });
+    } catch {
+      // Game server is unreachable, dead, or blocked by CORS: lobby is not active.
+      return false;
+    }
 
     if (!response.ok) {
       return false;

@@ -456,3 +456,78 @@ describe("JoinLobbyModal map preview", () => {
     expect(tags({ infiniteGold: true, instantBuild: true })).toBe(tags({}) + 2);
   });
 });
+
+describe("JoinLobbyModal checkActiveLobby resilience", () => {
+  beforeEach(() => {
+    (window as any).BOOTSTRAP_CONFIG = {
+      gameEnv: "prod",
+      numWorkers: 1,
+      turnstileSiteKey: "x",
+      jwtAudience: "openfront.io",
+      instanceId: "test",
+      gitCommit: "test",
+      serverHost: "blue.openfront.io",
+    };
+  });
+
+  afterEach(() => {
+    delete (window as any).BOOTSTRAP_CONFIG;
+    vi.restoreAllMocks();
+  });
+
+  it("returns false instead of throwing when /exists fetch throws", async () => {
+    const modal = new JoinLobbyModal();
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
+      const url = String(input);
+      if (url.includes("/exists")) {
+        throw new TypeError("Failed to fetch");
+      }
+      return new Response(JSON.stringify({ servers: {} }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      });
+    });
+
+    const result = await (modal as any).checkActiveLobby("AbCd1234");
+    expect(result).toBe(false);
+  });
+
+  it("returns false instead of throwing when resolving the server throws", async () => {
+    const modal = new JoinLobbyModal();
+    (window as any).BOOTSTRAP_CONFIG = {
+      gameEnv: "prod",
+      turnstileSiteKey: "x",
+      jwtAudience: "openfront.io",
+      instanceId: "test",
+      gitCommit: "test",
+    };
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(JSON.stringify({ servers: {} }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      }),
+    );
+
+    const result = await (modal as any).checkActiveLobby("AbCd1234");
+    expect(result).toBe(false);
+  });
+
+  it("falls through to checkArchivedGame when /exists fetch throws during handleUrlJoin", async () => {
+    const modal = new JoinLobbyModal();
+    (modal as any).startTrackingLobby = vi.fn();
+    (modal as any).checkArchivedGame = vi.fn().mockResolvedValue("success");
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
+      const url = String(input);
+      if (url.includes("/exists")) {
+        throw new TypeError("Failed to fetch");
+      }
+      return new Response(JSON.stringify({ servers: {} }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      });
+    });
+
+    await (modal as any).handleUrlJoin("AbCd1234");
+    expect((modal as any).checkArchivedGame).toHaveBeenCalledWith("AbCd1234");
+  });
+});
