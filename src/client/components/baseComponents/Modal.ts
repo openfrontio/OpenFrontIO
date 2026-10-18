@@ -41,6 +41,9 @@ export class OModal extends LitElement {
   @property({ attribute: false })
   public onTabChange?: (key: string) => void;
 
+  @property({ type: Boolean }) public showScrollToTop = false;
+  @state() private showScrollTopButton = false;
+
   public onClose?: () => void;
 
   public open() {
@@ -56,6 +59,7 @@ export class OModal extends LitElement {
   public close() {
     if (this.isModalOpen) {
       this.isModalOpen = false;
+      this.showScrollTopButton = false;
       this.onClose?.();
       if (!this.inline) {
         OModal.openCount = Math.max(0, OModal.openCount - 1);
@@ -93,6 +97,18 @@ export class OModal extends LitElement {
     if (this.scrollContainer) {
       this.scrollContainer.scrollTop = scrollTop;
     }
+  }
+
+  private handleScroll(e: Event) {
+    if (this.showScrollToTop) {
+      this.showScrollTopButton =
+        (e.currentTarget as HTMLElement).scrollTop > 200;
+    }
+  }
+
+  private scrollToTop() {
+    this.scrollContainer?.scrollTo({ top: 0, behavior: "smooth" });
+    this.showScrollTopButton = false;
   }
 
   disconnectedCallback() {
@@ -197,9 +213,34 @@ export class OModal extends LitElement {
           <section class="${sectionClass}">
             <slot name="header"></slot>
             ${hasTabs ? this.renderTabs() : html``}
-            <div data-modal-scroll class="flex-1 min-h-0 overflow-y-auto">
+            <div
+              data-modal-scroll
+              @scroll=${this.handleScroll}
+              class="flex-1 min-h-0 overflow-y-auto"
+            >
               <slot></slot>
             </div>
+            ${this.showScrollToTop && this.showScrollTopButton
+              ? html`<button
+                  type="button"
+                  aria-label="Scroll to top"
+                  class="absolute bottom-4 right-4 z-20 flex h-10 w-10 items-center justify-center rounded-full bg-black/80 border border-white/20 text-white shadow-lg backdrop-blur-md transition-all hover:bg-white/20 active:scale-95 cursor-pointer"
+                  @click=${this.scrollToTop}
+                >
+                  <svg
+                    class="h-5 w-5 stroke-2"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                  >
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      d="M12 19V5M5 12l7-7 7 7"
+                    />
+                  </svg>
+                </button>`
+              : html``}
           </section>
         </div>
       </aside>

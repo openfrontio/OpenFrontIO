@@ -18,6 +18,7 @@ export interface ModalConfig {
   alwaysMaximized?: boolean;
   maxWidth?: string;
   hideTabs?: boolean;
+  showScrollToTop?: boolean;
 }
 
 /**
@@ -148,6 +149,7 @@ export abstract class BaseModal extends LitElement {
         ?hideCloseButton=${cfg.hideCloseButton ?? true}
         ?alwaysMaximized=${cfg.alwaysMaximized ?? false}
         maxWidth=${cfg.maxWidth ?? ""}
+        ?showScrollToTop=${cfg.showScrollToTop ?? false}
         .tabs=${cfg.hideTabs ? [] : tabs}
         .activeTab=${this.activeTab}
         .onTabChange=${(key: string) => this.setActiveTab(key)}
