@@ -106,6 +106,17 @@ describe("GameMap BFS & bfsSearch", () => {
     }).toThrow("Re-entrant bfsSearch is not supported");
   });
 
+  it("throws on re-entrant bfsSearch calls from within filter", () => {
+    const map = createMap();
+
+    expect(() => {
+      map.bfsSearch(12, (gm) => {
+        gm.bfsSearch(0, () => true);
+        return true;
+      });
+    }).toThrow("Re-entrant bfsSearch is not supported");
+  });
+
   it("bfs returns a TileSet with all matching tiles", () => {
     const map = createMap();
     const tiles = map.bfs(12, (gm, t) => gm.manhattanDist(12, t) <= 1);
