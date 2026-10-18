@@ -43,6 +43,7 @@ import {
   GameMode,
   GameType,
 } from "@openfront/engine-api/game/GameTypes";
+import { ClientEnv } from "../../src/client/ClientEnv";
 import { JoinLobbyModal } from "../../src/client/JoinLobbyModal";
 import { UserSettings } from "../../src/client/UserSettings";
 
@@ -459,6 +460,7 @@ describe("JoinLobbyModal map preview", () => {
 
 describe("JoinLobbyModal checkActiveLobby resilience", () => {
   beforeEach(() => {
+    ClientEnv.reset();
     (window as any).BOOTSTRAP_CONFIG = {
       gameEnv: "prod",
       numWorkers: 1,
@@ -472,6 +474,7 @@ describe("JoinLobbyModal checkActiveLobby resilience", () => {
 
   afterEach(() => {
     delete (window as any).BOOTSTRAP_CONFIG;
+    ClientEnv.reset();
     vi.restoreAllMocks();
   });
 
@@ -493,6 +496,7 @@ describe("JoinLobbyModal checkActiveLobby resilience", () => {
   });
 
   it("returns false instead of throwing when resolving the server throws", async () => {
+    ClientEnv.reset();
     const modal = new JoinLobbyModal();
     (window as any).BOOTSTRAP_CONFIG = {
       gameEnv: "prod",
@@ -507,9 +511,15 @@ describe("JoinLobbyModal checkActiveLobby resilience", () => {
         headers: { "Content-Type": "application/json" },
       }),
     );
+    const gameHttpBaseSpy = vi
+      .spyOn(ClientEnv, "gameHttpBase")
+      .mockImplementation(() => {
+        throw new Error("server resolution failed");
+      });
 
     const result = await (modal as any).checkActiveLobby("AbCd1234");
     expect(result).toBe(false);
+    expect(gameHttpBaseSpy).toHaveBeenCalledWith("AbCd1234");
   });
 
   it("falls through to checkArchivedGame when /exists fetch throws during handleUrlJoin", async () => {
