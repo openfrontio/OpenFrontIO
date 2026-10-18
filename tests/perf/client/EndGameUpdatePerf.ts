@@ -41,6 +41,7 @@ import {
 } from "@openfront/engine-api/game/GameUpdates";
 import { GameConfig, GameStartInfo } from "@openfront/engine-api/Schemas";
 import { Config } from "@openfront/engine-lib/configuration/Config";
+import { UNIT_UPDATE_STRIDE } from "@openfront/engine-lib/game/PackedUnitUpdates";
 import { loadTerrainMap } from "@openfront/engine-lib/game/TerrainMapLoader";
 import { CityExecution } from "@openfront/engine/execution/CityExecution";
 import { FactoryExecution } from "@openfront/engine/execution/FactoryExecution";
@@ -643,7 +644,9 @@ async function main(): Promise<void> {
 
     const gu: GameUpdateViewData = currentGu;
     tileUpdatesTotal += gu.packedTileUpdates.length / 2;
-    if (gu.updates[GameUpdateType.Unit]) {
+    if (gu.packedUnitUpdates) {
+      unitUpdatesTotal += gu.packedUnitUpdates.length / UNIT_UPDATE_STRIDE;
+    } else if (gu.updates[GameUpdateType.Unit]) {
       unitUpdatesTotal += gu.updates[GameUpdateType.Unit].length;
     }
     const hashes = gu.updates[GameUpdateType.Hash] as HashUpdate[];
@@ -658,12 +661,8 @@ async function main(): Promise<void> {
     if (gu.packedMotionPlans) transfers.push(gu.packedMotionPlans.buffer);
     if (gu.packedPlayerUpdates) transfers.push(gu.packedPlayerUpdates.buffer);
     if (gu.packedAttackUpdates) transfers.push(gu.packedAttackUpdates.buffer);
-    const packedUnits = (gu as { packedUnitUpdates?: Float64Array })
-      .packedUnitUpdates;
-    if (packedUnits) transfers.push(packedUnits.buffer);
-    const packedTimers = (gu as { packedMissileTimers?: Uint32Array })
-      .packedMissileTimers;
-    if (packedTimers) transfers.push(packedTimers.buffer);
+    if (gu.packedUnitUpdates) transfers.push(gu.packedUnitUpdates.buffer);
+    if (gu.packedMissileTimers) transfers.push(gu.packedMissileTimers.buffer);
 
     start = performance.now();
     const cloned = structuredClone(gu, { transfer: transfers });

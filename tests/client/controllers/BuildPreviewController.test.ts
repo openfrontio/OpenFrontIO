@@ -960,6 +960,7 @@ describe("BuildPreviewController Single-Flight Coalescing Guard with Tile-Change
     const userSettings = {
       nukeAllianceSafetyDuration: () => 0,
       cursorCostLabel: () => false,
+      snapBuildPreview: () => false,
     };
 
     const eventBus = new EventBus();

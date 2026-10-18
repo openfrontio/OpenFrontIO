@@ -46,6 +46,7 @@ import {
 } from "@openfront/engine-api/game/GameUpdates";
 import { GameConfig, GameStartInfo } from "@openfront/engine-api/Schemas";
 import { Config } from "@openfront/engine-lib/configuration/Config";
+import { UNIT_UPDATE_STRIDE } from "@openfront/engine-lib/game/PackedUnitUpdates";
 import { loadTerrainMap } from "@openfront/engine-lib/game/TerrainMapLoader";
 import { createGameRunner } from "@openfront/engine/GameRunner";
 import { loadMapFiles } from "@openfront/shared/GameMapLoader";
@@ -417,7 +418,9 @@ async function main(): Promise<void> {
     tilePairsByTick.set(tick, pairs);
     totalTilePairs += pairs;
     maxTilePairs = Math.max(maxTilePairs, pairs);
-    unitUpdatesTotal += gu.updates[GameUpdateType.Unit].length;
+    unitUpdatesTotal += gu.packedUnitUpdates
+      ? gu.packedUnitUpdates.length / UNIT_UPDATE_STRIDE
+      : gu.updates[GameUpdateType.Unit].length;
     playerUpdatesTotal += gu.updates[GameUpdateType.Player].length;
 
     // Same transfer list as Worker.worker.ts sendGameUpdateBatch().
@@ -430,6 +433,12 @@ async function main(): Promise<void> {
     }
     if (gu.packedAttackUpdates) {
       transfers.push(gu.packedAttackUpdates.buffer);
+    }
+    if (gu.packedUnitUpdates) {
+      transfers.push(gu.packedUnitUpdates.buffer);
+    }
+    if (gu.packedMissileTimers) {
+      transfers.push(gu.packedMissileTimers.buffer);
     }
     start = performance.now();
     const cloned = structuredClone(gu, { transfer: transfers });

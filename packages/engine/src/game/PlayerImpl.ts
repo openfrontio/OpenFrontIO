@@ -1739,11 +1739,10 @@ export class PlayerImpl implements Player {
       undefined,
       true,
     );
-    // Flood the player's own tiles inside the radius. Same traversal as
-    // GameMap.bfs (stack, N/S/W/E push order) so `nearbyTiles` comes out in
-    // the same order — the stable sort below keeps that order for ties and
-    // callers take the first entry — but on the shared visited array instead
-    // of a Set per call (nation placement calls this per candidate tile).
+    // Flood the player's own tiles inside the radius using its own scratch
+    // stack (N/S/W/E push order) on the shared visited array instead of a
+    // Set per call (nation placement calls this per candidate tile). The
+    // stable sort below keeps that order for ties and callers take the first entry.
     const map = this.mg.map();
     const w = map.width();
     const cx = tile % w;
