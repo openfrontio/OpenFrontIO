@@ -1147,6 +1147,10 @@ export class UserSettings {
     return this.getString(GRAPHICS_PRESETS_KEY, "") !== "";
   }
 
+  /**
+   * Retrieves and parses the player's saved lobby configuration presets directly from storage.
+   * Returns an empty array if storage access fails, key is unset, or validation fails.
+   */
   getLobbyPresets(): LobbyPreset[] {
     try {
       const storageKey = this.storageKey(LOBBY_PRESETS_KEY);
@@ -1158,6 +1162,10 @@ export class UserSettings {
     }
   }
 
+  /**
+   * Persists the given array of lobby presets to storage. Clears the key if empty.
+   * Returns true on successful write, or false if storage access fails.
+   */
   setLobbyPresets(presets: readonly LobbyPreset[]): boolean {
     try {
       if (presets.length === 0) {

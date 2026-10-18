@@ -70,6 +70,10 @@ export const LobbyPresetSchema = z.object({
 
 export type LobbyPreset = z.infer<typeof LobbyPresetSchema>;
 
+/**
+ * Safely parses raw JSON from storage into an array of validated LobbyPreset objects.
+ * Returns an empty array if parsing fails, input is null/empty, or no valid presets exist.
+ */
 export function parseLobbyPresetsJson(rawJson: string | null): LobbyPreset[] {
   if (!rawJson) return [];
   try {
@@ -88,6 +92,11 @@ export function parseLobbyPresetsJson(rawJson: string | null): LobbyPreset[] {
   }
 }
 
+/**
+ * Saves or updates a named lobby preset in user settings.
+ * Trims and clamps the preset name, updates an existing preset (case-insensitive) or appends a new one,
+ * and persists the updated list. Returns the updated preset list or null if saving fails.
+ */
 export function saveLobbyPreset(
   name: string,
   config: LobbyPresetConfig,
@@ -122,6 +131,10 @@ export function saveLobbyPreset(
   return success ? newPresets : null;
 }
 
+/**
+ * Deletes a named lobby preset from user settings (case-insensitive).
+ * Persists the updated preset list and returns it, or returns null if the deletion could not be saved.
+ */
 export function deleteLobbyPreset(
   name: string,
   userSettings: UserSettings,
