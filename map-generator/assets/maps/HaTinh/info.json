@@ -1,0 +1,8 @@
+{
+  "id": "Ha_Tinh",
+  "name": "Ha Tinh",
+  "translation_key": "map.ha_tinh",
+  "categories": ["asia", "countries"],
+  "multiplayer_frequency": 0,
+  "nations": []
+}
