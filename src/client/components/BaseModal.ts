@@ -239,6 +239,7 @@ export abstract class BaseModal extends LitElement {
 
     if (this.inline) {
       this.style.pointerEvents = "none";
+      this.modalEl?.resetScrollToTop();
       if (window.showPage) {
         window.showPage?.("page-play");
       }

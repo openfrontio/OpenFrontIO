@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it } from "vitest";
 import "../../../src/client/components/baseComponents/Modal";
 import type { OModal } from "../../../src/client/components/baseComponents/Modal";
+import { BaseModal } from "../../../src/client/components/BaseModal";
 
 const tabs = ["stats", "games", "clans", "progression"].map((key) => ({
   key,
@@ -113,5 +114,99 @@ describe("o-modal tab row", () => {
     modal.activeTab = "progression";
     await modal.updateComplete;
     expect(row.scrollLeft).toBe(0);
+  });
+});
+
+describe("o-modal scroll-to-top", () => {
+  it("spawns when scrolled down, has localized aria-label, and resets", async () => {
+    const modal = await render("stats");
+    modal.showScrollToTop = true;
+    const scrollEl = modal.shadowRoot!.querySelector<HTMLElement>(
+      "[data-modal-scroll]",
+    )!;
+    Object.defineProperty(scrollEl, "scrollTop", {
+      value: 300,
+      writable: true,
+    });
+    scrollEl.dispatchEvent(new Event("scroll"));
+    await modal.updateComplete;
+
+    const btn =
+      modal.shadowRoot!.querySelector<HTMLButtonElement>("button[aria-label]")!;
+    expect(btn).not.toBeNull();
+    expect(btn.getAttribute("aria-label")).toBe("common.scroll_to_top");
+
+    let scrolledTo = false;
+    scrollEl.scrollTo = () => {
+      scrolledTo = true;
+    };
+    btn.click();
+    await modal.updateComplete;
+
+    expect(scrolledTo).toBe(true);
+    expect(modal.shadowRoot!.querySelector("button[aria-label]")).toBeNull();
+
+    // Suppressed during scroll animation
+    scrollEl.dispatchEvent(new Event("scroll"));
+    await modal.updateComplete;
+    expect(modal.shadowRoot!.querySelector("button[aria-label]")).toBeNull();
+
+    // Reaches top
+    Object.defineProperty(scrollEl, "scrollTop", { value: 0, writable: true });
+    scrollEl.dispatchEvent(new Event("scroll"));
+    await modal.updateComplete;
+
+    // Scrolling down again spawns button
+    Object.defineProperty(scrollEl, "scrollTop", {
+      value: 250,
+      writable: true,
+    });
+    scrollEl.dispatchEvent(new Event("scroll"));
+    await modal.updateComplete;
+    expect(
+      modal.shadowRoot!.querySelector("button[aria-label]"),
+    ).not.toBeNull();
+
+    modal.resetScrollToTop();
+    await modal.updateComplete;
+    expect(modal.shadowRoot!.querySelector("button[aria-label]")).toBeNull();
+  });
+
+  it("resets scroll-to-top when an inline modal closes", async () => {
+    class TestInlineModal extends BaseModal {
+      protected modalConfig() {
+        return { showScrollToTop: true };
+      }
+    }
+    if (!customElements.get("test-inline-scroll-modal")) {
+      customElements.define("test-inline-scroll-modal", TestInlineModal);
+    }
+    const m = document.createElement(
+      "test-inline-scroll-modal",
+    ) as TestInlineModal;
+    m.inline = true;
+    document.body.appendChild(m);
+    await m.updateComplete;
+    m.open();
+    await m.updateComplete;
+
+    const modalEl = m.renderRoot.querySelector("o-modal") as OModal;
+    await modalEl.updateComplete;
+    const scrollEl = modalEl.shadowRoot!.querySelector<HTMLElement>(
+      "[data-modal-scroll]",
+    )!;
+    Object.defineProperty(scrollEl, "scrollTop", {
+      value: 300,
+      writable: true,
+    });
+    scrollEl.dispatchEvent(new Event("scroll"));
+    await modalEl.updateComplete;
+    expect(
+      modalEl.shadowRoot!.querySelector("button[aria-label]"),
+    ).not.toBeNull();
+
+    m.close();
+    await modalEl.updateComplete;
+    expect(modalEl.shadowRoot!.querySelector("button[aria-label]")).toBeNull();
   });
 });

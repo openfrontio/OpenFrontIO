@@ -1,5 +1,6 @@
 import { LitElement, PropertyValues, html } from "lit";
 import { customElement, property, query, state } from "lit/decorators.js";
+import { translateText } from "../../Utils";
 import { documentStylesSheet } from "./SharedStyles";
 
 export type OModalTab = { key: string; label: string };
@@ -43,8 +44,14 @@ export class OModal extends LitElement {
 
   @property({ type: Boolean }) public showScrollToTop = false;
   @state() private showScrollTopButton = false;
+  private scrollingToTop = false;
 
   public onClose?: () => void;
+
+  public resetScrollToTop(): void {
+    this.scrollingToTop = false;
+    this.showScrollTopButton = false;
+  }
 
   public open() {
     if (!this.isModalOpen) {
@@ -59,7 +66,7 @@ export class OModal extends LitElement {
   public close() {
     if (this.isModalOpen) {
       this.isModalOpen = false;
-      this.showScrollTopButton = false;
+      this.resetScrollToTop();
       this.onClose?.();
       if (!this.inline) {
         OModal.openCount = Math.max(0, OModal.openCount - 1);
@@ -100,15 +107,21 @@ export class OModal extends LitElement {
   }
 
   private handleScroll(e: Event) {
-    if (this.showScrollToTop) {
-      this.showScrollTopButton =
-        (e.currentTarget as HTMLElement).scrollTop > 200;
+    if (!this.showScrollToTop) return;
+    const target = e.currentTarget as HTMLElement;
+    if (this.scrollingToTop) {
+      if (target.scrollTop <= 200) {
+        this.scrollingToTop = false;
+      }
+      return;
     }
+    this.showScrollTopButton = target.scrollTop > 200;
   }
 
   private scrollToTop() {
-    this.scrollContainer?.scrollTo({ top: 0, behavior: "smooth" });
+    this.scrollingToTop = true;
     this.showScrollTopButton = false;
+    this.scrollContainer?.scrollTo({ top: 0, behavior: "smooth" });
   }
 
   disconnectedCallback() {
@@ -223,7 +236,7 @@ export class OModal extends LitElement {
             ${this.showScrollToTop && this.showScrollTopButton
               ? html`<button
                   type="button"
-                  aria-label="Scroll to top"
+                  aria-label=${translateText("common.scroll_to_top")}
                   class="absolute bottom-4 right-4 z-20 flex h-10 w-10 items-center justify-center rounded-full bg-black/80 border border-white/20 text-white shadow-lg backdrop-blur-md transition-all hover:bg-white/20 active:scale-95 cursor-pointer"
                   @click=${this.scrollToTop}
                 >
