@@ -10,6 +10,7 @@ if (typeof globalThis.document === "undefined") {
   Object.defineProperty(globalThis, "document", {
     configurable: true,
     value: {
+      body: { children: [] },
       addEventListener: () => {},
       removeEventListener: () => {},
       dispatchEvent: () => true,
