@@ -3,7 +3,9 @@
   "name": "Ommatrypta",
   "translation_key": "map.ommatrypta",
   "categories": ["arcade", "new"],
-  "multiplayer_frequency": 10,
+  "multiplayer_frequency": 19,
+  "team_frequency": 13,
+  "special_team_count": 13,
   "nations": [
     {
       "name": "I Dont Know"
