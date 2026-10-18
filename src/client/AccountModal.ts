@@ -52,6 +52,11 @@ import { consumeLinkResult } from "./LinkResult";
 import { consumeLoginResult, LoginResult } from "./LoginResult";
 import "./PlayerProfileModal";
 import { loadPlayerProgress } from "./PlayerProgress";
+import {
+  PROVISIONAL_PROGRESS_CHANGED,
+  provisionalProgress,
+  scoredGames,
+} from "./ProvisionalProgress";
 import { steamSDK } from "./SteamSDK";
 import { playerProfileUrl } from "./utilities/PlayerProfileUrl";
 import { currentPagePath, translateText } from "./Utils";
@@ -123,6 +128,8 @@ export class AccountModal extends BaseModal {
 
   private userMeResponse: UserMeResponse | null = null;
   private statsTree: PlayerStatsTree | null = null;
+  // The card's clan tag, from the player's own profile (displayClanTag).
+  private displayClanTag: string | null = null;
   // Preserves the Games tab's accumulated list + cursor across tab switches.
   private gameHistoryCache: PlayerGameHistoryCache | null = null;
   private gamesScrollTop = 0;
@@ -130,6 +137,13 @@ export class AccountModal extends BaseModal {
 
   constructor() {
     super();
+
+    // The level shown counts XP from games still waiting to be scored, and
+    // that changed (ProvisionalProgress.ts).
+    document.addEventListener(PROVISIONAL_PROGRESS_CHANGED, (event) => {
+      if (scoredGames(event).length > 0) this.rereadProgression();
+      this.requestUpdate();
+    });
 
     document.addEventListener("userMeResponse", (event: Event) => {
       // A portal sign-in fires userMeResponse (via Main's auth listener);
@@ -183,8 +197,12 @@ export class AccountModal extends BaseModal {
       title: translateText("account_modal.title"),
       onBack: () => this.close(),
       ariaLabel: translateText("common.back"),
+      // Not on Poki: the profile link leads players off Poki.
       rightContent:
-        isLoggedIn && !this.isLoadingUser && publicId
+        isLoggedIn &&
+        !this.isLoadingUser &&
+        publicId &&
+        gamePortal.name() !== "poki"
           ? html`
               <copy-button
                 class="shrink-0"
@@ -486,8 +504,12 @@ export class AccountModal extends BaseModal {
     if (this.progression === null) {
       return this.renderLoadingSpinner(translateText("common.loading"));
     }
+    // With any XP still waiting to be scored, provisionally.
+    const view = provisionalProgress(publicId, this.progression);
     return html`<profile-progression
-      .progress=${this.progression}
+      .progress=${view.progress}
+      .confirmedLevel=${view.confirmedLevel}
+      .provisional=${view.provisional}
       .publicId=${publicId}
       .popKey=${`account-${this.openCount}`}
       @rewards-changed=${this.handleTrackRewardsChanged}
@@ -523,6 +545,22 @@ export class AccountModal extends BaseModal {
     this.progressionLoad++;
     this.progressionFor = null;
     this.progression = null;
+  }
+
+  // A pending game was scored: read the tab's progress again, for its
+  // history and milestones. The level holds meanwhile (and on a stale read):
+  // the scored game's XP counts onto any figure that doesn't include it yet
+  // (ProvisionalProgress.ts).
+  private rereadProgression(): void {
+    const publicId = this.progressionFor;
+    if (publicId === null || this.progression === null) return;
+    // Closed, it's read afresh at the next opening anyway.
+    if (!this.isConnected || !this.isOpen()) return;
+    const load = ++this.progressionLoad;
+    void loadPlayerProgress(publicId).then((progress) => {
+      if (load !== this.progressionLoad || progress === null) return;
+      this.progression = progress;
+    });
   }
 
   // The track's Claim all moved rewards into the balances. Update the
@@ -605,12 +643,16 @@ export class AccountModal extends BaseModal {
   ): TemplateResult | typeof nothing {
     const player = this.userMeResponse?.player;
     if (!player?.publicId || !player.progress) return nothing;
+    // With any XP still waiting to be scored, provisionally: it never offers
+    // Prestige (only the confirmed level can).
+    const view = provisionalProgress(player.publicId, player.progress);
     return html`<profile-card
       class=${variant === "full" ? "mb-4 block" : "block"}
       .variant=${variant}
       .username=${player.username ?? player.publicId}
-      .clanTag=${player.clans?.[0]?.tag ?? null}
-      .progress=${player.progress}
+      .clanTag=${this.displayClanTag}
+      .progress=${view.progress}
+      .provisional=${view.provisional}
       .openKey=${`account-${this.openCount}`}
       prestigeable
       @prestige-request=${this.handlePrestigeRequest}
@@ -906,6 +948,7 @@ export class AccountModal extends BaseModal {
 
   private resetPlayerData(): void {
     this.statsTree = null;
+    this.displayClanTag = null;
     this.dropProgression();
     this.gameHistoryCache = null;
     this.gamesScrollTop = 0;
@@ -1210,6 +1253,7 @@ export class AccountModal extends BaseModal {
       }
 
       this.statsTree = data.stats;
+      this.displayClanTag = data.displayClanTag ?? null;
 
       this.requestUpdate();
     } catch (err) {

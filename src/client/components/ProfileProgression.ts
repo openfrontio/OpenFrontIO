@@ -3,6 +3,7 @@ import type {
   PublicProgress,
   Reward,
   TrackFlare,
+  UserMeResponse,
 } from "@openfront/shared/ApiSchemas";
 import { html, LitElement, nothing, PropertyValues, TemplateResult } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
@@ -10,6 +11,11 @@ import { claimReward, getUserMe, invalidateUserMe } from "../Api";
 import { showInGameAlert } from "../InGameModal";
 import { clampPrestige, MAX_LEVEL, MILESTONE_LEVELS } from "../Progression";
 import { fetchProgressionConfig } from "../ProgressionApi";
+import {
+  PROVISIONAL_PROGRESS_CHANGED,
+  scoredGames,
+  scoredUpTo,
+} from "../ProvisionalProgress";
 import { claimRewards } from "../RewardClaims";
 import { translateText } from "../Utils";
 import { prefersReducedMotion } from "../utilities/ReducedMotion";
@@ -166,7 +172,24 @@ interface TrackData {
   config: ProgressionConfig;
   // The owner's unclaimed rewards; null when the viewer isn't the player.
   rewards: Reward[] | null;
+  // The progress of the /users/@me copy those rewards came from: they say
+  // nothing of levels it hadn't reached.
+  rewardsFrom: { prestige: number; level: number; lifetimeXp: number } | null;
   model: RewardTrackModule["rewardTrackModel"];
+}
+
+// The owner's rewards, and the progress they were read with.
+function ownRewards(
+  me: UserMeResponse | false,
+  publicId: string | null,
+): Pick<TrackData, "rewards" | "rewardsFrom"> {
+  if (me === false || me.player.publicId !== publicId) {
+    return { rewards: null, rewardsFrom: null };
+  }
+  return {
+    rewards: me.player.rewards ?? [],
+    rewardsFrom: me.player.progress ?? null,
+  };
 }
 
 @customElement("profile-progression")
@@ -174,6 +197,12 @@ export class ProfileProgression extends LitElement {
   @property({ attribute: false }) progress: PublicProgress | null = null;
   // Whose profile this is: the track shows claim status to them alone.
   @property({ attribute: false }) publicId: string | null = null;
+  // Set when `progress` is provisional (the player's own, counting XP from
+  // games still waiting to be scored): the confirmed level. The levels past
+  // it are pending on the track, and their milestones not reached yet.
+  @property({ attribute: false }) confirmedLevel: number | null = null;
+  // The level counts XP from games the API hasn't scored yet.
+  @property({ type: Boolean }) provisional = false;
   // Names one opening of the profile: the tab pops in once per key, however
   // often it's shown again (a tab switch builds a new element). Without a
   // key it pops in once per element.
@@ -206,6 +235,8 @@ export class ProfileProgression extends LitElement {
   connectedCallback(): void {
     super.connectedCallback();
     ensureProfileProgressionStyles();
+    document.addEventListener("userMeResponse", this.onUserMe);
+    document.addEventListener(PROVISIONAL_PROGRESS_CHANGED, this.onScored);
     // Back after a Claim all was cut short: its button works again, and the
     // track is read afresh (loadedFor was cleared).
     if (this.claiming) this.claiming = false;
@@ -213,6 +244,8 @@ export class ProfileProgression extends LitElement {
 
   disconnectedCallback(): void {
     super.disconnectedCallback();
+    document.removeEventListener("userMeResponse", this.onUserMe);
+    document.removeEventListener(PROVISIONAL_PROGRESS_CHANGED, this.onScored);
     this.claimToken++;
     if (this.popTimer !== null) clearTimeout(this.popTimer);
     this.popTimer = null;
@@ -248,17 +281,48 @@ export class ProfileProgression extends LitElement {
     ]);
     clearTimeout(timer);
     if (token !== this.loadToken) return;
-    const rewards =
-      me !== false && me.player.publicId === publicId
-        ? (me.player.rewards ?? [])
-        : null;
     this.track =
       trackModule !== null &&
       config !== false &&
       trackModule.trackHasRewards(config)
-        ? { config, rewards, model: trackModule.rewardTrackModel }
+        ? {
+            config,
+            ...ownRewards(me, publicId),
+            model: trackModule.rewardTrackModel,
+          }
         : null;
     this.ready = true;
+  }
+
+  // The owner's account broadcast afresh: its rewards replace the track's.
+  private onUserMe = (event: Event): void => {
+    const me = (event as CustomEvent<UserMeResponse | false>).detail;
+    const track = this.track;
+    if (!track?.rewards || me === false || !me?.player) return;
+    if (me.player.publicId !== this.publicId) return;
+    this.track = { ...track, ...ownRewards(me, this.publicId) };
+  };
+
+  // A game was scored that the track's rewards copy doesn't include (no
+  // broadcast brought a newer one): read the owner's rewards again.
+  private onScored = (event: Event): void => {
+    const track = this.track;
+    if (!track?.rewards || scoredGames(event).length === 0) return;
+    if ((track.rewardsFrom?.lifetimeXp ?? 0) >= scoredUpTo(event)) return;
+    const publicId = this.publicId;
+    void this.loadOwnAccount(publicId).then((me) => {
+      if (this.track !== track || me === false) return;
+      this.track = { ...track, ...ownRewards(me, publicId) };
+    });
+  };
+
+  // Past the level the rewards copy had reached, a passed level with no
+  // reward row is pending, not Claimed: the copy predates it.
+  private trackConfirmedLevel(progress: PublicProgress): number | null {
+    const from = this.track?.rewardsFrom;
+    const limit = this.confirmedLevel;
+    if (!from || from.prestige !== progress.prestige) return limit;
+    return from.level < (limit ?? progress.level) ? from.level : limit;
   }
 
   // /users/@me when the viewer is this player, else false or another
@@ -287,7 +351,12 @@ export class ProfileProgression extends LitElement {
     // The model's claim leaves held rewards out (claimRewards would skip
     // them anyway).
     const ids = new Set(
-      track.model(progress, track.config, owned).claim?.ids ?? [],
+      track.model(
+        progress,
+        track.config,
+        owned,
+        this.trackConfirmedLevel(progress),
+      ).claim?.ids ?? [],
     );
     const toClaim = owned.filter((r) => ids.has(r.id));
     if (toClaim.length === 0) return;
@@ -415,11 +484,18 @@ export class ProfileProgression extends LitElement {
             .progress=${progress}
             .config=${track.config}
             .rewards=${track.rewards}
+            .confirmedLevel=${this.trackConfirmedLevel(progress)}
+            .provisional=${this.provisional}
             .claiming=${this.claiming}
             .describeCosmetic=${this.describeCosmetic}
             @claim-all=${() => void this.claimAll()}
           ></reward-track>`}
-      ${this.renderHistory(progress)} ${this.renderMilestones(progress)}
+      ${this.renderHistory(progress)}
+      ${this.renderMilestones(
+        this.confirmedLevel === null
+          ? progress
+          : { ...progress, level: this.confirmedLevel },
+      )}
     `;
   }
 

@@ -187,6 +187,12 @@ body.page-open {
   display: none; /* Chrome, Safari */
 }
 
+/* Main adds .game-portal to <html> on CrazyGames and Poki. A rule rather than
+   a one-off sweep, so it also hides elements that render later (lazy modals). */
+.game-portal .no-game-portal {
+  display: none !important;
+}
+
 .start-game-button {
   width: 100%;
   max-width: 300px;

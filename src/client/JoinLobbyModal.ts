@@ -39,14 +39,12 @@ import { DEFAULT_TITLE_CLASS, modalHeader } from "./components/ui/ModalHeader";
 import { openReplayViewer } from "./replay/ReplayEntry";
 import { nationsConfigToSlider } from "./utilities/GameConfigHelpers";
 import {
+  disabledUnitsBox,
+  hostCheatsBox,
+  LOBBY_SETTING_TAG,
   lobbySettingTagText,
   notableLobbySettings,
 } from "./utilities/LobbySettingsSummary";
-
-// The homepage lobby card's modifier pill, one size down: a lobby can run a
-// dozen settings and they all have to fit beside the preview.
-const SETTING_TAG =
-  "rounded bg-malibu-blue px-1.5 py-0.5 text-[11px] font-bold tracking-widest text-white";
 
 @customElement("join-lobby-modal")
 export class JoinLobbyModal extends BaseModal {
@@ -127,26 +125,22 @@ export class JoinLobbyModal extends BaseModal {
       });
     }
     // Both affordances answer "get my friends into this lobby", so they sit
-    // together. Copy stays private-only (the ID is how a private lobby is
-    // shared); the Steam invite works for either, because the shell keeps a
-    // shadow lobby for any joined game.
-    const copy =
-      this.currentLobbyId && this.isPrivateLobby()
-        ? html`<copy-button .lobbyId=${this.currentLobbyId}></copy-button>`
-        : undefined;
-    // Except public FFA: inviting Steam friends into an every-man-for-himself
-    // public match encourages teaming, so the button stays off there. Public
-    // team lobbies and private lobbies keep it. A config that has not arrived
+    // together. The Steam invite works for public and private lobbies alike,
+    // because the shell keeps a shadow lobby for any joined game.
+    // Except public FFA: bringing friends into an every-man-for-himself
+    // public match encourages teaming, so both stay off there. Public team
+    // lobbies and private lobbies keep them. A config that has not arrived
     // yet counts as "off" too — the URL-join and accepted-invite paths render
     // this header before the first lobby_info, and that window must not show
     // a button the config may be about to forbid.
     const isPublicFfa =
       this.gameConfig?.gameType === GameType.Public &&
       this.gameConfig.gameMode !== GameMode.Team;
-    const invite =
-      this.gameConfig === null || isPublicFfa
-        ? undefined
-        : inviteFriendsButton();
+    const canShare = this.gameConfig !== null && !isPublicFfa;
+    const copy = canShare
+      ? html`<copy-button .lobbyId=${this.currentLobbyId}></copy-button>`
+      : undefined;
+    const invite = canShare ? inviteFriendsButton() : undefined;
     return modalHeader({
       // titleContent (not title) so the bell can sit at the right edge of the
       // title row via ml-auto, next to the copy/invite cluster.
@@ -156,13 +150,9 @@ export class JoinLobbyModal extends BaseModal {
         ${this.gameStartAlert.renderBell()}`,
       onBack: () => this.closeAndLeave(),
       ariaLabel: translateText("common.close"),
-      // Only pair them behind a wrapper when both are present, so a browser --
-      // which never gets the invite button -- renders exactly the markup it
-      // rendered before this change.
-      rightContent:
-        copy && invite
-          ? html`<div class="flex items-center gap-2">${copy}${invite}</div>`
-          : (copy ?? invite),
+      rightContent: invite
+        ? html`<div class="flex items-center gap-2">${copy}${invite}</div>`
+        : copy,
     });
   }
 
@@ -708,7 +698,9 @@ export class JoinLobbyModal extends BaseModal {
 
     const tags = notableLobbySettings(c, this.nationCount).map(
       (s) =>
-        html`<span class="${SETTING_TAG}">${lobbySettingTagText(s)}</span>`,
+        html`<span class="${LOBBY_SETTING_TAG}"
+          >${lobbySettingTagText(s)}</span
+        >`,
     );
 
     // object-contain, not object-cover: the preview is here to be studied
@@ -748,117 +740,7 @@ export class JoinLobbyModal extends BaseModal {
             </div>`
           : html``}
       </div>
-      ${this.renderDisabledUnits()} ${this.renderHostCheats()}
-    `;
-  }
-
-  private renderDisabledUnits(): TemplateResult {
-    if (
-      !this.gameConfig ||
-      !this.gameConfig.disabledUnits ||
-      this.gameConfig.disabledUnits.length === 0
-    ) {
-      return html``;
-    }
-
-    const unitKeys: Record<string, string> = {
-      City: "unit_type.city",
-      Port: "unit_type.port",
-      "Defense Post": "unit_type.defense_post",
-      "SAM Launcher": "unit_type.sam_launcher",
-      "Missile Silo": "unit_type.missile_silo",
-      Warship: "unit_type.warship",
-      Factory: "unit_type.factory",
-      "Atom Bomb": "unit_type.atom_bomb",
-      "Hydrogen Bomb": "unit_type.hydrogen_bomb",
-      MIRV: "unit_type.mirv",
-      "Trade Ship": "player_stats_table.unit.trade",
-      Transport: "player_stats_table.unit.trans",
-      "MIRV Warhead": "player_stats_table.unit.mirvw",
-    };
-
-    return html`
-      <div
-        class="mt-4 mb-6 p-3 bg-red-500/10 border border-red-500/20 rounded-lg"
-      >
-        <div
-          class="text-xs font-bold text-red-400 uppercase tracking-widest mb-2"
-        >
-          ${translateText("private_lobby.disabled_units")}
-        </div>
-        <div class="flex flex-wrap gap-2">
-          ${this.gameConfig.disabledUnits.map((unit) => {
-            const key = unitKeys[unit];
-            const name = key ? translateText(key) : unit;
-            return html`
-              <span
-                class="px-2 py-1 bg-red-500/20 text-red-200 text-xs rounded font-bold border border-red-500/30"
-              >
-                ${name}
-              </span>
-            `;
-          })}
-        </div>
-      </div>
-    `;
-  }
-
-  private renderHostCheats(): TemplateResult {
-    if (!this.gameConfig?.hostCheats) {
-      return html``;
-    }
-
-    const hc = this.gameConfig.hostCheats;
-    const items: TemplateResult[] = [];
-
-    if (hc.infiniteGold)
-      items.push(
-        html`<span
-          class="px-2 py-1 bg-yellow-500/20 text-yellow-200 text-xs rounded font-bold border border-yellow-500/30"
-        >
-          ${translateText("game_settings.infinite_gold")}
-        </span>`,
-      );
-    if (hc.infiniteTroops)
-      items.push(
-        html`<span
-          class="px-2 py-1 bg-yellow-500/20 text-yellow-200 text-xs rounded font-bold border border-yellow-500/30"
-        >
-          ${translateText("game_settings.infinite_troops")}
-        </span>`,
-      );
-    if (hc.goldMultiplier)
-      items.push(
-        html`<span
-          class="px-2 py-1 bg-yellow-500/20 text-yellow-200 text-xs rounded font-bold border border-yellow-500/30"
-        >
-          ${translateText("game_settings.gold_multiplier")}:
-          x${hc.goldMultiplier}
-        </span>`,
-      );
-    if (hc.startingGold)
-      items.push(
-        html`<span
-          class="px-2 py-1 bg-yellow-500/20 text-yellow-200 text-xs rounded font-bold border border-yellow-500/30"
-        >
-          ${translateText("private_lobby.starting_gold")}:
-          ${parseFloat((hc.startingGold / 1_000_000).toPrecision(12))}M
-        </span>`,
-      );
-
-    if (items.length === 0) return html``;
-
-    return html`
-      <div
-        class="mt-4 mb-6 p-3 bg-yellow-500/10 border border-yellow-500/20 rounded-lg"
-      >
-        <div
-          class="text-xs font-bold text-yellow-400 uppercase tracking-widest mb-2"
-        >
-          ${translateText("private_lobby.host_cheats")}
-        </div>
-        <div class="flex flex-wrap gap-2">${items}</div>
-      </div>
+      ${disabledUnitsBox(c, "mt-4 mb-6")} ${hostCheatsBox(c, "mt-4 mb-6")}
     `;
   }
 

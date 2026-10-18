@@ -346,7 +346,7 @@ export class NationExecution implements Execution {
 
     others.forEach((other: Player) => {
       // In team games on higher difficulties, refuse to trade with anyone
-      // not on this nation's team (mirrors the "stop trading with all" button).
+      // not on this nation's team.
       if (
         teamGame &&
         isHigherDifficulty &&

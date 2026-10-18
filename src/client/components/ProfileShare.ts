@@ -1,5 +1,6 @@
 import { html, LitElement, nothing, TemplateResult } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
+import { gamePortal } from "../GamePortal";
 import { Platform } from "../Platform";
 import { copyToClipboard, showToast, translateText } from "../Utils";
 
@@ -485,7 +486,8 @@ export class ProfileShare extends LitElement {
   }
 
   render() {
-    if (this.url === "") return nothing;
+    // Not on Poki: the link leads players off Poki.
+    if (this.url === "" || gamePortal.name() === "poki") return nothing;
     return html`
       ${this.layout === "menu" ? this.renderMenu() : this.renderRow()}
       <span class="sr-only" role="status" aria-live="polite"

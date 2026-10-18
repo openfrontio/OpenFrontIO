@@ -73,6 +73,11 @@ import "../../../../src/client/components/GameXpPanel";
 import type { GameXpPanel } from "../../../../src/client/components/GameXpPanel";
 import "../../../../src/client/hud/layers/WinModal";
 import type { WinModal } from "../../../../src/client/hud/layers/WinModal";
+import {
+  readPendingXp,
+  recordPendingXp,
+  stopProvisionalProgress,
+} from "../../../../src/client/ProvisionalProgress";
 import type { GameView } from "../../../../src/client/view";
 
 const GAME_ID = "gPROVXP01";
@@ -670,6 +675,107 @@ describe("WinModal provisional XP at death", () => {
     await endGame(end);
     expect(xpState()).toBe("ineligible");
     expect(panel()!.querySelector("[data-xp-confirmed]")).not.toBeNull();
+  });
+
+  describe("kept for the account menu and profile", () => {
+    beforeEach(() => {
+      localStorage.clear();
+      // Drops the store's parsed copy too.
+      stopProvisionalProgress();
+    });
+    afterEach(() => localStorage.clear());
+
+    it("keeps an eligible figure for the account, marked scored once it is", async () => {
+      let asked = 0;
+      stubXpEndpoint(() =>
+        asked++ === 0 ? new Response("", { status: 404 }) : json(serverXp()),
+      );
+      const { game, end } = makeGame();
+      await mount(game);
+      // Counted on the account as read at death (lifetime 850), unasked.
+      expect(readPendingXp("me")).toEqual([
+        expect.objectContaining({ gameId: GAME_ID, xp: 274, notIn: 850 }),
+      ]);
+      // Another account on this browser has none.
+      expect(readPendingXp("someone-else")).toEqual([]);
+
+      await endGame(end);
+      await settle(3_000);
+      expect(xpState()).toBe("result");
+      // Kept, with the API's figure: a stale read of the account still
+      // shows the game, and a fresh one doesn't count it again.
+      expect(readPendingXp("me")).toEqual([
+        expect.objectContaining({
+          gameId: GAME_ID,
+          scored: { xp: 274, lifetimeAfter: 1124 },
+        }),
+      ]);
+    });
+
+    it("keeps it while the server hasn't scored the game", async () => {
+      stubXpEndpoint(() => new Response("", { status: 404 }));
+      const { game, end } = makeGame();
+      await mount(game);
+      await endGame(end);
+      await settle(60_000);
+      expect(readPendingXp("me")).toHaveLength(1);
+    });
+
+    it("starts the next game's figure from the pending game's level, without its first-game bonus", async () => {
+      // Game A, left earlier today and not scored yet: 250 provisional XP
+      // (with today's first-game bonus) takes level 9 at 50 to level 12 at 0.
+      recordPendingXp("me", {
+        gameId: "gA",
+        xp: 250,
+        day: PROGRESS.daily.day,
+        kind: "public",
+        firstGame: 100,
+        // Recorded at A's death, from the account then.
+        notIn: PROGRESS.lifetimeXp,
+      });
+      const asked: string[] = [];
+      vi.stubGlobal(
+        "fetch",
+        vi.fn(async (input: RequestInfo | URL) => {
+          asked.push(String(input));
+          return new Response("", { status: 404 });
+        }),
+      );
+      const { game } = makeGame();
+      await mount(game);
+      // Death asks nothing: the stored answers decide.
+      expect(asked).toEqual([]);
+      expect(xpState()).toBe("provisional");
+      const { moments, cards } = await playOut();
+      // From level 12, 174 XP reaches level 13; A's levels (and its level-10
+      // milestone) aren't celebrated again.
+      expect(moments.join(" ")).not.toContain('"level":10');
+      expect(cards).toEqual([]);
+      await finishReveal();
+      expect(currentLevel()).toBe(13);
+      // Game B: 274 less the first-game bonus A took.
+      expect(total()).toContain('"xp":"174"');
+      // Both stay pending, stacked, for the account menu and profile.
+      expect(
+        readPendingXp("me").map((e) => [e.gameId, e.xp, e.firstGame]),
+      ).toEqual([
+        ["gA", 250, 100],
+        [GAME_ID, 174, 0],
+      ]);
+    });
+
+    it("keeps nothing for an ineligible death", async () => {
+      stubXpEndpoint(() => new Response("", { status: 404 }));
+      const { game } = makeGame({
+        stats: () => ({
+          ...snapshot(),
+          stats: { ...snapshot().stats, me: { killedAt: 4000n } },
+        }),
+      });
+      await mount(game);
+      expect(xpState()).toBe("provisional_ineligible");
+      expect(readPendingXp("me")).toEqual([]);
+    });
   });
 
   it("keeps the provisional figure, still provisional, if the server never answers", async () => {
