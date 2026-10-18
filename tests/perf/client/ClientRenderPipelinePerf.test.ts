@@ -10,8 +10,8 @@
  *   - BuildPreviewController: Idle cursor diffing bypass, active drag lerp, and Port placement snapping
  *
  * Usage:
- *   npx tsx tests/perf/client/ClientRenderPipelinePerf.ts [--suite=all|webgl2|pipeline|lighting|railroad|shockwave|preview]
- *                                                        [--iterations=500] [--warmup=50] [--json]
+ *   npm run perf:pipeline
+ *   npx vitest tests/perf/client/ClientRenderPipelinePerf.test.ts --run
  */
 import "./Shims";
 

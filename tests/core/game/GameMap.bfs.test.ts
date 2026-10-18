@@ -140,12 +140,15 @@ describe("GameMap BFS & bfsSearch", () => {
     expect(result).toBe(true);
   });
 
-  it("handles 32-bit generation wrap-around correctly", () => {
+  it("handles 16-bit generation wrap-around correctly", () => {
     const map = createMap();
-    // Simulate generation right before 0xffffffff
-    (map as unknown as { bfsGen: number }).bfsGen = 0xffffffff - 1;
+    // Warm up one search so bfsVisited buffer is initialized
+    map.bfsSearch(12, () => true);
 
-    // Run first BFS which triggers wrap-around to 1
+    // Simulate generation right before 0xffff
+    (map as unknown as { bfsGen: number }).bfsGen = 0xffff - 1;
+
+    // Run BFS which increments to 0xffff, triggers fill(0), and wraps to 1
     const visited1: number[] = [];
     map.bfsSearch(
       12,

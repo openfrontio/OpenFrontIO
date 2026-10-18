@@ -458,7 +458,6 @@ export class RailroadPass {
         offset,
       );
       gl.pixelStorei(gl.UNPACK_ROW_LENGTH, 0);
-      gl.pixelStorei(gl.UNPACK_ALIGNMENT, 4);
       gl.activeTexture(gl.TEXTURE0);
       this.dirtyMinX = Infinity;
       this.dirtyMaxX = -Infinity;

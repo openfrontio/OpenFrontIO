@@ -4,7 +4,7 @@ import {
   UnitUpdate,
 } from "@openfront/engine-api/game/GameUpdates";
 
-export const UNIT_UPDATE_STRIDE = 20;
+export const UNIT_UPDATE_STRIDE = 21;
 
 export const OFFSET_ID = 0;
 export const OFFSET_POS = 1;
@@ -26,84 +26,46 @@ export const OFFSET_TRANSPORT_TROOPS = 16;
 export const OFFSET_NUKE_WAIT_TICKS = 17;
 export const OFFSET_PACKED_A = 18;
 export const OFFSET_PACKED_B = 19;
+export const OFFSET_LEVEL = 20;
 
 // unitType mapping
+export const PACKED_UNIT_TYPES: readonly UnitType[] = [
+  UnitType.TransportShip, // 1
+  UnitType.Warship, // 2
+  UnitType.Shell, // 3
+  UnitType.SAMMissile, // 4
+  UnitType.Port, // 5
+  UnitType.AtomBomb, // 6
+  UnitType.HydrogenBomb, // 7
+  UnitType.TradeShip, // 8
+  UnitType.MissileSilo, // 9
+  UnitType.DefensePost, // 10
+  UnitType.SAMLauncher, // 11
+  UnitType.City, // 12
+  UnitType.MIRV, // 13
+  UnitType.MIRVWarhead, // 14
+  UnitType.Train, // 15
+  UnitType.Factory, // 16
+] as const;
+
+const UNIT_TYPE_TO_INT = new Map<UnitType, number>(
+  PACKED_UNIT_TYPES.map((t, idx) => [t, idx + 1]),
+);
+
 export const unitTypeToInt = (type: UnitType): number => {
-  switch (type) {
-    case UnitType.TransportShip:
-      return 1;
-    case UnitType.Warship:
-      return 2;
-    case UnitType.Shell:
-      return 3;
-    case UnitType.SAMMissile:
-      return 4;
-    case UnitType.Port:
-      return 5;
-    case UnitType.AtomBomb:
-      return 6;
-    case UnitType.HydrogenBomb:
-      return 7;
-    case UnitType.TradeShip:
-      return 8;
-    case UnitType.MissileSilo:
-      return 9;
-    case UnitType.DefensePost:
-      return 10;
-    case UnitType.SAMLauncher:
-      return 11;
-    case UnitType.City:
-      return 12;
-    case UnitType.MIRV:
-      return 13;
-    case UnitType.MIRVWarhead:
-      return 14;
-    case UnitType.Train:
-      return 15;
-    case UnitType.Factory:
-      return 16;
-    default:
-      return 0;
+  const val = UNIT_TYPE_TO_INT.get(type);
+  if (val === undefined) {
+    throw new Error(`Unknown UnitType: ${type}`);
   }
+  return val;
 };
 
 export const intToUnitType = (val: number): UnitType => {
-  switch (val) {
-    case 1:
-      return UnitType.TransportShip;
-    case 2:
-      return UnitType.Warship;
-    case 3:
-      return UnitType.Shell;
-    case 4:
-      return UnitType.SAMMissile;
-    case 5:
-      return UnitType.Port;
-    case 6:
-      return UnitType.AtomBomb;
-    case 7:
-      return UnitType.HydrogenBomb;
-    case 8:
-      return UnitType.TradeShip;
-    case 9:
-      return UnitType.MissileSilo;
-    case 10:
-      return UnitType.DefensePost;
-    case 11:
-      return UnitType.SAMLauncher;
-    case 12:
-      return UnitType.City;
-    case 13:
-      return UnitType.MIRV;
-    case 14:
-      return UnitType.MIRVWarhead;
-    case 15:
-      return UnitType.Train;
-    case 16:
-      return UnitType.Factory;
-    default:
-      return UnitType.City; // fallback
+  const type = PACKED_UNIT_TYPES[val - 1];
+  if (!type) {
+    throw new Error(`Unknown packed unit type int: ${val}`);
   }
+  return type;
 };
 
 export const trainTypeToInt = (type: TrainType | undefined): number => {
@@ -293,7 +255,7 @@ export class PackedUnitUpdateDecoder {
   }
 
   get level(): number {
-    return unpackBLevel(this.buffer[this.offset + OFFSET_PACKED_B]);
+    return this.buffer[this.offset + OFFSET_LEVEL];
   }
   get isActive(): boolean {
     return unpackBIsActive(this.buffer[this.offset + OFFSET_PACKED_B]);
@@ -531,6 +493,7 @@ export function packUnitUpdates(units: UnitUpdate[]): {
       update.unitType,
     );
     packedUnitUpdates[offset + OFFSET_PACKED_B] = packB(update);
+    packedUnitUpdates[offset + OFFSET_LEVEL] = update.level;
 
     if (update.missileTimerQueue && update.missileTimerQueue.length > 0) {
       packedMissileTimers[timerOffset++] = update.id;

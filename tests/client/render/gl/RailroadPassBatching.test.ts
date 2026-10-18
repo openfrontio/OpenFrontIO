@@ -114,7 +114,7 @@ describe("RailroadPass Ghost Preview Batching", () => {
     expect(h.gl.pixelStorei).toHaveBeenCalledWith(h.gl.UNPACK_ROW_LENGTH, 100);
     expect(h.gl.pixelStorei).toHaveBeenCalledWith(h.gl.UNPACK_ALIGNMENT, 1);
     expect(h.gl.pixelStorei).toHaveBeenCalledWith(h.gl.UNPACK_ROW_LENGTH, 0);
-    expect(h.gl.pixelStorei).toHaveBeenCalledWith(h.gl.UNPACK_ALIGNMENT, 4);
+    expect(h.gl.pixelStorei).not.toHaveBeenCalledWith(h.gl.UNPACK_ALIGNMENT, 4);
 
     // INVARIANT 5: Active texture is restored to TEXTURE0 on exit
     expect(h.gl.activeTexture).toHaveBeenLastCalledWith(h.gl.TEXTURE0);

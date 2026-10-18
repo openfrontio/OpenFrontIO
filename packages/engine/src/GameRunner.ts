@@ -254,9 +254,6 @@ export class GameRunner {
     let viewDataChanged = false;
     if (this.game.inSpawnPhase()) {
       for (const p of this.game.allPlayers()) {
-        if (p.type() !== PlayerType.Human && p.type() !== PlayerType.Nation) {
-          continue;
-        }
         const spawnTile = p.spawnTile();
         if (spawnTile === undefined) continue;
         if (this.lastSpawnTiles.get(p.id()) !== spawnTile) {

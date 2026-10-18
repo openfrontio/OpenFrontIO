@@ -6,7 +6,7 @@ import { TileSet } from "./TileSet";
 
 export class GameMapImpl implements GameMap {
   private _numTilesWithFallout = 0;
-  private bfsVisited: Uint32Array | null = null;
+  private bfsVisited: Uint16Array | null = null;
   private bfsQueue: TileRef[] = [];
   private bfsGen = 0;
   private inBfs = false;
@@ -433,11 +433,11 @@ export class GameMapImpl implements GameMap {
   private bumpBfsGeneration(): number {
     const totalTiles = this.width_ * this.height_;
     if (!this.bfsVisited || this.bfsVisited.length < totalTiles) {
-      this.bfsVisited = new Uint32Array(totalTiles);
+      this.bfsVisited = new Uint16Array(totalTiles);
       this.bfsGen = 0;
     }
     this.bfsGen++;
-    if (this.bfsGen === 0xffffffff) {
+    if (this.bfsGen === 0xffff) {
       this.bfsVisited.fill(0);
       this.bfsGen = 1;
     }

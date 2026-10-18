@@ -29,6 +29,7 @@ import { unpackMotionPlans } from "@openfront/engine-lib/game/MotionPlans";
 import {
   PackedUnitUpdateDecoder,
   UNIT_UPDATE_STRIDE,
+  unpackUnitUpdates,
 } from "@openfront/engine-lib/game/PackedUnitUpdates";
 import { TerrainMapData } from "@openfront/engine-lib/game/TerrainMapLoader";
 import { TerraNulliusImpl } from "@openfront/engine-lib/game/TerraNulliusImpl";
@@ -411,32 +412,9 @@ export class GameView implements GameLike {
       }
     }
     const unitUpdates = gu.packedUnitUpdates
-      ? []
-      : gu.updates[GameUpdateType.Unit] || [];
+      ? unpackUnitUpdates(gu.packedUnitUpdates, gu.packedMissileTimers)
+      : (gu.updates[GameUpdateType.Unit] ?? []);
     if (gu.packedUnitUpdates) {
-      const { packedUnitUpdates, packedMissileTimers } = gu;
-      const timersMap = new Map<number, number[]>();
-      if (packedMissileTimers) {
-        let i = 0;
-        while (i < packedMissileTimers.length) {
-          const id = packedMissileTimers[i++];
-          const len = packedMissileTimers[i++];
-          const q: number[] = [];
-          for (let j = 0; j < len; j++) q.push(packedMissileTimers[i++]);
-          timersMap.set(id, q);
-        }
-      }
-
-      for (
-        let offset = 0;
-        offset < packedUnitUpdates.length;
-        offset += UNIT_UPDATE_STRIDE
-      ) {
-        const decoder = new PackedUnitUpdateDecoder(packedUnitUpdates, offset);
-        const update = decoder.toUnitUpdate() as UnitUpdate;
-        update.missileTimerQueue = timersMap.get(update.id) ?? [];
-        unitUpdates.push(update);
-      }
       gu.updates[GameUpdateType.Unit] = unitUpdates;
     }
 
@@ -636,9 +614,6 @@ export class GameView implements GameLike {
     ev.conquestEvents.length = 0;
     ev.bonusEvents.length = 0;
 
-    const unitUpdates = gu.packedUnitUpdates
-      ? []
-      : gu.updates[GameUpdateType.Unit] || [];
     if (gu.packedUnitUpdates) {
       // Re-unpacking is fine, it's just object creation for dead units, which is fast,
       // or we just decode the fields we need directly without creating objects!
@@ -661,6 +636,8 @@ export class GameView implements GameLike {
         }
       }
     } else {
+      const unitUpdates =
+        (gu.updates[GameUpdateType.Unit] as UnitUpdate[]) ?? [];
       for (const u of unitUpdates) {
         if (u.isActive) continue;
         ev.deadUnits.push({

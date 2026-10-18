@@ -632,13 +632,19 @@ const MirvStateSchema = z.object({
   stagedTargets: zTiles(),
   warheadsSpawned: z.boolean(),
   warheadExecutions: z.array(zRef()),
-  consecutiveOverlapFailures: zInt(),
+  consecutiveOverlapFailures: zInt().default(0),
 });
 type MirvState = z.infer<typeof MirvStateSchema>;
 
 export const MirvExecutionSnapshot = execSnapshotType({
   name: "MIRV",
-  version: 1,
+  version: 2,
   schema: MirvStateSchema,
   cls: () => MirvExecution,
+  migrations: {
+    1: (d) => ({
+      ...d,
+      consecutiveOverlapFailures: 0,
+    }),
+  },
 });
