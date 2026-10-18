@@ -166,6 +166,26 @@ describe("LobbyPresets logic and schema", () => {
     expect(parsed[0].name).toBe("Valid");
   });
 
+  it("rejects invalid teamCount options in LobbyPresetConfigSchema", () => {
+    const invalidTeam = {
+      ...sampleConfig,
+      teamCount: "InvalidTeamOption",
+    };
+    expect(LobbyPresetConfigSchema.safeParse(invalidTeam).success).toBe(false);
+
+    const negativeTeam = {
+      ...sampleConfig,
+      teamCount: -2,
+    };
+    expect(LobbyPresetConfigSchema.safeParse(negativeTeam).success).toBe(false);
+
+    const validDuos = {
+      ...sampleConfig,
+      teamCount: "Duos",
+    };
+    expect(LobbyPresetConfigSchema.safeParse(validDuos).success).toBe(true);
+  });
+
   describe("saveLobbyPreset and deleteLobbyPreset with UserSettings", () => {
     let mockStorage: Record<string, string>;
     let settings: UserSettings;
@@ -519,6 +539,20 @@ describe("<lobby-preset-controls> component", () => {
     saveBtn.click();
     expect(saveFired).toBe(false);
   });
+
+  it("clears nameInput when selectedName is cleared", async () => {
+    const select = element.querySelector(
+      "[data-test-preset-select]",
+    ) as HTMLSelectElement;
+    select.value = "Default Pro";
+    select.dispatchEvent(new Event("change"));
+    await element.updateComplete;
+    expect((element as any).nameInput).toBe("Default Pro");
+
+    element.selectedName = "";
+    await element.updateComplete;
+    expect((element as any).nameInput).toBe("");
+  });
 });
 
 describe("HostLobbyModal preset integration", () => {
@@ -655,6 +689,41 @@ describe("HostLobbyModal preset integration", () => {
     expect(modal.lobbyPresets).toHaveLength(1);
     expect(modal.selectedPresetName).toBe("Preset 1");
   });
+
+  it("defaults donateGold and donateTroops to isTeam when omitted, preserving explicit overrides", async () => {
+    await modal.importPresetConfig({
+      ...modal.exportPresetConfig(),
+      gameMode: GameMode.Team,
+      donateGold: undefined,
+      donateTroops: undefined,
+    });
+    expect(modal.donateGold).toBe(true);
+    expect(modal.donateTroops).toBe(true);
+
+    await modal.importPresetConfig({
+      ...modal.exportPresetConfig(),
+      gameMode: GameMode.FFA,
+      donateGold: undefined,
+      donateTroops: undefined,
+    });
+    expect(modal.donateGold).toBe(false);
+    expect(modal.donateTroops).toBe(false);
+
+    await modal.importPresetConfig({
+      ...modal.exportPresetConfig(),
+      gameMode: GameMode.Team,
+      donateGold: false,
+      donateTroops: false,
+    });
+    expect(modal.donateGold).toBe(false);
+    expect(modal.donateTroops).toBe(false);
+  });
+
+  it("clears selectedPresetName on onClose", () => {
+    modal.selectedPresetName = "My Preset";
+    modal.onClose();
+    expect(modal.selectedPresetName).toBe("");
+  });
 });
 
 describe("SinglePlayerModal preset integration", () => {
@@ -741,5 +810,11 @@ describe("SinglePlayerModal preset integration", () => {
 
     expect(modal.lobbyPresets).toHaveLength(1);
     expect(modal.selectedPresetName).toBe("Preset 1");
+  });
+
+  it("clears selectedPresetName on resetOptions", () => {
+    modal.selectedPresetName = "SP Preset";
+    modal.resetOptions();
+    expect(modal.selectedPresetName).toBe("");
   });
 });

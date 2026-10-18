@@ -1027,6 +1027,7 @@ export class HostLobbyModal extends BaseModal {
     }
 
     // Reset all transient form state to ensure clean slate
+    this.selectedPresetName = "";
     this.selectedMap = GameMapType.World;
     this.selectedDifficulty = Difficulty.Easy;
     this.nations = 0;
@@ -1705,10 +1706,11 @@ export class HostLobbyModal extends BaseModal {
     this.gameMode = config.gameMode;
     this.teamCount = config.teamCount;
     this.bots = config.bots;
+    const isTeam = config.gameMode === GameMode.Team;
     this.infiniteGold = config.infiniteGold ?? false;
-    this.donateGold = config.donateGold ?? false;
+    this.donateGold = config.donateGold ?? isTeam;
     this.infiniteTroops = config.infiniteTroops ?? false;
-    this.donateTroops = config.donateTroops ?? false;
+    this.donateTroops = config.donateTroops ?? isTeam;
     this.instantBuild = config.instantBuild ?? false;
     this.randomSpawn = config.randomSpawn ?? false;
     this.maxTimer = config.maxTimer ?? false;

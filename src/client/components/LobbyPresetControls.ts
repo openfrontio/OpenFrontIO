@@ -1,4 +1,4 @@
-import { html, LitElement } from "lit";
+import { html, LitElement, PropertyValues } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
 import { LobbyPreset, MAX_PRESET_NAME_LENGTH } from "../LobbyPresets";
 import { translateText } from "../Utils";
@@ -14,6 +14,12 @@ export class LobbyPresetControls extends LitElement {
 
   createRenderRoot() {
     return this;
+  }
+
+  protected override willUpdate(changed: PropertyValues<this>) {
+    if (changed.has("selectedName") && !this.selectedName) {
+      this.nameInput = "";
+    }
   }
 
   private handleSelectChange(e: Event) {

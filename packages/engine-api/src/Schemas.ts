@@ -177,7 +177,7 @@ export const ClanTagSchema = z
 // GameConfig on the wire. The candidate ORDER is the wire layout; only the
 // picking got cheaper.
 const TEAM_COUNT_PRESETS = [Duos, Trios, Quads, HumansVsNations] as const;
-const TeamCountConfigSchema = zb.union(
+export const TeamCountConfigSchema = zb.union(
   [
     zb.uint(),
     z.literal(Duos),

@@ -692,6 +692,7 @@ export class SinglePlayerModal extends BaseModal {
     // the modal must always give the player a live Start button back, whatever
     // left the previous attempt in flight.
     this.starting = false;
+    this.selectedPresetName = "";
     this.selectedMap = DEFAULT_OPTIONS.selectedMap;
     this.selectedDifficulty = DEFAULT_OPTIONS.selectedDifficulty;
     this.gameMode = DEFAULT_OPTIONS.gameMode;
