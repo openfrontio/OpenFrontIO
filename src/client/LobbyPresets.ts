@@ -4,10 +4,7 @@ import {
   GameMode,
   UnitType,
 } from "@openfront/engine-api/game/GameTypes";
-import {
-  TeamCountConfig,
-  TeamCountConfigSchema,
-} from "@openfront/engine-api/Schemas";
+import { TeamCountConfigSchema } from "@openfront/engine-api/Schemas";
 import { DOOMSDAY_CLOCK_SPEEDS } from "@openfront/engine-lib/game/DoomsdayClock";
 import { z } from "zod";
 import type { UserSettings } from "./UserSettings";
