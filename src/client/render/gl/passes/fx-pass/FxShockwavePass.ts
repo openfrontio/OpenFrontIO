@@ -51,14 +51,11 @@ interface ActiveShockwave {
 // 6 triangles (18 2D vertices): center rectangle + 2 side trapezoids
 const OCTAGON_VERTS = new Float32Array([
   // Center rectangle (2 triangles)
-  0.2929, 0, 0.7071, 0, 0.2929, 1,
-  0.7071, 0, 0.7071, 1, 0.2929, 1,
+  0.2929, 0, 0.7071, 0, 0.2929, 1, 0.7071, 0, 0.7071, 1, 0.2929, 1,
   // Left trapezoid (2 triangles)
-  0, 0.2929, 0.2929, 0, 0.2929, 1,
-  0, 0.2929, 0.2929, 1, 0, 0.7071,
+  0, 0.2929, 0.2929, 0, 0.2929, 1, 0, 0.2929, 0.2929, 1, 0, 0.7071,
   // Right trapezoid (2 triangles)
-  0.7071, 0, 1, 0.2929, 0.7071, 1,
-  1, 0.2929, 1, 0.7071, 0.7071, 1,
+  0.7071, 0, 1, 0.2929, 0.7071, 1, 1, 0.2929, 1, 0.7071, 0.7071, 1,
 ]);
 const SHOCKWAVE_FLOATS = 22;
 const SHOCKWAVE_STRIDE = SHOCKWAVE_FLOATS * 4; // bytes

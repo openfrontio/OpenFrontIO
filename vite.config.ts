@@ -352,7 +352,15 @@ export default defineConfig(({ mode }) => {
           test: {
             name: "node",
             environment: "node",
-            exclude: ["tests/client/**"],
+            exclude: ["tests/client/**", "tests/perf/**"],
+          },
+        },
+        {
+          extends: true,
+          test: {
+            name: "perf",
+            environment: "node",
+            include: ["tests/perf/**/*.test.ts"],
           },
         },
       ],
