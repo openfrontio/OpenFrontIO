@@ -231,7 +231,10 @@ export class WarshipExecution implements Execution {
     const warshipTile = this.warship.tile();
     const warshipComponent = this.mg.getWaterComponent(warshipTile);
     if (warshipComponent === null) {
-      throw new Error(`Warship at tile ${warshipTile} has no water component`);
+      console.error(
+        `[WarshipExecution] Warship at tile ${warshipTile} has no water component; cannot find nearest port`,
+      );
+      return undefined;
     }
 
     const nearest = findMinimumBy(
@@ -240,7 +243,10 @@ export class WarshipExecution implements Execution {
       (port) => {
         const portComponent = this.mg.getWaterComponent(port.tile());
         if (portComponent === null) {
-          throw new Error(`Port at tile ${port.tile()} has no water component`);
+          console.error(
+            `[WarshipExecution] Port at tile ${port.tile()} has no water component; skipping`,
+          );
+          return false;
         }
         return portComponent === warshipComponent;
       },
@@ -593,7 +599,10 @@ export class WarshipExecution implements Execution {
     const warshipTile = this.warship.tile();
     const warshipComponent = this.mg.getWaterComponent(warshipTile);
     if (warshipComponent === null) {
-      throw new Error(`Warship at tile ${warshipTile} has no water component`);
+      console.error(
+        `[WarshipExecution] Warship at tile ${warshipTile} has no water component; cannot find nearest available port`,
+      );
+      return undefined;
     }
 
     let bestTile: TileRef | undefined = undefined;
