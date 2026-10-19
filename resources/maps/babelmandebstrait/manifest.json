@@ -242,9 +242,9 @@
         "x": 0,
         "y": 540
       }
-    ],
-    "themes": ["africa", "asia"]
+    ]
   },
   "team_frequency": 10,
+  "themes": ["africa", "asia"],
   "translation_key": "map.babelmandebstrait"
 }

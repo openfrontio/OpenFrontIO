@@ -353,9 +353,9 @@
         "x": 1173,
         "y": 0
       }
-    ],
-    "themes": ["africa"]
+    ]
   },
   "team_frequency": 10,
+  "themes": ["africa"],
   "translation_key": "map.madagascar"
 }

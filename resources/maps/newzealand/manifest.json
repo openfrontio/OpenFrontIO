@@ -451,8 +451,8 @@
         "x": 928,
         "y": 0
       }
-    ],
-    "themes": ["oceania"]
+    ]
   },
+  "themes": ["oceania"],
   "translation_key": "map.newzealand"
 }

@@ -384,6 +384,7 @@ export const maps: readonly MapInfo[] = [
     specialFrequency: -1,
     defaultNationCount: 26,
     specialTeamCount: 2,
+    themes: ["africa", "asia"],
   },
   {
     id: "Baikal",
@@ -1879,6 +1880,7 @@ export const maps: readonly MapInfo[] = [
     defaultNationCount: 34,
     specialTeamCount: 2,
     forcedModifiers: ["isWaterNukes:50"],
+    themes: ["africa"],
   },
   {
     id: "Manicouagan",
@@ -2008,6 +2010,7 @@ export const maps: readonly MapInfo[] = [
     teamFrequency: -1,
     specialFrequency: -1,
     defaultNationCount: 20,
+    themes: ["oceania"],
   },
   {
     id: "NileDelta",

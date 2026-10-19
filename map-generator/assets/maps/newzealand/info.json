@@ -422,7 +422,7 @@
       "name": "Invercargill",
       "flag": "nz"
     }
-    ],
+  ],
   "teamGameSpawnAreas": {
     "2": [
       {
@@ -437,7 +437,7 @@
         "x": 928,
         "y": 0
       }
-    ],
+    ]
+  },
   "themes": ["oceania"]
-}
 }
