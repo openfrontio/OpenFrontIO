@@ -63,6 +63,128 @@ const workerId = ServerEnv.workerId() ?? 0;
 const log = logger.child({ comp: `w_${workerId}` });
 const playlist = new MapPlaylist();
 
+// Toggle whether a private lobby is visible in the public lobby browser.
+// Creator-only; listing requires an active subscription (checked fresh
+// against the API) and is limited to one listed lobby per creator.
+export function registerListingRoute(opts: {
+  app: express.Express;
+  gm: GameManager;
+  lobbyService: WorkerLobbyService;
+  log: typeof log;
+}) {
+  const { app, gm, lobbyService, log } = opts;
+
+  app.post(
+    "/api/game/:id/listing",
+    async (req: Request<{ id: string }>, res: Response) => {
+      const authHeader = req.headers.authorization;
+      if (!authHeader?.startsWith("Bearer ")) {
+        return res.status(400).json({ error: "Authorization header required" });
+      }
+      const token = authHeader.substring("Bearer ".length);
+      const auth = await verifyClientToken(token);
+      if (auth.type !== "success") {
+        return res.status(401).json({ error: "Invalid token" });
+      }
+
+      const parsed = z
+        .object({
+          listed: z.boolean(),
+          autoStartMs: z
+            .number()
+            .int()
+            .min(MIN_HOSTED_LOBBY_AUTO_START_MS)
+            .max(HOSTED_LOBBY_AUTO_START_MS)
+            .optional(),
+          maxPlayers: z
+            .number()
+            .int()
+            .min(MIN_HOSTED_LOBBY_PLAYERS)
+            .max(MAX_HOSTED_LOBBY_PLAYERS)
+            .optional(),
+        })
+        .safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json({ error: z.prettifyError(parsed.error) });
+      }
+      const { listed, autoStartMs, maxPlayers } = parsed.data;
+
+      const game = gm.game(req.params.id);
+      if (game === null) {
+        return res.status(404).json({ error: "Game not found" });
+      }
+      if (!game.isCreator(auth.persistentId)) {
+        return res
+          .status(403)
+          .json({ error: "Only the lobby creator can change its listing" });
+      }
+      if (game.isPublic() || game.hasStarted()) {
+        return res.status(409).json({ error: "Game cannot be listed" });
+      }
+      // Listing is one-way for the host: players recruited from the lobby
+      // browser must not lose the lobby they joined. Only the master delists
+      // (duplicate creator / cap overflow).
+      if (!listed && game.isListed()) {
+        return res.status(409).json({ error: "listing_permanent" });
+      }
+
+      if (listed) {
+        const preError = getListingEligibilityError(game, maxPlayers);
+        if (preError !== null) {
+          return res.status(409).json({ error: preError });
+        }
+
+        // Dev has no subscription backend; skip the check so the feature is
+        // testable locally (same precedent as Turnstile).
+        if (ServerEnv.env() !== GameEnv.Dev) {
+          const userMe = await getUserMe(token);
+          if (userMe.type === "error") {
+            log.warn(
+              `listing rejected, user me fetch failed: ${userMe.message}`,
+              {
+                gameID: req.params.id,
+              },
+            );
+            return res.status(403).json({ error: "subscription_required" });
+          }
+          if (!userMe.response.player.canCreatePublicLobbies) {
+            return res.status(403).json({ error: "subscription_required" });
+          }
+        }
+
+        // Re-verify after the async entitlement check to close the race window
+        // where the host could alter lobby settings (e.g. enable host cheats).
+        const raceError = getListingEligibilityError(game, maxPlayers);
+        if (raceError !== null) {
+          return res.status(409).json({ error: raceError });
+        }
+
+        const creatorID = game.hashedCreatorID();
+        if (
+          creatorID !== undefined &&
+          lobbyService.creatorHasListedLobby(creatorID, game.id)
+        ) {
+          return res.status(409).json({ error: "listing_limit_reached" });
+        }
+
+        // Cluster-wide cap to prevent listing spam. Approximate here (the
+        // broadcast lags by ~1s); the master's cap is the backstop.
+        if (lobbyService.hostedLobbyCount() >= MAX_HOSTED_LOBBIES) {
+          return res.status(409).json({ error: "listing_full" });
+        }
+      }
+
+      game.setListed(listed, { autoStartMs, maxPlayers });
+      log.info(`lobby listing ${listed ? "enabled" : "disabled"}`, {
+        gameID: game.id,
+        autoStartMs,
+        maxPlayers,
+      });
+      res.json({ listed });
+    },
+  );
+}
+
 // Worker setup
 export async function startWorker() {
   log.info(`Worker starting...`);
@@ -276,115 +398,7 @@ export async function startWorker() {
     });
   });
 
-  // Toggle whether a private lobby is visible in the public lobby browser.
-  // Creator-only; listing requires an active subscription (checked fresh
-  // against the API) and is limited to one listed lobby per creator.
-  app.post("/api/game/:id/listing", async (req, res) => {
-    const authHeader = req.headers.authorization;
-    if (!authHeader?.startsWith("Bearer ")) {
-      return res.status(400).json({ error: "Authorization header required" });
-    }
-    const token = authHeader.substring("Bearer ".length);
-    const auth = await verifyClientToken(token);
-    if (auth.type !== "success") {
-      return res.status(401).json({ error: "Invalid token" });
-    }
-
-    const parsed = z
-      .object({
-        listed: z.boolean(),
-        autoStartMs: z
-          .number()
-          .int()
-          .min(MIN_HOSTED_LOBBY_AUTO_START_MS)
-          .max(HOSTED_LOBBY_AUTO_START_MS)
-          .optional(),
-        maxPlayers: z
-          .number()
-          .int()
-          .min(MIN_HOSTED_LOBBY_PLAYERS)
-          .max(MAX_HOSTED_LOBBY_PLAYERS)
-          .optional(),
-      })
-      .safeParse(req.body);
-    if (!parsed.success) {
-      return res.status(400).json({ error: z.prettifyError(parsed.error) });
-    }
-    const { listed, autoStartMs, maxPlayers } = parsed.data;
-
-    const game = gm.game(req.params.id);
-    if (game === null) {
-      return res.status(404).json({ error: "Game not found" });
-    }
-    if (!game.isCreator(auth.persistentId)) {
-      return res
-        .status(403)
-        .json({ error: "Only the lobby creator can change its listing" });
-    }
-    if (game.isPublic() || game.hasStarted()) {
-      return res.status(409).json({ error: "Game cannot be listed" });
-    }
-    // Listing is one-way for the host: players recruited from the lobby
-    // browser must not lose the lobby they joined. Only the master delists
-    // (duplicate creator / cap overflow).
-    if (!listed && game.isListed()) {
-      return res.status(409).json({ error: "listing_permanent" });
-    }
-
-    if (listed) {
-      const preError = getListingEligibilityError(game, maxPlayers);
-      if (preError !== null) {
-        return res.status(409).json({ error: preError });
-      }
-
-      // Dev has no subscription backend; skip the check so the feature is
-      // testable locally (same precedent as Turnstile).
-      if (ServerEnv.env() !== GameEnv.Dev) {
-        const userMe = await getUserMe(token);
-        if (userMe.type === "error") {
-          log.warn(
-            `listing rejected, user me fetch failed: ${userMe.message}`,
-            {
-              gameID: req.params.id,
-            },
-          );
-          return res.status(403).json({ error: "subscription_required" });
-        }
-        if (!userMe.response.player.canCreatePublicLobbies) {
-          return res.status(403).json({ error: "subscription_required" });
-        }
-      }
-
-      // Re-verify after the async entitlement check to close the race window
-      // where the host could alter lobby settings (e.g. enable host cheats).
-      const raceError = getListingEligibilityError(game, maxPlayers);
-      if (raceError !== null) {
-        return res.status(409).json({ error: raceError });
-      }
-
-      const creatorID = game.hashedCreatorID();
-      if (
-        creatorID !== undefined &&
-        lobbyService.creatorHasListedLobby(creatorID, game.id)
-      ) {
-        return res.status(409).json({ error: "listing_limit_reached" });
-      }
-
-      // Cluster-wide cap to prevent listing spam. Approximate here (the
-      // broadcast lags by ~1s); the master's cap is the backstop.
-      if (lobbyService.hostedLobbyCount() >= MAX_HOSTED_LOBBIES) {
-        return res.status(409).json({ error: "listing_full" });
-      }
-    }
-
-    game.setListed(listed, { autoStartMs, maxPlayers });
-    log.info(`lobby listing ${listed ? "enabled" : "disabled"}`, {
-      gameID: game.id,
-      autoStartMs,
-      maxPlayers,
-    });
-    res.json({ listed });
-  });
+  registerListingRoute({ app, gm, lobbyService, log });
 
   // The host of a listed lobby pays (plutonium, charged by the API with the
   // host's token) to put it in the public Special queue, right behind the

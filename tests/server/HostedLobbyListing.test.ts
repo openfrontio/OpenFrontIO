@@ -27,8 +27,13 @@ import {
   InternalPublicGames,
 } from "../../src/server/IPCBridgeSchema";
 import { MasterLobbyService } from "../../src/server/MasterLobbyService";
+import { GameEnv } from "@openfront/shared/configuration/Env";
+import * as jwtModule from "../../src/server/jwt";
 import { ServerEnv } from "../../src/server/ServerEnv";
-import { getListingEligibilityError } from "../../src/server/Worker";
+import {
+  getListingEligibilityError,
+  registerListingRoute,
+} from "../../src/server/Worker";
 import { WorkerLobbyService } from "../../src/server/WorkerLobbyService";
 import {
   makeClient as harnessClient,
@@ -188,6 +193,85 @@ describe("GameServer listing", () => {
       expect(getListingEligibilityError(game, 0)).toBe(
         "listing_max_players_too_low",
       );
+    });
+  });
+
+  describe("app.post('/api/game/:id/listing') interleaving", () => {
+    it("rejects listing when lobby settings change to enable host cheats while getUserMe is pending", async () => {
+      let routeHandler!: (req: any, res: any) => Promise<any>;
+      const mockApp = {
+        post(path: string, handler: any) {
+          if (path === "/api/game/:id/listing") {
+            routeHandler = handler;
+          }
+        },
+      };
+
+      const game = makeGame("test-interleaving", CREATOR);
+      const mockGm: any = {
+        game: vi.fn((id: string) => (id === "test-interleaving" ? game : null)),
+      };
+      const mockLobbyService: any = {
+        creatorHasListedLobby: vi.fn().mockReturnValue(false),
+        hostedLobbyCount: vi.fn().mockReturnValue(0),
+      };
+
+      registerListingRoute({
+        app: mockApp as any,
+        gm: mockGm,
+        lobbyService: mockLobbyService,
+        log: mockLogger as any,
+      });
+
+      vi.spyOn(jwtModule, "verifyClientToken").mockResolvedValue({
+        type: "success",
+        persistentId: CREATOR,
+        claims: null,
+      });
+
+      vi.spyOn(ServerEnv, "env").mockReturnValue(GameEnv.Prod);
+
+      let resolveUserMe!: (val: any) => void;
+      const userMePromise = new Promise((resolve) => {
+        resolveUserMe = resolve;
+      });
+      vi.spyOn(jwtModule, "getUserMe").mockImplementation(
+        () => userMePromise as any,
+      );
+
+      const req: any = {
+        headers: { authorization: "Bearer test-token" },
+        params: { id: "test-interleaving" },
+        body: { listed: true },
+      };
+      const res: any = {
+        statusCode: 200,
+        body: undefined,
+        status(code: number) {
+          this.statusCode = code;
+          return this;
+        },
+        json(data: unknown) {
+          this.body = data;
+          return this;
+        },
+      };
+
+      const listingPromise = routeHandler(req, res);
+
+      // Mutate the lobby config while getUserMe is pending
+      game.updateGameConfig({ hostCheats: { infiniteGold: true } });
+
+      resolveUserMe({
+        type: "success",
+        response: { player: { canCreatePublicLobbies: true } },
+      });
+
+      await listingPromise;
+
+      expect(res.statusCode).toBe(409);
+      expect(res.body).toEqual({ error: "listing_host_cheats_enabled" });
+      expect(game.isListed()).toBe(false);
     });
   });
 });
