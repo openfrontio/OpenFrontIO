@@ -2652,7 +2652,6 @@
     "move_up": "Move Camera Up",
     "move_up_desc": "Move the camera upward",
     "nuclear_betrayal_blocked": "Blocked: this strike would cause a betrayal debuff.",
-    "nuclear_betrayal_blocked_short": "Blocked: betrayal",
     "nuclear_betrayal_protection_disabled": "Nuclear betrayal protection: OFF",
     "nuclear_betrayal_protection_enabled": "Nuclear betrayal protection: ON",
     "nuke_alliance_safety_desc": "Prevents accidental nuke strikes on newly formed allies.",

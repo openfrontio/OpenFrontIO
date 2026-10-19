@@ -49,20 +49,37 @@ describe("blocked nuclear previews", () => {
     expect(gl.uniform3f).toHaveBeenLastCalledWith("color", 1, 0.2, 0.2);
   });
 
-  test.each(["Atom Bomb", "Hydrogen Bomb", "MIRV"])(
-    "renders a persistent gray X for a blocked %s",
+  test.each(["Atom Bomb", "Hydrogen Bomb"])(
+    "does not add a crosshair for a blocked %s",
     (ghostType) => {
       const gl = makeGL();
       const pass = Object.create(CrosshairPass.prototype) as CrosshairPass;
       Object.assign(pass, { gl, uColor: "color", uIsDiagonal: "diagonal" });
       pass.updateGhostPreview({ ...ghost, ghostType });
       pass.draw(new Float32Array(9));
-      expect(gl.uniform3f).toHaveBeenLastCalledWith("color", 0.6, 0.6, 0.6);
-      expect(gl.uniform1f).toHaveBeenCalledWith("diagonal", 1);
+      expect(gl.drawArrays).not.toHaveBeenCalled();
     },
   );
 
-  test("shows the gray explanation even when cursor prices are hidden and gold is insufficient", () => {
+  test("grays out the existing MIRV crosshair without turning it into an X", () => {
+    const gl = makeGL();
+    const pass = Object.create(CrosshairPass.prototype) as CrosshairPass;
+    Object.assign(pass, { gl, uColor: "color", uIsDiagonal: "diagonal" });
+    pass.updateGhostPreview({ ...ghost, ghostType: "MIRV" });
+    pass.draw(new Float32Array(9));
+    expect(gl.uniform3f).toHaveBeenLastCalledWith("color", 0.6, 0.6, 0.6);
+    expect(gl.uniform1f).toHaveBeenCalledWith("diagonal", 0);
+    pass.updateGhostPreview({
+      ...ghost,
+      ghostType: "MIRV",
+      betrayalBlocked: false,
+      canBuild: true,
+    });
+    pass.draw(new Float32Array(9));
+    expect(gl.uniform3f).toHaveBeenLastCalledWith("color", 0.9, 0.15, 0.15);
+  });
+
+  test("does not add a betrayal caption to the cursor price", () => {
     const renderer = Object.create(GPURenderer.prototype) as GPURenderer;
     const setGhostCostLabel = vi.fn();
     const pass = { updateGhostPreview: vi.fn() };
@@ -75,15 +92,15 @@ describe("blocked nuclear previews", () => {
       samRadiusPass: { setVisible: vi.fn() },
     });
     renderer.updateGhostPreview(ghost);
+    expect(setGhostCostLabel).toHaveBeenLastCalledWith(null);
+    renderer.updateGhostPreview({ ...ghost, showCost: true });
     expect(setGhostCostLabel).toHaveBeenLastCalledWith({
       tileX: 3,
       tileY: 4,
-      cost: 0,
-      canAfford: true,
+      cost: 100,
+      canAfford: false,
       canPlace: false,
-      topText: "user_setting.nuclear_betrayal_blocked_short",
+      topText: undefined,
     });
-    renderer.updateGhostPreview({ ...ghost, betrayalBlocked: false });
-    expect(setGhostCostLabel).toHaveBeenLastCalledWith(null);
   });
 });

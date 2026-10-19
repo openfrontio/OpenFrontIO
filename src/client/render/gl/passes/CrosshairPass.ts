@@ -3,7 +3,7 @@
  * warship or MIRV placement (ghost preview).
  *
  * Screen-space quad with a crosshair SDF in the fragment shader.
- * Darker red when placement is invalid; a gray X when betrayal is blocked.
+ * Darker red when placement is invalid; gray when betrayal is blocked.
  */
 
 import type { GhostPreviewData } from "../../types";
@@ -99,12 +99,7 @@ export class CrosshairPass {
   }
 
   updateGhostPreview(data: GhostPreviewData | null): void {
-    if (
-      data &&
-      (data.ghostType === UT_WARSHIP ||
-        data.ghostType === UT_MIRV ||
-        data.betrayalBlocked)
-    ) {
+    if (data && (data.ghostType === UT_WARSHIP || data.ghostType === UT_MIRV)) {
       this.active = true;
       this.centerX = data.tileX;
       this.centerY = data.tileY;
@@ -170,7 +165,7 @@ export class CrosshairPass {
     gl.uniform2f(this.uCenter, this.centerX, this.centerY);
     gl.uniform1f(this.uHalfSize, CROSSHAIR_PX);
     gl.uniform2f(this.uViewport, gl.drawingBufferWidth, gl.drawingBufferHeight);
-    gl.uniform1f(this.uIsDiagonal, this.betrayalBlocked ? 1.0 : 0.0);
+    gl.uniform1f(this.uIsDiagonal, 0.0);
     gl.uniform1f(this.uHasAtlas, 0.0);
     gl.uniform1f(this.uAlpha, 1.0);
 
