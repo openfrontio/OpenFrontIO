@@ -209,6 +209,32 @@ describe("subscription-panel", () => {
     expect(text()).toContain("account_modal.sub_status_canceling");
   });
 
+  describe("status pill", () => {
+    const pillIsGreen = () =>
+      el.querySelector("span.rounded-full")!.className.includes("green");
+
+    it("styles a status this client does not know as entitled", async () => {
+      el.sub = sub({ status: "some_future_status" });
+      await el.updateComplete;
+      expect(pillIsGreen()).toBe(true);
+    });
+
+    it("styles grace as entitled", async () => {
+      el.sub = sub({ status: "grace" });
+      await el.updateComplete;
+      expect(pillIsGreen()).toBe(true);
+    });
+
+    it.each(["past_due", "unpaid", "expired", "canceled"])(
+      "keeps %s neutral",
+      async (status) => {
+        el.sub = sub({ status });
+        await el.updateComplete;
+        expect(pillIsGreen()).toBe(false);
+      },
+    );
+  });
+
   // OPE-314, the blocking half. A granted month (`provider: null`) has no
   // billing period: the server's cancel expires it on the spot and revokes the
   // premium username with it, and the grant ledger only ever earns it once, so
