@@ -93,6 +93,9 @@ jobs:
       matrix:
         include: ${{ github.event_name == 'schedule' && fromJSON(vars.DEPLOY_TARGETS_DEV || '[{"subdomain":"nightly","host":"staging"},{"subdomain":"green","host":"staging"},{"subdomain":"blue","host":"staging"}]') || fromJSON('[{"subdomain":""}]') }}
     timeout-minutes: 30
+    # Read only: update.sh pulls the image with this job's token.
+    permissions:
+      packages: read
     environment: ${{ inputs.target_domain == 'openfront.io' && 'prod' || '' }}
     env:
       DOMAIN: ${{ inputs.target_domain || 'openfront.dev' }}
@@ -218,6 +221,9 @@ jobs:
         env:
           GHCR_REPO: ${{ vars.GHCR_REPO }}
           GHCR_USERNAME: ${{ vars.GHCR_USERNAME }}
+          # update.sh pulls the private image with this job's own token.
+          GHCR_USER: ${{ github.actor }}
+          GHCR_TOKEN: ${{ github.token }}
           ENV: ${{ inputs.target_domain == 'openfront.io' && 'prod' || 'staging' }}
           # The schedule names a machine per leg; a dispatch picks one; a push
           # always lands on staging.

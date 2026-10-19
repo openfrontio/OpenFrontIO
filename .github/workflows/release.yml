@@ -77,6 +77,9 @@ jobs:
   deploy-alpha:
     name: 🧪 Deploy to alpha
     runs-on: ubuntu-latest
+    # Read only: update.sh pulls the image with this job's token.
+    permissions:
+      packages: read
     timeout-minutes: 30
     needs: [build]
     steps:
@@ -95,6 +98,9 @@ jobs:
         env:
           GHCR_REPO: openfront-prod
           GHCR_USERNAME: ${{ vars.GHCR_USERNAME }}
+          # update.sh pulls the private image with this job's own token.
+          GHCR_USER: ${{ github.actor }}
+          GHCR_TOKEN: ${{ github.token }}
           DOMAIN: ${{ vars.DOMAIN }}
           CDN_BASE: ${{ vars.CDN_BASE }}
           IMAGE_ID: ${{ needs.build.outputs.IMAGE_ID }}
@@ -140,6 +146,9 @@ jobs:
   deploy-beta:
     name: 🐞 Deploy to beta (${{ matrix.target.host }})
     runs-on: ubuntu-latest
+    # Read only: update.sh pulls the image with this job's token.
+    permissions:
+      packages: read
     needs: [build, deploy-alpha]
     timeout-minutes: 30
     environment: prod-beta
@@ -166,6 +175,9 @@ jobs:
         env:
           GHCR_REPO: ${{ vars.GHCR_REPO }}
           GHCR_USERNAME: ${{ vars.GHCR_USERNAME }}
+          # update.sh pulls the private image with this job's own token.
+          GHCR_USER: ${{ github.actor }}
+          GHCR_TOKEN: ${{ github.token }}
           DOMAIN: ${{ vars.DOMAIN }}
           CDN_BASE: ${{ vars.CDN_BASE }}
           IMAGE_ID: ${{ needs.build.outputs.IMAGE_ID }}
@@ -214,6 +226,9 @@ jobs:
   deploy-blue:
     name: 🔵 Deploy to blue (${{ matrix.target.host }})
     runs-on: ubuntu-latest
+    # Read only: update.sh pulls the image with this job's token.
+    permissions:
+      packages: read
     needs: [build, deploy-alpha]
     timeout-minutes: 30
     environment: prod-blue
@@ -255,6 +270,9 @@ jobs:
         env:
           GHCR_REPO: ${{ vars.GHCR_REPO }}
           GHCR_USERNAME: ${{ vars.GHCR_USERNAME }}
+          # update.sh pulls the private image with this job's own token.
+          GHCR_USER: ${{ github.actor }}
+          GHCR_TOKEN: ${{ github.token }}
           DOMAIN: ${{ vars.DOMAIN }}
           # Blue/green sit behind the openfront.io load balancer: see ServerEnv.siteHost.
           SITE_HOST: ${{ vars.DOMAIN }}
@@ -305,6 +323,9 @@ jobs:
   deploy-green:
     name: 🟢 Deploy to green (${{ matrix.target.host }})
     runs-on: ubuntu-latest
+    # Read only: update.sh pulls the image with this job's token.
+    permissions:
+      packages: read
     needs: [build, deploy-alpha]
     timeout-minutes: 30
     environment: prod-green
@@ -336,6 +357,9 @@ jobs:
         env:
           GHCR_REPO: ${{ vars.GHCR_REPO }}
           GHCR_USERNAME: ${{ vars.GHCR_USERNAME }}
+          # update.sh pulls the private image with this job's own token.
+          GHCR_USER: ${{ github.actor }}
+          GHCR_TOKEN: ${{ github.token }}
           DOMAIN: ${{ vars.DOMAIN }}
           # Blue/green sit behind the openfront.io load balancer: see ServerEnv.siteHost.
           SITE_HOST: ${{ vars.DOMAIN }}
