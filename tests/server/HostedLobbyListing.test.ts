@@ -197,6 +197,10 @@ describe("GameServer listing", () => {
   });
 
   describe("app.post('/api/game/:id/listing') interleaving", () => {
+    afterEach(() => {
+      vi.restoreAllMocks();
+    });
+
     it("rejects listing when lobby settings change to enable host cheats while getUserMe is pending", async () => {
       let routeHandler!: (req: any, res: any) => Promise<any>;
       const mockApp = {
@@ -235,9 +239,9 @@ describe("GameServer listing", () => {
       const userMePromise = new Promise((resolve) => {
         resolveUserMe = resolve;
       });
-      vi.spyOn(jwtModule, "getUserMe").mockImplementation(
-        () => userMePromise as any,
-      );
+      const getUserMeSpy = vi
+        .spyOn(jwtModule, "getUserMe")
+        .mockImplementation(() => userMePromise as any);
 
       const req: any = {
         headers: { authorization: "Bearer test-token" },
@@ -258,6 +262,9 @@ describe("GameServer listing", () => {
       };
 
       const listingPromise = routeHandler(req, res);
+
+      // Wait until the handler passes preError validation and is suspended on getUserMe
+      await vi.waitFor(() => expect(getUserMeSpy).toHaveBeenCalled());
 
       // Mutate the lobby config while getUserMe is pending
       game.updateGameConfig({ hostCheats: { infiniteGold: true } });
