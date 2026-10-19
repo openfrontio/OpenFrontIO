@@ -512,7 +512,7 @@
   "control_panel": {
     "gold": "Ouro",
     "troops": "Tropas",
-    "attack_ratio": "Proporción de ataque"
+    "attack_ratio": "{percent}%\n({troops})"
   },
   "player_panel": {
     "gold": "Ouro",

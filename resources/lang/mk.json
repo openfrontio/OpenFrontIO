@@ -549,7 +549,7 @@
   "control_panel": {
     "gold": "Злато",
     "troops": "Војници",
-    "attack_ratio": "Однос на напад"
+    "attack_ratio": "{percent}%\n({troops})"
   },
   "player_panel": {
     "gold": "Злато",

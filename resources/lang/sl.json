@@ -555,7 +555,7 @@
   "control_panel": {
     "gold": "Zlato",
     "troops": "Enote",
-    "attack_ratio": "Napadalno razmerje"
+    "attack_ratio": "{percent}%\n({troops})"
   },
   "player_panel": {
     "gold": "Zlato",

@@ -601,7 +601,7 @@ export class ControlPanel extends LitElement implements Controller {
       percent,
       troops,
     });
-    return translated === "control_panel.attack_ratio" ||
+    return translated !== "control_panel.attack_ratio" &&
       translated.includes(percent)
       ? translated
       : `${percent}%\n(${troops})`;

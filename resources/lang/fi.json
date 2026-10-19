@@ -549,7 +549,7 @@
   "control_panel": {
     "gold": "Kultaa",
     "troops": "Joukkoja",
-    "attack_ratio": "Hyökkäyksen osuus"
+    "attack_ratio": "{percent}%\n({troops})"
   },
   "player_panel": {
     "gold": "Kultaa",

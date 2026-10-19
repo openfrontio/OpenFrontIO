@@ -597,7 +597,7 @@
   "control_panel": {
     "gold": "Złoto",
     "troops": "Wojsko",
-    "attack_ratio": "Współczynnik ataku"
+    "attack_ratio": "{percent}%\n({troops})"
   },
   "player_panel": {
     "gold": "Złoto",

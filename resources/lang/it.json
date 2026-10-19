@@ -396,7 +396,7 @@
     "gold": "Oro",
     "troops": "Truppe",
     "workers": "Lavoratori",
-    "attack_ratio": "Rapporto di Attacco"
+    "attack_ratio": "{percent}%\n({troops})"
   },
   "player_panel": {
     "gold": "Oro",
