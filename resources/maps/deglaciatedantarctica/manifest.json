@@ -65,5 +65,6 @@
       "name": "French Claim"
     }
   ],
+  "themes": ["antarctica"],
   "translation_key": "map.deglaciatedantarctica"
 }

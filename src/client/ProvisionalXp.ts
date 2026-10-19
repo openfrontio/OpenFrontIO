@@ -10,6 +10,7 @@ import {
   type PlayerStats,
 } from "@openfront/engine-api/StatsSchemas";
 import type { XpRules } from "@openfront/shared/ApiSchemas";
+import { applyMultipliers } from "./XpMultipliers";
 
 // A copy of the API's XP formula (computeXp in the API's
 // lib/progression/Xp.ts), for the PROVISIONAL figure shown when a player dies
@@ -213,17 +214,8 @@ export function computeXp(ctx: XpContext, rules: XpRules): XpResult {
   };
 }
 
-/** The award for a subtotal: both multipliers, rounded half up. */
-export function applyMultipliers(
-  subtotal: number,
-  gamePermille: number,
-  subscriberPermille: number,
-): number {
-  const scale = 1000 * 1000;
-  return Math.floor(
-    (subtotal * gamePermille * subscriberPermille + scale / 2) / scale,
-  );
-}
+// The award for a subtotal: both multipliers, rounded half up.
+export { applyMultipliers };
 
 // For each spawned player in an FFA game, how many other spawned players went
 // out strictly before them. Survivors outlast every eliminated player and tie

@@ -1,5 +1,5 @@
 {
-  "categories": ["arcade"],
+  "categories": ["arcade", "new"],
   "id": "Ommatrypta",
   "layers": [
     {
@@ -17,17 +17,17 @@
   ],
   "map": {
     "height": 1284,
-    "num_land_tiles": 678782,
+    "num_land_tiles": 678797,
     "width": 2192
   },
   "map16x": {
     "height": 321,
-    "num_land_tiles": 38429,
+    "num_land_tiles": 38430,
     "width": 548
   },
   "map4x": {
     "height": 642,
-    "num_land_tiles": 164345,
+    "num_land_tiles": 164340,
     "width": 1096
   },
   "multiplayer_frequency": 10,
@@ -136,5 +136,6 @@
       "name": "Balling"
     }
   ],
+  "themes": ["scary", "fantasy"],
   "translation_key": "map.ommatrypta"
 }

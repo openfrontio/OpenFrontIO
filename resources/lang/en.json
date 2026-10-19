@@ -116,6 +116,8 @@
     "sub_status_canceled": "Canceled",
     "sub_status_canceling": "Canceling",
     "sub_status_canceling_on": "Cancels {date}",
+    "sub_status_expired": "Expired",
+    "sub_status_grace": "Grace Period",
     "sub_status_incomplete": "Incomplete",
     "sub_status_incomplete_expired": "Expired",
     "sub_status_past_due": "Past Due",
@@ -225,6 +227,7 @@
       "greet": "Greetings",
       "help": "Help",
       "misc": "Miscellaneous",
+      "recent": "Recent",
       "warnings": "Warnings"
     },
     "defend": {
@@ -276,7 +279,9 @@
       "strategy": "Nice strategy!",
       "team_up": "Let’s team up against [P1]!"
     },
+    "no_phrases": "No matching phrases",
     "search": "Search player...",
+    "search_phrases": "Search phrases...",
     "short": {
       "greet": {
         "ruining_games": "Ruining our games"
@@ -296,7 +301,7 @@
         "saving_for_mirv": "[P1] saving for MIRV",
         "snowballing": "[P1] is snowballing",
         "stalemate": "Peace? Stalemate.",
-        "stop_trading_all": "Stop all trading!"
+        "stop_trading_enemies": "Stop trading with enemies!"
       }
     },
     "title": "Quick Chat",
@@ -317,7 +322,7 @@
       "snowballing": "[P1] is snowballing too fast!",
       "stalemate": "Let's make peace. This is a stalemate, we will both lose.",
       "stop_trading": "Stop trading with [P1]!",
-      "stop_trading_all": "Please stop trading with all!",
+      "stop_trading_enemies": "Please stop trading with enemies!",
       "strong": "[P1] is strong.",
       "weak": "[P1] is weak."
     }
@@ -1789,9 +1794,9 @@
     "send_gold": "Send Gold",
     "send_troops": "Send Troops",
     "start_trade": "Start Trading",
-    "start_trade_all": "Start Trading with All",
+    "start_trade_enemies": "Start Trading with Enemies",
     "stop_trade": "Stop Trading",
-    "stop_trade_all": "Stop Trading with All",
+    "stop_trade_enemies": "Stop Trading with Enemies",
     "stopped": "Stopped",
     "target": "Target",
     "trading": "Trading",
@@ -2141,6 +2146,7 @@
     "earlier": "Earlier levels",
     "key_claimed": "Claimed",
     "key_locked": "Locked",
+    "key_pending": "Pending",
     "key_ready": "Ready to claim",
     "later": "Later levels",
     "legend_reward": "Legend reward",
@@ -2621,6 +2627,8 @@
     "graphics_refresh_modifier_desc": "Hold this key and {key} to refresh graphics",
     "ground_attack": "Ground Attack",
     "ground_attack_desc": "Send a ground attack to the tile under your cursor.",
+    "halloween_theme_desc": "Show the Halloween look on the home page.",
+    "halloween_theme_label": "Halloween Theme",
     "help_messages_desc": "Show contextual tips and warnings during gameplay, such as army limit warnings and general gameplay advice.",
     "help_messages_label": "Help Messages",
     "highlight_glow_strength_label": "Highlight strength",
@@ -2636,6 +2644,7 @@
     "lobby_start_alerts_desc": "Play the start chime for each lobby and ranked match by default and show a desktop notification when permitted. You can override it with the lobby bell.",
     "lobby_start_alerts_label": "Lobby Start Alerts",
     "menu_shortcuts": "Menu Shortcuts",
+    "modifiers": "Modifiers",
     "move_down": "Move Camera Down",
     "move_down_desc": "Move the camera downward",
     "move_left": "Move Camera Left",
@@ -2670,6 +2679,8 @@
     "retaliate_attack_desc": "Send a retaliation attack to blunt/negate the force of the most recent active attacker. Only available when you are being attacked.",
     "select_all_warships": "Select All Warships",
     "select_all_warships_desc": "Select all of your warships on the map.",
+    "snap_build_preview_desc": "Move the build preview to the tile the structure will actually be built on",
+    "snap_build_preview_label": "Snap Build Preview",
     "special_effects_desc": "Toggle special effects. Deactivate to improve performances",
     "special_effects_label": "Special effects",
     "steam_lobby_links_desc": "Open lobby links in the Steam app instead of joining in this browser",

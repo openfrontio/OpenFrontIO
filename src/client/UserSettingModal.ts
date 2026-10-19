@@ -80,6 +80,11 @@ const PREVIEWABLE: readonly CueCategory[] = ["effects", "alerts", "interface"];
  */
 const PREVIEW_CEILING_MS = 10_000;
 
+// Set by the inline script at the top of <body> in index.html.
+function isHalloweenSeason(): boolean {
+  return document.body.dataset.halloweenSeason !== undefined;
+}
+
 @customElement("user-setting")
 export class UserSettingModal extends BaseModal {
   private currentUiScale: number | undefined;
@@ -408,6 +413,15 @@ export class UserSettingModal extends BaseModal {
     );
   }
 
+  private toggleSnapBuildPreview() {
+    this.userSettings.toggleSnapBuildPreview();
+
+    console.log(
+      "🧲 Snap build preview:",
+      this.userSettings.snapBuildPreview() ? "ON" : "OFF",
+    );
+  }
+
   private toggleAnonymousNames() {
     this.userSettings.toggleRandomName();
 
@@ -517,6 +531,14 @@ export class UserSettingModal extends BaseModal {
     console.log(
       "🔍 Go to player:",
       this.userSettings.goToPlayer() ? "ON" : "OFF",
+    );
+  }
+
+  private toggleHalloweenTheme() {
+    this.userSettings.toggleHalloweenTheme();
+    document.body.classList.toggle(
+      "halloween-theme",
+      isHalloweenSeason() && this.userSettings.halloweenTheme(),
     );
   }
 
@@ -1829,6 +1851,15 @@ export class UserSettingModal extends BaseModal {
         @change=${this.toggleCursorCostLabel}
       ></setting-toggle>
 
+      <!-- 🧲 Snap Build Preview -->
+      <setting-toggle
+        label="${translateText("user_setting.snap_build_preview_label")}"
+        description="${translateText("user_setting.snap_build_preview_desc")}"
+        id="snap-build-preview-toggle"
+        .checked=${this.userSettings.snapBuildPreview()}
+        @change=${this.toggleSnapBuildPreview}
+      ></setting-toggle>
+
       <!-- 🖱️ Left Click Menu -->
       <setting-toggle
         label="${translateText("user_setting.left_click_label")}"
@@ -1894,6 +1925,16 @@ export class UserSettingModal extends BaseModal {
         .checked=${this.userSettings.goToPlayer()}
         @change=${this.toggleGoToPlayer}
       ></setting-toggle>
+
+      ${isHalloweenSeason()
+        ? html`<setting-toggle
+            label="${translateText("user_setting.halloween_theme_label")}"
+            description="${translateText("user_setting.halloween_theme_desc")}"
+            id="halloween-theme-toggle"
+            .checked=${this.userSettings.halloweenTheme()}
+            @change=${this.toggleHalloweenTheme}
+          ></setting-toggle>`
+        : null}
 
       <!-- Help messages (moved here from the in-game menu) -->
       <setting-toggle

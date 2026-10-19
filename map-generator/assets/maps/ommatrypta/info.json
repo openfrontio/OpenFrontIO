@@ -2,7 +2,7 @@
   "id": "Ommatrypta",
   "name": "Ommatrypta",
   "translation_key": "map.ommatrypta",
-  "categories": ["arcade"],
+  "categories": ["arcade", "new"],
   "multiplayer_frequency": 10,
   "nations": [
     {
@@ -122,5 +122,6 @@
       "alpha": 0.7,
       "nukeable": false
     }
-  ]
+  ],
+  "themes": ["scary", "fantasy"]
 }
