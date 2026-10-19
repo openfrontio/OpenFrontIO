@@ -326,5 +326,21 @@
       "flag": "mg"
     }
   ],
+  "teamGameSpawnAreas": {
+    "2": [
+      {
+        "height": 2332,
+        "width": 1174,
+        "x": 0,
+        "y": 0
+      },
+      {
+        "height": 2332,
+        "width": 2324,
+        "x": 1173,
+        "y": 0
+      }
+    ],
   "themes": ["africa"]
+}
 }
