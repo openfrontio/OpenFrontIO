@@ -478,6 +478,7 @@ export const BuildUnitIntentSchema = z.object({
   tile: zb.uint(),
   rocketDirectionUp: z.boolean().optional(),
   amount: zb.uint({ min: 1, max: MAX_UPGRADE_AMOUNT }).optional(),
+  preventBetrayal: z.boolean().optional(),
 });
 
 export const UpgradeStructureIntentSchema = z.object({

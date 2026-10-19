@@ -56,6 +56,7 @@ export function createRenderer(
   eventBus: EventBus,
   playerRole: string | null,
   view: MapRenderer,
+  abortSignal: AbortSignal,
   mapLayerController?: MapLayerController,
 ): GameRenderer {
   const transformHandler = new TransformHandler(game, eventBus, inputEl);
@@ -328,6 +329,7 @@ export function createRenderer(
       transformHandler,
       view,
       userSettings,
+      abortSignal,
     ),
     new HoverHighlightController(game, eventBus, transformHandler, view),
     new LiveStatsController(game, eventBus),

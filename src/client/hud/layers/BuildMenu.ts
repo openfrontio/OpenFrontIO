@@ -7,6 +7,7 @@ import {
   UnitType,
 } from "@openfront/engine-api/game/GameTypes";
 import { renderNumber } from "@openfront/engine-lib/Format";
+import { wouldNukeCauseBetrayal } from "@openfront/engine-lib/execution/NukeAlliance";
 import { assetUrl } from "@openfront/shared/AssetUrls";
 import { EventBus } from "@openfront/shared/EventBus";
 import { css, html, LitElement } from "lit";
@@ -25,6 +26,7 @@ import {
   SendUpgradeStructureIntentEvent,
 } from "../../Transport";
 import { UIState } from "../../UIState";
+import { USER_SETTINGS_CHANGED_EVENT, UserSettings } from "../../UserSettings";
 import { GameView } from "../../view";
 const warshipIcon = assetUrl("images/BattleshipIconWhite.svg");
 const cityIcon = assetUrl("images/CityIconWhite.svg");
@@ -125,6 +127,7 @@ export const flattenedBuildTable = buildTable.flat();
 
 @customElement("build-menu")
 export class BuildMenu extends LitElement implements Controller {
+  private readonly userSettings = new UserSettings();
   public game: GameView;
   public eventBus: EventBus;
   public uiState: UIState;
@@ -132,6 +135,24 @@ export class BuildMenu extends LitElement implements Controller {
   public playerBuildables: BuildableUnit[] | null = null;
   private filteredBuildTable: BuildItemDisplay[][] = buildTable;
   public transformHandler: TransformHandler;
+
+  connectedCallback() {
+    super.connectedCallback();
+    globalThis.addEventListener(
+      `${USER_SETTINGS_CHANGED_EVENT}:settings.preventNuclearBetrayal`,
+      this.onNuclearBetrayalChanged,
+    );
+  }
+
+  disconnectedCallback() {
+    globalThis.removeEventListener(
+      `${USER_SETTINGS_CHANGED_EVENT}:settings.preventNuclearBetrayal`,
+      this.onNuclearBetrayalChanged,
+    );
+    super.disconnectedCallback();
+  }
+
+  private readonly onNuclearBetrayalChanged = () => this.requestUpdate();
 
   init() {
     this.eventBus.on(ShowBuildMenuEvent, (e) => {
@@ -356,10 +377,28 @@ export class BuildMenu extends LitElement implements Controller {
   @state()
   private _hidden = true;
 
-  public canBuildOrUpgrade(item: BuildItemDisplay): boolean {
+  public isBetrayalBlocked(unitType: UnitType, tile: TileRef): boolean {
+    if (!this.userSettings.preventNuclearBetrayal()) return false;
+    const player = this.game.myPlayer();
+    return (
+      player !== null &&
+      wouldNukeCauseBetrayal({
+        game: this.game,
+        player,
+        targetTile: tile,
+        unitType,
+      })
+    );
+  }
+
+  public canBuildOrUpgrade(
+    item: BuildItemDisplay,
+    tile: TileRef = this.clickedTile,
+  ): boolean {
     if (this.game?.myPlayer() === null || this.playerBuildables === null) {
       return false;
     }
+    if (this.isBetrayalBlocked(item.unitType, tile)) return false;
     const unit = this.playerBuildables.find((u) => u.type === item.unitType);
     return unit ? unit.canBuild !== false || unit.canUpgrade !== false : false;
   }
@@ -383,6 +422,7 @@ export class BuildMenu extends LitElement implements Controller {
   }
 
   public sendBuildOrUpgrade(buildableUnit: BuildableUnit, tile: TileRef): void {
+    if (this.isBetrayalBlocked(buildableUnit.type, tile)) return;
     if (buildableUnit.canUpgrade !== false) {
       this.eventBus.emit(
         new SendUpgradeStructureIntentEvent(
@@ -419,18 +459,25 @@ export class BuildMenu extends LitElement implements Controller {
                 if (buildableUnit === undefined) {
                   return html``;
                 }
+                const blocked = this.isBetrayalBlocked(
+                  item.unitType,
+                  this.clickedTile,
+                );
                 const enabled =
-                  buildableUnit.canBuild !== false ||
-                  buildableUnit.canUpgrade !== false;
+                  !blocked &&
+                  (buildableUnit.canBuild !== false ||
+                    buildableUnit.canUpgrade !== false);
                 return html`
                   <button
                     class="build-button"
                     @click=${() =>
                       this.sendBuildOrUpgrade(buildableUnit, this.clickedTile)}
                     ?disabled=${!enabled}
-                    title=${!enabled
-                      ? translateText("build_menu.not_enough_money")
-                      : ""}
+                    title=${blocked
+                      ? translateText("user_setting.nuclear_betrayal_blocked")
+                      : !enabled
+                        ? translateText("build_menu.not_enough_money")
+                        : ""}
                   >
                     <img
                       src=${item.icon}
@@ -442,8 +489,10 @@ export class BuildMenu extends LitElement implements Controller {
                       ${item.key && translateText(item.key)}
                     </span>
                     <span class="build-description"
-                      >${item.description &&
-                      translateText(item.description)}</span
+                      >${blocked
+                        ? translateText("user_setting.nuclear_betrayal_blocked")
+                        : item.description &&
+                          translateText(item.description)}</span
                     >
                     <span class="build-cost" translate="no">
                       ${renderNumber(

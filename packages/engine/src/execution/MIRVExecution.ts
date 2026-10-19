@@ -5,6 +5,7 @@ import {
   UnitType,
 } from "@openfront/engine-api/game/GameTypes";
 import { PseudoRandom } from "@openfront/engine-lib/PseudoRandom";
+import { wouldNukeCauseBetrayal } from "@openfront/engine-lib/execution/NukeAlliance";
 import {
   zInt,
   zNum,
@@ -77,6 +78,7 @@ export class MirvExecution implements Execution {
   constructor(
     private player: Player,
     private dst: TileRef,
+    private preventBetrayal?: boolean,
   ) {}
 
   init(mg: Game, ticks: number): void {
@@ -90,6 +92,18 @@ export class MirvExecution implements Execution {
 
   tick(ticks: number): void {
     if (this.nuke === null) {
+      if (
+        this.preventBetrayal &&
+        wouldNukeCauseBetrayal({
+          game: this.mg,
+          player: this.player,
+          targetTile: this.dst,
+          unitType: UnitType.MIRV,
+        })
+      ) {
+        this.active = false;
+        return;
+      }
       const spawn = this.player.canBuild(UnitType.MIRV, this.dst);
       if (spawn === false) {
         console.warn(`cannot build MIRV`);
@@ -396,6 +410,7 @@ export class MirvExecution implements Execution {
       active: this.active,
       player: w.player(this.player),
       dst: this.dst,
+      preventBetrayal: this.preventBetrayal,
       range: this.range,
       rangeSquared: this.rangeSquared,
       minimumSpread: this.minimumSpread,
@@ -432,6 +447,7 @@ export class MirvExecution implements Execution {
     this.active = s.active;
     this.player = r.player(s.player);
     this.dst = s.dst;
+    this.preventBetrayal = s.preventBetrayal;
     this.range = s.range;
     this.rangeSquared = s.rangeSquared;
     this.minimumSpread = s.minimumSpread;
@@ -464,6 +480,7 @@ const MirvStateSchema = z.object({
   active: z.boolean(),
   player: zPlayerRef(),
   dst: zTile(),
+  preventBetrayal: z.boolean().optional(),
   range: zInt(),
   rangeSquared: zInt(),
   minimumSpread: zInt(),
@@ -496,7 +513,8 @@ type MirvState = z.infer<typeof MirvStateSchema>;
 
 export const MirvExecutionSnapshot = execSnapshotType({
   name: "MIRV",
-  version: 1,
+  version: 2,
+  migrations: { 1: (data) => data },
   schema: MirvStateSchema,
   cls: () => MirvExecution,
 });

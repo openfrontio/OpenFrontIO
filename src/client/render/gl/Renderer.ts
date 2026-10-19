@@ -1067,8 +1067,9 @@ export class GPURenderer {
     // The multiplier badge (x5) rides on the cost label but must show even
     // when there is no cost line — e.g. infinite gold (cost 0) or the
     // cursor-cost-label setting turned off.
-    const topText =
-      data?.multiplier && data.multiplier > 1
+    const topText = data?.betrayalBlocked
+      ? translateText("user_setting.nuclear_betrayal_blocked_short")
+      : data?.multiplier && data.multiplier > 1
         ? translateText("build_menu.upgrade_amount", {
             amount: data.multiplier.toString(),
           })
@@ -1080,7 +1081,7 @@ export class GPURenderer {
             tileX: data.tileX,
             tileY: data.tileY,
             cost: showCost ? data.cost : 0,
-            canAfford: data.canAfford,
+            canAfford: data.betrayalBlocked || data.canAfford,
             canPlace: data.canBuild || data.canUpgrade,
             topText,
           }

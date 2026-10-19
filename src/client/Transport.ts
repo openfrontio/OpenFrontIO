@@ -59,6 +59,7 @@ import {
 } from "./LobbyEvents";
 import { LocalServer } from "./LocalServer";
 import { describeSocketClose } from "./SocketClose";
+import { UserSettings } from "./UserSettings";
 import { homeHref, translateText } from "./Utils";
 import { PlayerView } from "./view";
 
@@ -241,6 +242,7 @@ const poolRedirectLatch = (gameID: string) => `pool-redirect:${gameID}`;
 const POOL_REDIRECT_FROM = "pool-redirect-from";
 
 export class Transport {
+  private readonly userSettings = new UserSettings();
   // Retry budget for a dropped game socket. The first retry is immediate (a
   // blip should not cost a second), then exponential from the base to the
   // cap with +/-25% jitter: about 90s nominal over ten attempts, 68-113s with
@@ -886,12 +888,18 @@ export class Transport {
   }
 
   private onBuildUnitIntent(event: BuildUnitIntentEvent) {
+    const isNuke =
+      event.unit === UnitType.AtomBomb ||
+      event.unit === UnitType.HydrogenBomb ||
+      event.unit === UnitType.MIRV;
     this.sendIntent({
       type: "build_unit",
       unit: event.unit,
       tile: event.tile,
       rocketDirectionUp: event.rocketDirectionUp,
       amount: event.amount,
+      preventBetrayal:
+        (isNuke && this.userSettings.preventNuclearBetrayal()) || undefined,
     });
   }
 

@@ -115,6 +115,7 @@ describe("RadialMenuElements", () => {
 
     mockBuildMenu = {
       canBuildOrUpgrade: vi.fn(() => true),
+      isBetrayalBlocked: vi.fn(() => false),
       cost: vi.fn(() => 100),
       count: vi.fn(() => 5),
     };
@@ -182,6 +183,60 @@ describe("RadialMenuElements", () => {
   });
 
   describe("attackMenuElement", () => {
+    it("disables unsafe nuclear targets and explains the protection", () => {
+      mockParams.selected = null;
+      mockBuildMenu.isBetrayalBlocked.mockReturnValue(true);
+      mockBuildMenu.canBuildOrUpgrade.mockReturnValue(false);
+      const items = attackMenuElement.subMenu!(mockParams);
+
+      for (const type of [
+        UnitType.AtomBomb,
+        UnitType.HydrogenBomb,
+        UnitType.MIRV,
+      ]) {
+        const item = items.find((entry) => entry.id === `attack_${type}`)!;
+        expect(item.disabled(mockParams)).toBe(true);
+        expect(item.tooltipItems).toContainEqual({
+          text: "user_setting.nuclear_betrayal_blocked",
+          className: "description",
+        });
+        item.action!(mockParams);
+      }
+      expect(mockBuildMenu.canBuildOrUpgrade).toHaveBeenCalledWith(
+        expect.objectContaining({ unitType: UnitType.AtomBomb }),
+        mockTile,
+      );
+      expect(mockParams.eventBus.emit).not.toHaveBeenCalled();
+    });
+
+    it("rechecks protection in an already-open bulk atom bomb menu", () => {
+      mockParams.selected = null;
+      mockGame.myPlayer = vi.fn(() => mockPlayer);
+      mockPlayer.gold = vi.fn(() => 1000n);
+      mockPlayer.readyMissileCount = vi.fn(() => 10);
+      const atom = attackMenuElement.subMenu!(mockParams).find(
+        (entry) => entry.id === `attack_${UnitType.AtomBomb}`,
+      )!;
+      const bulk = atom.subMenu!(mockParams)[1];
+      expect(bulk.disabled(mockParams)).toBe(false);
+
+      mockBuildMenu.isBetrayalBlocked.mockReturnValue(true);
+      expect(bulk.disabled(mockParams)).toBe(true);
+      bulk.action!(mockParams);
+      expect(mockParams.eventBus.emit).not.toHaveBeenCalled();
+      expect(bulk.tooltipItems).toContainEqual({
+        text: "user_setting.nuclear_betrayal_blocked",
+        className: "description",
+      });
+
+      mockBuildMenu.isBetrayalBlocked.mockReturnValue(false);
+      expect(bulk.disabled(mockParams)).toBe(false);
+      bulk.action!(mockParams);
+      expect(mockParams.eventBus.emit).toHaveBeenCalledWith(
+        new BuildUnitIntentEvent(UnitType.AtomBomb, mockTile, undefined, 2),
+      );
+    });
+
     it("should have correct basic properties", () => {
       expect(attackMenuElement.id).toBe(Slot.Attack);
       expect(attackMenuElement.name).toBe("radial_attack");
@@ -769,7 +824,8 @@ describe("RadialMenuElements", () => {
 
       (translateText as Mock).mockClear();
 
-      buildMenuElement.subMenu!(mockParams);
+      const items = buildMenuElement.subMenu!(mockParams);
+      expect(items.every((item) => item.tooltipItems?.length)).toBe(true);
 
       expect(translateText).toHaveBeenCalledWith("unit_type.city");
       expect(translateText).toHaveBeenCalledWith("unit_type.city_desc");
@@ -790,7 +846,8 @@ describe("RadialMenuElements", () => {
       } as unknown as PlayerView;
       mockParams.selected = enemyPlayer;
 
-      attackMenuElement.subMenu!(mockParams);
+      const items = attackMenuElement.subMenu!(mockParams);
+      expect(items.every((item) => item.tooltipItems?.length)).toBe(true);
 
       expect(translateText).toHaveBeenCalledWith("unit_type.atom_bomb");
       expect(translateText).toHaveBeenCalledWith("unit_type.atom_bomb_desc");

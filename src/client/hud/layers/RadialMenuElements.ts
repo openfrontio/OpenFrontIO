@@ -437,30 +437,36 @@ function createMenuElements(
           ? item.key.replace("unit_type.", "")
           : item.unitType.toString(),
         disabled: (p: MenuElementParams) =>
-          !p.buildMenu.canBuildOrUpgrade(item),
+          !p.buildMenu.canBuildOrUpgrade(item, p.tile),
         color: (p: MenuElementParams) =>
-          p.buildMenu.canBuildOrUpgrade(item)
+          p.buildMenu.canBuildOrUpgrade(item, p.tile)
             ? filterType === "attack"
               ? COLORS.attack
               : COLORS.building
             : COLORS.building,
         icon: item.icon,
-        tooltipItems: [
-          { text: translateText(item.key ?? ""), className: "title" },
-          {
-            text: translateText(item.description ?? ""),
-            className: "description",
-          },
-          {
-            text: `${renderNumber(params.buildMenu.cost(item))} ${translateText("player_panel.gold")}`,
-            className: "cost",
-          },
-          item.countable
-            ? { text: `${params.buildMenu.count(item)}x`, className: "count" }
-            : null,
-        ].filter(
-          (tooltipItem): tooltipItem is TooltipItem => tooltipItem !== null,
-        ),
+        get tooltipItems() {
+          return [
+            { text: translateText(item.key ?? ""), className: "title" },
+            {
+              text: translateText(
+                params.buildMenu.isBetrayalBlocked(item.unitType, params.tile)
+                  ? "user_setting.nuclear_betrayal_blocked"
+                  : (item.description ?? ""),
+              ),
+              className: "description",
+            },
+            {
+              text: `${renderNumber(params.buildMenu.cost(item))} ${translateText("player_panel.gold")}`,
+              className: "cost",
+            },
+            item.countable
+              ? { text: `${params.buildMenu.count(item)}x`, className: "count" }
+              : null,
+          ].filter(
+            (tooltipItem): tooltipItem is TooltipItem => tooltipItem !== null,
+          );
+        },
         subMenu: (params: MenuElementParams) => {
           const buildableUnit = params.playerActions.buildableUnits.find(
             (bu) => bu.type === item.unitType,
@@ -473,7 +479,7 @@ function createMenuElements(
             buildableUnit.canBuild !== false;
           if (
             (buildableUnit.canUpgrade === false && !isStackableNuke) ||
-            !params.buildMenu.canBuildOrUpgrade(item)
+            !params.buildMenu.canBuildOrUpgrade(item, params.tile)
           ) {
             return [];
           }
@@ -517,21 +523,40 @@ function createMenuElements(
                   ? COLORS.building
                   : COLORS.disabled,
               icon: "",
-              tooltipItems: [
-                {
-                  text: translateText("radial_menu.upgrade_x", {
-                    amount: amount.toString(),
-                  }),
-                  className: "title",
-                },
-                {
-                  text: `${renderNumber(cost)} ${translateText("player_panel.gold")}`,
-                  className: "cost",
-                },
-              ],
+              get tooltipItems() {
+                return [
+                  {
+                    text: translateText("radial_menu.upgrade_x", {
+                      amount: amount.toString(),
+                    }),
+                    className: "title",
+                  },
+                  {
+                    text: `${renderNumber(cost)} ${translateText("player_panel.gold")}`,
+                    className: "cost",
+                  },
+                  ...(params.buildMenu.isBetrayalBlocked(
+                    item.unitType,
+                    params.tile,
+                  )
+                    ? [
+                        {
+                          text: translateText(
+                            "user_setting.nuclear_betrayal_blocked",
+                          ),
+                          className: "description",
+                        },
+                      ]
+                    : []),
+                ];
+              },
               disabled: (p: MenuElementParams) =>
-                !executable || (p.game.myPlayer()?.gold() ?? 0n) < cost,
+                !executable ||
+                (p.game.myPlayer()?.gold() ?? 0n) < cost ||
+                p.buildMenu.isBetrayalBlocked(item.unitType, p.tile),
               action: (p: MenuElementParams) => {
+                if (p.buildMenu.isBetrayalBlocked(item.unitType, p.tile))
+                  return;
                 if (isStackableNuke) {
                   p.eventBus.emit(
                     new BuildUnitIntentEvent(
@@ -562,7 +587,7 @@ function createMenuElements(
           if (buildableUnit === undefined) {
             return;
           }
-          if (params.buildMenu.canBuildOrUpgrade(item)) {
+          if (params.buildMenu.canBuildOrUpgrade(item, params.tile)) {
             if (buildableUnit.canUpgrade !== false) {
               params.eventBus.emit(
                 new SendUpgradeStructureIntentEvent(

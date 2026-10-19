@@ -3,7 +3,7 @@
  * warship or MIRV placement (ghost preview).
  *
  * Screen-space quad with a crosshair SDF in the fragment shader.
- * Darker red when placement is invalid.
+ * Darker red when placement is invalid; a gray X when betrayal is blocked.
  */
 
 import type { GhostPreviewData } from "../../types";
@@ -43,6 +43,7 @@ export class CrosshairPass {
   private centerX = 0;
   private centerY = 0;
   private canBuild = false;
+  private betrayalBlocked = false;
 
   private blockedXTile: {
     x: number;
@@ -98,11 +99,17 @@ export class CrosshairPass {
   }
 
   updateGhostPreview(data: GhostPreviewData | null): void {
-    if (data && (data.ghostType === UT_WARSHIP || data.ghostType === UT_MIRV)) {
+    if (
+      data &&
+      (data.ghostType === UT_WARSHIP ||
+        data.ghostType === UT_MIRV ||
+        data.betrayalBlocked)
+    ) {
       this.active = true;
       this.centerX = data.tileX;
       this.centerY = data.tileY;
       this.canBuild = data.canBuild || data.canUpgrade;
+      this.betrayalBlocked = data.betrayalBlocked;
     } else {
       this.active = false;
     }
@@ -163,10 +170,13 @@ export class CrosshairPass {
     gl.uniform2f(this.uCenter, this.centerX, this.centerY);
     gl.uniform1f(this.uHalfSize, CROSSHAIR_PX);
     gl.uniform2f(this.uViewport, gl.drawingBufferWidth, gl.drawingBufferHeight);
-    gl.uniform1f(this.uIsDiagonal, 0.0);
+    gl.uniform1f(this.uIsDiagonal, this.betrayalBlocked ? 1.0 : 0.0);
+    gl.uniform1f(this.uHasAtlas, 0.0);
     gl.uniform1f(this.uAlpha, 1.0);
 
-    if (this.canBuild) {
+    if (this.betrayalBlocked) {
+      gl.uniform3f(this.uColor, 0.6, 0.6, 0.6);
+    } else if (this.canBuild) {
       gl.uniform3f(this.uColor, 0.9, 0.15, 0.15); // red crosshair
     } else {
       gl.uniform3f(this.uColor, 0.4, 0.1, 0.1); // dark red = can't build

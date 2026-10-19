@@ -8,7 +8,10 @@ import {
 } from "@openfront/engine-api/game/GameTypes";
 import { NukeType } from "@openfront/engine-api/StatsSchemas";
 import { atan2 } from "@openfront/engine-lib/DetMath";
-import { listNukeBreakAlliance } from "@openfront/engine-lib/execution/NukeAlliance";
+import {
+  listNukeBreakAlliance,
+  wouldNukeCauseBetrayal,
+} from "@openfront/engine-lib/execution/NukeAlliance";
 import { PseudoRandom } from "@openfront/engine-lib/PseudoRandom";
 import {
   zInt,
@@ -52,6 +55,7 @@ export class NukeExecution implements Execution {
     private speed: number = -1,
     private waitTicks = 0,
     private rocketDirectionUp: boolean = true,
+    private preventBetrayal?: boolean,
   ) {}
 
   init(mg: Game, ticks: number): void {
@@ -200,6 +204,18 @@ export class NukeExecution implements Execution {
 
   tick(ticks: number): void {
     if (this.nuke === null) {
+      if (
+        this.preventBetrayal &&
+        wouldNukeCauseBetrayal({
+          game: this.mg,
+          player: this.player,
+          targetTile: this.dst,
+          unitType: this.nukeType,
+        })
+      ) {
+        this.active = false;
+        return;
+      }
       const spawn = this.player.canBuild(this.nukeType, this.dst);
       if (spawn === false) {
         console.warn(`cannot build Nuke`);
@@ -561,6 +577,7 @@ export class NukeExecution implements Execution {
       speed: this.speed,
       waitTicks: this.waitTicks,
       rocketDirectionUp: this.rocketDirectionUp,
+      preventBetrayal: this.preventBetrayal,
     });
   }
 
@@ -578,6 +595,7 @@ export class NukeExecution implements Execution {
     this.speed = s.speed;
     this.waitTicks = s.waitTicks;
     this.rocketDirectionUp = s.rocketDirectionUp;
+    this.preventBetrayal = s.preventBetrayal;
   }
 }
 
@@ -593,12 +611,14 @@ const NukeStateSchema = z.object({
   speed: zNum(),
   waitTicks: zInt(),
   rocketDirectionUp: z.boolean(),
+  preventBetrayal: z.boolean().optional(),
 });
 type NukeState = z.infer<typeof NukeStateSchema>;
 
 export const NukeExecutionSnapshot = execSnapshotType({
   name: "Nuke",
-  version: 1,
+  version: 2,
+  migrations: { 1: (data) => data },
   schema: NukeStateSchema,
   cls: () => NukeExecution,
 });

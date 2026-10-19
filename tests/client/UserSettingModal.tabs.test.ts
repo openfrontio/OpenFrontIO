@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import en from "../../resources/lang/en.json";
+import type { SettingToggle } from "../../src/client/components/baseComponents/setting/SettingToggle";
 import { modalRouter } from "../../src/client/ModalRouter";
 import type { UIState } from "../../src/client/UIState";
 import "../../src/client/UserSettingModal";
@@ -108,7 +109,36 @@ describe("user-setting tabs", () => {
     "#help-messages-toggle",
     "#attacking-troops-overlay-toggle",
     "#attack-ratio-slider",
+    "#prevent-nuclear-betrayal-toggle",
   ];
+
+  it("shows nuclear betrayal protection and follows changes made by its shortcut", async () => {
+    const el = await mount(false);
+    el.open({ tab: "gameplay" });
+    await el.updateComplete;
+
+    const toggle = el.querySelector<HTMLInputElement>(
+      "#prevent-nuclear-betrayal-toggle input[type=checkbox]",
+    )!;
+    expect(toggle.checked).toBe(false);
+    toggle.click();
+    await el.updateComplete;
+    expect(new UserSettings().preventNuclearBetrayal()).toBe(true);
+
+    new UserSettings().togglePreventNuclearBetrayal();
+    await el.updateComplete;
+    await el.querySelector<SettingToggle>("#prevent-nuclear-betrayal-toggle")!
+      .updateComplete;
+    expect(toggle.checked).toBe(false);
+
+    el.open({ tab: "keybinds" });
+    await el.updateComplete;
+    expect(
+      el.querySelector(
+        'setting-keybind[action="toggleNuclearBetrayalProtection"]',
+      ),
+    ).not.toBeNull();
+  });
 
   it("persists the lobby alert default and requests permission only when enabling", async () => {
     const requestPermission = vi.fn().mockResolvedValue("denied");

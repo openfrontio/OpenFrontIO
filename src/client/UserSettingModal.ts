@@ -172,12 +172,20 @@ export class UserSettingModal extends BaseModal {
       `${USER_SETTINGS_CHANGED_EVENT}:${GRAPHICS_KEY}`,
       this.onGraphicsChanged,
     );
+    globalThis.addEventListener(
+      `${USER_SETTINGS_CHANGED_EVENT}:settings.preventNuclearBetrayal`,
+      this.onNuclearBetrayalChanged,
+    );
   }
 
   disconnectedCallback() {
     globalThis.removeEventListener(
       `${USER_SETTINGS_CHANGED_EVENT}:${GRAPHICS_KEY}`,
       this.onGraphicsChanged,
+    );
+    globalThis.removeEventListener(
+      `${USER_SETTINGS_CHANGED_EVENT}:settings.preventNuclearBetrayal`,
+      this.onNuclearBetrayalChanged,
     );
     window.removeEventListener("keydown", this.handleEasterEggKey);
     // An element torn down without close() being called (the in-game instance
@@ -203,6 +211,8 @@ export class UserSettingModal extends BaseModal {
       this.onLayerAlphaChange,
     );
   };
+
+  private readonly onNuclearBetrayalChanged = () => this.requestUpdate();
 
   private loadKeybindsFromStorage() {
     const parsed = this.userSettings.parsedUserKeybinds();
@@ -562,6 +572,10 @@ export class UserSettingModal extends BaseModal {
       "Attacking troops overlay:",
       this.userSettings.attackingTroopsOverlay() ? "ON" : "OFF",
     );
+  }
+
+  private togglePreventNuclearBetrayal() {
+    this.userSettings.togglePreventNuclearBetrayal();
   }
 
   // A slider handler writes the setting and stops. AudioMixer follows
@@ -1539,6 +1553,20 @@ export class UserSettingModal extends BaseModal {
         @change=${this.handleKeybindChange}
       ></setting-keybind>
 
+      <setting-keybind
+        action="toggleNuclearBetrayalProtection"
+        label=${translateText(
+          "user_setting.toggle_nuclear_betrayal_protection",
+        )}
+        description=${translateText(
+          "user_setting.toggle_nuclear_betrayal_protection_desc",
+        )}
+        .defaultKey=${this.defaultKeybinds.toggleNuclearBetrayalProtection}
+        .value=${this.getKeyValue("toggleNuclearBetrayalProtection")}
+        .display=${this.getKeyChar("toggleNuclearBetrayalProtection")}
+        @change=${this.handleKeybindChange}
+      ></setting-keybind>
+
       <h2
         class="text-blue-200 text-xl font-bold mt-8 mb-3 border-b border-white/10 pb-2"
       >
@@ -1997,6 +2025,16 @@ export class UserSettingModal extends BaseModal {
             : translateText("user_setting.off")}
         @change=${this.sliderNukeAllianceSafetyDuration}
       ></setting-slider>
+
+      <setting-toggle
+        label=${translateText("user_setting.prevent_nuclear_betrayal_label")}
+        description=${translateText(
+          "user_setting.prevent_nuclear_betrayal_desc",
+        )}
+        id="prevent-nuclear-betrayal-toggle"
+        .checked=${this.userSettings.preventNuclearBetrayal()}
+        @change=${this.togglePreventNuclearBetrayal}
+      ></setting-toggle>
 
       ${this.showEasterEggSettings
         ? html`

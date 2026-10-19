@@ -1,4 +1,5 @@
 import { EventBus } from "@openfront/shared/EventBus";
+import { UnitType } from "@openfront/engine-api/game/GameTypes";
 import { ServerMessage } from "@openfront/shared/WireSchemas";
 import {
   createGameWireContext,
@@ -50,6 +51,7 @@ vi.mock("../../src/client/Utils", () => ({
 import type { LobbyConfig } from "../../src/client/ClientGameRunner";
 import { SendKickPlayerIntentEvent } from "../../src/client/LobbyEvents";
 import {
+  BuildUnitIntentEvent,
   CancelAttackIntentEvent,
   counterAttackTroops,
   SendAttackIntentEvent,
@@ -60,6 +62,7 @@ import {
   SendWinnerEvent,
   Transport,
 } from "../../src/client/Transport";
+import { UserSettings } from "../../src/client/UserSettings";
 import type { PlayerView } from "../../src/client/view";
 
 // Just enough of the browser socket for Transport: readyState constants,
@@ -173,6 +176,49 @@ describe("Transport send paths", () => {
   }
 
   describe("intents", () => {
+    it("sends current betrayal protection on every nuclear launch", () => {
+      const { eventBus, ws } = connected();
+      const protection = vi
+        .spyOn(UserSettings.prototype, "preventNuclearBetrayal")
+        .mockReturnValue(true);
+
+      for (const unit of [
+        UnitType.AtomBomb,
+        UnitType.HydrogenBomb,
+        UnitType.MIRV,
+      ]) {
+        eventBus.emit(new BuildUnitIntentEvent(unit, 123));
+        expect(decodeFrames(ws).slice(-1)[0]).toEqual({
+          type: "intent",
+          intent: {
+            type: "build_unit",
+            unit,
+            tile: 123,
+            preventBetrayal: true,
+          },
+        });
+      }
+
+      eventBus.emit(new BuildUnitIntentEvent(UnitType.City, 123));
+      expect(decodeFrames(ws).slice(-1)[0]).toEqual({
+        type: "intent",
+        intent: { type: "build_unit", unit: UnitType.City, tile: 123 },
+      });
+
+      protection.mockReturnValue(false);
+      eventBus.emit(new BuildUnitIntentEvent(UnitType.AtomBomb, 123, true, 5));
+      expect(decodeFrames(ws).slice(-1)[0]).toEqual({
+        type: "intent",
+        intent: {
+          type: "build_unit",
+          unit: UnitType.AtomBomb,
+          tile: 123,
+          rocketDirectionUp: true,
+          amount: 5,
+        },
+      });
+    });
+
     it("turns bus intent events into intent frames the server can decode", () => {
       const { eventBus, ws } = connected();
       eventBus.emit(new SendSpawnIntentEvent(123));

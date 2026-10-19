@@ -1,4 +1,10 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import * as NukeAlliance from "@openfront/engine-lib/execution/NukeAlliance";
+import { EventBus } from "@openfront/shared/EventBus";
+import { BuildUnitIntentEvent } from "../../../../src/client/Transport";
+import { UserSettings } from "../../../../src/client/UserSettings";
+import type { GameView } from "../../../../src/client/view";
+import type { UIState } from "../../../../src/client/UIState";
 
 // Side-effect import: the @customElement decorator registers <build-menu>
 // when the module is evaluated, and a type-only reference would not evaluate it.
@@ -39,5 +45,66 @@ describe("BuildMenu.cost", () => {
     menu.playerBuildables = null;
 
     expect(menu.cost(item(UnitType.City))).toBe(0n);
+  });
+});
+
+describe("BuildMenu nuclear betrayal protection", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+    new UserSettings().removeCached("settings.preventNuclearBetrayal", false);
+  });
+
+  it("disables an unsafe target and rechecks direct launch attempts", async () => {
+    const settings = new UserSettings();
+    settings.removeCached("settings.preventNuclearBetrayal", false);
+    settings.togglePreventNuclearBetrayal();
+    const risk = vi
+      .spyOn(NukeAlliance, "wouldNukeCauseBetrayal")
+      .mockReturnValue(true);
+    const menu = makeMenu();
+    const unit = {
+      type: UnitType.AtomBomb,
+      canBuild: 10,
+      canUpgrade: false,
+      cost: 1n,
+    } as BuildableUnit;
+    const player = { buildables: async () => [unit] };
+    menu.game = {
+      myPlayer: () => player,
+      config: () => ({ isUnitDisabled: () => false }),
+    } as unknown as GameView;
+    menu.eventBus = new EventBus();
+    menu.uiState = { rocketDirectionUp: true } as UIState;
+    const launch = vi.fn();
+    menu.eventBus.on(BuildUnitIntentEvent, launch);
+    document.body.append(menu);
+    menu.showMenu(123);
+    await menu.updateComplete;
+    await menu.updateComplete;
+
+    expect(menu.canBuildOrUpgrade(item(UnitType.AtomBomb), 123)).toBe(false);
+    expect(risk).toHaveBeenCalledWith({
+      game: menu.game,
+      player,
+      targetTile: 123,
+      unitType: UnitType.AtomBomb,
+    });
+    expect(menu.shadowRoot!.querySelector("button")!.disabled).toBe(true);
+    menu.sendBuildOrUpgrade(unit, 123);
+    expect(launch).not.toHaveBeenCalled();
+    expect(menu.isVisible).toBe(true);
+
+    settings.togglePreventNuclearBetrayal();
+    await menu.updateComplete;
+    expect(menu.shadowRoot!.querySelector("button")!.disabled).toBe(false);
+    expect(menu.canBuildOrUpgrade(item(UnitType.AtomBomb), 123)).toBe(true);
+    menu.sendBuildOrUpgrade(unit, 123);
+    expect(launch).toHaveBeenCalledWith(
+      new BuildUnitIntentEvent(UnitType.AtomBomb, 123, true),
+    );
+    menu.remove();
+    const requestUpdate = vi.spyOn(menu, "requestUpdate");
+    settings.togglePreventNuclearBetrayal();
+    expect(requestUpdate).not.toHaveBeenCalled();
   });
 });

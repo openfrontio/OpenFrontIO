@@ -656,6 +656,30 @@ describe("UserSettings replay viewer", () => {
   });
 });
 
+describe("UserSettings nuclear betrayal protection", () => {
+  beforeEach(resetUserSettingsState);
+
+  it("defaults off and unbound, and remembers both toggle states", () => {
+    const settings = new UserSettings();
+    expect(settings.preventNuclearBetrayal()).toBe(false);
+    expect(
+      settings.keybinds(false).toggleNuclearBetrayalProtection,
+    ).toBeUndefined();
+
+    settings.togglePreventNuclearBetrayal();
+    expect(new UserSettings().preventNuclearBetrayal()).toBe(true);
+    expect(localStorage.getItem("settings.preventNuclearBetrayal")).toBe(
+      "true",
+    );
+
+    settings.togglePreventNuclearBetrayal();
+    expect(new UserSettings().preventNuclearBetrayal()).toBe(false);
+    expect(localStorage.getItem("settings.preventNuclearBetrayal")).toBe(
+      "false",
+    );
+  });
+});
+
 describe("UserSettings favorite emojis", () => {
   beforeEach(resetUserSettingsState);
 

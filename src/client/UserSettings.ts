@@ -42,6 +42,7 @@ export function getDefaultKeybinds(isMac: boolean): Record<string, string> {
     emojiMenu: "KeyF",
     quickChat: "KeyR",
     swapDirection: "KeyU",
+    toggleNuclearBetrayalProtection: "Null",
     zoomOut: "KeyQ",
     zoomIn: "KeyE",
     zoomOutMinus: "Minus",
@@ -563,6 +564,17 @@ export class UserSettings {
 
   toggleHalloweenTheme() {
     this.setBool(HALLOWEEN_THEME_KEY, !this.halloweenTheme());
+  }
+
+  preventNuclearBetrayal(): boolean {
+    return this.getBool("settings.preventNuclearBetrayal", false);
+  }
+
+  togglePreventNuclearBetrayal(): void {
+    this.setBool(
+      "settings.preventNuclearBetrayal",
+      !this.preventNuclearBetrayal(),
+    );
   }
 
   nukeAllianceSafetyDuration(): number {

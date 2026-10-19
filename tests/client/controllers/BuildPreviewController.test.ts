@@ -1,13 +1,26 @@
 import { UnitType } from "@openfront/engine-api/game/GameTypes";
 import { EventBus } from "@openfront/shared/EventBus";
-import { describe, expect, test, vi } from "vitest";
+import { afterEach, describe, expect, test, vi } from "vitest";
 import {
   BuildPreviewController,
   samThreatensNukePreview,
   shouldPreserveGhostAfterBuild,
 } from "../../../src/client/controllers/BuildPreviewController";
-import { MouseUpEvent } from "../../../src/client/InputHandler";
+import {
+  ConfirmGhostStructureEvent,
+  MouseUpEvent,
+} from "../../../src/client/InputHandler";
 import { BuildUnitIntentEvent } from "../../../src/client/Transport";
+import { USER_SETTINGS_CHANGED_EVENT } from "../../../src/client/UserSettings";
+
+let previewAbort: AbortController | undefined;
+
+afterEach(() => {
+  previewAbort?.abort();
+  previewAbort = undefined;
+  vi.restoreAllMocks();
+  vi.unstubAllGlobals();
+});
 
 describe("BuildPreviewController ghost preservation (locked nuke / Enter confirm)", () => {
   describe("shouldPreserveGhostAfterBuild", () => {
@@ -37,6 +50,172 @@ describe("BuildPreviewController ghost preservation (locked nuke / Enter confirm
     });
   });
 });
+
+describe.each([UnitType.AtomBomb, UnitType.HydrogenBomb, UnitType.MIRV])(
+  "BuildPreviewController betrayal protection for %s",
+  (type) => {
+    function makeController() {
+      vi.stubGlobal("requestAnimationFrame", vi.fn());
+      vi.spyOn(performance, "now").mockReturnValue(1000);
+      const unit = {
+        type,
+        canBuild: 43,
+        canUpgrade: false,
+        cost: 1n,
+        ghostRailPaths: [],
+        overlappingRailroads: [],
+      };
+      const ally = {
+        smallID: () => 2,
+        isTraitor: () => false,
+        isDisconnected: () => false,
+      };
+      const player = {
+        gold: () => 100n,
+        readyMissileCount: () => 3,
+        smallID: () => 1,
+        allies: () => [ally],
+        units: () => [],
+        buildables: async () => [unit],
+      };
+      const game = {
+        isValidCoord: () => true,
+        isImpassable: () => false,
+        ref: (x: number, y: number) => y * 10 + x,
+        x: (tile: number) => tile % 10,
+        y: (tile: number) => Math.floor(tile / 10),
+        ownerID: (tile: number) => (tile === 43 ? 2 : 3),
+        myPlayer: () => player,
+        anyUnitNearby: () => false,
+        circleSearch: (
+          tile: number,
+          _radius: number,
+          visit: (tile: number, distanceSquared: number) => boolean,
+        ) => visit(tile, 0),
+        config: () => ({
+          nukeMagnitudes: () => ({ inner: 1, outer: 1 }),
+          nukeAllianceBreakThreshold: () => 0,
+        }),
+      };
+      const transformHandler = {
+        screenToWorldCoordinates: vi.fn(() => ({ x: 3, y: 4 })),
+      };
+      const userSettings = {
+        preventNuclearBetrayal: vi.fn(() => true),
+        nukeAllianceSafetyDuration: () => 0,
+        cursorCostLabel: () => false,
+        snapBuildPreview: () => false,
+      };
+      const eventBus = new EventBus();
+      const listenerAbort = new window.AbortController();
+      previewAbort = listenerAbort;
+      const intents: BuildUnitIntentEvent[] = [];
+      eventBus.on(BuildUnitIntentEvent, (event) => intents.push(event));
+      const controller = new BuildPreviewController(
+        game as any,
+        eventBus,
+        { ghostStructure: type } as any,
+        transformHandler as any,
+        { updateGhostPreview: vi.fn(), updateNukeTrajectory: vi.fn() } as any,
+        userSettings as any,
+        listenerAbort.signal,
+      );
+      (controller as any).ghostUnit = { buildableUnit: unit };
+      controller.init();
+      return {
+        controller,
+        eventBus,
+        intents,
+        transformHandler,
+        userSettings,
+        listenerAbort,
+      };
+    }
+
+    test("blocks repeated clicks and Enter without clearing the selection", () => {
+      const { controller, eventBus, intents } = makeController();
+      eventBus.emit(new MouseUpEvent(0, 0));
+      eventBus.emit(new MouseUpEvent(0, 0));
+      eventBus.emit(new ConfirmGhostStructureEvent());
+      expect(intents).toEqual([]);
+      expect(controller.uiState.ghostStructure).toBe(type);
+    });
+
+    test("re-enables preview and launch when moving to a safe target", async () => {
+      const { controller, eventBus, intents, transformHandler } =
+        makeController();
+      controller.tick();
+      await Promise.resolve();
+      expect((controller as any).lastGhostData).toMatchObject({
+        canBuild: false,
+        betrayalBlocked: true,
+      });
+
+      transformHandler.screenToWorldCoordinates.mockReturnValue({
+        x: 4,
+        y: 4,
+      });
+      vi.mocked(performance.now).mockReturnValue(1100);
+      controller.tick();
+      await Promise.resolve();
+      expect((controller as any).lastGhostData).toMatchObject({
+        canBuild: true,
+        betrayalBlocked: false,
+      });
+      eventBus.emit(new ConfirmGhostStructureEvent());
+      expect(intents).toHaveLength(1);
+      expect(intents[0].tile).toBe(44);
+    });
+
+    test("checks the setting again at confirmation before the preview refreshes", () => {
+      const { controller, eventBus, intents, userSettings } = makeController();
+      userSettings.preventNuclearBetrayal.mockReturnValue(false);
+      const preview = (controller as any).buildGhostPreviewData(43, true);
+      expect(preview).toMatchObject({
+        canBuild: true,
+        rangeWarning: true,
+        betrayalBlocked: false,
+      });
+
+      userSettings.preventNuclearBetrayal.mockReturnValue(true);
+      eventBus.emit(new ConfirmGhostStructureEvent());
+      expect(intents).toEqual([]);
+      userSettings.preventNuclearBetrayal.mockReturnValue(false);
+      eventBus.emit(new ConfirmGhostStructureEvent());
+      expect(intents).toHaveLength(1);
+    });
+
+    test("refreshes on a setting change while paused and removes the listener on stop", async () => {
+      const { controller, userSettings, listenerAbort } = makeController();
+      controller.tick();
+      await Promise.resolve();
+      expect((controller as any).lastGhostData.betrayalBlocked).toBe(true);
+
+      userSettings.preventNuclearBetrayal.mockReturnValue(false);
+      globalThis.dispatchEvent(
+        new CustomEvent(
+          `${USER_SETTINGS_CHANGED_EVENT}:settings.preventNuclearBetrayal`,
+        ),
+      );
+      await Promise.resolve();
+      expect((controller as any).lastGhostData).toMatchObject({
+        canBuild: true,
+        betrayalBlocked: false,
+        rangeWarning: type !== UnitType.MIRV,
+      });
+
+      listenerAbort.abort();
+      userSettings.preventNuclearBetrayal.mockReturnValue(true);
+      globalThis.dispatchEvent(
+        new CustomEvent(
+          `${USER_SETTINGS_CHANGED_EVENT}:settings.preventNuclearBetrayal`,
+        ),
+      );
+      await Promise.resolve();
+      expect((controller as any).lastGhostData.betrayalBlocked).toBe(false);
+    });
+  },
+);
 
 describe("samThreatensNukePreview (nuke trajectory threat set, #4226)", () => {
   const teammates = new Set([7, 8]);
@@ -99,6 +278,7 @@ describe("BuildPreviewController confirm with the pointer off the map", () => {
     };
     const userSettings = {
       nukeAllianceSafetyDuration: () => 0,
+      preventNuclearBetrayal: () => false,
       cursorCostLabel: () => false,
       snapBuildPreview: () => snap,
     };
@@ -114,6 +294,7 @@ describe("BuildPreviewController confirm with the pointer off the map", () => {
       transformHandler as any,
       { updateGhostPreview: () => {}, updateNukeTrajectory: () => {} } as any,
       userSettings as any,
+      new AbortController().signal,
     );
     (controller as any).ghostUnit = {
       buildableUnit: { type: UnitType.City, canBuild: 1, canUpgrade: false },

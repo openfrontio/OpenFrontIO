@@ -1,7 +1,49 @@
 import { GameMap, TileRef } from "@openfront/engine-api/game/GameMap";
-import { Structures } from "@openfront/engine-api/game/GameTypes";
+import { Structures, UnitType } from "@openfront/engine-api/game/GameTypes";
 import { GameLike } from "@openfront/engine-api/game/ReadViews";
-import { NukeMagnitude } from "../configuration/Config";
+import { Config, NukeMagnitude } from "../configuration/Config";
+
+export function wouldNukeCauseBetrayal({
+  game,
+  player,
+  targetTile,
+  unitType,
+}: {
+  game: GameLike & { config(): Config };
+  player: {
+    allies(): readonly {
+      smallID(): number;
+      isTraitor(): boolean;
+      isDisconnected(): boolean;
+    }[];
+  };
+  targetTile: TileRef;
+  unitType: UnitType;
+}): boolean {
+  if (
+    unitType !== UnitType.AtomBomb &&
+    unitType !== UnitType.HydrogenBomb &&
+    unitType !== UnitType.MIRV
+  ) {
+    return false;
+  }
+  const allySmallIds = new Set(
+    player
+      .allies()
+      .filter((ally) => !ally.isTraitor() && !ally.isDisconnected())
+      .map((ally) => ally.smallID()),
+  );
+  if (unitType === UnitType.MIRV) {
+    return allySmallIds.has(game.ownerID(targetTile));
+  }
+  return wouldNukeBreakAlliance({
+    game,
+    targetTile,
+    magnitude: game.config().nukeMagnitudes(unitType),
+    allySmallIds,
+    threshold: game.config().nukeAllianceBreakThreshold(),
+  });
+}
 
 export interface NukeBlastParams {
   gm: GameMap;

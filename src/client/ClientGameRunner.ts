@@ -861,6 +861,7 @@ async function createClientGame(
       eventBus,
       lobbyConfig.playerRole,
       view,
+      graphicsListenerAbort.signal,
       mapLayerController,
     );
 

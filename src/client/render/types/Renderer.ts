@@ -247,6 +247,7 @@ export interface GhostPreviewData {
   rangeRadius: number;
   /** True if placing here would carry a penalty (e.g. nuking an ally → traitor). */
   rangeWarning: boolean;
+  betrayalBlocked: boolean;
 }
 
 /** Nuke trajectory preview data — Bezier control points + color thresholds. */

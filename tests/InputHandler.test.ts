@@ -1399,6 +1399,63 @@ describe("InputHandler AutoUpgrade", () => {
     });
   });
 
+  describe("Nuclear betrayal protection keybind", () => {
+    beforeEach(() => {
+      testSettings.removeCached("settings.preventNuclearBetrayal", false);
+      inputHandler.initialize();
+      testSettings.setKeybinds({
+        toggleNuclearBetrayalProtection: "Shift+KeyJ",
+      });
+    });
+
+    afterEach(() => {
+      testSettings.removeCached("settings.preventNuclearBetrayal", false);
+    });
+
+    test("a rebound key toggles protection on and off with feedback", () => {
+      const messages = vi.fn();
+      window.addEventListener("show-message", messages);
+      try {
+        window.dispatchEvent(new KeyboardEvent("keyup", { code: "KeyJ" }));
+        expect(testSettings.preventNuclearBetrayal()).toBe(false);
+
+        window.dispatchEvent(
+          new KeyboardEvent("keyup", { code: "KeyJ", shiftKey: true }),
+        );
+        expect(testSettings.preventNuclearBetrayal()).toBe(true);
+
+        window.dispatchEvent(
+          new KeyboardEvent("keyup", { code: "KeyJ", shiftKey: true }),
+        );
+        expect(testSettings.preventNuclearBetrayal()).toBe(false);
+        expect(messages).toHaveBeenCalledTimes(2);
+      } finally {
+        window.removeEventListener("show-message", messages);
+      }
+    });
+
+    test("typing or rebinding does not toggle protection", () => {
+      const input = document.createElement("input");
+      const keybind = document.createElement("setting-keybind");
+      const button = document.createElement("button");
+      keybind.appendChild(button);
+      document.body.append(input, keybind);
+
+      for (const target of [input, button]) {
+        target.dispatchEvent(
+          new KeyboardEvent("keyup", {
+            code: "KeyJ",
+            shiftKey: true,
+            bubbles: true,
+          }),
+        );
+      }
+      expect(testSettings.preventNuclearBetrayal()).toBe(false);
+      input.remove();
+      keybind.remove();
+    });
+  });
+
   describe("Quick chat keybind", () => {
     beforeEach(() => {
       inputHandler.destroy();

@@ -4,6 +4,7 @@ import * as d3 from "d3";
 import { Controller } from "../../Controller";
 import { CloseViewEvent } from "../../InputHandler";
 import { PlaySoundEffectEvent } from "../../sound/Sounds";
+import { USER_SETTINGS_CHANGED_EVENT } from "../../UserSettings";
 import { getSvgAspectRatio, translateText } from "../../Utils";
 import {
   CenterButtonElement,
@@ -54,6 +55,7 @@ type RequiredRadialMenuConfig = Required<RadialMenuConfig>;
 export class RadialMenu implements Controller {
   private menuElement: d3.Selection<HTMLDivElement, unknown, null, undefined>;
   private tooltipElement: HTMLDivElement | null = null;
+  private hoveredMenuElement: MenuElement | null = null;
   private isVisible: boolean = false;
 
   private currentLevel: number = 0; // Current menu level (0 = main menu, 1 = submenu, etc.)
@@ -450,6 +452,7 @@ export class RadialMenu implements Controller {
     level: number,
   ) {
     const onHover = (d: d3.PieArcDatum<MenuElement>, path: any) => {
+      this.hoveredMenuElement = d.data;
       const disabled = this.params === null || d.data.disabled(this.params);
       if (d.data.tooltipItems && d.data.tooltipItems.length > 0) {
         this.showTooltip(d.data.tooltipItems);
@@ -694,6 +697,7 @@ export class RadialMenu implements Controller {
   }
 
   private navigateToSubMenu(children: MenuElement[]) {
+    this.hideTooltip();
     this.isTransitioning = true;
 
     this.menuStack.push(this.currentMenuItems);
@@ -777,6 +781,7 @@ export class RadialMenu implements Controller {
       return;
     }
 
+    this.hideTooltip();
     this.isTransitioning = true;
 
     this.updateMenuLevels();
@@ -887,6 +892,10 @@ export class RadialMenu implements Controller {
     this.renderMenuItems(this.currentMenuItems, this.currentLevel);
     this.onCenterButtonHover(true);
     window.addEventListener("resize", this.handleResize);
+    globalThis.addEventListener(
+      `${USER_SETTINGS_CHANGED_EVENT}:settings.preventNuclearBetrayal`,
+      this.onNuclearBetrayalChanged,
+    );
   }
 
   public hideRadialMenu() {
@@ -911,7 +920,13 @@ export class RadialMenu implements Controller {
 
     this.lastHideTime = Date.now();
     window.removeEventListener("resize", this.handleResize);
+    globalThis.removeEventListener(
+      `${USER_SETTINGS_CHANGED_EVENT}:settings.preventNuclearBetrayal`,
+      this.onNuclearBetrayalChanged,
+    );
   }
+
+  private readonly onNuclearBetrayalChanged = () => this.refresh();
 
   private handleCenterButtonClick() {
     if (this.centerButtonState === "default") {
@@ -1173,6 +1188,9 @@ export class RadialMenu implements Controller {
 
     // Refresh center button state
     this.updateCenterButtonState(this.centerButtonState);
+
+    const tooltipItems = this.hoveredMenuElement?.tooltipItems;
+    if (tooltipItems) this.showTooltip(tooltipItems);
   }
 
   private refreshAllyExtendIcon(
@@ -1369,6 +1387,7 @@ export class RadialMenu implements Controller {
   }
 
   private hideTooltip() {
+    this.hoveredMenuElement = null;
     if (this.tooltipElement) {
       this.tooltipElement.style.display = "none";
     }

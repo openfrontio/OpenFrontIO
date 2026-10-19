@@ -14,6 +14,7 @@ import {
   UserSettings,
 } from "./UserSettings";
 import { ReplaySpeedMultiplier } from "./utilities/ReplaySpeedMultiplier";
+import { showToast, translateText } from "./Utils";
 import { GameView, UnitView } from "./view";
 
 export class MouseUpEvent implements GameEvent {
@@ -499,6 +500,21 @@ export class InputHandler {
       const nextDirection = !this.uiState.rocketDirectionUp;
       this.eventBus.emit(new SwapRocketDirectionEvent(nextDirection));
     });
+    this.addKeybindAndEvent(
+      this.keybinds.toggleNuclearBetrayalProtection,
+      () => {
+        this.userSettings.togglePreventNuclearBetrayal();
+        const enabled = this.userSettings.preventNuclearBetrayal();
+        showToast(
+          translateText(
+            enabled
+              ? "user_setting.nuclear_betrayal_protection_enabled"
+              : "user_setting.nuclear_betrayal_protection_disabled",
+          ),
+          enabled ? "green" : "red",
+        );
+      },
+    );
     this.addKeybindAndEvent("Shift+KeyD", () => {
       this.eventBus.emit(new TogglePerformanceOverlayEvent());
     });

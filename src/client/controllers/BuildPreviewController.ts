@@ -18,6 +18,7 @@ import {
 import {
   listNukeBreakAlliance,
   wouldNukeBreakAlliance,
+  wouldNukeCauseBetrayal,
 } from "@openfront/engine-lib/execution/NukeAlliance";
 import { EventBus } from "@openfront/shared/EventBus";
 import { Controller } from "../Controller";
@@ -35,7 +36,7 @@ import {
   SendUpgradeStructureIntentEvent,
 } from "../Transport";
 import { UIState } from "../UIState";
-import { UserSettings } from "../UserSettings";
+import { USER_SETTINGS_CHANGED_EVENT, UserSettings } from "../UserSettings";
 import { GameView } from "../view";
 
 /** True for nuke types (AtomBomb, HydrogenBomb): ghost is preserved after placement so user can place multiple or keep selection (Enter/key confirm). */
@@ -103,9 +104,19 @@ export class BuildPreviewController implements Controller {
     private transformHandler: TransformHandler,
     private view: MapRenderer,
     private userSettings: UserSettings,
+    private readonly abortSignal: AbortSignal,
   ) {}
 
   init() {
+    globalThis.addEventListener(
+      `${USER_SETTINGS_CHANGED_EVENT}:settings.preventNuclearBetrayal`,
+      () => {
+        // Paused games do not tick, but toggling protection must update the aim.
+        this.lastGhostQueryAt = -Infinity;
+        this.tick();
+      },
+      { signal: this.abortSignal },
+    );
     this.eventBus.on(MouseMoveEvent, (e) => this.moveGhost(e));
     this.eventBus.on(MouseUpEvent, (e) => this.requestConfirmStructure(e));
     this.eventBus.on(ConfirmGhostStructureEvent, () =>
@@ -227,13 +238,14 @@ export class BuildPreviewController implements Controller {
       }
     }
 
-    // Check if targeting an ally (for nuke warning visual)
+    // Protection has its own blocked preview; keep the existing warning when off.
     let targetingAlly = false;
     const myPlayer = this.game.myPlayer();
     const nukeType = this.ghostUnit.buildableUnit.type;
     if (
-      tileRef &&
+      tileRef !== undefined &&
       myPlayer &&
+      !this.userSettings.preventNuclearBetrayal() &&
       (nukeType === UnitType.AtomBomb || nukeType === UnitType.HydrogenBomb)
     ) {
       this.connectedAllySmallIds.clear();
@@ -437,6 +449,14 @@ export class BuildPreviewController implements Controller {
     if (!myPlayer) return null;
 
     const u = this.ghostUnit.buildableUnit;
+    const betrayalBlocked =
+      this.userSettings.preventNuclearBetrayal() &&
+      wouldNukeCauseBetrayal({
+        game: this.game,
+        targetTile: tileRef,
+        unitType: u.type,
+        player: myPlayer,
+      });
     // With snapping on, a new structure's preview sits on the tile it will
     // actually be built on (the sim moves it off nearby buildings) instead of
     // under the cursor.
@@ -504,7 +524,7 @@ export class BuildPreviewController implements Controller {
       snapToPlacement: placementTile !== tileRef,
       radiusTileX,
       radiusTileY,
-      canBuild: u.canBuild !== false,
+      canBuild: u.canBuild !== false && !betrayalBlocked,
       canUpgrade: u.canUpgrade !== false,
       cost: Number(cost),
       multiplier: multiplier,
@@ -516,6 +536,7 @@ export class BuildPreviewController implements Controller {
       upgradeTargetTile,
       rangeRadius,
       rangeWarning: targetingAlly,
+      betrayalBlocked,
     };
   }
 
@@ -560,6 +581,20 @@ export class BuildPreviewController implements Controller {
       if (!this.game.isValidCoord(tile.x, tile.y)) return;
       const unitType = this.ghostUnit.buildableUnit.type;
       const targetTile = this.game.ref(tile.x, tile.y);
+      const myPlayer = this.game.myPlayer();
+
+      if (
+        myPlayer &&
+        this.userSettings.preventNuclearBetrayal() &&
+        wouldNukeCauseBetrayal({
+          game: this.game,
+          targetTile,
+          unitType,
+          player: myPlayer,
+        })
+      ) {
+        return;
+      }
 
       if (this.shouldBlockRecentAllyNuke(targetTile, unitType)) {
         return;
