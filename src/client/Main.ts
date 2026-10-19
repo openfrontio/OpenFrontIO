@@ -4,6 +4,7 @@ import {
   UserMeResponse,
 } from "@openfront/shared/ApiSchemas";
 import { assetUrl } from "@openfront/shared/AssetUrls";
+import { GameEnv } from "@openfront/shared/configuration/Env";
 import { EventBus } from "@openfront/shared/EventBus";
 import { toWireGameStartInfo } from "@openfront/shared/SharedUtil";
 import {
@@ -14,7 +15,6 @@ import {
   PublicGameInfo,
   WireGameStartInfo,
 } from "@openfront/shared/WireSchemas";
-import { GameEnv } from "@openfront/shared/configuration/Env";
 import { ClientEnv } from "src/client/ClientEnv";
 import { renderNavVersion } from "src/client/GameVersion";
 import { responseHasLinkedIdentity } from "./AccountIdentity";
@@ -142,9 +142,21 @@ import {
 } from "./TurnstileToken";
 // Before the first userMeResponse, for the modals that load after it.
 import "./UserMeBroadcast";
-import { UserSettings } from "./UserSettings";
+import { classicReplayHref } from "./replay/ReplayEntry";
 import "./UsernameInput";
+import { parseReplayViewerHash } from "./replay/ReplayViewerRoute";
 import { UsernameInput } from "./UsernameInput";
+import { UserSettings } from "./UserSettings";
+import "./components/BannedModal";
+import "./components/DesktopStatusBar";
+import "./components/MarketingConsentToast";
+import "./components/PurchaseNudgeModal";
+import {
+  installCtrlWheelZoomBlocker,
+  installDoubleTapZoomBlocker,
+  installSafariPinchZoomBlocker,
+} from "./utilities/DisableSafariPinchZoom";
+import { playerProfileRouteArgs } from "./utilities/PlayerProfileUrl";
 import {
   apexPathFor,
   currentPagePath,
@@ -156,18 +168,6 @@ import {
   translateText,
 } from "./Utils";
 import { isReplayShellHost } from "./VersionedReplay";
-import "./components/BannedModal";
-import "./components/DesktopStatusBar";
-import "./components/MarketingConsentToast";
-import "./components/PurchaseNudgeModal";
-import { classicReplayHref } from "./replay/ReplayEntry";
-import { parseReplayViewerHash } from "./replay/ReplayViewerRoute";
-import {
-  installCtrlWheelZoomBlocker,
-  installDoubleTapZoomBlocker,
-  installSafariPinchZoomBlocker,
-} from "./utilities/DisableSafariPinchZoom";
-import { playerProfileRouteArgs } from "./utilities/PlayerProfileUrl";
 
 import "./components/DesktopNavBar";
 import "./components/Footer";
