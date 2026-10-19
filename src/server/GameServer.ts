@@ -97,6 +97,13 @@ import {
 // to play and missed it; after this they are taken to have come to watch.
 const LATE_JOIN_GRACE_MS = 5_000;
 
+// How many turns of per-client hashes to keep. DesyncDetector only ever
+// compares the turn ten back (its CHECK_INTERVAL), so older entries can
+// never be read; without a cap each client's map grows by one entry per
+// turn for the whole game (~108k entries, several MB, over a 3-hour
+// match). 32 gives the detector's window threefold slack for lag.
+const HASH_RETENTION_TURNS = 32;
+
 export type JoinResult =
   | "joined"
   | "kicked"
@@ -830,6 +837,15 @@ export class GameServer {
       }
       case "hash": {
         client.hashes.set(clientMsg.turnNumber, clientMsg.hash);
+        // Turn numbers climb, so the entry just stored is the newest; drop
+        // any that fell out of the retention window behind it. Deleting
+        // from the live keys() iterator is safe in JS.
+        const oldestUseful = clientMsg.turnNumber - HASH_RETENTION_TURNS;
+        for (const turn of client.hashes.keys()) {
+          if (turn < oldestUseful) {
+            client.hashes.delete(turn);
+          }
+        }
         break;
       }
       case "spectate": {

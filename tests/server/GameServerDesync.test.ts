@@ -121,4 +121,28 @@ describe("desync handling in the turn loop", () => {
     const turns = replayedTurns(game, clients[0].persistentID, ctx);
     expect(turns[0].hash).toBeUndefined();
   });
+
+  it("prunes old per-client hashes but keeps the detector's window", async () => {
+    const { game, clients } = startedWith(2);
+    const [a, b] = clients;
+    // A long game's worth of hashes, both clients agreeing throughout
+    // except for one late disagreement (on a checked turn — the detector
+    // only compares every tenth turn).
+    for (let turn = 0; turn < 200; turn++) {
+      await reportHash(a, turn, 1000 + turn);
+      await reportHash(b, turn, turn === 190 ? 9999 : 1000 + turn);
+    }
+
+    // Entries older than the retention window behind the newest turn are
+    // gone; the map stays a fixed size instead of growing all game.
+    expect(a.hashes.has(0)).toBe(false);
+    expect(a.hashes.has(150)).toBe(false);
+    expect(a.hashes.has(199)).toBe(true);
+    expect(a.hashes.size).toBeLessThanOrEqual(33);
+
+    // The retained window is exactly what the detector reads: b's
+    // disagreement on turn 190 is still caught when turn 200 commits.
+    vi.advanceTimersByTime(210 * TURN_MS);
+    expect(game.numDesyncedClients()).toBe(1);
+  });
 });
