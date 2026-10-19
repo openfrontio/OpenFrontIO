@@ -110,4 +110,10 @@ describe("archive retries", () => {
     expect(fetchMock).not.toHaveBeenCalled();
     expect(log.error).toHaveBeenCalledTimes(1);
   });
+
+  test("a record without info logs instead of rejecting", async () => {
+    await expect(archive({} as unknown as GameRecord)).resolves.toBeUndefined();
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(log.error).toHaveBeenCalledTimes(1);
+  });
 });
