@@ -1148,6 +1148,7 @@ describe("Warship", () => {
 
     const portTile = game.ref(coastX, 15);
     const port = player1.buildUnit(UnitType.Port, portTile, {});
+    player1.buildUnit(UnitType.Port, game.ref(coastX, 3), {});
 
     const warshipTile = game.ref(coastX + 1, 10);
     const warship = player1.buildUnit(UnitType.Warship, warshipTile, {
