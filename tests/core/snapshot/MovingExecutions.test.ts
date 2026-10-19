@@ -3,8 +3,10 @@ import {
   PlayerType,
   UnitType,
 } from "@openfront/engine-api/game/GameTypes";
+import { GameUpdateType } from "@openfront/engine-api/game/GameUpdates";
 import { AttackExecution } from "@openfront/engine/execution/AttackExecution";
 import { BoatRetreatExecution } from "@openfront/engine/execution/BoatRetreatExecution";
+import { Executor } from "@openfront/engine/execution/ExecutionManager";
 import { FactoryExecution } from "@openfront/engine/execution/FactoryExecution";
 import { RetreatExecution } from "@openfront/engine/execution/RetreatExecution";
 import { SpawnExecution } from "@openfront/engine/execution/SpawnExecution";
@@ -12,8 +14,9 @@ import { TradeShipExecution } from "@openfront/engine/execution/TradeShipExecuti
 import { TransportShipExecution } from "@openfront/engine/execution/TransportShipExecution";
 import { WarshipExecution } from "@openfront/engine/execution/WarshipExecution";
 import { Game, Player } from "@openfront/engine/game/Game";
+import { GameRunner } from "@openfront/engine/GameRunner";
 import { setup } from "../../util/Setup";
-import { expectSnapshotRoundTrip } from "../../util/Snapshot";
+import { expectSnapshotRoundTrip, roundTrip } from "../../util/Snapshot";
 import { executeTicks } from "../../util/utils";
 
 function conquerRect(
@@ -137,6 +140,80 @@ describe("snapshot: transport ships", () => {
     executeTicks(game, 2);
     expect(boat.transportShipState().isRetreating).toBe(true);
     await expectSnapshotRoundTrip(game, MAP, 40);
+  });
+
+  test("resuming snapshot with a moving transport ship emits advancing client position updates", async () => {
+    const { game, defender } = await boatGame();
+    game.addExecution(
+      new TransportShipExecution(defender, game.ref(15, 8), 100),
+    );
+    executeTicks(game, 5);
+    const boat = defender.units(UnitType.TransportShip)[0];
+    expect(boat).toBeDefined();
+    const initialTile = boat.tile();
+
+    const { restored } = await roundTrip(game, MAP);
+    const restoredBoat = restored.unit(boat.id());
+    expect(restoredBoat).toBeDefined();
+    expect(restoredBoat!.tile()).toBe(initialTile);
+
+    let advanced = false;
+    for (let i = 0; i < 20; i++) {
+      const updates = restored.executeNextTick();
+      const unitUpdates = updates[GameUpdateType.Unit] ?? [];
+      const boatUpdate = unitUpdates.find((u) => u.id === boat.id());
+      if (boatUpdate && boatUpdate.pos !== initialTile) {
+        expect(boatUpdate.pos).toBe(restoredBoat!.tile());
+        advanced = true;
+        break;
+      }
+    }
+    expect(advanced).toBe(true);
+  });
+
+  test("GameRunner.snapshotViewData and restore behavior for moving units", async () => {
+    const { game, defender } = await boatGame();
+    game.addExecution(
+      new TransportShipExecution(defender, game.ref(15, 8), 100),
+    );
+    executeTicks(game, 5);
+    const boat = defender.units(UnitType.TransportShip)[0];
+    expect(boat).toBeDefined();
+    const initialTile = boat.tile();
+
+    const { restored } = await roundTrip(game, MAP);
+    const restoredBoat = restored.unit(boat.id());
+    expect(restoredBoat).toBeDefined();
+    expect(restoredBoat!.tile()).toBe(initialTile);
+
+    const runner = new GameRunner(
+      restored,
+      new Executor(restored, "game_id", "defender"),
+      () => {},
+    );
+
+    // Initial snapshot update from GameRunner.snapshotViewData
+    const snapshotView = runner.snapshotViewData();
+    const boatSnapshotUnit = snapshotView.updates[GameUpdateType.Unit]?.find(
+      (u) => u.id === boat.id(),
+    );
+    expect(boatSnapshotUnit).toBeDefined();
+    expect(boatSnapshotUnit?.pos).toBe(initialTile);
+
+    // Advance restored game ticks until boat moves and emits a unit update
+    let advancedBoatPos: number | null = null;
+    for (let i = 0; i < 20; i++) {
+      const updates = restored.executeNextTick();
+      const unitUpdates = updates[GameUpdateType.Unit] ?? [];
+      const boatUpdate = unitUpdates.find((u) => u.id === boat.id());
+      if (boatUpdate && boatUpdate.pos !== initialTile) {
+        advancedBoatPos = boatUpdate.pos;
+        break;
+      }
+    }
+    expect(advancedBoatPos).not.toBeNull();
+    expect(advancedBoatPos).toBe(restoredBoat!.tile());
+    expect(advancedBoatPos).not.toBe(initialTile);
   });
 });
 

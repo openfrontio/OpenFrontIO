@@ -12,6 +12,7 @@ import { Player } from "./Game";
 export interface Stats {
   getPlayerStats(player: Player): PlayerStats | null;
   stats(): AllPlayersStats;
+  migrateClientID(oldClientID: ClientID, newClientID: ClientID): void;
 
   // Player attacks target
   attack(

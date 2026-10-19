@@ -13,9 +13,7 @@ import {
   SnapshotError,
   SnapshotType,
   Versioned,
-  VersionedSchema,
 } from "@openfront/engine-lib/snapshot/SnapshotType";
-import { z } from "zod";
 import { EngineConfig } from "../configuration/EngineConfig";
 import { AllianceImpl, AllianceSnapshot } from "../game/AllianceImpl";
 import {
@@ -37,7 +35,7 @@ import {
 import { UnitImpl, UnitSnapshot } from "../game/UnitImpl";
 import { newCell, newPlayerInfo } from "./CommonSchemas";
 import { EXECUTION_SNAPSHOT_TYPES } from "./ExecutionRegistry";
-import { decodeSnapshotValue, encodeSnapshotValue } from "./SnapshotCodec";
+import { encodeSnapshotValue } from "./SnapshotCodec";
 import {
   ExecRecord,
   RefTable,
@@ -45,42 +43,21 @@ import {
   SnapshotWriter,
 } from "./SnapshotContext";
 
-export const SNAPSHOT_MAGIC = "OpenFrontGameSnapshot";
-
-/**
- * Version of the root layout below. Everything inside it carries its own
- * record version, so this only moves when the root itself changes.
- */
-export const SNAPSHOT_FORMAT_VERSION = 1;
-
-const ExecRecordSchema = z.object({
-  t: z.string(),
-  v: z.number().int(),
-  d: z.unknown(),
-});
-
-const RootSchema = z.object({
-  magic: z.literal(SNAPSHOT_MAGIC),
-  format: z.number().int(),
-  /** Build that wrote the snapshot. Informational: any build can read it. */
-  gitCommit: z.string(),
-  gameID: z.string().nullable(),
-  tick: z.number().int(),
-  gameConfig: z.unknown(),
-  game: VersionedSchema,
-  map: VersionedSchema,
-  miniMap: VersionedSchema,
-  players: z.array(VersionedSchema),
-  units: z.array(VersionedSchema),
-  attacks: z.array(VersionedSchema),
-  alliances: z.array(VersionedSchema),
-  allianceRequests: z.array(VersionedSchema),
-  stations: z.array(VersionedSchema),
-  railroads: z.array(VersionedSchema),
-  clusters: z.array(VersionedSchema),
-  execs: z.array(ExecRecordSchema),
-});
-type Root = z.infer<typeof RootSchema>;
+import {
+  decodeRoot,
+  type Root,
+  SNAPSHOT_FORMAT_VERSION,
+  SNAPSHOT_MAGIC,
+} from "@openfront/engine-lib/snapshot/MapSnapshot";
+export {
+  decodeRoot,
+  readSnapshotHeader,
+  restoreMapsFromSnapshot,
+  SNAPSHOT_FORMAT_VERSION,
+  SNAPSHOT_MAGIC,
+  type RestoredMapsResult,
+  type SnapshotHeader,
+} from "@openfront/engine-lib/snapshot/MapSnapshot";
 
 const EXEC_TYPES = EXECUTION_SNAPSHOT_TYPES;
 const execTypes = new Map(EXEC_TYPES.map((t) => [t.name, t]));
@@ -205,53 +182,6 @@ export function snapshotGameData(game: Game, opts: SnapshotOptions = {}): Root {
     railroads,
     clusters,
     execs,
-  };
-}
-
-export interface SnapshotHeader {
-  format: number;
-  gitCommit: string;
-  gameID: string | null;
-  tick: number;
-  gameConfig: GameConfig;
-}
-
-function decodeRoot(bytes: Uint8Array): Root {
-  let raw: unknown;
-  try {
-    raw = decodeSnapshotValue(bytes);
-  } catch (e) {
-    throw new SnapshotError(`not a game snapshot: ${String(e)}`);
-  }
-  if (
-    typeof raw !== "object" ||
-    raw === null ||
-    (raw as { magic?: unknown }).magic !== SNAPSHOT_MAGIC
-  ) {
-    throw new SnapshotError("not a game snapshot");
-  }
-  const format = (raw as { format?: unknown }).format;
-  if (typeof format !== "number" || format > SNAPSHOT_FORMAT_VERSION) {
-    throw new SnapshotError(
-      `snapshot format ${String(format)} is newer than this build supports (${SNAPSHOT_FORMAT_VERSION})`,
-    );
-  }
-  const root = RootSchema.safeParse(raw);
-  if (!root.success) {
-    throw new SnapshotError(`malformed snapshot: ${root.error.message}`);
-  }
-  return root.data;
-}
-
-/** Reads what a restore needs to load first: the config and the map. */
-export function readSnapshotHeader(bytes: Uint8Array): SnapshotHeader {
-  const root = decodeRoot(bytes);
-  return {
-    format: root.format,
-    gitCommit: root.gitCommit,
-    gameID: root.gameID,
-    tick: root.tick,
-    gameConfig: GameConfigSchema.parse(root.gameConfig),
   };
 }
 

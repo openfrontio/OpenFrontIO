@@ -18,6 +18,7 @@ const SPEEDS = [0.5, 1, 2, 4, 8, 16, 32];
 // Same icons as the in-game controls (GameRightSidebar).
 const playIcon = assetUrl("images/PlayIconWhite.svg");
 const pauseIcon = assetUrl("images/PauseIconWhite.svg");
+const continueIcon = assetUrl("images/SwordIconWhite.svg");
 const speedIcon = assetUrl("images/FastForwardIconSolidWhite.svg");
 const settingsIcon = assetUrl("images/SettingIconWhite.svg");
 const fullscreenIcon = assetUrl("images/FullscreenIconWhite.svg");
@@ -79,6 +80,7 @@ export class ReplayControls extends LitElement {
   @property({ type: Number }) total = 0;
   @property({ type: Boolean }) playing = false;
   @property({ type: Number }) speed = 1;
+  @property({ type: Boolean }) canContinue = true;
 
   @state() private speedMenuOpen = false;
   @state() private isFullscreen = document.fullscreenElement !== null;
@@ -117,7 +119,11 @@ export class ReplayControls extends LitElement {
   /** Seek, but not past what's been loaded (the thumb snaps back). */
   private onTimelineInput(e: Event): void {
     const input = e.target as HTMLInputElement;
-    const frame = Math.min(Number(input.value), this.loaded - 1);
+    if (this.loaded <= 0) {
+      input.value = "0";
+      return;
+    }
+    const frame = Math.max(0, Math.min(Number(input.value), this.loaded - 1));
     if (frame !== Number(input.value)) input.value = String(frame);
     this.emit("replay-seek", frame);
   }
@@ -174,6 +180,7 @@ export class ReplayControls extends LitElement {
             min="0"
             max=${Math.max(0, this.total - 1)}
             .value=${String(frame)}
+            .disabled=${this.loaded <= 0}
             aria-label=${translateText("replay_viewer.timeline")}
             @input=${this.onTimelineInput}
           />
@@ -194,6 +201,13 @@ export class ReplayControls extends LitElement {
             translateText("replay_panel.replay_speed"),
             () => (this.speedMenuOpen = !this.speedMenuOpen),
           )}
+          ${this.canContinue
+            ? iconButton(
+                continueIcon,
+                translateText("replay_viewer.continue_from_here"),
+                () => this.emit("replay-continue"),
+              )
+            : nothing}
           ${iconButton(
             settingsIcon,
             translateText("user_setting.game_menu_title"),

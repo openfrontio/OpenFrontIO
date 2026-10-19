@@ -2,6 +2,7 @@ import { TileRef } from "@openfront/engine-api/game/GameMap";
 import { UnitType } from "@openfront/engine-api/game/GameTypes";
 import { Unit } from "./Game";
 import { StationManager } from "./RailNetworkImpl";
+import { Railroad } from "./Railroad";
 import { TrainStation } from "./TrainStation";
 
 export interface RailNetwork {
@@ -12,4 +13,5 @@ export interface RailNetwork {
   overlappingRailroads(unitType: UnitType, tile: TileRef): TileRef[];
   computeGhostRailPaths(unitType: UnitType, tile: TileRef): TileRef[][];
   recomputeClusters(): void;
+  railroads(): Railroad[];
 }

@@ -315,6 +315,11 @@ export class ReplayReader {
         let ref = 0;
         for (let i = 0; i < count; i++) {
           ref += r.readVarUint();
+          if (ref >= this.tileState.length) {
+            throw new RangeError(
+              `tile ref out of bounds (${ref} >= ${this.tileState.length})`,
+            );
+          }
           if (this.tileState[ref] & FALLOUT_BIT) this.falloutTiles--;
           if (state & FALLOUT_BIT) this.falloutTiles++;
           this.tileState[ref] = state;
@@ -443,6 +448,11 @@ function readTileRuns(
   changed: number[] | null,
 ): number {
   const runs = r.readVarUint();
+  if (runs > tiles.length) {
+    throw new RangeError(
+      `tile run count exceeds map size (${runs} > ${tiles.length})`,
+    );
+  }
   const values = new Uint16Array(runs);
   for (let i = 0; i < runs; i++) values[i] = r.readU16();
   let fallout = 0;

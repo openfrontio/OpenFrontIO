@@ -4,6 +4,7 @@ import {
   AllPlayers,
   BuildableUnit,
   Cell,
+  Difficulty,
   EmojiMessage,
   GameUpdates,
   Gold,
@@ -29,6 +30,7 @@ import {
   WarshipState,
 } from "@openfront/engine-api/game/GameTypes";
 import {
+  AllianceRequestUpdate,
   GameUpdate,
   PlayerUpdate,
   UnitUpdate,
@@ -40,7 +42,11 @@ import {
   UnitLike,
   UnitPredicate,
 } from "@openfront/engine-api/game/ReadViews";
-import { AllPlayersStats, ClientID } from "@openfront/engine-api/Schemas";
+import {
+  AllPlayersStats,
+  ClientID,
+  GameID,
+} from "@openfront/engine-api/Schemas";
 import { MotionPlanRecord } from "@openfront/engine-lib/game/MotionPlans";
 import type { EngineConfig } from "../configuration/EngineConfig";
 import { AbstractGraph } from "../pathfinding/algorithms/AbstractGraph";
@@ -161,6 +167,7 @@ export interface AllianceRequest {
   recipient(): Player;
   createdAt(): Tick;
   status(): "pending" | "accepted" | "rejected";
+  toUpdate(): AllianceRequestUpdate;
 }
 
 export interface Alliance {
@@ -311,6 +318,7 @@ export interface Player extends PlayerLike {
   // Basic Info
   smallID(): number;
   info(): PlayerInfo;
+  setPlayerInfo(info: PlayerInfo): void;
   name(): string;
   displayName(): string;
   clanTag(): string | null;
@@ -497,6 +505,7 @@ export interface Player extends PlayerLike {
   toUpdate(
     statsOut?: number[],
     attackTroopsOut?: number[],
+    forceFull?: boolean,
   ): PlayerUpdate | null;
   playerProfile(): PlayerProfile;
   // WARNING: this operation is expensive.
@@ -545,6 +554,7 @@ export interface Game extends GameLike {
 
   // Alliances
   expireAlliance(alliance: Alliance): void;
+  allianceRequests(): AllianceRequest[];
 
   // Immunity timer
   isSpawnImmunityActive(): boolean;
@@ -553,6 +563,7 @@ export interface Game extends GameLike {
 
   // Game State
   ticks(): Tick;
+  startTick(): Tick | null;
   inSpawnPhase(): boolean;
   endSpawnPhase(): void;
   executeNextTick(): GameUpdates;
@@ -604,6 +615,11 @@ export interface Game extends GameLike {
   ): Array<{ unit: Unit; distSquared: number }>;
 
   addExecution(...exec: Execution[]): void;
+  executions(): Execution[];
+  removeExecution(exec: Execution): void;
+  takeoverPlayer(player: Player | PlayerID, localClientID: ClientID): void;
+  convertHumanToNation(player: Player | PlayerID, gameID: GameID): Execution;
+  applySingleplayerConfig(difficulty?: Difficulty): void;
   displayMessage(
     message: string,
     type: MessageType,

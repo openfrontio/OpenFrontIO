@@ -656,6 +656,7 @@ describe("Client.initialize() booted from Main.ts module scope", () => {
       expect(messages).not.toContain(
         translateText("common.backend_unreachable"),
       );
+      document.dispatchEvent(new CustomEvent("leave-lobby"));
     });
   });
 
@@ -704,6 +705,39 @@ describe("Client.initialize() booted from Main.ts module scope", () => {
       // Leave, so the viewer can open in the next test.
       document.dispatchEvent(new CustomEvent("leave-lobby"));
       warn.mockRestore();
+    }
+  });
+
+  it("replaces the URL and clears the replay hash when joining a singleplayer lobby", async () => {
+    history.replaceState(null, "", "/#replay-viewer=dqKzit4cWu");
+    expect(window.location.hash).toBe("#replay-viewer=dqKzit4cWu");
+
+    const replaceSpy = vi.spyOn(history, "replaceState");
+
+    try {
+      document.dispatchEvent(
+        new CustomEvent("join-lobby", {
+          detail: {
+            gameID: "sp_game_clear_hash",
+            source: "singleplayer",
+          },
+          bubbles: true,
+        }),
+      );
+
+      await vi.waitFor(() => {
+        const calls = replaceSpy.mock.calls;
+        const targetCall = calls.find(
+          (call) =>
+            typeof call[2] === "string" &&
+            call[2].includes("sp_game_clear_hash"),
+        );
+        expect(targetCall).toBeDefined();
+        expect(targetCall![2]).not.toContain("#");
+      });
+    } finally {
+      document.dispatchEvent(new CustomEvent("leave-lobby"));
+      replaceSpy.mockRestore();
     }
   });
 

@@ -110,4 +110,45 @@ describe("LocalServer edge cases", () => {
     server.onMessage({ type: "hash", turnNumber: 0, hash: 1111 });
     expect(messages.filter((m) => m.type === "desync")).toHaveLength(1);
   });
+
+  it("offsets turns and hash lookup by resumeTick when resuming from snapshot", () => {
+    const messages: ServerMessage[] = [];
+    const server = new LocalServer(
+      {
+        gameStartInfo: makeGameStartInfo(),
+        resumeSnapshot: new Uint8Array([1, 2, 3]),
+        resumeTick: 200,
+        playerName: "TestUser",
+        playerClanTag: null,
+      } as any,
+      false,
+      new EventBus(),
+    );
+    server.updateCallback(
+      () => {},
+      (message) => messages.push(message),
+    );
+    server.start();
+
+    // End a turn (generates turn with turnNumber: turnOffset + turns.length)
+    (server as any).endTurn();
+
+    const turnMessages = messages.filter((m) => m.type === "turn");
+    expect(turnMessages).toHaveLength(1);
+    expect(turnMessages[0]).toEqual({
+      type: "turn",
+      turn: {
+        turnNumber: 200,
+        intents: [],
+      },
+    });
+
+    // Hash for turn 200 (which is 200 % 100 === 0)
+    server.onMessage({ type: "hash", turnNumber: 200, hash: 9999 });
+
+    // Verify turn.hash was updated on the turn at index (200 - 200 = 0)
+    expect((server as any).turns[0].hash).toBe(9999);
+
+    server.endGame();
+  });
 });

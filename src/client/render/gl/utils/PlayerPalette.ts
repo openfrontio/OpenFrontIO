@@ -103,11 +103,13 @@ export function writePatternEntry(
   if (!pattern?.patternData) return;
   try {
     const decoded = decodePatternData(pattern.patternData, base64url.decode);
+    const numBytes = (decoded.width * decoded.height + 7) >> 3;
+    if (numBytes > 1024) return;
+    data.set(decoded.bytes.subarray(3, 3 + numBytes), smallID * 1024);
     meta[metaOff] = 1; // hasPattern
     meta[metaOff + 1] = decoded.width;
     meta[metaOff + 2] = decoded.height;
     meta[metaOff + 3] = decoded.scale;
-    data.set(decoded.bytes.slice(3), smallID * 1024);
   } catch (e) {
     console.warn("Failed to decode territory pattern", e);
   }

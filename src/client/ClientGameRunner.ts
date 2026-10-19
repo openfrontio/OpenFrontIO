@@ -14,9 +14,13 @@ import {
 } from "@openfront/engine-api/game/GameUpdates";
 import { findClosestBy } from "@openfront/engine-lib/Util";
 import { Config } from "@openfront/engine-lib/configuration/Config";
-import { TerrainMapData } from "@openfront/engine-lib/game/TerrainMapLoader";
+import {
+  loadTerrainMap,
+  TerrainMapData,
+} from "@openfront/engine-lib/game/TerrainMapLoader";
+import { restoreMapsFromSnapshot } from "@openfront/engine-lib/snapshot/MapSnapshot";
 import { EventBus } from "@openfront/shared/EventBus";
-import { GameMapLoader } from "@openfront/shared/GameMapLoader";
+import { GameMapLoader, loadMapFiles } from "@openfront/shared/GameMapLoader";
 import { replacer } from "@openfront/shared/SharedUtil";
 import {
   GameRecord,
@@ -115,6 +119,9 @@ export interface LobbyConfig {
   gameRecord?: GameRecord;
   // Watch without playing.
   spectator?: boolean;
+  // Saved snapshot and tick when resuming a solo match.
+  resumeSnapshot?: Uint8Array;
+  resumeTick?: number;
   // Host only: the play token the lobby was created under, used for the
   // first join so the host joins as the creator (see createLobby).
   creatorToken?: string;
@@ -675,7 +682,7 @@ function mountWebGLFrameLoop(
   return { builder, stopFrameLoop };
 }
 
-async function createClientGame(
+export async function createClientGame(
   lobbyConfig: LobbyConfig,
   clientID: ClientID | undefined,
   eventBus: EventBus,
@@ -695,7 +702,15 @@ async function createClientGame(
   );
   let gameMap: TerrainMapData;
 
-  if (terrainLoad) {
+  if (lobbyConfig.resumeSnapshot) {
+    gameMap = await loadTerrainMap(
+      await loadMapFiles(
+        mapLoader,
+        lobbyConfig.gameStartInfo.config.gameMap,
+        lobbyConfig.gameStartInfo.config.gameMapSize,
+      ),
+    );
+  } else if (terrainLoad) {
     gameMap = await terrainLoad;
   } else {
     gameMap = await loadCachedTerrainMap(
@@ -706,9 +721,30 @@ async function createClientGame(
   // Kick off the font-atlas fetch so it overlaps with worker init; the
   // render passes need it parsed before createWebGLView runs.
   const atlasDataLoad = preloadAtlasData();
-  const worker = new WorkerClient(lobbyConfig.gameStartInfo, clientID);
+  const worker = new WorkerClient(
+    lobbyConfig.gameStartInfo,
+    clientID,
+    lobbyConfig.resumeSnapshot,
+  );
   await worker.initialize();
   await atlasDataLoad;
+  let initialStartTick: number | null = null;
+  if (lobbyConfig.resumeSnapshot) {
+    try {
+      const restored = restoreMapsFromSnapshot(
+        lobbyConfig.resumeSnapshot,
+        gameMap.gameMap,
+        gameMap.miniGameMap,
+      );
+      initialStartTick = restored.startTick;
+      lobbyConfig.resumeTick = restored.tick;
+    } catch (e) {
+      worker.cleanup();
+      console.warn("Failed to restore maps from snapshot", e);
+      throw e;
+    }
+  }
+
   const gameView = new GameView(
     worker,
     config,
@@ -718,6 +754,7 @@ async function createClientGame(
     lobbyConfig.playerClanTag,
     lobbyConfig.gameStartInfo.gameID,
     lobbyConfig.gameStartInfo.players,
+    initialStartTick,
   );
 
   // Transparent fullscreen overlay used purely as the pointer-event /
@@ -951,6 +988,9 @@ export class ClientGameRunner {
     private metrics: GameMetrics | null = null,
   ) {
     this.lastMessageTime = Date.now();
+    if (this.lobby.resumeTick !== undefined) {
+      this.turnsSeen = this.lobby.resumeTick;
+    }
   }
 
   /**
@@ -1012,6 +1052,7 @@ export class ClientGameRunner {
 
     this.renderer.initialize();
     this.input.initialize();
+    let isInitialUpdate = Boolean(this.worker.initialUpdate);
     this.worker.start((gu: GameUpdateViewData | ErrorUpdate) => {
       if (this.lobby.gameStartInfo === undefined) {
         throw new Error("missing gameStartInfo");
@@ -1027,7 +1068,11 @@ export class ClientGameRunner {
         this.stop();
         return;
       }
-      this.transport.turnComplete();
+      if (isInitialUpdate) {
+        isInitialUpdate = false;
+      } else {
+        this.transport.turnComplete();
+      }
       gu.updates[GameUpdateType.Hash].forEach((hu: HashUpdate) => {
         this.eventBus.emit(new SendHashEvent(hu.tick, hu.hash));
       });
