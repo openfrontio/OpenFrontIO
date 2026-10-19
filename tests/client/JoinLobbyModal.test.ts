@@ -43,6 +43,7 @@ import {
   GameMode,
   GameType,
 } from "@openfront/engine-api/game/GameTypes";
+import { ClientEnv } from "../../src/client/ClientEnv";
 import { JoinLobbyModal } from "../../src/client/JoinLobbyModal";
 import { UserSettings } from "../../src/client/UserSettings";
 
@@ -454,5 +455,89 @@ describe("JoinLobbyModal map preview", () => {
       renderConfig(config).querySelectorAll(`${SETTINGS} > span`).length;
 
     expect(tags({ infiniteGold: true, instantBuild: true })).toBe(tags({}) + 2);
+  });
+});
+
+describe("JoinLobbyModal checkActiveLobby resilience", () => {
+  beforeEach(() => {
+    ClientEnv.reset();
+    (window as any).BOOTSTRAP_CONFIG = {
+      gameEnv: "prod",
+      numWorkers: 1,
+      turnstileSiteKey: "x",
+      jwtAudience: "openfront.io",
+      instanceId: "test",
+      gitCommit: "test",
+      serverHost: "blue.openfront.io",
+    };
+  });
+
+  afterEach(() => {
+    delete (window as any).BOOTSTRAP_CONFIG;
+    ClientEnv.reset();
+    vi.restoreAllMocks();
+  });
+
+  it("returns false instead of throwing when /exists fetch throws", async () => {
+    const modal = new JoinLobbyModal();
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
+      const url = String(input);
+      if (url.includes("/exists")) {
+        throw new TypeError("Failed to fetch");
+      }
+      return new Response(JSON.stringify({ servers: {} }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      });
+    });
+
+    const result = await (modal as any).checkActiveLobby("AbCd1234");
+    expect(result).toBe(false);
+  });
+
+  it("returns false instead of throwing when resolving the server throws", async () => {
+    ClientEnv.reset();
+    const modal = new JoinLobbyModal();
+    (window as any).BOOTSTRAP_CONFIG = {
+      gameEnv: "prod",
+      turnstileSiteKey: "x",
+      jwtAudience: "openfront.io",
+      instanceId: "test",
+      gitCommit: "test",
+    };
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(JSON.stringify({ servers: {} }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      }),
+    );
+    const gameHttpBaseSpy = vi
+      .spyOn(ClientEnv, "gameHttpBase")
+      .mockImplementation(() => {
+        throw new Error("server resolution failed");
+      });
+
+    const result = await (modal as any).checkActiveLobby("AbCd1234");
+    expect(result).toBe(false);
+    expect(gameHttpBaseSpy).toHaveBeenCalledWith("AbCd1234");
+  });
+
+  it("falls through to checkArchivedGame when /exists fetch throws during handleUrlJoin", async () => {
+    const modal = new JoinLobbyModal();
+    (modal as any).startTrackingLobby = vi.fn();
+    (modal as any).checkArchivedGame = vi.fn().mockResolvedValue("success");
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
+      const url = String(input);
+      if (url.includes("/exists")) {
+        throw new TypeError("Failed to fetch");
+      }
+      return new Response(JSON.stringify({ servers: {} }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      });
+    });
+
+    await (modal as any).handleUrlJoin("AbCd1234");
+    expect((modal as any).checkArchivedGame).toHaveBeenCalledWith("AbCd1234");
   });
 });
