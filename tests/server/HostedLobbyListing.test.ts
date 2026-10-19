@@ -169,17 +169,25 @@ describe("GameServer listing", () => {
 
     it("rejects lobbies with an active join whitelist", () => {
       const game = makeGame("g", CREATOR, { allowedPublicIds: ["p1"] });
-      expect(getListingEligibilityError(game)).toBe("listing_whitelist_enabled");
+      expect(getListingEligibilityError(game)).toBe(
+        "listing_whitelist_enabled",
+      );
     });
 
     it("rejects lobbies with host cheats enabled", () => {
-      const game = makeGame("g", CREATOR, { hostCheats: { infiniteGold: true } });
-      expect(getListingEligibilityError(game)).toBe("listing_host_cheats_enabled");
+      const game = makeGame("g", CREATOR, {
+        hostCheats: { infiniteGold: true },
+      });
+      expect(getListingEligibilityError(game)).toBe(
+        "listing_host_cheats_enabled",
+      );
     });
 
     it("rejects when player count meets or exceeds maxPlayers cap", () => {
       const game = makeGame();
-      expect(getListingEligibilityError(game, 0)).toBe("listing_max_players_too_low");
+      expect(getListingEligibilityError(game, 0)).toBe(
+        "listing_max_players_too_low",
+      );
     });
   });
 });
