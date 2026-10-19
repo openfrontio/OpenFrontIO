@@ -133,8 +133,14 @@ export class PlayerInfoOverlay extends LitElement implements Controller {
   // right, and the panel width they need) only show on wide screens with a
   // mouse: narrower, the wider panel covers other HUD like the leaderboard,
   // and touch devices have no keyboard shortcut to show.
+  // Not in a replay: there is nothing to do to a recorded player, and the
+  // replay viewer's myPlayer() is a ReplayPlayerView, which has no actions().
   private showShortcutButtons(): boolean {
-    return window.innerWidth >= 1200 && !Platform.isTouch;
+    return (
+      window.innerWidth >= 1200 &&
+      !Platform.isTouch &&
+      !this.game.config().isReplay()
+    );
   }
 
   private get barOffset(): number {
