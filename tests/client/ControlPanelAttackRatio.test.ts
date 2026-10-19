@@ -64,9 +64,59 @@ describe("control-panel attack ratio", () => {
     await (panel as any).updateComplete;
 
     const mobileContainer = panel.querySelector(".lg\\:hidden");
-    expect(mobileContainer?.textContent).toContain(
+    expect(mobileContainer?.textContent).toContain("20%\n(2.00K)");
+    expect(mobileContainer?.textContent).not.toContain(
       "control_panel.attack_ratio",
     );
+    const sliderContainer = mobileContainer?.querySelector(
+      'input[type="range"]',
+    )?.parentElement;
+    expect(sliderContainer?.className).toContain("min-w-0");
+  });
+
+  it("uses the translated string when it interpolates percent", async () => {
+    const langSelector = document.createElement("lang-selector") as any;
+    langSelector.translations = {
+      "control_panel.attack_ratio": "{percent}% ({troops})",
+    };
+    document.body.appendChild(langSelector);
+
+    panel.game = {
+      inSpawnPhase: () => false,
+      myPlayer: () => ({ isAlive: () => true, troops: () => 100_000 }),
+    } as unknown as GameView;
+    new UserSettings().setAttackRatio(0.5);
+
+    panel.setVisibile(true);
+    await (panel as any).updateComplete;
+
+    const mobileContainer = panel.querySelector(".lg\\:hidden");
+    expect(mobileContainer?.textContent).toContain("50% (5.00K)");
+
+    langSelector.remove();
+  });
+
+  it("falls back to formatted percent and troop count if translation does not include percent", async () => {
+    const langSelector = document.createElement("lang-selector") as any;
+    langSelector.translations = {
+      "control_panel.attack_ratio": "Rapporto di Attacco",
+    };
+    document.body.appendChild(langSelector);
+
+    panel.game = {
+      inSpawnPhase: () => false,
+      myPlayer: () => ({ isAlive: () => true, troops: () => 100_000 }),
+    } as unknown as GameView;
+    new UserSettings().setAttackRatio(0.5);
+
+    panel.setVisibile(true);
+    await (panel as any).updateComplete;
+
+    const mobileContainer = panel.querySelector(".lg\\:hidden");
+    expect(mobileContainer?.textContent).toContain("50%\n(5.00K)");
+    expect(mobileContainer?.textContent).not.toContain("Rapporto di Attacco");
+
+    langSelector.remove();
   });
 
   // <control-panel> sits in index.html, so its (hidden) slider exists on the
