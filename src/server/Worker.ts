@@ -332,24 +332,9 @@ export async function startWorker() {
     }
 
     if (listed) {
-      // A whitelisted lobby would be advertised to everyone yet reject every
-      // joiner; the whitelist itself is stripped from the broadcast, so
-      // browsers could not even tell why.
-      if (game.hasJoinWhitelist()) {
-        return res.status(409).json({ error: "listing_whitelist_enabled" });
-      }
-
-      // Host cheats give the host an asymmetric advantage over players
-      // recruited from the lobby browser. Enabling them while listed is
-      // likewise rejected (GameServer's update_game_config handling).
-      if (game.hasHostCheats()) {
-        return res.status(409).json({ error: "listing_host_cheats_enabled" });
-      }
-
-      // A cap at or below the current head count would advertise a lobby
-      // nobody can join.
-      if (maxPlayers !== undefined && maxPlayers <= game.numPlayers()) {
-        return res.status(409).json({ error: "listing_max_players_too_low" });
+      const preError = getListingEligibilityError(game, maxPlayers);
+      if (preError !== null) {
+        return res.status(409).json({ error: preError });
       }
 
       // Dev has no subscription backend; skip the check so the feature is
@@ -368,6 +353,13 @@ export async function startWorker() {
         if (!userMe.response.player.canCreatePublicLobbies) {
           return res.status(403).json({ error: "subscription_required" });
         }
+      }
+
+      // Re-verify after the async entitlement check to close the race window
+      // where the host could alter lobby settings (e.g. enable host cheats).
+      const raceError = getListingEligibilityError(game, maxPlayers);
+      if (raceError !== null) {
+        return res.status(409).json({ error: raceError });
       }
 
       const creatorID = game.hashedCreatorID();
@@ -963,4 +955,25 @@ function getClientIp(req: http.IncomingMessage): string {
   const cfIp = req.headers["cf-connecting-ip"];
   if (typeof cfIp === "string" && cfIp) return cfIp;
   return req.socket.remoteAddress ?? "unknown";
+}
+
+// Checks mutable lobby settings that make a lobby ineligible for public listing.
+// Evaluated before and after the async subscription check to prevent TOCTOU races.
+export function getListingEligibilityError(
+  game: GameServer,
+  maxPlayers?: number,
+): string | null {
+  if (game.isPublic() || game.hasStarted()) {
+    return "Game cannot be listed";
+  }
+  if (game.hasJoinWhitelist()) {
+    return "listing_whitelist_enabled";
+  }
+  if (game.hasHostCheats()) {
+    return "listing_host_cheats_enabled";
+  }
+  if (maxPlayers !== undefined && maxPlayers <= game.numPlayers()) {
+    return "listing_max_players_too_low";
+  }
+  return null;
 }

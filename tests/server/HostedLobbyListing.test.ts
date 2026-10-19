@@ -28,6 +28,7 @@ import {
 } from "../../src/server/IPCBridgeSchema";
 import { MasterLobbyService } from "../../src/server/MasterLobbyService";
 import { ServerEnv } from "../../src/server/ServerEnv";
+import { getListingEligibilityError } from "../../src/server/Worker";
 import { WorkerLobbyService } from "../../src/server/WorkerLobbyService";
 import {
   makeClient as harnessClient,
@@ -144,6 +145,42 @@ describe("GameServer listing", () => {
       gameConfig: { gameType: GameType.Public } as any,
     });
     expect(pub.gameInfo().listed).toBeUndefined();
+  });
+
+  describe("getListingEligibilityError", () => {
+    it("returns null for a valid, private lobby with no cheats or whitelist", () => {
+      const game = makeGame();
+      expect(getListingEligibilityError(game, 10)).toBeNull();
+    });
+
+    it("rejects public games or already started games", () => {
+      const pub = new GameServer({
+        id: "pub",
+        log: mockLogger,
+        createdAt: Date.now(),
+        gameConfig: testGameConfig({ gameType: GameType.Public }),
+      });
+      expect(getListingEligibilityError(pub)).toBe("Game cannot be listed");
+
+      const started = makeGame();
+      started.prestart();
+      expect(getListingEligibilityError(started)).toBe("Game cannot be listed");
+    });
+
+    it("rejects lobbies with an active join whitelist", () => {
+      const game = makeGame("g", CREATOR, { allowedPublicIds: ["p1"] });
+      expect(getListingEligibilityError(game)).toBe("listing_whitelist_enabled");
+    });
+
+    it("rejects lobbies with host cheats enabled", () => {
+      const game = makeGame("g", CREATOR, { hostCheats: { infiniteGold: true } });
+      expect(getListingEligibilityError(game)).toBe("listing_host_cheats_enabled");
+    });
+
+    it("rejects when player count meets or exceeds maxPlayers cap", () => {
+      const game = makeGame();
+      expect(getListingEligibilityError(game, 0)).toBe("listing_max_players_too_low");
+    });
   });
 });
 
