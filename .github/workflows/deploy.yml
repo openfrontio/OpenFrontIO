@@ -236,6 +236,12 @@ jobs:
           # Grafana Faro collector for browser telemetry, delivered the same
           # way (runtime env → BOOTSTRAP_CONFIG). Unset keeps it off.
           FARO_COLLECTOR_URL: ${{ vars.FARO_COLLECTOR_URL }}
+          # Match telemetry (src/server/telemetry).
+          # Off unless TELEMETRY_ENABLED is "true"; a missing or invalid URL
+          # or secret only disables it, never fails the deploy.
+          TELEMETRY_ENABLED: ${{ vars.TELEMETRY_ENABLED }}
+          TELEMETRY_INGEST_URL: ${{ vars.TELEMETRY_INGEST_URL }}
+          TELEMETRY_SIGNING_SECRET: ${{ secrets.TELEMETRY_SIGNING_SECRET }}
           OTEL_EXPORTER_OTLP_ENDPOINT: ${{ secrets.OTEL_EXPORTER_OTLP_ENDPOINT }}
           OTEL_AUTH_HEADER: ${{ secrets.OTEL_AUTH_HEADER }}
           API_KEY: ${{ secrets.API_KEY }}
