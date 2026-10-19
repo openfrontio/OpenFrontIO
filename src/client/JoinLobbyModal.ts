@@ -1,5 +1,5 @@
-import { GAME_ID_REGEX, GameConfig } from "@openfront/engine-api/Schemas";
 import { GameMode, GameType } from "@openfront/engine-api/game/GameTypes";
+import { GAME_ID_REGEX, GameConfig } from "@openfront/engine-api/Schemas";
 import { assetUrl } from "@openfront/shared/AssetUrls";
 import { EventBus } from "@openfront/shared/EventBus";
 import {
@@ -22,21 +22,19 @@ import {
   translateText,
 } from "../client/Utils";
 import { getApiBase } from "./Api";
+import { BaseModal } from "./components/BaseModal";
+import { GameStartAlertController } from "./components/GameStartAlertController";
+import { inviteFriendsButton } from "./components/ui/InviteFriendsButton";
+import { DEFAULT_TITLE_CLASS, modalHeader } from "./components/ui/ModalHeader";
 import { gamePortal } from "./GamePortal";
 import { SendSpectateEvent } from "./LobbyEvents";
 import { PublicLobbySocket } from "./LobbySocket";
 import { JoinLobbyEvent } from "./Main";
-import { ensureServerList, redirectToGameVersion } from "./ServerList";
-import { terrainMapFileLoader } from "./TerrainMapFileLoader";
-import { normaliseMapKey } from "./Utils";
-import { findVersionedShell } from "./VersionedReplay";
-import { BaseModal } from "./components/BaseModal";
-import "./components/CopyButton";
-import { GameStartAlertController } from "./components/GameStartAlertController";
-import "./components/LobbyPlayerView";
-import { inviteFriendsButton } from "./components/ui/InviteFriendsButton";
-import { DEFAULT_TITLE_CLASS, modalHeader } from "./components/ui/ModalHeader";
 import { openReplayViewer } from "./replay/ReplayEntry";
+import "./components/CopyButton";
+import { ensureServerList, redirectToGameVersion } from "./ServerList";
+import "./components/LobbyPlayerView";
+import { terrainMapFileLoader } from "./TerrainMapFileLoader";
 import { nationsConfigToSlider } from "./utilities/GameConfigHelpers";
 import {
   disabledUnitsBox,
@@ -45,6 +43,8 @@ import {
   lobbySettingTagText,
   notableLobbySettings,
 } from "./utilities/LobbySettingsSummary";
+import { normaliseMapKey } from "./Utils";
+import { findVersionedShell } from "./VersionedReplay";
 
 @customElement("join-lobby-modal")
 export class JoinLobbyModal extends BaseModal {

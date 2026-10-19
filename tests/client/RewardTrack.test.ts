@@ -27,7 +27,6 @@ import type {
   UserMeResponse,
 } from "@openfront/shared/ApiSchemas";
 import { ProgressionConfigSchema } from "@openfront/shared/ApiSchemas";
-import { PROVISIONAL_PROGRESS_CHANGED } from "../../src/client/ProvisionalProgress";
 import {
   POP_CAP,
   ProfileProgression,
@@ -42,6 +41,7 @@ import {
   trackHasRewards,
   trackMaxLevel,
 } from "../../src/client/components/RewardTrack";
+import { PROVISIONAL_PROGRESS_CHANGED } from "../../src/client/ProvisionalProgress";
 
 if (!customElements.get("profile-progression")) {
   customElements.define("profile-progression", ProfileProgression);

@@ -5,11 +5,11 @@ import {
   type Cosmetics,
 } from "@openfront/shared/CosmeticSchemas";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { purchaseCosmetic } from "../../src/client/Cosmetics";
-import { EFFECTS_KEY, UserSettings } from "../../src/client/UserSettings";
 import type { CosmeticCard } from "../../src/client/components/CosmeticCard";
-import "../../src/client/components/EffectsGrid";
 import type { EffectsGrid } from "../../src/client/components/EffectsGrid";
+import { purchaseCosmetic } from "../../src/client/Cosmetics";
+import "../../src/client/components/EffectsGrid";
+import { EFFECTS_KEY, UserSettings } from "../../src/client/UserSettings";
 
 vi.mock("../../src/client/Cosmetics", async (importOriginal) => ({
   ...(await importOriginal<typeof import("../../src/client/Cosmetics")>()),
