@@ -150,8 +150,9 @@ describe("GameServer - allowlist (allowedPublicIds)", () => {
       },
     });
     const info = game.gameInfo();
-    expect(info.gameConfig.allowedPublicIds).toBeUndefined();
-    expect(info.gameConfig.nameRevealPublicIds).toBeUndefined();
+    expect(info.gameConfig).toBeDefined();
+    expect(info.gameConfig?.allowedPublicIds).toBeUndefined();
+    expect(info.gameConfig?.nameRevealPublicIds).toBeUndefined();
     // The server still enforces the allowlist from its own config.
     expect(game.gameConfig.allowedPublicIds).toEqual(["pub-ok"]);
     expect(game.gameConfig.nameRevealPublicIds).toEqual(["pub-reveal"]);
