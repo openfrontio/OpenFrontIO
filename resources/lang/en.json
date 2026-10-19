@@ -116,6 +116,8 @@
     "sub_status_canceled": "Canceled",
     "sub_status_canceling": "Canceling",
     "sub_status_canceling_on": "Cancels {date}",
+    "sub_status_expired": "Expired",
+    "sub_status_grace": "Grace Period",
     "sub_status_incomplete": "Incomplete",
     "sub_status_incomplete_expired": "Expired",
     "sub_status_past_due": "Past Due",
