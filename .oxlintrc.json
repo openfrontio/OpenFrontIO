@@ -25,6 +25,16 @@
     "typescript/prefer-nullish-coalescing": "error",
     "eqeqeq": "error",
     "no-case-declarations": "error",
-    "no-unused-vars": "off"
+    "no-unused-vars": [
+      "error",
+      {
+        "args": "none",
+        "caughtErrors": "none",
+        "fix": {
+          "imports": "safe-fix",
+          "variables": "off"
+        }
+      }
+    ]
   }
 }

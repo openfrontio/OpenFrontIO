@@ -11,7 +11,6 @@ import {
   ToggleRenderDebugGuiEvent,
 } from "../../InputHandler";
 import type { UserSettingModal } from "../../UserSettingModal";
-import { homeHref, translateText } from "../../Utils";
 import {
   disabledUnitsBox,
   hostCheatsBox,
@@ -19,6 +18,7 @@ import {
   lobbySettingTagText,
   notableLobbySettings,
 } from "../../utilities/LobbySettingsSummary";
+import { homeHref, translateText } from "../../Utils";
 const exitIcon = assetUrl("images/ExitIconWhite.svg");
 const settingsIcon = assetUrl("images/SettingIconWhite.svg");
 const treeIcon = assetUrl("images/TreeIconWhite.svg");
