@@ -23,6 +23,16 @@ import "./PlutoniumIcon";
 // The Steam-rail launch policies (S1 tier change, S2 cancel) live in
 // SubscriptionPolicy.ts so the store reads the same switches.
 
+const UNENTITLED_STATUSES: ReadonlySet<string> = new Set([
+  "canceled",
+  "expired",
+  "incomplete",
+  "incomplete_expired",
+  "past_due",
+  "paused",
+  "unpaid",
+]);
+
 @customElement("subscription-panel")
 export class SubscriptionPanel extends LitElement {
   @property({ type: Object })
@@ -155,8 +165,10 @@ export class SubscriptionPanel extends LitElement {
       </span>`;
     }
 
-    const isActive =
-      this.sub.status === "active" || this.sub.status === "trialing";
+    // Grey is only for statuses known to entitle nothing. Anything else,
+    // including a status newer than this client, is treated as entitled:
+    // the server only sends `subscription` for an entitled player.
+    const isActive = !UNENTITLED_STATUSES.has(this.sub.status);
     // Unknown/newer statuses fall back to the raw value rather than showing a
     // translation key.
     const translated = translateText(
