@@ -231,9 +231,6 @@ export class WarshipExecution implements Execution {
     const warshipTile = this.warship.tile();
     const warshipComponent = this.mg.getWaterComponent(warshipTile);
     if (warshipComponent === null) {
-      console.error(
-        `[WarshipExecution] Warship at tile ${warshipTile} has no water component; cannot find nearest port`,
-      );
       return undefined;
     }
 
@@ -242,13 +239,7 @@ export class WarshipExecution implements Execution {
       (port) => this.mg.euclideanDistSquared(warshipTile, port.tile()),
       (port) => {
         const portComponent = this.mg.getWaterComponent(port.tile());
-        if (portComponent === null) {
-          console.error(
-            `[WarshipExecution] Port at tile ${port.tile()} has no water component; skipping`,
-          );
-          return false;
-        }
-        return portComponent === warshipComponent;
+        return portComponent !== null && portComponent === warshipComponent;
       },
     );
 
@@ -599,9 +590,6 @@ export class WarshipExecution implements Execution {
     const warshipTile = this.warship.tile();
     const warshipComponent = this.mg.getWaterComponent(warshipTile);
     if (warshipComponent === null) {
-      console.error(
-        `[WarshipExecution] Warship at tile ${warshipTile} has no water component; cannot find nearest available port`,
-      );
       return undefined;
     }
 
