@@ -54,6 +54,7 @@ import { logger } from "./Logger";
 import { registerPlayerProfileRoute } from "./PlayerProfileRoute";
 import { resolveVerifiedJoin } from "./Privilege";
 
+import { loadGatekeeper } from "./Gatekeeper";
 import { MapPlaylist } from "./MapPlaylist";
 import { setNoStoreHeaders } from "./NoStoreHeaders";
 import { PrivilegeRefresher } from "./PrivilegeRefresher";
@@ -254,7 +255,8 @@ export async function startWorker() {
     // undefined.
     workerId,
   });
-  const gm = new GameManager(log, telemetry, buildHash);
+  const gatekeeper = await loadGatekeeper(log);
+  const gm = new GameManager(log, telemetry, buildHash, gatekeeper);
   server.on("close", () => telemetry.stop());
 
   // Initialize lobby service (handles WebSocket upgrade routing)
