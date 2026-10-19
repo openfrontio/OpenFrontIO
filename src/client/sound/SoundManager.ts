@@ -13,7 +13,17 @@ import {
 const AMBIENCE_FADE_MS = 500;
 
 /**
- * The audio a running game owns: the looping gameplay track and the structure
+ * The gameplay playlist. A game starts on a random track and plays the rest
+ * in order, round and round, so short games do not always hear the same one.
+ */
+const GAMEPLAY_TRACKS = [
+  "sounds/music/gameplay.mp3",
+  "sounds/music/gameplay-2.mp3",
+  "sounds/music/gameplay-3.mp3",
+];
+
+/**
+ * The audio a running game owns: the gameplay playlist and the structure
  * ambience. Cue playback, channel volumes and the concurrency budgets all live
  * in AudioMixer, which outlives any one game.
  */
@@ -23,6 +33,8 @@ export class SoundManager {
   private wantsMusic = false;
   /** play() has been called, so it must not be called a second time. */
   private musicStarted = false;
+  /** Index into GAMEPLAY_TRACKS of the track backgroundMusic holds. */
+  private track = Math.floor(Math.random() * GAMEPLAY_TRACKS.length);
   private ambienceTracks = new Map<AmbienceTrack, Howl>();
   private currentAmbience: AmbienceTrack | null = null;
   private fadingOut = new Set<Howl>();
@@ -51,19 +63,19 @@ export class SoundManager {
   }
 
   /**
-   * Builds the looping gameplay track. One track that keeps looping —
+   * Builds the Howl for the current gameplay track. The playlist keeps going —
    * including through the victory and defeat cues — so a game never hard-cuts
-   * to silence, per the sound designer's note. The menu theme (MenuMusic.ts)
-   * covers the home page.
+   * to silence, per the sound designer's note. Only one track is built at a
+   * time: on iOS a loaded track is held as ~75 MB of PCM. The menu theme
+   * (MenuMusic.ts) covers the home page.
    */
   private buildBackgroundMusic(): void {
     this.safely("initialize background music", () => {
       const music = new Howl({
-        src: [assetUrl("sounds/music/gameplay.mp3")],
-        loop: true,
+        src: [assetUrl(GAMEPLAY_TRACKS[this.track])],
         volume: 0,
         // Stream it. Howler's default Web Audio path XHRs the whole file and
-        // decodes it to PCM before the first note, and this track is 4.6 MB,
+        // decodes it to PCM before the first note, and each track is ~4.5 MB,
         // so play() queued behind tens of seconds of silence at game start on
         // a slow connection. Cues and ambience stay on Web Audio.
         //
@@ -88,7 +100,8 @@ export class SoundManager {
       // Bound without an id, like AudioMixer's: Howler emits loaderror with a
       // null id for everything but a media-element error, and an id-bound
       // listener would be dead code for the cases that matter.
-      music.once("loaderror", () => this.replaceFailedMusic(music));
+      music.once("loaderror", () => this.replaceMusic(music, false));
+      music.once("end", () => this.replaceMusic(music, true));
       // Nothing is playing after a rejected play(), so let a later change try
       // again rather than latching the track off for the rest of the game.
       music.on("playerror", () => {
@@ -99,7 +112,11 @@ export class SoundManager {
   }
 
   /**
-   * Swaps in a fresh Howl after a load that failed.
+   * Swaps in a fresh Howl: the next track once one ends (`advance`), or the
+   * same track again after a load that failed.
+   *
+   * A finished track is unloaded rather than kept for the next time round,
+   * so iOS holds one decoded track, not the whole playlist.
    *
    * The dead one cannot simply be retried: the play() that was queued behind
    * the failed load is still sitting in Howler's queue, so a later successful
@@ -110,13 +127,16 @@ export class SoundManager {
    * silent game, and the retry only costs a fetch when the player's own
    * volume change asks for one.
    */
-  private replaceFailedMusic(failed: Howl): void {
-    if (this.backgroundMusic !== failed) return;
-    this.mixer.unregister(failed);
-    this.safely("unload failed background music", () => failed.unload());
+  private replaceMusic(old: Howl, advance: boolean): void {
+    if (this.backgroundMusic !== old) return;
+    this.mixer.unregister(old);
+    this.safely("unload background music", () => old.unload());
     this.backgroundMusic = null;
     this.musicStarted = false;
+    if (advance) this.track = (this.track + 1) % GAMEPLAY_TRACKS.length;
     this.buildBackgroundMusic();
+    // Not after a failure: a file that keeps failing would retry in a loop.
+    if (advance) this.startMusicIfAudible();
   }
 
   dispose(): void {
