@@ -597,7 +597,7 @@
   "control_panel": {
     "gold": "Χρυσός",
     "troops": "Στρατεύματα",
-    "attack_ratio": "{percent}%\n({troops})"
+    "attack_ratio": "Αναλογία Επίθεσης"
   },
   "player_panel": {
     "gold": "Χρυσός",

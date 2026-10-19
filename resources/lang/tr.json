@@ -755,7 +755,7 @@
   "control_panel": {
     "gold": "Altın",
     "troops": "Birlik",
-    "attack_ratio": "{percent}%\n({troops})"
+    "attack_ratio": "Saldırı Oranı"
   },
   "player_panel": {
     "gold": "Altın",

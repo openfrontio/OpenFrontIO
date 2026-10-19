@@ -534,7 +534,7 @@
   "control_panel": {
     "allied_afk_neighbor_info": "Du kannst Spieler angreifen, die vom Spiel getrennt sind, selbst wenn du mit ihnen verbündet bist.",
     "army_limit_warning": "Du bist in der Nähe deines Armee-Limits! Überlege, deine Truppen an Teammitglieder zu schicken.",
-    "attack_ratio": "{percent}%\n({troops})",
+    "attack_ratio": "{percent}% ({troops})",
     "low_troops_warning": "Du hast sehr wenige Truppen - Du solltest immer Truppen zur Verteidigung behalten.",
     "teammate_afk_neighbor_info": "Du kannst getrennte Teammitglieder angreifen.",
     "traitor_neighbor_info": "Du kannst Verräter verraten, ohne selbst Verräter zu werden."

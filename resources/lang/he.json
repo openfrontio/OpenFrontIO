@@ -464,7 +464,7 @@
     "gold": "זהב",
     "troops": "חיילים",
     "workers": "עובדים",
-    "attack_ratio": "{percent}%\n({troops})"
+    "attack_ratio": "יחס תקיפה"
   },
   "player_panel": {
     "gold": "זהב",

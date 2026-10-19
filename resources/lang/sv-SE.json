@@ -501,7 +501,7 @@
     "gold": "Guld",
     "troops": "Trupper",
     "workers": "Arbetare",
-    "attack_ratio": "{percent}%\n({troops})"
+    "attack_ratio": "Anfallsskala"
   },
   "player_panel": {
     "gold": "Guld",

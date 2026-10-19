@@ -512,7 +512,7 @@
   "control_panel": {
     "gold": "Zlato",
     "troops": "Vojská",
-    "attack_ratio": "{percent}%\n({troops})"
+    "attack_ratio": "Pomer útoku"
   },
   "player_panel": {
     "gold": "Zlato",

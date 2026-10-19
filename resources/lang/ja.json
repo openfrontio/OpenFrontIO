@@ -534,7 +534,7 @@
   "control_panel": {
     "allied_afk_neighbor_info": "同盟を組んでいても接続が切れたプレイヤーに攻撃することができます。",
     "army_limit_warning": "あなたの兵力が上限に到達しそうです！部隊をチームメイトに送ることを検討してください。",
-    "attack_ratio": "{percent}%\n({troops})",
+    "attack_ratio": "{percent}%({troops})",
     "low_troops_warning": "兵力が残りわずかです。防衛のため、兵力を常に一部残しておきましょう。",
     "teammate_afk_neighbor_info": "接続が切れたチームメイトを攻撃できます。",
     "traitor_neighbor_info": "裏切り者に対して同盟を破棄しても、裏切り者にはなりません。"
