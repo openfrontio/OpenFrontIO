@@ -1,5 +1,5 @@
 import { GameEnv } from "@openfront/shared/configuration/Env";
-import cluster from "cluster";
+import cluster, { Worker } from "cluster";
 import crypto from "crypto";
 import express from "express";
 import rateLimit from "express-rate-limit";
@@ -203,6 +203,11 @@ export async function startMaster() {
     client.start();
   }
 
+    // Map each cluster Worker to the WORKER_ID it was forked with. A Worker's
+  // env is not readable after exit (worker.process has no .env), so the id
+  // must be captured here, at fork time, for the exit handler below.
+  const workerIds = new Map<Worker, number>();
+
   // Fork workers
   for (let i = 0; i < ServerEnv.numWorkers(); i++) {
     const worker = cluster.fork({
@@ -210,20 +215,21 @@ export async function startMaster() {
       INSTANCE_ID,
     });
 
+    workerIds.set(worker, i);
     lobbyService.registerWorker(i, worker);
     log.info(`Started worker ${i} (PID: ${worker.process.pid})`);
   }
 
   // Handle worker crashes
   cluster.on("exit", (worker, code, signal) => {
-    const workerId = (worker as any).process?.env?.WORKER_ID;
+    const workerId = workerIds.get(worker);
+    workerIds.delete(worker);
     if (workerId === undefined) {
       log.error(`worker crashed could not find id`);
       return;
     }
 
-    const workerIdNum = parseInt(workerId);
-    lobbyService.removeWorker(workerIdNum);
+    lobbyService.removeWorker(workerId);
 
     log.warn(
       `Worker ${workerId} (PID: ${worker.process.pid}) died with code: ${code} and signal: ${signal}`,
@@ -236,7 +242,8 @@ export async function startMaster() {
       INSTANCE_ID,
     });
 
-    lobbyService.registerWorker(workerIdNum, newWorker);
+        workerIds.set(newWorker, workerId);
+    lobbyService.registerWorker(workerId, newWorker);
     log.info(
       `Restarted worker ${workerId} (New PID: ${newWorker.process.pid})`,
     );
