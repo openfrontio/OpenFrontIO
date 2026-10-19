@@ -12,11 +12,16 @@ import { ServerEnv } from "./ServerEnv";
 
 const log = logger.child({ component: "Archive" });
 
-// Waits before each retry of a failed archive POST. The POST is idempotent
-// (the API answers "already in database" for a game it holds), so a retry
-// after a lost response is harmless; without one, a 5xx or network blip
-// during an API incident loses the game's stats for every player.
-export const ARCHIVE_RETRY_DELAYS_MS = [2_000, 8_000, 30_000];
+// Waits before each retry of a failed archive POST. Without a retry, a 5xx or
+// network blip during an API incident loses the game's stats for every player.
+// The API's duplicate check isn't atomic, so a retry that overlaps a still-
+// running attempt can apply the game's win/loss deltas twice: the first delay
+// is kept well above ingest time to make that unlikely.
+export const ARCHIVE_RETRY_DELAYS_MS = [10_000, 30_000, 60_000];
+
+// Per attempt, so an API that accepts the connection and then hangs doesn't
+// hold a retry for undici's 300 s default.
+export const ARCHIVE_TIMEOUT_MS = 15_000;
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
@@ -55,9 +60,21 @@ export async function archive(gameRecord: GameRecord) {
     let failure: string;
     let retryable: boolean;
     try {
-      const response = await fetch(url, request);
+      const response = await fetch(url, {
+        ...request,
+        signal: AbortSignal.timeout(ARCHIVE_TIMEOUT_MS),
+      });
       if (response.ok) return;
       failure = `${response.status} ${response.statusText}`;
+      // The API answers 409 for a game it already holds: after a failed
+      // attempt, that one most likely saved and only its response was lost.
+      if (response.status === 409 && attempt > 1) {
+        log.warn(
+          `archive attempt ${attempt} got ${failure}, treating as already archived`,
+          { gameID },
+        );
+        return;
+      }
       // Other 4xx are schema or validation rejections: retrying won't help.
       retryable = response.status >= 500 || response.status === 429;
     } catch (error) {

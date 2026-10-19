@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
 // archive() is the only path a finished game takes to the API. A POST lost to
 // a 5xx or a network blip loses the game's stats for every player, so it
-// retries those (the POST is idempotent) but not a validation rejection.
+// retries those but not a validation rejection.
 
 const log = vi.hoisted(() => ({ error: vi.fn(), warn: vi.fn() }));
 vi.mock("../../src/server/Logger", () => ({
@@ -101,7 +101,38 @@ describe("archive retries", () => {
     await runArchive();
     const [first, second] = fetchMock.mock.calls;
     expect(second[0]).toBe(first[0]);
-    expect(second[1]).toBe(first[1]);
+    expect(second[1].body).toBe(first[1].body);
+  });
+
+  test("each attempt gets its own timeout signal", async () => {
+    fetchMock
+      .mockRejectedValueOnce(new DOMException("timed out", "TimeoutError"))
+      .mockResolvedValueOnce(respond(200));
+    await runArchive();
+    const [first, second] = fetchMock.mock.calls;
+    expect(first[1].signal).toBeInstanceOf(AbortSignal);
+    expect(second[1].signal).toBeInstanceOf(AbortSignal);
+    expect(second[1].signal).not.toBe(first[1].signal);
+    expect(log.error).not.toHaveBeenCalled();
+  });
+
+  test("a 409 after a failed attempt counts as already archived", async () => {
+    fetchMock
+      .mockResolvedValueOnce(respond(503))
+      .mockResolvedValueOnce(respond(409));
+    await runArchive();
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(log.error).not.toHaveBeenCalled();
+    expect(log.warn).toHaveBeenCalledTimes(2);
+    expect(log.warn.mock.calls[1][0]).toContain("already archived");
+  });
+
+  test("a 409 on the first attempt is an error", async () => {
+    fetchMock.mockResolvedValue(respond(409));
+    await runArchive();
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(log.error).toHaveBeenCalledTimes(1);
+    expect(log.error.mock.calls[0][0]).toContain("409");
   });
 
   test("a missing API config logs instead of rejecting", async () => {
