@@ -29,8 +29,8 @@ function recordingGatekeeper() {
       calls.push({ hook: "clientJoined", args: [client.clientID] }),
     intentObserved: (o: IntentObservation) =>
       calls.push({ hook: "intentObserved", args: [o] }),
-    turnCommitted: (turn, count) =>
-      calls.push({ hook: "turnCommitted", args: [turn, count] }),
+    turnCommitted: (turn, count, intents) =>
+      calls.push({ hook: "turnCommitted", args: [turn, count, intents] }),
     matchEnded: (totalTurns) =>
       calls.push({ hook: "matchEnded", args: [totalTurns] }),
   };
@@ -68,7 +68,7 @@ describe("guardGatekeeper", () => {
       }),
     };
     const hooks = guardGatekeeper(throwing, log).matchOpened({ gameID: "g" });
-    expect(() => hooks.turnCommitted(0, 0)).not.toThrow();
+    expect(() => hooks.turnCommitted(0, 0, [])).not.toThrow();
     expect(() => hooks.matchEnded(0)).not.toThrow();
     expect(log.error).toHaveBeenCalledTimes(2);
   });
@@ -196,6 +196,10 @@ describe("GameServer gatekeeper hooks", () => {
     ]);
     const firstTurn = rec.calls.find((c) => c.hook === "turnCommitted");
     expect(firstTurn?.args[0]).toBe(0);
+    // The committed list holds the observed object itself (toContain checks
+    // identity), so the module can find each observation's position in the
+    // archived turn, among intents the server added.
+    expect(firstTurn?.args[2]).toContain(rec.observed()[0].intent);
   });
 
   it("reports a rejected intent with its reason", async () => {
