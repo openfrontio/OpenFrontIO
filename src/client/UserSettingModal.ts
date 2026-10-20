@@ -39,6 +39,7 @@ import {
   getDefaultKeybinds,
   GRAPHICS_KEY,
   keysMayBeShared,
+  MAP_LAYERS_KEY,
   USER_SETTINGS_CHANGED_EVENT,
   UserSettings,
 } from "./UserSettings";
@@ -172,11 +173,19 @@ export class UserSettingModal extends BaseModal {
       `${USER_SETTINGS_CHANGED_EVENT}:${GRAPHICS_KEY}`,
       this.onGraphicsChanged,
     );
+    globalThis.addEventListener(
+      `${USER_SETTINGS_CHANGED_EVENT}:${MAP_LAYERS_KEY}`,
+      this.onGraphicsChanged,
+    );
   }
 
   disconnectedCallback() {
     globalThis.removeEventListener(
       `${USER_SETTINGS_CHANGED_EVENT}:${GRAPHICS_KEY}`,
+      this.onGraphicsChanged,
+    );
+    globalThis.removeEventListener(
+      `${USER_SETTINGS_CHANGED_EVENT}:${MAP_LAYERS_KEY}`,
       this.onGraphicsChanged,
     );
     window.removeEventListener("keydown", this.handleEasterEggKey);
@@ -197,7 +206,7 @@ export class UserSettingModal extends BaseModal {
    */
   private readonly onGraphicsChanged = () => {
     pushMapLayerState(
-      this.userSettings.graphicsOverrides(),
+      this.userSettings,
       this.mapLayers,
       this.onLayerVisibilityChange,
       this.onLayerAlphaChange,
@@ -544,6 +553,10 @@ export class UserSettingModal extends BaseModal {
 
   private togglePerformanceOverlay() {
     this.userSettings.togglePerformanceOverlay();
+  }
+
+  private toggleMapLayers() {
+    this.userSettings.toggleMapLayers();
   }
 
   private toggleHelpMessages() {
@@ -1814,6 +1827,15 @@ export class UserSettingModal extends BaseModal {
         id="performance-overlay-toggle"
         .checked=${this.userSettings.performanceOverlay()}
         @change=${this.togglePerformanceOverlay}
+      ></setting-toggle>
+
+      <!-- 🗺️ Map Layers -->
+      <setting-toggle
+        label="${translateText("user_setting.map_layers_label")}"
+        description="${translateText("user_setting.map_layers_desc")}"
+        id="map-layers-toggle"
+        .checked=${this.userSettings.mapLayers()}
+        @change=${this.toggleMapLayers}
       ></setting-toggle>
 
       <!-- 🔧 Advanced -->
