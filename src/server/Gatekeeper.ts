@@ -25,7 +25,9 @@ export interface MatchGatekeeper {
   clientJoined(client: Client): void;
   intentObserved(observation: IntentObservation): void;
   // intents is the committed turn's list, in the order the archived record
-  // stores it. Its entries are the same objects intentObserved received.
+  // stores it. Entries that came through intentObserved are the same objects
+  // it received; the rest (the server's mark_disconnected, admin-bot intents)
+  // were never observed.
   turnCommitted(
     turnNumber: number,
     intentCount: number,
