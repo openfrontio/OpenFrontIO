@@ -69,6 +69,20 @@ export function isSteamAuthenticated(claims: TokenPayload | null): boolean {
   return claims?.provider === "steam";
 }
 
+export type ClientAuth = "account" | "anonymous";
+
+// A guest session carries a JWT too, so a non-null claims object is not a
+// sign-in. Infra stamps provider only for a session with a persistent identity
+// behind it (discord, google, steam, email, a portal account...), except for
+// "guest", which a refreshed guest session carries; a freshly minted guest
+// session has no provider at all.
+export function clientAuth(claims: TokenPayload | null): ClientAuth {
+  const provider = claims?.provider;
+  return provider === undefined || provider === "guest"
+    ? "anonymous"
+    : "account";
+}
+
 export function planJoinVerify(args: {
   isReadmit: boolean;
   gameStarted: boolean;

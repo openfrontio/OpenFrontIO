@@ -115,6 +115,8 @@ export interface ClientOpts {
   spectator?: boolean;
   trusted?: boolean;
   platform?: Client["platform"];
+  device?: Client["device"];
+  claims?: Client["claims"];
   levelBadge?: Client["levelBadge"];
 }
 
@@ -130,7 +132,7 @@ export function makeClient(opts: ClientOpts = {}): Client {
   return new Client(
     clientID,
     opts.persistentID ?? `${clientID}-pid`,
-    null,
+    opts.claims ?? null,
     opts.role ?? null,
     undefined,
     opts.ip ?? `10.0.${Math.floor(n / 256)}.${n % 256}`,
@@ -143,6 +145,7 @@ export function makeClient(opts: ClientOpts = {}): Client {
     opts.spectator ?? false,
     opts.trusted ?? false,
     opts.platform,
+    opts.device,
     opts.levelBadge,
   );
 }
