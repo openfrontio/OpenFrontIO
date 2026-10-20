@@ -1,0 +1,239 @@
+{
+  "id": "OttomanEmpire",
+  "name": "Ottoman Empire",
+  "display_name": "Ottoman Empire (1683)",
+  "translation_key": "map.ottomanempire",
+  "categories": ["europe", "asia", "africa"],
+  "multiplayer_frequency": 5,
+  "nations": [
+    {
+      "coordinates": [1722, 701],
+      "name": "Istanbul",
+      "flag": "Ottoman Empire"
+    },
+    {
+      "coordinates": [1414, 578],
+      "name": "Rumeli",
+      "flag": "Ottoman Empire"
+    },
+    {
+      "coordinates": [1778, 815],
+      "name": "Anadolu",
+      "flag": "Ottoman Empire"
+    },
+    {
+      "coordinates": [1179, 207],
+      "name": "Budin",
+      "flag": "Ottoman Empire"
+    },
+    {
+      "coordinates": [1253, 174],
+      "name": "Egri",
+      "flag": "Ottoman Empire"
+    },
+    {
+      "coordinates": [1299, 346],
+      "name": "Temesvar",
+      "flag": "Ottoman Empire"
+    },
+    {
+      "coordinates": [1146, 491],
+      "name": "Bosna",
+      "flag": "Ottoman Empire"
+    },
+    {
+      "coordinates": [1629, 471],
+      "name": "Silistre",
+      "flag": "Ottoman Empire"
+    },
+    {
+      "coordinates": [1592, 110],
+      "name": "Kamaniçe",
+      "flag": "Ottoman Empire"
+    },
+    {
+      "coordinates": [1989, 423],
+      "name": "Kirim Hanligi",
+      "flag": "crimea"
+    },
+    {
+      "coordinates": [1566, 448],
+      "name": "Eflak"
+    },
+    {
+      "coordinates": [1647, 234],
+      "name": "Bogdan",
+      "flag": "Principality of Moldavia"
+    },
+    {
+      "coordinates": [1428, 321],
+      "name": "Erdel",
+      "flag": "Transylvania"
+    },
+    {
+      "coordinates": [1362, 948],
+      "name": "Mora",
+      "flag": "Ottoman Empire"
+    },
+    {
+      "coordinates": [1514, 1095],
+      "name": "Girit",
+      "flag": "Ottoman Empire"
+    },
+    {
+      "coordinates": [1963, 1106],
+      "name": "Kibris",
+      "flag": "Ottoman Empire"
+    },
+    {
+      "coordinates": [1914, 923],
+      "name": "Karaman",
+      "flag": "Ottoman Empire"
+    },
+    {
+      "coordinates": [2161, 793],
+      "name": "Rum",
+      "flag": "Ottoman Empire"
+    },
+    {
+      "coordinates": [2309, 702],
+      "name": "Trabzon",
+      "flag": "Ottoman Empire"
+    },
+    {
+      "coordinates": [2393, 781],
+      "name": "Erzurum",
+      "flag": "Ottoman Empire"
+    },
+    {
+      "coordinates": [2508, 880],
+      "name": "Van",
+      "flag": "Ottoman Empire"
+    },
+    {
+      "coordinates": [2336, 920],
+      "name": "Diyarbekir",
+      "flag": "Ottoman Empire"
+    },
+    {
+      "coordinates": [2487, 656],
+      "name": "Çildir",
+      "flag": "Ottoman Empire"
+    },
+    {
+      "coordinates": [2168, 1037],
+      "name": "Halep",
+      "flag": "Ottoman Empire"
+    },
+    {
+      "coordinates": [2122, 1216],
+      "name": "Sam",
+      "flag": "Ottoman Empire"
+    },
+    {
+      "coordinates": [2271, 1054],
+      "name": "Rakka",
+      "flag": "Ottoman Empire"
+    },
+    {
+      "coordinates": [2494, 1028],
+      "name": "Musul",
+      "flag": "Ottoman Empire"
+    },
+    {
+      "coordinates": [2561, 1229],
+      "name": "Bagdat",
+      "flag": "Ottoman Empire"
+    },
+    {
+      "coordinates": [2749, 1410],
+      "name": "Basra",
+      "flag": "Ottoman Empire"
+    },
+    {
+      "coordinates": [1846, 1439],
+      "name": "Misir",
+      "flag": "Ottoman Empire"
+    },
+    {
+      "coordinates": [2179, 2097],
+      "name": "Habes",
+      "flag": "Ottoman Empire"
+    },
+    {
+      "coordinates": [2317, 1964],
+      "name": "Hicaz",
+      "flag": "Ottoman Empire"
+    },
+    {
+      "coordinates": [861, 1257],
+      "name": "Trablusgarp",
+      "flag": "Ottoman Empire"
+    },
+    {
+      "coordinates": [697, 996],
+      "name": "Tunus",
+      "flag": "Ottoman Empire"
+    },
+    {
+      "coordinates": [308, 1000],
+      "name": "Cezayir",
+      "flag": "Ottoman Empire"
+    },
+    {
+      "coordinates": [1774, 1366],
+      "name": "Iskenderiye",
+      "flag": "Ottoman Empire"
+    },
+    {
+      "coordinates": [1882, 1669],
+      "name": "Said",
+      "flag": "Ottoman Empire"
+    },
+    {
+      "coordinates": [1937, 1804],
+      "name": "Asvan",
+      "flag": "Ottoman Empire"
+    },
+    {
+      "coordinates": [1237, 1307],
+      "name": "Bingazi",
+      "flag": "Ottoman Empire"
+    },
+    {
+      "coordinates": [660, 1433],
+      "name": "Gadames",
+      "flag": "Ottoman Empire"
+    },
+    {
+      "coordinates": [502, 1026],
+      "name": "Konstantin",
+      "flag": "Ottoman Empire"
+    },
+    {
+      "coordinates": [70, 1126],
+      "name": "Tilimsan",
+      "flag": "Ottoman Empire"
+    },
+    {
+      "coordinates": [2303, 1781],
+      "name": "Medine",
+      "flag": "Ottoman Empire"
+    },
+    {
+      "coordinates": [2064, 1329],
+      "name": "Kudüs",
+      "flag": "Ottoman Empire"
+    },
+    {
+      "coordinates": [1863, 277],
+      "name": "Özi",
+      "flag": "Ottoman Empire"
+    },
+    {
+      "coordinates": [2069, 983],
+      "name": "Adana",
+      "flag": "Ottoman Empire"
+    }
+  ]
+}
