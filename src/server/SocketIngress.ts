@@ -10,6 +10,7 @@ import { Logger } from "winston";
 import { z } from "zod";
 import { Client } from "./Client";
 import { ClientMsgRateLimiter } from "./ClientMsgRateLimiter";
+import { MatchGatekeeper, noopMatchGatekeeper } from "./Gatekeeper";
 import { MatchTelemetryRecorder } from "./MatchTelemetryRecorder";
 
 export const KICK_REASON_TOO_MUCH_DATA = "kick_reason.too_much_data";
@@ -53,6 +54,7 @@ export class SocketIngress {
       ClientMsgRateLimiter,
       "check"
     > = new ClientMsgRateLimiter(),
+    private readonly gatekeeper: MatchGatekeeper = noopMatchGatekeeper,
   ) {}
 
   attach(client: Client): void {
@@ -127,6 +129,15 @@ export class SocketIngress {
           KICK_REASON_INVALID_MESSAGE,
           reasonDetail,
         );
+        this.gatekeeper.intentObserved({
+          client,
+          intent: raw.intent,
+          intentType:
+            typeof raw.intent?.type === "string" ? raw.intent.type : null,
+          outcome: "rejected",
+          turn: this.view.serverTick(),
+          reasonCode: KICK_REASON_INVALID_MESSAGE,
+        });
       }
       this.log.warn(`Failed to parse client message, kicking`, {
         clientID: client.clientID,
@@ -152,6 +163,14 @@ export class SocketIngress {
           this.view.serverTick(),
           KICK_REASON_TOO_MUCH_DATA,
         );
+        this.gatekeeper.intentObserved({
+          client,
+          intent: { ...clientMsg.intent, clientID: client.clientID },
+          intentType: clientMsg.intent.type,
+          outcome: "rejected",
+          turn: this.view.serverTick(),
+          reasonCode: KICK_REASON_TOO_MUCH_DATA,
+        });
       }
       this.log.warn(`Client rate limit exceeded, kicking`, {
         clientID: client.clientID,
@@ -170,6 +189,14 @@ export class SocketIngress {
           this.view.serverTick(),
           "limit",
         );
+        this.gatekeeper.intentObserved({
+          client,
+          intent: { ...clientMsg.intent, clientID: client.clientID },
+          intentType: clientMsg.intent.type,
+          outcome: "rejected",
+          turn: this.view.serverTick(),
+          reasonCode: "limit",
+        });
       }
       // Rejected intents are already counted via telemetry.intentObserved
       // above; a misbehaving client can produce thousands of these a
