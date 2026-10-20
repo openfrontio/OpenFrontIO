@@ -24,7 +24,15 @@ export interface IntentObservation {
 export interface MatchGatekeeper {
   clientJoined(client: Client): void;
   intentObserved(observation: IntentObservation): void;
-  turnCommitted(turnNumber: number, intentCount: number): void;
+  // intents is the committed turn's list, in the order the archived record
+  // stores it. Entries that came through intentObserved are the same objects
+  // it received; the rest (the server's mark_disconnected, admin-bot intents)
+  // were never observed.
+  turnCommitted(
+    turnNumber: number,
+    intentCount: number,
+    intents: readonly unknown[],
+  ): void;
   // Called when the match ends, whether or not it started. GameServer.end()
   // can run more than once; guardGatekeeper passes on only the first call.
   matchEnded(totalTurns: number): void;
@@ -73,8 +81,8 @@ export function guardGatekeeper(inner: Gatekeeper, log: Logger): Gatekeeper {
       return {
         clientJoined: guard("clientJoined", (c) => hooks.clientJoined(c)),
         intentObserved: guard("intentObserved", (o) => hooks.intentObserved(o)),
-        turnCommitted: guard("turnCommitted", (t, n) =>
-          hooks.turnCommitted(t, n),
+        turnCommitted: guard("turnCommitted", (t, n, intents) =>
+          hooks.turnCommitted(t, n, intents),
         ),
         matchEnded: guard("matchEnded", (totalTurns) => {
           if (ended) return;
