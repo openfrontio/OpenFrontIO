@@ -301,6 +301,12 @@ export class LocalServer {
     if (this.archived || this.archiveInFlight) {
       return;
     }
+    // A game resumed from a save is never archived: its turns start mid-game,
+    // so the record could not replay, and archiving is what awards XP and
+    // achievements, which a shared save one move from victory would farm.
+    if (this.lobbyConfig.snapshot !== undefined) {
+      return;
+    }
     const players: PlayerRecord[] = [
       {
         persistentID: getPersistentID(),

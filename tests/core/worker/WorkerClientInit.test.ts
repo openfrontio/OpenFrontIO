@@ -5,7 +5,10 @@
 
 import { GameMapSize, GameMapType } from "@openfront/engine-api/game/GameTypes";
 import type { GameStartInfo } from "@openfront/engine-api/Schemas";
-import { WorkerClient } from "../../../src/client/WorkerClient";
+import {
+  readSnapshotHeader,
+  WorkerClient,
+} from "../../../src/client/WorkerClient";
 
 const worker = vi.hoisted(() => ({
   posted: [] as { msg: Record<string, unknown>; transfer: unknown[] }[],
@@ -101,5 +104,45 @@ describe("WorkerClient.initialize", () => {
     await expect(client.initialize()).rejects.toThrow("map not found");
     await vi.waitFor(() => expect(worker.terminated).toBe(true));
     expect(worker.posted).toEqual([]);
+  });
+});
+
+describe("readSnapshotHeader", () => {
+  function answer(data: Record<string, unknown>) {
+    for (const l of worker.listeners) l(new MessageEvent("message", { data }));
+  }
+
+  test("asks a worker of its own for the header, then stops it", async () => {
+    const snapshot = new Uint8Array([1, 2, 3]);
+    const header = readSnapshotHeader(snapshot);
+    await vi.waitFor(() => expect(worker.posted).toHaveLength(1));
+    const { msg, transfer } = worker.posted[0];
+    expect(msg).toEqual({ type: "read_snapshot_header", snapshot });
+    // Copied, not moved: the caller starts the game from the same bytes.
+    expect(transfer).toEqual([]);
+    const result = {
+      format: 1,
+      gitCommit: "abc",
+      gameID: "game0001",
+      tick: 500,
+      gameConfig: start.config,
+      humans: [{ clientID: "HUMAN001", name: "me" }],
+    };
+    answer({ type: "read_snapshot_header_result", header: result });
+    await expect(header).resolves.toEqual(result);
+    expect(worker.terminated).toBe(true);
+    expect(snapshot).toEqual(new Uint8Array([1, 2, 3]));
+  });
+
+  test("fails with the engine's reason when the bytes aren't a snapshot", async () => {
+    const header = readSnapshotHeader(new Uint8Array([9]));
+    await vi.waitFor(() => expect(worker.posted).toHaveLength(1));
+    answer({
+      type: "read_snapshot_header_result",
+      header: null,
+      error: "not a game snapshot",
+    });
+    await expect(header).rejects.toThrow("not a game snapshot");
+    expect(worker.terminated).toBe(true);
   });
 });

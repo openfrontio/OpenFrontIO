@@ -3,6 +3,7 @@ import {
   Nation,
   TeamGameSpawnAreas,
 } from "@openfront/engine-api/game/GameTypes";
+import type { SnapshotHeader } from "@openfront/engine-api/game/SnapshotHeader";
 import { GameConfig, GameConfigSchema } from "@openfront/engine-api/Schemas";
 import {
   GameMapImpl,
@@ -208,14 +209,6 @@ export function snapshotGameData(game: Game, opts: SnapshotOptions = {}): Root {
   };
 }
 
-export interface SnapshotHeader {
-  format: number;
-  gitCommit: string;
-  gameID: string | null;
-  tick: number;
-  gameConfig: GameConfig;
-}
-
 function decodeRoot(bytes: Uint8Array): Root {
   let raw: unknown;
   try {
@@ -243,15 +236,22 @@ function decodeRoot(bytes: Uint8Array): Root {
   return root.data;
 }
 
-/** Reads what a restore needs to load first: the config and the map. */
+/**
+ * Reads what a restore needs to load first: the config and the map, and the
+ * humans whose clientIDs a resumed game's intents must carry.
+ */
 export function readSnapshotHeader(bytes: Uint8Array): SnapshotHeader {
   const root = decodeRoot(bytes);
+  const humans = readVersioned(GameSnapshot, root.game).humans.flatMap((h) =>
+    h.clientID === null ? [] : [{ clientID: h.clientID, name: h.name }],
+  );
   return {
     format: root.format,
     gitCommit: root.gitCommit,
     gameID: root.gameID,
     tick: root.tick,
     gameConfig: GameConfigSchema.parse(root.gameConfig),
+    humans,
   };
 }
 

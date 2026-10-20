@@ -59,12 +59,13 @@ function makeGameStartInfo(): GameStartInfo {
   } as GameStartInfo;
 }
 
-function makeServer(isReplay: boolean): LocalServer {
+function makeServer(isReplay: boolean, snapshot?: Uint8Array): LocalServer {
   const server = new LocalServer(
     {
       gameStartInfo: makeGameStartInfo(),
       playerName: "TestUser",
       playerClanTag: null,
+      snapshot,
     } as any,
     isReplay,
     new EventBus(),
@@ -184,5 +185,18 @@ describe("LocalServer archiving", () => {
     server.endGame();
     await new Promise((r) => setTimeout(r, 10));
     expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("never archives a game resumed from a save, won or not", async () => {
+    const server = makeServer(false, new Uint8Array([1, 2, 3]));
+    server.start();
+
+    server.onMessage(winnerMsg);
+    server.endGame();
+    await new Promise((r) => setTimeout(r, 10));
+    const archiveCalls = fetchMock.mock.calls.filter(([url]) =>
+      String(url).endsWith("/archive_singleplayer_game"),
+    );
+    expect(archiveCalls).toEqual([]);
   });
 });

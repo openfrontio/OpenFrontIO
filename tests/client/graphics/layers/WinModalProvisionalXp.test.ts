@@ -276,6 +276,7 @@ function makeGame(
       }),
       isReplay: () => false,
     }),
+    resumedFromSave: () => false,
   } as unknown as GameView;
   return { game, humanStats, end: () => (ended = true) };
 }
