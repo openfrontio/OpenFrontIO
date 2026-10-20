@@ -1,0 +1,160 @@
+{
+  "id": "Turkiye",
+  "name": "Turkiye",
+  "display_name": "Türkiye",
+  "translation_key": "map.turkiye",
+  "categories": ["countries", "europe", "asia"],
+  "multiplayer_frequency": 5,
+  "nations": [
+    {
+      "coordinates": [439, 212],
+      "flag": "tr",
+      "name": "Istanbul"
+    },
+    {
+      "coordinates": [150, 111],
+      "flag": "tr",
+      "name": "Edirne"
+    },
+    {
+      "coordinates": [132, 346],
+      "flag": "tr",
+      "name": "Çanakkale"
+    },
+    {
+      "coordinates": [449, 340],
+      "flag": "tr",
+      "name": "Bursa"
+    },
+    {
+      "coordinates": [308, 422],
+      "flag": "tr",
+      "name": "Balikesir"
+    },
+    {
+      "coordinates": [218, 611],
+      "flag": "tr",
+      "name": "Izmir"
+    },
+    {
+      "coordinates": [365, 796],
+      "flag": "tr",
+      "name": "Mugla"
+    },
+    {
+      "coordinates": [452, 710],
+      "flag": "tr",
+      "name": "Denizli"
+    },
+    {
+      "coordinates": [625, 559],
+      "flag": "tr",
+      "name": "Afyonkarahisar"
+    },
+    {
+      "coordinates": [623, 402],
+      "flag": "tr",
+      "name": "Eskisehir"
+    },
+    {
+      "coordinates": [646, 845],
+      "flag": "tr",
+      "name": "Antalya"
+    },
+    {
+      "coordinates": [858, 695],
+      "flag": "tr",
+      "name": "Konya"
+    },
+    {
+      "coordinates": [903, 378],
+      "flag": "tr",
+      "name": "Ankara"
+    },
+    {
+      "coordinates": [776, 145],
+      "flag": "tr",
+      "name": "Zonguldak"
+    },
+    {
+      "coordinates": [1013, 155],
+      "flag": "tr",
+      "name": "Kastamonu"
+    },
+    {
+      "coordinates": [1317, 170],
+      "flag": "tr",
+      "name": "Samsun"
+    },
+    {
+      "coordinates": [1399, 407],
+      "flag": "tr",
+      "name": "Sivas"
+    },
+    {
+      "coordinates": [1216, 563],
+      "flag": "tr",
+      "name": "Kayseri"
+    },
+    {
+      "coordinates": [1115, 858],
+      "flag": "tr",
+      "name": "Mersin"
+    },
+    {
+      "coordinates": [1197, 829],
+      "flag": "tr",
+      "name": "Adana"
+    },
+    {
+      "coordinates": [1297, 952],
+      "flag": "tr",
+      "name": "Hatay"
+    },
+    {
+      "coordinates": [1443, 819],
+      "flag": "tr",
+      "name": "Gaziantep"
+    },
+    {
+      "coordinates": [1553, 621],
+      "flag": "tr",
+      "name": "Malatya"
+    },
+    {
+      "coordinates": [1722, 214],
+      "flag": "tr",
+      "name": "Trabzon"
+    },
+    {
+      "coordinates": [1907, 383],
+      "flag": "tr",
+      "name": "Erzurum"
+    },
+    {
+      "coordinates": [1783, 689],
+      "flag": "tr",
+      "name": "Diyarbakir"
+    },
+    {
+      "coordinates": [1612, 805],
+      "flag": "tr",
+      "name": "Sanliurfa"
+    },
+    {
+      "coordinates": [2158, 598],
+      "flag": "tr",
+      "name": "Van"
+    },
+    {
+      "coordinates": [2125, 276],
+      "flag": "tr",
+      "name": "Kars"
+    },
+    {
+      "coordinates": [2202, 741],
+      "flag": "tr",
+      "name": "Hakkari"
+    }
+  ]
+}
