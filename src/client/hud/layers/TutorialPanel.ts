@@ -136,7 +136,11 @@ export class TutorialPanel extends LitElement implements Controller {
     // subscribed to TutorialStateEvent.
     if (!this.started) {
       this.started = true;
-      this.setActive(!this.userSettings.tutorialDismissed());
+      // The steps walk a new game from its spawn; a resumed save is well
+      // past that, and would hold the spawn ring up until the next attack.
+      this.setActive(
+        !this.userSettings.tutorialDismissed() && !this.game.resumedFromSave(),
+      );
     }
     if (!this.active) return;
 
