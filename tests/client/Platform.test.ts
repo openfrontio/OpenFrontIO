@@ -155,7 +155,7 @@ describe("Platform", () => {
     expect(platform.isDesktopWidth).toBe(false);
   });
 
-  it("detects keyboard from pointer or keydown", async () => {
+  it("detects keyboard from keydown outside text inputs on touch devices", async () => {
     vi.stubGlobal("matchMedia", () => ({ matches: false }));
     const p = await loadPlatform({ userAgent: "Mozilla/5.0" });
     vi.spyOn(p, "isTouch", "get").mockReturnValue(true);
@@ -203,5 +203,15 @@ describe("Platform", () => {
     expect(p.hasKeyboard).toBe(true);
 
     host.remove();
+  });
+
+  it("does not treat fine pointer alone as a keyboard on touch devices", async () => {
+    vi.stubGlobal("matchMedia", (q: string) => ({
+      matches: q === "(any-pointer: fine)",
+    }));
+    const p = await loadPlatform({ userAgent: "Mozilla/5.0" });
+    vi.spyOn(p, "isTouch", "get").mockReturnValue(true);
+
+    expect(p.hasKeyboard).toBe(false);
   });
 });

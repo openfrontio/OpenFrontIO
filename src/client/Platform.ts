@@ -163,12 +163,10 @@ export const Platform = (() => {
       );
     },
 
-    /** Whether a physical keyboard is present, in use, or paired with a fine pointer. */
+    /** Whether a physical keyboard is present or has been detected via keypress. */
     get hasKeyboard(): boolean {
       return isBrowser()
-        ? !this.isTouch ||
-            !!(window as any).__hasKeyboard ||
-            window.matchMedia?.("(any-pointer: fine)").matches === true
+        ? !this.isTouch || !!(window as any).__hasKeyboard
         : false;
     },
   };

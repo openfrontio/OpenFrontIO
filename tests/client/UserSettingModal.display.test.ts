@@ -224,7 +224,7 @@ describe("Keybinds tab on touch devices", () => {
     vi.restoreAllMocks();
   });
 
-  it("is present with a fine pointer", async () => {
+  it("is present on a non-touch device", async () => {
     vi.spyOn(Platform, "isTouch", "get").mockReturnValue(false);
     const el = await mount();
     expect(tabKeys(el)).toContain("keybinds");
