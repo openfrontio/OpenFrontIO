@@ -1,10 +1,10 @@
 import type { HumanStatsSnapshot } from "@openfront/engine-api/game/GameTypes";
-import type { Winner } from "@openfront/engine-api/Schemas";
 import {
   GameMode,
   GameType,
   HumansVsNations,
 } from "@openfront/engine-api/game/GameTypes";
+import type { Winner } from "@openfront/engine-api/Schemas";
 import type {
   GameXpResponse,
   Progress,
