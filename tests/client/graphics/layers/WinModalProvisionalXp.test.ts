@@ -79,6 +79,7 @@ import {
   recordPendingXp,
   stopProvisionalProgress,
 } from "../../../../src/client/ProvisionalProgress";
+import { SendWinnerEvent } from "../../../../src/client/Transport";
 import type { GameView } from "../../../../src/client/view";
 
 const GAME_ID = "gPROVXP01";
@@ -292,11 +293,18 @@ function makeGame(
     winStats?: AllPlayersStats;
     // The tick the Win update comes on.
     winTick?: number;
+    // The player the result names can't be found: this client doesn't vote.
+    unknownWinner?: boolean;
   } = {},
 ) {
   let ended = false;
   let delivered = false;
   const humanStats = vi.fn(async () => (opts.stats ?? snapshot)());
+  // The worker's narrow answer at the end: the same snapshot, without stats.
+  const humanDisconnects = vi.fn(async () => {
+    const { tick, disconnectedAt } = await (opts.stats ?? snapshot)();
+    return { tick, disconnectedAt };
+  });
   const game = {
     gameID: () => GAME_ID,
     ticks: () => opts.winTick ?? 6000,
@@ -320,12 +328,15 @@ function makeGame(
         ],
       };
     },
-    playerByClientID: (id: string) => ({
-      isPlayer: () => true,
-      clientID: () => id,
-      displayName: () => id,
-    }),
-    worker: { humanStats },
+    playerByClientID: (id: string) =>
+      opts.unknownWinner
+        ? undefined
+        : {
+            isPlayer: () => true,
+            clientID: () => id,
+            displayName: () => id,
+          },
+    worker: { humanStats, humanDisconnects },
     config: () => ({
       gameConfig: () => ({
         gameType: GameType.Public,
@@ -338,7 +349,7 @@ function makeGame(
       isReplay: () => false,
     }),
   } as unknown as GameView;
-  return { game, humanStats, end: () => (ended = true) };
+  return { game, humanStats, humanDisconnects, end: () => (ended = true) };
 }
 
 describe("WinModal provisional XP at death", () => {
@@ -1128,7 +1139,7 @@ describe("WinModal provisional XP at death", () => {
       expect(total()).toContain('"xp":"387"');
     });
 
-    it("puts a little more time on the server down to the game's length, without logging drift", async () => {
+    it("confirms quietly when the server only counted the game a little longer", async () => {
       const warn = vi.spyOn(console, "warn");
       // The server counted the game a few turns longer: one more XP.
       let asked = 0;
@@ -1158,9 +1169,17 @@ describe("WinModal provisional XP at death", () => {
       await finishReveal();
       await settle(3_000);
       expect(xpState()).toBe("result");
-      await finishReveal();
+      // "XP confirmed", nothing replayed, no note: but the server's numbers.
+      expect(
+        panel()!.querySelector("[data-xp-confirmed]")!.textContent,
+      ).toContain("progression.xp_confirmed");
+      expect(revealing()).toBe(false);
+      expect(await playOut()).toEqual({ moments: [], cards: [] });
+      expect(panel()!.querySelector("[data-xp-reconcile]")).toBeNull();
       expect(total()).toContain('"xp":"388"');
-      expect(notes()).toEqual(['progression.provisional_was:{"xp":"387"}']);
+      expect(
+        panel()!.querySelector("[data-xp-header-level]")!.textContent,
+      ).toContain('progression.xp_progress:{"current":"38","next":"100"}');
       expect(warn).not.toHaveBeenCalledWith(
         "Provisional XP differed from the server's",
         expect.anything(),
@@ -1223,21 +1242,201 @@ describe("WinModal provisional XP at death", () => {
       ]);
     });
 
+    it("still shows and keeps the figure when the poll gives up before it is ready", async () => {
+      // Signed out of the API (401): the poll answers null at once, while
+      // the worker is still to answer.
+      stubXpEndpoint(() => new Response("", { status: 401 }));
+      let answer: () => void = () => {};
+      const ready = new Promise<void>((resolve) => (answer = resolve));
+      const { game, end } = aliveGame({
+        stats: async () => {
+          await ready;
+          return endSnapshot();
+        },
+      });
+      await mount(game);
+      await endGame(end);
+      expect(xpState()).toBe("hidden");
+
+      answer();
+      await settle();
+      expect(xpState()).toBe("provisional");
+      // No answer is coming: provisional, not confirming.
+      expect(panel()!.querySelector("[data-xp-confirming]")).toBeNull();
+      await finishReveal();
+      expect(total()).toContain('"xp":"387"');
+      expect(readPendingXp("me")).toEqual([
+        expect.objectContaining({ gameId: GAME_ID, xp: 387 }),
+      ]);
+    });
+
+    it("stops working out the figure once the server has answered", async () => {
+      stubXpEndpoint(() => json(endServerXp()));
+      // The rules come slowly: the server's figure arrives first.
+      let answer: () => void = () => {};
+      fetchProgressionConfig.mockReturnValue(
+        new Promise((resolve) => (answer = () => resolve(CONFIG))),
+      );
+      const { game, end, humanDisconnects } = aliveGame();
+      await mount(game);
+      await endGame(end);
+      expect(xpState()).toBe("result");
+
+      answer();
+      await settle(1_000);
+      // The leftover load was called off before asking the worker.
+      expect(humanDisconnects).not.toHaveBeenCalled();
+      expect(view().reconciled).toBeUndefined();
+      expect(readPendingXp("me")).toEqual([
+        expect.objectContaining({ scored: { xp: 387, lifetimeAfter: 1237 } }),
+      ]);
+    });
+
+    it("takes away the win the server's result gave someone else", async () => {
+      let asked = 0;
+      // The server's replay named "late": 387 less the 45 win is 342, and
+      // 50 + 342 is level 12 at 92.
+      stubXpEndpoint(() =>
+        asked++ === 0
+          ? new Response("", { status: 404 })
+          : json(
+              endServerXp({
+                breakdown: {
+                  ...END_BREAKDOWN,
+                  win: 0,
+                  subtotal: 342,
+                  total: 342,
+                },
+                after: {
+                  ...endServerXp().after,
+                  level: 12,
+                  xpInLevel: 92,
+                  lifetimeXp: 1192,
+                },
+                levelsReached: levels(10, 11, 12),
+              }),
+            ),
+      );
+      const warn = vi.spyOn(console, "warn");
+      const { game, end } = aliveGame();
+      await mount(game);
+      await endGame(end);
+      await finishReveal();
+      await settle(3_000);
+      expect(xpState()).toBe("result");
+      expect(total()).toContain('"xp":"342"');
+      expect(notes()).toEqual([
+        'progression.provisional_was:{"xp":"387"}',
+        "progression.reconcile_win_removed",
+        'progression.reconcile_level_adjusted:{"level":"12"}',
+      ]);
+      expect(warn).not.toHaveBeenCalledWith(
+        "Provisional XP differed from the server's",
+        expect.anything(),
+      );
+    });
+
+    it("adds a win the server's result gave this player, in FFA", async () => {
+      let asked = 0;
+      stubXpEndpoint(() =>
+        asked++ === 0 ? new Response("", { status: 404 }) : json(endServerXp()),
+      );
+      // This client's simulation named "late": no win in its figure, 342.
+      const { game, end } = aliveGame({ winner: ["player", "late"] });
+      await mount(game);
+      await endGame(end);
+      await finishReveal();
+      expect(total()).toContain('"xp":"342"');
+      await settle(3_000);
+      expect(xpState()).toBe("result");
+      await finishReveal();
+      expect(total()).toContain('"xp":"387"');
+      // Not "your team won": this is FFA.
+      expect(notes()).toEqual([
+        'progression.provisional_was:{"xp":"342"}',
+        "progression.reconcile_win",
+      ]);
+    });
+
+    describe("the account it starts from", () => {
+      // The account once this game is scored: 850 + 387, the day's first
+      // game taken by it.
+      const afterThisGame = {
+        ...signedIn,
+        player: {
+          ...signedIn.player,
+          progress: {
+            ...PROGRESS,
+            level: 13,
+            xpInLevel: 37,
+            lifetimeXp: 1237,
+            daily: { ...PROGRESS.daily, firstGameClaimed: true },
+          },
+        },
+      };
+
+      it("is the one read while the game was on, even if the page's copy was refetched since", async () => {
+        stubXpEndpoint(() => new Response("", { status: 404 }));
+        const { game, end } = aliveGame();
+        await mount(game);
+        modal.init();
+        await settle();
+        // Mid-game the page's copy is dropped (an earlier game scored, say)
+        // and refetched at the end, by when the server has scored this one.
+        getUserMe.mockResolvedValue(afterThisGame);
+        await endGame(end);
+        await finishReveal();
+        // From level 9 at 50, the first game of the day included.
+        expect(total()).toContain('"xp":"387"');
+        expect(currentLevel()).toBe(13);
+        expect(readPendingXp("me")).toEqual([
+          expect.objectContaining({ xp: 387, notIn: 850 }),
+        ]);
+      });
+
+      it("is the page's copy when nothing was read while the game was on", async () => {
+        stubXpEndpoint(() => new Response("", { status: 404 }));
+        const { game, end } = aliveGame();
+        await mount(game);
+        getUserMe.mockResolvedValue(afterThisGame);
+        await endGame(end);
+        await finishReveal();
+        // Today's behaviour: the page's copy, as it now stands.
+        expect(total()).toContain('"xp":"287"');
+      });
+    });
+
     describe("falls back to 'Calculating XP…'", () => {
       it("for another formula revision", async () => {
         fetchProgressionConfig.mockResolvedValue({ ...CONFIG, formula: 2 });
         stubXpEndpoint(() => new Response("", { status: 404 }));
-        const { game, end, humanStats } = aliveGame();
+        const { game, end, humanDisconnects } = aliveGame();
         await mount(game);
         await endGame(end);
         expect(xpState()).toBe("calculating");
-        expect(humanStats).not.toHaveBeenCalled();
+        expect(humanDisconnects).not.toHaveBeenCalled();
+        expect(readPendingXp("me")).toEqual([]);
+      });
+
+      it("when this client cast no vote, rather than a figure with the win", async () => {
+        stubXpEndpoint(() => new Response("", { status: 404 }));
+        const sent: unknown[] = [];
+        // The winner named can't be found here: no vote goes out.
+        const { game, end, humanDisconnects } = aliveGame({
+          unknownWinner: true,
+        });
+        await mount(game);
+        modal.eventBus.on(SendWinnerEvent, (e) => sent.push(e));
+        await endGame(end);
+        expect(sent).toEqual([]);
+        expect(xpState()).toBe("calculating");
+        expect(humanDisconnects).not.toHaveBeenCalled();
         expect(readPendingXp("me")).toEqual([]);
       });
 
       it("for a singleplayer game the API doesn't score", async () => {
         stubXpEndpoint(() => new Response("", { status: 404 }));
-        const { game, end, humanStats } = aliveGame();
+        const { game, end, humanDisconnects: humanStats } = aliveGame();
         const config = game.config().gameConfig();
         (game as unknown as { config: () => unknown }).config = () => ({
           gameConfig: () => ({ ...config, gameType: GameType.Singleplayer }),
@@ -1278,7 +1477,7 @@ describe("WinModal provisional XP at death", () => {
       it("keeps the one from the death", async () => {
         stubXpEndpoint(() => new Response("", { status: 404 }));
         // Died at 4000 (the death figure: 274); someone else won.
-        const { game, end, humanStats } = makeGame({
+        const { game, end, humanStats, humanDisconnects } = makeGame({
           winner: ["player", "alive"],
           winStats: snapshot().stats,
         });
@@ -1290,6 +1489,7 @@ describe("WinModal provisional XP at death", () => {
         expect(xpState()).toBe("provisional");
         expect(view().provisional?.inputs.atGameEnd).toBe(false);
         expect(humanStats).toHaveBeenCalledTimes(1);
+        expect(humanDisconnects).not.toHaveBeenCalled();
         expect(readPendingXp("me")).toEqual([
           expect.objectContaining({ gameId: GAME_ID, xp: 274 }),
         ]);

@@ -154,21 +154,22 @@ function dailyOn(daily: Progress["daily"], now: number): DailyXpState {
 }
 
 /**
- * computeXp's context for the local player at the moment they died, from the
- * worker's stats snapshot. "retry" when the snapshot doesn't show the death
- * yet (the simulation stamps it a tick after the last tile falls).
+ * computeXp's context for the local player, derived the way the API derives
+ * it from the archived record (its GameInputs.ts), from the worker's stats
+ * snapshot.
  *
- * With `end`, the context once the game is over instead, alive or not: the
- * snapshot's tick stands for the game's length, and the win is known. Only
- * the feats are still left out: the API judges them.
+ * Without `end`, at the moment the player died, with what only the end
+ * settles left out: no win (a dead player can't win FFA; a team's result is
+ * pending). "retry" when the snapshot doesn't show the death yet (the
+ * simulation stamps it a tick after the last tile falls).
  *
- * Derived the way the API derives it from the archived record (its
- * GameInputs.ts), with what can only be known at the end left out: no win
- * (a dead player can't win FFA; a team's result is pending), no feats (they
- * are judged on the finished game), and no leave (the player is still here).
- * The first game of the day is known now: the daily state from /users/@me
- * says whether it is still open (unless its day has ended since), and the
- * game type whether this game pays it.
+ * With `end`, once the game is over, alive or not: the snapshot's tick
+ * stands for the game's length, and the win is known.
+ *
+ * Either way no feats (the API judges them on the finished game) and no
+ * leave (the player is still here). The first game of the day is known: the
+ * daily state from /users/@me says whether it is still open (unless its day
+ * has ended since), and the game type whether this game pays it.
  */
 export function provisionalXpContext(input: {
   snapshot: HumanStatsSnapshot;
@@ -177,7 +178,8 @@ export function provisionalXpContext(input: {
   progress: Progress;
   // The game is over: its result.
   end?: GameEnd;
-  // When the player died (epoch ms); now unless a test says otherwise.
+  // When the figure is worked out (epoch ms), for the day's allowances; now
+  // unless a test says otherwise.
   now?: number;
 }): { ctx: XpContext; disconnectedOpponents: number } | "retry" {
   const { snapshot, myClientID, config, progress, end } = input;
@@ -394,8 +396,13 @@ async function withTimeout<T>(p: Promise<T>, ms: number): Promise<T | null> {
 
 // Why the server's figure differs from the provisional one, where it's known.
 export type XpDifference =
-  // The team won: a win bonus added.
-  | "team_win"
+  // A win bonus the provisional figure didn't have: the team won (a figure
+  // from a death leaves a team's win pending), or the server's result named
+  // the player the winner.
+  | "win_added"
+  // A win bonus the provisional figure had and the server's doesn't: its
+  // result (the winner vote, or its replay of the game) named someone else.
+  | "win_removed"
   // Feats are judged on the finished game (only while they pay XP).
   | "feats"
   // The end-of-game vote didn't agree on the game's stats.
@@ -420,14 +427,16 @@ export type XpDifference =
   | "other";
 
 export interface XpReconciliation {
-  // The server's figure is the provisional one.
+  // The server's figure is the provisional one, or differs only by a little
+  // more time from the game's length (game_length), with the player on the
+  // level shown: confirmed quietly either way.
   matched: boolean;
   differences: XpDifference[];
   // The provisional total, null when the provisional figure was ineligible.
   provisionalTotal: number | null;
-  // A difference the known sources (team win, feats, verification, the daily
-  // cap, a multiplier change, a returning opponent) don't explain: the
-  // formula copy may have drifted.
+  // A difference the known sources (a win, feats, verification, the daily
+  // cap, a multiplier change, a returning opponent, the game's length) don't
+  // explain: the formula copy may have drifted.
   drift: boolean;
 }
 
@@ -436,11 +445,17 @@ export function reconcileXp(
   server: GameXpResponse,
   // ProvisionalXpInputs.disconnectedOpponents: opponents counted as gone at
   // death who may have come back; ProvisionalXpInputs.atGameEnd: the figure
-  // was worked out from the finished game.
+  // was worked out from the finished game; `shown`, the provisional figure's
+  // response (ProvisionalXp.response): the level it left the player on.
   {
     disconnectedOpponents = 0,
     atGameEnd = false,
-  }: { disconnectedOpponents?: number; atGameEnd?: boolean } = {},
+    shown,
+  }: {
+    disconnectedOpponents?: number;
+    atGameEnd?: boolean;
+    shown?: GameXpResponse;
+  } = {},
 ): XpReconciliation {
   const provisionalTotal = provisional.eligible
     ? provisional.breakdown.total
@@ -483,7 +498,8 @@ export function reconcileXp(
   const s = server.breakdown;
   if (s.total === p.total) return same;
   const differences: XpDifference[] = [];
-  if (s.win > p.win) differences.push("team_win");
+  if (s.win > p.win) differences.push("win_added");
+  if (s.win < p.win) differences.push("win_removed");
   if (s.feats > p.feats) differences.push("feats");
   // The first game of the day is known at death (from /users/@me), so it
   // only differs when the day's state changed before the game was scored.
@@ -511,7 +527,21 @@ export function reconcileXp(
     endOfGameXp(p) +
     endOfGameXp(s) +
     (lengthDiffers ? s.time - p.time : 0);
-  if (atServer(subtotal) === s.total) return differ(differences);
+  if (atServer(subtotal) === s.total) {
+    // Only a little more time, and no level the figure didn't show: the
+    // server almost always counts a player still in it a turn or two longer,
+    // which is no news worth a note or a second reveal.
+    if (
+      differences.length === 1 &&
+      differences[0] === "game_length" &&
+      shown?.eligible === true &&
+      shown.after.prestige === server.after.prestige &&
+      shown.after.level === server.after.level
+    ) {
+      return { ...same, differences };
+    }
+    return differ(differences);
+  }
   // An opponent who had disconnected when the player died was counted as
   // outlasted; one who came back isn't, on the server. When the server's
   // lower placement is the whole of the difference, that is the reason.

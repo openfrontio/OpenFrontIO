@@ -131,6 +131,12 @@ export class WinModal extends LitElement implements Controller {
   // The game's result, from its Win update: a player still in the game at
   // the end gets a provisional figure worked out from it.
   private gameEnd: GameEndUpdate | null = null;
+  // A Win update has come: anything read of the account from now on may
+  // already count this game.
+  private gameOverSeen = false;
+  // The account's progress as read while the game was on (init): what a
+  // figure from the end starts from, and is kept as not including.
+  private startAccount: { publicId: string; progress: Progress } | null = null;
   // A detach cut the end-of-game poll short; re-attaching restarts it (the
   // Win update that started it is delivered only once).
   private xpPollAborted = false;
@@ -676,16 +682,28 @@ export class WinModal extends LitElement implements Controller {
         const slow = setTimeout(() => {
           this.xpView = { kind: "calculating" };
         }, END_PROVISIONAL_GRACE_MS);
+        // Its own signal, so a server that answers first stops the leftover
+        // worker calls; a detach stops them too.
+        const loadAbort = new AbortController();
+        const stopLoad = () => loadAbort.abort();
+        abort.signal.addEventListener("abort", stopLoad, { once: true });
         const loaded = await Promise.race([
-          this.loadProvisionalXp(progress, end, abort.signal).catch(
+          this.loadProvisionalXp(progress, end, loadAbort.signal).catch(
             (err: unknown) => {
               console.warn("WinModal: no provisional XP at the end", err);
               return null;
             },
           ),
-          poll.then(() => null),
+          // Only the server's figure beats this one. A poll that gives up
+          // (timed out, unavailable) leaves it to come: it then stays up,
+          // provisional, and kept for the account menu.
+          poll.then((result) =>
+            result === null ? new Promise<never>(() => {}) : null,
+          ),
         ]);
         clearTimeout(slow);
+        loadAbort.abort();
+        abort.signal.removeEventListener("abort", stopLoad);
         if (loaded !== null && !abort.signal.aborted) {
           provisional = loaded.provisional;
           this.provisionalXp = provisional;
@@ -739,6 +757,7 @@ export class WinModal extends LitElement implements Controller {
       const outcome = reconcileXp(provisional.result, result, {
         disconnectedOpponents: provisional.inputs.disconnectedOpponents,
         atGameEnd: provisional.inputs.atGameEnd,
+        shown: provisional.response,
       });
       if (outcome.drift) {
         // Not explained by what only the end of the game adds: the client's
@@ -811,6 +830,7 @@ export class WinModal extends LitElement implements Controller {
     if (progression === false || provisionalXpRules(progression) === null) {
       return null;
     }
+    if (signal?.aborted) return null;
     const game = this.game;
     const myClientID = game.myClientID();
     if (myClientID === undefined) return null;
@@ -819,15 +839,23 @@ export class WinModal extends LitElement implements Controller {
     // (the page's copy is from when the game started, and a game left
     // earlier may have been scored since). Past the page's cache, so a failed
     // ask can't cost the game-end figure its copy; the page's progress stands
-    // in for it. At the end, the page's copy: a fresh read could already
-    // have this game in it, should the server score it that quickly, and the
-    // figure is wanted at once. Games left earlier are counted below.
+    // in for it. At the end, the account as read while the game was on
+    // (captureStartProgress): any read since could already have this game
+    // in it, should the server score it that quickly, and the page's copy
+    // may have been refetched since (an earlier game scored, a new session).
+    // Only without that, the page's copy. Games left earlier are counted
+    // below.
     let confirmed = progress;
     if (end === null) {
       const fresh = await fetchUserMeUncached();
       if (fresh !== false && fresh.player.progress !== undefined) {
         confirmed = fresh.player.progress;
       }
+    } else if (
+      this.startAccount !== null &&
+      this.startAccount.publicId === this.xpPublicId
+    ) {
+      confirmed = this.startAccount.progress;
     }
     // Games left earlier and not scored yet stack underneath this one: it
     // starts from where their provisional XP took the player, and from the
@@ -844,14 +872,16 @@ export class WinModal extends LitElement implements Controller {
       progress: start,
       progression,
       end: end === null ? undefined : { winner: end.winner },
-      // At the end, the stats this client votes (the Win update's): the
-      // record the server scores. The worker's snapshot still says who is
-      // disconnected, and how far the game has got.
+      // At the end, the stats this client voted (the Win update's): the
+      // record the server scores, on the tick the game ended. Only who is
+      // disconnected is asked of the worker, without copying every player's
+      // stats again.
       humanStats:
         end === null
           ? () => game.worker.humanStats()
           : async () => ({
-              ...(await game.worker.humanStats()),
+              disconnectedAt: (await game.worker.humanDisconnects())
+                .disconnectedAt,
               stats: end.allPlayersStats,
               tick: end.tick,
             }),
@@ -890,7 +920,24 @@ export class WinModal extends LitElement implements Controller {
   }
 
   init() {
-    if (!this.game.config().isReplay()) loadGameXpPanel();
+    if (this.game.config().isReplay()) return;
+    loadGameXpPanel();
+    void this.captureStartProgress();
+  }
+
+  // Reads the account's progress, and today's allowances, while the game is
+  // on: it can't include this game yet. Nothing is kept should the answer
+  // only come once the game is over.
+  private async captureStartProgress(): Promise<void> {
+    try {
+      const account = await resolveXpAccount();
+      if (account.kind !== "signed_in" || this.gameOverSeen) return;
+      const { publicId, progress } = account.me.player;
+      if (!publicId || progress === undefined) return;
+      this.startAccount = { publicId, progress };
+    } catch (err) {
+      console.warn("WinModal: no account read at the start", err);
+    }
   }
 
   tick() {
@@ -910,23 +957,26 @@ export class WinModal extends LitElement implements Controller {
     }
     const updates = this.game.updatesSinceLastTick();
     const winUpdates = updates?.[GameUpdateType.Win] ?? [];
-    if (winUpdates.length > 0) {
-      const { winner, allPlayersStats } = winUpdates[0];
+    if (winUpdates.length > 0) this.gameOverSeen = true;
+    // Votes the result to the server. The result voted is what a figure from
+    // the end is worked out from: a Win update this client doesn't vote
+    // gives none.
+    const vote = (winner: Winner, allPlayersStats: AllPlayersStats) => {
+      this.eventBus.emit(new SendWinnerEvent(winner, allPlayersStats));
       this.gameEnd ??= { winner, allPlayersStats, tick: this.game.ticks() };
-      void this.updateXp(true);
-    }
+    };
     winUpdates.forEach((wu) => {
       if (wu.winner === undefined) {
         // Match cancelled (e.g. a ranked 2v2 that didn't fill or fully
         // spawn): the game ends with no winner. Still vote the result to the
         // server so the record is archived winnerless (never ranked).
-        this.eventBus.emit(new SendWinnerEvent(undefined, wu.allPlayersStats));
+        vote(undefined, wu.allPlayersStats);
         this._title = translateText("win_modal.match_cancelled");
         this.isWin = false;
         history.replaceState(null, "", `${window.location.pathname}?replay`);
         this.show();
       } else if (wu.winner[0] === "team") {
-        this.eventBus.emit(new SendWinnerEvent(wu.winner, wu.allPlayersStats));
+        vote(wu.winner, wu.allPlayersStats);
         if (wu.winner[1] === this.game.myPlayer()?.team()) {
           this._title = translateText("win_modal.your_team");
           this.isWin = true;
@@ -941,7 +991,7 @@ export class WinModal extends LitElement implements Controller {
         history.replaceState(null, "", `${window.location.pathname}?replay`);
         this.show();
       } else if (wu.winner[0] === "nation") {
-        this.eventBus.emit(new SendWinnerEvent(wu.winner, wu.allPlayersStats));
+        vote(wu.winner, wu.allPlayersStats);
         this._title = translateText("win_modal.nation_won", {
           nation: wu.winner[1],
         });
@@ -953,9 +1003,7 @@ export class WinModal extends LitElement implements Controller {
         if (!winner?.isPlayer()) return;
         const winnerClient = winner.clientID();
         if (winnerClient !== null) {
-          this.eventBus.emit(
-            new SendWinnerEvent(["player", winnerClient], wu.allPlayersStats),
-          );
+          vote(["player", winnerClient], wu.allPlayersStats);
         }
         if (
           winnerClient !== null &&
@@ -975,6 +1023,8 @@ export class WinModal extends LitElement implements Controller {
         this.show();
       }
     });
+    // After the vote, so a figure from the end has what was voted.
+    if (winUpdates.length > 0) void this.updateXp(true);
   }
 
   private playEndOfGameSound(): void {

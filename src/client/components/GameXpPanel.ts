@@ -1,4 +1,4 @@
-import type { GameType } from "@openfront/engine-api/game/GameTypes";
+import { GameMode, type GameType } from "@openfront/engine-api/game/GameTypes";
 import type {
   GameXpEligible,
   GameXpResponse,
@@ -83,15 +83,19 @@ export type GameXpPanelState =
 // out in full so the translation checks can see the keys. An unverified game
 // has no line of its own: the server's figure is then ineligible, and its
 // note says so. Nor does the game counted for longer on the server
-// (game_length): a little more time, under the provisional figure's line.
+// (game_length): a little more time, under the provisional figure's line
+// (and on its own, confirmed quietly). A win added says "your team won" in a
+// team game (TEAM_WIN_KEY).
 const DIFFERENCE_KEYS: Partial<Record<XpDifference, string>> = {
-  team_win: "progression.reconcile_team_win",
+  win_added: "progression.reconcile_win",
+  win_removed: "progression.reconcile_win_removed",
   feats: "progression.reconcile_feats",
   daily_cap: "progression.reconcile_daily_cap",
   multiplier: "progression.reconcile_multiplier",
   reconnect: "progression.reconcile_reconnect",
   other: "progression.reconcile_other",
 };
+const TEAM_WIN_KEY = "progression.reconcile_team_win";
 
 // How a reveal runs: in full (a provisional figure too); or as the
 // celebration once the server has answered with more than a provisional
@@ -1238,8 +1242,13 @@ export class GameXpPanel extends LitElement {
           params: { xp: formatXp(outcome.provisionalTotal) },
         });
       }
+      const teamGame =
+        s.reconciled.provisional.inputs.gameMode === GameMode.Team;
       for (const difference of outcome.differences) {
-        const key = DIFFERENCE_KEYS[difference];
+        const key =
+          difference === "win_added" && teamGame
+            ? TEAM_WIN_KEY
+            : DIFFERENCE_KEYS[difference];
         // The ineligibility note already says it.
         if (
           key === undefined ||

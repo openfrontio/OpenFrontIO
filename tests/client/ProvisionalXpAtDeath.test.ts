@@ -659,7 +659,7 @@ describe("reconcileXp", () => {
       ),
     ).toEqual({
       matched: false,
-      differences: ["team_win", "feats"],
+      differences: ["win_added", "feats"],
       provisionalTotal: 196,
       drift: false,
     });
@@ -712,7 +712,7 @@ describe("reconcileXp", () => {
           total: 313,
         }),
       ),
-    ).toMatchObject({ differences: ["team_win", "multiplier"], drift: false });
+    ).toMatchObject({ differences: ["win_added", "multiplier"], drift: false });
     // A changed multiplier doesn't hide a line that differs unexplained.
     expect(
       reconcileXp(
@@ -804,7 +804,40 @@ describe("reconcileXp", () => {
     ).toMatchObject({ differences: ["other"], drift: true });
   });
 
-  it("explains a winner the server overturned, for a figure from the end", () => {
+  it("confirms a figure from the end that only counted the game shorter, on the level it showed", () => {
+    const longer = server({ time: 115, subtotal: 165, total: 198 });
+    // The provisional figure left the player on level 6, as the server does.
+    const shown = server({});
+    expect(
+      reconcileXp(provisional, longer, { atGameEnd: true, shown }),
+    ).toEqual({
+      matched: true,
+      differences: ["game_length"],
+      provisionalTotal: 196,
+      drift: false,
+    });
+    // A level the figure didn't reach is no quiet confirmation.
+    const lowerLevel: GameXpResponse = shown.eligible
+      ? { ...shown, after: { ...shown.after, level: 5 } }
+      : shown;
+    expect(
+      reconcileXp(provisional, longer, { atGameEnd: true, shown: lowerLevel }),
+    ).toMatchObject({ matched: false, differences: ["game_length"] });
+    // Nor with anything else differing as well.
+    expect(
+      reconcileXp(
+        provisional,
+        server({ time: 115, win: 150, subtotal: 315, total: 378 }),
+        { atGameEnd: true, shown },
+      ),
+    ).toMatchObject({
+      matched: false,
+      differences: ["win_added", "game_length"],
+      drift: false,
+    });
+  });
+
+  it("explains a win the server's result took away, for a figure from the end", () => {
     // Shown with an FFA win of 60 (223 * 1.2 = 267.6); the server's replay
     // named someone else.
     const won: XpResult = {
@@ -812,8 +845,25 @@ describe("reconcileXp", () => {
       breakdown: { ...breakdown, win: 60, subtotal: 223, total: 268 },
       daily: { privateGames: 0, singleplayerGames: 0, firstGameClaimed: true },
     };
-    expect(reconcileXp(won, server({}), { atGameEnd: true })).toMatchObject({
+    expect(reconcileXp(won, server({}), { atGameEnd: true })).toEqual({
       matched: false,
+      differences: ["win_removed"],
+      provisionalTotal: 268,
+      drift: false,
+    });
+  });
+
+  it("explains a win the server's result gave, in any mode", () => {
+    // (163 + 60) * 1.2 = 267.6: an FFA win the client's own result didn't
+    // name the player for.
+    expect(
+      reconcileXp(provisional, server({ win: 60, subtotal: 223, total: 268 }), {
+        atGameEnd: true,
+      }),
+    ).toEqual({
+      matched: false,
+      differences: ["win_added"],
+      provisionalTotal: 196,
       drift: false,
     });
   });
