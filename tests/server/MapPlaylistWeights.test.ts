@@ -31,6 +31,57 @@ describe("MapPlaylist weight overrides", () => {
     );
   });
 
+  it("scales the frequency by the queue's multiplier, override or not", () => {
+    const p = internals(new MapPlaylist());
+    const count = (type: string, overrides: object) =>
+      p
+        .buildMapsList(type, undefined, overrides)
+        .filter((m) => m === GameMapType.World).length;
+
+    const W = GameMapType.World;
+    expect(count("ffa", { [W]: { ffaFrequency: 10, ffaMultiplier: 2 } })).toBe(
+      20,
+    );
+    expect(
+      count("ffa", { [W]: { ffaFrequency: 10, ffaMultiplier: 0.5 } }),
+    ).toBe(5);
+    // On the build's own frequency.
+    expect(count("ffa", { [W]: { ffaMultiplier: 2 } })).toBe(
+      2 * count("ffa", {}),
+    );
+    // A manual 0 still takes the map out.
+    expect(count("ffa", { [W]: { ffaFrequency: 0, ffaMultiplier: 2 } })).toBe(
+      0,
+    );
+    // Another queue's multiplier leaves this one alone.
+    expect(count("ffa", { [W]: { ffaFrequency: 10, teamMultiplier: 2 } })).toBe(
+      10,
+    );
+    expect(
+      count("special", { [W]: { specialFrequency: 10, specialMultiplier: 2 } }),
+    ).toBe(20);
+  });
+
+  it("rounds a fractional count up with probability equal to the fraction", () => {
+    const p = internals(new MapPlaylist());
+    const count = () =>
+      p
+        .buildMapsList("ffa", undefined, {
+          [GameMapType.World]: { ffaFrequency: 5, ffaMultiplier: 1.3 },
+        })
+        .filter((m) => m === GameMapType.World).length;
+
+    const random = vi.spyOn(Math, "random");
+    try {
+      random.mockReturnValue(0.49);
+      expect(count()).toBe(7);
+      random.mockReturnValue(0.51);
+      expect(count()).toBe(6);
+    } finally {
+      random.mockRestore();
+    }
+  });
+
   it("drops queued playlists when the overrides change", async () => {
     const playlist = new MapPlaylist();
     await playlist.gameConfig("ffa");

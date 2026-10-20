@@ -5,6 +5,12 @@ const MapWeightOverrideSchema = z.object({
   ffaFrequency: z.number().int().nonnegative().optional(),
   teamFrequency: z.number().int().nonnegative().optional(),
   specialFrequency: z.number().int().nonnegative().optional(),
+  // Fill-rate weights computed nightly by the API from how fast each map's
+  // lobbies fill (infra docs/map-fill-weights.md). They scale the frequency
+  // for that queue, overridden or not; absent means 1.
+  ffaMultiplier: z.number().positive().optional(),
+  teamMultiplier: z.number().positive().optional(),
+  specialMultiplier: z.number().positive().optional(),
 });
 
 const MapWeightsResponseSchema = z.object({
@@ -13,7 +19,8 @@ const MapWeightsResponseSchema = z.object({
 
 // Keyed by map name (the GameMapType value). Each entry uses info.json's
 // field names, so MapPlaylist spreads it over the build's MapInfo; an absent
-// field keeps the build's value and 0 takes the map out of that queue.
+// field keeps the build's value and 0 takes the map out of that queue. The
+// multipliers are applied on top (MapPlaylist.buildMapsList).
 export type MapWeightOverrides = z.infer<
   typeof MapWeightsResponseSchema
 >["maps"];

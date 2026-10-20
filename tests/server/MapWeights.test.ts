@@ -25,6 +25,28 @@ describe("fetchMapWeights", () => {
     expect(init.headers["x-api-key"]).toBeDefined();
   });
 
+  it("returns the fill-rate multipliers", async () => {
+    const maps = {
+      World: { ffaFrequency: 12, ffaMultiplier: 1.23, teamMultiplier: 0.8 },
+      Europe: { specialMultiplier: 1.1 },
+    };
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(jsonResponse({ maps })));
+
+    expect(await fetchMapWeights()).toEqual(maps);
+  });
+
+  it("throws on a multiplier that is not positive", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi
+        .fn()
+        .mockResolvedValue(
+          jsonResponse({ maps: { World: { ffaMultiplier: 0 } } }),
+        ),
+    );
+    await expect(fetchMapWeights()).rejects.toThrow("malformed");
+  });
+
   it("throws on a non-200", async () => {
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue(jsonResponse({}, 503)));
     await expect(fetchMapWeights()).rejects.toThrow("503");

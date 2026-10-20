@@ -119,6 +119,12 @@ const MUTUALLY_EXCLUSIVE_MODIFIERS: [ModifierKey, ModifierKey][] = [
   ["isNukesDisabled", "isWaterNukes"],
 ];
 
+const MULTIPLIER_FIELDS = {
+  ffa: "ffaMultiplier",
+  team: "teamMultiplier",
+  special: "specialMultiplier",
+} as const satisfies Record<ScheduledPublicGameType, string>;
+
 // Special games roll ffa/team per-game (see getSpecialConfig), so their
 // playlist is split in two rather than sharing one "special" queue -
 // each half can then fall back to the matching ffaFrequency/teamFrequency.
@@ -768,7 +774,13 @@ export class MapPlaylist {
           }
           break;
       }
-      for (let i = 0; i < freq; i++) {
+      // The API's fill-rate multiplier scales whichever frequency won above.
+      // Copies are whole, so round up with probability equal to the fraction:
+      // 5 x 1.3 is 6 or 7, averaging 6.5 over many playlists.
+      const multiplier = mapInfo[MULTIPLIER_FIELDS[type]] ?? 1;
+      const scaled = freq * multiplier;
+      const copies = Math.floor(scaled) + (Math.random() < scaled % 1 ? 1 : 0);
+      for (let i = 0; i < copies; i++) {
         maps.push(map);
       }
     });
