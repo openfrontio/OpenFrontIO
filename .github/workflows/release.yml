@@ -45,7 +45,7 @@ jobs:
           password: ${{ secrets.GHCR_TOKEN }}
       - id: build
         env:
-          GHCR_REPO: openfront-prod
+          GHCR_REPO: openfront-server
           GHCR_USERNAME: ${{ vars.GHCR_USERNAME }}
           RELEASE_BODY: ${{ github.event.release.body }}
           RELEASE_NAME: ${{ github.event.release.name }}
@@ -96,7 +96,7 @@ jobs:
           chmod 600 ~/.ssh/id_rsa
       - name: 🚀 Deploy image
         env:
-          GHCR_REPO: openfront-prod
+          GHCR_REPO: openfront-server
           GHCR_USERNAME: ${{ vars.GHCR_USERNAME }}
           # update.sh pulls the private image with this job's own token.
           GHCR_USER: ${{ github.actor }}
