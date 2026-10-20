@@ -12,6 +12,10 @@ function isAllowedOrigin(origin: string): boolean {
   if (origin === DESKTOP_APP_ORIGIN) return true;
   const siteHost = ServerEnv.siteHost();
   if (siteHost !== undefined && origin === `https://${siteHost}`) return true;
+
+  // Replay shell host: replay.openfront.io (or replay.<domain>)
+  const audience = ServerEnv.domain();
+  if (audience && origin === `https://replay.${audience}`) return true;
   // This server's own game host — harmless (same-origin requests skip CORS)
   // and what a page rendered by this server pins itself to — and its own
   // PAGE host when GAME_DOMAIN splits the two names (`main.openfront.dev`

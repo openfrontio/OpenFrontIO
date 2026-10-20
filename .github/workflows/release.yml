@@ -17,6 +17,27 @@ jobs:
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v7
+      # The optional security module (src/server/README.md), at the commit
+      # pinned in this tree. The app token is scoped to that repo, read only.
+      - uses: actions/create-github-app-token@v3
+        id: gatekeeper-token
+        with:
+          client-id: ${{ vars.APP_CLIENT_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+          owner: openfrontio
+          repositories: gatekeeper
+          permission-contents: read
+      - name: 🔒 Resolve the pinned security module
+        id: gatekeeper
+        run: echo "sha=$(git rev-parse HEAD:src/server/gatekeeper)" >> "$GITHUB_OUTPUT"
+      - name: 🔒 Check out the security module
+        uses: actions/checkout@v7
+        with:
+          repository: openfrontio/gatekeeper
+          ref: ${{ steps.gatekeeper.outputs.sha }}
+          path: src/server/gatekeeper
+          token: ${{ steps.gatekeeper-token.outputs.token }}
+          persist-credentials: false
       # Fail the release before anything deploys: a malformed targets var
       # would otherwise only surface when a color job's matrix expands,
       # after alpha and beta already shipped the new image. length > 0 also
@@ -45,7 +66,7 @@ jobs:
           password: ${{ secrets.GHCR_TOKEN }}
       - id: build
         env:
-          GHCR_REPO: openfront-prod
+          GHCR_REPO: openfront-server
           GHCR_USERNAME: ${{ vars.GHCR_USERNAME }}
           RELEASE_BODY: ${{ github.event.release.body }}
           RELEASE_NAME: ${{ github.event.release.name }}
@@ -77,6 +98,9 @@ jobs:
   deploy-alpha:
     name: 🧪 Deploy to alpha
     runs-on: ubuntu-latest
+    # Read only: update.sh pulls the image with this job's token.
+    permissions:
+      packages: read
     timeout-minutes: 30
     needs: [build]
     steps:
@@ -93,8 +117,11 @@ jobs:
           chmod 600 ~/.ssh/id_rsa
       - name: 🚀 Deploy image
         env:
-          GHCR_REPO: openfront-prod
+          GHCR_REPO: openfront-server
           GHCR_USERNAME: ${{ vars.GHCR_USERNAME }}
+          # update.sh pulls the private image with this job's own token.
+          GHCR_USER: ${{ github.actor }}
+          GHCR_TOKEN: ${{ github.token }}
           DOMAIN: ${{ vars.DOMAIN }}
           CDN_BASE: ${{ vars.CDN_BASE }}
           IMAGE_ID: ${{ needs.build.outputs.IMAGE_ID }}
@@ -110,6 +137,10 @@ jobs:
           # test-mode key, matching its test-mode API.
           STRIPE_PUBLISHABLE_KEY: ${{ vars.STRIPE_PUBLISHABLE_KEY }}
           FARO_COLLECTOR_URL: ${{ vars.FARO_COLLECTOR_URL }}
+          # Match telemetry (see deploy.yml).
+          TELEMETRY_ENABLED: ${{ vars.TELEMETRY_ENABLED }}
+          TELEMETRY_INGEST_URL: ${{ vars.TELEMETRY_INGEST_URL }}
+          TELEMETRY_SIGNING_SECRET: ${{ secrets.TELEMETRY_SIGNING_SECRET }}
           SERVER_HOST_STAGING: ${{ secrets.SERVER_HOST_STAGING }}
           SERVER_HOSTS_JSON: ${{ secrets.SERVER_HOSTS_JSON }}
           SSH_KEY: ~/.ssh/id_rsa
@@ -136,6 +167,9 @@ jobs:
   deploy-beta:
     name: 🐞 Deploy to beta (${{ matrix.target.host }})
     runs-on: ubuntu-latest
+    # Read only: update.sh pulls the image with this job's token.
+    permissions:
+      packages: read
     needs: [build, deploy-alpha]
     timeout-minutes: 30
     environment: prod-beta
@@ -162,6 +196,9 @@ jobs:
         env:
           GHCR_REPO: ${{ vars.GHCR_REPO }}
           GHCR_USERNAME: ${{ vars.GHCR_USERNAME }}
+          # update.sh pulls the private image with this job's own token.
+          GHCR_USER: ${{ github.actor }}
+          GHCR_TOKEN: ${{ github.token }}
           DOMAIN: ${{ vars.DOMAIN }}
           CDN_BASE: ${{ vars.CDN_BASE }}
           IMAGE_ID: ${{ needs.build.outputs.IMAGE_ID }}
@@ -178,6 +215,10 @@ jobs:
           # test-mode key, matching its test-mode API.
           STRIPE_PUBLISHABLE_KEY: ${{ vars.STRIPE_PUBLISHABLE_KEY }}
           FARO_COLLECTOR_URL: ${{ vars.FARO_COLLECTOR_URL }}
+          # Match telemetry (see deploy.yml).
+          TELEMETRY_ENABLED: ${{ vars.TELEMETRY_ENABLED }}
+          TELEMETRY_INGEST_URL: ${{ vars.TELEMETRY_INGEST_URL }}
+          TELEMETRY_SIGNING_SECRET: ${{ secrets.TELEMETRY_SIGNING_SECRET }}
           SERVER_HOST_FALK2: ${{ secrets.SERVER_HOST_FALK2 }}
           SERVER_HOSTS_JSON: ${{ secrets.SERVER_HOSTS_JSON }}
           TARGET_HOST: ${{ matrix.target.host }}
@@ -206,6 +247,9 @@ jobs:
   deploy-blue:
     name: 🔵 Deploy to blue (${{ matrix.target.host }})
     runs-on: ubuntu-latest
+    # Read only: update.sh pulls the image with this job's token.
+    permissions:
+      packages: read
     needs: [build, deploy-alpha]
     timeout-minutes: 30
     environment: prod-blue
@@ -247,6 +291,9 @@ jobs:
         env:
           GHCR_REPO: ${{ vars.GHCR_REPO }}
           GHCR_USERNAME: ${{ vars.GHCR_USERNAME }}
+          # update.sh pulls the private image with this job's own token.
+          GHCR_USER: ${{ github.actor }}
+          GHCR_TOKEN: ${{ github.token }}
           DOMAIN: ${{ vars.DOMAIN }}
           # Blue/green sit behind the openfront.io load balancer: see ServerEnv.siteHost.
           SITE_HOST: ${{ vars.DOMAIN }}
@@ -265,6 +312,10 @@ jobs:
           # test-mode key, matching its test-mode API.
           STRIPE_PUBLISHABLE_KEY: ${{ vars.STRIPE_PUBLISHABLE_KEY }}
           FARO_COLLECTOR_URL: ${{ vars.FARO_COLLECTOR_URL }}
+          # Match telemetry (see deploy.yml).
+          TELEMETRY_ENABLED: ${{ vars.TELEMETRY_ENABLED }}
+          TELEMETRY_INGEST_URL: ${{ vars.TELEMETRY_INGEST_URL }}
+          TELEMETRY_SIGNING_SECRET: ${{ secrets.TELEMETRY_SIGNING_SECRET }}
           SERVER_HOST_FALK2: ${{ secrets.SERVER_HOST_FALK2 }}
           SERVER_HOSTS_JSON: ${{ secrets.SERVER_HOSTS_JSON }}
           TARGET_HOST: ${{ matrix.target.host }}
@@ -293,6 +344,9 @@ jobs:
   deploy-green:
     name: 🟢 Deploy to green (${{ matrix.target.host }})
     runs-on: ubuntu-latest
+    # Read only: update.sh pulls the image with this job's token.
+    permissions:
+      packages: read
     needs: [build, deploy-alpha]
     timeout-minutes: 30
     environment: prod-green
@@ -324,6 +378,9 @@ jobs:
         env:
           GHCR_REPO: ${{ vars.GHCR_REPO }}
           GHCR_USERNAME: ${{ vars.GHCR_USERNAME }}
+          # update.sh pulls the private image with this job's own token.
+          GHCR_USER: ${{ github.actor }}
+          GHCR_TOKEN: ${{ github.token }}
           DOMAIN: ${{ vars.DOMAIN }}
           # Blue/green sit behind the openfront.io load balancer: see ServerEnv.siteHost.
           SITE_HOST: ${{ vars.DOMAIN }}
@@ -342,6 +399,10 @@ jobs:
           # test-mode key, matching its test-mode API.
           STRIPE_PUBLISHABLE_KEY: ${{ vars.STRIPE_PUBLISHABLE_KEY }}
           FARO_COLLECTOR_URL: ${{ vars.FARO_COLLECTOR_URL }}
+          # Match telemetry (see deploy.yml).
+          TELEMETRY_ENABLED: ${{ vars.TELEMETRY_ENABLED }}
+          TELEMETRY_INGEST_URL: ${{ vars.TELEMETRY_INGEST_URL }}
+          TELEMETRY_SIGNING_SECRET: ${{ secrets.TELEMETRY_SIGNING_SECRET }}
           SERVER_HOST_FALK2: ${{ secrets.SERVER_HOST_FALK2 }}
           SERVER_HOSTS_JSON: ${{ secrets.SERVER_HOSTS_JSON }}
           TARGET_HOST: ${{ matrix.target.host }}

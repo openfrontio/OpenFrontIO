@@ -1,4 +1,3 @@
-import { GameStartInfo } from "@openfront/engine-api/Schemas";
 import {
   Cell,
   GameMapSize,
@@ -13,6 +12,7 @@ import {
   AdditionalNation,
   Nation as ManifestNation,
 } from "@openfront/engine-api/game/MapFiles";
+import { GameStartInfo } from "@openfront/engine-api/Schemas";
 import { PseudoRandom } from "@openfront/engine-lib/PseudoRandom";
 
 /**

@@ -93,6 +93,9 @@ jobs:
       matrix:
         include: ${{ github.event_name == 'schedule' && fromJSON(vars.DEPLOY_TARGETS_DEV || '[{"subdomain":"nightly","host":"staging"},{"subdomain":"green","host":"staging"},{"subdomain":"blue","host":"staging"}]') || fromJSON('[{"subdomain":""}]') }}
     timeout-minutes: 30
+    # Read only: update.sh pulls the image with this job's token.
+    permissions:
+      packages: read
     environment: ${{ inputs.target_domain == 'openfront.io' && 'prod' || '' }}
     env:
       DOMAIN: ${{ inputs.target_domain || 'openfront.dev' }}
@@ -171,6 +174,27 @@ jobs:
         run: |
           echo "GH_TOKEN=$GH_TOKEN" >> $GITHUB_ENV
           gh api octocat
+      # The optional security module (src/server/README.md), at the commit
+      # pinned in this tree. The app token is scoped to that repo, read only.
+      - uses: actions/create-github-app-token@v3
+        id: gatekeeper-token
+        with:
+          client-id: ${{ vars.APP_CLIENT_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+          owner: openfrontio
+          repositories: gatekeeper
+          permission-contents: read
+      - name: 🔒 Resolve the pinned security module
+        id: gatekeeper
+        run: echo "sha=$(git rev-parse HEAD:src/server/gatekeeper)" >> "$GITHUB_OUTPUT"
+      - name: 🔒 Check out the security module
+        uses: actions/checkout@v7
+        with:
+          repository: openfrontio/gatekeeper
+          ref: ${{ steps.gatekeeper.outputs.sha }}
+          path: src/server/gatekeeper
+          token: ${{ steps.gatekeeper-token.outputs.token }}
+          persist-credentials: false
       - name: 📝 Create deployment
         if: ${{ github.repository == 'openfrontio/OpenFrontIO' && steps.generate-token.outputs.token != '' }}
         uses: actions/github-script@v9
@@ -218,6 +242,9 @@ jobs:
         env:
           GHCR_REPO: ${{ vars.GHCR_REPO }}
           GHCR_USERNAME: ${{ vars.GHCR_USERNAME }}
+          # update.sh pulls the private image with this job's own token.
+          GHCR_USER: ${{ github.actor }}
+          GHCR_TOKEN: ${{ github.token }}
           ENV: ${{ inputs.target_domain == 'openfront.io' && 'prod' || 'staging' }}
           # The schedule names a machine per leg; a dispatch picks one; a push
           # always lands on staging.
@@ -236,6 +263,12 @@ jobs:
           # Grafana Faro collector for browser telemetry, delivered the same
           # way (runtime env → BOOTSTRAP_CONFIG). Unset keeps it off.
           FARO_COLLECTOR_URL: ${{ vars.FARO_COLLECTOR_URL }}
+          # Match telemetry (src/server/telemetry).
+          # Off unless TELEMETRY_ENABLED is "true"; a missing or invalid URL
+          # or secret only disables it, never fails the deploy.
+          TELEMETRY_ENABLED: ${{ vars.TELEMETRY_ENABLED }}
+          TELEMETRY_INGEST_URL: ${{ vars.TELEMETRY_INGEST_URL }}
+          TELEMETRY_SIGNING_SECRET: ${{ secrets.TELEMETRY_SIGNING_SECRET }}
           OTEL_EXPORTER_OTLP_ENDPOINT: ${{ secrets.OTEL_EXPORTER_OTLP_ENDPOINT }}
           OTEL_AUTH_HEADER: ${{ secrets.OTEL_AUTH_HEADER }}
           API_KEY: ${{ secrets.API_KEY }}

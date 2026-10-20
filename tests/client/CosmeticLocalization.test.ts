@@ -1,13 +1,13 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { ResolvedCosmetic } from "../../src/client/Cosmetics";
-import "../../src/client/LangSelector";
-import type { LangSelector } from "../../src/client/LangSelector";
-import "../../src/client/components/CosmeticCard";
 import type { CosmeticCard } from "../../src/client/components/CosmeticCard";
+import "../../src/client/LangSelector";
 import {
   cosmeticDisplayName,
   cosmeticRarityLabel,
 } from "../../src/client/components/CosmeticPresentation";
+import "../../src/client/components/CosmeticCard";
+import type { ResolvedCosmetic } from "../../src/client/Cosmetics";
+import type { LangSelector } from "../../src/client/LangSelector";
 
 const rarePattern: ResolvedCosmetic = {
   type: "pattern",
