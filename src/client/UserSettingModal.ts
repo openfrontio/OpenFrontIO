@@ -521,7 +521,12 @@ export class UserSettingModal extends BaseModal {
   }
 
   private sliderNukeAllianceSafetyDuration(e: CustomEvent<{ value: number }>) {
-    this.userSettings.setNukeAllianceSafetyDuration(e.detail.value);
+    const value = e.detail?.value;
+    if (typeof value !== "number") {
+      console.warn("Slider event missing detail.value", e);
+      return;
+    }
+    this.userSettings.setNukeAllianceSafetyDuration(value);
     this.requestUpdate();
   }
 
@@ -1772,7 +1777,12 @@ export class UserSettingModal extends BaseModal {
         id="hud-opacity-slider"
         .value=${this.userSettings.hudOpacity() * 100}
         @change=${(e: CustomEvent<{ value: number }>) => {
-          this.userSettings.setHudOpacity(e.detail.value / 100);
+          const value = e.detail?.value;
+          if (typeof value !== "number") {
+            console.warn("Slider event missing detail.value", e);
+            return;
+          }
+          this.userSettings.setHudOpacity(value / 100);
           document.documentElement.style.setProperty(
             "--hud-opacity",
             String(this.userSettings.hudOpacity()),
