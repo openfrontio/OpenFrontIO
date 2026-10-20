@@ -380,7 +380,8 @@ describe("JoinLobbyModal Steam invite button", () => {
     });
 
     const copy = renderHeader(modal).querySelector("copy-button") as
-      (HTMLElement & { lobbyId?: string }) | null;
+      | (HTMLElement & { lobbyId?: string })
+      | null;
 
     expect(copy?.lobbyId).toBe("ABCD1234");
   });
