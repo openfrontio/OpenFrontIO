@@ -89,6 +89,8 @@ export class GameRightSidebar extends LitElement implements Controller {
       this.game?.config()?.gameConfig()?.gameType === GameType.Private;
     this._isVisible = true;
     this.hasShownOneMinuteWarning = false;
+    // LocalServer opens a resumed game paused.
+    this.isPaused = this.game.resumedFromSave();
 
     this.eventBus.on(SpawnBarVisibleEvent, (e) => {
       this.spawnBarVisible = e.visible;

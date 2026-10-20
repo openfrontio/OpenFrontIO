@@ -157,6 +157,14 @@ export class LocalServer {
       // Don't send myClientID for replays — viewer has no player identity.
       myClientID: this.lobbyConfig.gameRecord ? undefined : this.clientID,
     } satisfies ServerStartGameMessage);
+    // A resumed game opens paused, so the player can get their bearings. The
+    // pause turn is also the tick that brings the view up to the save.
+    if (this.lobbyConfig.snapshot !== undefined) {
+      this.onMessage({
+        type: "intent",
+        intent: { type: "toggle_pause", paused: true },
+      });
+    }
     // Last, so a start() that throws above leaves no interval behind.
     if (!this.isReplay) {
       this.stopHeartbeat = startSingleplayerHeartbeat(

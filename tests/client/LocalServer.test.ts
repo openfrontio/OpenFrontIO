@@ -200,3 +200,64 @@ describe("LocalServer archiving", () => {
     expect(archiveCalls).toEqual([]);
   });
 });
+
+describe("LocalServer resuming a save", () => {
+  beforeEach(() => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => new Response(null, { status: 200 })),
+    );
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  function startServer(snapshot?: Uint8Array) {
+    const sent: any[] = [];
+    const server = new LocalServer(
+      {
+        gameStartInfo: makeGameStartInfo(),
+        playerName: "TestUser",
+        playerClanTag: null,
+        snapshot,
+      } as any,
+      false,
+      new EventBus(),
+    );
+    server.updateCallback(
+      () => {},
+      (msg) => sent.push(msg),
+    );
+    server.start();
+    const turns = () => sent.filter((m) => m.type === "turn");
+    return { server, turns };
+  }
+
+  it("opens paused, with the pause as its first turn", async () => {
+    const { server, turns } = startServer(new Uint8Array([1, 2, 3]));
+
+    expect(turns()).toHaveLength(1);
+    expect(turns()[0].turn.intents).toEqual([
+      { type: "toggle_pause", paused: true, clientID: CLIENT_ID },
+    ]);
+    await new Promise((r) => setTimeout(r, 300));
+    expect(turns()).toHaveLength(1);
+
+    server.onMessage({
+      type: "intent",
+      intent: { type: "toggle_pause", paused: false },
+    } as ClientMessage);
+    expect(turns()[1].turn.intents).toEqual([
+      { type: "toggle_pause", paused: false, clientID: CLIENT_ID },
+    ]);
+    server.endGame();
+  });
+
+  it("starts a new game running", async () => {
+    const { server, turns } = startServer();
+    await vi.waitFor(() => expect(turns()).toHaveLength(1));
+    expect(turns()[0].turn.intents).toEqual([]);
+    server.endGame();
+  });
+});

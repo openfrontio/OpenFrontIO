@@ -172,7 +172,12 @@ async function onMessage(e: MessageEvent<MainThreadMessage>) {
                 message.clientID,
                 message.map,
                 gameUpdate,
-              )
+              ).then((gr) => {
+                // The page's view starts empty, so the first tick carries
+                // the state the snapshot restored.
+                gr.game.queueViewResync();
+                return gr;
+              })
             : createGameRunner(
                 message.gameStartInfo,
                 message.clientID,
