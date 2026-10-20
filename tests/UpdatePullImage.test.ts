@@ -50,6 +50,11 @@ function runPull(env: {
   fs.mkdirSync(binDir);
   const logFile = path.join(tempDir, "calls");
   fs.writeFileSync(logFile, "");
+  const envFile = path.join(tempDir, "deploy.env");
+  fs.writeFileSync(
+    envFile,
+    `GHCR_IMAGE=ghcr.io/openfrontio/openfront-prod:v1\nGHCR_TOKEN=${env.GHCR_TOKEN ?? ""}\nGHCR_USER=${env.GHCR_USER ?? ""}\nAPI_KEY=k3y\n`,
+  );
   const fakeDocker = `#!/bin/bash
 if [ "$1" = login ]; then
   echo "login \${*:2} stdin=$(cat)" >> '${logFile}'
@@ -66,6 +71,7 @@ exit 0
     "set -eo pipefail",
     `export PATH='${binDir}':"$PATH"`,
     "GHCR_IMAGE=ghcr.io/openfrontio/openfront-prod:v1",
+    `ENV_FILE='${envFile}'`,
     extractPullBlock(),
     'echo "reached end"',
   ].join("\n");
@@ -83,6 +89,8 @@ exit 0
   return {
     status: result.status,
     reachedEnd: result.stdout.includes("reached end"),
+    envFile: fs.readFileSync(envFile, "utf8"),
+    leftoverBackup: fs.existsSync(`${envFile}.bak`),
     calls: fs
       .readFileSync(logFile, "utf8")
       .split("\n")
@@ -100,6 +108,19 @@ describe("update.sh pull image", () => {
       "pull ghcr.io/openfrontio/openfront-prod:v1",
       "logout ghcr.io",
     ]);
+  });
+
+  it("drops the token from the env file the containers get", () => {
+    const r = runPull({ GHCR_TOKEN: "ghs_token", GHCR_USER: "evan" });
+    expect(r.envFile).toBe(
+      "GHCR_IMAGE=ghcr.io/openfrontio/openfront-prod:v1\nAPI_KEY=k3y\n",
+    );
+    expect(r.leftoverBackup).toBe(false);
+  });
+
+  it("drops the token from the env file when the pull fails", () => {
+    const r = runPull({ GHCR_TOKEN: "ghs_token", failPull: true });
+    expect(r.envFile).not.toContain("ghs_token");
   });
 
   it("never puts the token on the command line", () => {

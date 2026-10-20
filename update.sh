@@ -38,13 +38,16 @@ echo "Pulling ${GHCR_IMAGE} from GitHub Container Registry..."
 # --- BEGIN pull image (tested) ---
 # The images are private. GHCR_TOKEN is the deploy job's own GITHUB_TOKEN
 # (packages: read), which expires when the job ends; log out after the pull
-# so the host keeps no registry credential. Without a token, pull
-# anonymously, as a hand-run update.sh against a public image would.
+# so the host keeps no registry credential, and drop the token from the env
+# file, which every `docker run --env-file` below hands to a container.
+# Without a token, pull anonymously, as a hand-run update.sh against a public
+# image would.
 if [ -n "${GHCR_TOKEN:-}" ]; then
     printf '%s' "$GHCR_TOKEN" | docker login ghcr.io -u "${GHCR_USER:-openfront}" --password-stdin
     pull_status=0
     docker pull "${GHCR_IMAGE}" || pull_status=$?
     docker logout ghcr.io >/dev/null || true
+    sed -i.bak -e '/^GHCR_TOKEN=/d' -e '/^GHCR_USER=/d' "$ENV_FILE" && rm -f "$ENV_FILE.bak"
     if [ "$pull_status" -ne 0 ]; then
         exit "$pull_status"
     fi
