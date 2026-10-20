@@ -1539,7 +1539,11 @@ export class GameServer {
       },
       this.turns.length,
     );
-    this.gatekeeper.turnCommitted(pastTurn.turnNumber, pastTurn.intents.length);
+    this.gatekeeper.turnCommitted(
+      pastTurn.turnNumber,
+      pastTurn.intents.length,
+      pastTurn.intents,
+    );
 
     this.handleSynchronization();
     this.checkDisconnectedStatus();
