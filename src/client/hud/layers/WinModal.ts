@@ -399,8 +399,8 @@ export class WinModal extends LitElement implements Controller {
       }
       .win-action:hover ~ [data-share-ring],
       .win-action:focus-visible ~ [data-share-ring] {
-        top: -7px;
-        bottom: -3px;
+        top: -6px;
+        bottom: -2px;
       }
       .win-action:active ~ [data-share-ring] {
         top: -4px;

@@ -43,6 +43,13 @@ vi.mock("../../../../src/client/GamePortal", () => ({
   },
 }));
 
+// jsdom has no ResizeObserver.
+globalThis.ResizeObserver ??= class {
+  observe() {}
+  unobserve() {}
+  disconnect() {}
+} as unknown as typeof ResizeObserver;
+
 describe("WinModal Requeue", () => {
   let mockLocationHref = "";
 
@@ -219,7 +226,7 @@ describe("WinModal pattern promotion", () => {
     expect(style).not.toBeNull();
     const css = style?.textContent ?? "";
     expect(css).toContain(".win-action:hover ~ [data-share-ring]");
-    expect(css).toContain("top: -7px");
-    expect(css).toContain("bottom: -3px");
+    expect(css).toContain("top: -6px");
+    expect(css).toContain("bottom: -2px");
   });
 });
