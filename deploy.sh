@@ -304,6 +304,18 @@ fi
 # when multiple deployments are happening at the same time.
 ENV_FILE="${REMOTE_UPDATE_PATH}/${SUBDOMAIN}-${RANDOM}.env"
 
+# Each env-file record is one line, so a line break in a telemetry value would
+# inject extra variables. Disable telemetry rather than fail the deploy.
+for telemetry_var in TELEMETRY_ENABLED TELEMETRY_INGEST_URL TELEMETRY_SIGNING_SECRET; do
+    if [[ ${!telemetry_var} == *$'\n'* || ${!telemetry_var} == *$'\r'* ]]; then
+        echo "⚠️  $telemetry_var contains a line break; telemetry disabled for this deploy."
+        TELEMETRY_ENABLED=""
+        TELEMETRY_INGEST_URL=""
+        TELEMETRY_SIGNING_SECRET=""
+        break
+    fi
+done
+
 print_header "EXECUTING UPDATE SCRIPT ON SERVER"
 
 ssh -i $SSH_KEY $REMOTE_USER@$SERVER_HOST "chmod +x $REMOTE_UPDATE_SCRIPT && \
@@ -320,6 +332,7 @@ HOST=$HOST
 MACHINE=$HOST
 GHCR_IMAGE=$GHCR_IMAGE
 GHCR_TOKEN=$GHCR_TOKEN
+GHCR_USER=$GHCR_USER
 API_KEY=$API_KEY
 ADMIN_BOT_API_KEY=$ADMIN_BOT_API_KEY
 DOMAIN=$DOMAIN
@@ -339,6 +352,9 @@ STRIPE_PUBLISHABLE_KEY=$STRIPE_PUBLISHABLE_KEY
 FARO_COLLECTOR_URL=$FARO_COLLECTOR_URL
 OTEL_EXPORTER_OTLP_ENDPOINT=$OTEL_EXPORTER_OTLP_ENDPOINT
 OTEL_AUTH_HEADER=$OTEL_AUTH_HEADER
+TELEMETRY_ENABLED=$TELEMETRY_ENABLED
+TELEMETRY_INGEST_URL=$TELEMETRY_INGEST_URL
+TELEMETRY_SIGNING_SECRET=$TELEMETRY_SIGNING_SECRET
 EOL
 chmod 600 $ENV_FILE && \
 flock -w 900 $REMOTE_LOCK_FILE $REMOTE_UPDATE_SCRIPT $ENV_FILE && \

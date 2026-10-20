@@ -1,3 +1,4 @@
+import { MAX_USERNAME_LENGTH } from "@openfront/engine-api/Schemas";
 import { describe, expect, test } from "vitest";
 import {
   censorPlayer,
@@ -271,6 +272,13 @@ describe("Censor (local fallback)", () => {
         expect(profanityMatcher.hasMatch(name), name).toBe(false);
         expect(censorPlayer(name, null).username, name).toBe(name);
       }
+    });
+
+    test("clamps usernames exceeding MAX_USERNAME_LENGTH", () => {
+      const longName = "a".repeat(MAX_USERNAME_LENGTH + 7);
+      const res = censorPlayer(longName, null);
+      expect(res.username).toBe("a".repeat(MAX_USERNAME_LENGTH));
+      expect(res.username.length).toBe(MAX_USERNAME_LENGTH);
     });
   });
 });
