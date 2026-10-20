@@ -14,6 +14,7 @@ import { Logger } from "winston";
 import WebSocket from "ws";
 import { Client } from "./Client";
 import { GamePhase, GameServer, JoinResult } from "./GameServer";
+import { Gatekeeper, noopGatekeeper } from "./Gatekeeper";
 import {
   noopMatchTelemetryEmitter,
   type MatchTelemetryEmitter,
@@ -26,6 +27,7 @@ export class GameManager {
     private log: Logger,
     private readonly telemetry: MatchTelemetryEmitter = noopMatchTelemetryEmitter,
     private readonly telemetryBuildHash: string = "DEV",
+    private readonly gatekeeper: Gatekeeper = noopGatekeeper,
   ) {
     setInterval(() => this.tick(), 1000);
   }
@@ -112,6 +114,7 @@ export class GameManager {
       {
         telemetry: this.telemetry,
         telemetryBuildHash: this.telemetryBuildHash,
+        gatekeeper: this.gatekeeper,
       },
     );
     this.games.set(id, game);

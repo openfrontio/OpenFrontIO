@@ -6,6 +6,7 @@ import {
   GameType,
 } from "@openfront/engine-api/game/GameTypes";
 import { LOBBY_LABEL_MAX } from "@openfront/engine-lib/Util";
+import { GameEnv } from "@openfront/shared/configuration/Env";
 import { sanitizeLobbyLabel } from "@openfront/shared/SharedUtil";
 import {
   FEATURED_LOBBY_AUTO_START_MS,
@@ -26,9 +27,8 @@ import {
   InternalGameInfo,
   InternalPublicGames,
 } from "../../src/server/IPCBridgeSchema";
-import { MasterLobbyService } from "../../src/server/MasterLobbyService";
-import { GameEnv } from "@openfront/shared/configuration/Env";
 import * as jwtModule from "../../src/server/jwt";
+import { MasterLobbyService } from "../../src/server/MasterLobbyService";
 import { ServerEnv } from "../../src/server/ServerEnv";
 import {
   getListingEligibilityError,

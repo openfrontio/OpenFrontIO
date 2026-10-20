@@ -1,8 +1,8 @@
 import version from "resources/version.txt?raw";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ClientEnv } from "../../../src/client/ClientEnv";
-import { composeGameVersion } from "../../../src/client/GameVersion";
 import { Footer } from "../../../src/client/components/Footer";
+import { composeGameVersion } from "../../../src/client/GameVersion";
 
 const SHA = "bf739f86c4e1d2a3b5c6d7e8f90123456789abcd";
 
