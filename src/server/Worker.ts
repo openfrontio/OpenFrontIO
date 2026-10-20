@@ -898,6 +898,7 @@ export async function startWorker() {
           clientMsg.spectator === true,
           trusted,
           clientMsg.platform,
+          clientMsg.device,
           levelBadge,
         );
 
