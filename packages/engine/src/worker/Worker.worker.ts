@@ -4,6 +4,7 @@ import {
 } from "@openfront/engine-api/game/GameUpdates";
 import {
   AttackClusteredPositionsResultMessage,
+  HumanDisconnectsResultMessage,
   HumanStatsResultMessage,
   InitErrorMessage,
   InitializedMessage,
@@ -340,6 +341,24 @@ async function onMessage(e: MessageEvent<MainThreadMessage>) {
         } as HumanStatsResultMessage);
       } catch (error) {
         console.error("Failed to get human stats:", error);
+        throw error;
+      }
+      break;
+    case "human_disconnects":
+      if (!gameRunner) {
+        throw new Error("Game runner not initialized");
+      }
+
+      try {
+        // As human_stats: between drain batches, a tick boundary.
+        const result = (await gameRunner).humanDisconnects();
+        sendMessage({
+          type: "human_disconnects_result",
+          id: message.id,
+          result,
+        } as HumanDisconnectsResultMessage);
+      } catch (error) {
+        console.error("Failed to get human disconnects:", error);
         throw error;
       }
       break;

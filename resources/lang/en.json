@@ -2029,6 +2029,8 @@
     "reconcile_other": "The final figure differs from the provisional one.",
     "reconcile_reconnect": "An opponent who had disconnected came back, so they don't count as outlasted.",
     "reconcile_team_win": "Your team won: the win bonus was added.",
+    "reconcile_win": "You won: the win bonus was added.",
+    "reconcile_win_removed": "The server found a different winner, so the win bonus was taken off.",
     "rewards_balance": "Balance {caps} Caps · {plutonium} Plutonium",
     "rewards_balance_caps": "Balance {caps} Caps",
     "rewards_claimed": "Claimed",

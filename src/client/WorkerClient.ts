@@ -2,6 +2,7 @@ import { TileRef } from "@openfront/engine-api/game/GameMap";
 import {
   BuildableUnit,
   Cell,
+  HumanDisconnects,
   HumanStatsSnapshot,
   PlayerActions,
   PlayerBorderTiles,
@@ -253,6 +254,25 @@ export class WorkerClient {
 
   /** Every human's stats as they stand now (see HumanStats.ts). */
   humanStats(): Promise<HumanStatsSnapshot> {
+    return this.askHumans("human_stats", (message) =>
+      message.type === "human_stats_result" ? message.result : undefined,
+    );
+  }
+
+  /**
+   * The tick and who is disconnected right now, without the stats (see
+   * HumanStats.ts): no copy of every player's stats where they aren't needed.
+   */
+  humanDisconnects(): Promise<HumanDisconnects> {
+    return this.askHumans("human_disconnects", (message) =>
+      message.type === "human_disconnects_result" ? message.result : undefined,
+    );
+  }
+
+  private askHumans<T>(
+    type: "human_stats" | "human_disconnects",
+    read: (message: WorkerMessage) => T | undefined,
+  ): Promise<T> {
     return new Promise((resolve, reject) => {
       if (!this.isInitialized) {
         reject(new Error("Worker not initialized"));
@@ -260,7 +280,7 @@ export class WorkerClient {
       }
 
       const messageId = generateID();
-      // The worker has no error reply for this request: a failure there
+      // The worker has no error reply for these requests: a failure there
       // surfaces here as the timeout.
       const cleanup = (timer: ReturnType<typeof setTimeout>) => {
         clearTimeout(timer);
@@ -268,21 +288,19 @@ export class WorkerClient {
       };
       const timeout = setTimeout(() => {
         cleanup(timeout);
-        console.warn(`human_stats request timed out (request ${messageId})`);
-        reject(new Error("human_stats request timed out"));
+        console.warn(`${type} request timed out (request ${messageId})`);
+        reject(new Error(`${type} request timed out`));
       }, 5000);
 
       this.messageHandlers.set(messageId, (message) => {
-        if (message.type === "human_stats_result") {
+        const result = read(message);
+        if (result !== undefined) {
           cleanup(timeout);
-          resolve(message.result);
+          resolve(result);
         }
       });
 
-      this.worker!.postMessage({
-        type: "human_stats",
-        id: messageId,
-      });
+      this.worker!.postMessage({ type, id: messageId });
     });
   }
 

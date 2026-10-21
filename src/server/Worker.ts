@@ -63,14 +63,15 @@ import { rejoinOrClose } from "./Rejoin";
 import { ServerEnv } from "./ServerEnv";
 import { SingleplayerPresence } from "./SingleplayerPresence";
 import { applyStaticAssetCacheControl } from "./StaticAssetCache";
-import { createMatchTelemetryEmitter } from "./telemetry/BufferedMatchTelemetryEmitter";
-import { MAX_WEBSOCKET_PAYLOAD_BYTES } from "./telemetry/MatchTelemetryConfig";
 import { WorkerLobbyService } from "./WorkerLobbyService";
 import { initWorkerMetrics } from "./WorkerMetrics";
 import { stripWorkerPrefix } from "./WorkerPathPrefix";
 
 const workerId = ServerEnv.workerId() ?? 0;
 const log = logger.child({ comp: `w_${workerId}` });
+
+// The WebSocket server's max payload.
+const MAX_WEBSOCKET_PAYLOAD_BYTES = 1024 * 1024;
 const playlist = new MapPlaylist();
 
 export function clampApprovedUsername(username: string): string {
@@ -246,18 +247,8 @@ export async function startWorker() {
     maxPayload: MAX_WEBSOCKET_PAYLOAD_BYTES,
   });
 
-  const buildHash = ServerEnv.gitCommit();
-  const telemetry = createMatchTelemetryEmitter(process.env, log, {
-    buildHash,
-    instanceId: ServerEnv.instanceId(),
-    // Reuse the normalized worker id (defaults to 0 when WORKER_ID is unset) so
-    // telemetry identity matches routing and logging instead of reporting
-    // undefined.
-    workerId,
-  });
   const gatekeeper = await loadGatekeeper(log);
-  const gm = new GameManager(log, telemetry, buildHash, gatekeeper);
-  server.on("close", () => telemetry.stop());
+  const gm = new GameManager(log, gatekeeper);
 
   // Initialize lobby service (handles WebSocket upgrade routing)
   const lobbyService = new WorkerLobbyService(server, wss, gm, log);
@@ -900,6 +891,7 @@ export async function startWorker() {
           clientMsg.spectator === true,
           trusted,
           clientMsg.platform,
+          clientMsg.device,
           levelBadge,
         );
 
