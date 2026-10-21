@@ -52,7 +52,8 @@ describe("Ai Attack Behavior", () => {
     let landTileCount = 0;
     testGame.map().forEachTile((tile) => {
       if (!testGame.map().isLand(tile)) return;
-      (landTileCount++ % 2 === 0 ? testBot : testHuman).conquer(tile);
+      (landTileCount % 2 === 0 ? testBot : testHuman).conquer(tile);
+      landTileCount++;
     });
 
     // Add troops

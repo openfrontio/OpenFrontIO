@@ -1,5 +1,5 @@
 import { GameEnv } from "@openfront/shared/configuration/Env";
-import cluster from "cluster";
+import cluster, { Worker } from "cluster";
 import crypto from "crypto";
 import express from "express";
 import rateLimit from "express-rate-limit";
@@ -203,45 +203,86 @@ export async function startMaster() {
     client.start();
   }
 
-  // Fork workers
-  for (let i = 0; i < ServerEnv.numWorkers(); i++) {
+  // A worker that dies within this long of being forked counts as a
+  // startup crash; one that stayed up at least this long is treated as
+  // healthy, restarts immediately, and clears its backoff.
+  const STARTUP_CRASH_MS = 30_000;
+  const BACKOFF_CAP_MS = 30_000;
+
+  // Map each cluster Worker to the WORKER_ID it was forked with, plus the
+  // fork time. A Worker's env is not readable after exit (worker.process
+  // has no .env), so the id must be captured here, at fork time.
+  const forkedWorkers = new Map<Worker, { id: number; forkedAt: number }>();
+
+  // Consecutive startup crashes per worker id, driving the backoff delay.
+  const startupCrashes = new Map<number, number>();
+
+  const forkWorker = (workerId: number): Worker => {
     const worker = cluster.fork({
-      WORKER_ID: i,
-      INSTANCE_ID,
-    });
-
-    lobbyService.registerWorker(i, worker);
-    log.info(`Started worker ${i} (PID: ${worker.process.pid})`);
-  }
-
-  // Handle worker crashes
-  cluster.on("exit", (worker, code, signal) => {
-    const workerId = (worker as any).process?.env?.WORKER_ID;
-    if (workerId === undefined) {
-      log.error(`worker crashed could not find id`);
-      return;
-    }
-
-    const workerIdNum = parseInt(workerId);
-    lobbyService.removeWorker(workerIdNum);
-
-    log.warn(
-      `Worker ${workerId} (PID: ${worker.process.pid}) died with code: ${code} and signal: ${signal}`,
-    );
-    log.info(`Restarting worker ${workerId}...`);
-
-    // Restart the worker with the same ID
-    const newWorker = cluster.fork({
       WORKER_ID: workerId,
       INSTANCE_ID,
     });
 
-    lobbyService.registerWorker(workerIdNum, newWorker);
+    forkedWorkers.set(worker, { id: workerId, forkedAt: Date.now() });
+    lobbyService.registerWorker(workerId, worker);
+    return worker;
+  };
+
+  // Fork workers
+  for (let i = 0; i < ServerEnv.numWorkers(); i++) {
+    const worker = forkWorker(i);
+    log.info(`Started worker ${i} (PID: ${worker.process.pid})`);
+  }
+
+  // Handle worker crashes. A worker that dies during startup may crash on
+  // boot again (bad env, bad file), so its restart is delayed with an
+  // exponential backoff (1s doubling, capped) to avoid fork-looping many
+  // times a second. Normal crashes restart straight away, and the backoff
+  // resets once a worker has stayed up past STARTUP_CRASH_MS.
+  cluster.on("exit", (worker, code, signal) => {
+    const info = forkedWorkers.get(worker);
+    forkedWorkers.delete(worker);
+    if (info === undefined) {
+      log.error(`worker crashed could not find id`);
+      return;
+    }
+
+    const workerId = info.id;
+    const uptimeMs = Date.now() - info.forkedAt;
+
+    lobbyService.removeWorker(workerId);
+
+    log.warn(
+      `Worker ${workerId} (PID: ${worker.process.pid}) died with code: ${code} and signal: ${signal}`,
+    );
+
+    if (uptimeMs < STARTUP_CRASH_MS) {
+      const crashes = (startupCrashes.get(workerId) ?? 0) + 1;
+      startupCrashes.set(workerId, crashes);
+      const delayMs = Math.min(1_000 * 2 ** (crashes - 1), BACKOFF_CAP_MS);
+      log.warn(
+        `Worker ${workerId} died during startup (${uptimeMs}ms after fork, crash #${crashes}); delaying restart by ${delayMs}ms`,
+      );
+      setTimeout(() => {
+        log.info(`Restarting worker ${workerId}...`);
+        const newWorker = forkWorker(workerId);
+        log.info(
+          `Restarted worker ${workerId} (New PID: ${newWorker.process.pid})`,
+        );
+      }, delayMs);
+      return;
+    }
+
+    // Stayed up past STARTUP_CRASH_MS: a normal crash, restart straight
+    // away and reset this slot's backoff.
+    startupCrashes.delete(workerId);
+    log.info(`Restarting worker ${workerId}...`);
+
+    const newWorker = forkWorker(workerId);
     log.info(
       `Restarted worker ${workerId} (New PID: ${newWorker.process.pid})`,
     );
   });
-
   const PORT = 3000;
   server.listen(PORT, () => {
     log.info(`Master HTTP server listening on port ${PORT}`);

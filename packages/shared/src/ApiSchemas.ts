@@ -1,8 +1,3 @@
-import { ClanTagSchema } from "@openfront/engine-api/Schemas";
-import {
-  BigIntStringSchema,
-  PlayerStatsSchema,
-} from "@openfront/engine-api/StatsSchemas";
 import {
   Difficulty,
   GameMode,
@@ -10,6 +5,11 @@ import {
   HumansVsNations,
   RankedType,
 } from "@openfront/engine-api/game/GameTypes";
+import { ClanTagSchema } from "@openfront/engine-api/Schemas";
+import {
+  BigIntStringSchema,
+  PlayerStatsSchema,
+} from "@openfront/engine-api/StatsSchemas";
 import { z } from "zod";
 import { base64urlToUuid } from "./Base64";
 import {
@@ -1181,6 +1181,11 @@ export const PlayerProfileSchema = z.object({
       }),
     )
     .optional(),
+  // The tag to show beside the player's name: the one from their latest game
+  // played under a clan they still belong to. null when none of their recent
+  // games has one. Optional so responses from an API without the field still
+  // parse (→ no tag shown).
+  displayClanTag: z.string().nullable().optional(),
 });
 export type PlayerProfile = z.infer<typeof PlayerProfileSchema>;
 

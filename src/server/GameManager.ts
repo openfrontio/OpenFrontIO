@@ -7,6 +7,7 @@ import {
 } from "@openfront/engine-api/game/GameTypes";
 import { GameConfig, GameID } from "@openfront/engine-api/Schemas";
 import {
+  ClientDeviceSchema,
   ClientPlatformSchema,
   PublicGameType,
 } from "@openfront/shared/WireSchemas";
@@ -14,18 +15,22 @@ import { Logger } from "winston";
 import WebSocket from "ws";
 import { Client } from "./Client";
 import { GamePhase, GameServer, JoinResult } from "./GameServer";
-import {
-  noopMatchTelemetryEmitter,
-  type MatchTelemetryEmitter,
-} from "./telemetry/MatchTelemetry";
+import { Gatekeeper, noopGatekeeper } from "./Gatekeeper";
+import { ClientAuth, clientAuth } from "./JoinVerify";
+
+export interface ClientSegmentCount {
+  platform: Client["platform"];
+  device: Client["device"];
+  auth: ClientAuth;
+  count: number;
+}
 
 export class GameManager {
   private games: Map<GameID, GameServer> = new Map();
 
   constructor(
     private log: Logger,
-    private readonly telemetry: MatchTelemetryEmitter = noopMatchTelemetryEmitter,
-    private readonly telemetryBuildHash: string = "DEV",
+    private readonly gatekeeper: Gatekeeper = noopGatekeeper,
   ) {
     setInterval(() => this.tick(), 1000);
   }
@@ -110,8 +115,7 @@ export class GameManager {
         matchmakingClanTags,
       },
       {
-        telemetry: this.telemetry,
-        telemetryBuildHash: this.telemetryBuildHash,
+        gatekeeper: this.gatekeeper,
       },
     );
     this.games.set(id, game);
@@ -130,18 +134,35 @@ export class GameManager {
     return totalClients;
   }
 
-  // Every platform is present, zeros included, so a platform whose last
-  // player leaves reports 0 instead of its series going stale.
-  activeClientsByPlatform(): Map<Client["platform"], number> {
-    const counts = new Map<Client["platform"], number>(
-      [...ClientPlatformSchema.options, "unknown" as const].map((p) => [p, 0]),
-    );
-    for (const game of this.games.values()) {
-      for (const client of game.activeClients()) {
-        counts.set(client.platform, counts.get(client.platform)! + 1);
+  // Every segment is present, zeros included, so a segment whose last player
+  // leaves reports 0 instead of its series going stale.
+  activeClientsBySegment(): ClientSegmentCount[] {
+    const platforms = [...ClientPlatformSchema.options, "unknown"] as const;
+    const devices = [...ClientDeviceSchema.options, "unknown"] as const;
+    const auths = ["account", "anonymous"] as const;
+    const counts = new Map<string, ClientSegmentCount>();
+    const key = (p: string, d: string, a: string) => `${p}/${d}/${a}`;
+    for (const platform of platforms) {
+      for (const device of devices) {
+        for (const auth of auths) {
+          counts.set(key(platform, device, auth), {
+            platform,
+            device,
+            auth,
+            count: 0,
+          });
+        }
       }
     }
-    return counts;
+    for (const game of this.games.values()) {
+      for (const client of game.activeClients()) {
+        const segment = counts.get(
+          key(client.platform, client.device, clientAuth(client.claims)),
+        );
+        segment!.count++;
+      }
+    }
+    return [...counts.values()];
   }
 
   desyncCount(): number {

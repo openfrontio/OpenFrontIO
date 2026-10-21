@@ -413,6 +413,15 @@ export class UserSettingModal extends BaseModal {
     );
   }
 
+  private toggleSnapBuildPreview() {
+    this.userSettings.toggleSnapBuildPreview();
+
+    console.log(
+      "🧲 Snap build preview:",
+      this.userSettings.snapBuildPreview() ? "ON" : "OFF",
+    );
+  }
+
   private toggleAnonymousNames() {
     this.userSettings.toggleRandomName();
 
@@ -1840,6 +1849,15 @@ export class UserSettingModal extends BaseModal {
         id="cursor_cost_label-toggle"
         .checked=${this.userSettings.cursorCostLabel()}
         @change=${this.toggleCursorCostLabel}
+      ></setting-toggle>
+
+      <!-- 🧲 Snap Build Preview -->
+      <setting-toggle
+        label="${translateText("user_setting.snap_build_preview_label")}"
+        description="${translateText("user_setting.snap_build_preview_desc")}"
+        id="snap-build-preview-toggle"
+        .checked=${this.userSettings.snapBuildPreview()}
+        @change=${this.toggleSnapBuildPreview}
       ></setting-toggle>
 
       <!-- 🖱️ Left Click Menu -->

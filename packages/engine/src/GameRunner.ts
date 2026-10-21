@@ -4,6 +4,7 @@ import {
   BuildableUnit,
   GameType,
   GameUpdates,
+  HumanDisconnects,
   HumanStatsSnapshot,
   NameViewData,
   PlayerActions,
@@ -32,7 +33,7 @@ import { SpawnTimerExecution } from "./execution/SpawnTimerExecution";
 import { WinCheckExecution } from "./execution/WinCheckExecution";
 import { Game, Player } from "./game/Game";
 import { createGame } from "./game/GameImpl";
-import { humanStatsSnapshot } from "./game/HumanStats";
+import { humanDisconnects, humanStatsSnapshot } from "./game/HumanStats";
 import { placeName, placeSpawnName } from "./game/NameBoxCalculator";
 import { createNationsForGame } from "./game/NationCreation";
 import {
@@ -354,6 +355,9 @@ export class GameRunner {
       throw new Error(`player with id ${playerID} not found`);
     }
     return player.playerProfile();
+  }
+  public humanDisconnects(): HumanDisconnects {
+    return humanDisconnects(this.game);
   }
   public humanStats(): HumanStatsSnapshot {
     return humanStatsSnapshot(this.game);

@@ -4,6 +4,7 @@ import {
   UserMeResponse,
 } from "@openfront/shared/ApiSchemas";
 import { assetUrl } from "@openfront/shared/AssetUrls";
+import { GameEnv } from "@openfront/shared/configuration/Env";
 import { EventBus } from "@openfront/shared/EventBus";
 import { toWireGameStartInfo } from "@openfront/shared/SharedUtil";
 import {
@@ -14,7 +15,6 @@ import {
   PublicGameInfo,
   WireGameStartInfo,
 } from "@openfront/shared/WireSchemas";
-import { GameEnv } from "@openfront/shared/configuration/Env";
 import { ClientEnv } from "src/client/ClientEnv";
 import { renderNavVersion } from "src/client/GameVersion";
 import { responseHasLinkedIdentity } from "./AccountIdentity";
@@ -142,9 +142,21 @@ import {
 } from "./TurnstileToken";
 // Before the first userMeResponse, for the modals that load after it.
 import "./UserMeBroadcast";
-import { UserSettings } from "./UserSettings";
+import { classicReplayHref } from "./replay/ReplayEntry";
 import "./UsernameInput";
+import { parseReplayViewerHash } from "./replay/ReplayViewerRoute";
 import { UsernameInput } from "./UsernameInput";
+import { UserSettings } from "./UserSettings";
+import "./components/BannedModal";
+import "./components/DesktopStatusBar";
+import "./components/MarketingConsentToast";
+import "./components/PurchaseNudgeModal";
+import {
+  installCtrlWheelZoomBlocker,
+  installDoubleTapZoomBlocker,
+  installSafariPinchZoomBlocker,
+} from "./utilities/DisableSafariPinchZoom";
+import { playerProfileRouteArgs } from "./utilities/PlayerProfileUrl";
 import {
   apexPathFor,
   currentPagePath,
@@ -156,18 +168,6 @@ import {
   translateText,
 } from "./Utils";
 import { isReplayShellHost } from "./VersionedReplay";
-import "./components/BannedModal";
-import "./components/DesktopStatusBar";
-import "./components/MarketingConsentToast";
-import "./components/PurchaseNudgeModal";
-import { classicReplayHref } from "./replay/ReplayEntry";
-import { parseReplayViewerHash } from "./replay/ReplayViewerRoute";
-import {
-  installCtrlWheelZoomBlocker,
-  installDoubleTapZoomBlocker,
-  installSafariPinchZoomBlocker,
-} from "./utilities/DisableSafariPinchZoom";
-import { playerProfileRouteArgs } from "./utilities/PlayerProfileUrl";
 
 import "./components/DesktopNavBar";
 import "./components/Footer";
@@ -2233,15 +2233,6 @@ class Client {
   }
 }
 
-// Hide elements with the no-game-portal class on CrazyGames and Poki
-const hidePortalElements = () => {
-  if (gamePortal.isOnGamePortal()) {
-    document.querySelectorAll(".no-game-portal").forEach((el) => {
-      (el as HTMLElement).style.display = "none";
-    });
-  }
-};
-
 // Initialize the client when the DOM is loaded
 const bootstrap = () => {
   // First, so the error hooks are in place for everything below. No-op
@@ -2267,12 +2258,10 @@ const bootstrap = () => {
   prefetchGameClient();
   prefetchModals();
 
-  // Hide elements immediately
-  hidePortalElements();
-
-  // Also hide elements after a short delay to catch late-rendered components
-  setTimeout(hidePortalElements, 100);
-  setTimeout(hidePortalElements, 500);
+  // Hides every .no-game-portal element on CrazyGames and Poki (styles.css).
+  if (gamePortal.isOnGamePortal()) {
+    document.documentElement.classList.add("game-portal");
+  }
 
   // Populate the portal account buttons once the nav/top-bar have rendered
   // (onUserMe also refreshes them after auth and on mid-session sign-in).
