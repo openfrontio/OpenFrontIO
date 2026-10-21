@@ -12,6 +12,7 @@ import {
   joinOwnsInFlightFlag,
   nextBootInterrupt,
   parseClaimPromptStore,
+  reportThanksStringsReady,
   runBootInterrupt,
   steamGrantStringsReady,
   USERNAME_FORM_HASH,
@@ -47,6 +48,8 @@ function boot(
     rewardCount: 0,
     claimPromptDue: true,
     claimStringsReady: true,
+    reportThanksDue: false,
+    reportThanksStringsReady: true,
     ...overrides,
   };
 }
@@ -436,6 +439,7 @@ describe("runBootInterrupt", () => {
       updateSteamGrant: (update) =>
         calls.grantStored.push(update(context.grantStore)),
       markNoticeSeen: () => {},
+      markMessageSeen: () => {},
       now: () => now,
       ...overrides,
     };
@@ -785,6 +789,8 @@ describe("an unready claim prompt yields the boot rather than eating it", () => 
     rewardCount: 2,
     claimPromptDue: true,
     claimStringsReady: claimPromptStringsReady(unready),
+    reportThanksDue: false,
+    reportThanksStringsReady: false,
   };
 
   it("does not choose the claim prompt", () => {
@@ -815,6 +821,7 @@ describe("an unready claim prompt yields the boot rather than eating it", () => 
         storeClaimPrompt: (store) => calls.stored.push(store),
         updateSteamGrant: () => {},
         markNoticeSeen: () => {},
+        markMessageSeen: () => {},
         now: () => 1_757_000_000_000,
       },
     );
@@ -933,6 +940,7 @@ describe("running the Steam grant notices", () => {
       storeClaimPrompt: () => {},
       updateSteamGrant: (update) => calls.grantStored.push(update(grantStore)),
       markNoticeSeen: () => {},
+      markMessageSeen: () => {},
       now: () => now,
     };
     return { base, calls };
@@ -1094,6 +1102,7 @@ describe("an interrupt the player never answered", () => {
       updateSteamGrant: (update) =>
         calls.grantStored.push(update(context.grantStore)),
       markNoticeSeen: () => {},
+      markMessageSeen: () => {},
       now: () => now,
     };
     return { base, calls, settle: open.settle };
@@ -1183,5 +1192,74 @@ describe("an interrupt the player never answered", () => {
     await runBootInterrupt("username-claim", context, base);
     await runBootInterrupt("username-claim", context, base);
     expect(calls.opened).toBe(2);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// The report thank-you
+// ---------------------------------------------------------------------------
+
+describe("the report thank-you in the ordering", () => {
+  it("shows when one is pending and nothing else is", () => {
+    expect(nextBootInterrupt(boot({ reportThanksDue: true }))).toBe(
+      "report-thanks",
+    );
+  });
+
+  // Lowest priority: it is a thank-you, and it keeps until the next login.
+  it("yields to every other interrupt", () => {
+    expect(
+      nextBootInterrupt(boot({ reportThanksDue: true, rewardCount: 1 })),
+    ).toBe("rewards");
+    expect(
+      nextBootInterrupt(boot({ reportThanksDue: true, lapseNoticeDue: true })),
+    ).toBe("lapse-notice");
+  });
+
+  it("never interrupts a deep link", () => {
+    expect(
+      nextBootInterrupt(boot({ reportThanksDue: true, cleanHomepage: false })),
+    ).toBeNull();
+  });
+
+  // It is shown once and then marked seen on the server, so an echoed key
+  // would spend it on a string nobody can read.
+  it("waits for its strings", () => {
+    expect(
+      nextBootInterrupt(
+        boot({ reportThanksDue: true, reportThanksStringsReady: false }),
+      ),
+    ).toBeNull();
+    expect(reportThanksStringsReady((key) => key)).toBe(false);
+    expect(reportThanksStringsReady((key) => `t(${key})`)).toBe(true);
+  });
+});
+
+describe("running the report thank-you", () => {
+  it("shows the thank-you, then marks it seen", async () => {
+    const events: string[] = [];
+    await runBootInterrupt(
+      "report-thanks",
+      { claimStore: {}, grantStore: {}, publicId: ME, steamNotice: null },
+      {
+        translate: (key) => `t(${key})`,
+        confirm: async () => true,
+        alert: async (body, heading) => {
+          events.push(`alert ${heading}: ${body}`);
+        },
+        tierName: (tier) => tier,
+        navigate: () => {},
+        openRewards: () => {},
+        storeClaimPrompt: () => {},
+        updateSteamGrant: () => {},
+        markNoticeSeen: () => {},
+        markMessageSeen: (kind) => events.push(`seen ${kind}`),
+        now: () => 1_757_000_000_000,
+      },
+    );
+    expect(events).toEqual([
+      `alert t(${BOOT_INTERRUPT_KEYS.reportThanksHeading}): t(${BOOT_INTERRUPT_KEYS.reportThanksBody})`,
+      "seen report_thanks",
+    ]);
   });
 });

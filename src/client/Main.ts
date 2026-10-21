@@ -20,7 +20,12 @@ import { renderNavVersion } from "src/client/GameVersion";
 import { responseHasLinkedIdentity } from "./AccountIdentity";
 import { adGatekeeper } from "./AdGatekeeper";
 import { loadAdmiral, onAdmiralMeasured } from "./Admiral";
-import { getUserMe, invalidateUserMe, markNoticeSeen } from "./Api";
+import {
+  getUserMe,
+  invalidateUserMe,
+  markMessageSeen,
+  markNoticeSeen,
+} from "./Api";
 import {
   getDesktopSessionState,
   reauthAfterPortalChange,
@@ -36,6 +41,7 @@ import {
   lapseShownAfterDispatch,
   nextBootInterrupt,
   parseClaimPromptStore,
+  reportThanksStringsReady,
   runBootInterrupt,
   steamGrantStringsReady,
 } from "./BootInterrupts";
@@ -902,6 +908,9 @@ class Client {
             rewardCount: rewards.filter(isRewardClaimable).length,
             claimPromptDue: claimPromptDue(claimStore, Date.now(), publicId),
             claimStringsReady: claimPromptStringsReady(translateText),
+            reportThanksDue:
+              userMeResponse.pendingMessages.includes("report_thanks"),
+            reportThanksStringsReady: reportThanksStringsReady(translateText),
           }),
           {
             claimStore,
@@ -953,6 +962,7 @@ class Client {
                 ),
               ),
             markNoticeSeen: (notice) => void markNoticeSeen(notice),
+            markMessageSeen: (kind) => void markMessageSeen(kind),
             now: () => Date.now(),
           },
         );
