@@ -12,8 +12,8 @@ import { GameView, PlayerView } from "../view";
  * The Overtime readout: once the mode has kicked in, shows the shrinking
  * tile share required to win against first place's current share (the top
  * player in FFA, the top team otherwise — the same split WinCheckExecution
- * judges). Embedded by game-right-sidebar so it stacks (centered) under the
- * game timer, like the doomsday-clock panel. Hidden before the start minute,
+ * judges). Embedded by game-right-sidebar so it stacks under the game timer,
+ * like the doomsday-clock panel. Hidden before the start minute,
  * when the mode is off, and after a winner. First place is global info, so
  * spectators and eliminated players see the full readout too.
  */
@@ -116,7 +116,7 @@ export class OvertimePanel extends LitElement {
         : "bg-green-400";
 
     const panel =
-      "w-fit flex flex-col gap-1.5 py-2 px-4 bg-gray-800/92 backdrop-blur-sm shadow-xs rounded-bl-lg text-white text-sm";
+      "w-fit flex flex-col gap-1.5 py-2 px-4 bg-gray-800/92 backdrop-blur-sm shadow-xs rounded-l-lg text-white text-sm";
 
     return html`
       <div class="${panel}">
