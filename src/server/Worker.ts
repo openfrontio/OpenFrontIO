@@ -80,34 +80,45 @@ export function clampApprovedUsername(username: string): string {
     : username;
 }
 
+export function isSocketClosed(
+  ws: WebSocket | { readyState: number },
+): boolean {
+  return (
+    ws.readyState === WebSocket.CLOSING || ws.readyState === WebSocket.CLOSED
+  );
+}
+
+export type JoinOutcome =
+  | { action: "admit"; username: string; clanTag: string | null }
+  | { action: "reject"; reason: string; errorCodes?: string[] };
+
 export function resolveJoinVerdict(
   verdict: JoinVerifyResponse,
   fallback: { username: string; clanTag: string | null },
-):
-  | { action: "admit"; username: string; clanTag: string | null }
-  | { action: "reject"; reason: string } {
-  switch (verdict.status) {
-    case "approved":
-      return {
-        action: "admit",
-        username: clampApprovedUsername(verdict.username),
-        clanTag: verdict.clanTag,
-      };
-    case "rejected":
-      return {
-        action: "reject",
-        reason: verdict.reason,
-      };
-    case "error": {
-      return {
-        action: "admit",
-        username: verdict.identity
-          ? clampApprovedUsername(verdict.identity.username)
-          : fallback.username,
-        clanTag: verdict.identity ? verdict.identity.clanTag : fallback.clanTag,
-      };
-    }
+): JoinOutcome {
+  if (verdict.status === "approved") {
+    return {
+      action: "admit",
+      username: clampApprovedUsername(verdict.username),
+      clanTag: verdict.clanTag,
+    };
   }
+  if (verdict.status === "rejected") {
+    return {
+      action: "reject",
+      reason: verdict.reason,
+      ...(verdict.errorCodes !== undefined && {
+        errorCodes: verdict.errorCodes,
+      }),
+    };
+  }
+  return {
+    action: "admit",
+    username: verdict.identity
+      ? clampApprovedUsername(verdict.identity.username)
+      : fallback.username,
+    clanTag: verdict.identity ? verdict.identity.clanTag : fallback.clanTag,
+  };
 }
 
 // Toggle whether a private lobby is visible in the public lobby browser.
@@ -624,6 +635,9 @@ export async function startWorker() {
           ws.close(CloseCode.InternalError, CloseReason.InvalidToken);
           return;
         }
+        if (isSocketClosed(ws)) {
+          return;
+        }
         const { persistentId, claims } = result;
 
         if (claims?.role === "banned") {
@@ -713,6 +727,12 @@ export async function startWorker() {
               clientMsg.username,
               clientMsg.clanTag ?? null,
             );
+            if (verdict.status === "approved" || verdict.status === "error") {
+              game?.markAdmitted(persistentId);
+            }
+            if (isSocketClosed(ws)) {
+              return;
+            }
             const resolved = resolveJoinVerdict(verdict, {
               username,
               clanTag,
@@ -722,6 +742,9 @@ export async function startWorker() {
                 persistentID: persistentId,
                 gameID: clientMsg.gameID,
                 reason: resolved.reason,
+                ...(resolved.errorCodes !== undefined && {
+                  errorCodes: resolved.errorCodes,
+                }),
               });
               ws.close(CloseCode.Unauthorized, CloseReason.TurnstileFailed);
               return;
@@ -796,6 +819,9 @@ export async function startWorker() {
             });
             const { code, reason } = userMeFailureClose(result);
             ws.close(code, reason);
+            return;
+          }
+          if (isSocketClosed(ws)) {
             return;
           }
           flares = result.response.player.flares;

@@ -1,6 +1,8 @@
 import type { TokenPayload } from "@openfront/shared/ApiSchemas";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
+  _clearInFlightTokens,
+  _inFlightTokenCount,
   clientAuth,
   isSteamAuthenticated,
   planJoinVerify,
@@ -18,6 +20,7 @@ function jsonResponse(body: unknown, status = 200) {
 describe("verifyJoin", () => {
   afterEach(() => {
     vi.unstubAllGlobals();
+    _clearInFlightTokens();
   });
 
   it("returns the display-ready pair on approval and posts the identity", async () => {
@@ -78,6 +81,151 @@ describe("verifyJoin", () => {
       status: "rejected",
       reason: "token invalid",
     });
+  });
+
+  it("preserves structured errorCodes on rejection", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(
+        jsonResponse({
+          status: "rejected",
+          reason: "duplicate",
+          errorCodes: ["timeout-or-duplicate"],
+        }),
+      ),
+    );
+    expect(await verifyJoin("ip", "tok-dup", "xXblackxX", null)).toEqual({
+      status: "rejected",
+      reason: "duplicate",
+      errorCodes: ["timeout-or-duplicate"],
+    });
+  });
+
+  it("coalesces concurrent in-flight verifyJoin calls for the same non-null token and identity", async () => {
+    let resolveFetch: (val: unknown) => void;
+    const fetchPromise = new Promise((resolve) => {
+      resolveFetch = resolve;
+    });
+    const fetchMock = vi.fn().mockImplementation(() => fetchPromise);
+    vi.stubGlobal("fetch", fetchMock);
+
+    const call1 = verifyJoin("ip1", "shared-tok", "User1", null);
+    const call2 = verifyJoin("ip2", "shared-tok", "User1", null);
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+
+    resolveFetch!(
+      jsonResponse({
+        status: "approved",
+        username: "User1",
+        clanTag: null,
+      }),
+    );
+
+    const [v1, v2] = await Promise.all([call1, call2]);
+    expect(v1).toEqual({
+      status: "approved",
+      username: "User1",
+      clanTag: null,
+    });
+    expect(v2).toEqual(v1);
+    expect(_inFlightTokenCount()).toBe(0);
+  });
+
+  it("dispatches a subsequent verifyJoin call after previous in-flight finishes", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      jsonResponse({
+        status: "approved",
+        username: "User1",
+        clanTag: null,
+      }),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const first = await verifyJoin("ip1", "shared-tok", "User1", null);
+    const second = await verifyJoin("ip2", "shared-tok", "User1", null);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(first.status).toBe("approved");
+    expect(second.status).toBe("approved");
+    expect(_inFlightTokenCount()).toBe(0);
+  });
+
+  it("does not coalesce concurrent calls with the same token but different username or clanTag", async () => {
+    let resolveFetch: (val: unknown) => void;
+    const fetchPromise = new Promise((resolve) => {
+      resolveFetch = resolve;
+    });
+    const fetchMock = vi.fn().mockImplementation(() => fetchPromise);
+    vi.stubGlobal("fetch", fetchMock);
+
+    const c1 = verifyJoin("ip1", "shared-tok", "Alice", "TAG");
+    const c2 = verifyJoin("ip2", "shared-tok", "Bob", "TAG");
+    const c3 = verifyJoin("ip3", "shared-tok", "Alice", "OTHER");
+    const c4 = verifyJoin("ip4", "shared-tok", "Alice", null);
+    const c1Retry = verifyJoin("ip5", "shared-tok", "Alice", "TAG");
+
+    expect(fetchMock).toHaveBeenCalledTimes(4);
+    expect(_inFlightTokenCount()).toBe(4);
+
+    resolveFetch!(
+      jsonResponse({
+        status: "approved",
+        username: "Mocked",
+        clanTag: null,
+      }),
+    );
+
+    const [r1, r2, r3, r4, rRetry] = await Promise.all([
+      c1,
+      c2,
+      c3,
+      c4,
+      c1Retry,
+    ]);
+    expect(rRetry).toBe(r1);
+    expect([r1, r2, r3, r4].every((r) => r.status === "approved")).toBe(true);
+    expect(_inFlightTokenCount()).toBe(0);
+  });
+
+  it("coalesces concurrent in-flight verifyJoin calls on fetch failure and clears in-flight map", async () => {
+    let rejectFetch: (err: unknown) => void;
+    const fetchPromise = new Promise((_, reject) => {
+      rejectFetch = reject;
+    });
+    const fetchMock = vi.fn().mockImplementation(() => fetchPromise);
+    vi.stubGlobal("fetch", fetchMock);
+
+    const call1 = verifyJoin("ip1", "failing-tok", "User1", null);
+    const call2 = verifyJoin("ip2", "failing-tok", "User1", null);
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(_inFlightTokenCount()).toBe(1);
+
+    rejectFetch!(new Error("network failure"));
+
+    const [v1, v2] = await Promise.all([call1, call2]);
+    expect(v1.status).toBe("error");
+    expect(v2.status).toBe("error");
+    expect(v1).toEqual(v2);
+    expect(_inFlightTokenCount()).toBe(0);
+  });
+
+  it("does not coalesce calls when token is empty string", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      jsonResponse({
+        status: "approved",
+        username: "User",
+        clanTag: null,
+      }),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const call1 = verifyJoin("ip1", "", "User1", null);
+    const call2 = verifyJoin("ip2", "", "User2", null);
+
+    await Promise.all([call1, call2]);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(_inFlightTokenCount()).toBe(0);
   });
 
   it("sends a null token for reconnects (API skips siteverify, runs the name check alone)", async () => {
@@ -282,6 +430,20 @@ describe("planJoinVerify", () => {
     expect(planJoinVerify({ ...readmit, identityUnchanged: true })).toEqual({
       action: "skip",
     });
+  });
+
+  it("verifies a pre-start re-admit when stored identity is null (identityUnchanged is false)", () => {
+    // When a client drops between verifyJoin and joinClient, isReadmit is true
+    // but stored identity is null, resulting in identityUnchanged: false.
+    expect(
+      planJoinVerify({
+        isReadmit: true,
+        gameStarted: false,
+        turnstileToken: null,
+        identityUnchanged: false,
+        steamAuthed: false,
+      }),
+    ).toEqual({ action: "verify", token: null });
   });
 
   it("verifies a Steam-authed first join with a null token (skips siteverify, keeps the name check)", () => {

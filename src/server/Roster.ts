@@ -26,6 +26,10 @@ export class Roster {
   private kicked = new Set<string>();
   private disconnected = new Map<ClientID, boolean>();
 
+  markAdmitted(persistentID: string): void {
+    this.admitted.add(persistentID);
+  }
+
   add(client: Client): void {
     this.sockets.add(client.ws);
     this.reconnectable.set(client.persistentID, client.clientID);

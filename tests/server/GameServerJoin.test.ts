@@ -331,4 +331,12 @@ describe("GameServer.joinClient — active game reconnection", () => {
     expect(lateClient.spectator).toBe(false);
     expect(game.getClientIdForPersistentId("late-pid")).toBeNull();
   });
+
+  it("records admission via markAdmitted before seating and reports true via wasAdmitted", () => {
+    const game = makeGame();
+    const pid = "test-gs-pre-admit";
+    expect(game.wasAdmitted(pid)).toBe(false);
+    game.markAdmitted(pid);
+    expect(game.wasAdmitted(pid)).toBe(true);
+  });
 });

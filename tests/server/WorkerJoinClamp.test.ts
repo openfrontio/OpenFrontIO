@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import type { JoinVerifyResponse } from "../../src/server/JoinVerify";
 import {
   clampApprovedUsername,
+  isSocketClosed,
   resolveJoinVerdict,
 } from "../../src/server/Worker";
 import { cid, makeClient, makeGame } from "../util/GameServerHarness";
@@ -89,5 +90,44 @@ describe("Worker join username clamping", () => {
     const clamped = clampApprovedUsername(errorIdentityUsername);
     expect(clamped).toHaveLength(MAX_USERNAME_LENGTH);
     expect(clamped).toBe("x".repeat(MAX_USERNAME_LENGTH));
+  });
+
+  it("passes structured errorCodes through on rejection in resolveJoinVerdict", () => {
+    const verdict: JoinVerifyResponse = {
+      status: "rejected",
+      reason: "duplicate",
+      errorCodes: ["timeout-or-duplicate"],
+    };
+    const outcome = resolveJoinVerdict(verdict, {
+      username: "user",
+      clanTag: null,
+    });
+    expect(outcome).toEqual({
+      action: "reject",
+      reason: "duplicate",
+      errorCodes: ["timeout-or-duplicate"],
+    });
+  });
+
+  it("passes legacy rejection without errorCodes through in resolveJoinVerdict", () => {
+    const verdict: JoinVerifyResponse = {
+      status: "rejected",
+      reason: "invalid_token",
+    };
+    const outcome = resolveJoinVerdict(verdict, {
+      username: "user",
+      clanTag: null,
+    });
+    expect(outcome).toEqual({
+      action: "reject",
+      reason: "invalid_token",
+    });
+  });
+
+  it("detects socket closed and closing states with isSocketClosed", () => {
+    expect(isSocketClosed({ readyState: 0 })).toBe(false); // CONNECTING
+    expect(isSocketClosed({ readyState: 1 })).toBe(false); // OPEN
+    expect(isSocketClosed({ readyState: 2 })).toBe(true); // CLOSING
+    expect(isSocketClosed({ readyState: 3 })).toBe(true); // CLOSED
   });
 });

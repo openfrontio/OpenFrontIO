@@ -42,6 +42,36 @@ describe("Roster", () => {
     expect(roster.wasAdmitted("nobody")).toBe(false);
   });
 
+  it("records admission via markAdmitted prior to client add and overrides on kick", () => {
+    const roster = new Roster();
+    const pid = "pre-admit-pid";
+
+    expect(roster.wasAdmitted(pid)).toBe(false);
+    expect(roster.byPersistentId(pid)).toBeUndefined();
+
+    // Mark admitted before the client is seated in Roster
+    roster.markAdmitted(pid);
+    expect(roster.wasAdmitted(pid)).toBe(true);
+    // Still not reconnectable / active since add() hasn't been called
+    expect(roster.byPersistentId(pid)).toBeUndefined();
+    expect(roster.active()).toEqual([]);
+
+    // Now seat the client
+    const p1 = makeClient({ clientID: cid("p1"), persistentID: pid });
+    roster.add(p1);
+    expect(roster.wasAdmitted(pid)).toBe(true);
+    expect(roster.byPersistentId(pid)).toBe(p1);
+
+    // Kicking overrides wasAdmitted
+    roster.kick(p1);
+    expect(roster.isKicked(pid)).toBe(true);
+    expect(roster.wasAdmitted(pid)).toBe(false);
+
+    // Calling markAdmitted on a kicked account still yields false for wasAdmitted
+    roster.markAdmitted(pid);
+    expect(roster.wasAdmitted(pid)).toBe(false);
+  });
+
   it("moves a reconnecting client to the end, on the new socket, and drops the old one", () => {
     const roster = new Roster();
     const p1 = makeClient({ clientID: cid("p1") });
