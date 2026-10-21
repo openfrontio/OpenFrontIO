@@ -908,8 +908,10 @@ class Client {
             rewardCount: rewards.filter(isRewardClaimable).length,
             claimPromptDue: claimPromptDue(claimStore, Date.now(), publicId),
             claimStringsReady: claimPromptStringsReady(translateText),
-            reportThanksDue:
-              userMeResponse.pendingMessages.includes("report_thanks"),
+            // Not every caller's response went through the schema default.
+            reportThanksDue: (userMeResponse.pendingMessages ?? []).includes(
+              "report_thanks",
+            ),
             reportThanksStringsReady: reportThanksStringsReady(translateText),
           }),
           {
