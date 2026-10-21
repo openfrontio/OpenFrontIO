@@ -10,7 +10,7 @@ import { Logger } from "winston";
 import { z } from "zod";
 import { Client } from "./Client";
 import { ClientMsgRateLimiter } from "./ClientMsgRateLimiter";
-import { MatchTelemetryRecorder } from "./MatchTelemetryRecorder";
+import { MatchGatekeeper, noopMatchGatekeeper } from "./Gatekeeper";
 
 export const KICK_REASON_TOO_MUCH_DATA = "kick_reason.too_much_data";
 export const KICK_REASON_INVALID_MESSAGE = "kick_reason.invalid_message";
@@ -47,12 +47,12 @@ export interface SocketIngressView {
 export class SocketIngress {
   constructor(
     private readonly log: Logger,
-    private readonly telemetry: MatchTelemetryRecorder,
     private readonly view: SocketIngressView,
     private readonly rateLimiter: Pick<
       ClientMsgRateLimiter,
       "check"
     > = new ClientMsgRateLimiter(),
+    private readonly gatekeeper: MatchGatekeeper = noopMatchGatekeeper,
   ) {}
 
   attach(client: Client): void {
@@ -100,7 +100,7 @@ export class SocketIngress {
     // Decode and validate in two steps (instead of one parseBytes) so a
     // message that is structurally sound but fails validation — the
     // signature of a buggy or cheating client — can still be attributed
-    // to its intent in telemetry, exactly like the JSON path did.
+    // to its intent for the gatekeeper, exactly like the JSON path did.
     let raw: ClientMessage;
     try {
       // A Buffer is a Uint8Array and zbin honours its byteOffset.
@@ -118,15 +118,15 @@ export class SocketIngress {
     if (!parsed.success) {
       const reasonDetail = z.prettifyError(parsed.error);
       if (raw.type === "intent") {
-        this.telemetry.intentObserved(
+        this.gatekeeper.intentObserved({
           client,
-          raw.intent,
-          typeof raw.intent?.type === "string" ? raw.intent.type : null,
-          "rejected",
-          this.view.serverTick(),
-          KICK_REASON_INVALID_MESSAGE,
-          reasonDetail,
-        );
+          intent: raw.intent,
+          intentType:
+            typeof raw.intent?.type === "string" ? raw.intent.type : null,
+          outcome: "rejected",
+          turn: this.view.serverTick(),
+          reasonCode: KICK_REASON_INVALID_MESSAGE,
+        });
       }
       this.log.warn(`Failed to parse client message, kicking`, {
         clientID: client.clientID,
@@ -144,14 +144,14 @@ export class SocketIngress {
     );
     if (rateResult === "kick") {
       if (clientMsg.type === "intent") {
-        this.telemetry.intentObserved(
+        this.gatekeeper.intentObserved({
           client,
-          { ...clientMsg.intent, clientID: client.clientID },
-          clientMsg.intent.type,
-          "rejected",
-          this.view.serverTick(),
-          KICK_REASON_TOO_MUCH_DATA,
-        );
+          intent: { ...clientMsg.intent, clientID: client.clientID },
+          intentType: clientMsg.intent.type,
+          outcome: "rejected",
+          turn: this.view.serverTick(),
+          reasonCode: KICK_REASON_TOO_MUCH_DATA,
+        });
       }
       this.log.warn(`Client rate limit exceeded, kicking`, {
         clientID: client.clientID,
@@ -162,16 +162,16 @@ export class SocketIngress {
     }
     if (rateResult === "limit") {
       if (clientMsg.type === "intent") {
-        this.telemetry.intentObserved(
+        this.gatekeeper.intentObserved({
           client,
-          { ...clientMsg.intent, clientID: client.clientID },
-          clientMsg.intent.type,
-          "rejected",
-          this.view.serverTick(),
-          "limit",
-        );
+          intent: { ...clientMsg.intent, clientID: client.clientID },
+          intentType: clientMsg.intent.type,
+          outcome: "rejected",
+          turn: this.view.serverTick(),
+          reasonCode: "limit",
+        });
       }
-      // Rejected intents are already counted via telemetry.intentObserved
+      // Rejected intents are already reported via gatekeeper.intentObserved
       // above; a misbehaving client can produce thousands of these a
       // minute, so this is debug-only rather than warn.
       this.log.debug(`Client message rate limit exceeded, dropping`, {

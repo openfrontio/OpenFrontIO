@@ -1,5 +1,4 @@
 // @vitest-environment jsdom
-import { UserSettings } from "../src/client/UserSettings";
 import {
   goldCoinIcon,
   guildIcon,
@@ -7,8 +6,9 @@ import {
   soldierIcon,
   upperLimitIcon,
 } from "../src/client/hud/HotbarIcons";
-import { PlayerStats } from "../src/client/hud/layers/PlayerStats";
 import { columnsFor } from "../src/client/hud/layers/lib/StatsColumns";
+import { PlayerStats } from "../src/client/hud/layers/PlayerStats";
+import { UserSettings } from "../src/client/UserSettings";
 import type { GameView, PlayerView } from "../src/client/view";
 
 function player(

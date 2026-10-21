@@ -1,22 +1,22 @@
 import type { Cosmetics, Effect } from "@openfront/shared/CosmeticSchemas";
 import { nothing, type LitElement } from "lit";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import type { CosmeticCard } from "../../src/client/components/CosmeticCard";
+import "../../src/client/Store";
+import type { EffectsGrid } from "../../src/client/components/EffectsGrid";
+import type { PurchaseButton } from "../../src/client/components/PurchaseButton";
 import {
   fetchCosmetics,
   purchaseCosmetic,
   resolveCosmetics,
   type ResolvedCosmetic,
 } from "../../src/client/Cosmetics";
-import "../../src/client/Store";
 import type { StoreModal } from "../../src/client/Store";
 import {
   EFFECTS_KEY,
   PATTERN_KEY,
   UserSettings,
 } from "../../src/client/UserSettings";
-import type { CosmeticCard } from "../../src/client/components/CosmeticCard";
-import type { EffectsGrid } from "../../src/client/components/EffectsGrid";
-import type { PurchaseButton } from "../../src/client/components/PurchaseButton";
 
 vi.mock("../../src/client/Cosmetics", async (importOriginal) => ({
   ...(await importOriginal<typeof import("../../src/client/Cosmetics")>()),

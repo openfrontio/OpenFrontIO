@@ -17,8 +17,8 @@ import {
   scoredUpTo,
 } from "../ProvisionalProgress";
 import { claimRewards } from "../RewardClaims";
-import { translateText } from "../Utils";
 import { prefersReducedMotion } from "../utilities/ReducedMotion";
+import { translateText } from "../Utils";
 import { describeFlareCosmetic, type FlareCosmeticView } from "./FlareCosmetic";
 import "./LevelBadge";
 import { SECTION, SECTION_TITLE } from "./ProgressionSection";

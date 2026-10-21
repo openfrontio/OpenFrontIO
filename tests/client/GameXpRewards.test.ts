@@ -730,7 +730,7 @@ describe("game-xp-panel level rewards", () => {
   }
   const higher = (provisionalTotal: number) => ({
     matched: false,
-    differences: ["team_win" as const],
+    differences: ["win_added" as const],
     provisionalTotal,
     drift: false,
   });

@@ -592,6 +592,21 @@ export class ControlPanel extends LitElement implements Controller {
     `;
   }
 
+  private getMobileAttackRatioLabel(): string {
+    const percent = (this.attackRatio * 100).toFixed(0);
+    const troops = renderTroops(
+      (this.game?.myPlayer()?.troops() ?? 0) * this.attackRatio,
+    );
+    const translated = translateText("control_panel.attack_ratio", {
+      percent,
+      troops,
+    });
+    return translated !== "control_panel.attack_ratio" &&
+      translated.includes(percent)
+      ? translated
+      : `${percent}%\n(${troops})`;
+  }
+
   private renderMobile() {
     return html`
       ${this.renderNotification()}
@@ -636,18 +651,13 @@ export class ControlPanel extends LitElement implements Controller {
             />
             <span
               class="text-white text-[11px] font-bold tabular-nums text-center leading-tight whitespace-pre-wrap"
-              >${translateText("control_panel.attack_ratio", {
-                percent: (this.attackRatio * 100).toFixed(0),
-                troops: renderTroops(
-                  (this.game?.myPlayer()?.troops() ?? 0) * this.attackRatio,
-                ),
-              })}</span
+              >${this.getMobileAttackRatioLabel()}</span
             >
           </div>
         </div>
         <!-- Attack ratio slider -->
         <div
-          class="flex-1 ${this.tutorialHighlightClass("attack_ratio")}"
+          class="flex-1 min-w-0 ${this.tutorialHighlightClass("attack_ratio")}"
           translate="no"
         >
           <input

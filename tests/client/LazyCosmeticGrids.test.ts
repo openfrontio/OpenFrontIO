@@ -23,10 +23,10 @@ class FakeIntersectionObserver {
 }
 vi.stubGlobal("IntersectionObserver", FakeIntersectionObserver);
 
-import type { ResolvedCosmetic } from "../../src/client/Cosmetics";
-import "../../src/client/components/CosmeticPreview";
 import type { CosmeticPreview } from "../../src/client/components/CosmeticPreview";
+import "../../src/client/components/CosmeticPreview";
 import { ProgressiveList } from "../../src/client/components/ProgressiveList";
+import type { ResolvedCosmetic } from "../../src/client/Cosmetics";
 
 function report(element: Element, near: boolean) {
   const io = FakeIntersectionObserver.instance!;
