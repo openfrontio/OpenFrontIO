@@ -111,28 +111,7 @@ export function planJoinVerify(args: {
   return { action: "verify", token: null };
 }
 
-/**
- * Verify a joining player against the API's join_verify endpoint, which runs
- * the Turnstile check and name censoring concurrently: `status` is the
- * Turnstile verdict, and on approval the (username, clanTag) pair is the
- * display-ready identity for the session — a banned username as its
- * deterministic shadow name, a banned tag as null, a surviving tag
- * uppercased.
- *
- * SECURITY: a null token SKIPS siteverify — the API trusts the game server
- * to omit the token only for already-admitted reconnects (whose single-use
- * token is spent); those come back approved with just the name check run.
- * Callers must never forward a first join with a null token (see
- * planJoinVerify).
- *
- * Failures are never retried: a Turnstile token is single-use, so
- * re-submitting after a timeout or 5xx can redeem an already-spent token and
- * turn an API hiccup into a hard rejection of a legitimate player. Any
- * failure returns "error" and the caller fails open, matching the old
- * standalone-Turnstile stance: with the API's screened identity when it
- * sent one (a degraded verdict whose name check finished), otherwise with
- * the locally screened name (see Censor.ts).
- */
+// In-flight verifyJoin requests coalesced by (token, persistentId, username, clanTag).
 const inFlightByToken = new Map<string, Promise<JoinVerifyResponse>>();
 
 function parseJoinVerifyResponse(data: unknown): JoinVerifyResponse {
@@ -214,14 +193,37 @@ async function verifyJoinRequest(
   }
 }
 
+/**
+ * Verify a joining player against the API's join_verify endpoint, which runs
+ * the Turnstile check and name censoring concurrently: `status` is the
+ * Turnstile verdict, and on approval the (username, clanTag) pair is the
+ * display-ready identity for the session — a banned username as its
+ * deterministic shadow name, a banned tag as null, a surviving tag
+ * uppercased.
+ *
+ * SECURITY: a null token SKIPS siteverify — the API trusts the game server
+ * to omit the token only for already-admitted reconnects (whose single-use
+ * token is spent); those come back approved with just the name check run.
+ * Callers must never forward a first join with a null token (see
+ * planJoinVerify).
+ *
+ * Failures are never retried: a Turnstile token is single-use, so
+ * re-submitting after a timeout or 5xx can redeem an already-spent token and
+ * turn an API hiccup into a hard rejection of a legitimate player. Any
+ * failure returns "error" and the caller fails open, matching the old
+ * standalone-Turnstile stance: with the API's screened identity when it
+ * sent one (a degraded verdict whose name check finished), otherwise with
+ * the locally screened name (see Censor.ts).
+ */
 export async function verifyJoin(
   ip: string,
   turnstileToken: string | null,
   username: string,
   clanTag: string | null,
+  persistentId?: string,
 ): Promise<JoinVerifyResponse> {
   if (turnstileToken !== null && turnstileToken.length > 0) {
-    const key = `${turnstileToken}\0${username}\0${clanTag ?? ""}`;
+    const key = `${turnstileToken}\0${persistentId ?? ""}\0${username}\0${clanTag ?? ""}`;
     const inFlight = inFlightByToken.get(key);
     if (inFlight) {
       return inFlight;

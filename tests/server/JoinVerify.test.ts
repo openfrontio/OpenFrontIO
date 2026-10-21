@@ -187,6 +187,66 @@ describe("verifyJoin", () => {
     expect(_inFlightTokenCount()).toBe(0);
   });
 
+  it("does not coalesce concurrent calls with the same token and username but different persistentIds", async () => {
+    let resolveFetch: (val: unknown) => void;
+    const fetchPromise = new Promise((resolve) => {
+      resolveFetch = resolve;
+    });
+    const fetchMock = vi.fn().mockImplementation(() => fetchPromise);
+    vi.stubGlobal("fetch", fetchMock);
+
+    const call1 = verifyJoin("ip1", "shared-tok", "User1", null, "pid-1");
+    const call2 = verifyJoin("ip2", "shared-tok", "User1", null, "pid-2");
+    const call1Dup = verifyJoin("ip3", "shared-tok", "User1", null, "pid-1");
+
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(_inFlightTokenCount()).toBe(2);
+
+    resolveFetch!(
+      jsonResponse({
+        status: "approved",
+        username: "User1",
+        clanTag: null,
+      }),
+    );
+
+    const [v1, v2, v1Dup] = await Promise.all([call1, call2, call1Dup]);
+    expect(v1.status).toBe("approved");
+    expect(v2.status).toBe("approved");
+    expect(v1Dup).toBe(v1);
+    expect(_inFlightTokenCount()).toBe(0);
+  });
+
+  it("treats omitted persistentId as distinct from defined persistentId", async () => {
+    let resolveFetch: (val: unknown) => void;
+    const fetchPromise = new Promise((resolve) => {
+      resolveFetch = resolve;
+    });
+    const fetchMock = vi.fn().mockImplementation(() => fetchPromise);
+    vi.stubGlobal("fetch", fetchMock);
+
+    const call1 = verifyJoin("ip1", "shared-tok", "User1", null);
+    const call2 = verifyJoin("ip2", "shared-tok", "User1", null, "pid-1");
+    const call1Dup = verifyJoin("ip3", "shared-tok", "User1", null);
+
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(_inFlightTokenCount()).toBe(2);
+
+    resolveFetch!(
+      jsonResponse({
+        status: "approved",
+        username: "User1",
+        clanTag: null,
+      }),
+    );
+
+    const [v1, v2, v1Dup] = await Promise.all([call1, call2, call1Dup]);
+    expect(v1.status).toBe("approved");
+    expect(v2.status).toBe("approved");
+    expect(v1Dup).toBe(v1);
+    expect(_inFlightTokenCount()).toBe(0);
+  });
+
   it("coalesces concurrent in-flight verifyJoin calls on fetch failure and clears in-flight map", async () => {
     let rejectFetch: (err: unknown) => void;
     const fetchPromise = new Promise((_, reject) => {

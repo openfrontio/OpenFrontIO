@@ -339,4 +339,41 @@ describe("GameServer.joinClient — active game reconnection", () => {
     game.markAdmitted(pid);
     expect(game.wasAdmitted(pid)).toBe(true);
   });
+
+  it("removes admission via unmarkAdmitted and reports false via wasAdmitted", () => {
+    const game = makeGame();
+    const pid = "test-gs-unmark-admit";
+    game.markAdmitted(pid);
+    expect(game.wasAdmitted(pid)).toBe(true);
+    game.unmarkAdmitted(pid);
+    expect(game.wasAdmitted(pid)).toBe(false);
+  });
+
+  it("handles unmarkAdmitted on non-admitted ID and allows re-admission", () => {
+    const game = makeGame();
+    const pid = "test-gs-unmark-noop";
+    expect(game.wasAdmitted(pid)).toBe(false);
+    game.unmarkAdmitted(pid);
+    expect(game.wasAdmitted(pid)).toBe(false);
+    game.markAdmitted(pid);
+    expect(game.wasAdmitted(pid)).toBe(true);
+    game.unmarkAdmitted(pid);
+    expect(game.wasAdmitted(pid)).toBe(false);
+  });
+
+  it("unmarks admission when joinClient fails on started game", () => {
+    const game = makeGame();
+    const pid = "test-gs-unmark-failed-join";
+    game.markAdmitted(pid);
+    expect(game.wasAdmitted(pid)).toBe(true);
+    const client = makeClient({
+      clientID: cid("fail1"),
+      persistentID: pid,
+    });
+    game.start();
+    const result = game.joinClient(client);
+    expect(result).not.toBe("joined");
+    game.unmarkAdmitted(pid);
+    expect(game.wasAdmitted(pid)).toBe(false);
+  });
 });

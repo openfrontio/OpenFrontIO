@@ -72,6 +72,27 @@ describe("Roster", () => {
     expect(roster.wasAdmitted(pid)).toBe(false);
   });
 
+  it("removes admission via unmarkAdmitted", () => {
+    const roster = new Roster();
+    const pid = "test-pid";
+    roster.markAdmitted(pid);
+    expect(roster.wasAdmitted(pid)).toBe(true);
+    roster.unmarkAdmitted(pid);
+    expect(roster.wasAdmitted(pid)).toBe(false);
+  });
+
+  it("handles unmarkAdmitted on non-admitted ID and allows re-admission", () => {
+    const roster = new Roster();
+    const pid = "test-pid-2";
+    expect(roster.wasAdmitted(pid)).toBe(false);
+    roster.unmarkAdmitted(pid);
+    expect(roster.wasAdmitted(pid)).toBe(false);
+    roster.markAdmitted(pid);
+    expect(roster.wasAdmitted(pid)).toBe(true);
+    roster.unmarkAdmitted(pid);
+    expect(roster.wasAdmitted(pid)).toBe(false);
+  });
+
   it("moves a reconnecting client to the end, on the new socket, and drops the old one", () => {
     const roster = new Roster();
     const p1 = makeClient({ clientID: cid("p1") });

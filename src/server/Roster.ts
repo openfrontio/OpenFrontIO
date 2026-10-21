@@ -30,6 +30,10 @@ export class Roster {
     this.admitted.add(persistentID);
   }
 
+  unmarkAdmitted(persistentID: string): void {
+    this.admitted.delete(persistentID);
+  }
+
   add(client: Client): void {
     this.sockets.add(client.ws);
     this.reconnectable.set(client.persistentID, client.clientID);

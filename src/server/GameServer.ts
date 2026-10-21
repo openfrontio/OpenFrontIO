@@ -516,6 +516,10 @@ export class GameServer {
     this.clients.markAdmitted(persistentID);
   }
 
+  public unmarkAdmitted(persistentID: string): void {
+    this.clients.unmarkAdmitted(persistentID);
+  }
+
   // Screened identity stored for this player's client record, or null if
   // the record (or its reconnect mapping) is gone. Lets the join path skip
   // re-screening a reconnect whose submitted identity is unchanged.

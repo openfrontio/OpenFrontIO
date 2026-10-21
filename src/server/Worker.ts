@@ -685,8 +685,8 @@ export async function startWorker() {
         // API. Runs before the rejoin attempt so a pre-start identity
         // change on refresh is screened before it is applied.
         let verifySkipped = false;
+        const game = gm.game(clientMsg.gameID);
         if (ServerEnv.env() !== GameEnv.Dev) {
-          const game = gm.game(clientMsg.gameID);
           const stored = game?.storedIdentity(persistentId) ?? null;
           const isReadmit = game?.wasAdmitted(persistentId) ?? false;
           const steamAuthed = isSteamAuthenticated(claims);
@@ -726,6 +726,7 @@ export async function startWorker() {
               plan.token,
               clientMsg.username,
               clientMsg.clanTag ?? null,
+              persistentId,
             );
             if (verdict.status === "approved" || verdict.status === "error") {
               game?.markAdmitted(persistentId);
@@ -806,6 +807,7 @@ export async function startWorker() {
         if (claims === null) {
           if (allowedFlares !== undefined) {
             log.warn("Unauthorized: Anonymous user attempted to join game");
+            game?.unmarkAdmitted(persistentId);
             ws.close(CloseCode.Unauthorized, CloseReason.LoginRequired);
             return;
           }
@@ -818,6 +820,7 @@ export async function startWorker() {
               gameID: clientMsg.gameID,
             });
             const { code, reason } = userMeFailureClose(result);
+            game?.unmarkAdmitted(persistentId);
             ws.close(code, reason);
             return;
           }
@@ -842,6 +845,7 @@ export async function startWorker() {
               log.warn(
                 "Forbidden: player without an allowed flare attempted to join game",
               );
+              game?.unmarkAdmitted(persistentId);
               ws.close(CloseCode.Forbidden, CloseReason.Forbidden);
               return;
             }
@@ -872,6 +876,7 @@ export async function startWorker() {
             persistentID: persistentId,
             gameID: clientMsg.gameID,
           });
+          game?.unmarkAdmitted(persistentId);
           ws.close(CloseCode.Forbidden, CloseReason.CosmeticsForbidden);
           return;
         }
@@ -922,6 +927,9 @@ export async function startWorker() {
         );
 
         const joinResult = gm.joinClient(client, clientMsg.gameID);
+        if (joinResult !== "joined") {
+          game?.unmarkAdmitted(persistentId);
+        }
 
         if (joinResult === "not_found") {
           log.info(`game ${clientMsg.gameID} not found on worker ${workerId}`);
