@@ -1,0 +1,27 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <LangVersion>12.0</LangVersion>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <ServerGarbageCollector>false</ServerGarbageCollector>
+    <InvariantGlobalization>true</InvariantGlobalization>
+    <RootNamespace>OpenFrontRL</RootNamespace>
+    <!-- cuda (default: GPU build for Windows/Linux) or cpu:  dotnet run -p:TorchBackend=cpu -->
+    <TorchBackend Condition="'$(TorchBackend)' == ''">cuda</TorchBackend>
+  </PropertyGroup>
+
+  <ItemGroup Condition="'$(TorchBackend)' == 'cpu'">
+    <PackageReference Include="TorchSharp-cpu" Version="0.105.2" />
+  </ItemGroup>
+  <ItemGroup Condition="'$(TorchBackend)' == 'cuda' And $([MSBuild]::IsOSPlatform('Windows'))">
+    <PackageReference Include="TorchSharp-cuda-windows" Version="0.105.2" />
+  </ItemGroup>
+  <ItemGroup Condition="'$(TorchBackend)' == 'cuda' And $([MSBuild]::IsOSPlatform('Linux'))">
+    <PackageReference Include="TorchSharp-cuda-linux" Version="0.105.2" />
+  </ItemGroup>
+
+</Project>

@@ -35,3 +35,9 @@ map-generator/map-generator.exe
 # src/core package split (#1701): tick-trace inputs and baselines
 .tick-records/
 .tick-baseline/
+
+# RL trainer
+OpenFrontRL/bin/
+OpenFrontRL/obj/
+OpenFrontRL/runs/
+runs/
