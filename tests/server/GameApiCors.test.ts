@@ -241,6 +241,7 @@ describe("gameApiCors middleware, mounted on a real Express app", () => {
   });
 
   afterEach(async () => {
+    vi.unstubAllEnvs();
     await new Promise<void>((resolve, reject) =>
       server.close((err) => (err ? reject(err) : resolve())),
     );
@@ -291,6 +292,40 @@ describe("gameApiCors middleware, mounted on a real Express app", () => {
       "app://openfront",
     );
     expect(routeHits).toEqual(["exists"]);
+  });
+
+  test("grants a request from the replay shell", async () => {
+    vi.stubEnv("DOMAIN", "openfront.io");
+    const res = await fetch(`${base}/w0/api/game/abcdefgh/exists`, {
+      headers: { Origin: "https://replay.openfront.io" },
+    });
+
+    expect(res.status).toBe(200);
+    expect(res.headers.get("access-control-allow-origin")).toBe(
+      "https://replay.openfront.io",
+    );
+    expect(routeHits).toEqual(["exists"]);
+  });
+
+  test("answers a preflight from the replay shell without running the route", async () => {
+    vi.stubEnv("DOMAIN", "openfront.io");
+    const res = await fetch(`${base}/w0/api/game/abcdefgh/exists`, {
+      method: "OPTIONS",
+      headers: {
+        Origin: "https://replay.openfront.io",
+        "Access-Control-Request-Method": "GET",
+        "Access-Control-Request-Headers": "content-type",
+      },
+    });
+
+    expect(res.status).toBe(204);
+    expect(res.headers.get("access-control-allow-origin")).toBe(
+      "https://replay.openfront.io",
+    );
+    expect(
+      res.headers.get("access-control-allow-headers")?.toLowerCase(),
+    ).toContain("content-type");
+    expect(routeHits).toEqual([]);
   });
 
   test("grants a worker-mismatch 404 so the client can read it", async () => {
@@ -424,6 +459,44 @@ describe("applyGameApiCorsHeaders and the rest of the fleet", () => {
     vi.stubEnv("SITE_HOST", "openfront.io");
     const { headers, setHeader } = collect();
     applyGameApiCorsHeaders("https://evil.openfront.io", setHeader);
+    expect(headers.has("Access-Control-Allow-Origin")).toBe(false);
+  });
+});
+
+describe("applyGameApiCorsHeaders and the replay shell host", () => {
+  beforeEach(() => {
+    vi.stubEnv("DOMAIN", "openfront.io");
+    vi.stubEnv("SUBDOMAIN", "blue");
+    vi.stubEnv("SITE_HOST", "openfront.io");
+  });
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  test("allows the replay shell origin over https", () => {
+    const { headers, setHeader } = collect();
+    applyGameApiCorsHeaders("https://replay.openfront.io", setHeader);
+    expect(headers.get("Access-Control-Allow-Origin")).toBe(
+      "https://replay.openfront.io",
+    );
+  });
+
+  test("rejects replay shell over http", () => {
+    const { headers, setHeader } = collect();
+    applyGameApiCorsHeaders("http://replay.openfront.io", setHeader);
+    expect(headers.has("Access-Control-Allow-Origin")).toBe(false);
+  });
+
+  test("rejects an unrelated sub-subdomain of replay", () => {
+    const { headers, setHeader } = collect();
+    applyGameApiCorsHeaders("https://evil.replay.openfront.io", setHeader);
+    expect(headers.has("Access-Control-Allow-Origin")).toBe(false);
+  });
+
+  test("rejects replay shell when DOMAIN is unset", () => {
+    vi.stubEnv("DOMAIN", "");
+    const { headers, setHeader } = collect();
+    applyGameApiCorsHeaders("https://replay.openfront.io", setHeader);
     expect(headers.has("Access-Control-Allow-Origin")).toBe(false);
   });
 });

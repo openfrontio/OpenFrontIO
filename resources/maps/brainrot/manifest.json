@@ -3,7 +3,7 @@
   "id": "BrainRot",
   "layers": [
     {
-      "alpha": 0.75,
+      "alpha": 0.7,
       "id": "brland",
       "nukeable": true,
       "placement": "land"
@@ -11,20 +11,20 @@
   ],
   "map": {
     "height": 2352,
-    "num_land_tiles": 1457885,
+    "num_land_tiles": 1455663,
     "width": 2996
   },
   "map16x": {
     "height": 588,
-    "num_land_tiles": 86741,
+    "num_land_tiles": 86594,
     "width": 749
   },
   "map4x": {
     "height": 1176,
-    "num_land_tiles": 358574,
+    "num_land_tiles": 357985,
     "width": 1498
   },
-  "multiplayer_frequency": 50,
+  "multiplayer_frequency": 19,
   "name": "Brain Rot",
   "nations": [
     {
@@ -141,7 +141,7 @@
     },
     {
       "coordinates": [1740, 960],
-      "name": "Wemickes Area"
+      "name": "Wernicke Area"
     },
     {
       "coordinates": [1770, 970],
@@ -200,6 +200,8 @@
       "name": "Brain Stem"
     }
   ],
+  "special_team_count": 27,
+  "team_frequency": 13,
   "themes": ["space", "war"],
   "translation_key": "map.brainrot"
 }

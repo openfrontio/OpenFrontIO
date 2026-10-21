@@ -9,8 +9,8 @@ import {
 } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
 import { clampPrestige, levelFraction } from "../Progression";
-import { translateText } from "../Utils";
 import { prefersReducedMotion } from "../utilities/ReducedMotion";
+import { translateText } from "../Utils";
 import "./LevelBadge";
 import { levelBadgeAccent } from "./LevelBadge";
 import { splitAccountUsername, usernameText } from "./ui/UsernameText";
