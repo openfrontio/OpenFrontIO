@@ -153,7 +153,7 @@ describe("readSnapshotHeader", () => {
     const header = readSnapshotHeader(new Uint8Array([9]));
     await vi.waitFor(() => expect(worker.posted).toHaveLength(1));
     for (const l of worker.errorListeners) {
-      l(new ErrorEvent("error", { message: "out of memory" }));
+      l({ message: "out of memory" } as ErrorEvent);
     }
     await expect(header).rejects.toThrow("out of memory");
     expect(worker.terminated).toBe(true);
