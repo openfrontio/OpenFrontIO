@@ -5,19 +5,24 @@
 
 import { GameMapSize, GameMapType } from "@openfront/engine-api/game/GameTypes";
 import type { GameStartInfo } from "@openfront/engine-api/Schemas";
-import { WorkerClient } from "../../../src/client/WorkerClient";
+import {
+  readSnapshotHeader,
+  WorkerClient,
+} from "../../../src/client/WorkerClient";
 
 const worker = vi.hoisted(() => ({
   posted: [] as { msg: Record<string, unknown>; transfer: unknown[] }[],
   listeners: [] as ((e: MessageEvent) => void)[],
+  errorListeners: [] as ((e: ErrorEvent) => void)[],
   terminated: false,
 }));
 const mapFiles = vi.hoisted(() => ({ fail: false }));
 
 vi.mock("@openfront/engine/worker/Worker.worker?worker&inline", () => ({
   default: class {
-    addEventListener(_type: string, l: (e: MessageEvent) => void) {
-      worker.listeners.push(l);
+    addEventListener(type: string, l: (e: any) => void) {
+      if (type === "error") worker.errorListeners.push(l);
+      else worker.listeners.push(l);
     }
     postMessage(msg: Record<string, unknown>, transfer: unknown[] = []) {
       worker.posted.push({ msg, transfer });
@@ -53,6 +58,7 @@ const start = {
 beforeEach(() => {
   worker.posted = [];
   worker.listeners = [];
+  worker.errorListeners = [];
   worker.terminated = false;
   mapFiles.fail = false;
 });
@@ -101,5 +107,55 @@ describe("WorkerClient.initialize", () => {
     await expect(client.initialize()).rejects.toThrow("map not found");
     await vi.waitFor(() => expect(worker.terminated).toBe(true));
     expect(worker.posted).toEqual([]);
+  });
+});
+
+describe("readSnapshotHeader", () => {
+  function answer(data: Record<string, unknown>) {
+    for (const l of worker.listeners) l(new MessageEvent("message", { data }));
+  }
+
+  test("asks a worker of its own for the header, then stops it", async () => {
+    const snapshot = new Uint8Array([1, 2, 3]);
+    const header = readSnapshotHeader(snapshot);
+    await vi.waitFor(() => expect(worker.posted).toHaveLength(1));
+    const { msg, transfer } = worker.posted[0];
+    expect(msg).toEqual({ type: "read_snapshot_header", snapshot });
+    // Copied, not moved: the caller starts the game from the same bytes.
+    expect(transfer).toEqual([]);
+    const result = {
+      format: 1,
+      gitCommit: "abc",
+      gameID: "game0001",
+      tick: 500,
+      gameConfig: start.config,
+      humans: [{ clientID: "HUMAN001", name: "me" }],
+    };
+    answer({ type: "read_snapshot_header_result", header: result });
+    await expect(header).resolves.toEqual(result);
+    expect(worker.terminated).toBe(true);
+    expect(snapshot).toEqual(new Uint8Array([1, 2, 3]));
+  });
+
+  test("fails with the engine's reason when the bytes aren't a snapshot", async () => {
+    const header = readSnapshotHeader(new Uint8Array([9]));
+    await vi.waitFor(() => expect(worker.posted).toHaveLength(1));
+    answer({
+      type: "read_snapshot_header_result",
+      header: null,
+      error: "not a game snapshot",
+    });
+    await expect(header).rejects.toThrow("not a game snapshot");
+    expect(worker.terminated).toBe(true);
+  });
+
+  test("fails at once when the worker dies", async () => {
+    const header = readSnapshotHeader(new Uint8Array([9]));
+    await vi.waitFor(() => expect(worker.posted).toHaveLength(1));
+    for (const l of worker.errorListeners) {
+      l({ message: "out of memory" } as ErrorEvent);
+    }
+    await expect(header).rejects.toThrow("out of memory");
+    expect(worker.terminated).toBe(true);
   });
 });

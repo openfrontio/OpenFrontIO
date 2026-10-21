@@ -113,6 +113,8 @@ export interface LobbyConfig {
   gameStartInfo?: WireGameStartInfo;
   // GameRecord exists when replaying an archived game.
   gameRecord?: GameRecord;
+  // Set when resuming a saved singleplayer game: the snapshot to restore.
+  snapshot?: Uint8Array;
   // Watch without playing.
   spectator?: boolean;
   // Host only: the play token the lobby was created under, used for the
@@ -706,7 +708,11 @@ async function createClientGame(
   // Kick off the font-atlas fetch so it overlaps with worker init; the
   // render passes need it parsed before createWebGLView runs.
   const atlasDataLoad = preloadAtlasData();
-  const worker = new WorkerClient(lobbyConfig.gameStartInfo, clientID);
+  const worker = new WorkerClient(
+    lobbyConfig.gameStartInfo,
+    clientID,
+    lobbyConfig.snapshot,
+  );
   await worker.initialize();
   await atlasDataLoad;
   const gameView = new GameView(
@@ -718,6 +724,7 @@ async function createClientGame(
     lobbyConfig.playerClanTag,
     lobbyConfig.gameStartInfo.gameID,
     lobbyConfig.gameStartInfo.players,
+    lobbyConfig.snapshot !== undefined,
   );
 
   // Transparent fullscreen overlay used purely as the pointer-event /

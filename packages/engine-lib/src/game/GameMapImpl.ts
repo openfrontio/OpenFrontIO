@@ -157,6 +157,11 @@ export class GameMapImpl implements GameMap {
   // map file and verify the file it will be restored onto is the same one.
   private pristineTerrain: Map<TileRef, number> | null = null;
 
+  /** Tiles whose terrain may differ from the map file's. */
+  editedTerrainTiles(): TileRef[] {
+    return [...(this.pristineTerrain?.keys() ?? [])];
+  }
+
   private noteTerrainEdit(ref: TileRef): void {
     this.pristineTerrain ??= new Map();
     if (!this.pristineTerrain.has(ref)) {
