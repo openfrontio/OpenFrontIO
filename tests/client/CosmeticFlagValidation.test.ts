@@ -16,13 +16,60 @@ vi.mock("../../src/client/Api", async (importOriginal) => ({
 }));
 
 const catalog = {
-  patterns: {},
+  patterns: {
+    stripes: {
+      name: "stripes",
+      pattern: "AAAAAA",
+      product: null,
+      rarity: "rare",
+    },
+  },
+  colorPalettes: {
+    fire: {
+      name: "fire",
+      primaryColor: "#ff0000",
+      secondaryColor: "#ffff00",
+    },
+  },
   flags: {
     donator: {
       name: "donator",
       url: "https://cdn.test/flags/donator.svg",
       product: null,
       rarity: "rare",
+    },
+  },
+  skins: {
+    cool: {
+      name: "cool",
+      url: "https://cdn.test/skins/cool.png",
+      product: null,
+      rarity: "rare",
+    },
+  },
+  crowns: {
+    golden: {
+      name: "golden",
+      url: "https://cdn.test/crowns/golden.png",
+      product: null,
+      rarity: "rare",
+    },
+  },
+  effects: {
+    transportShipTrail: {
+      spectrum: {
+        name: "spectrum",
+        effectType: "transportShipTrail",
+        url: "https://cdn.test/trails/spectrum.png",
+        product: null,
+        rarity: "rare",
+        attributes: {
+          type: "gradient",
+          colors: ["#ffffff"],
+          colorSize: 1,
+          movementSpeed: 1,
+        },
+      },
     },
   },
 };
@@ -150,5 +197,197 @@ describe("flag validation against an unknown profile", () => {
 
     expect(refs.flag).toBeUndefined();
     expect(new UserSettings().getFlag()).toBeNull();
+  });
+});
+
+describe("pattern, skin, crown, and effect validation against unknown and verified profiles (#5660)", () => {
+  beforeEach(() => {
+    invalidateCosmetics();
+    resetSettings();
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => ({
+        ok: true,
+        status: 200,
+        json: async () => catalog,
+      })),
+    );
+    vi.spyOn(console, "error").mockImplementation(() => undefined);
+  });
+
+  afterEach(() => {
+    invalidateCosmetics();
+    resetSettings();
+    vi.unstubAllGlobals();
+    vi.restoreAllMocks();
+  });
+
+  it("keeps saved pattern, crown, and effect when the profile cannot be resolved", async () => {
+    const s = new UserSettings();
+    s.setSelectedPatternName("pattern:stripes:fire");
+    s.setSelectedCrownName("golden");
+    s.setSelectedEffectName("transportShipTrail", "spectrum");
+    vi.mocked(getUserMe).mockResolvedValue(false);
+
+    const refs = await getPlayerCosmeticsRefs();
+
+    expect(refs.patternName).toBeUndefined();
+    expect(refs.patternColorPaletteName).toBeUndefined();
+    expect(refs.crownName).toBeUndefined();
+    expect(refs.effects).toBeUndefined();
+
+    expect(s.getSelectedPatternName(catalog as any)?.name).toBe("stripes");
+    expect(s.getSelectedCrownName()).toBe("golden");
+    expect(s.getSelectedEffects()).toEqual({ transportShipTrail: "spectrum" });
+  });
+
+  it("keeps saved skin when the profile cannot be resolved", async () => {
+    const s = new UserSettings();
+    s.setSelectedPatternName("skin:cool");
+    vi.mocked(getUserMe).mockResolvedValue(false);
+
+    const refs = await getPlayerCosmeticsRefs();
+
+    expect(refs.skinName).toBeUndefined();
+    expect(s.getSelectedSkinName()).toBe("cool");
+  });
+
+  it("clears pattern, crown, and effect when the profile lacks required flares", async () => {
+    const s = new UserSettings();
+    s.setSelectedPatternName("pattern:stripes:fire");
+    s.setSelectedCrownName("golden");
+    s.setSelectedEffectName("transportShipTrail", "spectrum");
+    vi.mocked(getUserMe).mockResolvedValue(userWithFlares([]));
+
+    const refs = await getPlayerCosmeticsRefs();
+
+    expect(refs.patternName).toBeUndefined();
+    expect(refs.patternColorPaletteName).toBeUndefined();
+    expect(refs.crownName).toBeUndefined();
+    expect(refs.effects).toBeUndefined();
+
+    expect(s.getSelectedPatternName(catalog as any)).toBeNull();
+    expect(s.getSelectedCrownName()).toBeNull();
+    expect(s.getSelectedEffects()).toEqual({});
+  });
+
+  it("clears skin when the profile lacks required skin flare", async () => {
+    const s = new UserSettings();
+    s.setSelectedPatternName("skin:cool");
+    vi.mocked(getUserMe).mockResolvedValue(userWithFlares([]));
+
+    const refs = await getPlayerCosmeticsRefs();
+
+    expect(refs.skinName).toBeUndefined();
+    expect(s.getSelectedSkinName()).toBeNull();
+  });
+
+  it("keeps and sends pattern, crown, and effect when the profile owns flares", async () => {
+    const s = new UserSettings();
+    s.setSelectedPatternName("pattern:stripes:fire");
+    s.setSelectedCrownName("golden");
+    s.setSelectedEffectName("transportShipTrail", "spectrum");
+    vi.mocked(getUserMe).mockResolvedValue(
+      userWithFlares([
+        "pattern:stripes:fire",
+        "crown:golden",
+        "effect:spectrum",
+      ]),
+    );
+
+    const refs = await getPlayerCosmeticsRefs();
+
+    expect(refs.patternName).toBe("stripes");
+    expect(refs.patternColorPaletteName).toBe("fire");
+    expect(refs.crownName).toBe("golden");
+    expect(refs.effects).toEqual({ transportShipTrail: "spectrum" });
+  });
+
+  it("keeps and sends skin when the profile owns skin flare", async () => {
+    const s = new UserSettings();
+    s.setSelectedPatternName("skin:cool");
+    vi.mocked(getUserMe).mockResolvedValue(userWithFlares(["skin:cool"]));
+
+    const refs = await getPlayerCosmeticsRefs();
+
+    expect(refs.skinName).toBe("cool");
+    expect(s.getSelectedSkinName()).toBe("cool");
+  });
+
+  it("honours wildcard flares for pattern, skin, crown, and effects", async () => {
+    const s = new UserSettings();
+    s.setSelectedPatternName("pattern:stripes:fire");
+    s.setSelectedCrownName("golden");
+    s.setSelectedEffectName("transportShipTrail", "spectrum");
+    vi.mocked(getUserMe).mockResolvedValue(
+      userWithFlares(["pattern:*", "crown:*", "effect:*"]),
+    );
+
+    const refs = await getPlayerCosmeticsRefs();
+
+    expect(refs.patternName).toBe("stripes");
+    expect(refs.patternColorPaletteName).toBe("fire");
+    expect(refs.crownName).toBe("golden");
+    expect(refs.effects).toEqual({ transportShipTrail: "spectrum" });
+
+    // Skin wildcard
+    s.setSelectedPatternName("skin:cool");
+    vi.mocked(getUserMe).mockResolvedValue(userWithFlares(["skin:*"]));
+    const skinRefs = await getPlayerCosmeticsRefs();
+    expect(skinRefs.skinName).toBe("cool");
+  });
+
+  it("clears skin, crown, and effects when the loaded catalog no longer lists them", async () => {
+    const s = new UserSettings();
+    s.setSelectedCrownName("retired");
+    s.setSelectedEffectName("transportShipTrail", "retired");
+    vi.mocked(getUserMe).mockResolvedValue(
+      userWithFlares(["crown:*", "effect:*"]),
+    );
+
+    const refs = await getPlayerCosmeticsRefs();
+
+    expect(refs.crownName).toBeUndefined();
+    expect(refs.effects).toBeUndefined();
+
+    expect(s.getSelectedCrownName()).toBeNull();
+    expect(s.getSelectedEffects()).toEqual({});
+
+    // Retired skin
+    s.setSelectedPatternName("skin:retired");
+    vi.mocked(getUserMe).mockResolvedValue(userWithFlares(["skin:*"]));
+    const skinRefs = await getPlayerCosmeticsRefs();
+    expect(skinRefs.skinName).toBeUndefined();
+    expect(s.getSelectedSkinName()).toBeNull();
+  });
+
+  it("keeps saved skin, crown, and effects in settings when the cosmetics catalog fails to load", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => ({
+        ok: false,
+        status: 500,
+        json: async () => {
+          throw new Error("500 Internal Server Error");
+        },
+      })),
+    );
+    const s = new UserSettings();
+    s.setSelectedPatternName("skin:cool");
+    s.setSelectedCrownName("golden");
+    s.setSelectedEffectName("transportShipTrail", "spectrum");
+    vi.mocked(getUserMe).mockResolvedValue(
+      userWithFlares(["skin:*", "crown:*", "effect:*"]),
+    );
+
+    const refs = await getPlayerCosmeticsRefs();
+
+    expect(refs.skinName).toBeUndefined();
+    expect(refs.crownName).toBeUndefined();
+    expect(refs.effects).toBeUndefined();
+
+    expect(s.getSelectedSkinName()).toBe("cool");
+    expect(s.getSelectedCrownName()).toBe("golden");
+    expect(s.getSelectedEffects()).toEqual({ transportShipTrail: "spectrum" });
   });
 });

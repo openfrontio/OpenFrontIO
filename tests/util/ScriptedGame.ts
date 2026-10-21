@@ -60,7 +60,7 @@ export class TestDataMapLoader implements GameMapLoader {
           fs.readFileSync(path.join(dir, "manifest.json"), "utf8"),
         ) as MapManifest,
       webpPath: path.join(dir, "thumbnail.webp"),
-      layerPng: async () => {
+      layerImage: async () => {
         throw new Error("no layers in test maps");
       },
     };
@@ -280,6 +280,17 @@ function playIntent(game: Game, p: Player, rand: PseudoRandom): Intent | null {
   if (!p.isAlive()) return null;
   // Most ticks a human does nothing; keep the game moving.
   if (!rand.chance(3)) return null;
+  // Nations build no ports this early, so the scripted humans' ports are the ones that trade
+  const embargoedHuman = game
+    .players()
+    .find(
+      (o) =>
+        SCRIPTED_HUMANS.includes(o.clientID() as never) &&
+        p.hasEmbargoAgainst(o),
+    );
+  if (embargoedHuman !== undefined && rand.chance(2)) {
+    return { type: "embargo", targetID: embargoedHuman.id(), action: "stop" };
+  }
   const others = game.players().filter((o) => o !== p && o.isPlayer());
   const other = pick(rand, others);
   const own = (types: UnitType[]) => p.units(types);
@@ -337,7 +348,16 @@ function playIntent(game: Game, p: Player, rand: PseudoRandom): Intent | null {
         UnitType.HydrogenBomb,
         UnitType.MIRV,
       ])!;
-      const tile = randomOwnedTile(rand, other);
+      // Half the bombs fly at an enemy SAM, so SAMs get to shoot
+      const sam = rand.chance(2)
+        ? pick(
+            rand,
+            game
+              .units(UnitType.SAMLauncher)
+              .filter((s) => !p.isFriendly(s.owner(), true)),
+          )
+        : null;
+      const tile = sam?.tile() ?? randomOwnedTile(rand, other);
       if (tile === null || p.canBuild(unit, tile) === false) return null;
       return {
         type: "build_unit",

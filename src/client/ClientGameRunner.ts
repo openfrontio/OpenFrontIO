@@ -1,4 +1,3 @@
-import { ClientID, GameID } from "@openfront/engine-api/Schemas";
 import { TileRef } from "@openfront/engine-api/game/GameMap";
 import {
   BuildableUnit,
@@ -12,9 +11,10 @@ import {
   GameUpdateViewData,
   HashUpdate,
 } from "@openfront/engine-api/game/GameUpdates";
-import { findClosestBy } from "@openfront/engine-lib/Util";
+import { ClientID, GameID } from "@openfront/engine-api/Schemas";
 import { Config } from "@openfront/engine-lib/configuration/Config";
 import { TerrainMapData } from "@openfront/engine-lib/game/TerrainMapLoader";
+import { findClosestBy } from "@openfront/engine-lib/Util";
 import { EventBus } from "@openfront/shared/EventBus";
 import { GameMapLoader } from "@openfront/shared/GameMapLoader";
 import { replacer } from "@openfront/shared/SharedUtil";
@@ -28,8 +28,11 @@ import {
 } from "@openfront/shared/WireSchemas";
 import { ClientEnv } from "../client/ClientEnv";
 import { reloadForUpdate, translateText } from "../client/Utils";
+import { MapLayerController } from "./controllers/MapLayerController";
 import { isDesktopShell } from "./DesktopShell";
 import { GameMetrics } from "./GameMetrics";
+import { createRenderer, GameRenderer } from "./hud/GameRenderer";
+import { goldRateTracker } from "./hud/layers/lib/GoldRateTracker";
 import { showInGameAlert } from "./InGameModal";
 import {
   AutoUpgradeEvent,
@@ -45,16 +48,34 @@ import {
   TickMetricsEvent,
   ToggleRenderDebugGuiEvent,
 } from "./InputHandler";
+import { rememberLobbyRoster } from "./LobbyRosterLevels";
 import { pagePin } from "./PagePin";
 import { groupTokenOf, loggableStartMessage } from "./PresenceGroup";
+import {
+  applyGraphicsOverrides,
+  createRenderSettings,
+  deepAssign,
+  GLUnavailableError,
+  MapRenderer,
+  preloadAtlasData,
+  renderDpr,
+  type RenderSettings,
+  showGLGate,
+  trackGLInit,
+} from "./render/gl";
+import { ALL_UNIT_TYPES, UnitState } from "./render/types";
 import { versionedPathForMismatchedGame } from "./ServerList";
+import { audioMixer, initAudioMixer } from "./sound/AudioMixer";
+import { SoundManager } from "./sound/SoundManager";
 import { reportGameError } from "./Telemetry";
 import {
   loadCachedTerrainMap,
   terrainMapFileLoader,
 } from "./TerrainMapFileLoader";
+import { themeProvider } from "./theme/ThemeProvider";
 import { GoToPlayerEvent } from "./TransformHandler";
 import {
+  counterAttackTroops,
   MoveWarshipIntentEvent,
   NewLobbyEvent,
   SendAllianceExtensionIntentEvent,
@@ -74,28 +95,9 @@ import {
   UserSettings,
 } from "./UserSettings";
 import { createCanvas } from "./Utils";
+import { GameView, PlayerView } from "./view";
 import { WebGLFrameBuilder } from "./WebGLFrameBuilder";
 import { WorkerClient } from "./WorkerClient";
-import { MapLayerController } from "./controllers/MapLayerController";
-import { createRenderer, GameRenderer } from "./hud/GameRenderer";
-import { goldRateTracker } from "./hud/layers/lib/GoldRateTracker";
-import {
-  applyGraphicsOverrides,
-  createRenderSettings,
-  deepAssign,
-  GLUnavailableError,
-  MapRenderer,
-  preloadAtlasData,
-  renderDpr,
-  type RenderSettings,
-  showGLGate,
-  trackGLInit,
-} from "./render/gl";
-import { ALL_UNIT_TYPES, UnitState } from "./render/types";
-import { audioMixer, initAudioMixer } from "./sound/AudioMixer";
-import { SoundManager } from "./sound/SoundManager";
-import { themeProvider } from "./theme/ThemeProvider";
-import { GameView, PlayerView } from "./view";
 
 export interface LobbyConfig {
   cosmetics: PlayerCosmeticRefs;
@@ -221,6 +223,12 @@ export function joinLobby(
       // Server tells us our assigned clientID
       clientID = message.myClientID;
       eventBus.emit(new LobbyInfoEvent(message.lobby, message.myClientID));
+      // Kept past game start for the in-game level badges.
+      rememberLobbyRoster(
+        message.lobby.gameID,
+        message.lobby.clients,
+        message.myClientID,
+      );
       // Preload the map while still in the lobby so game start can reuse the
       // cached result instead of blocking on the download in the short
       // prestart->start window. The preload is debounced: it only fires once
@@ -1460,7 +1468,7 @@ export class ClientGameRunner {
     ) as PlayerView;
     if (!attacker) return;
 
-    const counterTroops = Math.min(
+    const counterTroops = counterAttackTroops(
       mostRecentAttack.troops,
       this.renderer.uiState.attackRatio * this.myPlayer.troops(),
     );

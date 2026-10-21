@@ -1,5 +1,6 @@
 import { html, LitElement, nothing } from "lit";
 import { customElement, property, query, state } from "lit/decorators.js";
+import { gamePortal } from "../GamePortal";
 import { steamSDK } from "../SteamSDK";
 import { translateText } from "../Utils";
 
@@ -86,7 +87,7 @@ export class SteamWishlist extends LitElement {
 
   protected updated() {
     if (this.frame === undefined) {
-      // Hidden on Steam — nothing rendered to measure.
+      // Hidden on Steam and Poki — nothing rendered to measure.
       this.resizeObserver?.disconnect();
       this.resizeObserver = undefined;
       return;
@@ -102,8 +103,12 @@ export class SteamWishlist extends LitElement {
     }
   }
 
+  // The iframe's color-scheme is light, Steam's own: the page is dark
+  // (index.html), and an iframe whose color scheme differs from its
+  // document's gets an opaque white backdrop, a white strip under the card.
   render() {
-    if (steamSDK.isOnSteam()) return nothing;
+    // Poki doesn't allow promoting other platforms.
+    if (steamSDK.isOnSteam() || gamePortal.name() === "poki") return nothing;
 
     const frameWidth = Math.min(
       WIDGET_WIDTH,
@@ -122,7 +127,7 @@ export class SteamWishlist extends LitElement {
                 class="block border-0 origin-top-left"
                 width=${frameWidth}
                 height=${WIDGET_HEIGHT}
-                style="transform: scale(${scale})"
+                style="transform: scale(${scale}); color-scheme: light"
                 src=${steamWidgetUrl(this.campaign)}
                 title=${translateText("steam_wishlist.buy_on_steam")}
                 loading="lazy"

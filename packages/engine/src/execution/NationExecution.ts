@@ -196,6 +196,7 @@ export class NationExecution implements Execution {
     }
 
     this.attackBehavior.followUpLandings();
+    this.nukeBehavior.followUpStrikes();
 
     if (ticks % this.attackRate !== this.attackTick) {
       // Call handleStructures twice between regular attack ticks (at 1/3 and 2/3 of the interval)
@@ -319,13 +320,13 @@ export class NationExecution implements Execution {
     others.forEach((other: Player) => {
       const embargoMalus = -20;
       if (
-        other.hasEmbargoAgainst(player) &&
+        other.hasManualEmbargoAgainst(player) &&
         !this.embargoMalusApplied.has(other.id())
       ) {
         player.updateRelation(other, embargoMalus);
         this.embargoMalusApplied.add(other.id());
       } else if (
-        !other.hasEmbargoAgainst(player) &&
+        !other.hasManualEmbargoAgainst(player) &&
         this.embargoMalusApplied.has(other.id())
       ) {
         player.updateRelation(other, -embargoMalus);
@@ -345,7 +346,7 @@ export class NationExecution implements Execution {
 
     others.forEach((other: Player) => {
       // In team games on higher difficulties, refuse to trade with anyone
-      // not on this nation's team (mirrors the "stop trading with all" button).
+      // not on this nation's team.
       if (
         teamGame &&
         isHigherDifficulty &&

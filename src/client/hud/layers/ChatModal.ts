@@ -50,6 +50,7 @@ const CORE_PHRASES = new Set([
   "misc.team_up",
   "warnings.betrayed",
   "warnings.mirv_ready",
+  "warnings.renew_or_nuke",
 ]);
 
 // Phrases the panel shows under another category than their key's. Display
@@ -67,6 +68,28 @@ const allPhrases = Object.entries(quickChatPhrases).flatMap(
 const fullKey = (category: string, phrase: QuickChatPhrase) =>
   `${category}.${phrase.key}`;
 
+const phraseByKey = new Map(
+  allPhrases.map((p) => [fullKey(p.category, p.phrase), p]),
+);
+
+const RECENT_KEY = "quick-chat-recent";
+const MAX_RECENT = 10;
+
+function loadRecent(): string[] {
+  try {
+    const parsed = JSON.parse(localStorage.getItem(RECENT_KEY) ?? "[]");
+    if (!Array.isArray(parsed)) return [];
+    return parsed
+      .filter((k): k is string => typeof k === "string" && phraseByKey.has(k))
+      .slice(0, MAX_RECENT);
+  } catch (error) {
+    console.warn("Failed to read recent quick chats from localStorage:", error);
+    return [];
+  }
+}
+
+type PhraseEntry = { category: string; phrase: QuickChatPhrase };
+
 @customElement("chat-modal")
 export class ChatModal extends LitElement {
   @state() public isOpen = false;
@@ -76,8 +99,11 @@ export class ChatModal extends LitElement {
     phrase: QuickChatPhrase;
   } | null = null;
   @state() private search = "";
+  @state() private phraseSearch = "";
   /** Kept across opens: a player who wants every phrase keeps seeing them. */
   @state() private showAll = false;
+  /** Full keys of the last phrases sent, newest first. */
+  @state() private recent = loadRecent();
 
   createRenderRoot() {
     return this;
@@ -132,7 +158,7 @@ export class ChatModal extends LitElement {
               >
               ${this.pending ? null : this.renderAllPhrasesSwitch()}
             </div>
-            ${this.pending ? this.renderPlayerPicker() : this.renderSections()}
+            ${this.pending ? this.renderPlayerPicker() : this.renderPhrases()}
           </div>
         </div>
       </div>
@@ -165,15 +191,63 @@ export class ChatModal extends LitElement {
     `;
   }
 
-  /** One section per category: its core phrases, or all of them. */
-  private renderSections() {
-    return this.categories.map(({ id }) => {
-      const phrases = allPhrases
-        .filter(({ category, phrase }) => {
-          const key = fullKey(category, phrase);
+  private renderPhrases() {
+    const sections = this.sections();
+    const query = this.phraseQuery();
+    return html`
+      ${this.showAll
+        ? html`<input
+            class="px-2 py-1.5 rounded-md bg-zinc-800 ring-1 ring-white/10 text-sm outline-none focus:ring-white/30"
+            type="text"
+            placeholder=${translateText("chat.search_phrases")}
+            .value=${this.phraseSearch}
+            @input=${(e: Event) =>
+              (this.phraseSearch = (e.target as HTMLInputElement).value)}
+            @keydown=${(e: KeyboardEvent) => {
+              const first = sections[0]?.phrases[0];
+              if (e.key === "Enter" && !e.isComposing && query && first) {
+                this.pickPhrase(first.category, first.phrase);
+              }
+            }}
+          />`
+        : null}
+      ${sections.length === 0
+        ? html`<p class="text-sm text-zinc-400">
+            ${translateText("chat.no_phrases")}
+          </p>`
+        : sections.map(
+            ({ id, phrases }) => html`
+              <section>
+                <h3
+                  class="mb-1 text-[11px] font-semibold uppercase tracking-wider text-zinc-400"
+                >
+                  ${translateText(`chat.cat.${id}`)}
+                </h3>
+                <div class="flex flex-wrap gap-1">
+                  ${phrases.map((entry) => this.renderChip(entry))}
+                </div>
+              </section>
+            `,
+          )}
+    `;
+  }
+
+  private phraseQuery(): string {
+    return this.showAll ? this.phraseSearch.trim().toLowerCase() : "";
+  }
+
+  /** Recent, then each category's core or all phrases; a search drops Recent. */
+  private sections(): { id: string; phrases: PhraseEntry[] }[] {
+    const query = this.phraseQuery();
+    const sections = this.categories.map(({ id }) => ({
+      id,
+      phrases: allPhrases
+        .filter((entry) => {
+          const key = fullKey(entry.category, entry.phrase);
           return (
-            (SHOWN_UNDER[key] ?? category) === id &&
-            (this.showAll || CORE_PHRASES.has(key))
+            (SHOWN_UNDER[key] ?? entry.category) === id &&
+            (this.showAll || CORE_PHRASES.has(key)) &&
+            (!query || this.matchesQuery(entry, query))
           );
         })
         // Core phrases first, so they keep their place when "All phrases"
@@ -183,35 +257,36 @@ export class ChatModal extends LitElement {
             Number(!CORE_PHRASES.has(fullKey(a.category, a.phrase))) -
               Number(!CORE_PHRASES.has(fullKey(b.category, b.phrase))) ||
             Number(a.category !== id) - Number(b.category !== id),
-        );
-      if (phrases.length === 0) return null;
-      return html`
-        <section>
-          <h3
-            class="mb-1 text-[11px] font-semibold uppercase tracking-wider text-zinc-400"
-          >
-            ${translateText(`chat.cat.${id}`)}
-          </h3>
-          <div class="flex flex-wrap gap-1">
-            ${phrases.map(({ category, phrase }) => {
-              const full = translateText(`chat.${category}.${phrase.key}`);
-              return html`
-                <button
-                  class="max-w-[15rem] truncate px-2.5 py-1 rounded-md text-sm text-left
-                         bg-white/5 hover:bg-white/15 active:bg-white/25 transition-colors cursor-pointer"
-                  title=${full.replace(PLAYER_PLACEHOLDER, "___")}
-                  @click=${() => this.pickPhrase(category, phrase)}
-                >
-                  ${this.renderWithBlank(
-                    this.chipLabel(category, phrase.key, full),
-                  )}
-                </button>
-              `;
-            })}
-          </div>
-        </section>
-      `;
-    });
+        ),
+    }));
+    if (!query) {
+      sections.unshift({
+        id: "recent",
+        phrases: this.recent.flatMap((key) => phraseByKey.get(key) ?? []),
+      });
+    }
+    return sections.filter(({ phrases }) => phrases.length > 0);
+  }
+
+  private matchesQuery({ category, phrase }: PhraseEntry, query: string) {
+    const full = translateText(`chat.${category}.${phrase.key}`);
+    return [full, this.chipLabel(category, phrase.key, full)].some((text) =>
+      text.replace(PLAYER_PLACEHOLDER, "").toLowerCase().includes(query),
+    );
+  }
+
+  private renderChip({ category, phrase }: PhraseEntry) {
+    const full = translateText(`chat.${category}.${phrase.key}`);
+    return html`
+      <button
+        class="max-w-[15rem] truncate px-2.5 py-1 rounded-md text-sm text-left
+               bg-white/5 hover:bg-white/15 active:bg-white/25 transition-colors cursor-pointer"
+        title=${full.replace(PLAYER_PLACEHOLDER, "___")}
+        @click=${() => this.pickPhrase(category, phrase)}
+      >
+        ${this.renderWithBlank(this.chipLabel(category, phrase.key, full))}
+      </button>
+    `;
   }
 
   // Long phrases have a short label for their chip; the rest show in full.
@@ -348,6 +423,18 @@ export class ChatModal extends LitElement {
     });
   }
 
+  private remember(key: string) {
+    this.recent = [key, ...this.recent.filter((k) => k !== key)].slice(
+      0,
+      MAX_RECENT,
+    );
+    try {
+      localStorage.setItem(RECENT_KEY, JSON.stringify(this.recent));
+    } catch (error) {
+      console.warn("Failed to save recent quick chats to localStorage:", error);
+    }
+  }
+
   // A phrase without a player sends right away; one that names a player
   // asks for the player first.
   private pickPhrase(category: string, phrase: QuickChatPhrase) {
@@ -369,6 +456,7 @@ export class ChatModal extends LitElement {
       this.eventBus.emit(
         new SendQuickChatEvent(this.recipient, quickChatKey, target?.id()),
       );
+      this.remember(quickChatKey);
     }
     this.close();
   }
@@ -380,6 +468,7 @@ export class ChatModal extends LitElement {
     }
     this.pending = null;
     this.search = "";
+    this.phraseSearch = "";
     this.isOpen = true;
   }
 
@@ -387,6 +476,7 @@ export class ChatModal extends LitElement {
     this.isOpen = false;
     this.pending = null;
     this.search = "";
+    this.phraseSearch = "";
   }
 
   public setRecipient(value: PlayerView) {

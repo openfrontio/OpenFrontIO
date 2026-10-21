@@ -5,7 +5,6 @@ import { html, nothing, TemplateResult } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import { repeat } from "lit/directives/repeat.js";
 import { getDesktopSessionState } from "../Auth";
-import { crazyGamesSDK } from "../CrazyGamesSDK";
 import {
   getDesktopUpdateState,
   isDesktopShell,
@@ -16,6 +15,7 @@ import {
   reportMultiplayerRefusal,
   shouldBlockSocketSourcedAction,
 } from "../GameModeSelector";
+import { gamePortal } from "../GamePortal";
 import type { JoinLobbyModal } from "../JoinLobbyModal";
 import { whenModalLoaded } from "../LazyModals";
 import { PublicLobbySocket } from "../LobbySocket";
@@ -230,10 +230,10 @@ export class DetailedGameViewModal extends BaseModal {
   private applyUserMe(me: UserMeResponse | false): void {
     this.viewerSignedIn = viewerIsSignedIn(me);
     this.viewerTrusted = viewerIsTrusted(me);
-    // A CrazyGames sign-in surfaces as a userMeResponse without a linked
+    // A portal sign-in surfaces as a userMeResponse without a linked
     // identity, so re-read the SDK profile alongside it.
-    if (crazyGamesSDK.isOnCrazyGames()) {
-      void crazyGamesSDK.getUserProfile().then((user) => {
+    if (gamePortal.isOnGamePortal()) {
+      void gamePortal.getUserProfile().then((user) => {
         if (user !== null) this.viewerSignedIn = true;
       });
     }

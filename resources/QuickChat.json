@@ -39,6 +39,14 @@
     {
       "key": "send_gold_to",
       "requiresPlayer": true
+    },
+    {
+      "key": "renew_alliance",
+      "requiresPlayer": false
+    },
+    {
+      "key": "break_alliance",
+      "requiresPlayer": false
     }
   ],
   "attack": [
@@ -72,6 +80,14 @@
     },
     {
       "key": "crown",
+      "requiresPlayer": false
+    },
+    {
+      "key": "nuke",
+      "requiresPlayer": true
+    },
+    {
+      "key": "spend_gold",
       "requiresPlayer": false
     }
   ],
@@ -165,6 +181,14 @@
     {
       "key": "same_team",
       "requiresPlayer": false
+    },
+    {
+      "key": "what_doing",
+      "requiresPlayer": false
+    },
+    {
+      "key": "why_attack",
+      "requiresPlayer": false
     }
   ],
   "misc": [
@@ -199,6 +223,10 @@
     {
       "key": "join_discord",
       "requiresPlayer": false
+    },
+    {
+      "key": "alliances_end_together",
+      "requiresPlayer": true
     }
   ],
   "warnings": [
@@ -263,7 +291,7 @@
       "requiresPlayer": true
     },
     {
-      "key": "stop_trading_all",
+      "key": "stop_trading_enemies",
       "requiresPlayer": false
     },
     {
@@ -273,6 +301,18 @@
     {
       "key": "pirating",
       "requiresPlayer": true
+    },
+    {
+      "key": "stop_war",
+      "requiresPlayer": false
+    },
+    {
+      "key": "nuke_threat",
+      "requiresPlayer": false
+    },
+    {
+      "key": "renew_or_nuke",
+      "requiresPlayer": false
     }
   ]
 }

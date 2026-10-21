@@ -5,9 +5,9 @@ import { UserSettings } from "src/client/UserSettings";
 import { z } from "zod";
 import { getApiBase, getAudience } from "./Api";
 import { ClientEnv } from "./ClientEnv";
-import { crazyGamesSDK } from "./CrazyGamesSDK";
 import type { DesktopSessionState, SessionFailureKind } from "./DesktopShell";
 import { desktopLinkGate, isDesktopShell } from "./DesktopShell";
+import { gamePortal, type GamePortalName } from "./GamePortal";
 import { showInGameAlert } from "./InGameModal";
 import type { SteamTicketResult } from "./SteamSDK";
 import { steamSDK } from "./SteamSDK";
@@ -16,6 +16,15 @@ import { generateCryptoRandomUUID, translateText } from "./Utils";
 export type UserAuth = { jwt: string; claims: TokenPayload } | false;
 
 const PERSISTENT_ID_KEY = "player_persistent_id";
+
+// Prefix for caching the active publicId returned by /users/@me keyed by
+// the player's persistent ID (sub claim in JWT). Keyed by persistent ID rather
+// than being a single value so signing into a different account cannot read
+// the previous one's cosmetic scope (#5660).
+export const PUBLIC_ID_CACHE_PREFIX = "cached_public_id_";
+
+let __inMemoryPublicId: string | null = null;
+let __inMemoryPublicIdSub: string | null = null;
 
 let __jwt: string | null = null;
 let __refreshPromise: Promise<void> | null = null;
@@ -319,16 +328,16 @@ function announceLoggedOut(): void {
 export function clearLocalSession(): void {
   const hadSession = __jwt !== null;
   __jwt = null;
+  updateUserSettingsForJwt(null);
   localStorage.removeItem(PERSISTENT_ID_KEY);
-  // Switch cosmetics back to the logged-out scope. The player's own
-  // selections stay stored under their publicId and are restored on the
-  // next login (#4955).
-  UserSettings.setPlayerId(null);
+  // Switch cosmetics back to the logged-out scope (via updateUserSettingsForJwt).
+  // The player's own selections stay stored under their publicId and are restored
+  // on the next login (#4955, #5660).
   // Keep the desktop bar's session state in sync: without this, a 401-driven
   // logOut() (or any other clearLocalSession caller) leaves __sessionState at
   // "signed-in" with no JWT behind it, so the bar hides and multiplayer
   // unlocks with nothing backing it until the next join self-heals it.
-  // Guarded to Steam only -- web/CrazyGames have no bar and no session-gating
+  // Guarded to Steam only -- web/portals have no bar and no session-gating
   // to desync. Skipped while a retry is legitimately in flight (status
   // "retrying"): retrySteamSignIn already owns that transition end-to-end via
   // its own userAuth() call, and this must not race ahead of it with a stale
@@ -437,10 +446,12 @@ export async function userAuth(
     if (!result.success) {
       const error = z.prettifyError(result.error);
       console.error("Invalid payload", error);
+      updateUserSettingsForJwt(null);
       return false;
     }
 
     const claims = result.data;
+    updateUserSettingsForJwt(jwt);
     return { jwt, claims };
   } catch (e) {
     console.error("isLoggedIn failed", e);
@@ -501,13 +512,14 @@ async function doRefreshJwt(): Promise<void> {
     setSessionState({ status: "signed-out", reason: ticketReason(result) });
     return;
   }
-  if (crazyGamesSDK.isOnCrazyGames()) {
-    const token = await crazyGamesSDK.getUserToken();
+  const portal = gamePortal.name();
+  if (portal !== null) {
+    const token = await gamePortal.getUserToken();
     if (token) {
-      // Signed-in CrazyGames account: exchange their token for our session.
-      // No CrazyGames account / not signed in falls through to the guest flow
+      // Signed-in portal account: exchange their token for our session.
+      // No portal account / not signed in falls through to the guest flow
       // below.
-      return doCrazyGamesLogin(token);
+      return doPortalLogin(portal, token);
     }
   }
   try {
@@ -543,6 +555,7 @@ async function doRefreshJwt(): Promise<void> {
     __expiresAt = Date.now() + expiresIn * 1000;
     console.log("Refresh succeeded");
     __jwt = jwt;
+    updateUserSettingsForJwt(jwt);
   } catch (e) {
     console.warn("Refresh failed", e);
     // if server unreachable, just clear jwt
@@ -587,34 +600,41 @@ function ticketReason(
   }
 }
 
-// Exchange a CrazyGames user token for our session. On CrazyGames the refresh
-// cookie isn't usable (SameSite=Lax, cross-site iframe), so we re-exchange on
-// expiry instead of hitting /auth/refresh.
-async function doCrazyGamesLogin(token: string): Promise<void> {
+// Exchange a CrazyGames or Poki user token for our session. On a portal the
+// refresh cookie isn't usable (SameSite=Lax, cross-site iframe), so we
+// re-exchange on expiry instead of hitting /auth/refresh.
+async function doPortalLogin(
+  portal: GamePortalName,
+  token: string,
+): Promise<void> {
   try {
-    console.log("Logging in with CrazyGames");
-    const response = await fetch(getApiBase() + "/auth/crazygames", {
+    console.log(`Logging in with ${portal}`);
+    // Bounded like doSteamLogin: userAuth() awaits this exchange, so a
+    // response that never settles would stall every authenticated call.
+    const response = await fetch(`${getApiBase()}/auth/${portal}`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ token }),
+      signal: AbortSignal.timeout(10_000),
     });
     if (response.status !== 200) {
-      console.error("CrazyGames login failed", response);
+      console.error(`${portal} login failed`, response);
       __jwt = null;
       return;
     }
     const json = await response.json();
     const { jwt, expiresIn } = json;
     __expiresAt = Date.now() + expiresIn * 1000;
-    console.log("CrazyGames login succeeded");
+    console.log(`${portal} login succeeded`);
     __jwt = jwt;
+    updateUserSettingsForJwt(jwt);
   } catch (e) {
-    console.warn("CrazyGames login failed", e);
+    console.warn(`${portal} login failed`, e);
     __jwt = null;
   }
 }
 
-// Exchange a Steam Web-API ticket for our session. Like CrazyGames, the
+// Exchange a Steam Web-API ticket for our session. Like the portals, the
 // refresh cookie isn't usable from app://openfront (cross-site), so we
 // re-exchange a fresh ticket on expiry rather than hitting /auth/refresh.
 async function doSteamLogin(ticket: string): Promise<void> {
@@ -658,6 +678,7 @@ async function doSteamLogin(ticket: string): Promise<void> {
     __expiresAt = Date.now() + expiresIn * 1000;
     console.log("Steam login succeeded");
     __jwt = jwt;
+    updateUserSettingsForJwt(jwt);
     setSessionState({ status: "signed-in" });
   } catch (e) {
     console.warn("Steam login failed", e);
@@ -666,14 +687,14 @@ async function doSteamLogin(ticket: string): Promise<void> {
   }
 }
 
-// Called when the CrazyGames auth state changes mid-session (e.g. the player
+// Called when the portal auth state changes mid-session (e.g. the player
 // signs in): drop the cached session so userAuth() re-exchanges the new token.
 // Single-flight: Main's auth listener and the account modal's sign-in handler
 // can both react to the same sign-in; sharing one exchange keeps them from
 // racing on __jwt. Any refresh already in flight is allowed to settle first so
 // its stale result can't satisfy the reauth.
 let __reauthPromise: Promise<UserAuth> | null = null;
-export async function reauthAfterCrazyGamesChange(): Promise<UserAuth> {
+export async function reauthAfterPortalChange(): Promise<UserAuth> {
   __reauthPromise ??= (async () => {
     try {
       if (__refreshPromise) {
@@ -690,7 +711,7 @@ export async function reauthAfterCrazyGamesChange(): Promise<UserAuth> {
 }
 
 // The Retry action on the desktop status bar. Single-flight for the same
-// reason reauthAfterCrazyGamesChange is: the bar and any other caller must
+// reason reauthAfterPortalChange is: the bar and any other caller must
 // share one exchange rather than race on __jwt. A refresh already in flight
 // is allowed to settle first so its stale result cannot satisfy the retry.
 //
@@ -791,4 +812,88 @@ function getPersistentIDFromLocalStorage(): string {
   localStorage.setItem(PERSISTENT_ID_KEY, newID);
 
   return newID;
+}
+
+/**
+ * Records the publicId /users/@me reported for a session, so the next load can
+ * restore the cosmetic scope from the token alone (see PUBLIC_ID_CACHE_PREFIX).
+ *
+ * Best effort by design: this is a cache of something the network already
+ * answered, so a storage failure (quota exceeded, private browsing) must not
+ * cost the caller the profile it just fetched. Losing the cache only puts the
+ * cosmetic scope back on the /users/@me path it was there to shortcut.
+ */
+export function rememberPublicId(persistentId: string, publicId: string): void {
+  // Keep the latest known mapping in memory before attempting persistence.
+  // localStorage is only a cache; a storage failure must not lose the publicId
+  // that /users/@me already gave us during this session.
+  __inMemoryPublicIdSub = persistentId;
+  __inMemoryPublicId = publicId;
+  try {
+    localStorage.setItem(PUBLIC_ID_CACHE_PREFIX + persistentId, publicId);
+  } catch (e) {
+    console.warn("rememberPublicId: cache write failed", e);
+  }
+}
+
+/**
+ * Returns the publicId cached for the given persistentId, preferring the fresh
+ * in-memory publicId learned from /users/@me during this session, and falling
+ * back to localStorage.
+ */
+export function getCachedPublicId(persistentId: string): string | null {
+  if (__inMemoryPublicIdSub === persistentId && __inMemoryPublicId !== null) {
+    return __inMemoryPublicId;
+  }
+  try {
+    return localStorage.getItem(PUBLIC_ID_CACHE_PREFIX + persistentId);
+  } catch (e) {
+    console.warn("getCachedPublicId: cache read failed", e);
+    return null;
+  }
+}
+
+/**
+ * Points UserSettings at the cosmetic scope of whoever `jwt` belongs to, and at
+ * the logged-out scope when there is no session.
+ *
+ * Called when `__jwt` is assigned rather than from /users/@me alone, so
+ * cosmetics are scoped correctly from the first render instead of only once
+ * the profile request lands. A token whose claims do not validate clears the
+ * scope rather than guessing at one: an unverified `sub` must never adopt a
+ * player's stored cosmetics.
+ */
+function updateUserSettingsForJwt(jwt: string | null): void {
+  if (!jwt) {
+    __inMemoryPublicId = null;
+    __inMemoryPublicIdSub = null;
+    UserSettings.setPlayerId(null);
+    return;
+  }
+  try {
+    const result = TokenPayloadSchema.safeParse(decodeJwt(jwt));
+    if (!result.success) {
+      __inMemoryPublicId = null;
+      __inMemoryPublicIdSub = null;
+      UserSettings.setPlayerId(null);
+      return;
+    }
+
+    const sub = result.data.sub;
+    // Replace the session-only fallback when the authenticated account changes
+    // so a previous account can never bleed into the new cosmetic scope.
+    if (__inMemoryPublicIdSub !== null && __inMemoryPublicIdSub !== sub) {
+      __inMemoryPublicId = null;
+      __inMemoryPublicIdSub = null;
+    }
+
+    const publicId = getCachedPublicId(sub);
+    UserSettings.setPlayerId(publicId ?? null);
+  } catch {
+    // An undecodable token or invalid claims cannot safely select a cosmetic
+    // scope. Drop the in-memory mapping associated with the old session.
+    __inMemoryPublicId = null;
+    __inMemoryPublicIdSub = null;
+    UserSettings.setPlayerId(null);
+  }
 }

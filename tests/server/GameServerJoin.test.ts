@@ -1,4 +1,5 @@
 import { GameType } from "@openfront/engine-api/game/GameTypes";
+import { ADMIN_BOT_CLIENT_ID } from "@openfront/engine-api/Schemas";
 import { GameEnv } from "@openfront/shared/configuration/Env";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ServerEnv } from "../../src/server/ServerEnv";
@@ -67,6 +68,62 @@ describe("GameServer.joinClient — environment guards", () => {
 
       expect(game.getClientIdForPersistentId("acct-pid")).toBe(cid("second"));
       expect(game.wasAdmitted("acct-pid")).toBe(true);
+    });
+
+    // The evicted session's record stays known to the game with the same
+    // persistentID and publicId. Kicking it must cut off
+    // the session that replaced it, not ban the account while leaving that
+    // session connected (and every later kick returning "already kicked").
+    describe("kicking the account after a duplicate replacement", () => {
+      const withPublicId = (tag: string) =>
+        makeClient({
+          clientID: cid(tag),
+          persistentID: "acct-pid",
+          publicId: "pubACCT1",
+        });
+
+      it("cuts off the live session when the evicted record is kicked", () => {
+        vi.spyOn(ServerEnv, "env").mockReturnValue(GameEnv.Prod);
+        const game = makeGame();
+        const first = withPublicId("first");
+        const second = withPublicId("second");
+        game.joinClient(first);
+        game.joinClient(second);
+
+        game.kickClient(cid("first"), "kick_reason.admin");
+
+        expect(mockWsOf(second).close).toHaveBeenCalledWith(
+          1000,
+          "kick_reason.admin",
+        );
+        expect(game.numClients()).toBe(0);
+        expect(game.joinClient(withPublicId("third"))).toBe("kicked");
+      });
+
+      it("cuts off the live session on an admin kick by publicId", () => {
+        vi.spyOn(ServerEnv, "env").mockReturnValue(GameEnv.Prod);
+        const game = makeGame();
+        const second = withPublicId("second");
+        game.joinClient(withPublicId("first"));
+        game.joinClient(second);
+
+        const result = game.handleIntent(
+          { type: "kick_player", targetPublicID: "pubACCT1" } as any,
+          {
+            clientID: ADMIN_BOT_CLIENT_ID,
+            isLobbyCreator: false,
+            isAdmin: true,
+            isAdminBot: true,
+          },
+        );
+
+        expect(result.status).toBe(200);
+        expect(mockWsOf(second).close).toHaveBeenCalledWith(
+          1000,
+          "kick_reason.admin",
+        );
+        expect(game.numClients()).toBe(0);
+      });
     });
 
     it("is not enforced outside prod", () => {

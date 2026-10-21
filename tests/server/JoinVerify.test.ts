@@ -1,6 +1,7 @@
 import type { TokenPayload } from "@openfront/shared/ApiSchemas";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
+  clientAuth,
   isSteamAuthenticated,
   planJoinVerify,
   verifyJoin,
@@ -100,13 +101,74 @@ describe("verifyJoin", () => {
     expect(JSON.parse(init.body).token).toBeNull();
   });
 
+  // The API answers 200 {status:"error"} when siteverify or the name check
+  // fails or runs past its budget; the name verdict rides along when the
+  // name check finished.
+  it("passes a degraded error verdict through with the API's identity", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(
+        jsonResponse({
+          status: "error",
+          reason: "turnstile timed out",
+          username: "SnugglePuppy",
+          clanTag: "COOL",
+        }),
+      ),
+    );
+    expect(await verifyJoin("ip", "tok", "xXblackxX", "CoOl")).toEqual({
+      status: "error",
+      reason: "turnstile timed out",
+      degraded: true,
+      identity: { username: "SnugglePuppy", clanTag: "COOL" },
+    });
+  });
+
+  it("normalizes an absent clanTag to null on a degraded verdict", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(
+        jsonResponse({
+          status: "error",
+          reason: "turnstile failed (TimeoutError)",
+          username: "Alice",
+        }),
+      ),
+    );
+    expect(await verifyJoin("ip", "tok", "Alice", null)).toEqual({
+      status: "error",
+      reason: "turnstile failed (TimeoutError)",
+      degraded: true,
+      identity: { username: "Alice", clanTag: null },
+    });
+  });
+
+  it("returns a degraded verdict without identity when the name check did not finish", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValue(
+        jsonResponse({ status: "error", reason: "name check timed out" }),
+      );
+    vi.stubGlobal("fetch", fetchMock);
+
+    expect(await verifyJoin("ip", "tok", "Alice", null)).toEqual({
+      status: "error",
+      reason: "name check timed out",
+      degraded: true,
+    });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
   it("returns error on a 4xx without retrying", async () => {
     const fetchMock = vi
       .fn()
       .mockResolvedValue(jsonResponse({ message: "bad payload" }, 400));
     vi.stubGlobal("fetch", fetchMock);
 
-    expect((await verifyJoin("ip", "tok", "Alice", null)).status).toBe("error");
+    expect(await verifyJoin("ip", "tok", "Alice", null)).toMatchObject({
+      status: "error",
+      degraded: false,
+    });
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 
@@ -119,7 +181,10 @@ describe("verifyJoin", () => {
       .mockResolvedValue(jsonResponse({ message: "boom" }, 500));
     vi.stubGlobal("fetch", fetchMock);
 
-    expect((await verifyJoin("ip", "tok", "Alice", null)).status).toBe("error");
+    expect(await verifyJoin("ip", "tok", "Alice", null)).toMatchObject({
+      status: "error",
+      degraded: false,
+    });
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 
@@ -127,7 +192,10 @@ describe("verifyJoin", () => {
     const fetchMock = vi.fn().mockRejectedValue(new Error("network down"));
     vi.stubGlobal("fetch", fetchMock);
 
-    expect((await verifyJoin("ip", "tok", "Alice", null)).status).toBe("error");
+    expect(await verifyJoin("ip", "tok", "Alice", null)).toMatchObject({
+      status: "error",
+      degraded: false,
+    });
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 
@@ -137,7 +205,10 @@ describe("verifyJoin", () => {
       .mockResolvedValue(jsonResponse({ approved: true }));
     vi.stubGlobal("fetch", fetchMock);
 
-    expect((await verifyJoin("ip", "tok", "Alice", null)).status).toBe("error");
+    expect(await verifyJoin("ip", "tok", "Alice", null)).toMatchObject({
+      status: "error",
+      degraded: false,
+    });
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 });
@@ -257,5 +328,31 @@ describe("isSteamAuthenticated", () => {
     expect(isSteamAuthenticated(claims())).toBe(false);
     expect(isSteamAuthenticated(claims("discord"))).toBe(false);
     expect(isSteamAuthenticated(null)).toBe(false);
+  });
+});
+
+describe("clientAuth", () => {
+  function claims(provider?: string): TokenPayload {
+    return {
+      jti: "j",
+      sub: "s",
+      iat: 0,
+      iss: "i",
+      aud: "openfront.io",
+      exp: 0,
+      ...(provider ? { provider } : {}),
+    } as TokenPayload;
+  }
+
+  it("is account for any persistent provider", () => {
+    for (const provider of ["discord", "google", "steam", "email", "poki"]) {
+      expect(clientAuth(claims(provider))).toBe("account");
+    }
+  });
+
+  it("is anonymous for no token, a guest session, and a token without a provider", () => {
+    expect(clientAuth(null)).toBe("anonymous");
+    expect(clientAuth(claims("guest"))).toBe("anonymous");
+    expect(clientAuth(claims())).toBe("anonymous");
   });
 });

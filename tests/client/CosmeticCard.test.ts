@@ -1,8 +1,8 @@
 import { html } from "lit";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import type { ResolvedCosmetic } from "../../src/client/Cosmetics";
-import "../../src/client/components/CosmeticCard";
 import type { CosmeticCard } from "../../src/client/components/CosmeticCard";
+import "../../src/client/components/CosmeticCard";
+import type { ResolvedCosmetic } from "../../src/client/Cosmetics";
 
 const translations = {
   "cosmetics.adfree": "ad-free for life!",
@@ -490,5 +490,64 @@ describe("CosmeticCard", () => {
     // ...but stay under the legendary sparkles, which sit at the card corners
     // where the badge is and are meant to read as the topmost layer.
     expect(badgeZ).toBeLessThan(ruleZ("data-cosmetic-sparkle"));
+  });
+
+  describe("subscription perks tooltip", () => {
+    const tier = (requiresSteamLicence: boolean): ResolvedCosmetic => ({
+      type: "subscription",
+      cosmetic: {
+        name: requiresSteamLicence ? "steam_plus" : "gold",
+        description: "",
+        priceMonthly: 499,
+        dailySoftCurrency: 0,
+        dailyHardCurrency: 10,
+        hardCurrencySignupBonus: 250,
+        canCreatePublicLobbies: true,
+        requiresSteamLicence,
+        product: null,
+        rarity: "epic",
+      } as never,
+      colorPalette: null,
+      relationship: "purchasable",
+      key: requiresSteamLicence
+        ? "subscription:steam_plus"
+        : "subscription:gold",
+    });
+
+    async function perksOf(resolved: ResolvedCosmetic) {
+      card = document.createElement("cosmetic-card") as CosmeticCard;
+      card.resolved = resolved;
+      document.body.appendChild(card);
+      await card.updateComplete;
+      const info = card.querySelector("cosmetic-info") as HTMLElement & {
+        perks: { label: string }[];
+      };
+      return info.perks.map((perk) => perk.label);
+    }
+
+    it("lists the verified name and public lobbies for a web tier", async () => {
+      installTranslations();
+      expect(await perksOf(tier(false))).toEqual([
+        "Verified username",
+        "cosmetics.public_lobbies",
+      ]);
+    });
+
+    it("lists neither for a tier the Steam licence already covers", async () => {
+      installTranslations();
+      expect(await perksOf(tier(true))).toEqual([]);
+    });
+  });
+
+  it("hands its preview the size it is given", async () => {
+    await createCard();
+    const preview = () =>
+      card!.querySelector("cosmetic-preview") as HTMLElement & {
+        size: string;
+      };
+    expect(preview().size).toBe("card");
+    card!.previewSize = "detail";
+    await card!.updateComplete;
+    expect(preview().size).toBe("detail");
   });
 });
