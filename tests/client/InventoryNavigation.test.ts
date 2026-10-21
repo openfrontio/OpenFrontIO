@@ -5,12 +5,12 @@ import type { LitElement } from "lit";
 import path from "path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import "../../src/client/InventoryModal";
-import type { InventoryModal } from "../../src/client/InventoryModal";
-import { modalRouter } from "../../src/client/ModalRouter";
-import { initNavigation } from "../../src/client/Navigation";
 import { DesktopNavBar } from "../../src/client/components/DesktopNavBar";
 import { MobileNavBar } from "../../src/client/components/MobileNavBar";
 import { PlayPage } from "../../src/client/components/PlayPage";
+import type { InventoryModal } from "../../src/client/InventoryModal";
+import { modalRouter } from "../../src/client/ModalRouter";
+import { initNavigation } from "../../src/client/Navigation";
 
 if (!("ResizeObserver" in globalThis)) {
   class ResizeObserverStub {

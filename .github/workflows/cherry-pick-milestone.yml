@@ -2,7 +2,7 @@
 # with milestone "v34" is cherry-picked onto branch v34. Fires on merge (for a
 # PR milestoned beforehand) and on milestoning (for a PR already merged).
 #
-#   - Clean pick that passes typecheck, Prettier and lint on the release
+#   - Clean pick that passes typecheck, format and lint on the release
 #     branch: pushed straight to it, same as a hand pick. It is the exact
 #     change already reviewed on main.
 #   - Conflict, or a clean pick that fails those checks (it can lean on code
@@ -76,7 +76,7 @@ jobs:
         ${{ github.event.pull_request.merge_commit_sha }} (PR
         #${{ github.event.pull_request.number }}) from main cherry-picked
         cleanly onto release branch `${{ github.event.pull_request.milestone.title }}`
-        and is HEAD, but the result fails typecheck, Prettier or lint on this
+        and is HEAD, but the result fails typecheck, format or lint on this
         branch. Fix it so the change from the PR works on this branch.
 
       FIX_RULES: |
@@ -93,8 +93,9 @@ jobs:
         - Leave no conflict markers anywhere.
         - Before you stop, typecheck the whole project (`npm run typecheck`
           if package.json defines it, otherwise `npx tsc --noEmit`) and fix
-          every error the backport causes. Then run `npx eslint` and
-          `npx prettier --check` on the files the backport changes.
+          every error the backport causes. Then run `npx eslint` and this
+          branch's formatter (`npx oxfmt --check` if package.json has oxfmt,
+          otherwise `npx prettier --check`) on the files the backport changes.
 
         Only edit files. Do not run git commands that change state (add,
         commit, cherry-pick, checkout, reset, stash); the workflow commits
@@ -158,9 +159,23 @@ jobs:
       # The checks CI runs, scoped to what a backport can break: the whole
       # project's types, and format and lint on the files changed since the
       # base commit given as $1. Failed check names go to $RUNNER_TEMP/failed.
-      - name: Write check script
+      #
+      # The release branch picks the formatter, not main: branches before the
+      # oxfmt switch still run Prettier, and the two wrap template literals
+      # differently, so using the wrong one fails the branch's own format job.
+      - name: Write check scripts
         if: steps.target.outputs.skip == 'false'
         run: |
+          cat > "$RUNNER_TEMP/format.sh" <<'EOF'
+          set -uo pipefail
+          mode=$1; shift
+          if jq -e '.devDependencies.oxfmt' package.json > /dev/null; then
+            [ "$mode" = check ] && exec npx oxfmt --check "$@"
+            exec npx oxfmt "$@"
+          fi
+          [ "$mode" = check ] && exec npx prettier --check --ignore-unknown "$@"
+          exec npx prettier --write --ignore-unknown "$@"
+          EOF
           cat > "$RUNNER_TEMP/check.sh" <<'EOF'
           set -uo pipefail
           base=$1
@@ -180,7 +195,7 @@ jobs:
             npx tsc --noEmit || failed+=(typecheck)
           fi
           if [ ${#files[@]} -gt 0 ]; then
-            npx prettier --check --ignore-unknown "${files[@]}" || failed+=(prettier)
+            bash "$RUNNER_TEMP/format.sh" check "${files[@]}" || failed+=(format)
           fi
           if [ ${#code[@]} -gt 0 ]; then
             { npx oxlint "${code[@]}" && npx eslint --no-warn-ignored "${code[@]}"; } || failed+=(lint)
@@ -336,7 +351,7 @@ jobs:
           prompt: ${{ format('{0}{1}', env.FIX_MODE == 'conflict' && env.CONFLICT_INTRO || env.CHECKS_INTRO, env.FIX_RULES) }}
           claude_args: |
             --model claude-opus-5-5
-            --allowedTools "Read,Edit,Write,Grep,Glob,LS,Bash(git status:*),Bash(git diff:*),Bash(git log:*),Bash(git show:*),Bash(npm run typecheck:*),Bash(npx tsc:*),Bash(npx prettier:*),Bash(npx eslint:*),Bash(npx oxlint:*)"
+            --allowedTools "Read,Edit,Write,Grep,Glob,LS,Bash(git status:*),Bash(git diff:*),Bash(git log:*),Bash(git show:*),Bash(npm run typecheck:*),Bash(npx tsc:*),Bash(npx prettier:*),Bash(npx oxfmt:*),Bash(npx eslint:*),Bash(npx oxlint:*)"
             --max-turns 120
 
       # Backup account for when the primary is out of usage; see the shared
@@ -351,7 +366,7 @@ jobs:
           prompt: ${{ format('{0}{1}', env.FIX_MODE == 'conflict' && env.CONFLICT_INTRO || env.CHECKS_INTRO, env.FIX_RULES) }}
           claude_args: |
             --model claude-opus-5-5
-            --allowedTools "Read,Edit,Write,Grep,Glob,LS,Bash(git status:*),Bash(git diff:*),Bash(git log:*),Bash(git show:*),Bash(npm run typecheck:*),Bash(npx tsc:*),Bash(npx prettier:*),Bash(npx eslint:*),Bash(npx oxlint:*)"
+            --allowedTools "Read,Edit,Write,Grep,Glob,LS,Bash(git status:*),Bash(git diff:*),Bash(git log:*),Bash(git show:*),Bash(npm run typecheck:*),Bash(npx tsc:*),Bash(npx prettier:*),Bash(npx oxfmt:*),Bash(npx eslint:*),Bash(npx oxlint:*)"
             --max-turns 120
 
       - name: Open PR with fixed pick
@@ -390,7 +405,7 @@ jobs:
           git add -A
           mapfile -t changed < <(git diff --cached --name-only --diff-filter=d "$BASE")
           if [ ${#changed[@]} -gt 0 ]; then
-            npx prettier --write --ignore-unknown "${changed[@]}"
+            bash "$RUNNER_TEMP/format.sh" write "${changed[@]}"
             git add -A
           fi
 
@@ -440,7 +455,7 @@ jobs:
           else
             body+="
 
-          Typecheck, Prettier and lint pass on the result."
+          Typecheck, format and lint pass on the result."
           fi
           body+="
 

@@ -1,3 +1,4 @@
+import { MAX_USERNAME_LENGTH } from "@openfront/engine-api/Schemas";
 import { simpleHash } from "@openfront/engine-lib/Util";
 import {
   DataSet,
@@ -142,10 +143,15 @@ export function censorPlayer(
       ? shadowNames[simpleHash(username) % shadowNames.length]
       : username;
 
+  const clampedName =
+    censoredName.length > MAX_USERNAME_LENGTH
+      ? censoredName.slice(0, MAX_USERNAME_LENGTH).trim()
+      : censoredName;
+
   const censoredClanTag =
     clanTag && !clanTagIsProfane && !combinedSlurAcrossBoundary
       ? clanTag.toUpperCase()
       : null;
 
-  return { username: censoredName, clanTag: censoredClanTag };
+  return { username: clampedName, clanTag: censoredClanTag };
 }

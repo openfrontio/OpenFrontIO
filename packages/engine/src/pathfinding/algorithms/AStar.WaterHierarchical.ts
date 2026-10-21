@@ -1,9 +1,9 @@
 import { GameMap, TileRef } from "@openfront/engine-api/game/GameMap";
 import { DebugSpan } from "../../utilities/DebugSpan";
 import { PathFinder } from "../types";
+import { AbstractGraph, AbstractNode } from "./AbstractGraph";
 import { AbstractGraphAStar } from "./AStar.AbstractGraph";
 import { AStarWaterBounded } from "./AStar.WaterBounded";
-import { AbstractGraph, AbstractNode } from "./AbstractGraph";
 import { BFSGrid } from "./BFS.Grid";
 
 export class AStarWaterHierarchical implements PathFinder<number> {

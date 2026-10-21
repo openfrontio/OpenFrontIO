@@ -1,13 +1,13 @@
 import { assetUrl } from "@openfront/shared/AssetUrls";
 import { html } from "lit";
 import { customElement, property } from "lit/decorators.js";
-import { translateText } from "./Utils";
 import { BaseModal } from "./components/BaseModal";
 import { modalHeader } from "./components/ui/ModalHeader";
 import {
   collectGraphicsDiagnostics,
   GraphicsDiagnostics,
 } from "./utilities/Diagnostic";
+import { translateText } from "./Utils";
 const infoIcon = assetUrl("images/InfoIcon.svg");
 
 @customElement("troubleshooting-modal")

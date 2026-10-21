@@ -1,4 +1,5 @@
 import {
+  HumanDisconnects,
   HumanStatsSnapshot,
   PlayerType,
 } from "@openfront/engine-api/game/GameTypes";
@@ -10,6 +11,19 @@ import { Game } from "./Game";
  * engine-api's GameTypes). Read-only: nothing here touches the simulation.
  */
 export function humanStatsSnapshot(game: Game): HumanStatsSnapshot {
+  return {
+    ...humanDisconnects(game),
+    // A copy: the live object keeps changing as the game runs.
+    stats: deepCopy(game.stats().stats()),
+  };
+}
+
+/**
+ * The tick and the humans whose connection is lost right now, without the
+ * stats (see HumanDisconnects in engine-api's GameTypes): nothing is copied
+ * but the disconnects. Read-only, like humanStatsSnapshot.
+ */
+export function humanDisconnects(game: Game): HumanDisconnects {
   const disconnectedAt: Record<ClientID, number> = {};
   for (const player of game.allPlayers()) {
     const clientID = player.clientID();
@@ -18,12 +32,7 @@ export function humanStatsSnapshot(game: Game): HumanStatsSnapshot {
     const tick = player.disconnectedAtTick();
     if (tick !== null) disconnectedAt[clientID] = tick;
   }
-  return {
-    tick: game.ticks(),
-    // A copy: the live object keeps changing as the game runs.
-    stats: deepCopy(game.stats().stats()),
-    disconnectedAt,
-  };
+  return { tick: game.ticks(), disconnectedAt };
 }
 
 // The stats are plain objects and arrays of numbers, bigints and strings.

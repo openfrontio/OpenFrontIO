@@ -3,7 +3,10 @@ import { AttackExecution } from "@openfront/engine/execution/AttackExecution";
 import { MarkDisconnectedExecution } from "@openfront/engine/execution/MarkDisconnectedExecution";
 import { SpawnExecution } from "@openfront/engine/execution/SpawnExecution";
 import { Game } from "@openfront/engine/game/Game";
-import { humanStatsSnapshot } from "@openfront/engine/game/HumanStats";
+import {
+  humanDisconnects,
+  humanStatsSnapshot,
+} from "@openfront/engine/game/HumanStats";
 import { describe, expect, it } from "vitest";
 import { setup } from "../../util/Setup";
 import { executeTicks } from "../../util/utils";
@@ -58,6 +61,25 @@ describe("humanStatsSnapshot", () => {
     expect(humanStatsSnapshot(g).disconnectedAt).toEqual({ client_b: 120 });
   });
 
+  it("gives the tick and the disconnects alone, as the full snapshot has them", async () => {
+    const g = await game();
+    g.stats().attack(g.player("player_a"), g.player("player_b"), 100);
+    new MarkDisconnectedExecution(g.player("player_b"), true).init(g, 120);
+
+    const disconnects = humanDisconnects(g);
+    expect(disconnects).toEqual({
+      tick: g.ticks(),
+      disconnectedAt: { client_b: 120 },
+    });
+    // No stats copied.
+    expect(Object.keys(disconnects)).toEqual(["tick", "disconnectedAt"]);
+    const full = humanStatsSnapshot(g);
+    expect(disconnects).toEqual({
+      tick: full.tick,
+      disconnectedAt: full.disconnectedAt,
+    });
+  });
+
   it("leaves out players without a client", async () => {
     const g = await setup("plains", {}, [
       new PlayerInfo("alice", PlayerType.Human, "client_a", "player_a"),
@@ -97,7 +119,10 @@ describe("humanStatsSnapshot", () => {
           );
         }
         g.executeNextTick();
-        if (snapshotEveryTick) humanStatsSnapshot(g);
+        if (snapshotEveryTick) {
+          humanStatsSnapshot(g);
+          humanDisconnects(g);
+        }
         trace.push(
           g
             .allPlayers()

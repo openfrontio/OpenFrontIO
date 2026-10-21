@@ -1,6 +1,7 @@
 import type { TokenPayload } from "@openfront/shared/ApiSchemas";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
+  clientAuth,
   isSteamAuthenticated,
   planJoinVerify,
   verifyJoin,
@@ -327,5 +328,31 @@ describe("isSteamAuthenticated", () => {
     expect(isSteamAuthenticated(claims())).toBe(false);
     expect(isSteamAuthenticated(claims("discord"))).toBe(false);
     expect(isSteamAuthenticated(null)).toBe(false);
+  });
+});
+
+describe("clientAuth", () => {
+  function claims(provider?: string): TokenPayload {
+    return {
+      jti: "j",
+      sub: "s",
+      iat: 0,
+      iss: "i",
+      aud: "openfront.io",
+      exp: 0,
+      ...(provider ? { provider } : {}),
+    } as TokenPayload;
+  }
+
+  it("is account for any persistent provider", () => {
+    for (const provider of ["discord", "google", "steam", "email", "poki"]) {
+      expect(clientAuth(claims(provider))).toBe("account");
+    }
+  });
+
+  it("is anonymous for no token, a guest session, and a token without a provider", () => {
+    expect(clientAuth(null)).toBe("anonymous");
+    expect(clientAuth(claims("guest"))).toBe("anonymous");
+    expect(clientAuth(claims())).toBe("anonymous");
   });
 });

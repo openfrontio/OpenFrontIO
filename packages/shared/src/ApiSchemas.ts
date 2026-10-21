@@ -1,8 +1,3 @@
-import { ClanTagSchema } from "@openfront/engine-api/Schemas";
-import {
-  BigIntStringSchema,
-  PlayerStatsSchema,
-} from "@openfront/engine-api/StatsSchemas";
 import {
   Difficulty,
   GameMode,
@@ -10,6 +5,11 @@ import {
   HumansVsNations,
   RankedType,
 } from "@openfront/engine-api/game/GameTypes";
+import { ClanTagSchema } from "@openfront/engine-api/Schemas";
+import {
+  BigIntStringSchema,
+  PlayerStatsSchema,
+} from "@openfront/engine-api/StatsSchemas";
 import { z } from "zod";
 import { base64urlToUuid } from "./Base64";
 import {

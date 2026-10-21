@@ -162,6 +162,7 @@ function makeGame(opts: {
       clientID: () => "me",
     }),
     inSpawnPhase: () => false,
+    ticks: () => 6000,
     updatesSinceLastTick: () => {
       if (!opts.ended || delivered) return {};
       delivered = true;
