@@ -73,6 +73,13 @@ describe("saved-games-panel", () => {
     expect(api.listSavedGames).not.toHaveBeenCalled();
   });
 
+  // The Solo modal refreshes the panel on every open, guests included.
+  it("doesn't ask a guest's saves on refresh", async () => {
+    const panel = await mount({ signedIn: false });
+    await panel.refresh();
+    expect(api.listSavedGames).not.toHaveBeenCalled();
+  });
+
   it("lists the player's saves and starts one from Play", async () => {
     const panel = await mount({ signedIn: true });
     await settle(panel);

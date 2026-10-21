@@ -57,18 +57,19 @@ export class SavedGamesPanel extends LitElement {
 
   connectedCallback() {
     super.connectedCallback();
-    if (this.signedIn) void this.refresh();
+    void this.refresh();
   }
 
   protected willUpdate(changed: Map<string | number | symbol, unknown>) {
     // connectedCallback covers the first render; later sign-ins load here.
     if (changed.has("signedIn") && changed.get("signedIn") !== undefined) {
-      if (this.signedIn) void this.refresh();
+      void this.refresh();
     }
     if (changed.has("sharedId")) void this.loadShared();
   }
 
   async refresh(): Promise<void> {
+    if (!this.signedIn) return;
     this.saves = "loading";
     const saves = await listSavedGames();
     this.saves = saves === false ? "error" : saves;

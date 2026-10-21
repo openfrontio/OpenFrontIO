@@ -68,6 +68,10 @@ export async function readSnapshotHeader(
           resolve(e.data.header);
         }
       });
+      worker.addEventListener("error", (e: ErrorEvent) => {
+        clearTimeout(timer);
+        reject(new Error(e.message || "The snapshot reader failed"));
+      });
       worker.postMessage({
         type: "read_snapshot_header",
         snapshot,

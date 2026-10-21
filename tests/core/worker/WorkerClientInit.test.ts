@@ -13,14 +13,16 @@ import {
 const worker = vi.hoisted(() => ({
   posted: [] as { msg: Record<string, unknown>; transfer: unknown[] }[],
   listeners: [] as ((e: MessageEvent) => void)[],
+  errorListeners: [] as ((e: ErrorEvent) => void)[],
   terminated: false,
 }));
 const mapFiles = vi.hoisted(() => ({ fail: false }));
 
 vi.mock("@openfront/engine/worker/Worker.worker?worker&inline", () => ({
   default: class {
-    addEventListener(_type: string, l: (e: MessageEvent) => void) {
-      worker.listeners.push(l);
+    addEventListener(type: string, l: (e: any) => void) {
+      if (type === "error") worker.errorListeners.push(l);
+      else worker.listeners.push(l);
     }
     postMessage(msg: Record<string, unknown>, transfer: unknown[] = []) {
       worker.posted.push({ msg, transfer });
@@ -56,6 +58,7 @@ const start = {
 beforeEach(() => {
   worker.posted = [];
   worker.listeners = [];
+  worker.errorListeners = [];
   worker.terminated = false;
   mapFiles.fail = false;
 });
@@ -143,6 +146,16 @@ describe("readSnapshotHeader", () => {
       error: "not a game snapshot",
     });
     await expect(header).rejects.toThrow("not a game snapshot");
+    expect(worker.terminated).toBe(true);
+  });
+
+  test("fails at once when the worker dies", async () => {
+    const header = readSnapshotHeader(new Uint8Array([9]));
+    await vi.waitFor(() => expect(worker.posted).toHaveLength(1));
+    for (const l of worker.errorListeners) {
+      l(new ErrorEvent("error", { message: "out of memory" }));
+    }
+    await expect(header).rejects.toThrow("out of memory");
     expect(worker.terminated).toBe(true);
   });
 });
