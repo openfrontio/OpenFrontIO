@@ -929,6 +929,8 @@
     "open_on_twitch": "Open {channel} on Twitch"
   },
   "ffa_rating": {
+    "calibrating": "Calibrating {n}/10",
+    "credit": "Rating by OFstats",
     "tier": {
       "bronze": "Bronze",
       "diamond": "Diamond",
