@@ -50,6 +50,18 @@ describe("MapPlaylist weights", () => {
     expect(total / 2000).toBeCloseTo(2.3, 1);
   });
 
+  it("never empties a queue with a positive weight in it", () => {
+    const weights = Object.fromEntries(
+      Object.values(GameMapType).map((m) => [m, { ffaWeight: 0 }]),
+    );
+    weights[GameMapType.World] = { ffaWeight: 0.1 };
+    for (let seed = 1; seed <= 50; seed++) {
+      expect(p.buildMapsList("ffa", weights, new PseudoRandom(seed))).toEqual([
+        GameMapType.World,
+      ]);
+    }
+  });
+
   it("drops queued playlists when the weights change", async () => {
     const playlist = new MapPlaylist();
     await playlist.gameConfig("ffa");
