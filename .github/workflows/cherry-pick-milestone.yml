@@ -93,14 +93,11 @@ jobs:
         - Leave no conflict markers anywhere.
         - Before you stop, typecheck the whole project (`npm run typecheck`
           if package.json defines it, otherwise `npx tsc --noEmit`) and fix
-          every error the backport causes. Then run every linter declared in
-          this branch's package.json on the changed code: run Oxlint if
-          configured, and ESLint if configured (both may be configured). Use
-          `./node_modules/.bin/oxlint` and/or `./node_modules/.bin/eslint`, not
-          `npx`; do not install tools. If neither linter is declared, report
-          the missing lint configuration. Also run this branch's formatter
-          (`npx oxfmt --check` if package.json has oxfmt, otherwise
-          `npx prettier --check`) on the files the backport changes.
+          every error the backport causes. Then run the linter(s) (`npx oxlint`
+          if package.json only has oxlint, otherwise 'npx oxlint' and then
+          'npx eslint'), and this branch's formatter (`npm run format:check` if
+          package.json has it, otherwise `npx prettier --check`) on the files
+          the backport changes.
 
         Only edit files. Do not run git commands that change state (add,
         commit, cherry-pick, checkout, reset, stash); the workflow commits
@@ -380,7 +377,7 @@ jobs:
           prompt: ${{ format('{0}{1}', env.FIX_MODE == 'conflict' && env.CONFLICT_INTRO || env.CHECKS_INTRO, env.FIX_RULES) }}
           claude_args: |
             --model claude-opus-5-5
-            --allowedTools "Read,Edit,Write,Grep,Glob,LS,Bash(git status:*),Bash(git diff:*),Bash(git log:*),Bash(git show:*),Bash(npm run typecheck:*),Bash(npx tsc:*),Bash(npx prettier:*),Bash(npx oxfmt:*),Bash(./node_modules/.bin/eslint:*),Bash(./node_modules/.bin/oxlint:*)"
+            --allowedTools "Read,Edit,Write,Grep,Glob,LS,Bash(git status:*),Bash(git diff:*),Bash(git log:*),Bash(git show:*),Bash(npm run typecheck:*),Bash(npx tsc:*),Bash(npx prettier:*),Bash(npx oxfmt:*),Bash(npx eslint:*),Bash(npx oxlint:*)"
             --max-turns 120
 
       # Backup account for when the primary is out of usage; see the shared
@@ -395,7 +392,7 @@ jobs:
           prompt: ${{ format('{0}{1}', env.FIX_MODE == 'conflict' && env.CONFLICT_INTRO || env.CHECKS_INTRO, env.FIX_RULES) }}
           claude_args: |
             --model claude-opus-5-5
-            --allowedTools "Read,Edit,Write,Grep,Glob,LS,Bash(git status:*),Bash(git diff:*),Bash(git log:*),Bash(git show:*),Bash(npm run typecheck:*),Bash(npx tsc:*),Bash(npx prettier:*),Bash(npx oxfmt:*),Bash(./node_modules/.bin/eslint:*),Bash(./node_modules/.bin/oxlint:*)"
+            --allowedTools "Read,Edit,Write,Grep,Glob,LS,Bash(git status:*),Bash(git diff:*),Bash(git log:*),Bash(git show:*),Bash(npm run typecheck:*),Bash(npx tsc:*),Bash(npx prettier:*),Bash(npx oxfmt:*),Bash(npx eslint:*),Bash(npx oxlint:*)"
             --max-turns 120
 
       - name: Open PR with fixed pick
