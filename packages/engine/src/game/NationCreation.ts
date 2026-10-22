@@ -13,6 +13,7 @@ import {
   Nation as ManifestNation,
 } from "@openfront/engine-api/game/MapFiles";
 import { GameStartInfo } from "@openfront/engine-api/Schemas";
+import { getCompactMapNationCount } from "@openfront/engine-lib/game/NationCount";
 import { PseudoRandom } from "@openfront/engine-lib/PseudoRandom";
 
 /**
@@ -24,6 +25,8 @@ import { PseudoRandom } from "@openfront/engine-lib/PseudoRandom";
  *   - Public HumansVsNations: matches nation count to human player count
  *   - Public compact maps: uses 25% of manifest nations
  *   - Otherwise: uses all manifest nations
+ * nationCountForGame (engine-lib NationCount.ts) predicts the count without
+ * making them, so change the two together.
  *
  * When more nations are needed than the manifest defines, names are first
  * drawn from `additionalNations`; any remainder is generated procedurally.
@@ -163,20 +166,6 @@ function createRandomNations(
     );
   }
   return nations;
-}
-
-// For compact maps, only 25% of nations are used (minimum 1).
-export function getCompactMapNationCount(
-  manifestNationCount: number,
-  isCompactMap: boolean,
-): number {
-  if (manifestNationCount === 0) {
-    return 0;
-  }
-  if (isCompactMap) {
-    return Math.max(1, Math.floor(manifestNationCount * 0.25));
-  }
-  return manifestNationCount;
 }
 
 function generateUniqueNationName(

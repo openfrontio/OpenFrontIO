@@ -4,6 +4,7 @@ import {
   GameMapType,
   GameMode,
   GameType,
+  HumansVsNations,
   Nation,
 } from "@openfront/engine-api/game/GameTypes";
 import {
@@ -11,6 +12,7 @@ import {
   Nation as ManifestNation,
 } from "@openfront/engine-api/game/MapFiles";
 import { GameConfig, GameStartInfo } from "@openfront/engine-api/Schemas";
+import { nationCountForGame } from "@openfront/engine-lib/game/NationCount";
 import { PseudoRandom } from "@openfront/engine-lib/PseudoRandom";
 import { createNationsForGame } from "@openfront/engine/game/NationCreation";
 
@@ -336,5 +338,59 @@ describe("createNationsForGame: additionalNations pool", () => {
     const names = nationNames(nations);
     expect(names).toHaveLength(8);
     expect(new Set(names).size).toBe(8);
+  });
+});
+
+describe("nationCountForGame", () => {
+  test("predicts how many nations createNationsForGame makes", () => {
+    const manifests = [0, 1, 3, 72].map(makeManifestNations);
+    const extras = makeAdditionalNations(["Ex1", "Ex2"]);
+    let cases = 0;
+    for (const manifest of manifests) {
+      for (const gameType of [
+        GameType.Public,
+        GameType.Private,
+        GameType.Singleplayer,
+      ]) {
+        for (const gameMapSize of [GameMapSize.Normal, GameMapSize.Compact]) {
+          for (const [gameMode, playerTeams] of [
+            [GameMode.FFA, undefined],
+            [GameMode.Team, 2],
+            [GameMode.Team, HumansVsNations],
+          ] as const) {
+            for (const nations of ["default", "disabled", 0, 5, 80] as const) {
+              for (const numHumans of [0, 7]) {
+                const gameStart = makeGameStart(0);
+                gameStart.config = {
+                  ...gameStart.config,
+                  gameType,
+                  gameMapSize,
+                  gameMode,
+                  playerTeams,
+                  nations,
+                };
+                const made = createNationsForGame(
+                  gameStart,
+                  manifest,
+                  extras,
+                  numHumans,
+                  new PseudoRandom(1),
+                );
+                expect(
+                  nationCountForGame(
+                    gameStart.config,
+                    manifest.length,
+                    numHumans,
+                  ),
+                  JSON.stringify(gameStart.config),
+                ).toBe(made.length);
+                cases++;
+              }
+            }
+          }
+        }
+      }
+    }
+    expect(cases).toBe(720);
   });
 });
