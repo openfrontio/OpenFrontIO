@@ -21,7 +21,6 @@ export class RankedModal extends BaseModal {
 
   @state() private elo: number | string = "...";
   @state() private elo2v2: number | string = "...";
-  @state() private eloFfa: number | string = "...";
   @state() private userMeResponse: UserMeResponse | false = false;
   @state() private errorMessage: string | null = null;
   // Hides the trust lock until /users/@me answers, so a trusted player
@@ -72,7 +71,6 @@ export class RankedModal extends BaseModal {
     if (this.errorMessage) {
       this.elo = translateText("map_component.error");
       this.elo2v2 = translateText("map_component.error");
-      this.eloFfa = translateText("map_component.error");
       return;
     }
 
@@ -83,7 +81,6 @@ export class RankedModal extends BaseModal {
       const noElo = translateText("matchmaking_modal.no_elo");
       this.elo = leaderboard?.oneVone?.elo ?? noElo;
       this.elo2v2 = leaderboard?.twoVtwo?.elo ?? noElo;
-      this.eloFfa = leaderboard?.ffa?.elo ?? noElo;
     }
   }
 
@@ -92,7 +89,6 @@ export class RankedModal extends BaseModal {
     this.showTrustRequired = false;
     this.elo = "...";
     this.elo2v2 = "...";
-    this.eloFfa = "...";
     this.errorMessage = null;
 
     try {
@@ -107,7 +103,6 @@ export class RankedModal extends BaseModal {
       this.errorMessage = translateText("map_component.error");
       this.elo = translateText("map_component.error");
       this.elo2v2 = translateText("map_component.error");
-      this.eloFfa = translateText("map_component.error");
     } finally {
       this.loading = false;
       this.updateElo();
@@ -147,18 +142,11 @@ export class RankedModal extends BaseModal {
             () => this.handleRanked("2v2"),
           )}
           ${this.renderCard(
-            translateText("mode_selector.ranked_ffa_title"),
-            this.errorMessage ??
-              (this.isRankedEligible()
-                ? translateText("matchmaking_modal.elo", { elo: this.eloFfa })
-                : translateText("mode_selector.ranked_title")),
-            () => this.handleRanked("ffa"),
-          )}
-          ${this.renderCard(
             translateText("mode_selector.ranked_clanwars_title"),
             this.errorMessage ??
               translateText("mode_selector.ranked_clanwars_subtitle"),
             () => this.handleRanked("clanwars"),
+            true,
           )}
         </div>
         <p class="mt-6 text-xs text-white/60 leading-relaxed text-center">
@@ -175,7 +163,12 @@ export class RankedModal extends BaseModal {
     `;
   }
 
-  private renderCard(title: string, subtitle: string, onClick: () => void) {
+  private renderCard(
+    title: string,
+    subtitle: string,
+    onClick: () => void,
+    wide = false,
+  ) {
     // Ranked admits trusted accounts only: a green open lock when the
     // player's account is trusted, a red closed one otherwise.
     const lock = this.trustKnown()
@@ -188,7 +181,9 @@ export class RankedModal extends BaseModal {
     return html`
       <button
         @click=${onClick}
-        class="relative flex flex-col w-full h-28 sm:h-32 rounded-2xl bg-malibu-blue border-0 transition-all duration-200 hover:bg-aquarius hover:scale-[1.03] hover:shadow-[var(--shadow-action-card-hover)] active:bg-malibu-blue/80 active:scale-[0.98] p-6 items-center justify-center gap-3"
+        class="${wide
+          ? "sm:col-span-2 "
+          : ""}relative flex flex-col w-full h-28 sm:h-32 rounded-2xl bg-malibu-blue border-0 transition-all duration-200 hover:bg-aquarius hover:scale-[1.03] hover:shadow-[var(--shadow-action-card-hover)] active:bg-malibu-blue/80 active:scale-[0.98] p-6 items-center justify-center gap-3"
       >
         <div class="flex flex-col items-center gap-1 text-center">
           <h3

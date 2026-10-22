@@ -1,4 +1,4 @@
-import { RankedType } from "@openfront/engine-api/game/GameTypes";
+import { GameType, RankedType } from "@openfront/engine-api/game/GameTypes";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { PurchaseButton } from "../../../../src/client/components/PurchaseButton";
 import {
@@ -8,6 +8,7 @@ import {
 } from "../../../../src/client/Cosmetics";
 import "../../../../src/client/hud/layers/WinModal";
 import type { WinModal } from "../../../../src/client/hud/layers/WinModal";
+import type { GameView } from "../../../../src/client/view";
 
 vi.mock("../../../../src/client/Utils", () => ({
   translateText: vi.fn((key: string) => {
@@ -77,24 +78,6 @@ describe("WinModal Requeue", () => {
     vi.restoreAllMocks();
   });
 
-  describe("isRankedGame detection", () => {
-    it("should detect ranked 1v1 game", () => {
-      const gameConfig = {
-        rankedType: RankedType.OneVOne,
-      };
-      const isRankedGame = gameConfig.rankedType === RankedType.OneVOne;
-      expect(isRankedGame).toBe(true);
-    });
-
-    it("should not detect non-ranked game", () => {
-      const gameConfig = {
-        rankedType: undefined,
-      };
-      const isRankedGame = gameConfig.rankedType === RankedType.OneVOne;
-      expect(isRankedGame).toBe(false);
-    });
-  });
-
   describe("requeue navigation", () => {
     it("should navigate to /?requeue when requeue is triggered", () => {
       // Simulate the _handleRequeue behavior
@@ -131,6 +114,54 @@ describe("WinModal Requeue", () => {
       const hasRequeue = url.searchParams.has("requeue");
       expect(hasRequeue).toBe(false);
     });
+  });
+});
+
+describe("WinModal Play Again", () => {
+  const stubGame = (rankedType?: RankedType) =>
+    ({
+      config: () => ({
+        gameConfig: () => ({ rankedType, gameType: GameType.Public }),
+        isReplay: () => false,
+      }),
+      myPlayer: () => null,
+    }) as unknown as GameView;
+
+  async function shownWith(rankedType?: RankedType): Promise<WinModal> {
+    const modal = document.createElement("win-modal") as WinModal;
+    modal.game = stubGame(rankedType);
+    document.body.appendChild(modal);
+    await modal.show();
+    await modal.updateComplete;
+    return modal;
+  }
+
+  it("offers no Play Again after a ranked FFA game", async () => {
+    const modal = await shownWith(RankedType.FreeForAll);
+    expect(modal.querySelector('[data-win-action="requeue"]')).toBeNull();
+    modal.remove();
+  });
+
+  it.each([
+    [RankedType.OneVOne, "1v1"],
+    [RankedType.TwoVTwo, "2v2"],
+    [RankedType.ClanWars, "clanwars"],
+  ] as const)("requeues a ranked %s game as %s", async (rankedType, mode) => {
+    const modal = await shownWith(rankedType);
+    const requeue = vi.fn();
+    document.addEventListener("matchmaking-requeue", requeue);
+    modal
+      .querySelector<HTMLButtonElement>('[data-win-action="requeue"]')!
+      .click();
+    expect(requeue.mock.calls[0][0].detail).toEqual({ mode });
+    document.removeEventListener("matchmaking-requeue", requeue);
+    modal.remove();
+  });
+
+  it("offers no Play Again after an unranked game", async () => {
+    const modal = await shownWith(undefined);
+    expect(modal.querySelector('[data-win-action="requeue"]')).toBeNull();
+    modal.remove();
   });
 });
 

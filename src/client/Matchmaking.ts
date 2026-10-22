@@ -24,7 +24,7 @@ import { translateText } from "./Utils";
 
 // The ranked queues. Same strings as RankedType, the API's `mode` param and
 // the `/?requeue=` value.
-export type MatchmakingMode = "1v1" | "2v2" | "ffa" | "clanwars";
+export type MatchmakingMode = "1v1" | "2v2" | "clanwars";
 
 type MatchmakingJoin = {
   type: "join";
@@ -75,11 +75,9 @@ export class MatchmakingModal extends BaseModal {
     const title = translateText(
       this.mode === "2v2"
         ? "matchmaking_modal.title_2v2"
-        : this.mode === "ffa"
-          ? "matchmaking_modal.title_ffa"
-          : this.mode === "clanwars"
-            ? "matchmaking_modal.title_clanwars"
-            : "matchmaking_modal.title",
+        : this.mode === "clanwars"
+          ? "matchmaking_modal.title_clanwars"
+          : "matchmaking_modal.title",
     );
     return modalHeader({
       titleContent: html`<span class="${DEFAULT_TITLE_CLASS}">${title}</span>
@@ -517,9 +515,7 @@ export class MatchmakingModal extends BaseModal {
     const row =
       this.mode === "2v2"
         ? userMe.player.leaderboard?.twoVtwo
-        : this.mode === "ffa"
-          ? userMe.player.leaderboard?.ffa
-          : userMe.player.leaderboard?.oneVone;
+        : userMe.player.leaderboard?.oneVone;
     this.elo = row?.elo ?? translateText("matchmaking_modal.no_elo");
     this.selectedClanTag = this.selectedClanFrom(userMe);
     // Clan wars is played for a clan: without one of the player's own clans

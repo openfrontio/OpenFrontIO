@@ -76,18 +76,23 @@ describe("RankedModal trust lock", () => {
 
   it("shows a green open lock on every ranked card for a trusted account", async () => {
     const locks = await openWith(userMe("trusted"));
-    expect(locks).toHaveLength(4);
+    expect(locks).toHaveLength(3);
     for (const lock of locks) {
       expect(lock.dataset.trust).toBe("unlocked");
       expect(lock.classList.contains("text-green-400")).toBe(true);
     }
   });
 
+  it("has no FFA card", async () => {
+    await openWith(userMe("trusted"));
+    expect(modal.textContent).not.toContain("mode_selector.ranked_ffa_title");
+  });
+
   it.each(["untrusted", null, undefined] as const)(
     "shows a red closed lock when the tier is %s",
     async (tier) => {
       const locks = await openWith(userMe(tier));
-      expect(locks).toHaveLength(4);
+      expect(locks).toHaveLength(3);
       for (const lock of locks) {
         expect(lock.dataset.trust).toBe("locked");
         expect(lock.classList.contains("text-red-400")).toBe(true);
@@ -98,7 +103,6 @@ describe("RankedModal trust lock", () => {
   it("shows a red closed lock when signed out", async () => {
     const locks = await openWith(false);
     expect(locks.map((l) => l.dataset.trust)).toEqual([
-      "locked",
       "locked",
       "locked",
       "locked",
@@ -114,7 +118,7 @@ describe("RankedModal trust lock", () => {
     resolve(userMe("trusted"));
     await vi.waitFor(async () => {
       await modal.updateComplete;
-      expect(modal.querySelectorAll("[data-trust]")).toHaveLength(4);
+      expect(modal.querySelectorAll("[data-trust]")).toHaveLength(3);
     });
   });
 
@@ -162,7 +166,7 @@ describe("RankedModal trust lock", () => {
       await modal.updateComplete;
     }
 
-    it.each([0, 1, 2, 3])(
+    it.each([0, 1, 2])(
       "shows the ranked trust popup for an untrusted account (card %i)",
       async (index) => {
         await openWith(userMe("untrusted"));
@@ -185,8 +189,7 @@ describe("RankedModal trust lock", () => {
     it.each([
       [0, "1v1"],
       [1, "2v2"],
-      [2, "ffa"],
-      [3, "clanwars"],
+      [2, "clanwars"],
     ] as const)(
       "opens matchmaking for a trusted account (card %i, %s)",
       async (index, mode) => {

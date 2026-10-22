@@ -104,6 +104,7 @@ import {
 } from "./PresenceGroup";
 import { fetchMyGameXp, fetchProgressionConfig } from "./ProgressionApi";
 import { startProvisionalProgress } from "./ProvisionalProgress";
+import { consumeRequeueUrl } from "./RequeueUrl";
 import type { RewardsModal } from "./RewardsModal";
 import {
   ensureServerList,
@@ -1578,7 +1579,9 @@ class Client {
       window.location.href = homeHref();
     }
 
-    const requeueMode = this.consumeRequeueUrl();
+    const requeueMode = consumeRequeueUrl(window.location, (url) =>
+      history.replaceState(null, "", url),
+    );
     if (requeueMode !== null) {
       document.dispatchEvent(
         new CustomEvent("open-matchmaking", {
@@ -1608,29 +1611,6 @@ class Client {
     // The store loads on demand (see LazyModals); until it has, there's
     // nothing to refresh.
     if (customElements.get("store-modal")) this.storeModal?.refresh();
-  }
-
-  // Returns the requeue mode ("/?requeue" = 1v1, "/?requeue=2v2" = 2v2,
-  // "/?requeue=ffa" = FFA, "/?requeue=clanwars" = clan wars), or null when
-  // the URL has no requeue param.
-  private consumeRequeueUrl(): MatchmakingMode | null {
-    const searchParams = new URLSearchParams(window.location.search);
-    if (!searchParams.has("requeue")) {
-      return null;
-    }
-    const param = searchParams.get("requeue");
-    const mode =
-      param === "2v2" || param === "ffa" || param === "clanwars"
-        ? param
-        : "1v1";
-
-    searchParams.delete("requeue");
-    const newUrl =
-      window.location.pathname +
-      (searchParams.toString() ? `?${searchParams.toString()}` : "") +
-      window.location.hash;
-    history.replaceState(null, "", newUrl);
-    return mode;
   }
 
   private desktopUpdateState: DesktopUpdateState | null = null;
