@@ -36,7 +36,7 @@ export interface GameUpdateViewData {
    */
   packedMotionPlans?: Uint32Array;
   /**
-   * Packed unit updates (stride of 20 floats per unit).
+   * Packed unit updates (stride of 21 floats per unit, see UNIT_UPDATE_STRIDE).
    */
   packedUnitUpdates?: Float64Array;
   /**
