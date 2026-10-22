@@ -733,20 +733,25 @@ export class MapPlaylist {
 
   // Each map appears floor(weight) times, plus once more with probability
   // equal to the fraction, so a weight of 2.3 averages 2.3 copies over
-  // playlists.
+  // playlists. If every weight is below 1 the rounding can leave the list
+  // empty; the heaviest map then stands in, so the caller's all-zero fallback
+  // never puts a 0-weight map back in.
   private buildMapsList(
     type: ScheduledPublicGameType,
     weights: MapWeights,
     rand: PseudoRandom,
   ): GameMapType[] {
     const maps: GameMapType[] = [];
+    let heaviest: { map: GameMapType; weight: number } | undefined;
     for (const { type: map } of allMaps) {
       const weight = weights[map]?.[WEIGHT_KEYS[type]] ?? DEFAULT_MAP_WEIGHT;
+      if (weight > (heaviest?.weight ?? 0)) heaviest = { map, weight };
       const copies = Math.floor(weight) + (rand.next() < weight % 1 ? 1 : 0);
       for (let i = 0; i < copies; i++) {
         maps.push(map);
       }
     }
+    if (maps.length === 0 && heaviest !== undefined) maps.push(heaviest.map);
     return maps;
   }
 
