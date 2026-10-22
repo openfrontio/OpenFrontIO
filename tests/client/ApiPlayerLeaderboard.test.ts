@@ -53,6 +53,22 @@ describe("fetchPlayerLeaderboard", () => {
     expect((result as { "1v1": unknown[] })["1v1"]).toHaveLength(1);
   });
 
+  it("keeps an FFA entry's uncertainty and tier", async () => {
+    (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce(
+      res({
+        "1v1": [],
+        "2v2": [],
+        ffa: [{ ...entry(1), uncertainty: 61.2, tier: "Diamond II" }],
+      }),
+    );
+
+    const result = (await fetchPlayerLeaderboard(1)) as { ffa: unknown[] };
+    expect(result.ffa[0]).toMatchObject({
+      uncertainty: 61.2,
+      tier: "Diamond II",
+    });
+  });
+
   it("requests the page it was asked for", async () => {
     const fetchMock = global.fetch as ReturnType<typeof vi.fn>;
     fetchMock.mockResolvedValueOnce(res({ "1v1": [], "2v2": [] }));
