@@ -272,7 +272,7 @@ export class PlayerGameHistoryView extends LitElement {
     const url = `${ClientEnv.shareOrigin()}${ClientEnv.gamePath(gameId)}`;
 
     try {
-      await copyToClipboard(url);
+      await void copyToClipboard(url);
       showToast(translateText("common.copied"), "green");
     } catch {
       showToast(translateText("common.failed_copy"), "red");

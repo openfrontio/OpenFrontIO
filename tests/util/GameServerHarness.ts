@@ -90,7 +90,7 @@ export function makeMockWs(): MockWs {
     trigger: async (event, ...args) => {
       if (event === "close") ws.readyState = CLOSED;
       for (const handler of listeners.get(event) ?? []) {
-        await Promise.resolve(handler(...args));
+        await handler(...args);
       }
     },
     emit: (msg) => ws.trigger("message", clientFrame(msg)),

@@ -15,9 +15,9 @@ function makeClient(
   username: string,
   clanTag: string | null,
   role: string | null = null,
-  publicId?: string,
+  publicId: string | undefined = undefined,
   friends: string[] = [],
-  cosmetics?: { verified?: boolean },
+  cosmetics: { verified?: boolean } | undefined = undefined,
 ): Client {
   return harnessClient({
     clientID,

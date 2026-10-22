@@ -166,7 +166,7 @@ const DIGITS: Record<string, readonly string[]> = {
 // Width of the digit block in digit pixels: glyphs plus the gaps between
 // them (no trailing gap, so the block centres exactly).
 const textWidth = (text: string): number =>
-  text.split("").reduce((a, c) => a + DIGITS[c][0].length, 0) + text.length - 1;
+  [...text].reduce((a, c) => a + DIGITS[c][0].length, 0) + text.length - 1;
 
 // The digits as one path of pixel runs.
 function digitsPath(text: string, x0: number, y0: number, s: number): string {

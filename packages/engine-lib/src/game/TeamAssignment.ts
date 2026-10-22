@@ -17,8 +17,8 @@ export function assignTeams(
   teams: Team[],
   isDuosTriosQuads: boolean,
   maxTeamSize: number = getMaxTeamSize(players.length, teams.length),
-): Map<PlayerInfo, Team> {
-  const result = new Map<PlayerInfo, Team>();
+): Map<PlayerInfo, Team | "kicked"> {
+  const result = new Map<PlayerInfo, Team | "kicked">();
   const teamPlayerCount = new Map<Team, number>();
 
   // Matchmade games arrive with a server-pinned team slot (teamIndex). The
@@ -165,7 +165,7 @@ export function assignTeamsLobbyPreview(
   teams: Team[],
   teamCount: TeamCountConfig,
   nationCount: number,
-): Map<PlayerInfo, Team> {
+): Map<PlayerInfo, Team | "kicked"> {
   const maxTeamSize = getMaxTeamSize(
     players.length + nationCount,
     teams.length,

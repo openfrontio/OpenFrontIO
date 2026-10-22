@@ -876,9 +876,11 @@ describe("MasterLobbyService hosted lobbies", () => {
     const created = workers.flatMap((w) =>
       sentMessages(w).filter((m) => m.type === "createGame"),
     );
-    expect(
-      created.map((m) => m.publicGameType).sort((a, b) => a.localeCompare(b)),
-    ).toEqual(["ffa", "special", "team"]);
+    expect(created.map((m) => m.publicGameType).sort()).toEqual([
+      "ffa",
+      "special",
+      "team",
+    ]);
   });
 });
 

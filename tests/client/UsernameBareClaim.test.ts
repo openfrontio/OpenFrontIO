@@ -156,7 +156,7 @@ describe("UsernamePanel bare-claim fallback", () => {
     // configurable here, so replacing the object is the way in.
     Object.defineProperty(window, "location", {
       configurable: true,
-      value: Object.assign(new URL(realLocation.href), { reload, hash: "" }),
+      value: { ...realLocation, reload, hash: "" },
     });
   });
 
@@ -287,11 +287,7 @@ describe("UsernamePanel bare-claim fallback", () => {
     history.replaceState(null, "", "/?x=1#modal=change-username");
     Object.defineProperty(window, "location", {
       configurable: true,
-      value: Object.assign(new URL(realLocation.href), {
-        pathname: "/",
-        search: "?x=1",
-        reload,
-      }),
+      value: { ...realLocation, pathname: "/", search: "?x=1", reload },
     });
     const replaceState = vi.spyOn(history, "replaceState");
     updateUsername.mockResolvedValue({ ok: true, data: okBody() });

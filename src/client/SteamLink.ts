@@ -74,7 +74,7 @@ export function normalizeSteamLinkCode(raw: string): string {
 export function isValidSteamLinkCode(code: string): boolean {
   return (
     code.length === CODE_LENGTH &&
-    code.split("").every((ch) => CODE_ALPHABET.includes(ch))
+    [...code].every((ch) => CODE_ALPHABET.includes(ch))
   );
 }
 

@@ -59,12 +59,13 @@ async function clanFetch(
   options?: RequestInit,
 ): Promise<Response> {
   const url = `${getApiBase()}${path}`;
-  const headers = new Headers(options?.headers);
-  if (!headers.has("Accept")) headers.set("Accept", "application/json");
-  headers.set("Authorization", await getAuthHeader());
   return fetch(url, {
     ...options,
-    headers,
+    headers: {
+      Accept: "application/json",
+      ...options?.headers,
+      Authorization: await getAuthHeader(),
+    },
   });
 }
 

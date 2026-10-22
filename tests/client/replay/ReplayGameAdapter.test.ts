@@ -103,8 +103,8 @@ describe("ReplayGameAdapter", () => {
         view
           .allies()
           .map((a) => a.smallID())
-          .sort((a, b) => a - b),
-      ).toEqual([...state.allies].sort((a, b) => a - b));
+          .sort(),
+      ).toEqual([...state.allies].sort());
     }
     // A spectator's view: the replay belongs to nobody.
     expect(adapter.myPlayer()).toBeNull();

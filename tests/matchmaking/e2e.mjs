@@ -266,9 +266,7 @@ try {
     }
     c.check(
       `in-game team split is 2 vs 2 (${JSON.stringify(teamCounts)})`,
-      Object.values(teamCounts)
-        .sort((a, b) => a - b)
-        .join(",") === "2,2",
+      Object.values(teamCounts).sort().join(",") === "2,2",
     );
     c.check(
       "team split is identical on every client (deterministic)",

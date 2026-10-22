@@ -26,7 +26,7 @@ export class EmojiExecution implements Execution {
 
   constructor(
     private requestor: Player,
-    private recipientID: PlayerID,
+    private recipientID: PlayerID | typeof AllPlayers,
     private emoji: number,
   ) {}
 

@@ -290,8 +290,7 @@ console.log(
     `files rewritten: ${rewritten.size}, specifiers rewritten: ` +
     `${[...rewritten.values()].reduce((a, b) => a + b, 0)}`,
 );
-for (const [f, n] of [...rewritten].sort(([a], [b]) => a.localeCompare(b)))
-  console.log(`  ${n}\t${f}`);
+for (const [f, n] of [...rewritten].sort()) console.log(`  ${n}\t${f}`);
 if (warnings.length > 0) {
   console.log(`\nwarnings (${warnings.length}):`);
   for (const w of warnings) console.log(`  ${w}`);
