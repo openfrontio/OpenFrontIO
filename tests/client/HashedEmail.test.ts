@@ -92,6 +92,22 @@ describe("syncHashedEmail", () => {
     expect(profiles).toEqual([]);
   });
 
+  it("doesn't send a hash queued before a logout once ramp.js loads", async () => {
+    await syncHashedEmail(me({ email: "user@example.com" }), true);
+    await syncHashedEmail(false, true);
+    drain();
+
+    expect(profiles).toEqual([]);
+  });
+
+  it("still sends a queued hash when the same account syncs again", async () => {
+    await syncHashedEmail(me({ email: "user@example.com" }), true);
+    await syncHashedEmail(me({ email: "user@example.com" }), true);
+    drain();
+
+    expect(profiles).toEqual([{ format: "UUP1", heid: { sha256: USER_HASH } }]);
+  });
+
   it("doesn't write an account back after a logout that overtook its hash", async () => {
     const signIn = syncHashedEmail(me({ email: "user@example.com" }), true);
     await syncHashedEmail(false, true);

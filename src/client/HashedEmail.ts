@@ -48,8 +48,10 @@ export async function syncHashedEmail(
   localStorage.setItem(HEM_STORAGE_KEY, sha256);
   // ramp.js read window.ramp.up at init, so a first sign-in or a changed
   // email this session goes through setUserProfile. Without ramp.js (an ad
-  // blocker) the queue never drains, which is harmless.
+  // blocker) the queue never drains, which is harmless. It can drain after a
+  // logout or an account switch, so only a hash that's still stored is sent.
   window.ramp?.que.push(() => {
+    if (localStorage.getItem(HEM_STORAGE_KEY) !== sha256) return;
     window.ramp.setUserProfile({ format: "UUP1", heid: { sha256 } });
   });
 }
