@@ -3,7 +3,6 @@
   "name": "Horn Of Africa",
   "translation_key": "map.hornofafrica",
   "categories": ["africa", "new"],
-  "multiplayer_frequency": 5,
   "nations": [
     {
       "coordinates": [1767, 1707],

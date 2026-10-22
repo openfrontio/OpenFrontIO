@@ -3,7 +3,6 @@
   "name": "North America",
   "translation_key": "map.northamerica",
   "categories": ["featured", "continental", "north_america"],
-  "multiplayer_frequency": 5,
   "featured_rank": 3,
   "nations": [
     {

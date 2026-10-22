@@ -4,7 +4,6 @@
   "display_name": "Europe (Classic)",
   "translation_key": "map.europeclassic",
   "categories": ["europe", "continental"],
-  "multiplayer_frequency": 0,
   "nations": [
     {
       "coordinates": [171, 171],
