@@ -270,6 +270,57 @@ describe("saved-games-panel", () => {
     }
     expect(opened).toEqual([THEIRS.id, MINE.id]);
     expect(input.value).toBe("");
+    expect(panel.querySelector("[data-code-error]")).toBeNull();
+    expect(input.getAttribute("aria-invalid")).toBe("false");
+  });
+
+  it("pastes without opening", async () => {
+    const readText = vi.fn(async () => savedGameShareUrl(THEIRS.id));
+    Object.defineProperty(navigator, "clipboard", {
+      value: { writeText, readText },
+      configurable: true,
+    });
+    const panel = await mount({ signedIn: false });
+    const opened: unknown[] = [];
+    panel.addEventListener("open-shared-save", (e) =>
+      opened.push((e as CustomEvent).detail),
+    );
+    panel
+      .querySelector<HTMLButtonElement>('[data-action="paste-code"]')!
+      .click();
+    await settle(panel);
+    expect(
+      panel.querySelector<HTMLInputElement>("[data-save-code]")!.value,
+    ).toBe(savedGameShareUrl(THEIRS.id));
+    expect(opened).toEqual([]);
+    expect(panel.querySelector("[data-code-error]")).toBeNull();
+  });
+
+  it("retries the shared save already offered when its code is entered again", async () => {
+    api.fetchSharedSavedGame.mockResolvedValueOnce("request_failed");
+    api.fetchSharedSavedGame.mockResolvedValueOnce(THEIRS);
+    const panel = await mount({ signedIn: false, sharedId: THEIRS.id });
+    await vi.waitFor(() =>
+      expect(panel.querySelector("[data-shared-error]")).not.toBeNull(),
+    );
+    const opened: unknown[] = [];
+    panel.addEventListener("open-shared-save", (e) =>
+      opened.push((e as CustomEvent).detail),
+    );
+    const input = panel.querySelector<HTMLInputElement>("[data-save-code]")!;
+    input.value = THEIRS.id;
+    input.dispatchEvent(new Event("input"));
+    await panel.updateComplete;
+    panel
+      .querySelector<HTMLButtonElement>('[data-action="open-code"]')!
+      .click();
+    await vi.waitFor(() =>
+      expect(panel.querySelector("[data-shared-save]")?.textContent).toContain(
+        "Their game",
+      ),
+    );
+    expect(api.fetchSharedSavedGame).toHaveBeenCalledTimes(2);
+    expect(opened).toEqual([]);
   });
 
   it("says when what's pasted isn't a shared game", async () => {
@@ -287,7 +338,10 @@ describe("saved-games-panel", () => {
       .click();
     await panel.updateComplete;
     expect(opened).toEqual([]);
-    expect(panel.querySelector("[data-code-error]")).not.toBeNull();
+    const error = panel.querySelector("[data-code-error]")!;
+    expect(error).not.toBeNull();
+    expect(input.getAttribute("aria-invalid")).toBe("true");
+    expect(input.getAttribute("aria-errormessage")).toBe(error.id);
   });
 });
 

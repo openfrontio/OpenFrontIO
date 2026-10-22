@@ -1,5 +1,5 @@
 import type { SavedGame } from "@openfront/shared/ApiSchemas";
-import { html, LitElement, type TemplateResult } from "lit";
+import { html, LitElement, nothing, type TemplateResult } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
 import { ClientEnv } from "../ClientEnv";
 import { showInGameConfirm } from "../InGameModal";
@@ -137,6 +137,11 @@ export class SavedGamesPanel extends LitElement {
     this.codeInvalid = id === null;
     if (id === null) return;
     this.codeValue = "";
+    // The save already offered: the modal's id wouldn't change, so retry it.
+    if (id === this.sharedId) {
+      void this.loadShared();
+      return;
+    }
     this.dispatchEvent(
       new CustomEvent<string>("open-shared-save", {
         detail: id,
@@ -278,6 +283,7 @@ export class SavedGamesPanel extends LitElement {
       ? "bg-blue-600 hover:bg-blue-500 text-white"
       : "bg-white/5 hover:bg-white/10 text-white/80 border border-white/10";
     return html`<button
+      type="button"
       class="px-3 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wider transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${tone}"
       data-action=${opts.attr ?? ""}
       ?disabled=${opts.disabled ?? false}
@@ -296,6 +302,10 @@ export class SavedGamesPanel extends LitElement {
           placeholder=${translateText("saved_games.code_placeholder")}
           aria-label=${translateText("saved_games.code_placeholder")}
           data-save-code
+          aria-invalid=${this.codeInvalid ? "true" : "false"}
+          aria-errormessage=${this.codeInvalid
+            ? "saved-game-code-error"
+            : nothing}
           .value=${this.codeValue}
           @input=${(e: Event) => {
             this.codeValue = (e.target as HTMLInputElement).value;
@@ -318,7 +328,11 @@ export class SavedGamesPanel extends LitElement {
         )}
       </div>
       ${this.codeInvalid
-        ? html`<div class="text-xs text-red-400" data-code-error>
+        ? html`<div
+            id="saved-game-code-error"
+            class="text-xs text-red-400"
+            data-code-error
+          >
             ${translateText("saved_games.error.code_invalid")}
           </div>`
         : null}
