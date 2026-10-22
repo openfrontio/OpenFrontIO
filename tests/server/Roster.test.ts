@@ -124,9 +124,9 @@ describe("Roster", () => {
     expect(roster.byPersistentId(pid)).toBeUndefined();
     expect(roster.wasAdmitted(pid)).toBe(true);
 
-    // Once no longer reconnectable, unmarkAdmitted deletes admission
+    // Because the player was seated in roster.add, unmarkAdmitted does not delete admission
     roster.unmarkAdmitted(pid);
-    expect(roster.wasAdmitted(pid)).toBe(false);
+    expect(roster.wasAdmitted(pid)).toBe(true);
   });
 
   it("moves a reconnecting client to the end, on the new socket, and drops the old one", () => {

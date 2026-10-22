@@ -30,8 +30,15 @@ export class Roster {
     this.admitted.add(persistentID);
   }
 
+  private hasEverBeenSeated(persistentID: string): boolean {
+    for (const client of this.everyone.values()) {
+      if (client.persistentID === persistentID) return true;
+    }
+    return false;
+  }
+
   unmarkAdmitted(persistentID: string): void {
-    if (this.reconnectable.has(persistentID)) return;
+    if (this.hasEverBeenSeated(persistentID)) return;
     this.admitted.delete(persistentID);
   }
 

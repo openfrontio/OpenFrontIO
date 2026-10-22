@@ -438,4 +438,30 @@ describe("GameServer.joinClient — active game reconnection", () => {
 
     expect(game.wasAdmitted(pid)).toBe(true);
   });
+
+  it("maintains wasAdmitted when concurrent Attempt A rolls back tentative admission after Attempt B seated and left the lobby", () => {
+    const game = makeGame();
+    const pid = "concurrent-race-pid";
+
+    // Attempt A arrives first when not yet admitted
+    const guardA = createAdmissionGuard(game, pid, game.wasAdmitted(pid));
+    guardA.markAdmittedIfNeeded();
+    expect(guardA.wasAdmittedThisAttempt()).toBe(true);
+    expect(game.wasAdmitted(pid)).toBe(true);
+
+    // Concurrent Attempt B seats successfully
+    const clientB = makeClient({ clientID: cid("pB"), persistentID: pid });
+    expect(game.joinClient(clientB)).toBe("joined");
+
+    // Client B leaves the lobby before game starts (triggers forgetReconnect)
+    mockWsOf(clientB).trigger("close");
+    expect(game.getClientIdForPersistentId(pid)).toBeNull();
+    expect(game.wasAdmitted(pid)).toBe(true);
+
+    // Downstream failure causes Attempt A to rollback its tentative admission
+    guardA.rollback();
+
+    // Because client B was seated, admission is preserved despite Attempt A's rollback
+    expect(game.wasAdmitted(pid)).toBe(true);
+  });
 });
