@@ -4,11 +4,11 @@ import {
   PlayerType,
   UnitType,
 } from "@openfront/engine-api/game/GameTypes";
+import { readVersioned } from "@openfront/engine-lib/snapshot/SnapshotType";
 import {
   MirvExecution,
   MirvExecutionSnapshot,
 } from "@openfront/engine/execution/MIRVExecution";
-import { readVersioned } from "@openfront/engine-lib/snapshot/SnapshotType";
 import { Game, Player } from "@openfront/engine/game/Game";
 import { setup } from "../../util/Setup";
 import { executeTicks } from "../../util/utils";
