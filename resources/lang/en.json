@@ -2186,11 +2186,13 @@
     "title": "Rewards"
   },
   "saved_games": {
+    "code_placeholder": "Paste a shared game link or code",
     "copy_link": "Copy link",
     "delete": "Delete",
     "delete_confirm": "Delete \"{name}\"? This can't be undone.",
     "empty": "No saved games yet. Save one from the in-game menu.",
     "error": {
+      "code_invalid": "That isn't a shared game link or code.",
       "copy_failed": "Couldn't copy the link.",
       "download_failed": "Couldn't download the saved game. Try again.",
       "list_failed": "Couldn't load your saved games.",
@@ -2205,6 +2207,7 @@
     },
     "link_copied": "Link copied",
     "loading": "Loading…",
+    "open": "Open",
     "play": "Play",
     "rename": "Rename",
     "rename_save": "Save",
