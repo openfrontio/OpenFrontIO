@@ -95,8 +95,8 @@ jobs:
           if package.json defines it, otherwise `npx tsc --noEmit`) and fix
           every error the backport causes. Then run the linter(s) (`npx oxlint`
           if package.json only has oxlint, otherwise 'npx oxlint' and then
-          'npx eslint'), and this branch's formatter (`npm run format:check` if
-          package.json has it, otherwise `npx prettier --check`) on the files
+          'npx eslint'), and this branch's formatter (`npx oxfmt --check` if
+          package.json has oxfmt, otherwise `npx prettier --check`) on the files
           the backport changes.
 
         Only edit files. Do not run git commands that change state (add,
