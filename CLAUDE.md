@@ -11,8 +11,8 @@ npm run start:client     # Client only
 npm run start:server-dev # Server only
 npm test                 # Run all tests (Vitest)
 npm run test:coverage    # Tests with coverage
-npm run lint             # Oxlint + ESLint
-npm run lint:fix         # Oxlint + ESLint with auto-fix
+npm run lint             # Oxlint
+npm run lint:fix         # Oxlint with auto-fix
 npm run format           # Oxfmt
 npm run build-prod       # Production build
 npm run typecheck        # tsc for the root project and each package

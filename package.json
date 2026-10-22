@@ -34,29 +34,22 @@
     "format": "oxfmt",
     "format:check": "oxfmt --check",
     "format:map-generator": "cd map-generator && go fmt .",
-    "lint": "npm run lint:oxlint && npm run lint:eslint",
-    "lint:fix": "npm run lint:oxlint:fix && npm run lint:eslint:fix",
-    "lint:oxlint": "oxlint",
-    "lint:oxlint:fix": "oxlint --fix",
-    "lint:github": "oxlint --format=github && eslint --format gha",
-    "lint:eslint": "eslint",
-    "lint:eslint:fix": "eslint --fix",
+    "lint": "oxlint",
+    "lint:fix": "oxlint --fix",
+    "lint:github": "oxlint --format=github",
     "prepare": "husky",
     "gen-maps": "cd map-generator && go run -tags nodynamic . && npm run format",
     "inst": "npm ci --ignore-scripts"
   },
   "lint-staged": {
     "**/*.{js,mjs,cjs,ts,jsx,tsx}": [
-      "oxlint --fix",
-      "eslint --fix"
+      "oxlint --fix"
     ],
     "**/*": [
       "oxfmt --no-error-on-unmatched-pattern"
     ]
   },
   "devDependencies": {
-    "@eslint/compat": "^2.0.5",
-    "@eslint/js": "^10.0.1",
     "@lit-labs/virtualizer": "^2.1.1",
     "@tailwindcss/vite": "^4.2.4",
     "@types/benchmark": "^2.1.5",
@@ -76,10 +69,6 @@
     "concurrently": "^9.2.4",
     "cross-env": "^10.1.0",
     "d3": "^7.9.0",
-    "eslint": "^10.3.0",
-    "eslint-config-prettier": "^10.1.8",
-    "eslint-formatter-gha": "^2.0.1",
-    "globals": "^17.6.0",
     "husky": "^9.1.7",
     "jsdom": "^29.1.1",
     "lint-staged": "^16.4.0",
@@ -92,7 +81,6 @@
     "oxlint-plugin-eslint": "^1.88.0",
     "tailwindcss": "^4.2.4",
     "typescript": "^6.0.3",
-    "typescript-eslint": "^8.59.1",
     "vite": "^8.0.16",
     "vite-plugin-html": "^3.2.2",
     "vitest": "^4.1.11",

@@ -93,7 +93,7 @@ jobs:
         - Leave no conflict markers anywhere.
         - Before you stop, typecheck the whole project (`npm run typecheck`
           if package.json defines it, otherwise `npx tsc --noEmit`) and fix
-          every error the backport causes. Then run `npx eslint` and this
+          every error the backport causes. Then run `npx oxlint` and this
           branch's formatter (`npx oxfmt --check` if package.json has oxfmt,
           otherwise `npx prettier --check`) on the files the backport changes.
 
@@ -198,7 +198,7 @@ jobs:
             bash "$RUNNER_TEMP/format.sh" check "${files[@]}" || failed+=(format)
           fi
           if [ ${#code[@]} -gt 0 ]; then
-            { npx oxlint "${code[@]}" && npx eslint --no-warn-ignored "${code[@]}"; } || failed+=(lint)
+            npx oxlint "${code[@]}" || failed+=(lint)
           fi
           echo "${failed[*]}" | sed 's/ /, /g' > "$RUNNER_TEMP/failed"
           [ ${#failed[@]} -eq 0 ]
@@ -351,7 +351,7 @@ jobs:
           prompt: ${{ format('{0}{1}', env.FIX_MODE == 'conflict' && env.CONFLICT_INTRO || env.CHECKS_INTRO, env.FIX_RULES) }}
           claude_args: |
             --model claude-opus-5-5
-            --allowedTools "Read,Edit,Write,Grep,Glob,LS,Bash(git status:*),Bash(git diff:*),Bash(git log:*),Bash(git show:*),Bash(npm run typecheck:*),Bash(npx tsc:*),Bash(npx prettier:*),Bash(npx oxfmt:*),Bash(npx eslint:*),Bash(npx oxlint:*)"
+            --allowedTools "Read,Edit,Write,Grep,Glob,LS,Bash(git status:*),Bash(git diff:*),Bash(git log:*),Bash(git show:*),Bash(npm run typecheck:*),Bash(npx tsc:*),Bash(npx prettier:*),Bash(npx oxfmt:*),Bash(npx oxlint:*)"
             --max-turns 120
 
       # Backup account for when the primary is out of usage; see the shared
@@ -366,7 +366,7 @@ jobs:
           prompt: ${{ format('{0}{1}', env.FIX_MODE == 'conflict' && env.CONFLICT_INTRO || env.CHECKS_INTRO, env.FIX_RULES) }}
           claude_args: |
             --model claude-opus-5-5
-            --allowedTools "Read,Edit,Write,Grep,Glob,LS,Bash(git status:*),Bash(git diff:*),Bash(git log:*),Bash(git show:*),Bash(npm run typecheck:*),Bash(npx tsc:*),Bash(npx prettier:*),Bash(npx oxfmt:*),Bash(npx eslint:*),Bash(npx oxlint:*)"
+            --allowedTools "Read,Edit,Write,Grep,Glob,LS,Bash(git status:*),Bash(git diff:*),Bash(git log:*),Bash(git show:*),Bash(npm run typecheck:*),Bash(npx tsc:*),Bash(npx prettier:*),Bash(npx oxfmt:*),Bash(npx oxlint:*)"
             --max-turns 120
 
       - name: Open PR with fixed pick
