@@ -930,7 +930,12 @@
   },
   "ffa_rating": {
     "calibrating": "Calibrating {n}/10",
+    "calibration_complete": "Calibration complete",
     "credit": "Rating by OFstats",
+    "expected": "Expected win: {pct}%",
+    "pending": "Calculating rating…",
+    "placement": "Placement",
+    "result": "Result",
     "tier": {
       "bronze": "Bronze",
       "diamond": "Diamond",
@@ -940,7 +945,9 @@
       "master": "Master",
       "platinum": "Platinum",
       "silver": "Silver"
-    }
+    },
+    "tier_up": "Promoted to {tier}",
+    "title": "FFA Rating"
   },
   "free_play": {
     "account": "Your account, stats, friends and cosmetics",
