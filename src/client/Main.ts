@@ -76,6 +76,7 @@ import {
 } from "./GameModeSelector";
 import { gamePortal } from "./GamePortal";
 import { GameStartingModal } from "./GameStartingModal";
+import { syncHashedEmail } from "./HashedEmail";
 import type { HelpModal } from "./HelpModal";
 import "./HomepagePromos";
 import type { HomepagePromos } from "./HomepagePromos";
@@ -101,6 +102,7 @@ import { modalRouter } from "./ModalRouter";
 import { updateAccountNavButton } from "./NavAccountButton";
 import { initNavigation } from "./Navigation";
 import { capturePagePin } from "./PagePin";
+import { setPurchaseAccountRefresh } from "./Payments";
 import { fallbackPlayerName, LAPSE_NOTICE_KEY } from "./PlayerName";
 import { updatePortalNavButton } from "./PortalAccountButton";
 import {
@@ -189,6 +191,8 @@ import "./styles/core/variables.css";
 import "./styles/layout/container.css";
 import "./styles/layout/header.css";
 
+type RampUserProfile = { format: "UUP1"; heid: { sha256: string } };
+
 declare global {
   interface Window {
     turnstile?: TurnstileApi;
@@ -208,6 +212,9 @@ declare global {
         slots?: any;
       };
       spaNewPage: (url?: string) => void;
+      // Hashed email (HEM): `up` is read once at init, setUserProfile after.
+      up?: RampUserProfile;
+      setUserProfile: (profile: RampUserProfile) => void;
       spaAds: (config?: {
         ads?: Array<{ type: string; selectorId?: string }>;
         countPageview?: boolean;
@@ -757,6 +764,7 @@ class Client {
       loadConfig: fetchProgressionConfig,
       refreshUserMe: broadcastFreshUserMe,
     });
+    setPurchaseAccountRefresh(broadcastFreshUserMe);
 
     const onUserMe = async (userMeResponse: UserMeResponse | false) => {
       if (gamePortal.isOnGamePortal()) {
@@ -768,6 +776,9 @@ class Client {
         userMeResponse !== false && userMeResponse.player?.adfree === true;
       window.adsEnabled =
         !isAdFree && !gamePortal.isOnGamePortal() && !isDesktopShell();
+      syncHashedEmail(userMeResponse, window.adsEnabled).catch((e) =>
+        console.warn("Hashed email sync failed", e),
+      );
       // Ad-eligible users only: paid/adfree users must never load Admiral (its
       // adblock popup fires autonomously once the payload runs). Start watching
       // adblock state; once a blocker is ever detected the in-game ad is

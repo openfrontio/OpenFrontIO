@@ -2190,11 +2190,13 @@
     "title": "Rewards"
   },
   "saved_games": {
+    "code_placeholder": "Paste a shared game link or code",
     "copy_link": "Copy link",
     "delete": "Delete",
     "delete_confirm": "Delete \"{name}\"? This can't be undone.",
     "empty": "No saved games yet. Save one from the in-game menu.",
     "error": {
+      "code_invalid": "That isn't a shared game link or code.",
       "copy_failed": "Couldn't copy the link.",
       "download_failed": "Couldn't download the saved game. Try again.",
       "list_failed": "Couldn't load your saved games.",
@@ -2209,6 +2211,7 @@
     },
     "link_copied": "Link copied",
     "loading": "Loading…",
+    "open": "Open",
     "play": "Play",
     "rename": "Rename",
     "rename_save": "Save",
@@ -2394,6 +2397,7 @@
     "purchase_pending": "Your purchase is still being processed. It will appear in your account shortly — check your order history if it doesn't.",
     "purchase_success": "Purchase succeeded: {name}",
     "purchase_tribe_button": "Purchase",
+    "steam_browser_approval": "Steam has opened the purchase in your browser. Approve it there, then come back here. It will show up once Steam confirms it.",
     "steam_licence_required": "This subscription is only for players who own OpenFront on Steam.",
     "steam_overlay_cancelled": "Purchase cancelled. You haven't been charged.",
     "steam_overlay_waiting": "Approve the purchase in the Steam overlay to continue.",
