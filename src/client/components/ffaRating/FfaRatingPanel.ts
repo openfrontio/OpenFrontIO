@@ -143,11 +143,18 @@ export class FfaRatingPanel extends LitElement {
     return this;
   }
 
+  connectedCallback() {
+    super.connectedCallback();
+    // Lit schedules no update on re-attach, so ask for one: updated() then
+    // polls again.
+    if (this.hasUpdated) this.requestUpdate();
+  }
+
   disconnectedCallback() {
     super.disconnectedCallback();
     this.abort?.abort();
     this.abort = null;
-    // A re-attached panel asks again.
+    // A re-attached panel asks again (connectedCallback requests the update).
     this.polledGameId = null;
   }
 

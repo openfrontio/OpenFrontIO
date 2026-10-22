@@ -238,4 +238,18 @@ describe("<ffa-rating-panel>", () => {
     panel.remove();
     expect(signal.aborted).toBe(true);
   });
+
+  it("asks again when removed and re-attached", async () => {
+    const poll = vi.fn(
+      (_id: string, _signal: AbortSignal) =>
+        new Promise<FfaGameRatingResponse | null>(() => {}),
+    );
+    await render(poll);
+    expect(poll).toHaveBeenCalledTimes(1);
+    panel.remove();
+    document.body.appendChild(panel);
+    await panel.updateComplete;
+    expect(poll).toHaveBeenCalledTimes(2);
+    expect(poll.mock.calls[1][1].aborted).toBe(false);
+  });
 });
