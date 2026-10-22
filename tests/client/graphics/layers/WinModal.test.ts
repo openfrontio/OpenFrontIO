@@ -1,5 +1,11 @@
-import { RankedType } from "@openfront/engine-api/game/GameTypes";
+import {
+  GameMode,
+  GameType,
+  PlayerType,
+  RankedType,
+} from "@openfront/engine-api/game/GameTypes";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import type { FfaRatingPanel } from "../../../../src/client/components/ffaRating/FfaRatingPanel";
 import type { PurchaseButton } from "../../../../src/client/components/PurchaseButton";
 import {
   fetchCosmetics,
@@ -8,6 +14,7 @@ import {
 } from "../../../../src/client/Cosmetics";
 import "../../../../src/client/hud/layers/WinModal";
 import type { WinModal } from "../../../../src/client/hud/layers/WinModal";
+import { resolveXpAccount } from "../../../../src/client/ProgressionAccount";
 
 vi.mock("../../../../src/client/Utils", () => ({
   translateText: vi.fn((key: string) => {
@@ -26,6 +33,15 @@ vi.mock("../../../../src/client/Utils", () => ({
 
 vi.mock("../../../../src/client/Api", () => ({
   getUserMe: vi.fn(async () => null),
+}));
+
+vi.mock("../../../../src/client/ProgressionAccount", () => ({
+  resolveXpAccount: vi.fn(),
+}));
+
+// The mounted rating panel must make no request.
+vi.mock("../../../../src/client/FfaRatingApi", () => ({
+  pollFfaGameRating: vi.fn(() => new Promise(() => {})),
 }));
 
 vi.mock("../../../../src/client/Cosmetics", async (importOriginal) => ({
@@ -230,5 +246,76 @@ describe("WinModal pattern promotion", () => {
     expect(css).toContain(".win-action:hover ~ [data-share-ring]");
     expect(css).toContain("top: -6px");
     expect(css).toContain("bottom: -2px");
+  });
+});
+
+describe("WinModal FFA rating panel", () => {
+  let modal: WinModal | undefined;
+
+  afterEach(() => {
+    modal?.remove();
+    modal = undefined;
+    vi.mocked(resolveXpAccount).mockReset();
+  });
+
+  const signedIn = (ffa: Record<string, unknown>) =>
+    vi.mocked(resolveXpAccount).mockResolvedValue({
+      kind: "signed_in",
+      me: { player: { trustTier: "trusted", leaderboard: { ffa } } },
+    } as never);
+
+  const mount = async (rankedType?: RankedType) => {
+    const el = document.createElement("win-modal") as WinModal;
+    el.game = {
+      gameID: () => "g1",
+      config: () => ({
+        gameConfig: () => ({
+          gameType: GameType.Public,
+          gameMode: GameMode.FFA,
+          rankedType,
+        }),
+        isReplay: () => false,
+      }),
+      myPlayer: () => ({ isAlive: () => true }),
+      players: () =>
+        Array.from({ length: 12 }, () => ({
+          type: () => PlayerType.Human,
+          hasSpawned: () => true,
+        })),
+    } as never;
+    document.body.appendChild(el);
+    await el.updateComplete;
+    modal = el;
+    return el as unknown as HTMLElement & {
+      updateComplete: Promise<boolean>;
+      updateFfaRating(): Promise<void>;
+    };
+  };
+
+  it("shows the FFA rating panel after a public FFA game for a rated viewer", async () => {
+    signedIn({ calibrationGames: 3 });
+    const m = await mount();
+    await m.updateFfaRating();
+    await m.updateComplete;
+    const panel = m.querySelector<FfaRatingPanel>("ffa-rating-panel")!;
+    expect(panel.gameId).toBe("g1");
+    expect(panel.lobbyHumans).toBe(12);
+  });
+
+  it("shows no panel while the API sends no rating", async () => {
+    signedIn({ elo: 1234 });
+    const m = await mount();
+    await m.updateFfaRating();
+    await m.updateComplete;
+    expect(m.querySelector("ffa-rating-panel")).toBeNull();
+  });
+
+  it("shows no panel after a ranked game", async () => {
+    signedIn({ calibrationGames: 3 });
+    const m = await mount(RankedType.OneVOne);
+    await m.updateFfaRating();
+    await m.updateComplete;
+    expect(m.querySelector("ffa-rating-panel")).toBeNull();
+    expect(resolveXpAccount).not.toHaveBeenCalled();
   });
 });
