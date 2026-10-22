@@ -317,9 +317,8 @@ export class NukeExecution implements Execution {
   /**
    * Record a motion plan so the client can derive the nuke's position each
    * tick instead of receiving per-tick unit updates (see TradeShipExecution).
-   * Replays a separate pathfinder because the curve's cached points don't
-   * advance exactly one index per tick — the plan path must be the exact
-   * tile sequence that movement's `next()` calls will produce.
+   * Uses the nuke's precomputed trajectory directly so the plan matches the
+   * exact tile sequence of flight.
    */
   private recordMotionPlan(ticks: number): void {
     if (this.nuke === null || this.src === undefined || this.src === null) {
