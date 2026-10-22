@@ -742,6 +742,29 @@ describe("LeaderboardModal", () => {
       expect(modal.querySelector("ofstats-credit")).not.toBeNull();
     });
 
+    it("rounds the rating of a row whose tier was dropped on a live board", async () => {
+      fetchMock().mockResolvedValueOnce(
+        jsonRes({
+          "1v1": [],
+          "2v2": [],
+          ffa: [
+            rated(1, "p4", 2012.6, "Diamond II"),
+            // The schema drops a malformed tier (the mocked fetch here skips
+            // it), so such a row arrives with no tier and an unrounded Elo.
+            entry(2, "p5", 1850.7),
+          ],
+        }),
+      );
+      await getPlayerList()!.loadPlayerLeaderboard(true);
+      await showLadder("playersFfa");
+      expect(modal.querySelectorAll("[data-ffa-rating-cell]")).toHaveLength(1);
+      const text = modal.querySelector(
+        "leaderboard-player-list tbody",
+      )!.textContent!;
+      expect(text).toContain("1851");
+      expect(text).not.toContain("1850.7");
+    });
+
     it("shows the frozen FFA ladder plainly", async () => {
       fetchMock().mockResolvedValueOnce(
         jsonRes({ "1v1": [], "2v2": [], ffa: [entry(1, "p4", 1300)] }),

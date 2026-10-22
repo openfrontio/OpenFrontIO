@@ -478,7 +478,7 @@ export class LeaderboardPlayerList extends LitElement {
     const weight = strong ? "font-bold" : "font-medium";
     if (!this.ffaRatingLive || row.tier === undefined) {
       return html`<span class="font-mono text-white ${weight}"
-        >${row.elo}</span
+        >${this.ffaRatingLive ? formatRating(row.elo) : row.elo}</span
       >`;
     }
     return html`
