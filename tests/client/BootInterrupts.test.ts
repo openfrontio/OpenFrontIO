@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it } from "vitest";
 import {
   BOOT_INTERRUPT_KEYS,
   bootInterruptsAllowed,
@@ -12,7 +12,9 @@ import {
   joinOwnsInFlightFlag,
   nextBootInterrupt,
   parseClaimPromptStore,
+  reportThanksDueThisLaunch,
   reportThanksStringsReady,
+  resetReportThanksForTest,
   runBootInterrupt,
   steamGrantStringsReady,
   USERNAME_FORM_HASH,
@@ -1236,6 +1238,38 @@ describe("the report thank-you in the ordering", () => {
 });
 
 describe("running the report thank-you", () => {
+  beforeEach(() => resetReportThanksForTest());
+
+  // /users/@me is re-read within a launch (session recovery, a portal sign-in)
+  // and the seen POST is fire and forget, so a re-read can still carry the
+  // message the player just closed. One showing per launch.
+  it("is due once per launch, however often /users/@me is re-read", async () => {
+    expect(reportThanksDueThisLaunch(["report_thanks"])).toBe(true);
+    await runBootInterrupt(
+      "report-thanks",
+      { claimStore: {}, grantStore: {}, publicId: ME, steamNotice: null },
+      {
+        translate: (key) => `t(${key})`,
+        confirm: async () => true,
+        alert: async () => {},
+        tierName: (tier) => tier,
+        navigate: () => {},
+        openRewards: () => {},
+        storeClaimPrompt: () => {},
+        updateSteamGrant: () => {},
+        markNoticeSeen: () => {},
+        markMessageSeen: () => {},
+        now: () => 1_757_000_000_000,
+      },
+    );
+    expect(reportThanksDueThisLaunch(["report_thanks"])).toBe(false);
+  });
+
+  it("is not due without a pending report_thanks", () => {
+    expect(reportThanksDueThisLaunch([])).toBe(false);
+    expect(reportThanksDueThisLaunch(["something_else"])).toBe(false);
+  });
+
   it("shows the thank-you, then marks it seen", async () => {
     const events: string[] = [];
     await runBootInterrupt(

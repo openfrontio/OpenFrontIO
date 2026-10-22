@@ -514,6 +514,24 @@ export function steamGrantStringsReady(
   ).every((key) => translate(key, params) !== key);
 }
 
+// /users/@me is re-read several times per launch (session recovery, a portal
+// sign-in) and the seen POST is fire and forget, so a re-read can still carry
+// the message the player just closed. One thank-you per launch, as with the
+// Steam notices (SteamNotices.ts); a launch that never showed it still owes
+// it, because nothing was marked seen.
+let reportThanksShownThisLaunch = false;
+
+/** Is the report thank-you owed on this boot? */
+export function reportThanksDueThisLaunch(pendingMessages: string[]): boolean {
+  return (
+    !reportThanksShownThisLaunch && pendingMessages.includes("report_thanks")
+  );
+}
+
+export function resetReportThanksForTest(): void {
+  reportThanksShownThisLaunch = false;
+}
+
 /**
  * The same precondition for the report thank-you: it is marked seen on the
  * server once shown, so a key echoed back would spend it unread.
@@ -727,6 +745,7 @@ async function runInterrupt(
       ports.openRewards();
       return;
     case "report-thanks":
+      reportThanksShownThisLaunch = true;
       await ports.alert(
         ports.translate(BOOT_INTERRUPT_KEYS.reportThanksBody),
         ports.translate(BOOT_INTERRUPT_KEYS.reportThanksHeading),

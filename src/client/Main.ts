@@ -41,6 +41,7 @@ import {
   lapseShownAfterDispatch,
   nextBootInterrupt,
   parseClaimPromptStore,
+  reportThanksDueThisLaunch,
   reportThanksStringsReady,
   runBootInterrupt,
   steamGrantStringsReady,
@@ -912,8 +913,8 @@ class Client {
             claimPromptDue: claimPromptDue(claimStore, Date.now(), publicId),
             claimStringsReady: claimPromptStringsReady(translateText),
             // Not every caller's response went through the schema default.
-            reportThanksDue: (userMeResponse.pendingMessages ?? []).includes(
-              "report_thanks",
+            reportThanksDue: reportThanksDueThisLaunch(
+              userMeResponse.pendingMessages ?? [],
             ),
             reportThanksStringsReady: reportThanksStringsReady(translateText),
           }),
