@@ -31,11 +31,20 @@ const MINE = {
 };
 const THEIRS = { ...MINE, id: "theirs00000000000000bb", name: "Their game" };
 
-async function mount(props: Partial<SavedGamesPanel>) {
+function toggle(panel: Element) {
+  return panel.querySelector<HTMLButtonElement>("[data-saved-games-toggle]")!;
+}
+
+/** Mounts the panel, opened as a player would unless `closed`. */
+async function mount(props: Partial<SavedGamesPanel>, closed = false) {
   const panel = document.createElement("saved-games-panel");
   Object.assign(panel, props);
   document.body.appendChild(panel);
   await panel.updateComplete;
+  if (!closed && toggle(panel).getAttribute("aria-expanded") !== "true") {
+    toggle(panel).click();
+    await panel.updateComplete;
+  }
   return panel;
 }
 
@@ -67,6 +76,35 @@ describe("saved-games-panel", () => {
 
   afterEach(() => {
     document.body.innerHTML = "";
+  });
+
+  it("starts closed, and loads the player's saves only once opened", async () => {
+    const panel = await mount({ signedIn: true }, true);
+    await settle(panel);
+    expect(toggle(panel).getAttribute("aria-expanded")).toBe("false");
+    expect(panel.querySelector("[data-save-code]")).toBeNull();
+    expect(api.listSavedGames).not.toHaveBeenCalled();
+    // The Solo modal's refresh on open waits for the panel too.
+    await panel.refresh();
+    expect(api.listSavedGames).not.toHaveBeenCalled();
+
+    toggle(panel).click();
+    await settle(panel);
+    expect(api.listSavedGames).toHaveBeenCalledTimes(1);
+    expect(panel.querySelector(`[data-save-id="${MINE.id}"]`)).not.toBeNull();
+
+    toggle(panel).click();
+    await panel.updateComplete;
+    expect(panel.querySelector("[data-own-saves]")).toBeNull();
+  });
+
+  it("opens itself for a save a link names", async () => {
+    api.fetchSharedSavedGame.mockResolvedValue(THEIRS);
+    const panel = await mount({ signedIn: false, sharedId: THEIRS.id }, true);
+    expect(toggle(panel).getAttribute("aria-expanded")).toBe("true");
+    await vi.waitFor(() =>
+      expect(panel.querySelector("[data-shared-save]")).not.toBeNull(),
+    );
   });
 
   it("shows a guest without a link only the code box", async () => {

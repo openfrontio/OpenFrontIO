@@ -50,9 +50,9 @@ export function savedGameShareUrl(id: string): string {
 }
 
 /**
- * The Solo modal's saved games: a box to paste a shared save's link or
- * code, the shared save from it or from a link, and the signed-in player's
- * own saves. Starting one is the modal's job; this only fires
+ * The Solo modal's saved games, collapsed until opened (or opened by a
+ * share link): a box to paste a shared save's link or code, the shared save
+ * from it or from a link, and the signed-in player's own saves. Starting one is the modal's job; this only fires
  * `load-saved-game`, and `open-shared-save` with a pasted save's id.
  */
 @customElement("saved-games-panel")
@@ -64,6 +64,7 @@ export class SavedGamesPanel extends LitElement {
   /** A game is starting: no second one. */
   @property({ type: Boolean }) busy = false;
 
+  @state() private expanded = false;
   @state() private saves: SavedGame[] | "loading" | "error" = "loading";
   @state() private shared: SavedGame | SavedGameError | "loading" | null = null;
   @state() private renamingId: string | null = null;
@@ -78,21 +79,31 @@ export class SavedGamesPanel extends LitElement {
     return this;
   }
 
-  connectedCallback() {
-    super.connectedCallback();
-    void this.refresh();
-  }
-
   protected willUpdate(changed: Map<string | number | symbol, unknown>) {
-    // connectedCallback covers the first render; later sign-ins load here.
     if (changed.has("signedIn") && changed.get("signedIn") !== undefined) {
       void this.refresh();
     }
-    if (changed.has("sharedId")) void this.loadShared();
+    if (changed.has("sharedId")) {
+      // A link's save would go unseen in a closed panel.
+      if (this.sharedId !== null) this.expand();
+      void this.loadShared();
+    }
   }
 
+  private expand() {
+    if (this.expanded) return;
+    this.expanded = true;
+    void this.refresh();
+  }
+
+  private toggle() {
+    if (this.expanded) this.expanded = false;
+    else this.expand();
+  }
+
+  /** Loads the player's saves, while the panel is open. */
   async refresh(): Promise<void> {
-    if (!this.signedIn) return;
+    if (!this.signedIn || !this.expanded) return;
     this.saves = "loading";
     const saves = await listSavedGames();
     this.saves = saves === false ? "error" : saves;
@@ -465,19 +476,38 @@ export class SavedGamesPanel extends LitElement {
         ${saves.map((s) => this.renderRow(s))}
       </ul>`;
     }
-    return html`<div data-own-saves>
-      <div
-        class="mb-2 text-[11px] font-bold uppercase tracking-wider text-white/60"
-      >
-        ${translateText("saved_games.title")}
-      </div>
-      ${body}
-    </div>`;
+    return html`<div data-own-saves>${body}</div>`;
   }
 
   render() {
-    return html`<div class="flex flex-col gap-4">
-      ${this.renderCodeForm()}${this.renderShared()}${this.renderOwn()}
+    const expanded = this.expanded;
+    return html`<div class="w-full">
+      <button
+        type="button"
+        aria-expanded=${expanded}
+        data-saved-games-toggle
+        @click=${this.toggle}
+        class="w-full flex items-center gap-3 px-4 py-3 rounded-xl border text-sm font-bold text-white uppercase tracking-wider transition-all duration-200 active:scale-[0.99] ${expanded
+          ? "bg-malibu-blue/20 border-malibu-blue/50"
+          : "bg-white/5 border-white/10 hover:bg-white/10 hover:border-white/20"}"
+      >
+        <svg
+          class="w-3.5 h-3.5 shrink-0 transition-transform duration-200 ${expanded
+            ? "rotate-90"
+            : ""}"
+          viewBox="0 0 12 12"
+          fill="currentColor"
+          aria-hidden="true"
+        >
+          <path d="M4 2l5 4-5 4z" />
+        </svg>
+        ${translateText("saved_games.title")}
+      </button>
+      ${expanded
+        ? html`<div class="mt-4 flex flex-col gap-4">
+            ${this.renderCodeForm()}${this.renderShared()}${this.renderOwn()}
+          </div>`
+        : null}
     </div>`;
   }
 }
