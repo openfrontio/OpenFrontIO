@@ -259,6 +259,9 @@ export interface JoinLobbyEvent {
   gameStartInfo?: WireGameStartInfo;
   // GameRecord exists when replaying an archived game.
   gameRecord?: GameRecord;
+  // A singleplayer game resumed from a saved game: the uncompressed snapshot
+  // the engine restores instead of starting fresh from gameStartInfo.
+  snapshot?: Uint8Array;
   source?: "public" | "private" | "host" | "matchmaking" | "singleplayer";
   publicLobbyInfo?: GameInfo | PublicGameInfo;
   // Watch without playing.
@@ -1855,6 +1858,7 @@ class Client {
           ? toWireGameStartInfo(lobby.gameRecord.info)
           : undefined),
       gameRecord: lobby.gameRecord,
+      snapshot: lobby.snapshot,
       spectator: lobby.spectator,
       creatorToken: lobby.creatorToken,
     });

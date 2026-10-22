@@ -126,6 +126,16 @@ function configWithoutPool(config: GameConfig): GameConfig {
   return copy;
 }
 
+// Sibling lobby IDs and account publicId lists are server-internal secrets.
+// Strip them from every config that leaves the server to clients or public
+// routes (the start message, archived game record, lobby broadcast, and /api/game/:id).
+function sanitizeConfigForWire(config: GameConfig): GameConfig {
+  const copy = configWithoutPool(config);
+  delete copy.allowedPublicIds;
+  delete copy.nameRevealPublicIds;
+  return copy;
+}
+
 const KICK_REASON_DUPLICATE_SESSION = "kick_reason.duplicate_session";
 const KICK_REASON_LOBBY_CREATOR = "kick_reason.lobby_creator";
 const KICK_REASON_ADMIN = "kick_reason.admin";
@@ -1106,9 +1116,7 @@ export class GameServer {
     // enforced server-side against this.gameConfig (joinClient / seesReal).
     // Keep them out of gameStartInfo: its config goes to every client in the
     // start message and into the publicly downloadable game record.
-    const config = configWithoutPool(this.gameConfig);
-    delete config.allowedPublicIds;
-    delete config.nameRevealPublicIds;
+    const config = sanitizeConfigForWire(this.gameConfig);
 
     const result = WireGameStartInfoSchema.safeParse({
       gameID: this.id,
@@ -1665,8 +1673,8 @@ export class GameServer {
   // anonymizes all names when the option is on.
   public gameInfo(viewer?: ClientID): GameInfo {
     // Goes out over the unauthenticated /api/game/:id route and the per-second
-    // lobby_info broadcast, so strip the pool secrets (see configWithoutPool).
-    const gameConfig = configWithoutPool(this.gameConfig);
+    // lobby_info broadcast, so strip secrets (see sanitizeConfigForWire).
+    const gameConfig = sanitizeConfigForWire(this.gameConfig);
     return {
       gameID: this.id,
       clients: this.names.lobbyClients(viewer, this.clients.active()),
@@ -1957,7 +1965,10 @@ export class GameServer {
     // The record as of now; the game may run on while the replay does.
     const turns = this.turns.slice();
     const endTime = Date.now();
-    this.log.warn(
+    // A lone voter is the common case (the loser leaves without voting) and
+    // its replay almost always agrees, so it logs at info; the replay result
+    // still warns when it overturns the vote.
+    this.log[reason === "lone voter" ? "info" : "warn"](
       {
         disputed: "winner vote disputed, replaying game",
         "lone voter": "winner vote decided by one IP, replaying game",

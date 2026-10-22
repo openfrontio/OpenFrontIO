@@ -628,8 +628,15 @@ export class WinModal extends LitElement implements Controller {
     loadGameXpPanel();
     try {
       const game = this.game;
-      // Spectators and replay viewers have no XP of their own.
-      if (game.config().isReplay() || !game.myPlayer()) return;
+      // Spectators and replay viewers have no XP of their own, and a game
+      // resumed from a save earns none.
+      if (
+        game.config().isReplay() ||
+        !game.myPlayer() ||
+        game.resumedFromSave()
+      ) {
+        return;
+      }
       const account = await resolveXpAccount();
       // /users/@me failed while there is a session: a signed-in player must
       // not be told to sign in over a network blip, so say nothing.

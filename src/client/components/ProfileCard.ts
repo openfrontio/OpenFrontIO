@@ -13,6 +13,7 @@ import { prefersReducedMotion } from "../utilities/ReducedMotion";
 import { translateText } from "../Utils";
 import "./LevelBadge";
 import { levelBadgeAccent } from "./LevelBadge";
+import { splitAccountUsername, usernameText } from "./ui/UsernameText";
 import { formatXp, xpProgressText } from "./XpBar";
 
 // The level side of a player, at a glance: their badge, name and clan, the
@@ -467,13 +468,16 @@ export class ProfileCard extends LitElement {
               : "block text-sm"}"
             >[${this.clanTag}]</span
           >`;
+    const { base, discriminator } = splitAccountUsername(this.username);
+    const plainName =
+      discriminator === null ? base : `${base}#${discriminator}`;
     const name = html`<span
       data-profile-name
       class="truncate font-black leading-tight ${this.compact
         ? "text-2xl"
         : "block text-3xl sm:text-4xl"}"
-      title=${this.username}
-      >${this.username}</span
+      title=${plainName}
+      >${usernameText(this.username, "")}</span
     >`;
 
     if (this.compact) {
