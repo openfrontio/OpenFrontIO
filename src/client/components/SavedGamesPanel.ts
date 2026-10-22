@@ -391,33 +391,37 @@ export class SavedGamesPanel extends LitElement {
     >
       <div class="flex items-center gap-3">
         <div class="flex-1 min-w-0">
-          ${renaming
-            ? html`<input
-                class="w-full rounded-md bg-black/30 border border-white/20 px-2 py-1 text-sm text-white"
-                maxlength="64"
-                aria-label=${translateText("saved_games.rename")}
-                .value=${this.renameValue}
-                @input=${(e: Event) =>
-                  (this.renameValue = (e.target as HTMLInputElement).value)}
-                @keydown=${(e: KeyboardEvent) => {
-                  if (e.key === "Enter") void this.submitRename(save);
-                  if (e.key === "Escape") {
-                    e.stopPropagation();
-                    this.renamingId = null;
+          ${
+            renaming
+              ? html`<input
+                  class="w-full rounded-md bg-black/30 border border-white/20 px-2 py-1 text-sm text-white"
+                  maxlength="64"
+                  aria-label=${translateText("saved_games.rename")}
+                  .value=${this.renameValue}
+                  @input=${(e: Event) =>
+                    (this.renameValue = (e.target as HTMLInputElement).value)}
+                  @keydown=${(e: KeyboardEvent) => {
+                    if (e.key === "Enter") void this.submitRename(save);
+                    if (e.key === "Escape") {
+                      e.stopPropagation();
+                      this.renamingId = null;
+                    }
+                  }}
+                />`
+              : html`<div class="flex items-center gap-2">
+                  <span class="font-semibold text-white truncate"
+                    >${save.name}</span
+                  >
+                  ${
+                    save.public
+                      ? html`<span
+                          class="shrink-0 rounded px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider bg-green-500/20 text-green-300"
+                          >${translateText("saved_games.shared_badge")}</span
+                        >`
+                      : null
                   }
-                }}
-              />`
-            : html`<div class="flex items-center gap-2">
-                <span class="font-semibold text-white truncate"
-                  >${save.name}</span
-                >
-                ${save.public
-                  ? html`<span
-                      class="shrink-0 rounded px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider bg-green-500/20 text-green-300"
-                      >${translateText("saved_games.shared_badge")}</span
-                    >`
-                  : null}
-              </div>`}
+                </div>`
+          }
           <div class="text-xs text-white/50">${this.details(save)}</div>
         </div>
         ${this.button(
@@ -427,22 +431,24 @@ export class SavedGamesPanel extends LitElement {
         )}
       </div>
       <div class="flex flex-wrap gap-2">
-        ${renaming
-          ? html`${this.button(
-              translateText("saved_games.rename_save"),
-              () => void this.submitRename(save),
-              { disabled: pending, attr: "rename-save" },
-            )}
-            ${this.button(
-              translateText("common.cancel"),
-              () => (this.renamingId = null),
-              { disabled: pending },
-            )}`
-          : this.button(
-              translateText("saved_games.rename"),
-              () => this.startRename(save),
-              { disabled: pending, attr: "rename" },
-            )}
+        ${
+          renaming
+            ? html`${this.button(
+                translateText("saved_games.rename_save"),
+                () => void this.submitRename(save),
+                { disabled: pending, attr: "rename-save" },
+              )}
+              ${this.button(
+                translateText("common.cancel"),
+                () => (this.renamingId = null),
+                { disabled: pending },
+              )}`
+            : this.button(
+                translateText("saved_games.rename"),
+                () => this.startRename(save),
+                { disabled: pending, attr: "rename" },
+              )
+        }
         ${this.button(
           translateText(
             save.public ? "saved_games.unshare" : "saved_games.share",
@@ -450,22 +456,28 @@ export class SavedGamesPanel extends LitElement {
           () => void this.toggleShared(save),
           { disabled: pending, attr: "toggle-share" },
         )}
-        ${save.public
-          ? this.button(
-              translateText("saved_games.copy_link"),
-              () => void this.copyLink(save.id),
-              { attr: "copy-link" },
-            )
-          : null}
+        ${
+          save.public
+            ? this.button(
+                translateText("saved_games.copy_link"),
+                () => void this.copyLink(save.id),
+                { attr: "copy-link" },
+              )
+            : null
+        }
         ${this.button(
           translateText("saved_games.delete"),
           () => void this.deleteSave(save),
           { disabled: pending, attr: "delete" },
         )}
       </div>
-      ${error !== null
-        ? html`<div class="text-xs text-red-400" data-row-error>${error}</div>`
-        : null}
+      ${
+        error !== null
+          ? html`<div class="text-xs text-red-400" data-row-error>
+              ${error}
+            </div>`
+          : null
+      }
     </li>`;
   }
 

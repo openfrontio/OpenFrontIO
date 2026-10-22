@@ -196,12 +196,14 @@ export class StoreModal extends BaseModal {
       onBack: () => this.close(),
       ariaLabel: translateText("common.back"),
       rightContent: html`<div class="flex items-center gap-4">
-        ${currency
-          ? html`<currency-display
-              .hard=${currency.hard}
-              .soft=${currency.soft}
-            ></currency-display>`
-          : ""}
+        ${
+          currency
+            ? html`<currency-display
+                .hard=${currency.hard}
+                .soft=${currency.soft}
+              ></currency-display>`
+            : ""
+        }
         <not-logged-in-warning></not-logged-in-warning>
       </div>`,
     });
@@ -366,9 +368,11 @@ export class StoreModal extends BaseModal {
   private renderStatus(text: string, muted = false): TemplateResult {
     return html`<span
       data-store-status
-      class="mt-2 flex min-h-11 w-full items-center justify-center rounded-lg border px-2 py-1.5 text-center font-bold ${muted
-        ? "border-white/15 bg-white/5 text-xs text-white/60"
-        : "border-emerald-500/40 bg-emerald-500/15 text-base text-emerald-300"}"
+      class="mt-2 flex min-h-11 w-full items-center justify-center rounded-lg border px-2 py-1.5 text-center font-bold ${
+        muted
+          ? "border-white/15 bg-white/5 text-xs text-white/60"
+          : "border-emerald-500/40 bg-emerald-500/15 text-base text-emerald-300"
+      }"
       >${text}</span
     >`;
   }
@@ -412,11 +416,13 @@ export class StoreModal extends BaseModal {
         class=${cardClass}
         previewSize=${previewSize}
         .resolved=${group[0]}
-        .variants=${group.length > 1 ||
-        group[0].type === "pattern" ||
-        group[0].type === "skin"
-          ? group
-          : []}
+        .variants=${
+          group.length > 1 ||
+          group[0].type === "pattern" ||
+          group[0].type === "skin"
+            ? group
+            : []
+        }
         .activeVariantKey=${active.key}
         .actionContent=${action}
         state=${focused ? "focused" : "idle"}
@@ -486,21 +492,27 @@ export class StoreModal extends BaseModal {
       .priceSoft=${priceSoft ?? null}
       .rarity=${priced?.rarity ?? "common"}
       .itemName=${cosmeticSelectionLabel(resolved)}
-      .dollarLabelKey=${resolved.type === "subscription" && userHasSubscription
-        ? "store.switch_button"
-        : ""}
-      .priceSuffix=${resolved.type === "subscription"
-        ? translateText("store.price_per_month")
-        : ""}
-      .onPurchaseDollar=${product || subscriptionDollarPrice
-        ? () => purchase("dollar")
-        : undefined}
-      .onPurchaseHard=${priceHard !== undefined
-        ? () => purchase("hard")
-        : undefined}
-      .onPurchaseSoft=${priceSoft !== undefined
-        ? () => purchase("soft")
-        : undefined}
+      .dollarLabelKey=${
+        resolved.type === "subscription" && userHasSubscription
+          ? "store.switch_button"
+          : ""
+      }
+      .priceSuffix=${
+        resolved.type === "subscription"
+          ? translateText("store.price_per_month")
+          : ""
+      }
+      .onPurchaseDollar=${
+        product || subscriptionDollarPrice
+          ? () => purchase("dollar")
+          : undefined
+      }
+      .onPurchaseHard=${
+        priceHard !== undefined ? () => purchase("hard") : undefined
+      }
+      .onPurchaseSoft=${
+        priceSoft !== undefined ? () => purchase("soft") : undefined
+      }
     ></purchase-button>`;
   }
 
@@ -559,9 +571,11 @@ export class StoreModal extends BaseModal {
         ${COSMETICS_SUB_TABS.map((tab) => {
           const active = this.cosmeticsSubTab === tab;
           return html`<button
-            class="-mb-px whitespace-nowrap border-b-2 px-4 py-3 text-sm font-bold uppercase tracking-wider transition-colors ${active
-              ? "border-malibu-blue text-aquarius"
-              : "border-transparent text-white/40 hover:text-white/70"}"
+            class="-mb-px whitespace-nowrap border-b-2 px-4 py-3 text-sm font-bold uppercase tracking-wider transition-colors ${
+              active
+                ? "border-malibu-blue text-aquarius"
+                : "border-transparent text-white/40 hover:text-white/70"
+            }"
             @click=${() => this.setCosmeticsSubTab(tab)}
           >
             ${translateText(`store.${tab}`)}
@@ -615,16 +629,18 @@ export class StoreModal extends BaseModal {
   private renderBundleGrid(): TemplateResult {
     return html`${this.renderBrowser(this.visibleGroups, {
       emptyTranslationKey: "store.no_bundles",
-    })}${this.openedPack && !this.previewingCosmetic
-      ? // The dialog is portaled above the modal's stacking context, so a
-        // preview opened from one of its items would render underneath it.
-        // Yield to the preview; the dialog comes back when it closes.
-        html`<pack-contents-dialog
-          .pack=${this.openedPack}
-          .actionContent=${this.renderCardAction(this.openedPack, false)}
-          @close=${() => this.closePack()}
-        ></pack-contents-dialog>`
-      : ""}`;
+    })}${
+      this.openedPack && !this.previewingCosmetic
+        ? // The dialog is portaled above the modal's stacking context, so a
+          // preview opened from one of its items would render underneath it.
+          // Yield to the preview; the dialog comes back when it closes.
+          html`<pack-contents-dialog
+            .pack=${this.openedPack}
+            .actionContent=${this.renderCardAction(this.openedPack, false)}
+            @close=${() => this.closePack()}
+          ></pack-contents-dialog>`
+        : ""
+    }`;
   }
 
   private renderSubscriptionGrid(): TemplateResult {
@@ -656,15 +672,17 @@ export class StoreModal extends BaseModal {
 
   protected renderHeaderSlot() {
     return html`${this.renderHeader()}
-    ${this.previewingCosmetic
-      ? html`<cosmetic-preview-modal
-          .resolved=${this.previewingCosmetic}
-          @close-preview=${() => {
-            this.previewingCosmetic = null;
-            this.requestUpdate();
-          }}
-        ></cosmetic-preview-modal>`
-      : ""}`;
+    ${
+      this.previewingCosmetic
+        ? html`<cosmetic-preview-modal
+            .resolved=${this.previewingCosmetic}
+            @close-preview=${() => {
+              this.previewingCosmetic = null;
+              this.requestUpdate();
+            }}
+          ></cosmetic-preview-modal>`
+        : ""
+    }`;
   }
 
   protected renderBody(key: string): TemplateResult {
