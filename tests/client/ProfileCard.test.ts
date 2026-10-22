@@ -57,6 +57,41 @@ describe("<profile-card>", () => {
     expect(text("[data-profile-lifetime]")).toContain("212,400");
   });
 
+  it("shows the FFA rating on the full card", async () => {
+    const ffaRating = {
+      kind: "rated",
+      rating: 1612.6,
+      uncertainty: 84.7,
+      tier: "Gold I",
+    } as const;
+    await render({ progress: PRESTIGE_3, ffaRating });
+    const summary = card.querySelector("ffa-rating-summary");
+    expect(summary).not.toBeNull();
+    expect((summary as unknown as { rating: unknown }).rating).toEqual(
+      ffaRating,
+    );
+  });
+
+  it("shows no FFA rating without one", async () => {
+    await render({ progress: PRESTIGE_3 });
+    expect(card.querySelector("[data-ffa-rating-summary]")).toBeNull();
+    expect(card.textContent).not.toContain("ffa_rating.title");
+  });
+
+  it("keeps the compact card free of the rating", async () => {
+    await render({
+      variant: "compact",
+      progress: PRESTIGE_3,
+      ffaRating: {
+        kind: "rated",
+        rating: 1612.6,
+        uncertainty: 84.7,
+        tier: "Gold I",
+      },
+    });
+    expect(card.querySelector("ffa-rating-summary")).toBeNull();
+  });
+
   it("never repeats the games and wins the stats below it show", async () => {
     await render({ username: "Iamlewis", progress: PRESTIGE_3 });
     expect(card.textContent).not.toContain("player_stats_tree.stats_played");

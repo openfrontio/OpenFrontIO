@@ -11,6 +11,8 @@ import { customElement, property, state } from "lit/decorators.js";
 import { clampPrestige, levelFraction } from "../Progression";
 import { prefersReducedMotion } from "../utilities/ReducedMotion";
 import { translateText } from "../Utils";
+import "./ffaRating/FfaRatingSummary";
+import type { FfaRatingSummaryData } from "./ffaRating/FfaRatingSummary";
 import "./LevelBadge";
 import { levelBadgeAccent } from "./LevelBadge";
 import { splitAccountUsername, usernameText } from "./ui/UsernameText";
@@ -104,6 +106,8 @@ export class ProfileCard extends LitElement {
   // The progress counts XP from games still waiting to be scored: the card
   // says it's provisional.
   @property({ type: Boolean }) provisional = false;
+  // The player's FFA rating, on the full card only. Null: nothing shows.
+  @property({ attribute: false }) ffaRating: FfaRatingSummaryData | null = null;
   // Names one opening of the page the card is on: the flourish plays once per
   // key, however often the card is rendered again (a tab switch builds a new
   // one). Without a key it plays once per card.
@@ -527,6 +531,12 @@ export class ProfileCard extends LitElement {
         <div class="w-full min-w-0 flex-1 text-center sm:text-left">
           ${clan} ${name} ${this.renderLevelLine(progress)}
           ${this.renderProvisional()} ${this.renderXp(progress)}
+          ${this.ffaRating === null
+            ? nothing
+            : html`<ffa-rating-summary
+                class="mt-4 block"
+                .rating=${this.ffaRating}
+              ></ffa-rating-summary>`}
           ${this.canPrestige(progress)
             ? html`<div
                 class="mt-4 flex flex-col items-center gap-3 sm:flex-row sm:justify-between"

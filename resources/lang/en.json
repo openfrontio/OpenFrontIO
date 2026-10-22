@@ -933,6 +933,7 @@
     "calibration_complete": "Calibration complete",
     "credit": "Rating by OFstats",
     "expected": "Expected win: {pct}%",
+    "peak": "Peak {rating}",
     "pending": "Calculating rating…",
     "placement": "Placement",
     "rating": "Rating",
