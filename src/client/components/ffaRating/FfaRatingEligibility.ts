@@ -18,7 +18,8 @@ export interface FfaRatingGame {
 
 /**
  * The game as an FFA rating candidate: a public, unranked FFA game that the
- * viewer played (not a replay, not as a spectator). null for anything else.
+ * viewer played (not a replay, not as a spectator, and spawned in). null for
+ * anything else.
  */
 export function ffaRatingGameOf(
   game: Pick<GameView, "config" | "myPlayer" | "players" | "gameID">,
@@ -30,7 +31,7 @@ export function ffaRatingGameOf(
     gameMode !== GameMode.FFA ||
     rankedType !== undefined ||
     config.isReplay() ||
-    game.myPlayer() === null
+    game.myPlayer()?.hasSpawned() !== true
   ) {
     return null;
   }

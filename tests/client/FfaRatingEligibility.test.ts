@@ -13,7 +13,12 @@ import {
 
 const game = (
   cfg: Partial<GameConfig>,
-  opts: { replay?: boolean; me?: boolean; humans?: number } = {},
+  opts: {
+    replay?: boolean;
+    me?: boolean;
+    spawned?: boolean;
+    humans?: number;
+  } = {},
 ) =>
   ({
     gameID: () => "g1",
@@ -26,7 +31,8 @@ const game = (
       }),
       isReplay: () => opts.replay ?? false,
     }),
-    myPlayer: () => ((opts.me ?? true) ? {} : null),
+    myPlayer: () =>
+      (opts.me ?? true) ? { hasSpawned: () => opts.spawned ?? true } : null,
     players: () => [
       ...Array.from({ length: opts.humans ?? 12 }, () => ({
         type: () => PlayerType.Human,
@@ -52,6 +58,7 @@ describe("ffaRatingGameOf", () => {
     ["an old ranked FFA game", game({ rankedType: RankedType.FreeForAll })],
     ["a replay", game({}, { replay: true })],
     ["a spectator", game({}, { me: false })],
+    ["a viewer who never spawned", game({}, { spawned: false })],
   ])("has no rating for %s", (_, g) => {
     expect(ffaRatingGameOf(g)).toBeNull();
   });

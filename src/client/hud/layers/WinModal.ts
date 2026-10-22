@@ -1095,6 +1095,9 @@ export class WinModal extends LitElement implements Controller {
     try {
       const ffaGame = ffaRatingGameOf(this.game);
       if (ffaGame === null) return;
+      // Only a human winner ends a rated game: a nation or tribe win, a team
+      // win or a cancelled match is never rated.
+      if (this.gameEnd?.winner?.[0] !== "player") return;
       this.ffaRatingChecked = true;
       const account = await resolveXpAccount();
       if (account.kind !== "signed_in" || !viewerHasFfaRating(account.me)) {

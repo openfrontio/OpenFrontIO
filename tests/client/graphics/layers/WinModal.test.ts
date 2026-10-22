@@ -4,6 +4,7 @@ import {
   PlayerType,
   RankedType,
 } from "@openfront/engine-api/game/GameTypes";
+import type { Winner } from "@openfront/engine-api/Schemas";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { FfaRatingPanel } from "../../../../src/client/components/ffaRating/FfaRatingPanel";
 import type { PurchaseButton } from "../../../../src/client/components/PurchaseButton";
@@ -264,7 +265,10 @@ describe("WinModal FFA rating panel", () => {
       me: { player: { trustTier: "trusted", leaderboard: { ffa } } },
     } as never);
 
-  const mount = async (rankedType?: RankedType) => {
+  const mount = async (
+    rankedType?: RankedType,
+    winner: Winner = ["player", "c1"],
+  ) => {
     const el = document.createElement("win-modal") as WinModal;
     el.game = {
       gameID: () => "g1",
@@ -276,13 +280,19 @@ describe("WinModal FFA rating panel", () => {
         }),
         isReplay: () => false,
       }),
-      myPlayer: () => ({ isAlive: () => true }),
+      myPlayer: () => ({ isAlive: () => true, hasSpawned: () => true }),
       players: () =>
         Array.from({ length: 12 }, () => ({
           type: () => PlayerType.Human,
           hasSpawned: () => true,
         })),
     } as never;
+    // What vote() records when the Win update arrives.
+    (el as unknown as { gameEnd: unknown }).gameEnd = {
+      winner,
+      allPlayersStats: {},
+      tick: 0,
+    };
     document.body.appendChild(el);
     await el.updateComplete;
     modal = el;
@@ -308,6 +318,15 @@ describe("WinModal FFA rating panel", () => {
     await m.updateFfaRating();
     await m.updateComplete;
     expect(m.querySelector("ffa-rating-panel")).toBeNull();
+  });
+
+  it("shows no panel when a nation won", async () => {
+    signedIn({ calibrationGames: 3 });
+    const m = await mount(undefined, ["nation", "Atlantis"]);
+    await m.updateFfaRating();
+    await m.updateComplete;
+    expect(m.querySelector("ffa-rating-panel")).toBeNull();
+    expect(resolveXpAccount).not.toHaveBeenCalled();
   });
 
   it("shows no panel after a ranked game", async () => {
