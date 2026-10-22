@@ -496,7 +496,7 @@ describe("GameView.update — units", () => {
       game
         .units()
         .map((u) => u.id())
-        .sort(),
+        .sort((a, b) => a - b),
     ).toEqual([1, 2]);
     expect(game.units(UnitType.City).map((u) => u.id())).toEqual([1]);
     // The inactive one is still present until the NEXT tick sweeps it.

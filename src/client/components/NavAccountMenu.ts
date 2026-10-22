@@ -26,7 +26,6 @@ import {
 import { steamSDK } from "../SteamSDK";
 import { playerProfileUrl } from "../utilities/PlayerProfileUrl";
 import { copyToClipboard, showToast, translateText } from "../Utils";
-import "./LevelBadge";
 import { levelBadgeLabel } from "./LevelBadge";
 import { xpBar, xpProgressText } from "./XpBar";
 

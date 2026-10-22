@@ -13,13 +13,12 @@ async function friendsFetch(
   path: string,
   options?: RequestInit,
 ): Promise<Response> {
+  const headers = new Headers(options?.headers);
+  if (!headers.has("Accept")) headers.set("Accept", "application/json");
+  headers.set("Authorization", await getAuthHeader());
   return fetch(`${getApiBase()}${path}`, {
     ...options,
-    headers: {
-      Accept: "application/json",
-      ...options?.headers,
-      Authorization: await getAuthHeader(),
-    },
+    headers,
   });
 }
 

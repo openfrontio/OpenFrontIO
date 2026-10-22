@@ -6,10 +6,12 @@
   },
   "ignorePatterns": [
     "src/server/gatekeeper/**",
-    "tests/pathfinding/playground/**"
+    "tests/pathfinding/playground/**",
+    ".claude/**"
   ],
+  "plugins": ["eslint", "typescript", "oxc", "import"],
   "categories": {
-    "correctness": "off",
+    "correctness": "error",
     "suspicious": "off",
     "pedantic": "off",
     "perf": "off",
@@ -22,9 +24,14 @@
   },
   "rules": {
     "typescript/no-explicit-any": "off",
+    "typescript/no-floating-promises": "off",
+    "typescript/restrict-template-expressions": "off",
+    "typescript/unbound-method": "off",
+    "typescript/no-base-to-string": "off",
     "typescript/prefer-nullish-coalescing": "error",
     "eqeqeq": "error",
     "no-case-declarations": "error",
+    "import/no-duplicates": "error",
     "no-unused-vars": [
       "error",
       {
@@ -36,5 +43,123 @@
         }
       }
     ]
-  }
+  },
+  "jsPlugins": [{ "name": "eslint-js", "specifier": "oxlint-plugin-eslint" }],
+  "overrides": [
+    {
+      "files": [
+        "packages/engine/src/**/*.ts",
+        "packages/engine-api/src/**/*.ts",
+        "packages/engine-lib/src/**/*.ts"
+      ],
+      "excludeFiles": ["packages/engine-lib/src/DetMath.ts"],
+      "rules": {
+        "eslint/no-restricted-properties": [
+          "error",
+          {
+            "object": "Math",
+            "property": "exp",
+            "message": "Math.exp differs between JS engines; use packages/engine-lib/src/DetMath.ts to keep the simulation deterministic."
+          },
+          {
+            "object": "Math",
+            "property": "expm1",
+            "message": "Math.expm1 differs between JS engines; use packages/engine-lib/src/DetMath.ts to keep the simulation deterministic."
+          },
+          {
+            "object": "Math",
+            "property": "log",
+            "message": "Math.log differs between JS engines; use packages/engine-lib/src/DetMath.ts to keep the simulation deterministic."
+          },
+          {
+            "object": "Math",
+            "property": "log1p",
+            "message": "Math.log1p differs between JS engines; use packages/engine-lib/src/DetMath.ts to keep the simulation deterministic."
+          },
+          {
+            "object": "Math",
+            "property": "log2",
+            "message": "Math.log2 differs between JS engines; use packages/engine-lib/src/DetMath.ts to keep the simulation deterministic."
+          },
+          {
+            "object": "Math",
+            "property": "log10",
+            "message": "Math.log10 differs between JS engines; use packages/engine-lib/src/DetMath.ts to keep the simulation deterministic."
+          },
+          {
+            "object": "Math",
+            "property": "pow",
+            "message": "Math.pow differs between JS engines; use packages/engine-lib/src/DetMath.ts to keep the simulation deterministic."
+          },
+          {
+            "object": "Math",
+            "property": "sin",
+            "message": "Math.sin differs between JS engines; use packages/engine-lib/src/DetMath.ts to keep the simulation deterministic."
+          },
+          {
+            "object": "Math",
+            "property": "cos",
+            "message": "Math.cos differs between JS engines; use packages/engine-lib/src/DetMath.ts to keep the simulation deterministic."
+          },
+          {
+            "object": "Math",
+            "property": "tan",
+            "message": "Math.tan differs between JS engines; use packages/engine-lib/src/DetMath.ts to keep the simulation deterministic."
+          },
+          {
+            "object": "Math",
+            "property": "asin",
+            "message": "Math.asin differs between JS engines; use packages/engine-lib/src/DetMath.ts to keep the simulation deterministic."
+          },
+          {
+            "object": "Math",
+            "property": "acos",
+            "message": "Math.acos differs between JS engines; use packages/engine-lib/src/DetMath.ts to keep the simulation deterministic."
+          },
+          {
+            "object": "Math",
+            "property": "atan",
+            "message": "Math.atan differs between JS engines; use packages/engine-lib/src/DetMath.ts to keep the simulation deterministic."
+          },
+          {
+            "object": "Math",
+            "property": "atan2",
+            "message": "Math.atan2 differs between JS engines; use packages/engine-lib/src/DetMath.ts to keep the simulation deterministic."
+          },
+          {
+            "object": "Math",
+            "property": "sinh",
+            "message": "Math.sinh differs between JS engines; use packages/engine-lib/src/DetMath.ts to keep the simulation deterministic."
+          },
+          {
+            "object": "Math",
+            "property": "cosh",
+            "message": "Math.cosh differs between JS engines; use packages/engine-lib/src/DetMath.ts to keep the simulation deterministic."
+          },
+          {
+            "object": "Math",
+            "property": "tanh",
+            "message": "Math.tanh differs between JS engines; use packages/engine-lib/src/DetMath.ts to keep the simulation deterministic."
+          },
+          {
+            "object": "Math",
+            "property": "cbrt",
+            "message": "Math.cbrt differs between JS engines; use packages/engine-lib/src/DetMath.ts to keep the simulation deterministic."
+          },
+          {
+            "object": "Math",
+            "property": "hypot",
+            "message": "Math.hypot differs between JS engines; use packages/engine-lib/src/DetMath.ts to keep the simulation deterministic."
+          }
+        ],
+        "eslint-js/no-restricted-syntax": [
+          "error",
+          {
+            "selector": "BinaryExpression[operator='**']:not([right.type='Literal'][right.value=2])",
+            "message": "`**` with a non-2 exponent differs between JS engines; use packages/engine-lib/src/DetMath.ts to keep the simulation deterministic."
+          }
+        ]
+      }
+    }
+  ]
 }

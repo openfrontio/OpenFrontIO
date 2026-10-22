@@ -87,7 +87,9 @@ describe("SavedGamesApi", () => {
       tick: "1200",
     });
     expect(init.method).toBe("POST");
-    expect(init.headers.Authorization).toBe("Bearer test-jwt");
+    expect(new Headers(init.headers).get("Authorization")).toBe(
+      "Bearer test-jwt",
+    );
     // A byte body, so the browser sends the Content-Length the API checks.
     expect(init.body).toBeInstanceOf(Uint8Array);
     expect(new Uint8Array(gunzipSync(init.body))).toEqual(snapshot);
@@ -116,7 +118,7 @@ describe("SavedGamesApi", () => {
     await expect(downloadSavedGame(SAVE.id, true)).resolves.toEqual(snapshot);
     const [url, init] = fetchMock.mock.calls[0];
     expect(url).toBe(`https://api.test/public/saved_games/${SAVE.id}/data`);
-    expect(init?.headers?.Authorization).toBeUndefined();
+    expect(new Headers(init?.headers).get("Authorization")).toBeNull();
   });
 
   it("downloads the player's own save with their session", async () => {
@@ -126,7 +128,9 @@ describe("SavedGamesApi", () => {
     await expect(downloadSavedGame(SAVE.id, false)).resolves.toEqual(snapshot);
     const [url, init] = fetchMock.mock.calls[0];
     expect(url).toBe(`https://api.test/users/@me/saved_games/${SAVE.id}/data`);
-    expect(init.headers.Authorization).toBe("Bearer test-jwt");
+    expect(new Headers(init.headers).get("Authorization")).toBe(
+      "Bearer test-jwt",
+    );
   });
 
   it("reports a missing save as not_found", async () => {

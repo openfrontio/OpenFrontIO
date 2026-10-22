@@ -562,11 +562,8 @@ describe("fetchClanMembers", () => {
 
     await fetchClanMembers("TEST");
 
-    const headers = fetchSpy.mock.calls[0]![1]?.headers as Record<
-      string,
-      string
-    >;
-    expect(headers.Authorization).toBe("Bearer test-token");
+    const headers = new Headers(fetchSpy.mock.calls[0]![1]?.headers);
+    expect(headers.get("Authorization")).toBe("Bearer test-token");
   });
 });
 
@@ -634,11 +631,8 @@ describe("fetchClanRequests", () => {
 
     await fetchClanRequests("TEST");
 
-    const headers = fetchSpy.mock.calls[0]![1]?.headers as Record<
-      string,
-      string
-    >;
-    expect(headers.Authorization).toBe("Bearer test-token");
+    const headers = new Headers(fetchSpy.mock.calls[0]![1]?.headers);
+    expect(headers.get("Authorization")).toBe("Bearer test-token");
   });
 });
 
@@ -757,11 +751,8 @@ describe("fetchClanGames", () => {
 
     await fetchClanGames("TEST");
 
-    const headers = fetchSpy.mock.calls[0]![1]?.headers as Record<
-      string,
-      string
-    >;
-    expect(headers.Authorization).toBe("Bearer test-token");
+    const headers = new Headers(fetchSpy.mock.calls[0]![1]?.headers);
+    expect(headers.get("Authorization")).toBe("Bearer test-token");
   });
 });
 

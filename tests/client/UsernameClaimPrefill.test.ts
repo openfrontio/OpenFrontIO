@@ -167,7 +167,7 @@ describe("claim form prefill", () => {
     const realDescriptor = Object.getOwnPropertyDescriptor(window, "location")!;
     Object.defineProperty(window, "location", {
       configurable: true,
-      value: { ...window.location, reload, hash: "" },
+      value: Object.assign(new URL(window.location.href), { reload, hash: "" }),
     });
     try {
       getUser.mockResolvedValue({ steamId: "x", name: "Ada.Lovelace" });

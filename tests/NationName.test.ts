@@ -46,12 +46,14 @@ describe("Map manifests: nation name constraints", () => {
           }
           // Allow only printable safe-extended-ASCII characters
           // within [0x20-0x7E] or [0xA0-0xFF], as in https://www.ascii-code.com/.
-          const excludededCharacters = [...name].filter(
-            (c) =>
-              c.charCodeAt(0) < 0x20 ||
-              (0x7e < c.charCodeAt(0) && c.charCodeAt(0) < 0xa0) ||
-              0xff < c.charCodeAt(0),
-          );
+          const excludededCharacters = name
+            .split("")
+            .filter(
+              (c) =>
+                c.charCodeAt(0) < 0x20 ||
+                (0x7e < c.charCodeAt(0) && c.charCodeAt(0) < 0xa0) ||
+                0xff < c.charCodeAt(0),
+            );
           if (0 < excludededCharacters.length) {
             violations.push(
               `${manifestPath} -> nations[${idx}].name "${name}" has ${excludededCharacters.length} non valid characters: ${excludededCharacters}`,

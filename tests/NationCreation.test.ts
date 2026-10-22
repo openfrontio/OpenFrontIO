@@ -291,7 +291,9 @@ describe("createNationsForGame: additionalNations pool", () => {
     );
 
     expect(nations).toHaveLength(2);
-    const flags = nations.map((n) => n.playerInfo.nationFlag).sort();
+    const flags = nations
+      .map((n) => n.playerInfo.nationFlag)
+      .sort((a, b) => String(a).localeCompare(String(b)));
     expect(flags).toEqual(["in", "pk"]);
   });
 

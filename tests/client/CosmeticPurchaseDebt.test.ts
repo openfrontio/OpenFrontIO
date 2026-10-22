@@ -72,7 +72,9 @@ describe("purchaseCosmetic when the wallet is in debt", () => {
     reloadMock = vi.fn();
     Object.defineProperty(window, "location", {
       configurable: true,
-      value: { ...originalLocation, reload: reloadMock },
+      value: Object.assign(new URL(originalLocation.href), {
+        reload: reloadMock,
+      }),
     });
     vi.mocked(getUserMe).mockResolvedValue(userWith(500, 5000));
   });

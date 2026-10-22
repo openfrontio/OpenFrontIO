@@ -36,6 +36,8 @@ import { CopyButton } from "./components/CopyButton";
 import "./components/GameConfigSettings";
 import "./components/InputCard";
 import "./components/InsufficientCurrencyDialog";
+// The type import below is erased at runtime; keep this to register the dialog.
+// oxlint-disable-next-line import/no-duplicates -- Required custom-element registration.
 import "./components/ListLobbyDialog";
 import { ListLobbyOptions } from "./components/ListLobbyDialog";
 import "./components/LobbyPlayerView";

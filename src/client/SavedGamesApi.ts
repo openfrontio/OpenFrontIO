@@ -25,12 +25,11 @@ export type SavedGameError =
   | "request_failed";
 
 async function authedFetch(path: string, init?: RequestInit) {
+  const headers = new Headers(init?.headers);
+  headers.set("Authorization", await getAuthHeader());
   return fetch(`${getApiBase()}${path}`, {
     ...init,
-    headers: {
-      ...init?.headers,
-      Authorization: await getAuthHeader(),
-    },
+    headers,
   });
 }
 

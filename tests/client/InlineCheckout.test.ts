@@ -110,7 +110,9 @@ beforeEach(() => {
   reloadMock = vi.fn();
   Object.defineProperty(window, "location", {
     configurable: true,
-    value: { ...originalLocation, reload: reloadMock },
+    value: Object.assign(new URL(originalLocation.href), {
+      reload: reloadMock,
+    }),
   });
 });
 

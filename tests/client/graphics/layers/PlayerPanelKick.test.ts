@@ -202,11 +202,10 @@ describe("PlayerPanel - report player", () => {
     (panel as any).renderModeration(other, other, false);
     expect(mockActionButton).not.toHaveBeenCalled();
 
-    const nation = {
-      ...other,
+    const nation = Object.assign({}, other, {
       type: () => PlayerType.Nation,
       clientID: () => null,
-    } as unknown as PlayerView;
+    }) as unknown as PlayerView;
     (panel as any).renderModeration(me, nation, false);
     expect(mockActionButton).not.toHaveBeenCalled();
   });

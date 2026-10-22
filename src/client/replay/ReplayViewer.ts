@@ -22,7 +22,6 @@ import "../hud/layers/PlayerInfoOverlay";
 import type { PlayerInfoOverlay } from "../hud/layers/PlayerInfoOverlay";
 import "../hud/layers/PlayerStats";
 import type { PlayerStats } from "../hud/layers/PlayerStats";
-import "../hud/layers/SettingsModal";
 import {
   ShowSettingsModalEvent,
   type SettingsModal,

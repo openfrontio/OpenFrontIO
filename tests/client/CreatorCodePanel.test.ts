@@ -125,7 +125,7 @@ describe("CreatorCodePanel", () => {
     // an in-place refresh via the `creator-changed` event, not a reload.
     Object.defineProperty(window, "location", {
       configurable: true,
-      value: { ...realLocation, reload, hash: "" },
+      value: Object.assign(new URL(realLocation.href), { reload, hash: "" }),
     });
   });
 

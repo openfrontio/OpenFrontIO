@@ -79,7 +79,7 @@ describe("PseudoRandom", () => {
       expect(v).toBeLessThan(8);
       seen.add(v);
     }
-    expect([...seen].sort()).toEqual([3, 4, 5, 6, 7]);
+    expect([...seen].sort((a, b) => a - b)).toEqual([3, 4, 5, 6, 7]);
   });
 
   test("nextInt with a single-value range always returns it", () => {

@@ -2,9 +2,13 @@ import type { MapLayer } from "@openfront/engine-api/game/MapFiles";
 import { html, nothing } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import { formatKeyForDisplay, translateText } from "../client/Utils";
+// This type is erased at runtime; retain the import to register the setting.
+// oxlint-disable-next-line import/no-duplicates -- Required custom-element registration.
 import "./components/baseComponents/setting/SettingKeybind";
 import { SettingKeybind } from "./components/baseComponents/setting/SettingKeybind";
 import "./components/baseComponents/setting/SettingNumber";
+// This type is erased at runtime; retain the import to register the setting.
+// oxlint-disable-next-line import/no-duplicates -- Required custom-element registration.
 import "./components/baseComponents/setting/SettingSelect";
 import { SettingSelect } from "./components/baseComponents/setting/SettingSelect";
 import "./components/baseComponents/setting/SettingSlider";

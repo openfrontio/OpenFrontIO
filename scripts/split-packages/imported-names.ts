@@ -41,5 +41,5 @@ for (const f of listSourceFiles()) {
     } else console.log("other ref", r, ref.kind);
   }
 }
-for (const [n, fs] of [...names].sort())
+for (const [n, fs] of [...names].sort(([a], [b]) => a.localeCompare(b)))
   console.log(n.padEnd(28), fs.size, [...fs].slice(0, 3).join(" "));

@@ -32,7 +32,7 @@ describe("poolIndexFor", () => {
     for (let i = 0; i < 200; i++) {
       hits.add(poolIndexFor(`player-${i}`, 4));
     }
-    expect([...hits].sort()).toEqual([0, 1, 2, 3]);
+    expect([...hits].sort((a, b) => a - b)).toEqual([0, 1, 2, 3]);
   });
 });
 

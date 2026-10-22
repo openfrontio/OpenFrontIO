@@ -50,7 +50,7 @@ export class Client {
     // From the server's /users/@me lookup at join (levelBadgeForPlayer);
     // undefined for guests, players who hide their level, or when the API sent
     // no progress. Display-only.
-    public readonly levelBadge: LevelBadge | undefined = undefined,
+    public readonly levelBadge?: LevelBadge,
   ) {
     this.wireLevelBadge = packLevelBadge(levelBadge);
   }

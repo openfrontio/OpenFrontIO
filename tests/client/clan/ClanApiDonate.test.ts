@@ -41,9 +41,9 @@ describe("donateToClan", () => {
       amount: "300",
       idempotencyKey: "key-1234567",
     });
-    const headers = init.headers as Record<string, string>;
-    expect(headers["Content-Type"]).toBe("application/json");
-    expect(headers.Authorization).toBe("Bearer test-token");
+    const headers = new Headers(init.headers);
+    expect(headers.get("Content-Type")).toBe("application/json");
+    expect(headers.get("Authorization")).toBe("Bearer test-token");
   });
 
   it("keeps a bigint-sized amount exact on the wire", async () => {
