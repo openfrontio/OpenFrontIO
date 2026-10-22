@@ -94,6 +94,7 @@ import { modalRouter } from "./ModalRouter";
 import { updateAccountNavButton } from "./NavAccountButton";
 import { initNavigation } from "./Navigation";
 import { capturePagePin } from "./PagePin";
+import { setPurchaseAccountRefresh } from "./Payments";
 import { fallbackPlayerName, LAPSE_NOTICE_KEY } from "./PlayerName";
 import { updatePortalNavButton } from "./PortalAccountButton";
 import {
@@ -750,6 +751,7 @@ class Client {
       loadConfig: fetchProgressionConfig,
       refreshUserMe: broadcastFreshUserMe,
     });
+    setPurchaseAccountRefresh(broadcastFreshUserMe);
 
     const onUserMe = async (userMeResponse: UserMeResponse | false) => {
       if (gamePortal.isOnGamePortal()) {
