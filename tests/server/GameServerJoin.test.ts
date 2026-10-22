@@ -464,4 +464,39 @@ describe("GameServer.joinClient — active game reconnection", () => {
     // Because client B was seated, admission is preserved despite Attempt A's rollback
     expect(game.wasAdmitted(pid)).toBe(true);
   });
+
+  it("protects admission when two concurrent unseated guards share a persistentId and the first rolls back", () => {
+    const game = makeGame();
+    const pid = "concurrent-unseated-guard-pid";
+
+    // Attempt A arrives first when not yet admitted
+    const isReadmitA = game.wasAdmitted(pid);
+    expect(isReadmitA).toBe(false);
+    const guardA = createAdmissionGuard(game, pid, isReadmitA, "attempt-A");
+    guardA.markAdmittedIfNeeded();
+    expect(guardA.wasAdmittedThisAttempt()).toBe(true);
+    expect(game.wasAdmitted(pid)).toBe(true);
+    expect(game.hasEverBeenSeated(pid)).toBe(false);
+
+    // Attempt B arrives concurrently before Attempt A is seated
+    const isReadmitB = game.wasAdmitted(pid);
+    expect(isReadmitB).toBe(true);
+    const guardB = createAdmissionGuard(game, pid, isReadmitB, "attempt-B");
+    guardB.markAdmittedIfNeeded();
+    expect(guardB.wasAdmittedThisAttempt()).toBe(true);
+    expect(game.wasAdmitted(pid)).toBe(true);
+    expect(game.hasEverBeenSeated(pid)).toBe(false);
+
+    // Attempt A rolls back (e.g. getUserMe failure)
+    guardA.rollback();
+    expect(guardA.wasAdmittedThisAttempt()).toBe(false);
+    // Admission remains protected because Attempt B is still pending
+    expect(game.wasAdmitted(pid)).toBe(true);
+
+    // Attempt B rolls back
+    guardB.rollback();
+    expect(guardB.wasAdmittedThisAttempt()).toBe(false);
+    // All pending unseated attempts rolled back, admission cleared
+    expect(game.wasAdmitted(pid)).toBe(false);
+  });
 });

@@ -135,17 +135,45 @@ describe("Worker join username clamping", () => {
 });
 
 describe("createAdmissionGuard", () => {
-  function makeMockTarget(initialAdmitted: string[] = []): AdmissionTarget {
+  function makeMockTarget(
+    initialAdmitted: string[] = [],
+    initialSeated: string[] = initialAdmitted,
+  ): AdmissionTarget {
     const admitted = new Set<string>(initialAdmitted);
+    const seated = new Set<string>(initialSeated);
+    const pending = new Map<string, Set<string>>();
     return {
-      markAdmitted(pid: string) {
+      markAdmitted(pid: string, attemptId?: string) {
         admitted.add(pid);
+        if (attemptId !== undefined) {
+          let attempts = pending.get(pid);
+          if (!attempts) {
+            attempts = new Set();
+            pending.set(pid, attempts);
+          }
+          attempts.add(attemptId);
+        }
       },
-      unmarkAdmitted(pid: string) {
+      unmarkAdmitted(pid: string, attemptId?: string) {
+        if (seated.has(pid)) return;
+        if (attemptId !== undefined) {
+          const attempts = pending.get(pid);
+          if (attempts) {
+            attempts.delete(attemptId);
+            if (attempts.size > 0) return;
+            pending.delete(pid);
+          }
+        } else {
+          if ((pending.get(pid)?.size ?? 0) > 0) return;
+          pending.delete(pid);
+        }
         admitted.delete(pid);
       },
       wasAdmitted(pid: string) {
         return admitted.has(pid);
+      },
+      hasEverBeenSeated(pid: string) {
+        return seated.has(pid);
       },
     };
   }
@@ -198,6 +226,47 @@ describe("createAdmissionGuard", () => {
     guard.rollback();
     expect(target.wasAdmitted(pid)).toBe(true);
     expect(guard.wasAdmittedThisAttempt()).toBe(false);
+  });
+
+  it("registers concurrent unseated attempt and preserves admission when first attempt rolls back", () => {
+    const target = makeMockTarget([], []);
+    const pid = "concurrent-pending-user";
+    const guard1 = createAdmissionGuard(target, pid, false, "attempt-1");
+    guard1.markAdmittedIfNeeded();
+    expect(guard1.wasAdmittedThisAttempt()).toBe(true);
+    expect(target.wasAdmitted(pid)).toBe(true);
+
+    // Second concurrent attempt arrives before seating
+    const isReadmit = target.wasAdmitted(pid);
+    expect(isReadmit).toBe(true);
+    const guard2 = createAdmissionGuard(target, pid, isReadmit, "attempt-2");
+    guard2.markAdmittedIfNeeded();
+    expect(guard2.wasAdmittedThisAttempt()).toBe(true);
+    expect(target.wasAdmitted(pid)).toBe(true);
+
+    // First attempt rolls back (e.g. getUserMe error)
+    guard1.rollback();
+    expect(guard1.wasAdmittedThisAttempt()).toBe(false);
+    expect(target.wasAdmitted(pid)).toBe(true);
+
+    // Second attempt rolls back
+    guard2.rollback();
+    expect(guard2.wasAdmittedThisAttempt()).toBe(false);
+    expect(target.wasAdmitted(pid)).toBe(false);
+  });
+
+  it("does not clear admission on target unmark without attemptId if another attempt is pending", () => {
+    const target = makeMockTarget([], []);
+    const pid = "pending-clamp-user";
+    const guard = createAdmissionGuard(target, pid, false, "attempt-1");
+    guard.markAdmittedIfNeeded();
+    expect(target.wasAdmitted(pid)).toBe(true);
+
+    target.unmarkAdmitted(pid);
+    expect(target.wasAdmitted(pid)).toBe(true);
+
+    guard.rollback();
+    expect(target.wasAdmitted(pid)).toBe(false);
   });
 
   it("handles undefined game target safely", () => {

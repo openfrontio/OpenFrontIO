@@ -512,12 +512,16 @@ export class GameServer {
     return this.clients.wasAdmitted(persistentID);
   }
 
-  public markAdmitted(persistentID: string): void {
-    this.clients.markAdmitted(persistentID);
+  public markAdmitted(persistentID: string, attemptID?: string): void {
+    this.clients.markAdmitted(persistentID, attemptID);
   }
 
-  public unmarkAdmitted(persistentID: string): void {
-    this.clients.unmarkAdmitted(persistentID);
+  public unmarkAdmitted(persistentID: string, attemptID?: string): void {
+    this.clients.unmarkAdmitted(persistentID, attemptID);
+  }
+
+  public hasEverBeenSeated(persistentID: string): boolean {
+    return this.clients.hasEverBeenSeated(persistentID);
   }
 
   // Screened identity stored for this player's client record, or null if

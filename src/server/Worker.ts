@@ -122,34 +122,38 @@ export function resolveJoinVerdict(
 }
 
 export interface AdmissionTarget {
-  markAdmitted(persistentID: string): void;
-  unmarkAdmitted(persistentID: string): void;
+  markAdmitted(persistentID: string, attemptID?: string): void;
+  unmarkAdmitted(persistentID: string, attemptID?: string): void;
   wasAdmitted(persistentID: string): boolean;
+  hasEverBeenSeated?(persistentID: string): boolean;
 }
 
 export function createAdmissionGuard(
   game: AdmissionTarget | null | undefined,
   persistentId: string,
   isReadmit: boolean,
+  attemptId: string = generateID(),
 ) {
   let admittedThisAttempt = false;
 
   return {
     markAdmittedIfNeeded(): void {
-      if (!isReadmit && !game?.wasAdmitted(persistentId)) {
-        game?.markAdmitted(persistentId);
+      if (admittedThisAttempt) return;
+      const shouldAdmit = !isReadmit
+        ? !game?.wasAdmitted(persistentId)
+        : !game?.hasEverBeenSeated?.(persistentId);
+      if (shouldAdmit) {
+        game?.markAdmitted(persistentId, attemptId);
         admittedThisAttempt = true;
       }
     },
     rollback(): void {
       if (admittedThisAttempt) {
         admittedThisAttempt = false;
-        game?.unmarkAdmitted(persistentId);
+        game?.unmarkAdmitted(persistentId, attemptId);
       }
     },
-    wasAdmittedThisAttempt(): boolean {
-      return admittedThisAttempt;
-    },
+    wasAdmittedThisAttempt: () => admittedThisAttempt,
   };
 }
 

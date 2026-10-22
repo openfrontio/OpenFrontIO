@@ -93,6 +93,83 @@ describe("Roster", () => {
     expect(roster.wasAdmitted(pid)).toBe(false);
   });
 
+  it("tracks multiple pending attempts and clears admission only when all roll back", () => {
+    const roster = new Roster();
+    const pid = "multi-attempt-pid";
+    const attempt1 = "att-1";
+    const attempt2 = "att-2";
+
+    roster.markAdmitted(pid, attempt1);
+    expect(roster.wasAdmitted(pid)).toBe(true);
+
+    roster.markAdmitted(pid, attempt2);
+    expect(roster.wasAdmitted(pid)).toBe(true);
+
+    // Attempt 1 rolls back, but Attempt 2 is still pending
+    roster.unmarkAdmitted(pid, attempt1);
+    expect(roster.wasAdmitted(pid)).toBe(true);
+
+    // Attempt 2 rolls back, no more pending attempts
+    roster.unmarkAdmitted(pid, attempt2);
+    expect(roster.wasAdmitted(pid)).toBe(false);
+  });
+
+  it("preserves backwards compatibility when no attemptID is passed", () => {
+    const roster = new Roster();
+    const pid = "compat-pid";
+
+    roster.markAdmitted(pid);
+    expect(roster.wasAdmitted(pid)).toBe(true);
+
+    roster.unmarkAdmitted(pid);
+    expect(roster.wasAdmitted(pid)).toBe(false);
+  });
+
+  it("clears pending attempts when client is seated or kicked", () => {
+    const roster = new Roster();
+    const pid = "seated-clear-pid";
+    const attempt1 = "att-1";
+
+    roster.markAdmitted(pid, attempt1);
+    expect(roster.wasAdmitted(pid)).toBe(true);
+
+    const client = makeClient({ clientID: cid("p1"), persistentID: pid });
+    roster.add(client);
+    expect(roster.hasEverBeenSeated(pid)).toBe(true);
+
+    // Rollback of attempt1 after seating is a no-op
+    roster.unmarkAdmitted(pid, attempt1);
+    expect(roster.wasAdmitted(pid)).toBe(true);
+  });
+
+  it("clears pending attempts when client is kicked", () => {
+    const roster = new Roster();
+    const pid = "kicked-clear-pid";
+    const attempt1 = "att-1";
+
+    roster.markAdmitted(pid, attempt1);
+    expect(roster.wasAdmitted(pid)).toBe(true);
+
+    const client = makeClient({ clientID: cid("p1"), persistentID: pid });
+    roster.add(client);
+    roster.kick(client);
+    expect(roster.isKicked(pid)).toBe(true);
+    expect(roster.wasAdmitted(pid)).toBe(false);
+  });
+
+  it("does not clear admission on unmarkAdmitted without attemptID if another attempt is pending", () => {
+    const roster = new Roster();
+    const pid = "pending-pid";
+    roster.markAdmitted(pid, "att-1");
+    expect(roster.wasAdmitted(pid)).toBe(true);
+
+    roster.unmarkAdmitted(pid); // no attemptID
+    expect(roster.wasAdmitted(pid)).toBe(true);
+
+    roster.unmarkAdmitted(pid, "att-1");
+    expect(roster.wasAdmitted(pid)).toBe(false);
+  });
+
   it("does not remove admission on unmarkAdmitted if the persistent ID is currently reconnectable", () => {
     const roster = new Roster();
     const pid = "seated-reconnectable-pid";
