@@ -928,6 +928,18 @@
     "minimize": "Minimize",
     "open_on_twitch": "Open {channel} on Twitch"
   },
+  "ffa_rating": {
+    "tier": {
+      "bronze": "Bronze",
+      "diamond": "Diamond",
+      "gold": "Gold",
+      "grandmaster": "Grandmaster",
+      "iron": "Iron",
+      "master": "Master",
+      "platinum": "Platinum",
+      "silver": "Silver"
+    }
+  },
   "free_play": {
     "account": "Your account, stats, friends and cosmetics",
     "ad_free_steam": "No ads in the Steam app, ever",
