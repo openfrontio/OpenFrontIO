@@ -276,7 +276,7 @@ export type GameXpEligible = z.infer<typeof GameXpEligibleSchema>;
 export type GameXpIneligible = z.infer<typeof GameXpIneligibleSchema>;
 export type GameXpResponse = z.infer<typeof GameXpResponseSchema>;
 
-// GET /game/:id/ffa-rating — what one FFA game did to the caller's rating.
+// GET /users/@me/ffa_rating/:gameId — what one FFA game did to the caller's rating.
 // While calibrating (`calibrating: true`) only the games count is sent; once
 // rated, the before/after numbers and tiers follow. Strict, unlike the fields
 // added to the lists above: the caller treats a body that fails to parse as
