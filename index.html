@@ -241,6 +241,12 @@
       window.ramp = window.ramp || {};
       window.ramp.que = window.ramp.que || [];
       window.ramp.passiveMode = true;
+      // Returning player's hashed email (src/client/HashedEmail.ts), which
+      // RAMP only reads at init.
+      try {
+        var hem = localStorage.getItem("ramp_hem_sha256");
+        if (hem) window.ramp.up = { format: "UUP1", heid: { sha256: hem } };
+      } catch (e) {}
     </script>
 
     <script>
