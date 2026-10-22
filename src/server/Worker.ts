@@ -121,6 +121,38 @@ export function resolveJoinVerdict(
   };
 }
 
+export interface AdmissionTarget {
+  markAdmitted(persistentID: string): void;
+  unmarkAdmitted(persistentID: string): void;
+  wasAdmitted(persistentID: string): boolean;
+}
+
+export function createAdmissionGuard(
+  game: AdmissionTarget | null | undefined,
+  persistentId: string,
+  isReadmit: boolean,
+) {
+  let admittedThisAttempt = false;
+
+  return {
+    markAdmittedIfNeeded(): void {
+      if (!isReadmit && !game?.wasAdmitted(persistentId)) {
+        game?.markAdmitted(persistentId);
+        admittedThisAttempt = true;
+      }
+    },
+    rollback(): void {
+      if (admittedThisAttempt) {
+        admittedThisAttempt = false;
+        game?.unmarkAdmitted(persistentId);
+      }
+    },
+    wasAdmittedThisAttempt(): boolean {
+      return admittedThisAttempt;
+    },
+  };
+}
+
 // Toggle whether a private lobby is visible in the public lobby browser.
 // Creator-only; listing requires an active subscription (checked fresh
 // against the API) and is limited to one listed lobby per creator.
@@ -686,9 +718,14 @@ export async function startWorker() {
         // change on refresh is screened before it is applied.
         let verifySkipped = false;
         const game = gm.game(clientMsg.gameID);
+        const isReadmit = game?.wasAdmitted(persistentId) ?? false;
+        const admissionGuard = createAdmissionGuard(
+          game,
+          persistentId,
+          isReadmit,
+        );
         if (ServerEnv.env() !== GameEnv.Dev) {
           const stored = game?.storedIdentity(persistentId) ?? null;
-          const isReadmit = game?.wasAdmitted(persistentId) ?? false;
           const steamAuthed = isSteamAuthenticated(claims);
           // SECURITY: the reject/skip/verify split (first joins must
           // present a token, only re-admits may omit it) lives in
@@ -729,7 +766,7 @@ export async function startWorker() {
               persistentId,
             );
             if (verdict.status === "approved" || verdict.status === "error") {
-              game?.markAdmitted(persistentId);
+              admissionGuard.markAdmittedIfNeeded();
             }
             if (isSocketClosed(ws)) {
               return;
@@ -807,7 +844,7 @@ export async function startWorker() {
         if (claims === null) {
           if (allowedFlares !== undefined) {
             log.warn("Unauthorized: Anonymous user attempted to join game");
-            game?.unmarkAdmitted(persistentId);
+            admissionGuard.rollback();
             ws.close(CloseCode.Unauthorized, CloseReason.LoginRequired);
             return;
           }
@@ -820,7 +857,7 @@ export async function startWorker() {
               gameID: clientMsg.gameID,
             });
             const { code, reason } = userMeFailureClose(result);
-            game?.unmarkAdmitted(persistentId);
+            admissionGuard.rollback();
             ws.close(code, reason);
             return;
           }
@@ -845,7 +882,7 @@ export async function startWorker() {
               log.warn(
                 "Forbidden: player without an allowed flare attempted to join game",
               );
-              game?.unmarkAdmitted(persistentId);
+              admissionGuard.rollback();
               ws.close(CloseCode.Forbidden, CloseReason.Forbidden);
               return;
             }
@@ -876,7 +913,7 @@ export async function startWorker() {
             persistentID: persistentId,
             gameID: clientMsg.gameID,
           });
-          game?.unmarkAdmitted(persistentId);
+          admissionGuard.rollback();
           ws.close(CloseCode.Forbidden, CloseReason.CosmeticsForbidden);
           return;
         }
@@ -927,8 +964,8 @@ export async function startWorker() {
         );
 
         const joinResult = gm.joinClient(client, clientMsg.gameID);
-        if (joinResult !== "joined") {
-          game?.unmarkAdmitted(persistentId);
+        if (joinResult !== "joined" && joinResult !== "redirected") {
+          admissionGuard.rollback();
         }
 
         if (joinResult === "not_found") {

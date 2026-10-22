@@ -31,6 +31,7 @@ export class Roster {
   }
 
   unmarkAdmitted(persistentID: string): void {
+    if (this.reconnectable.has(persistentID)) return;
     this.admitted.delete(persistentID);
   }
 

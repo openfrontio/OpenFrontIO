@@ -93,6 +93,42 @@ describe("Roster", () => {
     expect(roster.wasAdmitted(pid)).toBe(false);
   });
 
+  it("does not remove admission on unmarkAdmitted if the persistent ID is currently reconnectable", () => {
+    const roster = new Roster();
+    const pid = "seated-reconnectable-pid";
+    const client = makeClient({ clientID: cid("p1"), persistentID: pid });
+    roster.add(client);
+
+    expect(roster.wasAdmitted(pid)).toBe(true);
+    expect(roster.byPersistentId(pid)).toBe(client);
+
+    roster.unmarkAdmitted(pid);
+    expect(roster.wasAdmitted(pid)).toBe(true);
+
+    // Still reconnectable after markLeft (socket disconnected, e.g. in active game)
+    roster.markLeft(client);
+    roster.unmarkAdmitted(pid);
+    expect(roster.wasAdmitted(pid)).toBe(true);
+  });
+
+  it("retains wasAdmitted true when an admitted player leaves via forgetReconnect", () => {
+    const roster = new Roster();
+    const pid = "leave-pid";
+    const client = makeClient({ clientID: cid("p1"), persistentID: pid });
+    roster.add(client);
+    expect(roster.wasAdmitted(pid)).toBe(true);
+
+    roster.markLeft(client);
+    roster.forgetReconnect(client);
+
+    expect(roster.byPersistentId(pid)).toBeUndefined();
+    expect(roster.wasAdmitted(pid)).toBe(true);
+
+    // Once no longer reconnectable, unmarkAdmitted deletes admission
+    roster.unmarkAdmitted(pid);
+    expect(roster.wasAdmitted(pid)).toBe(false);
+  });
+
   it("moves a reconnecting client to the end, on the new socket, and drops the old one", () => {
     const roster = new Roster();
     const p1 = makeClient({ clientID: cid("p1") });

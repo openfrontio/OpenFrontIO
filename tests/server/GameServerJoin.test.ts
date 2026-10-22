@@ -3,6 +3,7 @@ import { ADMIN_BOT_CLIENT_ID } from "@openfront/engine-api/Schemas";
 import { GameEnv } from "@openfront/shared/configuration/Env";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ServerEnv } from "../../src/server/ServerEnv";
+import { createAdmissionGuard } from "../../src/server/Worker";
 import {
   cid,
   makeClient,
@@ -375,5 +376,66 @@ describe("GameServer.joinClient — active game reconnection", () => {
     expect(result).not.toBe("joined");
     game.unmarkAdmitted(pid);
     expect(game.wasAdmitted(pid)).toBe(false);
+  });
+
+  it("maintains wasAdmitted when an admitted seated player leaves the lobby and a subsequent join fails authorization", () => {
+    const game = makeGame();
+    const pid = "seated-leaving-pid";
+    const client = makeClient({ clientID: cid("p1"), persistentID: pid });
+
+    game.markAdmitted(pid);
+    expect(game.joinClient(client)).toBe("joined");
+    expect(game.wasAdmitted(pid)).toBe(true);
+
+    // Player leaves the lobby before game starts (triggers forgetReconnect)
+    mockWsOf(client).trigger("close");
+    expect(game.getClientIdForPersistentId(pid)).toBeNull();
+    expect(game.wasAdmitted(pid)).toBe(true);
+
+    // Subsequent join attempt: worker evaluates isReadmit and creates guard
+    const isReadmit = game.wasAdmitted(pid);
+    expect(isReadmit).toBe(true);
+    const admissionGuard = createAdmissionGuard(game, pid, isReadmit);
+
+    // The attempt reaches verify or skips it, then markAdmittedIfNeeded is called
+    admissionGuard.markAdmittedIfNeeded();
+    expect(admissionGuard.wasAdmittedThisAttempt()).toBe(false);
+
+    // Authorization fails downstream (e.g. getUserMe error or forbidden)
+    admissionGuard.rollback();
+
+    // Admission from earlier join is preserved
+    expect(game.wasAdmitted(pid)).toBe(true);
+  });
+
+  it("maintains wasAdmitted when an admitted player leaves the lobby and subsequent joinClient fails", () => {
+    const game = makeGame();
+    const pid = "seated-leaving-started-pid";
+    const client1 = makeClient({ clientID: cid("p1"), persistentID: pid });
+    game.markAdmitted(pid);
+    expect(game.joinClient(client1)).toBe("joined");
+
+    // Player leaves before start
+    mockWsOf(client1).trigger("close");
+    expect(game.wasAdmitted(pid)).toBe(true);
+
+    // Game starts in their absence
+    game.start();
+
+    // Rejoin attempt creates guard with isReadmit: true
+    const isReadmit = game.wasAdmitted(pid);
+    const guard = createAdmissionGuard(game, pid, isReadmit);
+    guard.markAdmittedIfNeeded();
+
+    // joinClient is rejected because game started without them
+    const client2 = makeClient({ clientID: cid("p2"), persistentID: pid });
+    const joinResult = game.joinClient(client2);
+    expect(joinResult).not.toBe("joined");
+
+    if (joinResult !== "joined" && joinResult !== "redirected") {
+      guard.rollback();
+    }
+
+    expect(game.wasAdmitted(pid)).toBe(true);
   });
 });
