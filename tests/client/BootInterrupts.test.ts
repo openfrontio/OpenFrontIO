@@ -1244,7 +1244,7 @@ describe("running the report thank-you", () => {
   // and the seen POST is fire and forget, so a re-read can still carry the
   // message the player just closed. One showing per launch.
   it("is due once per launch, however often /users/@me is re-read", async () => {
-    expect(reportThanksDueThisLaunch(["report_thanks"])).toBe(true);
+    expect(reportThanksDueThisLaunch(["report_thanks"], ME)).toBe(true);
     await runBootInterrupt(
       "report-thanks",
       { claimStore: {}, grantStore: {}, publicId: ME, steamNotice: null },
@@ -1262,12 +1262,16 @@ describe("running the report thank-you", () => {
         now: () => 1_757_000_000_000,
       },
     );
-    expect(reportThanksDueThisLaunch(["report_thanks"])).toBe(false);
+    expect(reportThanksDueThisLaunch(["report_thanks"], ME)).toBe(false);
+    // A portal sign-in to another account, without a reload, still owes it.
+    expect(reportThanksDueThisLaunch(["report_thanks"], "other-account")).toBe(
+      true,
+    );
   });
 
   it("is not due without a pending report_thanks", () => {
-    expect(reportThanksDueThisLaunch([])).toBe(false);
-    expect(reportThanksDueThisLaunch(["something_else"])).toBe(false);
+    expect(reportThanksDueThisLaunch([], ME)).toBe(false);
+    expect(reportThanksDueThisLaunch(["something_else"], ME)).toBe(false);
   });
 
   it("shows the thank-you, then marks it seen", async () => {

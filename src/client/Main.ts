@@ -915,6 +915,7 @@ class Client {
             // Not every caller's response went through the schema default.
             reportThanksDue: reportThanksDueThisLaunch(
               userMeResponse.pendingMessages ?? [],
+              publicId,
             ),
             reportThanksStringsReady: reportThanksStringsReady(translateText),
           }),

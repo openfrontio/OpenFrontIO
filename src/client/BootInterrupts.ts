@@ -518,18 +518,23 @@ export function steamGrantStringsReady(
 // sign-in) and the seen POST is fire and forget, so a re-read can still carry
 // the message the player just closed. One thank-you per launch, as with the
 // Steam notices (SteamNotices.ts); a launch that never showed it still owes
-// it, because nothing was marked seen.
-let reportThanksShownThisLaunch = false;
+// it, because nothing was marked seen. Kept per account, since a portal
+// sign-in can switch accounts without a reload.
+const reportThanksShownThisLaunch = new Set<string>();
 
-/** Is the report thank-you owed on this boot? */
-export function reportThanksDueThisLaunch(pendingMessages: string[]): boolean {
+/** Is the report thank-you owed to this account on this boot? */
+export function reportThanksDueThisLaunch(
+  pendingMessages: string[],
+  publicId: string,
+): boolean {
   return (
-    !reportThanksShownThisLaunch && pendingMessages.includes("report_thanks")
+    !reportThanksShownThisLaunch.has(publicId) &&
+    pendingMessages.includes("report_thanks")
   );
 }
 
 export function resetReportThanksForTest(): void {
-  reportThanksShownThisLaunch = false;
+  reportThanksShownThisLaunch.clear();
 }
 
 /**
@@ -745,7 +750,7 @@ async function runInterrupt(
       ports.openRewards();
       return;
     case "report-thanks":
-      reportThanksShownThisLaunch = true;
+      reportThanksShownThisLaunch.add(context.publicId);
       await ports.alert(
         ports.translate(BOOT_INTERRUPT_KEYS.reportThanksBody),
         ports.translate(BOOT_INTERRUPT_KEYS.reportThanksHeading),
