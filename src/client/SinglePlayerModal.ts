@@ -24,7 +24,10 @@ import { BaseModal } from "./components/BaseModal";
 import "./components/GameConfigSettings";
 import "./components/SavedGamesPanel";
 import { MEDAL_ORDER, medalIcon } from "./components/map/Medals";
-import type { LoadSavedGameDetail } from "./components/SavedGamesPanel";
+import {
+  type LoadSavedGameDetail,
+  savedGameIdFrom,
+} from "./components/SavedGamesPanel";
 import "./components/ToggleInputCard";
 import { modalHeader } from "./components/ui/ModalHeader";
 import { getPlayerCosmetics, prewarmCosmetics } from "./Cosmetics";
@@ -99,9 +102,6 @@ class SavedGameLoadError extends Error {
     super(messageKey);
   }
 }
-
-// Saved games' public ids (nanoid). Anything else in a link is not one.
-const SAVED_GAME_ID = /^[A-Za-z0-9_-]{1,64}$/;
 
 /** What a start has to wait for before it can dispatch join-lobby. */
 type StartPreparation = {
@@ -514,6 +514,8 @@ export class SinglePlayerModal extends BaseModal {
             .sharedId=${this.sharedSaveId}
             .busy=${this.starting}
             @load-saved-game=${this.handleLoadSavedGame}
+            @open-shared-save=${(e: CustomEvent<string>) =>
+              (this.sharedSaveId = e.detail)}
           ></saved-games-panel>
           <game-config-settings
             class="block"
@@ -727,8 +729,7 @@ export class SinglePlayerModal extends BaseModal {
 
   protected onOpen(args?: Record<string, unknown>): void {
     const save = args?.save;
-    this.sharedSaveId =
-      typeof save === "string" && SAVED_GAME_ID.test(save) ? save : null;
+    this.sharedSaveId = typeof save === "string" ? savedGameIdFrom(save) : null;
     // Saves made since the list last loaded (a game played in between).
     void this.querySelector("saved-games-panel")?.refresh();
     void this.loadNationCount();

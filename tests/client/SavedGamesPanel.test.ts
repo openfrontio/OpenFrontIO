@@ -14,8 +14,11 @@ const dialogs = vi.hoisted(() => ({
 }));
 vi.mock("../../src/client/InGameModal", () => dialogs);
 
-import "../../src/client/components/SavedGamesPanel";
-import type { SavedGamesPanel } from "../../src/client/components/SavedGamesPanel";
+import {
+  type SavedGamesPanel,
+  savedGameIdFrom,
+  savedGameShareUrl,
+} from "../../src/client/components/SavedGamesPanel";
 
 const MINE = {
   id: "mine0000000000000000aa",
@@ -66,10 +69,12 @@ describe("saved-games-panel", () => {
     document.body.innerHTML = "";
   });
 
-  it("shows nothing to a guest without a link", async () => {
+  it("shows a guest without a link only the code box", async () => {
     const panel = await mount({ signedIn: false });
     await settle(panel);
-    expect(panel.textContent?.trim()).toBe("");
+    expect(panel.querySelector("[data-save-code]")).not.toBeNull();
+    expect(panel.querySelector("[data-own-saves]")).toBeNull();
+    expect(panel.querySelector("[data-shared-save]")).toBeNull();
     expect(api.listSavedGames).not.toHaveBeenCalled();
   });
 
@@ -205,5 +210,66 @@ describe("saved-games-panel", () => {
         "saved_games.error.shared_not_found",
       ),
     );
+  });
+
+  // Links don't open the game on Steam or the portals, so a shared save is
+  // pasted in instead.
+  it("opens the shared save a pasted link or code names", async () => {
+    const panel = await mount({ signedIn: false });
+    const opened: unknown[] = [];
+    panel.addEventListener("open-shared-save", (e) =>
+      opened.push((e as CustomEvent).detail),
+    );
+    const input = panel.querySelector<HTMLInputElement>("[data-save-code]")!;
+    for (const pasted of [savedGameShareUrl(THEIRS.id), `  ${MINE.id} `]) {
+      input.value = pasted;
+      input.dispatchEvent(new Event("input"));
+      await panel.updateComplete;
+      panel
+        .querySelector<HTMLButtonElement>('[data-action="open-code"]')!
+        .click();
+      await panel.updateComplete;
+    }
+    expect(opened).toEqual([THEIRS.id, MINE.id]);
+    expect(input.value).toBe("");
+  });
+
+  it("says when what's pasted isn't a shared game", async () => {
+    const panel = await mount({ signedIn: false });
+    const opened: unknown[] = [];
+    panel.addEventListener("open-shared-save", (e) =>
+      opened.push((e as CustomEvent).detail),
+    );
+    const input = panel.querySelector<HTMLInputElement>("[data-save-code]")!;
+    input.value = "https://openfront.io/game/abc12345";
+    input.dispatchEvent(new Event("input"));
+    await panel.updateComplete;
+    panel
+      .querySelector<HTMLButtonElement>('[data-action="open-code"]')!
+      .click();
+    await panel.updateComplete;
+    expect(opened).toEqual([]);
+    expect(panel.querySelector("[data-code-error]")).not.toBeNull();
+  });
+});
+
+describe("savedGameIdFrom", () => {
+  it("reads a bare code or a share link", () => {
+    expect(savedGameIdFrom(MINE.id)).toBe(MINE.id);
+    expect(savedGameIdFrom(savedGameShareUrl(MINE.id))).toBe(MINE.id);
+    expect(
+      savedGameIdFrom(
+        `https://example.com/#modal=single-player&save=${MINE.id}`,
+      ),
+    ).toBe(MINE.id);
+  });
+
+  it("takes nothing else for a save", () => {
+    expect(savedGameIdFrom("")).toBeNull();
+    expect(savedGameIdFrom("../../users/@me")).toBeNull();
+    expect(
+      savedGameIdFrom("https://openfront.io/#modal=single-player"),
+    ).toBeNull();
+    expect(savedGameIdFrom("https://openfront.io/#save=../x")).toBeNull();
   });
 });

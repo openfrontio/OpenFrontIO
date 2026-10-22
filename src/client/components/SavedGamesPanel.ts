@@ -24,15 +24,36 @@ export interface LoadSavedGameDetail {
   shared: boolean;
 }
 
+// Saved games' public ids (nanoid). Anything else in a link is not one.
+const SAVED_GAME_ID = /^[A-Za-z0-9_-]{1,64}$/;
+
+/**
+ * The save a pasted share link or bare code points at, or null. Links only
+ * open the game in a browser, so on Steam and the game portals a shared
+ * save is opened by pasting it.
+ */
+export function savedGameIdFrom(input: string): string | null {
+  const text = input.trim();
+  if (SAVED_GAME_ID.test(text)) return text;
+  try {
+    const url = new URL(text);
+    const id = new URLSearchParams(url.hash.slice(1)).get("save");
+    return id !== null && SAVED_GAME_ID.test(id) ? id : null;
+  } catch {
+    return null;
+  }
+}
+
 /** The link that opens a shared save in the Solo modal. */
 export function savedGameShareUrl(id: string): string {
   return `${ClientEnv.shareOrigin()}/#modal=single-player&save=${encodeURIComponent(id)}`;
 }
 
 /**
- * The Solo modal's saved games: a shared save opened from a link, and the
- * signed-in player's own saves. Starting one is the modal's job; this only
- * fires `load-saved-game`.
+ * The Solo modal's saved games: a box to paste a shared save's link or
+ * code, the shared save from it or from a link, and the signed-in player's
+ * own saves. Starting one is the modal's job; this only fires
+ * `load-saved-game`, and `open-shared-save` with a pasted save's id.
  */
 @customElement("saved-games-panel")
 export class SavedGamesPanel extends LitElement {
@@ -50,6 +71,8 @@ export class SavedGamesPanel extends LitElement {
   // The row with a request in flight; its buttons are off until it settles.
   @state() private pendingId: string | null = null;
   @state() private rowError: { id: string; message: string } | null = null;
+  @state() private codeValue = "";
+  @state() private codeInvalid = false;
 
   createRenderRoot() {
     return this;
@@ -95,6 +118,30 @@ export class SavedGamesPanel extends LitElement {
         composed: true,
       }),
     );
+  }
+
+  private openCode(e?: Event) {
+    e?.preventDefault();
+    const id = savedGameIdFrom(this.codeValue);
+    this.codeInvalid = id === null;
+    if (id === null) return;
+    this.codeValue = "";
+    this.dispatchEvent(
+      new CustomEvent<string>("open-shared-save", {
+        detail: id,
+        bubbles: true,
+        composed: true,
+      }),
+    );
+  }
+
+  private async pasteCode() {
+    try {
+      this.codeValue = (await navigator.clipboard.readText()).trim();
+      this.codeInvalid = false;
+    } catch (err) {
+      console.warn("Failed to read clipboard contents: ", err);
+    }
   }
 
   private replace(updated: SavedGame) {
@@ -227,6 +274,44 @@ export class SavedGamesPanel extends LitElement {
     >
       ${label}
     </button>`;
+  }
+
+  private renderCodeForm(): TemplateResult {
+    return html`<form class="flex flex-col gap-1" @submit=${this.openCode}>
+      <div class="flex gap-2">
+        <input
+          type="text"
+          class="flex-1 min-w-0 px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent font-mono text-sm"
+          placeholder=${translateText("saved_games.code_placeholder")}
+          aria-label=${translateText("saved_games.code_placeholder")}
+          data-save-code
+          .value=${this.codeValue}
+          @input=${(e: Event) => {
+            this.codeValue = (e.target as HTMLInputElement).value;
+            this.codeInvalid = false;
+          }}
+        />
+        ${this.button(
+          translateText("common.paste"),
+          () => void this.pasteCode(),
+          { attr: "paste-code" },
+        )}
+        ${this.button(
+          translateText("saved_games.open"),
+          () => this.openCode(),
+          {
+            primary: true,
+            disabled: this.codeValue.trim() === "",
+            attr: "open-code",
+          },
+        )}
+      </div>
+      ${this.codeInvalid
+        ? html`<div class="text-xs text-red-400" data-code-error>
+            ${translateText("saved_games.error.code_invalid")}
+          </div>`
+        : null}
+    </form>`;
   }
 
   private renderShared(): TemplateResult | null {
@@ -391,10 +476,9 @@ export class SavedGamesPanel extends LitElement {
   }
 
   render() {
-    const shared = this.renderShared();
-    const own = this.renderOwn();
-    if (shared === null && own === null) return null;
-    return html`<div class="flex flex-col gap-4">${shared}${own}</div>`;
+    return html`<div class="flex flex-col gap-4">
+      ${this.renderCodeForm()}${this.renderShared()}${this.renderOwn()}
+    </div>`;
   }
 }
 
