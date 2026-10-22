@@ -1,4 +1,4 @@
-import { GameType, RankedType } from "@openfront/engine-api/game/GameTypes";
+import { GameType } from "@openfront/engine-api/game/GameTypes";
 import { GameUpdateType } from "@openfront/engine-api/game/GameUpdates";
 import type { AllPlayersStats, Winner } from "@openfront/engine-api/Schemas";
 import type { GameXpEligible, Progress } from "@openfront/shared/ApiSchemas";
@@ -31,6 +31,7 @@ import {
 } from "../../Cosmetics";
 import { isDesktopShell } from "../../DesktopShell";
 import { gamePortal } from "../../GamePortal";
+import type { MatchmakingMode } from "../../Matchmaking";
 import {
   gameShareMoment,
   momentShareLabel,
@@ -54,6 +55,7 @@ import {
   provisionalXpRules,
   reconcileXp,
 } from "../../ProvisionalXpAtDeath";
+import { requeueModeForRankedType } from "../../RequeueUrl";
 import { PlaySoundEffectEvent } from "../../sound/Sounds";
 import { steamSDK } from "../../SteamSDK";
 import { SendWinnerEvent } from "../../Transport";
@@ -104,8 +106,10 @@ export class WinModal extends LitElement implements Controller {
   @state()
   private isWin = false;
 
+  // The queue to rejoin from "Play Again"; null when the game has none (an
+  // unranked game, or a ranked FFA game, which has no queue any more).
   @state()
-  private isRankedGame = false;
+  private requeueMode: MatchmakingMode | null = null;
 
   @state()
   private patternContent: TemplateResult | null = null;
@@ -195,7 +199,7 @@ export class WinModal extends LitElement implements Controller {
             "exit",
           )}
           ${this.renderShare()}
-          ${this.isRankedGame
+          ${this.requeueMode !== null
             ? this.actionButton(
                 "main",
                 translateText("win_modal.requeue"),
@@ -306,9 +310,10 @@ export class WinModal extends LitElement implements Controller {
     if (url === null) return null;
     // Three labelled buttons fit side by side from md up; below that (and
     // beside a ranked game's requeue button) it takes a row of its own.
-    const placement = this.isRankedGame
-      ? "order-first basis-full"
-      : "order-first basis-full md:order-none md:basis-0 md:flex-1";
+    const placement =
+      this.requeueMode !== null
+        ? "order-first basis-full"
+        : "order-first basis-full md:order-none md:basis-0 md:flex-1";
     return html`<profile-share
       data-win-share
       class="flex ${placement}"
@@ -606,8 +611,9 @@ export class WinModal extends LitElement implements Controller {
 
   async show() {
     gamePortal.gameplayStop();
-    this.isRankedGame =
-      this.game.config().gameConfig().rankedType !== undefined;
+    this.requeueMode = requeueModeForRankedType(
+      this.game.config().gameConfig().rankedType,
+    );
     this.isVisible = true;
     this.requestUpdate();
     try {
@@ -929,23 +935,14 @@ export class WinModal extends LitElement implements Controller {
   }
 
   private _handleRequeue() {
+    if (this.requeueMode === null) return;
     this.hide();
     // Requeue for the same mode; Main owns the mechanism (currently a
     // reload with the requeue param, which reopens the queue after the
     // page teardown).
-    const rankedType = this.game.config().gameConfig().rankedType;
     document.dispatchEvent(
       new CustomEvent("matchmaking-requeue", {
-        detail: {
-          mode:
-            rankedType === RankedType.TwoVTwo
-              ? ("2v2" as const)
-              : rankedType === RankedType.FreeForAll
-                ? ("ffa" as const)
-                : rankedType === RankedType.ClanWars
-                  ? ("clanwars" as const)
-                  : ("1v1" as const),
-        },
+        detail: { mode: this.requeueMode },
       }),
     );
   }
