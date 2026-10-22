@@ -3,7 +3,6 @@
   "name": "Gulf Of Guinea",
   "translation_key": "map.gulfofguinea",
   "categories": ["africa"],
-  "multiplayer_frequency": 5,
   "nations": [
     {
       "coordinates": [1807, 739],

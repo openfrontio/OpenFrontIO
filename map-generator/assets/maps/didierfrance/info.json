@@ -4,7 +4,6 @@
   "display_name": "Didier (France)",
   "translation_key": "map.didierfrance",
   "categories": ["arcade"],
-  "multiplayer_frequency": 1,
   "nations": [
     {
       "coordinates": [120, 680],

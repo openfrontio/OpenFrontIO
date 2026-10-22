@@ -3,7 +3,6 @@
   "name": "Vancouver Island",
   "translation_key": "map.vancouverisland",
   "categories": ["north_america", "new"],
-  "multiplayer_frequency": 4,
   "nations": [
     {
       "coordinates": [2478, 1308],

@@ -3,8 +3,6 @@
   "name": "Strait of Hormuz",
   "translation_key": "map.straitofhormuz",
   "categories": ["asia"],
-  "multiplayer_frequency": 4,
-  "team_frequency": 8,
   "special_team_count": 2,
   "nations": [
     {

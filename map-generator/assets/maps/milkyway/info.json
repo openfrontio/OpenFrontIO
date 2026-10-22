@@ -4,7 +4,6 @@
   "display_name": "Milky Way",
   "translation_key": "map.milkyway",
   "categories": ["cosmic"],
-  "multiplayer_frequency": 8,
   "nations": [
     {
       "coordinates": [869, 886],

@@ -3,7 +3,6 @@
   "name": "Onion",
   "translation_key": "map.onion",
   "categories": ["arcade"],
-  "multiplayer_frequency": 2,
   "nations": [
     {
       "coordinates": [51, 188],

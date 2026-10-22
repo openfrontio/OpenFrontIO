@@ -3,7 +3,6 @@
   "id": "YangtzeRiver",
   "translation_key": "map.yangtzeriver",
   "categories": ["asia"],
-  "multiplayer_frequency": 3,
   "nations": [
     {
       "coordinates": [3306, 1778],
