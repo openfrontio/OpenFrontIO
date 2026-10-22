@@ -579,6 +579,7 @@
     "invalid_token": "Your session token was rejected.",
     "lobby_full": "The lobby is full.",
     "login_required": "You must be logged in to play on this server.",
+    "mode_retired": "This queue has been retired. Pick another mode.",
     "no_heartbeat": "The server stopped hearing from you.",
     "not_allowlisted": "You are not on this lobby's allowlist.",
     "not_trusted": "This lobby is limited to trusted accounts. You can still join any other lobby.",

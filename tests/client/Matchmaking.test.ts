@@ -1,5 +1,9 @@
 import type { UserMeResponse } from "@openfront/shared/ApiSchemas";
-import { CloseCode, CloseReason } from "@openfront/shared/CloseCodes";
+import {
+  CloseCode,
+  CloseReason,
+  isTerminalClose,
+} from "@openfront/shared/CloseCodes";
 import type { Mock } from "vitest";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -520,6 +524,15 @@ describe("MatchmakingModal trust gate", () => {
     expect(modal.isOpen()).toBe(true);
     expect(notTrusted(modal)).toBe(true);
     expect(sockets).toHaveLength(1);
+  });
+
+  it("stops without reconnecting when the service says the mode is retired", async () => {
+    apiMocks.getUserMe.mockResolvedValue(withTrust("trusted"));
+    const { socket } = await openAndJoin("1v1");
+    socket.serverClose(CloseCode.ModeRetired, CloseReason.ModeRetired);
+    await vi.runAllTimersAsync();
+    expect(sockets).toHaveLength(1);
+    expect(isTerminalClose(CloseCode.ModeRetired)).toBe(true);
   });
 });
 
