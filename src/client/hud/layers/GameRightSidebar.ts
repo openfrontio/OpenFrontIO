@@ -72,11 +72,10 @@ export class GameRightSidebar extends LitElement implements Controller {
   private immunityBarVisible = false;
 
   createRenderRoot() {
-    // Stack the timer bar + doomsday-clock readout, centers aligned (the narrower
-    // one sits centered under the wider one).
+    // Stack the timer bar + mode readouts flush against the right screen edge.
     this.style.display = "flex";
     this.style.flexDirection = "column";
-    this.style.alignItems = "center";
+    this.style.alignItems = "flex-end";
     this.style.gap = "6px";
     return this;
   }
@@ -89,6 +88,8 @@ export class GameRightSidebar extends LitElement implements Controller {
       this.game?.config()?.gameConfig()?.gameType === GameType.Private;
     this._isVisible = true;
     this.hasShownOneMinuteWarning = false;
+    // LocalServer opens a resumed game paused.
+    this.isPaused = this.game.resumedFromSave();
 
     this.eventBus.on(SpawnBarVisibleEvent, (e) => {
       this.spawnBarVisible = e.visible;

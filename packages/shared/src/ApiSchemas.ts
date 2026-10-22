@@ -1495,3 +1495,20 @@ export const SteamFinalizeResponseSchema = z.object({
   resolution: SteamOrderResolutionSchema,
 });
 export type SteamFinalizeResponse = z.infer<typeof SteamFinalizeResponseSchema>;
+
+// A saved singleplayer game (/users/@me/saved_games, /public/saved_games).
+// The bytes are fetched separately from its `/data` route.
+export const SavedGameSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  map: z.string(),
+  tick: z.number(),
+  sizeBytes: z.number(),
+  public: z.boolean(),
+  createdAt: z.string(),
+});
+export type SavedGame = z.infer<typeof SavedGameSchema>;
+
+export const SavedGamesListResponseSchema = z.object({
+  savedGames: SavedGameSchema.array(),
+});
