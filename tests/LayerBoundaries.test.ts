@@ -8,10 +8,12 @@
  * so the list only shrinks.
  */
 import fs from "fs";
+import { type Node } from "oxc-parser";
+import { transformSync } from "oxc-transform";
 import path from "path";
-import ts from "typescript";
 import { fileURLToPath } from "url";
 import { describe, expect, test } from "vitest";
+import { forEachChild, isStringLiteral, parseSource } from "./util/sourceAst";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 
@@ -117,54 +119,54 @@ function walk(dir: string, out: string[] = []): string[] {
 
 function specifiers(file: string): string[] {
   const text = fs.readFileSync(path.join(ROOT, file), "utf8");
-  const sf = ts.createSourceFile(file, text, ts.ScriptTarget.Latest, true);
+  const program = parseSource(file, text);
   const out: string[] = [];
-  const visit = (node: ts.Node) => {
+  const visit = (node: Node) => {
     if (
-      (ts.isImportDeclaration(node) || ts.isExportDeclaration(node)) &&
-      node.moduleSpecifier &&
-      ts.isStringLiteral(node.moduleSpecifier)
+      node.type === "ImportDeclaration" ||
+      node.type === "ExportNamedDeclaration" ||
+      node.type === "ExportAllDeclaration"
     ) {
-      out.push(node.moduleSpecifier.text);
-    } else if (
-      ts.isImportTypeNode(node) &&
-      ts.isLiteralTypeNode(node.argument) &&
-      ts.isStringLiteral(node.argument.literal)
-    ) {
-      out.push(node.argument.literal.text);
-    } else if (
-      ts.isCallExpression(node) &&
-      node.expression.kind === ts.SyntaxKind.ImportKeyword &&
-      node.arguments.length > 0 &&
-      ts.isStringLiteralLike(node.arguments[0])
-    ) {
-      out.push(node.arguments[0].text);
+      const source = node.source;
+      if (source !== null && isStringLiteral(source)) {
+        out.push(source.value);
+      }
+    } else if (node.type === "TSImportType") {
+      if (isStringLiteral(node.source)) {
+        out.push(node.source.value);
+      }
+    } else if (node.type === "ImportExpression") {
+      if (isStringLiteral(node.source)) {
+        out.push(node.source.value);
+      }
     }
-    ts.forEachChild(node, visit);
+    forEachChild(node, visit);
   };
-  visit(sf);
+  visit(program);
   return out;
 }
 
 /**
- * The imports and re-exports left once TypeScript compiles the source: an
- * import used only as a type is erased, so it loads nothing.
+ * The imports and re-exports left once the types are erased: an import used
+ * only as a type is erased, so it loads nothing.
  */
 function runtimeSpecifiers(source: string): string[] {
-  const js = ts.transpileModule(source, {
-    compilerOptions: {
-      module: ts.ModuleKind.ESNext,
-      target: ts.ScriptTarget.ESNext,
-    },
-  }).outputText;
-  const sf = ts.createSourceFile("out.js", js, ts.ScriptTarget.Latest);
-  return sf.statements.flatMap((s) =>
-    (ts.isImportDeclaration(s) || ts.isExportDeclaration(s)) &&
-    s.moduleSpecifier &&
-    ts.isStringLiteral(s.moduleSpecifier)
-      ? [s.moduleSpecifier.text]
-      : [],
-  );
+  const js = transformSync("input.ts", source, { sourcemap: false }).code;
+  const program = parseSource("out.js", js);
+  const out: string[] = [];
+  for (const statement of program.body) {
+    if (
+      statement.type === "ImportDeclaration" ||
+      statement.type === "ExportNamedDeclaration" ||
+      statement.type === "ExportAllDeclaration"
+    ) {
+      const specifier = statement.source;
+      if (specifier !== null && isStringLiteral(specifier)) {
+        out.push(specifier.value);
+      }
+    }
+  }
+  return out;
 }
 
 function probe(base: string): string | null {
