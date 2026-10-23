@@ -773,6 +773,13 @@ export const ClientMessageSchema = zb.discriminatedUnion("type", [
 export const PlayerRecordSchema = WirePlayerSchema.extend({
   persistentID: PersistentIdSchema.nullable(), // WARNING: PII
   stats: PlayerStatsSchema,
+  // Match telemetry: the team the game put this player on (its in-game team
+  // name, e.g. "Red", "Team 12", "Humans"), set by createPartialGameRecord
+  // for every team game. Unlike teamIndex (a simulation input, set only for
+  // matchmade pins), it is never fed back into a replay. Absent in FFA, for
+  // a player the game kicked from the teams (clan overflow), and on records
+  // from before it existed.
+  team: z.string().optional(),
 });
 
 export type PlayerRecord = z.infer<typeof PlayerRecordSchema>;
