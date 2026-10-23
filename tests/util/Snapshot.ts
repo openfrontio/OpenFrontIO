@@ -160,7 +160,7 @@ export const DERIVED_FIELDS = new Set<string>([
   // executions: attacks, ships and trains
   "nbuf2", // AttackExecution scratch neighbor buffer (nbuf is above)
   // executions: nations and tribes
-  // NationStructureBehavior: both reset at the start of doHandleStructures
+  // NationStructurePlacement: both reset at the start of doHandleStructures
   // and only read inside it. (AiAttackBehavior.nbuf is covered above.)
   "_sharedWaterComponents",
   "reachableStationsCache",
