@@ -4,6 +4,8 @@ import {
   BuildableUnit,
   GameType,
   GameUpdates,
+  HumanDisconnects,
+  HumanStatsSnapshot,
   NameViewData,
   PlayerActions,
   PlayerBorderTiles,
@@ -31,6 +33,7 @@ import { SpawnTimerExecution } from "./execution/SpawnTimerExecution";
 import { WinCheckExecution } from "./execution/WinCheckExecution";
 import { Game, Player } from "./game/Game";
 import { createGame } from "./game/GameImpl";
+import { humanDisconnects, humanStatsSnapshot } from "./game/HumanStats";
 import { placeName, placeSpawnName } from "./game/NameBoxCalculator";
 import { createNationsForGame } from "./game/NationCreation";
 import {
@@ -353,6 +356,13 @@ export class GameRunner {
     }
     return player.playerProfile();
   }
+  public humanDisconnects(): HumanDisconnects {
+    return humanDisconnects(this.game);
+  }
+  public humanStats(): HumanStatsSnapshot {
+    return humanStatsSnapshot(this.game);
+  }
+
   public playerBorderTiles(playerID: PlayerID): PlayerBorderTiles {
     const player = this.game.player(playerID);
     if (!player.isPlayer()) {

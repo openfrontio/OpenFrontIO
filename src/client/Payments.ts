@@ -64,12 +64,58 @@ export interface SteamMicroTxnBridge {
 // there on purpose), so narrow it locally -- same convention SteamSDK.ts
 // follows, and for the same reason (a second `declare global` with a different
 // type triggers TS2717).
-function steamBridge(): { microTxn?: SteamMicroTxnBridge } | undefined {
+interface SteamPaymentsBridge {
+  microTxn?: SteamMicroTxnBridge;
+  isOverlayAttached?: () => Promise<boolean>;
+}
+
+function steamBridge(): SteamPaymentsBridge | undefined {
   if (typeof window === "undefined") return undefined;
   const desktop = window.openfrontDesktop as
-    | { steam?: { microTxn?: SteamMicroTxnBridge } }
+    | { steam?: SteamPaymentsBridge }
     | undefined;
   return desktop?.steam;
+}
+
+/**
+ * Whether Steam can show its purchase dialog in this window. A shell too old
+ * to say is assumed to have the overlay, which is what every purchase before
+ * this assumed.
+ */
+export async function steamOverlayAttached(): Promise<boolean> {
+  const check = steamBridge()?.isOverlayAttached;
+  if (typeof check !== "function") return true;
+  try {
+    return await check();
+  } catch (e) {
+    console.error("steamOverlayAttached: bridge failed", e);
+    return true;
+  }
+}
+
+/**
+ * How long after sending a player to Steam's approval page a refocused game
+ * window re-reads the account. The purchase settles when their browser
+ * reaches the return route, which this window never hears about.
+ */
+export const BROWSER_APPROVAL_REFRESH_MS = 15 * 60 * 1000;
+
+let refreshAccount: () => unknown = () => invalidateUserMe();
+let browserApprovalUntil = 0;
+let refreshingOnFocus = false;
+
+/** Main supplies the refetch-and-broadcast, which lives above this module. */
+export function setPurchaseAccountRefresh(refresh: () => unknown): void {
+  refreshAccount = refresh;
+}
+
+function refreshOnReturnFromBrowser(): void {
+  browserApprovalUntil = Date.now() + BROWSER_APPROVAL_REFRESH_MS;
+  if (refreshingOnFocus) return;
+  refreshingOnFocus = true;
+  window.addEventListener("focus", () => {
+    if (Date.now() <= browserApprovalUntil) void refreshAccount();
+  });
 }
 
 /**
@@ -263,6 +309,9 @@ export type PurchaseRequest =
 export type PurchaseOutcome =
   // Navigation to the rail has been triggered; the page is going away.
   | { outcome: "redirecting" }
+  // A desktop without the Steam overlay: Steam's approval page is open in the
+  // player's browser, and the purchase settles when they approve it there.
+  | { outcome: "browser_approval" }
   // The Steam overlay purchase was approved and finalized.
   | { outcome: "completed" }
   // The player dismissed the Steam overlay. Nothing was charged and nothing
@@ -358,6 +407,8 @@ function checkoutError(
       );
     case "rate_limited":
       return error(translateText("store.checkout_rate_limited"));
+    case "steam_licence_required":
+      return error(translateText("store.steam_licence_required"));
     // Not a breakage: the rail is deliberately switched off (501, never 500).
     case "provider_unavailable":
       return error(translateText("store.checkout_rail_unavailable"));
@@ -434,9 +485,14 @@ async function runPurchase(
   request: PurchaseRequest,
   navigate: (url: string) => void,
 ): Promise<PurchaseOutcome> {
+  // Leaving "client_overlay" out is what asks the server for Steam's web
+  // approval page instead of a dialog nobody would see.
+  const withoutOverlay =
+    provider === "steam" && !(await steamOverlayAttached());
   const result = await createPaymentsCheckout({
     provider,
     ...request,
+    ...(withoutOverlay ? { handoffs: ["redirect"] } : {}),
   } as PaymentsCheckoutRequest);
   if (!result.ok) return checkoutError(result);
 
@@ -447,7 +503,11 @@ async function runPurchase(
     // not parse it, append to it, or rewrite it. The schema has already
     // guaranteed it is non-null for this handoff.
     navigate(redirectUrl!);
-    return { outcome: "redirecting" };
+    if (provider !== "steam") return { outcome: "redirecting" };
+    // The desktop shell opens Steam's page in the OS browser and this window
+    // stays put.
+    refreshOnReturnFromBrowser();
+    return { outcome: "browser_approval" };
   }
 
   // handoff === "client_overlay": there is nothing to navigate to.
@@ -578,6 +638,8 @@ export function purchaseOutcomeMessage(
   switch (outcome.outcome) {
     case "redirecting":
       return null;
+    case "browser_approval":
+      return translateText("store.steam_browser_approval");
     case "completed":
       return translateText(successMessageKey);
     case "cancelled":

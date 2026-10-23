@@ -16,7 +16,6 @@ import { ZbContext } from "@openfront/zbin";
 import { vi } from "vitest";
 import { Client } from "../../src/server/Client";
 import { GameServer, GameServerDeps } from "../../src/server/GameServer";
-import { type MatchTelemetryEmitter } from "../../src/server/telemetry/MatchTelemetry";
 import { clientFrame, decodeSentServerMessage, testGameConfig } from "./Wire";
 
 // A schema-valid 8-char id from a readable tag: cid("p1") === "p1000000".
@@ -115,6 +114,9 @@ export interface ClientOpts {
   spectator?: boolean;
   trusted?: boolean;
   platform?: Client["platform"];
+  device?: Client["device"];
+  claims?: Client["claims"];
+  levelBadge?: Client["levelBadge"];
 }
 
 let nextClient = 1;
@@ -129,7 +131,7 @@ export function makeClient(opts: ClientOpts = {}): Client {
   return new Client(
     clientID,
     opts.persistentID ?? `${clientID}-pid`,
-    null,
+    opts.claims ?? null,
     opts.role ?? null,
     undefined,
     opts.ip ?? `10.0.${Math.floor(n / 256)}.${n % 256}`,
@@ -142,6 +144,8 @@ export function makeClient(opts: ClientOpts = {}): Client {
     opts.spectator ?? false,
     opts.trusted ?? false,
     opts.platform,
+    opts.device,
+    opts.levelBadge,
   );
 }
 
@@ -156,8 +160,7 @@ export interface GameOpts {
   startsAt?: number;
   publicGameType?: PublicGameType;
   matchmakingTeams?: string[][];
-  telemetry?: MatchTelemetryEmitter;
-  buildHash?: string;
+  matchmakingClanTags?: string[];
   // Overrides for what the game reaches outside itself for. By default the
   // archive upload and the tribe fetch are inert spies: pass your own
   // `archive` to read the record a game produced.
@@ -171,10 +174,10 @@ export function makeGame(opts: GameOpts = {}): GameServer {
     archive: vi.fn(async () => {}),
     // A failed replay: a disputed vote archives its own result.
     replayWinner: vi.fn(async () => null),
+    // An empty replay queue, whatever other tests left in the real one.
+    replayPending: () => 0,
     fetchTribes: vi.fn(async () => []),
   };
-  if (opts.telemetry !== undefined) deps.telemetry = opts.telemetry;
-  if (opts.buildHash !== undefined) deps.telemetryBuildHash = opts.buildHash;
   Object.assign(deps, opts.deps);
   return new GameServer(
     {
@@ -186,6 +189,7 @@ export function makeGame(opts: GameOpts = {}): GameServer {
       startsAt: opts.startsAt,
       publicGameType: opts.publicGameType,
       matchmakingTeams: opts.matchmakingTeams,
+      matchmakingClanTags: opts.matchmakingClanTags,
     },
     deps,
   );

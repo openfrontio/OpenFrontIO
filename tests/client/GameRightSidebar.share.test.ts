@@ -8,14 +8,14 @@ const copyToClipboardMock = vi.hoisted(() =>
 );
 const showToastMock = vi.hoisted(() => vi.fn());
 
-const crazyGamesSDKMock = vi.hoisted(() => ({
+const gamePortalMock = vi.hoisted(() => ({
   gameplayStop: vi.fn(),
   gameplayStart: vi.fn(),
   requestMidgameAd: vi.fn(),
   isInstantMultiplayer: vi.fn(async () => false),
-  isOnCrazyGames: vi.fn(() => false),
+  isOnGamePortal: vi.fn(() => false),
   createInviteLink: vi.fn(
-    (gameId: string): string | null =>
+    async (gameId: string): Promise<string | null> =>
       `https://crazygames.com/game?invite=${gameId}`,
   ),
 }));
@@ -36,8 +36,8 @@ vi.mock("../../src/client/Utils", async (importOriginal) => ({
   }),
 }));
 
-vi.mock("../../src/client/CrazyGamesSDK", () => ({
-  crazyGamesSDK: crazyGamesSDKMock,
+vi.mock("../../src/client/GamePortal", () => ({
+  gamePortal: gamePortalMock,
 }));
 
 import { ClientEnv } from "../../src/client/ClientEnv";
@@ -76,6 +76,7 @@ function fakeGame(opts: CreateGameOpts = {}): GameView {
     elapsedGameSeconds: () => 0,
     myPlayer: () => undefined,
     gameID: () => gameId,
+    resumedFromSave: () => false,
   } as unknown as GameView;
 }
 
@@ -121,8 +122,8 @@ describe("GameRightSidebar share button", () => {
     setBootstrapConfig({ serverHost: "openfront.io" });
     copyToClipboardMock.mockClear();
     showToastMock.mockClear();
-    crazyGamesSDKMock.isOnCrazyGames.mockReturnValue(false);
-    crazyGamesSDKMock.createInviteLink.mockClear();
+    gamePortalMock.isOnGamePortal.mockReturnValue(false);
+    gamePortalMock.createInviteLink.mockClear();
   });
 
   afterEach(() => {
@@ -244,12 +245,12 @@ describe("GameRightSidebar share button", () => {
     expect(GAME_ID_REGEX.test(pathMatch![1])).toBe(true);
   });
 
-  it("uses crazyGamesSDK.createInviteLink on CrazyGames", async () => {
+  it("uses gamePortal.createInviteLink on game portals", async () => {
     const gameId = "cg99912345";
     expect(GAME_ID_REGEX.test(gameId)).toBe(true);
 
-    crazyGamesSDKMock.isOnCrazyGames.mockReturnValue(true);
-    crazyGamesSDKMock.createInviteLink.mockReturnValue(
+    gamePortalMock.isOnGamePortal.mockReturnValue(true);
+    gamePortalMock.createInviteLink.mockResolvedValue(
       `https://crazygames.com/game?invite=${gameId}`,
     );
 
@@ -260,17 +261,17 @@ describe("GameRightSidebar share button", () => {
     shareBtn!.click();
     await new Promise((resolve) => setTimeout(resolve, 0));
 
-    expect(crazyGamesSDKMock.createInviteLink).toHaveBeenCalledWith(gameId);
+    expect(gamePortalMock.createInviteLink).toHaveBeenCalledWith(gameId);
     expect(copyToClipboardMock).toHaveBeenCalledWith(
       `https://crazygames.com/game?invite=${gameId}`,
     );
     expect(showToastMock).toHaveBeenCalledWith("Copied!", "green");
   });
 
-  it("shows failure toast when CrazyGames invite link fails", async () => {
+  it("shows failure toast when game portal invite link fails", async () => {
     const gameId = "cgfail1234";
-    crazyGamesSDKMock.isOnCrazyGames.mockReturnValue(true);
-    crazyGamesSDKMock.createInviteLink.mockReturnValue(null);
+    gamePortalMock.isOnGamePortal.mockReturnValue(true);
+    gamePortalMock.createInviteLink.mockResolvedValue(null);
 
     const el = await mount({ gameId });
     const shareBtn = getShareButton(el);

@@ -1214,6 +1214,7 @@ export class PlayerImpl implements Player {
       if (p.id() === this.id()) continue;
       if (p.type() === PlayerType.Bot) continue;
       if (this.isOnSameTeam(p)) continue;
+      if (this.isAlliedWith(p)) continue;
       return true;
     }
     return false;
@@ -1225,6 +1226,10 @@ export class PlayerImpl implements Player {
 
   hasEmbargoAgainst(other: Player): boolean {
     return this.embargoes.has(other.id());
+  }
+
+  hasManualEmbargoAgainst(other: Player): boolean {
+    return this.embargoes.get(other.id())?.isTemporary === false;
   }
 
   canTrade(other: Player): boolean {

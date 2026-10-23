@@ -2,6 +2,8 @@ import { assetUrl } from "@openfront/shared/AssetUrls";
 import { LitElement, html } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import { desktopSteamLocale } from "./DesktopShell";
+// The type-only use below is erased at runtime; keep this to register the modal.
+// oxlint-disable-next-line import/no-duplicates -- Required custom-element registration.
 import "./LanguageModal";
 import { LanguageModal } from "./LanguageModal";
 import { formatDebugTranslation } from "./Utils";
@@ -277,6 +279,10 @@ export class LangSelector extends LitElement {
       "purchase-button",
       "custom-currency-card",
       "fluent-slider",
+      "nav-account-menu",
+      "level-badge",
+      "game-xp-panel",
+      "past-game-xp-card",
       "news-modal",
       "account-modal",
       "game-stats-modal",

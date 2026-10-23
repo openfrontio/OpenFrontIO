@@ -4,9 +4,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 // API, the in-game dialog and the Steam bridge, and none of the three is what
 // these exercise.
 const { getUser, updateUsername } = vi.hoisted(() => ({
-  getUser: vi.fn(
-    async (): Promise<{ steamId: string; name: string } | null> =>
-      Promise.resolve(null),
+  getUser: vi.fn(async (): Promise<{ steamId: string; name: string } | null> =>
+    Promise.resolve(null),
   ),
   updateUsername: vi.fn(),
 }));

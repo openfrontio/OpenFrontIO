@@ -86,9 +86,11 @@ export class RankingControls extends LitElement {
         type="button"
         data-ranking-category=${type}
         aria-pressed=${active}
-        class="flex min-h-11 min-w-0 items-center justify-center gap-1.5 rounded-lg border px-2 py-2.5 text-[10px] font-bold uppercase tracking-wider transition-all duration-200 sm:gap-2 sm:px-4 sm:text-xs sm:tracking-widest ${active
-          ? "border-malibu-blue/30 bg-malibu-blue/20 text-aquarius shadow-(--shadow-malibu-blue-soft)"
-          : "border-transparent text-white/40 hover:bg-white/5 hover:text-white/75"} focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-aquarius/70"
+        class="flex min-h-11 min-w-0 items-center justify-center gap-1.5 rounded-lg border px-2 py-2.5 text-[10px] font-bold uppercase tracking-wider transition-all duration-200 sm:gap-2 sm:px-4 sm:text-xs sm:tracking-widest ${
+          active
+            ? "border-malibu-blue/30 bg-malibu-blue/20 text-aquarius shadow-(--shadow-malibu-blue-soft)"
+            : "border-transparent text-white/40 hover:bg-white/5 hover:text-white/75"
+        } focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-aquarius/70"
         @click=${() => this.onSort(type)}
       >
         <span class="hidden sm:block" aria-hidden="true">${icon}</span>
@@ -103,9 +105,9 @@ export class RankingControls extends LitElement {
       <div
         role="group"
         aria-label=${ariaLabel}
-        class="mt-2 grid grid-cols-6 gap-1 rounded-xl border border-white/10 bg-white/[0.03] p-1 ${hasSixMetrics
-          ? "sm:grid-cols-6"
-          : "sm:grid-cols-5"}"
+        class="mt-2 grid grid-cols-6 gap-1 rounded-xl border border-white/10 bg-white/[0.03] p-1 ${
+          hasSixMetrics ? "sm:grid-cols-6" : "sm:grid-cols-5"
+        }"
       >
         ${metrics.map((metric, index) =>
           this.renderMetricButton(
@@ -135,9 +137,11 @@ export class RankingControls extends LitElement {
         aria-pressed=${active}
         @click=${() => this.onSort(type)}
         title=${translateText(label)}
-        class="${mobileSpan} min-h-11 min-w-0 rounded-lg border px-1.5 py-2 text-[10px] font-bold uppercase leading-tight tracking-wider transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-aquarius/70 sm:col-span-1 sm:px-2 ${active
-          ? "border-malibu-blue/30 bg-malibu-blue/15 text-aquarius"
-          : "border-transparent text-white/40 hover:border-white/10 hover:bg-white/[0.06] hover:text-white/75"}"
+        class="${mobileSpan} min-h-11 min-w-0 rounded-lg border px-1.5 py-2 text-[10px] font-bold uppercase leading-tight tracking-wider transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-aquarius/70 sm:col-span-1 sm:px-2 ${
+          active
+            ? "border-malibu-blue/30 bg-malibu-blue/15 text-aquarius"
+            : "border-transparent text-white/40 hover:border-white/10 hover:bg-white/[0.06] hover:text-white/75"
+        }"
       >
         <span class="block min-w-0 break-words">${translateText(label)}</span>
       </button>
@@ -190,17 +194,19 @@ export class RankingControls extends LitElement {
   render() {
     return html`
       ${this.renderMainButtons()}
-      ${isWarRanking(this.rankType)
-        ? this.renderMetricSelector(
-            warMetrics,
-            translateText("game_info_modal.war"),
-          )
-        : isEconomyRanking(this.rankType)
+      ${
+        isWarRanking(this.rankType)
           ? this.renderMetricSelector(
-              economyMetrics,
-              translateText("game_info_modal.economy"),
+              warMetrics,
+              translateText("game_info_modal.war"),
             )
-          : ""}
+          : isEconomyRanking(this.rankType)
+            ? this.renderMetricSelector(
+                economyMetrics,
+                translateText("game_info_modal.economy"),
+              )
+            : ""
+      }
     `;
   }
 

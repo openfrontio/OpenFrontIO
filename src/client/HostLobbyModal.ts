@@ -36,6 +36,8 @@ import { CopyButton } from "./components/CopyButton";
 import "./components/GameConfigSettings";
 import "./components/InputCard";
 import "./components/InsufficientCurrencyDialog";
+// The type import below is erased at runtime; keep this to register the dialog.
+// oxlint-disable-next-line import/no-duplicates -- Required custom-element registration.
 import "./components/ListLobbyDialog";
 import { ListLobbyOptions } from "./components/ListLobbyDialog";
 import "./components/LobbyPlayerView";
@@ -44,7 +46,7 @@ import "./components/ToggleInputCard";
 import { inviteFriendsButton } from "./components/ui/InviteFriendsButton";
 import { modalHeader } from "./components/ui/ModalHeader";
 import { fetchCosmetics, InsufficientCurrency } from "./Cosmetics";
-import { crazyGamesSDK } from "./CrazyGamesSDK";
+import { gamePortal } from "./GamePortal";
 import { JoinLobbyEvent } from "./Main";
 import { terrainMapFileLoader } from "./TerrainMapFileLoader";
 import { UserSettings } from "./UserSettings";
@@ -200,8 +202,8 @@ export class HostLobbyModal extends BaseModal {
   }
 
   private async buildLobbyUrl(): Promise<string> {
-    if (crazyGamesSDK.isOnCrazyGames()) {
-      const link = crazyGamesSDK.createInviteLink(this.lobbyId);
+    if (gamePortal.isOnGamePortal()) {
+      const link = await gamePortal.createInviteLink(this.lobbyId);
       if (link !== null) {
         return link;
       }
@@ -220,14 +222,14 @@ export class HostLobbyModal extends BaseModal {
   }
 
   private updateHistory(url: string): void {
-    if (crazyGamesSDK.isOnCrazyGames()) {
+    if (gamePortal.isOnGamePortal()) {
       return;
     }
     history.replaceState(null, "", url);
   }
 
   private updateLobbyHistory(lobbyUrl: string): void {
-    if (crazyGamesSDK.isOnCrazyGames()) {
+    if (gamePortal.isOnGamePortal()) {
       return;
     }
     const lobbyIdHidden = !this.userSettings.lobbyIdVisibility();
@@ -296,10 +298,11 @@ export class HostLobbyModal extends BaseModal {
   private renderVisibilityToggle() {
     const segment = (labelKey: string, isPublic: boolean) => html`
       <button
-        class="px-3 py-1 text-[10px] font-bold uppercase tracking-widest rounded-full transition-all ${this
-          .publiclyListed === isPublic
-          ? "bg-malibu-blue text-white"
-          : "text-white/50 hover:text-white"}"
+        class="px-3 py-1 text-[10px] font-bold uppercase tracking-widest rounded-full transition-all ${
+          this.publiclyListed === isPublic
+            ? "bg-malibu-blue text-white"
+            : "text-white/50 hover:text-white"
+        }"
         @click=${() => this.handleVisibilitySelect(isPublic)}
       >
         ${translateText(labelKey)}
@@ -309,9 +312,11 @@ export class HostLobbyModal extends BaseModal {
       <div
         class="flex items-center rounded-full border border-white/10 bg-white/5 p-0.5 shrink-0"
       >
-        ${this.publiclyListed
-          ? nothing
-          : segment("host_modal.visibility_private", false)}
+        ${
+          this.publiclyListed
+            ? nothing
+            : segment("host_modal.visibility_private", false)
+        }
         ${segment("host_modal.visibility_public", true)}
       </div>
       ${this.renderAutoStartTimer()} ${this.renderQueueButton()}
@@ -627,13 +632,15 @@ export class HostLobbyModal extends BaseModal {
         <div
           class="flex-1 min-h-0 overflow-y-auto custom-scrollbar p-6 mr-1 mx-auto w-full max-w-5xl"
         >
-          ${this.publiclyListed
-            ? html`<div
-                class="mb-6 rounded-xl border border-amber-500/40 bg-amber-500/10 px-4 py-3 text-sm font-medium text-amber-300"
-              >
-                ${translateText("host_modal.settings_locked_listed")}
-              </div>`
-            : nothing}
+          ${
+            this.publiclyListed
+              ? html`<div
+                  class="mb-6 rounded-xl border border-amber-500/40 bg-amber-500/10 px-4 py-3 text-sm font-medium text-amber-300"
+                >
+                  ${translateText("host_modal.settings_locked_listed")}
+                </div>`
+              : nothing
+          }
           <!-- Players joined a listed lobby for its advertised settings, so
                they are frozen (the server rejects changes too). -->
           <game-config-settings
@@ -748,15 +755,17 @@ export class HostLobbyModal extends BaseModal {
             @map-selected=${this.handleConfigMapSelected}
             @random-map-selected=${this.handleConfigRandomMapSelected}
             @difficulty-selected=${this.handleConfigDifficultySelected}
-            @doomsday-clock-speed-selected=${this
-              .handleConfigDoomsdayClockSpeedSelected}
+            @doomsday-clock-speed-selected=${
+              this.handleConfigDoomsdayClockSpeedSelected
+            }
             @game-mode-selected=${this.handleConfigGameModeSelected}
             @team-count-selected=${this.handleConfigTeamCountSelected}
             @bots-changed=${this.handleBotsChange}
             @nations-changed=${this.handleNationsChange}
             @option-toggle-changed=${this.handleConfigOptionToggleChanged}
-            @host-cheat-toggle-changed=${this
-              .handleConfigHostCheatToggleChanged}
+            @host-cheat-toggle-changed=${
+              this.handleConfigHostCheatToggleChanged
+            }
             @unit-toggle-changed=${this.handleConfigUnitToggleChanged}
           ></game-config-settings>
 
@@ -768,12 +777,16 @@ export class HostLobbyModal extends BaseModal {
             .currentClientID=${this.lobbyCreatorClientID}
             .teamCount=${this.teamCount}
             .nationCount=${this.nations}
-            .onKickPlayer=${this.publiclyListed
-              ? undefined
-              : (clientID: string) => this.kickPlayer(clientID)}
-            .onToggleNameReveal=${this.publiclyListed
-              ? undefined
-              : (clientID: string) => this.toggleNameReveal(clientID)}
+            .onKickPlayer=${
+              this.publiclyListed
+                ? undefined
+                : (clientID: string) => this.kickPlayer(clientID)
+            }
+            .onToggleNameReveal=${
+              this.publiclyListed
+                ? undefined
+                : (clientID: string) => this.toggleNameReveal(clientID)
+            }
             .nameReveals=${this.nameReveals}
             .anonymizeNames=${this.anonymizeNames}
           ></lobby-player-view>
@@ -787,61 +800,69 @@ export class HostLobbyModal extends BaseModal {
             size="lg"
             .title=${statusLabel}
             .uppercase=${secondsRemaining === null}
-            ?disable=${this.queued ||
-            (this.lobbyStartAt === null && this.clients.length < 2)}
+            ?disable=${
+              this.queued ||
+              (this.lobbyStartAt === null && this.clients.length < 2)
+            }
             @click=${this.toggleGameStartTimer}
           ></o-button>
         </div>
 
-        ${this.showListLobbyDialog
-          ? html`<list-lobby-dialog
-              .currentPlayers=${this.seatedPlayerCount()}
-              .suggestedMaxPlayers=${this.playerLimit
-                ? this.playerLimitValue
-                : undefined}
-              @cancel=${() => (this.showListLobbyDialog = false)}
-              @confirm=${(e: CustomEvent<ListLobbyOptions>) => {
-                this.showListLobbyDialog = false;
-                void this.handlePublicListingToggle(true, e.detail);
-              }}
-            ></list-lobby-dialog>`
-          : ""}
-        ${this.showQueueConfirm && this.queuePriceHard !== null
-          ? html`<confirm-dialog
-              .heading=${translateText("host_modal.queue_confirm_title")}
-              .message=${translateText("host_modal.queue_confirm_body", {
-                price: this.queuePriceHard,
-              })}
-              variant="warning"
-              .confirmText=${translateText("host_modal.queue_confirm")}
-              @cancel=${() => (this.showQueueConfirm = false)}
-              @confirm=${() => {
-                this.showQueueConfirm = false;
-                void this.handleQueue();
-              }}
-            ></confirm-dialog>`
-          : ""}
+        ${
+          this.showListLobbyDialog
+            ? html`<list-lobby-dialog
+                .currentPlayers=${this.seatedPlayerCount()}
+                .suggestedMaxPlayers=${
+                  this.playerLimit ? this.playerLimitValue : undefined
+                }
+                @cancel=${() => (this.showListLobbyDialog = false)}
+                @confirm=${(e: CustomEvent<ListLobbyOptions>) => {
+                  this.showListLobbyDialog = false;
+                  void this.handlePublicListingToggle(true, e.detail);
+                }}
+              ></list-lobby-dialog>`
+            : ""
+        }
+        ${
+          this.showQueueConfirm && this.queuePriceHard !== null
+            ? html`<confirm-dialog
+                .heading=${translateText("host_modal.queue_confirm_title")}
+                .message=${translateText("host_modal.queue_confirm_body", {
+                  price: this.queuePriceHard,
+                })}
+                variant="warning"
+                .confirmText=${translateText("host_modal.queue_confirm")}
+                @cancel=${() => (this.showQueueConfirm = false)}
+                @confirm=${() => {
+                  this.showQueueConfirm = false;
+                  void this.handleQueue();
+                }}
+              ></confirm-dialog>`
+            : ""
+        }
         <insufficient-currency-dialog
           .info=${this.insufficientInfo}
           @close=${() => (this.insufficientInfo = null)}
         ></insufficient-currency-dialog>
-        ${this.showSubscriptionRequired
-          ? html`<confirm-dialog
-              .heading=${translateText(
-                "host_modal.subscription_required_title",
-              )}
-              .message=${translateText("host_modal.subscription_required_body")}
-              variant="warning"
-              .showClose=${true}
-              .buttons=${"confirmOnly"}
-              .confirmText=${translateText("host_modal.view_subscriptions")}
-              @cancel=${() => (this.showSubscriptionRequired = false)}
-              @confirm=${() => {
-                this.showSubscriptionRequired = false;
-                window.location.href = "/#modal=store&tab=subscriptions";
-              }}
-            ></confirm-dialog>`
-          : ""}
+        ${
+          this.showSubscriptionRequired
+            ? html`<confirm-dialog
+                .heading=${translateText(
+                  "host_modal.subscription_required_title",
+                )}
+                .message=${translateText("host_modal.subscription_required_body")}
+                variant="warning"
+                .showClose=${true}
+                .buttons=${"confirmOnly"}
+                .confirmText=${translateText("host_modal.view_subscriptions")}
+                @cancel=${() => (this.showSubscriptionRequired = false)}
+                @confirm=${() => {
+                  this.showSubscriptionRequired = false;
+                  window.location.href = "/#modal=store&tab=subscriptions";
+                }}
+              ></confirm-dialog>`
+            : ""
+        }
       </div>
     `;
   }
@@ -891,7 +912,7 @@ export class HostLobbyModal extends BaseModal {
         if (!isValidGameID(this.lobbyId)) {
           throw new Error(`Invalid lobby ID format: ${this.lobbyId}`);
         }
-        crazyGamesSDK.showInviteButton(this.lobbyId);
+        gamePortal.showInviteButton(this.lobbyId);
 
         // Now that we have the id, build and copy the share link. If lobby
         // creation fails, the catch below clears the clipboard.
@@ -931,7 +952,7 @@ export class HostLobbyModal extends BaseModal {
       throw new Error(`Invalid lobby ID format: ${lobbyId}`);
     }
     this.lobbyId = lobbyId;
-    crazyGamesSDK.showInviteButton(this.lobbyId);
+    gamePortal.showInviteButton(this.lobbyId);
 
     const url = await this.constructUrl();
     this.updateLobbyHistory(url);
@@ -989,7 +1010,7 @@ export class HostLobbyModal extends BaseModal {
       this.leaveLobby();
       this.updateHistory("/"); // Reset URL to base
     }
-    crazyGamesSDK.hideInviteButton();
+    gamePortal.hideInviteButton();
 
     // Clean up timers and resources
     if (this.botsUpdateTimer !== null) {

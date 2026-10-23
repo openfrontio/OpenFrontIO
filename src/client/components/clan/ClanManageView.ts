@@ -391,30 +391,32 @@ export class ClanManageView extends LitElement {
               class="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-white/20 focus:outline-none focus:ring-2 focus:ring-malibu-blue/50 focus:border-malibu-blue/50 transition-all font-medium hover:bg-white/10 text-sm resize-none"
             ></textarea>
           </div>
-          ${this.myRole === "leader"
-            ? html`
-                <div>
-                  <label
-                    class="block text-[10px] font-bold text-white/40 uppercase tracking-wider mb-2"
-                    >${translateText("clan_modal.discord_url_label")}</label
-                  >
-                  <input
-                    type="url"
-                    .value=${this.manageDiscordUrl}
-                    @input=${(e: Event) =>
-                      (this.manageDiscordUrl = (
-                        e.target as HTMLInputElement
-                      ).value)}
-                    placeholder="https://discord.gg/..."
-                    maxlength="255"
-                    class="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-white/20 focus:outline-none focus:ring-2 focus:ring-malibu-blue/50 focus:border-malibu-blue/50 transition-all font-medium hover:bg-white/10 text-sm"
-                  />
-                  <p class="text-white/40 text-xs mt-2">
-                    ${translateText("clan_modal.discord_url_hint")}
-                  </p>
-                </div>
-              `
-            : ""}
+          ${
+            this.myRole === "leader"
+              ? html`
+                  <div>
+                    <label
+                      class="block text-[10px] font-bold text-white/40 uppercase tracking-wider mb-2"
+                      >${translateText("clan_modal.discord_url_label")}</label
+                    >
+                    <input
+                      type="url"
+                      .value=${this.manageDiscordUrl}
+                      @input=${(e: Event) =>
+                        (this.manageDiscordUrl = (
+                          e.target as HTMLInputElement
+                        ).value)}
+                      placeholder="https://discord.gg/..."
+                      maxlength="255"
+                      class="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-white/20 focus:outline-none focus:ring-2 focus:ring-malibu-blue/50 focus:border-malibu-blue/50 transition-all font-medium hover:bg-white/10 text-sm"
+                    />
+                    <p class="text-white/40 text-xs mt-2">
+                      ${translateText("clan_modal.discord_url_hint")}
+                    </p>
+                  </div>
+                `
+              : ""
+          }
           <div class="flex items-center justify-between">
             <div>
               <div class="text-white text-sm font-bold">
@@ -429,16 +431,14 @@ export class ClanManageView extends LitElement {
               aria-checked="${this.manageIsOpen}"
               aria-label="${translateText("clan_modal.open_clan")}"
               @click=${() => (this.manageIsOpen = !this.manageIsOpen)}
-              class="relative w-12 h-7 rounded-full transition-all ${this
-                .manageIsOpen
-                ? "bg-malibu-blue"
-                : "bg-white/20"}"
+              class="relative w-12 h-7 rounded-full transition-all ${
+                this.manageIsOpen ? "bg-malibu-blue" : "bg-white/20"
+              }"
             >
               <div
-                class="absolute top-1 w-5 h-5 rounded-full bg-white shadow transition-all ${this
-                  .manageIsOpen
-                  ? "left-6"
-                  : "left-1"}"
+                class="absolute top-1 w-5 h-5 rounded-full bg-white shadow transition-all ${
+                  this.manageIsOpen ? "left-6" : "left-1"
+                }"
               ></div>
             </button>
           </div>
@@ -447,9 +447,11 @@ export class ClanManageView extends LitElement {
             ?disabled=${this.saving}
             class="w-full px-6 py-3 text-sm font-bold text-white uppercase tracking-wider bg-malibu-blue hover:bg-aquarius active:bg-malibu-blue/80 rounded-xl transition-all disabled:opacity-50"
           >
-            ${this.saving
-              ? translateText("clan_modal.saving")
-              : translateText("clan_modal.save_changes")}
+            ${
+              this.saving
+                ? translateText("clan_modal.saving")
+                : translateText("clan_modal.save_changes")
+            }
           </button>
         </div>
 
@@ -515,32 +517,34 @@ export class ClanManageView extends LitElement {
           >
             ${translateText("clan_modal.banned_players")}
           </button>
-          ${this.myRole === "leader"
-            ? html`
-                <button
-                  @click=${() =>
-                    this.dispatchEvent(
-                      new CustomEvent("navigate-transfer", {
-                        bubbles: true,
-                        composed: true,
-                      }),
-                    )}
-                  class="w-full px-6 py-3 text-sm font-bold text-amber-400 uppercase tracking-wider bg-amber-600/20 hover:bg-amber-600/30 rounded-xl transition-all border border-amber-500/30"
-                >
-                  ${translateText("clan_modal.transfer_leadership")}
-                </button>
-                <button
-                  @click=${() => {
-                    this.confirmAction = "disband";
-                    this.confirmTargetId = null;
-                  }}
-                  ?disabled=${this.confirmAction === "disband"}
-                  class="w-full px-6 py-3 text-sm font-bold text-red-400 uppercase tracking-wider bg-red-600/20 hover:bg-red-600/30 rounded-xl transition-all border border-red-500/30 disabled:opacity-50 disabled:pointer-events-none"
-                >
-                  ${translateText("clan_modal.disband_clan")}
-                </button>
-              `
-            : ""}
+          ${
+            this.myRole === "leader"
+              ? html`
+                  <button
+                    @click=${() =>
+                      this.dispatchEvent(
+                        new CustomEvent("navigate-transfer", {
+                          bubbles: true,
+                          composed: true,
+                        }),
+                      )}
+                    class="w-full px-6 py-3 text-sm font-bold text-amber-400 uppercase tracking-wider bg-amber-600/20 hover:bg-amber-600/30 rounded-xl transition-all border border-amber-500/30"
+                  >
+                    ${translateText("clan_modal.transfer_leadership")}
+                  </button>
+                  <button
+                    @click=${() => {
+                      this.confirmAction = "disband";
+                      this.confirmTargetId = null;
+                    }}
+                    ?disabled=${this.confirmAction === "disband"}
+                    class="w-full px-6 py-3 text-sm font-bold text-red-400 uppercase tracking-wider bg-red-600/20 hover:bg-red-600/30 rounded-xl transition-all border border-red-500/30 disabled:opacity-50 disabled:pointer-events-none"
+                  >
+                    ${translateText("clan_modal.disband_clan")}
+                  </button>
+                `
+              : ""
+          }
         </div>
       </div>
     `;
@@ -562,16 +566,20 @@ export class ClanManageView extends LitElement {
     return html`
       <div
         class="flex flex-col py-2.5 px-3 rounded-xl border
-        ${isMe
-          ? "bg-malibu-blue/10 border-malibu-blue/20"
-          : "bg-white/5 border-white/10"}"
+        ${
+          isMe
+            ? "bg-malibu-blue/10 border-malibu-blue/20"
+            : "bg-white/5 border-white/10"
+        }"
       >
         <div class="flex items-center flex-wrap gap-1.5">
           <div
             class="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold shrink-0
-          ${isMe
-              ? "bg-malibu-blue/20 text-aquarius"
-              : "bg-white/10 text-white/50"}"
+          ${
+              isMe
+                ? "bg-malibu-blue/20 text-aquarius"
+                : "bg-white/10 text-white/50"
+            }"
           >
             ${renderRoleIcon(member.role)}
           </div>
@@ -582,50 +590,58 @@ export class ClanManageView extends LitElement {
             })}
           </span>
           <div class="flex items-center gap-1.5 ml-auto flex-wrap justify-end">
-            ${canPromote
-              ? html`<button
-                  @click=${() => this.handlePromote(member.publicId)}
-                  ?disabled=${this.memberActionPending}
-                  class="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-purple-500/10 text-purple-400/70 border border-purple-500/20 hover:bg-purple-500/20 hover:text-purple-400 transition-all disabled:opacity-50 disabled:pointer-events-none"
-                >
-                  ${translateText("clan_modal.promote")}
-                </button>`
-              : ""}
-            ${canDemote
-              ? html`<button
-                  @click=${() => this.handleDemote(member.publicId)}
-                  ?disabled=${this.memberActionPending}
-                  class="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-white/5 text-white/40 border border-white/10 hover:bg-white/10 hover:text-white/60 transition-all disabled:opacity-50 disabled:pointer-events-none"
-                >
-                  ${translateText("clan_modal.demote")}
-                </button>`
-              : ""}
-            ${canModerate
-              ? html`
-                  <button
-                    @click=${() => {
-                      this.confirmAction = "kick";
-                      this.confirmTargetId = member.publicId;
-                    }}
-                    ?disabled=${this.memberActionPending ||
-                    this.confirmAction !== null}
-                    class="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-red-500/10 text-red-400/70 border border-red-500/20 hover:bg-red-500/20 hover:text-red-400 transition-all disabled:opacity-50 disabled:pointer-events-none"
+            ${
+              canPromote
+                ? html`<button
+                    @click=${() => this.handlePromote(member.publicId)}
+                    ?disabled=${this.memberActionPending}
+                    class="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-purple-500/10 text-purple-400/70 border border-purple-500/20 hover:bg-purple-500/20 hover:text-purple-400 transition-all disabled:opacity-50 disabled:pointer-events-none"
                   >
-                    ${translateText("clan_modal.kick")}
-                  </button>
-                  <button
-                    @click=${() => {
-                      this.confirmAction = "ban";
-                      this.confirmTargetId = member.publicId;
-                    }}
-                    ?disabled=${this.memberActionPending ||
-                    this.confirmAction !== null}
-                    class="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-red-500/10 text-red-400/70 border border-red-500/20 hover:bg-red-500/20 hover:text-red-400 transition-all disabled:opacity-50 disabled:pointer-events-none"
+                    ${translateText("clan_modal.promote")}
+                  </button>`
+                : ""
+            }
+            ${
+              canDemote
+                ? html`<button
+                    @click=${() => this.handleDemote(member.publicId)}
+                    ?disabled=${this.memberActionPending}
+                    class="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-white/5 text-white/40 border border-white/10 hover:bg-white/10 hover:text-white/60 transition-all disabled:opacity-50 disabled:pointer-events-none"
                   >
-                    ${translateText("clan_modal.ban")}
-                  </button>
-                `
-              : ""}
+                    ${translateText("clan_modal.demote")}
+                  </button>`
+                : ""
+            }
+            ${
+              canModerate
+                ? html`
+                    <button
+                      @click=${() => {
+                        this.confirmAction = "kick";
+                        this.confirmTargetId = member.publicId;
+                      }}
+                      ?disabled=${
+                        this.memberActionPending || this.confirmAction !== null
+                      }
+                      class="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-red-500/10 text-red-400/70 border border-red-500/20 hover:bg-red-500/20 hover:text-red-400 transition-all disabled:opacity-50 disabled:pointer-events-none"
+                    >
+                      ${translateText("clan_modal.kick")}
+                    </button>
+                    <button
+                      @click=${() => {
+                        this.confirmAction = "ban";
+                        this.confirmTargetId = member.publicId;
+                      }}
+                      ?disabled=${
+                        this.memberActionPending || this.confirmAction !== null
+                      }
+                      class="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-red-500/10 text-red-400/70 border border-red-500/20 hover:bg-red-500/20 hover:text-red-400 transition-all disabled:opacity-50 disabled:pointer-events-none"
+                    >
+                      ${translateText("clan_modal.ban")}
+                    </button>
+                  `
+                : ""
+            }
           </div>
         </div>
       </div>

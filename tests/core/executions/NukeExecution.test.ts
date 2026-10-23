@@ -98,6 +98,44 @@ describe("NukeExecution", () => {
     expect(nukeExec.getNuke()!.isTargetable()).toBeTruthy();
   });
 
+  test("incoming atom bomb warning uses a translation key", () => {
+    player.buildUnit(UnitType.MissileSilo, game.ref(1, 1), {});
+    const target = game.ref(50, 50);
+    otherPlayer.conquer(target);
+    const displayIncomingSpy = vi.spyOn(game, "displayIncomingUnit");
+
+    game.addExecution(
+      new NukeExecution(UnitType.AtomBomb, player, game.ref(1, 1), target),
+    );
+    executeTicks(game, 2);
+
+    expect(displayIncomingSpy).toHaveBeenCalledWith(
+      expect.any(Number),
+      "events_display.atom_bomb_inbound",
+      MessageType.NUKE_INBOUND,
+      expect.any(String),
+    );
+  });
+
+  test("incoming hydrogen bomb warning uses a translation key", () => {
+    player.buildUnit(UnitType.MissileSilo, game.ref(1, 1), {});
+    const target = game.ref(50, 50);
+    otherPlayer.conquer(target);
+    const displayIncomingSpy = vi.spyOn(game, "displayIncomingUnit");
+
+    game.addExecution(
+      new NukeExecution(UnitType.HydrogenBomb, player, game.ref(1, 1), target),
+    );
+    executeTicks(game, 2);
+
+    expect(displayIncomingSpy).toHaveBeenCalledWith(
+      expect.any(Number),
+      "events_display.hydrogen_bomb_inbound",
+      MessageType.HYDROGEN_BOMB_INBOUND,
+      expect.any(String),
+    );
+  });
+
   test("nuke should break alliances on launch", async () => {
     const req = player.createAllianceRequest(otherPlayer);
     req!.accept();

@@ -100,20 +100,22 @@ export class SteamHandoffModal extends BaseModal {
             this.launched ? "steam_handoff.launched" : "steam_handoff.prompt",
           )}
         </p>
-        ${this.launched
-          ? null
-          : html`<label
-              class="flex items-center gap-2 text-xs text-white/60 cursor-pointer"
-            >
-              <input
-                type="checkbox"
-                class="steam-handoff-remember"
-                .checked=${this.remember}
-                @change=${(e: Event) =>
-                  (this.remember = (e.target as HTMLInputElement).checked)}
-              />
-              ${translateText("steam_handoff.remember")}
-            </label>`}
+        ${
+          this.launched
+            ? null
+            : html`<label
+                class="flex items-center gap-2 text-xs text-white/60 cursor-pointer"
+              >
+                <input
+                  type="checkbox"
+                  class="steam-handoff-remember"
+                  .checked=${this.remember}
+                  @change=${(e: Event) =>
+                    (this.remember = (e.target as HTMLInputElement).checked)}
+                />
+                ${translateText("steam_handoff.remember")}
+              </label>`
+        }
         <div class="flex gap-3">
           <button
             class="steam-handoff-browser-btn ${BUTTON_BASE} ${BUTTON_SECONDARY}"

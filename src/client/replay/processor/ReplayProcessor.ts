@@ -199,6 +199,9 @@ export async function processGameRecord(
         const turn = run[j];
         const gu = gameUpdates[j];
         if (gu === undefined) {
+          // As with a desync below: what was checked before this turn is
+          // still the game that was played.
+          await appendChecked();
           throw new Error(
             `simulation failed at turn ${turn.turnNumber}: ` +
               (error !== undefined

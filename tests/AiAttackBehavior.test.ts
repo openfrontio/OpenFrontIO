@@ -1,16 +1,26 @@
 import {
   Difficulty,
   GameMode,
+  GameType,
   PlayerInfo,
   PlayerType,
+  Relation,
   UnitType,
 } from "@openfront/engine-api/game/GameTypes";
+import { GameConfig } from "@openfront/engine-api/Schemas";
 import { PseudoRandom } from "@openfront/engine-lib/PseudoRandom";
 import { AllianceRequestExecution } from "@openfront/engine/execution/alliance/AllianceRequestExecution";
 import { AttackExecution } from "@openfront/engine/execution/AttackExecution";
+import { DonateTroopsExecution } from "@openfront/engine/execution/DonateTroopExecution";
 import { NationAllianceBehavior } from "@openfront/engine/execution/nation/NationAllianceBehavior";
-import { NationEmojiBehavior } from "@openfront/engine/execution/nation/NationEmojiBehavior";
-import { AiAttackBehavior } from "@openfront/engine/execution/utils/AiAttackBehavior";
+import { NationAttackBehavior } from "@openfront/engine/execution/nation/NationAttackBehavior";
+import {
+  EMOJI_ASSIST_ACCEPT,
+  EMOJI_ASSIST_RELATION_TOO_LOW,
+  NationEmojiBehavior,
+} from "@openfront/engine/execution/nation/NationEmojiBehavior";
+import { NationWarshipBehavior } from "@openfront/engine/execution/nation/NationWarshipBehavior";
+import { TribeAttackBehavior } from "@openfront/engine/execution/TribeAttackBehavior";
 import { Game, Player } from "@openfront/engine/game/Game";
 import { setup } from "./util/Setup";
 import { executeTicks } from "./util/utils";
@@ -19,7 +29,7 @@ describe("Ai Attack Behavior", () => {
   let game: Game;
   let bot: Player;
   let human: Player;
-  let attackBehavior: AiAttackBehavior;
+  let attackBehavior: TribeAttackBehavior;
 
   // Helper function for basic test setup
   async function setupTestEnvironment() {
@@ -52,14 +62,15 @@ describe("Ai Attack Behavior", () => {
     let landTileCount = 0;
     testGame.map().forEachTile((tile) => {
       if (!testGame.map().isLand(tile)) return;
-      (landTileCount++ % 2 === 0 ? testBot : testHuman).conquer(tile);
+      (landTileCount % 2 === 0 ? testBot : testHuman).conquer(tile);
+      landTileCount++;
     });
 
     // Add troops
     testBot.addTroops(5000);
     testHuman.addTroops(5000);
 
-    const behavior = new AiAttackBehavior(
+    const behavior = new TribeAttackBehavior(
       new PseudoRandom(42),
       testGame,
       testBot,
@@ -139,15 +150,17 @@ describe("Ai Attack Behavior", () => {
     // path; the attack on an ally must be blocked by AttackExecution's
     // alliance check regardless of what the AI decides.
     const nationRandom = new PseudoRandom(42);
-    const nationBehavior = new AiAttackBehavior(
+    const nationEmoji = new NationEmojiBehavior(nationRandom, game, nation);
+    const nationBehavior = new NationAttackBehavior(
       nationRandom,
       game,
       nation,
       0.5,
       0.5,
       0.2,
-      undefined,
-      new NationEmojiBehavior(nationRandom, game, nation),
+      new NationAllianceBehavior(nationRandom, game, nation, nationEmoji),
+      nationEmoji,
+      new NationWarshipBehavior(nationRandom, game, nation, nationEmoji),
     );
 
     // Alliance between nation and human
@@ -229,7 +242,7 @@ describe("Hard/Impossible troop floor", () => {
     } as any;
     const mockAlliance = { maybeBetray: vi.fn() } as any;
 
-    const behavior = new AiAttackBehavior(
+    const behavior = new NationAttackBehavior(
       new PseudoRandom(42),
       testGame,
       attacker,
@@ -238,6 +251,7 @@ describe("Hard/Impossible troop floor", () => {
       0.2, // expandRatio
       mockAlliance,
       mockEmoji,
+      {} as any,
     );
 
     return { testGame, attacker, neighbor, bot, behavior };
@@ -367,49 +381,44 @@ describe("Hard/Impossible troop floor", () => {
     expect(exec.startTroops).toBeGreaterThan(hardCap);
   });
 
-  it("Hard: sendAttack uncapped when nation has no player neighbors", async () => {
-    const testGame = await setup("big_plains", {
-      infiniteGold: true,
-      instantBuild: true,
-      difficulty: Difficulty.Hard,
-    });
-
-    // Give bot only half the land so there's unowned land to attack via sendAttack
-    const botInfo = new PlayerInfo("lone_bot", PlayerType.Bot, null, "lone_id");
-    testGame.addPlayer(botInfo);
-    const bot = testGame.player("lone_id");
+  it("Hard: a strong bot neighbor doesn't hold back troops for free land", async () => {
+    const testGame = await setup("big_plains", { difficulty: Difficulty.Hard });
+    const nation = testGame.addPlayer(
+      new PlayerInfo("nation", PlayerType.Nation, null, "nation_id"),
+    );
+    const bot = testGame.addPlayer(
+      new PlayerInfo("bot", PlayerType.Bot, null, "bot_id"),
+    );
     let assigned = 0;
     testGame.map().forEachTile((tile) => {
-      if (!testGame.map().isLand(tile)) return;
-      if (assigned % 2 === 0) bot.conquer(tile);
-      assigned++;
+      if (assigned >= 90 || !testGame.map().isLand(tile)) return;
+      [nation, bot][assigned++ % 2].conquer(tile);
     });
-    bot.addTroops(100_000);
+    nation.addTroops(100_000);
+    bot.addTroops(1_000_000);
+    expect(nation.nearby()).toContain(bot);
 
-    // No player neighbors — troopSendCap should return Infinity
-    expect(bot.nearby().filter((n) => n.isPlayer()).length).toBe(0);
-
-    const behavior = new AiAttackBehavior(
+    const behavior = new NationAttackBehavior(
       new PseudoRandom(42),
       testGame,
-      bot,
-      0.5,
-      0.3,
-      0.2,
+      nation,
+      0.5, // triggerRatio
+      0.3, // reserveRatio
+      0.2, // expandRatio
+      { maybeBetray: vi.fn() } as any,
+      { maybeSendAttackEmoji: vi.fn(), sendEmoji: vi.fn() } as any,
+      {} as any,
     );
 
     const addExecSpy = vi.spyOn(testGame, "addExecution");
-    // sendAttack goes through sendLandAttack which applies troopSendCap.
-    // With no player neighbors, troopSendCap returns Infinity (no cap).
-    const result = behavior.sendAttack(testGame.terraNullius());
-
-    expect(result).toBe(true);
+    expect(behavior.sendAttack(testGame.terraNullius())).toBe(true);
     const exec = addExecSpy.mock.calls.find(
-      (c) => c[0].constructor.name === "AttackExecution",
+      (c) => c[0] instanceof AttackExecution,
     )?.[0] as any;
-    expect(exec).toBeDefined();
-    // No cap applies, so troops should be the full reserve amount
-    expect(exec.startTroops).toBeGreaterThan(40_000);
+    // Counting the bot as a threat would leave only a 5% trickle
+    expect(exec.startTroops).toBeCloseTo(
+      nation.troops() - 0.2 * testGame.config().maxTroops(nation),
+    );
   });
 
   it("Team: troopSendCap returns Infinity — no cap in team games", async () => {
@@ -454,7 +463,8 @@ describe("Hard/Impossible troop floor", () => {
       players[assigned % 3].conquer(tile);
       assigned++;
     });
-    bot.addTroops(100);
+    // Strong enough that taking it needs more than the FFA cap below
+    bot.addTroops(20_000);
 
     const mockEmoji = {
       maybeSendAttackEmoji: vi.fn(),
@@ -462,7 +472,7 @@ describe("Hard/Impossible troop floor", () => {
     } as any;
     const mockAlliance = { maybeBetray: vi.fn() } as any;
 
-    const behavior = new AiAttackBehavior(
+    const behavior = new NationAttackBehavior(
       new PseudoRandom(42),
       testGame,
       attacker,
@@ -471,6 +481,7 @@ describe("Hard/Impossible troop floor", () => {
       0.2,
       mockAlliance,
       mockEmoji,
+      {} as any,
     );
 
     // In FFA Hard, attacker with 100k and neighbor with 90k would cap
@@ -543,7 +554,7 @@ describe("Hard/Impossible troop floor", () => {
     } as any;
     const mockAlliance = { maybeBetray: vi.fn() } as any;
 
-    const behavior = new AiAttackBehavior(
+    const behavior = new NationAttackBehavior(
       new PseudoRandom(42),
       testGame,
       attacker,
@@ -552,6 +563,7 @@ describe("Hard/Impossible troop floor", () => {
       0.2,
       mockAlliance,
       mockEmoji,
+      {} as any,
     );
 
     attacker.addTroops(100_000);
@@ -656,13 +668,16 @@ describe("Juicy target strategy", () => {
       city.increaseLevel();
     }
 
-    const behavior = new AiAttackBehavior(
+    const behavior = new NationAttackBehavior(
       new PseudoRandom(42),
       testGame,
       attacker,
       0.5,
       0.3,
       0.2,
+      {} as any,
+      {} as any,
+      {} as any,
     );
 
     return { testGame, attacker, weak, rich, behavior };
@@ -757,7 +772,7 @@ describe("Juicy target strategy - end-to-end via maybeAttack", () => {
       attacker,
       emojiBehavior,
     );
-    const behavior = new AiAttackBehavior(
+    const behavior = new NationAttackBehavior(
       new PseudoRandom(42),
       testGame,
       attacker,
@@ -766,6 +781,12 @@ describe("Juicy target strategy - end-to-end via maybeAttack", () => {
       0.2, // expandRatio
       allianceBehavior,
       emojiBehavior,
+      new NationWarshipBehavior(
+        new PseudoRandom(42),
+        testGame,
+        attacker,
+        emojiBehavior,
+      ),
     );
 
     return { testGame, attacker, weak, rich, behavior };
@@ -833,7 +854,7 @@ describe("Retaliation by difficulty - end-to-end via maybeAttack", () => {
       nation,
       emojiBehavior,
     );
-    const behavior = new AiAttackBehavior(
+    const behavior = new NationAttackBehavior(
       new PseudoRandom(42),
       testGame,
       nation,
@@ -842,6 +863,12 @@ describe("Retaliation by difficulty - end-to-end via maybeAttack", () => {
       0.2, // expandRatio
       allianceBehavior,
       emojiBehavior,
+      new NationWarshipBehavior(
+        new PseudoRandom(42),
+        testGame,
+        nation,
+        emojiBehavior,
+      ),
     );
 
     return { testGame, nation, enemy, other, behavior };
@@ -1117,7 +1144,7 @@ describe("Juicy ally betrayal strategy - end-to-end via maybeAttack", () => {
       attacker,
       emojiBehavior,
     );
-    const behavior = new AiAttackBehavior(
+    const behavior = new NationAttackBehavior(
       new PseudoRandom(42),
       testGame,
       attacker,
@@ -1126,6 +1153,12 @@ describe("Juicy ally betrayal strategy - end-to-end via maybeAttack", () => {
       0.2, // expandRatio
       allianceBehavior,
       emojiBehavior,
+      new NationWarshipBehavior(
+        new PseudoRandom(42),
+        testGame,
+        attacker,
+        emojiBehavior,
+      ),
     );
 
     return { testGame, attacker, ally, behavior };
@@ -1148,4 +1181,236 @@ describe("Juicy ally betrayal strategy - end-to-end via maybeAttack", () => {
       }
     },
   );
+});
+
+describe("City troops and expansion", () => {
+  // A Hard nation with 30 city levels but few troops, bordering free land, a bot and a human
+  async function setupCityRich(startingGold: number) {
+    const game = await setup("big_plains", {
+      difficulty: Difficulty.Hard,
+      startingGold,
+    });
+    const add = (id: string, type: PlayerType) =>
+      game.addPlayer(new PlayerInfo(id, type, null, `${id}_id`));
+    const nation = add("nation", PlayerType.Nation);
+    const bot = add("bot", PlayerType.Bot);
+    const human = add("human", PlayerType.Human);
+    let assigned = 0;
+    game.map().forEachTile((tile) => {
+      if (assigned >= 90 || !game.map().isLand(tile)) return;
+      [nation, bot, human][assigned++ % 3].conquer(tile);
+    });
+    const city = nation.buildUnit(
+      UnitType.City,
+      Array.from(nation.tiles())[0],
+      {},
+    );
+    for (let level = 1; level < 30; level++) city.increaseLevel();
+    nation.addTroops(100_000);
+    bot.addTroops(100);
+    human.addTroops(1_000);
+
+    const behavior = new NationAttackBehavior(
+      new PseudoRandom(42),
+      game,
+      nation,
+      0.5, // triggerRatio
+      0.3, // reserveRatio
+      0.2, // expandRatio
+      { maybeBetray: vi.fn() } as any,
+      { maybeSendAttackEmoji: vi.fn(), sendEmoji: vi.fn() } as any,
+      {} as any,
+    );
+    const attacks = vi.spyOn(game, "addExecution");
+    const sent = () =>
+      attacks.mock.calls
+        .map((c) => c[0])
+        .filter((e): e is AttackExecution => e instanceof AttackExecution);
+    return { game, nation, bot, human, behavior, sent };
+  }
+
+  it("with high starting gold, keeps the expand ratio of its max troops without cities when taking free land", async () => {
+    const { game, nation, behavior, sent } = await setupCityRich(25_000_000);
+    const config = game.config();
+    expect(
+      config.maxTroops(nation) - config.maxTroopsWithoutCities(nation),
+    ).toBe(30 * 250_000);
+    // 100k troops are a few percent of the 7.6M max troops
+    expect(behavior.sendAttack(game.terraNullius())).toBe(true);
+    expect(sent()[0]["startTroops"]).toBeCloseTo(
+      nation.troops() - 0.2 * config.maxTroopsWithoutCities(nation),
+    );
+  });
+
+  it("with high starting gold, attacks bots, but not players, below the reserve ratio its cities raise", async () => {
+    const { bot, human, behavior, sent } = await setupCityRich(25_000_000);
+    behavior["attackBestTarget"]([], [bot, human]);
+    expect(sent().map((e) => e.targetID())).toEqual([bot.id()]);
+    expect(behavior.sendAttack(human)).toBe(false);
+  });
+
+  it("without high starting gold, waits for the ratios of its max troops with cities", async () => {
+    const { game, bot, human, behavior, sent } = await setupCityRich(0);
+    expect(behavior.sendAttack(game.terraNullius())).toBe(false);
+    behavior["attackBestTarget"]([], [bot, human]);
+    expect(sent()).toEqual([]);
+  });
+});
+
+describe("Troop donations to teammates", () => {
+  // Five stripes. "busy" and "strong" fight the enemy, "idle" has no troops but isn't fighting.
+  async function setupTeam(gameConfig: Partial<GameConfig> = {}) {
+    const ids = ["nation", "busy", "strong", "idle", "enemy"];
+    const game = await setup(
+      "big_plains",
+      {
+        gameMode: GameMode.Team,
+        playerTeams: 2,
+        donateTroops: true,
+        difficulty: Difficulty.Impossible,
+        ...gameConfig,
+      },
+      ids.map(
+        (id, i) =>
+          new PlayerInfo(
+            id,
+            i === 0 ? PlayerType.Nation : PlayerType.Human,
+            null,
+            id,
+            false,
+            null,
+            [],
+            id === "enemy" ? 1 : 0,
+          ),
+      ),
+    );
+    const [nation, busy, strong, idle, enemy] = ids.map((id) =>
+      game.player(id),
+    );
+    const owners = [nation, busy, strong, idle, enemy];
+    game.map().forEachTile((tile) => {
+      if (!game.map().isLand(tile)) return;
+      owners[Math.floor((game.x(tile) * owners.length) / game.width())].conquer(
+        tile,
+      );
+    });
+    nation.setTroops(500_000);
+    busy.setTroops(1_000);
+    strong.setTroops(200_000);
+    idle.setTroops(0);
+    enemy.setTroops(100_000);
+    busy.createAttack(enemy, 1_000, null, new Set());
+    strong.createAttack(enemy, 1_000, null, new Set());
+
+    const behavior = new NationAttackBehavior(
+      new PseudoRandom(42),
+      game,
+      nation,
+      0.5, // triggerRatio
+      0.3, // reserveRatio
+      0.2, // expandRatio
+      {} as any,
+      {} as any,
+      {} as any,
+    );
+    const spy = vi.spyOn(game, "addExecution");
+    const donations = () =>
+      spy.mock.calls
+        .map((c) => c[0])
+        .filter((e) => e instanceof DonateTroopsExecution);
+    return { game, nation, busy, behavior, donations };
+  }
+
+  it("Impossible gives its troops above the reserve to the fighting teammate lowest on troops", async () => {
+    const { game, nation, busy, behavior, donations } = await setupTeam();
+    expect(behavior["donateTroops"]()).toBe(true);
+    const [donation] = donations();
+    expect(donation["recipientID"]).toBe(busy.id());
+    expect(donation["troops"]).toBeCloseTo(
+      nation.troops() - 0.3 * game.config().maxTroops(nation),
+    );
+  });
+
+  it.each([
+    ["in public games", { gameType: GameType.Public }],
+    ["on Easy", { difficulty: Difficulty.Easy }],
+    ["with troop donations off", { donateTroops: false }],
+  ])("doesn't donate %s", async (_, gameConfig) => {
+    const { behavior, donations } = await setupTeam(gameConfig);
+    expect(behavior["donateTroops"]()).toBe(false);
+    expect(donations()).toEqual([]);
+  });
+});
+
+describe("Assisting allies", () => {
+  // Three stripes: target | nation | ally. The ally has marked `target` as its target.
+  async function setupAssist(relationWithAlly: number) {
+    const game = await setup("big_plains", { difficulty: Difficulty.Hard }, [
+      new PlayerInfo("nation", PlayerType.Nation, null, "nation_id"),
+      new PlayerInfo("ally", PlayerType.Human, null, "ally_id"),
+      new PlayerInfo("target", PlayerType.Human, null, "target_id"),
+    ]);
+    const nation = game.player("nation_id");
+    const ally = game.player("ally_id");
+    const target = game.player("target_id");
+    game.map().forEachTile((tile) => {
+      if (!game.map().isLand(tile)) return;
+      const x = game.x(tile);
+      (x < 70 ? target : x < 130 ? nation : ally).conquer(tile);
+    });
+    nation.setTroops(500_000);
+    ally.setTroops(50_000);
+    target.setTroops(50_000);
+
+    game.addExecution(new AllianceRequestExecution(nation, ally.id()));
+    game.executeNextTick();
+    game.addExecution(new AllianceRequestExecution(ally, nation.id()));
+    game.executeNextTick();
+    expect(nation.isAlliedWith(ally)).toBe(true);
+    ally.target(target);
+    // Relations are clamped to [-100, 100], so this lands exactly on relationWithAlly
+    nation.updateRelation(ally, -200);
+    nation.updateRelation(ally, 100 + relationWithAlly);
+
+    const emoji = { sendEmoji: vi.fn(), maybeSendAttackEmoji: vi.fn() };
+    const behavior = new NationAttackBehavior(
+      new PseudoRandom(42),
+      game,
+      nation,
+      0.5, // triggerRatio
+      0.3, // reserveRatio
+      0.2, // expandRatio
+      {} as any,
+      emoji as any,
+      {} as any,
+    );
+    const spy = vi.spyOn(game, "addExecution");
+    const attacksOn = (p: typeof target) =>
+      spy.mock.calls
+        .map((c) => c[0])
+        .filter((e) => e instanceof AttackExecution && e.targetID() === p.id());
+    return { nation, ally, target, behavior, emoji, attacksOn };
+  }
+
+  it("joins a friendly ally's attack, which uses up some of the friendship", async () => {
+    const { nation, ally, target, behavior, emoji, attacksOn } =
+      await setupAssist(60);
+    expect(nation.relation(ally)).toBe(Relation.Friendly);
+
+    expect(behavior["assistAllies"]()).toBe(true);
+    expect(attacksOn(target)).toHaveLength(1);
+    expect(emoji.sendEmoji).toHaveBeenCalledWith(ally, EMOJI_ASSIST_ACCEPT);
+    expect(nation.relation(ally)).toBe(Relation.Neutral);
+  });
+
+  it("won't help an ally it isn't friendly with", async () => {
+    const { ally, target, behavior, emoji, attacksOn } = await setupAssist(40);
+
+    expect(behavior["assistAllies"]()).toBe(false);
+    expect(attacksOn(target)).toHaveLength(0);
+    expect(emoji.sendEmoji).toHaveBeenCalledWith(
+      ally,
+      EMOJI_ASSIST_RELATION_TOO_LOW,
+    );
+  });
 });

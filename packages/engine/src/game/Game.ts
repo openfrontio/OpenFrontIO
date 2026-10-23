@@ -149,6 +149,8 @@ export interface Attack {
   removeBorderTile(tile: TileRef): void;
   clearBorder(): void;
   borderSize(): number;
+  // Target tiles this attack is about to fight over.
+  borderTiles(): ReadonlySet<TileRef>;
   clusteredPositions(): TileRef[];
 }
 
@@ -466,6 +468,8 @@ export interface Player extends PlayerLike {
 
   // Embargo
   hasEmbargoAgainst(other: Player): boolean;
+  // Excludes the temporary embargo every attacked player places on its attacker
+  hasManualEmbargoAgainst(other: Player): boolean;
   tradingPartners(): Player[];
   addEmbargo(other: Player, isTemporary: boolean): void;
   getEmbargoes(): Embargo[];
@@ -551,6 +555,7 @@ export interface Game extends GameLike {
   ticks(): Tick;
   inSpawnPhase(): boolean;
   endSpawnPhase(): void;
+  queueViewResync(): void;
   executeNextTick(): GameUpdates;
   drainPackedTileUpdates(): Uint32Array;
   recordMotionPlan(record: MotionPlanRecord): void;
