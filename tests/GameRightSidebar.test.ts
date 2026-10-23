@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 import { GameType } from "@openfront/engine-api/game/GameTypes";
 import { EventBus } from "@openfront/shared/EventBus";
 import { GameRightSidebar } from "../src/client/hud/layers/GameRightSidebar";
@@ -55,6 +56,7 @@ function createSidebar(overrides: Partial<TimerState> = {}) {
     elapsedGameSeconds: () => state.elapsedSeconds,
     inSpawnPhase: () => state.inSpawnPhase,
     myPlayer: () => undefined,
+    resumedFromSave: () => false,
     ticks: () => state.ticks,
   } as unknown as GameView;
 

@@ -50,10 +50,16 @@ export class ConnectedComponents {
   /** Labels and union-find state, for game snapshots. */
   snapshot(): ConnectedComponentsState | null {
     if (this.componentIds === null) return null;
+    const parents = this.parents;
     return {
       componentIds: this.componentIds.slice(),
       componentSizes: [...this._componentSizes],
-      parents: [...this.parents],
+      // Roots only: find() compresses whatever paths lookups happen to take, which a restore doesn't repeat
+      parents: parents.map((_, id) => {
+        let root = id;
+        while (parents[root] !== root) root = parents[root];
+        return root;
+      }),
       maxId: this.maxId,
       landMarker: this.landMarker,
     };

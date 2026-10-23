@@ -210,7 +210,10 @@ export class EventsDisplay extends LitElement implements Controller {
     }
 
     let remainingEvents = this.events.filter((event) => {
-      const expired = this.game.ticks() - event.createdAt >= 80;
+      const age = this.game.ticks() - event.createdAt;
+      // A negative age is an event from later in the game: the replay
+      // viewer seeked back past it.
+      const expired = age >= 80 || age < 0;
       const isInboundWarning =
         event.type === MessageType.NUKE_INBOUND ||
         event.type === MessageType.HYDROGEN_BOMB_INBOUND ||
@@ -592,9 +595,19 @@ export class EventsDisplay extends LitElement implements Controller {
     }
 
     const unitView = this.game.unit(event.unitID);
+    let description = event.message;
+    if (event.message.startsWith("events_display.") && unitView) {
+      const params: Record<string, string | number> = {
+        name: unitView.owner().displayName(),
+      };
+      if (event.messageType === MessageType.NAVAL_INVASION_INBOUND) {
+        params.troops = renderTroops(unitView.troops());
+      }
+      description = translateText(event.message, params);
+    }
 
     this.addEvent({
-      description: event.message,
+      description: description,
       type: event.messageType,
       unsafeDescription: false,
       highlight: true,
@@ -643,23 +656,26 @@ export class EventsDisplay extends LitElement implements Controller {
             event.type,
           )}"
         >
-          ${event.focusID
-            ? this.renderButton({
-                content: this.getEventDescription(event),
-                onClick: () => {
-                  if (event.focusID) this.emitGoToPlayerEvent(event.focusID);
-                },
-                className: "text-left",
-              })
-            : event.unitView
+          ${
+            event.focusID
               ? this.renderButton({
                   content: this.getEventDescription(event),
                   onClick: () => {
-                    if (event.unitView) this.emitGoToUnitEvent(event.unitView);
+                    if (event.focusID) this.emitGoToPlayerEvent(event.focusID);
                   },
                   className: "text-left",
                 })
-              : this.getEventDescription(event)}
+              : event.unitView
+                ? this.renderButton({
+                    content: this.getEventDescription(event),
+                    onClick: () => {
+                      if (event.unitView)
+                        this.emitGoToUnitEvent(event.unitView);
+                    },
+                    className: "text-left",
+                  })
+                : this.getEventDescription(event)
+          }
         </td>
       </tr>
     `;
@@ -698,45 +714,51 @@ export class EventsDisplay extends LitElement implements Controller {
 
     return html`
       <div class="flex flex-col gap-1 w-full min-[1200px]:w-96">
-        ${tier2Events.length > 0
-          ? html`
-              <div
-                class="bg-gray-800/92 backdrop-blur-sm max-h-[12vh] lg:max-h-[22vh] overflow-y-auto rounded-lg opacity-90 events-container"
-              >
-                <table
-                  class="w-full border-collapse text-white text-xs lg:text-sm pointer-events-auto"
+        ${
+          tier2Events.length > 0
+            ? html`
+                <div
+                  class="bg-gray-800/92 backdrop-blur-sm max-h-[12vh] lg:max-h-[22vh] overflow-y-auto rounded-lg opacity-90 events-container"
                 >
-                  <tbody>
-                    ${tier2Events.map((event) => this.renderEventRow(event))}
-                  </tbody>
-                </table>
-              </div>
-            `
-          : ""}
-        ${tier1Events.length > 0 || showBetrayalTimer
-          ? html`
-              <div
-                class="bg-gray-800 backdrop-blur-sm max-h-[30vh] lg:max-h-[40vh] overflow-y-auto rounded-lg shadow-lg border-l-4 border-red-500 important-events-container"
-              >
-                <table
-                  class="w-full border-collapse text-white text-base lg:text-lg font-medium pointer-events-auto"
+                  <table
+                    class="w-full border-collapse text-white text-xs lg:text-sm pointer-events-auto"
+                  >
+                    <tbody>
+                      ${tier2Events.map((event) => this.renderEventRow(event))}
+                    </tbody>
+                  </table>
+                </div>
+              `
+            : ""
+        }
+        ${
+          tier1Events.length > 0 || showBetrayalTimer
+            ? html`
+                <div
+                  class="bg-gray-800 backdrop-blur-sm max-h-[30vh] lg:max-h-[40vh] overflow-y-auto rounded-lg shadow-lg border-l-4 border-red-500 important-events-container"
                 >
-                  <tbody>
-                    ${tier1Events.map((event) => this.renderEventRow(event))}
-                    ${showBetrayalTimer
-                      ? html`
-                          <tr>
-                            <td class="lg:px-2 lg:py-1 p-1 text-left">
-                              ${this.renderBetrayalDebuffTimer()}
-                            </td>
-                          </tr>
-                        `
-                      : ""}
-                  </tbody>
-                </table>
-              </div>
-            `
-          : ""}
+                  <table
+                    class="w-full border-collapse text-white text-base lg:text-lg font-medium pointer-events-auto"
+                  >
+                    <tbody>
+                      ${tier1Events.map((event) => this.renderEventRow(event))}
+                      ${
+                        showBetrayalTimer
+                          ? html`
+                              <tr>
+                                <td class="lg:px-2 lg:py-1 p-1 text-left">
+                                  ${this.renderBetrayalDebuffTimer()}
+                                </td>
+                              </tr>
+                            `
+                          : ""
+                      }
+                    </tbody>
+                  </table>
+                </div>
+              `
+            : ""
+        }
       </div>
     `;
   }

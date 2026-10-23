@@ -18,13 +18,17 @@ import {
   type ProcessingHandlers,
 } from "../../../src/client/replay/LocalProcessing";
 import { ReplayPlayback } from "../../../src/client/replay/ReplayPlayback";
-import { fetchReplayRecord } from "../../../src/client/replay/ReplayRecord";
+import {
+  fetchReplayRecord,
+  hasRecordedHashes,
+} from "../../../src/client/replay/ReplayRecord";
 import { replayStore } from "../../../src/client/replay/ReplayStore";
 import { ReplayViewer } from "../../../src/client/replay/ReplayViewer";
 import { loadCachedTerrainMap } from "../../../src/client/TerrainMapFileLoader";
 
 vi.mock("../../../src/client/replay/ReplayRecord", () => ({
   fetchReplayRecord: vi.fn(),
+  hasRecordedHashes: vi.fn(() => true),
 }));
 vi.mock("../../../src/client/replay/ReplayStore", () => ({
   replayStore: { get: vi.fn(), put: vi.fn(), remove: vi.fn() },
@@ -73,6 +77,7 @@ function viewer() {
     status: string;
     error: string;
     stoppedEarly: string;
+    unverifiedNotice: boolean;
     classicFallback: boolean;
     growing: boolean;
     gameLength: number | null;
@@ -248,6 +253,7 @@ test("plays as the game is processed, and keeps the finished replay", async () =
   expect(playback.append).toHaveBeenCalledExactlyOnceWith(MORE);
   expect(v.growing).toBe(false);
   expect(playback.live).toBe(false);
+  expect(v.unverifiedNotice).toBe(false);
   // Stored from what the viewer holds.
   await vi.waitFor(() =>
     expect(replayStore.put).toHaveBeenCalledExactlyOnceWith(
@@ -255,6 +261,19 @@ test("plays as the game is processed, and keeps the finished replay", async () =
       STORED,
     ),
   );
+});
+
+test("a record with no hashes plays with a notice, and isn't kept", async () => {
+  vi.mocked(hasRecordedHashes).mockReturnValueOnce(false);
+  const { v, handlers } = await processing();
+  handlers.onAppend(FIRST);
+  handlers.onDone();
+  await v.applying;
+  expect(v.status).toBe("ready");
+  expect(v.unverifiedNotice).toBe(true);
+  // Next time it's checked (and the notice shown) again.
+  await new Promise((r) => setTimeout(r, 0));
+  expect(replayStore.put).not.toHaveBeenCalled();
 });
 
 test("a desync before any frames is an error, and the client-side replay is offered", async () => {
@@ -373,4 +392,60 @@ test("playback keys do nothing while the settings menu is open", () => {
   v.onKey(key("ArrowRight"));
   expect(playback.play).toHaveBeenCalledOnce();
   expect(playback.seek).toHaveBeenCalledWith(11);
+});
+
+test("playback keys do nothing while the game settings are open, or in their sliders", () => {
+  const element = new ReplayViewer();
+  const v = element as unknown as {
+    status: string;
+    playback: unknown;
+    onKey(e: KeyboardEvent): void;
+  };
+  const playback = {
+    playing: false,
+    frame: 10,
+    play: vi.fn(),
+    pause: vi.fn(),
+    seek: vi.fn(async () => {}),
+  };
+  v.status = "ready";
+  v.playback = playback;
+  // Opened from the settings menu, which has closed by then.
+  let open = true;
+  const gameSettings = Object.assign(document.createElement("div"), {
+    id: "game-settings",
+    isOpen: () => open,
+  });
+  document.body.appendChild(gameSettings);
+  const slider = Object.assign(document.createElement("input"), {
+    type: "range",
+  });
+  gameSettings.appendChild(slider);
+  const timeline = Object.assign(document.createElement("input"), {
+    type: "range",
+  });
+  element.appendChild(document.createElement("replay-controls"));
+  element.querySelector("replay-controls")!.appendChild(timeline);
+  const key = (code: string, on: HTMLElement = document.body) => {
+    const e = new KeyboardEvent("keydown", { code, bubbles: true });
+    Object.defineProperty(e, "target", { value: on });
+    return e;
+  };
+  try {
+    v.onKey(key("Space"));
+    v.onKey(key("ArrowRight", slider));
+    expect(playback.play).not.toHaveBeenCalled();
+    expect(playback.seek).not.toHaveBeenCalled();
+
+    // Closed, a slider still keeps its arrow keys. The timeline seeks.
+    open = false;
+    v.onKey(key("ArrowRight", slider));
+    expect(playback.seek).not.toHaveBeenCalled();
+    v.onKey(key("ArrowRight", timeline));
+    expect(playback.seek).toHaveBeenCalledWith(11);
+    v.onKey(key("Space"));
+    expect(playback.play).toHaveBeenCalledOnce();
+  } finally {
+    gameSettings.remove();
+  }
 });

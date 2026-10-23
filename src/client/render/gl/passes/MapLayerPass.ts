@@ -1,7 +1,7 @@
 /**
  * MapLayerPass — renders a single map-layer image between terrain and territory.
  *
- * Each layer is a full-size PNG (same dimensions as image.png) placed above
+ * Each layer is a full-size image (same dimensions as the map grid) placed above
  * the terrain tiles but below player territory.  The fragment shader discards
  * pixels whose land/water type does not match the layer's "placement" and
  * (for nukeable layers) pixels that have been destroyed by a nuke.
@@ -39,12 +39,12 @@ export class MapLayerPass {
     private gl: WebGL2RenderingContext,
     /** Terrain-bytes R8UI texture (shared across all layer passes). */
     private terrainBytesTex: WebGLTexture,
-    /** Layer RGBA image (ImageBitmap loaded from the layer PNG). */
+    /** Layer RGBA image (ImageBitmap decoded from the layer WebP). */
     image: ImageBitmap,
     private mapW: number,
     private mapH: number,
     /** 0 = land layer, 1 = water layer. */
-    private placement: 0 | 1,
+    readonly placement: 0 | 1,
     /** Whether the layer is destroyed by nukes. */
     private nukeable: boolean,
   ) {

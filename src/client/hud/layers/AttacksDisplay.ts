@@ -23,6 +23,7 @@ import {
 import {
   CancelAttackIntentEvent,
   CancelBoatIntentEvent,
+  counterAttackTroops,
   SendAttackIntentEvent,
 } from "../../Transport";
 import { UIState } from "../../UIState";
@@ -206,7 +207,7 @@ export class AttacksDisplay extends LitElement implements Controller {
     const myPlayer = this.game.myPlayer();
     if (!myPlayer) return;
 
-    const counterTroops = Math.min(
+    const counterTroops = counterAttackTroops(
       attack.troops,
       this.uiState.attackRatio * myPlayer.troops(),
     );
@@ -234,27 +235,31 @@ export class AttacksDisplay extends LitElement implements Controller {
                   this.game.playerBySmallID(attack.attackerID) as PlayerView
                 )?.displayName()}</span
               >
-              ${attack.retreating
-                ? `(${translateText("events_display.retreating")}...)`
-                : ""} `,
+              ${
+                attack.retreating
+                  ? `(${translateText("events_display.retreating")}...)`
+                  : ""
+              } `,
             onClick: () => this.attackWarningOnClick(attack),
             className:
               "text-left text-red-400 inline-flex items-center gap-0.5 lg:gap-1 min-w-0",
             translate: false,
           })}
-          ${!attack.retreating
-            ? this.renderButton({
-                content: html`<img
-                  src="${swordIcon}"
-                  class="h-4 w-4"
-                  style="filter: brightness(0) saturate(100%) invert(27%) sepia(91%) saturate(4551%) hue-rotate(348deg) brightness(89%) contrast(97%)"
-                />`,
-                onClick: () => this.handleRetaliate(attack),
-                className:
-                  "ml-auto inline-flex items-center justify-center cursor-pointer bg-red-900/50 hover:bg-red-800/70 sm:rounded-lg px-1.5 py-1 border border-red-700/50",
-                translate: false,
-              })
-            : ""}
+          ${
+            !attack.retreating
+              ? this.renderButton({
+                  content: html`<img
+                    src="${swordIcon}"
+                    class="h-4 w-4"
+                    style="filter: brightness(0) saturate(100%) invert(27%) sepia(91%) saturate(4551%) hue-rotate(348deg) brightness(89%) contrast(97%)"
+                  />`,
+                  onClick: () => this.handleRetaliate(attack),
+                  className:
+                    "ml-auto inline-flex items-center justify-center cursor-pointer bg-red-900/50 hover:bg-red-800/70 sm:rounded-lg px-1.5 py-1 border border-red-700/50",
+                  translate: false,
+                })
+              : ""
+          }
         </div>
       `,
     );
@@ -286,16 +291,18 @@ export class AttacksDisplay extends LitElement implements Controller {
               "text-left text-aquarius inline-flex items-center gap-0.5 lg:gap-1 min-w-0",
             translate: false,
           })}
-          ${!attack.retreating
-            ? this.renderButton({
-                content: "❌",
-                onClick: () => this.emitCancelAttackIntent(attack.id),
-                className: "ml-auto text-left shrink-0",
-                disabled: attack.retreating,
-              })
-            : html`<span class="ml-auto truncate text-aquarius"
-                >(${translateText("events_display.retreating")}...)</span
-              >`}
+          ${
+            !attack.retreating
+              ? this.renderButton({
+                  content: "❌",
+                  onClick: () => this.emitCancelAttackIntent(attack.id),
+                  className: "ml-auto text-left shrink-0",
+                  disabled: attack.retreating,
+                })
+              : html`<span class="ml-auto truncate text-aquarius"
+                  >(${translateText("events_display.retreating")}...)</span
+                >`
+          }
         </div>
       `,
     );
@@ -322,16 +329,18 @@ export class AttacksDisplay extends LitElement implements Controller {
               "text-left text-aquarius inline-flex items-center gap-0.5 lg:gap-1 min-w-0",
             translate: false,
           })}
-          ${!landAttack.retreating
-            ? this.renderButton({
-                content: "❌",
-                onClick: () => this.emitCancelAttackIntent(landAttack.id),
-                className: "ml-auto text-left shrink-0",
-                disabled: landAttack.retreating,
-              })
-            : html`<span class="ml-auto truncate text-aquarius"
-                >(${translateText("events_display.retreating")}...)</span
-              >`}
+          ${
+            !landAttack.retreating
+              ? this.renderButton({
+                  content: "❌",
+                  onClick: () => this.emitCancelAttackIntent(landAttack.id),
+                  className: "ml-auto text-left shrink-0",
+                  disabled: landAttack.retreating,
+                })
+              : html`<span class="ml-auto truncate text-aquarius"
+                  >(${translateText("events_display.retreating")}...)</span
+                >`
+          }
         </div>
       `,
     );
@@ -399,16 +408,18 @@ export class AttacksDisplay extends LitElement implements Controller {
               "text-left text-aquarius inline-flex items-center gap-0.5 lg:gap-1 min-w-0",
             translate: false,
           })}
-          ${boat.transportShipState().isRetreating
-            ? html`<span class="ml-auto truncate text-aquarius"
-                >(${translateText("events_display.retreating")}...)</span
-              >`
-            : this.renderButton({
-                content: "\u274C",
-                onClick: () => this.emitBoatCancelIntent(boat.id()),
-                className: "ml-auto text-left shrink-0",
-                disabled: boat.transportShipState().isRetreating,
-              })}
+          ${
+            boat.transportShipState().isRetreating
+              ? html`<span class="ml-auto truncate text-aquarius"
+                  >(${translateText("events_display.retreating")}...)</span
+                >`
+              : this.renderButton({
+                  content: "\u274C",
+                  onClick: () => this.emitBoatCancelIntent(boat.id()),
+                  className: "ml-auto text-left shrink-0",
+                  disabled: boat.transportShipState().isRetreating,
+                })
+          }
         </div>
       `,
     );

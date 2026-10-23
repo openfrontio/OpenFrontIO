@@ -78,7 +78,7 @@ describe("samThreatensNukePreview (nuke trajectory threat set, #4226)", () => {
 });
 
 describe("BuildPreviewController confirm with the pointer off the map", () => {
-  function makeController(worldX: number, worldY: number) {
+  function makeController(worldX: number, worldY: number, snap = false) {
     const width = 10;
     const height = 10;
     const game = {
@@ -100,6 +100,7 @@ describe("BuildPreviewController confirm with the pointer off the map", () => {
     const userSettings = {
       nukeAllianceSafetyDuration: () => 0,
       cursorCostLabel: () => false,
+      snapBuildPreview: () => snap,
     };
     const eventBus = new EventBus();
     const emitted: unknown[] = [];
@@ -121,9 +122,9 @@ describe("BuildPreviewController confirm with the pointer off the map", () => {
   }
 
   test.each([UnitType.City, UnitType.Port, UnitType.Warship])(
-    "resolved preview for %s",
+    "snapped preview for %s",
     (type) => {
-      const { controller } = makeController(3, 4);
+      const { controller } = makeController(3, 4, true);
       const buildable = (controller as any).ghostUnit.buildableUnit;
       Object.assign(buildable, { type, canBuild: 0, cost: 1n });
       const data = (controller as any).buildGhostPreviewData(43, false);
@@ -133,6 +134,16 @@ describe("BuildPreviewController confirm with the pointer off the map", () => {
       expect(data.snapToPlacement).toBe(type !== UnitType.Warship);
     },
   );
+
+  test("preview stays under the cursor when snapping is off", () => {
+    const { controller } = makeController(3, 4);
+    const buildable = (controller as any).ghostUnit.buildableUnit;
+    Object.assign(buildable, { type: UnitType.City, canBuild: 0, cost: 1n });
+    const data = (controller as any).buildGhostPreviewData(43, false);
+    expect([data.tileX, data.tileY]).toEqual([3, 4]);
+    expect([data.radiusTileX, data.radiusTileY]).toEqual([3, 4]);
+    expect(data.snapToPlacement).toBe(false);
+  });
 
   test("does not throw or emit a build intent when released off the map edge", () => {
     const { controller, emitted } = makeController(-1, 4);

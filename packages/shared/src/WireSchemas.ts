@@ -22,6 +22,7 @@ import {
   GameStartInfoSchema,
   ID,
   IntentSchema,
+  JoinUsernameSchema,
   MappedID,
   PlayerSchema,
   TurnSchema,
@@ -223,16 +224,16 @@ export const ClientInfoSchema = z.object({
   // prestige and legend packed into one varint by packLevelBadge
   // (LevelBadgeWire.ts); read it with unpackLevelBadge. Stamped by the game
   // server from its own /users/@me lookup, never taken from the client.
-  // Display-only. Absent for guests, for players who hide their level (on
-  // every copy of the roster, their own included), when the API has
-  // progression off or the lookup failed, and on anonymized entries (a badge
-  // beside an anonymous name would point out the veterans). Must stay the
-  // LAST field: its one presence bit is the eighth and last bit of this
-  // object's one-byte header, so an entry without it encodes byte-identically
-  // to one from before it existed, and a pre-badge frame still decodes.
-  // Another field here would need a second header byte. No range check here
-  // on purpose: one bad value must not fail the whole roster's parse, so
-  // unpackLevelBadge drops it instead.
+  // Display-only. Absent for guests, for players who hide their level (even
+  // from themselves: their own client draws its own badge from its local
+  // /users/@me instead), when the API has progression off or the lookup
+  // failed, and on anonymized entries (a badge beside an anonymous name would
+  // point out the veterans). Must stay the LAST field: its one presence
+  // bit is the eighth and last bit of this object's one-byte header, so an
+  // entry without it encodes byte-identically to one from before it existed,
+  // and a pre-badge frame still decodes. Another field here would need a
+  // second header byte. No range check here on purpose: one bad value must
+  // not fail the whole roster's parse, so unpackLevelBadge drops it instead.
   levelBadge: zb.uint().optional(),
 });
 
@@ -693,9 +694,20 @@ export const ClientIntentMessageSchema = z.object({
 // Where the client was distributed, as the client reports it. Unverified, so
 // fit for metric dimensions only; the signed provider="steam" claim is the
 // trustworthy Steam signal. Append new members only (zbin ordinals).
-export const ClientPlatformSchema = z.enum(["web", "steam", "crazygames"]);
+export const ClientPlatformSchema = z.enum([
+  "web",
+  "steam",
+  "crazygames",
+  "poki",
+]);
 
 export type ClientPlatform = z.infer<typeof ClientPlatformSchema>;
+
+// Phone-or-tablet versus everything else, as the client reports it from its
+// OS (see clientDevice). Unverified; metric dimension only.
+export const ClientDeviceSchema = z.enum(["desktop", "mobile"]);
+
+export type ClientDevice = z.infer<typeof ClientDeviceSchema>;
 
 // WARNING: never send this message to clients.
 // Note: clientID is NOT included - server assigns it based on persistentID from token
@@ -703,7 +715,7 @@ export const ClientJoinMessageSchema = z.object({
   type: z.literal("join"),
   token: TokenSchema, // WARNING: PII - server extracts persistentID from this
   gameID: ID,
-  username: UsernameSchema,
+  username: JoinUsernameSchema,
   clanTag: ClanTagSchema,
   // Server replaces the refs with the actual cosmetic data.
   cosmetics: PlayerCosmeticRefsSchema.optional(),
@@ -715,10 +727,12 @@ export const ClientJoinMessageSchema = z.object({
   // whose commit doesn't match its own (missing counts as a mismatch —
   // pre-feature bundles are by definition stale).
   gitCommit: z.string().max(64).optional(),
-  // Must stay the last field, and its presence bit must not spill into a new
-  // header byte: then a stale bundle's frame (which lacks it) still decodes,
-  // reaches the gitCommit check above, and the player is told to refresh.
+  // platform and device must stay the last fields, and their presence bits
+  // must not spill into a new header byte: then a stale bundle's frame (which
+  // lacks them) still decodes, reaches the gitCommit check above, and the
+  // player is told to refresh.
   platform: ClientPlatformSchema.optional(),
+  device: ClientDeviceSchema.optional(),
 });
 
 export const ClientRejoinMessageSchema = z.object({
@@ -779,6 +793,14 @@ export const GameEndInfoSchema = GameStartInfoSchema.extend({
   // Absent on singleplayer records and on records read back from the API,
   // which scrubs them like persistentID.
   reports: PlayerReportSchema.array().optional(),
+  // Set by game servers only: true when this record's winner and stats were
+  // checked, either by the winner vote deciding with at least two IPs behind
+  // the same winner and stats, or by the server replaying the game. False
+  // when neither happened: nobody voted, or the replay failed and the record
+  // holds no decided vote or one sent by a single IP. Absent on singleplayer
+  // records, which no vote backs, and on records from servers that predate
+  // the check. Only true counts as agreed.
+  statsAgreed: z.boolean().optional(),
 });
 
 export type GameEndInfo = z.infer<typeof GameEndInfoSchema>;

@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@import "./halloween.css";
 
 @custom-variant dark (&:where(.dark, .dark *));
 @custom-variant hover (&:hover);
@@ -103,6 +104,24 @@ body.in-game {
   overflow: hidden;
 }
 
+body.in-game .bg-gray-800\/92:not(.game-end-timer-sidebar-flash) {
+  background-color: rgb(
+    from var(--color-gray-800) r g b / calc(0.92 * var(--hud-opacity, 1))
+  );
+}
+
+body.in-game .stats-table .bg-gray-800\/85 {
+  background-color: rgb(
+    from var(--color-gray-800) r g b / calc(0.85 * var(--hud-opacity, 1))
+  );
+}
+
+body.in-game .stats-table .bg-gray-700\/95 {
+  background-color: rgb(
+    from var(--color-gray-700) r g b / calc(0.95 * var(--hud-opacity, 1))
+  );
+}
+
 /* An inline page (store, settings, leaderboard, ...) is a modal rendered in
    the content area: lock the document so it scrolls inside the modal, and
    stack body children in a column so the content area gets the height left
@@ -166,6 +185,12 @@ body.page-open {
 }
 .hide-scrollbar::-webkit-scrollbar {
   display: none; /* Chrome, Safari */
+}
+
+/* Main adds .game-portal to <html> on CrazyGames and Poki. A rule rather than
+   a one-off sweep, so it also hides elements that render later (lazy modals). */
+.game-portal .no-game-portal {
+  display: none !important;
 }
 
 .start-game-button {
