@@ -22,7 +22,6 @@ import "./components/baseComponents/Button";
 import "./components/baseComponents/Modal";
 import { BaseModal } from "./components/BaseModal";
 import "./components/GameConfigSettings";
-import "./components/SavedGamesPanel";
 import { MEDAL_ORDER, medalIcon } from "./components/map/Medals";
 import {
   type LoadSavedGameDetail,
@@ -354,10 +353,11 @@ export class SinglePlayerModal extends BaseModal {
       rightContent: responseHasLinkedIdentity(this.userMeResponse)
         ? html`<button
               @click=${this.toggleAchievements}
-              class="flex items-center gap-2 px-3 py-2 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 transition-all shrink-0 ${this
-                .showAchievements
-                ? "bg-yellow-500/10 border-yellow-500/30 text-yellow-400"
-                : "text-white/60"}"
+              class="flex items-center gap-2 px-3 py-2 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 transition-all shrink-0 ${
+                this.showAchievements
+                  ? "bg-yellow-500/10 border-yellow-500/30 text-yellow-400"
+                  : "text-white/60"
+              }"
             >
               <img
                 src=${assetUrl("images/MedalIconWhite.svg")}
@@ -591,8 +591,9 @@ export class SinglePlayerModal extends BaseModal {
             @map-selected=${this.handleConfigMapSelected}
             @random-map-selected=${this.handleConfigRandomMapSelected}
             @difficulty-selected=${this.handleConfigDifficultySelected}
-            @doomsday-clock-speed-selected=${this
-              .handleConfigDoomsdayClockSpeedSelected}
+            @doomsday-clock-speed-selected=${
+              this.handleConfigDoomsdayClockSpeedSelected
+            }
             @game-mode-selected=${this.handleConfigGameModeSelected}
             @team-count-selected=${this.handleConfigTeamCountSelected}
             @bots-changed=${this.handleBotsChange}
@@ -604,21 +605,23 @@ export class SinglePlayerModal extends BaseModal {
 
         <!-- Footer Action -->
         <div class="p-6 border-t border-white/10 bg-black/20 shrink-0">
-          ${responseHasLinkedIdentity(this.userMeResponse) &&
-          this.hasOptionsChanged()
-            ? html`<div
-                class="mb-4 px-4 py-3 rounded-xl bg-yellow-500/20 border border-yellow-500/30 text-yellow-400 text-xs font-bold uppercase tracking-wider text-center"
-              >
-                ${translateText("single_modal.options_changed_no_achievements")}
-              </div>`
-            : null}
+          ${
+            responseHasLinkedIdentity(this.userMeResponse) &&
+            this.hasOptionsChanged()
+              ? html`<div
+                  class="mb-4 px-4 py-3 rounded-xl bg-yellow-500/20 border border-yellow-500/30 text-yellow-400 text-xs font-bold uppercase tracking-wider text-center"
+                >
+                  ${translateText("single_modal.options_changed_no_achievements")}
+                </div>`
+              : null
+          }
           <o-button
             variant="primary"
             width="block"
             size="lg"
-            translationKey=${this.starting
-              ? "game_settings.starting"
-              : "game_settings.start"}
+            translationKey=${
+              this.starting ? "game_settings.starting" : "game_settings.start"
+            }
             .disable=${this.starting}
             @click=${this.startGame}
           ></o-button>

@@ -327,9 +327,9 @@ export class LegendCeremony extends LitElement {
     }
     if (!this.reached("implode")) {
       return html`<div
-        class="lc-charge-wrap lc-fade-in ${this.beat === "charge"
-          ? "lc-charge"
-          : ""}"
+        class="lc-charge-wrap lc-fade-in ${
+          this.beat === "charge" ? "lc-charge" : ""
+        }"
       >
         <level-badge
           .level=${99}
@@ -355,14 +355,16 @@ export class LegendCeremony extends LitElement {
       return html`${this.renderCrown("lc-crown-drop", "")}${pinpoint}`;
     }
     // From the impact on.
-    return html`${this.landed
-      ? this.renderCrown("", "lc-crown-breathe")
-      : html`${this.renderCrown("lc-crown-land", "")}
-          <span aria-hidden="true" class="ceremony-shockwave lc-shock"></span>
-          <span
-            aria-hidden="true"
-            class="ceremony-shockwave lc-shock lc-shock-2"
-          ></span>`}`;
+    return html`${
+      this.landed
+        ? this.renderCrown("", "lc-crown-breathe")
+        : html`${this.renderCrown("lc-crown-land", "")}
+            <span aria-hidden="true" class="ceremony-shockwave lc-shock"></span>
+            <span
+              aria-hidden="true"
+              class="ceremony-shockwave lc-shock lc-shock-2"
+            ></span>`
+    }`;
   }
 
   private renderLine(moment: LegendMoment): TemplateResult {
@@ -437,46 +439,56 @@ export class LegendCeremony extends LitElement {
         <div aria-hidden="true" class="lc-rays ${this.raysMode()}"></div>
         <div class="lc-stage">
           <div class="lc-emblem">${this.renderEmblem()}</div>
-          ${this.reached("title")
-            ? html`<div
-                data-legend-title
-                class="lc-title ${this.skipped
-                  ? "lc-title-final lc-final-in"
-                  : "lc-title-slam"}"
-              >
-                ${translateText("progression.legend")}
-              </div>`
-            : nothing}
+          ${
+            this.reached("title")
+              ? html`<div
+                  data-legend-title
+                  class="lc-title ${
+                    this.skipped
+                      ? "lc-title-final lc-final-in"
+                      : "lc-title-slam"
+                  }"
+                >
+                  ${translateText("progression.legend")}
+                </div>`
+              : nothing
+          }
           ${this.reached("line") ? this.renderLine(moment) : nothing}
           ${done ? this.renderShare(moment) : nothing}
-          ${done
-            ? html`<div
-                class="lc-actions ${this.skipped ? "lc-final-in" : "lc-rise"}"
-              >
-                <button
-                  type="button"
-                  data-legend-continue
-                  class="lc-continue"
-                  @click=${(e: Event) => {
-                    e.stopPropagation();
-                    this.close();
-                  }}
+          ${
+            done
+              ? html`<div
+                  class="lc-actions ${this.skipped ? "lc-final-in" : "lc-rise"}"
                 >
-                  ${translateText("legend_ceremony.continue")}
-                </button>
-              </div>`
-            : nothing}
+                  <button
+                    type="button"
+                    data-legend-continue
+                    class="lc-continue"
+                    @click=${(e: Event) => {
+                      e.stopPropagation();
+                      this.close();
+                    }}
+                  >
+                    ${translateText("legend_ceremony.continue")}
+                  </button>
+                </div>`
+              : nothing
+          }
         </div>
       </div>
-      ${this.beat === "implode" || this.beat === "descend"
-        ? html`<div
-            aria-hidden="true"
-            class="ceremony-flash lc-flash lc-flash-small"
-          ></div>`
-        : nothing}
-      ${this.reached("impact") && !this.landed
-        ? html`<div aria-hidden="true" class="ceremony-flash lc-flash"></div>`
-        : nothing}
+      ${
+        this.beat === "implode" || this.beat === "descend"
+          ? html`<div
+              aria-hidden="true"
+              class="ceremony-flash lc-flash lc-flash-small"
+            ></div>`
+          : nothing
+      }
+      ${
+        this.reached("impact") && !this.landed
+          ? html`<div aria-hidden="true" class="ceremony-flash lc-flash"></div>`
+          : nothing
+      }
     </div>`;
   }
 }

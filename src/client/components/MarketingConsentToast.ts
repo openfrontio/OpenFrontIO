@@ -146,11 +146,13 @@ export class MarketingConsentToast extends LitElement {
             ${translateText("marketing_consent.yes")}
           </button>
         </div>
-        ${this.errored
-          ? html`<div class="mt-2 text-[10px] text-red-400">
-              ${translateText("marketing_consent.error")}
-            </div>`
-          : nothing}
+        ${
+          this.errored
+            ? html`<div class="mt-2 text-[10px] text-red-400">
+                ${translateText("marketing_consent.error")}
+              </div>`
+            : nothing
+        }
       </div>
     `;
   }

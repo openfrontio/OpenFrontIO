@@ -11,7 +11,6 @@ import { customElement, property, state } from "lit/decorators.js";
 import { clampPrestige, levelFraction } from "../Progression";
 import { prefersReducedMotion } from "../utilities/ReducedMotion";
 import { translateText } from "../Utils";
-import "./LevelBadge";
 import { levelBadgeAccent } from "./LevelBadge";
 import { splitAccountUsername, usernameText } from "./ui/UsernameText";
 import { formatXp, xpProgressText } from "./XpBar";
@@ -225,12 +224,14 @@ export class ProfileCard extends LitElement {
       data-profile-level-line
       class="font-black uppercase text-white ${size}"
     >
-      ${prestige > 0
-        ? html`<span class="text-yellow-300"
-              >${translateText("progression.prestige", { prestige })}</span
-            >
-            <span class="text-white/30">·</span>`
-        : nothing}
+      ${
+        prestige > 0
+          ? html`<span class="text-yellow-300"
+                >${translateText("progression.prestige", { prestige })}</span
+              >
+              <span class="text-white/30">·</span>`
+          : nothing
+      }
       ${translateText("progression.level", { level: progress.level })}
     </div>`;
   }
@@ -249,10 +250,9 @@ export class ProfileCard extends LitElement {
   private renderBar(fill: number): TemplateResult {
     return html`<div
       data-xp-bar
-      class="relative w-full overflow-hidden rounded-sm bg-white/15 ${this
-        .compact
-        ? "h-2"
-        : "h-3"}"
+      class="relative w-full overflow-hidden rounded-sm bg-white/15 ${
+        this.compact ? "h-2" : "h-3"
+      }"
       role="progressbar"
       aria-valuemin="0"
       aria-valuemax="100"
@@ -297,20 +297,21 @@ export class ProfileCard extends LitElement {
     return html`<div class=${this.compact ? "mt-1.5" : "mt-3"}>
       ${hasBar ? this.renderBar(fill) : nothing}
       <div
-        class="mt-1 flex items-baseline justify-between gap-3 text-xs ${this
-          .compact
-          ? "justify-end"
-          : ""}"
+        class="mt-1 flex items-baseline justify-between gap-3 text-xs ${
+          this.compact ? "justify-end" : ""
+        }"
       >
         ${lifetime}
-        ${hasBar
-          ? html`<div
-              data-profile-xp
-              class="shrink-0 font-semibold tabular-nums text-white/55"
-            >
-              ${xpProgressText(xpInLevel, progress.legend ? 0 : xpForNext)}
-            </div>`
-          : nothing}
+        ${
+          hasBar
+            ? html`<div
+                data-profile-xp
+                class="shrink-0 font-semibold tabular-nums text-white/55"
+              >
+                ${xpProgressText(xpInLevel, progress.legend ? 0 : xpForNext)}
+              </div>`
+            : nothing
+        }
       </div>
     </div>`;
   }
@@ -463,9 +464,9 @@ export class ProfileCard extends LitElement {
         ? nothing
         : html`<span
             data-profile-clan
-            class="font-black tracking-wider text-aquarius ${this.compact
-              ? "shrink-0 text-sm"
-              : "block text-sm"}"
+            class="font-black tracking-wider text-aquarius ${
+              this.compact ? "shrink-0 text-sm" : "block text-sm"
+            }"
             >[${this.clanTag}]</span
           >`;
     const { base, discriminator } = splitAccountUsername(this.username);
@@ -473,9 +474,9 @@ export class ProfileCard extends LitElement {
       discriminator === null ? base : `${base}#${discriminator}`;
     const name = html`<span
       data-profile-name
-      class="truncate font-black leading-tight ${this.compact
-        ? "text-2xl"
-        : "block text-3xl sm:text-4xl"}"
+      class="truncate font-black leading-tight ${
+        this.compact ? "text-2xl" : "block text-3xl sm:text-4xl"
+      }"
       title=${plainName}
       >${usernameText(this.username, "")}</span
     >`;
@@ -501,11 +502,13 @@ export class ProfileCard extends LitElement {
               ${this.renderProvisional()}
             </div>
           </div>
-          ${this.canPrestige(progress)
-            ? html`<div class="flex shrink-0 justify-end">
-                ${this.renderPrestigeButton()}
-              </div>`
-            : this.renderCompactXp(progress)}
+          ${
+            this.canPrestige(progress)
+              ? html`<div class="flex shrink-0 justify-end">
+                  ${this.renderPrestigeButton()}
+                </div>`
+              : this.renderCompactXp(progress)
+          }
         </div>
       </section>`;
     }
@@ -514,9 +517,9 @@ export class ProfileCard extends LitElement {
     return html`<section
       data-profile-card="full"
       ?data-profile-legend=${legend}
-      class="relative overflow-hidden rounded-xl border border-white/10 bg-gradient-to-br from-[#0b1424] to-[#132644] p-5 text-white sm:p-6 ${legend
-        ? "profile-card-legend"
-        : ""} ${this.intro ? "profile-card-intro" : ""}"
+      class="relative overflow-hidden rounded-xl border border-white/10 bg-gradient-to-br from-[#0b1424] to-[#132644] p-5 text-white sm:p-6 ${
+        legend ? "profile-card-legend" : ""
+      } ${this.intro ? "profile-card-intro" : ""}"
     >
       ${this.renderBackground(legend)}
       ${this.pulse === null ? nothing : this.renderPulse(this.pulse)}
@@ -527,16 +530,18 @@ export class ProfileCard extends LitElement {
         <div class="w-full min-w-0 flex-1 text-center sm:text-left">
           ${clan} ${name} ${this.renderLevelLine(progress)}
           ${this.renderProvisional()} ${this.renderXp(progress)}
-          ${this.canPrestige(progress)
-            ? html`<div
-                class="mt-4 flex flex-col items-center gap-3 sm:flex-row sm:justify-between"
-              >
-                <span class="text-sm text-yellow-100/80"
-                  >${translateText("prestige.ready")}</span
+          ${
+            this.canPrestige(progress)
+              ? html`<div
+                  class="mt-4 flex flex-col items-center gap-3 sm:flex-row sm:justify-between"
                 >
-                ${this.renderPrestigeButton()}
-              </div>`
-            : nothing}
+                  <span class="text-sm text-yellow-100/80"
+                    >${translateText("prestige.ready")}</span
+                  >
+                  ${this.renderPrestigeButton()}
+                </div>`
+              : nothing
+          }
         </div>
       </div>
     </section>`;

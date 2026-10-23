@@ -433,12 +433,14 @@ export class TutorialPanel extends LitElement implements Controller {
           >
           <span class="flex items-center gap-2 text-sm text-gray-300">
             ${this.confirmingClose ? nothing : this.renderHeaderActions()}
-            ${this.ctx && !this.progress.finished()
-              ? translateText("tutorial.step_counter", {
-                  current: this.progress.position(this.ctx),
-                  total: this.progress.total(this.ctx),
-                })
-              : nothing}
+            ${
+              this.ctx && !this.progress.finished()
+                ? translateText("tutorial.step_counter", {
+                    current: this.progress.position(this.ctx),
+                    total: this.progress.total(this.ctx),
+                  })
+                : nothing
+            }
             <button
               class="text-gray-400 hover:text-white text-base leading-none px-1"
               title=${translateText("tutorial.close")}
@@ -465,22 +467,26 @@ export class TutorialPanel extends LitElement implements Controller {
       return nothing;
     const goTo = this.goToTarget();
     return html`
-      ${step.manual
-        ? html`<button
-            class="rounded bg-malibu-blue hover:bg-aquarius px-2 py-0.5 font-semibold text-white"
-            @click=${() => this.progress.acknowledge()}
-          >
-            ${translateText("tutorial.got_it")}
-          </button>`
-        : nothing}
-      ${goTo
-        ? html`<button
-            class="rounded bg-malibu-blue hover:bg-aquarius px-2 py-0.5 font-semibold text-white"
-            @click=${() => this.eventBus.emit(new GoToPlayerEvent(goTo))}
-          >
-            ${translateText("tutorial.go_to")}
-          </button>`
-        : nothing}
+      ${
+        step.manual
+          ? html`<button
+              class="rounded bg-malibu-blue hover:bg-aquarius px-2 py-0.5 font-semibold text-white"
+              @click=${() => this.progress.acknowledge()}
+            >
+              ${translateText("tutorial.got_it")}
+            </button>`
+          : nothing
+      }
+      ${
+        goTo
+          ? html`<button
+              class="rounded bg-malibu-blue hover:bg-aquarius px-2 py-0.5 font-semibold text-white"
+              @click=${() => this.eventBus.emit(new GoToPlayerEvent(goTo))}
+            >
+              ${translateText("tutorial.go_to")}
+            </button>`
+          : nothing
+      }
       <button
         class="text-gray-400 hover:text-white underline"
         @click=${() => this.progress.skip()}
@@ -518,22 +524,26 @@ export class TutorialPanel extends LitElement implements Controller {
     const done = this.progress.stepDone();
     return html`
       <p class="flex gap-1.5 ${done ? "text-green-400" : ""}">
-        ${step.bullets && !done
-          ? nothing
-          : html`<span class="shrink-0">${done ? "✓" : "•"}</span>`}
-        ${step.bullets
-          ? html`<ul class="list-disc ms-4 flex flex-col gap-1">
-              ${step.bullets.map(
-                // dir=auto keeps step text on its content's side while the
-                // panel chrome mirrors — untranslated steps (English fallback)
-                // then keep their punctuation on the correct end.
-                (b) =>
-                  html`<li dir="auto">
-                    ${translateText(`tutorial.step.${b}`)}
-                  </li>`,
-              )}
-            </ul>`
-          : html`<span dir="auto">${this.stepText(step, done)}</span>`}
+        ${
+          step.bullets && !done
+            ? nothing
+            : html`<span class="shrink-0">${done ? "✓" : "•"}</span>`
+        }
+        ${
+          step.bullets
+            ? html`<ul class="list-disc ms-4 flex flex-col gap-1">
+                ${step.bullets.map(
+                  // dir=auto keeps step text on its content's side while the
+                  // panel chrome mirrors — untranslated steps (English fallback)
+                  // then keep their punctuation on the correct end.
+                  (b) =>
+                    html`<li dir="auto">
+                      ${translateText(`tutorial.step.${b}`)}
+                    </li>`,
+                )}
+              </ul>`
+            : html`<span dir="auto">${this.stepText(step, done)}</span>`
+        }
       </p>
     `;
   }
