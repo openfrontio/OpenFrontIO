@@ -174,8 +174,6 @@ export class AttackExecution implements Execution {
         this.attack.sourceTile() === null
       ) {
         this.attack.setTroops(this.attack.troops() + outgoing.troops());
-        // stops troop duping when cancel attack finishes on same tick as new attack
-        outgoing.setTroops(0);
         outgoing.delete();
       }
     }
@@ -279,6 +277,14 @@ export class AttackExecution implements Execution {
     const targetIsPlayer = this.target.isPlayer(); // cache target type
     const targetPlayer = targetIsPlayer ? (this.target as Player) : null; // cache target player
 
+    // Must come before the retreat refund: another attack's init can absorb or
+    // cancel this one on the tick its retreat completes, and refunding troops
+    // that were already handed over duplicates them.
+    if (!this.attack.isActive()) {
+      this.active = false;
+      return;
+    }
+
     if (this.attack.retreated()) {
       if (targetIsPlayer) {
         this.retreat(malusForRetreat);
@@ -290,11 +296,6 @@ export class AttackExecution implements Execution {
     }
 
     if (this.attack.retreating()) {
-      return;
-    }
-
-    if (!this.attack.isActive()) {
-      this.active = false;
       return;
     }
 
