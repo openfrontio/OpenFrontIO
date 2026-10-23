@@ -303,9 +303,9 @@ export class SavedGamesPanel extends LitElement {
           aria-label=${translateText("saved_games.code_placeholder")}
           data-save-code
           aria-invalid=${this.codeInvalid ? "true" : "false"}
-          aria-errormessage=${this.codeInvalid
-            ? "saved-game-code-error"
-            : nothing}
+          aria-errormessage=${
+            this.codeInvalid ? "saved-game-code-error" : nothing
+          }
           .value=${this.codeValue}
           @input=${(e: Event) => {
             this.codeValue = (e.target as HTMLInputElement).value;
@@ -327,15 +327,17 @@ export class SavedGamesPanel extends LitElement {
           },
         )}
       </div>
-      ${this.codeInvalid
-        ? html`<div
-            id="saved-game-code-error"
-            class="text-xs text-red-400"
-            data-code-error
-          >
-            ${translateText("saved_games.error.code_invalid")}
-          </div>`
-        : null}
+      ${
+        this.codeInvalid
+          ? html`<div
+              id="saved-game-code-error"
+              class="text-xs text-red-400"
+              data-code-error
+            >
+              ${translateText("saved_games.error.code_invalid")}
+            </div>`
+          : null
+      }
     </form>`;
   }
 
@@ -513,14 +515,16 @@ export class SavedGamesPanel extends LitElement {
         aria-expanded=${expanded}
         data-saved-games-toggle
         @click=${this.toggle}
-        class="w-full flex items-center gap-3 px-4 py-3 rounded-xl border text-sm font-bold text-white uppercase tracking-wider transition-all duration-200 active:scale-[0.99] ${expanded
-          ? "bg-malibu-blue/20 border-malibu-blue/50"
-          : "bg-white/5 border-white/10 hover:bg-white/10 hover:border-white/20"}"
+        class="w-full flex items-center gap-3 px-4 py-3 rounded-xl border text-sm font-bold text-white uppercase tracking-wider transition-all duration-200 active:scale-[0.99] ${
+          expanded
+            ? "bg-malibu-blue/20 border-malibu-blue/50"
+            : "bg-white/5 border-white/10 hover:bg-white/10 hover:border-white/20"
+        }"
       >
         <svg
-          class="w-3.5 h-3.5 shrink-0 transition-transform duration-200 ${expanded
-            ? "rotate-90"
-            : ""}"
+          class="w-3.5 h-3.5 shrink-0 transition-transform duration-200 ${
+            expanded ? "rotate-90" : ""
+          }"
           viewBox="0 0 12 12"
           fill="currentColor"
           aria-hidden="true"
@@ -529,11 +533,13 @@ export class SavedGamesPanel extends LitElement {
         </svg>
         ${translateText("saved_games.title")}
       </button>
-      ${expanded
-        ? html`<div class="mt-4 flex flex-col gap-4">
-            ${this.renderCodeForm()}${this.renderShared()}${this.renderOwn()}
-          </div>`
-        : null}
+      ${
+        expanded
+          ? html`<div class="mt-4 flex flex-col gap-4">
+              ${this.renderCodeForm()}${this.renderShared()}${this.renderOwn()}
+            </div>`
+          : null
+      }
     </div>`;
   }
 }
