@@ -6,9 +6,13 @@ import {
   resolveKeybindLabel,
   translateText,
 } from "../client/Utils";
+// This type is erased at runtime; retain the import to register the setting.
+// oxlint-disable-next-line import/no-duplicates -- Required custom-element registration.
 import "./components/baseComponents/setting/SettingKeybind";
 import { SettingKeybind } from "./components/baseComponents/setting/SettingKeybind";
 import "./components/baseComponents/setting/SettingNumber";
+// This type is erased at runtime; retain the import to register the setting.
+// oxlint-disable-next-line import/no-duplicates -- Required custom-element registration.
 import "./components/baseComponents/setting/SettingSelect";
 import { SettingSelect } from "./components/baseComponents/setting/SettingSelect";
 import "./components/baseComponents/setting/SettingSlider";
@@ -686,10 +690,11 @@ export class UserSettingModal extends BaseModal {
     return html`
       <button
         id="audio-${category}-test"
-        class="self-end px-3 py-1 text-sm font-medium rounded-lg border border-white/10 text-white transition-colors ${muted ||
-        pending
-          ? "opacity-40 cursor-not-allowed"
-          : "bg-white/5 hover:bg-white/15"}"
+        class="self-end px-3 py-1 text-sm font-medium rounded-lg border border-white/10 text-white transition-colors ${
+          muted || pending
+            ? "opacity-40 cursor-not-allowed"
+            : "bg-white/5 hover:bg-white/15"
+        }"
         ?disabled=${muted || pending}
         title=${muted ? translateText(hint) : ""}
         @click=${() => this.playTestCue(category)}
@@ -714,11 +719,13 @@ export class UserSettingModal extends BaseModal {
           @change=${(e: CustomEvent<{ value: number }>) =>
             this.sliderAudio(category, e)}
         ></setting-slider>
-        ${controls !== null && PREVIEWABLE.includes(category as CueCategory)
-          ? html`<div class="flex justify-end">
-              ${this.renderTestButton(controls, category as CueCategory)}
-            </div>`
-          : ""}
+        ${
+          controls !== null && PREVIEWABLE.includes(category as CueCategory)
+            ? html`<div class="flex justify-end">
+                ${this.renderTestButton(controls, category as CueCategory)}
+              </div>`
+            : ""
+        }
       </div>
     `;
   }
@@ -1192,40 +1199,44 @@ export class UserSettingModal extends BaseModal {
         @change=${this.handleDisplayModeChange}
       ></setting-select>
 
-      ${uiScale === undefined
-        ? null
-        : html`
-            <setting-select
-              id="display-ui-scale-select"
-              label=${translateText("user_setting.display_ui_scale_label")}
-              description=${translateText("user_setting.display_ui_scale_desc")}
-              .value=${String(uiScale)}
-              ?disabled=${this.displayBusy}
-              .options=${uiScaleOptions(uiScale).map((scale) => ({
-                value: scale,
-                label: translateText("user_setting.display_ui_scale_option", {
-                  scale,
-                }),
-              }))}
-              @change=${this.handleUiScaleChange}
-            ></setting-select>
-          `}
-      ${displays.length > 1
-        ? html`
-            <setting-select
-              id="display-monitor-select"
-              label=${translateText("user_setting.display_monitor_label")}
-              description=${translateText("user_setting.display_monitor_desc")}
-              .value=${String(selectedId)}
-              ?disabled=${this.displayBusy}
-              .options=${displays.map((d, i) => ({
-                value: d.id,
-                label: this.displayOptionLabel(d, i),
-              }))}
-              @change=${this.handleDisplayMonitorChange}
-            ></setting-select>
-          `
-        : null}
+      ${
+        uiScale === undefined
+          ? null
+          : html`
+              <setting-select
+                id="display-ui-scale-select"
+                label=${translateText("user_setting.display_ui_scale_label")}
+                description=${translateText("user_setting.display_ui_scale_desc")}
+                .value=${String(uiScale)}
+                ?disabled=${this.displayBusy}
+                .options=${uiScaleOptions(uiScale).map((scale) => ({
+                  value: scale,
+                  label: translateText("user_setting.display_ui_scale_option", {
+                    scale,
+                  }),
+                }))}
+                @change=${this.handleUiScaleChange}
+              ></setting-select>
+            `
+      }
+      ${
+        displays.length > 1
+          ? html`
+              <setting-select
+                id="display-monitor-select"
+                label=${translateText("user_setting.display_monitor_label")}
+                description=${translateText("user_setting.display_monitor_desc")}
+                .value=${String(selectedId)}
+                ?disabled=${this.displayBusy}
+                .options=${displays.map((d, i) => ({
+                  value: d.id,
+                  label: this.displayOptionLabel(d, i),
+                }))}
+                @change=${this.handleDisplayMonitorChange}
+              ></setting-select>
+            `
+          : null
+      }
     `;
   }
 
@@ -1857,9 +1868,11 @@ export class UserSettingModal extends BaseModal {
         @change=${this.toggleGraphicsAdvanced}
       ></setting-toggle>
 
-      ${this.graphicsAdvancedOpen
-        ? html`<graphics-advanced-settings></graphics-advanced-settings>`
-        : nothing}
+      ${
+        this.graphicsAdvancedOpen
+          ? html`<graphics-advanced-settings></graphics-advanced-settings>`
+          : nothing
+      }
     `;
   }
 
@@ -1937,17 +1950,19 @@ export class UserSettingModal extends BaseModal {
         @change=${this.toggleReplayViewer}
       ></setting-toggle>
 
-      ${canHandOffToSteam()
-        ? html`<setting-toggle
-            label="${translateText("user_setting.steam_lobby_links_label")}"
-            description="${translateText(
-              "user_setting.steam_lobby_links_desc",
-            )}"
-            id="steam-lobby-links-toggle"
-            .checked=${this.userSettings.steamLobbyLinks() === "steam"}
-            @change=${this.toggleSteamLobbyLinks}
-          ></setting-toggle>`
-        : null}
+      ${
+        canHandOffToSteam()
+          ? html`<setting-toggle
+              label="${translateText("user_setting.steam_lobby_links_label")}"
+              description="${translateText(
+                "user_setting.steam_lobby_links_desc",
+              )}"
+              id="steam-lobby-links-toggle"
+              .checked=${this.userSettings.steamLobbyLinks() === "steam"}
+              @change=${this.toggleSteamLobbyLinks}
+            ></setting-toggle>`
+          : null
+      }
 
       <!-- 🔍 Go to player -->
       <setting-toggle
@@ -1958,15 +1973,17 @@ export class UserSettingModal extends BaseModal {
         @change=${this.toggleGoToPlayer}
       ></setting-toggle>
 
-      ${isHalloweenSeason()
-        ? html`<setting-toggle
-            label="${translateText("user_setting.halloween_theme_label")}"
-            description="${translateText("user_setting.halloween_theme_desc")}"
-            id="halloween-theme-toggle"
-            .checked=${this.userSettings.halloweenTheme()}
-            @change=${this.toggleHalloweenTheme}
-          ></setting-toggle>`
-        : null}
+      ${
+        isHalloweenSeason()
+          ? html`<setting-toggle
+              label="${translateText("user_setting.halloween_theme_label")}"
+              description="${translateText("user_setting.halloween_theme_desc")}"
+              id="halloween-theme-toggle"
+              .checked=${this.userSettings.halloweenTheme()}
+              @change=${this.toggleHalloweenTheme}
+            ></setting-toggle>`
+          : null
+      }
 
       <!-- Help messages (moved here from the in-game menu) -->
       <setting-toggle
@@ -2030,49 +2047,51 @@ export class UserSettingModal extends BaseModal {
         @change=${this.sliderNukeAllianceSafetyDuration}
       ></setting-slider>
 
-      ${this.showEasterEggSettings
-        ? html`
-            <setting-slider
-              label="${translateText(
-                "user_setting.easter_writing_speed_label",
-              )}"
-              description="${translateText(
-                "user_setting.easter_writing_speed_desc",
-              )}"
-              min="0"
-              max="100"
-              value="40"
-              easter="true"
-              @change=${(e: CustomEvent) => {
-                const value = e.detail?.value;
-                if (value !== undefined) {
-                  console.log("Changed:", value);
-                } else {
-                  console.warn("Slider event missing detail.value", e);
-                }
-              }}
-            ></setting-slider>
+      ${
+        this.showEasterEggSettings
+          ? html`
+              <setting-slider
+                label="${translateText(
+                  "user_setting.easter_writing_speed_label",
+                )}"
+                description="${translateText(
+                  "user_setting.easter_writing_speed_desc",
+                )}"
+                min="0"
+                max="100"
+                value="40"
+                easter="true"
+                @change=${(e: CustomEvent) => {
+                  const value = e.detail?.value;
+                  if (value !== undefined) {
+                    console.log("Changed:", value);
+                  } else {
+                    console.warn("Slider event missing detail.value", e);
+                  }
+                }}
+              ></setting-slider>
 
-            <setting-number
-              label="${translateText("user_setting.easter_bug_count_label")}"
-              description="${translateText(
-                "user_setting.easter_bug_count_desc",
-              )}"
-              value="100"
-              min="0"
-              max="1000"
-              easter="true"
-              @change=${(e: CustomEvent) => {
-                const value = e.detail?.value;
-                if (value !== undefined) {
-                  console.log("Changed:", value);
-                } else {
-                  console.warn("Slider event missing detail.value", e);
-                }
-              }}
-            ></setting-number>
-          `
-        : null}
+              <setting-number
+                label="${translateText("user_setting.easter_bug_count_label")}"
+                description="${translateText(
+                  "user_setting.easter_bug_count_desc",
+                )}"
+                value="100"
+                min="0"
+                max="1000"
+                easter="true"
+                @change=${(e: CustomEvent) => {
+                  const value = e.detail?.value;
+                  if (value !== undefined) {
+                    console.log("Changed:", value);
+                  } else {
+                    console.warn("Slider event missing detail.value", e);
+                  }
+                }}
+              ></setting-number>
+            `
+          : null
+      }
     `;
   }
 
