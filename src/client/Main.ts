@@ -1404,7 +1404,7 @@ class Client {
     }
     gamePortal.isInstantMultiplayer().then((isInstant) => {
       if (isInstant) {
-        console.log(`CrazyGames: joining instant multiplayer lobby`);
+        console.log(`Portal: hosting instant multiplayer lobby`);
         whenModalLoaded("host-lobby-modal", () => this.hostModal.open());
       }
     });
