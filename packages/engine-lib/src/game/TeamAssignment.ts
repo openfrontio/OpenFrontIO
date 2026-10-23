@@ -108,11 +108,16 @@ export function assignTeams(
     }
   }
 
-  const placePlayer = (p: PlayerInfo) => {
+  // groupLeft counts this player and the members of their friend group still
+  // to be seated after them. Among teams with equally many friends, prefer
+  // the one that seats the most of the group, so the first friend doesn't
+  // take the last seat beside a stranger.
+  const placePlayer = (p: PlayerInfo, groupLeft: number) => {
     const myFriends =
       p.clientID !== null ? friendGraph.get(p.clientID) : undefined;
     let bestTeam: Team | null = null;
     let bestFriendCount = -1;
+    let bestGroupSeats = -1;
     let bestSize = isDuosTriosQuads ? -1 : Infinity;
     for (const t of teams) {
       const size = teamPlayerCount.get(t) ?? 0;
@@ -123,12 +128,16 @@ export function assignTeams(
           if (teamByClientID.get(friendID) === t) friendsOnTeam++;
         }
       }
+      const groupSeats = Math.min(groupLeft, maxTeamSize - size);
       if (
         friendsOnTeam > bestFriendCount ||
         (friendsOnTeam === bestFriendCount &&
-          (isDuosTriosQuads ? size > bestSize : size < bestSize))
+          (groupSeats > bestGroupSeats ||
+            (groupSeats === bestGroupSeats &&
+              (isDuosTriosQuads ? size > bestSize : size < bestSize))))
       ) {
         bestFriendCount = friendsOnTeam;
+        bestGroupSeats = groupSeats;
         bestSize = size;
         bestTeam = t;
       }
@@ -153,11 +162,49 @@ export function assignTeams(
     (p) => p.playerType !== PlayerType.Nation,
   );
 
-  for (const p of otherPlayers.concat(nationPlayers)) {
-    placePlayer(p);
+  // Seat each friend group back to back, largest first, so strangers who
+  // joined between two friends can't fill the first friend's team before
+  // the second is placed.
+  for (const group of friendGroups(otherPlayers, friendGraph)) {
+    group.forEach((p, i) => placePlayer(p, group.length - i));
+  }
+  for (const p of nationPlayers) {
+    placePlayer(p, 1);
   }
 
   return result;
+}
+
+// Splits players into groups connected by friend edges, each group in the
+// order it was reached, largest groups first (ties keep join order). Players
+// with no friends among `players` are groups of one.
+function friendGroups(
+  players: PlayerInfo[],
+  friendGraph: Map<ClientID, Set<ClientID>>,
+): PlayerInfo[][] {
+  const byClientID = new Map<ClientID, PlayerInfo>();
+  for (const p of players) {
+    if (p.clientID !== null) byClientID.set(p.clientID, p);
+  }
+  const grouped = new Set<PlayerInfo>();
+  const groups: PlayerInfo[][] = [];
+  for (const start of players) {
+    if (grouped.has(start)) continue;
+    grouped.add(start);
+    const group = [start];
+    for (let i = 0; i < group.length; i++) {
+      const clientID = group[i].clientID;
+      if (clientID === null) continue;
+      for (const friendID of friendGraph.get(clientID) ?? []) {
+        const friend = byClientID.get(friendID);
+        if (friend === undefined || grouped.has(friend)) continue;
+        grouped.add(friend);
+        group.push(friend);
+      }
+    }
+    groups.push(group);
+  }
+  return groups.sort((a, b) => b.length - a.length);
 }
 
 export function assignTeamsLobbyPreview(
