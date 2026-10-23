@@ -1617,6 +1617,7 @@
     "vietnam": "Vietnam",
     "warshipwarship": "Warship Warship",
     "world": "World",
+    "world4k": "World 4000",
     "worldinverted": "World Inverted",
     "yangtzeriver": "Yangtze River",
     "yellowsea": "Yellow Sea",
@@ -1652,6 +1653,11 @@
     "unfavorite": "Remove from favourites"
   },
   "map_layers": {
+    "label": "label",
+    "w2kland": "w2kland",
+    "w2kwater": "w2kwater",
+    "w4kland": "w4kland",
+    "w4kwater": "w4kwater",
     "brland": "brland",
     "eyeland": "eyeland",
     "eyewater": "eyewater",
