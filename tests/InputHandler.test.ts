@@ -2707,7 +2707,7 @@ describe("InputHandler teardown (OPE-411)", () => {
       ).toBe(false);
     });
 
-    test("a held KeyE continues to emit zoom after Control or Meta is released", () => {
+    test("a held KeyE continues to emit zoom after Control is released", () => {
       handler.initialize();
 
       const emitSpy = vi.spyOn(bus, "emit");
@@ -2755,7 +2755,7 @@ describe("InputHandler teardown (OPE-411)", () => {
       ).toBe(false);
     });
 
-    test("held browser zoom keys (Equal, Minus, NumpadAdd, NumpadSubtract) continue to emit zoom after Control or Meta is released", () => {
+    test("held browser zoom keys (Equal, Minus, NumpadAdd, NumpadSubtract) continue to emit zoom after Control is released", () => {
       handler.initialize();
 
       for (const code of ["Equal", "Minus", "NumpadAdd", "NumpadSubtract"]) {
@@ -2816,6 +2816,37 @@ describe("InputHandler teardown (OPE-411)", () => {
 
       expect(handler["activeKeys"].has("Equal")).toBe(false);
       expect(handler["activeKeys"].has("Minus")).toBe(false);
+    });
+
+    test("on macOS, zoom keys are cleared when Meta is released to prevent swallowed keyups from sticking", () => {
+      handler.initialize();
+
+      for (const code of [
+        "Minus",
+        "Equal",
+        "NumpadAdd",
+        "NumpadSubtract",
+        "KeyE",
+        "KeyQ",
+      ]) {
+        handler["activeKeys"].add(code);
+      }
+
+      // Release MetaLeft
+      window.dispatchEvent(
+        new KeyboardEvent("keyup", { code: "MetaLeft", metaKey: false }),
+      );
+
+      for (const code of [
+        "Minus",
+        "Equal",
+        "NumpadAdd",
+        "NumpadSubtract",
+        "KeyE",
+        "KeyQ",
+      ]) {
+        expect(handler["activeKeys"].has(code)).toBe(false);
+      }
     });
 
     test("holding ShiftRight and pressing another key does NOT add ShiftLeft to activeKeys", () => {

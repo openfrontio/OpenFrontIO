@@ -314,7 +314,7 @@ export class InputHandler {
    * `initializePointerAndKeyboardEvents()`. */
   private listenerAbort: AbortController | null = null;
   private activeKeys = new Set<string>();
-  private zoomKeysHeldBeforeModifier = new Set<string>();
+  private zoomKeysHeldBeforeControl = new Set<string>();
   private shiftHeld = false;
   private keybinds: Record<string, string> = {};
   private keybindAndEvent: Array<[string, KeybindEntry]> = [];
@@ -670,7 +670,7 @@ export class InputHandler {
       "blur",
       () => {
         this.activeKeys.clear();
-        this.zoomKeysHeldBeforeModifier.clear();
+        this.zoomKeysHeldBeforeControl.clear();
         this.shiftHeld = false;
         if (this.alternateView) {
           this.alternateView = false;
@@ -841,20 +841,21 @@ export class InputHandler {
             e.code === "NumpadAdd" ||
             e.code === "NumpadSubtract");
 
-        const modifierCodes = [
-          "MetaLeft",
-          "MetaRight",
-          "ControlLeft",
-          "ControlRight",
-        ];
         if (
-          modifierCodes.includes(e.code) &&
-          !modifierCodes.some((code) => this.activeKeys.has(code))
+          (e.code === "ControlLeft" || e.code === "ControlRight") &&
+          !this.activeKeys.has("ControlLeft") &&
+          !this.activeKeys.has("ControlRight")
         ) {
-          this.zoomKeysHeldBeforeModifier = new Set(
-            ["Minus", "Equal", "NumpadAdd", "NumpadSubtract"].filter((code) =>
-              this.activeKeys.has(code),
-            ),
+          const zoomCodes = [
+            "Minus",
+            "Equal",
+            "NumpadAdd",
+            "NumpadSubtract",
+            this.keybinds.zoomIn,
+            this.keybinds.zoomOut,
+          ].filter((code): code is string => Boolean(code) && code !== "Null");
+          this.zoomKeysHeldBeforeControl = new Set(
+            zoomCodes.filter((code) => this.activeKeys.has(code)),
           );
         }
 
@@ -921,37 +922,50 @@ export class InputHandler {
 
         this.shiftHeld = e.shiftKey;
 
-        // When the meta (cmd) or ctrl key is released, any keys that were held
-        // simultaneously will have had their keyup swallowed by the browser
-        // (e.g. cmd+Plus for browser zoom). Clear zoom-related keys that were
-        // not already active before the modifier was pressed.
-        if (
-          e.code === "MetaLeft" ||
-          e.code === "MetaRight" ||
-          e.code === "ControlLeft" ||
-          e.code === "ControlRight"
-        ) {
-          const modifierCodes = [
-            "MetaLeft",
-            "MetaRight",
-            "ControlLeft",
-            "ControlRight",
-          ];
-          const lastModifierReleased = !modifierCodes.some(
-            (code) => code !== e.code && this.activeKeys.has(code),
-          );
-          if (lastModifierReleased) {
-            for (const code of [
+        // When meta (Cmd on macOS) is released, any keys released while Cmd was
+        // held will have had their keyup swallowed by the browser (e.g. Cmd+Plus
+        // for browser zoom, or releasing a zoom key while Cmd was held). Clear all
+        // zoom keys to prevent them staying stuck in activeKeys forever.
+        if (e.code === "MetaLeft" || e.code === "MetaRight") {
+          const otherMetaHeld =
+            (e.code === "MetaLeft" && this.activeKeys.has("MetaRight")) ||
+            (e.code === "MetaRight" && this.activeKeys.has("MetaLeft"));
+          if (!otherMetaHeld) {
+            this.activeKeys.delete("Minus");
+            this.activeKeys.delete("Equal");
+            this.activeKeys.delete("NumpadAdd");
+            this.activeKeys.delete("NumpadSubtract");
+            if (this.keybinds.zoomIn)
+              this.activeKeys.delete(this.keybinds.zoomIn);
+            if (this.keybinds.zoomOut)
+              this.activeKeys.delete(this.keybinds.zoomOut);
+          }
+        }
+
+        // When Control is released, clear zoom keys that were pressed after
+        // Control was held (e.g. Ctrl+Plus for browser zoom), but preserve keys
+        // that were already held before Control was pressed.
+        if (e.code === "ControlLeft" || e.code === "ControlRight") {
+          const otherCtrlHeld =
+            (e.code === "ControlLeft" && this.activeKeys.has("ControlRight")) ||
+            (e.code === "ControlRight" && this.activeKeys.has("ControlLeft"));
+          if (!otherCtrlHeld) {
+            const zoomCodes = [
               "Minus",
               "Equal",
               "NumpadAdd",
               "NumpadSubtract",
-            ]) {
-              if (!this.zoomKeysHeldBeforeModifier.has(code)) {
+              this.keybinds.zoomIn,
+              this.keybinds.zoomOut,
+            ].filter(
+              (code): code is string => Boolean(code) && code !== "Null",
+            );
+            for (const code of zoomCodes) {
+              if (!this.zoomKeysHeldBeforeControl.has(code)) {
                 this.activeKeys.delete(code);
               }
             }
-            this.zoomKeysHeldBeforeModifier.clear();
+            this.zoomKeysHeldBeforeControl.clear();
           }
         }
 
@@ -959,7 +973,7 @@ export class InputHandler {
           const slot = favoriteSlotForKey(e);
           if (slot !== null) {
             e.preventDefault();
-            this.zoomKeysHeldBeforeModifier.delete(e.code);
+            this.zoomKeysHeldBeforeControl.delete(e.code);
             this.activeKeys.delete(e.code);
             // Only a press made while the table was open sends; releasing a
             // key held from before (say, to pan) doesn't.
@@ -981,7 +995,7 @@ export class InputHandler {
             item[1].handler(e);
           }
         }
-        this.zoomKeysHeldBeforeModifier.delete(e.code);
+        this.zoomKeysHeldBeforeControl.delete(e.code);
         this.activeKeys.delete(e.code);
 
         // Reset crosshair when Shift is released (unless selection box or multi-selection still active)
@@ -1680,7 +1694,7 @@ export class InputHandler {
     // renderer has already removed.
     this.resetPointerState();
     this.activeKeys.clear();
-    this.zoomKeysHeldBeforeModifier.clear();
+    this.zoomKeysHeldBeforeControl.clear();
     this.shiftHeld = false;
     this.emojiTableOpen = false;
     this.emojiKeysDown.clear();
