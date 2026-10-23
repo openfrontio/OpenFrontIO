@@ -254,27 +254,6 @@ describe("PokiSDK", () => {
     expect(poki.gameLoadingFinished).toHaveBeenCalledOnce();
   });
 
-  // Poki's account calls get no answer after a failed init and wait out their
-  // own timeouts; every join waited 8s on getToken before this.
-  it("skips account calls when init failed", async () => {
-    framedBy("https://games.poki.com/458768/openfront");
-    const poki = fakePoki({
-      init: vi.fn(async () => {
-        throw new Error("blocked");
-      }),
-      getToken: vi.fn(() => new Promise<string | null>(() => {})),
-      getUser: vi.fn(() => new Promise<null>(() => {})),
-      login: vi.fn(() => new Promise<void>(() => {})),
-    });
-    await initWith(sdk, poki);
-    expect(await sdk.getUserToken()).toBeNull();
-    expect(await sdk.getUserProfile()).toBeNull();
-    await sdk.showAuthPrompt();
-    expect(poki.getToken).not.toHaveBeenCalled();
-    expect(poki.getUser).not.toHaveBeenCalled();
-    expect(poki.login).not.toHaveBeenCalled();
-  });
-
   it("gives up on an SDK script that never loads", async () => {
     vi.useFakeTimers();
     try {

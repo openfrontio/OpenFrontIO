@@ -89,10 +89,6 @@ function keepPokiParams(): void {
 // happytime, so those are no-ops here.
 export class PokiSDK {
   private initialized = false;
-  // False when init() failed or timed out. Poki's account calls then get no
-  // answer from the page and each waits out its own timeout (8s for a token,
-  // 45s for login), which every join waited on before asking for a session.
-  private accountsAvailable = false;
   private isGameplayActive = false;
   private authListeners: ((user: PortalUser | null) => void)[] = [];
   private readyPromise: Promise<boolean>;
@@ -132,10 +128,6 @@ export class PokiSDK {
     return this.readyPromise;
   }
 
-  private async whenAccountsReady(): Promise<boolean> {
-    return (await this.whenReady()) && this.accountsAvailable;
-  }
-
   async maybeInit(): Promise<void> {
     if (this.initialized) {
       console.warn("Poki SDK already initialized");
@@ -172,7 +164,6 @@ export class PokiSDK {
         ),
       ]);
       console.log("Poki SDK initialized");
-      this.accountsAvailable = true;
     } catch (error) {
       // Typically an adblocker, which can also leave init() unsettled. Poki's
       // guidance is to run the game anyway; the SDK calls stay safe and ad
@@ -214,7 +205,7 @@ export class PokiSDK {
   // A fresh Poki token for our backend to verify. It expires after a minute,
   // so it is fetched for each exchange and never cached.
   async getUserToken(): Promise<string | null> {
-    if (!(await this.whenAccountsReady())) {
+    if (!(await this.whenReady())) {
       return null;
     }
     try {
@@ -227,7 +218,7 @@ export class PokiSDK {
   }
 
   async getUserProfile(): Promise<PortalUser | null> {
-    if (!(await this.whenAccountsReady())) {
+    if (!(await this.whenReady())) {
       return null;
     }
     try {
@@ -243,7 +234,7 @@ export class PokiSDK {
   // Poki has no auth listener, so a completed login notifies ours here. Only
   // call this from a click: Poki forbids prompting on its own.
   async showAuthPrompt(): Promise<void> {
-    if (!(await this.whenAccountsReady())) {
+    if (!(await this.whenReady())) {
       return;
     }
     try {
