@@ -1,10 +1,12 @@
 import type { MapLayer } from "@openfront/engine-api/game/MapFiles";
 import type { GraphicsOverrides } from "./render/gl";
+import type { UserSettings } from "./UserSettings";
 
 /**
- * Map-layer visibility and opacity, read out of the stored graphics overrides.
+ * Map-layer visibility and opacity, read out of the stored graphics overrides
+ * and the Map Layers switch.
  *
- * These two are the only graphics settings the renderer does not re-read from
+ * These are the only graphics settings the renderer does not re-read from
  * the settings object on a change: `ClientGameRunner` re-resolves everything
  * else onto the live render settings, but layer state is pushed imperatively
  * through `setLayerVisible` / `setLayerAlpha`. So whoever writes them has to
@@ -30,20 +32,23 @@ export function layerAlpha(
 }
 
 /**
- * Push every layer's stored state to the renderer.
+ * Push every layer's stored state to the renderer. The Map Layers switch
+ * hides every layer without touching their own toggles.
  *
  * Idempotent and cheap — both callbacks just set a flag on a pass — so it is
  * safe to run on any graphics change rather than trying to work out which
  * changes could have touched a layer.
  */
 export function pushMapLayerState(
-  overrides: GraphicsOverrides,
+  userSettings: UserSettings,
   mapLayers: readonly MapLayer[],
   onVisibility: ((layerId: string, visible: boolean) => void) | null,
   onAlpha: ((layerId: string, alpha: number) => void) | null,
 ): void {
+  const overrides = userSettings.graphicsOverrides();
+  const layersOn = userSettings.mapLayers();
   for (const layer of mapLayers) {
-    onVisibility?.(layer.id, isLayerVisible(overrides, layer.id));
+    onVisibility?.(layer.id, layersOn && isLayerVisible(overrides, layer.id));
   }
   for (const layer of mapLayers) {
     onAlpha?.(layer.id, layerAlpha(overrides, layer.id, layer.alpha));

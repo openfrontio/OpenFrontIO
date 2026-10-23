@@ -297,10 +297,11 @@ describe("settling a disputed winner vote by replay", () => {
   });
 
   const disconnect = (client: Client) => mockWsOf(client).trigger("close");
-  const warned = (msg: string) =>
-    log.warn.mock.calls
+  const logged = (level: "info" | "warn", msg: string) =>
+    log[level].mock.calls
       .filter(([m]: [string]) => m === msg)
       .map(([, meta]: [string, Record<string, unknown>]) => meta);
+  const warned = (msg: string) => logged("warn", msg);
 
   it("replays a vote decided by a lone IP and archives the replay's result", async () => {
     const claimed = { [A]: { finalTiles: 100n } } as AllPlayersStats;
@@ -311,9 +312,11 @@ describe("settling a disputed winner vote by replay", () => {
     await disconnect(clients[1]);
 
     expect(replayWinner).toHaveBeenCalledTimes(1);
-    expect(warned("winner vote decided by one IP, replaying game")).toEqual([
-      expect.objectContaining({ candidates: 1, backers: 1 }),
-    ]);
+    // Common (the loser leaves without voting), so info, not warn.
+    expect(
+      logged("info", "winner vote decided by one IP, replaying game"),
+    ).toEqual([expect.objectContaining({ candidates: 1, backers: 1 })]);
+    expect(warned("winner vote decided by one IP, replaying game")).toEqual([]);
     // Ending the game meanwhile leaves the record to the replay.
     await game.end();
     expect(archive).not.toHaveBeenCalled();

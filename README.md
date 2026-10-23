@@ -130,13 +130,13 @@ npm run dev:prod
   npm run format
   ```
 
-- **Lint code with Oxlint and ESLint**:
+- **Lint code with Oxlint**:
 
   ```bash
   npm run lint
   ```
 
-- **Lint and fix code with Oxlint and ESLint**:
+- **Lint and fix code with Oxlint**:
 
   ```bash
   npm run lint:fix

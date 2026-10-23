@@ -251,6 +251,7 @@ export class TickMetricsEvent implements GameEvent {
 interface KeybindEntry {
   handler: (e: KeyboardEvent) => void;
   conditions: Array<(e: KeyboardEvent) => boolean>;
+  ignoreShift?: boolean;
 }
 
 /**
@@ -507,12 +508,16 @@ export class InputHandler {
       this.eventBus.emit(new AlternateViewEvent(false));
     });
     const resetKey = this.keybinds.resetGfx ?? "KeyR";
+    const ignoreShift =
+      this.keybinds.altKey === "ShiftLeft" ||
+      this.keybinds.altKey === "ShiftRight";
     this.addKeybindAndEvent(
       resetKey,
       () => {
         this.eventBus.emit(new RefreshGraphicsEvent());
       },
       (e: KeyboardEvent) => this.resetGfxModifierHeld(e),
+      { ignoreShift },
     );
 
     let buildKeybinds: string[] = [
@@ -829,7 +834,9 @@ export class InputHandler {
 
         const isConfiguredKeybind =
           Object.values(this.keybinds).includes(e.code) ||
-          this.keybindAndEvent.some(([k]) => this.keybindMatchesEvent(e, k));
+          this.keybindAndEvent.some(([k, entry]) =>
+            this.keybindMatchesEvent(e, k, entry.ignoreShift),
+          );
 
         if (isConfiguredKeybind && !isBrowserZoomCombo) {
           e.preventDefault();
@@ -918,7 +925,7 @@ export class InputHandler {
         }
 
         outerLoop: for (const item of this.keybindAndEvent) {
-          if (this.keybindMatchesEvent(e, item[0])) {
+          if (this.keybindMatchesEvent(e, item[0], item[1].ignoreShift)) {
             for (const i of item[1].conditions) {
               if (!i(e)) {
                 continue outerLoop;
@@ -1372,9 +1379,12 @@ export class InputHandler {
   private keybindMatchesEvent(
     e: KeyboardEvent | { shiftKey: boolean; code: string },
     keybindValue: string,
+    ignoreShift = false,
   ): boolean {
     const parsed = this.parseKeybind(keybindValue);
-    return e.code === parsed.code && e.shiftKey === parsed.shift;
+    return (
+      e.code === parsed.code && (ignoreShift || e.shiftKey === parsed.shift)
+    );
   }
 
   /**
@@ -1443,17 +1453,29 @@ export class InputHandler {
   /**
    * Add a keybind that activates on one press
    * @param keybind The keybind that is being activated
-   * @param event The code to be exectued when this keybind is pressed
-   * @param conditions Optional conditions that can be added, they get the keyboard up event passed to them
+   * @param event The code to be executed when this keybind is pressed
+   * @param conditionsOrOptions Conditions that get the keyboard event passed to them, or options like ignoreShift
    */
   private addKeybindAndEvent(
     keybind: string,
     event: (type: KeyboardEvent) => any,
-    ...conditions: ((type: KeyboardEvent) => any)[]
+    ...conditionsOrOptions: Array<
+      ((type: KeyboardEvent) => any) | { ignoreShift?: boolean }
+    >
   ) {
+    let ignoreShift: boolean | undefined;
+    const conditions: Array<(type: KeyboardEvent) => boolean> = [];
+    for (const item of conditionsOrOptions) {
+      if (typeof item === "function") {
+        conditions.push(item);
+      } else if (item && typeof item === "object") {
+        ignoreShift = item.ignoreShift;
+      }
+    }
     const entry: KeybindEntry = {
       handler: event,
       conditions,
+      ignoreShift,
     };
     this.keybindAndEvent.push([keybind, entry]);
   }

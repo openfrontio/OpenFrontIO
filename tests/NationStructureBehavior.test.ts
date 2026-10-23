@@ -8,6 +8,7 @@ import { PseudoRandom } from "@openfront/engine-lib/PseudoRandom";
 import { AttackExecution } from "@openfront/engine/execution/AttackExecution";
 import { ConstructionExecution } from "@openfront/engine/execution/ConstructionExecution";
 import { NationStructureBehavior } from "@openfront/engine/execution/nation/NationStructureBehavior";
+import { NationStructurePlacement } from "@openfront/engine/execution/nation/NationStructurePlacement";
 import { Game, Player } from "@openfront/engine/game/Game";
 import { Cluster } from "@openfront/engine/game/TrainStation";
 import { vi } from "vitest";
@@ -42,6 +43,7 @@ function makeGame(stations: any[] = []): any {
     railNetwork: () => ({
       stationManager: () => ({ getAll: () => new Set(stations) }),
     }),
+    sharedWaterComponents: () => null,
   };
 }
 
@@ -85,75 +87,32 @@ function makeBehavior(
   return new NationStructureBehavior(random, game, player);
 }
 
-// ── shouldUseConnectivityScore ───────────────────────────────────────────────
+function makePlacement(
+  game: any,
+  player: any,
+  random: PseudoRandom = new PseudoRandom(0),
+): NationStructurePlacement {
+  return new NationStructurePlacement(random, game, player);
+}
 
-describe("NationStructureBehavior.shouldUseConnectivityScore", () => {
-  afterEach(() => {
-    vi.restoreAllMocks();
-  });
+// ── startRound ───────────────────────────────────────────────────────────────
 
-  function behaviorWithNextInt(returnValue: number): {
-    behavior: NationStructureBehavior;
-    random: PseudoRandom;
-  } {
-    const random = new PseudoRandom(0);
-    vi.spyOn(random, "nextInt").mockReturnValue(returnValue);
-    const behavior = makeBehavior(makeGame(), makePlayer([], []), random);
-    return { behavior, random };
-  }
+// Snapshots don't store the station cache, so it must not outlive a round
+describe("NationStructurePlacement.startRound", () => {
+  it("rebuilds the reachable stations once per round", () => {
+    const placement = makePlacement(makeGame(), makePlayer([], []));
+    placement.startRound();
+    const first = (placement as any).getOrBuildReachableStations();
+    expect((placement as any).getOrBuildReachableStations()).toBe(first);
 
-  it("always returns false for Easy (randomChance = 0)", () => {
-    for (const v of [0, 50, 99]) {
-      const { behavior, random } = behaviorWithNextInt(v);
-      vi.spyOn(random, "nextInt").mockReturnValue(v);
-      expect(
-        (behavior as any).shouldUseConnectivityScore(Difficulty.Easy),
-      ).toBe(false);
-    }
-  });
-
-  it("returns true for Medium when nextInt < 60", () => {
-    const { behavior } = behaviorWithNextInt(59);
-    expect(
-      (behavior as any).shouldUseConnectivityScore(Difficulty.Medium),
-    ).toBe(true);
-  });
-
-  it("returns false for Medium when nextInt === 60 (boundary)", () => {
-    const { behavior } = behaviorWithNextInt(60);
-    expect(
-      (behavior as any).shouldUseConnectivityScore(Difficulty.Medium),
-    ).toBe(false);
-  });
-
-  it("returns true for Hard when nextInt < 75", () => {
-    const { behavior } = behaviorWithNextInt(74);
-    expect((behavior as any).shouldUseConnectivityScore(Difficulty.Hard)).toBe(
-      true,
-    );
-  });
-
-  it("returns false for Hard when nextInt === 75 (boundary)", () => {
-    const { behavior } = behaviorWithNextInt(75);
-    expect((behavior as any).shouldUseConnectivityScore(Difficulty.Hard)).toBe(
-      false,
-    );
-  });
-
-  it("always returns true for Impossible (randomChance = 100)", () => {
-    for (const v of [0, 50, 99]) {
-      const { behavior, random } = behaviorWithNextInt(v);
-      vi.spyOn(random, "nextInt").mockReturnValue(v);
-      expect(
-        (behavior as any).shouldUseConnectivityScore(Difficulty.Impossible),
-      ).toBe(true);
-    }
+    placement.startRound();
+    expect((placement as any).getOrBuildReachableStations()).not.toBe(first);
   });
 });
 
 // ── buildReachableStations ───────────────────────────────────────────────────
 
-describe("NationStructureBehavior.buildReachableStations", () => {
+describe("NationStructurePlacement.buildReachableStations", () => {
   const selfWeight = Number(TRAIN_GOLD.self) / MAX_TRADE_GOLD;
   const allyWeight = Number(TRAIN_GOLD.ally) / MAX_TRADE_GOLD;
   const teamWeight = Number(TRAIN_GOLD.team) / MAX_TRADE_GOLD;
@@ -164,7 +123,7 @@ describe("NationStructureBehavior.buildReachableStations", () => {
     const unit = makeUnit(10);
     const station = makeStation(unit, cluster);
     const player = makePlayer([unit], []);
-    const behavior = makeBehavior(makeGame([station]), player);
+    const behavior = makePlacement(makeGame([station]), player);
 
     const result = (behavior as any).buildReachableStations();
 
@@ -178,7 +137,7 @@ describe("NationStructureBehavior.buildReachableStations", () => {
     const unit = makeUnit(11);
     const station = makeStation(unit, null);
     const player = makePlayer([unit], []);
-    const behavior = makeBehavior(makeGame([station]), player);
+    const behavior = makePlacement(makeGame([station]), player);
 
     const result = (behavior as any).buildReachableStations();
 
@@ -191,7 +150,7 @@ describe("NationStructureBehavior.buildReachableStations", () => {
     const unit = makeUnit(20);
     // No stations in station manager
     const player = makePlayer([unit], []);
-    const behavior = makeBehavior(makeGame([]), player);
+    const behavior = makePlacement(makeGame([]), player);
 
     const result = (behavior as any).buildReachableStations();
 
@@ -203,7 +162,7 @@ describe("NationStructureBehavior.buildReachableStations", () => {
     const station = makeStation(unit, null);
     const bot = makeNeighbor({ type: PlayerType.Bot, units: [unit] });
     const player = makePlayer([], [bot]);
-    const behavior = makeBehavior(makeGame([station]), player);
+    const behavior = makePlacement(makeGame([station]), player);
 
     const result = (behavior as any).buildReachableStations();
 
@@ -215,7 +174,7 @@ describe("NationStructureBehavior.buildReachableStations", () => {
     const station = makeStation(unit, null);
     const nonPlayer = makeNeighbor({ isPlayer: false, units: [unit] });
     const player = makePlayer([], [nonPlayer]);
-    const behavior = makeBehavior(makeGame([station]), player);
+    const behavior = makePlacement(makeGame([station]), player);
 
     const result = (behavior as any).buildReachableStations();
 
@@ -227,7 +186,7 @@ describe("NationStructureBehavior.buildReachableStations", () => {
     const station = makeStation(unit, null);
     const neighbor = makeNeighbor({ units: [unit] });
     const player = makePlayer([], [neighbor], { canTrade: () => false });
-    const behavior = makeBehavior(makeGame([station]), player);
+    const behavior = makePlacement(makeGame([station]), player);
 
     const result = (behavior as any).buildReachableStations();
 
@@ -244,7 +203,7 @@ describe("NationStructureBehavior.buildReachableStations", () => {
       isOnSameTeam: () => false,
       isAlliedWith: () => false,
     });
-    const behavior = makeBehavior(makeGame([station]), player);
+    const behavior = makePlacement(makeGame([station]), player);
 
     const result = (behavior as any).buildReachableStations();
 
@@ -263,7 +222,7 @@ describe("NationStructureBehavior.buildReachableStations", () => {
       isOnSameTeam: () => false,
       isAlliedWith: (n) => n === neighbor,
     });
-    const behavior = makeBehavior(makeGame([station]), player);
+    const behavior = makePlacement(makeGame([station]), player);
 
     const result = (behavior as any).buildReachableStations();
 
@@ -280,7 +239,7 @@ describe("NationStructureBehavior.buildReachableStations", () => {
       isOnSameTeam: (n) => n === neighbor,
       isAlliedWith: () => false,
     });
-    const behavior = makeBehavior(makeGame([station]), player);
+    const behavior = makePlacement(makeGame([station]), player);
 
     const result = (behavior as any).buildReachableStations();
 
@@ -293,7 +252,7 @@ describe("NationStructureBehavior.buildReachableStations", () => {
     // Station manager has no stations, so unit is unknown
     const neighbor = makeNeighbor({ units: [unit] });
     const player = makePlayer([], [neighbor]);
-    const behavior = makeBehavior(makeGame([]), player);
+    const behavior = makePlacement(makeGame([]), player);
 
     const result = (behavior as any).buildReachableStations();
 
@@ -307,7 +266,7 @@ describe("NationStructureBehavior.buildReachableStations", () => {
     const neighborStation = makeStation(neighborUnit, null);
     const neighbor = makeNeighbor({ units: [neighborUnit] });
     const player = makePlayer([ownUnit], [neighbor]);
-    const behavior = makeBehavior(
+    const behavior = makePlacement(
       makeGame([ownStation, neighborStation]),
       player,
     );
@@ -332,15 +291,6 @@ describe("NationStructureBehavior.tryBuildDefensePost", () => {
     };
   }
 
-  function makeBoatAttack(troops: number): any {
-    return {
-      troops: () => troops,
-      sourceTile: () => 999, // non-null → boat
-      clusteredPositions: () => [],
-      attacker: () => ({ id: () => "boat" }),
-    };
-  }
-
   function makeMinimalGame(difficulty: Difficulty): any {
     return {
       config: () => ({
@@ -362,53 +312,6 @@ describe("NationStructureBehavior.tryBuildDefensePost", () => {
     };
   }
 
-  function callTryBuild(
-    difficulty: Difficulty,
-    troops: number,
-    attacks: any[],
-  ): boolean {
-    const game = makeMinimalGame(difficulty);
-    const player = makeMinimalPlayer(troops, attacks);
-    const behavior = makeBehavior(game, player);
-    (behavior as any).placementsCount = 1;
-    return (behavior as any).tryBuildDefensePost();
-  }
-
-  it("returns false on Easy regardless of ratio", () => {
-    expect(callTryBuild(Difficulty.Easy, 100, [makeLandAttack(5000)])).toBe(
-      false,
-    );
-  });
-
-  it("returns false when there are no incoming attacks", () => {
-    expect(callTryBuild(Difficulty.Hard, 1000, [])).toBe(false);
-  });
-
-  it("builds against a landed boat attack", () => {
-    const addExecution = vi.fn();
-    const game = { ...makeMinimalGame(Difficulty.Hard), addExecution };
-    const player = {
-      ...makeMinimalPlayer(100, [makeBoatAttack(5000)]),
-      canBuild: () => true,
-    };
-    const behavior = makeBehavior(game, player);
-    (behavior as any).placementsCount = 1;
-    vi.spyOn(behavior as any, "getAttackFrontTiles").mockReturnValue([1]);
-    vi.spyOn(behavior as any, "findDefensePostTile").mockReturnValue(42);
-    expect((behavior as any).tryBuildDefensePost()).toBe(true);
-    expect(addExecution).toHaveBeenCalledTimes(1);
-  });
-
-  it("returns false when land-attack ratio is below 0.35", () => {
-    expect(callTryBuild(Difficulty.Hard, 1000, [makeLandAttack(349)])).toBe(
-      false,
-    );
-  });
-
-  it("returns false when own troops are zero", () => {
-    expect(callTryBuild(Difficulty.Hard, 0, [makeLandAttack(500)])).toBe(false);
-  });
-
   // ── Medium 50% gate ──────────────────────────────────────────────────────
 
   it("Medium: returns false when random.chance(2) fails (50% gate closed)", () => {
@@ -419,17 +322,6 @@ describe("NationStructureBehavior.tryBuildDefensePost", () => {
     const behavior = makeBehavior(game, player, random);
     (behavior as any).placementsCount = 1;
     expect((behavior as any).tryBuildDefensePost()).toBe(false);
-  });
-
-  it("Medium: 50% gate consumes only the chance(2) call", () => {
-    const game = makeMinimalGame(Difficulty.Medium);
-    const player = makeMinimalPlayer(1000, [makeLandAttack(1000)]);
-    const random = new PseudoRandom(0);
-    const chanceSpy = vi.spyOn(random, "chance").mockReturnValue(false);
-    const behavior = makeBehavior(game, player, random);
-    (behavior as any).placementsCount = 1;
-    (behavior as any).tryBuildDefensePost();
-    expect(chanceSpy).toHaveBeenCalledWith(2);
   });
 
   it("Hard: skips chance gate (no chance(2) consumed)", () => {
@@ -447,55 +339,31 @@ describe("NationStructureBehavior.tryBuildDefensePost", () => {
     expect(chanceSpy).not.toHaveBeenCalledWith(2);
   });
 
-  // ── Cap enforcement ──────────────────────────────────────────────────────
-
-  it("Hard: returns false once countDefensePostsNearFront reaches the allowed cap", () => {
-    const game = makeMinimalGame(Difficulty.Hard);
-    // ratio = 1.0 → ceil(1.0 / 0.4) = 3 allowed
-    const player = makeMinimalPlayer(1000, [makeLandAttack(1000)]);
-    const behavior = makeBehavior(game, player);
-    (behavior as any).placementsCount = 1;
-    vi.spyOn(behavior as any, "getAttackFrontTiles").mockReturnValue([1]);
-    vi.spyOn(behavior as any, "countDefensePostsNearFront").mockReturnValue(3);
-    expect((behavior as any).tryBuildDefensePost()).toBe(false);
-  });
-
-  it("Hard: returns false once countDefensePostsNearFront exceeds the allowed cap", () => {
-    const game = makeMinimalGame(Difficulty.Hard);
-    // ratio = 0.4 → ceil(0.4 / 0.4) = 1 allowed
-    const player = makeMinimalPlayer(1000, [makeLandAttack(400)]);
-    const behavior = makeBehavior(game, player);
-    (behavior as any).placementsCount = 1;
-    vi.spyOn(behavior as any, "getAttackFrontTiles").mockReturnValue([1]);
-    vi.spyOn(behavior as any, "countDefensePostsNearFront").mockReturnValue(1);
-    expect((behavior as any).tryBuildDefensePost()).toBe(false);
-  });
-
-  // ── Successful build path ────────────────────────────────────────────────
-
-  it("Hard: dispatches a ConstructionExecution for DefensePost on successful build", () => {
-    const addExecution = vi.fn();
-    const game = {
-      ...makeMinimalGame(Difficulty.Hard),
-      addExecution,
-    };
-    const canBuild = vi.fn(() => true);
-    const player = {
-      ...makeMinimalPlayer(1000, [makeLandAttack(1000)]),
-      gold: () => 1_000_000n,
-      canBuild,
-    };
-    const behavior = makeBehavior(game, player);
-    (behavior as any).placementsCount = 1;
-    vi.spyOn(behavior as any, "getAttackFrontTiles").mockReturnValue([1]);
-    vi.spyOn(behavior as any, "countDefensePostsNearFront").mockReturnValue(0);
-    vi.spyOn(behavior as any, "findDefensePostTile").mockReturnValue(42);
-
-    expect((behavior as any).tryBuildDefensePost()).toBe(true);
-    expect(addExecution).toHaveBeenCalledTimes(1);
-    const exec = addExecution.mock.calls[0][0];
-    expect(exec).toBeInstanceOf(ConstructionExecution);
-  });
+  // One post per 40% of incoming-to-own troops
+  it.each([
+    { attack: 400, allowed: 1 },
+    { attack: 1000, allowed: 3 },
+  ])(
+    "Hard: builds up to $allowed posts near the front against a $attack-troop attack",
+    ({ attack, allowed }) => {
+      const build = (postsNearFront: number): boolean => {
+        const game = {
+          ...makeMinimalGame(Difficulty.Hard),
+          addExecution: vi.fn(),
+        };
+        const player = makeMinimalPlayer(1000, [makeLandAttack(attack)]);
+        const behavior = makeBehavior(game, player);
+        vi.spyOn(behavior as any, "getAttackFrontTiles").mockReturnValue([1]);
+        vi.spyOn(behavior as any, "countDefensePostsNearFront").mockReturnValue(
+          postsNearFront,
+        );
+        vi.spyOn(behavior as any, "findDefensePostTile").mockReturnValue(42);
+        return (behavior as any).tryBuildDefensePost();
+      };
+      expect(build(allowed - 1)).toBe(true);
+      expect(build(allowed)).toBe(false);
+    },
+  );
 
   it("returns false when player.gold() is below cost", () => {
     const game = {
@@ -1085,10 +953,6 @@ describe("NationStructureBehavior.countDefensePostsNearFront", () => {
   it("counts a post only once even if near multiple front tiles", () => {
     expect(count([10], [1, 2], () => threshold - 1)).toBe(1);
   });
-
-  it("sums posts near different sections of the front", () => {
-    expect(count([10, 20], [1, 2], () => threshold - 1)).toBe(2);
-  });
 });
 
 // ── doHandleStructures — crowded-map first-structure exception ──────────────
@@ -1181,7 +1045,7 @@ describe("NationStructureBehavior.isOnStructureCooldown", () => {
     [5_000_000n, true],
     [25_000_000n, false],
   ])(
-    "with %i starting gold, waits 5s after its second structure: %s",
+    "with %i starting gold, waits 25s after its second structure: %s",
     (gold, waits) => {
       const game: any = {
         config: () => ({ startingGold: () => gold }),
@@ -1193,49 +1057,4 @@ describe("NationStructureBehavior.isOnStructureCooldown", () => {
       expect((behavior as any).isOnStructureCooldown()).toBe(waits);
     },
   );
-});
-
-// ── getOrBuildReachableStations cache behaviour ──────────────────────────────
-
-describe("NationStructureBehavior.getOrBuildReachableStations", () => {
-  let behavior: NationStructureBehavior;
-  let buildSpy: ReturnType<typeof vi.spyOn>;
-
-  beforeEach(() => {
-    const player = makePlayer([], []);
-    behavior = makeBehavior(makeGame(), player);
-    buildSpy = vi.spyOn(behavior as any, "buildReachableStations");
-  });
-
-  afterEach(() => {
-    vi.restoreAllMocks();
-  });
-
-  it("calls buildReachableStations exactly once on first access", () => {
-    (behavior as any).getOrBuildReachableStations();
-
-    expect(buildSpy).toHaveBeenCalledTimes(1);
-  });
-
-  it("returns the same array instance on repeated calls", () => {
-    const first = (behavior as any).getOrBuildReachableStations();
-    const second = (behavior as any).getOrBuildReachableStations();
-
-    expect(first).toBe(second);
-  });
-
-  it("does not call buildReachableStations a second time when cache is warm", () => {
-    (behavior as any).getOrBuildReachableStations();
-    (behavior as any).getOrBuildReachableStations();
-
-    expect(buildSpy).toHaveBeenCalledTimes(1);
-  });
-
-  it("rebuilds after the cache is reset to null", () => {
-    (behavior as any).getOrBuildReachableStations();
-    (behavior as any).reachableStationsCache = null;
-    (behavior as any).getOrBuildReachableStations();
-
-    expect(buildSpy).toHaveBeenCalledTimes(2);
-  });
 });

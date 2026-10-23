@@ -32,7 +32,7 @@ export async function startSoloGame(page, opts = {}) {
     await page.waitForTimeout(300); // let Lit re-render
   }
   await page
-    .locator('o-button[translationKey="single_modal.start"] button:visible')
+    .locator('o-button[translationKey="game_settings.start"] button:visible')
     .first()
     .click();
   await waitForGameReady(page);

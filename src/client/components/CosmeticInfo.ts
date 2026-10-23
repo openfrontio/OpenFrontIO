@@ -66,23 +66,31 @@ export class CosmeticInfo extends LitElement {
         role="tooltip"
         class="pointer-events-none absolute right-0 top-9 hidden w-max max-w-full flex-col gap-0.5 whitespace-normal rounded-lg border border-white/10 bg-zinc-900 px-3 py-2 text-left text-xs text-white shadow-xl group-hover/cosmetic-info:flex group-focus-within/cosmetic-info:flex"
       >
-        ${this.rarity
-          ? html`<div class="font-bold uppercase tracking-wider ${rarityColor}">
-              ${translateText(`cosmetics.${this.rarity}`)}
-            </div>`
-          : nothing}
-        ${this.showAdFree
-          ? html`<div class="font-bold text-green-400">
-              ${translateText("cosmetics.adfree")}
-            </div>`
-          : nothing}
-        ${this.usdValue !== undefined
-          ? html`<div>
-              ${translateText("cosmetics.usd_value", {
-                usd: `$${this.usdValue.toFixed(2)}`,
-              })}
-            </div>`
-          : nothing}
+        ${
+          this.rarity
+            ? html`<div
+                class="font-bold uppercase tracking-wider ${rarityColor}"
+              >
+                ${translateText(`cosmetics.${this.rarity}`)}
+              </div>`
+            : nothing
+        }
+        ${
+          this.showAdFree
+            ? html`<div class="font-bold text-green-400">
+                ${translateText("cosmetics.adfree")}
+              </div>`
+            : nothing
+        }
+        ${
+          this.usdValue !== undefined
+            ? html`<div>
+                ${translateText("cosmetics.usd_value", {
+                  usd: `$${this.usdValue.toFixed(2)}`,
+                })}
+              </div>`
+            : nothing
+        }
         ${this.perks.map(
           (perk) =>
             html`<div class="max-w-56">
@@ -90,31 +98,41 @@ export class CosmeticInfo extends LitElement {
               <span class="text-white/80">${perk.info}</span>
             </div>`,
         )}
-        ${this.items.length > 0
-          ? html`<div data-cosmetic-info-items class="max-w-56">
-              <span class="font-bold text-purple-300"
-                >${translateText("cosmetics.pack_includes")}</span
-              >
-              <span class="text-white/80">${this.items.join(", ")}</span>
-            </div>`
-          : nothing}
-        ${this.colorPalette
-          ? html`<div>
-              ${translateText("cosmetics.color_label")}
-              ${translateCosmetic(
-                "territory_patterns.color_palette",
-                this.colorPalette,
-              )}
-            </div>`
-          : nothing}
-        ${this.artist
-          ? html`<div>
-              ${translateText("cosmetics.artist_label")} ${this.artist}
-            </div>`
-          : nothing}
-        ${aiLabelKey
-          ? html`<div class="text-white/70">${translateText(aiLabelKey)}</div>`
-          : nothing}
+        ${
+          this.items.length > 0
+            ? html`<div data-cosmetic-info-items class="max-w-56">
+                <span class="font-bold text-purple-300"
+                  >${translateText("cosmetics.pack_includes")}</span
+                >
+                <span class="text-white/80">${this.items.join(", ")}</span>
+              </div>`
+            : nothing
+        }
+        ${
+          this.colorPalette
+            ? html`<div>
+                ${translateText("cosmetics.color_label")}
+                ${translateCosmetic(
+                  "territory_patterns.color_palette",
+                  this.colorPalette,
+                )}
+              </div>`
+            : nothing
+        }
+        ${
+          this.artist
+            ? html`<div>
+                ${translateText("cosmetics.artist_label")} ${this.artist}
+              </div>`
+            : nothing
+        }
+        ${
+          aiLabelKey
+            ? html`<div class="text-white/70">
+                ${translateText(aiLabelKey)}
+              </div>`
+            : nothing
+        }
       </div>
     </div>`;
   }

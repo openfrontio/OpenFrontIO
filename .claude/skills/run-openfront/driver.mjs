@@ -40,6 +40,22 @@ export async function launch({ viewport, rafIntervalMs, args } = {}) {
   const context = await browser.newContext({
     viewport: viewport ?? { width: 1400, height: 1000 },
   });
+  // The client gates software WebGL (render/gl/initGL.ts); SwiftShader is all we have.
+  await context.addInitScript(() => {
+    const getContext = HTMLCanvasElement.prototype.getContext;
+    HTMLCanvasElement.prototype.getContext = function (type, attrs) {
+      if (attrs?.failIfMajorPerformanceCaveat)
+        attrs = { ...attrs, failIfMajorPerformanceCaveat: false };
+      return getContext.call(this, type, attrs);
+    };
+    const getParameter = WebGL2RenderingContext.prototype.getParameter;
+    WebGL2RenderingContext.prototype.getParameter = function (p) {
+      const v = getParameter.call(this, p);
+      return typeof v === "string"
+        ? v.replace(/swiftshader|llvmpipe|software/gi, "headless")
+        : v;
+    };
+  });
   if (rafIntervalMs) {
     await context.addInitScript((interval) => {
       let last = 0;
