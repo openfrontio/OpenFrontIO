@@ -59,12 +59,13 @@ function makeGameStartInfo(): GameStartInfo {
   } as GameStartInfo;
 }
 
-function makeServer(isReplay: boolean): LocalServer {
+function makeServer(isReplay: boolean, snapshot?: Uint8Array): LocalServer {
   const server = new LocalServer(
     {
       gameStartInfo: makeGameStartInfo(),
       playerName: "TestUser",
       playerClanTag: null,
+      snapshot,
     } as any,
     isReplay,
     new EventBus(),
@@ -184,5 +185,79 @@ describe("LocalServer archiving", () => {
     server.endGame();
     await new Promise((r) => setTimeout(r, 10));
     expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("never archives a game resumed from a save, won or not", async () => {
+    const server = makeServer(false, new Uint8Array([1, 2, 3]));
+    server.start();
+
+    server.onMessage(winnerMsg);
+    server.endGame();
+    await new Promise((r) => setTimeout(r, 10));
+    const archiveCalls = fetchMock.mock.calls.filter(([url]) =>
+      String(url).endsWith("/archive_singleplayer_game"),
+    );
+    expect(archiveCalls).toEqual([]);
+  });
+});
+
+describe("LocalServer resuming a save", () => {
+  beforeEach(() => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => new Response(null, { status: 200 })),
+    );
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  function startServer(snapshot?: Uint8Array) {
+    const sent: any[] = [];
+    const server = new LocalServer(
+      {
+        gameStartInfo: makeGameStartInfo(),
+        playerName: "TestUser",
+        playerClanTag: null,
+        snapshot,
+      } as any,
+      false,
+      new EventBus(),
+    );
+    server.updateCallback(
+      () => {},
+      (msg) => sent.push(msg),
+    );
+    server.start();
+    const turns = () => sent.filter((m) => m.type === "turn");
+    return { server, turns };
+  }
+
+  it("opens paused, with the pause as its first turn", async () => {
+    const { server, turns } = startServer(new Uint8Array([1, 2, 3]));
+
+    expect(turns()).toHaveLength(1);
+    expect(turns()[0].turn.intents).toEqual([
+      { type: "toggle_pause", paused: true, clientID: CLIENT_ID },
+    ]);
+    await new Promise((r) => setTimeout(r, 300));
+    expect(turns()).toHaveLength(1);
+
+    server.onMessage({
+      type: "intent",
+      intent: { type: "toggle_pause", paused: false },
+    } as ClientMessage);
+    expect(turns()[1].turn.intents).toEqual([
+      { type: "toggle_pause", paused: false, clientID: CLIENT_ID },
+    ]);
+    server.endGame();
+  });
+
+  it("starts a new game running", async () => {
+    const { server, turns } = startServer();
+    await vi.waitFor(() => expect(turns()).toHaveLength(1));
+    expect(turns()[0].turn.intents).toEqual([]);
+    server.endGame();
   });
 });

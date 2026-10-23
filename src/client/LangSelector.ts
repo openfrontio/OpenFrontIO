@@ -2,6 +2,8 @@ import { assetUrl } from "@openfront/shared/AssetUrls";
 import { LitElement, html } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import { desktopSteamLocale } from "./DesktopShell";
+// The type-only use below is erased at runtime; keep this to register the modal.
+// oxlint-disable-next-line import/no-duplicates -- Required custom-element registration.
 import "./LanguageModal";
 import { LanguageModal } from "./LanguageModal";
 import { formatDebugTranslation } from "./Utils";

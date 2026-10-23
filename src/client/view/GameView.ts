@@ -151,6 +151,7 @@ export class GameView implements GameLike {
     private _myClanTag: string | null,
     private _gameID: GameID,
     humans: WirePlayer[],
+    private _resumedFromSave = false,
   ) {
     this._map = this._mapData.gameMap;
     this.lastUpdate = null;
@@ -1077,6 +1078,12 @@ export class GameView implements GameLike {
   }
   gameID(): GameID {
     return this._gameID;
+  }
+
+  // Started from a saved game rather than from the beginning. Such a game is
+  // never archived, so it earns no XP or achievements.
+  resumedFromSave(): boolean {
+    return this._resumedFromSave;
   }
 
   private _markedPlayers: ReadonlySet<number> | null = null;
