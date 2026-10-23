@@ -315,10 +315,13 @@ function isKeyNamedProperty(name: PropertyKey): boolean {
 /**
  * A property assignment (`{ key: value }`) whose name ends in "key".
  * Shorthand properties, methods and accessors are separate node kinds and
- * do not count.
+ * do not count, and a computed name (`{ [key]: value }`) is not a name at
+ * all.
  */
 function isKeyNamedPropertyAssignment(node: ObjectProperty): boolean {
-  if (node.kind !== "init" || node.shorthand || node.method) return false;
+  if (node.kind !== "init" || node.shorthand || node.method || node.computed) {
+    return false;
+  }
   return isKeyNamedProperty(node.key);
 }
 
