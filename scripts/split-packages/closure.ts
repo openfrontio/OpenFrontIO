@@ -7,7 +7,25 @@
  *   --exclude: core files to treat as engine-only entries (not traversed),
  *              e.g. src/core/worker/Worker.worker.ts
  */
-import { listSourceFiles, moduleRefs, parse, rel, resolveSpec } from "./lib";
+// DISABLED: TypeScript 7.0 ships no JavaScript compiler API - the package
+// only exports a version string - so this script cannot parse TypeScript any
+// more. The replacement API (typescript/sync, typescript/ast) arrives with
+// TypeScript 7.1: it is in beta today (`npm i -D typescript@7.1.0-beta`) and
+// the final release is expected in December 2026. Until then this script is
+// kept as it is, but is not type-checked and refuses to run. The next split
+// has to wait for that release.
+// See https://github.com/openfrontio/OpenFrontIO/issues/4982
+// @ts-nocheck
+import {
+  assertCompilerApiAvailable,
+  listSourceFiles,
+  moduleRefs,
+  parse,
+  rel,
+  resolveSpec,
+} from "./lib";
+
+assertCompilerApiAvailable();
 
 const argv = process.argv.slice(2);
 const excluded = new Set<string>();
