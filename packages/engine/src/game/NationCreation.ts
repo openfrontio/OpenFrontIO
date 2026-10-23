@@ -1,9 +1,5 @@
 import {
   Cell,
-  GameMapSize,
-  GameMode,
-  GameType,
-  HumansVsNations,
   Nation,
   PlayerInfo,
   PlayerType,
@@ -13,20 +9,12 @@ import {
   Nation as ManifestNation,
 } from "@openfront/engine-api/game/MapFiles";
 import { GameStartInfo } from "@openfront/engine-api/Schemas";
-import { getCompactMapNationCount } from "@openfront/engine-lib/game/NationCount";
+import { nationPickForGame } from "@openfront/engine-lib/game/NationCount";
 import { PseudoRandom } from "@openfront/engine-lib/PseudoRandom";
 
 /**
- * Creates the nations array for a game.
- * If config.nations is a number (custom count), uses that exact count,
- * generating additional nations with random names if needed.
- * If config.nations is "disabled", returns no nations.
- * If config.nations is "default":
- *   - Public HumansVsNations: matches nation count to human player count
- *   - Public compact maps: uses 25% of manifest nations
- *   - Otherwise: uses all manifest nations
- * nationCountForGame (engine-lib NationCount.ts) predicts the count without
- * making them, so change the two together.
+ * Creates the nations array for a game, picked by nationPickForGame
+ * (engine-lib NationCount.ts).
  *
  * When more nations are needed than the manifest defines, names are first
  * drawn from `additionalNations`; any remainder is generated procedurally.
@@ -56,52 +44,27 @@ export function createNationsForGame(
       ),
     );
 
-  const isCompactMap = gameStart.config.gameMapSize === GameMapSize.Compact;
-
-  const isHumansVsNations =
-    gameStart.config.gameMode === GameMode.Team &&
-    gameStart.config.playerTeams === HumansVsNations;
-
-  const configNations = gameStart.config.nations;
-  if (configNations === "disabled") {
-    return [];
-  }
-  // If nations count is explicitly set, use that exact count
-  if (typeof configNations === "number") {
-    return createRandomNations(
-      configNations,
-      manifestNations,
-      additionalNations,
-      toNation,
-      random,
-    );
-  }
-
-  if (gameStart.config.gameType === GameType.Public) {
-    // For HvN, balance nation count to match human count
-    if (isHumansVsNations) {
+  // `?.`: a manifest can leave out `nations` (the plains test map does),
+  // which only a game with nations disabled gets away with.
+  const pick = nationPickForGame(
+    gameStart.config,
+    manifestNations?.length ?? 0,
+    numHumans,
+  );
+  switch (pick.kind) {
+    case "none":
+      return [];
+    case "manifest":
+      return manifestNations.map(toNation);
+    case "random":
       return createRandomNations(
-        numHumans,
+        pick.count,
         manifestNations,
         additionalNations,
         toNation,
         random,
       );
-    }
-
-    // For compact maps, use only 25% of nations (minimum 1)
-    if (isCompactMap) {
-      const targetCount = getCompactMapNationCount(
-        manifestNations.length,
-        true,
-      );
-      const shuffled = random.shuffleArray(manifestNations);
-      const slicedNations = shuffled.slice(0, targetCount);
-      return slicedNations.map(toNation);
-    }
   }
-
-  return manifestNations.map(toNation);
 }
 
 /**
