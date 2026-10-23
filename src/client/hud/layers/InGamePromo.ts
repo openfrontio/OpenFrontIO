@@ -17,7 +17,6 @@ export class InGamePromo extends LitElement implements Controller {
 
   private shouldShow: boolean = false;
   private adsVisible: boolean = false;
-  private bottomRailDestroyed: boolean = false;
   private cornerAdShown: boolean = false;
   private adCheckInterval: ReturnType<typeof setTimeout> | null = null;
   private adGateOff: (() => void) | null = null;
@@ -30,10 +29,9 @@ export class InGamePromo extends LitElement implements Controller {
 
   tick() {
     if (!this.game.inSpawnPhase()) {
-      if (!this.bottomRailDestroyed) {
-        this.bottomRailDestroyed = true;
-        this.destroyBottomRail();
-      }
+      // Every tick rather than once, so a rail loaded again mid-game cannot
+      // stay. Cheap: it returns at once unless a rail is loaded.
+      this.destroyBottomRail();
       if (!this.cornerAdShown) {
         this.cornerAdShown = true;
         console.log("[InGamePromo] Spawn phase ended, triggering showAd");
