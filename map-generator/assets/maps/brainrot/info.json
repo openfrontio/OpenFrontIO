@@ -3,7 +3,10 @@
   "name": "Brain Rot",
   "translation_key": "map.brainrot",
   "categories": ["arcade", "new"],
-  "multiplayer_frequency": 50,
+  "multiplayer_frequency": 19,
+  "team_frequency": 13,
+  "special_team_count": 27,
+
   "nations": [
     {
       "coordinates": [760, 760],
@@ -128,7 +131,7 @@
 
     {
       "coordinates": [1740, 960],
-      "name": "Wemickes Area"
+      "name": "Wernicke Area"
     },
     {
       "coordinates": [1770, 970],
@@ -195,7 +198,7 @@
     {
       "id": "brland",
       "placement": "land",
-      "alpha": 0.75,
+      "alpha": 0.7,
       "nukeable": true
     }
   ],

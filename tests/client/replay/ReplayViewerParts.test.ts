@@ -1,3 +1,7 @@
+import type {
+  NukeImpactEvent,
+  ReplayFrame,
+} from "../../../src/client/replay/codec/ReplayTypes";
 import {
   CameraGestures,
   ReplayCamera,
@@ -9,10 +13,6 @@ import {
 import { ReplayNukedLayers } from "../../../src/client/replay/ReplayNukedLayers";
 import { ReplayTerrain } from "../../../src/client/replay/ReplayTerrain";
 import { parseReplayViewerHash } from "../../../src/client/replay/ReplayViewerRoute";
-import type {
-  NukeImpactEvent,
-  ReplayFrame,
-} from "../../../src/client/replay/codec/ReplayTypes";
 
 describe("parseReplayViewerHash", () => {
   test.each([

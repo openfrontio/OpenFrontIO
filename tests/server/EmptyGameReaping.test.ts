@@ -1,12 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { GameManager } from "../../src/server/GameManager";
 import { GamePhase, GameServer } from "../../src/server/GameServer";
-import {
-  MatchTelemetryEmitter,
-  MatchTelemetryEvent,
-  MatchTelemetryType,
-  zeroCounters,
-} from "../../src/server/telemetry/MatchTelemetry";
+import { noopMatchGatekeeper } from "../../src/server/Gatekeeper";
 import {
   cid,
   makeClient,
@@ -24,19 +19,10 @@ import {
 describe("empty game reaping", () => {
   let log: any;
 
-  // Everything the game reaches for is inert in the harness; only the
-  // telemetry sink is read, to prove a playerless game never starts.
-  class RecordingEmitter implements MatchTelemetryEmitter {
-    readonly types: MatchTelemetryType[] = [];
-    emit(event: MatchTelemetryEvent) {
-      this.types.push(event.type);
-      return "enqueued" as const;
-    }
-    counters() {
-      return zeroCounters();
-    }
-    stop() {}
-  }
+  // start() builds gameStartInfo; prestart (hasStarted()) does not, so this
+  // tells a game that really started from one that is only scheduled to.
+  const ranStart = (game: GameServer) =>
+    (game as any).gameStartInfo !== undefined;
 
   // One tick of GameManager's loop, plus the 2s delayed start it schedules.
   const runManager = (ms: number) => vi.advanceTimersByTime(ms);
@@ -163,7 +149,7 @@ describe("empty game reaping", () => {
     });
 
     it("is logged once, at info, when the manager prunes it", () => {
-      const manager = new GameManager(log, new RecordingEmitter());
+      const manager = new GameManager(log);
       const game = manager.createGame(cid("capped"), undefined)!;
       game.joinClient(makeClient());
       manager.publicLobbies();
@@ -184,7 +170,7 @@ describe("empty game reaping", () => {
     });
 
     it("is not logged when a game is pruned before the cap", () => {
-      const manager = new GameManager(log, new RecordingEmitter());
+      const manager = new GameManager(log);
       const game = manager.createGame(cid("short"), undefined)!;
       (game as any).hasReachedMaxPlayerCount = true;
 
@@ -199,8 +185,7 @@ describe("empty game reaping", () => {
   });
 
   it("ends an empty game whose ping clock never goes quiet", () => {
-    const telemetry = new RecordingEmitter();
-    const manager = new GameManager(log, telemetry);
+    const manager = new GameManager(log);
     const game = manager.createGame(cid("warm"), undefined)!;
     const client = makeClient();
     game.joinClient(client);
@@ -227,8 +212,7 @@ describe("empty game reaping", () => {
   });
 
   it("does not start a full lobby everyone left, and prunes it", () => {
-    const telemetry = new RecordingEmitter();
-    const manager = new GameManager(log, telemetry);
+    const manager = new GameManager(log);
     const game = manager.createGame(cid("empty"), undefined)!;
     (game as any).hasReachedMaxPlayerCount = true;
     // The clients who filled the lobby were pinging until the moment they
@@ -237,10 +221,9 @@ describe("empty game reaping", () => {
 
     runManager(5_000);
 
-    // Started with an empty roster, this would emit a playerless
-    // match_started and run turns for nobody.
+    // Started with an empty roster, this would run turns for nobody.
     expect(game.hasStarted()).toBe(false);
-    expect(telemetry.types).not.toContain("match_started");
+    expect(ranStart(game)).toBe(false);
     expect(manager.activeGames()).toBe(1);
 
     // Once the ping clock goes quiet it is pruned instead.
@@ -253,8 +236,8 @@ describe("empty game reaping", () => {
   // The roster empties the instant a socket closes, blip or not, so an empty
   // roster when the delayed start comes due is not proof of abandonment.
   describe("a roster that empties during the start delay", () => {
-    const prestartedGame = (telemetry: RecordingEmitter) => {
-      const manager = new GameManager(log, telemetry);
+    const prestartedGame = () => {
+      const manager = new GameManager(log);
       const game: GameServer = manager.createGame(cid("delay"), undefined)!;
       const client = makeClient();
       game.joinClient(client);
@@ -263,24 +246,22 @@ describe("empty game reaping", () => {
       // start() 2s out.
       runManager(1_000);
       expect(game.hasStarted()).toBe(true);
-      expect(telemetry.types).not.toContain("match_started");
+      expect(ranStart(game)).toBe(false);
       return { manager, game, client };
     };
 
     it("holds the start rather than running it for nobody", async () => {
-      const telemetry = new RecordingEmitter();
-      const { manager, client } = prestartedGame(telemetry);
+      const { manager, game, client } = prestartedGame();
 
       await mockWsOf(client).trigger("close");
       runManager(3_000);
 
-      expect(telemetry.types).not.toContain("match_started");
+      expect(ranStart(game)).toBe(false);
       expect(manager.activeGames()).toBe(1);
     });
 
     it("starts the held game when a dropped client reconnects", async () => {
-      const telemetry = new RecordingEmitter();
-      const { manager, game, client } = prestartedGame(telemetry);
+      const { manager, game, client } = prestartedGame();
 
       // A blip: the socket closes and the client reconnects a moment later,
       // which is what Transport does on any close bar 1000 and 1002.
@@ -292,25 +273,27 @@ describe("empty game reaping", () => {
 
       runManager(1_000);
 
-      expect(telemetry.types).toContain("match_started");
+      expect(ranStart(game)).toBe(true);
       expect(manager.activeGames()).toBe(1);
     });
 
     it("reaps the held game if nobody comes back", async () => {
-      const telemetry = new RecordingEmitter();
-      const { manager, client } = prestartedGame(telemetry);
+      const { manager, game, client } = prestartedGame();
 
       await mockWsOf(client).trigger("close");
       runManager(60_000);
 
-      expect(telemetry.types).not.toContain("match_started");
+      expect(ranStart(game)).toBe(false);
       expect(manager.activeGames()).toBe(0);
     });
   });
 
   it("ignores messages from a socket that has left the roster", async () => {
-    const telemetry = new RecordingEmitter();
-    const game = makeGame({ log, telemetry });
+    const intentObserved = vi.fn();
+    const gatekeeper = {
+      matchOpened: () => ({ ...noopMatchGatekeeper, intentObserved }),
+    };
+    const game = makeGame({ log, deps: { gatekeeper } });
     const staying = makeClient({ clientID: cid("stays") });
     const leaving = makeClient({ clientID: cid("leaves") });
     game.joinClient(staying);
@@ -323,6 +306,6 @@ describe("empty game reaping", () => {
     await ws.trigger("close");
     await ws.emit({ type: "intent", intent: { type: "spawn", tile: 1 } });
 
-    expect(telemetry.types).not.toContain("intent_observed");
+    expect(intentObserved).not.toHaveBeenCalled();
   });
 });

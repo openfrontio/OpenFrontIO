@@ -64,6 +64,8 @@ vi.mock("../../src/client/BootInterrupts", () => ({
   claimPromptDue: () => false,
   claimPromptStringsReady: () => false,
   steamGrantStringsReady: () => false,
+  reportThanksStringsReady: () => false,
+  reportThanksDueThisLaunch: () => false,
   joinOwnsInFlightFlag: () => true,
   lapseShownAfterDispatch: (
     _resp: unknown,

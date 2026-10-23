@@ -116,6 +116,8 @@
     "sub_status_canceled": "Canceled",
     "sub_status_canceling": "Canceling",
     "sub_status_canceling_on": "Cancels {date}",
+    "sub_status_expired": "Expired",
+    "sub_status_grace": "Grace Period",
     "sub_status_incomplete": "Incomplete",
     "sub_status_incomplete_expired": "Expired",
     "sub_status_past_due": "Past Due",
@@ -217,7 +219,9 @@
       "crown": "Attack the crown!",
       "finish": "Let's finish off [P1]!",
       "focus": "Focus fire on [P1]!",
-      "mirv": "Launch a MIRV at [P1]!"
+      "mirv": "Launch a MIRV at [P1]!",
+      "nuke": "Nuke [P1]!",
+      "spend_gold": "Stop hoarding gold, use it!"
     },
     "cat": {
       "attack": "Attack",
@@ -253,13 +257,17 @@
       "thanks": "Thanks!",
       "trust_broken": "I trusted you...",
       "trust_me": "You can trust me. Promise!",
-      "well_played": "Well played!"
+      "well_played": "Well played!",
+      "what_doing": "What are you doing?!",
+      "why_attack": "Why are you attacking me?!"
     },
     "help": {
       "alliance": "Alliance?",
+      "break_alliance": "Please break our alliance so I can get some land too!",
       "gold": "Please give me gold!",
       "help_defend": "Help me defend against [P1]!",
       "no_attack": "Please don't attack me!",
+      "renew_alliance": "Please renew our alliance before it expires!",
       "send_gold_to": "Send gold to [P1]!",
       "send_troops_to": "Send troops to [P1]!",
       "sorry_attack": "Sorry, I didn’t mean to attack.",
@@ -268,6 +276,7 @@
       "troops_frontlines": "Send troops to the frontlines!"
     },
     "misc": {
+      "alliances_end_together": "Our alliances with [P1] end around the same time!",
       "build_closer": "Build closer to get trains!",
       "coastline": "Please let me get a coastline.",
       "fun": "This game is fun!",
@@ -285,10 +294,13 @@
         "ruining_games": "Ruining our games"
       },
       "help": {
+        "break_alliance": "Break alliance, I need land!",
+        "renew_alliance": "Renew our alliance!",
         "sorry_attack": "Sorry for attacking!",
         "troops_frontlines": "Troops to the front!"
       },
       "misc": {
+        "alliances_end_together": "Our [P1] alliances end together",
         "coastline": "Let me have a coast",
         "join_discord": "Join the Discord!",
         "pr": "Is my PR merged yet?"
@@ -296,10 +308,12 @@
       "warnings": {
         "mirv_ready": "[P1] can MIRV now!",
         "pirating": "[P1] is pirating",
+        "renew_or_nuke": "Renew or get nuked!",
         "saving_for_mirv": "[P1] saving for MIRV",
         "snowballing": "[P1] is snowballing",
         "stalemate": "Peace? Stalemate.",
-        "stop_trading_enemies": "Stop trading with enemies!"
+        "stop_trading_enemies": "Stop trading with enemies!",
+        "stop_war": "Stop before others swoop in"
       }
     },
     "title": "Quick Chat",
@@ -315,12 +329,15 @@
       "mirv_ready": "[P1] has enough gold to launch a MIRV!",
       "mirv_soon": "[P1] can launch a MIRV soon!",
       "no_allies": "[P1] has no allies.",
+      "nuke_threat": "Stop now, or I'll nuke you!",
       "pirating": "[P1] is pirating all of our trade!",
+      "renew_or_nuke": "Renew our alliance, or I'll nuke you!",
       "saving_for_mirv": "[P1] is saving up to launch a MIRV.",
       "snowballing": "[P1] is snowballing too fast!",
       "stalemate": "Let's make peace. This is a stalemate, we will both lose.",
       "stop_trading": "Stop trading with [P1]!",
       "stop_trading_enemies": "Please stop trading with enemies!",
+      "stop_war": "Let's stop this war before someone else takes advantage!",
       "strong": "[P1] is strong.",
       "weak": "[P1] is weak."
     }
@@ -2012,6 +2029,8 @@
     "reconcile_other": "The final figure differs from the provisional one.",
     "reconcile_reconnect": "An opponent who had disconnected came back, so they don't count as outlasted.",
     "reconcile_team_win": "Your team won: the win bonus was added.",
+    "reconcile_win": "You won: the win bonus was added.",
+    "reconcile_win_removed": "The server found a different winner, so the win bonus was taken off.",
     "rewards_balance": "Balance {caps} Caps · {plutonium} Plutonium",
     "rewards_balance_caps": "Balance {caps} Caps",
     "rewards_claimed": "Claimed",
@@ -2135,6 +2154,10 @@
     "unverified": "This game's record has no checks, so this replay couldn't be verified against the game that was played.",
     "watch_classic": "Watch the old replay instead"
   },
+  "report_thanks": {
+    "body": "A person who you recently reported has been banned, thanks for keeping openfront a safer and more enjoyable place",
+    "heading": "Thank you"
+  },
   "reward_track": {
     "after_level": "After level {level}",
     "caps_amount": "{amount} Caps",
@@ -2165,6 +2188,49 @@
   },
   "rewards_modal": {
     "title": "Rewards"
+  },
+  "saved_games": {
+    "code_placeholder": "Paste a shared game link or code",
+    "copy_link": "Copy link",
+    "delete": "Delete",
+    "delete_confirm": "Delete \"{name}\"? This can't be undone.",
+    "empty": "No saved games yet. Save one from the in-game menu.",
+    "error": {
+      "code_invalid": "That isn't a shared game link or code.",
+      "copy_failed": "Couldn't copy the link.",
+      "download_failed": "Couldn't download the saved game. Try again.",
+      "list_failed": "Couldn't load your saved games.",
+      "load_failed": "Couldn't start the saved game.",
+      "name_invalid": "That name isn't allowed.",
+      "name_not_shareable": "That name can't be shown on a shared game. Rename it first.",
+      "not_found": "That saved game no longer exists.",
+      "not_singleplayer": "Only singleplayer games can be loaded.",
+      "request_failed": "Something went wrong. Try again.",
+      "shared_not_found": "This shared game isn't available. It may have been deleted or made private.",
+      "unreadable": "This saved game can't be loaded by this version of the game."
+    },
+    "link_copied": "Link copied",
+    "loading": "Loading…",
+    "open": "Open",
+    "play": "Play",
+    "rename": "Rename",
+    "rename_save": "Save",
+    "save_desc": "Save this game to your account to continue it later",
+    "save_label": "Save game",
+    "save_status": {
+      "limit": "You've reached the saved game limit. Delete one from the Solo menu first.",
+      "not_found": "Couldn't save the game. Try again.",
+      "rejected": "This game couldn't be saved.",
+      "request_failed": "Couldn't save the game. Try again.",
+      "saved": "Saved. Find it in the Solo menu.",
+      "saving": "Saving…",
+      "unauthorized": "Sign in to save games."
+    },
+    "share": "Share",
+    "shared_badge": "Shared",
+    "shared_title": "Shared game",
+    "title": "Saved games",
+    "unshare": "Unshare"
   },
   "select_lang": {
     "title": "Select Language"
@@ -2331,6 +2397,7 @@
     "purchase_pending": "Your purchase is still being processed. It will appear in your account shortly — check your order history if it doesn't.",
     "purchase_success": "Purchase succeeded: {name}",
     "purchase_tribe_button": "Purchase",
+    "steam_browser_approval": "Steam has opened the purchase in your browser. Approve it there, then come back here. It will show up once Steam confirms it.",
     "steam_licence_required": "This subscription is only for players who own OpenFront on Steam.",
     "steam_overlay_cancelled": "Purchase cancelled. You haven't been charged.",
     "steam_overlay_waiting": "Approve the purchase in the Steam overlay to continue.",
@@ -2641,6 +2708,8 @@
     "lobby_id_visibility_label": "Hidden Lobby IDs",
     "lobby_start_alerts_desc": "Play the start chime for each lobby and ranked match by default and show a desktop notification when permitted. You can override it with the lobby bell.",
     "lobby_start_alerts_label": "Lobby Start Alerts",
+    "map_layers_desc": "Show the extra images some maps draw over the terrain. Turn off to hide them on every map.",
+    "map_layers_label": "Map Layers",
     "menu_shortcuts": "Menu Shortcuts",
     "modifiers": "Modifiers",
     "move_down": "Move Camera Down",
@@ -2677,6 +2746,8 @@
     "retaliate_attack_desc": "Send a retaliation attack to blunt/negate the force of the most recent active attacker. Only available when you are being attacked.",
     "select_all_warships": "Select All Warships",
     "select_all_warships_desc": "Select all of your warships on the map.",
+    "snap_build_preview_desc": "Move the build preview to the tile the structure will actually be built on",
+    "snap_build_preview_label": "Snap Build Preview",
     "special_effects_desc": "Toggle special effects. Deactivate to improve performances",
     "special_effects_label": "Special effects",
     "steam_lobby_links_desc": "Open lobby links in the Steam app instead of joining in this browser",

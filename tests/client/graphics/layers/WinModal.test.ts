@@ -65,6 +65,13 @@ vi.mock("../../../../src/client/GamePortal", () => ({
 import { ClientEnv } from "../../../../src/client/ClientEnv";
 import type { GameView } from "../../../../src/client/view";
 
+// jsdom has no ResizeObserver.
+globalThis.ResizeObserver ??= class {
+  observe() {}
+  unobserve() {}
+  disconnect() {}
+} as unknown as typeof ResizeObserver;
+
 const realLocationDescriptor = Object.getOwnPropertyDescriptor(
   window,
   "location",
@@ -237,6 +244,18 @@ describe("WinModal pattern promotion", () => {
     } finally {
       delete window.openfrontDesktop;
     }
+  });
+
+  it("includes action styles that align [data-share-ring] with .win-action on hover", async () => {
+    modal = document.createElement("win-modal") as WinModal;
+    document.body.appendChild(modal);
+    await modal.updateComplete;
+    const style = modal.querySelector("style");
+    expect(style).not.toBeNull();
+    const css = style?.textContent ?? "";
+    expect(css).toContain(".win-action:hover ~ [data-share-ring]");
+    expect(css).toContain("top: -6px");
+    expect(css).toContain("bottom: -2px");
   });
 });
 

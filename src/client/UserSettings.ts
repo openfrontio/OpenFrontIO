@@ -203,6 +203,8 @@ export const FLAG_KEY = "flag";
 export const CROWN_KEY = "crown";
 export const COLOR_KEY = "settings.territoryColor";
 export const PERFORMANCE_OVERLAY_KEY = "settings.performanceOverlay";
+// Kept out of the graphics overrides so picking a preset doesn't turn it back on.
+export const MAP_LAYERS_KEY = "settings.mapLayers";
 export const KEYBINDS_KEY = "settings.keybinds";
 export const GRAPHICS_KEY = "settings.graphics";
 export const GRAPHICS_PRESETS_KEY = "settings.graphicsPresets";
@@ -423,6 +425,10 @@ export class UserSettings {
     return this.getBool(PERFORMANCE_OVERLAY_KEY, false);
   }
 
+  mapLayers() {
+    return this.getBool(MAP_LAYERS_KEY, true);
+  }
+
   alertFrame() {
     return this.getBool("settings.alertFrame", true);
   }
@@ -496,6 +502,14 @@ export class UserSettings {
     return this.getBool("settings.cursorCostLabel", legacy);
   }
 
+  snapBuildPreview() {
+    return this.getBool("settings.snapBuildPreview", false);
+  }
+
+  toggleSnapBuildPreview() {
+    this.setBool("settings.snapBuildPreview", !this.snapBuildPreview());
+  }
+
   toggleLeftClickOpenMenu() {
     this.setBool("settings.leftClickOpensMenu", !this.leftClickOpensMenu());
   }
@@ -511,6 +525,10 @@ export class UserSettings {
 
   togglePerformanceOverlay() {
     this.setBool(PERFORMANCE_OVERLAY_KEY, !this.performanceOverlay());
+  }
+
+  toggleMapLayers() {
+    this.setBool(MAP_LAYERS_KEY, !this.mapLayers());
   }
 
   toggleAlertFrame() {

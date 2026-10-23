@@ -1,16 +1,14 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { MatchTelemetryRecorder } from "../../src/server/MatchTelemetryRecorder";
+import {
+  type IntentObservation,
+  noopMatchGatekeeper,
+} from "../../src/server/Gatekeeper";
 import {
   KICK_REASON_INVALID_MESSAGE,
   KICK_REASON_TOO_MUCH_DATA,
   SocketIngress,
   SocketIngressView,
 } from "../../src/server/SocketIngress";
-import type {
-  MatchTelemetryCounters,
-  MatchTelemetryEmitter,
-  MatchTelemetryEvent,
-} from "../../src/server/telemetry/MatchTelemetry";
 import {
   cid,
   makeClient,
@@ -21,26 +19,14 @@ import { clientFrame } from "../util/Wire";
 
 // The ingress pipeline on its own, with a stubbed rate limiter: what reaches
 // the game, what is dropped, who gets kicked, and how a rejected intent is
-// attributed in telemetry. What a delivered message then does is GameServer's
-// handleClientMessage, covered by the frame-level tests (GameServerWire,
-// GameServerJoin, MatchTelemetryIntegration).
-
-class RecordingEmitter implements MatchTelemetryEmitter {
-  events: MatchTelemetryEvent[] = [];
-  emit(event: MatchTelemetryEvent) {
-    this.events.push(event);
-    return "enqueued" as const;
-  }
-  counters(): MatchTelemetryCounters {
-    throw new Error("not used");
-  }
-  stop() {}
-}
+// reported to the gatekeeper. What a delivered message then does is
+// GameServer's handleClientMessage, covered by the frame-level tests
+// (GameServerWire, GameServerJoin).
 
 type Rate = "ok" | "limit" | "kick";
 
 function setup(rate: Rate = "ok") {
-  const emitter = new RecordingEmitter();
+  const intentObserved = vi.fn((_: IntentObservation) => {});
   const view: SocketIngressView = {
     zbinCtx: () => undefined,
     serverTick: () => 7,
@@ -52,14 +38,15 @@ function setup(rate: Rate = "ok") {
   const log = mockLogger();
   const ingress = new SocketIngress(
     log,
-    new MatchTelemetryRecorder(emitter, cid("match"), "build-1"),
     view,
     { check },
+    { ...noopMatchGatekeeper, intentObserved },
   );
   const observed = () =>
-    emitter.events
-      .filter((e) => e.type === "intent_observed")
-      .map((e) => e.payload);
+    intentObserved.mock.calls.map(([o]) => ({
+      ...o,
+      client: o.client.clientID,
+    }));
   return { ingress, view, check, observed, log };
 }
 
@@ -120,11 +107,11 @@ describe("SocketIngress.receive", () => {
 
     expect(observed()).toMatchObject([
       {
-        identity: { clientId: P1, publicId: "p1-pub" },
+        client: P1,
         intentType: "targetPlayer",
         outcome: "rejected",
+        turn: 7,
         reasonCode: KICK_REASON_INVALID_MESSAGE,
-        reasonDetail: expect.stringContaining("target"),
         intent: { type: "targetPlayer", target: "not a client id" },
       },
     ]);
@@ -163,9 +150,10 @@ describe("SocketIngress.receive", () => {
 
       expect(observed()).toMatchObject([
         {
-          identity: { clientId: P1, publicId: "p1-pub" },
+          client: P1,
           intentType: "spawn",
           outcome: "rejected",
+          turn: 7,
           reasonCode,
           intent: { type: "spawn", tile: 1, clientID: P1 },
         },
@@ -189,7 +177,7 @@ describe("SocketIngress.receive", () => {
     expect(view.kick).not.toHaveBeenCalled();
     expect(observed()).toEqual([]);
     // A misbehaving client can produce thousands of these a minute; the
-    // aggregate is already counted via telemetry, so this must not be warn.
+    // intent is already reported to the gatekeeper, so this must not be warn.
     expect(log.warn).not.toHaveBeenCalled();
     expect(log.debug).toHaveBeenCalledWith(
       expect.stringContaining("rate limit exceeded"),

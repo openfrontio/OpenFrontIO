@@ -20,7 +20,6 @@ RUN --mount=type=cache,target=/root/.npm \
 # Copy only what's needed for build
 COPY tsconfig.json tsconfig.base.json ./
 COPY vite.config.ts ./
-COPY eslint.config.js ./
 COPY index.html ./
 COPY client-api.json ./
 COPY resources ./resources
