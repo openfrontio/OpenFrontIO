@@ -93,10 +93,9 @@ export class LobbyPresetControls extends LitElement {
 
     return html`
       <div
-        class="w-full bg-white/5 border border-white/10 rounded-2xl p-4 sm:p-5 mb-8 ${this
-          .disabled
-          ? "opacity-60"
-          : ""}"
+        class="w-full bg-white/5 border border-white/10 rounded-2xl p-4 sm:p-5 mb-8 ${
+          this.disabled ? "opacity-60" : ""
+        }"
       >
         <div class="flex items-center gap-3 pb-3 border-b border-white/10 mb-4">
           <div
@@ -138,9 +137,11 @@ export class LobbyPresetControls extends LitElement {
                 ?disabled=${this.disabled || !hasPresets}
               >
                 <option value="">
-                  ${hasPresets
-                    ? translateText("lobby_config.preset.select")
-                    : translateText("lobby_config.preset.no_presets")}
+                  ${
+                    hasPresets
+                      ? translateText("lobby_config.preset.select")
+                      : translateText("lobby_config.preset.no_presets")
+                  }
                 </option>
                 ${this.presets.map(
                   (p) => html`

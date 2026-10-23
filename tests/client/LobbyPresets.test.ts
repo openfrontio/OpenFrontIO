@@ -5,6 +5,7 @@ import {
   UnitType,
 } from "@openfront/engine-api/game/GameTypes";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { LobbyPresetControls } from "../../src/client/components/LobbyPresetControls";
 import {
   deleteLobbyPreset,
   LOBBY_PRESETS_KEY,
@@ -16,8 +17,6 @@ import {
   saveLobbyPreset,
 } from "../../src/client/LobbyPresets";
 import { UserSettings } from "../../src/client/UserSettings";
-import "../../src/client/components/LobbyPresetControls";
-import { LobbyPresetControls } from "../../src/client/components/LobbyPresetControls";
 
 vi.mock("../../src/client/Utils", () => ({
   translateText: vi.fn((key: string) => key),
