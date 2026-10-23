@@ -3,6 +3,8 @@ import {
   MIN_HOSTED_LOBBY_PLAYERS,
 } from "@openfront/shared/WireSchemas";
 import { describe, expect, it } from "vitest";
+// The class is used as a type below, so this import is needed for registration.
+// oxlint-disable-next-line import/no-duplicates -- Required custom-element registration.
 import "../../src/client/components/ListLobbyDialog";
 import { ListLobbyDialog } from "../../src/client/components/ListLobbyDialog";
 

@@ -8,9 +8,9 @@ import {
 import { PseudoRandom } from "@openfront/engine-lib/PseudoRandom";
 import { AttackExecution } from "@openfront/engine/execution/AttackExecution";
 import { NationAllianceBehavior } from "@openfront/engine/execution/nation/NationAllianceBehavior";
+import { NationAttackBehavior } from "@openfront/engine/execution/nation/NationAttackBehavior";
 import { NationEmojiBehavior } from "@openfront/engine/execution/nation/NationEmojiBehavior";
 import { findRunawayLeader } from "@openfront/engine/execution/nation/NationUtils";
-import { NationAttackBehavior } from "@openfront/engine/execution/nation/NationAttackBehavior";
 import { NationWarshipBehavior } from "@openfront/engine/execution/nation/NationWarshipBehavior";
 import { AllianceRequest, Game, Player } from "@openfront/engine/game/Game";
 import { setup } from "./util/Setup";

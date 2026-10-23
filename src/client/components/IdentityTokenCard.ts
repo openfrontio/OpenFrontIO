@@ -77,11 +77,13 @@ export class IdentityTokenCard extends LitElement {
             @click=${this.handleGenerate}
           ></o-button>
         </div>
-        ${this.errorKey
-          ? html`<div class="text-red-400 text-sm mt-3">
-              ${translateText(this.errorKey)}
-            </div>`
-          : nothing}
+        ${
+          this.errorKey
+            ? html`<div class="text-red-400 text-sm mt-3">
+                ${translateText(this.errorKey)}
+              </div>`
+            : nothing
+        }
         ${this.token ? this.renderToken(this.token) : nothing}
       </div>
     `;
@@ -101,9 +103,11 @@ export class IdentityTokenCard extends LitElement {
         <o-button
           variant="secondary"
           size="sm"
-          translationKey=${this.copied
-            ? "account_modal.identity_token_copied"
-            : "account_modal.identity_token_copy"}
+          translationKey=${
+            this.copied
+              ? "account_modal.identity_token_copied"
+              : "account_modal.identity_token_copy"
+          }
           @click=${this.handleCopy}
         ></o-button>
       </div>

@@ -300,7 +300,7 @@ describe("EffectsGrid", () => {
       await card.updateComplete;
       card.querySelector<HTMLButtonElement>("[data-cosmetic-main]")!.click();
 
-      expect((onMessage.mock.lastCall?.[0] as CustomEvent).detail.message).toBe(
+      expect((onMessage.mock.lastCall![0] as CustomEvent).detail.message).toBe(
         "Selected Localized Wake",
       );
 
