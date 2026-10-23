@@ -390,8 +390,8 @@ export class UserSettingModal extends BaseModal {
     if (!this.isModalOpen || this.showEasterEggSettings) return;
 
     // Validate that the event target is inside this component
-    const target = e.target as Node;
-    if (!this.contains(target)) {
+    const target = e.target;
+    if (!(target instanceof Node) || !this.contains(target)) {
       return;
     }
 
@@ -2107,6 +2107,7 @@ export class UserSettingModal extends BaseModal {
   }
 
   protected onOpen(args?: Record<string, unknown>): void {
+    this.lastHasKeyboard = Platform.hasKeyboard;
     window.addEventListener("keydown", this.handleEasterEggKey);
     // Keybinds are editable from either instance and were only read in
     // connectedCallback, so re-read them or the other one renders stale.
