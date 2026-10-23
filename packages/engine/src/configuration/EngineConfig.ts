@@ -624,10 +624,6 @@ export class EngineConfig extends Config {
     return 20; // in ticks (one tick is 100ms)
   }
 
-  radiusPortSpawn() {
-    return 20;
-  }
-
   tradeShipShortRangeDebuff(): number {
     return 300;
   }

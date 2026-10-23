@@ -147,6 +147,11 @@ export const DERIVED_FIELDS = new Set<string>([
   "myUnitCountMemo",
   "myUnitsOwnedMemo",
   "nearbyMemo",
+  // GameMapImpl BFS scratch buffers
+  "bfsVisited",
+  "bfsQueue",
+  "bfsGen",
+  "inBfs",
   // SharedWaterCache
   "playerWater",
   // Config / EngineConfig
