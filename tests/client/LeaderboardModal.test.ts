@@ -781,7 +781,7 @@ describe("LeaderboardModal", () => {
       expect(cols[2].style.width).toBe("6rem");
     });
 
-    it("widens the rating column once rows carry a tier", async () => {
+    it("widens the rating column, less on phones, once rows carry a tier", async () => {
       fetchMock().mockResolvedValueOnce(
         jsonRes({
           "1v1": [],
@@ -794,7 +794,14 @@ describe("LeaderboardModal", () => {
       const cols = modal.querySelectorAll<HTMLElement>(
         "leaderboard-player-list col",
       );
-      expect(cols[2].style.width).toBe("12rem");
+      expect(cols[2].style.width).toBe("");
+      expect(cols[2].classList).toContain("w-32");
+      expect(cols[2].classList).toContain("sm:w-48");
+      // The rating and its uncertainty never wrap apart.
+      const cell = modal.querySelector("[data-ffa-rating-cell]")!;
+      const value = cell.querySelector("[data-ffa-rating-value]")!;
+      expect(value.classList).toContain("whitespace-nowrap");
+      expect(value.textContent).toContain("± 61");
     });
 
     it("pins a calibrating row for a signed-in player not on the board", async () => {

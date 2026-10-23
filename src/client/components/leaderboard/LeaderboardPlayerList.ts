@@ -473,7 +473,9 @@ export class LeaderboardPlayerList extends LitElement {
 
   // The rating column. On a live FFA board a rated row shows its tier badge
   // and "rating ± uncertainty"; every other ladder (and an FFA board whose
-  // rows carry no tier) shows the plain Elo number, exactly as before.
+  // rows carry no tier) shows the plain Elo number, exactly as before. On a
+  // phone the badge sits above the number, so the column stays narrow enough
+  // to show without scrolling sideways.
   private renderRatingCell(row: LadderRow, strong: boolean): TemplateResult {
     const weight = strong ? "font-bold" : "font-medium";
     if (!this.ffaRatingLive || row.tier === undefined) {
@@ -482,16 +484,21 @@ export class LeaderboardPlayerList extends LitElement {
       >`;
     }
     return html`
-      <div class="flex items-center justify-end gap-2" data-ffa-rating-cell>
+      <div
+        class="flex flex-col items-end gap-1 sm:flex-row sm:items-center sm:justify-end sm:gap-2"
+        data-ffa-rating-cell
+      >
         <ffa-tier-badge .tier=${row.tier}></ffa-tier-badge>
-        <span class="font-mono text-white ${weight}"
-          >${formatRating(row.elo)}</span
-        >
-        ${row.uncertainty === undefined
-          ? nothing
-          : html`<span class="font-mono text-white/40"
-              >± ${formatRating(row.uncertainty)}</span
-            >`}
+        <span class="whitespace-nowrap" data-ffa-rating-value>
+          <span class="font-mono text-white ${weight}"
+            >${formatRating(row.elo)}</span
+          >
+          ${row.uncertainty === undefined
+            ? nothing
+            : html`<span class="font-mono text-white/40"
+                >± ${formatRating(row.uncertainty)}</span
+              >`}
+        </span>
       </div>
     `;
   }
@@ -714,7 +721,9 @@ export class LeaderboardPlayerList extends LitElement {
               <colgroup>
                 <col style="width: 4rem" />
                 <col style="width: 12rem" />
-                <col style="width: ${ratingLive ? "12rem" : "6rem"}" />
+                ${ratingLive
+                  ? html`<col class="w-32 sm:w-48" />`
+                  : html`<col style="width: 6rem" />`}
                 <col style="width: 6rem" />
                 <col style="width: 6rem" />
               </colgroup>
