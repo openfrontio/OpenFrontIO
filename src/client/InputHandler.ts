@@ -428,6 +428,7 @@ export class InputHandler {
 
   /** Re-read the player's keybinds and rebuild the key dispatch table. */
   private buildKeybindTable() {
+    this.uiState.preventStacking = false;
     this.keybinds = this.userSettings.keybinds(Platform.isMac);
     this.keybindAndEvent = [];
 
@@ -668,6 +669,7 @@ export class InputHandler {
       "blur",
       () => {
         this.activeKeys.clear();
+        this.uiState.preventStacking = false;
         if (this.alternateView) {
           this.alternateView = false;
           this.eventBus.emit(new AlternateViewEvent(false));
@@ -769,6 +771,9 @@ export class InputHandler {
           return;
         }
 
+        if (this.keybindMatchesEvent(e, this.keybinds.preventStacking)) {
+          this.uiState.preventStacking = true;
+        }
         if (this.keybindMatchesEvent(e, this.keybinds.toggleView)) {
           e.preventDefault();
           if (!this.alternateView) {
@@ -887,6 +892,10 @@ export class InputHandler {
     window.addEventListener(
       "keyup",
       (e) => {
+        const hold = this.parseKeybind(this.keybinds.preventStacking);
+        if (e.code === hold.code || (hold.shift && !e.shiftKey)) {
+          this.uiState.preventStacking = false;
+        }
         const isTextInput = this.isTextInputTarget(e.target);
         if (isTextInput && !this.activeKeys.has(e.code)) {
           return;
@@ -1579,6 +1588,7 @@ export class InputHandler {
     // renderer has already removed.
     this.resetPointerState();
     this.activeKeys.clear();
+    this.uiState.preventStacking = false;
     this.emojiTableOpen = false;
     this.emojiKeysDown.clear();
     this.keybindAndEvent = [];

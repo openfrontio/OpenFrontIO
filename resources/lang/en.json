@@ -2733,6 +2733,8 @@
     "performance_overlay_desc": "Toggle the performance overlay. When enabled, the performance overlay will be displayed. Press shift-D during game to toggle.",
     "performance_overlay_label": "Performance Overlay",
     "press_a_key": "Press a key",
+    "prevent_stacking": "Prevent Building Stacking",
+    "prevent_stacking_desc": "Hold to build a new structure instead of upgrading a nearby one. Normal placement restrictions still apply.",
     "quick_chat": "Quick Chat",
     "quick_chat_desc": "Open quick chat for the player whose tile is under your cursor.",
     "render_debug_gui": "Render Debug GUI",

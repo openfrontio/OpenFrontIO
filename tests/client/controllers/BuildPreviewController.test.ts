@@ -161,4 +161,12 @@ describe("BuildPreviewController confirm with the pointer off the map", () => {
       | undefined;
     expect(intent?.tile).toBe(43);
   });
+  test.each([true, false])("prevent stacking held: %s", (held) => {
+    const { controller, emitted } = makeController(3, 4);
+    const c = controller as any;
+    c.uiState.preventStacking = held;
+    c.ghostUnit.buildableUnit.canUpgrade = 7;
+    c.requestConfirmStructure(new MouseUpEvent(0, 0));
+    expect(emitted[0] instanceof BuildUnitIntentEvent).toBe(held);
+  });
 });
