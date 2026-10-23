@@ -12,9 +12,9 @@ import {
 } from "@openfront/engine-lib/configuration/Config";
 import { PseudoRandom } from "@openfront/engine-lib/PseudoRandom";
 import { NationAllianceBehavior } from "@openfront/engine/execution/nation/NationAllianceBehavior";
+import { NationAttackBehavior } from "@openfront/engine/execution/nation/NationAttackBehavior";
 import { NationEmojiBehavior } from "@openfront/engine/execution/nation/NationEmojiBehavior";
 import { NationNukeBehavior } from "@openfront/engine/execution/nation/NationNukeBehavior";
-import { NationAttackBehavior } from "@openfront/engine/execution/nation/NationAttackBehavior";
 import { NationWarshipBehavior } from "@openfront/engine/execution/nation/NationWarshipBehavior";
 import { Game, Player, Unit } from "@openfront/engine/game/Game";
 import { setup } from "./util/Setup";

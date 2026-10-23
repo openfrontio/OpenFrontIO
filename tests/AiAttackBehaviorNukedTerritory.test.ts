@@ -7,8 +7,8 @@ import {
 import { PseudoRandom } from "@openfront/engine-lib/PseudoRandom";
 import { AttackExecution } from "@openfront/engine/execution/AttackExecution";
 import { NationAllianceBehavior } from "@openfront/engine/execution/nation/NationAllianceBehavior";
-import { NationEmojiBehavior } from "@openfront/engine/execution/nation/NationEmojiBehavior";
 import { NationAttackBehavior } from "@openfront/engine/execution/nation/NationAttackBehavior";
+import { NationEmojiBehavior } from "@openfront/engine/execution/nation/NationEmojiBehavior";
 import { NationWarshipBehavior } from "@openfront/engine/execution/nation/NationWarshipBehavior";
 import { Game, Player } from "@openfront/engine/game/Game";
 import { setup } from "./util/Setup";
