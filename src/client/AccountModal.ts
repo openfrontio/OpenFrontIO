@@ -35,6 +35,8 @@ import "./components/CreatorCodePanel";
 import type { CreatorChangedDetail } from "./components/CreatorCodePanel";
 import "./components/CurrencyDisplay";
 import "./components/Difficulties";
+import "./components/ffaRating/FfaRatingSummary";
+import { ffaSummaryFromMe } from "./components/ffaRating/FfaRatingSummary";
 import "./components/FriendsList";
 import type { PrestigeFlow } from "./components/PrestigeFlow";
 import "./components/ProfileCard";
@@ -642,6 +644,16 @@ export class AccountModal extends BaseModal {
     variant: "full" | "compact",
   ): TemplateResult | typeof nothing {
     const player = this.userMeResponse?.player;
+    const ffaRating = ffaSummaryFromMe(player?.leaderboard?.ffa);
+    // No level to show (progression off): the full tab still shows the rating.
+    if (player?.publicId && !player.progress) {
+      return variant === "full" && ffaRating !== null
+        ? html`<ffa-rating-summary
+            class="mb-4 block"
+            .rating=${ffaRating}
+          ></ffa-rating-summary>`
+        : nothing;
+    }
     if (!player?.publicId || !player.progress) return nothing;
     // With any XP still waiting to be scored, provisionally: it never offers
     // Prestige (only the confirmed level can).
@@ -653,6 +665,7 @@ export class AccountModal extends BaseModal {
       .clanTag=${this.displayClanTag}
       .progress=${view.progress}
       .provisional=${view.provisional}
+      .ffaRating=${ffaRating}
       .openKey=${`account-${this.openCount}`}
       prestigeable
       @prestige-request=${this.handlePrestigeRequest}

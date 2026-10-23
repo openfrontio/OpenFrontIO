@@ -61,7 +61,7 @@ export class LeaderboardModal extends BaseModal {
         },
         {
           key: "playersFfa",
-          label: translateText("leaderboard_modal.ranked_ffa_tab"),
+          label: translateText("leaderboard_modal.ffa_rating_tab"),
         },
         { key: "clans", label: translateText("leaderboard_modal.clans_tab") },
         { key: "tribes", label: translateText("leaderboard_modal.tribes_tab") },

@@ -15,6 +15,11 @@ import type { PlayerGameHistoryCache } from "./components/baseComponents/stats/P
 import "./components/baseComponents/stats/PlayerStatsTree";
 import { BaseModal } from "./components/BaseModal";
 import "./components/clan/ClanCard";
+import "./components/ffaRating/FfaRatingSummary";
+import {
+  ffaSummaryFromProfile,
+  type FfaRatingSummaryData,
+} from "./components/ffaRating/FfaRatingSummary";
 import "./components/PlayerName";
 import "./components/ProfileCard";
 import "./components/ProfileProgression";
@@ -55,6 +60,7 @@ export class PlayerProfileModal extends BaseModal {
   @state() private statsTree: PlayerStatsTree | null = null;
   @state() private clans: NonNullable<PlayerProfile["clans"]> = [];
   @state() private displayClanTag: string | null = null;
+  @state() private ffaRating: FfaRatingSummaryData | null = null;
   // Level / XP, when progression is on and the player has any.
   @state() private progress: PublicProgress | null = null;
   @state() private loading = false;
@@ -312,13 +318,19 @@ export class PlayerProfileModal extends BaseModal {
     const view = this.progressView();
     return html`
       ${view === null
-        ? nothing
+        ? this.ffaRating === null
+          ? nothing
+          : html`<ffa-rating-summary
+              class="mb-4 block"
+              .rating=${this.ffaRating}
+            ></ffa-rating-summary>`
         : html`<profile-card
             class="mb-4 block"
             .username=${this.username ?? this.publicId ?? ""}
             .clanTag=${this.displayClanTag}
             .progress=${view.progress}
             .provisional=${view.provisional}
+            .ffaRating=${this.ffaRating}
             .openKey=${`profile-${this.openCount}`}
           ></profile-card>`}
       <profile-share
@@ -494,6 +506,7 @@ export class PlayerProfileModal extends BaseModal {
     this.statsTree = null;
     this.clans = [];
     this.displayClanTag = null;
+    this.ffaRating = null;
     this.progress = null;
     this.gameHistoryCache = null;
     this.gamesScrollTop = 0;
@@ -548,6 +561,8 @@ export class PlayerProfileModal extends BaseModal {
     this.clans = profile === false ? [] : (profile.clans ?? []);
     this.displayClanTag =
       profile === false ? null : (profile.displayClanTag ?? null);
+    this.ffaRating =
+      profile === false ? null : ffaSummaryFromProfile(profile.ffaRating);
   }
 
   // Intentionally preserves publicId/statsTree/history cache/scroll: the page

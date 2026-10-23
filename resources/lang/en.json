@@ -928,6 +928,29 @@
     "minimize": "Minimize",
     "open_on_twitch": "Open {channel} on Twitch"
   },
+  "ffa_rating": {
+    "calibrating": "Calibrating {n}/10",
+    "calibration_complete": "Calibration complete",
+    "credit": "Rating by OFstats",
+    "expected": "Expected win: {pct}%",
+    "peak": "Peak {rating}",
+    "pending": "Calculating rating…",
+    "placement": "Placement",
+    "rating": "Rating",
+    "result": "Result",
+    "tier": {
+      "bronze": "Bronze",
+      "diamond": "Diamond",
+      "gold": "Gold",
+      "grandmaster": "Grandmaster",
+      "iron": "Iron",
+      "master": "Master",
+      "platinum": "Platinum",
+      "silver": "Silver"
+    },
+    "tier_up": "Promoted to {tier}",
+    "title": "FFA Rating"
+  },
   "free_play": {
     "account": "Your account, stats, friends and cosmetics",
     "ad_free_steam": "No ads in the Steam app, ever",
@@ -1411,6 +1434,7 @@
     "clans_tab": "Clans",
     "elo": "ELO",
     "error": "Error loading leaderboard",
+    "ffa_rating_tab": "FFA Rating",
     "games": "Games",
     "loss_score": "Loss Score",
     "loss_score_tooltip": "Weighted losses based on clan participation and match difficulty",
@@ -1419,7 +1443,6 @@
     "player": "Player",
     "rank": "Rank",
     "ranked_2v2_tab": "2v2 Ranked",
-    "ranked_ffa_tab": "FFA Ranked",
     "ranked_no_stats": "No ranked games have been played on this ladder yet",
     "ranked_tab": "1v1 Ranked",
     "ratio": "Ratio",

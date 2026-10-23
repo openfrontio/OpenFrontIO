@@ -17,6 +17,8 @@ vi.mock("../../src/client/Utils", () => ({
       "leaderboard_modal.title": "Leaderboard",
       "leaderboard_modal.ranked_tab": "Ranked",
       "leaderboard_modal.ranked_2v2_tab": "2v2 Ranked",
+      "leaderboard_modal.ffa_rating_tab": "FFA Rating",
+      "ffa_rating.rating": "Rating",
       "leaderboard_modal.ranked_no_stats": "No ranked games on this ladder",
       "leaderboard_modal.clans_tab": "Clans",
       "leaderboard_modal.refresh_time": "Refreshed every 1 hour",
@@ -135,6 +137,7 @@ beforeEach(() => {
 import { RankedType } from "@openfront/engine-api/game/GameTypes";
 import { RankedLeaderboardResponseSchema } from "@openfront/shared/ApiSchemas";
 import "../../src/client/components/baseComponents/Modal";
+import type { FfaTierBadge } from "../../src/client/components/ffaRating/FfaTierBadge";
 import { LeaderboardModal } from "../../src/client/LeaderboardModal";
 
 describe("LeaderboardModal", () => {
@@ -676,6 +679,205 @@ describe("LeaderboardModal", () => {
       );
       await modal.updateComplete;
       expect(getPlayerList()!.rankedType).toBe(RankedType.TwoVTwo);
+    });
+  });
+
+  describe("FFA rating tab", () => {
+    const entry = (rank: number, publicId: string, elo: number) => ({
+      rank,
+      elo,
+      peakElo: elo,
+      wins: 1,
+      losses: 1,
+      total: 2,
+      public_id: publicId,
+      accountUsername: publicId,
+    });
+    const rated = (rank: number, id: string, elo: number, tier: string) => ({
+      ...entry(rank, id, elo),
+      uncertainty: 61.2,
+      tier,
+    });
+    const ratingHeader = () =>
+      modal.querySelectorAll("leaderboard-player-list thead th")[2].textContent;
+    const fetchMock = () => global.fetch as ReturnType<typeof vi.fn>;
+    const meOnce = async (me: unknown) => {
+      const { getUserMe } = await import("../../src/client/Api");
+      vi.mocked(getUserMe).mockResolvedValueOnce(me as never);
+    };
+
+    it("labels the FFA tab FFA Rating", () => {
+      const tabs = (
+        modal as unknown as {
+          modalConfig(): { tabs: { key: string; label: string }[] };
+        }
+      ).modalConfig().tabs;
+      expect(tabs.find((t) => t.key === "playersFfa")!.label).toBe(
+        "FFA Rating",
+      );
+    });
+
+    it("shows a tier badge and rating ± on the FFA tab only", async () => {
+      fetchMock().mockResolvedValueOnce(
+        jsonRes({
+          "1v1": [entry(1, "p1", 1200)],
+          "2v2": [],
+          ffa: [rated(1, "p4", 2012.6, "Diamond II")],
+        }),
+      );
+      await getPlayerList()!.loadPlayerLeaderboard(true);
+      await getPlayerList()!.updateComplete;
+      expect(modal.querySelectorAll("ffa-tier-badge")).toHaveLength(0); // 1v1 tab
+      expect(modal.querySelector("ofstats-credit")).toBeNull();
+      expect(ratingHeader()).toContain("Elo");
+
+      await showLadder("playersFfa");
+      const cell = modal.querySelector("[data-ffa-rating-cell]")!;
+      expect(cell.querySelector<FfaTierBadge>("ffa-tier-badge")!.tier).toBe(
+        "Diamond II",
+      );
+      expect(cell.textContent).toContain("2013");
+      expect(cell.textContent).toContain("± 61");
+      expect(ratingHeader()).toContain("Rating");
+      expect(modal.querySelector("ofstats-credit")).not.toBeNull();
+    });
+
+    it("rounds the rating of a row whose tier was dropped on a live board", async () => {
+      fetchMock().mockResolvedValueOnce(
+        jsonRes({
+          "1v1": [],
+          "2v2": [],
+          ffa: [
+            rated(1, "p4", 2012.6, "Diamond II"),
+            // The schema drops a malformed tier (the mocked fetch here skips
+            // it), so such a row arrives with no tier and an unrounded Elo.
+            entry(2, "p5", 1850.7),
+          ],
+        }),
+      );
+      await getPlayerList()!.loadPlayerLeaderboard(true);
+      await showLadder("playersFfa");
+      expect(modal.querySelectorAll("[data-ffa-rating-cell]")).toHaveLength(1);
+      const text = modal.querySelector(
+        "leaderboard-player-list tbody",
+      )!.textContent!;
+      expect(text).toContain("1851");
+      expect(text).not.toContain("1850.7");
+    });
+
+    it("shows the frozen FFA ladder plainly", async () => {
+      fetchMock().mockResolvedValueOnce(
+        jsonRes({ "1v1": [], "2v2": [], ffa: [entry(1, "p4", 1300)] }),
+      );
+      await getPlayerList()!.loadPlayerLeaderboard(true);
+      await showLadder("playersFfa");
+      expect(modal.querySelector("ffa-tier-badge")).toBeNull();
+      expect(modal.querySelector("[data-ffa-rating-cell]")).toBeNull();
+      expect(modal.querySelector("ofstats-credit")).toBeNull();
+      expect(ratingHeader()).toContain("Elo");
+      const cols = modal.querySelectorAll<HTMLElement>(
+        "leaderboard-player-list col",
+      );
+      expect(cols[2].style.width).toBe("6rem");
+    });
+
+    it("widens the rating column, less on phones, once rows carry a tier", async () => {
+      fetchMock().mockResolvedValueOnce(
+        jsonRes({
+          "1v1": [],
+          "2v2": [],
+          ffa: [rated(1, "p4", 2012.6, "Diamond II")],
+        }),
+      );
+      await getPlayerList()!.loadPlayerLeaderboard(true);
+      await showLadder("playersFfa");
+      const cols = modal.querySelectorAll<HTMLElement>(
+        "leaderboard-player-list col",
+      );
+      expect(cols[2].style.width).toBe("");
+      expect(cols[2].classList).toContain("w-32");
+      expect(cols[2].classList).toContain("sm:w-48");
+      // The rating and its uncertainty never wrap apart.
+      const cell = modal.querySelector("[data-ffa-rating-cell]")!;
+      const value = cell.querySelector("[data-ffa-rating-value]")!;
+      expect(value.classList).toContain("whitespace-nowrap");
+      expect(value.textContent).toContain("± 61");
+    });
+
+    it("pins a calibrating row for a signed-in player not on the board", async () => {
+      await meOnce({
+        player: {
+          publicId: "me",
+          username: "me.1",
+          leaderboard: { ffa: { games: 4, wins: 1, calibrationGames: 4 } },
+        },
+      });
+      fetchMock().mockResolvedValueOnce(
+        jsonRes({
+          "1v1": [entry(1, "p1", 1200)],
+          "2v2": [],
+          ffa: [rated(1, "p4", 2012.6, "Diamond II")],
+        }),
+      );
+      await getPlayerList()!.loadPlayerLeaderboard(true);
+      await getPlayerList()!.updateComplete;
+      expect(modal.querySelector("[data-ffa-calibrating-row]")).toBeNull(); // 1v1 tab
+      await showLadder("playersFfa");
+      const row = modal.querySelector("tfoot [data-ffa-calibrating-row]")!;
+      expect(
+        row.querySelector<FfaTierBadge>("ffa-tier-badge")!.calibrationGames,
+      ).toBe(4);
+      const cells = row.querySelectorAll("td");
+      expect(cells).toHaveLength(5);
+      expect(cells[0].textContent).toContain("—");
+      expect(cells[1].textContent).toContain("Your ranking");
+      expect(cells[1].querySelector("player-name")).not.toBeNull();
+      expect(cells[3].textContent).toContain("4");
+      expect(cells[4].textContent).toContain("25.0%");
+    });
+
+    it("shows a dash win ratio for a calibrating player with no games", async () => {
+      await meOnce({
+        player: {
+          publicId: "me",
+          leaderboard: { ffa: { calibrationGames: 0 } },
+        },
+      });
+      fetchMock().mockResolvedValueOnce(
+        jsonRes({
+          "1v1": [],
+          "2v2": [],
+          ffa: [rated(1, "p4", 2012.6, "Diamond II")],
+        }),
+      );
+      await getPlayerList()!.loadPlayerLeaderboard(true);
+      await showLadder("playersFfa");
+      const cells = modal.querySelectorAll(
+        "tfoot [data-ffa-calibrating-row] td",
+      );
+      expect(cells[3].textContent).toContain("0");
+      expect(cells[4].textContent).toContain("—");
+    });
+
+    it("pins no calibrating row for a listed player", async () => {
+      await meOnce({
+        player: {
+          publicId: "p4",
+          leaderboard: {
+            ffa: { elo: 2012.6, tier: "Diamond II", games: 40, wins: 9 },
+          },
+        },
+      });
+      fetchMock().mockResolvedValueOnce(
+        jsonRes({
+          "1v1": [entry(1, "p1", 1200)],
+          "2v2": [],
+          ffa: [rated(1, "p4", 2012.6, "Diamond II")],
+        }),
+      );
+      await getPlayerList()!.loadPlayerLeaderboard(true);
+      await showLadder("playersFfa");
+      expect(modal.querySelector("[data-ffa-calibrating-row]")).toBeNull();
     });
   });
 
