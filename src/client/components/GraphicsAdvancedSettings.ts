@@ -957,21 +957,23 @@ export class GraphicsAdvancedSettings extends LitElement {
                 ?disabled=${!layersOn}
                 @change=${() => this.onToggleLayer(layer.id)}
               ></setting-toggle>
-              ${layersOn && this.isLayerVisible(layer.id)
-                ? html`<setting-slider
-                    label=${`${this.layerName(layer.id)} — ${translateText("graphics_setting.layer_alpha_label")}`}
-                    description=""
-                    id=${`map-layer-${layer.id}-alpha-slider`}
-                    min=${LAYER_ALPHA_MIN}
-                    max=${LAYER_ALPHA_MAX}
-                    step=${LAYER_ALPHA_STEP}
-                    unit=""
-                    .formatValue=${(v: number) => v.toFixed(2)}
-                    .value=${alpha}
-                    @change=${(e: Event) =>
-                      this.onLayerAlphaSliderChange(layer.id, e)}
-                  ></setting-slider>`
-                : nothing}
+              ${
+                layersOn && this.isLayerVisible(layer.id)
+                  ? html`<setting-slider
+                      label=${`${this.layerName(layer.id)} — ${translateText("graphics_setting.layer_alpha_label")}`}
+                      description=""
+                      id=${`map-layer-${layer.id}-alpha-slider`}
+                      min=${LAYER_ALPHA_MIN}
+                      max=${LAYER_ALPHA_MAX}
+                      step=${LAYER_ALPHA_STEP}
+                      unit=""
+                      .formatValue=${(v: number) => v.toFixed(2)}
+                      .value=${alpha}
+                      @change=${(e: Event) =>
+                        this.onLayerAlphaSliderChange(layer.id, e)}
+                    ></setting-slider>`
+                  : nothing
+              }
             </div>
           `;
         })}
