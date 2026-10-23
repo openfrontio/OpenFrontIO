@@ -44,7 +44,7 @@ export class MapLayerPass {
     private mapW: number,
     private mapH: number,
     /** 0 = land layer, 1 = water layer. */
-    private placement: 0 | 1,
+    readonly placement: 0 | 1,
     /** Whether the layer is destroyed by nukes. */
     private nukeable: boolean,
   ) {

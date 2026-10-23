@@ -19,10 +19,13 @@ import {
 } from "../NavAccountButton";
 import { closeMobileSidebar } from "../Navigation";
 import { levelFraction } from "../Progression";
+import {
+  PROVISIONAL_PROGRESS_CHANGED,
+  provisionalProgress,
+} from "../ProvisionalProgress";
 import { steamSDK } from "../SteamSDK";
 import { playerProfileUrl } from "../utilities/PlayerProfileUrl";
 import { copyToClipboard, showToast, translateText } from "../Utils";
-import "./LevelBadge";
 import { levelBadgeLabel } from "./LevelBadge";
 import { xpBar, xpProgressText } from "./XpBar";
 
@@ -99,6 +102,11 @@ export class NavAccountMenu extends LitElement {
   // The progress the trigger shows. It trails a refreshed /users/@me while
   // the bar catches up to it (see navCatchUp).
   @state() private shownProgress: Progress | null = null;
+  // Whether the progress the trigger heads for is provisional: it counts the
+  // XP of games still waiting to be scored (ProvisionalProgress.ts).
+  @state() private provisional = false;
+  // Bumped when the pending XP changes, so the progress is read again.
+  @state() private provisionalRev = 0;
   // While catching up: the fill's width in place of the progress's (100 to
   // finish the old level, 0 to start the new one), and its transition.
   @state() private barOverride: number | null = null;
@@ -123,6 +131,10 @@ export class NavAccountMenu extends LitElement {
     document.addEventListener(
       "userMeResponse",
       this.handleUserMeResponse as EventListener,
+    );
+    document.addEventListener(
+      PROVISIONAL_PROGRESS_CHANGED,
+      this.handleProvisionalChanged,
     );
     document.addEventListener("click", this.handleDocumentClick);
     window.addEventListener("keydown", this.handleKeyDown);
@@ -150,6 +162,10 @@ export class NavAccountMenu extends LitElement {
       "userMeResponse",
       this.handleUserMeResponse as EventListener,
     );
+    document.removeEventListener(
+      PROVISIONAL_PROGRESS_CHANGED,
+      this.handleProvisionalChanged,
+    );
     document.removeEventListener("click", this.handleDocumentClick);
     window.removeEventListener("keydown", this.handleKeyDown);
     window.removeEventListener("showPage", this.closeMenu);
@@ -160,10 +176,16 @@ export class NavAccountMenu extends LitElement {
   }
 
   protected willUpdate(changed: PropertyValues): void {
-    if (!changed.has("userMeResponse") && !changed.has("portalUser")) {
+    if (
+      !changed.has("userMeResponse") &&
+      !changed.has("portalUser") &&
+      !changed.has("provisionalRev")
+    ) {
       return;
     }
-    const next = this.progress();
+    const view = this.progressView();
+    this.provisional = view?.provisional ?? false;
+    const next = view?.progress ?? null;
     const shown = this.shownProgress;
     if (next === shown) return;
     // A catch-up still running is overtaken: carry on from what it shows.
@@ -283,6 +305,10 @@ export class NavAccountMenu extends LitElement {
     this.panel = null;
   }
 
+  private handleProvisionalChanged = () => {
+    this.provisionalRev++;
+  };
+
   private handleUserMeResponse = (
     event: CustomEvent<UserMeResponse | false>,
   ) => {
@@ -365,8 +391,9 @@ export class NavAccountMenu extends LitElement {
     const items: MenuItem[] = [];
 
     // Nothing to share without a publicId (older backend, or a session whose
-    // player record hasn't resolved).
-    if (publicId) {
+    // player record hasn't resolved). Not on Poki: the link leads players off
+    // Poki.
+    if (publicId && gamePortal.name() !== "poki") {
       items.push({
         key: "copy-profile-url",
         labelKey: "nav_account_menu.copy_profile_url",
@@ -472,9 +499,11 @@ export class NavAccountMenu extends LitElement {
   render(): TemplateResult {
     return html`
       <div class="relative" data-account-nav>
-        ${this.variant === "mobile"
-          ? this.renderMobileTrigger()
-          : this.renderDesktopTrigger()}
+        ${
+          this.variant === "mobile"
+            ? this.renderMobileTrigger()
+            : this.renderDesktopTrigger()
+        }
       </div>
     `;
   }
@@ -494,15 +523,18 @@ export class NavAccountMenu extends LitElement {
         aria-label=${translateText("nav_account_menu.title")}
         class="w-max min-w-60 max-w-[min(20rem,calc(100vw-1rem))] rounded-xl border border-white/10 bg-zinc-900 shadow-xl overflow-hidden"
       >
+        ${this.renderProvisionalNote()}
         ${this.items().map(
           (item) => html`
             <button
               role="menuitem"
               data-menu-item=${item.key}
               @click=${() => this.selectItem(item)}
-              class="w-full flex items-center gap-3 px-4 py-3 text-left text-sm font-medium normal-case tracking-normal cursor-pointer transition-colors ${item.danger
-                ? "text-red-400 hover:bg-red-500/10 border-t border-white/10"
-                : "text-white/80 hover:bg-white/10 hover:text-white"}"
+              class="w-full flex items-center gap-3 px-4 py-3 text-left text-sm font-medium normal-case tracking-normal cursor-pointer transition-colors ${
+                item.danger
+                  ? "text-red-400 hover:bg-red-500/10 border-t border-white/10"
+                  : "text-white/80 hover:bg-white/10 hover:text-white"
+              }"
             >
               <span class="w-4 h-4 shrink-0">${item.icon}</span>
               <span class="min-w-0 break-words"
@@ -515,12 +547,45 @@ export class NavAccountMenu extends LitElement {
     `;
   }
 
+  // Heads the menu while the trigger's level counts XP still waiting to be
+  // scored: the level and XP it shows, and that they're provisional.
+  private renderProvisionalNote(): TemplateResult | typeof nothing {
+    const view = this.progressView();
+    if (view === null || !view.provisional) return nothing;
+    const { progress } = view;
+    return html`<div
+      data-menu-provisional
+      class="flex items-center gap-3 px-4 py-3 border-b border-white/10 bg-white/[0.03]"
+    >
+      <level-badge
+        .level=${progress.level}
+        .prestige=${progress.prestige}
+        .legend=${progress.legend}
+        .size=${28}
+      ></level-badge>
+      <div class="min-w-0 text-xs leading-snug">
+        <div class="font-bold text-white normal-case tracking-normal">
+          ${levelBadgeLabel(progress.level, progress.prestige, progress.legend)}
+          <span class="text-white/40">·</span>
+          <span class="tabular-nums text-white/70"
+            >${xpProgressText(progress.xpInLevel, progress.xpForNext)}</span
+          >
+        </div>
+        <div
+          class="mt-0.5 text-amber-200/80 normal-case tracking-normal break-words"
+        >
+          ${translateText("progression.provisional_label")}
+        </div>
+      </div>
+    </div>`;
+  }
+
   private renderChevron(): TemplateResult {
     return html`
       <svg
-        class="w-3 h-3 shrink-0 transition-transform ${this.menuOpen
-          ? "rotate-180"
-          : ""}"
+        class="w-3 h-3 shrink-0 transition-transform ${
+          this.menuOpen ? "rotate-180" : ""
+        }"
         xmlns="http://www.w3.org/2000/svg"
         viewBox="0 0 24 24"
         fill="none"
@@ -535,24 +600,29 @@ export class NavAccountMenu extends LitElement {
     `;
   }
 
-  /** The signed-in player's level, or null when there is none to show. */
-  private progress(): Progress | null {
+  private progressView(): { progress: Progress; provisional: boolean } | null {
     if (!this.isSignedIn() || this.userMeResponse === false) return null;
-    return this.userMeResponse.player.progress ?? null;
+    const { publicId, progress } = this.userMeResponse.player;
+    if (progress === undefined) return null;
+    return provisionalProgress(publicId, progress);
   }
 
   // The trigger's accessible name. Its aria-label would otherwise hide the
   // level badge inside it from screen readers, so the level is in it too.
   private triggerLabel(): string {
-    const progress = this.progress();
-    if (progress === null) return translateText("main.account");
-    return translateText("nav_account_menu.account_with_level", {
+    const view = this.progressView();
+    if (view === null) return translateText("main.account");
+    const { progress } = view;
+    const label = translateText("nav_account_menu.account_with_level", {
       level: levelBadgeLabel(
         progress.level,
         progress.prestige,
         progress.legend,
       ),
     });
+    return view.provisional
+      ? `${label} · ${translateText("progression.provisional_label")}`
+      : label;
   }
 
   // Level badge beside the avatar, plus a thin XP bar along the trigger's
@@ -567,42 +637,51 @@ export class NavAccountMenu extends LitElement {
       progress.prestige,
       progress.legend,
     );
-    const title = `${label} · ${xpProgressText(progress.xpInLevel, progress.xpForNext)}`;
+    const title = [
+      label,
+      xpProgressText(progress.xpInLevel, progress.xpForNext),
+      ...(this.provisional
+        ? [translateText("progression.provisional_label")]
+        : []),
+    ].join(" · ");
     // Phones: 20px (smaller, the unit icon can't be read) on the avatar's
     // corner, anchored 6px out so it grows away from the avatar, not over it.
     const mobile = variant === "mobile";
     return html`
-      ${this.levelPop
-        ? html`<style>
-            @keyframes nav-level-pop {
-              0% {
-                transform: scale(1);
+      ${
+        this.levelPop
+          ? html`<style>
+              @keyframes nav-level-pop {
+                0% {
+                  transform: scale(1);
+                }
+                35% {
+                  transform: scale(1.55);
+                  filter: drop-shadow(0 0 6px rgba(250, 204, 21, 0.9));
+                }
+                100% {
+                  transform: scale(1);
+                }
               }
-              35% {
-                transform: scale(1.55);
-                filter: drop-shadow(0 0 6px rgba(250, 204, 21, 0.9));
-              }
-              100% {
-                transform: scale(1);
-              }
-            }
-            .nav-level-pop level-badge {
-              display: block;
-              animation: nav-level-pop ${NAV_LEVEL_POP_MS}ms
-                cubic-bezier(0.2, 0.9, 0.3, 1.3);
-            }
-            @media (prefers-reduced-motion: reduce) {
               .nav-level-pop level-badge {
-                animation: none;
+                display: block;
+                animation: nav-level-pop ${NAV_LEVEL_POP_MS}ms
+                  cubic-bezier(0.2, 0.9, 0.3, 1.3);
               }
-            }
-          </style>`
-        : nothing}
+              @media (prefers-reduced-motion: reduce) {
+                .nav-level-pop level-badge {
+                  animation: none;
+                }
+              }
+            </style>`
+          : nothing
+      }
       <span
         data-account-level
-        class="${mobile
-          ? "absolute -top-1.5 -left-1.5 z-10"
-          : "flex items-center"} ${this.levelPop ? "nav-level-pop" : ""}"
+        ?data-provisional=${this.provisional}
+        class="${
+          mobile ? "absolute -top-1.5 -left-1.5 z-10" : "flex items-center"
+        } ${this.levelPop ? "nav-level-pop" : ""}"
         title=${title}
       >
         <level-badge
@@ -629,9 +708,11 @@ export class NavAccountMenu extends LitElement {
     return html`
       <span
         data-account-xp-bar
-        class="pointer-events-none absolute ${variant === "mobile"
-          ? "-bottom-1.5 left-0 right-0"
-          : "bottom-0 left-0 right-0"}"
+        class="pointer-events-none absolute ${
+          variant === "mobile"
+            ? "-bottom-1.5 left-0 right-0"
+            : "bottom-0 left-0 right-0"
+        }"
         aria-hidden="true"
       >
         ${xpBar(percent, {
@@ -732,9 +813,11 @@ export class NavAccountMenu extends LitElement {
              NavAccountButton and must not be re-created. -->
         <span
           data-account-identity
-          class="relative flex items-center gap-2 ${this.shownProgress !== null
-            ? "pb-1.5 [&_[data-account-avatar]]:h-7 [&_[data-account-avatar]]:w-7"
-            : ""}"
+          class="relative flex items-center gap-2 ${
+            this.shownProgress !== null
+              ? "pb-1.5 [&_[data-account-avatar]]:h-7 [&_[data-account-avatar]]:w-7"
+              : ""
+          }"
         >
           ${this.renderLevel("desktop")}
           ${this.renderIdentityIcons({

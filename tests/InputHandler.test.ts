@@ -1388,6 +1388,10 @@ describe("InputHandler AutoUpgrade", () => {
       inputHandler.initialize();
     });
 
+    afterEach(() => {
+      new UserSettings().removeCached(KEYBINDS_KEY, false);
+    });
+
     test("N targets the player under the cursor", () => {
       const targets: DoTargetPlayerEvent[] = [];
       eventBus.on(DoTargetPlayerEvent, (e) => targets.push(e));
@@ -1415,6 +1419,10 @@ describe("InputHandler AutoUpgrade", () => {
         eventBus,
       );
       inputHandler.initialize();
+    });
+
+    afterEach(() => {
+      new UserSettings().removeCached(KEYBINDS_KEY, false);
     });
 
     test("R opens quick chat at the last mouse position", () => {
@@ -1461,6 +1469,24 @@ describe("InputHandler AutoUpgrade", () => {
 
       expect(chats).toHaveLength(0);
     });
+
+    test("Shift+R resets graphics when altKey is bound to ShiftRight", () => {
+      new UserSettings().setKeybinds({
+        altKey: { value: "ShiftRight", key: "Shift" },
+      });
+
+      const chats: ShowChatMenuEvent[] = [];
+      const refreshes: RefreshGraphicsEvent[] = [];
+      eventBus.on(ShowChatMenuEvent, (e) => chats.push(e));
+      eventBus.on(RefreshGraphicsEvent, (e) => refreshes.push(e));
+
+      window.dispatchEvent(
+        new KeyboardEvent("keyup", { code: "KeyR", shiftKey: true }),
+      );
+
+      expect(chats).toHaveLength(0);
+      expect(refreshes).toHaveLength(1);
+    });
   });
 
   describe("Emoji menu keybind", () => {
@@ -1478,6 +1504,10 @@ describe("InputHandler AutoUpgrade", () => {
         eventBus,
       );
       inputHandler.initialize();
+    });
+
+    afterEach(() => {
+      new UserSettings().removeCached(KEYBINDS_KEY, false);
     });
 
     test("F opens the emoji menu at the last mouse position", () => {

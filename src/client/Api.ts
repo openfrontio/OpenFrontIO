@@ -60,6 +60,7 @@ import {
   getPlayToken,
   isSessionActive,
   logOut,
+  rememberPublicId,
   userAuth,
 } from "./Auth";
 import { ClientEnv } from "./ClientEnv";
@@ -271,7 +272,9 @@ async function requestUserMe(): Promise<{
     // session changed (logout, account switch) while the request was in
     // flight: a stale response must not reactivate the old player's scope.
     if (isSessionActive(claims.sub)) {
-      UserSettings.setPlayerId(result.data.player.publicId);
+      const publicId = result.data.player.publicId;
+      rememberPublicId(claims.sub, publicId);
+      UserSettings.setPlayerId(publicId);
     }
     return { profile: result.data, aborted: false };
   } catch (e) {
@@ -1991,6 +1994,31 @@ export async function markNoticeSeen(notice: string): Promise<boolean> {
     return true;
   } catch (e) {
     console.error("markNoticeSeen: request failed", e);
+    return false;
+  }
+}
+
+export async function markMessageSeen(kind: string): Promise<boolean> {
+  try {
+    const response = await fetch(`${getApiBase()}/users/@me/messages/seen`, {
+      method: "POST",
+      headers: {
+        Authorization: await getAuthHeader(),
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ kind }),
+    });
+    if (!response.ok) {
+      console.error(
+        "markMessageSeen: request failed",
+        response.status,
+        response.statusText,
+      );
+      return false;
+    }
+    return true;
+  } catch (e) {
+    console.error("markMessageSeen: request failed", e);
     return false;
   }
 }

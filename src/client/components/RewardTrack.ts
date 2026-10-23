@@ -51,8 +51,11 @@ export function isLevelReward(reward: Reward): boolean {
  *           the owner when their rewards don't say which level they're for);
  *           and the owner's level whose only unclaimed rewards are held
  *           (isRewardClaimable): not claimed, but nothing to claim yet.
+ * pending — reached only provisionally: the player's level counts XP from
+ *           games still waiting to be scored (ProvisionalProgress.ts). The
+ *           API hasn't granted its rewards yet, so nothing to claim.
  */
-type TrackNodeStatus = "claimed" | "ready" | "locked" | "passed";
+type TrackNodeStatus = "claimed" | "ready" | "locked" | "passed" | "pending";
 
 interface TrackNode {
   level: number;
@@ -174,11 +177,16 @@ export function trackEnd(config: ProgressionConfig, run: number): TrackEnd {
  * Everything the track draws. `rewards` is the owner's unclaimed rewards
  * from /users/@me, or null for a visitor. Only this run's level rewards
  * count: earlier runs' are claimed from the account's rewards list.
+ *
+ * `confirmedLevel` is set when `progress` counts XP its rewards list doesn't
+ * know of yet (pending games, ProvisionalProgress.ts): the levels past it are
+ * pending, never claimable. Claims come from the reward rows alone.
  */
 export function rewardTrackModel(
   progress: TrackProgress,
   config: ProgressionConfig,
   rewards: readonly Reward[] | null,
+  confirmedLevel: number | null = null,
 ): RewardTrackModel {
   const run = clampPrestige(progress.prestige);
   const maxLevel = trackMaxLevel(config);
@@ -225,7 +233,14 @@ export function rewardTrackModel(
     const passed = level <= current;
     let status: TrackNodeStatus;
     if (!passed) status = "locked";
-    else if (!statuses) status = "passed";
+    else if (
+      confirmedLevel !== null &&
+      level > confirmedLevel &&
+      !waiting.has(level) &&
+      !held.has(level)
+    ) {
+      status = "pending";
+    } else if (!statuses) status = "passed";
     else if (waiting.has(level)) status = "ready";
     else status = held.has(level) ? "passed" : "claimed";
     nodes.push({
@@ -302,6 +317,21 @@ const LOCK = html`<svg
   <path d="M8 11V8a4 4 0 0 1 8 0v3" />
 </svg>`;
 
+// An hourglass: reached provisionally, waiting for the game to be scored.
+const HOURGLASS = html`<svg
+  viewBox="0 0 24 24"
+  width="11"
+  height="11"
+  fill="none"
+  stroke="#fcd34d"
+  stroke-width="2.4"
+  stroke-linecap="round"
+  stroke-linejoin="round"
+  aria-hidden="true"
+>
+  <path d="M7 3h10M7 21h10M8 3c0 5 8 6 8 9s-8 4-8 9M16 3c0 5-8 6-8 9s8 4 8 9" />
+</svg>`;
+
 const arrow = (side: "prev" | "next") =>
   html`<svg
     viewBox="0 0 24 24"
@@ -324,6 +354,11 @@ export class RewardTrack extends LitElement {
   // The owner's unclaimed rewards; null for a visitor.
   @property({ attribute: false }) rewards: Reward[] | null = null;
   @property({ type: Boolean }) claiming = false;
+  // Set when `progress` is provisional: the confirmed level, past which the
+  // levels are only pending (see rewardTrackModel).
+  @property({ attribute: false }) confirmedLevel: number | null = null;
+  // The level counts XP from games the API hasn't scored yet.
+  @property({ type: Boolean }) provisional = false;
 
   // Replaceable for tests and previews.
   describeCosmetic: (flare: TrackFlare) => Promise<FlareCosmeticView | null> =
@@ -369,12 +404,18 @@ export class RewardTrack extends LitElement {
     if (
       changed.has("progress") ||
       changed.has("config") ||
-      changed.has("rewards")
+      changed.has("rewards") ||
+      changed.has("confirmedLevel")
     ) {
       this.model =
         this.progress === null || this.config === null
           ? null
-          : rewardTrackModel(this.progress, this.config, this.rewards);
+          : rewardTrackModel(
+              this.progress,
+              this.config,
+              this.rewards,
+              this.confirmedLevel,
+            );
       if (changed.has("progress")) this.scrolledToLevel = false;
       if (this.model?.owner && !this.model.statuses && !this.warnedUnplaced) {
         this.warnedUnplaced = true;
@@ -614,15 +655,29 @@ export class RewardTrack extends LitElement {
     return html`
       <section class=${SECTION} data-reward-track>
         <h3 class="mb-3 ${SECTION_TITLE}">
-          ${model.run === 0
-            ? translateText("reward_track.title_first_run")
-            : translateText("reward_track.title", { prestige: model.run })}
+          ${
+            model.run === 0
+              ? translateText("reward_track.title_first_run")
+              : translateText("reward_track.title", { prestige: model.run })
+          }
         </h3>
-        ${claim !== null && claim.ids.length > 0
-          ? this.renderClaimBar(claim)
-          : nothing}
+        ${
+          this.provisional
+            ? html`<p
+                class="-mt-2 mb-3 text-xs font-semibold text-amber-200/80"
+                data-track-provisional
+              >
+                ${translateText("progression.provisional_label")}
+              </p>`
+            : nothing
+        }
+        ${
+          claim !== null && claim.ids.length > 0
+            ? this.renderClaimBar(claim)
+            : nothing
+        }
         ${this.renderStrip(model)} ${this.renderTrack(model)}
-        ${model.statuses ? this.renderKey() : nothing}
+        ${model.statuses ? this.renderKey(model) : nothing}
       </section>
     `;
   }
@@ -632,9 +687,11 @@ export class RewardTrack extends LitElement {
     return html`<div class="rt-claim" data-track-claim data-pp>
       <div class="flex shrink-0 items-center gap-0.5">
         <cap-icon .size=${26}></cap-icon>
-        ${showPlutonium
-          ? html`<plutonium-icon .size=${22}></plutonium-icon>`
-          : nothing}
+        ${
+          showPlutonium
+            ? html`<plutonium-icon .size=${22}></plutonium-icon>`
+            : nothing
+        }
       </div>
       <div class="min-w-0 flex-[1_1_180px]">
         <div class="text-sm font-bold text-white" data-claim-count>
@@ -647,14 +704,16 @@ export class RewardTrack extends LitElement {
             >${translateText("reward_track.claim_caps", {
               amount: claim.caps.toLocaleString(),
             })}</span
-          >${showPlutonium
-            ? html`<span class="text-white/35"> · </span
-                ><span class="text-green-400" data-claim-plutonium
-                  >${translateText("reward_track.claim_plutonium", {
-                    amount: claim.plutonium.toLocaleString(),
-                  })}</span
-                >`
-            : nothing}
+          >${
+            showPlutonium
+              ? html`<span class="text-white/35"> · </span
+                  ><span class="text-green-400" data-claim-plutonium
+                    >${translateText("reward_track.claim_plutonium", {
+                      amount: claim.plutonium.toLocaleString(),
+                    })}</span
+                  >`
+              : nothing
+          }
         </div>
       </div>
       <o-button
@@ -703,24 +762,30 @@ export class RewardTrack extends LitElement {
       @keydown=${this.onStripKey}
     >
       <div class="rt-labels" aria-hidden="true">
-        ${model.level >= 10
-          ? html`<span class="rt-label-start" data-strip-start
-              >${translateText("reward_track.strip_start")}</span
-            >`
-          : nothing}
-        ${merged
-          ? nothing
-          : html`<span
-              class="rt-label-you"
-              data-strip-you
-              style="left:${pct(model.level)}"
-              >${youText}</span
-            >`}
+        ${
+          model.level >= 10
+            ? html`<span class="rt-label-start" data-strip-start
+                >${translateText("reward_track.strip_start")}</span
+              >`
+            : nothing
+        }
+        ${
+          merged
+            ? nothing
+            : html`<span
+                class="rt-label-you"
+                data-strip-you
+                style="left:${pct(model.level)}"
+                >${youText}</span
+              >`
+        }
         <span class="rt-label-end" data-strip-end ?data-legend=${end.legend}
-          >${merged
-            ? html`<span class="rt-label-you-merged">${youText}</span
-                ><span class="text-white/35"> · </span>`
-            : nothing}<span class="rt-label-end-text">${endText}</span></span
+          >${
+            merged
+              ? html`<span class="rt-label-you-merged">${youText}</span
+                  ><span class="text-white/35"> · </span>`
+              : nothing
+          }<span class="rt-label-end-text">${endText}</span></span
         >
       </div>
       <div class="rt-rail" data-strip-rail>
@@ -751,10 +816,9 @@ export class RewardTrack extends LitElement {
         <div
           class="rt-window"
           data-strip-window
-          style="left:calc(${pct(lo)} - 4px);width:calc(${stripPercent(
-            hi,
-            max,
-          ) - stripPercent(lo, max)}% + 8px)"
+          style="left:calc(${pct(lo)} - 4px);width:calc(${
+            stripPercent(hi, max) - stripPercent(lo, max)
+          }% + 8px)"
         ></div>
         <div
           class="rt-knob"
@@ -835,6 +899,7 @@ export class RewardTrack extends LitElement {
       dot = html`<div
         class="rt-dot"
         ?data-passed=${node.status !== "locked"}
+        ?data-pending=${node.status === "pending"}
         ?data-pu=${node.plutonium > 0}
       >
         ${node.level}
@@ -852,14 +917,20 @@ export class RewardTrack extends LitElement {
       <div class="rt-dotwrap">${dot}</div>
       <div class="rt-under">
         <div class="rt-caps" data-node-caps>
-          ${node.caps > 0
-            ? html`<cap-icon .size=${12}></cap-icon
-                >${node.caps.toLocaleString()}`
-            : html`<span class="text-white/35">—</span>`}
+          ${
+            node.caps > 0
+              ? html`<cap-icon .size=${12}></cap-icon
+                  >${node.caps.toLocaleString()}`
+              : html`<span class="text-white/35">—</span>`
+          }
         </div>
-        ${model.owner
-          ? html`<div class="rt-status">${this.renderStatus(node, model)}</div>`
-          : nothing}
+        ${
+          model.owner
+            ? html`<div class="rt-status">
+                ${this.renderStatus(node, model)}
+              </div>`
+            : nothing
+        }
       </div>
     </div>`;
   }
@@ -890,6 +961,8 @@ export class RewardTrack extends LitElement {
       parts.push(translateText("reward_track.key_ready"));
     } else if (node.status === "locked") {
       parts.push(translateText("reward_track.key_locked"));
+    } else if (node.status === "pending") {
+      parts.push(translateText("reward_track.key_pending"));
     }
     return parts.join(", ");
   }
@@ -902,20 +975,24 @@ export class RewardTrack extends LitElement {
           <div class="rt-preview">${view.preview}</div>
           <div class="min-w-0">
             <div class="rt-cname" data-callout-name>${view.name}</div>
-            ${view.typeLabel === ""
-              ? nothing
-              : html`<div class="rt-ctype" data-callout-type>
-                  ${view.typeLabel}
-                </div>`}
+            ${
+              view.typeLabel === ""
+                ? nothing
+                : html`<div class="rt-ctype" data-callout-type>
+                    ${view.typeLabel}
+                  </div>`
+            }
           </div>
-          ${node.plutonium > 0
-            ? html`<div class="rt-callout-pu" data-callout-plutonium>
-                <plutonium-icon .size=${14}></plutonium-icon>${translateText(
-                  "reward_track.plus",
-                  { amount: node.plutonium },
-                )}
-              </div>`
-            : nothing}
+          ${
+            node.plutonium > 0
+              ? html`<div class="rt-callout-pu" data-callout-plutonium>
+                  <plutonium-icon .size=${14}></plutonium-icon>${translateText(
+                    "reward_track.plus",
+                    { amount: node.plutonium },
+                  )}
+                </div>`
+              : nothing
+          }
         </div>
         <div class="rt-stem rt-stem-cosmetic"></div>`;
     }
@@ -949,6 +1026,8 @@ export class RewardTrack extends LitElement {
         return html`<span class="rt-ready" data-ready></span>`;
       case "locked":
         return html`<span data-locked>${LOCK}</span>`;
+      case "pending":
+        return html`<span data-pending>${HOURGLASS}</span>`;
       default:
         return nothing;
     }
@@ -960,18 +1039,20 @@ export class RewardTrack extends LitElement {
     return html`<div class="rt-end-col" role="listitem">
       <div class="rt-end" data-track-end ?data-legend=${end.legend}>
         <div class="rt-end-head">
-          ${end.legend
-            ? html`<level-badge
-                .level=${model.maxLevel}
-                .prestige=${model.run}
-                .legend=${true}
-                .size=${44}
-              ></level-badge>`
-            : html`<level-badge
-                .level=${1}
-                .prestige=${end.rank}
-                .size=${44}
-              ></level-badge>`}
+          ${
+            end.legend
+              ? html`<level-badge
+                  .level=${model.maxLevel}
+                  .prestige=${model.run}
+                  .legend=${true}
+                  .size=${44}
+                ></level-badge>`
+              : html`<level-badge
+                  .level=${1}
+                  .prestige=${end.rank}
+                  .size=${44}
+                ></level-badge>`
+          }
           <div class="leading-tight whitespace-nowrap">
             <div class="rt-kicker">
               ${translateText("reward_track.after_level", {
@@ -979,49 +1060,60 @@ export class RewardTrack extends LitElement {
               })}
             </div>
             <div class="rt-end-title" data-end-title>
-              ${end.legend
-                ? translateText("progression.legend")
-                : translateText("progression.prestige", {
-                    prestige: end.rank,
-                  })}
+              ${
+                end.legend
+                  ? translateText("progression.legend")
+                  : translateText("progression.prestige", {
+                      prestige: end.rank,
+                    })
+              }
             </div>
-            ${end.legend
-              ? html`<div class="rt-end-sub" data-end-sub>
-                  ${translateText("reward_track.legend_sub")}
-                </div>`
-              : end.caps !== null
-                ? html`<div class="rt-end-caps" data-end-caps>
-                    <cap-icon .size=${14}></cap-icon>${translateText(
-                      "reward_track.caps_amount",
-                      { amount: end.caps.toLocaleString() },
-                    )}
+            ${
+              end.legend
+                ? html`<div class="rt-end-sub" data-end-sub>
+                    ${translateText("reward_track.legend_sub")}
                   </div>`
-                : nothing}
+                : end.caps !== null
+                  ? html`<div class="rt-end-caps" data-end-caps>
+                      <cap-icon .size=${14}></cap-icon>${translateText(
+                        "reward_track.caps_amount",
+                        { amount: end.caps.toLocaleString() },
+                      )}
+                    </div>`
+                  : nothing
+            }
           </div>
         </div>
-        ${view === null
-          ? nothing
-          : html`<div class="rt-tag" data-end-tag>
-              <div class="rt-preview">${view.preview}</div>
-              <div class="min-w-0">
-                <div class="rt-cname" data-end-tag-name>${view.name}</div>
-                ${view.typeLabel === ""
-                  ? nothing
-                  : html`<div class="rt-ctype">${view.typeLabel}</div>`}
-                <div class="rt-tag-for" data-end-tag-for>
-                  ${end.legend
-                    ? translateText("reward_track.legend_reward")
-                    : translateText("reward_track.prestige_reward", {
-                        rank: end.rank,
-                      })}
+        ${
+          view === null
+            ? nothing
+            : html`<div class="rt-tag" data-end-tag>
+                <div class="rt-preview">${view.preview}</div>
+                <div class="min-w-0">
+                  <div class="rt-cname" data-end-tag-name>${view.name}</div>
+                  ${
+                    view.typeLabel === ""
+                      ? nothing
+                      : html`<div class="rt-ctype">${view.typeLabel}</div>`
+                  }
+                  <div class="rt-tag-for" data-end-tag-for>
+                    ${
+                      end.legend
+                        ? translateText("reward_track.legend_reward")
+                        : translateText("reward_track.prestige_reward", {
+                            rank: end.rank,
+                          })
+                    }
+                  </div>
                 </div>
-              </div>
-            </div>`}
+              </div>`
+        }
       </div>
     </div>`;
   }
 
-  private renderKey(): TemplateResult {
+  private renderKey(model: RewardTrackModel): TemplateResult {
+    const pending = model.nodes.some((n) => n.status === "pending");
     return html`<div class="rt-key" data-track-legend data-pp>
       <span class="rt-key-item"
         >${CHECK}${translateText("reward_track.key_claimed")}</span
@@ -1031,7 +1123,13 @@ export class RewardTrack extends LitElement {
         )}</span
       ><span class="rt-key-item"
         >${LOCK}${translateText("reward_track.key_locked")}</span
-      >
+      >${
+        pending
+          ? html`<span class="rt-key-item" data-key-pending
+              >${HOURGLASS}${translateText("reward_track.key_pending")}</span
+            >`
+          : nothing
+      }
     </div>`;
   }
 }
@@ -1194,6 +1292,10 @@ reward-track .rt-dot {
   border: 2px solid rgba(255, 255, 255, 0.22);
 }
 reward-track .rt-dot[data-passed] { background: #facc15; color: #1a1300; border-color: #fde68a; }
+/* Reached provisionally: passed, but not confirmed yet. */
+reward-track .rt-dot[data-pending] {
+  background: rgba(250, 204, 21, 0.28); color: #fef3c7; border-style: dashed; border-color: #fcd34d;
+}
 reward-track .rt-dot[data-pu] { box-shadow: 0 0 0 2px #4ade80, 0 0 9px rgba(74, 222, 128, 0.65); }
 /* The ring pads the 34px badge by 3px, so the round 40px ring clears the
    level chip's corners and matches the 40px dot row. */
@@ -1205,7 +1307,8 @@ reward-track .rt-badge-locked { opacity: 0.6; }
 reward-track .rt-under {
   margin-top: 3px; display: flex; flex-direction: column; align-items: center; gap: 1px;
 }
-reward-track .rt-node[data-status="locked"] .rt-under { opacity: 0.65; }
+reward-track .rt-node[data-status="locked"] .rt-under,
+reward-track .rt-node[data-status="pending"] .rt-under { opacity: 0.65; }
 reward-track .rt-caps {
   display: flex; align-items: center; gap: 2px; height: 14px; white-space: nowrap;
   color: #fff; font-weight: 800; font-size: 11px;

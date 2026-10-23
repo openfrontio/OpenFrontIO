@@ -1,5 +1,6 @@
 import { html, LitElement, nothing, TemplateResult } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
+import { gamePortal } from "../GamePortal";
 import { Platform } from "../Platform";
 import { copyToClipboard, showToast, translateText } from "../Utils";
 
@@ -415,31 +416,34 @@ export class ProfileShare extends LitElement {
         >
       </button>
       ${shareRingEnabled() ? ringTemplate : nothing}
-      ${this.menuOpen
-        ? html`<div
-            data-share-menu
-            role="menu"
-            aria-label=${this.label}
-            class="absolute bottom-[calc(100%+8px)] left-1/2 z-50 flex w-max min-w-[220px] -translate-x-1/2 flex-col gap-0.5 rounded-xl border border-white/15 bg-zinc-900 p-1.5 shadow-[0_12px_32px_rgba(0,0,0,0.55)]"
-          >
-            ${ACTIONS.map(
-              (a) =>
-                html`<button
-                  type="button"
-                  role="menuitem"
-                  data-share=${a.action}
-                  class=${MENU_ITEM}
-                  @click=${() => {
-                    this.run(a.action);
-                    this.closeMenu(true);
-                  }}
-                >
-                  <span class="grid w-[18px] place-items-center">${a.icon}</span
-                  ><span>${translateText(a.labelKey)}</span>
-                </button>`,
-            )}
-          </div>`
-        : nothing}
+      ${
+        this.menuOpen
+          ? html`<div
+              data-share-menu
+              role="menu"
+              aria-label=${this.label}
+              class="absolute bottom-[calc(100%+8px)] left-1/2 z-50 flex w-max min-w-[220px] -translate-x-1/2 flex-col gap-0.5 rounded-xl border border-white/15 bg-zinc-900 p-1.5 shadow-[0_12px_32px_rgba(0,0,0,0.55)]"
+            >
+              ${ACTIONS.map(
+                (a) =>
+                  html`<button
+                    type="button"
+                    role="menuitem"
+                    data-share=${a.action}
+                    class=${MENU_ITEM}
+                    @click=${() => {
+                      this.run(a.action);
+                      this.closeMenu(true);
+                    }}
+                  >
+                    <span class="grid w-[18px] place-items-center"
+                      >${a.icon}</span
+                    ><span>${translateText(a.labelKey)}</span>
+                  </button>`,
+              )}
+            </div>`
+          : nothing
+      }
     </div>`;
   }
 
@@ -469,23 +473,26 @@ export class ProfileShare extends LitElement {
     return html`<div
       class="flex flex-wrap gap-2 ${this.centered ? "justify-center" : ""}"
     >
-      ${useNativeShare()
-        ? this.button(
-            "native",
-            shareIcon,
-            translateText("player_profile.share_native"),
-            () => void this.nativeShare(),
-          )
-        : ACTIONS.map((a) =>
-            this.button(a.action, a.icon, translateText(a.labelKey), () =>
-              this.run(a.action),
-            ),
-          )}
+      ${
+        useNativeShare()
+          ? this.button(
+              "native",
+              shareIcon,
+              translateText("player_profile.share_native"),
+              () => void this.nativeShare(),
+            )
+          : ACTIONS.map((a) =>
+              this.button(a.action, a.icon, translateText(a.labelKey), () =>
+                this.run(a.action),
+              ),
+            )
+      }
     </div>`;
   }
 
   render() {
-    if (this.url === "") return nothing;
+    // Not on Poki: the link leads players off Poki.
+    if (this.url === "" || gamePortal.name() === "poki") return nothing;
     return html`
       ${this.layout === "menu" ? this.renderMenu() : this.renderRow()}
       <span class="sr-only" role="status" aria-live="polite"

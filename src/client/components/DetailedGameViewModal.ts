@@ -296,9 +296,11 @@ export class DetailedGameViewModal extends BaseModal {
       rightContent: html`<o-button
         variant=${this.showFilters ? "primary" : "secondary"}
         size="sm"
-        title=${count > 0
-          ? translateText("detailed_view.filters_with_count", { count })
-          : translateText("detailed_view.filters")}
+        title=${
+          count > 0
+            ? translateText("detailed_view.filters_with_count", { count })
+            : translateText("detailed_view.filters")
+        }
         @click=${() => (this.showFilters = !this.showFilters)}
       ></o-button>`,
     });
@@ -316,32 +318,38 @@ export class DetailedGameViewModal extends BaseModal {
 
     return html`
       <div class="custom-scrollbar p-4 lg:p-6 flex flex-col gap-4">
-        ${this.showTrustRequired
-          ? trustRequiredDialog(
-              this.viewerSignedIn,
-              () => (this.showTrustRequired = false),
-            )
-          : nothing}
+        ${
+          this.showTrustRequired
+            ? trustRequiredDialog(
+                this.viewerSignedIn,
+                () => (this.showTrustRequired = false),
+              )
+            : nothing
+        }
         ${this.showFilters ? this.renderFilterPanel() : nothing}
-        ${shown.length === 0
-          ? html`<p class="py-12 text-center text-sm text-white/50">
-              ${translateText("detailed_view.no_lobbies")}
-            </p>`
-          : tab === ALL_TAB
-            ? html`
-                <!-- One pane per scheduled bucket, cards stacked within it. -->
-                <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 items-start">
-                  ${SCHEDULED_PANES.map((type) =>
-                    this.renderPane(
-                      translateText(`detailed_view.pane_${type}`),
-                      ofType(shown, type),
-                      ofType(all, type).length,
-                    ),
-                  )}
-                </div>
-                ${this.renderHostedPane(ofType(shown, "hosted"))}
-              `
-            : this.renderTypeTab(ofType(shown, tab), ofType(all, tab).length)}
+        ${
+          shown.length === 0
+            ? html`<p class="py-12 text-center text-sm text-white/50">
+                ${translateText("detailed_view.no_lobbies")}
+              </p>`
+            : tab === ALL_TAB
+              ? html`
+                  <!-- One pane per scheduled bucket, cards stacked within it. -->
+                  <div
+                    class="grid grid-cols-1 sm:grid-cols-3 gap-4 items-start"
+                  >
+                    ${SCHEDULED_PANES.map((type) =>
+                      this.renderPane(
+                        translateText(`detailed_view.pane_${type}`),
+                        ofType(shown, type),
+                        ofType(all, type).length,
+                      ),
+                    )}
+                  </div>
+                  ${this.renderHostedPane(ofType(shown, "hosted"))}
+                `
+              : this.renderTypeTab(ofType(shown, tab), ofType(all, tab).length)
+        }
       </div>
     `;
   }
@@ -390,13 +398,15 @@ export class DetailedGameViewModal extends BaseModal {
           ${this.paneHeading(name, lobbies.length)}
         </h3>
         <div class="flex flex-col gap-4">
-          ${lobbies.length === 0 && placeholders === 0
-            ? html`<p
-                class="py-6 text-center text-xs text-white/30 rounded-xl border border-dashed border-white/10"
-              >
-                ${translateText("detailed_view.pane_empty")}
-              </p>`
-            : nothing}
+          ${
+            lobbies.length === 0 && placeholders === 0
+              ? html`<p
+                  class="py-6 text-center text-xs text-white/30 rounded-xl border border-dashed border-white/10"
+                >
+                  ${translateText("detailed_view.pane_empty")}
+                </p>`
+              : nothing
+          }
           ${this.renderSlots(lobbies, placeholders)}
         </div>
       </section>
@@ -702,9 +712,9 @@ export class DetailedGameViewModal extends BaseModal {
           <button
             @click=${() => this.deleteProfile()}
             ?disabled=${this.selectedProfile === ""}
-            class="${BUTTON_CLASS} ${this.selectedProfile === ""
-              ? "opacity-40 cursor-not-allowed"
-              : ""}"
+            class="${BUTTON_CLASS} ${
+              this.selectedProfile === "" ? "opacity-40 cursor-not-allowed" : ""
+            }"
           >
             ${translateText("detailed_view.delete_profile")}
           </button>
