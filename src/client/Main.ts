@@ -67,7 +67,6 @@ import {
 } from "./DesktopShell";
 import "./FeaturedStream";
 import { loadGameClient, prefetchGameClient } from "./GameClientLoader";
-import "./GameModeSelector";
 import {
   GameModeSelector,
   joinIsGateable,
@@ -83,6 +82,8 @@ import type { HomepagePromos } from "./HomepagePromos";
 import type { HostLobbyModal as HostPrivateLobbyModal } from "./HostLobbyModal";
 import { showInGameAlert, showInGameConfirm } from "./InGameModal";
 import type { JoinLobbyModal } from "./JoinLobbyModal";
+// The LangSelector class is used as a type; retain this for registration.
+// oxlint-disable-next-line import/no-duplicates -- Required custom-element registration.
 import "./LangSelector";
 import { LangSelector } from "./LangSelector";
 import { initLayout } from "./Layout";
@@ -152,8 +153,10 @@ import {
 // Before the first userMeResponse, for the modals that load after it.
 import "./UserMeBroadcast";
 import { classicReplayHref } from "./replay/ReplayEntry";
-import "./UsernameInput";
 import { parseReplayViewerHash } from "./replay/ReplayViewerRoute";
+// The UsernameInput class is used as a type; retain this for registration.
+// oxlint-disable-next-line import/no-duplicates -- Required custom-element registration.
+import "./UsernameInput";
 import { UsernameInput } from "./UsernameInput";
 import { UserSettings } from "./UserSettings";
 import "./components/BannedModal";
