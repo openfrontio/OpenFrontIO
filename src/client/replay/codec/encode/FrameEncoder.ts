@@ -255,7 +255,7 @@ export class FrameEncoder {
 function writeTileRuns(w: BinaryWriter, tileState: Uint16Array): void {
   const values: number[] = [];
   const lengths: number[] = [];
-  for (let i = 0; i < tileState.length; ) {
+  for (let i = 0; i < tileState.length;) {
     const v = tileState[i];
     let j = i + 1;
     while (j < tileState.length && tileState[j] === v) j++;

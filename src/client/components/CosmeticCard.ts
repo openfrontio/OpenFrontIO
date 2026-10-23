@@ -344,9 +344,9 @@ export class CosmeticCard extends LitElement {
           <span
             data-cosmetic-swatch-dot
             aria-hidden="true"
-            class="h-5 w-5 rounded-full ${isActive
-              ? "scale-110 ring-2 ring-white"
-              : ""}"
+            class="h-5 w-5 rounded-full ${
+              isActive ? "scale-110 ring-2 ring-white" : ""
+            }"
             style="background-image: linear-gradient(135deg, ${primary} 0 calc(50% - 0.5px), rgba(255,255,255,0.55) calc(50% - 0.5px) calc(50% + 0.5px), ${secondary} calc(50% + 0.5px) 100%);"
           ></span>
         </button>`;
@@ -410,21 +410,22 @@ export class CosmeticCard extends LitElement {
             size=${this.previewSize}
           ></cosmetic-preview>
         </div>
-        ${isEquipped
-          ? html`<span
-              data-cosmetic-equipped="true"
-              class="absolute bottom-1 left-1 z-[4] rounded-full bg-emerald-500 px-2 py-0.5 text-[10px] font-black uppercase tracking-wide text-white shadow-lg shadow-emerald-950/60 ring-1 ring-emerald-200/70"
-              >✓ ${translateText("inventory.equipped")}</span
-            >`
-          : nothing}
+        ${
+          isEquipped
+            ? html`<span
+                data-cosmetic-equipped="true"
+                class="absolute bottom-1 left-1 z-[4] rounded-full bg-emerald-500 px-2 py-0.5 text-[10px] font-black uppercase tracking-wide text-white shadow-lg shadow-emerald-950/60 ring-1 ring-emerald-200/70"
+                >✓ ${translateText("inventory.equipped")}</span
+              >`
+            : nothing
+        }
       </div>
     `;
     const name = html`<span
       data-cosmetic-name
-      class="w-full capitalize  whitespace-normal break-words px-3 pt-3 text-center text-sm font-bold leading-tight text-white ${this
-        .interactive
-        ? "cursor-pointer"
-        : ""}"
+      class="w-full capitalize  whitespace-normal break-words px-3 pt-3 text-center text-sm font-bold leading-tight text-white ${
+        this.interactive ? "cursor-pointer" : ""
+      }"
       @click=${() => this.interactive && this.onActivate?.(active)}
       >${displayName}</span
     >`;
@@ -435,36 +436,40 @@ export class CosmeticCard extends LitElement {
       data-cosmetic-rarity=${rarity}
       class="relative flex h-full flex-col items-center overflow-visible rounded-xl border transition-all duration-200 ease-out hover:-translate-y-1 ${shellClass}"
     >
-      ${rarity === "epic" || rarity === "legendary"
-        ? html`<span data-cosmetic-shimmer aria-hidden="true"></span>`
-        : nothing}
-      ${rarity === "legendary"
-        ? html`<span data-cosmetic-border-sweep aria-hidden="true"></span>
-            <span
-              data-cosmetic-sparkle="0"
-              aria-hidden="true"
-              style="top: 4px; left: 4px"
-              >✦</span
-            >
-            <span
-              data-cosmetic-sparkle="1"
-              aria-hidden="true"
-              style="top: 4px; right: 4px"
-              >✦</span
-            >
-            <span
-              data-cosmetic-sparkle="2"
-              aria-hidden="true"
-              style="bottom: 4px; left: 4px"
-              >✦</span
-            >
-            <span
-              data-cosmetic-sparkle="3"
-              aria-hidden="true"
-              style="bottom: 4px; right: 4px"
-              >✦</span
-            >`
-        : nothing}
+      ${
+        rarity === "epic" || rarity === "legendary"
+          ? html`<span data-cosmetic-shimmer aria-hidden="true"></span>`
+          : nothing
+      }
+      ${
+        rarity === "legendary"
+          ? html`<span data-cosmetic-border-sweep aria-hidden="true"></span>
+              <span
+                data-cosmetic-sparkle="0"
+                aria-hidden="true"
+                style="top: 4px; left: 4px"
+                >✦</span
+              >
+              <span
+                data-cosmetic-sparkle="1"
+                aria-hidden="true"
+                style="top: 4px; right: 4px"
+                >✦</span
+              >
+              <span
+                data-cosmetic-sparkle="2"
+                aria-hidden="true"
+                style="bottom: 4px; left: 4px"
+                >✦</span
+              >
+              <span
+                data-cosmetic-sparkle="3"
+                aria-hidden="true"
+                style="bottom: 4px; right: 4px"
+                >✦</span
+              >`
+          : nothing
+      }
       ${name}
       <!-- The info bubble anchors to this wrapper, not the whole card, so it
            lands on the artwork's corner instead of over the name — and stays
@@ -473,47 +478,57 @@ export class CosmeticCard extends LitElement {
            sibling card, e.g. the custom-amount slider) to the artwork box,
            instead of pooling it as a void between artwork and buttons. -->
       <div class="relative w-full flex-1 flex flex-col">
-        ${this.interactive
-          ? html`<button
-              type="button"
-              data-cosmetic-main
-              aria-label=${displayName}
-              aria-pressed=${isEquipped ? "true" : nothing}
-              aria-current=${isFocused ? "true" : nothing}
-              class="group relative flex flex-1 flex-col items-center gap-2 w-full rounded-xl px-3 pb-3 pt-2 cursor-pointer outline-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50 focus-visible:ring-offset-1"
-              @click=${() => this.onActivate?.(active)}
-            >
-              ${content}
-            </button>`
-          : html`<div
-              data-cosmetic-main
-              class="group relative flex flex-1 w-full flex-col items-center gap-2 rounded-xl px-3 pb-3 pt-2"
-            >
-              ${content}
-            </div>`}
-        ${this.interactive && active.cosmetic !== null
-          ? html`<cosmetic-info
-                .artist=${priced?.artist}
-                .aiDisclosed=${priced?.aiDisclosed}
-                .rarity=${rarity}
-                .colorPalette=${active.colorPalette?.name}
-                .showAdFree=${active.relationship === "purchasable" &&
-                !isDesktopShell()}
-                .usdValue=${usdValue}
-                .perks=${this.subscriptionPerks()}
-                .items=${(active.packItems ?? []).map(cosmeticSelectionLabel)}
-              ></cosmetic-info>
-              <cosmetic-preview-bubble
-                .resolved=${active}
-              ></cosmetic-preview-bubble>`
-          : nothing}
+        ${
+          this.interactive
+            ? html`<button
+                type="button"
+                data-cosmetic-main
+                aria-label=${displayName}
+                aria-pressed=${isEquipped ? "true" : nothing}
+                aria-current=${isFocused ? "true" : nothing}
+                class="group relative flex flex-1 flex-col items-center gap-2 w-full rounded-xl px-3 pb-3 pt-2 cursor-pointer outline-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50 focus-visible:ring-offset-1"
+                @click=${() => this.onActivate?.(active)}
+              >
+                ${content}
+              </button>`
+            : html`<div
+                data-cosmetic-main
+                class="group relative flex flex-1 w-full flex-col items-center gap-2 rounded-xl px-3 pb-3 pt-2"
+              >
+                ${content}
+              </div>`
+        }
+        ${
+          this.interactive && active.cosmetic !== null
+            ? html`<cosmetic-info
+                  .artist=${priced?.artist}
+                  .aiDisclosed=${priced?.aiDisclosed}
+                  .rarity=${rarity}
+                  .colorPalette=${active.colorPalette?.name}
+                  .showAdFree=${
+                    active.relationship === "purchasable" && !isDesktopShell()
+                  }
+                  .usdValue=${usdValue}
+                  .perks=${this.subscriptionPerks()}
+                  .items=${(active.packItems ?? []).map(cosmeticSelectionLabel)}
+                ></cosmetic-info>
+                <cosmetic-preview-bubble
+                  .resolved=${active}
+                ></cosmetic-preview-bubble>`
+            : nothing
+        }
       </div>
       ${this.renderSwatches()}
-      ${this.actionContent !== nothing
-        ? html`<div data-cosmetic-action class="mt-auto w-full px-3 pb-3 pt-2">
-            ${this.actionContent}
-          </div>`
-        : nothing}
+      ${
+        this.actionContent !== nothing
+          ? html`<div
+              data-cosmetic-action
+              class="mt-auto w-full px-3 pb-3 pt-2"
+            >
+              ${this.actionContent}
+            </div>`
+          : nothing
+      }
     </div>`;
   }
 }

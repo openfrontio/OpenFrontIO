@@ -22,7 +22,6 @@ import "../hud/layers/PlayerInfoOverlay";
 import type { PlayerInfoOverlay } from "../hud/layers/PlayerInfoOverlay";
 import "../hud/layers/PlayerStats";
 import type { PlayerStats } from "../hud/layers/PlayerStats";
-import "../hud/layers/SettingsModal";
 import {
   ShowSettingsModalEvent,
   type SettingsModal,
@@ -806,46 +805,51 @@ export class ReplayViewer extends LitElement {
           @dblclick=${this.onDoubleClick}
         ></div>
         ${this.status === "ready" ? this.renderStats() : nothing}
-        ${this.status === "ready" && this.stoppedEarly !== ""
-          ? this.renderStoppedEarly(loaded)
-          : nothing}
-        ${this.status === "ready" &&
-        this.stoppedEarly === "" &&
-        this.unverifiedNotice
-          ? this.renderUnverified()
-          : nothing}
+        ${
+          this.status === "ready" && this.stoppedEarly !== ""
+            ? this.renderStoppedEarly(loaded)
+            : nothing
+        }
+        ${
+          this.status === "ready" &&
+          this.stoppedEarly === "" &&
+          this.unverifiedNotice
+            ? this.renderUnverified()
+            : nothing
+        }
         <player-info-overlay></player-info-overlay>
         <!-- Always in the DOM, like the overlay: attachHud wires it up while
           the replay is still loading. Its content is w-96 from 1200px up,
           so it widens with it there instead of spilling off the right. -->
         <events-display
-          class="absolute right-3 bottom-20 w-80 max-w-[40vw] min-[1200px]:w-96 ${this
-            .status === "ready"
-            ? ""
-            : "hidden"}"
+          class="absolute right-3 bottom-20 w-80 max-w-[40vw] min-[1200px]:w-96 ${
+            this.status === "ready" ? "" : "hidden"
+          }"
         ></events-display>
-        ${this.status === "ready"
-          ? html`<replay-controls
-              .frame=${this.frame}
-              .tick=${this.tick}
-              .loaded=${loaded}
-              .total=${timelineFrames(loaded, this.gameLength, this.growing)}
-              .playing=${this.playing}
-              .speed=${this.speed}
-              @replay-toggle-play=${() => this.togglePlay()}
-              @replay-seek=${(e: CustomEvent<number>) =>
-                void this.playback?.seek(e.detail)}
-              @replay-speed=${(e: CustomEvent<number>) =>
-                this.playback?.setSpeed(e.detail)}
-              @replay-menu=${() => this.openMenu()}
-            ></replay-controls>`
-          : html`<replay-status
-              .gameID=${this.gameID}
-              .status=${this.status}
-              .progress=${this.progress}
-              .error=${this.error}
-              .classicFallback=${this.classicFallback}
-            ></replay-status>`}
+        ${
+          this.status === "ready"
+            ? html`<replay-controls
+                .frame=${this.frame}
+                .tick=${this.tick}
+                .loaded=${loaded}
+                .total=${timelineFrames(loaded, this.gameLength, this.growing)}
+                .playing=${this.playing}
+                .speed=${this.speed}
+                @replay-toggle-play=${() => this.togglePlay()}
+                @replay-seek=${(e: CustomEvent<number>) =>
+                  void this.playback?.seek(e.detail)}
+                @replay-speed=${(e: CustomEvent<number>) =>
+                  this.playback?.setSpeed(e.detail)}
+                @replay-menu=${() => this.openMenu()}
+              ></replay-controls>`
+            : html`<replay-status
+                .gameID=${this.gameID}
+                .status=${this.status}
+                .progress=${this.progress}
+                .error=${this.error}
+                .classicFallback=${this.classicFallback}
+              ></replay-status>`
+        }
         <settings-modal></settings-modal>
       </div>
     `;
@@ -919,13 +923,15 @@ export class ReplayViewer extends LitElement {
           .visible=${true}
           .eventBus=${this.hudBus}
         ></player-stats>
-        ${this.focusName === ""
-          ? nothing
-          : html`<span class="text-xs text-white/70"
-              >${translateText("replay_viewer.following", {
-                name: this.focusName,
-              })}</span
-            >`}
+        ${
+          this.focusName === ""
+            ? nothing
+            : html`<span class="text-xs text-white/70"
+                >${translateText("replay_viewer.following", {
+                  name: this.focusName,
+                })}</span
+              >`
+        }
       </aside>
     `;
   }

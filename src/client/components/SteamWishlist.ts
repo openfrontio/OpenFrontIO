@@ -121,20 +121,22 @@ export class SteamWishlist extends LitElement {
         class="steam-wishlist-frame w-full mx-auto overflow-hidden"
         style="max-width: ${WIDGET_WIDTH}px; height: ${WIDGET_HEIGHT * scale}px"
       >
-        ${this.active
-          ? html`
-              <iframe
-                class="block border-0 origin-top-left"
-                width=${frameWidth}
-                height=${WIDGET_HEIGHT}
-                style="transform: scale(${scale}); color-scheme: light"
-                src=${steamWidgetUrl(this.campaign)}
-                title=${translateText("steam_wishlist.buy_on_steam")}
-                loading="lazy"
-                scrolling="no"
-              ></iframe>
-            `
-          : nothing}
+        ${
+          this.active
+            ? html`
+                <iframe
+                  class="block border-0 origin-top-left"
+                  width=${frameWidth}
+                  height=${WIDGET_HEIGHT}
+                  style="transform: scale(${scale}); color-scheme: light"
+                  src=${steamWidgetUrl(this.campaign)}
+                  title=${translateText("steam_wishlist.buy_on_steam")}
+                  loading="lazy"
+                  scrolling="no"
+                ></iframe>
+              `
+            : nothing
+        }
       </div>
     `;
   }

@@ -348,6 +348,7 @@ function makeGame(
       }),
       isReplay: () => false,
     }),
+    resumedFromSave: () => false,
   } as unknown as GameView;
   return { game, humanStats, humanDisconnects, end: () => (ended = true) };
 }

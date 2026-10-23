@@ -129,17 +129,19 @@ export class OModal extends LitElement {
               role="tab"
               data-key=${tab.key}
               aria-selected=${active}
-              class="shrink-0 whitespace-nowrap min-h-10 px-2 py-3 text-[11px] leading-4 tracking-wide sm:px-4 sm:text-sm sm:leading-5 sm:tracking-wider font-bold uppercase transition-all relative cursor-pointer ${active
-                ? "text-aquarius"
-                : "text-white/40 hover:text-white/70"}"
+              class="shrink-0 whitespace-nowrap min-h-10 px-2 py-3 text-[11px] leading-4 tracking-wide sm:px-4 sm:text-sm sm:leading-5 sm:tracking-wider font-bold uppercase transition-all relative cursor-pointer ${
+                active ? "text-aquarius" : "text-white/40 hover:text-white/70"
+              }"
               @click=${() => this.handleTabClick(tab.key)}
             >
               ${tab.label}
-              ${active
-                ? html`<div
-                    class="absolute bottom-0 left-0 right-0 h-0.5 bg-malibu-blue"
-                  ></div>`
-                : ""}
+              ${
+                active
+                  ? html`<div
+                      class="absolute bottom-0 left-0 right-0 h-0.5 bg-malibu-blue"
+                    ></div>`
+                  : ""
+              }
             </button>
           `;
         })}
@@ -179,21 +181,25 @@ export class OModal extends LitElement {
           class="${wrapperClass}"
           style="${wrapperStyle}"
         >
-          ${this.inline || this.hideCloseButton
-            ? html``
-            : html`<div
-                class="absolute top-5 right-5 z-10 text-white cursor-pointer"
-                @click=${() => this.close()}
-              >
-                ✕
-              </div>`}
-          ${!this.hideHeader && this.title
-            ? html`<div
-                class="px-[1.4rem] py-[1rem] text-2xl font-bold text-white"
-              >
-                ${this.title}
-              </div>`
-            : html``}
+          ${
+            this.inline || this.hideCloseButton
+              ? html``
+              : html`<div
+                  class="absolute top-5 right-5 z-10 text-white cursor-pointer"
+                  @click=${() => this.close()}
+                >
+                  ✕
+                </div>`
+          }
+          ${
+            !this.hideHeader && this.title
+              ? html`<div
+                  class="px-[1.4rem] py-[1rem] text-2xl font-bold text-white"
+                >
+                  ${this.title}
+                </div>`
+              : html``
+          }
           <section class="${sectionClass}">
             <slot name="header"></slot>
             ${hasTabs ? this.renderTabs() : html``}

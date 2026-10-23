@@ -20,7 +20,12 @@ import { renderNavVersion } from "src/client/GameVersion";
 import { responseHasLinkedIdentity } from "./AccountIdentity";
 import { adGatekeeper } from "./AdGatekeeper";
 import { loadAdmiral, onAdmiralMeasured } from "./Admiral";
-import { getUserMe, invalidateUserMe, markNoticeSeen } from "./Api";
+import {
+  getUserMe,
+  invalidateUserMe,
+  markMessageSeen,
+  markNoticeSeen,
+} from "./Api";
 import {
   getDesktopSessionState,
   reauthAfterPortalChange,
@@ -36,6 +41,8 @@ import {
   lapseShownAfterDispatch,
   nextBootInterrupt,
   parseClaimPromptStore,
+  reportThanksDueThisLaunch,
+  reportThanksStringsReady,
   runBootInterrupt,
   steamGrantStringsReady,
 } from "./BootInterrupts";
@@ -60,7 +67,6 @@ import {
 } from "./DesktopShell";
 import "./FeaturedStream";
 import { loadGameClient, prefetchGameClient } from "./GameClientLoader";
-import "./GameModeSelector";
 import {
   GameModeSelector,
   joinIsGateable,
@@ -69,12 +75,15 @@ import {
 } from "./GameModeSelector";
 import { gamePortal } from "./GamePortal";
 import { GameStartingModal } from "./GameStartingModal";
+import { syncHashedEmail } from "./HashedEmail";
 import type { HelpModal } from "./HelpModal";
 import "./HomepagePromos";
 import type { HomepagePromos } from "./HomepagePromos";
 import type { HostLobbyModal as HostPrivateLobbyModal } from "./HostLobbyModal";
 import { showInGameAlert, showInGameConfirm } from "./InGameModal";
 import type { JoinLobbyModal } from "./JoinLobbyModal";
+// The LangSelector class is used as a type; retain this for registration.
+// oxlint-disable-next-line import/no-duplicates -- Required custom-element registration.
 import "./LangSelector";
 import { LangSelector } from "./LangSelector";
 import { initLayout } from "./Layout";
@@ -94,6 +103,7 @@ import { modalRouter } from "./ModalRouter";
 import { updateAccountNavButton } from "./NavAccountButton";
 import { initNavigation } from "./Navigation";
 import { capturePagePin } from "./PagePin";
+import { setPurchaseAccountRefresh } from "./Payments";
 import { fallbackPlayerName, LAPSE_NOTICE_KEY } from "./PlayerName";
 import { updatePortalNavButton } from "./PortalAccountButton";
 import {
@@ -143,8 +153,10 @@ import {
 // Before the first userMeResponse, for the modals that load after it.
 import "./UserMeBroadcast";
 import { classicReplayHref } from "./replay/ReplayEntry";
-import "./UsernameInput";
 import { parseReplayViewerHash } from "./replay/ReplayViewerRoute";
+// The UsernameInput class is used as a type; retain this for registration.
+// oxlint-disable-next-line import/no-duplicates -- Required custom-element registration.
+import "./UsernameInput";
 import { UsernameInput } from "./UsernameInput";
 import { UserSettings } from "./UserSettings";
 import "./components/BannedModal";
@@ -182,6 +194,8 @@ import "./styles/core/variables.css";
 import "./styles/layout/container.css";
 import "./styles/layout/header.css";
 
+type RampUserProfile = { format: "UUP1"; heid: { sha256: string } };
+
 declare global {
   interface Window {
     turnstile?: TurnstileApi;
@@ -201,6 +215,9 @@ declare global {
         slots?: any;
       };
       spaNewPage: (url?: string) => void;
+      // Hashed email (HEM): `up` is read once at init, setUserProfile after.
+      up?: RampUserProfile;
+      setUserProfile: (profile: RampUserProfile) => void;
       spaAds: (config?: {
         ads?: Array<{ type: string; selectorId?: string }>;
         countPageview?: boolean;
@@ -253,6 +270,9 @@ export interface JoinLobbyEvent {
   gameStartInfo?: WireGameStartInfo;
   // GameRecord exists when replaying an archived game.
   gameRecord?: GameRecord;
+  // A singleplayer game resumed from a saved game: the uncompressed snapshot
+  // the engine restores instead of starting fresh from gameStartInfo.
+  snapshot?: Uint8Array;
   source?: "public" | "private" | "host" | "matchmaking" | "singleplayer";
   publicLobbyInfo?: GameInfo | PublicGameInfo;
   // Watch without playing.
@@ -747,6 +767,7 @@ class Client {
       loadConfig: fetchProgressionConfig,
       refreshUserMe: broadcastFreshUserMe,
     });
+    setPurchaseAccountRefresh(broadcastFreshUserMe);
 
     const onUserMe = async (userMeResponse: UserMeResponse | false) => {
       if (gamePortal.isOnGamePortal()) {
@@ -758,6 +779,9 @@ class Client {
         userMeResponse !== false && userMeResponse.player?.adfree === true;
       window.adsEnabled =
         !isAdFree && !gamePortal.isOnGamePortal() && !isDesktopShell();
+      syncHashedEmail(userMeResponse, window.adsEnabled).catch((e) =>
+        console.warn("Hashed email sync failed", e),
+      );
       // Ad-eligible users only: paid/adfree users must never load Admiral (its
       // adblock popup fires autonomously once the payload runs). Start watching
       // adblock state; once a blocker is ever detected the in-game ad is
@@ -902,6 +926,12 @@ class Client {
             rewardCount: rewards.filter(isRewardClaimable).length,
             claimPromptDue: claimPromptDue(claimStore, Date.now(), publicId),
             claimStringsReady: claimPromptStringsReady(translateText),
+            // Not every caller's response went through the schema default.
+            reportThanksDue: reportThanksDueThisLaunch(
+              userMeResponse.pendingMessages ?? [],
+              publicId,
+            ),
+            reportThanksStringsReady: reportThanksStringsReady(translateText),
           }),
           {
             claimStore,
@@ -953,6 +983,7 @@ class Client {
                 ),
               ),
             markNoticeSeen: (notice) => void markNoticeSeen(notice),
+            markMessageSeen: (kind) => void markMessageSeen(kind),
             now: () => Date.now(),
           },
         );
@@ -1843,6 +1874,7 @@ class Client {
           ? toWireGameStartInfo(lobby.gameRecord.info)
           : undefined),
       gameRecord: lobby.gameRecord,
+      snapshot: lobby.snapshot,
       spectator: lobby.spectator,
       creatorToken: lobby.creatorToken,
     });
