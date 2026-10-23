@@ -134,6 +134,7 @@ export enum GameMapType {
   Vietnam = "Vietnam", // map-generator/assets/maps/vietnam/info.json
   WarshipWarship = "Warship Warship", // map-generator/assets/maps/warshipwarship/info.json
   World = "World", // map-generator/assets/maps/world/info.json
+  Worldamericas = "World Americas", // map-generator/assets/maps/worldamericas/info.json
   WorldInverted = "World Inverted", // map-generator/assets/maps/worldinverted/info.json
   YangtzeRiver = "Yangtze River", // map-generator/assets/maps/yangtzeriver/info.json
   YellowSea = "Yellow Sea", // map-generator/assets/maps/yellowsea/info.json
@@ -2545,6 +2546,17 @@ export const maps: readonly MapInfo[] = [
     defaultNationCount: 72,
     featuredRank: 1,
     forcedModifiers: ["isCrowded:50"],
+  },
+  {
+    id: "Worldamericas",
+    type: GameMapType.Worldamericas,
+    translationKey: "map.worldamericas",
+    categories: ["world"],
+    multiplayerFrequency: 8,
+    ffaFrequency: -1,
+    teamFrequency: -1,
+    specialFrequency: -1,
+    defaultNationCount: 72,
   },
   {
     id: "WorldInverted",
