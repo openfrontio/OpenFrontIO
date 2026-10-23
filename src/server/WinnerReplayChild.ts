@@ -59,7 +59,7 @@ async function replay(req: ReplayRequest) {
 }
 
 process.once("message", (req: ReplayRequest) => {
-  replay(req)
+  void replay(req)
     .then(
       (result): ReplayResponse => ({ ok: true, result }),
       (error: unknown): ReplayResponse => ({
