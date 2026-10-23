@@ -3,7 +3,6 @@
   "name": "Russia",
   "translation_key": "map.russia",
   "categories": ["europe", "asia", "countries"],
-  "multiplayer_frequency": 8,
   "nations": [
     {
       "coordinates": [715, 415],

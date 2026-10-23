@@ -23,21 +23,6 @@ const EN_JSON = path.join(ROOT, "resources", "lang", "en.json");
 
 const allMapKeys = Object.keys(GameMapType) as GameMapName[];
 
-// Maps excluded from the frequency requirement (not part of regular playlists).
-const FREQUENCY_EXEMPTIONS: Set<GameMapName> = new Set([
-  "GiantWorldMap",
-  "Oceania",
-  "BaikalNukeWars",
-  "Tourney1",
-  "Tourney2",
-  "Tourney3",
-  "Tourney4",
-  "EuropeClassic",
-  "BritanniaClassic",
-  "ChoppingBlock",
-  "Luna",
-]);
-
 // The API (openfrontio/infra `GameMapTypeSchema`, and the `maps.name`
 // varchar(29) column) rejects a game record whose map name breaks these.
 const API_MAP_NAME = /^[a-zA-Z0-9\s().-]+$/;
@@ -261,18 +246,6 @@ describe("Map consistency", () => {
       const fields: [string, unknown, unknown][] = [
         ["categories", info.categories, map.categories],
         ["translation_key", info.translation_key, map.translationKey],
-        [
-          "multiplayer_frequency",
-          info.multiplayer_frequency ?? 0,
-          map.multiplayerFrequency,
-        ],
-        ["ffa_frequency", info.ffa_frequency ?? -1, map.ffaFrequency],
-        ["team_frequency", info.team_frequency ?? -1, map.teamFrequency],
-        [
-          "special_frequency",
-          info.special_frequency ?? -1,
-          map.specialFrequency,
-        ],
         ["featured_rank", orOmitted(info.featured_rank), map.featuredRank],
         [
           "special_team_count",
@@ -317,33 +290,31 @@ describe("Map consistency", () => {
     }
   });
 
-  test("Every GameMapType (except exemptions) has a frequency set", () => {
+  test("info.json sets no rotation weights", () => {
+    // Public-lobby rotation weights live in the API (GET /map_weights); the
+    // generator ignores these keys, so one here would silently do nothing.
     const errors: string[] = [];
     for (const key of allMapKeys) {
-      if (FREQUENCY_EXEMPTIONS.has(key)) continue;
       const info = readInfoJson(key);
-      if (info === null) continue; // Other tests catch missing files.
-      const freq = info.multiplayer_frequency;
-      const hasFallback = typeof freq === "number" && freq > 0;
-      const hasPerMode =
-        (typeof info.ffa_frequency === "number" && info.ffa_frequency > 0) ||
-        (typeof info.team_frequency === "number" && info.team_frequency > 0) ||
-        (typeof info.special_frequency === "number" &&
-          info.special_frequency > 0);
-      if (!hasFallback && !hasPerMode) {
-        errors.push(
-          `${key} has no frequency in info.json (set multiplayer_frequency > 0, or at least one per-mode frequency, or add the map to FREQUENCY_EXEMPTIONS)`,
-        );
+      if (info === null) continue;
+      for (const field of [
+        "multiplayer_frequency",
+        "ffa_frequency",
+        "team_frequency",
+        "special_frequency",
+      ]) {
+        if (field in info) errors.push(`${key}: info.json sets ${field}`);
       }
     }
     if (errors.length > 0) {
       throw new Error(
-        "Maps missing a frequency (not exempted):\n" + errors.join("\n"),
+        "Rotation weights are set in the API admin panel, not info.json:\n" +
+          errors.join("\n"),
       );
     }
   });
 
-  test("Per-mode frequencies are valid numbers when set", () => {
+  test("Modifier fields are valid", () => {
     const VALID_MODIFIER_KEYS = new Set([
       "isRandomSpawn",
       "isCompact",
@@ -364,18 +335,6 @@ describe("Map consistency", () => {
     for (const key of allMapKeys) {
       const info = readInfoJson(key);
       if (info === null) continue;
-      for (const field of [
-        "ffa_frequency",
-        "team_frequency",
-        "special_frequency",
-      ]) {
-        const val = info[field];
-        if (val !== undefined && (typeof val !== "number" || val < 0)) {
-          errors.push(
-            `${key}: ${field} is ${JSON.stringify(val)} (must be a non-negative number or omitted)`,
-          );
-        }
-      }
       // Validate disabled_modifiers values.
       const disabled = info.disabled_modifiers;
       if (Array.isArray(disabled)) {
@@ -429,8 +388,7 @@ describe("Map consistency", () => {
     }
     if (errors.length > 0) {
       throw new Error(
-        "Invalid per-mode frequency or modifier fields in info.json:\n" +
-          errors.join("\n"),
+        "Invalid modifier fields in info.json:\n" + errors.join("\n"),
       );
     }
   });
@@ -629,7 +587,6 @@ describe("Map consistency", () => {
       "display_name",
       "translation_key",
       "categories",
-      "multiplayer_frequency",
       "featured_rank",
       "special_team_count",
     ];

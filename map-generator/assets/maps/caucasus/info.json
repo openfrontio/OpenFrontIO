@@ -3,7 +3,6 @@
   "name": "Caucasus",
   "translation_key": "map.caucasus",
   "categories": ["europe", "asia"],
-  "multiplayer_frequency": 5,
   "nations": [
     {
       "coordinates": [624, 581],

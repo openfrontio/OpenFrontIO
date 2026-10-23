@@ -3,7 +3,6 @@
   "name": "Crimea",
   "translation_key": "map.crimea",
   "categories": ["europe"],
-  "multiplayer_frequency": 4,
   "nations": [
     {
       "coordinates": [539, 1112],
