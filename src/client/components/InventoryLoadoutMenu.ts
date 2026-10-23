@@ -41,35 +41,39 @@ export class InventoryLoadoutMenu extends LitElement {
   private renderSlot(name: string) {
     const isActive = name === this.active;
     return html`<div
-      class="flex items-stretch overflow-hidden rounded-lg border ${isActive
-        ? "border-blue-400 bg-blue-500/20"
-        : "border-white/15 bg-white/5"}"
+      class="flex items-stretch overflow-hidden rounded-lg border ${
+        isActive
+          ? "border-blue-400 bg-blue-500/20"
+          : "border-white/15 bg-white/5"
+      }"
     >
       <button
         type="button"
         data-loadout-slot=${name}
         aria-pressed=${isActive ? "true" : "false"}
         aria-label=${translateText("inventory.loadout_slot", { name })}
-        class="px-3 py-1.5 text-xs font-black uppercase tracking-wider transition-colors ${isActive
-          ? "text-white"
-          : "text-white/75 hover:bg-white/10"}"
+        class="px-3 py-1.5 text-xs font-black uppercase tracking-wider transition-colors ${
+          isActive ? "text-white" : "text-white/75 hover:bg-white/10"
+        }"
         @click=${() => this.onSelect?.(name)}
       >
         ${name}
       </button>
-      ${isActive
-        ? html`<button
-            type="button"
-            data-loadout-delete=${name}
-            aria-label=${translateText("inventory.loadout_delete_target", {
-              name,
-            })}
-            class="border-l border-white/15 px-2 text-xs font-black text-white/60 transition-colors hover:bg-white/10 hover:text-white"
-            @click=${() => this.onDelete?.(name)}
-          >
-            ✕
-          </button>`
-        : nothing}
+      ${
+        isActive
+          ? html`<button
+              type="button"
+              data-loadout-delete=${name}
+              aria-label=${translateText("inventory.loadout_delete_target", {
+                name,
+              })}
+              class="border-l border-white/15 px-2 text-xs font-black text-white/60 transition-colors hover:bg-white/10 hover:text-white"
+              @click=${() => this.onDelete?.(name)}
+            >
+              ✕
+            </button>`
+          : nothing
+      }
     </div>`;
   }
 

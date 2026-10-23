@@ -2154,6 +2154,10 @@
     "unverified": "This game's record has no checks, so this replay couldn't be verified against the game that was played.",
     "watch_classic": "Watch the old replay instead"
   },
+  "report_thanks": {
+    "body": "A person who you recently reported has been banned, thanks for keeping openfront a safer and more enjoyable place",
+    "heading": "Thank you"
+  },
   "reward_track": {
     "after_level": "After level {level}",
     "caps_amount": "{amount} Caps",
@@ -2186,11 +2190,13 @@
     "title": "Rewards"
   },
   "saved_games": {
+    "code_placeholder": "Paste a shared game link or code",
     "copy_link": "Copy link",
     "delete": "Delete",
     "delete_confirm": "Delete \"{name}\"? This can't be undone.",
     "empty": "No saved games yet. Save one from the in-game menu.",
     "error": {
+      "code_invalid": "That isn't a shared game link or code.",
       "copy_failed": "Couldn't copy the link.",
       "download_failed": "Couldn't download the saved game. Try again.",
       "list_failed": "Couldn't load your saved games.",
@@ -2205,6 +2211,7 @@
     },
     "link_copied": "Link copied",
     "loading": "Loading…",
+    "open": "Open",
     "play": "Play",
     "rename": "Rename",
     "rename_save": "Save",

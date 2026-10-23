@@ -155,14 +155,16 @@ export abstract class BaseModal extends LitElement {
         ${headerSlot ? html`<div slot="header">${headerSlot}</div>` : null}
         ${body}
       </o-modal>
-      ${this.closeConfirm
-        ? html`<confirm-dialog
-            .message=${this.closeConfirm.message}
-            variant="warning"
-            @confirm=${() => this.settleCloseConfirm(true)}
-            @cancel=${() => this.settleCloseConfirm(false)}
-          ></confirm-dialog>`
-        : null}
+      ${
+        this.closeConfirm
+          ? html`<confirm-dialog
+              .message=${this.closeConfirm.message}
+              variant="warning"
+              @confirm=${() => this.settleCloseConfirm(true)}
+              @cancel=${() => this.settleCloseConfirm(false)}
+            ></confirm-dialog>`
+          : null
+      }
     `;
   }
 
@@ -340,15 +342,19 @@ export function renderLoadingSpinner(
       class="flex flex-col items-center justify-center p-12 text-white h-full min-h-[400px]"
     >
       <div
-        class="w-12 h-12 border-4 ${spinnerColorClasses[
-          spinnerColor
-        ]} rounded-full animate-spin mb-4"
+        class="w-12 h-12 border-4 ${
+          spinnerColorClasses[spinnerColor]
+        } rounded-full animate-spin mb-4"
       ></div>
-      ${message
-        ? html`<p class="text-white/60 font-medium tracking-wide animate-pulse">
-            ${message}
-          </p>`
-        : ""}
+      ${
+        message
+          ? html`<p
+              class="text-white/60 font-medium tracking-wide animate-pulse"
+            >
+              ${message}
+            </p>`
+          : ""
+      }
     </div>
   `;
 }

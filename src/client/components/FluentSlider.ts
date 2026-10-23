@@ -96,52 +96,54 @@ export class FluentSlider extends LitElement {
           @change=${this.handleSliderChange}
         />
         <div
-          class="text-xs uppercase font-bold tracking-wider text-center w-full leading-tight mb-1 flex flex-col items-center ${this
-            .value > 0
-            ? "text-white"
-            : "text-white/60"}"
+          class="text-xs uppercase font-bold tracking-wider text-center w-full leading-tight mb-1 flex flex-col items-center ${
+            this.value > 0 ? "text-white" : "text-white/60"
+          }"
         >
           <span>${this.labelKey ? translateText(this.labelKey) : ""}</span>
-          ${this.isEditing
-            ? html`<input
-                type="number"
-                .min=${this.min}
-                .max=${this.max}
-                .valueAsNumber=${this.value}
-                class="w-[60px] bg-black/60 text-white border border-white/20 text-center rounded text-sm p-1 leading-none font-bold font-inherit mt-1 focus:outline-none focus:border-blue-500"
-                @input=${this.handleNumberInput}
-                @blur=${() => {
-                  this.isEditing = false;
-                  this.handleNumberComplete();
-                }}
-                @keydown=${this.handleNumberKeyDown}
-              />`
-            : html`<span
-                class="cursor-pointer min-w-[60px] inline-block text-center text-sm font-bold select-none hover:text-white transition-colors mt-1 ${this
-                  .value > 0
-                  ? "text-white"
-                  : "text-white/60"}"
-                role="button"
-                tabindex="0"
-                @click=${this.enableEditing}
-                @keydown=${(e: KeyboardEvent) => {
-                  if (e.key === "Enter" || e.key === " ") {
-                    this.enableEditing();
-                    e.preventDefault();
+          ${
+            this.isEditing
+              ? html`<input
+                  type="number"
+                  .min=${this.min}
+                  .max=${this.max}
+                  .valueAsNumber=${this.value}
+                  class="w-[60px] bg-black/60 text-white border border-white/20 text-center rounded text-sm p-1 leading-none font-bold font-inherit mt-1 focus:outline-none focus:border-blue-500"
+                  @input=${this.handleNumberInput}
+                  @blur=${() => {
+                    this.isEditing = false;
+                    this.handleNumberComplete();
+                  }}
+                  @keydown=${this.handleNumberKeyDown}
+                />`
+              : html`<span
+                  class="cursor-pointer min-w-[60px] inline-block text-center text-sm font-bold select-none hover:text-white transition-colors mt-1 ${
+                    this.value > 0 ? "text-white" : "text-white/60"
+                  }"
+                  role="button"
+                  tabindex="0"
+                  @click=${this.enableEditing}
+                  @keydown=${(e: KeyboardEvent) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      this.enableEditing();
+                      e.preventDefault();
+                    }
+                  }}
+                >
+                  ${
+                    this.value === 0 && this.disabledKey
+                      ? translateText(this.disabledKey)
+                      : this.defaultValue !== undefined &&
+                          this.value === this.defaultValue &&
+                          this.defaultLabelKey
+                        ? html`${this.value}
+                            <span class="text-white/40 uppercase"
+                              >(${translateText(this.defaultLabelKey)})</span
+                            >`
+                        : this.value
                   }
-                }}
-              >
-                ${this.value === 0 && this.disabledKey
-                  ? translateText(this.disabledKey)
-                  : this.defaultValue !== undefined &&
-                      this.value === this.defaultValue &&
-                      this.defaultLabelKey
-                    ? html`${this.value}
-                        <span class="text-white/40 uppercase"
-                          >(${translateText(this.defaultLabelKey)})</span
-                        >`
-                    : this.value}
-              </span>`}
+                </span>`
+          }
         </div>
       </div>
     `;

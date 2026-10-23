@@ -120,23 +120,25 @@ export class TroubleshootingModal extends BaseModal {
         ${this.section(
           translateText("troubleshooting.power"),
           html`
-            ${this.diagnostics!.power.unavailable
-              ? this.row(
-                  translateText("troubleshooting.battery"),
-                  translateText("troubleshooting.unavailable"),
-                )
-              : html`
-                  ${this.row(
-                    translateText("troubleshooting.charging"),
-                    this.diagnostics!.power.charging
-                      ? translateText("troubleshooting.yes")
-                      : translateText("troubleshooting.no"),
-                  )}
-                  ${this.row(
-                    translateText("troubleshooting.battery_level"),
-                    this.diagnostics!.power.level,
-                  )}
-                `}
+            ${
+              this.diagnostics!.power.unavailable
+                ? this.row(
+                    translateText("troubleshooting.battery"),
+                    translateText("troubleshooting.unavailable"),
+                  )
+                : html`
+                    ${this.row(
+                      translateText("troubleshooting.charging"),
+                      this.diagnostics!.power.charging
+                        ? translateText("troubleshooting.yes")
+                        : translateText("troubleshooting.no"),
+                    )}
+                    ${this.row(
+                      translateText("troubleshooting.battery_level"),
+                      this.diagnostics!.power.level,
+                    )}
+                  `
+            }
             ${this.infoTip(translateText("troubleshooting.power_saving_tip"))}
           `,
         )}
@@ -147,11 +149,11 @@ export class TroubleshootingModal extends BaseModal {
   private infoTip(text: string, warning?: boolean): unknown {
     return html`
       <div
-        class="mt-2 ${warning
-          ? "bg-orange-500/10"
-          : "bg-white/10"} flex gap-2 text-white py-1 px-3 rounded-sm  border-1 ${warning
-          ? "border-orange-400"
-          : "border-white/40"}"
+        class="mt-2 ${
+          warning ? "bg-orange-500/10" : "bg-white/10"
+        } flex gap-2 text-white py-1 px-3 rounded-sm  border-1 ${
+          warning ? "border-orange-400" : "border-white/40"
+        }"
       >
         <img src="${infoIcon}" class="w-4" />
         ${text}

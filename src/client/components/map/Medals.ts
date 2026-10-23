@@ -32,9 +32,9 @@ export function medalIcon(
 ): TemplateResult {
   return html`<div
     class="${sizeClass} ${earned ? "opacity-100" : "opacity-25"}"
-    style="background-color:${MEDAL_COLORS[
-      difficulty
-    ]}; mask:${MEDAL_MASK}; -webkit-mask:${MEDAL_MASK};"
+    style="background-color:${
+      MEDAL_COLORS[difficulty]
+    }; mask:${MEDAL_MASK}; -webkit-mask:${MEDAL_MASK};"
     title=${translateText(`difficulty.${difficulty.toLowerCase()}`)}
   ></div>`;
 }
