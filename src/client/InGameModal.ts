@@ -1,3 +1,5 @@
+// The type-only use below is erased at runtime; keep this to register the dialog.
+// oxlint-disable-next-line import/no-duplicates -- Required custom-element registration.
 import "./components/ConfirmDialog";
 import { ConfirmDialog } from "./components/ConfirmDialog";
 import { gamePortal } from "./GamePortal";

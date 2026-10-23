@@ -72,6 +72,7 @@ function makeUserMe(
     steamLicence: false,
     steamLicenceSince: null,
     noticesSeen: [],
+    pendingMessages: [],
     player: {
       publicId: "test-player",
       adfree: false,

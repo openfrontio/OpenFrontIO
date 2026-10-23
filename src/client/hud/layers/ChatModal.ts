@@ -50,6 +50,7 @@ const CORE_PHRASES = new Set([
   "misc.team_up",
   "warnings.betrayed",
   "warnings.mirv_ready",
+  "warnings.renew_or_nuke",
 ]);
 
 // Phrases the panel shows under another category than their key's. Display
@@ -174,16 +175,14 @@ export class ChatModal extends LitElement {
       >
         ${translateText("chat.all_phrases")}
         <span
-          class="relative inline-block w-8 h-4.5 rounded-full transition-colors ${this
-            .showAll
-            ? "bg-blue-500"
-            : "bg-zinc-600"}"
+          class="relative inline-block w-8 h-4.5 rounded-full transition-colors ${
+            this.showAll ? "bg-blue-500" : "bg-zinc-600"
+          }"
         >
           <span
-            class="absolute top-0.5 left-0.5 size-3.5 rounded-full bg-white transition-transform ${this
-              .showAll
-              ? "translate-x-3.5"
-              : ""}"
+            class="absolute top-0.5 left-0.5 size-3.5 rounded-full bg-white transition-transform ${
+              this.showAll ? "translate-x-3.5" : ""
+            }"
           ></span>
         </span>
       </button>
@@ -194,40 +193,44 @@ export class ChatModal extends LitElement {
     const sections = this.sections();
     const query = this.phraseQuery();
     return html`
-      ${this.showAll
-        ? html`<input
-            class="px-2 py-1.5 rounded-md bg-zinc-800 ring-1 ring-white/10 text-sm outline-none focus:ring-white/30"
-            type="text"
-            placeholder=${translateText("chat.search_phrases")}
-            .value=${this.phraseSearch}
-            @input=${(e: Event) =>
-              (this.phraseSearch = (e.target as HTMLInputElement).value)}
-            @keydown=${(e: KeyboardEvent) => {
-              const first = sections[0]?.phrases[0];
-              if (e.key === "Enter" && !e.isComposing && query && first) {
-                this.pickPhrase(first.category, first.phrase);
-              }
-            }}
-          />`
-        : null}
-      ${sections.length === 0
-        ? html`<p class="text-sm text-zinc-400">
-            ${translateText("chat.no_phrases")}
-          </p>`
-        : sections.map(
-            ({ id, phrases }) => html`
-              <section>
-                <h3
-                  class="mb-1 text-[11px] font-semibold uppercase tracking-wider text-zinc-400"
-                >
-                  ${translateText(`chat.cat.${id}`)}
-                </h3>
-                <div class="flex flex-wrap gap-1">
-                  ${phrases.map((entry) => this.renderChip(entry))}
-                </div>
-              </section>
-            `,
-          )}
+      ${
+        this.showAll
+          ? html`<input
+              class="px-2 py-1.5 rounded-md bg-zinc-800 ring-1 ring-white/10 text-sm outline-none focus:ring-white/30"
+              type="text"
+              placeholder=${translateText("chat.search_phrases")}
+              .value=${this.phraseSearch}
+              @input=${(e: Event) =>
+                (this.phraseSearch = (e.target as HTMLInputElement).value)}
+              @keydown=${(e: KeyboardEvent) => {
+                const first = sections[0]?.phrases[0];
+                if (e.key === "Enter" && !e.isComposing && query && first) {
+                  this.pickPhrase(first.category, first.phrase);
+                }
+              }}
+            />`
+          : null
+      }
+      ${
+        sections.length === 0
+          ? html`<p class="text-sm text-zinc-400">
+              ${translateText("chat.no_phrases")}
+            </p>`
+          : sections.map(
+              ({ id, phrases }) => html`
+                <section>
+                  <h3
+                    class="mb-1 text-[11px] font-semibold uppercase tracking-wider text-zinc-400"
+                  >
+                    ${translateText(`chat.cat.${id}`)}
+                  </h3>
+                  <div class="flex flex-wrap gap-1">
+                    ${phrases.map((entry) => this.renderChip(entry))}
+                  </div>
+                </section>
+              `,
+            )
+      }
     `;
   }
 

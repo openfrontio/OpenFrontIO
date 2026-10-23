@@ -110,16 +110,17 @@ export class PastGameXpCard extends LitElement {
   private circledIcon(kind: "info" | "dash"): TemplateResult {
     return html`<svg
       viewBox="0 0 18 18"
-      class="size-[18px] flex-none ${kind === "info"
-        ? "text-white/40"
-        : "text-white/30"}"
+      class="size-[18px] flex-none ${
+        kind === "info" ? "text-white/40" : "text-white/30"
+      }"
       fill="none"
       stroke="currentColor"
       aria-hidden="true"
     >
       <circle cx="9" cy="9" r="8" stroke-width="1.5" />
-      ${kind === "info"
-        ? svg`<path d="M9 8v5" stroke-width="1.8" stroke-linecap="round" />
+      ${
+        kind === "info"
+          ? svg`<path d="M9 8v5" stroke-width="1.8" stroke-linecap="round" />
             <circle
               cx="9"
               cy="5.3"
@@ -127,7 +128,8 @@ export class PastGameXpCard extends LitElement {
               fill="currentColor"
               stroke="none"
             />`
-        : svg`<path d="M5.5 9h7" stroke-width="1.8" stroke-linecap="round" />`}
+          : svg`<path d="M5.5 9h7" stroke-width="1.8" stroke-linecap="round" />`
+      }
     </svg>`;
   }
 
@@ -166,9 +168,11 @@ export class PastGameXpCard extends LitElement {
         ${this.badge(after.level, after.prestige, after.legend)}
         <div class="leading-tight">
           <div class="text-[15px] font-extrabold">
-            ${after.legend
-              ? translateText("progression.legend")
-              : translateText("progression.level", { level: after.level })}
+            ${
+              after.legend
+                ? translateText("progression.legend")
+                : translateText("progression.level", { level: after.level })
+            }
           </div>
           <div class="text-xs tabular-nums text-white/55">
             ${xpProgressText(after.xpInLevel, after.xpForNext)}
@@ -189,9 +193,9 @@ export class PastGameXpCard extends LitElement {
       >
       <span
         data-past-xp-new-badge
-        class="inline-grid place-items-center rounded-full ${milestone
-          ? "shadow-[0_0_14px_rgba(250,204,21,0.55)]"
-          : ""}"
+        class="inline-grid place-items-center rounded-full ${
+          milestone ? "shadow-[0_0_14px_rgba(250,204,21,0.55)]" : ""
+        }"
       >
         ${this.badge(
           last.level,
@@ -205,14 +209,16 @@ export class PastGameXpCard extends LitElement {
           to: last.level,
         })}
       </span>
-      ${milestone
-        ? html`<span
-            data-past-xp-milestone
-            class="ml-1 rounded-full border border-yellow-400/45 bg-yellow-400/10 px-2 py-[3px] text-[10px] font-extrabold uppercase tracking-[0.14em] text-yellow-300"
-          >
-            ${translateText("progression.milestone_chip")}
-          </span>`
-        : nothing}
+      ${
+        milestone
+          ? html`<span
+              data-past-xp-milestone
+              class="ml-1 rounded-full border border-yellow-400/45 bg-yellow-400/10 px-2 py-[3px] text-[10px] font-extrabold uppercase tracking-[0.14em] text-yellow-300"
+            >
+              ${translateText("progression.milestone_chip")}
+            </span>`
+          : nothing
+      }
     </div>`;
   }
 
@@ -228,28 +234,34 @@ export class PastGameXpCard extends LitElement {
           : DEFAULT_BOOST_COLORS;
       return html`<div
         data-past-xp-multiplier=${m.key}
-        data-xp-tier=${m.key === "subscriber"
-          ? (subscriberTierOf(m.permille)?.tier ?? nothing)
-          : nothing}
+        data-xp-tier=${
+          m.key === "subscriber"
+            ? (subscriberTierOf(m.permille)?.tier ?? nothing)
+            : nothing
+        }
         class="mt-1.5 flex flex-wrap items-baseline gap-x-2.5 gap-y-1 text-[13px] leading-relaxed"
       >
         <span
-          class="font-extrabold uppercase italic tracking-[0.04em] ${cut
-            ? "text-sky-300"
-            : "bg-clip-text text-transparent"}"
-          style=${cut
-            ? nothing
-            : `background-image: linear-gradient(90deg, ${colors[0]}, ${colors[1]})`}
+          class="font-extrabold uppercase italic tracking-[0.04em] ${
+            cut ? "text-sky-300" : "bg-clip-text text-transparent"
+          }"
+          style=${
+            cut
+              ? nothing
+              : `background-image: linear-gradient(90deg, ${colors[0]}, ${colors[1]})`
+          }
           >${xpBonusText(m.key, m.permille)}</span
         >
-        ${m.amount === null
-          ? nothing
-          : html`<span
-              data-past-xp-multiplier-amount
-              class="font-extrabold tabular-nums ${cut ? "text-sky-300" : ""}"
-              style=${cut ? nothing : `color: ${colors[1]}`}
-              >${this.signed(m.amount)}</span
-            >`}
+        ${
+          m.amount === null
+            ? nothing
+            : html`<span
+                data-past-xp-multiplier-amount
+                class="font-extrabold tabular-nums ${cut ? "text-sky-300" : ""}"
+                style=${cut ? nothing : `color: ${colors[1]}`}
+                >${this.signed(m.amount)}</span
+              >`
+        }
       </div>`;
     })}`;
   }
@@ -272,36 +284,40 @@ export class PastGameXpCard extends LitElement {
           </div>
           ${this.renderLevel(data)}
         </div>
-        ${lines.length > 0
-          ? html`<div
-              data-past-xp-lines
-              class="mt-3 grid grid-cols-1 gap-x-7 gap-y-1 border-t border-white/[0.08] pt-2.5 sm:grid-cols-3"
-            >
-              ${lines.map(
-                (line) =>
-                  html`<div
-                    data-past-xp-line=${line.key}
-                    class="flex justify-between gap-3 text-[13px] leading-relaxed"
-                  >
-                    <span class="min-w-0 text-white/70"
-                      >${translateText(XP_LINE_LABEL_KEYS[line.key])}</span
+        ${
+          lines.length > 0
+            ? html`<div
+                data-past-xp-lines
+                class="mt-3 grid grid-cols-1 gap-x-7 gap-y-1 border-t border-white/[0.08] pt-2.5 sm:grid-cols-3"
+              >
+                ${lines.map(
+                  (line) =>
+                    html`<div
+                      data-past-xp-line=${line.key}
+                      class="flex justify-between gap-3 text-[13px] leading-relaxed"
                     >
-                    <span class="font-bold tabular-nums text-yellow-300"
-                      >${this.signed(line.amount)}</span
-                    >
-                  </div>`,
-              )}
-            </div>`
-          : nothing}
+                      <span class="min-w-0 text-white/70"
+                        >${translateText(XP_LINE_LABEL_KEYS[line.key])}</span
+                      >
+                      <span class="font-bold tabular-nums text-yellow-300"
+                        >${this.signed(line.amount)}</span
+                      >
+                    </div>`,
+                )}
+              </div>`
+            : nothing
+        }
         ${this.renderMultipliers(data)}
-        ${data.breakdown.leftEarly
-          ? html`<p
-              data-past-xp-left-early
-              class="m-0 mt-2 text-xs text-amber-300"
-            >
-              ${translateText("progression.left_early")}
-            </p>`
-          : nothing}
+        ${
+          data.breakdown.leftEarly
+            ? html`<p
+                data-past-xp-left-early
+                class="m-0 mt-2 text-xs text-amber-300"
+              >
+                ${translateText("progression.left_early")}
+              </p>`
+            : nothing
+        }
       `,
       "result",
     );

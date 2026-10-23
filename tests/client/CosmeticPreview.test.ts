@@ -1,11 +1,11 @@
 import { afterEach, describe, expect, it } from "vitest";
-import type { ResolvedCosmetic } from "../../src/client/Cosmetics";
 import {
   cosmeticDisplayName,
   cosmeticRarity,
 } from "../../src/client/components/CosmeticPresentation";
-import "../../src/client/components/CosmeticPreview";
 import type { CosmeticPreview } from "../../src/client/components/CosmeticPreview";
+import "../../src/client/components/CosmeticPreview";
+import type { ResolvedCosmetic } from "../../src/client/Cosmetics";
 
 const translations = {
   "cosmetics.free": "+{numFree} BONUS!",
