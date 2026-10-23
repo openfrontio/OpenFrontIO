@@ -174,6 +174,8 @@ export class AttackExecution implements Execution {
         this.attack.sourceTile() === null
       ) {
         this.attack.setTroops(this.attack.troops() + outgoing.troops());
+        // stops troop duping when cancel attack finishes on same tick as new attack
+        outgoing.setTroops(0);
         outgoing.delete();
       }
     }
