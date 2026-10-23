@@ -1,7 +1,8 @@
 /**
  * RangeCirclePass — draws a translucent circle showing the effective
  * range of a structure during build-mode ghost preview. White by default,
- * red when the ghost flags a warning (e.g. nuking would break an alliance).
+ * flashing red when the ghost flags a warning (nuking here would mark
+ * you a traitor).
  *
  * Single quad with circle SDF in the fragment shader.
  * Active only when a ghost preview with rangeRadius > 0 is set.
@@ -75,7 +76,10 @@ export class RangeCirclePass {
     gl.uniform2f(this.uCenter, this.centerX, this.centerY);
     gl.uniform1f(this.uRadius, this.radius);
     if (this.warning) {
-      gl.uniform3f(this.uColor, 1.0, 0.2, 0.2);
+      // Flash red↔white so the traitor-mark warning is unmistakable.
+      const t = 0.5 + 0.5 * Math.sin(performance.now() * 0.01257); // ~2 Hz
+      const gb = 0.2 + 0.8 * (1.0 - t);
+      gl.uniform3f(this.uColor, 1.0, gb, gb);
     } else {
       gl.uniform3f(this.uColor, 1.0, 1.0, 1.0);
     }
