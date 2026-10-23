@@ -1,0 +1,156 @@
+{
+  "categories": ["oceania"],
+  "id": "Zealandia",
+  "map": {
+    "height": 1888,
+    "num_land_tiles": 1029510,
+    "width": 2048
+  },
+  "map16x": {
+    "height": 472,
+    "num_land_tiles": 60231,
+    "width": 512
+  },
+  "map4x": {
+    "height": 944,
+    "num_land_tiles": 251133,
+    "width": 1024
+  },
+  "multiplayer_frequency": 6,
+  "name": "Zealandia",
+  "nations": [
+    {
+      "coordinates": [378, 1075],
+      "flag": "au",
+      "name": "Tasmania"
+    },
+    {
+      "coordinates": [461, 819],
+      "flag": "au",
+      "name": "Canberra"
+    },
+    {
+      "coordinates": [673, 367],
+      "flag": "au",
+      "name": "Brisbane"
+    },
+    {
+      "coordinates": [533, 35],
+      "flag": "au",
+      "name": "Great Barrier Reef"
+    },
+    {
+      "coordinates": [1585, 1511],
+      "flag": "nz",
+      "name": "Campbell Plateau"
+    },
+    {
+      "coordinates": [1365, 53],
+      "flag": "nc",
+      "name": "New Caledonia"
+    },
+    {
+      "coordinates": [1473, 862],
+      "flag": "nz",
+      "name": "Challenger Plateau"
+    },
+    {
+      "coordinates": [1754, 1010],
+      "flag": "nz",
+      "name": "Wellington"
+    },
+    {
+      "coordinates": [1141, 595],
+      "flag": "nc",
+      "name": "Lord Howe Rise"
+    },
+    {
+      "coordinates": [1093, 225],
+      "name": "Titanosaurs"
+    },
+    {
+      "coordinates": [1665, 459],
+      "name": "Tuataras"
+    },
+    {
+      "coordinates": [301, 1774],
+      "name": "Elasmosaur Navy"
+    },
+    {
+      "coordinates": [1738, 760],
+      "flag": "nz",
+      "name": "Auckland"
+    },
+    {
+      "coordinates": [1417, 1278],
+      "flag": "nz",
+      "name": "Invercargill"
+    },
+    {
+      "coordinates": [1664, 1119],
+      "flag": "nz",
+      "name": "Christchurch"
+    },
+    {
+      "coordinates": [2012, 1362],
+      "flag": "nz",
+      "name": "Mount Bollons"
+    },
+    {
+      "coordinates": [1930, 1138],
+      "flag": "nz",
+      "name": "Chatham Mountains"
+    },
+    {
+      "coordinates": [388, 1345],
+      "flag": "au",
+      "name": "East Tasman Island"
+    },
+    {
+      "coordinates": [173, 858],
+      "flag": "au",
+      "name": "Melbourne"
+    },
+    {
+      "coordinates": [1340, 1698],
+      "flag": "aq",
+      "name": "Penguins"
+    },
+    {
+      "coordinates": [519, 683],
+      "flag": "au",
+      "name": "Sydney"
+    },
+    {
+      "coordinates": [2038, 451],
+      "flag": "nz",
+      "name": "Colville Islands"
+    },
+    {
+      "coordinates": [2019, 656],
+      "flag": "to",
+      "name": "Kermadec Islands"
+    },
+    {
+      "coordinates": [1600, 775],
+      "flag": "au",
+      "name": "Aotea Valley"
+    },
+    {
+      "coordinates": [1414, 580],
+      "flag": "nz",
+      "name": "W.N. Ridge"
+    },
+    {
+      "coordinates": [813, 50],
+      "flag": "au",
+      "name": "Bellona Island"
+    },
+    {
+      "coordinates": [1055, 1564],
+      "flag": "nz",
+      "name": "Puysegur Islands"
+    }
+  ],
+  "translation_key": "map.zealandia"
+}
