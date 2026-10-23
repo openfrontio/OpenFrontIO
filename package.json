@@ -76,6 +76,7 @@
     "marked": "^18.0.5",
     "mrmime": "^2.0.1",
     "oxc-parser": "^0.154.0",
+    "oxc-transform": "^0.154.0",
     "oxfmt": "^0.73.0",
     "oxlint": "^1.88.0",
     "oxlint-plugin-eslint": "^1.88.0",

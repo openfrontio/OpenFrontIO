@@ -1,8 +1,6 @@
 import fs from "fs";
 import IntlMessageFormat from "intl-messageformat";
 import {
-  parseSync,
-  visitorKeys,
   type CallExpression,
   type Expression,
   type Node,
@@ -12,6 +10,7 @@ import {
   type TemplateLiteral,
 } from "oxc-parser";
 import path from "path";
+import { forEachChild, isStringLiteral, parseSource } from "./util/sourceAst";
 
 const PROJECT_ROOT = path.join(__dirname, "..");
 const LANGUAGE_DIR = path.join(PROJECT_ROOT, "resources", "lang");
@@ -75,9 +74,6 @@ type ScanResult = {
   referencedStaticKeys: Set<string>;
   dynamicPrefixes: Set<string>;
 };
-
-/** Every literal node shares the type "Literal"; the value tells them apart. */
-type AnyLiteral = Extract<Node, { type: "Literal" }>;
 
 /** A template literal without substitutions. */
 type PlainTemplateLiteral = TemplateLiteral & { expressions: [] };
@@ -224,12 +220,6 @@ function isTranslateTextCall(node: CallExpression): boolean {
     return callee.property.name === "translateText";
   }
   return false;
-}
-
-function isStringLiteral(node: Node): node is StringLiteral {
-  return (
-    node.type === "Literal" && typeof (node as AnyLiteral).value === "string"
-  );
 }
 
 function isTemplateLiteral(node: Node): node is PlainTemplateLiteral {
@@ -409,46 +399,13 @@ function collectFromExpression(
   }
 }
 
-function isNode(value: unknown): value is Node {
-  return (
-    typeof value === "object" &&
-    value !== null &&
-    typeof (value as { type?: unknown }).type === "string"
-  );
-}
-
-/** The child nodes of a node, in the order the oxc AST lists them. */
-function childNodes(node: Node): Node[] {
-  const keys = visitorKeys[node.type];
-  if (keys === undefined) return [];
-  const children: Node[] = [];
-  const record = node as unknown as Record<string, unknown>;
-  for (const key of keys) {
-    const value = record[key];
-    if (Array.isArray(value)) {
-      for (const item of value) {
-        if (isNode(item)) children.push(item);
-      }
-    } else if (isNode(value)) {
-      children.push(value);
-    }
-  }
-  return children;
-}
-
 function scanTsFile(
   filePath: string,
   rootKeys: Set<string>,
   enKeySet: Set<string>,
 ): ScanResult {
   const content = fs.readFileSync(filePath, "utf-8");
-  const { program, errors } = parseSync(filePath, content, {
-    lang: filePath.endsWith(".tsx") ? "tsx" : "ts",
-    sourceType: "unambiguous",
-  });
-  if (errors.length > 0) {
-    throw new Error(`${filePath}: ${errors[0].message}`);
-  }
+  const program = parseSource(filePath, content);
 
   const result: ScanResult = {
     usedKeys: new Set<string>(),
@@ -510,9 +467,7 @@ function scanTsFile(
       collectFromExpression(node.init, result, rootKeys, enKeySet);
     }
 
-    for (const child of childNodes(node)) {
-      visit(child);
-    }
+    forEachChild(node, visit);
   };
 
   visit(program);
