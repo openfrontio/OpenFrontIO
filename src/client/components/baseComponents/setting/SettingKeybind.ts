@@ -43,9 +43,11 @@ export class SettingKeybind extends LitElement {
         <div class="flex items-center gap-3 shrink-0">
           <div
             class="relative h-12 min-w-[80px] px-4 flex items-center justify-center bg-black/60 border border-white/20 rounded-lg text-xl font-bold font-mono shadow-inner hover:border-blue-500 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/50 transition-all cursor-pointer select-none text-white
-            ${this.listening
-              ? "border-blue-500 text-blue-400 ring-2 ring-blue-500/50"
-              : ""}"
+            ${
+              this.listening
+                ? "border-blue-500 text-blue-400 ring-2 ring-blue-500/50"
+                : ""
+            }"
             role="button"
             aria-label="${translateText("user_setting.press_a_key")}"
             tabindex="0"
@@ -58,9 +60,11 @@ export class SettingKeybind extends LitElement {
 
           <div class="flex flex-col gap-1">
             <button
-              class="text-[10px] font-bold uppercase tracking-wider bg-white/5 hover:bg-white/20 border border-white/10 px-3 py-1 rounded text-white/60 hover:text-white transition-colors ${canReset
-                ? ""
-                : "opacity-50 cursor-not-allowed pointer-events-none"}"
+              class="text-[10px] font-bold uppercase tracking-wider bg-white/5 hover:bg-white/20 border border-white/10 px-3 py-1 rounded text-white/60 hover:text-white transition-colors ${
+                canReset
+                  ? ""
+                  : "opacity-50 cursor-not-allowed pointer-events-none"
+              }"
               @click=${this.resetToDefault}
               ?disabled=${!canReset}
             >

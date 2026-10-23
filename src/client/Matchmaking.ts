@@ -93,11 +93,13 @@ export class MatchmakingModal extends BaseModal {
     // Clan wars rates the clan, so show who the player is playing for instead.
     const eloDisplay = html`
       <p class="text-center mt-2 mb-4 text-white/60">
-        ${this.mode === "clanwars"
-          ? translateText("matchmaking_modal.clanwars_clan", {
-              clan: this.selectedClanTag ?? "",
-            })
-          : translateText("matchmaking_modal.elo", { elo: this.elo })}
+        ${
+          this.mode === "clanwars"
+            ? translateText("matchmaking_modal.clanwars_clan", {
+                clan: this.selectedClanTag ?? "",
+              })
+            : translateText("matchmaking_modal.elo", { elo: this.elo })
+        }
       </p>
     `;
     return html`
@@ -148,25 +150,29 @@ export class MatchmakingModal extends BaseModal {
     }
     if (this.gameID === null) {
       return html`
-        ${this.queueSize !== null
-          ? html`
-              <p class="text-center text-white/60">
-                ${translateText("matchmaking_modal.queue_size", {
-                  count: this.queueSize.count,
-                })}
-              </p>
-              ${this.queueSize.clanCount !== undefined
-                ? html`
-                    <p class="text-center text-white/60">
-                      ${translateText("matchmaking_modal.clan_queue_size", {
-                        count: this.queueSize.clanCount,
-                        clan: this.selectedClanTag ?? "",
-                      })}
-                    </p>
-                  `
-                : ""}
-            `
-          : ""}
+        ${
+          this.queueSize !== null
+            ? html`
+                <p class="text-center text-white/60">
+                  ${translateText("matchmaking_modal.queue_size", {
+                    count: this.queueSize.count,
+                  })}
+                </p>
+                ${
+                  this.queueSize.clanCount !== undefined
+                    ? html`
+                        <p class="text-center text-white/60">
+                          ${translateText("matchmaking_modal.clan_queue_size", {
+                            count: this.queueSize.clanCount,
+                            clan: this.selectedClanTag ?? "",
+                          })}
+                        </p>
+                      `
+                    : ""
+                }
+              `
+            : ""
+        }
         ${this.renderLoadingSpinner(
           translateText("matchmaking_modal.searching"),
           "green",

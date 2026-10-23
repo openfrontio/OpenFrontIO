@@ -141,14 +141,16 @@ export class OvertimePanel extends LitElement {
             style="left:${Math.min(100, requiredPct)}%"
           ></div>
         </div>
-        ${leader !== null
-          ? html`<div class="text-xs text-gray-300">
-              ${translateText("overtime.first_place", {
-                name: leader.name,
-                pct: leaderPctShown,
-              })}
-            </div>`
-          : ""}
+        ${
+          leader !== null
+            ? html`<div class="text-xs text-gray-300">
+                ${translateText("overtime.first_place", {
+                  name: leader.name,
+                  pct: leaderPctShown,
+                })}
+              </div>`
+            : ""
+        }
       </div>
     `;
   }

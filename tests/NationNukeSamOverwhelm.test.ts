@@ -13,13 +13,13 @@ import {
 import { PseudoRandom } from "@openfront/engine-lib/PseudoRandom";
 import { MissileSiloExecution } from "@openfront/engine/execution/MissileSiloExecution";
 import { NationAllianceBehavior } from "@openfront/engine/execution/nation/NationAllianceBehavior";
+import { NationAttackBehavior } from "@openfront/engine/execution/nation/NationAttackBehavior";
 import { NationEmojiBehavior } from "@openfront/engine/execution/nation/NationEmojiBehavior";
 import { NationNukeBehavior } from "@openfront/engine/execution/nation/NationNukeBehavior";
+import { NationWarshipBehavior } from "@openfront/engine/execution/nation/NationWarshipBehavior";
 import { NationExecution } from "@openfront/engine/execution/NationExecution";
 import { SAMLauncherExecution } from "@openfront/engine/execution/SAMLauncherExecution";
 import { UpgradeStructureExecution } from "@openfront/engine/execution/UpgradeStructureExecution";
-import { NationAttackBehavior } from "@openfront/engine/execution/nation/NationAttackBehavior";
-import { NationWarshipBehavior } from "@openfront/engine/execution/nation/NationWarshipBehavior";
 import { Game, Player } from "@openfront/engine/game/Game";
 import { setup } from "./util/Setup";
 import { TestConfig } from "./util/TestConfig";

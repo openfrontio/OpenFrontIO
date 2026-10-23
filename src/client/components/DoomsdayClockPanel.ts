@@ -245,26 +245,28 @@ export class DoomsdayClockPanel extends LitElement {
               pct: requiredPct.toFixed(1),
             })}
           </span>
-          ${live
-            ? myTeam !== null
-              ? html`<span style=${`color:${this.teamColor(myTeam)}`}>
-                  ${translateText("doomsday_clock.your_team", {
-                    team: this.teamDisplayName(myTeam),
-                    pct: yourPct.toFixed(1),
-                  })}
-                </span>`
-              : html`<span
-                  class=${redAlert ? "text-red-300" : "text-green-300"}
-                >
-                  ${translateText("doomsday_clock.you", {
-                    pct: yourPct.toFixed(1),
-                  })}
-                </span>`
-            : ""}
+          ${
+            live
+              ? myTeam !== null
+                ? html`<span style=${`color:${this.teamColor(myTeam)}`}>
+                    ${translateText("doomsday_clock.your_team", {
+                      team: this.teamDisplayName(myTeam),
+                      pct: yourPct.toFixed(1),
+                    })}
+                  </span>`
+                : html`<span
+                    class=${redAlert ? "text-red-300" : "text-green-300"}
+                  >
+                    ${translateText("doomsday_clock.you", {
+                      pct: yourPct.toFixed(1),
+                    })}
+                  </span>`
+              : ""
+          }
         </div>
-        ${detail
-          ? html`<div class="text-xs text-gray-400">${detail}</div>`
-          : ""}
+        ${
+          detail ? html`<div class="text-xs text-gray-400">${detail}</div>` : ""
+        }
       </div>
     `;
   }
