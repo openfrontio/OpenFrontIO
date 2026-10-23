@@ -100,6 +100,7 @@ export enum GameMapType {
   Oceania = "Oceania", // map-generator/assets/maps/oceania/info.json
   Ommatrypta = "Ommatrypta", // map-generator/assets/maps/ommatrypta/info.json
   Onion = "Onion", // map-generator/assets/maps/onion/info.json
+  OttomanEmpire = "Ottoman Empire", // map-generator/assets/maps/ottomanempire/info.json
   Pangaea = "Pangaea", // map-generator/assets/maps/pangaea/info.json
   Passage = "Passage", // map-generator/assets/maps/passage/info.json
   Pluto = "Pluto", // map-generator/assets/maps/pluto/info.json
@@ -2089,6 +2090,17 @@ export const maps: readonly MapInfo[] = [
     teamFrequency: -1,
     specialFrequency: -1,
     defaultNationCount: 3,
+  },
+  {
+    id: "OttomanEmpire",
+    type: GameMapType.OttomanEmpire,
+    translationKey: "map.ottomanempire",
+    categories: ["europe", "asia", "africa"],
+    multiplayerFrequency: 5,
+    ffaFrequency: -1,
+    teamFrequency: -1,
+    specialFrequency: -1,
+    defaultNationCount: 46,
   },
   {
     id: "Pangaea",
