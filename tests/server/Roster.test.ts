@@ -42,6 +42,170 @@ describe("Roster", () => {
     expect(roster.wasAdmitted("nobody")).toBe(false);
   });
 
+  it("records admission via markAdmitted prior to client add and overrides on kick", () => {
+    const roster = new Roster();
+    const pid = "pre-admit-pid";
+
+    expect(roster.wasAdmitted(pid)).toBe(false);
+    expect(roster.byPersistentId(pid)).toBeUndefined();
+
+    // Mark admitted before the client is seated in Roster
+    roster.markAdmitted(pid);
+    expect(roster.wasAdmitted(pid)).toBe(true);
+    // Still not reconnectable / active since add() hasn't been called
+    expect(roster.byPersistentId(pid)).toBeUndefined();
+    expect(roster.active()).toEqual([]);
+
+    // Now seat the client
+    const p1 = makeClient({ clientID: cid("p1"), persistentID: pid });
+    roster.add(p1);
+    expect(roster.wasAdmitted(pid)).toBe(true);
+    expect(roster.byPersistentId(pid)).toBe(p1);
+
+    // Kicking overrides wasAdmitted
+    roster.kick(p1);
+    expect(roster.isKicked(pid)).toBe(true);
+    expect(roster.wasAdmitted(pid)).toBe(false);
+
+    // Calling markAdmitted on a kicked account still yields false for wasAdmitted
+    roster.markAdmitted(pid);
+    expect(roster.wasAdmitted(pid)).toBe(false);
+  });
+
+  it("removes admission via unmarkAdmitted", () => {
+    const roster = new Roster();
+    const pid = "test-pid";
+    roster.markAdmitted(pid);
+    expect(roster.wasAdmitted(pid)).toBe(true);
+    roster.unmarkAdmitted(pid);
+    expect(roster.wasAdmitted(pid)).toBe(false);
+  });
+
+  it("handles unmarkAdmitted on non-admitted ID and allows re-admission", () => {
+    const roster = new Roster();
+    const pid = "test-pid-2";
+    expect(roster.wasAdmitted(pid)).toBe(false);
+    roster.unmarkAdmitted(pid);
+    expect(roster.wasAdmitted(pid)).toBe(false);
+    roster.markAdmitted(pid);
+    expect(roster.wasAdmitted(pid)).toBe(true);
+    roster.unmarkAdmitted(pid);
+    expect(roster.wasAdmitted(pid)).toBe(false);
+  });
+
+  it("tracks multiple pending attempts and clears admission only when all roll back", () => {
+    const roster = new Roster();
+    const pid = "multi-attempt-pid";
+    const attempt1 = "att-1";
+    const attempt2 = "att-2";
+
+    roster.markAdmitted(pid, attempt1);
+    expect(roster.wasAdmitted(pid)).toBe(true);
+
+    roster.markAdmitted(pid, attempt2);
+    expect(roster.wasAdmitted(pid)).toBe(true);
+
+    // Attempt 1 rolls back, but Attempt 2 is still pending
+    roster.unmarkAdmitted(pid, attempt1);
+    expect(roster.wasAdmitted(pid)).toBe(true);
+
+    // Attempt 2 rolls back, no more pending attempts
+    roster.unmarkAdmitted(pid, attempt2);
+    expect(roster.wasAdmitted(pid)).toBe(false);
+  });
+
+  it("preserves backwards compatibility when no attemptID is passed", () => {
+    const roster = new Roster();
+    const pid = "compat-pid";
+
+    roster.markAdmitted(pid);
+    expect(roster.wasAdmitted(pid)).toBe(true);
+
+    roster.unmarkAdmitted(pid);
+    expect(roster.wasAdmitted(pid)).toBe(false);
+  });
+
+  it("clears pending attempts when client is seated or kicked", () => {
+    const roster = new Roster();
+    const pid = "seated-clear-pid";
+    const attempt1 = "att-1";
+
+    roster.markAdmitted(pid, attempt1);
+    expect(roster.wasAdmitted(pid)).toBe(true);
+
+    const client = makeClient({ clientID: cid("p1"), persistentID: pid });
+    roster.add(client);
+    expect(roster.hasEverBeenSeated(pid)).toBe(true);
+
+    // Rollback of attempt1 after seating is a no-op
+    roster.unmarkAdmitted(pid, attempt1);
+    expect(roster.wasAdmitted(pid)).toBe(true);
+  });
+
+  it("clears pending attempts when client is kicked", () => {
+    const roster = new Roster();
+    const pid = "kicked-clear-pid";
+    const attempt1 = "att-1";
+
+    roster.markAdmitted(pid, attempt1);
+    expect(roster.wasAdmitted(pid)).toBe(true);
+
+    const client = makeClient({ clientID: cid("p1"), persistentID: pid });
+    roster.add(client);
+    roster.kick(client);
+    expect(roster.isKicked(pid)).toBe(true);
+    expect(roster.wasAdmitted(pid)).toBe(false);
+  });
+
+  it("does not clear admission on unmarkAdmitted without attemptID if another attempt is pending", () => {
+    const roster = new Roster();
+    const pid = "pending-pid";
+    roster.markAdmitted(pid, "att-1");
+    expect(roster.wasAdmitted(pid)).toBe(true);
+
+    roster.unmarkAdmitted(pid); // no attemptID
+    expect(roster.wasAdmitted(pid)).toBe(true);
+
+    roster.unmarkAdmitted(pid, "att-1");
+    expect(roster.wasAdmitted(pid)).toBe(false);
+  });
+
+  it("does not remove admission on unmarkAdmitted if the persistent ID is currently reconnectable", () => {
+    const roster = new Roster();
+    const pid = "seated-reconnectable-pid";
+    const client = makeClient({ clientID: cid("p1"), persistentID: pid });
+    roster.add(client);
+
+    expect(roster.wasAdmitted(pid)).toBe(true);
+    expect(roster.byPersistentId(pid)).toBe(client);
+
+    roster.unmarkAdmitted(pid);
+    expect(roster.wasAdmitted(pid)).toBe(true);
+
+    // Still reconnectable after markLeft (socket disconnected, e.g. in active game)
+    roster.markLeft(client);
+    roster.unmarkAdmitted(pid);
+    expect(roster.wasAdmitted(pid)).toBe(true);
+  });
+
+  it("retains wasAdmitted true when an admitted player leaves via forgetReconnect", () => {
+    const roster = new Roster();
+    const pid = "leave-pid";
+    const client = makeClient({ clientID: cid("p1"), persistentID: pid });
+    roster.add(client);
+    expect(roster.wasAdmitted(pid)).toBe(true);
+
+    roster.markLeft(client);
+    roster.forgetReconnect(client);
+
+    expect(roster.byPersistentId(pid)).toBeUndefined();
+    expect(roster.wasAdmitted(pid)).toBe(true);
+
+    // Because the player was seated in roster.add, unmarkAdmitted does not delete admission
+    roster.unmarkAdmitted(pid);
+    expect(roster.wasAdmitted(pid)).toBe(true);
+  });
+
   it("moves a reconnecting client to the end, on the new socket, and drops the old one", () => {
     const roster = new Roster();
     const p1 = makeClient({ clientID: cid("p1") });
@@ -129,7 +293,7 @@ describe("Roster", () => {
     roster.add(p1);
     roster.add(p2);
 
-    expect(roster.kick(p1)).toBe(true);
+    expect(roster.kick(p1)).toEqual([p1]);
     expect(roster.active()).toEqual([p2]);
     expect(roster.isKicked("p1-pid")).toBe(true);
     expect(roster.wasAdmitted("p1-pid")).toBe(false);
@@ -138,8 +302,23 @@ describe("Roster", () => {
     expect(roster.byPersistentId("p1-pid")).toBe(p1);
 
     roster.markLeft(p2);
-    expect(roster.kick(p2)).toBe(false);
+    expect(roster.kick(p2)).toEqual([]);
     expect(roster.isKicked("p2-pid")).toBe(true);
+  });
+
+  it("drops every connected session of a kicked account", () => {
+    const roster = new Roster();
+    const stale = makeClient({ clientID: cid("old"), persistentID: "p1-pid" });
+    const live = makeClient({ clientID: cid("new"), persistentID: "p1-pid" });
+    const other = makeClient({ clientID: cid("p2"), persistentID: "p2-pid" });
+    roster.add(stale);
+    roster.markLeft(stale);
+    roster.add(live);
+    roster.add(other);
+
+    // Kicking the left record still cuts off the session that replaced it.
+    expect(roster.kick(stale)).toEqual([live]);
+    expect(roster.active()).toEqual([other]);
   });
 
   it("prunes clients silent for longer than the limit and hands them back", () => {

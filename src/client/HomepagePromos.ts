@@ -1,6 +1,7 @@
 import { LitElement } from "lit";
 import { customElement } from "lit/decorators.js";
 import { adGatekeeper } from "./AdGatekeeper";
+import { menuChromeIsTornDown } from "./MenuChrome";
 
 // ─── Gutter Ads ──────────────────────────────────────────────────────────────
 
@@ -11,6 +12,10 @@ export class HomepagePromos extends LitElement {
   private cornerAdDestroyed: boolean = false;
 
   private onUserMeResponse = () => {
+    // userMeResponse also fires mid-game (a session dropped by a 401, a
+    // purchase's balance recheck), after close() has reset adLoaded.
+    // restoreMenuChrome() calls show() once the player is back on the menu.
+    if (menuChromeIsTornDown()) return;
     if (window.adsEnabled) {
       console.log("showing homepage ads");
       this.show();
@@ -29,6 +34,12 @@ export class HomepagePromos extends LitElement {
   };
 
   private bottomRailActive: boolean = false;
+  // From destroyBottomRail() until the next loadBottomRail(). A destroy that
+  // lands while Playwire is still filling the rail finds nothing to remove,
+  // and the rail renders afterwards over the game, so while this is set any
+  // rail that appears is destroyed again.
+  private bottomRailDestroyedAt: number | null = null;
+  private railDestroy: Promise<void> | null = null;
 
   // The header ad ("flex" leaderboard, GumGum via Playwire) renders in a
   // #pw-oop-flex element that ramp.js nests inside a #pw-oop-flex_container
@@ -58,6 +69,7 @@ export class HomepagePromos extends LitElement {
     // syncTopAd attaches to the banner itself track its size and position.
     this.topAdMutation = new MutationObserver(() => {
       if (this.findTopAd() !== this.topAdEl) this.syncTopAd();
+      if (this.bottomRailDestroyedAt !== null) this.destroyStrayBottomRail();
     });
     // subtree: the banner is nested inside a wrapper (#pw-oop-flex_container),
     // so watching body's direct children alone misses it.
@@ -214,8 +226,12 @@ export class HomepagePromos extends LitElement {
     }
 
     this.bottomRailActive = true;
+    this.bottomRailDestroyedAt = null;
     try {
       window.ramp.que.push(() => {
+        // The queue drains when ramp.js loads, which can be after the rail
+        // was destroyed (see InGamePromo) or the player turned out ad-free.
+        if (!this.bottomRailActive || !window.adsEnabled) return;
         try {
           window.ramp.spaAddAds([{ type: "bottom_rail" }]);
           console.log("Bottom rail ad loaded");
@@ -231,18 +247,49 @@ export class HomepagePromos extends LitElement {
   public destroyBottomRail(): void {
     if (!this.bottomRailActive) return;
     this.bottomRailActive = false;
-
-    if (!window.ramp) return;
-
-    try {
-      window.ramp.destroyUnits("pw-oop-bottom_rail");
+    this.bottomRailDestroyedAt = performance.now();
+    this.railDestroy = this.destroyBottomRailUnit().then(() => {
+      this.railDestroy = null;
       console.log("Bottom rail ad destroyed");
-    } catch (e) {
-      console.warn("Error destroying bottom_rail ad:", e);
+      if (this.bottomRailDestroyedAt !== null) this.destroyStrayBottomRail();
+    });
+  }
+
+  private destroyBottomRailUnit(): Promise<void> {
+    if (typeof window.ramp?.destroyUnits !== "function") {
+      return Promise.resolve();
     }
+    // destroyUnits can throw synchronously or reject; neither may escape.
+    return Promise.resolve()
+      .then(() => window.ramp.destroyUnits("pw-oop-bottom_rail"))
+      .catch((e: unknown) => {
+        console.warn("Error destroying bottom_rail ad:", e);
+      });
+  }
+
+  private destroyStrayBottomRail(): void {
+    // The rail is expected on the page until a destroy in flight settles.
+    if (this.railDestroy !== null) return;
+    if (document.getElementById("pw-oop-bottom_rail") === null) return;
+    const seconds = Math.round(
+      (performance.now() - (this.bottomRailDestroyedAt ?? 0)) / 1000,
+    );
+    // console.error so Telemetry forwards it at the error sampling rate: this
+    // is the only record of how often the rail outlives its destroy in prod.
+    console.error(
+      `Bottom rail ad still on the page ${seconds}s after it was destroyed; destroying it again`,
+    );
+    this.railDestroy = this.destroyBottomRailUnit().then(() => {
+      this.railDestroy = null;
+      if (this.bottomRailDestroyedAt === null) return;
+      // Still here after its destroy settled: one destroyUnits does not know
+      // about, so nothing else will remove it.
+      document.getElementById("pw-oop-bottom_rail")?.remove();
+    });
   }
 
   private loadGutterAds(): void {
+    if (!window.adsEnabled) return;
     console.log("loading ramp gutter rails and header ad");
     if (!window.ramp) {
       console.warn("Playwire RAMP not available");
@@ -256,6 +303,10 @@ export class HomepagePromos extends LitElement {
 
     try {
       window.ramp.que.push(() => {
+        // The queue drains when ramp.js loads, which can be after a game has
+        // started (close() found only the index.html stub and destroyed
+        // nothing) or after the player turned out ad-free.
+        if (menuChromeIsTornDown() || !window.adsEnabled) return;
         try {
           window.ramp.spaAddAds([
             { type: "left_rail" },

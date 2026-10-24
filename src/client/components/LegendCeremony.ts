@@ -7,6 +7,7 @@ import {
   TemplateResult,
 } from "lit";
 import { customElement, state } from "lit/decorators.js";
+import { momentShareText, momentShareUrl } from "../MomentShare";
 import { MAX_PRESTIGE } from "../Progression";
 import { translateText } from "../Utils";
 import {
@@ -15,6 +16,7 @@ import {
   renderHoneycomb,
 } from "./Ceremony";
 import "./LevelBadge";
+import "./ProfileShare";
 import { formatXp } from "./XpBar";
 
 // Becoming a Legend (Prestige 10, level 99 to 100): the whole screen, once
@@ -22,8 +24,9 @@ import { formatXp } from "./XpBar";
 // it and the honeycomb pulsing in toward it, implodes to a point of light, and
 // the Legend crown drops in and lands hard: a gold flash, two shockwaves, the
 // screen shaking and two gold waves running out across the honeycomb. LEGEND
-// slams in and a gold sweep runs through it, then a line on what it took, and
-// Continue. At rest the crown breathes and the rays turn slowly.
+// slams in and a gold sweep runs through it, then a line on what it took, a
+// row to share it, and Continue. At rest the crown breathes and the rays turn
+// slowly.
 //
 // Any click or key skips to the end; Escape (or Continue) then closes it.
 // Emits `legend-ceremony-closed` when it closes.
@@ -59,6 +62,8 @@ export interface LegendMoment {
   lifetimeXp: number;
   // When it happened.
   at: Date;
+  // Whose it is, for the share link. Empty: no share row.
+  publicId: string;
 }
 
 const SEEN_PREFIX = "legendCeremonySeen:";
@@ -215,7 +220,8 @@ export class LegendCeremony extends LitElement {
   }
 
   // Every key while it's up stays with it. Before the end any key skips;
-  // at the end Escape closes and Tab stays on Continue.
+  // at the end Escape closes and Tab moves between the share buttons and
+  // Continue without leaving the ceremony.
   private onKeyDown = (e: KeyboardEvent): void => {
     if (this.moment === null) return;
     e.stopPropagation();
@@ -229,7 +235,19 @@ export class LegendCeremony extends LitElement {
       this.close();
     } else if (e.key === "Tab") {
       e.preventDefault();
-      this.continueButton()?.focus();
+      const buttons = [
+        ...(this.root()?.querySelectorAll<HTMLButtonElement>(
+          "button:not([disabled])",
+        ) ?? []),
+      ];
+      if (buttons.length === 0) return;
+      // From anywhere else, back to Continue (the last).
+      const at = buttons.indexOf(document.activeElement as HTMLButtonElement);
+      const next =
+        at === -1
+          ? buttons.length - 1
+          : (at + (e.shiftKey ? -1 : 1) + buttons.length) % buttons.length;
+      buttons[next].focus();
     }
   };
 
@@ -309,9 +327,9 @@ export class LegendCeremony extends LitElement {
     }
     if (!this.reached("implode")) {
       return html`<div
-        class="lc-charge-wrap lc-fade-in ${this.beat === "charge"
-          ? "lc-charge"
-          : ""}"
+        class="lc-charge-wrap lc-fade-in ${
+          this.beat === "charge" ? "lc-charge" : ""
+        }"
       >
         <level-badge
           .level=${99}
@@ -337,14 +355,16 @@ export class LegendCeremony extends LitElement {
       return html`${this.renderCrown("lc-crown-drop", "")}${pinpoint}`;
     }
     // From the impact on.
-    return html`${this.landed
-      ? this.renderCrown("", "lc-crown-breathe")
-      : html`${this.renderCrown("lc-crown-land", "")}
-          <span aria-hidden="true" class="ceremony-shockwave lc-shock"></span>
-          <span
-            aria-hidden="true"
-            class="ceremony-shockwave lc-shock lc-shock-2"
-          ></span>`}`;
+    return html`${
+      this.landed
+        ? this.renderCrown("", "lc-crown-breathe")
+        : html`${this.renderCrown("lc-crown-land", "")}
+            <span aria-hidden="true" class="ceremony-shockwave lc-shock"></span>
+            <span
+              aria-hidden="true"
+              class="ceremony-shockwave lc-shock lc-shock-2"
+            ></span>`
+    }`;
   }
 
   private renderLine(moment: LegendMoment): TemplateResult {
@@ -369,6 +389,29 @@ export class LegendCeremony extends LitElement {
         ><span aria-hidden="true" class="lc-dot">·</span
         ><span class="lc-seg">${formatDate(moment.at)}</span>
       </div>`;
+  }
+
+  // Sharing it, between the line and Continue, the same as the prestige
+  // ceremony's row. The ceremony skips (or, done, does nothing) on any
+  // click; the row keeps its clicks. It is simply there, without the rise
+  // the Continue button has.
+  private renderShare(moment: LegendMoment): TemplateResult | typeof nothing {
+    if (moment.publicId === "") return nothing;
+    const share = { kind: "legend" } as const;
+    const url = momentShareUrl(moment.publicId, share);
+    if (url === null) return nothing;
+    return html`<div
+      data-legend-share
+      class="lc-share"
+      @click=${(e: Event) => e.stopPropagation()}
+    >
+      <profile-share
+        solid
+        centered
+        .url=${url}
+        .text=${momentShareText(share)}
+      ></profile-share>
+    </div>`;
   }
 
   private renderCeremony(moment: LegendMoment): TemplateResult {
@@ -396,45 +439,56 @@ export class LegendCeremony extends LitElement {
         <div aria-hidden="true" class="lc-rays ${this.raysMode()}"></div>
         <div class="lc-stage">
           <div class="lc-emblem">${this.renderEmblem()}</div>
-          ${this.reached("title")
-            ? html`<div
-                data-legend-title
-                class="lc-title ${this.skipped
-                  ? "lc-title-final lc-final-in"
-                  : "lc-title-slam"}"
-              >
-                ${translateText("progression.legend")}
-              </div>`
-            : nothing}
-          ${this.reached("line") ? this.renderLine(moment) : nothing}
-          ${done
-            ? html`<div
-                class="lc-actions ${this.skipped ? "lc-final-in" : "lc-rise"}"
-              >
-                <button
-                  type="button"
-                  data-legend-continue
-                  class="lc-continue"
-                  @click=${(e: Event) => {
-                    e.stopPropagation();
-                    this.close();
-                  }}
+          ${
+            this.reached("title")
+              ? html`<div
+                  data-legend-title
+                  class="lc-title ${
+                    this.skipped
+                      ? "lc-title-final lc-final-in"
+                      : "lc-title-slam"
+                  }"
                 >
-                  ${translateText("legend_ceremony.continue")}
-                </button>
-              </div>`
-            : nothing}
+                  ${translateText("progression.legend")}
+                </div>`
+              : nothing
+          }
+          ${this.reached("line") ? this.renderLine(moment) : nothing}
+          ${done ? this.renderShare(moment) : nothing}
+          ${
+            done
+              ? html`<div
+                  class="lc-actions ${this.skipped ? "lc-final-in" : "lc-rise"}"
+                >
+                  <button
+                    type="button"
+                    data-legend-continue
+                    class="lc-continue"
+                    @click=${(e: Event) => {
+                      e.stopPropagation();
+                      this.close();
+                    }}
+                  >
+                    ${translateText("legend_ceremony.continue")}
+                  </button>
+                </div>`
+              : nothing
+          }
         </div>
       </div>
-      ${this.beat === "implode" || this.beat === "descend"
-        ? html`<div
-            aria-hidden="true"
-            class="ceremony-flash lc-flash lc-flash-small"
-          ></div>`
-        : nothing}
-      ${this.reached("impact") && !this.landed
-        ? html`<div aria-hidden="true" class="ceremony-flash lc-flash"></div>`
-        : nothing}
+      ${
+        this.beat === "implode" || this.beat === "descend"
+          ? html`<div
+              aria-hidden="true"
+              class="ceremony-flash lc-flash lc-flash-small"
+            ></div>`
+          : nothing
+      }
+      ${
+        this.reached("impact") && !this.landed
+          ? html`<div aria-hidden="true" class="ceremony-flash lc-flash"></div>`
+          : nothing
+      }
     </div>`;
   }
 }
@@ -967,8 +1021,12 @@ const LEGEND_STYLES = html`<style>
       transform: translateY(12px);
     }
   }
+  .lc-share {
+    margin-top: 24px;
+    padding: 0 16px;
+  }
   .lc-actions {
-    margin-top: 26px;
+    margin-top: 24px;
     display: flex;
     flex-direction: column;
     align-items: center;

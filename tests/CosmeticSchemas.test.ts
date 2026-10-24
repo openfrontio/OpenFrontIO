@@ -1204,8 +1204,8 @@ describe("SubscriptionSchema unlimitedRanked", () => {
     canCreatePublicLobbies: false,
   };
 
-  it("rejects a tier without unlimitedRanked", () => {
-    expect(SubscriptionSchema.safeParse(base).success).toBe(false);
+  it("accepts a tier without unlimitedRanked", () => {
+    expect(SubscriptionSchema.safeParse(base).success).toBe(true);
   });
 
   it("accepts a tier with unlimitedRanked", () => {

@@ -7,6 +7,7 @@ import {
   maps,
   UnitType,
 } from "@openfront/engine-api/game/GameTypes";
+import type { SnapshotHeader } from "@openfront/engine-api/game/SnapshotHeader";
 import { TeamCountConfig } from "@openfront/engine-api/Schemas";
 import { DoomsdayClockSpeed } from "@openfront/engine-lib/game/DoomsdayClock";
 import { UserMeResponse } from "@openfront/shared/ApiSchemas";
@@ -22,14 +23,19 @@ import "./components/baseComponents/Modal";
 import { BaseModal } from "./components/BaseModal";
 import "./components/GameConfigSettings";
 import { MEDAL_ORDER, medalIcon } from "./components/map/Medals";
+import {
+  type LoadSavedGameDetail,
+  savedGameIdFrom,
+} from "./components/SavedGamesPanel";
 import "./components/ToggleInputCard";
 import { modalHeader } from "./components/ui/ModalHeader";
 import { getPlayerCosmetics, prewarmCosmetics } from "./Cosmetics";
-import { crazyGamesSDK } from "./CrazyGamesSDK";
+import { gamePortal } from "./GamePortal";
 import { GameStartingModal } from "./GameStartingModal";
 import { showInGameAlert } from "./InGameModal";
 import { JoinLobbyEvent } from "./Main";
 import { fallbackPlayerName, ResolvedPlayerName } from "./PlayerName";
+import { downloadSavedGame } from "./SavedGamesApi";
 import { lastUserMeResponse } from "./UserMeBroadcast";
 import { UsernameInput } from "./UsernameInput";
 import { UserSettings } from "./UserSettings";
@@ -64,11 +70,11 @@ import { terrainMapFileLoader } from "./TerrainMapFileLoader";
 export const START_PREPARE_DEADLINE_MS = 15_000;
 
 /**
- * Ceiling on the CrazyGames midgame ad, deliberately far above
+ * Ceiling on the portal midgame ad, deliberately far above
  * START_PREPARE_DEADLINE_MS: an ad creative routinely runs 15-30s and it has
  * to gate the start, because dispatching behind one puts gameplay — spawn
  * selection included — under a still-visible overlay. This exists only for an
- * SDK that never calls adFinished or adError at all. Off CrazyGames,
+ * SDK that never calls adFinished or adError at all. Off a portal,
  * requestMidgameAd() resolves immediately and none of this is reached.
  */
 export const MIDGAME_AD_DEADLINE_MS = 60_000;
@@ -87,6 +93,13 @@ function withDeadline<T>(
     timer = setTimeout(() => resolve(onDeadline()), ms);
   });
   return Promise.race([work, deadline]).finally(() => clearTimeout(timer));
+}
+
+/** A saved game that can't be started, with the message that says why. */
+class SavedGameLoadError extends Error {
+  constructor(readonly messageKey: string) {
+    super(messageKey);
+  }
 }
 
 /** What a start has to wait for before it can dispatch join-lobby. */
@@ -216,6 +229,8 @@ export class SinglePlayerModal extends BaseModal {
   // nothing visible until every await in startGame() settles, which reads as
   // a hang rather than as loading whenever the network is slow or absent.
   @state() private starting: boolean = false;
+  // A shared save opened from a `#modal=single-player&save=<id>` link.
+  @state() private sharedSaveId: string | null = null;
   // Identifies the current start attempt. Bumped on every start and on every
   // close, so an attempt that outlives its modal can tell it has been retired.
   private startAttempt: number = 0;
@@ -288,7 +303,7 @@ export class SinglePlayerModal extends BaseModal {
   };
 
   private renderNotLoggedInBanner(): TemplateResult {
-    if (crazyGamesSDK.isOnCrazyGames()) {
+    if (gamePortal.isOnGamePortal()) {
       return html``;
     }
     return html`<button
@@ -338,10 +353,11 @@ export class SinglePlayerModal extends BaseModal {
       rightContent: responseHasLinkedIdentity(this.userMeResponse)
         ? html`<button
               @click=${this.toggleAchievements}
-              class="flex items-center gap-2 px-3 py-2 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 transition-all shrink-0 ${this
-                .showAchievements
-                ? "bg-yellow-500/10 border-yellow-500/30 text-yellow-400"
-                : "text-white/60"}"
+              class="flex items-center gap-2 px-3 py-2 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 transition-all shrink-0 ${
+                this.showAchievements
+                  ? "bg-yellow-500/10 border-yellow-500/30 text-yellow-400"
+                  : "text-white/60"
+              }"
             >
               <img
                 src=${assetUrl("images/MedalIconWhite.svg")}
@@ -492,6 +508,15 @@ export class SinglePlayerModal extends BaseModal {
         <div
           class="flex-1 min-h-0 overflow-y-auto custom-scrollbar px-6 pt-4 pb-6 mr-1 mx-auto w-full max-w-5xl"
         >
+          <saved-games-panel
+            class="block mb-6"
+            .signedIn=${responseHasLinkedIdentity(this.userMeResponse)}
+            .sharedId=${this.sharedSaveId}
+            .busy=${this.starting}
+            @load-saved-game=${this.handleLoadSavedGame}
+            @open-shared-save=${(e: CustomEvent<string>) =>
+              (this.sharedSaveId = e.detail)}
+          ></saved-games-panel>
           <game-config-settings
             class="block"
             .sectionGapClass=${"space-y-6"}
@@ -566,8 +591,9 @@ export class SinglePlayerModal extends BaseModal {
             @map-selected=${this.handleConfigMapSelected}
             @random-map-selected=${this.handleConfigRandomMapSelected}
             @difficulty-selected=${this.handleConfigDifficultySelected}
-            @doomsday-clock-speed-selected=${this
-              .handleConfigDoomsdayClockSpeedSelected}
+            @doomsday-clock-speed-selected=${
+              this.handleConfigDoomsdayClockSpeedSelected
+            }
             @game-mode-selected=${this.handleConfigGameModeSelected}
             @team-count-selected=${this.handleConfigTeamCountSelected}
             @bots-changed=${this.handleBotsChange}
@@ -579,21 +605,23 @@ export class SinglePlayerModal extends BaseModal {
 
         <!-- Footer Action -->
         <div class="p-6 border-t border-white/10 bg-black/20 shrink-0">
-          ${responseHasLinkedIdentity(this.userMeResponse) &&
-          this.hasOptionsChanged()
-            ? html`<div
-                class="mb-4 px-4 py-3 rounded-xl bg-yellow-500/20 border border-yellow-500/30 text-yellow-400 text-xs font-bold uppercase tracking-wider text-center"
-              >
-                ${translateText("single_modal.options_changed_no_achievements")}
-              </div>`
-            : null}
+          ${
+            responseHasLinkedIdentity(this.userMeResponse) &&
+            this.hasOptionsChanged()
+              ? html`<div
+                  class="mb-4 px-4 py-3 rounded-xl bg-yellow-500/20 border border-yellow-500/30 text-yellow-400 text-xs font-bold uppercase tracking-wider text-center"
+                >
+                  ${translateText("single_modal.options_changed_no_achievements")}
+                </div>`
+              : null
+          }
           <o-button
             variant="primary"
             width="block"
             size="lg"
-            translationKey=${this.starting
-              ? "game_settings.starting"
-              : "game_settings.start"}
+            translationKey=${
+              this.starting ? "game_settings.starting" : "game_settings.start"
+            }
             .disable=${this.starting}
             @click=${this.startGame}
           ></o-button>
@@ -647,6 +675,7 @@ export class SinglePlayerModal extends BaseModal {
         startingModal.hide();
       }
     }
+    this.sharedSaveId = null;
     this.resetOptions();
   }
 
@@ -701,7 +730,11 @@ export class SinglePlayerModal extends BaseModal {
     this.overtimeStartMinutes = DEFAULT_OPTIONS.overtimeStartMinutes;
   }
 
-  protected onOpen(): void {
+  protected onOpen(args?: Record<string, unknown>): void {
+    const save = args?.save;
+    this.sharedSaveId = typeof save === "string" ? savedGameIdFrom(save) : null;
+    // Saves made since the list last loaded (a game played in between).
+    void this.querySelector("saved-games-panel")?.refresh();
     void this.loadNationCount();
     // Spend the cosmetics round trip while the player is picking a map, not
     // after they commit. startGame() still resolves cosmetics properly; this
@@ -1019,7 +1052,7 @@ export class SinglePlayerModal extends BaseModal {
   }
 
   /**
-   * The CrazyGames midgame ad, on a bound of its own.
+   * The portal midgame ad, on a bound of its own.
    *
    * Separate from resolveNameAndCosmetics because an ad is not the same kind
    * of wait. It is the player watching something, legitimately for longer than
@@ -1031,12 +1064,12 @@ export class SinglePlayerModal extends BaseModal {
    * adFinished/adError callbacks).
    *
    * Only ever called for a start that is still live — an ad shown for a game
-   * that will not start is worse than no ad. Off CrazyGames this resolves
+   * that will not start is worse than no ad. Off a portal this resolves
    * immediately.
    */
   private awaitMidgameAd(): Promise<void> {
     return withDeadline(
-      crazyGamesSDK.requestMidgameAd(),
+      gamePortal.requestMidgameAd(),
       MIDGAME_AD_DEADLINE_MS,
       () => {
         console.warn("Midgame ad never signalled completion; starting anyway");
@@ -1069,6 +1102,175 @@ export class SinglePlayerModal extends BaseModal {
       finalMaxTimerValue = Math.max(1, Math.min(120, this.maxTimerValue));
     }
 
+    await this.launch(async ({ resolvedName, cosmetics }, usernameInput) => {
+      console.log(
+        `Starting single player game with map: ${GameMapType[this.selectedMap as keyof typeof GameMapType]}${this.useRandomMap ? " (Randomly selected)" : ""}`,
+      );
+      const clientID = generateID();
+      const gameID = generateID();
+      return {
+        gameID: gameID,
+        gameStartInfo: {
+          gameID: gameID,
+          players: [
+            {
+              clientID,
+              username: resolvedName.name,
+              clanTag: usernameInput?.getClanTag() ?? null,
+              cosmetics,
+            },
+          ],
+          config: {
+            gameMap: this.selectedMap,
+            gameMapSize: this.compactMap
+              ? GameMapSize.Compact
+              : GameMapSize.Normal,
+            gameType: GameType.Singleplayer,
+            gameMode: this.gameMode,
+            playerTeams: this.teamCount,
+            difficulty: this.selectedDifficulty,
+            maxTimerValue: finalMaxTimerValue,
+            bots: this.bots,
+            infiniteGold: this.infiniteGold,
+            donateGold: this.gameMode === GameMode.Team,
+            donateTroops: this.gameMode === GameMode.Team,
+            infiniteTroops: this.infiniteTroops,
+            instantBuild: this.instantBuild,
+            randomSpawn: this.randomSpawn,
+            disabledUnits: this.disabledUnits.filter((unit): unit is UnitType =>
+              Object.values(UnitType).includes(unit),
+            ),
+            nations: sliderToNationsConfig(
+              this.nations,
+              this.defaultNationCount,
+            ),
+            ...(this.goldMultiplier && this.goldMultiplierValue
+              ? { goldMultiplier: this.goldMultiplierValue }
+              : {}),
+            ...(this.startingGold && this.startingGoldValue !== undefined
+              ? {
+                  startingGold: Math.round(this.startingGoldValue * 1_000_000),
+                }
+              : {}),
+            ...(this.customAlliances
+              ? { customAllianceDuration: this.customAllianceMinutes ?? 0 }
+              : {}),
+            ...(this.waterNukes ? { waterNukes: true } : {}),
+            ...(this.doomsdayClock
+              ? {
+                  doomsdayClock: {
+                    enabled: true,
+                    speed: this.doomsdayClockSpeed,
+                  },
+                }
+              : {}),
+            ...(this.overtime
+              ? {
+                  overtime: {
+                    enabled: true,
+                    startMinutes: this.overtimeStartMinutes ?? 30,
+                  },
+                }
+              : {}),
+          },
+          lobbyCreatedAt: Date.now(), // ms; server should be authoritative in MP
+        },
+        source: "singleplayer",
+      };
+    });
+  }
+
+  private handleLoadSavedGame = (e: Event) => {
+    const { id, shared } = (e as CustomEvent<LoadSavedGameDetail>).detail;
+    void this.startSavedGame(id, shared);
+  };
+
+  /**
+   * Resumes a saved game, the player's own or a shared one, where it was
+   * saved. The game itself comes from the snapshot; the start only supplies
+   * who is playing it.
+   */
+  private async startSavedGame(id: string, shared: boolean) {
+    if (this.starting) return;
+    try {
+      await this.launch(async ({ resolvedName, cosmetics }, usernameInput) => {
+        const snapshot = await downloadSavedGame(id, shared);
+        if (typeof snapshot === "string") {
+          throw new SavedGameLoadError(
+            snapshot === "not_found"
+              ? "saved_games.error.not_found"
+              : "saved_games.error.download_failed",
+          );
+        }
+        // The engine reads it, on a worker of its own (this page can't load
+        // the engine).
+        const { readSnapshotHeader } = await import("./WorkerClient");
+        let header: SnapshotHeader;
+        try {
+          header = await readSnapshotHeader(snapshot);
+        } catch (err) {
+          console.warn("Saved game is not a snapshot this build reads", err);
+          throw new SavedGameLoadError("saved_games.error.unreadable");
+        }
+        const human = header.humans[0];
+        if (
+          header.gameConfig.gameType !== GameType.Singleplayer ||
+          header.humans.length !== 1
+        ) {
+          throw new SavedGameLoadError("saved_games.error.not_singleplayer");
+        }
+        console.log(
+          `Resuming saved game ${id} on ${header.gameConfig.gameMap} at tick ${header.tick}`,
+        );
+        // A fresh id: a shared save is played by many, each its own game.
+        const gameID = generateID();
+        return {
+          gameID,
+          gameStartInfo: {
+            gameID,
+            players: [
+              {
+                // The saved game's own player: the engine finds a player by
+                // the clientID its intents carry.
+                clientID: human.clientID,
+                username: resolvedName.name,
+                clanTag: usernameInput?.getClanTag() ?? null,
+                cosmetics,
+              },
+            ],
+            config: header.gameConfig,
+            lobbyCreatedAt: Date.now(),
+          },
+          snapshot,
+          source: "singleplayer",
+        };
+      });
+    } catch (err) {
+      if (!(err instanceof SavedGameLoadError)) {
+        console.error("Failed to start the saved game", err);
+      }
+      await showInGameAlert(
+        translateText(
+          err instanceof SavedGameLoadError
+            ? err.messageKey
+            : "saved_games.error.load_failed",
+        ),
+      );
+    }
+  }
+
+  /**
+   * What every solo start shares: the busy button, the starting overlay, the
+   * player's name and cosmetics, the midgame ad and the join-lobby dispatch.
+   * `build` makes the event once the name and cosmetics are known, before
+   * the ad; throwing from it abandons the start (and reaches the caller).
+   */
+  private async launch(
+    build: (
+      prepared: StartPreparation,
+      usernameInput: UsernameInput | null,
+    ) => Promise<JoinLobbyEvent>,
+  ): Promise<void> {
     // Everything past this point awaits something, some of it network-bound.
     // Hold the button in its busy state until join-lobby is away so the wait
     // reads as loading rather than as a dead click.
@@ -1085,12 +1287,6 @@ export class SinglePlayerModal extends BaseModal {
     this.overlayAttempt = attempt;
     overlay?.show();
     try {
-      console.log(
-        `Starting single player game with map: ${GameMapType[this.selectedMap as keyof typeof GameMapType]}${this.useRandomMap ? " (Randomly selected)" : ""}`,
-      );
-      const clientID = generateID();
-      const gameID = generateID();
-
       const usernameInput = document.querySelector(
         "username-input",
       ) as UsernameInput | null;
@@ -1098,8 +1294,7 @@ export class SinglePlayerModal extends BaseModal {
       // Resolved before the dispatch rather than inside it, so every wait is
       // attributable to the busy button above, and bounded so none of them
       // can outlive it.
-      const { resolvedName, cosmetics } =
-        await this.resolveNameAndCosmetics(usernameInput);
+      const prepared = await this.resolveNameAndCosmetics(usernameInput);
 
       // Retired while this was resolving — the modal was closed, and possibly
       // reopened and started again. The live attempt owns the start; this one
@@ -1120,6 +1315,11 @@ export class SinglePlayerModal extends BaseModal {
       // start.
       if (attempt !== this.startAttempt) return;
 
+      const detail = await build(prepared, usernameInput);
+
+      // Building can wait on the network (a saved game's download).
+      if (attempt !== this.startAttempt) return;
+
       await this.awaitMidgameAd();
 
       // The ad is long enough that the modal can be closed while it runs.
@@ -1127,78 +1327,7 @@ export class SinglePlayerModal extends BaseModal {
 
       this.dispatchEvent(
         new CustomEvent("join-lobby", {
-          detail: {
-            gameID: gameID,
-            gameStartInfo: {
-              gameID: gameID,
-              players: [
-                {
-                  clientID,
-                  username: resolvedName.name,
-                  clanTag: usernameInput?.getClanTag() ?? null,
-                  cosmetics,
-                },
-              ],
-              config: {
-                gameMap: this.selectedMap,
-                gameMapSize: this.compactMap
-                  ? GameMapSize.Compact
-                  : GameMapSize.Normal,
-                gameType: GameType.Singleplayer,
-                gameMode: this.gameMode,
-                playerTeams: this.teamCount,
-                difficulty: this.selectedDifficulty,
-                maxTimerValue: finalMaxTimerValue,
-                bots: this.bots,
-                infiniteGold: this.infiniteGold,
-                donateGold: this.gameMode === GameMode.Team,
-                donateTroops: this.gameMode === GameMode.Team,
-                infiniteTroops: this.infiniteTroops,
-                instantBuild: this.instantBuild,
-                randomSpawn: this.randomSpawn,
-                disabledUnits: this.disabledUnits.filter(
-                  (unit): unit is UnitType =>
-                    Object.values(UnitType).includes(unit),
-                ),
-                nations: sliderToNationsConfig(
-                  this.nations,
-                  this.defaultNationCount,
-                ),
-                ...(this.goldMultiplier && this.goldMultiplierValue
-                  ? { goldMultiplier: this.goldMultiplierValue }
-                  : {}),
-                ...(this.startingGold && this.startingGoldValue !== undefined
-                  ? {
-                      startingGold: Math.round(
-                        this.startingGoldValue * 1_000_000,
-                      ),
-                    }
-                  : {}),
-                ...(this.customAlliances
-                  ? { customAllianceDuration: this.customAllianceMinutes ?? 0 }
-                  : {}),
-                ...(this.waterNukes ? { waterNukes: true } : {}),
-                ...(this.doomsdayClock
-                  ? {
-                      doomsdayClock: {
-                        enabled: true,
-                        speed: this.doomsdayClockSpeed,
-                      },
-                    }
-                  : {}),
-                ...(this.overtime
-                  ? {
-                      overtime: {
-                        enabled: true,
-                        startMinutes: this.overtimeStartMinutes ?? 30,
-                      },
-                    }
-                  : {}),
-              },
-              lobbyCreatedAt: Date.now(), // ms; server should be authoritative in MP
-            },
-            source: "singleplayer",
-          } satisfies JoinLobbyEvent,
+          detail,
           bubbles: true,
           composed: true,
         }),

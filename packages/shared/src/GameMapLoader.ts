@@ -12,8 +12,12 @@ export interface MapData {
   map16xBin: () => Promise<Uint8Array>;
   manifest: () => Promise<MapManifest>;
   webpPath: string;
-  /** Load a map layer PNG by layer id. Returns an ImageBitmap. */
-  layerPng: (layerId: string) => Promise<ImageBitmap>;
+  /**
+   * Load a map layer image by layer id. `compact` selects the map4x-sized
+   * variant (`<id>.4x.webp`; ids cannot contain dots, so it never collides
+   * with another layer), which Compact games draw on directly.
+   */
+  layerImage: (layerId: string, compact: boolean) => Promise<ImageBitmap>;
 }
 
 /** Loads the files a game on this map and size reads (see MapFiles). */

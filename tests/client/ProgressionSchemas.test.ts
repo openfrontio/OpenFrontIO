@@ -1,5 +1,6 @@
 import {
   GameXpResponseSchema,
+  isRewardClaimable,
   ProgressionConfigSchema,
   PublicProgressSchema,
   UserMeResponseSchema,
@@ -88,6 +89,93 @@ describe("GameXpResponseSchema", () => {
     if (!parsed.eligible) throw new Error("expected eligible");
     expect(parsed.breakdown.total).toBe(275);
     expect(parsed.levelsReached).toEqual([{ prestige: 0, level: 5 }]);
+  });
+
+  it("parses the level rewards and flares a game earned", () => {
+    const parsed = GameXpResponseSchema.parse({
+      ...eligible,
+      rewards: [
+        {
+          prestige: 0,
+          level: 5,
+          id: "41",
+          currencyType: "soft",
+          amount: "100",
+          reason: "level_up",
+          note: null,
+          claimed: false,
+        },
+      ],
+      flares: [
+        {
+          kind: "level",
+          prestige: 0,
+          level: 5,
+          flareId: "7",
+          flareName: "effect:firebird_trail",
+          cosmetic: { type: "effect", name: "firebird_trail", url: null },
+        },
+        {
+          kind: "legend",
+          prestige: null,
+          level: null,
+          flareId: "8",
+          flareName: "flag:obey_flag",
+          cosmetic: null,
+        },
+      ],
+    });
+    if (!parsed.eligible) throw new Error("expected eligible");
+    expect(parsed.rewards!.map((r) => [r.id, r.amount, r.claimed])).toEqual([
+      ["41", "100", false],
+    ]);
+    expect(parsed.flares!.map((f) => f.flareName)).toEqual([
+      "effect:firebird_trail",
+      "flag:obey_flag",
+    ]);
+  });
+
+  it("reads missing or malformed rewards and flares as absent", () => {
+    let parsed = GameXpResponseSchema.parse(eligible);
+    if (!parsed.eligible) throw new Error("expected eligible");
+    expect(parsed.rewards).toBeUndefined();
+    expect(parsed.flares).toBeUndefined();
+    parsed = GameXpResponseSchema.parse({
+      ...eligible,
+      rewards: [{ id: 5 }],
+      flares: "nope",
+    });
+    if (!parsed.eligible) throw new Error("expected eligible");
+    expect(parsed.rewards).toBeUndefined();
+    expect(parsed.flares).toBeUndefined();
+    expect(parsed.breakdown.total).toBe(275);
+  });
+
+  // The end-of-game rewards row reads rewards[]: a held one must still parse,
+  // and keep its hold so the row never offers it for claiming.
+  it("parses a result whose level rewards are held, keeping the hold", () => {
+    const parsed = GameXpResponseSchema.parse({
+      ...eligible,
+      rewards: [
+        {
+          prestige: 0,
+          level: 5,
+          id: "9",
+          currencyType: "hard",
+          amount: "25",
+          reason: "level_milestone",
+          note: null,
+          claimed: false,
+          held: "trust",
+        },
+      ],
+      flares: [],
+    });
+    if (!parsed.eligible) throw new Error("expected eligible");
+    expect(parsed.rewards!.map((r) => [r.id, r.held])).toEqual([
+      ["9", "trust"],
+    ]);
+    expect(isRewardClaimable(parsed.rewards![0])).toBe(false);
   });
 
   it("defaults a missing levelsReached to none", () => {
@@ -268,5 +356,107 @@ describe("public progression schemas", () => {
       flares: { nope: true },
     });
     expect(parsed.flares).toEqual([]);
+  });
+});
+
+describe("provisional XP fields", () => {
+  const config = {
+    version: 2,
+    maxLevel: 100,
+    maxPrestige: 10,
+    levels: [{ level: 1, xpToNext: 100, cumulativeXp: 0 }],
+  };
+  const rules = {
+    minAliveTicks: 1200,
+    gameXp: 50,
+    xpPerMinute: 17,
+    timeCapMinutes: 30,
+    ffaPlacementMax: 150,
+    ffaWin: 300,
+    fullLobbyHumans: 20,
+    teamWin: 150,
+    teamWinMinAlivePermille: 500,
+    hvnWin: 100,
+    firstGameOfDay: 100,
+    featXp: 0,
+    maxFeatsPerGame: 3,
+    publicPermille: 1000,
+    rankedPermille: 1250,
+    privatePermille: 500,
+    singleplayerPermille: 250,
+    privateMinHumans: 4,
+    privateGamesPerDay: 10,
+    singleplayerGamesPerDay: 5,
+  };
+
+  it("parses the formula revision, its rules and the prestige rewards", () => {
+    const data = { ...config, formula: 1, xp: rules, prestige: { caps: 0 } };
+    expect(ProgressionConfigSchema.parse(data)).toEqual({
+      ...data,
+      flares: [],
+    });
+  });
+
+  it("keeps the level curve when the rules are malformed", () => {
+    const parsed = ProgressionConfigSchema.parse({
+      ...config,
+      formula: 1,
+      xp: { ...rules, gameXp: "fifty" },
+    });
+    expect(parsed.xp).toBeUndefined();
+    expect(parsed.levels).toEqual(config.levels);
+  });
+
+  it("reads first-win rules (from before the first game of the day) as absent", () => {
+    const firstWinRules: Record<string, number> = {
+      ...rules,
+      firstWinOfDay: 200,
+    };
+    delete firstWinRules.firstGameOfDay;
+    const parsed = ProgressionConfigSchema.parse({
+      ...config,
+      formula: 1,
+      xp: firstWinRules,
+    });
+    expect(parsed.xp).toBeUndefined();
+    expect(parsed.levels).toEqual(config.levels);
+  });
+
+  it("parses today's allowances and the subscriber boost on progress", () => {
+    const daily = {
+      privateGames: 2,
+      singleplayerGames: 0,
+      firstGameClaimed: true,
+    };
+    const parsed = UserMeResponseSchema.parse(
+      userMe({ progress: { ...progress, daily, subscriberPermille: 1200 } }),
+    );
+    expect(parsed.player.progress?.daily).toEqual(daily);
+    expect(parsed.player.progress?.subscriberPermille).toBe(1200);
+  });
+
+  it("drops a first-win allowance block but keeps the progress", () => {
+    const parsed = UserMeResponseSchema.parse(
+      userMe({
+        progress: {
+          ...progress,
+          daily: {
+            privateGames: 0,
+            singleplayerGames: 0,
+            firstWinClaimed: true,
+          },
+        },
+      }),
+    );
+    expect(parsed.player.progress?.level).toBe(37);
+    expect(parsed.player.progress?.daily).toBeUndefined();
+  });
+
+  it("drops a malformed allowance block but keeps the progress", () => {
+    const parsed = UserMeResponseSchema.parse(
+      userMe({ progress: { ...progress, daily: { privateGames: "x" } } }),
+    );
+    expect(parsed.player.progress?.level).toBe(37);
+    expect(parsed.player.progress?.daily).toBeUndefined();
   });
 });

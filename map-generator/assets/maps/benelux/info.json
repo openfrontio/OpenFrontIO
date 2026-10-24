@@ -1,0 +1,50 @@
+{
+  "id": "Benelux",
+  "name": "Benelux",
+  "translation_key": "map.benelux",
+  "categories": ["new", "europe", "countries"],
+  "multiplayer_frequency": 5,
+  "nations": [
+    {
+      "coordinates": [718, 492],
+      "name": "Netherlands",
+      "flag": "nl"
+    },
+    {
+      "coordinates": [1046, 265],
+      "name": "Friesland",
+      "flag": "Friesland"
+    },
+    {
+      "coordinates": [812, 772],
+      "name": "North Brabant",
+      "flag": "North_Brabant"
+    },
+    {
+      "coordinates": [1044, 555],
+      "name": "Gelderland",
+      "flag": "Gelderland"
+    },
+    {
+      "coordinates": [1308, 380],
+      "name": "Drenthe",
+      "flag": "Drenthe"
+    },
+    {
+      "coordinates": [1052, 1173],
+      "name": "Luxembourg",
+      "flag": "lu"
+    },
+    {
+      "coordinates": [762, 1038],
+      "name": "Wallonia",
+      "flag": "Wallonia"
+    },
+    {
+      "coordinates": [615, 930],
+      "name": "Flanders",
+      "flag": "Flanders"
+    }
+  ],
+  "themes": ["Europe"]
+}

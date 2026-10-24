@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 import { GameType } from "@openfront/engine-api/game/GameTypes";
 import { describe, expect, it } from "vitest";
 import {

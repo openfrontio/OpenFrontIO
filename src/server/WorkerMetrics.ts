@@ -94,7 +94,7 @@ export function initWorkerMetrics(
     "openfront.winner_replay.pending.gauge",
     {
       description:
-        "Winner replays waiting or running on this worker (disputed votes)",
+        "Winner replays waiting or running on this worker (disputed or one-IP votes)",
     },
   );
 
@@ -102,7 +102,7 @@ export function initWorkerMetrics(
     "openfront.winner_replay.outcomes",
     {
       description:
-        "Disputed winner votes settled by replay: agreed with the vote, overturned it, or failed (vote stood)",
+        "Disputed or one-IP winner votes settled by replay: agreed with the vote, overturned it, or failed (vote stood); or skipped (one-IP vote, replay queue full: vote stood unconfirmed)",
     },
   );
 
@@ -127,8 +127,13 @@ export function initWorkerMetrics(
 
   connectedClientsGauge.addCallback((result) => {
     const labels = getPromLabels();
-    for (const [platform, count] of gameManager.activeClientsByPlatform()) {
-      result.observe(count, { ...labels, "openfront.platform": platform });
+    for (const segment of gameManager.activeClientsBySegment()) {
+      result.observe(segment.count, {
+        ...labels,
+        "openfront.platform": segment.platform,
+        "openfront.device": segment.device,
+        "openfront.auth": segment.auth,
+      });
     }
   });
 

@@ -10,8 +10,11 @@ import type { LitElement } from "lit";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { getUserMe } from "../../src/client/Api";
 import { userAuth } from "../../src/client/Auth";
-import { fetchCosmetics } from "../../src/client/Cosmetics";
+import type { CosmeticCard } from "../../src/client/components/CosmeticCard";
 import "../../src/client/InventoryModal";
+import type { EffectsGrid } from "../../src/client/components/EffectsGrid";
+import type { InventoryLoadoutBar } from "../../src/client/components/InventoryLoadoutBar";
+import { fetchCosmetics } from "../../src/client/Cosmetics";
 import type { InventoryModal } from "../../src/client/InventoryModal";
 import {
   CROWN_KEY,
@@ -22,9 +25,6 @@ import {
   PATTERN_KEY,
   UserSettings,
 } from "../../src/client/UserSettings";
-import type { CosmeticCard } from "../../src/client/components/CosmeticCard";
-import type { EffectsGrid } from "../../src/client/components/EffectsGrid";
-import type { InventoryLoadoutBar } from "../../src/client/components/InventoryLoadoutBar";
 
 vi.mock("../../src/client/Api", async (importOriginal) => ({
   ...(await importOriginal<typeof import("../../src/client/Api")>()),
@@ -525,7 +525,7 @@ describe("InventoryModal", () => {
   it("announces flag, crown and skin selections too", async () => {
     const onMessage = vi.fn();
     const lastMessage = () =>
-      (onMessage.mock.lastCall?.[0] as CustomEvent).detail.message;
+      (onMessage.mock.lastCall![0] as CustomEvent).detail.message;
     window.addEventListener("show-message", onMessage);
     try {
       await showTab(modal, "skins");

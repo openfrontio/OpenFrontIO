@@ -11,9 +11,9 @@ npm run start:client     # Client only
 npm run start:server-dev # Server only
 npm test                 # Run all tests (Vitest)
 npm run test:coverage    # Tests with coverage
-npm run lint             # Oxlint + ESLint
-npm run lint:fix         # Oxlint + ESLint with auto-fix
-npm run format           # Prettier
+npm run lint             # Oxlint
+npm run lint:fix         # Oxlint with auto-fix
+npm run format           # Oxfmt
 npm run build-prod       # Production build
 npm run typecheck        # tsc for the root project and each package
 ```
@@ -29,7 +29,7 @@ npx vitest NationAllianceBehavior --run # match by name pattern
 
 OpenFront.io is a real-time multiplayer territorial strategy game. There are four components:
 
-1. **The engine** — Deterministic game simulation, split into npm workspace packages under `packages/` (see below). Pure TypeScript with **no external dependencies** beyond zod. Must stay bit-identical on every client: use the seeded PRNG, and use `packages/engine-lib/src/DetMath.ts` instead of `Math.exp`/`log`/`pow`/`sin`/… or `**` with an exponent other than 2 (ESLint enforces this). Runs in a Web Worker thread. All `packages/engine`, `packages/engine-api` and `packages/engine-lib` changes **must** include tests.
+1. **The engine** — Deterministic game simulation, split into npm workspace packages under `packages/` (see below). Pure TypeScript with **no external dependencies** beyond zod. Must stay bit-identical on every client: use the seeded PRNG, and use `packages/engine-lib/src/DetMath.ts` instead of `Math.exp`/`log`/`pow`/`sin`/… or `**` with an exponent other than 2 (Oxlint enforces this). Runs in a Web Worker thread. All `packages/engine`, `packages/engine-api` and `packages/engine-lib` changes **must** include tests.
 2. **`src/client/`** — Rendering (custom WebGL2 renderer in `src/client/render/`), UI (Lit web components + Tailwind CSS 4), WebSocket communication.
 3. **`src/server/`** — Game coordination, intent relay, WebSocket management (Node.js/Express/ws).
 4. **API** — Closed-source Cloudflare Worker handling auth, stats, cosmetics, monetization. Not in this repo.
@@ -98,9 +98,11 @@ All user-visible text must go through `translateText()` and have a corresponding
 
 Tests use a `setup()` helper from `tests/util/Setup.ts` that creates a full game instance with map data from `tests/testdata/maps/`. Write tests that exercise the core simulation directly — not mocks.
 
+Only `tests/client/**` runs under jsdom; everything else runs in the `node` environment. A test outside `tests/client` that needs `document`/`window` starts with `// @vitest-environment jsdom`.
+
 ## Tech Stack
 
-- **Bundler:** Vite + TypeScript 6
+- **Bundler:** Vite + TypeScript 7
 - **Rendering:** Custom WebGL2 renderer (`src/client/render/`)
 - **UI Components:** Lit (LitElement) + Tailwind CSS 4
 - **Audio:** Howler.js

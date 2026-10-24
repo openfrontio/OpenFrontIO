@@ -20,7 +20,7 @@ vi.mock("../../src/client/Auth", () => ({
   linkSteam: vi.fn(async () => true),
   steamLogin: vi.fn(),
   logOut: vi.fn(async () => true),
-  reauthAfterCrazyGamesChange: vi.fn(async () => false),
+  reauthAfterPortalChange: vi.fn(async () => false),
   sendMagicLink: vi.fn(async () => true),
   getAuthHeader: vi.fn(async () => "Bearer test-token"),
 }));
@@ -141,6 +141,14 @@ describe("AccountModal — after a prestige", () => {
     await new Promise((r) => setTimeout(r, 0));
     await modal.updateComplete;
   };
+
+  it("tells the rewards panel a linked account is signed in", () => {
+    const panel = modal.querySelector("rewards-panel") as unknown as {
+      signedIn: boolean;
+    } | null;
+    expect(panel).not.toBeNull();
+    expect(panel!.signedIn).toBe(true);
+  });
 
   it("opens the prestige flow on the press", async () => {
     // Already on its way: the card offers Prestige.
