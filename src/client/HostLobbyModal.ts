@@ -84,6 +84,8 @@ export class HostLobbyModal extends BaseModal {
   @state() private donateTroops: boolean = false;
   @state() private maxTimer: boolean = false;
   @state() private maxTimerValue: number | undefined = undefined;
+  @state() private winThreshold: boolean = false;
+  @state() private winThresholdValue: number | undefined = undefined;
   @state() private playerLimit: boolean = false;
   @state() private playerLimitValue: number | undefined = undefined;
   @state() private startDelayValue: number | undefined = 3;
@@ -537,6 +539,22 @@ export class HostLobbyModal extends BaseModal {
         .onToggle=${this.handleOvertimeToggle}
         .onInput=${this.handleOvertimeMinutesInput}
         .onKeyDown=${this.handleOvertimeMinutesKeyDown}
+      ></toggle-input-card>`,
+      html`<toggle-input-card
+        .labelKey=${"game_settings.win_threshold"}
+        .checked=${this.winThreshold}
+        .inputId=${"win-threshold-value"}
+        .inputMin=${10}
+        .inputMax=${99.9}
+        .inputStep=${"0.1"}
+        .inputValue=${this.winThresholdValue}
+        .inputAriaLabel=${translateText("game_settings.win_threshold")}
+        .inputPlaceholder=${"80"}
+        .defaultInputValue=${80}
+        .minValidOnEnable=${10}
+        .onToggle=${this.handleWinThresholdToggle}
+        .onChange=${this.handleWinThresholdValueChanges}
+        .onKeyDown=${this.handleWinThresholdValueKeyDown}
       ></toggle-input-card>`,
       html`<toggle-input-card
         .labelKey=${"game_settings.gold_multiplier"}
@@ -1038,6 +1056,8 @@ export class HostLobbyModal extends BaseModal {
     this.donateTroops = false;
     this.maxTimer = false;
     this.maxTimerValue = undefined;
+    this.winThreshold = false;
+    this.winThresholdValue = undefined;
     this.playerLimit = false;
     this.playerLimitValue = undefined;
     this.playerLimitLoadedFor = null;
@@ -1247,6 +1267,33 @@ export class HostLobbyModal extends BaseModal {
   ) => {
     this.maxTimer = checked;
     this.maxTimerValue = toOptionalNumber(value);
+    this.putGameConfig();
+  };
+
+  private handleWinThresholdToggle = (
+    checked: boolean,
+    value: number | string | undefined,
+  ) => {
+    this.winThreshold = checked;
+    this.winThresholdValue = toOptionalNumber(value);
+    this.putGameConfig();
+  };
+
+  private handleWinThresholdValueKeyDown = (e: KeyboardEvent) => {
+    preventDisallowedKeys(e, ["-", "+", "e", "E"]);
+  };
+
+  private handleWinThresholdValueChanges = (e: Event) => {
+    const input = e.target as HTMLInputElement;
+    const value = parseBoundedFloatFromInput(input, { min: 10, max: 99.9 });
+
+    if (value === undefined) {
+      this.winThresholdValue = undefined;
+      input.value = "";
+    } else {
+      // One decimal at most, matching the tenths the server stores.
+      this.winThresholdValue = Math.round(value * 10) / 10;
+    }
     this.putGameConfig();
   };
 
@@ -1678,6 +1725,10 @@ export class HostLobbyModal extends BaseModal {
               this.defaultNationCount,
             ),
             maxTimerValue: this.maxTimer === true ? this.maxTimerValue : null,
+            winThresholdTenths:
+              this.winThreshold === true && this.winThresholdValue !== undefined
+                ? Math.round(this.winThresholdValue * 10)
+                : null,
             // null lifts the cap; the server keeps players already seated.
             // Until the lobby's own cap has been read from lobby info, "off"
             // may just mean "not loaded yet", so leave the cap alone.

@@ -1027,7 +1027,8 @@
     "start": "Start Game",
     "starting": "Starting…",
     "starting_gold": "Starting Gold (Millions)",
-    "water_nukes": "Water nukes"
+    "water_nukes": "Water nukes",
+    "win_threshold": "Win threshold (%)"
   },
   "game_starting_modal": {
     "code_license": "Code licensed under AGPL-3.0 (no warranty)",
