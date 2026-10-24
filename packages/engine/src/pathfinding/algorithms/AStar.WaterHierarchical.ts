@@ -142,10 +142,45 @@ export class AStarWaterHierarchical implements PathFinder<number> {
     return this.localAStarShortPath.searchBounded(candidates, target, bounds);
   }
 
+  private tryShortPathSingle(from: TileRef, to: TileRef): TileRef[] | null {
+    const SHORT_PATH_THRESHOLD = 120;
+    const PADDING = 10;
+
+    if (this.map.manhattanDist(from, to) > SHORT_PATH_THRESHOLD) {
+      return null;
+    }
+
+    const fromX = this.map.x(from);
+    const fromY = this.map.y(from);
+    const toX = this.map.x(to);
+    const toY = this.map.y(to);
+
+    const bounds = {
+      minX: Math.max(0, Math.min(fromX, toX) - PADDING),
+      maxX: Math.min(this.map.width() - 1, Math.max(fromX, toX) + PADDING),
+      minY: Math.max(0, Math.min(fromY, toY) - PADDING),
+      maxY: Math.min(this.map.height() - 1, Math.max(fromY, toY) + PADDING),
+    };
+
+    return this.localAStarShortPath.searchBounded(from, to, bounds);
+  }
+
   findPathSingle(from: TileRef, to: TileRef): TileRef[] | null {
+    if (from === to) {
+      return [from];
+    }
+
+    // 1. Try bounded A* for short distances
+    DebugSpan.start("shortPath");
+    const shortPath = this.tryShortPathSingle(from, to);
+    DebugSpan.end();
+    if (shortPath) {
+      return shortPath;
+    }
+
     const dist = this.map.manhattanDist(from, to);
 
-    // Early exit for very short distances
+    // Early exit for very short distances (if shortPath was bounded out by padding)
     if (dist <= this.graph.clusterSize) {
       DebugSpan.start("earlyExit");
       const startX = this.map.x(from);
@@ -161,37 +196,75 @@ export class AStarWaterHierarchical implements PathFinder<number> {
     }
 
     DebugSpan.start("nodeLookup");
-    const startNode = this.findNearestNode(from);
-    const endNode = this.findNearestNode(to);
+    const startCandidates = this.findCandidateNodes(from);
+    const endCandidates = this.findCandidateNodes(to);
     DebugSpan.end();
 
-    if (!startNode) {
+    if (startCandidates.length === 0 || endCandidates.length === 0) {
       return null;
     }
 
-    if (!endNode) {
-      return null;
-    }
+    startCandidates.sort((a, b) => a.dist - b.dist);
+    endCandidates.sort((a, b) => a.dist - b.dist);
 
-    if (startNode.id === endNode.id) {
-      DebugSpan.start("sameNodeLocalPath");
-      const clusterX = Math.floor(startNode.x / this.graph.clusterSize);
-      const clusterY = Math.floor(startNode.y / this.graph.clusterSize);
-      const path = this.findLocalPath(from, to, clusterX, clusterY, true);
-      DebugSpan.end();
-      return path;
-    }
+    const starts = startCandidates.slice(0, 4);
+    const ends = endCandidates.slice(0, 4);
 
     DebugSpan.start("abstractPath");
-    const nodePath = this.findAbstractPath(startNode.id, endNode.id);
+    let bestPath: number[] | null = null;
+    let bestCost = Infinity;
+
+    for (const s of starts) {
+      for (const t of ends) {
+        if (s.node.id === t.node.id) {
+          const totalCost = s.dist + t.dist;
+          if (totalCost < bestCost) {
+            bestCost = totalCost;
+            bestPath = [s.node.id];
+          }
+          continue;
+        }
+
+        const p = this.findAbstractPath(s.node.id, t.node.id);
+        if (!p) continue;
+
+        let pathEdgeCost = 0;
+        for (let i = 0; i < p.length - 1; i++) {
+          const edge = this.graph.getEdgeBetween(p[i], p[i + 1]);
+          if (!edge) {
+            pathEdgeCost = Infinity;
+            break;
+          }
+          pathEdgeCost += edge.cost;
+        }
+
+        const totalCost = s.dist + pathEdgeCost + t.dist;
+        if (totalCost < bestCost) {
+          bestCost = totalCost;
+          bestPath = p;
+        }
+      }
+    }
     DebugSpan.end();
 
-    if (!nodePath) {
+    if (!bestPath) {
       return null;
+    }
+
+    if (bestPath.length === 1) {
+      DebugSpan.start("sameNodeLocalPath");
+      const singleNode = this.graph.getNode(bestPath[0])!;
+      const clusterX = Math.floor(singleNode.x / this.graph.clusterSize);
+      const clusterY = Math.floor(singleNode.y / this.graph.clusterSize);
+      const path = this.findLocalPath(from, to, clusterX, clusterY, true);
+      DebugSpan.end();
+      if (path) {
+        return path;
+      }
     }
 
     DebugSpan.set("nodePath", () =>
-      nodePath
+      bestPath!
         .map((nodeId) => {
           const node = this.graph.getNode(nodeId);
           return node ? node.tile : -1;
@@ -204,18 +277,25 @@ export class AStarWaterHierarchical implements PathFinder<number> {
     DebugSpan.start("initialPath");
 
     // 1. Find path from start to first node
-    const firstNode = this.graph.getNode(nodePath[0])!;
+    const firstNode = this.graph.getNode(bestPath[0])!;
     const firstNodeTile = firstNode.tile;
 
     const startX = this.map.x(from);
     const startY = this.map.y(from);
     const startClusterX = Math.floor(startX / this.graph.clusterSize);
     const startClusterY = Math.floor(startY / this.graph.clusterSize);
-    const startSegment = this.findLocalPath(
+    let startSegment = this.findLocalPath(
       from,
       firstNodeTile,
       startClusterX,
       startClusterY,
+    );
+    startSegment ??= this.findLocalPath(
+      from,
+      firstNodeTile,
+      startClusterX,
+      startClusterY,
+      true,
     );
 
     if (!startSegment) {
@@ -225,9 +305,9 @@ export class AStarWaterHierarchical implements PathFinder<number> {
     initialPath.push(...startSegment);
 
     // 2. Build path through abstract nodes
-    for (let i = 0; i < nodePath.length - 1; i++) {
-      const fromNodeId = nodePath[i];
-      const toNodeId = nodePath[i + 1];
+    for (let i = 0; i < bestPath.length - 1; i++) {
+      const fromNodeId = bestPath[i];
+      const toNodeId = bestPath[i + 1];
 
       const edge = this.graph.getEdgeBetween(fromNodeId, toNodeId);
       if (!edge) {
@@ -254,11 +334,18 @@ export class AStarWaterHierarchical implements PathFinder<number> {
         }
       }
 
-      const segmentPath = this.findLocalPath(
+      let segmentPath = this.findLocalPath(
         fromTile,
         toTile,
         edge.clusterX,
         edge.clusterY,
+      );
+      segmentPath ??= this.findLocalPath(
+        fromTile,
+        toTile,
+        edge.clusterX,
+        edge.clusterY,
+        true,
       );
 
       if (!segmentPath) {
@@ -274,18 +361,25 @@ export class AStarWaterHierarchical implements PathFinder<number> {
     }
 
     // 3. Find path from last node to end
-    const lastNode = this.graph.getNode(nodePath[nodePath.length - 1])!;
+    const lastNode = this.graph.getNode(bestPath[bestPath.length - 1])!;
     const lastNodeTile = lastNode.tile;
 
     const endX = this.map.x(to);
     const endY = this.map.y(to);
     const endClusterX = Math.floor(endX / this.graph.clusterSize);
     const endClusterY = Math.floor(endY / this.graph.clusterSize);
-    const endSegment = this.findLocalPath(
+    let endSegment = this.findLocalPath(
       lastNodeTile,
       to,
       endClusterX,
       endClusterY,
+    );
+    endSegment ??= this.findLocalPath(
+      lastNodeTile,
+      to,
+      endClusterX,
+      endClusterY,
+      true,
     );
 
     if (!endSegment) {
@@ -296,8 +390,74 @@ export class AStarWaterHierarchical implements PathFinder<number> {
 
     DebugSpan.set("initialPath", () => initialPath);
 
-    // Smoothing moved to SmoothingTransformer - return raw path
     return initialPath;
+  }
+
+  private findCandidateNodes(
+    tile: TileRef,
+  ): { node: AbstractNode; dist: number }[] {
+    const x = this.map.x(tile);
+    const y = this.map.y(tile);
+
+    const clusterX = Math.floor(x / this.graph.clusterSize);
+    const clusterY = Math.floor(y / this.graph.clusterSize);
+
+    const clusterSize = this.graph.clusterSize;
+    const minX = clusterX * clusterSize;
+    const minY = clusterY * clusterSize;
+    const maxX = Math.min(this.map.width() - 1, minX + clusterSize - 1);
+    const maxY = Math.min(this.map.height() - 1, minY + clusterSize - 1);
+
+    const cluster = this.graph.getCluster(clusterX, clusterY);
+    if (!cluster || cluster.nodeIds.length === 0) {
+      return [];
+    }
+
+    const candidateNodes = cluster.nodeIds
+      .map((id) => this.graph.getNode(id)!)
+      .filter((n) => n !== null && n !== undefined);
+    const remaining = new Set(candidateNodes.map((n) => n.id));
+    const found: { node: AbstractNode; dist: number }[] = [];
+
+    const maxDistance = clusterSize * clusterSize;
+
+    this.tileBFS.search(
+      this.map.width(),
+      this.map.height(),
+      tile,
+      maxDistance,
+      (t: TileRef) => this.map.isWater(t),
+      (t: TileRef, dist: number) => {
+        const tileX = this.map.x(t);
+        const tileY = this.map.y(t);
+
+        for (const node of candidateNodes) {
+          if (remaining.has(node.id) && node.x === tileX && node.y === tileY) {
+            remaining.delete(node.id);
+            found.push({ node, dist });
+            if (remaining.size === 0) {
+              return true;
+            }
+          }
+        }
+
+        if (tileX < minX || tileX > maxX || tileY < minY || tileY > maxY) {
+          return null;
+        }
+      },
+    );
+
+    if (found.length === 0) {
+      const nearest = this.findNearestNode(tile);
+      if (nearest) {
+        found.push({
+          node: nearest,
+          dist: this.map.manhattanDist(tile, nearest.tile),
+        });
+      }
+    }
+
+    return found;
   }
 
   private findNearestNode(tile: TileRef): AbstractNode | null {
