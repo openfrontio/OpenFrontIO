@@ -102,6 +102,44 @@ describe("tick sampling", () => {
     expect(tiles[TILE_INDEX_DRAWDOWN_PEAK]).toBe(1000n);
     expect(tiles[TILE_INDEX_DRAWDOWN_TROUGH]).toBe(100n);
   });
+
+  it("handles restoreSnapshot correctly by continuing to track peaks and drawdowns", () => {
+    sample(100, 200, 1);
+    sample(50, 150, 1);
+
+    const snapshot = stats.snapshot();
+    const restoredStats = new StatsImpl();
+    restoredStats.restoreSnapshot(snapshot);
+
+    // Continue sampling on restored instance
+    restoredStats.recordTickSample(player1, 200, 500, 3);
+    restoredStats.recordTickSample(player1, 10, 300, 2);
+
+    const s = restoredStats.stats().client1!;
+    expect(s.tiles![TILE_INDEX_PEAK]).toBe(200n);
+    // Decline from 200 to 10 (95% drop) beats 100 to 50 (50% drop)
+    expect(s.tiles![TILE_INDEX_DRAWDOWN_PEAK]).toBe(200n);
+    expect(s.tiles![TILE_INDEX_DRAWDOWN_TROUGH]).toBe(10n);
+    expect(s.peakTroops).toBe(500n);
+    expect(s.alliances![ALLIANCE_INDEX_PEAK_CONCURRENT]).toBe(3n);
+  });
+
+  it("handles BigInt and large inputs via the fallback path", () => {
+    stats.recordTickSample(player1, 100_000_000n, 500_000_000n, 2);
+    stats.recordTickSample(player1, 20_000_000n, 100_000_000n, 1);
+
+    const s = client1Stats();
+    expect(s.tiles![TILE_INDEX_PEAK]).toBe(100_000_000n);
+    expect(s.tiles![TILE_INDEX_DRAWDOWN_PEAK]).toBe(100_000_000n);
+    expect(s.tiles![TILE_INDEX_DRAWDOWN_TROUGH]).toBe(20_000_000n);
+    expect(s.peakTroops).toBe(500_000_000n);
+  });
+
+  it("safely ignores players with null clientID without allocating or throwing", () => {
+    const fakeBot = { clientID: () => null } as any;
+    stats.recordTickSample(fakeBot, 500, 1000, 0);
+    expect(Object.keys(stats.stats()).length).toBe(0);
+  });
 });
 
 describe("tick loop wiring", () => {
