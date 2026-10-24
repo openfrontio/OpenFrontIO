@@ -10,7 +10,11 @@ vi.mock("../../src/server/Logger", () => ({
   logger: { child: () => log },
 }));
 
-import { archive, ARCHIVE_RETRY_DELAYS_MS } from "../../src/server/Archive";
+import {
+  archive,
+  ARCHIVE_RETRY_DELAYS_MS,
+  ARCHIVE_TIMEOUT_MS,
+} from "../../src/server/Archive";
 
 const record = { info: { gameID: "abcd1234" } } as unknown as GameRecord;
 
@@ -114,6 +118,16 @@ describe("archive retries", () => {
     expect(second[1].signal).toBeInstanceOf(AbortSignal);
     expect(second[1].signal).not.toBe(first[1].signal);
     expect(log.error).not.toHaveBeenCalled();
+  });
+
+  // A timed-out attempt cancels the API's ingest part-way: the game row is
+  // saved but its player stats are not, and the retry's 409 hides that. So an
+  // attempt must outlast the API's slow tail (p99 above 65 s), and a retry
+  // must not start while ingest can still be running.
+  test("an attempt outlasts the API's slow ingest tail", () => {
+    expect(ARCHIVE_TIMEOUT_MS).toBeGreaterThanOrEqual(90_000);
+    expect(ARCHIVE_TIMEOUT_MS).toBeLessThan(300_000);
+    expect(ARCHIVE_TIMEOUT_MS).toBeGreaterThan(ARCHIVE_RETRY_DELAYS_MS[0]);
   });
 
   test("a 409 after a failed attempt counts as already archived", async () => {
