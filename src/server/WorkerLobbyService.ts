@@ -31,7 +31,8 @@ function publicLobbyGameConfig(gc: GameConfig): GameConfig {
   delete sanitized.allowedPublicIds;
   delete sanitized.nameReveals;
   delete sanitized.nameRevealPublicIds;
-  delete sanitized.hostCheats;
+  // hostCheats stays in the advertised config so players joining a listed
+  // lobby can see the host runs cheats.
   delete sanitized.pool;
   return sanitized;
 }

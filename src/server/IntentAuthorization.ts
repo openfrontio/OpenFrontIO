@@ -1,6 +1,5 @@
 import { GameType } from "@openfront/engine-api/game/GameTypes";
 import { ClientID, Intent } from "@openfront/engine-api/Schemas";
-import { hostCheatsEnabled } from "./ConfigPatch";
 
 export interface IntentActor {
   clientID: ClientID; // stamped onto the intent
@@ -39,11 +38,7 @@ export function authorizeIntent(
   // the owner's sandbox lever — it is deliberately usable in ANY game on this
   // deployment, public lobbies included. It stays key-gated at the HTTP layer
   // and denied to ordinary websocket clients (case below).
-  if (
-    actor.isAdminBot &&
-    game.isPublic &&
-    intent.type !== "grant_resources"
-  ) {
+  if (actor.isAdminBot && game.isPublic && intent.type !== "grant_resources") {
     return { status: 403, error: "admin bot cannot act on public games" };
   }
 
@@ -95,16 +90,8 @@ export function authorizeIntent(
           error: "cannot change the config of a publicly listed lobby",
         };
       }
-      // Host cheats give the host an asymmetric advantage over players
-      // recruited from the lobby browser. Listing is likewise rejected
-      // while cheats are on (Worker's listing endpoint), so a listed
-      // lobby can never have them.
-      if (game.isListed && hostCheatsEnabled(intent.config.hostCheats)) {
-        return {
-          status: 409,
-          error: "cannot enable host cheats in a publicly listed lobby",
-        };
-      }
+      // Host cheats are allowed on listed lobbies (the advertised config
+      // discloses them to players recruited from the lobby browser).
       // Likewise a join whitelist: a listed lobby must stay joinable by
       // anyone who finds it, and listing is permanent, so the whitelist is
       // rejected rather than delisting the lobby.

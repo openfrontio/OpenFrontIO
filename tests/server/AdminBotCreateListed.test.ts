@@ -99,12 +99,11 @@ describe("admin bot create_game public listing", () => {
     expect(res.statusCode).toBe(200);
   });
 
-  it("refuses to list a lobby with host cheats", () => {
+  it("allows listing a lobby with host cheats", () => {
     const { handler } = captureCreateHandler({ setListed: vi.fn() });
     const res = mockRes();
     handler({ body: { ...BASE, listed: true, hostCheats: {} } }, res);
-    expect(res.statusCode).toBe(409);
-    expect(res.body).toEqual({ error: "listing_host_cheats_enabled" });
+    expect(res.statusCode).toBe(200);
   });
 
   it("400s a non-boolean listed", () => {

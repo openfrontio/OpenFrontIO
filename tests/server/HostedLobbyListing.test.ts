@@ -179,13 +179,11 @@ describe("GameServer listing", () => {
       );
     });
 
-    it("rejects lobbies with host cheats enabled", () => {
+    it("lists lobbies with host cheats enabled", () => {
       const game = makeGame("g", CREATOR, {
         hostCheats: { infiniteGold: true },
       });
-      expect(getListingEligibilityError(game)).toBe(
-        "listing_host_cheats_enabled",
-      );
+      expect(getListingEligibilityError(game)).toBeNull();
     });
 
     it("rejects when player count meets or exceeds maxPlayers cap", () => {
@@ -201,7 +199,7 @@ describe("GameServer listing", () => {
       vi.restoreAllMocks();
     });
 
-    it("rejects listing when lobby settings change to enable host cheats while getUserMe is pending", async () => {
+    it("succeeds listing when lobby settings change to enable host cheats while getUserMe is pending", async () => {
       let routeHandler!: (req: any, res: any) => Promise<any>;
       const mockApp = {
         post(path: string, handler: any) {
@@ -276,9 +274,10 @@ describe("GameServer listing", () => {
 
       await listingPromise;
 
-      expect(res.statusCode).toBe(409);
-      expect(res.body).toEqual({ error: "listing_host_cheats_enabled" });
-      expect(game.isListed()).toBe(false);
+      // Host cheats no longer block listing: the concurrent mutation is
+      // harmless and the listing succeeds.
+      expect(res.statusCode).toBe(200);
+      expect(game.isListed()).toBe(true);
     });
   });
 });
@@ -630,7 +629,7 @@ describe("listed lobby host powers", () => {
     expect(game.hasJoinWhitelist()).toBe(false);
   });
 
-  it("rejects enabling host cheats while listed", () => {
+  it("allows enabling host cheats while listed", () => {
     const game = makeGame();
     game.setListed(true);
 
@@ -638,17 +637,20 @@ describe("listed lobby host powers", () => {
       type: "update_game_config",
       config: { hostCheats: { infiniteGold: true } },
     } as any;
-    expect(game.handleIntent(cheats, asBot).status).toBe(409);
-    expect(game.hasHostCheats()).toBe(false);
+    expect(game.handleIntent(cheats, asBot).status).toBe(200);
+    expect(game.hasHostCheats()).toBe(true);
 
     // A neutral hostCheats block still goes through (the client always
-    // sends the field), as do real cheats once the lobby is unlisted.
+    // sends the field).
     expect(
       game.handleIntent(
         { type: "update_game_config", config: { hostCheats: {} } } as any,
         asBot,
       ).status,
     ).toBe(200);
+    // A listed lobby still refuses config changes from the host (players
+    // joined for the advertised settings); after unlisting, the host can.
+    expect(game.handleIntent(cheats, asHost).status).toBe(409);
     game.setListed(false);
     expect(game.handleIntent(cheats, asHost).status).toBe(200);
     expect(game.hasHostCheats()).toBe(true);
@@ -957,7 +959,10 @@ describe("WorkerLobbyService hosted lobbies", () => {
     expect(reported.gameConfig.allowedPublicIds).toBeUndefined();
     expect(reported.gameConfig.nameReveals).toBeUndefined();
     expect(reported.gameConfig.nameRevealPublicIds).toBeUndefined();
-    expect(reported.gameConfig.hostCheats).toBeUndefined();
+    // Host cheats are advertised so joining players know the host cheats.
+    expect(reported.gameConfig.hostCheats).toEqual({
+      infiniteGold: true,
+    });
     // A listed pool advertises its entry point, not the sibling ids.
     expect(reported.gameConfig.pool).toBeUndefined();
     expect(reported.autoStartAt).toBe(game.autoStartAt());

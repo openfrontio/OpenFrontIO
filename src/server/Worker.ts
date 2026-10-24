@@ -1088,9 +1088,8 @@ export function getListingEligibilityError(
   if (game.hasJoinWhitelist()) {
     return "listing_whitelist_enabled";
   }
-  if (game.hasHostCheats()) {
-    return "listing_host_cheats_enabled";
-  }
+  // Host cheats no longer block listing: a listed lobby may disclose that
+  // the host runs cheats in its advertised config.
   if (maxPlayers !== undefined && maxPlayers <= game.numPlayers()) {
     return "listing_max_players_too_low";
   }

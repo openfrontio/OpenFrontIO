@@ -718,23 +718,19 @@ export class HostLobbyModal extends BaseModal {
                     checked: this.doomsdayClock,
                     doomsdayClockSpeed: this.doomsdayClockSpeed,
                   },
-                  // Host cheats and public listing are mutually exclusive
-                  // (the server rejects both combinations), so the controls
-                  // disappear while the lobby is listed.
-                  ...(this.publiclyListed
-                    ? []
-                    : [
-                        {
-                          labelKey: "host_modal.host_cheats",
-                          checked: this.hostCheatsEnabled,
-                        },
-                      ]),
+                  // Host cheats ride along in listed (public) lobbies: the
+                  // host's advantage is a server-owner policy choice, and the
+                  // advertised config discloses it to joining players.
+                  {
+                    labelKey: "host_modal.host_cheats",
+                    checked: this.hostCheatsEnabled,
+                  },
                 ],
                 inputCards,
               },
               hostCheats: {
                 titleKey: "host_modal.host_cheats",
-                visible: this.hostCheatsEnabled && !this.publiclyListed,
+                visible: this.hostCheatsEnabled,
                 toggles: [
                   {
                     labelKey: "game_settings.infinite_gold",

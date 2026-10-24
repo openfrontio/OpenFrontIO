@@ -199,9 +199,8 @@ function parseCreateGameRequest(reqBody: unknown): ParsedCreateGame {
     if ((config.allowedPublicIds?.length ?? 0) > 0) {
       return fail(409, { error: "listing_whitelist_enabled" });
     }
-    if (config.hostCheats !== undefined) {
-      return fail(409, { error: "listing_host_cheats_enabled" });
-    }
+    // Host cheats on listed lobbies are permitted: the advertised config
+    // discloses them to joining players.
   }
   // Featuring only means anything for a listed lobby: it governs the listing
   // deadline and the browser row. Refuse rather than silently ignore, so a
