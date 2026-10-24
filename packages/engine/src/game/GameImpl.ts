@@ -761,7 +761,7 @@ export class GameImpl implements Game {
   }
 
   allPlayers(): Player[] {
-    return this._playersBySmallID;
+    return this._playersBySmallID.slice();
   }
 
   executions(): Execution[] {
