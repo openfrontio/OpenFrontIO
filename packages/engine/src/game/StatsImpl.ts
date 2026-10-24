@@ -79,7 +79,7 @@ type SampleCache = {
   peakAlliance: number;
 };
 
-const _sampleCache = new WeakMap<PlayerStats, SampleCache>();
+const _sampleCache = new WeakMap<NonNullable<PlayerStats>, SampleCache>();
 
 export class StatsImpl implements Stats {
   private data: AllPlayersStats = {};
