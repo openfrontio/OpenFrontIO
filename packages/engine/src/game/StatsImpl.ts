@@ -71,18 +71,18 @@ const conquest_by_type: Record<PlayerType, number> = {
   [PlayerType.Bot]: PLAYER_INDEX_BOT,
 };
 
+type SampleCache = {
+  peak: number;
+  ddPeak: number;
+  ddTrough: number;
+  peakTroops: number;
+  peakAlliance: number;
+};
+
+const _sampleCache = new WeakMap<PlayerStats, SampleCache>();
+
 export class StatsImpl implements Stats {
   private data: AllPlayersStats = {};
-  private _sampleCache = new Map<
-    ClientID,
-    {
-      peak: number;
-      ddPeak: number;
-      ddTrough: number;
-      peakTroops: number;
-      peakAlliance: number;
-    }
-  >();
 
   snapshot(): StatsState {
     return { data: this.data };
@@ -91,7 +91,6 @@ export class StatsImpl implements Stats {
   /** Fills a prototype-only shell; see RestorableExecution.restoreSnapshot. */
   restoreSnapshot(s: StatsState): void {
     this.data = s.data as AllPlayersStats;
-    this._sampleCache.clear();
   }
 
   getPlayerStats(player: Player): PlayerStats {
@@ -455,7 +454,7 @@ export class StatsImpl implements Stats {
       this.data[clientID] = p;
     }
 
-    let cache = this._sampleCache.get(clientID);
+    let cache = _sampleCache.get(p);
     if (cache === undefined) {
       p.tiles ??= [0n, 0n, 0n];
       while (p.tiles.length <= TILE_INDEX_DRAWDOWN_TROUGH) p.tiles.push(0n);
@@ -470,7 +469,7 @@ export class StatsImpl implements Stats {
         peakTroops: p.peakTroops === undefined ? -1 : Number(p.peakTroops),
         peakAlliance: Number(p.alliances[ALLIANCE_INDEX_PEAK_CONCURRENT]),
       };
-      this._sampleCache.set(clientID, cache);
+      _sampleCache.set(p, cache);
     }
 
     if (
