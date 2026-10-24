@@ -19,6 +19,7 @@ import { EmbargoAllExecution } from "@openfront/engine/execution/EmbargoAllExecu
 import { EmbargoExecution } from "@openfront/engine/execution/EmbargoExecution";
 import { EmojiExecution } from "@openfront/engine/execution/EmojiExecution";
 import { FactoryExecution } from "@openfront/engine/execution/FactoryExecution";
+import { GrantResourcesExecution } from "@openfront/engine/execution/GrantResourcesExecution";
 import { MarkDisconnectedExecution } from "@openfront/engine/execution/MarkDisconnectedExecution";
 import { MissileSiloExecution } from "@openfront/engine/execution/MissileSiloExecution";
 import { MoveWarshipExecution } from "@openfront/engine/execution/MoveWarshipExecution";
@@ -166,6 +167,8 @@ describe("basic execution snapshots", () => {
         new MoveWarshipExecution(a, [1, 2, 2], game.ref(1, 1)),
         new DonateGoldExecution(a, b.id(), null),
         new DonateTroopsExecution(a, "nobody", 100),
+        new GrantResourcesExecution(b.id(), 100, 50),
+        new GrantResourcesExecution("nobody", 100, 50),
       );
       // Everything pending.
       await expectSnapshotRoundTrip(game, MAP, 0);

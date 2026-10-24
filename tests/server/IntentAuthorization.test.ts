@@ -208,6 +208,49 @@ describe("authorizeIntent", () => {
     ],
     ["gameplay by an admin", spawn, admin, lobby(), null],
     ["gameplay by the bot", spawn, bot, lobby(), 400],
+
+    [
+      "grant by a player",
+      { type: "grant_resources", target: cid("p2"), gold: 1000, troops: null },
+      player,
+      lobby(),
+      403,
+    ],
+    [
+      "grant by the host",
+      { type: "grant_resources", target: cid("p2"), gold: 1000, troops: null },
+      host,
+      lobby(),
+      403,
+    ],
+    [
+      "grant by an admin",
+      { type: "grant_resources", target: cid("p2"), gold: 1000, troops: null },
+      admin,
+      lobby(),
+      null,
+    ],
+    [
+      "grant by the bot",
+      { type: "grant_resources", target: cid("p2"), gold: null, troops: 500 },
+      bot,
+      lobby(),
+      null,
+    ],
+    [
+      "grant by the bot in a public game (owner carve-out)",
+      { type: "grant_resources", target: cid("p2"), gold: 1000, troops: null },
+      bot,
+      lobby({ isPublic: true }),
+      null,
+    ],
+    [
+      "non-grant by the bot in a public game stays refused",
+      spawn,
+      bot,
+      lobby({ isPublic: true }),
+      403,
+    ],
   ])("%s", (_name, intent, who, game, status) => {
     const outcome = authorizeIntent(intent, who, game);
     if (status === null) {

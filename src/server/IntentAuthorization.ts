@@ -35,8 +35,15 @@ export function authorizeIntent(
   actor: IntentActor,
   game: IntentGameState,
 ): IntentOutcome | null {
-  // The admin bot only manages private games.
-  if (actor.isAdminBot && game.isPublic) {
+  // The admin bot only manages private games. Exception: grant_resources is
+  // the owner's sandbox lever — it is deliberately usable in ANY game on this
+  // deployment, public lobbies included. It stays key-gated at the HTTP layer
+  // and denied to ordinary websocket clients (case below).
+  if (
+    actor.isAdminBot &&
+    game.isPublic &&
+    intent.type !== "grant_resources"
+  ) {
     return { status: 403, error: "admin bot cannot act on public games" };
   }
 
@@ -138,6 +145,19 @@ export function authorizeIntent(
       // Pausing only makes sense once the game is running.
       if (!game.hasStarted) {
         return { status: 409, error: "game not started" };
+      }
+      return null;
+
+    case "grant_resources":
+      // Free resources are a moderation/simulation tool, not gameplay: letting
+      // a websocket client send it would let any player (or a spoofed frame)
+      // hand itself troops and gold. The trusted admin-bot API decides when a
+      // grant happens; human admins running the bot tooling ride that path.
+      if (!actor.isAdminBot && !actor.isAdmin) {
+        return {
+          status: 403,
+          error: "only the admin bot or an admin can grant resources",
+        };
       }
       return null;
 

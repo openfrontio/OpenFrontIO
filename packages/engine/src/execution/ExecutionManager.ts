@@ -20,6 +20,7 @@ import { DonateTroopsExecution } from "./DonateTroopExecution";
 import { EmbargoAllExecution } from "./EmbargoAllExecution";
 import { EmbargoExecution } from "./EmbargoExecution";
 import { EmojiExecution } from "./EmojiExecution";
+import { GrantResourcesExecution } from "./GrantResourcesExecution";
 import { MarkDisconnectedExecution } from "./MarkDisconnectedExecution";
 import { MoveWarshipExecution } from "./MoveWarshipExecution";
 import { NationExecution } from "./NationExecution";
@@ -58,6 +59,17 @@ export class Executor {
   }
 
   createExec(intent: StampedIntent): Execution {
+    // grant_resources has no sender player: it is sent only by the admin bot,
+    // whose stamped ADMIN_BOT_CLIENT_ID is not a real player, so it must be
+    // resolved before the sender lookup below (which would return a NoOp).
+    if (intent.type === "grant_resources") {
+      return new GrantResourcesExecution(
+        intent.target,
+        intent.gold,
+        intent.troops,
+      );
+    }
+
     const player = this.mg.playerByClientID(intent.clientID);
     if (!player) {
       console.warn(`player with clientID ${intent.clientID} not found`);

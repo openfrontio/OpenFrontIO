@@ -35,6 +35,7 @@ export type Intent =
   | EmojiIntent
   | DonateGoldIntent
   | DonateTroopsIntent
+  | GrantResourcesIntent
   | BuildUnitIntent
   | EmbargoIntent
   | QuickChatIntent
@@ -61,6 +62,7 @@ export type TargetPlayerIntent = z.infer<typeof TargetPlayerIntentSchema>;
 export type EmojiIntent = z.infer<typeof EmojiIntentSchema>;
 export type DonateGoldIntent = z.infer<typeof DonateGoldIntentSchema>;
 export type DonateTroopsIntent = z.infer<typeof DonateTroopIntentSchema>;
+export type GrantResourcesIntent = z.infer<typeof GrantResourcesIntentSchema>;
 export type EmbargoIntent = z.infer<typeof EmbargoIntentSchema>;
 export type BuildUnitIntent = z.infer<typeof BuildUnitIntentSchema>;
 export type UpgradeStructureIntent = z.infer<
@@ -484,6 +486,20 @@ export const DonateTroopIntentSchema = z.object({
   troops: zb.float({ min: 0 }).nullable(),
 });
 
+// Admin-bot only (see authorizeIntent): grants resources to a player without
+// a donor. At least one of gold/troops must be set — a grant of nothing is a
+// mistake, not a no-op worth a turn slot.
+export const GrantResourcesIntentSchema = z
+  .object({
+    type: z.literal("grant_resources"),
+    target: MappedID,
+    gold: zb.float({ min: 0 }).nullable(),
+    troops: zb.float({ min: 0 }).nullable(),
+  })
+  .refine((v) => v.gold !== null || v.troops !== null, {
+    message: "at least one of gold or troops must be non-null",
+  });
+
 export const BuildUnitIntentSchema = z.object({
   type: z.literal("build_unit"),
   unit: z.enum(UnitType),
@@ -575,6 +591,7 @@ export const IntentSchema = z.discriminatedUnion("type", [
   EmojiIntentSchema,
   DonateGoldIntentSchema,
   DonateTroopIntentSchema,
+  GrantResourcesIntentSchema,
   BuildUnitIntentSchema,
   UpgradeStructureIntentSchema,
   EmbargoIntentSchema,
