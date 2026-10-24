@@ -1,11 +1,12 @@
+// @vitest-environment jsdom
 import { describe, expect, it } from "vitest";
-import { WebGLFrameBuilder } from "../src/client/WebGLFrameBuilder";
 import {
   MAX_TRAIL_COLORS,
   RAILROAD_EFFECT_BLOCK,
   STRUCTURES_EFFECT_BLOCK,
   TRAIN_EFFECT_BLOCK,
 } from "../src/client/render/gl/utils/ColorUtils";
+import { WebGLFrameBuilder } from "../src/client/WebGLFrameBuilder";
 
 const PALETTE_SIZE = 4096;
 const LOCAL = 5;

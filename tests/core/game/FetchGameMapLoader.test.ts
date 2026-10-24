@@ -27,4 +27,27 @@ describe("FetchGameMapLoader", () => {
       "/_assets/maps/britanniaclassic/manifest.json.hashed",
     );
   });
+
+  test("loads the WebP layer, and the 4x variant for compact games", async () => {
+    const fetchMock = vi.fn(async (_url: string) => ({
+      ok: true,
+      blob: async () => new Blob(),
+      statusText: "OK",
+    }));
+    vi.stubGlobal("fetch", fetchMock);
+    const bitmap = {} as ImageBitmap;
+    vi.stubGlobal(
+      "createImageBitmap",
+      vi.fn(async () => bitmap),
+    );
+
+    const loader = new FetchGameMapLoader("/maps");
+    const mapData = loader.getMapData(GameMapType.China);
+
+    await expect(mapData.layerImage("label", false)).resolves.toBe(bitmap);
+    expect(fetchMock).toHaveBeenLastCalledWith("/maps/china/label.webp");
+
+    await expect(mapData.layerImage("label", true)).resolves.toBe(bitmap);
+    expect(fetchMock).toHaveBeenLastCalledWith("/maps/china/label.4x.webp");
+  });
 });

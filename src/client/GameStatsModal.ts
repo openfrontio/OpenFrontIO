@@ -275,9 +275,9 @@ export class GameStatsModal extends BaseModal {
         ?.returnToGames(profileReturn?.publicId, profileReturn?.origin);
     } else if (openedFrom === "clan") {
       document
-        .querySelector<
-          HTMLElement & { returnToGameHistory(): void }
-        >("clan-modal")
+        .querySelector<HTMLElement & { returnToGameHistory(): void }>(
+          "clan-modal",
+        )
         ?.returnToGameHistory();
     }
   }

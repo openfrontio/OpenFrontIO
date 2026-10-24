@@ -14,5 +14,8 @@ helm-charts
 .idea
 coverage*
 tests/
+# The security module's own tests and git metadata (src/server/gatekeeper).
+src/server/gatekeeper/tests/
+src/server/gatekeeper/.git
 scripts/replay/
 scripts/split-packages/

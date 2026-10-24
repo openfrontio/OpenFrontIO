@@ -42,26 +42,30 @@ export class PlayerRow extends LitElement {
     return html`
       <li data-player-row class=${rowClass}>
         ${content}
-        ${player.publicId
-          ? html`<button
-              type="button"
-              class="absolute inset-0 z-10 cursor-pointer bg-transparent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-aquarius/70"
-              title=${translateText("player_profile.view")}
-              aria-label=${`${translateText("player_profile.view")}: ${player.username}`}
-              @click=${() => dispatchViewProfile(this, player.publicId!)}
-            ></button>`
-          : ""}
+        ${
+          player.publicId
+            ? html`<button
+                type="button"
+                class="absolute inset-0 z-10 cursor-pointer bg-transparent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-aquarius/70"
+                title=${translateText("player_profile.view")}
+                aria-label=${`${translateText("player_profile.view")}: ${player.username}`}
+                @click=${() => dispatchViewProfile(this, player.publicId!)}
+              ></button>`
+            : ""
+        }
       </li>
     `;
   }
 
   private renderRowContent(): TemplateResult {
     return html`
-      ${this.player.winner
-        ? html`<div
-            class="absolute inset-y-0 left-0 w-0.5 bg-yellow-400/70"
-          ></div>`
-        : ""}
+      ${
+        this.player.winner
+          ? html`<div
+              class="absolute inset-y-0 left-0 w-0.5 bg-yellow-400/70"
+            ></div>`
+          : ""
+      }
       ${this.renderRank()} ${this.renderIdentity()}
       <div class="col-start-2 min-w-0 sm:col-start-auto">
         ${this.renderPlayerInfo()}
@@ -97,11 +101,13 @@ export class PlayerRow extends LitElement {
     return html`
       <div class="relative shrink-0">
         ${this.renderIcon()}
-        ${this.player.winner
-          ? this.renderCrownIcon()
-          : this.player.killedAt !== undefined
-            ? this.renderEliminatedIcon()
-            : ""}
+        ${
+          this.player.winner
+            ? this.renderCrownIcon()
+            : this.player.killedAt !== undefined
+              ? this.renderEliminatedIcon()
+              : ""
+        }
       </div>
     `;
   }
@@ -149,14 +155,16 @@ export class PlayerRow extends LitElement {
           data-player-identity
           class="flex min-w-0 flex-1 items-center gap-2 text-left"
         >
-          ${this.player.clanTag
-            ? html`<div
-                data-player-clan-tag
-                class="inline-flex min-w-0 max-w-[40%] shrink-0 rounded-md border border-malibu-blue/20 bg-malibu-blue/10 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-aquarius/85"
-              >
-                <span class="truncate">${this.player.clanTag}</span>
-              </div>`
-            : ""}
+          ${
+            this.player.clanTag
+              ? html`<div
+                  data-player-clan-tag
+                  class="inline-flex min-w-0 max-w-[40%] shrink-0 rounded-md border border-malibu-blue/20 bg-malibu-blue/10 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-aquarius/85"
+                >
+                  <span class="truncate">${this.player.clanTag}</span>
+                </div>`
+              : ""
+          }
           <div
             data-player-name
             class="min-w-0 flex-1 truncate text-sm font-semibold tracking-wide text-white/85 sm:text-[15px]"

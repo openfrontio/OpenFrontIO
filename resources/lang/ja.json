@@ -44,6 +44,16 @@
     "games_type_singleplayer": "シングルプレイヤー",
     "get_magic_link": "マジックリンクを入手",
     "google_alt": "Google",
+    "identity_token_copied": "コピーしました",
+    "identity_token_copy": "コピー",
+    "identity_token_desc": "Openfrontの自分のアカウントを統計サイトに連携します。トークンを生成して、そのサイトに貼り付けてください。",
+    "identity_token_failed": "トークンを生成できませんでした。もう一度お試しください。",
+    "identity_token_generate": "トークンを生成",
+    "identity_token_logged_out": "セッションの有効期限が切れています。もう一度お試しください。",
+    "identity_token_note": "制限時間は１０分で、{site}でのみ使用可能です。{site}の指定された場所に貼り付けてください。",
+    "identity_token_rate_limited": "リクエストが多すぎます。１分待ってからもう一度試してください。",
+    "identity_token_site": "サイト",
+    "identity_token_title": "外部サイトと連携",
     "link_discord": "Discordアカウントを連携する",
     "link_existing_account": "既存のアカウントとリンクする",
     "link_google": "Googleアカウントを連携",
@@ -85,6 +95,8 @@
     "sign_in_desc": "統計と進捗状況を保存するにはサインインしてください。",
     "sub_granted_from_purchase": "Steamでの購入で無償で付属しています。料金は請求されず、自動更新もされないため、管理や解約は必要ありません。",
     "sub_granted_indefinite": "アカウントに無料アクセスが付与されています。料金は請求されないため、管理や解約は必要ありません。",
+    "sub_granted_perks_end_on": "{tier}の特典は{date}に終了します",
+    "sub_past_due_note": "最新の支払いが完了していないため、{tier}の特典が一時停止されています。得点を再開するには、支払い方法を更新してください。",
     "sub_price_monthly": "{price}/月",
     "sub_renews_on": "{date}に更新",
     "sub_status_active": "有効",
@@ -134,8 +146,7 @@
     "username_temporary_notice": "あなたのユーザー名は他のプレイヤーに取得されました。新しいユーザー名を入力してください。この名前変更は無料です。",
     "username_temporary_prompt": "あなたのユーザー名は他のプレイヤーに取得されました。今すぐユーザー名変更しますか？この名前変更は無料です。",
     "username_temporary_prompt_confirm": "名前を選択",
-    "username_title": "ユーザーネーム",
-    "sub_granted_ends_on": "無料アクセスは{date}に終了します"
+    "username_title": "ユーザーネーム"
   },
   "account_settings_modal": {
     "title": "アカウント設定"
@@ -190,7 +201,6 @@
       "focus": "[P1]に集中砲火だ！",
       "mirv": "MIRVを[P1]に発射！"
     },
-    "build": "電報の作成",
     "cat": {
       "attack": "攻撃",
       "defend": "防衛",
@@ -199,7 +209,6 @@
       "misc": "その他",
       "warnings": "警告"
     },
-    "category": "カテゴリ",
     "defend": {
       "ally": "[P1]は私の仲間だ！",
       "build_posts": "防御ポストを建設しよう！",
@@ -245,11 +254,7 @@
       "strategy": "良い戦略だ！",
       "team_up": "チームを組んで [P1]に立ち向かおう！"
     },
-    "phrase": "フレーズ",
-    "player": "プレイヤー",
     "search": "プレイヤーを検索…",
-    "send": "送る",
-    "sort_by_territory": "領土で並べ替え",
     "title": "電報",
     "to": "{user}に送信:{msg}",
     "warnings": {
@@ -262,15 +267,21 @@
       "mirv_ready": "[P1]はMIRVを発射できるだけのお金を持っている！",
       "mirv_soon": "[P1]はもうすぐMIRVを発射できる！",
       "no_allies": "[P1]は味方はいない。",
-      "number1_warning": "私たちが手を組まないと１位のプレイヤーがすぐに勝ってしまう！",
       "saving_for_mirv": "[P1]はMIRVを発射するために貯金している。",
       "snowballing": "[P1]の成長が早すぎる！",
       "stalemate": "和解しよう。この膠着状態を脱しないと私たちは負けてしまう。",
       "stop_trading": "[P1]との交易を停止せよ！",
       "stop_trading_all": "全ての国と貿易を停止してください！",
       "strong": "[P1]は強い。",
-      "weak": "[P1]は弱い。"
-    }
+      "weak": "[P1]は弱い。",
+      "number1_warning": "私たちが手を組まないと１位のプレイヤーがすぐに勝ってしまう！"
+    },
+    "build": "電報の作成",
+    "category": "カテゴリ",
+    "phrase": "フレーズ",
+    "player": "プレイヤー",
+    "send": "送る",
+    "sort_by_territory": "領土で並べ替え"
   },
   "clan_modal": {
     "applied": "許可",
@@ -468,6 +479,7 @@
     "no_heartbeat": "サーバーからの応答がなくなりました。",
     "not_allowlisted": "あなたはこのロビーの許可を受けていません。",
     "not_trusted": "このロビーは優良アカウントに限定されています。",
+    "pool_redirect": "このロビーから別のロビーに移動されました。もう一度お試しください。",
     "protocol_error": "接続に問題が発生しました。",
     "ranked_limit_reached": "本日の無料ランク戦の回数上限に達しました。",
     "turnstile_failed": "ボットチェックに失敗しました。ページを更新してもう一度お試しください。",
@@ -522,12 +534,14 @@
   "control_panel": {
     "allied_afk_neighbor_info": "同盟を組んでいても接続が切れたプレイヤーに攻撃することができます。",
     "army_limit_warning": "あなたの兵力が上限に到達しそうです！部隊をチームメイトに送ることを検討してください。",
+    "attack_ratio": "{percent}%({troops})",
     "low_troops_warning": "兵力が残りわずかです。防衛のため、兵力を常に一部残しておきましょう。",
     "teammate_afk_neighbor_info": "接続が切れたチームメイトを攻撃できます。",
     "traitor_neighbor_info": "裏切り者に対して同盟を破棄しても、裏切り者にはなりません。"
   },
   "cosmetics": {
     "adfree": "ずっと広告なし！",
+    "ai_label": "AIの力を借りて作成する",
     "artist_label": "作者 :",
     "color_label": "色 :",
     "common": "コモン",
@@ -537,23 +551,24 @@
     "legendary": "レジェンド",
     "pack_includes": "内容：",
     "pack_more_items": "＋{count}個",
+    "pattern_preview": "パターンプレビュー",
     "per_day": "/日",
     "public_lobbies": "公開ロビーを作成",
     "public_lobbies_info": "誰でも参加できる公開カスタムロビーを作成します。",
     "rare": "レア",
     "search": "検索…",
-    "signup_bonus": "新規登録ボーナス",
     "soft": "クラウンキャップ",
     "type_crown": "クラウン",
     "type_effect": "{type}エフェクト",
     "type_flag": "旗",
     "type_skin": "スキン",
     "uncommon": "アンコモン",
-    "unlimited_ranked": "ランク戦無制限",
-    "unlimited_ranked_info": "ランクマッチをプレイできる回数に制限はありません。",
     "usd_value": "価格: {usd}",
     "verified_name": "認証済みユーザー名",
-    "verified_name_info": "あなた専用のユーザー名を登録し、ゲーム内で認証済みバッジが表示されます。"
+    "verified_name_info": "あなた専用のユーザー名を登録し、ゲーム内で認証済みバッジが表示されます。",
+    "signup_bonus": "新規登録ボーナス",
+    "unlimited_ranked": "ランク戦無制限",
+    "unlimited_ranked_info": "ランクマッチをプレイできる回数に制限はありません。"
   },
   "creator_code": {
     "change": "変更",
@@ -678,6 +693,16 @@
     "easy": "簡単",
     "hard": "難しい",
     "impossible": "不可能",
+    "info": "{smarts}、{troops}",
+    "info_label": "難易度の詳細を表示",
+    "info_note_hard": "（この難易度は公開している人類 vs 国家ゲームで使用されます）",
+    "info_note_medium": "（この難易度は公開FFAゲームで使用されます）",
+    "info_smarts_easy": "あんぽんたん",
+    "info_smarts_hard": "賢い",
+    "info_smarts_impossible": "すごく賢い",
+    "info_smarts_medium": "普通",
+    "info_troops": "人間の最大兵力の{percent}%",
+    "info_troops_same": "人間と同じ最大兵力",
     "medium": "普通"
   },
   "discord_user_header": {
@@ -727,6 +752,9 @@
     "crashed": "ゲームがクラッシュしました！",
     "desync_notice": "他のプレイヤと同期ズレが発生しています。他のプレイヤーとは違う画面になっている可能性があります。",
     "login_failed": "ログインに失敗しました。後でもう一度やり直してください。",
+    "login_token_consumed": "このログインリンクはすでに使用している可能性があります。別のタブを確認してください。",
+    "login_token_expired": "このログインリンクの有効期限が切れています。新しいログインリンクをリクエストしてください。",
+    "login_token_invalid": "このログインリンクは無効か期限が切れています。新しいログインリンクを取得してください。",
     "paste_discord": "以下の内容をDiscordのバグ報告に貼り付けてください :",
     "spawn_failed": {
       "description": "自動スポーンの選択に失敗しました。このゲームにプレイできません。",
@@ -781,6 +809,15 @@
     "live": "配信中",
     "minimize": "最小化",
     "open_on_twitch": "Twitchの {channel} を開く"
+  },
+  "free_play": {
+    "account": "自分のアカウント、戦績、フレンド、外観",
+    "ad_free_steam": "Steamアプリ内で広告は一切表示されません",
+    "after_grant_heading": "無料期間が終了しても利用できます",
+    "custom_lobbies": "フレンドと遊べる非公開カスタムロビー",
+    "free_heading": "無料プレイでも以下の特典を利用できます",
+    "full_game": "完全版ゲーム：すべてのマップとモード、オンラインプレイ・シングルプレイ",
+    "ranked": "ランク戦（無料プレイでは1日あたりの対戦回数に制限があります）"
   },
   "friends": {
     "accept": "承諾",
@@ -900,7 +937,7 @@
     "copy_json_label": "設定JSONをコピー",
     "cosmetics_crowns_desc": "1位のプレイヤーの名前の上に王冠を表示します",
     "cosmetics_crowns_label": "王冠",
-    "cosmetics_flag_opacity_desc": "核爆発のエフェクトを変更します",
+    "cosmetics_flag_opacity_desc": "プレイヤー名の横に表示される国旗の不透明度を設定します。自分の国旗も含まれます",
     "cosmetics_flag_opacity_label": "国旗の不透明度",
     "cosmetics_flags_desc": "プレイヤー名の横に国旗を表示します",
     "cosmetics_flags_label": "国旗",
@@ -1126,6 +1163,11 @@
     "host_badge": "ホスト",
     "host_cheats": "ホストのチート",
     "leave_confirmation": "ロビーを退出してよろしいですか？",
+    "list_lobby_body": "ロビーは公開ロビーの一覧に表示されます。タイマーが終了するか、ロビーが満員になると自動的に開始します。公開後は設定を変更できません。",
+    "list_lobby_confirm": "ロビーを公開",
+    "list_lobby_max_players": "最大プレイヤー数",
+    "list_lobby_start_minutes": "開始まで（分）",
+    "list_lobby_title": "ロビーを公開する",
     "mode": "モード",
     "nation_player": "国家",
     "nation_players": "国家",
@@ -1134,7 +1176,17 @@
     "player_whitelist": "プレイヤーのホワイトリスト (公開ID)",
     "player_whitelist_placeholder": "コンマで区切る",
     "players": "プレイヤー",
+    "queue": "キュー",
+    "queue_confirm": "支払ってキューに追加",
+    "queue_confirm_body": "このロビーを公開キューに追加するために{price}プルトニウムを支払いますか？カウントダウン中のロビーが開始した直後に、このロビーが開始します。",
+    "queue_confirm_title": "公開キューに追加しますか？",
+    "queue_failed": "ロビーをキューに追加できませんでした。もう一度お試しください。二重に請求されることはありません。",
+    "queue_item": "公開キューの参加枠",
+    "queue_tooltip": "このロビーを公開Specialキューに追加します。まもなく開始するロビーのすぐ後ろに配置されます",
+    "queued": "キューに追加済み",
+    "queued_waiting": "公開キューで待機中",
     "remove_player": "{username}を削除",
+    "settings_locked_listed": "このロビーは公開されているため、設定を変更できません。",
     "spectator": "観戦者",
     "spectators": "観戦者",
     "start_delay": "開始までの（秒）",
@@ -1143,7 +1195,6 @@
     "subscription_required_title": "サブスクリプションが必要です",
     "team_count": "チームの数",
     "teams_Duos": "デュオ (2人1組)",
-    "teams_Humans Vs Nations": "人類 vs 国家",
     "teams_Quads": "クワッド (4人1組)",
     "teams_Trios": "トリオ (3人1組)",
     "title": "プライベートロビーを作成",
@@ -1151,7 +1202,8 @@
     "view_subscriptions": "サブスクリプションの確認",
     "visibility_private": "非公開",
     "visibility_public": "公開",
-    "waiting": "他のプレイヤーの参加を待っています..."
+    "waiting": "他のプレイヤーの参加を待っています...",
+    "teams_Humans Vs Nations": "人類 vs 国家"
   },
   "inventory": {
     "equipped": "装備中",
@@ -1174,6 +1226,7 @@
     "selected_cosmetic": "{name}を選択中",
     "selected_cosmetic_variant": "{name}（{variant}）",
     "showing_effects": "装備中のエフェクト：{count}個",
+    "sign_in_for_cosmetics": "スキン、王冠、エフェクトを利用するには、ログインするかアカウントを作成してください。",
     "title": "インベントリ",
     "unequip": "装備を外す",
     "unequip_all": "すべて外す",
@@ -1303,6 +1356,7 @@
     "arctic": "北極",
     "asia": "アジア",
     "australia": "オーストラリア",
+    "babelmandebstrait": "バブ・エル・マンデブ海峡",
     "baikal": "バイカル湖付近",
     "baikalnukewars": "バイカル湖 (核戦争後)",
     "bajacalifornia": "バハ・カリフォルニア",
@@ -1317,7 +1371,9 @@
     "branchingpaths": "岐路",
     "britannia": "イギリス",
     "britanniaclassic": "イギリス (クラシック)",
+    "canaryislands": "カナリア諸島",
     "capecod": "ケープコッド",
+    "capeofgoodhope": "喜望峰",
     "caribbean": "カリブ海",
     "caspiansea": "カスピ海",
     "caucasus": "コーカサス",
@@ -1354,6 +1410,7 @@
     "hawaii": "ハワイ諸島",
     "hecatestrait": "ヘカテ海峡",
     "hongkong": "香港",
+    "hornofafrica": "アフリカの角",
     "iceland": "アイスランド",
     "indiansubcontinent": "インド亜大陸",
     "irishsea": "アイリッシュ海",
@@ -1368,6 +1425,7 @@
     "lisbon": "リスボン",
     "losangeles": "ロサンゼルス",
     "luna": "月",
+    "madagascar": "マダガスカル",
     "manicouagan": "マニクアガン湖",
     "map": "地図",
     "marenostrum": "地中海",
@@ -1379,6 +1437,7 @@
     "montreal": "モントリオール",
     "morethanluck": "運が良いだけなの...？",
     "newyorkcity": "ニューヨーク市",
+    "newzealand": "ニュージーランド",
     "niledelta": "ナイル川デルタ",
     "northamerica": "北アメリカ",
     "northwestpassage": "カナダ北極諸島",
@@ -1387,8 +1446,10 @@
     "pangaea": "パンゲア",
     "passage": "パッセージ",
     "pluto": "冥王星",
+    "pulicatlake": "プリカット湖",
     "qingchina": "大清",
     "random": "ランダム",
+    "riodejaneiro": "リオデジャネイロ",
     "russia": "ロシア",
     "sanfrancisco": "サンフランシスコ",
     "scandinavia": "スカンジナビア半島",
@@ -1412,6 +1473,7 @@
     "tradersdream": "海商人の夢",
     "twolakes": "二つの湖",
     "unitedstates": "アメリカ合衆国",
+    "vancouverisland": "バンクーバー島",
     "venice": "ヴェネツィア",
     "vietnam": "ベトナム",
     "warshipwarship": "Warship Warship",
@@ -1480,7 +1542,6 @@
     "waiting_for_game": "ゲーム開始を待っています…"
   },
   "mode_selector": {
-    "coming_soon": "事前参加",
     "lobbies_unreachable": "公開ロビーに接続できません",
     "offline_lobbies": "オフライン中は公開ロビーを利用できません",
     "ranked_1v1_title": "1v1",
@@ -1491,7 +1552,8 @@
     "servers_unreachable": "OpenFrontのサーバーに接続できません",
     "teams_count": "{teamCount}チーム",
     "teams_of": "各{playersPerTeam}人の{teamCount}チーム",
-    "teams_title": "チーム"
+    "teams_title": "チーム",
+    "coming_soon": "事前参加"
   },
   "multi_tab": {
     "detected": "複数のゲームタブが開いています。",
@@ -1597,10 +1659,10 @@
   "player_profile": {
     "loading": "プロフィールの読み込み中…",
     "no_clans": "このプレイヤーはどのクランにも所属していません。",
-    "not_found": "プレイヤーのプロフィールが見つかりません",
     "share": "プロフィールをシェア",
     "title": "プレイヤーのプロフィール",
-    "view": "プロフィールを表示"
+    "view": "プロフィールを表示",
+    "not_found": "プレイヤーのプロフィールが見つかりません"
   },
   "player_stats_table": {
     "arrived": "到着",
@@ -1697,6 +1759,7 @@
     "listing_full": "公開ロビーをこれ以上表示できません。しばらくしてからもう一度お試しください。",
     "listing_host_cheats_enabled": "ロビーを公開するには、ホストチートを無効にしてください。",
     "listing_limit_reached": "すでに公開中のロビーがあります。",
+    "listing_max_players_too_low": "最大プレイヤー数は、現在ロビーにいるプレイヤー数より多く設定する必要があります。",
     "listing_requires_subscription": "ロビーを公開するには、有効なサブスクリプションが必要です。",
     "listing_whitelist_enabled": "ロビーを公開するには、ホストチートを無効にしてください。",
     "no_open_lobbies": "現在公開されているロビーがありません",
@@ -1734,13 +1797,15 @@
   },
   "public_lobby": {
     "connecting": "ロビーに接続しています…",
+    "custom": "カスタム",
+    "custom_default_settings": "標準設定",
+    "custom_tooltip_title": "プレイヤーが作成したロビー",
     "invite_friends": "友達を招待する",
     "join_timeout": "時間内にゲームに参加していませんでした。",
     "notify_armed": "通知をオンにしました。ゲーム開始時に音が鳴ります",
     "notify_off": "ゲーム開始時に音を鳴らす",
     "notify_on": "ゲーム開始アラートがオンです",
     "notify_started": "ゲームが開始されました！",
-    "players_per_team": "{num}プレイヤー",
     "see_all": "{count}個",
     "started": "開始しています",
     "starting_game": "開始します…",
@@ -1760,7 +1825,8 @@
     "trusted_tooltip_title": "優良アカウントのみのロビー",
     "trusted_unlocked": "優良アカウントのみ。あなたのアカウントは優良アカウントです。",
     "upcoming": "公開中のロビー",
-    "waiting_for_players": "プレイヤーを待っています"
+    "waiting_for_players": "プレイヤーを待っています",
+    "players_per_team": "{num}プレイヤー"
   },
   "purchase_nudge": {
     "body": "OpenFrontを楽しんでいただけて何よりです！もしよかったらご支援をいただけると嬉しいです。何か1つでも購入すると、以降は広告なしでゲームをお楽しみできます。",
@@ -1784,6 +1850,24 @@
     "fastest_game_speed": "最大",
     "game_speed": "ゲーム速度",
     "replay_speed": "再生速度"
+  },
+  "replay_viewer": {
+    "following": "{name}を追跡中",
+    "load_failed": "リプレイを読み込めませんでした。",
+    "loading": "リプレイを読み込み中…",
+    "partial": "この試合は最初の{time}まで視聴できます。",
+    "pause": "一時停止",
+    "play": "再生",
+    "processing": "リプレイを準備中…",
+    "processing_fetching": "試合記録を取得中",
+    "processing_simulating": "試合を再生中：{percent}%",
+    "timeline": "リプレイのタイムライン",
+    "unavailable_desync": "このバージョンのOpenFrontでは、試合を正しく再生できません。",
+    "unavailable_failed": "試合の処理に失敗しました。",
+    "unavailable_not_found": "試合が見つかりませんでした。",
+    "unavailable_other_build": "この試合は別のバージョンのOpenFrontでプレイされました。",
+    "unavailable_unreachable": "試合をダウンロードできませんでした。接続を確認して、もう一度お試しください。",
+    "watch_classic": "旧形式のリプレイを視聴する"
   },
   "rewards_modal": {
     "title": "報酬"
@@ -1812,6 +1896,12 @@
   },
   "spawn_timer": {
     "team_percent_tooltip": "{team}：{percent}"
+  },
+  "steam_grant": {
+    "ended_body": "Steamでの購入に付属していた{tier}の1か月分の特典期間が終了しました。料金が請求されることはありません。引き続き、完全版ゲームのすべてのマップとモード、オンラインプレイ、無料プレイの1日あたりの対戦回数制限付きランク戦、フレンドとのカスタムロビーを利用できます。Steamアプリでは引き続き広告は表示されません。{tier}の特典を再び利用したい場合は、いつでもストアからサブスクリプションに登録できます。",
+    "ended_heading": "Steam購入で1か月の特典の期間が終了しました",
+    "welcome_body": "Steamでの購入により、{date}まで{tier}を利用できます。お支払いはSteamでの1回限りで、追加請求や自動更新はありません。特典期間が終了しても、完全版ゲームのすべてのマップとモードは引き続き利用でき、Steamアプリでは広告も表示されません。終了するのは{tier}の特典のみです。",
+    "welcome_heading": "Steam購入特典に含まれています"
   },
   "steam_handoff": {
     "launched": "このロビーをSteamアプリで開いています。何も起こらない場合は、Steamが起動していることを確認してください。",
@@ -1860,10 +1950,8 @@
     "default_name": "Steamプレイヤー"
   },
   "steam_wishlist": {
-    "cta": "ウィッシュリストに追加",
-    "on_steam": "SteamでOpenFrontを開く",
-    "release": "2026年７月〜９月に公開",
-    "title": "OpenFrontをウィッシュリストに登録！"
+    "buy_cta": "Steamで購入",
+    "buy_on_steam": "OpenFrontをSteamで購入"
   },
   "store": {
     "already_owned": "すでにこのアイテムを所有しています。課金はされていません。",
@@ -1887,7 +1975,7 @@
     "confirm_purchase_body": "{amount, number} {currency}で{item}を購入しますか？",
     "confirm_purchase_title": "購入を確認する",
     "confirm_subscribe_over_grant": "今すぐ有料の{tier}プランを開始しますか？無料期間はすぐに終了します。残りの{days, plural,other {#日分}}は返金されず、有料期間にも加算されません。",
-    "confirm_subscribe_over_grant_no_days": "今すぐ有料の{tier}プランを開始しますか？無料期間はすぐに終了し、残りの期間は返金されず、有料期間にも加算されません。store.subscribe_heading サブスクリプションを開始。",
+    "confirm_subscribe_over_grant_no_days": "今すぐ有料の{tier}プランを開始しますか？無料期間はすぐに終了し、残りの期間は返金されず、有料期間にも加算されません。",
     "confirm_tier_change_steam": "今すぐ {tier} を登録しますか？新しいプランはすぐに通常価格で開始され、今月の残り分は返金されません。",
     "confirm_upgrade": "{tier}にアップグレードしますか？差額が今すぐ請求されます。",
     "cosmetics": "外見",
@@ -1900,6 +1988,7 @@
     "insufficient_currency_body": "{item}を購入するには、あと{amount, number} {currency}必要です。",
     "insufficient_currency_title": "{currency}が不足しています",
     "login_required": "通貨で購入するにはログインする必要があります。",
+    "manage_billing": "お支払い設定を管理",
     "no_affiliate_items": "現在利用できる広告商品はありません。後でもう一度確認してください。",
     "no_bundles": "現在利用できるバンドルはありません。後でもう一度確認してください。",
     "no_crowns": "現在、クラウンで購入できるアイテムはありません。新しいアイテムの追加をお待ちください。",
@@ -1937,6 +2026,8 @@
     "steam_overlay_waiting": "Steamオーバーレイでの購入を承認して続行してください。",
     "subscribe_heading": "サブスクリプションを開始",
     "subscribed": "購入済み",
+    "subscription_past_due": "サブスクリプションの前回の支払いが完了しなかったため、利用が一時停止されています。再開するには、お支払い方法を更新してください。二重に請求される可能性があるため、再登録しないでください。",
+    "subscription_past_due_desktop": "サブスクリプションの前回の支払いが完了しなかったため、利用が一時停止されています。再開するには、OpenFrontの公式サイトでお支払い方法を更新してください。二重に請求される可能性があるため、再登録しないでください。",
     "subscription_purchase_success": "サブスクリプションが有効になりました！",
     "subscriptions": "サブスクリプション",
     "switch_button": "切り替える",
@@ -2232,6 +2323,8 @@
     "left_click_label": "左クリックでメニューを開く",
     "lobby_id_visibility_desc": "プライベートロビー作成時にロビーIDを隠す。",
     "lobby_id_visibility_label": "ロビーIDを非表示",
+    "lobby_start_alerts_desc": "デフォルトで、各ロビーとランク戦の開始時にチャイムを鳴らし、許可されている場合はデスクトップ通知を表示します。ロビー内のベルアイコンから個別に変更できます。",
+    "lobby_start_alerts_label": "ロビー開始通知",
     "menu_shortcuts": "メニューのショートカット",
     "move_down": "視点を下に移動",
     "move_down_desc": "視点を下に移動します。",
@@ -2255,6 +2348,8 @@
     "press_a_key": "キーを入力",
     "render_debug_gui": "描画デバッグGUI",
     "render_debug_gui_desc": "レンダラー調整パネルの表示を切り替えます",
+    "replay_viewer_desc": "巻き戻し操作に対応した新しいリプレイビューアーを使用します。オフにすると従来のリプレイビューアーが開きます。",
+    "replay_viewer_label": "新しいリプレイビューアー",
     "request_alliance": "同盟を要請",
     "request_alliance_desc": "選択したプレイヤーに同盟を要請します。",
     "reset": "リセット",
@@ -2300,6 +2395,8 @@
     "enter_username": "ユーザー名を入力。",
     "invalid_chars": "ユーザー名には、文字、数字、スペース、アンダーバーのみを含めることができます。",
     "lapse_notice": "あなたのサブスクリプション期間は終了しましたので、\"{name}\"としてプレイできなくなりました。名前は{date}まであなたに確保されています。期限の前に再登録して名前を保持してください。期限の後は他の誰でもその名前を利用できます。",
+    "lapse_notice_after_grant": "Steam購入に付属していた1か月分のプレミアム利用期間が終了したため、現在は「{name}」としてプレイしていません。ゲーム本編は引き続き無料で利用できますが、プレミアム特典は終了しました。この名前は{date}まで確保されています。それまでにサブスクリプションに登録すれば、引き続きその名前を使用できます。それ以降は、ほかのプレイヤーもその名前を取得できるようになります。",
+    "lapse_notice_after_grant_at_risk": "Steam購入に付属していた1か月分のプレミアム利用期間が終了したため、現在は「{name}」としてプレイしておらず、その名前の確保期間も終了しています。ゲーム本編は引き続き無料で利用できます。ほかのプレイヤーがいつでもその名前を取得できるため、名前を確保するには今すぐサブスクリプションに登録してください。",
     "lapse_notice_at_risk": "あなたはもう \"{name}\" としてプレイしておらず、そのためこの名前は予約されていません。 他のプレイヤーはいつでもその名前を利用できます。名前を保持するには今すぐ再登録してください。",
     "not_string": "ユーザー名は文字列で入力してください。",
     "tag": "タグ",

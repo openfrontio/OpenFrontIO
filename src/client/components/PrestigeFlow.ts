@@ -12,13 +12,9 @@ import {
   PropertyValues,
   TemplateResult,
 } from "lit";
-import { customElement, state } from "lit/decorators.js";
-import {
-  MAX_LEVEL,
-  MAX_PRESTIGE,
-  PrestigeTier,
-  prestigeTier,
-} from "../Progression";
+import { customElement, property, state } from "lit/decorators.js";
+import { momentShareText, momentShareUrl } from "../MomentShare";
+import { MAX_LEVEL, MAX_PRESTIGE, prestigeAccent } from "../Progression";
 import { fetchProgressionConfig, prestigeMe } from "../ProgressionApi";
 import { translateText } from "../Utils";
 import "./CapIcon";
@@ -29,6 +25,7 @@ import {
 } from "./Ceremony";
 import { describeFlareCosmetic, FlareCosmeticView } from "./FlareCosmetic";
 import "./LevelBadge";
+import "./ProfileShare";
 import { formatXp } from "./XpBar";
 
 // Prestiging, start to finish: the confirmation (the player's badge as it is
@@ -75,14 +72,6 @@ const HOT_AT = 0.75;
 const CEREMONY_EMBLEM_LIFT = 112;
 // The emblem's move to there.
 const HANDOFF_MOVE_MS = 650;
-
-const TIER_COLORS: Record<PrestigeTier, string> = {
-  none: "#facc15",
-  ring: "#f59e0b",
-  double: "#e2e8f0",
-  sunburst: "#facc15",
-  radiant: "#d946ef",
-};
 
 /**
  * The last prestige rank, Legend coming after it: the config's, so the ladder
@@ -165,6 +154,8 @@ function newIdempotencyKey(): string {
 
 @customElement("prestige-flow")
 export class PrestigeFlow extends LitElement {
+  // The player's public ID, for the ceremony's share link. Empty: no share.
+  @property({ type: String }) publicId = "";
   @state() private stage: Stage = "closed";
   // Progress before prestiging.
   @state() private prior: Progress | null = null;
@@ -415,18 +406,20 @@ export class PrestigeFlow extends LitElement {
     return html`<div
       data-prestige-overlay
       class="prestige-ceremony fixed inset-0 z-[10020] text-white"
-      style="--tier: ${TIER_COLORS[prestigeTier(rank)]}"
+      style="--tier: ${prestigeAccent(rank, false)}"
     >
       ${this.renderStyles()}
       <div aria-hidden="true" class="ceremony-backdrop absolute inset-0"></div>
       ${renderHoneycomb(this.honeycombMode(), {
         className: "prestige-honeycomb",
       })}
-      ${charging
-        ? renderHoneycomb("hx-charge", {
-            className: `prestige-honeycomb prestige-charge-comb ${chargeFading ? "is-off" : ""}`,
-          })
-        : nothing}
+      ${
+        charging
+          ? renderHoneycomb("hx-charge", {
+              className: `prestige-honeycomb prestige-charge-comb ${chargeFading ? "is-off" : ""}`,
+            })
+          : nothing
+      }
       <div aria-hidden="true" class="ceremony-vignette absolute inset-0"></div>
       ${ceremony ? this.renderCeremony(before) : this.renderConfirm(before)}
     </div>`;
@@ -480,7 +473,7 @@ export class PrestigeFlow extends LitElement {
              the one that shatters at the flash. -->
         <div
           class="prestige-float relative mt-10"
-          style="--hero: ${TIER_COLORS[prestigeTier(this.rankOf(before))]}"
+          style="--hero: ${prestigeAccent(this.rankOf(before), false)}"
         >
           <div
             aria-hidden="true"
@@ -503,16 +496,20 @@ export class PrestigeFlow extends LitElement {
         <p class="m-0 mt-6 max-w-md text-sm text-white/75">
           ${translateText("prestige.summary")}
         </p>
-        ${this.error === null
-          ? nothing
-          : html`<p
-              data-prestige-error
-              class="m-0 mt-2 text-sm font-bold text-rose-400"
-            >
-              ${this.error === "signed_out"
-                ? translateText("prestige.error_signed_out")
-                : translateText("prestige.error")}
-            </p>`}
+        ${
+          this.error === null
+            ? nothing
+            : html`<p
+                data-prestige-error
+                class="m-0 mt-2 text-sm font-bold text-rose-400"
+              >
+                ${
+                  this.error === "signed_out"
+                    ? translateText("prestige.error_signed_out")
+                    : translateText("prestige.error")
+                }
+              </p>`
+        }
 
         <div class="mt-6 flex w-full max-w-md gap-3">
           <button
@@ -552,11 +549,13 @@ export class PrestigeFlow extends LitElement {
               ?data-holding=${holding}
             ></span>
             <span class="relative">
-              ${submitting
-                ? translateText("prestige.submitting")
-                : holding
-                  ? translateText("prestige.keep_holding")
-                  : translateText("prestige.confirm")}
+              ${
+                submitting
+                  ? translateText("prestige.submitting")
+                  : holding
+                    ? translateText("prestige.keep_holding")
+                    : translateText("prestige.confirm")
+              }
             </span>
           </button>
         </div>
@@ -654,12 +653,14 @@ export class PrestigeFlow extends LitElement {
             class="block text-[13px] font-black normal-case tracking-normal text-white"
             >${exclusive.name}</span
           ><span class="mt-0.5 block"
-            >${exclusive.typeLabel === ""
-              ? translateText("prestige.exclusive_untyped", { rank })
-              : translateText("prestige.exclusive", {
-                  type: exclusive.typeLabel,
-                  rank,
-                })}</span
+            >${
+              exclusive.typeLabel === ""
+                ? translateText("prestige.exclusive_untyped", { rank })
+                : translateText("prestige.exclusive", {
+                    type: exclusive.typeLabel,
+                    rank,
+                  })
+            }</span
           >`,
       });
     }
@@ -914,79 +915,117 @@ export class PrestigeFlow extends LitElement {
       @click=${() => this.skipCeremony()}
     >
       <div class="relative grid h-[260px] w-[260px] place-items-center">
-        ${!shattered
-          ? html`<div aria-hidden="true" class="absolute inset-0">
-                ${particles.map(
-                  (deg, i) =>
+        ${
+          !shattered
+            ? html`<div aria-hidden="true" class="absolute inset-0">
+                  ${particles.map(
+                    (deg, i) =>
+                      html`<span
+                        class="prestige-particle"
+                        style="--a: ${deg}deg; animation-delay: ${
+                          (i % 6) * 0.18
+                        }s"
+                      ></span>`,
+                  )}
+                </div>
+                <div class="prestige-charge relative">
+                  <level-badge
+                    .level=${levelCap(this.config)}
+                    .prestige=${before.prestige}
+                    .size=${200}
+                  ></level-badge>
+                </div>`
+            : nothing
+        }
+        ${
+          shattered && !done
+            ? html`<div aria-hidden="true" class="absolute inset-0">
+                <span class="ceremony-shockwave"></span>
+                ${shards.map(
+                  (deg) =>
                     html`<span
-                      class="prestige-particle"
-                      style="--a: ${deg}deg; animation-delay: ${(i % 6) *
-                      0.18}s"
+                      class="prestige-shard"
+                      style="--a: ${deg}deg"
                     ></span>`,
                 )}
-              </div>
-              <div class="prestige-charge relative">
+              </div>`
+            : nothing
+        }
+        ${
+          revealed
+            ? html`<div
+                class="relative ${done ? "" : "prestige-reveal"}"
+                data-prestige-new-badge
+              >
                 <level-badge
-                  .level=${levelCap(this.config)}
-                  .prestige=${before.prestige}
-                  .size=${200}
+                  .level=${after?.level ?? 1}
+                  .prestige=${rank}
+                  .size=${220}
                 ></level-badge>
               </div>`
-          : nothing}
-        ${shattered && !done
-          ? html`<div aria-hidden="true" class="absolute inset-0">
-              <span class="ceremony-shockwave"></span>
-              ${shards.map(
-                (deg) =>
-                  html`<span
-                    class="prestige-shard"
-                    style="--a: ${deg}deg"
-                  ></span>`,
-              )}
-            </div>`
-          : nothing}
-        ${revealed
-          ? html`<div
-              class="relative ${done ? "" : "prestige-reveal"}"
-              data-prestige-new-badge
-            >
-              <level-badge
-                .level=${after?.level ?? 1}
-                .prestige=${rank}
-                .size=${220}
-              ></level-badge>
-            </div>`
-          : nothing}
+            : nothing
+        }
       </div>
 
       <div class="relative mt-6 flex min-h-[200px] flex-col items-center">
-        ${this.reached("title")
-          ? html`<div
-              data-prestige-title
-              class="${done
-                ? ""
-                : "ceremony-slam"} prestige-title text-5xl font-black uppercase italic tracking-wide sm:text-7xl"
-            >
-              ${translateText("prestige.ceremony_title", { rank })}
-            </div>`
-          : nothing}
-        ${done
-          ? html`<button
-              type="button"
-              data-prestige-continue
-              class="prestige-fade prestige-cut mt-6 border-0 bg-gradient-to-b from-yellow-300 to-amber-500 px-10 py-3 text-base font-black uppercase tracking-wider text-zinc-900 transition-transform hover:-translate-y-0.5"
-              @click=${(e: Event) => {
-                e.stopPropagation();
-                this.close();
-              }}
-            >
-              ${translateText("prestige.continue")}
-            </button>`
-          : nothing}
+        ${
+          this.reached("title")
+            ? html`<div
+                data-prestige-title
+                class="${
+                  done ? "" : "ceremony-slam"
+                } prestige-title text-5xl font-black uppercase italic tracking-wide sm:text-7xl"
+              >
+                ${translateText("prestige.ceremony_title", { rank })}
+              </div>`
+            : nothing
+        }
+        ${done ? this.renderShare(rank) : nothing}
+        ${
+          done
+            ? html`<button
+                type="button"
+                data-prestige-continue
+                class="prestige-fade prestige-cut mt-6 border-0 bg-gradient-to-b from-yellow-300 to-amber-500 px-10 py-3 text-base font-black uppercase tracking-wider text-zinc-900 transition-transform hover:-translate-y-0.5"
+                @click=${(e: Event) => {
+                  e.stopPropagation();
+                  this.close();
+                }}
+              >
+                ${translateText("prestige.continue")}
+              </button>`
+            : nothing
+        }
       </div>
-      ${shattered && !this.reached("title")
-        ? html`<div aria-hidden="true" class="ceremony-flash"></div>`
-        : nothing}
+      ${
+        shattered && !this.reached("title")
+          ? html`<div aria-hidden="true" class="ceremony-flash"></div>`
+          : nothing
+      }
+    </div>`;
+  }
+
+  // Sharing the new rank, between the title and Continue. The ceremony
+  // skips (or, done, does nothing) on any click; the row keeps its clicks.
+  // It is simply there, without the rise the Continue button has.
+  private renderShare(rank: number): TemplateResult | typeof nothing {
+    if (this.publicId === "") return nothing;
+    const moment = { kind: "prestige", rank } as const;
+    // The rank is the server's: one the card route wouldn't draw drops the
+    // row rather than sharing a link that unfurls without a card.
+    const url = momentShareUrl(this.publicId, moment);
+    if (url === null) return nothing;
+    return html`<div
+      data-prestige-share
+      class="mt-6"
+      @click=${(e: Event) => e.stopPropagation()}
+    >
+      <profile-share
+        solid
+        centered
+        .url=${url}
+        .text=${momentShareText(moment)}
+      ></profile-share>
     </div>`;
   }
 

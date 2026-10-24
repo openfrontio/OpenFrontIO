@@ -1,4 +1,8 @@
-import { ID, isValidGameID } from "@openfront/engine-api/Schemas";
+import {
+  ID,
+  isValidGameID,
+  MAX_USERNAME_LENGTH,
+} from "@openfront/engine-api/Schemas";
 import { CloseCode, CloseReason } from "@openfront/shared/CloseCodes";
 import { GameEnv } from "@openfront/shared/configuration/Env";
 import { generateID, replacer } from "@openfront/shared/SharedUtil";
@@ -37,13 +41,20 @@ import { gameApiCors } from "./GameApiCors";
 import { GameManager } from "./GameManager";
 import { registerGamePreviewRoute } from "./GamePreviewRoute";
 import { GamePhase, type GameServer } from "./GameServer";
-import { isSteamAuthenticated, planJoinVerify, verifyJoin } from "./JoinVerify";
+import {
+  isSteamAuthenticated,
+  type JoinVerifyResponse,
+  planJoinVerify,
+  verifyJoin,
+} from "./JoinVerify";
 import { getUserMe, userMeFailureClose, verifyClientToken } from "./jwt";
 import { levelBadgeForPlayer } from "./LevelBadge";
 import { payForLobbyQueue, queueListedLobby } from "./LobbyQueuePayment";
 import { logger } from "./Logger";
+import { registerPlayerProfileRoute } from "./PlayerProfileRoute";
 import { resolveVerifiedJoin } from "./Privilege";
 
+import { loadGatekeeper } from "./Gatekeeper";
 import { MapPlaylist } from "./MapPlaylist";
 import { setNoStoreHeaders } from "./NoStoreHeaders";
 import { PrivilegeRefresher } from "./PrivilegeRefresher";
@@ -52,15 +63,221 @@ import { rejoinOrClose } from "./Rejoin";
 import { ServerEnv } from "./ServerEnv";
 import { SingleplayerPresence } from "./SingleplayerPresence";
 import { applyStaticAssetCacheControl } from "./StaticAssetCache";
-import { createMatchTelemetryEmitter } from "./telemetry/BufferedMatchTelemetryEmitter";
-import { MAX_WEBSOCKET_PAYLOAD_BYTES } from "./telemetry/MatchTelemetryConfig";
 import { WorkerLobbyService } from "./WorkerLobbyService";
 import { initWorkerMetrics } from "./WorkerMetrics";
 import { stripWorkerPrefix } from "./WorkerPathPrefix";
 
 const workerId = ServerEnv.workerId() ?? 0;
 const log = logger.child({ comp: `w_${workerId}` });
+
+// The WebSocket server's max payload.
+const MAX_WEBSOCKET_PAYLOAD_BYTES = 1024 * 1024;
 const playlist = new MapPlaylist();
+
+export function clampApprovedUsername(username: string): string {
+  return username.length > MAX_USERNAME_LENGTH
+    ? username.slice(0, MAX_USERNAME_LENGTH).trim()
+    : username;
+}
+
+export function isSocketClosed(
+  ws: WebSocket | { readyState: number },
+): boolean {
+  return (
+    ws.readyState === WebSocket.CLOSING || ws.readyState === WebSocket.CLOSED
+  );
+}
+
+export type JoinOutcome =
+  | { action: "admit"; username: string; clanTag: string | null }
+  | { action: "reject"; reason: string; errorCodes?: string[] };
+
+export function resolveJoinVerdict(
+  verdict: JoinVerifyResponse,
+  fallback: { username: string; clanTag: string | null },
+): JoinOutcome {
+  if (verdict.status === "approved") {
+    return {
+      action: "admit",
+      username: clampApprovedUsername(verdict.username),
+      clanTag: verdict.clanTag,
+    };
+  }
+  if (verdict.status === "rejected") {
+    return {
+      action: "reject",
+      reason: verdict.reason,
+      ...(verdict.errorCodes !== undefined && {
+        errorCodes: verdict.errorCodes,
+      }),
+    };
+  }
+  return {
+    action: "admit",
+    username: verdict.identity
+      ? clampApprovedUsername(verdict.identity.username)
+      : fallback.username,
+    clanTag: verdict.identity ? verdict.identity.clanTag : fallback.clanTag,
+  };
+}
+
+export interface AdmissionTarget {
+  markAdmitted(persistentID: string, attemptID?: string): void;
+  unmarkAdmitted(persistentID: string, attemptID?: string): void;
+  wasAdmitted(persistentID: string): boolean;
+  hasEverBeenSeated?(persistentID: string): boolean;
+}
+
+export function createAdmissionGuard(
+  game: AdmissionTarget | null | undefined,
+  persistentId: string,
+  isReadmit: boolean,
+  attemptId: string = generateID(),
+) {
+  let admittedThisAttempt = false;
+
+  return {
+    markAdmittedIfNeeded(): void {
+      if (admittedThisAttempt) return;
+      const shouldAdmit = !isReadmit
+        ? !game?.wasAdmitted(persistentId)
+        : !game?.hasEverBeenSeated?.(persistentId);
+      if (shouldAdmit) {
+        game?.markAdmitted(persistentId, attemptId);
+        admittedThisAttempt = true;
+      }
+    },
+    rollback(): void {
+      if (admittedThisAttempt) {
+        admittedThisAttempt = false;
+        game?.unmarkAdmitted(persistentId, attemptId);
+      }
+    },
+    wasAdmittedThisAttempt: () => admittedThisAttempt,
+  };
+}
+
+// Toggle whether a private lobby is visible in the public lobby browser.
+// Creator-only; listing requires an active subscription (checked fresh
+// against the API) and is limited to one listed lobby per creator.
+export function registerListingRoute(opts: {
+  app: express.Express;
+  gm: GameManager;
+  lobbyService: WorkerLobbyService;
+  log: typeof log;
+}) {
+  const { app, gm, lobbyService, log } = opts;
+
+  app.post(
+    "/api/game/:id/listing",
+    async (req: Request<{ id: string }>, res: Response) => {
+      const authHeader = req.headers.authorization;
+      if (!authHeader?.startsWith("Bearer ")) {
+        return res.status(400).json({ error: "Authorization header required" });
+      }
+      const token = authHeader.substring("Bearer ".length);
+      const auth = await verifyClientToken(token);
+      if (auth.type !== "success") {
+        return res.status(401).json({ error: "Invalid token" });
+      }
+
+      const parsed = z
+        .object({
+          listed: z.boolean(),
+          autoStartMs: z
+            .number()
+            .int()
+            .min(MIN_HOSTED_LOBBY_AUTO_START_MS)
+            .max(HOSTED_LOBBY_AUTO_START_MS)
+            .optional(),
+          maxPlayers: z
+            .number()
+            .int()
+            .min(MIN_HOSTED_LOBBY_PLAYERS)
+            .max(MAX_HOSTED_LOBBY_PLAYERS)
+            .optional(),
+        })
+        .safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json({ error: z.prettifyError(parsed.error) });
+      }
+      const { listed, autoStartMs, maxPlayers } = parsed.data;
+
+      const game = gm.game(req.params.id);
+      if (game === null) {
+        return res.status(404).json({ error: "Game not found" });
+      }
+      if (!game.isCreator(auth.persistentId)) {
+        return res
+          .status(403)
+          .json({ error: "Only the lobby creator can change its listing" });
+      }
+      if (game.isPublic() || game.hasStarted()) {
+        return res.status(409).json({ error: "Game cannot be listed" });
+      }
+      // Listing is one-way for the host: players recruited from the lobby
+      // browser must not lose the lobby they joined. Only the master delists
+      // (duplicate creator / cap overflow).
+      if (!listed && game.isListed()) {
+        return res.status(409).json({ error: "listing_permanent" });
+      }
+
+      if (listed) {
+        const preError = getListingEligibilityError(game, maxPlayers);
+        if (preError !== null) {
+          return res.status(409).json({ error: preError });
+        }
+
+        // Dev has no subscription backend; skip the check so the feature is
+        // testable locally (same precedent as Turnstile).
+        if (ServerEnv.env() !== GameEnv.Dev) {
+          const userMe = await getUserMe(token);
+          if (userMe.type === "error") {
+            log.warn(
+              `listing rejected, user me fetch failed: ${userMe.message}`,
+              {
+                gameID: req.params.id,
+              },
+            );
+            return res.status(403).json({ error: "subscription_required" });
+          }
+          if (!userMe.response.player.canCreatePublicLobbies) {
+            return res.status(403).json({ error: "subscription_required" });
+          }
+        }
+
+        // Re-verify after the async entitlement check to close the race window
+        // where the host could alter lobby settings (e.g. enable host cheats).
+        const raceError = getListingEligibilityError(game, maxPlayers);
+        if (raceError !== null) {
+          return res.status(409).json({ error: raceError });
+        }
+
+        const creatorID = game.hashedCreatorID();
+        if (
+          creatorID !== undefined &&
+          lobbyService.creatorHasListedLobby(creatorID, game.id)
+        ) {
+          return res.status(409).json({ error: "listing_limit_reached" });
+        }
+
+        // Cluster-wide cap to prevent listing spam. Approximate here (the
+        // broadcast lags by ~1s); the master's cap is the backstop.
+        if (lobbyService.hostedLobbyCount() >= MAX_HOSTED_LOBBIES) {
+          return res.status(409).json({ error: "listing_full" });
+        }
+      }
+
+      game.setListed(listed, { autoStartMs, maxPlayers });
+      log.info(`lobby listing ${listed ? "enabled" : "disabled"}`, {
+        gameID: game.id,
+        autoStartMs,
+        maxPlayers,
+      });
+      res.json({ listed });
+    },
+  );
+}
 
 // Worker setup
 export async function startWorker() {
@@ -77,17 +294,8 @@ export async function startWorker() {
     maxPayload: MAX_WEBSOCKET_PAYLOAD_BYTES,
   });
 
-  const buildHash = ServerEnv.gitCommit();
-  const telemetry = createMatchTelemetryEmitter(process.env, log, {
-    buildHash,
-    instanceId: ServerEnv.instanceId(),
-    // Reuse the normalized worker id (defaults to 0 when WORKER_ID is unset) so
-    // telemetry identity matches routing and logging instead of reporting
-    // undefined.
-    workerId,
-  });
-  const gm = new GameManager(log, telemetry, buildHash);
-  server.on("close", () => telemetry.stop());
+  const gatekeeper = await loadGatekeeper(log);
+  const gm = new GameManager(log, gatekeeper);
 
   // Initialize lobby service (handles WebSocket upgrade routing)
   const lobbyService = new WorkerLobbyService(server, wss, gm, log);
@@ -119,7 +327,7 @@ export async function startWorker() {
     ServerEnv.jwtIssuer() + "/reserved_clan_tags",
     log,
   );
-  privilegeRefresher.start();
+  void privilegeRefresher.start();
 
   // Ahead of everything that can reject a request — the worker-prefix check
   // below and the rate limiter further down — so that a 404 or a 429 still
@@ -275,123 +483,7 @@ export async function startWorker() {
     });
   });
 
-  // Toggle whether a private lobby is visible in the public lobby browser.
-  // Creator-only; listing requires an active subscription (checked fresh
-  // against the API) and is limited to one listed lobby per creator.
-  app.post("/api/game/:id/listing", async (req, res) => {
-    const authHeader = req.headers.authorization;
-    if (!authHeader?.startsWith("Bearer ")) {
-      return res.status(400).json({ error: "Authorization header required" });
-    }
-    const token = authHeader.substring("Bearer ".length);
-    const auth = await verifyClientToken(token);
-    if (auth.type !== "success") {
-      return res.status(401).json({ error: "Invalid token" });
-    }
-
-    const parsed = z
-      .object({
-        listed: z.boolean(),
-        autoStartMs: z
-          .number()
-          .int()
-          .min(MIN_HOSTED_LOBBY_AUTO_START_MS)
-          .max(HOSTED_LOBBY_AUTO_START_MS)
-          .optional(),
-        maxPlayers: z
-          .number()
-          .int()
-          .min(MIN_HOSTED_LOBBY_PLAYERS)
-          .max(MAX_HOSTED_LOBBY_PLAYERS)
-          .optional(),
-      })
-      .safeParse(req.body);
-    if (!parsed.success) {
-      return res.status(400).json({ error: z.prettifyError(parsed.error) });
-    }
-    const { listed, autoStartMs, maxPlayers } = parsed.data;
-
-    const game = gm.game(req.params.id);
-    if (game === null) {
-      return res.status(404).json({ error: "Game not found" });
-    }
-    if (!game.isCreator(auth.persistentId)) {
-      return res
-        .status(403)
-        .json({ error: "Only the lobby creator can change its listing" });
-    }
-    if (game.isPublic() || game.hasStarted()) {
-      return res.status(409).json({ error: "Game cannot be listed" });
-    }
-    // Listing is one-way for the host: players recruited from the lobby
-    // browser must not lose the lobby they joined. Only the master delists
-    // (duplicate creator / cap overflow).
-    if (!listed && game.isListed()) {
-      return res.status(409).json({ error: "listing_permanent" });
-    }
-
-    if (listed) {
-      // A whitelisted lobby would be advertised to everyone yet reject every
-      // joiner; the whitelist itself is stripped from the broadcast, so
-      // browsers could not even tell why.
-      if (game.hasJoinWhitelist()) {
-        return res.status(409).json({ error: "listing_whitelist_enabled" });
-      }
-
-      // Host cheats give the host an asymmetric advantage over players
-      // recruited from the lobby browser. Enabling them while listed is
-      // likewise rejected (GameServer's update_game_config handling).
-      if (game.hasHostCheats()) {
-        return res.status(409).json({ error: "listing_host_cheats_enabled" });
-      }
-
-      // A cap at or below the current head count would advertise a lobby
-      // nobody can join.
-      if (maxPlayers !== undefined && maxPlayers <= game.numPlayers()) {
-        return res.status(409).json({ error: "listing_max_players_too_low" });
-      }
-
-      // Dev has no subscription backend; skip the check so the feature is
-      // testable locally (same precedent as Turnstile).
-      if (ServerEnv.env() !== GameEnv.Dev) {
-        const userMe = await getUserMe(token);
-        if (userMe.type === "error") {
-          log.warn(
-            `listing rejected, user me fetch failed: ${userMe.message}`,
-            {
-              gameID: req.params.id,
-            },
-          );
-          return res.status(403).json({ error: "subscription_required" });
-        }
-        if (!userMe.response.player.canCreatePublicLobbies) {
-          return res.status(403).json({ error: "subscription_required" });
-        }
-      }
-
-      const creatorID = game.hashedCreatorID();
-      if (
-        creatorID !== undefined &&
-        lobbyService.creatorHasListedLobby(creatorID, game.id)
-      ) {
-        return res.status(409).json({ error: "listing_limit_reached" });
-      }
-
-      // Cluster-wide cap to prevent listing spam. Approximate here (the
-      // broadcast lags by ~1s); the master's cap is the backstop.
-      if (lobbyService.hostedLobbyCount() >= MAX_HOSTED_LOBBIES) {
-        return res.status(409).json({ error: "listing_full" });
-      }
-    }
-
-    game.setListed(listed, { autoStartMs, maxPlayers });
-    log.info(`lobby listing ${listed ? "enabled" : "disabled"}`, {
-      gameID: game.id,
-      autoStartMs,
-      maxPlayers,
-    });
-    res.json({ listed });
-  });
+  registerListingRoute({ app, gm, lobbyService, log });
 
   // The host of a listed lobby pays (plutonium, charged by the API with the
   // host's token) to put it in the public Special queue, right behind the
@@ -478,6 +570,8 @@ export async function startWorker() {
     log,
     baseDir: __dirname,
   });
+
+  registerPlayerProfileRoute({ app, log, baseDir: __dirname });
 
   registerAdminBotRoutes({ app, gm, workerId, log });
 
@@ -577,6 +671,9 @@ export async function startWorker() {
           ws.close(CloseCode.InternalError, CloseReason.InvalidToken);
           return;
         }
+        if (isSocketClosed(ws)) {
+          return;
+        }
         const { persistentId, claims } = result;
 
         if (claims?.role === "banned") {
@@ -624,10 +721,15 @@ export async function startWorker() {
         // API. Runs before the rejoin attempt so a pre-start identity
         // change on refresh is screened before it is applied.
         let verifySkipped = false;
+        const game = gm.game(clientMsg.gameID);
+        const isReadmit = game?.wasAdmitted(persistentId) ?? false;
+        const admissionGuard = createAdmissionGuard(
+          game,
+          persistentId,
+          isReadmit,
+        );
         if (ServerEnv.env() !== GameEnv.Dev) {
-          const game = gm.game(clientMsg.gameID);
           const stored = game?.storedIdentity(persistentId) ?? null;
-          const isReadmit = game?.wasAdmitted(persistentId) ?? false;
           const steamAuthed = isSteamAuthenticated(claims);
           // SECURITY: the reject/skip/verify split (first joins must
           // present a token, only re-admits may omit it) lives in
@@ -665,29 +767,44 @@ export async function startWorker() {
               plan.token,
               clientMsg.username,
               clientMsg.clanTag ?? null,
+              persistentId,
             );
-            switch (verdict.status) {
-              case "approved":
-                username = verdict.username;
-                clanTag = verdict.clanTag;
-                break;
-              case "rejected":
-                // Only reachable on first joins: re-admits omit the token,
-                // which the API always approves.
-                log.warn("Unauthorized: Turnstile token rejected", {
-                  persistentID: persistentId,
-                  gameID: clientMsg.gameID,
-                  reason: verdict.reason,
-                });
-                ws.close(CloseCode.Unauthorized, CloseReason.TurnstileFailed);
-                return;
-              case "error":
-                // Fail open: the locally screened name stands.
-                log.error("join_verify error", {
-                  persistentID: persistentId,
-                  gameID: clientMsg.gameID,
-                  reason: verdict.reason,
-                });
+            if (verdict.status === "approved" || verdict.status === "error") {
+              admissionGuard.markAdmittedIfNeeded();
+            }
+            if (isSocketClosed(ws)) {
+              return;
+            }
+            const resolved = resolveJoinVerdict(verdict, {
+              username,
+              clanTag,
+            });
+            if (resolved.action === "reject") {
+              log.warn("Unauthorized: Turnstile token rejected", {
+                persistentID: persistentId,
+                gameID: clientMsg.gameID,
+                reason: resolved.reason,
+                ...(resolved.errorCodes !== undefined && {
+                  errorCodes: resolved.errorCodes,
+                }),
+              });
+              ws.close(CloseCode.Unauthorized, CloseReason.TurnstileFailed);
+              return;
+            }
+            username = resolved.username;
+            clanTag = resolved.clanTag;
+
+            if (verdict.status === "error") {
+              const fields = {
+                persistentID: persistentId,
+                gameID: clientMsg.gameID,
+                reason: verdict.reason,
+              };
+              if (verdict.degraded) {
+                log.warn("join_verify degraded", fields);
+              } else {
+                log.error("join_verify error", fields);
+              }
             }
           } else {
             verifySkipped = true;
@@ -731,6 +848,7 @@ export async function startWorker() {
         if (claims === null) {
           if (allowedFlares !== undefined) {
             log.warn("Unauthorized: Anonymous user attempted to join game");
+            admissionGuard.rollback();
             ws.close(CloseCode.Unauthorized, CloseReason.LoginRequired);
             return;
           }
@@ -743,7 +861,11 @@ export async function startWorker() {
               gameID: clientMsg.gameID,
             });
             const { code, reason } = userMeFailureClose(result);
+            admissionGuard.rollback();
             ws.close(code, reason);
+            return;
+          }
+          if (isSocketClosed(ws)) {
             return;
           }
           flares = result.response.player.flares;
@@ -764,6 +886,7 @@ export async function startWorker() {
               log.warn(
                 "Forbidden: player without an allowed flare attempted to join game",
               );
+              admissionGuard.rollback();
               ws.close(CloseCode.Forbidden, CloseReason.Forbidden);
               return;
             }
@@ -794,6 +917,7 @@ export async function startWorker() {
             persistentID: persistentId,
             gameID: clientMsg.gameID,
           });
+          admissionGuard.rollback();
           ws.close(CloseCode.Forbidden, CloseReason.CosmeticsForbidden);
           return;
         }
@@ -839,10 +963,14 @@ export async function startWorker() {
           clientMsg.spectator === true,
           trusted,
           clientMsg.platform,
+          clientMsg.device,
           levelBadge,
         );
 
         const joinResult = gm.joinClient(client, clientMsg.gameID);
+        if (joinResult !== "joined" && joinResult !== "redirected") {
+          admissionGuard.rollback();
+        }
 
         if (joinResult === "not_found") {
           log.info(`game ${clientMsg.gameID} not found on worker ${workerId}`);
@@ -946,4 +1074,25 @@ function getClientIp(req: http.IncomingMessage): string {
   const cfIp = req.headers["cf-connecting-ip"];
   if (typeof cfIp === "string" && cfIp) return cfIp;
   return req.socket.remoteAddress ?? "unknown";
+}
+
+// Checks mutable lobby settings that make a lobby ineligible for public listing.
+// Evaluated before and after the async subscription check to prevent TOCTOU races.
+export function getListingEligibilityError(
+  game: GameServer,
+  maxPlayers?: number,
+): string | null {
+  if (game.isPublic() || game.hasStarted()) {
+    return "Game cannot be listed";
+  }
+  if (game.hasJoinWhitelist()) {
+    return "listing_whitelist_enabled";
+  }
+  if (game.hasHostCheats()) {
+    return "listing_host_cheats_enabled";
+  }
+  if (maxPlayers !== undefined && maxPlayers <= game.numPlayers()) {
+    return "listing_max_players_too_low";
+  }
+  return null;
 }

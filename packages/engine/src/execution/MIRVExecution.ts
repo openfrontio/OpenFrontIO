@@ -96,6 +96,7 @@ export class MirvExecution implements Execution {
         this.active = false;
         return;
       }
+      this.targetPlayer = this.mg.owner(this.dst);
       this.spawnTile = spawn;
       this.nuke = this.player.buildUnit(UnitType.MIRV, spawn, {
         targetTile: this.dst,
@@ -142,13 +143,14 @@ export class MirvExecution implements Execution {
         );
       }
 
-      this.mg.displayIncomingUnit(
-        this.nuke.id(),
-        // TODO TranslateText
-        `⚠️⚠️⚠️ ${this.player.displayName()} - MIRV INBOUND ⚠️⚠️⚠️`,
-        MessageType.MIRV_INBOUND,
-        this.targetPlayer.id(),
-      );
+      if (this.targetPlayer.isPlayer()) {
+        this.mg.displayIncomingUnit(
+          this.nuke.id(),
+          "events_display.mirv_inbound",
+          MessageType.MIRV_INBOUND,
+          this.targetPlayer.id(),
+        );
+      }
 
       // after sending a nuke set the missilesilo on cooldown
       const silo = this.player

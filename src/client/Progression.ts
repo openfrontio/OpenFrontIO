@@ -5,23 +5,11 @@ import type { XpBreakdown } from "@openfront/shared/ApiSchemas";
 // components follow are unit-testable on their own.
 
 // The badge art is cut for a 100-level track with 10 prestige ranks (see
-// levelBand, prestigeTier), so the caps stay client constants: raising either
-// on the server needs new art, not only a new number. A rank past
-// MAX_PRESTIGE still shows its own number, drawn with the last rank's art.
+// prestigeTier), so the caps stay client constants: raising either on the
+// server needs new art, not only a new number. A rank past MAX_PRESTIGE is
+// still named by its own number, drawn with the last rank's art.
 export const MAX_LEVEL = 100;
 export const MAX_PRESTIGE = 10;
-
-/**
- * The level band a badge frame is drawn from: 0 for levels 1–9, 1 for 10–19,
- * … 9 for 90–99, and 10 for level 100 alone. Out-of-range input is clamped so
- * a surprising server value still draws a frame.
- */
-export function levelBand(level: number): number {
-  if (!Number.isFinite(level)) return 0;
-  const clamped = Math.min(MAX_LEVEL, Math.max(1, Math.floor(level)));
-  if (clamped >= MAX_LEVEL) return 10;
-  return Math.floor(clamped / 10);
-}
 
 /**
  * The prestige rank to show: whole and never negative, but not capped at
@@ -33,19 +21,62 @@ export function clampPrestige(prestige: number): number {
 }
 
 /**
- * The prestige emblem drawn around a badge. Each tier is a different SHAPE,
- * not just a colour (colour-blind players): a ring, a double ring, a
- * sunburst, and a denser glowing burst for the last rank.
+ * The tier a prestige rank's badge is drawn in, one per rank: Iron at P1 up
+ * to Champion at P10 (a rank past it keeps Champion's art), "none" before the
+ * first prestige. The badge also lights one segment of its rim gauge per
+ * rank, so the order reads without telling the colours apart.
  */
-export type PrestigeTier = "none" | "ring" | "double" | "sunburst" | "radiant";
+export const PRESTIGE_TIERS = [
+  "iron",
+  "bronze",
+  "silver",
+  "gold",
+  "platinum",
+  "emerald",
+  "diamond",
+  "master",
+  "grandmaster",
+  "champion",
+] as const;
+
+export type PrestigeTier = "none" | (typeof PRESTIGE_TIERS)[number];
 
 export function prestigeTier(prestige: number): PrestigeTier {
-  const p = clampPrestige(prestige);
-  if (p === 0) return "none";
-  if (p <= 3) return "ring";
-  if (p <= 6) return "double";
-  if (p <= 9) return "sunburst";
-  return "radiant";
+  const p = Math.min(MAX_PRESTIGE, clampPrestige(prestige));
+  return p === 0 ? "none" : PRESTIGE_TIERS[p - 1];
+}
+
+/**
+ * Each tier's colour: the badge's gauge, icon and level chip. Champion's rim
+ * and chip are prismatic; this is the pink its glow takes. "none" is the
+ * slate of an unprestiged badge.
+ */
+export const TIER_COLORS: Readonly<Record<PrestigeTier, string>> = {
+  none: "#64748b",
+  iron: "#6b7280",
+  bronze: "#c27c3e",
+  silver: "#c3cbd6",
+  gold: "#f2c230",
+  platinum: "#9fe3dc",
+  emerald: "#2fd28f",
+  diamond: "#a5e7ff",
+  master: "#c48cff",
+  grandmaster: "#ff6b81",
+  champion: "#f472b6",
+};
+
+/** Legend's gold: its gauge, crown and chip. */
+export const LEGEND_COLOR = "#facc15";
+
+/**
+ * The colour for a glow or highlight around a player's badge, so it matches
+ * the badge: the tier's colour, Legend's gold, and a light slate before the
+ * first prestige.
+ */
+export function prestigeAccent(prestige: number, legend: boolean): string {
+  if (legend) return LEGEND_COLOR;
+  const tier = prestigeTier(prestige);
+  return tier === "none" ? "#cbd5e1" : TIER_COLORS[tier];
 }
 
 // Levels called out when reached: the end-of-game XP panel gives one reached
@@ -280,4 +311,13 @@ export function levelRewardReasonKey(reason: string): string | undefined {
   return Object.prototype.hasOwnProperty.call(LEVEL_REWARD_REASON_KEYS, reason)
     ? LEVEL_REWARD_REASON_KEYS[reason]
     : undefined;
+}
+
+/** A reward's amount (a stringified bigint); 0 when it isn't one. */
+export function rewardAmount(value: string): bigint {
+  try {
+    return BigInt(value);
+  } catch {
+    return 0n;
+  }
 }

@@ -9,6 +9,9 @@ import type { GameView } from "../../../../src/client/view";
 
 vi.mock("../../../../src/client/Utils", () => ({
   translateText: vi.fn((key: string) => key),
+  getTranslatedPlayerTeamLabel: vi.fn(
+    (team: string | null) => (team === "Red" ? "Rood" : (team ?? "")), // "Rood" is Dutch for "Red"
+  ),
   getGamesPlayed: vi.fn(() => 10),
   isInIframe: vi.fn(() => false),
   homeHref: vi.fn(() => "/"),
@@ -27,15 +30,20 @@ vi.mock("../../../../src/client/Cosmetics", async (importOriginal) => ({
   resolveCosmetics: vi.fn(() => []),
 }));
 
-vi.mock("../../../../src/client/CrazyGamesSDK", () => ({
-  crazyGamesSDK: {
+vi.mock("../../../../src/client/GamePortal", () => ({
+  gamePortal: {
     happytime: vi.fn(),
-    requestAd: vi.fn(),
     gameplayStop: vi.fn(),
+    // Read by the win modal's <steam-wishlist> and <profile-share>.
+    name: () => null,
   },
 }));
 
-import { crazyGamesSDK } from "../../../../src/client/CrazyGamesSDK";
+import { gamePortal } from "../../../../src/client/GamePortal";
+import {
+  getTranslatedPlayerTeamLabel,
+  translateText,
+} from "../../../../src/client/Utils";
 
 type Winner = ["team", string] | ["player", string] | undefined;
 
@@ -58,6 +66,7 @@ function makeGame(opts: {
       clientID: () => opts.myClientID ?? null,
     }),
     inSpawnPhase: () => false,
+    ticks: () => 6000,
     updatesSinceLastTick: () => ({ [GameUpdateType.Win]: [winUpdate] }),
     playerByClientID: () => opts.winnerPlayer,
     config: () => ({ gameConfig: () => ({ rankedType: undefined }) }),
@@ -92,17 +101,21 @@ describe("WinModal tick win handling", () => {
 
     expect(events).toHaveLength(1);
     expect(events[0].winner).toEqual(["team", "Blue"]);
-    expect(crazyGamesSDK.happytime).toHaveBeenCalled();
+    expect(gamePortal.happytime).toHaveBeenCalled();
     await vi.waitFor(() => expect(modal!.isVisible).toBe(true));
   });
 
-  it("emits the winner without celebrating when another team wins", async () => {
+  it("emits the (translated) winner without celebrating when another team wins", async () => {
     const events = setup(makeGame({ winner: ["team", "Red"], myTeam: "Blue" }));
     modal!.tick();
 
     expect(events).toHaveLength(1);
     expect(events[0].winner).toEqual(["team", "Red"]);
-    expect(crazyGamesSDK.happytime).not.toHaveBeenCalled();
+    expect(gamePortal.happytime).not.toHaveBeenCalled();
+    expect(getTranslatedPlayerTeamLabel).toHaveBeenCalledWith("Red");
+    expect(translateText).toHaveBeenCalledWith("win_modal.other_team", {
+      team: "Rood",
+    });
     await vi.waitFor(() => expect(modal!.isVisible).toBe(true));
   });
 
@@ -122,7 +135,7 @@ describe("WinModal tick win handling", () => {
 
     expect(events).toHaveLength(1);
     expect(events[0].winner).toEqual(["player", "winner-client"]);
-    expect(crazyGamesSDK.happytime).not.toHaveBeenCalled();
+    expect(gamePortal.happytime).not.toHaveBeenCalled();
     await vi.waitFor(() => expect(modal!.isVisible).toBe(true));
   });
 
@@ -140,7 +153,7 @@ describe("WinModal tick win handling", () => {
     );
     modal!.tick();
 
-    expect(crazyGamesSDK.happytime).toHaveBeenCalled();
+    expect(gamePortal.happytime).toHaveBeenCalled();
     await vi.waitFor(() => expect(modal!.isVisible).toBe(true));
   });
 

@@ -156,9 +156,11 @@ export class ClanTransferView extends LitElement {
   private renderContent(nonLeaders: ClanMember[], totalMemberPages: number) {
     return html`
       <div class="space-y-6">
-        ${this.errorMsg
-          ? html`<p class="text-red-400 text-sm">${this.errorMsg}</p>`
-          : ""}
+        ${
+          this.errorMsg
+            ? html`<p class="text-red-400 text-sm">${this.errorMsg}</p>`
+            : ""
+        }
 
         <div class="bg-amber-500/10 rounded-xl border border-amber-500/20 p-4">
           <p class="text-amber-400/80 text-sm">
@@ -176,9 +178,11 @@ export class ClanTransferView extends LitElement {
             (m) => html`
               <div
                 class="relative w-full flex items-center gap-3 py-2.5 px-3 rounded-xl border transition-all text-left
-                      ${this.transferTarget === m.publicId
-                  ? "bg-amber-500/10 border-amber-500/20"
-                  : "bg-white/5 border-white/10 hover:bg-white/10"}"
+                      ${
+                  this.transferTarget === m.publicId
+                    ? "bg-amber-500/10 border-amber-500/20"
+                    : "bg-white/5 border-white/10 hover:bg-white/10"
+                }"
               >
                 <button
                   type="button"
@@ -204,52 +208,62 @@ export class ClanTransferView extends LitElement {
                 </div>
                 <span
                   class="relative pointer-events-none text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full shrink-0
-                        ${m.role === "officer"
-                    ? "bg-purple-500/20 text-purple-400 border border-purple-500/30"
-                    : "bg-white/10 text-white/40 border border-white/10"}"
+                        ${
+                    m.role === "officer"
+                      ? "bg-purple-500/20 text-purple-400 border border-purple-500/30"
+                      : "bg-white/10 text-white/40 border border-white/10"
+                  }"
                 >
                   ${translateClanRole(m.role)}
                 </span>
-                ${this.transferTarget === m.publicId
-                  ? html`<svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      class="relative pointer-events-none w-5 h-5 text-amber-400 shrink-0"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      stroke="currentColor"
-                      stroke-width="2"
-                    >
-                      <path
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                        d="M5 13l4 4L19 7"
-                      />
-                    </svg>`
-                  : ""}
+                ${
+                  this.transferTarget === m.publicId
+                    ? html`<svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        class="relative pointer-events-none w-5 h-5 text-amber-400 shrink-0"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                        stroke-width="2"
+                      >
+                        <path
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                          d="M5 13l4 4L19 7"
+                        />
+                      </svg>`
+                    : ""
+                }
               </div>
             `,
           )}
         </div>
 
-        ${totalMemberPages > 1
-          ? renderServerPagination(this.memberPage, totalMemberPages, (p) =>
-              this.loadMembers(p),
-            )
-          : ""}
+        ${
+          totalMemberPages > 1
+            ? renderServerPagination(this.memberPage, totalMemberPages, (p) =>
+                this.loadMembers(p),
+              )
+            : ""
+        }
 
         <button
           @click=${() => (this.confirmAction = "transfer")}
           class="w-full px-6 py-3 text-sm font-bold text-white uppercase tracking-wider rounded-xl transition-all border disabled:opacity-50 disabled:pointer-events-none
-                ${this.transferTarget && !this.actionPending
-            ? "bg-gradient-to-r from-amber-600 to-amber-700 hover:from-amber-500 hover:to-amber-600 shadow-lg hover:shadow-amber-900/40 border-white/5"
-            : "bg-white/5 border-white/10 text-white/30 cursor-not-allowed"}"
+                ${
+            this.transferTarget && !this.actionPending
+              ? "bg-gradient-to-r bg-origin-border from-amber-600 to-amber-700 hover:from-amber-500 hover:to-amber-600 shadow-lg hover:shadow-amber-900/40 border-white/5"
+              : "bg-white/5 border-white/10 text-white/30 cursor-not-allowed"
+          }"
           ?disabled=${!this.transferTarget || this.actionPending}
         >
-          ${this.transferTarget
-            ? translateText("clan_modal.confirm_transfer", {
-                name: this.transferTarget,
-              })
-            : translateText("clan_modal.select_new_leader")}
+          ${
+            this.transferTarget
+              ? translateText("clan_modal.confirm_transfer", {
+                  name: this.transferTarget,
+                })
+              : translateText("clan_modal.select_new_leader")
+          }
         </button>
       </div>
     `;
