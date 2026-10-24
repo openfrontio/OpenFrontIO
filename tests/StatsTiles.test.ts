@@ -135,6 +135,15 @@ describe("tick sampling", () => {
     expect(s.peakTroops).toBe(500_000_000n);
   });
 
+  it("handles fractional samples via fallback path without throwing", () => {
+    stats.recordTickSample(player1, 10.8, 20.4, 1);
+    const s = client1Stats();
+    expect(s.tiles![TILE_INDEX_PEAK]).toBe(10n);
+    expect(s.tiles![TILE_INDEX_DRAWDOWN_PEAK]).toBe(10n);
+    expect(s.tiles![TILE_INDEX_DRAWDOWN_TROUGH]).toBe(10n);
+    expect(s.peakTroops).toBe(20n);
+  });
+
   it("safely ignores players with null clientID without allocating or throwing", () => {
     const fakeBot = { clientID: () => null } as any;
     stats.recordTickSample(fakeBot, 500, 1000, 0);

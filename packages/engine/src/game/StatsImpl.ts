@@ -476,6 +476,11 @@ export class StatsImpl implements Stats {
     if (
       typeof tiles === "number" &&
       typeof troops === "number" &&
+      Number.isInteger(tiles) &&
+      Number.isInteger(troops) &&
+      Number.isInteger(allianceCount) &&
+      tiles >= 0 &&
+      troops >= 0 &&
       tiles < 90_000_000 &&
       troops < 90_000_000
     ) {
