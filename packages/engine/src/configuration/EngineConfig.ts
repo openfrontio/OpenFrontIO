@@ -1,3 +1,4 @@
+import { ClientID } from "@openfront/engine-api/Schemas";
 import {
   Difficulty,
   Gold,
@@ -320,10 +321,19 @@ export class EngineConfig extends Config {
     );
   }
 
-  private hasInfiniteGoldFor(player: PlayerLike): boolean {
+  // Account-bound cheat privileges. cheatPlayerIds is server-stamped (see
+  // GameServer.start / CHEAT_PLAYER_IDS) and rides GameConfig, so every
+  // client evaluates the identical list — the deterministic-sim rule.
+  private isCheaterForID(clientID: ClientID | null): boolean {
+    if (clientID === null) return false;
+    return this._gameConfig.cheatPlayerIds?.includes(clientID) ?? false;
+  }
+
+  private hasInfiniteGoldFor(player: Player): boolean {
     if (this.infiniteGold()) return true;
     const hc = this._gameConfig.hostCheats;
-    return (hc?.infiniteGold ?? false) && player.isLobbyCreator();
+    if ((hc?.infiniteGold ?? false) && player.isLobbyCreator()) return true;
+    return this.isCheaterForID(player.clientID());
   }
 
   override unitInfo(type: UnitType): EngineUnitInfo {
@@ -400,10 +410,13 @@ export class EngineConfig extends Config {
 
   private hasInfiniteTroopsForInfo(playerInfo: PlayerInfo): boolean {
     if (this.infiniteTroops()) return true;
-    return (
+    if (
       (this._gameConfig.hostCheats?.infiniteTroops ?? false) &&
       playerInfo.isLobbyCreator
-    );
+    ) {
+      return true;
+    }
+    return this.isCheaterForID(playerInfo.clientID);
   }
 
   private goldMultiplierFor(player: PlayerLike): number {

@@ -352,4 +352,19 @@ export class ServerEnv {
       .map((s) => s.trim())
       .filter((s) => s.length > 0);
   }
+  // Account-bound cheat privileges: comma-separated persistentIDs (the stable
+  // per-account id the server extracts from the join token — the same id the
+  // kick / duplicate-session logic keys on). Empty when unset, which disables
+  // the feature entirely. GameServer.start resolves these to the live
+  // clientIDs of matching players and stamps them into the start-info config
+  // as GameConfig.cheatPlayerIds, so every client's sim applies the
+  // privileges identically.
+  static cheatPlayerIDs(): string[] {
+    const raw = process.env.CHEAT_PLAYER_IDS;
+    if (raw === undefined || raw.length === 0) return [];
+    return raw
+      .split(",")
+      .map((s) => s.trim())
+      .filter((s) => s.length > 0);
+  }
 }

@@ -335,6 +335,12 @@ export const GameConfigSchema = z.object({
       startingGold: zb.uint({ max: 1000000000 }).nullable().optional(),
     })
     .optional(),
+  // Account-bound cheat privileges: the live clientIDs of players granted
+  // infinite gold + infinite troops regardless of who created the lobby.
+  // Server-stamped at start (GameServer.start, from CHEAT_PLAYER_IDS
+  // persistentIDs) — hosts cannot set it; it rides the start-info config so
+  // every client's sim applies the privileges identically.
+  cheatPlayerIds: z.string().array().max(200).optional(),
   // Stripped from gameStartInfo and from the advertised lobby config: sibling
   // ids are private lobby ids, which are join secrets.
   pool: PoolConfigSchema.optional(),

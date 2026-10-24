@@ -179,6 +179,10 @@ export interface GameServerDeps {
   // so a test can pin a value it can assert on; production always takes the
   // random default.
   mintGroupToken: () => string;
+  // Account-bound cheat privileges: the CHEAT_PLAYER_IDS persistentID list.
+  // A thunk so the value is read when the game starts, not when it is
+  // created (tests pin their own list).
+  cheatPlayerIDs: () => string[];
 }
 
 // 16 URL-safe characters of CSPRNG output — 12 bytes is exactly 16 base64url
@@ -198,6 +202,7 @@ export function defaultGameServerDeps(): GameServerDeps {
     fetchTribes: fetchCustomTribes,
     env: () => ServerEnv.env(),
     turnIntervalMs: () => ServerEnv.turnIntervalMs(),
+    cheatPlayerIDs: () => ServerEnv.cheatPlayerIDs(),
     gatekeeper: noopGatekeeper,
     mintGroupToken,
   };
@@ -1129,6 +1134,24 @@ export class GameServer {
     // Keep them out of gameStartInfo: its config goes to every client in the
     // start message and into the publicly downloadable game record.
     const config = sanitizeConfigForWire(this.gameConfig);
+
+    // Account-bound cheat privileges (CHEAT_PLAYER_IDS). The config is minted
+    // before anyone joins, so the persistentID match can only happen here,
+    // server-side: resolve the listed accounts to their live clientIDs and
+    // stamp them into the start-info config — the one config the sim, the
+    // wire and the archive all read, so every client applies the privileges
+    // identically (deterministic sim). clientIDs are already visible in the
+    // players list, so stamping them leaks nothing.
+    const cheatIDs = this.deps.cheatPlayerIDs();
+    if (cheatIDs.length > 0) {
+      const stamped = this.clients
+        .players()
+        .filter((c) => cheatIDs.includes(c.persistentID))
+        .map((c) => c.clientID);
+      if (stamped.length > 0) {
+        config.cheatPlayerIds = stamped;
+      }
+    }
 
     const result = WireGameStartInfoSchema.safeParse({
       gameID: this.id,
