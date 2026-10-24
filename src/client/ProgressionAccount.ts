@@ -2,12 +2,12 @@ import type { UserMeResponse } from "@openfront/shared/ApiSchemas";
 import { hasLinkedIdentity } from "./AccountIdentity";
 import { getUserMe } from "./Api";
 import { isLoggedIn } from "./Auth";
-import { crazyGamesSDK } from "./CrazyGamesSDK";
+import { gamePortal } from "./GamePortal";
 
 // Who is asking about XP. Shared by every XP surface (the end-of-game panel,
 // the past-game stats modal) so they agree on what "signed in" means.
 export type XpAccount =
-  // A real account: a linked identity, or a CrazyGames profile whose token
+  // A real account: a linked identity, or a portal profile whose token
   // exchange produced a session. Same rule as the account modal.
   | { kind: "signed_in"; me: UserMeResponse }
   // No session, or only a guest one (POST /auth/refresh with no cookie mints
@@ -25,8 +25,8 @@ export async function resolveXpAccount(): Promise<XpAccount> {
   if (me === false) return { kind: "unknown" };
   if (hasLinkedIdentity(me.user)) return { kind: "signed_in", me };
   if (
-    crazyGamesSDK.isOnCrazyGames?.() &&
-    (await crazyGamesSDK.getUserProfile()) !== null
+    gamePortal.isOnGamePortal() &&
+    (await gamePortal.getUserProfile()) !== null
   ) {
     return { kind: "signed_in", me };
   }

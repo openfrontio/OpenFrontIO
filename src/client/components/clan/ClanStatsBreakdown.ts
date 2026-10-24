@@ -89,20 +89,22 @@ export class ClanStatsBreakdown extends LitElement {
           ${expand?.expanded ? "rotate-90" : ""}"
         aria-hidden="true"
       >
-        ${toggleVisible
-          ? html`<svg
-              xmlns="http://www.w3.org/2000/svg"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="3"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              class="w-2.5 h-2.5"
-            >
-              <path d="M9 6l6 6-6 6" />
-            </svg>`
-          : ""}
+        ${
+          toggleVisible
+            ? html`<svg
+                xmlns="http://www.w3.org/2000/svg"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="3"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                class="w-2.5 h-2.5"
+              >
+                <path d="M9 6l6 6-6 6" />
+              </svg>`
+            : ""
+        }
       </span>
     `;
     const padding = `${LEVEL_LEFT_PAD[level]} pr-1.5 py-0.5`;
@@ -149,50 +151,56 @@ export class ClanStatsBreakdown extends LitElement {
             disabled: false,
           },
         )}
-        ${this.expandedTotal
-          ? html`
-              ${this.renderRow(
-                translateText("clan_modal.history_type_ffa"),
-                this.stats.ffa,
-                1,
-              )}
-              ${this.renderRow(
-                translateText("clan_modal.stats_team"),
-                this.stats.team,
-                1,
-                {
-                  expanded: this.expandedTeam,
-                  onToggle: this.toggleTeam,
-                  disabled: teamKeys.length === 0,
-                },
-              )}
-              ${this.expandedTeam
-                ? html`${teamKeys.map((k) =>
-                    this.renderRow(labelForSubKey(k), this.stats[k], 2),
-                  )}`
-                : ""}
-              ${this.renderRow(
-                translateText("clan_modal.stats_hvn"),
-                this.stats.hvn,
-                1,
-              )}
-              ${this.renderRow(
-                translateText("clan_modal.stats_ranked"),
-                this.stats.ranked,
-                1,
-                {
-                  expanded: this.expandedRanked,
-                  onToggle: this.toggleRanked,
-                  disabled: rankedKeys.length === 0,
-                },
-              )}
-              ${this.expandedRanked
-                ? html`${rankedKeys.map((k) =>
-                    this.renderRow(labelForSubKey(k), this.stats[k], 2),
-                  )}`
-                : ""}
-            `
-          : ""}
+        ${
+          this.expandedTotal
+            ? html`
+                ${this.renderRow(
+                  translateText("clan_modal.history_type_ffa"),
+                  this.stats.ffa,
+                  1,
+                )}
+                ${this.renderRow(
+                  translateText("clan_modal.stats_team"),
+                  this.stats.team,
+                  1,
+                  {
+                    expanded: this.expandedTeam,
+                    onToggle: this.toggleTeam,
+                    disabled: teamKeys.length === 0,
+                  },
+                )}
+                ${
+                  this.expandedTeam
+                    ? html`${teamKeys.map((k) =>
+                        this.renderRow(labelForSubKey(k), this.stats[k], 2),
+                      )}`
+                    : ""
+                }
+                ${this.renderRow(
+                  translateText("clan_modal.stats_hvn"),
+                  this.stats.hvn,
+                  1,
+                )}
+                ${this.renderRow(
+                  translateText("clan_modal.stats_ranked"),
+                  this.stats.ranked,
+                  1,
+                  {
+                    expanded: this.expandedRanked,
+                    onToggle: this.toggleRanked,
+                    disabled: rankedKeys.length === 0,
+                  },
+                )}
+                ${
+                  this.expandedRanked
+                    ? html`${rankedKeys.map((k) =>
+                        this.renderRow(labelForSubKey(k), this.stats[k], 2),
+                      )}`
+                    : ""
+                }
+              `
+            : ""
+        }
       </div>
     `;
   }

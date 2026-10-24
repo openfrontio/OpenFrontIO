@@ -20,6 +20,11 @@ vi.mock("../../src/client/Utils", () => ({
   copyToClipboard: copyToClipboardMock,
 }));
 
+// The visitor banner asks who is viewing; these tests don't sign anyone in.
+vi.mock("../../src/client/ProgressionAccount", () => ({
+  resolveXpAccount: vi.fn(async () => ({ kind: "unknown" })),
+}));
+
 vi.mock("../../src/client/Api", () => ({
   fetchPublicPlayerProfile: fetchPublicPlayerProfileMock,
 }));
@@ -141,7 +146,7 @@ describe("public player profile route", () => {
       await modal.updateComplete;
       expect(modal.isOpen()).toBe(true);
       expect(modal.querySelector("player-stats-tree-view")).toBeNull();
-      expect(modal.textContent).toContain("player_profile.not_found");
+      expect(modal.textContent).toContain("player_profile.not_found_title");
     });
     expect(fetchPublicPlayerProfileMock).toHaveBeenCalledWith("missing");
   });
@@ -154,7 +159,7 @@ describe("public player profile route", () => {
     await vi.waitFor(async () => {
       await modal.updateComplete;
       expect(modal.isOpen()).toBe(true);
-      expect(modal.textContent).toContain("player_profile.not_found");
+      expect(modal.textContent).toContain("player_profile.not_found_title");
     });
     expect(fetchPublicPlayerProfileMock).not.toHaveBeenCalled();
   });

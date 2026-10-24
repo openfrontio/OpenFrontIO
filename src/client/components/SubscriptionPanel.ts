@@ -23,6 +23,16 @@ import "./PlutoniumIcon";
 // The Steam-rail launch policies (S1 tier change, S2 cancel) live in
 // SubscriptionPolicy.ts so the store reads the same switches.
 
+const UNENTITLED_STATUSES: ReadonlySet<string> = new Set([
+  "canceled",
+  "expired",
+  "incomplete",
+  "incomplete_expired",
+  "past_due",
+  "paused",
+  "unpaid",
+]);
+
 @customElement("subscription-panel")
 export class SubscriptionPanel extends LitElement {
   @property({ type: Object })
@@ -30,6 +40,9 @@ export class SubscriptionPanel extends LitElement {
 
   @property({ type: Object })
   cosmetic: Subscription | null = null;
+
+  @property({ type: Boolean })
+  steamLicence = false;
 
   createRenderRoot() {
     return this;
@@ -152,8 +165,10 @@ export class SubscriptionPanel extends LitElement {
       </span>`;
     }
 
-    const isActive =
-      this.sub.status === "active" || this.sub.status === "trialing";
+    // Grey is only for statuses known to entitle nothing. Anything else,
+    // including a status newer than this client, is treated as entitled:
+    // the server only sends `subscription` for an entitled player.
+    const isActive = !UNENTITLED_STATUSES.has(this.sub.status);
     // Unknown/newer statuses fall back to the raw value rather than showing a
     // translation key.
     const translated = translateText(
@@ -164,14 +179,16 @@ export class SubscriptionPanel extends LitElement {
       : translated;
 
     return html`<span
-      class="${base} ${isActive
-        ? "bg-green-500/10 border-green-500/30 text-green-300"
-        : "bg-white/5 border-white/15 text-white/60"}"
+      class="${base} ${
+        isActive
+          ? "bg-green-500/10 border-green-500/30 text-green-300"
+          : "bg-white/5 border-white/15 text-white/60"
+      }"
     >
       <span
-        class="w-1.5 h-1.5 rounded-full ${isActive
-          ? "bg-green-400"
-          : "bg-white/40"}"
+        class="w-1.5 h-1.5 rounded-full ${
+          isActive ? "bg-green-400" : "bg-white/40"
+        }"
       ></span>
       ${label}
     </span>`;
@@ -207,9 +224,9 @@ export class SubscriptionPanel extends LitElement {
 
   private renderDateLine(text: string, windingDown: boolean): TemplateResult {
     return html`<div
-      class="flex items-center gap-2 text-sm ${windingDown
-        ? "text-amber-200/80"
-        : "text-white/50"}"
+      class="flex items-center gap-2 text-sm ${
+        windingDown ? "text-amber-200/80" : "text-white/50"
+      }"
     >
       <svg
         xmlns="http://www.w3.org/2000/svg"
@@ -314,7 +331,10 @@ export class SubscriptionPanel extends LitElement {
             tier: tierName,
           })}
         </p>
-        ${renderFreePlayPerks("free_play.after_grant_heading")}
+        ${renderFreePlayPerks(
+          "free_play.after_grant_heading",
+          this.steamLicence,
+        )}
       </div>
     `;
   }
@@ -366,16 +386,18 @@ export class SubscriptionPanel extends LitElement {
     return html`
       <div class="flex flex-col gap-2">
         <div class="flex flex-wrap gap-2">
-          ${STEAM_TIER_CHANGE_IN_APP
-            ? html`<o-button
-                class="flex-1 min-w-[8rem]"
-                variant="primary"
-                width="block"
-                size="md"
-                translationKey="account_modal.change_tier"
-                @click=${this.handleChangeTier}
-              ></o-button>`
-            : nothing}
+          ${
+            STEAM_TIER_CHANGE_IN_APP
+              ? html`<o-button
+                  class="flex-1 min-w-[8rem]"
+                  variant="primary"
+                  width="block"
+                  size="md"
+                  translationKey="account_modal.change_tier"
+                  @click=${this.handleChangeTier}
+                ></o-button>`
+              : nothing
+          }
           ${manage}
         </div>
         ${note}
@@ -412,15 +434,17 @@ export class SubscriptionPanel extends LitElement {
               tier: tierName,
             })}
           </p>
-          ${onDesktop
-            ? this.renderManageOnWeb()
-            : html`<o-button
-                variant="primary"
-                width="block"
-                size="md"
-                translationKey="store.manage_billing"
-                @click=${this.handleManage}
-              ></o-button>`}
+          ${
+            onDesktop
+              ? this.renderManageOnWeb()
+              : html`<o-button
+                  variant="primary"
+                  width="block"
+                  size="md"
+                  translationKey="store.manage_billing"
+                  @click=${this.handleManage}
+                ></o-button>`
+          }
         </div>
       `;
     }
@@ -448,16 +472,18 @@ export class SubscriptionPanel extends LitElement {
             translationKey="account_modal.change_tier"
             @click=${this.handleChangeTier}
           ></o-button>
-          ${onDesktop
-            ? nothing
-            : html`<o-button
-                class="flex-1 min-w-[8rem]"
-                variant="secondary"
-                width="block"
-                size="md"
-                translationKey="account_modal.manage_subscription"
-                @click=${this.handleManage}
-              ></o-button>`}
+          ${
+            onDesktop
+              ? nothing
+              : html`<o-button
+                  class="flex-1 min-w-[8rem]"
+                  variant="secondary"
+                  width="block"
+                  size="md"
+                  translationKey="account_modal.manage_subscription"
+                  @click=${this.handleManage}
+                ></o-button>`
+          }
         </div>
         ${onDesktop ? this.renderManageOnWeb() : nothing}
         <button
@@ -486,34 +512,40 @@ export class SubscriptionPanel extends LitElement {
               <div class="text-xl font-bold text-white leading-tight">
                 ${tierName}
               </div>
-              ${cosmetic?.product?.price
-                ? html`<div class="text-sm text-white/50">
-                    ${translateText("account_modal.sub_price_monthly", {
-                      price: cosmetic.product.price,
-                    })}
-                  </div>`
-                : ""}
+              ${
+                cosmetic?.product?.price
+                  ? html`<div class="text-sm text-white/50">
+                      ${translateText("account_modal.sub_price_monthly", {
+                        price: cosmetic.product.price,
+                      })}
+                    </div>`
+                  : ""
+              }
             </div>
             ${this.renderStatusPill()}
           </div>
 
-          ${cosmetic?.description
-            ? html`<p class="text-sm text-white/70 leading-relaxed">
-                ${cosmetic.description}
-              </p>`
-            : ""}
-          ${cosmetic
-            ? html`<div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                ${this.renderPerk(
-                  cosmetic.hardCurrencySignupBonus,
-                  "cosmetics.signup_bonus",
-                )}
-                ${this.renderPerk(
-                  cosmetic.dailyHardCurrency,
-                  "cosmetics.per_day",
-                )}
-              </div>`
-            : ""}
+          ${
+            cosmetic?.description
+              ? html`<p class="text-sm text-white/70 leading-relaxed">
+                  ${cosmetic.description}
+                </p>`
+              : ""
+          }
+          ${
+            cosmetic
+              ? html`<div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  ${this.renderPerk(
+                    cosmetic.hardCurrencySignupBonus,
+                    "cosmetics.per_month",
+                  )}
+                  ${this.renderPerk(
+                    cosmetic.dailyHardCurrency,
+                    "cosmetics.per_day",
+                  )}
+                </div>`
+              : ""
+          }
           ${this.renderPeriodLine(tierName)}
 
           <div class="border-t border-white/10 pt-4">

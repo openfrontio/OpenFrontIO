@@ -123,9 +123,11 @@ export class ClanDonationsView extends LitElement {
               aria-selected=${active}
               data-currency-filter=${tab.key}
               @click=${() => this.setFilter(tab.key)}
-              class="flex-1 px-3 py-1.5 text-xs font-bold uppercase tracking-wider whitespace-nowrap rounded-lg transition-colors ${active
-                ? "bg-malibu-blue/20 text-aquarius border border-malibu-blue/30"
-                : "text-white/50 hover:text-white hover:bg-white/5 border border-transparent"}"
+              class="flex-1 px-3 py-1.5 text-xs font-bold uppercase tracking-wider whitespace-nowrap rounded-lg transition-colors ${
+                active
+                  ? "bg-malibu-blue/20 text-aquarius border border-malibu-blue/30"
+                  : "text-white/50 hover:text-white hover:bg-white/5 border border-transparent"
+              }"
             >
               ${translateText(tab.labelKey)}
             </button>
@@ -190,13 +192,15 @@ export class ClanDonationsView extends LitElement {
         class="flex items-center gap-3 py-2.5 px-3 rounded-xl border bg-white/5 border-white/10"
       >
         <div class="flex-1 min-w-0 flex flex-col">
-          ${d.createdBy === null
-            ? html`<span class="text-sm text-white/40 italic"
-                >${translateText("clan_modal.donations_deleted_player")}</span
-              >`
-            : html`<div class="min-w-0">
-                ${playerNameLink(this, d.createdByUsername, d.createdBy)}
-              </div>`}
+          ${
+            d.createdBy === null
+              ? html`<span class="text-sm text-white/40 italic"
+                  >${translateText("clan_modal.donations_deleted_player")}</span
+                >`
+              : html`<div class="min-w-0">
+                  ${playerNameLink(this, d.createdByUsername, d.createdBy)}
+                </div>`
+          }
           <span class="text-white/30 text-[10px] whitespace-nowrap"
             >${formatAbsoluteTime(d.createdAt)}</span
           >

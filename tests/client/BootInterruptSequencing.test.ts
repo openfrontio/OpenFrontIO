@@ -99,7 +99,9 @@ describe("boot sequencing against a real <username-input>", () => {
       navigate: (hash) => calls.navigated.push(hash),
       openRewards: () => calls.rewardsOpened++,
       storeClaimPrompt: () => {},
-      storeSteamGrant: () => {},
+      updateSteamGrant: () => {},
+      markNoticeSeen: () => {},
+      markMessageSeen: () => {},
       now: () => Date.now(),
     };
     const player = userMe.player;
@@ -112,13 +114,17 @@ describe("boot sequencing against a real <username-input>", () => {
       grantWelcomeDue: false,
       grantEndedDue: false,
       grantStringsReady: true,
+      steamNotice: null,
+      steamNoticeStringsReady: true,
       rewardCount: (player.rewards ?? []).length,
       claimPromptDue: true,
       claimStringsReady: true,
+      reportThanksDue: false,
+      reportThanksStringsReady: true,
     });
     await runBootInterrupt(
       interrupt,
-      { claimStore: {}, grantStore: {}, publicId: "p" },
+      { claimStore: {}, grantStore: {}, publicId: "p", steamNotice: null },
       ports,
     );
     return { interrupt, ...calls };

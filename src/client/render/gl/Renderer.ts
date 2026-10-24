@@ -1346,8 +1346,10 @@ export class GPURenderer {
     if (pe.terrain) this.terrainPass.draw(cam);
     gl.enable(gl.BLEND);
     gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
-    // Map layers sit between terrain and territory.
+    // Map layers sit between terrain and territory. Alt view hides the land
+    // ones so the terrain underneath shows.
     for (const layerPass of this.mapLayerPasses.values()) {
+      if (this.altView && layerPass.placement === 0) continue;
       layerPass.draw(cam);
     }
     if (pe.territory) this.territoryPass.draw(cam);

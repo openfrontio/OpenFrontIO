@@ -248,30 +248,32 @@ export class NavUtilityIcons extends LitElement {
           ${translateText("notifications.title")}
         </div>
         <div class="max-h-[min(28rem,calc(100vh-8rem))] overflow-y-auto">
-          ${hasNewVersion
-            ? html`
-                <button
-                  role="menuitem"
-                  class="w-full px-4 py-3 flex items-start gap-3 text-left bg-blue-500/10 hover:bg-blue-500/20 transition-colors border-b border-white/5"
-                  @click=${this.openReleaseNotes}
-                >
-                  <span
-                    class="mt-1 w-2 h-2 rounded-full bg-red-500 shrink-0"
-                    aria-hidden="true"
-                  ></span>
-                  <span class="min-w-0">
-                    <span class="block text-sm font-semibold text-white">
-                      ${translateText("notifications.new_version", {
-                        version: this._notifications.currentVersion(),
-                      })}
+          ${
+            hasNewVersion
+              ? html`
+                  <button
+                    role="menuitem"
+                    class="w-full px-4 py-3 flex items-start gap-3 text-left bg-blue-500/10 hover:bg-blue-500/20 transition-colors border-b border-white/5"
+                    @click=${this.openReleaseNotes}
+                  >
+                    <span
+                      class="mt-1 w-2 h-2 rounded-full bg-red-500 shrink-0"
+                      aria-hidden="true"
+                    ></span>
+                    <span class="min-w-0">
+                      <span class="block text-sm font-semibold text-white">
+                        ${translateText("notifications.new_version", {
+                          version: this._notifications.currentVersion(),
+                        })}
+                      </span>
+                      <span class="block mt-1 text-xs text-white/50">
+                        ${translateText("notifications.view_release_notes")}
+                      </span>
                     </span>
-                    <span class="block mt-1 text-xs text-white/50">
-                      ${translateText("notifications.view_release_notes")}
-                    </span>
-                  </span>
-                </button>
-              `
-            : ""}
+                  </button>
+                `
+              : ""
+          }
           ${friendRequests.map(
             (request) => html`
               <button
@@ -304,12 +306,14 @@ export class NavUtilityIcons extends LitElement {
                     ${translateText("notifications.friend_request")}
                   </span>
                   <span class="block truncate text-sm font-semibold text-white">
-                    ${request.username
-                      ? usernameText(
-                          request.username,
-                          "text-white font-semibold",
-                        )
-                      : request.publicId}
+                    ${
+                      request.username
+                        ? usernameText(
+                            request.username,
+                            "text-white font-semibold",
+                          )
+                        : request.publicId
+                    }
                   </span>
                   <span class="block mt-1 text-[10px] text-white/35">
                     ${this.formatRequestDate(request.createdAt)}
@@ -318,13 +322,15 @@ export class NavUtilityIcons extends LitElement {
               </button>
             `,
           )}
-          ${!hasNewVersion && friendRequests.length === 0
-            ? html`
-                <p class="px-4 py-6 text-center text-sm text-white/50">
-                  ${translateText("notifications.empty")}
-                </p>
-              `
-            : ""}
+          ${
+            !hasNewVersion && friendRequests.length === 0
+              ? html`
+                  <p class="px-4 py-6 text-center text-sm text-white/50">
+                    ${translateText("notifications.empty")}
+                  </p>
+                `
+              : ""
+          }
         </div>
         <button
           role="menuitem"
@@ -355,10 +361,11 @@ export class NavUtilityIcons extends LitElement {
       <div class="flex items-center gap-1">
         <div class="relative">
           <button
-            class="${this.buttonClass()} ${this.notificationsOpen ||
-            currentPage === "page-news"
-              ? "active"
-              : ""}"
+            class="${this.buttonClass()} ${
+              this.notificationsOpen || currentPage === "page-news"
+                ? "active"
+                : ""
+            }"
             data-notifications-trigger
             aria-label=${translateText("notifications.title")}
             title=${translateText("notifications.title")}
@@ -382,15 +389,17 @@ export class NavUtilityIcons extends LitElement {
               <path d="M13.73 21a2 2 0 0 1-3.46 0" />
             </svg>
           </button>
-          ${this._notifications.showBellDot()
-            ? this.renderDot("bg-red-500")
-            : ""}
+          ${
+            this._notifications.showBellDot()
+              ? this.renderDot("bg-red-500")
+              : ""
+          }
         </div>
         <div class="relative">
           <button
-            class="${this.buttonClass()} ${currentPage === "page-help"
-              ? "active"
-              : ""}"
+            class="${this.buttonClass()} ${
+              currentPage === "page-help" ? "active" : ""
+            }"
             data-page="page-help"
             data-i18n-aria-label="main.help"
             data-i18n-title="main.help"
@@ -412,14 +421,16 @@ export class NavUtilityIcons extends LitElement {
               <line x1="12" y1="17.5" x2="12.01" y2="17.5" />
             </svg>
           </button>
-          ${this._notifications.showHelpDot()
-            ? this.renderDot("bg-yellow-400")
-            : ""}
+          ${
+            this._notifications.showHelpDot()
+              ? this.renderDot("bg-yellow-400")
+              : ""
+          }
         </div>
         <button
-          class="${this.buttonClass()} ${currentPage === "page-settings"
-            ? "active"
-            : ""}"
+          class="${this.buttonClass()} ${
+            currentPage === "page-settings" ? "active" : ""
+          }"
           data-page="page-settings"
           data-i18n-aria-label="main.settings"
           data-i18n-title="main.settings"

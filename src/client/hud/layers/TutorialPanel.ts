@@ -8,11 +8,12 @@ import { EventBus } from "@openfront/shared/EventBus";
 import { LitElement, html, nothing } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import { Controller } from "../../Controller";
+import { KeyboardLayoutController } from "../../KeyboardLayout";
 import { Platform } from "../../Platform";
 import { GoToPlayerEvent } from "../../TransformHandler";
 import { UIState } from "../../UIState";
 import { UserSettings } from "../../UserSettings";
-import { textDirection, translateText } from "../../Utils";
+import { resolveKeybindLabel, textDirection, translateText } from "../../Utils";
 import { GameView } from "../../view";
 import { PlayerView } from "../../view/PlayerView";
 import {
@@ -80,13 +81,13 @@ const TOUCH_TEXT_STEPS = new Set([
 
 /** Defaults shown when the player hasn't rebound the action (see UnitDisplay). */
 const HOTKEY_FALLBACKS = {
-  buildCity: "1",
-  buildFactory: "2",
-  buildPort: "3",
-  buildDefensePost: "4",
-  buildWarship: "7",
-  buildMissileSilo: "5",
-  buildAtomBomb: "8",
+  buildCity: "Digit1",
+  buildFactory: "Digit2",
+  buildPort: "Digit3",
+  buildDefensePost: "Digit4",
+  buildWarship: "Digit7",
+  buildMissileSilo: "Digit5",
+  buildAtomBomb: "Digit8",
 } as const;
 
 @customElement("tutorial-panel")
@@ -103,7 +104,11 @@ export class TutorialPanel extends LitElement implements Controller {
   private progress = new TutorialProgress();
   private started = false;
   private costs = new Map<UnitType, bigint>();
-  private keybinds: Record<string, { key?: string }> | null = null;
+  private keybinds: Record<
+    string,
+    { key?: string; value?: string | string[] }
+  > | null = null;
+  private keyboardLayout = new KeyboardLayoutController(this);
   private mapMarksActive = false;
   /** Latched: an atom bomb of ours was seen in flight at least once. */
   private atomLaunchSeen = false;
@@ -136,7 +141,11 @@ export class TutorialPanel extends LitElement implements Controller {
     // subscribed to TutorialStateEvent.
     if (!this.started) {
       this.started = true;
-      this.setActive(!this.userSettings.tutorialDismissed());
+      // The steps walk a new game from its spawn; a resumed save is well
+      // past that, and would hold the spawn ring up until the next attack.
+      this.setActive(
+        !this.userSettings.tutorialDismissed() && !this.game.resumedFromSave(),
+      );
     }
     if (!this.active) return;
 
@@ -387,7 +396,9 @@ export class TutorialPanel extends LitElement implements Controller {
   private hotkeyFor(step: TutorialStep): string {
     if (!step.hotkey) return "";
     this.keybinds ??= this.userSettings.parsedUserKeybinds();
-    return this.keybinds[step.hotkey]?.key ?? HOTKEY_FALLBACKS[step.hotkey];
+    const entry = this.keybinds[step.hotkey];
+    const defaultCode = HOTKEY_FALLBACKS[step.hotkey] || "";
+    return resolveKeybindLabel(entry, defaultCode, this.keyboardLayout.map);
   }
 
   private setHighlight(target: TutorialHighlight | null) {
@@ -429,12 +440,14 @@ export class TutorialPanel extends LitElement implements Controller {
           >
           <span class="flex items-center gap-2 text-sm text-gray-300">
             ${this.confirmingClose ? nothing : this.renderHeaderActions()}
-            ${this.ctx && !this.progress.finished()
-              ? translateText("tutorial.step_counter", {
-                  current: this.progress.position(this.ctx),
-                  total: this.progress.total(this.ctx),
-                })
-              : nothing}
+            ${
+              this.ctx && !this.progress.finished()
+                ? translateText("tutorial.step_counter", {
+                    current: this.progress.position(this.ctx),
+                    total: this.progress.total(this.ctx),
+                  })
+                : nothing
+            }
             <button
               class="text-gray-400 hover:text-white text-base leading-none px-1"
               title=${translateText("tutorial.close")}
@@ -461,22 +474,26 @@ export class TutorialPanel extends LitElement implements Controller {
       return nothing;
     const goTo = this.goToTarget();
     return html`
-      ${step.manual
-        ? html`<button
-            class="rounded bg-malibu-blue hover:bg-aquarius px-2 py-0.5 font-semibold text-white"
-            @click=${() => this.progress.acknowledge()}
-          >
-            ${translateText("tutorial.got_it")}
-          </button>`
-        : nothing}
-      ${goTo
-        ? html`<button
-            class="rounded bg-malibu-blue hover:bg-aquarius px-2 py-0.5 font-semibold text-white"
-            @click=${() => this.eventBus.emit(new GoToPlayerEvent(goTo))}
-          >
-            ${translateText("tutorial.go_to")}
-          </button>`
-        : nothing}
+      ${
+        step.manual
+          ? html`<button
+              class="rounded bg-malibu-blue hover:bg-aquarius px-2 py-0.5 font-semibold text-white"
+              @click=${() => this.progress.acknowledge()}
+            >
+              ${translateText("tutorial.got_it")}
+            </button>`
+          : nothing
+      }
+      ${
+        goTo
+          ? html`<button
+              class="rounded bg-malibu-blue hover:bg-aquarius px-2 py-0.5 font-semibold text-white"
+              @click=${() => this.eventBus.emit(new GoToPlayerEvent(goTo))}
+            >
+              ${translateText("tutorial.go_to")}
+            </button>`
+          : nothing
+      }
       <button
         class="text-gray-400 hover:text-white underline"
         @click=${() => this.progress.skip()}
@@ -514,22 +531,26 @@ export class TutorialPanel extends LitElement implements Controller {
     const done = this.progress.stepDone();
     return html`
       <p class="flex gap-1.5 ${done ? "text-green-400" : ""}">
-        ${step.bullets && !done
-          ? nothing
-          : html`<span class="shrink-0">${done ? "✓" : "•"}</span>`}
-        ${step.bullets
-          ? html`<ul class="list-disc ms-4 flex flex-col gap-1">
-              ${step.bullets.map(
-                // dir=auto keeps step text on its content's side while the
-                // panel chrome mirrors — untranslated steps (English fallback)
-                // then keep their punctuation on the correct end.
-                (b) =>
-                  html`<li dir="auto">
-                    ${translateText(`tutorial.step.${b}`)}
-                  </li>`,
-              )}
-            </ul>`
-          : html`<span dir="auto">${this.stepText(step, done)}</span>`}
+        ${
+          step.bullets && !done
+            ? nothing
+            : html`<span class="shrink-0">${done ? "✓" : "•"}</span>`
+        }
+        ${
+          step.bullets
+            ? html`<ul class="list-disc ms-4 flex flex-col gap-1">
+                ${step.bullets.map(
+                  // dir=auto keeps step text on its content's side while the
+                  // panel chrome mirrors — untranslated steps (English fallback)
+                  // then keep their punctuation on the correct end.
+                  (b) =>
+                    html`<li dir="auto">
+                      ${translateText(`tutorial.step.${b}`)}
+                    </li>`,
+                )}
+              </ul>`
+            : html`<span dir="auto">${this.stepText(step, done)}</span>`
+        }
       </p>
     `;
   }
