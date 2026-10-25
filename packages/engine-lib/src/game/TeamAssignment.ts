@@ -224,3 +224,23 @@ export function resolveTeamsList(
   }
   return Array.from({ length: numTeams }, (_, i) => `Team ${i + 1}`);
 }
+
+export function adjustForTeams(
+  playerCount: number,
+  numPlayerTeams: TeamCountConfig | undefined,
+): number {
+  if (numPlayerTeams === undefined || numPlayerTeams === HumansVsNations) {
+    return playerCount;
+  }
+  const divisor =
+    numPlayerTeams === Duos
+      ? 2
+      : numPlayerTeams === Trios
+        ? 3
+        : numPlayerTeams === Quads
+          ? 4
+          : numPlayerTeams;
+  if (divisor <= 0) return playerCount;
+  const adjusted = playerCount - (playerCount % divisor);
+  return adjusted > 0 ? adjusted : divisor;
+}

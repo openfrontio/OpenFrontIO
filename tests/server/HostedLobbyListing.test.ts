@@ -4,6 +4,7 @@ import {
   GameMapType,
   GameMode,
   GameType,
+  Trios,
 } from "@openfront/engine-api/game/GameTypes";
 import { LOBBY_LABEL_MAX } from "@openfront/engine-lib/Util";
 import { GameEnv } from "@openfront/shared/configuration/Env";
@@ -395,6 +396,16 @@ describe("listed lobby auto-start", () => {
     // Filling to the cap starts the game before the deadline.
     game.joinClient(makeClient("guest", OTHER_CREATOR, fakeWs()));
     expect(game.phase()).toBe(GamePhase.Active);
+  });
+
+  it("adjusts the listing player cap for team games", () => {
+    const game = makeGame("team-game", CREATOR, {
+      gameMode: GameMode.Team,
+      playerTeams: Trios,
+    });
+    game.joinClient(makeClient("host", CREATOR, fakeWs()));
+    game.setListed(true, { maxPlayers: 100 });
+    expect(game.gameInfo().gameConfig?.maxPlayers).toBe(99);
   });
 
   it("never auto-starts an unlisted lobby", () => {

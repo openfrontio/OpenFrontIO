@@ -22,6 +22,7 @@ import {
   Winner,
 } from "@openfront/engine-api/Schemas";
 import {
+  adjustForTeams,
   assignTeamsLobbyPreview,
   resolveTeamsList,
 } from "@openfront/engine-lib/game/TeamAssignment";
@@ -1745,8 +1746,12 @@ export class GameServer {
     // Only on the transition: relisting must not change the cap players
     // joined under.
     if (listed && !wasListed && options.maxPlayers !== undefined) {
-      this.gameConfig.maxPlayers = options.maxPlayers;
-      if (this.playerCount() >= options.maxPlayers) {
+      const max =
+        this.gameConfig.gameMode === GameMode.Team
+          ? adjustForTeams(options.maxPlayers, this.gameConfig.playerTeams)
+          : options.maxPlayers;
+      this.gameConfig.maxPlayers = max;
+      if (this.playerCount() >= max) {
         this.hasReachedMaxPlayerCount = true;
       }
     }

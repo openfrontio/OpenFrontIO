@@ -11,12 +11,14 @@ import {
   TeamCountConfig,
 } from "@openfront/engine-api/Schemas";
 import { DoomsdayClockSpeed } from "@openfront/engine-lib/game/DoomsdayClock";
+import { adjustForTeams } from "@openfront/engine-lib/game/TeamAssignment";
 import { GameEnv } from "@openfront/shared/configuration/Env";
 import { EventBus } from "@openfront/shared/EventBus";
 import {
   ClientInfo,
   LOBBY_QUEUE_CUTOFF_MS,
   LobbyInfoEvent,
+  MAX_HOSTED_LOBBY_PLAYERS,
 } from "@openfront/shared/WireSchemas";
 import { html, nothing } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
@@ -813,7 +815,11 @@ export class HostLobbyModal extends BaseModal {
             ? html`<list-lobby-dialog
                 .currentPlayers=${this.seatedPlayerCount()}
                 .suggestedMaxPlayers=${
-                  this.playerLimit ? this.playerLimitValue : undefined
+                  this.playerLimit
+                    ? this.playerLimitValue
+                    : this.gameMode === GameMode.Team
+                      ? adjustForTeams(MAX_HOSTED_LOBBY_PLAYERS, this.teamCount)
+                      : undefined
                 }
                 @cancel=${() => (this.showListLobbyDialog = false)}
                 @confirm=${(e: CustomEvent<ListLobbyOptions>) => {
@@ -1601,7 +1607,10 @@ export class HostLobbyModal extends BaseModal {
       // the card is right if the host later unlists.
       if (!wasListed && result.listed && options?.maxPlayers !== undefined) {
         this.playerLimit = true;
-        this.playerLimitValue = options.maxPlayers;
+        this.playerLimitValue =
+          this.gameMode === GameMode.Team
+            ? adjustForTeams(options.maxPlayers, this.teamCount)
+            : options.maxPlayers;
       }
     } else {
       this.publiclyListed = !checked;

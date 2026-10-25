@@ -1,9 +1,11 @@
 import {
   Difficulty,
+  Duos,
   GameMapSize,
   GameMapType,
   GameMode,
   GameType,
+  Trios,
   UnitType,
 } from "@openfront/engine-api/game/GameTypes";
 import { GameConfig } from "@openfront/engine-api/Schemas";
@@ -109,6 +111,18 @@ describe("applyGameConfigPatch", () => {
 
     applyGameConfigPatch(target, { maxPlayers: null });
     expect(target.maxPlayers).toBeUndefined();
+  });
+
+  it("adjusts maxPlayers for team games", () => {
+    const target = testGameConfig({
+      gameMode: GameMode.Team,
+      playerTeams: Trios,
+    });
+    applyGameConfigPatch(target, { maxPlayers: 100 });
+    expect(target.maxPlayers).toBe(99);
+
+    applyGameConfigPatch(target, { playerTeams: Duos });
+    expect(target.maxPlayers).toBe(98);
   });
 
   it("ignores pool, which every member of a pool has to agree on", () => {

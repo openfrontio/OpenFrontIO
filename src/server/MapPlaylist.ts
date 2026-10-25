@@ -16,6 +16,7 @@ import {
 } from "@openfront/engine-api/game/GameTypes";
 import { GameConfig, TeamCountConfig } from "@openfront/engine-api/Schemas";
 import { SAM_CONSTRUCTION_TICKS } from "@openfront/engine-lib/configuration/Config";
+import { adjustForTeams } from "@openfront/engine-lib/game/TeamAssignment";
 import { PseudoRandom } from "@openfront/engine-lib/PseudoRandom";
 import { ScheduledPublicGameType } from "@openfront/shared/WireSchemas";
 import { logger } from "./Logger";
@@ -981,27 +982,11 @@ export class MapPlaylist {
     playerCount: number,
     numPlayerTeams: TeamCountConfig | undefined,
   ): number {
-    if (numPlayerTeams === undefined) return playerCount;
-    let p = playerCount;
-    switch (numPlayerTeams) {
-      case Duos:
-        p -= p % 2;
-        break;
-      case Trios:
-        p -= p % 3;
-        break;
-      case Quads:
-        p -= p % 4;
-        break;
-      case HumansVsNations:
-        // Half the slots are for humans, the other half will get filled with nations
-        p = Math.floor(p / 2);
-        break;
-      default:
-        p -= p % numPlayerTeams;
-        break;
+    if (numPlayerTeams === HumansVsNations) {
+      // Half the slots are for humans, the other half will get filled with nations
+      return Math.floor(playerCount / 2);
     }
-    return p;
+    return adjustForTeams(playerCount, numPlayerTeams);
   }
 
   /**
