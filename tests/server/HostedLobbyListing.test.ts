@@ -4,6 +4,7 @@ import {
   GameMapType,
   GameMode,
   GameType,
+  Trios,
 } from "@openfront/engine-api/game/GameTypes";
 import { LOBBY_LABEL_MAX } from "@openfront/engine-lib/Util";
 import { GameEnv } from "@openfront/shared/configuration/Env";
@@ -193,6 +194,20 @@ describe("GameServer listing", () => {
       expect(getListingEligibilityError(game, 0)).toBe(
         "listing_max_players_too_low",
       );
+    });
+
+    it("checks the effective team cap against player count", () => {
+      const game = makeGame("team-eligibility", CREATOR, {
+        gameMode: GameMode.Team,
+        playerTeams: Trios,
+      });
+      game.joinClient(makeClient("p1", "c1", fakeWs()));
+      game.joinClient(makeClient("p2", "c2", fakeWs()));
+      game.joinClient(makeClient("p3", "c3", fakeWs()));
+      expect(getListingEligibilityError(game, 5)).toBe(
+        "listing_max_players_too_low",
+      );
+      expect(getListingEligibilityError(game, 6)).toBeNull();
     });
   });
 
@@ -395,6 +410,16 @@ describe("listed lobby auto-start", () => {
     // Filling to the cap starts the game before the deadline.
     game.joinClient(makeClient("guest", OTHER_CREATOR, fakeWs()));
     expect(game.phase()).toBe(GamePhase.Active);
+  });
+
+  it("adjusts the listing player cap for team games", () => {
+    const game = makeGame("team-game", CREATOR, {
+      gameMode: GameMode.Team,
+      playerTeams: Trios,
+    });
+    game.joinClient(makeClient("host", CREATOR, fakeWs()));
+    game.setListed(true, { maxPlayers: 100 });
+    expect(game.gameInfo().gameConfig?.maxPlayers).toBe(99);
   });
 
   it("never auto-starts an unlisted lobby", () => {
