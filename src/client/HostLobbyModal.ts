@@ -159,6 +159,11 @@ export class HostLobbyModal extends BaseModal {
   // don't snap the field back.
   private playerLimitLoadedFor: string | null = null;
 
+  // Same idea for the win threshold: until the lobby's own value has been
+  // read from lobby info (or the host edited it), "off" may just mean "not
+  // loaded yet", so an unrelated setting change must not clear it.
+  private winThresholdLoadedFor: string | null = null;
+
   private readonly handleLobbyInfo = (event: LobbyInfoEvent) => {
     const lobby = event.lobby;
     if (!this.lobbyId || lobby.gameID !== this.lobbyId) {
@@ -175,6 +180,14 @@ export class HostLobbyModal extends BaseModal {
       if (maxPlayers !== undefined) {
         this.playerLimit = true;
         this.playerLimitValue = maxPlayers;
+      }
+    }
+    if (this.winThresholdLoadedFor !== this.lobbyId) {
+      this.winThresholdLoadedFor = this.lobbyId;
+      const tenths = lobby.gameConfig?.winThresholdTenths;
+      if (typeof tenths === "number") {
+        this.winThreshold = true;
+        this.winThresholdValue = tenths / 10;
       }
     }
     if ("serverTime" in lobby && typeof lobby.serverTime === "number") {
@@ -1058,6 +1071,7 @@ export class HostLobbyModal extends BaseModal {
     this.maxTimerValue = undefined;
     this.winThreshold = false;
     this.winThresholdValue = undefined;
+    this.winThresholdLoadedFor = null;
     this.playerLimit = false;
     this.playerLimitValue = undefined;
     this.playerLimitLoadedFor = null;
@@ -1276,6 +1290,7 @@ export class HostLobbyModal extends BaseModal {
   ) => {
     this.winThreshold = checked;
     this.winThresholdValue = toOptionalNumber(value);
+    this.winThresholdLoadedFor = this.lobbyId;
     this.putGameConfig();
   };
 
@@ -1286,6 +1301,7 @@ export class HostLobbyModal extends BaseModal {
   private handleWinThresholdValueChanges = (e: Event) => {
     const input = e.target as HTMLInputElement;
     const value = parseBoundedFloatFromInput(input, { min: 10, max: 99.9 });
+    this.winThresholdLoadedFor = this.lobbyId;
 
     if (value === undefined) {
       this.winThresholdValue = undefined;
@@ -1728,7 +1744,11 @@ export class HostLobbyModal extends BaseModal {
             winThresholdTenths:
               this.winThreshold === true && this.winThresholdValue !== undefined
                 ? Math.round(this.winThresholdValue * 10)
-                : null,
+                : // null clears it; until the lobby's own value has loaded,
+                  // leave it alone.
+                  this.winThresholdLoadedFor === this.lobbyId
+                  ? null
+                  : undefined,
             // null lifts the cap; the server keeps players already seated.
             // Until the lobby's own cap has been read from lobby info, "off"
             // may just mean "not loaded yet", so leave the cap alone.

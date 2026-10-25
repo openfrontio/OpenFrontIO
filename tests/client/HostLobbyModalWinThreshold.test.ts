@@ -11,7 +11,17 @@ vi.mock("../../src/client/DesktopPresence", () => ({
   },
 }));
 
+import { LobbyInfoEvent } from "@openfront/shared/WireSchemas";
 import { HostLobbyModal } from "../../src/client/HostLobbyModal";
+
+const LOBBY = "ABCD1234";
+
+function lobbyInfo(winThresholdTenths: number | undefined, gameID = LOBBY) {
+  return new LobbyInfoEvent(
+    { gameID, clients: [], gameConfig: { winThresholdTenths } } as any,
+    "host",
+  );
+}
 
 function modalWithStubbedPush() {
   const modal = new HostLobbyModal() as any;
@@ -96,6 +106,8 @@ describe("HostLobbyModal win threshold", () => {
 
   it("sends null when off, so the 80% default applies", async () => {
     const modal = new HostLobbyModal() as any;
+    modal.lobbyId = LOBBY;
+    modal.handleLobbyInfo(lobbyInfo(undefined));
     modal.winThreshold = false;
     modal.winThresholdValue = 75.5;
     expect((await pushedConfig(modal)).winThresholdTenths).toBeNull();
@@ -103,8 +115,71 @@ describe("HostLobbyModal win threshold", () => {
 
   it("sends null when on but no valid value is typed", async () => {
     const modal = new HostLobbyModal() as any;
+    modal.lobbyId = LOBBY;
+    modal.handleLobbyInfo(lobbyInfo(undefined));
     modal.winThreshold = true;
     modal.winThresholdValue = undefined;
     expect((await pushedConfig(modal)).winThresholdTenths).toBeNull();
+  });
+});
+
+// A host returning to an existing lobby (?host) starts with default settings;
+// without this, their next change of any setting would send
+// winThresholdTenths: null and clear the lobby's custom threshold.
+describe("HostLobbyModal win threshold from lobby info", () => {
+  it("loads the lobby's threshold from its first lobby info", () => {
+    const modal = new HostLobbyModal() as any;
+    modal.lobbyId = LOBBY;
+    modal.handleLobbyInfo(lobbyInfo(755));
+    expect(modal.winThreshold).toBe(true);
+    expect(modal.winThresholdValue).toBe(75.5);
+  });
+
+  it("does not overwrite the host's edits on later lobby info", () => {
+    const modal = new HostLobbyModal() as any;
+    modal.lobbyId = LOBBY;
+    modal.handleLobbyInfo(lobbyInfo(755));
+    modal.winThresholdValue = 60;
+    modal.handleLobbyInfo(lobbyInfo(755));
+    expect(modal.winThresholdValue).toBe(60);
+  });
+
+  it("keeps an edit the host made before the first lobby info", () => {
+    const modal = new HostLobbyModal() as any;
+    modal.lobbyId = LOBBY;
+    modal.putGameConfig = vi.fn();
+    modal.handleWinThresholdToggle(true, 60);
+    modal.handleLobbyInfo(lobbyInfo(755));
+    expect(modal.winThresholdValue).toBe(60);
+  });
+
+  it("keeps the host switching it off before the first lobby info", () => {
+    const modal = new HostLobbyModal() as any;
+    modal.lobbyId = LOBBY;
+    modal.putGameConfig = vi.fn();
+    modal.handleWinThresholdToggle(false, undefined);
+    modal.handleLobbyInfo(lobbyInfo(755));
+    expect(modal.winThreshold).toBe(false);
+  });
+
+  it("ignores lobby info for another lobby", () => {
+    const modal = new HostLobbyModal() as any;
+    modal.lobbyId = LOBBY;
+    modal.handleLobbyInfo(lobbyInfo(755, "OTHER999"));
+    expect(modal.winThreshold).toBe(false);
+  });
+
+  it("leaves the threshold alone before the lobby's has loaded", async () => {
+    const modal = new HostLobbyModal() as any;
+    modal.lobbyId = LOBBY;
+    expect((await pushedConfig(modal)).winThresholdTenths).toBeUndefined();
+  });
+
+  it("sends the host's threshold even before the lobby's has loaded", async () => {
+    const modal = new HostLobbyModal() as any;
+    modal.lobbyId = LOBBY;
+    modal.winThreshold = true;
+    modal.winThresholdValue = 75.5;
+    expect((await pushedConfig(modal)).winThresholdTenths).toBe(755);
   });
 });
