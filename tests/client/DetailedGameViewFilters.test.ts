@@ -8,7 +8,7 @@ import {
 } from "@openfront/engine-api/game/GameTypes";
 import { GameConfig } from "@openfront/engine-api/Schemas";
 import { PublicGameInfo } from "@openfront/shared/WireSchemas";
-import { beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import {
   DEFAULT_FILTER_PROFILE_KEY,
   DEFAULT_FILTERS,
@@ -26,6 +26,7 @@ import {
   saveDefaultFilterProfile,
   saveFilterProfile,
 } from "../../src/client/components/DetailedGameViewFilters";
+import { UserSettings } from "../../src/client/UserSettings";
 
 function config(overrides: Partial<GameConfig> = {}): GameConfig {
   return {
@@ -375,5 +376,74 @@ describe("default filter profile", () => {
     saveDefaultFilterProfile("Big");
     deleteFilterProfile("Small");
     expect(loadDefaultFilterProfile(profiles)).toBe("Big");
+  });
+});
+
+describe("profiles per account", () => {
+  beforeEach(() => {
+    localStorage.clear();
+    UserSettings.setPlayerId(null);
+  });
+
+  afterEach(() => {
+    UserSettings.setPlayerId(null);
+  });
+
+  it("keeps each account's profiles and default separate", () => {
+    UserSettings.setPlayerId("rikardo");
+    saveFilterProfile("asd", filters({ minCapacity: 100 }));
+    saveDefaultFilterProfile("asd");
+
+    UserSettings.setPlayerId("anon");
+    expect(loadFilterProfiles()).toEqual({});
+    saveFilterProfile("anon", filters({ hideEmpty: true }));
+    saveDefaultFilterProfile("anon");
+    expect(Object.keys(loadFilterProfiles())).toEqual(["anon"]);
+    expect(loadDefaultFilterProfile(loadFilterProfiles())).toBe("anon");
+
+    UserSettings.setPlayerId("rikardo");
+    expect(Object.keys(loadFilterProfiles())).toEqual(["asd"]);
+    expect(loadDefaultFilterProfile(loadFilterProfiles())).toBe("asd");
+  });
+
+  it("keeps profiles through a logout and login", () => {
+    UserSettings.setPlayerId("rikardo");
+    saveFilterProfile("asd", filters({ minCapacity: 100 }));
+    saveDefaultFilterProfile("asd");
+
+    UserSettings.setPlayerId(null);
+    expect(loadFilterProfiles()).toEqual({});
+
+    UserSettings.setPlayerId("rikardo");
+    expect(loadFilterProfiles().asd.minCapacity).toBe(100);
+    expect(loadDefaultFilterProfile(loadFilterProfiles())).toBe("asd");
+  });
+
+  it("deleting a profile in one account leaves the other's alone", () => {
+    UserSettings.setPlayerId("a");
+    saveFilterProfile("same name", filters());
+    saveDefaultFilterProfile("same name");
+    UserSettings.setPlayerId("b");
+    saveFilterProfile("same name", filters());
+    saveDefaultFilterProfile("same name");
+
+    deleteFilterProfile("same name");
+    expect(loadFilterProfiles()).toEqual({});
+
+    UserSettings.setPlayerId("a");
+    expect(Object.keys(loadFilterProfiles())).toEqual(["same name"]);
+    expect(loadDefaultFilterProfile(loadFilterProfiles())).toBe("same name");
+  });
+
+  it("moves profiles saved before this change to the first account that loads", () => {
+    saveFilterProfile("old", filters({ minCapacity: 50 }));
+    saveDefaultFilterProfile("old");
+
+    UserSettings.setPlayerId("first");
+    expect(loadFilterProfiles().old.minCapacity).toBe(50);
+    expect(loadDefaultFilterProfile(loadFilterProfiles())).toBe("old");
+
+    UserSettings.setPlayerId("second");
+    expect(loadFilterProfiles()).toEqual({});
   });
 });

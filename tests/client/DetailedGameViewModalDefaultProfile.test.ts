@@ -17,6 +17,7 @@ import {
   saveFilterProfile,
 } from "../../src/client/components/DetailedGameViewFilters";
 import { DetailedGameViewModal } from "../../src/client/components/DetailedGameViewModal";
+import { UserSettings } from "../../src/client/UserSettings";
 
 function openModal(modal: any) {
   modal.lobbySocket = { start: vi.fn(async () => {}), stop: vi.fn() };
@@ -34,6 +35,7 @@ describe("DetailedGameViewModal default profile", () => {
 
   beforeEach(() => {
     localStorage.clear();
+    UserSettings.setPlayerId(null);
     saveFilterProfile("Halloween", {
       ...DEFAULT_FILTERS,
       modes: ["ffa"],
@@ -43,6 +45,7 @@ describe("DetailedGameViewModal default profile", () => {
   });
 
   afterEach(() => {
+    UserSettings.setPlayerId(null);
     // onOpen starts a repaint timer.
     for (const modal of modals.splice(0)) {
       clearInterval(modal.countdownTimer);
@@ -91,5 +94,29 @@ describe("DetailedGameViewModal default profile", () => {
     openModal(modal);
     modal.deleteProfile();
     expect(modal.defaultProfile).toBe("");
+  });
+
+  it("each account opens with its own default, and gets it back on login", () => {
+    UserSettings.setPlayerId("rikardo");
+    saveFilterProfile("asd", { ...DEFAULT_FILTERS, minCapacity: 100 });
+    saveDefaultFilterProfile("asd");
+    const modal = newModal();
+    openModal(modal);
+    expect(modal.selectedProfile).toBe("asd");
+    expect(modal.filters.minCapacity).toBe(100);
+
+    // Another account on the same device: nothing of Rikardo's is visible.
+    UserSettings.setPlayerId("anon");
+    modal.loadAccountProfiles();
+    expect(modal.profiles).toEqual({});
+    expect(modal.selectedProfile).toBe("");
+    expect(modal.filters).toEqual(DEFAULT_FILTERS);
+
+    // Back to the first account: its default is applied again.
+    UserSettings.setPlayerId("rikardo");
+    modal.loadAccountProfiles();
+    expect(modal.selectedProfile).toBe("asd");
+    expect(modal.defaultProfile).toBe("asd");
+    expect(modal.filters.minCapacity).toBe(100);
   });
 });

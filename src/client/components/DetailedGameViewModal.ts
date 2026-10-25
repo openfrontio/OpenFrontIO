@@ -22,6 +22,7 @@ import { PublicLobbySocket } from "../LobbySocket";
 import { JoinLobbyEvent } from "../Main";
 import { lastUserMeResponse } from "../UserMeBroadcast";
 import { UsernameInput } from "../UsernameInput";
+import { UserSettings } from "../UserSettings";
 import {
   calculateServerTimeOffset,
   getGameModeLabel,
@@ -164,17 +165,26 @@ export class DetailedGameViewModal extends BaseModal {
     };
   }
 
-  // Only the first open of a page load applies the default profile, so a
-  // filter change made since then isn't undone by reopening the menu.
-  private defaultProfileApplied = false;
+  // The account whose default profile is currently applied. Profiles belong to
+  // the logged-in account, so a different account starts from its own default,
+  // while reopening the menu as the same account keeps the filters as they
+  // are. undefined until the first load.
+  private appliedForAccount: string | null | undefined = undefined;
 
-  protected override onOpen(): void {
+  private loadAccountProfiles(): void {
     this.profiles = loadFilterProfiles();
     this.defaultProfile = loadDefaultFilterProfile(this.profiles);
-    if (!this.defaultProfileApplied) {
-      this.defaultProfileApplied = true;
-      this.applyProfile(this.defaultProfile);
-    }
+    const account = UserSettings.currentPlayerId();
+    if (this.appliedForAccount === account) return;
+    this.appliedForAccount = account;
+    this.filters = { ...DEFAULT_FILTERS };
+    this.selectedProfile = "";
+    this.profileName = "";
+    this.applyProfile(this.defaultProfile);
+  }
+
+  protected override onOpen(): void {
+    this.loadAccountProfiles();
     void this.lobbySocket.start();
     // Countdowns are derived from server timestamps, so a plain repaint keeps
     // them ticking between socket updates.
@@ -242,6 +252,8 @@ export class DetailedGameViewModal extends BaseModal {
   private applyUserMe(me: UserMeResponse | false): void {
     this.viewerSignedIn = viewerIsSignedIn(me);
     this.viewerTrusted = viewerIsTrusted(me);
+    // The account may have changed (login, logout, switch).
+    this.loadAccountProfiles();
     // A portal sign-in surfaces as a userMeResponse without a linked
     // identity, so re-read the SDK profile alongside it.
     if (gamePortal.isOnGamePortal()) {

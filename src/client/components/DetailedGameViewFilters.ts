@@ -6,6 +6,7 @@ import {
   Trios,
 } from "@openfront/engine-api/game/GameTypes";
 import { PublicGameInfo, PublicGames } from "@openfront/shared/WireSchemas";
+import { UserSettings } from "../UserSettings";
 
 /**
  * Filtering, ordering and saved-profile logic for the Detailed View lobby
@@ -217,6 +218,29 @@ export function filterAndSortLobbies(
 
 // ---- Saved filter profiles ----
 
+// Profiles and the default profile belong to the logged-in account: each key
+// is suffixed with the account's publicId (like the cosmetic selections in
+// UserSettings), so accounts sharing a browser or the desktop app never see
+// each other's. Logged out, the bare key is used.
+
+function scopedKey(key: string): string {
+  const playerId = UserSettings.currentPlayerId();
+  return playerId === null ? key : `${key}:${playerId}`;
+}
+
+function readStored(key: string): string | null {
+  const playerId = UserSettings.currentPlayerId();
+  const value = localStorage.getItem(scopedKey(key));
+  if (value !== null || playerId === null) return value;
+  // Data saved before profiles were per account (or while logged out) moves
+  // to the first account that asks for it, so nobody loses their profiles.
+  const unscoped = localStorage.getItem(key);
+  if (unscoped === null) return null;
+  localStorage.setItem(scopedKey(key), unscoped);
+  localStorage.removeItem(key);
+  return unscoped;
+}
+
 export const FILTER_PROFILES_KEY = "detailed-view-filter-profiles";
 export const DEFAULT_FILTER_PROFILE_KEY =
   "detailed-view-default-filter-profile";
@@ -278,7 +302,7 @@ export function hasFilterProfile(
 export function loadFilterProfiles(): Record<string, LobbyFilters> {
   let parsed: unknown;
   try {
-    const stored = localStorage.getItem(FILTER_PROFILES_KEY);
+    const stored = readStored(FILTER_PROFILES_KEY);
     if (stored === null) return emptyProfiles();
     parsed = JSON.parse(stored);
   } catch (error) {
@@ -297,7 +321,10 @@ export function loadFilterProfiles(): Record<string, LobbyFilters> {
 
 function persistProfiles(profiles: Record<string, LobbyFilters>) {
   try {
-    localStorage.setItem(FILTER_PROFILES_KEY, JSON.stringify(profiles));
+    localStorage.setItem(
+      scopedKey(FILTER_PROFILES_KEY),
+      JSON.stringify(profiles),
+    );
   } catch (error) {
     console.warn("Failed to save lobby filter profiles", error);
   }
@@ -341,7 +368,7 @@ export function deleteFilterProfile(
 
 function readDefaultFilterProfileName(): string {
   try {
-    return localStorage.getItem(DEFAULT_FILTER_PROFILE_KEY) ?? "";
+    return readStored(DEFAULT_FILTER_PROFILE_KEY) ?? "";
   } catch (error) {
     console.warn("Failed to read default lobby filter profile", error);
     return "";
@@ -363,9 +390,9 @@ export function loadDefaultFilterProfile(
 export function saveDefaultFilterProfile(name: string): void {
   try {
     if (name === "") {
-      localStorage.removeItem(DEFAULT_FILTER_PROFILE_KEY);
+      localStorage.removeItem(scopedKey(DEFAULT_FILTER_PROFILE_KEY));
     } else {
-      localStorage.setItem(DEFAULT_FILTER_PROFILE_KEY, name);
+      localStorage.setItem(scopedKey(DEFAULT_FILTER_PROFILE_KEY), name);
     }
   } catch (error) {
     console.warn("Failed to save default lobby filter profile", error);
