@@ -2160,6 +2160,10 @@
     "unverified": "This game's record has no checks, so this replay couldn't be verified against the game that was played.",
     "watch_classic": "Watch the old replay instead"
   },
+  "report_thanks": {
+    "body": "A person who you recently reported has been banned, thanks for keeping openfront a safer and more enjoyable place",
+    "heading": "Thank you"
+  },
   "reward_track": {
     "after_level": "After level {level}",
     "caps_amount": "{amount} Caps",
@@ -2190,6 +2194,49 @@
   },
   "rewards_modal": {
     "title": "Rewards"
+  },
+  "saved_games": {
+    "code_placeholder": "Paste a shared game link or code",
+    "copy_link": "Copy link",
+    "delete": "Delete",
+    "delete_confirm": "Delete \"{name}\"? This can't be undone.",
+    "empty": "No saved games yet. Save one from the in-game menu.",
+    "error": {
+      "code_invalid": "That isn't a shared game link or code.",
+      "copy_failed": "Couldn't copy the link.",
+      "download_failed": "Couldn't download the saved game. Try again.",
+      "list_failed": "Couldn't load your saved games.",
+      "load_failed": "Couldn't start the saved game.",
+      "name_invalid": "That name isn't allowed.",
+      "name_not_shareable": "That name can't be shown on a shared game. Rename it first.",
+      "not_found": "That saved game no longer exists.",
+      "not_singleplayer": "Only singleplayer games can be loaded.",
+      "request_failed": "Something went wrong. Try again.",
+      "shared_not_found": "This shared game isn't available. It may have been deleted or made private.",
+      "unreadable": "This saved game can't be loaded by this version of the game."
+    },
+    "link_copied": "Link copied",
+    "loading": "Loading…",
+    "open": "Open",
+    "play": "Play",
+    "rename": "Rename",
+    "rename_save": "Save",
+    "save_desc": "Save this game to your account to continue it later",
+    "save_label": "Save game",
+    "save_status": {
+      "limit": "You've reached the saved game limit. Delete one from the Solo menu first.",
+      "not_found": "Couldn't save the game. Try again.",
+      "rejected": "This game couldn't be saved.",
+      "request_failed": "Couldn't save the game. Try again.",
+      "saved": "Saved. Find it in the Solo menu.",
+      "saving": "Saving…",
+      "unauthorized": "Sign in to save games."
+    },
+    "share": "Share",
+    "shared_badge": "Shared",
+    "shared_title": "Shared game",
+    "title": "Saved games",
+    "unshare": "Unshare"
   },
   "select_lang": {
     "title": "Select Language"
@@ -2356,6 +2403,7 @@
     "purchase_pending": "Your purchase is still being processed. It will appear in your account shortly — check your order history if it doesn't.",
     "purchase_success": "Purchase succeeded: {name}",
     "purchase_tribe_button": "Purchase",
+    "steam_browser_approval": "Steam has opened the purchase in your browser. Approve it there, then come back here. It will show up once Steam confirms it.",
     "steam_licence_required": "This subscription is only for players who own OpenFront on Steam.",
     "steam_overlay_cancelled": "Purchase cancelled. You haven't been charged.",
     "steam_overlay_waiting": "Approve the purchase in the Steam overlay to continue.",
@@ -2659,6 +2707,7 @@
     "hud_opacity_desc": "Adjust panel backgrounds without fading text or icons. 100% keeps their original appearance.",
     "hud_opacity_label": "HUD background opacity",
     "keybind_conflict_error": "The key {key} is already bound to another action.",
+    "keybind_shift_prefix": "Shift+",
     "keybinds_hint": "Click a key to rebind it. You can assign a single key or Shift + key combination.",
     "left_click_desc": "When ON, left-click opens menu and sword button attacks. When OFF, left-click attacks directly.",
     "left_click_label": "Left Click to Open Menu",
@@ -2666,6 +2715,8 @@
     "lobby_id_visibility_label": "Hidden Lobby IDs",
     "lobby_start_alerts_desc": "Play the start chime for each lobby and ranked match by default and show a desktop notification when permitted. You can override it with the lobby bell.",
     "lobby_start_alerts_label": "Lobby Start Alerts",
+    "map_layers_desc": "Show the extra images some maps draw over the terrain. Turn off to hide them on every map.",
+    "map_layers_label": "Map Layers",
     "menu_shortcuts": "Menu Shortcuts",
     "modifiers": "Modifiers",
     "move_down": "Move Camera Down",

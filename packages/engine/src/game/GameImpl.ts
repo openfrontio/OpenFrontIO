@@ -34,6 +34,7 @@ import {
 } from "@openfront/engine-api/Schemas";
 import { ATTACK_INDEX_SENT } from "@openfront/engine-api/StatsSchemas";
 import { renderNumber } from "@openfront/engine-lib/Format";
+import { GameMapImpl } from "@openfront/engine-lib/game/GameMapImpl";
 import {
   MotionPlanRecord,
   packMotionPlans,
@@ -92,6 +93,7 @@ import {
   RailNetworkImpl,
   RailNetworkSnapshot,
 } from "./RailNetworkImpl";
+import { Railroad } from "./Railroad";
 import { Stats } from "./Stats";
 import { StatsImpl, StatsSnapshot } from "./StatsImpl";
 import { WaterManager, WaterManagerSnapshot } from "./WaterManager";
@@ -139,6 +141,7 @@ export class GameImpl implements Game {
 
   private updates: GameUpdates = createGameUpdatesMap();
   private tileUpdatePairs: number[] = [];
+  private viewResyncQueued = false;
   /** [smallID, tilesOwned, gold, troops] quads — see PlayerImpl.toUpdate. */
   private playerStatsQuads: number[] = [];
   /** [smallID, direction, index, troops] quads — see packAttackTroopDeltas. */
@@ -534,6 +537,50 @@ export class GameImpl implements Game {
     });
   }
 
+  /**
+   * Queues, with the next tick's updates, what a view with no history needs
+   * to show this game as it stands: a host showing a game restored from a
+   * snapshot never saw the updates that built it. Players need nothing here,
+   * since a restored player's first update is a full one.
+   */
+  queueViewResync(): void {
+    this.viewResyncQueued = true;
+  }
+
+  private addViewResync(): void {
+    const map = this._map as GameMapImpl;
+    const terrainEdited = new Set(map.editedTerrainTiles());
+    const numTiles = map.width() * map.height();
+    for (let tile = 0; tile < numTiles; tile++) {
+      if (map.tileState(tile) !== 0 || terrainEdited.has(tile)) {
+        this.recordTileUpdate(tile);
+      }
+    }
+    // The view never got the motion plans of moves already under way, so
+    // those units report each step instead, as unplanned units do.
+    this.planDrivenUnitIds.clear();
+    for (const unit of this._unitMap.values()) {
+      this.addUpdate(unit.toUpdate());
+    }
+    const railroads = new Set<Railroad>();
+    for (const station of this._railNetwork.stationManager().getAll()) {
+      for (const railroad of station.getRailroads()) railroads.add(railroad);
+    }
+    for (const railroad of railroads) {
+      this.addUpdate({
+        type: GameUpdateType.RailroadConstructionEvent,
+        id: railroad.id,
+        tiles: railroad.tiles,
+      });
+    }
+    if (this.startTick !== null) {
+      this.addUpdate({
+        type: GameUpdateType.SpawnPhaseEnd,
+        startTick: this.startTick,
+      });
+    }
+  }
+
   ticks(): number {
     return this._ticks;
   }
@@ -541,6 +588,10 @@ export class GameImpl implements Game {
   executeNextTick(): GameUpdates {
     this.updates = createGameUpdatesMap();
     this.tileUpdatePairs.length = 0;
+    if (this.viewResyncQueued) {
+      this.viewResyncQueued = false;
+      this.addViewResync();
+    }
     this.execs.forEach((e) => {
       if (
         (!this.inSpawnPhase() || e.activeDuringSpawnPhase()) &&
