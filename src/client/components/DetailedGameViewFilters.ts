@@ -237,16 +237,24 @@ function scopedKey(key: string): string {
  */
 function adoptUnscopedProfiles(): void {
   if (UserSettings.currentPlayerId() === null) return;
-  if (localStorage.getItem(scopedKey(FILTER_PROFILES_KEY)) !== null) return;
+  const profilesKey = scopedKey(FILTER_PROFILES_KEY);
+  if (localStorage.getItem(profilesKey) !== null) return;
   const profiles = localStorage.getItem(FILTER_PROFILES_KEY);
   if (profiles === null) return;
-  localStorage.setItem(scopedKey(FILTER_PROFILES_KEY), profiles);
-  localStorage.removeItem(FILTER_PROFILES_KEY);
   const defaultName = localStorage.getItem(DEFAULT_FILTER_PROFILE_KEY);
-  if (defaultName !== null) {
-    localStorage.setItem(scopedKey(DEFAULT_FILTER_PROFILE_KEY), defaultName);
-    localStorage.removeItem(DEFAULT_FILTER_PROFILE_KEY);
+  const defaultKey = scopedKey(DEFAULT_FILTER_PROFILE_KEY);
+  // Copy first, delete after: if a write fails, the unscoped data is still
+  // there and the next read retries the whole move.
+  try {
+    localStorage.setItem(profilesKey, profiles);
+    if (defaultName !== null) localStorage.setItem(defaultKey, defaultName);
+  } catch (error) {
+    localStorage.removeItem(profilesKey);
+    if (defaultName !== null) localStorage.removeItem(defaultKey);
+    throw error;
   }
+  localStorage.removeItem(FILTER_PROFILES_KEY);
+  if (defaultName !== null) localStorage.removeItem(DEFAULT_FILTER_PROFILE_KEY);
 }
 
 export const FILTER_PROFILES_KEY = "detailed-view-filter-profiles";

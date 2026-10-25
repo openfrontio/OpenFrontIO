@@ -8,7 +8,7 @@ import {
 } from "@openfront/engine-api/game/GameTypes";
 import { GameConfig } from "@openfront/engine-api/Schemas";
 import { PublicGameInfo } from "@openfront/shared/WireSchemas";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   DEFAULT_FILTER_PROFILE_KEY,
   DEFAULT_FILTERS,
@@ -492,5 +492,31 @@ describe("profiles per account", () => {
     expect(localStorage.getItem(FILTER_PROFILES_KEY)).toBeNull();
     expect(localStorage.getItem(DEFAULT_FILTER_PROFILE_KEY)).toBeNull();
     expect(Object.keys(loadFilterProfiles())).toEqual(["Big"]);
+  });
+
+  it("keeps the logged-out data and retries when moving it fails halfway", () => {
+    saveFilterProfile("Big", filters());
+    saveDefaultFilterProfile("Big");
+    UserSettings.setPlayerId("a");
+
+    const realSetItem = Storage.prototype.setItem;
+    const setItem = vi
+      .spyOn(Storage.prototype, "setItem")
+      .mockImplementation(function (this: Storage, key: string, value: string) {
+        if (key === `${DEFAULT_FILTER_PROFILE_KEY}:a`) {
+          throw new Error("quota");
+        }
+        realSetItem.call(this, key, value);
+      });
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+    expect(loadFilterProfiles()).toEqual({});
+    // Nothing was lost or half-moved.
+    expect(localStorage.getItem(FILTER_PROFILES_KEY)).not.toBeNull();
+    expect(localStorage.getItem(DEFAULT_FILTER_PROFILE_KEY)).toBe("Big");
+    expect(localStorage.getItem(`${FILTER_PROFILES_KEY}:a`)).toBeNull();
+    setItem.mockRestore();
+
+    expect(Object.keys(loadFilterProfiles())).toEqual(["Big"]);
+    expect(loadDefaultFilterProfile(loadFilterProfiles())).toBe("Big");
   });
 });
