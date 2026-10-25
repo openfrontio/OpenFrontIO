@@ -10,17 +10,20 @@ import { GameConfig } from "@openfront/engine-api/Schemas";
 import { PublicGameInfo } from "@openfront/shared/WireSchemas";
 import { beforeEach, describe, expect, it } from "vitest";
 import {
+  DEFAULT_FILTER_PROFILE_KEY,
   DEFAULT_FILTERS,
   deleteFilterProfile,
   FILTER_PROFILES_KEY,
   filterAndSortLobbies,
   flattenLobbies,
   hasFilterProfile,
+  loadDefaultFilterProfile,
   loadFilterProfiles,
   lobbyFacts,
   LobbyFilters,
   MAX_FILTER_PROFILES,
   normalizeFilters,
+  saveDefaultFilterProfile,
   saveFilterProfile,
 } from "../../src/client/components/DetailedGameViewFilters";
 
@@ -326,5 +329,51 @@ describe("filter profiles", () => {
     expect(Object.keys(afterOverflow)).toHaveLength(MAX_FILTER_PROFILES);
     const overwritten = saveFilterProfile("p0", filters({ hideEmpty: true }));
     expect(overwritten.p0.hideEmpty).toBe(true);
+  });
+});
+
+describe("default filter profile", () => {
+  beforeEach(() => {
+    localStorage.clear();
+  });
+
+  it("is empty until one is chosen", () => {
+    const profiles = saveFilterProfile("Big", filters({ minCapacity: 100 }));
+    expect(loadDefaultFilterProfile(profiles)).toBe("");
+  });
+
+  it("remembers the chosen profile", () => {
+    const profiles = saveFilterProfile("Big", filters({ minCapacity: 100 }));
+    saveDefaultFilterProfile("Big");
+    expect(loadDefaultFilterProfile(profiles)).toBe("Big");
+  });
+
+  it("an empty name clears the default", () => {
+    const profiles = saveFilterProfile("Big", filters());
+    saveDefaultFilterProfile("Big");
+    saveDefaultFilterProfile("");
+    expect(loadDefaultFilterProfile(profiles)).toBe("");
+    expect(localStorage.getItem(DEFAULT_FILTER_PROFILE_KEY)).toBeNull();
+  });
+
+  it("ignores a default naming a profile that no longer exists", () => {
+    saveFilterProfile("Big", filters());
+    saveDefaultFilterProfile("Gone");
+    expect(loadDefaultFilterProfile(loadFilterProfiles())).toBe("");
+  });
+
+  it("deleting the default profile clears it", () => {
+    saveFilterProfile("Big", filters());
+    saveDefaultFilterProfile("Big");
+    deleteFilterProfile("Big");
+    expect(localStorage.getItem(DEFAULT_FILTER_PROFILE_KEY)).toBeNull();
+  });
+
+  it("deleting another profile keeps the default", () => {
+    saveFilterProfile("Big", filters());
+    const profiles = saveFilterProfile("Small", filters());
+    saveDefaultFilterProfile("Big");
+    deleteFilterProfile("Small");
+    expect(loadDefaultFilterProfile(profiles)).toBe("Big");
   });
 });

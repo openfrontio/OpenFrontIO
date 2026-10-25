@@ -218,6 +218,8 @@ export function filterAndSortLobbies(
 // ---- Saved filter profiles ----
 
 export const FILTER_PROFILES_KEY = "detailed-view-filter-profiles";
+export const DEFAULT_FILTER_PROFILE_KEY =
+  "detailed-view-default-filter-profile";
 export const MAX_FILTER_PROFILES = 20;
 export const MAX_PROFILE_NAME_LENGTH = 32;
 
@@ -330,5 +332,42 @@ export function deleteFilterProfile(
   if (!hasFilterProfile(profiles, name)) return profiles;
   delete profiles[name];
   persistProfiles(profiles);
+  // A deleted profile can't stay the default.
+  if (readDefaultFilterProfileName() === name) {
+    saveDefaultFilterProfile("");
+  }
   return profiles;
+}
+
+function readDefaultFilterProfileName(): string {
+  try {
+    return localStorage.getItem(DEFAULT_FILTER_PROFILE_KEY) ?? "";
+  } catch (error) {
+    console.warn("Failed to read default lobby filter profile", error);
+    return "";
+  }
+}
+
+/**
+ * The name of the profile applied when the Detailed View is first opened, or
+ * "" when none is set (or the chosen profile no longer exists).
+ */
+export function loadDefaultFilterProfile(
+  profiles: Record<string, LobbyFilters>,
+): string {
+  const name = readDefaultFilterProfileName();
+  return hasFilterProfile(profiles, name) ? name : "";
+}
+
+/** Set the default profile; an empty name clears it. */
+export function saveDefaultFilterProfile(name: string): void {
+  try {
+    if (name === "") {
+      localStorage.removeItem(DEFAULT_FILTER_PROFILE_KEY);
+    } else {
+      localStorage.setItem(DEFAULT_FILTER_PROFILE_KEY, name);
+    }
+  } catch (error) {
+    console.warn("Failed to save default lobby filter profile", error);
+  }
 }

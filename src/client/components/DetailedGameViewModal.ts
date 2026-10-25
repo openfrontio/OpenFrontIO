@@ -37,6 +37,7 @@ import {
   filterAndSortLobbies,
   flattenLobbies,
   hasFilterProfile,
+  loadDefaultFilterProfile,
   loadFilterProfiles,
   LOBBY_MODES,
   LOBBY_SOURCES,
@@ -45,6 +46,7 @@ import {
   LobbySourceFilter,
   NAMED_TEAM_CONFIGS,
   NUMERIC_TEAM_CONFIGS,
+  saveDefaultFilterProfile,
   saveFilterProfile,
 } from "./DetailedGameViewFilters";
 import {
@@ -118,6 +120,7 @@ export class DetailedGameViewModal extends BaseModal {
   @state() private showFilters = false;
   @state() private profiles: Record<string, LobbyFilters> = {};
   @state() private selectedProfile = "";
+  @state() private defaultProfile = "";
   @state() private profileName = "";
   @state() private desktopUpdateState: DesktopUpdateState | null = null;
   @state() private viewerTrusted: boolean = false;
@@ -161,8 +164,17 @@ export class DetailedGameViewModal extends BaseModal {
     };
   }
 
+  // Only the first open of a page load applies the default profile, so a
+  // filter change made since then isn't undone by reopening the menu.
+  private defaultProfileApplied = false;
+
   protected override onOpen(): void {
     this.profiles = loadFilterProfiles();
+    this.defaultProfile = loadDefaultFilterProfile(this.profiles);
+    if (!this.defaultProfileApplied) {
+      this.defaultProfileApplied = true;
+      this.applyProfile(this.defaultProfile);
+    }
     void this.lobbySocket.start();
     // Countdowns are derived from server timestamps, so a plain repaint keeps
     // them ticking between socket updates.
@@ -719,6 +731,22 @@ export class DetailedGameViewModal extends BaseModal {
             ${translateText("detailed_view.delete_profile")}
           </button>
         </div>
+        <span class="${SECTION_LABEL} mt-3"
+          >${translateText("detailed_view.default_profile")}</span
+        >
+        ${styledSelect({
+          options: [
+            {
+              value: "",
+              label: translateText("detailed_view.no_default_profile"),
+            },
+            ...names.map((name) => ({ value: name, label: name })),
+          ],
+          value: this.defaultProfile,
+          onChange: (value) => this.setDefaultProfile(value),
+          ariaLabel: translateText("detailed_view.default_profile"),
+          className: "w-full sm:w-1/2",
+        })}
       </div>
     `;
   }
@@ -797,6 +825,12 @@ export class DetailedGameViewModal extends BaseModal {
     if (this.selectedProfile === "") return;
     this.profiles = deleteFilterProfile(this.selectedProfile);
     this.selectedProfile = "";
+    this.defaultProfile = loadDefaultFilterProfile(this.profiles);
+  }
+
+  private setDefaultProfile(name: string) {
+    saveDefaultFilterProfile(name);
+    this.defaultProfile = loadDefaultFilterProfile(this.profiles);
   }
 
   // Silent backstop, mirroring the homepage buttons: an invalid username can't
