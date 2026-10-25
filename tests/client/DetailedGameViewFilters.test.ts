@@ -488,9 +488,9 @@ describe("profiles per account", () => {
 
     UserSettings.setPlayerId("a");
     // Reading the default first must still bring the profiles along.
-    expect(loadDefaultFilterProfile(loadFilterProfiles())).toBe("Big");
-    expect(Object.keys(loadFilterProfiles())).toEqual(["Big"]);
-    expect(localStorage.getItem(DEFAULT_FILTER_PROFILE_KEY)).toBeNull();
+    expect(loadDefaultFilterProfile({ Big: filters() })).toBe("Big");
     expect(localStorage.getItem(FILTER_PROFILES_KEY)).toBeNull();
+    expect(localStorage.getItem(DEFAULT_FILTER_PROFILE_KEY)).toBeNull();
+    expect(Object.keys(loadFilterProfiles())).toEqual(["Big"]);
   });
 });
