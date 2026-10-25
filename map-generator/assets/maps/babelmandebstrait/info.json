@@ -2,7 +2,7 @@
   "id": "BabelMandebStrait",
   "name": "Bab el-Mandeb Strait",
   "translation_key": "map.babelmandebstrait",
-  "categories": ["new", "africa", "asia"],
+  "categories": ["africa", "asia"],
   "multiplayer_frequency": 5,
   "team_frequency": 10,
   "special_team_count": 2,

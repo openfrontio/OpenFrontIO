@@ -2,7 +2,7 @@
   "id": "NewZealand",
   "name": "New Zealand",
   "translation_key": "map.newzealand",
-  "categories": ["new", "oceania"],
+  "categories": ["oceania"],
   "multiplayer_frequency": 5,
   "nations": [
     {

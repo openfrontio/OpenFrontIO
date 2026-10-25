@@ -76,7 +76,7 @@
       "name": "Tadjoura"
     }
   ],
-  "categories": ["new", "africa", "asia"],
+  "categories": ["africa", "asia"],
   "id": "BabelMandebStrait",
   "map": {
     "height": 1500,

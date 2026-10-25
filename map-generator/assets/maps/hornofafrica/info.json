@@ -2,7 +2,7 @@
   "id": "HornOfAfrica",
   "name": "Horn Of Africa",
   "translation_key": "map.hornofafrica",
-  "categories": ["africa", "new"],
+  "categories": ["africa"],
   "multiplayer_frequency": 5,
   "nations": [
     {

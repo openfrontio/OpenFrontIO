@@ -2,7 +2,7 @@
   "id": "CapeOfGoodHope",
   "name": "Cape Of Good Hope",
   "translation_key": "map.capeofgoodhope",
-  "categories": ["new", "africa"],
+  "categories": ["africa"],
   "multiplayer_frequency": 4,
   "nations": [
     {

@@ -2,7 +2,7 @@
   "id": "Madagascar",
   "name": "Madagascar",
   "translation_key": "map.madagascar",
-  "categories": ["new", "africa"],
+  "categories": ["africa"],
   "multiplayer_frequency": 5,
   "team_frequency": 10,
   "special_team_count": 2,
