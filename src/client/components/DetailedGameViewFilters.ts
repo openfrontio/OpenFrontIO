@@ -228,17 +228,25 @@ function scopedKey(key: string): string {
   return playerId === null ? key : `${key}:${playerId}`;
 }
 
-function readStored(key: string): string | null {
-  const playerId = UserSettings.currentPlayerId();
-  const value = localStorage.getItem(scopedKey(key));
-  if (value !== null || playerId === null) return value;
-  // Data saved before profiles were per account (or while logged out) moves
-  // to the first account that asks for it, so nobody loses their profiles.
-  const unscoped = localStorage.getItem(key);
-  if (unscoped === null) return null;
-  localStorage.setItem(scopedKey(key), unscoped);
-  localStorage.removeItem(key);
-  return unscoped;
+/**
+ * Profiles saved before they were per account (or while logged out) move,
+ * together with their default, to the first account that has none of its own,
+ * so nobody loses theirs. Done as one step: an account that already has
+ * profiles leaves the logged-out ones alone, and a default can never be
+ * separated from the profiles it names.
+ */
+function adoptUnscopedProfiles(): void {
+  if (UserSettings.currentPlayerId() === null) return;
+  if (localStorage.getItem(scopedKey(FILTER_PROFILES_KEY)) !== null) return;
+  const profiles = localStorage.getItem(FILTER_PROFILES_KEY);
+  if (profiles === null) return;
+  localStorage.setItem(scopedKey(FILTER_PROFILES_KEY), profiles);
+  localStorage.removeItem(FILTER_PROFILES_KEY);
+  const defaultName = localStorage.getItem(DEFAULT_FILTER_PROFILE_KEY);
+  if (defaultName !== null) {
+    localStorage.setItem(scopedKey(DEFAULT_FILTER_PROFILE_KEY), defaultName);
+    localStorage.removeItem(DEFAULT_FILTER_PROFILE_KEY);
+  }
 }
 
 export const FILTER_PROFILES_KEY = "detailed-view-filter-profiles";
@@ -302,7 +310,8 @@ export function hasFilterProfile(
 export function loadFilterProfiles(): Record<string, LobbyFilters> {
   let parsed: unknown;
   try {
-    const stored = readStored(FILTER_PROFILES_KEY);
+    adoptUnscopedProfiles();
+    const stored = localStorage.getItem(scopedKey(FILTER_PROFILES_KEY));
     if (stored === null) return emptyProfiles();
     parsed = JSON.parse(stored);
   } catch (error) {
@@ -368,7 +377,8 @@ export function deleteFilterProfile(
 
 function readDefaultFilterProfileName(): string {
   try {
-    return readStored(DEFAULT_FILTER_PROFILE_KEY) ?? "";
+    adoptUnscopedProfiles();
+    return localStorage.getItem(scopedKey(DEFAULT_FILTER_PROFILE_KEY)) ?? "";
   } catch (error) {
     console.warn("Failed to read default lobby filter profile", error);
     return "";

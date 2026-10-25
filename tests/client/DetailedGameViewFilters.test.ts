@@ -446,4 +446,51 @@ describe("profiles per account", () => {
     UserSettings.setPlayerId("second");
     expect(loadFilterProfiles()).toEqual({});
   });
+
+  it("leaves logged-out profiles alone when the account already has its own", () => {
+    saveFilterProfile("Big", filters({ minCapacity: 100 }));
+    saveDefaultFilterProfile("Big");
+
+    UserSettings.setPlayerId("a");
+    // First load adopts the logged-out data; then the account clears its default.
+    expect(Object.keys(loadFilterProfiles())).toEqual(["Big"]);
+    saveDefaultFilterProfile("");
+
+    UserSettings.setPlayerId(null);
+    saveFilterProfile("Guest", filters());
+    saveDefaultFilterProfile("Guest");
+
+    UserSettings.setPlayerId("a");
+    expect(Object.keys(loadFilterProfiles())).toEqual(["Big"]);
+    expect(loadDefaultFilterProfile(loadFilterProfiles())).toBe("");
+
+    UserSettings.setPlayerId(null);
+    expect(Object.keys(loadFilterProfiles())).toEqual(["Guest"]);
+    expect(loadDefaultFilterProfile(loadFilterProfiles())).toBe("Guest");
+  });
+
+  it("an account with profiles but no default does not take the logged-out default", () => {
+    UserSettings.setPlayerId("a");
+    saveFilterProfile("Mine", filters());
+
+    UserSettings.setPlayerId(null);
+    saveFilterProfile("Big", filters());
+    saveDefaultFilterProfile("Big");
+
+    UserSettings.setPlayerId("a");
+    expect(loadDefaultFilterProfile(loadFilterProfiles())).toBe("");
+    expect(Object.keys(loadFilterProfiles())).toEqual(["Mine"]);
+  });
+
+  it("moves the default only together with the profiles it names", () => {
+    saveFilterProfile("Big", filters());
+    saveDefaultFilterProfile("Big");
+
+    UserSettings.setPlayerId("a");
+    // Reading the default first must still bring the profiles along.
+    expect(loadDefaultFilterProfile(loadFilterProfiles())).toBe("Big");
+    expect(Object.keys(loadFilterProfiles())).toEqual(["Big"]);
+    expect(localStorage.getItem(DEFAULT_FILTER_PROFILE_KEY)).toBeNull();
+    expect(localStorage.getItem(FILTER_PROFILES_KEY)).toBeNull();
+  });
 });
