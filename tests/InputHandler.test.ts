@@ -41,6 +41,8 @@ class MockPointerEvent {
   pointerType: string;
   ctrlKey: boolean;
   shiftKey: boolean;
+  metaKey: boolean;
+  altKey: boolean;
   preventDefault: () => void;
 
   constructor(type: string, init: any) {
@@ -54,6 +56,8 @@ class MockPointerEvent {
     this.pointerType = init.pointerType ?? "mouse";
     this.ctrlKey = init.ctrlKey ?? false;
     this.shiftKey = init.shiftKey ?? false;
+    this.metaKey = init.metaKey ?? false;
+    this.altKey = init.altKey ?? false;
     this.preventDefault = vi.fn();
   }
 }
@@ -353,11 +357,12 @@ describe("InputHandler AutoUpgrade", () => {
       });
     }
 
-    function fireLeftPointerUp(ctrlKey: boolean) {
+    function fireLeftPointerUp(ctrlKey: boolean, metaKey = false) {
       const shared = {
         button: 0 as const,
         pointerId: 1,
         ctrlKey,
+        metaKey,
       };
       // Matching pointerdown required: onPointerUp returns early unless
       // pointerDown is set and pointers has this pointerId.
@@ -464,13 +469,46 @@ describe("InputHandler AutoUpgrade", () => {
       inputHandler["activeKeys"].add("MetaLeft");
 
       const mockEmit = vi.spyOn(eventBus, "emit");
-      fireLeftPointerUp(false);
+      fireLeftPointerUp(false, true);
 
       const emittedTypes = mockEmit.mock.calls.map(
         (call) => call[0].constructor.name,
       );
       expect(emittedTypes).toContain("ShowBuildMenuEvent");
       expect(emittedTypes).not.toContain("MouseUpEvent");
+    });
+
+    test("Mac: a Cmd whose keyup was swallowed (cmd+shift+4) does not open the build menu", () => {
+      setIsMac(true);
+      inputHandler.initialize();
+      inputHandler["keybinds"].buildMenuModifier = "MetaLeft";
+      // The screenshot overlay takes the keyboard after these keydowns, so
+      // their keyups never reach the page and the window never blurs.
+      window.dispatchEvent(
+        new KeyboardEvent("keydown", { code: "MetaLeft", metaKey: true }),
+      );
+      window.dispatchEvent(
+        new KeyboardEvent("keydown", {
+          code: "ShiftLeft",
+          metaKey: true,
+          shiftKey: true,
+        }),
+      );
+      expect(inputHandler["activeKeys"].has("MetaLeft")).toBe(true);
+      expect(mockCanvas.style.cursor).toBe("crosshair");
+
+      const mockEmit = vi.spyOn(eventBus, "emit");
+      fireLeftPointerUp(false);
+
+      const emittedTypes = mockEmit.mock.calls.map(
+        (call) => call[0].constructor.name,
+      );
+      expect(emittedTypes).not.toContain("ShowBuildMenuEvent");
+      expect(emittedTypes).toContain("MouseUpEvent");
+      expect(inputHandler["activeKeys"].has("MetaLeft")).toBe(false);
+      expect(inputHandler["activeKeys"].has("ShiftLeft")).toBe(false);
+      expect(mockCanvas.style.cursor).toBe("");
+      inputHandler.destroy();
     });
 
     test("Mac: ctrl+left during spawn still emits MouseUpEvent", () => {
@@ -1688,6 +1726,7 @@ describe("Warship box selection (Shift+drag)", () => {
     inputHandler["onPointerMove"](
       new PointerEvent("pointermove", {
         button: 0,
+        shiftKey: true,
         clientX: 200,
         clientY: 200,
         pointerId: 1,
@@ -1720,6 +1759,7 @@ describe("Warship box selection (Shift+drag)", () => {
     inputHandler["onPointerMove"](
       new PointerEvent("pointermove", {
         button: 0,
+        shiftKey: true,
         clientX: 200,
         clientY: 200,
         pointerId: 1,
@@ -1730,6 +1770,7 @@ describe("Warship box selection (Shift+drag)", () => {
     inputHandler["onPointerUp"](
       new PointerEvent("pointerup", {
         button: 0,
+        shiftKey: true,
         clientX: 200,
         clientY: 200,
         pointerId: 1,
@@ -1771,6 +1812,7 @@ describe("Warship box selection (Shift+drag)", () => {
     inputHandler["onPointerMove"](
       new PointerEvent("pointermove", {
         button: 0,
+        shiftKey: true,
         clientX: 104,
         clientY: 104,
         pointerId: 1,
@@ -1779,6 +1821,7 @@ describe("Warship box selection (Shift+drag)", () => {
     inputHandler["onPointerUp"](
       new PointerEvent("pointerup", {
         button: 0,
+        shiftKey: true,
         clientX: 104,
         clientY: 104,
         pointerId: 1,

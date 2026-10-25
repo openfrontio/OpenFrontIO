@@ -426,6 +426,38 @@ export class InputHandler {
     this.multiSelectionActive = false;
   }
 
+  /**
+   * Ensures activeKeys only holds modifiers that the event reports as pressed, so a
+   * modifier whose keyup was missed can't keep acting as if it's held.
+   * See https://github.com/openfrontio/OpenFrontIO/issues/6122
+   */
+  private clearReleasedModifiers(e: MouseEvent | KeyboardEvent) {
+    const held: Record<string, boolean> = {
+      MetaLeft: e.metaKey,
+      MetaRight: e.metaKey,
+      ShiftLeft: e.shiftKey,
+      ShiftRight: e.shiftKey,
+      AltLeft: e.altKey,
+      AltRight: e.altKey,
+      ControlLeft: e.ctrlKey,
+      ControlRight: e.ctrlKey,
+    };
+    // Drop modifiers the event says aren't held.
+    for (const code of this.activeKeys) {
+      if (held[code] === false) this.activeKeys.delete(code);
+    }
+    // The crosshair was set by one of these; clear it once none still apply.
+    const crosshairNeeded =
+      this.activeKeys.has(this.keybinds.boxSelectWarships) || // box-select key held
+      this.selectionBoxActive || // box-select drag in progress
+      this.unitSelectionActive || // warship(s) selected
+      this.multiSelectionActive || // warships selected by box
+      this.longPressActive; // touch long-press selection
+    if (!crosshairNeeded) {
+      this.canvas.style.cursor = "";
+    }
+  }
+
   /** Re-read the player's keybinds and rebuild the key dispatch table. */
   private buildKeybindTable() {
     this.keybinds = this.userSettings.keybinds(Platform.isMac);
@@ -740,6 +772,7 @@ export class InputHandler {
     window.addEventListener(
       "keydown",
       (e) => {
+        this.clearReleasedModifiers(e);
         const isTextInput = this.isTextInputTarget(e.target);
         if (isTextInput && e.code !== "Escape") {
           return;
@@ -951,6 +984,7 @@ export class InputHandler {
   }
 
   private onPointerDown(event: PointerEvent) {
+    this.clearReleasedModifiers(event);
     if (event.button === 1) {
       event.preventDefault();
       this.eventBus.emit(new AutoUpgradeEvent(event.clientX, event.clientY));
@@ -1072,6 +1106,7 @@ export class InputHandler {
   };
 
   onPointerUp(event: PointerEvent) {
+    this.clearReleasedModifiers(event);
     if (event.button === 1) {
       event.preventDefault();
       return;
@@ -1248,6 +1283,7 @@ export class InputHandler {
   }
 
   private onPointerMove(event: PointerEvent) {
+    this.clearReleasedModifiers(event);
     if (event.button === 1) {
       event.preventDefault();
       return;
