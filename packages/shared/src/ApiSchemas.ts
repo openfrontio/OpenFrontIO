@@ -561,6 +561,9 @@ export const UserMeResponseSchema = z.object({
   steamLicenceSince: z.string().nullable().optional().default(null),
   // Notice keys this player has dismissed (POST /users/@me/notices).
   noticesSeen: z.array(z.string()).optional().default([]),
+  // Server-raised messages due for this player and not yet shown
+  // (POST /users/@me/messages/seen once shown), e.g. "report_thanks".
+  pendingMessages: z.array(z.string()).optional().default([]),
   // The player's most recent automatic tier conversion, if any.
   tierConversion: z
     .object({

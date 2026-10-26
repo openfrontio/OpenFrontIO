@@ -1998,6 +1998,31 @@ export async function markNoticeSeen(notice: string): Promise<boolean> {
   }
 }
 
+export async function markMessageSeen(kind: string): Promise<boolean> {
+  try {
+    const response = await fetch(`${getApiBase()}/users/@me/messages/seen`, {
+      method: "POST",
+      headers: {
+        Authorization: await getAuthHeader(),
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ kind }),
+    });
+    if (!response.ok) {
+      console.error(
+        "markMessageSeen: request failed",
+        response.status,
+        response.statusText,
+      );
+      return false;
+    }
+    return true;
+  } catch (e) {
+    console.error("markMessageSeen: request failed", e);
+    return false;
+  }
+}
+
 export async function changeSubscriptionTier(
   tierName: string,
 ): Promise<boolean | "rate_limited" | "steam_licence_required"> {

@@ -170,9 +170,11 @@ export class WinModal extends LitElement implements Controller {
   render() {
     return html`
       <div
-        class="${this.isVisible
-          ? "fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-gray-800/70 p-4 md:p-6 shrink-0 rounded-lg z-[10010] shadow-2xl backdrop-blur-xs text-white w-[min(90vw,700px)] max-w-[90%] max-h-[90dvh] overflow-hidden flex flex-col"
-          : "hidden"}"
+        class="${
+          this.isVisible
+            ? "fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-gray-800/70 p-4 md:p-6 shrink-0 rounded-lg z-[10010] shadow-2xl backdrop-blur-xs text-white w-[min(90vw,700px)] max-w-[90%] max-h-[90dvh] overflow-hidden flex flex-col"
+            : "hidden"
+        }"
       >
         <h2 class="m-0 mb-4 text-[26px] text-center text-white shrink-0">
           ${this._title || ""}
@@ -199,14 +201,16 @@ export class WinModal extends LitElement implements Controller {
             "exit",
           )}
           ${this.renderShare()}
-          ${this.requeueMode !== null
-            ? this.actionButton(
-                "main",
-                translateText("win_modal.requeue"),
-                () => this._handleRequeue(),
-                "requeue",
-              )
-            : null}
+          ${
+            this.requeueMode !== null
+              ? this.actionButton(
+                  "main",
+                  translateText("win_modal.requeue"),
+                  () => this._handleRequeue(),
+                  "requeue",
+                )
+              : null
+          }
           ${this.actionButton(
             "main",
             this.game?.myPlayer()?.isAlive()
@@ -487,21 +491,23 @@ export class WinModal extends LitElement implements Controller {
         </h3>
         <!-- 56.25% = 9:16 -->
         <div class="relative w-full pb-[56.25%]">
-          ${Platform.isElectron
-            ? html`<video
-                class="absolute top-0 left-0 w-full h-full rounded-sm"
-                src="${this.isVisible ? DESKTOP_TUTORIAL_VIDEO_URL : ""}"
-                controls
-                preload="metadata"
-              ></video>`
-            : html`<iframe
-                class="absolute top-0 left-0 w-full h-full rounded-sm"
-                src="${this.isVisible ? TUTORIAL_VIDEO_URL : ""}"
-                title="YouTube video player"
-                frameborder="0"
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                allowfullscreen
-              ></iframe>`}
+          ${
+            Platform.isElectron
+              ? html`<video
+                  class="absolute top-0 left-0 w-full h-full rounded-sm"
+                  src="${this.isVisible ? DESKTOP_TUTORIAL_VIDEO_URL : ""}"
+                  controls
+                  preload="metadata"
+                ></video>`
+              : html`<iframe
+                  class="absolute top-0 left-0 w-full h-full rounded-sm"
+                  src="${this.isVisible ? TUTORIAL_VIDEO_URL : ""}"
+                  title="YouTube video player"
+                  frameborder="0"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                  allowfullscreen
+                ></iframe>`
+          }
         </div>
       </div>
     `;
@@ -513,11 +519,13 @@ export class WinModal extends LitElement implements Controller {
         <h3 class="text-xl font-semibold text-white mb-3">
           ${translateText("win_modal.support_openfront")}
         </h3>
-        ${isDesktopShell()
-          ? null
-          : html`<p class="text-white mb-3">
-              ${translateText("win_modal.territory_pattern")}
-            </p>`}
+        ${
+          isDesktopShell()
+            ? null
+            : html`<p class="text-white mb-3">
+                ${translateText("win_modal.territory_pattern")}
+              </p>`
+        }
         <div
           class="mx-auto w-full overflow-x-auto overflow-y-visible rounded-sm"
         >

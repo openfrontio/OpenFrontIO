@@ -147,6 +147,7 @@ function userMe(
     steamLicence: false,
     steamLicenceSince: null,
     noticesSeen: [],
+    pendingMessages: [],
     player: {
       publicId: "player-id",
       adfree: false,
@@ -343,6 +344,25 @@ describe("MatchmakingModal clan-aware joins", () => {
     expect(modal.isOpen()).toBe(false);
     expect(apiMocks.invalidateUserMe).not.toHaveBeenCalled();
     expect(showMessage).toHaveBeenCalledOnce();
+    expect(sockets).toHaveLength(1);
+    window.removeEventListener("show-message", showMessage);
+  });
+
+  it("shows the retired-queue message without reconnecting on ModeRetired", async () => {
+    apiMocks.getUserMe.mockResolvedValue(userMe());
+    const showMessage = vi.fn();
+    window.addEventListener("show-message", showMessage);
+
+    const { modal, socket } = await openAndJoin("1v1");
+    socket.serverClose(CloseCode.ModeRetired, CloseReason.ModeRetired);
+    await vi.runAllTimersAsync();
+
+    expect(modal.isOpen()).toBe(false);
+    expect(showMessage).toHaveBeenCalledOnce();
+    const { translateText } = await import("../../src/client/Utils");
+    const shown = (showMessage.mock.calls[0][0] as CustomEvent).detail.message;
+    expect(shown).toBe(translateText(CloseReason.ModeRetired));
+    expect(shown).not.toBe(translateText("matchmaking_modal.rejected"));
     expect(sockets).toHaveLength(1);
     window.removeEventListener("show-message", showMessage);
   });

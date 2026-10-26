@@ -51,8 +51,9 @@ export function notableLobbySettings(
       value: enabled,
     });
   if (
-    pm?.isHardNations ||
-    (c.gameType === GameType.Private && c.difficulty !== Difficulty.Easy)
+    c.nations !== "disabled" &&
+    (pm?.isHardNations ||
+      (c.gameType === GameType.Private && c.difficulty !== Difficulty.Easy))
   )
     items.push({
       label: translateText("difficulty.difficulty"),

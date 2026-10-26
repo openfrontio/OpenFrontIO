@@ -511,6 +511,18 @@ export class GameServer {
     return this.clients.wasAdmitted(persistentID);
   }
 
+  public markAdmitted(persistentID: string, attemptID?: string): void {
+    this.clients.markAdmitted(persistentID, attemptID);
+  }
+
+  public unmarkAdmitted(persistentID: string, attemptID?: string): void {
+    this.clients.unmarkAdmitted(persistentID, attemptID);
+  }
+
+  public hasEverBeenSeated(persistentID: string): boolean {
+    return this.clients.hasEverBeenSeated(persistentID);
+  }
+
   // Screened identity stored for this player's client record, or null if
   // the record (or its reconnect mapping) is gone. Lets the join path skip
   // re-screening a reconnect whose submitted identity is unchanged.
@@ -2090,7 +2102,7 @@ export class GameServer {
         } satisfies PlayerRecord;
       },
     );
-    this.deps.archive(
+    void this.deps.archive(
       createPartialGameRecord(
         this.id,
         this.gameStartInfo.config,

@@ -121,17 +121,19 @@ export class StreamingNow extends LitElement {
         class="group flex w-20 shrink-0 snap-start flex-col items-center gap-1 text-center"
       >
         <div class="relative">
-          ${s.avatarUrl
-            ? html`<img
-                src="${s.avatarUrl}"
-                alt=""
-                loading="lazy"
-                referrerpolicy="no-referrer"
-                class="h-11 w-11 rounded-full object-cover ring-2 ring-red-500/70"
-              />`
-            : html`<div
-                class="h-11 w-11 rounded-full bg-white/10 ring-2 ring-red-500/70"
-              ></div>`}
+          ${
+            s.avatarUrl
+              ? html`<img
+                  src="${s.avatarUrl}"
+                  alt=""
+                  loading="lazy"
+                  referrerpolicy="no-referrer"
+                  class="h-11 w-11 rounded-full object-cover ring-2 ring-red-500/70"
+                />`
+              : html`<div
+                  class="h-11 w-11 rounded-full bg-white/10 ring-2 ring-red-500/70"
+                ></div>`
+          }
           <span
             class="absolute -bottom-0.5 -right-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-surface"
           >
