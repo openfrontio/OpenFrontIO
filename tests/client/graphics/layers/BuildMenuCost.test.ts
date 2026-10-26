@@ -87,10 +87,43 @@ it("recovers the open build menu after a buildables timeout", async () => {
   const warning = vi.spyOn(console, "warn").mockImplementation(() => {});
   try {
     await (menu as any).refresh();
-    expect(menu.playerBuildables).toBeNull();
+    expect(menu.playerBuildables).toBe(units);
     expect(warning).toHaveBeenCalledTimes(1);
     await (menu as any).refresh();
     expect(menu.playerBuildables).toBe(units);
+  } finally {
+    warning.mockRestore();
+  }
+});
+
+it("an older timeout cannot erase a newer successful menu refresh", async () => {
+  const menu = makeMenu();
+  let rejectOld: (error: Error) => void = () => {};
+  const units = [
+    { type: UnitType.City, canBuild: 43, canUpgrade: false, cost: 1n },
+  ] as BuildableUnit[];
+  const buildables = vi
+    .fn()
+    .mockImplementationOnce(
+      () =>
+        new Promise((_, reject) => {
+          rejectOld = reject;
+        }),
+    )
+    .mockResolvedValue(units);
+  menu.game = {
+    myPlayer: () => ({ buildables }),
+    config: () => ({ isUnitDisabled: () => false }),
+  } as any;
+  const warning = vi.spyOn(console, "warn").mockImplementation(() => {});
+  try {
+    const oldRefresh = (menu as any).refresh();
+    await (menu as any).refresh();
+    expect(menu.playerBuildables).toBe(units);
+    rejectOld(new Error("timeout"));
+    await oldRefresh;
+    expect(menu.playerBuildables).toBe(units);
+    expect(warning).toHaveBeenCalledTimes(1);
   } finally {
     warning.mockRestore();
   }

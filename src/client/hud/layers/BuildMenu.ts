@@ -496,8 +496,7 @@ export class BuildMenu extends LitElement implements Controller {
         this.requestUpdate();
       })
       .catch((error) => {
-        this.playerBuildables = null;
-        this.requestUpdate();
+        // Retain the last successful snapshot, including newer overlapping replies.
         console.warn("Failed to refresh build menu", error);
       });
 
