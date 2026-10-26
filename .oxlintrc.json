@@ -55,6 +55,12 @@
   "jsPlugins": [{ "name": "eslint-js", "specifier": "oxlint-plugin-eslint" }],
   "overrides": [
     {
+      "files": ["src/server/**/*.ts"],
+      "rules": {
+        "typescript/no-floating-promises": "error"
+      }
+    },
+    {
       "files": [
         "packages/engine/src/**/*.ts",
         "packages/engine-api/src/**/*.ts",

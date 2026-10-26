@@ -101,5 +101,27 @@
       "name": "Fishing Hamlet",
       "strength": 1
     }
-  ]
+  ],
+  "teamGameSpawnAreas": {
+    "3": [
+      {
+        "height": 1075,
+        "width": 2480,
+        "x": 0,
+        "y": 0
+      },
+      {
+        "height": 1070,
+        "width": 1240,
+        "x": 1240,
+        "y": 1075
+      },
+      {
+        "height": 1070,
+        "width": 1240,
+        "x": 0,
+        "y": 1075
+      }
+    ]
+  }
 }

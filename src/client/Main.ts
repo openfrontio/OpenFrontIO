@@ -759,6 +759,34 @@ class Client {
 
     this.steamHandoffModal = document.querySelector("steam-handoff-modal");
 
+    // Assigned before the userAuth() await below, which can take seconds (on
+    // Poki it waits on the SDK): the join-lobby listener is already live, and
+    // a lobby clicked meanwhile joined with no modal to show it.
+    // Both load on demand (see LazyModals). whenDefined resolves while a
+    // modal's module is still evaluating, so they have the bus before
+    // whatever loaded them can open them.
+    this.hostModal = document.querySelector(
+      "host-lobby-modal",
+    ) as HostPrivateLobbyModal;
+    if (!this.hostModal) {
+      console.warn("Host private lobby modal element not found");
+    } else {
+      void customElements.whenDefined("host-lobby-modal").then(() => {
+        this.hostModal.eventBus = this.eventBus;
+      });
+    }
+
+    this.joinModal = document.querySelector(
+      "join-lobby-modal",
+    ) as JoinLobbyModal;
+    if (!this.joinModal) {
+      console.warn("Join lobby modal element not found");
+    } else {
+      void customElements.whenDefined("join-lobby-modal").then(() => {
+        this.joinModal.eventBus = this.eventBus;
+      });
+    }
+
     // The XP of games the player died in, still waiting to be scored, shown
     // provisionally on their level until they are. Listening before the
     // first userMeResponse below.
@@ -1058,31 +1086,6 @@ class Client {
     desktopUpdate()?.subscribe((state) => {
       this.desktopUpdateState = state;
     });
-
-    // Both load on demand (see LazyModals). whenDefined resolves while a
-    // modal's module is still evaluating, so they have the bus before
-    // whatever loaded them can open them.
-    this.hostModal = document.querySelector(
-      "host-lobby-modal",
-    ) as HostPrivateLobbyModal;
-    if (!this.hostModal) {
-      console.warn("Host private lobby modal element not found");
-    } else {
-      void customElements.whenDefined("host-lobby-modal").then(() => {
-        this.hostModal.eventBus = this.eventBus;
-      });
-    }
-
-    this.joinModal = document.querySelector(
-      "join-lobby-modal",
-    ) as JoinLobbyModal;
-    if (!this.joinModal) {
-      console.warn("Join lobby modal element not found");
-    } else {
-      void customElements.whenDefined("join-lobby-modal").then(() => {
-        this.joinModal.eventBus = this.eventBus;
-      });
-    }
 
     // Attempt to join lobby from the current URL once the document is ready.
     if (document.readyState === "loading") {
@@ -1401,7 +1404,7 @@ class Client {
     }
     gamePortal.isInstantMultiplayer().then((isInstant) => {
       if (isInstant) {
-        console.log(`CrazyGames: joining instant multiplayer lobby`);
+        console.log(`Portal: hosting instant multiplayer lobby`);
         whenModalLoaded("host-lobby-modal", () => this.hostModal.open());
       }
     });
@@ -1818,7 +1821,11 @@ class Client {
       });
     }
     // Only update URL immediately for private lobbies, not public ones
-    if (lobby.source !== "public") {
+    if (
+      lobby.source !== "public" &&
+      lobby.source !== "singleplayer" &&
+      !lobby.gameRecord
+    ) {
       this.updateJoinUrlForShare(lobby.gameID);
     }
     // Singleplayer runs entirely locally, and the session is only used here
@@ -1950,7 +1957,11 @@ class Client {
       setInGameSignal(true);
 
       const lobbyIdHidden = !this.userSettings.lobbyIdVisibility();
-      if (isReplayShellHost(window.location.hostname)) {
+      if (
+        isReplayShellHost(window.location.hostname) ||
+        isSingleplayer ||
+        lobby.gameRecord !== undefined
+      ) {
         // Keep the canonical replay URL (replay.<domain>/<gameId>): the
         // /game/<id> shape and the #refresh trampoline only exist on the
         // game-server origin, so rewriting here would leave a URL that 404s
