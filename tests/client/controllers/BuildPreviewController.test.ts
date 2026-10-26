@@ -263,7 +263,7 @@ describe("BuildPreviewController confirm with the pointer off the map", () => {
     c.renderGhost(); // The old hover query is still in flight for tile 43.
     coordinates.mockReturnValue({ x: 5, y: 4 });
     c.requestConfirmStructure(new MouseUpEvent(0, 0));
-    expect(c.pendingConfirm).toBe(45);
+    expect(c.pendingConfirm).toEqual({ tile: 45, preventStacking: false });
     expect(emitted).toEqual([]);
     coordinates.mockReturnValue({ x: 8, y: 8 }); // Move away before either reply.
     pending[0]([{ type: UnitType.City, canBuild: false, canUpgrade: false }]);
@@ -276,6 +276,30 @@ describe("BuildPreviewController confirm with the pointer off the map", () => {
     expect((emitted[0] as BuildUnitIntentEvent).tile).toBe(45);
     expect(c.pendingConfirm).toBeNull();
   });
+
+  test.each([false, true])(
+    "a queued click keeps its hold mode after key release (held: %s)",
+    async (held) => {
+      const { controller, emitted } = makeController(3, 4);
+      const c = controller as any;
+      let reply: (units: unknown[]) => void = () => {};
+      c.game.myPlayer = () => ({
+        buildables: () =>
+          new Promise((resolve) => {
+            reply = resolve;
+          }),
+      });
+      c.uiState.preventStacking = held;
+      c.ghostResolved = false;
+      vi.spyOn(c, "emitGhostPreview").mockImplementation(() => {});
+      c.requestConfirmStructure(new MouseUpEvent(0, 0));
+      c.uiState.preventStacking = !held;
+      reply([{ type: UnitType.City, canBuild: 43, canUpgrade: 7 }]);
+      await Promise.resolve();
+      expect(emitted).toHaveLength(1);
+      expect(emitted[0] instanceof BuildUnitIntentEvent).toBe(held);
+    },
+  );
 
   test("canceling a queued click before the worker replies cannot build", async () => {
     const { controller, emitted } = makeController(3, 4);

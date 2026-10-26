@@ -77,7 +77,8 @@ export class BuildPreviewController implements Controller {
   private readonly usedSafetyAllies: Set<number> = new Set();
   private readonly mousePos = { x: 0, y: 0 };
   private lastGhostQueryAt: number = 0;
-  private pendingConfirm: TileRef | null = null;
+  private pendingConfirm: { tile: TileRef; preventStacking: boolean } | null =
+    null;
   private resolvedGhostTile: TileRef | undefined;
   private ghostResolved = false;
   private ghostQuerySequence = 0;
@@ -218,8 +219,8 @@ export class BuildPreviewController implements Controller {
     const tile =
       this.pendingConfirm !== null
         ? {
-            x: this.game.x(this.pendingConfirm),
-            y: this.game.y(this.pendingConfirm),
+            x: this.game.x(this.pendingConfirm.tile),
+            y: this.game.y(this.pendingConfirm.tile),
           }
         : this.transformHandler.screenToWorldCoordinates(
             this.mousePos.x,
@@ -275,7 +276,7 @@ export class BuildPreviewController implements Controller {
       .buildables(
         tileRef,
         [ghost.buildableUnit.type],
-        !!this.uiState.preventStacking,
+        this.pendingConfirm?.preventStacking ?? !!this.uiState.preventStacking,
       )
       .then((buildables) => {
         if (this.ghostUnit !== ghost || query !== this.ghostQuerySequence)
@@ -304,15 +305,18 @@ export class BuildPreviewController implements Controller {
         this.ghostUnit.buildableUnit = unit;
 
         if (this.pendingConfirm !== null) {
-          if (this.pendingConfirm !== tileRef) {
+          if (this.pendingConfirm.tile !== tileRef) {
             this.lastGhostQueryAt = -Infinity;
             this.renderGhost();
             return;
           }
-          const confirmedTile = this.pendingConfirm;
+          const confirmation = this.pendingConfirm;
           this.pendingConfirm = null;
-          if (this.isGhostReadyForConfirm()) {
-            this.createStructure(confirmedTile);
+          if (this.isGhostReadyForConfirm(confirmation.preventStacking)) {
+            this.createStructure(
+              confirmation.tile,
+              confirmation.preventStacking,
+            );
           }
         }
 
@@ -554,16 +558,20 @@ export class BuildPreviewController implements Controller {
     };
   }
 
-  private effectiveBuildableUnit(): BuildableUnit | null {
+  private effectiveBuildableUnit(
+    preventStacking = this.uiState.preventStacking,
+  ): BuildableUnit | null {
     const unit = this.ghostUnit?.buildableUnit;
     if (!unit) return null;
-    return this.uiState.preventStacking
+    return preventStacking
       ? { ...unit, canUpgrade: false, upgradeCosts: undefined }
       : unit;
   }
 
-  private isGhostReadyForConfirm(): boolean {
-    const unit = this.effectiveBuildableUnit();
+  private isGhostReadyForConfirm(
+    preventStacking = this.uiState.preventStacking,
+  ): boolean {
+    const unit = this.effectiveBuildableUnit(preventStacking);
     return (
       unit !== null && (unit.canBuild !== false || unit.canUpgrade !== false)
     );
@@ -583,13 +591,19 @@ export class BuildPreviewController implements Controller {
     }
     // Cache the world tile, not screen coordinates: camera and pointer movement
     // must not retarget a click while the worker validates its placement.
-    this.pendingConfirm = tile;
+    this.pendingConfirm = {
+      tile,
+      preventStacking: !!this.uiState.preventStacking,
+    };
     this.lastGhostQueryAt = -Infinity;
     this.renderGhost();
   }
 
-  private createStructure(targetTile: TileRef) {
-    const unit = this.effectiveBuildableUnit();
+  private createStructure(
+    targetTile: TileRef,
+    preventStacking = this.uiState.preventStacking,
+  ) {
+    const unit = this.effectiveBuildableUnit(preventStacking);
     if (!unit || (unit.canBuild === false && unit.canUpgrade === false)) return;
     if (unit.canUpgrade !== false) {
       this.eventBus.emit(
