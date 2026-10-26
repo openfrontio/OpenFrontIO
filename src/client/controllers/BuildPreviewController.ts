@@ -271,13 +271,11 @@ export class BuildPreviewController implements Controller {
     if (!myPlayer) return;
     const ghost = this.ghostUnit;
     const query = ++this.ghostQuerySequence;
+    const preventStacking =
+      this.pendingConfirm?.preventStacking ?? !!this.uiState.preventStacking;
     this.ghostQueryPending = true;
     myPlayer
-      .buildables(
-        tileRef,
-        [ghost.buildableUnit.type],
-        this.pendingConfirm?.preventStacking ?? !!this.uiState.preventStacking,
-      )
+      .buildables(tileRef, [ghost.buildableUnit.type], preventStacking)
       .then((buildables) => {
         if (this.ghostUnit !== ghost || query !== this.ghostQuerySequence)
           return;
@@ -286,6 +284,15 @@ export class BuildPreviewController implements Controller {
           return;
         }
         this.ghostQueryPending = false;
+        if (
+          preventStacking !==
+          (this.pendingConfirm?.preventStacking ??
+            !!this.uiState.preventStacking)
+        ) {
+          this.lastGhostQueryAt = -Infinity;
+          this.renderGhost();
+          return;
+        }
         this.ghostResolved = true;
         this.resolvedGhostTile = tileRef;
 

@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 // Side-effect import: the @customElement decorator registers <build-menu>
 // when the module is evaluated, and a type-only reference would not evaluate it.
@@ -68,4 +68,30 @@ describe("BuildMenu hold-to-build availability", () => {
     expect(button.disabled).toBe(false);
     menu.remove();
   });
+});
+
+it("recovers the open build menu after a buildables timeout", async () => {
+  const menu = makeMenu();
+  const units = [
+    { type: UnitType.City, canBuild: 43, canUpgrade: false, cost: 1n },
+  ] as BuildableUnit[];
+  const buildables = vi
+    .fn()
+    .mockRejectedValueOnce(new Error("timeout"))
+    .mockResolvedValue(units);
+  menu.game = {
+    myPlayer: () => ({ buildables }),
+    config: () => ({ isUnitDisabled: () => false }),
+  } as any;
+  menu.playerBuildables = units;
+  const warning = vi.spyOn(console, "warn").mockImplementation(() => {});
+  try {
+    await (menu as any).refresh();
+    expect(menu.playerBuildables).toBeNull();
+    expect(warning).toHaveBeenCalledTimes(1);
+    await (menu as any).refresh();
+    expect(menu.playerBuildables).toBe(units);
+  } finally {
+    warning.mockRestore();
+  }
 });

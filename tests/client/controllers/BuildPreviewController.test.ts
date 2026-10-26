@@ -301,6 +301,39 @@ describe("BuildPreviewController confirm with the pointer off the map", () => {
     },
   );
 
+  test("a hold change during a hover request immediately requeries rail metadata", async () => {
+    const { controller } = makeController(3, 4);
+    const c = controller as any;
+    let reply: (units: unknown[]) => void = () => {};
+    const fresh = {
+      type: UnitType.City,
+      canBuild: 43,
+      canUpgrade: 7,
+      ghostRailPaths: [[43, 44]],
+    };
+    const buildables = vi
+      .fn()
+      .mockImplementationOnce(
+        () =>
+          new Promise((resolve) => {
+            reply = resolve;
+          }),
+      )
+      .mockResolvedValue([fresh]);
+    c.game.myPlayer = () => ({ buildables });
+    vi.spyOn(c, "emitGhostPreview").mockImplementation(() => {});
+    c.renderGhost();
+    c.uiState.preventStacking = true;
+    reply([
+      { type: UnitType.City, canBuild: 43, canUpgrade: 7, ghostRailPaths: [] },
+    ]);
+    await Promise.resolve();
+    expect(buildables).toHaveBeenNthCalledWith(1, 43, [UnitType.City], false);
+    expect(buildables).toHaveBeenNthCalledWith(2, 43, [UnitType.City], true);
+    await Promise.resolve();
+    expect(c.ghostUnit.buildableUnit.ghostRailPaths).toEqual([[43, 44]]);
+  });
+
   test("canceling a queued click before the worker replies cannot build", async () => {
     const { controller, emitted } = makeController(3, 4);
     const c = controller as any;

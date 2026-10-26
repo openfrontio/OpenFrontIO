@@ -488,16 +488,22 @@ export class BuildMenu extends LitElement implements Controller {
   }
 
   private refresh() {
-    this.game
+    const refresh = this.game
       .myPlayer()
       ?.buildables(this.clickedTile, BuildMenus.types)
       .then((buildables) => {
         this.playerBuildables = buildables;
         this.requestUpdate();
+      })
+      .catch((error) => {
+        this.playerBuildables = null;
+        this.requestUpdate();
+        console.warn("Failed to refresh build menu", error);
       });
 
     // remove disabled buildings from the buildtable
     this.filteredBuildTable = this.getBuildableUnits();
+    return refresh;
   }
 
   private getBuildableUnits(): BuildItemDisplay[][] {
