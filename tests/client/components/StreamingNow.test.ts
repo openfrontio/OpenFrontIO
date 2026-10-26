@@ -9,6 +9,31 @@ vi.mock("../../../src/client/Api", async (importOriginal) => ({
   getStreams: () => getStreams(),
 }));
 
+// A MediaQueryList whose answer a test can flip, firing its change listeners like a
+// resize (or Poki's fullscreen toggle) does. `matches` answers per query string.
+function fakeMediaQueries(matches: (query: string) => boolean) {
+  const listeners = new Set<() => void>();
+  let answer = matches;
+  return {
+    matchMedia: (query: string) => ({
+      get matches() {
+        return answer(query);
+      },
+      addEventListener: (_type: string, cb: () => void) => listeners.add(cb),
+      removeEventListener: (_type: string, cb: () => void) =>
+        listeners.delete(cb),
+    }),
+    set(next: (query: string) => boolean) {
+      answer = next;
+      listeners.forEach((cb) => cb());
+    },
+  };
+}
+
+// Poki's 1031x580 frame: wide enough for lg, but short.
+const shortDesktop = (query: string) =>
+  query.includes("min-width: 1024px") || query.includes("max-height: 800px");
+
 // Every entry in the feed is a verified-live broadcast, so startedAt is always present.
 const startedAt = "2026-08-03T12:00:00Z";
 
@@ -69,6 +94,8 @@ describe("StreamingNow", () => {
   // replacement: it owns no timer, it renders only what the API verified, and it stops
   // when the shared poller stops.
   describe("panel behaviour", () => {
+    let viewport: ReturnType<typeof fakeMediaQueries>;
+
     beforeEach(async () => {
       vi.useFakeTimers({ shouldAdvanceTime: true });
       getStreams.mockResolvedValue({
@@ -94,7 +121,8 @@ describe("StreamingNow", () => {
         ],
       });
       // A desktop-sized viewport: the host stays off on compact screens.
-      vi.stubGlobal("matchMedia", () => ({ matches: false }));
+      viewport = fakeMediaQueries(() => false);
+      vi.stubGlobal("matchMedia", viewport.matchMedia);
       await import("../../../src/client/components/StreamingNow");
     });
 
@@ -152,12 +180,7 @@ describe("StreamingNow", () => {
     });
 
     it("does not subscribe on a short desktop-width screen", async () => {
-      // Poki's 1031x580 frame: wide enough for lg, but short.
-      vi.stubGlobal("matchMedia", (query: string) => ({
-        matches:
-          query.includes("min-width: 1024px") ||
-          query.includes("max-height: 800px"),
-      }));
+      viewport.set(shortDesktop);
       const el = document.createElement("streaming-now") as HTMLElement & {
         updateComplete: Promise<boolean>;
       };
@@ -166,6 +189,24 @@ describe("StreamingNow", () => {
       await vi.advanceTimersByTimeAsync(60_000);
       expect(getStreams).not.toHaveBeenCalled();
       expect(el.style.display).toBe("none");
+    });
+
+    it("drops the strip when the window turns compact and brings it back", async () => {
+      const el = await mount();
+      expect(el.style.display).not.toBe("none");
+
+      viewport.set(shortDesktop); // e.g. leaving Poki's fullscreen
+      await el.updateComplete;
+      expect(el.style.display).toBe("none");
+      expect(el.querySelectorAll("a")).toHaveLength(0);
+      const calls = getStreams.mock.calls.length;
+      await vi.advanceTimersByTimeAsync(5 * 60_000);
+      expect(getStreams.mock.calls.length).toBe(calls); // unsubscribed, so no polling
+
+      viewport.set(() => false);
+      await vi.waitFor(() => expect(el.style.display).not.toBe("none"));
+      await el.updateComplete;
+      expect(el.querySelectorAll("a")).toHaveLength(2);
     });
 
     it("owns no timer: disconnecting stops all polling", async () => {
