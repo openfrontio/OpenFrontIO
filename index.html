@@ -355,7 +355,7 @@
            inline page is open, when the content area is padded below the ad
            instead and nothing scrolls) -->
       <desktop-nav-bar
-        class="sticky top-[var(--top-ad-height,0px)] z-[60] in-[.page-open]:static"
+        class="sticky top-[var(--top-ad-height,0px)] z-[60] in-[.page-open]:static in-[.page-open]:compact:hidden"
       ></desktop-nav-bar>
 
       <div
@@ -464,7 +464,9 @@
         ></detailed-view-modal>
       </main-layout>
 
-      <div class="[.in-game_&]:hidden mt-auto flex flex-col shrink-0">
+      <div
+        class="[.in-game_&]:hidden in-[.page-open]:compact:hidden mt-auto flex flex-col shrink-0"
+      >
         <page-footer></page-footer>
       </div>
 
