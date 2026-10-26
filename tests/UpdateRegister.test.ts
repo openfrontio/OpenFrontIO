@@ -7,6 +7,7 @@ import { afterEach, describe, expect, it } from "vitest";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const SCRIPT = path.resolve(__dirname, "../update.sh");
+const isWindows = process.platform === "win32";
 
 const BEGIN = "# --- BEGIN register (tested) ---";
 const END = "# --- END register (tested) ---";
@@ -111,7 +112,7 @@ printf '%s' "$CODE"
 
 const OK = { code: "200", body: '{"letter":"c","numWorkers":20}' };
 
-describe("update.sh register_identity", () => {
+describe.skipIf(isWindows)("update.sh register_identity", () => {
   it("asks the registry who this host is and takes its answer", () => {
     const r = runRegister([OK]);
     expect(r.status).toBe(0);
