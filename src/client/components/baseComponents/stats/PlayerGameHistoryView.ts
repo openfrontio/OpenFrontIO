@@ -159,13 +159,13 @@ export class PlayerGameHistoryView extends LitElement {
   private setTypeFilter(filter: TypeKey) {
     if (filter === this.typeFilter) return;
     this.typeFilter = filter;
-    this.reload();
+    void this.reload();
   }
 
   private setModeFilter(filter: ModeKey) {
     if (filter === this.modeFilter) return;
     this.modeFilter = filter;
-    this.reload();
+    void this.reload();
   }
 
   private async load({ append }: { append: boolean }) {

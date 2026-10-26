@@ -613,7 +613,7 @@ export class WinModal extends LitElement implements Controller {
   }
 
   async show() {
-    gamePortal.gameplayStop();
+    void gamePortal.gameplayStop();
     this.isRankedGame =
       this.game.config().gameConfig().rankedType !== undefined;
     this.isVisible = true;
@@ -992,7 +992,7 @@ export class WinModal extends LitElement implements Controller {
       this._title = translateText("win_modal.died");
       this.eventBus.emit(new PlaySoundEffectEvent("defeat"));
       void this.updateXp(false);
-      this.show();
+      void this.show();
     }
     const updates = this.game.updatesSinceLastTick();
     const winUpdates = updates?.[GameUpdateType.Win] ?? [];
@@ -1013,13 +1013,13 @@ export class WinModal extends LitElement implements Controller {
         this._title = translateText("win_modal.match_cancelled");
         this.isWin = false;
         history.replaceState(null, "", `${window.location.pathname}?replay`);
-        this.show();
+        void this.show();
       } else if (wu.winner[0] === "team") {
         vote(wu.winner, wu.allPlayersStats);
         if (wu.winner[1] === this.game.myPlayer()?.team()) {
           this._title = translateText("win_modal.your_team");
           this.isWin = true;
-          gamePortal.happytime();
+          void gamePortal.happytime();
         } else {
           this._title = translateText("win_modal.other_team", {
             team: getTranslatedPlayerTeamLabel(wu.winner[1]),
@@ -1028,7 +1028,7 @@ export class WinModal extends LitElement implements Controller {
         }
         this.playEndOfGameSound();
         history.replaceState(null, "", `${window.location.pathname}?replay`);
-        this.show();
+        void this.show();
       } else if (wu.winner[0] === "nation") {
         vote(wu.winner, wu.allPlayersStats);
         this._title = translateText("win_modal.nation_won", {
@@ -1036,7 +1036,7 @@ export class WinModal extends LitElement implements Controller {
         });
         this.isWin = false;
         this.playEndOfGameSound();
-        this.show();
+        void this.show();
       } else {
         const winner = this.game.playerByClientID(wu.winner[1]);
         if (!winner?.isPlayer()) return;
@@ -1050,7 +1050,7 @@ export class WinModal extends LitElement implements Controller {
         ) {
           this._title = translateText("win_modal.you_won");
           this.isWin = true;
-          gamePortal.happytime();
+          void gamePortal.happytime();
         } else {
           this._title = translateText("win_modal.other_won", {
             player: winner.displayName(),
@@ -1059,7 +1059,7 @@ export class WinModal extends LitElement implements Controller {
         }
         this.playEndOfGameSound();
         history.replaceState(null, "", `${window.location.pathname}?replay`);
-        this.show();
+        void this.show();
       }
     });
     // After the vote, so a figure from the end has what was voted.

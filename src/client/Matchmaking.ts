@@ -206,7 +206,7 @@ export class MatchmakingModal extends BaseModal {
     this.notTrusted = false;
     this.queueSize = null;
     this.reconnectAttempts = 0;
-    this.connect();
+    void this.connect();
     return true;
   }
 
@@ -236,7 +236,7 @@ export class MatchmakingModal extends BaseModal {
       }
       this.connected = false;
       this.queueSize = null;
-      this.connect();
+      void this.connect();
     }, 15000);
   }
 
@@ -543,7 +543,7 @@ export class MatchmakingModal extends BaseModal {
     this.queueSize = null;
     this.reconnectAttempts = 0;
     this.notTrusted = false;
-    this.connect();
+    void this.connect();
   }
 
   protected onClose(): void {

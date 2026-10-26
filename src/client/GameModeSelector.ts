@@ -375,7 +375,7 @@ export class GameModeSelector extends LitElement {
       this.updateDeferred = true;
       return;
     }
-    showInGameAlert(translateText("update_available.message")).then(() => {
+    void showInGameAlert(translateText("update_available.message")).then(() => {
       reloadForUpdate();
     });
   }
@@ -515,7 +515,7 @@ export class GameModeSelector extends LitElement {
       this.closeLobbyFeed();
     } else {
       this.feedGaveUp = false;
-      this.lobbySocket.start();
+      void this.lobbySocket.start();
     }
   };
 
@@ -565,7 +565,7 @@ export class GameModeSelector extends LitElement {
       this.lobbies = null;
       return;
     }
-    this.lobbySocket.start({ refreshList });
+    void this.lobbySocket.start({ refreshList });
   }
 
   /**

@@ -238,7 +238,7 @@ export class PlayerInfoOverlay extends LitElement implements Controller {
     if (owner && owner.isPlayer()) {
       this.player = owner as PlayerView;
       this.tile = tile;
-      this.player.profile().then((p) => {
+      void this.player.profile().then((p) => {
         this.playerProfile = p;
       });
       this.refreshPlayerActions(this.player, tile);

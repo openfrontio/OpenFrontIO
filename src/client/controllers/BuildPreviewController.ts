@@ -256,7 +256,7 @@ export class BuildPreviewController implements Controller {
       }
     }
 
-    this.game
+    void this.game
       ?.myPlayer()
       ?.buildables(tileRef, [this.ghostUnit?.buildableUnit.type])
       .then((buildables) => {

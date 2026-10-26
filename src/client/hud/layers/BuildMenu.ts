@@ -489,7 +489,7 @@ export class BuildMenu extends LitElement implements Controller {
   }
 
   private refresh() {
-    this.game
+    void this.game
       .myPlayer()
       ?.buildables(this.clickedTile, BuildMenus.types)
       .then((buildables) => {

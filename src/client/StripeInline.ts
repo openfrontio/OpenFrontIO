@@ -206,7 +206,7 @@ export class InlineCheckoutSession {
     this.request = request;
     if (amountCents !== this.amountCents) {
       this.amountCents = amountCents;
-      this.elements.update({ amount: amountCents });
+      void this.elements.update({ amount: amountCents });
     }
     // Always dropped, even when only the request changed: a cached intent was
     // minted for the OLD request and the server will not reprice it.

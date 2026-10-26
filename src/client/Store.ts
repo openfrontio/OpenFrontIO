@@ -165,7 +165,7 @@ export class StoreModal extends BaseModal {
 
   private onUserMeEvent = (event: Event) => {
     const customEvent = event as CustomEvent<UserMeResponse | false>;
-    this.onUserMe(customEvent.detail);
+    void this.onUserMe(customEvent.detail);
   };
 
   private onOpenCosmeticPreview = (event: Event) => {

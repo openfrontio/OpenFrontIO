@@ -165,7 +165,7 @@ export class TutorialPanel extends LitElement implements Controller {
     }
 
     if (this.game.ticks() % COST_POLL_TICKS === 0) {
-      player.buildables(undefined, COST_POLL_TYPES).then((buildables) => {
+      void player.buildables(undefined, COST_POLL_TYPES).then((buildables) => {
         this.costs = new Map(buildables.map((b) => [b.type, b.cost]));
       });
     }
@@ -329,7 +329,7 @@ export class TutorialPanel extends LitElement implements Controller {
     for (const id of ids) {
       const nation = this.game.playerBySmallID(id);
       if (!nation.isPlayer()) continue;
-      (nation as PlayerView).profile().then((profile) => {
+      void (nation as PlayerView).profile().then((profile) => {
         this.nationRelations.set(
           id,
           profile.relations[me.smallID()] ?? Relation.Neutral,

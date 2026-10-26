@@ -157,7 +157,7 @@ export function joinLobby(
     }
     // Always send join - server will detect reconnection via persistentID
     console.log(`Joining game lobby ${lobbyConfig.gameID}`);
-    transport.joinGame();
+    void transport.joinGame();
   };
   // Only begin a terrain preload once the same map has been stable across
   // this many consecutive lobby_info broadcasts (one per second). A host
@@ -254,7 +254,7 @@ export function joinLobby(
           pendingPreloadStreak = 1;
         }
         if (pendingPreloadStreak >= MAP_PRELOAD_DEBOUNCE_STREAK) {
-          requestTerrainLoad(gameConfig.gameMap, gameConfig.gameMapSize);
+          void requestTerrainLoad(gameConfig.gameMap, gameConfig.gameMapSize);
         }
       }
       return;
@@ -263,7 +263,7 @@ export function joinLobby(
       console.log(
         `lobby: game prestarting: ${JSON.stringify(message, replacer)}`,
       );
-      requestTerrainLoad(message.gameMap, message.gameMapSize);
+      void requestTerrainLoad(message.gameMap, message.gameMapSize);
       resolvePrestart();
     }
     if (message.type === "start") {
@@ -335,15 +335,17 @@ export function joinLobby(
           }),
         );
       } else if (message.error === "kick_reason.host_left") {
-        showInGameAlert(translateText("kick_reason.host_left")).then(() => {
-          document.dispatchEvent(
-            new CustomEvent("leave-lobby", {
-              detail: { lobby: lobbyConfig.gameID, cause: "host-left" },
-              bubbles: true,
-              composed: true,
-            }),
-          );
-        });
+        void showInGameAlert(translateText("kick_reason.host_left")).then(
+          () => {
+            document.dispatchEvent(
+              new CustomEvent("leave-lobby", {
+                detail: { lobby: lobbyConfig.gameID, cause: "host-left" },
+                bubbles: true,
+                composed: true,
+              }),
+            );
+          },
+        );
       } else if (message.error === "kick_reason.match_cancelled") {
         // A matched player never connected and the server cancelled the game
         // pre-start. Tear down the dead lobby, then put the matchmaking
@@ -409,11 +411,11 @@ export function joinLobby(
             // version's page is not being served), so say so and stop.
             void showInGameAlert(translateText("update_available.message"));
           } else {
-            showInGameAlert(translateText("update_available.message")).then(
-              () => {
-                reloadForUpdate();
-              },
-            );
+            void showInGameAlert(
+              translateText("update_available.message"),
+            ).then(() => {
+              reloadForUpdate();
+            });
           }
         }
       } else {
@@ -840,7 +842,7 @@ async function createClientGame(
       if (debugGui === null) {
         if (debugGuiLoading) return;
         debugGuiLoading = true;
-        import("./render/gl/debug/index")
+        void import("./render/gl/debug/index")
           .then(({ createDebugGui }) => {
             debugGui = createDebugGui(
               view.getSettings(),
@@ -1057,7 +1059,7 @@ export class ClientGameRunner {
     const onconnect = () => {
       console.log("Connected to game server!");
       this.awaitingStart = true;
-      this.transport.rejoinGame(this.turnsSeen);
+      void this.transport.rejoinGame(this.turnsSeen);
     };
 
     let hasGoneToPlayer = false;
@@ -1198,7 +1200,7 @@ export class ClientGameRunner {
     this.transport.updateCallback(onconnect, onmessage);
     console.log("sending join game");
     // Rejoin game from the start so we don't miss any turns.
-    this.transport.rejoinGame(0);
+    void this.transport.rejoinGame(0);
   }
 
   public stop() {
