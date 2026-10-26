@@ -135,4 +135,21 @@ describe("HostLobbyModal seated player count", () => {
     ];
     expect(modal.seatedPlayerCount()).toBe(2);
   });
+
+  it("treats spectators as non-seated for the start button and status label", () => {
+    const modal = new HostLobbyModal() as any;
+    modal.clients = [
+      { clientID: "host", username: "host" },
+      { clientID: "spec", username: "spec", spectator: true },
+    ];
+    modal.lobbyStartAt = null;
+    modal.queued = false;
+
+    // With 1 player and 1 spectator, seated count is 1.
+    expect(modal.seatedPlayerCount()).toBe(1);
+
+    // Adding another real player makes seated count 2.
+    modal.clients.push({ clientID: "p2", username: "p2" });
+    expect(modal.seatedPlayerCount()).toBe(2);
+  });
 });

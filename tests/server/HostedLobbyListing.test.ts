@@ -992,6 +992,49 @@ describe("WorkerLobbyService hosted lobbies", () => {
     expect(lobbyList.lobbies.map((l: any) => l.gameID)).toEqual(["ffa-g1"]);
   });
 
+  it("does not count spectators in reported lobby numClients", () => {
+    const game = makeGame("hosted-spectator", CREATOR);
+    game.setListed(true);
+    const p1 = harnessClient({ clientID: "p1" as any, persistentID: "p1-pid" });
+    const spec = harnessClient({
+      clientID: "s1" as any,
+      persistentID: "s1-pid",
+      spectator: true,
+    });
+    game.joinClient(p1);
+    game.joinClient(spec);
+    gm.listedLobbies.mockReturnValue([game]);
+
+    const ffa = new GameServer({
+      id: "ffa-spec",
+      log: mockLogger,
+      createdAt: Date.now(),
+      gameConfig: testGameConfig({ gameType: GameType.Public }),
+      publicGameType: "ffa",
+    });
+    const spec2 = harnessClient({
+      clientID: "s2" as any,
+      persistentID: "s2-pid",
+      spectator: true,
+    });
+    ffa.joinClient(spec2);
+    gm.publicLobbies.mockReturnValue([ffa]);
+
+    emitBroadcast({ ffa: [], team: [], special: [], hosted: [] });
+
+    const lobbyList = sendToMaster.mock.calls
+      .map((c: any[]) => c[0])
+      .find((m: any) => m.type === "lobbyList");
+    const hosted = lobbyList.lobbies.find(
+      (l: any) => l.gameID === "hosted-spectator",
+    );
+    const publicLobby = lobbyList.lobbies.find(
+      (l: any) => l.gameID === "ffa-spec",
+    );
+    expect(hosted.numClients).toBe(1);
+    expect(publicLobby.numClients).toBe(0);
+  });
+
   it("reports the game manager's live game count to the master", () => {
     gm.activeGames.mockReturnValue(7);
     // Drop the stub so the real sendToMaster runs: assert on the message that
