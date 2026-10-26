@@ -252,6 +252,9 @@ jobs:
           OTEL_AUTH_HEADER: ${{ secrets.OTEL_AUTH_HEADER }}
           API_KEY: ${{ secrets.API_KEY }}
           ADMIN_BOT_API_KEY: ${{ secrets.ADMIN_BOT_API_KEY }}
+          # For the optional security module (src/server/gatekeeper). Unset
+          # leaves the parts that need it off.
+          GATEKEEPER_SECRET: ${{ secrets.GATEKEEPER_SECRET }}
           # From the DEPLOY_TARGETS_DEV entry on the schedule; empty otherwise,
           # and deploy.sh fills in the defaults (deploy.sh, "identity").
           GAME_HOST: ${{ matrix.gameHost || inputs.game_host || '' }}
