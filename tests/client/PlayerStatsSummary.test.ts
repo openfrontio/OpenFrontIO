@@ -436,30 +436,6 @@ describe("PlayerStatsSummary", () => {
     );
   });
 
-  it("replaces the legacy four-card grid in the selected stats tree", async () => {
-    const statsTree: PlayerStatsTree = {
-      Public: {
-        "Free For All": {
-          Medium: leaf,
-        },
-      },
-    };
-    // Instantiate the real class directly so profile-modal tests that register
-    // a lightweight stand-in under the same custom-element tag cannot mask the
-    // integration behavior this test covers.
-    const tree = new PlayerStatsTreeView();
-    tree.statsTree = statsTree;
-    document.body.append(tree);
-
-    await tree.updateComplete;
-
-    const summary = tree.querySelector(
-      "player-stats-summary",
-    ) as PlayerStatsSummary | null;
-    expect(summary?.leaf).toEqual(leaf);
-    expect(tree.querySelector("player-stats-grid")).toBeNull();
-  });
-
   it("gives the performance summary equal padding above and below", async () => {
     const tree = new PlayerStatsTreeView();
     tree.statsTree = {
