@@ -226,5 +226,21 @@ describe("WorkerClient placement preview request", () => {
       data: { type: "player_buildables_result", id: request.id, result: [] },
     } as unknown as MessageEvent<WorkerMessage>);
     await expect(result).resolves.toEqual([]);
+    expect(internalClient.messageHandlers.size).toBe(0);
+  });
+  it("times out a lost request so a slow preview can recover without leaking handlers", async () => {
+    vi.useFakeTimers();
+    try {
+      const { client, internalClient } = createClient();
+      const result = client.playerBuildables("7", 3, 4, undefined, true);
+      const rejection = expect(result).rejects.toThrow(
+        "player_buildables request timed out",
+      );
+      await vi.advanceTimersByTimeAsync(5000);
+      await rejection;
+      expect(internalClient.messageHandlers.size).toBe(0);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });

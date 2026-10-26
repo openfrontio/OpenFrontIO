@@ -391,12 +391,21 @@ export class WorkerClient {
       }
 
       const messageId = generateID();
+      const cleanup = () => {
+        clearTimeout(timeout);
+        this.messageHandlers.delete(messageId);
+      };
+      const timeout = setTimeout(() => {
+        cleanup();
+        reject(new Error("player_buildables request timed out"));
+      }, 5000);
 
       this.messageHandlers.set(messageId, (message) => {
         if (
           message.type === "player_buildables_result" &&
           message.result !== undefined
         ) {
+          cleanup();
           resolve(message.result);
         }
       });
