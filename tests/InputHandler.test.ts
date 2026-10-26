@@ -2849,6 +2849,87 @@ describe("InputHandler teardown (OPE-411)", () => {
       }
     });
 
+    test("clears physical code for Shift-modified zoom binds when Meta is released", () => {
+      settings.setKeybinds({ zoomIn: "Shift+KeyE" });
+      handler.initialize();
+
+      // Hold Shift+E, then press Meta
+      window.dispatchEvent(
+        new KeyboardEvent("keydown", { code: "ShiftLeft", shiftKey: true }),
+      );
+      window.dispatchEvent(
+        new KeyboardEvent("keydown", { code: "KeyE", shiftKey: true }),
+      );
+      window.dispatchEvent(
+        new KeyboardEvent("keydown", {
+          code: "MetaLeft",
+          metaKey: true,
+          shiftKey: true,
+        }),
+      );
+
+      expect(handler["activeKeys"].has("KeyE")).toBe(true);
+
+      // Release Meta (keyup for KeyE was swallowed while Meta was down)
+      window.dispatchEvent(
+        new KeyboardEvent("keyup", {
+          code: "MetaLeft",
+          metaKey: false,
+          shiftKey: true,
+        }),
+      );
+
+      // KeyE must be cleared from activeKeys so it does not stay stuck
+      expect(handler["activeKeys"].has("KeyE")).toBe(false);
+
+      // Release Shift
+      window.dispatchEvent(
+        new KeyboardEvent("keyup", { code: "ShiftLeft", shiftKey: false }),
+      );
+      expect(handler["activeKeys"].has("KeyE")).toBe(false);
+    });
+
+    test("preserves physical code for Shift-modified zoom binds held before Control", () => {
+      settings.setKeybinds({ zoomIn: "Shift+KeyE" });
+      handler.initialize();
+
+      const emitSpy = vi.spyOn(bus, "emit");
+
+      // Hold Shift+E before Control
+      window.dispatchEvent(
+        new KeyboardEvent("keydown", { code: "ShiftLeft", shiftKey: true }),
+      );
+      window.dispatchEvent(
+        new KeyboardEvent("keydown", { code: "KeyE", shiftKey: true }),
+      );
+
+      // Press Control
+      window.dispatchEvent(
+        new KeyboardEvent("keydown", {
+          code: "ControlLeft",
+          ctrlKey: true,
+          shiftKey: true,
+        }),
+      );
+
+      // Release Control
+      window.dispatchEvent(
+        new KeyboardEvent("keyup", {
+          code: "ControlLeft",
+          ctrlKey: false,
+          shiftKey: true,
+        }),
+      );
+
+      // KeyE was held before Control, so it should still be in activeKeys and emit zoom
+      expect(handler["activeKeys"].has("KeyE")).toBe(true);
+      emitSpy.mockClear();
+      vi.advanceTimersByTime(5);
+      expect(
+        emitSpy.mock.calls.some((c: unknown[]) => c[0] instanceof ZoomEvent),
+      ).toBe(true);
+    });
+
     test("holding ShiftRight and pressing another key does NOT add ShiftLeft to activeKeys", () => {
       settings.setKeybinds({ moveUp: "Shift+KeyW" });
       handler.initialize();

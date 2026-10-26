@@ -846,14 +846,7 @@ export class InputHandler {
           !this.activeKeys.has("ControlLeft") &&
           !this.activeKeys.has("ControlRight")
         ) {
-          const zoomCodes = [
-            "Minus",
-            "Equal",
-            "NumpadAdd",
-            "NumpadSubtract",
-            this.keybinds.zoomIn,
-            this.keybinds.zoomOut,
-          ].filter((code): code is string => Boolean(code) && code !== "Null");
+          const zoomCodes = this.getZoomPhysicalCodes();
           this.zoomKeysHeldBeforeControl = new Set(
             zoomCodes.filter((code) => this.activeKeys.has(code)),
           );
@@ -931,14 +924,9 @@ export class InputHandler {
             (e.code === "MetaLeft" && this.activeKeys.has("MetaRight")) ||
             (e.code === "MetaRight" && this.activeKeys.has("MetaLeft"));
           if (!otherMetaHeld) {
-            this.activeKeys.delete("Minus");
-            this.activeKeys.delete("Equal");
-            this.activeKeys.delete("NumpadAdd");
-            this.activeKeys.delete("NumpadSubtract");
-            if (this.keybinds.zoomIn)
-              this.activeKeys.delete(this.keybinds.zoomIn);
-            if (this.keybinds.zoomOut)
-              this.activeKeys.delete(this.keybinds.zoomOut);
+            for (const code of this.getZoomPhysicalCodes()) {
+              this.activeKeys.delete(code);
+            }
           }
         }
 
@@ -950,17 +938,7 @@ export class InputHandler {
             (e.code === "ControlLeft" && this.activeKeys.has("ControlRight")) ||
             (e.code === "ControlRight" && this.activeKeys.has("ControlLeft"));
           if (!otherCtrlHeld) {
-            const zoomCodes = [
-              "Minus",
-              "Equal",
-              "NumpadAdd",
-              "NumpadSubtract",
-              this.keybinds.zoomIn,
-              this.keybinds.zoomOut,
-            ].filter(
-              (code): code is string => Boolean(code) && code !== "Null",
-            );
-            for (const code of zoomCodes) {
+            for (const code of this.getZoomPhysicalCodes()) {
               if (!this.zoomKeysHeldBeforeControl.has(code)) {
                 this.activeKeys.delete(code);
               }
@@ -1500,6 +1478,13 @@ export class InputHandler {
     return bindings.filter(
       (k): k is string => typeof k === "string" && k !== "" && k !== "Null",
     );
+  }
+
+  private getZoomPhysicalCodes(): string[] {
+    const configured = [this.keybinds.zoomIn, this.keybinds.zoomOut]
+      .filter((code): code is string => Boolean(code) && code !== "Null")
+      .map((code) => this.parseKeybind(code).code);
+    return ["Minus", "Equal", "NumpadAdd", "NumpadSubtract", ...configured];
   }
 
   /**
