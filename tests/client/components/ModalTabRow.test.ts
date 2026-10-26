@@ -228,4 +228,20 @@ describe("o-modal scroll-to-top", () => {
     await modalEl.updateComplete;
     expect(modalEl.shadowRoot!.querySelector("button[aria-label]")).toBeNull();
   });
+
+  it("adds bottom padding to scroll container only when showScrollToTop is enabled", async () => {
+    const modal = await render("stats");
+    const scrollEl = modal.shadowRoot!.querySelector<HTMLElement>(
+      "[data-modal-scroll]",
+    )!;
+    expect(scrollEl.className).not.toContain("pb-16");
+
+    modal.showScrollToTop = true;
+    await modal.updateComplete;
+    expect(scrollEl.className).toContain("pb-16");
+
+    modal.showScrollToTop = false;
+    await modal.updateComplete;
+    expect(scrollEl.className).not.toContain("pb-16");
+  });
 });
