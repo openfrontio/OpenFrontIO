@@ -208,6 +208,11 @@ describe("GameServer listing", () => {
         "listing_max_players_too_low",
       );
       expect(getListingEligibilityError(game, 6)).toBeNull();
+
+      game.gameConfig.maxPlayers = 3;
+      expect(getListingEligibilityError(game)).toBe(
+        "listing_max_players_too_low",
+      );
     });
   });
 
