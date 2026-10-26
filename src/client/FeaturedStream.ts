@@ -1,6 +1,7 @@
 import { LiveStream, StreamsFeed } from "@openfront/shared/ApiSchemas";
 import { LitElement, html } from "lit";
 import { customElement, state } from "lit/decorators.js";
+import { isCompactViewport } from "./CompactViewport";
 import { isDesktopShell } from "./DesktopShell";
 import { gamePortal } from "./GamePortal";
 import { broadcastKey, streamsFeed, watchUrl } from "./StreamsFeed";
@@ -109,16 +110,6 @@ function isCoarsePointer(): boolean {
   return (
     typeof window.matchMedia === "function" &&
     window.matchMedia("(pointer: coarse)").matches
-  );
-}
-
-// Small laptops, phones and Poki-sized frames: the panel (at least 400x336) would
-// cover too much of the page there. Same bounds as the `compact` variant in
-// styles.css, where open pages fill the screen.
-function isCompactViewport(): boolean {
-  return (
-    typeof window.matchMedia === "function" &&
-    window.matchMedia("(max-height: 800px), (max-width: 1023px)").matches
   );
 }
 
