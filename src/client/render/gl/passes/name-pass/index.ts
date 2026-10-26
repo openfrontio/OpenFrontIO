@@ -735,9 +735,10 @@ export class NamePass {
   }
 
   /**
-   * Find the player whose name plate (name + troops + flag + emoji/status row)
-   * is under the cursor, so the whole plate can fade as a unit. Mirrors the
-   * lerp + sizing math in name.vert.glsl. Returns the smallID, or 0 for none.
+   * Find the player whose name plate (name + troops + flag + emoji/status row
+   * + verified badge) is under the cursor, so the whole plate can fade as a
+   * unit. Mirrors the lerp + sizing math in name.vert.glsl and
+   * status-icon.vert.glsl. Returns the smallID, or 0 for none.
    */
   private hitTestNamePlate(now: number): number {
     const mx = this.mouseWorldX;
@@ -760,7 +761,7 @@ export class NamePass {
       const halfW =
         slot.nameHalfWidth * ((nameSize * nameScale) / this.fontSize);
       let left = wx - halfW;
-      const right = wx + halfW;
+      let right = wx + halfW;
       if (slot.flagLayerIdx >= 0) left -= lineH * 1.2 * FLAG_ASPECT;
 
       // Name line (flag is slightly taller); emoji/status rows sit above it.
@@ -774,11 +775,17 @@ export class NamePass {
         slot.target ||
         slot.embargo ||
         slot.nukeActive ||
-        slot.inDoomsdayClock;
+        slot.inDoomsdayClock ||
+        slot.doomsdayClockDraining ||
+        slot.doomsdayClockDecaying;
       if (slot.emojiAtlasIdx >= 0) {
         top = wy - lineH * ns.emojiRowOffset;
       } else if (hasStatus) {
         top = wy - lineH * ns.statusRowOffset;
+      }
+      if (slot.static.verified === true) {
+        right += lineH * 0.51;
+        top = Math.min(top, wy - lineH * 0.775);
       }
       const bottom = wy + lineH * (1.1 + 0.5 * ns.troopSizeMultiplier);
 
