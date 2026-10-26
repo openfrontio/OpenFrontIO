@@ -1177,4 +1177,23 @@ describe("UsernameInput held bare name", () => {
     expect(window.location.hash).toBe("");
     expect(el.isVerified()).toBe(false);
   });
+
+  it("removes userMeResponse listener on disconnect", async () => {
+    let capturedListener: EventListenerOrEventListenerObject | undefined;
+    const origAdd = document.addEventListener.bind(document);
+    const addSpy = vi
+      .spyOn(document, "addEventListener")
+      .mockImplementation((type, listener, options) => {
+        if (type === "userMeResponse") capturedListener = listener;
+        return origAdd(type, listener, options);
+      });
+    const removeSpy = vi.spyOn(document, "removeEventListener");
+    const el = await mount();
+    expect(capturedListener).toBeDefined();
+
+    el.remove();
+    expect(removeSpy).toHaveBeenCalledWith("userMeResponse", capturedListener);
+    addSpy.mockRestore();
+    removeSpy.mockRestore();
+  });
 });
