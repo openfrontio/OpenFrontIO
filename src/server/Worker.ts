@@ -1093,7 +1093,8 @@ export function getListingEligibilityError(
   if (game.hasHostCheats()) {
     return "listing_host_cheats_enabled";
   }
-  const cap = maxPlayers ?? game.gameConfig.maxPlayers;
+  const cap =
+    maxPlayers ?? (game.isListed() ? undefined : game.gameConfig.maxPlayers);
   if (cap !== undefined) {
     const effectiveCap =
       game.gameConfig.gameMode === GameMode.Team

@@ -214,6 +214,23 @@ describe("GameServer listing", () => {
         "listing_max_players_too_low",
       );
     });
+
+    it("skips stored maxPlayers cap check when lobby is already listed and request omits maxPlayers", () => {
+      const game = makeGame("listed-game", CREATOR);
+      game.joinClient(makeClient("p1", "c1", fakeWs()));
+      game.joinClient(makeClient("p2", "c2", fakeWs()));
+      game.setListed(true, { maxPlayers: 2 });
+      expect(game.isListed()).toBe(true);
+      expect(game.numPlayers()).toBe(2);
+
+      // Omitting maxPlayers on relist skips the stored cap check even when full.
+      expect(getListingEligibilityError(game)).toBeNull();
+
+      // Passing explicit maxPlayers <= numPlayers still rejects.
+      expect(getListingEligibilityError(game, 2)).toBe(
+        "listing_max_players_too_low",
+      );
+    });
   });
 
   describe("app.post('/api/game/:id/listing') interleaving", () => {
