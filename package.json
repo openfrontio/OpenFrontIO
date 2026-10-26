@@ -39,7 +39,8 @@
     "lint:fix": "oxlint --fix",
     "lint:github": "oxlint --format=github",
     "prepare": "husky",
-    "gen-maps": "cd map-generator && go run -tags nodynamic . && npm run format",
+    "gen-maps": "cd map-generator && go run -tags nodynamic . && npm run gen-map-schema && npm run format",
+    "gen-map-schema": "tsx scripts/genMapInfoSchema.ts",
     "inst": "npm ci --ignore-scripts"
   },
   "lint-staged": {

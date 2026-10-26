@@ -1,4 +1,5 @@
 {
+  "$schema": "../../../info.schema.json",
   "id": "ChoppingBlock",
   "name": "Chopping Block",
   "translation_key": "map.choppingblock",

@@ -1,4 +1,5 @@
 {
+  "$schema": "../../../info.schema.json",
   "id": "IndianSubcontinent",
   "name": "Indian Subcontinent",
   "translation_key": "map.indiansubcontinent",

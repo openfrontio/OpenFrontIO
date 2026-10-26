@@ -103,10 +103,13 @@ In-Game, the color of a tile is determined dynamically based on its **Terrain Ty
 
 The map-generator reads `assets/maps/<map_name>/info.json` to determine nation positions, starting coordinates, flags, and other map metadata.
 
+`info.schema.json` in this folder is the JSON Schema for the file. Keep the `"$schema"` line from the example so your editor validates and autocompletes as you type. Unknown keys are errors. The schema is generated from `MapInfoSchema` in `../packages/engine-api/src/game/MapManifest.ts` (`npm run gen-map-schema`, also part of `npm run gen-maps`); change the Zod schema, not the JSON file.
+
 ### Example
 
 ```json
 {
+  "$schema": "../../../info.schema.json",
   "id": "MySampleMap",
   "name": "My Sample Map",
   "translation_key": "map.mysamplemap",
@@ -152,7 +155,9 @@ Public-lobby rotation weights are not set here: the API computes them from how f
 | `custom_tribes`      |          | Array of tribe names or `{ "name": "...", "coordinates": [x, y] }` objects. Coordinates are optional (omit for random spawn). Tribe names must be unique and must not collide with `nations[].name`. Empty strings are rejected. |
 | `themes`             |          | Array of theme strings for tribe name generation.                                                                                                                                                                                |
 | `layers`             |          | Array of map layer definitions rendered between terrain and territory (see below).                                                                                                                                               |
-| `nations`            |          | Array of nation objects (see below).                                                                                                                                                                                             |
+| `nations`            | ✅       | Array of nation objects (see below). May be empty.                                                                                                                                                                               |
+| `additionalNations`  |          | Nation objects drawn at random when a game asks for more nations than `nations` lists.                                                                                                                                           |
+| `teamGameSpawnAreas` |          | Spawn rectangles per team count: `{ "2": [{ "x", "y", "width", "height" }, ...] }`. Must lie inside the map.                                                                                                                     |
 
 ### Categories
 
@@ -183,6 +188,7 @@ The generator does not ship the PNG. It writes two lossy WebP files (quality 90)
 | `id`        | ✅       | Unique identifier for the layer. Also the PNG filename (without extension). Must be alphanumeric (hyphens allowed). Must not be `"image"` (reserved). |
 | `placement` | ✅       | `"land"` or `"water"` — whether the layer sits on land (and impassable terrain) or water tiles.                                                       |
 | `nukeable`  |          | If `true`, the layer is permanently destroyed in nuke impact radii. Defaults to `false`.                                                              |
+| `alpha`     |          | Initial opacity (`0`–`1`) for the player's layer-alpha slider. Defaults to `1`.                                                                       |
 
 Layer display names are stored in the `map_layers` section of `../resources/lang/en.json` (keyed by layer id). Players can disable layers in the graphics settings.
 

@@ -1,4 +1,5 @@
 {
+  "$schema": "../../../info.schema.json",
   "id": "NorthwestPassage",
   "name": "Northwest Passage",
   "translation_key": "map.northwestpassage",

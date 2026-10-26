@@ -1,4 +1,5 @@
 {
+  "$schema": "../../../info.schema.json",
   "id": "SoutheastAsia",
   "name": "SoutheastAsia",
   "display_name": "Southeast Asia",

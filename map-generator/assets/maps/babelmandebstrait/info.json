@@ -1,4 +1,5 @@
 {
+  "$schema": "../../../info.schema.json",
   "id": "BabelMandebStrait",
   "name": "Bab el-Mandeb Strait",
   "translation_key": "map.babelmandebstrait",

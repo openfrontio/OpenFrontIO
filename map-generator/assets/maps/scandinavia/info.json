@@ -1,4 +1,5 @@
 {
+  "$schema": "../../../info.schema.json",
   "id": "Scandinavia",
   "name": "Scandinavia",
   "translation_key": "map.scandinavia",
@@ -90,7 +91,7 @@
       "flag": "ru"
     },
     {
-      "coordinates": [2007, 1727],
+      "coordinates": [2003, 1727],
       "name": "Tver",
       "flag": "ru"
     },

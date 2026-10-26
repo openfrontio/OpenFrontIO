@@ -1,4 +1,5 @@
 {
+  "$schema": "../../../info.schema.json",
   "id": "BritanniaClassic",
   "name": "Britannia Classic",
   "display_name": "Britannia (Classic)",
