@@ -1,6 +1,7 @@
 import type { LiveStream } from "@openfront/shared/ApiSchemas";
 import { LitElement, html, nothing } from "lit";
 import { customElement, state } from "lit/decorators.js";
+import { isCompactViewport } from "../CompactViewport";
 import { streamsFeed, watchUrl } from "../StreamsFeed";
 import { translateText } from "../Utils";
 
@@ -34,13 +35,9 @@ export class StreamingNow extends LitElement {
   connectedCallback() {
     super.connectedCallback();
     this.style.display = "none"; // hidden until the feed reports a live stream (no flash)
-    // Desktop only (host carries `hidden lg:block`); below lg, don't even subscribe.
-    if (
-      typeof window.matchMedia === "function" &&
-      !window.matchMedia("(min-width: 1024px)").matches
-    ) {
-      return;
-    }
+    // Not on compact screens (below lg, where the host is also `hidden`, or short
+    // ones such as Poki's frame): don't even subscribe.
+    if (isCompactViewport()) return;
     // The shared poller owns the cadence and stops itself in-game and while the tab is
     // hidden. This previously ran its own setInterval and only cleared it in
     // disconnectedCallback — which never fires, because <play-page> is never removed

@@ -93,8 +93,8 @@ describe("StreamingNow", () => {
           },
         ],
       });
-      // The host is desktop-only; jsdom's matchMedia reports no match for everything.
-      vi.stubGlobal("matchMedia", () => ({ matches: true }));
+      // A desktop-sized viewport: the host stays off on compact screens.
+      vi.stubGlobal("matchMedia", () => ({ matches: false }));
       await import("../../../src/client/components/StreamingNow");
     });
 
@@ -149,6 +149,23 @@ describe("StreamingNow", () => {
       const el = await mount();
       expect(el.style.display).toBe("none");
       expect(el.querySelectorAll("a")).toHaveLength(0);
+    });
+
+    it("does not subscribe on a short desktop-width screen", async () => {
+      // Poki's 1031x580 frame: wide enough for lg, but short.
+      vi.stubGlobal("matchMedia", (query: string) => ({
+        matches:
+          query.includes("min-width: 1024px") ||
+          query.includes("max-height: 800px"),
+      }));
+      const el = document.createElement("streaming-now") as HTMLElement & {
+        updateComplete: Promise<boolean>;
+      };
+      document.body.appendChild(el);
+      await el.updateComplete;
+      await vi.advanceTimersByTimeAsync(60_000);
+      expect(getStreams).not.toHaveBeenCalled();
+      expect(el.style.display).toBe("none");
     });
 
     it("owns no timer: disconnecting stops all polling", async () => {
