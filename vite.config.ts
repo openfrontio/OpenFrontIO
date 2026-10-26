@@ -27,6 +27,31 @@ import {
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+const clientForksTests = [
+  "tests/client/ApexNavigation.test.ts",
+  "tests/client/Auth.desktopLogin.test.ts",
+  "tests/client/Auth.steamOpenId.test.ts",
+  "tests/client/ClientEnvStatic.test.ts",
+  "tests/client/ClientGameRunnerMessages.test.ts",
+  "tests/client/CosmeticPackPurchase.test.ts",
+  "tests/client/CosmeticPurchaseDebt.test.ts",
+  "tests/client/CreatorCodePanel.test.ts",
+  "tests/client/HashedEmail.test.ts",
+  "tests/client/InlineCheckout.test.ts",
+  "tests/client/MainInitialize.test.ts",
+  "tests/client/Matchmaking.test.ts",
+  "tests/client/Platform.test.ts",
+  "tests/client/PokiSDK.test.ts",
+  "tests/client/ServerList.test.ts",
+  "tests/client/ShareLinks.test.ts",
+  "tests/client/TransportConnectionRefused.test.ts",
+  "tests/client/TransportPoolRedirect.test.ts",
+  "tests/client/TransportReconnect.test.ts",
+  "tests/client/UsernameBareClaim.test.ts",
+  "tests/client/UsernameClaimPrefill.test.ts",
+  "tests/client/graphics/layers/WinModal.test.ts",
+];
+
 // Dev-only: resources/public/ is served at the site root, as the build copies
 // it into static/. Vite's publicDir (resources/) would put it under /public/.
 function serveRootPublicDir(publicDir: string): Plugin {
@@ -338,13 +363,27 @@ export default defineConfig(({ mode }) => {
       // Starting jsdom costs every file ~0.5s, more than many of them spend
       // running tests, so only the client tests get it. A test elsewhere that
       // needs a DOM opts in with a `// @vitest-environment jsdom` first line.
+      // vmThreads keeps jsdom loaded across files instead of importing it again
+      // in a fresh process for each one. Its window is the real jsdom window,
+      // though, whose location, top and window can't be redefined and whose
+      // crypto has no subtle, so tests that need those stay on the default pool.
       projects: [
         {
           extends: true,
           test: {
             name: "client",
             environment: "jsdom",
+            pool: "vmThreads",
             include: ["tests/client/**/*.test.ts"],
+            exclude: clientForksTests,
+          },
+        },
+        {
+          extends: true,
+          test: {
+            name: "client-forks",
+            environment: "jsdom",
+            include: clientForksTests,
           },
         },
         {
