@@ -3,8 +3,6 @@
   "name": "Labyrinth",
   "translation_key": "map.labyrinth",
   "categories": ["arcade"],
-  "multiplayer_frequency": 2,
-  "team_frequency": 4,
   "nations": [
     {
       "coordinates": [50, 50],

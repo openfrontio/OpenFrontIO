@@ -3,7 +3,6 @@
   "name": "New Zealand",
   "translation_key": "map.newzealand",
   "categories": ["new", "oceania"],
-  "multiplayer_frequency": 5,
   "nations": [
     {
       "coordinates": [1096, 415],

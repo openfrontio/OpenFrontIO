@@ -3,7 +3,6 @@
   "name": "Hong Kong",
   "translation_key": "map.hongkong",
   "categories": ["asia"],
-  "multiplayer_frequency": 8,
   "nations": [
     {
       "coordinates": [1592, 1147],

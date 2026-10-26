@@ -3,8 +3,6 @@
   "id": "ChannelIslands",
   "translation_key": "map.channelislands",
   "categories": ["north_america"],
-  "multiplayer_frequency": 4,
-  "team_frequency": 7,
   "nations": [
     {
       "coordinates": [4060, 214],
