@@ -391,7 +391,7 @@ export class BuildMenu extends LitElement implements Controller {
           buildableUnit.type,
         ),
       );
-    } else if (buildableUnit.canBuild) {
+    } else if (buildableUnit.canBuild !== false) {
       const rocketDirectionUp =
         buildableUnit.type === UnitType.AtomBomb ||
         buildableUnit.type === UnitType.HydrogenBomb
@@ -420,9 +420,7 @@ export class BuildMenu extends LitElement implements Controller {
                 if (buildableUnit === undefined) {
                   return html``;
                 }
-                const enabled =
-                  buildableUnit.canBuild !== false ||
-                  buildableUnit.canUpgrade !== false;
+                const enabled = this.canBuildOrUpgrade(item);
                 return html`
                   <button
                     class="build-button"

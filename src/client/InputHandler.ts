@@ -893,7 +893,14 @@ export class InputHandler {
       "keyup",
       (e) => {
         const hold = this.parseKeybind(this.keybinds.preventStacking);
-        if (e.code === hold.code || (hold.shift && !e.shiftKey)) {
+        // macOS can swallow H's keyup while Cmd is held. Reset on Cmd release
+        // before the text-input guard as focus may have moved into a menu.
+        if (
+          e.code === hold.code ||
+          (hold.shift && !e.shiftKey) ||
+          e.code === "MetaLeft" ||
+          e.code === "MetaRight"
+        ) {
           this.uiState.preventStacking = false;
         }
         const isTextInput = this.isTextInputTarget(e.target);

@@ -207,3 +207,24 @@ describe("WorkerClient humanStats", () => {
     }
   });
 });
+
+describe("WorkerClient placement preview request", () => {
+  it("forwards the opt-in rail preview flag with a buildables request", async () => {
+    const { client, worker, internalClient } = createClient();
+    const result = client.playerBuildables("7", 3, 4, undefined, true);
+    const request = vi.mocked(worker.postMessage).mock.calls[0][0] as {
+      id: string;
+    };
+    expect(request).toMatchObject({
+      type: "player_buildables",
+      playerID: "7",
+      x: 3,
+      y: 4,
+      includeBuildPreview: true,
+    });
+    internalClient.handleWorkerMessage({
+      data: { type: "player_buildables_result", id: request.id, result: [] },
+    } as unknown as MessageEvent<WorkerMessage>);
+    await expect(result).resolves.toEqual([]);
+  });
+});

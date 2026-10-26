@@ -41,3 +41,31 @@ describe("BuildMenu.cost", () => {
     expect(menu.cost(item(UnitType.City))).toBe(0n);
   });
 });
+
+describe("BuildMenu hold-to-build availability", () => {
+  it("uses the effective action for rendered buttons as the hold changes", async () => {
+    const menu = makeMenu();
+    menu.game = { myPlayer: () => ({}) } as any;
+    menu.uiState = { preventStacking: true } as any;
+    menu.playerBuildables = [
+      { type: UnitType.City, canBuild: false, canUpgrade: 7, cost: 1n },
+    ] as BuildableUnit[];
+    (menu as any).filteredBuildTable = [[item(UnitType.City)]];
+    document.body.appendChild(menu);
+    await menu.updateComplete;
+    const button = menu.renderRoot.querySelector("button")!;
+    expect(button.disabled).toBe(true);
+
+    menu.uiState.preventStacking = false;
+    menu.requestUpdate();
+    await menu.updateComplete;
+    expect(button.disabled).toBe(false);
+
+    menu.uiState.preventStacking = true;
+    menu.playerBuildables[0].canBuild = 0;
+    menu.requestUpdate();
+    await menu.updateComplete;
+    expect(button.disabled).toBe(false);
+    menu.remove();
+  });
+});

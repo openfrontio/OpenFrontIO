@@ -382,6 +382,7 @@ export class WorkerClient {
     x?: number,
     y?: number,
     units?: readonly PlayerBuildableUnitType[],
+    includeBuildPreview = false,
   ): Promise<BuildableUnit[]> {
     return new Promise((resolve, reject) => {
       if (!this.isInitialized) {
@@ -407,6 +408,7 @@ export class WorkerClient {
         x,
         y,
         units,
+        includeBuildPreview,
       });
     });
   }

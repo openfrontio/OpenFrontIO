@@ -78,6 +78,9 @@ export class BuildPreviewController implements Controller {
   private readonly mousePos = { x: 0, y: 0 };
   private lastGhostQueryAt: number = 0;
   private pendingConfirm: MouseUpEvent | null = null;
+  private ghostResolved = false;
+  private ghostQuerySequence = 0;
+  private ghostQueryPending = false;
 
   // Buildable validation runs on the snapped tile under the cursor, but the
   // rendered icon follows the cursor at sub-tile precision so motion is
@@ -203,7 +206,7 @@ export class BuildPreviewController implements Controller {
   }
 
   renderGhost() {
-    if (!this.ghostUnit) return;
+    if (!this.ghostUnit || this.ghostQueryPending) return;
 
     const now = performance.now();
     if (now - this.lastGhostQueryAt < 50) return;
@@ -256,15 +259,21 @@ export class BuildPreviewController implements Controller {
       }
     }
 
-    this.game
-      ?.myPlayer()
-      ?.buildables(tileRef, [this.ghostUnit?.buildableUnit.type])
+    if (!myPlayer) return;
+    const ghost = this.ghostUnit;
+    const query = ++this.ghostQuerySequence;
+    this.ghostQueryPending = true;
+    myPlayer
+      .buildables(
+        tileRef,
+        [ghost.buildableUnit.type],
+        !!this.uiState.preventStacking,
+      )
       .then((buildables) => {
-        if (!this.ghostUnit) {
-          this.pendingConfirm = null;
-          this.emitGhostPreview(tileRef, targetingAlly, trajectoryTileRef);
+        if (this.ghostUnit !== ghost || query !== this.ghostQuerySequence)
           return;
-        }
+        this.ghostQueryPending = false;
+        this.ghostResolved = true;
 
         const unit = buildables.find(
           (u) => u.type === this.ghostUnit!.buildableUnit.type,
@@ -290,6 +299,13 @@ export class BuildPreviewController implements Controller {
         }
 
         this.emitGhostPreview(tileRef, targetingAlly, trajectoryTileRef);
+      })
+      .catch((error) => {
+        if (this.ghostUnit !== ghost || query !== this.ghostQuerySequence)
+          return;
+        this.ghostQueryPending = false;
+        this.pendingConfirm = null;
+        console.error("Failed to query build preview", error);
       });
   }
 
@@ -436,8 +452,7 @@ export class BuildPreviewController implements Controller {
     const myPlayer = this.game.myPlayer();
     if (!myPlayer) return null;
 
-    const u = { ...this.ghostUnit.buildableUnit };
-    if (this.uiState.preventStacking) u.canUpgrade = false;
+    const u = this.effectiveBuildableUnit()!;
     // With snapping on, a new structure's preview sits on the tile it will
     // actually be built on (the sim moves it off nearby buildings) instead of
     // under the cursor.
@@ -511,8 +526,9 @@ export class BuildPreviewController implements Controller {
       multiplier: multiplier,
       showCost: this.userSettings.cursorCostLabel(),
       canAfford,
-      ghostRailPaths: u.ghostRailPaths,
-      overlappingRailroads: u.overlappingRailroads,
+      ghostRailPaths: u.canUpgrade === false ? u.ghostRailPaths : [],
+      overlappingRailroads:
+        u.canUpgrade === false ? u.overlappingRailroads : [],
       ownerID: myPlayer.smallID(),
       upgradeTargetTile,
       rangeRadius,
@@ -520,49 +536,51 @@ export class BuildPreviewController implements Controller {
     };
   }
 
+  private effectiveBuildableUnit(): BuildableUnit | null {
+    const unit = this.ghostUnit?.buildableUnit;
+    if (!unit) return null;
+    return this.uiState.preventStacking
+      ? { ...unit, canUpgrade: false, upgradeCosts: undefined }
+      : unit;
+  }
+
   private isGhostReadyForConfirm(): boolean {
-    if (!this.ghostUnit) return false;
-    const bu = this.ghostUnit.buildableUnit;
-    return bu.canBuild !== false || bu.canUpgrade !== false;
+    const unit = this.effectiveBuildableUnit();
+    return (
+      unit !== null && (unit.canBuild !== false || unit.canUpgrade !== false)
+    );
   }
 
   private requestConfirmStructure(e: MouseUpEvent): void {
     if (!this.ghostUnit && !this.uiState.ghostStructure) return;
     if (this.isGhostReadyForConfirm()) {
       this.createStructure(e);
-    } else {
+    } else if (!this.ghostResolved) {
+      // Wait for the initial query, but a click on a resolved invalid preview
+      // must not become a queued build when the pointer moves elsewhere.
       this.pendingConfirm = e;
     }
   }
 
   private createStructure(e: MouseUpEvent) {
-    if (!this.ghostUnit) return;
-    if (
-      this.ghostUnit.buildableUnit.canBuild === false &&
-      this.ghostUnit.buildableUnit.canUpgrade === false
-    ) {
-      this.removeGhostStructure();
-      return;
-    }
+    const unit = this.effectiveBuildableUnit();
+    if (!unit || (unit.canBuild === false && unit.canUpgrade === false)) return;
     const tile = this.transformHandler.screenToWorldCoordinates(e.x, e.y);
-    if (
-      this.ghostUnit.buildableUnit.canUpgrade !== false &&
-      !this.uiState.preventStacking
-    ) {
+    if (unit.canUpgrade !== false) {
       this.eventBus.emit(
         new SendUpgradeStructureIntentEvent(
-          this.ghostUnit.buildableUnit.canUpgrade,
-          this.ghostUnit.buildableUnit.type,
+          unit.canUpgrade,
+          unit.type,
           this.uiState.upgradeMultiplier || 1,
         ),
       );
       this.removeGhostStructure();
-    } else if (this.ghostUnit.buildableUnit.canBuild) {
+    } else if (unit.canBuild !== false) {
       // The pointer can be released just off the map edge before the
       // throttled hover refresh marks the ghost unbuildable; there is no
       // tile to build on, so keep the ghost and wait for a click on the map.
       if (!this.game.isValidCoord(tile.x, tile.y)) return;
-      const unitType = this.ghostUnit.buildableUnit.type;
+      const unitType = unit.type;
       const targetTile = this.game.ref(tile.x, tile.y);
 
       if (this.shouldBlockRecentAllyNuke(targetTile, unitType)) {
@@ -655,6 +673,7 @@ export class BuildPreviewController implements Controller {
   private createGhostStructure(type: PlayerBuildableUnitType | null) {
     if (type === null) return;
     if (this.game.myPlayer() === null) return;
+    this.ghostResolved = false;
     this.ghostUnit = {
       buildableUnit: {
         type,
@@ -669,6 +688,9 @@ export class BuildPreviewController implements Controller {
 
   private clearGhostStructure() {
     this.pendingConfirm = null;
+    this.ghostResolved = false;
+    this.ghostQuerySequence++;
+    this.ghostQueryPending = false;
     this.ghostUnit = null;
     this.lastGhostData = null;
     this.view.updateGhostPreview(null);
