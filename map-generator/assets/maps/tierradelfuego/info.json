@@ -3,7 +3,6 @@
   "name": "Tierra Del Fuego",
   "translation_key": "map.tierradelfuego",
   "categories": ["south_america"],
-  "multiplayer_frequency": 5,
   "nations": [
     {
       "coordinates": [1320, 945],

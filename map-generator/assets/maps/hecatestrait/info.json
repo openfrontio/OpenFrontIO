@@ -3,7 +3,6 @@
   "name": "Hecate Strait",
   "translation_key": "map.hecatestrait",
   "categories": ["north_america"],
-  "multiplayer_frequency": 4,
   "nations": [
     {
       "coordinates": [421, 628],

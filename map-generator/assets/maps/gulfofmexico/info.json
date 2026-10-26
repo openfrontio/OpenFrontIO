@@ -3,7 +3,6 @@
   "name": "Gulf Of Mexico",
   "translation_key": "map.gulfofmexico",
   "categories": ["north_america"],
-  "multiplayer_frequency": 5,
   "nations": [
     {
       "coordinates": [2639, 1752],

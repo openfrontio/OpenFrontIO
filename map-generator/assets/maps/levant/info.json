@@ -3,7 +3,6 @@
   "name": "Levant",
   "translation_key": "map.levant",
   "categories": ["asia"],
-  "multiplayer_frequency": 5,
   "nations": [
     {
       "coordinates": [722, 1683],

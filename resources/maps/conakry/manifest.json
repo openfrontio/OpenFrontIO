@@ -16,7 +16,6 @@
     "num_land_tiles": 272605,
     "width": 1228
   },
-  "multiplayer_frequency": 3,
   "name": "Conakry",
   "nations": [
     {
@@ -137,7 +136,6 @@
       }
     ]
   },
-  "team_frequency": 6,
   "themes": ["africa"],
   "translation_key": "map.conakry"
 }
