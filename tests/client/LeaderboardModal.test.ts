@@ -804,6 +804,28 @@ describe("LeaderboardModal", () => {
       expect(value.textContent).toContain("± 61");
     });
 
+    it("pins the calibrating row even when the FFA board is empty", async () => {
+      await meOnce({
+        player: {
+          publicId: "me",
+          username: "me.1",
+          leaderboard: { ffa: { games: 2, wins: 0, calibrationGames: 2 } },
+        },
+      });
+      fetchMock().mockResolvedValueOnce(
+        jsonRes({ "1v1": [entry(1, "p1", 1200)], "2v2": [], ffa: [] }),
+      );
+      await getPlayerList()!.loadPlayerLeaderboard(true);
+      await showLadder("playersFfa");
+      const row = modal.querySelector("tfoot [data-ffa-calibrating-row]")!;
+      expect(
+        row.querySelector<FfaTierBadge>("ffa-tier-badge")!.calibrationGames,
+      ).toBe(2);
+      // The 2v2 board is empty too, and no one is calibrating there.
+      await showLadder("players2v2");
+      expect(modal.querySelector("[data-ffa-calibrating-row]")).toBeNull();
+    });
+
     it("pins a calibrating row for a signed-in player not on the board", async () => {
       await meOnce({
         player: {

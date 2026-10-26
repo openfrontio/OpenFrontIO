@@ -7,13 +7,14 @@ import {
 } from "@openfront/engine-api/game/GameTypes";
 import { renderNumber } from "@openfront/engine-lib/Format";
 import { EventBus } from "@openfront/shared/EventBus";
-import { html, LitElement } from "lit";
+import { html, LitElement, nothing } from "lit";
 import { customElement } from "lit/decorators.js";
 import { Controller } from "../../Controller";
 import { ToggleStructureEvent } from "../../InputHandler";
+import { KeyboardLayoutController } from "../../KeyboardLayout";
 import { UIState } from "../../UIState";
 import { UserSettings } from "../../UserSettings";
-import { translateText } from "../../Utils";
+import { resolveKeybindLabel, translateText } from "../../Utils";
 import { GameView } from "../../view";
 import {
   atomBombIcon,
@@ -37,6 +38,7 @@ export class UnitDisplay extends LitElement implements Controller {
   public uiState: UIState;
   private playerBuildables: BuildableUnit[] | null = null;
   private keybinds: Record<string, { value: string; key: string }> = {};
+  private keyboardLayout = new KeyboardLayoutController(this);
   private _cities = 0;
   private _warships = 0;
   private _factories = 0;
@@ -149,74 +151,82 @@ export class UnitDisplay extends LitElement implements Controller {
             this._cities,
             UnitType.City,
             "city",
-            this.keybinds["buildCity"]?.key ?? "1",
+            this.getHotkey("buildCity", "Digit1"),
           )}
           ${this.renderUnitItem(
             factoryIcon,
             this._factories,
             UnitType.Factory,
             "factory",
-            this.keybinds["buildFactory"]?.key ?? "2",
+            this.getHotkey("buildFactory", "Digit2"),
           )}
           ${this.renderUnitItem(
             portIcon,
             this._port,
             UnitType.Port,
             "port",
-            this.keybinds["buildPort"]?.key ?? "3",
+            this.getHotkey("buildPort", "Digit3"),
           )}
           ${this.renderUnitItem(
             defensePostIcon,
             this._defensePost,
             UnitType.DefensePost,
             "defense_post",
-            this.keybinds["buildDefensePost"]?.key ?? "4",
+            this.getHotkey("buildDefensePost", "Digit4"),
           )}
           ${this.renderUnitItem(
             missileSiloIcon,
             this._missileSilo,
             UnitType.MissileSilo,
             "missile_silo",
-            this.keybinds["buildMissileSilo"]?.key ?? "5",
+            this.getHotkey("buildMissileSilo", "Digit5"),
           )}
           ${this.renderUnitItem(
             samLauncherIcon,
             this._samLauncher,
             UnitType.SAMLauncher,
             "sam_launcher",
-            this.keybinds["buildSamLauncher"]?.key ?? "6",
+            this.getHotkey("buildSamLauncher", "Digit6"),
           )}
           ${this.renderUnitItem(
             warshipIcon,
             this._warships,
             UnitType.Warship,
             "warship",
-            this.keybinds["buildWarship"]?.key ?? "7",
+            this.getHotkey("buildWarship", "Digit7"),
           )}
           ${this.renderUnitItem(
             atomBombIcon,
             null,
             UnitType.AtomBomb,
             "atom_bomb",
-            this.keybinds["buildAtomBomb"]?.key ?? "8",
+            this.getHotkey("buildAtomBomb", "Digit8"),
           )}
           ${this.renderUnitItem(
             hydrogenBombIcon,
             null,
             UnitType.HydrogenBomb,
             "hydrogen_bomb",
-            this.keybinds["buildHydrogenBomb"]?.key ?? "9",
+            this.getHotkey("buildHydrogenBomb", "Digit9"),
           )}
           ${this.renderUnitItem(
             mirvIcon,
             null,
             UnitType.MIRV,
             "mirv",
-            this.keybinds["buildMIRV"]?.key ?? "0",
+            this.getHotkey("buildMIRV", "Digit0"),
           )}
         </div>
       </div>
     `;
+  }
+
+  private getHotkey(action: string, defaultCode: string): string {
+    return resolveKeybindLabel(
+      this.keybinds[action],
+      defaultCode,
+      this.keyboardLayout.map,
+    );
   }
 
   private renderUnitItem(
@@ -248,39 +258,43 @@ export class UnitDisplay extends LitElement implements Controller {
           this.requestUpdate();
         }}
       >
-        ${hovered
-          ? html`
-              <div
-                class="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 text-gray-200 text-center w-max text-xs bg-gray-800/90 backdrop-blur-xs rounded-sm p-1 z-[100] shadow-lg pointer-events-none"
-              >
-                <div class="font-bold text-sm mb-1">
-                  ${translateText(
-                    "unit_type." + structureKey,
-                  )}${` [${displayHotkey}]`}
-                </div>
-                <div class="p-2">
-                  ${translateText("build_menu.desc." + structureKey)}
-                </div>
-                ${unitType === UnitType.Warship
-                  ? html`<div
-                      class="mt-1 px-2 py-1 text-[10px] text-cyan-300 border-t border-white/10"
+        ${
+          hovered
+            ? html`
+                <div
+                  class="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 text-gray-200 text-center w-max text-xs bg-gray-800/90 backdrop-blur-xs rounded-sm p-1 z-[100] shadow-lg pointer-events-none"
+                >
+                  <div class="font-bold text-sm mb-1">
+                    ${translateText("unit_type." + structureKey)}${
+                      hotkey ? ` [${displayHotkey}]` : ""
+                    }
+                  </div>
+                  <div class="p-2">
+                    ${translateText("build_menu.desc." + structureKey)}
+                  </div>
+                  ${
+                    unitType === UnitType.Warship
+                      ? html`<div
+                          class="mt-1 px-2 py-1 text-[10px] text-cyan-300 border-t border-white/10"
+                        >
+                          ⇧ ${translateText("build_menu.warship_shift_hint")}
+                        </div>`
+                      : null
+                  }
+                  <div class="flex items-center justify-center gap-1">
+                    <img src=${goldCoinIcon} width="13" height="13" />
+                    <span class="text-yellow-300"
+                      >${renderNumber(this.cost(unitType))}</span
                     >
-                      ⇧ ${translateText("build_menu.warship_shift_hint")}
-                    </div>`
-                  : null}
-                <div class="flex items-center justify-center gap-1">
-                  <img src=${goldCoinIcon} width="13" height="13" />
-                  <span class="text-yellow-300"
-                    >${renderNumber(this.cost(unitType))}</span
-                  >
+                  </div>
                 </div>
-              </div>
-            `
-          : null}
+              `
+            : null
+        }
         <div
-          class="${this.canBuild(unitType)
-            ? ""
-            : "opacity-40"} border border-slate-500 rounded-sm px-0.5 pb-0.5 flex items-center gap-0.5 cursor-pointer
+          class="${
+            this.canBuild(unitType) ? "" : "opacity-40"
+          } border border-slate-500 rounded-sm px-0.5 pb-0.5 flex items-center gap-0.5 cursor-pointer
              ${selected ? "hover:bg-gray-400/10" : "hover:bg-gray-800"}
              rounded-sm text-white ${selected ? "bg-slate-400/20" : ""}
              ${this.tutorialHighlight === unitType ? "tutorial-highlight" : ""}"
@@ -313,14 +327,22 @@ export class UnitDisplay extends LitElement implements Controller {
           @mouseleave=${() =>
             this.eventBus?.emit(new ToggleStructureEvent(null))}
         >
-          ${html`<div class="ml-0.5 text-[10px] relative -top-1 text-gray-400">
-            ${displayHotkey}
-          </div>`}
+          ${
+            hotkey
+              ? html`<div
+                  class="ml-0.5 text-[10px] relative -top-1 text-gray-400"
+                >
+                  ${displayHotkey}
+                </div>`
+              : nothing
+          }
           <div class="flex items-center gap-0.5 pt-0.5">
             <img src=${icon} alt=${structureKey} class="align-middle size-5" />
-            ${number !== null
-              ? html`<span class="text-xs">${renderNumber(number)}</span>`
-              : null}
+            ${
+              number !== null
+                ? html`<span class="text-xs">${renderNumber(number)}</span>`
+                : null
+            }
           </div>
         </div>
       </div>

@@ -24,6 +24,7 @@ function makeUserMe(flares: string[] = []): UserMeResponse {
     steamLicence: false,
     steamLicenceSince: null,
     noticesSeen: [],
+    pendingMessages: [],
     player: {
       publicId: "test",
       adfree: false,

@@ -493,11 +493,13 @@ export class LeaderboardPlayerList extends LitElement {
           <span class="font-mono text-white ${weight}"
             >${formatRating(row.elo)}</span
           >
-          ${row.uncertainty === undefined
-            ? nothing
-            : html`<span class="font-mono text-white/40"
-                >± ${formatRating(row.uncertainty)}</span
-              >`}
+          ${
+            row.uncertainty === undefined
+              ? nothing
+              : html`<span class="font-mono text-white/40"
+                  >± ${formatRating(row.uncertainty)}</span
+                >`
+          }
         </span>
       </div>
     `;
@@ -524,9 +526,9 @@ export class LeaderboardPlayerList extends LitElement {
     return html`
       <tr
         data-current-user=${isCurrentUser ? "true" : "false"}
-        class="border-b border-white/5 hover:bg-white/[0.07] transition-colors group ${isCurrentUser
-          ? "bg-blue-500/15"
-          : ""}"
+        class="border-b border-white/5 hover:bg-white/[0.07] transition-colors group ${
+          isCurrentUser ? "bg-blue-500/15" : ""
+        }"
       >
         <td class="py-3 px-4 text-center">
           <div
@@ -556,9 +558,9 @@ export class LeaderboardPlayerList extends LitElement {
         <td class="py-3 px-4 text-right pr-6">
           <div class="inline-flex flex-col items-end">
             <span
-              class="font-mono font-bold ${player.winRate >= 0.5
-                ? "text-green-400"
-                : "text-red-400"}"
+              class="font-mono font-bold ${
+                player.winRate >= 0.5 ? "text-green-400" : "text-red-400"
+              }"
               >${(player.winRate * 100).toFixed(1)}%</span
             >
             <span
@@ -689,7 +691,14 @@ export class LeaderboardPlayerList extends LitElement {
     if (this.isLoading && this.playerData.length === 0)
       return this.renderLoading();
     if (this.error) return this.renderError();
-    if (this.hasLoadedPlayers && this.playerData.length === 0)
+    // An empty FFA board still shows a calibrating player their pinned row.
+    const pinnedCalibration =
+      this.rankedType === RankedType.FreeForAll && this.ffaCalibration !== null;
+    if (
+      this.hasLoadedPlayers &&
+      this.playerData.length === 0 &&
+      !pinnedCalibration
+    )
       return this.renderNoData();
 
     // Level badges mark prestiged players and Legends only (see
@@ -707,23 +716,25 @@ export class LeaderboardPlayerList extends LitElement {
           stray outline. The rows above it end on their own border-b.
         -->
         <div
-          class="h-full border-x border-t border-white/5 bg-black/20 relative ${ratingLive
-            ? "flex flex-col"
-            : ""}"
+          class="h-full border-x border-t border-white/5 bg-black/20 relative ${
+            ratingLive ? "flex flex-col" : ""
+          }"
         >
           <div
-            class="scroll-container ${ratingLive
-              ? "flex-1 min-h-0"
-              : "h-full"} overflow-y-auto overflow-x-auto scrollbar-thin scrollbar-thumb-white/20"
+            class="scroll-container ${
+              ratingLive ? "flex-1 min-h-0" : "h-full"
+            } overflow-y-auto overflow-x-auto scrollbar-thin scrollbar-thumb-white/20"
             @scroll=${() => this.handleScroll()}
           >
             <table class="w-full text-sm border-collapse table-fixed">
               <colgroup>
                 <col style="width: 4rem" />
                 <col style="width: 12rem" />
-                ${ratingLive
-                  ? html`<col class="w-32 sm:w-48" />`
-                  : html`<col style="width: 6rem" />`}
+                ${
+                  ratingLive
+                    ? html`<col class="w-32 sm:w-48" />`
+                    : html`<col style="width: 6rem" />`
+                }
                 <col style="width: 6rem" />
                 <col style="width: 6rem" />
               </colgroup>
@@ -761,11 +772,13 @@ export class LeaderboardPlayerList extends LitElement {
             </table>
             ${this.renderPlayerFooter()}
           </div>
-          ${ratingLive
-            ? html`<ofstats-credit
-                class="block shrink-0 py-2 text-center"
-              ></ofstats-credit>`
-            : nothing}
+          ${
+            ratingLive
+              ? html`<ofstats-credit
+                  class="block shrink-0 py-2 text-center"
+                ></ofstats-credit>`
+              : nothing
+          }
         </div>
       </div>
     `;

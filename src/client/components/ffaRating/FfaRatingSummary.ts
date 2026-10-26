@@ -90,29 +90,36 @@ export class FfaRatingSummary extends LitElement {
       <span class="text-xs font-bold uppercase tracking-wide text-white/70"
         >${translateText("ffa_rating.title")}</span
       >
-      ${rating.kind === "rated"
-        ? html`<ffa-tier-badge size="md" .tier=${rating.tier}></ffa-tier-badge>
-            <span
-              data-ffa-rating-value
-              class="text-lg font-bold tabular-nums text-white"
-              >${formatRatingWithUncertainty(
-                rating.rating,
-                rating.uncertainty,
-              )}</span
-            >
-            ${rating.peak === undefined
-              ? nothing
-              : html`<span
-                  data-ffa-rating-peak
-                  class="text-xs tabular-nums text-white/60"
-                  >${translateText("ffa_rating.peak", {
-                    rating: formatRating(rating.peak),
-                  })}</span
-                >`}`
-        : html`<ffa-tier-badge
-            size="md"
-            .calibrationGames=${rating.calibrationGames}
-          ></ffa-tier-badge>`}
+      ${
+        rating.kind === "rated"
+          ? html`<ffa-tier-badge
+                size="md"
+                .tier=${rating.tier}
+              ></ffa-tier-badge>
+              <span
+                data-ffa-rating-value
+                class="text-lg font-bold tabular-nums text-white"
+                >${formatRatingWithUncertainty(
+                  rating.rating,
+                  rating.uncertainty,
+                )}</span
+              >
+              ${
+                rating.peak === undefined
+                  ? nothing
+                  : html`<span
+                      data-ffa-rating-peak
+                      class="text-xs tabular-nums text-white/60"
+                      >${translateText("ffa_rating.peak", {
+                        rating: formatRating(rating.peak),
+                      })}</span
+                    >`
+              }`
+          : html`<ffa-tier-badge
+              size="md"
+              .calibrationGames=${rating.calibrationGames}
+            ></ffa-tier-badge>`
+      }
       <ofstats-credit></ofstats-credit>
     </div>`;
   }

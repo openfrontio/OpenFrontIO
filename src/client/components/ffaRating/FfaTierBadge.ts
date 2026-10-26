@@ -55,9 +55,9 @@ export class FfaTierBadge extends LitElement {
           title=${this.tier}
           class="inline-flex align-middle"
           ><span
-            class="rounded-full font-bold tracking-wide whitespace-nowrap bg-white/10 text-white/70 ${FFA_BADGE_SIZE_CLASSES[
-              this.size
-            ]}"
+            class="rounded-full font-bold tracking-wide whitespace-nowrap bg-white/10 text-white/70 ${
+              FFA_BADGE_SIZE_CLASSES[this.size]
+            }"
             >${this.tier}</span
           ></span
         >`;
@@ -88,18 +88,18 @@ export class FfaTierBadge extends LitElement {
 
   protected renderTier(tier: ParsedFfaTier, label: string): TemplateResult {
     return html`<span
-      class="rounded-full font-bold uppercase tracking-wide whitespace-nowrap ${FFA_TIER_COLOR_CLASSES[
-        tier.base
-      ]} ${FFA_BADGE_SIZE_CLASSES[this.size]}"
+      class="rounded-full font-bold uppercase tracking-wide whitespace-nowrap ${
+        FFA_TIER_COLOR_CLASSES[tier.base]
+      } ${FFA_BADGE_SIZE_CLASSES[this.size]}"
       >${label}</span
     >`;
   }
 
   protected renderCalibrating(n: number): TemplateResult {
     return html`<span
-      class="rounded-full border border-dashed border-white/40 text-white/70 font-bold tracking-wide whitespace-nowrap ${FFA_BADGE_SIZE_CLASSES[
-        this.size
-      ]}"
+      class="rounded-full border border-dashed border-white/40 text-white/70 font-bold tracking-wide whitespace-nowrap ${
+        FFA_BADGE_SIZE_CLASSES[this.size]
+      }"
       >${translateText("ffa_rating.calibrating", { n })}</span
     >`;
   }

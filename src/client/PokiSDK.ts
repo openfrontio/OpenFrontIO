@@ -85,8 +85,8 @@ function keepPokiParams(): void {
 }
 
 // Mirrors CrazyGamesSDK's surface so GamePortal can route to either. Poki has
-// no loading events per join, no invite button, no instant multiplayer and no
-// happytime, so those are no-ops here.
+// no loading events per join, no invite button and no happytime, so those are
+// no-ops here.
 export class PokiSDK {
   private initialized = false;
   private isGameplayActive = false;
@@ -253,8 +253,17 @@ export class PokiSDK {
     this.authListeners.push(listener);
   }
 
+  // A poki.com link carrying gdhost (e.g. poki.com/en/g/openfront?gdhost=1)
+  // opens the game straight into hosting a new lobby. An invite to an
+  // existing lobby wins over it.
   async isInstantMultiplayer(): Promise<boolean> {
-    return false;
+    if (!(await this.whenReady())) {
+      return false;
+    }
+    if (window.PokiSDK!.getURLParam("gameId")) {
+      return false;
+    }
+    return Boolean(window.PokiSDK!.getURLParam("host"));
   }
 
   async gameplayStart(): Promise<void> {

@@ -323,9 +323,11 @@ export class PlayerGameHistoryView extends LitElement {
               role="tab"
               aria-selected=${isActive}
               @click=${() => onSelect(tab.key)}
-              class="grow ${basis} px-3 py-1.5 text-xs font-bold uppercase tracking-wider whitespace-nowrap rounded-lg transition-colors ${isActive
-                ? "bg-malibu-blue/20 text-aquarius border border-malibu-blue/30"
-                : "text-white/50 hover:text-white hover:bg-white/5 border border-transparent"}"
+              class="grow ${basis} px-3 py-1.5 text-xs font-bold uppercase tracking-wider whitespace-nowrap rounded-lg transition-colors ${
+                isActive
+                  ? "bg-malibu-blue/20 text-aquarius border border-malibu-blue/30"
+                  : "text-white/50 hover:text-white hover:bg-white/5 border border-transparent"
+              }"
             >
               ${translateText(tab.labelKey)}
             </button>
@@ -458,42 +460,48 @@ export class PlayerGameHistoryView extends LitElement {
       <div
         class="relative bg-white/5 border border-white/10 rounded-xl overflow-hidden"
       >
-        ${mapWebpPath
-          ? html`<div
-              class="relative w-full aspect-[30/15] overflow-hidden bg-surface"
-            >
-              <img
-                src=${mapWebpPath}
-                alt=${mapDisplayName ?? ""}
-                draggable="false"
-                loading="lazy"
-                decoding="async"
-                class="w-full h-full object-cover"
-              />
-              <div
-                class="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent"
-              ></div>
-              ${mapDisplayName
-                ? html`<div
-                    class="absolute bottom-2 left-3 text-xs font-bold text-white uppercase tracking-wider drop-shadow"
-                  >
-                    ${mapDisplayName}
-                  </div>`
-                : ""}
-              <div class="absolute top-2 left-2">
-                ${this.renderResultBadge(game)}
-              </div>
-              <div
-                class="absolute bottom-2 right-2 text-xs font-medium text-white bg-black/60 backdrop-blur-sm px-2 py-1 rounded-md whitespace-nowrap"
+        ${
+          mapWebpPath
+            ? html`<div
+                class="relative w-full aspect-[30/15] overflow-hidden bg-surface"
               >
-                ${formatAbsoluteTime(game.start)}
-              </div>
-            </div>`
-          : ""}
+                <img
+                  src=${mapWebpPath}
+                  alt=${mapDisplayName ?? ""}
+                  draggable="false"
+                  loading="lazy"
+                  decoding="async"
+                  class="w-full h-full object-cover"
+                />
+                <div
+                  class="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent"
+                ></div>
+                ${
+                  mapDisplayName
+                    ? html`<div
+                        class="absolute bottom-2 left-3 text-xs font-bold text-white uppercase tracking-wider drop-shadow"
+                      >
+                        ${mapDisplayName}
+                      </div>`
+                    : ""
+                }
+                <div class="absolute top-2 left-2">
+                  ${this.renderResultBadge(game)}
+                </div>
+                <div
+                  class="absolute bottom-2 right-2 text-xs font-medium text-white bg-black/60 backdrop-blur-sm px-2 py-1 rounded-md whitespace-nowrap"
+                >
+                  ${formatAbsoluteTime(game.start)}
+                </div>
+              </div>`
+            : ""
+        }
         <div
-          class=${mapWebpPath
-            ? "absolute top-2 right-2 z-[1]"
-            : "flex items-center justify-end px-4 py-3 border-b border-white/5"}
+          class=${
+            mapWebpPath
+              ? "absolute top-2 right-2 z-[1]"
+              : "flex items-center justify-end px-4 py-3 border-b border-white/5"
+          }
         >
           <div class="flex items-center gap-2 shrink-0">
             <button
@@ -569,12 +577,14 @@ export class PlayerGameHistoryView extends LitElement {
             translateText("clan_modal.history_game_type"),
             formatGameType(game),
           )}
-          ${mapWebpPath
-            ? ""
-            : this.renderField(
-                translateText("clan_modal.history_map"),
-                mapDisplayName ?? "—",
-              )}
+          ${
+            mapWebpPath
+              ? ""
+              : this.renderField(
+                  translateText("clan_modal.history_map"),
+                  mapDisplayName ?? "—",
+                )
+          }
           ${this.renderField(
             translateText("clan_modal.history_players"),
             game.totalPlayers === null ? "—" : `${game.totalPlayers}`,

@@ -284,19 +284,21 @@ export class SettingsModal extends LitElement implements Controller {
         >
           ${translateText("user_setting.modifiers")}
         </div>
-        ${settings.length > 0
-          ? html`<div
-              class="flex flex-wrap gap-1 px-3 pt-1 uppercase"
-              data-modifier-tags
-            >
-              ${settings.map(
-                (s) =>
-                  html`<span class=${LOBBY_SETTING_TAG}
-                    >${lobbySettingTagText(s)}</span
-                  >`,
-              )}
-            </div>`
-          : null}
+        ${
+          settings.length > 0
+            ? html`<div
+                class="flex flex-wrap gap-1 px-3 pt-1 uppercase"
+                data-modifier-tags
+              >
+                ${settings.map(
+                  (s) =>
+                    html`<span class=${LOBBY_SETTING_TAG}
+                      >${lobbySettingTagText(s)}</span
+                    >`,
+                )}
+              </div>`
+            : null
+        }
         ${disabledUnits} ${hostCheats}
       </div>
     `;
@@ -371,9 +373,11 @@ export class SettingsModal extends LitElement implements Controller {
                 </div>
               </div>
               <div class="text-sm text-slate-400">
-                ${this.alternateView
-                  ? translateText("user_setting.on")
-                  : translateText("user_setting.off")}
+                ${
+                  this.alternateView
+                    ? translateText("user_setting.on")
+                    : translateText("user_setting.off")
+                }
               </div>
             </button>
 

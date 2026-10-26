@@ -363,9 +363,11 @@ export class PurchaseButton extends LitElement {
         @click=${(e: Event) => this.handleClick(e, this.onPurchaseDollar)}
       >
         <span class="purchase-sparkle-streak"></span>
-        ${this.dollarLabelKey
-          ? html`${translateText(this.dollarLabelKey)} `
-          : nothing}${price}${this.priceSuffix}
+        ${
+          this.dollarLabelKey
+            ? html`${translateText(this.dollarLabelKey)} `
+            : nothing
+        }${price}${this.priceSuffix}
       </button>
     `;
   }
@@ -433,63 +435,75 @@ export class PurchaseButton extends LitElement {
         style="--purchase-particle-top: ${leadingReserved * 3}rem"
         aria-busy=${this.busy ? "true" : nothing}
       >
-        ${this.rarity !== "common"
-          ? html`<span class="purchase-ember purchase-ember-0"></span>
-              <span class="purchase-ember purchase-ember-1"></span>
-              <span class="purchase-ember purchase-ember-2"></span>
-              <span class="purchase-ember purchase-ember-3"></span>
-              ${Array.from(
-                { length: 40 },
-                (_, i) =>
-                  html`<span
-                    class="purchase-burst purchase-burst-${i}"
-                  ></span>`,
-              )}`
-          : null}
+        ${
+          this.rarity !== "common"
+            ? html`<span class="purchase-ember purchase-ember-0"></span>
+                <span class="purchase-ember purchase-ember-1"></span>
+                <span class="purchase-ember purchase-ember-2"></span>
+                <span class="purchase-ember purchase-ember-3"></span>
+                ${Array.from(
+                  { length: 40 },
+                  (_, i) =>
+                    html`<span
+                      class="purchase-burst purchase-burst-${i}"
+                    ></span>`,
+                )}`
+            : null
+        }
         <div class="flex flex-col gap-1 w-full">
-          ${hasDollar
-            ? this.renderDollarButton()
-            : this.reserveDollar
-              ? this.renderReservedLine()
-              : null}
-          ${hasHard
-            ? this.renderHardButton()
-            : this.reserveHard
-              ? this.renderReservedLine()
-              : null}
-          ${hasSoft
-            ? this.renderSoftButton()
-            : this.reserveSoft
-              ? this.renderReservedLine()
-              : null}
+          ${
+            hasDollar
+              ? this.renderDollarButton()
+              : this.reserveDollar
+                ? this.renderReservedLine()
+                : null
+          }
+          ${
+            hasHard
+              ? this.renderHardButton()
+              : this.reserveHard
+                ? this.renderReservedLine()
+                : null
+          }
+          ${
+            hasSoft
+              ? this.renderSoftButton()
+              : this.reserveSoft
+                ? this.renderReservedLine()
+                : null
+          }
         </div>
-        ${this.busy
-          ? html`<div class="cosmetic-loading-overlay">
-              <div class="cosmetic-loading-spinner"></div>
-            </div>`
-          : nothing}
+        ${
+          this.busy
+            ? html`<div class="cosmetic-loading-overlay">
+                <div class="cosmetic-loading-spinner"></div>
+              </div>`
+            : nothing
+        }
       </div>
-      ${this.confirmingPurchase
-        ? html`<confirm-dialog
-            .heading=${translateText("store.confirm_purchase_title")}
-            .message=${translateText("store.confirm_purchase_body", {
-              item: this.confirmingPurchase.itemName,
-              amount: this.confirmingPurchase.amount,
-              currency: translateText(
-                this.confirmingPurchase.method === "hard"
-                  ? "cosmetics.hard"
-                  : "cosmetics.soft",
-              ),
-            })}
-            variant="warning"
-            @confirm=${() => {
-              const pending = this.confirmingPurchase;
-              this.confirmingPurchase = null;
-              this.executePurchase(pending?.handler);
-            }}
-            @cancel=${() => (this.confirmingPurchase = null)}
-          ></confirm-dialog>`
-        : nothing}
+      ${
+        this.confirmingPurchase
+          ? html`<confirm-dialog
+              .heading=${translateText("store.confirm_purchase_title")}
+              .message=${translateText("store.confirm_purchase_body", {
+                item: this.confirmingPurchase.itemName,
+                amount: this.confirmingPurchase.amount,
+                currency: translateText(
+                  this.confirmingPurchase.method === "hard"
+                    ? "cosmetics.hard"
+                    : "cosmetics.soft",
+                ),
+              })}
+              variant="warning"
+              @confirm=${() => {
+                const pending = this.confirmingPurchase;
+                this.confirmingPurchase = null;
+                this.executePurchase(pending?.handler);
+              }}
+              @cancel=${() => (this.confirmingPurchase = null)}
+            ></confirm-dialog>`
+          : nothing
+      }
       <insufficient-currency-dialog
         .info=${this.insufficient}
         @close=${() => (this.insufficient = null)}

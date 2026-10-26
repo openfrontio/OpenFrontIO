@@ -287,16 +287,18 @@ export class FfaRatingPanel extends LitElement {
           >
         </div>
       </div>
-      ${promoted
-        ? html`<p
-            data-ffa-tier-up
-            class="ffa-tier-up text-sm font-bold text-yellow-400"
-          >
-            ${translateText("ffa_rating.tier_up", {
-              tier: ffaTierLabelOf(r.tierAfter),
-            })}
-          </p>`
-        : nothing}
+      ${
+        promoted
+          ? html`<p
+              data-ffa-tier-up
+              class="ffa-tier-up text-sm font-bold text-yellow-400"
+            >
+              ${translateText("ffa_rating.tier_up", {
+                tier: ffaTierLabelOf(r.tierAfter),
+              })}
+            </p>`
+          : nothing
+      }
       <ofstats-credit></ofstats-credit>`;
   }
 }
