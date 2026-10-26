@@ -531,9 +531,25 @@
     <win-modal></win-modal>
     <new-lobby-prompt></new-lobby-prompt>
     <game-starting-modal></game-starting-modal>
-    <div class="flex flex-col items-end fixed top-0 right-0 z-1000 gap-2">
-      <game-right-sidebar></game-right-sidebar>
-      <replay-panel></replay-panel>
+    <!-- Top HUD: below lg each piece is fixed on its own. From lg, where the
+         leaderboard opens by default, they share one row, leaderboard | card |
+         sidebar: the card is centered when it fits and shifts right or narrows
+         to clear the open leaderboard instead of covering it. -->
+    <div
+      class="contents lg:fixed lg:top-0 lg:inset-x-0 lg:z-1000 lg:grid lg:grid-cols-[minmax(max-content,1fr)_minmax(0,max-content)_minmax(max-content,1fr)] lg:items-start lg:pointer-events-none"
+    >
+      <game-left-sidebar
+        class="lg:col-start-1 lg:justify-self-start"
+      ></game-left-sidebar>
+      <player-info-overlay
+        class="lg:col-start-2 lg:min-w-0"
+      ></player-info-overlay>
+      <div
+        class="flex flex-col items-end gap-2 max-lg:fixed max-lg:top-0 max-lg:right-0 max-lg:z-1000 lg:col-start-3 lg:justify-self-end lg:pointer-events-auto"
+      >
+        <game-right-sidebar></game-right-sidebar>
+        <replay-panel></replay-panel>
+      </div>
     </div>
     <settings-modal></settings-modal>
     <!-- The in-game settings modal: the same component as #page-settings, but
@@ -550,9 +566,7 @@
     <alert-frame></alert-frame>
     <chat-modal></chat-modal>
     <multi-tab-modal></multi-tab-modal>
-    <game-left-sidebar></game-left-sidebar>
     <performance-overlay></performance-overlay>
-    <player-info-overlay></player-info-overlay>
     <heads-up-message></heads-up-message>
 
     <!-- Featured stream: direct <body> child (NOT inside the in-[.in-game]:hidden
