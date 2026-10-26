@@ -112,3 +112,99 @@ describe("HomepagePromos in a running game", () => {
     expect(ramp.spaAddAds).not.toHaveBeenCalled();
   });
 });
+
+describe("HomepagePromos bottom rail after its destroy", () => {
+  const flush = () => new Promise((resolve) => setTimeout(resolve, 0));
+
+  function renderRail(): HTMLElement {
+    const rail = document.createElement("div");
+    rail.id = "pw-oop-bottom_rail";
+    document.body.appendChild(rail);
+    return rail;
+  }
+
+  let error: ReturnType<typeof vi.spyOn>;
+
+  beforeEach(() => {
+    error = vi.spyOn(console, "error").mockImplementation(() => {});
+  });
+
+  afterEach(() => {
+    document.getElementById("pw-oop-bottom_rail")?.remove();
+    error.mockRestore();
+  });
+
+  it("destroys a rail that finishes rendering after the destroy", async () => {
+    const { ramp, drain } = stubRamp();
+    promos.loadBottomRail();
+    drain();
+    promos.destroyBottomRail();
+    await flush();
+
+    renderRail();
+    await flush();
+
+    expect(ramp.destroyUnits).toHaveBeenCalledTimes(2);
+    expect(error).toHaveBeenCalledTimes(1);
+  });
+
+  it("removes the rail itself when destroyUnits leaves it on the page", async () => {
+    stubRamp();
+    promos.loadBottomRail();
+    promos.destroyBottomRail();
+
+    const rail = renderRail();
+    await flush();
+
+    expect(rail.isConnected).toBe(false);
+  });
+
+  it("removes the rail when destroyUnits rejects", async () => {
+    const { ramp } = stubRamp();
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    ramp.destroyUnits.mockImplementation(() =>
+      Promise.reject(new Error("unknown unit")),
+    );
+    promos.loadBottomRail();
+    promos.destroyBottomRail();
+
+    const rail = renderRail();
+    await flush();
+
+    expect(rail.isConnected).toBe(false);
+    warn.mockRestore();
+  });
+
+  it("does not report a rail that its own destroy removes", async () => {
+    const { ramp, drain } = stubRamp();
+    const rail = renderRail();
+    ramp.destroyUnits.mockImplementation(() => {
+      rail.remove();
+      return Promise.resolve();
+    });
+    promos.loadBottomRail();
+    drain();
+    promos.destroyBottomRail();
+    // An unrelated in-game DOM change while the destroy is in flight.
+    document.body.appendChild(document.createElement("div"));
+    await flush();
+
+    expect(ramp.destroyUnits).toHaveBeenCalledTimes(1);
+    expect(error).not.toHaveBeenCalled();
+  });
+
+  it("leaves the rail of the next lobby alone", async () => {
+    const { ramp, drain } = stubRamp();
+    promos.loadBottomRail();
+    promos.destroyBottomRail();
+    promos.loadBottomRail();
+    drain();
+
+    const rail = renderRail();
+    await flush();
+
+    expect(rail.isConnected).toBe(true);
+    expect(ramp.destroyUnits).toHaveBeenCalledTimes(1);
+    expect(error).not.toHaveBeenCalled();
+  });
+});

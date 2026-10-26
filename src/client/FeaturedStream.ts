@@ -487,18 +487,16 @@ export class FeaturedStream extends LitElement {
     return html`
       <div
         id="featured-stream-card"
-        class="fixed z-[45000] overflow-hidden rounded-lg bg-black/95 shadow-2xl ring-1 ring-white/10 ${this
-          .dragPos
-          ? ""
-          : "transition-all duration-300 " +
-            CORNER_CLASS[this.corner]} ${this.present()
-          ? "opacity-100"
-          : "pointer-events-none opacity-0"} ${min
-          ? "w-[400px]"
-          : "w-[clamp(400px,40vw,720px)]"} max-w-[92vw]"
-        style=${this.dragPos
-          ? `left:${this.dragPos.x}px;top:${this.dragPos.y}px`
-          : ""}
+        class="fixed z-[45000] overflow-hidden rounded-lg bg-black/95 shadow-2xl ring-1 ring-white/10 ${
+          this.dragPos
+            ? ""
+            : "transition-all duration-300 " + CORNER_CLASS[this.corner]
+        } ${this.present() ? "opacity-100" : "pointer-events-none opacity-0"} ${
+          min ? "w-[400px]" : "w-[clamp(400px,40vw,720px)]"
+        } max-w-[92vw]"
+        style=${
+          this.dragPos ? `left:${this.dragPos.x}px;top:${this.dragPos.y}px` : ""
+        }
         aria-hidden=${this.present() ? "false" : "true"}
       >
         <div
@@ -541,16 +539,18 @@ export class FeaturedStream extends LitElement {
             >
               ✕
             </button>
-            ${this.adFree
-              ? html`<button
-                  class="px-1 text-lg leading-none text-white/70 hover:text-white"
-                  aria-label=${translateText("featured_stream.hide_today")}
-                  title=${translateText("featured_stream.hide_today")}
-                  @click=${this.onHideToday}
-                >
-                  ⊘
-                </button>`
-              : ""}
+            ${
+              this.adFree
+                ? html`<button
+                    class="px-1 text-lg leading-none text-white/70 hover:text-white"
+                    aria-label=${translateText("featured_stream.hide_today")}
+                    title=${translateText("featured_stream.hide_today")}
+                    @click=${this.onHideToday}
+                  >
+                    ⊘
+                  </button>`
+                : ""
+            }
           </div>
         </div>
         <div

@@ -11,6 +11,7 @@ import { MapLayer } from "@openfront/engine-api/game/MapFiles";
 import { TerrainMapData } from "@openfront/engine-lib/game/TerrainMapLoader";
 import { GameMapLoader } from "@openfront/shared/GameMapLoader";
 import { Controller } from "../Controller";
+import { pushMapLayerState } from "../MapLayerSettings";
 import { MapRenderer } from "../render/gl";
 import { UserSettings } from "../UserSettings";
 
@@ -40,38 +41,17 @@ export class MapLayerController implements Controller {
       .then((images) => {
         if (!this.abortSignal.aborted) {
           this.view.setMapLayers(this.gameMap.layers!, images);
-          this.applyVisibility();
-          this.applyAlpha();
+          pushMapLayerState(
+            this.userSettings,
+            this.gameMap.layers!,
+            (id, visible) => this.view.setLayerVisible(id, visible),
+            (id, alpha) => this.view.setLayerAlpha(id, alpha),
+          );
         }
       })
       .catch((e) =>
         console.warn("[MapLayerController] Failed to load layer images:", e),
       );
-  }
-
-  private applyVisibility() {
-    const overrides = this.userSettings.graphicsOverrides();
-    if (!overrides.mapLayerVisibility || !this.gameMap.layers) return;
-    for (const layer of this.gameMap.layers) {
-      const vis = overrides.mapLayerVisibility[layer.id];
-      if (vis !== undefined) {
-        this.view.setLayerVisible(layer.id, vis);
-      }
-    }
-  }
-
-  private applyAlpha() {
-    const overrides = this.userSettings.graphicsOverrides();
-    if (!this.gameMap.layers) return;
-    for (const layer of this.gameMap.layers) {
-      const alpha = overrides.mapLayerAlpha?.[layer.id];
-      if (alpha !== undefined) {
-        this.view.setLayerAlpha(layer.id, alpha);
-      } else if (layer.alpha !== undefined) {
-        // Apply manifest default when no user override exists.
-        this.view.setLayerAlpha(layer.id, layer.alpha);
-      }
-    }
   }
 }
 
