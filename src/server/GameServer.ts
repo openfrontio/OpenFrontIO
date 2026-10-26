@@ -1745,14 +1745,17 @@ export class GameServer {
     this.listing.setListed(listed, options.autoStartMs);
     // Only on the transition: relisting must not change the cap players
     // joined under.
-    if (listed && !wasListed && options.maxPlayers !== undefined) {
-      const max =
-        this.gameConfig.gameMode === GameMode.Team
-          ? adjustForTeams(options.maxPlayers, this.gameConfig.playerTeams)
-          : options.maxPlayers;
-      this.gameConfig.maxPlayers = max;
-      if (this.playerCount() >= max) {
-        this.hasReachedMaxPlayerCount = true;
+    if (listed && !wasListed) {
+      const raw = options.maxPlayers ?? this.gameConfig.maxPlayers;
+      if (raw !== undefined) {
+        const max =
+          this.gameConfig.gameMode === GameMode.Team
+            ? adjustForTeams(raw, this.gameConfig.playerTeams)
+            : raw;
+        this.gameConfig.maxPlayers = max;
+        if (this.playerCount() >= max) {
+          this.hasReachedMaxPlayerCount = true;
+        }
       }
     }
   }

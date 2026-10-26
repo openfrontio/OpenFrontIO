@@ -229,8 +229,11 @@ export function adjustForTeams(
   count: number,
   teams: TeamCountConfig | undefined,
 ): number {
-  if (teams === undefined || teams === HumansVsNations) return count;
+  if (teams === undefined || teams === HumansVsNations || count <= 0)
+    return count;
   const size =
     teams === Duos ? 2 : teams === Trios ? 3 : teams === Quads ? 4 : teams;
-  return size > 0 && count > size ? count - (count % size) : count;
+  if (size <= 0) return count;
+  const rounded = count - (count % size);
+  return Math.max(size, rounded);
 }

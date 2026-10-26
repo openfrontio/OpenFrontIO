@@ -133,6 +133,10 @@ describe("applyGameConfigPatch", () => {
     applyGameConfigPatch(target, { maxPlayers: null });
     expect(target.maxPlayers).toBeUndefined();
 
+    // Enforces at least a full team size when cap is smaller than team size.
+    applyGameConfigPatch(target, { playerTeams: Trios, maxPlayers: 2 });
+    expect(target.maxPlayers).toBe(3);
+
     // Recalculates when gameMode changes to team.
     const ffa = testGameConfig({ gameMode: GameMode.FFA, maxPlayers: 100 });
     applyGameConfigPatch(ffa, {

@@ -425,6 +425,25 @@ describe("listed lobby auto-start", () => {
     game.joinClient(makeClient("host", CREATOR, fakeWs()));
     game.setListed(true, { maxPlayers: 100 });
     expect(game.gameInfo().gameConfig?.maxPlayers).toBe(99);
+
+    // Adjusts unaligned stored maxPlayers when options omit maxPlayers.
+    const game2 = makeGame("team-game-no-opts", CREATOR, {
+      gameMode: GameMode.Team,
+      playerTeams: Trios,
+      maxPlayers: 100,
+    });
+    game2.joinClient(makeClient("host", CREATOR, fakeWs()));
+    game2.setListed(true);
+    expect(game2.gameInfo().gameConfig?.maxPlayers).toBe(99);
+
+    // Enforces at least a full team size when cap is smaller than team size.
+    const game3 = makeGame("team-game-small", CREATOR, {
+      gameMode: GameMode.Team,
+      playerTeams: Trios,
+    });
+    game3.joinClient(makeClient("host", CREATOR, fakeWs()));
+    game3.setListed(true, { maxPlayers: 2 });
+    expect(game3.gameInfo().gameConfig?.maxPlayers).toBe(3);
   });
 
   it("never auto-starts an unlisted lobby", () => {
