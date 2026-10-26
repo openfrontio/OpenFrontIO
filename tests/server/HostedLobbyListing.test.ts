@@ -444,6 +444,15 @@ describe("listed lobby auto-start", () => {
     game3.joinClient(makeClient("host", CREATOR, fakeWs()));
     game3.setListed(true, { maxPlayers: 2 });
     expect(game3.gameInfo().gameConfig?.maxPlayers).toBe(3);
+
+    // Leaves configured cap unchanged for numeric team counts.
+    const game4 = makeGame("team-game-numeric", CREATOR, {
+      gameMode: GameMode.Team,
+      playerTeams: 3,
+    });
+    game4.joinClient(makeClient("host", CREATOR, fakeWs()));
+    game4.setListed(true, { maxPlayers: 5 });
+    expect(game4.gameInfo().gameConfig?.maxPlayers).toBe(5);
   });
 
   it("never auto-starts an unlisted lobby", () => {

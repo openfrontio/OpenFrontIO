@@ -137,6 +137,10 @@ describe("applyGameConfigPatch", () => {
     applyGameConfigPatch(target, { playerTeams: Trios, maxPlayers: 2 });
     expect(target.maxPlayers).toBe(3);
 
+    // Leaves configured cap unchanged for numeric team counts (number of teams, not team size).
+    applyGameConfigPatch(target, { playerTeams: 3, maxPlayers: 5 });
+    expect(target.maxPlayers).toBe(5);
+
     // Recalculates when gameMode changes to team.
     const ffa = testGameConfig({ gameMode: GameMode.FFA, maxPlayers: 100 });
     applyGameConfigPatch(ffa, {
