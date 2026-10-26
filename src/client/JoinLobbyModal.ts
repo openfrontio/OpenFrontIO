@@ -898,6 +898,13 @@ export class JoinLobbyModal extends BaseModal {
 
     try {
       const url = new URL(input);
+      // Portal invite links carry the id as a query param: gdgameId on Poki
+      // (poki.com/en/g/openfront?gdgameId=…), gameId on CrazyGames. Checked
+      // before the path, since CrazyGames' /game/openfront looks like an id.
+      for (const param of ["gdgameId", "gameId"]) {
+        const value = url.searchParams.get(param);
+        if (value && GAME_ID_REGEX.test(value)) return value;
+      }
       const match = url.pathname.match(/game\/([^/]+)/);
       const candidate = match?.[1];
       if (candidate && GAME_ID_REGEX.test(candidate)) return candidate;

@@ -102,7 +102,7 @@ Only `tests/client/**` runs under jsdom; everything else runs in the `node` envi
 
 ## Tech Stack
 
-- **Bundler:** Vite + TypeScript 6
+- **Bundler:** Vite + TypeScript 7
 - **Rendering:** Custom WebGL2 renderer (`src/client/render/`)
 - **UI Components:** Lit (LitElement) + Tailwind CSS 4
 - **Audio:** Howler.js
