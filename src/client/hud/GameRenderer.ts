@@ -390,6 +390,10 @@ export class GameRenderer {
     private performanceOverlay: PerformanceOverlay,
   ) {}
 
+  private onResize = () => {
+    this.transformHandler.updateCanvasBoundingRect();
+  };
+
   initialize() {
     loadAllSprites().catch((err) =>
       console.warn("Failed to preload sprites:", err),
@@ -397,12 +401,14 @@ export class GameRenderer {
 
     this.layers.forEach((l) => l.init?.());
 
-    window.addEventListener("resize", () =>
-      this.transformHandler.updateCanvasBoundingRect(),
-    );
+    window.addEventListener("resize", this.onResize);
 
     //show whole map on startup
     this.transformHandler.centerAll(0.9);
+  }
+
+  dispose() {
+    window.removeEventListener("resize", this.onResize);
   }
 
   tick() {
