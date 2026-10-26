@@ -1,6 +1,7 @@
 import fs from "fs";
 import path from "path";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
+import { MultiTabModal } from "../../src/client/hud/layers/MultiTabModal";
 
 const EN_JSON = path.join(
   __dirname,
@@ -22,5 +23,13 @@ describe("multi_tab translations", () => {
     expect(en.multi_tab.explanation).toBe(
       "To ensure fair play, only one active game tab is permitted at a time.",
     );
+  });
+
+  it("stops monitoring on disconnectedCallback", () => {
+    const modal = new MultiTabModal();
+    const detector = { stopMonitoring: vi.fn() };
+    (modal as any).detector = detector;
+    modal.disconnectedCallback();
+    expect(detector.stopMonitoring).toHaveBeenCalledTimes(1);
   });
 });
