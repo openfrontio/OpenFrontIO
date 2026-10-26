@@ -9,7 +9,7 @@
     "tests/pathfinding/playground/**",
     ".claude/**"
   ],
-  "plugins": ["eslint", "typescript", "oxc", "import"],
+  "plugins": ["eslint", "typescript", "oxc", "import", "unicorn"],
   "categories": {
     "correctness": "error",
     "suspicious": "off",
@@ -31,12 +31,15 @@
     "typescript/no-misused-spread": "off",
     "typescript/require-array-sort-compare": "off",
     "typescript/no-redundant-type-constituents": "off",
-    "typescript/await-thenable": "off",
     "typescript/no-useless-default-assignment": "off",
     "typescript/prefer-nullish-coalescing": "error",
     "eqeqeq": "error",
     "no-case-declarations": "error",
     "import/no-duplicates": "error",
+    "unicorn/no-invalid-remove-event-listener": "error",
+    "unicorn/no-new-array": "off",
+    "unicorn/no-useless-spread": "off",
+    "unicorn/prefer-string-starts-ends-with": "off",
     "no-unused-vars": [
       "error",
       {
