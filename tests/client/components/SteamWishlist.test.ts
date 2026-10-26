@@ -9,7 +9,12 @@ vi.mock("../../../src/client/Utils", () => ({
 vi.stubGlobal(
   "ResizeObserver",
   class {
-    observe() {}
+    // Throws like the browser's, so observing nothing fails the test.
+    observe(target: unknown) {
+      if (!(target instanceof Element)) {
+        throw new TypeError("parameter 1 is not of type 'Element'.");
+      }
+    }
     disconnect() {}
   },
 );
