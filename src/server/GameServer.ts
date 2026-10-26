@@ -69,6 +69,7 @@ import { applyGameConfigPatch, hostCheatsEnabled } from "./ConfigPatch";
 import { LiveStatsVote, voteKey, WinnerVote } from "./Consensus";
 import { fetchCustomTribes } from "./CustomTribes";
 import { DesyncDetector } from "./DesyncDetector";
+import { Gatekeeper, MatchGatekeeper, noopGatekeeper } from "./Gatekeeper";
 import {
   authorizeIntent,
   IntentActor,
@@ -180,6 +181,7 @@ export interface GameServerDeps {
   turnIntervalMs: () => number;
   telemetry: MatchTelemetryEmitter;
   telemetryBuildHash: string;
+  gatekeeper: Gatekeeper;
   // This game's opaque grouping token (see mintGroupToken). Injectable only
   // so a test can pin a value it can assert on; production always takes the
   // random default.
@@ -205,6 +207,7 @@ export function defaultGameServerDeps(): GameServerDeps {
     turnIntervalMs: () => ServerEnv.turnIntervalMs(),
     telemetry: noopMatchTelemetryEmitter,
     telemetryBuildHash: "DEV",
+    gatekeeper: noopGatekeeper,
     mintGroupToken,
   };
 }
@@ -300,6 +303,9 @@ export class GameServer {
   // counters, finished-once (see MatchTelemetryRecorder.ts).
   private readonly telemetry: MatchTelemetryRecorder;
 
+  // This match's security hooks (see Gatekeeper.ts).
+  private readonly gatekeeper: MatchGatekeeper;
+
   // Opaque per-game grouping token, minted once here and sent to every
   // participant (see mintGroupToken and the GroupToken comment in Schemas).
   // Private, and it stays private: nothing reads it back off the wire, no
@@ -338,6 +344,7 @@ export class GameServer {
       opts.id,
       this.deps.telemetryBuildHash,
     );
+    this.gatekeeper = this.deps.gatekeeper.matchOpened({ gameID: opts.id });
     this.names = new NameVisibility({
       gameID: opts.id,
       config: () => this.gameConfig,
@@ -345,13 +352,19 @@ export class GameServer {
       teamIndex: (c) => this.matchmakingTeamIndex(c),
     });
     this.log = opts.log.child({ gameID: opts.id });
-    this.ingress = new SocketIngress(this.log, this.telemetry, {
-      zbinCtx: () => this.zbinCtx,
-      serverTick: () => this.turns.length,
-      onMessage: (client, msg) => this.handleClientMessage(client, msg),
-      onClose: (client) => this.handleClientDisconnect(client),
-      kick: (clientID, reasonKey) => this.kickClient(clientID, reasonKey),
-    });
+    this.ingress = new SocketIngress(
+      this.log,
+      this.telemetry,
+      {
+        zbinCtx: () => this.zbinCtx,
+        serverTick: () => this.turns.length,
+        onMessage: (client, msg) => this.handleClientMessage(client, msg),
+        onClose: (client) => this.handleClientDisconnect(client),
+        kick: (clientID, reasonKey) => this.kickClient(clientID, reasonKey),
+      },
+      undefined,
+      this.gatekeeper,
+    );
     if (opts.startsAt !== undefined) {
       this.visibleAt = Date.now();
     }
@@ -422,6 +435,14 @@ export class GameServer {
             accepted ? acceptedReasonCode : String(outcome.status),
             accepted ? undefined : outcome.error,
           );
+          this.gatekeeper.intentObserved({
+            client,
+            intent: stamped,
+            intentType: stamped.type,
+            outcome: accepted ? "accepted" : "rejected",
+            turn: serverTick,
+            reasonCode: accepted ? acceptedReasonCode : String(outcome.status),
+          });
         }
       }
       return outcome;
@@ -724,6 +745,7 @@ export class GameServer {
       },
       this.turns.length,
     );
+    this.gatekeeper.clientJoined(client);
     this.ingress.attach(client);
     this.startLobbyInfoBroadcast();
 
@@ -1525,6 +1547,7 @@ export class GameServer {
       },
       this.turns.length,
     );
+    this.gatekeeper.turnCommitted(pastTurn.turnNumber, pastTurn.intents.length);
 
     this.handleSynchronization();
     this.checkDisconnectedStatus();
@@ -1559,6 +1582,7 @@ export class GameServer {
     if (this.stage !== "started") {
       this.log.info(`game not started, not archiving game`);
       this.telemetry.matchFinished(this.turns.length);
+      this.gatekeeper.matchEnded(this.turns.length);
       return;
     }
     this.log.info(`ending game with ${this.turns.length} turns`);
@@ -1600,6 +1624,7 @@ export class GameServer {
       });
     }
     this.telemetry.matchFinished(this.turns.length);
+    this.gatekeeper.matchEnded(this.turns.length);
   }
 
   // Drops the clients that have not pinged for 60s. GameManager calls this
