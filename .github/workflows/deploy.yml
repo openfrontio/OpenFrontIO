@@ -174,6 +174,27 @@ jobs:
         run: |
           echo "GH_TOKEN=$GH_TOKEN" >> $GITHUB_ENV
           gh api octocat
+      # The optional security module (src/server/README.md), at the commit
+      # pinned in this tree. The app token is scoped to that repo, read only.
+      - uses: actions/create-github-app-token@v3
+        id: gatekeeper-token
+        with:
+          client-id: ${{ vars.APP_CLIENT_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+          owner: openfrontio
+          repositories: gatekeeper
+          permission-contents: read
+      - name: 🔒 Resolve the pinned security module
+        id: gatekeeper
+        run: echo "sha=$(git rev-parse HEAD:src/server/gatekeeper)" >> "$GITHUB_OUTPUT"
+      - name: 🔒 Check out the security module
+        uses: actions/checkout@v7
+        with:
+          repository: openfrontio/gatekeeper
+          ref: ${{ steps.gatekeeper.outputs.sha }}
+          path: src/server/gatekeeper
+          token: ${{ steps.gatekeeper-token.outputs.token }}
+          persist-credentials: false
       - name: 📝 Create deployment
         if: ${{ github.repository == 'openfrontio/OpenFrontIO' && steps.generate-token.outputs.token != '' }}
         uses: actions/github-script@v9
