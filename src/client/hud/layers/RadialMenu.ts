@@ -128,6 +128,19 @@ export class RadialMenu implements Controller {
     this.eventBus.on(CloseViewEvent, (e) => {
       this.hideRadialMenu();
     });
+    document.addEventListener("leave-lobby", this.onLeaveLobby);
+  }
+
+  private onLeaveLobby = () => {
+    this.destroy();
+  };
+
+  public destroy(): void {
+    document.removeEventListener("leave-lobby", this.onLeaveLobby);
+    window.removeEventListener("resize", this.handleResize);
+    this.isVisible = false;
+    this.menuElement?.remove();
+    this.tooltipElement?.remove();
   }
 
   private createMenuElement() {
