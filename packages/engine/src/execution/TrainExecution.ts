@@ -34,10 +34,6 @@ export class TrainExecution implements Execution {
   private _tradeStopsVisited: number = 0;
   private pathTiles: TileRef[] = [];
   private pathIndex: number = 0;
-  // Saved-path offsets between reconstructed rail segments. Junction tiles can
-  // be shared by adjacent segments, so these advances may be shorter than the
-  // segments' raw tile arrays.
-  private pathSegmentLengths: number[] = [];
 
   constructor(
     private railNetwork: RailNetwork,
@@ -248,9 +244,7 @@ export class TrainExecution implements Execution {
 
   private nextStation(): boolean {
     if (this.stations.length > 2) {
-      const pathAdvance = this.pathSegmentLengths.shift();
-      this.pathIndex +=
-        pathAdvance ?? this.currentRailroad?.getTiles().length ?? 0;
+      this.pathIndex += this.currentRailroad?.getTiles().length ?? 0;
       this.stations.shift();
       const railRoad =
         getOrientedRailroad(this.stations[0], this.stations[1]) ??
@@ -296,33 +290,12 @@ export class TrainExecution implements Execution {
     if (!path || path.length <= 2) return;
 
     const segments: OrientedRailroad[] = [];
-    const segmentStarts: number[] = [];
     let cursor = this.pathIndex;
     for (let i = 0; i < path.length - 1; i++) {
       const segment = getOrientedRailroad(path[i], path[i + 1]);
       if (!segment) return;
       segments.push(segment);
-
-      const tiles = segment.getTiles();
-      const segmentStartCursor = cursor;
-      const skipSharedJunction =
-        i > 0 &&
-        tiles.length > 0 &&
-        cursor > this.pathIndex &&
-        this.pathTiles[cursor - 1] === tiles[0] &&
-        this.pathTiles[cursor] !== tiles[0];
-
-      // When the saved route lists a junction once but the replacement
-      // segments both include it, the next segment starts at the previous
-      // saved-path entry. Record that mapped start instead of its raw offset.
-      segmentStarts.push(
-        (skipSharedJunction ? segmentStartCursor - 1 : segmentStartCursor) -
-          this.pathIndex,
-      );
-
-      for (let j = 0; j < tiles.length; j++) {
-        const tile = tiles[j];
-        if (j === 0 && skipSharedJunction) continue;
+      for (const tile of segment.getTiles()) {
         if (this.pathTiles[cursor++] !== tile) return;
       }
     }
@@ -330,22 +303,14 @@ export class TrainExecution implements Execution {
     const oldTiles = this.currentRailroad.getTiles();
     if (cursor !== this.pathIndex + oldTiles.length) return;
 
-    // Translate each segment boundary into the saved route's coordinate
-    // system. Raw tile counts are wrong when a junction is shared but was
-    // recorded only once in the original path.
-    const segmentPathLengths = segmentStarts.map((start, i) =>
-      i + 1 < segmentStarts.length
-        ? segmentStarts[i + 1] - start
-        : oldTiles.length - start,
-    );
-
     // Drop replacement stations whose stop boundary is already behind the
     // engine. A station exactly at the engine remains so stationReached() can
     // process it normally and award gold once.
     let activeSegment = 0;
     let segmentStart = 0;
+    let boundary = 0;
     for (let i = 0; i < segments.length - 1; i++) {
-      const boundary = segmentStarts[i + 1];
+      boundary += segments[i].getTiles().length;
       const stopIndex = this.stopIndexAtBoundary(
         path[i + 1],
         oldTiles,
@@ -359,7 +324,6 @@ export class TrainExecution implements Execution {
     this.pathIndex += segmentStart;
     this.currentTile -= segmentStart;
     this.currentRailroad = segments[activeSegment];
-    this.pathSegmentLengths = segmentPathLengths.slice(activeSegment);
     this.stations.splice(0, 2, ...path.slice(activeSegment));
   }
 
@@ -456,7 +420,6 @@ export class TrainExecution implements Execution {
       tradeStopsVisited: this._tradeStopsVisited,
       pathTiles: w.tiles(this.pathTiles),
       pathIndex: this.pathIndex,
-      pathSegmentLengths: this.pathSegmentLengths,
       player: w.player(this.player),
       source: w.station(this.source),
       destination: w.station(this.destination),
@@ -487,7 +450,6 @@ export class TrainExecution implements Execution {
     this._tradeStopsVisited = s.tradeStopsVisited;
     this.pathTiles = Array.from(s.pathTiles);
     this.pathIndex = s.pathIndex;
-    this.pathSegmentLengths = s.pathSegmentLengths ?? [];
     this.railNetwork = r.game.railNetwork();
     this.player = r.player(s.player);
     this.source = r.station(s.source);
@@ -514,7 +476,6 @@ const TrainExecutionStateSchema = z.object({
   tradeStopsVisited: zInt(),
   pathTiles: zTiles(),
   pathIndex: zInt(),
-  pathSegmentLengths: z.array(zInt()).default([]),
   player: zPlayerRef(),
   source: zRef(),
   destination: zRef(),
