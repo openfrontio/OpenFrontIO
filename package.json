@@ -21,6 +21,7 @@
     "docs:map-generator": "cd map-generator && go doc -cmd -u -all",
     "tunnel": "npm run build-prod && npm run start:server",
     "test": "vitest run",
+    "test:changed": "vitest run --changed origin/main",
     "test:matchmaking": "node tests/matchmaking/contained.mjs",
     "test:matchmaking:e2e": "node tests/matchmaking/e2e.mjs",
     "test:matchmaking:cancel": "node tests/matchmaking/e2e-cancel.mjs",
