@@ -296,6 +296,11 @@ export class FeaturedStream extends LitElement {
     }
     // A close (or a game start) during the SDK load must not mount.
     if (this.inGame || this.dismissed) return;
+    // Nor a window that turned compact meanwhile (see onFeed).
+    if (isCompactViewport()) {
+      this.goOffline();
+      return;
+    }
     if (this.stream !== stream) return; // superseded while the SDK loaded
     const channel = stream.channel;
     const host = this.querySelector(
