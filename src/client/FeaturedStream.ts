@@ -112,6 +112,16 @@ function isCoarsePointer(): boolean {
   );
 }
 
+// Small laptops, phones and Poki-sized frames: the panel (at least 400x336) would
+// cover too much of the page there. Same bounds as the `compact` variant in
+// styles.css, where open pages fill the screen.
+function isCompactViewport(): boolean {
+  return (
+    typeof window.matchMedia === "function" &&
+    window.matchMedia("(max-height: 800px), (max-width: 1023px)").matches
+  );
+}
+
 const SDK_SRC = "https://embed.twitch.tv/embed/v1.js";
 let sdkPromise: Promise<TwitchGlobal> | undefined;
 function loadTwitchSdk(): Promise<TwitchGlobal> {
@@ -233,6 +243,13 @@ export class FeaturedStream extends LitElement {
   // Twitch to find out.
   private async onFeed(feed: StreamsFeed) {
     if (this.inGame || this.dismissed) return;
+    // Not on a compact screen. Checked per feed tick, so shrinking the window drops a
+    // playing panel (rather than hiding it, which Twitch's ToS forbids) and growing it
+    // brings the panel back.
+    if (isCompactViewport()) {
+      this.goOffline();
+      return;
+    }
     const next = featuredStream(feed, this.dead);
     if (next === null) {
       this.goOffline();
@@ -279,6 +296,11 @@ export class FeaturedStream extends LitElement {
     }
     // A close (or a game start) during the SDK load must not mount.
     if (this.inGame || this.dismissed) return;
+    // Nor a window that turned compact meanwhile (see onFeed).
+    if (isCompactViewport()) {
+      this.goOffline();
+      return;
+    }
     if (this.stream !== stream) return; // superseded while the SDK loaded
     const channel = stream.channel;
     const host = this.querySelector(

@@ -168,8 +168,14 @@ export class OModal extends LitElement {
       !this.inline && this.maxWidth ? `max-width: ${this.maxWidth};` : "";
 
     const hasTabs = this.tabs.length > 0;
-    const sectionClass =
-      "relative flex-1 min-h-0 flex flex-col text-white bg-black/70 backdrop-blur-xl lg:rounded-2xl lg:border border-white/10 overflow-hidden";
+    // An inline page on a compact screen fills it edge to edge (see the `compact`
+    // variant in styles.css), so it drops its frame there. Plain `compact:`,
+    // not `in-[.page-open]:` as in MainLayout: this renders in a shadow root,
+    // which body.page-open can't reach, and an inline modal only shows while
+    // its page is open anyway.
+    const sectionClass = `relative flex-1 min-h-0 flex flex-col text-white bg-black/70 backdrop-blur-xl lg:rounded-2xl lg:border border-white/10 overflow-hidden ${
+      this.inline ? "compact:rounded-none! compact:border-0!" : ""
+    }`;
 
     return html`
       <aside
