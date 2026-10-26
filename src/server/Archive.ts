@@ -20,8 +20,11 @@ const log = logger.child({ component: "Archive" });
 export const ARCHIVE_RETRY_DELAYS_MS = [10_000, 30_000, 60_000];
 
 // Per attempt, so an API that accepts the connection and then hangs doesn't
-// hold a retry for undici's 300 s default.
-export const ARCHIVE_TIMEOUT_MS = 15_000;
+// hold a retry for undici's 300 s default. Well above the API's slowest
+// ingest: a large public game takes longer than 15 s to save, and an attempt
+// abandoned mid-save leaves the game stored but its stats and XP unapplied,
+// with the retry answered 409 as if it had been archived.
+export const ARCHIVE_TIMEOUT_MS = 120_000;
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 

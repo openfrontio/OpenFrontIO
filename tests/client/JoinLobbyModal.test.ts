@@ -541,3 +541,32 @@ describe("JoinLobbyModal checkActiveLobby resilience", () => {
     expect((modal as any).checkArchivedGame).toHaveBeenCalledWith("AbCd1234");
   });
 });
+
+describe("JoinLobbyModal pasted lobby links", () => {
+  const normalize = (input: string): string | null =>
+    (new JoinLobbyModal() as any).normalizeLobbyId(input);
+
+  it("takes the id from a Poki invite link", () => {
+    expect(
+      normalize(
+        "https://poki.com/en/preview/8d0149be-4a6f-4eb3-8af0-d7d5ee9c2cc5/58c9e7b0-5432-4117-8f51-62022219c432?gdgameId=AbCd1234",
+      ),
+    ).toBe("AbCd1234");
+    expect(normalize("https://poki.com/en/g/openfront?gdgameId=AbCd1234")).toBe(
+      "AbCd1234",
+    );
+  });
+
+  it("takes the id from a CrazyGames invite link, not its /game/ path", () => {
+    expect(
+      normalize("https://www.crazygames.com/game/openfront?gameId=AbCd1234"),
+    ).toBe("AbCd1234");
+  });
+
+  it("still takes the id from our own lobby link and a bare id", () => {
+    expect(normalize("https://openfront.io/game/AbCd1234?lobby&s=x1y2z")).toBe(
+      "AbCd1234",
+    );
+    expect(normalize("AbCd1234")).toBe("AbCd1234");
+  });
+});
