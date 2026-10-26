@@ -77,7 +77,8 @@ export class BuildPreviewController implements Controller {
   private readonly usedSafetyAllies: Set<number> = new Set();
   private readonly mousePos = { x: 0, y: 0 };
   private lastGhostQueryAt: number = 0;
-  private pendingConfirm: MouseUpEvent | null = null;
+  private pendingConfirm: TileRef | null = null;
+  private resolvedGhostTile: TileRef | undefined;
   private ghostResolved = false;
   private ghostQuerySequence = 0;
   private ghostQueryPending = false;
@@ -213,10 +214,17 @@ export class BuildPreviewController implements Controller {
     this.lastGhostQueryAt = now;
     let tileRef: TileRef | undefined;
     let trajectoryTileRef: TileRef | undefined;
-    const tile = this.transformHandler.screenToWorldCoordinates(
-      this.mousePos.x,
-      this.mousePos.y,
-    );
+    // Resolve a queued click before following subsequent pointer movement.
+    const tile =
+      this.pendingConfirm !== null
+        ? {
+            x: this.game.x(this.pendingConfirm),
+            y: this.game.y(this.pendingConfirm),
+          }
+        : this.transformHandler.screenToWorldCoordinates(
+            this.mousePos.x,
+            this.mousePos.y,
+          );
     if (this.game.isValidCoord(tile.x, tile.y)) {
       tileRef = this.game.ref(tile.x, tile.y);
       trajectoryTileRef = tileRef;
@@ -272,8 +280,13 @@ export class BuildPreviewController implements Controller {
       .then((buildables) => {
         if (this.ghostUnit !== ghost || query !== this.ghostQuerySequence)
           return;
+        if (this.uiState.ghostStructure !== ghost.buildableUnit.type) {
+          this.syncGhostState();
+          return;
+        }
         this.ghostQueryPending = false;
         this.ghostResolved = true;
+        this.resolvedGhostTile = tileRef;
 
         const unit = buildables.find(
           (u) => u.type === this.ghostUnit!.buildableUnit.type,
@@ -291,10 +304,15 @@ export class BuildPreviewController implements Controller {
         this.ghostUnit.buildableUnit = unit;
 
         if (this.pendingConfirm !== null) {
-          const ev = this.pendingConfirm;
+          if (this.pendingConfirm !== tileRef) {
+            this.lastGhostQueryAt = -Infinity;
+            this.renderGhost();
+            return;
+          }
+          const confirmedTile = this.pendingConfirm;
           this.pendingConfirm = null;
           if (this.isGhostReadyForConfirm()) {
-            this.createStructure(ev);
+            this.createStructure(confirmedTile);
           }
         }
 
@@ -552,20 +570,27 @@ export class BuildPreviewController implements Controller {
   }
 
   private requestConfirmStructure(e: MouseUpEvent): void {
-    if (!this.ghostUnit && !this.uiState.ghostStructure) return;
-    if (this.isGhostReadyForConfirm()) {
-      this.createStructure(e);
-    } else if (!this.ghostResolved) {
-      // Wait for the initial query, but a click on a resolved invalid preview
-      // must not become a queued build when the pointer moves elsewhere.
-      this.pendingConfirm = e;
+    this.syncGhostState();
+    if (!this.ghostUnit) return;
+    const position = this.transformHandler.screenToWorldCoordinates(e.x, e.y);
+    // A release just outside the map has no tile to validate or build on.
+    if (!this.game.isValidCoord(position.x, position.y)) return;
+    const tile = this.game.ref(position.x, position.y);
+    if (this.game.isImpassable(tile)) return;
+    if (this.ghostResolved && this.resolvedGhostTile === tile) {
+      if (this.isGhostReadyForConfirm()) this.createStructure(tile);
+      return;
     }
+    // Cache the world tile, not screen coordinates: camera and pointer movement
+    // must not retarget a click while the worker validates its placement.
+    this.pendingConfirm = tile;
+    this.lastGhostQueryAt = -Infinity;
+    this.renderGhost();
   }
 
-  private createStructure(e: MouseUpEvent) {
+  private createStructure(targetTile: TileRef) {
     const unit = this.effectiveBuildableUnit();
     if (!unit || (unit.canBuild === false && unit.canUpgrade === false)) return;
-    const tile = this.transformHandler.screenToWorldCoordinates(e.x, e.y);
     if (unit.canUpgrade !== false) {
       this.eventBus.emit(
         new SendUpgradeStructureIntentEvent(
@@ -576,12 +601,7 @@ export class BuildPreviewController implements Controller {
       );
       this.removeGhostStructure();
     } else if (unit.canBuild !== false) {
-      // The pointer can be released just off the map edge before the
-      // throttled hover refresh marks the ghost unbuildable; there is no
-      // tile to build on, so keep the ghost and wait for a click on the map.
-      if (!this.game.isValidCoord(tile.x, tile.y)) return;
       const unitType = unit.type;
-      const targetTile = this.game.ref(tile.x, tile.y);
 
       if (this.shouldBlockRecentAllyNuke(targetTile, unitType)) {
         return;
@@ -674,6 +694,7 @@ export class BuildPreviewController implements Controller {
     if (type === null) return;
     if (this.game.myPlayer() === null) return;
     this.ghostResolved = false;
+    this.resolvedGhostTile = undefined;
     this.ghostUnit = {
       buildableUnit: {
         type,
@@ -689,6 +710,7 @@ export class BuildPreviewController implements Controller {
   private clearGhostStructure() {
     this.pendingConfirm = null;
     this.ghostResolved = false;
+    this.resolvedGhostTile = undefined;
     this.ghostQuerySequence++;
     this.ghostQueryPending = false;
     this.ghostUnit = null;
