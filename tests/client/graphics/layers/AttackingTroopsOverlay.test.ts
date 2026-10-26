@@ -94,5 +94,20 @@ describe("pushLabels buffer reuse", () => {
     ctrl.pushLabels();
     expect(captured).toBe(firstBuf);
     expect(captured[0]).toBe(firstItem);
+
+    ctrl.attacks.clear();
+    ctrl.pushLabels();
+    expect(captured.length).toBe(0);
+
+    ctrl.attacks.set("a", {
+      text: "2",
+      isIncoming: false,
+      slots: [
+        { curX: 1, curY: 1, srcX: 0, srcY: 0, dstX: 2, dstY: 2, startMs: 0 },
+      ],
+    });
+    ctrl.pushLabels();
+    expect(captured.length).toBe(1);
+    expect(captured[0]).toBe(firstItem);
   });
 });
