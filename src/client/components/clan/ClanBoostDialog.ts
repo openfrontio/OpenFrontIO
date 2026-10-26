@@ -256,9 +256,11 @@ export class ClanBoostDialog extends LitElement {
         data-tier=${tier.tier}
         ?disabled=${this.submitting || (this.tierLocked && !selected)}
         @click=${() => this.selectTier(tier.tier)}
-        class="flex-1 flex flex-col items-center gap-1 px-3 py-2.5 rounded-xl border transition-all ${selected
-          ? "bg-malibu-blue/15 border-aquarius/70 ring-2 ring-malibu-blue/40 text-white"
-          : "bg-white/5 border-white/10 text-white/50 hover:bg-white/10 hover:text-white"} disabled:opacity-50 disabled:pointer-events-none"
+        class="flex-1 flex flex-col items-center gap-1 px-3 py-2.5 rounded-xl border transition-all ${
+          selected
+            ? "bg-malibu-blue/15 border-aquarius/70 ring-2 ring-malibu-blue/40 text-white"
+            : "bg-white/5 border-white/10 text-white/50 hover:bg-white/10 hover:text-white"
+        } disabled:opacity-50 disabled:pointer-events-none"
       >
         <span class="text-xs font-bold uppercase tracking-wider">
           ${translateText(`clan_modal.boost_tier_${tier.tier}`)}
@@ -339,35 +341,41 @@ export class ClanBoostDialog extends LitElement {
       </div>
 
       <div class="flex items-center justify-between gap-3 text-xs">
-        ${tier
-          ? html`<span
-              data-clan-balance
-              title=${this.balanceLabel(tier.currency)}
-              aria-label=${this.balanceLabel(tier.currency)}
-              class="flex items-center gap-1.5 font-bold text-white/80"
-            >
-              ${this.currencyIcon(tier.currency)}
-              ${formatCurrencyAmount(
-                this.clanBalance(tier.currency).toString(),
-              )}
-            </span>`
-          : html`<span></span>`}
+        ${
+          tier
+            ? html`<span
+                data-clan-balance
+                title=${this.balanceLabel(tier.currency)}
+                aria-label=${this.balanceLabel(tier.currency)}
+                class="flex items-center gap-1.5 font-bold text-white/80"
+              >
+                ${this.currencyIcon(tier.currency)}
+                ${formatCurrencyAmount(
+                  this.clanBalance(tier.currency).toString(),
+                )}
+              </span>`
+            : html`<span></span>`
+        }
         ${this.renderLimitMeter(status)}
       </div>
 
-      ${running
-        ? html`<p
-            data-boost-running
-            class="mt-3 inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-malibu-blue/15 text-aquarius border border-malibu-blue/40"
-          >
-            ${translateText("clan_modal.boost_time_left", {
-              remaining: running,
-            })}
-          </p>`
-        : ""}
-      ${error
-        ? html`<p class="text-red-400 text-xs mt-3" role="alert">${error}</p>`
-        : ""}
+      ${
+        running
+          ? html`<p
+              data-boost-running
+              class="mt-3 inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-malibu-blue/15 text-aquarius border border-malibu-blue/40"
+            >
+              ${translateText("clan_modal.boost_time_left", {
+                remaining: running,
+              })}
+            </p>`
+          : ""
+      }
+      ${
+        error
+          ? html`<p class="text-red-400 text-xs mt-3" role="alert">${error}</p>`
+          : ""
+      }
 
       <p class="mt-3 text-[11px] text-white/40">
         ${translateText("clan_modal.boost_final")}

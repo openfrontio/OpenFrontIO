@@ -197,6 +197,7 @@ export function createRenderer(
   settingsModal.eventBus = eventBus;
   settingsModal.gameConfig = game.config().gameConfig();
   settingsModal.mapNationCount = game.mapNationCount();
+  settingsModal.game = game;
 
   // The in-game settings instance needs the bus so the Audio sliders reach
   // SoundManager, which caches its volumes at construction, and UIState so the

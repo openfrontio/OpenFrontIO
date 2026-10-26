@@ -2,6 +2,7 @@ import { TileRef } from "@openfront/engine-api/game/GameMap";
 import {
   BuildableUnit,
   Cell,
+  HumanDisconnects,
   HumanStatsSnapshot,
   PlayerActions,
   PlayerBorderTiles,
@@ -14,9 +15,11 @@ import {
   GameUpdateViewData,
 } from "@openfront/engine-api/game/GameUpdates";
 import { MapFiles } from "@openfront/engine-api/game/MapFiles";
+import { SnapshotHeader } from "@openfront/engine-api/game/SnapshotHeader";
 import { ClientID, GameStartInfo, Turn } from "@openfront/engine-api/Schemas";
 import {
   InitMessage,
+  ReadSnapshotHeaderMessage,
   WorkerMessage,
 } from "@openfront/engine-api/worker/WorkerMessages";
 import {
@@ -35,6 +38,48 @@ export async function createGameWorker(): Promise<Worker> {
   const { default: GameWorker } =
     await import("@openfront/engine/worker/Worker.worker?worker&inline");
   return new GameWorker();
+}
+
+// A header is one decode of a few MB; far past that, the worker is stuck.
+const READ_SNAPSHOT_HEADER_TIMEOUT_MS = 30_000;
+
+/**
+ * Reads a snapshot's header on a worker of its own: the page can't load the
+ * engine, and a resume has to know the game's config and humans before it
+ * can start one. The bytes are copied, not transferred, so the caller can
+ * still start the game from them.
+ */
+export async function readSnapshotHeader(
+  snapshot: Uint8Array,
+): Promise<SnapshotHeader> {
+  const worker = await createGameWorker();
+  try {
+    return await new Promise<SnapshotHeader>((resolve, reject) => {
+      const timer = setTimeout(
+        () => reject(new Error("Timed out reading the snapshot")),
+        READ_SNAPSHOT_HEADER_TIMEOUT_MS,
+      );
+      worker.addEventListener("message", (e: MessageEvent<WorkerMessage>) => {
+        if (e.data.type !== "read_snapshot_header_result") return;
+        clearTimeout(timer);
+        if (e.data.header === null) {
+          reject(new Error(e.data.error ?? "Not a game snapshot"));
+        } else {
+          resolve(e.data.header);
+        }
+      });
+      worker.addEventListener("error", (e: ErrorEvent) => {
+        clearTimeout(timer);
+        reject(new Error(e.message || "The snapshot reader failed"));
+      });
+      worker.postMessage({
+        type: "read_snapshot_header",
+        snapshot,
+      } satisfies ReadSnapshotHeaderMessage);
+    });
+  } finally {
+    worker.terminate();
+  }
 }
 
 export class WorkerClient {
@@ -213,6 +258,25 @@ export class WorkerClient {
 
   /** Every human's stats as they stand now (see HumanStats.ts). */
   humanStats(): Promise<HumanStatsSnapshot> {
+    return this.askHumans("human_stats", (message) =>
+      message.type === "human_stats_result" ? message.result : undefined,
+    );
+  }
+
+  /**
+   * The tick and who is disconnected right now, without the stats (see
+   * HumanStats.ts): no copy of every player's stats where they aren't needed.
+   */
+  humanDisconnects(): Promise<HumanDisconnects> {
+    return this.askHumans("human_disconnects", (message) =>
+      message.type === "human_disconnects_result" ? message.result : undefined,
+    );
+  }
+
+  private askHumans<T>(
+    type: "human_stats" | "human_disconnects",
+    read: (message: WorkerMessage) => T | undefined,
+  ): Promise<T> {
     return new Promise((resolve, reject) => {
       if (!this.isInitialized) {
         reject(new Error("Worker not initialized"));
@@ -220,7 +284,7 @@ export class WorkerClient {
       }
 
       const messageId = generateID();
-      // The worker has no error reply for this request: a failure there
+      // The worker has no error reply for these requests: a failure there
       // surfaces here as the timeout.
       const cleanup = (timer: ReturnType<typeof setTimeout>) => {
         clearTimeout(timer);
@@ -228,21 +292,19 @@ export class WorkerClient {
       };
       const timeout = setTimeout(() => {
         cleanup(timeout);
-        console.warn(`human_stats request timed out (request ${messageId})`);
-        reject(new Error("human_stats request timed out"));
+        console.warn(`${type} request timed out (request ${messageId})`);
+        reject(new Error(`${type} request timed out`));
       }, 5000);
 
       this.messageHandlers.set(messageId, (message) => {
-        if (message.type === "human_stats_result") {
+        const result = read(message);
+        if (result !== undefined) {
           cleanup(timeout);
-          resolve(message.result);
+          resolve(result);
         }
       });
 
-      this.worker!.postMessage({
-        type: "human_stats",
-        id: messageId,
-      });
+      this.worker!.postMessage({ type, id: messageId });
     });
   }
 

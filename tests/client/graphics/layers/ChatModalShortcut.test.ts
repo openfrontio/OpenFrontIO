@@ -1,6 +1,5 @@
 import { EventBus } from "@openfront/shared/EventBus";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import "../../../../src/client/hud/layers/ChatModal";
 import {
   ShowPlayerChatEvent,
   type ChatModal,

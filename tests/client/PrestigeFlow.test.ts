@@ -140,13 +140,11 @@ describe("<prestige-flow>", () => {
     flow.fetchConfig = fetchConfig;
     describeCosmetic = vi
       .fn<PrestigeFlow["describeCosmetic"]>()
-      .mockImplementation(
-        async (f): Promise<FlareCosmeticView> => ({
-          name: `Name of ${f.flareName}`,
-          typeLabel: "Nuke Explosion Effect",
-          preview: html`<span data-test-preview>${f.flareName}</span>`,
-        }),
-      );
+      .mockImplementation(async (f): Promise<FlareCosmeticView> => ({
+        name: `Name of ${f.flareName}`,
+        typeLabel: "Nuke Explosion Effect",
+        preview: html`<span data-test-preview>${f.flareName}</span>`,
+      }));
     flow.describeCosmetic = describeCosmetic;
     document.body.appendChild(flow);
     await flow.updateComplete;

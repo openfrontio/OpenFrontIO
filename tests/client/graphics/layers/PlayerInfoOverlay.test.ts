@@ -91,7 +91,7 @@ describe("PlayerInfoOverlay", () => {
     smallID: () => 2,
   };
 
-  const makeGame = (myPlayer: unknown) => ({
+  const makeGame = (myPlayer: unknown, isReplay = false) => ({
     isValidCoord: () => true,
     ref: () => 42,
     owner: () => hovered,
@@ -100,6 +100,7 @@ describe("PlayerInfoOverlay", () => {
     config: () => ({
       isUnitDisabled: () => true,
       maxTroops: () => 1000,
+      isReplay: () => isReplay,
     }),
     teamClanTag: () => undefined,
   });
@@ -222,6 +223,30 @@ describe("PlayerInfoOverlay", () => {
       expect(out).not.toContain("player_panel.chat");
       expect(out).not.toContain("player_panel.emotes");
       expect(out).toContain("sm:w-[500px]");
+    });
+
+    it("hide in the replay viewer, whose player has no actions()", () => {
+      Object.defineProperty(window, "innerWidth", {
+        value: 1400,
+        configurable: true,
+      });
+      window.matchMedia = vi.fn(() => ({ matches: false })) as never;
+      // The replay's followed player is a ReplayPlayerView: no actions().
+      overlay.game = makeGame(
+        {
+          isFriendly: () => false,
+          isAlliedWith: () => false,
+          smallID: () => 1,
+        },
+        true,
+      ) as never;
+
+      expect(() => overlay.maybeShow(10, 10)).not.toThrow();
+      expect(() => overlay.tick()).not.toThrow();
+      const out = flatten(overlay.render());
+      expect(out).toContain("Bob");
+      expect(out).not.toContain("player_panel.chat");
+      expect(out).not.toContain("player_panel.emotes");
     });
 
     it("hide on touch devices", () => {

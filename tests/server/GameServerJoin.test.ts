@@ -3,6 +3,7 @@ import { ADMIN_BOT_CLIENT_ID } from "@openfront/engine-api/Schemas";
 import { GameEnv } from "@openfront/shared/configuration/Env";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ServerEnv } from "../../src/server/ServerEnv";
+import { createAdmissionGuard } from "../../src/server/Worker";
 import {
   cid,
   makeClient,
@@ -330,5 +331,172 @@ describe("GameServer.joinClient — active game reconnection", () => {
     expect(game.joinClient(lateClient)).toBe("started");
     expect(lateClient.spectator).toBe(false);
     expect(game.getClientIdForPersistentId("late-pid")).toBeNull();
+  });
+
+  it("records admission via markAdmitted before seating and reports true via wasAdmitted", () => {
+    const game = makeGame();
+    const pid = "test-gs-pre-admit";
+    expect(game.wasAdmitted(pid)).toBe(false);
+    game.markAdmitted(pid);
+    expect(game.wasAdmitted(pid)).toBe(true);
+  });
+
+  it("removes admission via unmarkAdmitted and reports false via wasAdmitted", () => {
+    const game = makeGame();
+    const pid = "test-gs-unmark-admit";
+    game.markAdmitted(pid);
+    expect(game.wasAdmitted(pid)).toBe(true);
+    game.unmarkAdmitted(pid);
+    expect(game.wasAdmitted(pid)).toBe(false);
+  });
+
+  it("handles unmarkAdmitted on non-admitted ID and allows re-admission", () => {
+    const game = makeGame();
+    const pid = "test-gs-unmark-noop";
+    expect(game.wasAdmitted(pid)).toBe(false);
+    game.unmarkAdmitted(pid);
+    expect(game.wasAdmitted(pid)).toBe(false);
+    game.markAdmitted(pid);
+    expect(game.wasAdmitted(pid)).toBe(true);
+    game.unmarkAdmitted(pid);
+    expect(game.wasAdmitted(pid)).toBe(false);
+  });
+
+  it("unmarks admission when joinClient fails on started game", () => {
+    const game = makeGame();
+    const pid = "test-gs-unmark-failed-join";
+    game.markAdmitted(pid);
+    expect(game.wasAdmitted(pid)).toBe(true);
+    const client = makeClient({
+      clientID: cid("fail1"),
+      persistentID: pid,
+    });
+    game.start();
+    const result = game.joinClient(client);
+    expect(result).not.toBe("joined");
+    game.unmarkAdmitted(pid);
+    expect(game.wasAdmitted(pid)).toBe(false);
+  });
+
+  it("maintains wasAdmitted when an admitted seated player leaves the lobby and a subsequent join fails authorization", () => {
+    const game = makeGame();
+    const pid = "seated-leaving-pid";
+    const client = makeClient({ clientID: cid("p1"), persistentID: pid });
+
+    game.markAdmitted(pid);
+    expect(game.joinClient(client)).toBe("joined");
+    expect(game.wasAdmitted(pid)).toBe(true);
+
+    // Player leaves the lobby before game starts (triggers forgetReconnect)
+    mockWsOf(client).trigger("close");
+    expect(game.getClientIdForPersistentId(pid)).toBeNull();
+    expect(game.wasAdmitted(pid)).toBe(true);
+
+    // Subsequent join attempt: worker evaluates isReadmit and creates guard
+    const isReadmit = game.wasAdmitted(pid);
+    expect(isReadmit).toBe(true);
+    const admissionGuard = createAdmissionGuard(game, pid, isReadmit);
+
+    // The attempt reaches verify or skips it, then markAdmittedIfNeeded is called
+    admissionGuard.markAdmittedIfNeeded();
+    expect(admissionGuard.wasAdmittedThisAttempt()).toBe(false);
+
+    // Authorization fails downstream (e.g. getUserMe error or forbidden)
+    admissionGuard.rollback();
+
+    // Admission from earlier join is preserved
+    expect(game.wasAdmitted(pid)).toBe(true);
+  });
+
+  it("maintains wasAdmitted when an admitted player leaves the lobby and subsequent joinClient fails", () => {
+    const game = makeGame();
+    const pid = "seated-leaving-started-pid";
+    const client1 = makeClient({ clientID: cid("p1"), persistentID: pid });
+    game.markAdmitted(pid);
+    expect(game.joinClient(client1)).toBe("joined");
+
+    // Player leaves before start
+    mockWsOf(client1).trigger("close");
+    expect(game.wasAdmitted(pid)).toBe(true);
+
+    // Game starts in their absence
+    game.start();
+
+    // Rejoin attempt creates guard with isReadmit: true
+    const isReadmit = game.wasAdmitted(pid);
+    const guard = createAdmissionGuard(game, pid, isReadmit);
+    guard.markAdmittedIfNeeded();
+
+    // joinClient is rejected because game started without them
+    const client2 = makeClient({ clientID: cid("p2"), persistentID: pid });
+    const joinResult = game.joinClient(client2);
+    expect(joinResult).not.toBe("joined");
+
+    if (joinResult !== "joined" && joinResult !== "redirected") {
+      guard.rollback();
+    }
+
+    expect(game.wasAdmitted(pid)).toBe(true);
+  });
+
+  it("maintains wasAdmitted when concurrent Attempt A rolls back tentative admission after Attempt B seated and left the lobby", () => {
+    const game = makeGame();
+    const pid = "concurrent-race-pid";
+
+    // Attempt A arrives first when not yet admitted
+    const guardA = createAdmissionGuard(game, pid, game.wasAdmitted(pid));
+    guardA.markAdmittedIfNeeded();
+    expect(guardA.wasAdmittedThisAttempt()).toBe(true);
+    expect(game.wasAdmitted(pid)).toBe(true);
+
+    // Concurrent Attempt B seats successfully
+    const clientB = makeClient({ clientID: cid("pB"), persistentID: pid });
+    expect(game.joinClient(clientB)).toBe("joined");
+
+    // Client B leaves the lobby before game starts (triggers forgetReconnect)
+    mockWsOf(clientB).trigger("close");
+    expect(game.getClientIdForPersistentId(pid)).toBeNull();
+    expect(game.wasAdmitted(pid)).toBe(true);
+
+    // Downstream failure causes Attempt A to rollback its tentative admission
+    guardA.rollback();
+
+    // Because client B was seated, admission is preserved despite Attempt A's rollback
+    expect(game.wasAdmitted(pid)).toBe(true);
+  });
+
+  it("protects admission when two concurrent unseated guards share a persistentId and the first rolls back", () => {
+    const game = makeGame();
+    const pid = "concurrent-unseated-guard-pid";
+
+    // Attempt A arrives first when not yet admitted
+    const isReadmitA = game.wasAdmitted(pid);
+    expect(isReadmitA).toBe(false);
+    const guardA = createAdmissionGuard(game, pid, isReadmitA, "attempt-A");
+    guardA.markAdmittedIfNeeded();
+    expect(guardA.wasAdmittedThisAttempt()).toBe(true);
+    expect(game.wasAdmitted(pid)).toBe(true);
+    expect(game.hasEverBeenSeated(pid)).toBe(false);
+
+    // Attempt B arrives concurrently before Attempt A is seated
+    const isReadmitB = game.wasAdmitted(pid);
+    expect(isReadmitB).toBe(true);
+    const guardB = createAdmissionGuard(game, pid, isReadmitB, "attempt-B");
+    guardB.markAdmittedIfNeeded();
+    expect(guardB.wasAdmittedThisAttempt()).toBe(true);
+    expect(game.wasAdmitted(pid)).toBe(true);
+    expect(game.hasEverBeenSeated(pid)).toBe(false);
+
+    // Attempt A rolls back (e.g. getUserMe failure)
+    guardA.rollback();
+    expect(guardA.wasAdmittedThisAttempt()).toBe(false);
+    // Admission remains protected because Attempt B is still pending
+    expect(game.wasAdmitted(pid)).toBe(true);
+
+    // Attempt B rolls back
+    guardB.rollback();
+    expect(guardB.wasAdmittedThisAttempt()).toBe(false);
+    // All pending unseated attempts rolled back, admission cleared
+    expect(game.wasAdmitted(pid)).toBe(false);
   });
 });

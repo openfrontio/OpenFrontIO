@@ -54,6 +54,7 @@ function userMe(user: UserMeResponse["user"]): UserMeResponse {
     steamLicence: false,
     steamLicenceSince: null,
     noticesSeen: [],
+    pendingMessages: [],
     player: {} as UserMeResponse["player"],
   };
 }

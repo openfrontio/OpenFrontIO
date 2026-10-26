@@ -206,6 +206,19 @@ describe("PokiSDK", () => {
       expect(poki.getURLParam).toHaveBeenCalledWith("gameId");
     });
 
+    it("hosts a new lobby from a gdhost link", async () => {
+      expect(await sdk.isInstantMultiplayer()).toBe(false);
+      poki.getURLParam = vi.fn((name: string) => (name === "host" ? "1" : ""));
+      expect(await sdk.isInstantMultiplayer()).toBe(true);
+    });
+
+    it("joins rather than hosts when the link also carries an invite", async () => {
+      poki.getURLParam = vi.fn((name: string) =>
+        name === "gameId" ? "abcd1234" : "1",
+      );
+      expect(await sdk.isInstantMultiplayer()).toBe(false);
+    });
+
     it("builds invite links through shareableURL", async () => {
       expect(await sdk.createInviteLink("abcd1234")).toBe(
         "https://poki.com/en/g/openfront",
@@ -342,6 +355,7 @@ describe("PokiSDK", () => {
     expect(appendChild).not.toHaveBeenCalled();
     expect(await sdk.getUserToken()).toBeNull();
     expect(await sdk.getInviteGameId()).toBeNull();
+    expect(await sdk.isInstantMultiplayer()).toBe(false);
     await sdk.requestMidgameAd();
   });
 });
