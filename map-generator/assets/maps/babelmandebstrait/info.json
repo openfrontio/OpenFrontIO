@@ -215,5 +215,21 @@
       "flag": "fr"
     }
   ],
+  "teamGameSpawnAreas": {
+    "2": [
+      {
+        "height": 990,
+        "width": 830,
+        "x": 670,
+        "y": 0
+      },
+      {
+        "height": 960,
+        "width": 765,
+        "x": 0,
+        "y": 540
+      }
+    ]
+  },
   "themes": ["africa", "asia"]
 }

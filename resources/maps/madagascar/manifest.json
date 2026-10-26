@@ -339,6 +339,22 @@
     }
   ],
   "special_team_count": 2,
+  "teamGameSpawnAreas": {
+    "2": [
+      {
+        "height": 2332,
+        "width": 1174,
+        "x": 0,
+        "y": 0
+      },
+      {
+        "height": 2332,
+        "width": 2324,
+        "x": 1173,
+        "y": 0
+      }
+    ]
+  },
   "team_frequency": 10,
   "themes": ["africa"],
   "translation_key": "map.madagascar"
