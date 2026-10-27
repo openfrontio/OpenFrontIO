@@ -988,13 +988,17 @@ export class PlayerExecution implements Execution {
       // but the fill below hands over the whole territory the cluster sits on.
       // Verify this specific 4-way component is sealed in before conquering it.
       if (!this.isEnclosed(t, minX, minY, maxX, maxY)) {
-        // Mark any cluster tiles reached during the failed walk to prevent duplicate walks
-        const encGen = state.gen;
-        for (let j = i; j < cluster.length; j++) {
-          if (visited[cluster[j]] === encGen) {
-            visited[cluster[j]] = floodGen;
-          }
-        }
+        // Mark all reachable tiles of this component within the fence as floodGen,
+        // guaranteeing no other seed in this component repeats the walk, while
+        // safely halting at the fence to avoid flooding the open empire.
+        this.markRejectedComponent(
+          t,
+          floodGen,
+          minX - 1,
+          minY - 1,
+          maxX + 1,
+          maxY + 1,
+        );
         continue;
       }
 
@@ -1018,6 +1022,48 @@ export class PlayerExecution implements Execution {
     }
 
     return anyRemoved;
+  }
+
+  private markRejectedComponent(
+    start: TileRef,
+    floodGen: number,
+    fenceMinX: number,
+    fenceMinY: number,
+    fenceMaxX: number,
+    fenceMaxY: number,
+  ): void {
+    const state = this.traversalState();
+    const visited = state.visited;
+    const stack = state.stack;
+    const map = this.map;
+    const mySmallID = this.player.smallID();
+    const mapWidth = map.width();
+
+    stack.length = 0;
+    visited[start] = floodGen;
+    stack.push(start);
+
+    while (stack.length > 0) {
+      const cur = stack.pop()!;
+      const numN = map.neighbors4(cur, this.nbuf);
+      for (let i = 0; i < numN; i++) {
+        const n = this.nbuf[i];
+        if (visited[n] === floodGen || map.ownerID(n) !== mySmallID) {
+          continue;
+        }
+        const x = n % mapWidth;
+        const y = (n / mapWidth) | 0;
+        if (
+          x >= fenceMinX &&
+          x <= fenceMaxX &&
+          y >= fenceMinY &&
+          y <= fenceMaxY
+        ) {
+          visited[n] = floodGen;
+          stack.push(n);
+        }
+      }
+    }
   }
 
   /**
