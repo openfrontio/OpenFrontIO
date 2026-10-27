@@ -1,4 +1,5 @@
 {
+  "$schema": "../../../info.schema.json",
   "id": "MilkyWay",
   "name": "MilkyWay",
   "display_name": "Milky Way",

@@ -1,4 +1,5 @@
 {
+  "$schema": "../../../info.schema.json",
   "additionalNations": [
     {
       "coordinates": [1085, 1363],

@@ -391,7 +391,7 @@ export const maps: readonly MapInfo[] = [
     translationKey: "map.benelux",
     categories: ["new", "europe", "countries"],
     defaultNationCount: 8,
-    themes: ["Europe"],
+    themes: ["europe"],
   },
   {
     id: "BeringSea",

@@ -1,4 +1,5 @@
 {
+  "$schema": "../../../info.schema.json",
   "id": "TheBox",
   "name": "The Box",
   "translation_key": "map.thebox",

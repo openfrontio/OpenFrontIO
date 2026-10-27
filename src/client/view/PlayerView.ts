@@ -331,12 +331,14 @@ export class PlayerView implements PlayerLike {
   async buildables(
     tile?: TileRef,
     units?: readonly PlayerBuildableUnitType[],
+    includeBuildPreview = false,
   ): Promise<BuildableUnit[]> {
     return this.game.worker.playerBuildables(
       this.id(),
       tile && this.game.x(tile),
       tile && this.game.y(tile),
       units,
+      includeBuildPreview,
     );
   }
 

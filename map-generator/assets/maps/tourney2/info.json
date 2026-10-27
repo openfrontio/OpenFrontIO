@@ -1,4 +1,5 @@
 {
+  "$schema": "../../../info.schema.json",
   "id": "Tourney2",
   "name": "Tourney 3 Teams",
   "translation_key": "map.tourney2",

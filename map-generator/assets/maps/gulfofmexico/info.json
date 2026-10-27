@@ -1,4 +1,5 @@
 {
+  "$schema": "../../../info.schema.json",
   "id": "GulfOfMexico",
   "name": "Gulf Of Mexico",
   "translation_key": "map.gulfofmexico",

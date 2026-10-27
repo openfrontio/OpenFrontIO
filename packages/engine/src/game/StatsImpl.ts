@@ -71,6 +71,16 @@ const conquest_by_type: Record<PlayerType, number> = {
   [PlayerType.Bot]: PLAYER_INDEX_BOT,
 };
 
+type SampleCache = {
+  peak: number;
+  ddPeak: number;
+  ddTrough: number;
+  peakTroops: number;
+  peakAlliance: number;
+};
+
+const _sampleCache = new WeakMap<NonNullable<PlayerStats>, SampleCache>();
+
 export class StatsImpl implements Stats {
   private data: AllPlayersStats = {};
 
@@ -96,8 +106,9 @@ export class StatsImpl implements Stats {
   private _makePlayerStats(player: Player): PlayerStats {
     const clientID = player.clientID();
     if (clientID === null) return undefined;
-    if (clientID in this.data) {
-      return this.data[clientID];
+    const existing = this.data[clientID];
+    if (existing !== undefined) {
+      return existing;
     }
     const data = {} satisfies PlayerStats;
     this.data[clientID] = data;
@@ -434,30 +445,113 @@ export class StatsImpl implements Stats {
     troops: BigIntLike,
     allianceCount: number,
   ): void {
-    const p = this._makePlayerStats(player);
-    if (p === undefined) return;
+    const clientID = player.clientID();
+    if (clientID === null) return;
 
-    const t = _bigint(tiles);
-    p.tiles ??= [0n, 0n, 0n];
-    while (p.tiles.length <= TILE_INDEX_DRAWDOWN_TROUGH) p.tiles.push(0n);
-    if (t > p.tiles[TILE_INDEX_PEAK]) p.tiles[TILE_INDEX_PEAK] = t;
-    const peak = p.tiles[TILE_INDEX_PEAK];
-    const ddPeak = p.tiles[TILE_INDEX_DRAWDOWN_PEAK];
-    const ddTrough = p.tiles[TILE_INDEX_DRAWDOWN_TROUGH];
-    // Cross-multiplied rather than compared as a ratio, so this stays in
-    // exact integer arithmetic. bigint is unbounded, so there is no overflow
-    // to reason about. ddPeak === 0n means no drawdown has been recorded yet
-    // (including a leading zero-tile sample, which cannot itself represent a
-    // decline), so unconditionally seed rather than comparing against it.
-    if (ddPeak === 0n || (peak - t) * ddPeak > (ddPeak - ddTrough) * peak) {
-      p.tiles[TILE_INDEX_DRAWDOWN_PEAK] = peak;
-      p.tiles[TILE_INDEX_DRAWDOWN_TROUGH] = t;
+    let p = this.data[clientID];
+    if (p === undefined) {
+      p = {};
+      this.data[clientID] = p;
     }
 
-    const tr = _bigint(troops);
-    if (p.peakTroops === undefined || tr > p.peakTroops) p.peakTroops = tr;
+    let cache = _sampleCache.get(p);
+    if (cache === undefined) {
+      p.tiles ??= [0n, 0n, 0n];
+      while (p.tiles.length <= TILE_INDEX_DRAWDOWN_TROUGH) p.tiles.push(0n);
+      p.alliances ??= [0n, 0n];
+      while (p.alliances.length <= ALLIANCE_INDEX_PEAK_CONCURRENT) {
+        p.alliances.push(0n);
+      }
+      cache = {
+        peak: Number(p.tiles[TILE_INDEX_PEAK]),
+        ddPeak: Number(p.tiles[TILE_INDEX_DRAWDOWN_PEAK]),
+        ddTrough: Number(p.tiles[TILE_INDEX_DRAWDOWN_TROUGH]),
+        peakTroops: p.peakTroops === undefined ? -1 : Number(p.peakTroops),
+        peakAlliance: Number(p.alliances[ALLIANCE_INDEX_PEAK_CONCURRENT]),
+      };
+      _sampleCache.set(p, cache);
+    }
 
-    this._maxAlliance(player, ALLIANCE_INDEX_PEAK_CONCURRENT, allianceCount);
+    if (
+      typeof tiles === "number" &&
+      typeof troops === "number" &&
+      Number.isInteger(tiles) &&
+      Number.isInteger(troops) &&
+      Number.isInteger(allianceCount) &&
+      tiles >= 0 &&
+      troops >= 0 &&
+      tiles < 90_000_000 &&
+      troops < 90_000_000
+    ) {
+      // Fast path: safe integer math with 0 heap allocations on non-peak ticks.
+      if (tiles > cache.peak) {
+        cache.peak = tiles;
+        const t = BigInt(tiles);
+        p.tiles![TILE_INDEX_PEAK] = t;
+        if (cache.ddPeak === 0) {
+          cache.ddPeak = tiles;
+          cache.ddTrough = tiles;
+          p.tiles![TILE_INDEX_DRAWDOWN_PEAK] = t;
+          p.tiles![TILE_INDEX_DRAWDOWN_TROUGH] = t;
+        }
+      } else if (cache.ddPeak === 0) {
+        cache.ddPeak = cache.peak;
+        cache.ddTrough = tiles;
+        p.tiles![TILE_INDEX_DRAWDOWN_PEAK] = p.tiles![TILE_INDEX_PEAK];
+        p.tiles![TILE_INDEX_DRAWDOWN_TROUGH] = BigInt(tiles);
+      } else if (tiles < cache.peak) {
+        const decline = (cache.peak - tiles) * cache.ddPeak;
+        const worstDecline = (cache.ddPeak - cache.ddTrough) * cache.peak;
+        if (decline > worstDecline) {
+          cache.ddPeak = cache.peak;
+          cache.ddTrough = tiles;
+          p.tiles![TILE_INDEX_DRAWDOWN_PEAK] = p.tiles![TILE_INDEX_PEAK];
+          p.tiles![TILE_INDEX_DRAWDOWN_TROUGH] = BigInt(tiles);
+        }
+      }
+
+      if (troops > cache.peakTroops) {
+        cache.peakTroops = troops;
+        p.peakTroops = BigInt(troops);
+      }
+
+      if (allianceCount > cache.peakAlliance) {
+        cache.peakAlliance = allianceCount;
+        p.alliances![ALLIANCE_INDEX_PEAK_CONCURRENT] = BigInt(allianceCount);
+      }
+    } else {
+      // Fallback path: BigInt math for unbounded/non-primitive values.
+      const t = _bigint(tiles);
+      p.tiles ??= [0n, 0n, 0n];
+      while (p.tiles.length <= TILE_INDEX_DRAWDOWN_TROUGH) p.tiles.push(0n);
+      if (t > p.tiles[TILE_INDEX_PEAK]) p.tiles[TILE_INDEX_PEAK] = t;
+      const peak = p.tiles[TILE_INDEX_PEAK];
+      const ddPeak = p.tiles[TILE_INDEX_DRAWDOWN_PEAK];
+      const ddTrough = p.tiles[TILE_INDEX_DRAWDOWN_TROUGH];
+      if (ddPeak === 0n || (peak - t) * ddPeak > (ddPeak - ddTrough) * peak) {
+        p.tiles[TILE_INDEX_DRAWDOWN_PEAK] = peak;
+        p.tiles[TILE_INDEX_DRAWDOWN_TROUGH] = t;
+      }
+
+      const tr = _bigint(troops);
+      if (p.peakTroops === undefined || tr > p.peakTroops) p.peakTroops = tr;
+
+      p.alliances ??= [0n];
+      while (p.alliances.length <= ALLIANCE_INDEX_PEAK_CONCURRENT) {
+        p.alliances.push(0n);
+      }
+      const v = _bigint(allianceCount);
+      if (v > p.alliances[ALLIANCE_INDEX_PEAK_CONCURRENT]) {
+        p.alliances[ALLIANCE_INDEX_PEAK_CONCURRENT] = v;
+      }
+
+      // Sync cache
+      cache.peak = Number(p.tiles[TILE_INDEX_PEAK]);
+      cache.ddPeak = Number(p.tiles[TILE_INDEX_DRAWDOWN_PEAK]);
+      cache.ddTrough = Number(p.tiles[TILE_INDEX_DRAWDOWN_TROUGH]);
+      cache.peakTroops = Number(p.peakTroops);
+      cache.peakAlliance = Number(p.alliances[ALLIANCE_INDEX_PEAK_CONCURRENT]);
+    }
   }
 
   recordKilledBy(victim: Player, killerClientID: ClientID | null): void {

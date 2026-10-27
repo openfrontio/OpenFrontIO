@@ -1,4 +1,5 @@
 {
+  "$schema": "../../../info.schema.json",
   "id": "DidierFrance",
   "name": "Didier France",
   "display_name": "Didier (France)",

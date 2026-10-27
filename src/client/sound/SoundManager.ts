@@ -66,8 +66,8 @@ export class SoundManager {
    * Builds the Howl for the current gameplay track. The playlist keeps going —
    * including through the victory and defeat cues — so a game never hard-cuts
    * to silence, per the sound designer's note. Only one track is built at a
-   * time: on iOS a loaded track is held as ~75 MB of PCM. The menu theme
-   * (MenuMusic.ts) covers the home page.
+   * time: on the Web Audio path a loaded track is held as ~75 MB of PCM. The
+   * menu theme (MenuMusic.ts) covers the home page.
    */
   private buildBackgroundMusic(): void {
     this.safely("initialize background music", () => {
@@ -79,7 +79,7 @@ export class SoundManager {
         // so play() queued behind tens of seconds of silence at game start on
         // a slow connection. Cues and ambience stay on Web Audio.
         //
-        // iOS is the exception: it ignores volume on a media element, so a
+        // A browser with locked media-element volume is the exception: the
         // streamed track cannot be turned down or muted there at all, and Web
         // Audio is the only path with a working gain. Cues are unaffected
         // because they are already Web Audio.
@@ -87,9 +87,10 @@ export class SoundManager {
         // Never, on any platform. This runs in the constructor, before anyone
         // knows whether the player has music on, and Howler's default would
         // start fetching right here: the whole 4.6 MB buffered on a media
-        // element, or on iOS decoded to ~74 MB of PCM (209 s of 44.1 kHz
-        // stereo). The web defaults every channel to silence until the player
-        // opts in, so that is mostly spent on players who hear nothing.
+        // element, or decoded to ~74 MB of PCM on a volume-locked browser
+        // (209 s of 44.1 kHz stereo). The web defaults every channel to silence
+        // until the player opts in, so that is mostly spent on players who hear
+        // nothing.
         //
         // startMusicIfAudible does the one fetch, once the channel is
         // audible. It also means a rebuild after a failed load cannot retry
@@ -116,7 +117,7 @@ export class SoundManager {
    * same track again after a load that failed.
    *
    * A finished track is unloaded rather than kept for the next time round,
-   * so iOS holds one decoded track, not the whole playlist.
+   * so the Web Audio path holds one decoded track, not the whole playlist.
    *
    * The dead one cannot simply be retried: the play() that was queued behind
    * the failed load is still sitting in Howler's queue, so a later successful
@@ -176,11 +177,11 @@ export class SoundManager {
   /**
    * Starts the track, loading it first if it is not loaded yet.
    *
-   * Gated on the channel being audible because on the Web Audio path (iOS)
-   * loading means holding the whole track decoded, and the web defaults every
-   * channel to silence until the player opts in -- so a player who never
-   * turns music on would otherwise pay the download and the decode for
-   * something they never hear. Called again whenever the music channel
+   * Gated on the channel being audible because on the Web Audio path used for
+   * locked media volume, loading means holding the whole track decoded, and the
+   * web defaults every channel to silence until the player opts in -- so a
+   * player who never turns music on would otherwise pay the download and decode
+   * for something they never hear. Called again whenever the music channel
    * changes, so turning the slider up mid-game still starts it.
    *
    * isAudible, not volumeFor: the question is whether the player has the

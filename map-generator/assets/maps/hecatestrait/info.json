@@ -1,4 +1,5 @@
 {
+  "$schema": "../../../info.schema.json",
   "id": "Hecatestrait",
   "name": "Hecate Strait",
   "translation_key": "map.hecatestrait",
