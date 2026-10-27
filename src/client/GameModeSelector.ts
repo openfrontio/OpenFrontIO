@@ -671,14 +671,14 @@ export class GameModeSelector extends LitElement {
     // and the lobby column runs down beside them, so its two cards get that height.
     return html`
       <div
-        class="flex flex-col gap-4 w-full px-4 pb-4 mx-auto sm:px-0 sm:pb-0 sm:grid sm:grid-cols-[2fr_1fr] sm:grid-rows-[auto_min(24rem,40vh)_auto_auto] desktop:sm:grid-rows-[auto_40vh_auto_auto] sm:[reading-flow:grid-rows]"
+        class="flex flex-col gap-4 sm:compact:gap-3 w-full px-4 pb-4 mx-auto sm:px-0 sm:pb-0 sm:grid sm:grid-cols-[2fr_1fr] sm:grid-rows-[auto_min(24rem,40vh)_auto_auto] desktop:sm:grid-rows-[auto_40vh_auto_auto] sm:[reading-flow:grid-rows]"
       >
         <ios-add-to-home-screen-banner
           class="no-game-portal [&:empty]:hidden sm:col-span-2 sm:row-start-1"
         ></ios-add-to-home-screen-banner>
 
         <div
-          class="flex gap-4 h-14 sm:col-span-2 sm:row-start-3 ${
+          class="flex gap-4 sm:compact:gap-3 h-14 sm:col-span-2 sm:row-start-3 ${
             heroSlot ? "sm:compact:col-span-1!" : ""
           }"
         >
@@ -701,7 +701,9 @@ export class GameModeSelector extends LitElement {
               : nothing
           }
         </div>
-        <div class="grid grid-cols-3 gap-4 h-14 sm:col-span-2 sm:row-start-4">
+        <div
+          class="grid grid-cols-3 gap-4 sm:compact:gap-3 h-14 sm:col-span-2 sm:row-start-4"
+        >
           ${this.renderSmallActionCard(
             translateText("main.create"),
             this.openHostLobby,
@@ -763,7 +765,7 @@ export class GameModeSelector extends LitElement {
 
         <!-- Always rendered: the heading is the only way into the lobby browser. -->
         <section
-          class="flex flex-col gap-4 min-w-0 sm:grid sm:grid-rows-[auto_1fr_1fr] sm:row-start-2 sm:min-h-0 sm:[reading-flow:grid-rows] ${
+          class="flex flex-col gap-4 sm:compact:gap-3 min-w-0 sm:grid sm:grid-rows-[auto_1fr_1fr] sm:row-start-2 sm:min-h-0 sm:[reading-flow:grid-rows] ${
             heroSlot
               ? "sm:col-start-2 sm:compact:row-end-4"
               : "sm:col-start-1 sm:col-span-2"

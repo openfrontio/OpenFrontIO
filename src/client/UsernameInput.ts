@@ -123,7 +123,7 @@ const NAME_BOX =
 // box; the span only lands on the same pixel when it sizes from font metrics
 // too. Any fixed leading drifts a pixel under some fonts.
 const NAME_TEXT =
-  "text-xl/[normal] sm:text-2xl/[normal] font-medium tracking-wider " +
+  "text-xl/[normal] sm:text-2xl/[normal] sm:compact:text-xl/[normal] font-medium tracking-wider " +
   "[text-shadow:0_1px_2px_rgba(0,0,0,0.9)]";
 
 @customElement("username-input")
