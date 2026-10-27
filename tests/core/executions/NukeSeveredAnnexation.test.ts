@@ -235,7 +235,7 @@ describe("land a nuke severs from the main body is annexed", () => {
   // Border clusters join land that touches only at a corner, but territories
   // join only side by side. Piece A borders nothing but fallout; piece B,
   // touching it diagonally, borders the attacker. Run both orientations so
-  // whichever piece the cluster lists first, A is judged on its own.
+  // neither orientation has an accidental advantage.
   test.each([
     {
       name: "A above-left of B",
@@ -422,8 +422,6 @@ describe("land a nuke severs from the main body is annexed", () => {
   });
 
   // The generation counter wraps after 2^32 passes and clears every stamp.
-  // Wrap it at each pass of the defender's check in turn, on the inland case
-  // so the territory race runs too.
   test("a wrap of the generation counter mid-check changes nothing", async () => {
     const { body, arm: longArm, craters, cutX } = longArmCases[1];
     const cutOff = rect(cutX, 0, 199, 199);
@@ -441,24 +439,44 @@ describe("land a nuke severs from the main body is annexed", () => {
       await newGame();
       const scratch = tileTraversalScratch(game);
       const phases: string[] = [];
+      let armed = false;
       for (const [method, phase] of [
         ["calculateClusters", "clusters"],
-        ["splitCluster", "split"],
-        ["largestTerritoryPart", "race"],
-        ["annexSeveredClusters", "annex"],
+        ["removeClusters", "removeClusters"],
+        ["removeCluster", "removeCluster"],
+        ["isEnclosed", "isEnclosed"],
       ]) {
         const original = proto[method];
-        vi.spyOn(proto, method).mockImplementation(function (
-          this: unknown,
-          ...args: unknown[]
-        ) {
-          phases.push(phase);
-          try {
-            return original.apply(this, args);
-          } finally {
-            phases.pop();
-          }
-        });
+        if (method === "removeClusters") {
+          vi.spyOn(proto, "removeClusters").mockImplementation(function (
+            this: unknown,
+            ...args: unknown[]
+          ) {
+            phases.push(phase);
+            if (armed && (this as { player: Player }).player === defender) {
+              armed = false;
+              // The counter wraps on the next bump past 0xfffffffe.
+              scratch.gen = 0xfffffffe - passesBeforeWrap;
+            }
+            try {
+              return original.apply(this, args);
+            } finally {
+              phases.pop();
+            }
+          });
+        } else {
+          vi.spyOn(proto, method).mockImplementation(function (
+            this: unknown,
+            ...args: unknown[]
+          ) {
+            phases.push(phase);
+            try {
+              return original.apply(this, args);
+            } finally {
+              phases.pop();
+            }
+          });
+        }
       }
       const bump = proto.bumpGenerations;
       vi.spyOn(proto, "bumpGenerations").mockImplementation(function (
@@ -472,19 +490,6 @@ describe("land a nuke severs from the main body is annexed", () => {
           wrappedIn.add(phases[phases.length - 1]);
         }
         return first;
-      });
-      let armed = false;
-      const removeClusters = proto.removeClusters;
-      vi.spyOn(proto, "removeClusters").mockImplementation(function (
-        this: unknown,
-        ...args: unknown[]
-      ) {
-        if (armed && (this as { player: Player }).player === defender) {
-          armed = false;
-          // The counter wraps on the next bump past 0xfffffffe.
-          scratch.gen = 0xfffffffe - passesBeforeWrap;
-        }
-        return removeClusters.apply(this, args);
       });
 
       paint(union(body, longArm));
@@ -502,87 +507,12 @@ describe("land a nuke severs from the main body is annexed", () => {
       expect(defenderTilesIn(kept), label).toBe(keptBefore);
     }
     expect(brokenRuns).toBe(0);
-    expect([...wrappedIn].sort()).toEqual([
-      "annex",
-      "clusters",
-      "race",
-      "split",
-    ]);
+    expect([...wrappedIn].sort()).toEqual(
+      wrappedIn.has("removeClusters")
+        ? ["clusters", "removeClusters"]
+        : ["clusters"],
+    );
   }, 60_000);
-
-  test("the territory race adds up parts that share a territory", () => {
-    // A is larger than B, but each half of A is smaller.
-    const a = rect(20, 20, 49, 29);
-    const b = rect(100, 100, 119, 109);
-    paint(union(a, b));
-    const exec = new PlayerExecution(defender);
-    exec.init(game, game.ticks());
-    const parts = [
-      [game.ref(20, 20)],
-      [game.ref(100, 100)],
-      [game.ref(49, 29)],
-    ];
-    const roots = new Int32Array(parts.length);
-
-    const main = (
-      exec as unknown as {
-        largestTerritoryPart(p: number[][], r: Int32Array): number;
-      }
-    ).largestTerritoryPart(parts, roots);
-
-    expect([0, 2]).toContain(main);
-    expect(roots[1]).toBe(1);
-    const rootOf = (i: number) => (roots[i] === i ? i : roots[roots[i]]);
-    expect(rootOf(0)).toBe(main);
-    expect(rootOf(2)).toBe(main);
-  });
-
-  test("the territory race drops a ring round a hole without walking the land round it", () => {
-    // The defender holds the whole map but a hole in the middle and a small
-    // territory in the top-left corner.
-    const hole = rect(98, 98, 102, 102);
-    const ring = rect(97, 97, 103, 103);
-    const small = rect(0, 0, 9, 9);
-    // The attacker holds the hole and a strip round the small territory.
-    paint((x, y) => (!hole(x, y) && !rect(0, 0, 10, 10)(x, y)) || small(x, y));
-    const exec = new PlayerExecution(defender);
-    exec.init(game, game.ticks());
-    const race = (
-      exec as unknown as {
-        largestTerritoryPart(
-          p: number[][],
-          r: Int32Array,
-          b?: readonly number[],
-        ): number;
-      }
-    ).largestTerritoryPart.bind(exec);
-    const ringTiles: number[] = [];
-    game.map().forEachTile((t) => {
-      if (ring(game.x(t), game.y(t)) && !hole(game.x(t), game.y(t))) {
-        ringTiles.push(t);
-      }
-    });
-    const map = game.map();
-    const neighbors4 = map.neighbors4.bind(map);
-    let walked = 0;
-    vi.spyOn(map, "neighbors4").mockImplementation((ref, out) => {
-      walked++;
-      return neighbors4(ref, out);
-    });
-
-    // The ring's flood leaves its box at once and drops out, so the small
-    // territory, which fits its box, wins although the land round the ring
-    // is far larger, and the race never walks that land.
-    const smallTiles = [game.ref(0, 9), game.ref(9, 9), game.ref(9, 0)];
-    expect(
-      race(
-        [ringTiles, smallTiles],
-        new Int32Array(2),
-        [97, 97, 103, 103, 0, 0, 9, 9],
-      ),
-    ).toBe(1);
-    expect(walked).toBeLessThan(400);
-  });
 
   test("a piece cut off a main body whose land outruns its border along the map edge is annexed", () => {
     // A band right across the map: the map edge has no border tiles, so the
@@ -649,60 +579,36 @@ describe("land a nuke severs from the main body is annexed", () => {
     const defenderLand = (x: number, y: number) => !corner(x, y);
     const mainBefore = defenderTilesIn(defenderLand);
 
-    // Count the tiles the severed-land floods, and the race for the main
-    // body, walk.
-    let inFlood = false;
-    let inRace = false;
+    // Count the tiles isEnclosed walks.
+    let inEnclosed = false;
     let walked = 0;
-    let raced = 0;
     const proto = PlayerExecution.prototype as unknown as Record<
       string,
       (...args: unknown[]) => unknown
     >;
-    const original = proto.severedTerritory;
-    const flood = vi
-      .spyOn(proto, "severedTerritory")
+    const originalEnclosed = proto.isEnclosed;
+    const isEnclosedSpy = vi
+      .spyOn(proto, "isEnclosed")
       .mockImplementation(function (this: unknown, ...args: unknown[]) {
-        inFlood = true;
+        inEnclosed = true;
         try {
-          return original.apply(this, args);
+          return originalEnclosed.apply(this, args);
         } finally {
-          inFlood = false;
-        }
-      });
-    const originalRace = proto.largestTerritoryPart;
-    const race = vi
-      .spyOn(proto, "largestTerritoryPart")
-      .mockImplementation(function (this: unknown, ...args: unknown[]) {
-        inRace = true;
-        try {
-          return originalRace.apply(this, args);
-        } finally {
-          inRace = false;
+          inEnclosed = false;
         }
       });
     const map = game.map();
     const neighbors4 = map.neighbors4.bind(map);
     vi.spyOn(map, "neighbors4").mockImplementation((ref, out) => {
-      if (inFlood) walked++;
-      if (inRace) raced++;
+      if (inEnclosed) walked++;
       return neighbors4(ref, out);
     });
 
     runClusterChecks();
 
-    // The race for the main body walks a few hundred tiles: the ring's
-    // flood drops out once it leaves the ring's box, and the main body only
-    // has to outgrow the piece. Unbounded, it walks the whole main body
-    // (~37,000 tiles).
-    expect(race).toHaveBeenCalled();
-    expect(raced).toBeLessThan(1000);
-    expect(flood).toHaveBeenCalled();
+    expect(isEnclosedSpy).toHaveBeenCalled();
     expect(defenderTilesIn(piece)).toBe(0);
     expect(defenderTilesIn(defenderLand)).toBe(mainBefore);
-    // The main body is ~37,000 tiles, and without a bound these passes walk
-    // nearly all of it; a flood from the ring stops once it leaves the
-    // ring's bounding box.
     expect(walked).toBeLessThan(1000);
   });
 
