@@ -1290,6 +1290,15 @@ export class UserSettingModal extends BaseModal {
       ></setting-keybind>
 
       <setting-keybind
+        action="preventStacking"
+        label=${translateText("user_setting.prevent_stacking")}
+        description=${translateText("user_setting.prevent_stacking_desc")}
+        defaultKey=${this.defaultKeybinds.preventStacking}
+        .value=${this.getKeyValue("preventStacking")}
+        .display=${this.getKeyChar("preventStacking")}
+        @change=${this.handleKeybindChange}
+      ></setting-keybind>
+      <setting-keybind
         action="coordinateGrid"
         label=${translateText("user_setting.coordinate_grid_label")}
         description=${translateText("user_setting.coordinate_grid_desc")}
@@ -1736,7 +1745,7 @@ export class UserSettingModal extends BaseModal {
         action="moveUpArrow"
         label=${translateText("user_setting.move_up")}
         description=${translateText("user_setting.move_up_desc")}
-        .defaultKey=${this.defaultKeybinds.moveUpArrow}
+        defaultKey=${this.defaultKeybinds.moveUpArrow}
         .value=${this.getKeyValue("moveUpArrow")}
         .display=${this.getKeyChar("moveUpArrow")}
         @change=${this.handleKeybindChange}
@@ -1756,7 +1765,7 @@ export class UserSettingModal extends BaseModal {
         action="moveLeftArrow"
         label=${translateText("user_setting.move_left")}
         description=${translateText("user_setting.move_left_desc")}
-        .defaultKey=${this.defaultKeybinds.moveLeftArrow}
+        defaultKey=${this.defaultKeybinds.moveLeftArrow}
         .value=${this.getKeyValue("moveLeftArrow")}
         .display=${this.getKeyChar("moveLeftArrow")}
         @change=${this.handleKeybindChange}
@@ -1776,7 +1785,7 @@ export class UserSettingModal extends BaseModal {
         action="moveDownArrow"
         label=${translateText("user_setting.move_down")}
         description=${translateText("user_setting.move_down_desc")}
-        .defaultKey=${this.defaultKeybinds.moveDownArrow}
+        defaultKey=${this.defaultKeybinds.moveDownArrow}
         .value=${this.getKeyValue("moveDownArrow")}
         .display=${this.getKeyChar("moveDownArrow")}
         @change=${this.handleKeybindChange}
@@ -1796,7 +1805,7 @@ export class UserSettingModal extends BaseModal {
         action="moveRightArrow"
         label=${translateText("user_setting.move_right")}
         description=${translateText("user_setting.move_right_desc")}
-        .defaultKey=${this.defaultKeybinds.moveRightArrow}
+        defaultKey=${this.defaultKeybinds.moveRightArrow}
         .value=${this.getKeyValue("moveRightArrow")}
         .display=${this.getKeyChar("moveRightArrow")}
         @change=${this.handleKeybindChange}

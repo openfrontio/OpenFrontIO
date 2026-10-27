@@ -1,0 +1,303 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "$schema": {
+      "type": "string"
+    },
+    "id": {
+      "type": "string",
+      "pattern": "^[A-Z][A-Za-z0-9]*$",
+      "description": "UpperCamelCase folder name; the GameMapType enum key."
+    },
+    "name": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 29,
+      "pattern": "^[a-zA-Z0-9\\s().-]+$",
+      "description": "Canonical wire-format name. Never change it once the map ships."
+    },
+    "translation_key": {
+      "type": "string",
+      "pattern": "^map\\.[a-z0-9]+$"
+    },
+    "display_name": {
+      "description": "English display name when it differs from name.",
+      "type": "string",
+      "minLength": 1
+    },
+    "categories": {
+      "minItems": 1,
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": [
+          "featured",
+          "new",
+          "world",
+          "continental",
+          "europe",
+          "asia",
+          "north_america",
+          "africa",
+          "south_america",
+          "oceania",
+          "antarctica",
+          "countries",
+          "cosmic",
+          "fictional",
+          "arcade",
+          "tournament"
+        ]
+      }
+    },
+    "featured_rank": {
+      "description": "Position in the featured grid, 1 first.",
+      "type": "integer",
+      "exclusiveMinimum": 0,
+      "maximum": 9007199254740991
+    },
+    "special_team_count": {
+      "description": "Preferred team count in team and special games.",
+      "type": "integer",
+      "minimum": 2,
+      "maximum": 9007199254740991
+    },
+    "disabled_modifiers": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": [
+          "isRandomSpawn",
+          "isCompact",
+          "isCrowded",
+          "isHardNations",
+          "startingGold1M",
+          "startingGold5M",
+          "startingGold25M",
+          "goldMultiplier",
+          "isAlliancesDisabled",
+          "isNukesDisabled",
+          "isSAMsDisabled",
+          "isPeaceTime",
+          "isWaterNukes",
+          "isDoomsdayClock"
+        ]
+      }
+    },
+    "forced_modifiers": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^(isRandomSpawn|isCompact|isCrowded|isHardNations|startingGold1M|startingGold5M|startingGold25M|goldMultiplier|isAlliancesDisabled|isNukesDisabled|isSAMsDisabled|isPeaceTime|isWaterNukes|isDoomsdayClock)(:(100|[1-9][0-9]?))?$",
+        "description": "A modifier key, or \"key:percentage\" for a roll chance."
+      }
+    },
+    "themes": {
+      "description": "Tribe name themes from resources/tribeNameThemes.json.",
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": [
+          "default",
+          "north_america",
+          "south_america",
+          "europe",
+          "africa",
+          "asia",
+          "antarctica",
+          "oceania",
+          "space",
+          "fantasy",
+          "war",
+          "western",
+          "under_ocean",
+          "tournament",
+          "funny",
+          "scary",
+          "weird",
+          "vs"
+        ]
+      }
+    },
+    "custom_tribes": {
+      "type": "array",
+      "items": {
+        "anyOf": [
+          {
+            "type": "string",
+            "minLength": 1
+          },
+          {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string",
+                "minLength": 1
+              },
+              "coordinates": {
+                "type": "array",
+                "prefixItems": [
+                  {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 9007199254740991
+                  },
+                  {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 9007199254740991
+                  }
+                ],
+                "description": "[x, y] tile position. Origin is top-left; y extends down."
+              }
+            },
+            "required": ["name"],
+            "additionalProperties": false
+          }
+        ]
+      }
+    },
+    "nations": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1
+          },
+          "coordinates": {
+            "description": "Spawn position. Omit for a random spawn.",
+            "type": "array",
+            "prefixItems": [
+              {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              }
+            ]
+          },
+          "flag": {
+            "description": "Flag file name in resources/flags/ without the .svg suffix. Empty means no flag.",
+            "type": "string"
+          }
+        },
+        "required": ["name"],
+        "additionalProperties": false
+      }
+    },
+    "additionalNations": {
+      "description": "Fallback nations used when a game asks for more than nations lists.",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1
+          },
+          "coordinates": {
+            "description": "Spawn position. Omit for a random spawn.",
+            "type": "array",
+            "prefixItems": [
+              {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              }
+            ]
+          },
+          "flag": {
+            "description": "Flag file name in resources/flags/ without the .svg suffix. Empty means no flag.",
+            "type": "string"
+          }
+        },
+        "required": ["name"],
+        "additionalProperties": false
+      }
+    },
+    "teamGameSpawnAreas": {
+      "description": "Spawn rectangles per team count.",
+      "type": "object",
+      "propertyNames": {
+        "type": "string",
+        "pattern": "^[0-9]+$"
+      },
+      "additionalProperties": {
+        "minItems": 1,
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "x": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 9007199254740991
+            },
+            "y": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 9007199254740991
+            },
+            "width": {
+              "type": "integer",
+              "exclusiveMinimum": 0,
+              "maximum": 9007199254740991
+            },
+            "height": {
+              "type": "integer",
+              "exclusiveMinimum": 0,
+              "maximum": 9007199254740991
+            }
+          },
+          "required": ["x", "y", "width", "height"],
+          "additionalProperties": false
+        }
+      }
+    },
+    "layers": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[a-zA-Z0-9-]+$",
+            "description": "Layer id. Also the PNG file name without the extension."
+          },
+          "placement": {
+            "type": "string",
+            "enum": ["land", "water"],
+            "description": "Whether the layer covers land or water tiles."
+          },
+          "nukeable": {
+            "description": "Permanently destroyed inside nuke impact radii.",
+            "type": "boolean"
+          },
+          "alpha": {
+            "description": "Initial opacity for the player's layer-alpha slider.",
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1
+          }
+        },
+        "required": ["id", "placement"],
+        "additionalProperties": false
+      }
+    }
+  },
+  "required": ["id", "name", "translation_key", "categories", "nations"],
+  "additionalProperties": false,
+  "title": "OpenFront map info.json"
+}

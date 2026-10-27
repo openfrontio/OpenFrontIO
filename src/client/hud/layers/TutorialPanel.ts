@@ -165,9 +165,14 @@ export class TutorialPanel extends LitElement implements Controller {
     }
 
     if (this.game.ticks() % COST_POLL_TICKS === 0) {
-      player.buildables(undefined, COST_POLL_TYPES).then((buildables) => {
-        this.costs = new Map(buildables.map((b) => [b.type, b.cost]));
-      });
+      player
+        .buildables(undefined, COST_POLL_TYPES)
+        .then((buildables) => {
+          this.costs = new Map(buildables.map((b) => [b.type, b.cost]));
+        })
+        .catch((error) =>
+          console.warn("Failed to refresh tutorial costs", error),
+        );
     }
 
     const ctx = this.buildContext(player);

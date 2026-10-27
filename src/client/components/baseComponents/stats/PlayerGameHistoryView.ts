@@ -272,7 +272,7 @@ export class PlayerGameHistoryView extends LitElement {
     const url = `${ClientEnv.shareOrigin()}${ClientEnv.gamePath(gameId)}`;
 
     try {
-      await void copyToClipboard(url);
+      await copyToClipboard(url);
       showToast(translateText("common.copied"), "green");
     } catch {
       showToast(translateText("common.failed_copy"), "red");
@@ -383,7 +383,7 @@ export class PlayerGameHistoryView extends LitElement {
           (group) => html`
             <div class="space-y-3">
               <div
-                class="sticky top-0 z-10 flex items-center gap-3 px-1 py-1.5"
+                class="sticky top-0 z-10 flex items-center gap-3 px-1 py-1.5 pointer-events-none"
               >
                 <span class="h-px flex-1 bg-white/10"></span>
                 <h3

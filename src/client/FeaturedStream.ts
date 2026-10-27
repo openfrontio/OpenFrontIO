@@ -1,6 +1,7 @@
 import { LiveStream, StreamsFeed } from "@openfront/shared/ApiSchemas";
 import { LitElement, html } from "lit";
 import { customElement, state } from "lit/decorators.js";
+import { isCompactViewport } from "./CompactViewport";
 import { isDesktopShell } from "./DesktopShell";
 import { gamePortal } from "./GamePortal";
 import { broadcastKey, streamsFeed, watchUrl } from "./StreamsFeed";
@@ -233,6 +234,13 @@ export class FeaturedStream extends LitElement {
   // Twitch to find out.
   private async onFeed(feed: StreamsFeed) {
     if (this.inGame || this.dismissed) return;
+    // Not on a compact screen. Checked per feed tick, so shrinking the window drops a
+    // playing panel (rather than hiding it, which Twitch's ToS forbids) and growing it
+    // brings the panel back.
+    if (isCompactViewport()) {
+      this.goOffline();
+      return;
+    }
     const next = featuredStream(feed, this.dead);
     if (next === null) {
       this.goOffline();
@@ -279,6 +287,11 @@ export class FeaturedStream extends LitElement {
     }
     // A close (or a game start) during the SDK load must not mount.
     if (this.inGame || this.dismissed) return;
+    // Nor a window that turned compact meanwhile (see onFeed).
+    if (isCompactViewport()) {
+      this.goOffline();
+      return;
+    }
     if (this.stream !== stream) return; // superseded while the SDK loaded
     const channel = stream.channel;
     const host = this.querySelector(
