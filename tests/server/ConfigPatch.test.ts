@@ -43,6 +43,7 @@ const EDITABLE: { [K in keyof GameConfig]?: GameConfig[K] } = {
 // `.nullable().optional()` in the schema: null clears, undefined leaves alone.
 const NULLABLE: { [K in keyof GameConfig]?: NonNullable<GameConfig[K]> } = {
   maxTimerValue: 30,
+  winThresholdTenths: 755,
   startDelay: 10,
   spawnImmunityDuration: 50,
   goldMultiplier: 2,

@@ -84,6 +84,11 @@ export function notableLobbySettings(
       label: translateText("private_lobby.game_length"),
       value: renderDuration(c.maxTimerValue * 60),
     });
+  if (c.winThresholdTenths)
+    items.push({
+      label: translateText("game_settings.win_threshold"),
+      value: `${c.winThresholdTenths / 10}%`,
+    });
   if (
     c.spawnImmunityDuration &&
     Math.round(c.spawnImmunityDuration / 10) !== 5

@@ -364,14 +364,18 @@ export class MatchmakingModal extends BaseModal {
         // otherwise the "searching" message will be shown immediately.
         // Also wait so people who back out immediately aren't added
         // to the matchmaking queue.
+        const jwt = await getPlayToken();
+        if (this.socket !== socket || socket.readyState !== WebSocket.OPEN) {
+          return;
+        }
         const message: MatchmakingJoin = {
           type: "join",
-          jwt: await getPlayToken(),
+          jwt,
           ...(this.selectedClanTag === null
             ? {}
             : { clanTag: this.selectedClanTag }),
         };
-        this.socket.send(JSON.stringify(message));
+        socket.send(JSON.stringify(message));
         this.connected = true;
         // The server starts broadcasting queue-size once we're queued;
         // from here on, silence means the connection is dead.
@@ -564,6 +568,11 @@ export class MatchmakingModal extends BaseModal {
       clearInterval(this.gameCheckInterval);
       this.gameCheckInterval = null;
     }
+  }
+
+  disconnectedCallback(): void {
+    this.onClose();
+    super.disconnectedCallback();
   }
 
   private async checkGame() {

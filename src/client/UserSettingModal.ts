@@ -1290,6 +1290,15 @@ export class UserSettingModal extends BaseModal {
       ></setting-keybind>
 
       <setting-keybind
+        action="preventStacking"
+        label=${translateText("user_setting.prevent_stacking")}
+        description=${translateText("user_setting.prevent_stacking_desc")}
+        defaultKey=${this.defaultKeybinds.preventStacking}
+        .value=${this.getKeyValue("preventStacking")}
+        .display=${this.getKeyChar("preventStacking")}
+        @change=${this.handleKeybindChange}
+      ></setting-keybind>
+      <setting-keybind
         action="coordinateGrid"
         label=${translateText("user_setting.coordinate_grid_label")}
         description=${translateText("user_setting.coordinate_grid_desc")}

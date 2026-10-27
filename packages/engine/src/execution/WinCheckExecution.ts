@@ -141,12 +141,12 @@ export class WinCheckExecution implements Execution {
     }
     const numTilesWithoutFallout =
       this.mg.numLandTiles() - this.mg.numTilesWithFallout();
-    // Cross-multiplied: the threshold is a whole percentage, so this is
-    // exact integer math.
+    // Cross-multiplied: the threshold is in whole tenths of a percent, so
+    // this is exact integer math.
     return (
-      tilesOwned * 100 >
+      tilesOwned * 1000 >
       numTilesWithoutFallout *
-        this.mg.config().percentageTilesOwnedToWin(timeElapsed)
+        this.mg.config().percentageTilesOwnedToWinTenths(timeElapsed)
     );
   }
 
