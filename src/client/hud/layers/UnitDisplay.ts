@@ -116,9 +116,12 @@ export class UnitDisplay extends LitElement implements Controller {
   tick() {
     const player = this.game?.myPlayer();
     if (!player) return;
-    player.buildables(undefined, BuildMenus.types).then((buildables) => {
-      this.playerBuildables = buildables;
-    });
+    player
+      .buildables(undefined, BuildMenus.types)
+      .then((buildables) => {
+        this.playerBuildables = buildables;
+      })
+      .catch((error) => console.warn("Failed to refresh unit costs", error));
     this._cities = player.totalUnitLevels(UnitType.City);
     this._missileSilo = player.totalUnitLevels(UnitType.MissileSilo);
     this._port = player.totalUnitLevels(UnitType.Port);

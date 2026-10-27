@@ -2980,3 +2980,91 @@ describe("InputHandler teardown (OPE-411)", () => {
     });
   });
 });
+
+describe("InputHandler prevent building stacking hold", () => {
+  let handler: InputHandler;
+  let state: UIState;
+  const settings = new UserSettings();
+  const key = (type: string, code: string, init: KeyboardEventInit = {}) =>
+    window.dispatchEvent(new KeyboardEvent(type, { code, ...init }));
+
+  beforeEach(() => {
+    settings.removeCached(KEYBINDS_KEY, false);
+    state = {
+      attackRatio: 20,
+      ghostStructure: null,
+      rocketDirectionUp: true,
+      upgradeMultiplier: 1,
+    };
+    const game = {
+      inSpawnPhase: () => false,
+      myPlayer: () => ({ isAlive: () => true }),
+    } as unknown as GameView;
+    handler = new InputHandler(
+      game,
+      state,
+      document.createElement("canvas"),
+      new EventBus(),
+    );
+    handler.initialize();
+  });
+
+  afterEach(() => {
+    handler.destroy();
+    settings.removeCached(KEYBINDS_KEY, false);
+    document.body.innerHTML = "";
+  });
+
+  test("holds only until key release, blur, teardown or rebinding", () => {
+    key("keydown", "KeyH");
+    expect(state.preventStacking).toBe(true);
+    key("keyup", "KeyH");
+    expect(state.preventStacking).toBe(false);
+    key("keydown", "KeyH");
+    window.dispatchEvent(new Event("blur"));
+    expect(state.preventStacking).toBe(false);
+    key("keydown", "KeyH");
+    settings.setKeybinds({ preventStacking: "KeyV" });
+    expect(state.preventStacking).toBe(false);
+    key("keydown", "KeyH");
+    expect(state.preventStacking).toBe(false);
+    key("keydown", "KeyV");
+    expect(state.preventStacking).toBe(true);
+    handler.destroy();
+    expect(state.preventStacking).toBe(false);
+  });
+
+  test.each(["KeyH", "ShiftLeft", "ShiftRight"])(
+    "releasing %s clears Shift+H",
+    (code) => {
+      settings.setKeybinds({ preventStacking: "Shift+KeyH" });
+      key("keydown", "KeyH", { shiftKey: true });
+      expect(state.preventStacking).toBe(true);
+      key("keyup", code, { shiftKey: code === "KeyH" });
+      expect(state.preventStacking).toBe(false);
+    },
+  );
+
+  test.each(["MetaLeft", "MetaRight"])(
+    "clears on %s release when macOS swallows H keyup",
+    (code) => {
+      key("keydown", "KeyH");
+      key("keydown", code, { metaKey: true });
+      expect(state.preventStacking).toBe(true);
+      // No H keyup arrives. Focus may also move into a text field in a menu.
+      const input = document.createElement("input");
+      document.body.append(input);
+      input.dispatchEvent(new KeyboardEvent("keyup", { code, bubbles: true }));
+      expect(state.preventStacking).toBe(false);
+    },
+  );
+
+  test("typing H in a text field does not activate the hold", () => {
+    const input = document.createElement("input");
+    document.body.append(input);
+    input.dispatchEvent(
+      new KeyboardEvent("keydown", { code: "KeyH", bubbles: true }),
+    );
+    expect(state.preventStacking).not.toBe(true);
+  });
+});
