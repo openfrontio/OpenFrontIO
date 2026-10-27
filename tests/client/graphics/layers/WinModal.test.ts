@@ -1,11 +1,11 @@
 import { RankedType } from "@openfront/engine-api/game/GameTypes";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import type { PurchaseButton } from "../../../../src/client/components/PurchaseButton";
 import {
   fetchCosmetics,
   resolveCosmetics,
   type ResolvedCosmetic,
 } from "../../../../src/client/Cosmetics";
-import type { PurchaseButton } from "../../../../src/client/components/PurchaseButton";
 import "../../../../src/client/hud/layers/WinModal";
 import type { WinModal } from "../../../../src/client/hud/layers/WinModal";
 
@@ -44,6 +44,13 @@ vi.mock("../../../../src/client/GamePortal", () => ({
     name: () => null,
   },
 }));
+
+// jsdom has no ResizeObserver.
+globalThis.ResizeObserver ??= class {
+  observe() {}
+  unobserve() {}
+  disconnect() {}
+} as unknown as typeof ResizeObserver;
 
 describe("WinModal Requeue", () => {
   let mockLocationHref = "";
@@ -211,5 +218,17 @@ describe("WinModal pattern promotion", () => {
     } finally {
       delete window.openfrontDesktop;
     }
+  });
+
+  it("includes action styles that align [data-share-ring] with .win-action on hover", async () => {
+    modal = document.createElement("win-modal") as WinModal;
+    document.body.appendChild(modal);
+    await modal.updateComplete;
+    const style = modal.querySelector("style");
+    expect(style).not.toBeNull();
+    const css = style?.textContent ?? "";
+    expect(css).toContain(".win-action:hover ~ [data-share-ring]");
+    expect(css).toContain("top: -6px");
+    expect(css).toContain("bottom: -2px");
   });
 });

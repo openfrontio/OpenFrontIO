@@ -3,7 +3,6 @@
   "name": "Svalmel",
   "translation_key": "map.svalmel",
   "categories": ["fictional", "europe", "north_america"],
-  "multiplayer_frequency": 8,
   "nations": [
     {
       "coordinates": [900, 850],

@@ -3,7 +3,6 @@
   "name": "Japan",
   "translation_key": "map.japan",
   "categories": ["countries", "asia"],
-  "multiplayer_frequency": 6,
   "nations": [
     {
       "coordinates": [1895, 288],

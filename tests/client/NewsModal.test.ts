@@ -1,7 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-// Side-effect import registers <news-modal>; a type-only import would be
-// elided and leave the element inert.
-import "../../src/client/NewsModal";
+// The named import registers <news-modal> as a side effect; a type-only import
+// would be elided and leave the element inert.
 import { NewsModal } from "../../src/client/NewsModal";
 
 beforeEach(() => {

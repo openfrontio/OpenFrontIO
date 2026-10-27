@@ -3,8 +3,6 @@
   "name": "Canary Islands",
   "translation_key": "map.canaryislands",
   "categories": ["new", "africa"],
-  "multiplayer_frequency": 3,
-  "team_frequency": 10,
   "nations": [
     {
       "coordinates": [229, 1022],

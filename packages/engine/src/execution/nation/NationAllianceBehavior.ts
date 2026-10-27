@@ -193,7 +193,10 @@ export class NationAllianceBehavior {
     const totalPlayers = this.game
       .players()
       .filter((p) => p.type() !== PlayerType.Bot).length;
-    const otherPlayerAlliances = otherPlayer.alliances().length;
+    // An alliance with us is the one being renewed, not another one
+    const otherPlayerAlliances =
+      otherPlayer.alliances().length -
+      (otherPlayer.isAlliedWith(this.player) ? 1 : 0);
 
     if (difficulty === Difficulty.Hard) {
       return otherPlayerAlliances >= totalPlayers * 0.5;

@@ -3,8 +3,6 @@
   "name": "Madagascar",
   "translation_key": "map.madagascar",
   "categories": ["new", "africa"],
-  "multiplayer_frequency": 5,
-  "team_frequency": 10,
   "special_team_count": 2,
   "forced_modifiers": ["isWaterNukes:50"],
   "nations": [
@@ -326,5 +324,21 @@
       "flag": "mg"
     }
   ],
+  "teamGameSpawnAreas": {
+    "2": [
+      {
+        "height": 2332,
+        "width": 1174,
+        "x": 0,
+        "y": 0
+      },
+      {
+        "height": 2332,
+        "width": 2324,
+        "x": 1173,
+        "y": 0
+      }
+    ]
+  },
   "themes": ["africa"]
 }

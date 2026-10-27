@@ -407,12 +407,20 @@ export interface PlayerBorderTiles {
  * the same per-player stats the end-of-game record carries, and in FFA from
  * who went out before them. Built by the engine's humanStatsSnapshot().
  */
-export interface HumanStatsSnapshot {
-  // The tick the snapshot was taken at.
-  tick: number;
+export interface HumanStatsSnapshot extends HumanDisconnects {
   // Every human's stats, keyed by clientID: the object the archived record
   // carries per player (players who never spawned have none).
   stats: AllPlayersStats;
+}
+
+/**
+ * Just the snapshot's tick and who is disconnected, without the stats: what
+ * the client needs at the end of the game, where it has the stats from the
+ * Win update already. Built by the engine's humanDisconnects().
+ */
+export interface HumanDisconnects {
+  // The tick the snapshot was taken at.
+  tick: number;
   // Humans whose connection is currently marked lost: clientID -> the tick
   // it was. The API reads a player who never came back as having left then.
   disconnectedAt: Record<ClientID, number>;

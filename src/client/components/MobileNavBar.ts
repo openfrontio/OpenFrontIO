@@ -108,14 +108,16 @@ export class MobileNavBar extends LitElement {
           @click=${this._notifications.onStoreClick}
         >
           <button class="${MOBILE_ITEM}" data-i18n="main.store"></button>
-          ${this._notifications.showStoreDot()
-            ? this._renderDot("bg-red-500")
-            : ""}
+          ${
+            this._notifications.showStoreDot()
+              ? this._renderDot("bg-red-500")
+              : ""
+          }
         </div>
         <button
-          class="${MOBILE_ITEM} ${currentPage === "page-inventory"
-            ? "active"
-            : ""}"
+          class="${MOBILE_ITEM} ${
+            currentPage === "page-inventory" ? "active" : ""
+          }"
           data-page="page-inventory"
           data-i18n="main.inventory"
         ></button>

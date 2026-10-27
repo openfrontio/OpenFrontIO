@@ -40,7 +40,8 @@ export type BootInterrupt =
   | "username-claim"
   | "lapse-notice"
   | "grant-ended"
-  | "rewards";
+  | "rewards"
+  | "report-thanks";
 
 export interface BootInterruptInputs {
   /**
@@ -86,6 +87,13 @@ export interface BootInterruptInputs {
    * interrupt take the boot instead of losing it.
    */
   claimStringsReady: boolean;
+  /**
+   * `report_thanks` is in /users/@me `pendingMessages`: someone this player
+   * reported has been banned, and the server has a thank-you waiting.
+   */
+  reportThanksDue: boolean;
+  /** reportThanksStringsReady(...), as grantStringsReady. */
+  reportThanksStringsReady: boolean;
 }
 
 /**
@@ -292,6 +300,11 @@ export function nextBootInterrupt(
 
   if (inputs.rewardCount > 0) return "rewards";
 
+  // Last: a thank-you has nothing riding on it and keeps on the server until a
+  // boot has room for it.
+  if (inputs.reportThanksDue && inputs.reportThanksStringsReady)
+    return "report-thanks";
+
   return null;
 }
 
@@ -442,6 +455,8 @@ export const BOOT_INTERRUPT_KEYS = {
   grantWelcomeHeading: "steam_grant.welcome_heading",
   grantEndedBody: "steam_grant.ended_body",
   grantEndedHeading: "steam_grant.ended_heading",
+  reportThanksBody: "report_thanks.body",
+  reportThanksHeading: "report_thanks.heading",
 } as const;
 
 /** Where the username form lives. */
@@ -499,6 +514,42 @@ export function steamGrantStringsReady(
   ).every((key) => translate(key, params) !== key);
 }
 
+// /users/@me is re-read several times per launch (session recovery, a portal
+// sign-in) and the seen POST is fire and forget, so a re-read can still carry
+// the message the player just closed. One thank-you per launch, as with the
+// Steam notices (SteamNotices.ts); a launch that never showed it still owes
+// it, because nothing was marked seen. Kept per account, since a portal
+// sign-in can switch accounts without a reload.
+const reportThanksShownThisLaunch = new Set<string>();
+
+/** Is the report thank-you owed to this account on this boot? */
+export function reportThanksDueThisLaunch(
+  pendingMessages: string[],
+  publicId: string,
+): boolean {
+  return (
+    !reportThanksShownThisLaunch.has(publicId) &&
+    pendingMessages.includes("report_thanks")
+  );
+}
+
+export function resetReportThanksForTest(): void {
+  reportThanksShownThisLaunch.clear();
+}
+
+/**
+ * The same precondition for the report thank-you: it is marked seen on the
+ * server once shown, so a key echoed back would spend it unread.
+ */
+export function reportThanksStringsReady(
+  translate: (key: string) => string,
+): boolean {
+  return [
+    BOOT_INTERRUPT_KEYS.reportThanksBody,
+    BOOT_INTERRUPT_KEYS.reportThanksHeading,
+  ].every((key) => translate(key) !== key);
+}
+
 /**
  * Everything acting on an interrupt has to reach outside itself for. Passed in
  * rather than imported so the wiring below is exercised by tests instead of
@@ -529,6 +580,8 @@ export interface BootInterruptPorts {
   updateSteamGrant(update: (store: SteamGrantStore) => SteamGrantStore): void;
   /** POST /users/@me/notices. Fire and forget. */
   markNoticeSeen(notice: string): void;
+  /** POST /users/@me/messages/seen. Fire and forget. */
+  markMessageSeen(kind: string): void;
   now(): number;
 }
 
@@ -695,6 +748,14 @@ async function runInterrupt(
       return;
     case "rewards":
       ports.openRewards();
+      return;
+    case "report-thanks":
+      reportThanksShownThisLaunch.add(context.publicId);
+      await ports.alert(
+        ports.translate(BOOT_INTERRUPT_KEYS.reportThanksBody),
+        ports.translate(BOOT_INTERRUPT_KEYS.reportThanksHeading),
+      );
+      ports.markMessageSeen("report_thanks");
       return;
     case null:
       return;

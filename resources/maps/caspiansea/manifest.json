@@ -16,7 +16,6 @@
     "num_land_tiles": 235925,
     "width": 504
   },
-  "multiplayer_frequency": 5,
   "name": "Caspian Sea",
   "nations": [
     {
@@ -97,7 +96,6 @@
       }
     ]
   },
-  "team_frequency": 10,
   "themes": ["asia"],
   "translation_key": "map.caspiansea"
 }

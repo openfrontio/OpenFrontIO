@@ -228,7 +228,7 @@ export class ClanGameHistoryView extends LitElement {
     const url = `${ClientEnv.shareOrigin()}${ClientEnv.gamePath(gameId)}`;
 
     try {
-      await void copyToClipboard(url);
+      await copyToClipboard(url);
       showToast(translateText("common.copied"), "green");
     } catch {
       showToast(translateText("common.failed_copy"), "red");
@@ -272,9 +272,11 @@ export class ClanGameHistoryView extends LitElement {
               role="tab"
               aria-selected=${active}
               @click=${() => this.setFilter(tab.key)}
-              class="grow ${basis} px-3 py-1.5 text-xs font-bold uppercase tracking-wider whitespace-nowrap rounded-lg transition-colors ${active
-                ? "bg-malibu-blue/20 text-aquarius border border-malibu-blue/30"
-                : "text-white/50 hover:text-white hover:bg-white/5 border border-transparent"}"
+              class="grow ${basis} px-3 py-1.5 text-xs font-bold uppercase tracking-wider whitespace-nowrap rounded-lg transition-colors ${
+                active
+                  ? "bg-malibu-blue/20 text-aquarius border border-malibu-blue/30"
+                  : "text-white/50 hover:text-white hover:bg-white/5 border border-transparent"
+              }"
             >
               ${translateText(tab.labelKey)}
             </button>
@@ -416,42 +418,48 @@ export class ClanGameHistoryView extends LitElement {
       <div
         class="relative bg-white/5 border border-white/10 rounded-xl overflow-hidden"
       >
-        ${mapWebpPath
-          ? html`<div
-              class="relative w-full aspect-[30/11] overflow-hidden bg-surface"
-            >
-              <img
-                src=${mapWebpPath}
-                alt=${mapDisplayName ?? ""}
-                draggable="false"
-                loading="lazy"
-                decoding="async"
-                class="w-full h-full object-cover"
-              />
-              <div
-                class="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent"
-              ></div>
-              ${mapDisplayName
-                ? html`<div
-                    class="absolute bottom-2 left-3 text-xs font-bold text-white uppercase tracking-wider drop-shadow"
-                  >
-                    ${mapDisplayName}
-                  </div>`
-                : ""}
-              <div class="absolute top-2 left-2">
-                ${this.renderResultBadge(game, winners)}
-              </div>
-              <div
-                class="absolute bottom-2 right-2 text-xs font-medium text-white bg-black/60 backdrop-blur-sm px-2 py-1 rounded-md whitespace-nowrap"
+        ${
+          mapWebpPath
+            ? html`<div
+                class="relative w-full aspect-[30/11] overflow-hidden bg-surface"
               >
-                ${formatAbsoluteTime(game.start)}
-              </div>
-            </div>`
-          : ""}
+                <img
+                  src=${mapWebpPath}
+                  alt=${mapDisplayName ?? ""}
+                  draggable="false"
+                  loading="lazy"
+                  decoding="async"
+                  class="w-full h-full object-cover"
+                />
+                <div
+                  class="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent"
+                ></div>
+                ${
+                  mapDisplayName
+                    ? html`<div
+                        class="absolute bottom-2 left-3 text-xs font-bold text-white uppercase tracking-wider drop-shadow"
+                      >
+                        ${mapDisplayName}
+                      </div>`
+                    : ""
+                }
+                <div class="absolute top-2 left-2">
+                  ${this.renderResultBadge(game, winners)}
+                </div>
+                <div
+                  class="absolute bottom-2 right-2 text-xs font-medium text-white bg-black/60 backdrop-blur-sm px-2 py-1 rounded-md whitespace-nowrap"
+                >
+                  ${formatAbsoluteTime(game.start)}
+                </div>
+              </div>`
+            : ""
+        }
         <div
-          class=${mapWebpPath
-            ? "absolute top-2 right-2 z-[1]"
-            : "flex items-center justify-end px-4 py-3 border-b border-white/5"}
+          class=${
+            mapWebpPath
+              ? "absolute top-2 right-2 z-[1]"
+              : "flex items-center justify-end px-4 py-3 border-b border-white/5"
+          }
         >
           <div class="flex items-center gap-2 shrink-0">
             <button
@@ -515,12 +523,14 @@ export class ClanGameHistoryView extends LitElement {
             translateText("clan_modal.history_game_type"),
             formatGameType(game),
           )}
-          ${mapWebpPath
-            ? ""
-            : this.renderField(
-                translateText("clan_modal.history_map"),
-                mapDisplayName ?? "—",
-              )}
+          ${
+            mapWebpPath
+              ? ""
+              : this.renderField(
+                  translateText("clan_modal.history_map"),
+                  mapDisplayName ?? "—",
+                )
+          }
           ${this.renderPlayersField(game)}
           ${this.renderField(
             translateText("clan_modal.history_duration"),
@@ -596,22 +606,26 @@ export class ClanGameHistoryView extends LitElement {
   ): TemplateResult | string {
     if (game.clanPlayers.length === 0) return "";
     return html`
-      ${winners.length > 0
-        ? this.renderPlayerSection(
-            translateText("clan_modal.history_clan_winners"),
-            winners,
-            "text-green-400",
-            "winners",
-          )
-        : ""}
-      ${losers.length > 0
-        ? this.renderPlayerSection(
-            translateText("clan_modal.history_clan_members"),
-            losers,
-            "text-white/40",
-            "losers",
-          )
-        : ""}
+      ${
+        winners.length > 0
+          ? this.renderPlayerSection(
+              translateText("clan_modal.history_clan_winners"),
+              winners,
+              "text-green-400",
+              "winners",
+            )
+          : ""
+      }
+      ${
+        losers.length > 0
+          ? this.renderPlayerSection(
+              translateText("clan_modal.history_clan_members"),
+              losers,
+              "text-white/40",
+              "losers",
+            )
+          : ""
+      }
     `;
   }
 

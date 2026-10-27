@@ -133,8 +133,14 @@ export class PlayerInfoOverlay extends LitElement implements Controller {
   // right, and the panel width they need) only show on wide screens with a
   // mouse: narrower, the wider panel covers other HUD like the leaderboard,
   // and touch devices have no keyboard shortcut to show.
+  // Not in a replay: there is nothing to do to a recorded player, and the
+  // replay viewer's myPlayer() is a ReplayPlayerView, which has no actions().
   private showShortcutButtons(): boolean {
-    return window.innerWidth >= 1200 && !Platform.isTouch;
+    return (
+      window.innerWidth >= 1200 &&
+      !Platform.isTouch &&
+      !this.game.config().isReplay()
+    );
   }
 
   private get barOffset(): number {
@@ -503,13 +509,15 @@ export class PlayerInfoOverlay extends LitElement implements Controller {
       }}
     >
       <img src=${icon} alt="" class="size-5 object-contain" />
-      ${key
-        ? html`<span
-            class="pointer-events-none absolute -bottom-1 -right-1 px-0.5 rounded-sm bg-gray-800 text-[9px] leading-tight font-mono text-gray-300"
-            translate="no"
-            >${key}</span
-          >`
-        : ""}
+      ${
+        key
+          ? html`<span
+              class="pointer-events-none absolute -bottom-1 -right-1 px-0.5 rounded-sm bg-gray-800 text-[9px] leading-tight font-mono text-gray-300"
+              translate="no"
+              >${key}</span
+            >`
+          : ""
+      }
     </button>`;
   }
 
@@ -568,9 +576,9 @@ export class PlayerInfoOverlay extends LitElement implements Controller {
       if (alliance !== undefined) {
         allianceHtml = isAllianceWrapped
           ? html`<div
-              class="${traitorTicks === 0
-                ? "ml-auto"
-                : ""} flex flex-col items-center gap-0 text-xs font-bold leading-none shrink-0"
+              class="${
+                traitorTicks === 0 ? "ml-auto" : ""
+              } flex flex-col items-center gap-0 text-xs font-bold leading-none shrink-0"
             >
               <img
                 src=${allianceIcon}
@@ -583,9 +591,9 @@ export class PlayerInfoOverlay extends LitElement implements Controller {
               >
             </div>`
           : html`<div
-              class="${traitorTicks === 0
-                ? "ml-auto"
-                : ""} flex items-center mr-0 gap-1 text-xs font-bold leading-tight shrink-0"
+              class="${
+                traitorTicks === 0 ? "ml-auto" : ""
+              } flex items-center mr-0 gap-1 text-xs font-bold leading-tight shrink-0"
             >
               <img
                 src=${allianceIcon}
@@ -614,24 +622,30 @@ export class PlayerInfoOverlay extends LitElement implements Controller {
 
     return html`
       <div class="flex items-start gap-1 lg:gap-2 p-1 lg:p-1.5">
-        ${myPlayer && this.showShortcutButtons()
-          ? html`<div class="flex flex-col gap-1 self-center shrink-0">
-              ${player !== myPlayer
-                ? this.renderShortcutButton(
-                    chatIcon,
-                    translateText("player_panel.chat"),
-                    keybinds.quickChat,
-                    () => this.eventBus.emit(new ShowPlayerChatEvent(player)),
-                  )
-                : ""}
-              ${this.renderShortcutButton(
-                emojiIcon,
-                translateText("player_panel.emotes"),
-                keybinds.emojiMenu,
-                () => this.eventBus.emit(new ShowPlayerEmojiMenuEvent(player)),
-              )}
-            </div>`
-          : ""}
+        ${
+          myPlayer && this.showShortcutButtons()
+            ? html`<div class="flex flex-col gap-1 self-center shrink-0">
+                ${
+                  player !== myPlayer
+                    ? this.renderShortcutButton(
+                        chatIcon,
+                        translateText("player_panel.chat"),
+                        keybinds.quickChat,
+                        () =>
+                          this.eventBus.emit(new ShowPlayerChatEvent(player)),
+                      )
+                    : ""
+                }
+                ${this.renderShortcutButton(
+                  emojiIcon,
+                  translateText("player_panel.emotes"),
+                  keybinds.emojiMenu,
+                  () =>
+                    this.eventBus.emit(new ShowPlayerEmojiMenuEvent(player)),
+                )}
+              </div>`
+            : ""
+        }
         <!-- Left: Gold & Troop bar -->
         <div class="flex flex-col gap-1 shrink-0 w-28 md:w-36">
           <div class="flex items-center gap-1">
@@ -643,17 +657,16 @@ export class PlayerInfoOverlay extends LitElement implements Controller {
               <span class="px-0.5">${renderNumber(player.gold())}</span>
             </div>
             <div
-              class="flex flex-1 flex-col items-center justify-center text-xs font-bold ${attackingTroops >
-              0
-                ? "text-aquarius"
-                : "text-white/40"} drop-shadow-[0_1px_1px_rgba(0,0,0,0.8)]"
+              class="flex flex-1 flex-col items-center justify-center text-xs font-bold ${
+                attackingTroops > 0 ? "text-aquarius" : "text-white/40"
+              } drop-shadow-[0_1px_1px_rgba(0,0,0,0.8)]"
               translate="no"
             >
               <span class="flex items-center gap-px leading-none text-xs"
                 ><img
-                  class="w-2.5 h-2.5 inline-block ${attackingTroops > 0
-                    ? ""
-                    : "brightness-0 invert opacity-40"}"
+                  class="w-2.5 h-2.5 inline-block ${
+                    attackingTroops > 0 ? "" : "brightness-0 invert opacity-40"
+                  }"
                   src=${attackingTroops > 0 ? soldierIconAquarius : soldierIcon}
                   alt=""
                   aria-hidden="true"
@@ -677,12 +690,14 @@ export class PlayerInfoOverlay extends LitElement implements Controller {
               isFriendly ?? false,
             )}"
           >
-            ${player.cosmetics.flag
-              ? html`<img
-                  class="h-6 object-contain shrink-0"
-                  src=${assetUrl(player.cosmetics.flag!)}
-                />`
-              : html``}
+            ${
+              player.cosmetics.flag
+                ? html`<img
+                    class="h-6 object-contain shrink-0"
+                    src=${assetUrl(player.cosmetics.flag!)}
+                  />`
+                : html``
+            }
             <div class="shrink min-w-0">
               <span
                 class="font-mono inline-block leading-[1.2] wrap-anywhere"
@@ -691,29 +706,31 @@ export class PlayerInfoOverlay extends LitElement implements Controller {
               >
             </div>
             ${this.getRelationSmiley(player, myPlayer)}
-            ${playerTeam !== "" && player.type() !== PlayerType.Bot
-              ? html`<div
-                  class="flex flex-col items-center leading-tight shrink-0"
-                >
-                  <span
-                    class="text-gray-400 text-xs font-mono font-normal whitespace-nowrap"
+            ${
+              playerTeam !== "" && player.type() !== PlayerType.Bot
+                ? html`<div
+                    class="flex flex-col items-center leading-tight shrink-0"
+                  >
+                    <span
+                      class="text-gray-400 text-xs font-mono font-normal whitespace-nowrap"
+                      >${playerType}</span
+                    >
+                    <span
+                      class="text-xs font-mono font-normal text-gray-400 whitespace-nowrap"
+                      >[<span
+                        style="color: ${themeProvider
+                          .current()
+                          .teamColor(player.team()!)
+                          .toHex()}"
+                        >${clanTag ?? playerTeam}</span
+                      >]</span
+                    >
+                  </div>`
+                : html`<span
+                    class="text-gray-400 text-xs font-mono font-normal shrink-0 whitespace-nowrap"
                     >${playerType}</span
-                  >
-                  <span
-                    class="text-xs font-mono font-normal text-gray-400 whitespace-nowrap"
-                    >[<span
-                      style="color: ${themeProvider
-                        .current()
-                        .teamColor(player.team()!)
-                        .toHex()}"
-                      >${clanTag ?? playerTeam}</span
-                    >]</span
-                  >
-                </div>`
-              : html`<span
-                  class="text-gray-400 text-xs font-mono font-normal shrink-0 whitespace-nowrap"
-                  >${playerType}</span
-                >`}
+                  >`
+            }
             ${this.renderPlayerNameIcons(playerIcons)} ${betrayalHtml ?? ""}
             ${allianceHtml ?? ""}
           </div>
@@ -734,9 +751,11 @@ export class PlayerInfoOverlay extends LitElement implements Controller {
             ${this.displayUnitCount(player, UnitType.Warship, warshipIcon)}
           </div>
         </div>
-        ${myPlayer && this.showShortcutButtons()
-          ? this.renderActionButtons(player, myPlayer, keybinds)
-          : ""}
+        ${
+          myPlayer && this.showShortcutButtons()
+            ? this.renderActionButtons(player, myPlayer, keybinds)
+            : ""
+        }
       </div>
     `;
   }
@@ -828,8 +847,9 @@ export class PlayerInfoOverlay extends LitElement implements Controller {
           ></div>
           <div
             class="absolute inset-y-0 left-0 w-full origin-left bg-malibu-blue transition-transform duration-200 ease-out"
-            style="transform: translateX(${greenPercent}%) scaleX(${orangePercent /
-            100});"
+            style="transform: translateX(${greenPercent}%) scaleX(${
+              orangePercent / 100
+            });"
           ></div>
         </div>
         <div
@@ -868,16 +888,20 @@ export class PlayerInfoOverlay extends LitElement implements Controller {
         </div>
         <div class="mt-1">
           <div class="text-sm opacity-80">${unit.type()}</div>
-          ${unit.hasHealth()
-            ? html` <div class="text-sm">Health: ${unit.health()}</div> `
-            : ""}
-          ${unit.type() === UnitType.TransportShip
-            ? html`
-                <div class="text-sm">
-                  Troops: ${renderTroops(unit.troops())}
-                </div>
-              `
-            : ""}
+          ${
+            unit.hasHealth()
+              ? html` <div class="text-sm">Health: ${unit.health()}</div> `
+              : ""
+          }
+          ${
+            unit.type() === UnitType.TransportShip
+              ? html`
+                  <div class="text-sm">
+                    Troops: ${renderTroops(unit.troops())}
+                  </div>
+                `
+              : ""
+          }
         </div>
       </div>
     `;
@@ -889,20 +913,22 @@ export class PlayerInfoOverlay extends LitElement implements Controller {
     }
 
     const containerClasses = this._isInfoVisible
-      ? "opacity-100 visible"
+      ? "opacity-100 visible pointer-events-auto"
       : "opacity-0 invisible pointer-events-none";
 
+    // From lg it sits in the top HUD row (index.html), which shifts or narrows
+    // it to clear the open leaderboard.
     return html`
       <div
-        class="fixed top-0 left-0 right-0 sm:left-1/2 sm:right-auto sm:-translate-x-1/2 z-[1001]"
+        class="max-lg:fixed max-lg:top-0 max-lg:left-0 max-lg:right-0 sm:max-lg:left-1/2 sm:max-lg:right-auto sm:max-lg:-translate-x-1/2 max-lg:z-[1001]"
         style="margin-top: ${this.barOffset}px;"
         @click=${() => this.hide()}
         @contextmenu=${(e: MouseEvent) => e.preventDefault()}
       >
         <div
-          class="bg-gray-800/92 backdrop-blur-sm shadow-xs min-[1200px]:rounded-lg sm:rounded-b-lg shadow-lg text-white text-lg lg:text-base w-full ${this.showShortcutButtons()
-            ? "sm:w-[598px]"
-            : "sm:w-[500px]"} overflow-hidden ${containerClasses}"
+          class="bg-gray-800/92 backdrop-blur-sm shadow-xs min-[1200px]:rounded-lg sm:rounded-b-lg shadow-lg text-white text-lg lg:text-base w-full ${
+            this.showShortcutButtons() ? "sm:w-[598px]" : "sm:w-[500px]"
+          } lg:max-w-full overflow-hidden ${containerClasses}"
           @mouseenter=${this.onPanelEnter}
           @mouseleave=${this.onPanelLeave}
         >

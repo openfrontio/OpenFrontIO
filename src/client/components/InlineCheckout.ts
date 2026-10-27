@@ -414,24 +414,26 @@ export class InlineCheckout extends LitElement {
           data-express-checkout
           class=${this.walletVisible ? "w-full" : "hidden"}
         ></div>
-        ${this.walletVisible
-          ? html`<button
-              data-pay-with-card
-              class="w-full border-0 bg-transparent py-1 text-center text-xs font-semibold text-blue-300 underline underline-offset-2 cursor-pointer transition-colors duration-200 hover:text-white disabled:opacity-50"
-              ?disabled=${this.fallbackBusy || this.confirming}
-              @click=${(e: Event) => this.onPriceClick(e)}
-            >
-              ${translateText("store.pay_with_card")}
-            </button>`
-          : html`<button
-              class="purchase-sparkle-btn relative overflow-hidden w-full min-h-11 px-2 py-1.5 bg-blue-500/20 text-blue-300 border border-blue-500/40 rounded-lg text-base font-bold cursor-pointer transition-all duration-200 flex items-center justify-center
+        ${
+          this.walletVisible
+            ? html`<button
+                data-pay-with-card
+                class="w-full border-0 bg-transparent py-1 text-center text-xs font-semibold text-blue-300 underline underline-offset-2 cursor-pointer transition-colors duration-200 hover:text-white disabled:opacity-50"
+                ?disabled=${this.fallbackBusy || this.confirming}
+                @click=${(e: Event) => this.onPriceClick(e)}
+              >
+                ${translateText("store.pay_with_card")}
+              </button>`
+            : html`<button
+                class="purchase-sparkle-btn relative overflow-hidden w-full min-h-11 px-2 py-1.5 bg-blue-500/20 text-blue-300 border border-blue-500/40 rounded-lg text-base font-bold cursor-pointer transition-all duration-200 flex items-center justify-center
                hover:bg-blue-600 hover:border-blue-400 hover:text-white hover:shadow-[0_0_20px_rgba(96,165,250,0.6)] disabled:opacity-50"
-              ?disabled=${this.fallbackBusy || this.confirming}
-              @click=${(e: Event) => this.onPriceClick(e)}
-            >
-              <span class="purchase-sparkle-streak"></span>
-              ${label}
-            </button>`}
+                ?disabled=${this.fallbackBusy || this.confirming}
+                @click=${(e: Event) => this.onPriceClick(e)}
+              >
+                <span class="purchase-sparkle-streak"></span>
+                ${label}
+              </button>`
+        }
       </div>
     `;
   }
@@ -458,46 +460,54 @@ export class InlineCheckout extends LitElement {
           <h2 class="text-lg font-bold text-white mb-4 pr-8">
             ${translateText("store.pay_with_card")}
           </h2>
-          ${this.emailRequired
-            ? html`<label
-                  class="mb-1 block text-xs font-medium text-white/70"
-                  for="inline-checkout-email"
-                  >${translateText("store.card_email_label")}</label
-                >
-                <input
-                  id="inline-checkout-email"
-                  data-checkout-email
-                  type="email"
-                  autocomplete="email"
-                  .value=${this.emailValue}
-                  ?disabled=${this.confirming}
-                  @input=${(e: Event) => {
-                    this.emailValue = (e.target as HTMLInputElement).value;
-                  }}
-                  class="mb-1 w-full rounded-lg border border-white/15 bg-white/5 px-3 py-2 text-white placeholder-white/30 focus:outline-none focus:ring-2 focus:ring-blue-500/50"
-                />
-                <p class="mb-3 text-xs text-white/50">
-                  ${translateText("store.card_email_hint")}
-                </p>`
-            : nothing}
+          ${
+            this.emailRequired
+              ? html`<label
+                    class="mb-1 block text-xs font-medium text-white/70"
+                    for="inline-checkout-email"
+                    >${translateText("store.card_email_label")}</label
+                  >
+                  <input
+                    id="inline-checkout-email"
+                    data-checkout-email
+                    type="email"
+                    autocomplete="email"
+                    .value=${this.emailValue}
+                    ?disabled=${this.confirming}
+                    @input=${(e: Event) => {
+                      this.emailValue = (e.target as HTMLInputElement).value;
+                    }}
+                    class="mb-1 w-full rounded-lg border border-white/15 bg-white/5 px-3 py-2 text-white placeholder-white/30 focus:outline-none focus:ring-2 focus:ring-blue-500/50"
+                  />
+                  <p class="mb-3 text-xs text-white/50">
+                    ${translateText("store.card_email_hint")}
+                  </p>`
+              : nothing
+          }
           <div data-payment-element class="mb-4 min-h-[6rem]"></div>
-          ${this.modalError !== null
-            ? html`<p class="mb-4 text-sm font-medium text-red-300">
-                ${this.modalError}
-              </p>`
-            : nothing}
+          ${
+            this.modalError !== null
+              ? html`<p class="mb-4 text-sm font-medium text-red-300">
+                  ${this.modalError}
+                </p>`
+              : nothing
+          }
           <button
             @click=${() => void this.confirmCard()}
-            ?disabled=${this.confirming ||
-            !this.cardReady ||
-            (this.emailRequired && !this.emailLooksValid())}
+            ?disabled=${
+              this.confirming ||
+              !this.cardReady ||
+              (this.emailRequired && !this.emailLooksValid())
+            }
             class="w-full min-h-11 px-4 py-2.5 rounded-xl bg-blue-600 text-white text-base font-bold hover:bg-blue-700 transition-all disabled:opacity-50 disabled:pointer-events-none flex items-center justify-center gap-2"
           >
-            ${this.confirming
-              ? html`<span
-                  class="inline-block h-5 w-5 rounded-full border-2 border-white/30 border-t-white animate-spin"
-                ></span>`
-              : nothing}
+            ${
+              this.confirming
+                ? html`<span
+                    class="inline-block h-5 w-5 rounded-full border-2 border-white/30 border-t-white animate-spin"
+                  ></span>`
+                : nothing
+            }
             ${translateText("store.pay_amount", { amount: this.priceLabel })}
           </button>
         </div>

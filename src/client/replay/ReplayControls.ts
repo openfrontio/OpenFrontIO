@@ -199,15 +199,17 @@ export class ReplayControls extends LitElement {
             translateText("user_setting.game_menu_title"),
             () => this.openMenu(),
           )}
-          ${this.showFullscreen
-            ? iconButton(
-                this.isFullscreen ? exitFullscreenIcon : fullscreenIcon,
-                translateText(
-                  this.isFullscreen ? "fullscreen.exit" : "fullscreen.enter",
-                ),
-                () => this.toggleFullscreen(),
-              )
-            : nothing}
+          ${
+            this.showFullscreen
+              ? iconButton(
+                  this.isFullscreen ? exitFullscreenIcon : fullscreenIcon,
+                  translateText(
+                    this.isFullscreen ? "fullscreen.exit" : "fullscreen.enter",
+                  ),
+                  () => this.toggleFullscreen(),
+                )
+              : nothing
+          }
           ${exitButton()}
           ${this.speedMenuOpen ? this.renderSpeedMenu() : nothing}
         </div>
@@ -228,10 +230,9 @@ export class ReplayControls extends LitElement {
           ${SPEEDS.map(
             (sp) =>
               html`<button
-                class="py-0.5 px-1 text-sm text-white rounded-sm border transition border-gray-500 hover:border-gray-200 ${sp ===
-                this.speed
-                  ? "bg-malibu-blue"
-                  : ""}"
+                class="py-0.5 px-1 text-sm text-white rounded-sm border transition border-gray-500 hover:border-gray-200 ${
+                  sp === this.speed ? "bg-malibu-blue" : ""
+                }"
                 @click=${() => this.setSpeed(sp)}
               >
                 ×${sp}
