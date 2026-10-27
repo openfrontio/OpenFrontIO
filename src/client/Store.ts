@@ -111,9 +111,10 @@ export class StoreModal extends BaseModal {
   protected modalConfig() {
     if (this.affiliateCode) {
       // Affiliate mode: hide tabs, show only items associated with the code.
-      return {};
+      return { showScrollToTop: true };
     }
     return {
+      showScrollToTop: true,
       tabs: [
         { key: "packs", label: translateText("store.packs") },
         { key: "subscriptions", label: translateText("store.subscriptions") },
