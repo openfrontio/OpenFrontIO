@@ -7,7 +7,6 @@ import {
 } from "@openfront/engine-api/game/GameTypes";
 import fs from "fs";
 import path from "path";
-import { validateLayer } from "./util/layerValidation";
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -22,11 +21,6 @@ const RESOURCES_MAPS = path.join(ROOT, "resources", "maps");
 const EN_JSON = path.join(ROOT, "resources", "lang", "en.json");
 
 const allMapKeys = Object.keys(GameMapType) as GameMapName[];
-
-// The API (openfrontio/infra `GameMapTypeSchema`, and the `maps.name`
-// varchar(29) column) rejects a game record whose map name breaks these.
-const API_MAP_NAME = /^[a-zA-Z0-9\s().-]+$/;
-const API_MAP_NAME_MAX_LENGTH = 29;
 
 // Maps whose folder isn't their name without spaces and punctuation; the
 // site Worker's link previews list them in infra `src/site/lib/GameMeta.ts`.
@@ -153,29 +147,6 @@ describe("Map consistency", () => {
     }
     if (errors.length > 0) {
       throw new Error("Map generator asset violations:\n" + errors.join("\n"));
-    }
-  });
-
-  test("Map names are ones the API accepts", () => {
-    const errors: string[] = [];
-    for (const key of allMapKeys) {
-      const name = GameMapType[key];
-      if (!API_MAP_NAME.test(name)) {
-        errors.push(
-          `${key}: "${name}" has a character the API's GameMapTypeSchema rejects (allowed: letters, digits, spaces, . ( ) -)`,
-        );
-      }
-      if (name.length > API_MAP_NAME_MAX_LENGTH) {
-        errors.push(
-          `${key}: "${name}" is longer than the API's ${API_MAP_NAME_MAX_LENGTH}-character maps.name`,
-        );
-      }
-    }
-    if (errors.length > 0) {
-      throw new Error(
-        "Games on these maps would fail to archive (no stats, no replay):\n" +
-          errors.join("\n"),
-      );
     }
   });
 
@@ -310,85 +281,6 @@ describe("Map consistency", () => {
       throw new Error(
         "Rotation weights are set in the API admin panel, not info.json:\n" +
           errors.join("\n"),
-      );
-    }
-  });
-
-  test("Modifier fields are valid", () => {
-    const VALID_MODIFIER_KEYS = new Set([
-      "isRandomSpawn",
-      "isCompact",
-      "isCrowded",
-      "isHardNations",
-      "startingGold1M",
-      "startingGold5M",
-      "startingGold25M",
-      "goldMultiplier",
-      "isAlliancesDisabled",
-      "isNukesDisabled",
-      "isSAMsDisabled",
-      "isPeaceTime",
-      "isWaterNukes",
-      "isDoomsdayClock",
-    ]);
-    const errors: string[] = [];
-    for (const key of allMapKeys) {
-      const info = readInfoJson(key);
-      if (info === null) continue;
-      // Validate disabled_modifiers values.
-      const disabled = info.disabled_modifiers;
-      if (Array.isArray(disabled)) {
-        for (const mod of disabled) {
-          if (typeof mod !== "string" || !VALID_MODIFIER_KEYS.has(mod)) {
-            errors.push(
-              `${key}: disabled_modifiers contains invalid modifier "${mod}"`,
-            );
-          }
-        }
-      }
-      // Validate forced_modifiers format: plain key or "key:percentage".
-      const forced = info.forced_modifiers;
-      if (Array.isArray(forced)) {
-        for (const entry of forced) {
-          if (typeof entry !== "string") {
-            errors.push(
-              `${key}: forced_modifiers contains non-string entry ${JSON.stringify(entry)}`,
-            );
-            continue;
-          }
-          const parts = entry.split(":");
-          if (parts.length > 2) {
-            errors.push(
-              `${key}: forced_modifiers "${entry}" has too many colon-separated segments (expected "modifier" or "modifier:percentage")`,
-            );
-            continue;
-          }
-          const [mod, pctStr] = parts;
-          if (!VALID_MODIFIER_KEYS.has(mod)) {
-            errors.push(
-              `${key}: forced_modifiers contains invalid modifier "${mod}"`,
-            );
-          }
-          if (pctStr !== undefined) {
-            if (!/^\d+$/.test(pctStr)) {
-              errors.push(
-                `${key}: forced_modifiers "${entry}" has non-integer percentage`,
-              );
-            } else {
-              const pct = parseInt(pctStr, 10);
-              if (pct < 1 || pct > 100) {
-                errors.push(
-                  `${key}: forced_modifiers "${entry}" has invalid percentage (must be 1-100)`,
-                );
-              }
-            }
-          }
-        }
-      }
-    }
-    if (errors.length > 0) {
-      throw new Error(
-        "Invalid modifier fields in info.json:\n" + errors.join("\n"),
       );
     }
   });
@@ -621,29 +513,6 @@ describe("Map consistency", () => {
   });
 
   // ── Layer validation ────────────────────────────────────────────────────
-
-  test("Layer definitions in info.json are valid", () => {
-    const errors: string[] = [];
-
-    for (const key of allMapKeys) {
-      const info = readInfoJson(key);
-      if (info === null) continue;
-      const layers = info.layers as
-        | Array<{ id: string; placement: string; nukeable?: boolean }>
-        | undefined;
-      if (!layers || !Array.isArray(layers)) continue;
-
-      const ids = new Set<string>();
-      for (let i = 0; i < layers.length; i++) {
-        errors.push(...validateLayer(layers[i], i, key, ids));
-      }
-    }
-    if (errors.length > 0) {
-      throw new Error(
-        "Layer definition violations in info.json:\n" + errors.join("\n"),
-      );
-    }
-  });
 
   test("Every defined layer has its source PNG and both generated WebP variants", () => {
     const errors: string[] = [];

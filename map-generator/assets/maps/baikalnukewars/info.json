@@ -1,4 +1,5 @@
 {
+  "$schema": "../../../info.schema.json",
   "id": "BaikalNukeWars",
   "name": "Baikal Nuke Wars",
   "display_name": "Baikal (Nuke Wars)",

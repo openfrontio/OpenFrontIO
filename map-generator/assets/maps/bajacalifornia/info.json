@@ -1,4 +1,5 @@
 {
+  "$schema": "../../../info.schema.json",
   "id": "BajaCalifornia",
   "name": "Baja California",
   "translation_key": "map.bajacalifornia",

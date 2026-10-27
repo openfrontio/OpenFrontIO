@@ -1,4 +1,5 @@
 {
+  "$schema": "../../../info.schema.json",
   "id": "Benelux",
   "name": "Benelux",
   "translation_key": "map.benelux",
@@ -45,5 +46,5 @@
       "flag": "Flanders"
     }
   ],
-  "themes": ["Europe"]
+  "themes": ["europe"]
 }
