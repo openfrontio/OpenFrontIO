@@ -3,7 +3,6 @@
   "name": "Finger Lakes",
   "translation_key": "map.fingerlakes",
   "categories": ["north_america"],
-  "multiplayer_frequency": 4,
   "nations": [
     {
       "coordinates": [1156, 1222],

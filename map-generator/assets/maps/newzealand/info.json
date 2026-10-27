@@ -3,7 +3,6 @@
   "name": "New Zealand",
   "translation_key": "map.newzealand",
   "categories": ["new", "oceania"],
-  "multiplayer_frequency": 5,
   "nations": [
     {
       "coordinates": [1096, 415],
@@ -423,5 +422,21 @@
       "flag": "nz"
     }
   ],
+  "teamGameSpawnAreas": {
+    "2": [
+      {
+        "height": 2013,
+        "width": 1159,
+        "x": 670,
+        "y": 1437
+      },
+      {
+        "height": 1621,
+        "width": 962,
+        "x": 928,
+        "y": 0
+      }
+    ]
+  },
   "themes": ["oceania"]
 }

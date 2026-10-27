@@ -3,7 +3,6 @@
   "name": "Cape Cod",
   "translation_key": "map.capecod",
   "categories": ["north_america"],
-  "multiplayer_frequency": 4,
   "nations": [
     {
       "coordinates": [417, 227],

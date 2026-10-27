@@ -3,8 +3,6 @@
   "name": "Surrounded",
   "translation_key": "map.surrounded",
   "categories": ["fictional"],
-  "multiplayer_frequency": 4,
-  "team_frequency": 8,
   "special_team_count": 4,
   "nations": [
     {

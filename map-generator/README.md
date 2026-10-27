@@ -111,7 +111,6 @@ The map-generator reads `assets/maps/<map_name>/info.json` to determine nation p
   "name": "My Sample Map",
   "translation_key": "map.mysamplemap",
   "categories": ["europe", "featured"],
-  "multiplayer_frequency": 4,
   "featured_rank": 5,
   "layers": [
     {
@@ -137,25 +136,23 @@ The map-generator reads `assets/maps/<map_name>/info.json` to determine nation p
 
 ### Fields
 
-| Field                   | Required | Description                                                                                                                                                                                                                      |
-| ----------------------- | -------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `id`                    | ✅       | `CamelCaseName` of the map. Must match the `assets/maps/<map_name>` folder name (case-insensitive). Becomes the `GameMapType` enum key.                                                                                          |
-| `name`                  | ✅       | Canonical name — the `GameMapType` enum value. **Must never change** once the map ships (it is part of the wire format and stored in game records).                                                                              |
-| `translation_key`       | ✅       | Key in `../resources/lang/en.json`. Must be `map.<foldername>`.                                                                                                                                                                  |
-| `categories`            | ✅       | One or more category strings (see below). No duplicates. Must have at least one entry. Groups the map in the map picker.                                                                                                         |
-| `multiplayer_frequency` |          | How often the map appears in the public multiplayer playlist. Use `0` (or omit) to exclude from rotation. Used as fallback when per-mode frequencies are not set.                                                                |
-| `ffa_frequency`         |          | FFA lobby rotation weight. Overrides `multiplayer_frequency` for FFA lobbies. Use `0` to exclude from FFA. Omit to use `multiplayer_frequency`.                                                                                  |
-| `team_frequency`        |          | Team lobby rotation weight. Overrides `multiplayer_frequency` for Team lobbies. Use `0` to exclude from Team. Omit to use `multiplayer_frequency`.                                                                               |
-| `special_frequency`     |          | Special lobby rotation weight. Overrides `multiplayer_frequency` for Special lobbies. Use `0` to exclude from Special. Omit to use `multiplayer_frequency`.                                                                      |
-| `disabled_modifiers`    |          | Array of modifier keys that should never be rolled for this map in special games (e.g. `["isRandomSpawn"]`).                                                                                                                     |
-| `forced_modifiers`      |          | Array of modifiers always forced on in special games. Plain key (e.g. `"startingGold5M"`) or `"key:percentage"` (e.g. `"goldMultiplier:75"` = 75% chance). Counts toward the 3-modifier cap.                                     |
-| `display_name`          |          | English display name written to `../resources/lang/en.json`. Defaults to `name`. Set only when the display name differs from the canonical name (e.g. `"MENA"`, `"Europe (Classic)"`).                                           |
-| `featured_rank`         |          | Position in the featured grid (`1` = first). Requires `"featured"` in `categories`. Unranked featured maps sort after ranked ones, alphabetically.                                                                               |
-| `special_team_count`    |          | Preferred team count for team/special games — see `SPECIAL_TEAM_MAPS` in `../src/server/MapPlaylist.ts`. Must be `0` or `≥ 2` (1 is not allowed).                                                                                |
-| `custom_tribes`         |          | Array of tribe names or `{ "name": "...", "coordinates": [x, y] }` objects. Coordinates are optional (omit for random spawn). Tribe names must be unique and must not collide with `nations[].name`. Empty strings are rejected. |
-| `themes`                |          | Array of theme strings for tribe name generation.                                                                                                                                                                                |
-| `layers`                |          | Array of map layer definitions rendered between terrain and territory (see below).                                                                                                                                               |
-| `nations`               |          | Array of nation objects (see below).                                                                                                                                                                                             |
+Public-lobby rotation weights are not set here: the API computes them from how fast each map's lobbies fill, and admins override them in the admin panel. A new map rotates at the default weight (`DEFAULT_MAP_WEIGHT` in `../src/server/MapPlaylist.ts`) until the API has a weight for it.
+
+| Field                | Required | Description                                                                                                                                                                                                                      |
+| -------------------- | -------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `id`                 | ✅       | `CamelCaseName` of the map. Must match the `assets/maps/<map_name>` folder name (case-insensitive). Becomes the `GameMapType` enum key.                                                                                          |
+| `name`               | ✅       | Canonical name — the `GameMapType` enum value. **Must never change** once the map ships (it is part of the wire format and stored in game records).                                                                              |
+| `translation_key`    | ✅       | Key in `../resources/lang/en.json`. Must be `map.<foldername>`.                                                                                                                                                                  |
+| `categories`         | ✅       | One or more category strings (see below). No duplicates. Must have at least one entry. Groups the map in the map picker.                                                                                                         |
+| `disabled_modifiers` |          | Array of modifier keys that should never be rolled for this map in special games (e.g. `["isRandomSpawn"]`).                                                                                                                     |
+| `forced_modifiers`   |          | Array of modifiers always forced on in special games. Plain key (e.g. `"startingGold5M"`) or `"key:percentage"` (e.g. `"goldMultiplier:75"` = 75% chance). Counts toward the 3-modifier cap.                                     |
+| `display_name`       |          | English display name written to `../resources/lang/en.json`. Defaults to `name`. Set only when the display name differs from the canonical name (e.g. `"MENA"`, `"Europe (Classic)"`).                                           |
+| `featured_rank`      |          | Position in the featured grid (`1` = first). Requires `"featured"` in `categories`. Unranked featured maps sort after ranked ones, alphabetically.                                                                               |
+| `special_team_count` |          | Preferred team count for team/special games — see `SPECIAL_TEAM_MAPS` in `../src/server/MapPlaylist.ts`. Must be `0` or `≥ 2` (1 is not allowed).                                                                                |
+| `custom_tribes`      |          | Array of tribe names or `{ "name": "...", "coordinates": [x, y] }` objects. Coordinates are optional (omit for random spawn). Tribe names must be unique and must not collide with `nations[].name`. Empty strings are rejected. |
+| `themes`             |          | Array of theme strings for tribe name generation.                                                                                                                                                                                |
+| `layers`             |          | Array of map layer definitions rendered between terrain and territory (see below).                                                                                                                                               |
+| `nations`            |          | Array of nation objects (see below).                                                                                                                                                                                             |
 
 ### Categories
 

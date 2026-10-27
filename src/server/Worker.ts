@@ -327,7 +327,7 @@ export async function startWorker() {
     ServerEnv.jwtIssuer() + "/reserved_clan_tags",
     log,
   );
-  privilegeRefresher.start();
+  void privilegeRefresher.start();
 
   // Ahead of everything that can reject a request — the worker-prefix check
   // below and the rate limiter further down — so that a 404 or a 429 still
