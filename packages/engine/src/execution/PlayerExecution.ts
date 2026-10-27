@@ -378,55 +378,6 @@ export class PlayerExecution implements Execution {
       }
     }
 
-    // Fix: Doughnut borders. Prevents a heavily deformed crater (hole) from having more border tiles
-    // and falsely claiming primary cluster. A cluster is a hole if it is completely enclosed by another
-    // cluster of the SAME contiguous territory. Bbox containment alone is insufficient (disjoint C-shapes).
-    const clusterTerritoryIdsRef: { ids: Int32Array | null } = { ids: null };
-    const nextTerritoryIdRef = { id: 1 };
-
-    if (
-      this.isHoleCluster(
-        largestIndex,
-        clusters,
-        boxes,
-        clusterTerritoryIdsRef,
-        nextTerritoryIdRef,
-        clusterSizes,
-        largestIndex,
-      )
-    ) {
-      let bestIndex = -1;
-      let bestArea = -1;
-      let bestLength = -1;
-      for (let i = 0; i < clusters.length; i++) {
-        if (i === largestIndex) continue;
-        if (
-          clusterSizes[i] < bestArea ||
-          (clusterSizes[i] === bestArea && clusters[i].length <= bestLength)
-        ) {
-          continue;
-        }
-        if (
-          !this.isHoleCluster(
-            i,
-            clusters,
-            boxes,
-            clusterTerritoryIdsRef,
-            nextTerritoryIdRef,
-            clusterSizes,
-            largestIndex,
-          )
-        ) {
-          bestArea = clusterSizes[i];
-          bestLength = clusters[i].length;
-          bestIndex = i;
-        }
-      }
-      if (bestIndex !== -1) {
-        largestIndex = bestIndex;
-      }
-    }
-
     const largestCluster = clusters[largestIndex];
     if (largestCluster === undefined) throw new Error("No clusters");
 
@@ -484,31 +435,6 @@ export class PlayerExecution implements Execution {
       if (i === largestIndex) continue;
       if (classes[i] & CLUSTER_SURROUNDED) {
         const idx = i * 4;
-        if (isPinched[i]) {
-          const surroundedBy = this.surroundedBySamePlayer(
-            clusters[i],
-            boxes[idx],
-            boxes[idx + 1],
-            boxes[idx + 2],
-            boxes[idx + 3],
-          );
-          if (!surroundedBy || surroundedBy.isFriendly(this.player)) {
-            continue;
-          }
-          const removed = this.removeCluster(
-            clusters[i],
-            boxes[idx],
-            boxes[idx + 1],
-            boxes[idx + 2],
-            boxes[idx + 3],
-            surroundedBy,
-            true,
-          );
-          if (removed) {
-            clusterRemoved[i] = 1;
-          }
-          continue;
-        }
         const removed = this.removeCluster(
           clusters[i],
           boxes[idx],
@@ -516,7 +442,7 @@ export class PlayerExecution implements Execution {
           boxes[idx + 2],
           boxes[idx + 3],
           undefined,
-          false,
+          Boolean(isPinched[i]),
         );
         if (removed) {
           clusterRemoved[i] = 1;
@@ -525,6 +451,8 @@ export class PlayerExecution implements Execution {
     }
 
     // 2. Pinch pass
+    const clusterTerritoryIdsRef: { ids: Int32Array | null } = { ids: null };
+    const nextTerritoryIdRef = { id: 1 };
     for (let i = 0; i < clusters.length; i++) {
       if (!this.player.isAlive()) break;
       if (clusterRemoved[i]) continue;
@@ -537,8 +465,6 @@ export class PlayerExecution implements Execution {
           boxes,
           clusterTerritoryIdsRef,
           nextTerritoryIdRef,
-          clusterSizes,
-          largestIndex,
         )
       ) {
         continue;
@@ -688,14 +614,28 @@ export class PlayerExecution implements Execution {
     }
   }
 
+  private initClusterTerritories(
+    clusters: TileRef[][],
+    clusterTerritoryIdsRef: { ids: Int32Array | null },
+  ): Int32Array {
+    const ids = new Int32Array(clusters.length).fill(-1);
+    clusterTerritoryIdsRef.ids = ids;
+    const scratch = this.traversalState();
+    for (let c = 0; c < clusters.length; c++) {
+      const cl = clusters[c];
+      for (let k = 0; k < cl.length; k++) {
+        scratch.clusterIndexMap[cl[k]] = c + 1;
+      }
+    }
+    return ids;
+  }
+
   private isHoleCluster(
     i: number,
     clusters: TileRef[][],
     boxes: Int32Array,
     clusterTerritoryIdsRef: { ids: Int32Array | null },
     nextTerritoryIdRef: { id: number },
-    clusterSizes?: Int32Array,
-    largestIndex?: number,
   ): boolean {
     const iIdx = i * 4;
     const iMinX = boxes[iIdx];
@@ -704,49 +644,26 @@ export class PlayerExecution implements Execution {
     const iMaxY = boxes[iIdx + 3];
 
     for (let j = 0; j < clusters.length; j++) {
-      if (j !== i) {
-        // Topological Sovereign Guard: The sovereign main body can NEVER be
-        // an interior hole of a cluster with smaller or equal territory area!
-        if (
-          clusterSizes &&
-          largestIndex !== undefined &&
-          i === largestIndex &&
-          clusterSizes[j] <= clusterSizes[largestIndex]
-        ) {
-          continue;
-        }
-        const jIdx = j * 4;
-        if (
-          boxes[jIdx] <= iMinX &&
-          boxes[jIdx + 1] <= iMinY &&
-          boxes[jIdx + 2] >= iMaxX &&
-          boxes[jIdx + 3] >= iMaxY
-        ) {
-          if (!clusterTerritoryIdsRef.ids) {
-            clusterTerritoryIdsRef.ids = new Int32Array(clusters.length).fill(
-              -1,
-            );
-            const scratch = this.traversalState();
-            for (let c = 0; c < clusters.length; c++) {
-              const cl = clusters[c];
-              for (let k = 0; k < cl.length; k++) {
-                scratch.clusterIndexMap[cl[k]] = c + 1;
-              }
-            }
-          }
-          nextTerritoryIdRef.id = this.checkAndAssignTerritory(
-            clusters,
-            i,
-            j,
-            clusterTerritoryIdsRef.ids,
-            nextTerritoryIdRef.id,
-          );
-          if (
-            clusterTerritoryIdsRef.ids[i] !== -1 &&
-            clusterTerritoryIdsRef.ids[i] === clusterTerritoryIdsRef.ids[j]
-          ) {
-            return true;
-          }
+      if (j === i) continue;
+      const jIdx = j * 4;
+      if (
+        boxes[jIdx] <= iMinX &&
+        boxes[jIdx + 1] <= iMinY &&
+        boxes[jIdx + 2] >= iMaxX &&
+        boxes[jIdx + 3] >= iMaxY
+      ) {
+        const ids =
+          clusterTerritoryIdsRef.ids ??
+          this.initClusterTerritories(clusters, clusterTerritoryIdsRef);
+        nextTerritoryIdRef.id = this.checkAndAssignTerritory(
+          clusters,
+          i,
+          j,
+          ids,
+          nextTerritoryIdRef.id,
+        );
+        if (ids[i] !== -1 && ids[i] === ids[j]) {
+          return true;
         }
       }
     }
@@ -982,16 +899,15 @@ export class PlayerExecution implements Execution {
       }
     }
 
-    const capturing = knownCaptor ?? this.getCapturingPlayer(cluster);
-    if (capturing === null) {
-      return false;
-    }
-
     const pinched = isPinched ?? this.hasDiagonalPinch(cluster);
 
     // Fast path: for unpinched clusters (single 4-way component), evaluate
     // once. If unsealed, abort immediately in O(1) without looping cluster tiles.
     if (!pinched) {
+      const capturing = knownCaptor ?? this.getCapturingPlayer(cluster);
+      if (capturing === null) {
+        return false;
+      }
       if (!this.isEnclosed(firstTile, minX, minY, maxX, maxY)) {
         return false;
       }
@@ -1054,12 +970,16 @@ export class PlayerExecution implements Execution {
       );
 
       if (tiles.length > 0) {
+        const componentCaptor = knownCaptor ?? this.getCapturingPlayer(tiles);
+        if (componentCaptor === null) {
+          continue;
+        }
         anyRemoved = true;
         if (this.player.numTilesOwned() === tiles.length) {
-          this.mg.conquerPlayer(capturing, this.player);
+          this.mg.conquerPlayer(componentCaptor, this.player);
         }
         for (const tile of tiles) {
-          capturing.conquer(tile);
+          componentCaptor.conquer(tile);
         }
       }
     }

@@ -878,6 +878,33 @@ describe("land a nuke severs from the main body is annexed", () => {
     expect(defenderTilesIn(enclave)).toBe(0);
   });
 
+  test("a pinched enclave with a checkerboard border surrounded by two different enemies with no fallout is annexed", () => {
+    paint(union(mainBody, rect(100, 100, 110, 110)));
+    // Third player surrounds the southern half of the enclave
+    for (let x = 95; x <= 115; x++) {
+      for (let y = 106; y <= 115; y++) {
+        if (game.owner(game.ref(x, y)) === attacker) {
+          third.conquer(game.ref(x, y));
+        }
+      }
+    }
+    const enclave = (x: number, y: number) => {
+      if (x < 100 || x > 110 || y < 100 || y > 110) return false;
+      if ((x === 100 || x === 101) && (y === 100 || y === 101)) {
+        return (x + y) % 2 === 0;
+      }
+      return true;
+    };
+    startClusterChecks();
+    attacker.conquer(game.ref(100, 101));
+    attacker.conquer(game.ref(101, 100));
+    expect(defenderTilesIn(enclave)).toBeGreaterThan(0);
+
+    runClusterChecks();
+
+    expect(defenderTilesIn(enclave)).toBe(0);
+  });
+
   test("two diagonally joined blobs where one contains an unsealed hole only annexes the sealed blob", () => {
     // Defender has Blob A (sealed) and Blob B (contains an unsealed pocket), touching only at a diagonal corner
     const blobA = rect(50, 50, 55, 55);
