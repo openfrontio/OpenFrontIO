@@ -391,6 +391,8 @@ export class PlayerExecution implements Execution {
         boxes,
         clusterTerritoryIdsRef,
         nextTerritoryIdRef,
+        clusterSizes,
+        largestIndex,
       )
     ) {
       let bestIndex = -1;
@@ -411,6 +413,8 @@ export class PlayerExecution implements Execution {
             boxes,
             clusterTerritoryIdsRef,
             nextTerritoryIdRef,
+            clusterSizes,
+            largestIndex,
           )
         ) {
           bestArea = clusterSizes[i];
@@ -533,6 +537,8 @@ export class PlayerExecution implements Execution {
           boxes,
           clusterTerritoryIdsRef,
           nextTerritoryIdRef,
+          clusterSizes,
+          largestIndex,
         )
       ) {
         continue;
@@ -647,6 +653,26 @@ export class PlayerExecution implements Execution {
       if (componentTiles.length >= maxTerritoryArea) {
         continue;
       }
+
+      // Nuclear severance requirement: the severed candidate component must
+      // border radioactive fallout (a crater). A candidate that has no fallout
+      // along its border was not severed by a nuke and is left to 8-way rules.
+      let componentHasFallout = false;
+      for (let k = 0; k < componentTiles.length; k++) {
+        const t = componentTiles[k];
+        const numN = map.neighbors4(t, this.nbuf);
+        for (let nIdx = 0; nIdx < numN; nIdx++) {
+          if (map.hasFallout(this.nbuf[nIdx])) {
+            componentHasFallout = true;
+            break;
+          }
+        }
+        if (componentHasFallout) break;
+      }
+      if (!componentHasFallout) {
+        continue;
+      }
+
       // Evaluate if this component is enclosed using bounded 4-way flood fill:
       if (this.isEnclosed(start, cMinX, cMinY, cMaxX, cMaxY)) {
         const capturing = this.getCapturingPlayer(componentTiles);
@@ -668,6 +694,8 @@ export class PlayerExecution implements Execution {
     boxes: Int32Array,
     clusterTerritoryIdsRef: { ids: Int32Array | null },
     nextTerritoryIdRef: { id: number },
+    clusterSizes?: Int32Array,
+    largestIndex?: number,
   ): boolean {
     const iIdx = i * 4;
     const iMinX = boxes[iIdx];
@@ -677,6 +705,16 @@ export class PlayerExecution implements Execution {
 
     for (let j = 0; j < clusters.length; j++) {
       if (j !== i) {
+        // Topological Sovereign Guard: The sovereign main body can NEVER be
+        // an interior hole of a cluster with smaller or equal territory area!
+        if (
+          clusterSizes &&
+          largestIndex !== undefined &&
+          i === largestIndex &&
+          clusterSizes[j] <= clusterSizes[largestIndex]
+        ) {
+          continue;
+        }
         const jIdx = j * 4;
         if (
           boxes[jIdx] <= iMinX &&
@@ -685,7 +723,9 @@ export class PlayerExecution implements Execution {
           boxes[jIdx + 3] >= iMaxY
         ) {
           if (!clusterTerritoryIdsRef.ids) {
-            clusterTerritoryIdsRef.ids = new Int32Array(clusters.length);
+            clusterTerritoryIdsRef.ids = new Int32Array(clusters.length).fill(
+              -1,
+            );
             const scratch = this.traversalState();
             for (let c = 0; c < clusters.length; c++) {
               const cl = clusters[c];
@@ -701,7 +741,10 @@ export class PlayerExecution implements Execution {
             clusterTerritoryIdsRef.ids,
             nextTerritoryIdRef.id,
           );
-          if (clusterTerritoryIdsRef.ids[i] === clusterTerritoryIdsRef.ids[j]) {
+          if (
+            clusterTerritoryIdsRef.ids[i] !== -1 &&
+            clusterTerritoryIdsRef.ids[i] === clusterTerritoryIdsRef.ids[j]
+          ) {
             return true;
           }
         }
@@ -718,16 +761,19 @@ export class PlayerExecution implements Execution {
     nextTerritoryId: number,
   ): number {
     if (
-      clusterTerritoryIds[cIdxA] !== 0 &&
+      clusterTerritoryIds[cIdxA] !== -1 &&
       clusterTerritoryIds[cIdxA] === clusterTerritoryIds[cIdxB]
     ) {
       return nextTerritoryId;
     }
-    if (clusterTerritoryIds[cIdxA] !== 0 && clusterTerritoryIds[cIdxB] !== 0) {
+    if (
+      clusterTerritoryIds[cIdxA] !== -1 &&
+      clusterTerritoryIds[cIdxB] !== -1
+    ) {
       return nextTerritoryId;
     }
 
-    const startIdx = clusterTerritoryIds[cIdxB] === 0 ? cIdxB : cIdxA;
+    const startIdx = clusterTerritoryIds[cIdxB] === -1 ? cIdxB : cIdxA;
     const territoryId = nextTerritoryId++;
 
     const state = this.traversalState();
@@ -839,7 +885,6 @@ export class PlayerExecution implements Execution {
   ): number {
     let hasEnemy = false;
     let hasOpenLand = false;
-    let hasFallout = false;
     let minX = 1e9,
       minY = 1e9,
       maxX = -1e9,
@@ -865,7 +910,6 @@ export class PlayerExecution implements Execution {
           if (y > maxY) maxY = y;
         } else if (ownerId === 0) {
           if (map.hasFallout(n)) {
-            hasFallout = true;
             const x = map.x(n);
             const y = map.y(n);
             if (x < minX) minX = x;
@@ -878,7 +922,6 @@ export class PlayerExecution implements Execution {
         }
       }
     }
-    void hasFallout;
     if (!hasEnemy) {
       return hasOpenLand ? CLUSTER_OPEN : 0;
     }

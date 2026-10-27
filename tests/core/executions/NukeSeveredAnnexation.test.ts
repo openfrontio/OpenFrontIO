@@ -892,6 +892,9 @@ describe("land a nuke severs from the main body is annexed", () => {
       }
     }
 
+    // A nuke crater at the severance notch between Blob A and Blob B
+    fallout(rect(56, 53, 58, 55));
+
     expect(defenderTilesIn(blobA)).toBeGreaterThan(0);
     expect(defenderTilesIn(blobB)).toBeGreaterThan(0);
 
