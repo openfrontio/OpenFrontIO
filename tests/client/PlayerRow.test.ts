@@ -7,6 +7,7 @@ import { PlayerRow } from "../../src/client/components/baseComponents/ranking/Pl
 
 const basePlayer: PlayerInfo = {
   id: "player-1",
+  publicId: null,
   username: "Ada Lovelace",
   clanTag: null,
   gold: [],
@@ -115,6 +116,31 @@ describe("PlayerRow", () => {
     expect(identity.children[1]).toBe(username);
     expect(clanTag.textContent?.trim()).toBe("UN");
     expect(username.textContent?.trim()).toBe("kazz");
+  });
+
+  it("makes the whole row a profile button when a public ID is available", async () => {
+    row = await mountRow({ player: { publicId: "public-player-1" } });
+    let selectedPublicId: string | null = null;
+    row.addEventListener("view-profile", (event) => {
+      selectedPublicId = (event as CustomEvent<{ publicId: string }>).detail
+        .publicId;
+    });
+
+    const button = row.querySelector<HTMLButtonElement>(
+      "[data-player-row] > button",
+    );
+    expect(button?.type).toBe("button");
+    expect(button?.getAttribute("aria-label")).toContain("Ada Lovelace");
+
+    button?.click();
+
+    expect(selectedPublicId).toBe("public-player-1");
+  });
+
+  it("leaves a row without a public ID non-interactive", async () => {
+    row = await mountRow();
+
+    expect(row.querySelector("[data-player-row] > button")).toBeNull();
   });
 
   it("preserves an eliminated player's flag and adds eliminated status", async () => {
