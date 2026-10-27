@@ -18,6 +18,7 @@ export interface ModalConfig {
   alwaysMaximized?: boolean;
   maxWidth?: string;
   hideTabs?: boolean;
+  showScrollToTop?: boolean;
 }
 
 /**
@@ -148,6 +149,7 @@ export abstract class BaseModal extends LitElement {
         ?hideCloseButton=${cfg.hideCloseButton ?? true}
         ?alwaysMaximized=${cfg.alwaysMaximized ?? false}
         maxWidth=${cfg.maxWidth ?? ""}
+        ?showScrollToTop=${cfg.showScrollToTop ?? false}
         .tabs=${cfg.hideTabs ? [] : tabs}
         .activeTab=${this.activeTab}
         .onTabChange=${(key: string) => this.setActiveTab(key)}
@@ -218,6 +220,7 @@ export abstract class BaseModal extends LitElement {
           window.showPage?.(pageId);
         }
         this.style.pointerEvents = "auto";
+        this.modalEl?.syncScrollToTop();
       } else {
         this.modalEl?.open();
       }
@@ -239,6 +242,7 @@ export abstract class BaseModal extends LitElement {
 
     if (this.inline) {
       this.style.pointerEvents = "none";
+      this.modalEl?.resetScrollToTop();
       if (window.showPage) {
         window.showPage?.("page-play");
       }

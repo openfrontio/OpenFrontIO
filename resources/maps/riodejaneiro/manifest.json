@@ -3,20 +3,19 @@
   "id": "RioDeJaneiro",
   "map": {
     "height": 1680,
-    "num_land_tiles": 1498664,
+    "num_land_tiles": 1491794,
     "width": 1488
   },
   "map16x": {
     "height": 420,
-    "num_land_tiles": 91674,
+    "num_land_tiles": 90245,
     "width": 372
   },
   "map4x": {
     "height": 840,
-    "num_land_tiles": 371752,
+    "num_land_tiles": 368670,
     "width": 744
   },
-  "multiplayer_frequency": 4,
   "name": "Rio de Janeiro",
   "nations": [
     {
@@ -170,6 +169,22 @@
       "name": "Ipanema"
     }
   ],
+  "teamGameSpawnAreas": {
+    "2": [
+      {
+        "height": 1680,
+        "width": 744,
+        "x": 0,
+        "y": 0
+      },
+      {
+        "height": 1680,
+        "width": 744,
+        "x": 744,
+        "y": 0
+      }
+    ]
+  },
   "themes": ["south_america"],
   "translation_key": "map.riodejaneiro"
 }

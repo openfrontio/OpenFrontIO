@@ -1119,7 +1119,6 @@
     "num_land_tiles": 226651,
     "width": 674
   },
-  "multiplayer_frequency": 7,
   "name": "More Than Luck",
   "nations": [
     {
@@ -1301,6 +1300,5 @@
       }
     ]
   },
-  "team_frequency": 14,
   "translation_key": "map.morethanluck"
 }

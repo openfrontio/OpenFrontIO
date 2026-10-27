@@ -1510,6 +1510,7 @@ export class PlayerImpl implements Player {
   public buildableUnits(
     tile: TileRef | null,
     units: readonly PlayerBuildableUnitType[] = PlayerBuildable.types,
+    includeBuildPreview = false,
   ): BuildableUnit[] {
     const mg = this.mg;
     const config = mg.config();
@@ -1544,7 +1545,10 @@ export class PlayerImpl implements Player {
         canBuild = this.canSpawnUnitType(u, tile, validTiles);
       }
 
-      const buildNew = canBuild !== false && canUpgrade === false;
+      // A hold-to-build preview may need the new placement's rails even
+      // when upgrading is also possible at the cursor tile.
+      const buildNew =
+        canBuild !== false && (canUpgrade === false || includeBuildPreview);
 
       // Cumulative bulk-upgrade totals. Each upgrade raises the unit's level
       // and the constructed count, so step n costs the same as if the player
