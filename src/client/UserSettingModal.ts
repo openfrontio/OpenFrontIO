@@ -1463,6 +1463,7 @@ export class UserSettingModal extends BaseModal {
 
       <setting-keybind
         action="buildScrollModifier"
+        .allowModifiers=${true}
         label=${translateText("user_setting.build_scroll_modifier")}
         description=${translateText("user_setting.build_scroll_modifier_desc")}
         .defaultKey=${this.defaultKeybinds.buildScrollModifier}
