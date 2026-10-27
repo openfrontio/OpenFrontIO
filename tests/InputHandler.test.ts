@@ -3134,12 +3134,30 @@ describe("GhostStructure Hotkeys tapping/Scrolling", () => {
     testSettings.setKeybinds({
       buildAtomBomb: "F14",
       buildScrollModifier: "F13",
+      buildCity: "F15",
     });
     inputHandler.initialize();
   });
 
   afterEach(() => {
     inputHandler.destroy();
+  });
+
+  test("switching ghost structures via GUIclick resets the upgrade multiplier", () => {
+    inputHandler.setGhostStructure(UnitType.City, "hotkey");
+    expect(inputHandler["uiState"].ghostStructure).toBe(UnitType.City);
+    expect(inputHandler["uiState"].upgradeMultiplier).toBe(1);
+
+    inputHandler.setGhostStructure(UnitType.City, "increase");
+    expect(inputHandler["uiState"].upgradeMultiplier).toBe(2);
+    inputHandler.setGhostStructure(UnitType.City, "increase");
+    expect(inputHandler["uiState"].upgradeMultiplier).toBe(3);
+    inputHandler.setGhostStructure(UnitType.City, "increase");
+    expect(inputHandler["uiState"].upgradeMultiplier).toBe(4);
+
+    inputHandler.setGhostStructure(UnitType.AtomBomb, "GUIclick");
+    expect(inputHandler["uiState"].ghostStructure).toBe(UnitType.AtomBomb);
+    expect(inputHandler["uiState"].upgradeMultiplier).toBe(1);
   });
 
   test("repeated hotkey taps increase the build multiplier by 5 each time and loop", () => {
