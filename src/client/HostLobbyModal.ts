@@ -929,7 +929,7 @@ export class HostLobbyModal extends BaseModal {
         // matching the createLobby() failure path below.
         void navigator.clipboard.writeText("").catch(() => {});
       });
-      this.loadNationCount();
+      void this.loadNationCount();
       return;
     }
 
@@ -973,7 +973,7 @@ export class HostLobbyModal extends BaseModal {
     // BaseModal.firstUpdated() owns modalEl.onClose so the o-modal close path
     // (backdrop / close button) runs confirmBeforeClose(). Don't override it
     // here — doing so would bypass the leave-lobby confirmation.
-    this.loadNationCount();
+    void this.loadNationCount();
   }
 
   // Bind the host view to a lobby the server already created (the successor of a
@@ -1120,7 +1120,7 @@ export class HostLobbyModal extends BaseModal {
     this.useRandomMap = true;
     this.selectedMap = getRandomMapType();
     await this.loadNationCount();
-    this.putGameConfig();
+    void this.putGameConfig();
   }
 
   private handleConfigRandomMapSelected = () => {
@@ -1131,7 +1131,7 @@ export class HostLobbyModal extends BaseModal {
     this.selectedMap = value;
     this.useRandomMap = false;
     await this.loadNationCount();
-    this.putGameConfig();
+    void this.putGameConfig();
   }
 
   private handleConfigMapSelected = (e: Event) => {
@@ -1141,7 +1141,7 @@ export class HostLobbyModal extends BaseModal {
 
   private async handleDifficultySelection(value: Difficulty) {
     this.selectedDifficulty = value;
-    this.putGameConfig();
+    void this.putGameConfig();
   }
 
   private handleConfigDifficultySelected = (e: Event) => {
@@ -1152,7 +1152,7 @@ export class HostLobbyModal extends BaseModal {
   private handleConfigDoomsdayClockSpeedSelected = (e: Event) => {
     const customEvent = e as CustomEvent<{ speed: DoomsdayClockSpeed }>;
     this.doomsdayClockSpeed = customEvent.detail.speed;
-    this.putGameConfig();
+    void this.putGameConfig();
   };
 
   private handleConfigGameModeSelected = (e: Event) => {
@@ -1196,19 +1196,19 @@ export class HostLobbyModal extends BaseModal {
         break;
       case "host_modal.anonymous_players":
         this.anonymizeNames = checked;
-        this.putGameConfig();
+        void this.putGameConfig();
         break;
       case "game_settings.water_nukes":
         this.waterNukes = checked;
-        this.putGameConfig();
+        void this.putGameConfig();
         break;
       case "game_settings.doomsday_clock":
         this.doomsdayClock = checked;
-        this.putGameConfig();
+        void this.putGameConfig();
         break;
       case "host_modal.host_cheats":
         this.hostCheatsEnabled = checked;
-        this.putGameConfig();
+        void this.putGameConfig();
         break;
       default:
         break;
@@ -1225,11 +1225,11 @@ export class HostLobbyModal extends BaseModal {
     switch (labelKey) {
       case "game_settings.infinite_gold":
         this.hostCheatInfiniteGold = checked;
-        this.putGameConfig();
+        void this.putGameConfig();
         break;
       case "game_settings.infinite_troops":
         this.hostCheatInfiniteTroops = checked;
-        this.putGameConfig();
+        void this.putGameConfig();
         break;
       default:
         break;
@@ -1244,7 +1244,7 @@ export class HostLobbyModal extends BaseModal {
       unit,
       checked,
     );
-    this.putGameConfig();
+    void this.putGameConfig();
   };
 
   // Modified to include debouncing
@@ -1265,14 +1265,14 @@ export class HostLobbyModal extends BaseModal {
 
     // Set a new timer to call putGameConfig after 300ms of inactivity
     this.botsUpdateTimer = window.setTimeout(() => {
-      this.putGameConfig();
+      void this.putGameConfig();
       this.botsUpdateTimer = null;
     }, 300);
   };
 
   private handleInstantBuildChange = (val: boolean) => {
     this.instantBuild = val;
-    this.putGameConfig();
+    void this.putGameConfig();
   };
 
   private handleMaxTimerToggle = (
@@ -1281,7 +1281,7 @@ export class HostLobbyModal extends BaseModal {
   ) => {
     this.maxTimer = checked;
     this.maxTimerValue = toOptionalNumber(value);
-    this.putGameConfig();
+    void this.putGameConfig();
   };
 
   private handleWinThresholdToggle = (
@@ -1291,7 +1291,7 @@ export class HostLobbyModal extends BaseModal {
     this.winThreshold = checked;
     this.winThresholdValue = toOptionalNumber(value);
     this.winThresholdLoadedFor = this.lobbyId;
-    this.putGameConfig();
+    void this.putGameConfig();
   };
 
   private handleWinThresholdValueKeyDown = (e: KeyboardEvent) => {
@@ -1310,7 +1310,7 @@ export class HostLobbyModal extends BaseModal {
       // One decimal at most, matching the tenths the server stores.
       this.winThresholdValue = Math.round(value * 10) / 10;
     }
-    this.putGameConfig();
+    void this.putGameConfig();
   };
 
   private handleOvertimeToggle = (
@@ -1319,7 +1319,7 @@ export class HostLobbyModal extends BaseModal {
   ) => {
     this.overtime = checked;
     this.overtimeStartMinutes = toOptionalNumber(value);
-    this.putGameConfig();
+    void this.putGameConfig();
   };
 
   private handleOvertimeMinutesKeyDown = (e: KeyboardEvent) => {
@@ -1337,7 +1337,7 @@ export class HostLobbyModal extends BaseModal {
       return;
     }
     this.overtimeStartMinutes = value;
-    this.putGameConfig();
+    void this.putGameConfig();
   };
 
   private handleSpawnImmunityToggle = (
@@ -1346,7 +1346,7 @@ export class HostLobbyModal extends BaseModal {
   ) => {
     this.spawnImmunity = checked;
     this.spawnImmunityDurationMinutes = toOptionalNumber(value);
-    this.putGameConfig();
+    void this.putGameConfig();
   };
 
   private handleGoldMultiplierToggle = (
@@ -1355,7 +1355,7 @@ export class HostLobbyModal extends BaseModal {
   ) => {
     this.goldMultiplier = checked;
     this.goldMultiplierValue = toOptionalNumber(value);
-    this.putGameConfig();
+    void this.putGameConfig();
   };
 
   private handleStartingGoldToggle = (
@@ -1364,7 +1364,7 @@ export class HostLobbyModal extends BaseModal {
   ) => {
     this.startingGold = checked;
     this.startingGoldValue = toOptionalNumber(value);
-    this.putGameConfig();
+    void this.putGameConfig();
   };
 
   private handleSpawnImmunityDurationKeyDown = (e: KeyboardEvent) => {
@@ -1378,7 +1378,7 @@ export class HostLobbyModal extends BaseModal {
       return;
     }
     this.spawnImmunityDurationMinutes = value;
-    this.putGameConfig();
+    void this.putGameConfig();
   };
 
   private handleCustomAlliancesToggle = (
@@ -1387,7 +1387,7 @@ export class HostLobbyModal extends BaseModal {
   ) => {
     this.customAlliances = checked;
     this.customAllianceMinutes = toOptionalNumber(value);
-    this.putGameConfig();
+    void this.putGameConfig();
   };
 
   private handleCustomAllianceMinutesKeyDown = (e: KeyboardEvent) => {
@@ -1401,7 +1401,7 @@ export class HostLobbyModal extends BaseModal {
       return;
     }
     this.customAllianceMinutes = value;
-    this.putGameConfig();
+    void this.putGameConfig();
   };
 
   private handleGoldMultiplierValueKeyDown = (e: KeyboardEvent) => {
@@ -1418,7 +1418,7 @@ export class HostLobbyModal extends BaseModal {
     } else {
       this.goldMultiplierValue = value;
     }
-    this.putGameConfig();
+    void this.putGameConfig();
   };
 
   private handleStartingGoldValueKeyDown = (e: KeyboardEvent) => {
@@ -1438,7 +1438,7 @@ export class HostLobbyModal extends BaseModal {
     } else {
       this.startingGoldValue = value;
     }
-    this.putGameConfig();
+    void this.putGameConfig();
   };
 
   private handleHostCheatGoldMultiplierToggle = (
@@ -1447,7 +1447,7 @@ export class HostLobbyModal extends BaseModal {
   ) => {
     this.hostCheatGoldMultiplier = checked;
     this.hostCheatGoldMultiplierValue = toOptionalNumber(value);
-    this.putGameConfig();
+    void this.putGameConfig();
   };
 
   private handleHostCheatGoldMultiplierValueKeyDown = (e: KeyboardEvent) => {
@@ -1464,7 +1464,7 @@ export class HostLobbyModal extends BaseModal {
     } else {
       this.hostCheatGoldMultiplierValue = value;
     }
-    this.putGameConfig();
+    void this.putGameConfig();
   };
 
   private handleHostCheatStartingGoldToggle = (
@@ -1473,7 +1473,7 @@ export class HostLobbyModal extends BaseModal {
   ) => {
     this.hostCheatStartingGold = checked;
     this.hostCheatStartingGoldValue = toOptionalNumber(value);
-    this.putGameConfig();
+    void this.putGameConfig();
   };
 
   private handleHostCheatStartingGoldValueKeyDown = (e: KeyboardEvent) => {
@@ -1493,27 +1493,27 @@ export class HostLobbyModal extends BaseModal {
     } else {
       this.hostCheatStartingGoldValue = value;
     }
-    this.putGameConfig();
+    void this.putGameConfig();
   };
 
   private handleRandomSpawnChange = (val: boolean) => {
     this.randomSpawn = val;
-    this.putGameConfig();
+    void this.putGameConfig();
   };
 
   private handleInfiniteGoldChange = (val: boolean) => {
     this.infiniteGold = val;
-    this.putGameConfig();
+    void this.putGameConfig();
   };
 
   private handleDonateGoldChange = (val: boolean) => {
     this.donateGold = val;
-    this.putGameConfig();
+    void this.putGameConfig();
   };
 
   private handleInfiniteTroopsChange = (val: boolean) => {
     this.infiniteTroops = val;
-    this.putGameConfig();
+    void this.putGameConfig();
   };
 
   private handleCompactMapChange = (val: boolean) => {
@@ -1524,12 +1524,12 @@ export class HostLobbyModal extends BaseModal {
       this.defaultNationCount,
       val,
     );
-    this.putGameConfig();
+    void this.putGameConfig();
   };
 
   private handleDonateTroopsChange = (val: boolean) => {
     this.donateTroops = val;
-    this.putGameConfig();
+    void this.putGameConfig();
   };
 
   private handleMaxTimerValueKeyDown = (e: KeyboardEvent) => {
@@ -1548,7 +1548,7 @@ export class HostLobbyModal extends BaseModal {
       return;
     }
     this.maxTimerValue = value;
-    this.putGameConfig();
+    void this.putGameConfig();
   };
 
   private handlePlayerLimitToggle = (
@@ -1558,7 +1558,7 @@ export class HostLobbyModal extends BaseModal {
     this.playerLimit = checked;
     this.playerLimitValue = toOptionalNumber(value);
     this.markPlayerLimitSettled();
-    this.putGameConfig();
+    void this.putGameConfig();
   };
 
   private handlePlayerLimitValueKeyDown = (e: KeyboardEvent) => {
@@ -1573,7 +1573,7 @@ export class HostLobbyModal extends BaseModal {
     }
     this.playerLimitValue = value;
     this.markPlayerLimitSettled();
-    this.putGameConfig();
+    void this.putGameConfig();
   };
 
   // The host's own edit is what the card should show from now on: a lobby
@@ -1605,7 +1605,7 @@ export class HostLobbyModal extends BaseModal {
     } else {
       this.startDelayValue = value;
     }
-    this.putGameConfig();
+    void this.putGameConfig();
   };
 
   private handleNationsChange = (e: Event) => {
@@ -1620,7 +1620,7 @@ export class HostLobbyModal extends BaseModal {
       clearTimeout(this.nationsUpdateTimer);
     }
     this.nationsUpdateTimer = window.setTimeout(() => {
-      this.putGameConfig();
+      void this.putGameConfig();
       this.nationsUpdateTimer = null;
     }, 300);
   };
@@ -1634,17 +1634,17 @@ export class HostLobbyModal extends BaseModal {
       this.donateGold = false;
       this.donateTroops = false;
     }
-    this.putGameConfig();
+    void this.putGameConfig();
   }
 
   private async handleTeamCountSelection(value: TeamCountConfig) {
     this.teamCount = value;
-    this.putGameConfig();
+    void this.putGameConfig();
   }
 
   private handleWhitelistToggle = (checked: boolean) => {
     this.whitelistEnabled = checked;
-    this.putGameConfig();
+    void this.putGameConfig();
   };
 
   // Server-authoritative: it re-verifies the subscription and enforces the
@@ -1693,7 +1693,7 @@ export class HostLobbyModal extends BaseModal {
 
   private handleAllowedPublicIdsChange = (e: Event) => {
     this.allowedPublicIds = (e.target as HTMLInputElement).value;
-    this.putGameConfig();
+    void this.putGameConfig();
   };
 
   // Comma/space/newline-separated publicIds, capped at the 200 the schema
@@ -1815,7 +1815,7 @@ export class HostLobbyModal extends BaseModal {
     this.nameReveals = this.nameReveals.includes(clientID)
       ? this.nameReveals.filter((c) => c !== clientID)
       : [...this.nameReveals, clientID];
-    this.putGameConfig();
+    void this.putGameConfig();
   }
 
   private async toggleGameStartTimer() {

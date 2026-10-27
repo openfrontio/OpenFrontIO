@@ -233,9 +233,9 @@ export class GameRightSidebar extends LitElement implements Controller {
   private onPauseButtonClick() {
     this.isPaused = !this.isPaused;
     if (this.isPaused) {
-      gamePortal.gameplayStop();
+      void gamePortal.gameplayStop();
     } else {
-      gamePortal.gameplayStart();
+      void gamePortal.gameplayStart();
     }
     this.eventBus.emit(new PauseGameIntentEvent(this.isPaused));
   }

@@ -144,9 +144,9 @@ export class SettingsModal extends LitElement implements Controller {
     // Portals: report gameplay as stopped whenever the settings menu is open,
     // and resumed when it closes — unless the game was already paused when opened.
     if (pause) {
-      gamePortal.gameplayStop();
+      void gamePortal.gameplayStop();
     } else if (!this.wasPausedWhenOpened) {
-      gamePortal.gameplayStart();
+      void gamePortal.gameplayStart();
     }
 
     // Only pause the simulation itself when we own the pause (singleplayer or

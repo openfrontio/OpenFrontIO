@@ -262,7 +262,7 @@ export class FxSpritePass {
 
     gl.bindVertexArray(null);
 
-    this.loadAtlas();
+    void this.loadAtlas();
   }
 
   // -------------------------------------------------------------------------

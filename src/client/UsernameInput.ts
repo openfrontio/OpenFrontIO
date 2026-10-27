@@ -660,14 +660,14 @@ export class UsernameInput extends LitElement {
     // reloads the whole page — falls back to a fresh guest username instead of
     // keeping the account name. addAuthListener only fires on login; portals
     // refresh the page on logout, so there is no logout event to handle.
-    gamePortal.getUsername().then((username) => {
+    void gamePortal.getUsername().then((username) => {
       if (username) {
         this.baseUsername = clampUsername(username);
         this.usernameIsGenerated = false;
         this.validateAndStore();
       }
     });
-    gamePortal.addAuthListener((user) => {
+    void gamePortal.addAuthListener((user) => {
       if (user) {
         this.baseUsername = clampUsername(user.username);
         this.usernameIsGenerated = false;

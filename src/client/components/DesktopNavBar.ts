@@ -20,7 +20,7 @@ export class DesktopNavBar extends LitElement {
     const current = window.currentPageId;
     if (current) {
       // Wait for render
-      this.updateComplete.then(() => {
+      void this.updateComplete.then(() => {
         this._updateActiveState(current);
       });
     }
