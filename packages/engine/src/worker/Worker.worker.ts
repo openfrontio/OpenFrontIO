@@ -298,6 +298,7 @@ async function onMessage(e: MessageEvent<MainThreadMessage>) {
           message.x,
           message.y,
           message.units,
+          message.includeBuildPreview,
         );
         sendMessage({
           type: "player_buildables_result",

@@ -2106,7 +2106,7 @@ export class GameServer {
         } satisfies PlayerRecord;
       },
     );
-    this.deps.archive(
+    void this.deps.archive(
       createPartialGameRecord(
         this.id,
         this.gameStartInfo.config,

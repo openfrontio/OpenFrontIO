@@ -56,6 +56,7 @@ Using AI tools is fine — but you **MUST** understand the code you are submitti
 - **Node.js**: Version 24.15.0 or newer in the Node 24 release line.
 - **npm**: Version 12.1.0 or newer in the npm 12 release line. If Node.js bundled an older version, run `npm install --global --ignore-scripts npm@12.1.0` before installing project dependencies.
 - **Git**: For version control.
+- **Editor**: The project type-checks with TypeScript 7, which has no JavaScript API for editor extensions to drive. In VS Code, install the [TypeScript 7 native preview extension](https://marketplace.visualstudio.com/items?itemName=TypeScriptTeam.native-preview) to get language support for the workspace.
 
 ### Installation
 

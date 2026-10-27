@@ -39,16 +39,6 @@ type mapInfo struct {
 	// English display name written to en.json. Defaults to Name; set it when
 	// the display name differs from the canonical (wire-format) name.
 	DisplayName string `json:"display_name"`
-	// How many times the map appears in the multiplayer playlist.
-	// 0 (or omitted) keeps the map out of the regular rotation.
-	// Used as fallback when per-mode frequencies are not set.
-	MultiplayerFrequency int `json:"multiplayer_frequency"`
-	// Per-gamemode rotation weights. When set (>= 0), these override
-	// multiplayer_frequency for that specific lobby type. Omit to fall
-	// back to multiplayer_frequency.
-	FFAFrequency   *int `json:"ffa_frequency"`
-	TeamFrequency  *int `json:"team_frequency"`
-	SpecialFrequency *int `json:"special_frequency"`
 	// Position in the featured grid (1 = first). Featured maps without a
 	// rank sort after ranked ones, alphabetically.
 	FeaturedRank int `json:"featured_rank"`
@@ -179,9 +169,6 @@ func loadMapInfos() ([]mapInfo, error) {
 		if info.TranslationKey != "map."+m.Name {
 			return nil, fmt.Errorf("map %s: info.json \"translation_key\" (%q) must be %q", m.Name, info.TranslationKey, "map."+m.Name)
 		}
-		if info.MultiplayerFrequency < 0 {
-			return nil, fmt.Errorf("map %s: info.json \"multiplayer_frequency\" (%d) must be >= 0", m.Name, info.MultiplayerFrequency)
-		}
 		if info.FeaturedRank < 0 {
 			return nil, fmt.Errorf("map %s: info.json \"featured_rank\" (%d) must be >= 1", m.Name, info.FeaturedRank)
 		}
@@ -190,19 +177,6 @@ func loadMapInfos() ([]mapInfo, error) {
 		}
 		if info.SpecialTeamCount < 0 || info.SpecialTeamCount == 1 {
 			return nil, fmt.Errorf("map %s: info.json \"special_team_count\" (%d) must be >= 2", m.Name, info.SpecialTeamCount)
-		}
-		// Validate per-mode frequencies (only when explicitly set).
-		for _, freq := range []struct {
-			name string
-			val  *int
-		}{
-			{"ffa_frequency", info.FFAFrequency},
-			{"team_frequency", info.TeamFrequency},
-			{"special_frequency", info.SpecialFrequency},
-		} {
-			if freq.val != nil && *freq.val < 0 {
-				return nil, fmt.Errorf("map %s: info.json %q (%d) must be >= 0", m.Name, freq.name, *freq.val)
-			}
 		}
 		// Validate modifier keys (plain or with percentage, e.g. "goldMultiplier:75").
 		validModifiers := map[string]bool{
@@ -371,14 +345,6 @@ func generateMapsTS(infos []mapInfo) (string, error) {
 	b.WriteString("  translationKey: string;\n")
 	b.WriteString("  /** Map picker categories. */\n")
 	b.WriteString("  categories: MapCategory[];\n")
-	b.WriteString("  /** How many times the map appears in the multiplayer playlist (fallback). */\n")
-	b.WriteString("  multiplayerFrequency: number;\n")
-	b.WriteString("  /** FFA lobby rotation weight. -1 = use multiplayerFrequency. */\n")
-	b.WriteString("  ffaFrequency: number;\n")
-	b.WriteString("  /** Team lobby rotation weight. -1 = use multiplayerFrequency. */\n")
-	b.WriteString("  teamFrequency: number;\n")
-	b.WriteString("  /** Special lobby rotation weight. -1 = use multiplayerFrequency. */\n")
-	b.WriteString("  specialFrequency: number;\n")
 	b.WriteString("  /** Position in the featured grid (1 = first); unranked featured maps sort last. */\n")
 	b.WriteString("  featuredRank?: number;\n")
 	b.WriteString("  /** Preferred team count in team/special games (see MapPlaylist). */\n")
@@ -425,22 +391,6 @@ func generateMapsTS(infos []mapInfo) (string, error) {
 			b.WriteString(fmt.Sprintf("%q", category))
 		}
 		b.WriteString("],\n")
-		b.WriteString(fmt.Sprintf("    multiplayerFrequency: %d,\n", info.MultiplayerFrequency))
-		ffaFreq := -1
-		if info.FFAFrequency != nil {
-			ffaFreq = *info.FFAFrequency
-		}
-		teamFreq := -1
-		if info.TeamFrequency != nil {
-			teamFreq = *info.TeamFrequency
-		}
-		specialFreq := -1
-		if info.SpecialFrequency != nil {
-			specialFreq = *info.SpecialFrequency
-		}
-		b.WriteString(fmt.Sprintf("    ffaFrequency: %d,\n", ffaFreq))
-		b.WriteString(fmt.Sprintf("    teamFrequency: %d,\n", teamFreq))
-		b.WriteString(fmt.Sprintf("    specialFrequency: %d,\n", specialFreq))
 		b.WriteString(fmt.Sprintf("    defaultNationCount: %d,\n", len(info.Nations)))
 		if info.FeaturedRank > 0 {
 			b.WriteString(fmt.Sprintf("    featuredRank: %d,\n", info.FeaturedRank))

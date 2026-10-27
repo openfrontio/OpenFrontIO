@@ -164,7 +164,6 @@
     "num_land_tiles": 467723,
     "width": 1750
   },
-  "multiplayer_frequency": 5,
   "name": "Madagascar",
   "nations": [
     {
@@ -339,7 +338,22 @@
     }
   ],
   "special_team_count": 2,
-  "team_frequency": 10,
+  "teamGameSpawnAreas": {
+    "2": [
+      {
+        "height": 2332,
+        "width": 1174,
+        "x": 0,
+        "y": 0
+      },
+      {
+        "height": 2332,
+        "width": 2324,
+        "x": 1173,
+        "y": 0
+      }
+    ]
+  },
   "themes": ["africa"],
   "translation_key": "map.madagascar"
 }

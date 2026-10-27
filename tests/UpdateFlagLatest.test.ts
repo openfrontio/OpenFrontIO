@@ -7,6 +7,7 @@ import { afterEach, describe, expect, it } from "vitest";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const SCRIPT = path.resolve(__dirname, "../update.sh");
+const isWindows = process.platform === "win32";
 
 const BEGIN = "# --- BEGIN flag latest (tested) ---";
 const END = "# --- END flag latest (tested) ---";
@@ -138,7 +139,7 @@ printf '%s' "$CODE"
   };
 }
 
-describe("update.sh flag_latest", () => {
+describe.skipIf(isWindows)("update.sh flag_latest", () => {
   it("posts the site and the full version to /cluster/latest", () => {
     const result = runFlagLatest(["200"]);
 
