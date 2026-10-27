@@ -107,7 +107,7 @@ export class MainRadialMenu implements Controller {
       myPlayer
         .actions(clickedTile)
         .then((actions) => {
-          this.updatePlayerActions(
+          void this.updatePlayerActions(
             myPlayer,
             actions,
             clickedTile,
@@ -182,7 +182,7 @@ export class MainRadialMenu implements Controller {
     myPlayer
       .actions(tile)
       .then((actions) => {
-        this.updatePlayerActions(myPlayer, actions, tile);
+        void this.updatePlayerActions(myPlayer, actions, tile);
       })
       .catch((error) => {
         console.warn("Failed to refresh radial menu actions:", error);

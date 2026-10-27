@@ -64,7 +64,7 @@ export class NewsBox extends LitElement {
 
   connectedCallback() {
     super.connectedCallback();
-    this.loadNews();
+    void this.loadNews();
   }
 
   private async loadNews() {

@@ -70,7 +70,7 @@ export class ClanManageView extends LitElement {
       this.manageDiscordUrl = this.selectedClan.discordUrl ?? "";
       this.manageIsOpen = this.selectedClan.isOpen ?? true;
     }
-    this.loadMembers(1);
+    void this.loadMembers(1);
   }
 
   disconnectedCallback() {
@@ -285,12 +285,12 @@ export class ClanManageView extends LitElement {
     if (sort === this.memberSort) return;
     this.memberSort = sort;
     this.memberOrder = defaultOrderForSort(sort);
-    this.loadMembers(1);
+    void this.loadMembers(1);
   }
 
   private onOrderToggle() {
     this.memberOrder = this.memberOrder === "asc" ? "desc" : "asc";
-    this.loadMembers(1);
+    void this.loadMembers(1);
   }
 
   render() {
@@ -315,7 +315,7 @@ export class ClanManageView extends LitElement {
         ?disabled=${this.actionPending}
         @confirm=${() => {
           this.clearConfirm();
-          this.handleDisband();
+          void this.handleDisband();
         }}
         @cancel=${() => this.clearConfirm()}
       ></confirm-dialog>`;
@@ -328,7 +328,7 @@ export class ClanManageView extends LitElement {
         @confirm=${() => {
           const id = this.confirmTargetId!;
           this.clearConfirm();
-          this.handleKick(id);
+          void this.handleKick(id);
         }}
         @cancel=${() => this.clearConfirm()}
       ></confirm-dialog>`;
@@ -343,7 +343,7 @@ export class ClanManageView extends LitElement {
           const id = this.confirmTargetId!;
           const reason = e.detail.text;
           this.clearConfirm();
-          this.handleBan(id, reason);
+          void this.handleBan(id, reason);
         }}
         @cancel=${() => this.clearConfirm()}
       ></confirm-dialog>`;
@@ -489,7 +489,7 @@ export class ClanManageView extends LitElement {
                 (p) => this.loadMembers(p),
                 (pp) => {
                   this.membersPerPage = pp;
-                  this.loadMembers(1);
+                  void this.loadMembers(1);
                 },
               )}
             `;

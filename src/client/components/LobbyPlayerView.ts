@@ -588,7 +588,8 @@ export class LobbyTeamView extends LitElement {
       this.teamMaxSize = Math.max(
         1,
         Math.ceil(
-          (this.clients.length + this.effectiveNationCount) / teams.length,
+          (this.activePlayers.length + this.effectiveNationCount) /
+            teams.length,
         ),
       );
     }

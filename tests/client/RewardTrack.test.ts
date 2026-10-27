@@ -643,7 +643,7 @@ describe("<reward-track>", () => {
         'progression.prestige:{"prestige":5}',
       );
       expect(end.querySelector("[data-end-caps]")?.textContent).toContain(
-        'reward_track.caps_amount:{"amount":"2,500"}',
+        `reward_track.caps_amount:{"amount":"${(2500).toLocaleString()}"}`,
       );
       const badge = end.querySelector("level-badge") as HTMLElement & {
         level: number;

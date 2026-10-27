@@ -16,7 +16,6 @@
     "num_land_tiles": 224367,
     "width": 800
   },
-  "multiplayer_frequency": 5,
   "name": "Taiwan Strait",
   "nations": [
     {
@@ -162,7 +161,6 @@
       }
     ]
   },
-  "team_frequency": 10,
   "themes": ["asia"],
   "translation_key": "map.taiwanstrait"
 }

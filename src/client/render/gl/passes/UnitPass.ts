@@ -360,7 +360,7 @@ export class UnitPass {
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
 
     // Start async atlas build
-    this.loadAtlas();
+    void this.loadAtlas();
 
     // --- Shared quad buffer ---
     this.quadBuf = gl.createBuffer()!;
