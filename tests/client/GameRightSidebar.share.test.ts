@@ -40,7 +40,7 @@ vi.mock("../../src/client/GamePortal", () => ({
   gamePortal: gamePortalMock,
 }));
 
-import { ClientEnv } from "../../src/client/ClientEnv";
+import { ClientEnv, deriveShareOrigin } from "../../src/client/ClientEnv";
 import "../../src/client/hud/layers/GameRightSidebar";
 import type { GameRightSidebar } from "../../src/client/hud/layers/GameRightSidebar";
 import type { GameView } from "../../src/client/view";
@@ -192,9 +192,16 @@ describe("GameRightSidebar share button", () => {
   });
 
   it("uses share origin from desktop shell instead of app://", async () => {
-    const shareOriginSpy = vi
-      .spyOn(ClientEnv, "shareOrigin")
-      .mockReturnValue("https://openfront.io");
+    vi.spyOn(ClientEnv, "shareOrigin").mockImplementation(() =>
+      deriveShareOrigin(
+        () => ({
+          siteOrigin: ClientEnv.siteOrigin(),
+          jwtAudience: ClientEnv.jwtAudience(),
+        }),
+        "app:",
+        "app://openfront",
+      ),
+    );
     setBootstrapConfig({ serverHost: "openfront.io" });
 
     const gameId = "desk456789";
@@ -207,7 +214,6 @@ describe("GameRightSidebar share button", () => {
     shareBtn!.click();
     await new Promise((resolve) => setTimeout(resolve, 0));
 
-    expect(shareOriginSpy).toHaveBeenCalled();
     expect(copyToClipboardMock).toHaveBeenCalledTimes(1);
     const copiedUrl = copyToClipboardMock.mock.calls[0][0];
     expect(copiedUrl).toBe(`https://openfront.io${ClientEnv.gamePath(gameId)}`);
@@ -301,9 +307,9 @@ describe("GameRightSidebar share button", () => {
     expect(showToastMock).toHaveBeenCalledWith("Failed to copy", "red");
   });
 
-  it("renders the share button in singleplayer games", async () => {
+  it("does not render the share button in singleplayer games", async () => {
     const el = await mount({ gameType: GameType.Singleplayer });
     const shareBtn = getShareButton(el);
-    expect(shareBtn).not.toBeNull();
+    expect(shareBtn).toBeNull();
   });
 });
