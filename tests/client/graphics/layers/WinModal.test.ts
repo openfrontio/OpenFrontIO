@@ -303,11 +303,16 @@ describe("WinModal share button", () => {
     vi.restoreAllMocks();
   });
 
-  async function createModal(opts?: { isWin?: boolean; gameId?: string }) {
+  async function createModal(opts?: {
+    isWin?: boolean;
+    gameId?: string;
+    resumedFromSave?: boolean;
+  }) {
     modal = document.createElement("win-modal") as WinModal;
     modal.game = {
       gameID: () => opts?.gameId ?? "gamexyz123",
       myPlayer: () => null,
+      resumedFromSave: () => opts?.resumedFromSave ?? false,
       config: () => ({
         gameConfig: () => ({ rankedType: undefined }),
       }),
@@ -320,6 +325,14 @@ describe("WinModal share button", () => {
     await modal.updateComplete;
     return modal;
   }
+
+  it("hides the share button when the game was resumed from a save", async () => {
+    const el = await createModal({ resumedFromSave: true });
+    const shareButton = el.querySelector<HTMLButtonElement>(
+      'button[data-win-action="share"]',
+    );
+    expect(shareButton).toBeNull();
+  });
 
   it("renders a square share button with tooltip and aria-label matching row height", async () => {
     const el = await createModal();

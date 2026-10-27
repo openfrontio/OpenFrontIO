@@ -236,18 +236,22 @@ export class WinModal extends LitElement implements Controller {
             () => this.hide(),
             "keep",
           )}
-          <button
-            type="button"
-            data-win-action="share"
-            class="win-action win-action-main win-action-icon"
-            title=${translateText("win_modal.share")}
-            aria-label=${translateText("win_modal.share")}
-            @click=${this._handleShare}
-          >
-            <span class="relative flex items-center justify-center"
-              >${iconShare}</span
-            >
-          </button>
+          ${
+            this.game?.resumedFromSave?.()
+              ? null
+              : html`<button
+                  type="button"
+                  data-win-action="share"
+                  class="win-action win-action-main win-action-icon"
+                  title=${translateText("win_modal.share")}
+                  aria-label=${translateText("win_modal.share")}
+                  @click=${this._handleShare}
+                >
+                  <span class="relative flex items-center justify-center"
+                    >${iconShare}</span
+                  >
+                </button>`
+          }
         </div>
         ${this.renderActionStyles()}
       </div>
