@@ -81,7 +81,7 @@ export class PlayPage extends LitElement {
              split only exists while the panel is live (.streaming-live via has-[]) —
              otherwise the left column takes the full row. -->
         <div
-          class="w-full pb-4 lg:pb-0 flex flex-col gap-4 sm:-mx-4 sm:w-[calc(100%+2rem)] lg:mx-0 lg:w-full lg:grid lg:grid-cols-1 lg:has-[.streaming-live]:grid-cols-[2fr_1fr] lg:gap-4 lg:items-stretch"
+          class="w-full pb-4 lg:pb-0 sm:compact:pb-0 flex flex-col gap-4 sm:-mx-4 sm:w-[calc(100%+2rem)] lg:mx-0 lg:w-full lg:grid lg:grid-cols-1 lg:has-[.streaming-live]:grid-cols-[2fr_1fr] lg:gap-4 lg:items-stretch"
         >
           <!-- Mobile: spacer for fixed top bar -->
           <div

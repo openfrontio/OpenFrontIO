@@ -669,9 +669,10 @@ export class GameModeSelector extends LitElement {
     // reading-flow keeps focus order following the rows (Chromium only).
     // On compact screens (styles.css) Solo/Tutorial sit under the hero card only,
     // and the lobby column runs down beside them, so its two cards get that height.
+    // There the grid also pulls up over the gap after the banner's row when it's empty.
     return html`
       <div
-        class="flex flex-col gap-4 sm:compact:gap-3 w-full px-4 pb-4 mx-auto sm:px-0 sm:pb-0 sm:grid sm:grid-cols-[2fr_1fr] sm:grid-rows-[auto_min(24rem,40vh)_auto_auto] desktop:sm:grid-rows-[auto_40vh_auto_auto] sm:[reading-flow:grid-rows]"
+        class="flex flex-col gap-4 sm:compact:gap-3 sm:compact:has-[>ios-add-to-home-screen-banner:empty]:-mt-3 w-full px-4 pb-4 mx-auto sm:px-0 sm:pb-0 sm:grid sm:grid-cols-[2fr_1fr] sm:grid-rows-[auto_min(24rem,40vh)_auto_auto] desktop:sm:grid-rows-[auto_40vh_auto_auto] sm:[reading-flow:grid-rows]"
       >
         <ios-add-to-home-screen-banner
           class="no-game-portal [&:empty]:hidden sm:col-span-2 sm:row-start-1"
