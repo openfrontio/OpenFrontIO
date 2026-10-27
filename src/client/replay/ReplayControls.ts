@@ -1,9 +1,9 @@
 /**
  * <replay-controls>: the replay viewer's bottom bar with the timeline,
- * play/pause, speed menu, settings, fullscreen and exit. It only displays
- * what the viewer gives it and reports clicks as events:
+ * play/pause, speed menu, export menu, settings, fullscreen and exit. It
+ * only displays what the viewer gives it and reports clicks as events:
  *   replay-toggle-play, replay-seek (detail: frame),
- *   replay-speed (detail: speed), replay-menu
+ *   replay-speed (detail: speed), replay-export (detail: format), replay-menu
  */
 
 import { assetUrl } from "@openfront/shared/AssetUrls";
@@ -12,6 +12,7 @@ import { customElement, property, state } from "lit/decorators.js";
 import { isDesktopShell } from "../DesktopShell";
 import { gamePortal } from "../GamePortal";
 import { homeHref, translateText } from "../Utils";
+import { EXPORT_FORMATS, type ReplayExportFormat } from "./ReplayExport";
 import { TICKS_PER_SECOND } from "./ReplayPlayback";
 
 const SPEEDS = [0.5, 1, 2, 4, 8, 16, 32];
@@ -19,6 +20,7 @@ const SPEEDS = [0.5, 1, 2, 4, 8, 16, 32];
 const playIcon = assetUrl("images/PlayIconWhite.svg");
 const pauseIcon = assetUrl("images/PauseIconWhite.svg");
 const speedIcon = assetUrl("images/FastForwardIconSolidWhite.svg");
+const exportIcon = assetUrl("images/ExportIconWhite.svg");
 const settingsIcon = assetUrl("images/SettingIconWhite.svg");
 const fullscreenIcon = assetUrl("images/FullscreenIconWhite.svg");
 const exitFullscreenIcon = assetUrl("images/ExitFullscreenIconWhite.svg");
@@ -47,11 +49,17 @@ export function timelineFrames(
 }
 
 /** An icon button in the in-game style (GameRightSidebar). */
-export function iconButton(src: string, label: string, onClick: () => void) {
+export function iconButton(
+  src: string,
+  label: string,
+  onClick: () => void,
+  disabled = false,
+) {
   return html`<button
-    class="p-1 rounded-md cursor-pointer hover:bg-white/10"
+    class="p-1 rounded-md cursor-pointer hover:bg-white/10 disabled:opacity-50 disabled:pointer-events-none disabled:cursor-not-allowed"
     title=${label}
     aria-label=${label}
+    ?disabled=${disabled}
     @click=${onClick}
   >
     <img src=${src} alt="" width="20" height="20" />
@@ -79,8 +87,10 @@ export class ReplayControls extends LitElement {
   @property({ type: Number }) total = 0;
   @property({ type: Boolean }) playing = false;
   @property({ type: Number }) speed = 1;
+  @property({ type: Boolean }) exporting = false;
 
   @state() private speedMenuOpen = false;
+  @state() private exportMenuOpen = false;
   @state() private isFullscreen = document.fullscreenElement !== null;
   /**
    * Portals have their own fullscreen button and the desktop shell manages
@@ -110,25 +120,46 @@ export class ReplayControls extends LitElement {
     this.abort.abort();
   }
 
-  private emit(name: string, detail?: number): void {
+  private emit(name: string, detail?: number | ReplayExportFormat): void {
     this.dispatchEvent(new CustomEvent(name, { detail, bubbles: true }));
   }
 
   /** Seek, but not past what's been loaded (the thumb snaps back). */
   private onTimelineInput(e: Event): void {
+    if (this.exporting) return;
     const input = e.target as HTMLInputElement;
     const frame = Math.min(Number(input.value), this.loaded - 1);
     if (frame !== Number(input.value)) input.value = String(frame);
     this.emit("replay-seek", frame);
   }
 
+  private toggleSpeedMenu(): void {
+    if (this.exporting) return;
+    this.exportMenuOpen = false;
+    this.speedMenuOpen = !this.speedMenuOpen;
+  }
+
+  private toggleExportMenu(): void {
+    if (this.exporting) return;
+    this.speedMenuOpen = false;
+    this.exportMenuOpen = !this.exportMenuOpen;
+  }
+
   private setSpeed(speed: number): void {
+    if (this.exporting) return;
     this.speedMenuOpen = false;
     this.emit("replay-speed", speed);
   }
 
+  private selectExportFormat(format: ReplayExportFormat): void {
+    if (this.exporting) return;
+    this.exportMenuOpen = false;
+    this.emit("replay-export", format);
+  }
+
   private openMenu(): void {
     this.speedMenuOpen = false;
+    this.exportMenuOpen = false;
     this.emit("replay-menu");
   }
 
@@ -170,11 +201,12 @@ export class ReplayControls extends LitElement {
           </div>
           <input
             type="range"
-            class="relative w-full h-4 m-0 appearance-none bg-transparent cursor-pointer [&::-webkit-slider-runnable-track]:bg-transparent [&::-moz-range-track]:bg-transparent [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3.5 [&::-webkit-slider-thumb]:h-3.5 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-sky-400 [&::-moz-range-thumb]:w-3.5 [&::-moz-range-thumb]:h-3.5 [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:border-0 [&::-moz-range-thumb]:bg-sky-400"
+            class="relative w-full h-4 m-0 appearance-none bg-transparent cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed [&::-webkit-slider-runnable-track]:bg-transparent [&::-moz-range-track]:bg-transparent [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3.5 [&::-webkit-slider-thumb]:h-3.5 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-sky-400 [&::-moz-range-thumb]:w-3.5 [&::-moz-range-thumb]:h-3.5 [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:border-0 [&::-moz-range-thumb]:bg-sky-400"
             min="0"
             max=${Math.max(0, this.total - 1)}
             .value=${String(frame)}
             aria-label=${translateText("replay_viewer.timeline")}
+            ?disabled=${this.exporting}
             @input=${this.onTimelineInput}
           />
         </div>
@@ -188,11 +220,22 @@ export class ReplayControls extends LitElement {
               this.playing ? "replay_viewer.pause" : "replay_viewer.play",
             ),
             () => this.emit("replay-toggle-play"),
+            this.exporting,
           )}
           ${iconButton(
             speedIcon,
             translateText("replay_panel.replay_speed"),
-            () => (this.speedMenuOpen = !this.speedMenuOpen),
+            () => this.toggleSpeedMenu(),
+            this.exporting,
+          )}
+          ${iconButton(
+            exportIcon,
+            translateText(
+              this.exporting
+                ? "replay_viewer.exporting"
+                : "replay_viewer.export",
+            ),
+            () => this.toggleExportMenu(),
           )}
           ${iconButton(
             settingsIcon,
@@ -212,6 +255,7 @@ export class ReplayControls extends LitElement {
           }
           ${exitButton()}
           ${this.speedMenuOpen ? this.renderSpeedMenu() : nothing}
+          ${this.exportMenuOpen ? this.renderExportMenu() : nothing}
         </div>
       </div>
     `;
@@ -236,6 +280,32 @@ export class ReplayControls extends LitElement {
                 @click=${() => this.setSpeed(sp)}
               >
                 ×${sp}
+              </button>`,
+          )}
+        </div>
+      </div>
+    `;
+  }
+
+  /** Export format menu, styled to match the speed menu. */
+  private renderExportMenu() {
+    return html`
+      <div
+        class="absolute bottom-full right-0 mb-4 p-2 min-w-48 bg-gray-800/92 backdrop-blur-sm shadow-xs rounded-lg"
+      >
+        <div class="mb-2 text-white" translate="no">
+          ${translateText("replay_viewer.export")}
+        </div>
+        <div class="flex flex-col gap-1.5">
+          ${EXPORT_FORMATS.map(
+            (fmt) =>
+              html`<button
+                data-export-format=${fmt}
+                class="py-1 px-2 text-left text-sm text-white rounded-sm border transition border-gray-500 hover:border-gray-200 cursor-pointer"
+                ?disabled=${this.exporting}
+                @click=${() => this.selectExportFormat(fmt)}
+              >
+                ${translateText(`replay_viewer.export_${fmt}`)}
               </button>`,
           )}
         </div>

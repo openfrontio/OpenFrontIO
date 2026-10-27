@@ -80,12 +80,14 @@ function viewer() {
     unverifiedNotice: boolean;
     classicFallback: boolean;
     growing: boolean;
+    partial: boolean;
     gameLength: number | null;
     playback: FakePlayback | null;
     applying: Promise<void>;
     start(source: unknown): Promise<void>;
     open(): Promise<void>;
     reportError(err: unknown, inReplay?: boolean): void;
+    exportReplay(format: string): Promise<void>;
     view: unknown;
     disconnectedCallback(): void;
   };
@@ -295,10 +297,51 @@ test("a desync while playing keeps what was processed watchable", async () => {
   expect(v.status).toBe("ready");
   expect(v.stoppedEarly).toBe("replay_viewer.unavailable_desync");
   expect(v.growing).toBe(false);
+  expect(v.partial).toBe(true);
   expect(playback.live).toBe(false);
   expect(playback.pause).not.toHaveBeenCalled();
   // A replay that isn't whole isn't kept.
   expect(replayStore.put).not.toHaveBeenCalled();
+});
+
+test("blocks export while growing or partial, persisting across banner dismissal", async () => {
+  const messages: { message: string; color: string; duration: number }[] = [];
+  const listener = (e: Event) =>
+    messages.push(
+      (e as CustomEvent<{ message: string; color: string; duration: number }>)
+        .detail,
+    );
+  window.addEventListener("show-message", listener);
+  try {
+    const { v, handlers } = await processing();
+    handlers.onAppend(FIRST);
+    await v.applying;
+    expect(v.growing).toBe(true);
+    expect(v.partial).toBe(false);
+
+    // Export while growing is blocked
+    await v.exportReplay("json");
+    expect(messages).toHaveLength(1);
+    expect(messages[0].color).toBe("red");
+    expect(messages[0].message).toBe("replay_viewer.export_incomplete");
+
+    // Desync occurs: processing stops early
+    handlers.onError("diverged at turn 3000", true);
+    await v.applying;
+    expect(v.growing).toBe(false);
+    expect(v.partial).toBe(true);
+
+    // Dismiss banner: stoppedEarly is cleared, but partial stays true
+    v.stoppedEarly = "";
+
+    // Export after banner dismissal is still blocked
+    await v.exportReplay("json");
+    expect(messages).toHaveLength(2);
+    expect(messages[1].color).toBe("red");
+    expect(messages[1].message).toBe("replay_viewer.export_incomplete");
+  } finally {
+    window.removeEventListener("show-message", listener);
+  }
 });
 
 test("a renderer failure stops processing and ignores later appends", async () => {
