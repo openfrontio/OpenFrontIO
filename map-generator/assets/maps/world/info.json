@@ -1,9 +1,9 @@
 {
+  "$schema": "../../../info.schema.json",
   "id": "World",
   "name": "World",
   "translation_key": "map.world",
   "categories": ["featured", "world"],
-  "multiplayer_frequency": 30,
   "forced_modifiers": ["isCrowded:50"],
   "featured_rank": 1,
   "nations": [
