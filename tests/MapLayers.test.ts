@@ -1,11 +1,11 @@
 import { GameMapSize, GameMapType } from "@openfront/engine-api/game/GameTypes";
 import type { MapFiles, MapLayer } from "@openfront/engine-api/game/MapFiles";
+import { MapInfoSchema } from "@openfront/engine-api/game/MapManifest";
 import { loadTerrainMap } from "@openfront/engine-lib/game/TerrainMapLoader";
 import type { GameMapLoader, MapData } from "@openfront/shared/GameMapLoader";
 import { describe, expect, test, vi } from "vitest";
 import { loadLayerImages } from "../src/client/controllers/MapLayerController";
 import { GraphicsOverridesSchema } from "../src/client/render/gl/GraphicsOverrides";
-import { validateLayer } from "./util/layerValidation";
 
 describe("Map layer feature", () => {
   describe("GraphicsOverridesSchema", () => {
@@ -119,215 +119,53 @@ describe("Map layer feature", () => {
   });
 
   describe("Layer validation rules", () => {
-    test("valid id is accepted", () => {
-      const seen = new Set<string>();
-      const errors = validateLayer(
-        { id: "forests", placement: "land" },
-        0,
-        "test",
-        seen,
-      );
-      expect(errors).toHaveLength(0);
+    const layers = (...entries: unknown[]) =>
+      MapInfoSchema.safeParse({
+        id: "Test",
+        name: "Test",
+        translation_key: "map.test",
+        categories: ["arcade"],
+        nations: [],
+        layers: entries,
+      });
+    const errorsOf = (...entries: unknown[]) =>
+      layers(...entries).error?.issues.map((i) => i.message) ?? [];
+
+    test.each([
+      { id: "forests", placement: "land" },
+      { id: "dense-forests", placement: "land" },
+      { id: "123", placement: "water" },
+      { id: "a", placement: "land", alpha: 0.5 },
+      { id: "a", placement: "land", alpha: 0 },
+      { id: "a", placement: "land", alpha: 1 },
+    ])("accepts %j", (layer) => {
+      expect(errorsOf(layer)).toEqual([]);
     });
 
-    test("hyphenated id is accepted", () => {
-      const seen = new Set<string>();
-      const errors = validateLayer(
-        { id: "dense-forests", placement: "land" },
-        0,
-        "test",
-        seen,
-      );
-      expect(errors).toHaveLength(0);
+    test.each([
+      [{ id: "my layer", placement: "land" }, "Invalid string"],
+      [{ id: "layer_id", placement: "land" }, "Invalid string"],
+      [{ id: "layer.id", placement: "land" }, "Invalid string"],
+      [{ id: "", placement: "land" }, "Invalid string"],
+      [{ id: "image", placement: "land" }, "reserved"],
+      [{ id: "clouds", placement: "air" }, "Invalid option"],
+      [{ id: "a", placement: "land", alpha: -0.1 }, "Too small"],
+      [{ id: "a", placement: "land", alpha: 1.5 }, "Too big"],
+      [{ id: "a", placement: "land", alpha: "0.5" }, "Invalid input"],
+      [{ id: "a", placement: "land", alpha: NaN }, "Invalid input"],
+      [{ id: "a", placement: "land", nukeable: "yes" }, "Invalid input"],
+      [{ id: "a", placement: "land", opacity: 1 }, "Unrecognized key"],
+    ])("rejects %j", (layer, message) => {
+      expect(errorsOf(layer).join("\n")).toContain(message);
     });
 
-    test("numeric id is accepted", () => {
-      const seen = new Set<string>();
-      const errors = validateLayer(
-        { id: "123", placement: "water" },
-        0,
-        "test",
-        seen,
-      );
-      expect(errors).toHaveLength(0);
-    });
-
-    test("id with spaces is rejected", () => {
-      const seen = new Set<string>();
-      const errors = validateLayer(
-        { id: "my layer", placement: "land" },
-        0,
-        "test",
-        seen,
-      );
-      expect(errors.length).toBeGreaterThan(0);
-      expect(errors[0]).toContain("alphanumeric");
-    });
-
-    test("id with underscores is rejected", () => {
-      const seen = new Set<string>();
-      const errors = validateLayer(
-        { id: "layer_id", placement: "land" },
-        0,
-        "test",
-        seen,
-      );
-      expect(errors.length).toBeGreaterThan(0);
-    });
-
-    test("id with dots is rejected", () => {
-      const seen = new Set<string>();
-      const errors = validateLayer(
-        { id: "layer.id", placement: "land" },
-        0,
-        "test",
-        seen,
-      );
-      expect(errors.length).toBeGreaterThan(0);
-    });
-
-    test("empty id is rejected", () => {
-      const seen = new Set<string>();
-      const errors = validateLayer(
-        { id: "", placement: "land" },
-        0,
-        "test",
-        seen,
-      );
-      expect(errors.some((e) => e.includes("must not be empty"))).toBe(true);
-    });
-
-    test("reserved id 'image' is rejected", () => {
-      const seen = new Set<string>();
-      const errors = validateLayer(
-        { id: "image", placement: "land" },
-        0,
-        "test",
-        seen,
-      );
-      expect(errors.some((e) => e.includes("reserved"))).toBe(true);
-    });
-
-    test("duplicate id is rejected", () => {
-      const seen = new Set<string>();
-      seen.add("forests");
-      const errors = validateLayer(
-        { id: "forests", placement: "land" },
-        1,
-        "test",
-        seen,
-      );
-      expect(errors.some((e) => e.includes("duplicate"))).toBe(true);
-    });
-
-    test("invalid placement 'air' is rejected", () => {
-      const seen = new Set<string>();
-      const errors = validateLayer(
-        { id: "clouds", placement: "air" },
-        0,
-        "test",
-        seen,
-      );
-      expect(errors.some((e) => e.includes("must be"))).toBe(true);
-    });
-
-    test("valid placements 'land' and 'water' are accepted", () => {
-      const seen1 = new Set<string>();
+    test("rejects duplicate ids", () => {
       expect(
-        validateLayer({ id: "a", placement: "land" }, 0, "test", seen1),
-      ).toHaveLength(0);
-      const seen2 = new Set<string>();
-      expect(
-        validateLayer({ id: "b", placement: "water" }, 0, "test", seen2),
-      ).toHaveLength(0);
-    });
-
-    test("valid alpha value is accepted", () => {
-      const seen = new Set<string>();
-      expect(
-        validateLayer(
-          { id: "a", placement: "land", alpha: 0.5 },
-          0,
-          "test",
-          seen,
+        errorsOf(
+          { id: "forests", placement: "land" },
+          { id: "forests", placement: "water" },
         ),
-      ).toHaveLength(0);
-    });
-
-    test("alpha boundary values are accepted", () => {
-      const seen1 = new Set<string>();
-      expect(
-        validateLayer(
-          { id: "a", placement: "land", alpha: 0 },
-          0,
-          "test",
-          seen1,
-        ),
-      ).toHaveLength(0);
-      const seen2 = new Set<string>();
-      expect(
-        validateLayer(
-          { id: "b", placement: "land", alpha: 1 },
-          0,
-          "test",
-          seen2,
-        ),
-      ).toHaveLength(0);
-    });
-
-    test("negative alpha is rejected", () => {
-      const seen = new Set<string>();
-      const errors = validateLayer(
-        { id: "a", placement: "land", alpha: -0.1 },
-        0,
-        "test",
-        seen,
-      );
-      expect(errors.some((e) => e.includes("between 0 and 1"))).toBe(true);
-    });
-
-    test("alpha greater than 1 is rejected", () => {
-      const seen = new Set<string>();
-      const errors = validateLayer(
-        { id: "a", placement: "land", alpha: 1.5 },
-        0,
-        "test",
-        seen,
-      );
-      expect(errors.some((e) => e.includes("between 0 and 1"))).toBe(true);
-    });
-
-    test("non-numeric alpha is rejected", () => {
-      const seen = new Set<string>();
-      const errors = validateLayer(
-        { id: "a", placement: "land", alpha: "0.5" },
-        0,
-        "test",
-        seen,
-      );
-      expect(errors.some((e) => e.includes("must be a finite number"))).toBe(
-        true,
-      );
-    });
-
-    test("NaN alpha is rejected", () => {
-      const seen = new Set<string>();
-      const errors = validateLayer(
-        { id: "a", placement: "land", alpha: NaN },
-        0,
-        "test",
-        seen,
-      );
-      expect(errors.some((e) => e.includes("must be a finite number"))).toBe(
-        true,
-      );
-    });
-
-    test("undefined alpha is accepted", () => {
-      const seen = new Set<string>();
-      expect(
-        validateLayer({ id: "a", placement: "land" }, 0, "test", seen),
-      ).toHaveLength(0);
+      ).toContain("layer ids must be unique");
     });
   });
 
