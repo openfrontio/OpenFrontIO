@@ -33,6 +33,7 @@ import { isDesktopShell } from "./DesktopShell";
 import { GameMetrics } from "./GameMetrics";
 import { createRenderer, GameRenderer } from "./hud/GameRenderer";
 import { goldRateTracker } from "./hud/layers/lib/GoldRateTracker";
+import { UnitDisplay } from "./hud/layers/UnitDisplay";
 import { showInGameAlert } from "./InGameModal";
 import {
   AutoUpgradeEvent,
@@ -901,12 +902,25 @@ async function createClientGame(
       `creating private game got difficulty: ${lobbyConfig.gameStartInfo.config.difficulty}`,
     );
 
+    const inputHandler = new InputHandler(
+      gameView,
+      gameRenderer.uiState,
+      inputOverlay,
+      eventBus,
+    );
+    const unitDisplay = document.querySelector(
+      "unit-display",
+    ) as UnitDisplay | null;
+    if (unitDisplay) {
+      unitDisplay.inputHandler = inputHandler;
+    }
+
     return new ClientGameRunner(
       lobbyConfig,
       clientID,
       eventBus,
       gameRenderer,
-      new InputHandler(gameView, gameRenderer.uiState, inputOverlay, eventBus),
+      inputHandler,
       transport,
       worker,
       gameView,

@@ -1413,9 +1413,9 @@ export class InputHandler {
     this.eventBus.emit(new ContextMenuEvent(event.clientX, event.clientY));
   }
 
-  private setGhostStructure(
+  public setGhostStructure(
     ghostStructure: PlayerBuildableUnitType | null,
-    source: "increase" | "decrease" | "hotkey" = "hotkey",
+    source: "increase" | "decrease" | "GUIclick" | "hotkey" = "hotkey",
   ) {
     if (
       this.uiState.ghostStructure === ghostStructure &&
@@ -1423,6 +1423,7 @@ export class InputHandler {
     ) {
       const currentMultiplier = this.uiState.upgradeMultiplier ?? 1;
       switch (source) {
+        case "GUIclick":
         case "hotkey":
           // first jump goes 1 -> 5 as before
           this.uiState.upgradeMultiplier =
