@@ -855,4 +855,26 @@ describe("land a nuke severs from the main body is annexed", () => {
     expect(defenderTilesIn(edgeBody)).toBe(bodyBefore);
     expect(defenderTilesIn(edgeStrip)).toBe(stripBefore);
   });
+
+  test("a pinched enclave with a checkerboard border surrounded by one enemy with no fallout is annexed", () => {
+    // An enclave surrounded by an enemy on all sides, with a 2x2 diagonal checkerboard pattern on its border and zero fallout
+    const enclave = (x: number, y: number) => {
+      if (x < 50 || x > 60 || y < 50 || y > 60) return false;
+      // 2x2 checkerboard notch along the border
+      if ((x === 50 || x === 51) && (y === 50 || y === 51)) {
+        return (x + y) % 2 === 0;
+      }
+      return true;
+    };
+    paint(rect(50, 50, 60, 60));
+    startClusterChecks();
+    // Mid-game attack creates the 2x2 checkerboard notch along the border
+    attacker.conquer(game.ref(50, 51));
+    attacker.conquer(game.ref(51, 50));
+    expect(defenderTilesIn(enclave)).toBeGreaterThan(0);
+
+    runClusterChecks();
+
+    expect(defenderTilesIn(enclave)).toBe(0);
+  });
 });
