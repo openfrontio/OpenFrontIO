@@ -113,8 +113,11 @@ describe("createRenderer", () => {
     const addSpy = vi.spyOn(window, "addEventListener");
     const removeSpy = vi.spyOn(window, "removeEventListener");
     renderer.initialize();
-    expect(addSpy).toHaveBeenCalledWith("resize", expect.any(Function));
+    const resizeListener = addSpy.mock.calls.find(
+      ([type]) => type === "resize",
+    )?.[1];
+    expect(resizeListener).toEqual(expect.any(Function));
     renderer.dispose();
-    expect(removeSpy).toHaveBeenCalledWith("resize", expect.any(Function));
+    expect(removeSpy).toHaveBeenCalledWith("resize", resizeListener);
   });
 });
