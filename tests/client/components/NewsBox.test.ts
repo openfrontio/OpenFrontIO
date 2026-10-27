@@ -2,6 +2,7 @@ import newsItems from "../../../resources/news.json";
 import {
   filterNewsByPlatform,
   getVisibleNewsItems,
+  NewsBox,
   NewsItem,
 } from "../../../src/client/components/NewsBox";
 
@@ -148,5 +149,13 @@ describe("NewsBox", () => {
       const items = getVisibleNewsItems(allItems);
       expect(items.some((i) => i.type === "tournament")).toBe(true);
     });
+  });
+
+  it("does not start cycle timer if disconnected before loadNews resolves", async () => {
+    const el = new NewsBox() as any;
+    document.body.appendChild(el);
+    el.remove();
+    await new Promise((r) => setTimeout(r, 10));
+    expect(el.cycleTimer).toBeNull();
   });
 });

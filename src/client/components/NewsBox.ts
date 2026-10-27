@@ -73,6 +73,7 @@ export class NewsBox extends LitElement {
         getNews(),
         import("../Markdown"),
       ]);
+      if (!this.isConnected) return;
       this.renderMarkdown = renderMarkdown;
       const allItems = filterNewsByPlatform(news, clientPlatform());
       // Reset stale dismissed list when all items would be hidden
