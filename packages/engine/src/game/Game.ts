@@ -397,6 +397,7 @@ export interface Player extends PlayerLike {
   buildableUnits(
     tile: TileRef | null,
     units?: readonly PlayerBuildableUnitType[],
+    includeBuildPreview?: boolean,
   ): BuildableUnit[];
   canBuild(
     type: UnitType,

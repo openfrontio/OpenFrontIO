@@ -628,6 +628,7 @@
     "not_logged_in": "Not logged in",
     "paste": "Paste",
     "preset_max": "Max",
+    "scroll_to_top": "Scroll to top",
     "send": "Send",
     "slider_tooltip": "{percent}% • {amount}",
     "summary_keep": "Keep",
@@ -754,6 +755,7 @@
   },
   "detailed_view": {
     "capacity": "Capacity",
+    "default_profile": "Default profile",
     "delete_profile": "Delete",
     "filters": "Filters",
     "filters_with_count": "Filters ({count})",
@@ -768,6 +770,7 @@
     "mode_ffa": "FFA",
     "mode_hvn": "Humans vs Nations",
     "mode_teams": "Teams",
+    "no_default_profile": "No default profile",
     "no_lobbies": "No lobbies match your filters.",
     "no_profile": "No profile",
     "pane_empty": "No lobbies",
@@ -1029,7 +1032,8 @@
     "start": "Start Game",
     "starting": "Starting…",
     "starting_gold": "Starting Gold (Millions)",
-    "water_nukes": "Water nukes"
+    "water_nukes": "Water nukes",
+    "win_threshold": "Win threshold (%)"
   },
   "game_starting_modal": {
     "code_license": "Code licensed under AGPL-3.0 (no warranty)",
@@ -2735,6 +2739,8 @@
     "performance_overlay_desc": "Toggle the performance overlay. When enabled, the performance overlay will be displayed. Press shift-D during game to toggle.",
     "performance_overlay_label": "Performance Overlay",
     "press_a_key": "Press a key",
+    "prevent_stacking": "Prevent Building Stacking",
+    "prevent_stacking_desc": "Hold to build a new structure instead of upgrading a nearby one. Normal placement restrictions still apply.",
     "quick_chat": "Quick Chat",
     "quick_chat_desc": "Open quick chat for the player whose tile is under your cursor.",
     "render_debug_gui": "Render Debug GUI",
