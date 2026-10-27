@@ -1,5 +1,6 @@
 import { LitElement, PropertyValues, html } from "lit";
 import { customElement, property, query, state } from "lit/decorators.js";
+import { prefersReducedMotion } from "../../utilities/ReducedMotion";
 import { translateText } from "../../Utils";
 import { documentStylesSheet } from "./SharedStyles";
 
@@ -53,6 +54,13 @@ export class OModal extends LitElement {
     this.scrollingToTop = false;
     this.showScrollTopButton = false;
     this.lastScrollTop = 0;
+  }
+
+  public syncScrollToTop(): void {
+    const scrollTop = this.scrollContainer?.scrollTop ?? 0;
+    this.scrollingToTop = false;
+    this.lastScrollTop = scrollTop;
+    this.showScrollTopButton = this.showScrollToTop && scrollTop > 200;
   }
 
   public open() {
@@ -134,7 +142,12 @@ export class OModal extends LitElement {
     this.scrollingToTop = true;
     this.showScrollTopButton = false;
     this.lastScrollTop = this.scrollContainer?.scrollTop ?? 0;
-    this.scrollContainer?.scrollTo({ top: 0, behavior: "smooth" });
+    // The button unmounts on this click; keep keyboard focus inside the modal.
+    this.scrollContainer?.focus({ preventScroll: true });
+    this.scrollContainer?.scrollTo({
+      top: 0,
+      behavior: prefersReducedMotion() ? "auto" : "smooth",
+    });
   }
 
   disconnectedCallback() {
@@ -253,9 +266,10 @@ export class OModal extends LitElement {
             ${hasTabs ? this.renderTabs() : html``}
             <div
               data-modal-scroll
+              tabindex="-1"
               @scroll=${this.handleScroll}
               @scrollend=${this.handleScrollEnd}
-              class="flex-1 min-h-0 overflow-y-auto ${
+              class="flex-1 min-h-0 overflow-y-auto outline-none ${
                 this.showScrollToTop ? "pb-16" : ""
               }"
             >

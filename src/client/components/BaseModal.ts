@@ -220,6 +220,7 @@ export abstract class BaseModal extends LitElement {
           window.showPage?.(pageId);
         }
         this.style.pointerEvents = "auto";
+        this.modalEl?.syncScrollToTop();
       } else {
         this.modalEl?.open();
       }
