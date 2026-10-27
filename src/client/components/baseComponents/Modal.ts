@@ -1,5 +1,7 @@
 import { LitElement, PropertyValues, html } from "lit";
 import { customElement, property, query, state } from "lit/decorators.js";
+import { prefersReducedMotion } from "../../utilities/ReducedMotion";
+import { translateText } from "../../Utils";
 import { documentStylesSheet } from "./SharedStyles";
 
 export type OModalTab = { key: string; label: string };
@@ -41,7 +43,25 @@ export class OModal extends LitElement {
   @property({ attribute: false })
   public onTabChange?: (key: string) => void;
 
+  @property({ type: Boolean }) public showScrollToTop = false;
+  @state() private showScrollTopButton = false;
+  private scrollingToTop = false;
+  private lastScrollTop = 0;
+
   public onClose?: () => void;
+
+  public resetScrollToTop(): void {
+    this.scrollingToTop = false;
+    this.showScrollTopButton = false;
+    this.lastScrollTop = 0;
+  }
+
+  public syncScrollToTop(): void {
+    const scrollTop = this.scrollContainer?.scrollTop ?? 0;
+    this.scrollingToTop = false;
+    this.lastScrollTop = scrollTop;
+    this.showScrollTopButton = this.showScrollToTop && scrollTop > 200;
+  }
 
   public open() {
     if (!this.isModalOpen) {
@@ -56,6 +76,7 @@ export class OModal extends LitElement {
   public close() {
     if (this.isModalOpen) {
       this.isModalOpen = false;
+      this.resetScrollToTop();
       this.onClose?.();
       if (!this.inline) {
         OModal.openCount = Math.max(0, OModal.openCount - 1);
@@ -93,6 +114,40 @@ export class OModal extends LitElement {
     if (this.scrollContainer) {
       this.scrollContainer.scrollTop = scrollTop;
     }
+  }
+
+  private handleScroll(e: Event) {
+    if (!this.showScrollToTop) return;
+    const target = e.currentTarget as HTMLElement;
+    const { scrollTop } = target;
+    if (this.scrollingToTop) {
+      if (scrollTop > this.lastScrollTop || scrollTop <= 200) {
+        this.scrollingToTop = false;
+      } else {
+        this.lastScrollTop = scrollTop;
+        return;
+      }
+    }
+    this.lastScrollTop = scrollTop;
+    this.showScrollTopButton = scrollTop > 200;
+  }
+
+  private handleScrollEnd(e: Event) {
+    if (!this.showScrollToTop) return;
+    this.scrollingToTop = false;
+    this.showScrollTopButton = (e.currentTarget as HTMLElement).scrollTop > 200;
+  }
+
+  private scrollToTop() {
+    this.scrollingToTop = true;
+    this.showScrollTopButton = false;
+    this.lastScrollTop = this.scrollContainer?.scrollTop ?? 0;
+    // The button unmounts on this click; keep keyboard focus inside the modal.
+    this.scrollContainer?.focus({ preventScroll: true });
+    this.scrollContainer?.scrollTo({
+      top: 0,
+      behavior: prefersReducedMotion() ? "auto" : "smooth",
+    });
   }
 
   disconnectedCallback() {
@@ -209,9 +264,40 @@ export class OModal extends LitElement {
           <section class="${sectionClass}">
             <slot name="header"></slot>
             ${hasTabs ? this.renderTabs() : html``}
-            <div data-modal-scroll class="flex-1 min-h-0 overflow-y-auto">
+            <div
+              data-modal-scroll
+              tabindex="-1"
+              @scroll=${this.handleScroll}
+              @scrollend=${this.handleScrollEnd}
+              class="flex-1 min-h-0 overflow-y-auto outline-none ${
+                this.showScrollToTop ? "pb-16" : ""
+              }"
+            >
               <slot></slot>
             </div>
+            ${
+              this.showScrollToTop && this.showScrollTopButton
+                ? html`<button
+                    type="button"
+                    aria-label=${translateText("common.scroll_to_top")}
+                    class="absolute bottom-4 right-4 z-20 flex h-10 w-10 items-center justify-center rounded-full bg-black/80 border border-white/20 text-white shadow-lg backdrop-blur-md transition-all hover:bg-white/20 active:scale-95 cursor-pointer"
+                    @click=${this.scrollToTop}
+                  >
+                    <svg
+                      class="h-5 w-5 stroke-2"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                    >
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        d="M12 19V5M5 12l7-7 7 7"
+                      />
+                    </svg>
+                  </button>`
+                : html``
+            }
           </section>
         </div>
       </aside>
