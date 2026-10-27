@@ -45,11 +45,6 @@ import "../../src/client/hud/layers/GameRightSidebar";
 import type { GameRightSidebar } from "../../src/client/hud/layers/GameRightSidebar";
 import type { GameView } from "../../src/client/view";
 
-const realLocationDescriptor = Object.getOwnPropertyDescriptor(
-  window,
-  "location",
-)!;
-
 type TestSidebar = GameRightSidebar & { updateComplete: Promise<unknown> };
 
 interface CreateGameOpts {
@@ -83,25 +78,6 @@ function fakeGame(opts: CreateGameOpts = {}): GameView {
 describe("GameRightSidebar share button", () => {
   let sidebar: TestSidebar | undefined;
 
-  function stubLocation(href: string) {
-    const url = new URL(href);
-    const origin =
-      url.protocol === "app:" ? `${url.protocol}//${url.hostname}` : url.origin;
-    Object.defineProperty(window, "location", {
-      configurable: true,
-      value: {
-        href,
-        origin,
-        protocol: url.protocol,
-        pathname: url.pathname,
-        hash: url.hash,
-        search: url.search,
-        host: url.host,
-        hostname: url.hostname,
-      },
-    });
-  }
-
   function setBootstrapConfig(
     overrides: { jwtAudience?: string; serverHost?: string } = {},
   ) {
@@ -118,7 +94,7 @@ describe("GameRightSidebar share button", () => {
   }
 
   beforeEach(() => {
-    stubLocation("https://openfront.io/");
+    vi.spyOn(ClientEnv, "shareOrigin").mockReturnValue("https://openfront.io");
     setBootstrapConfig({ serverHost: "openfront.io" });
     copyToClipboardMock.mockClear();
     showToastMock.mockClear();
@@ -129,7 +105,6 @@ describe("GameRightSidebar share button", () => {
   afterEach(() => {
     sidebar?.remove();
     sidebar = undefined;
-    Object.defineProperty(window, "location", realLocationDescriptor);
     delete (window as { BOOTSTRAP_CONFIG?: unknown }).BOOTSTRAP_CONFIG;
     ClientEnv.reset();
     vi.restoreAllMocks();
@@ -217,7 +192,9 @@ describe("GameRightSidebar share button", () => {
   });
 
   it("uses share origin from desktop shell instead of app://", async () => {
-    stubLocation("app://openfront/index.html");
+    const shareOriginSpy = vi
+      .spyOn(ClientEnv, "shareOrigin")
+      .mockReturnValue("https://openfront.io");
     setBootstrapConfig({ serverHost: "openfront.io" });
 
     const gameId = "desk456789";
@@ -230,6 +207,7 @@ describe("GameRightSidebar share button", () => {
     shareBtn!.click();
     await new Promise((resolve) => setTimeout(resolve, 0));
 
+    expect(shareOriginSpy).toHaveBeenCalled();
     expect(copyToClipboardMock).toHaveBeenCalledTimes(1);
     const copiedUrl = copyToClipboardMock.mock.calls[0][0];
     expect(copiedUrl).toBe(`https://openfront.io${ClientEnv.gamePath(gameId)}`);
