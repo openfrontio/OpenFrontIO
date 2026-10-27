@@ -753,6 +753,7 @@
   },
   "detailed_view": {
     "capacity": "Capacity",
+    "default_profile": "Default profile",
     "delete_profile": "Delete",
     "filters": "Filters",
     "filters_with_count": "Filters ({count})",
@@ -767,6 +768,7 @@
     "mode_ffa": "FFA",
     "mode_hvn": "Humans vs Nations",
     "mode_teams": "Teams",
+    "no_default_profile": "No default profile",
     "no_lobbies": "No lobbies match your filters.",
     "no_profile": "No profile",
     "pane_empty": "No lobbies",
