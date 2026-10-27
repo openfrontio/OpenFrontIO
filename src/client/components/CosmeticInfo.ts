@@ -2,6 +2,7 @@ import { html, LitElement, nothing } from "lit";
 import { customElement, property } from "lit/decorators.js";
 import { translateCosmetic } from "../Cosmetics";
 import { translateText } from "../Utils";
+import { cosmeticAiLabelKey } from "./CosmeticPresentation";
 
 const rarityColors: Record<string, string> = {
   common: "text-white/60",
@@ -15,7 +16,8 @@ const rarityColors: Record<string, string> = {
 export class CosmeticInfo extends LitElement {
   @property({ type: String }) artist?: string;
   // The artist's own declaration, from the catalogue. Undefined where nobody was asked — which is
-  // every cosmetic added before the question existed — and that reads as nothing at all here.
+  // every cosmetic added before the question existed — and that reads as "unknown" beside an
+  // artist credit (see cosmeticAiLabelKey).
   @property({ type: Boolean }) aiDisclosed?: boolean;
   @property({ type: String }) rarity?: string;
   @property({ type: String }) colorPalette?: string;
@@ -42,6 +44,7 @@ export class CosmeticInfo extends LitElement {
       return nothing;
     }
 
+    const aiLabelKey = cosmeticAiLabelKey(this.aiDisclosed, this.artist);
     const rarityColor = rarityColors[this.rarity ?? ""] ?? "text-white/70";
     // The strip spans the card so the bubble (right-aligned under the "?")
     // can be capped at the card's width and wrap. Sized to its longest line,
@@ -124,11 +127,9 @@ export class CosmeticInfo extends LitElement {
             : nothing
         }
         ${
-          // `=== true` on purpose: false (declared no AI) and undefined (never asked) both render
-          // nothing, so the bubble only ever carries a declaration that was actually made.
-          this.aiDisclosed === true
+          aiLabelKey
             ? html`<div class="text-white/70">
-                ${translateText("cosmetics.ai_label")}
+                ${translateText(aiLabelKey)}
               </div>`
             : nothing
         }

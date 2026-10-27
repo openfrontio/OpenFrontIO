@@ -432,6 +432,7 @@ export class InputHandler {
 
   /** Re-read the player's keybinds and rebuild the key dispatch table. */
   private buildKeybindTable() {
+    this.uiState.preventStacking = false;
     this.keybinds = this.userSettings.keybinds(Platform.isMac);
     this.keybindAndEvent = [];
 
@@ -671,6 +672,7 @@ export class InputHandler {
       "blur",
       () => {
         this.activeKeys.clear();
+        this.uiState.preventStacking = false;
         this.zoomKeysHeldBeforeControl.clear();
         this.shiftHeld = false;
         if (this.alternateView) {
@@ -785,6 +787,9 @@ export class InputHandler {
           e.preventDefault();
         }
 
+        if (this.keybindMatchesEvent(e, this.keybinds.preventStacking)) {
+          this.uiState.preventStacking = true;
+        }
         if (this.keybindMatchesEvent(e, this.keybinds.toggleView)) {
           e.preventDefault();
           if (!this.alternateView) {
@@ -916,6 +921,17 @@ export class InputHandler {
     window.addEventListener(
       "keyup",
       (e) => {
+        const hold = this.parseKeybind(this.keybinds.preventStacking);
+        // macOS can swallow H's keyup while Cmd is held. Reset on Cmd release
+        // before the text-input guard as focus may have moved into a menu.
+        if (
+          e.code === hold.code ||
+          (hold.shift && !e.shiftKey) ||
+          e.code === "MetaLeft" ||
+          e.code === "MetaRight"
+        ) {
+          this.uiState.preventStacking = false;
+        }
         const isTextInput = this.isTextInputTarget(e.target);
         if (isTextInput && !this.activeKeys.has(e.code)) {
           return;
@@ -1732,6 +1748,7 @@ export class InputHandler {
     // renderer has already removed.
     this.resetPointerState();
     this.activeKeys.clear();
+    this.uiState.preventStacking = false;
     this.zoomKeysHeldBeforeControl.clear();
     this.shiftHeld = false;
     this.emojiTableOpen = false;

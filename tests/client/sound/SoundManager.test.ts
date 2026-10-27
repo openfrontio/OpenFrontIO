@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const howlInstances: any[] = [];
 let nextPlayId = 1;
+const originalMatches = Element.prototype.matches;
 const { howlerVolume } = vi.hoisted(() => ({ howlerVolume: vi.fn() }));
 
 vi.mock("howler", () => {
@@ -99,20 +100,41 @@ const musicHowls = () =>
 /** The gameplay track the manager currently holds: the last one it built. */
 const currentMusic = () => musicHowls()[musicHowls().length - 1];
 
+/** Stands in for a browser that does (or does not) support the selector. */
+function setVolumeLocked(result: boolean | "unsupported") {
+  vi.spyOn(Element.prototype, "matches").mockImplementation(function (
+    this: Element,
+    selector: string,
+  ) {
+    if (selector !== ":volume-locked") {
+      return originalMatches.call(this, selector);
+    }
+    if (result === "unsupported") {
+      throw new DOMException("Unknown pseudo-class", "SyntaxError");
+    }
+    return result;
+  });
+}
+
 /**
- * Runs `body` against a SoundManager built as though this were iOS.
+ * Runs `body` against a SoundManager built as though this were iOS. By default
+ * the selector is unsupported, exercising the iOS fallback for Safari < 15.4.
  *
- * Rebuilt rather than flipped in place, because the platform is read when the
- * music Howl is constructed.
+ * Rebuilt rather than flipped in place, because the capability is read when
+ * the music Howl is constructed.
  */
-function onIOS(body: () => void, options?: { music?: number }) {
+function onIOS(
+  body: () => void,
+  options?: { music?: number; volumeLocked?: boolean | "unsupported" },
+) {
   soundManager.dispose();
   mixer.dispose();
   howlInstances.length = 0;
   const previousIsIOS = Platform.isIOS;
   Platform.isIOS = true;
+  setVolumeLocked(options?.volumeLocked ?? "unsupported");
   try {
-    build(options);
+    build({ music: options?.music });
     body();
   } finally {
     Platform.isIOS = previousIsIOS;
@@ -222,12 +244,31 @@ describe("background music", () => {
     expect(currentMusic().html5).toBe(true);
   });
 
-  it("uses Web Audio on iOS, where a streamed track cannot be turned down", () => {
+  it("uses Web Audio on older iOS without :volume-locked", () => {
     onIOS(() => {
-      // iOS ignores volume writes to a media element, so the streamed track
-      // could not be muted at all there (#5457).
+      // Before Safari 15.4 the selector throws, so the iOS fallback applies:
+      // a streamed track could not be muted at all there (#5457).
       expect(currentMusic().html5).toBe(false);
     });
+  });
+
+  it("uses Web Audio when :volume-locked reports locked volume off iOS", () => {
+    setVolumeLocked(true);
+    soundManager.dispose();
+    mixer.dispose();
+    howlInstances.length = 0;
+    build();
+
+    expect(currentMusic().html5).toBe(false);
+  });
+
+  it("streams on iOS when :volume-locked reports unlocked volume", () => {
+    onIOS(
+      () => {
+        expect(currentMusic().html5).toBe(true);
+      },
+      { volumeLocked: false },
+    );
   });
 
   it("never fetches the track from the constructor", () => {
