@@ -118,7 +118,6 @@
     "num_land_tiles": 452399,
     "width": 2372
   },
-  "multiplayer_frequency": 4,
   "name": "Channel Islands",
   "nations": [
     {
@@ -342,7 +341,6 @@
       "name": "Solvang"
     }
   ],
-  "team_frequency": 7,
   "themes": ["north_america", "western"],
   "translation_key": "map.channelislands"
 }

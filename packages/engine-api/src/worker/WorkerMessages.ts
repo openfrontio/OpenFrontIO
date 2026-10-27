@@ -149,6 +149,8 @@ export interface PlayerBuildablesMessage extends BaseWorkerMessage {
   x?: number;
   y?: number;
   units?: readonly PlayerBuildableUnitType[];
+  // Include placement rails even when an upgrade target is also available.
+  includeBuildPreview?: boolean;
 }
 
 export interface PlayerBuildablesResultMessage extends BaseWorkerMessage {
