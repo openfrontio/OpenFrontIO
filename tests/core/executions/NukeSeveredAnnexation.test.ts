@@ -877,4 +877,27 @@ describe("land a nuke severs from the main body is annexed", () => {
 
     expect(defenderTilesIn(enclave)).toBe(0);
   });
+
+  test("two diagonally joined blobs where one contains an unsealed hole only annexes the sealed blob", () => {
+    // Defender has Blob A (sealed) and Blob B (contains an unsealed pocket), touching only at a diagonal corner
+    const blobA = rect(50, 50, 55, 55);
+    const blobB = rect(56, 56, 62, 62);
+    paint(union(blobA, blobB));
+    startClusterChecks();
+
+    // Create an unsealed pocket of clean unclaimed land inside Blob B
+    for (let x = 58; x <= 60; x++) {
+      for (let y = 58; y <= 60; y++) {
+        defender.relinquish(game.ref(x, y));
+      }
+    }
+
+    expect(defenderTilesIn(blobA)).toBeGreaterThan(0);
+    expect(defenderTilesIn(blobB)).toBeGreaterThan(0);
+
+    runClusterChecks();
+
+    expect(defenderTilesIn(blobA)).toBe(0);
+    expect(defenderTilesIn(blobB)).toBeGreaterThan(0);
+  });
 });

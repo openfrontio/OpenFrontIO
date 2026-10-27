@@ -933,37 +933,53 @@ export class PlayerExecution implements Execution {
       }
     }
 
-    // The checks above only ever looked at this one cluster of border tiles,
-    // but the fill below hands over the whole territory the cluster sits on.
-    // Those are different sets: every hole in a territory — an enemy enclave,
-    // a nuke crater — gives it another border cluster, so a cluster that
-    // passes can be wrapped around a hole in the middle of a wide open
-    // empire. Verify the land actually changing hands is sealed in.
-    if (!this.isEnclosed(firstTile, minX, minY, maxX, maxY)) {
-      return false;
-    }
-
     const capturing = knownCaptor ?? this.getCapturingPlayer(cluster);
     if (capturing === null) {
       return false;
     }
 
-    const tiles = this.floodFillWithGen(
-      this.bumpGeneration(),
-      this.traversalState().visited,
-      cluster,
-      false,
-      (tile) => this.mg.ownerID(tile) === this.player.smallID(),
-    );
+    const state = this.traversalState();
+    const floodGen = this.bumpGeneration();
+    const visited = state.visited;
+    let anyRemoved = false;
 
-    if (this.player.numTilesOwned() === tiles.length) {
-      this.mg.conquerPlayer(capturing, this.player);
+    for (let i = 0; i < cluster.length; i++) {
+      if (!this.player.isAlive()) break;
+      const t = cluster[i];
+      if (
+        visited[t] === floodGen ||
+        this.mg.ownerID(t) !== this.player.smallID()
+      ) {
+        continue;
+      }
+
+      // The checks above only ever looked at this one cluster of border tiles,
+      // but the fill below hands over the whole territory the cluster sits on.
+      // Verify this specific 4-way component is sealed in before conquering it.
+      if (!this.isEnclosed(t, minX, minY, maxX, maxY)) {
+        continue;
+      }
+
+      const tiles = this.floodFillWithGen(
+        floodGen,
+        visited,
+        [t],
+        false,
+        (tile) => this.mg.ownerID(tile) === this.player.smallID(),
+      );
+
+      if (tiles.length > 0) {
+        anyRemoved = true;
+        if (this.player.numTilesOwned() === tiles.length) {
+          this.mg.conquerPlayer(capturing, this.player);
+        }
+        for (const tile of tiles) {
+          capturing.conquer(tile);
+        }
+      }
     }
 
-    for (const tile of tiles) {
-      capturing.conquer(tile);
-    }
-    return true;
+    return anyRemoved;
   }
 
   /**
