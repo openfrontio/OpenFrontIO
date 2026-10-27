@@ -27,10 +27,7 @@ export const LOBBY_SOURCES: LobbySourceFilter[] = ["public", "hosted"];
  */
 export const NAMED_TEAM_CONFIGS = [Duos, Trios, Quads] as const;
 export const NUMERIC_TEAM_CONFIGS = ["2", "3", "4", "5", "6", "7", "8"];
-const TEAM_CONFIGS: string[] = [
-  ...NAMED_TEAM_CONFIGS,
-  ...NUMERIC_TEAM_CONFIGS,
-];
+const TEAM_CONFIGS: string[] = [...NAMED_TEAM_CONFIGS, ...NUMERIC_TEAM_CONFIGS];
 
 export interface LobbyFilters {
   /** Empty array means "no restriction" for every multi-select below. */
@@ -163,10 +160,7 @@ function withinRange(
   return true;
 }
 
-function matchesFilters(
-  lobby: PublicGameInfo,
-  filters: LobbyFilters,
-): boolean {
+function matchesFilters(lobby: PublicGameInfo, filters: LobbyFilters): boolean {
   const facts = lobbyFacts(lobby);
 
   if (filters.modes.length > 0 && !filters.modes.includes(facts.mode)) {

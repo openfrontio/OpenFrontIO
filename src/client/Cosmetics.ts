@@ -927,9 +927,7 @@ export function prewarmCosmetics(): Promise<void> {
   );
 }
 
-async function resolveFlagUrl(
-  flagRef: string,
-): Promise<string | undefined> {
+async function resolveFlagUrl(flagRef: string): Promise<string | undefined> {
   if (flagRef.startsWith("flag:")) {
     const key = flagRef.slice("flag:".length);
     const cosmetics = await fetchCosmetics();

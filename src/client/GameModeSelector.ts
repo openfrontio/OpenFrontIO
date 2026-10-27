@@ -162,9 +162,7 @@ export function shouldBlockMultiplayerAction(
  * about the game server behind it. The update state is not either -- a
  * pending update is not "offline".
  */
-function lobbyFeedSuspended(
-  session: DesktopSessionState | null,
-): boolean {
+function lobbyFeedSuspended(session: DesktopSessionState | null): boolean {
   return session !== null && !multiplayerAllowedForSession(session);
 }
 
