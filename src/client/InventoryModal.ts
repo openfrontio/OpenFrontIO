@@ -99,6 +99,7 @@ export class InventoryModal extends BaseModal {
   }));
   protected modalConfig() {
     return {
+      showScrollToTop: true,
       hideTabs: true,
       tabs: [
         { key: "skins", label: translateText("store.patterns") },

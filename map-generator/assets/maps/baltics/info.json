@@ -3,7 +3,6 @@
   "name": "Baltics",
   "translation_key": "map.baltics",
   "categories": ["europe"],
-  "multiplayer_frequency": 5,
   "nations": [
     {
       "coordinates": [10, 220],

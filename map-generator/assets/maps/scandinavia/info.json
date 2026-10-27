@@ -3,7 +3,6 @@
   "name": "Scandinavia",
   "translation_key": "map.scandinavia",
   "categories": ["europe"],
-  "multiplayer_frequency": 7,
   "nations": [
     {
       "coordinates": [419, 1426],

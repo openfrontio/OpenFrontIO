@@ -3,7 +3,6 @@
   "name": "Deglaciated Antarctica",
   "translation_key": "map.deglaciatedantarctica",
   "categories": ["antarctica", "fictional"],
-  "multiplayer_frequency": 4,
   "nations": [
     {
       "coordinates": [1545, 785],

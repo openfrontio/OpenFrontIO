@@ -3,7 +3,6 @@
   "name": "Rio de Janeiro",
   "translation_key": "map.riodejaneiro",
   "categories": ["south_america", "new"],
-  "multiplayer_frequency": 4,
   "nations": [
     {
       "name": "Niterói",
@@ -156,5 +155,21 @@
       "flag": "br"
     }
   ],
+  "teamGameSpawnAreas": {
+    "2": [
+      {
+        "height": 1680,
+        "width": 744,
+        "x": 0,
+        "y": 0
+      },
+      {
+        "height": 1680,
+        "width": 744,
+        "x": 744,
+        "y": 0
+      }
+    ]
+  },
   "themes": ["south_america"]
 }

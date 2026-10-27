@@ -315,11 +315,11 @@ export async function startMaster() {
       applyCheckinState(result, (active) => lobbyService.setActive(active));
     }, CHECKIN_INTERVAL_MS);
 
-    // Public-lobby rotation weight overrides set in the API. Until the first
-    // fetch lands, and while it keeps failing, the last known weights (or the
-    // build's info.json) stay in effect.
+    // Public-lobby rotation weights from the API. Until the first fetch
+    // lands every map has DEFAULT_MAP_WEIGHT; while it keeps failing, the last
+    // known weights stay in effect.
     startPolling(async () => {
-      playlist.setWeightOverrides(await fetchMapWeights());
+      playlist.setWeights(await fetchMapWeights());
     }, MAP_WEIGHTS_POLL_MS);
   }
 }

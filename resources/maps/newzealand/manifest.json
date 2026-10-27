@@ -333,7 +333,6 @@
     "num_land_tiles": 189565,
     "width": 944
   },
-  "multiplayer_frequency": 5,
   "name": "New Zealand",
   "nations": [
     {
@@ -437,6 +436,22 @@
       "name": "Rangitahua"
     }
   ],
+  "teamGameSpawnAreas": {
+    "2": [
+      {
+        "height": 2013,
+        "width": 1159,
+        "x": 670,
+        "y": 1437
+      },
+      {
+        "height": 1621,
+        "width": 962,
+        "x": 928,
+        "y": 0
+      }
+    ]
+  },
   "themes": ["oceania"],
   "translation_key": "map.newzealand"
 }
