@@ -1,4 +1,5 @@
 {
+  "$schema": "../../../info.schema.json",
   "id": "GatewayToTheAtlantic",
   "name": "Gateway to the Atlantic",
   "translation_key": "map.gatewaytotheatlantic",

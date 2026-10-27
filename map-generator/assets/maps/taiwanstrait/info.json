@@ -1,4 +1,5 @@
 {
+  "$schema": "../../../info.schema.json",
   "id": "TaiwanStrait",
   "name": "Taiwan Strait",
   "translation_key": "map.taiwanstrait",

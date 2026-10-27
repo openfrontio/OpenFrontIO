@@ -1,4 +1,5 @@
 {
+  "$schema": "../../../info.schema.json",
   "id": "Balkhash",
   "name": "Balkhash",
   "translation_key": "map.balkhash",

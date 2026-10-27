@@ -1,4 +1,5 @@
 {
+  "$schema": "../../../info.schema.json",
   "id": "BetweenTwoSeas",
   "name": "Between Two Seas",
   "translation_key": "map.betweentwoseas",

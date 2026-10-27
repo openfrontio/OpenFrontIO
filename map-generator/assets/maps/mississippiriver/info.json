@@ -1,4 +1,5 @@
 {
+  "$schema": "../../../info.schema.json",
   "id": "MississippiRiver",
   "name": "Mississippi River",
   "translation_key": "map.mississippiriver",

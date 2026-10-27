@@ -1,4 +1,5 @@
 {
+  "$schema": "../../../info.schema.json",
   "id": "TierraDelFuego",
   "name": "Tierra Del Fuego",
   "translation_key": "map.tierradelfuego",
