@@ -220,7 +220,8 @@ func processMap(ctx context.Context, name string, isTest bool) (string, error) {
 		}
 	}
 
-	// Serialize the updated manifest to JSON
+	// The editor hint only applies to the authored info.json.
+	delete(manifest, "$schema")
 	updatedManifest, err := json.MarshalIndent(manifest, "", "  ")
 	if err != nil {
 		return "", fmt.Errorf("failed to serialize manifest for %s: %w", name, err)

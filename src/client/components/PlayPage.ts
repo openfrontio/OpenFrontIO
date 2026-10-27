@@ -90,7 +90,8 @@ export class PlayPage extends LitElement {
 
           <!-- Left column: news banner + identity row, stacked tight. -->
           <div class="flex flex-col gap-2 min-w-0">
-            <news-box></news-box>
+            <!-- Off on compact screens (see styles.css), like Streaming Now. -->
+            <news-box class="compact:hidden"></news-box>
 
             <!-- Identity row: username over the currently selected cosmetic background. -->
             <div
