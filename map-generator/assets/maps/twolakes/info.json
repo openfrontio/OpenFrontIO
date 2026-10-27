@@ -1,9 +1,9 @@
 {
+  "$schema": "../../../info.schema.json",
   "id": "TwoLakes",
   "name": "Two Lakes",
   "translation_key": "map.twolakes",
   "categories": ["europe"],
-  "multiplayer_frequency": 4,
   "nations": [
     {
       "coordinates": [1025, 750],

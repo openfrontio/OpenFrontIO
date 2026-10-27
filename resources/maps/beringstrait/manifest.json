@@ -16,7 +16,6 @@
     "num_land_tiles": 146565,
     "width": 750
   },
-  "multiplayer_frequency": 2,
   "name": "Bering Strait",
   "nations": [
     {
@@ -47,7 +46,6 @@
       }
     ]
   },
-  "team_frequency": 5,
   "themes": ["asia", "north_america"],
   "translation_key": "map.beringstrait"
 }

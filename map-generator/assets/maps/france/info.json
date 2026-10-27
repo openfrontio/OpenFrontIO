@@ -1,9 +1,9 @@
 {
+  "$schema": "../../../info.schema.json",
   "id": "France",
   "name": "France",
   "translation_key": "map.france",
   "categories": ["europe", "countries"],
-  "multiplayer_frequency": 8,
   "nations": [
     {
       "coordinates": [1140, 389],
