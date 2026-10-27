@@ -68,7 +68,7 @@ describe("NamePass targeted nameplate hover", () => {
       0, 0.001, 0,
       0, 0, 1,
     ]);
-    pass.setMouseWorldPos(160, 150);
+    pass.setMouseWorldPos(160, 160);
 
     // This cursor position is outside the unboosted nameplate bounds.
     expect(pass.hitTestNamePlate(1, cameraMatrix)).toBe(0);
