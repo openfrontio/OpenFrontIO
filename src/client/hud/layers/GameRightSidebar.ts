@@ -295,8 +295,13 @@ export class GameRightSidebar extends LitElement implements Controller {
   }
 
   private isShareable(): boolean {
+    const isReplay = this.game?.config?.()?.isReplay?.();
     const gameType = this.game?.config?.()?.gameConfig?.()?.gameType;
-    return Boolean(this.game?.gameID?.()) && gameType !== GameType.Singleplayer;
+    return (
+      Boolean(this.game?.gameID?.()) &&
+      gameType !== GameType.Singleplayer &&
+      !isReplay
+    );
   }
 
   private async onShareButtonClick() {

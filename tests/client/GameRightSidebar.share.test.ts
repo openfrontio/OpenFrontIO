@@ -312,4 +312,10 @@ describe("GameRightSidebar share button", () => {
     const shareBtn = getShareButton(el);
     expect(shareBtn).toBeNull();
   });
+
+  it("does not render the share button in replay sessions", async () => {
+    const el = await mount({ isReplay: true });
+    const shareBtn = getShareButton(el);
+    expect(shareBtn).toBeNull();
+  });
 });
