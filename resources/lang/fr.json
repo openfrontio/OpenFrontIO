@@ -251,7 +251,7 @@
       "have_fun": "Amuse-toi bien !",
       "hello": "Bonjour !",
       "hi_again": "Rebonjour !",
-      "nice_to_meet": "Enchanté·e !",
+      "nice_to_meet": "Enchanté !",
       "oops": "Oups, mauvais bouton !",
       "ruining_games": "Tu ruines nos deux parties.",
       "same_team": "Je suis de ton côté !",
@@ -323,7 +323,7 @@
       "snowballing": "[P1] grandit beaucoup trop vite !",
       "stalemate": "Faisons la paix. C'est une impasse, nous perdrons tous les deux.",
       "stop_trading": "Arrête le commerce avec [P1] !",
-      "strong": "[P1] est fort·e.",
+      "strong": "[P1] est fort.",
       "weak": "[P1] est faible.",
       "stop_trading_all": "S'il te plaît, arrête de commercer avec les ennemis !"
     }
@@ -604,7 +604,7 @@
     "month_oct": "Octobre",
     "month_sep": "Septembre",
     "none": "Aucun",
-    "not_logged_in": "Pas connecté·e",
+    "not_logged_in": "Pas connecté",
     "paste": "Coller",
     "preset_max": "Max",
     "send": "Envoyer",
@@ -1625,7 +1625,7 @@
     "dismiss": "Ignorer",
     "error": "Échec de la sauvegarde. Veuillez réessayer.",
     "no": "Non merci",
-    "title": "Voulez-vous rester informé·e des nouveautés d'OpenFront ?",
+    "title": "Voulez-vous rester informé des nouveautés d'OpenFront ?",
     "yes": "Oui s'il vous plaît"
   },
   "matchmaking_modal": {
@@ -2274,7 +2274,7 @@
     "flags": "Drapeaux",
     "insufficient_currency_body": "Vous avez besoin de {amount, number} plus {currency} pour acheter {item}.",
     "insufficient_currency_title": "Pas assez de {currency}",
-    "login_required": "Vous devez être connecté·e pour acheter avec de la monnaie.",
+    "login_required": "Vous devez être connecté pour acheter avec de la monnaie.",
     "manage_billing": "Gérer la facturation",
     "no_affiliate_items": "Pas d'objets disponibles. Revenez plus tard pour de nouveaux articles.",
     "no_bundles": "Aucun pack disponible. Revenez plus tard pour découvrir de nouveaux articles.",
@@ -2313,7 +2313,7 @@
     "steam_overlay_cancelled": "Achat annulé. Vous n'avez pas été facturé.",
     "steam_overlay_waiting": "Confirmez l’achat dans l’interface Steam pour continuer.",
     "subscribe_heading": "S'abonner",
-    "subscribed": "Abonné·e",
+    "subscribed": "Abonné",
     "subscription_past_due": "Votre dernier paiement pour votre abonnement n'a pas été effectué, ce dernier est donc mis en attente. Mettez à jour votre méthode de paiement pour le restaurer. Ne vous réabonnez pas, ou vous pourriez être facturé une seconde fois.",
     "subscription_past_due_desktop": "Votre dernier paiement pour votre abonnement n'a pas été effectué, ce dernier est donc mis en attente. Mettez à jour votre méthode de paiement sur le site OpenFront.io pour le restaurer. Ne vous réabonnez pas, ou vous pourriez être facturé une seconde fois.",
     "subscription_purchase_success": "Abonnement activé !",
@@ -2715,7 +2715,7 @@
     "verified_use_hint": "Jouer avec votre pseudo de compte vérifié"
   },
   "win_modal": {
-    "died": "Vous êtes mort·e.",
+    "died": "Vous êtes mort.",
     "discord_description": "Parlez avec des joueurs, découvrez de nouvelles fonctionnalités et gagnez des prix !",
     "exit": "Quitter la partie",
     "join_discord": "Rejoignez notre communauté Discord !",
