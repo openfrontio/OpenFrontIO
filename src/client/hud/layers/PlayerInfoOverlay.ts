@@ -913,12 +913,14 @@ export class PlayerInfoOverlay extends LitElement implements Controller {
     }
 
     const containerClasses = this._isInfoVisible
-      ? "opacity-100 visible"
+      ? "opacity-100 visible pointer-events-auto"
       : "opacity-0 invisible pointer-events-none";
 
+    // From lg it sits in the top HUD row (index.html), which shifts or narrows
+    // it to clear the open leaderboard.
     return html`
       <div
-        class="fixed top-0 left-0 right-0 sm:left-1/2 sm:right-auto sm:-translate-x-1/2 z-[1001]"
+        class="max-lg:fixed max-lg:top-0 max-lg:left-0 max-lg:right-0 sm:max-lg:left-1/2 sm:max-lg:right-auto sm:max-lg:-translate-x-1/2 max-lg:z-[1001]"
         style="margin-top: ${this.barOffset}px;"
         @click=${() => this.hide()}
         @contextmenu=${(e: MouseEvent) => e.preventDefault()}
@@ -926,7 +928,7 @@ export class PlayerInfoOverlay extends LitElement implements Controller {
         <div
           class="bg-gray-800/92 backdrop-blur-sm shadow-xs min-[1200px]:rounded-lg sm:rounded-b-lg shadow-lg text-white text-lg lg:text-base w-full ${
             this.showShortcutButtons() ? "sm:w-[598px]" : "sm:w-[500px]"
-          } overflow-hidden ${containerClasses}"
+          } lg:max-w-full overflow-hidden ${containerClasses}"
           @mouseenter=${this.onPanelEnter}
           @mouseleave=${this.onPanelLeave}
         >
