@@ -151,6 +151,7 @@ export class PlayerExecution implements Execution {
         min: new Cell(boxes[0], boxes[1]),
         max: new Cell(boxes[2], boxes[3]),
       };
+      const isPinched = this.hasDiagonalPinch(clusters[0]);
       let removed = false;
       const surroundedBy = this.surroundedBySamePlayer(
         clusters[0],
@@ -167,9 +168,9 @@ export class PlayerExecution implements Execution {
           boxes[2],
           boxes[3],
           surroundedBy,
+          isPinched,
         );
       }
-      const isPinched = this.hasDiagonalPinch(clusters[0]);
       if (!removed && isPinched) {
         const state = this.traversalState();
         const visited = state.visited;
@@ -466,6 +467,7 @@ export class PlayerExecution implements Execution {
         boxes[lIdx + 2],
         boxes[lIdx + 3],
         surroundedBy,
+        Boolean(isPinched[largestIndex]),
       );
       if (removed) {
         clusterRemoved[largestIndex] = 1;
@@ -496,6 +498,7 @@ export class PlayerExecution implements Execution {
             boxes[idx + 2],
             boxes[idx + 3],
             surroundedBy,
+            true,
           );
           if (removed) {
             clusterRemoved[i] = 1;
@@ -508,6 +511,8 @@ export class PlayerExecution implements Execution {
           boxes[idx + 1],
           boxes[idx + 2],
           boxes[idx + 3],
+          undefined,
+          false,
         );
         if (removed) {
           clusterRemoved[i] = 1;
@@ -897,6 +902,7 @@ export class PlayerExecution implements Execution {
     maxX?: number,
     maxY?: number,
     knownCaptor?: Player,
+    isPinched?: boolean,
   ): boolean {
     for (const t of cluster) {
       if (this.mg?.ownerID(t) !== this.player?.smallID()) {
@@ -938,6 +944,31 @@ export class PlayerExecution implements Execution {
       return false;
     }
 
+    const pinched = isPinched ?? this.hasDiagonalPinch(cluster);
+
+    // Fast path: for unpinched clusters (single 4-way component), evaluate
+    // once. If unsealed, abort immediately in O(1) without looping cluster tiles.
+    if (!pinched) {
+      if (!this.isEnclosed(firstTile, minX, minY, maxX, maxY)) {
+        return false;
+      }
+      const tiles = this.floodFillWithGen(
+        this.bumpGeneration(),
+        this.traversalState().visited,
+        [firstTile],
+        false,
+        (tile) => this.mg.ownerID(tile) === this.player.smallID(),
+      );
+      if (this.player.numTilesOwned() === tiles.length) {
+        this.mg.conquerPlayer(capturing, this.player);
+      }
+      for (const tile of tiles) {
+        capturing.conquer(tile);
+      }
+      return true;
+    }
+
+    // Pinched clusters: handle each 4-way component independently
     const state = this.traversalState();
     const floodGen = this.bumpGeneration();
     const visited = state.visited;
@@ -957,6 +988,13 @@ export class PlayerExecution implements Execution {
       // but the fill below hands over the whole territory the cluster sits on.
       // Verify this specific 4-way component is sealed in before conquering it.
       if (!this.isEnclosed(t, minX, minY, maxX, maxY)) {
+        // Mark any cluster tiles reached during the failed walk to prevent duplicate walks
+        const encGen = state.gen;
+        for (let j = i; j < cluster.length; j++) {
+          if (visited[cluster[j]] === encGen) {
+            visited[cluster[j]] = floodGen;
+          }
+        }
         continue;
       }
 
