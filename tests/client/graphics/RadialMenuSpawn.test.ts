@@ -47,6 +47,7 @@ describe("RadialMenu center button - spawn phase", () => {
 describe("RadialMenu teardown", () => {
   it("cleans up DOM elements and window resize listener on leave-lobby", () => {
     const bus = new EventBus();
+    const offSpy = vi.spyOn(bus, "off");
     const menu = new RadialMenu(bus, { subMenu: () => [] } as any, {} as any);
     menu.init();
     (menu as any).isVisible = true;
@@ -55,6 +56,10 @@ describe("RadialMenu teardown", () => {
     document.dispatchEvent(new CustomEvent("leave-lobby"));
 
     expect(removeSpy).toHaveBeenCalledWith("resize", expect.any(Function));
+    expect(offSpy).toHaveBeenCalledWith(
+      expect.any(Function),
+      expect.any(Function),
+    );
     expect(document.querySelector(".radial-menu-container")).toBeNull();
   });
 });

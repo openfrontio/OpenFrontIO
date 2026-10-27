@@ -54,6 +54,7 @@ type RequiredRadialMenuConfig = Required<RadialMenuConfig>;
 export class RadialMenu implements Controller {
   private menuElement: d3.Selection<HTMLDivElement, unknown, null, undefined>;
   private tooltipElement: HTMLDivElement | null = null;
+  private tooltipStyleElement: HTMLStyleElement | null = null;
   private isVisible: boolean = false;
 
   private currentLevel: number = 0; // Current menu level (0 = main menu, 1 = submenu, etc.)
@@ -122,12 +123,12 @@ export class RadialMenu implements Controller {
     this.centerButtonIconSize = this.config.centerIconSize;
   }
 
+  private onCloseView = () => this.hideRadialMenu();
+
   init() {
     this.createMenuElement();
     this.createTooltipElement();
-    this.eventBus.on(CloseViewEvent, (e) => {
-      this.hideRadialMenu();
-    });
+    this.eventBus.on(CloseViewEvent, this.onCloseView);
     document.addEventListener("leave-lobby", this.onLeaveLobby);
   }
 
@@ -138,9 +139,11 @@ export class RadialMenu implements Controller {
   public destroy(): void {
     document.removeEventListener("leave-lobby", this.onLeaveLobby);
     window.removeEventListener("resize", this.handleResize);
+    this.eventBus.off(CloseViewEvent, this.onCloseView);
     this.isVisible = false;
     this.menuElement?.remove();
     this.tooltipElement?.remove();
+    this.tooltipStyleElement?.remove();
   }
 
   private createMenuElement() {
@@ -262,6 +265,7 @@ export class RadialMenu implements Controller {
 
       ${this.config.tooltipStyle}
     `;
+    this.tooltipStyleElement = style;
     document.head.appendChild(style);
   }
 
