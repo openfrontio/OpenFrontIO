@@ -27,7 +27,7 @@ export const LOBBY_SOURCES: LobbySourceFilter[] = ["public", "hosted"];
  */
 export const NAMED_TEAM_CONFIGS = [Duos, Trios, Quads] as const;
 export const NUMERIC_TEAM_CONFIGS = ["2", "3", "4", "5", "6", "7", "8"];
-export const TEAM_CONFIGS: string[] = [
+const TEAM_CONFIGS: string[] = [
   ...NAMED_TEAM_CONFIGS,
   ...NUMERIC_TEAM_CONFIGS,
 ];
@@ -163,7 +163,7 @@ function withinRange(
   return true;
 }
 
-export function matchesFilters(
+function matchesFilters(
   lobby: PublicGameInfo,
   filters: LobbyFilters,
 ): boolean {
@@ -261,7 +261,7 @@ export const FILTER_PROFILES_KEY = "detailed-view-filter-profiles";
 export const DEFAULT_FILTER_PROFILE_KEY =
   "detailed-view-default-filter-profile";
 export const MAX_FILTER_PROFILES = 20;
-export const MAX_PROFILE_NAME_LENGTH = 32;
+const MAX_PROFILE_NAME_LENGTH = 32;
 
 function toStringArray(value: unknown, allowed: readonly string[]): string[] {
   if (!Array.isArray(value)) return [];

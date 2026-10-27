@@ -44,7 +44,7 @@ const CHECKIN_JITTER_MS = 1_000;
 // joined.
 const MATCH_START_DEADLINE_MS = 15_000;
 
-export const MatchmakingAssignmentSchema = z.object({
+const MatchmakingAssignmentSchema = z.object({
   // Flat list of matched players' publicIds.
   players: z.array(z.string()),
   // The matcher's team split ([[a],[b]] for 1v1). Optional for tolerance,

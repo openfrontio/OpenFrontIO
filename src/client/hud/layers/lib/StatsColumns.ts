@@ -23,8 +23,6 @@ import {
 import { goldRateTracker } from "./GoldRateTracker";
 
 export {
-  COLUMN_IDS,
-  DEFAULT_STATS_COLUMNS,
   type ColumnId,
 } from "../../../StatsConstants";
 

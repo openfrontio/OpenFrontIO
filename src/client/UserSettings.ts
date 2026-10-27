@@ -202,7 +202,6 @@ const AUDIO_LEGACY_KEY: Partial<Record<AudioCategory, string>> = {
 export const PATTERN_KEY = "territoryPattern";
 export const FLAG_KEY = "flag";
 export const CROWN_KEY = "crown";
-export const COLOR_KEY = "settings.territoryColor";
 export const PERFORMANCE_OVERLAY_KEY = "settings.performanceOverlay";
 // Kept out of the graphics overrides so picking a preset doesn't turn it back on.
 export const MAP_LAYERS_KEY = "settings.mapLayers";
@@ -256,7 +255,7 @@ export interface CosmeticLoadout {
 export const MAX_LOADOUTS = 10;
 
 /** Slots are numbered rather than named: "01", "02", … */
-export function loadoutSlotName(slot: number): string {
+function loadoutSlotName(slot: number): string {
   return slot.toString().padStart(2, "0");
 }
 

@@ -841,7 +841,7 @@ export function rememberPublicId(persistentId: string, publicId: string): void {
  * in-memory publicId learned from /users/@me during this session, and falling
  * back to localStorage.
  */
-export function getCachedPublicId(persistentId: string): string | null {
+function getCachedPublicId(persistentId: string): string | null {
   if (__inMemoryPublicIdSub === persistentId && __inMemoryPublicId !== null) {
     return __inMemoryPublicId;
   }

@@ -46,7 +46,7 @@ export interface BuildItemDisplay {
   countable?: boolean;
 }
 
-export const buildTable: BuildItemDisplay[][] = [
+const buildTable: BuildItemDisplay[][] = [
   [
     {
       unitType: UnitType.AtomBomb,
