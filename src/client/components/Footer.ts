@@ -1,7 +1,11 @@
 import { assetUrl } from "@openfront/shared/AssetUrls";
-import { LitElement, html } from "lit";
+import { LitElement, html, nothing } from "lit";
 import { customElement, state } from "lit/decorators.js";
-import { composeVersionDisplay, desktopVersion } from "../DesktopShell";
+import {
+  composeVersionDisplay,
+  desktopVersion,
+  isDesktopShell,
+} from "../DesktopShell";
 import { currentGameVersion } from "../GameVersion";
 import "./SteamWishlistButton";
 
@@ -103,12 +107,17 @@ export class Footer extends LitElement {
               />
             </a>
           </div>
-          <!-- The nav bar shows the game version alone so it reads the same
-               across web and Steam; the full string, shell version included,
-               lives down here where a player can quote it in a bug report. -->
-          <div class="footer-version text-xs mt-1 lg:mt-2 text-center px-4">
-            ${this.versionLabel}
-          </div>
+          <!-- Steam build only. The nav bar shows the game version alone so it
+               reads the same across web and Steam; the full string, shell
+               version included, lives down here where a player can quote it
+               in a bug report. -->
+          ${isDesktopShell()
+            ? html`<div
+                class="footer-version text-xs mt-1 lg:mt-2 text-center px-4"
+              >
+                ${this.versionLabel}
+              </div>`
+            : nothing}
           <div
             class="text-xs mt-1 lg:mt-2 flex items-center justify-center gap-4 px-4"
           >
