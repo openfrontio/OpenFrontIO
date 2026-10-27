@@ -1,9 +1,9 @@
 {
+  "$schema": "../../../info.schema.json",
   "id": "ChoppingBlock",
   "name": "Chopping Block",
   "translation_key": "map.choppingblock",
   "categories": ["arcade"],
-  "multiplayer_frequency": 0,
   "special_team_count": 4,
   "forced_modifiers": ["isWaterNukes:50"],
   "nations": [

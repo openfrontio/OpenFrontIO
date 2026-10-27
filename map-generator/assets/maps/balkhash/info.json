@@ -1,9 +1,9 @@
 {
+  "$schema": "../../../info.schema.json",
   "id": "Balkhash",
   "name": "Balkhash",
   "translation_key": "map.balkhash",
   "categories": ["asia"],
-  "multiplayer_frequency": 4,
   "nations": [
     {
       "coordinates": [979, 101],
