@@ -566,6 +566,11 @@ export class MatchmakingModal extends BaseModal {
     }
   }
 
+  disconnectedCallback(): void {
+    this.onClose();
+    super.disconnectedCallback();
+  }
+
   private async checkGame() {
     if (this.gameID === null) {
       return;
