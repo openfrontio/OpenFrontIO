@@ -402,28 +402,33 @@ export class NavAccountMenu extends LitElement {
       });
     }
 
-    items.push(
-      {
-        key: "view-account",
-        labelKey: "nav_account_menu.view_account",
-        icon: iconUser,
-        onSelect: () => {
-          window.showPage?.("page-account");
-        },
+    items.push({
+      key: "view-account",
+      labelKey: "nav_account_menu.view_account",
+      icon: iconUser,
+      onSelect: () => {
+        window.showPage?.("page-account");
       },
-      {
+    });
+
+    // Not on portals: the settings ask for the player's email (marketing
+    // consent, binding an email), which a portal's players shouldn't be
+    // asked for.
+    if (!gamePortal.isOnGamePortal()) {
+      items.push({
         key: "account-settings",
         labelKey: "nav_account_menu.account_settings",
         icon: iconGear,
         onSelect: () => this.openModal("account-settings"),
-      },
-      {
-        key: "change-username",
-        labelKey: "nav_account_menu.change_username",
-        icon: iconTag,
-        onSelect: () => this.openModal("change-username"),
-      },
-    );
+      });
+    }
+
+    items.push({
+      key: "change-username",
+      labelKey: "nav_account_menu.change_username",
+      icon: iconTag,
+      onSelect: () => this.openModal("change-username"),
+    });
 
     if (subscribed) {
       items.push({

@@ -318,6 +318,9 @@ export const GameConfigSchema = z.object({
   // create_game / update_game_config.
   trusted: z.boolean().optional(),
   maxTimerValue: zb.uint({ min: 1, max: 120 }).nullable().optional(), // In minutes
+  // Tile share needed to win, in tenths of a percent (755 = 75.5%). Capped at
+  // 99.9%: the win check is a strict ">", so 100% could never be won.
+  winThresholdTenths: zb.uint({ min: 100, max: 999 }).nullable().optional(),
   customAllianceDuration: zb.uint({ max: 15 }).nullable().optional(), // In minutes; 0 disables alliances
   startDelay: zb.uint({ max: 600 }).nullable().optional(), // In seconds
   spawnImmunityDuration: zb.uint().nullable().optional(), // In ticks

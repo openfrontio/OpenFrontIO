@@ -656,10 +656,17 @@ export class GameModeSelector extends LitElement {
     // The hero slot holds the spinner, then the FFA card; loaded without one
     // it goes and the upcoming column takes the whole row.
     const heroSlot = this.lobbies === null || ffa !== undefined;
-    // A lone secondary card takes both of the column's card rows.
+    // A lone secondary card takes both of the column's card rows. In short
+    // windows (Poki's frames are 580px and 470px tall) two would each be too
+    // small, so teams keeps both rows and the special lobby is left to the lobby
+    // browser. 700px still leaves an iPad mini in landscape (744px) both.
     const cardRows =
       teams && special
-        ? { special: "sm:row-start-2", teams: "sm:row-start-3" }
+        ? {
+            special: "sm:row-start-2 sm:[@media(max-height:700px)]:hidden",
+            teams:
+              "sm:row-start-3 sm:[@media(max-height:700px)]:row-start-2! sm:[@media(max-height:700px)]:row-span-2!",
+          }
         : {
             special: "sm:row-start-2 sm:row-span-2",
             teams: "sm:row-start-2 sm:row-span-2",

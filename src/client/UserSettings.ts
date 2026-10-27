@@ -25,6 +25,7 @@ import { isDesktopShell } from "./DesktopShell";
 export function getDefaultKeybinds(isMac: boolean): Record<string, string> {
   return {
     toggleView: "Space",
+    preventStacking: "KeyH",
     coordinateGrid: "KeyM",
     buildCity: "Digit1",
     buildFactory: "Digit2",
@@ -328,6 +329,11 @@ export class UserSettings {
     for (const key of PER_PLAYER_KEYS) {
       settings.emitChange(key, settings.getCached(key));
     }
+  }
+
+  /** publicId of the logged-in player, or null when logged out. */
+  static currentPlayerId(): string | null {
+    return UserSettings.playerId;
   }
 
   private storageKey(key: string): string {

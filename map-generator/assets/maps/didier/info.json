@@ -1,9 +1,9 @@
 {
+  "$schema": "../../../info.schema.json",
   "id": "Didier",
   "name": "Didier",
   "translation_key": "map.didier",
   "categories": ["arcade"],
-  "multiplayer_frequency": 1,
   "nations": [
     {
       "coordinates": [478, 163],
