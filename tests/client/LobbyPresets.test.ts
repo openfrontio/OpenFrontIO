@@ -17,6 +17,7 @@ import {
   saveLobbyPreset,
 } from "../../src/client/LobbyPresets";
 import { UserSettings } from "../../src/client/UserSettings";
+import { showToast } from "../../src/client/Utils";
 
 vi.mock("../../src/client/Utils", () => ({
   translateText: vi.fn((key: string) => key),
@@ -183,6 +184,166 @@ describe("LobbyPresets logic and schema", () => {
       teamCount: "Duos",
     };
     expect(LobbyPresetConfigSchema.safeParse(validDuos).success).toBe(true);
+  });
+
+  it("enforces integer and range bounds on numeric config options", () => {
+    // bots: 0-400 int
+    expect(
+      LobbyPresetConfigSchema.safeParse({ ...sampleConfig, bots: -1 }).success,
+    ).toBe(false);
+    expect(
+      LobbyPresetConfigSchema.safeParse({ ...sampleConfig, bots: 401 }).success,
+    ).toBe(false);
+    expect(
+      LobbyPresetConfigSchema.safeParse({ ...sampleConfig, bots: 10.5 })
+        .success,
+    ).toBe(false);
+    expect(
+      LobbyPresetConfigSchema.safeParse({ ...sampleConfig, bots: 0 }).success,
+    ).toBe(true);
+    expect(
+      LobbyPresetConfigSchema.safeParse({ ...sampleConfig, bots: 400 }).success,
+    ).toBe(true);
+
+    // nations: 0-400 int
+    expect(
+      LobbyPresetConfigSchema.safeParse({ ...sampleConfig, nations: -1 })
+        .success,
+    ).toBe(false);
+    expect(
+      LobbyPresetConfigSchema.safeParse({ ...sampleConfig, nations: 401 })
+        .success,
+    ).toBe(false);
+    expect(
+      LobbyPresetConfigSchema.safeParse({ ...sampleConfig, nations: 5.5 })
+        .success,
+    ).toBe(false);
+
+    // maxTimerValue: 1-120 int
+    expect(
+      LobbyPresetConfigSchema.safeParse({ ...sampleConfig, maxTimerValue: 0 })
+        .success,
+    ).toBe(false);
+    expect(
+      LobbyPresetConfigSchema.safeParse({ ...sampleConfig, maxTimerValue: 121 })
+        .success,
+    ).toBe(false);
+    expect(
+      LobbyPresetConfigSchema.safeParse({
+        ...sampleConfig,
+        maxTimerValue: 60.5,
+      }).success,
+    ).toBe(false);
+
+    // customAllianceMinutes: 0-15 int
+    expect(
+      LobbyPresetConfigSchema.safeParse({
+        ...sampleConfig,
+        customAllianceMinutes: -1,
+      }).success,
+    ).toBe(false);
+    expect(
+      LobbyPresetConfigSchema.safeParse({
+        ...sampleConfig,
+        customAllianceMinutes: 16,
+      }).success,
+    ).toBe(false);
+
+    // overtimeStartMinutes: 1-120 int
+    expect(
+      LobbyPresetConfigSchema.safeParse({
+        ...sampleConfig,
+        overtimeStartMinutes: 0,
+      }).success,
+    ).toBe(false);
+    expect(
+      LobbyPresetConfigSchema.safeParse({
+        ...sampleConfig,
+        overtimeStartMinutes: 121,
+      }).success,
+    ).toBe(false);
+
+    // spawnImmunityDurationMinutes: 0-120 int
+    expect(
+      LobbyPresetConfigSchema.safeParse({
+        ...sampleConfig,
+        spawnImmunityDurationMinutes: -1,
+      }).success,
+    ).toBe(false);
+    expect(
+      LobbyPresetConfigSchema.safeParse({
+        ...sampleConfig,
+        spawnImmunityDurationMinutes: 121,
+      }).success,
+    ).toBe(false);
+
+    // playerLimitValue: 2-1000 int
+    expect(
+      LobbyPresetConfigSchema.safeParse({
+        ...sampleConfig,
+        playerLimitValue: 1,
+      }).success,
+    ).toBe(false);
+    expect(
+      LobbyPresetConfigSchema.safeParse({
+        ...sampleConfig,
+        playerLimitValue: 1001,
+      }).success,
+    ).toBe(false);
+
+    // startDelayValue: 0-600 int
+    expect(
+      LobbyPresetConfigSchema.safeParse({
+        ...sampleConfig,
+        startDelayValue: -1,
+      }).success,
+    ).toBe(false);
+    expect(
+      LobbyPresetConfigSchema.safeParse({
+        ...sampleConfig,
+        startDelayValue: 601,
+      }).success,
+    ).toBe(false);
+
+    // goldMultiplierValue: 0.1-1000 float
+    expect(
+      LobbyPresetConfigSchema.safeParse({
+        ...sampleConfig,
+        goldMultiplierValue: 0.05,
+      }).success,
+    ).toBe(false);
+    expect(
+      LobbyPresetConfigSchema.safeParse({
+        ...sampleConfig,
+        goldMultiplierValue: 1001,
+      }).success,
+    ).toBe(false);
+    expect(
+      LobbyPresetConfigSchema.safeParse({
+        ...sampleConfig,
+        goldMultiplierValue: 2.5,
+      }).success,
+    ).toBe(true);
+
+    // startingGoldValue: 0.1-1000 float
+    expect(
+      LobbyPresetConfigSchema.safeParse({
+        ...sampleConfig,
+        startingGoldValue: 0.05,
+      }).success,
+    ).toBe(false);
+    expect(
+      LobbyPresetConfigSchema.safeParse({
+        ...sampleConfig,
+        startingGoldValue: 1001,
+      }).success,
+    ).toBe(false);
+    expect(
+      LobbyPresetConfigSchema.safeParse({
+        ...sampleConfig,
+        startingGoldValue: 100.5,
+      }).success,
+    ).toBe(true);
   });
 
   describe("saveLobbyPreset and deleteLobbyPreset with UserSettings", () => {
@@ -654,11 +815,16 @@ describe("HostLobbyModal preset integration", () => {
   });
 
   it("shows error toast when saving preset fails", () => {
+    vi.mocked(showToast).mockClear();
     (modal.userSettings as any).setLobbyPresets = () => false;
     modal.handlePresetSave(
       new CustomEvent("preset-save", { detail: "Fail Save" }),
     );
     expect(modal.lobbyPresets).toHaveLength(0);
+    expect(showToast).toHaveBeenCalledWith(
+      "lobby_config.preset.save_failed",
+      "red",
+    );
   });
 
   it("marks player limit settled on preset import so uncapped preset clears prior cap", async () => {
@@ -676,6 +842,7 @@ describe("HostLobbyModal preset integration", () => {
   });
 
   it("shows error toast and preserves presets when deleting preset fails", () => {
+    vi.mocked(showToast).mockClear();
     modal.lobbyPresets = [
       { name: "Preset 1", createdAt: 1, config: modal.exportPresetConfig() },
     ];
@@ -688,6 +855,10 @@ describe("HostLobbyModal preset integration", () => {
 
     expect(modal.lobbyPresets).toHaveLength(1);
     expect(modal.selectedPresetName).toBe("Preset 1");
+    expect(showToast).toHaveBeenCalledWith(
+      "lobby_config.preset.delete_failed",
+      "red",
+    );
   });
 
   it("defaults donateGold and donateTroops to isTeam when omitted, preserving explicit overrides", async () => {
@@ -790,14 +961,20 @@ describe("SinglePlayerModal preset integration", () => {
   });
 
   it("shows error toast when saving preset fails", () => {
+    vi.mocked(showToast).mockClear();
     (modal.userSettings as any).setLobbyPresets = () => false;
     modal.handlePresetSave(
       new CustomEvent("preset-save", { detail: "Fail Save" }),
     );
     expect(modal.lobbyPresets).toHaveLength(0);
+    expect(showToast).toHaveBeenCalledWith(
+      "lobby_config.preset.save_failed",
+      "red",
+    );
   });
 
   it("shows error toast and preserves presets when deleting preset fails", () => {
+    vi.mocked(showToast).mockClear();
     modal.lobbyPresets = [
       { name: "Preset 1", createdAt: 1, config: modal.exportPresetConfig() },
     ];
@@ -810,6 +987,10 @@ describe("SinglePlayerModal preset integration", () => {
 
     expect(modal.lobbyPresets).toHaveLength(1);
     expect(modal.selectedPresetName).toBe("Preset 1");
+    expect(showToast).toHaveBeenCalledWith(
+      "lobby_config.preset.delete_failed",
+      "red",
+    );
   });
 
   it("clears selectedPresetName on resetOptions", () => {
