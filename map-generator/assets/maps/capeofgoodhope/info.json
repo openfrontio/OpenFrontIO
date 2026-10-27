@@ -3,7 +3,6 @@
   "name": "Cape Of Good Hope",
   "translation_key": "map.capeofgoodhope",
   "categories": ["new", "africa"],
-  "multiplayer_frequency": 4,
   "nations": [
     {
       "coordinates": [467, 395],

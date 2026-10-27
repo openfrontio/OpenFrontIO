@@ -3,7 +3,6 @@
   "name": "Halkidiki",
   "translation_key": "map.halkidiki",
   "categories": ["europe"],
-  "multiplayer_frequency": 4,
   "nations": [
     {
       "coordinates": [1798, 984],

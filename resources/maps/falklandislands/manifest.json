@@ -16,7 +16,6 @@
     "num_land_tiles": 178970,
     "width": 1050
   },
-  "multiplayer_frequency": 4,
   "name": "Falkland Islands",
   "nations": [
     {
@@ -97,7 +96,6 @@
       }
     ]
   },
-  "team_frequency": 8,
   "themes": ["south_america"],
   "translation_key": "map.falklandislands"
 }
