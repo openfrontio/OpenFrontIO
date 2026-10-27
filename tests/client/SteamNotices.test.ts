@@ -372,6 +372,8 @@ describe("the steam-notice boot interrupt", () => {
       rewardCount: 0,
       claimPromptDue: true,
       claimStringsReady: true,
+      reportThanksDue: false,
+      reportThanksStringsReady: true,
       ...overrides,
     };
   }
@@ -430,6 +432,7 @@ describe("the steam-notice boot interrupt", () => {
       storeClaimPrompt: () => {},
       updateSteamGrant: (update) => calls.grantStored.push(update(grantStore)),
       markNoticeSeen: (notice) => calls.seen.push(notice),
+      markMessageSeen: () => {},
       now: () => NOW,
     };
     return { base, calls };

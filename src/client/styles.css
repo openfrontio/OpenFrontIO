@@ -5,6 +5,16 @@
 @custom-variant hover (&:hover);
 /* The Steam shell has no ad slots, so it can use the width they reserve. */
 @custom-variant desktop (&:where(.desktop-shell, .desktop-shell *));
+/* Short or narrow viewports (small laptops, phones, Poki's embedded frame): an
+   open inline page fills the screen there, without the header and footer. */
+@custom-variant compact {
+  @media (max-height: 800px) {
+    @slot;
+  }
+  @media (max-width: 1023px) {
+    @slot;
+  }
+}
 
 @theme {
   --default-ring-width: 3px;

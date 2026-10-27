@@ -6,8 +6,8 @@ import {
   tileTraversalScratch,
 } from "../../game/TileTraversalScratch";
 import { DebugSpan } from "../../utilities/DebugSpan";
-import { PathFinding } from "../PathFinder";
 import { AStarWaterBounded } from "../algorithms/AStar.WaterBounded";
+import { PathFinding } from "../PathFinder";
 
 type Owner = Player | TerraNullius;
 

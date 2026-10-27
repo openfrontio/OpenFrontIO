@@ -34,6 +34,8 @@ vi.mock("../../../../src/client/GamePortal", () => ({
   gamePortal: {
     happytime: vi.fn(),
     gameplayStop: vi.fn(),
+    // Read by the win modal's <steam-wishlist> and <profile-share>.
+    name: () => null,
   },
 }));
 
@@ -64,6 +66,7 @@ function makeGame(opts: {
       clientID: () => opts.myClientID ?? null,
     }),
     inSpawnPhase: () => false,
+    ticks: () => 6000,
     updatesSinceLastTick: () => ({ [GameUpdateType.Win]: [winUpdate] }),
     playerByClientID: () => opts.winnerPlayer,
     config: () => ({ gameConfig: () => ({ rankedType: undefined }) }),

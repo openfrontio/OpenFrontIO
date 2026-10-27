@@ -4,6 +4,7 @@ import {
   UserMeResponse,
 } from "@openfront/shared/ApiSchemas";
 import { assetUrl } from "@openfront/shared/AssetUrls";
+import { GameEnv } from "@openfront/shared/configuration/Env";
 import { EventBus } from "@openfront/shared/EventBus";
 import { toWireGameStartInfo } from "@openfront/shared/SharedUtil";
 import {
@@ -14,13 +15,17 @@ import {
   PublicGameInfo,
   WireGameStartInfo,
 } from "@openfront/shared/WireSchemas";
-import { GameEnv } from "@openfront/shared/configuration/Env";
 import { ClientEnv } from "src/client/ClientEnv";
 import { renderNavVersion } from "src/client/GameVersion";
 import { responseHasLinkedIdentity } from "./AccountIdentity";
 import { adGatekeeper } from "./AdGatekeeper";
 import { loadAdmiral, onAdmiralMeasured } from "./Admiral";
-import { getUserMe, invalidateUserMe, markNoticeSeen } from "./Api";
+import {
+  getUserMe,
+  invalidateUserMe,
+  markMessageSeen,
+  markNoticeSeen,
+} from "./Api";
 import {
   getDesktopSessionState,
   reauthAfterPortalChange,
@@ -36,6 +41,8 @@ import {
   lapseShownAfterDispatch,
   nextBootInterrupt,
   parseClaimPromptStore,
+  reportThanksDueThisLaunch,
+  reportThanksStringsReady,
   runBootInterrupt,
   steamGrantStringsReady,
 } from "./BootInterrupts";
@@ -60,7 +67,6 @@ import {
 } from "./DesktopShell";
 import "./FeaturedStream";
 import { loadGameClient, prefetchGameClient } from "./GameClientLoader";
-import "./GameModeSelector";
 import {
   GameModeSelector,
   joinIsGateable,
@@ -69,12 +75,15 @@ import {
 } from "./GameModeSelector";
 import { gamePortal } from "./GamePortal";
 import { GameStartingModal } from "./GameStartingModal";
+import { syncHashedEmail } from "./HashedEmail";
 import type { HelpModal } from "./HelpModal";
 import "./HomepagePromos";
 import type { HomepagePromos } from "./HomepagePromos";
 import type { HostLobbyModal as HostPrivateLobbyModal } from "./HostLobbyModal";
 import { showInGameAlert, showInGameConfirm } from "./InGameModal";
 import type { JoinLobbyModal } from "./JoinLobbyModal";
+// The LangSelector class is used as a type; retain this for registration.
+// oxlint-disable-next-line import/no-duplicates -- Required custom-element registration.
 import "./LangSelector";
 import { LangSelector } from "./LangSelector";
 import { initLayout } from "./Layout";
@@ -94,6 +103,7 @@ import { modalRouter } from "./ModalRouter";
 import { updateAccountNavButton } from "./NavAccountButton";
 import { initNavigation } from "./Navigation";
 import { capturePagePin } from "./PagePin";
+import { setPurchaseAccountRefresh } from "./Payments";
 import { fallbackPlayerName, LAPSE_NOTICE_KEY } from "./PlayerName";
 import { updatePortalNavButton } from "./PortalAccountButton";
 import {
@@ -142,9 +152,23 @@ import {
 } from "./TurnstileToken";
 // Before the first userMeResponse, for the modals that load after it.
 import "./UserMeBroadcast";
-import { UserSettings } from "./UserSettings";
+import { classicReplayHref } from "./replay/ReplayEntry";
+import { parseReplayViewerHash } from "./replay/ReplayViewerRoute";
+// The UsernameInput class is used as a type; retain this for registration.
+// oxlint-disable-next-line import/no-duplicates -- Required custom-element registration.
 import "./UsernameInput";
 import { UsernameInput } from "./UsernameInput";
+import { UserSettings } from "./UserSettings";
+import "./components/BannedModal";
+import "./components/DesktopStatusBar";
+import "./components/MarketingConsentToast";
+import "./components/PurchaseNudgeModal";
+import {
+  installCtrlWheelZoomBlocker,
+  installDoubleTapZoomBlocker,
+  installSafariPinchZoomBlocker,
+} from "./utilities/DisableSafariPinchZoom";
+import { playerProfileRouteArgs } from "./utilities/PlayerProfileUrl";
 import {
   apexPathFor,
   currentPagePath,
@@ -156,18 +180,6 @@ import {
   translateText,
 } from "./Utils";
 import { isReplayShellHost } from "./VersionedReplay";
-import "./components/BannedModal";
-import "./components/DesktopStatusBar";
-import "./components/MarketingConsentToast";
-import "./components/PurchaseNudgeModal";
-import { classicReplayHref } from "./replay/ReplayEntry";
-import { parseReplayViewerHash } from "./replay/ReplayViewerRoute";
-import {
-  installCtrlWheelZoomBlocker,
-  installDoubleTapZoomBlocker,
-  installSafariPinchZoomBlocker,
-} from "./utilities/DisableSafariPinchZoom";
-import { playerProfileRouteArgs } from "./utilities/PlayerProfileUrl";
 
 import "./components/DesktopNavBar";
 import "./components/Footer";
@@ -181,6 +193,8 @@ import "./styles/core/typography.css";
 import "./styles/core/variables.css";
 import "./styles/layout/container.css";
 import "./styles/layout/header.css";
+
+type RampUserProfile = { format: "UUP1"; heid: { sha256: string } };
 
 declare global {
   interface Window {
@@ -201,6 +215,9 @@ declare global {
         slots?: any;
       };
       spaNewPage: (url?: string) => void;
+      // Hashed email (HEM): `up` is read once at init, setUserProfile after.
+      up?: RampUserProfile;
+      setUserProfile: (profile: RampUserProfile) => void;
       spaAds: (config?: {
         ads?: Array<{ type: string; selectorId?: string }>;
         countPageview?: boolean;
@@ -253,6 +270,9 @@ export interface JoinLobbyEvent {
   gameStartInfo?: WireGameStartInfo;
   // GameRecord exists when replaying an archived game.
   gameRecord?: GameRecord;
+  // A singleplayer game resumed from a saved game: the uncompressed snapshot
+  // the engine restores instead of starting fresh from gameStartInfo.
+  snapshot?: Uint8Array;
   source?: "public" | "private" | "host" | "matchmaking" | "singleplayer";
   publicLobbyInfo?: GameInfo | PublicGameInfo;
   // Watch without playing.
@@ -739,6 +759,34 @@ class Client {
 
     this.steamHandoffModal = document.querySelector("steam-handoff-modal");
 
+    // Assigned before the userAuth() await below, which can take seconds (on
+    // Poki it waits on the SDK): the join-lobby listener is already live, and
+    // a lobby clicked meanwhile joined with no modal to show it.
+    // Both load on demand (see LazyModals). whenDefined resolves while a
+    // modal's module is still evaluating, so they have the bus before
+    // whatever loaded them can open them.
+    this.hostModal = document.querySelector(
+      "host-lobby-modal",
+    ) as HostPrivateLobbyModal;
+    if (!this.hostModal) {
+      console.warn("Host private lobby modal element not found");
+    } else {
+      void customElements.whenDefined("host-lobby-modal").then(() => {
+        this.hostModal.eventBus = this.eventBus;
+      });
+    }
+
+    this.joinModal = document.querySelector(
+      "join-lobby-modal",
+    ) as JoinLobbyModal;
+    if (!this.joinModal) {
+      console.warn("Join lobby modal element not found");
+    } else {
+      void customElements.whenDefined("join-lobby-modal").then(() => {
+        this.joinModal.eventBus = this.eventBus;
+      });
+    }
+
     // The XP of games the player died in, still waiting to be scored, shown
     // provisionally on their level until they are. Listening before the
     // first userMeResponse below.
@@ -747,6 +795,7 @@ class Client {
       loadConfig: fetchProgressionConfig,
       refreshUserMe: broadcastFreshUserMe,
     });
+    setPurchaseAccountRefresh(broadcastFreshUserMe);
 
     const onUserMe = async (userMeResponse: UserMeResponse | false) => {
       if (gamePortal.isOnGamePortal()) {
@@ -758,6 +807,9 @@ class Client {
         userMeResponse !== false && userMeResponse.player?.adfree === true;
       window.adsEnabled =
         !isAdFree && !gamePortal.isOnGamePortal() && !isDesktopShell();
+      syncHashedEmail(userMeResponse, window.adsEnabled).catch((e) =>
+        console.warn("Hashed email sync failed", e),
+      );
       // Ad-eligible users only: paid/adfree users must never load Admiral (its
       // adblock popup fires autonomously once the payload runs). Start watching
       // adblock state; once a blocker is ever detected the in-game ad is
@@ -902,6 +954,12 @@ class Client {
             rewardCount: rewards.filter(isRewardClaimable).length,
             claimPromptDue: claimPromptDue(claimStore, Date.now(), publicId),
             claimStringsReady: claimPromptStringsReady(translateText),
+            // Not every caller's response went through the schema default.
+            reportThanksDue: reportThanksDueThisLaunch(
+              userMeResponse.pendingMessages ?? [],
+              publicId,
+            ),
+            reportThanksStringsReady: reportThanksStringsReady(translateText),
           }),
           {
             claimStore,
@@ -953,6 +1011,7 @@ class Client {
                 ),
               ),
             markNoticeSeen: (notice) => void markNoticeSeen(notice),
+            markMessageSeen: (kind) => void markMessageSeen(kind),
             now: () => Date.now(),
           },
         );
@@ -1027,31 +1086,6 @@ class Client {
     desktopUpdate()?.subscribe((state) => {
       this.desktopUpdateState = state;
     });
-
-    // Both load on demand (see LazyModals). whenDefined resolves while a
-    // modal's module is still evaluating, so they have the bus before
-    // whatever loaded them can open them.
-    this.hostModal = document.querySelector(
-      "host-lobby-modal",
-    ) as HostPrivateLobbyModal;
-    if (!this.hostModal) {
-      console.warn("Host private lobby modal element not found");
-    } else {
-      void customElements.whenDefined("host-lobby-modal").then(() => {
-        this.hostModal.eventBus = this.eventBus;
-      });
-    }
-
-    this.joinModal = document.querySelector(
-      "join-lobby-modal",
-    ) as JoinLobbyModal;
-    if (!this.joinModal) {
-      console.warn("Join lobby modal element not found");
-    } else {
-      void customElements.whenDefined("join-lobby-modal").then(() => {
-        this.joinModal.eventBus = this.eventBus;
-      });
-    }
 
     // Attempt to join lobby from the current URL once the document is ready.
     if (document.readyState === "loading") {
@@ -1370,7 +1404,7 @@ class Client {
     }
     gamePortal.isInstantMultiplayer().then((isInstant) => {
       if (isInstant) {
-        console.log(`CrazyGames: joining instant multiplayer lobby`);
+        console.log(`Portal: hosting instant multiplayer lobby`);
         whenModalLoaded("host-lobby-modal", () => this.hostModal.open());
       }
     });
@@ -1787,7 +1821,11 @@ class Client {
       });
     }
     // Only update URL immediately for private lobbies, not public ones
-    if (lobby.source !== "public") {
+    if (
+      lobby.source !== "public" &&
+      lobby.source !== "singleplayer" &&
+      !lobby.gameRecord
+    ) {
       this.updateJoinUrlForShare(lobby.gameID);
     }
     // Singleplayer runs entirely locally, and the session is only used here
@@ -1843,6 +1881,7 @@ class Client {
           ? toWireGameStartInfo(lobby.gameRecord.info)
           : undefined),
       gameRecord: lobby.gameRecord,
+      snapshot: lobby.snapshot,
       spectator: lobby.spectator,
       creatorToken: lobby.creatorToken,
     });
@@ -1918,7 +1957,11 @@ class Client {
       setInGameSignal(true);
 
       const lobbyIdHidden = !this.userSettings.lobbyIdVisibility();
-      if (isReplayShellHost(window.location.hostname)) {
+      if (
+        isReplayShellHost(window.location.hostname) ||
+        isSingleplayer ||
+        lobby.gameRecord !== undefined
+      ) {
         // Keep the canonical replay URL (replay.<domain>/<gameId>): the
         // /game/<id> shape and the #refresh trampoline only exist on the
         // game-server origin, so rewriting here would leave a URL that 404s

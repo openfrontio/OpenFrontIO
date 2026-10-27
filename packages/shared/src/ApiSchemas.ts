@@ -1,8 +1,3 @@
-import { ClanTagSchema } from "@openfront/engine-api/Schemas";
-import {
-  BigIntStringSchema,
-  PlayerStatsSchema,
-} from "@openfront/engine-api/StatsSchemas";
 import {
   Difficulty,
   GameMode,
@@ -10,6 +5,11 @@ import {
   HumansVsNations,
   RankedType,
 } from "@openfront/engine-api/game/GameTypes";
+import { ClanTagSchema } from "@openfront/engine-api/Schemas";
+import {
+  BigIntStringSchema,
+  PlayerStatsSchema,
+} from "@openfront/engine-api/StatsSchemas";
 import { z } from "zod";
 import { base64urlToUuid } from "./Base64";
 import {
@@ -561,6 +561,9 @@ export const UserMeResponseSchema = z.object({
   steamLicenceSince: z.string().nullable().optional().default(null),
   // Notice keys this player has dismissed (POST /users/@me/notices).
   noticesSeen: z.array(z.string()).optional().default([]),
+  // Server-raised messages due for this player and not yet shown
+  // (POST /users/@me/messages/seen once shown), e.g. "report_thanks".
+  pendingMessages: z.array(z.string()).optional().default([]),
   // The player's most recent automatic tier conversion, if any.
   tierConversion: z
     .object({
@@ -1495,3 +1498,20 @@ export const SteamFinalizeResponseSchema = z.object({
   resolution: SteamOrderResolutionSchema,
 });
 export type SteamFinalizeResponse = z.infer<typeof SteamFinalizeResponseSchema>;
+
+// A saved singleplayer game (/users/@me/saved_games, /public/saved_games).
+// The bytes are fetched separately from its `/data` route.
+export const SavedGameSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  map: z.string(),
+  tick: z.number(),
+  sizeBytes: z.number(),
+  public: z.boolean(),
+  createdAt: z.string(),
+});
+export type SavedGame = z.infer<typeof SavedGameSchema>;
+
+export const SavedGamesListResponseSchema = z.object({
+  savedGames: SavedGameSchema.array(),
+});

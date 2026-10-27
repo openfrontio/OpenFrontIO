@@ -1,9 +1,9 @@
 {
+  "$schema": "../../../info.schema.json",
   "id": "Asia",
   "name": "Asia",
   "translation_key": "map.asia",
   "categories": ["featured", "continental", "asia"],
-  "multiplayer_frequency": 6,
   "featured_rank": 5,
   "nations": [
     {

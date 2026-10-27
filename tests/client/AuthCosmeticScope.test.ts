@@ -1,3 +1,4 @@
+import { uuidToBase64url } from "@openfront/shared/Base64";
 import { base64url } from "jose";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { getApiBase } from "../../src/client/ApiBase";
@@ -8,7 +9,6 @@ import {
   userAuth,
 } from "../../src/client/Auth";
 import { ClientEnv } from "../../src/client/ClientEnv";
-import { uuidToBase64url } from "@openfront/shared/Base64";
 import { UserSettings } from "../../src/client/UserSettings";
 
 // The real Auth module, for the same reason AuthSessionActive.test.ts uses it:

@@ -63,6 +63,26 @@ describe("<profile-card>", () => {
     expect(card.textContent).not.toContain("player_stats_tree.stats_victories");
   });
 
+  it("shows an unverified username's suffix as #4545, not .4545", async () => {
+    await render({ username: "Rikardo66.4545", progress: PRESTIGE_3 });
+    const name = card.querySelector("[data-profile-name]")!;
+    expect(name.textContent).toContain("Rikardo66");
+    expect(name.textContent).toContain("#4545");
+    expect(name.textContent).not.toContain(".4545");
+    expect(name.getAttribute("title")).toBe("Rikardo66#4545");
+  });
+
+  it("keeps leading zeros in the suffix, and leaves a verified name bare", async () => {
+    await render({ username: "Ninja.0042", progress: PRESTIGE_3 });
+    expect(text("[data-profile-name]")).toContain("#0042");
+    card.remove();
+    await render({ username: "Ninja", progress: PRESTIGE_3 });
+    expect(text("[data-profile-name]")).not.toContain("#");
+    expect(
+      card.querySelector("[data-profile-name]")!.getAttribute("title"),
+    ).toBe("Ninja");
+  });
+
   it("is one row on the account page, without the lifetime XP", async () => {
     await render({
       variant: "compact",

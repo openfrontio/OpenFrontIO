@@ -143,6 +143,7 @@ function userMe(
     steamLicence: false,
     steamLicenceSince: null,
     noticesSeen: [],
+    pendingMessages: [],
     player: {
       publicId: "player-id",
       adfree: false,

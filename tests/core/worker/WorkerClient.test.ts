@@ -154,6 +154,40 @@ describe("WorkerClient humanStats", () => {
     expect(internalClient.messageHandlers.has(request.id)).toBe(false);
   });
 
+  it("asks the worker for just the disconnects, and resolves with its answer", async () => {
+    const { client, worker, internalClient } = createClient();
+    const promise = client.humanDisconnects();
+    const request = vi.mocked(worker.postMessage).mock.calls[0][0] as {
+      id: string;
+      type: string;
+    };
+    expect(request.type).toBe("human_disconnects");
+
+    const result = { tick: 50, disconnectedAt: { client_b: 30 } };
+    internalClient.handleWorkerMessage({
+      data: { type: "human_disconnects_result", id: request.id, result },
+    } as unknown as MessageEvent<WorkerMessage>);
+
+    await expect(promise).resolves.toEqual(result);
+    expect(internalClient.messageHandlers.has(request.id)).toBe(false);
+  });
+
+  it("rejects a disconnects request the worker doesn't answer", async () => {
+    vi.useFakeTimers();
+    try {
+      const { client, internalClient } = createClient();
+      const promise = client.humanDisconnects();
+      const rejection = expect(promise).rejects.toThrow(
+        "human_disconnects request timed out",
+      );
+      await vi.advanceTimersByTimeAsync(5000);
+      await rejection;
+      expect(internalClient.messageHandlers.size).toBe(0);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it("rejects and removes the handler when the worker does not respond", async () => {
     vi.useFakeTimers();
     try {

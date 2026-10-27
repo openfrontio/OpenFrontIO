@@ -28,6 +28,7 @@ import {
   WarshipSelectionBoxCancelEvent,
   WarshipSelectionBoxCompleteEvent,
   WarshipSelectionBoxUpdateEvent,
+  ZoomEvent,
 } from "../src/client/InputHandler";
 import { Platform } from "../src/client/Platform";
 import { UIState } from "../src/client/UIState";
@@ -1419,6 +1420,10 @@ describe("InputHandler AutoUpgrade", () => {
       inputHandler.initialize();
     });
 
+    afterEach(() => {
+      new UserSettings().removeCached(KEYBINDS_KEY, false);
+    });
+
     test("N targets the player under the cursor", () => {
       const targets: DoTargetPlayerEvent[] = [];
       eventBus.on(DoTargetPlayerEvent, (e) => targets.push(e));
@@ -1446,6 +1451,10 @@ describe("InputHandler AutoUpgrade", () => {
         eventBus,
       );
       inputHandler.initialize();
+    });
+
+    afterEach(() => {
+      new UserSettings().removeCached(KEYBINDS_KEY, false);
     });
 
     test("R opens quick chat at the last mouse position", () => {
@@ -1492,6 +1501,24 @@ describe("InputHandler AutoUpgrade", () => {
 
       expect(chats).toHaveLength(0);
     });
+
+    test("Shift+R resets graphics when altKey is bound to ShiftRight", () => {
+      new UserSettings().setKeybinds({
+        altKey: { value: "ShiftRight", key: "Shift" },
+      });
+
+      const chats: ShowChatMenuEvent[] = [];
+      const refreshes: RefreshGraphicsEvent[] = [];
+      eventBus.on(ShowChatMenuEvent, (e) => chats.push(e));
+      eventBus.on(RefreshGraphicsEvent, (e) => refreshes.push(e));
+
+      window.dispatchEvent(
+        new KeyboardEvent("keyup", { code: "KeyR", shiftKey: true }),
+      );
+
+      expect(chats).toHaveLength(0);
+      expect(refreshes).toHaveLength(1);
+    });
   });
 
   describe("Emoji menu keybind", () => {
@@ -1509,6 +1536,10 @@ describe("InputHandler AutoUpgrade", () => {
         eventBus,
       );
       inputHandler.initialize();
+    });
+
+    afterEach(() => {
+      new UserSettings().removeCached(KEYBINDS_KEY, false);
     });
 
     test("F opens the emoji menu at the last mouse position", () => {
@@ -2247,6 +2278,738 @@ describe("InputHandler teardown (OPE-411)", () => {
       handler.destroy();
       vi.useRealTimers();
     }
+  });
+
+  describe("Shift-modified hold-to-pan and hold-to-zoom keybinds", () => {
+    let handler: InputHandler;
+    let settings: UserSettings;
+    let bus: EventBus;
+
+    beforeEach(() => {
+      vi.useFakeTimers();
+      settings = new UserSettings();
+      settings.removeCached(KEYBINDS_KEY, false);
+      bus = new EventBus();
+      handler = new InputHandler(
+        {
+          inSpawnPhase: () => false,
+          myPlayer: () => ({ isAlive: () => true }),
+        } as any,
+        {
+          attackRatio: 20,
+          ghostStructure: null,
+          rocketDirectionUp: true,
+          upgradeMultiplier: 1,
+        } as any,
+        document.createElement("canvas"),
+        bus,
+      );
+    });
+
+    afterEach(() => {
+      handler.destroy();
+      vi.useRealTimers();
+    });
+
+    test("pans up when moveUp is bound to Shift+KeyW", () => {
+      settings.setKeybinds({ moveUp: "Shift+KeyW" });
+      handler.initialize();
+
+      const emitSpy = vi.spyOn(bus, "emit");
+      window.dispatchEvent(
+        new KeyboardEvent("keydown", { code: "ShiftLeft", shiftKey: true }),
+      );
+      window.dispatchEvent(
+        new KeyboardEvent("keydown", { code: "KeyW", shiftKey: true }),
+      );
+
+      vi.advanceTimersByTime(10);
+      const dragCalls = emitSpy.mock.calls.filter(
+        (c: unknown[]) => c[0] instanceof DragEvent,
+      );
+      expect(dragCalls.length).toBeGreaterThan(0);
+      expect((dragCalls[0][0] as DragEvent).deltaY).toBe(handler["PAN_SPEED"]);
+
+      // Releasing KeyW stops panning
+      window.dispatchEvent(
+        new KeyboardEvent("keyup", { code: "KeyW", shiftKey: true }),
+      );
+      emitSpy.mockClear();
+      vi.advanceTimersByTime(10);
+      expect(
+        emitSpy.mock.calls.some((c: unknown[]) => c[0] instanceof DragEvent),
+      ).toBe(false);
+    });
+
+    test("pans in all 4 directions with Shift-modified bindings", () => {
+      settings.setKeybinds({
+        moveUp: "Shift+KeyW",
+        moveDown: "Shift+KeyS",
+        moveLeft: "Shift+KeyA",
+        moveRight: "Shift+KeyD",
+      });
+      handler.initialize();
+
+      const emitSpy = vi.spyOn(bus, "emit");
+      window.dispatchEvent(
+        new KeyboardEvent("keydown", { code: "ShiftLeft", shiftKey: true }),
+      );
+
+      // Down
+      window.dispatchEvent(
+        new KeyboardEvent("keydown", { code: "KeyS", shiftKey: true }),
+      );
+      vi.advanceTimersByTime(5);
+      expect(
+        emitSpy.mock.calls.some(
+          (c: unknown[]) =>
+            c[0] instanceof DragEvent &&
+            (c[0] as DragEvent).deltaY === -handler["PAN_SPEED"],
+        ),
+      ).toBe(true);
+      window.dispatchEvent(
+        new KeyboardEvent("keyup", { code: "KeyS", shiftKey: true }),
+      );
+      emitSpy.mockClear();
+
+      // Left
+      window.dispatchEvent(
+        new KeyboardEvent("keydown", { code: "KeyA", shiftKey: true }),
+      );
+      vi.advanceTimersByTime(5);
+      expect(
+        emitSpy.mock.calls.some(
+          (c: unknown[]) =>
+            c[0] instanceof DragEvent &&
+            (c[0] as DragEvent).deltaX === handler["PAN_SPEED"],
+        ),
+      ).toBe(true);
+      window.dispatchEvent(
+        new KeyboardEvent("keyup", { code: "KeyA", shiftKey: true }),
+      );
+      emitSpy.mockClear();
+
+      // Right
+      window.dispatchEvent(
+        new KeyboardEvent("keydown", { code: "KeyD", shiftKey: true }),
+      );
+      vi.advanceTimersByTime(5);
+      expect(
+        emitSpy.mock.calls.some(
+          (c: unknown[]) =>
+            c[0] instanceof DragEvent &&
+            (c[0] as DragEvent).deltaX === -handler["PAN_SPEED"],
+        ),
+      ).toBe(true);
+      window.dispatchEvent(
+        new KeyboardEvent("keyup", { code: "KeyD", shiftKey: true }),
+      );
+    });
+
+    test("pans with Shift-modified arrow bindings (moveUpArrow etc.)", () => {
+      settings.setKeybinds({
+        moveUpArrow: "Shift+ArrowUp",
+        moveDownArrow: "Shift+ArrowDown",
+        moveLeftArrow: "Shift+ArrowLeft",
+        moveRightArrow: "Shift+ArrowRight",
+      });
+      handler.initialize();
+
+      const emitSpy = vi.spyOn(bus, "emit");
+      window.dispatchEvent(
+        new KeyboardEvent("keydown", { code: "ShiftLeft", shiftKey: true }),
+      );
+      window.dispatchEvent(
+        new KeyboardEvent("keydown", { code: "ArrowUp", shiftKey: true }),
+      );
+
+      vi.advanceTimersByTime(5);
+      expect(
+        emitSpy.mock.calls.some(
+          (c: unknown[]) =>
+            c[0] instanceof DragEvent &&
+            (c[0] as DragEvent).deltaY === handler["PAN_SPEED"],
+        ),
+      ).toBe(true);
+
+      window.dispatchEvent(
+        new KeyboardEvent("keyup", { code: "ArrowUp", shiftKey: true }),
+      );
+    });
+
+    test("an unmodified press does NOT activate a Shift-only binding", () => {
+      settings.setKeybinds({ moveUp: "Shift+KeyW" });
+      handler.initialize();
+
+      const emitSpy = vi.spyOn(bus, "emit");
+      window.dispatchEvent(
+        new KeyboardEvent("keydown", { code: "KeyW", shiftKey: false }),
+      );
+
+      vi.advanceTimersByTime(20);
+      expect(
+        emitSpy.mock.calls.some((c: unknown[]) => c[0] instanceof DragEvent),
+      ).toBe(false);
+    });
+
+    test("releasing Shift while the physical key remains held stops the action", () => {
+      settings.setKeybinds({ moveUp: "Shift+KeyW" });
+      handler.initialize();
+
+      const emitSpy = vi.spyOn(bus, "emit");
+      window.dispatchEvent(
+        new KeyboardEvent("keydown", { code: "ShiftLeft", shiftKey: true }),
+      );
+      window.dispatchEvent(
+        new KeyboardEvent("keydown", { code: "KeyW", shiftKey: true }),
+      );
+
+      vi.advanceTimersByTime(5);
+      expect(
+        emitSpy.mock.calls.some((c: unknown[]) => c[0] instanceof DragEvent),
+      ).toBe(true);
+
+      // Release Shift while KeyW is still held
+      window.dispatchEvent(
+        new KeyboardEvent("keyup", { code: "ShiftLeft", shiftKey: false }),
+      );
+      emitSpy.mockClear();
+
+      vi.advanceTimersByTime(10);
+      expect(
+        emitSpy.mock.calls.some((c: unknown[]) => c[0] instanceof DragEvent),
+      ).toBe(false);
+    });
+
+    test("pressing Shift while the physical key is already held activates the binding", () => {
+      settings.setKeybinds({ moveUp: "Shift+KeyW" });
+      handler.initialize();
+
+      const emitSpy = vi.spyOn(bus, "emit");
+      // Press KeyW first without Shift
+      window.dispatchEvent(
+        new KeyboardEvent("keydown", { code: "KeyW", shiftKey: false }),
+      );
+
+      vi.advanceTimersByTime(10);
+      expect(
+        emitSpy.mock.calls.some((c: unknown[]) => c[0] instanceof DragEvent),
+      ).toBe(false);
+
+      // Now press Shift while KeyW is still held
+      window.dispatchEvent(
+        new KeyboardEvent("keydown", { code: "ShiftLeft", shiftKey: true }),
+      );
+
+      vi.advanceTimersByTime(10);
+      expect(
+        emitSpy.mock.calls.some(
+          (c: unknown[]) =>
+            c[0] instanceof DragEvent &&
+            (c[0] as DragEvent).deltaY === handler["PAN_SPEED"],
+        ),
+      ).toBe(true);
+    });
+
+    test("zooms with Shift-modified zoom bindings (zoomIn, zoomOut)", () => {
+      settings.setKeybinds({
+        zoomOut: "Shift+KeyQ",
+        zoomIn: "Shift+KeyE",
+        zoomOutNumpad: "Shift+NumpadSubtract",
+        zoomInNumpad: "Shift+NumpadAdd",
+      });
+      handler.initialize();
+
+      const emitSpy = vi.spyOn(bus, "emit");
+      window.dispatchEvent(
+        new KeyboardEvent("keydown", { code: "ShiftLeft", shiftKey: true }),
+      );
+      window.dispatchEvent(
+        new KeyboardEvent("keydown", { code: "KeyQ", shiftKey: true }),
+      );
+
+      vi.advanceTimersByTime(5);
+      const zoomOutCalls = emitSpy.mock.calls.filter(
+        (c: unknown[]) =>
+          c[0] instanceof ZoomEvent &&
+          (c[0] as ZoomEvent).delta === handler["ZOOM_SPEED"],
+      );
+      expect(zoomOutCalls.length).toBeGreaterThan(0);
+
+      window.dispatchEvent(
+        new KeyboardEvent("keyup", { code: "KeyQ", shiftKey: true }),
+      );
+      emitSpy.mockClear();
+
+      // zoomOutNumpad
+      window.dispatchEvent(
+        new KeyboardEvent("keydown", {
+          code: "NumpadSubtract",
+          shiftKey: true,
+        }),
+      );
+      vi.advanceTimersByTime(5);
+      const zoomOutNumpadCalls = emitSpy.mock.calls.filter(
+        (c: unknown[]) =>
+          c[0] instanceof ZoomEvent &&
+          (c[0] as ZoomEvent).delta === handler["ZOOM_SPEED"],
+      );
+      expect(zoomOutNumpadCalls.length).toBeGreaterThan(0);
+
+      window.dispatchEvent(
+        new KeyboardEvent("keyup", {
+          code: "NumpadSubtract",
+          shiftKey: true,
+        }),
+      );
+      emitSpy.mockClear();
+
+      // Zoom in
+      window.dispatchEvent(
+        new KeyboardEvent("keydown", { code: "KeyE", shiftKey: true }),
+      );
+      vi.advanceTimersByTime(5);
+      const zoomInCalls = emitSpy.mock.calls.filter(
+        (c: unknown[]) =>
+          c[0] instanceof ZoomEvent &&
+          (c[0] as ZoomEvent).delta === -handler["ZOOM_SPEED"],
+      );
+      expect(zoomInCalls.length).toBeGreaterThan(0);
+
+      window.dispatchEvent(
+        new KeyboardEvent("keyup", { code: "KeyE", shiftKey: true }),
+      );
+      emitSpy.mockClear();
+
+      // zoomInNumpad
+      window.dispatchEvent(
+        new KeyboardEvent("keydown", { code: "NumpadAdd", shiftKey: true }),
+      );
+      vi.advanceTimersByTime(5);
+      const zoomInNumpadCalls = emitSpy.mock.calls.filter(
+        (c: unknown[]) =>
+          c[0] instanceof ZoomEvent &&
+          (c[0] as ZoomEvent).delta === -handler["ZOOM_SPEED"],
+      );
+      expect(zoomInNumpadCalls.length).toBeGreaterThan(0);
+    });
+
+    test("zooms with Shift-modified alternate zoom bindings (Equal, Minus)", () => {
+      settings.setKeybinds({
+        zoomOutMinus: "Shift+Minus",
+        zoomInEqual: "Shift+Equal",
+      });
+      handler.initialize();
+
+      const emitSpy = vi.spyOn(bus, "emit");
+      window.dispatchEvent(
+        new KeyboardEvent("keydown", { code: "ShiftLeft", shiftKey: true }),
+      );
+      window.dispatchEvent(
+        new KeyboardEvent("keydown", { code: "Minus", shiftKey: true }),
+      );
+
+      vi.advanceTimersByTime(5);
+      expect(
+        emitSpy.mock.calls.some(
+          (c: unknown[]) =>
+            c[0] instanceof ZoomEvent &&
+            (c[0] as ZoomEvent).delta === handler["ZOOM_SPEED"],
+        ),
+      ).toBe(true);
+
+      window.dispatchEvent(
+        new KeyboardEvent("keyup", { code: "Minus", shiftKey: true }),
+      );
+      emitSpy.mockClear();
+
+      window.dispatchEvent(
+        new KeyboardEvent("keydown", { code: "Equal", shiftKey: true }),
+      );
+      vi.advanceTimersByTime(5);
+      expect(
+        emitSpy.mock.calls.some(
+          (c: unknown[]) =>
+            c[0] instanceof ZoomEvent &&
+            (c[0] as ZoomEvent).delta === -handler["ZOOM_SPEED"],
+        ),
+      ).toBe(true);
+    });
+
+    test("unmodified bindings work normally and do not trigger when Shift is held", () => {
+      handler.initialize();
+
+      const emitSpy = vi.spyOn(bus, "emit");
+      // Plain KeyW pans
+      window.dispatchEvent(
+        new KeyboardEvent("keydown", { code: "KeyW", shiftKey: false }),
+      );
+      vi.advanceTimersByTime(5);
+      expect(
+        emitSpy.mock.calls.some((c: unknown[]) => c[0] instanceof DragEvent),
+      ).toBe(true);
+
+      // Now press Shift (as in warship box selection mode) -> panning stops
+      window.dispatchEvent(
+        new KeyboardEvent("keydown", { code: "ShiftLeft", shiftKey: true }),
+      );
+      emitSpy.mockClear();
+      vi.advanceTimersByTime(10);
+      expect(
+        emitSpy.mock.calls.some((c: unknown[]) => c[0] instanceof DragEvent),
+      ).toBe(false);
+
+      // Release Shift -> panning resumes
+      window.dispatchEvent(
+        new KeyboardEvent("keyup", { code: "ShiftLeft", shiftKey: false }),
+      );
+      emitSpy.mockClear();
+      vi.advanceTimersByTime(5);
+      expect(
+        emitSpy.mock.calls.some((c: unknown[]) => c[0] instanceof DragEvent),
+      ).toBe(true);
+
+      window.dispatchEvent(
+        new KeyboardEvent("keyup", { code: "KeyW", shiftKey: false }),
+      );
+    });
+
+    test("browser zoom shortcuts (Ctrl/Cmd + Minus/Equal) do not trigger game zoom or preventDefault", () => {
+      handler.initialize();
+
+      const emitSpy = vi.spyOn(bus, "emit");
+      const event = new KeyboardEvent("keydown", {
+        code: "Minus",
+        ctrlKey: true,
+      });
+      const preventSpy = vi.spyOn(event, "preventDefault");
+      window.dispatchEvent(event);
+
+      vi.advanceTimersByTime(10);
+      expect(preventSpy).not.toHaveBeenCalled();
+      expect(
+        emitSpy.mock.calls.some((c: unknown[]) => c[0] instanceof ZoomEvent),
+      ).toBe(false);
+      expect(handler["activeKeys"].has("Minus")).toBe(false);
+    });
+
+    test("window blur clears held action state", () => {
+      settings.setKeybinds({ moveUp: "Shift+KeyW" });
+      handler.initialize();
+
+      const emitSpy = vi.spyOn(bus, "emit");
+      window.dispatchEvent(
+        new KeyboardEvent("keydown", { code: "ShiftLeft", shiftKey: true }),
+      );
+      window.dispatchEvent(
+        new KeyboardEvent("keydown", { code: "KeyW", shiftKey: true }),
+      );
+
+      vi.advanceTimersByTime(5);
+      expect(
+        emitSpy.mock.calls.some((c: unknown[]) => c[0] instanceof DragEvent),
+      ).toBe(true);
+
+      // Blur window
+      window.dispatchEvent(new Event("blur"));
+      emitSpy.mockClear();
+
+      vi.advanceTimersByTime(10);
+      expect(
+        emitSpy.mock.calls.some((c: unknown[]) => c[0] instanceof DragEvent),
+      ).toBe(false);
+      expect(handler["activeKeys"].size).toBe(0);
+    });
+
+    test("unbound ('Null') bindings do not trigger continuous action", () => {
+      settings.setKeybinds({ moveUp: "Null" });
+      handler.initialize();
+
+      const emitSpy = vi.spyOn(bus, "emit");
+      window.dispatchEvent(
+        new KeyboardEvent("keydown", { code: "KeyW", shiftKey: false }),
+      );
+      window.dispatchEvent(
+        new KeyboardEvent("keydown", { code: "KeyW", shiftKey: true }),
+      );
+
+      vi.advanceTimersByTime(10);
+      expect(
+        emitSpy.mock.calls.some((c: unknown[]) => c[0] instanceof DragEvent),
+      ).toBe(false);
+    });
+
+    test("a held KeyE continues to emit zoom after Control is released", () => {
+      handler.initialize();
+
+      const emitSpy = vi.spyOn(bus, "emit");
+      // Hold KeyE to zoom in
+      window.dispatchEvent(
+        new KeyboardEvent("keydown", { code: "KeyE", shiftKey: false }),
+      );
+      vi.advanceTimersByTime(5);
+      expect(
+        emitSpy.mock.calls.some(
+          (c: unknown[]) =>
+            c[0] instanceof ZoomEvent &&
+            (c[0] as ZoomEvent).delta === -handler["ZOOM_SPEED"],
+        ),
+      ).toBe(true);
+
+      // Press and release Control (e.g. modifier tapped or shortcuts used)
+      window.dispatchEvent(
+        new KeyboardEvent("keydown", { code: "ControlLeft", ctrlKey: true }),
+      );
+      window.dispatchEvent(
+        new KeyboardEvent("keyup", { code: "ControlLeft", ctrlKey: false }),
+      );
+      emitSpy.mockClear();
+
+      // KeyE is still held down, zoom should continue emitting
+      vi.advanceTimersByTime(5);
+      expect(
+        emitSpy.mock.calls.some(
+          (c: unknown[]) =>
+            c[0] instanceof ZoomEvent &&
+            (c[0] as ZoomEvent).delta === -handler["ZOOM_SPEED"],
+        ),
+      ).toBe(true);
+      expect(handler["activeKeys"].has("KeyE")).toBe(true);
+
+      // Release KeyE
+      window.dispatchEvent(
+        new KeyboardEvent("keyup", { code: "KeyE", shiftKey: false }),
+      );
+      emitSpy.mockClear();
+      vi.advanceTimersByTime(5);
+      expect(
+        emitSpy.mock.calls.some((c: unknown[]) => c[0] instanceof ZoomEvent),
+      ).toBe(false);
+    });
+
+    test("held browser zoom keys (Equal, Minus, NumpadAdd, NumpadSubtract) continue to emit zoom after Control is released", () => {
+      handler.initialize();
+
+      for (const code of ["Equal", "Minus", "NumpadAdd", "NumpadSubtract"]) {
+        const emitSpy = vi.spyOn(bus, "emit");
+        window.dispatchEvent(
+          new KeyboardEvent("keydown", { code, shiftKey: false }),
+        );
+        vi.advanceTimersByTime(5);
+        expect(
+          emitSpy.mock.calls.some((c: unknown[]) => c[0] instanceof ZoomEvent),
+        ).toBe(true);
+
+        // Press and release Control while zoom key is held
+        window.dispatchEvent(
+          new KeyboardEvent("keydown", { code: "ControlLeft", ctrlKey: true }),
+        );
+        window.dispatchEvent(
+          new KeyboardEvent("keyup", { code: "ControlLeft", ctrlKey: false }),
+        );
+        emitSpy.mockClear();
+
+        // Zoom key should remain held and emit zoom
+        vi.advanceTimersByTime(5);
+        expect(
+          emitSpy.mock.calls.some((c: unknown[]) => c[0] instanceof ZoomEvent),
+        ).toBe(true);
+        expect(handler["activeKeys"].has(code)).toBe(true);
+
+        // Release the zoom key
+        window.dispatchEvent(
+          new KeyboardEvent("keyup", { code, shiftKey: false }),
+        );
+        emitSpy.mockClear();
+        vi.advanceTimersByTime(5);
+        expect(
+          emitSpy.mock.calls.some((c: unknown[]) => c[0] instanceof ZoomEvent),
+        ).toBe(false);
+        expect(handler["activeKeys"].has(code)).toBe(false);
+      }
+    });
+
+    test("browser zoom keys pressed after modifier are cleaned up when modifier is released", () => {
+      handler.initialize();
+
+      // Press Control first
+      window.dispatchEvent(
+        new KeyboardEvent("keydown", { code: "ControlLeft", ctrlKey: true }),
+      );
+
+      // Simulate a browser zoom key getting into activeKeys (e.g. if swallowed)
+      handler["activeKeys"].add("Equal");
+      handler["activeKeys"].add("Minus");
+
+      // Release Control
+      window.dispatchEvent(
+        new KeyboardEvent("keyup", { code: "ControlLeft", ctrlKey: false }),
+      );
+
+      expect(handler["activeKeys"].has("Equal")).toBe(false);
+      expect(handler["activeKeys"].has("Minus")).toBe(false);
+    });
+
+    test("on macOS, zoom keys are cleared when Meta is released to prevent swallowed keyups from sticking", () => {
+      handler.initialize();
+
+      for (const code of [
+        "Minus",
+        "Equal",
+        "NumpadAdd",
+        "NumpadSubtract",
+        "KeyE",
+        "KeyQ",
+      ]) {
+        handler["activeKeys"].add(code);
+      }
+
+      // Release MetaLeft
+      window.dispatchEvent(
+        new KeyboardEvent("keyup", { code: "MetaLeft", metaKey: false }),
+      );
+
+      for (const code of [
+        "Minus",
+        "Equal",
+        "NumpadAdd",
+        "NumpadSubtract",
+        "KeyE",
+        "KeyQ",
+      ]) {
+        expect(handler["activeKeys"].has(code)).toBe(false);
+      }
+    });
+
+    test("clears physical code for Shift-modified zoom binds when Meta is released", () => {
+      settings.setKeybinds({ zoomIn: "Shift+KeyE" });
+      handler.initialize();
+
+      // Hold Shift+E, then press Meta
+      window.dispatchEvent(
+        new KeyboardEvent("keydown", { code: "ShiftLeft", shiftKey: true }),
+      );
+      window.dispatchEvent(
+        new KeyboardEvent("keydown", { code: "KeyE", shiftKey: true }),
+      );
+      window.dispatchEvent(
+        new KeyboardEvent("keydown", {
+          code: "MetaLeft",
+          metaKey: true,
+          shiftKey: true,
+        }),
+      );
+
+      expect(handler["activeKeys"].has("KeyE")).toBe(true);
+
+      // Release Meta (keyup for KeyE was swallowed while Meta was down)
+      window.dispatchEvent(
+        new KeyboardEvent("keyup", {
+          code: "MetaLeft",
+          metaKey: false,
+          shiftKey: true,
+        }),
+      );
+
+      // KeyE must be cleared from activeKeys so it does not stay stuck
+      expect(handler["activeKeys"].has("KeyE")).toBe(false);
+
+      // Release Shift
+      window.dispatchEvent(
+        new KeyboardEvent("keyup", { code: "ShiftLeft", shiftKey: false }),
+      );
+      expect(handler["activeKeys"].has("KeyE")).toBe(false);
+    });
+
+    test("preserves physical code for Shift-modified zoom binds held before Control", () => {
+      settings.setKeybinds({ zoomIn: "Shift+KeyE" });
+      handler.initialize();
+
+      const emitSpy = vi.spyOn(bus, "emit");
+
+      // Hold Shift+E before Control
+      window.dispatchEvent(
+        new KeyboardEvent("keydown", { code: "ShiftLeft", shiftKey: true }),
+      );
+      window.dispatchEvent(
+        new KeyboardEvent("keydown", { code: "KeyE", shiftKey: true }),
+      );
+
+      // Press Control
+      window.dispatchEvent(
+        new KeyboardEvent("keydown", {
+          code: "ControlLeft",
+          ctrlKey: true,
+          shiftKey: true,
+        }),
+      );
+
+      // Release Control
+      window.dispatchEvent(
+        new KeyboardEvent("keyup", {
+          code: "ControlLeft",
+          ctrlKey: false,
+          shiftKey: true,
+        }),
+      );
+
+      // KeyE was held before Control, so it should still be in activeKeys and emit zoom
+      expect(handler["activeKeys"].has("KeyE")).toBe(true);
+      emitSpy.mockClear();
+      vi.advanceTimersByTime(5);
+      expect(
+        emitSpy.mock.calls.some((c: unknown[]) => c[0] instanceof ZoomEvent),
+      ).toBe(true);
+    });
+
+    test("holding ShiftRight and pressing another key does NOT add ShiftLeft to activeKeys", () => {
+      settings.setKeybinds({ moveUp: "Shift+KeyW" });
+      handler.initialize();
+
+      const emitSpy = vi.spyOn(bus, "emit");
+      // Press physical Right Shift
+      window.dispatchEvent(
+        new KeyboardEvent("keydown", { code: "ShiftRight", shiftKey: true }),
+      );
+      // Press KeyW with shiftKey: true
+      window.dispatchEvent(
+        new KeyboardEvent("keydown", { code: "KeyW", shiftKey: true }),
+      );
+
+      // activeKeys must not contain ShiftLeft (which would trigger boxSelectWarships)
+      expect(handler["activeKeys"].has("ShiftLeft")).toBe(false);
+      expect(handler["activeKeys"].has("ShiftRight")).toBe(true);
+      expect(handler["activeKeys"].has("KeyW")).toBe(true);
+
+      vi.advanceTimersByTime(5);
+      expect(
+        emitSpy.mock.calls.some(
+          (c: unknown[]) =>
+            c[0] instanceof DragEvent &&
+            (c[0] as DragEvent).deltaY === handler["PAN_SPEED"],
+        ),
+      ).toBe(true);
+
+      // Release ShiftRight while KeyW is held
+      window.dispatchEvent(
+        new KeyboardEvent("keyup", { code: "ShiftRight", shiftKey: false }),
+      );
+      expect(handler["activeKeys"].has("ShiftRight")).toBe(false);
+      emitSpy.mockClear();
+      vi.advanceTimersByTime(10);
+      // Shift action should stop
+      expect(
+        emitSpy.mock.calls.some((c: unknown[]) => c[0] instanceof DragEvent),
+      ).toBe(false);
+    });
+
+    test("rebuilds continuous action bindings when keybind settings change", () => {
+      handler.initialize();
+      expect(handler["keybinds"].moveUpArrow).toBe("ArrowUp");
+
+      settings.setKeybinds({ moveUpArrow: "Shift+ArrowUp" });
+      expect(handler["keybinds"].moveUpArrow).toBe("Shift+ArrowUp");
+    });
   });
 });
 

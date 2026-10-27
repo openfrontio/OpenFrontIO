@@ -1,8 +1,8 @@
 import { html } from "lit";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import type { ResolvedCosmetic } from "../../src/client/Cosmetics";
-import "../../src/client/components/CosmeticCard";
 import type { CosmeticCard } from "../../src/client/components/CosmeticCard";
+import "../../src/client/components/CosmeticCard";
+import type { ResolvedCosmetic } from "../../src/client/Cosmetics";
 
 const translations = {
   "cosmetics.adfree": "ad-free for life!",

@@ -16,7 +16,6 @@ import { ZbContext } from "@openfront/zbin";
 import { vi } from "vitest";
 import { Client } from "../../src/server/Client";
 import { GameServer, GameServerDeps } from "../../src/server/GameServer";
-import { type MatchTelemetryEmitter } from "../../src/server/telemetry/MatchTelemetry";
 import { clientFrame, decodeSentServerMessage, testGameConfig } from "./Wire";
 
 // A schema-valid 8-char id from a readable tag: cid("p1") === "p1000000".
@@ -70,7 +69,10 @@ export interface MockWs {
 // readyState leaves OPEN once the socket is closed from either side, as the
 // real one does, so server guards like `readyState === OPEN` behave the same.
 export function makeMockWs(): MockWs {
-  const listeners = new Map<string, ((...args: any[]) => void)[]>();
+  const listeners = new Map<
+    string,
+    ((...args: any[]) => void | Promise<void>)[]
+  >();
   const CLOSED = 3;
   const ws: MockWs = {
     on: (event, handler) => {
@@ -115,6 +117,8 @@ export interface ClientOpts {
   spectator?: boolean;
   trusted?: boolean;
   platform?: Client["platform"];
+  device?: Client["device"];
+  claims?: Client["claims"];
   levelBadge?: Client["levelBadge"];
 }
 
@@ -130,7 +134,7 @@ export function makeClient(opts: ClientOpts = {}): Client {
   return new Client(
     clientID,
     opts.persistentID ?? `${clientID}-pid`,
-    null,
+    opts.claims ?? null,
     opts.role ?? null,
     undefined,
     opts.ip ?? `10.0.${Math.floor(n / 256)}.${n % 256}`,
@@ -143,6 +147,7 @@ export function makeClient(opts: ClientOpts = {}): Client {
     opts.spectator ?? false,
     opts.trusted ?? false,
     opts.platform,
+    opts.device,
     opts.levelBadge,
   );
 }
@@ -159,8 +164,6 @@ export interface GameOpts {
   publicGameType?: PublicGameType;
   matchmakingTeams?: string[][];
   matchmakingClanTags?: string[];
-  telemetry?: MatchTelemetryEmitter;
-  buildHash?: string;
   // Overrides for what the game reaches outside itself for. By default the
   // archive upload and the tribe fetch are inert spies: pass your own
   // `archive` to read the record a game produced.
@@ -178,8 +181,6 @@ export function makeGame(opts: GameOpts = {}): GameServer {
     replayPending: () => 0,
     fetchTribes: vi.fn(async () => []),
   };
-  if (opts.telemetry !== undefined) deps.telemetry = opts.telemetry;
-  if (opts.buildHash !== undefined) deps.telemetryBuildHash = opts.buildHash;
   Object.assign(deps, opts.deps);
   return new GameServer(
     {

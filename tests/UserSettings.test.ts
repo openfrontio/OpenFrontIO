@@ -358,9 +358,8 @@ describe("UserSettings stats columns", () => {
   beforeEach(resetUserSettingsState);
 
   it("returns defaults when nothing is stored", () => {
-    // The player table opens with the clan tag shown; a team has no tag.
+    // The clan column is opt-in, so both tables open with the same stats.
     expect(new UserSettings().statsColumns("player")).toEqual([
-      "clan",
       "tiles",
       "gold",
       "maxtroops",
@@ -398,7 +397,6 @@ describe("UserSettings stats columns", () => {
   it("falls back to defaults on corrupt JSON", () => {
     localStorage.setItem(PLAYER_STATS_COLUMNS_KEY, "not json");
     expect(new UserSettings().statsColumns("player")).toEqual([
-      "clan",
       "tiles",
       "gold",
       "maxtroops",
@@ -408,7 +406,6 @@ describe("UserSettings stats columns", () => {
   it("falls back to defaults when no valid ids remain", () => {
     localStorage.setItem(PLAYER_STATS_COLUMNS_KEY, JSON.stringify(["bogus"]));
     expect(new UserSettings().statsColumns("player")).toEqual([
-      "clan",
       "tiles",
       "gold",
       "maxtroops",
