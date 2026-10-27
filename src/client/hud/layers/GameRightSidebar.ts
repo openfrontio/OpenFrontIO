@@ -328,6 +328,18 @@ export class GameRightSidebar extends LitElement implements Controller {
     }
   }
 
+  private onShareButtonKeyDown(e: KeyboardEvent) {
+    if (e.code === "Space" || e.key === " " || e.key === "Enter") {
+      e.stopPropagation();
+    }
+  }
+
+  private onShareButtonKeyUp(e: KeyboardEvent) {
+    if (e.code === "Space" || e.key === " " || e.key === "Enter") {
+      e.stopPropagation();
+    }
+  }
+
   private onFullscreenButtonClick() {
     if (!document.fullscreenElement) {
       document.documentElement.requestFullscreen().catch((err) => {
@@ -426,6 +438,8 @@ export class GameRightSidebar extends LitElement implements Controller {
                 type="button"
                 class="cursor-pointer bg-transparent border-0 p-0 flex items-center justify-center text-white"
                 @click=${this.onShareButtonClick}
+                @keydown=${this.onShareButtonKeyDown}
+                @keyup=${this.onShareButtonKeyUp}
                 title=${translateText("game_right_sidebar.share_link")}
                 aria-label=${translateText("game_right_sidebar.share_link")}
               >

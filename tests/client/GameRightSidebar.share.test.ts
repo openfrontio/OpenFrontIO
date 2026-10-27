@@ -318,4 +318,58 @@ describe("GameRightSidebar share button", () => {
     const shareBtn = getShareButton(el);
     expect(shareBtn).toBeNull();
   });
+
+  it("stops propagation of Space and Enter activation keys without preventing default", async () => {
+    const el = await mount();
+    const shareBtn = getShareButton(el);
+    expect(shareBtn).not.toBeNull();
+
+    const parentKeyDown = vi.fn();
+    el.addEventListener("keydown", parentKeyDown);
+    const parentKeyUp = vi.fn();
+    el.addEventListener("keyup", parentKeyUp);
+
+    // Space keydown
+    const spaceKeyDown = new KeyboardEvent("keydown", {
+      code: "Space",
+      key: " ",
+      bubbles: true,
+      cancelable: true,
+    });
+    shareBtn!.dispatchEvent(spaceKeyDown);
+    expect(parentKeyDown).not.toHaveBeenCalled();
+    expect(spaceKeyDown.defaultPrevented).toBe(false);
+
+    // Space keyup
+    const spaceKeyUp = new KeyboardEvent("keyup", {
+      code: "Space",
+      key: " ",
+      bubbles: true,
+      cancelable: true,
+    });
+    shareBtn!.dispatchEvent(spaceKeyUp);
+    expect(parentKeyUp).not.toHaveBeenCalled();
+    expect(spaceKeyUp.defaultPrevented).toBe(false);
+
+    // Enter keydown
+    const enterKeyDown = new KeyboardEvent("keydown", {
+      code: "Enter",
+      key: "Enter",
+      bubbles: true,
+      cancelable: true,
+    });
+    shareBtn!.dispatchEvent(enterKeyDown);
+    expect(parentKeyDown).not.toHaveBeenCalled();
+    expect(enterKeyDown.defaultPrevented).toBe(false);
+
+    // Other keys (e.g. Tab) should still bubble
+    const tabKeyDown = new KeyboardEvent("keydown", {
+      code: "Tab",
+      key: "Tab",
+      bubbles: true,
+      cancelable: true,
+    });
+    shareBtn!.dispatchEvent(tabKeyDown);
+    expect(parentKeyDown).toHaveBeenCalledWith(tabKeyDown);
+  });
 });
