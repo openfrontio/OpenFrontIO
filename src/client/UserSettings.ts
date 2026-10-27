@@ -326,6 +326,11 @@ export class UserSettings {
     }
   }
 
+  /** publicId of the logged-in player, or null when logged out. */
+  static currentPlayerId(): string | null {
+    return UserSettings.playerId;
+  }
+
   private storageKey(key: string): string {
     if (UserSettings.playerId !== null && PER_PLAYER_KEYS.includes(key)) {
       return `${key}:${UserSettings.playerId}`;
