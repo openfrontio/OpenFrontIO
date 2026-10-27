@@ -3,7 +3,6 @@
   "name": "Germany",
   "translation_key": "map.germany",
   "categories": ["europe", "countries"],
-  "multiplayer_frequency": 5,
   "custom_tribes": [
     "Aachen, Städteregion",
     "Ahrweiler",
