@@ -334,12 +334,17 @@ export class TutorialPanel extends LitElement implements Controller {
     for (const id of ids) {
       const nation = this.game.playerBySmallID(id);
       if (!nation.isPlayer()) continue;
-      void (nation as PlayerView).profile().then((profile) => {
-        this.nationRelations.set(
-          id,
-          profile.relations[me.smallID()] ?? Relation.Neutral,
+      (nation as PlayerView)
+        .profile()
+        .then((profile) => {
+          this.nationRelations.set(
+            id,
+            profile.relations[me.smallID()] ?? Relation.Neutral,
+          );
+        })
+        .catch((error) =>
+          console.warn("Failed to fetch nation relations", error),
         );
-      });
     }
   }
 
