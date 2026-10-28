@@ -10,8 +10,29 @@ import {
   copyRootPublicFiles,
   createHashedPublicAssetFiles,
   getPublicDir,
+  listHashedPublicAssetPaths,
   writeRootFilesIndex,
 } from "../../src/server/PublicAssetManifest";
+
+// OFstats's emblem kit: a flat emblem per family for small sizes, and a
+// shaded one per tier, numeral included, for large ones.
+const FFA_TIER_FAMILIES = [
+  "iron",
+  "bronze",
+  "silver",
+  "gold",
+  "platinum",
+  "diamond",
+  "master",
+  "grandmaster",
+];
+const FFA_TIER_ART = [
+  ...FFA_TIER_FAMILIES.map((f) => `images/ffa-tiers/compact/${f}.svg`),
+  ...FFA_TIER_FAMILIES.slice(0, 7).flatMap((f) =>
+    ["iii", "ii", "i"].map((d) => `images/ffa-tiers/detailed/${f}-${d}.svg`),
+  ),
+  "images/ffa-tiers/detailed/grandmaster.svg",
+].sort();
 
 describe("PublicAssetManifest", () => {
   let tempDir: string | null = null;
@@ -394,5 +415,22 @@ describe("PublicAssetManifest", () => {
       index[".well-known/apple-developer-merchantid-domain-association"],
     ).toBe("text/plain; charset=utf-8");
     expect(index["press/"]).toBe("text/html; charset=utf-8");
+  });
+
+  test("hashes exactly OFstats's 30 FFA tier emblems", () => {
+    const paths = listHashedPublicAssetPaths([path.resolve("resources")]);
+    expect(paths.filter((p) => p.startsWith("images/ffa-tiers/"))).toEqual(
+      FFA_TIER_ART,
+    );
+  });
+
+  test("ships only inert FFA tier SVGs", async () => {
+    for (const asset of FFA_TIER_ART) {
+      const svg = await fs.readFile(path.resolve("resources", asset), "utf8");
+      expect(svg, asset).toMatch(/^<svg[\s>]/);
+      expect(svg, asset).not.toMatch(
+        /<script|\son[a-z]+\s*=|<foreignObject|(?:xlink:)?href\s*=\s*["'](?!#|data:image\/)/i,
+      );
+    }
   });
 });

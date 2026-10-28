@@ -117,6 +117,13 @@ Licensed under ODbL
 © [OpenStreetMap contributors](https://www.openstreetmap.org/copyright)  
 Licensed under ODbL
 
+## FFA Rating
+
+### OFstats
+
+FFA rating model by [OFstats](https://ofstats.io/leaderboard/how-it-works) ([kdembler/ofstats-rating](https://github.com/kdembler/ofstats-rating), MIT, © 2026 Klaudiusz Dembler).  
+Rank emblems in `resources/images/ffa-tiers/` by [OFstats](https://ofstats.io), licensed under [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/).
+
 ## Icons
 
 ### [The Noun Project](https://thenounproject.com/)
