@@ -4,7 +4,9 @@ import {
   PlayerType,
   RankedType,
 } from "@openfront/engine-api/game/GameTypes";
+import { GameUpdateType } from "@openfront/engine-api/game/GameUpdates";
 import { GAME_ID_REGEX, type Winner } from "@openfront/engine-api/Schemas";
+import { EventBus } from "@openfront/shared/EventBus";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { FfaRatingPanel } from "../../../../src/client/components/ffaRating/FfaRatingPanel";
 import type { PurchaseButton } from "../../../../src/client/components/PurchaseButton";
@@ -361,6 +363,50 @@ describe("WinModal FFA rating panel", () => {
     await m.updateComplete;
     expect(m.querySelector("ffa-rating-panel")).toBeNull();
     expect(resolveXpAccount).not.toHaveBeenCalled();
+  });
+
+  it("shows the panel when the Win update arrives through tick()", async () => {
+    signedIn({ calibrationGames: 3 });
+    const el = document.createElement("win-modal") as WinModal;
+    const winner = { isPlayer: () => true, clientID: () => "c1" };
+    el.game = {
+      gameID: () => "g1",
+      config: () => ({
+        gameConfig: () => ({
+          gameType: GameType.Public,
+          gameMode: GameMode.FFA,
+        }),
+        isReplay: () => false,
+      }),
+      myPlayer: () => ({
+        isAlive: () => true,
+        hasSpawned: () => true,
+        clientID: () => "c1",
+      }),
+      players: () =>
+        Array.from({ length: 12 }, () => ({
+          type: () => PlayerType.Human,
+          hasSpawned: () => true,
+        })),
+      inSpawnPhase: () => false,
+      ticks: () => 6000,
+      playerByClientID: () => winner,
+      updatesSinceLastTick: () => ({
+        [GameUpdateType.Win]: [
+          { winner: ["player", "c1"], allPlayersStats: {} },
+        ],
+      }),
+    } as never;
+    el.eventBus = new EventBus();
+    document.body.appendChild(el);
+    modal = el;
+
+    el.tick();
+
+    await vi.waitFor(() => {
+      const panel = el.querySelector<FfaRatingPanel>("ffa-rating-panel");
+      expect(panel?.gameId).toBe("g1");
+    });
   });
 });
 
