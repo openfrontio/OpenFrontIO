@@ -976,7 +976,7 @@ describe("land a nuke severs from the main body is annexed", () => {
     },
   );
 
-  test("a single contiguous 8-way empire (clusters.length === 1) annexes a diagonally pinched tip severed by fallout", () => {
+  test("a single contiguous 8-way empire (clusters.length === 1) annexes a diagonally pinched tip", () => {
     // Main body: 20x20 block (400 tiles)
     const mainBody = rect(20, 20, 39, 39);
     // Diagonally pinched tip: 3x3 block (9 tiles) connected only diagonally at (40, 40)
@@ -1001,8 +1001,9 @@ describe("land a nuke severs from the main body is annexed", () => {
     attacker.conquer(game.ref(20, 20));
     runClusterChecks();
 
-    // Pinched tip severed by fallout is annexed by attacker
+    // Diagonally pinched tip is annexed by attacker
     expect(defenderTilesIn(pinchedTip)).toBe(0);
+    expect(tilesOwnedBy(attacker, pinchedTip)).toBe(9);
     // Main body survives (minus the 1 conquered tile)
     expect(defenderTilesIn(mainBody)).toBe(399);
   });
@@ -1017,14 +1018,45 @@ describe("land a nuke severs from the main body is annexed", () => {
 
     paint(union(mainBody, enclave1, enclave2));
 
+    const proto = PlayerExecution.prototype as unknown as Record<
+      string,
+      (...args: unknown[]) => unknown
+    >;
+    const originalRemoveClusters = proto.removeClusters;
+    let defenderPasses = 0;
+    let enclave1TilesAfterFirstPass = -1;
+    let enclave2TilesAfterFirstPass = -1;
+
+    vi.spyOn(proto, "removeClusters").mockImplementation(function (
+      this: unknown,
+      ...args: unknown[]
+    ) {
+      const result = originalRemoveClusters.apply(this, args);
+      if ((this as { player: Player }).player === defender) {
+        defenderPasses++;
+        if (defenderPasses === 1) {
+          enclave1TilesAfterFirstPass = defenderTilesIn(enclave1);
+          enclave2TilesAfterFirstPass = defenderTilesIn(enclave2);
+        }
+      }
+      return result;
+    });
+
     startClusterChecks();
     // Trigger mid-game conquest on defender to ensure cluster checks execute
     attacker.conquer(game.ref(0, 10));
     runClusterChecks();
 
-    // Both secondary enclaves are annexed in the same tick
+    // Both secondary enclaves are removed immediately during the first execution pass
+    expect(defenderPasses).toBeGreaterThanOrEqual(1);
+    expect(enclave1TilesAfterFirstPass).toBe(0);
+    expect(enclave2TilesAfterFirstPass).toBe(0);
+
+    // Both secondary enclaves are owned by attacker
     expect(defenderTilesIn(enclave1)).toBe(0);
     expect(defenderTilesIn(enclave2)).toBe(0);
+    expect(tilesOwnedBy(attacker, enclave1)).toBe(9);
+    expect(tilesOwnedBy(attacker, enclave2)).toBe(9);
     // Main body remains intact (1200 tiles minus the 1 conquered tile)
     expect(defenderTilesIn(mainBody)).toBe(1199);
   });
