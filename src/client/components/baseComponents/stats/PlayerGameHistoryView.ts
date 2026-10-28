@@ -159,13 +159,13 @@ export class PlayerGameHistoryView extends LitElement {
   private setTypeFilter(filter: TypeKey) {
     if (filter === this.typeFilter) return;
     this.typeFilter = filter;
-    this.reload();
+    void this.reload();
   }
 
   private setModeFilter(filter: ModeKey) {
     if (filter === this.modeFilter) return;
     this.modeFilter = filter;
-    this.reload();
+    void this.reload();
   }
 
   private async load({ append }: { append: boolean }) {
@@ -383,7 +383,7 @@ export class PlayerGameHistoryView extends LitElement {
           (group) => html`
             <div class="space-y-3">
               <div
-                class="sticky top-0 z-10 flex items-center gap-3 px-1 py-1.5"
+                class="sticky top-0 z-10 flex items-center gap-3 px-1 py-1.5 pointer-events-none"
               >
                 <span class="h-px flex-1 bg-white/10"></span>
                 <h3

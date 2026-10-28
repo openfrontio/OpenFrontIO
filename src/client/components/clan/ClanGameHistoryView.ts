@@ -89,7 +89,7 @@ export class ClanGameHistoryView extends LitElement {
       this.nextCursor = this.cachedState.nextCursor;
       this.filter = this.cachedState.filter;
     } else if (this.clanTag) {
-      this.reload();
+      void this.reload();
     }
   }
 
@@ -117,7 +117,7 @@ export class ClanGameHistoryView extends LitElement {
   private setFilter(filter: FilterKey) {
     if (filter === this.filter) return;
     this.filter = filter;
-    this.reload();
+    void this.reload();
   }
 
   private async load({ append }: { append: boolean }) {
@@ -335,7 +335,7 @@ export class ClanGameHistoryView extends LitElement {
           (group) => html`
             <div class="space-y-3">
               <div
-                class="sticky top-0 z-10 flex items-center gap-3 px-1 py-1.5"
+                class="sticky top-0 z-10 flex items-center gap-3 px-1 py-1.5 pointer-events-none"
               >
                 <span class="h-px flex-1 bg-white/10"></span>
                 <h3

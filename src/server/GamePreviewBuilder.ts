@@ -10,7 +10,7 @@ import { z } from "zod";
 import { getRuntimeAssetManifest } from "./RuntimeAssetManifest";
 import { ServerEnv } from "./ServerEnv";
 
-export const PlayerInfoSchema = z.object({
+const PlayerInfoSchema = z.object({
   clientID: z.string().optional(),
   username: UsernameSchema.optional(),
   clanTag: ClanTagSchema,
@@ -163,7 +163,8 @@ export async function buildPreview(
     activePlayers = countActivePlayers(players);
   } else {
     activePlayers =
-      countActivePlayers(players) || (lobby?.clients?.length ?? 0);
+      countActivePlayers(players) ||
+      (lobby?.clients?.filter((c) => !c.spectator).length ?? 0);
   }
   const map = lobby?.gameConfig?.gameMap ?? config.gameMap;
   let mode = lobby?.gameConfig?.gameMode ?? config.gameMode ?? GameMode.FFA;

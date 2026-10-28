@@ -299,7 +299,13 @@ export class UserSettingModal extends BaseModal {
       actions: [string, string];
       keyPrefix: string;
     }> = [
-      { actions: ["emojiMenuModifier", "altKey"], keyPrefix: "Alt" },
+      // This is a tad ugly, but it's the only solution I found.
+      {
+        actions: ["buildScrollModifier", "emojiMenuModifier"],
+        keyPrefix: "Alt",
+      },
+      { actions: ["altKey", "emojiMenuModifier"], keyPrefix: "Alt" },
+      { actions: ["buildScrollModifier", "altKey"], keyPrefix: "Alt" },
       { actions: ["boxSelectWarships", "shiftKey"], keyPrefix: "Shift" },
     ];
 
@@ -1290,6 +1296,15 @@ export class UserSettingModal extends BaseModal {
       ></setting-keybind>
 
       <setting-keybind
+        action="preventStacking"
+        label=${translateText("user_setting.prevent_stacking")}
+        description=${translateText("user_setting.prevent_stacking_desc")}
+        defaultKey=${this.defaultKeybinds.preventStacking}
+        .value=${this.getKeyValue("preventStacking")}
+        .display=${this.getKeyChar("preventStacking")}
+        @change=${this.handleKeybindChange}
+      ></setting-keybind>
+      <setting-keybind
         action="coordinateGrid"
         label=${translateText("user_setting.coordinate_grid_label")}
         description=${translateText("user_setting.coordinate_grid_desc")}
@@ -1443,6 +1458,17 @@ export class UserSettingModal extends BaseModal {
         .defaultKey=${this.defaultKeybinds.buildMenuModifier}
         .value=${this.getKeyValue("buildMenuModifier")}
         .display=${this.getKeyChar("buildMenuModifier")}
+        @change=${this.handleKeybindChange}
+      ></setting-keybind>
+
+      <setting-keybind
+        action="buildScrollModifier"
+        .allowModifiers=${true}
+        label=${translateText("user_setting.build_scroll_modifier")}
+        description=${translateText("user_setting.build_scroll_modifier_desc")}
+        .defaultKey=${this.defaultKeybinds.buildScrollModifier}
+        .value=${this.getKeyValue("buildScrollModifier")}
+        .display=${this.getKeyChar("buildScrollModifier")}
         @change=${this.handleKeybindChange}
       ></setting-keybind>
 

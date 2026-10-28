@@ -112,7 +112,12 @@ export function uploadFrameData(
   view.updateNukeTelegraphs(frame.nukeTelegraphs);
 
   // --- Names + player status ---
-  view.updateNames(frame.names, frame.players, false, frame.playerStatus);
+  view.updateNames(
+    frame.names,
+    frame.players,
+    frame.namesSnap ?? false,
+    frame.playerStatus,
+  );
 
   // --- Relations ---
   // Gated: updateRelations triggers a full-map border recompute downstream,

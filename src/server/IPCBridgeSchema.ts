@@ -34,7 +34,7 @@ export const InternalGameInfoSchema = PublicGameInfoSchema.extend({
   queuedAt: z.number().optional(),
 });
 
-export const InternalPublicGamesSchema = z.object({
+const InternalPublicGamesSchema = z.object({
   serverTime: z.number(),
   games: z.partialRecord(PublicGameTypeSchema, z.array(InternalGameInfoSchema)),
 });

@@ -38,7 +38,7 @@ import { playerTypeFromEnum } from "../view/EntityState";
 import type { ReplayFrame } from "./codec/ReplayTypes";
 
 /** A unit as the HUD reads it (maxTroops, ship counts, hover cards). */
-export class ReplayUnitView {
+class ReplayUnitView {
   constructor(
     private readonly state: UnitState,
     private readonly game: ReplayGameView,
@@ -83,7 +83,7 @@ export class ReplayUnitView {
   }
 }
 
-export class ReplayPlayerView {
+class ReplayPlayerView {
   // Written by ReplayGameView.sync, read through the accessors below.
   /** The current frame's state, undefined before the player appears. */
   current: PlayerState | undefined;
