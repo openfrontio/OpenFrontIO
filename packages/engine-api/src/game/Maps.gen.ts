@@ -2020,10 +2020,6 @@ export const maps: readonly MapInfo[] = [
     type: GameMapType.Worldamericas,
     translationKey: "map.worldamericas",
     categories: ["world"],
-    multiplayerFrequency: 8,
-    ffaFrequency: -1,
-    teamFrequency: -1,
-    specialFrequency: -1,
     defaultNationCount: 72,
   },
   {
