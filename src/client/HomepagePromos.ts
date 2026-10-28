@@ -53,6 +53,7 @@ export class HomepagePromos extends LitElement {
   // rail that appears is destroyed again.
   private bottomRailDestroyedAt: number | null = null;
   private railDestroy: Promise<void> | null = null;
+  private railDestroyCount = 0;
 
   // The header ad ("flex" leaderboard, GumGum via Playwire) renders in a
   // #pw-oop-flex element that ramp.js nests inside a #pw-oop-flex_container
@@ -268,6 +269,7 @@ export class HomepagePromos extends LitElement {
     if (!this.bottomRailActive) return;
     this.bottomRailActive = false;
     this.bottomRailDestroyedAt = performance.now();
+    this.railDestroyCount++;
     this.railDestroy = this.destroyBottomRailUnit().then(() => {
       this.railDestroy = null;
       console.log("Bottom rail ad destroyed");
@@ -296,6 +298,7 @@ export class HomepagePromos extends LitElement {
     if (this.railDestroy !== null) return;
     const rail = document.getElementById(BOTTOM_RAIL_ID);
     if (rail === null) return;
+    const destroyCount = this.railDestroyCount;
     const seconds = Math.round(
       (performance.now() - (this.bottomRailDestroyedAt ?? 0)) / 1000,
     );
@@ -322,12 +325,20 @@ export class HomepagePromos extends LitElement {
       reportEvent("bottom_rail_in_game", {
         ...details,
         destroyUnits,
-        removedBy: left === null ? "playwire" : "openfront",
+        // Once the next lobby has lifted the ban, the rail on the page may be
+        // that lobby's, so who removed this one is unknown.
+        removedBy: !stillBanned
+          ? "unknown"
+          : left === null
+            ? "playwire"
+            : "openfront",
         outcome: "removed",
       });
       if (!stillBanned) return;
       setTimeout(() => {
+        // A later lobby's rail is not this one's, whatever is on the page.
         if (this.bottomRailDestroyedAt === null) return;
+        if (this.railDestroyCount !== destroyCount) return;
         // Any rail creative, not only #pw-oop-bottom_rail: the guard already
         // destroys that element again whenever it comes back.
         const creative = document.querySelector(
