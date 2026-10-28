@@ -795,8 +795,10 @@ describe("LeaderboardModal", () => {
         "leaderboard-player-list col",
       );
       expect(cols[2].style.width).toBe("");
+      // From sm up, room for the widest badge (emblem + GRANDMASTER) beside
+      // the rating; on a phone the badge shows only the division.
       expect(cols[2].classList).toContain("w-32");
-      expect(cols[2].classList).toContain("sm:w-48");
+      expect(cols[2].classList).toContain("sm:w-60");
       // The rating and its uncertainty never wrap apart.
       const cell = modal.querySelector("[data-ffa-rating-cell]")!;
       const value = cell.querySelector("[data-ffa-rating-value]")!;

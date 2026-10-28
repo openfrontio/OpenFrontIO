@@ -114,6 +114,34 @@ describe("<ffa-tier-badge>", () => {
     ).toBe("ffa_rating.tier.diamond II");
   });
 
+  it("shows only the division at sm on a phone, the full label from sm up", async () => {
+    await render({ tier: "Diamond II" });
+    const label = badge.querySelector<HTMLElement>("[data-ffa-tier-label]")!;
+    expect(label.textContent!.trim()).toBe("ffa_rating.tier.diamond II");
+    expect(label.classList).toContain("sr-only");
+    expect(label.classList).toContain("sm:not-sr-only");
+    const division = badge.querySelector<HTMLElement>("[data-ffa-division]")!;
+    expect(division.textContent!.trim()).toBe("II");
+    expect(division.getAttribute("aria-hidden")).toBe("true");
+    expect(division.classList).toContain("sm:hidden");
+  });
+
+  it("shows Grandmaster's emblem alone at sm on a phone", async () => {
+    await render({ tier: "Grandmaster" });
+    expect(badge.querySelector("[data-ffa-division]")).toBeNull();
+    expect(badge.querySelector("[data-ffa-tier-label]")!.classList).toContain(
+      "sr-only",
+    );
+  });
+
+  it("always shows the full label at md", async () => {
+    await render({ tier: "Diamond II", size: "md" });
+    expect(
+      badge.querySelector("[data-ffa-tier-label]")!.classList,
+    ).not.toContain("sr-only");
+    expect(badge.querySelector("[data-ffa-division]")).toBeNull();
+  });
+
   it("gives the detailed emblem the tier as alt text and no label", async () => {
     await render({ tier: "Diamond II", size: "lg" });
     expect(img().alt).toBe("ffa_rating.tier.diamond II");

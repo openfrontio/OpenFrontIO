@@ -732,7 +732,7 @@ export class LeaderboardPlayerList extends LitElement {
                 <col style="width: 12rem" />
                 ${
                   ratingLive
-                    ? html`<col class="w-32 sm:w-48" />`
+                    ? html`<col class="w-32 sm:w-60" />`
                     : html`<col style="width: 6rem" />`
                 }
                 <col style="width: 6rem" />

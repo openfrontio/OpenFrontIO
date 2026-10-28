@@ -117,6 +117,9 @@ export class FfaTierBadge extends LitElement {
       />`;
     }
     // The label beside it says the tier, so the emblem itself is decorative.
+    // sm sits in narrow leaderboard rows: on a phone it shows only the
+    // division (OFstats's compact rule) and keeps the label for screen readers.
+    const phone = size === "sm";
     return html`<span class="inline-flex items-center gap-1.5 whitespace-nowrap"
       ><img
         data-ffa-tier-img
@@ -129,11 +132,20 @@ export class FfaTierBadge extends LitElement {
         class="block shrink-0"
       /><span
         data-ffa-tier-label
-        class="font-bold uppercase tracking-wide text-white ${
-          LABEL_CLASSES[size]
-        }"
+        class="${
+          phone ? "sr-only sm:not-sr-only" : ""
+        } font-bold uppercase tracking-wide text-white ${LABEL_CLASSES[size]}"
         >${label}</span
-      ></span
+      >${
+        phone && tier.division !== null
+          ? html`<span
+              data-ffa-division
+              aria-hidden="true"
+              class="sm:hidden font-bold text-white ${LABEL_CLASSES[size]}"
+              >${tier.division}</span
+            >`
+          : nothing
+      }</span
     >`;
   }
 
