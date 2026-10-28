@@ -1823,6 +1823,27 @@ describe("BuildPreviewController touch preview", () => {
     }
   });
 
+  test("Enter does not confirm at a stale mouse position without a touch preview", () => {
+    const { controller, eventBus, player } = makeController(UnitType.City);
+    const requestAnimationFrame = vi
+      .spyOn(globalThis, "requestAnimationFrame")
+      .mockImplementation(() => 1);
+    (controller as any).touchPlacementMode = true;
+    (controller as any).touchPreviewTile = null;
+    (controller as any).mousePos.x = 100;
+    (controller as any).mousePos.y = 100;
+
+    try {
+      controller.init();
+      eventBus.emit(new ConfirmGhostStructureEvent());
+
+      expect(player.buildables).not.toHaveBeenCalled();
+      expect((controller as any).pendingConfirmations).toHaveLength(0);
+    } finally {
+      requestAnimationFrame.mockRestore();
+    }
+  });
+
   test("preserves a selected nuke for repeated touch launches", async () => {
     const { controller, builds, uiState } = makeController(UnitType.AtomBomb);
 

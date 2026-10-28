@@ -2013,7 +2013,7 @@ describe("mobile tap-preview placement", () => {
     expect(moves).toHaveLength(1);
   });
 
-  test("only mouse pointer movement emits MouseMoveEvent", () => {
+  test("non-touch pointer movement emits MouseMoveEvent", () => {
     const moves: MouseMoveEvent[] = [];
     eventBus.on(MouseMoveEvent, (event) => moves.push(event));
     inputHandler.initialize();
@@ -2024,6 +2024,17 @@ describe("mobile tap-preview placement", () => {
     });
     Object.defineProperty(compatibilityMove, "movementX", { value: 5 });
     window.dispatchEvent(compatibilityMove);
+    expect(moves).toEqual([]);
+
+    const touchPointerMove = new PointerEvent("pointermove", {
+      button: -1,
+      clientX: 60,
+      clientY: 70,
+      pointerId: 2,
+      pointerType: "touch",
+    });
+    Object.defineProperty(touchPointerMove, "movementX", { value: 5 });
+    inputHandler["onPointerMove"](touchPointerMove);
     expect(moves).toEqual([]);
 
     const mousePointerMove = new PointerEvent("pointermove", {
@@ -2038,6 +2049,19 @@ describe("mobile tap-preview placement", () => {
 
     expect(moves).toHaveLength(1);
     expect(moves[0]).toEqual(expect.objectContaining({ x: 70, y: 80 }));
+
+    const penPointerMove = new PointerEvent("pointermove", {
+      button: -1,
+      clientX: 90,
+      clientY: 100,
+      pointerId: 4,
+      pointerType: "pen",
+    });
+    Object.defineProperty(penPointerMove, "movementX", { value: 5 });
+    inputHandler["onPointerMove"](penPointerMove);
+
+    expect(moves).toHaveLength(2);
+    expect(moves[1]).toEqual(expect.objectContaining({ x: 90, y: 100 }));
   });
 
   test("a touch-generated context menu does not cancel placement", () => {
@@ -2056,6 +2080,30 @@ describe("mobile tap-preview placement", () => {
     );
 
     expect(uiState.ghostStructure).toBe(UnitType.City);
+  });
+
+  test("a touch context menu remains available when no ghost is active", () => {
+    const contextMenus: ContextMenuEvent[] = [];
+    eventBus.on(ContextMenuEvent, (event) => contextMenus.push(event));
+    uiState.ghostStructure = null;
+    inputHandler["onPointerDown"](
+      new PointerEvent("pointerdown", {
+        button: 0,
+        clientX: 100,
+        clientY: 100,
+        pointerId: 1,
+        pointerType: "touch",
+      }),
+    );
+
+    inputHandler["onContextMenu"](
+      new MouseEvent("contextmenu", { clientX: 100, clientY: 100 }),
+    );
+
+    expect(contextMenus).toHaveLength(1);
+    expect(contextMenus[0]).toEqual(
+      expect.objectContaining({ x: 100, y: 100 }),
+    );
   });
 
   test("a mouse context menu still cancels placement", () => {

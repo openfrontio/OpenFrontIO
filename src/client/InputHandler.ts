@@ -1400,7 +1400,7 @@ export class InputHandler {
   }
 
   private onPointerMove(event: PointerEvent) {
-    if (event.pointerType === "mouse") {
+    if (event.pointerType !== "touch") {
       this.lastMouseX = event.clientX;
       this.lastMouseY = event.clientY;
       if (event.movementX || event.movementY) {
@@ -1505,7 +1505,10 @@ export class InputHandler {
 
   private onContextMenu(event: MouseEvent) {
     event.preventDefault();
-    if (this.lastPointerType === "touch") {
+    if (
+      this.lastPointerType === "touch" &&
+      this.uiState.ghostStructure !== null
+    ) {
       return;
     }
     if (this.gameView.inSpawnPhase()) {

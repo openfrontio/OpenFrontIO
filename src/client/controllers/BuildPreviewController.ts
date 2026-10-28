@@ -311,10 +311,15 @@ export class BuildPreviewController implements Controller {
     });
     this.eventBus.on(ConfirmGhostStructureEvent, () => {
       this.syncGhostState();
-      const target =
-        (this.touchPlacementMode ? this.touchPreviewScreenPosition() : null) ??
-        this.mousePos;
-      this.requestConfirmStructure(new MouseUpEvent(target.x, target.y));
+      if (this.touchPlacementMode) {
+        const target = this.touchPreviewScreenPosition();
+        if (target === null) return;
+        this.requestConfirmStructure(new MouseUpEvent(target.x, target.y));
+        return;
+      }
+      this.requestConfirmStructure(
+        new MouseUpEvent(this.mousePos.x, this.mousePos.y),
+      );
     });
 
     const rafLoop = () => {
