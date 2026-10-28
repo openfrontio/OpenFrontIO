@@ -322,23 +322,24 @@ export class HomepagePromos extends LitElement {
       // about, so nothing else will remove it.
       const left = stillBanned ? document.getElementById(BOTTOM_RAIL_ID) : null;
       left?.remove();
+      // A later lobby joined, or joined and left, while this destroy ran: the
+      // rail on the page now may be that lobby's, not this one's.
+      const isCurrent = () =>
+        this.bottomRailDestroyedAt !== null &&
+        this.railDestroyCount === destroyCount;
       reportEvent("bottom_rail_in_game", {
         ...details,
         destroyUnits,
-        // Once the next lobby has lifted the ban, the rail on the page may be
-        // that lobby's, so who removed this one is unknown.
-        removedBy: !stillBanned
+        removedBy: !isCurrent()
           ? "unknown"
           : left === null
             ? "playwire"
             : "openfront",
         outcome: "removed",
       });
-      if (!stillBanned) return;
+      if (!isCurrent()) return;
       setTimeout(() => {
-        // A later lobby's rail is not this one's, whatever is on the page.
-        if (this.bottomRailDestroyedAt === null) return;
-        if (this.railDestroyCount !== destroyCount) return;
+        if (!isCurrent()) return;
         // Any rail creative, not only #pw-oop-bottom_rail: the guard already
         // destroys that element again whenever it comes back.
         const creative = document.querySelector(

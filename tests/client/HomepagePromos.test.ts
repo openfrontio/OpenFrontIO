@@ -216,6 +216,29 @@ describe("HomepagePromos bottom rail after its destroy", () => {
     expect(document.getElementById("pw-oop-bottom_rail")).not.toBeNull();
   });
 
+  it("reports an unknown remover when a later lobby came and went mid-destroy", async () => {
+    const { ramp } = stubRamp();
+    joinLobby();
+    promos.destroyBottomRail();
+    await flush();
+    let settle = () => {};
+    ramp.destroyUnits.mockImplementation(
+      () => new Promise<void>((resolve) => (settle = resolve)),
+    );
+    renderRail();
+    await flush();
+
+    joinLobby();
+    promos.destroyBottomRail();
+    settle();
+    await vi.advanceTimersByTimeAsync(2000);
+
+    expect(reportEvent).toHaveBeenCalledExactlyOnceWith(
+      "bottom_rail_in_game",
+      expect.objectContaining({ removedBy: "unknown", outcome: "removed" }),
+    );
+  });
+
   it("removes and reports the rail when destroyUnits rejects", async () => {
     const { ramp } = stubRamp();
     const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
