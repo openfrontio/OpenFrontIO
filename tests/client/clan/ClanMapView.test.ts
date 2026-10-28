@@ -132,6 +132,13 @@ describe("ClanMapView", () => {
     expect(spinner()).not.toBeNull();
   });
 
+  it("keeps the spinner for clanmap:loaded from a window other than its own frame", async () => {
+    ready({ source: window, data: { type: "clanmap:loaded" } });
+    await flushAsync(view);
+
+    expect(spinner()).not.toBeNull();
+  });
+
   it("drops the spinner after the fallback when the page never reports loaded", async () => {
     vi.useFakeTimers();
     try {
