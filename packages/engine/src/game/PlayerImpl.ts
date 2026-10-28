@@ -1510,6 +1510,7 @@ export class PlayerImpl implements Player {
   public buildableUnits(
     tile: TileRef | null,
     units: readonly PlayerBuildableUnitType[] = PlayerBuildable.types,
+    includeBuildPreview = false,
   ): BuildableUnit[] {
     const mg = this.mg;
     const config = mg.config();
@@ -1544,7 +1545,10 @@ export class PlayerImpl implements Player {
         canBuild = this.canSpawnUnitType(u, tile, validTiles);
       }
 
-      const buildNew = canBuild !== false && canUpgrade === false;
+      // A hold-to-build preview may need the new placement's rails even
+      // when upgrading is also possible at the cursor tile.
+      const buildNew =
+        canBuild !== false && (canUpgrade === false || includeBuildPreview);
 
       // Cumulative bulk-upgrade totals. Each upgrade raises the unit's level
       // and the constructed count, so step n costs the same as if the player
@@ -1682,22 +1686,9 @@ export class PlayerImpl implements Player {
   }
 
   portSpawn(tile: TileRef, validTiles: TileRef[] | null): TileRef | false {
-    const spawns = Array.from(
-      this.mg.bfs(
-        tile,
-        manhattanDistFN(tile, this.mg.config().radiusPortSpawn()),
-      ),
-    )
-      .filter((t) => this.mg.owner(t) === this && this.mg.isShore(t))
-      .sort(
-        (a, b) =>
-          this.mg.manhattanDist(a, tile) - this.mg.manhattanDist(b, tile),
-      );
-    const validTileSet = new Set(
-      validTiles ?? this.validStructureSpawnTiles(tile),
-    );
-    for (const t of spawns) {
-      if (validTileSet.has(t)) {
+    const tiles = validTiles ?? this.validStructureSpawnTiles(tile);
+    for (const t of tiles) {
+      if (this.mg.isShore(t)) {
         return t;
       }
     }
@@ -1752,11 +1743,10 @@ export class PlayerImpl implements Player {
       undefined,
       true,
     );
-    // Flood the player's own tiles inside the radius. Same traversal as
-    // GameMap.bfs (stack, N/S/W/E push order) so `nearbyTiles` comes out in
-    // the same order — the stable sort below keeps that order for ties and
-    // callers take the first entry — but on the shared visited array instead
-    // of a Set per call (nation placement calls this per candidate tile).
+    // Flood the player's own tiles inside the radius using its own scratch
+    // stack (N/S/W/E push order) on the shared visited array instead of a
+    // Set per call (nation placement calls this per candidate tile). The
+    // stable sort below keeps that order for ties and callers take the first entry.
     const map = this.mg.map();
     const w = map.width();
     const cx = tile % w;
@@ -1948,20 +1938,23 @@ export class PlayerImpl implements Player {
     if (this.mg.hasOwner(tile)) {
       return this.sharesBorderWith(owner);
     } else {
-      for (const t of this.mg.bfs(
+      let foundBorder = false;
+      this.mg.bfsSearch(
         tile,
         andFN(
           (gm, t) => !gm.hasOwner(t) && gm.isLand(t) && !gm.isImpassable(t),
           manhattanDistFN(tile, 200),
         ),
-      )) {
-        for (const n of this.mg.neighbors(t)) {
-          if (this.mg.owner(n) === this) {
-            return true;
+        (t) => {
+          for (const n of this.mg.neighbors(t)) {
+            if (this.mg.owner(n) === this) {
+              foundBorder = true;
+              return false;
+            }
           }
-        }
-      }
-      return false;
+        },
+      );
+      return foundBorder;
     }
   }
 

@@ -1253,7 +1253,7 @@ export class AccountModal extends BaseModal {
           this.userMeResponse = userMe;
           this.prefetchPrestigeFlow();
           if (this.userMeResponse?.player?.publicId) {
-            this.loadPlayerProfile(this.userMeResponse.player.publicId);
+            void this.loadPlayerProfile(this.userMeResponse.player.publicId);
           }
         }
         this.finishLoadingUser(opening);

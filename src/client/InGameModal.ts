@@ -19,13 +19,13 @@ function showDialog(props: Partial<ConfirmDialog>): Promise<boolean> {
   const dialog = document.createElement("confirm-dialog") as ConfirmDialog;
   Object.assign(dialog, props);
 
-  gamePortal.gameplayStop();
+  void gamePortal.gameplayStop();
   document.body.appendChild(dialog);
 
   return new Promise<boolean>((resolve) => {
     const done = (result: boolean) => {
       dialog.remove();
-      gamePortal.gameplayStart();
+      void gamePortal.gameplayStart();
       resolve(result);
     };
     dialog.addEventListener("confirm", () => done(true));

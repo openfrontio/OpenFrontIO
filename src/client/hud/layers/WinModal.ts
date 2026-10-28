@@ -7,15 +7,18 @@ import { EventBus } from "@openfront/shared/EventBus";
 import { html, LitElement, nothing, TemplateResult } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import {
+  copyToClipboard,
   DESKTOP_TUTORIAL_VIDEO_URL,
   getGamesPlayed,
   getTranslatedPlayerTeamLabel,
   homeHref,
   isInIframe,
+  showToast,
   translateText,
   TUTORIAL_VIDEO_URL,
 } from "../../../client/Utils";
 import { fetchUserMeUncached, getUserMe, invalidateUserMe } from "../../Api";
+import { ClientEnv } from "../../ClientEnv";
 import "../../components/CosmeticCard";
 import { cosmeticSelectionLabel } from "../../components/CosmeticPresentation";
 import {
@@ -101,6 +104,24 @@ function loadGameXpPanel(): void {
 function loadFfaRatingPanel(): Promise<unknown> {
   return import("../../components/ffaRating/FfaRatingPanel");
 }
+
+const iconShare = html`<svg
+  xmlns="http://www.w3.org/2000/svg"
+  viewBox="0 0 24 24"
+  fill="none"
+  stroke="currentColor"
+  stroke-width="2"
+  stroke-linecap="round"
+  stroke-linejoin="round"
+  class="w-5 h-5"
+  aria-hidden="true"
+>
+  <circle cx="18" cy="5" r="3" />
+  <circle cx="6" cy="12" r="3" />
+  <circle cx="18" cy="19" r="3" />
+  <line x1="8.6" y1="10.5" x2="15.4" y2="6.5" />
+  <line x1="8.6" y1="13.5" x2="15.4" y2="17.5" />
+</svg>`;
 
 @customElement("win-modal")
 export class WinModal extends LitElement implements Controller {
@@ -240,6 +261,22 @@ export class WinModal extends LitElement implements Controller {
             () => this.hide(),
             "keep",
           )}
+          ${
+            this.game?.resumedFromSave?.()
+              ? null
+              : html`<button
+                  type="button"
+                  data-win-action="share"
+                  class="win-action win-action-main win-action-icon"
+                  title=${translateText("win_modal.share")}
+                  aria-label=${translateText("win_modal.share")}
+                  @click=${this._handleShare}
+                >
+                  <span class="relative flex items-center justify-center"
+                    >${iconShare}</span
+                  >
+                </button>`
+          }
         </div>
         ${this.renderActionStyles()}
       </div>
@@ -444,6 +481,12 @@ export class WinModal extends LitElement implements Controller {
         border-color: rgba(255, 255, 255, 0.35);
         box-shadow: 0 0 14px rgba(255, 255, 255, 0.25);
       }
+      .win-action-icon {
+        padding: 0;
+        width: 3rem;
+        aspect-ratio: 1 / 1;
+        flex-shrink: 0;
+      }
       /* The share menu's flash ring sits in the trigger's wrapper so it isn't
          clipped by .win-action's overflow:hidden. When the button translates up
          on hover/focus, keep the ring centered around it. */
@@ -638,7 +681,7 @@ export class WinModal extends LitElement implements Controller {
   }
 
   async show() {
-    gamePortal.gameplayStop();
+    void gamePortal.gameplayStop();
     this.isRankedGame =
       this.game.config().gameConfig().rankedType !== undefined;
     this.isVisible = true;
@@ -983,6 +1026,30 @@ export class WinModal extends LitElement implements Controller {
     );
   }
 
+  private async _handleShare() {
+    const gameId = this.game?.gameID();
+    if (!gameId) {
+      showToast(translateText("common.failed_copy"), "red");
+      return;
+    }
+
+    try {
+      const text = gamePortal.isOnGamePortal()
+        ? await gamePortal.createInviteLink(gameId)
+        : `${ClientEnv.shareOrigin()}${ClientEnv.gamePath(gameId)}`;
+
+      if (!text) {
+        showToast(translateText("common.failed_copy"), "red");
+        return;
+      }
+
+      await copyToClipboard(text);
+      showToast(translateText("common.copied"), "green");
+    } catch {
+      showToast(translateText("common.failed_copy"), "red");
+    }
+  }
+
   init() {
     if (this.game.config().isReplay()) return;
     loadGameXpPanel();
@@ -1017,7 +1084,7 @@ export class WinModal extends LitElement implements Controller {
       this._title = translateText("win_modal.died");
       this.eventBus.emit(new PlaySoundEffectEvent("defeat"));
       void this.updateXp(false);
-      this.show();
+      void this.show();
     }
     const updates = this.game.updatesSinceLastTick();
     const winUpdates = updates?.[GameUpdateType.Win] ?? [];
@@ -1038,13 +1105,13 @@ export class WinModal extends LitElement implements Controller {
         this._title = translateText("win_modal.match_cancelled");
         this.isWin = false;
         history.replaceState(null, "", `${window.location.pathname}?replay`);
-        this.show();
+        void this.show();
       } else if (wu.winner[0] === "team") {
         vote(wu.winner, wu.allPlayersStats);
         if (wu.winner[1] === this.game.myPlayer()?.team()) {
           this._title = translateText("win_modal.your_team");
           this.isWin = true;
-          gamePortal.happytime();
+          void gamePortal.happytime();
         } else {
           this._title = translateText("win_modal.other_team", {
             team: getTranslatedPlayerTeamLabel(wu.winner[1]),
@@ -1053,7 +1120,7 @@ export class WinModal extends LitElement implements Controller {
         }
         this.playEndOfGameSound();
         history.replaceState(null, "", `${window.location.pathname}?replay`);
-        this.show();
+        void this.show();
       } else if (wu.winner[0] === "nation") {
         vote(wu.winner, wu.allPlayersStats);
         this._title = translateText("win_modal.nation_won", {
@@ -1061,7 +1128,7 @@ export class WinModal extends LitElement implements Controller {
         });
         this.isWin = false;
         this.playEndOfGameSound();
-        this.show();
+        void this.show();
       } else {
         const winner = this.game.playerByClientID(wu.winner[1]);
         if (!winner?.isPlayer()) return;
@@ -1075,7 +1142,7 @@ export class WinModal extends LitElement implements Controller {
         ) {
           this._title = translateText("win_modal.you_won");
           this.isWin = true;
-          gamePortal.happytime();
+          void gamePortal.happytime();
         } else {
           this._title = translateText("win_modal.other_won", {
             player: winner.displayName(),
@@ -1084,7 +1151,7 @@ export class WinModal extends LitElement implements Controller {
         }
         this.playEndOfGameSound();
         history.replaceState(null, "", `${window.location.pathname}?replay`);
-        this.show();
+        void this.show();
       }
     });
     // After the vote, so a figure from the end has what was voted.

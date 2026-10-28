@@ -36,7 +36,7 @@ import { clientPlatform } from "./ClientPlatform";
 // warnings. Prod has enough players that 1% is plenty of signal; everywhere
 // else every session reports, so a staging or dev deployment shows
 // everything at once.
-export function sessionSamplingRate(env: GameEnv): number {
+function sessionSamplingRate(env: GameEnv): number {
   return env === GameEnv.Prod ? 0.01 : 1;
 }
 
@@ -45,7 +45,7 @@ export function sessionSamplingRate(env: GameEnv): number {
 // would be its own billed session; at 10% a common error still shows up
 // hundreds of times a day. Both rates cut the same hash (isSessionSampled),
 // so the 1% sessions are among these and send their errors too.
-export function errorSamplingRate(env: GameEnv): number {
+function errorSamplingRate(env: GameEnv): number {
   return env === GameEnv.Prod ? 0.1 : 1;
 }
 
@@ -161,6 +161,15 @@ export function initTelemetry(): Promise<Faro | null> {
 // event volume, none of it actionable since nothing is actually blocked.
 const DROPPED_EVENTS = new Set(["securitypolicyviolation"]);
 
+// Sent from every session, whatever its sampling: each one is looked up by
+// game ID from a player's report, and ad removals are reported to the ad
+// partner. Only for events rare enough not to move the per-session bill.
+const UNSAMPLED_EVENTS = new Set(["bottom_rail_in_game"]);
+// Unsampled events skip isRepeated, so they get a page-wide cap of their own
+// against an ad script stuck re-adding what we remove.
+const MAX_UNSAMPLED_EVENTS = 20;
+let unsampledSent = 0;
+
 /**
  * Forwards console[method] calls made from our bundle to Faro as log lines
  * at `level`, with the stack of an Error argument when there is one.
@@ -210,6 +219,11 @@ function filterSignal(
     if (item.type === "event") {
       const name = (item.payload as { name?: unknown } | null)?.name;
       if (typeof name === "string" && DROPPED_EVENTS.has(name)) return null;
+      if (typeof name === "string" && UNSAMPLED_EVENTS.has(name)) {
+        if (unsampledSent >= MAX_UNSAMPLED_EVENTS) return null;
+        unsampledSent++;
+        return slimBrowserMeta(scrubUrls(item));
+      }
     }
     if (item.type === "exception" && isThirdPartyException(item)) return null;
     const sessionId = item.meta.session?.id;
@@ -294,7 +308,7 @@ function slimBrowserMeta(item: TransportItem): TransportItem {
  * has initialized. So every URL that leaves the page is cut to origin +
  * path: no query, no hash.
  */
-export function stripUrl(url: string): string {
+function stripUrl(url: string): string {
   return url.split(/[?#]/, 1)[0];
 }
 
@@ -320,6 +334,7 @@ export function resetTelemetry(): void {
   faroPromise = null;
   sent.clear();
   sentTotal = 0;
+  unsampledSent = 0;
 }
 
 /**
@@ -360,6 +375,17 @@ export function reportMeasurement(
   void initTelemetry().then((faro) => {
     if (faro === null) return;
     faro.api.pushMeasurement({ type, values }, { context });
+  });
+}
+
+/** A named Faro event; see UNSAMPLED_EVENTS for the ones never sampled. */
+export function reportEvent(
+  name: string,
+  attributes: Record<string, string>,
+): void {
+  void initTelemetry().then((faro) => {
+    if (faro === null) return;
+    faro.api.pushEvent(name, attributes);
   });
 }
 

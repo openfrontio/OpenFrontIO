@@ -199,7 +199,7 @@ export class ClanModal extends BaseModal {
       this.detailCache = null;
       this.gameHistoryCache = null;
       if (tab === "my-clans") {
-        this.loadMyClans();
+        void this.loadMyClans();
       }
       return;
     }
@@ -351,7 +351,7 @@ export class ClanModal extends BaseModal {
     if (targetTag) {
       this.openDetail(targetTag.toUpperCase());
     }
-    this.loadMyClans();
+    void this.loadMyClans();
   }
 
   protected onClose(): void {
@@ -468,7 +468,7 @@ export class ClanModal extends BaseModal {
           @view-profile=${(e: CustomEvent<{ publicId: string }>) =>
             this.openPlayerProfile(e.detail.publicId)}
           @leadership-transferred=${() => {
-            this.loadMyClans().then(() =>
+            void this.loadMyClans().then(() =>
               this.openDetail(this.selectedClanTag),
             );
           }}

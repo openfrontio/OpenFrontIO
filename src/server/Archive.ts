@@ -1,4 +1,4 @@
-import { GameID, ID } from "@openfront/engine-api/Schemas";
+import { GameID } from "@openfront/engine-api/Schemas";
 import { replacer } from "@openfront/shared/SharedUtil";
 import {
   GameRecord,
@@ -95,38 +95,6 @@ export async function archive(gameRecord: GameRecord) {
       gameID,
     });
     await sleep(withJitter(ARCHIVE_RETRY_DELAYS_MS[attempt - 1]));
-  }
-}
-
-export async function readGameRecord(
-  gameId: GameID,
-): Promise<GameRecord | null> {
-  try {
-    if (!ID.safeParse(gameId).success) {
-      log.error(`invalid game ID: ${gameId}`);
-      return null;
-    }
-    const url = `${ServerEnv.jwtIssuer()}/game/${gameId}`;
-    const response = await fetch(url, {
-      method: "GET",
-      headers: {
-        "Content-Type": "application/json",
-        "x-api-key": ServerEnv.apiKey(),
-      },
-    });
-    const record = await response.json();
-    if (!response.ok) {
-      log.error(`error reading game record: ${response.statusText}`, {
-        gameID: gameId,
-      });
-      return null;
-    }
-    return GameRecordSchema.parse(record);
-  } catch (error) {
-    log.error(`error reading game record: ${error}`, {
-      gameID: gameId,
-    });
-    return null;
   }
 }
 
