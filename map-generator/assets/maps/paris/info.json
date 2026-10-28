@@ -3,7 +3,6 @@
   "name": "Paris",
   "translation_key": "map.paris",
   "categories": ["europe", "new"],
-  "multiplayer_frequency": 3,
   "nations": [
     {
       "coordinates": [1702, 321],
