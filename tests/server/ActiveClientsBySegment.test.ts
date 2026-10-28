@@ -1,19 +1,12 @@
 import type { TokenPayload } from "@openfront/shared/ApiSchemas";
 import { describe, expect, it } from "vitest";
 import { GameManager } from "../../src/server/GameManager";
-import { zeroCounters } from "../../src/server/telemetry/MatchTelemetry";
 import {
   cid,
   makeClient,
   mockLogger,
   mockWsOf,
 } from "../util/GameServerHarness";
-
-const telemetry = {
-  emit: () => "enqueued" as const,
-  counters: zeroCounters,
-  stop: () => {},
-};
 
 function claims(provider?: string): TokenPayload {
   return {
@@ -29,7 +22,7 @@ function claims(provider?: string): TokenPayload {
 
 describe("GameManager.activeClientsBySegment", () => {
   it("counts connected clients per platform, device and auth across games, zeros included", () => {
-    const manager = new GameManager(mockLogger(), telemetry);
+    const manager = new GameManager(mockLogger());
     const a = manager.createGame(cid("a"), undefined)!;
     const b = manager.createGame(cid("b"), undefined)!;
     a.joinClient(
@@ -59,7 +52,7 @@ describe("GameManager.activeClientsBySegment", () => {
     b.joinClient(makeClient());
     const gone = makeClient({ platform: "crazygames", device: "mobile" });
     b.joinClient(gone);
-    mockWsOf(gone).trigger("close");
+    void mockWsOf(gone).trigger("close");
 
     const segments = manager.activeClientsBySegment();
     const nonZero = segments

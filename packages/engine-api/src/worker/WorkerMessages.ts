@@ -11,6 +11,7 @@ import {
 } from "../game/GameTypes";
 import { ErrorUpdate, GameUpdateViewData } from "../game/GameUpdates";
 import { MapFiles } from "../game/MapFiles";
+import { SnapshotHeader } from "../game/SnapshotHeader";
 import { ClientID, GameStartInfo, Turn } from "../Schemas";
 
 export type WorkerMessageType =
@@ -39,6 +40,8 @@ export type WorkerMessageType =
   | "transport_ship_spawn_result"
   | "snapshot"
   | "snapshot_result"
+  | "read_snapshot_header"
+  | "read_snapshot_header_result"
   | "human_stats"
   | "human_stats_result"
   | "human_disconnects"
@@ -146,6 +149,8 @@ export interface PlayerBuildablesMessage extends BaseWorkerMessage {
   x?: number;
   y?: number;
   units?: readonly PlayerBuildableUnitType[];
+  // Include placement rails even when an upgrade target is also available.
+  includeBuildPreview?: boolean;
 }
 
 export interface PlayerBuildablesResultMessage extends BaseWorkerMessage {
@@ -206,6 +211,19 @@ export interface SnapshotResultMessage extends BaseWorkerMessage {
   snapshot: Uint8Array | null;
 }
 
+/** Reads a snapshot's header. Answered without an initialized game. */
+export interface ReadSnapshotHeaderMessage extends BaseWorkerMessage {
+  type: "read_snapshot_header";
+  snapshot: Uint8Array;
+}
+
+export interface ReadSnapshotHeaderResultMessage extends BaseWorkerMessage {
+  type: "read_snapshot_header_result";
+  /** Null if the bytes are not a snapshot this build can read. */
+  header: SnapshotHeader | null;
+  error?: string;
+}
+
 export interface HumanStatsMessage extends BaseWorkerMessage {
   type: "human_stats";
 }
@@ -237,6 +255,7 @@ export type MainThreadMessage =
   | AttackClusteredPositionsMessage
   | TransportShipSpawnMessage
   | SnapshotMessage
+  | ReadSnapshotHeaderMessage
   | HumanStatsMessage
   | HumanDisconnectsMessage;
 
@@ -256,5 +275,6 @@ export type WorkerMessage =
   | AttackClusteredPositionsResultMessage
   | TransportShipSpawnResultMessage
   | SnapshotResultMessage
+  | ReadSnapshotHeaderResultMessage
   | HumanStatsResultMessage
   | HumanDisconnectsResultMessage;

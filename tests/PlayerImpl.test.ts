@@ -36,6 +36,38 @@ describe("PlayerImpl", () => {
     expect(buCity!.canUpgrade).toBe(city.id());
   });
 
+  test("opt-in new placement rail preview is available beside an upgradeable factory", () => {
+    for (let x = 0; x < 100; x++) {
+      for (let y = 0; y < 100; y++) player.conquer(game.ref(x, y));
+    }
+    const factory = player.buildUnit(UnitType.Factory, game.ref(30, 30), {});
+    const city = player.buildUnit(UnitType.City, game.ref(90, 30), {});
+    const tile = game.ref(35, 30);
+    const normal = player.buildableUnits(tile, [UnitType.Factory])[0];
+    const preview = player.buildableUnits(tile, [UnitType.Factory], true)[0];
+    expect(normal.canUpgrade).toBe(factory.id());
+    expect(normal.ghostRailPaths).toEqual([]);
+    expect(preview.canUpgrade).toBe(normal.canUpgrade);
+    expect(preview.canBuild).toBe(normal.canBuild);
+    expect(preview.cost).toBe(normal.cost);
+    expect(preview.canBuild).not.toBe(false);
+    expect(preview.ghostRailPaths[0][0]).toBe(city.tile());
+    expect(preview.ghostRailPaths[0].slice(-1)).toEqual([preview.canBuild]);
+  });
+
+  test("new placement rail preview stays empty without a valid spawn", () => {
+    const factory = player.buildUnit(UnitType.Factory, game.ref(0, 0), {});
+    const preview = player.buildableUnits(
+      game.ref(0, 0),
+      [UnitType.Factory],
+      true,
+    )[0];
+    expect(preview.canUpgrade).toBe(factory.id());
+    expect(preview.canBuild).toBe(false);
+    expect(preview.ghostRailPaths).toEqual([]);
+    expect(preview.overlappingRailroads).toEqual([]);
+  });
+
   test("DefensePost cannot be upgraded", () => {
     player.buildUnit(UnitType.DefensePost, game.ref(0, 0), {});
     const buDefensePost = player

@@ -37,6 +37,7 @@ const COPIED_KEYS = [
 // value, the stored config says undefined.
 const NULLABLE_KEYS = [
   "maxTimerValue",
+  "winThresholdTenths",
   "startDelay",
   "spawnImmunityDuration",
   "goldMultiplier",

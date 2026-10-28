@@ -35,8 +35,7 @@ import type { SpiralParams } from "../render/frame/SpiralTrails";
 import { SpiralTrails } from "../render/frame/SpiralTrails";
 import { TrailManager } from "../render/frame/TrailManager";
 import type { FrameData, NameEntry } from "../render/types";
-import { STRUCTURE_TYPES } from "../render/types";
-import { TRAIL_TYPES } from "../render/types/UnitType";
+import { STRUCTURE_TYPES, TRAIL_TYPES } from "../render/types";
 import { UserSettings } from "../UserSettings";
 import { resolveTeamClanTag } from "../Utils";
 import { WorkerClient } from "../WorkerClient";
@@ -151,6 +150,7 @@ export class GameView implements GameLike {
     private _myClanTag: string | null,
     private _gameID: GameID,
     humans: WirePlayer[],
+    private _resumedFromSave = false,
   ) {
     this._map = this._mapData.gameMap;
     this.lastUpdate = null;
@@ -1077,6 +1077,12 @@ export class GameView implements GameLike {
   }
   gameID(): GameID {
     return this._gameID;
+  }
+
+  // Started from a saved game rather than from the beginning. Such a game is
+  // never archived, so it earns no XP or achievements.
+  resumedFromSave(): boolean {
+    return this._resumedFromSave;
   }
 
   private _markedPlayers: ReadonlySet<number> | null = null;

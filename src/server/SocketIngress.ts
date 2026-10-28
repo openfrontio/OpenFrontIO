@@ -11,7 +11,6 @@ import { z } from "zod";
 import { Client } from "./Client";
 import { ClientMsgRateLimiter } from "./ClientMsgRateLimiter";
 import { MatchGatekeeper, noopMatchGatekeeper } from "./Gatekeeper";
-import { MatchTelemetryRecorder } from "./MatchTelemetryRecorder";
 
 export const KICK_REASON_TOO_MUCH_DATA = "kick_reason.too_much_data";
 export const KICK_REASON_INVALID_MESSAGE = "kick_reason.invalid_message";
@@ -48,7 +47,6 @@ export interface SocketIngressView {
 export class SocketIngress {
   constructor(
     private readonly log: Logger,
-    private readonly telemetry: MatchTelemetryRecorder,
     private readonly view: SocketIngressView,
     private readonly rateLimiter: Pick<
       ClientMsgRateLimiter,
@@ -102,7 +100,7 @@ export class SocketIngress {
     // Decode and validate in two steps (instead of one parseBytes) so a
     // message that is structurally sound but fails validation — the
     // signature of a buggy or cheating client — can still be attributed
-    // to its intent in telemetry, exactly like the JSON path did.
+    // to its intent for the gatekeeper, exactly like the JSON path did.
     let raw: ClientMessage;
     try {
       // A Buffer is a Uint8Array and zbin honours its byteOffset.
@@ -120,15 +118,6 @@ export class SocketIngress {
     if (!parsed.success) {
       const reasonDetail = z.prettifyError(parsed.error);
       if (raw.type === "intent") {
-        this.telemetry.intentObserved(
-          client,
-          raw.intent,
-          typeof raw.intent?.type === "string" ? raw.intent.type : null,
-          "rejected",
-          this.view.serverTick(),
-          KICK_REASON_INVALID_MESSAGE,
-          reasonDetail,
-        );
         this.gatekeeper.intentObserved({
           client,
           intent: raw.intent,
@@ -155,14 +144,6 @@ export class SocketIngress {
     );
     if (rateResult === "kick") {
       if (clientMsg.type === "intent") {
-        this.telemetry.intentObserved(
-          client,
-          { ...clientMsg.intent, clientID: client.clientID },
-          clientMsg.intent.type,
-          "rejected",
-          this.view.serverTick(),
-          KICK_REASON_TOO_MUCH_DATA,
-        );
         this.gatekeeper.intentObserved({
           client,
           intent: { ...clientMsg.intent, clientID: client.clientID },
@@ -181,14 +162,6 @@ export class SocketIngress {
     }
     if (rateResult === "limit") {
       if (clientMsg.type === "intent") {
-        this.telemetry.intentObserved(
-          client,
-          { ...clientMsg.intent, clientID: client.clientID },
-          clientMsg.intent.type,
-          "rejected",
-          this.view.serverTick(),
-          "limit",
-        );
         this.gatekeeper.intentObserved({
           client,
           intent: { ...clientMsg.intent, clientID: client.clientID },
@@ -198,7 +171,7 @@ export class SocketIngress {
           reasonCode: "limit",
         });
       }
-      // Rejected intents are already counted via telemetry.intentObserved
+      // Rejected intents are already reported via gatekeeper.intentObserved
       // above; a misbehaving client can produce thousands of these a
       // minute, so this is debug-only rather than warn.
       this.log.debug(`Client message rate limit exceeded, dropping`, {

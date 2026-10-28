@@ -1,9 +1,9 @@
 {
+  "$schema": "../../../info.schema.json",
   "id": "ClearwaterLakes",
   "name": "Clearwater Lakes",
   "translation_key": "map.clearwaterlakes",
   "categories": ["north_america"],
-  "multiplayer_frequency": 3,
   "nations": [
     {
       "coordinates": [671, 847],

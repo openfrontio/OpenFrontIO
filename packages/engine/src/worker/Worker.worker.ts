@@ -14,6 +14,7 @@ import {
   PlayerBorderTilesResultMessage,
   PlayerBuildablesResultMessage,
   PlayerProfileResultMessage,
+  ReadSnapshotHeaderResultMessage,
   RunTurnsResultMessage,
   SnapshotResultMessage,
   TransportShipSpawnResultMessage,
@@ -24,6 +25,7 @@ import {
   createGameRunnerFromSnapshot,
   GameRunner,
 } from "../GameRunner";
+import { readSnapshotHeader } from "../snapshot/GameSnapshot";
 
 const ctx: Worker = self as any;
 // Where answers go: the page that started this worker, or the port it
@@ -171,7 +173,12 @@ async function onMessage(e: MessageEvent<MainThreadMessage>) {
                 message.clientID,
                 message.map,
                 gameUpdate,
-              )
+              ).then((gr) => {
+                // The page's view starts empty, so the first tick carries
+                // the state the snapshot restored.
+                gr.game.queueViewResync();
+                return gr;
+              })
             : createGameRunner(
                 message.gameStartInfo,
                 message.clientID,
@@ -291,6 +298,7 @@ async function onMessage(e: MessageEvent<MainThreadMessage>) {
           message.x,
           message.y,
           message.units,
+          message.includeBuildPreview,
         );
         sendMessage({
           type: "player_buildables_result",
@@ -437,6 +445,26 @@ async function onMessage(e: MessageEvent<MainThreadMessage>) {
         } as SnapshotResultMessage,
         snapshot ? [snapshot.buffer] : [],
       );
+      break;
+    }
+    case "read_snapshot_header": {
+      // Needs no game: the page asks before it knows what to start.
+      let result: ReadSnapshotHeaderResultMessage;
+      try {
+        result = {
+          type: "read_snapshot_header_result",
+          id: message.id,
+          header: readSnapshotHeader(message.snapshot),
+        };
+      } catch (error) {
+        result = {
+          type: "read_snapshot_header_result",
+          id: message.id,
+          header: null,
+          error: error instanceof Error ? error.message : String(error),
+        };
+      }
+      sendMessage(result);
       break;
     }
     default:

@@ -238,7 +238,6 @@
     "num_land_tiles": 410851,
     "width": 1500
   },
-  "multiplayer_frequency": 4,
   "name": "Juan De Fuca Strait",
   "nations": [
     {
@@ -345,7 +344,6 @@
       }
     ]
   },
-  "team_frequency": 8,
   "themes": ["north_america"],
   "translation_key": "map.juandefucastrait"
 }

@@ -17,10 +17,6 @@ import { Client } from "./Client";
 import { GamePhase, GameServer, JoinResult } from "./GameServer";
 import { Gatekeeper, noopGatekeeper } from "./Gatekeeper";
 import { ClientAuth, clientAuth } from "./JoinVerify";
-import {
-  noopMatchTelemetryEmitter,
-  type MatchTelemetryEmitter,
-} from "./telemetry/MatchTelemetry";
 
 export interface ClientSegmentCount {
   platform: Client["platform"];
@@ -34,8 +30,6 @@ export class GameManager {
 
   constructor(
     private log: Logger,
-    private readonly telemetry: MatchTelemetryEmitter = noopMatchTelemetryEmitter,
-    private readonly telemetryBuildHash: string = "DEV",
     private readonly gatekeeper: Gatekeeper = noopGatekeeper,
   ) {
     setInterval(() => this.tick(), 1000);
@@ -121,8 +115,6 @@ export class GameManager {
         matchmakingClanTags,
       },
       {
-        telemetry: this.telemetry,
-        telemetryBuildHash: this.telemetryBuildHash,
         gatekeeper: this.gatekeeper,
       },
     );
@@ -236,11 +228,9 @@ export class GameManager {
         if (game.pastMaxDuration()) {
           this.log.info("game past max duration", { gameID: id });
         }
-        try {
-          game.end();
-        } catch (error) {
+        game.end().catch((error) => {
           this.log.error(`error ending game ${id}: ${error}`);
-        }
+        });
       } else {
         active.set(id, game);
       }

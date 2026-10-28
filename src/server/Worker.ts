@@ -63,14 +63,15 @@ import { rejoinOrClose } from "./Rejoin";
 import { ServerEnv } from "./ServerEnv";
 import { SingleplayerPresence } from "./SingleplayerPresence";
 import { applyStaticAssetCacheControl } from "./StaticAssetCache";
-import { createMatchTelemetryEmitter } from "./telemetry/BufferedMatchTelemetryEmitter";
-import { MAX_WEBSOCKET_PAYLOAD_BYTES } from "./telemetry/MatchTelemetryConfig";
 import { WorkerLobbyService } from "./WorkerLobbyService";
 import { initWorkerMetrics } from "./WorkerMetrics";
 import { stripWorkerPrefix } from "./WorkerPathPrefix";
 
 const workerId = ServerEnv.workerId() ?? 0;
 const log = logger.child({ comp: `w_${workerId}` });
+
+// The WebSocket server's max payload.
+const MAX_WEBSOCKET_PAYLOAD_BYTES = 1024 * 1024;
 const playlist = new MapPlaylist();
 
 export function clampApprovedUsername(username: string): string {
@@ -79,34 +80,81 @@ export function clampApprovedUsername(username: string): string {
     : username;
 }
 
+export function isSocketClosed(
+  ws: WebSocket | { readyState: number },
+): boolean {
+  return (
+    ws.readyState === WebSocket.CLOSING || ws.readyState === WebSocket.CLOSED
+  );
+}
+
+export type JoinOutcome =
+  | { action: "admit"; username: string; clanTag: string | null }
+  | { action: "reject"; reason: string; errorCodes?: string[] };
+
 export function resolveJoinVerdict(
   verdict: JoinVerifyResponse,
   fallback: { username: string; clanTag: string | null },
-):
-  | { action: "admit"; username: string; clanTag: string | null }
-  | { action: "reject"; reason: string } {
-  switch (verdict.status) {
-    case "approved":
-      return {
-        action: "admit",
-        username: clampApprovedUsername(verdict.username),
-        clanTag: verdict.clanTag,
-      };
-    case "rejected":
-      return {
-        action: "reject",
-        reason: verdict.reason,
-      };
-    case "error": {
-      return {
-        action: "admit",
-        username: verdict.identity
-          ? clampApprovedUsername(verdict.identity.username)
-          : fallback.username,
-        clanTag: verdict.identity ? verdict.identity.clanTag : fallback.clanTag,
-      };
-    }
+): JoinOutcome {
+  if (verdict.status === "approved") {
+    return {
+      action: "admit",
+      username: clampApprovedUsername(verdict.username),
+      clanTag: verdict.clanTag,
+    };
   }
+  if (verdict.status === "rejected") {
+    return {
+      action: "reject",
+      reason: verdict.reason,
+      ...(verdict.errorCodes !== undefined && {
+        errorCodes: verdict.errorCodes,
+      }),
+    };
+  }
+  return {
+    action: "admit",
+    username: verdict.identity
+      ? clampApprovedUsername(verdict.identity.username)
+      : fallback.username,
+    clanTag: verdict.identity ? verdict.identity.clanTag : fallback.clanTag,
+  };
+}
+
+export interface AdmissionTarget {
+  markAdmitted(persistentID: string, attemptID?: string): void;
+  unmarkAdmitted(persistentID: string, attemptID?: string): void;
+  wasAdmitted(persistentID: string): boolean;
+  hasEverBeenSeated?(persistentID: string): boolean;
+}
+
+export function createAdmissionGuard(
+  game: AdmissionTarget | null | undefined,
+  persistentId: string,
+  isReadmit: boolean,
+  attemptId: string = generateID(),
+) {
+  let admittedThisAttempt = false;
+
+  return {
+    markAdmittedIfNeeded(): void {
+      if (admittedThisAttempt) return;
+      const shouldAdmit = !isReadmit
+        ? !game?.wasAdmitted(persistentId)
+        : !game?.hasEverBeenSeated?.(persistentId);
+      if (shouldAdmit) {
+        game?.markAdmitted(persistentId, attemptId);
+        admittedThisAttempt = true;
+      }
+    },
+    rollback(): void {
+      if (admittedThisAttempt) {
+        admittedThisAttempt = false;
+        game?.unmarkAdmitted(persistentId, attemptId);
+      }
+    },
+    wasAdmittedThisAttempt: () => admittedThisAttempt,
+  };
 }
 
 // Toggle whether a private lobby is visible in the public lobby browser.
@@ -246,18 +294,8 @@ export async function startWorker() {
     maxPayload: MAX_WEBSOCKET_PAYLOAD_BYTES,
   });
 
-  const buildHash = ServerEnv.gitCommit();
-  const telemetry = createMatchTelemetryEmitter(process.env, log, {
-    buildHash,
-    instanceId: ServerEnv.instanceId(),
-    // Reuse the normalized worker id (defaults to 0 when WORKER_ID is unset) so
-    // telemetry identity matches routing and logging instead of reporting
-    // undefined.
-    workerId,
-  });
   const gatekeeper = await loadGatekeeper(log);
-  const gm = new GameManager(log, telemetry, buildHash, gatekeeper);
-  server.on("close", () => telemetry.stop());
+  const gm = new GameManager(log, gatekeeper);
 
   // Initialize lobby service (handles WebSocket upgrade routing)
   const lobbyService = new WorkerLobbyService(server, wss, gm, log);
@@ -289,7 +327,7 @@ export async function startWorker() {
     ServerEnv.jwtIssuer() + "/reserved_clan_tags",
     log,
   );
-  privilegeRefresher.start();
+  void privilegeRefresher.start();
 
   // Ahead of everything that can reject a request — the worker-prefix check
   // below and the rate limiter further down — so that a 404 or a 429 still
@@ -633,6 +671,9 @@ export async function startWorker() {
           ws.close(CloseCode.InternalError, CloseReason.InvalidToken);
           return;
         }
+        if (isSocketClosed(ws)) {
+          return;
+        }
         const { persistentId, claims } = result;
 
         if (claims?.role === "banned") {
@@ -680,10 +721,15 @@ export async function startWorker() {
         // API. Runs before the rejoin attempt so a pre-start identity
         // change on refresh is screened before it is applied.
         let verifySkipped = false;
+        const game = gm.game(clientMsg.gameID);
+        const isReadmit = game?.wasAdmitted(persistentId) ?? false;
+        const admissionGuard = createAdmissionGuard(
+          game,
+          persistentId,
+          isReadmit,
+        );
         if (ServerEnv.env() !== GameEnv.Dev) {
-          const game = gm.game(clientMsg.gameID);
           const stored = game?.storedIdentity(persistentId) ?? null;
-          const isReadmit = game?.wasAdmitted(persistentId) ?? false;
           const steamAuthed = isSteamAuthenticated(claims);
           // SECURITY: the reject/skip/verify split (first joins must
           // present a token, only re-admits may omit it) lives in
@@ -721,7 +767,14 @@ export async function startWorker() {
               plan.token,
               clientMsg.username,
               clientMsg.clanTag ?? null,
+              persistentId,
             );
+            if (verdict.status === "approved" || verdict.status === "error") {
+              admissionGuard.markAdmittedIfNeeded();
+            }
+            if (isSocketClosed(ws)) {
+              return;
+            }
             const resolved = resolveJoinVerdict(verdict, {
               username,
               clanTag,
@@ -731,6 +784,9 @@ export async function startWorker() {
                 persistentID: persistentId,
                 gameID: clientMsg.gameID,
                 reason: resolved.reason,
+                ...(resolved.errorCodes !== undefined && {
+                  errorCodes: resolved.errorCodes,
+                }),
               });
               ws.close(CloseCode.Unauthorized, CloseReason.TurnstileFailed);
               return;
@@ -792,6 +848,7 @@ export async function startWorker() {
         if (claims === null) {
           if (allowedFlares !== undefined) {
             log.warn("Unauthorized: Anonymous user attempted to join game");
+            admissionGuard.rollback();
             ws.close(CloseCode.Unauthorized, CloseReason.LoginRequired);
             return;
           }
@@ -804,7 +861,11 @@ export async function startWorker() {
               gameID: clientMsg.gameID,
             });
             const { code, reason } = userMeFailureClose(result);
+            admissionGuard.rollback();
             ws.close(code, reason);
+            return;
+          }
+          if (isSocketClosed(ws)) {
             return;
           }
           flares = result.response.player.flares;
@@ -825,6 +886,7 @@ export async function startWorker() {
               log.warn(
                 "Forbidden: player without an allowed flare attempted to join game",
               );
+              admissionGuard.rollback();
               ws.close(CloseCode.Forbidden, CloseReason.Forbidden);
               return;
             }
@@ -855,6 +917,7 @@ export async function startWorker() {
             persistentID: persistentId,
             gameID: clientMsg.gameID,
           });
+          admissionGuard.rollback();
           ws.close(CloseCode.Forbidden, CloseReason.CosmeticsForbidden);
           return;
         }
@@ -905,6 +968,9 @@ export async function startWorker() {
         );
 
         const joinResult = gm.joinClient(client, clientMsg.gameID);
+        if (joinResult !== "joined" && joinResult !== "redirected") {
+          admissionGuard.rollback();
+        }
 
         if (joinResult === "not_found") {
           log.info(`game ${clientMsg.gameID} not found on worker ${workerId}`);

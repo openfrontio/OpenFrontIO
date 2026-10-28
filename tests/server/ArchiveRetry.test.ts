@@ -10,7 +10,11 @@ vi.mock("../../src/server/Logger", () => ({
   logger: { child: () => log },
 }));
 
-import { archive, ARCHIVE_RETRY_DELAYS_MS } from "../../src/server/Archive";
+import {
+  archive,
+  ARCHIVE_RETRY_DELAYS_MS,
+  ARCHIVE_TIMEOUT_MS,
+} from "../../src/server/Archive";
 
 const record = { info: { gameID: "abcd1234" } } as unknown as GameRecord;
 
@@ -114,6 +118,17 @@ describe("archive retries", () => {
     expect(second[1].signal).toBeInstanceOf(AbortSignal);
     expect(second[1].signal).not.toBe(first[1].signal);
     expect(log.error).not.toHaveBeenCalled();
+  });
+
+  // The API saves a large public game in well over 15 s. An attempt abandoned
+  // mid-save leaves the game stored with its stats unapplied, and the retry's
+  // 409 then reads as success, so a slow save must be waited for.
+  test("waits long enough for a slow save before abandoning an attempt", async () => {
+    const timeout = vi.spyOn(AbortSignal, "timeout");
+    fetchMock.mockResolvedValueOnce(respond(200));
+    await runArchive();
+    expect(timeout).toHaveBeenCalledWith(ARCHIVE_TIMEOUT_MS);
+    expect(ARCHIVE_TIMEOUT_MS).toBeGreaterThanOrEqual(60_000);
   });
 
   test("a 409 after a failed attempt counts as already archived", async () => {
