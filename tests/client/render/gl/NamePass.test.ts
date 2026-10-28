@@ -81,6 +81,10 @@ describe("NamePass targeted nameplate hover", () => {
     slot.flagLayerIdx = 0;
     pass.setMouseWorldPos(-150, 200);
     expect(pass.hitTestNamePlate(1, cameraMatrix)).toBe(42);
+
+    // Without a flag, the same position stays outside the plate.
+    slot.flagLayerIdx = -1;
+    expect(pass.hitTestNamePlate(1, cameraMatrix)).toBe(0);
   });
 });
 
