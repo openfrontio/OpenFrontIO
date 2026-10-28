@@ -894,6 +894,7 @@ async function createClientGame(
     const disposeRenderer = (): void => {
       if (rendererDisposed) return;
       rendererDisposed = true;
+      gameRenderer.dispose();
       stopFrameLoop();
       view.dispose();
       glCanvas.remove();
