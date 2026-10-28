@@ -2050,10 +2050,6 @@ export const maps: readonly MapInfo[] = [
     type: GameMapType.Zealandia,
     translationKey: "map.zealandia",
     categories: ["oceania"],
-    multiplayerFrequency: 6,
-    ffaFrequency: -1,
-    teamFrequency: -1,
-    specialFrequency: -1,
     defaultNationCount: 27,
   },
 ];
