@@ -1095,8 +1095,6 @@ export class BuildPreviewController implements Controller {
     this.pendingConfirm = null;
     this.ghostResolved = false;
     this.resolvedGhostTile = undefined;
-    this.ghostQuerySequence++;
-    this.ghostQueryPending = false;
     this.ghostUnit = null;
     this.lastGhostData = null;
     this.renderedGhostBuffer = null;
