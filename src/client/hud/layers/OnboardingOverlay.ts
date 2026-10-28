@@ -40,15 +40,26 @@ const NUDGE_MS = 1500;
  */
 const IN_FLIGHT_MS = 400;
 
-/** Spotlight radius around a single-tile target, in tiles and at least px. */
-const TARGET_RADIUS_TILES = 6;
-const MIN_SPOT_PX = 48;
+/**
+ * Radius of the target marker, in tiles, kept within these px. On the
+ * expand step no one's land lies this close to it, so it only covers
+ * empty land.
+ */
+const TARGET_RADIUS_TILES = 4;
+const MIN_TARGET_PX = 14;
+const MAX_TARGET_PX = 40;
 
 /**
  * How far past our border, toward where we're headed, the expand step's
- * spotlight sits, in tiles: on the border it reads as "click your land".
+ * target sits at most, in tiles: on the border it reads as "click your land".
  */
 const EXPAND_REACH_TILES = 10;
+
+/**
+ * Directions tried for the expand step's target, in degrees off the one
+ * toward the goal, when land in that one is taken too close to the border.
+ */
+const EXPAND_TURNS = [0, 30, -30, 60, -60, 90, -90];
 
 /** Steps whose text says "tap" instead of "click" on touch devices. */
 const TOUCH_TEXT = new Set([
@@ -64,13 +75,11 @@ const TOUCH_TEXT = new Set([
 interface Target {
   x: number;
   y: number;
-  /** Spotlight radius in tiles. */
-  radius: number;
 }
 
 /**
  * The onboarding tutorial (docs/OnboardingTutorial.md): on a `tutorial`
- * game it spotlights the step's target with an arrow, shows one sentence,
+ * game it marks the step's target with an arrow, shows one sentence,
  * and drops (through the Transport's intent gate) any spawn, attack or boat
  * the step doesn't ask for, or any attack while troops are low.
  */
@@ -85,7 +94,7 @@ export class OnboardingOverlay extends LitElement implements Controller {
   @state() private hasCoast = true;
   @state() private lowTroops = false;
   @state() private nudging = false;
-  /** Screen position and radius of the spotlight, in px. */
+  /** Screen position and radius of the target marker, in px. */
   @state() private spot: { x: number; y: number; r: number } | null = null;
 
   private target: Target | null = null;
@@ -312,11 +321,11 @@ export class OnboardingOverlay extends LitElement implements Controller {
     });
     this.hasCoast = hasCoast;
 
-    const at = (c: Cell | null, radius = TARGET_RADIUS_TILES): Target | null =>
-      c === null ? null : { x: c.x, y: c.y, radius };
+    const at = (c: Cell | null): Target | null =>
+      c === null ? null : { x: c.x, y: c.y };
     switch (this.step) {
       case "spawn":
-        this.target = { ...SPAWN_ZONE };
+        this.target = { x: SPAWN_ZONE.x, y: SPAWN_ZONE.y };
         break;
       case "expand":
         this.target = at(this.intoFreeLand(frontier, goal));
@@ -326,7 +335,7 @@ export class OnboardingOverlay extends LitElement implements Controller {
         break;
       case "boat":
         this.target = hasCoast
-          ? { ...ISLET }
+          ? { x: ISLET.x, y: ISLET.y }
           : at(this.intoFreeLand(frontier, ISLET));
         break;
       case "nation":
@@ -350,7 +359,9 @@ export class OnboardingOverlay extends LitElement implements Controller {
 
   /**
    * Walks from a free tile at our border up to EXPAND_REACH_TILES toward
-   * `goal`, staying on free land, and returns the last tile reached.
+   * `goal`, staying on free land, and returns the farthest tile reached
+   * with no one's land under the marker. If there's none that way, tries
+   * directions further off it; null if none has one.
    */
   private intoFreeLand(
     from: Cell | null,
@@ -358,22 +369,38 @@ export class OnboardingOverlay extends LitElement implements Controller {
   ): Cell | null {
     if (from === null) return null;
     const g = this.game;
-    const dx = goal.x - from.x;
-    const dy = goal.y - from.y;
-    const len = Math.hypot(dx, dy);
-    let last = from;
-    for (let i = 1; i <= Math.min(EXPAND_REACH_TILES, len); i++) {
-      const x = Math.round(from.x + (dx / len) * i);
-      const y = Math.round(from.y + (dy / len) * i);
-      if (!g.isValidCoord(x, y)) break;
-      const t = g.ref(x, y);
-      if (!g.isLand(t) || g.hasOwner(t)) break;
-      last = new Cell(x, y);
+    const toward = Math.atan2(goal.y - from.y, goal.x - from.x);
+    for (const turn of EXPAND_TURNS) {
+      const a = toward + (turn * Math.PI) / 180;
+      let best: Cell | null = null;
+      for (let i = 1; i <= EXPAND_REACH_TILES; i++) {
+        const x = Math.round(from.x + Math.cos(a) * i);
+        const y = Math.round(from.y + Math.sin(a) * i);
+        if (!g.isValidCoord(x, y)) break;
+        const t = g.ref(x, y);
+        if (!g.isLand(t) || g.hasOwner(t)) break;
+        if (this.noOwnerNear(x, y)) best = new Cell(x, y);
+      }
+      if (best !== null) return best;
     }
-    return last;
+    return null;
   }
 
-  /** Keeps the spotlight on the target as the camera moves. */
+  /** Whether no tile within TARGET_RADIUS_TILES of (x, y) has an owner. */
+  private noOwnerNear(x: number, y: number): boolean {
+    const g = this.game;
+    const r = TARGET_RADIUS_TILES;
+    for (let dy = -r; dy <= r; dy++) {
+      for (let dx = -r; dx <= r; dx++) {
+        if (dx * dx + dy * dy > r * r) continue;
+        if (!g.isValidCoord(x + dx, y + dy)) continue;
+        if (g.hasOwner(g.ref(x + dx, y + dy))) return false;
+      }
+    }
+    return true;
+  }
+
+  /** Keeps the target marker on the target as the camera moves. */
   private followTarget = () => {
     this.frame = requestAnimationFrame(this.followTarget);
     const t = this.target;
@@ -384,7 +411,13 @@ export class OnboardingOverlay extends LitElement implements Controller {
     const p = this.transformHandler.worldToScreenCoordinates(
       new Cell(t.x + 0.5, t.y + 0.5),
     );
-    const r = Math.max(MIN_SPOT_PX, t.radius * this.transformHandler.scale);
+    const r = Math.min(
+      MAX_TARGET_PX,
+      Math.max(
+        MIN_TARGET_PX,
+        TARGET_RADIUS_TILES * this.transformHandler.scale,
+      ),
+    );
     const s = this.spot;
     if (
       s === null ||
@@ -434,18 +467,28 @@ export class OnboardingOverlay extends LitElement implements Controller {
           spot === null
             ? nothing
             : html`
-                <div
-                  class="absolute inset-0"
-                  style="background: radial-gradient(circle at ${spot.x}px ${spot.y}px, transparent ${spot.r}px, rgba(0, 0, 0, 0.55) ${
-                    spot.r + 24
-                  }px)"
-                ></div>
-                <div
-                  class="absolute rounded-full border-4 border-yellow-300 animate-ping"
+                <svg
+                  class="absolute drop-shadow-lg"
                   style="left: ${spot.x - spot.r}px; top: ${
                     spot.y - spot.r
                   }px; width: ${spot.r * 2}px; height: ${spot.r * 2}px"
-                ></div>
+                  viewBox="-10 -10 20 20"
+                >
+                  <g fill="none" stroke="#000" stroke-width="3">
+                    <circle r="8.5" />
+                    <circle r="4.5" />
+                  </g>
+                  <g fill="none" stroke="#fde047" stroke-width="1.6">
+                    <circle r="8.5" />
+                    <circle r="4.5" />
+                  </g>
+                  <circle
+                    r="1.6"
+                    fill="#fde047"
+                    stroke="#000"
+                    stroke-width="0.8"
+                  />
+                </svg>
                 <div
                   class="absolute -translate-x-1/2 animate-bounce text-yellow-300 drop-shadow-lg"
                   style="left: ${spot.x}px; top: ${spot.y - spot.r - 56}px"

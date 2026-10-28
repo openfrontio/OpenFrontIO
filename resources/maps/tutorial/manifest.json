@@ -10,23 +10,23 @@
   "id": "Tutorial",
   "map": {
     "height": 168,
-    "num_land_tiles": 15836,
+    "num_land_tiles": 13467,
     "width": 224
   },
   "map16x": {
     "height": 42,
-    "num_land_tiles": 908,
+    "num_land_tiles": 775,
     "width": 56
   },
   "map4x": {
     "height": 84,
-    "num_land_tiles": 3852,
+    "num_land_tiles": 3274,
     "width": 112
   },
   "name": "Tutorial",
   "nations": [
     {
-      "coordinates": [186, 74],
+      "coordinates": [175, 84],
       "flag": "",
       "name": "Red Empire"
     }

@@ -33,7 +33,7 @@ The game ends with a victory screen that offers **Play a solo game**, which star
 
 What makes it different from the guide:
 
-- **Spotlight.** Everything except the current target is dimmed, and an animated hand or arrow points at the target.
+- **Target.** A target marker and an animated arrow show where to click. The rest of the screen stays as it is. When the target is empty land, the marker covers only empty land.
 - **Input gating.** Clicks and taps outside the current target are ignored, so the player can't wander off the script. Camera pan and zoom stay free, but the map fits on one screen, so they shouldn't be needed.
 - **One sentence per step**, large and in the middle of the screen, not in a corner panel. Touch devices get their own wording, as the guide already does (`tutorial.step_touch.*`).
 - **Low-troops rule.** New players click again and again and send their whole army away. This rule is on for the whole tutorial, not a single step:
@@ -89,7 +89,7 @@ Log when each step starts and finishes (spawn, expand, tribe, boat, nation, win,
 ## Build order
 
 1. Tutorial map and the engine scenario (fixed tribe, passive nation, win check), with tests.
-2. Overlay: spotlight, pointer, input gating, on desktop and touch.
+2. Overlay: target marker, pointer, input gating, on desktop and touch.
 3. Step script, low-troops rule and victory screen.
 4. First-visit modal and the Poki auto-start.
 5. Step logging.
