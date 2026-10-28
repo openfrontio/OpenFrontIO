@@ -1,9 +1,10 @@
 {
+  "$schema": "../../../info.schema.json",
   "id": "Ommatrypta",
   "name": "Ommatrypta",
   "translation_key": "map.ommatrypta",
   "categories": ["arcade", "new"],
-  "multiplayer_frequency": 10,
+  "special_team_count": 13,
   "nations": [
     {
       "name": "I Dont Know"

@@ -8,21 +8,25 @@ import {
 } from "@openfront/engine-api/game/GameTypes";
 import { GameConfig } from "@openfront/engine-api/Schemas";
 import { PublicGameInfo } from "@openfront/shared/WireSchemas";
-import { beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
+  DEFAULT_FILTER_PROFILE_KEY,
   DEFAULT_FILTERS,
   deleteFilterProfile,
   FILTER_PROFILES_KEY,
   filterAndSortLobbies,
   flattenLobbies,
   hasFilterProfile,
+  loadDefaultFilterProfile,
   loadFilterProfiles,
   lobbyFacts,
   LobbyFilters,
   MAX_FILTER_PROFILES,
   normalizeFilters,
+  saveDefaultFilterProfile,
   saveFilterProfile,
 } from "../../src/client/components/DetailedGameViewFilters";
+import { UserSettings } from "../../src/client/UserSettings";
 
 function config(overrides: Partial<GameConfig> = {}): GameConfig {
   return {
@@ -326,5 +330,193 @@ describe("filter profiles", () => {
     expect(Object.keys(afterOverflow)).toHaveLength(MAX_FILTER_PROFILES);
     const overwritten = saveFilterProfile("p0", filters({ hideEmpty: true }));
     expect(overwritten.p0.hideEmpty).toBe(true);
+  });
+});
+
+describe("default filter profile", () => {
+  beforeEach(() => {
+    localStorage.clear();
+  });
+
+  it("is empty until one is chosen", () => {
+    const profiles = saveFilterProfile("Big", filters({ minCapacity: 100 }));
+    expect(loadDefaultFilterProfile(profiles)).toBe("");
+  });
+
+  it("remembers the chosen profile", () => {
+    const profiles = saveFilterProfile("Big", filters({ minCapacity: 100 }));
+    saveDefaultFilterProfile("Big");
+    expect(loadDefaultFilterProfile(profiles)).toBe("Big");
+  });
+
+  it("an empty name clears the default", () => {
+    const profiles = saveFilterProfile("Big", filters());
+    saveDefaultFilterProfile("Big");
+    saveDefaultFilterProfile("");
+    expect(loadDefaultFilterProfile(profiles)).toBe("");
+    expect(localStorage.getItem(DEFAULT_FILTER_PROFILE_KEY)).toBeNull();
+  });
+
+  it("ignores a default naming a profile that no longer exists", () => {
+    saveFilterProfile("Big", filters());
+    saveDefaultFilterProfile("Gone");
+    expect(loadDefaultFilterProfile(loadFilterProfiles())).toBe("");
+  });
+
+  it("deleting the default profile clears it", () => {
+    saveFilterProfile("Big", filters());
+    saveDefaultFilterProfile("Big");
+    deleteFilterProfile("Big");
+    expect(localStorage.getItem(DEFAULT_FILTER_PROFILE_KEY)).toBeNull();
+  });
+
+  it("deleting another profile keeps the default", () => {
+    saveFilterProfile("Big", filters());
+    const profiles = saveFilterProfile("Small", filters());
+    saveDefaultFilterProfile("Big");
+    deleteFilterProfile("Small");
+    expect(loadDefaultFilterProfile(profiles)).toBe("Big");
+  });
+});
+
+describe("profiles per account", () => {
+  beforeEach(() => {
+    localStorage.clear();
+    UserSettings.setPlayerId(null);
+  });
+
+  afterEach(() => {
+    UserSettings.setPlayerId(null);
+  });
+
+  it("keeps each account's profiles and default separate", () => {
+    UserSettings.setPlayerId("rikardo");
+    saveFilterProfile("asd", filters({ minCapacity: 100 }));
+    saveDefaultFilterProfile("asd");
+
+    UserSettings.setPlayerId("anon");
+    expect(loadFilterProfiles()).toEqual({});
+    saveFilterProfile("anon", filters({ hideEmpty: true }));
+    saveDefaultFilterProfile("anon");
+    expect(Object.keys(loadFilterProfiles())).toEqual(["anon"]);
+    expect(loadDefaultFilterProfile(loadFilterProfiles())).toBe("anon");
+
+    UserSettings.setPlayerId("rikardo");
+    expect(Object.keys(loadFilterProfiles())).toEqual(["asd"]);
+    expect(loadDefaultFilterProfile(loadFilterProfiles())).toBe("asd");
+  });
+
+  it("keeps profiles through a logout and login", () => {
+    UserSettings.setPlayerId("rikardo");
+    saveFilterProfile("asd", filters({ minCapacity: 100 }));
+    saveDefaultFilterProfile("asd");
+
+    UserSettings.setPlayerId(null);
+    expect(loadFilterProfiles()).toEqual({});
+
+    UserSettings.setPlayerId("rikardo");
+    expect(loadFilterProfiles().asd.minCapacity).toBe(100);
+    expect(loadDefaultFilterProfile(loadFilterProfiles())).toBe("asd");
+  });
+
+  it("deleting a profile in one account leaves the other's alone", () => {
+    UserSettings.setPlayerId("a");
+    saveFilterProfile("same name", filters());
+    saveDefaultFilterProfile("same name");
+    UserSettings.setPlayerId("b");
+    saveFilterProfile("same name", filters());
+    saveDefaultFilterProfile("same name");
+
+    deleteFilterProfile("same name");
+    expect(loadFilterProfiles()).toEqual({});
+
+    UserSettings.setPlayerId("a");
+    expect(Object.keys(loadFilterProfiles())).toEqual(["same name"]);
+    expect(loadDefaultFilterProfile(loadFilterProfiles())).toBe("same name");
+  });
+
+  it("moves profiles saved before this change to the first account that loads", () => {
+    saveFilterProfile("old", filters({ minCapacity: 50 }));
+    saveDefaultFilterProfile("old");
+
+    UserSettings.setPlayerId("first");
+    expect(loadFilterProfiles().old.minCapacity).toBe(50);
+    expect(loadDefaultFilterProfile(loadFilterProfiles())).toBe("old");
+
+    UserSettings.setPlayerId("second");
+    expect(loadFilterProfiles()).toEqual({});
+  });
+
+  it("leaves logged-out profiles alone when the account already has its own", () => {
+    saveFilterProfile("Big", filters({ minCapacity: 100 }));
+    saveDefaultFilterProfile("Big");
+
+    UserSettings.setPlayerId("a");
+    // First load adopts the logged-out data; then the account clears its default.
+    expect(Object.keys(loadFilterProfiles())).toEqual(["Big"]);
+    saveDefaultFilterProfile("");
+
+    UserSettings.setPlayerId(null);
+    saveFilterProfile("Guest", filters());
+    saveDefaultFilterProfile("Guest");
+
+    UserSettings.setPlayerId("a");
+    expect(Object.keys(loadFilterProfiles())).toEqual(["Big"]);
+    expect(loadDefaultFilterProfile(loadFilterProfiles())).toBe("");
+
+    UserSettings.setPlayerId(null);
+    expect(Object.keys(loadFilterProfiles())).toEqual(["Guest"]);
+    expect(loadDefaultFilterProfile(loadFilterProfiles())).toBe("Guest");
+  });
+
+  it("an account with profiles but no default does not take the logged-out default", () => {
+    UserSettings.setPlayerId("a");
+    saveFilterProfile("Mine", filters());
+
+    UserSettings.setPlayerId(null);
+    saveFilterProfile("Big", filters());
+    saveDefaultFilterProfile("Big");
+
+    UserSettings.setPlayerId("a");
+    expect(loadDefaultFilterProfile(loadFilterProfiles())).toBe("");
+    expect(Object.keys(loadFilterProfiles())).toEqual(["Mine"]);
+  });
+
+  it("moves the default only together with the profiles it names", () => {
+    saveFilterProfile("Big", filters());
+    saveDefaultFilterProfile("Big");
+
+    UserSettings.setPlayerId("a");
+    // Reading the default first must still bring the profiles along.
+    expect(loadDefaultFilterProfile({ Big: filters() })).toBe("Big");
+    expect(localStorage.getItem(FILTER_PROFILES_KEY)).toBeNull();
+    expect(localStorage.getItem(DEFAULT_FILTER_PROFILE_KEY)).toBeNull();
+    expect(Object.keys(loadFilterProfiles())).toEqual(["Big"]);
+  });
+
+  it("keeps the logged-out data and retries when moving it fails halfway", () => {
+    saveFilterProfile("Big", filters());
+    saveDefaultFilterProfile("Big");
+    UserSettings.setPlayerId("a");
+
+    const realSetItem = Storage.prototype.setItem;
+    const setItem = vi
+      .spyOn(Storage.prototype, "setItem")
+      .mockImplementation(function (this: Storage, key: string, value: string) {
+        if (key === `${DEFAULT_FILTER_PROFILE_KEY}:a`) {
+          throw new Error("quota");
+        }
+        realSetItem.call(this, key, value);
+      });
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+    expect(loadFilterProfiles()).toEqual({});
+    // Nothing was lost or half-moved.
+    expect(localStorage.getItem(FILTER_PROFILES_KEY)).not.toBeNull();
+    expect(localStorage.getItem(DEFAULT_FILTER_PROFILE_KEY)).toBe("Big");
+    expect(localStorage.getItem(`${FILTER_PROFILES_KEY}:a`)).toBeNull();
+    setItem.mockRestore();
+
+    expect(Object.keys(loadFilterProfiles())).toEqual(["Big"]);
+    expect(loadDefaultFilterProfile(loadFilterProfiles())).toBe("Big");
   });
 });

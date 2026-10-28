@@ -15,9 +15,9 @@ import { DoomsdayClockSpeed } from "@openfront/engine-lib/game/DoomsdayClock";
 import { stripVersionPrefix } from "@openfront/shared/ServerList";
 import IntlMessageFormat from "intl-messageformat";
 import { ClientEnv } from "./ClientEnv";
+import type { KeyboardLayoutMap } from "./KeyboardLayout";
 import type { LangSelector } from "./LangSelector";
 import { pagePin } from "./PagePin";
-import { Platform } from "./Platform";
 
 export const TUTORIAL_VIDEO_URL = "https://www.youtube.com/embed/7J5zwb_s_Cg";
 
@@ -329,13 +329,84 @@ export function formatPercentage(value: number): string {
  * formatKeyForDisplay("ArrowUp") // returns "Arrowup"
  * formatKeyForDisplay("") // returns ""
  */
+export type KeybindEntry =
+  | {
+      key?: string;
+      value?: string | string[];
+    }
+  | string;
+
+function getKeybindShiftPrefix(): string {
+  const shiftPrefix = translateText("user_setting.keybind_shift_prefix");
+  return shiftPrefix === "user_setting.keybind_shift_prefix"
+    ? "Shift+"
+    : shiftPrefix;
+}
+
+/**
+ * Resolve a saved physical key code into the character shown for the user's
+ * active keyboard layout. Number-row actions intentionally keep numeric labels:
+ * layout maps contain unshifted symbols for those physical keys on AZERTY.
+ */
+export function resolveKeybindLabel(
+  entry: KeybindEntry | undefined,
+  defaultCode: string,
+  layoutMap: KeyboardLayoutMap | null,
+): string {
+  const savedValue = typeof entry === "string" ? entry : entry?.value;
+  if (savedValue === "Null") return "";
+
+  const hasValidSavedValue =
+    typeof savedValue === "string" ||
+    (Array.isArray(savedValue) && typeof savedValue[0] === "string");
+  const valueCode =
+    typeof savedValue === "string"
+      ? savedValue
+      : Array.isArray(savedValue) && typeof savedValue[0] === "string"
+        ? savedValue[0]
+        : defaultCode;
+  const savedKey =
+    typeof entry === "object" && typeof entry?.key === "string"
+      ? entry.key
+      : "";
+
+  let isShift = false;
+  let codeToResolve = valueCode;
+  if (valueCode.startsWith("Shift+")) {
+    isShift = true;
+    codeToResolve = valueCode.slice(6);
+  }
+
+  if (
+    layoutMap &&
+    layoutMap.has(codeToResolve) &&
+    !codeToResolve.startsWith("Digit") &&
+    !codeToResolve.startsWith("Numpad")
+  ) {
+    const char = layoutMap.get(codeToResolve)!.toUpperCase();
+    return isShift ? `${getKeybindShiftPrefix()}${char}` : char;
+  }
+
+  // Resolve number-row codes before the saved-key fallback: on AZERTY, the
+  // stored character for Digit2 can be "é", but the bound action is Digit2.
+  if (/^Digit\d$/.test(codeToResolve)) {
+    return formatKeyForDisplay(valueCode);
+  }
+
+  if (savedKey && hasValidSavedValue) {
+    return savedKey;
+  }
+
+  return formatKeyForDisplay(valueCode);
+}
+
 export function formatKeyForDisplay(value: string): string {
   // Handle empty string
   if (!value) return "";
 
   // Handle Shift+ prefix: format as "Shift+X"
   if (value.startsWith("Shift+")) {
-    return "Shift+" + formatKeyForDisplay(value.slice(6));
+    return getKeybindShiftPrefix() + formatKeyForDisplay(value.slice(6));
   }
 
   // Handle space character or "Space" key
@@ -654,14 +725,6 @@ export function getMessageTypeClasses(type: MessageType): string {
       console.warn(`Message type ${type} has no explicit color`);
       return severityColors["white"];
   }
-}
-
-export function getModifierKey(): string {
-  return Platform.isMac ? "⌘" : "Ctrl";
-}
-
-export function getAltKey(): string {
-  return Platform.isMac ? "⌥" : "Alt";
 }
 
 export function getGamesPlayed(): number {

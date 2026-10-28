@@ -48,7 +48,7 @@ import { ZbContext } from "@openfront/zbin";
 import { ClientEnv, NoServerError } from "src/client/ClientEnv";
 import { getPlayToken } from "./Auth";
 import { LobbyConfig } from "./ClientGameRunner";
-import { clientPlatform } from "./ClientPlatform";
+import { clientDevice, clientPlatform } from "./ClientPlatform";
 import { isDesktopShell } from "./DesktopShell";
 import { showInGameConfirm } from "./InGameModal";
 import {
@@ -724,6 +724,7 @@ export class Transport {
       spectator: this.lobbyConfig.spectator,
       gitCommit: ClientEnv.gitCommit(),
       platform: clientPlatform(),
+      device: clientDevice(),
     } satisfies ClientJoinMessage);
   }
 

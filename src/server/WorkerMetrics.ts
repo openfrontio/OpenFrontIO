@@ -127,8 +127,13 @@ export function initWorkerMetrics(
 
   connectedClientsGauge.addCallback((result) => {
     const labels = getPromLabels();
-    for (const [platform, count] of gameManager.activeClientsByPlatform()) {
-      result.observe(count, { ...labels, "openfront.platform": platform });
+    for (const segment of gameManager.activeClientsBySegment()) {
+      result.observe(segment.count, {
+        ...labels,
+        "openfront.platform": segment.platform,
+        "openfront.device": segment.device,
+        "openfront.auth": segment.auth,
+      });
     }
   });
 

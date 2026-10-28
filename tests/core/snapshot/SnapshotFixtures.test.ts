@@ -9,6 +9,7 @@ import { gunzipSync, gzipSync } from "zlib";
 import {
   createScriptedRunner,
   restoreScriptedRunner,
+  SCRIPTED_HUMANS,
   scriptedGameStart,
   stepScripted,
 } from "../../util/ScriptedGame";
@@ -67,5 +68,50 @@ describe("snapshot fixtures from earlier builds", { timeout: 120_000 }, () => {
     // A snapshot written by this build from the migrated game loads too.
     const again = await restoreScriptedRunner(MAP, start, runner.snapshot());
     expect(again.game.ticks()).toBe(header.tick + 100);
+  });
+
+  // How the client resumes a saved game: a fresh game id, and one player
+  // carrying the clientID the header names. The game's players, names
+  // included, still come from the snapshot.
+  test.each(fixtures())(
+    "%s resumes as a new game for its human",
+    async (name) => {
+      const bytes = new Uint8Array(
+        gunzipSync(fs.readFileSync(path.join(DIR, name))),
+      );
+      const header = readSnapshotHeader(bytes);
+      const [human] = header.humans;
+      const runner = await restoreScriptedRunner(
+        MAP,
+        {
+          gameID: "RESUMED01",
+          lobbyCreatedAt: 0,
+          config: header.gameConfig,
+          players: [
+            { clientID: human.clientID, username: "loader", clanTag: null },
+          ],
+        },
+        bytes,
+      );
+      expect(runner.game.playerByClientID(human.clientID)?.name()).toBe(
+        human.name,
+      );
+      for (let i = 0; i < 100; i++) stepScripted(runner);
+      expect(runner.game.ticks()).toBe(header.tick + 100);
+    },
+  );
+
+  // A host resuming a save starts its player under the stored clientID, so
+  // the header has to name the humans, and only them (not nations or bots).
+  test.each(fixtures())("%s names its humans in the header", (name) => {
+    const bytes = new Uint8Array(
+      gunzipSync(fs.readFileSync(path.join(DIR, name))),
+    );
+    expect(readSnapshotHeader(bytes).humans).toEqual(
+      SCRIPTED_HUMANS.map((clientID, i) => ({
+        clientID,
+        name: `scripted${i}`,
+      })),
+    );
   });
 });

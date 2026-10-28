@@ -1,5 +1,5 @@
-import { GAME_ID_REGEX, GameConfig } from "@openfront/engine-api/Schemas";
 import { GameMode, GameType } from "@openfront/engine-api/game/GameTypes";
+import { GAME_ID_REGEX, GameConfig } from "@openfront/engine-api/Schemas";
 import { assetUrl } from "@openfront/shared/AssetUrls";
 import { EventBus } from "@openfront/shared/EventBus";
 import {
@@ -22,21 +22,19 @@ import {
   translateText,
 } from "../client/Utils";
 import { getApiBase } from "./Api";
+import { BaseModal } from "./components/BaseModal";
+import { GameStartAlertController } from "./components/GameStartAlertController";
+import { inviteFriendsButton } from "./components/ui/InviteFriendsButton";
+import { DEFAULT_TITLE_CLASS, modalHeader } from "./components/ui/ModalHeader";
 import { gamePortal } from "./GamePortal";
 import { SendSpectateEvent } from "./LobbyEvents";
 import { PublicLobbySocket } from "./LobbySocket";
 import { JoinLobbyEvent } from "./Main";
-import { ensureServerList, redirectToGameVersion } from "./ServerList";
-import { terrainMapFileLoader } from "./TerrainMapFileLoader";
-import { normaliseMapKey } from "./Utils";
-import { findVersionedShell } from "./VersionedReplay";
-import { BaseModal } from "./components/BaseModal";
-import "./components/CopyButton";
-import { GameStartAlertController } from "./components/GameStartAlertController";
-import "./components/LobbyPlayerView";
-import { inviteFriendsButton } from "./components/ui/InviteFriendsButton";
-import { DEFAULT_TITLE_CLASS, modalHeader } from "./components/ui/ModalHeader";
 import { openReplayViewer } from "./replay/ReplayEntry";
+import "./components/CopyButton";
+import { ensureServerList, redirectToGameVersion } from "./ServerList";
+import "./components/LobbyPlayerView";
+import { terrainMapFileLoader } from "./TerrainMapFileLoader";
 import { nationsConfigToSlider } from "./utilities/GameConfigHelpers";
 import {
   disabledUnitsBox,
@@ -45,6 +43,8 @@ import {
   lobbySettingTagText,
   notableLobbySettings,
 } from "./utilities/LobbySettingsSummary";
+import { normaliseMapKey } from "./Utils";
+import { findVersionedShell } from "./VersionedReplay";
 
 @customElement("join-lobby-modal")
 export class JoinLobbyModal extends BaseModal {
@@ -223,42 +223,48 @@ export class JoinLobbyModal extends BaseModal {
     return html`
       <div class="flex flex-col h-full">
         <div class="flex-1 custom-scrollbar p-6 space-y-4 mr-1">
-          ${this.isConnecting
-            ? html`
-                <div
-                  class="min-h-[240px] flex flex-col items-center justify-center gap-4"
-                >
+          ${
+            this.isConnecting
+              ? html`
                   <div
-                    class="w-12 h-12 border-4 border-white/20 border-t-white rounded-full animate-spin"
-                  ></div>
-                  <p class="text-center text-white/80 text-sm">
-                    ${translateText("public_lobby.connecting")}
-                  </p>
-                </div>
-              `
-            : html`
-                ${this.gameConfig ? this.renderGameConfig() : html``}
-                ${this.players.length > 0
-                  ? html`
-                      <lobby-player-view
-                        class="mt-6"
-                        .gameMode=${this.gameConfig?.gameMode ?? GameMode.FFA}
-                        .clients=${this.players}
-                        .lobbyCreatorClientID=${hostClientID}
-                        .currentClientID=${this.currentClientID}
-                        .anonymizeNames=${this.gameConfig?.anonymizeNames ??
-                        false}
-                        .teamCount=${this.gameConfig?.playerTeams ?? 2}
-                        .isPublicGame=${this.gameConfig?.gameType ===
-                        GameType.Public}
-                        .nationCount=${nationsConfigToSlider(
-                          this.gameConfig?.nations ?? "default",
-                          this.nationCount,
-                        )}
-                      ></lobby-player-view>
-                    `
-                  : ""}
-              `}
+                    class="min-h-[240px] flex flex-col items-center justify-center gap-4"
+                  >
+                    <div
+                      class="w-12 h-12 border-4 border-white/20 border-t-white rounded-full animate-spin"
+                    ></div>
+                    <p class="text-center text-white/80 text-sm">
+                      ${translateText("public_lobby.connecting")}
+                    </p>
+                  </div>
+                `
+              : html`
+                  ${this.gameConfig ? this.renderGameConfig() : html``}
+                  ${
+                    this.players.length > 0
+                      ? html`
+                          <lobby-player-view
+                            class="mt-6"
+                            .gameMode=${this.gameConfig?.gameMode ?? GameMode.FFA}
+                            .clients=${this.players}
+                            .lobbyCreatorClientID=${hostClientID}
+                            .currentClientID=${this.currentClientID}
+                            .anonymizeNames=${
+                              this.gameConfig?.anonymizeNames ?? false
+                            }
+                            .teamCount=${this.gameConfig?.playerTeams ?? 2}
+                            .isPublicGame=${
+                              this.gameConfig?.gameType === GameType.Public
+                            }
+                            .nationCount=${nationsConfigToSlider(
+                              this.gameConfig?.nations ?? "default",
+                              this.nationCount,
+                            )}
+                          ></lobby-player-view>
+                        `
+                      : ""
+                  }
+                `
+          }
         </div>
 
         ${html`
@@ -276,24 +282,26 @@ export class JoinLobbyModal extends BaseModal {
                 <span class="text-sm font-bold text-white">${statusLabel}</span>
               </div>
               ${this.renderSpectateToggle()}
-              ${maxPlayers > 0
-                ? html`
-                    <div
-                      class="flex items-center gap-2 text-white/80 text-xs font-bold uppercase tracking-widest"
-                    >
-                      <span>${playerCount}/${maxPlayers}</span>
-                      <svg
-                        class="w-4 h-4 text-white"
-                        fill="currentColor"
-                        viewBox="0 0 20 20"
+              ${
+                maxPlayers > 0
+                  ? html`
+                      <div
+                        class="flex items-center gap-2 text-white/80 text-xs font-bold uppercase tracking-widest"
                       >
-                        <path
-                          d="M13 6a3 3 0 11-6 0 3 3 0 016 0zM18 8a2 2 0 11-4 0 2 2 0 014 0zM14 15a4 4 0 00-8 0v3h8v-3zM6 8a2 2 0 11-4 0 2 2 0 014 0zM16 18v-3a5.972 5.972 0 00-.75-2.906A3.005 3.005 0 0119 15v3h-3zM4.75 12.094A5.973 5.972 0 004 15v3H1v-3a3 3 0 013.75-2.906z"
-                        ></path>
-                      </svg>
-                    </div>
-                  `
-                : html``}
+                        <span>${playerCount}/${maxPlayers}</span>
+                        <svg
+                          class="w-4 h-4 text-white"
+                          fill="currentColor"
+                          viewBox="0 0 20 20"
+                        >
+                          <path
+                            d="M13 6a3 3 0 11-6 0 3 3 0 016 0zM18 8a2 2 0 11-4 0 2 2 0 014 0zM14 15a4 4 0 00-8 0v3h8v-3zM6 8a2 2 0 11-4 0 2 2 0 014 0zM16 18v-3a5.972 5.972 0 00-.75-2.906A3.005 3.005 0 0119 15v3h-3zM4.75 12.094A5.973 5.972 0 004 15v3H1v-3a3 3 0 013.75-2.906z"
+                          ></path>
+                        </svg>
+                      </div>
+                    `
+                  : html``
+              }
             </div>
           </div>
         `}
@@ -444,31 +452,37 @@ export class JoinLobbyModal extends BaseModal {
             <span class="text-sm font-bold truncate ${accentClass}"
               >${featuredLabel ?? mapName}</span
             >
-            ${lobby.custom
-              ? html`<span
-                  class="px-1.5 py-0.5 bg-orange-500 text-white text-[10px] rounded font-bold uppercase tracking-wider shrink-0"
-                  >${translateText("public_lobby.custom")}</span
-                >`
-              : ""}
+            ${
+              lobby.custom
+                ? html`<span
+                    class="px-1.5 py-0.5 bg-orange-500 text-white text-[10px] rounded font-bold uppercase tracking-wider shrink-0"
+                    >${translateText("public_lobby.custom")}</span
+                  >`
+                : ""
+            }
           </div>
           <span class="text-xs text-white/60">${subtitleLine}</span>
-          ${settings.length > 0 || disabledUnitCount > 0
-            ? html`<div class="flex flex-wrap gap-1 mt-1">
-                ${settings.map((s) => {
-                  return html`<span
-                    class="px-1.5 py-0.5 bg-white/10 text-white/70 text-[10px] rounded font-bold"
-                    >${lobbySettingTagText(s)}</span
-                  >`;
-                })}
-                ${disabledUnitCount > 0
-                  ? html`<span
-                      class="px-1.5 py-0.5 bg-red-500/20 text-red-200 text-[10px] rounded font-bold border border-red-500/30"
-                      >${translateText("private_lobby.disabled_units")}:
-                      ${disabledUnitCount}</span
-                    >`
-                  : ""}
-              </div>`
-            : ""}
+          ${
+            settings.length > 0 || disabledUnitCount > 0
+              ? html`<div class="flex flex-wrap gap-1 mt-1">
+                  ${settings.map((s) => {
+                    return html`<span
+                      class="px-1.5 py-0.5 bg-white/10 text-white/70 text-[10px] rounded font-bold"
+                      >${lobbySettingTagText(s)}</span
+                    >`;
+                  })}
+                  ${
+                    disabledUnitCount > 0
+                      ? html`<span
+                          class="px-1.5 py-0.5 bg-red-500/20 text-red-200 text-[10px] rounded font-bold border border-red-500/30"
+                          >${translateText("private_lobby.disabled_units")}:
+                          ${disabledUnitCount}</span
+                        >`
+                      : ""
+                  }
+                </div>`
+              : ""
+          }
         </div>
         <div class="flex flex-col items-end gap-1 shrink-0">
           <div class="flex items-center gap-1 text-white/80 text-xs font-bold">
@@ -479,15 +493,19 @@ export class JoinLobbyModal extends BaseModal {
               ></path>
             </svg>
           </div>
-          ${secondsToStart === undefined
-            ? ""
-            : html`<span
-                class="text-amber-300 text-xs font-bold tabular-nums"
-                title=${translateText("host_modal.auto_start_timer")}
-                >${secondsToStart > 0
-                  ? renderDuration(secondsToStart)
-                  : translateText("public_lobby.starting_game")}</span
-              >`}
+          ${
+            secondsToStart === undefined
+              ? ""
+              : html`<span
+                  class="text-amber-300 text-xs font-bold tabular-nums"
+                  title=${translateText("host_modal.auto_start_timer")}
+                  >${
+                    secondsToStart > 0
+                      ? renderDuration(secondsToStart)
+                      : translateText("public_lobby.starting_game")
+                  }</span
+                >`
+          }
         </div>
       </button>
     `;
@@ -523,7 +541,7 @@ export class JoinLobbyModal extends BaseModal {
       this.startTrackingLobby(lobbyId, lobbyInfo);
       // If opened with lobbyId but no lobbyInfo (URL join case), auto-join the lobby
       if (!lobbyInfo) {
-        this.handleUrlJoin(lobbyId, args?.spectate === true);
+        void this.handleUrlJoin(lobbyId, args?.spectate === true);
       }
     }
   }
@@ -717,9 +735,9 @@ export class JoinLobbyModal extends BaseModal {
       <div class="flex flex-col sm:flex-row gap-4 mb-6">
         <div
           data-test-map-preview
-          class="flex items-center justify-center w-full ${tags.length > 0
-            ? "sm:w-3/5"
-            : ""} shrink-0 rounded-lg border border-white/10 bg-black/20 overflow-hidden"
+          class="flex items-center justify-center w-full ${
+            tags.length > 0 ? "sm:w-3/5" : ""
+          } shrink-0 rounded-lg border border-white/10 bg-black/20 overflow-hidden"
         >
           <img
             src=${thumbnailUrl}
@@ -731,14 +749,16 @@ export class JoinLobbyModal extends BaseModal {
             }}
           />
         </div>
-        ${tags.length > 0
-          ? html`<div
-              data-test-lobby-settings
-              class="flex flex-wrap content-start gap-1 min-w-0 flex-1 uppercase"
-            >
-              ${tags}
-            </div>`
-          : html``}
+        ${
+          tags.length > 0
+            ? html`<div
+                data-test-lobby-settings
+                class="flex flex-wrap content-start gap-1 min-w-0 flex-1 uppercase"
+              >
+                ${tags}
+              </div>`
+            : html``
+        }
       </div>
       ${disabledUnitsBox(c, "mt-4 mb-6")} ${hostCheatsBox(c, "mt-4 mb-6")}
     `;
@@ -757,7 +777,7 @@ export class JoinLobbyModal extends BaseModal {
       const mapChanged = this.gameConfig?.gameMap !== lobby.gameConfig.gameMap;
       this.gameConfig = lobby.gameConfig;
       if (mapChanged) {
-        this.loadNationCount();
+        void this.loadNationCount();
       }
     }
 
@@ -878,6 +898,13 @@ export class JoinLobbyModal extends BaseModal {
 
     try {
       const url = new URL(input);
+      // Portal invite links carry the id as a query param: gdgameId on Poki
+      // (poki.com/en/g/openfront?gdgameId=…), gameId on CrazyGames. Checked
+      // before the path, since CrazyGames' /game/openfront looks like an id.
+      for (const param of ["gdgameId", "gameId"]) {
+        const value = url.searchParams.get(param);
+        if (value && GAME_ID_REGEX.test(value)) return value;
+      }
       const match = url.pathname.match(/game\/([^/]+)/);
       const candidate = match?.[1];
       if (candidate && GAME_ID_REGEX.test(candidate)) return candidate;

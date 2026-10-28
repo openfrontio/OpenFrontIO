@@ -153,14 +153,16 @@ export class RewardsPanel extends LitElement {
         class="flex items-center justify-between gap-4 p-3 rounded-lg bg-white/5 border border-white/10"
       >
         <div class="flex items-center gap-3 min-w-0">
-          ${isHard
-            ? html`<plutonium-icon .size=${20}></plutonium-icon>`
-            : html`<cap-icon .size=${20}></cap-icon>`}
+          ${
+            isHard
+              ? html`<plutonium-icon .size=${20}></plutonium-icon>`
+              : html`<cap-icon .size=${20}></cap-icon>`
+          }
           <div class="flex flex-col min-w-0">
             <span
-              class="text-sm font-bold ${isHard
-                ? "text-green-400"
-                : "text-amber-700"}"
+              class="text-sm font-bold ${
+                isHard ? "text-green-400" : "text-amber-700"
+              }"
               >+${this.formatAmount(reward.amount)}</span
             >
             <span class="text-xs text-white/60 truncate"
@@ -168,22 +170,26 @@ export class RewardsPanel extends LitElement {
             >
           </div>
         </div>
-        ${!isRewardClaimable(reward)
-          ? // A hold with no copy of its own is left to the note below.
-            html`<span
-              data-reward-held
-              class="shrink-0 text-xs font-bold text-white/60 text-right"
-              >${reward.held === "trust"
-                ? translateText("account_modal.reward_held_trust")
-                : ""}</span
-            >`
-          : html`<o-button
-              variant="primary"
-              size="xs"
-              translationKey="account_modal.claim"
-              .disable=${this.claiming}
-              @click=${() => this.handleClaim(reward)}
-            ></o-button>`}
+        ${
+          !isRewardClaimable(reward)
+            ? // A hold with no copy of its own is left to the note below.
+              html`<span
+                data-reward-held
+                class="shrink-0 text-xs font-bold text-white/60 text-right"
+                >${
+                  reward.held === "trust"
+                    ? translateText("account_modal.reward_held_trust")
+                    : ""
+                }</span
+              >`
+            : html`<o-button
+                variant="primary"
+                size="xs"
+                translationKey="account_modal.claim"
+                .disable=${this.claiming}
+                @click=${() => this.handleClaim(reward)}
+              ></o-button>`
+        }
       </div>
     `;
   }
@@ -232,15 +238,17 @@ export class RewardsPanel extends LitElement {
             <span>🎁</span>
             ${translateText("account_modal.unclaimed_rewards")}
           </h3>
-          ${claimable.length > 1
-            ? html`<o-button
-                variant="primary"
-                size="xs"
-                translationKey="account_modal.claim_all"
-                .disable=${this.claiming}
-                @click=${this.handleClaimAll}
-              ></o-button>`
-            : ""}
+          ${
+            claimable.length > 1
+              ? html`<o-button
+                  variant="primary"
+                  size="xs"
+                  translationKey="account_modal.claim_all"
+                  .disable=${this.claiming}
+                  @click=${this.handleClaimAll}
+                ></o-button>`
+              : ""
+          }
         </div>
         <div class="flex flex-col gap-2">
           ${this.rewards.map((r) => this.renderReward(r))}

@@ -150,6 +150,7 @@ function makeGame(opts: {
   alive?: boolean;
   replay?: boolean;
   gameType?: GameType;
+  resumed?: boolean;
 }) {
   const winUpdate = { winner: ["team", "Red"], allPlayersStats: {} };
   let delivered = false;
@@ -162,6 +163,7 @@ function makeGame(opts: {
       clientID: () => "me",
     }),
     inSpawnPhase: () => false,
+    ticks: () => 6000,
     updatesSinceLastTick: () => {
       if (!opts.ended || delivered) return {};
       delivered = true;
@@ -175,6 +177,7 @@ function makeGame(opts: {
       }),
       isReplay: () => opts.replay ?? false,
     }),
+    resumedFromSave: () => opts.resumed ?? false,
   } as unknown as GameView;
 }
 
@@ -299,6 +302,14 @@ describe("WinModal XP section", () => {
     // And it stops asking.
     await settle(30_000);
     expect(fetchMock.mock.calls.length).toBe(calls);
+  });
+
+  it("shows no XP for a game resumed from a save, and never asks for it", async () => {
+    const fetchMock = stubXpEndpoint([notFound]);
+    await mount(makeGame({ ended: true, resumed: true }));
+    await settle(60_000);
+    expect(modal.querySelector("[data-xp-panel]")).toBeNull();
+    expect(fetchMock).not.toHaveBeenCalled();
   });
 
   it("shows one friendly line for an ineligible game", async () => {

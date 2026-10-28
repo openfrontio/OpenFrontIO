@@ -30,6 +30,7 @@ const profile = {
   steamLicence: false,
   steamLicenceSince: null,
   noticesSeen: [],
+  pendingMessages: [],
   player: {
     publicId: "player-1",
     adfree: false,

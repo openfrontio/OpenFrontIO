@@ -64,7 +64,7 @@ export class NewsBox extends LitElement {
 
   connectedCallback() {
     super.connectedCallback();
-    this.loadNews();
+    void this.loadNews();
   }
 
   private async loadNews() {
@@ -137,25 +137,28 @@ export class NewsBox extends LitElement {
       >
         <div class="flex items-center gap-3">
           <span
-            class="shrink-0 text-[10px] font-bold tracking-wider px-2 py-0.5 rounded ${typeLabelColors[
-              item.type
-            ] ?? typeLabelColors["announcement"]}"
+            class="shrink-0 text-[10px] font-bold tracking-wider px-2 py-0.5 rounded ${
+              typeLabelColors[item.type] ?? typeLabelColors["announcement"]
+            }"
             >${translateText(
               typeLabelKeys[item.type] ?? typeLabelKeys["announcement"],
             )}</span
           >
           <div class="flex-1 min-w-0">
-            ${item.url
-              ? html`<a
-                  href="${item.url}"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  class="text-sm font-medium text-white hover:text-blue-300 transition-colors truncate block"
-                  >${item.title}</a
-                >`
-              : html`<span class="text-sm font-medium text-white truncate block"
-                  >${item.title}</span
-                >`}
+            ${
+              item.url
+                ? html`<a
+                    href="${item.url}"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    class="text-sm font-medium text-white hover:text-blue-300 transition-colors truncate block"
+                    >${item.title}</a
+                  >`
+                : html`<span
+                    class="text-sm font-medium text-white truncate block"
+                    >${item.title}</span
+                  >`
+            }
             <span
               class="text-xs text-white/50 block [&_a]:text-blue-300 [&_a:hover]:text-blue-200"
               >${this.renderMarkdown?.(
@@ -165,26 +168,29 @@ export class NewsBox extends LitElement {
               )}</span
             >
           </div>
-          ${this.items.length > 1
-            ? html`
-                <div class="flex gap-1 shrink-0">
-                  ${this.items.map(
-                    (_, i) => html`
-                      <button
-                        @click=${() => this.goTo(i)}
-                        class="w-1.5 h-1.5 rounded-full transition-colors ${i ===
-                        this.activeIndex
-                          ? "bg-white/60"
-                          : "bg-white/20 hover:bg-white/40"}"
-                        aria-label="${translateText("news_box.go_to_item", {
-                          num: i + 1,
-                        })}"
-                      ></button>
-                    `,
-                  )}
-                </div>
-              `
-            : nothing}
+          ${
+            this.items.length > 1
+              ? html`
+                  <div class="flex gap-1 shrink-0">
+                    ${this.items.map(
+                      (_, i) => html`
+                        <button
+                          @click=${() => this.goTo(i)}
+                          class="w-1.5 h-1.5 rounded-full transition-colors ${
+                            i === this.activeIndex
+                              ? "bg-white/60"
+                              : "bg-white/20 hover:bg-white/40"
+                          }"
+                          aria-label="${translateText("news_box.go_to_item", {
+                            num: i + 1,
+                          })}"
+                        ></button>
+                      `,
+                    )}
+                  </div>
+                `
+              : nothing
+          }
           <button
             @click=${() => this.dismiss(item.id)}
             class="shrink-0 p-0.5 text-white/30 hover:text-white/70 transition-colors"
