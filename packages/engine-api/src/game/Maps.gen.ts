@@ -1700,10 +1700,6 @@ export const maps: readonly MapInfo[] = [
     type: GameMapType.OttomanEmpire,
     translationKey: "map.ottomanempire",
     categories: ["europe", "asia", "africa"],
-    multiplayerFrequency: 5,
-    ffaFrequency: -1,
-    teamFrequency: -1,
-    specialFrequency: -1,
     defaultNationCount: 46,
   },
   {
