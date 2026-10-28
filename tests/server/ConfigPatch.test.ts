@@ -1,9 +1,11 @@
 import {
   Difficulty,
+  Duos,
   GameMapSize,
   GameMapType,
   GameMode,
   GameType,
+  Trios,
   UnitType,
 } from "@openfront/engine-api/game/GameTypes";
 import { GameConfig } from "@openfront/engine-api/Schemas";
@@ -110,6 +112,43 @@ describe("applyGameConfigPatch", () => {
 
     applyGameConfigPatch(target, { maxPlayers: null });
     expect(target.maxPlayers).toBeUndefined();
+  });
+
+  it("adjusts maxPlayers for team games", () => {
+    const target = testGameConfig({
+      gameMode: GameMode.Team,
+      playerTeams: Trios,
+    });
+    applyGameConfigPatch(target, { maxPlayers: 100 });
+    expect(target.maxPlayers).toBe(99);
+
+    // Recalculates when playerTeams changes even if maxPlayers is omitted.
+    applyGameConfigPatch(target, { playerTeams: Duos });
+    expect(target.maxPlayers).toBe(98);
+
+    // Preserves cap when neither team setting changes.
+    applyGameConfigPatch(target, { bots: 50 });
+    expect(target.maxPlayers).toBe(98);
+
+    // Lifts cap when maxPlayers is explicitly null.
+    applyGameConfigPatch(target, { maxPlayers: null });
+    expect(target.maxPlayers).toBeUndefined();
+
+    // Enforces at least a full team size when cap is smaller than team size.
+    applyGameConfigPatch(target, { playerTeams: Trios, maxPlayers: 2 });
+    expect(target.maxPlayers).toBe(3);
+
+    // Leaves configured cap unchanged for numeric team counts (number of teams, not team size).
+    applyGameConfigPatch(target, { playerTeams: 3, maxPlayers: 5 });
+    expect(target.maxPlayers).toBe(5);
+
+    // Recalculates when gameMode changes to team.
+    const ffa = testGameConfig({ gameMode: GameMode.FFA, maxPlayers: 100 });
+    applyGameConfigPatch(ffa, {
+      gameMode: GameMode.Team,
+      playerTeams: Trios,
+    });
+    expect(ffa.maxPlayers).toBe(99);
   });
 
   it("ignores pool, which every member of a pool has to agree on", () => {

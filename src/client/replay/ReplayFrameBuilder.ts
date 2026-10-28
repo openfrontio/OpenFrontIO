@@ -38,7 +38,7 @@ import type {
   PlayerStatic,
   UnitState,
 } from "../render/types";
-import { STRUCTURE_TYPES, TRAIL_TYPES } from "../render/types/UnitType";
+import { STRUCTURE_TYPES, TRAIL_TYPES } from "../render/types";
 import type {
   RailroadEvent,
   ReplayAppend,
@@ -104,6 +104,7 @@ export class ReplayFrameBuilder {
     this.frame = {
       tick: 0,
       inSpawnPhase: true,
+      namesSnap: false,
       tileState: new Uint16Array(w * h),
       trailState: this.trails.getTrailState(),
       spiralRibbons: this.spirals.getRibbons(),
@@ -195,6 +196,7 @@ export class ReplayFrameBuilder {
     fd.tick = f.tick;
     const spawnEnd = this.header.spawnPhaseEnd;
     fd.inSpawnPhase = spawnEnd === null || f.tick < spawnEnd.tick;
+    fd.namesSnap = spawnEnd !== null && f.tick === spawnEnd.tick;
     fd.tileState = f.tileState;
     fd.units = f.units;
     fd.players = this.showEmojis() ? f.players : withoutEmojis(f.players);

@@ -105,6 +105,8 @@ export class PokiSDK {
   // becomes our own URL after one (leaving a game, a lobby redirect). So a
   // positive answer is kept for the frame's session: sessionStorage survives
   // those navigations and is scoped to this frame, never a top-level tab.
+  // index.html repeats this check (window.__onPoki) to skip third-party
+  // scripts before the bundle loads; keep the two in step.
   isOnPoki(): boolean {
     if (window.self === window.top) return false;
     if (readSession(POKI_SESSION_KEY) === "true") return true;

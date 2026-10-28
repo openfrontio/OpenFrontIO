@@ -26,7 +26,10 @@ import {
   GameUpdate,
   GameUpdateType,
 } from "@openfront/engine-api/game/GameUpdates";
-import { UnitPredicate } from "@openfront/engine-api/game/ReadViews";
+import {
+  ReadonlyTileSet,
+  UnitPredicate,
+} from "@openfront/engine-api/game/ReadViews";
 import {
   AllPlayersStats,
   ClientID,
@@ -1430,10 +1433,17 @@ export class GameImpl implements Game {
   ): Set<TileRef> {
     return this._map.circleSearch(tile, radius, filter);
   }
+  bfsSearch(
+    tile: TileRef,
+    filter: (gm: GameMap, tile: TileRef) => boolean,
+    onVisit?: (tile: TileRef) => boolean | void,
+  ): boolean {
+    return this._map.bfsSearch(tile, filter, onVisit);
+  }
   bfs(
     tile: TileRef,
     filter: (gm: GameMap, tile: TileRef) => boolean,
-  ): Set<TileRef> {
+  ): ReadonlyTileSet {
     return this._map.bfs(tile, filter);
   }
   tileState(tile: TileRef): number {

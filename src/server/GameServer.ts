@@ -21,6 +21,7 @@ import {
   Winner,
 } from "@openfront/engine-api/Schemas";
 import {
+  adjustForTeams,
   assignTeamsLobbyPreview,
   resolveTeamsList,
 } from "@openfront/engine-lib/game/TeamAssignment";
@@ -189,7 +190,7 @@ function mintGroupToken(): string {
   return randomBytes(12).toString("base64url");
 }
 
-export function defaultGameServerDeps(): GameServerDeps {
+function defaultGameServerDeps(): GameServerDeps {
   return {
     archive: (record) => archive(finalizeGameRecord(record)),
     replayWinner: replayWinnerInChild,
@@ -1740,10 +1741,17 @@ export class GameServer {
     this.listing.setListed(listed, options.autoStartMs);
     // Only on the transition: relisting must not change the cap players
     // joined under.
-    if (listed && !wasListed && options.maxPlayers !== undefined) {
-      this.gameConfig.maxPlayers = options.maxPlayers;
-      if (this.playerCount() >= options.maxPlayers) {
-        this.hasReachedMaxPlayerCount = true;
+    if (listed && !wasListed) {
+      const raw = options.maxPlayers ?? this.gameConfig.maxPlayers;
+      if (raw !== undefined) {
+        const max =
+          this.gameConfig.gameMode === GameMode.Team
+            ? adjustForTeams(raw, this.gameConfig.playerTeams)
+            : raw;
+        this.gameConfig.maxPlayers = max;
+        if (this.playerCount() >= max) {
+          this.hasReachedMaxPlayerCount = true;
+        }
       }
     }
   }
