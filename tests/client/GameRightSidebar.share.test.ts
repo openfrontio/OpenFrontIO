@@ -372,4 +372,47 @@ describe("GameRightSidebar share button", () => {
     shareBtn!.dispatchEvent(tabKeyDown);
     expect(parentKeyDown).toHaveBeenCalledWith(tabKeyDown);
   });
+
+  it("prevents default on mousedown so pointer clicks do not hold focus", async () => {
+    const el = await mount();
+    const shareBtn = getShareButton(el);
+    expect(shareBtn).not.toBeNull();
+
+    const mousedownEvent = new MouseEvent("mousedown", {
+      bubbles: true,
+      cancelable: true,
+    });
+    shareBtn!.dispatchEvent(mousedownEvent);
+    expect(mousedownEvent.defaultPrevented).toBe(true);
+  });
+
+  it("blurs the button on pointer click to avoid capturing subsequent keybinds", async () => {
+    const el = await mount();
+    const shareBtn = getShareButton(el);
+    expect(shareBtn).not.toBeNull();
+
+    const blurSpy = vi.spyOn(shareBtn!, "blur");
+    const pointerClick = new MouseEvent("click", {
+      bubbles: true,
+      cancelable: true,
+      detail: 1,
+    });
+    shareBtn!.dispatchEvent(pointerClick);
+    expect(blurSpy).toHaveBeenCalledTimes(1);
+  });
+
+  it("preserves focus on keyboard activation so tabbed focus remains accessible", async () => {
+    const el = await mount();
+    const shareBtn = getShareButton(el);
+    expect(shareBtn).not.toBeNull();
+
+    const blurSpy = vi.spyOn(shareBtn!, "blur");
+    const keyboardClick = new MouseEvent("click", {
+      bubbles: true,
+      cancelable: true,
+      detail: 0,
+    });
+    shareBtn!.dispatchEvent(keyboardClick);
+    expect(blurSpy).not.toHaveBeenCalled();
+  });
 });

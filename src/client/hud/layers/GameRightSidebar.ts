@@ -13,12 +13,8 @@ import { gamePortal } from "../../GamePortal";
 import { showInGameAlert, showInGameConfirm } from "../../InGameModal";
 import { TogglePauseIntentEvent } from "../../InputHandler";
 import { PauseGameIntentEvent, SendWinnerEvent } from "../../Transport";
-import {
-  copyToClipboard,
-  homeHref,
-  showToast,
-  translateText,
-} from "../../Utils";
+import { shareGame } from "../../utilities/ShareGame";
+import { homeHref, showToast, translateText } from "../../Utils";
 import { GameView } from "../../view";
 import { ImmunityBarVisibleEvent } from "./ImmunityTimer";
 import { ShowReplayPanelEvent } from "./ReplayPanel";
@@ -304,28 +300,11 @@ export class GameRightSidebar extends LitElement implements Controller {
     );
   }
 
-  private async onShareButtonClick() {
-    const gameId = this.game?.gameID?.();
-    if (!gameId) {
-      showToast(translateText("common.failed_copy"), "red");
-      return;
+  private async onShareButtonClick(e?: Event) {
+    if (e && (e as MouseEvent).detail !== 0) {
+      (e.currentTarget as HTMLElement | null)?.blur();
     }
-
-    try {
-      const text = gamePortal.isOnGamePortal()
-        ? await gamePortal.createInviteLink(gameId)
-        : `${ClientEnv.shareOrigin()}${ClientEnv.gamePath(gameId)}`;
-
-      if (!text) {
-        showToast(translateText("common.failed_copy"), "red");
-        return;
-      }
-
-      await copyToClipboard(text);
-      showToast(translateText("common.copied"), "green");
-    } catch {
-      showToast(translateText("common.failed_copy"), "red");
-    }
+    await shareGame(this.game?.gameID?.());
   }
 
   private onShareButtonKeyDown(e: KeyboardEvent) {
@@ -437,6 +416,7 @@ export class GameRightSidebar extends LitElement implements Controller {
             ? html`<button
                 type="button"
                 class="cursor-pointer bg-transparent border-0 p-0 flex items-center justify-center text-white"
+                @mousedown=${(e: MouseEvent) => e.preventDefault()}
                 @click=${this.onShareButtonClick}
                 @keydown=${this.onShareButtonKeyDown}
                 @keyup=${this.onShareButtonKeyUp}

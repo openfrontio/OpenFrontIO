@@ -7,18 +7,15 @@ import { EventBus } from "@openfront/shared/EventBus";
 import { html, LitElement, TemplateResult } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import {
-  copyToClipboard,
   DESKTOP_TUTORIAL_VIDEO_URL,
   getGamesPlayed,
   getTranslatedPlayerTeamLabel,
   homeHref,
   isInIframe,
-  showToast,
   translateText,
   TUTORIAL_VIDEO_URL,
 } from "../../../client/Utils";
 import { fetchUserMeUncached, getUserMe, invalidateUserMe } from "../../Api";
-import { ClientEnv } from "../../ClientEnv";
 import "../../components/CosmeticCard";
 import { cosmeticSelectionLabel } from "../../components/CosmeticPresentation";
 import type { GameXpPanelState } from "../../components/GameXpPanel";
@@ -60,6 +57,7 @@ import {
 import { PlaySoundEffectEvent } from "../../sound/Sounds";
 import { steamSDK } from "../../SteamSDK";
 import { SendWinnerEvent } from "../../Transport";
+import { shareGame } from "../../utilities/ShareGame";
 import { GameView } from "../../view";
 
 type LegendCeremonyModule = typeof import("../../components/LegendCeremony");
@@ -1002,27 +1000,7 @@ export class WinModal extends LitElement implements Controller {
   }
 
   private async _handleShare() {
-    const gameId = this.game?.gameID();
-    if (!gameId) {
-      showToast(translateText("common.failed_copy"), "red");
-      return;
-    }
-
-    try {
-      const text = gamePortal.isOnGamePortal()
-        ? await gamePortal.createInviteLink(gameId)
-        : `${ClientEnv.shareOrigin()}${ClientEnv.gamePath(gameId)}`;
-
-      if (!text) {
-        showToast(translateText("common.failed_copy"), "red");
-        return;
-      }
-
-      await copyToClipboard(text);
-      showToast(translateText("common.copied"), "green");
-    } catch {
-      showToast(translateText("common.failed_copy"), "red");
-    }
+    await shareGame(this.game?.gameID());
   }
 
   init() {
