@@ -634,7 +634,9 @@ export class OnboardingOverlay extends LitElement implements Controller {
             total: ONBOARDING_STEPS.length,
           })}
         </div>
-        <div class="mt-1 text-lg sm:text-2xl font-semibold leading-snug">
+        <div
+          class="mt-1 text-base sm:text-xl font-semibold leading-snug text-balance"
+        >
           ${this.nudging ? this.text("wrong_target") : this.text(this.stepKey())}
         </div>
         ${
