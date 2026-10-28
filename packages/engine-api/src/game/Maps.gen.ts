@@ -1963,10 +1963,6 @@ export const maps: readonly MapInfo[] = [
     type: GameMapType.Turkiye,
     translationKey: "map.turkiye",
     categories: ["countries", "europe", "asia"],
-    multiplayerFrequency: 5,
-    ffaFrequency: -1,
-    teamFrequency: -1,
-    specialFrequency: -1,
     defaultNationCount: 30,
   },
   {
