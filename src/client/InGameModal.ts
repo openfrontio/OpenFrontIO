@@ -1,3 +1,5 @@
+// The type-only use below is erased at runtime; keep this to register the dialog.
+// oxlint-disable-next-line import/no-duplicates -- Required custom-element registration.
 import "./components/ConfirmDialog";
 import { ConfirmDialog } from "./components/ConfirmDialog";
 import { gamePortal } from "./GamePortal";
@@ -17,13 +19,13 @@ function showDialog(props: Partial<ConfirmDialog>): Promise<boolean> {
   const dialog = document.createElement("confirm-dialog") as ConfirmDialog;
   Object.assign(dialog, props);
 
-  gamePortal.gameplayStop();
+  void gamePortal.gameplayStop();
   document.body.appendChild(dialog);
 
   return new Promise<boolean>((resolve) => {
     const done = (result: boolean) => {
       dialog.remove();
-      gamePortal.gameplayStart();
+      void gamePortal.gameplayStart();
       resolve(result);
     };
     dialog.addEventListener("confirm", () => done(true));

@@ -41,6 +41,7 @@ import {
   trackHasRewards,
   trackMaxLevel,
 } from "../../src/client/components/RewardTrack";
+import { PROVISIONAL_PROGRESS_CHANGED } from "../../src/client/ProvisionalProgress";
 
 if (!customElements.get("profile-progression")) {
   customElements.define("profile-progression", ProfileProgression);
@@ -642,7 +643,7 @@ describe("<reward-track>", () => {
         'progression.prestige:{"prestige":5}',
       );
       expect(end.querySelector("[data-end-caps]")?.textContent).toContain(
-        'reward_track.caps_amount:{"amount":"2,500"}',
+        `reward_track.caps_amount:{"amount":"${(2500).toLocaleString()}"}`,
       );
       const badge = end.querySelector("level-badge") as HTMLElement & {
         level: number;
@@ -1311,5 +1312,261 @@ describe("<profile-progression> with the track", () => {
         window.matchMedia = original;
       }
     });
+  });
+});
+
+// The owner's level counts XP from games still waiting to be scored
+// (ProvisionalProgress.ts): Wonder is confirmed at P3 L47, and shows L50
+// provisionally.
+describe("provisional levels", () => {
+  it("marks the levels past the confirmed one pending, never ready", () => {
+    const m = rewardTrackModel(progress(3, 50), config(), ownerRewards(), 47);
+    const status = (level: number) => m.nodes[level - 1].status;
+    expect(m.level).toBe(50);
+    expect(m.nodes[49].current).toBe(true);
+    expect([48, 49, 50].map(status)).toEqual(["pending", "pending", "pending"]);
+    // The confirmed levels are as they were.
+    expect(status(47)).toBe("ready");
+    expect(status(44)).toBe("claimed");
+    expect(status(51)).toBe("locked");
+    // Claim all only ever has the API's rewards: the confirmed levels'.
+    expect(m.claim?.ids).toEqual(["l45", "l46", "l47", "l25pu"]);
+  });
+
+  it("is a confirmed track without a confirmed level", () => {
+    const m = rewardTrackModel(progress(3, 50), config(), ownerRewards());
+    expect(m.nodes.some((n) => n.status === "pending")).toBe(false);
+  });
+
+  it("draws pending levels with their own mark, and says it's provisional", async () => {
+    const el = document.createElement("reward-track") as RewardTrack;
+    el.describeCosmetic = describeCosmetic;
+    el.progress = progress(3, 50);
+    el.config = config();
+    el.rewards = ownerRewards();
+    el.confirmedLevel = 47;
+    el.provisional = true;
+    document.body.appendChild(el);
+    await vi.waitFor(async () => {
+      await el.updateComplete;
+      expect(el.textContent).not.toContain("?");
+    });
+    try {
+      expect(
+        el.querySelector("[data-track-provisional]")?.textContent,
+      ).toContain("progression.provisional_label");
+      const node48 = el.querySelector(`[data-level="48"]`)!;
+      expect(node48.getAttribute("data-status")).toBe("pending");
+      expect(node48.querySelector("[data-pending]")).not.toBeNull();
+      expect(node48.querySelector("[data-ready]")).toBeNull();
+      expect(node48.getAttribute("aria-label")).toContain(
+        "reward_track.key_pending",
+      );
+      // "You" sits on the projected level.
+      expect(
+        el.querySelector(`[data-level="50"]`)!.hasAttribute("data-current"),
+      ).toBe(true);
+      expect(el.querySelector("[data-key-pending]")).not.toBeNull();
+      // Claim all counts only the confirmed levels' rewards.
+      expect(el.querySelector("[data-claim-count]")?.textContent).toContain(
+        'reward_track.claim_count:{"count":4}',
+      );
+    } finally {
+      el.remove();
+    }
+  });
+
+  it("keeps levels a scored game reached unclaimed, without the provisional label", async () => {
+    // Only scored XP took the stale figure (L47) to L50: the rewards list
+    // doesn't know those levels yet, so they're pending, never Claimed.
+    const el = document.createElement("reward-track") as RewardTrack;
+    el.describeCosmetic = describeCosmetic;
+    el.progress = progress(3, 50);
+    el.config = config();
+    el.rewards = ownerRewards();
+    el.confirmedLevel = 47;
+    document.body.appendChild(el);
+    try {
+      await vi.waitFor(async () => {
+        await el.updateComplete;
+        expect(el.querySelector('[data-level="48"]')).not.toBeNull();
+      });
+      expect(el.querySelector("[data-track-provisional]")).toBeNull();
+      for (const level of [48, 49, 50]) {
+        expect(
+          el
+            .querySelector(`[data-level="${level}"]`)!
+            .getAttribute("data-status"),
+        ).toBe("pending");
+      }
+    } finally {
+      el.remove();
+    }
+  });
+
+  it("never claims a pending level, and keeps its milestones unreached", async () => {
+    const claim = vi.fn(async () => ({ currency: { soft: 1, hard: 1 } }));
+    const el = document.createElement(
+      "profile-progression",
+    ) as ProfileProgression;
+    el.loadConfig = async () => config();
+    el.loadUserMe = async () =>
+      ({
+        user: {},
+        player: { publicId: "wonder01", rewards: ownerRewards() },
+      }) as unknown as UserMeResponse;
+    el.describeCosmetic = describeCosmetic;
+    el.claim = claim;
+    el.publicId = "wonder01";
+    el.popKey = "provisional-test";
+    el.progress = { ...progress(3, 50) };
+    el.confirmedLevel = 47;
+    document.body.appendChild(el);
+    try {
+      await vi.waitFor(async () => {
+        await el.updateComplete;
+        const track = el.querySelector<RewardTrack>("reward-track");
+        expect(track).not.toBeNull();
+        await track!.updateComplete;
+        expect(el.querySelector("[data-claim-all]")).not.toBeNull();
+      });
+      expect(
+        el.querySelector<RewardTrack>("reward-track")!.confirmedLevel,
+      ).toBe(47);
+      // Level 50 is a milestone the API hasn't confirmed.
+      expect(
+        el.querySelector(`[data-milestone="50"]`)!.hasAttribute("data-reached"),
+      ).toBe(false);
+      el.querySelector<HTMLElement>("[data-claim-all]")!.click();
+      await vi.waitFor(() => expect(claim).toHaveBeenCalledTimes(4));
+      expect(claim.mock.calls.map((c) => (c as unknown[])[0])).toEqual([
+        "l45",
+        "l46",
+        "l47",
+        "l25pu",
+      ]);
+    } finally {
+      el.remove();
+    }
+  });
+});
+
+// The track judges each passed level by the owner's rewards, which come from
+// a /users/@me copy: past the level that copy had reached, a passed level
+// with no reward row is pending, never Claimed.
+describe("<profile-progression> and its rewards copy", () => {
+  const meAt = (level: number, lifetimeXp: number, rewards: Reward[]) =>
+    ({
+      user: {},
+      player: {
+        publicId: "wonder01",
+        rewards,
+        progress: {
+          prestige: 3,
+          level,
+          xpInLevel: 0,
+          xpForNext: 100,
+          lifetimeXp,
+          legend: false,
+          canPrestige: false,
+        },
+      },
+    }) as unknown as UserMeResponse;
+  const status = (el: HTMLElement, level: number) =>
+    el.querySelector(`[data-level="${level}"]`)?.getAttribute("data-status");
+
+  async function mount(
+    loadUserMe: ProfileProgression["loadUserMe"],
+  ): Promise<ProfileProgression> {
+    const el = document.createElement(
+      "profile-progression",
+    ) as ProfileProgression;
+    el.loadConfig = async () => config();
+    el.loadUserMe = loadUserMe;
+    el.describeCosmetic = describeCosmetic;
+    el.publicId = "wonder01";
+    el.popKey = `copy-${Math.random()}`;
+    el.progress = { ...progress(3, 50) };
+    document.body.appendChild(el);
+    await vi.waitFor(async () => {
+      await el.updateComplete;
+      await el.querySelector<RewardTrack>("reward-track")?.updateComplete;
+      expect(el.querySelector('[data-level="48"]')).not.toBeNull();
+    });
+    return el;
+  }
+
+  afterEach(() => {
+    document.body.innerHTML = "";
+  });
+
+  it("shows levels past a stale copy as pending, then reads it again when a game is scored", async () => {
+    let fresh = false;
+    const l49 = reward({ id: "l49", level: 49, prestige: 3 });
+    const loadUserMe = vi.fn(async () =>
+      fresh ? meAt(50, 2000, [l49]) : meAt(47, 1000, []),
+    );
+    const el = await mount(loadUserMe);
+    // Read at 47: 48-50 can't be judged from it.
+    expect([48, 49, 50].map((l) => status(el, l))).toEqual([
+      "pending",
+      "pending",
+      "pending",
+    ]);
+    expect(status(el, 47)).toBe("claimed");
+
+    // A game is scored up to lifetime 2000, past the copy's 1000.
+    fresh = true;
+    document.dispatchEvent(
+      new CustomEvent(PROVISIONAL_PROGRESS_CHANGED, {
+        detail: { scored: ["g1"], scoredUpTo: 2000 },
+      }),
+    );
+    await vi.waitFor(async () => {
+      await el.querySelector<RewardTrack>("reward-track")!.updateComplete;
+      expect(status(el, 49)).toBe("ready");
+    });
+    expect(status(el, 48)).toBe("claimed");
+    expect(status(el, 50)).toBe("claimed");
+  });
+
+  it("judges levels normally when its rewards were read after the game", async () => {
+    const l49 = reward({ id: "l49", level: 49, prestige: 3 });
+    const el = await mount(async () => meAt(50, 2000, [l49]));
+    expect(status(el, 48)).toBe("claimed");
+    expect(status(el, 49)).toBe("ready");
+    // A score its copy already includes reads nothing again.
+    const track = el.querySelector("reward-track");
+    document.dispatchEvent(
+      new CustomEvent(PROVISIONAL_PROGRESS_CHANGED, {
+        detail: { scored: ["g1"], scoredUpTo: 2000 },
+      }),
+    );
+    await el.updateComplete;
+    expect(el.querySelector("reward-track")).toBe(track);
+    expect(status(el, 49)).toBe("ready");
+  });
+
+  it("takes the owner's broadcast account as its copy, asking nothing", async () => {
+    const loadUserMe = vi.fn(async () => meAt(47, 1000, []));
+    const el = await mount(loadUserMe);
+    const reads = loadUserMe.mock.calls.length;
+    const l49 = reward({ id: "l49", level: 49, prestige: 3 });
+    document.dispatchEvent(
+      new CustomEvent("userMeResponse", { detail: meAt(50, 2000, [l49]) }),
+    );
+    await vi.waitFor(async () => {
+      await el.querySelector<RewardTrack>("reward-track")!.updateComplete;
+      expect(status(el, 49)).toBe("ready");
+    });
+    expect(loadUserMe.mock.calls.length).toBe(reads);
+    // Someone else's account changes nothing.
+    document.dispatchEvent(
+      new CustomEvent("userMeResponse", {
+        detail: { ...meAt(10, 1, []), player: { publicId: "other" } },
+      }),
+    );
+    await el.updateComplete;
+    expect(status(el, 49)).toBe("ready");
   });
 });

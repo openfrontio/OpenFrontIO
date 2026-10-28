@@ -2,10 +2,15 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const getUserMeMock = vi.hoisted(() => vi.fn());
 const fetchPublicPlayerProgressMock = vi.hoisted(() => vi.fn());
+const noteFigureMock = vi.hoisted(() => vi.fn());
 
 vi.mock("../../src/client/Api", () => ({ getUserMe: getUserMeMock }));
 vi.mock("../../src/client/ProgressionApi", () => ({
   fetchPublicPlayerProgress: fetchPublicPlayerProgressMock,
+}));
+
+vi.mock("../../src/client/ProvisionalProgress", () => ({
+  noteFigure: noteFigureMock,
 }));
 
 import { loadPlayerProgress } from "../../src/client/PlayerProgress";
@@ -43,6 +48,21 @@ describe("loadPlayerProgress", () => {
     fetchPublicPlayerProgressMock.mockResolvedValue(false);
     getUserMeMock.mockResolvedValue(me("someone-else"));
     expect(await loadPlayerProgress("abcd1234")).toBeNull();
+  });
+
+  it("hands every figure it reads to the pending-XP store", async () => {
+    fetchPublicPlayerProgressMock.mockResolvedValue(PUBLIC);
+    await loadPlayerProgress("abcd1234");
+    expect(noteFigureMock).toHaveBeenCalledWith("abcd1234", PUBLIC);
+    fetchPublicPlayerProgressMock.mockResolvedValue(false);
+    getUserMeMock.mockResolvedValue(me("abcd1234"));
+    await loadPlayerProgress("abcd1234");
+    expect(noteFigureMock).toHaveBeenLastCalledWith("abcd1234", OWN);
+    // Nothing read, nothing handed in.
+    noteFigureMock.mockClear();
+    getUserMeMock.mockResolvedValue(false);
+    await loadPlayerProgress("abcd1234");
+    expect(noteFigureMock).not.toHaveBeenCalled();
   });
 
   it("is null when nothing can be read", async () => {

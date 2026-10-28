@@ -157,6 +157,14 @@ export class LocalServer {
       // Don't send myClientID for replays — viewer has no player identity.
       myClientID: this.lobbyConfig.gameRecord ? undefined : this.clientID,
     } satisfies ServerStartGameMessage);
+    // A resumed game opens paused, so the player can get their bearings. The
+    // pause turn is also the tick that brings the view up to the save.
+    if (this.lobbyConfig.snapshot !== undefined) {
+      this.onMessage({
+        type: "intent",
+        intent: { type: "toggle_pause", paused: true },
+      });
+    }
     // Last, so a start() that throws above leaves no interval behind.
     if (!this.isReplay) {
       this.stopHeartbeat = startSingleplayerHeartbeat(
@@ -301,6 +309,12 @@ export class LocalServer {
     if (this.archived || this.archiveInFlight) {
       return;
     }
+    // A game resumed from a save is never archived: its turns start mid-game,
+    // so the record could not replay, and archiving is what awards XP and
+    // achievements, which a shared save one move from victory would farm.
+    if (this.lobbyConfig.snapshot !== undefined) {
+      return;
+    }
     const players: PlayerRecord[] = [
       {
         persistentID: getPersistentID(),
@@ -331,7 +345,7 @@ export class LocalServer {
       return;
     }
 
-    this.archiveGame(result.data, unloading);
+    void this.archiveGame(result.data, unloading);
   }
 
   private async archiveGame(
@@ -389,8 +403,8 @@ async function compress(data: string): Promise<ArrayBuffer> {
   const reader = stream.readable.getReader();
 
   // Write the data to the compression stream
-  writer.write(new TextEncoder().encode(data));
-  writer.close();
+  void writer.write(new TextEncoder().encode(data));
+  void writer.close();
 
   // Read the compressed data
   const chunks: Uint8Array[] = [];

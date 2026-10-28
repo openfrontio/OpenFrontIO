@@ -7,6 +7,38 @@ import type { TeamStats } from "../src/client/hud/layers/TeamStats";
 import { UserSettings } from "../src/client/UserSettings";
 import type { GameView, PlayerView } from "../src/client/view";
 
+function ffaGame(): GameView {
+  const player = {
+    id: () => "player-1",
+    smallID: () => 0,
+    name: () => "Player 1",
+    displayName: () => "Player 1",
+    clanTag: () => null,
+    numTilesOwned: () => 10,
+    gold: () => 100n,
+    tradeGold: () => 0,
+    trainGold: () => 0,
+    piracyGold: () => 0,
+    goldEarned: () => 0,
+    isAlive: () => true,
+    isOnSameTeam: () => false,
+    team: () => null,
+  } as unknown as PlayerView;
+  return {
+    config: () => ({
+      gameConfig: () => ({ gameMode: GameMode.FFA }),
+      maxTroops: () => 1_000,
+    }),
+    gameID: () => "test-game",
+    inSpawnPhase: () => false,
+    myPlayer: () => player,
+    numLandTiles: () => 100,
+    ticks: () => 600,
+    numTilesWithFallout: () => 0,
+    playerViews: () => [player],
+  } as unknown as GameView;
+}
+
 describe("GameLeftSidebar", () => {
   beforeEach(() => {
     localStorage.clear();
@@ -39,35 +71,7 @@ describe("GameLeftSidebar", () => {
   });
 
   it("renders the player stats table after toggling it", async () => {
-    const player = {
-      id: () => "player-1",
-      smallID: () => 0,
-      name: () => "Player 1",
-      displayName: () => "Player 1",
-      clanTag: () => null,
-      numTilesOwned: () => 10,
-      gold: () => 100n,
-      tradeGold: () => 0,
-      trainGold: () => 0,
-      piracyGold: () => 0,
-      goldEarned: () => 0,
-      isAlive: () => true,
-      isOnSameTeam: () => false,
-      team: () => null,
-    } as unknown as PlayerView;
-    const game = {
-      config: () => ({
-        gameConfig: () => ({ gameMode: GameMode.FFA }),
-        maxTroops: () => 1_000,
-      }),
-      gameID: () => "test-game",
-      inSpawnPhase: () => false,
-      myPlayer: () => player,
-      numLandTiles: () => 100,
-      ticks: () => 600,
-      numTilesWithFallout: () => 0,
-      playerViews: () => [player],
-    } as unknown as GameView;
+    const game = ffaGame();
     const sidebar = new GameLeftSidebar();
     sidebar.game = game;
     sidebar.eventBus = new EventBus();
@@ -89,6 +93,37 @@ describe("GameLeftSidebar", () => {
 
     sidebar.remove();
   });
+
+  it.each([
+    { viewport: "a large screen", compact: false, shown: true },
+    {
+      viewport: "a compact screen (Poki's frame)",
+      compact: true,
+      shown: false,
+    },
+  ])(
+    "opens the leaderboard after spawn by default on $viewport",
+    async ({ compact, shown }) => {
+      vi.stubGlobal("innerWidth", 1280);
+      vi.stubGlobal("matchMedia", (query: string) => ({
+        matches: compact,
+        media: query,
+      }));
+      const sidebar = new GameLeftSidebar();
+      sidebar.game = ffaGame();
+      sidebar.eventBus = new EventBus();
+      document.body.append(sidebar);
+      sidebar.init();
+      sidebar.tick();
+      await sidebar.updateComplete;
+
+      const playerStats = sidebar.querySelector("player-stats") as PlayerStats;
+      expect(playerStats.visible).toBe(shown);
+
+      sidebar.remove();
+      vi.unstubAllGlobals();
+    },
+  );
 
   it("stacks the player and team stats tables vertically at every width", async () => {
     const game = {

@@ -74,8 +74,8 @@ await browser.close();
 
 `game.mjs` drives an actual singleplayer game end-to-end: start, spawn,
 attack/expand, open the radial menu, and read **ground-truth sim state**.
-WebGL works headless via SwiftShader (no extra flags needed), and the
-screenshots show the real rendered map.
+WebGL works headless via SwiftShader (`launch()` masks it from the client's
+software-renderer gate), and the screenshots show the real rendered map.
 
 Smoke flow (≈2 min: starts a 50-bot game, spawns, expands, opens the
 radial menu, asserts territory growth):

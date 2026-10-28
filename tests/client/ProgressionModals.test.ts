@@ -237,10 +237,40 @@ describe("player profile level", () => {
     expect(levelLine()!.textContent).not.toContain("progression.prestige");
     expect(
       modal.querySelector("[data-profile-lifetime]")!.textContent,
-    ).toContain("4,200");
+    ).toContain((4200).toLocaleString());
     // No XP-in-level from this API: no bar.
     expect(modal.querySelector("profile-card [data-xp-bar]")).toBeNull();
     expect(fetchPublicPlayerProgress).toHaveBeenCalledWith("someone-else");
+  });
+
+  it("puts the profile's displayClanTag on the card, not the first clan", async () => {
+    const clan = (tag: string) => ({
+      tag,
+      name: `${tag} clan`,
+      role: "member",
+      joinedAt: "2026-01-01T00:00:00.000Z",
+      memberCount: 3,
+    });
+    fetchPublicPlayerProfile.mockResolvedValue({
+      createdAt: "2026-01-01T00:00:00.000Z",
+      stats: { Public: {} },
+      clans: [clan("AUS"), clan("LUX")],
+      displayClanTag: "LUX",
+    });
+    fetchPublicPlayerProgress.mockResolvedValue({
+      prestige: 0,
+      level: 12,
+      lifetimeXp: 4200,
+      legend: false,
+    });
+    await open("someone-else");
+    await vi.waitFor(() =>
+      expect(
+        modal.querySelector<HTMLElement & { clanTag: string | null }>(
+          "profile-card",
+        )?.clanTag,
+      ).toBe("LUX"),
+    );
   });
 
   it("draws the XP bar when the public endpoint says how far through the level", async () => {

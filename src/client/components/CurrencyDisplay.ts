@@ -62,27 +62,31 @@ export class CurrencyDisplay extends LitElement {
 
     return html`
       <div class="${row}">
-        ${hard === null
-          ? ""
-          : html`<div
-              class="flex items-center gap-1.5"
-              title=${translateText("cosmetics.hard")}
-            >
-              <plutonium-icon .size=${compact ? 12 : 16}></plutonium-icon>
-              <span class="${hardText}">${hard}</span>
-            </div>`}
-        ${soft === null
-          ? ""
-          : html`<div
-              class="flex items-center gap-1.5"
-              title=${translateText("cosmetics.soft")}
-            >
-              <cap-icon
-                .size=${compact ? 14 : 20}
-                style=${compact ? "" : "margin-top:3px"}
-              ></cap-icon>
-              <span class="${softText}">${soft}</span>
-            </div>`}
+        ${
+          hard === null
+            ? ""
+            : html`<div
+                class="flex items-center gap-1.5"
+                title=${translateText("cosmetics.hard")}
+              >
+                <plutonium-icon .size=${compact ? 12 : 16}></plutonium-icon>
+                <span class="${hardText}">${hard}</span>
+              </div>`
+        }
+        ${
+          soft === null
+            ? ""
+            : html`<div
+                class="flex items-center gap-1.5"
+                title=${translateText("cosmetics.soft")}
+              >
+                <cap-icon
+                  .size=${compact ? 14 : 20}
+                  style=${compact ? "" : "margin-top:3px"}
+                ></cap-icon>
+                <span class="${softText}">${soft}</span>
+              </div>`
+        }
       </div>
     `;
   }

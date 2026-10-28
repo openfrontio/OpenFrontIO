@@ -50,6 +50,7 @@ function userMe(subTier: string | null) {
     user: {},
     steamLicence: true,
     noticesSeen: [],
+    pendingMessages: [],
     player: {
       publicId: "p",
       flares: [],

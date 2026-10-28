@@ -1069,4 +1069,112 @@ describe("Warship", () => {
 
     expect(warship.warshipState().patrolTile).toBe(game.ref(coastX + 1, 10));
   });
+
+  test("Warship retreat does not throw and skips candidate port with null water component", async () => {
+    const consoleErrorSpy = vi.spyOn(console, "error");
+    const maxHealth = game.config().unitInfo(UnitType.Warship).maxHealth;
+    if (typeof maxHealth !== "number") throw new Error("no maxHealth");
+
+    // nullPortTile is much closer to warshipTile than validPortTile
+    const nullPortTile = game.ref(coastX, 10);
+    const validPortTile = game.ref(coastX, 15);
+    player1.buildUnit(UnitType.Port, nullPortTile, {});
+    player1.buildUnit(UnitType.Port, validPortTile, {});
+
+    const warshipTile = game.ref(coastX + 1, 10);
+    const warship = player1.buildUnit(UnitType.Warship, warshipTile, {
+      patrolTile: warshipTile,
+    });
+    game.addExecution(new WarshipExecution(warship));
+    game.executeNextTick();
+
+    // Mock getWaterComponent so nullPortTile has null component, while validPortTile has component 1
+    vi.spyOn(game, "getWaterComponent").mockImplementation((tile: TileRef) => {
+      if (tile === nullPortTile) return null;
+      return 1;
+    });
+    vi.spyOn(game, "hasWaterComponent").mockImplementation(
+      (tile: TileRef, comp: number) => game.getWaterComponent(tile) === comp,
+    );
+
+    // Drop warship health below retreat threshold
+    warship.modifyHealth(Math.floor(maxHealth * 0.05) - warship.health());
+
+    // Execute 1 tick: must not throw, must not log console.error, must skip nullPortTile and retreat to validPortTile
+    expect(() => game.executeNextTick()).not.toThrow();
+    expect(consoleErrorSpy).not.toHaveBeenCalled();
+    expect(warship.warshipState().state).toBe("retreating");
+    expect(warship.warshipState().retreatPort).toBe(validPortTile);
+  });
+
+  test("Warship retreat does not throw and stays patrolling when warship water component is null", async () => {
+    const consoleErrorSpy = vi.spyOn(console, "error");
+    const maxHealth = game.config().unitInfo(UnitType.Warship).maxHealth;
+    if (typeof maxHealth !== "number") throw new Error("no maxHealth");
+
+    const portTile = game.ref(coastX, 10);
+    player1.buildUnit(UnitType.Port, portTile, {});
+
+    const warshipTile = game.ref(coastX + 1, 10);
+    const warship = player1.buildUnit(UnitType.Warship, warshipTile, {
+      patrolTile: warshipTile,
+    });
+    game.addExecution(new WarshipExecution(warship));
+    game.executeNextTick();
+
+    // Mock getWaterComponent so warship's tile has null component
+    vi.spyOn(game, "getWaterComponent").mockImplementation((tile: TileRef) => {
+      if (tile === warship.tile()) return null;
+      return 1;
+    });
+    vi.spyOn(game, "hasWaterComponent").mockImplementation(
+      (tile: TileRef, comp: number) => game.getWaterComponent(tile) === comp,
+    );
+
+    // Drop warship health below retreat threshold
+    warship.modifyHealth(Math.floor(maxHealth * 0.05) - warship.health());
+
+    // Execute 1 tick: must not throw, must not log console.error, must remain in patrolling
+    expect(() => game.executeNextTick()).not.toThrow();
+    expect(consoleErrorSpy).not.toHaveBeenCalled();
+    expect(warship.warshipState().state).toBe("patrolling");
+    expect(warship.warshipState().retreatPort).toBeUndefined();
+  });
+
+  test("Retreating warship cancels retreat if port is destroyed and warship water component is null", async () => {
+    const consoleErrorSpy = vi.spyOn(console, "error");
+    const maxHealth = game.config().unitInfo(UnitType.Warship).maxHealth;
+    if (typeof maxHealth !== "number") throw new Error("no maxHealth");
+
+    const portTile = game.ref(coastX, 15);
+    const port = player1.buildUnit(UnitType.Port, portTile, {});
+    player1.buildUnit(UnitType.Port, game.ref(coastX, 3), {});
+
+    const warshipTile = game.ref(coastX + 1, 10);
+    const warship = player1.buildUnit(UnitType.Warship, warshipTile, {
+      patrolTile: warshipTile,
+    });
+    game.addExecution(new WarshipExecution(warship));
+    game.executeNextTick();
+
+    // Damage warship so it starts retreating
+    warship.modifyHealth(Math.floor(maxHealth * 0.05) - warship.health());
+    game.executeNextTick();
+
+    expect(warship.warshipState().state).toBe("retreating");
+    expect(warship.warshipState().retreatPort).toBe(portTile);
+
+    // Destroy the retreat port and mock warship tile as null water component
+    port.delete();
+    vi.spyOn(game, "getWaterComponent").mockImplementation((tile: TileRef) => {
+      if (tile === warship.tile()) return null;
+      return 1;
+    });
+
+    // Execute 1 tick: nearestAvailablePortTile encounters null component, returns undefined, cancels retreat
+    expect(() => game.executeNextTick()).not.toThrow();
+    expect(consoleErrorSpy).not.toHaveBeenCalled();
+    expect(warship.warshipState().state).toBe("patrolling");
+    expect(warship.warshipState().retreatPort).toBeUndefined();
+  });
 });

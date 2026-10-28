@@ -27,6 +27,12 @@ import "./LeaderboardModal";
 import { modalRouter } from "./ModalRouter";
 import { loadPlayerProgress } from "./PlayerProgress";
 import {
+  isOwnAccount,
+  PROVISIONAL_PROGRESS_CHANGED,
+  provisionalProgress,
+  scoredGames,
+} from "./ProvisionalProgress";
+import {
   parsePlayerProfilePath,
   playerProfileUrl,
 } from "./utilities/PlayerProfileUrl";
@@ -48,6 +54,7 @@ export class PlayerProfileModal extends BaseModal {
   @state() private username: string | null = null;
   @state() private statsTree: PlayerStatsTree | null = null;
   @state() private clans: NonNullable<PlayerProfile["clans"]> = [];
+  @state() private displayClanTag: string | null = null;
   // Level / XP, when progression is on and the player has any.
   @state() private progress: PublicProgress | null = null;
   @state() private loading = false;
@@ -69,6 +76,55 @@ export class PlayerProfileModal extends BaseModal {
   private wantsProgressionTab = false;
   // Counts fresh openings, to key the profile card's once-per-open flourish.
   private openCount = 0;
+
+  connectedCallback(): void {
+    super.connectedCallback();
+    document.addEventListener(
+      PROVISIONAL_PROGRESS_CHANGED,
+      this.handleProvisionalChanged,
+    );
+  }
+
+  disconnectedCallback(): void {
+    document.removeEventListener(
+      PROVISIONAL_PROGRESS_CHANGED,
+      this.handleProvisionalChanged,
+    );
+    super.disconnectedCallback();
+  }
+
+  // Bumped by every read of the progress, so the last one started wins.
+  private progressRead = 0;
+
+  // The player's own level counts XP from games still waiting to be scored,
+  // and that changed (ProvisionalProgress.ts).
+  private handleProvisionalChanged = (event: Event): void => {
+    if (scoredGames(event).length > 0) this.rereadProgress();
+    this.requestUpdate();
+  };
+
+  // A pending game was scored: on the viewer's own open profile, read the
+  // progress again, for its history and milestones. The level holds
+  // meanwhile (and on a stale read): the scored game's XP counts onto any
+  // figure that doesn't include it yet (ProvisionalProgress.ts).
+  private rereadProgress(): void {
+    const publicId = this.publicId;
+    if (publicId === null || this.progress === null) return;
+    if (!this.isConnected || !this.isOpen() || !isOwnAccount(publicId)) return;
+    const gen = this.loadGeneration;
+    const read = ++this.progressRead;
+    void loadPlayerProgress(publicId).then((progress) => {
+      if (gen !== this.loadGeneration || read !== this.progressRead) return;
+      if (progress === null || this.publicId !== publicId) return;
+      this.progress = progress;
+    });
+  }
+
+  private progressView() {
+    return this.progress === null
+      ? null
+      : provisionalProgress(this.publicId, this.progress);
+  }
 
   protected modalConfig() {
     return {
@@ -101,9 +157,11 @@ export class PlayerProfileModal extends BaseModal {
             class="text-white text-xl lg:text-2xl font-bold tracking-wide break-words hyphens-auto min-w-0 inline-flex items-center gap-2"
           >
             ${usernameText(this.username)}
-            ${isVerifiedUsername(this.username)
-              ? verifiedBadge("w-5 h-5")
-              : nothing}
+            ${
+              isVerifiedUsername(this.username)
+                ? verifiedBadge("w-5 h-5")
+                : nothing
+            }
           </span>`
         : undefined,
       onBack: () => this.back(),
@@ -229,9 +287,11 @@ export class PlayerProfileModal extends BaseModal {
     return html`
       <player-game-history-view
         .publicId=${publicId}
-        .cachedState=${this.gameHistoryCache?.publicId === publicId
-          ? this.gameHistoryCache
-          : null}
+        .cachedState=${
+          this.gameHistoryCache?.publicId === publicId
+            ? this.gameHistoryCache
+            : null
+        }
         @history-updated=${(e: CustomEvent<PlayerGameHistoryCache>) => {
           this.gameHistoryCache = e.detail;
         }}
@@ -253,16 +313,20 @@ export class PlayerProfileModal extends BaseModal {
     }
     // The card heads the stats; games and wins stay in the stats below it,
     // and the ways to share the profile follow it.
+    const view = this.progressView();
     return html`
-      ${this.progress === null
-        ? nothing
-        : html`<profile-card
-            class="mb-4 block"
-            .username=${this.username ?? this.publicId ?? ""}
-            .clanTag=${this.clans[0]?.tag ?? null}
-            .progress=${this.progress}
-            .openKey=${`profile-${this.openCount}`}
-          ></profile-card>`}
+      ${
+        view === null
+          ? nothing
+          : html`<profile-card
+              class="mb-4 block"
+              .username=${this.username ?? this.publicId ?? ""}
+              .clanTag=${this.displayClanTag}
+              .progress=${view.progress}
+              .provisional=${view.provisional}
+              .openKey=${`profile-${this.openCount}`}
+            ></profile-card>`
+      }
       <profile-share
         class="mb-[18px] block"
         .url=${playerProfileUrl(publicId)}
@@ -277,11 +341,14 @@ export class PlayerProfileModal extends BaseModal {
   private renderProgression() {
     // The tab is hidden without progress; should it still be selected (a new
     // player opened on top), show the Stats content rather than nothing.
-    if (this.progress === null) return this.renderProfile();
+    const view = this.progressView();
+    if (view === null) return this.renderProfile();
     // Keyed like the card's flourish: the tab pops in once per opening, not
     // again on a tab switch.
     return html`<profile-progression
-      .progress=${this.progress}
+      .progress=${view.progress}
+      .confirmedLevel=${view.confirmedLevel}
+      .provisional=${view.provisional}
       .publicId=${this.publicId}
       .popKey=${`profile-${this.openCount}`}
     ></profile-progression>`;
@@ -324,14 +391,16 @@ export class PlayerProfileModal extends BaseModal {
         <p class="mt-2 max-w-md text-sm text-white/60">
           ${translateText("player_profile.not_found_body")}
         </p>
-        ${this.openedLink === null
-          ? nothing
-          : html`<p
-              class="mt-3 break-all font-mono text-xs text-white/35"
-              data-opened-link
-            >
-              ${this.openedLink}
-            </p>`}
+        ${
+          this.openedLink === null
+            ? nothing
+            : html`<p
+                class="mt-3 break-all font-mono text-xs text-white/35"
+                data-opened-link
+              >
+                ${this.openedLink}
+              </p>`
+        }
         <!-- Side by side where there's room, stacked on a phone. -->
         <div
           class="mt-6 flex flex-col items-stretch justify-center gap-3 sm:flex-row sm:items-center"
@@ -432,6 +501,7 @@ export class PlayerProfileModal extends BaseModal {
     this.username = null;
     this.statsTree = null;
     this.clans = [];
+    this.displayClanTag = null;
     this.progress = null;
     this.gameHistoryCache = null;
     this.gamesScrollTop = 0;
@@ -461,8 +531,9 @@ export class PlayerProfileModal extends BaseModal {
     // holds up the profile (its request can take up to its own timeout).
     // Only shown alongside a loaded profile (see renderProfile). Missing
     // progress hides the summary.
+    const read = ++this.progressRead;
     void loadPlayerProgress(publicId).then((progress) => {
-      if (!current()) return;
+      if (!current() || read !== this.progressRead) return;
       this.progress = progress;
       const wanted = this.wantsProgressionTab;
       this.wantsProgressionTab = false;
@@ -483,6 +554,8 @@ export class PlayerProfileModal extends BaseModal {
     this.statsTree = profile === false ? null : profile.stats;
     this.username = profile === false ? null : (profile.username ?? null);
     this.clans = profile === false ? [] : (profile.clans ?? []);
+    this.displayClanTag =
+      profile === false ? null : (profile.displayClanTag ?? null);
   }
 
   // Intentionally preserves publicId/statsTree/history cache/scroll: the page
@@ -554,9 +627,9 @@ export class PlayerProfileModal extends BaseModal {
     this.close();
     if (openedFrom === "clan") {
       document
-        .querySelector<
-          HTMLElement & { returnFromPlayerProfile(): void }
-        >("clan-modal")
+        .querySelector<HTMLElement & { returnFromPlayerProfile(): void }>(
+          "clan-modal",
+        )
         ?.returnFromPlayerProfile();
     } else if (openedFrom === "leaderboard") {
       document
@@ -564,9 +637,9 @@ export class PlayerProfileModal extends BaseModal {
         ?.open();
     } else if (openedFrom === "account") {
       document
-        .querySelector<
-          HTMLElement & { returnToFriends(): void }
-        >("account-modal")
+        .querySelector<HTMLElement & { returnToFriends(): void }>(
+          "account-modal",
+        )
         ?.returnToFriends();
     }
   }

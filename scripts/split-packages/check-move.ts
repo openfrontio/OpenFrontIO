@@ -7,9 +7,20 @@
  * Usage: npx tsx scripts/split-packages/check-move.ts [<base> [<head>]]
  *   Defaults: base HEAD~1, head HEAD. Pass --cached as head for the index.
  */
+// DISABLED: TypeScript 7.0 ships no JavaScript compiler API - the package
+// only exports a version string - so this script cannot parse TypeScript any
+// more. The replacement API (typescript/sync, typescript/ast) arrives with
+// TypeScript 7.1: it is in beta today (`npm i -D typescript@7.1.0-beta`) and
+// the final release is expected in December 2026. Until then this script is
+// kept as it is, but is not type-checked and refuses to run. The next split
+// has to wait for that release.
+// See https://github.com/openfrontio/OpenFrontIO/issues/4982
+// @ts-nocheck
 import { execFileSync } from "child_process";
 import ts from "typescript";
-import { moduleRefs, parse, ROOT } from "./lib";
+import { assertCompilerApiAvailable, moduleRefs, parse, ROOT } from "./lib";
+
+assertCompilerApiAvailable();
 
 // Config edits the move forces (docs/EnginePackageSplit.md, "Tooling changes
 // the move forces"), plus the move's own inputs.

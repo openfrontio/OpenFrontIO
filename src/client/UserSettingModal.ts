@@ -1,10 +1,18 @@
 import type { MapLayer } from "@openfront/engine-api/game/MapFiles";
 import { html, nothing } from "lit";
 import { customElement, state } from "lit/decorators.js";
-import { formatKeyForDisplay, translateText } from "../client/Utils";
+import {
+  formatKeyForDisplay,
+  resolveKeybindLabel,
+  translateText,
+} from "../client/Utils";
+// This type is erased at runtime; retain the import to register the setting.
+// oxlint-disable-next-line import/no-duplicates -- Required custom-element registration.
 import "./components/baseComponents/setting/SettingKeybind";
 import { SettingKeybind } from "./components/baseComponents/setting/SettingKeybind";
 import "./components/baseComponents/setting/SettingNumber";
+// This type is erased at runtime; retain the import to register the setting.
+// oxlint-disable-next-line import/no-duplicates -- Required custom-element registration.
 import "./components/baseComponents/setting/SettingSelect";
 import { SettingSelect } from "./components/baseComponents/setting/SettingSelect";
 import "./components/baseComponents/setting/SettingSlider";
@@ -27,6 +35,7 @@ import {
   type DesktopDisplaySnapshot,
 } from "./DesktopDisplay";
 import { isDesktopShell } from "./DesktopShell";
+import { KeyboardLayoutController } from "./KeyboardLayout";
 import { pushMapLayerState } from "./MapLayerSettings";
 import { Platform } from "./Platform";
 import type { AudioControls } from "./sound/CuePlayer";
@@ -39,6 +48,7 @@ import {
   getDefaultKeybinds,
   GRAPHICS_KEY,
   keysMayBeShared,
+  MAP_LAYERS_KEY,
   USER_SETTINGS_CHANGED_EVENT,
   UserSettings,
 } from "./UserSettings";
@@ -80,8 +90,14 @@ const PREVIEWABLE: readonly CueCategory[] = ["effects", "alerts", "interface"];
  */
 const PREVIEW_CEILING_MS = 10_000;
 
+// Set by the inline script at the top of <body> in index.html.
+function isHalloweenSeason(): boolean {
+  return document.body.dataset.halloweenSeason !== undefined;
+}
+
 @customElement("user-setting")
 export class UserSettingModal extends BaseModal {
+  private keyboardLayout = new KeyboardLayoutController(this);
   private currentUiScale: number | undefined;
   protected routerName: string | undefined = "settings";
 
@@ -153,6 +169,14 @@ export class UserSettingModal extends BaseModal {
   private displayRequestId = 0;
 
   private displaySettleTimer: ReturnType<typeof setTimeout> | undefined;
+  private lastHasKeyboard = Platform.hasKeyboard;
+
+  private handleKeyboardDetection = () => {
+    if (Platform.hasKeyboard && !this.lastHasKeyboard) {
+      this.lastHasKeyboard = true;
+      this.requestUpdate();
+    }
+  };
 
   connectedCallback() {
     super.connectedCallback();
@@ -163,15 +187,26 @@ export class UserSettingModal extends BaseModal {
       this.routerName = undefined;
     }
     this.loadKeybindsFromStorage();
+    this.lastHasKeyboard = Platform.hasKeyboard;
+    window.addEventListener("keydown", this.handleKeyboardDetection);
     globalThis.addEventListener(
       `${USER_SETTINGS_CHANGED_EVENT}:${GRAPHICS_KEY}`,
+      this.onGraphicsChanged,
+    );
+    globalThis.addEventListener(
+      `${USER_SETTINGS_CHANGED_EVENT}:${MAP_LAYERS_KEY}`,
       this.onGraphicsChanged,
     );
   }
 
   disconnectedCallback() {
+    window.removeEventListener("keydown", this.handleKeyboardDetection);
     globalThis.removeEventListener(
       `${USER_SETTINGS_CHANGED_EVENT}:${GRAPHICS_KEY}`,
+      this.onGraphicsChanged,
+    );
+    globalThis.removeEventListener(
+      `${USER_SETTINGS_CHANGED_EVENT}:${MAP_LAYERS_KEY}`,
       this.onGraphicsChanged,
     );
     window.removeEventListener("keydown", this.handleEasterEggKey);
@@ -192,7 +227,7 @@ export class UserSettingModal extends BaseModal {
    */
   private readonly onGraphicsChanged = () => {
     pushMapLayerState(
-      this.userSettings.graphicsOverrides(),
+      this.userSettings,
       this.mapLayers,
       this.onLayerVisibilityChange,
       this.onLayerAlphaChange,
@@ -347,16 +382,16 @@ export class UserSettingModal extends BaseModal {
 
   private getKeyChar(action: string): string {
     const entry = this.userKeybinds[action];
-    if (!entry) return formatKeyForDisplay(this.defaultKeybinds[action] || "");
-    return entry.key || formatKeyForDisplay(entry.value || "");
+    const defaultCode = this.defaultKeybinds[action] || "";
+    return resolveKeybindLabel(entry, defaultCode, this.keyboardLayout.map);
   }
 
   private handleEasterEggKey = (e: KeyboardEvent) => {
     if (!this.isModalOpen || this.showEasterEggSettings) return;
 
     // Validate that the event target is inside this component
-    const target = e.target as Node;
-    if (!this.contains(target)) {
+    const target = e.target;
+    if (!(target instanceof Node) || !this.contains(target)) {
       return;
     }
 
@@ -405,6 +440,15 @@ export class UserSettingModal extends BaseModal {
     console.log(
       "💰 Cursor build cost:",
       this.userSettings.cursorCostLabel() ? "ON" : "OFF",
+    );
+  }
+
+  private toggleSnapBuildPreview() {
+    this.userSettings.toggleSnapBuildPreview();
+
+    console.log(
+      "🧲 Snap build preview:",
+      this.userSettings.snapBuildPreview() ? "ON" : "OFF",
     );
   }
 
@@ -520,8 +564,20 @@ export class UserSettingModal extends BaseModal {
     );
   }
 
+  private toggleHalloweenTheme() {
+    this.userSettings.toggleHalloweenTheme();
+    document.body.classList.toggle(
+      "halloween-theme",
+      isHalloweenSeason() && this.userSettings.halloweenTheme(),
+    );
+  }
+
   private togglePerformanceOverlay() {
     this.userSettings.togglePerformanceOverlay();
+  }
+
+  private toggleMapLayers() {
+    this.userSettings.toggleMapLayers();
   }
 
   private toggleHelpMessages() {
@@ -645,10 +701,11 @@ export class UserSettingModal extends BaseModal {
     return html`
       <button
         id="audio-${category}-test"
-        class="self-end px-3 py-1 text-sm font-medium rounded-lg border border-white/10 text-white transition-colors ${muted ||
-        pending
-          ? "opacity-40 cursor-not-allowed"
-          : "bg-white/5 hover:bg-white/15"}"
+        class="self-end px-3 py-1 text-sm font-medium rounded-lg border border-white/10 text-white transition-colors ${
+          muted || pending
+            ? "opacity-40 cursor-not-allowed"
+            : "bg-white/5 hover:bg-white/15"
+        }"
         ?disabled=${muted || pending}
         title=${muted ? translateText(hint) : ""}
         @click=${() => this.playTestCue(category)}
@@ -673,11 +730,13 @@ export class UserSettingModal extends BaseModal {
           @change=${(e: CustomEvent<{ value: number }>) =>
             this.sliderAudio(category, e)}
         ></setting-slider>
-        ${controls !== null && PREVIEWABLE.includes(category as CueCategory)
-          ? html`<div class="flex justify-end">
-              ${this.renderTestButton(controls, category as CueCategory)}
-            </div>`
-          : ""}
+        ${
+          controls !== null && PREVIEWABLE.includes(category as CueCategory)
+            ? html`<div class="flex justify-end">
+                ${this.renderTestButton(controls, category as CueCategory)}
+              </div>`
+            : ""
+        }
       </div>
     `;
   }
@@ -752,7 +811,7 @@ export class UserSettingModal extends BaseModal {
         // validates a requested tab against this list -- lands
         // open({ tab: "keybinds" }) on Gameplay instead of selecting a tab
         // with nothing behind it.
-        ...(Platform.isTouch
+        ...(Platform.isTouch && !Platform.hasKeyboard
           ? []
           : [
               {
@@ -1151,40 +1210,44 @@ export class UserSettingModal extends BaseModal {
         @change=${this.handleDisplayModeChange}
       ></setting-select>
 
-      ${uiScale === undefined
-        ? null
-        : html`
-            <setting-select
-              id="display-ui-scale-select"
-              label=${translateText("user_setting.display_ui_scale_label")}
-              description=${translateText("user_setting.display_ui_scale_desc")}
-              .value=${String(uiScale)}
-              ?disabled=${this.displayBusy}
-              .options=${uiScaleOptions(uiScale).map((scale) => ({
-                value: scale,
-                label: translateText("user_setting.display_ui_scale_option", {
-                  scale,
-                }),
-              }))}
-              @change=${this.handleUiScaleChange}
-            ></setting-select>
-          `}
-      ${displays.length > 1
-        ? html`
-            <setting-select
-              id="display-monitor-select"
-              label=${translateText("user_setting.display_monitor_label")}
-              description=${translateText("user_setting.display_monitor_desc")}
-              .value=${String(selectedId)}
-              ?disabled=${this.displayBusy}
-              .options=${displays.map((d, i) => ({
-                value: d.id,
-                label: this.displayOptionLabel(d, i),
-              }))}
-              @change=${this.handleDisplayMonitorChange}
-            ></setting-select>
-          `
-        : null}
+      ${
+        uiScale === undefined
+          ? null
+          : html`
+              <setting-select
+                id="display-ui-scale-select"
+                label=${translateText("user_setting.display_ui_scale_label")}
+                description=${translateText("user_setting.display_ui_scale_desc")}
+                .value=${String(uiScale)}
+                ?disabled=${this.displayBusy}
+                .options=${uiScaleOptions(uiScale).map((scale) => ({
+                  value: scale,
+                  label: translateText("user_setting.display_ui_scale_option", {
+                    scale,
+                  }),
+                }))}
+                @change=${this.handleUiScaleChange}
+              ></setting-select>
+            `
+      }
+      ${
+        displays.length > 1
+          ? html`
+              <setting-select
+                id="display-monitor-select"
+                label=${translateText("user_setting.display_monitor_label")}
+                description=${translateText("user_setting.display_monitor_desc")}
+                .value=${String(selectedId)}
+                ?disabled=${this.displayBusy}
+                .options=${displays.map((d, i) => ({
+                  value: d.id,
+                  label: this.displayOptionLabel(d, i),
+                }))}
+                @change=${this.handleDisplayMonitorChange}
+              ></setting-select>
+            `
+          : null
+      }
     `;
   }
 
@@ -1227,6 +1290,15 @@ export class UserSettingModal extends BaseModal {
       ></setting-keybind>
 
       <setting-keybind
+        action="preventStacking"
+        label=${translateText("user_setting.prevent_stacking")}
+        description=${translateText("user_setting.prevent_stacking_desc")}
+        defaultKey=${this.defaultKeybinds.preventStacking}
+        .value=${this.getKeyValue("preventStacking")}
+        .display=${this.getKeyChar("preventStacking")}
+        @change=${this.handleKeybindChange}
+      ></setting-keybind>
+      <setting-keybind
         action="coordinateGrid"
         label=${translateText("user_setting.coordinate_grid_label")}
         description=${translateText("user_setting.coordinate_grid_desc")}
@@ -1238,6 +1310,7 @@ export class UserSettingModal extends BaseModal {
 
       <setting-keybind
         action="altKey"
+        .allowModifiers=${true}
         label=${translateText("user_setting.graphics_refresh_modifier")}
         description=${translateText(
           "user_setting.graphics_refresh_modifier_desc",
@@ -1373,6 +1446,7 @@ export class UserSettingModal extends BaseModal {
 
       <setting-keybind
         action="buildMenuModifier"
+        .allowModifiers=${true}
         label=${translateText("user_setting.build_menu_modifier")}
         description=${translateText("user_setting.build_menu_modifier_desc")}
         .defaultKey=${this.defaultKeybinds.buildMenuModifier}
@@ -1383,6 +1457,7 @@ export class UserSettingModal extends BaseModal {
 
       <setting-keybind
         action="emojiMenuModifier"
+        .allowModifiers=${true}
         label=${translateText("user_setting.emoji_menu_modifier")}
         description=${translateText("user_setting.emoji_menu_modifier_desc")}
         .defaultKey=${this.defaultKeybinds.emojiMenuModifier}
@@ -1393,6 +1468,7 @@ export class UserSettingModal extends BaseModal {
 
       <setting-keybind
         action="boxSelectWarships"
+        .allowModifiers=${true}
         label=${translateText("user_setting.box_select_warships")}
         description=${translateText("user_setting.box_select_warships_desc")}
         .defaultKey=${this.defaultKeybinds.boxSelectWarships}
@@ -1669,7 +1745,7 @@ export class UserSettingModal extends BaseModal {
         action="moveUpArrow"
         label=${translateText("user_setting.move_up")}
         description=${translateText("user_setting.move_up_desc")}
-        .defaultKey=${this.defaultKeybinds.moveUpArrow}
+        defaultKey=${this.defaultKeybinds.moveUpArrow}
         .value=${this.getKeyValue("moveUpArrow")}
         .display=${this.getKeyChar("moveUpArrow")}
         @change=${this.handleKeybindChange}
@@ -1689,7 +1765,7 @@ export class UserSettingModal extends BaseModal {
         action="moveLeftArrow"
         label=${translateText("user_setting.move_left")}
         description=${translateText("user_setting.move_left_desc")}
-        .defaultKey=${this.defaultKeybinds.moveLeftArrow}
+        defaultKey=${this.defaultKeybinds.moveLeftArrow}
         .value=${this.getKeyValue("moveLeftArrow")}
         .display=${this.getKeyChar("moveLeftArrow")}
         @change=${this.handleKeybindChange}
@@ -1709,7 +1785,7 @@ export class UserSettingModal extends BaseModal {
         action="moveDownArrow"
         label=${translateText("user_setting.move_down")}
         description=${translateText("user_setting.move_down_desc")}
-        .defaultKey=${this.defaultKeybinds.moveDownArrow}
+        defaultKey=${this.defaultKeybinds.moveDownArrow}
         .value=${this.getKeyValue("moveDownArrow")}
         .display=${this.getKeyChar("moveDownArrow")}
         @change=${this.handleKeybindChange}
@@ -1729,7 +1805,7 @@ export class UserSettingModal extends BaseModal {
         action="moveRightArrow"
         label=${translateText("user_setting.move_right")}
         description=${translateText("user_setting.move_right_desc")}
-        .defaultKey=${this.defaultKeybinds.moveRightArrow}
+        defaultKey=${this.defaultKeybinds.moveRightArrow}
         .value=${this.getKeyValue("moveRightArrow")}
         .display=${this.getKeyChar("moveRightArrow")}
         @change=${this.handleKeybindChange}
@@ -1794,6 +1870,15 @@ export class UserSettingModal extends BaseModal {
         @change=${this.togglePerformanceOverlay}
       ></setting-toggle>
 
+      <!-- 🗺️ Map Layers -->
+      <setting-toggle
+        label="${translateText("user_setting.map_layers_label")}"
+        description="${translateText("user_setting.map_layers_desc")}"
+        id="map-layers-toggle"
+        .checked=${this.userSettings.mapLayers()}
+        @change=${this.toggleMapLayers}
+      ></setting-toggle>
+
       <!-- 🔧 Advanced -->
       <setting-toggle
         label="${translateText("graphics_setting.advanced_label")}"
@@ -1803,9 +1888,11 @@ export class UserSettingModal extends BaseModal {
         @change=${this.toggleGraphicsAdvanced}
       ></setting-toggle>
 
-      ${this.graphicsAdvancedOpen
-        ? html`<graphics-advanced-settings></graphics-advanced-settings>`
-        : nothing}
+      ${
+        this.graphicsAdvancedOpen
+          ? html`<graphics-advanced-settings></graphics-advanced-settings>`
+          : nothing
+      }
     `;
   }
 
@@ -1827,6 +1914,15 @@ export class UserSettingModal extends BaseModal {
         id="cursor_cost_label-toggle"
         .checked=${this.userSettings.cursorCostLabel()}
         @change=${this.toggleCursorCostLabel}
+      ></setting-toggle>
+
+      <!-- 🧲 Snap Build Preview -->
+      <setting-toggle
+        label="${translateText("user_setting.snap_build_preview_label")}"
+        description="${translateText("user_setting.snap_build_preview_desc")}"
+        id="snap-build-preview-toggle"
+        .checked=${this.userSettings.snapBuildPreview()}
+        @change=${this.toggleSnapBuildPreview}
       ></setting-toggle>
 
       <!-- 🖱️ Left Click Menu -->
@@ -1874,17 +1970,19 @@ export class UserSettingModal extends BaseModal {
         @change=${this.toggleReplayViewer}
       ></setting-toggle>
 
-      ${canHandOffToSteam()
-        ? html`<setting-toggle
-            label="${translateText("user_setting.steam_lobby_links_label")}"
-            description="${translateText(
-              "user_setting.steam_lobby_links_desc",
-            )}"
-            id="steam-lobby-links-toggle"
-            .checked=${this.userSettings.steamLobbyLinks() === "steam"}
-            @change=${this.toggleSteamLobbyLinks}
-          ></setting-toggle>`
-        : null}
+      ${
+        canHandOffToSteam()
+          ? html`<setting-toggle
+              label="${translateText("user_setting.steam_lobby_links_label")}"
+              description="${translateText(
+                "user_setting.steam_lobby_links_desc",
+              )}"
+              id="steam-lobby-links-toggle"
+              .checked=${this.userSettings.steamLobbyLinks() === "steam"}
+              @change=${this.toggleSteamLobbyLinks}
+            ></setting-toggle>`
+          : null
+      }
 
       <!-- 🔍 Go to player -->
       <setting-toggle
@@ -1894,6 +1992,18 @@ export class UserSettingModal extends BaseModal {
         .checked=${this.userSettings.goToPlayer()}
         @change=${this.toggleGoToPlayer}
       ></setting-toggle>
+
+      ${
+        isHalloweenSeason()
+          ? html`<setting-toggle
+              label="${translateText("user_setting.halloween_theme_label")}"
+              description="${translateText("user_setting.halloween_theme_desc")}"
+              id="halloween-theme-toggle"
+              .checked=${this.userSettings.halloweenTheme()}
+              @change=${this.toggleHalloweenTheme}
+            ></setting-toggle>`
+          : null
+      }
 
       <!-- Help messages (moved here from the in-game menu) -->
       <setting-toggle
@@ -1957,53 +2067,56 @@ export class UserSettingModal extends BaseModal {
         @change=${this.sliderNukeAllianceSafetyDuration}
       ></setting-slider>
 
-      ${this.showEasterEggSettings
-        ? html`
-            <setting-slider
-              label="${translateText(
-                "user_setting.easter_writing_speed_label",
-              )}"
-              description="${translateText(
-                "user_setting.easter_writing_speed_desc",
-              )}"
-              min="0"
-              max="100"
-              value="40"
-              easter="true"
-              @change=${(e: CustomEvent) => {
-                const value = e.detail?.value;
-                if (value !== undefined) {
-                  console.log("Changed:", value);
-                } else {
-                  console.warn("Slider event missing detail.value", e);
-                }
-              }}
-            ></setting-slider>
+      ${
+        this.showEasterEggSettings
+          ? html`
+              <setting-slider
+                label="${translateText(
+                  "user_setting.easter_writing_speed_label",
+                )}"
+                description="${translateText(
+                  "user_setting.easter_writing_speed_desc",
+                )}"
+                min="0"
+                max="100"
+                value="40"
+                easter="true"
+                @change=${(e: CustomEvent) => {
+                  const value = e.detail?.value;
+                  if (value !== undefined) {
+                    console.log("Changed:", value);
+                  } else {
+                    console.warn("Slider event missing detail.value", e);
+                  }
+                }}
+              ></setting-slider>
 
-            <setting-number
-              label="${translateText("user_setting.easter_bug_count_label")}"
-              description="${translateText(
-                "user_setting.easter_bug_count_desc",
-              )}"
-              value="100"
-              min="0"
-              max="1000"
-              easter="true"
-              @change=${(e: CustomEvent) => {
-                const value = e.detail?.value;
-                if (value !== undefined) {
-                  console.log("Changed:", value);
-                } else {
-                  console.warn("Slider event missing detail.value", e);
-                }
-              }}
-            ></setting-number>
-          `
-        : null}
+              <setting-number
+                label="${translateText("user_setting.easter_bug_count_label")}"
+                description="${translateText(
+                  "user_setting.easter_bug_count_desc",
+                )}"
+                value="100"
+                min="0"
+                max="1000"
+                easter="true"
+                @change=${(e: CustomEvent) => {
+                  const value = e.detail?.value;
+                  if (value !== undefined) {
+                    console.log("Changed:", value);
+                  } else {
+                    console.warn("Slider event missing detail.value", e);
+                  }
+                }}
+              ></setting-number>
+            `
+          : null
+      }
     `;
   }
 
   protected onOpen(args?: Record<string, unknown>): void {
+    this.lastHasKeyboard = Platform.hasKeyboard;
     window.addEventListener("keydown", this.handleEasterEggKey);
     // Keybinds are editable from either instance and were only read in
     // connectedCallback, so re-read them or the other one renders stale.

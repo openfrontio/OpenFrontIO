@@ -24,6 +24,7 @@ export class EmbargoAllExecution implements Execution {
       if (p.id() === me.id()) continue;
       if (p.type() === PlayerType.Bot) continue;
       if (me.isOnSameTeam(p)) continue;
+      if (me.isAlliedWith(p)) continue;
 
       if (this.action === "start") {
         if (!me.hasEmbargoAgainst(p)) me.addEmbargo(p, false);

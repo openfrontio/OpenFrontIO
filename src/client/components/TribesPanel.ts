@@ -459,22 +459,28 @@ export class TribesPanel extends LitElement {
           ?disabled=${this.purchasing || price === null}
         >
           ${translateText("store.purchase_tribe_button")}
-          ${price !== null
-            ? html`<span class="flex items-center gap-1">
-                <plutonium-icon .size=${18}></plutonium-icon>${price}
-              </span>`
-            : ""}
+          ${
+            price !== null
+              ? html`<span class="flex items-center gap-1">
+                  <plutonium-icon .size=${18}></plutonium-icon>${price}
+                </span>`
+              : ""
+          }
         </button>
       </form>
-      ${this.notice
-        ? html`<p
-            class="text-sm font-medium ${this.notice.kind === "success"
-              ? "text-green-400"
-              : "text-red-400"}"
-          >
-            ${this.notice.text}
-          </p>`
-        : ""}
+      ${
+        this.notice
+          ? html`<p
+              class="text-sm font-medium ${
+                this.notice.kind === "success"
+                  ? "text-green-400"
+                  : "text-red-400"
+              }"
+            >
+              ${this.notice.text}
+            </p>`
+          : ""
+      }
     </section>`;
   }
 
@@ -499,10 +505,12 @@ export class TribesPanel extends LitElement {
           })
         : null;
     return html`<span class="text-xs text-amber-300 mt-0.5">
-      ${countText}${until
-        ? html` ·
-          ${translateText("store.tribe_boost_next_expiry", { date: until })}`
-        : ""}
+      ${countText}${
+        until
+          ? html` ·
+            ${translateText("store.tribe_boost_next_expiry", { date: until })}`
+          : ""
+      }
     </span>`;
   }
 
@@ -545,11 +553,13 @@ export class TribesPanel extends LitElement {
       <div class="flex flex-col min-w-0">
         <span class="font-bold text-white truncate">${tribe.displayName}</span>
         ${this.renderBoostStatus(tribe)}
-        ${tribe.reviewReason
-          ? html`<span class="text-xs text-white/50 mt-0.5"
-              >${tribe.reviewReason}</span
-            >`
-          : ""}
+        ${
+          tribe.reviewReason
+            ? html`<span class="text-xs text-white/50 mt-0.5"
+                >${tribe.reviewReason}</span
+              >`
+            : ""
+        }
       </div>
       <div class="shrink-0 flex items-center gap-2">
         ${this.renderStatsButton(tribe)} ${this.renderBoostButton(tribe)}
@@ -617,16 +627,19 @@ export class TribesPanel extends LitElement {
         >
           ${translateText("store.your_tribes_heading")}
         </h3>
-        ${this.boostNotice
-          ? html`<p
-              class="text-sm font-medium px-1 ${this.boostNotice.kind ===
-              "success"
-                ? "text-green-400"
-                : "text-red-400"}"
-            >
-              ${this.boostNotice.text}
-            </p>`
-          : ""}
+        ${
+          this.boostNotice
+            ? html`<p
+                class="text-sm font-medium px-1 ${
+                  this.boostNotice.kind === "success"
+                    ? "text-green-400"
+                    : "text-red-400"
+                }"
+              >
+                ${this.boostNotice.text}
+              </p>`
+            : ""
+        }
         ${this.renderList()}
       </section>
       <insufficient-currency-dialog

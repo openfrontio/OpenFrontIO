@@ -30,7 +30,7 @@ export const FLAG_CELL_H = 85;
  * error" with an empty info log. Start at 128 (7 MB) — the low end of
  * the working set, so most games never grow — and let the rest come on demand.
  */
-export const MAX_FLAG_LAYERS = 128;
+const MAX_FLAG_LAYERS = 128;
 
 interface PendingEntry {
   layer: number;

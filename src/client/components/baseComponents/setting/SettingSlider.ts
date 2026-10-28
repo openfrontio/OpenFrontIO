@@ -85,9 +85,11 @@ export class SettingSlider extends LitElement {
           <div class="flex items-center gap-2 w-full">
             <span
               class="text-white font-bold text-sm shrink-0 text-right min-w-[3ch]"
-              >${this.formatValue
-                ? this.formatValue(this.value)
-                : `${this.value}${this.unit}`}</span
+              >${
+                this.formatValue
+                  ? this.formatValue(this.value)
+                  : `${this.value}${this.unit}`
+              }</span
             >
             <input
               type="range"

@@ -1,16 +1,30 @@
+import { GameType } from "@openfront/engine-api/game/GameTypes";
+import { GameConfig } from "@openfront/engine-api/Schemas";
 import { assetUrl } from "@openfront/shared/AssetUrls";
 import { EventBus } from "@openfront/shared/EventBus";
 import { html, LitElement } from "lit";
 import { customElement, property, query, state } from "lit/decorators.js";
 import { gamePortal } from "src/client/GamePortal";
 import { PauseGameIntentEvent } from "src/client/Transport";
+import { responseHasLinkedIdentity } from "../../AccountIdentity";
+import { ClientEnv } from "../../ClientEnv";
 import { Controller } from "../../Controller";
 import {
   AlternateViewEvent,
   ToggleRenderDebugGuiEvent,
 } from "../../InputHandler";
+import { type SavedGameError, uploadSavedGame } from "../../SavedGamesApi";
+import { lastUserMeResponse } from "../../UserMeBroadcast";
 import type { UserSettingModal } from "../../UserSettingModal";
-import { homeHref, translateText } from "../../Utils";
+import {
+  disabledUnitsBox,
+  hostCheatsBox,
+  LOBBY_SETTING_TAG,
+  lobbySettingTagText,
+  notableLobbySettings,
+} from "../../utilities/LobbySettingsSummary";
+import { getMapName, homeHref, translateText } from "../../Utils";
+import type { GameView } from "../../view/GameView";
 const exitIcon = assetUrl("images/ExitIconWhite.svg");
 const settingsIcon = assetUrl("images/SettingIconWhite.svg");
 const treeIcon = assetUrl("images/TreeIconWhite.svg");
@@ -27,8 +41,9 @@ export class ShowSettingsModalEvent {
  * The in-game menu.
  *
  * It holds what is session state or a game action — the alternate (terrain)
- * view, the debug GUI, exiting — plus a link into the settings modal. Every
- * `UserSettings`-backed row it used to duplicate, the advanced graphics
+ * view, the debug GUI, exiting — plus the game's modifiers (the non-default
+ * lobby settings the join modal shows) and a link into the settings modal.
+ * Every `UserSettings`-backed row it used to duplicate, the advanced graphics
  * options included, now lives in `UserSettingModal`, which this opens through
  * the non-inline `#game-settings` instance so both entry points render the
  * same UI.
@@ -52,11 +67,27 @@ export class SettingsModal extends LitElement implements Controller {
   @property({ type: Boolean })
   wasPausedWhenOpened = false;
 
+  @property({ attribute: false })
+  gameConfig: GameConfig | null = null;
+
+  /** Nations the map defines; null skips the nation-count comparison. */
+  @property({ attribute: false })
+  mapNationCount: number | null = null;
+
+  /** The running game, for saving it. */
+  @property({ attribute: false })
+  game: GameView | null = null;
+
+  @state()
+  private saveStatus: "saving" | "saved" | SavedGameError | null = null;
+
   init() {
     this.eventBus.on(ShowSettingsModalEvent, (event) => {
       this.isVisible = event.isVisible;
       this.shouldPause = event.shouldPause;
       this.wasPausedWhenOpened = event.isPaused;
+      // A save's outcome is news once; the next opening starts clean.
+      if (this.saveStatus !== "saving") this.saveStatus = null;
       this.pauseGame(true);
     });
   }
@@ -113,9 +144,9 @@ export class SettingsModal extends LitElement implements Controller {
     // Portals: report gameplay as stopped whenever the settings menu is open,
     // and resumed when it closes — unless the game was already paused when opened.
     if (pause) {
-      gamePortal.gameplayStop();
+      void gamePortal.gameplayStop();
     } else if (!this.wasPausedWhenOpened) {
-      gamePortal.gameplayStart();
+      void gamePortal.gameplayStart();
     }
 
     // Only pause the simulation itself when we own the pause (singleplayer or
@@ -160,9 +191,117 @@ export class SettingsModal extends LitElement implements Controller {
     this.closeModal();
   }
 
+  // Saves are kept on the player's account: singleplayer games only, and
+  // only for a signed-in account, since a guest's saves would be lost with
+  // the browser's session.
+  private canSave(): boolean {
+    const game = this.game;
+    return (
+      game !== null &&
+      game.config().gameConfig().gameType === GameType.Singleplayer &&
+      !game.config().isReplay() &&
+      responseHasLinkedIdentity(lastUserMeResponse()?.response ?? false)
+    );
+  }
+
+  private async onSaveButtonClick() {
+    const game = this.game;
+    if (game === null || this.saveStatus === "saving") return;
+    this.saveStatus = "saving";
+    try {
+      // The menu has paused the game, so this is the moment the player sees.
+      const snapshot = await game.worker.snapshot(ClientEnv.gitCommit());
+      const map = game.config().gameConfig().gameMap;
+      const result = await uploadSavedGame(snapshot, {
+        name: defaultSaveName(getMapName(map) ?? map, new Date()),
+        map,
+        tick: game.ticks(),
+      });
+      this.saveStatus = typeof result === "string" ? result : "saved";
+    } catch (err) {
+      console.warn("Failed to save the game", err);
+      this.saveStatus = "request_failed";
+    }
+  }
+
+  private renderSaveRow() {
+    if (!this.canSave()) return null;
+    const status = this.saveStatus;
+    const desc =
+      status === null
+        ? translateText("saved_games.save_desc")
+        : translateText(`saved_games.save_status.${status}`);
+    return html`
+      <button
+        class="flex gap-3 items-center w-full text-left p-3 hover:bg-slate-700 rounded-sm text-white transition-colors disabled:opacity-60"
+        data-save-game
+        ?disabled=${status === "saving"}
+        @click="${this.onSaveButtonClick}"
+      >
+        <svg
+          width="20"
+          height="20"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          aria-hidden="true"
+        >
+          <path
+            d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"
+          />
+          <path d="M17 21v-8H7v8M7 3v5h8" />
+        </svg>
+        <div class="flex-1">
+          <div class="font-medium">
+            ${translateText("saved_games.save_label")}
+          </div>
+          <div class="text-sm text-slate-400" data-save-status>${desc}</div>
+        </div>
+      </button>
+    `;
+  }
+
   private onExitButtonClick() {
     // redirect to the home page
     window.location.href = homeHref();
+  }
+
+  private renderModifiers() {
+    const c = this.gameConfig;
+    if (c === null) return null;
+    const settings = notableLobbySettings(c, this.mapNationCount);
+    const disabledUnits = disabledUnitsBox(c, "mx-3 mt-2");
+    const hostCheats = hostCheatsBox(c, "mx-3 mt-2");
+    if (settings.length === 0 && disabledUnits === null && hostCheats === null)
+      return null;
+    return html`
+      <div class="border-t border-slate-600 pt-3 mt-4" data-game-modifiers>
+        <div
+          class="px-3 py-1 text-xs font-semibold text-slate-400 uppercase tracking-wider"
+        >
+          ${translateText("user_setting.modifiers")}
+        </div>
+        ${
+          settings.length > 0
+            ? html`<div
+                class="flex flex-wrap gap-1 px-3 pt-1 uppercase"
+                data-modifier-tags
+              >
+                ${settings.map(
+                  (s) =>
+                    html`<span class=${LOBBY_SETTING_TAG}
+                      >${lobbySettingTagText(s)}</span
+                    >`,
+                )}
+              </div>`
+            : null
+        }
+        ${disabledUnits} ${hostCheats}
+      </div>
+    `;
   }
 
   render() {
@@ -202,6 +341,8 @@ export class SettingsModal extends LitElement implements Controller {
           </div>
 
           <div class="p-4 flex flex-col gap-3">
+            ${this.renderSaveRow()}
+
             <button
               class="flex gap-3 items-center w-full text-left p-3 hover:bg-slate-700 rounded-sm text-white transition-colors"
               data-open-settings
@@ -232,11 +373,15 @@ export class SettingsModal extends LitElement implements Controller {
                 </div>
               </div>
               <div class="text-sm text-slate-400">
-                ${this.alternateView
-                  ? translateText("user_setting.on")
-                  : translateText("user_setting.off")}
+                ${
+                  this.alternateView
+                    ? translateText("user_setting.on")
+                    : translateText("user_setting.off")
+                }
               </div>
             </button>
+
+            ${this.renderModifiers()}
 
             <div class="border-t border-slate-600 pt-3 mt-4">
               <div
@@ -282,4 +427,13 @@ export class SettingsModal extends LitElement implements Controller {
       </div>
     `;
   }
+}
+
+/** "World 2026-10-19 14:05": the map and the local time, editable later. */
+export function defaultSaveName(mapName: string, at: Date): string {
+  const pad = (n: number) => String(n).padStart(2, "0");
+  const date = `${at.getFullYear()}-${pad(at.getMonth() + 1)}-${pad(at.getDate())}`;
+  const time = `${pad(at.getHours())}:${pad(at.getMinutes())}`;
+  // The API caps names at 64 characters.
+  return `${mapName.slice(0, 47)} ${date} ${time}`;
 }

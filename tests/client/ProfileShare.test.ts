@@ -18,6 +18,7 @@ import {
   ProfileShare,
   xShareUrl,
 } from "../../src/client/components/ProfileShare";
+import { gamePortal } from "../../src/client/GamePortal";
 
 if (!customElements.get("profile-share")) {
   customElements.define("profile-share", ProfileShare);
@@ -78,6 +79,16 @@ describe("<profile-share>", () => {
     expect(button("copy")?.textContent).toContain(
       "player_profile.share_copy_link",
     );
+  });
+
+  it("renders nothing on Poki, which the link would lead players off", async () => {
+    const name = vi.spyOn(gamePortal, "name").mockReturnValue("poki");
+    try {
+      await render();
+      expect(el.querySelector("[data-share]")).toBeNull();
+    } finally {
+      name.mockRestore();
+    }
   });
 
   it("copies the link, toasts and announces it", async () => {

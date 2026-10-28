@@ -38,7 +38,7 @@ import type {
   PlayerStatic,
   UnitState,
 } from "../render/types";
-import { STRUCTURE_TYPES, TRAIL_TYPES } from "../render/types/UnitType";
+import { STRUCTURE_TYPES, TRAIL_TYPES } from "../render/types";
 import type {
   RailroadEvent,
   ReplayAppend,
