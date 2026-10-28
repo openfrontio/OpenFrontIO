@@ -846,6 +846,9 @@ export class HostLobbyModal extends BaseModal {
                 .suggestedMaxPlayers=${
                   this.playerLimit ? this.playerLimitValue : undefined
                 }
+                .playerTeams=${
+                  this.gameMode === GameMode.Team ? this.teamCount : undefined
+                }
                 @cancel=${() => (this.showListLobbyDialog = false)}
                 @confirm=${(e: CustomEvent<ListLobbyOptions>) => {
                   this.showListLobbyDialog = false;
