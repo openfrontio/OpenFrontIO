@@ -3,8 +3,6 @@
   "name": "Brahmaputra",
   "translation_key": "map.brahmaputra",
   "categories": ["asia", "new"],
-  "multiplayer_frequency": 4,
-  "team_frequency": 10,
   "special_team_count": 2,
   "themes": ["asia"],
   "teamGameSpawnAreas": {
