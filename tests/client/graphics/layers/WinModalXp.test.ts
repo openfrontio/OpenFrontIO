@@ -66,6 +66,7 @@ import type { GameXpPanel } from "../../../../src/client/components/GameXpPanel"
 import "../../../../src/client/components/LegendCeremony";
 import "../../../../src/client/hud/layers/WinModal";
 import type { WinModal } from "../../../../src/client/hud/layers/WinModal";
+import { stopProvisionalProgress } from "../../../../src/client/ProvisionalProgress";
 import { playerProfileUrl } from "../../../../src/client/utilities/PlayerProfileUrl";
 import type { GameView } from "../../../../src/client/view";
 
@@ -149,6 +150,7 @@ function makeGame(opts: {
   alive?: boolean;
   replay?: boolean;
   gameType?: GameType;
+  resumed?: boolean;
 }) {
   const winUpdate = { winner: ["team", "Red"], allPlayersStats: {} };
   let delivered = false;
@@ -161,6 +163,7 @@ function makeGame(opts: {
       clientID: () => "me",
     }),
     inSpawnPhase: () => false,
+    ticks: () => 6000,
     updatesSinceLastTick: () => {
       if (!opts.ended || delivered) return {};
       delivered = true;
@@ -174,6 +177,7 @@ function makeGame(opts: {
       }),
       isReplay: () => opts.replay ?? false,
     }),
+    resumedFromSave: () => opts.resumed ?? false,
   } as unknown as GameView;
 }
 
@@ -181,6 +185,10 @@ describe("WinModal XP section", () => {
   let modal: WinModal;
 
   beforeEach(() => {
+    // Each test starts with no games kept from the one before (the account
+    // menu's pending XP, ProvisionalProgress.ts).
+    localStorage.clear();
+    stopProvisionalProgress();
     vi.useFakeTimers();
     getUserMe.mockResolvedValue(signedIn);
     isLoggedIn.mockResolvedValue(true);
@@ -294,6 +302,14 @@ describe("WinModal XP section", () => {
     // And it stops asking.
     await settle(30_000);
     expect(fetchMock.mock.calls.length).toBe(calls);
+  });
+
+  it("shows no XP for a game resumed from a save, and never asks for it", async () => {
+    const fetchMock = stubXpEndpoint([notFound]);
+    await mount(makeGame({ ended: true, resumed: true }));
+    await settle(60_000);
+    expect(modal.querySelector("[data-xp-panel]")).toBeNull();
+    expect(fetchMock).not.toHaveBeenCalled();
   });
 
   it("shows one friendly line for an ineligible game", async () => {
@@ -1101,6 +1117,10 @@ describe("WinModal XP section", () => {
     expect(panel()!.querySelector("[data-xp-total]")!.textContent).toContain(
       '"xp":"212"',
     );
+    // jsdom queues a 0ms storage event for the scored game kept for the
+    // account menu (a fake 0ms timer runs at 1ms); nothing else may be left
+    // running.
+    await vi.advanceTimersByTimeAsync(1);
     expect(vi.getTimerCount()).toBe(0);
   });
 

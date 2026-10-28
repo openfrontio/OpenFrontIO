@@ -7,6 +7,7 @@ import {
   UnitType,
 } from "@openfront/engine-api/game/GameTypes";
 import { PseudoRandom } from "@openfront/engine-lib/PseudoRandom";
+import { AllianceExtensionExecution } from "@openfront/engine/execution/alliance/AllianceExtensionExecution";
 import { AllianceRequestExecution } from "@openfront/engine/execution/alliance/AllianceRequestExecution";
 import { NationAllianceBehavior } from "@openfront/engine/execution/nation/NationAllianceBehavior";
 import { NationEmojiBehavior } from "@openfront/engine/execution/nation/NationEmojiBehavior";
@@ -154,44 +155,68 @@ describe("AllianceBehavior.handleAllianceRequests", () => {
 });
 
 describe("AllianceBehavior.handleAllianceExtensionRequests", () => {
-  let mockGame: any;
-  let mockPlayer: any;
-  let mockAlliance: any;
-  let mockHuman: any;
-  let mockRandom: any;
-  let allianceBehavior: NationAllianceBehavior;
-
-  beforeEach(() => {
-    mockGame = {
-      addExecution: vi.fn(),
-      config: vi.fn(() => ({ disableAlliances: vi.fn(() => false) })),
-    };
-    mockHuman = { id: vi.fn(() => "human_id") };
-    mockAlliance = {
-      onlyOneAgreedToExtend: vi.fn(() => true),
-      other: vi.fn(() => mockHuman),
-    };
-    mockRandom = { chance: vi.fn() };
-
-    mockPlayer = {
-      alliances: vi.fn(() => [mockAlliance]),
-      relation: vi.fn(),
-      id: vi.fn(() => "bot_id"),
-      type: vi.fn(() => PlayerType.Nation),
-    };
-
-    allianceBehavior = new NationAllianceBehavior(
-      mockRandom,
-      mockGame,
-      mockPlayer,
-      new NationEmojiBehavior(mockRandom, mockGame, mockPlayer),
+  // Impossible FFA with only the nation and its ally, each holding half the
+  // map, so the alliance being renewed is the ally's only one. The ally has asked to renew.
+  async function setupRenewal(allyTroops: number) {
+    const game = await setup(
+      "big_plains",
+      { difficulty: Difficulty.Impossible },
+      [
+        new PlayerInfo("nation", PlayerType.Nation, null, "nation"),
+        new PlayerInfo("ally", PlayerType.Human, null, "ally"),
+      ],
     );
+    const nation = game.player("nation");
+    const ally = game.player("ally");
+    game.map().forEachTile((tile) => {
+      if (!game.map().isLand(tile)) return;
+      (game.x(tile) < game.width() / 2 ? nation : ally).conquer(tile);
+    });
+    nation.setTroops(100_000);
+    ally.setTroops(allyTroops);
+
+    game.addExecution(new AllianceRequestExecution(nation, ally.id()));
+    game.executeNextTick();
+    game.addExecution(new AllianceRequestExecution(ally, nation.id()));
+    game.executeNextTick();
+    game.addExecution(new AllianceExtensionExecution(ally, nation.id()));
+    game.executeNextTick();
+    const alliance = nation.allianceWith(ally)!;
+    expect(alliance.onlyOneAgreedToExtend()).toBe(true);
+
+    const random = new PseudoRandom(42);
+    const allianceBehavior = new NationAllianceBehavior(
+      random,
+      game,
+      nation,
+      new NationEmojiBehavior(random, game, nation),
+    );
+    return { game, nation, ally, alliance, allianceBehavior };
+  }
+
+  it("renews the alliance with an ally much stronger than itself", async () => {
+    const { game, alliance, allianceBehavior } = await setupRenewal(500_000);
+    const expiresAt = alliance.expiresAt();
+
+    allianceBehavior.handleAllianceExtensionRequests();
+    game.executeNextTick();
+
+    expect(alliance.expiresAt()).toBeGreaterThan(expiresAt);
+    expect(alliance.onlyOneAgreedToExtend()).toBe(false);
   });
 
-  it("should NOT request extension if onlyOneAgreedToExtend is false (no expiration yet or both already agreed)", () => {
-    mockAlliance.onlyOneAgreedToExtend.mockReturnValue(false);
+  it("lets the alliance run out with a weaker ally it distrusts", async () => {
+    const { game, nation, ally, alliance, allianceBehavior } =
+      await setupRenewal(50_000);
+    nation.updateRelation(ally, -200);
+    const spy = vi.spyOn(game, "addExecution");
+
     allianceBehavior.handleAllianceExtensionRequests();
-    expect(mockGame.addExecution).not.toHaveBeenCalled();
+
+    expect(
+      spy.mock.calls.some((c) => c[0] instanceof AllianceExtensionExecution),
+    ).toBe(false);
+    expect(alliance.onlyOneAgreedToExtend()).toBe(true);
   });
 });
 

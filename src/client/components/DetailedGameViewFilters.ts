@@ -6,6 +6,7 @@ import {
   Trios,
 } from "@openfront/engine-api/game/GameTypes";
 import { PublicGameInfo, PublicGames } from "@openfront/shared/WireSchemas";
+import { UserSettings } from "../UserSettings";
 
 /**
  * Filtering, ordering and saved-profile logic for the Detailed View lobby
@@ -26,10 +27,7 @@ export const LOBBY_SOURCES: LobbySourceFilter[] = ["public", "hosted"];
  */
 export const NAMED_TEAM_CONFIGS = [Duos, Trios, Quads] as const;
 export const NUMERIC_TEAM_CONFIGS = ["2", "3", "4", "5", "6", "7", "8"];
-export const TEAM_CONFIGS: string[] = [
-  ...NAMED_TEAM_CONFIGS,
-  ...NUMERIC_TEAM_CONFIGS,
-];
+const TEAM_CONFIGS: string[] = [...NAMED_TEAM_CONFIGS, ...NUMERIC_TEAM_CONFIGS];
 
 export interface LobbyFilters {
   /** Empty array means "no restriction" for every multi-select below. */
@@ -162,10 +160,7 @@ function withinRange(
   return true;
 }
 
-export function matchesFilters(
-  lobby: PublicGameInfo,
-  filters: LobbyFilters,
-): boolean {
+function matchesFilters(lobby: PublicGameInfo, filters: LobbyFilters): boolean {
   const facts = lobbyFacts(lobby);
 
   if (filters.modes.length > 0 && !filters.modes.includes(facts.mode)) {
@@ -217,9 +212,50 @@ export function filterAndSortLobbies(
 
 // ---- Saved filter profiles ----
 
+// Profiles and the default profile belong to the logged-in account: each key
+// is suffixed with the account's publicId (like the cosmetic selections in
+// UserSettings), so accounts sharing a browser or the desktop app never see
+// each other's. Logged out, the bare key is used.
+
+function scopedKey(key: string): string {
+  const playerId = UserSettings.currentPlayerId();
+  return playerId === null ? key : `${key}:${playerId}`;
+}
+
+/**
+ * Profiles saved before they were per account (or while logged out) move,
+ * together with their default, to the first account that has none of its own,
+ * so nobody loses theirs. Done as one step: an account that already has
+ * profiles leaves the logged-out ones alone, and a default can never be
+ * separated from the profiles it names.
+ */
+function adoptUnscopedProfiles(): void {
+  if (UserSettings.currentPlayerId() === null) return;
+  const profilesKey = scopedKey(FILTER_PROFILES_KEY);
+  if (localStorage.getItem(profilesKey) !== null) return;
+  const profiles = localStorage.getItem(FILTER_PROFILES_KEY);
+  if (profiles === null) return;
+  const defaultName = localStorage.getItem(DEFAULT_FILTER_PROFILE_KEY);
+  const defaultKey = scopedKey(DEFAULT_FILTER_PROFILE_KEY);
+  // Copy first, delete after: if a write fails, the unscoped data is still
+  // there and the next read retries the whole move.
+  try {
+    localStorage.setItem(profilesKey, profiles);
+    if (defaultName !== null) localStorage.setItem(defaultKey, defaultName);
+  } catch (error) {
+    localStorage.removeItem(profilesKey);
+    if (defaultName !== null) localStorage.removeItem(defaultKey);
+    throw error;
+  }
+  localStorage.removeItem(FILTER_PROFILES_KEY);
+  if (defaultName !== null) localStorage.removeItem(DEFAULT_FILTER_PROFILE_KEY);
+}
+
 export const FILTER_PROFILES_KEY = "detailed-view-filter-profiles";
+export const DEFAULT_FILTER_PROFILE_KEY =
+  "detailed-view-default-filter-profile";
 export const MAX_FILTER_PROFILES = 20;
-export const MAX_PROFILE_NAME_LENGTH = 32;
+const MAX_PROFILE_NAME_LENGTH = 32;
 
 function toStringArray(value: unknown, allowed: readonly string[]): string[] {
   if (!Array.isArray(value)) return [];
@@ -276,7 +312,8 @@ export function hasFilterProfile(
 export function loadFilterProfiles(): Record<string, LobbyFilters> {
   let parsed: unknown;
   try {
-    const stored = localStorage.getItem(FILTER_PROFILES_KEY);
+    adoptUnscopedProfiles();
+    const stored = localStorage.getItem(scopedKey(FILTER_PROFILES_KEY));
     if (stored === null) return emptyProfiles();
     parsed = JSON.parse(stored);
   } catch (error) {
@@ -295,7 +332,10 @@ export function loadFilterProfiles(): Record<string, LobbyFilters> {
 
 function persistProfiles(profiles: Record<string, LobbyFilters>) {
   try {
-    localStorage.setItem(FILTER_PROFILES_KEY, JSON.stringify(profiles));
+    localStorage.setItem(
+      scopedKey(FILTER_PROFILES_KEY),
+      JSON.stringify(profiles),
+    );
   } catch (error) {
     console.warn("Failed to save lobby filter profiles", error);
   }
@@ -330,5 +370,43 @@ export function deleteFilterProfile(
   if (!hasFilterProfile(profiles, name)) return profiles;
   delete profiles[name];
   persistProfiles(profiles);
+  // A deleted profile can't stay the default.
+  if (readDefaultFilterProfileName() === name) {
+    saveDefaultFilterProfile("");
+  }
   return profiles;
+}
+
+function readDefaultFilterProfileName(): string {
+  try {
+    adoptUnscopedProfiles();
+    return localStorage.getItem(scopedKey(DEFAULT_FILTER_PROFILE_KEY)) ?? "";
+  } catch (error) {
+    console.warn("Failed to read default lobby filter profile", error);
+    return "";
+  }
+}
+
+/**
+ * The name of the profile applied when the Detailed View is first opened, or
+ * "" when none is set (or the chosen profile no longer exists).
+ */
+export function loadDefaultFilterProfile(
+  profiles: Record<string, LobbyFilters>,
+): string {
+  const name = readDefaultFilterProfileName();
+  return hasFilterProfile(profiles, name) ? name : "";
+}
+
+/** Set the default profile; an empty name clears it. */
+export function saveDefaultFilterProfile(name: string): void {
+  try {
+    if (name === "") {
+      localStorage.removeItem(scopedKey(DEFAULT_FILTER_PROFILE_KEY));
+    } else {
+      localStorage.setItem(scopedKey(DEFAULT_FILTER_PROFILE_KEY), name);
+    }
+  } catch (error) {
+    console.warn("Failed to save default lobby filter profile", error);
+  }
 }

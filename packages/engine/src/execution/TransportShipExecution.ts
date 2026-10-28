@@ -163,7 +163,7 @@ export class TransportShipExecution implements Execution {
     this.motionPlanDst = this.dst;
 
     // Notify the target player about the incoming naval invasion
-    if (this.target.id() !== mg.terraNullius().id()) {
+    if (this.target.isPlayer()) {
       mg.displayIncomingUnit(
         this.boat.id(),
         "events_display.naval_invasion_inbound",

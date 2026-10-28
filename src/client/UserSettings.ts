@@ -20,6 +20,7 @@ import { isDesktopShell } from "./DesktopShell";
 export function getDefaultKeybinds(isMac: boolean): Record<string, string> {
   return {
     toggleView: "Space",
+    preventStacking: "KeyH",
     coordinateGrid: "KeyM",
     buildCity: "Digit1",
     buildFactory: "Digit2",
@@ -84,6 +85,9 @@ export function keysMayBeShared(a: string, b: string): boolean {
 }
 
 export const USER_SETTINGS_CHANGED_EVENT = "event:user-settings-changed";
+
+// index.html reads this key directly to set the theme class before first paint.
+const HALLOWEEN_THEME_KEY = "settings.halloweenTheme";
 
 /**
  * Mixer channels. Category is a pure function of the cue name (categoryOf in
@@ -198,8 +202,9 @@ const AUDIO_LEGACY_KEY: Partial<Record<AudioCategory, string>> = {
 export const PATTERN_KEY = "territoryPattern";
 export const FLAG_KEY = "flag";
 export const CROWN_KEY = "crown";
-export const COLOR_KEY = "settings.territoryColor";
 export const PERFORMANCE_OVERLAY_KEY = "settings.performanceOverlay";
+// Kept out of the graphics overrides so picking a preset doesn't turn it back on.
+export const MAP_LAYERS_KEY = "settings.mapLayers";
 export const KEYBINDS_KEY = "settings.keybinds";
 export const GRAPHICS_KEY = "settings.graphics";
 export const GRAPHICS_PRESETS_KEY = "settings.graphicsPresets";
@@ -250,7 +255,7 @@ export interface CosmeticLoadout {
 export const MAX_LOADOUTS = 10;
 
 /** Slots are numbered rather than named: "01", "02", … */
-export function loadoutSlotName(slot: number): string {
+function loadoutSlotName(slot: number): string {
   return slot.toString().padStart(2, "0");
 }
 
@@ -318,6 +323,11 @@ export class UserSettings {
     for (const key of PER_PLAYER_KEYS) {
       settings.emitChange(key, settings.getCached(key));
     }
+  }
+
+  /** publicId of the logged-in player, or null when logged out. */
+  static currentPlayerId(): string | null {
+    return UserSettings.playerId;
   }
 
   private storageKey(key: string): string {
@@ -420,6 +430,10 @@ export class UserSettings {
     return this.getBool(PERFORMANCE_OVERLAY_KEY, false);
   }
 
+  mapLayers() {
+    return this.getBool(MAP_LAYERS_KEY, true);
+  }
+
   alertFrame() {
     return this.getBool("settings.alertFrame", true);
   }
@@ -493,6 +507,14 @@ export class UserSettings {
     return this.getBool("settings.cursorCostLabel", legacy);
   }
 
+  snapBuildPreview() {
+    return this.getBool("settings.snapBuildPreview", false);
+  }
+
+  toggleSnapBuildPreview() {
+    this.setBool("settings.snapBuildPreview", !this.snapBuildPreview());
+  }
+
   toggleLeftClickOpenMenu() {
     this.setBool("settings.leftClickOpensMenu", !this.leftClickOpensMenu());
   }
@@ -508,6 +530,10 @@ export class UserSettings {
 
   togglePerformanceOverlay() {
     this.setBool(PERFORMANCE_OVERLAY_KEY, !this.performanceOverlay());
+  }
+
+  toggleMapLayers() {
+    this.setBool(MAP_LAYERS_KEY, !this.mapLayers());
   }
 
   toggleAlertFrame() {
@@ -544,6 +570,14 @@ export class UserSettings {
 
   toggleGoToPlayer() {
     this.setBool("settings.goToPlayer", !this.goToPlayer());
+  }
+
+  halloweenTheme() {
+    return this.getBool(HALLOWEEN_THEME_KEY, true);
+  }
+
+  toggleHalloweenTheme() {
+    this.setBool(HALLOWEEN_THEME_KEY, !this.halloweenTheme());
   }
 
   nukeAllianceSafetyDuration(): number {

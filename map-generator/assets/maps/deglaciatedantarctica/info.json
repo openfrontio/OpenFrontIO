@@ -1,9 +1,9 @@
 {
+  "$schema": "../../../info.schema.json",
   "id": "DeglaciatedAntarctica",
   "name": "Deglaciated Antarctica",
   "translation_key": "map.deglaciatedantarctica",
   "categories": ["antarctica", "fictional"],
-  "multiplayer_frequency": 4,
   "nations": [
     {
       "coordinates": [1545, 785],
@@ -50,5 +50,6 @@
       "name": "French Claim",
       "flag": "fr"
     }
-  ]
+  ],
+  "themes": ["antarctica"]
 }

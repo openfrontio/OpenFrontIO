@@ -16,7 +16,7 @@
  */
 
 /** Per-side dimension for every atlas layer. Larger images are downscaled. */
-export const SKIN_DIM = 1024;
+const SKIN_DIM = 1024;
 
 export class SkinAtlasArray {
   private gl: WebGL2RenderingContext;

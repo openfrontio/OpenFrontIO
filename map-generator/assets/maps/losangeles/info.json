@@ -1,9 +1,9 @@
 {
+  "$schema": "../../../info.schema.json",
   "id": "LosAngeles",
   "name": "Los Angeles",
   "translation_key": "map.losangeles",
   "categories": ["north_america"],
-  "multiplayer_frequency": 8,
   "nations": [
     {
       "coordinates": [546, 16],

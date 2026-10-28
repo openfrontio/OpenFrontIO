@@ -69,6 +69,14 @@ Licensed under [CC0 1.0.](https://creativecommons.org/publicdomain/zero/1.0/lega
 [NASA/JPL-Caltech](https://www.jpl.nasa.gov/images/pia10748-our-milky-way-gets-a-makeover-artist-concept/)
 [Public Domain](https://www.jpl.nasa.gov/jpl-image-use-policy/)
 
+### Brain Rot Map
+
+[https://en.wikipedia.org/wiki/Human_brain#/media/File:Skull_and_brain_normal_human.svg](https://en.wikipedia.org/wiki/Human_brain#/media/File:Skull_and_brain_normal_human.svg)
+Patrick J. Lynch, medical illustrator
+Skull and brain normal human diagram.
+Creative Commons Attribution 2.5 License 2006
+File:Skull and brain normal human.svg
+
 ### Strait Of Malacca Map
 
 [https://commons.wikimedia.org/wiki/User:Sadalmelik#/media/File:Sumatra_Topography.png](https://commons.wikimedia.org/wiki/File:Sumatra_Topography.png#/media/File:Sumatra_Topography.png)

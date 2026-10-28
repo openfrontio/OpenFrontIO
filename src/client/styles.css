@@ -5,6 +5,16 @@
 @custom-variant hover (&:hover);
 /* The Steam shell has no ad slots, so it can use the width they reserve. */
 @custom-variant desktop (&:where(.desktop-shell, .desktop-shell *));
+/* Short or narrow viewports (small laptops, phones, Poki's embedded frame): an
+   open inline page fills the screen there, without the header and footer. */
+@custom-variant compact {
+  @media (max-height: 800px) {
+    @slot;
+  }
+  @media (max-width: 1023px) {
+    @slot;
+  }
+}
 
 @theme {
   --default-ring-width: 3px;
@@ -185,6 +195,12 @@ body.page-open {
 }
 .hide-scrollbar::-webkit-scrollbar {
   display: none; /* Chrome, Safari */
+}
+
+/* Main adds .game-portal to <html> on CrazyGames and Poki. A rule rather than
+   a one-off sweep, so it also hides elements that render later (lazy modals). */
+.game-portal .no-game-portal {
+  display: none !important;
 }
 
 .start-game-button {
