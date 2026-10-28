@@ -18,8 +18,8 @@ export const ONBOARDING_STEPS: readonly OnboardingStep[] = [
  * Landmarks of the Tutorial map (map-generator/assets/maps/tutorial), in
  * tiles: where the player may spawn, and the empty islet of the boat step.
  */
-export const SPAWN_ZONE = { x: 140, y: 140, radius: 22 };
-export const ISLET = { x: 205, y: 200, radius: 20 };
+export const SPAWN_ZONE = { x: 98, y: 98, radius: 15 };
+export const ISLET = { x: 144, y: 140, radius: 14 };
 
 /**
  * An attack or boat that would leave the player under this share of their

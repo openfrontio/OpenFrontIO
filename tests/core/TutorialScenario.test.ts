@@ -71,7 +71,7 @@ async function playTutorial(
 const spawn = (game: Game): StampedIntent => ({
   type: "spawn",
   clientID: CLIENT,
-  tile: game.ref(140, 140),
+  tile: game.ref(98, 98),
 });
 
 const human = (game: Game) => game.playerByClientID(CLIENT)!;
@@ -101,12 +101,12 @@ describe("Tutorial scenario", () => {
     const tribe = ofType(game, PlayerType.Bot)!;
     expect(nation.isAlive()).toBe(true);
     expect(tribe.isAlive()).toBe(true);
-    // The strait splits the map at x ≈ 190..220: the nation filled its own
+    // The strait splits the map at x ≈ 130..155: the nation filled its own
     // island and the tribe stayed on the player's.
     const xs = (p: Player) => [...p.tiles()].map((t) => game.x(t));
-    expect(Math.min(...xs(nation))).toBeGreaterThan(210);
-    expect(Math.max(...xs(tribe))).toBeLessThan(200);
-    expect(nation.numTilesOwned()).toBeGreaterThan(4000);
+    expect(Math.min(...xs(nation))).toBeGreaterThan(150);
+    expect(Math.max(...xs(tribe))).toBeLessThan(135);
+    expect(nation.numTilesOwned()).toBeGreaterThan(3000);
     expect(tribe.numTilesOwned()).toBeGreaterThan(1000);
     expect(game.getWinner()).toBeNull();
   });

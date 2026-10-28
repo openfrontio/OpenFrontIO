@@ -26,8 +26,11 @@ import {
 /** How often (in ticks) to re-read the map for the step and its target. */
 const SCAN_TICKS = 5;
 
-/** How long the low-troops warning and the "not there" nudge stay up. */
-const LOW_TROOPS_MS = 2500;
+/**
+ * How long the low-troops warning stays up at least, so it can be read
+ * even once troops grow back, and how long the "not there" nudge lasts.
+ */
+const LOW_TROOPS_MS = 5000;
 const NUDGE_MS = 1500;
 
 /**
@@ -113,9 +116,9 @@ export class OnboardingOverlay extends LitElement implements Controller {
       this.scan(me);
     }
     const now = performance.now();
-    this.lowTroops =
-      me.hasSpawned() &&
-      (this.troopShare(me) < LOW_TROOP_SHARE || now < this.lowTroopsUntil);
+    const low = me.hasSpawned() && this.troopShare(me) < LOW_TROOP_SHARE;
+    if (low && !this.lowTroops) this.lowTroopsUntil = now + LOW_TROOPS_MS;
+    this.lowTroops = low || now < this.lowTroopsUntil;
     this.nudging = now < this.nudgeUntil;
   }
 
@@ -141,7 +144,7 @@ export class OnboardingOverlay extends LitElement implements Controller {
       return true;
     }
     if (verdict === "low_troops") {
-      this.lowTroopsUntil = now + LOW_TROOPS_MS;
+      if (!this.lowTroops) this.lowTroopsUntil = now + LOW_TROOPS_MS;
       this.lowTroops = true;
     } else {
       this.nudgeUntil = now + NUDGE_MS;

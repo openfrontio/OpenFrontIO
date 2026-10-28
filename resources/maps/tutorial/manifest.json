@@ -2,31 +2,31 @@
   "categories": ["fictional"],
   "custom_tribes": [
     {
-      "coordinates": [55, 70],
+      "coordinates": [38, 49],
       "name": "Hill Tribe"
     }
   ],
   "hidden": true,
   "id": "Tutorial",
   "map": {
-    "height": 240,
-    "num_land_tiles": 32303,
-    "width": 320
+    "height": 168,
+    "num_land_tiles": 15836,
+    "width": 224
   },
   "map16x": {
-    "height": 60,
-    "num_land_tiles": 1896,
-    "width": 80
+    "height": 42,
+    "num_land_tiles": 908,
+    "width": 56
   },
   "map4x": {
-    "height": 120,
-    "num_land_tiles": 7910,
-    "width": 160
+    "height": 84,
+    "num_land_tiles": 3852,
+    "width": 112
   },
   "name": "Tutorial",
   "nations": [
     {
-      "coordinates": [265, 105],
+      "coordinates": [186, 74],
       "flag": "",
       "name": "Red Empire"
     }
