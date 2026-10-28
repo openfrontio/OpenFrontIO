@@ -52,7 +52,7 @@ describe("GameManager.activeClientsBySegment", () => {
     b.joinClient(makeClient());
     const gone = makeClient({ platform: "crazygames", device: "mobile" });
     b.joinClient(gone);
-    mockWsOf(gone).trigger("close");
+    void mockWsOf(gone).trigger("close");
 
     const segments = manager.activeClientsBySegment();
     const nonZero = segments

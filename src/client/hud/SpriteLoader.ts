@@ -104,21 +104,12 @@ const getSpriteForUnit = (unit: UnitView): ImageBitmap | null => {
   return spriteMap.get(unitType) ?? null;
 };
 
-export const isSpriteReady = (unit: UnitView): boolean => {
-  const unitType = unit.type();
-  if (unitType === UnitType.Train) {
-    const trainType = trainTypeToSpriteType(unit);
-    return spriteMap.has(trainType);
-  }
-  return spriteMap.has(unitType);
-};
-
 const coloredSpriteCache: Map<string, HTMLCanvasElement> = new Map();
 
 /**
  * Load a canvas and replace grayscale with border colors
  */
-export const colorizeCanvas = (
+const colorizeCanvas = (
   source: CanvasImageSource & { width: number; height: number },
   colorA: Colord,
   colorB: Colord,

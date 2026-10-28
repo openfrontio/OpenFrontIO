@@ -47,7 +47,7 @@ export function timelineFrames(
 }
 
 /** An icon button in the in-game style (GameRightSidebar). */
-export function iconButton(src: string, label: string, onClick: () => void) {
+function iconButton(src: string, label: string, onClick: () => void) {
   return html`<button
     class="p-1 rounded-md cursor-pointer hover:bg-white/10"
     title=${label}

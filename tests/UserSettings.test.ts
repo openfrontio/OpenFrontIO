@@ -617,6 +617,11 @@ describe("getDefaultKeybinds", () => {
         }
       }
     }
+    const keybinds = getDefaultKeybinds(false);
+    expect(keybinds.buildScrollModifier).toBe("AltLeft");
+    expect(keybinds.emojiMenuModifier).toBe("AltLeft");
+    // Note: this is related to user_setting.graphics_refresh_modifier, not the actual alt key.
+    expect(keybinds.altKey).toBe("AltLeft");
   });
 
   it("handles Mac-specific modifier keys correctly", () => {

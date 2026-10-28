@@ -31,18 +31,18 @@ const fxAtlasUrl = assetUrl("atlases/fx-atlas.png");
 // FX type indices (atlas row)
 // ---------------------------------------------------------------------------
 
-export const FX_NUKE = 0;
-export const FX_SAM_EXPLOSION = 1;
-export const FX_BUILDING_EXPLOSION = 2;
-export const FX_UNIT_EXPLOSION = 3;
-export const FX_MINI_EXPLOSION = 4;
-export const FX_SINKING_SHIP = 5;
-export const FX_MINI_FIRE = 6;
-export const FX_MINI_SMOKE = 7;
-export const FX_MINI_BIG_SMOKE = 8;
-export const FX_MINI_SMOKE_FIRE = 9;
-export const FX_DUST = 10;
-export const FX_CONQUEST = 11;
+const FX_NUKE = 0;
+const FX_SAM_EXPLOSION = 1;
+const FX_BUILDING_EXPLOSION = 2;
+const FX_UNIT_EXPLOSION = 3;
+const FX_MINI_EXPLOSION = 4;
+const FX_SINKING_SHIP = 5;
+const FX_MINI_FIRE = 6;
+const FX_MINI_SMOKE = 7;
+const FX_MINI_BIG_SMOKE = 8;
+const FX_MINI_SMOKE_FIRE = 9;
+const FX_DUST = 10;
+const FX_CONQUEST = 11;
 const FX_TYPE_COUNT = 12;
 
 // ---------------------------------------------------------------------------
@@ -262,7 +262,7 @@ export class FxSpritePass {
 
     gl.bindVertexArray(null);
 
-    this.loadAtlas();
+    void this.loadAtlas();
   }
 
   // -------------------------------------------------------------------------
