@@ -90,19 +90,13 @@ describe("ClanModal — signed out", () => {
     expect(modal.isOpen()).toBe(true);
     expect(getElState(modal, "activeTab")).toBe("map");
     expect(modal.querySelector("clan-map-view")).not.toBeNull();
-  });
-
-  it("shows Coming Soon instead of the map in prod", async () => {
-    stubGameEnv("prod");
-    modal.open({ tab: "map" });
-    await flushAsync(modal);
-
-    expect(getElState(modal, "activeTab")).toBe("map");
-    // The map hasn't shipped to prod: the iframe never mounts, and neither
-    // does the fullscreen button that targets it.
-    expect(modal.querySelector("clan-map-view")).toBeNull();
-    expect(modal.textContent).toContain("clan_modal.map_coming_soon");
-    expect(modal.querySelector('[data-testid="map-fullscreen"]')).toBeNull();
+    // The map is still in alpha, and its tab says so.
+    const shell = modal.querySelector("o-modal") as unknown as {
+      tabs: { key: string; label: string }[];
+    };
+    expect(shell.tabs.find((t) => t.key === "map")?.label).toBe(
+      "clan_modal.tab_map_alpha",
+    );
   });
 
   it("lets a signed-out viewer browse clans", async () => {
