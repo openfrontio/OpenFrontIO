@@ -56,7 +56,7 @@ import { LINES_PER_PLAYER, MAX_CHARS } from "./Types";
 const FLAG_ASPECT = 128 / 85;
 
 // Crown cosmetics use square cells (must match the crownAtlas cell size below).
-export const CROWN_CELL = 128;
+const CROWN_CELL = 128;
 
 // Initial unique-crown capacity. Crowns are a rare cosmetic, so start small
 // (32 × 128×128 RGBA8 + mips ≈ 2.8 MB vs ~43 MB at the 512 flag default);

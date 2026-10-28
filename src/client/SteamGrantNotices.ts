@@ -71,7 +71,7 @@ export interface DatedGrant extends SteamGrant {
 }
 
 /** The dated grant on this account, Steam or not, or null. */
-export function datedGrantOf(
+function datedGrantOf(
   userMe: UserMeResponse | false | null,
 ): DatedGrant | null {
   if (userMe === null || userMe === false) return null;

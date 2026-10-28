@@ -11,7 +11,7 @@ import { getAuthHeader } from "./Auth";
 
 // A late-game World snapshot is about 2.7 MB raw. A shared save is anyone's
 // upload, so a download that inflates past this is a gzip bomb, not a game.
-export const MAX_SNAPSHOT_BYTES = 64 * 1024 * 1024;
+const MAX_SNAPSHOT_BYTES = 64 * 1024 * 1024;
 
 export type SavedGameError =
   // No session, or the API refused it.

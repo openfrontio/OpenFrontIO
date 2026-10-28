@@ -190,7 +190,7 @@ function mintGroupToken(): string {
   return randomBytes(12).toString("base64url");
 }
 
-export function defaultGameServerDeps(): GameServerDeps {
+function defaultGameServerDeps(): GameServerDeps {
   return {
     archive: (record) => archive(finalizeGameRecord(record)),
     replayWinner: replayWinnerInChild,

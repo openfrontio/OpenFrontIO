@@ -36,7 +36,7 @@ import { clientPlatform } from "./ClientPlatform";
 // warnings. Prod has enough players that 1% is plenty of signal; everywhere
 // else every session reports, so a staging or dev deployment shows
 // everything at once.
-export function sessionSamplingRate(env: GameEnv): number {
+function sessionSamplingRate(env: GameEnv): number {
   return env === GameEnv.Prod ? 0.01 : 1;
 }
 
@@ -45,7 +45,7 @@ export function sessionSamplingRate(env: GameEnv): number {
 // would be its own billed session; at 10% a common error still shows up
 // hundreds of times a day. Both rates cut the same hash (isSessionSampled),
 // so the 1% sessions are among these and send their errors too.
-export function errorSamplingRate(env: GameEnv): number {
+function errorSamplingRate(env: GameEnv): number {
   return env === GameEnv.Prod ? 0.1 : 1;
 }
 
@@ -294,7 +294,7 @@ function slimBrowserMeta(item: TransportItem): TransportItem {
  * has initialized. So every URL that leaves the page is cut to origin +
  * path: no query, no hash.
  */
-export function stripUrl(url: string): string {
+function stripUrl(url: string): string {
   return url.split(/[?#]/, 1)[0];
 }
 

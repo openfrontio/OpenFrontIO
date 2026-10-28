@@ -27,7 +27,7 @@ export function discordShareText(url: string, text: string): string {
 // The native share sheet, where there is one to use. Desktop Chrome on
 // Windows has navigator.share too, but there the three buttons say more than
 // a generic Share, so the sheet is kept to touch devices.
-export function useNativeShare(): boolean {
+function useNativeShare(): boolean {
   return (
     typeof navigator !== "undefined" &&
     typeof navigator.share === "function" &&
@@ -73,7 +73,7 @@ const RING =
   "pointer-events-none absolute -inset-1 rounded-[14px] border-2 border-solid border-[rgba(250,204,21,0.95)] opacity-0 shadow-[0_0_12px_rgba(250,204,21,0.45)]";
 
 /** Whether this device shows the share ring: a fine hover pointer, motion on. */
-export function shareRingEnabled(): boolean {
+function shareRingEnabled(): boolean {
   if (typeof window === "undefined" || typeof window.matchMedia !== "function")
     return false;
   return (

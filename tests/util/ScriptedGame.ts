@@ -151,7 +151,7 @@ export function stepScripted(runner: GameRunner): void {
  * a pure function of the game state and tick, so a restored game gets the
  * same intents as the original at the same tick.
  */
-export function scriptedTurn(game: Game): Turn {
+function scriptedTurn(game: Game): Turn {
   const tick = game.ticks();
   const rand = new PseudoRandom(tick * 7919 + 17);
   const intents: StampedIntent[] = [];
