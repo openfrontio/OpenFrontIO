@@ -1,10 +1,10 @@
 {
+  "$schema": "../../../info.schema.json",
   "id": "Turkiye",
   "name": "Turkiye",
   "display_name": "Türkiye",
   "translation_key": "map.turkiye",
   "categories": ["countries", "europe", "asia"],
-  "multiplayer_frequency": 5,
   "nations": [
     {
       "coordinates": [439, 212],
