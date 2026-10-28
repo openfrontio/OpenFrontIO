@@ -624,7 +624,7 @@ export class OnboardingOverlay extends LitElement implements Controller {
       </div>
       <div
         dir=${textDirection()}
-        class="fixed top-20 left-1/2 -translate-x-1/2 z-[1001] pointer-events-none w-[min(92vw,560px)] rounded-xl bg-gray-900 px-5 py-4 text-center text-white shadow-2xl ${
+        class="fixed top-[1cm] left-1/2 -translate-x-1/2 z-[1001] pointer-events-none w-[min(92vw,560px)] rounded-xl bg-gray-900 px-5 py-4 text-center text-white shadow-2xl ${
           this.nudging ? "onboarding-shake ring-4 ring-yellow-300" : ""
         }"
       >
