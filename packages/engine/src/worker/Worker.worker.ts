@@ -147,6 +147,12 @@ function transfersOf(gameUpdates: GameUpdateViewData[]): Transferable[] {
     if (gu.packedNukeImpacts) {
       transfers.push(gu.packedNukeImpacts.buffer);
     }
+    if (gu.packedUnitUpdates) {
+      transfers.push(gu.packedUnitUpdates.buffer);
+    }
+    if (gu.packedMissileTimers) {
+      transfers.push(gu.packedMissileTimers.buffer);
+    }
   }
   return transfers;
 }

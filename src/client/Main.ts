@@ -471,7 +471,7 @@ class Client {
       lapseMarker = localStorage.getItem(LAPSE_NOTICE_KEY);
     };
 
-    gamePortal.maybeInit();
+    void gamePortal.maybeInit();
 
     // Every exit from a game (win screen, in-game quit, popstate) navigates to
     // "/" and re-runs this, so announcing the menu here also covers "returned
@@ -1058,16 +1058,16 @@ class Client {
       applyUserMe(initialAuthGeneration)(false);
     } else {
       // JWT appears valid: fetch the profile and apply it if still current.
-      getUserMe().then(applyUserMe(initialAuthGeneration));
+      void getUserMe().then(applyUserMe(initialAuthGeneration));
     }
 
     // Re-run auth when the player signs into their portal account mid-session.
     // Logout reloads the page, so only login needs handling here.
-    gamePortal.addAuthListener(() => {
+    void gamePortal.addAuthListener(() => {
       invalidateUserMe();
       snapshotLapseMarker();
       const generation = authGeneration;
-      reauthAfterPortalChange().then((result) =>
+      void reauthAfterPortalChange().then((result) =>
         result === false
           ? applyUserMe(generation)(false)
           : getUserMe().then(applyUserMe(generation)),
@@ -1091,7 +1091,7 @@ class Client {
     if (document.readyState === "loading") {
       document.addEventListener("DOMContentLoaded", () => this.handleUrl());
     } else {
-      this.handleUrl();
+      void this.handleUrl();
     }
 
     // An invite accepted from outside the app is parked by the shell, because
@@ -1156,7 +1156,7 @@ class Client {
     };
 
     const leaveGame = () => {
-      gamePortal.gameplayStop().then(() => {
+      void gamePortal.gameplayStop().then(() => {
         // redirect to the home page
         window.location.href = homeHref();
       });
@@ -1190,11 +1190,11 @@ class Client {
           // We can't block navigation on an async confirmation, so restore the
           // history entry immediately and only leave once the player confirms.
           history.pushState(null, "", this.currentUrl);
-          showInGameConfirm(translateText("help_modal.exit_confirmation")).then(
-            (isConfirmed) => {
-              if (isConfirmed) leaveGame();
-            },
-          );
+          void showInGameConfirm(
+            translateText("help_modal.exit_confirmation"),
+          ).then((isConfirmed) => {
+            if (isConfirmed) leaveGame();
+          });
           return;
         }
 
@@ -1210,11 +1210,11 @@ class Client {
 
     const onJoinChanged = () => {
       if (this.lobbyHandle !== null) {
-        this.handleLeaveLobby();
+        void this.handleLeaveLobby();
       }
 
       // Attempt to join lobby
-      this.handleUrl();
+      void this.handleUrl();
     };
 
     // Handle browser navigation (back/forward) and manual hash edits.
@@ -1402,7 +1402,7 @@ class Client {
         return;
       }
     }
-    gamePortal.isInstantMultiplayer().then((isInstant) => {
+    void gamePortal.isInstantMultiplayer().then((isInstant) => {
       if (isInstant) {
         console.log(`Portal: hosting instant multiplayer lobby`);
         whenModalLoaded("host-lobby-modal", () => this.hostModal.open());
@@ -1636,7 +1636,7 @@ class Client {
   private refreshStore(): void {
     // The store loads on demand (see LazyModals); until it has, there's
     // nothing to refresh.
-    if (customElements.get("store-modal")) this.storeModal?.refresh();
+    if (customElements.get("store-modal")) void this.storeModal?.refresh();
   }
 
   // Returns the requeue mode ("/?requeue" = 1v1, "/?requeue=2v2" = 2v2,
@@ -1902,7 +1902,7 @@ class Client {
     // From here lobbyHandle is the guard.
     this.joinInFlight = false;
 
-    this.lobbyHandle.prestart.then(() => {
+    void this.lobbyHandle.prestart.then(() => {
       // The game is actually starting now (lobby wait is over). Let listeners that stay up
       // through the wait (e.g. the featured-stream panel) hide at this point instead of on join.
       this.menuTornDown = true;
@@ -1942,7 +1942,7 @@ class Client {
       }
     });
 
-    this.lobbyHandle.join.then(() => {
+    void this.lobbyHandle.join.then(() => {
       this.loadedJoinModal()?.closeWithoutLeaving();
       this.gameModeSelector.stop();
       incrementGamesPlayed();
@@ -1953,7 +1953,7 @@ class Client {
         window.PageOS.session.newPageView();
       }
       gamePortal.loadingStop();
-      gamePortal.gameplayStart();
+      void gamePortal.gameplayStart();
       setInGameSignal(true);
 
       const lobbyIdHidden = !this.userSettings.lobbyIdVisibility();
@@ -2183,7 +2183,7 @@ class Client {
       }
     }
 
-    gamePortal.gameplayStop();
+    void gamePortal.gameplayStop();
   }
 
   // Puts the player back into the ranked queue. From a pre-start match
@@ -2296,7 +2296,7 @@ const bootstrap = () => {
   installCtrlWheelZoomBlocker();
 
   initLayout();
-  new Client().initialize();
+  void new Client().initialize();
   initNavigation();
   prefetchGameClient();
   prefetchModals();

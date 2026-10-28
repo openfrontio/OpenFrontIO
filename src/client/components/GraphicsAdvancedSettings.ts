@@ -29,6 +29,7 @@ const COSMETICS_SHOW_FROM_LABELS: Record<
   everyone: "graphics_setting.cosmetics_show_from_everyone",
   teammates: "graphics_setting.cosmetics_show_from_teammates",
   self: "graphics_setting.cosmetics_show_from_self",
+  none: "graphics_setting.cosmetics_show_from_none",
 };
 
 type CosmeticCategory = Exclude<
@@ -1008,7 +1009,7 @@ export class GraphicsAdvancedSettings extends LitElement {
             description=${translateText(descKey)}
             id=${`cosmetics-${key}-toggle`}
             .checked=${cosmetics[key] !== false}
-            ?disabled=${showFrom === "self"}
+            ?disabled=${showFrom === "self" || showFrom === "none"}
             @change=${() => this.onToggleCosmeticCategory(key)}
           ></setting-toggle>
         `,
