@@ -229,64 +229,81 @@ export class PlayerExecution implements Execution {
     }
 
     const map = this.map;
-    let hasInscribedBox = false;
-    for (let i = 0; i < clusters.length && !hasInscribedBox; i++) {
-      const iMinX = boxes[i * 4];
-      const iMinY = boxes[i * 4 + 1];
-      const iMaxX = boxes[i * 4 + 2];
-      const iMaxY = boxes[i * 4 + 3];
-      for (let j = 0; j < clusters.length; j++) {
-        if (i !== j) {
-          const jIdx = j * 4;
-          if (
-            boxes[jIdx] <= iMinX &&
-            boxes[jIdx + 1] <= iMinY &&
-            boxes[jIdx + 2] >= iMaxX &&
-            boxes[jIdx + 3] >= iMaxY
-          ) {
-            hasInscribedBox = true;
-            break;
-          }
-        }
-      }
-    }
-
     const isPinched = new Uint8Array(clusters.length);
-    let hasPinch = false;
     for (let i = 0; i < clusters.length; i++) {
       if (this.hasDiagonalPinch(clusters[i])) {
         isPinched[i] = 1;
-        hasPinch = true;
-      }
-    }
-
-    let hasFallout = false;
-    if (!hasInscribedBox && !hasPinch) {
-      for (let i = 0; i < clusters.length && !hasFallout; i++) {
-        const cl = clusters[i];
-        for (let j = 0; j < cl.length; j++) {
-          const t = cl[j];
-          const numN = map.neighbors4(t, this.nbuf);
-          for (let k = 0; k < numN; k++) {
-            if (map.hasFallout(this.nbuf[k])) {
-              hasFallout = true;
-              break;
-            }
-          }
-          if (hasFallout) break;
-        }
       }
     }
 
     let largestIndex = 0;
     let maxTerritoryArea = 0;
     const clusterSizes = new Int32Array(clusters.length);
-    let territoryAreas: number[] | undefined;
-    let clusterTileTIds: Int32Array[] | undefined;
 
-    if (!hasInscribedBox && !hasPinch && !hasFallout) {
-      maxTerritoryArea = this.player.numTilesOwned();
-      for (let i = 1; i < clusters.length; i++) {
+    // Sovereign invariant ranking: determine the primary territory by measuring the
+    // largest contiguous 4-way territory area reachable from each border cluster,
+    // rather than raw border tile count or bounding box (which can be distorted by
+    // craters, enclaves, or diagonal staircases).
+    const state = this.traversalState();
+    const reservedGenerations = clusters.length * 4 + 16;
+    const areaGen = this.bumpGenerations(reservedGenerations);
+    const visited = state.visited;
+    const stack = state.stack;
+    const mySmallID = this.player.smallID();
+    const territoryAreas = [0];
+    const clusterTileTIds = new Array(clusters.length);
+
+    let nextTId = 1;
+    for (let i = 0; i < clusters.length; i++) {
+      const cluster = clusters[i];
+      const tileTIds = new Int32Array(cluster.length);
+      clusterTileTIds[i] = tileTIds;
+      let maxClusterTerritory = 0;
+      for (let j = 0; j < cluster.length; j++) {
+        const t = cluster[j];
+        if (visited[t] >= areaGen) {
+          const tId = visited[t] - areaGen + 1;
+          tileTIds[j] = tId;
+          const sz = territoryAreas[tId];
+          if (sz > maxClusterTerritory) maxClusterTerritory = sz;
+          continue;
+        }
+        if (map.ownerID(t) !== mySmallID) continue;
+        const tId = nextTId++;
+        tileTIds[j] = tId;
+        const tGen = areaGen + tId - 1;
+        while (state.gen < tGen && state.gen >= areaGen) {
+          this.bumpGeneration();
+        }
+        visited[t] = tGen;
+        stack.length = 0;
+        stack.push(t);
+        let size = 0;
+        while (stack.length > 0) {
+          const cur = stack.pop()!;
+          size++;
+          const numNeighbors = map.neighbors4(cur, this.nbuf);
+          for (let k = 0; k < numNeighbors; k++) {
+            const n = this.nbuf[k];
+            if (visited[n] < areaGen && map.ownerID(n) === mySmallID) {
+              visited[n] = tGen;
+              stack.push(n);
+            }
+          }
+        }
+        territoryAreas[tId] = size;
+        if (size > maxClusterTerritory) maxClusterTerritory = size;
+      }
+      clusterSizes[i] = maxClusterTerritory;
+      if (maxClusterTerritory > maxTerritoryArea) {
+        maxTerritoryArea = maxClusterTerritory;
+      }
+    }
+
+    for (let i = 1; i < clusters.length; i++) {
+      if (clusterSizes[i] > clusterSizes[largestIndex]) {
+        largestIndex = i;
+      } else if (clusterSizes[i] === clusterSizes[largestIndex]) {
         const curBoxArea =
           (boxes[i * 4 + 2] - boxes[i * 4] + 1) *
           (boxes[i * 4 + 3] - boxes[i * 4 + 1] + 1);
@@ -297,81 +314,6 @@ export class PlayerExecution implements Execution {
           largestIndex = i;
         } else if (curBoxArea === bestBoxArea) {
           if (clusters[i].length > clusters[largestIndex].length) {
-            largestIndex = i;
-          }
-        }
-      }
-    } else {
-      // Sovereign invariant ranking: determine the primary territory by measuring the
-      // largest contiguous 4-way territory area reachable from each border cluster,
-      // rather than raw border tile count (which can be distorted by craters or enclaves).
-      const state = this.traversalState();
-      const reservedGenerations = clusters.length * 4 + 16;
-      const areaGen = this.bumpGenerations(reservedGenerations);
-      const visited = state.visited;
-      const stack = state.stack;
-      const mySmallID = this.player.smallID();
-      territoryAreas = [0];
-      clusterTileTIds = new Array(clusters.length);
-
-      let nextTId = 1;
-      for (let i = 0; i < clusters.length; i++) {
-        const cluster = clusters[i];
-        const tileTIds = new Int32Array(cluster.length);
-        clusterTileTIds[i] = tileTIds;
-        let maxClusterTerritory = 0;
-        for (let j = 0; j < cluster.length; j++) {
-          const t = cluster[j];
-          if (visited[t] >= areaGen) {
-            const tId = visited[t] - areaGen + 1;
-            tileTIds[j] = tId;
-            const sz = territoryAreas[tId];
-            if (sz > maxClusterTerritory) maxClusterTerritory = sz;
-            continue;
-          }
-          if (map.ownerID(t) !== mySmallID) continue;
-          const tId = nextTId++;
-          tileTIds[j] = tId;
-          const tGen = areaGen + tId - 1;
-          while (state.gen < tGen && state.gen >= areaGen) {
-            this.bumpGeneration();
-          }
-          visited[t] = tGen;
-          stack.length = 0;
-          stack.push(t);
-          let size = 0;
-          while (stack.length > 0) {
-            const cur = stack.pop()!;
-            size++;
-            const numNeighbors = map.neighbors4(cur, this.nbuf);
-            for (let k = 0; k < numNeighbors; k++) {
-              const n = this.nbuf[k];
-              if (visited[n] < areaGen && map.ownerID(n) === mySmallID) {
-                visited[n] = tGen;
-                stack.push(n);
-              }
-            }
-          }
-          territoryAreas[tId] = size;
-          if (size > maxClusterTerritory) maxClusterTerritory = size;
-        }
-        clusterSizes[i] = maxClusterTerritory;
-        if (maxClusterTerritory > maxTerritoryArea) {
-          maxTerritoryArea = maxClusterTerritory;
-        }
-      }
-
-      for (let i = 1; i < clusters.length; i++) {
-        if (clusterSizes[i] > clusterSizes[largestIndex]) {
-          largestIndex = i;
-        } else if (clusterSizes[i] === clusterSizes[largestIndex]) {
-          const curBoxArea =
-            (boxes[i * 4 + 2] - boxes[i * 4] + 1) *
-            (boxes[i * 4 + 3] - boxes[i * 4 + 1] + 1);
-          const bestBoxArea =
-            (boxes[largestIndex * 4 + 2] - boxes[largestIndex * 4] + 1) *
-            (boxes[largestIndex * 4 + 3] - boxes[largestIndex * 4 + 1] + 1);
-          if (curBoxArea > bestBoxArea) {
             largestIndex = i;
           }
         }

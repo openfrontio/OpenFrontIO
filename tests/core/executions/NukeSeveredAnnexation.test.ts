@@ -930,4 +930,25 @@ describe("land a nuke severs from the main body is annexed", () => {
     expect(defenderTilesIn(blobA)).toBe(0);
     expect(defenderTilesIn(blobB)).toBeGreaterThan(0);
   });
+
+  test("a compact landlocked core is not annexed when a secondary strip has a larger bounding box", () => {
+    const core = rect(10, 10, 59, 59);
+    const strip = (x: number, y: number) => {
+      if (x < 100 || x > 160 || y < 100 || y > 160) return false;
+      const step = Math.floor((x - 100) / 2);
+      return y === 100 + step * 2 || y === 100 + step * 2 + 1;
+    };
+    paint(union(core, strip));
+    for (let x = 9; x <= 60; x++) {
+      for (let y = 9; y <= 60; y++) {
+        if (core(x, y)) continue;
+        if (y <= 35) attacker.conquer(game.ref(x, y));
+        else third.conquer(game.ref(x, y));
+      }
+    }
+    startClusterChecks();
+    runClusterChecks();
+
+    expect(defenderTilesIn(core)).toBeGreaterThan(0);
+  });
 });
