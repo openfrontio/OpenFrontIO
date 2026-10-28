@@ -10,7 +10,6 @@ import {
   copyRootPublicFiles,
   createHashedPublicAssetFiles,
   getPublicDir,
-  listHashedPublicAssetPaths,
   writeRootFilesIndex,
 } from "../../src/server/PublicAssetManifest";
 
@@ -418,10 +417,17 @@ describe("PublicAssetManifest", () => {
   });
 
   test("hashes exactly OFstats's 30 FFA tier emblems", () => {
-    const paths = listHashedPublicAssetPaths([path.resolve("resources")]);
-    expect(paths.filter((p) => p.startsWith("images/ffa-tiers/"))).toEqual(
-      FFA_TIER_ART,
-    );
+    const manifest = buildPublicAssetManifest([path.resolve("resources")]);
+    const tierArt = Object.keys(manifest)
+      .filter((p) => p.startsWith("images/ffa-tiers/"))
+      .sort();
+    expect(tierArt).toEqual(FFA_TIER_ART);
+    for (const asset of tierArt) {
+      const { dir, name } = path.posix.parse(asset);
+      expect(manifest[asset], asset).toMatch(
+        new RegExp(`^/_assets/${dir}/${name}\\.[0-9a-f]+\\.svg$`),
+      );
+    }
   });
 
   test("ships only inert FFA tier SVGs", async () => {
