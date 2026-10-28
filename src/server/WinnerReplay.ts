@@ -21,8 +21,9 @@ const CHILD = path.join(
   "WinnerReplayChild.ts",
 );
 
-// A 3-hour game on the biggest map, starved of CPU, finishes well inside
-// this; past it the replay is presumed stuck.
+// Most replays finish well inside this, but the largest games (tens of
+// thousands of turns) can take most of it or run past it; past it the replay
+// is presumed stuck.
 const TIMEOUT_MS = 30 * 60 * 1000;
 // Caps the child's heap so a runaway replay dies on its own instead of
 // taking the worker's memory with it.

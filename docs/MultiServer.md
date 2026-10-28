@@ -984,7 +984,7 @@ turns into the "update available" prompt.
    version as `latest` once its servers have registered. Landed (#5369);
    detailed below.
 5. **API (not bound by the cut):** the registry, check-in, `GET
-/cluster.json`, set-latest, admin rollback, and a static-page Worker on
+   /cluster.json`, set-latest, admin rollback, and a static-page Worker on
    the site hostname reading only the public bucket (`/v/<commit>/…`
    immutable, everything else `latest`'s page, `/desktop/*.json`).
 

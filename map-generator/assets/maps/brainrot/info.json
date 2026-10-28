@@ -1,10 +1,9 @@
 {
+  "$schema": "../../../info.schema.json",
   "id": "BrainRot",
   "name": "Brain Rot",
   "translation_key": "map.brainrot",
   "categories": ["arcade", "new"],
-  "multiplayer_frequency": 19,
-  "team_frequency": 13,
   "special_team_count": 27,
 
   "nations": [

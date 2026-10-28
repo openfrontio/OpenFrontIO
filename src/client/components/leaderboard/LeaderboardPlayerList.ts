@@ -383,9 +383,9 @@ export class LeaderboardPlayerList extends LitElement {
     return html`
       <tr
         data-current-user=${isCurrentUser ? "true" : "false"}
-        class="border-b border-white/5 hover:bg-white/[0.07] transition-colors group ${isCurrentUser
-          ? "bg-blue-500/15"
-          : ""}"
+        class="border-b border-white/5 hover:bg-white/[0.07] transition-colors group ${
+          isCurrentUser ? "bg-blue-500/15" : ""
+        }"
       >
         <td class="py-3 px-4 text-center">
           <div
@@ -415,9 +415,9 @@ export class LeaderboardPlayerList extends LitElement {
         <td class="py-3 px-4 text-right pr-6">
           <div class="inline-flex flex-col items-end">
             <span
-              class="font-mono font-bold ${player.winRate >= 0.5
-                ? "text-green-400"
-                : "text-red-400"}"
+              class="font-mono font-bold ${
+                player.winRate >= 0.5 ? "text-green-400" : "text-red-400"
+              }"
               >${(player.winRate * 100).toFixed(1)}%</span
             >
             <span

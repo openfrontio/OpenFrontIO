@@ -397,6 +397,7 @@ export interface Player extends PlayerLike {
   buildableUnits(
     tile: TileRef | null,
     units?: readonly PlayerBuildableUnitType[],
+    includeBuildPreview?: boolean,
   ): BuildableUnit[];
   canBuild(
     type: UnitType,
@@ -555,6 +556,7 @@ export interface Game extends GameLike {
   ticks(): Tick;
   inSpawnPhase(): boolean;
   endSpawnPhase(): void;
+  queueViewResync(): void;
   executeNextTick(): GameUpdates;
   drainPackedTileUpdates(): Uint32Array;
   recordMotionPlan(record: MotionPlanRecord): void;

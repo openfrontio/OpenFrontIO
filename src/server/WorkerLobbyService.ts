@@ -188,7 +188,10 @@ export class WorkerLobbyService {
       .map(({ game, info }) => {
         return {
           gameID: info.gameID,
-          numClients: info.clients?.length ?? 0,
+          numClients:
+            game.numPlayers?.() ??
+            info.clients?.filter((c) => !c.spectator).length ??
+            0,
           startsAt: info.startsAt,
           gameConfig: info.gameConfig,
           publicGameType: info.publicGameType!,
@@ -205,7 +208,10 @@ export class WorkerLobbyService {
       const gi = g.gameInfo();
       return {
         gameID: gi.gameID,
-        numClients: gi.clients?.length ?? 0,
+        numClients:
+          g.numPlayers?.() ??
+          gi.clients?.filter((c) => !c.spectator).length ??
+          0,
         startsAt: gi.startsAt,
         gameConfig: gi.gameConfig && publicLobbyGameConfig(gi.gameConfig),
         publicGameType: g.isQueued() ? "special" : "hosted",

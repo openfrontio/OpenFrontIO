@@ -703,6 +703,12 @@ export const ClientPlatformSchema = z.enum([
 
 export type ClientPlatform = z.infer<typeof ClientPlatformSchema>;
 
+// Phone-or-tablet versus everything else, as the client reports it from its
+// OS (see clientDevice). Unverified; metric dimension only.
+export const ClientDeviceSchema = z.enum(["desktop", "mobile"]);
+
+export type ClientDevice = z.infer<typeof ClientDeviceSchema>;
+
 // WARNING: never send this message to clients.
 // Note: clientID is NOT included - server assigns it based on persistentID from token
 export const ClientJoinMessageSchema = z.object({
@@ -721,10 +727,12 @@ export const ClientJoinMessageSchema = z.object({
   // whose commit doesn't match its own (missing counts as a mismatch —
   // pre-feature bundles are by definition stale).
   gitCommit: z.string().max(64).optional(),
-  // Must stay the last field, and its presence bit must not spill into a new
-  // header byte: then a stale bundle's frame (which lacks it) still decodes,
-  // reaches the gitCommit check above, and the player is told to refresh.
+  // platform and device must stay the last fields, and their presence bits
+  // must not spill into a new header byte: then a stale bundle's frame (which
+  // lacks them) still decodes, reaches the gitCommit check above, and the
+  // player is told to refresh.
   platform: ClientPlatformSchema.optional(),
+  device: ClientDeviceSchema.optional(),
 });
 
 export const ClientRejoinMessageSchema = z.object({

@@ -26,7 +26,7 @@ export function clampPrestige(prestige: number): number {
  * first prestige. The badge also lights one segment of its rim gauge per
  * rank, so the order reads without telling the colours apart.
  */
-export const PRESTIGE_TIERS = [
+const PRESTIGE_TIERS = [
   "iron",
   "bronze",
   "silver",
@@ -136,7 +136,7 @@ export type SubscriberTier = "sovereign" | "warlord" | "vanguard";
 // the tier is recognised by it: these must match the multipliers set on the
 // tiers in the admin panel. A multiplier not listed here still shows, as a
 // plain subscriber bonus.
-export const SUBSCRIBER_TIERS: readonly {
+const SUBSCRIBER_TIERS: readonly {
   tier: SubscriberTier;
   permille: number;
   colors: readonly [string, string];
@@ -168,7 +168,7 @@ type XpSourceKey =
 // this client doesn't know, or one stored under an older name.
 export type XpLineKey = XpSourceKey | "other";
 
-export const XP_LINE_KEYS: readonly XpSourceKey[] = [
+const XP_LINE_KEYS: readonly XpSourceKey[] = [
   "played",
   "time",
   "placement",

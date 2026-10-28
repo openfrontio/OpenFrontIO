@@ -20,7 +20,7 @@ const CHECKIN_TIMEOUT_MS = 8_000;
 //     here as draining, but the API keeps them apart so the list can say
 //     why. Only "open" takes new games, so a state we fail to recognise
 //     must never be read as open (see sendCheckin: it returns null).
-export const ServerStateSchema = z.enum(["open", "draining", "fenced"]);
+const ServerStateSchema = z.enum(["open", "draining", "fenced"]);
 export type ServerState = z.infer<typeof ServerStateSchema>;
 
 // The API binds a letter to a host for good and answers 409 to any other
