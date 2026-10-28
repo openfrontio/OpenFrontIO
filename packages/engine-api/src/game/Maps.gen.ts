@@ -1286,7 +1286,7 @@ export const maps: readonly MapInfo[] = [
     id: "HornOfAfrica",
     type: GameMapType.HornOfAfrica,
     translationKey: "map.hornofafrica",
-    categories: ["new"],
+    categories: ["africa"],
     defaultNationCount: 29,
     themes: ["africa"],
   },
