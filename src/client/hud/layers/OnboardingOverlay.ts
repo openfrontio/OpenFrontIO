@@ -61,6 +61,14 @@ const EXPAND_REACH_TILES = 10;
  */
 const EXPAND_TURNS = [0, 30, -30, 60, -60, 90, -90];
 
+/**
+ * Where on screen a new step's target counts as seen, as shares of the
+ * viewport: the leaderboard, the step card and the control panel cover
+ * the edges.
+ */
+const VIEW_X = [0.25, 0.75];
+const VIEW_Y = [0.3, 0.75];
+
 /** Steps whose text says "tap" instead of "click" on touch devices. */
 const TOUCH_TEXT = new Set([
   "spawn",
@@ -236,8 +244,8 @@ export class OnboardingOverlay extends LitElement implements Controller {
 
   /**
    * Reads the step off the map, and where its arrow points: the free land
-   * at our edge nearest where we're headed, the tribe's land at our edge,
-   * the islet, or the nation's coast nearest the islet.
+   * at our edge nearest where we're headed, the tribe's land nearest its
+   * name (its middle), the islet, or the nation's coast nearest the islet.
    */
   private scan(me: PlayerView) {
     const g = this.game;
@@ -247,7 +255,6 @@ export class OnboardingOverlay extends LitElement implements Controller {
     const tribeID = tribe?.smallID() ?? -1;
     const nationID = nation?.smallID() ?? -1;
     const tribeLoc = tribe?.nameLocation();
-    const myLoc = me.nameLocation();
     // Grow toward the tribe while it's alive, then toward the islet.
     const goal = tribeLoc ?? ISLET;
     const near = (from: { x: number; y: number }, x: number, y: number) =>
@@ -258,8 +265,8 @@ export class OnboardingOverlay extends LitElement implements Controller {
     let hasCoast = false;
     let frontier: Cell | null = null;
     let frontierDist = Infinity;
-    let tribeEdge: Cell | null = null;
-    let tribeEdgeDist = Infinity;
+    let tribeMiddle: Cell | null = null;
+    let tribeMiddleDist = Infinity;
     let nationCoast: Cell | null = null;
     let nationCoastDist = Infinity;
 
@@ -283,6 +290,14 @@ export class OnboardingOverlay extends LitElement implements Controller {
           }
           continue;
         }
+        if (owner === tribeID && tribeLoc) {
+          const d = near(tribeLoc, x, y);
+          if (d < tribeMiddleDist) {
+            tribeMiddleDist = d;
+            tribeMiddle = new Cell(x, y);
+          }
+          continue;
+        }
         if (owner !== mine) continue;
         if (inCircle(ISLET, x, y)) ownsIslet = true;
         if (g.isShore(t)) hasCoast = true;
@@ -294,11 +309,6 @@ export class OnboardingOverlay extends LitElement implements Controller {
           const no = g.ownerID(n);
           if (no === tribeID) {
             bordersTribe = true;
-            const d = myLoc ? near(myLoc, nx, ny) : 0;
-            if (d < tribeEdgeDist) {
-              tribeEdgeDist = d;
-              tribeEdge = new Cell(nx, ny);
-            }
           } else if (no === 0 && g.isLand(n)) {
             const d = near(goal, nx, ny);
             if (d < frontierDist) {
@@ -331,7 +341,7 @@ export class OnboardingOverlay extends LitElement implements Controller {
         this.target = at(this.intoFreeLand(frontier, goal));
         break;
       case "tribe":
-        this.target = at(tribeEdge);
+        this.target = at(tribeMiddle);
         break;
       case "boat":
         this.target = hasCoast
@@ -346,15 +356,23 @@ export class OnboardingOverlay extends LitElement implements Controller {
         this.eventBus.emit(new SetIntentGateEvent(null));
         break;
     }
-    // A new step's target can be across the map from where the camera is.
+    // A new step's target can be across the map, or under the HUD.
     const t = this.target;
-    if (
-      this.step !== previous &&
-      t !== null &&
-      !this.transformHandler.isOnScreen(new Cell(t.x, t.y))
-    ) {
+    if (this.step !== previous && t !== null && !this.inView(t)) {
       this.eventBus.emit(new GoToPositionEvent(t.x, t.y));
     }
+  }
+
+  private inView(t: Target): boolean {
+    const p = this.transformHandler.worldToScreenCoordinates(
+      new Cell(t.x + 0.5, t.y + 0.5),
+    );
+    return (
+      p.x > window.innerWidth * VIEW_X[0] &&
+      p.x < window.innerWidth * VIEW_X[1] &&
+      p.y > window.innerHeight * VIEW_Y[0] &&
+      p.y < window.innerHeight * VIEW_Y[1]
+    );
   }
 
   /**
