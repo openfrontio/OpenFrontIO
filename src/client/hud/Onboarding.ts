@@ -4,6 +4,8 @@
  * which step they're on and whether an action may go through.
  */
 
+import type { GameEvent } from "@openfront/shared/EventBus";
+
 export type OnboardingStep = "spawn" | "expand" | "tribe" | "boat" | "nation";
 
 export const ONBOARDING_STEPS: readonly OnboardingStep[] = [
@@ -29,6 +31,14 @@ export const ISLET = { x: 144, y: 140, radius: 14 };
  * third click or so (they start at about 20%).
  */
 export const LOW_TROOP_SHARE = 0.1;
+
+/**
+ * Emitted when the low-troops warning shows or hides, so the troop bar
+ * flashes red along with it.
+ */
+export class OnboardingLowTroopsEvent implements GameEvent {
+  constructor(public readonly low: boolean) {}
+}
 
 export function inCircle(
   c: { x: number; y: number; radius: number },

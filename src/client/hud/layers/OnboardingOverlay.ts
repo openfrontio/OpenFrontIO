@@ -16,6 +16,7 @@ import {
   judge,
   LOW_TROOP_SHARE,
   ONBOARDING_STEPS,
+  OnboardingLowTroopsEvent,
   OnboardingStep,
   OnboardingTarget,
   OnboardingVerdict,
@@ -141,8 +142,14 @@ export class OnboardingOverlay extends LitElement implements Controller {
     const now = performance.now();
     const low = me.hasSpawned() && this.troopShare(me) < LOW_TROOP_SHARE;
     if (low && !this.lowTroops) this.lowTroopsUntil = now + LOW_TROOPS_MS;
-    this.lowTroops = low || now < this.lowTroopsUntil;
+    this.setLowTroops(low || now < this.lowTroopsUntil);
     this.nudging = now < this.nudgeUntil;
+  }
+
+  private setLowTroops(low: boolean) {
+    if (low === this.lowTroops) return;
+    this.lowTroops = low;
+    this.eventBus.emit(new OnboardingLowTroopsEvent(low));
   }
 
   /** Our troops, less those just sent and `sending`, over our max. */
@@ -168,7 +175,7 @@ export class OnboardingOverlay extends LitElement implements Controller {
     }
     if (verdict === "low_troops") {
       if (!this.lowTroops) this.lowTroopsUntil = now + LOW_TROOPS_MS;
-      this.lowTroops = true;
+      this.setLowTroops(true);
     } else {
       this.nudgeUntil = now + NUDGE_MS;
       this.nudging = true;
@@ -353,6 +360,7 @@ export class OnboardingOverlay extends LitElement implements Controller {
         break;
       case "won":
         this.target = null;
+        this.setLowTroops(false);
         this.eventBus.emit(new SetIntentGateEvent(null));
         break;
     }

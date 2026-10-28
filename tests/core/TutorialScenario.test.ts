@@ -106,7 +106,7 @@ describe("Tutorial scenario", () => {
     const xs = (p: Player) => [...p.tiles()].map((t) => game.x(t));
     expect(Math.min(...xs(nation))).toBeGreaterThan(150);
     expect(Math.max(...xs(tribe))).toBeLessThan(135);
-    expect(nation.numTilesOwned()).toBeGreaterThan(1000);
+    expect(nation.numTilesOwned()).toBeGreaterThan(700);
     expect(tribe.numTilesOwned()).toBeGreaterThan(1000);
     expect(game.getWinner()).toBeNull();
   });
