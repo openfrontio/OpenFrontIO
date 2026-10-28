@@ -106,6 +106,7 @@ import { capturePagePin } from "./PagePin";
 import { setPurchaseAccountRefresh } from "./Payments";
 import { fallbackPlayerName, LAPSE_NOTICE_KEY } from "./PlayerName";
 import { updatePortalNavButton } from "./PortalAccountButton";
+import { shouldStartPortalTutorial } from "./PortalTutorial";
 import {
   GroupTokenTracker,
   presenceLobbyId,
@@ -1101,6 +1102,10 @@ class Client {
     } else {
       void this.handleUrl();
     }
+
+    void shouldStartPortalTutorial().then((start) => {
+      if (start) document.dispatchEvent(new CustomEvent("start-tutorial"));
+    });
 
     // An invite accepted from outside the app is parked by the shell, because
     // it arrives before this renderer exists. Pull it now that we are alive.
