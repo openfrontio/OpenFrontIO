@@ -1,5 +1,6 @@
 import {
   maps as allMaps,
+  listedMaps,
   Difficulty,
   Duos,
   GameMapSize,
@@ -743,7 +744,7 @@ export class MapPlaylist {
   ): GameMapType[] {
     const maps: GameMapType[] = [];
     let heaviest: { map: GameMapType; weight: number } | undefined;
-    for (const { type: map } of allMaps) {
+    for (const { type: map } of listedMaps) {
       const weight = weights[map]?.[WEIGHT_KEYS[type]] ?? DEFAULT_MAP_WEIGHT;
       if (weight > (heaviest?.weight ?? 0)) heaviest = { map, weight };
       const copies = Math.floor(weight) + (rand.next() < weight % 1 ? 1 : 0);

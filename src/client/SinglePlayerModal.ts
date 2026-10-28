@@ -4,7 +4,7 @@ import {
   GameMapType,
   GameMode,
   GameType,
-  maps,
+  listedMaps,
   UnitType,
 } from "@openfront/engine-api/game/GameTypes";
 import { TeamCountConfig } from "@openfront/engine-api/Schemas";
@@ -140,7 +140,7 @@ async function loadAchievementEligibleMaps(): Promise<Set<GameMapType> | null> {
     const eligible = new Set<GameMapType>();
     let hadFailure = false;
     await Promise.all(
-      maps.map(async (m) => {
+      listedMaps.map(async (m) => {
         try {
           const manifest = await terrainMapFileLoader
             .getMapData(m.type)
